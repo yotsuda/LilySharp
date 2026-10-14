@@ -175,3 +175,20 @@ export function sourceGroupToReveal(tabs: readonly SourceTab[], previewColumn: n
     }
     return elsewhere[0].column;
 }
+
+/**
+ * Where a click on a preview shows its score when no editor shows it (owner's request
+ * 2026-10-14: the .lys closed, its preview left open, a click there opens it again): the group
+ * that holds a tab of it, behind others, and no preview; else where a score opened into a
+ * preview's group goes (scoreGroupFor) — the leftmost group with no preview, else a new group
+ * left of the preview's. Never a preview's group, where it would cover the preview.
+ */
+export function sourceGroupToOpen(tabs: readonly SourceTab[], groups: readonly GroupInfo[], uri: string): number | 'left' {
+    const previews = new Set(groups.filter(g => g.hasPreview).map(g => g.column));
+    const tab = tabs.find(t => t.uri === uri && !previews.has(t.column));
+    if (tab) {
+        return tab.column;
+    }
+    const free = groups.filter(g => !g.hasPreview).map(g => g.column);
+    return free.length > 0 ? Math.min(...free) : 'left';
+}

@@ -6,6 +6,13 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+### A click on a preview opens its closed score again
+
+- **With the `.lys` closed and its preview still open, a click on the preview opens the `.lys`
+  again** and puts the caret on what was clicked (a note, a bar). It opens in the group that
+  still has a tab of it, else the leftmost group without a preview, else a new group left of the
+  preview. An untitled score that was closed is gone and is not reopened.
+
 ### Click a bar in the preview to go to it
 
 - **A click on a bar in the score preview puts the editor's caret at the start of that bar**: its

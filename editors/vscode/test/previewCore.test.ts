@@ -16,7 +16,7 @@
 
 import { describe, it } from 'node:test';
 import * as assert from 'node:assert/strict';
-import { svgPostKey, pagesSummary, previewOnEditorShown, sourceGroupToReveal, newPreviewColumn, scoreGroupFor, ShownEditor } from '../src/previewCore';
+import { svgPostKey, pagesSummary, previewOnEditorShown, sourceGroupToReveal, sourceGroupToOpen, newPreviewColumn, scoreGroupFor, ShownEditor } from '../src/previewCore';
 
 describe('a score opened into a preview\'s group', () => {
     it('moves to the leftmost group with no preview', () => {
@@ -145,5 +145,22 @@ describe('the source tab a preview brings forward', () => {
         assert.equal(sourceGroupToReveal([{ column: 1, uri: 'file:///b.lys', active: false }], 2, a), undefined);
         assert.equal(sourceGroupToReveal([{ column: 2, uri: a, active: false }], 2, a), undefined);
         assert.equal(sourceGroupToReveal([{ column: 1, uri: a, active: false }, { column: 3, uri: a, active: true }], 2, a), undefined);
+    });
+});
+
+// A click on a preview whose score was closed opens it again (owner's request 2026-10-14).
+describe('where a click on a preview reopens its closed score', () => {
+    const a = 'file:///a.lys';
+    const preview = { column: 2, hasPreview: true };
+
+    it('is the group holding a tab of it behind others, never the preview\'s', () => {
+        assert.equal(sourceGroupToOpen([{ column: 3, uri: a, active: false }], [{ column: 1, hasPreview: false }, preview, { column: 3, hasPreview: false }], a), 3);
+        assert.equal(sourceGroupToOpen([{ column: 2, uri: a, active: false }], [{ column: 1, hasPreview: false }, preview], a), 1);
+    });
+    it('is else the leftmost group with no preview', () => {
+        assert.equal(sourceGroupToOpen([{ column: 3, uri: 'file:///b.lys', active: true }], [preview, { column: 3, hasPreview: false }, { column: 4, hasPreview: false }], a), 3);
+    });
+    it('is a new group left of the preview when every group holds one (the score\'s group went with it)', () => {
+        assert.equal(sourceGroupToOpen([], [{ column: 1, hasPreview: true }], a), 'left');
     });
 });

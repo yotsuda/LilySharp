@@ -36,7 +36,7 @@ import { registerOmrContexts } from './omrReader';
 import { OmrScanDeps, hasScan, previewReady, previewShowsBar, registerScanFollow, showScan } from './omrScan';
 import { registerVerifyOnSave } from './omrVerify';
 import { markdownItExtensionApi } from './markdownFence';
-import { svgPostKey, pagesSummary, SvgPages, previewOnEditorShown, sourceGroupToReveal, newPreviewColumn, scoreGroupFor, SourceTab } from './previewCore';
+import { svgPostKey, pagesSummary, SvgPages, previewOnEditorShown, sourceGroupToReveal, newPreviewColumn, scoreGroupFor, sourceGroupToOpen, SourceTab } from './previewCore';
 import { textFontFaceCss, textFontsRoot } from './scoreFonts';
 import { SplitSectionsChoice, modalText, splitChoiceItems } from './splitSectionsCore';
 import { cleanHistory, forgetFont, recordFont, samePath, shownFonts } from './soundFontHistoryCore';
@@ -194,6 +194,41 @@ function revealPreviewSource(panel: vscode.WebviewPanel) {
         void vscode.window.showTextDocument(vscode.Uri.parse(key), { viewColumn: column, preserveFocus: true });
     }
 }
+// A click on a preview whose score no editor shows (owner's request 2026-10-14: the .lys closed,
+// the preview left open): the score is opened again — in the group that holds a tab of it, else
+// where a score opened beside a preview goes (sourceGroupToOpen) — and the click lands there as
+// in an open one. An untitled score that was closed is gone: nothing to open, as before.
+async function openPreviewSource(panel: vscode.WebviewPanel, key: string): Promise<vscode.TextEditor | undefined> {
+    const uri = vscode.Uri.parse(key);
+    if (uri.scheme === 'untitled' && !vscode.workspace.textDocuments.some(d => d.uri.toString() === key)) {
+        return undefined;
+    }
+    const tabs: SourceTab[] = [];
+    for (const group of vscode.window.tabGroups.all) {
+        for (const tab of group.tabs) {
+            if (tab.input instanceof vscode.TabInputText) {
+                tabs.push({ column: group.viewColumn, uri: tab.input.uri.toString(), active: tab.isActive });
+            }
+        }
+    }
+    const groups = vscode.window.tabGroups.all.map(g => ({ column: g.viewColumn, hasPreview: g.tabs.some(isPreviewTab) }));
+    const target = sourceGroupToOpen(tabs, groups, key);
+    try {
+        const doc = await vscode.workspace.openTextDocument(uri);
+        if (target === 'left') {
+            // The preview was clicked, so its group is the active one.
+            panel.reveal(panel.viewColumn, false);
+            await vscode.commands.executeCommand('workbench.action.newGroupLeft');
+        }
+        outputChannel.appendLine(`Preview click: reopened ${key} in ${target}`);
+        // A tab of its own, not VS Code's preview tab: the score is reopened to be worked on.
+        return await vscode.window.showTextDocument(doc, { viewColumn: target === 'left' ? vscode.ViewColumn.Active : target, preview: false });
+    } catch (err) {
+        outputChannel.appendLine(`Preview click: could not reopen ${key}: ${err}`);
+        return undefined;
+    }
+}
+
 // The scan view's hooks (omrScan.ts, set in activate): a preview reports the bar it scrolled to.
 let scanDeps: OmrScanDeps | undefined;
 // A message posted before the webview has finished loading its HTML is
@@ -1265,7 +1300,7 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
             } else if (message.type === 'jumpToPosition') {
                 const targetEditor = vscode.window.visibleTextEditors.find(
                     e => e.document.uri.toString() === uri
-                );
+                ) ?? await openPreviewSource(panel, uri);
                 if (targetEditor) {
                     // A grob's data-pos is its node's full-span start, which sits on
                     // the leading indentation of its line, so a raw jump lands at
