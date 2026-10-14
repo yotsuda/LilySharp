@@ -2067,10 +2067,15 @@ internal sealed class MultiStaffLayouter
         // LILYPOND-REF: lily/multi-measure-rest.cc:341-391 calculate_spacing_rods →
         // Rod::add_to_cols → lily/simple-spacer.cc:90-128 Simple_spacer::add_rod.
         int springOffset = 0;
+        var percentSignRods = ScoreSideTables.PercentSignBarRods(score);
         for (int i = 0; i < measureSprings.Count; i++)
         {
             int measureIndex = startMeasureIndex + i;
             int springCount = measureSprings[i].Length;
+            // An odd multi-bar percent sign centred in this bar: the bar holds its slash group
+            // (ScoreSideTables.PercentSignBarRods; SystemBreaker prices the same rod).
+            if (springCount > 0 && measureIndex < percentSignRods.Count && percentSignRods[measureIndex] > 0)
+                rods.Add((springOffset, springOffset + springCount, percentSignRods[measureIndex]));
             if (springCount > 0 && runMap.TryGetRunStartingAt(measureIndex, out var run))
             {
                 // LP's Paper_column::minimum_distance (li, ri) between the bounding

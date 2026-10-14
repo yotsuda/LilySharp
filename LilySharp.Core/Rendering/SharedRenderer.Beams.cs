@@ -45,7 +45,7 @@ internal static partial class SharedRenderer
         var percentByStaff = t_percentByStaff ?? new HashSet<(int Staff, int Measure)>();
         t_percentByStaff = null;
         foreach (var prItem in score.PercentRepeats)
-            for (int m = prItem.FirstCoveredMeasure; m <= prItem.MeasureIndex; m++)
+            for (int m = prItem.FirstCoveredMeasure; m <= prItem.LastCoveredMeasure; m++)
                 percentByStaff.Add((prItem.StaffIndex, m));
         foreach (var beam in layout.BeamLayouts)
         {

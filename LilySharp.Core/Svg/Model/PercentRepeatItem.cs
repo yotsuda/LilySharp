@@ -96,7 +96,18 @@ public sealed record PercentRepeatItem(
     // LILYPOND-REF: lily/percent-repeat-interface.cc:107-121 beat_slash — count 0 draws
     //   x_percent (me, 2) and anything else brew_slash (me, count).
     // Meaningless unless <see cref="BeatTiming"/> is set.
-    int SlashCount = 0
+    int SlashCount = 0,
+    // How many WHOLE bars the repetition stands for: 1 for the single sign, 2 for the double,
+    // N ≥ 3 for a multi-bar sign. The sign stands at the middle of the N bars — on the bar line
+    // between the halves for an even N (IsDouble, anchored as the double is, on the second
+    // half's first bar), centred in the middle bar for an odd one — with min(N, 4) slashes and
+    // the count above it from 2 bars up. LILYSHARP-OWN (owner's decision 2026-10-14, session
+    // 905): LilyPond draws one slash in the first bar of a 3-or-more-bar repetition and leaves
+    // the rest blank (lily/percent-repeat-iterator.cc:86-99 next_element — the else branch);
+    // SMuFL's repeat1Bar / repeat2Bars / repeat4Bars and the 1-, 2- and 4-bar repeats of
+    // MuseScore and Dorico are the sign centred on its bars, slash count = bar count, and an
+    // N above it. Ignored for a beat slash.
+    int Bars = 1
 )
 {
     // Identity, not value equality: see ModelIdentity.
@@ -114,7 +125,7 @@ public sealed record PercentRepeatItem(
     /// <summary>
     /// The FIRST measure this sign replaces — <see cref="MeasureIndex"/> itself for a single
     /// sign, and the measure before it for a double, whose anchor is the second of the pair.
-    /// Walk <c>FirstCoveredMeasure .. MeasureIndex</c> to visit every measure covered.
+    /// Walk <c>FirstCoveredMeasure .. LastCoveredMeasure</c> to visit every measure covered.
     /// </summary>
     /// <remarks>
     /// ⚠️ ONE HOME, because FOUR passes ask it and a pass that disagreed would print the
@@ -139,6 +150,15 @@ public sealed record PercentRepeatItem(
     /// </remarks>
     public int FirstCoveredMeasure =>
         IsBeatSlash ? MeasureIndex + 1
+        : Bars >= 3 ? MeasureIndex - Bars / 2
         : IsDouble ? MeasureIndex - 1
+        : MeasureIndex;
+
+    /// <summary>The LAST measure this sign replaces — past <see cref="MeasureIndex"/> for a
+    /// multi-bar sign, whose anchor is the middle of its bars. Before the first for a beat slash
+    /// (it covers none).</summary>
+    public int LastCoveredMeasure =>
+        IsBeatSlash ? MeasureIndex
+        : Bars >= 3 ? FirstCoveredMeasure + Bars - 1
         : MeasureIndex;
 }

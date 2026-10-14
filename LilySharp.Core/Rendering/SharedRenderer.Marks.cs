@@ -282,7 +282,7 @@ internal static partial class SharedRenderer
             // column (SpacingRules.MmrRodMinimumDistance, through
             // PercentRepeatEngraver.DoublePercentInkWidth) is the stencil drawn here, so
             // the reservation and the ink cannot drift apart.
-            var g = PercentRepeatEngraver.Geometry(pr.IsBeatSlash, pr.SlashCount, pr.IsDouble, ss);
+            var g = PercentRepeatEngraver.Geometry(pr.IsBeatSlash, pr.SlashCount, pr.IsDouble, ss, pr.Bars);
             bool plainSlash = g.PlainSlash;
             int slashes = g.Slashes;
             double slashWidth = g.SlashWidth;
@@ -338,6 +338,12 @@ internal static partial class SharedRenderer
                     gc.DrawCircle(upperDotCx, cy + dotDy, dotRadius, Color.Black);
                     gc.DrawCircle(lowerDotCx, cy - dotDy, dotRadius, Color.Black);
                 }
+                // The bar count above a sign of 2 bars or more, as the multi-measure rest's —
+                // the same digits, the same staff-padding over the top line's ink
+                // (PercentRepeatItem.Bars: LILYSHARP-OWN; Dorico's 2- and 4-bar repeats carry
+                // their count).
+                if (!pr.IsBeatSlash && pr.Bars >= 2)
+                    DrawMmrNumber(pr.Bars, pr.X, cy - pr.YUp, (staff?.Height ?? StaffHeight) / 2, gc);
             }
         }
     }

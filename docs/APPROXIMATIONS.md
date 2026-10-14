@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 63 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 63 | 観測者がゼロだと自認しているもの |
-| `OWN` | 250 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **376** | |
+| `OWN` | 254 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **380** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -31,8 +31,8 @@
 | `LilySharp.Core/Svg/Layout/FingeringEngraver.cs` | 7 |
 | `LilySharp.Core/Svg/Layout/LayoutEngine.Annotations.cs` | 7 |
 | `LilySharp.Core/Svg/Layout/TabStaffGeometry.cs` | 7 |
+| `LilySharp.Core/Rendering/SharedRenderer.Marks.cs` | 6 |
 | `LilySharp.Core/Rendering/SharedRenderer.Overlays.cs` | 6 |
-| `LilySharp.Core/Svg/Layout/ChordNameEngraver.cs` | 6 |
 
 ## APPROX — LP に対応物はあるが、形が違うと自認しているもの（63 件）
 
@@ -246,7 +246,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（250 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（254 件）
 
 ### `LilySharp.Core/Editing/KeyRespeller.cs`
 - **`KeyRespeller`** LILYSHARP-OWN: an editor aid. The rule:
@@ -333,6 +333,7 @@
 ### `LilySharp.Core/Rendering/SharedRenderer.GraceNotes.cs`
 - **`SharedRenderer.DrawTabGraceNotes`** as for a notation grace. ⚠️ LILYSHARP-OWN, and knowingly so: LilyPond's TabStaff
 ### `LilySharp.Core/Rendering/SharedRenderer.Marks.cs`
+- **`SharedRenderer.DrawPercentRepeatsLive`** (PercentRepeatItem.Bars: LILYSHARP-OWN; Dorico's 2- and 4-bar repeats carry
 - **`SharedRenderer.DrawStemlessTremolo`** LP: ss × length-fraction × 0.81. LILYSHARP-OWN: length-fraction is
 ### `LilySharp.Core/Rendering/SharedRenderer.Overlays.cs`
 - **`SharedRenderer.DrawTodoMarks`** LILYSHARP-OWN: an editor's mark, with no LilyPond counterpart.
@@ -386,6 +387,7 @@
 - **`MeasureBuilder.SectionHead`** LILYSHARP-OWN (owner's decisions, 2026-10-02, HANDOFF §1.1 第737): a time, key
 ### `LilySharp.Core/Svg/Collector/MeasureCollector.cs`
 - **`MeasureCollector.DefaultExpansionBudgetCap`** LILYSHARP-OWN: no LilyPond counterpart — LilyPond itself hangs on the
+- **`MeasureCollector.ProcessPercentRepeat`** LILYSHARP-OWN, owner's decision 2026-10-14, session 905). Whole bars: the body opens
 - **`MeasureCollector.ProcessGraceRegion`** voice last wrote. An undurated grace opens at an eighth — LILYSHARP-OWN, not a
 ### `LilySharp.Core/Svg/Collector/MeasureCollector.Definitions.cs`
 - **`MeasureCollector.KeyCourtesyDue`** LILYSHARP-OWN: LilyPond prints nothing here — a clef change draws no key signature
@@ -554,6 +556,8 @@
 - **`SystemDetails.StaffCompression`** LILYSHARP-OWN: the number itself has no LilyPond counterpart, because LilyPond's
 ### `LilySharp.Core/Svg/Layout/PageLayouter.cs`
 - **`PageLayouter.PositionSystemsOnPage`** ⚠️ LILYSHARP-OWN: THE CHAIN'S LAST NODE, WHICH IS NOT ALWAYS THE LAST STAFF.
+### `LilySharp.Core/Svg/Layout/ScoreSideTables.cs`
+- **`ScoreSideTables.PercentSignBarRods`** LILYSHARP-OWN (the multi-bar sign is, PercentRepeatItem.Bars, session 905): LilyPond's
 ### `LilySharp.Core/Svg/Layout/SkylineBuilder.cs`
 - **`SkylineBuilder.BuildSystemSkylines`** ⚠️ LILYSHARP-OWN: THE TWO-EDGE MODEL ITSELF. LilyPond has no such pair —
 - **`SkylineBuilder.OuterStaff`** ⚠️ LILYSHARP-OWN: THE SELECTION IS DELIBERATELY THE OLD ONE, and it is a KNOWN
@@ -620,6 +624,8 @@
 - **`Measure.IsTrailingClefColumn`** ⚠️ LILYSHARP-OWN: THE FLAGGED ZERO-WIDTH MEASURE IS A TRANSLATION DEVICE. LilyPond
 ### `LilySharp.Core/Svg/Model/MusicMarkItem.cs`
 - **`MusicMarkItem..ctor`** coda itself (LILYSHARP-OWN, a Gould-style departure).
+### `LilySharp.Core/Svg/Model/PercentRepeatItem.cs`
+- **`PercentRepeatItem`** the count above it from 2 bars up. LILYSHARP-OWN (owner's decision 2026-10-14, session
 ### `LilySharp.Core/Syntax/StringLiteral.cs`
 - **`StringLiteral`** LILYSHARP-OWN: the owner's decision (2026-09-30) — Lily#'s strings follow C#'s grammar:
 ### `LilySharp.Core/Syntax/SyntaxNodes.cs`

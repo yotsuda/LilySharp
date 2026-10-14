@@ -46,10 +46,12 @@
   <polygon points="38.00,13.28 38.68,13.28 40.68,11.28 40.00,11.28" data-pos="406"/>
   <circle cx="37.45" cy="11.78" r="0.23" data-pos="406"/>
   <circle cx="40.15" cy="12.78" r="0.23" data-pos="406"/>
+  <text class="music" x="38.07" y="9.83" font-size="4.00" data-pos="406">2</text>
   <polygon points="35.98,26.23 37.00,26.23 40.00,23.23 38.98,23.23" data-pos="406"/>
   <polygon points="37.60,26.23 38.62,26.23 41.62,23.23 40.60,23.23" data-pos="406"/>
   <circle cx="36.88" cy="23.98" r="0.23" data-pos="406"/>
   <circle cx="40.72" cy="25.48" r="0.23" data-pos="406"/>
+  <text class="music" x="38.07" y="20.53" font-size="4.00" data-pos="406">2</text>
   <rect x="12.14" y="6.69" width="2.75" height="2.74" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="372"/>
   <text x="13.52" y="9.08" font-size="2.77" text-anchor="middle" data-pos="372">A</text>
   </g>

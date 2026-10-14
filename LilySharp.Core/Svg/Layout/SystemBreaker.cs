@@ -336,6 +336,15 @@ internal sealed class SystemBreaker
                 lineStartRod = MultiStaffLayouter.LineStartRunRodDistance(
                     score, i, isFirstSystem: i == 0, run.Count, measureLength);
             }
+            // An odd multi-bar percent sign centred in the bar: the layouter's rod
+            // (ScoreSideTables.PercentSignBarRods), priced the same way here.
+            var percentSignRods = ScoreSideTables.PercentSignBarRods(score);
+            if (i < percentSignRods.Count && percentSignRods[i] > 0)
+            {
+                runRod = true;
+                ideal = Math.Max(ideal, percentSignRods[i]);
+                min = Math.Max(min, percentSignRods[i]);
+            }
 
             // The springs this measure gets when it ENDS a line: every column's own ink held
             // inside the line by a rod to the line's end column — the same reaches

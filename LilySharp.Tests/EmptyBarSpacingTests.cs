@@ -279,10 +279,12 @@ public class EmptyBarSpacingTests
                 springs[^1].InverseCompressStrength, 9);
         }
 
-        // Control: the slash bar itself holds a RepeatSlash grob — used, ordinary chain.
-        var slashBar = ColumnSprings(SlashBody, 3, gs);
-        Assert.True(slashBar[0].IdealDistance > 0.5,
-            $"the slash bar keeps its bar-line → column spring: {slashBar[0].IdealDistance}");
+        // The repetition's FIRST bar is blank too since session 905: three whole bars take the
+        // multi-bar sign centred in the middle bar (PercentRepeatItem.Bars), not LilyPond's
+        // RepeatSlash grob standing in the first bar's column, so no bar of the three holds a
+        // column of its own.
+        var firstBar = ColumnSprings(SlashBody, 3, gs);
+        Assert.Equal(0.0, firstBar[0].IdealDistance);
     }
 
     [Fact]

@@ -45,7 +45,10 @@ public readonly record struct PercentRepeatLayout(
     bool IsBeatSlash = false,
     // LilyPond's slash-count, carried through: 0 draws the dotted DoubleRepeatSlash, N ≥ 1
     // draws N plain slashes. Meaningless unless IsBeatSlash.
-    int SlashCount = 0
+    int SlashCount = 0,
+    // The whole bars the sign stands for (PercentRepeatItem.Bars): min(N, 4) slashes, and the
+    // count drawn above from 2 up.
+    int Bars = 1
 );
 
 /// <summary>
@@ -129,7 +132,8 @@ internal static class PercentRepeatEngraver
     /// this function's GroupWidth to six digits in both.
     /// </para>
     /// </remarks>
-    internal static SignGeometry Geometry(bool isBeatSlash, int slashCount, bool isDouble, double staffSpace)
+    internal static SignGeometry Geometry(bool isBeatSlash, int slashCount, bool isDouble, double staffSpace,
+        int bars = 1)
     {
         // LILYPOND-REF: scm/define-grobs.scm — the PercentRepeat and DoublePercentRepeat
         //   entries: dot-negative-kern 0.75, slash-negative-kern 1.6, slope 1.0,
@@ -141,6 +145,7 @@ internal static class PercentRepeatEngraver
         double slashKern = plainSlash ? 0.85 : 1.6;
         int slashes = isBeatSlash
             ? (slashCount >= 1 ? slashCount : 2)
+            : bars >= 2 ? System.Math.Min(bars, 4)   // the multi-bar sign (PercentRepeatItem.Bars)
             : (isDouble ? 2 : 1);
         double slashWidth = 2.0 / slope * staffSpace;
         double slashHeight = slashWidth * slope;
@@ -246,7 +251,7 @@ internal static class PercentRepeatEngraver
             results.Add(new PercentRepeatLayout(
                 item.MeasureIndex, x, 0.0, ml.Width, item.SourcePosition, i,
                 StaffIndex: item.StaffIndex, IsDouble: item.IsDouble,
-                IsBeatSlash: item.IsBeatSlash, SlashCount: item.SlashCount));
+                IsBeatSlash: item.IsBeatSlash, SlashCount: item.SlashCount, Bars: item.Bars));
         }
 
         return results.ToImmutable();

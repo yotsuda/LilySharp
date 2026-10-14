@@ -17,7 +17,11 @@ a2 b | c d | %2 | %2 |            the two-bar pattern twice more      (old: repe
 
 - **`%N` is ONE repetition of the N bars written just before it** (`%` = `%1`), and it occupies
   those N bars of time. One written mark is one drawn sign: a `%` in its bar, the double percent
-  over the bar line of a `%2`, and for `%3` and up LilyPond's single slash in the first bar with
+  over the bar line of a `%2`, and for `%3` and up the multi-bar sign (session 905, owner's
+  decision — LilyPond draws a single slash in the first bar): min(N, 4) slashes at the middle
+  of the N bars, on the middle bar line for an even N and in the middle bar for an odd one, with
+  the count N above from `%2` up (`PercentRepeatItem.Bars`); the bars' inner bar lines forbid a
+  line break, so the sign's bars stay on one line. Formerly LilyPond's single slash in the first bar with
   the others blank (the three shapes the page already draws — `PercentRepeatShape`). It is the
   only item of its span: written between two bar lines, `| %4 |`, as `R1*4` is — the closing
   one may be the music's end, and a `break` may stand beside the mark (`… | break % |`, the

@@ -194,7 +194,7 @@ internal sealed class MidBarBreakTable
             return "the bar is unmetered (time none), so it has no position to break at";
 
         foreach (var p in percents)
-            if (p.MeasureIndex == bar || (p.IsDouble && p.MeasureIndex - 1 == bar))
+            if (p.MeasureIndex == bar || (bar >= p.FirstCoveredMeasure && bar <= p.LastCoveredMeasure))
                 return "a percent repeat covers the bar";
 
         // An item-less measure (a `voice { }` track's mirror of a bar the span does not

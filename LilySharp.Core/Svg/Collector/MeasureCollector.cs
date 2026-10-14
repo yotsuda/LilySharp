@@ -5778,7 +5778,16 @@ public sealed partial class MeasureCollector
         // LILYPOND-REF: lily/percent-repeat-iterator.cc:86-99 next_element.
         var bodyShape = PercentRepeatShape.Classify(bodyLength, meterAtBody);
         bool isDoubleBody = bodyShape == PercentBodyShape.Double;
-        bool isBeatSlashBody = bodyShape == PercentBodyShape.RepeatSlash;
+        // THREE OR MORE WHOLE BARS take the multi-bar sign, not LilyPond's slash: the sign at the
+        // middle of the bars, min(N, 4) slashes, the count above (PercentRepeatItem.Bars —
+        // LILYSHARP-OWN, owner's decision 2026-10-14, session 905). Whole bars: the body opens
+        // on a bar line and closes on one, every bar the meter's length.
+        int multiBars = bodyShape == PercentBodyShape.RepeatSlash
+            && bodyMeasureCount >= 3
+            && openAtStart == Fraction.Zero && builder.CurrentDuration == Fraction.Zero
+            && bodyLength == meterAtBody * new Fraction(bodyMeasureCount, 1)
+                ? bodyMeasureCount : 0;
+        bool isBeatSlashBody = bodyShape == PercentBodyShape.RepeatSlash && multiBars == 0;
         // LilyPond decides the count ONCE, from the body's written durations, and the
         // count then chooses the grob as well as the number of slashes.
         // LILYPOND-REF: scm/music-functions.scm:378-390 calc-repeat-slash-count.
@@ -5931,7 +5940,20 @@ public sealed partial class MeasureCollector
                     iterStart + 1,
                     at,
                     _cursor.StaffIndex,
-                    IsDouble: true));
+                    IsDouble: true,
+                    Bars: 2));
+            }
+            else if (multiBars >= 3)
+            {
+                // The middle of the bars: the bar line between the halves for an even count
+                // (anchored, as the double is, on the second half's first bar), the middle bar
+                // for an odd one.
+                _percentRepeats.Add(new PercentRepeatItem(
+                    iterStart + multiBars / 2,
+                    at,
+                    _cursor.StaffIndex,
+                    IsDouble: multiBars % 2 == 0,
+                    Bars: multiBars));
             }
             else
             {

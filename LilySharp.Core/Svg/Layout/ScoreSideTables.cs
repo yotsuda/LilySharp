@@ -403,9 +403,56 @@ internal static class ScoreSideTables
             foreach (var (_, staff, index) in score.EnumerateStaves())
                 if (index == staffIndex && staff.Tuning is { } tuning)
                     ss = EngravingDefaults.TabStringSpace(Tunings.GetStringCount(tuning));
-            half = Math.Max(half, PercentRepeatEngraver.DoublePercentInkWidth(ss) / 2);
+            half = Math.Max(half, PercentRepeatEngraver.Geometry(false, 0, true, ss, pr.Bars).GroupWidth / 2);
         }
         return half;
+    }
+
+    private static readonly System.Runtime.CompilerServices
+        .ConditionalWeakTable<MultiStaffScore, double[]> _percentSignBarRodsByScore = new();
+
+    /// <summary>The clearance a multi-bar percent sign keeps from each bar line of the bar it
+    /// is centred in.</summary>
+    internal const double PercentSignBarPadding = 0.5;
+
+    /// <summary>
+    /// Per bar index: the least width (bar line ink to bar line ink) the bar must have to hold
+    /// the widest ODD multi-bar percent sign centred in it — its slash group plus
+    /// <see cref="PercentSignBarPadding"/> each side — 0 where none stands. An even count stands
+    /// on a bar line and reserves through <see cref="DoublePercentHalfWidths"/>; the single
+    /// percent fits any bar. A tab staff's sign is one-and-a-half-sized.
+    /// </summary>
+    /// <remarks>
+    /// LILYSHARP-OWN (the multi-bar sign is, PercentRepeatItem.Bars, session 905): LilyPond's
+    /// 3-or-more-bar repetition is a slash in a column of its own. Priced as a rod over the
+    /// bar's springs, as the multi-measure rest's run rod is (MultiStaffLayouter and
+    /// SystemBreaker read the same table, so the break gate and the layout agree).
+    /// </remarks>
+    internal static IReadOnlyList<double> PercentSignBarRods(MultiStaffScore score)
+        => _percentSignBarRodsByScore.GetValue(score, ComputePercentSignBarRods);
+
+    private static double[] ComputePercentSignBarRods(MultiStaffScore score)
+    {
+        int n = score.MeasureCount;
+        var rod = new double[n];
+        if (score.PercentRepeats.IsDefaultOrEmpty)
+            return rod;
+        var staffSpace = new Dictionary<int, double>();
+        foreach (var (_, staff, index) in score.EnumerateStaves())
+            staffSpace[index] = staff.Tuning is { } tuning
+                ? EngravingDefaults.TabStringSpace(Tunings.GetStringCount(tuning))
+                : 1.0;
+        foreach (var pr in score.PercentRepeats)
+        {
+            if (pr.IsBeatSlash || pr.IsDouble || pr.Bars < 3 || pr.MeasureIndex < 0 || pr.MeasureIndex >= n)
+                continue;
+            double ss = staffSpace.TryGetValue(pr.StaffIndex, out var s) ? s : 1.0;
+            double w = PercentRepeatEngraver.Geometry(false, 0, false, ss, pr.Bars).GroupWidth
+                       + 2 * PercentSignBarPadding;
+            if (w > rod[pr.MeasureIndex])
+                rod[pr.MeasureIndex] = w;
+        }
+        return rod;
     }
 
     private static double[] ComputeDoublePercentHalfWidths(MultiStaffScore score)
@@ -426,7 +473,7 @@ internal static class ScoreSideTables
             if (!pr.IsDouble || pr.MeasureIndex < 0 || pr.MeasureIndex >= n)
                 continue;
             double ss = staffSpace.TryGetValue(pr.StaffIndex, out var s) ? s : 1.0;
-            double h = PercentRepeatEngraver.DoublePercentInkWidth(ss) / 2;
+            double h = PercentRepeatEngraver.Geometry(false, 0, true, ss, pr.Bars).GroupWidth / 2;
             if (h > half[pr.MeasureIndex])
                 half[pr.MeasureIndex] = h;
         }

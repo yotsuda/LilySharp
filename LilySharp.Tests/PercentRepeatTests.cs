@@ -495,7 +495,7 @@ public class PercentRepeatTests
             score { staff mel }
             """);
         Assert.Equal(
-            System.Text.RegularExpressions.Regex.Matches(control, "<text class=\"music\"").Count,
+            System.Text.RegularExpressions.Regex.Matches(control, "<text class=\"music\"").Count + 1, // + the count "2" (session 905)
             System.Text.RegularExpressions.Regex.Matches(svg, "<text class=\"music\"").Count);
     }
 
@@ -527,171 +527,176 @@ public class PercentRepeatTests
         Assert.Equal(Beams(control).Count, Beams(svg).Count);
         Assert.Equal(Stems(control).Count, Stems(svg).Count);
         Assert.Equal(
-            System.Text.RegularExpressions.Regex.Matches(control, "<text class=\"music\"").Count,
+            System.Text.RegularExpressions.Regex.Matches(control, "<text class=\"music\"").Count + 1, // + the count "2" (session 905)
             System.Text.RegularExpressions.Regex.Matches(svg, "<text class=\"music\"").Count);
         Assert.Equal(2, Slashes(svg).Count);
     }
 
-    // --- the REPEAT slash: a body of three or more bars (LilyPond's third branch) ---
+    // --- three or more whole bars: the multi-bar sign (session 905) ---
     //
     // ⚠️ A body SHORTER than a bar — LilyPond's beat slash — cannot be written since
-    // 2026-10-14 (docs/percent-repeat-design.md): a mark repeats whole bars. Its tests left
-    // with it (the slash at a beat, its spacing columns and its tab rod); the slash's
-    // count and its two shapes are the same grob for a body of three or more bars, and are
-    // pinned here on such bodies.
+    // 2026-10-14 (docs/percent-repeat-design.md), and since session 905 a body of three or
+    // more WHOLE bars takes the multi-bar sign, not LilyPond's RepeatSlash (owner's decision:
+    // PercentRepeatItem.Bars). The beat-slash grob is left only for an error's recovery (a
+    // body that is not whole bars, LYS1049); its LilyPond-measured stencil is pinned on the
+    // geometry itself below.
 
     /// <summary>
-    /// The spacer that OPENS a repeat slash's repetition carries the slash count, and only
-    /// that one: the column holds the RepeatSlash / DoubleRepeatSlash grob, which the spacing
-    /// must price as a used column with a wish and the group's ink
-    /// (<see cref="RestItem.RepeatSlashCount"/>); the bars after it are the event still
-    /// sounding, plain spacers.
-    /// LILYPOND-REF: lily/slash-repeat-engraver.cc:56-66 process_music.
+    /// Three whole bars are ONE multi-bar sign, in the repetition's MIDDLE bar, covering all
+    /// three — whatever the body's durations (the beat slash's count read them; this sign does
+    /// not), and its spacers carry no slash count (no bar of the three holds a column).
     /// </summary>
-    [Fact]
-    public void Collector_RepeatSlashSpacer_CarriesTheSlashCountOnItsOpeningPiece()
+    [Theory]
+    [InlineData("c1")]
+    [InlineData("c16 d e f c d e f c d e f c d e f")]
+    [InlineData("c8 d c d c d c d")]
+    [InlineData("g8. c16 g8. c16 g8. c16 g8. c16")]
+    public void Collector_ThreeWholeBars_AreOneMultiBarSignInTheMiddleBar(string bar)
     {
-        const string bar = "c16 d e f c d e f c d e f c d e f";
         var score = new MeasureCollector().Collect(
             TestPaper.ParseAtIndentZero($"{bar} | {bar} | {bar} | %3 |"));
 
+        var pr = Assert.Single(score.PercentRepeats);
+        Assert.False(pr.IsBeatSlash);
+        Assert.False(pr.IsDouble);
+        Assert.Equal(3, pr.Bars);
+        Assert.Equal(4, pr.MeasureIndex);          // the middle of bars 3..5
+        Assert.Equal(3, pr.FirstCoveredMeasure);
+        Assert.Equal(5, pr.LastCoveredMeasure);
+        Assert.Equal(6, score.Voice.Measures.Length);
         var spacers = score.Voice.Measures.SelectMany(m => m.Items)
             .OfType<RestItem>().Where(r => r.IsSpacer).ToList();
-        Assert.Equal(3, spacers.Count);                // one a bar of the repetition
-        Assert.Equal(2, spacers[0].RepeatSlashCount);  // sixteenths → two plain slashes
-        Assert.Null(spacers[1].RepeatSlashCount);
-        Assert.Null(spacers[2].RepeatSlashCount);
+        Assert.Equal(3, spacers.Count);
+        Assert.All(spacers, s => Assert.Null(s.RepeatSlashCount));
     }
 
     /// <summary>
-    /// The slash COUNT comes from the body's written durations: all equal gives
-    /// <c>max (duration-log − 2) 1</c>, and anything mixed gives 0, which is not "no slashes"
-    /// but the OTHER grob — the dotted <c>DoubleRepeatSlash</c>.
-    /// LILYPOND-REF: scm/music-functions.scm:378-390 calc-repeat-slash-count;
-    /// LILYPOND-REF: lily/slash-repeat-engraver.cc:56-66 process_music.
-    /// ★ The three shapes were measured on 2.26.0 (scratch/p282/slashprobe-lp.png and the
-    /// session-278 probe): sixteenths draw two slashes, eighths one, and `g8. c16` the dotted
-    /// double.
+    /// An EVEN count stands on the bar line between its halves — anchored, as the double is,
+    /// on the second half's first bar — and the count goes past 4 bars with the slashes capped
+    /// at 4; the bar lines inside the repetition forbid a line break, so the sign's bars stay
+    /// on one line.
     /// </summary>
     [Theory]
-    [InlineData("c16 d e f c d e f c d e f c d e f", 2)]   // duration-log 4 → max(2,1)
-    [InlineData("c8 d c d c d c d", 1)]                    // duration-log 3 → max(1,1)
-    [InlineData("c4 c c c", 1)]                            // duration-log 2 → max(0,1) = 1
-    [InlineData("c32 d e f g a b c c d e f g a b c c d e f g a b c c d e f g a b c", 3)] // duration-log 5 → max(3,1)
-    [InlineData("g8. c16 g8. c16 g8. c16 g8. c16", 0)]     // mixed → DoubleRepeatSlash
-    [InlineData("c8 d16 e c8 d16 e c8 d16 e c8 d16 e", 0)] // mixed → DoubleRepeatSlash
-    public void Collector_RepeatSlashCount_FollowsTheWrittenDurations(string bar, int expected)
+    [InlineData(4)]
+    [InlineData(8)]
+    public void Collector_EvenWholeBars_StandOnTheMiddleBarLine_AndDoNotBreak(int n)
     {
-        var score = new MeasureCollector().Collect(TestPaper.ParseAtIndentZero($"{bar} | {bar} | {bar} | %3 |"));
+        string body = string.Join(" | ", Enumerable.Repeat("c1", n));
+        var score = new MeasureCollector().Collect(TestPaper.ParseAtIndentZero($"{body} | %{n} |"));
 
         var pr = Assert.Single(score.PercentRepeats);
-        Assert.True(pr.IsBeatSlash);
-        Assert.Equal(expected, pr.SlashCount);
+        Assert.True(pr.IsDouble);
+        Assert.Equal(n, pr.Bars);
+        Assert.Equal(n + n / 2, pr.MeasureIndex);
+        Assert.Equal(n, pr.FirstCoveredMeasure);
+        Assert.Equal(2 * n - 1, pr.LastCoveredMeasure);
+        var measures = score.Voice.Measures;
+        for (int m = n; m < 2 * n - 1; m++)
+            Assert.Equal(BreakPermission.Forbid, measures[m].LineBreakPermission);
+        Assert.Equal(System.Math.Min(n, 4),
+            PercentRepeatEngraver.Geometry(false, 0, true, 1.0, pr.Bars).Slashes);
     }
 
     /// <summary>
-    /// A body of THREE OR MORE WHOLE measures is LilyPond's else branch — one branch, not three.
-    /// The repetition is ONE slash carrying the body's whole length, so the sign appears once,
-    /// in the repetition's first measure, and the measures after it in that repetition are
-    /// blank.
-    /// ★ Measured on 2.26.0: scratch/p282/wholebody3.ly (3 whole notes) and wholebody8.ly
-    /// (8) both draw exactly one slash per repetition with every later measure empty.
-    /// ⚠️ THIS TEST USED TO ASSERT THE OPPOSITE — three per-measure percents, called a decided
-    /// divergence. It was decided against LilyPond's grob DESCRIPTIONS ("repeating patterns
-    /// shorter than a single measure") rather than against its iterator, which has no such
-    /// test. Session 286.
+    /// Drawn: N slashes (4 at most) of the percent family — slope 1.0, overlapped by 1.6, with
+    /// the dots — and the count above the staff in the multi-measure rest's digits. The double
+    /// sign carries its "2" too.
     /// </summary>
-    [Fact]
-    public void Collector_ThreeMeasureBody_IsOneSlashCoveringThreeMeasures()
+    [Theory]
+    [InlineData(2, 2)]
+    [InlineData(3, 3)]
+    [InlineData(4, 4)]
+    [InlineData(8, 4)]
+    public void Renderer_MultiBarSign_DrawsMinNFourSlashesAndTheCountAbove(int n, int slashCount)
     {
-        var score = new MeasureCollector().Collect(
-            TestPaper.ParseAtIndentZero("c1 | d1 | e1 | %3 |"));
-
-        var pr = Assert.Single(score.PercentRepeats);
-        Assert.True(pr.IsBeatSlash);
-        Assert.False(pr.IsDouble);
-        // Equal written durations: calc-repeat-slash-count gives max(log - 2, 1) = 1.
-        Assert.Equal(1, pr.SlashCount);
-        // The repetition starts at the fourth measure and the sign is on that one alone.
-        Assert.Equal(3, pr.MeasureIndex);
-        // …and it still OCCUPIES three, so the two after it exist and are empty.
-        Assert.Equal(6, score.Voice.Measures.Length);
-    }
-
-    /// <summary>
-    /// Drawn, an equal-duration repeat slash is STEEPER and MORE TIGHTLY OVERLAPPED than the
-    /// percent family, and carries no dots: slope 1.7 and slash-negative-kern 0.85 against
-    /// the percent signs' 1.0 and 1.6.
-    /// LILYPOND-REF: scm/define-grobs.scm — the RepeatSlash entry (range-less: one-word grob
-    /// name, HANDOFF §5.2.1⑦).
-    /// ★ Every number here is read off LilyPond 2.26.0's own SVG for the twin
-    /// (scratch/p282/slashprobe-lpsvg.svg): the two slashes of `\repeat percent 2
-    /// { c16 d e f }` are `M0 0 l0.5569 0 l1.1765 -2.0000 l-0.5569 0 z` at x = 27.1376 and
-    /// 28.0210 — so x_width 0.5569, run 1.1765, height 2.0000, origins 0.8834 apart. The grob
-    /// and its stencil do not depend on how long the body is.
-    /// </summary>
-    [Fact]
-    public void Renderer_EqualDurationRepeatSlash_IsSteeperUnkernedAndUndotted()
-    {
-        var svg = TestPaper.SvgFromRenderSpec("""
+        string body = string.Join(" | ", Enumerable.Repeat("c1", n));
+        var svg = TestPaper.SvgFromRenderSpec($$"""
             part mel { }
-            section A { mel { c16 d e f c d e f c d e f c d e f | c16 d e f c d e f c d e f c d e f | c16 d e f c d e f c d e f c d e f | %3 | } }
+            section A { mel { {{body}} | %{{n}} | } }
+            form { ~A }
+            score { staff mel }
+            """);
+        var control = TestPaper.SvgFromRenderSpec($$"""
+            part mel { }
+            section A { mel { {{body}} | } }
             form { ~A }
             score { staff mel }
             """);
 
         var slashes = Slashes(svg);
-        Assert.Equal(2, slashes.Count);
-        slashes.Sort((p, q) => p.X0.CompareTo(q.X0));
-        // wid = 2.0/1.7 = 1.17647, height = wid·1.7 = 2.0,
-        // x_width = hypot (0.48, 0.48/1.7) = 0.556887.
-        // ONE decimal on the width too: it is the difference of two X coordinates the SVG
-        // prints to two decimals, so it reads 1.17 or 1.18 depending on where the bar's
-        // spacing happens to put the slash (session 360 moved it by 0.1 and flipped it).
-        // The percent family's wid is 2.0/1.0 = 2.0, a whole decimal away.
-        Assert.Equal(1.1765, slashes[0].W, 1);
-        Assert.Equal(2.0, slashes[0].Height, 2);
-        // ONE decimal on the terms built from two rounded coordinates — the SVG prints X to
-        // two, so a difference carries up to 0.01. It still separates what matters: the
-        // percent family's x_width is 0.6788 and its overlap 1.0788.
-        Assert.Equal(0.5569, slashes[0].XWidth, 1);
-        // (wid + x_width) − 0.85 = 0.883358, where the percent family's overlap is 1.0788.
-        Assert.Equal(0.8834, slashes[1].X0 - slashes[0].X0, 1);
-        // NO DOTS: brew_slash's stencil, not x_percent's.
-        Assert.Empty(System.Text.RegularExpressions.Regex.Matches(svg, "<circle "));
-    }
-
-    /// <summary>
-    /// A MIXED-duration repeat slash is the other grob, and its picture is the double
-    /// percent's — two slashes at slope 1.0, overlapped by 1.6, WITH the two dots. That is
-    /// what makes `slash-count = 0` worth carrying: it is not a count of zero slashes.
-    /// LILYPOND-REF: scm/define-grobs.scm — the DoubleRepeatSlash entry (range-less: one-word
-    ///   grob name);
-    /// LILYPOND-REF: lily/percent-repeat-interface.cc:107-121 beat_slash — <c>x_percent
-    ///   (me, 2)</c> when the count is 0.
-    /// ★ Measured on 2.26.0 (scratch/p282/slashprobe-lpsvg.svg): `M0 0 l0.6788 0 l2.0000
-    /// -2.0000 l-0.6788 0 z` at x = 37.3980 and 38.4768 — origins 1.0788 apart.
-    /// </summary>
-    [Fact]
-    public void Renderer_MixedDurationRepeatSlash_IsTheDottedDouble()
-    {
-        var svg = TestPaper.SvgFromRenderSpec("""
-            part mel { }
-            section A { mel { g8. c16 g8. c16 g8. c16 g8. c16 | g8. c16 g8. c16 g8. c16 g8. c16 | g8. c16 g8. c16 g8. c16 g8. c16 | %3 | } }
-            form { ~A }
-            score { staff mel }
-            """);
-
-        var slashes = Slashes(svg);
-        Assert.Equal(2, slashes.Count);
+        Assert.Equal(slashCount, slashes.Count);
         slashes.Sort((p, q) => p.X0.CompareTo(q.X0));
         Assert.Equal(2.0, slashes[0].W, 2);
-        // ONE decimal for the same rounding reason as the plain slash's, and it still
-        // separates the two grobs: the plain slash's x_width is 0.5569 and its overlap 0.8834.
-        Assert.Equal(0.48 * System.Math.Sqrt(2), slashes[0].XWidth, 1);
         Assert.Equal(2.0 + 0.48 * System.Math.Sqrt(2) - 1.6, slashes[1].X0 - slashes[0].X0, 1);
-        // …and it DOES carry the dots.
         Assert.Equal(2, System.Text.RegularExpressions.Regex.Matches(svg, "<circle ").Count);
+        // The count's digits are the only music glyphs the repetition adds.
+        Assert.Equal(
+            System.Text.RegularExpressions.Regex.Matches(control, "<text class=\"music\"").Count
+                + n.ToString().Length,
+            System.Text.RegularExpressions.Regex.Matches(svg, "<text class=\"music\"").Count);
+    }
+
+    /// <summary>
+    /// An ODD multi-bar sign stands inside its middle bar, so the bar must hold it: on a tab
+    /// staff (staff space 1.5) the three-slash sign is 7.3 wide, more than the blank bar's
+    /// natural width, and the bar's rod (ScoreSideTables.PercentSignBarRods) widens it so the
+    /// slashes clear both bar lines.
+    /// </summary>
+    [Fact]
+    public void Layout_AnOddSignOnATab_FitsInsideItsMiddleBar()
+    {
+        var svg = TestPaper.SvgFromRenderSpec("""
+            octave absolute
+            part bl { clef bass  tuning bass }
+            section A { bl { a,,8 a,, a,, a,, c c c c | d,4 d, d, d, | g,2 g, | %3 | r1 | } }
+            form { ~A }
+            score { staff bl  tab bl }
+            """);
+        // The tab's slashes: the lowest group (the tab staff is below the notation one).
+        var slashes = Slashes(svg);
+        double tabY = slashes.Max(s => s.Cy);
+        var tab = slashes.Where(s => System.Math.Abs(s.Cy - tabY) < 0.5).ToList();
+        Assert.Equal(3, tab.Count);
+        double left = tab.Min(s => s.X0);
+        double right = tab.Max(s => s.X0 + s.XWidth + s.W);
+        // The bar lines either side of the group (thin bar rects — the staves' align).
+        var bars = System.Text.RegularExpressions.Regex.Matches(svg, "<rect x=\"([-\\d.]+)\" y=\"[-\\d.]+\" width=\"0.19\"")
+            .Select(m => double.Parse(m.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture))
+            .Distinct().OrderBy(x => x).ToList();
+        double before = bars.Where(x => x < left).Max();
+        double after = bars.Where(x => x > left).Min();
+        Assert.True(right < after && left > before + 0.19,
+            $"the sign [{left}, {right}] must stand inside its bar ({before}, {after})");
+    }
+
+    /// <summary>
+    /// The beat-slash stencils LilyPond 2.26.0 draws, pinned on the geometry (no spelling
+    /// reaches them since session 905 but an error's recovery). The plain slash is steeper and
+    /// more tightly overlapped than the percent family and carries no dots; the mixed-duration
+    /// one is the percent family's dotted pair.
+    /// ★ Read off LilyPond's own SVG (scratch/p282/slashprobe-lpsvg.svg): the plain slashes of
+    /// `\repeat percent 2 { c16 d e f }` are x_width 0.5569, run 1.1765, height 2.0, origins
+    /// 0.8834 apart; the mixed `g8. c16` pair is x_width 0.6788, run 2.0, origins 1.0788 apart.
+    /// LILYPOND-REF: scm/define-grobs.scm — the RepeatSlash and DoubleRepeatSlash entries
+    ///   (range-less: one-word grob names, HANDOFF §5.2.1⑦).
+    /// </summary>
+    [Fact]
+    public void Geometry_BeatSlashStencils_AreLilyPonds()
+    {
+        var plain = PercentRepeatEngraver.Geometry(isBeatSlash: true, slashCount: 2, isDouble: false, staffSpace: 1.0);
+        Assert.True(plain.PlainSlash);
+        Assert.Equal(2, plain.Slashes);
+        Assert.Equal(1.1765, plain.SlashWidth, 3);
+        Assert.Equal(2.0, plain.SlashHeight, 6);
+        Assert.Equal(0.5569, plain.XWidth, 3);
+        Assert.Equal(0.8834, plain.PairGap, 3);
+
+        var mixed = PercentRepeatEngraver.Geometry(isBeatSlash: true, slashCount: 0, isDouble: false, staffSpace: 1.0);
+        Assert.False(mixed.PlainSlash);
+        Assert.Equal(2, mixed.Slashes);
+        Assert.Equal(2.0, mixed.SlashWidth, 6);
+        Assert.Equal(0.48 * System.Math.Sqrt(2), mixed.XWidth, 6);
+        Assert.Equal(2.0 + 0.48 * System.Math.Sqrt(2) - 1.6, mixed.PairGap, 6);
     }
 
     /// <summary>

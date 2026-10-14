@@ -6,6 +6,15 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+### Multi-bar percent repeats draw the standard sign
+
+- **`%3` and longer draw one sign at the middle of the repeated bars** — on the middle bar line
+  for an even count, in the middle bar for an odd one — with one slash a bar up to four
+  (`%8` keeps four), and **every repeat of 2 bars or more prints its count above the sign**.
+  This is the 1-, 2- and 4-bar repeat sign of SMuFL fonts, MuseScore and Dorico; LilyPond's
+  single slash in the first bar is no longer drawn. The repeated bars never break across a
+  line.
+
 ### Secondary dominants in Roman numerals: `V7/V`, and the bass as a digit
 
 - **A degree entry reads `/` + a numeral as a secondary function** — `V7/V` is D7 in C,
@@ -46,7 +55,7 @@ workflow attaches that section to the GitHub Release verbatim.
   `c4 d e f | % | % | % |` is the bar four times, `a2 b | c'2 d' | %2 | %2 |` the two bars
   three times. `%N` repeats the N bars written just before it, stands alone between bar lines
   (a `break` may stand beside it), and is drawn where it is written — the `%` sign, the double
-  `%` over a `%2`'s bar line, LilyPond's slash for `%3` and up. A mark that repeats nothing is
+  `%` over a `%2`'s bar line, the multi-bar sign for `%3` and up (below). A mark that repeats nothing is
   **LYS1048**, bars a mark repeats that are not whole bars **LYS1049**.
 - **`repeat percent N { … }` and `repeat unfold N { … }` are gone (LYS1047).** The editor's
   quick fix rewrites the item, and the new **`lysc percent <book>`** rewrites a whole book;
