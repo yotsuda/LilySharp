@@ -35,6 +35,13 @@ namespace LilySharp.Core.Semantics;
 /// (the last one short if the span is) — 15/8 in 4/4, `… cis, break fis,,8 …` in the owner's
 /// 銀河鉄道999, where the `|` before the break is missing. A bar line is never made up silently.
 /// </para>
+/// <para>
+/// LILYSHARP-OWN: in LilyPond `|` is only a bar CHECK — Timing draws the bars, a failed check
+/// warns once and the music runs on across the bars it overfills, "one mistake offsets all
+/// subsequent bar checks" (lily/timing-translator.cc:222-240). Lily#'s
+/// written bar line IS the bar (owner's decision, 2026-10-14; semantics are musical validity's
+/// to decide, RULES §5.2): what overfills it is left out, a bar line left out is an error.
+/// </para>
 /// </remarks>
 public static class WrittenBar
 {

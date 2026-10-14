@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 63 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 63 | 観測者がゼロだと自認しているもの |
-| `OWN` | 246 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **372** | |
+| `OWN` | 247 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **373** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -246,7 +246,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（246 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（247 件）
 
 ### `LilySharp.Core/Editing/KeyRespeller.cs`
 - **`KeyRespeller`** LILYSHARP-OWN: an editor aid. The rule:
@@ -369,6 +369,8 @@
 - **`ChordDiagramsKey`** LILYSHARP-OWN: LilyPond's FretBoards context carries its own stringTunings
 ### `LilySharp.Core/Semantics/RepeatPasses.cs`
 - **`RepeatPasses.EndingFor`** LILYSHARP-OWN: a pass no ending names replays the LAST ending — |: A [1. B] :|*3 [2. C]
+### `LilySharp.Core/Semantics/WrittenBar.cs`
+- **`WrittenBar`** LILYSHARP-OWN: in LilyPond `|` is only a bar CHECK — Timing draws the bars, a failed check
 ### `LilySharp.Core/Svg/Collector/BeamDetector.cs`
 - **`BeamDetector.TupletSpan`** LILYSHARP-OWN as a carrier: LilyPond has no such intermediate — its
 - **`BeamDetector.BuildTupletSpans`** LILYSHARP-OWN wiring: LilyPond's beam engravers receive each stem's
