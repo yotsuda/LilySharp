@@ -14,6 +14,9 @@ workflow attaches that section to the GitHub Release verbatim.
   bar cannot be counted for sure (a tuplet, grace or voice block, a pickup, a multi-bar rest) it
   writes nothing. Typing `|` and a space yourself right after is absorbed, one Ctrl+Z takes the
   bar line back, and `lilysharp.typingAids.enabled` turns it off with the other typing aids.
+  Bare durations count (`c8 8 8 8 8 8 8 8`). In `voice { } { }` it moves on instead: the first
+  voice's first bar full writes `} { ` (the next voice), and a later voice as long as the first
+  writes `} ` (the span closes). No bar line is written inside a tuplet, a grace or a repeat.
 
 ### The preview keeps the caret's bar lit
 

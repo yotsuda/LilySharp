@@ -1930,88 +1930,219 @@ function meterAt(text: string, offset: number): number {
     return closedBelow ? NaN : meter;
 }
 
-/** Rule 32: the bar line a space typed at `offset` writes — `text` holding the
- * space there — or null. See the rule for when, and why so often not. */
+/** A running duration: the base (4 for a quarter) and its dots. */
+type Running = { base: number, dots: number };
+
+/** One countable event of rule 32's walk: the duration it spells (none: it carries the
+ * running one), whether it is a bare duration and whether it is an arpeggio. */
+type CountedEvent = { end: number, base?: number, dots: number, bare: boolean, arpeggio: boolean };
+
+/** The events of [from, to) as rule 32 counts them — or null at the first thing that is
+ * not a countable event (a barrier, a note it cannot slot, a dot with no number). */
+function countedEvents(text: string, from: number, to: number): CountedEvent[] | null {
+    const out: CountedEvent[] = [];
+    for (const event of musicEvents(text, from, to, true)) {
+        if (!event.note) { return null; }
+        if (isDigit(text[event.start])) {
+            // A bare duration: its number and dots are all it is.
+            let d = event.start;
+            while (isDigit(text[d])) { d++; }
+            let e = d;
+            while (text[e] === '.') { e++; }
+            out.push({ end: event.end, base: parseInt(text.slice(event.start, d), 10), dots: e - d, bare: true, arpeggio: false });
+            continue;
+        }
+        const slots = noteSlots(text, event.start, event.end);
+        if (!slots) { return null; }
+        const digits = text.slice(slots.marksEnd, slots.digitsEnd);
+        const dots = slots.coreEnd - slots.digitsEnd;
+        if (!digits && dots > 0) { return null; }
+        out.push({
+            end: event.end, base: digits ? parseInt(digits, 10) : undefined, dots, bare: false,
+            arpeggio: text.startsWith('<<', event.start),
+        });
+    }
+    return out;
+}
+
+/** What `events` last, in WHOLE units, from the running duration `running` — which is
+ * left where the last of them leaves it. NaN when one is not a duration. */
+function lengthOf(events: CountedEvent[], running: Running): number {
+    let sum = 0;
+    for (const e of events) {
+        if (e.base !== undefined) { running.base = e.base; running.dots = e.dots; }
+        sum += durationUnits(running.base, running.dots);
+    }
+    return sum;
+}
+
+/** The running duration in force at `at`, a bar line or a block's start inside the block
+ * opening at `blockStart`: the last one spelled before it, read back a bar at a time —
+ * the walk kept to bars, as walkStart explains, not the whole block per keystroke —
+ * else `opening`, the one the block opens with. null when a bar back there cannot be
+ * counted (its events could change the running value in ways the walk cannot see). */
+function runningBefore(text: string, blockStart: number, at: number, opening: Running): Running | null {
+    for (let from = at; from > blockStart;) {
+        const prevStart = walkStart(text, blockStart, from - 1);
+        const prev = countedEvents(text, prevStart, from - 1);
+        if (!prev) { return null; }
+        for (let e = prev.length - 1; e >= 0; e--) {
+            if (prev[e].base !== undefined) { return { base: prev[e].base!, dots: prev[e].dots }; }
+        }
+        from = prevStart;
+    }
+    return { ...opening };
+}
+
+/** The identifier ending just before `end` (blanks skipped), and where it starts. */
+function wordBefore(text: string, end: number): { word: string, at: number } {
+    let q = end - 1;
+    while (q >= 0 && isSpace(text[q])) { q--; }
+    let s = q;
+    while (s >= 0 && isWordChar(text[s])) { s--; }
+    return { word: text.slice(s + 1, q + 1), at: s + 1 };
+}
+
+/** The `{` matching the `}` at `close`, or -1. */
+function openOf(text: string, close: number): number {
+    for (let i = close - 1, depth = 0; i >= 0; i--) {
+        if (text[i] === '}') { depth++; }
+        else if (text[i] === '{') {
+            if (depth === 0) { return i; }
+            depth--;
+        }
+    }
+    return -1;
+}
+
+/** The voice span (GRAMMAR §5.1 VoiceBlock: `voice { … } { … }`, each block optionally
+ * named) whose block opens at `open` — the `voice` keyword's offset, the blocks before
+ * this one, and this one's index — or null when that block is not a voice's. */
+function voiceSpanOf(text: string, open: number)
+    : { keyword: number, before: { open: number, close: number }[], index: number } | null {
+    const before: { open: number, close: number }[] = [];
+    for (let p = open; ;) {
+        const named = wordBefore(text, p);
+        if (named.word === 'voice') { return { keyword: named.at, before, index: before.length }; }
+        // A name (`voice sop {`, `} alt {`), then the keyword or the voice before it.
+        let q = named.word ? named.at : p;
+        if (named.word) {
+            const kw = wordBefore(text, q);
+            if (kw.word === 'voice') { return { keyword: kw.at, before, index: before.length }; }
+        }
+        q--;
+        while (q >= 0 && isSpace(text[q])) { q--; }
+        if (text[q] !== '}') { return null; }
+        const prevOpen = openOf(text, q);
+        if (prevOpen < 0) { return null; }
+        before.unshift({ open: prevOpen, close: q });
+        p = prevOpen;
+    }
+}
+
+/** The words that open a `{ }` holding music that is NOT a run of bars of its own — a
+ * tuplet's and a grace's body, a repeat's alternatives, and blocks of no music at all.
+ * A block they open is not counted by rule 32 (a '|' does not belong inside it). */
+const NOT_BARS = new Set(['grace', 'afterGrace', 'acciaccatura', 'appoggiatura', 'alternative',
+    'repeat', 'tuplet', 'score', 'form', 'paper', 'layout', 'header', 'midi', 'markup']);
+
+/** Whether the block opening at `open` is a run of bars rule 32 may count: one named by
+ * an identifier (`section A {`, a part's `rh {`, `part rh {`) that is not a NOT_BARS
+ * word, and not a tuplet's or repeat's (whose `{` follows a number: `3/2 {`). */
+function barsBlock(text: string, open: number): boolean {
+    const named = wordBefore(text, open);
+    if (!named.word || isDigit(named.word[0]) || NOT_BARS.has(named.word)) { return false; }
+    return !NOT_BARS.has(wordBefore(text, named.at).word);
+}
+
+/** Rule 32: the bar line a space typed at `offset` writes — `text` holding the space
+ * there — or null. See the rule for when, and why so often not. In a voice span it
+ * moves on instead: the first voice's first bar full writes `} { ` (the next voice),
+ * and a later voice as long as the first writes `} ` (the span closes). */
 export function autoBarlinePlan(text: string, offset: number): FixPlan | null {
     if (text[offset] !== ' ' || inStringOrComment(text, offset)) { return null; }
     // The end of what is being written: the rest of the line is blank or closes the block.
     let k = offset + 1;
     while (k < text.length && (text[k] === ' ' || text[k] === '\t')) { k++; }
-    if (k < text.length && text[k] !== '\n' && text[k] !== '\r' && text[k] !== '}') { return null; }
+    const closes = text[k] === '}';
+    if (k < text.length && text[k] !== '\n' && text[k] !== '\r' && !closes) { return null; }
     const before = text.slice(0, offset) + text.slice(offset + 1);
     if (offset === 0 || isSpace(before[offset - 1])) { return null; }
 
     const [blockStart] = blockBounds(before, offset);
-    const barStart = walkStart(before, blockStart, offset);
-    // A pickup is shorter than the meter on purpose; the first bar of a block may be one.
-    if (barStart === blockStart && before.lastIndexOf('partial', offset) >= 0) { return null; }
+    const open = blockStart - 1;
+    if (open < 0 || before[open] !== '{') { return null; }
     const meter = meterAt(before, offset);
     if (!Number.isFinite(meter)) { return null; }
 
-    // The events of [from, to), each with the duration it spells (none: it carries
-    // the running one) — or null at the first thing that is not a countable event.
-    const read = (from: number, to: number) => {
-        const out: { end: number, base?: number, dots: number, bare: boolean, arpeggio: boolean }[] = [];
-        for (const event of musicEvents(before, from, to, true)) {
-            if (!event.note) { return null; }
-            if (isDigit(before[event.start])) {
-                // A bare duration: its number and dots are all it is.
-                let d = event.start;
-                while (isDigit(before[d])) { d++; }
-                let e = d;
-                while (before[e] === '.') { e++; }
-                out.push({ end: event.end, base: parseInt(before.slice(event.start, d), 10), dots: e - d, bare: true, arpeggio: false });
-                continue;
-            }
-            const slots = noteSlots(before, event.start, event.end);
-            if (!slots) { return null; }
-            const digits = before.slice(slots.marksEnd, slots.digitsEnd);
-            const dots = slots.coreEnd - slots.digitsEnd;
-            if (!digits && dots > 0) { return null; }
-            out.push({
-                end: event.end, base: digits ? parseInt(digits, 10) : undefined, dots, bare: false,
-                arpeggio: before.startsWith('<<', event.start),
-            });
-        }
-        return out;
-    };
+    // What the block opens with: a voice's block the running duration in force where its
+    // span opens (each voice of a span starts from there — MEASURED, lysc check 2026-10-15:
+    // `c8 voice { d … } { e … }` counts both voices in eighths), any other a quarter.
+    let opening: Running = { base: 4, dots: 0 };
+    let barsFromBlock = true;     // the block's first bar is a whole bar of the meter
+    const span = voiceSpanOf(before, open);
+    if (span) {
+        const [outerStart] = blockBounds(before, span.keyword);
+        const spanBar = walkStart(before, outerStart, span.keyword);
+        // The span must open on a bar line: mid-bar, its first bar is a remainder.
+        const lead = countedEvents(before, spanBar, span.keyword);
+        if (!lead || lead.length > 0) { return null; }
+        if (spanBar === outerStart && before.lastIndexOf('partial', span.keyword) >= 0) { return null; }
+        const atSpan = runningBefore(before, outerStart, spanBar, opening);
+        if (!atSpan) { return null; }
+        opening = atSpan;
+    } else if (!barsBlock(before, open)) {
+        return null;
+    } else if (before.lastIndexOf('partial', offset) >= 0) {
+        barsFromBlock = false;    // a pickup is shorter than the meter on purpose
+    }
+
     // A '*' scales what it follows (`R1*2`, `c4*2/3`), which the walk passes over.
+    const barStart = walkStart(before, blockStart, offset);
     if (before.slice(barStart, offset).includes('*')) { return null; }
-    const bar = read(barStart, offset);
+    if (barStart === blockStart && !barsFromBlock) { return null; }
+    const bar = countedEvents(before, barStart, offset);
     if (!bar || bar.length === 0) { return null; }
-    // A bare duration repeats the event before it: with none before it in the block
-    // (the bar opens the block), or after an arpeggio, it is LYS0016 — no count.
-    if (bar[0].bare && barStart === blockStart) { return null; }
-    if (bar.some((e, n) => e.bare && n > 0 && bar[n - 1].arpeggio)) { return null; }
     // The space ends the bar's last event — after its glued marks, nothing else.
     if (postEventsEnd(before, bar[bar.length - 1].end) !== offset) { return null; }
-    // The running duration the bar opens with: carried from the bars before, read back
-    // a bar at a time until one spells its own — the walk kept to bars, as walkStart
-    // explains, not the whole block per keystroke. A block opens on a quarter.
-    let base = 4, dots = 0;
-    if (bar[0].base === undefined) {
-        for (let from = barStart; from > blockStart;) {
-            const prevStart = walkStart(before, blockStart, from - 1);
-            const prev = read(prevStart, from - 1);
-            if (!prev) { return null; }
-            const spelled = prev.filter(e => e.base !== undefined);
-            if (spelled.length > 0) {
-                base = spelled[spelled.length - 1].base!;
-                dots = spelled[spelled.length - 1].dots;
-                break;
-            }
-            from = prevStart;
-        }
-    }
-    let sum = 0;
-    for (const e of bar) {
-        if (e.base !== undefined) { base = e.base; dots = e.dots; }
-        sum += durationUnits(base, dots);
-    }
-    if (sum !== meter) { return null; }
-    return {
-        edits: [{ at: offset + 1, ins: '| ' }],
-        caret: offset + 3,
+    // A bare duration repeats the event before it: with none before it in the block, or
+    // after an arpeggio, it is LYS0016 — no count.
+    if (bar[0].bare && barStart === blockStart) { return null; }
+    if (bar.some((e, n) => e.bare && n > 0 && bar[n - 1].arpeggio)) { return null; }
+    const running = runningBefore(before, blockStart, barStart, opening);
+    if (!running) { return null; }
+    const barFull = lengthOf(bar, running) === meter;
+
+    const barline: FixPlan = {
+        edits: [{ at: offset + 1, ins: '| ' }], caret: offset + 3,
         what: 'space typed -> the bar is full: | written after it',
     };
+    if (!span) { return barFull ? barline : null; }
+    if (span.index === 0) {
+        // The first voice: its first bar full moves on to the next voice; a voice already
+        // written over bars (a '|' in it) goes on bar by bar.
+        if (!barFull) { return null; }
+        if (before.slice(blockStart, offset).includes('|')) { return barline; }
+        // `} { ` — a '}' already after the caret (VS Code closed the '{') closes the NEW voice.
+        return {
+            edits: [{ at: offset + 1, ins: '} { ' }], caret: offset + 5,
+            what: 'space typed -> the first voice\'s bar is full: } { opened the next voice',
+        };
+    }
+    // A later voice: as long as the first, the span closes; a bar of it full, a bar line.
+    const first = span.before[0];
+    const firstEvents = countedEvents(before, first.open + 1, first.close);
+    const mine = countedEvents(before, blockStart, offset);
+    if (!firstEvents || !mine || firstEvents.length === 0) { return null; }
+    const firstLength = lengthOf(firstEvents, { ...opening });
+    const myLength = lengthOf(mine, { ...opening });
+    if (myLength === firstLength) {
+        // `} ` — over the '}' already after the caret, if VS Code closed the '{'.
+        const end = closes ? k + 1 : offset + 1;
+        return {
+            edits: [{ at: offset + 1, del: end - (offset + 1), ins: '} ' }], caret: offset + 3,
+            what: 'space typed -> the voice is as long as the first: } closed the span',
+        };
+    }
+    return barFull && myLength < firstLength ? barline : null;
 }

@@ -489,3 +489,40 @@ describe('a space after the note that fills its bar writes the bar line (rule 32
         typed('// c d e r‸', ' ', '// c d e r ‸');                                // a comment
     });
 });
+
+describe('a space after the bar that fills a voice moves on (rule 32, voice { } { })', () => {
+    it('32. the first voice\'s first bar full opens the next voice', () => {
+        typed('m { voice { c d e f‸', ' ', 'm { voice { c d e f } { ‸');
+        typed('m { voice { c d e f‸}', ' ', 'm { voice { c d e f } { ‸}');                  // VS Code closed the '{'
+        typed('m { voice sop { c d e f‸}', ' ', 'm { voice sop { c d e f } { ‸}');
+        typed('m { c1 | voice { c2 d‸}', ' ', 'm { c1 | voice { c2 d } { ‸}');
+    });
+    it('32. a first voice written over bars goes on bar by bar', () => {
+        typed('m { voice { c1 | d4 e f g‸}', ' ', 'm { voice { c1 | d4 e f g | ‸}');
+        typed('m { voice { c1 | d e f g‸}', ' ', 'm { voice { c1 | d e f g ‸}');           // d e f g carry the whole: over
+    });
+    it('32. a later voice as long as the first closes the span; a bar of it short of that, a bar line', () => {
+        typed('m { voice { c d e f } { g2 a‸}', ' ', 'm { voice { c d e f } { g2 a } ‸');
+        typed('m { voice { c d e f } { g2 a‸ }', ' ', 'm { voice { c d e f } { g2 a } ‸');
+        typed('m { voice { c d e f } { g2 a‸', ' ', 'm { voice { c d e f } { g2 a } ‸');
+        typed('m { voice { c1 | d1 } { e1‸}', ' ', 'm { voice { c1 | d1 } { e1 | ‸}');
+        typed('m { voice { c1 | d1 } { e1 | f1‸}', ' ', 'm { voice { c1 | d1 } { e1 | f1 } ‸');
+        typed('m { voice { c d e f } sop { g2 a‸}', ' ', 'm { voice { c d e f } sop { g2 a } ‸');
+    });
+    it('32. each voice counts from the duration in force where the span opens (lysc, 2026-10-15)', () => {
+        typed('m { c8 d e f g a b c | voice { d d d d d d d d‸}', ' ', 'm { c8 d e f g a b c | voice { d d d d d d d d } { ‸}');
+        typed('m { c8 d e f g a b c | voice { d1 } { e e e e e e e e‸}', ' ', 'm { c8 d e f g a b c | voice { d1 } { e e e e e e e e } ‸');
+    });
+    it('32. a span that opens mid-bar, or a voice that opens on a bare duration, is not counted', () => {
+        typed('m { c2 voice { d e‸}', ' ', 'm { c2 voice { d e ‸}');
+        typed('m { c1 | voice { c1 } { 1‸}', ' ', 'm { c1 | voice { c1 } { 1 ‸}');
+    });
+});
+
+describe('rule 32 counts bars, not the bodies inside them', () => {
+    it('32. writes no bar line inside a tuplet, a grace or a repeat\'s alternatives', () => {
+        typed('m { tuplet 3/2 { c4 d e f‸}', ' ', 'm { tuplet 3/2 { c4 d e f ‸}');
+        typed('m { grace { c4 d e f‸}', ' ', 'm { grace { c4 d e f ‸}');
+        typed('m { repeat volta 2 { c d e f‸}', ' ', 'm { repeat volta 2 { c d e f ‸}');
+    });
+});

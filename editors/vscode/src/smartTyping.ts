@@ -207,7 +207,11 @@ export function registerSmartTyping(
                     if (plan) {
                         // Its own undo step: Ctrl+Z takes the bar line back and leaves the space.
                         applyFixWithCaret(editor, text, plan.edits, plan.caret!, true);
-                        autoBarline = { key, caret: plan.caret!, barTyped: false };
+                        // Only a written bar line absorbs a '|' typed after it; after a voice's
+                        // `} { ` or `} ` the next key is the music's.
+                        if (plan.edits.some(e => e.ins === '| ')) {
+                            autoBarline = { key, caret: plan.caret!, barTyped: false };
+                        }
                         log(`smartTyping: ${plan.what}`);
                     }
                 }
