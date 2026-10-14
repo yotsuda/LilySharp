@@ -697,36 +697,46 @@ public class PercentRepeatTests
     }
 
     /// <summary>
-    /// An ODD multi-bar sign stands inside its middle bar, so the bar must hold it: on a tab
-    /// staff (staff space 1.5) the three-slash sign is 7.3 wide, more than the blank bar's
-    /// natural width, and the bar's rod (ScoreSideTables.PercentSignBarRods) widens it so the
-    /// slashes clear both bar lines.
+    /// An ODD multi-bar sign stands at the CENTRE of its middle bar and need not fit inside it:
+    /// its bars take the same rod an even sign's do, half the group plus the padding
+    /// (ScoreSideTables.PercentSignBarRods), so a long odd span leaves the written bars their
+    /// room (the owner, session 905: `%11`'s bars each held a whole sign and squeezed bars
+    /// 12-16). On a tab the 1.5-sized three-slash sign crosses its bar's lines, as an even sign
+    /// crosses its middle bar line.
     /// </summary>
-    [Fact]
-    public void Layout_AnOddSignOnATab_FitsInsideItsMiddleBar()
+    [Theory]
+    [InlineData("staff bl  tab bl", 3)]
+    [InlineData("staff bl", 11)]
+    public void Layout_AnOddSign_StandsAtItsMiddleBarsCentre(string score, int n)
     {
-        var svg = TestPaper.SvgFromRenderSpec("""
+        string body = string.Join(" | ", Enumerable.Repeat("c1", n));
+        var svg = TestPaper.SvgFromRenderSpec($$"""
             octave absolute
+            paper { raggedRight }
             part bl { clef bass  tuning bass }
-            section A { bl { a,,8 a,, a,, a,, c c c c | d,4 d, d, d, | g,2 g, | %3 | r1 | } }
+            section A { bl { {{body}} | break %{{n}} | } }
             form { ~A }
-            score { staff bl  tab bl }
+            score { {{score}} }
             """);
-        // The tab's slashes: the lowest group (the tab staff is below the notation one).
+        // The lowest staff's slashes (the tab's when there is one).
         var slashes = Slashes(svg);
-        double tabY = slashes.Max(s => s.Cy);
-        var tab = slashes.Where(s => System.Math.Abs(s.Cy - tabY) < 0.5).ToList();
-        Assert.Equal(3, tab.Count);
-        double left = tab.Min(s => s.X0);
-        double right = tab.Max(s => s.X0 + s.XWidth + s.W);
-        // The bar lines either side of the group (thin bar rects — the staves' align).
+        double y = slashes.Max(s => s.Cy);
+        var sign = slashes.Where(s => System.Math.Abs(s.Cy - y) < 0.5).ToList();
+        Assert.Equal(System.Math.Min(n, 4), sign.Count);
+        double centre = (sign.Min(s => s.X0) + sign.Max(s => s.X0 + s.XWidth + s.W)) / 2;
         var bars = System.Text.RegularExpressions.Regex.Matches(svg, "<rect x=\"([-\\d.]+)\" y=\"[-\\d.]+\" width=\"0.19\"")
             .Select(m => double.Parse(m.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture))
             .Distinct().OrderBy(x => x).ToList();
-        double before = bars.Where(x => x < left).Max();
-        double after = bars.Where(x => x > left).Min();
-        Assert.True(right < after && left > before + 0.19,
-            $"the sign [{left}, {right}] must stand inside its bar ({before}, {after})");
+        double before = bars.Where(x => x < centre).Max();
+        double after = bars.Where(x => x > centre).Min();
+        // Within half a staff space of the bar's middle: the single sign's own centring
+        // (PercentRepeatEngraver: the measure's X + width / 2), which reads the bar's layout box.
+        Assert.InRange(centre, (before + 0.19 + after) / 2 - 0.5, (before + 0.19 + after) / 2 + 0.5);
+        // The span's bars a blank bar's natural width, not a whole sign's: a ragged line's
+        // middle bar here is under the sign's width plus two paddings for the 11-bar sign.
+        if (n == 11)
+            Assert.True(after - before < PercentRepeatEngraver.Geometry(false, 0, false, 1.0, n).GroupWidth + 1.0,
+                $"the middle bar {after - before:F2} still holds the whole sign");
     }
 
     /// <summary>

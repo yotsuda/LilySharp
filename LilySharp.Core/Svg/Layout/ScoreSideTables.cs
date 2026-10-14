@@ -418,10 +418,10 @@ internal static class ScoreSideTables
     /// <summary>
     /// Per bar index: the least width (bar line ink to bar line ink) every bar of a multi-bar
     /// percent sign's span must have — the SAME for all N bars, so the span's blank bars stand
-    /// evenly however much the sign needs. An odd count's sign stands inside its middle bar,
-    /// which must hold the whole slash group plus <see cref="PercentSignBarPadding"/> each side;
-    /// an even count's straddles the middle bar line, and each bar beside it holds half the
-    /// group plus the padding. 0 where no such sign stands. A tab staff's sign is
+    /// evenly however much the sign needs: each bar holds half the slash group plus
+    /// <see cref="PercentSignBarPadding"/>, the share a sign centred on the span takes of the bars it
+    /// stands over — an even count's straddles the middle bar line, an odd count's stands in the
+    /// middle bar and may cross its bar lines. 0 where no such sign stands. A tab staff's sign is
     /// one-and-a-half-sized.
     /// </summary>
     /// <remarks>
@@ -476,7 +476,11 @@ internal static class ScoreSideTables
                 continue;
             double ss = staffSpace.TryGetValue(pr.StaffIndex, out var s) ? s : 1.0;
             double group = PercentRepeatEngraver.Geometry(false, 0, pr.IsDouble, ss, pr.Bars).GroupWidth;
-            double w = (pr.IsDouble ? group / 2 : group) + (pr.IsDouble ? 1 : 2) * PercentSignBarPadding;
+            // Half the group and one padding, odd or even: the sign may cross the bar lines of the
+            // bar it is centred in, as an even one crosses its middle bar line (the owner: an odd
+            // sign need not fit inside its middle bar — holding it there made %11's eleven bars
+            // each a whole sign wide and squeezed the written bars, session 905).
+            double w = group / 2 + PercentSignBarPadding;
             for (int m = Math.Max(0, pr.FirstCoveredMeasure); m <= Math.Min(n - 1, pr.LastCoveredMeasure); m++)
                 if (w > rod[m])
                     rod[m] = w;
