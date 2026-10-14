@@ -52,7 +52,7 @@ public sealed class RepeatBodyMeasureValidationTests
     private static void AssertClean(string music) =>
         Assert.DoesNotContain(Diagnose(music), d =>
             d.Code == DiagnosticCodes.MeasureIncomplete
-            || d.Code == DiagnosticCodes.MeasureOverflow
+            || d.Code is DiagnosticCodes.MeasureOverflow or DiagnosticCodes.MissingBarLine
             || d.Code == DiagnosticCodes.PickupWithoutPartial);
 
     [Fact]
@@ -101,9 +101,9 @@ public sealed class RepeatBodyMeasureValidationTests
     public void AMeterChangeStillGovernsWhatFollowsIt()
     {
         Assert.Contains(Diagnose("c1 | time 1/4 repeat percent 2 { r1 } | time 4/4 d1 |"),
-            d => d.Code == DiagnosticCodes.MeasureOverflow && d.Message.Contains("1/4"));
+            d => d.Code is DiagnosticCodes.MeasureOverflow or DiagnosticCodes.MissingBarLine && d.Message.Contains("1/4"));
         Assert.Contains(Diagnose("c1 | repeat percent 2 { r1 } time 1/4 r2 | time 4/4 d1 |"),
-            d => d.Code == DiagnosticCodes.MeasureOverflow && d.Message.Contains("1/2 exceeds"));
+            d => d.Code is DiagnosticCodes.MeasureOverflow or DiagnosticCodes.MissingBarLine && d.Message.Contains("1/2 exceeds"));
     }
 
     [Fact]
@@ -111,7 +111,7 @@ public sealed class RepeatBodyMeasureValidationTests
     {
         // Nine inherited eighths in 4/4 — a real overflow inside the body.
         var diags = Diagnose("c8 c c c c c c c | repeat percent 2 { a a a a a a a a a } |");
-        Assert.Contains(diags, d => d.Code == DiagnosticCodes.MeasureOverflow);
+        Assert.Contains(diags, d => d.Code is DiagnosticCodes.MeasureOverflow or DiagnosticCodes.MissingBarLine);
     }
 
     [Fact]
@@ -145,7 +145,7 @@ public sealed class RepeatBodyMeasureValidationTests
     public void AnOverfullLeadInIsReportedWhereItWasWritten()
     {
         const string music = "c1 | r1 r1 r1 repeat percent 4 { r1 | r1 }";
-        var over = Assert.Single(Diagnose(music), d => d.Code == DiagnosticCodes.MeasureOverflow);
+        var over = Assert.Single(Diagnose(music), d => d.Code is DiagnosticCodes.MeasureOverflow or DiagnosticCodes.MissingBarLine);
 
         // The span STARTS at the first of the three whole rests — the enclosing music —
         // rather than inside the repeat's body.
@@ -166,7 +166,7 @@ public sealed class RepeatBodyMeasureValidationTests
     public void TheSameOverflowWithoutARepeatKeepsItsAddress()
     {
         const string music = "c1 | r1 r1 r1 c1 | c1 |";
-        var over = Assert.Single(Diagnose(music), d => d.Code == DiagnosticCodes.MeasureOverflow);
+        var over = Assert.Single(Diagnose(music), d => d.Code is DiagnosticCodes.MeasureOverflow or DiagnosticCodes.MissingBarLine);
         string source = $"part mel {{\n  section A {{ {music} }}\n}}\n";
         Assert.Equal(source.IndexOf("r1", System.StringComparison.Ordinal), over.Span.Start);
     }

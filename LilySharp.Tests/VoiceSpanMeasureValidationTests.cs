@@ -42,7 +42,7 @@ public sealed class VoiceSpanMeasureValidationTests
 
     private static bool AnyFullness(IReadOnlyList<Diagnostic> diags) => diags.Any(d =>
         d.Code == DiagnosticCodes.MeasureIncomplete
-        || d.Code == DiagnosticCodes.MeasureOverflow
+        || d.Code is DiagnosticCodes.MeasureOverflow or DiagnosticCodes.MissingBarLine
         || d.Code == DiagnosticCodes.PickupWithoutPartial
         || d.Code == DiagnosticCodes.MeasureDurationMismatch);
 
@@ -69,7 +69,7 @@ public sealed class VoiceSpanMeasureValidationTests
         // The control: voice 2's second bar holds a whole note where voice 1 made it 3/4. It
         // warns, and on voice 2's own bar — not on the `time` carried in from voice 1.
         const string source = "time 4/4\npart mel {\n  section A { voice { c''1 | time 3/4 c''2. | } { c'1 | c'1 | } }\n}\n";
-        var d = Assert.Single(Diagnose(source), x => x.Code == DiagnosticCodes.MeasureOverflow);
+        var d = Assert.Single(Diagnose(source), x => x.Code is DiagnosticCodes.MeasureOverflow or DiagnosticCodes.MissingBarLine);
         Assert.Equal(source.LastIndexOf("c'1", System.StringComparison.Ordinal), d.Span.Start);
     }
 
@@ -79,7 +79,7 @@ public sealed class VoiceSpanMeasureValidationTests
         // `voice { c d e f } e f g a` engraves eight quarters in one 4/4 bar — exactly what
         // the bare spelling engraves, which warns LYS2002. The span must not hide it.
         var diags = Diagnose("time 4/4\npart mel {\n  section A { voice { c4 d e f } e f g a | }\n}\n");
-        Assert.Contains(diags, d => d.Code == DiagnosticCodes.MeasureOverflow);
+        Assert.Contains(diags, d => d.Code is DiagnosticCodes.MeasureOverflow or DiagnosticCodes.MissingBarLine);
     }
 
     [Fact]
@@ -87,7 +87,7 @@ public sealed class VoiceSpanMeasureValidationTests
     {
         // The control: without the braces the bar is the same music and the same warning.
         var diags = Diagnose("time 4/4\npart mel {\n  section A { c4 d e f e f g a | }\n}\n");
-        Assert.Contains(diags, d => d.Code == DiagnosticCodes.MeasureOverflow);
+        Assert.Contains(diags, d => d.Code is DiagnosticCodes.MeasureOverflow or DiagnosticCodes.MissingBarLine);
     }
 
     [Fact]
@@ -135,7 +135,7 @@ public sealed class VoiceSpanMeasureValidationTests
         var diags = Diagnose($"time 4/4\npart mel {{\n  section A {{ {music} }}\n}}\n");
         Assert.True(warns == diags.Any(d => d.Code == DiagnosticCodes.MeasureIncomplete),
             string.Join("\n", diags.Select(d => d.Message)));
-        Assert.DoesNotContain(diags, d => d.Code == DiagnosticCodes.MeasureOverflow);
+        Assert.DoesNotContain(diags, d => d.Code is DiagnosticCodes.MeasureOverflow or DiagnosticCodes.MissingBarLine);
     }
 
     [Fact]

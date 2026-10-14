@@ -1150,15 +1150,43 @@ internal sealed class MeasureValidator : ISemanticValidator
             + "the music written after the span goes on from there - or writes the rest of the bar itself");
     }
 
-    /// <summary>Emits the overfull-measure warning (a bar longer than its expected fill).</summary>
+    /// <summary>Emits the overfull-measure diagnostic (a bar longer than its expected fill): the
+    /// error for a bar line that looks left out — the span is whole bars, and is laid out as them
+    /// — else the warning that the music past the bar's end is not drawn or played
+    /// (<see cref="WrittenBar"/>, the rule the page and the playback read).</summary>
     private void EmitOverfull(MeasureContent measure, Fraction duration, Fraction expected,
         Fraction? partialLength, TextSpan? leadInSpan = null)
     {
         var span = Reported(measure, leadInSpan);
+        // A bar holding a phrase reference, a repeat or a multi-bar rest closes where its beats
+        // fill, on the page and in the playback, as every bar did before (MeasureModel.Bar.Flowed).
+        // A meter changing inside the bar is the same (no one bar length to hold it to).
+        if (measure.Items.Any(n => n is VariableReferenceSyntax or RestSyntax { MeasureCount: > 1 }
+                || n is RepeatExpressionSyntax rep && rep.RepeatType.Text != "tremolo")
+            || measure.Items.Skip(1).Any(n => n is TimeSignatureSyntax))
+        {
+            _diagnostics.Warning(span, DiagnosticCodes.MeasureOverflow,
+                partialLength != null
+                    ? $"Pickup measure duration {duration} exceeds the declared partial {expected}"
+                    : $"Measure duration {duration} exceeds time signature {MeterText}");
+            return;
+        }
+        int missing = WrittenBar.MissingBarLines(duration.ToDouble(), expected.ToDouble(), _bars.MeterLength.ToDouble());
+        if (missing > 0)
+        {
+            _diagnostics.Error(span, DiagnosticCodes.MissingBarLine,
+                (partialLength != null
+                    ? $"Pickup measure duration {duration} is about the {expected} pickup and {missing} bar(s) of {MeterText}: "
+                    : $"Measure duration {duration} is about {missing + 1} bars of {MeterText}: ")
+                + (missing == 1 ? "a bar line looks to be missing. " : $"{missing} bar lines look to be missing. ")
+                + $"Every note is kept, in bars of {MeterText} - write " + (missing == 1 ? "it" : "them"));
+            return;
+        }
         _diagnostics.Warning(span, DiagnosticCodes.MeasureOverflow,
-            partialLength != null
+            (partialLength != null
                 ? $"Pickup measure duration {duration} exceeds the declared partial {expected}"
-                : $"Measure duration {duration} exceeds time signature {MeterText}");
+                : $"Measure duration {duration} exceeds time signature {MeterText}")
+            + ": the music past the bar line is not drawn or played");
     }
 
     /// <summary>

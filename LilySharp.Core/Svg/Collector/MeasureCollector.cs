@@ -940,13 +940,16 @@ public sealed partial class MeasureCollector
     private Func<int, (Fraction Length, int Start)?>? _writtenBarAt;
 
     /// <summary>
-    /// The written bar <paramref name="position"/> stands in — its length and its start — when a
-    /// written bar line closes it, else null (MeasureBuilder.WrittenBarAt). The scope is the part
-    /// block or the section the position is written in; music inlined from a phrase stands
-    /// outside it and answers null, as music with no bar line after it does.
+    /// The written bar <paramref name="position"/> stands in — its length and its start — or
+    /// null (MeasureBuilder.WrittenBarAt). A written bar runs from a bar line to the next, or to
+    /// the end of its scope (the part block or the section the position is written in). Null
+    /// where a bar line cannot be written — a bar a repeat's flow or an <c>R1*N</c> fills at the
+    /// meter — and for music inlined from a phrase, which stands outside the scope: those bars
+    /// still close where their beats run out.
     /// </summary>
-    /// <remarks>The answer depends on the bar's music up to its bar line, so that much is read
-    /// (folded into MaxSourceRead): an edit further on in the bar re-walks from before it.</remarks>
+    /// <remarks>The answer depends on the bar's music up to its bar line (or the scope's end),
+    /// so that much is read (folded into MaxSourceRead): an edit further on in the bar re-walks
+    /// from before it.</remarks>
     private (Fraction Length, int Start)? WrittenBarAt(int position)
     {
         if (_root?.FindNode(position) is not { } node)
@@ -968,10 +971,11 @@ public sealed partial class MeasureCollector
         {
             if (position < bar.Span.Start || position >= bar.Span.End)
                 continue;
-            if (bar.BarLineEnd < 0 || bar.IsEmpty)
+            if (bar.Flowed || bar.IsEmpty)
                 return null;
             if (_probeRecording != null && _formBarRead == null)
-                _walkMaxSourceRead = Math.Max(_walkMaxSourceRead, bar.BarLineEnd);
+                _walkMaxSourceRead = Math.Max(_walkMaxSourceRead,
+                    bar.BarLineEnd >= 0 ? bar.BarLineEnd : scope.FullSpan.End);
             return (bar.Duration, bar.Span.Start);
         }
         return null;

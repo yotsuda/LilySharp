@@ -2259,6 +2259,19 @@ RepeatBarline  = '|:' | ':|:' | RepeatEnd ;          (* FORM ONLY — changes th
 RepeatEnd      = ':|' , [ '*' , Integer ] ;          (* :|*N plays the span N times, default 2;
                                                         not beside endings (LYS1042) *)
 
+(* THE BAR LINES ARE THE BARS (owner's decision, 2026-10-14). Unlike LilyPond, where '|' is
+   only a check and Timing draws the bars, a written bar line ends a bar and nothing else does:
+     - a bar with too much in it is still ONE bar — what starts past its end is neither drawn
+       nor played (LYS2002, a warning); a note sounding across the end is drawn whole and
+       cut in the playback;
+     - a span within a quarter of a bar of two or more whole bars, with no bar line inside,
+       is a bar line LEFT OUT: an ERROR (LYS2017), drawn and played in bars of the meter with
+       every note kept until the bar line is written;
+     - where no bar line can be written — a repeat's turns, an 'R1*N', a phrase body inlined
+       into the bar, a 'time' changing inside it — the bars still close where the beats fill.
+   The playback re-syncs every part at every bar line: a short bar is filled with silence.
+   One rule, one place: Semantics.WrittenBar (page: MeasureBuilder, playback: MidiExporter). *)
+
 (* REPEAT BARLINES ARE FORM-ONLY (user decision, 2026-08-31; LYS1034). Written in music
    they are an error — see the note on MusicItem in §8.1 for the line the decision draws.
    What is left to say about them is what happens INSIDE a form:

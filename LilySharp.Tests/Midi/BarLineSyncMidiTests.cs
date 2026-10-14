@@ -131,6 +131,24 @@ public class BarLineSyncMidiTests
     }
 
     [Fact]
+    public void TheMusicAfterTheLastBarLine_IsHeldToItsBarToo()
+    {
+        // The lane's end closes the span as a bar line would (CloseLane): 11/8 is one bar, and
+        // the f past its end is not played, as the page does not draw it.
+        var notes = Notes(Book("c'1 | d1", "c'1 | g2 g f4."), "p2");
+        Assert.Equal(new[] { 0, Bar, Bar + 960 }, notes.Select(n => n.StartTick));
+    }
+
+    [Fact]
+    public void ALeftOutBarLineBeforeAShortBar_KeepsEveryNote()
+    {
+        // 9/4 after a full bar: two bars and a beat, a bar line left out (LYS2017) — the beat
+        // sounds, and its short bar is filled out to the bar line, as the page draws it.
+        var notes = Notes(Book("c'1 | d | e | f | g", "c'1 | d1 e1 g4 | f1"), "p2");
+        Assert.Equal(new[] { 0, Bar, 2 * Bar, 3 * Bar, 4 * Bar }, notes.Select(n => n.StartTick));
+    }
+
+    [Fact]
     public void AMultiBarRest_IsNotCutToOneBar()
     {
         var notes = Notes(Book("c'1 | d | e | f", "c'1 | R1*2 | f1"), "p2");

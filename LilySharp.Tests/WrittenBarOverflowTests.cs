@@ -14,7 +14,9 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+using System.Collections.Generic;
 using System.Linq;
+using LilySharp.Core.Semantics;
 using LilySharp.Core.Svg.Collector;
 using LilySharp.Core.Svg.Model;
 using LilySharp.Core.Syntax;
@@ -82,11 +84,50 @@ public class WrittenBarOverflowTests
     }
 
     [Fact]
-    public void MusicWithNoBarLines_StillFillsBarAfterBar()
+    public void TheMusicAfterTheLastBarLine_IsHeldToItsBarToo()
+    {
+        // No bar line after `g2 g f4.`: the span still ends where the music does, and 11/8 is
+        // one bar with too much in it — the f is not drawn, as it would not be before a `|`.
+        var bars = Bars("c'1 | g2 g f4.", "c'1 | d1");
+        Assert.Equal(2, bars.Length);
+        Assert.Equal(2, Sounding(bars[1]));
+    }
+
+    [Fact]
+    public void ALeftOutBarLineBeforeAShortBar_KeepsEveryNote()
+    {
+        // 9/4: two bars and a beat with no bar line — within a quarter of two bars, so a bar
+        // line left out; the beat is a short third bar, not music to drop.
+        var bars = Bars("c'1 | d1 e1 g4 | f1", "c'1 | d | e | f | g");
+        Assert.Equal(5, bars.Length);
+        Assert.Equal(5, bars.Sum(Sounding));
+    }
+
+    [Fact]
+    public void ALeftOutBarLine_IsAnError_AndAnOverfullBarAWarning()
+    {
+        static List<Diagnostic> Measure(string music) => SemanticValidation.Run(SyntaxTree.Parse(
+            $"part m {{ section A {{ {music} }} }} form {{ A }} score {{ staff m }}"))
+            .Where(d => d.Code is DiagnosticCodes.MissingBarLine or DiagnosticCodes.MeasureOverflow).ToList();
+
+        var left = Assert.Single(Measure("c'1 | d8 d d d d d d d e e e e e e e | f1 |"));
+        Assert.Equal(DiagnosticCodes.MissingBarLine, left.Code);
+        Assert.Equal(DiagnosticSeverity.Error, left.Severity);
+
+        var over = Assert.Single(Measure("c'1 | g2 g c,8 | e1 |"));
+        Assert.Equal(DiagnosticCodes.MeasureOverflow, over.Code);
+        Assert.Contains("not drawn or played", over.Message);
+    }
+
+    [Fact]
+    public void MusicWithNoBarLines_StillFillsBarAfterBar_AndIsAnError()
     {
         var bars = Bars("c'1 d e f");
         Assert.Equal(4, bars.Length);
         Assert.All(bars, b => Assert.Equal(1, Sounding(b)));
+        Assert.Contains(SemanticValidation.Run(SyntaxTree.Parse(
+                "part m { section A { c'1 d e f } } form { A } score { staff m }")),
+            d => d.Code == DiagnosticCodes.MissingBarLine);
     }
 
     [Fact]

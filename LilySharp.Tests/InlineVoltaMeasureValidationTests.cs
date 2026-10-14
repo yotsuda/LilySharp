@@ -55,7 +55,7 @@ public sealed class InlineVoltaMeasureValidationTests
     private static IEnumerable<Diagnostic> BarFullness(string music) =>
         Diagnose(music).Where(d =>
             d.Code == DiagnosticCodes.MeasureIncomplete
-            || d.Code == DiagnosticCodes.MeasureOverflow
+            || d.Code is DiagnosticCodes.MeasureOverflow or DiagnosticCodes.MissingBarLine
             || d.Code == DiagnosticCodes.PickupWithoutPartial);
 
     private static void AssertClean(string music) => Assert.Empty(BarFullness(music));
@@ -74,7 +74,7 @@ public sealed class InlineVoltaMeasureValidationTests
         // was one opaque zero-duration item this was silent — the only bar in the book
         // nobody counted.
         Assert.Contains(BarFullness("|: c'4 c' c' c' | [1. c'1 c'1 c'1 | ] :| [2. c'4 c' c' c' | ]"),
-            d => d.Code == DiagnosticCodes.MeasureOverflow);
+            d => d.Code is DiagnosticCodes.MeasureOverflow or DiagnosticCodes.MissingBarLine);
 
     [Fact]
     public void AWellFormedEndingIsSilent() =>

@@ -233,7 +233,7 @@ public class DocExamplesParseTests
                 var wrapped = SyntaxTree.Parse(WrapFragment(code, tree));
                 if (!wrapped.HasErrors)
                 {
-                    var semantic = SemanticErrors(wrapped);
+                    var semantic = SemanticErrors(wrapped, fragment: true);
                     if (semantic == null)
                         continue;
                     failures.Add($"block #{index} (as a section body, SEMANTIC):\n{code}\n  -> {semantic}");
@@ -267,12 +267,16 @@ public class DocExamplesParseTests
     /// ⚠️ ERRORS only. Warnings are deliberately allowed: an illustration of two notes has
     /// no reason to fill a 4/4 bar, and demanding it would push padding rests into examples
     /// whose whole job is to show one idea.
+    /// ⚠️ …and a FRAGMENT is a catalog — one notation a line, `c4@ppp` `c4@pp` … — not a
+    /// passage, so the bar line it would need between its lines (LYS2017, a span of whole bars
+    /// with no bar line) is no claim it makes either. A complete document is held to it.
     /// </remarks>
-    private static string? SemanticErrors(SyntaxTree tree)
+    private static string? SemanticErrors(SyntaxTree tree, bool fragment = false)
     {
         var errors = LilySharp.Core.Semantics.SemanticValidation.Run(tree)
             .Where(d => d.Severity == DiagnosticSeverity.Error)
             .Where(d => !FragmentCodes.Contains(d.Code))
+            .Where(d => !(fragment && d.Code == DiagnosticCodes.MissingBarLine))
             .ToList();
         return errors.Count == 0 ? null : string.Join(" | ", errors.Select(d => d.Message));
     }

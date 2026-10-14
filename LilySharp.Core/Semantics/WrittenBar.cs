@@ -30,16 +30,18 @@ namespace LilySharp.Core.Semantics;
 /// score, laid out at their length, lost its last bar).
 /// </para>
 /// <para>
-/// THE ONE EXCEPTION IS A BAR LINE LEFT OUT: a span within a quarter of a bar of two or more whole
-/// bars is that many bars, and keeps every note — 15/8 in 4/4, `… cis, break fis,,8 …` in the
-/// owner's 銀河鉄道999, where the `|` before the break is missing.
+/// THE ONE EXCEPTION IS A BAR LINE LEFT OUT, AND IT IS AN ERROR (LYS2017): a span within a quarter
+/// of a bar of two or more whole bars keeps every note, its bars closing where their beats fill
+/// (the last one short if the span is) — 15/8 in 4/4, `… cis, break fis,,8 …` in the owner's
+/// 銀河鉄道999, where the `|` before the break is missing. A bar line is never made up silently.
 /// </para>
 /// </remarks>
 public static class WrittenBar
 {
     /// <summary>
-    /// How many bars of the meter a written span holds after the bar it opened, when it is long
-    /// enough to be bars with a bar line left out; 0 when it is one bar (with too much in it).
+    /// How many bar lines a written span looks to be missing — the whole bars of the meter it
+    /// holds after the bar it opened, when it is within a quarter of a bar of that; 0 when it is
+    /// one bar (with too much in it).
     /// </summary>
     /// <param name="span">The span's length.</param>
     /// <param name="first">The bar it opened: the meter, or a pickup.</param>

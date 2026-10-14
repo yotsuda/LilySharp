@@ -111,7 +111,7 @@ public class LineLeadingSourcePositionTests
             + "part m { clef bass }\n"
             + "section A {\n"
             + "  m {\n"
-            + "    c1 c1 |\n"
+            + "    c1 c4 |\n"
             + "  }\n"
             + "}\n"
             + "form { A }\n"

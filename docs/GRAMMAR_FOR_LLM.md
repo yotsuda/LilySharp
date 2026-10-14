@@ -65,8 +65,8 @@ section Main {                  // a section binds music to each part by name
                                 // level, a part header and a part's first bar reject it).
                                 // Later in a part's music, `| partial 2. r2. |` makes THAT
                                 // bar 3 beats long — written in every part sharing the bar
-  rightHand { motif g2 g | }
-  leftHand  { c2 c | g2 g | }
+  rightHand { g8 | motif g2 g | }
+  leftHand  { r8 | c2 c | g2 g | }
 }
 
 form { Main }              // playback/print order of sections
@@ -257,6 +257,12 @@ c8 d e f    // all eighths
 bes8 8 8 8  // bes eighths, written once
 <c e g>4 4  // the chord again
 ```
+
+**Bar lines are the bars.** Write `|` at the end of every bar. A bar with too much in it stays
+one bar: what starts past its end is not drawn or played (LYS2002). Music that is two or more
+whole bars with no `|` between them (within a quarter of a bar) is an ERROR (LYS2017) — it is
+drawn and played in bars of the meter, every note kept, until the `|` is written. A repeat's
+turns, an `R1*N` and a phrase body still close their bars where the beats fill.
 
 ## Notes, rests, chords
 

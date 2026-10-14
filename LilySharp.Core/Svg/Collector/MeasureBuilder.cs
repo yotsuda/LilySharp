@@ -95,19 +95,20 @@ internal sealed class MeasureBuilder
     private BreakKind? _followingBreak;
 
     /// <summary>
-    /// The written bar a source position stands in — its length and where it starts — when a
-    /// written bar line closes it, else null (the collector's lookup, MeasureModel's bars).
-    /// Asked when the beats run out with no bar line right after: a written bar with too much
-    /// in it is still ONE bar, and what starts after its end is not drawn
-    /// (<see cref="Semantics.WrittenBar"/>, owner's decision 2026-10-14). Null: every fill
-    /// closes a bar, as before.
+    /// The written bar a source position stands in — its length and where it starts: from a bar
+    /// line to the next, or to the scope's end — else null (the collector's lookup, MeasureModel's
+    /// bars). Asked when the beats run out with no bar line right after. Lily#'s bar lines ARE
+    /// the bars (owner's decision 2026-10-14): a written bar with too much in it is still ONE
+    /// bar, and what starts after its end is not drawn; only a bar line that looks left out is
+    /// made up for, and reported (LYS2017, <see cref="Semantics.WrittenBar"/>). Null — a bar a
+    /// repeat's flow or an <c>R1*N</c> fills, music inlined from a phrase, or no lookup — closes
+    /// a bar at every fill, as every fill did before.
     /// </summary>
     internal Func<int, (Fraction Length, int Start)?>? WrittenBarAt { get; init; }
 
-    // The written bar the last fill asked about (its start, -1 for none), how many bars it
-    // has already closed at a fill, and how long its first bar was (the pickup or the meter).
+    // The written bar the last fill asked about (its start, -1 for none) and how long its first
+    // bar was (the pickup or the meter).
     private int _spanKey = -1;
-    private int _spanCloses;
     private Fraction _spanFirstBar;
     // The written bar is past its end: the bar stays open for its written bar line, and the
     // music until then is not drawn.
@@ -1322,12 +1323,13 @@ internal sealed class MeasureBuilder
     }
 
     /// <summary>
-    /// True when the beats have run out INSIDE a written bar that has no more bars to give: it
-    /// is one bar with too much in it (or the last of the bars a left-out bar line makes —
-    /// <see cref="Semantics.WrittenBar"/>), so the bar stays open for its written bar line and
-    /// the music until then is not drawn (<see cref="_overflowing"/>). False closes the bar at
-    /// the fill, as every fill did before: a bar line right after it, music with no bar line
-    /// to close it, or a written bar that holds whole bars.
+    /// True when the beats have run out INSIDE a written bar that is one bar with too much in
+    /// it: the bar stays open for its written bar line and the music until then is not drawn
+    /// (<see cref="_overflowing"/>). False closes the bar at the fill, as every fill did before:
+    /// a bar line right after it, a bar the lookup does not hold to its bar lines, or a span
+    /// that is bars with a bar line left out (<see cref="Semantics.WrittenBar"/>, LYS2017 —
+    /// every note kept). The span's first bar (a pickup, or the meter) is the one its first
+    /// fill closed, so a later fill in it asks the same question.
     /// </summary>
     /// <remarks>
     /// Until 2026-10-14 the fill always closed the bar, and what was left became bars of its
@@ -1341,20 +1343,13 @@ internal sealed class MeasureBuilder
         if (written.Start != _spanKey)
         {
             _spanKey = written.Start;
-            _spanCloses = 0;
             _spanFirstBar = _bars.BarLength;
         }
-        var meter = _bars.MeterLength;
-        int bars = 1 + Semantics.WrittenBar.MissingBarLines(
-            written.Length.ToDouble(), _spanFirstBar.ToDouble(), meter.ToDouble());
-        var whole = _spanFirstBar + meter * new Fraction(bars - 1, 1);
-        if (_spanCloses + 1 >= bars && written.Length > whole)
-        {
-            _overflowing = true;
-            return true;
-        }
-        _spanCloses++;
-        return false;
+        if (written.Length <= _spanFirstBar || Semantics.WrittenBar.MissingBarLines(
+                written.Length.ToDouble(), _spanFirstBar.ToDouble(), _bars.MeterLength.ToDouble()) > 0)
+            return false;
+        _overflowing = true;
+        return true;
     }
 
     /// <summary>
@@ -1683,8 +1678,7 @@ internal sealed class MeasureBuilder
     {
         bool atScopeStart = _atScopeStart;
         _atScopeStart = false; // any written barline ends the scope's opening span
-        _spanKey = -1; // …and the written bar the fills were counted in
-        _spanCloses = 0;
+        _spanKey = -1; // …and the written bar the fills asked about
         if (barType == BarlineType.RepeatStart)
         {
             // |: opens the NEXT measure; close anything pending first. A directive-only
@@ -2064,9 +2058,8 @@ internal sealed class MeasureBuilder
         int SectionHeadMeasures,
         TimeSignature MeterInForce,
         // A fill inside a written bar that holds several (a bar line left out) leaves a clean
-        // boundary with the bar's count running (OverflowsTheWrittenBar).
+        // boundary inside the span (OverflowsTheWrittenBar).
         int SpanKey,
-        int SpanCloses,
         Fraction SpanFirstBar);
 
     /// <summary>True at a checkpointable boundary: nothing pending in the
@@ -2090,7 +2083,7 @@ internal sealed class MeasureBuilder
         _measures.Count > 0 ? _measures[^1] : null,
         _logicalCount, _barPosition, _alternativeStart, _alternativeUndo, _inEnding,
         _pendingPlay, _sectionHead, _sectionHeadMeasures, MeterInForce,
-        _spanKey, _spanCloses, _spanFirstBar);
+        _spanKey, _spanFirstBar);
 
     /// <summary>Restores a captured boundary state, adopting <paramref name="prefix"/>
     /// as the measures emitted before it. The <see cref="MeasureCompleted"/> hook
@@ -2132,7 +2125,6 @@ internal sealed class MeasureBuilder
         _sectionHeadMeasures = ck.SectionHeadMeasures;
         MeterInForce = ck.MeterInForce;
         _spanKey = ck.SpanKey;
-        _spanCloses = ck.SpanCloses;
         _spanFirstBar = ck.SpanFirstBar;
         _overflowing = false;
     }

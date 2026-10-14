@@ -389,7 +389,7 @@ public class DoubleAngleArpeggioTests
     {
         var v = new MeasureValidator();
         v.Validate(Parse(music));
-        return v.Diagnostics.Any(d => d.Code == DiagnosticCodes.MeasureOverflow);
+        return v.Diagnostics.Any(d => d.Code is DiagnosticCodes.MeasureOverflow or DiagnosticCodes.MissingBarLine);
     }
 
     [Fact]

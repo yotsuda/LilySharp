@@ -46,11 +46,13 @@ namespace LilySharp.Core.Semantics;
 internal static class MeasureModel
 {
     /// <summary>One measure of a flattened scope: its total sounded duration, the source
-    /// span to squiggle, whether it is an explicit empty <c>| |</c> placeholder, and the end of
-    /// the written bar line that closed its music, or -1 (<see cref="WrittenBar"/> reads only
-    /// closed bars: the music after a scope's last bar line, or a bar a repeat's flow filled,
-    /// has no written end).</summary>
-    internal readonly record struct Bar(Fraction Duration, TextSpan Span, bool IsEmpty = false, int BarLineEnd = -1);
+    /// span to squiggle, whether it is an explicit empty <c>| |</c> placeholder, the end of
+    /// the written bar line that closed its music (-1 for the music after a scope's last bar
+    /// line), and whether the bar was cut at the meter rather than written — a repeat's flow
+    /// or one of the bars of an <c>R1*N</c>, the two places a bar line cannot be written
+    /// (<see cref="WrittenBar"/> holds every other bar to its bar lines).</summary>
+    internal readonly record struct Bar(Fraction Duration, TextSpan Span, bool IsEmpty = false, int BarLineEnd = -1,
+        bool Flowed = false);
 
     /// <summary>
     /// Flattens <paramref name="scope"/> (expanding phrase references via
@@ -99,16 +101,19 @@ internal static class MeasureModel
         bool senzaMisura = false; // time none: no auto-complete boundary exists
         int repeatFlow = 0;       // depth of percent/unfold expansions in flight
         int plannedFor = -1;      // the bar plannedMeterAt was last asked for
+        int phraseDepth = 0;      // phrase bodies being inlined
+        bool flows = false;       // the bar under construction holds music of a repeat's flow or a phrase body
 
         void FlushMusic(int barLineEnd = -1)
         {
             if (current.Count == 0)
                 return;
-            bars.Add(new Bar(total, MeasureDurations.GetSpan(current), BarLineEnd: barLineEnd));
+            bars.Add(new Bar(total, MeasureDurations.GetSpan(current), BarLineEnd: barLineEnd, Flowed: flows));
             current = new List<SyntaxNode>();
             total = Fraction.Zero;
             confirmable = false;
             atScopeStart = false;
+            flows = false;
         }
 
         foreach (var entry in stream)
@@ -126,6 +131,7 @@ internal static class MeasureModel
                 // extracting a section into a phrase cannot silently lose a bar. EXIT
                 // re-arms the boundary only when the phrase left a CLOSED bar to attach to,
                 // so an outer `|` right after `~x` confirms that close instead of a gap.
+                phraseDepth += boundary.IsEnter ? 1 : -1;
                 if (!boundary.IsEnter)
                 {
                     confirmable = current.Count == 0 && bars.Count > 0;
@@ -156,6 +162,10 @@ internal static class MeasureModel
                 if (time.IsSenzaMisura) senzaMisura = true;
                 else { senzaMisura = false; meter = DurationCalculator.ParseTimeSignature(time.Beats, time.BeatType); }
                 meterChanges?.Add((bars.Count, time, current.Count > 0));
+                // A meter changing inside a written span leaves no one bar length to hold it
+                // to: its bars close where their beats fill (Flowed), as they always did.
+                if (current.Count > 0)
+                    flows = true;
                 continue;
             }
             if (node is BarlineSyntax bar)
@@ -207,6 +217,10 @@ internal static class MeasureModel
                 itemDuration = meter - total is { Numerator: > 0 } left ? left : meter;
             total += itemDuration;
             current.Add(node);
+            // A bar holding a repeat's flow, a phrase body or an `R1*N` closes where its beats
+            // fill (Bar.Flowed): the page lets those run on as it always did.
+            if (repeatFlow > 0 || phraseDepth > 0 || node is RestSyntax { MeasureCount: > 1 })
+                flows = true;
 
             // While a repeat expansion is in flight the bar auto-completes at the meter,
             // as the collector renders it (MeasureBuilder.AddDuration): a repeat opening
@@ -217,10 +231,11 @@ internal static class MeasureModel
             // right on it confirms the close instead of opening an empty `| |` bar.
             if (repeatFlow > 0 && !senzaMisura && total >= meter)
             {
-                bars.Add(new Bar(total, MeasureDurations.GetSpan(current)));
+                bars.Add(new Bar(total, MeasureDurations.GetSpan(current), Flowed: true));
                 current = new List<SyntaxNode>();
                 total = Fraction.Zero;
                 confirmable = true;
+                flows = false;
             }
 
             // `R1*N` is N BARS of silence written as one token, and it is written with ONE
@@ -246,7 +261,7 @@ internal static class MeasureModel
                 // charges it: `R1*2000000000` parses, and this loop would faithfully model
                 // that many bars on the diagnostics path.
                 for (int extra = 1; extra < written && budget.Charge(1); extra++)
-                    bars.Add(new Bar(itemDuration, node.Span));
+                    bars.Add(new Bar(itemDuration, node.Span, Flowed: true));
         }
         FlushMusic(); // a trailing partial bar (music after the last barline) counts
         return bars;

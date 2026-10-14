@@ -1083,6 +1083,14 @@ public static class DiagnosticCodes
     /// duration (<c>R2</c>).</summary>
     public const string BareBarRestNeedsABar = "LYS2016";
 
+    /// <summary>Measure error: a span between two bar lines (or after the last one) holds two or
+    /// more whole bars, within a quarter of a bar — a bar line looks to be missing. The page and
+    /// the playback keep every note, in bars of the meter (<see cref="Semantics.WrittenBar"/>),
+    /// but a bar line is never inferred silently: Lily#'s bar lines are the bars (owner's
+    /// decision, 2026-10-14). Any other span longer than its bar is LYS2002, and what starts past
+    /// the bar's end is not drawn or played.</summary>
+    public const string MissingBarLine = "LYS2017";
+
     /// <summary>Measure warning: a rendered score holds NO BARS AT ALL — every part it
     /// draws is empty, so the file compiles to a blank page.
     /// <para>

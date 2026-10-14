@@ -161,14 +161,20 @@ public class CompletionAuditTests
     {
         var labels = LilySharpLanguageServer.GetTimeCompletions().Items.Select(i => i.Label!).ToList();
         Assert.Contains("none", labels);
+        // The book's one bar is 4/4 whatever the meter offered, so the bar-length diagnostics
+        // (a 2/4 meter reads it as two bars with the bar line between them missing) are not the
+        // question here.
+        static bool NotABarLength(Diagnostic d)
+            => d.Code is not (DiagnosticCodes.MeasureOverflow or DiagnosticCodes.MeasureIncomplete
+                or DiagnosticCodes.MissingBarLine);
         foreach (string time in labels)
         {
-            AssertCompiles(Book(top: $"time {time}"), $"top-level `time {time}`");
+            var top = Errors(Book(top: $"time {time}")).Where(NotABarLength).ToList();
+            Assert.True(top.Count == 0, $"top-level `time {time}` is refused: "
+                + string.Join(" | ", top.Select(d => $"{d.Code} {d.Message}")));
             // Senza misura counts no bars, so the bar is left unclosed for it.
             string music = time == "none" ? "time none c4 d e f g" : $"time {time} c4 d e f |";
-            var errors = Errors(Book(music: music))
-                .Where(d => d.Code != DiagnosticCodes.MeasureOverflow && d.Code != DiagnosticCodes.MeasureIncomplete)
-                .ToList();
+            var errors = Errors(Book(music: music)).Where(NotABarLength).ToList();
             Assert.True(errors.Count == 0, $"in-music `time {time}` is refused: "
                 + string.Join(" | ", errors.Select(d => $"{d.Code} {d.Message}")));
         }
@@ -500,7 +506,8 @@ public class CompletionAuditTests
             string line = $"{directive} {value[directive]}";
             // A pickup shortens the bar, so the bar-length warnings are not the question here.
             static bool NotABarLength(Diagnostic d)
-                => d.Code != DiagnosticCodes.MeasureOverflow && d.Code != DiagnosticCodes.MeasureIncomplete;
+                => d.Code is not (DiagnosticCodes.MeasureOverflow or DiagnosticCodes.MeasureIncomplete
+                    or DiagnosticCodes.MissingBarLine);
             var header = Errors($"part m {{ clef treble section A {{ c4 d e f | }} }}\nsection A {{ {line} }}\n"
                                 + "form { A }\nscore { staff m }").Where(NotABarLength).ToList();
             Assert.True(header.Count == 0, $"`{line}` in a by-part section header is refused: "
