@@ -1326,6 +1326,17 @@ internal sealed class MultiStaffLayouter
             // (the middle of a double percent pair) — EmptyBarSprings' own branch.
             bool closingBreakable = startMeasureIndex == measures.Length - 1
                 || measures[startMeasureIndex].LineBreakPermission != BreakPermission.Forbid;
+            // LILYSHARP-OWN: a bar of a sign of three or more bars (Lily#'s own; LilyPond's
+            //   N-bar repetition is a slash in a column of its own) stretches by its bar-to-bar
+            //   pair alone, as the span's other bars do.
+            //   departs from: the forbidden branch's stretch, its IDEAL from the prefix column
+            //     (measured for the double percent, which keeps it): it makes the clef and the key
+            //     stretch too, so on a justified line the span's first bar grew with the key —
+            //     the owner's percent4-center.lys (session 905), `key fis major` then `%4` on a
+            //     line of its own: 35.9 / 18.5 / 18.5 / 18.5 against 23.1 apiece with no key.
+            //   observed by: PercentRepeatTests.Layout_AJustifiedLineOpeningOnASpan_StandsEvenly.
+            if (ScoreSideTables.InMultiBarPercentSpan(score, startMeasureIndex))
+                closingBreakable = true;
             return LineStartColumn.EmptyBarLineStartSpring(
                 score, prefix.Columns, SpacingRules.ClefGroupInkLeft(score), timeInkWidth,
                 startMeasureIndex, measureStartBarWidth, closing,

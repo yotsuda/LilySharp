@@ -438,6 +438,19 @@ internal static class ScoreSideTables
     internal static IReadOnlyList<double> PercentSignBarRods(MultiStaffScore score)
         => _percentSignBarRodsByScore.GetValue(score, ComputePercentSignBarRods);
 
+    /// <summary>Whether bar <paramref name="measureIndex"/> is one of the blank bars of a sign of
+    /// three or more bars (PercentRepeatItem.Bars) — Lily#'s own sign, whose span stands evenly.</summary>
+    internal static bool InMultiBarPercentSpan(MultiStaffScore score, int measureIndex)
+    {
+        if (score.PercentRepeats.IsDefaultOrEmpty)
+            return false;
+        foreach (var pr in score.PercentRepeats)
+            if (!pr.IsBeatSlash && pr.Bars >= 3
+                && measureIndex >= pr.FirstCoveredMeasure && measureIndex <= pr.LastCoveredMeasure)
+                return true;
+        return false;
+    }
+
     private static double[] ComputePercentSignBarRods(MultiStaffScore score)
     {
         int n = score.MeasureCount;

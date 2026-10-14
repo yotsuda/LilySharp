@@ -40,7 +40,7 @@ const WRITTEN = JSON.stringify({
     ],
     measures: [
         { measure: 4, part: 'rh', line: 32, page: 1, box: [1292, 900, 2223, 1040] },
-        // (a reader since LilySharp-Omr c22fe99 writes the staff too; the rh bar is an older one's)
+        // (a reader since LilySharp-Omr's "side file: staff" writes the staff too; the rh bar is an older one's)
         { measure: 4, part: 'lh', line: 33, page: 1, box: [1292, 1046, 2223, 1203], staff: [1292, 1085, 2223, 1164] },
         { measure: 5, part: 'rh', line: 34, page: null, box: null },
     ],
@@ -71,7 +71,7 @@ describe('the scan page script', () => {
 });
 
 // What the scan tints, as the preview tints a bar's staff: the reader's staff (LilySharp-Omr
-// c22fe99), or from an older reader, which drew a part's bar two staff spaces past its outer lines
+// "side file: staff"), or from an older reader, which drew a part's bar two staff spaces past its outer lines
 // (Sidecar.AddPage), the box's middle half.
 describe('a bar\'s staff on the scan', () => {
     it('is the reader\'s staff where it wrote one', () => {

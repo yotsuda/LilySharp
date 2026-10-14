@@ -14,16 +14,16 @@
 |---|---:|---|
 | `APPROX` | 63 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 63 | 観測者がゼロだと自認しているもの |
-| `OWN` | 256 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **382** | |
+| `OWN` | 257 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **383** | |
 
 ## 密度の高いファイル（上位 12）
 
 | ファイル | 件数 |
 |---|---:|
 | `LilySharp.Core/Svg/Layout/MusicMarkEngraver.cs` | 21 |
+| `LilySharp.Core/Svg/Layout/MultiStaffLayouter.cs` | 13 |
 | `LilySharp.Core/Svg/EngravingDefaults.cs` | 12 |
-| `LilySharp.Core/Svg/Layout/MultiStaffLayouter.cs` | 12 |
 | `LilySharp.Core/Svg/Layout/ArticulationEngraver.cs` | 10 |
 | `LilySharp.Core/Svg/Layout/NoteCollision.cs` | 9 |
 | `LilySharp.Core/Svg/Layout/ElementCoordinator.cs` | 8 |
@@ -246,7 +246,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（256 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（257 件）
 
 ### `LilySharp.Core/Editing/KeyRespeller.cs`
 - **`KeyRespeller`** LILYSHARP-OWN: an editor aid. The rule:
@@ -518,6 +518,7 @@
 ### `LilySharp.Core/Svg/Layout/MultiStaffLayouter.cs`
 - **`MultiStaffLayouter.TextRowRefpointBelowTop`** ⚠️ LILYSHARP-OWN, AND IT HAS ONE HOME ON PURPOSE. LilyPond has no band: a Lyrics or
 - **`MultiStaffLayouter.TextRowVerseSpacing`** ⚠️ LILYSHARP-OWN, AND IT IS NOW THE LAST FLAT VERSE STEP LEFT. Where the row is an
+- **`MultiStaffLayouter.LineStartSpringForLine`** LILYSHARP-OWN: a bar of a sign of three or more bars (Lily#'s own; LilyPond's
 - **`MultiStaffLayouter.LayoutMeasures`** LILYSHARP-OWN, the lead-sheet grid's line-start bar (user request
 - **`MultiStaffLayouter.LeadSheetFloorShare`** wide as its 3/4 bars for one beat). LILYSHARP-OWN like the floor itself: LilyPond has
 - **`MultiStaffLayouter.CollectAllTimingsForMeasure`** timing-placed chord symbol and a beat slash do. LILYSHARP-OWN: the filler-slot keep.

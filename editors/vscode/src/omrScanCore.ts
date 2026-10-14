@@ -53,7 +53,7 @@ export interface ScanBar {
     readonly page: number;
     readonly box: Box;
     /** The bar's staff alone, top line to bottom line, mapped as `box` is — the reader's `staff`,
-     *  written since LilySharp-Omr c22fe99 (Lily#'s proposal of 2026-10-14); absent from an older
+     *  written since LilySharp-Omr's "side file: staff" (Lily#'s proposal of 2026-10-14); absent from an older
      *  side file (barStaff then takes the box's middle half). */
     readonly staff?: Box;
 }

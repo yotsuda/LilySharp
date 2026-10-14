@@ -4,6 +4,12 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+### A line that opens on a `%4` keeps its four bars alike
+
+- **A multi-bar percent (`%3` and up) that opens a justified line stands evenly**: its first bar,
+  after the clef and the key, used to stretch with the key's width as well, so with five or six
+  sharps it came out nearly twice as long as the others and the sign stood off the middle.
+
 ### A click on a preview opens its closed score again
 
 - **With the `.lys` closed and its preview still open, a click on the preview opens the `.lys`

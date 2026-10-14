@@ -672,6 +672,43 @@ public class PercentRepeatTests
     }
 
     /// <summary>
+    /// A JUSTIFIED line that opens on a multi-bar sign's span stands evenly too: the span's first
+    /// bar, after the clef and the key, stretches by its bar-to-bar pair as the others do — not by
+    /// the prefix's reach as well (MultiStaffLayouter.LineStartSpringForLine, LILYSHARP-OWN). The
+    /// owner's percent4-center.lys (session 905): `key fis major`, `%4` on a line of its own drew
+    /// 35.9 / 18.5 / 18.5 / 18.5, and the sign stood off the middle of the line.
+    /// </summary>
+    [Theory]
+    [InlineData("fis major")]
+    [InlineData("c major")]
+    public void Layout_AJustifiedLineOpeningOnASpan_StandsEvenly(string key)
+    {
+        var svg = TestPaper.SvgFromRenderSpec($$"""
+            octave absolute
+            key {{key}}
+            part m { clef treble }
+            section A { m { fis'1 | d'1 | b1 | e'1 | break %4 | } }
+            form { ~A }
+            score { staff m }
+            """);
+        var rows = System.Text.RegularExpressions.Regex.Matches(svg, "<rect x=\"([-\\d.]+)\" y=\"([-\\d.]+)\" width=\"0.19\"")
+            .Select(m => (X: double.Parse(m.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture),
+                          Y: double.Parse(m.Groups[2].Value, System.Globalization.CultureInfo.InvariantCulture)))
+            .GroupBy(r => r.Y).OrderBy(g => g.Key).ToList();
+        var bars = rows[^1].Select(r => r.X).Distinct().OrderBy(x => x).ToList();
+        Assert.Equal(4, bars.Count);
+        double bar = bars[3] - bars[2];
+        Assert.InRange(bars[2] - bars[1], bar - 0.05, bar + 0.05);   // (the SVG writes two decimals)
+        // The first bar from the prefix's ink: the clef's and the key's music glyphs on that line.
+        double y = rows[^1].Key;
+        double prefixRight = System.Text.RegularExpressions.Regex.Matches(svg, "<text class=\"music\" x=\"([-\\d.]+)\" y=\"([-\\d.]+)\"")
+            .Select(m => (X: double.Parse(m.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture),
+                          Y: double.Parse(m.Groups[2].Value, System.Globalization.CultureInfo.InvariantCulture)))
+            .Where(g => System.Math.Abs(g.Y - y) < 6 && g.X < bars[0]).Max(g => g.X) + 1.0;
+        Assert.InRange(bars[0] - prefixRight, bar - 1.5, bar + 1.5);
+    }
+
+    /// <summary>
     /// A ONE-bar `%` on a squeezed line keeps LilyPond's PercentRepeat rod: its bar holds the
     /// empty bar's minimum + full-measure-extra-space + the bar's duration space, 5.39 between two
     /// single bar lines in 4/4 (SpacingRules.PercentRepeatRodDistance).
