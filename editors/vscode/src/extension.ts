@@ -2940,9 +2940,10 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         .main-content.over-bar {
             cursor: pointer;
         }
-        /* The bar a click would go to (barStaffAt), tinted as the scan view tints its bars. */
+        /* The bar a click would go to (barStaffAt), its staff tinted in the colour the scan view
+           lights a bar in (omrScan.ts rect.light; the owner's request 2026-10-14: the two alike). */
         #svgContainer rect.bar-staff.hover {
-            fill: rgba(0, 120, 215, 0.08);
+            fill: rgba(0, 120, 215, 0.14);
         }
         .container {
             max-width: 100%;

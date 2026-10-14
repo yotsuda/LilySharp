@@ -27,7 +27,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import type { LanguageClient } from 'vscode-languageclient/node';
 import {
-    BarAnchor, PrintedBar, ScanSideFile, ScanTarget, ServerTodo, anchorsOf, barOnLine, flaggedBars, hiddenTodoKeys, parseSideFile, resolvedTodoKeys,
+    BarAnchor, PrintedBar, ScanSideFile, ScanTarget, ServerTodo, anchorsOf, barOnLine, flaggedBars, hiddenTodoKeys, parseSideFile, resolvedTodoKeys, staffOfBarBox,
     SCAN_DEFAULT_THRESHOLD, pageLabel, scanBarForPrinted, scanTitle, shiftAnchors, shownImage, sideFileOf, todoStroke,
     todoTarget,
 } from './omrScanCore';
@@ -299,7 +299,9 @@ async function follow(view: ScanView, editor: vscode.TextEditor, deps: OmrScanDe
         return;
     }
     view.lastTarget = id;
-    void view.panel.webview.postMessage({ type: 'light', target: target ?? null });
+    // A bar lights its staff only, as its hover tints it; a mark its whole box.
+    const lit = target && target.kind === 'bar' ? { ...target, box: staffOfBarBox(target.box) } : target;
+    void view.panel.webview.postMessage({ type: 'light', target: lit ?? null });
 }
 
 async function editorOf(view: ScanView): Promise<vscode.TextEditor> {
@@ -361,8 +363,8 @@ function render(view: ScanView): void {
         }
         const src = panel.webview.asWebviewUri(vscode.Uri.file(shown)).toString();
         const bars = side.measures.map((m, i) => m.page !== p.page ? '' :
-            `<rect class="bar" ${rect(m.box)} data-i="${i}">`
-            + `<title>bar ${m.measure}${m.part ? ` (${esc(m.part)})` : ''}</title></rect>`).join('');
+            `<g class="bar" data-i="${i}"><rect class="hit" ${rect(m.box)}/><rect class="tint" ${rect(staffOfBarBox(m.box))}/>`
+            + `<title>bar ${m.measure}${m.part ? ` (${esc(m.part)})` : ''}</title></g>`).join('');
         // An outline, heavier and darker the less sure the reader is; the slider hides the surer.
         const todos = side.todos.filter(t => t.page === p.page).map(t => {
             const s = todoStroke(t), sure = t.confidence === undefined ? '' : ` (${t.confidence.toFixed(2)})`;
@@ -387,14 +389,17 @@ function render(view: ScanView): void {
   .page img { display: block; width: 100%; height: auto; background: #fff; }
   .page svg { position: absolute; inset: 0; width: 100%; height: 100%; }
   .page.missing { padding: 12px; border: 1px dashed var(--vscode-editorWidget-border, #888); }
-  rect.bar { fill: transparent; stroke: none; cursor: pointer; }
-  rect.bar:hover { fill: rgba(0, 120, 215, .08); }
+  /* A bar: the click takes its whole box, the tint its staff alone — as in the preview, in the
+     colour the caret's bar is lit in (owner's request 2026-10-14). */
+  g.bar { cursor: pointer; }
+  g.bar rect { fill: transparent; stroke: none; }
+  g.bar:hover rect.tint { fill: rgba(0, 120, 215, .14); }
   rect.todo { fill: transparent; stroke: #d00; vector-effect: non-scaling-stroke; cursor: pointer; }
   rect.todo.quiet { stroke-dasharray: 4 3; }
   rect.todo:hover { fill: rgba(220, 0, 0, .12); }
   .filter { display: inline-flex; align-items: center; gap: 6px; margin-left: 12px; }
   .filter input { width: 140px; }
-  rect.light { fill: rgba(0, 120, 215, .14); stroke: #0078d7; stroke-width: 2; vector-effect: non-scaling-stroke; pointer-events: none; }
+  rect.light { fill: rgba(0, 120, 215, .14); stroke: none; pointer-events: none; }
 </style></head><body>
 <p class="note">${esc(path.basename(view.lys.fsPath))} — read from ${side.pages.length === 1 ? 'this page' : `these ${side.pages.length} pages`}. `
         + `Red: marked to check — heavier where the reader is less sure. A click goes to the music; the caret lights its bar here. `
@@ -438,10 +443,10 @@ ${pages || '<p>The side file lists no page.</p>'}
   vscode.postMessage({ type: 'threshold', value: Number(thr.value) });
   filter();
   document.addEventListener('click', e => {
-    const r = e.target.closest('rect');
+    const r = e.target.closest('rect.todo, g.bar');
     if (!r) return;
     if (r.classList.contains('todo')) vscode.postMessage({ type: 'todo', key: r.dataset.key });
-    else if (r.classList.contains('bar')) vscode.postMessage({ type: 'bar', index: Number(r.dataset.i) });
+    else vscode.postMessage({ type: 'bar', index: Number(r.dataset.i) });
   });
 
   // B4: the bar at the top of the view goes to the preview as the scan scrolls; a scroll
@@ -449,7 +454,7 @@ ${pages || '<p>The side file lists no page.</p>'}
   let quietUntil = 0, reportTimer = null;
   function topBar() {
     let best = null, bestTop = Infinity, bestLeft = Infinity;
-    for (const r of document.querySelectorAll('rect.bar')) {
+    for (const r of document.querySelectorAll('g.bar')) {
       const b = r.getBoundingClientRect();
       if (b.bottom <= 4 || b.top >= window.innerHeight) continue;
       const top = Math.round(Math.max(b.top, 0));
@@ -473,7 +478,7 @@ ${pages || '<p>The side file lists no page.</p>'}
       return;
     }
     if (data.type === 'showBar') {
-      const r = document.querySelector('rect.bar[data-i="' + data.index + '"]');
+      const r = document.querySelector('g.bar[data-i="' + data.index + '"]');
       if (!r) return;
       quietUntil = Date.now() + 400;
       window.scrollBy({ top: r.getBoundingClientRect().top - 24 });

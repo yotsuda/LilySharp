@@ -11,6 +11,9 @@ All notable changes to the Lily# VS Code extension are documented here.
   chord name) goes to the nearest staff of that bar, and the bar under the mouse is tinted. A
   click on a note still goes to the note, a drag still scrolls, and during playback a click on a
   bar plays from there.
+- **The scan view (Show Original Scan) and the preview light a bar alike**: the staff alone, in
+  the same blue, with no frame — on the scan the bar the caret is in and the bar under the mouse,
+  where the scan used to tint the box two spaces past the staff and frame the caret's bar.
 
 ### A clef change in mid-line writes the key's sharps and flats out
 

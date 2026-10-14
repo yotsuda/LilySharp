@@ -158,6 +158,18 @@ export function resolvedTodoKeys(todos: readonly Pick<ScanTodo, 'key' | 'quiet'>
     const present = new Set(inSource.map(t => t.Key).filter((k): k is string => !!k));
     return [...new Set(todos.filter(t => !t.quiet && !present.has(t.key)).map(t => t.key))];
 }
+/**
+ * The staff inside a bar's box: the reader draws a part's bar from two staff spaces over its top
+ * line to two under its bottom one (LilySharp-Omr `Sidecar.AddPage`: `st.Top - 2 * s` ..
+ * `st.Bottom + 2 * s`), and a staff is four spaces tall, so its lines are the middle half of the
+ * box. The scan tints this, as the preview tints a bar from its top line to its bottom one
+ * (owner's request 2026-10-14: the two views alike); the click still takes the whole box.
+ */
+export function staffOfBarBox(box: Box): Box {
+    const quarter = (box[3] - box[1]) / 4;
+    return [box[0], box[1] + quarter, box[2], box[3] - quarter];
+}
+
 /** The side file of a .lys: `x.lys` → `x.omr.json`. */
 export function sideFileOf(lysPath: string): string {
     return lysPath.replace(/\.lys$/i, '') + '.omr.json';

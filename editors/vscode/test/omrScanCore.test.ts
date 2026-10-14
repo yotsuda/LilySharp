@@ -24,7 +24,7 @@ import * as path from 'node:path';
 import * as vm from 'node:vm';
 import {
     SCAN_DEFAULT_THRESHOLD, anchorsOf, barOnLine, markFactsOf, pageLabel, parseSideFile, scanBarForPrinted, scanTitle,
-    flaggedBars, hiddenTodoKeys, resolvedTodoKeys, shiftAnchors, shownAt, shownImage, sideFileOf, todoStroke, todoTarget,
+    flaggedBars, hiddenTodoKeys, resolvedTodoKeys, shiftAnchors, shownAt, shownImage, sideFileOf, staffOfBarBox, todoStroke, todoTarget,
 } from '../src/omrScanCore';
 
 // Absolute on whichever OS runs the tests.
@@ -66,6 +66,17 @@ describe('the scan page script', () => {
         const body = src.slice(src.indexOf('>', open) + 1, src.indexOf('</script>', open));
         assert.doesNotMatch(body, /\$\{|\\/);
         assert.doesNotThrow(() => new vm.Script(body));
+    });
+});
+
+// The reader draws a part's bar two staff spaces past its outer lines (Sidecar.AddPage), so the
+// staff is the box's middle half: what the scan tints, as the preview tints a bar's staff.
+describe('a bar\'s staff on the scan', () => {
+    it('is the middle half of the box, its whole width', () => {
+        // Largo p.1 bar 1 (the owner's scan): box 518..684, the lines at 559..643.
+        const [x0, y0, x1, y1] = staffOfBarBox([472, 518, 1003, 684]);
+        assert.deepEqual([x0, x1], [472, 1003]);
+        assert.ok(Math.abs(y0 - 559.5) < 1 && Math.abs(y1 - 642.5) < 1, `${y0}..${y1}`);
     });
 });
 
