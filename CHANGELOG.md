@@ -6,6 +6,16 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+### A clef change in mid-line writes the key's sharps and flats out
+
+- **After a clef change in the middle of a line, a note its key alters carries the key's
+  sharp or flat**, once a bar and note name, until the line ends: the key signature at the
+  line's start stands on the old clef's lines, so the F♯ of D major in a tenor-clef passage was
+  left for the player to find on the wrong line. Nothing changes where the clef opens a line
+  (the key signature is drawn in it there), in the line's own clef, or for a note the key
+  leaves alone; a bar line still resets the accidentals. LilyPond adds nothing here. None of
+  the 334 books in the owner's corpus or the repository's books changes.
+
 ### The percent repeat is written where it is drawn
 
 - **A percent repeat is the bars once, then one mark a repetition after them:**

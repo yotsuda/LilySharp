@@ -4,6 +4,11 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+### A clef change in mid-line writes the key's sharps and flats out
+
+- After a clef change in the middle of a line, a note its key alters carries the key's ?/?
+  (once a bar and note name, until the line ends) — in the preview as on the page.
+
 ### The percent repeat: `| % |` after the bars
 
 - **`c4 d e f | % | % | % |`** — a percent repeat is the bars once and a mark a repetition after

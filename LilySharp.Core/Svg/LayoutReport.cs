@@ -63,8 +63,7 @@ public static class LayoutReport
 
     private static void AppendScore(StringBuilder sb, SyntaxTree tree, RenderSpec? spec)
     {
-        var score = SvgGenerator.CollectScore(tree, spec);
-        var layout = new LayoutEngine(score.Paper).Layout(score);
+        var (score, layout) = SvgGenerator.CollectAndLayout(tree, spec);
 
         // Reconstruct the header as written: `score [name]`; the unnamed score shows no name.
         string name = spec?.Name ?? "";

@@ -510,6 +510,33 @@ public sealed class IncrementalCompiler
         // tree/content they recorded and verified on read, never by "the last compile".
         Checkpoint(CompileStage.Collected, token);
 
+        // A score that changes clef is laid out the full road's way (SvgGenerator.CollectAndLayout):
+        // its notes' key reminders after a mid-line clef change depend on where the lines
+        // break, which this session's collect does not know. Rare, and rendered whole —
+        // every geometry cache is shed, so the next compile starts from scratch.
+        if (SvgGenerator.ChangesClef(score))
+        {
+            var (twice, laidOut) = SvgGenerator.CollectAndLayout(
+                tree, spec, SvgGenerator.PaperBaseOf(_options.Snippet, _options.Interactive));
+            _springs = null;
+            _springsSpare = null;
+            _lineBreaks = null;
+            _shortest = null;
+            _systemCache = null;
+            _cachedLayout = null;
+            _contentKeys = default;
+            _springEdges = default;
+            _overrides = default;
+            _reverts = default;
+            _fragments?.BeginPass(default, windowValid: false, 0, 0, 0);
+            var (wPrefix, wSuffixStart, wDelta) = CollectResumePlanner.ComputeWindow(_tree.Text, tree.Text);
+            _lastWindow = new Rendering.Svg.SvgEditWindow(wPrefix, wSuffixStart, wDelta);
+            _tree = tree;
+            LastEditSkippedLineBreak = false;
+            LastEditReusedLayout = false;
+            return SvgGenerator.RenderDocument(twice, laidOut, _options, resolveDataPos: true, null, _pageBuffers);
+        }
+
         // A `fonts { }` edit changes the TEXT METRICS every layout stage measures with —
         // an input that lives OUTSIDE every reuse key this session keeps: the per-measure
         // content key folds the resolved model and side-tables (never the face), and the

@@ -597,6 +597,28 @@ public sealed partial class MeasureCollector
     private int _accidentalBar;
     private int _accidentalOrder;
 
+    /// <summary>
+    /// The measures that open a line of the laid-out score, from a first layout of the same
+    /// book — what <see cref="KeyCourtesyDue"/> needs to know which clef the line's key
+    /// signature was drawn in. Null on a first collect: no reminder is drawn, and
+    /// <see cref="ClefChangesMidLine"/> says whether a second collect is wanted
+    /// (SvgGenerator.CollectAndLayout).
+    /// </summary>
+    public IReadOnlyList<int>? LineStartMeasures { get; init; }
+
+    /// <summary>True when a note stood in a clef other than the one its staff opened with
+    /// and its key alters it — the case where the line starts matter (KeyCourtesyDue).</summary>
+    public bool ClefChangesMidLine { get; private set; }
+
+    // KeyCourtesyDue's walk state: the primary walk's builder (null in a span's later
+    // voice), the staff and measure the last pitched note stood in, the clef the line's key
+    // signature was drawn in, and the note names already met in the bar.
+    private MeasureBuilder? _keyCourtesyBuilder;
+    private int _keyCourtesyStaff = -1;
+    private int _keyCourtesyMeasure = -1;
+    private ClefType _keyCourtesyLineClef;
+    private readonly HashSet<int> _keyCourtesySeen = new();
+
     // The style the score asks for, read once from the resolved layout plan (the music
     // walks all run after CollectDefinitions).
     private Semantics.AccidentalStyleSpec _accidentalStyle = Semantics.AccidentalStyles.Default;
@@ -3575,6 +3597,10 @@ public sealed partial class MeasureCollector
             builder.AddItem(new RestItem(offset, 0, voiceNode.SourceStart) { IsSpacer = true, IsSpanLead = true });
         ResetAccidentalMemory();
         builder.MeasureCompleted = _advanceAccidentalBar ??= AdvanceAccidentalBar;
+        // A span's later voice keeps no key reminder (KeyCourtesyDue): its measures are
+        // counted from the span, not the score's. The walk it interrupts gets its own back.
+        var outerKeyCourtesyBuilder = _keyCourtesyBuilder;
+        _keyCourtesyBuilder = null;
 
         _pendingInlineVoltas.Clear();
 
@@ -3598,6 +3624,7 @@ public sealed partial class MeasureCollector
 
         var finalized = builder.FinalizeMeasures();
         _lastEndsOffTheBar = builder.EndsOffTheBar;
+        _keyCourtesyBuilder = outerKeyCourtesyBuilder;
         return finalized;
     }
 
@@ -3743,6 +3770,10 @@ public sealed partial class MeasureCollector
         _phraseGreens = null;
         _courtesySourcePositions.Clear();
         _measureAccidentals.Clear();
+        _keyCourtesySeen.Clear();
+        _keyCourtesyStaff = -1;
+        _keyCourtesyMeasure = -1;
+        ClefChangesMidLine = false;
         _fingeringByPosition.Clear();
         _markHostMeasure.Clear();
         // Deliberately OUTSIDE CumulativeSideTables (its remark says why): still an
@@ -3972,6 +4003,7 @@ public sealed partial class MeasureCollector
             builder.SetPartial(filePickup); // top-level partial N arms every voice
         ResetAccidentalMemory();
         builder.MeasureCompleted = _advanceAccidentalBar ??= AdvanceAccidentalBar;
+        _keyCourtesyBuilder = builder;
 
         _pendingInlineVoltas.Clear();
 

@@ -57,8 +57,7 @@ public static class PdfGenerator
         // ONE collection path for every output format (see PngGenerator):
         // the hand-copied variant here silently missed score transpose and the
         // `with chords` attachment.
-        MultiStaffScore multiScore = SvgGenerator.CollectScore(tree, renderSpec, SvgGenerator.PaperBaseOf(false, options.EditorMarks), options.PaperOverrides);
-        ScoreLayout layout = new LayoutEngine(multiScore.Paper).Layout(multiScore);
+        var (multiScore, layout) = SvgGenerator.CollectAndLayout(tree, renderSpec, SvgGenerator.PaperBaseOf(false, options.EditorMarks), options.PaperOverrides);
         LayoutWarnings.Report(layout, multiScore.Paper, options.LayoutWarning);
 
         var docOptions = new PdfDocumentOptions

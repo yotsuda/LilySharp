@@ -897,6 +897,73 @@ public sealed partial class MeasureCollector
     }
 
     /// <summary>
+    /// Whether this note writes out the alteration its key gives it: the staff stands in a
+    /// clef other than the one its line's key signature was drawn in, and this is the bar's
+    /// first note of that name (owner's decision 2026-10-14: after a clef change in the
+    /// middle of a line the key signature's sharps and flats stand on the old clef's lines,
+    /// and the player reads them off the wrong line; a clef that is the same as the line's
+    /// confuses no one). Asked of every pitched note, so the bar's names are all counted.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// LILYSHARP-OWN: LilyPond prints nothing here — a clef change draws no key signature
+    /// and leaves the accidentals to the ordinary rules (lily/key-engraver.cc prints the
+    /// signature only on a key change or a line start). The engraving convention agrees:
+    /// the key signature is not restated at a clef change in mid-line. Written out once per
+    /// bar and note name because a bar line resets what a reader keeps in mind; it stops
+    /// at the next line, whose key signature is drawn in the new clef.
+    /// </para>
+    /// <para>
+    /// The line starts come from a first layout (<see cref="LineStartMeasures"/>); without
+    /// them nothing is written, and <see cref="ClefChangesMidLine"/> reports whether a note
+    /// stood in a clef other than its staff's first — what asks for a second collect.
+    /// The line's clef is read at the first pitched note of the line: a line that opens on
+    /// rests and changes clef before its first note reads the new clef (a rare shape, noted
+    /// rather than measured). A span's later voice is not walked by the score's measures and
+    /// writes none.
+    /// </para>
+    /// </remarks>
+    private bool KeyCourtesyDue(int step, int actual)
+    {
+        if (_keyCourtesyBuilder is not { } builder)
+            return false;
+        int measure = builder.CurrentMeasureIndex + _cursor.MetadataMeasureOffset;
+        var clef = ParseClefType(_meta.Clef);
+        if (_cursor.StaffIndex != _keyCourtesyStaff || measure < _keyCourtesyMeasure)
+        {
+            // A new staff (or a walk that starts back at an earlier bar): what the line's
+            // key signature stands in is re-read here.
+            _keyCourtesyStaff = _cursor.StaffIndex;
+            _keyCourtesyMeasure = -1;
+            _keyCourtesyLineClef = clef;
+        }
+        if (measure != _keyCourtesyMeasure)
+        {
+            if (_keyCourtesyMeasure < 0 || LineStartsBetween(_keyCourtesyMeasure, measure))
+                _keyCourtesyLineClef = clef;
+            _keyCourtesyMeasure = measure;
+            _keyCourtesySeen.Clear();
+        }
+        bool first = _keyCourtesySeen.Add(step);
+        if (!first || actual == 0 || actual != GetKeySignatureAlteration(step) || clef == _keyCourtesyLineClef)
+            return false;
+        ClefChangesMidLine = true;
+        return LineStartMeasures != null;
+
+        // A line opens at a measure in (from, to] — with no layout yet, only the first.
+        bool LineStartsBetween(int from, int to)
+        {
+            var starts = LineStartMeasures;
+            if (starts == null)
+                return false;
+            foreach (int s in starts)
+                if (s > from && s <= to)
+                    return true;
+            return false;
+        }
+    }
+
+    /// <summary>
     /// The accidental a pitch displays under the score's style, and whether it is a
     /// CAUTIONARY one — LilyPond's <c>autoAccidentals</c> / <c>autoCautionaries</c> pair,
     /// asked of every rule and OR-ed, with the cautionary answer winning when it claims
@@ -921,6 +988,7 @@ public sealed partial class MeasureCollector
     private (string? Name, bool Cautionary) GetDisplayAccidental(int step, int actual, int octave)
     {
         var style = _accidentalStyle;
+        bool keyCourtesy = KeyCourtesyDue(step, actual);
         var need = Fold(style.Accidentals);
         bool cautionary = false;
         if (style.Cautionaries.Count > 0)
@@ -939,7 +1007,14 @@ public sealed partial class MeasureCollector
         _measureAccidentals[(step, octave)] = (actual, _accidentalBar, _accidentalOrder++);
 
         if (!need.NeedAcc)
-            return (null, false);
+        {
+            // The key's own alteration, written out where the line's key signature stands in
+            // another clef (KeyCourtesyDue) — a plain sign, no restore natural.
+            return keyCourtesy ? (actual switch
+            {
+                2 => "doubleSharp", 1 => "sharp", -1 => "flat", -2 => "doubleFlat", _ => null
+            }, false) : (null, false);
+        }
 
         bool restore = need.NeedRestore && style.ExtraNatural;
         string? name = actual switch

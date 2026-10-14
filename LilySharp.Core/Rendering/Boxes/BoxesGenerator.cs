@@ -51,8 +51,7 @@ public static class BoxesGenerator
         Semantics.PaperOverrides? settings = null, Action<string>? layoutWarning = null,
         string? fontDirectory = null)
     {
-        var score = SvgGenerator.CollectScore(tree, renderSpec, settings: settings);
-        var layout = new LayoutEngine(score.Paper).Layout(score);
+        var (score, layout) = SvgGenerator.CollectAndLayout(tree, renderSpec, settings: settings);
         LayoutWarnings.Report(layout, score.Paper, layoutWarning);
         using var doc = new BoxesDocumentContext(fontDirectory ?? FontLocator.Find());
         using (var fallbacks = MusicFallbackLog.Open())

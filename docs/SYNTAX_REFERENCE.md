@@ -2010,6 +2010,20 @@ rather than approximated, and a style the table does not hold is refused at the 
 `.ly` twin writes `\accidentalStyle modern` at the head of each part's music, where the
 function's own default context is the staff.
 
+**After a clef change in the middle of a line**, under every style, a note its key alters
+writes the key's sharp or flat out: the line's key signature stands on the OLD clef's lines,
+so the F♯ of D major would otherwise be read off the wrong line. Once a bar and note name —
+a bar line resets what the reader keeps in mind — and only until the line ends, since the
+next line's key signature is drawn in the new clef. Nothing is added to a staff in the clef
+its line opened with, at a clef change that opens a line, or to a note the key leaves
+alone; and a bar line still resets the accidentals as always (no courtesy natural in the
+next bar). LilyPond adds nothing here; this is Lily#'s own (owner's decision, 2026-10-14).
+
+```
+key d major
+c'4 d e f | clef tenor fis,,1 |   // the F♯ in tenor clef is written with its ♯
+```
+
 **`sectionLabels`** — how a `form` section's name is drawn. `boxed` (the default) is the
 frame Lily# has always drawn, and it is Lily#-own: LilyPond's `SectionLabel` grob draws the
 bare string, and the twin reaches Lily#'s picture by writing `\mark \markup \box`. `plain`
