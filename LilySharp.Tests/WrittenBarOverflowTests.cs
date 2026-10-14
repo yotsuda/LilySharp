@@ -120,6 +120,29 @@ public class WrittenBarOverflowTests
     }
 
     [Fact]
+    public void ATimeWrittenInsideABar_IsALeftOutBarLine()
+    {
+        // `c1 time 3/4 c2.` — the bar line before the `time` is missing.
+        var diags = SemanticValidation.Run(SyntaxTree.Parse(
+            "part m { section A { c'1 time 3/4 c2. | } } form { A } score { staff m }"));
+        var d = Assert.Single(diags, x => x.Code == DiagnosticCodes.MissingBarLine);
+        Assert.Equal(DiagnosticSeverity.Error, d.Severity);
+        Assert.DoesNotContain(SemanticValidation.Run(SyntaxTree.Parse(
+                "part m { section A { c'1 | time 3/4 c2. | } } form { A } score { staff m }")),
+            x => x.Code is DiagnosticCodes.MissingBarLine or DiagnosticCodes.MeasureOverflow);
+    }
+
+    [Fact]
+    public void ABarLineInsideACue_ClosesItsBar()
+    {
+        // `cue { f'1( | gis'1) } |` is two bars, as the page draws it — the validator read the
+        // cue as one item of 2/1 and called its bar line missing.
+        Assert.DoesNotContain(SemanticValidation.Run(SyntaxTree.Parse(
+                "part m { section A { c'1 | cue { f'1( | gis'1) } | } } form { A } score { staff m }")),
+            x => x.Code is DiagnosticCodes.MissingBarLine or DiagnosticCodes.MeasureOverflow);
+    }
+
+    [Fact]
     public void MusicWithNoBarLines_StillFillsBarAfterBar_AndIsAnError()
     {
         var bars = Bars("c'1 d e f");

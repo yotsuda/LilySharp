@@ -261,8 +261,9 @@ bes8 8 8 8  // bes eighths, written once
 **Bar lines are the bars.** Write `|` at the end of every bar. A bar with too much in it stays
 one bar: what starts past its end is not drawn or played (LYS2002). Music that is two or more
 whole bars with no `|` between them (within a quarter of a bar) is an ERROR (LYS2017) — it is
-drawn and played in bars of the meter, every note kept, until the `|` is written. A repeat's
-turns, an `R1*N` and a phrase body still close their bars where the beats fill.
+drawn and played in bars of the meter, every note kept, until the `|` is written; so is a
+`time` written after music in a bar (write the `|` before it). A repeat's turns, an `R1*N`
+and a phrase body still close their bars where the beats fill.
 
 ## Notes, rests, chords
 
@@ -275,11 +276,11 @@ s4          // invisible spacer rest
 | R1 |      // a bar rest of a written duration (a whole note), as in LilyPond; a bare R moves no running duration
 a,4@rest    // quarter rest printed where the note a, would sit (a PITCHED rest)
 <c e g>4    // chord (shared duration after '>'), C major triad as a quarter
-<c 3 5>4    // the same triad by scale degrees (root + 3rd + 5th of the key)
+<c 3 5>4 |  // the same triad by scale degrees (root + 3rd + 5th of the key)
 <1 3 5>2    // degrees only: anchored on the key TONIC (C E G in C major)
-q           // THE PREVIOUS CHORD AGAIN, at the running duration
+q |         // THE PREVIOUS CHORD AGAIN, at the running duration
 q2          // ...at its own duration; q@staccato takes its own post-events too
-q'          // ...an octave up (q,, two down) — the marks ACCUMULATE, see below
+q' |        // ...an octave up (q,, two down) — the marks ACCUMULATE, see below
 ```
 
 `q` repeats the chord before it (notes and rests are transparent; only a written
@@ -336,7 +337,7 @@ A CHORD FROM A SHAPE — `chord(SYMBOL SHAPE)` + a chord's tail (duration, dots,
 beams, scripts, dynamics): writes the notes a fretted shape sounds (2026-09-28).
 
 ```
-chord(C x32013)1            // C3 E3 G3 C4 G4 on a guitar — each string's open pitch + fret
+chord(C x32013)1 |          // C3 E3 G3 C4 G4 on a guitar — each string's open pitch + fret
 chord(Cm7 x3x546)2@chord    // + name and diagram: a bare @chord takes the item's words
 chord(C xx-10-12-13-12)4.~  // frets 10-15 in the dash form
 ```
@@ -365,19 +366,19 @@ degrees-only group anchors on the tonic. NOT LilyPond's `<< >>`
 << c e g >>      // c, then e/g stacked above (E4 G4); after c4 → a triplet of eighths (3:2)
 << c 3 5 >>      // by degrees: c e g
 << 8 5 3 1 >>    // degrees-only anchors on the TONIC: C5 G4 E4 C4 — descending, no marks
-<< <c e> g >>    // a chord member, then g
+<< <c e> g >> |  // a chord member, then g
 << c r e >>      // a rest is a gap (an equal share); e still stacks above c
 << c . d >>4     // a SPACED dot = one more share for the member before it: 2:1 → tuplet 3/2 { c4 d8 }
 << c . . d >>4   // 3:1 → c8. d16 (never glued: `c.` is a duration dot, `3.` a decimal)
-<< c@accent e\3 g( a) >>  // a member carries scripts, string numbers, fingering, dynamics, slur marks
+<< c@accent e\3 g( a) >> |  // a member carries scripts, string numbers, fingering, dynamics, slur marks
 << c e g >>4\2   // on the group: a dynamic, a chord name, a string number (every member's);
                  //   a '~' or '(' after >> hangs on the LAST member
-<< c e g >>2     // a duration after >> = the group's total: 3 in a half (triplet 3:2 of quarters)
+<< c e g >>2 |   // a duration after >> = the group's total: 3 in a half (triplet 3:2 of quarters)
                  // (the convention's spelling: M against the power of two below it —
                  //  5 in a quarter → 16ths 5:4; 4 in a quarter → plain 16ths; 2 in a
                  //  dotted quarter → 8ths 2:3)
 << c e g >>'     // marks after >> shift the whole group and propagate to the next note
-<< chord(C x32010) >>2   // a chord(…) member is SPREAD: its notes lowest first, one member each (5:4)
+<< chord(C x32010) >>2 | // a chord(…) member is SPREAD: its notes lowest first, one member each (5:4)
 << c chord(G 320003) e >>2   // mixed: c, G's six strings, then e (e stacks above the root c)
 ```
 
@@ -488,12 +489,12 @@ c4@staccato d4@accent <e g>4@arpeggio |
 ## Ties, slurs, beams
 
 ```
-c4~ | c4 d e f       // tie (same pitch across the barline) with ~
-c4( d e f)           // slur (different pitches) with ( )
-<c e>4( <d f>)       // a slur may bind chords, not just single notes
-c4( d e( f) g)       // WRONG: one slur at a time (the inner '(' is ignored); an outer phrase is @phrasingSlur
+c4~ | c4 d e f |     // tie (same pitch across the barline) with ~
+c4( d e f) |         // slur (different pitches) with ( )
+<c e>2( <d f>) |     // a slur may bind chords, not just single notes
+c8( d e( f) g) r4. | // WRONG: one slur at a time (the inner '(' is ignored); an outer phrase is @phrasingSlur
 c8[ d e f]           // manual beam; beaming is automatic otherwise
-r8[ c d e]           // a manual beam may open or close on a rest, and reaches it
+r8[ c d e] |         // a manual beam may open or close on a rest, and reaches it
 ```
 
 ## Hairpins (spanners over several notes)
@@ -607,8 +608,8 @@ repeat unfold 8 { ground }               // 32 bars from one line
 ```
 grace { d16 e } f4           // grace before F
 acciaccatura { a16 } b4      // slashed grace
-appoggiatura { c8 } d4       // unslashed grace
-c2 afterGrace { d16 e } f2   // AFTER the note before it: the run ends the c (LilyPond \afterGrace)
+appoggiatura { c8 } d4 |     // unslashed grace
+c2 afterGrace { d16 e } f2 | // AFTER the note before it: the run ends the c (LilyPond \afterGrace)
 ```
 
 ## Multi-voice (one staff)

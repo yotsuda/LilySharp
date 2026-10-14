@@ -162,8 +162,9 @@ internal static class MeasureModel
                 if (time.IsSenzaMisura) senzaMisura = true;
                 else { senzaMisura = false; meter = DurationCalculator.ParseTimeSignature(time.Beats, time.BeatType); }
                 meterChanges?.Add((bars.Count, time, current.Count > 0));
-                // A meter changing inside a written span leaves no one bar length to hold it
-                // to: its bars close where their beats fill (Flowed), as they always did.
+                // A meter changing inside a written span stands where a bar line was left out
+                // (MeasureValidator reports it, LYS2017); with no one bar length to hold the span
+                // to, its bars close where their beats fill (Flowed), every note kept.
                 if (current.Count > 0)
                     flows = true;
                 continue;

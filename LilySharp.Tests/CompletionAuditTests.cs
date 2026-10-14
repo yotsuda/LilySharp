@@ -161,20 +161,18 @@ public class CompletionAuditTests
     {
         var labels = LilySharpLanguageServer.GetTimeCompletions().Items.Select(i => i.Label!).ToList();
         Assert.Contains("none", labels);
-        // The book's one bar is 4/4 whatever the meter offered, so the bar-length diagnostics
-        // (a 2/4 meter reads it as two bars with the bar line between them missing) are not the
-        // question here.
-        static bool NotABarLength(Diagnostic d)
-            => d.Code is not (DiagnosticCodes.MeasureOverflow or DiagnosticCodes.MeasureIncomplete
-                or DiagnosticCodes.MissingBarLine);
         foreach (string time in labels)
         {
-            var top = Errors(Book(top: $"time {time}")).Where(NotABarLength).ToList();
-            Assert.True(top.Count == 0, $"top-level `time {time}` is refused: "
-                + string.Join(" | ", top.Select(d => $"{d.Code} {d.Message}")));
+            // The bar is a bare `R |`, which lasts its bar in any meter (Music.BarRest) — a 4/4
+            // bar of notes under `time 2/4` is two bars with the bar line between them left out
+            // (LYS2017). Senza misura has no bar for an `R` to last, and counts none.
+            string bar = time == "none" ? "c4 d e f |" : "R |";
+            AssertCompiles(Book(top: $"time {time}", music: bar), $"top-level `time {time}`");
             // Senza misura counts no bars, so the bar is left unclosed for it.
-            string music = time == "none" ? "time none c4 d e f g" : $"time {time} c4 d e f |";
-            var errors = Errors(Book(music: music)).Where(NotABarLength).ToList();
+            string music = time == "none" ? "time none c4 d e f g" : $"time {time} R |";
+            var errors = Errors(Book(music: music))
+                .Where(d => d.Code != DiagnosticCodes.MeasureOverflow && d.Code != DiagnosticCodes.MeasureIncomplete)
+                .ToList();
             Assert.True(errors.Count == 0, $"in-music `time {time}` is refused: "
                 + string.Join(" | ", errors.Select(d => $"{d.Code} {d.Message}")));
         }
@@ -504,15 +502,17 @@ public class CompletionAuditTests
         foreach (string directive in LanguageVocabulary.SectionSettings)
         {
             string line = $"{directive} {value[directive]}";
-            // A pickup shortens the bar, so the bar-length warnings are not the question here.
+            // A pickup shortens the bar, so the bar-length warnings are not the question here —
+            // but the music writes its pickup bar: a full bar under `partial 4` is the pickup and
+            // a bar with the bar line between them left out (LYS2017).
             static bool NotABarLength(Diagnostic d)
-                => d.Code is not (DiagnosticCodes.MeasureOverflow or DiagnosticCodes.MeasureIncomplete
-                    or DiagnosticCodes.MissingBarLine);
-            var header = Errors($"part m {{ clef treble section A {{ c4 d e f | }} }}\nsection A {{ {line} }}\n"
+                => d.Code != DiagnosticCodes.MeasureOverflow && d.Code != DiagnosticCodes.MeasureIncomplete;
+            string music = directive == "partial" ? "c4 | d e f g |" : "c4 d e f |";
+            var header = Errors($"part m {{ clef treble section A {{ {music} }} }}\nsection A {{ {line} }}\n"
                                 + "form { A }\nscore { staff m }").Where(NotABarLength).ToList();
             Assert.True(header.Count == 0, $"`{line}` in a by-part section header is refused: "
                 + string.Join(" | ", header.Select(d => $"{d.Code} {d.Message}")));
-            var beside = Errors(Book(sectionExtra: line)).Where(NotABarLength).ToList();
+            var beside = Errors(Book(sectionExtra: line, music: music)).Where(NotABarLength).ToList();
             Assert.True(beside.Count == 0, $"`{line}` beside a by-section part cell is refused: "
                 + string.Join(" | ", beside.Select(d => $"{d.Code} {d.Message}")));
         }

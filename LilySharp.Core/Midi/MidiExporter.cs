@@ -739,7 +739,8 @@ public sealed class MidiExporter
                 break;
 
             case TimeSignatureSyntax timeSig:
-                // A meter changing inside a bar leaves it no one length: it flows (_barFlows).
+                // A meter changing inside a bar — a bar line left out before it (LYS2017) — leaves
+                // it no one length: it flows (_barFlows), every note kept.
                 if (_currentTick > _barStart)
                     _barFlows = true;
                 ProcessTimeSignature(timeSig, conductorTrack);

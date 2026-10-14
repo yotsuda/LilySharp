@@ -8,9 +8,9 @@ part v { clef treble }
 
 section Main {
   v {
-    repeat tremolo 32 { d32 }
+    repeat tremolo 32 { d32 } |
 
-    c4 c4 c4 c4 c4
+    c4 c4 c4 c4 | c4
   }
 }
 

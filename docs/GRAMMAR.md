@@ -2267,8 +2267,10 @@ RepeatEnd      = ':|' , [ '*' , Integer ] ;          (* :|*N plays the span N ti
      - a span within a quarter of a bar of two or more whole bars, with no bar line inside,
        is a bar line LEFT OUT: an ERROR (LYS2017), drawn and played in bars of the meter with
        every note kept until the bar line is written;
+     - a 'time' written after music in a span stands where a bar line was left out: the same
+       error (LYS2017), every note kept;
      - where no bar line can be written — a repeat's turns, an 'R1*N', a phrase body inlined
-       into the bar, a 'time' changing inside it — the bars still close where the beats fill.
+       into the bar — the bars still close where the beats fill.
    The playback re-syncs every part at every bar line: a short bar is filled with silence.
    One rule, one place: Semantics.WrittenBar (page: MeasureBuilder, playback: MidiExporter). *)
 

@@ -135,8 +135,8 @@ A duration standing **alone** repeats the previous note, chord or slash at the
 new length — the same reading LilyPond gives an isolated duration:
 
 ```
-bes8 8 8 8 8 8 8 8    // an eighth-note bass pump, written once
-<c e g>4 4 2          // the chord again, quarter then half
+bes8 8 8 8 8 8 8 8 |  // an eighth-note bass pump, written once
+<c e g>4 4 2 |        // the chord again, quarter then half
 c'4 r4 4              // rests are transparent: the last 4 is c' again
 ```
 
@@ -171,9 +171,9 @@ ordinary note; playback is silent. Combine with a one-line staff
 rendering, so the same part can keep five lines elsewhere) for a rhythm chart:
 
 ```
-/4 / / /              // four beat slashes
-/8 8 /4 8 8 /4        // a comping figure (bare durations continue the run)
-/4 4 g8 g /4 /        // ensemble kicks mix with pitched notes
+/4 / / / |            // four beat slashes
+/8 8 /4 8 8 /4 |      // a comping figure (bare durations continue the run)
+/4 4 g8 g /4 |        // ensemble kicks mix with pitched notes
 ```
 
 `time 4/4`, `tuplet 3/2` and a chord entry's `c/g` keep their own `/` — only
@@ -235,9 +235,9 @@ Notes enclosed in angle brackets share a duration (written after the `>`):
 ```
 <c e g>4       // C major triad, quarter note
 <d fis a>2     // D major triad, half note
-<c 3 5>4       // the same triad by scale DEGREES: root + 3rd + 5th of the key
+<c 3 5>4 |     // the same triad by scale DEGREES: root + 3rd + 5th of the key
 <1 3 5>2       // degrees only — anchored on the key's tonic (C E G in C major)
-<2 4 6>2       // the ii triad (D F A in C major); degrees follow the key
+<2 4 6>2 |     // the ii triad (D F A in C major); degrees follow the key
 ```
 
 **Octaves — the anchor model.** Two rules: *a mark moves only what it is attached to*,
@@ -304,9 +304,9 @@ every member's, and a tie or slur mark hangs on its **last** member.
 ```
 << c@accent e\3 g@finger(1) >>   // per-member marks
 << c( e g) >>                    // a slur over the group, on the members
-<< c e g >>4\2                   // every member on the second string
+<< c e g >>4\2 |                 // every member on the second string
 << c e g >>4~ g                  // the tie is the last member's
-<< c e g >>4( d)                 // …and so is a bow started after '>>'
+<< c e g >>4( d) |               // …and so is a bow started after '>>'
 ```
 
 A **spaced dot** holds the member before it one more share of the total (not the 1.5×
@@ -460,11 +460,11 @@ Dynamics use `@` prefix (or `\` for LilyPond compatibility):
 c4@ppp   // Pianississimo
 c4@pp    // Pianissimo
 c4@p     // Piano
-c4@mp    // Mezzo piano
+c4@mp |  // Mezzo piano
 c4@mf    // Mezzo forte
 c4@f     // Forte
 c4@ff    // Fortissimo
-c4@fff   // Fortississimo
+c4@fff | // Fortississimo
 ```
 
 Dynamics sit below the staff by default. Append `.up` / `.down` to force the side:
@@ -532,8 +532,8 @@ c4~ | c4 d e f   // C tied across barline
 Connect different pitches with `(` and `)`:
 
 ```
-c4( d e f)        // Slur over four notes
-c4( d) e( f)      // Two separate slurs
+c4( d e f) |      // Slur over four notes
+c4( d) e( f) |    // Two separate slurs
 ```
 
 A slur mark written INSIDE a chord's brackets, after one of its pitches, binds the bow to
@@ -1134,8 +1134,8 @@ default part pages.
 ```
 grace { d16 e } f4          // Grace notes before F
 acciaccatura { a16 } b4     // Slashed grace (takes no time)
-appoggiatura { c8 } d4      // Unslashed grace
-c2 afterGrace { d16 e } f2  // Grace notes AFTER the c, ending it
+appoggiatura { c8 } d4 |    // Unslashed grace
+c2 afterGrace { d16 e } f2 | // Grace notes AFTER the c, ending it
 ```
 
 **`afterGrace { … }` is written after its main note** (LilyPond's `\afterGrace c2 { d16 e }`

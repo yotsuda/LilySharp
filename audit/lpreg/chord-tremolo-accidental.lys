@@ -6,15 +6,15 @@ part melody
 
 section A {
   melody {
-    repeat tremolo 16 { c'32 d }
-    repeat tremolo 16 { c32 <dis> }
-    repeat tremolo 16 { c32 <dis fis> }
+    repeat tremolo 16 { c'32 d } |
+    repeat tremolo 16 { c32 <dis> } |
+    repeat tremolo 16 { c32 <dis fis> } |
     repeat tremolo 8 { c32 d }
-    repeat tremolo 8 { c32 <dis> }
+    repeat tremolo 8 { c32 <dis> } |
     repeat tremolo 8 { c32 <dis fis> }
     repeat tremolo 4 { c32 d }
-    repeat tremolo 4 { c32 <dis> }
-    repeat tremolo 16 { b'32 <cis> }
+    repeat tremolo 4 { c32 <dis> } |
+    repeat tremolo 16 { b'32 <cis> } |
   }
 }
 

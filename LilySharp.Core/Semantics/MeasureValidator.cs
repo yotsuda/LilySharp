@@ -1160,10 +1160,18 @@ internal sealed class MeasureValidator : ISemanticValidator
         var span = Reported(measure, leadInSpan);
         // A bar holding a phrase reference, a repeat or a multi-bar rest closes where its beats
         // fill, on the page and in the playback, as every bar did before (MeasureModel.Bar.Flowed).
-        // A meter changing inside the bar is the same (no one bar length to hold it to).
+        // A `time` written after music in the span stands where a bar line should: the bar line
+        // before it is left out (the span has no one bar length to hold it to, so its bars close
+        // where the beats fill, page and playback alike, until the bar line is written).
+        if (TimeInsideTheBar(measure.Items) is { } midTime)
+        {
+            _diagnostics.Error(midTime.Span, DiagnosticCodes.MissingBarLine,
+                $"Measure duration {duration} runs on past a time change written inside it: "
+                + "a bar line looks to be missing before the `time`. Every note is kept - write it");
+            return;
+        }
         if (measure.Items.Any(n => n is VariableReferenceSyntax or RestSyntax { MeasureCount: > 1 }
-                || n is RepeatExpressionSyntax rep && rep.RepeatType.Text != "tremolo")
-            || measure.Items.Skip(1).Any(n => n is TimeSignatureSyntax))
+                || n is RepeatExpressionSyntax rep && rep.RepeatType.Text != "tremolo"))
         {
             _diagnostics.Warning(span, DiagnosticCodes.MeasureOverflow,
                 partialLength != null
@@ -1187,6 +1195,33 @@ internal sealed class MeasureValidator : ISemanticValidator
                 ? $"Pickup measure duration {duration} exceeds the declared partial {expected}"
                 : $"Measure duration {duration} exceeds time signature {MeterText}")
             + ": the music past the bar line is not drawn or played");
+    }
+
+    /// <summary>The first <c>time</c> written after music in the bar with no bar line between —
+    /// or null. A repeat's turns, an <c>R1*N</c> and a phrase body close their own bars where
+    /// their beats fill, so a <c>time</c> right after one stands on that bar line, not inside a bar.</summary>
+    private static TimeSignatureSyntax? TimeInsideTheBar(List<SyntaxNode> items)
+    {
+        bool music = false;
+        var running = Fraction.Quarter;
+        foreach (var n in items)
+        {
+            if (n is TimeSignatureSyntax time)
+            {
+                if (music)
+                    return time;
+                continue;
+            }
+            if (n is VariableReferenceSyntax or RestSyntax { MeasureCount: > 1 }
+                || n is RepeatExpressionSyntax rep && rep.RepeatType.Text != "tremolo")
+            {
+                music = false;
+                continue;
+            }
+            if (MeasureDurations.ItemDuration(n, ref running) > Fraction.Zero)
+                music = true;
+        }
+        return null;
     }
 
     /// <summary>
@@ -1360,12 +1395,15 @@ internal sealed class MeasureValidator : ISemanticValidator
                     // invisible because they were written inside an ending.
                     AddItems(volta.Items);
                 }
-                else if (item is CueExpressionSyntax cue && cue.Body.Items.Any(c => c is VariableReferenceSyntax))
+                else if (item is CueExpressionSyntax cue
+                    && cue.Body.Items.Any(c => c is VariableReferenceSyntax or BarlineSyntax))
                 {
                     // A cue region is priced IN PLACE (MeasureDurations.ItemDuration sums its body
                     // with the running note value), so walking into it changes no tally — and a
-                    // phrase reference inside it then flows exactly as a bare one does. Only a cue
-                    // that holds one is opened, so every other cue keeps its one-item address.
+                    // phrase reference inside it then flows exactly as a bare one does, and a bar
+                    // line inside it closes the bar as it does on the page and in MeasureModel
+                    // (`cue { f'1( | gis'1) } |` is two bars, not one of 2/1). Only a cue that
+                    // holds one is opened, so every other cue keeps its one-item address.
                     AddItems(cue.Body.Items);
                 }
                 else if (item is ParallelExpressionSyntax par)

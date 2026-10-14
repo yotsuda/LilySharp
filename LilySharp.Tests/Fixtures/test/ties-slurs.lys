@@ -20,7 +20,7 @@ phrase slurs {
   // Basic slur
   c4( d e f) |
   // Descending slur
-  g4( f e d) c2 r2 |
+  g4( f e d) | c2 r2 |
 }
 
 phrase tieDirection {

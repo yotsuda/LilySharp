@@ -10,15 +10,15 @@ part v { clef treble }
 
 section Main {
   v {
-    repeat tremolo 16 { c'32 d' }
-    repeat tremolo 16 { c'32 <dis'> }
-    repeat tremolo 16 { c'32 <dis' fis'> }
+    repeat tremolo 16 { c'32 d' } |
+    repeat tremolo 16 { c'32 <dis'> } |
+    repeat tremolo 16 { c'32 <dis' fis'> } |
     repeat tremolo 8 { c'32 d' }
-    repeat tremolo 8 { c'32 <dis'> }
+    repeat tremolo 8 { c'32 <dis'> } |
     repeat tremolo 8 { c'32 <dis' fis'> }
     repeat tremolo 4 { c'32 d' }
-    repeat tremolo 4 { c'32 <dis'> }
-    repeat tremolo 16 { b'32 <cis''> }
+    repeat tremolo 4 { c'32 <dis'> } |
+    repeat tremolo 16 { b'32 <cis''> } |
   }
 }
 

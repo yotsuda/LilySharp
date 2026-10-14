@@ -6,7 +6,7 @@ part melody
 
 section A {
   melody {
-    f'4( e) f~f
+    f'4( e) f~f |
     e,4( f) e~e
   }
 }

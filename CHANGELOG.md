@@ -21,8 +21,10 @@ workflow attaches that section to the GitHub Release verbatim.
   the beats run out, with one exception: a span within a quarter of a bar of two or more whole
   bars with no `|` inside (15/8 in 4/4, or music written without bar lines at all) is a bar
   line left out — it is drawn and played in bars of the meter with every note kept, and is an
-  **error, LYS2017**, until the `|` is written. A repeat's turns, an `R1*N`, a phrase body and
-  a `time` changing inside a bar still close their bars where the beats fill.
+  **error, LYS2017**, until the `|` is written — as is a `time` written after music in a bar.
+  A repeat's turns, an `R1*N` and a phrase body still close their bars where the beats fill.
+- **A bar line inside a `cue { }` closes its bar for the bar checks too**, as it always did on
+  the page: `cue { f'1( | gis'1) } |` was checked as one bar of 2/1.
 - **The empty chord `<>` takes no time in playback**, as on the page: `c4 <>@sfz d` sounded the
   `d` a beat late.
 
