@@ -637,6 +637,41 @@ public class PercentRepeatTests
     }
 
     /// <summary>
+    /// The blank bars of a multi-bar sign's span stand EVENLY — the bars beside the sign are not
+    /// widened alone (the owner, session 905: "only the bar the % stands in is longer"). Every
+    /// bar of the span takes the same rod (ScoreSideTables.PercentSignBarRods), and the double's
+    /// bar-line reservation is the 2-bar pair's alone. On a staff and on a tab (1.5-sized sign).
+    /// </summary>
+    [Theory]
+    [InlineData(3)]
+    [InlineData(4)]
+    [InlineData(6)]
+    public void Layout_AMultiBarSpan_StandsEvenly(int n)
+    {
+        string body = string.Join(" | ", Enumerable.Repeat("c1", n));
+        // Ragged: a justified line stretches past every rod, and the rod is what is asked.
+        var svg = TestPaper.SvgFromRenderSpec($$"""
+            octave absolute
+            paper { raggedRight }
+            part bl { clef bass  tuning bass }
+            section A { bl { {{body}} | break %{{n}} | } }
+            form { ~A }
+            score { staff bl  tab bl }
+            """);
+        // The second system's bar lines on one staff: its bars are the span alone.
+        var rows = System.Text.RegularExpressions.Regex.Matches(svg, "<rect x=\"([-\\d.]+)\" y=\"([-\\d.]+)\" width=\"0.19\"")
+            .Select(m => (X: double.Parse(m.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture),
+                          Y: double.Parse(m.Groups[2].Value, System.Globalization.CultureInfo.InvariantCulture)))
+            .GroupBy(r => r.Y).OrderBy(g => g.Key).ToList();
+        var last = rows[^1].Select(r => r.X).Distinct().OrderBy(x => x).ToList();
+        var widths = last.Zip(last.Skip(1), (a, b) => b - a).ToList();
+        // The line's first bar opens at the prefix, not a bar line: the rest are bar to bar.
+        Assert.True(widths.Count >= n - 1, $"{widths.Count} bars");
+        Assert.True(widths.Max() - widths.Min() < 0.05,
+            $"the span's bars must stand evenly: {string.Join(" ", widths.Select(w => w.ToString("F2")))}");
+    }
+
+    /// <summary>
     /// An ODD multi-bar sign stands inside its middle bar, so the bar must hold it: on a tab
     /// staff (staff space 1.5) the three-slash sign is 7.3 wide, more than the blank bar's
     /// natural width, and the bar's rod (ScoreSideTables.PercentSignBarRods) widens it so the

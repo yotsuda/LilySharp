@@ -336,7 +336,7 @@ internal sealed class SystemBreaker
                 lineStartRod = MultiStaffLayouter.LineStartRunRodDistance(
                     score, i, isFirstSystem: i == 0, run.Count, measureLength);
             }
-            // An odd multi-bar percent sign centred in the bar: the layouter's rod
+            // A bar of a multi-bar percent sign's span: the layouter's rod
             // (ScoreSideTables.PercentSignBarRods), priced the same way here.
             var percentSignRods = ScoreSideTables.PercentSignBarRods(score);
             if (i < percentSignRods.Count && percentSignRods[i] > 0)

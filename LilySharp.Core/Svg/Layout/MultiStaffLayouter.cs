@@ -2072,8 +2072,8 @@ internal sealed class MultiStaffLayouter
         {
             int measureIndex = startMeasureIndex + i;
             int springCount = measureSprings[i].Length;
-            // An odd multi-bar percent sign centred in this bar: the bar holds its slash group
-            // (ScoreSideTables.PercentSignBarRods; SystemBreaker prices the same rod).
+            // A bar of a multi-bar percent sign's span: every bar of it holds the same rod, so the
+            // span stands evenly (ScoreSideTables.PercentSignBarRods; SystemBreaker prices the same).
             if (springCount > 0 && measureIndex < percentSignRods.Count && percentSignRods[measureIndex] > 0)
                 rods.Add((springOffset, springOffset + springCount, percentSignRods[measureIndex]));
             if (springCount > 0 && runMap.TryGetRunStartingAt(measureIndex, out var run))

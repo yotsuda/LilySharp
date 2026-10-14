@@ -1,4 +1,4 @@
-﻿// Lily# - Music notation compiler
+// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -397,7 +397,7 @@ internal static class ScoreSideTables
         double half = 0;
         foreach (var pr in score.PercentRepeats)
         {
-            if (!pr.IsDouble || pr.MeasureIndex != measureIndex || pr.StaffIndex != staffIndex)
+            if (!pr.IsDouble || pr.Bars >= 3 || pr.MeasureIndex != measureIndex || pr.StaffIndex != staffIndex)
                 continue;
             double ss = 1.0;
             foreach (var (_, staff, index) in score.EnumerateStaves())
@@ -416,17 +416,24 @@ internal static class ScoreSideTables
     internal const double PercentSignBarPadding = 0.5;
 
     /// <summary>
-    /// Per bar index: the least width (bar line ink to bar line ink) the bar must have to hold
-    /// the widest ODD multi-bar percent sign centred in it — its slash group plus
-    /// <see cref="PercentSignBarPadding"/> each side — 0 where none stands. An even count stands
-    /// on a bar line and reserves through <see cref="DoublePercentHalfWidths"/>; the single
-    /// percent fits any bar. A tab staff's sign is one-and-a-half-sized.
+    /// Per bar index: the least width (bar line ink to bar line ink) every bar of a multi-bar
+    /// percent sign's span must have — the SAME for all N bars, so the span's blank bars stand
+    /// evenly however much the sign needs. An odd count's sign stands inside its middle bar,
+    /// which must hold the whole slash group plus <see cref="PercentSignBarPadding"/> each side;
+    /// an even count's straddles the middle bar line, and each bar beside it holds half the
+    /// group plus the padding. 0 where no such sign stands. A tab staff's sign is
+    /// one-and-a-half-sized.
     /// </summary>
     /// <remarks>
     /// LILYSHARP-OWN (the multi-bar sign is, PercentRepeatItem.Bars, session 905): LilyPond's
-    /// 3-or-more-bar repetition is a slash in a column of its own. Priced as a rod over the
+    /// 3-or-more-bar repetition is a slash in a column of its own. Priced as a rod over each
     /// bar's springs, as the multi-measure rest's run rod is (MultiStaffLayouter and
-    /// SystemBreaker read the same table, so the break gate and the layout agree).
+    /// SystemBreaker read the same table, so the break gate and the layout agree). ⚠️ NOT THE
+    /// DOUBLE'S BAR-LINE RESERVATION: an even sign anchored as the double is used to reserve its
+    /// half on each side of the middle bar line (<see cref="DoublePercentHalfWidths"/>), which
+    /// widened only the two middle bars of the span — LilyPond's measured spacing for the
+    /// 2-bar pair, which keeps it, but nothing a longer sign asks for (the owner: "the bar the
+    /// % stands in is longer", session 905).
     /// </remarks>
     internal static IReadOnlyList<double> PercentSignBarRods(MultiStaffScore score)
         => _percentSignBarRodsByScore.GetValue(score, ComputePercentSignBarRods);
@@ -444,13 +451,14 @@ internal static class ScoreSideTables
                 : 1.0;
         foreach (var pr in score.PercentRepeats)
         {
-            if (pr.IsBeatSlash || pr.IsDouble || pr.Bars < 3 || pr.MeasureIndex < 0 || pr.MeasureIndex >= n)
+            if (pr.IsBeatSlash || pr.Bars < 3)
                 continue;
             double ss = staffSpace.TryGetValue(pr.StaffIndex, out var s) ? s : 1.0;
-            double w = PercentRepeatEngraver.Geometry(false, 0, false, ss, pr.Bars).GroupWidth
-                       + 2 * PercentSignBarPadding;
-            if (w > rod[pr.MeasureIndex])
-                rod[pr.MeasureIndex] = w;
+            double group = PercentRepeatEngraver.Geometry(false, 0, pr.IsDouble, ss, pr.Bars).GroupWidth;
+            double w = (pr.IsDouble ? group / 2 : group) + (pr.IsDouble ? 1 : 2) * PercentSignBarPadding;
+            for (int m = Math.Max(0, pr.FirstCoveredMeasure); m <= Math.Min(n - 1, pr.LastCoveredMeasure); m++)
+                if (w > rod[m])
+                    rod[m] = w;
         }
         return rod;
     }
@@ -470,7 +478,7 @@ internal static class ScoreSideTables
                 : 1.0;
         foreach (var pr in score.PercentRepeats)
         {
-            if (!pr.IsDouble || pr.MeasureIndex < 0 || pr.MeasureIndex >= n)
+            if (!pr.IsDouble || pr.Bars >= 3 || pr.MeasureIndex < 0 || pr.MeasureIndex >= n)
                 continue;
             double ss = staffSpace.TryGetValue(pr.StaffIndex, out var s) ? s : 1.0;
             double h = PercentRepeatEngraver.Geometry(false, 0, true, ss, pr.Bars).GroupWidth / 2;
