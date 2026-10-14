@@ -2271,7 +2271,7 @@ public class IncrementalCompilerTests
         "octave absolute\ntime 4/4\nkey c major\npart melody { clef treble }\n"
         + "section Main { melody { "
         + string.Join(" ", Enumerable.Range(0, 160).Select(i =>
-            $"c'4@staccato d'4@accent e'4 f'4@mark(\"{(char)('A' + i % 26)}\") | repeat percent 2 {{ g'4 a' b' c'' | }}"))
+            $"c'4@staccato d'4@accent e'4 f'4@mark(\"{(char)('A' + i % 26)}\") | g'4 a' b' c'' | % |"))
         + " } }\n";
 
     /// <summary>A same-length script edit on the first page (an accent turned tenuto: Δ=0, so no
@@ -2304,7 +2304,7 @@ public class IncrementalCompilerTests
         string source = MarkedBook();
         var session = new IncrementalCompiler(SyntaxTree.Parse(source), Opt);
         string before = Norm(session.Render());
-        int mid = source.IndexOf("| repeat", source.Length / 2, StringComparison.Ordinal);
+        int mid = source.IndexOf("| g'4", source.Length / 2, StringComparison.Ordinal);
         Assert.True(mid >= 0);
         var change = new TextChange(new TextSpan(mid + 1, 0), " ");
         var incremental = Norm(session.Edit(change));

@@ -825,9 +825,9 @@ theme");
     // ========== Repeat Tests ==========
 
     [Fact]
-    public void ParseRepeatUnfold()
+    public void ParseRepeatTremolo()
     {
-        var tree = MusicSource.Parse("repeat unfold 2 { c4 d e f }");
+        var tree = MusicSource.Parse("repeat tremolo 4 { c16 e } r2 |");
         Assert.False(tree.HasErrors);
 
         // Wrapped, so the repeat is no longer a root slot — search the whole tree.
@@ -868,13 +868,15 @@ theme");
     }
 
     [Fact]
-    public void ParseRepeatUnfoldRoundTrip()
+    public void ParsePercentRepeatRoundTrip()
     {
-        // The round-trip subject is the whole parsed document, so compare the wrapped source.
-        var source = MusicSource.Wrap("repeat unfold 2 { c4 d e f | g2 g | }");
+        // The round-trip subject is the whole parsed document, so compare the wrapped source:
+        // the grouping moves the source's own nodes into the group, every character kept.
+        var source = MusicSource.Wrap("c4 d e f | g2 g | %2 | % | %0 |");
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors);
         Assert.Equal(source, tree.ToFullString());
+        Assert.Single(tree.GetNodes<PercentRepeatSyntax>());
     }
 
     [Fact]

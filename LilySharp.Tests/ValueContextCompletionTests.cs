@@ -506,7 +506,7 @@ public class ValueContextCompletionTests
 
         var kinds = LilySharpLanguageServer.GetRepeatKindCompletions().Items
             .Select(i => i.Label).ToArray();
-        Assert.Equal(new[] { "unfold", "percent", "tremolo" }, kinds);
+        Assert.Equal(new[] { "tremolo" }, kinds);
     }
 
     [Theory]

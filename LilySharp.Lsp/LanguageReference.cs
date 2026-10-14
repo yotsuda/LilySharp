@@ -63,12 +63,14 @@ internal static class LanguageReference
         // The kinds are joined from the compiler's list (SyntaxFacts.RepeatKindVocabulary),
         // not spelled here — this row carried its own copy of the three until 2026-09-03.
         new("repeat", $"repeat ({string.Join("|", LilySharp.Core.Semantics.LanguageVocabulary.RepeatKinds)}) count {{ music }}",
-            "Repeats the music block. A volta repeat is written in the form instead: "
-                + "'|: A :|' (count ':|*N'), with endings '|: A [1. B] :| [2. C]'.",
+            "A tremolo: the music alternated count times. A percent repeat is written after the "
+                + "bars it repeats, one mark a repetition: 'c4 d e f | % | % |', 'a2 b | c d | %2 |'. "
+                + "A volta repeat is written in the form: '|: A :|' (count ':|*N'), with endings "
+                + "'|: A [1. B] :| [2. C]'.",
             new[] { (string.Join("|", LilySharp.Core.Semantics.LanguageVocabulary.RepeatKinds), "Repeat kind (volta is the symbolic |: :| form, not this keyword)"),
-                    ("count", "Number of repetitions (integer)"),
-                    ("{ music }", "Music block to repeat") },
-            Sample: "part melody\nsection A { melody {\nrepeat unfold 2 { c4 d e f }\n} }\nform { ~A }\nscore { staff melody }",
+                    ("count", "Number of strokes (integer)"),
+                    ("{ music }", "The note or the two notes alternated") },
+            Sample: "part melody\nsection A { melody {\nrepeat tremolo 4 { c16 e } r2 |\n} }\nform { ~A }\nscore { staff melody }",
             HoverMarker: "**Repeat**"),
         new("tempo", "tempo \"marking\" duration = bpm",
             "Sets the tempo for playback.",
@@ -132,6 +134,10 @@ internal static class LanguageReference
             TieSyntax => "**Tie**: Connects two notes of the same pitch",
             SlurSyntax slur => slur.IsOpen ? "**Slur start**: `(`" : "**Slur end**: `)`",
             RepeatExpressionSyntax => "**Repeat**: Repeats the enclosed music",
+            PercentMarkSyntax { Parent: PercentRepeatSyntax group } mark =>
+                $"**Percent repeat**: `{mark.Mark.Text}` — the {(group.Bars == 1 ? "bar" : $"{group.Bars} bars")} before it once more "
+                + $"(heard {group.Count} times in all)",
+            PercentMarkSyntax mark => $"**Percent mark** `{mark.Mark.Text}`: repeats the bars written before it — here it repeats nothing (LYS1048)",
             ParallelExpressionSyntax => "**Parallel**: Multiple voices played simultaneously",
             TimeSignatureSyntax ts => $"**Time Signature**: {ts.Beats}/{ts.BeatType}",
             TempoDeclarationSyntax tempo => $"**Tempo**: {tempo.Marking ?? ""} {(tempo.BeatUnit != null ? $"{tempo.BeatUnit} = " : "")}{tempo.Bpm ?? 120} BPM".Trim(),

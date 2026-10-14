@@ -104,7 +104,7 @@ public class PostEventOrderTests
     /// whether it FLOWS THROUGH bar accounting from its item KINDS
     /// (<c>MeasureValidator.FlowsThroughBarAccounting</c>), and a marker that moved inside a
     /// note left that body looking like plain notes:
-    /// <c>repeat unfold 2 { c8(@accent d e f } g4 |</c> drew LYS2001 where the identical
+    /// <c>c8(@accent d e f c8(@accent d e f g4 |</c> drew LYS2001 where the identical
     /// music spelled <c>c8@accent(</c> drew LYS2006. The page, the MusicXML and the MIDI
     /// were byte-identical, so nothing above could see it.
     /// </remarks>
@@ -176,8 +176,8 @@ public class PostEventOrderTests
     // decides whether the repeat FLOWS THROUGH bar accounting by looking at its item kinds,
     // and that gate answered differently for the two spellings until it was told to look
     // inside a note as well — LYS2001 against LYS2006 on the same four notes.
-    [InlineData("repeat unfold 2 { c8(@accent d e f } g4 |",
-                "repeat unfold 2 { c8@accent( d e f } g4 |")]
+    [InlineData("c8(@accent d e f c8(@accent d e f g4 |",
+                "c8@accent( d e f c8@accent( d e f g4 |")]
     [InlineData("cue { c8(@accent d e f) } g4 r4 r2 |", "cue { c8@accent( d e f) } g4 r4 r2 |")]
     [InlineData("r4 e8( g <>)@f c8 c c |", "r4 e8( g <>@f) c8 c c |")]
     public void TheTwoOrdersOfOnePostEventRun_AreTheSameMusic(string markerFirst, string markerLast)

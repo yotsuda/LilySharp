@@ -280,8 +280,6 @@ public class CompletionVocabularyTests
 
         var body = new Dictionary<string, (string Body, string Tail)>
         {
-            ["unfold"] = ("g4 a", ""),            // 2 × a half bar
-            ["percent"] = ("g4 a b c'", ""),       // 2 × a bar
             ["tremolo"] = ("g16", "a4 b c'"),      // 4 strokes = one beat, then the rest of the bar
         };
         var rejected = new List<string>();

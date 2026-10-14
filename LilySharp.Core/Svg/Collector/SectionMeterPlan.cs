@@ -165,7 +165,8 @@ internal sealed class SectionMeterPlan
         if (!_changes.TryGetValue(section, out var c) || c.Count == 0)
             return items;
         foreach (var item in items)
-            if (item is RepeatExpressionSyntax or ParallelExpressionSyntax or VariableReferenceSyntax)
+            if (item is RepeatExpressionSyntax or PercentRepeatSyntax or PercentMarkSyntax
+                or ParallelExpressionSyntax or VariableReferenceSyntax)
                 return items;
         var result = new List<SyntaxNode>(items.Count + c.Count);
         int bar = 0;

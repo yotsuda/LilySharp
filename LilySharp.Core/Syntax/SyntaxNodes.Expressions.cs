@@ -45,6 +45,115 @@ public sealed class RepeatExpressionSyntax : SyntaxNode
 }
 
 /// <summary>
+/// A percent mark, <c>%</c> or <c>%N</c>: one repetition of the N bars written before it
+/// (docs/percent-repeat-design.md). Inside a <see cref="PercentRepeatSyntax"/> it is one
+/// repetition; a mark left outside one (too few bars before it, …) is reported and read as
+/// a bar of nothing.
+/// </summary>
+public sealed class PercentMarkSyntax : SyntaxNode
+{
+    internal PercentMarkSyntax(InternalSyntax.PercentMarkGreen green, SyntaxNode? parent, int position)
+        : base(green, parent, position)
+    {
+    }
+
+    /// <summary>The <c>%</c> / <c>%N</c> token.</summary>
+    public SyntaxTokenNode Mark => (SyntaxTokenNode)GetChild(0)!;
+
+    /// <summary>The number of bars the mark repeats: <c>%</c> is 1, <c>%N</c> is N; 0 for a
+    /// count that is not a number of bars (<c>%0</c>, a count too large to read).</summary>
+    public int Bars => LengthOf(Green.GetSlot(0)!.Text);
+
+    internal static int LengthOf(string text) =>
+        text.Length == 1 ? 1
+        : int.TryParse(text.AsSpan(1), System.Globalization.NumberStyles.None,
+            System.Globalization.CultureInfo.InvariantCulture, out int n) && n is > 0 and <= MaxBars ? n
+        : 0;
+
+    /// <summary>The longest body a mark may repeat — a bound so a typo cannot ask for a
+    /// million bars; the owner's books repeat at most eight.</summary>
+    public const int MaxBars = 64;
+}
+
+/// <summary>
+/// A percent repeat, grouped by the parser around a run of marks: the bars repeated (their
+/// items, bar lines between them included), the bar line closing them, and each mark with
+/// the bar lines between the marks (and any line break beside a mark) — the source's own nodes
+/// in its order. The bar line after the last mark is outside, and so are the directives at the
+/// head of the first bar (Parser.GroupPercentRepeats). <c>a2 b | c d | %2 | %2 |</c> is the
+/// pattern three times.
+/// </summary>
+public sealed class PercentRepeatSyntax : SyntaxNode
+{
+    internal PercentRepeatSyntax(InternalSyntax.PercentRepeatGreen green, SyntaxNode? parent, int position)
+        : base(green, parent, position)
+    {
+    }
+
+    /// <summary>The slot of the bar line that closes the body: the last one before the first
+    /// mark (line breaks may stand between the two).</summary>
+    private int BodyEndSlot
+    {
+        get
+        {
+            int first = 0;
+            while (first < SlotCount && Green.GetSlot(first)?.Kind != SyntaxKind.PercentMarkItem)
+                first++;
+            int bar = first - 1;
+            while (bar > 0 && Green.GetSlot(bar)?.Kind != SyntaxKind.Barline)
+                bar--;
+            return bar;
+        }
+    }
+
+    /// <summary>The slot of the first mark.</summary>
+    private int FirstMarkSlot
+    {
+        get
+        {
+            int first = 0;
+            while (first < SlotCount && Green.GetSlot(first)?.Kind != SyntaxKind.PercentMarkItem)
+                first++;
+            return first;
+        }
+    }
+
+    /// <summary>The items of the bars repeated, in order, the bar lines between them
+    /// included and the one closing them not.</summary>
+    public IEnumerable<SyntaxNode> BodyItems
+    {
+        get
+        {
+            int end = BodyEndSlot;
+            for (int i = 0; i < end; i++)
+                if (GetChild(i) is { } child)
+                    yield return child;
+        }
+    }
+
+    /// <summary>The bar line that closes the body, before the first mark.</summary>
+    public BarlineSyntax BodyEndBar => (BarlineSyntax)GetChild(BodyEndSlot)!;
+
+    /// <summary>The marks, one per repetition.</summary>
+    public IEnumerable<PercentMarkSyntax> Marks
+    {
+        get
+        {
+            for (int i = BodyEndSlot + 1; i < SlotCount; i++)
+                if (Green.GetSlot(i)?.Kind == SyntaxKind.PercentMarkItem)
+                    yield return (PercentMarkSyntax)GetChild(i)!;
+        }
+    }
+
+    /// <summary>The number of bars repeated — every mark's length (the grouping keeps only
+    /// marks of one length together).</summary>
+    public int Bars => PercentMarkSyntax.LengthOf(Green.GetSlot(FirstMarkSlot)!.GetSlot(0)!.Text);
+
+    /// <summary>How many times the bars are heard: once written, once per mark.</summary>
+    public int Count => 1 + Marks.Count();
+}
+
+/// <summary>
 /// Parallel expression: <c>&lt;&lt; expr \\ expr &gt;&gt;</c>
 /// </summary>
 public sealed class ParallelExpressionSyntax : SyntaxNode

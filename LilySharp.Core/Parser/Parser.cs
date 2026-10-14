@@ -375,6 +375,8 @@ internal sealed partial class Parser
         }
 
         var eof = Expect(SyntaxKind.EndOfFile);
+        // Music written at the top level (reported, LYS0020) is still read as written there.
+        GroupPercentRepeats(members);
         return new CompilationUnitGreen([.. members], eof);
     }
 

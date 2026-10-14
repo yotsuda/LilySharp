@@ -97,7 +97,7 @@ public sealed class MeasureValidatorWalkTests
     [InlineData("melody { c8 c c c c c tuplet 3/2 { c8 c c } | }")]        // TupletExpression
     [InlineData("melody { c8 c c c c c c grace { c16 } c8 | }")]           // GraceExpression
     [InlineData("melody { c8 c c c c c c cue treble { c8 } | }")]          // CueExpression
-    [InlineData("melody { repeat percent 2 { c8 c c c c c c c } }")]       // RepeatExpression
+    [InlineData("melody { c8 c c c c c c c | % }")]       // RepeatExpression
     [InlineData("melody { voice { c2 c2 } voice { e2 e2 } }")]             // ParallelExpression
     [InlineData("melody { c2 voice { d2 } voice { e2 } }")]                // … mid-bar
     [InlineData("chords prog { section A { | C | } }")]                    // ChordPartBlock

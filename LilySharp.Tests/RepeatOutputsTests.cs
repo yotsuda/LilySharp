@@ -49,7 +49,7 @@ namespace LilySharp.Tests;
 /// </para>
 /// <para>
 /// ⚠️ `unfold` IS DELIBERATELY NOT IN THIS FAMILY. It prints every copy, and the page's own
-/// copies climb with it (MEASURED: `repeat unfold 4 { g''8 a }` draws its four pairs an octave
+/// copies climb with it (MEASURED: `g''8 a g''8 a g''8 a g''8 a` draws its four pairs an octave
 /// apart, rising), so page and exporters agree. LilyPond does not — it resolves the relative
 /// chain once and copies the result, so its unfolded copies are identical, and our twin
 /// exports `\repeat unfold 4 { g''8 a }` verbatim into that rule. That disagreement is about
@@ -70,7 +70,7 @@ public class RepeatOutputsTests
     private const string Percent = """
         time 4/4
         part melody
-        section A { melody { repeat percent 3 { g''8 a b c d e f g | } } }
+        section A { melody { g''8 a b c d e f g | % | % } }
         form { ~A }
         score { staff melody }
         """;
@@ -109,7 +109,7 @@ public class RepeatOutputsTests
     public void InAbsoluteOctaveMode_ThereWasNothingToClimb()
     {
         // The control, and it has to be `octave absolute` rather than a well-chosen relative
-        // body: the first draft used `repeat percent 3 { g''4 a g a | }` on the reasoning
+        // body: the first draft used `g''4 a g a | % | % |` on the reasoning
         // that it "ends where it starts", and it went red under the poison with the others.
         // It does not end where it starts — `''` counts from the NEAREST g, so a body whose
         // last note is A5 re-enters two octaves up however tidy it looks. In absolute mode
@@ -119,7 +119,7 @@ public class RepeatOutputsTests
             octave absolute
             time 4/4
             part melody
-            section A { melody { repeat percent 3 { g'8 a' b' c'' d'' e'' f'' g'' | } } }
+            section A { melody { g'8 a' b' c'' d'' e'' f'' g'' | % | % } }
             form { ~A }
             score { staff melody }
             """);

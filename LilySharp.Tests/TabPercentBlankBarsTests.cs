@@ -61,7 +61,7 @@ public sealed class TabPercentBlankBarsTests
 
     // A three-bar body: bars 4-6 are one slash and two blank bars.
     private const string ThreeBarPercent =
-        "repeat percent 2 { a,,8\\4 a,,\\4 a,,\\4 a,,\\4 c\\1 c\\1 c\\1 c\\1 | d,4\\3 d,\\3 d,\\3 d,\\3 | g,2\\2 g,\\2 | }";
+        "a,,8\\4 a,,\\4 a,,\\4 a,,\\4 c\\1 c\\1 c\\1 c\\1 | d,4\\3 d,\\3 d,\\3 d,\\3 | g,2\\2 g,\\2 | %3";
 
     private static int WholeRests(RecordingDrawingContext page)
         => page.Glyphs.Count(g => g.Glyph is EmmentalerGlyphs.RestWhole or EmmentalerGlyphs.RestWholeLedgered);

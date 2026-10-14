@@ -21,7 +21,7 @@ section Chorus {
   head { riffF | c'4 a8 f~ f2 | riffF r1 |
          riffBb | f''4 d8 bes~ bes2 | riffF | r1 |
          riffC | riffBb | riffF | r1 | }
-  comp { repeat unfold 12 { comping } }
+  comp { comping comping comping comping comping comping comping comping comping comping comping comping }
   bass { f,4 a c ees | bes d f aes | f,4 a c ees | f,4 a c ees |
          bes d f aes | bes, d f aes | f,4 a c ees | f,4 a c ees |
          c4 e g bes | bes, d f aes | f,4 a c ees | c4 e g bes | }

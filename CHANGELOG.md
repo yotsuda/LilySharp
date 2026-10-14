@@ -6,6 +6,24 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+### The percent repeat is written where it is drawn
+
+- **A percent repeat is the bars once, then one mark a repetition after them:**
+  `c4 d e f | % | % | % |` is the bar four times, `a2 b | c'2 d' | %2 | %2 |` the two bars
+  three times. `%N` repeats the N bars written just before it, stands alone between bar lines
+  (a `break` may stand beside it), and is drawn where it is written — the `%` sign, the double
+  `%` over a `%2`'s bar line, LilyPond's slash for `%3` and up. A mark that repeats nothing is
+  **LYS1048**, bars a mark repeats that are not whole bars **LYS1049**.
+- **`repeat percent N { … }` and `repeat unfold N { … }` are gone (LYS1047).** The editor's
+  quick fix rewrites the item, and the new **`lysc percent <book>`** rewrites a whole book;
+  an unfold, or a percent repeat of less than whole bars (LilyPond's beat repeat), is
+  written out. Measured on 334 books: 472 repeats became marks and 5 were written out, and
+  every one plays byte-identically and draws identically except those 5. `repeat tremolo`
+  stays.
+- The bars of a percent repeat are written bars now, so they are checked like any other —
+  the last place where bars closed by themselves where the beats filled, inside a repeat,
+  is gone.
+
 ### Playback keeps the parts together after a miscounted bar
 
 - **A bar of the wrong length no longer pushes the rest of a part out of step.** At each bar
@@ -23,7 +41,7 @@ workflow attaches that section to the GitHub Release verbatim.
   line left out — it is drawn and played in bars of the meter with every note kept, and is an
   **error, LYS2017**, until the `|` is written — as is a `time` written after music in a bar.
   A phrase's music — a phrase inside a phrase too — is held to the bar it plays in like any
-  other. A repeat's turns and an `R1*N` still close their bars where the beats fill.
+  other. An `R1*N` still closes its bars where the beats fill.
 - **A bar line inside a `cue { }` closes its bar for the bar checks too**, as it always did on
   the page: `cue { f'1( | gis'1) } |` was checked as one bar of 2/1.
 - **The hands of a grand staff share their dynamics in playback.** A dynamic written in either

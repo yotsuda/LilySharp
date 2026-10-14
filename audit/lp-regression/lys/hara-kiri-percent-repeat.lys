@@ -21,10 +21,10 @@ part rs { }
 
 section Main {
   n1 { c'1 | c' | break c' | c' | }
-  n2 { repeat percent 4 { c1 | } }
-  tb { repeat percent 4 { c,1 | } }
-  dr { repeat percent 4 { hh1 | } }
-  rs { repeat percent 4 { b1 | } }
+  n2 { c1 | % | % | % }
+  tb { c,1 | % | % | % }
+  dr { hh1 | % | % | % }
+  rs { b1 | % | % | % }
 }
 
 form { ~Main }

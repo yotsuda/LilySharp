@@ -1446,7 +1446,7 @@ DrumLine       = [ 'up' | 'down' ] , ( PhraseRef | MusicBlock ) ;
    voices: every hand's hit on stems up, merged into chords where the lines meet, and every
    foot's (bd, bda, hhp) on stems down. 'up' / 'down' before a line puts all of it on that
    side. A line holds drum notes, drum chords, bare durations, rests, bar lines, 'tuplet'
-   and 'repeat unfold/percent'; a chart whose lines hold anything else (a pitched note, a
+   and percent repeats; a chart whose lines hold anything else (a pitched note, a
    nested tuplet, two tuplets crossing in one voice) is drawn as written, a voice a line.
    A flam's grace (acciaccatura { sn16 } sn4) is drawn before the item its hit joins.
    Music written straight into the chart, not in a line, is LYS0040. Hits no drummer can
@@ -1991,7 +1991,7 @@ DisplayName    = String ;
 MusicBlock     = '{' , { MusicItem } , '}' ;
 
 MusicItem      = Note | Rest | Chord | Arpeggio | Barline | PhraseRef
-               | SlashNote | BareDuration
+               | SlashNote | BareDuration | PercentMark
                | Slur | Tie | Beam | Tuplet | Grace | Cue | MidMusicCommand
                | DrumChart ;                      (* §5.2 *)
 
@@ -1999,7 +1999,7 @@ MusicItem      = Note | Rest | Chord | Arpeggio | Barline | PhraseRef
    barline ('|:' ':|' ':|:') and a volta ending ('[1. … ]') change the ORDER the music plays
    in, and a book's order is written in its `form`. Writing one here is an ERROR with no
    grace period and no rewriter — the line is drawn at "does it change the playing order",
-   which is why `repeat percent`, `repeat unfold` and `tremolo` STAY (they abbreviate notes)
+   which is why the percent mark '%' and `repeat tremolo` STAY (they abbreviate notes)
    and why a `lyrics` row's '[1. … ]' is untouched (it is the words for the Nth pass, a
    different construct: LyricVolta in §5).
    They are still LEXED and PARSED here so the error can name them and point at them; what
@@ -2273,7 +2273,7 @@ RepeatEnd      = ':|' , [ '*' , Integer ] ;          (* :|*N plays the span N ti
        error (LYS2017), every note kept;
      - a phrase body inlined into the bar is music like any other, held to the written bar it
        plays in (its own bar lines are bar lines);
-     - where no bar line can be written — a repeat's turns, an 'R1*N' — the bars still close
+     - where no bar line can be written — inside an 'R1*N' or a '%N' — the bars still close
        where the beats fill.
    The playback re-syncs every part at every bar line: a short bar is filled with silence.
    One rule, one place: Semantics.WrittenBar (page: MeasureBuilder, playback: MidiExporter). *)
@@ -2606,24 +2606,46 @@ Grace          = ( 'grace' | 'acciaccatura' | 'appoggiatura' | 'afterGrace' ) , 
                     stands in grace time — inside the body, out to the main note, or in
                     from a main note — DOWN when it starts in the body unless the voice
                     fixes the side (session 725). *)
-Repeat         = 'repeat' , ( 'percent' | 'unfold' | 'tremolo' ) , [ Integer ] , MusicBlock ;
-                 (* repeat percent 2 { … } = percent-repeat the measure; volta repeats
-                    use the symbolic |: … :| form, NOT a 'repeat' keyword *)
-                 (* WHICH SIGN a percent repeat prints is the BODY'S LENGTH, not the
-                    repeat count, and LilyPond decides it once, on the second iteration
-                    (percent-repeat-iterator.cc's next_element). There are TWO tests and
-                    one else — no more:
-                      one measure   -> the single % in each repeated measure
-                      two measures  -> ONE double-% on the bar line between the pair,
-                                       so 'repeat percent 4 { r1 | r1 }' is three double
+Repeat         = 'repeat' , 'tremolo' , Integer , MusicBlock ;
+                 (* a tremolo: the note, or the two notes, alternated Integer times.
+                    Volta repeats use the form's |: … :|, NOT a 'repeat' keyword.
+                    ⚠️ 'repeat percent' and 'repeat unfold' are GONE (owner's decision
+                    2026-10-14, LYS1047): a percent repeat is the PercentMark below, an
+                    unfold its music written out; `lysc percent` and the quick fix rewrite
+                    the old spelling. *)
+PercentMark    = '%' , [ Integer ] ;                 (* no space: '%2' *)
+                 (* ONE REPETITION of the N bars written just before it ('%' is '%1'), and
+                    it occupies those N bars (docs/percent-repeat-design.md):
+                      c4 d e f | % | % | % |      the bar four times
+                      a2 b | c' d' | %2 | %2 |    the two bars three times
+                    A mark is the only thing in its bar — written between two bar lines
+                    (the closing one may be the music's end; a 'break' may stand beside
+                    it). Marks in a row repeat the SAME bars; a mark of another length
+                    right after them is an error, since the bars a mark repeats are
+                    WRITTEN bars. "The bars before it" are counted back over the bar lines
+                    of the same music (a block, a part cell, a section's music, an
+                    ending); the directives at the head of the first of them ('break',
+                    'key', 'time', 'clef' …) are written before the bars, not repeated.
+                    A mark that cannot be read so is LYS1048; bars that are not whole bars
+                    of the meter (a pickup, a short bar) are LYS1049. The parser groups a
+                    run of marks with its bars (PercentRepeatSyntax: the bars, the bar line
+                    closing them, the marks and the bar lines between them — the source's
+                    own nodes, so every position stands).
+                    WHICH SIGN a mark prints is the BODY'S LENGTH, and LilyPond decides it
+                    once (percent-repeat-iterator.cc's next_element). There are TWO tests
+                    and one else — no more:
+                      '%'           -> the single % in the repeated measure
+                      '%2'          -> ONE double-% on the bar line between the pair,
+                                       so 'r1 | r1 | %2 | %2 | %2' is three double
                                        signs, not six single ones
-                      anything else -> ONE repeat slash where the repetition starts, and
+                      '%3' and up   -> ONE repeat slash where the repetition starts, and
                                        the rest of that repetition's measures are BLANK.
-                                       'repeat percent 2 { c1 | c1 | c1 }' is three written
-                                       measures, one slash, and two empty bars.
+                                       'c1 | c1 | c1 | %3' is three written measures, one
+                                       slash, and two empty bars.
                     How many slashes that last sign carries comes from the body's WRITTEN
                     durations (calc-repeat-slash-count): all equal gives a plain slash,
-                    unequal gives the double slash. *)
+                    unequal gives the double slash. A body shorter than a bar — LilyPond's
+                    beat repeat — cannot be written: write the notes out. *)
 Cue            = 'cue' , [ ClefName ] , MusicBlock ;
                  (* Small cue notes. A cue is a REGION, not a note annotation — it maps
                     onto LilyPond's CueVoice context, whose size is a context property,

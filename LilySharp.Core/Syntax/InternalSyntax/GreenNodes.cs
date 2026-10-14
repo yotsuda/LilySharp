@@ -662,6 +662,30 @@ internal sealed class RepeatExpressionGreen : GreenSyntaxNode
 }
 
 /// <summary>
+/// A percent mark as an item of music: <c>%</c> or <c>%N</c> (docs/percent-repeat-design.md).
+/// </summary>
+internal sealed class PercentMarkGreen : GreenSyntaxNode
+{
+    public PercentMarkGreen(SyntaxToken mark)
+        : base(SyntaxKind.PercentMarkItem, [mark])
+    {
+    }
+}
+
+/// <summary>
+/// A percent repeat: the items of the bars it repeats, the bar line before its first mark, and
+/// its marks with the bar lines between them — the source's own nodes in their order, so the
+/// grouping moves no position (docs/percent-repeat-design.md §3).
+/// </summary>
+internal sealed class PercentRepeatGreen : GreenSyntaxNode
+{
+    public PercentRepeatGreen(GreenNode?[] children)
+        : base(SyntaxKind.PercentRepeat, children)
+    {
+    }
+}
+
+/// <summary>
 /// Parallel expression: <c>&lt;&lt; expr \\ expr &gt;&gt;</c>
 /// </summary>
 internal sealed class ParallelExpressionGreen : GreenSyntaxNode

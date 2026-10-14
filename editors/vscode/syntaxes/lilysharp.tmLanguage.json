@@ -562,7 +562,7 @@
             ]
         },
         "directive-value": {
-            "comment": "A directive and the ONE word that is its value: `octave relative`, `repeat unfold 2`. ⚠️ The value words are NOT reserved — `part relative { … }` and `part unfold { … }` both compile (measured 2026-08-18) — so colouring them from a bare alternation paints a writer's own part name as a keyword. Same device as #instrument-value, and it has to be included BEFORE #keywords so the two-word form is read first.",
+            "comment": "A directive and the ONE word that is its value: `octave relative`, `repeat tremolo 4`. ⚠️ The value words are NOT reserved — `part relative { … }` and `part unfold { … }` both compile (measured 2026-08-18) — so colouring them from a bare alternation paints a writer's own part name as a keyword. Same device as #instrument-value, and it has to be included BEFORE #keywords so the two-word form is read first.",
             "patterns": [
                 {
                     "match": "\\b(octave)\\s+(absolute|relative)\\b",
@@ -572,7 +572,7 @@
                     }
                 },
                 {
-                    "match": "\\b(repeat)\\s+(percent|unfold|tremolo)\\b",
+                    "match": "\\b(repeat)\\s+(tremolo)\\b",
                     "captures": {
                         "1": { "name": "keyword.control.lilysharp" },
                         "2": { "name": "support.constant.repeat-kind.lilysharp" }
@@ -689,6 +689,11 @@
         },
         "barlines": {
             "patterns": [
+                {
+                    "comment": "A percent mark, `%` or `%N`: one repetition of the N bars before it, alone between bar lines (docs/percent-repeat-design.md).",
+                    "name": "keyword.operator.percent-repeat.lilysharp",
+                    "match": "%\\d*"
+                },
                 {
                     "comment": "Repeat-end with explicit count: :|*N",
                     "match": "(:\\|)(\\*)(\\d+)",

@@ -860,12 +860,9 @@ public sealed partial class LilySharpLanguageServer
 
     // Prose and the default count per repeat kind. A tremolo's count is the number of
     // strokes the body is played in (repeat tremolo 4 { c16 e } = one beat), so its default
-    // is a beat's worth rather than the "twice" the other two mean. Membership decides
-    // nothing — the words come from the compiler.
+    // is a beat's worth. Membership decides nothing — the words come from the compiler.
     private static readonly System.Collections.Generic.Dictionary<string, (string Detail, int Count)> RepeatKindDetails = new()
     {
-        ["unfold"] = ("Write the body out N times (LP \\repeat unfold)", 2),
-        ["percent"] = ("Play the body N times, printed as % / ⁒ repeat signs (LP \\repeat percent)", 2),
         ["tremolo"] = ("Tremolo: alternate the body's notes N times under beams (LP \\repeat tremolo)", 4),
     };
 

@@ -35,6 +35,7 @@ internal sealed partial class Parser
         var openBrace = Expect(SyntaxKind.OpenBrace);
 
         var items = ParseList(SyntaxKind.CloseBrace, ParseSectionItem);
+        GroupPercentRepeats(items);
 
         var closeBrace = Expect(SyntaxKind.CloseBrace);
         return new SectionDeclarationGreen(keyword, tilde, name, label, openBrace, [.. items], closeBrace);

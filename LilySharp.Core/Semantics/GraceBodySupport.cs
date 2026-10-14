@@ -598,6 +598,7 @@ internal static class GraceBodySupport
         VariableReferenceSyntax => "a phrase reference",
         CueExpressionSyntax => "a cue",
         RepeatExpressionSyntax => "a repeat",
+        PercentRepeatSyntax or PercentMarkSyntax => "a percent repeat",
         DynamicSyntax => "a dynamic",
         StringNumberAnnotationSyntax => "a string number",
         ArticulationSyntax or MusicMarkSyntax => "an annotation",

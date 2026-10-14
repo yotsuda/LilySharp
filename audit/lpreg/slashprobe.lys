@@ -4,7 +4,7 @@ time 4/4
 part v { }
 
 section Main {
-  v { repeat percent 2 { c16 d e f } repeat percent 2 { g8. c16 } | }
+  v { c16 d e f c16 d e f g8. c16 g8. c16 | }
 }
 
 form { ~Main }

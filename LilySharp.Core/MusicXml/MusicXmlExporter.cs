@@ -2569,6 +2569,57 @@ public sealed class MusicXmlExporter
         measure.Attributes.MeasureRepeatBars = bars;
     }
 
+    /// <summary>
+    /// A percent repeat: the bars, then each mark as the bars again. Repeated measures carry
+    /// their REAL notes (importers hide them behind the sign and strict ones see full bars, as
+    /// MuseScore exports them); a one- or two-bar body runs under a
+    /// <c>&lt;measure-style&gt;&lt;measure-repeat&gt;</c> — START on the first repeated measure,
+    /// STOP on the measure the bar line after the run opens. A longer body is written out: the
+    /// page draws LilyPond's slash there, which MusicXML has no element for.
+    /// </summary>
+    private void ProcessPercentRepeat(PercentRepeatSyntax percent)
+    {
+        int bars = percent.Bars;
+        bool sign = bars is 1 or 2 && _currentPart != null;
+        // Every repetition is the one copy the page draws, so each re-enters the frame the bars
+        // opened in (the tremolo's rule above).
+        var frame = (_currentOctave, _currentStep, _defaultDuration);
+        var body = percent.BodyItems.ToList();
+        int bodyEnd = percent.BodyEndBar.Position;
+        bool afterBody = false, first = true;
+        foreach (var child in percent.ChildNodes())
+        {
+            if (!afterBody)
+            {
+                ProcessNode(child);
+                afterBody = child.Position == bodyEnd;
+                continue;
+            }
+            if (child is not PercentMarkSyntax)
+            {
+                ProcessNode(child);
+                continue;
+            }
+            (_currentOctave, _currentStep, _defaultDuration) = frame;
+            int passStart = _currentPart?.Measures.Count ?? 0;
+            var opened = _currentMeasure;
+            foreach (var item in body)
+                ProcessNode(item);
+            if (sign && first)
+            {
+                var start = _currentPart!.Measures.Count > passStart ? _currentPart.Measures[passStart] : opened;
+                if (start != null)
+                    MarkMeasureRepeat(start, "start", bars);
+            }
+            first = false;
+        }
+        // The STOP rides the part's next measure — "the first measure where the repeats are no
+        // longer displayed" (MusicXML 4.0): the one the bar line after the run opens, or the next
+        // section's first when the run ends its section (StartNewMeasure).
+        if (sign && !first && _currentPartName != null)
+            _pendingRepeatStop[_currentPartName] = bars;
+    }
+
     private void ProcessNode(SyntaxNode node)
     {
         switch (node)
@@ -2739,59 +2790,46 @@ public sealed class MusicXmlExporter
                 ProcessParallelVoices(parallel);
                 break;
 
+            case PercentRepeatSyntax percent:
+                ProcessPercentRepeat(percent);
+                break;
+
+            case PercentMarkSyntax stray:
+                // A mark that repeats nothing (LYS1048): the bars it stands for, empty — an
+                // unprinted whole-bar rest each, as the page draws them.
+                for (int bar = 0; bar < Math.Max(1, stray.Bars) && _currentMeasure != null && _currentPart != null; bar++)
+                {
+                    if (bar > 0 && _currentMeasure.Notes.Count > 0)
+                    {
+                        _currentPart.Measures.Add(_currentMeasure);
+                        StartNewMeasure();
+                    }
+                    var (type, dots) = GetNoteType(_bars.MeterLength);
+                    _currentMeasure!.Notes.Add(new MusicXmlNote
+                    {
+                        IsRest = true,
+                        IsMeasureRest = true,
+                        PrintObject = false,
+                        Duration = FractionToTicks(_bars.MeterLength),
+                        Type = type,
+                        Dots = dots,
+                    });
+                }
+                break;
+
             case RepeatExpressionSyntax repeat:
                 {
                     int repCount = int.TryParse(repeat.Count.Text, out int rc) ? Math.Max(1, rc) : 2;
-                    // A one-measure percent body exports the SIGN: the source
-                    // measure once, then empty measures under a
-                    // <measure-style><measure-repeat> run (importers play the
-                    // repeat and print %). Multi-measure bodies and the other
-                    // repeat types stay unfolded (metrically correct).
-                    // …and a TWO-measure body its sign too (%%, the page's DoublePercentRepeat):
-                    // MusicXML's measure-repeat names the measures one repetition spans.
-                    int percentBars = repeat.Body.Items.Count(i => i is BarlineSyntax);
-                    bool oneMeasurePercent = repeat.RepeatType.Text == "percent"
-                        && percentBars is 1 or 2
-                        && repeat.Body.Items.LastOrDefault() is BarlineSyntax
-                        && _currentPart != null;
-                    // A percent sign and a tremolo are ENGRAVED ONCE, so every pass has to
-                    // be that one copy — which means re-entering the body in the frame it
-                    // opened in, not the one the previous pass left. Without it a body that
-                    // moves the frame climbs, and unlike the MIDI (which clamps at key 127)
-                    // this file has no ceiling to hide it: MEASURED 2026-08-17 on
-                    // `repeat tremolo 32 { g''64 a }`, whose page is one G5-A5 pair, the
-                    // export ran G5 A5 G7 A7 G9 ... up to OCTAVE 67.
-                    // ⚠️ `unfold` re-enters its own frame TOO, though it is written out in
-                    // full: N copies of one piece of music is what "play this N times" means
-                    // (decided 2026-08-17, HANDOFF §3), and it is LilyPond's reading as well.
+                    // The old `repeat percent` / `repeat unfold` (LYS1047) is its body once.
+                    if (repeat.RepeatType.Text != "tremolo")
+                        repCount = 1;
+                    // A tremolo is ENGRAVED ONCE, so every pass has to be that one copy — which
+                    // means re-entering the body in the frame it opened in, not the one the
+                    // previous pass left. Without it a body that moves the frame climbs, and unlike
+                    // the MIDI (which clamps at key 127) this file has no ceiling to hide it:
+                    // MEASURED 2026-08-17 on `repeat tremolo 32 { g''64 a }`, whose page is one
+                    // G5-A5 pair, the export ran G5 A5 G7 A7 G9 ... up to OCTAVE 67.
                     var frame = (_currentOctave, _currentStep, _defaultDuration);
-                    if (oneMeasurePercent)
-                    {
-                        // Repeated measures carry their REAL notes under the
-                        // measure-style (importers hide them behind the % and
-                        // strict ones see full bars), like MuseScore exports.
-                        for (int rep = 0; rep < repCount; rep++)
-                        {
-                            // The body ends with its own barline, which flushes
-                            // the measure and opens the next (flushing HERE
-                            // nulls the open measure and drops later passes).
-                            if (rep > 0)
-                                (_currentOctave, _currentStep, _defaultDuration) = frame;
-                            int passStart = _currentPart!.Measures.Count;
-                            ProcessNode(repeat.Body);
-                            // The START rides the FIRST measure of the first repetition (the pass
-                            // flushes it, so it is the first one added during the pass).
-                            if (rep == 1 && _currentPart.Measures.Count > passStart)
-                                MarkMeasureRepeat(_currentPart.Measures[passStart], "start", percentBars);
-                        }
-                        // The STOP rides the measure AFTER the last repetition — "the first
-                        // measure where the repeats are no longer displayed" (MusicXML 4.0) —
-                        // the one the body's closing bar line opened. When nothing follows it
-                        // stays empty and is not written, and the sign runs to the part's end.
-                        if (repCount > 1 && _currentMeasure != null)
-                            MarkMeasureRepeat(_currentMeasure, "stop", percentBars);
-                        break;
-                    }
                     for (int rep = 0; rep < repCount; rep++)
                     {
                         if (rep > 0)

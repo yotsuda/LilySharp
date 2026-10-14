@@ -4,6 +4,14 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+### The percent repeat: `| % |` after the bars
+
+- **`c4 d e f | % | % | % |`** — a percent repeat is the bars once and a mark a repetition after
+  them (`%2` for two bars). The mark is coloured, its hover says how many bars it repeats and how
+  many times they sound, and a mark that repeats nothing is underlined with the reason.
+- **`repeat percent` / `repeat unfold` are errors with a quick fix** that rewrites the item as
+  marks — or writes the music out, for an unfold or a beat. `repeat` now offers `tremolo` alone.
+
 ### A clef change on a condensed staff moves every part
 
 - **A `clef` written by one part of a `condensedStaff` changes the staff for all of them**, and

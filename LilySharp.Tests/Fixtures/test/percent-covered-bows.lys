@@ -3,7 +3,7 @@
 // never re-plays the body, so nothing the body writes exists there (owner report
 // 2026-09-02, tab-percent.lys: the slur drew a second time over the sign on a numbers tab).
 part melody {
-  section A { repeat percent 2 { c1@p@accent( | c@f) | } }
+  section A { c1@p@accent( | c@f) | %2 }
 }
 
 form { A }

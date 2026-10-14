@@ -258,14 +258,12 @@ internal sealed class MeasureValidator : ISemanticValidator
             // A tremolo repeat's body ("{ c32 }") is metric material of the
             // ENCLOSING measure (counted above via ItemDuration), never a
             // standalone bar — entering it flagged it as a 1/32 "first measure".
-            // A percent/volta/unfold body IS a bar stream, but it is validated from
-            // the enclosing stream's pass (ValidateMeasures), which knows the frame
-            // the repeat opens in — the running default note value, meter, and
-            // elapsed beats. Entering it here validated it as a standalone block in a
-            // fresh quarter-note frame: `c8 c c c c c c c | repeat percent 4
-            // { a a … }` flagged duration-2 bars the renderer fills exactly (the
-            // bare a's inherit the eighth ACROSS the repeat, as the collector walks
-            // them — reported 2026-08-13, scratch/ベースタブLy/1stbarline.lys).
+            // The old `repeat percent` / `repeat unfold` body (LYS1047) is read in place by
+            // the enclosing stream's pass (SplitIntoMeasures), with the running default note
+            // value — entering it here validated it in a fresh quarter-note frame:
+            // `c8 c c c c c c c | repeat percent 4 { a a … }` flagged duration-2 bars (the
+            // bare a's inherit the eighth, as the collector walks them — reported
+            // 2026-08-13, scratch/ベースタブLy/1stbarline.lys).
             RepeatExpressionSyntax => true,
 
             // LYS0010 recovery: a nested voice's block INLINES into the enclosing
@@ -435,7 +433,7 @@ internal sealed class MeasureValidator : ISemanticValidator
         Fraction? leadIn = null, Fraction? initialDefault = null, bool openTail = false,
         TextSpan? leadInSpan = null, Fraction? inheritedPickup = null, Fraction? spanEnd = null)
     {
-        var measures = SplitIntoMeasures(items, startPos, out var voiceSpans, out var repeatSpans,
+        var measures = SplitIntoMeasures(items, startPos, out var voiceSpans,
             out var phraseSpans, out bool tailUnclosed);
 
         // The (section, part) cell this stream IS — only a section's own top-level stream
@@ -527,16 +525,16 @@ internal sealed class MeasureValidator : ISemanticValidator
             if (cell is { } planCell && cellContainer != null
                 && _meterPlan.ForeignChangeAt(planCell.Section, i, cellContainer) is { } foreignTime)
                 _bars.SetTime(foreignTime);
-            // ⚠️ The meter is adopted IN ITEM ORDER, segment by segment around the repeat
-            // cuts below — not for the whole written bar up front. A `repeat percent`
-            // body closes its own rendered bars, so the enclosing written bar can hold
-            // `repeat percent 9 { r1 } time 1/4 r4 |`: the `time` stands AFTER the body and
-            // governs only the `r4`. Adopting it before the cuts validated the body's `r1`
+            // ⚠️ The meter is adopted IN ITEM ORDER, segment by segment around the phrase
+            // cuts below — not for the whole written bar up front. A phrase body closes its
+            // own bars at its bar lines, so the enclosing written bar can hold one and then a
+            // `time`, which governs only what follows it. (Found 2026-09-04 with the old
+            // `repeat percent 9 { r1 } time 1/4 r4 |`: adopting it before the cuts validated the `r1`
             // against 1/4 ("Measure duration 1 exceeds time signature 1/4") while the
             // collector, which walks the stream in order, drew the book right — the
             // validator and the page disagreed on the same source (I Love You, the tab
             // corpus, 2026-09-04; the probe pair is `} time 1/4 r4 |` vs `} | time 1/4 r4 |`,
-            // and only the first warned). The bar's own fill check still uses the LAST
+            // and only the first warned.) The bar's own fill check still uses the LAST
             // meter written in it, as before.
             void AdoptMeters(int fromIndex, int toIndex)
             {
@@ -552,28 +550,25 @@ internal sealed class MeasureValidator : ISemanticValidator
             // and they sit in FRONT of it, so a repeat or span opening later in the bar
             // sees them in its lead-in.
             var total = i == 0 && leadIn is { } lead ? lead : Fraction.Zero;
-            // Rendered bars a repeat flow closed INSIDE this written bar (see below).
-            // They fill their meter by construction, so they carry no diagnostic of
-            // their own — but they sound, and they mean the remainder the written
-            // barline eventually closes is NOT the stream's opening bar.
+            // Bars a phrase body's bar lines closed INSIDE this written bar (see below).
+            // They are judged where the body is, so they carry no diagnostic here — but they
+            // sound, and they mean the remainder the written barline eventually closes is
+            // NOT the stream's opening bar.
             int renderedBarsClosed = 0;
 
-            // Voice spans and repeats, merged in item order: count up to each address,
-            // snapshot, then carry on — one spelling of the beat count
+            // Voice spans and phrase references, merged in item order: count up to each
+            // address, snapshot, then carry on — one spelling of the beat count
             // (MeasureDurations), just read in segments.
-            var cuts = new List<(int ItemIndex, ParallelExpressionSyntax? Span, RepeatExpressionSyntax? Rep, PhraseSpan? Phrase)>();
+            var cuts = new List<(int ItemIndex, ParallelExpressionSyntax? Span, PhraseSpan? Phrase)>();
             foreach (var vs in voiceSpans)
                 if (vs.MeasureIndex == i)
-                    cuts.Add((vs.ItemIndex, vs.Span, null, null));
-            foreach (var rs in repeatSpans)
-                if (rs.MeasureIndex == i)
-                    cuts.Add((rs.ItemIndex, null, rs.Rep, null));
+                    cuts.Add((vs.ItemIndex, vs.Span, null));
             foreach (var ps in phraseSpans)
                 if (ps.MeasureIndex == i)
-                    cuts.Add((ps.ItemIndex, null, null, ps));
+                    cuts.Add((ps.ItemIndex, null, ps));
             cuts.Sort((a, b) => a.ItemIndex.CompareTo(b.ItemIndex));
             int from = 0;
-            foreach (var (itemIndex, span, rep, phrase) in cuts)
+            foreach (var (itemIndex, span, phrase) in cuts)
             {
                 AdoptMeters(from, itemIndex);
                 total += MeasureDurations.CalculateMeasureDuration(
@@ -594,7 +589,7 @@ internal sealed class MeasureValidator : ISemanticValidator
                 // collector's EnterDefaultFrame) and the body's exit value carries on after it.
                 // As an opaque zero-duration item 'riff e f |' with riff = 'c4 d' read as a
                 // half bar (HANDOFF §2 R12⒝, session 571). The bars a body barline closes are
-                // judged HERE, as a repeat body's are — in the frame the reference opens in: the
+                // judged HERE — in the frame the reference opens in: the
                 // bar's elapsed beats, the meter just adopted, a fresh quarter; the body's last
                 // chunk is open (the enclosing music goes on to fill it). It was judged only at
                 // its declaration, in the document's meter, until 2026-10-06 (HANDOFF §2
@@ -610,96 +605,34 @@ internal sealed class MeasureValidator : ISemanticValidator
                         inheritedPickup: i == 0 ? partialLength : null);
                     _phrasesCheckedInPlace.Add(played.Name);
                     defaultDuration = PricePhraseBody(played.Body, Fraction.Quarter, ref total, ref renderedBarsClosed);
-                    continue;
-                }
-
-                // The repeat body is its own bar stream, validated in the frame the
-                // repeat OPENS in — the elapsed beats of its rendered bar, the running
-                // default note value, and the meter just adopted for this bar. ONE pass
-                // covers every turn's default-duration frame (the entry value of turns
-                // 2..N — the previous turn's exit — equals turn 1's own exit); openTail
-                // exempts the body's trailing chunk from the underfull check, because
-                // turns 2..N and the enclosing stream flow on from it and the flow
-                // accounting below owns the bars they cross.
-                // ⚠️ AND THE LEAD-IN'S ADDRESS TRAVELS WITH IT. Those beats were written in
-                // the ENCLOSING bar, in front of this repeat, and the body's first bar is
-                // made of both. When that bar comes out overfull the mistake is almost
-                // always in the enclosing music — `r1 r1 r1` with the bar lines left out,
-                // reported by the user on a real book — and pointing at the body sent the
-                // reader to the wrong line, or to no line they had written at all. The
-                // widened span reaches back over the items in front. When this stream is
-                // ITSELF a body, its own lead-in span comes along for the same reason.
-                var frontSpan = itemIndex > 0
-                    ? MeasureDurations.GetSpan(barItems.GetRange(0, itemIndex))
-                    : (TextSpan?)null;
-                ValidateItemsScoped(rep!.Body.Items, rep.Body.Position,
-                    total == Fraction.Zero ? null : total, defaultDuration, openTail: true,
-                    leadInSpan: UnionSpans(i == 0 ? leadInSpan : null, frontSpan),
-                    inheritedPickup: i == 0 ? partialLength : null);
-
-                // ⚠️ LYS2014 STOOD HERE and is retired (session 286). It warned that a
-                // `repeat percent` body of three or more WHOLE measures earned a sign that
-                // could not say what it repeated — true only because Lily# was printing a
-                // percent per measure, which LilyPond never did. LilyPond's iterator has two
-                // equality tests and one else; the else engraves ONE slash for the whole
-                // repetition and leaves its remaining measures blank. Now that the collector
-                // does the same there is nothing to warn about, and the looser gate this call
-                // needed (ignoringZeroDurationMarks) goes with it — see PercentRepeatShape.
-
-
-                if (!_bars.SenzaMisura && FlowsThroughBarAccounting(rep, out int playCount))
-                {
-                    // The played content flows ACROSS the written bar: mirror
-                    // MeasureBuilder.AddDuration, which auto-completes the rendered bar
-                    // whenever the tally reaches the meter (an overrunning item closes
-                    // its bar overlong — the body-stream check above already reports
-                    // that written chunk, so the flow stays silent about it). A body
-                    // barline closes the rendered bar wherever the tally stands — the
-                    // body stream owns the diagnostics for the bars IT writes. What
-                    // survives is the remainder, which the enclosing written barline
-                    // eventually closes and the checks below judge. Counting the repeat
-                    // as zero instead made `c2 repeat percent 2 { d4 d } |` nudge
-                    // "first measure is 1/2 of 4/4 — declare a pickup" while the render
-                    // (and LilyPond's own bar check on the twin) has bar 1 exactly full
-                    // and the SECOND bar short (reported 2026-08-13).
-                    for (int turn = 0; turn < playCount; turn++)
-                    {
-                        foreach (var bodyItem in rep.Body.Items)
-                        {
-                            if (bodyItem is BarlineSyntax)
-                            {
-                                if (total != Fraction.Zero)
-                                    renderedBarsClosed++;
-                                total = Fraction.Zero;
-                                continue;
-                            }
-                            total += MeasureDurations.ItemDuration(bodyItem, ref defaultDuration);
-                            if (total >= _bars.MeterLength)
-                            {
-                                renderedBarsClosed++;
-                                total = Fraction.Zero;
-                            }
-                        }
-                    }
-                }
-                else
-                {
-                    // A structured body (nested percent/volta repeat, voice span, phrase
-                    // reference, directive, multi-bar rest) stays an opaque zero-duration
-                    // item — pricing only the modeled half of such a body would invent
-                    // misfills. The stream after the repeat still continues with the
-                    // frame the body LEAVES: the collector's _defaultDuration threads
-                    // through the walked body, and the exit value is the same after
-                    // every turn (the body's last written duration, or the entry value
-                    // when it writes none), so ONE body pass reproduces it.
-                    MeasureDurations.CalculateMeasureDuration(
-                        rep.Body.Items.ToList(), ref defaultDuration);
                 }
             }
             AdoptMeters(from, barItems.Count);
             total += MeasureDurations.CalculateMeasureDuration(
                 barItems.GetRange(from, barItems.Count - from), ref defaultDuration);
             var duration = total;
+
+            // A percent mark's bar is the bars it repeats — whole bars of the meter, by the
+            // check below on the bars themselves — so there is nothing to hold it to.
+            if (barItems.Exists(n => n is PercentMarkSyntax))
+            {
+                seenSounding = true;
+                continue;
+            }
+            // A bar a mark repeats is a whole bar of the meter (LYS1049): the sign stands for
+            // it, and the repetition is as long as it is. Reported once, in place of the fill
+            // check — a pickup or a short bar repeated is the one mistake here.
+            if (!_bars.SenzaMisura && duration != _bars.MeterLength
+                && barItems.Find(n => n.Parent is PercentRepeatSyntax) is { Parent: PercentRepeatSyntax repeated }
+                && !barItems.Exists(n => n is RestSyntax r && Music.BarRest.IsBare(r)))
+            {
+                var mark = repeated.Marks.First();
+                _diagnostics.Error(Reported(measure, i == 0 ? leadInSpan : null), DiagnosticCodes.PercentBodyNotWholeBars,
+                    $"This bar is {duration} long, and '{mark.Mark.Text}' repeats it: the bars a percent mark repeats "
+                    + $"are whole bars of {MeterText}. Write the repetition out, or start the repeated bars after it.");
+                seenSounding = true;
+                continue;
+            }
 
             // Bars the flow closed sound BEFORE this bar's leftover: the stream has an
             // opening already, so the remainder can be neither the opening pickup nor a
@@ -911,65 +844,6 @@ internal sealed class MeasureValidator : ISemanticValidator
         return result;
     }
 
-    /// <summary>True when the repeat's played content can flow through the enclosing
-    /// bar accounting: every top-level body item is one the metric model prices exactly
-    /// (notes, rests, chords, tuplets, arpeggio groups, graces, cues, tremolos — and
-    /// barlines, which close the rendered bar where they stand). A structured body
-    /// (nested percent/volta repeat, voice span, phrase reference, directive, multi-bar
-    /// rest) reports false and stays an opaque zero-duration item instead.
-    /// <paramref name="playCount"/> mirrors the collector's ProcessRepeatExpression:
-    /// every non-tremolo type plays the body count times, defaulting to 2 when the
-    /// count does not parse.
-    /// <para>
-    /// ⚠️ THIS USED TO TAKE AN OPT-IN, <c>ignoringZeroDurationMarks</c>, which admitted the
-    /// items that occupy no time and steer no bar — a tie, a <c>break</c> — for the ONE caller
-    /// that asked a weaker question: LYS2014 needed a body's LENGTH, where the flow accounting
-    /// needs to replay the body's bar-closing across every turn. Both the caller and the
-    /// warning are retired (session 286), so the strict gate is the only gate again.
-    /// ★ WHAT THE LOOSE GATE MEASURED IS STILL WORTH KNOWING, and is why the flag is recorded
-    /// here rather than just deleted: of the corpus's 472 percent bodies, 114 fail the STRICT
-    /// gate, and every one of them fails on a <c>break</c> or a tie and nothing else. Loosening
-    /// the flow gate would move those 114 from the opaque-item branch to the flow branch and
-    /// change the bar diagnostics they draw — a different change, with its own evidence to
-    /// gather. HANDOFF §1 carries it as an open question.
-    /// </para></summary>
-    private static bool FlowsThroughBarAccounting(RepeatExpressionSyntax rep, out int playCount)
-    {
-        playCount = System.Math.Max(1, int.TryParse(rep.Count.Text, out int c) ? c : 2);
-        foreach (var item in rep.Body.Items)
-        {
-            // ⚠️ A MARKER WRITTEN ON A NOTE IS STILL A MARKER IN THIS BODY. Since 2026-08-30
-            // the tree stands in the order the characters were typed (HANDOFF §2F ⑺), so a
-            // tie/slur/beam marker written BEFORE another post-event — `c8(@accent d e f` —
-            // is a CHILD of its note instead of an item beside it. Asking only the item
-            // kinds would let such a body through the strict gate while the identical music
-            // spelled `c8@accent( d e f` still failed it, and the two would draw DIFFERENT
-            // bar diagnostics (measured: LYS2001 against LYS2006 on the same four notes).
-            // Loosening the gate for markers is a real option — see the ★ paragraph above,
-            // 114 of the corpus's 472 percent bodies fail on exactly a tie or a break — but
-            // it is a DIFFERENT change with its own evidence to gather, and it is not one to
-            // make by accident through a spelling.
-            if (CarriesAMarker(item))
-                return false;
-            switch (item)
-            {
-                case NoteSyntax or DrumNoteSyntax or ChordSyntax or ChordRepetitionSyntax
-                    or SlashNoteSyntax or BareDurationSyntax
-                    or TupletExpressionSyntax or ArpeggioSyntax or GraceExpressionSyntax
-                    or CueExpressionSyntax or BarlineSyntax:
-                    continue;
-                case RestSyntax rest when rest.MeasureCount <= 1:
-                    continue;
-                case RepeatExpressionSyntax trem when trem.RepeatType.Text == "tremolo"
-                    && int.TryParse(trem.Count.Text, out _):
-                    continue;
-                default:
-                    return false;
-            }
-        }
-        return true;
-    }
-
     /// <summary>
     /// What the bare bar rests (<c>R</c>, <c>R*N</c> — <see cref="Music.BarRest"/>) of one bar
     /// are worth: the bar they open, <paramref name="expected"/>. One that does not open its bar
@@ -1146,8 +1020,8 @@ internal sealed class MeasureValidator : ISemanticValidator
         Fraction? partialLength, TextSpan? leadInSpan = null)
     {
         var span = Reported(measure, leadInSpan);
-        // A bar holding a repeat, a multi-bar rest — or a phrase whose body this pass cannot price
-        // (FlowingPhraseBody: a nested reference, a repeat, a meter change …) — closes where its
+        // A bar holding a multi-bar rest — or a phrase whose body this pass cannot price
+        // (FlowingPhraseBody: a percent repeat, a meter change …) — closes where its
         // beats fill, on the page and in the playback, as every bar did before
         // (MeasureModel.Bar.Flowed). A phrase priced in place is music like any other.
         // A `time` written after music in the span stands where a bar line should: the bar line
@@ -1161,8 +1035,7 @@ internal sealed class MeasureValidator : ISemanticValidator
             return;
         }
         if (measure.Items.Any(n => n is RestSyntax { MeasureCount: > 1 }
-                || n is VariableReferenceSyntax reference && FlowingPhraseBody(reference) == null
-                || n is RepeatExpressionSyntax rep && rep.RepeatType.Text != "tremolo"))
+                || n is VariableReferenceSyntax reference && FlowingPhraseBody(reference) == null))
         {
             _diagnostics.Warning(span, DiagnosticCodes.MeasureOverflow,
                 partialLength != null
@@ -1189,7 +1062,7 @@ internal sealed class MeasureValidator : ISemanticValidator
     }
 
     /// <summary>The first <c>time</c> written after music in the bar with no bar line between —
-    /// or null. A repeat's turns, an <c>R1*N</c> and a phrase body close their own bars where
+    /// or null. An <c>R1*N</c> and a phrase body close their own bars where
     /// their beats fill, so a <c>time</c> right after one stands on that bar line, not inside a bar.</summary>
     private static TimeSignatureSyntax? TimeInsideTheBar(List<SyntaxNode> items)
     {
@@ -1203,8 +1076,7 @@ internal sealed class MeasureValidator : ISemanticValidator
                     return time;
                 continue;
             }
-            if (n is VariableReferenceSyntax or RestSyntax { MeasureCount: > 1 }
-                || n is RepeatExpressionSyntax rep && rep.RepeatType.Text != "tremolo")
+            if (n is VariableReferenceSyntax or RestSyntax { MeasureCount: > 1 })
             {
                 music = false;
                 continue;
@@ -1284,12 +1156,6 @@ internal sealed class MeasureValidator : ISemanticValidator
     /// <summary>A voice span met while splitting: the measure it opened in, the item index
     /// within that measure's (already inlined) items where it opened, and the span node.</summary>
     private readonly record struct VoiceSpan(int MeasureIndex, int ItemIndex, ParallelExpressionSyntax Span);
-
-    /// <summary>A percent/volta/unfold repeat met while splitting — same address scheme as
-    /// <see cref="VoiceSpan"/>. Its body is a bar stream of its own, validated with the
-    /// frame the repeat opens in (a tremolo is a metric item instead, folded by
-    /// <see cref="MeasureDurations.ItemDuration"/>).</summary>
-    private readonly record struct RepeatSpan(int MeasureIndex, int ItemIndex, RepeatExpressionSyntax Rep);
 
     /// <summary>A phrase reference whose body flows through the bar accounting (see
     /// <see cref="FlowingPhraseBody(VariableReferenceSyntax)"/>) — same address scheme as <see cref="VoiceSpan"/>.</summary>
@@ -1382,13 +1248,12 @@ internal sealed class MeasureValidator : ISemanticValidator
     /// <param name="tailUnclosed">True when the stream ended with music after its last
     /// barline — the final measure is then an OPEN chunk, not a bar anyone closed.</param>
     private List<MeasureContent> SplitIntoMeasures(IEnumerable<SyntaxNode> blockItems, int blockStartPos,
-        out List<VoiceSpan> voiceSpans, out List<RepeatSpan> repeatSpans, out List<PhraseSpan> phraseSpans,
+        out List<VoiceSpan> voiceSpans, out List<PhraseSpan> phraseSpans,
         out bool tailUnclosed)
     {
         var measures = new List<MeasureContent>();
         var currentItems = new List<SyntaxNode>();
         var spans = new List<VoiceSpan>();
-        var repeats = new List<RepeatSpan>();
         var phrases = new List<PhraseSpan>();
         int startPos = blockStartPos;
 
@@ -1461,15 +1326,22 @@ internal sealed class MeasureValidator : ISemanticValidator
                     if (par.Voices.FirstOrDefault() is MusicBlockSyntax lead)
                         AddItems(lead.Items);
                 }
+                else if (item is PercentRepeatSyntax percent)
+                {
+                    // A percent repeat's body and bar lines are written bars of this stream,
+                    // as the collector walks them; a mark's bar is the bars it repeats
+                    // (ValidateMeasures leaves it unchecked: it is whole by construction).
+                    AddItems(percent.ChildNodes());
+                }
+                else if (item is RepeatExpressionSyntax { RepeatType.Text: not "tremolo" } old)
+                {
+                    // The old `repeat percent` / `repeat unfold` (LYS1047): its body once, in
+                    // place, as the page and the playback read it.
+                    AddItems(old.Body.Items);
+                }
                 else
                 {
-                    // A percent/volta/unfold repeat stays an opaque zero-duration item in
-                    // its bar (its played bars are the body's), but its address is
-                    // recorded so ValidateMeasures can validate the body in the frame the
-                    // repeat opens in.
-                    if (item is RepeatExpressionSyntax rep && rep.RepeatType.Text != "tremolo")
-                        repeats.Add(new RepeatSpan(measures.Count, currentItems.Count, rep));
-                    else if (item is VariableReferenceSyntax reference && FlowingPhraseBody(reference) is { } body)
+                    if (item is VariableReferenceSyntax reference && FlowingPhraseBody(reference) is { } body)
                         phrases.Add(new PhraseSpan(measures.Count, currentItems.Count, body, reference.Name.Text,
                             (MusicBlockSyntax)_phraseBodies[reference.Name.Text]));
                     currentItems.Add(item);
@@ -1486,7 +1358,6 @@ internal sealed class MeasureValidator : ISemanticValidator
         }
 
         voiceSpans = spans;
-        repeatSpans = repeats;
         phraseSpans = phrases;
         return measures;
     }

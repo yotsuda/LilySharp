@@ -379,7 +379,7 @@ public class MidBarBreakTests
     {
         // The written play is music and splits; a covered play is written as spacers with the
         // sign (no notes, no break to replay) and stays one bar.
-        string book = Book("repeat percent 2 { c'4 d break e f | } g1 |");
+        string book = Book("c'4 d break e f | % | g1 |");
         var measures = Melody(book).Measures;
         Assert.Equal(4, measures.Length); // head | tail | % | g1
         Assert.True(measures[0].BreaksMidBar && measures[1].ContinuesBar);

@@ -48,9 +48,8 @@ public class RepeatAroundVoiceTests
     }
 
     [Theory]
-    [InlineData("repeat percent 2 { voice { c'1 } { e1 } | } d'1 |", "N-N", "N--")]
-    [InlineData("repeat percent 2 { voice { c'1 } { e1 } } d'1 |", "N-N", "N--")]
-    [InlineData("repeat unfold 2 { voice { c'1 } { e1 } | } d'1 |", "NNN", "NN-")]
+    [InlineData("voice { c'1 } { e1 } | % | d'1 |", "N-N", "N--")]
+    [InlineData("voice { c'1 } { e1 } | voice { c'1 } { e1 } | d'1 |", "NNN", "NN-")]
     public void ARepeatedVoiceSpan_DrawsItsVoices(string music, string voice1, string voice2)
         => Assert.Equal((voice1, voice2), Voices(music));
 }

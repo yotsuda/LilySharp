@@ -27,7 +27,7 @@ phrase nestedTuplet {
 
 phrase percentRepeat {
   // Percent repeat: play pattern then repeat it
-  repeat percent 2 { c4 e g e } |
+  c4 e g e | % |
   d4 f a f |
 }
 

@@ -578,14 +578,18 @@ score { staff melody }
   break falls to the next bar line and LYS1037 says why — tie the note (`c2~ break c2`) or
   move the break to a beat nothing crosses. `e2 break |` (a bar line right after) is the
   ordinary bar-line break.
-- Percent repeat (repeat the previous measure): `repeat percent 2 { c4 d e f | }`.
+- Percent repeat: write the bars once, then ONE mark per repetition, each alone between bar
+  lines — `%` repeats the bar before it, `%N` the N bars before it:
+  `c4 d e f | % | % | % |` (the bar four times), `a2 b | c'2 d' | %2 | %2 |` (two bars three
+  times). The bars repeated must be whole bars; a mark of another length cannot follow a run
+  of marks. `repeat percent` / `repeat unfold` are gone (LYS1047; `lysc percent` rewrites them).
 - Tremolo. On ONE note, `:N` after the duration strikes the stem (`c4:16` — one stroke per
   beam of N: `:8` one, `:16` two, `:32` three). Between TWO notes, `repeat tremolo N { a16 b }`
   alternates them, and lasts N times the body: `repeat tremolo 4 { c16 e }` = 4 × an eighth =
   a half note's time, drawn as two half notes joined by the tremolo beams.
 - NOT Lily#: `repeat volta` / `alternative` are LilyPond's spellings (the parser refuses
   `repeat volta` and points at the symbolic `|: ... :|` form above; `alternative` is just a
-  word). `repeat` is only for `percent` / `unfold` / `tremolo`.
+  word). `repeat` is only for `tremolo`.
 
 ## Tuplets
 
@@ -596,11 +600,12 @@ tuplet 3/2 { c8 d tuplet 3/2 { e16 f g } | }   // nesting allowed
 
 ## Repetition shorthand
 
-`repeat unfold N { ... }` writes its body out N times - phrases welcome:
+A phrase written N times is its music N times - the shorthand for music that is played again
+and drawn again:
 
 ```
 phrase ground { d2 a,2 | b,2 fis,2 | }
-repeat unfold 8 { ground }               // 32 bars from one line
+ground ground ground ground              // 8 bars from one line
 ```
 
 
@@ -642,7 +647,7 @@ drummap { hh: position 6 notehead x }  // TOP LEVEL, optional: re-table a drum
 - `drums { LINE LINE … }` — a drum chart: each LINE is a phrase name or `{ … }`, optionally
   led by `up`/`down`; the lines play together (`drums { hats back kick }`). Drawn in two
   voices: hands merged on stems up, feet (`bd bda hhp`) stems down. Lines hold drum notes,
-  drum chords, rests, `tuplet`, `repeat unfold/percent`. Notes straight in the chart =
+  drum chords, rests, `tuplet`, percent marks. Notes straight in the chart =
   LYS0040; three hands / three feet / hh with hho at once = warning LYS4030. Prefer it to
   `voice { } { }` for a kit: write each pattern once as a one-bar phrase. Flam:
   `acciaccatura { sn16 } sn4`. The editor offers stock one-bar patterns (`hats8 hats16 hats4

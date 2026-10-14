@@ -575,4 +575,16 @@ public enum SyntaxKind : ushort
     /// <summary>The <c>up</c> / <c>down</c> word before a line of a drum chart, overriding
     /// the stem side its kit pieces would take (hands up, feet down).</summary>
     DrumsLineDirection,
+
+    // === Percent repeat (docs/percent-repeat-design.md) ===
+    /// <summary>A percent mark token, <c>%</c> or <c>%N</c>: one repetition of the N bars
+    /// written before it.</summary>
+    PercentMark,
+    /// <summary>A percent mark as an item of music. Inside a <see cref="PercentRepeat"/> it is
+    /// one repetition; standing alone it is one the parser could not group with the bars it
+    /// repeats, and the validator says why.</summary>
+    PercentMarkItem,
+    /// <summary>A percent repeat: the bars it repeats, then its marks (<c>c4 d e f | % | %</c>),
+    /// the source's own nodes grouped in their order.</summary>
+    PercentRepeat,
 }

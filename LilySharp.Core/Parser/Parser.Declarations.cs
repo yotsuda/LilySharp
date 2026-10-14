@@ -155,6 +155,7 @@ internal sealed partial class Parser
         }
 
         var closeBrace = Expect(SyntaxKind.CloseBrace);
+        GroupPercentRepeats(items);
         // `[.. items]` COPIES, so the buffer is finished with here and not one line later.
         var section = new SectionDeclarationGreen(
             keyword, tilde, name, label, openBrace, [.. items], closeBrace);

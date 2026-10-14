@@ -91,7 +91,7 @@ public class RepeatStructureScopeValidatorTests
         + "section B { m { g2 g | } }\nform { A :| B :|: A }\nscore { staff m }\n")]
     // the repeats that stay in music: they abbreviate notes, they do not reorder them
     [InlineData("part m { clef treble }\n"
-        + "section A { m { repeat unfold 2 { c'4 d e f | } repeat percent 2 { g4 g g g | } } }\n"
+        + "section A { m { c'4 d e f | c'4 d e f | g4 g g g | % } }\n"
         + "form { ~A }\nscore { staff m }\n")]
     // a LYRIC verse header is the words for the Nth pass, not an ending
     [InlineData("octave absolute\ntime 4/4\nkey c major\n"

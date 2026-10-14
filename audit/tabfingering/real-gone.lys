@@ -10,7 +10,7 @@ part bassline {
   tuning bass
 
   section Intro {
-    repeat percent 5 { r1 | r1 } r1 | r2. grace { cis,16 } e,4\3( |
+    r1 | r1 | %2 | %2 | %2 | %2 | r1 | r2. grace { cis,16 } e,4\3( |
         b,,8) b,, b,, b,, b,, b,, b,, b,, | b,, b,, b,, b,, b,, b,, b,, b,, | break
   }
   section A {

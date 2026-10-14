@@ -62,7 +62,7 @@ internal sealed class ExpansionBudgetValidator : ISharedCollectValidator
             "this score expands past the collector's site budget, so the picture is "
             + "TRUNCATED from here on. Only the picture: 'lysc midi', 'lysc xml' and "
             + "'lysc ly' write the whole expansion. Nested phrase references multiply "
-            + "(each level doubles), and 'repeat unfold N' / 'R1*N' take any count - "
+            + "(each level doubles), and 'R1*N' takes any count - "
             + "reduce the nesting or the counts.");
     }
 }

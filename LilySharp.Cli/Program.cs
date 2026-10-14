@@ -79,6 +79,7 @@ static int Dispatch(string command, string[] args) => command switch
     "import" => RunImport(args),
     "vsqx" => RunVsqx(args),
     "octave" => RunOctave(args),
+    "percent" => RunPercent(args),
     "harmonize" => RunHarmonize(args),
     "check" => RunCheck(args),
     "layout" => RunLayout(args),
@@ -109,6 +110,7 @@ static void ShowHelp()
           ly         Convert to LilyPond (.ly) source
           import     Import MusicXML (.xml/.musicxml/.mxl) to a Lily# source file
           octave     Rewrite a Lily# file into absolute or relative octaves
+          percent    Rewrite the old `repeat percent` / `repeat unfold` as `| % |` marks
 
           harmonize  Suggest a diatonic chord track for the melody (prints a chords part)
           check      Check syntax without output
@@ -777,6 +779,68 @@ static int RunOctave(string[] args)
         }
         File.WriteAllText(outputPath, result.NewText);
         Console.WriteLine($"Created: {outputPath} ({result.ChangedPitches} note(s) re-marked)");
+        return 0;
+    }
+    catch (Exception ex)
+    {
+        Console.Error.WriteLine(CliParser.Verbose ? ex.ToString() : $"Error: {ex.Message}");
+        return 1;
+    }
+}
+
+// ============ Percent Command ============
+
+static int RunPercent(string[] args)
+{
+    if (WantsHelp(args))
+    {
+        Console.WriteLine("""
+            Usage: lysc percent [options] <input.lys>
+
+            Rewrites the old `repeat percent N { … }` and `repeat unfold N { … }` (LYS1047)
+            as they are written now: the bars once and a mark a repetition after them —
+            `repeat percent 4 { c4 d e f }` becomes `c4 d e f | % | % | %`, a two-bar body
+            `%2` — and an unfold, or a percent repeat of anything but whole bars, its music
+            written out. Nothing else in the file changes.
+
+            Without -i or -d the result goes to standard output.
+
+            Options:
+              -i, --in-place         Overwrite the input
+              -d, --out-dir <folder> Write <input>.lys into this folder
+              -h, --help             Show this help
+
+            Examples:
+              lysc percent song.lys             # print the rewritten book
+              lysc percent -i song.lys          # rewrite in place
+              lysc percent -d new song.lys      # new/song.lys
+            """);
+        return 0;
+    }
+
+    var r = OutputOptions()
+        .Flag("in-place", "-i", "--in-place")
+        .Parse(args);
+    if (r.Error != null) return OptionError(r.Error, "percent");
+    if (r.Has("in-place") && r.Get("out-dir") != null)
+        return OptionError("--in-place and --out-dir are mutually exclusive.", "percent");
+    var (inputPath, dir, ioError) = ResolveOutputs(r);
+    if (ioError != null) return OptionError(ioError, "percent");
+    string? outputPath = r.Has("in-place") ? inputPath
+        : r.Get("out-dir") != null ? OutputPathFor(inputPath!, dir!, ".lys")
+        : null;
+
+    try
+    {
+        var source = File.ReadAllText(inputPath!);
+        var result = LilySharp.Core.Editing.PercentRepeatConverter.Convert(source);
+        if (outputPath == null)
+        {
+            Console.Write(result.NewText);
+            return 0;
+        }
+        File.WriteAllText(outputPath, result.NewText);
+        Console.WriteLine($"Created: {outputPath} ({result.AsMarks} repeat(s) as marks, {result.WrittenOut} written out)");
         return 0;
     }
     catch (Exception ex)

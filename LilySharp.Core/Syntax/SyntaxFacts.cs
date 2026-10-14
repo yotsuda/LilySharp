@@ -366,8 +366,10 @@ internal static class SyntaxFacts
     /// context; until then the message was the only enumeration and the completion snippet
     /// carried its own copy of the three in a Detail string.</summary>
     /// <remarks>⚠️ <c>volta</c> is deliberately absent: <c>repeat volta</c> is refused
-    /// (LYS0006) in favour of the form's <c>|: … :|</c>.</remarks>
-    public static IReadOnlyList<string> RepeatKindVocabulary { get; } = ["unfold", "percent", "tremolo"];
+    /// (LYS0006) in favour of the form's <c>|: … :|</c>; <c>percent</c> and <c>unfold</c> left
+    /// on 2026-10-14 (LYS1047) for the percent mark <c>| % |</c> written after the bars and
+    /// the music written out (docs/percent-repeat-design.md).</remarks>
+    public static IReadOnlyList<string> RepeatKindVocabulary { get; } = ["tremolo"];
 
     /// <summary>The nine modes a <c>key</c> takes (GRAMMAR.md: Mode), in the order the
     /// parser's "Unknown mode" message names them and the editor offers them after the

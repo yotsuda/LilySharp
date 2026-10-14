@@ -787,6 +787,10 @@ public sealed partial class LilyPondExporter
         GraceExpressionSyntax g => EmitGrace(g),
         CueExpressionSyntax cue => EmitCue(cue),
         RepeatExpressionSyntax rep => EmitRepeat(rep),
+        PercentRepeatSyntax percent => EmitPercentRepeat(percent),
+        // A mark that repeats nothing (LYS1048): the bars it stands for, empty.
+        PercentMarkSyntax stray => "s" + Music.BarRest.LilyPondDuration(_bars.MeterLength)
+            + (stray.Bars > 1 ? $"*{stray.Bars}" : ""),
         MusicMarkSyntax mk => EmitMark(mk),
         // The section-play sentinel is matched by its GREEN: a marker inside a rebuilt
         // volta ending comes back as a GenericSyntaxNode red, and only the green (which
@@ -2447,7 +2451,21 @@ public sealed partial class LilyPondExporter
         // many times it is played, so its frame carries out like a tuplet's.
         CarryFrameBack(buf);
         string body = NestedText(buf);
-        return $"\\repeat {type} {count} {{ {body} }}";
+        // The old `repeat percent` / `repeat unfold` (LYS1047) is its body once, as the page
+        // draws it.
+        return type == "tremolo" ? $"\\repeat {type} {count} {{ {body} }}" : body;
+    }
+
+    /// <summary>A percent repeat: LilyPond's <c>\repeat percent N { … }</c> over the bars it
+    /// repeats — the bar lines inside the bars as bar checks, the ones around the marks left to
+    /// the repeat (LilyPond's sign stands in them).</summary>
+    private string EmitPercentRepeat(PercentRepeatSyntax percent)
+    {
+        var buf = OpenNested();
+        buf.EmitMusicStream(percent.BodyItems.ToList(), "");
+        CarryFrameBack(buf);
+        string body = NestedText(buf);
+        return $"\\repeat percent {percent.Count} {{ {body} }}";
     }
 
     private string Skip(SyntaxNode item)

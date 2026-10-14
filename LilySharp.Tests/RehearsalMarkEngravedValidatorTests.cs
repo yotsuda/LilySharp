@@ -64,8 +64,8 @@ public class RehearsalMarkEngravedValidatorTests
     [InlineData("c'1@mark(\"B\") | d'1 |")]                                   // plain
     [InlineData("c'4 d' e' f' |: g'1 | [1. a'1@mark(\"B\") ] :| [2. b'1 ]")]  // inline ending
     [InlineData("tuplet 3/2 { g'4@mark(\"B\") a' b' } c''4 d'' |")]           // tuplet
-    [InlineData("repeat unfold 2 { d'2@mark(\"B\") e' }")]                    // unfolded repeat
-    [InlineData("repeat percent 2 { d'2@mark(\"B\") e' }")]                   // percent repeat
+    [InlineData("d'2@mark(\"B\") e' d'2@mark(\"B\") e'")]                    // unfolded repeat
+    [InlineData("d'2@mark(\"B\") e' | %")]                   // percent repeat
     [InlineData("cue { f'1@mark(\"B\") } | g'1 |")]                           // cue region
     [InlineData("c'4 d' e' f' |")]                                            // no mark at all
     public void AnEngravedMark_IsNotReported(string music)

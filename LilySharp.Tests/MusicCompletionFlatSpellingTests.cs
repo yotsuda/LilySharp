@@ -136,7 +136,7 @@ public class MusicCompletionFlatSpellingTests
                 "override" => "override Stem.transparent = true g4 a b c' |",
                 "revert" => "revert Stem.transparent g4 a b c' |",
                 "once" => "once override Stem.transparent = true g4 a b c' |",
-                "repeat" => "repeat unfold 2 { g4 a b c' | }",
+                "repeat" => "repeat tremolo 4 { g16 } a4 b c' |",
                 "tuplet" => "tuplet 3/2 { g8 a b } c'4 d' e' |",
                 "<<" => "<< g b d' >>4 e'4 f' g' |",   // the group's duration goes after >>
 

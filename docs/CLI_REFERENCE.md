@@ -465,6 +465,39 @@ lysc octave --relative -i song.lys           # Converts in place
 lysc octave --absolute -d absolute song.lys  # Writes absolute/song.lys
 ```
 
+### percent - Rewrite the old percent and unfold repeats
+
+```bash
+lysc percent [options] <input.lys>
+```
+
+Rewrites the old `repeat percent N { … }` and `repeat unfold N { … }` (LYS1047, since
+2026-10-14) as they are written now: the bars once and one mark a repetition after them —
+`repeat percent 4 { c4 d e f }` becomes `c4 d e f | % | % | %`, a two-bar body `%2` — see
+the SYNTAX_REFERENCE's Percent Repeats. Nothing else in the file changes.
+
+A repeat becomes marks only when the marks read back as the same bars: it opens a bar, its
+bars are counted on the bar lines its body writes, and the rewritten book raises no LYS1048 /
+LYS1049 the old one did not. Otherwise — an unfold, a body shorter than a bar, a pickup, a
+repeat that starts mid-bar — its music is written out as many times as it was played. A
+repeat inside another is rewritten first.
+
+**Options:**
+| Option | Description |
+|--------|-------------|
+| `-i, --in-place` | Overwrite the input |
+| `-d, --out-dir <folder>` | Write `song.lys` into this folder |
+| `-h, --help` | Show help |
+
+Without `-i` or `-d` the result goes to stdout.
+
+**Examples:**
+```bash
+lysc percent song.lys              # Prints the rewritten book
+lysc percent -i song.lys           # Rewrites in place
+lysc percent -d new song.lys       # Writes new/song.lys
+```
+
 ### harmonize - Suggest a chord track
 
 ```bash

@@ -28,8 +28,8 @@ namespace LilySharp.Tests;
 /// The expansion budget — the liveness guard on the repository's one unbounded
 /// blowup (2026-08-26 review, judgment table's only red row): the phrase DAG
 /// doubles per level because <c>ExpandVariable</c> re-expands SIBLING
-/// references (the cycle guard cannot see that), and <c>repeat unfold N</c> /
-/// <c>R1*N</c> take any integer. Collect runs per keystroke, so before the
+/// references (the cycle guard cannot see that), <c>R1*N</c> takes any integer, and a
+/// percent repeat any number of marks. Collect runs per keystroke, so before the
 /// budget these books hung the preview. In-suite the truncation arms are pinned
 /// at a SMALL cap (the collector's cap is init-settable for exactly this — a
 /// real-cap truncation necessarily walks 10^6 sites, which belongs in a manual
@@ -83,18 +83,22 @@ public class ExpansionBudgetTests
             tightScore.Voice.Measures.Select(mm => mm.Items.Length));
     }
 
+    /// <summary>A bar of four quarters and <paramref name="marks"/> percent marks repeating it.</summary>
+    internal static string PercentRun(int marks) =>
+        "c4 d e f | " + string.Join(" | ", Enumerable.Repeat("%", marks));
+
     [Fact]
-    public void RepeatUnfold_TruncatesItsPasses()
+    public void PercentMarks_TruncateTheirRepetitions()
     {
-        // 4 quarters per pass, cap 30: the first pass is free (it is the written
-        // music), then floor(30/4) = 7 charged passes fit -> 32 notes, not 4000.
+        // 4 sites a repetition, cap 30: the written bar is free, then floor(30/4) = 7 charged
+        // repetitions fit -> the 4 notes and 7 repetition spacers, not 1000 bars.
         var collector = new MeasureCollector { ExpansionBudgetCap = 30 };
         var score = collector.Collect(
-            SyntaxTree.Parse("part m { }\nsection A { m { repeat unfold 1000 { c4 d e f } } }\n"
+            SyntaxTree.Parse($"part m {{ }}\nsection A {{ m {{ {PercentRun(1000)} }} }}\n"
                 + "form { ~A }\nscore { staff m }"), "m");
 
         Assert.NotNull(collector.ExpansionBudgetExceededAt);
-        Assert.Equal(32, score.Voice.Measures.Sum(mm => mm.Items.Length));
+        Assert.Equal(4 + 7, score.Voice.Measures.Sum(mm => mm.Items.Length));
     }
 
     [Fact]
@@ -115,7 +119,7 @@ public class ExpansionBudgetTests
     {
         var collector = new MeasureCollector();
         collector.Collect(SyntaxTree.Parse(
-            "part m { }\nsection A { m { repeat unfold 4 { c4 d e f } | R1*3 } }\n"
+            "part m { }\nsection A { m { c4 d e f | % | % | % | R1*3 } }\n"
             + "form { ~A }\nscore { staff m }"), "m");
         Assert.Null(collector.ExpansionBudgetExceededAt);
     }
@@ -145,7 +149,7 @@ public class ExpansionBudgetTests
     public void Validator_ReportsTheTruncation_OncePerCollect()
     {
         var collector = new MeasureCollector { ExpansionBudgetCap = 30 };
-        var tree = SyntaxTree.Parse("part m { }\nsection A { m { repeat unfold 1000 { c4 d e f } } }\n"
+        var tree = SyntaxTree.Parse($"part m {{ }}\nsection A {{ m {{ {PercentRun(1000)} }} }}\n"
             + "form { ~A }\nscore { staff m }");
         collector.Collect(tree, "m");
 
@@ -164,7 +168,7 @@ public class ExpansionBudgetTests
     public void Validator_SaysNothingOnANormalBook()
     {
         var diags = SemanticValidation.Run(SyntaxTree.Parse(
-            "part m { }\nsection A { m { repeat unfold 4 { c4 d e f } } }\n"
+            "part m { }\nsection A { m { c4 d e f | % | % | % } }\n"
             + "form { ~A }\nscore { staff m }"));
         Assert.DoesNotContain(diags, d => d.Code == DiagnosticCodes.ExpansionBudgetExceeded);
     }

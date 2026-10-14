@@ -966,7 +966,7 @@ public class LilyPondExporterTests
     [Fact]
     public void RepeatPercent_PassesThrough()
     {
-        var ly = Export(Score("repeat percent 4 { c,4 d,4 }"));
+        var ly = Export(Score("c,4 d,4 e,4 f,4 | % | % | %"));
         Assert.Contains("\\repeat percent 4 {", ly);
     }
 
@@ -981,7 +981,7 @@ public class LilyPondExporterTests
     [Fact]
     public void RepeatPercent_CarriesNoSkipBars_SoLilyPondDrawsTheEmptyBars()
     {
-        var ly = Export(Score("repeat percent 3 { c,4 d,4 e,4 f,4 | c,1 | d,1 | }"));
+        var ly = Export(Score("c,4 d,4 e,4 f,4 | c,1 | d,1 | %3 | %3"));
         Assert.Contains("\\repeat percent 3 {", ly);
         Assert.DoesNotContain("skipBars", ly);
     }
@@ -1779,7 +1779,7 @@ public class LilyPondExporterTests
     [InlineData("tuplet 3/2 { A } r2", "\\tuplet 3/2 { c'4 d' }")]
     [InlineData("grace { A } c'2.", "\\grace { c'4 d' }")]
     [InlineData("cue { A } r2", "\\new CueVoice { c'4 d' }")]
-    [InlineData("repeat unfold 2 { A }", "\\repeat unfold 2 { c'4 d' }")]
+    [InlineData("A A | %", "\\repeat percent 2 { c'4 d' c'4 d' }")]
     // A MARKED reference through a container: the nested \fixed it writes is measured off
     // _absoluteBaseOctave, which CarryFrameInto hands down and which nothing observed while
     // a nested body could not emit one at all.

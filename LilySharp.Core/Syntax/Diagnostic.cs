@@ -747,6 +747,25 @@ public static class DiagnosticCodes
     /// keeps the clef reading and never sees this.</remarks>
     public const string StaffPartNameIsAlsoAClef = "LYS1046";
 
+    /// <summary>Error: <c>repeat percent N { … }</c> or <c>repeat unfold N { … }</c>. A percent
+    /// repeat is written after the bars it repeats, one mark a repetition
+    /// (<c>c4 d e f | % | % |</c>, <c>a2 b | c d | %2 |</c>), and an unfold is its music written
+    /// out (docs/percent-repeat-design.md). The item is read as its body once; the quick fix
+    /// and <c>lysc percent</c> rewrite it.</summary>
+    /// <remarks>Owner's decision 2026-10-14 (session 904): the old spelling was hard to use, and
+    /// its bars closed where the beats filled where every other bar is closed by a bar line.</remarks>
+    public const string RepeatPercentRemoved = "LYS1047";
+
+    /// <summary>Error: a percent mark (<c>%</c>, <c>%N</c>) that repeats nothing — not written
+    /// alone between bar lines, fewer than N written bars before it, right after marks of
+    /// another length, or a count that is no number of bars. It is read as N empty bars.</summary>
+    public const string PercentMarkUngrouped = "LYS1048";
+
+    /// <summary>Error: a bar a percent mark repeats is not a whole bar of the meter (a pickup, a
+    /// short or a long bar). A mark is whole bars — the sign stands for them, and the
+    /// repetition is as long as they are.</summary>
+    public const string PercentBodyNotWholeBars = "LYS1049";
+
     /// <summary>Syntax error: a phrase reference needs a <c>$</c> — write <c>$name</c>.</summary>
     public const string BareReferenceRequiresDollar = "LYS1012";
 

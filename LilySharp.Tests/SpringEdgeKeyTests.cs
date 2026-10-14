@@ -115,7 +115,7 @@ public class SpringEdgeKeyTests
     [Fact]
     public void ADoublePercentSignOnTheOpeningBarLine_MovesWhatThePreviousBarReads()
     {
-        var (a, sa) = Edges(Book("repeat percent 2 { c4 d e f | g4 a b c | }"));
+        var (a, sa) = Edges(Book("c4 d e f | g4 a b c | %2"));
         var (b, sb) = Edges(Book("c4 d e f | g4 a b c | c4 d e f | g4 a b c |"));
         var half = ScoreSideTables.DoublePercentHalfWidths(sa);
         int sign = Enumerable.Range(0, half.Count).First(i => half[i] > 0);

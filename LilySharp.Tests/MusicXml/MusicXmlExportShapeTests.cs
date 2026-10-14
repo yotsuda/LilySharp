@@ -450,7 +450,7 @@ public class MusicXmlExportShapeTests
         // the % by importers, full bars for strict ones).
         var doc = Export("""
             part m { clef treble }
-            section A { m { repeat percent 2 { c'4 d' e' f' | } } }
+            section A { m { c'4 d' e' f' | % } }
             form { A }
             score { staff m }
             """);

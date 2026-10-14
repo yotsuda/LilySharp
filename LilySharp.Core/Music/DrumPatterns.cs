@@ -48,7 +48,7 @@ public static class DrumPatterns
         new("hats16", "hi-hat", "hh16 16 16 16 16 16 16 16 16 16 16 16 16 16 16 16 |", "sixteenth hi-hats"),
         new("hats4", "hi-hat", "hh4 4 4 4 |", "quarter hi-hats"),
         new("hatsOpen", "hi-hat", "hh8 hho hh hho hh hho hh hho |", "open on the off-beats"),
-        new("shuffle", "ride", "repeat unfold 4 { tuplet 3/2 { cymr4 8 } } |", "triplet shuffle on the ride"),
+        new("shuffle", "ride", "tuplet 3/2 { cymr4 8 } tuplet 3/2 { cymr4 8 } tuplet 3/2 { cymr4 8 } tuplet 3/2 { cymr4 8 } |", "triplet shuffle on the ride"),
         // Snare
         new("back", "snare", "r4 sn r sn |", "backbeat on 2 and 4"),
         new("halfTime", "snare", "r2 sn |", "half time, on 3"),

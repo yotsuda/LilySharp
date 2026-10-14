@@ -240,6 +240,10 @@ public sealed partial class LilySharpLanguageServer
                 // A drum chart's opener and its line words, re-kinded by Parser.Drums.
                 SyntaxKind.DrumsOpener or SyntaxKind.DrumsLineDirection => 0,
 
+                // A percent mark: one repetition of the bars before it — painted as a bar line
+                // is, a mark between the bar lines.
+                SyntaxKind.PercentMark => 5,
+
                 // Numbers
                 SyntaxKind.IntegerLiteral => 2,
 

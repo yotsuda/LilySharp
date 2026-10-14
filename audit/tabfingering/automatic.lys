@@ -10,7 +10,7 @@ part bassline {
   tuning bass5
 
   section Intro {
-    repeat percent 8 { r1 } break
+    r1 | % | % | % | % | % | % | % break
   }
   section A1 {
     f,4 r8. f,16 f,8 f, r aes,\2 | ees,4\3 r8. ees,16\3 ees,8\3 ees,\3 r4 | des,4 r8. des,16 des,8 des, r8 aes,\2 | c,4 r8. c,16 c,8 c, r4 | break

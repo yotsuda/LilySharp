@@ -178,7 +178,7 @@ public class SectionVoicePaddingExportTests
         // length, so a voice that IS four bars is not "short" of a four-bar section-mate.
         const string text = """
             phrase two { c1 | c1 | }
-            part upper { section Rest { R1*4 | } section Unf { repeat unfold 2 { c1 | c1 | } } section Phr { two two } }
+            part upper { section Rest { R1*4 | } section Unf { c1 | c1 | c1 | c1 | } section Phr { two two } }
             part lower { section Rest { c1 | c1 | c1 | c1 | } section Unf { c1 | c1 | c1 | c1 | } section Phr { c1 | c1 | c1 | c1 | } }
             form { Rest Unf Phr }
             score { staff upper  staff lower }
@@ -232,7 +232,7 @@ public class SectionVoicePaddingExportTests
                 // worst a short voice beside this one is not padded, as before 2026-09-10)
                 // and is allowed only where it is understood: a repeat whose body writes no
                 // bar line is music in one bar to the green walk, though its played length
-                // may be whole bars (05-special-techniques: `repeat percent 2 { c4 e g e } |`
+                // may be whole bars (05-special-techniques: `c4 e g e | % |`
                 // is one written bar of four beats, two bars played). An OVERCOUNT pads
                 // every other voice wrongly and is never allowed.
                 bool allowedUndercount = page < bars && book == "05-special-techniques.lys" && name == "Main";
@@ -273,16 +273,13 @@ public class SectionVoicePaddingExportTests
     }
 
     [Theory]
-    // A beat repeat: no bar line in the body, so the whole thing is music in one bar
-    // (audit/lpreg/slashprobe.lys drew 4 bars for 1 when each turn counted as a bar).
-    [InlineData("v { repeat percent 2 { c16 d e f } repeat percent 2 { g8. c16 } | }", 1)]
-    // Grace before an in-music volta: the grace is pending music the body's first bar
-    // absorbs; the page expands the volta into its two turns (voltagrace-probe.lys draws 2).
-    [InlineData("v { grace { f8 } repeat volta 2 { b1 | } }", 2)]
-    // A closed body: its bars per turn, and the `|` after it confirms the close.
-    [InlineData("v { repeat percent 4 { c1 | } | }", 4)]
-    // An open tail carries over once, never per turn (under, not over).
-    [InlineData("v { repeat percent 2 { g2 ~ g } | }", 1)]
+    // A percent mark is the bars it repeats, one bar line after it: `%2` is two.
+    [InlineData("v { c1 | d1 | %2 | }", 4)]
+    // A mark a bar.
+    [InlineData("v { c1 | % | % | % | }", 4)]
+    [InlineData("v { g2 ~ g | % | }", 2)]
+    // The music's end closes the last mark's bar, as it closes any.
+    [InlineData("v { c1 | d1 | %2 }", 4)]
     public void SyntacticCount_NeverExceedsThePage_OnRepeatShapes(string block, int expected)
     {
         var root = SyntaxTree.Parse($"time 4/4 part v {{ }} section Main {{ {block} }} form {{ Main }} score {{ staff v }}").GetRoot();

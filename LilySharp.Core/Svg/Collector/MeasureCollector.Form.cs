@@ -1232,7 +1232,8 @@ public sealed partial class MeasureCollector
                             pendingMusic = true;
                             break;
                         }
-                        int turns = child.GetSlot(2) is InternalSyntax.SyntaxToken c && int.TryParse(c.Text, out int k) ? Math.Max(1, k) : 1;
+                        // The old `repeat percent` / `repeat unfold` is reported and played once.
+                        const int turns = 1;
                         int bodyBars = 0; bool bodyPending = false; bool bodyConfirmable = false;
                         if (child.GetSlot(3) is { } body)
                             WalkBars(body, ref bodyBars, ref bodyPending, ref bodyConfirmable, phrases, activeRefs, ref budget);
@@ -1250,6 +1251,13 @@ public sealed partial class MeasureCollector
                         // the close (`repeat percent 2 { c4 e g e | } |` is two bars, not three).
                         confirmable = !pendingMusic;
                     }
+                    break;
+                case SyntaxKind.PercentMarkItem:
+                    // A percent mark is the N bars it repeats, as `R1*N` is (a percent repeat
+                    // is walked child by child: its body and bar lines are written bars).
+                    pendingMusic = true;
+                    if (PercentMarkSyntax.LengthOf(child.GetSlot(0)!.Text) is int markBars and > 1)
+                        bars = (int)Math.Min(DefaultExpansionBudgetCap, (long)bars + markBars - 1);
                     break;
                 case SyntaxKind.VariableReference:
                     // A phrase reference is its body's bars, walked where it stands (the
@@ -1393,6 +1401,11 @@ public sealed partial class MeasureCollector
                     if (rest.MeasureCount > 1)
                         bars = (int)Math.Min(DefaultExpansionBudgetCap, (long)bars + rest.MeasureCount - 1);
                     break;
+                case PercentMarkSyntax mark:
+                    pendingMusic = true;
+                    if (mark.Bars > 1)
+                        bars = (int)Math.Min(DefaultExpansionBudgetCap, (long)bars + mark.Bars - 1);
+                    break;
                 case RepeatExpressionSyntax rep:
                     if (rep.RepeatType.Text == "tremolo")
                     {
@@ -1400,7 +1413,7 @@ public sealed partial class MeasureCollector
                         break;
                     }
                     {
-                        int turns = int.TryParse(rep.Count.Text, out int k) ? Math.Max(1, k) : 1;
+                        const int turns = 1;
                         int bodyBars = 0; bool bodyPending = false; bool bodyConfirmable = false;
                         WalkBarsRed(rep.Body, ref bodyBars, ref bodyPending, ref bodyConfirmable);
                         if (bodyBars == 0)

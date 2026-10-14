@@ -283,17 +283,9 @@ public sealed class VoiceSpanTupletBarTests
     [Fact]
     public void APercentRepeatInVoice2OfALaterBlockSignsItsOwnBar()
     {
-        var score = Collect(Book("c''1 | voice { d''1 | e''1 } { repeat percent 2 { d'1 } } |"));
+        var score = Collect(Book("c''1 | voice { d''1 | e''1 } { d'1 | % } |"));
         var percent = Assert.Single(score.PercentRepeats);
         Assert.Equal(2, percent.MeasureIndex);
-    }
-
-    [Fact]
-    public void ABeatSlashInVoice2OfBar2IsSignedInBar2()
-    {
-        var score = Collect(Book("c''1 | voice { d''1 } { repeat percent 4 { d'4 } } |"));
-        Assert.NotEmpty(score.PercentRepeats);
-        Assert.All(score.PercentRepeats, p => Assert.Equal(1, p.MeasureIndex));
     }
 
     /// <summary>ALREADY RIGHT before the fix, and pinned so it stays so: a mark written on a

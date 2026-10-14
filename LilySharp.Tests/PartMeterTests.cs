@@ -246,7 +246,7 @@ public class PartMeterTests
     }
 
     [Theory]
-    [InlineData("top { repeat unfold 2 { e'2. | } } bot { time 3/4 g2. | a2. | }", "")]
+    [InlineData("top { e'2. | e'2. | } bot { time 3/4 g2. | a2. | }", "")]
     [InlineData("top { hook } bot { time 3/4 g2. | a2. | }", "phrase hook { e'2. | f'2. | }")]
     [InlineData("top { voice up { e'2. | f'2. | } down { c'2. | d'2. | } } bot { time 3/4 g2. | a2. | }", "")]
     public void TheMusicXml_WritesTheOtherPartsTimeIntoBarsNotWrittenAtTheTop(string b, string before)

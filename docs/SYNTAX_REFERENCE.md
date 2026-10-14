@@ -1300,8 +1300,8 @@ decides, not the reading order: in `|: A [1. D] :| [2. O]` the ending written af
 
 > Note: `repeat volta` / `alternative` are LilyPond's spellings, **not** Lily#'s — the
 > parser refuses `repeat volta` with a hint to the symbolic form above, and `alternative`
-> is an ordinary word. The `repeat` keyword is for `unfold` / `percent` / `tremolo` (see
-> below), which stay in the music because they abbreviate notes rather than reorder them.
+> is an ordinary word. The percent mark `%` and `repeat tremolo` (see below) stay in the
+> music because they abbreviate notes rather than reorder them.
 
 #### One-sided repeat barlines
 
@@ -1331,12 +1331,21 @@ two-part book, measured — so the picture and the sound could disagree.)
 
 ### Percent Repeats
 
-Use the percent repeat syntax to repeat the previous measure:
+Write the bars once, then one mark for each repetition, alone between bar lines: `%` repeats
+the bar before it, `%N` the N bars before it. The mark is drawn where it is written — the
+single `%` in its bar, the double `%` over the bar line of a `%2`, and for `%3` and up one
+slash in the repetition's first bar with the others left empty, as LilyPond prints them.
 
 ```
-c4 d e f |
-repeat percent 2 { c4 d e f | }
+c4 d e f | % | % | % |        // the bar four times
+a2 b | c'2 d' | %2 | %2 |     // the two bars three times
 ```
+
+Marks in a row repeat the same bars; a mark of another length right after them is an error
+(LYS1048) — the bars a mark repeats are written bars. They must be whole bars of the meter
+(LYS1049): a beat repeated is written out. A `break` may stand beside a mark
+(`… | break % |`). The old `repeat percent N { … }` and `repeat unfold N { … }` are errors
+(LYS1047); the editor's quick fix and `lysc percent` rewrite them.
 
 ## Beaming
 

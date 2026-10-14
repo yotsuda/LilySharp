@@ -1756,6 +1756,16 @@ public sealed partial class MeasureCollector
                 ProcessRepeatExpression(repeat, builder);
                 break;
 
+            case PercentRepeatSyntax percent:
+                ProcessPercentRepeat(percent, builder);
+                break;
+
+            case PercentMarkSyntax stray:
+                // A mark the parser could not group (reported, PercentMarkUngrouped): a bar
+                // of nothing, as the design says — the bar stays, nothing is invented.
+                WriteStrayPercentMark(stray, builder);
+                break;
+
             case OverrideDeclarationSyntax overrideDecl:
                 CollectOverride(overrideDecl, builder.CurrentMeasureIndex + _cursor.MetadataMeasureOffset, builder.CurrentItemCount, isOnce: false, staffIndex: _cursor.StaffIndex);
                 // Track it so the next section boundary reverts it to the part default.

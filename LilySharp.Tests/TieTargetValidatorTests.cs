@@ -113,18 +113,18 @@ public class TieTargetValidatorTests
     [Fact]
     public void TieIntoPercentRepetition_Warns()
     {
-        Assert.Equal(1, WarningCount("repeat percent 2 { f4 d e f~ | } f4 g a b |"));
-        Assert.Equal(0, WarningCount("repeat unfold 2 { f4 d e f~ | } f4 g a b |"));
+        Assert.Equal(1, WarningCount("f4 d e f~ | % | f4 g a b |"));
+        Assert.Equal(0, WarningCount("f4 d e f~ | f4 d e f~ | f4 g a b |"));
     }
 
     [Fact]
     public void ATieIntoAPercentRepetitionNamesTheRepeat()
     {
-        var source = "part m { section A { repeat percent 2 { f4 d e f~ | } f4 g a b | } } form { A } score { staff m }";
+        var source = "part m { section A { f4 d e f~ | % | f4 g a b | } } form { A } score { staff m }";
         var validator = new TieTargetValidator();
         validator.Validate(SyntaxTree.Parse(source));
         var d = Assert.Single(validator.Diagnostics);
-        Assert.Contains("'repeat percent'", d.Message);
+        Assert.Contains("percent mark", d.Message);
         Assert.Contains("@laissezVibrer", d.Message);
         // Pointed at the tied note, not at the `repeat` keyword the spacer carries.
         Assert.Equal(source.IndexOf("f~"), d.Span.Start);

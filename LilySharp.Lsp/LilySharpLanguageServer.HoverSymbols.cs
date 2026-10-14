@@ -480,6 +480,7 @@ public sealed partial class LilySharpLanguageServer
             FormDeclarationSyntax => ("form", SymbolKind.Struct),
             RenderDeclarationSyntax render => (RenderSymbolName(render), SymbolKind.Module),
             RepeatExpressionSyntax repeat => ($"repeat {repeat.Count.Text}x", SymbolKind.Operator),
+            PercentRepeatSyntax percent => ($"% {percent.Count}x", SymbolKind.Operator),
             // Tuplets and voice-parallel blocks are inline music constructs, not
             // navigation landmarks — emitting one per triplet floods the outline.
             KeySignatureSyntax key => ($"key {key.DisplayName}", SymbolKind.Key),

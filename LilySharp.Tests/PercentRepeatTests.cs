@@ -87,8 +87,8 @@ public class PercentRepeatTests
     [Fact]
     public void Collector_PercentRepeat_Basic()
     {
-        // repeat percent 2 { c4 d e f } → 2 measures total, measure 1 is percent repeat
-        var source = "repeat percent 2 { c4 d e f }";
+        // c4 d e f | % | → 2 measures total, measure 1 is percent repeat
+        var source = "c4 d e f | % |";
         var tree = TestPaper.ParseAtIndentZero(source);
         var collector = new MeasureCollector();
         var score = collector.Collect(tree);
@@ -104,8 +104,8 @@ public class PercentRepeatTests
     [Fact]
     public void Collector_PercentRepeat_FourTimes()
     {
-        // repeat percent 4 { c4 d e f } → 4 measures, measures 1-3 are percent repeats
-        var source = "repeat percent 4 { c4 d e f }";
+        // c4 d e f | % | % | % | → 4 measures, measures 1-3 are percent repeats
+        var source = "c4 d e f | % | % | % |";
         var tree = TestPaper.ParseAtIndentZero(source);
         var collector = new MeasureCollector();
         var score = collector.Collect(tree);
@@ -121,7 +121,7 @@ public class PercentRepeatTests
     public void Collector_PercentRepeat_NotesPreserved()
     {
         // The first measure should have actual notes
-        var source = "repeat percent 2 { c4 d e f }";
+        var source = "c4 d e f | % |";
         var tree = TestPaper.ParseAtIndentZero(source);
         var collector = new MeasureCollector();
         var score = collector.Collect(tree);
@@ -133,7 +133,7 @@ public class PercentRepeatTests
     [Fact]
     public void Collector_PercentRepeat_NoPercentForFirst()
     {
-        var source = "repeat percent 3 { c4 d e f }";
+        var source = "c4 d e f | % | % |";
         var tree = TestPaper.ParseAtIndentZero(source);
         var collector = new MeasureCollector();
         var score = collector.Collect(tree);
@@ -157,7 +157,7 @@ public class PercentRepeatTests
     [Fact]
     public void Collector_UnfoldRepeat_NoPercentMarkers()
     {
-        var source = "repeat unfold 2 { c4 d e f }";
+        var source = "c4 d e f c4 d e f";
         var tree = TestPaper.ParseAtIndentZero(source);
         var collector = new MeasureCollector();
         var score = collector.Collect(tree);
@@ -205,7 +205,7 @@ public class PercentRepeatTests
         var svg = TestPaper.SvgFromRenderSpec("""
             octave absolute
             part mel { }
-            section A { mel { repeat percent 2 { c4 c c c | } } }
+            section A { mel { c4 c c c | % } }
             form { ~A }
             score { staff mel tab mel }
             """);
@@ -303,7 +303,7 @@ public class PercentRepeatTests
     public void Collector_PercentRepeat_WithPrecedingMeasures()
     {
         // Measures before the repeat should not be affected
-        var source = "c4 d e f | repeat percent 2 { g4 a b c' }";
+        var source = "c4 d e f | g4 a b c' | % |";
         var tree = TestPaper.ParseAtIndentZero(source);
         var collector = new MeasureCollector();
         var score = collector.Collect(tree);
@@ -316,7 +316,7 @@ public class PercentRepeatTests
     [Fact]
     public void PercentCoveredMeasures_DrawNoWholeRestUnderTheSign()
     {
-        // `repeat percent 8 { R1 }`: LilyPond prints the rest ONCE — the covered
+        // `R1 | % | % | % | % | % | % | % |`: LilyPond prints the rest ONCE — the covered
         // measures show the % alone, because its percent iterator plays the body a
         // single time and the MMR engraver never sees the copies
         // (lily/percent-repeat-engraver.cc; measured on 2.26.0, the machine-exported
@@ -327,7 +327,7 @@ public class PercentRepeatTests
         // synthetic annotation Score carrying PercentRepeats at all.
         var tree = TestPaper.ParseAtIndentZero("""
             part melody {
-              section A { repeat percent 8 { R1 } }
+              section A { R1 | % | % | % | % | % | % | % }
             }
             form { A }
             score { staff melody }
@@ -356,7 +356,7 @@ public class PercentRepeatTests
     public void Collector_TwoMeasureBody_IsOneDoubleSignPerRepetition()
     {
         var score = new MeasureCollector().Collect(
-            TestPaper.ParseAtIndentZero("repeat percent 4 { c1 | d1 }"));
+            TestPaper.ParseAtIndentZero("c1 | d1 | %2 | %2 | %2 |"));
 
         Assert.Equal(8, score.Voice.Measures.Length);
         Assert.Equal(3, score.PercentRepeats.Length);
@@ -377,8 +377,8 @@ public class PercentRepeatTests
     /// builder's completed-measure count at two for a body that is one measure long.
     /// </summary>
     [Theory]
-    [InlineData("repeat percent 3 { c4 d e f }")]
-    [InlineData("repeat percent 3 { c4 d e f | }")]
+    [InlineData("c4 d e f | % | % |")]
+    [InlineData("c4 d e f | % | % |")]
     public void Collector_OneMeasureBody_StaysSingle(string source)
     {
         var score = new MeasureCollector().Collect(TestPaper.ParseAtIndentZero(source));
@@ -428,7 +428,7 @@ public class PercentRepeatTests
     {
         var svg = TestPaper.SvgFromRenderSpec("""
             part mel { }
-            section A { mel { repeat percent 2 { c1 | d1 } } }
+            section A { mel { c1 | d1 | %2 } }
             form { ~A }
             score { staff mel }
             """);
@@ -511,7 +511,7 @@ public class PercentRepeatTests
     {
         var svg = TestPaper.SvgFromRenderSpec("""
             part mel { }
-            section A { mel { repeat percent 2 { c8 d e f g a b c' | d'8 c' b a g f e d | } } }
+            section A { mel { c8 d e f g a b c' | d'8 c' b a g f e d | %2 } }
             form { ~A }
             score { staff mel }
             """);
@@ -532,196 +532,35 @@ public class PercentRepeatTests
         Assert.Equal(2, Slashes(svg).Count);
     }
 
-    // --- the BEAT slash: a body SHORTER than a measure (LilyPond's third branch) ---
+    // --- the REPEAT slash: a body of three or more bars (LilyPond's third branch) ---
+    //
+    // ⚠️ A body SHORTER than a bar — LilyPond's beat slash — cannot be written since
+    // 2026-10-14 (docs/percent-repeat-design.md): a mark repeats whole bars. Its tests left
+    // with it (the slash at a beat, its spacing columns and its tab rod); the slash's
+    // count and its two shapes are the same grob for a body of three or more bars, and are
+    // pinned here on such bodies.
 
     /// <summary>
-    /// A body shorter than a measure is a BEAT slash, and LilyPond does not re-engrave the
-    /// body for it: the iterator hands the context a RepeatSlashEvent instead of the music.
-    /// So the repetition contributes one sign and NO notes — which is why the item count in
-    /// the measure is the written beat plus one spacer per repetition, not the beat again.
-    /// LILYPOND-REF: lily/percent-repeat-iterator.cc:75-92 next_element — the `else` arm.
-    /// </summary>
-    [Fact]
-    public void Collector_SubMeasureBody_IsOneBeatSlashPerRepetitionAndNoRepeatedNotes()
-    {
-        var score = new MeasureCollector().Collect(
-            TestPaper.ParseAtIndentZero("repeat percent 4 { c16 d e f }"));
-
-        var measure = Assert.Single(score.Voice.Measures);
-        // Four written sixteenths, then one spacer for each of the three repetitions.
-        Assert.Equal(7, measure.Items.Length);
-        Assert.Equal(4, measure.Items.Count(i => i is NoteItem));
-        Assert.Equal(3, measure.Items.Count(i => i is RestItem { IsSpacer: true }));
-
-        Assert.Equal(3, score.PercentRepeats.Length);
-        Assert.All(score.PercentRepeats, pr => Assert.True(pr.IsBeatSlash));
-        Assert.All(score.PercentRepeats, pr => Assert.False(pr.IsDouble));
-        // Each stands at its own beat, all inside the one measure.
-        Assert.All(score.PercentRepeats, pr => Assert.Equal(0, pr.MeasureIndex));
-        Assert.Equal(
-            new[] { new Fraction(1, 4), new Fraction(1, 2), new Fraction(3, 4) },
-            score.PercentRepeats.Select(pr => pr.BeatTiming!.Value).ToArray());
-    }
-
-    /// <summary>
-    /// A beat slash covers NO measure — the one place where Lily# does what LilyPond does and
-    /// never emits the repeated body, so there is nothing underneath to hide. Reporting the
-    /// anchor here would blank the whole bar, the written beat the slash repeats included.
-    /// </summary>
-    [Fact]
-    public void Collector_BeatSlash_CoversNoMeasure()
-    {
-        var score = new MeasureCollector().Collect(
-            TestPaper.ParseAtIndentZero("repeat percent 2 { c16 d e f }"));
-
-        var pr = Assert.Single(score.PercentRepeats);
-        Assert.True(pr.FirstCoveredMeasure > pr.MeasureIndex);
-    }
-
-    /// <summary>
-    /// The spacer that OPENS a beat slash's column carries the slash count, and only that
-    /// one: the column holds the RepeatSlash / DoubleRepeatSlash grob, which the spacing
+    /// The spacer that OPENS a repeat slash's repetition carries the slash count, and only
+    /// that one: the column holds the RepeatSlash / DoubleRepeatSlash grob, which the spacing
     /// must price as a used column with a wish and the group's ink
-    /// (<see cref="RestItem.RepeatSlashCount"/>); a repetition that outlives its bar goes on
-    /// as plain spacers, the event still sounding.
+    /// (<see cref="RestItem.RepeatSlashCount"/>); the bars after it are the event still
+    /// sounding, plain spacers.
     /// LILYPOND-REF: lily/slash-repeat-engraver.cc:56-66 process_music.
     /// </summary>
     [Fact]
-    public void Collector_BeatSlashSpacer_CarriesTheSlashCountOnItsOpeningPiece()
+    public void Collector_RepeatSlashSpacer_CarriesTheSlashCountOnItsOpeningPiece()
     {
+        const string bar = "c16 d e f c d e f c d e f c d e f";
         var score = new MeasureCollector().Collect(
-            TestPaper.ParseAtIndentZero("repeat percent 2 { c16 d e f } repeat percent 2 { g8. c16 } |"));
+            TestPaper.ParseAtIndentZero($"{bar} | {bar} | {bar} | %3 |"));
 
-        var measure = Assert.Single(score.Voice.Measures);
-        var spacers = measure.Items.OfType<RestItem>().Where(r => r.IsSpacer).ToList();
-        Assert.Equal(2, spacers.Count);
-        Assert.Equal(2, spacers[0].RepeatSlashCount);   // sixteenths → two plain slashes
-        Assert.Equal(0, spacers[1].RepeatSlashCount);   // mixed → the dotted DoubleRepeatSlash
-        Assert.All(spacers, s => Assert.True(s.IsRepeatSlash));
-
-        // A repetition that crosses the bar line (the body `c4 d` is played from beat 2, so
-        // its repeat runs from beat 4 into the next bar): the slash's column is the FIRST
-        // piece, the rest of the event is plain spacers.
-        var crossing = new MeasureCollector().Collect(
-            TestPaper.ParseAtIndentZero("r4 repeat percent 2 { c4 d } e2. |"));
-        Assert.Equal(2, crossing.Voice.Measures.Length);
-        var pieces = crossing.Voice.Measures
-            .SelectMany(m => m.Items).OfType<RestItem>().Where(r => r.IsSpacer).ToList();
-        Assert.Equal(2, pieces.Count);                 // quarter before the bar, quarter after
-        Assert.Equal(1, pieces[0].RepeatSlashCount);
-        Assert.Null(pieces[1].RepeatSlashCount);
-    }
-
-    /// <summary>
-    /// Lily#'s two spring systems agree over a beat slash's column — the timing-column chain
-    /// the layout reads and the single-measure estimate the breaker reads — and both price
-    /// it as LilyPond does: the wish INTO the slash is a note's ordinary spring, the wish
-    /// OUT of it has no head (the duration space less the increment), and the closing leg
-    /// is the rod the slash group's ink raises against the bar line. The LP figures are
-    /// pinned by the ledger (percent.beat-slash.*, probes/beat-slash-spacing.ly BSL); this
-    /// pins the two systems to each other and the shape of the three legs.
-    /// </summary>
-    [Fact]
-    public void BothSpringSystems_AgreeOverABeatSlashColumn()
-    {
-        const string src = """
-            octave absolute
-            paper { raggedRight }
-            part melody {
-              section A {
-                repeat percent 2 { c16 d e f } repeat percent 2 { g8. c16 } | c1 |
-              }
-            }
-            form { A }
-            score { staff melody }
-            """;
-        var tree = TestPaper.ParseAtIndentZero(src);
-        var spec = RenderSpecParser.FindFirst(tree);
-        var multi = new MeasureCollector().CollectMultiStaff(tree, spec!);
-        var timings = MultiStaffLayouter.CollectAllTimingsForMeasure(multi, 0);
-        var allMeasures = MultiStaffLayouter.CollectAllMeasuresAtIndex(multi, 0);
-        var measures = multi.PrimaryContentStaff.PrimaryVoice.Measures;
-        var primary = measures[0];
-        // The score's own global shortest, as the layout finds it (a sixteenth bar and a
-        // whole-note bar: 1/16, so a sixteenth's duration space is the full 2.4).
-        double shortest = SpacingRules.CalculateCommonShortestDuration(multi);
-        var fonts = LilySharp.Core.Rendering.ScoreTextMetrics.Bundled;
-
-        // Both slash columns are kept: the sixteenths, the slash at 4/16, g8. at 8/16, its
-        // c16 at 11/16 and the dotted slash at 12/16 — eight columns, none dropped.
-        Assert.Equal(
-            new[] { 0, 1, 2, 3, 4, 8, 11, 12 }.Select(i => new Fraction(i, 16)).ToList(),
-            timings);
-
-        var column = new MeasureLayouter().CreateTimingSprings(
-            fonts, primary, timings, SpacingOptions.Default.WithShortest(shortest), allMeasures, measures[1],
-            SpacingRules.RunLeftBoundBarline(measures, 0));
-        column = MultiStaffLayouter.ApplySharedColumnReservations(
-            multi, 0, column, primary, timings, allMeasures, SpacingOptions.Default.WithShortest(shortest));
-        var item = SpacingRules.CreateSpringsForMeasure(fonts, primary, SpacingOptions.Default.WithShortest(shortest), nextMeasure: measures[1]);
-
-        // The IDEALS agree leg for leg (the two systems have always kept their minimums in
-        // different frames — the column chain's carries the rod, the estimate's the skyline
-        // minimum — so those are read off the column chain below, as the layout does).
-        Assert.Equal(column.Length, item.Length);
-        for (int i = 0; i < column.Length; i++)
-            Assert.Equal(column[i].IdealDistance, item[i].IdealDistance, 9);
-
-        // Spring i connects column i-1 → i (spring 0 is bar line → first column); the
-        // slash columns are 4 (after f16) and 6 (after c16), the closing leg is the last.
-        double sixteenth = column[4].IdealDistance;             // f16 → slash: a note's spring
-        double headless = column[5].IdealDistance;              // slash → g8.: no head
-        Assert.Equal(2.504200, sixteenth, 6);
-        Assert.Equal(3.600000, headless, 6);
-        // The closing leg's IDEAL is the headless 3.6 too; what LilyPond draws there is the
-        // rod (4.057645 = group 3.757645 + 0.3), a floor the spring carries as its minimum.
-        Assert.Equal(3.600000, column[^1].IdealDistance, 6);
-        Assert.Equal(4.057645, column[^1].MinDistance, 6);
-    }
-
-    /// <summary>
-    /// On a TAB staff the sign is one-and-a-half-sized, and its rod to the bar line is the
-    /// tab group's (5.636468 + 0.3), priced into the shared columns beside the fret digits so
-    /// the layout and the line-break gate read one number — the same 5.936467 whether a
-    /// notation staff stands over the tab or not (ledger percent.beat-slash.tab-*).
-    /// </summary>
-    [Theory]
-    [InlineData("staff bl\n  tab bl")]
-    [InlineData("tab bl")]
-    public void TabBeatSlash_ClosesOnTheTabGroupsRod(string staves)
-    {
-        string src = $$"""
-            octave absolute
-            paper { raggedRight }
-            part bl {
-              clef bass
-              tuning bass
-              section A {
-                repeat percent 2 { c,16 d, e, f, } repeat percent 2 { g,8. c,16 } | c,1 |
-              }
-            }
-            form { A }
-            score { {{staves}} }
-            """;
-        var tree = TestPaper.ParseAtIndentZero(src);
-        var spec = RenderSpecParser.FindFirst(tree);
-        var multi = new MeasureCollector().CollectMultiStaff(tree, spec!);
-        var timings = MultiStaffLayouter.CollectAllTimingsForMeasure(multi, 0);
-        var allMeasures = MultiStaffLayouter.CollectAllMeasuresAtIndex(multi, 0);
-        var measures = multi.PrimaryContentStaff.PrimaryVoice.Measures;
-        double shortest = SpacingRules.CalculateCommonShortestDuration(multi);
-        var fonts = LilySharp.Core.Rendering.ScoreTextMetrics.Bundled;
-        var column = new MeasureLayouter().CreateTimingSprings(
-            fonts, measures[0], timings, SpacingOptions.Default.WithShortest(shortest), allMeasures, measures[1],
-            SpacingRules.RunLeftBoundBarline(measures, 0));
-        column = MultiStaffLayouter.ApplySharedColumnReservations(
-            multi, 0, column, measures[0], timings, allMeasures, SpacingOptions.Default.WithShortest(shortest));
-
-        double tabGroup = PercentRepeatEngraver.Geometry(
-            isBeatSlash: true, slashCount: 0, isDouble: false,
-            staffSpace: LilySharp.Core.Svg.EngravingDefaults.TabStringSpace(4)).GroupWidth;
-        Assert.Equal(5.636468, tabGroup, 6);
-        Assert.Equal(5.936468, column[^1].MinDistance, 6);
+        var spacers = score.Voice.Measures.SelectMany(m => m.Items)
+            .OfType<RestItem>().Where(r => r.IsSpacer).ToList();
+        Assert.Equal(3, spacers.Count);                // one a bar of the repetition
+        Assert.Equal(2, spacers[0].RepeatSlashCount);  // sixteenths → two plain slashes
+        Assert.Null(spacers[1].RepeatSlashCount);
+        Assert.Null(spacers[2].RepeatSlashCount);
     }
 
     /// <summary>
@@ -735,15 +574,15 @@ public class PercentRepeatTests
     /// double.
     /// </summary>
     [Theory]
-    [InlineData("repeat percent 2 { c16 d e f }", 2)]   // duration-log 4 → max(2,1)
-    [InlineData("repeat percent 2 { c8 d }", 1)]        // duration-log 3 → max(1,1)
-    [InlineData("repeat percent 2 { c4 }", 1)]          // duration-log 2 → max(0,1) = 1
-    [InlineData("repeat percent 2 { c32 d e f g a b c }", 3)] // duration-log 5 → max(3,1)
-    [InlineData("repeat percent 2 { g8. c16 }", 0)]     // mixed → DoubleRepeatSlash
-    [InlineData("repeat percent 2 { c8 d16 e }", 0)]    // mixed → DoubleRepeatSlash
-    public void Collector_BeatSlashCount_FollowsTheWrittenDurations(string source, int expected)
+    [InlineData("c16 d e f c d e f c d e f c d e f", 2)]   // duration-log 4 → max(2,1)
+    [InlineData("c8 d c d c d c d", 1)]                    // duration-log 3 → max(1,1)
+    [InlineData("c4 c c c", 1)]                            // duration-log 2 → max(0,1) = 1
+    [InlineData("c32 d e f g a b c c d e f g a b c c d e f g a b c c d e f g a b c", 3)] // duration-log 5 → max(3,1)
+    [InlineData("g8. c16 g8. c16 g8. c16 g8. c16", 0)]     // mixed → DoubleRepeatSlash
+    [InlineData("c8 d16 e c8 d16 e c8 d16 e c8 d16 e", 0)] // mixed → DoubleRepeatSlash
+    public void Collector_RepeatSlashCount_FollowsTheWrittenDurations(string bar, int expected)
     {
-        var score = new MeasureCollector().Collect(TestPaper.ParseAtIndentZero(source));
+        var score = new MeasureCollector().Collect(TestPaper.ParseAtIndentZero($"{bar} | {bar} | {bar} | %3 |"));
 
         var pr = Assert.Single(score.PercentRepeats);
         Assert.True(pr.IsBeatSlash);
@@ -751,10 +590,10 @@ public class PercentRepeatTests
     }
 
     /// <summary>
-    /// A body of THREE OR MORE WHOLE measures takes the SAME branch a sub-measure body does —
-    /// LilyPond's else is one branch, not three. The repetition is ONE slash carrying the
-    /// body's whole length, so the sign appears once, in the repetition's first measure, and
-    /// the measures after it in that repetition are blank.
+    /// A body of THREE OR MORE WHOLE measures is LilyPond's else branch — one branch, not three.
+    /// The repetition is ONE slash carrying the body's whole length, so the sign appears once,
+    /// in the repetition's first measure, and the measures after it in that repetition are
+    /// blank.
     /// ★ Measured on 2.26.0: scratch/p282/wholebody3.ly (3 whole notes) and wholebody8.ly
     /// (8) both draw exactly one slash per repetition with every later measure empty.
     /// ⚠️ THIS TEST USED TO ASSERT THE OPPOSITE — three per-measure percents, called a decided
@@ -766,7 +605,7 @@ public class PercentRepeatTests
     public void Collector_ThreeMeasureBody_IsOneSlashCoveringThreeMeasures()
     {
         var score = new MeasureCollector().Collect(
-            TestPaper.ParseAtIndentZero("repeat percent 2 { c1 | d1 | e1 | }"));
+            TestPaper.ParseAtIndentZero("c1 | d1 | e1 | %3 |"));
 
         var pr = Assert.Single(score.PercentRepeats);
         Assert.True(pr.IsBeatSlash);
@@ -780,7 +619,7 @@ public class PercentRepeatTests
     }
 
     /// <summary>
-    /// Drawn, an equal-duration beat slash is STEEPER and MORE TIGHTLY OVERLAPPED than the
+    /// Drawn, an equal-duration repeat slash is STEEPER and MORE TIGHTLY OVERLAPPED than the
     /// percent family, and carries no dots: slope 1.7 and slash-negative-kern 0.85 against
     /// the percent signs' 1.0 and 1.6.
     /// LILYPOND-REF: scm/define-grobs.scm — the RepeatSlash entry (range-less: one-word grob
@@ -788,14 +627,15 @@ public class PercentRepeatTests
     /// ★ Every number here is read off LilyPond 2.26.0's own SVG for the twin
     /// (scratch/p282/slashprobe-lpsvg.svg): the two slashes of `\repeat percent 2
     /// { c16 d e f }` are `M0 0 l0.5569 0 l1.1765 -2.0000 l-0.5569 0 z` at x = 27.1376 and
-    /// 28.0210 — so x_width 0.5569, run 1.1765, height 2.0000, origins 0.8834 apart.
+    /// 28.0210 — so x_width 0.5569, run 1.1765, height 2.0000, origins 0.8834 apart. The grob
+    /// and its stencil do not depend on how long the body is.
     /// </summary>
     [Fact]
-    public void Renderer_EqualDurationBeatSlash_IsSteeperUnkernedAndUndotted()
+    public void Renderer_EqualDurationRepeatSlash_IsSteeperUnkernedAndUndotted()
     {
         var svg = TestPaper.SvgFromRenderSpec("""
             part mel { }
-            section A { mel { repeat percent 2 { c16 d e f } g2 } }
+            section A { mel { c16 d e f c d e f c d e f c d e f | c16 d e f c d e f c d e f c d e f | c16 d e f c d e f c d e f c d e f | %3 | } }
             form { ~A }
             score { staff mel }
             """);
@@ -822,10 +662,9 @@ public class PercentRepeatTests
     }
 
     /// <summary>
-    /// A MIXED-duration beat slash is the other grob, and its picture is the double percent's
-    /// — two slashes at slope 1.0, overlapped by 1.6, WITH the two dots — standing at a beat
-    /// instead of on a bar line. That is what makes `slash-count = 0` worth carrying: it is
-    /// not a count of zero slashes.
+    /// A MIXED-duration repeat slash is the other grob, and its picture is the double
+    /// percent's — two slashes at slope 1.0, overlapped by 1.6, WITH the two dots. That is
+    /// what makes `slash-count = 0` worth carrying: it is not a count of zero slashes.
     /// LILYPOND-REF: scm/define-grobs.scm — the DoubleRepeatSlash entry (range-less: one-word
     ///   grob name);
     /// LILYPOND-REF: lily/percent-repeat-interface.cc:107-121 beat_slash — <c>x_percent
@@ -834,11 +673,11 @@ public class PercentRepeatTests
     /// -2.0000 l-0.6788 0 z` at x = 37.3980 and 38.4768 — origins 1.0788 apart.
     /// </summary>
     [Fact]
-    public void Renderer_MixedDurationBeatSlash_IsTheDottedDoubleAtABeat()
+    public void Renderer_MixedDurationRepeatSlash_IsTheDottedDouble()
     {
         var svg = TestPaper.SvgFromRenderSpec("""
             part mel { }
-            section A { mel { repeat percent 2 { g8. c16 } g2 } }
+            section A { mel { g8. c16 g8. c16 g8. c16 g8. c16 | g8. c16 g8. c16 g8. c16 g8. c16 | g8. c16 g8. c16 g8. c16 g8. c16 | %3 | } }
             form { ~A }
             score { staff mel }
             """);
@@ -856,33 +695,26 @@ public class PercentRepeatTests
     }
 
     /// <summary>
-    /// The measure a beat slash stands in keeps its own beams and stems: the written beat the
-    /// slash repeats is still music, and hiding by measure would erase it. This is the arm of
-    /// <see cref="PercentRepeatItem.FirstCoveredMeasure"/>'s empty range that the four hiding
-    /// passes read, and the first draft of the port blanked the bar because <c>DrawBeams</c>
-    /// was not reading it.
+    /// A repeat inside a percent repeat's bars is collected as written.
     /// </summary>
+    /// <remarks>
+    /// ⚠️ THE TREMOLO IN FRONT IS THE POINT, not decoration. The collector lends each repeat's
+    /// body list from one list a thread keeps (<c>MeasureCollector.RentRepeatBody</c>), and the
+    /// inner repeat must get a list of its OWN while the percent repeat's is still being
+    /// walked. On a thread's first repeat the drawer is empty either way, so a nested repeat
+    /// on its own cannot tell a correct drawer from one that hands the outer list out twice —
+    /// the repeat before it is what fills the drawer. MEASURED (session 461, on the old
+    /// <c>repeat unfold</c>): with the rent leaving the drawer filled, the inner repeat appends
+    /// to the outer list, walks it from the start, meets itself, and the collect overflows
+    /// the stack.
+    /// </remarks>
     [Fact]
-    public void Renderer_BeatSlash_LeavesTheWrittenBeatBeamed()
+    public void ARepeatInsideAPercentRepeatsBars_IsCollectedAsWritten()
     {
-        var svg = TestPaper.SvgFromRenderSpec("""
-            part mel { }
-            section A { mel { repeat percent 2 { c16 d e f } g2 } }
-            form { ~A }
-            score { staff mel }
-            """);
-
-        // The sixteenths are beamed (two beam levels) and stemmed, exactly as when written
-        // out on their own.
-        var control = TestPaper.SvgFromRenderSpec("""
-            part mel { }
-            section A { mel { c16 d e f g2. } }
-            form { ~A }
-            score { staff mel }
-            """);
-        Assert.Equal(Beams(control).Count, Beams(svg).Count);
-        Assert.Equal(Stems(control).Count, Stems(svg).Count);
-        Assert.NotEmpty(Beams(svg));
+        var score = new MeasureCollector().Collect(TestPaper.ParseAtIndentZero(
+            "repeat tremolo 4 { c16 } r2. | repeat tremolo 2 { d8 } e4 f g | % |"));
+        Assert.Equal(5, score.Voice.Measures.SelectMany(m => m.Items).Count(i => i is NoteItem));
+        Assert.Single(score.PercentRepeats);
     }
 
     // --- what the body WRITES prints once ---
@@ -910,7 +742,7 @@ public class PercentRepeatTests
         // Bar 0 is written; bars 1-3 are the signs.
         var layout = LayoutOf($$"""
             part melody {
-              section A { repeat percent 4 { c4@p@accent( d) e~ e@f | } }
+              section A { c4@p@accent( d) e~ e@f | % | % | % }
             }
             form { A }
             score { {{staffSpec}} }
@@ -946,7 +778,7 @@ public class PercentRepeatTests
     {
         var layout = LayoutOf("""
             part melody {
-              section A { repeat unfold 4 { c4@p@accent( d) e~ e@f | } }
+              section A { c4@p@accent( d) e~ e@f | c4@p@accent( d) e~ e@f | c4@p@accent( d) e~ e@f | c4@p@accent( d) e~ e@f | }
             }
             form { A }
             score { staff melody }
@@ -975,7 +807,7 @@ public class PercentRepeatTests
             part rh { clef treble }
             part lh { clef bass }
             section A {
-              rh { repeat percent 3 { c4@chord(C)@figuredBass(6) d@glissando e f@cross | } g1 | }
+              rh { c4@chord(C)@figuredBass(6) d@glissando e f@cross | % | % | g1 | }
               lh { c2 g | c2 g | c2 g | c1 | }
             }
             form { ~A }
@@ -1006,7 +838,7 @@ public class PercentRepeatTests
     {
         var layout = LayoutOf("""
             part melody {
-              section A { repeat percent 3 { c1( | d1) | } }
+              section A { c1( | d1) | %2 | %2 }
             }
             form { A }
             score { staff melody }

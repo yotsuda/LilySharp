@@ -84,7 +84,7 @@ public sealed class TabFingeringExpectationTests
         new("amanda.lys", "section A3", 1, 2, "g", 2, 5, false, "octave shape: index on the root, little finger an octave up"),
         new("amanda.lys", "section B1", 1, 1, "e", 2, 2, false, "down two frets rather than a stretch"),
         new("amanda.lys", "section B1", 3, 1, "e", 2, 2, false, "down two frets rather than a stretch"),
-        new("real-gone.lys", "section Intro", 4, 1, "b", 3, 2, false, "the slur keeps the 3rd string"),
+        new("real-gone.lys", "section Intro", 9, 1, "b", 3, 2, false, "the slur keeps the 3rd string"),
         new("real-gone.lys", "section C", 4, 5, "a", 3, 0, false, "the open 3rd string"),
         new("real-gone.lys", "section D", 5, 1, "b", 3, 2, false, "the hand is free after a fall"),
         new("real-gone.lys", "section F", 1, 1, "b", 3, 2, false, "the 3rd string's 2nd after a bar of open strings"),

@@ -874,12 +874,20 @@ public sealed class MidiExporter
                 break;
 
             case RepeatExpressionSyntax repeat:
-                // Its turns flow across the bars (_barFlows) — before and after, since a bar
-                // line inside the body opens a bar of its own.
-                bool flows = repeat.RepeatType.Text != "tremolo";
-                _barFlows |= flows;
                 ProcessRepeat(repeat, track, conductorTrack);
-                _barFlows |= flows;
+                break;
+
+            case PercentRepeatSyntax percent:
+                ProcessPercentRepeat(percent, track, conductorTrack);
+                break;
+
+            case PercentMarkSyntax stray:
+                // A mark that repeats nothing (LYS1048): the bars it stands for, silent, as
+                // the page draws them empty.
+                ForgetOnset();
+                if (stray.Bars > 1)
+                    _barFlows = true;
+                _currentTick += MeasureTicks() * Math.Max(1, stray.Bars);
                 break;
 
             case TupletExpressionSyntax tuplet:
@@ -2010,8 +2018,48 @@ public sealed class MidiExporter
             // repeat barline spell one. Since 2026-08-31 a repeat barline in section music is
             // an ERROR anyway (LYS1034, RepeatStructureScopeValidator: repeats are written in
             // the form); this arm only keeps an error book's MIDI whole.
+            // A percent mark in its repeat sounds the bars once more (ProcessPercentRepeat).
+            if (items[i] is PercentMarkSyntax { Parent: PercentRepeatSyntax } && _percentFrames.Count > 0)
+            {
+                ReplayPercentBody(track, conductorTrack);
+                continue;
+            }
             ProcessNode(items[i], track, conductorTrack);
         }
+    }
+
+    /// <summary>The percent repeats being played, innermost last: each one's bars and the
+    /// frame they opened in (<see cref="ProcessPercentRepeat"/>).</summary>
+    private readonly Stack<(List<SyntaxNode> Body, Dictionary<int, int> Ordinals,
+        (int Octave, int NoteName, Fraction Duration) Frame)> _percentFrames = new();
+
+    /// <summary>
+    /// A percent repeat: its children walked in order as one sequence — the bars, their bar
+    /// line, then each mark sounding the bars once more (<see cref="ReplayPercentBody"/>) with
+    /// the bar lines between the marks. The page draws the bars once and a sign for each
+    /// repetition, so every repetition sounds that one copy: the source ordinals and the
+    /// pitch frame restart where the bars began, as they do for <see cref="ProcessRepeat"/>.
+    /// </summary>
+    private void ProcessPercentRepeat(PercentRepeatSyntax percent, MidiTrack track, MidiTrack conductorTrack)
+    {
+        _percentFrames.Push((percent.BodyItems.ToList(), new Dictionary<int, int>(_sourceOrdinals),
+            (_currentOctave, _currentNoteName, _defaultDuration)));
+        try
+        {
+            ProcessSequence(percent.ChildNodes().ToList(), track, conductorTrack);
+        }
+        finally
+        {
+            _percentFrames.Pop();
+        }
+    }
+
+    private void ReplayPercentBody(MidiTrack track, MidiTrack conductorTrack)
+    {
+        var (body, ordinals, frame) = _percentFrames.Peek();
+        _sourceOrdinals = new Dictionary<int, int>(ordinals);
+        (_currentOctave, _currentNoteName, _defaultDuration) = frame;
+        ProcessSequence(body, track, conductorTrack);
     }
 
     /// <summary>
@@ -3076,10 +3124,12 @@ public sealed class MidiExporter
         if (int.TryParse(repeat.Count.Text, out int count))
             repeatCount = count;
 
-        // percent (％ signs) and tremolo (one slashed note) are engraved
-        // ONCE; unfold is printed in full, so its ordinals keep counting.
+        // A tremolo (one slashed note) is engraved ONCE. The old `repeat percent` /
+        // `repeat unfold` (LYS1047) plays its body once, as the page draws it.
         string repType = repeat.RepeatType.Text;
-        bool engravedOnce = repType is "percent" or "tremolo";
+        if (repType != "tremolo")
+            repeatCount = 1;
+        bool engravedOnce = repType is "tremolo";
         var ordSnapshot = engravedOnce ? new Dictionary<int, int>(_sourceOrdinals) : null;
 
         // ⚠️ AND SO IS THE PITCH FRAME, for the same reason and it is the same fact: the

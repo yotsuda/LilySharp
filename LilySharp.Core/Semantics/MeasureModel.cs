@@ -36,20 +36,18 @@ namespace LilySharp.Core.Semantics;
 /// carry no duration and are not content, so <c>| key |</c> is an empty placeholder —
 /// exactly as the collector treats it. Phrase references expand in a fresh
 /// default-duration frame; tuplet/grace interiors fold into their wrapper via
-/// <see cref="MeasureDurations.ItemDuration"/>; percent/unfold repeats expand to their
-/// played length, and while their expansion is in flight the bar AUTO-COMPLETES at the
-/// meter (mirroring <c>MeasureBuilder.AddDuration</c>): a body that is no whole number
-/// of bars flows across the bar boundary, so counting its turns into one written bar
-/// disagreed with the collector's bar count (<c>repeat volta 2 { d8×8 }</c> was one
-/// two-whole-note bar here and two rendered bars on the page).
+/// <see cref="MeasureDurations.ItemDuration"/>; a percent repeat's bars are written bars, and
+/// each mark is the N bars it repeats, as <c>R1*N</c> is. (Until 2026-10-14 a
+/// <c>repeat percent</c> body was expanded here with the bar auto-completing at the meter
+/// while it was in flight; a percent repeat writes its bar lines now.)
 /// </remarks>
 internal static class MeasureModel
 {
     /// <summary>One measure of a flattened scope: its total sounded duration, the source
     /// span to squiggle, whether it is an explicit empty <c>| |</c> placeholder, the end of
     /// the written bar line that closed its music (-1 for the music after a scope's last bar
-    /// line), whether the bar was cut at the meter rather than written — a repeat's flow
-    /// or one of the bars of an <c>R1*N</c>, the two places a bar line cannot be written
+    /// line), whether the bar was cut at the meter rather than written — one of the bars
+    /// of an <c>R1*N</c> or of a <c>%N</c>, the two places a bar line cannot be written
     /// (<see cref="WrittenBar"/> holds every other bar to its bar lines) — and whether it holds
     /// music inlined from a phrase body (whose text lies outside the scope).</summary>
     internal readonly record struct Bar(Fraction Duration, TextSpan Span, bool IsEmpty = false, int BarLineEnd = -1,
@@ -107,7 +105,6 @@ internal static class MeasureModel
         int prevBarEnd = -1; // ink end of the last barline, for an empty bar's span
         var meter = initialMeter ?? DurationCalculator.ParseTimeSignature(4, 4);
         bool senzaMisura = false; // time none: no auto-complete boundary exists
-        int repeatFlow = 0;       // depth of percent/unfold expansions in flight
         int plannedFor = -1;      // the bar plannedMeterAt was last asked for
         bool flows = false;       // the bar under construction closes where its beats fill (Bar.Flowed)
         bool phraseInBar = false; // …holds music inlined from a phrase body (Bar.HasPhrase)
@@ -164,11 +161,6 @@ internal static class MeasureModel
                     confirmable = current.Count == 0 && bars.Count > 0;
                     atScopeStart = false;
                 }
-                continue;
-            }
-            if (entry is RepeatFlowMarker flow)
-            {
-                repeatFlow += flow.Delta;
                 continue;
             }
             var node = (SyntaxNode)entry;
@@ -248,34 +240,27 @@ internal static class MeasureModel
             // a pickup is the validator's to know, and the meter is this model's answer.
             if (node is RestSyntax bareRest && Music.BarRest.IsBare(bareRest) && !senzaMisura)
                 itemDuration = meter - total is { Numerator: > 0 } left ? left : meter;
+            // A percent mark is the bars it repeats, each a bar of the meter — the bars a
+            // mark may repeat are whole bars (MeasureValidator holds them to it), so the
+            // meter is their length, as the page's spacers fill them.
+            if (node is PercentMarkSyntax)
+                itemDuration = meter;
             total += itemDuration;
             current.Add(node);
             if (index != null)
                 pendingKeys.Add((chain, node.Span.Start));
             if (callSites.Count > 0)
                 phraseInBar = true;
-            // A bar holding a repeat's flow or an `R1*N` closes where its beats fill
-            // (Bar.Flowed): no bar line can be written inside them.
-            if (repeatFlow > 0 || node is RestSyntax { MeasureCount: > 1 })
-                flows = true;
-
-            // While a repeat expansion is in flight the bar auto-completes at the meter,
-            // as the collector renders it (MeasureBuilder.AddDuration): a repeat opening
-            // mid-bar, or a body that is no whole number of bars, flows across the bar
-            // boundary instead of piling its turns into the surrounding written bar.
-            // The boundary an auto-fill leaves is ATTACHABLE — the builder's
-            // _lastEndAutoFill — so `confirmable` re-arms and a written `|` standing
-            // right on it confirms the close instead of opening an empty `| |` bar.
-            if (repeatFlow > 0 && !senzaMisura && total >= meter)
+            // A bar of an `R1*N` or of a `%N` closes where its beats fill (Bar.Flowed): no
+            // bar line can be written inside them.
+            int written = node switch
             {
-                IndexTheBar();
-                bars.Add(new Bar(total, MeasureDurations.GetSpan(current), Flowed: true, HasPhrase: phraseInBar));
-                current = new List<SyntaxNode>();
-                total = Fraction.Zero;
-                confirmable = true;
-                flows = false;
-                phraseInBar = false;
-            }
+                RestSyntax r => r.MeasureCount,
+                PercentMarkSyntax mark => Math.Max(1, mark.Bars),
+                _ => 1,
+            };
+            if (written > 1)
+                flows = true;
 
             // `R1*N` is N BARS of silence written as one token, and it is written with ONE
             // barline after it. Counting the token as one bar made this model disagree with
@@ -294,24 +279,24 @@ internal static class MeasureModel
             // ⚠️ MeasureCount is COMPUTED (a child lookup and an int.TryParse over the token
             // text), so it is read once and held. Written as the loop's condition it was
             // re-parsed on every added bar. This walk is on the diagnostics path, which the
-            // editor runs on every keystroke.
-            if (node is RestSyntax rest && rest.MeasureCount is var written && written > 1)
-                // Each interior copy is a site of the expansion budget, as the collector
-                // charges it: `R1*2000000000` parses, and this loop would faithfully model
-                // that many bars on the diagnostics path.
-                for (int extra = 1; extra < written && budget.Charge(1); extra++)
-                    bars.Add(new Bar(itemDuration, node.Span, Flowed: true));
+            // editor runs on every keystroke. A `%N` is the same shape: N bars, one mark, one
+            // bar line after it.
+            // Each interior copy is a site of the expansion budget, as the collector
+            // charges it: `R1*2000000000` parses, and this loop would faithfully model
+            // that many bars on the diagnostics path.
+            // (A mark's bars were charged with the mark, in Flatten.)
+            for (int extra = 1; extra < written && (node is PercentMarkSyntax || budget.Charge(1)); extra++)
+                bars.Add(new Bar(itemDuration, node.Span, Flowed: true));
         }
         FlushMusic(); // a trailing partial bar (music after the last barline) counts
         return bars;
     }
 
     /// <summary>Marks a fresh default-duration frame (a phrase reference), matching the
-    /// collector's phrase-fresh semantics (<c>EnterDefaultFrame</c>). A repeat turn is NOT
-    /// one: the collector's <c>ProcessRepeatExpression</c> walks the body with the running
-    /// default — bare notes inherit the note value from BEFORE the repeat and across its
-    /// turns — so resetting per turn counted `c8 … repeat percent 4 { a a … }`'s bare a's
-    /// as quarters (reported 2026-08-13, scratch/ベースタブLy/1stbarline.lys).</summary>
+    /// collector's phrase-fresh semantics (<c>EnterDefaultFrame</c>). A repeat body is NOT
+    /// one: the collector walks it with the running default — bare notes inherit the note
+    /// value from BEFORE it — so resetting there counted `c8 … repeat percent 4 { a a … }`'s
+    /// bare a's as quarters (reported 2026-08-13, scratch/ベースタブLy/1stbarline.lys).</summary>
     private sealed class DurationResetMarker
     {
         public static readonly DurationResetMarker Instance = new();
@@ -330,18 +315,6 @@ internal static class MeasureModel
         public int CallSite { get; } = callSite;
         public static BoundaryMarker EnterAt(int callSite) => new(true, callSite);
         public static readonly BoundaryMarker Exit = new(false);
-    }
-
-    /// <summary>Brackets a percent/unfold expansion in the stream: while the depth is
-    /// positive, the splitter auto-completes the bar at the meter (the collector's
-    /// rendered-bar rule) — outside it, only written barlines close bars, which is the
-    /// whole point of validating what the author wrote. Nested repeats nest the depth.</summary>
-    private sealed class RepeatFlowMarker
-    {
-        public static readonly RepeatFlowMarker Enter = new(+1);
-        public static readonly RepeatFlowMarker Exit = new(-1);
-        public int Delta { get; }
-        private RepeatFlowMarker(int delta) => Delta = delta;
     }
 
     /// <summary>This walk's expansion cut-off: the same phrase DAG the collector
@@ -410,6 +383,7 @@ internal static class MeasureModel
             // Tuplet/grace interiors are folded into their wrapper by ItemDuration;
             // inline-volta interiors are ordinary written measures and flow through
             // as themselves. Repeat interiors are expanded by the case below.
+            // (A percent repeat is not among them: its body and bar lines are written music.)
             if (IsInside<TupletExpressionSyntax>(n, scope) || IsInside<GraceExpressionSyntax>(n, scope)
                 || IsInside<RepeatExpressionSyntax>(n, scope) || IsInside<ArpeggioSyntax>(n, scope))
                 continue;
@@ -457,40 +431,35 @@ internal static class MeasureModel
                         return;
                     break;
 
-                // Cross-part alignment and bar counting must see repeats at their
-                // PLAYED length: percent/unfold repeat their body COUNT times (the
-                // collector expands them into that many real measures), a tremolo is
-                // one metric item folded by ItemDuration.
-                // LILYPOND-REF: lily/percent-repeat-iterator.cc,
-                //   lily/chord-tremolo-engraver.cc.
+                // A tremolo is one metric item folded by ItemDuration
+                // (LILYPOND-REF: lily/chord-tremolo-engraver.cc). The old `repeat percent` /
+                // `repeat unfold` is reported where written and read as its body once, as the
+                // collector draws it.
                 case RepeatExpressionSyntax rep:
                     if (rep.RepeatType.Text == "tremolo")
                     {
                         if (!Emit(rep))
                             return;
                     }
-                    else if (int.TryParse(rep.Count.Text, out int repCount))
+                    else
                     {
                         // Inside a phrase body the repeat is ONE site of the body (the
-                        // collector's ExpandVariable emits the wrapper as one node); its
-                        // interior is the repeat's own walk, whose first pass is free and
-                        // whose extra passes are charged by the body's size, as
-                        // ProcessRepeatExpression's passCost charges them.
+                        // collector's ExpandVariable emits the wrapper as one node).
                         if (inPhrase && !budget.Charge(1))
                             return;
-                        // No DurationResetMarker here: the collector walks each turn with
-                        // the RUNNING default note value (see the marker's remarks). The
-                        // flow markers bracket ALL turns: the seam between turns is inside
-                        // the flow, so a body that is no whole number of bars auto-completes
-                        // across it exactly where the rendered barline falls.
-                        output.Add(RepeatFlowMarker.Enter);
-                        int before = output.Count;
                         Flatten(rep.Body, output, activeRefs, phraseBodies, budget, inPhrase: false);
-                        int passCost = Math.Max(1, output.Count - before);
-                        for (int r = 1; r < repCount && budget.Charge(passCost); r++)
-                            Flatten(rep.Body, output, activeRefs, phraseBodies, budget, inPhrase: false);
-                        output.Add(RepeatFlowMarker.Exit);
                     }
+                    break;
+
+                // A percent repeat's body and bar lines are written music and flow through as
+                // themselves; each mark is the bars it repeats (priced in Split), charged by
+                // the body's size as the collector's ProcessPercentRepeat charges a repetition.
+                case PercentMarkSyntax mark:
+                    if (mark.Parent is PercentRepeatSyntax group
+                        && !budget.Charge(Math.Max(1, group.BodyItems.Count())))
+                        return;
+                    if (!Emit(n))
+                        return;
                     break;
 
                 case VariableReferenceSyntax varRef:

@@ -47,7 +47,7 @@ public class SectionDirectChildrenGreenTests
         part bass { clef bass }
         phrase P { c4 d }
         section Head { key g major  time 3/4  tempo 4 = 100  partial 4  bass { c4 d e | } }
-        section Inline { c4 d e f | r4 s8 R1*2 | <c e g>4 q | break c4 ~ c ( d ) | P | tuplet 3/2 { c8 d e } | repeat unfold 2 { c4 } | @mark("A") c4 | }
+        section Inline { c4 d e f | r4 s8 R1*2 | <c e g>4 q | break c4 ~ c ( d ) | P | tuplet 3/2 { c8 d e } | c4 c4 | @mark("A") c4 | }
         section Mixed { override Stem.thickness = 2  c4 d e f | }
         section Blocks { bass { c4 d | } chords { c1 } lyrics { la la } }
         section Empty { key c major }

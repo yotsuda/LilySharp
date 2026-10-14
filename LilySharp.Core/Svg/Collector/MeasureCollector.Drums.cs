@@ -283,7 +283,7 @@ public sealed partial class MeasureCollector
 
     /// <summary>
     /// Reads one chart line into hits: drum notes, drum chords, bare durations repeating
-    /// either, rests, bar lines, <c>tuplet</c> and <c>repeat unfold/percent</c> — the music a
+    /// either, rests, bar lines, <c>tuplet</c> and percent repeats — the music a
     /// drum pattern is written in. Anything else answers false, and the chart is drawn
     /// unmerged.
     /// </summary>
@@ -342,10 +342,17 @@ public sealed partial class MeasureCollector
                         break;
                     }
                     case RepeatExpressionSyntax repeat when repeat.RepeatType.Text is "unfold" or "percent":
+                        // The old spelling, reported where written: its body once.
+                        if (!Read(owner.GatherVoiceMusicNodes(repeat.Body), scale, run))
+                            return false;
+                        break;
+                    case PercentRepeatSyntax percent:
                     {
-                        int count = int.TryParse(repeat.Count.Text, out int n) && n > 0 ? n : 1;
-                        var body = owner.GatherVoiceMusicNodes(repeat.Body);
-                        for (int k = 0; k < count; k++)
+                        // A chart line's pattern is heard in every bar, so the merged chart
+                        // writes each repetition's hits (the bar lines read nothing).
+                        var body = owner.GatherVoiceMusicNodes(percent);
+                        body.RemoveAll(s => s.Kind == SyntaxKind.PercentMarkItem);
+                        for (int k = 0; k < percent.Count; k++)
                             if (!Read(body, scale, run))
                                 return false;
                         break;

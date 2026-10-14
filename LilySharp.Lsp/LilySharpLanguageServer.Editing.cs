@@ -364,6 +364,8 @@ public sealed partial class LilySharpLanguageServer
                     actions.Add(split);
                 if (MissingScoreAction(doc, uri, diagnostic) is { } score)
                     actions.Add(score);
+                if (PercentRepeatAction(doc, uri, diagnostic) is { } percent)
+                    actions.Add(percent);
                 if (CaseSpellingAction(doc, uri, diagnostic) is { } spelling)
                     actions.Add(spelling);
                 if (diagnostic.Code == DiagnosticCodes.TodoMark && !todoOffered)
@@ -493,6 +495,32 @@ public sealed partial class LilySharpLanguageServer
         string lead = doc.Text.Length == 0 || doc.Text.EndsWith('\n') ? eol : eol + eol;
         return QuickFix($"Add {score}", doc, uri, diagnostic,
             EditOf(doc.Text, doc.Text.Length, doc.Text.Length, lead + score + eol));
+    }
+
+    /// <summary>
+    /// The quick fix for LYS1047, the old <c>repeat percent</c> / <c>repeat unfold</c>: the item
+    /// rewritten as <c>lysc percent</c> rewrites it (<see cref="LilySharp.Core.Editing.PercentRepeatConverter"/>)
+    /// — the bars once and a mark a repetition, or the music written out — as one edit over the
+    /// text that changes.
+    /// </summary>
+    private static CodeAction? PercentRepeatAction(Document doc, Uri uri, CoreDiagnostic diagnostic)
+    {
+        if (diagnostic.Code != DiagnosticCodes.RepeatPercentRemoved)
+            return null;
+        string? rewritten = LilySharp.Core.Editing.PercentRepeatConverter.ConvertAt(doc.Text, diagnostic.Span.Start);
+        if (rewritten == null || rewritten == doc.Text)
+            return null;
+        string text = doc.Text;
+        int head = 0;
+        while (head < text.Length && head < rewritten.Length && text[head] == rewritten[head])
+            head++;
+        int tail = 0;
+        while (tail < text.Length - head && tail < rewritten.Length - head
+               && text[text.Length - 1 - tail] == rewritten[rewritten.Length - 1 - tail])
+            tail++;
+        bool marks = rewritten.AsSpan(head, rewritten.Length - head - tail).Contains('%');
+        return QuickFix(marks ? "Write it as % marks after the bars" : "Write the music out", doc, uri, diagnostic,
+            EditOf(text, head, text.Length - tail, rewritten.Substring(head, rewritten.Length - head - tail)));
     }
 
     private static readonly System.Text.RegularExpressions.Regex SectionOfWarning =

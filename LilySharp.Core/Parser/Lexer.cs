@@ -233,6 +233,13 @@ internal sealed class Lexer
                 _position++;
                 return (SyntaxKind.Backslash, "\\");
             case '/': _position++; return (SyntaxKind.Slash, "/");
+            case '%':
+                // A percent mark, `%` or `%N` with the digits glued: one repetition of the N
+                // bars written before it (docs/percent-repeat-design.md).
+                _position++;
+                while (!IsAtEnd && char.IsAsciiDigit(Current))
+                    _position++;
+                return (SyntaxKind.PercentMark, _text[start.._position]);
         }
 
         // Colon: : or :| or :8/:16/:32 (tremolo)

@@ -1018,7 +1018,7 @@ public class EditorColouringTests
         //    rule that also names the directive — which is the whole reason they could leave
         //    the bare alternation without going dark.
         Assert.True(IsColoured("octave relative"));
-        Assert.True(IsColoured("repeat unfold"));
+        Assert.True(IsColoured("repeat tremolo"));
 
         // ⑸ The fonts block, both directions. A key the parser does NOT know must not be in
         //    the grammar's list either — that direction is what keeps the list from drifting

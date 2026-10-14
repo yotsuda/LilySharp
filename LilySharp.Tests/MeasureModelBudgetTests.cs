@@ -93,13 +93,17 @@ public class MeasureModelBudgetTests
     }
 
     [Fact]
-    public void RepeatUnfold_TruncatesItsPasses_LikeTheCollector()
+    public void PercentMarks_TruncateTheirRepetitions_LikeTheCollector()
     {
-        // 4 quarters per pass, cap 30: the first pass is free, seven charged passes fit
-        // (ExpansionBudgetTests.RepeatUnfold_TruncatesItsPasses) — 32 notes, eight 4/4 bars.
-        string book = Book("repeat unfold 1000 { c4 d e f }");
+        // 4 sites a repetition, cap 30: the written bar is free, seven charged repetitions
+        // fit (ExpansionBudgetTests.PercentMarks_TruncateTheirRepetitions) — eight 4/4 bars,
+        // as many as the collector's measures.
+        string book = Book(ExpansionBudgetTests.PercentRun(1000));
         var bars = ModelBars(book, 30);
-        Assert.Equal(CollectorNotes(book, 30), Quarters(bars));
+        var collector = new MeasureCollector { ExpansionBudgetCap = 30 };
+        var score = collector.Collect(SyntaxTree.Parse(book), "m");
+        Assert.NotNull(collector.ExpansionBudgetExceededAt);
+        Assert.Equal(score.Voice.Measures.Length, bars.Count);
         Assert.Equal(8, bars.Count);
     }
 

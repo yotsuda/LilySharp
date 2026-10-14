@@ -163,6 +163,16 @@ internal static class MeasureDurations
                 return body * new Fraction(tremCount, 1);
             }
 
+            case PercentRepeatSyntax percent:
+            {
+                // The bars once as written and once more for each mark. (A walk that splits
+                // bars reads the group's children instead — MeasureModel.)
+                var body = Fraction.Zero;
+                foreach (var bodyItem in percent.BodyItems)
+                    body += ItemDuration(bodyItem, ref defaultDuration);
+                return body * new Fraction(percent.Count, 1);
+            }
+
             default:
                 return Fraction.Zero;
         }

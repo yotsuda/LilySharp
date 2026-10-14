@@ -43,10 +43,114 @@ internal sealed partial class Parser
         }
 
         var closeBrace = Expect(SyntaxKind.CloseBrace);
+        GroupPercentRepeats(items);
         var block = new MusicBlockGreen(openBrace, [.. items], closeBrace);
         Svg.Layout.ListPool<GreenNode?>.Give(items);
         return block;
     }
+
+    /// <summary>
+    /// Groups each run of percent marks with the bars it repeats into one
+    /// <see cref="PercentRepeatGreen"/>, in place (docs/percent-repeat-design.md §3). A mark
+    /// <c>%N</c> alone between two bar lines (line breaks beside it allowed, the closing one
+    /// may be the list's end) takes the N bars written before the bar line in front of it —
+    /// back over N bar lines to the one before them or the list's start — when none of them
+    /// holds a mark; the marks of the same length that follow it, one a bar, join it. The
+    /// directives at the head of the first bar (a <c>break</c>, a <c>key</c>, a <c>time</c> …)
+    /// stay outside: they are written before the bars, not repeated with them. A mark that
+    /// cannot be grouped stays where it is, for the validator to report (LYS1048).
+    /// </summary>
+    /// <remarks>
+    /// The grouping reads the item list alone, so it lives in the parser beside the four lists
+    /// that hold music (a block, a section's bare music, a part's inner section, an inline
+    /// volta) and every reader receives the group. Whether the bars are WHOLE bars of the
+    /// meter is a question of time, answered by the validator (LYS1049).
+    /// </remarks>
+    private static void GroupPercentRepeats(List<GreenNode?> items)
+    {
+        for (int i = 1; i < items.Count; i++)
+        {
+            if (items[i] is not PercentMarkGreen mark)
+                continue;
+            int bars = PercentMarkSyntax.LengthOf(mark.GetSlot(0)!.Text);
+            int before = SkipBreaks(items, i - 1, -1);
+            if (bars == 0 || before < 0 || items[before]?.Kind != SyntaxKind.Barline || !ClosedAfter(items, i))
+                continue;
+
+            // Back over the bars: `close` is the bar line closing the bar being counted.
+            int start = -1;
+            int close = before;
+            for (int counted = 1; ; counted++)
+            {
+                int k = close - 1;
+                bool clean = true, music = false;
+                while (k >= 0 && items[k]?.Kind != SyntaxKind.Barline)
+                {
+                    if (items[k] is PercentMarkGreen or PercentRepeatGreen)
+                        clean = false;
+                    else if (!IsBarHeadDirective(items[k]))
+                        music = true;
+                    k--;
+                }
+                // A bar with nothing in it, or one holding a mark, is not a bar to repeat.
+                if (!clean || !music)
+                    break;
+                if (counted == bars)
+                {
+                    start = k + 1;
+                    break;
+                }
+                if (k < 0)
+                    break;
+                close = k;
+            }
+            if (start < 0)
+                continue;
+            while (IsBarHeadDirective(items[start]))
+                start++;
+
+            int end = i;
+            while (true)
+            {
+                int bar = SkipBreaks(items, end + 1, +1);
+                if (bar >= items.Count || items[bar]?.Kind != SyntaxKind.Barline)
+                    break;
+                int next = SkipBreaks(items, bar + 1, +1);
+                if (next >= items.Count || items[next] is not PercentMarkGreen nextMark
+                    || PercentMarkSyntax.LengthOf(nextMark.GetSlot(0)!.Text) != bars || !ClosedAfter(items, next))
+                    break;
+                end = next;
+            }
+
+            var children = items.GetRange(start, end - start + 1).ToArray();
+            items.RemoveRange(start, end - start + 1);
+            items.Insert(start, new PercentRepeatGreen(children));
+            i = start;
+        }
+
+        // The first item from `from` in direction `step` that is not a line break.
+        static int SkipBreaks(List<GreenNode?> list, int from, int step)
+        {
+            while (from >= 0 && from < list.Count && list[from]?.Kind == SyntaxKind.Break)
+                from += step;
+            return from;
+        }
+
+        // The mark at `at` is followed, past any line breaks, by a bar line or the list's end.
+        static bool ClosedAfter(List<GreenNode?> list, int at)
+        {
+            int after = SkipBreaks(list, at + 1, +1);
+            return after >= list.Count || list[after]?.Kind == SyntaxKind.Barline;
+        }
+    }
+
+    /// <summary>The items written at a bar's head that take no time and are not repeated with
+    /// the bars a percent mark repeats (<see cref="GroupPercentRepeats"/>).</summary>
+    internal static bool IsBarHeadDirective(GreenNode? item) => item?.Kind is SyntaxKind.Break
+        or SyntaxKind.KeySignature or SyntaxKind.TimeSignature or SyntaxKind.ClefDeclaration
+        or SyntaxKind.TempoDeclaration or SyntaxKind.PartialDeclaration or SyntaxKind.OctaveDirective
+        or SyntaxKind.OverrideDeclaration or SyntaxKind.RevertDeclaration or SyntaxKind.OnceModifier
+        or SyntaxKind.NavigationMark;
 
     private bool IsMusicItemStart()
     {
@@ -68,6 +172,7 @@ internal sealed partial class Parser
             SyntaxKind.OpenParen or SyntaxKind.CloseParen => true,
             SyntaxKind.OpenBracket or SyntaxKind.CloseBracket => true,
             SyntaxKind.RepeatKeyword => true,
+            SyntaxKind.PercentMark => true,
             SyntaxKind.TupletKeyword => true,
             SyntaxKind.BreakKeyword or SyntaxKind.NoBreakKeyword
                 or SyntaxKind.PageBreakKeyword or SyntaxKind.NoPageBreakKeyword => true,
@@ -174,6 +279,9 @@ internal sealed partial class Parser
 
 
             SyntaxKind.RepeatKeyword => ParseRepeatExpression(),
+            // `%` / `%N` — grouped with the bars it repeats once the list is read
+            // (GroupPercentRepeats).
+            SyntaxKind.PercentMark => new PercentMarkGreen(Advance()),
             SyntaxKind.TupletKeyword => ParseTupletExpression(),
             SyntaxKind.KeyKeyword => ParseKeySignature(),
             SyntaxKind.ClefKeyword => ParseClefDeclaration(),
@@ -1241,6 +1349,7 @@ internal sealed partial class Parser
                 Advance(); // skip unexpected token to recover
         }
 
+        GroupPercentRepeats(items);
         SyntaxToken? closeBracket = Check(SyntaxKind.CloseBracket) ? Advance() : null;
         return new InlineVoltaGreen(openBracket, number, separator, endNumber, more, dot, [.. items], closeBracket);
     }

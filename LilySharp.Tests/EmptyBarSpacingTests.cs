@@ -200,7 +200,7 @@ public class EmptyBarSpacingTests
     }
 
     [Fact]
-    public void APercentCoveredBar_IsAnEmptyBar_ButABeatSlashBarIsNot()
+    public void APercentCoveredBar_IsAnEmptyBar()
     {
         // The covered bar of a measure-wide percent repeat holds a spacer run and its sign
         // is a spanner between the bar-line columns — an empty bar, priced as the skip bar
@@ -209,7 +209,7 @@ public class EmptyBarSpacingTests
             octave absolute
             part bassline {
               clef bass
-              section A { c4 d e f | repeat percent 2 { g,4 a, b, c } | d4 e f g | }
+              section A { c4 d e f | g,4 a, b, c | % | d4 e f g | }
             }
             form { A }
             score { staff bassline }
@@ -218,26 +218,6 @@ public class EmptyBarSpacingTests
         double bw = SpacingRules.GetBarlineWidth(BarlineType.Single);
         Assert.Equal(0.0, coveredSprings[0].IdealDistance);
         Assert.Equal(5.51, coveredSprings[^1].IdealDistance + bw, 2);
-
-        // A body shorter than a bar is repeated as BEAT SLASHES, and a RepeatSlash is a
-        // rhythmic grob in the musical column: the bar holding nothing but slashes is
-        // USED and keeps its ordinary chain.
-        // LILYPOND-REF: scm/define-grobs.scm:2909-2918 RepeatSlash rhythmic-grob-interface.
-        const string slashes = """
-            octave absolute
-            part bassline {
-              clef bass
-              section A { repeat percent 8 { c8 d } | d4 e f g | }
-            }
-            form { A }
-            score { staff bassline }
-            """;
-        var (_, _, _, slashScore) = Collect(slashes, 1);
-        Assert.True(slashScore.PercentRepeats.Any(p => p.IsBeatSlash && p.MeasureIndex == 1),
-            "the second bar should hold beat slashes");
-        var slashSprings = ColumnSprings(slashes, 1, GlobalShortest);
-        Assert.True(slashSprings[0].IdealDistance > 0.5,
-            $"a bar of beat slashes keeps its bar-line → column spring: {slashSprings[0].IdealDistance}");
     }
 
     /// <summary>test/tab-percent-blank-bars, staff only — a THREE-bar slash body.</summary>
@@ -247,7 +227,7 @@ public class EmptyBarSpacingTests
         part bl {
           clef bass
           section A {
-            repeat percent 2 { a,,8 a,, a,, a,, c c c c | d,4 d, d, d, | g,2 g, | }
+            a,,8 a,, a,, a,, c c c c | d,4 d, d, d, | g,2 g, | %3 |
             r1 |
           }
         }
@@ -323,7 +303,7 @@ public class EmptyBarSpacingTests
             part bassline {
               clef bass
               section A {
-                c4 d e f | repeat percent 3 { g,4 a, b, c | d4 e f g | } a4 b c d |
+                c4 d e f | g,4 a, b, c | d4 e f g | %2 | %2 | a4 b c d |
               }
             }
             form { A }

@@ -218,6 +218,8 @@ public abstract class SyntaxNode
             SyntaxKind.PhraseDeclaration => new PhraseDeclarationSyntax((PhraseDeclarationGreen)green, this, position),
             SyntaxKind.VariableReference => new VariableReferenceSyntax((VariableReferenceGreen)green, this, position),
             SyntaxKind.RepeatExpression => new RepeatExpressionSyntax((RepeatExpressionGreen)green, this, position),
+            SyntaxKind.PercentMarkItem => new PercentMarkSyntax((PercentMarkGreen)green, this, position),
+            SyntaxKind.PercentRepeat => new PercentRepeatSyntax((PercentRepeatGreen)green, this, position),
             SyntaxKind.ParallelExpression => new ParallelExpressionSyntax((ParallelExpressionGreen)green, this, position),
             SyntaxKind.KeySignature => new KeySignatureSyntax((KeySignatureGreen)green, this, position),
             SyntaxKind.ClefDeclaration => new ClefDeclarationSyntax((ClefDeclarationGreen)green, this, position),
