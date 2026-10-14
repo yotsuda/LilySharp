@@ -17,6 +17,8 @@ workflow attaches that section to the GitHub Release verbatim.
   Bare durations count (`c8 8 8 8 8 8 8 8`). In `voice { } { }` it moves on instead: the first
   voice's first bar full writes `} { ` (the next voice), and a later voice as long as the first
   writes `} ` (the span closes). No bar line is written inside a tuplet, a grace or a repeat.
+  A closed voice span counts in the bar it stands in, as long as its first voice
+  (`voice { c d } { d e } c2` + space writes the `|`).
 
 ### The preview keeps the caret's bar lit
 

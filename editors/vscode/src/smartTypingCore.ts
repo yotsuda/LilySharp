@@ -1976,6 +1976,96 @@ function lengthOf(events: CountedEvent[], running: Running): number {
     return sum;
 }
 
+/** Where the bar holding `at` starts inside the block opening at `blockStart`: just after
+ * the last '|' before it that stands IN that block — not inside a voice span's braces,
+ * which hold bar lines of their own — or `blockStart`. Rule 32's walkStart. */
+function barStartIn(text: string, blockStart: number, at: number): number {
+    for (let i = at - 1, depth = 0; i >= blockStart; i--) {
+        const c = text[i];
+        if (c === '}') { depth++; }
+        else if (c === '{') { depth--; }
+        else if (c === '|' && depth === 0 && !inStringOrComment(text, i + 1)) { return i + 1; }
+    }
+    return blockStart;
+}
+
+/** The `}` matching the `{` at `open`, or -1 when it closes at or past `limit`. */
+function closeOf(text: string, open: number, limit: number): number {
+    for (let i = open + 1, depth = 0; i < limit; i++) {
+        if (text[i] === '{') { depth++; }
+        else if (text[i] === '}') {
+            if (depth === 0) { return i; }
+            depth--;
+        }
+    }
+    return -1;
+}
+
+/** What the bar [from, to) lasts, in WHOLE units, counted from `running` — left where the
+ * bar leaves it — or null when something in it cannot be counted. Its items are events
+ * and CLOSED voice spans (`voice { … } { … }`): a span lasts what its first voice does,
+ * whose timeline it is, and leaves the running duration where the FIRST voice ends —
+ * MEASURED with lysc check (2026-10-15): `voice { c4 d } { e8 e e e } c c` is a full bar,
+ * `voice { c8 d } { e4 } c c c` five eighths. A first voice written over bars (a '|' in
+ * it) ends a bar inside the span, so the bar is counted from its last bar line on
+ * (`voice { c1 | d2 } { e1 | f2 } c2` is full). `last` reports the events after the last
+ * span, which the caller checks against the caret. */
+function lengthOfBar(text: string, from: number, to: number, running: Running,
+    last?: { events: CountedEvent[] }): number | null {
+    let sum = 0;
+    for (let pos = from; ;) {
+        let brace = -1;
+        for (let i = pos; i < to; i++) {
+            if (text[i] === '{' && !inStringOrComment(text, i)) { brace = i; break; }
+        }
+        if (brace < 0) {
+            const events = countedEvents(text, pos, to);
+            if (!events) { return null; }
+            if (last) { last.events = events; }
+            return sum + lengthOf(events, running);
+        }
+        // A voice span, and nothing else: `voice {` or `voice name {`.
+        const named = wordBefore(text, brace);
+        const keyword = named.word === 'voice' ? named.at
+            : named.word && wordBefore(text, named.at).word === 'voice' ? wordBefore(text, named.at).at : -1;
+        if (keyword < 0) { return null; }
+        const lead = countedEvents(text, pos, keyword);
+        if (!lead) { return null; }
+        sum += lengthOf(lead, running);
+        // The span's blocks, each `{ … }` after an optional name.
+        const blocks: [number, number][] = [];
+        for (let open = brace; ;) {
+            const close = closeOf(text, open, to);
+            if (close < 0) { return null; }
+            blocks.push([open + 1, close]);
+            let q = close + 1;
+            while (q < to && isSpace(text[q])) { q++; }
+            let w = q;
+            while (w < to && isWordChar(text[w])) { w++; }
+            let n = w;
+            while (n < to && isSpace(text[n])) { n++; }
+            if (text[q] === '{') { open = q; continue; }
+            if (w > q && text[n] === '{' && text.slice(q, w) !== 'voice') { open = n; continue; }
+            pos = close + 1;
+            break;
+        }
+        const [vStart, vEnd] = blocks[0];
+        const voiceBar = barStartIn(text, vStart, vEnd);
+        const voice = { ...running };
+        if (voiceBar > vStart) {
+            // The first voice crossed a bar line: the bar began inside the span.
+            const earlier = lengthOfBar(text, vStart, voiceBar - 1, voice);
+            if (earlier === null) { return null; }
+            sum = 0;
+        }
+        const tail = lengthOfBar(text, voiceBar, vEnd, voice);
+        if (tail === null) { return null; }
+        sum += tail;
+        running.base = voice.base;
+        running.dots = voice.dots;
+    }
+}
+
 /** The running duration in force at `at`, a bar line or a block's start inside the block
  * opening at `blockStart`: the last one spelled before it, read back a bar at a time —
  * the walk kept to bars, as walkStart explains, not the whole block per keystroke —
@@ -1983,12 +2073,10 @@ function lengthOf(events: CountedEvent[], running: Running): number {
  * counted (its events could change the running value in ways the walk cannot see). */
 function runningBefore(text: string, blockStart: number, at: number, opening: Running): Running | null {
     for (let from = at; from > blockStart;) {
-        const prevStart = walkStart(text, blockStart, from - 1);
-        const prev = countedEvents(text, prevStart, from - 1);
-        if (!prev) { return null; }
-        for (let e = prev.length - 1; e >= 0; e--) {
-            if (prev[e].base !== undefined) { return { base: prev[e].base!, dots: prev[e].dots }; }
-        }
+        const prevStart = barStartIn(text, blockStart, from - 1);
+        const probe: Running = { base: -1, dots: 0 };
+        if (lengthOfBar(text, prevStart, from - 1, probe) === null) { return null; }
+        if (probe.base !== -1) { return probe; }
         from = prevStart;
     }
     return { ...opening };
@@ -2098,20 +2186,25 @@ export function autoBarlinePlan(text: string, offset: number): FixPlan | null {
     }
 
     // A '*' scales what it follows (`R1*2`, `c4*2/3`), which the walk passes over.
-    const barStart = walkStart(before, blockStart, offset);
+    const barStart = barStartIn(before, blockStart, offset);
     if (before.slice(barStart, offset).includes('*')) { return null; }
     if (barStart === blockStart && !barsFromBlock) { return null; }
-    const bar = countedEvents(before, barStart, offset);
-    if (!bar || bar.length === 0) { return null; }
+    const running = runningBefore(before, blockStart, barStart, opening);
+    if (!running) { return null; }
+    // The bar, a closed voice span in it counted as its first voice (lengthOfBar); `bar`
+    // is what follows the last span, where the caret is.
+    const tail = { events: [] as CountedEvent[] };
+    const length = lengthOfBar(before, barStart, offset, running, tail);
+    const bar = tail.events;
+    if (length === null || bar.length === 0) { return null; }
     // The space ends the bar's last event — after its glued marks, nothing else.
     if (postEventsEnd(before, bar[bar.length - 1].end) !== offset) { return null; }
     // A bare duration repeats the event before it: with none before it in the block, or
     // after an arpeggio, it is LYS0016 — no count.
-    if (bar[0].bare && barStart === blockStart) { return null; }
+    const opensBlock = barStart === blockStart && !before.slice(barStart, offset).includes('{');
+    if (bar[0].bare && opensBlock) { return null; }
     if (bar.some((e, n) => e.bare && n > 0 && bar[n - 1].arpeggio)) { return null; }
-    const running = runningBefore(before, blockStart, barStart, opening);
-    if (!running) { return null; }
-    const barFull = lengthOf(bar, running) === meter;
+    const barFull = length === meter;
 
     const barline: FixPlan = {
         edits: [{ at: offset + 1, ins: '| ' }], caret: offset + 3,

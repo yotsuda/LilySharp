@@ -519,6 +519,22 @@ describe('a space after the bar that fills a voice moves on (rule 32, voice { } 
     });
 });
 
+describe('rule 32 counts a closed voice span in the bar it stands in', () => {
+    it('32. a span lasts what its first voice does (the owner\'s `voice { c d } { d e } c2`)', () => {
+        typed('section A { voice { c d } { d e } c2‸', ' ', 'section A { voice { c d } { d e } c2 | ‸');
+        typed('m { c4 voice { d e } { f g } f‸', ' ', 'm { c4 voice { d e } { f g } f | ‸');
+        typed('m { voice sop { c d } alt { d e } c2‸', ' ', 'm { voice sop { c d } alt { d e } c2 | ‸');
+    });
+    it('32. what follows the span carries the FIRST voice\'s duration (lysc check, 2026-10-15)', () => {
+        typed('m { voice { c4 d } { e8 e e e } c c‸', ' ', 'm { voice { c4 d } { e8 e e e } c c | ‸');
+        typed('m { voice { c8 d } { e4 } c c c‸', ' ', 'm { voice { c8 d } { e4 } c c c ‸');           // five eighths
+        typed('m { voice { c4 d } { e8 e e e } c c | d e f g‸', ' ', 'm { voice { c4 d } { e8 e e e } c c | d e f g | ‸');
+    });
+    it('32. a first voice written over bars ends a bar inside the span', () => {
+        typed('m { voice { c1 | d2 } { e1 | f2 } c2‸', ' ', 'm { voice { c1 | d2 } { e1 | f2 } c2 | ‸');
+    });
+});
+
 describe('rule 32 counts bars, not the bodies inside them', () => {
     it('32. writes no bar line inside a tuplet, a grace or a repeat\'s alternatives', () => {
         typed('m { tuplet 3/2 { c4 d e f‸}', ' ', 'm { tuplet 3/2 { c4 d e f ‸}');
