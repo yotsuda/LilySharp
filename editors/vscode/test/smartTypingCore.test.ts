@@ -466,6 +466,17 @@ describe('a space after the note that fills its bar writes the bar line (rule 32
         typed('section A { time 6/8 c4. d8 e f‸', ' ', 'section A { time 6/8 c4. d8 e f | ‸');
         typed('part a { time 3/4 c d e | }\npart b { c d e‸', ' ', 'part a { time 3/4 c d e | }\npart b { c d e ‸');
     });
+    it('32. counts a bare duration — the previous event again at that length (GRAMMAR §8.2)', () => {
+        typed('section A { c8 8 8 8 8 8 8 8‸', ' ', 'section A { c8 8 8 8 8 8 8 8 | ‸');      // the bass pump
+        typed('section A { c 8 8 8 8 8 8‸', ' ', 'section A { c 8 8 8 8 8 8 | ‸');          // a quarter and six eighths
+        typed('section A { c 8 8 8 8 8 8 8‸', ' ', 'section A { c 8 8 8 8 8 8 8 ‸');        // 9/8: overfull
+        typed('section A { <c e g>4 4 2‸', ' ', 'section A { <c e g>4 4 2 | ‸');
+        typed('section A { /4 4 4 4‸', ' ', 'section A { /4 4 4 4 | ‸');
+        typed('section A { c8 8 8 8 8 8 8 8 | 8 8 8 8 8 8 8 8‸', ' ', 'section A { c8 8 8 8 8 8 8 8 | 8 8 8 8 8 8 8 8 | ‸');
+        typed('section A { c2. 8 8~‸', ' ', 'section A { c2. 8 8~ | ‸');
+        typed('section A { 8 8 8 8 8 8 8 8‸', ' ', 'section A { 8 8 8 8 8 8 8 8 ‸');        // nothing to repeat: LYS0016
+        typed('section A { <<c e g>>2 2‸', ' ', 'section A { <<c e g>>2 2 ‸');           // after an arpeggio: LYS0016
+    });
     it('32. writes nothing short of the meter, mid-line, or where it cannot count for sure', () => {
         typed('section A { c d e‸', ' ', 'section A { c d e ‸');                  // not full
         typed('section A { c d e r‸ f', ' ', 'section A { c d e r ‸ f');          // music after it

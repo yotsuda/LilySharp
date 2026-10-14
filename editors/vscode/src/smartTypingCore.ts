@@ -912,10 +912,27 @@ function skipBlock(text: string, i: number, end: number): number {
  * chord/arpeggio with its duration, trailing octave marks and annotations — and
  * a barrier for everything else. Both slur ends read this one walk, so they
  * agree on what a "note" is and on what they refuse to reach across. */
-function* musicEvents(text: string, from: number, end: number): Generator<MusicEvent> {
+function* musicEvents(text: string, from: number, end: number, bareDurations = false): Generator<MusicEvent> {
     let i = from;
     while (i < end) {
         const c = text[i];
+        if (bareDurations && isDigit(c)) {
+            // A BARE DURATION (`bes8 8 8 8`, GRAMMAR §8.2 BareDuration): the previous
+            // event again at this length — spaced from what is before it (a glued
+            // number is that item's own duration) and not running into a word. Only
+            // rule 32 asks for it; the marks' rules keep reading it as a barrier.
+            const prev = text[i - 1];
+            let j = i;
+            while (j < end && isDigit(text[j])) { j++; }
+            while (j < end && text[j] === '.') { j++; }
+            if ((prev === undefined || isSpace(prev) || prev === '|' || prev === '{')
+                && !(j < end && (isWordChar(text[j]) || isOctaveMark(text[j])))) {
+                const bareEnd = skipAnnotations(text, j, end);
+                yield { note: true, start: i, end: bareEnd };
+                i = bareEnd;
+                continue;
+            }
+        }
         if (isSpace(c) || isBetweenEvents(c)) { i++; continue; }
         if (c === '/' && text[i + 1] === '/') {
             while (i < end && text[i] !== '\n') { i++; }
@@ -1934,20 +1951,38 @@ export function autoBarlinePlan(text: string, offset: number): FixPlan | null {
     // The events of [from, to), each with the duration it spells (none: it carries
     // the running one) — or null at the first thing that is not a countable event.
     const read = (from: number, to: number) => {
-        const out: { end: number, base?: number, dots: number }[] = [];
-        for (const event of musicEvents(before, from, to)) {
+        const out: { end: number, base?: number, dots: number, bare: boolean, arpeggio: boolean }[] = [];
+        for (const event of musicEvents(before, from, to, true)) {
             if (!event.note) { return null; }
+            if (isDigit(before[event.start])) {
+                // A bare duration: its number and dots are all it is.
+                let d = event.start;
+                while (isDigit(before[d])) { d++; }
+                let e = d;
+                while (before[e] === '.') { e++; }
+                out.push({ end: event.end, base: parseInt(before.slice(event.start, d), 10), dots: e - d, bare: true, arpeggio: false });
+                continue;
+            }
             const slots = noteSlots(before, event.start, event.end);
             if (!slots) { return null; }
             const digits = before.slice(slots.marksEnd, slots.digitsEnd);
             const dots = slots.coreEnd - slots.digitsEnd;
             if (!digits && dots > 0) { return null; }
-            out.push({ end: event.end, base: digits ? parseInt(digits, 10) : undefined, dots });
+            out.push({
+                end: event.end, base: digits ? parseInt(digits, 10) : undefined, dots, bare: false,
+                arpeggio: before.startsWith('<<', event.start),
+            });
         }
         return out;
     };
+    // A '*' scales what it follows (`R1*2`, `c4*2/3`), which the walk passes over.
+    if (before.slice(barStart, offset).includes('*')) { return null; }
     const bar = read(barStart, offset);
     if (!bar || bar.length === 0) { return null; }
+    // A bare duration repeats the event before it: with none before it in the block
+    // (the bar opens the block), or after an arpeggio, it is LYS0016 — no count.
+    if (bar[0].bare && barStart === blockStart) { return null; }
+    if (bar.some((e, n) => e.bare && n > 0 && bar[n - 1].arpeggio)) { return null; }
     // The space ends the bar's last event — after its glued marks, nothing else.
     if (postEventsEnd(before, bar[bar.length - 1].end) !== offset) { return null; }
     // The running duration the bar opens with: carried from the bars before, read back
