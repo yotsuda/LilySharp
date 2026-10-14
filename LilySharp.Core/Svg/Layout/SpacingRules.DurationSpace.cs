@@ -369,6 +369,27 @@ internal static partial class SpacingRules
     }
 
     /// <summary>
+    /// The rod a ONE-bar percent repeat's PercentRepeat spanner sets over its bar: the
+    /// multi-measure rest's, from a grob that carries none of the rest's own properties — no
+    /// <c>measure-count</c> (so the symbol width is 0), no <c>space-increment</c>, no
+    /// <c>bound-padding</c>, no <c>minimum-length</c> — so the bar holds
+    /// <c>minimum_distance + full-measure-extra-space + duration space (mlen)</c>, 5.39 between
+    /// two single bar lines in 4/4. Same frame as <see cref="MmrRodDistance"/>.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-grobs.scm:2788-2807 PercentRepeat — springs-and-rods =
+    ///   ly:multi-measure-rest::set-spacing-rods;
+    /// LILYPOND-REF: lily/multi-measure-rest.cc:393-403 set_spacing_rods (sym_width from
+    ///   symbol_stencil, empty without measure-count, :166-173), :341-391 calculate_spacing_rods.
+    /// MEASURED, 2.26.0 (Lab probes/percent-last-bar, the owner's clef-change.lys: 13 whole-note
+    /// bars and a `%` closing one justified line): the `%` bar is 5.39 bar line to bar line,
+    /// the whole-note bars 5.18; Lily# squeezed the `%` bar to 2.91 until session 905.
+    /// </remarks>
+    internal static double PercentRepeatRodDistance(
+        Fraction measureLength, double minimumDistance, double leftFrameWidth)
+        => minimumDistance + FullMeasureExtraSpace + MmrRodDurationSpace(measureLength) - leftFrameWidth;
+
+    /// <summary>
     /// <c>get_duration_space</c> as the multi-measure-rest rod sees it: with the
     /// Spacing_options that init_from_grob leaves behind for a grob carrying no
     /// spacing properties. See the note on <see cref="MmrRodDistance"/>.

@@ -6,6 +6,12 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+### A `%` bar on a full line keeps its width
+
+- **A one-bar `%` no longer shrinks when its line is squeezed.** It keeps LilyPond's
+  minimum — an empty bar's plus a bar's duration space — so a `%` closing a full line of
+  whole notes is as wide as LilyPond draws it.
+
 ### A tie between slash heads no longer runs into the slash
 
 - **A tie between slash notes (`/4~ /4`) starts and ends clear of the slanted heads** — on a

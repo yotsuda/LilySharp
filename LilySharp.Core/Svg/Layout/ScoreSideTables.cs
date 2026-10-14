@@ -449,8 +449,29 @@ internal static class ScoreSideTables
             staffSpace[index] = staff.Tuning is { } tuning
                 ? EngravingDefaults.TabStringSpace(Tunings.GetStringCount(tuning))
                 : 1.0;
+        IReadOnlyList<Measure>? measures = null;
         foreach (var pr in score.PercentRepeats)
         {
+            // A ONE-bar percent: LilyPond's PercentRepeat rod over its bar
+            // (SpacingRules.PercentRepeatRodDistance), which keeps a squeezed line's `%` bar as
+            // wide as an empty bar's minimum plus a bar's duration space.
+            if (!pr.IsBeatSlash && !pr.IsDouble && pr.Bars <= 1)
+            {
+                measures ??= score.PrimaryContentStaff.PrimaryVoice.Measures;
+                int m = pr.MeasureIndex;
+                if (m < 0 || m >= n || m >= measures.Count)
+                    continue;
+                var measureLength = Fraction.Zero;
+                foreach (var item in measures[m].Items)
+                    measureLength += item.Duration;
+                var leftBound = SpacingRules.RunLeftBoundBarline(measures, m);
+                double single = SpacingRules.PercentRepeatRodDistance(measureLength,
+                    SpacingRules.MmrRodMinimumDistance(score.TextMetrics, leftBound, measures[m].Items),
+                    SpacingRules.GetBarlineWidth(leftBound));
+                if (single > rod[m])
+                    rod[m] = single;
+                continue;
+            }
             if (pr.IsBeatSlash || pr.Bars < 3)
                 continue;
             double ss = staffSpace.TryGetValue(pr.StaffIndex, out var s) ? s : 1.0;

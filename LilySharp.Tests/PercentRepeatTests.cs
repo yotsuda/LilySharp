@@ -672,6 +672,31 @@ public class PercentRepeatTests
     }
 
     /// <summary>
+    /// A ONE-bar `%` on a squeezed line keeps LilyPond's PercentRepeat rod: its bar holds the
+    /// empty bar's minimum + full-measure-extra-space + the bar's duration space, 5.39 between two
+    /// single bar lines in 4/4 (SpacingRules.PercentRepeatRodDistance).
+    /// ★ MEASURED, 2.26.0 (Lab probes/percent-last-bar, the owner's clef-change.lys): bars of
+    /// 5.79, 5.18 × 12 and the `%` bar 5.39 — Lily# squeezed the `%` bar to 2.91 until session 905.
+    /// </summary>
+    [Fact]
+    public void Layout_ASingleSignBarOnASqueezedLine_HoldsLilyPondsRod()
+    {
+        var svg = LiveRender.SvgFromRenderSpec("""
+            key d major
+            part melody { clef treble }
+            section A { melody { c'4 d e f | c1 | d1 | d1 | d1 | d1 | d1 | d1 | d1 | d1 | d1 | d1 | d1 | d1 | % } }
+            form { A }
+            score { staff melody }
+            """);
+        var xs = System.Text.RegularExpressions.Regex.Matches(svg, "<rect x=\"([-\\d.]+)\" y=\"[-\\d.]+\" width=\"0.19\"")
+            .Select(m => double.Parse(m.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture))
+            .Distinct().OrderBy(x => x).ToList();
+        var widths = xs.Zip(xs.Skip(1), (a, b) => b - a).ToList();
+        Assert.InRange(widths[^1], 5.39 - 0.02, 5.39 + 0.02);      // the % bar
+        Assert.InRange(widths[^2], 5.18 - 0.02, 5.18 + 0.02);      // a whole-note bar beside it
+    }
+
+    /// <summary>
     /// An ODD multi-bar sign stands inside its middle bar, so the bar must hold it: on a tab
     /// staff (staff space 1.5) the three-slash sign is 7.3 wide, more than the blank bar's
     /// natural width, and the bar's rod (ScoreSideTables.PercentSignBarRods) widens it so the
