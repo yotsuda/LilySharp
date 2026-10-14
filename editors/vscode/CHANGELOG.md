@@ -4,6 +4,15 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+### A space after the note that fills a bar writes the bar line
+
+- **Type `c d e r` and a space, and the `|` is written for you** (`c d e r | `) — when that note
+  brings the bar to exactly the meter, at the end of what you are writing. Durations carry from
+  the bars before as the compiler carries them, and the meter is the `time` in force. Where the
+  bar cannot be counted for sure (a tuplet, grace or voice block, a pickup, a multi-bar rest) it
+  writes nothing. Typing `|` and a space yourself right after is absorbed, one Ctrl+Z takes the
+  bar line back, and `lilysharp.typingAids.enabled` turns it off with the other typing aids.
+
 ### The preview keeps the caret's bar lit
 
 - **The bar the editor's caret is in stays lit on the preview**, as the scan view lights it:

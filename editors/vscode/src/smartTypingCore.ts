@@ -205,6 +205,18 @@
 // 31. `lilysharp.typingAids.enabled: false` turns ALL of the above off: every
 //    key is typed as pressed. (The Ctrl+Shift+Up/Down step commands are
 //    commands, not typing, and are not affected.)
+// 32. A SPACE typed right after the note that FILLS its bar writes the bar line
+//    after it (`c d e r` + ' ' → `c d e r | `; owner request 2026-10-14) — only at
+//    the end of what is being written (nothing but '}' after the caret on its line),
+//    only when the bar comes to EXACTLY the meter, and only where every event of it
+//    can be counted for sure: notes, rests, chords and slash notes, their durations
+//    and dots carried from the bar before as the compiler carries them (reset to a
+//    quarter at each block), the meter from the last `time` in force. Anything the
+//    count cannot be sure of — a tuplet, grace or voice block, a phrase reference, a
+//    multi-bar rest, a pickup bar, a `time` in a block the caret is not in — writes
+//    nothing: nothing is guessed. The bar line is its own undo step, and a '|' typed
+//    right after it — then a space — is absorbed, so typing it as well does not
+//    double it (smartTyping.ts keeps that state).
 //
 // Rules 14–23 and 25 move TEXT and never the CARET: the mark or digit travels to the
 // slot it belongs in and the cursor keeps the position it was pressed at (see
@@ -374,6 +386,7 @@ export function insertionPlan(typed: string, text: string, offset: number): FixP
         case '[': return beamOpenPlan(text, offset, false);
         case '[]': return beamOpenPlan(text, offset, true);
         case ']': return beamClosePlan(text, offset);
+        case ' ': return autoBarlinePlan(text, offset);
         default: return null;
     }
 }
@@ -1845,4 +1858,125 @@ export function chordDeleteClosePlan(text: string, oldText: string, offset: numb
     const open = findOpen(text, remaining, start);
     if (open < 0 || text[open - 1] !== '<') { return null; } // no opener, or already single
     return { edits: [{ at: open - 1, del: 1 }], what: '>> reduced -> demoted the matching << to <' };
+}
+
+/** The whole note in the units a bar is counted in: a 128th with five dots is
+ * still a whole number of them (4096 / 128 = 32 = 2^5). */
+const WHOLE = 4096;
+
+/** What an event of duration 1/`base` with `dots` dots lasts, in WHOLE units —
+ * or NaN when it is not a duration (rule 32 then writes nothing). */
+function durationUnits(base: number, dots: number): number {
+    if (!DURATIONS.includes(String(base)) || dots > 5) { return NaN; }
+    const plain = WHOLE / base;
+    return plain * 2 - plain / (1 << dots);
+}
+
+/** The meter in force at `offset` (rule 32), in WHOLE units: the last `time N/D`
+ * before it that stands at the top level or in a block the caret is inside, 4/4
+ * when there is none — or NaN when that `time` stands in ANOTHER block (a part's
+ * later section, say), whose reach the text alone cannot tell. */
+function meterAt(text: string, offset: number): number {
+    let depth = 0;
+    let meter = WHOLE;
+    let meterDepth = 0;      // the depth the last `time` stood at
+    let closedBelow = false; // a block it stood in has closed since
+    for (let i = 0; i < offset; i++) {
+        const c = text[i];
+        if (c === '"') {
+            const close = text.indexOf('"', i + 1);
+            if (close < 0) { break; }
+            i = close;
+        } else if (c === '/' && text[i + 1] === '/') {
+            const nl = text.indexOf('\n', i);
+            if (nl < 0) { break; }
+            i = nl;
+        } else if (c === '/' && text[i + 1] === '*') {
+            const close = text.indexOf('*/', i + 2);
+            if (close < 0) { break; }
+            i = close + 1;
+        } else if (c === '{') {
+            depth++;
+        } else if (c === '}') {
+            depth--;
+            if (depth < meterDepth) { closedBelow = true; }
+        } else if (c === 't' && !isWordChar(text[i - 1]) && text.startsWith('time', i)) {
+            const m = /^time\s+([0-9]+)\s*\/\s*([0-9]+)/.exec(text.slice(i, i + 24));
+            if (!m) { continue; }
+            const n = parseInt(m[1], 10), d = parseInt(m[2], 10);
+            meter = DURATIONS.includes(String(d)) && n > 0 ? n * (WHOLE / d) : NaN;
+            meterDepth = depth;
+            closedBelow = false;
+            i += m[0].length - 1;
+        }
+    }
+    return closedBelow ? NaN : meter;
+}
+
+/** Rule 32: the bar line a space typed at `offset` writes — `text` holding the
+ * space there — or null. See the rule for when, and why so often not. */
+export function autoBarlinePlan(text: string, offset: number): FixPlan | null {
+    if (text[offset] !== ' ' || inStringOrComment(text, offset)) { return null; }
+    // The end of what is being written: the rest of the line is blank or closes the block.
+    let k = offset + 1;
+    while (k < text.length && (text[k] === ' ' || text[k] === '\t')) { k++; }
+    if (k < text.length && text[k] !== '\n' && text[k] !== '\r' && text[k] !== '}') { return null; }
+    const before = text.slice(0, offset) + text.slice(offset + 1);
+    if (offset === 0 || isSpace(before[offset - 1])) { return null; }
+
+    const [blockStart] = blockBounds(before, offset);
+    const barStart = walkStart(before, blockStart, offset);
+    // A pickup is shorter than the meter on purpose; the first bar of a block may be one.
+    if (barStart === blockStart && before.lastIndexOf('partial', offset) >= 0) { return null; }
+    const meter = meterAt(before, offset);
+    if (!Number.isFinite(meter)) { return null; }
+
+    // The events of [from, to), each with the duration it spells (none: it carries
+    // the running one) — or null at the first thing that is not a countable event.
+    const read = (from: number, to: number) => {
+        const out: { end: number, base?: number, dots: number }[] = [];
+        for (const event of musicEvents(before, from, to)) {
+            if (!event.note) { return null; }
+            const slots = noteSlots(before, event.start, event.end);
+            if (!slots) { return null; }
+            const digits = before.slice(slots.marksEnd, slots.digitsEnd);
+            const dots = slots.coreEnd - slots.digitsEnd;
+            if (!digits && dots > 0) { return null; }
+            out.push({ end: event.end, base: digits ? parseInt(digits, 10) : undefined, dots });
+        }
+        return out;
+    };
+    const bar = read(barStart, offset);
+    if (!bar || bar.length === 0) { return null; }
+    // The space ends the bar's last event — after its glued marks, nothing else.
+    if (postEventsEnd(before, bar[bar.length - 1].end) !== offset) { return null; }
+    // The running duration the bar opens with: carried from the bars before, read back
+    // a bar at a time until one spells its own — the walk kept to bars, as walkStart
+    // explains, not the whole block per keystroke. A block opens on a quarter.
+    let base = 4, dots = 0;
+    if (bar[0].base === undefined) {
+        for (let from = barStart; from > blockStart;) {
+            const prevStart = walkStart(before, blockStart, from - 1);
+            const prev = read(prevStart, from - 1);
+            if (!prev) { return null; }
+            const spelled = prev.filter(e => e.base !== undefined);
+            if (spelled.length > 0) {
+                base = spelled[spelled.length - 1].base!;
+                dots = spelled[spelled.length - 1].dots;
+                break;
+            }
+            from = prevStart;
+        }
+    }
+    let sum = 0;
+    for (const e of bar) {
+        if (e.base !== undefined) { base = e.base; dots = e.dots; }
+        sum += durationUnits(base, dots);
+    }
+    if (sum !== meter) { return null; }
+    return {
+        edits: [{ at: offset + 1, ins: '| ' }],
+        caret: offset + 3,
+        what: 'space typed -> the bar is full: | written after it',
+    };
 }

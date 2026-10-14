@@ -17,7 +17,7 @@
 import * as vscode from 'vscode';
 import {
     Edit, FixPlan, TypePlan, afterKeystrokeEdit, composeFix, deletionPlan, insertionPlan,
-    isPlannedKey, isSmartInsert, multiCursorPlan, planFor, typedKeyOutcome,
+    isPlannedKey, isSmartInsert, multiCursorPlan, planFor, typedKeyOutcome, autoBarlinePlan,
 } from './smartTypingCore';
 
 // `lilysharp.typingAids.enabled` (rule 31): false turns every aid off. Read
@@ -78,6 +78,23 @@ function deletedChar(key: string, offset: number): string | undefined {
 // already-'<<' opener, etc.), but skipping the handler outright guarantees no
 // cascade and keeps the work per keystroke minimal.
 let applyingFix = false;
+
+/** The bar line a space just wrote (rule 32): the document, where the caret was
+ * left after it, and whether a '|' typed there has been absorbed already (then a
+ * space is next). Good for the very next keystroke in that document only. */
+let autoBarline: { key: string, caret: number, barTyped: boolean } | undefined;
+
+/** Whether a space typed at `offset` can end a bar at all — read off its LINE, so
+ * the space typed between two notes, the common one, never pays for the whole
+ * document's text (rule 32's own reading needs it): something is right before
+ * the space, and after it nothing but blanks or the block's '}'. */
+function mayEndBar(doc: vscode.TextDocument, offset: number): boolean {
+    const at = doc.positionAt(offset);
+    const line = doc.lineAt(at.line).text;
+    const col = at.character;
+    if (col === 0 || line[col - 1] === ' ' || line[col - 1] === '\t') { return false; }
+    return /^[ \t]*(?:\}|$)/.test(line.slice(col + 1));
+}
 
 /**
  * Smart typing for .lys music: chord brackets that keep their two ends in
@@ -148,6 +165,10 @@ export function registerSmartTyping(
             if (change) { cacheWindow(event.document, offset); }
 
             if (applyingFix || !aidsEnabled) { return; }
+            // An automatic bar line (rule 32) is good for the very next keystroke only:
+            // any change of the user's — a deletion, an undo — ends it.
+            const pending = autoBarline?.key === key ? autoBarline : undefined;
+            autoBarline = undefined;
             // Never fight undo/redo — re-fixing would make undo circular.
             if (event.reason === vscode.TextDocumentChangeReason.Undo
                 || event.reason === vscode.TextDocumentChangeReason.Redo) { return; }
@@ -168,6 +189,28 @@ export function registerSmartTyping(
                 // by putting that character back where it was.
                 const oldText = text.slice(0, offset) + deleted + text.slice(offset);
                 carryOut(editor, text, deletionPlan(deleted, text, oldText, offset), log);
+                return;
+            }
+            // Rule 32: a space may write the bar line, and a '|' or a space typed right
+            // after one written so is absorbed (pending, read above).
+            if (change.rangeLength === 0 && (change.text === ' ' || change.text === '|')) {
+                if (pending && offset === pending.caret && (change.text === '|' ? !pending.barTyped : pending.barTyped)) {
+                    // Typed as well: taken back out, in the keystroke's own undo step.
+                    applyFixWithCaret(editor, event.document.getText(), [{ at: offset, del: 1 }], offset);
+                    if (change.text === '|') { autoBarline = { ...pending, barTyped: true }; }
+                    log(`smartTyping: ${change.text} typed after an automatic bar line -> absorbed`);
+                    return;
+                }
+                if (change.text === ' ' && mayEndBar(event.document, offset)) {
+                    const text = event.document.getText();
+                    const plan = autoBarlinePlan(text, offset);
+                    if (plan) {
+                        // Its own undo step: Ctrl+Z takes the bar line back and leaves the space.
+                        applyFixWithCaret(editor, text, plan.edits, plan.caret!, true);
+                        autoBarline = { key, caret: plan.caret!, barTyped: false };
+                        log(`smartTyping: ${plan.what}`);
+                    }
+                }
                 return;
             }
             if (change.rangeLength !== 0 || !isSmartInsert(change.text)) { return; }

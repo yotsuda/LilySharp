@@ -444,3 +444,37 @@ describe('stayPut', () => {
         assert.equal(stayPut(5, 3, 3, 1), 4);
     });
 });
+
+describe('a space after the note that fills its bar writes the bar line (rule 32)', () => {
+    it('32. writes it when the bar comes to exactly the meter', () => {
+        typed('section A { c d e r‸', ' ', 'section A { c d e r | ‸');
+        typed('section A { c2 d‸', ' ', 'section A { c2 d | ‸');                 // d carries the half
+        typed('section A { c4. d8 e2‸', ' ', 'section A { c4. d8 e2 | ‸');
+        typed('section A { <c e g>1‸', ' ', 'section A { <c e g>1 | ‸');
+        typed('section A { R1‸', ' ', 'section A { R1 | ‸');
+        typed('section A { c4~ c2.~‸', ' ', 'section A { c4~ c2.~ | ‸');       // the tie is the note's
+        typed('section A { c d e f‸ }', ' ', 'section A { c d e f | ‸ }');     // only '}' after it
+    });
+    it('32. carries the running duration and its dots from the bars before, as the compiler does', () => {
+        typed('section A { c8 d e f g a b c | d e f g a b c d‸', ' ', 'section A { c8 d e f g a b c | d e f g a b c d | ‸');
+        typed('section A { c4. d8 e2 | f4. g‸', ' ', 'section A { c4. d8 e2 | f4. g ‸');   // 3/8 + 3/8: not full
+        typed('section A {\n  c2 d |\n  e f‸', ' ', 'section A {\n  c2 d |\n  e f | ‸');
+    });
+    it('32. reads the meter in force: the header\'s, or the block\'s own', () => {
+        typed('time 3/4\nsection A { c d e‸', ' ', 'time 3/4\nsection A { c d e | ‸');
+        typed('time 3/4\nsection A { c d e f‸', ' ', 'time 3/4\nsection A { c d e f ‸');   // overfull
+        typed('section A { time 6/8 c4. d8 e f‸', ' ', 'section A { time 6/8 c4. d8 e f | ‸');
+        typed('part a { time 3/4 c d e | }\npart b { c d e‸', ' ', 'part a { time 3/4 c d e | }\npart b { c d e ‸');
+    });
+    it('32. writes nothing short of the meter, mid-line, or where it cannot count for sure', () => {
+        typed('section A { c d e‸', ' ', 'section A { c d e ‸');                  // not full
+        typed('section A { c d e r‸ f', ' ', 'section A { c d e r ‸ f');          // music after it
+        typed('section A { c d e r |‸', ' ', 'section A { c d e r | ‸');          // after a bar line
+        typed('section A { tuplet 3/2 { c8 d e } d e f‸', ' ', 'section A { tuplet 3/2 { c8 d e } d e f ‸');
+        typed('section A { partial 4 c‸', ' ', 'section A { partial 4 c ‸');      // a pickup
+        typed('section A { R1*2‸', ' ', 'section A { R1*2 ‸');
+        typed('lyrics w { la la la la‸', ' ', 'lyrics w { la la la la ‸');
+        typed('title "c d e r‸', ' ', 'title "c d e r ‸');                        // a string
+        typed('// c d e r‸', ' ', '// c d e r ‸');                                // a comment
+    });
+});
