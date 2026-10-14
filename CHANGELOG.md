@@ -26,6 +26,12 @@ workflow attaches that section to the GitHub Release verbatim.
   other. A repeat's turns and an `R1*N` still close their bars where the beats fill.
 - **A bar line inside a `cue { }` closes its bar for the bar checks too**, as it always did on
   the page: `cue { f'1( | gis'1) } |` was checked as one bar of 2/1.
+- **The hands of a grand staff share their dynamics in playback.** A dynamic written in either
+  staff of a `grandStaff` sounds in both from its moment on, as a piano score's one dynamic
+  between the staves means; a hand's own dynamic at the same moment wins, and an accent stays
+  above the shared level. The closing `@pp` chord of `samples/nocturne.lys` sounded under a left
+  hand that wrote no dynamic and played at the default level. A `staffGroup` or `choirStaff`
+  keeps one level per part.
 - **The empty chord `<>` takes no time in playback**, as on the page: `c4 <>@sfz d` sounded the
   `d` a beat late.
 

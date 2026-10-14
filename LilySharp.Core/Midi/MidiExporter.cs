@@ -141,6 +141,106 @@ public sealed class MidiExporter
 
     private int LaneVelocity(string part)
         => _partVelocity.TryGetValue(part, out int v) ? v : DefaultVelocity;
+
+    // Every level the walk sets, in the order it sets them: the part it sets it in, where, and
+    // whether a dynamic was WRITTEN there (else a lane opening at its carried level, or a
+    // repeat's turn reopening at its entry level). ShareGrandStaffDynamics reads it.
+    private readonly List<(string? Part, int Tick, int Level, bool Written)> _levelLog = new();
+
+    /// <summary>The running level is now <paramref name="level"/> — a dynamic written here
+    /// (<paramref name="written"/>) or a level a lane or a repeat's turn reopens at.</summary>
+    private void SetLevel(int level, bool written, string? part = null)
+    {
+        _velocity = level;
+        _levelLog.Add((part ?? _currentPart, _currentTick, level, written));
+    }
+
+    /// <summary>
+    /// The parts of a grand staff (<c>grandStaff { staff rh  staff lh }</c>, the brace — one
+    /// instrument's hands) share their dynamics: a note sounds at the last dynamic written in
+    /// ANY of them at or before its onset — its own part's when both hands write one at the same
+    /// moment — and keeps what its own marks add to that level (an accent). Owner's decision,
+    /// 2026-10-14 (samples/nocturne.lys: the right hand's closing `@pp` chord sounded at 35 under
+    /// a left hand that writes no dynamic at all and played every bar at the default 80). A
+    /// bracket (`staffGroup`, `choirStaff`) is several instruments and keeps one level per part
+    /// (the p748 rule above).
+    /// </summary>
+    /// <remarks>LILYSHARP-OWN: LilyPond's Dynamic_performer is consisted per Voice
+    /// (ly/performer-init.ly:100-103), so its MIDI plays a dynamic in the hand it is written in
+    /// only; a piano score writes one dynamic between the staves for both hands.</remarks>
+    private void ShareGrandStaffDynamics(MidiTrack track)
+    {
+        if (_playedSpec == null || _levelLog.Count == 0)
+            return;
+        foreach (var group in GrandStaffPartSets(_playedSpec.Items))
+        {
+            if (group.Count < 2)
+                continue;
+            var own = group.ToDictionary(p => p, p => _levelLog
+                .Where(e => e.Part == p).OrderBy(e => e.Tick).ToList(), StringComparer.Ordinal);
+            var written = _levelLog.Where(e => e.Written && e.Part is { } p && group.Contains(p))
+                .OrderBy(e => e.Tick).ToList();
+            if (written.Count == 0)
+                continue;
+            for (int i = 0; i < track.Notes.Count; i++)
+            {
+                var n = track.Notes[i];
+                if (n.Part is not { } part || !own.TryGetValue(part, out var mine))
+                    continue;
+                int at = LastAtOrBefore(written, n.StartTick);
+                int self = LastAtOrBefore(mine, n.StartTick);
+                if (at < 0 || self < 0)
+                    continue;
+                // At one moment, the note's own hand's dynamic wins over the other's.
+                for (int k = at; k >= 0 && written[k].Tick == written[at].Tick; k--)
+                    if (written[k].Part == part) { at = k; break; }
+                int shift = written[at].Level - mine[self].Level;
+                if (shift != 0)
+                    track.Notes[i] = n with { Velocity = Math.Clamp(n.Velocity + shift, 1, 127) };
+            }
+        }
+
+        static int LastAtOrBefore(List<(string? Part, int Tick, int Level, bool Written)> list, int tick)
+        {
+            int lo = 0, hi = list.Count - 1, found = -1;
+            while (lo <= hi)
+            {
+                int mid = (lo + hi) / 2;
+                if (list[mid].Tick <= tick) { found = mid; lo = mid + 1; }
+                else hi = mid - 1;
+            }
+            return found;
+        }
+    }
+
+    /// <summary>The part names under each brace (<see cref="Svg.Model.StaffGroupType.GrandStaff"/>)
+    /// of the played score, every staff of the group at any depth.</summary>
+    private static IEnumerable<HashSet<string>> GrandStaffPartSets(IEnumerable<Svg.Collector.RenderItemSpec> items)
+    {
+        foreach (var item in items)
+        {
+            if (item is not Svg.Collector.GrandStaffRenderSpec { GrandStaff: var g })
+                continue;
+            if (g.Type == Svg.Model.StaffGroupType.GrandStaff)
+                yield return new HashSet<string>(PartsOf(g.Members), StringComparer.Ordinal);
+            else
+                foreach (var inner in GrandStaffPartSets(g.Members))
+                    yield return inner;
+        }
+
+        static IEnumerable<string> PartsOf(IEnumerable<Svg.Collector.RenderItemSpec> members)
+        {
+            foreach (var m in members)
+                switch (m)
+                {
+                    case Svg.Collector.SingleStaffSpec s: yield return s.Staff.VoiceName; break;
+                    case Svg.Collector.CondensedStaffSpec c: foreach (var p in c.PartNames) yield return p; break;
+                    case Svg.Collector.CombinedStaffSpec c: foreach (var p in c.PartNames) yield return p; break;
+                    case Svg.Collector.GrandStaffRenderSpec inner: foreach (var p in PartsOf(inner.GrandStaff.Members)) yield return p; break;
+                }
+        }
+    }
+
     private readonly Stack<(int numerator, int denominator)> _tupletStack = new();
 
     // The bar's context — the meter in force, the score's home meter, the pickup pending —
@@ -491,7 +591,9 @@ public sealed class MidiExporter
         _velocity = DefaultVelocity;
         _sourceOrdinals = new Dictionary<int, int>();
         OpenBarGrid(mainTrack, null);
+        _levelLog.Clear();
         ProcessNode(_root, mainTrack, conductorTrack);
+        ShareGrandStaffDynamics(mainTrack);
         // The notes an overfull bar ran past its bar line (AlignBarLine), once nothing indexes
         // the track any more.
         mainTrack.Notes.RemoveAll(n => n.DurationTicks < 0);
@@ -970,7 +1072,7 @@ public sealed class MidiExporter
         _currentNoteName = pitch.NoteName;
         _currentOctave = pitch.Octave;
         _defaultDuration = pitch.Dur;
-        _velocity = LaneVelocity(partName);
+        SetLevel(LaneVelocity(partName), written: false, partName);
         _partOctaveAnchor = anchor;
         _partAbsoluteBase = absBase;
         _currentTimbre = PartTimbre(partName);
@@ -1150,7 +1252,7 @@ public sealed class MidiExporter
                 _currentNoteName = pitch.NoteName;
                 _currentOctave = pitch.Octave;
                 _defaultDuration = pitch.Dur;
-                _velocity = LaneVelocity(pname);
+                SetLevel(LaneVelocity(pname), written: false, pname);
                 _partOctaveAnchor = anchor;
                 _partAbsoluteBase = absBase;
                 _currentTimbre = PartTimbre(pname);
@@ -1961,7 +2063,7 @@ public sealed class MidiExporter
         {
             _currentNoteName = savedName;
             _currentOctave = savedOctave;
-            _velocity = savedVelocity;
+            SetLevel(savedVelocity, written: false);
             _defaultDuration = savedDuration;
             if (pass > 1)
                 _sourceOrdinals = new Dictionary<int, int>(ordinalSnapshot);
@@ -2219,7 +2321,7 @@ public sealed class MidiExporter
         // exactly as if written on the first member (running state thereafter).
         foreach (var a in arpeggio.Articulations)
             if (a is DynamicSyntax { Level: not DynamicLevel.None } dyn)
-                _velocity = dyn.Velocity;
+                SetLevel(dyn.Velocity, written: true);
 
         // The ROOT is the first PITCHED member (leading rests just advance time); it
         // resolves relatively and anchors the group. Every later PITCHED member STACKS
@@ -2339,7 +2441,7 @@ public sealed class MidiExporter
             {
                 case DynamicSyntax { Level: not DynamicLevel.None } dynamic:
                     velocity = dynamic.Velocity;
-                    _velocity = velocity;
+                    SetLevel(velocity, written: true);
                     break;
                 case ArticulationSyntax articulation:
                     (velocity, durationPercent) = ApplyArticulationType(articulation.Type, velocity, durationPercent);
@@ -2407,7 +2509,7 @@ public sealed class MidiExporter
                 // it through set velocity 0 and silenced the rest of the part (fantasia.lys L65).
                 case DynamicSyntax { Level: not DynamicLevel.None } dynamic:
                     velocity = dynamic.Velocity;
-                    _velocity = velocity; // Update default velocity for subsequent notes
+                    SetLevel(velocity, written: true); // Update default velocity for subsequent notes
                     break;
 
                 case ArticulationSyntax articulation:
@@ -2470,7 +2572,7 @@ public sealed class MidiExporter
             {
                 case DynamicSyntax { Level: not DynamicLevel.None } dynamic:
                     velocity = dynamic.Velocity;
-                    _velocity = velocity;
+                    SetLevel(velocity, written: true);
                     break;
                 case ArticulationSyntax articulation:
                     (velocity, durationPercent) = ApplyArticulationType(articulation.Type, velocity, durationPercent);
@@ -2546,7 +2648,7 @@ public sealed class MidiExporter
             {
                 case DynamicSyntax { Level: not DynamicLevel.None } dynamic:
                     velocity = dynamic.Velocity;
-                    _velocity = velocity;
+                    SetLevel(velocity, written: true);
                     break;
                 case ArticulationSyntax articulation:
                     (velocity, durationPercent) = ApplyArticulationType(articulation.Type, velocity, durationPercent);
@@ -2721,7 +2823,7 @@ public sealed class MidiExporter
                 GetDuration(written);
             foreach (var child in chord.Articulations)
                 if (child is DynamicSyntax { Level: not DynamicLevel.None } dynamic)
-                    _velocity = dynamic.Velocity;
+                    SetLevel(dynamic.Velocity, written: true);
             return;
         }
 
@@ -2757,7 +2859,7 @@ public sealed class MidiExporter
             {
                 case DynamicSyntax { Level: not DynamicLevel.None } dynamic:
                     velocity = dynamic.Velocity;
-                    _velocity = velocity;
+                    SetLevel(velocity, written: true);
                     break;
                 case ArticulationSyntax articulation:
                     (velocity, durationPercent) = ApplyArticulationType(articulation.Type, velocity, durationPercent);

@@ -1735,7 +1735,9 @@ StaffGroupBody = '{' , { StaffRender | CondensedStaff | CombinedStaff
 
                       grandStaff    a BRACE, and bar lines drawn through the gap between
                                     the staves — the piano/harp reading of two staves as
-                                    one instrument (LilyPond `GrandStaff`)
+                                    one instrument (LilyPond `GrandStaff`); its staves
+                                    share their dynamics in the playback (a `@pp` in
+                                    either hand sounds in both)
                       staffGroup    a BRACKET, bar lines drawn through — an orchestral
                                     family, e.g. the woodwinds (LilyPond `StaffGroup`)
                       choirStaff    a BRACKET, bar lines NOT drawn through: each staff
