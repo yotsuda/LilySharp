@@ -2401,6 +2401,32 @@ public class IncrementalCompilerTests
         }
     }
 
+    /// <summary>The same for a phrase's music (MeasureCollector.WrittenBarAt finds its written
+    /// bar by its address in the expansion): the riff is declared BELOW the music, and the
+    /// keystrokes grow its body from one bar into one bar with too much in it (the g is not
+    /// drawn) and on into two with the bar line left out (every note drawn again).</summary>
+    [Fact]
+    public void AnEditInAPhraseDeclaredBelow_ReDecidesTheBarItPlaysIn()
+    {
+        string bar = "c'8 d e f g a b c |";
+        string source = "time 4/4\npart melody { clef treble }\nsection Main { melody { "
+            + string.Join(" ", Enumerable.Repeat(bar, 6))
+            + " riff | "
+            + string.Join(" ", Enumerable.Repeat(bar, 6))
+            + " } }\nphrase riff { c'4 d e f }\n";
+        var session = new IncrementalCompiler(SyntaxTree.Parse(source), Opt);
+        session.Render();
+        string live = source;
+        int at = source.IndexOf("c'4 d e f }", StringComparison.Ordinal) + "c'4 d e f".Length;
+        foreach (string typed in new[] { " g", " a", " b", " c" })
+        {
+            string incremental = Norm(session.Edit(new TextChange(new TextSpan(at, 0), typed)));
+            live = live[..at] + typed + live[at..];
+            at += typed.Length;
+            Assert.Equal(Full(live), incremental);
+        }
+    }
+
     /// <summary>Three single-character insertions, sent one at a time exactly as an editor
     /// sends them: every one must still render byte-identical to a full recompile. The
     /// liveness asserts pin that the chain actually reaches the regime — a keystroke that

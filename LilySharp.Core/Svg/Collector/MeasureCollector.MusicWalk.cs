@@ -80,7 +80,10 @@ public sealed partial class MeasureCollector
                 if (site.Node is RelativeResetMarker reset)
                 {
                     if (reset.PhraseName is { } opened)
+                    {
                         _openPhrases.Add(opened);
+                        _phraseCallSites.Add(reset.Position);
+                    }
                     EnterDefaultFrame(reset.OctaveOffset);
                     EnterPhraseTranspose(reset.AnchorStep, reset.OctaveOffset, reset.AnchorShape);
                     // ⚠️ ENTERING A PHRASE BODY TOUCHES THE BOUNDARY NOT AT ALL (owner's
@@ -100,7 +103,11 @@ public sealed partial class MeasureCollector
                 if (site.Node is PhraseEndMarker end)
                 {
                     if (end.PhraseName is { } closed && _openPhrases.LastIndexOf(closed) is var at and >= 0)
+                    {
                         _openPhrases.RemoveAt(at);
+                        if (_phraseCallSites.Count > 0)
+                            _phraseCallSites.RemoveAt(_phraseCallSites.Count - 1);
+                    }
                     ExitPhraseTranspose();
                     builder.ResetMeasureBoundary(retargetableClose: true);
                     continue;

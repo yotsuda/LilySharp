@@ -140,6 +140,22 @@ public class BarLineSyncMidiTests
     }
 
     [Fact]
+    public void APhrasesMusic_IsHeldToTheWrittenBarItPlaysIn()
+    {
+        // A five-beat riff before a bar line: the g past the bar is not played, as the page
+        // does not draw it, and the next bar sounds on the bar line.
+        var notes = Notes("""
+            time 4/4
+            phrase riff { c'4 d e f g }
+            part m { clef treble }
+            section A { m { riff | c1 | } }
+            form { A }
+            score { staff m }
+            """, "m");
+        Assert.Equal(new[] { 0, 480, 960, 1440, Bar }, notes.Select(n => n.StartTick));
+    }
+
+    [Fact]
     public void ALeftOutBarLineBeforeAShortBar_KeepsEveryNote()
     {
         // 9/4 after a full bar: two bars and a beat, a bar line left out (LYS2017) — the beat

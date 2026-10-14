@@ -8,11 +8,11 @@
   <text x="59.75" y="12.26" font-size="3.49" font-weight="bold" text-anchor="middle" data-pos="51">Bar Check</text>
   <text x="110.97" y="15.76" font-size="2.20" text-anchor="end" data-pos="72">Lily#</text>
   <g transform="translate(8.54,0.00) scale(1.0000,1.0000)">
-  <line x1="8.59" y1="23.96" x2="71.69" y2="23.96" stroke="#000000" stroke-width="0.100"/>
-  <line x1="8.59" y1="24.96" x2="71.69" y2="24.96" stroke="#000000" stroke-width="0.100"/>
-  <line x1="8.59" y1="25.96" x2="71.69" y2="25.96" stroke="#000000" stroke-width="0.100"/>
-  <line x1="8.59" y1="26.96" x2="71.69" y2="26.96" stroke="#000000" stroke-width="0.100"/>
-  <line x1="8.59" y1="27.96" x2="71.69" y2="27.96" stroke="#000000" stroke-width="0.100"/>
+  <line x1="8.59" y1="23.96" x2="66.21" y2="23.96" stroke="#000000" stroke-width="0.100"/>
+  <line x1="8.59" y1="24.96" x2="66.21" y2="24.96" stroke="#000000" stroke-width="0.100"/>
+  <line x1="8.59" y1="25.96" x2="66.21" y2="25.96" stroke="#000000" stroke-width="0.100"/>
+  <line x1="8.59" y1="26.96" x2="66.21" y2="26.96" stroke="#000000" stroke-width="0.100"/>
+  <line x1="8.59" y1="27.96" x2="66.21" y2="27.96" stroke="#000000" stroke-width="0.100"/>
   <text class="music" x="9.34" y="26.96" font-size="4.00"></text>
   <text class="music" x="13.42" y="25.96" font-size="4.00" data-pos="96"></text>
   <line x1="16.79" y1="28.96" x2="18.75" y2="28.96" stroke="#000000" stroke-width="0.200"/>
@@ -50,13 +50,9 @@
   <line x1="61.26" y1="27.81" x2="61.26" y2="24.46" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="63.02" y="27.46" font-size="4.00" data-pos="310"></text>
   <line x1="64.26" y1="27.31" x2="64.26" y2="23.96" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="68.35" y="26.96" font-size="4.00" data-pos="312"></text>
-  <line x1="69.59" y1="26.81" x2="69.59" y2="23.46" stroke="#000000" stroke-width="0.130"/>
   <rect x="29.37" y="23.96" width="0.19" height="4.00" data-pos="184"/>
   <rect x="42.59" y="23.96" width="0.19" height="4.00" data-pos="198"/>
   <rect x="52.92" y="23.96" width="0.19" height="4.00" data-pos="257"/>
-  <rect x="66.26" y="23.96" width="0.19" height="4.00" data-pos="311"/>
-  <rect x="71.55" y="23.96" width="0.19" height="4.00" data-pos="314"/>
   <text class="music" x="13.42" y="22.60" font-size="3.56" data-pos="87"></text>
   <line x1="14.52" y1="22.43" x2="14.52" y2="19.92" stroke="#000000" stroke-width="0.116" data-pos="87"/>
   <text x="15.20" y="23.08" font-size="2.20" data-pos="87">= 120</text>

@@ -142,6 +142,68 @@ public class WrittenBarOverflowTests
             x => x.Code is DiagnosticCodes.MissingBarLine or DiagnosticCodes.MeasureOverflow);
     }
 
+    private static Measure[] PhraseBars(string phrases, string music)
+        => new MeasureCollector().Collect(SyntaxTree.Parse(
+                $"time 4/4\n{phrases}\npart m {{ section A {{ {music} }} }}\nform {{ A }}\nscore {{ staff m }}\n"),
+            "m").Voice.Measures.ToArray();
+
+    private static List<Diagnostic> PhraseDiagnostics(string phrases, string music)
+        => SemanticValidation.Run(SyntaxTree.Parse(
+                $"time 4/4\n{phrases}\npart m {{ section A {{ {music} }} }}\nform {{ A }}\nscore {{ staff m }}\n"))
+            .Where(d => d.Code is DiagnosticCodes.MissingBarLine or DiagnosticCodes.MeasureOverflow).ToList();
+
+    [Fact]
+    public void APhrasesMusic_IsHeldToTheWrittenBarItPlaysIn()
+    {
+        // `riff | c1` with a five-beat riff: the bar is `c d e f`, the g past it is not drawn —
+        // the phrase body is music like any other (it used to close a bar of its own).
+        var bars = PhraseBars("phrase riff { c'4 d e f g }", "riff | c1 |");
+        Assert.Equal(2, bars.Length);
+        Assert.Equal(4, Sounding(bars[0]));
+        // Reported in the phrase's body and where it is referenced, as every bar check of a
+        // phrase is.
+        var diags = PhraseDiagnostics("phrase riff { c'4 d e f g }", "riff | c1 |");
+        Assert.NotEmpty(diags);
+        Assert.All(diags, d => Assert.Equal(DiagnosticCodes.MeasureOverflow, d.Code));
+    }
+
+    [Fact]
+    public void APhrasesOwnBarLines_AreBarLines()
+    {
+        var bars = PhraseBars("phrase riff { c'4 d e f | g a b c }", "riff | riff |");
+        Assert.Equal(4, bars.Length);
+        Assert.Equal(16, bars.Sum(Sounding));
+        Assert.Empty(PhraseDiagnostics("phrase riff { c'4 d e f | g a b c }", "riff | riff |"));
+    }
+
+    [Fact]
+    public void ABarLineLeftOutInAPhrase_IsAnError_AndKeepsEveryNote()
+    {
+        var bars = PhraseBars("phrase riff { c'4 d e f g a b c }", "riff | c1 |");
+        Assert.Equal(3, bars.Length);
+        Assert.Equal(9, bars.Sum(Sounding));
+        var diags = PhraseDiagnostics("phrase riff { c'4 d e f g a b c }", "riff | c1 |");
+        Assert.NotEmpty(diags);
+        Assert.All(diags, d => Assert.Equal(DiagnosticCodes.MissingBarLine, d.Code));
+    }
+
+    [Fact]
+    public void APhraseNestedInAPhrase_IsHeldToItsBarToo()
+    {
+        // `outer` is a full bar on its own (three beats of `inner` and an f); `outer g |` is one
+        // bar with too much in it. The validator prices the nested body in place where `outer`
+        // is played (MeasureValidator.PricePhraseBody) — as an opaque item `outer` was worth
+        // nothing there and the bar read as the g alone — and the g is not drawn, the same
+        // answer as the music written out.
+        const string phrases = "phrase inner { c'4 d e }\nphrase outer { inner f }";
+        var bars = PhraseBars(phrases, "outer g | c1 |");
+        Assert.Equal(2, bars.Length);
+        Assert.Equal(5, bars.Sum(Sounding));
+        var diags = PhraseDiagnostics(phrases, "outer g | c1 |");
+        Assert.NotEmpty(diags);
+        Assert.All(diags, d => Assert.Equal(DiagnosticCodes.MeasureOverflow, d.Code));
+    }
+
     [Fact]
     public void MusicWithNoBarLines_StillFillsBarAfterBar_AndIsAnError()
     {

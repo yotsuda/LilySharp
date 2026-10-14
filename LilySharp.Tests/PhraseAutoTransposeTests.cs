@@ -105,7 +105,7 @@ public sealed class PhraseAutoTransposeTests
             key c major
             phrase Lick { c d e c }
             part m {
-              section A { key g major Lick c }
+              section A { key g major Lick | c }
             }
             form { A }
             score { staff m }

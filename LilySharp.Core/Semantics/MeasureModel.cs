@@ -48,11 +48,12 @@ internal static class MeasureModel
     /// <summary>One measure of a flattened scope: its total sounded duration, the source
     /// span to squiggle, whether it is an explicit empty <c>| |</c> placeholder, the end of
     /// the written bar line that closed its music (-1 for the music after a scope's last bar
-    /// line), and whether the bar was cut at the meter rather than written — a repeat's flow
+    /// line), whether the bar was cut at the meter rather than written — a repeat's flow
     /// or one of the bars of an <c>R1*N</c>, the two places a bar line cannot be written
-    /// (<see cref="WrittenBar"/> holds every other bar to its bar lines).</summary>
+    /// (<see cref="WrittenBar"/> holds every other bar to its bar lines) — and whether it holds
+    /// music inlined from a phrase body (whose text lies outside the scope).</summary>
     internal readonly record struct Bar(Fraction Duration, TextSpan Span, bool IsEmpty = false, int BarLineEnd = -1,
-        bool Flowed = false);
+        bool Flowed = false, bool HasPhrase = false);
 
     /// <summary>
     /// Flattens <paramref name="scope"/> (expanding phrase references via
@@ -77,9 +78,16 @@ internal static class MeasureModel
     /// <param name="expansionBudget">The walk's expansion budget in the collector's own
     /// unit (<see cref="ExpansionCap"/> by default; tests pass a small one to pin the
     /// truncation arms, as ExpansionBudgetTests do for the collector).</param>
+    /// <param name="index">When given, filled with the bar every item of music lands in, by the
+    /// item's address in the expansion: the start of each phrase reference it was inlined
+    /// through, outermost first ("" outside any), and its own start — the address the collector
+    /// walks it at (MeasureCollector.WrittenBarAt), so music inlined from a phrase body finds the
+    /// written bar it plays in. The first bar an address lands in wins (a repeat's later turns
+    /// replay the same addresses).</param>
     public static List<Bar> Split(SyntaxNode scope, IReadOnlyDictionary<string, SyntaxNode> phraseBodies,
         Fraction? initialMeter = null, List<(int Bar, TimeSignatureSyntax Time, bool MidBar)>? meterChanges = null,
-        Func<int, TimeSignatureSyntax?>? plannedMeterAt = null, int expansionBudget = ExpansionCap)
+        Func<int, TimeSignatureSyntax?>? plannedMeterAt = null, int expansionBudget = ExpansionCap,
+        Dictionary<(string Chain, int Position), int>? index = null)
     {
         var stream = new List<object>();
         var budget = new ExpansionBudget(expansionBudget);
@@ -101,19 +109,34 @@ internal static class MeasureModel
         bool senzaMisura = false; // time none: no auto-complete boundary exists
         int repeatFlow = 0;       // depth of percent/unfold expansions in flight
         int plannedFor = -1;      // the bar plannedMeterAt was last asked for
-        int phraseDepth = 0;      // phrase bodies being inlined
-        bool flows = false;       // the bar under construction holds music of a repeat's flow or a phrase body
+        bool flows = false;       // the bar under construction closes where its beats fill (Bar.Flowed)
+        bool phraseInBar = false; // …holds music inlined from a phrase body (Bar.HasPhrase)
+        var callSites = new List<int>();  // the phrase references being inlined, outermost first
+        string chain = "";                // …as the index's address prefix
+        var pendingKeys = new List<(string, int)>();
+
+        // The bar about to be added: the addresses of its music land in it.
+        void IndexTheBar()
+        {
+            if (index != null)
+                foreach (var key in pendingKeys)
+                    index.TryAdd(key, bars.Count);
+            pendingKeys.Clear();
+        }
 
         void FlushMusic(int barLineEnd = -1)
         {
             if (current.Count == 0)
                 return;
-            bars.Add(new Bar(total, MeasureDurations.GetSpan(current), BarLineEnd: barLineEnd, Flowed: flows));
+            IndexTheBar();
+            bars.Add(new Bar(total, MeasureDurations.GetSpan(current), BarLineEnd: barLineEnd, Flowed: flows,
+                HasPhrase: phraseInBar));
             current = new List<SyntaxNode>();
             total = Fraction.Zero;
             confirmable = false;
             atScopeStart = false;
             flows = false;
+            phraseInBar = false;
         }
 
         foreach (var entry in stream)
@@ -131,7 +154,11 @@ internal static class MeasureModel
                 // extracting a section into a phrase cannot silently lose a bar. EXIT
                 // re-arms the boundary only when the phrase left a CLOSED bar to attach to,
                 // so an outer `|` right after `~x` confirms that close instead of a gap.
-                phraseDepth += boundary.IsEnter ? 1 : -1;
+                if (boundary.IsEnter)
+                    callSites.Add(boundary.CallSite);
+                else if (callSites.Count > 0)
+                    callSites.RemoveAt(callSites.Count - 1);
+                chain = callSites.Count == 0 ? "" : string.Join("/", callSites);
                 if (!boundary.IsEnter)
                 {
                     confirmable = current.Count == 0 && bars.Count > 0;
@@ -218,9 +245,13 @@ internal static class MeasureModel
                 itemDuration = meter - total is { Numerator: > 0 } left ? left : meter;
             total += itemDuration;
             current.Add(node);
-            // A bar holding a repeat's flow, a phrase body or an `R1*N` closes where its beats
-            // fill (Bar.Flowed): the page lets those run on as it always did.
-            if (repeatFlow > 0 || phraseDepth > 0 || node is RestSyntax { MeasureCount: > 1 })
+            if (index != null)
+                pendingKeys.Add((chain, node.Span.Start));
+            if (callSites.Count > 0)
+                phraseInBar = true;
+            // A bar holding a repeat's flow or an `R1*N` closes where its beats fill
+            // (Bar.Flowed): no bar line can be written inside them.
+            if (repeatFlow > 0 || node is RestSyntax { MeasureCount: > 1 })
                 flows = true;
 
             // While a repeat expansion is in flight the bar auto-completes at the meter,
@@ -232,11 +263,13 @@ internal static class MeasureModel
             // right on it confirms the close instead of opening an empty `| |` bar.
             if (repeatFlow > 0 && !senzaMisura && total >= meter)
             {
-                bars.Add(new Bar(total, MeasureDurations.GetSpan(current), Flowed: true));
+                IndexTheBar();
+                bars.Add(new Bar(total, MeasureDurations.GetSpan(current), Flowed: true, HasPhrase: phraseInBar));
                 current = new List<SyntaxNode>();
                 total = Fraction.Zero;
                 confirmable = true;
                 flows = false;
+                phraseInBar = false;
             }
 
             // `R1*N` is N BARS of silence written as one token, and it is written with ONE
@@ -284,10 +317,13 @@ internal static class MeasureModel
     /// measure), EXIT re-arms it when the phrase left a closed bar (an outer <c>|</c>
     /// confirms that close). Mirrors the collector's <c>ResetMeasureBoundary</c>, whose
     /// <c>retargetableClose</c> parameter draws the same distinction.</summary>
-    private sealed class BoundaryMarker(bool isEnter)
+    private sealed class BoundaryMarker(bool isEnter, int callSite = -1)
     {
         public bool IsEnter { get; } = isEnter;
-        public static readonly BoundaryMarker Enter = new(true);
+        /// <summary>Where the reference is written (its span's start) — the address the
+        /// collector's reset marker carries (RelativeResetMarker's call site).</summary>
+        public int CallSite { get; } = callSite;
+        public static BoundaryMarker EnterAt(int callSite) => new(true, callSite);
         public static readonly BoundaryMarker Exit = new(false);
     }
 
@@ -465,7 +501,7 @@ internal static class MeasureModel
                             return;
                         }
                         output.Add(DurationResetMarker.Instance);
-                        output.Add(BoundaryMarker.Enter);
+                        output.Add(BoundaryMarker.EnterAt(varRef.Span.Start));
                         Flatten(body, output, activeRefs, phraseBodies, budget, inPhrase: true);
                         output.Add(BoundaryMarker.Exit);
                         activeRefs.Remove(name);

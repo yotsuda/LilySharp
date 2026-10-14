@@ -649,6 +649,11 @@ public sealed partial class MeasureCollector
     // (ProcessMusicNodeSequence). A cue region gathers its body when it is walked, after the
     // enclosing expansion's cycle guard is gone, so it seeds its own guard from this list.
     private readonly List<string> _openPhrases = new();
+    // …and where each of them is referenced (the reset marker's call site), outermost first:
+    // the address WrittenBarAt finds the written bar of music inlined from a phrase body by
+    // (MeasureModel.Split's index). Never open at a checkpoint (WalkCarriesNothing asks that
+    // no phrase is open), so no checkpoint carries it.
+    private readonly List<int> _phraseCallSites = new();
 
     /// <summary>
     /// How deep into <c>grace { }</c> bodies this walk currently is. Non-zero means the items
@@ -935,24 +940,28 @@ public sealed partial class MeasureCollector
 
     // The written bars of each music scope (MeasureModel.Split), split the first time a fill in
     // it asks (WrittenBarAt) — only a fill with no bar line right after asks — cleared per collect.
-    private readonly Dictionary<SyntaxNode, List<Semantics.MeasureModel.Bar>> _writtenBars = new();
+    private readonly Dictionary<SyntaxNode, (List<Semantics.MeasureModel.Bar> Bars,
+        Dictionary<(string Chain, int Position), int> Index)> _writtenBars = new();
     private IReadOnlyDictionary<string, SyntaxNode>? _writtenBarPhrases;
     private Func<int, (Fraction Length, int Start)?>? _writtenBarAt;
 
     /// <summary>
-    /// The written bar <paramref name="position"/> stands in — its length and its start — or
-    /// null (MeasureBuilder.WrittenBarAt). A written bar runs from a bar line to the next, or to
-    /// the end of its scope (the part block or the section the position is written in). Null
-    /// where a bar line cannot be written — a bar a repeat's flow or an <c>R1*N</c> fills at the
-    /// meter — and for music inlined from a phrase, which stands outside the scope: those bars
-    /// still close where their beats run out.
+    /// The written bar the item at <paramref name="position"/> plays in — its length and a key
+    /// that tells it from every other bar — or null (MeasureBuilder.WrittenBarAt). A written bar
+    /// runs from a bar line to the next, or to the end of its scope (the part block or the
+    /// section the music is written in). An item inlined from a phrase body is found by its
+    /// address in the expansion — the references it was inlined through and its own position
+    /// (MeasureModel.Split's index) — so a phrase's music is held to the written bar it plays in
+    /// like any other. Null where a bar line cannot be written — a bar a repeat's flow or an
+    /// <c>R1*N</c> fills at the meter: those bars still close where their beats run out.
     /// </summary>
     /// <remarks>The answer depends on the bar's music up to its bar line (or the scope's end),
     /// so that much is read (folded into MaxSourceRead): an edit further on in the bar re-walks
-    /// from before it.</remarks>
+    /// from before it. A bar holding a phrase's music reads that phrase's body wherever it is
+    /// declared, so the fold is the whole document there.</remarks>
     private (Fraction Length, int Start)? WrittenBarAt(int position)
     {
-        if (_root?.FindNode(position) is not { } node)
+        if (_root?.FindNode(_phraseCallSites.Count > 0 ? _phraseCallSites[0] : position) is not { } node)
             return null;
         SyntaxNode? scope = null;
         for (var p = node; p != null && scope == null; p = p.Parent)
@@ -964,21 +973,23 @@ public sealed partial class MeasureCollector
         }
         if (scope == null)
             return null;
-        if (!_writtenBars.TryGetValue(scope, out var bars))
-            _writtenBars[scope] = bars = Semantics.MeasureModel.Split(scope,
-                _writtenBarPhrases ??= SectionBarCounts.PhraseBodies(_root!), ScoreMeter.Length);
-        foreach (var bar in bars)
+        if (!_writtenBars.TryGetValue(scope, out var split))
         {
-            if (position < bar.Span.Start || position >= bar.Span.End)
-                continue;
-            if (bar.Flowed || bar.IsEmpty)
-                return null;
-            if (_probeRecording != null && _formBarRead == null)
-                _walkMaxSourceRead = Math.Max(_walkMaxSourceRead,
-                    bar.BarLineEnd >= 0 ? bar.BarLineEnd : scope.FullSpan.End);
-            return (bar.Duration, bar.Span.Start);
+            var index = new Dictionary<(string, int), int>();
+            var bars = Semantics.MeasureModel.Split(scope, _writtenBarPhrases ??= SectionBarCounts.PhraseBodies(_root!),
+                ScoreMeter.Length, index: index);
+            _writtenBars[scope] = split = (bars, index);
         }
-        return null;
+        string chain = _phraseCallSites.Count == 0 ? "" : string.Join("/", _phraseCallSites);
+        if (!split.Index.TryGetValue((chain, position), out int at))
+            return null;
+        var bar = split.Bars[at];
+        if (bar.Flowed || bar.IsEmpty)
+            return null;
+        if (_probeRecording != null && _formBarRead == null)
+            _walkMaxSourceRead = Math.Max(_walkMaxSourceRead,
+                bar.HasPhrase ? _root!.FullSpan.End : bar.BarLineEnd >= 0 ? bar.BarLineEnd : scope.FullSpan.End);
+        return (bar.Duration, HashCode.Combine(scope.Span.Start, at));
     }
     // Record mode only: the header spans this walk read, in walk order (part
     // name/config at entry, then each visited section's name + header directives).
@@ -3676,6 +3687,7 @@ public sealed partial class MeasureCollector
         // Balanced by the marker pairs within a walk; cleared per pass so a walk cut short
         // cannot leave a name that would stop a later cue from expanding it.
         _openPhrases.Clear();
+        _phraseCallSites.Clear();
         _offBarVoices.Clear();
 
         // The cumulative output tables clear FROM THE REGISTRY that names them
@@ -4199,7 +4211,10 @@ public sealed partial class MeasureCollector
                             _walkHeaderReads.Add(new HeaderRead(
                                 new TextSpan(site.Position, reset.CallSiteEnd - site.Position), ValueOnly: true));
                         if (reset.PhraseName is { } opened)
+                        {
                             _openPhrases.Add(opened);
+                            _phraseCallSites.Add(reset.Position);
+                        }
                         EnterDefaultFrame(reset.OctaveOffset);
                         EnterPhraseTranspose(reset.AnchorStep, reset.OctaveOffset, reset.AnchorShape);
                         continue;
@@ -4208,7 +4223,11 @@ public sealed partial class MeasureCollector
                     if (site.Node is PhraseEndMarker end)
                     {
                         if (end.PhraseName is { } closed && _openPhrases.LastIndexOf(closed) is var at and >= 0)
+                        {
                             _openPhrases.RemoveAt(at);
+                            if (_phraseCallSites.Count > 0)
+                                _phraseCallSites.RemoveAt(_phraseCallSites.Count - 1);
+                        }
                         ExitPhraseTranspose();
                         builder.ResetMeasureBoundary(retargetableClose: true);
                         continue;

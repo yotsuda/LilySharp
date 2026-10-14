@@ -895,11 +895,9 @@ public sealed class MidiExporter
                         ? ShapeAnchorOf(anchorShape) : null;
                     if (anchorStep == LilySharp.Core.Music.PhraseAnchor.Shape)
                         anchorStep = null;
-                    // A phrase body's bars close where their beats fill, on the page as here
-                    // (_barFlows) — the bar it opens in and the bar it leaves open both.
-                    _barFlows = true;
+                    // A phrase body's music is held to the written bar it plays in like any
+                    // other (AlignBarLine), on the page as here.
                     ProcessNode(phraseBody, track, conductorTrack);
-                    _barFlows = true;
                     _currentTransposeSemitones = savedTranspose;
                     _partAbsoluteBase = savedAbsBase;
                     // Frame hand-off at the phrase's ANCHOR (matches the

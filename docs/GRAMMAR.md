@@ -2269,8 +2269,10 @@ RepeatEnd      = ':|' , [ '*' , Integer ] ;          (* :|*N plays the span N ti
        every note kept until the bar line is written;
      - a 'time' written after music in a span stands where a bar line was left out: the same
        error (LYS2017), every note kept;
-     - where no bar line can be written — a repeat's turns, an 'R1*N', a phrase body inlined
-       into the bar — the bars still close where the beats fill.
+     - a phrase body inlined into the bar is music like any other, held to the written bar it
+       plays in (its own bar lines are bar lines);
+     - where no bar line can be written — a repeat's turns, an 'R1*N' — the bars still close
+       where the beats fill.
    The playback re-syncs every part at every bar line: a short bar is filled with silence.
    One rule, one place: Semantics.WrittenBar (page: MeasureBuilder, playback: MidiExporter). *)
 

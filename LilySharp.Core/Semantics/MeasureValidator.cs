@@ -609,19 +609,7 @@ internal sealed class MeasureValidator : ISemanticValidator
                         leadInSpan: UnionSpans(i == 0 ? leadInSpan : null, phraseFront),
                         inheritedPickup: i == 0 ? partialLength : null);
                     _phrasesCheckedInPlace.Add(played.Name);
-                    var phraseDefault = Fraction.Quarter;
-                    foreach (var bodyItem in played.Body)
-                    {
-                        if (bodyItem is BarlineSyntax)
-                        {
-                            if (total != Fraction.Zero)
-                                renderedBarsClosed++;
-                            total = Fraction.Zero;
-                            continue;
-                        }
-                        total += MeasureDurations.ItemDuration(bodyItem, ref phraseDefault);
-                    }
-                    defaultDuration = phraseDefault;
+                    defaultDuration = PricePhraseBody(played.Body, Fraction.Quarter, ref total, ref renderedBarsClosed);
                     continue;
                 }
 
@@ -1158,8 +1146,10 @@ internal sealed class MeasureValidator : ISemanticValidator
         Fraction? partialLength, TextSpan? leadInSpan = null)
     {
         var span = Reported(measure, leadInSpan);
-        // A bar holding a phrase reference, a repeat or a multi-bar rest closes where its beats
-        // fill, on the page and in the playback, as every bar did before (MeasureModel.Bar.Flowed).
+        // A bar holding a repeat, a multi-bar rest — or a phrase whose body this pass cannot price
+        // (FlowingPhraseBody: a nested reference, a repeat, a meter change …) — closes where its
+        // beats fill, on the page and in the playback, as every bar did before
+        // (MeasureModel.Bar.Flowed). A phrase priced in place is music like any other.
         // A `time` written after music in the span stands where a bar line should: the bar line
         // before it is left out (the span has no one bar length to hold it to, so its bars close
         // where the beats fill, page and playback alike, until the bar line is written).
@@ -1170,7 +1160,8 @@ internal sealed class MeasureValidator : ISemanticValidator
                 + "a bar line looks to be missing before the `time`. Every note is kept - write it");
             return;
         }
-        if (measure.Items.Any(n => n is VariableReferenceSyntax or RestSyntax { MeasureCount: > 1 }
+        if (measure.Items.Any(n => n is RestSyntax { MeasureCount: > 1 }
+                || n is VariableReferenceSyntax reference && FlowingPhraseBody(reference) == null
                 || n is RepeatExpressionSyntax rep && rep.RepeatType.Text != "tremolo"))
         {
             _diagnostics.Warning(span, DiagnosticCodes.MeasureOverflow,
@@ -1301,41 +1292,85 @@ internal sealed class MeasureValidator : ISemanticValidator
     private readonly record struct RepeatSpan(int MeasureIndex, int ItemIndex, RepeatExpressionSyntax Rep);
 
     /// <summary>A phrase reference whose body flows through the bar accounting (see
-    /// <see cref="FlowingPhraseBody"/>) — same address scheme as <see cref="VoiceSpan"/>.</summary>
+    /// <see cref="FlowingPhraseBody(VariableReferenceSyntax)"/>) — same address scheme as <see cref="VoiceSpan"/>.</summary>
     private readonly record struct PhraseSpan(int MeasureIndex, int ItemIndex, List<SyntaxNode> Body, string Name, MusicBlockSyntax Block);
 
     /// <summary>The body items of the phrase <paramref name="reference"/> names, when every one
     /// is priced exactly by <see cref="MeasureDurations.ItemDuration"/> or occupies no time
-    /// (a marker, a key or clef change, a break); else null, and the reference stays an opaque
-    /// zero-duration item. A meter change, a nested reference, a repeat, a voice span or a
-    /// multi-bar rest keeps it opaque — pricing only part of such a body would invent misfills.</summary>
+    /// (a marker, a key or clef change, a break) or is a reference to such a phrase in turn
+    /// (priced by <see cref="PricePhraseBody"/>, its note value restarting at a quarter as the
+    /// collector's frame does); else null, and the reference stays an opaque zero-duration item.
+    /// A meter change, a repeat, a voice span, a multi-bar rest or a reference that cycles keeps
+    /// it opaque — pricing only part of such a body would invent misfills.</summary>
+    /// <remarks>A nested reference was opaque until 2026-10-14, so a bar holding one could not
+    /// be held to its bar line (MeasureModel.Bar.Flowed) — the last bar whose music closed bars
+    /// of its own where the beats filled, against "the bar lines are the bars".</remarks>
     private List<SyntaxNode>? FlowingPhraseBody(VariableReferenceSyntax reference)
+        => FlowingPhraseBody(reference, new HashSet<string>(StringComparer.Ordinal));
+
+    private List<SyntaxNode>? FlowingPhraseBody(VariableReferenceSyntax reference, HashSet<string> open)
     {
-        if (!_phraseBodies.TryGetValue(reference.Name.Text, out var body) || body is not MusicBlockSyntax block)
+        string name = reference.Name.Text;
+        if (!_phraseBodies.TryGetValue(name, out var body) || body is not MusicBlockSyntax block || !open.Add(name))
             return null;
-        var items = new List<SyntaxNode>();
-        foreach (var item in block.Items)
+        try
         {
-            switch (item)
+            var items = new List<SyntaxNode>();
+            foreach (var item in block.Items)
             {
-                case NoteSyntax or DrumNoteSyntax or ChordSyntax or ChordRepetitionSyntax
-                    or SlashNoteSyntax or BareDurationSyntax
-                    or TupletExpressionSyntax or ArpeggioSyntax or GraceExpressionSyntax
-                    or CueExpressionSyntax or BarlineSyntax
-                    or TieSyntax or SlurSyntax or BeamMarkerSyntax
-                    or KeySignatureSyntax or ClefDeclarationSyntax or BreakSyntax:
-                    break;
-                case RestSyntax rest when rest.MeasureCount <= 1:
-                    break;
-                case RepeatExpressionSyntax trem when trem.RepeatType.Text == "tremolo"
-                    && int.TryParse(trem.Count.Text, out _):
-                    break;
-                default:
-                    return null;
+                switch (item)
+                {
+                    case NoteSyntax or DrumNoteSyntax or ChordSyntax or ChordRepetitionSyntax
+                        or SlashNoteSyntax or BareDurationSyntax
+                        or TupletExpressionSyntax or ArpeggioSyntax or GraceExpressionSyntax
+                        or CueExpressionSyntax or BarlineSyntax
+                        or TieSyntax or SlurSyntax or BeamMarkerSyntax
+                        or KeySignatureSyntax or ClefDeclarationSyntax or BreakSyntax:
+                        break;
+                    case RestSyntax rest when rest.MeasureCount <= 1:
+                        break;
+                    case RepeatExpressionSyntax trem when trem.RepeatType.Text == "tremolo"
+                        && int.TryParse(trem.Count.Text, out _):
+                        break;
+                    case VariableReferenceSyntax nested when FlowingPhraseBody(nested, open) != null:
+                        break;
+                    default:
+                        return null;
+                }
+                items.Add(item);
             }
-            items.Add(item);
+            return items;
         }
-        return items;
+        finally
+        {
+            open.Remove(name);
+        }
+    }
+
+    /// <summary>Plays a flowing phrase body (<see cref="FlowingPhraseBody(VariableReferenceSyntax)"/>)
+    /// onto a bar tally: its beats join <paramref name="total"/>, a body bar line closes the bar
+    /// where the tally stands (counted in <paramref name="barsClosed"/>), a nested reference plays
+    /// its own body in place from a fresh quarter. Returns the note value the body leaves.</summary>
+    private Fraction PricePhraseBody(List<SyntaxNode> body, Fraction entryDefault, ref Fraction total, ref int barsClosed)
+    {
+        var running = entryDefault;
+        foreach (var bodyItem in body)
+        {
+            if (bodyItem is BarlineSyntax)
+            {
+                if (total != Fraction.Zero)
+                    barsClosed++;
+                total = Fraction.Zero;
+                continue;
+            }
+            if (bodyItem is VariableReferenceSyntax nested && FlowingPhraseBody(nested) is { } nestedBody)
+            {
+                running = PricePhraseBody(nestedBody, Fraction.Quarter, ref total, ref barsClosed);
+                continue;
+            }
+            total += MeasureDurations.ItemDuration(bodyItem, ref running);
+        }
+        return running;
     }
 
     /// <param name="tailUnclosed">True when the stream ended with music after its last
