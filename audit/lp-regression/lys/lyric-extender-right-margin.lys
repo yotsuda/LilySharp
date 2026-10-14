@@ -6,12 +6,15 @@
 // 次音節の系の基線で解決 (LyricHyphenLayout.NextLyricIndex/SecondSegmentY)。
 // hyphen の跨ぎ側 dash も同じ病気を同時に修理。
 // twin audit\lpreg\lyextrm.{ly,lys}。
+// 第905: `sings v` を足した — LP の \addlyrics は旋律に結ぶが、sings の無い行は
+// 小節に均等割りの行（GRAMMAR）で、2 小節目の「e」がタイの先の f の位置に出ていた。
+// 結んだ後: 第1系の終端 102.16（LP 102.16）・第2系の片は f の下 5.88 → 7.30（LP と同じ規則）。
 octave absolute
 time 4/4
 
 part v { }
 
-lyrics w { section Main { c d e effffffffffff __ | e d c | } }
+lyrics w sings v { section Main { c d e effffffffffff __ | e d c | } }
 
 section Main {
   v { c4 d e f~ | break f4 e d c | }
