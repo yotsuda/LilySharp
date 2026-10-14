@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 63 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 63 | 観測者がゼロだと自認しているもの |
-| `OWN` | 255 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **381** | |
+| `OWN` | 256 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **382** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -246,7 +246,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（255 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（256 件）
 
 ### `LilySharp.Core/Editing/KeyRespeller.cs`
 - **`KeyRespeller`** LILYSHARP-OWN: an editor aid. The rule:
@@ -601,6 +601,7 @@
 - **`TextOutlineSkylines`** ⚠️ LILYSHARP-OWN, two declared substitutions inside the walk, neither of which changes
 ### `LilySharp.Core/Svg/Layout/TieFormattingProblem.cs`
 - **`TieFormattingProblem.BowHeight`** LILYSHARP-OWN "observed by nothing". The bow twin sweep (HANDOFF §2 S0) observed it:
+- **`TieFormattingProblem.IsUndrawnLedger`** LILYSHARP-OWN (the owner, session 905: "a tie on a ledger-line head need not be short").
 - **`TieFormattingProblem.EdgeYUp`** ⚠️ LILYSHARP-OWN, AND ONLY ON A TAB. LilyPond has one staff_symbol_referencer_
 ### `LilySharp.Core/Svg/Layout/TodoMemoBand.cs`
 - **`TodoMemoStyle`** LILYSHARP-OWN, every one: an editor's mark, with no LilyPond counterpart. Owner's

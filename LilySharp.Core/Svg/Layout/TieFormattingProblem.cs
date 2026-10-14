@@ -613,6 +613,47 @@ internal sealed class TieFormattingProblem
         return lines.Length == 0 ? (1, -1) : (lines[0], lines[lines.Length - 1]);
     }
 
+    /// <summary>
+    /// A position with a LEDGER's parity outside the staff where the tie's heads draw no ledger —
+    /// past the heads, so beside them there is no line at all (a ledger stands under its own head
+    /// only, and only out to it). <see cref="OnLine"/> calls it a line (on_line walks the parity),
+    /// so the head-edge hug did not fire and a tie leaving d‴ over the treble staff stayed at
+    /// the heads' top edge, beside them — attached at their sides, short — where c‴ on its ledger
+    /// is hugged over the heads, attached near their centres. The hug now takes this position as
+    /// the space it is.
+    /// </summary>
+    /// <remarks>
+    /// LILYSHARP-OWN (the owner, session 905: "a tie on a ledger-line head need not be short").
+    /// MEASURED, 2.26.0 (Lab probes/ledger-tie cases.ly): whole-note ties are 5.569 for a', c''
+    /// (spaces in the staff), a'', c''' (on ledgers) and 3.607 for b' (a line in the staff) and
+    /// g'', b'', d''' (spaces past a ledger or past the staff), the short ones standing 0.5 over
+    /// the head's centre where the long ones stand 0.7–0.75. LILYPOND-REF:
+    /// lily/tie-formatting-problem.cc:495-505 generate_configuration — the hug's
+    /// <c>!Staff_symbol_referencer::on_line (…, pos)</c>.
+    /// </remarks>
+    private bool IsUndrawnLedger(int specIdx, int pos)
+    {
+        var (down, up) = StaffSpan(specIdx);
+        if (down > up)
+            return false;   // no lines at all
+        // A lone tie only: a chord's ties are scored together, and lifting one moved its
+        // neighbour inside the staff off LilyPond's seat (tie.y.chord-flag: -0.35 -> -1.225,
+        // session 905) — the chord keeps LilyPond's configuration.
+        if (_specs.Count != 1)
+            return false;
+        // Past EVERY head of both columns — a chord's other members draw ledgers out to
+        // themselves — and with a ledger's parity (otherwise on_line said "space" already).
+        if (_startOutlines[specIdx]?.HeadPositions is not { } a
+            || _endOutlines[specIdx]?.HeadPositions is not { } b)
+            return false;
+        int high = Math.Max(a.High, b.High), low = Math.Min(a.Low, b.Low);
+        if (pos > up && pos > high)
+            return (pos - (int)up) % 2 == 0;
+        if (pos < down && pos < low)
+            return ((int)down - pos) % 2 == 0;
+        return false;
+    }
+
     /// <summary><c>staff_span.widen (-1); staff_span.contains (pos)</c> — the staff's inner
     /// positions (:522-525, :777-784).</summary>
     private bool WithinStaff(int specIdx, int pos)
@@ -1007,7 +1048,7 @@ internal sealed class TieFormattingProblem
         //   which is that answer on a five-line staff only.
         if (yTune
             && Math.Max(Math.Abs(leftHeadEdge - y), Math.Abs(rightHeadEdge - y)) < 0.25
-            && !OnLine(specIdx, pos))
+            && (!OnLine(specIdx, pos) || IsUndrawnLedger(specIdx, pos)))
         {
             deltaY = (leftHeadEdge - y) + dir * _details.OuterTieVerticalGap;
         }

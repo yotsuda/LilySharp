@@ -6,6 +6,13 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+### A tie on a note in a space above or below the staff is no longer short
+
+- **A tie on a single note in a space outside the staff (d‴ over the treble, E2 under the
+  bass) arches over the heads like a tie on a ledger note**, instead of sitting short beside
+  them. LilyPond keeps it beside the heads to clear a line that is not drawn there. Chords keep
+  LilyPond's ties.
+
 ### A `%` bar on a full line keeps its width
 
 - **A one-bar `%` no longer shrinks when its line is squeezed.** It keeps LilyPond's
