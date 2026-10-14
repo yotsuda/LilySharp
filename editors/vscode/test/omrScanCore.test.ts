@@ -24,7 +24,7 @@ import * as path from 'node:path';
 import * as vm from 'node:vm';
 import {
     SCAN_DEFAULT_THRESHOLD, anchorsOf, barOnLine, markFactsOf, pageLabel, parseSideFile, scanBarForPrinted, scanTitle,
-    flaggedBars, hiddenTodoKeys, resolvedTodoKeys, shiftAnchors, shownAt, shownImage, sideFileOf, staffOfBarBox, todoStroke, todoTarget,
+    flaggedBars, hiddenTodoKeys, resolvedTodoKeys, shiftAnchors, shownAt, shownImage, sideFileOf, barStaff, todoStroke, todoTarget,
 } from '../src/omrScanCore';
 
 // Absolute on whichever OS runs the tests.
@@ -40,7 +40,8 @@ const WRITTEN = JSON.stringify({
     ],
     measures: [
         { measure: 4, part: 'rh', line: 32, page: 1, box: [1292, 900, 2223, 1040] },
-        { measure: 4, part: 'lh', line: 33, page: 1, box: [1292, 1046, 2223, 1203] },
+        // (a reader since LilySharp-Omr c22fe99 writes the staff too; the rh bar is an older one's)
+        { measure: 4, part: 'lh', line: 33, page: 1, box: [1292, 1046, 2223, 1203], staff: [1292, 1085, 2223, 1164] },
         { measure: 5, part: 'rh', line: 34, page: null, box: null },
     ],
     todos: [
@@ -69,12 +70,16 @@ describe('the scan page script', () => {
     });
 });
 
-// The reader draws a part's bar two staff spaces past its outer lines (Sidecar.AddPage), so the
-// staff is the box's middle half: what the scan tints, as the preview tints a bar's staff.
+// What the scan tints, as the preview tints a bar's staff: the reader's staff (LilySharp-Omr
+// c22fe99), or from an older reader, which drew a part's bar two staff spaces past its outer lines
+// (Sidecar.AddPage), the box's middle half.
 describe('a bar\'s staff on the scan', () => {
-    it('is the middle half of the box, its whole width', () => {
+    it('is the reader\'s staff where it wrote one', () => {
+        assert.deepEqual(barStaff({ box: [472, 518, 1003, 684], staff: [472, 559, 1003, 643] }), [472, 559, 1003, 643]);
+    });
+    it('is the middle half of the box, its whole width, from an older reader', () => {
         // Largo p.1 bar 1 (the owner's scan): box 518..684, the lines at 559..643.
-        const [x0, y0, x1, y1] = staffOfBarBox([472, 518, 1003, 684]);
+        const [x0, y0, x1, y1] = barStaff({ box: [472, 518, 1003, 684] });
         assert.deepEqual([x0, x1], [472, 1003]);
         assert.ok(Math.abs(y0 - 559.5) < 1 && Math.abs(y1 - 642.5) < 1, `${y0}..${y1}`);
     });
@@ -93,6 +98,7 @@ describe('the side file', () => {
         assert.equal(side.pages[0].image, path.join(SCANS, 'p01.png'));
         assert.equal(side.pages[1].image, path.join(WORK, 'p02.tif'));   // relative: the side file's folder
         assert.deepEqual(side.measures.map(m => `${m.measure}${m.part}`), ['4rh', '4lh']);
+        assert.deepEqual(side.measures.map(m => m.staff), [undefined, [1292, 1085, 2223, 1164]]);
         assert.deepEqual(side.todos.map(t => t.key), ['b4-lh']);
         assert.equal(side.todos[0].memo, 'bar 4: voices 600+1880/2400 ticks');
     });
@@ -265,6 +271,9 @@ describe('what the caret lights', () => {
         assert.equal(anchors.length, 2);                          // bar 5 has a line but no box: not drawn
         assert.deepEqual(barOnLine(anchors, ...lineOf(text, 33))?.box, [1292, 1046, 2223, 1203]);
         assert.deepEqual(barOnLine(anchors, ...lineOf(text, 32))?.label, '4');
+        // The scan lights the staff: the reader's where it wrote one, else the box's middle half.
+        assert.deepEqual(barOnLine(anchors, ...lineOf(text, 33))?.staff, [1292, 1085, 2223, 1164]);
+        assert.deepEqual(barOnLine(anchors, ...lineOf(text, 32))?.staff, [1292, 935, 2223, 1005]);
         assert.equal(barOnLine(anchors, ...lineOf(text, 31)), undefined);
     });
 

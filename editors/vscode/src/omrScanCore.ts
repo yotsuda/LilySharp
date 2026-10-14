@@ -52,6 +52,10 @@ export interface ScanBar {
     readonly line?: number;
     readonly page: number;
     readonly box: Box;
+    /** The bar's staff alone, top line to bottom line, mapped as `box` is — the reader's `staff`,
+     *  written since LilySharp-Omr c22fe99 (Lily#'s proposal of 2026-10-14); absent from an older
+     *  side file (barStaff then takes the box's middle half). */
+    readonly staff?: Box;
 }
 
 export interface ScanTodo {
@@ -159,14 +163,17 @@ export function resolvedTodoKeys(todos: readonly Pick<ScanTodo, 'key' | 'quiet'>
     return [...new Set(todos.filter(t => !t.quiet && !present.has(t.key)).map(t => t.key))];
 }
 /**
- * The staff inside a bar's box: the reader draws a part's bar from two staff spaces over its top
- * line to two under its bottom one (LilySharp-Omr `Sidecar.AddPage`: `st.Top - 2 * s` ..
- * `st.Bottom + 2 * s`), and a staff is four spaces tall, so its lines are the middle half of the
- * box. The scan tints this, as the preview tints a bar from its top line to its bottom one
- * (owner's request 2026-10-14: the two views alike); the click still takes the whole box.
+ * The staff of a bar on the scan, which the scan tints as the preview tints a bar from its top
+ * line to its bottom one (owner's request 2026-10-14: the two views alike; the click still takes
+ * the whole box): the reader's `staff` where it writes one, else the box's middle half — an older
+ * reader drew a part's bar two staff spaces past its outer lines (`Sidecar.AddPage`:
+ * `st.Top - 2 * s` .. `st.Bottom + 2 * s`) and a staff is four spaces tall.
  */
-export function staffOfBarBox(box: Box): Box {
-    const quarter = (box[3] - box[1]) / 4;
+export function barStaff(bar: Pick<ScanBar, 'box' | 'staff'>): Box {
+    if (bar.staff) {
+        return bar.staff;
+    }
+    const box = bar.box, quarter = (box[3] - box[1]) / 4;
     return [box[0], box[1] + quarter, box[2], box[3] - quarter];
 }
 
@@ -236,6 +243,7 @@ export function parseSideFile(text: string, sideFilePath: string): ScanSideFile 
                 measure, page, box: m.box,
                 ...(str(m?.part) ? { part: m.part } : {}),
                 ...(int(m?.line) !== undefined && m.line > 0 ? { line: m.line } : {}),
+                ...(isBox(m?.staff) ? { staff: m.staff } : {}),
             });
         }
     }
@@ -308,6 +316,8 @@ export interface ScanTarget {
     readonly kind: 'todo' | 'bar';
     readonly page: number;
     readonly box: Box;
+    /** Kind 'bar': the part of the box the scan lights, the bar's staff (barStaff). */
+    readonly staff?: Box;
     /** The mark's key (kind 'todo'), or the bar's number (kind 'bar'). */
     readonly label: string;
 }
@@ -396,5 +406,5 @@ export function barOnLine(anchors: readonly BarAnchor[], lineStart: number, line
     for (const x of anchors) {
         if (x.offset >= lineStart && x.offset <= lineEnd) { a = x; }
     }
-    return a ? { kind: 'bar', page: a.bar.page, box: a.bar.box, label: String(a.bar.measure) } : undefined;
+    return a ? { kind: 'bar', page: a.bar.page, box: a.bar.box, staff: barStaff(a.bar), label: String(a.bar.measure) } : undefined;
 }

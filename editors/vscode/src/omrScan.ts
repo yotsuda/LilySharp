@@ -27,7 +27,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import type { LanguageClient } from 'vscode-languageclient/node';
 import {
-    BarAnchor, PrintedBar, ScanSideFile, ScanTarget, ServerTodo, anchorsOf, barOnLine, flaggedBars, hiddenTodoKeys, parseSideFile, resolvedTodoKeys, staffOfBarBox,
+    BarAnchor, PrintedBar, ScanSideFile, ScanTarget, ServerTodo, anchorsOf, barOnLine, flaggedBars, hiddenTodoKeys, parseSideFile, resolvedTodoKeys, barStaff,
     SCAN_DEFAULT_THRESHOLD, pageLabel, scanBarForPrinted, scanTitle, shiftAnchors, shownImage, sideFileOf, todoStroke,
     todoTarget,
 } from './omrScanCore';
@@ -300,7 +300,7 @@ async function follow(view: ScanView, editor: vscode.TextEditor, deps: OmrScanDe
     }
     view.lastTarget = id;
     // A bar lights its staff only, as its hover tints it; a mark its whole box.
-    const lit = target && target.kind === 'bar' ? { ...target, box: staffOfBarBox(target.box) } : target;
+    const lit = target && target.staff ? { ...target, box: target.staff } : target;
     void view.panel.webview.postMessage({ type: 'light', target: lit ?? null });
 }
 
@@ -363,7 +363,7 @@ function render(view: ScanView): void {
         }
         const src = panel.webview.asWebviewUri(vscode.Uri.file(shown)).toString();
         const bars = side.measures.map((m, i) => m.page !== p.page ? '' :
-            `<g class="bar" data-i="${i}"><rect class="hit" ${rect(m.box)}/><rect class="tint" ${rect(staffOfBarBox(m.box))}/>`
+            `<g class="bar" data-i="${i}"><rect class="hit" ${rect(m.box)}/><rect class="tint" ${rect(barStaff(m))}/>`
             + `<title>bar ${m.measure}${m.part ? ` (${esc(m.part)})` : ''}</title></g>`).join('');
         // An outline, heavier and darker the less sure the reader is; the slider hides the surer.
         const todos = side.todos.filter(t => t.page === p.page).map(t => {
