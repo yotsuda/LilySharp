@@ -324,10 +324,12 @@ public interface IDrawingContext
     /// <summary>
     /// In interactive SVG, an invisible box over one bar of one staff — the bar's X range, the
     /// staff's top line to its bottom one — carrying where that bar is written
-    /// (<c>data-start</c>, the offset of its first note, rest or chord). A click on the bar in
-    /// the preview takes the editor there. Draws nothing; static backends emit nothing.
+    /// (<c>data-start</c>, the offset of its first note, rest or chord) and the stretch of text it
+    /// is written in (<c>data-span</c>, <paramref name="from"/> and <paramref name="to"/>). A click
+    /// on the bar in the preview takes the editor there; the editor's caret in the span lights the
+    /// bar. Draws nothing; static backends emit nothing.
     /// </summary>
-    void DrawBarStaffBox(int sourcePosition, double x, double y, double width, double height) { }
+    void DrawBarStaffBox(int sourcePosition, int from, int to, double x, double y, double width, double height) { }
 
     /// <summary>
     /// Begins a transformed group scope. Subsequent draw operations have the

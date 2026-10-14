@@ -256,3 +256,46 @@ describe('the preview finds the bar a click lands on', () => {
         assert.equal(barStaffAt(450, 120), null);
     });
 });
+
+// The bar the editor's caret is in stays lit (lightCaretBar, owner's request 2026-10-14): a bar
+// whose written stretch (data-span) holds the caret, or just after its closing bar line, or the
+// start of the token under the caret. Lifted out of the page script like the functions above.
+describe('the preview lights the bar the caret is in', () => {
+    const source = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
+    const start = source.indexOf('return `<!DOCTYPE html>') + 'return '.length;
+    const end = source.indexOf('</html>`;', start) + '</html>`'.length;
+    const html = new vm.Script(source.slice(start, end).replace(/\$\{[^}]*\}/g, 'X')).runInNewContext({}) as string;
+    const at = html.indexOf('function lightCaretBar(');
+    let depth = 0, close = -1;
+    for (let i = html.indexOf('{', at); i < html.length; i++) {
+        if (html[i] === '{') depth++;
+        else if (html[i] === '}' && --depth === 0) { close = i + 1; break; }
+    }
+    const bar = (span: string) => {
+        const cls = new Set<string>();
+        return { cls, getAttribute: () => span, classList: { add: (c: string) => cls.add(c), remove: (c: string) => cls.delete(c) } };
+    };
+    // bar 1 "c''1 |" at 10..15, bar 2 "d''2 e'' |" at 17..26.
+    const bars = [bar('10 15'), bar('17 26')];
+    const svgContainer = { querySelectorAll: (sel: string) => sel.includes('.caret') ? bars.filter(b => b.cls.has('caret')) : bars };
+    const light = new vm.Script('(() => { let caretAt = -1, caretToken = -1; return ' + html.slice(at, close) + '; })()')
+        .runInNewContext({ svgContainer, Number, parseInt }) as (caret?: number, token?: number) => void;
+    const lit = () => bars.map(b => b.cls.has('caret'));
+
+    it('finds the function in the page script', () => {
+        assert.ok(at >= 0 && close > at, 'lightCaretBar is not in the page script');
+    });
+    it('lights the bar holding the caret, one at a time', () => {
+        light(12, 10); assert.deepEqual(lit(), [true, false]);
+        light(20, 20); assert.deepEqual(lit(), [false, true]);
+    });
+    it('keeps the bar just closed lit after its bar line, and none in the gap or outside', () => {
+        light(16, -1); assert.deepEqual(lit(), [true, false]);
+        light(5, -1); assert.deepEqual(lit(), [false, false]);
+    });
+    it('lights again what it lit when called with no caret (after a render)', () => {
+        light(12, 10);
+        for (const b of bars) b.cls.clear();
+        light(); assert.deepEqual(lit(), [true, false]);
+    });
+});

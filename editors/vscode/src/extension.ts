@@ -973,7 +973,7 @@ export function activate(context: vscode.ExtensionContext) {
                         .filter(s => !s.isEmpty)
                         .map(s => [doc.offsetAt(s.start), doc.offsetAt(s.end)]);
                     if (ranges.length > 0) {
-                        panel.webview.postMessage({ type: 'highlightRange', ranges });
+                        panel.webview.postMessage({ type: 'highlightRange', ranges, caret: doc.offsetAt(event.selections[0].active) });
                         return;
                     }
 
@@ -1002,6 +1002,8 @@ export function activate(context: vscode.ExtensionContext) {
                         type: 'highlightPosition',
                         position: tokenStart >= 0 ? offset : -1,
                         tokenStart,
+                        // The caret itself, wherever it is: its bar stays lit (lightCaretBar).
+                        caret: offset,
                     });
                 }
             }
@@ -2985,7 +2987,8 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         /* The bar a click would go to (barStaffAt), its staff tinted in the colour the scan view
            lights a bar in (omrScan.ts rect.light; the owner's request 2026-10-14: the two alike). */
         #svgContainer rect.bar-staff.hover,
-        #svgContainer rect.bar-staff.peer {
+        #svgContainer rect.bar-staff.peer,
+        #svgContainer rect.bar-staff.caret {
             fill: rgba(0, 120, 215, 0.14);
         }
         .container {
@@ -3398,10 +3401,11 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         // single one is the template's own escape and vanishes (a \\s written
         // singly became an s, and a \\/ a /, which ended the regex early and took
         // the whole script down — the preview stayed on "Loading", 2026-09-04).
-        const SOURCE_ATTRS = /\\s(data-pos|data-alt|data-start)="[^"]*"/g;
+        const SOURCE_ATTRS = /\\s(data-pos|data-alt|data-start|data-span)="[^"]*"/g;
         // The elements that carry one: a grob's data-pos, a barline's data-alt list, and a bar's
         // written place (rect.bar-staff's data-start, which a click on the bar goes to).
-        const SOURCE_SELECTOR = '[data-pos], [data-alt], [data-start]';
+        // A bar's written stretch (data-span, a pair: the caret in it lights the bar) rides with it.
+        const SOURCE_SELECTOR = '[data-pos], [data-alt], [data-start], [data-span]';
         let shownPages = null;      // per page: { markup, blank } of what is on screen
         let shownFrame = null;      // the markup around the pages (svg tag, style, closing)
 
@@ -3432,11 +3436,11 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         // and the caller replaces the page instead.
         function restampPage(page, markup) {
             const els = page.querySelectorAll(SOURCE_SELECTOR);
-            const attrs = /\\sdata-(pos|alt|start)="([^"]*)"/g;
+            const attrs = /\\sdata-(pos|alt|start|span)="([^"]*)"/g;
             for (let k = 0; k < els.length; k++) {
                 const el = els[k];
                 const carried = (el.hasAttribute('data-pos') ? 1 : 0) + (el.hasAttribute('data-alt') ? 1 : 0)
-                    + (el.hasAttribute('data-start') ? 1 : 0);
+                    + (el.hasAttribute('data-start') ? 1 : 0) + (el.hasAttribute('data-span') ? 1 : 0);
                 for (let j = 0; j < carried; j++) {
                     const m = attrs.exec(markup);
                     if (!m) return false;
@@ -3459,10 +3463,10 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             const drawn = [];
             for (const el of page.querySelectorAll(SOURCE_SELECTOR)) {
                 for (const a of el.attributes) {
-                    if (a.name === 'data-pos' || a.name === 'data-alt' || a.name === 'data-start') drawn.push(a.name + '=' + a.value);
+                    if (a.name === 'data-pos' || a.name === 'data-alt' || a.name === 'data-start' || a.name === 'data-span') drawn.push(a.name + '=' + a.value);
                 }
             }
-            const attrs = /\\sdata-(pos|alt|start)="([^"]*)"/g;
+            const attrs = /\\sdata-(pos|alt|start|span)="([^"]*)"/g;
             let k = 0;
             for (let m; (m = attrs.exec(markup)); k++) {
                 const want = 'data-' + m[1] + '=' + m[2];
@@ -3797,11 +3801,12 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                     if (!Number.isFinite(m)) return false;
                     el.setAttribute(name, String(m));
                 }
-                const alt = el.getAttribute('data-alt');
-                if (alt) {
-                    const parts = alt.split(' ').map(a => shiftOffset(parseInt(a, 10), w));
+                for (const name of ['data-alt', 'data-span']) {
+                    const list = el.getAttribute(name);
+                    if (!list) continue;
+                    const parts = list.split(' ').map(a => shiftOffset(parseInt(a, 10), w));
                     if (parts.some(m => !Number.isFinite(m))) return false;
-                    el.setAttribute('data-alt', parts.join(' '));
+                    el.setAttribute(name, parts.join(' '));
                 }
             }
             return true;
@@ -4137,6 +4142,22 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             mainContent.classList.toggle('over-bar', r !== null);
             // …and a scan view of the score lights the same bar (omrScan previewHoversBar).
             vscode.postMessage({ type: 'hoverBar', start: r ? parseInt(r.getAttribute('data-start'), 10) : null });
+        }
+        // The bar the editor's caret is in stays lit (owner's request 2026-10-14, as the scan view
+        // lights it): every bar whose written stretch (data-span: its first note to the bar line
+        // closing it) holds the caret — just after that bar line included — or the start of the
+        // token under it; each printed copy of it. Kept across renders (the caret is re-applied
+        // with the bar flags), and moved by an edit's caret movement.
+        let caretAt = -1, caretToken = -1;
+        function lightCaretBar(caret, tokenStart) {
+            if (Number.isInteger(caret)) { caretAt = caret; caretToken = Number.isInteger(tokenStart) ? tokenStart : -1; }
+            for (const r of svgContainer.querySelectorAll('rect.bar-staff.caret')) r.classList.remove('caret');
+            if (caretAt < 0) return;
+            for (const r of svgContainer.querySelectorAll('rect.bar-staff[data-span]')) {
+                const span = r.getAttribute('data-span').split(' ');
+                const from = parseInt(span[0], 10), to = parseInt(span[1], 10);
+                if ((caretAt >= from && caretAt <= to + 1) || (caretToken >= from && caretToken <= to)) r.classList.add('caret');
+            }
         }
         // The scan view's bar under the mouse, lit here: every bar whose first note is written
         // on the line the reader wrote it on, [from, to] (omrScan lineOfScanBar); none without.
@@ -4932,6 +4953,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                         playbackNotes = null;
                         collectPages();
                         applyBarFlags();
+                        lightCaretBar();
                         // Keep the fit across re-renders (this is also what fits
                         // the FIRST render of a freshly opened preview); otherwise
                         // re-apply the current manual zoom to the fresh SVG.
@@ -5055,12 +5077,14 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                     }
                     break;
                 case 'highlightPosition':
+                    lightCaretBar(message.caret, message.tokenStart);
                     lastHighlightPos = message.position;
                     lastHighlightTokenStart = message.tokenStart;
                     lastHighlightRanges = null;
                     scheduleHighlight(() => highlightNearestElement(message.position, message.tokenStart));
                     break;
                 case 'highlightRange':
+                    lightCaretBar(message.caret, -1);
                     lastHighlightRanges = message.ranges;
                     lastHighlightPos = -1;
                     scheduleHighlight(() => highlightRange(message.ranges));

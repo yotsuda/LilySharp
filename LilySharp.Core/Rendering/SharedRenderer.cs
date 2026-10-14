@@ -304,21 +304,40 @@ internal static partial class SharedRenderer
             : BarNumberEngraver.NumberMeasures(measures, measures[0].IsPickup ? -1 : 0);
     }
 
+    /// <summary>Where one staff's bar is written: <see cref="Start"/> its first note, rest or chord
+    /// (a click on the bar goes there), <see cref="From"/>..<see cref="To"/> the stretch of text it
+    /// is written in (the editor's caret in it lights the bar): from the first note any voice
+    /// writes to the bar line that closes it (<see cref="Measure.SourceEnd"/>), or its last note.
+    /// Not from <see cref="Measure.SourceStart"/>: a section's first bar has the section's start
+    /// there (0 for the first), and the first bar after a section the bar line closing the one
+    /// before it — across every other part's text in between.</summary>
+    private readonly record struct BarSource(int Start, int From, int To);
+
     /// <summary>Per staff (the <c>EnumerateStaves</c> index), per measure index, where the bar's
-    /// music is written: the first note, rest or chord of its first voice that has one, a
-    /// spacer only when nothing else is there. <see cref="MusicItem.NoSourcePosition"/> where
-    /// the bar holds none (a lyrics or chords row). Not <see cref="Measure.SourceStart"/>: that
-    /// is the barline BEFORE the bar, and a section's first bar has the section's own start.</summary>
-    private static int[][] BarStartPositions(MultiStaffScore score)
+    /// music is written (<see cref="BarSource"/>): the first note, rest or chord of its first voice
+    /// that has one, a spacer only when nothing else is there; Start is
+    /// <see cref="MusicItem.NoSourcePosition"/> where the bar holds none (a lyrics or chords row).
+    /// Not <see cref="Measure.SourceStart"/> for the start: that is the barline BEFORE the bar, and
+    /// a section's first bar has the section's own start.</summary>
+    private static BarSource[][] BarStartPositions(MultiStaffScore score)
     {
-        var starts = new List<int[]>();
+        var starts = new List<BarSource[]>();
         foreach (var (_, staff, _) in score.EnumerateStaves())
         {
             int n = staff.Voices.IsDefaultOrEmpty ? 0 : staff.Voices.Max(v => v.Measures.Length);
-            var row = new int[n];
+            var row = new BarSource[n];
             for (int m = 0; m < n; m++)
             {
                 int best = MusicItem.NoSourcePosition, spacer = MusicItem.NoSourcePosition;
+                int first = int.MaxValue, last = -1;
+                foreach (var voice in staff.Voices)
+                    if (m < voice.Measures.Length)
+                        foreach (var item in voice.Measures[m].Items)
+                            if (item is NoteItem or RestItem or ChordItem && item.SourcePosition > 0)
+                            {
+                                first = Math.Min(first, item.SourcePosition);
+                                last = Math.Max(last, item.SourcePosition);
+                            }
                 foreach (var voice in staff.Voices)
                 {
                     if (m >= voice.Measures.Length)
@@ -339,7 +358,11 @@ internal static partial class SharedRenderer
                     if (best >= 0)
                         break;
                 }
-                row[m] = best >= 0 ? best : spacer;
+                var measures = staff.PrimaryVoice.Measures;
+                int to = Math.Max(last, m < measures.Length ? measures[m].SourceEnd : 0);
+                row[m] = last < 0
+                    ? new BarSource(best >= 0 ? best : spacer, 0, 0)
+                    : new BarSource(best >= 0 ? best : spacer, first, to);
             }
             starts.Add(row);
         }
@@ -351,7 +374,7 @@ internal static partial class SharedRenderer
     /// of its lowest — and one <see cref="IDrawingContext.DrawBarStaffBox"/> per bar per shown
     /// staff, carrying where that staff's bar is written (a click on the bar goes there).</summary>
     private static void DrawBarBoxes(SystemLayout system, ImmutableArray<int> barNumbers,
-        int[][] barStarts, IDrawingContext gc)
+        BarSource[][] barStarts, IDrawingContext gc)
     {
         if (system.StaffGroups.IsDefaultOrEmpty)
             return;
@@ -378,9 +401,10 @@ internal static partial class SharedRenderer
                     if (staff.IsHidden || staff.StaffIndex < 0 || staff.StaffIndex >= barStarts.Length)
                         continue;
                     var row = barStarts[staff.StaffIndex];
-                    int start = measure.MeasureIndex < row.Length ? row[measure.MeasureIndex] : MusicItem.NoSourcePosition;
-                    if (start >= 0)
-                        gc.DrawBarStaffBox(start, measure.X, system.Y + staff.Y, measure.Width, staff.Height);
+                    if (measure.MeasureIndex >= row.Length || row[measure.MeasureIndex].Start < 0)
+                        continue;
+                    var at = row[measure.MeasureIndex];
+                    gc.DrawBarStaffBox(at.Start, at.From, at.To, measure.X, system.Y + staff.Y, measure.Width, staff.Height);
                 }
         }
     }

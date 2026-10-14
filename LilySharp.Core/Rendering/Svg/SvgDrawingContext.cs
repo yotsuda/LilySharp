@@ -407,7 +407,7 @@ internal sealed class SvgDrawingContext : IDrawingContext
         _sb.Append(" fill=\"none\" pointer-events=\"none\"/>").AppendLine();
     }
 
-    public void DrawBarStaffBox(int sourcePosition, double x, double y, double width, double height)
+    public void DrawBarStaffBox(int sourcePosition, int from, int to, double x, double y, double width, double height)
     {
         // As DrawBarBox: no data-pos and no pointer events, so a note's click target and the
         // highlight recolor never meet it; the webview hit-tests it by its geometry.
@@ -415,6 +415,14 @@ internal sealed class SvgDrawingContext : IDrawingContext
         _sb.Append("  <rect class=\"bar-staff\" data-start=\"");
         AppendInt(sourcePosition);
         _sb.Append('"');
+        if (to > from)
+        {
+            _sb.Append(" data-span=\"");
+            AppendInt(from);
+            _sb.Append(' ');
+            AppendInt(to);
+            _sb.Append('"');
+        }
         Attr("x", x);
         Attr("y", y);
         Attr("width", width);

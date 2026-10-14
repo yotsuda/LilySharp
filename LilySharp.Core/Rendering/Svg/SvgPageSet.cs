@@ -172,6 +172,9 @@ public sealed class SvgPageSet
         const string Alt = " data-alt=\"";
         // A bar's written place (SvgDrawingContext.DrawBarStaffBox) is a source offset too.
         const string Start = " data-start=\"";
+        // …and the stretch of text it is written in, a pair (DrawBarStaffBox: the caret in it
+        // lights the bar) — read as data-alt's list is.
+        const string Span = " data-span=\"";
         int i = 0, j = 0;
         while (i < previous.Length && j < current.Length)
         {
@@ -188,10 +191,11 @@ public sealed class SvgPageSet
                 string? spelled = at.StartsWith(Pos, StringComparison.Ordinal) ? Pos
                     : at.StartsWith(Alt, StringComparison.Ordinal) ? Alt
                     : at.StartsWith(Start, StringComparison.Ordinal) ? Start
+                    : at.StartsWith(Span, StringComparison.Ordinal) ? Span
                     : null;
                 if (spelled != null)
                 {
-                    isAlt = ReferenceEquals(spelled, Alt);
+                    isAlt = ReferenceEquals(spelled, Alt) || ReferenceEquals(spelled, Span);
                     opener = true;
                     end = from + rel + spelled.Length;
                     break;

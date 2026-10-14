@@ -53,7 +53,7 @@ public class BarStaffBoxTests
         """;
 
     private static readonly Regex Box = new(
-        @"<rect class=""bar-staff"" data-start=""(\d+)"" x=""([^""]+)"" y=""([^""]+)"" width=""([^""]+)"" height=""([^""]+)""");
+        @"<rect class=""bar-staff"" data-start=""(\d+)""(?: data-span=""\d+ \d+"")? x=""([^""]+)"" y=""([^""]+)"" width=""([^""]+)"" height=""([^""]+)""");
 
     [Fact]
     public void EachBarOfEachStaff_GoesToItsFirstNote()
@@ -75,6 +75,22 @@ public class BarStaffBoxTests
         var bars = Regex.Matches(preview, @"<rect class=""bar-box"" data-bar=""\d+"" x=""([^""]+)"" y=""[^""]+"" width=""([^""]+)""");
         Assert.Equal(bars.Select(m => m.Groups[1].Value).OrderBy(x => x),
             boxes.Where(b => Num(b, 3) == top).Select(b => b.Groups[2].Value).OrderBy(x => x));
+    }
+
+    /// <summary>Each bar's written stretch (data-span, the caret in it lights the bar): from its
+    /// first note to the bar line closing it — the bar's own text, never the section's start nor
+    /// another part's text before a section's first bar (Measure.SourceStart has both).</summary>
+    [Fact]
+    public void EachBarOfEachStaff_SpansItsOwnText()
+    {
+        string preview = SvgGenerator.Generate(SyntaxTree.Parse(Book), SvgRenderOptions.Preview());
+        var spans = Regex.Matches(preview, @"data-start=""(\d+)"" data-span=""(\d+) (\d+)""").Cast<Match>()
+            .Select(m => (S: int.Parse(m.Groups[1].Value), F: int.Parse(m.Groups[2].Value), T: int.Parse(m.Groups[3].Value)))
+            .ToList();
+        Assert.Equal(8, spans.Count);
+        Assert.All(spans, x => Assert.Equal(x.S, x.F));
+        Assert.Equal(new[] { "g'4 |", "r4 |", "c''1 |", "c1 |", "d''2 e'' |", "d1 |", "f''1 |", "f,2 g, |" },
+            spans.Select(x => Book[x.F..(x.T + 1)]));
     }
 
     [Fact]

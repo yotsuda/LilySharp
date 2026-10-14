@@ -6,6 +6,12 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+### The preview keeps the caret's bar lit
+
+- **The bar the editor's caret is in stays lit on the preview**, as the scan view lights it:
+  each staff's bar from its first note to the bar line closing it (every printed copy), and it
+  follows the caret and the edits.
+
 ### The scan view and the preview light each other's bar under the mouse
 
 - **With Show Original Scan beside the preview, the bar under the mouse lights on both**: hover a

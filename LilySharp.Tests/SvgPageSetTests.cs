@@ -79,7 +79,7 @@ public sealed class SvgPageSetTests
     /// mapped through the window. A number the window declines fails the test — the server
     /// must not have called such a page Shifted.</summary>
     internal static string Restamp(string page, SvgEditWindow window)
-        => Regex.Replace(page, "( data-(?:pos|alt|start)=\")([^\"]*)\"", m =>
+        => Regex.Replace(page, "( data-(?:pos|alt|start|span)=\")([^\"]*)\"", m =>
         {
             var mapped = m.Groups[2].Value.Split(' ').Select(n =>
             {
@@ -276,6 +276,8 @@ public sealed class SvgPageSetTests
     [InlineData("<r data-start=\"14\"/>", "<r data-start=\"17\"/>", true)]   // a bar's written place
     [InlineData("<r data-start=\"14\"/>", "<r data-start=\"14\"/>", false)]
     [InlineData("<r data-start=\"11\"/>", "<r data-start=\"11\"/>", false)]  // inside the window
+    [InlineData("<r data-start=\"14\" data-span=\"5 20\"/>", "<r data-start=\"17\" data-span=\"5 23\"/>", true)]   // a bar's text
+    [InlineData("<r data-start=\"14\" data-span=\"5 20\"/>", "<r data-start=\"17\" data-span=\"5 20\"/>", false)]
     public void SameModuloWindow_AcceptsExactlyTheShiftedText(string previous, string current, bool expected)
     {
         var w = new SvgEditWindow(Prefix: 10, SuffixStart: 14, Delta: 3);
@@ -337,6 +339,7 @@ public sealed class SvgPageSetTests
         const string Pos = " data-pos=\"";
         const string Alt = " data-alt=\"";
         const string Start = " data-start=\"";
+        const string Span = " data-span=\"";
         int i = 0, j = 0;
         while (i < previous.Length && j < current.Length)
         {
@@ -350,6 +353,8 @@ public sealed class SvgPageSetTests
             var opener = previous.AsSpan(i - Pos.Length, Pos.Length);
             bool isAlt = opener.SequenceEqual(Alt);
             bool isStart = i >= Start.Length && previous.AsSpan(i - Start.Length, Start.Length).SequenceEqual(Start);
+            if (i >= Span.Length && previous.AsSpan(i - Span.Length, Span.Length).SequenceEqual(Span))
+                isAlt = true;   // a list, as data-alt is
             if (!isAlt && !isStart && !opener.SequenceEqual(Pos))
                 continue;
             while (true)
