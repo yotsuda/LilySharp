@@ -20,6 +20,14 @@ All notable changes to the Lily# VS Code extension are documented here.
   semitone commands are `lilysharp.stepSemitoneUp` / `lilysharp.stepSemitoneDown`). Off a note,
   those keys keep VS Code's own *Move Editor Left / Right in Group*.
 
+### The step keys change a tempo: by 1, or by 10
+
+- **On a `tempo`, `Ctrl+Shift+Up` / `Ctrl+Shift+Down` change the metronome number by 1, and
+  `Ctrl+Shift+PageUp` / `Ctrl+Shift+PageDown` by 10** — the caret anywhere from `tempo` to its
+  last value (`tempo "Allegro" 4 = 120` → `130`). Only the beats per minute step, never the beat
+  unit or a `swing 16`; the number stops at 1. A tempo with no number (`tempo "Allegro"`,
+  `tempo swing`) steps nothing, and the status bar says so.
+
 ### Guess Section Key reads the chord names too
 
 - **Lily#: Guess Section Key… now reads a section's chord rows as well as its notes** — a

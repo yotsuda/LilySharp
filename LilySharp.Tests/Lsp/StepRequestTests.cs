@@ -599,6 +599,43 @@ public class StepRequestTests
         => Assert.Equal(Guitar("c'1@chord(Cm7 x35343)"),
             Step(Guitar("c'1@chord(Cm7‸)"), +1, semitone: true).After);
 
+    // ---------------------------------------------------------------- a tempo
+
+    [Fact]
+    public void ATempo_StepsByOne_OnTheSemitoneKeys_ByTen_OnTheOctaveKeys()
+    {
+        Assert.Equal(Plain("tempo 121 c'4"), Step(Plain("tem‸po 120 c'4"), +1, semitone: true).After);
+        Assert.Equal(Plain("tempo 119 c'4"), Step(Plain("tempo 120‸ c'4"), -1, semitone: true).After);
+        Assert.Equal(Plain("tempo 130 c'4"), Step(Plain("‸tempo 120 c'4"), +1).After);
+        Assert.Equal(Plain("tempo 110 c'4"), Step(Plain("tempo 1‸20 c'4"), -1).After);
+    }
+
+    [Fact]
+    public void ATempo_StepsTheBpm_NotTheBeatUnitNorTheSwing()
+    {
+        Assert.Equal(Plain("tempo \"Allegro\" 4. = 100 c'4"),
+            Step(Plain("tempo \"Allegro\" 4‸. = 90 c'4"), +1).After);
+        Assert.Equal(Plain("tempo 121 swing 16 c'4"), Step(Plain("tempo 120 swing 1‸6 c'4"), +1, semitone: true).After);
+    }
+
+    [Fact]
+    public void ATempo_StopsAtOne_AndOneWithNoNumber_SaysWhy()
+    {
+        var (low, lowAfter) = Step(Plain("‸tempo 5 c'4"), -1);
+        Assert.False(low.Fallback);
+        Assert.Equal(Plain("tempo 1 c'4"), lowAfter);
+        var (none, noneAfter) = Step(Plain("‸tempo swing c'4"), +1);
+        Assert.False(none.Fallback);
+        Assert.Empty(none.Edits);
+        Assert.Equal(Plain("tempo swing c'4"), noneAfter);
+        Assert.Contains("no metronome number", none.Message);
+        Assert.Empty(none.Pitches);
+    }
+
+    [Fact]
+    public void ANoteAfterATempo_StillStepsAsANote()
+        => Assert.Equal(Plain("tempo 120 cis'4"), Step(Plain("tempo 120 ‸c'4"), +1, semitone: true).After);
+
     // ---------------------------------------------------------------- what sounds
 
     /// <summary>Cm7's predefined shape x35343 on the standard tuning, counted by hand string by

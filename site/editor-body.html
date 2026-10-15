@@ -42,8 +42,8 @@
     <tr><td><kbd>Ctrl+K</kbd> <kbd>V</kbd></td><td>open it beside the source</td></tr>
     <tr><td><kbd>Alt+P</kbd> (hold)</td><td>sound the note under the caret</td></tr>
     <tr><td><kbd>Alt+M</kbd></td><td>play the measure the caret is in</td></tr>
-    <tr><td><kbd>Ctrl+Shift+Up</kbd> / <kbd>Down</kbd></td><td>step a note a semitone, or a chord shape — <a href="#step">below</a></td></tr>
-    <tr><td><kbd>Ctrl+Shift+PageUp</kbd> / <kbd>PageDown</kbd></td><td>step a note an octave mark, or a chord shape</td></tr>
+    <tr><td><kbd>Ctrl+Shift+Up</kbd> / <kbd>Down</kbd></td><td>step a note a semitone, a chord shape, or a tempo by 1 — <a href="#step">below</a></td></tr>
+    <tr><td><kbd>Ctrl+Shift+PageUp</kbd> / <kbd>PageDown</kbd></td><td>step a note an octave mark, a chord shape, or a tempo by 10</td></tr>
     <tr><td><kbd>Ctrl+I</kbd></td><td>transform the selection with AI — <a href="#ai">below</a></td></tr>
   </table>
   <p class="note">On macOS read <kbd>Cmd</kbd> for <kbd>Ctrl</kbd> in the first two and the
@@ -220,6 +220,7 @@
     <tr><td>a <b>note</b>, <kbd>Ctrl+Shift+PageUp</kbd> / <kbd>PageDown</kbd></td><td>adds one <code>'</code> (Up) or <code>,</code> (Down) — or takes away one of the other mark. Inside <code>&lt; &gt;</code> or <code>&lt;&lt; &gt;&gt;</code> only the member under the caret moves; on the chord's <code>&gt;</code> or its duration, the whole chord moves. With a selection, every note in it steps. It is a plain mark edit, so in relative mode the notes after it follow.</td></tr>
     <tr><td>a <b>chord name</b> — <code>@chord(Cm7)</code> or a row's <code>Cm7</code></td><td>Up on a name with no shape writes its usual shape and the diagram appears (<code>@chord(Cm7)</code> → <code>@chord(Cm7 x35343)</code>, <code>G</code> → <code>G(320003)</code>); further Ups and Downs walk the other playable shapes, frets 10–15 included; Down back at the usual shape removes it. The status bar says where you are: <code>Cm7: shape 4 of 33 (x3x546)</code>.</td></tr>
     <tr><td>a <b><code>chord(…)</code></b> item</td><td>steps its shape the same way on the part's own instrument (from <code>chord(C)</code>, Up writes the usual shape); Down stops at the usual shape, since the item needs one.</td></tr>
+    <tr><td>a <b><code>tempo</code></b></td><td>changes the metronome number: <kbd>Ctrl+Shift+Up</kbd> / <kbd>Down</kbd> by 1, <kbd>Ctrl+Shift+PageUp</kbd> / <kbd>PageDown</kbd> by 10 (<code>tempo "Allegro" 4 = 120</code> → <code>130</code>). Never the beat unit or a <code>swing 16</code>; it stops at 1.</td></tr>
     <tr><td>anything else</td><td><kbd>Ctrl+Shift+Up</kbd> / <kbd>Down</kbd>: nothing on Windows and macOS; on Linux, VS Code's own <i>Add Cursor Above / Below</i>. <kbd>Ctrl+Shift+PageUp</kbd> / <kbd>PageDown</kbd>: VS Code's own <i>Move Editor Left / Right in Group</i> (nothing on macOS)</td></tr>
   </table>
   <p>All cursors step in one undo step. The shapes walked are the playable ones — at least
