@@ -28,6 +28,7 @@
 
 - [ ] **調の音**: `key f major a'4` の `a` で Ctrl+Shift+↑ → `bes'4`、もう 1 回 → `c''4`（記号が付いて音高が保たれる）。各回その音が鳴る。
 - [ ] `key g major e'4` で ↑ → `fis'4`。調号の無い本で `c'` ↑ → `d'`、`cis'` ↑ → `d'`、↓ → `c'`。`key a minor g'4` ↑ → `gis'4`（導音）、もう 1 回 → `a'4`。
+- [ ] **和音の転回**（2026-10-16 のユーザー決定）: `<c e g>` の `>` の直後で Ctrl+Shift+↑ → いちばん低い c だけが 1 オクターブ上がる（プレビューで e g c の形・e と g の高さは変わらない）。↓ → いちばん高い音が 1 オクターブ下がる。同じ位置で Ctrl+Shift+PgUp → `<c e g>'`（全体が上がる）。
 - [ ] relative の本で `f4 b4` の `b` で ↑ → `f4 c'4`（プレビューで c が f の上にある）。
 - [ ] **テンポ**（2026-10-16 のユーザー決定）: `tempo "Allegro" 4 = 120` の上（`tempo` から `120` までのどこでも）で Ctrl+Shift+↑ → `121`、Ctrl+Shift+PgUp → `131`、PgDn → `121`。プレビューのテンポ記号の数字も変わる。何も鳴らない。`tempo swing` の上ではステータスバーに *no metronome number*。
 - [ ] **調**（2026-10-16 のユーザー決定）: `key c major` の上で Ctrl+Shift+↑ → `key g major`、もう 1 回 → `key d major`、↓ 2 回で戻り、さらに ↓ → `key f major`。プレビューの調号が変わる。音符は書き換わらない。`key a minor` ↑ → `key e minor`。

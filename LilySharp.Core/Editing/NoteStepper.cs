@@ -199,6 +199,7 @@ public static partial class NoteStepper
         string? message = null;
         var stepped = new List<Target>();
         var bySemitone = new List<PitchSyntax>();
+        var inverted = new List<SyntaxNode>();
         foreach (var t in targets)
         {
             if (t.Kind == TargetKind.Tempo)
@@ -217,6 +218,14 @@ public static partial class NoteStepper
                 var (keyEdits, keySaid) = KeyStep((KeySignatureSyntax)t.Node, dir, semitone, WritesLongFlats(tree));
                 message ??= keySaid;
                 edits.AddRange(keyEdits);
+                stepped.Add(t);
+                continue;
+            }
+            if (semitone && t.Kind == TargetKind.Chord)
+            {
+                // A chord as a whole inverts (owner's decision 2026-10-16): its lowest member an
+                // octave up, or its highest down — made with the letters below.
+                inverted.Add(t.Node);
                 stepped.Add(t);
                 continue;
             }
@@ -245,10 +254,11 @@ public static partial class NoteStepper
         }
         if (stepped.Count == 0)
             return new StepResult(true, [], null, [], 0);
-        if (bySemitone.Count > 0)
+        if (bySemitone.Count > 0 || inverted.Count > 0)
         {
             edits.Sort((a, b) => a.Start.CompareTo(b.Start));
-            edits = SemitoneEdits(text, tree, edits, bySemitone, dir, expand);
+            (edits, string? letterSaid) = SemitoneEdits(text, tree, edits, bySemitone, inverted, dir, expand);
+            message ??= letterSaid;
         }
 
         edits.Sort((a, b) => a.Start.CompareTo(b.Start));

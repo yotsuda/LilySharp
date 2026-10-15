@@ -575,11 +575,31 @@ public class StepRequestTests
     }
 
     [Fact]
-    public void AScaleStep_MovesAMemberAlone_OrAWholeChord()
+    public void AScaleStep_MovesAMember_OrEveryNoteSelected()
     {
         Assert.Equal(Plain("<c' f' g'>4"), Semi("<c' e'‸ g'>4", +1, Plain));
-        Assert.Equal(Plain("<d' f' a'>4"), Semi("<c' e' g'>‸4", +1, Plain));
         Assert.Equal(Plain("d'4 r4 <d' g'>4"), Semi("«c'4 r4 <cis' f'>4»", +1, Plain));
+    }
+
+    /// <summary>Owner's decision 2026-10-16: on a chord as a whole (its <c>&gt;</c> or its
+    /// duration) Ctrl+Shift+Up raises the lowest member an octave — the next inversion — and
+    /// Down lowers the highest; the other members keep their pitches. PageUp / PageDown still
+    /// move the whole chord (<c>&lt;c e g&gt;'</c>).</summary>
+    [Fact]
+    public void AChord_Inverts_OnTheKeyPair()
+    {
+        Assert.Equal(Plain("<c'' e' g'>4"), Semi("<c' e' g'>‸4", +1, Plain));
+        Assert.Equal(Plain("<c' e' g>4"), Semi("<c' e' g'>4‸", -1, Plain));
+        Assert.Equal(Plain("<e' c g'>4"), Semi("<e' c, g'>‸4", +1, Plain));
+        // Relative octaves: the members after the raised one keep sounding where they were.
+        int[] was = AuditionAt(Rel("<c' e g>‸4")).Pitches;
+        Assert.Equal(3, was.Length);
+        var (up, upText) = Step(Rel("<c' e g>‸4"), +1, semitone: true);
+        Assert.True(was[1..].Append(was[0] + 12).SequenceEqual(up.Pitches), upText);
+        var (down, downText) = Step(Rel("<c' e g>‸4"), -1, semitone: true);
+        Assert.True(was[..2].Prepend(was[2] - 12).SequenceEqual(down.Pitches), downText);
+        Assert.Contains("an octave up", up.Message);
+        Assert.Equal(Plain("<c' e' g'>'4"), Step(Plain("<c' e' g'>‸4"), +1).After);
     }
 
     /// <summary>The step writes the file's flats: LilyPond's contractions es / as where the file

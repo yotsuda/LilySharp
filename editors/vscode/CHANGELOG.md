@@ -13,7 +13,7 @@ All notable changes to the Lily# VS Code extension are documented here.
   note off the key steps to the nearest note of it that way (`key c major`: `cis` Up → `d`,
   Down → `c`). The note keeps its pitch: where the new letter would land in another octave the
   octave marks are corrected (`b'` → `c''`; in relative octaves `f b` → `f c'`). A chord member
-  moves alone; on the chord's `>` every member moves; a selection moves every note in it. The
+  moves alone; on the chord's `>` or its duration the chord inverts — Up raises its lowest member an octave (`<c' e' g'>` → `<c'' e' g'>`), Down lowers its highest, the others keeping their pitches (PageUp / PageDown there still move the whole chord, `<c' e' g'>'`); a selection moves every note in it. The
   flats are written the file's way (`ees` / `aes`, or `es` / `as` where the file writes those).
   On an `@chord` or a chords-row entry the keys step the shape as before. **Breaking:** the
   octave step moved to **`Ctrl+Shift+PageUp` / `Ctrl+Shift+PageDown`** (same command ids,

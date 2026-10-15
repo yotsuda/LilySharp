@@ -54,6 +54,13 @@ namespace LilySharp.Core.Editing;
 /// it follow as they will, as after an octave step. A note no score resolves keeps its marks.
 /// </para>
 /// <para>
+/// A CHORD AS A WHOLE (the caret on its <c>&gt;</c> or its duration) INVERTS instead (owner's
+/// decision 2026-10-16): Up raises its lowest-sounding member an octave, Down lowers its
+/// highest, and the other members are held at their pitches by the same mark correction —
+/// in relative octaves each hangs on the one before it. The notes after the chord follow as
+/// they will.
+/// </para>
+/// <para>
 /// Not stepped (handled, no edit, a status-bar word): a scale-degree member and a
 /// quarter-tone pitch. An <c>@chord</c> or a <c>chords</c> row entry steps its shape as with
 /// the octave keys.
@@ -66,8 +73,9 @@ public static partial class NoteStepper
         "a scale degree or a quarter tone moves by octave only (Ctrl+Shift+PageUp / PageDown)";
 
     /// <summary>The octave-mark correction is tried at most this many times (one re-collection
-    /// each); one round settles every case met so far.</summary>
-    private const int MaxOctaveRounds = 4;
+    /// each). One round settles a single note; an inverted chord in relative octaves takes about
+    /// one per member, each member's octave hanging on the one before it.</summary>
+    private const int MaxOctaveRounds = 8;
 
     /// <summary>The pitches a semitone step of <paramref name="t"/> moves: a note's pitch, a
     /// member, or every pitch member of a chord or an arpeggio — never a scale degree or a
@@ -84,48 +92,77 @@ public static partial class NoteStepper
     }
 
     /// <summary>
-    /// The edits of a semitone step of <paramref name="pitches"/>, merged with
-    /// <paramref name="others"/> (sorted, not overlapping them): each pitch respelled
-    /// (<see cref="Respell"/>), its octave marks corrected until it sounds a semitone from
-    /// where it was (the type's remarks). <paramref name="expand"/> is the step's.
+    /// The edits of a key step of <paramref name="pitches"/> and of the inversion of
+    /// <paramref name="inverted"/>, merged with <paramref name="others"/> (sorted, not
+    /// overlapping them), and a status-bar message (or null). Each pitch is respelled
+    /// (<see cref="Respell"/>); each inverted chord's lowest member goes an octave up
+    /// (<paramref name="dir"/> &gt; 0), or its highest an octave down (<see cref="Inversion"/>).
+    /// The octave marks are then corrected until every pitch sounds where it should — the
+    /// stepped ones at their new tone, an inverted chord's other members where they were (the
+    /// type's remarks). <paramref name="expand"/> is the step's.
     /// </summary>
-    private static List<Edit> SemitoneEdits(string text, SyntaxTree tree, IReadOnlyList<Edit> others,
-        IReadOnlyList<PitchSyntax> pitches, int dir, Func<string, SyntaxTree>? expand)
+    private static (List<Edit> Edits, string? Message) SemitoneEdits(string text, SyntaxTree tree,
+        IReadOnlyList<Edit> others, IReadOnlyList<PitchSyntax> pitches, IReadOnlyList<SyntaxNode> inverted,
+        int dir, Func<string, SyntaxTree>? expand)
     {
         bool longFlats = WritesLongFlats(tree);
-        var respelled = pitches.Select(p => Respell(p, dir, longFlats)).ToArray();
-        var names = respelled.Select(r => r.Name).ToArray();
-        var extra = new int[pitches.Count];
+        var before = WrittenMidi(text, tree, expand);
+        string? message = null;
+        // Each moved pitch: its new name, how far it moves (semitones) and its marks' first guess.
+        var moves = new List<(PitchSyntax P, string Name, int Delta, int Extra)>();
+        foreach (var p in pitches)
+        {
+            var (name, delta) = Respell(p, dir, longFlats);
+            moves.Add((p, name, delta, 0));
+        }
+        foreach (var chord in inverted)
+        {
+            var members = MembersOf(chord).OfType<PitchSyntax>()
+                .Where(m => m.BaseName != '\0' && !moves.Any(x => x.P.SourceStart == m.SourceStart)).ToList();
+            if (Inversion(members, before, dir) is not { } pick)
+            {
+                message ??= "the chord's pitches are not known - step its members instead";
+                continue;
+            }
+            foreach (var m in members)
+            {
+                bool moved = m.SourceStart == pick.SourceStart;
+                moves.Add((m, text[m.SourceStart..NameEnd(m)], moved ? 12 * dir : 0, moved ? dir : 0));
+            }
+            message ??= $"{text[pick.SourceStart..NameEnd(pick)]}: an octave {(dir > 0 ? "up - the lowest" : "down - the highest")} of the chord";
+        }
+        var extra = moves.Select(x => x.Extra).ToArray();
 
         List<Edit> Build()
         {
             var list = new List<Edit>(others);
-            for (int i = 0; i < pitches.Count; i++)
+            for (int i = 0; i < moves.Count; i++)
             {
-                var p = pitches[i];
+                var (p, name, _, _) = moves[i];
                 int nameEnd = NameEnd(p);
+                if (extra[i] == 0 && text[p.SourceStart..nameEnd] == name)
+                    continue;
                 list.Add(extra[i] == 0
-                    ? new Edit(p.SourceStart, nameEnd, names[i])
-                    : new Edit(p.SourceStart, MarksEnd(text, nameEnd), names[i] + Marks(p.OctaveOffset + extra[i])));
+                    ? new Edit(p.SourceStart, nameEnd, name)
+                    : new Edit(p.SourceStart, MarksEnd(text, nameEnd), name + Marks(p.OctaveOffset + extra[i])));
             }
             list.Sort((a, b) => a.Start.CompareTo(b.Start));
             return list;
         }
 
         var edits = Build();
-        var before = WrittenMidi(text, tree, expand);
         if (before.Count == 0)
-            return edits;
+            return (edits, message);
         for (int round = 0; round < MaxOctaveRounds; round++)
         {
             var after = WrittenMidi(Apply(text, edits), null, expand);
             bool corrected = false;
-            for (int i = 0; i < pitches.Count; i++)
+            for (int i = 0; i < moves.Count; i++)
             {
-                int at = pitches[i].SourceStart;
+                int at = moves[i].P.SourceStart;
                 if (!before.TryGetValue(at, out int was) || !after.TryGetValue(MapThrough(edits, at), out int now))
                     continue;
-                int off = now - (was + respelled[i].Delta);
+                int off = now - (was + moves[i].Delta);
                 if (off == 0 || off % 12 != 0)
                     continue;
                 extra[i] -= off / 12;
@@ -135,7 +172,16 @@ public static partial class NoteStepper
                 break;
             edits = Build();
         }
-        return edits;
+        return (edits, message);
+    }
+
+    /// <summary>The member an inversion moves: the lowest sounding (<paramref name="dir"/> &gt; 0)
+    /// or the highest, the first written of equals; null when a member's pitch is unknown.</summary>
+    private static PitchSyntax? Inversion(List<PitchSyntax> members, Dictionary<int, int> pitches, int dir)
+    {
+        if (members.Count == 0 || members.Any(m => !pitches.ContainsKey(m.SourceStart)))
+            return null;
+        return dir > 0 ? members.MinBy(m => pitches[m.SourceStart]) : members.MaxBy(m => pitches[m.SourceStart]);
     }
 
     /// <summary>The written pitch the compiler resolves at each pitch's first character
