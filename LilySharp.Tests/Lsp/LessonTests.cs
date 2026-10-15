@@ -99,11 +99,12 @@ public class LessonTests
     public void Lesson2_ItsTwoKeyTasks_TurnItIntoTheTune()
     {
         // The digit task starts from a short bar (`d4`, typed 2 anywhere on the note), and the
-        // octave task from a note written an octave high (`g2`, Ctrl+Shift+Down adds the `,`) —
-        // which also lifts the note after it, the relative frame carrying the slip. Done, the
-        // lesson is clean, and nothing else in it raises a message.
+        // octave task from a note written an octave high (`g2`, Ctrl+Shift+PageDown adds the `,`
+        // — Ctrl+Shift+Down until the owner gave that key the semitone, 2026-10-15) — which also
+        // lifts the note after it, the relative frame carrying the slip. Done, the lesson is
+        // clean, and nothing else in it raises a message.
         string lesson = LilySharpLanguageServer.Lessons[1].Text;
-        const string digit = "d4@todo(\"caret before d, type 2\")", octave = "g2@todo(\"Ctrl+Shift+Down on g\")";
+        const string digit = "d4@todo(\"caret before d, type 2\")", octave = "g2@todo(\"Ctrl+Shift+PageDown on g\")";
         Assert.Contains(digit, lesson);
         Assert.Contains(octave, lesson);
         static List<LilySharp.Core.Syntax.Diagnostic> Messages(string text)

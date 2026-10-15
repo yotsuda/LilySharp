@@ -41,9 +41,11 @@ same number. See the [changelog](https://github.com/yotsuda/LilySharp/blob/maste
 
 | Key | What it does |
 |-----|--------------|
-| `Ctrl+Shift+Up` / `Ctrl+Shift+Down` on a **note** | Adds one `'` (Up) or `,` (Down) after the pitch — or takes away one of the other mark if the note has it. Inside `< >` / `<< >>` only the member under the caret moves; on the chord's `>` or its duration, the marks after the bracket move the whole chord. With a selection, every note in it steps. It is a plain mark edit: in relative octave mode the notes after it follow |
-| `Ctrl+Shift+Up` / `Ctrl+Shift+Down` on a **chord** — an `@chord(…)` or a `chords` row entry | A chord draws a diagram only where its shape is written — unless the score's layout says `chordDiagrams all` (or `chordDiagrams guitar all`), where every chord draws, its usual shape when none is written; there Up on a name alone writes the NEXT shape and Down at the usual shape does nothing. On a name alone, Up writes its usual shape — LilyPond's predefined one, else Lily#'s first — and the diagram appears: `@chord(Cm7)` → `@chord(Cm7 x35343)`, `G` → `G(320003)`. Further Ups (and Downs) walk Lily#'s shapes, frets 10–15 included — written with a `-` on each side of a two-digit fret (`@chord(Cm 8xx888)` → `@chord(Cm 8xx88-11)`; frets 10, 9, 9 are `10-9-9`), and one character per string whenever every fret is 9 or less; Down back at the usual shape removes it, and the diagram goes; Down on a name alone does nothing. With several shapes written (`F(133211 2010)`) the one for the chord's tuning steps. A shape with muted strings steps from the shape it mutes. The status bar says where it is (`Cm7: shape 4 of 33 (x3x546)`). Stretch shapes — fretted frets five apart, hard to play — are left out unless `"lilysharp.chordShapes.includeStretch": true`; a stretch shape already written steps to the shapes that sort around it. Hover a chord with no shape to see what Up would write |
+| `Ctrl+Shift+Up` / `Ctrl+Shift+Down` on a **note** | Moves it a semitone, spelled in the key in force: a note of the key's scale as the signature spells it (`key f major`: `a` → `bes`, not `ais`), in a minor key the raised seventh and sixth on their own letters (`key d minor`: `c` → `cis`), any other note natural if it can be, else a flat in a flat key and a sharp in a sharp key (with no signature: a sharp going up, a flat going down). The note keeps its pitch: when the new letter would land in another octave (`b'` → `c''`; in relative octaves `f b` → `f c'`) the octave marks are corrected. Inside `< >` / `<< >>` only the member under the caret moves; on the chord's `>` or its duration, every member moves. With a selection, every note in it steps. A scale degree or a quarter tone moves by octave only |
+| `Ctrl+Shift+PageUp` / `Ctrl+Shift+PageDown` on a **note** | Adds one `'` (Up) or `,` (Down) after the pitch — or takes away one of the other mark if the note has it. Inside `< >` / `<< >>` only the member under the caret moves; on the chord's `>` or its duration, the marks after the bracket move the whole chord. With a selection, every note in it steps. It is a plain mark edit: in relative octave mode the notes after it follow |
+| Either pair on a **chord** — an `@chord(…)` or a `chords` row entry | A chord draws a diagram only where its shape is written — unless the score's layout says `chordDiagrams all` (or `chordDiagrams guitar all`), where every chord draws, its usual shape when none is written; there Up on a name alone writes the NEXT shape and Down at the usual shape does nothing. On a name alone, Up writes its usual shape — LilyPond's predefined one, else Lily#'s first — and the diagram appears: `@chord(Cm7)` → `@chord(Cm7 x35343)`, `G` → `G(320003)`. Further Ups (and Downs) walk Lily#'s shapes, frets 10–15 included — written with a `-` on each side of a two-digit fret (`@chord(Cm 8xx888)` → `@chord(Cm 8xx88-11)`; frets 10, 9, 9 are `10-9-9`), and one character per string whenever every fret is 9 or less; Down back at the usual shape removes it, and the diagram goes; Down on a name alone does nothing. With several shapes written (`F(133211 2010)`) the one for the chord's tuning steps. A shape with muted strings steps from the shape it mutes. The status bar says where it is (`Cm7: shape 4 of 33 (x3x546)`). Stretch shapes — fretted frets five apart, hard to play — are left out unless `"lilysharp.chordShapes.includeStretch": true`; a stretch shape already written steps to the shapes that sort around it. Hover a chord with no shape to see what Up would write |
 | `Ctrl+Shift+Up` / `Ctrl+Shift+Down` **anywhere else** | Nothing on Windows and macOS (VS Code binds these keys to nothing in the editor there); on Linux, VS Code's own *Add Cursor Above / Below*, which these keys are the second binding of |
+| `Ctrl+Shift+PageUp` / `Ctrl+Shift+PageDown` **anywhere else** | VS Code's own *Move Editor Left / Right in Group* on Windows and Linux; nothing on macOS |
 
 The chord's tuning is the diagram's: the score's `layout { chordDiagrams TUNING [all] }`, else the
 part's instrument when it is fretted (for a `chords` row, the staff it stands above), else the
@@ -69,10 +71,10 @@ preview itself (the browser's autoplay rule); the status bar says so when a stri
 first.
 
 To use other keys, open **Keyboard Shortcuts** (`Ctrl+K Ctrl+S`), search for
-`lilysharp.stepUp` / `lilysharp.stepDown`, and bind them where you like — and, on Linux, if
-you want `Ctrl+Shift+Up/Down` back as plain *Add Cursor Above / Below*, remove the two
-bindings there (Mac: the default is `Ctrl+Shift+Up/Down` too — the Control key — not yet
-tried on a Mac).
+`lilysharp.stepSemitoneUp` / `lilysharp.stepSemitoneDown` (semitone) or `lilysharp.stepUp` /
+`lilysharp.stepDown` (octave), and bind them where you like — and, on Linux, if you want
+`Ctrl+Shift+Up/Down` back as plain *Add Cursor Above / Below*, remove the two bindings there
+(Mac: the defaults are the same keys — the Control key — not yet tried on a Mac).
 
 ### Semantic Token Colors
 
@@ -160,7 +162,7 @@ If not set, the extension looks for `lilysharp-lsp` in PATH.
 6. Use `F12` to go to variable definition
 7. Use `Shift+Alt+F` to format document
 8. The preview opens beside the file by itself (`lilysharp.preview.openOnOpen`; `Ctrl+K V` opens it by hand) and follows whichever `.lys` is in front — the lock in its title bar keeps it on one file. Then **hold `Alt+P`** to hear the note under the caret, or press `Alt+M` to play the measure the caret is in (the preview panel is the synth — a sound font, see [Playback](#playback)); the preview's ▶ plays the score
-9. Press `Ctrl+Shift+Up` / `Ctrl+Shift+Down` on a note to move it an octave, or on `@chord(Cm7)` (or a chords-row `Cm7`) to add a chord diagram and try the next shape — see [Stepping and Audition](#stepping-and-audition)
+9. Press `Ctrl+Shift+Up` / `Ctrl+Shift+Down` on a note to move it a semitone (`Ctrl+Shift+PageUp` / `PageDown`: an octave), or on `@chord(Cm7)` (or a chords-row `Cm7`) to add a chord diagram and try the next shape — see [Stepping and Audition](#stepping-and-audition)
 
 ## Example
 

@@ -816,9 +816,10 @@ export function activate(context: vscode.ExtensionContext) {
     // smartBrackets.
     registerSmartTyping(context, (msg: string) => outputChannel.appendLine(msg));
 
-    // The step keys (Ctrl+Shift+Up / Ctrl+Shift+Down: a note's octave mark, a chord's
-    // shape) and the automatic audition (the caret landing on a note, a note
-    // typed, a step) — owner's decision 2026-09-28. The server computes both; the
+    // The step keys (Ctrl+Shift+Up / Down: a note's semitone, Ctrl+Shift+PageUp / PageDown:
+    // its octave mark — owner's decision 2026-10-15; both: a chord's shape) and the automatic
+    // audition (the caret landing on a note, a note typed, a step) — owner's decision
+    // 2026-09-28. The server computes both; the
     // preview webview is the synth, and with no preview open they are silent.
     registerStepAudition(context, {
         getClient: () => client,

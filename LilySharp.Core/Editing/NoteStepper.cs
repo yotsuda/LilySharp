@@ -25,14 +25,18 @@ using LilySharp.Core.Syntax;
 namespace LilySharp.Core.Editing;
 
 /// <summary>
-/// The editor's "step" keys (Ctrl+Shift+Up / Ctrl+Shift+Down in a <c>.lys</c>; Ctrl+Alt until
-/// the owner moved them, 2026-09-28) and the audition that sounds what the caret is on: which
-/// written thing a caret or a selection is on, the text edit one step up or down makes of it,
-/// and the pitches it sounds.
+/// The editor's "step" keys and the audition that sounds what the caret is on: which written
+/// thing a caret or a selection is on, the text edit one step up or down makes of it, and the
+/// pitches it sounds. Two pairs of keys (owner's decision 2026-10-15): Ctrl+Shift+Up / Down
+/// step a note by a SEMITONE (<see cref="SemitoneEdits"/>), Ctrl+Shift+PageUp / PageDown by an
+/// OCTAVE mark — the octave pair was Ctrl+Shift+Up / Down from 2026-09-28 to 2026-10-15, and
+/// Ctrl+Alt before that.
 /// </summary>
 /// <remarks>
 /// <para>
-/// Owner's decisions, 2026-09-28. What a step does depends on what the caret is on:
+/// Owner's decisions, 2026-09-28. What an OCTAVE step does depends on what the caret is on
+/// (a semitone step does the same to a voicing, and moves a note's or a member's letter
+/// instead of its marks):
 /// </para>
 /// <list type="bullet">
 /// <item>an <c>@chord(Cm7)</c> / <c>@chord(Cm7 x35343)</c>, or a <c>chords</c> row entry
@@ -71,7 +75,7 @@ namespace LilySharp.Core.Editing;
 /// the letters.
 /// </para>
 /// </remarks>
-public static class NoteStepper
+public static partial class NoteStepper
 {
     /// <summary>One replacement of <c>[Start, End)</c> in the text the request was made against.</summary>
     public readonly record struct Edit(int Start, int End, string NewText);
@@ -149,10 +153,12 @@ public static class NoteStepper
     /// tree that SOUNDS (the server's <c>using</c> expansion); null parses it as it stands.
     /// <paramref name="includeStretch"/> (<c>lilysharp.chordShapes.includeStretch</c>) lets an
     /// <c>@chord</c> step through stretch shapes too (<see cref="ShapeOrder"/>).
+    /// <paramref name="semitone"/> steps notes and members by a semitone instead of an octave
+    /// mark (<see cref="SemitoneEdits"/>); a voicing steps its shape either way.
     /// </summary>
     public static StepResult Step(
         string text, SyntaxTree tree, IReadOnlyList<(int Start, int End)> selections, int direction,
-        Func<string, SyntaxTree>? expand = null, bool includeStretch = false)
+        Func<string, SyntaxTree>? expand = null, bool includeStretch = false, bool semitone = false)
     {
         int dir = direction >= 0 ? 1 : -1;
         var targets = new List<Target>();
@@ -185,8 +191,22 @@ public static class NoteStepper
         var edits = new List<Edit>();
         string? message = null;
         var stepped = new List<Target>();
+        var bySemitone = new List<PitchSyntax>();
         foreach (var t in targets)
         {
+            if (semitone && t.Kind != TargetKind.Voicing)
+            {
+                // The letters move; their edits are made together below, since in relative
+                // octaves each one's octave depends on the ones before it.
+                var moved = SemitonePitches(t);
+                if (moved.Count == 0)
+                    message ??= SemitoneRefusal;
+                stepped.Add(t);
+                foreach (var p in moved)
+                    if (!bySemitone.Any(q => q.SourceStart == p.SourceStart))
+                        bySemitone.Add(p);
+                continue;
+            }
             var (edit, said, handled) = t.Kind == TargetKind.Voicing
                 ? VoicingEdit(t.Node, dir, includeStretch)
                 : (MarkEdit(text, MarksStart(t), dir), null, true);
@@ -199,6 +219,11 @@ public static class NoteStepper
         }
         if (stepped.Count == 0)
             return new StepResult(true, [], null, [], 0);
+        if (bySemitone.Count > 0)
+        {
+            edits.Sort((a, b) => a.Start.CompareTo(b.Start));
+            edits = SemitoneEdits(text, tree, edits, bySemitone, dir, expand);
+        }
 
         edits.Sort((a, b) => a.Start.CompareTo(b.Start));
         string newText = Apply(text, edits);

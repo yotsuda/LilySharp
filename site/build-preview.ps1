@@ -203,7 +203,7 @@ $template = @'
       it proposes <code>sings</code>, then the part names that exist in your file. Rename a
       part and every reference to it moves with it. Hover a chord and it names itself — symbol,
       degree and pitches. An octave mark or a duration typed anywhere on a note lands in its
-      slot, <code>Ctrl+Shift+Up/Down</code> steps an octave or a chord shape, and the note you
+      slot, <code>Ctrl+Shift+Up/Down</code> steps a semitone (PageUp/PageDown an octave) or a chord shape, and the note you
       land on sounds. <a href="editor.html">Everything the editor does &rarr;</a></p></div>
     <div class="pillar"><span class="n">06</span><h3>One source, every score</h3>
       <p>A file can carry more than one <code>score</code> and more than one

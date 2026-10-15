@@ -76,7 +76,7 @@ score { staff m }
 3. `f` と `4` の間で `1` → `f1`。小節が詰め直される（小節が長すぎる警告が出るが構わない。後で戻してよい）。
 4. 任意: `cis4.` の後ろで `8` → `cis8.`（付点は残る）。
 
-### 3. `editor-step-octave` — Ctrl+Shift+Up/Down（音あり）
+### 3. `editor-step-octave` — Ctrl+Shift+PageUp/PageDown（音あり・2026-10-15 にオクターブはこのキーへ移った＝下の手順の Up/Down は PageUp/PageDown と読む）
 1. 3 小節目頭の `c4` にキャレット。`Ctrl+Shift+Up` を 2 回（`c''4`）、`Ctrl+Shift+Down` を 1 回
    （`c'4`）— そのたびに鳴る。
 2. `<c e g>` の中の `e` にキャレット: `Ctrl+Shift+Up` — その構成音だけが動く（`<c e' g>`）。

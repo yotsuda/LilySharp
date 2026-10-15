@@ -4,6 +4,22 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+### Ctrl+Shift+Up / Down step a note by a semitone; the octave moves to PageUp / PageDown
+
+- **`Ctrl+Shift+Up` / `Ctrl+Shift+Down` now move a note a semitone, spelled in the key in force**
+  — a note of the key's scale as the signature spells it (`key f major`: `a` → `bes`, not `ais`),
+  in a minor key the raised seventh and sixth on their own letters (`key d minor`: `c` → `cis`),
+  any other note natural if it can be, else a flat in a flat key and a sharp in a sharp key (with
+  no signature: a sharp going up, a flat going down). The note keeps its pitch: where the new
+  letter would land in another octave the octave marks are corrected (`b'` → `c''`; in relative
+  octaves `f b` → `f c'`). A chord member moves alone; on the chord's `>` every member moves; a
+  selection moves every note in it. The flats are written the file's way (`ees` / `aes`, or
+  `es` / `as` where the file writes those). On an `@chord` or a chords-row entry the keys step
+  the shape as before. **Breaking:** the octave step moved to **`Ctrl+Shift+PageUp` /
+  `Ctrl+Shift+PageDown`** (same command ids, `lilysharp.stepUp` / `lilysharp.stepDown`; the
+  semitone commands are `lilysharp.stepSemitoneUp` / `lilysharp.stepSemitoneDown`). Off a note,
+  those keys keep VS Code's own *Move Editor Left / Right in Group*.
+
 ### Guess Section Key reads the chord names too
 
 - **Lily#: Guess Section Key… now reads a section's chord rows as well as its notes** — a

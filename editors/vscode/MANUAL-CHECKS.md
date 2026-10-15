@@ -20,10 +20,16 @@
 
 ## 1. HANDOFF §1.0 ⒜ が「未」と名指すもの
 
-### 1.1 ステップ Ctrl+Shift+↑ / ↓（`lilysharp.stepUp` / `stepDown`）
+### 1.1 ステップ Ctrl+Shift+↑ / ↓（半音・`lilysharp.stepSemitoneUp` / `Down`）と Ctrl+Shift+PgUp / PgDn（オクターブ・`lilysharp.stepUp` / `stepDown`）
 
-キーは **Ctrl+Shift+↑↓ の 1 組だけ**（オクターブ記号もコード図の形も同じキー）。HANDOFF の「Ctrl+Alt+↑↓」は Lily# の割り当てではない
-（Ctrl+Alt+↑↓ は Windows のカーソル追加＝`auditionCore.ts` の註）＝起票が古い。
+**2026-10-15 ユーザー決定でキーが 2 組になった**: Ctrl+Shift+↑↓＝半音、Ctrl+Shift+PgUp/PgDn＝オクターブ記号（それまで Ctrl+Shift+↑↓ がオクターブ）。
+コード図の形はどちらの組でも動く。Ctrl+Alt+↑↓ は Lily# の割り当てではない（Windows のカーソル追加＝`auditionCore.ts` の註）。
+**下の項目の「↑ / ↓」は、オクターブ記号の項目では PgUp / PgDn と読む。**
+
+- [ ] **半音**: `key f major a'4` の `a` で Ctrl+Shift+↑ → `bes'4`、もう 1 回 → `b'4`、もう 1 回 → `c''4`（記号が付いて音高が保たれる）。各回その音が鳴る。
+- [ ] `key d minor c'4` で ↑ → `cis'4`（導音はシャープ）。調号の無い本で `c'` ↑ → `cis'`、`d'` ↓ → `des'`。
+- [ ] relative の本で `f4 b4` の `b` で ↑ → `f4 c'4`（プレビューで c が f の上にある）。
+- [ ] 音符の上でない所で Ctrl+Shift+PgUp / PgDn → エディタのタブが左右に動く（VS Code 既定の Move Editor Left / Right in Group）。音符の上ではタブは動かず、オクターブが動く。
 
 > ⚠️ **音はプレビューの webview が鳴らす**（`stepAudition.ts` の頭の註・2026-09-28 のユーザー決定）＝**その本のプレビューが開いていないと、ステップも自動の試聴も黙って何も鳴らさない**（ステップはプレビューを開かない）。Alt+P / Alt+M だけは 1 回目でプレビューを開き、2 回目で鳴る。確かめる前に `Ctrl+K V` でプレビューを横に開く。音が出ないときの切り分け: ⑴ プレビューが開いているか ⑵ Alt+P で鳴るか（鳴らなければ webview の合成器＝`AudioContext` の側・第901 からは SoundFont シンセ＝出力チャネル「Lily# Extension」の `Preview synth …` の行を見る） ⑶ 出力チャネル「Lily#」に `step:` の行が出ていないか（サーバーが Fallback を返した） ⑷ `lilysharp.audition.enabled` が切られていないか。サーバーの `lilysharp/step` は SHOTLIST の 4 行の本で `pitches=[72]` を返す（第888 が使い捨ての試験で確認）。
 

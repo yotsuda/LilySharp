@@ -29,7 +29,7 @@
 | # | ラベル | 新しく出るもの | 曲（すべて PD） |
 |---|---|---|---|
 | 1 | `lesson-01-completion` | **STEP 0＝プレビューを開く**（Ctrl+K → V・エディタ右上のアイコン・▶）→ 補完ツアー: トップレベル（`key`→`g`→`major`）・part の中（`instrument`→`cello`＝clef が自動でヘ音記号になる・part に clef は書かない）・`@todo` を 1 つ消す（赤い丸が消える＝以後の課題の印の扱いを覚える）・`@` の一覧・休符の小節を `Cmaj7`→`<c e g b>`（`C` は音名 c と紛れるので避けた・G major でも出る）・form を `form { |: ~A :| }` に書き換え・squiggle にマウスを乗せる | Mary Had a Little Lamb |
-| 2 | `lesson-02-notes` | 音名・音価・`\|`・相対オクターブ `'` `,`・ファイルの 4 要素・**Ctrl+Shift+Up/Down**（`g2` を Down で `g,2`、後ろの音まで戻る）・**数字キー**（`d4` の d の前で `2`＝音符のどこで打っても音価に入る。2026-10-11 ユーザー指示「キーボードが上手な人ほど永久に気づかない」） | Ode to Joy（Beethoven） |
+| 2 | `lesson-02-notes` | 音名・音価・`\|`・相対オクターブ `'` `,`・ファイルの 4 要素・**Ctrl+Shift+PageUp/PageDown**（`g2` を PageDown で `g,2`、後ろの音まで戻る。2026-10-15 に Ctrl+Shift+Up/Down は半音へ＝ユーザー決定）・**数字キー**（`d4` の d の前で `2`＝音符のどこで打っても音価に入る。2026-10-11 ユーザー指示「キーボードが上手な人ほど永久に気づかない」） | Ode to Joy（Beethoven） |
 | 3 | `lesson-03-rhythm` | 付点・16 分・3/4・`partial`・（TRY で休符・タイ・数字キー） | Happy Birthday to You（Hill） |
 | 4 | `lesson-04-keys` | `is`/`es`・「鳴る音を書く・調は印刷だけ」・`key` と旋法・**`score low transpose bes,`＝同じ曲を別の調で印刷**（2026-10-11 ユーザー指摘「レッスンに transpose がない」） | Minuet in G（Petzold・右手） |
 | 5 | `lesson-05-expression` | 強弱・ヘアピン・スラー・`@tenuto` `@fermata`・`@rit`…`@!rit` | Silent Night（Gruber・6/8） |

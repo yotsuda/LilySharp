@@ -24,18 +24,31 @@
 // (debounced, never while a selection is being extended), a note typed from the
 // keyboard sounds once its token has settled, a step sounds what it stepped to.
 
-/** The step keys (owner's decision 2026-09-28: Ctrl+Shift+Up / Ctrl+Shift+Down, moved from
- * Ctrl+Alt, which is Windows' Add Cursor Above / Below). */
+/** The semitone step keys (owner's decision 2026-10-15). Ctrl+Shift+Up / Down stepped by an
+ * octave mark from 2026-09-28 (moved then from Ctrl+Alt, which is Windows' Add Cursor
+ * Above / Below) until the octave moved to Ctrl+Shift+PageUp / PageDown. */
 export const STEP_UP_KEY = 'ctrl+shift+up';
 export const STEP_DOWN_KEY = 'ctrl+shift+down';
 
+/** The octave step keys (owner's decision 2026-10-15): beside the semitone pair, with the same
+ * modifiers. VS Code binds them to Move Editor Left / Right in Group, which the extension
+ * shadows in a .lys editor and falls back to off a note (stepFallbackCommand). */
+export const OCTAVE_UP_KEY = 'ctrl+shift+pageup';
+export const OCTAVE_DOWN_KEY = 'ctrl+shift+pagedown';
+
 /** The command a step key falls back to when the caret is on nothing steppable, or
- * undefined for none. VS Code's editor binds Ctrl+Shift+Up/Down to nothing on Windows and
- * macOS, so there the key simply does nothing; on Linux it is the SECOND binding of
- * editor.action.insertCursorAbove / Below, which the extension's binding shadows — so it
- * runs that command, and the key keeps doing what it did without the extension.
- * `platform` is Node's process.platform. */
-export function stepFallbackCommand(direction: 1 | -1, platform: string): string | undefined {
+ * undefined for none — the command VS Code binds the key to, so the key keeps doing what it
+ * did without the extension. `platform` is Node's process.platform.
+ *
+ * The semitone keys (Ctrl+Shift+Up / Down): VS Code's editor binds them to nothing on
+ * Windows and macOS; on Linux they are the SECOND binding of Add Cursor Above / Below.
+ * The octave keys (Ctrl+Shift+PageUp / PageDown): Move Editor Left / Right in Group on
+ * Windows and Linux; macOS binds that command to other keys, so nothing there. */
+export function stepFallbackCommand(direction: 1 | -1, platform: string, semitone = true): string | undefined {
+    if (!semitone) {
+        if (platform === 'darwin') { return undefined; }
+        return direction > 0 ? 'workbench.action.moveEditorLeftInGroup' : 'workbench.action.moveEditorRightInGroup';
+    }
     if (platform !== 'linux') { return undefined; }
     return direction > 0 ? 'editor.action.insertCursorAbove' : 'editor.action.insertCursorBelow';
 }

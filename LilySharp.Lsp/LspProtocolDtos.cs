@@ -659,8 +659,8 @@ public class StepSelection
     public int End { get; set; }
 }
 
-/// <summary>Parameters for lilysharp/step (Ctrl+Shift+Up / Ctrl+Shift+Down): every selection
-/// and the direction, +1 up or -1 down.</summary>
+/// <summary>Parameters for lilysharp/step (Ctrl+Shift+Up / Down by a semitone, Ctrl+Shift+PageUp
+/// / PageDown by an octave): every selection and the direction, +1 up or -1 down.</summary>
 public class StepParams
 {
     public TextDocumentIdentifier TextDocument { get; set; } = null!;
@@ -670,6 +670,10 @@ public class StepParams
     /// <c>@chord</c> also steps through stretch shapes (fretted frets five apart). Optional;
     /// absent means false.</summary>
     public bool IncludeStretch { get; set; }
+    /// <summary>Owner's decision 2026-10-15: a note steps by a semitone instead of an octave
+    /// mark (<c>NoteStepper.Step</c>). Optional; absent means false — the octave step, as
+    /// every request before it.</summary>
+    public bool Semitone { get; set; }
 }
 
 /// <summary>One replacement of <c>[Start, End)</c> (offsets into the text of

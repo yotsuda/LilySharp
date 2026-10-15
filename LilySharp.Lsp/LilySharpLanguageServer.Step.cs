@@ -49,7 +49,7 @@ public sealed partial class LilySharpLanguageServer
                 @params.Selections.Select(s => (s.Start, s.End)).ToList(), @params.Direction,
                 text => ExpandUsings(text, SyntaxTree.Parse(text), basePath,
                     p => System.IO.File.Exists(p) ? System.IO.File.ReadAllText(p) : null).Tree,
-                @params.IncludeStretch);
+                @params.IncludeStretch, @params.Semitone);
             return new StepResponse
             {
                 Fallback = result.Fallback,

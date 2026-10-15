@@ -5,9 +5,10 @@
 //   1 whole · 2 half · 4 quarter · 8 eighth — no number = same as before.
 // Each note goes to the nearest octave. `'` = one octave up, `,` = down.
 //
-// Two keys do this for you, with the caret anywhere on a note:
-//   Ctrl+Shift+Up / Down   one octave up / down (adds or removes ' and ,)
-//   a digit                sets the length, wherever you type it on the note
+// Keys do this for you, with the caret anywhere on a note:
+//   Ctrl+Shift+PageUp / PageDown   one octave up / down (adds or removes ' and ,)
+//   Ctrl+Shift+Up / Down           one semitone up / down (spelled in the key)
+//   a digit                        sets the length, wherever you type it on the note
 
 title "Ode to Joy"
 composer "Ludwig van Beethoven"
@@ -17,7 +18,7 @@ part melody {                   // a player
   section A {                   // the music
     e4 e f g | g f e d | c c d e | e d d4@todo("caret before d, type 2") |
     e4 e f g | g f e d | c c d e | d c c2 |
-    d4 d e c | d e8 f e4 c | d4 e8 f e4 d | c d g2@todo("Ctrl+Shift+Down on g") |
+    d4 d e c | d e8 f e4 c | d4 e8 f e4 d | c d g2@todo("Ctrl+Shift+PageDown on g") |
     e'4 e f g | g f e d | c c d e | d c c2 |.           // e' = back up
   }
 }

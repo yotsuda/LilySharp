@@ -14,8 +14,9 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-// The step keys (Ctrl+Shift+Up / Ctrl+Shift+Down) and the automatic audition — the
-// half that talks to VS Code. Owner's decisions, 2026-09-28.
+// The step keys (Ctrl+Shift+Up / Down by a semitone, Ctrl+Shift+PageUp / PageDown by an
+// octave mark) and the automatic audition — the half that talks to VS Code. Owner's
+// decisions, 2026-09-28 and 2026-10-15.
 //
 // WHAT a step does and WHAT sounds are the server's (lilysharp/step,
 // lilysharp/auditionAt — LilySharp.Core's NoteStepper): it has the tree, the
@@ -121,23 +122,23 @@ export function registerStepAudition(context: vscode.ExtensionContext, deps: Ste
     // One step at a time: a held key repeats the command faster than the server
     // answers, and each step must see the text the previous one left.
     let stepChain: Promise<void> = Promise.resolve();
-    const step = (direction: 1 | -1) => {
-        stepChain = stepChain.then(() => runStep(direction)).catch(err => deps.log(`step: ${err}`));
+    const step = (direction: 1 | -1, semitone: boolean) => {
+        stepChain = stepChain.then(() => runStep(direction, semitone)).catch(err => deps.log(`step: ${err}`));
         return stepChain;
     };
 
-    // Nothing steppable: Add Cursor Above / Below on Linux (the key's own second binding
-    // there), nothing on Windows and macOS (stepFallbackCommand).
-    const fallback = async (direction: 1 | -1) => {
-        const command = stepFallbackCommand(direction, process.platform);
+    // Nothing steppable: the key's own command (stepFallbackCommand) — Add Cursor Above /
+    // Below on Linux for the semitone keys, Move Editor Left / Right for the octave keys.
+    const fallback = async (direction: 1 | -1, semitone: boolean) => {
+        const command = stepFallbackCommand(direction, process.platform, semitone);
         if (command) { await vscode.commands.executeCommand(command); }
     };
 
-    const runStep = async (direction: 1 | -1) => {
+    const runStep = async (direction: 1 | -1, semitone: boolean) => {
         const editor = vscode.window.activeTextEditor;
         const client = deps.getClient();
         if (!editor || editor.document.languageId !== 'lilysharp' || !client || !deps.isReady()) {
-            await fallback(direction);
+            await fallback(direction, semitone);
             return;
         }
         const doc = editor.document;
@@ -147,10 +148,11 @@ export function registerStepAudition(context: vscode.ExtensionContext, deps: Ste
             Selections: editor.selections.map(s => ({ Start: doc.offsetAt(s.start), End: doc.offsetAt(s.end) })),
             Direction: direction,
             IncludeStretch: includeStretch(),
+            Semitone: semitone,
         });
         if (response.Fallback) {
             if (response.Error) { deps.log(`step: ${response.Error}`); }
-            await fallback(direction);
+            await fallback(direction, semitone);
             return;
         }
         // Typed into while the server thought: the offsets are about another text.
@@ -178,8 +180,10 @@ export function registerStepAudition(context: vscode.ExtensionContext, deps: Ste
     };
 
     context.subscriptions.push(
-        vscode.commands.registerCommand('lilysharp.stepUp', () => step(1)),
-        vscode.commands.registerCommand('lilysharp.stepDown', () => step(-1)),
+        vscode.commands.registerCommand('lilysharp.stepSemitoneUp', () => step(1, true)),
+        vscode.commands.registerCommand('lilysharp.stepSemitoneDown', () => step(-1, true)),
+        vscode.commands.registerCommand('lilysharp.stepUp', () => step(1, false)),
+        vscode.commands.registerCommand('lilysharp.stepDown', () => step(-1, false)),
     );
 
     // ---- the automatic auditions ----

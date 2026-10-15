@@ -19,33 +19,45 @@ import * as assert from 'node:assert/strict';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import {
-    AuditionMemory, Debouncer, EDIT_SELECTION_WINDOW_MS, CHORD_MS, NOTE_MS, STEP_DOWN_KEY, STEP_UP_KEY,
+    AuditionMemory, Debouncer, EDIT_SELECTION_WINDOW_MS, CHORD_MS, NOTE_MS, OCTAVE_DOWN_KEY, OCTAVE_UP_KEY,
+    STEP_DOWN_KEY, STEP_UP_KEY,
     auditionDurationMs, caretMoveMaySound, mayChangeATypedPitch, stepFallbackCommand,
 } from '../src/auditionCore';
 
 const DOC = 'file:///a.lys';
 
-describe('the step keys (owner\'s decision 2026-09-28: Ctrl+Shift+Up / Down)', () => {
-    it('are bound in package.json to Ctrl+Shift+Up / Down, in a writable .lys editor', () => {
+describe('the step keys (owner\'s decisions 2026-09-28 and 2026-10-15)', () => {
+    it('are bound in package.json: semitone to Ctrl+Shift+Up / Down, octave to Ctrl+Shift+PageUp / PageDown', () => {
         const manifest = JSON.parse(fs.readFileSync(path.join(__dirname, '..', '..', 'package.json'), 'utf8'));
         const bindings = manifest.contributes.keybindings as { command: string; key: string; when: string }[];
-        const up = bindings.filter(b => b.command === 'lilysharp.stepUp');
-        const down = bindings.filter(b => b.command === 'lilysharp.stepDown');
-        assert.deepEqual(up.map(b => b.key), [STEP_UP_KEY]);
-        assert.deepEqual(down.map(b => b.key), [STEP_DOWN_KEY]);
-        for (const b of [...up, ...down]) {
-            assert.equal(b.when, 'editorTextFocus && !editorReadonly && editorLangId == lilysharp');
+        const keysOf = (command: string) => bindings.filter(b => b.command === command);
+        const pairs: [string, string][] = [
+            ['lilysharp.stepSemitoneUp', STEP_UP_KEY], ['lilysharp.stepSemitoneDown', STEP_DOWN_KEY],
+            ['lilysharp.stepUp', OCTAVE_UP_KEY], ['lilysharp.stepDown', OCTAVE_DOWN_KEY],
+        ];
+        for (const [command, key] of pairs) {
+            const bound = keysOf(command);
+            assert.deepEqual(bound.map(b => b.key), [key], command);
+            assert.equal(bound[0].when, 'editorTextFocus && !editorReadonly && editorLangId == lilysharp');
         }
         assert.ok(!bindings.some(b => /ctrl\+alt\+(up|down)/.test(b.key)), 'no Ctrl+Alt+Up/Down left');
     });
 
-    it('fall back to Add Cursor Above / Below on Linux only (its second binding there)', () => {
+    it('semitone keys fall back to Add Cursor Above / Below on Linux only (its second binding there)', () => {
         assert.equal(stepFallbackCommand(1, 'linux'), 'editor.action.insertCursorAbove');
         assert.equal(stepFallbackCommand(-1, 'linux'), 'editor.action.insertCursorBelow');
         for (const platform of ['win32', 'darwin']) {
             assert.equal(stepFallbackCommand(1, platform), undefined);
             assert.equal(stepFallbackCommand(-1, platform), undefined);
         }
+    });
+
+    it('octave keys fall back to Move Editor Left / Right in Group, except on macOS', () => {
+        for (const platform of ['win32', 'linux']) {
+            assert.equal(stepFallbackCommand(1, platform, false), 'workbench.action.moveEditorLeftInGroup');
+            assert.equal(stepFallbackCommand(-1, platform, false), 'workbench.action.moveEditorRightInGroup');
+        }
+        assert.equal(stepFallbackCommand(1, 'darwin', false), undefined);
     });
 });
 

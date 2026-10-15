@@ -88,7 +88,7 @@ public class StepRequestTests
 
     /// <summary>Steps the marked source; the response and the text with its edits applied.</summary>
     private static (StepResponse Response, string After) Step(string marked, int direction,
-        bool includeStretch = false)
+        bool includeStretch = false, bool semitone = false)
     {
         var (text, selections) = Marked(marked);
         var response = Open(text).Step(new StepParams
@@ -97,6 +97,7 @@ public class StepRequestTests
             Selections = selections.Select(s => new StepSelection { Start = s.Start, End = s.End }).ToArray(),
             Direction = direction,
             IncludeStretch = includeStretch,
+            Semitone = semitone,
         });
         string after = text;
         foreach (var e in response.Edits.OrderByDescending(e => e.Start))
@@ -483,6 +484,120 @@ public class StepRequestTests
         Assert.Equal(Plain("c'4 r4 d'2 |"), after);
         Assert.True(Step(Plain("c'4 r4 d'2 |‸"), -1).Response.Fallback);
     }
+
+    // ---------------------------------------------------------------- semitones (2026-10-15)
+
+    /// <summary>Relative octaves (the language's default).</summary>
+    private static string Rel(string music) => MusicSource.Wrap(music);
+
+    /// <summary>A semitone step of the marked source; the text after it.</summary>
+    private static string Semi(string marked, int direction, Func<string, string> book)
+    {
+        var (response, after) = Step(book(marked), direction, semitone: true);
+        Assert.False(response.Fallback, response.Error);
+        return after;
+    }
+
+    /// <summary>Owner's decision 2026-10-15: a note of the key is spelled as the signature
+    /// spells it (F major: a → bes, not ais), any other note natural if it can be, else flat in
+    /// a flat key.</summary>
+    [Fact]
+    public void ASemitone_InAFlatKey_SpellsTheScaleThenFlats()
+    {
+        Assert.Equal(Plain("key f major bes'4"), Semi("key f major a'‸4", +1, Plain));
+        Assert.Equal(Plain("key f major b'4"), Semi("key f major bes'‸4", +1, Plain));
+        Assert.Equal(Plain("key f major bes'4"), Semi("key f major b'‸4", -1, Plain));
+        Assert.Equal(Plain("key f major aes'4"), Semi("key f major a'‸4", -1, Plain));
+        Assert.Equal(Plain("key f major des'4"), Semi("key f major c'‸4", +1, Plain));
+    }
+
+    /// <summary>In a sharp key the black keys off the scale are sharps; with no signature, a
+    /// sharp going up and a flat going down.</summary>
+    [Fact]
+    public void ASemitone_InASharpKey_Sharps_InCMajor_ByDirection()
+    {
+        Assert.Equal(Plain("key g major fis'4"), Semi("key g major f'‸4", +1, Plain));
+        Assert.Equal(Plain("key g major gis'4"), Semi("key g major g'‸4", +1, Plain));
+        Assert.Equal(Plain("key g major dis'4"), Semi("key g major e'‸4", -1, Plain));
+        Assert.Equal(Plain("cis'4"), Semi("c'‸4", +1, Plain));
+        Assert.Equal(Plain("des'4"), Semi("d'‸4", -1, Plain));
+        Assert.Equal(Plain("f'4"), Semi("e'‸4", +1, Plain));
+    }
+
+    /// <summary>A minor key spells its leading tone and raised sixth on their own letters,
+    /// whichever way the step goes (D minor: cis, not des).</summary>
+    [Fact]
+    public void ASemitone_InAMinorKey_SpellsTheLeadingToneSharp()
+    {
+        Assert.Equal(Plain("key d minor cis'4"), Semi("key d minor c'‸4", +1, Plain));
+        Assert.Equal(Plain("key d minor cis'4"), Semi("key d minor d'‸4", -1, Plain));
+        Assert.Equal(Plain("key a minor gis'4"), Semi("key a minor a'‸4", -1, Plain));
+        Assert.Equal(Plain("key a minor fis'4"), Semi("key a minor f'‸4", +1, Plain));
+    }
+
+    /// <summary>The key is the part declaration's, then the file's, when the music writes none.</summary>
+    [Fact]
+    public void ASemitone_ReadsThePartsKey_ThenTheFiles()
+    {
+        Assert.Equal(MusicSource.Wrap("bes'4", "octave absolute\nkey f major"),
+            Semi("a'‸4", +1, m => MusicSource.Wrap(m, "octave absolute\nkey f major")));
+        string Part(string m) => $$"""
+            octave absolute
+            key g major
+            part melody { key ees major }
+            section A { melody { {{m}} } }
+            form { A }
+            score { staff melody }
+            """;
+        Assert.Equal(Part("aes'4"), Semi("g'‸4", +1, Part));
+    }
+
+    /// <summary>The note keeps its pitch (owner's decision 2026-10-15): a new letter that the
+    /// octave rule would put elsewhere gets its marks corrected — in absolute octaves b' → c'',
+    /// and in relative ones f b → f c' (the nearest c is below the f).</summary>
+    [Fact]
+    public void ASemitone_KeepsThePitch_AcrossTheLettersOctave()
+    {
+        Assert.Equal(Plain("c''4"), Semi("b'‸4", +1, Plain));
+        Assert.Equal(Plain("b'4"), Semi("c''‸4", -1, Plain));
+        Assert.Equal(Plain("key ges major ces''4"), Semi("key ges major bes'‸4", +1, Plain));
+        Assert.Equal(Rel("f4 c'4"), Semi("f4 b‸4", +1, Rel));
+        Assert.Equal(Rel("f4 b4"), Semi("f4 c'‸4", -1, Rel));
+        Assert.Equal(Rel("a4 c4"), Semi("a4 b‸4", +1, Rel));
+        Assert.Equal([73], Step(Plain("c'‸4"), +1, semitone: true).Response.Pitches);
+    }
+
+    [Fact]
+    public void ASemitone_MovesAMemberAlone_OrAWholeChord()
+    {
+        Assert.Equal(Plain("<c' f' g'>4"), Semi("<c' e'‸ g'>4", +1, Plain));
+        Assert.Equal(Plain("<cis' f' gis'>4"), Semi("<c' e' g'>‸4", +1, Plain));
+        Assert.Equal(Plain("cis'4 r4 <d' fis'>4"), Semi("«c'4 r4 <cis' f'>4»", +1, Plain));
+    }
+
+    /// <summary>The step writes the file's flats: LilyPond's contractions es / as where the file
+    /// writes them, the language's ees / aes otherwise.</summary>
+    [Fact]
+    public void ASemitone_WritesTheFilesFlats()
+    {
+        Assert.Equal(Plain("key bes major es'4 as'4"), Semi("key bes major es'4 a'‸4", -1, Plain));
+        Assert.Equal(Plain("key bes major ees'4"), Semi("key bes major e'‸4", -1, Plain));
+    }
+
+    [Fact]
+    public void ASemitone_LeavesAQuarterTone_AndSaysWhy()
+    {
+        var (response, after) = Step(Plain("cih'‸4"), +1, semitone: true);
+        Assert.False(response.Fallback);
+        Assert.Empty(response.Edits);
+        Assert.Equal(Plain("cih'4"), after);
+        Assert.Contains("octave only", response.Message);
+    }
+
+    [Fact]
+    public void ASemitone_OnAShape_StepsTheShape()
+        => Assert.Equal(Guitar("c'1@chord(Cm7 x35343)"),
+            Step(Guitar("c'1@chord(Cm7‸)"), +1, semitone: true).After);
 
     // ---------------------------------------------------------------- what sounds
 
