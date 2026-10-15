@@ -632,6 +632,34 @@ public class StepRequestTests
         Assert.Empty(none.Pitches);
     }
 
+    // ---------------------------------------------------------------- a key
+
+    [Fact]
+    public void AKey_WalksTheCircleOfFifths_OnTheSemitoneKeys()
+    {
+        Assert.Equal(Plain("key g major c'4"), Step(Plain("k‸ey c major c'4"), +1, semitone: true).After);
+        Assert.Equal(Plain("key f major c'4"), Step(Plain("key c major‸ c'4"), -1, semitone: true).After);
+        Assert.Equal(Plain("key fis major c'4"), Step(Plain("key b‸ major c'4"), +1, semitone: true).After);
+        Assert.Equal(Plain("key bes major c'4"), Step(Plain("key ‸f major c'4"), -1, semitone: true).After);
+        Assert.Equal(Plain("key e minor c'4"), Step(Plain("key a mi‸nor c'4"), +1, semitone: true).After);
+        Assert.Equal(Plain("key a dorian c'4"), Step(Plain("‸key d dorian c'4"), +1, semitone: true).After);
+    }
+
+    [Fact]
+    public void AKey_WritesTheFilesFlats_AndStopsAtSeven()
+    {
+        Assert.Equal(Plain("key es major as'4"), Step(Plain("key ‸bes major as'4"), -1, semitone: true).After);
+        Assert.Equal(Plain("key ees major c'4"), Step(Plain("key ‸bes major c'4"), -1, semitone: true).After);
+        var (top, after) = Step(Plain("key ‸cis major c'4"), +1, semitone: true);
+        Assert.False(top.Fallback);
+        Assert.Equal(Plain("key cis major c'4"), after);
+        Assert.Contains("7 sharps", top.Message);
+    }
+
+    [Fact]
+    public void AKey_OnTheOctaveKeys_FallsBack()
+        => Assert.True(Step(Plain("key ‸c major c'4"), +1).Response.Fallback);
+
     [Fact]
     public void ANoteAfterATempo_StillStepsAsANote()
         => Assert.Equal(Plain("tempo 120 cis'4"), Step(Plain("tempo 120 ‸c'4"), +1, semitone: true).After);

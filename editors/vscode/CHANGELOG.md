@@ -20,6 +20,15 @@ All notable changes to the Lily# VS Code extension are documented here.
   semitone commands are `lilysharp.stepSemitoneUp` / `lilysharp.stepSemitoneDown`). Off a note,
   those keys keep VS Code's own *Move Editor Left / Right in Group*.
 
+### Ctrl+Shift+Up / Down walk a key round the circle of fifths
+
+- **On a `key`, `Ctrl+Shift+Up` adds a sharp and `Ctrl+Shift+Down` a flat** — the key a fifth up
+  or down: `key c major` → `key g major` → `key d major`; Down → `key f major`. The mode stays
+  (`a minor` → `e minor`, `d dorian` → `a dorian`), the walk stops at seven sharps or flats, and
+  flats are written the file's way (`ees` / `es`). Only the signature changes, not the notes after
+  it. `key custom …` steps nothing; `Ctrl+Shift+PageUp` / `PageDown` on a key keep VS Code's own
+  command.
+
 ### The step keys change a tempo: by 1, or by 10
 
 - **On a `tempo`, `Ctrl+Shift+Up` / `Ctrl+Shift+Down` change the metronome number by 1, and

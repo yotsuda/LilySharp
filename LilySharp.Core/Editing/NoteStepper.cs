@@ -31,7 +31,8 @@ namespace LilySharp.Core.Editing;
 /// step a note by a SEMITONE (<see cref="SemitoneEdits"/>), Ctrl+Shift+PageUp / PageDown by an
 /// OCTAVE mark — the octave pair was Ctrl+Shift+Up / Down from 2026-09-28 to 2026-10-15, and
 /// Ctrl+Alt before that. On a <c>tempo</c> the same pairs step the metronome number by 1 and
-/// by 10 (owner's decision 2026-10-16, NoteStepper.Tempo.cs).
+/// by 10 (owner's decision 2026-10-16, NoteStepper.Tempo.cs); on a <c>key</c> the semitone
+/// pair moves it a fifth round the circle (same day, NoteStepper.Key.cs).
 /// </summary>
 /// <remarks>
 /// <para>
@@ -95,6 +96,8 @@ public static partial class NoteStepper
         Voicing,
         /// <summary>A <c>tempo</c> — its metronome number steps (NoteStepper.Tempo.cs).</summary>
         Tempo,
+        /// <summary>A <c>key</c> — the semitone pair walks the circle of fifths (NoteStepper.Key.cs).</summary>
+        Key,
     }
 
     /// <summary>A written thing the caret is on: its kind and its node (a
@@ -207,6 +210,18 @@ public static partial class NoteStepper
                 stepped.Add(t);
                 continue;
             }
+            if (t.Kind == TargetKind.Key)
+            {
+                // Only the semitone pair steps a key; the octave pair keeps the editor's command.
+                if (!semitone)
+                    continue;
+                var (keyEdit, keySaid) = KeyEdit((KeySignatureSyntax)t.Node, dir, WritesLongFlats(tree));
+                message ??= keySaid;
+                if (keyEdit is { } ke)
+                    edits.Add(ke);
+                stepped.Add(t);
+                continue;
+            }
             if (semitone && t.Kind != TargetKind.Voicing)
             {
                 // The letters move; their edits are made together below, since in relative
@@ -252,7 +267,7 @@ public static partial class NoteStepper
             var sounding = expand?.Invoke(newText) ?? newTree;
             foreach (var t in stepped)
             {
-                if (t.Kind == TargetKind.Tempo)
+                if (t.Kind is TargetKind.Tempo or TargetKind.Key)
                     continue;
                 int at = MapThrough(edits, t.Key);
                 if (FindTarget(newTree, t.Kind, at) is not { } moved)
@@ -286,7 +301,7 @@ public static partial class NoteStepper
     public static Audition? AuditionAt(string text, SyntaxTree tree, int offset, SyntaxTree? sounding = null,
         bool includeStretch = false)
     {
-        if (TargetAt(text, tree, offset) is not { } target || target.Kind == TargetKind.Tempo)
+        if (TargetAt(text, tree, offset) is not { } target || target.Kind is TargetKind.Tempo or TargetKind.Key)
             return null;
         // A chords-row entry sounds when STEPPED, not when the caret lands on it: the caret
         // audition stays what it was before row entries became steppable (Lily#'s choice,
@@ -322,6 +337,8 @@ public static partial class NoteStepper
     {
         if (TempoAt(tree, offset) is { } tempo)
             return new Target(TargetKind.Tempo, tempo);
+        if (KeyAt(tree, offset) is { } key)
+            return new Target(TargetKind.Key, key);
         // An @chord: strictly after its '@' — a caret just before the '@' is also just after
         // the note's duration, and belongs to the note.
         // A bare one on a chord(…) item names the item's words (ChordAnnotation.Of), so it
