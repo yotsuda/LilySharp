@@ -131,6 +131,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - ⚠️ **未確認**: 実機の VS Code（拡張の組み直しが要る＝ユーザー）。PgUp/PgDn の上書きで音符の上ではタブ移動が効かない点はユーザー了承済み。
 - ⚠️ 観察: `samples/*.lys` 5 冊にこの会話より前からの未 commit の変更（ユーザー）＝触っていない。
 - `-End p906 -DiffBase f62596cbc`＝full **12339 / 0 / 2 / 12341**（Core 警告 6 は開始時から在る MeasureCollector の null 参照）。Core '+' 334 行・LILYSHARP-OWN 0（エディタの補助で LP に対応物なし）。未 push 43（push はユーザー）。
+- **ユーザー要望（2026-10-16）「テンポの上で Ctrl+Shift+PgUp で 10、Ctrl+Shift+↑ で 1 上げたい」**＝`831f851e6`: `NoteStepper.Tempo.cs`。`TargetKind.Tempo`（`tempo` の語から最後の値まで・`TargetAt` の先頭で取る）。半音の組＝±1、オクターブの組＝±10（`TempoBigStep`）。動かすのは `TempoValue` が bpm と読む数（`ValuePositions.Count`）だけ＝拍の単位と `swing 16` は動かさない。1 で止まる（Lily# の選択）。数の無い `tempo "Allegro"`／`tempo swing` は Fallback にせず何もしないでステータスバーに一言。テンポは鳴らさない（`AuditionAt` は null）。拡張側は無変更（応答は汎用）。網 `StepRequestTests` 4 本。README・拡張 CHANGELOG・MANUAL-CHECKS §1.1・site（editor／commands）。Lsp の網 492 本は通過、full は回していない。
 判定: 次の一手はユーザーの実機確認待ち ⇒ **この会話で続けてよい**。
 
 ## 以下は第905セッションの経緯
