@@ -498,46 +498,49 @@ public class StepRequestTests
         return after;
     }
 
-    /// <summary>Owner's decision 2026-10-15: a note of the key is spelled as the signature
-    /// spells it (F major: a → bes, not ais), any other note natural if it can be, else flat in
-    /// a flat key.</summary>
+    /// <summary>Owner's decision 2026-10-16: the step goes to the next tone of the key, spelled
+    /// as the signature spells it (F major: a → bes, bes → c); a note off the scale goes to the
+    /// nearest tone of it that way (b → c up, bes down).</summary>
     [Fact]
-    public void ASemitone_InAFlatKey_SpellsTheScaleThenFlats()
+    public void AScaleStep_InAFlatKey_WalksTheScale()
     {
         Assert.Equal(Plain("key f major bes'4"), Semi("key f major a'‸4", +1, Plain));
-        Assert.Equal(Plain("key f major b'4"), Semi("key f major bes'‸4", +1, Plain));
+        Assert.Equal(Plain("key f major c''4"), Semi("key f major bes'‸4", +1, Plain));
+        Assert.Equal(Plain("key f major bes'4"), Semi("key f major c''‸4", -1, Plain));
+        Assert.Equal(Plain("key f major g'4"), Semi("key f major a'‸4", -1, Plain));
+        Assert.Equal(Plain("key f major c''4"), Semi("key f major b'‸4", +1, Plain));
         Assert.Equal(Plain("key f major bes'4"), Semi("key f major b'‸4", -1, Plain));
-        Assert.Equal(Plain("key f major aes'4"), Semi("key f major a'‸4", -1, Plain));
-        Assert.Equal(Plain("key f major des'4"), Semi("key f major c'‸4", +1, Plain));
     }
 
-    /// <summary>In a sharp key the black keys off the scale are sharps; with no signature, a
-    /// sharp going up and a flat going down.</summary>
+    /// <summary>In G major e steps up to fis; with no signature the white keys, and a black key
+    /// steps to its neighbour that way.</summary>
     [Fact]
-    public void ASemitone_InASharpKey_Sharps_InCMajor_ByDirection()
+    public void AScaleStep_InASharpKey_AndInCMajor()
     {
-        Assert.Equal(Plain("key g major fis'4"), Semi("key g major f'‸4", +1, Plain));
-        Assert.Equal(Plain("key g major gis'4"), Semi("key g major g'‸4", +1, Plain));
-        Assert.Equal(Plain("key g major dis'4"), Semi("key g major e'‸4", -1, Plain));
-        Assert.Equal(Plain("cis'4"), Semi("c'‸4", +1, Plain));
-        Assert.Equal(Plain("des'4"), Semi("d'‸4", -1, Plain));
+        Assert.Equal(Plain("key g major fis'4"), Semi("key g major e'‸4", +1, Plain));
+        Assert.Equal(Plain("key g major g'4"), Semi("key g major fis'‸4", +1, Plain));
+        Assert.Equal(Plain("key g major fis'4"), Semi("key g major g'‸4", -1, Plain));
+        Assert.Equal(Plain("d'4"), Semi("c'‸4", +1, Plain));
+        Assert.Equal(Plain("d'4"), Semi("cis'‸4", +1, Plain));
+        Assert.Equal(Plain("c'4"), Semi("cis'‸4", -1, Plain));
         Assert.Equal(Plain("f'4"), Semi("e'‸4", +1, Plain));
     }
 
-    /// <summary>A minor key spells its leading tone and raised sixth on their own letters,
-    /// whichever way the step goes (D minor: cis, not des).</summary>
+    /// <summary>A minor key walks its signature — the natural minor (Lily#'s choice); a church
+    /// mode its own (D dorian: b natural).</summary>
     [Fact]
-    public void ASemitone_InAMinorKey_SpellsTheLeadingToneSharp()
+    public void AScaleStep_InAMinorKey_WalksTheSignature()
     {
-        Assert.Equal(Plain("key d minor cis'4"), Semi("key d minor c'‸4", +1, Plain));
-        Assert.Equal(Plain("key d minor cis'4"), Semi("key d minor d'‸4", -1, Plain));
-        Assert.Equal(Plain("key a minor gis'4"), Semi("key a minor a'‸4", -1, Plain));
-        Assert.Equal(Plain("key a minor fis'4"), Semi("key a minor f'‸4", +1, Plain));
+        Assert.Equal(Plain("key d minor d'4"), Semi("key d minor c'‸4", +1, Plain));
+        Assert.Equal(Plain("key d minor c'4"), Semi("key d minor d'‸4", -1, Plain));
+        Assert.Equal(Plain("key d minor bes'4"), Semi("key d minor a'‸4", +1, Plain));
+        Assert.Equal(Plain("key a minor a'4"), Semi("key a minor g'‸4", +1, Plain));
+        Assert.Equal(Plain("key d dorian b'4"), Semi("key d dorian a'‸4", +1, Plain));
     }
 
     /// <summary>The key is the part declaration's, then the file's, when the music writes none.</summary>
     [Fact]
-    public void ASemitone_ReadsThePartsKey_ThenTheFiles()
+    public void AScaleStep_ReadsThePartsKey_ThenTheFiles()
     {
         Assert.Equal(MusicSource.Wrap("bes'4", "octave absolute\nkey f major"),
             Semi("a'‸4", +1, m => MusicSource.Wrap(m, "octave absolute\nkey f major")));
@@ -556,7 +559,7 @@ public class StepRequestTests
     /// octave rule would put elsewhere gets its marks corrected — in absolute octaves b' → c'',
     /// and in relative ones f b → f c' (the nearest c is below the f).</summary>
     [Fact]
-    public void ASemitone_KeepsThePitch_AcrossTheLettersOctave()
+    public void AScaleStep_KeepsThePitch_AcrossTheLettersOctave()
     {
         Assert.Equal(Plain("c''4"), Semi("b'‸4", +1, Plain));
         Assert.Equal(Plain("b'4"), Semi("c''‸4", -1, Plain));
@@ -564,24 +567,24 @@ public class StepRequestTests
         Assert.Equal(Rel("f4 c'4"), Semi("f4 b‸4", +1, Rel));
         Assert.Equal(Rel("f4 b4"), Semi("f4 c'‸4", -1, Rel));
         Assert.Equal(Rel("a4 c4"), Semi("a4 b‸4", +1, Rel));
-        Assert.Equal([73], Step(Plain("c'‸4"), +1, semitone: true).Response.Pitches);
+        Assert.Equal([74], Step(Plain("c'‸4"), +1, semitone: true).Response.Pitches);
     }
 
     [Fact]
-    public void ASemitone_MovesAMemberAlone_OrAWholeChord()
+    public void AScaleStep_MovesAMemberAlone_OrAWholeChord()
     {
         Assert.Equal(Plain("<c' f' g'>4"), Semi("<c' e'‸ g'>4", +1, Plain));
-        Assert.Equal(Plain("<cis' f' gis'>4"), Semi("<c' e' g'>‸4", +1, Plain));
-        Assert.Equal(Plain("cis'4 r4 <d' fis'>4"), Semi("«c'4 r4 <cis' f'>4»", +1, Plain));
+        Assert.Equal(Plain("<d' f' a'>4"), Semi("<c' e' g'>‸4", +1, Plain));
+        Assert.Equal(Plain("d'4 r4 <d' g'>4"), Semi("«c'4 r4 <cis' f'>4»", +1, Plain));
     }
 
     /// <summary>The step writes the file's flats: LilyPond's contractions es / as where the file
     /// writes them, the language's ees / aes otherwise.</summary>
     [Fact]
-    public void ASemitone_WritesTheFilesFlats()
+    public void AScaleStep_WritesTheFilesFlats()
     {
-        Assert.Equal(Plain("key bes major es'4 as'4"), Semi("key bes major es'4 a'‸4", -1, Plain));
-        Assert.Equal(Plain("key bes major ees'4"), Semi("key bes major e'‸4", -1, Plain));
+        Assert.Equal(Plain("key bes major as'4 es'4"), Semi("key bes major as'4 f'‸4", -1, Plain));
+        Assert.Equal(Plain("key bes major ees'4"), Semi("key bes major f'‸4", -1, Plain));
     }
 
     [Fact]
@@ -673,7 +676,7 @@ public class StepRequestTests
 
     [Fact]
     public void ANoteAfterATempo_StillStepsAsANote()
-        => Assert.Equal(Plain("tempo 120 cis'4"), Step(Plain("tempo 120 ‸c'4"), +1, semitone: true).After);
+        => Assert.Equal(Plain("tempo 120 d'4"), Step(Plain("tempo 120 ‸c'4"), +1, semitone: true).After);
 
     // ---------------------------------------------------------------- what sounds
 

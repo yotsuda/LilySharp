@@ -42,7 +42,7 @@
     <tr><td><kbd>Ctrl+K</kbd> <kbd>V</kbd></td><td>open it beside the source</td></tr>
     <tr><td><kbd>Alt+P</kbd> (hold)</td><td>sound the note under the caret</td></tr>
     <tr><td><kbd>Alt+M</kbd></td><td>play the measure the caret is in</td></tr>
-    <tr><td><kbd>Ctrl+Shift+Up</kbd> / <kbd>Down</kbd></td><td>step a note a semitone, a chord shape, a tempo by 1, or a key a fifth — <a href="#step">below</a></td></tr>
+    <tr><td><kbd>Ctrl+Shift+Up</kbd> / <kbd>Down</kbd></td><td>step a note to the next note of the key, a chord shape, a tempo by 1, or a key a fifth — <a href="#step">below</a></td></tr>
     <tr><td><kbd>Ctrl+Shift+PageUp</kbd> / <kbd>PageDown</kbd></td><td>step a note an octave mark, a chord shape, or a tempo by 10; switch a key to its parallel / relative key</td></tr>
     <tr><td><kbd>Ctrl+I</kbd></td><td>transform the selection with AI — <a href="#ai">below</a></td></tr>
   </table>
@@ -204,16 +204,16 @@
 <section id="step">
   <h2>Stepping: <kbd>Ctrl+Shift+Up</kbd> / <kbd>Down</kbd>, <kbd>Ctrl+Shift+PageUp</kbd> / <kbd>PageDown</kbd></h2>
   <p>Two pairs of keys that step what the caret is on, one notch at a time:
-  <kbd>Ctrl+Shift+Up</kbd> / <kbd>Down</kbd> by a semitone, <kbd>Ctrl+Shift+PageUp</kbd> /
+  <kbd>Ctrl+Shift+Up</kbd> / <kbd>Down</kbd> to the next note of the key, <kbd>Ctrl+Shift+PageUp</kbd> /
   <kbd>PageDown</kbd> by an octave.</p>
   <table class="g">
     <tr><th>On</th><th>Up / Down</th></tr>
-    <tr><td>a <b>note</b>, <kbd>Ctrl+Shift+Up</kbd> / <kbd>Down</kbd></td><td>moves it a semitone,
-    spelled in the key in force: a note of the key's scale as the signature spells it
-    (<code>key f major</code>: <code>a</code> → <code>bes</code>, not <code>ais</code>), in a minor
-    key the raised seventh and sixth on their own letters (<code>key d minor</code>: <code>c</code>
-    → <code>cis</code>), any other note natural if it can be, else a flat in a flat key and a sharp
-    in a sharp key (no signature: a sharp going up, a flat going down). The note keeps its pitch —
+    <tr><td>a <b>note</b>, <kbd>Ctrl+Shift+Up</kbd> / <kbd>Down</kbd></td><td>moves it to the
+    next note of the key in force, spelled as the signature spells it: <code>key c major</code>
+    walks the white keys, <code>key f major</code> steps <code>a</code> → <code>bes</code> →
+    <code>c</code>. A minor key walks its signature (the natural minor). A note off the key steps
+    to the nearest note of the key that way (<code>cis</code> in C major: Up <code>d</code>, Down
+    <code>c</code>). The note keeps its pitch —
     where the new letter would land in another octave, the marks are corrected (<code>b'</code> →
     <code>c''</code>). A chord member moves alone; on the chord's <code>&gt;</code> every member
     moves.</td></tr>
@@ -235,7 +235,7 @@
   diagrams</a>.</p>
   <p class="note">To use other keys, open <i>Keyboard Shortcuts</i> (<kbd>Ctrl+K</kbd>
   <kbd>Ctrl+S</kbd>) and bind <code>lilysharp.stepSemitoneUp</code> / <code>lilysharp.stepSemitoneDown</code>
-  (semitone) or <code>lilysharp.stepUp</code> / <code>lilysharp.stepDown</code> (octave).</p>
+  (a note of the key) or <code>lilysharp.stepUp</code> / <code>lilysharp.stepDown</code> (octave).</p>
   <!-- VIDEO editor-step-octave: WITH SOUND. Source `c4 e g <c e g>4 |`, preview open. Caret on
        the first c: Ctrl+Shift+PageUp twice, PageDown once (each result sounds). Caret on the e
        inside the chord: PageUp — only that member moves. Caret after the chord's >: PageUp — the
@@ -369,7 +369,7 @@
     <tr><td>Guess Section Key…</td><td>reads the notes of the section at the cursor (or every section the selection touches) and offers its likely keys, best first; the one you pick is written as the key the section starts in, then the notes spelled against it are offered for respelling</td></tr>
     <tr><td>Respell Notes to Key…</td><td>respells the section's notes to the key it starts in (<code>fis</code> → <code>ges</code> in G♭ major, or one spelling where <code>fis</code> and <code>ges</code> are mixed); you choose which respellings to apply, and every note keeps its pitch</td></tr>
     <tr><td>Play Note at Cursor · Play Current Measure</td><td><kbd>Alt+P</kbd> (hold) · <kbd>Alt+M</kbd></td></tr>
-    <tr><td>Step Up · Step Down a Semitone</td><td><kbd>Ctrl+Shift+Up</kbd> · <kbd>Ctrl+Shift+Down</kbd> — <a href="#step">above</a></td></tr>
+    <tr><td>Step Up · Step Down in the Key</td><td><kbd>Ctrl+Shift+Up</kbd> · <kbd>Ctrl+Shift+Down</kbd> — <a href="#step">above</a></td></tr>
     <tr><td>Step Up · Step Down an Octave</td><td><kbd>Ctrl+Shift+PageUp</kbd> · <kbd>Ctrl+Shift+PageDown</kbd> — <a href="#step">above</a></td></tr>
     <tr><td>Open Preview · Open Preview to Side</td><td><kbd>Ctrl+Shift+V</kbd> · <kbd>Ctrl+K</kbd> <kbd>V</kbd></td></tr>
     <tr><td>Export as PDF / SVG / PNG / LilyPond / MusicXML / MIDI / VOCALOID</td><td>writes the file's scores</td></tr>

@@ -28,7 +28,8 @@ namespace LilySharp.Core.Editing;
 /// The editor's "step" keys and the audition that sounds what the caret is on: which written
 /// thing a caret or a selection is on, the text edit one step up or down makes of it, and the
 /// pitches it sounds. Two pairs of keys (owner's decision 2026-10-15): Ctrl+Shift+Up / Down
-/// step a note by a SEMITONE (<see cref="SemitoneEdits"/>), Ctrl+Shift+PageUp / PageDown by an
+/// step a note to the next tone of the KEY (<see cref="SemitoneEdits"/>; a semitone from
+/// 2026-10-15 to 2026-10-16, hence the names), Ctrl+Shift+PageUp / PageDown by an
 /// OCTAVE mark — the octave pair was Ctrl+Shift+Up / Down from 2026-09-28 to 2026-10-15, and
 /// Ctrl+Alt before that. On a <c>tempo</c> the same pairs step the metronome number by 1 and
 /// by 10 (owner's decision 2026-10-16, NoteStepper.Tempo.cs); on a <c>key</c> the semitone
@@ -37,7 +38,7 @@ namespace LilySharp.Core.Editing;
 /// <remarks>
 /// <para>
 /// Owner's decisions, 2026-09-28. What an OCTAVE step does depends on what the caret is on
-/// (a semitone step does the same to a voicing, and moves a note's or a member's letter
+/// (a key step does the same to a voicing, and moves a note's or a member's letter
 /// instead of its marks):
 /// </para>
 /// <list type="bullet">
@@ -159,8 +160,8 @@ public static partial class NoteStepper
     /// tree that SOUNDS (the server's <c>using</c> expansion); null parses it as it stands.
     /// <paramref name="includeStretch"/> (<c>lilysharp.chordShapes.includeStretch</c>) lets an
     /// <c>@chord</c> step through stretch shapes too (<see cref="ShapeOrder"/>).
-    /// <paramref name="semitone"/> steps notes and members by a semitone instead of an octave
-    /// mark (<see cref="SemitoneEdits"/>); a voicing steps its shape either way.
+    /// <paramref name="semitone"/> steps notes and members to the next tone of the key instead
+    /// of by an octave mark (<see cref="SemitoneEdits"/>); a voicing steps its shape either way.
     /// </summary>
     public static StepResult Step(
         string text, SyntaxTree tree, IReadOnlyList<(int Start, int End)> selections, int direction,

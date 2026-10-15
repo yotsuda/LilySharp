@@ -386,12 +386,12 @@
       {
         "command": "lilysharp.stepSemitoneUp",
         "category": "Lily#",
-        "title": "Step Up a Semitone (note / chord shape)"
+        "title": "Step Up in the Key (note / chord shape / tempo / key)"
       },
       {
         "command": "lilysharp.stepSemitoneDown",
         "category": "Lily#",
-        "title": "Step Down a Semitone (note / chord shape)"
+        "title": "Step Down in the Key (note / chord shape / tempo / key)"
       },
       {
         "command": "lilysharp.stepUp",

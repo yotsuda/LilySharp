@@ -24,38 +24,37 @@ using LilySharp.Core.Syntax;
 namespace LilySharp.Core.Editing;
 
 /// <summary>
-/// The semitone step (Ctrl+Shift+Up / Ctrl+Shift+Down, owner's decisions 2026-10-15): a note,
-/// a chord member, or every member of a chord moves a semitone, spelled in the key in force.
+/// The scale step (Ctrl+Shift+Up / Ctrl+Shift+Down): a note, a chord member, or every member of
+/// a chord moves to the next tone of the key in force, up or down. Until 2026-10-16 it moved a
+/// semitone (owner's decision 2026-10-15); the owner then asked for the key's tones only
+/// ("半音で動くのではなく、現在のkeyの上にある音だけにして") — the file and its names
+/// (<c>semitone</c>, <c>stepSemitoneUp</c>) keep the old word.
 /// </summary>
 /// <remarks>
 /// <para>
-/// THE SPELLING (owner's decision 2026-10-15, "調号＋短調の導音"), first rule that applies:
+/// THE SCALE is the signature's (Lily#'s choice: a minor key steps through its natural minor,
+/// the leading tone being an accidental the signature does not hold; a church mode through its
+/// own signature; a <c>key custom …</c> through the steps it writes). Each tone is spelled as
+/// the signature spells it — in F major a steps up to <c>bes</c>, in G major e up to
+/// <c>fis</c>. A note off the scale steps to the nearest tone of it in the direction asked
+/// (<c>cis</c> in C major: Up <c>d</c>, Down <c>c</c>).
 /// </para>
-/// <list type="number">
-/// <item>a note of the key's scale is spelled as the signature spells it — in F major a
-/// steps up to <c>bes</c>, not <c>ais</c>; in G-flat major <c>bes</c> steps up to <c>ces</c>;</item>
-/// <item>in a minor key the raised seventh (the leading tone) and the raised sixth are spelled
-/// on their own letters — <c>cis</c> in D minor, not <c>des</c>; <c>gis</c> and <c>fis</c> in A minor;</item>
-/// <item>any other note is a natural if it can be one;</item>
-/// <item>else a flat in a key with flats, a sharp in a key with sharps, and in a key with
-/// neither a sharp going up and a flat going down.</item>
-/// </list>
 /// <para>
 /// THE KEY IN FORCE is read from the source, not the collector (Lily#'s choice: the spelling
 /// is the writer's, before any transpose): the last <c>key</c> written before the note in the
 /// music around it, else its section's, else its part declaration's, else the file's; none
-/// (or a custom key) reads as C major.
+/// reads as C major.
 /// </para>
 /// <para>
-/// THE PITCH IS KEPT (owner's decision 2026-10-15): the stepped note sounds exactly a semitone
-/// from where it was. A new letter can change the octave a note resolves to — <c>b'</c> → <c>c''</c>
-/// in absolute octaves; <c>f b</c> → <c>f c'</c> in relative ones, where the nearest c is below
-/// the f — so the octave marks are corrected until the compiler's resolved pitch
-/// (<see cref="ResolvedPitches.ForFile"/>) is the old one plus or minus one. The notes after it
-/// follow as they will, as after an octave step. A note no score resolves keeps its marks.
+/// THE PITCH IS KEPT (owner's decision 2026-10-15): the stepped note sounds exactly the scale
+/// tone next to where it was. A new letter can change the octave a note resolves to —
+/// <c>b'</c> → <c>c''</c> in absolute octaves; <c>f b</c> → <c>f c'</c> in relative ones, where
+/// the nearest c is below the f — so the octave marks are corrected until the compiler's
+/// resolved pitch (<see cref="ResolvedPitches.ForFile"/>) is the one stepped to. The notes after
+/// it follow as they will, as after an octave step. A note no score resolves keeps its marks.
 /// </para>
 /// <para>
-/// Not stepped by a semitone (handled, no edit, a status-bar word): a scale-degree member and a
+/// Not stepped (handled, no edit, a status-bar word): a scale-degree member and a
 /// quarter-tone pitch. An <c>@chord</c> or a <c>chords</c> row entry steps its shape as with
 /// the octave keys.
 /// </para>
@@ -69,13 +68,6 @@ public static partial class NoteStepper
     /// <summary>The octave-mark correction is tried at most this many times (one re-collection
     /// each); one round settles every case met so far.</summary>
     private const int MaxOctaveRounds = 4;
-
-    /// <summary>The key a note is spelled in: its tonic's step and pitch class, its signature
-    /// in sharps (negative: flats), and whether it is minor.</summary>
-    private readonly record struct KeyContext(int TonicStep, int TonicPc, int Sharps, bool Minor)
-    {
-        public static readonly KeyContext CMajor = new(0, 0, 0, false);
-    }
 
     /// <summary>The pitches a semitone step of <paramref name="t"/> moves: a note's pitch, a
     /// member, or every pitch member of a chord or an arpeggio — never a scale degree or a
@@ -101,7 +93,8 @@ public static partial class NoteStepper
         IReadOnlyList<PitchSyntax> pitches, int dir, Func<string, SyntaxTree>? expand)
     {
         bool longFlats = WritesLongFlats(tree);
-        var names = pitches.Select(p => Respell(p, dir, longFlats)).ToArray();
+        var respelled = pitches.Select(p => Respell(p, dir, longFlats)).ToArray();
+        var names = respelled.Select(r => r.Name).ToArray();
         var extra = new int[pitches.Count];
 
         List<Edit> Build()
@@ -132,7 +125,7 @@ public static partial class NoteStepper
                 int at = pitches[i].SourceStart;
                 if (!before.TryGetValue(at, out int was) || !after.TryGetValue(MapThrough(edits, at), out int now))
                     continue;
-                int off = now - (was + dir);
+                int off = now - (was + respelled[i].Delta);
                 if (off == 0 || off % 12 != 0)
                     continue;
                 extra[i] -= off / 12;
@@ -192,51 +185,27 @@ public static partial class NoteStepper
         return !contracted;
     }
 
-    /// <summary>The name <paramref name="p"/> takes a semitone up (<paramref name="dir"/> &gt; 0)
-    /// or down, spelled in the key in force (the type's remarks).</summary>
-    private static string Respell(PitchSyntax p, int dir, bool longFlats)
+    /// <summary>The scale tone <paramref name="p"/> steps to, up (<paramref name="dir"/> &gt; 0)
+    /// or down, in the key in force (the type's remarks): its name, as the signature spells it,
+    /// and how many semitones it lies from <paramref name="p"/>.</summary>
+    private static (string Name, int Delta) Respell(PitchSyntax p, int dir, bool longFlats)
     {
-        int step = KeySpelling.StepOf(p.BaseName);
-        int pc = Mod12(RelativeOctave.StepSemitoneOf(step) + p.AccidentalOffset + dir);
-        var (newStep, alter) = Spell(pc, KeyInForce(p), dir);
-        return NameOf(newStep, alter, longFlats);
-    }
-
-    /// <summary>The spelling of pitch class <paramref name="pc"/> in <paramref name="key"/>
-    /// (the type's remarks): a step and its alteration.</summary>
-    private static (int Step, int Alter) Spell(int pc, KeyContext key, int dir)
-    {
-        for (int s = 0; s < 7; s++)
-        {
-            int a = KeySpelling.Alteration(s, key.Sharps);
-            if (Mod12(RelativeOctave.StepSemitoneOf(s) + a) == pc && Math.Abs(a) <= 2)
-                return (s, a);
-        }
-        if (key.Minor)
-        {
-            if (pc == Mod12(key.TonicPc - 1))
-                return OnStep((key.TonicStep + 6) % 7, pc);
-            if (pc == Mod12(key.TonicPc + 9))
-                return OnStep((key.TonicStep + 5) % 7, pc);
-        }
-        for (int s = 0; s < 7; s++)
-            if (RelativeOctave.StepSemitoneOf(s) == pc)
-                return (s, 0);
-        bool flat = key.Sharps < 0 || (key.Sharps == 0 && dir < 0);
-        int natural = flat ? Mod12(pc + 1) : Mod12(pc - 1);
-        for (int s = 0; s < 7; s++)
-            if (RelativeOctave.StepSemitoneOf(s) == natural)
-                return (s, flat ? -1 : 1);
-        return (0, 0); // unreachable: a black key always neighbours a white one
-    }
-
-    /// <summary>Pitch class <paramref name="pc"/> written on <paramref name="step"/>.</summary>
-    private static (int Step, int Alter) OnStep(int step, int pc)
-    {
-        int a = pc - RelativeOctave.StepSemitoneOf(step);
-        while (a > 6) a -= 12;
-        while (a < -6) a += 12;
-        return (step, a);
+        var signature = KeyInForce(p);
+        // In semitones above the letter's C, so ces is -1 and bis 12.
+        int was = RelativeOctave.StepSemitoneOf(KeySpelling.StepOf(p.BaseName)) + p.AccidentalOffset;
+        (int Step, int Alter, int Value)? best = null;
+        for (int octave = -1; octave <= 1; octave++)
+            for (int s = 0; s < 7; s++)
+            {
+                int a = signature[s];
+                int value = RelativeOctave.StepSemitoneOf(s) + a + 12 * octave;
+                if (dir > 0 ? value <= was : value >= was)
+                    continue;
+                if (best is not { } b || (dir > 0 ? value < b.Value : value > b.Value))
+                    best = (s, a, value);
+            }
+        var (step, alter, to) = best!.Value;
+        return (NameOf(step, alter, longFlats), to - was);
     }
 
     /// <summary>A pitch name in the language's Dutch names: <c>fis</c>, <c>bes</c>, <c>ees</c>
@@ -256,20 +225,27 @@ public static partial class NoteStepper
         };
     }
 
-    private static int Mod12(int x) => ((x % 12) + 12) % 12;
-
-    /// <summary>The key in force at <paramref name="node"/> (the type's remarks).</summary>
-    private static KeyContext KeyInForce(SyntaxNode node)
+    /// <summary>The signature in force at <paramref name="node"/> (the type's remarks): each
+    /// step's alteration, C to B — a custom key's as written, the others' from their sharps.</summary>
+    private static int[] KeyInForce(SyntaxNode node)
     {
-        if (WrittenKeyAt(node) is not { IsCustom: false } key
-            || key.GetChild(2) is not PitchSyntax tonic || tonic.BaseName == '\0')
-            return KeyContext.CMajor;
+        var alterations = new int[7];
+        var key = WrittenKeyAt(node);
+        if (key is { IsCustom: true })
+        {
+            foreach (var (step, alter) in key.CustomAlterations)
+                if (step >= 0)
+                    alterations[step] = alter;
+            return alterations;
+        }
+        if (key == null || key.GetChild(2) is not PitchSyntax tonic || tonic.BaseName == '\0')
+            return alterations;
         string mode = key.GetChild(3) is SyntaxTokenNode m && m.Text.Length > 0 ? m.Text.ToLowerInvariant() : "major";
         if (KeySpelling.SharpsFor(tonic.PitchName, mode) is not int sharps)
-            return KeyContext.CMajor;
-        int tonicStep = KeySpelling.StepOf(tonic.BaseName);
-        int tonicPc = Mod12(RelativeOctave.StepSemitoneOf(tonicStep) + tonic.AccidentalOffset);
-        return new KeyContext(tonicStep, tonicPc, sharps, mode is "minor" or "aeolian");
+            return alterations;
+        for (int s = 0; s < 7; s++)
+            alterations[s] = KeySpelling.Alteration(s, sharps);
+        return alterations;
     }
 
     /// <summary>The <c>key</c> written for <paramref name="node"/>: the last one before it among

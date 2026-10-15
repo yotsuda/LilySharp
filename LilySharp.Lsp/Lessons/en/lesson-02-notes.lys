@@ -7,7 +7,7 @@
 //
 // Keys do this for you, with the caret anywhere on a note:
 //   Ctrl+Shift+PageUp / PageDown   one octave up / down (adds or removes ' and ,)
-//   Ctrl+Shift+Up / Down           one semitone up / down (spelled in the key)
+//   Ctrl+Shift+Up / Down           to the next note of the key, up / down
 //   a digit                        sets the length, wherever you type it on the note
 
 title "Ode to Joy"
