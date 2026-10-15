@@ -212,13 +212,10 @@ public static partial class NoteStepper
             }
             if (t.Kind == TargetKind.Key)
             {
-                // Only the semitone pair steps a key; the octave pair keeps the editor's command.
-                if (!semitone)
-                    continue;
-                var (keyEdit, keySaid) = KeyEdit((KeySignatureSyntax)t.Node, dir, WritesLongFlats(tree));
+                // The semitone pair walks the circle; the octave pair switches the mode.
+                var (keyEdits, keySaid) = KeyStep((KeySignatureSyntax)t.Node, dir, semitone, WritesLongFlats(tree));
                 message ??= keySaid;
-                if (keyEdit is { } ke)
-                    edits.Add(ke);
+                edits.AddRange(keyEdits);
                 stepped.Add(t);
                 continue;
             }

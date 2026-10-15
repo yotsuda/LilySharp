@@ -657,8 +657,19 @@ public class StepRequestTests
     }
 
     [Fact]
-    public void AKey_OnTheOctaveKeys_FallsBack()
-        => Assert.True(Step(Plain("key ‸c major c'4"), +1).Response.Fallback);
+    public void AKey_OnTheOctaveKeys_PageUpTheParallel_PageDownTheRelative()
+    {
+        Assert.Equal(Plain("key c minor c'4"), Step(Plain("key ‸c major c'4"), +1).After);
+        Assert.Equal(Plain("key c major c'4"), Step(Plain("key c min‸or c'4"), +1).After);
+        Assert.Equal(Plain("key a minor c'4"), Step(Plain("key ‸c major c'4"), -1).After);
+        Assert.Equal(Plain("key c major c'4"), Step(Plain("key a minor‸ c'4"), -1).After);
+        Assert.Equal(Plain("key bes major c'4"), Step(Plain("‸key g minor c'4"), -1).After);
+        Assert.Equal(Plain("key cis minor c'4"), Step(Plain("‸key e major c'4"), -1).After);
+        var (modal, after) = Step(Plain("‸key d dorian c'4"), +1);
+        Assert.False(modal.Fallback);
+        Assert.Equal(Plain("key d dorian c'4"), after);
+        Assert.Contains("major and minor only", modal.Message);
+    }
 
     [Fact]
     public void ANoteAfterATempo_StillStepsAsANote()

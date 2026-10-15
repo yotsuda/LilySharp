@@ -26,8 +26,10 @@ All notable changes to the Lily# VS Code extension are documented here.
   or down: `key c major` → `key g major` → `key d major`; Down → `key f major`. The mode stays
   (`a minor` → `e minor`, `d dorian` → `a dorian`), the walk stops at seven sharps or flats, and
   flats are written the file's way (`ees` / `es`). Only the signature changes, not the notes after
-  it. `key custom …` steps nothing; `Ctrl+Shift+PageUp` / `PageDown` on a key keep VS Code's own
-  command.
+  it. `key custom …` steps nothing.
+- **On a `key`, `Ctrl+Shift+PageUp` switches to the parallel key and `Ctrl+Shift+PageDown` to the
+  relative key** — `key c major` ⇄ `key c minor` (the same tonic), `key c major` ⇄ `key a minor`
+  (the same signature). Major and minor only; a church mode says so.
 
 ### The step keys change a tempo: by 1, or by 10
 
