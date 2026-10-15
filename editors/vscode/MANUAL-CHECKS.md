@@ -22,12 +22,12 @@
 
 ### 1.1 ステップ Ctrl+Shift+↑ / ↓（調の音・`lilysharp.stepSemitoneUp` / `Down`）と Ctrl+Shift+PgUp / PgDn（オクターブ・`lilysharp.stepUp` / `stepDown`）
 
-**2026-10-15 ユーザー決定でキーが 2 組になった**: Ctrl+Shift+↑↓＝半音、Ctrl+Shift+PgUp/PgDn＝オクターブ記号（それまで Ctrl+Shift+↑↓ がオクターブ）。**2026-10-16 のユーザー決定で ↑↓ は半音ではなく調の音へ**（調号の音階・短調は自然短音階＝Lily# の選択）。
+**2026-10-15 ユーザー決定でキーが 2 組になった**: Ctrl+Shift+↑↓＝半音、Ctrl+Shift+PgUp/PgDn＝オクターブ記号（それまで Ctrl+Shift+↑↓ がオクターブ）。**2026-10-16 のユーザー決定で ↑↓ は半音ではなく調の音へ**（調号の音階・短調は導音も通る＝同日のユーザー決定）。
 コード図の形はどちらの組でも動く。Ctrl+Alt+↑↓ は Lily# の割り当てではない（Windows のカーソル追加＝`auditionCore.ts` の註）。
 **下の項目の「↑ / ↓」は、オクターブ記号の項目では PgUp / PgDn と読む。**
 
 - [ ] **調の音**: `key f major a'4` の `a` で Ctrl+Shift+↑ → `bes'4`、もう 1 回 → `c''4`（記号が付いて音高が保たれる）。各回その音が鳴る。
-- [ ] `key g major e'4` で ↑ → `fis'4`。調号の無い本で `c'` ↑ → `d'`、`cis'` ↑ → `d'`、↓ → `c'`。`key a minor g'4` ↑ → `a'4`（gis にはならない）。
+- [ ] `key g major e'4` で ↑ → `fis'4`。調号の無い本で `c'` ↑ → `d'`、`cis'` ↑ → `d'`、↓ → `c'`。`key a minor g'4` ↑ → `gis'4`（導音）、もう 1 回 → `a'4`。
 - [ ] relative の本で `f4 b4` の `b` で ↑ → `f4 c'4`（プレビューで c が f の上にある）。
 - [ ] **テンポ**（2026-10-16 のユーザー決定）: `tempo "Allegro" 4 = 120` の上（`tempo` から `120` までのどこでも）で Ctrl+Shift+↑ → `121`、Ctrl+Shift+PgUp → `131`、PgDn → `121`。プレビューのテンポ記号の数字も変わる。何も鳴らない。`tempo swing` の上ではステータスバーに *no metronome number*。
 - [ ] **調**（2026-10-16 のユーザー決定）: `key c major` の上で Ctrl+Shift+↑ → `key g major`、もう 1 回 → `key d major`、↓ 2 回で戻り、さらに ↓ → `key f major`。プレビューの調号が変わる。音符は書き換わらない。`key a minor` ↑ → `key e minor`。

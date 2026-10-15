@@ -32,9 +32,9 @@ namespace LilySharp.Core.Editing;
 /// </summary>
 /// <remarks>
 /// <para>
-/// THE SCALE is the signature's (Lily#'s choice: a minor key steps through its natural minor,
-/// the leading tone being an accidental the signature does not hold; a church mode through its
-/// own signature; a <c>key custom …</c> through the steps it writes). Each tone is spelled as
+/// THE SCALE is the signature's, and in a <c>minor</c> key its leading tone besides (owner's
+/// decision 2026-10-16, "短調は導音も通るように": A minor walks g, gis, a; the raised sixth is
+/// not added). A church mode walks its own signature, a <c>key custom …</c> the steps it writes. Each tone is spelled as
 /// the signature spells it — in F major a steps up to <c>bes</c>, in G major e up to
 /// <c>fis</c>. A note off the scale steps to the nearest tone of it in the direction asked
 /// (<c>cis</c> in C major: Up <c>d</c>, Down <c>c</c>).
@@ -190,14 +190,13 @@ public static partial class NoteStepper
     /// and how many semitones it lies from <paramref name="p"/>.</summary>
     private static (string Name, int Delta) Respell(PitchSyntax p, int dir, bool longFlats)
     {
-        var signature = KeyInForce(p);
+        var tones = KeyInForce(p);
         // In semitones above the letter's C, so ces is -1 and bis 12.
         int was = RelativeOctave.StepSemitoneOf(KeySpelling.StepOf(p.BaseName)) + p.AccidentalOffset;
         (int Step, int Alter, int Value)? best = null;
         for (int octave = -1; octave <= 1; octave++)
-            for (int s = 0; s < 7; s++)
+            foreach (var (s, a) in tones)
             {
-                int a = signature[s];
                 int value = RelativeOctave.StepSemitoneOf(s) + a + 12 * octave;
                 if (dir > 0 ? value <= was : value >= was)
                     continue;
@@ -225,27 +224,39 @@ public static partial class NoteStepper
         };
     }
 
-    /// <summary>The signature in force at <paramref name="node"/> (the type's remarks): each
-    /// step's alteration, C to B — a custom key's as written, the others' from their sharps.</summary>
-    private static int[] KeyInForce(SyntaxNode node)
+    /// <summary>The tones the step walks at <paramref name="node"/> (the type's remarks), each a
+    /// step (C to B) and its alteration: the signature's seven — a custom key's as written, the
+    /// others' from their sharps — and in a <c>minor</c> key its leading tone too.</summary>
+    private static List<(int Step, int Alter)> KeyInForce(SyntaxNode node)
     {
         var alterations = new int[7];
+        int? leadingStep = null;
         var key = WrittenKeyAt(node);
         if (key is { IsCustom: true })
         {
             foreach (var (step, alter) in key.CustomAlterations)
                 if (step >= 0)
                     alterations[step] = alter;
-            return alterations;
         }
-        if (key == null || key.GetChild(2) is not PitchSyntax tonic || tonic.BaseName == '\0')
-            return alterations;
-        string mode = key.GetChild(3) is SyntaxTokenNode m && m.Text.Length > 0 ? m.Text.ToLowerInvariant() : "major";
-        if (KeySpelling.SharpsFor(tonic.PitchName, mode) is not int sharps)
-            return alterations;
+        else if (key != null && key.GetChild(2) is PitchSyntax { BaseName: not '\0' } tonic)
+        {
+            string mode = key.GetChild(3) is SyntaxTokenNode m && m.Text.Length > 0 ? m.Text.ToLowerInvariant() : "major";
+            if (KeySpelling.SharpsFor(tonic.PitchName, mode) is int sharps)
+            {
+                for (int s = 0; s < 7; s++)
+                    alterations[s] = KeySpelling.Alteration(s, sharps);
+                // Owner's decision 2026-10-16: a minor key's raised seventh is walked too, on the
+                // seventh's own letter (D minor: c, cis, d).
+                if (mode == "minor")
+                    leadingStep = (KeySpelling.StepOf(tonic.BaseName) + 6) % 7;
+            }
+        }
+        var tones = new List<(int, int)>();
         for (int s = 0; s < 7; s++)
-            alterations[s] = KeySpelling.Alteration(s, sharps);
-        return alterations;
+            tones.Add((s, alterations[s]));
+        if (leadingStep is int l)
+            tones.Add((l, alterations[l] + 1));
+        return tones;
     }
 
     /// <summary>The <c>key</c> written for <paramref name="node"/>: the last one before it among

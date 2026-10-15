@@ -526,15 +526,19 @@ public class StepRequestTests
         Assert.Equal(Plain("f'4"), Semi("e'‸4", +1, Plain));
     }
 
-    /// <summary>A minor key walks its signature — the natural minor (Lily#'s choice); a church
-    /// mode its own (D dorian: b natural).</summary>
+    /// <summary>A minor key walks its signature and its leading tone (owner's decision
+    /// 2026-10-16: D minor c, cis, d); a church mode its own signature (D dorian: b natural).</summary>
     [Fact]
-    public void AScaleStep_InAMinorKey_WalksTheSignature()
+    public void AScaleStep_InAMinorKey_WalksTheSignature_AndTheLeadingTone()
     {
-        Assert.Equal(Plain("key d minor d'4"), Semi("key d minor c'‸4", +1, Plain));
-        Assert.Equal(Plain("key d minor c'4"), Semi("key d minor d'‸4", -1, Plain));
+        Assert.Equal(Plain("key d minor cis'4"), Semi("key d minor c'‸4", +1, Plain));
+        Assert.Equal(Plain("key d minor d'4"), Semi("key d minor cis'‸4", +1, Plain));
+        Assert.Equal(Plain("key d minor cis'4"), Semi("key d minor d'‸4", -1, Plain));
+        Assert.Equal(Plain("key d minor c'4"), Semi("key d minor cis'‸4", -1, Plain));
         Assert.Equal(Plain("key d minor bes'4"), Semi("key d minor a'‸4", +1, Plain));
-        Assert.Equal(Plain("key a minor a'4"), Semi("key a minor g'‸4", +1, Plain));
+        Assert.Equal(Plain("key a minor gis'4"), Semi("key a minor g'‸4", +1, Plain));
+        Assert.Equal(Plain("key f minor e'4"), Semi("key f minor ees'‸4", +1, Plain));
+        Assert.Equal(Plain("key a aeolian a'4"), Semi("key a aeolian g'‸4", +1, Plain));
         Assert.Equal(Plain("key d dorian b'4"), Semi("key d dorian a'‸4", +1, Plain));
     }
 

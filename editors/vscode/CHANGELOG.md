@@ -9,7 +9,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 - **`Ctrl+Shift+Up` / `Ctrl+Shift+Down` now move a note to the next note of the key in force**,
   spelled as the signature spells it: `key c major` walks the white keys (`c` → `d` → `e`),
   `key f major` steps `a` → `bes` → `c`, `key g major` `e` → `fis` → `g`. A minor key walks its
-  signature (the natural minor), a church mode its own, `key custom …` the notes it writes; a
+  signature and its leading tone (`key a minor`: `g` → `gis` → `a`), a church mode its own, `key custom …` the notes it writes; a
   note off the key steps to the nearest note of it that way (`key c major`: `cis` Up → `d`,
   Down → `c`). The note keeps its pitch: where the new letter would land in another octave the
   octave marks are corrected (`b'` → `c''`; in relative octaves `f b` → `f c'`). A chord member
