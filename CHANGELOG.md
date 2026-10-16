@@ -19,6 +19,10 @@ workflow attaches that section to the GitHub Release verbatim.
 - **The count over a multi-measure rest is in the page's silhouette** — a "4" over the
   first system no longer touches the title, and a staff above a run keeps clear of its number.
   (Found by the OMR, 2026-10-16.)
+- **A pedal bracket stands clear of a hairpin opening on its release note** — the bracket's
+  outline is half a pen wider than its line at each end, as LilyPond's is, so the hook under a
+  wedge's tip is pushed down by the outside-staff padding instead of touching it. (Found by the
+  OMR, 2026-10-14.)
 
 ### Guess Section Key reads the chord names too
 

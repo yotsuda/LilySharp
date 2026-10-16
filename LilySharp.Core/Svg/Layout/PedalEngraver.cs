@@ -121,13 +121,22 @@ internal static class PedalEngraver
     /// LILYPOND-REF: lily/piano-pedal-bracket.cc:93-94 Piano_pedal_bracket::print -- the stencil is Bracket::make_bracket
     /// LILYPOND-REF: lily/bracket.cc:63-86 Bracket::make_bracket -- the straight line between the corners plus, per end, a line to the flare corner raised by height[d] on the protrusion axis
     /// LILYPOND-REF: scm/define-grobs.scm:2865 PianoPedalBracket -- vertical-skylines from the stencil
+    /// LILYPOND-REF: lily/line-interface.cc:178-192 Line_interface::make_line -- the box of a drawn line is widened by half the pen on BOTH axes
     /// The edge lines protrude toward the staff (up), so the line's lower edge is the
     /// stencil's whole DOWN outline: a down skyline of this box and of the exact stencil
     /// agree, and the up side only ever meets the staff's own profile.
+    /// ⚠️ THE HALF PEN PAST EACH END IS LOAD-BEARING: a hairpin opening on the very note
+    /// the pedal releases on starts at the bracket's end X, and a box that stopped there
+    /// only TOUCHED the wedge's tip, which the skyline walk does not count. LilyPond's
+    /// box overlaps it by the half pen and the collision pass pushes the bracket under the
+    /// wedge. MEASURED (2.26.0, LilySharp-Omr docs/repro/hairpin-over-pedal-bracket-2026-10-14.lys,
+    /// bar 3): the hook's top 0.563 under the hairpin's line = the line's half pen 0.05 +
+    /// outside-staff padding 0.46 + the hook's half pen 0.05; Lily# drew the hook's top on
+    /// the tip (the OMR's report, 2026-10-14; fixed 2026-10-16).
     /// </remarks>
     internal static (double Left, double Right, double Bottom, double Top) BracketStencilBox(
         double startX, double endX, double lineYUp)
-        => (startX, endX, lineYUp - HalfThickness, lineYUp + EdgeHeight + HalfThickness);
+        => (startX - HalfThickness, endX + HalfThickness, lineYUp - HalfThickness, lineYUp + EdgeHeight + HalfThickness);
 
     /// <summary>One solved TEXT-style pedal WORD of one system: which mark (by its
     /// source position) and where its BASELINE sits, Y-up about the staff's middle
@@ -299,13 +308,15 @@ internal static class PedalEngraver
     {
         // The bracket's own UP profile with its line at the middle line (0), to be pushed
         // down by the same collision move the dynamics run (one spelling, DynamicEngraver).
+        // Half the pen past each end on X, as BracketStencilBox (its remark says why it is
+        // load-bearing: a wedge opening at the release note).
         var up = VerticalSkyline.FromBox(
-            startX, endX, -HalfThickness, HalfThickness, VerticalDirection.Up);
+            startX - HalfThickness, endX + HalfThickness, -HalfThickness, HalfThickness, VerticalDirection.Up);
         if (leftHook)
-            up.MergeBox(startX, startX + HookWidth,
+            up.MergeBox(startX - HalfThickness, startX + HookWidth,
                 -HalfThickness, EdgeHeight + HalfThickness);
         if (rightHook)
-            up.MergeBox(endX - HookWidth, endX,
+            up.MergeBox(endX - HookWidth, endX + HalfThickness,
                 -HalfThickness, EdgeHeight + HalfThickness);
         return up;
     }
