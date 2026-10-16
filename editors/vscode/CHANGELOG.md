@@ -25,9 +25,11 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 - **On a `clef`, `Ctrl+Shift+Up` steps to the clef for higher notes and `Ctrl+Shift+Down` to the
   clef for lower ones** — `clef bass` → `clef tenor` → `clef alto` → `clef treble`, stopping at
-  either end; `clef treble_8` steps from where it sorts (Up → `alto`, Down → `tenor`).
-  `Ctrl+Shift+PageUp` / `Ctrl+Shift+PageDown` move `treble` an octave (`clef treble` ⇄
-  `clef treble_8`). Only the clef changes, not the notes after it.
+  either end — a part header's `clef` (`part lh { clef bass }`) or a `clef` inside music. Any
+  other clef steps from where it sorts (`clef treble_8`: Up → `alto`, Down → `tenor`).
+  `Ctrl+Shift+PageUp` / `Ctrl+Shift+PageDown` move `treble` and `bass` an octave
+  (`treble_8` ⇄ `treble` ⇄ `treble^8`, `bass_8` ⇄ `bass`; inside music only `treble` ⇄
+  `treble_8`). Only the clef changes, not the notes after it.
 
 ### Ctrl+Shift+Up / Down walk a key round the circle of fifths
 

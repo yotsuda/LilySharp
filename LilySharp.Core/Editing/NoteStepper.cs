@@ -226,8 +226,8 @@ public static partial class NoteStepper
             }
             if (t.Kind == TargetKind.Clef)
             {
-                // The semitone pair walks the clefs; the octave pair moves treble an octave.
-                var (clefEdit, clefSaid) = ClefEdit((ClefDeclarationSyntax)t.Node, dir, semitone);
+                // The semitone pair walks the clefs; the octave pair moves treble or bass an octave.
+                var (clefEdit, clefSaid) = ClefEdit(t.Node, dir, semitone);
                 message ??= clefSaid;
                 if (clefEdit is { } ce)
                     edits.Add(ce);

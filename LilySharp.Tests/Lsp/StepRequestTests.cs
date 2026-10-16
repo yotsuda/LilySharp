@@ -724,6 +724,28 @@ public class StepRequestTests
         var (alto, after) = Step(Plain("clef ‸alto c4"), +1);
         Assert.False(alto.Fallback);
         Assert.Equal(Plain("clef alto c4"), after);
+        // Inside music a clef takes treble_8 only: treble^8 is a part header's.
+        var (up, same) = Step(Plain("clef ‸treble c4"), +1);
+        Assert.Equal(Plain("clef treble c4"), same);
+        Assert.Contains("header", up.Message);
+    }
+
+    [Fact]
+    public void APartHeadersClef_Steps_TheWayMostBooksWriteIt()
+    {
+        const string Book = "part lh {{ clef {0} octave 3 }}\nsection A {{ lh {{ c4 d e f }} }}\n";
+        string S(string clef) => string.Format(Book, clef);
+        Assert.Equal(S("tenor"), Step(S("ba‸ss"), +1, semitone: true).After);
+        Assert.Equal(S("bass"), Step(S("‸tenor"), -1, semitone: true).After);
+        Assert.Equal(S("bass"), Step(S("bass_8‸"), +1, semitone: true).After);
+        Assert.Equal(S("alto"), Step(S("mezzo‸soprano"), -1, semitone: true).After);
+        Assert.Equal(S("bass_8"), Step(S("ba‸ss"), -1).After);
+        Assert.Equal(S("treble^8"), Step(S("treb‸le"), +1).After);
+        Assert.Equal(S("treble"), Step(S("treble^8‸"), -1).After);
+        var (top, after) = Step(S("‸treble^8"), +1, semitone: true);
+        Assert.False(top.Fallback);
+        Assert.Equal(S("treble^8"), after);
+        Assert.Contains("highest", top.Message);
     }
 
     [Fact]
