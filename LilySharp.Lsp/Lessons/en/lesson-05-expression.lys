@@ -1,5 +1,4 @@
 // Lesson 5 of 12 — Expression
-// Preview: Ctrl+K V
 //
 // Marks follow a note with `@`: `@p` `@f` `@staccato` `@fermata` …
 // `@cresc` / `@decresc` run to the next dynamic.  `( … )` = slur.

@@ -1,5 +1,4 @@
 // Lesson 10 of 12 — Drums
-// Preview: Ctrl+K V
 //
 // A drum part is written as patterns. `drums { }` plays its lines together —
 // each a `phrase` or `{ … }` — and draws them as drummers read: hands on top,

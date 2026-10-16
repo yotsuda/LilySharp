@@ -1,5 +1,4 @@
 // Lesson 7 of 12 — Lyrics
-// Preview: Ctrl+K V
 //
 // A lyrics track `sings` a part: one syllable per note, `sleep- ing` joins a
 // word, `|` keeps in step with the bars. Each row goes under the staff.

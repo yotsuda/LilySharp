@@ -38,6 +38,11 @@ All notable changes to the Lily# VS Code extension are documented here.
   to put the caret on a note, the tempo, the key or the clef and press `Ctrl+Shift+Up` / `Down`
   or `Ctrl+Shift+PageUp` / `PageDown`. The preview's `Ctrl+K V` hint is gone from it.
 
+- **Lesson 1 practises the step keys, and the other lessons drop their `Ctrl+K V` line**: step 4,
+  after writing `@mf`, has you press `Ctrl+Shift+Up` on it (`f`) and `Ctrl+Shift+Down` twice
+  (`mp`). The preview opens by itself, so lessons 2-12 no longer start with `// Preview: Ctrl+K V`;
+  lesson 1 still says how to bring it back.
+
 ### Ctrl+Shift+Up / Down step a clef
 
 - **On a `clef`, `Ctrl+Shift+Up` steps to the clef for higher notes and `Ctrl+Shift+Down` to the

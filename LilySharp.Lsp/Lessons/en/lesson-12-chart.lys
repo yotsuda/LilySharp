@@ -1,5 +1,4 @@
 // Lesson 12 of 12 — A jazz chart
-// Preview: Ctrl+K V
 //
 // A rhythm chart: chord symbols over slashes, on one line. `/` is a beat with no
 // pitch, so `/4 / / /` is four of them. `as lines 1` draws a staff on one line, and

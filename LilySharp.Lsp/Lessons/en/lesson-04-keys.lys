@@ -1,5 +1,4 @@
 // Lesson 4 of 12 — Keys and accidentals
-// Preview: Ctrl+K V
 //
 // Sharp = `is`, flat = `es`: fis = F#, bes = Bb.
 // Write what sounds: in G major, F# is still `fis`. The key only prints it.

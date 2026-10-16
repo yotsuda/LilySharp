@@ -528,6 +528,27 @@ public class LessonTests
     }
 
     [Fact]
+    public void Lesson1_Step4_TheStepKeysOnTheMf_GiveFThenMp()
+    {
+        // The first practice of the step keys (owner's request 2026-10-16): caret on the `mf`
+        // step 4 wrote, Ctrl+Shift+Up gives `f`, Ctrl+Shift+Down twice `mp` — as the comment says.
+        Assert.Contains("Ctrl+Shift+Up: it", Lesson1);
+        int at = Lesson1.LastIndexOf("e@todo(\"STEP 4\")", System.StringComparison.Ordinal) + "e".Length;
+        string text = Lesson1.Remove(at, "@todo(\"STEP 4\")".Length).Insert(at, "@mf");
+        int caret = at + "@mf".Length;
+        string StepAt(string t, int c, int dir)
+        {
+            var step = LilySharp.Core.Editing.NoteStepper.Step(t, SyntaxTree.Parse(t), [(c, c)], dir, semitone: true);
+            Assert.False(step.Fallback);
+            return LilySharp.Core.Editing.NoteStepper.Apply(t, step.Edits);
+        }
+        string up = StepAt(text, caret, +1);
+        Assert.Equal("e@f e", up.Substring(at - 1, "e@f e".Length));
+        string down = StepAt(StepAt(up, at + "@f".Length, -1), at + "@mf".Length, -1);
+        Assert.Equal("e@mp e", down.Substring(at - 1, "e@mp e".Length));
+    }
+
+    [Fact]
     public void Lesson1_Step5_WhereTheRingedRestWas_Cmaj7IsOffered_InCMajorAndAfterStep1sGMajor()
     {
         // Cmaj7, not C: a label nobody can take for the note c. It is the key's IV7 in

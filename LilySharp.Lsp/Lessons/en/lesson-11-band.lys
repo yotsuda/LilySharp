@@ -1,5 +1,4 @@
 // Lesson 11 of 12 — A band
-// Preview: Ctrl+K V
 //
 // More parts, same section. `tab` prints a part as tablature, `clef percussion`
 // makes a drum part, and each `score` is one printout of the same music.

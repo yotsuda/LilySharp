@@ -21,7 +21,8 @@ part melody {
 
   // STEP 3 — Delete the first note's `@todo("STEP 3: …")`: its red circle goes away.
   // STEP 4 — Replace `@todo("STEP 4")` with `@mf`: delete it, type `@` right after the `e`,
-  // and pick `mf` from the list.
+  // and pick `mf` from the list. Then, with the caret on `mf`, press Ctrl+Shift+Up: it
+  // becomes `f`. Ctrl+Shift+Down twice: `mp`. The same keys move a note, the key, the clef.
   section A {
     e4@todo("STEP 3: delete this @todo") d c d | e@todo("STEP 4") e e2 |
     d4 d d2 | e4 g g2 |
