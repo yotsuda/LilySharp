@@ -34,6 +34,10 @@ All notable changes to the Lily# VS Code extension are documented here.
   says how far; `Ctrl+Shift+PageUp` / `PageDown` add or take an octave mark. `transpose` still
   takes a pitch, not a number of semitones — a number would leave the spelling open.
 
+- **A new score's first lines point at the step keys**: File ▸ New File… ▸ Lily# Score now says
+  to put the caret on a note, the tempo, the key or the clef and press `Ctrl+Shift+Up` / `Down`
+  or `Ctrl+Shift+PageUp` / `PageDown`. The preview's `Ctrl+K V` hint is gone from it.
+
 ### Ctrl+Shift+Up / Down step a clef
 
 - **On a `clef`, `Ctrl+Shift+Up` steps to the clef for higher notes and `Ctrl+Shift+Down` to the

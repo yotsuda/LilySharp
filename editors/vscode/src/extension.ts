@@ -332,13 +332,16 @@ function migratePreviewKey(oldUri: string, newUri: string) {
 //
 // The worked examples did not go away — they are the `template-…` completions
 // (Ctrl+Space at the top level), which replace the file rather than joining it.
-// That is what the one comment line below points at, and it is the only line here
-// that is not score.
+// That is what the first comment line below points at. The second points at the step
+// keys (owner's request 2026-10-16: a writer who finds typing hard changes a note, the
+// tempo, the key or the clef with them), and replaced the preview's Ctrl+K V. They are
+// the only lines here that are not score.
 //
 // ⚠️ Two spaces, no tabs: 545 of the 548 tracked .lys files that indent at all use
 // two spaces and not one uses a tab (measured 2026-08-23). The formatter cannot
 // settle this — it takes the indent from the client's formatting options.
-const NEW_SCORE_TEMPLATE = `// New to Lily#? Type "lesson" on a new line and pick lesson-01. Preview: Ctrl+K V.
+const NEW_SCORE_TEMPLATE = `// New to Lily#? Type "lesson" on a new line and pick lesson-01.
+// Put the caret on a note, the tempo, the key or the clef and press Ctrl+Shift+Up/Down or Ctrl+Shift+PageUp/PageDown.
 title "Untitled"
 
 tempo 100
