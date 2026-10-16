@@ -68,6 +68,7 @@ public static class SemanticValidation
         new SymbolReferenceValidator(),     // undefined variable / phrase / section
         new PhraseCycleValidator(),         // a phrase referencing itself (x -> y -> x)
         new MeasureValidator(),             // measure fullness / cross-part length / empty `| |` placeholders
+        new RestRunFractionValidator(),     // `R1*5/4`: LilyPond's fraction, read as a run and a slash note
         new DurationValidator(),            // invalid note values (5, 3, 6, …)
         new AnnotationNameValidator(),      // unknown @annotation names
         new TodoValidator(),                // every @todo mark, its arguments, a key written twice

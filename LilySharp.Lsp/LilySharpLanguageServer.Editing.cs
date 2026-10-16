@@ -368,6 +368,8 @@ public sealed partial class LilySharpLanguageServer
                     actions.Add(percent);
                 if (CaseSpellingAction(doc, uri, diagnostic) is { } spelling)
                     actions.Add(spelling);
+                if (RestRunFractionAction(doc, uri, diagnostic) is { } restRun)
+                    actions.Add(restRun);
                 if (diagnostic.Code == DiagnosticCodes.TodoMark && !todoOffered)
                 {
                     todoOffered = true;
@@ -525,6 +527,28 @@ public sealed partial class LilySharpLanguageServer
 
     private static readonly System.Text.RegularExpressions.Regex SectionOfWarning =
         new(@"^Section '([^']+)' is not the same length", System.Text.RegularExpressions.RegexOptions.Compiled);
+
+    private static readonly System.Text.RegularExpressions.Regex WriteOfRestRun =
+        new(@"write '([^']+)'\.$", System.Text.RegularExpressions.RegexOptions.Compiled);
+
+    /// <summary>
+    /// The quick fix of LYS2018 (<see cref="RestRunFractionValidator"/>): <c>R1*5/4</c> read as a
+    /// run and a slash note. The message ends "write 'R4*5'." when a spelling exists, and the
+    /// report's span is exactly the two things it was read as, so the edit is the replacement.
+    /// </summary>
+    private static CodeAction? RestRunFractionAction(Document doc, Uri uri, CoreDiagnostic diagnostic)
+    {
+        if (diagnostic.Code != DiagnosticCodes.RestRunFraction)
+            return null;
+        var m = WriteOfRestRun.Match(diagnostic.Message);
+        if (!m.Success)
+            return null;
+        int start = diagnostic.Span.Start, end = diagnostic.Span.End;
+        if (start < 0 || end > doc.Text.Length || end <= start)
+            return null;
+        string wanted = m.Groups[1].Value;
+        return QuickFix($"Write '{wanted}'", doc, uri, diagnostic, EditOf(doc.Text, start, end, wanted));
+    }
 
     /// <summary>
     /// The quick fix for a spelling that differs from a real one only in case (2026-09-29,

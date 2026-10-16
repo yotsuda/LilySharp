@@ -1111,6 +1111,14 @@ public static class DiagnosticCodes
     /// starts past the bar's end is not drawn or played.</summary>
     public const string MissingBarLine = "LYS2017";
 
+    /// <summary>Measure error: a rest run with LilyPond's FRACTION for a multiplier
+    /// (<c>R1*5/4</c>), which Lily# reads as two things — the run <c>R1*5</c> and the slash note
+    /// <c>/4</c> — and drew so without a word until the slash overflowed its bar. Lily# writes a
+    /// run as one duration and a count (<c>R4*5</c> is one 5/4 bar); the message says which
+    /// (<see cref="Semantics.RestRunFractionValidator"/>), and the editor offers to write it.
+    /// Owner's decision 2026-10-17: the fraction is not added to the grammar.</summary>
+    public const string RestRunFraction = "LYS2018";
+
     /// <summary>Measure warning: a rendered score holds NO BARS AT ALL — every part it
     /// draws is empty, so the file compiles to a blank page.
     /// <para>

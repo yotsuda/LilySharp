@@ -29,6 +29,11 @@ workflow attaches that section to the GitHub Release verbatim.
   bars). It was N bars of dur: `R4*5` drew five quarter rests under LYS2001, and `R4*40` left
   32 empty bars after it. A run that is not whole bars (`R4*3` in 5/4) is still N rests of
   its value, and the bar check says so. (Found by the OMR, 2026-10-16.)
+- **LilyPond's fraction on a run, `R1*5/4`, is named for what it is** — Lily# reads it as the
+  run `R1*5` and the slash note `/4`, and drew the two without a word until the slash overflowed
+  its bar. A slash glued to a run's count is now an error (LYS2018) that says the spelling Lily#
+  has for the same silence, `write 'R4*5'`, and the editor offers to write it. The fraction is not
+  added to the grammar: one spelling per instruction, and `/` is the slash note's.
 - **A hairpin on a lower staff opens at its own note** — on a grand staff, a left hand's
   crescendo under a resting right hand opened at the right hand's column of the same index,
   or at the bar's start when the right hand had fewer items. (Found by the OMR, 2026-10-14.)

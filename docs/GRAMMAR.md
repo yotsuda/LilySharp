@@ -2095,7 +2095,12 @@ Rest           = ( 'r' | 's' | 'R' ) , [ DurationToken ] , [ '*' , Integer ] , {
                     ('R4*3' in 5/4) it is N rests of dur, which the bar check reports; a run
                     opening mid-bar is read the same way. One rule, one place:
                     Music.BarRest.WholeBars (the collector, MeasureModel, the bar-count walk,
-                    the validator and the MusicXML writer all ask it). *)
+                    the validator and the MusicXML writer all ask it).
+                    ⚠️ LilyPond's FRACTION on a run ('R1*5/4') is not read: it is the run 'R1*5'
+                    and the slash note '/4', and a slash glued to the count is an ERROR naming
+                    the spelling Lily# has for it (LYS2018, 'write R4*5'; the editor offers it).
+                    Owner's decision 2026-10-17 — one spelling per instruction, and '/' is the
+                    slash note's; Semantics.RestRunFractionValidator. *)
 
 (* RHYTHM (COMPING) NOTATION, 2026-08-19. A SLASH NOTE is a pitchless note drawn
    as a slash head on the MIDDLE staff line — the token depicts the printed ink,
