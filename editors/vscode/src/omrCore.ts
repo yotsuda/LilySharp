@@ -23,10 +23,15 @@
 
 import { spawn } from 'child_process';
 import * as fs from 'fs';
-import * as path from 'path';
 
 /** The CLI-and-output agreement versions this extension speaks (the reader's `protocol`). */
 export const OMR_PROTOCOLS = { min: 1, max: 1 } as const;
+
+/** The oldest Scan Import this Lily# is written for. A reader answering a lower `--version` is
+ *  offered its update when a scan is read (the Marketplace keeps the extension current on its
+ *  own — VS Code's auto-update, not duplicated here; this is only Lily#'s own floor). Raised with
+ *  OMR_PROTOCOLS when a release leans on a newer reader (RELEASING.md §2). */
+export const OMR_MIN_VERSION = '0.3.0';
 
 /** The environment variable that points at a reader by hand (development; L1 ①). */
 export const OMR_PATH_VARIABLE = 'LILYSHARP_OMR_PATH';
@@ -58,45 +63,30 @@ export function omrRid(platform: string, arch: string): string | undefined {
     return os && (arch === 'x64' || arch === 'arm64') ? `${os}-${arch}` : undefined;
 }
 
-/** The reader's executable name on a platform. */
-export function omrExecutableName(platform: string): string {
-    return platform === 'win32' ? 'omr.exe' : 'omr';
-}
-
 /** Where the reader is, and how it was found. */
 export interface OmrLocation {
     readonly path: string;
-    readonly source: 'environment' | 'extension' | 'installed';
+    readonly source: 'environment' | 'extension';
 }
 
 /**
  * Finds the reader: ① the environment variable (a reader under development), ② the reader's
  * extension ({@link OMR_EXTENSION_ID}; `fromExtension` is its exported path, when it exists on
- * disk), ③ the newest version installed under `<installRoot>/<version>/<rid>/`, else undefined
- * (the caller offers the extension). Not a setting on purpose (the agreement §1: the reader's
- * place is not shown in Settings).
+ * disk), else undefined (the caller offers the extension). Not a setting on purpose (the
+ * agreement §1: the reader's place is not shown in Settings). A third place — a copy under
+ * Lily#'s own storage, from the download plan of 2026-10-05 — was dropped on 2026-10-17: nothing
+ * wrote there once the reader became an extension, and a copy left there would have stayed old
+ * outside the Marketplace's updates.
  */
 export function locateOmr(
-    env: Record<string, string | undefined>, installRoot: string | undefined,
-    platform: string, arch: string, exists: (p: string) => boolean = fs.existsSync,
-    list: (dir: string) => string[] = d => fs.readdirSync(d), fromExtension?: string): OmrLocation | undefined {
+    env: Record<string, string | undefined>, fromExtension?: string,
+    exists: (p: string) => boolean = fs.existsSync): OmrLocation | undefined {
     const fromEnv = env[OMR_PATH_VARIABLE]?.trim();
     if (fromEnv) {
         return { path: fromEnv, source: 'environment' };
     }
     if (fromExtension && exists(fromExtension)) {
         return { path: fromExtension, source: 'extension' };
-    }
-    const rid = omrRid(platform, arch);
-    if (!installRoot || !rid || !exists(installRoot)) {
-        return undefined;
-    }
-    const versions = list(installRoot).filter(v => /^\d+\.\d+\.\d+$/.test(v)).sort(compareVersions).reverse();
-    for (const version of versions) {
-        const exe = path.join(installRoot, version, rid, omrExecutableName(platform));
-        if (exists(exe)) {
-            return { path: exe, source: 'installed' };
-        }
     }
     return undefined;
 }
@@ -173,6 +163,13 @@ export function parseVersion(stdout: string): OmrVersion | undefined {
 /** Whether this extension speaks the reader's protocol. */
 export function speaksProtocol(protocol: number): boolean {
     return protocol >= OMR_PROTOCOLS.min && protocol <= OMR_PROTOCOLS.max;
+}
+
+/** Whether the reader's version is below {@link OMR_MIN_VERSION}. A version that does not start
+ *  with numbers (a development build's) is not called old. */
+export function readerIsOld(v: OmrVersion): boolean {
+    const numbers = /^\d+(\.\d+)*/.exec(v.version.trim());
+    return numbers !== null && compareVersions(numbers[0], OMR_MIN_VERSION) < 0;
 }
 
 /** One line of `--progress json` (§3.2). */

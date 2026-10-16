@@ -188,6 +188,7 @@
 - [ ] **B7**（第903・OMR 拡張の受け口）: `LILYSHARP_OMR_PATH` を外し、OMR 側の VSIX（`..\LilySharp-Omr\out\extension\lilysharp-omr-win32-x64-0.3.0.vsix`）を
       *Install from VSIX…* で入れる → Reload なしで Explorer の画像の右クリックに *Convert Image/PDF to Lily# (.lys)… (Beta)* が出る・Output に `OMR reader (extension): …\bin\omr.exe`・
       取り込み直後に照合の `@todo` が付く（`--verify`）・初回だけ Beta の一言。拡張を外す → 右クリックの項目は **残る**（Windows・`.lys` の無いワークスペースでも・2026-10-17 のユーザー決定「OMR 未インストールでもメニューを出す」）、右クリックでもパレットでも、ファイル選択ダイアログより**先に** *Install Scan Import* の案内（同日のユーザー決定・前はファイルを選んだ後で、右クリックの項目は OMR が入っているときだけだった）。
+- [ ] **B7′ 古い reader**（2026-10-17）: `LILYSHARP_OMR_PATH` に `--version --json` が `OMR_MIN_VERSION`（`omrCore.ts`）より小さい版を答える reader を指して読む → ファイルを選んだ後に警告 *Scan Import 0.2.0 is older than this Lily# is written for (0.3.0 or newer). Update it?*（ボタン *Update Scan Import*）。断る → その reader で読み込みが続く。押す → Marketplace の最新が入り、読み込みは行わない（もう一度実行）。保存時の verify は警告しない。
 - [ ] **B8**（第903・confidence）: OMR の新しい VSIX で取り込む → Problems で OMR の印の一部が **Warning**（confidence 0.6 未満）、残りと手で書いた `@todo` は **Info**。F8 が Warning の印から回る。
       Show Original Scan: 箱が塗りなしの線・低いものほど太く濃い・上に *Marks below* のスライダーと `(N / M)`・動かすと高いものが消える・`.lys` に無い印は細い破線。取り込みの通知に `(+N quiet, in the scan view)`。
 

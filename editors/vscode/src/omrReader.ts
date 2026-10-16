@@ -21,8 +21,7 @@
 // with no reload. omrCore.ts holds the order the places are tried in.
 
 import * as vscode from 'vscode';
-import * as path from 'path';
-import { OMR_EXTENSION_ID, OmrLocation, locateOmr, omrRid, readerOfExports } from './omrCore';
+import { OMR_EXTENSION_ID, OmrLocation, OmrVersion, locateOmr, omrRid, readerOfExports } from './omrCore';
 
 /** The reader's path the installed extension exports, or undefined (not installed, not this
  *  platform, or its activation failed). Activating it starts no process (the reply §3). */
@@ -38,10 +37,9 @@ export async function readerFromExtension(): Promise<string | undefined> {
     }
 }
 
-/** Finds the reader: the environment variable, the extension, then the global storage. */
-export async function findOmr(context: vscode.ExtensionContext): Promise<OmrLocation | undefined> {
-    return locateOmr(process.env, path.join(context.globalStorageUri.fsPath, 'omr'),
-        process.platform, process.arch, undefined, undefined, await readerFromExtension());
+/** Finds the reader: the environment variable, then the extension. */
+export async function findOmr(_context: vscode.ExtensionContext): Promise<OmrLocation | undefined> {
+    return locateOmr(process.env, await readerFromExtension());
 }
 
 /** Whether this machine can run the reader at all: it is published for Windows x64 only. */
@@ -55,9 +53,27 @@ export async function offerOmrExtension(): Promise<void> {
     const choice = await vscode.window.showInformationMessage(
         'Lily#: reading a scan or a PDF needs the Lily# Scan Import extension (Beta, Windows). Install it?',
         install);
-    if (choice !== install) {
-        return;
+    if (choice === install) {
+        await installOmrExtension();
     }
+}
+
+/** Says the reader is older than this Lily# is written for — or speaks an older protocol — and
+ *  offers its update, which is the Marketplace's newest (the same install command). True when
+ *  the user took it; the caller then leaves the read for after the update. Only a floor of
+ *  Lily#'s own: keeping the extension current is VS Code's auto-update, not repeated here. */
+export async function offerOmrUpdate(v: OmrVersion, why: string): Promise<boolean> {
+    const update = 'Update Scan Import';
+    const choice = await vscode.window.showWarningMessage(`Lily#: Scan Import ${v.version} ${why}`, update);
+    if (choice !== update) {
+        return false;
+    }
+    await installOmrExtension();
+    return true;
+}
+
+/** Installs — or, installed, updates to the newest — the reader's extension. */
+async function installOmrExtension(): Promise<void> {
     try {
         await vscode.commands.executeCommand('workbench.extensions.installExtension', OMR_EXTENSION_ID);
     } catch {

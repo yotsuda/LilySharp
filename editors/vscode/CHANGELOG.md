@@ -74,6 +74,13 @@ All notable changes to the Lily# VS Code extension are documented here.
   dialog** when the reader is not installed, instead of after you had chosen the files — and the
   Explorer's right-click on an image or a PDF offers it the same way on Windows, where it used
   to show only once the reader was installed.
+- **A Scan Import older than this Lily# is written for is offered its update** when a scan is
+  read (Lily#'s own floor, 0.3.0 today; keeping the extension current is VS Code's auto-update,
+  which Lily# does not repeat), and the read goes on with the old one if you decline. A reader
+  speaking an older protocol gets the same *Update Scan Import* button instead of a bare error.
+  The reader is the extension's, or the one `LILYSHARP_OMR_PATH` names: the third place Lily#
+  used to look in — a copy under its own storage, from the download plan the extension replaced,
+  never written since — is gone, so no copy there can stay old outside the Marketplace's updates.
 
 ### Ctrl+Shift+Up / Down step a clef
 

@@ -24,8 +24,8 @@ import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import {
-    OMR_EXTENSION_ID, OMR_INPUT_EXTENSIONS, OMR_PATH_VARIABLE, exitMeaning, launchOf, locateOmr, omrRid,
-    parseEvent, parseVersion, canVerify, readArguments, readerOfExports, runOmr, speaksProtocol, verifyArguments,
+    OMR_EXTENSION_ID, OMR_INPUT_EXTENSIONS, OMR_MIN_VERSION, OMR_PATH_VARIABLE, exitMeaning, launchOf, locateOmr, omrRid,
+    parseEvent, parseVersion, canVerify, readArguments, readerIsOld, readerOfExports, runOmr, speaksProtocol, verifyArguments,
 } from '../src/omrCore';
 
 describe('the core is editor-free', () => {
@@ -45,30 +45,19 @@ describe('where the reader is (L1)', () => {
     });
 
     it('takes the environment variable first', () => {
-        const at = locateOmr({ [OMR_PATH_VARIABLE]: ' C:\\dev\\omr.exe ' }, 'C:\\store', 'win32', 'x64', () => true, () => ['9.9.9']);
+        const at = locateOmr({ [OMR_PATH_VARIABLE]: ' C:\\dev\\omr.exe ' }, 'C:\\ext\\bin\\omr.exe', () => true);
         assert.deepEqual(at, { path: 'C:\\dev\\omr.exe', source: 'environment' });
-    });
-
-    it('then the newest installed version that has this machine\'s build', () => {
-        const root = path.join('S', 'omr');
-        const have = new Set([root,
-            path.join(root, '0.10.0', 'win-x64', 'omr.exe'),
-            path.join(root, '0.9.0', 'win-x64', 'omr.exe')]);
-        const at = locateOmr({}, root, 'win32', 'x64', p => have.has(p), () => ['0.9.0', '0.10.0', '0.11.0', 'tmp']);
-        assert.deepEqual(at, { path: path.join(root, '0.10.0', 'win-x64', 'omr.exe'), source: 'installed' });
     });
 
     it('then the reader\'s extension, when the path it exports is there', () => {
         const exe = 'C:\\ext\\bin\\omr.exe';
-        const root = path.join('S', 'omr');
-        const have = new Set([exe, root, path.join(root, '0.10.0', 'win-x64', 'omr.exe')]);
-        const list = () => ['0.10.0'];
-        assert.deepEqual(locateOmr({}, root, 'win32', 'x64', p => have.has(p), list, exe), { path: exe, source: 'extension' });
+        const have = new Set([exe]);
+        assert.deepEqual(locateOmr({}, exe, p => have.has(p)), { path: exe, source: 'extension' });
         // The environment variable still wins: a reader under development beats the published one.
-        assert.equal(locateOmr({ [OMR_PATH_VARIABLE]: 'C:\\dev\\omr.exe' }, root, 'win32', 'x64', p => have.has(p), list, exe)?.source,
-            'environment');
-        // An exported path that is not on disk (a broken bin) falls through to the storage.
-        assert.equal(locateOmr({}, root, 'win32', 'x64', p => have.has(p), list, 'C:\\gone\\omr.exe')?.source, 'installed');
+        assert.equal(locateOmr({ [OMR_PATH_VARIABLE]: 'C:\\dev\\omr.exe' }, exe, p => have.has(p))?.source, 'environment');
+        // An exported path that is not on disk (a broken bin) is no reader. There is no third
+        // place (2026-10-17): a copy under Lily#'s storage would stay old outside the Marketplace.
+        assert.equal(locateOmr({}, 'C:\\gone\\omr.exe', p => have.has(p)), undefined);
     });
 
     it('reads the extension\'s exports: a path, or nothing usable', () => {
@@ -81,7 +70,7 @@ describe('where the reader is (L1)', () => {
     });
 
     it('and nothing when neither is there', () => {
-        assert.equal(locateOmr({}, 'S', 'win32', 'x64', () => false, () => []), undefined);
+        assert.equal(locateOmr({}, undefined, () => false), undefined);
     });
 
     it('runs a .dll under dotnet and anything else as itself', () => {
@@ -116,6 +105,21 @@ describe('what the reader is asked and answers (§3.2)', () => {
         assert.equal(parseVersion('{"version":"0.3.0"}'), undefined);
         assert.equal(speaksProtocol(1), true);
         assert.equal(speaksProtocol(2), false);
+    });
+
+    it('calls a reader below OMR_MIN_VERSION old, and a development build not', () => {
+        assert.match(OMR_MIN_VERSION, /^\d+\.\d+\.\d+$/);
+        const [major, minor, patch] = OMR_MIN_VERSION.split('.').map(Number);
+        const at = (version: string) => readerIsOld({ version, protocol: 1 });
+        assert.equal(at(OMR_MIN_VERSION), false);
+        assert.equal(at(`${major}.${minor}.${patch + 1}`), false);
+        assert.equal(at(`${major}.${minor + 1}.0`), false);
+        assert.equal(at(`${major + 1}.0.0`), false);
+        assert.equal(at(`${major}.${minor}.${patch - 1}`), patch > 0);
+        assert.equal(at(`${major}.${minor - 1}.9`), minor > 0);
+        assert.equal(at('0.0.0'), true);
+        assert.equal(at(`${OMR_MIN_VERSION}-dev`), false);   // the numbers in front count
+        assert.equal(at('dev'), false);
     });
 
     it('reads the five events and ignores what is not one', () => {

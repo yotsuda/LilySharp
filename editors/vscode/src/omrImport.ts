@@ -24,10 +24,10 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { execFile } from 'child_process';
 import {
-    OMR_INPUT_EXTENSIONS, OMR_PROTOCOLS, canVerify, exitMeaning, launchOf, parseVersion,
-    progressText, readArguments, runOmr, speaksProtocol,
+    OMR_INPUT_EXTENSIONS, OMR_MIN_VERSION, OMR_PROTOCOLS, canVerify, exitMeaning, launchOf, parseVersion,
+    progressText, readArguments, readerIsOld, runOmr, speaksProtocol,
 } from './omrCore';
-import { findOmr, noteOmrBeta, offerOmrExtension } from './omrReader';
+import { findOmr, noteOmrBeta, offerOmrExtension, offerOmrUpdate } from './omrReader';
 
 export interface OmrImportDeps {
     readonly output: vscode.OutputChannel;
@@ -78,9 +78,18 @@ export async function importFromImage(
         return;
     }
     if (!speaksProtocol(v.protocol)) {
-        vscode.window.showErrorMessage(
-            `Lily#: the OMR reader ${v.version} speaks protocol ${v.protocol}; this Lily# speaks `
-            + `${OMR_PROTOCOLS.min}–${OMR_PROTOCOLS.max}. Update ${v.protocol > OMR_PROTOCOLS.max ? 'Lily#' : 'the reader'}.`);
+        const why = `speaks protocol ${v.protocol}; this Lily# speaks ${OMR_PROTOCOLS.min}–${OMR_PROTOCOLS.max}.`;
+        if (v.protocol > OMR_PROTOCOLS.max) {
+            vscode.window.showErrorMessage(`Lily#: Scan Import ${v.version} ${why} Update Lily#.`);
+        } else {
+            await offerOmrUpdate(v, `${why} Update Scan Import?`);
+        }
+        return;
+    }
+    // Lily#'s own floor (OMR_MIN_VERSION): an older reader is offered its update, and the read
+    // goes on with it when the offer is declined. New versions as such are VS Code's auto-update.
+    if (readerIsOld(v) && await offerOmrUpdate(v,
+        `is older than this Lily# is written for (${OMR_MIN_VERSION} or newer). Update it? The read goes on with this one otherwise.`)) {
         return;
     }
 
