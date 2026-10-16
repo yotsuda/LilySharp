@@ -160,6 +160,21 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第907セッションの経緯
+
+### 1.1 第907セッション（2026-10-16・YT-DELL2）
+
+新しい会話。`-Start p907`（開始 HEAD `b82bb32b0`・full **12355 / 0 / 2 / 12357**・Core 警告 6 は開始時から在る MeasureCollector の null 参照）。作業場所は Lab `sessions/p907/`（絵 `png/`・LP の双子 `ly/`・build／test の log）。**OMR の不具合一覧 `..\LilySharp-Omr\docs\repro\lilysharp-feedback-2026-10-16.md`（4 件）に対処**。返事は同じフォルダの `lilysharp-reply-2026-10-16.md`（OMR repo・Lily# は commit していない）。staff-box の提案（10-14）は両側とも済んでいた（OMR が `staff` を書き・Lily# の `omrScanCore.ts` が読む）。
+- **#1 `R4*5`（5/4）＝1 小節・`R4*40`＝8 小節**: `R<dur>*N` は dur × N を**拍子の整数小節**として読む（`Music.BarRest.WholeBars`・LP と同じ）。今までは「dur の小節が N 個」＝`R4*5` は 4 分休符 5 つ＋LYS2001、`R4*40` の後に空の小節 32 個（小節数を数える緑の歩き `CountBarsInScope` が 40 と数え、form がそこまで padding）。読む側 5 つを同じ関数に: collector（`MusicWalk` の RestSyntax 腕＝`CreateBarRestItem`）・`MeasureModel`・`CountBarsInScope`／`WalkBarsRed`（拍子を `ref` で運ぶ＝スコア直下の `time`（`ScoreMeterBefore`）＋歩きで会う `time` 緑（`MeterOf`）・phrase の memo の鍵に拍子）・`MeasureValidator.RunFill`・MusicXML。整数小節でない（`R4*3` in 5/4）と小節の途中は今まで通り（LYS2001）。**`R1*5/4` は文法外**（`R1*5`＋スラッシュ音符 `/4` と読まれる）＝OMR には `R4*5N` を書けと返事・`*N/M` を足すかはユーザー判断（足していない）。GRAMMAR.md の Rest に注・CHANGELOG。網 `BarRestTests` 6 本（collector・layout の数字・validator・別パート・MIDI・MusicXML）。
+- **#3 大譜表の下の五線の松葉**: `HairpinEngraver.CalculateStartX/EndX` が段の `MeasureLayout.Items`（＝最初の五線の item）を松葉の item 番号で引いていた＝左手の番号が右手の item 数を超えると小節頭から、超えないと右手の同じ番号の列から描いた。`LayoutUtilities.GetItemXOffset`（自分の五線の小節の item→列）に。網 `HairpinLowerStaffBoundTests`。
+- **#2 題名の下の休みの数字**: 数字（MultiMeasureRestNumber）は LP では outside-staff-priority のない五線内の墨＝五線の inside skyline（`MultiStaffLayouter`・pure の方も）と段の skyline（`SkylineBuilder.BuildSystemSkylines`＝題名のばね・1 段の本の `CalculateFirstSystemY` の床）に `MultiMeasureRestEngraver.SeedCountNumbers`（`MmrRunMap.ForScore` の run＋`BarWidth` の中心＋`NumberInkBox`）を足した。paging の注釈の箱（`EnrichExtentsWithAnnotationProtrusions`）に入れる形も試したが 1 段の本には届かないので戻した。網 `MultiMeasureRestLayoutTests.TheCount_IsInTheSystemsSilhouette`。
+- **#4 ペダル括弧のかぎと松葉の先＝直した（2 回目の読みで）**: png を目で読んだ 1 回目は「LP も積まない・松葉が 0.7 間低い」と誤読した。**SVG を数値で読むと**（`lysc ly --pin-fonts` → `lilypond -dbackend=svg`・Lab `sessions/p907/hp/`）松葉の線は LP 2.213 間・Lily# 2.21 間（五線下端から）で同じ、括弧は LP 3.776・Lily# 3.25＝**LP はかぎの上端を松葉の線の 0.563 下に置く＝0.05＋0.46＋0.05＝衝突回避で押している**。LP の線の stencil の箱は両軸にペンの半分だけ広い（`lily/line-interface.cc:178-192 make_line`）ので、同じ x で始まる松葉と「接する」のではなく 0.05 **重なる**。Lily# の `BracketStencilBox`／`BracketUpProfile` を x に ±0.05 広げた → 括弧 3.61（かぎ上端は松葉の線の 0.4 下。残り 0.16 は部屋の松葉が `@p` との組み付け前の高さで反復される既知の差＝`CalculateOnSystem` の註）。snapshot `test/pedal-under-next-system` が動いた（括弧 2 本が 3.58→4.25 間・LP の双子は 3.92／4.25＝Lily# は家族で 1 本の線なので低い方に揃う）＝承認。`DistanceResolved` は接点を数えるが、`i++` の順で「終わる建物と始まる建物」の対は訪ねない（LP の歩きも同じ）＝重なりが要る。
+- 罠: `audit/magic_constants.csv` は `LILYSHARP_UPDATE_DOCS=1` で再生成して CRLF に戻した（差分は `HairpinEngraver.CalculateEndX` の行の文面だけ・増減 0）。Write で作った新規 .cs は LF＝CRLF に直した。LILYPOND-REF の記号は**住所と同じ行**に書かないと `CitationsThatNameNothing_DoNotGrow` が数える（続きの行の記号は見ない）。
+- `-End p907 -DiffBase b82bb32b0`＝full **12368 / 0 / 2 / 12370**（+13 本）。Core '+' は -End の時点で未 commit＝0 と出た（commit 後に数えるなら `git diff b82bb32b0 --stat -- LilySharp.Core`）。未 push 58＋この便（push はユーザー）。`samples/*.lys` 5 冊の未 commit はユーザーのもの＝触っていない。
+- 残り: OMR の返事待ち（`AddMultiRests` の回避 2 つを外す・`R1*5/4` を書かない）／`*N/M` を文法に足すかはユーザー判断／部屋の松葉の高さ（`@p` との組み付け前）＝既知・未起票。
+- 教訓: **png を目で読んだ数値で LP との差を語らない**＝SVG の `<line>` を機械で読む（Lab `sessions/p907/hp/` の pwsh が型・LP は `<g transform="translate(x, y)">` の中）。1 回目の読みは 0.7 間ずれていた。
+判定: 4 件とも閉じた。次の一手は OMR の返事待ち ⇒ 続けるなら別の島＝**新しい会話でも損は小さい**（(c)・会話はかなり長い）。
+
 ## 以下は第906セッションの経緯
 
 ### 1.1 第906セッション（2026-10-15・YT-DELL2）
