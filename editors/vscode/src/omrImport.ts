@@ -42,6 +42,15 @@ export interface OmrImportDeps {
 /** The command: from the palette (a file picker), or the Explorer (one file or a selection). */
 export async function importFromImage(
     context: vscode.ExtensionContext, deps: OmrImportDeps, uri?: vscode.Uri, uris?: vscode.Uri[]): Promise<void> {
+    // The reader first, the files after: without the reader there is nothing to pick for, so
+    // the offer comes before the file dialog (owner's decision 2026-10-17; it used to come after,
+    // and a reader-less user chose files only to be told to install).
+    const where = await findOmr(context);
+    if (!where) {
+        await offerOmrExtension();
+        return;
+    }
+
     let inputs = (uris && uris.length > 0 ? uris : uri ? [uri] : [])
         .filter(u => OMR_INPUT_EXTENSIONS.includes(path.extname(u.fsPath).slice(1).toLowerCase() as never));
     if (inputs.length === 0) {
@@ -56,11 +65,6 @@ export async function importFromImage(
         inputs = picked;
     }
 
-    const where = await findOmr(context);
-    if (!where) {
-        await offerOmrExtension();
-        return;
-    }
     const launch = launchOf(where.path);
     deps.output.appendLine(`OMR reader (${where.source}): ${where.path}`);
 

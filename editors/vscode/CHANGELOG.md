@@ -70,6 +70,9 @@ All notable changes to the Lily# VS Code extension are documented here.
   note it is written on: the click used to land just before the `@`, which is the note's own
   place, and the step moved its pitch. A note, a bar and a title land where they did.
 
+- **Convert Image/PDF to Lily# (.lys)… asks for the Scan Import extension before the file
+  dialog** when the reader is not installed, instead of after you had chosen the files.
+
 ### Ctrl+Shift+Up / Down step a clef
 
 - **On a `clef`, `Ctrl+Shift+Up` steps to the clef for higher notes and `Ctrl+Shift+Down` to the

@@ -187,7 +187,7 @@
 - [ ] **B6** `@todo` を含む範囲を選んで Ctrl+I → プロンプトに todo のメモ・確信度・候補が入っている（Output / デバッグで見る）。直した印は `@todo` が外れ、直さない印は残る。
 - [ ] **B7**（第903・OMR 拡張の受け口）: `LILYSHARP_OMR_PATH` を外し、OMR 側の VSIX（`..\LilySharp-Omr\out\extension\lilysharp-omr-win32-x64-0.3.0.vsix`）を
       *Install from VSIX…* で入れる → Reload なしで Explorer の画像の右クリックに *Convert Image/PDF to Lily# (.lys)… (Beta)* が出る・Output に `OMR reader (extension): …\bin\omr.exe`・
-      取り込み直後に照合の `@todo` が付く（`--verify`）・初回だけ Beta の一言。拡張を外す → 右クリックから消え、パレットから実行すると *Install Scan Import* の案内。
+      取り込み直後に照合の `@todo` が付く（`--verify`）・初回だけ Beta の一言。拡張を外す → 右クリックから消え、パレットから実行すると、ファイル選択ダイアログより**先に** *Install Scan Import* の案内（2026-10-17 のユーザー決定・前はファイルを選んだ後だった）。
 - [ ] **B8**（第903・confidence）: OMR の新しい VSIX で取り込む → Problems で OMR の印の一部が **Warning**（confidence 0.6 未満）、残りと手で書いた `@todo` は **Info**。F8 が Warning の印から回る。
       Show Original Scan: 箱が塗りなしの線・低いものほど太く濃い・上に *Marks below* のスライダーと `(N / M)`・動かすと高いものが消える・`.lys` に無い印は細い破線。取り込みの通知に `(+N quiet, in the scan view)`。
 
