@@ -33,7 +33,9 @@ All notable changes to the Lily# VS Code extension are documented here.
   `@mordent` → `@prall`, `@reverseTurn` → `@turn`, `@trill` → `@pralltriller`, `@heel` → `@toe`,
   `@scoop` → `@plop`, `@fall` → `@doit`, `@breath` → `@caesura`, `@stemDown` → `@stemUp`; Down
   goes back. A `.up` /
-  `.down` stays; a mark in no group (`@tap`, `@harmonic`) says so in the status bar.
+  `.down` stays. A mark in no group (`@tap`, `@harmonic`), a dynamic on no ladder (`@sfz`) and a
+  bare `@chord` on a `<…>` chord step the note, member or chord they are written on instead —
+  `<c' e' g'>@chord` inverts the chord, as from its `>` (owner's request 2026-10-17).
 - **On a `time`** `Ctrl+Shift+Up` / `Down` step the beats by 1 (`3/4` → `4/4`), and
   `Ctrl+Shift+PageUp` / `PageDown` walk the common meters by the length of the bar,
   `3/8` `2/4` `6/8` `3/4` `2/2` `4/4` `9/8` `12/8` (`6/8` ⇄ `3/4` is one press).

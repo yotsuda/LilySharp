@@ -75,6 +75,11 @@ public static partial class NoteStepper
     private static bool IsSteppable(string name)
         => ArticulationRegistry.IsKnown(name) || AnnotationNameValidator.PlainFeatureNames.Contains(name);
 
+    /// <summary>The group a mark's name is in, or null: a mark in no group has nothing of its own
+    /// to step, so the keys step the note it is written on (<see cref="CarrierOf"/>).</summary>
+    private static string[]? GroupOf(string name)
+        => Array.Find(ArticulationGroups, g => Array.IndexOf(g, name) >= 0);
+
     /// <summary>The size from which a group wraps round instead of stopping at its ends (owner's
     /// decision 2026-10-16: two or three — and four, Lily#'s reading — are easier to use when
     /// Up and Down keep their meaning). No group is that large today.</summary>
@@ -98,7 +103,7 @@ public static partial class NoteStepper
     {
         var token = articulation.NameToken;
         string name = token.Text;
-        var group = Array.Find(ArticulationGroups, g => Array.IndexOf(g, name) >= 0);
+        var group = GroupOf(name);
         if (group == null)
             return (null, IsSteppable(name)
                 ? $"@{name}: in no group of marks to rotate through"

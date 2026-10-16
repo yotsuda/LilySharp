@@ -96,6 +96,12 @@ public static partial class NoteStepper
         return null;
     }
 
+    /// <summary>Whether the keys have a step for a dynamic of this name: a level on the ladder, or
+    /// a hairpin word (cresc / decresc / dim). <c>@sfz</c>, <c>@fp</c> and the like have none, so
+    /// the keys step the note they are written on (<see cref="CarrierOf"/>).</summary>
+    private static bool DynamicSteps(string name)
+        => SyntaxFacts.IsDynamicSpannerName(name) || Array.IndexOf(DynamicLadder, name) >= 0;
+
     /// <summary>One step of a dynamic: the edit (null when it cannot move) and the message.</summary>
     private static (Edit? Edit, string Message) DynamicEdit(DynamicSyntax dynamic, int dir)
     {

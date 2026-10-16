@@ -405,19 +405,30 @@ public static partial class NoteStepper
             return new Target(TargetKind.Time, time);
         if (ValuePropertyAt(tree, offset) is { } property)
             return new Target(TargetKind.HeaderValue, property);
+        // A mark with nothing of its own to step — a dynamic on no ladder (@sfz), an articulation
+        // in no group (@tap), a bare @chord on a <…> chord — steps the note, member or chord it is
+        // written on instead (owner's request 2026-10-17: on the word of "<c e g>@chord" the keys
+        // invert the chord, as from its '>'). A mark that steps keeps the keys even where it
+        // stays (@cresc Up, @upBow Up).
         if (DynamicAt(tree, offset) is { } dynamic)
-            return new Target(TargetKind.Dynamic, dynamic);
+            return DynamicSteps(dynamic.DynamicToken.Text)
+                ? new Target(TargetKind.Dynamic, dynamic)
+                : CarrierOf(dynamic) ?? new Target(TargetKind.Dynamic, dynamic);
         if (ArticulationAt(tree, offset) is { } articulation)
-            return new Target(TargetKind.Articulation, articulation);
+            return GroupOf(articulation.NameToken.Text) != null
+                ? new Target(TargetKind.Articulation, articulation)
+                : CarrierOf(articulation) ?? new Target(TargetKind.Articulation, articulation);
         // An @chord: strictly after its '@' — a caret just before the '@' is also just after
         // the note's duration, and belongs to the note.
         // A bare one on a chord(…) item names the item's words (ChordAnnotation.Of), so it
-        // steps the item's shape.
+        // steps the item's shape; one with no shape site (a bare @chord on <…>) is its chord's.
         foreach (var mark in tree.GetNodes<MusicMarkSyntax>())
             if (mark.Name == "chord" && mark.Span.Start < offset && offset <= mark.Span.End)
                 return ChordAnnotation.Of(mark) is { FromShapeItem: true }
                     ? new Target(TargetKind.Voicing, mark.Parent!)
-                    : new Target(TargetKind.Voicing, mark);
+                    : ShapeSiteOf(mark) is not (null, null)
+                        ? new Target(TargetKind.Voicing, mark)
+                        : CarrierOf(mark) ?? new Target(TargetKind.Voicing, mark);
         // A chord(…) item (owner's decision 2026-09-28): from its word 'chord' to its ')' —
         // the step rewrites its shape as an @chord's, on the part's tuning (StepTuning).
         foreach (var item in tree.GetNodes<ChordSyntax>())
@@ -456,6 +467,18 @@ public static partial class NoteStepper
         }
         return null;
     }
+
+    /// <summary>The note, chord member or chord an annotation is written on — what the keys step
+    /// when the annotation itself has nothing to step — or null (a rest's, a slash note's, a
+    /// <c>chord(…)</c> item's).</summary>
+    private static Target? CarrierOf(SyntaxNode annotation) => annotation.Parent switch
+    {
+        NoteSyntax note => new Target(TargetKind.Note, note),
+        PitchSyntax { Parent: ChordSyntax or ArpeggioSyntax } member => new Target(TargetKind.Member, member),
+        ChordSyntax { IsShapeChord: false } chord => new Target(TargetKind.Chord, chord),
+        ArpeggioSyntax arpeggio => new Target(TargetKind.Chord, arpeggio),
+        _ => null,
+    };
 
     /// <summary>Just past a <c>chord(…)</c> item's <c>)</c> (or its last word, unclosed).</summary>
     private static int ShapeItemHeadEnd(ChordSyntax item)

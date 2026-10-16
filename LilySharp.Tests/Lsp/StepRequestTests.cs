@@ -439,9 +439,15 @@ public class StepRequestTests
         Assert.Equal(Guitar("c'1@chord(Cm7 8x58x6)"), Up("c'1@chord(Cm7 8xx54x‸)", Guitar));
     }
 
+    /// <summary>An <c>@chord</c> with no symbol — a bare shape — has nothing of its own to step, so
+    /// the keys step the note it is written on (owner's request 2026-10-17); it used to fall back
+    /// to the editor's command.</summary>
     [Fact]
-    public void AShapeWithNoSymbol_IsNotSteppable()
-        => Assert.True(Step(Guitar("c'1@chord(x3x5‸46)"), +1).Response.Fallback);
+    public void AShapeWithNoSymbol_StepsItsNote()
+    {
+        Assert.Equal(Guitar("d'1@chord(x3x546)"), Step(Guitar("c'1@chord(x3x5‸46)"), +1, semitone: true).After);
+        Assert.Equal(Guitar("c''1@chord(x3x546)"), Up("c'1@chord(x3x5‸46)", Guitar));
+    }
 
     // ---------------------------------------------------------------- notes
 
@@ -797,11 +803,18 @@ public class StepRequestTests
         // The status bar lists the group, nothing more (owner's decision 2026-10-16).
         var (said, _) = Step(Plain("c'4@ferm‸ata d'"), +1, semitone: true);
         Assert.Equal("shortFermata / fermata / longFermata", said.Message);
-        // A mark in no group is steppable (no fallback to the editor's command) but stays.
+        // A mark in no group steps the note it is written on instead (owner's request 2026-10-17),
+        // on either pair; so does a dynamic on no ladder, and a member's mark its member. A bare
+        // @chord on a <…> chord is the chord's: the key pair inverts it, the octave pair moves it.
         var (alone, after) = Step(Plain("c'4@t‸ap d'"), +1, semitone: true);
         Assert.False(alone.Fallback);
-        Assert.Equal(Plain("c'4@tap d'"), after);
-        Assert.Contains("no group", alone.Message);
+        Assert.Equal(Plain("d'4@tap d'"), after);
+        Assert.Equal(Plain("c''4@tap d'"), Step(Plain("c'4@t‸ap d'"), +1).After);
+        Assert.Equal(Plain("d'4@sfz d'"), Step(Plain("c'4@s‸fz d'"), +1, semitone: true).After);
+        Assert.Equal(Plain("<c' f'@tap g'>4"), Step(Plain("<c' e'@t‸ap g'>4"), +1, semitone: true).After);
+        Assert.Equal(Plain("<c'' e' g'>4@chord"), Step(Plain("<c' e' g'>4@ch‸ord"), +1, semitone: true).After);
+        Assert.Equal(Plain("<c' e' g'>'4@chord"), Step(Plain("<c' e' g'>4@ch‸ord"), +1).After);
+        // A mark that steps keeps the keys even where it stays (@upBow Up, above).
         // Just before the '@' the caret is on the note.
         Assert.Equal(Plain("d'4@downBow d'"), Step(Plain("c'4‸@downBow d'"), +1, semitone: true).After);
     }
@@ -1016,7 +1029,8 @@ public class StepRequestTests
         Assert.Equal(-1, AuditionAt(Plain("c'4 r‸4")).Key);
         // A name with no shape written sounds the shape drawn for it (K3: every step sounds).
         Assert.Equal(Cm7X35343, AuditionAt(Guitar("c'1@chord(Cm7‸)")).Pitches);
-        Assert.Equal(-1, AuditionAt(Guitar("c'1@chord(\"N.C.\"‸)")).Key);   // no shape, no sound
+        // No shape to sound: the keys step (and the caret sounds) the note the mark is written on.
+        Assert.Equal("note", AuditionAt(Guitar("c'1@chord(\"N.C.\"‸)")).Kind);
     }
 
     /// <summary>An <c>@chord</c> on a rest or a spacer (owner's decision 2026-09-28: a chord symbol
