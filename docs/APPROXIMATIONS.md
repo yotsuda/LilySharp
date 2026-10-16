@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 63 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 63 | 観測者がゼロだと自認しているもの |
-| `OWN` | 257 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **383** | |
+| `OWN` | 258 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **384** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -246,10 +246,12 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（257 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（258 件）
 
 ### `LilySharp.Core/Editing/KeyRespeller.cs`
 - **`KeyRespeller`** LILYSHARP-OWN: an editor aid. The rule:
+### `LilySharp.Core/Editing/NoteStepper.Articulation.cs`
+- **`NoteStepper`** bar says so. LILYSHARP-OWN: an editor convenience with no LilyPond counterpart.
 ### `LilySharp.Core/Editing/NoteStepper.cs`
 - **`NoteStepper.NoProgram`** LILYSHARP-OWN: the editor's audition has no LilyPond counterpart (the performer
 ### `LilySharp.Core/Harmony/KeyEstimator.cs`

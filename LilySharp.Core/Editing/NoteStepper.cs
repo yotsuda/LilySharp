@@ -34,7 +34,9 @@ namespace LilySharp.Core.Editing;
 /// Ctrl+Alt before that. On a <c>tempo</c> the same pairs step the metronome number by 1 and
 /// by 10 (owner's decision 2026-10-16, NoteStepper.Tempo.cs); on a <c>key</c> the semitone
 /// pair moves it a fifth round the circle (same day, NoteStepper.Key.cs); on a <c>clef</c> it
-/// steps to the clef for higher or lower notes (same day, NoteStepper.Clef.cs).
+/// steps to the clef for higher or lower notes (same day, NoteStepper.Clef.cs); on an
+/// articulation either pair rotates it through its group — <c>@upBow</c> ⇄ <c>@downBow</c>
+/// (same day, NoteStepper.Articulation.cs).
 /// </summary>
 /// <remarks>
 /// <para>
@@ -104,6 +106,8 @@ public static partial class NoteStepper
         Clef,
         /// <summary>A dynamic — <c>@p</c> steps to <c>@mp</c>, <c>@decresc</c> to <c>@cresc</c> (NoteStepper.Values.cs).</summary>
         Dynamic,
+        /// <summary>An articulation — <c>@upBow</c> rotates to <c>@downBow</c> within its group (NoteStepper.Articulation.cs).</summary>
+        Articulation,
         /// <summary>A <c>time</c> — its beats or its beat unit (NoteStepper.Values.cs).</summary>
         Time,
         /// <summary>A header's <c>octave N</c> or <c>transpose X</c> (NoteStepper.Values.cs).</summary>
@@ -113,7 +117,7 @@ public static partial class NoteStepper
     /// <summary>The kinds whose step changes a setting, not a sound — the audition skips them.</summary>
     private static bool IsSilent(TargetKind kind)
         => kind is TargetKind.Tempo or TargetKind.Key or TargetKind.Clef or TargetKind.Dynamic
-            or TargetKind.Time or TargetKind.HeaderValue;
+            or TargetKind.Articulation or TargetKind.Time or TargetKind.HeaderValue;
 
     /// <summary>A written thing the caret is on: its kind and its node (a
     /// <see cref="NoteSyntax"/>, a <see cref="PitchSyntax"/> or <see cref="ScaleDegreeSyntax"/>
@@ -245,11 +249,12 @@ public static partial class NoteStepper
                 stepped.Add(t);
                 continue;
             }
-            if (t.Kind is TargetKind.Dynamic or TargetKind.Time or TargetKind.HeaderValue)
+            if (t.Kind is TargetKind.Dynamic or TargetKind.Articulation or TargetKind.Time or TargetKind.HeaderValue)
             {
                 var (valueEdit, valueSaid) = t.Kind switch
                 {
                     TargetKind.Dynamic => DynamicEdit((DynamicSyntax)t.Node, dir),
+                    TargetKind.Articulation => ArticulationEdit((ArticulationSyntax)t.Node, dir),
                     TargetKind.Time => TimeEdit((TimeSignatureSyntax)t.Node, dir, semitone),
                     _ => ValuePropertyEdit(text, tree, (PropertyAssignmentSyntax)t.Node, dir, semitone),
                 };
@@ -393,6 +398,8 @@ public static partial class NoteStepper
             return new Target(TargetKind.HeaderValue, property);
         if (DynamicAt(tree, offset) is { } dynamic)
             return new Target(TargetKind.Dynamic, dynamic);
+        if (ArticulationAt(tree, offset) is { } articulation)
+            return new Target(TargetKind.Articulation, articulation);
         // An @chord: strictly after its '@' — a caret just before the '@' is also just after
         // the note's duration, and belongs to the note.
         // A bare one on a chord(…) item names the item's words (ChordAnnotation.Of), so it

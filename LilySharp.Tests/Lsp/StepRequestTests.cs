@@ -767,6 +767,33 @@ public class StepRequestTests
     }
 
     [Fact]
+    public void AnArticulation_RotatesThroughItsGroup_OnEitherPair()
+    {
+        // The owner's two pairs: Up and Down both switch, and a second press comes back.
+        Assert.Equal(Plain("c'4@downBow d'"), Step(Plain("c'4@up‸Bow d'"), +1, semitone: true).After);
+        Assert.Equal(Plain("c'4@upBow d'"), Step(Plain("c'4@downBow‸ d'"), +1, semitone: true).After);
+        Assert.Equal(Plain("c'4@upBow d'"), Step(Plain("c'4@down‸Bow d'"), -1).After);
+        Assert.Equal(Plain("c'4@pullOff d'"), Step(Plain("c'4@h‸ammerOn d'"), +1, semitone: true).After);
+        Assert.Equal(Plain("c'4@hammerOn d'"), Step(Plain("c'4@pull‸Off d'"), -1, semitone: true).After);
+        // A longer group walks in order, the placement stays, and the ends wrap round.
+        Assert.Equal(Plain("c'4@portato.up d'"), Step(Plain("c'4@stacc‸ato.up d'"), +1, semitone: true).After);
+        Assert.Equal(Plain("c'4@staccatissimo d'"), Step(Plain("c'4@stacc‸ato d'"), -1, semitone: true).After);
+        Assert.Equal(Plain("c'4@staccatissimo d'"), Step(Plain("c'4@ten‸uto d'"), +1, semitone: true).After);
+        Assert.Equal(Plain("c'4@longFermata d'"), Step(Plain("c'4@ferm‸ata d'"), +1, semitone: true).After);
+        Assert.Equal(Plain("c'4@shortFermata d'"), Step(Plain("c'4@longFermata‸ d'"), +1, semitone: true).After);
+        Assert.Equal(Plain("c'4@prall d'"), Step(Plain("c'4@mor‸dent d'"), +1, semitone: true).After);
+        var (said, _) = Step(Plain("c'4@up‸Bow d'"), +1, semitone: true);
+        Assert.Equal("@downBow (upBow / downBow)", said.Message);
+        // A mark in no group is steppable (no fallback to the editor's command) but stays.
+        var (alone, after) = Step(Plain("c'4@t‸ap d'"), +1, semitone: true);
+        Assert.False(alone.Fallback);
+        Assert.Equal(Plain("c'4@tap d'"), after);
+        Assert.Contains("no group", alone.Message);
+        // Just before the '@' the caret is on the note.
+        Assert.Equal(Plain("d'4@upBow d'"), Step(Plain("c'4‸@upBow d'"), +1, semitone: true).After);
+    }
+
+    [Fact]
     public void ATime_StepsItsBeats_AndWalksTheCommonMetersOnTheOctaveKeys()
     {
         Assert.Equal(Plain("time 4/4 c'4"), Step(Plain("ti‸me 3/4 c'4"), +1, semitone: true).After);
