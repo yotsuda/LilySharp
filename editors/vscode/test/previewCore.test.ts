@@ -16,7 +16,7 @@
 
 import { describe, it } from 'node:test';
 import * as assert from 'node:assert/strict';
-import { svgPostKey, pagesSummary, previewOnEditorShown, sourceGroupToReveal, sourceGroupToOpen, newPreviewColumn, scoreGroupFor, ShownEditor } from '../src/previewCore';
+import { svgPostKey, pagesSummary, previewOnEditorShown, sourceGroupToReveal, sourceGroupToOpen, newPreviewColumn, scoreGroupFor, ShownEditor, jumpOffsetFor } from '../src/previewCore';
 
 describe('a score opened into a preview\'s group', () => {
     it('moves to the leftmost group with no preview', () => {
@@ -31,6 +31,34 @@ describe('a score opened into a preview\'s group', () => {
 
     it('stays where it opened in a group without a preview', () => {
         assert.equal(scoreGroupFor(1, [{ column: 1, hasPreview: false }, { column: 2, hasPreview: true }]), undefined);
+    });
+});
+
+describe('where a click on the preview puts the caret', () => {
+    it('steps over the indentation to the note', () => {
+        const text = 'part p {\n    c\'4 d\'4\n}';
+        assert.equal(text[jumpOffsetFor(text, text.indexOf('    c'))], 'c');
+    });
+
+    it('steps over a title\'s opening quote', () => {
+        const text = 'title "Harbour"';
+        assert.equal(jumpOffsetFor(text, text.indexOf('"')), text.indexOf('H'));
+    });
+
+    it('lands after the @ of a fermata, a dynamic and an @chord, where the step keys read the mark', () => {
+        // A caret just before the @ is the note's (NoteStepper.TargetAt), so a click on a
+        // fermata followed by Ctrl+Shift+Up moved the pitch (user report 2026-10-17).
+        const text = 'c\'4@fermata d\'4@mf e\'1@chord(Cm7)';
+        for (const mark of ['@fermata', '@mf', '@chord']) {
+            assert.equal(jumpOffsetFor(text, text.indexOf(mark)), text.indexOf(mark) + 1);
+        }
+    });
+
+    it('stays on a note, and never crosses a line break', () => {
+        const text = 'c\'4\n  d\'4';
+        assert.equal(jumpOffsetFor(text, 0), 0);
+        assert.equal(jumpOffsetFor(text, 3), 3);
+        assert.equal(jumpOffsetFor(text, 4), 6);
     });
 });
 

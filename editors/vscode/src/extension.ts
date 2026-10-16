@@ -36,7 +36,7 @@ import { registerOmrContexts } from './omrReader';
 import { OmrScanDeps, hasScan, previewHoversBar, previewReady, previewShowsBar, registerScanFollow, showScan } from './omrScan';
 import { registerVerifyOnSave } from './omrVerify';
 import { markdownItExtensionApi } from './markdownFence';
-import { svgPostKey, pagesSummary, SvgPages, previewOnEditorShown, sourceGroupToReveal, newPreviewColumn, scoreGroupFor, sourceGroupToOpen, SourceTab } from './previewCore';
+import { svgPostKey, pagesSummary, SvgPages, previewOnEditorShown, sourceGroupToReveal, newPreviewColumn, scoreGroupFor, sourceGroupToOpen, SourceTab, jumpOffsetFor } from './previewCore';
 import { textFontFaceCss, textFontsRoot } from './scoreFonts';
 import { SplitSectionsChoice, modalText, splitChoiceItems } from './splitSectionsCore';
 import { cleanHistory, forgetFont, recordFont, samePath, shownFonts } from './soundFontHistoryCore';
@@ -1315,23 +1315,11 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
                     e => e.document.uri.toString() === uri
                 ) ?? await openPreviewSource(panel, uri);
                 if (targetEditor) {
-                    // A grob's data-pos is its node's full-span start, which sits on
-                    // the leading indentation of its line, so a raw jump lands at
-                    // column 1. Nudge forward over horizontal whitespace to land on
-                    // the symbol itself (stop at the newline so we never cross lines).
+                    // A grob's data-pos is its node's full-span start — the leading
+                    // indentation, a title's opening quote, a mark's `@` — and the caret
+                    // goes past it to the thing clicked (jumpOffsetFor).
                     const doc = targetEditor.document;
-                    const text = doc.getText();
-                    let offset = message.position;
-                    while (offset < text.length && (text[offset] === ' ' || text[offset] === '\t')) {
-                        offset++;
-                    }
-                    // A text grob (title / composer / ...) carries its STRING token's
-                    // start, which is the opening quote. Step over it so the caret
-                    // lands on the text that was clicked, not on the delimiter.
-                    if (text[offset] === '"') {
-                        offset++;
-                    }
-                    const position = doc.positionAt(offset);
+                    const position = doc.positionAt(jumpOffsetFor(doc.getText(), message.position));
                     targetEditor.selection = new vscode.Selection(position, position);
                     targetEditor.revealRange(
                         new vscode.Range(position, position),

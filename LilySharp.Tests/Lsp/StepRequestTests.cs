@@ -787,6 +787,13 @@ public class StepRequestTests
         Assert.Equal(Plain("c'4@longFermata d'"), Step(Plain("c'4@ferm‸ata d'"), +1, semitone: true).After);
         Assert.Equal(Plain("c'4@longFermata d'"), Step(Plain("c'4@longFermata‸ d'"), +1, semitone: true).After);
         Assert.Equal(Plain("c'4@prall d'"), Step(Plain("c'4@mor‸dent d'"), +1, semitone: true).After);
+        // The stem's direction (owner's request 2026-10-17): Up is the stem up, on either pair.
+        Assert.Equal(Plain("c'4@stemUp d'"), Step(Plain("c'4@stem‸Down d'"), +1, semitone: true).After);
+        Assert.Equal(Plain("c'4@stemDown d'"), Step(Plain("c'4@stemUp‸ d'"), -1).After);
+        var (stem, top) = Step(Plain("c'4@stem‸Up d'"), +1, semitone: true);
+        Assert.False(stem.Fallback);
+        Assert.Equal(Plain("c'4@stemUp d'"), top);
+        Assert.Equal("stemDown / stemUp", stem.Message);
         // The status bar lists the group, nothing more (owner's decision 2026-10-16).
         var (said, _) = Step(Plain("c'4@ferm‸ata d'"), +1, semitone: true);
         Assert.Equal("shortFermata / fermata / longFermata", said.Message);

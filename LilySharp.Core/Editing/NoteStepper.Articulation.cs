@@ -16,6 +16,7 @@
 
 using System;
 using System.Linq;
+using LilySharp.Core.Semantics;
 using LilySharp.Core.Syntax;
 
 namespace LilySharp.Core.Editing;
@@ -39,16 +40,17 @@ namespace LilySharp.Core.Editing;
 /// long), the mordent pair (mordent below, prall above), the turn pair (reverseTurn starts
 /// below, turn above), the trill pair (trill, pralltriller), the organ pedal pair (heel, toe),
 /// the jazz approaches (scoop from below, plop from above) and departures (fall down, doit up),
-/// the breathing pair (breath, caesura). <c>@harmonic</c> / <c>@flageolet</c> draw the same
+/// the breathing pair (breath, caesura), and the stem's direction (stemDown, stemUp — owner's
+/// request 2026-10-17). <c>@harmonic</c> / <c>@flageolet</c> draw the same
 /// circle, so they are not a group; <c>@tap</c>, <c>@snapPizz</c>, <c>@stopped</c> and
 /// <c>@thumb</c> stand alone, and the status bar says so. LILYSHARP-OWN: an editor convenience
 /// with no LilyPond counterpart.
 /// </remarks>
 public static partial class NoteStepper
 {
-    /// <summary>The groups the step walks, each in Up order; every name is one the registry
-    /// knows (<see cref="ArticulationRegistry.IsKnown"/>), so a retired spelling drops out of
-    /// its group instead of being written.</summary>
+    /// <summary>The groups the step walks, each in Up order; every name is one Lily# consumes
+    /// (<see cref="IsSteppable"/>), so a retired spelling drops out of its group instead of
+    /// being written.</summary>
     private static readonly string[][] ArticulationGroups =
         [.. new[]
         {
@@ -64,7 +66,14 @@ public static partial class NoteStepper
             new[] { "scoop", "plop" },
             new[] { "fall", "doit" },
             new[] { "breath", "caesura" },
-        }.Select(g => g.Where(ArticulationRegistry.IsKnown).ToArray()).Where(g => g.Length > 1)];
+            new[] { "stemDown", "stemUp" },
+        }.Select(g => g.Where(IsSteppable).ToArray()).Where(g => g.Length > 1)];
+
+    /// <summary>A name the step may write: one the registry draws, or a plain annotation the
+    /// collector consumes by name — <c>@stemUp</c> / <c>@stemDown</c> are a stem's direction, not
+    /// an articulation (MeasureCollector reads them; AnnotationNameValidator names them).</summary>
+    private static bool IsSteppable(string name)
+        => ArticulationRegistry.IsKnown(name) || AnnotationNameValidator.PlainFeatureNames.Contains(name);
 
     /// <summary>The size from which a group wraps round instead of stopping at its ends (owner's
     /// decision 2026-10-16: two or three — and four, Lily#'s reading — are easier to use when
@@ -91,7 +100,7 @@ public static partial class NoteStepper
         string name = token.Text;
         var group = Array.Find(ArticulationGroups, g => Array.IndexOf(g, name) >= 0);
         if (group == null)
-            return (null, ArticulationRegistry.IsKnown(name)
+            return (null, IsSteppable(name)
                 ? $"@{name}: in no group of marks to rotate through"
                 : $"@{name}: not an articulation Lily# knows");
         string listed = string.Join(" / ", group);

@@ -31,7 +31,8 @@ All notable changes to the Lily# VS Code extension are documented here.
   either end: `@downBow` → `@upBow`, `@pullOff` → `@hammerOn`, `@staccatissimo` → `@staccato` →
   `@portato` → `@tenuto`, `@accent` → `@marcato`, `@shortFermata` → `@fermata` → `@longFermata`,
   `@mordent` → `@prall`, `@reverseTurn` → `@turn`, `@trill` → `@pralltriller`, `@heel` → `@toe`,
-  `@scoop` → `@plop`, `@fall` → `@doit`, `@breath` → `@caesura`; Down goes back. A `.up` /
+  `@scoop` → `@plop`, `@fall` → `@doit`, `@breath` → `@caesura`, `@stemDown` → `@stemUp`; Down
+  goes back. A `.up` /
   `.down` stays; a mark in no group (`@tap`, `@harmonic`) says so in the status bar.
 - **On a `time`** `Ctrl+Shift+Up` / `Down` step the beats by 1 (`3/4` → `4/4`), and
   `Ctrl+Shift+PageUp` / `PageDown` walk the common meters by the length of the bar,
@@ -61,6 +62,11 @@ All notable changes to the Lily# VS Code extension are documented here.
 - **Fixed: a digit typed in an additive `time` went to a duration**: in `time 2+|/2`, typing `3`
   wrote `time 2+/32` — the `/2` was read as a slash note. An additive meter, whole (`3+2/8`) or
   half typed, is now a meter to the typing aids, and the digit is typed as pressed.
+
+- **A click on a mark in the preview — a fermata, a dynamic, an `@chord` — puts the caret after
+  its `@`**, so `Ctrl+Shift+Up` then steps the mark (`@fermata` → `@longFermata`) and not the
+  note it is written on: the click used to land just before the `@`, which is the note's own
+  place, and the step moved its pitch. A note, a bar and a title land where they did.
 
 ### Ctrl+Shift+Up / Down step a clef
 
@@ -152,15 +158,15 @@ All notable changes to the Lily# VS Code extension are documented here.
 ### A clef change in mid-line writes the key's sharps and flats out
 
 - After a clef change in the middle of a line, a note its key alters carries the key's ?/?
-  (once a bar and note name, until the line ends) � in the preview as on the page.
+  (once a bar and note name, until the line ends) — in the preview as on the page.
 
 ### The percent repeat: `| % |` after the bars
 
-- **`c4 d e f | % | % | % |`** � a percent repeat is the bars once and a mark a repetition after
+- **`c4 d e f | % | % | % |`** — a percent repeat is the bars once and a mark a repetition after
   them (`%2` for two bars). The mark is coloured, its hover says how many bars it repeats and how
   many times they sound, and a mark that repeats nothing is underlined with the reason.
 - **`repeat percent` / `repeat unfold` are errors with a quick fix** that rewrites the item as
-  marks � or writes the music out, for an unfold or a beat. `repeat` now offers `tremolo` alone.
+  marks — or writes the music out, for an unfold or a beat. `repeat` now offers `tremolo` alone.
 
 ### A clef change on a condensed staff moves every part
 

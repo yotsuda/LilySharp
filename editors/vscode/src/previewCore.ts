@@ -73,6 +73,27 @@ export function pagesSummary(pages: SvgPages): string {
         + `: same ${same}, shifted ${shifted}, changed ${changed}; ${chars + pages.Head.length + pages.Tail.length} chars)`;
 }
 
+/**
+ * Where a click on the preview puts the caret, from the clicked grob's data-pos. A grob's
+ * data-pos is its node's full-span start: for the first thing on a line that is the leading
+ * indentation, for a text (a title, a composer) the opening quote, and for a mark written
+ * with an `@` — an articulation, a dynamic, an `@chord` — the `@` itself. The caret goes past
+ * each of those to the thing clicked. Past the `@` because the step keys read a caret just
+ * before it as the NOTE's (it is also just after the note's duration), so a click on a fermata
+ * followed by Ctrl+Shift+Up moved the pitch instead of the fermata (user report 2026-10-17).
+ * Never across a line break.
+ */
+export function jumpOffsetFor(text: string, pos: number): number {
+    let offset = pos;
+    while (offset < text.length && (text[offset] === ' ' || text[offset] === '\t')) {
+        offset++;
+    }
+    if (text[offset] === '"' || text[offset] === '@') {
+        offset++;
+    }
+    return offset;
+}
+
 export function svgPostKey(
     svg: string, error: string | null | undefined,
     renders: readonly RenderEntry[] | null | undefined, drawnRender: string): string {
