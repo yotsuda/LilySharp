@@ -42,8 +42,8 @@
     <tr><td><kbd>Ctrl+K</kbd> <kbd>V</kbd></td><td>open it beside the source</td></tr>
     <tr><td><kbd>Alt+P</kbd> (hold)</td><td>sound the note under the caret</td></tr>
     <tr><td><kbd>Alt+M</kbd></td><td>play the measure the caret is in</td></tr>
-    <tr><td><kbd>Ctrl+Shift+Up</kbd> / <kbd>Down</kbd></td><td>step a note to the next note of the key, a chord shape, a tempo by 1, or a key a fifth — <a href="#step">below</a></td></tr>
-    <tr><td><kbd>Ctrl+Shift+PageUp</kbd> / <kbd>PageDown</kbd></td><td>step a note an octave mark, a chord shape, or a tempo by 10; switch a key to its parallel / relative key</td></tr>
+    <tr><td><kbd>Ctrl+Shift+Up</kbd> / <kbd>Down</kbd></td><td>step a note to the next note of the key, a chord shape, a tempo by 1, a key a fifth, or a clef to the next — <a href="#step">below</a></td></tr>
+    <tr><td><kbd>Ctrl+Shift+PageUp</kbd> / <kbd>PageDown</kbd></td><td>step a note an octave mark, a chord shape, or a tempo by 10; switch a key to its parallel / relative key, or treble to treble_8</td></tr>
     <tr><td><kbd>Ctrl+I</kbd></td><td>transform the selection with AI — <a href="#ai">below</a></td></tr>
   </table>
   <p class="note">On macOS read <kbd>Cmd</kbd> for <kbd>Ctrl</kbd> in the first two and the
@@ -224,6 +224,7 @@
     <tr><td>a <b><code>tempo</code></b></td><td>changes the metronome number: <kbd>Ctrl+Shift+Up</kbd> / <kbd>Down</kbd> by 1, <kbd>Ctrl+Shift+PageUp</kbd> / <kbd>PageDown</kbd> by 10 (<code>tempo "Allegro" 4 = 120</code> → <code>130</code>). Never the beat unit or a <code>swing 16</code>; it stops at 1.</td></tr>
     <tr><td>a <b><code>key</code></b>, <kbd>Ctrl+Shift+Up</kbd> / <kbd>Down</kbd></td><td>moves it a fifth round the circle — one sharp more, or one flat more: <code>key c major</code> → <code>key g major</code>, Down → <code>key f major</code>. The mode stays (<code>a minor</code> → <code>e minor</code>); it stops at seven sharps or flats. Only the signature changes, not the notes.</td></tr>
     <tr><td>a <b><code>key</code></b>, <kbd>Ctrl+Shift+PageUp</kbd> / <kbd>PageDown</kbd></td><td>PageUp: the <b>parallel</b> key — same tonic, other mode (<code>c major</code> ⇄ <code>c minor</code>). PageDown: the <b>relative</b> key — same signature, other mode (<code>c major</code> ⇄ <code>a minor</code>). Major and minor only.</td></tr>
+    <tr><td>a <b><code>clef</code></b></td><td><kbd>Ctrl+Shift+Up</kbd> / <kbd>Down</kbd>: the clef for higher / lower notes — <code>bass</code> → <code>tenor</code> → <code>alto</code> → <code>treble</code>, stopping at either end. <kbd>Ctrl+Shift+PageUp</kbd> / <kbd>PageDown</kbd>: <code>treble</code> ⇄ <code>treble_8</code>. Only the clef changes, not the notes.</td></tr>
     <tr><td>anything else</td><td><kbd>Ctrl+Shift+Up</kbd> / <kbd>Down</kbd>: nothing on Windows and macOS; on Linux, VS Code's own <i>Add Cursor Above / Below</i>. <kbd>Ctrl+Shift+PageUp</kbd> / <kbd>PageDown</kbd>: VS Code's own <i>Move Editor Left / Right in Group</i> (nothing on macOS)</td></tr>
   </table>
   <p>All cursors step in one undo step. The shapes walked are the playable ones — at least

@@ -698,6 +698,34 @@ public class StepRequestTests
         Assert.Contains("major and minor only", modal.Message);
     }
 
+    // ---------------------------------------------------------------- a clef
+
+    [Fact]
+    public void AClef_WalksBassTenorAltoTreble_OnTheSemitoneKeys()
+    {
+        Assert.Equal(Plain("clef tenor c4"), Step(Plain("cl‸ef bass c4"), +1, semitone: true).After);
+        Assert.Equal(Plain("clef alto c4"), Step(Plain("clef tenor‸ c4"), +1, semitone: true).After);
+        Assert.Equal(Plain("clef treble c4"), Step(Plain("‸clef alto c4"), +1, semitone: true).After);
+        Assert.Equal(Plain("clef alto c4"), Step(Plain("clef ‸treble c4"), -1, semitone: true).After);
+        Assert.Equal(Plain("clef alto c4"), Step(Plain("clef treble_8‸ c4"), +1, semitone: true).After);
+        Assert.Equal(Plain("clef tenor c4"), Step(Plain("clef treble_8‸ c4"), -1, semitone: true).After);
+        var (top, after) = Step(Plain("clef ‸treble c4"), +1, semitone: true);
+        Assert.False(top.Fallback);
+        Assert.Equal(Plain("clef treble c4"), after);
+        Assert.Contains("highest", top.Message);
+        Assert.Empty(top.Pitches);
+    }
+
+    [Fact]
+    public void AClef_OnTheOctaveKeys_MovesTrebleAnOctave()
+    {
+        Assert.Equal(Plain("clef treble_8 c4"), Step(Plain("clef ‸treble c4"), -1).After);
+        Assert.Equal(Plain("clef treble c4"), Step(Plain("clef ‸treble_8 c4"), +1).After);
+        var (alto, after) = Step(Plain("clef ‸alto c4"), +1);
+        Assert.False(alto.Fallback);
+        Assert.Equal(Plain("clef alto c4"), after);
+    }
+
     [Fact]
     public void ANoteAfterATempo_StillStepsAsANote()
         => Assert.Equal(Plain("tempo 120 d'4"), Step(Plain("tempo 120 ‸c'4"), +1, semitone: true).After);

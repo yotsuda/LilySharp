@@ -33,6 +33,7 @@
 - [ ] **テンポ**（2026-10-16 のユーザー決定）: `tempo "Allegro" 4 = 120` の上（`tempo` から `120` までのどこでも）で Ctrl+Shift+↑ → `121`、Ctrl+Shift+PgUp → `131`、PgDn → `121`。プレビューのテンポ記号の数字も変わる。何も鳴らない。`tempo swing` の上ではステータスバーに *no metronome number*。
 - [ ] **調**（2026-10-16 のユーザー決定）: `key c major` の上で Ctrl+Shift+↑ → `key g major`、もう 1 回 → `key d major`、↓ 2 回で戻り、さらに ↓ → `key f major`。プレビューの調号が変わる。音符は書き換わらない。`key a minor` ↑ → `key e minor`。
 - [ ] **同主調・平行調**: `key c major` の上で Ctrl+Shift+PgUp → `key c minor`（同主調）、もう 1 回 → `key c major`。PgDn → `key a minor`（平行調・調号は変わらない）、もう 1 回 → `key c major`。タブは動かない。`key d dorian` の上ではステータスバーに *major and minor only*。
+- [ ] **音部記号**（2026-10-16 のユーザー要望）: `clef bass` の上で Ctrl+Shift+↑ → `clef tenor` → `clef alto` → `clef treble`、もう 1 回は動かずステータスバーに *already the highest*。↓ で逆に戻る。プレビューの音部記号が変わり、音符は書き換わらない。`clef treble` で PgDn → `clef treble_8`、PgUp で戻る。
 - [ ] 音符の上でない所で Ctrl+Shift+PgUp / PgDn → エディタのタブが左右に動く（VS Code 既定の Move Editor Left / Right in Group）。音符の上ではタブは動かず、オクターブが動く。
 
 > ⚠️ **音はプレビューの webview が鳴らす**（`stepAudition.ts` の頭の註・2026-09-28 のユーザー決定）＝**その本のプレビューが開いていないと、ステップも自動の試聴も黙って何も鳴らさない**（ステップはプレビューを開かない）。Alt+P / Alt+M だけは 1 回目でプレビューを開き、2 回目で鳴る。確かめる前に `Ctrl+K V` でプレビューを横に開く。音が出ないときの切り分け: ⑴ プレビューが開いているか ⑵ Alt+P で鳴るか（鳴らなければ webview の合成器＝`AudioContext` の側・第901 からは SoundFont シンセ＝出力チャネル「Lily# Extension」の `Preview synth …` の行を見る） ⑶ 出力チャネル「Lily#」に `step:` の行が出ていないか（サーバーが Fallback を返した） ⑷ `lilysharp.audition.enabled` が切られていないか。サーバーの `lilysharp/step` は SHOTLIST の 4 行の本で `pitches=[72]` を返す（第888 が使い捨ての試験で確認）。

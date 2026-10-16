@@ -21,6 +21,14 @@ All notable changes to the Lily# VS Code extension are documented here.
   `lilysharp.stepSemitoneDown`, named when the step was a semitone). Off a note, those keys keep
   VS Code's own *Move Editor Left / Right in Group*.
 
+### Ctrl+Shift+Up / Down step a clef
+
+- **On a `clef`, `Ctrl+Shift+Up` steps to the clef for higher notes and `Ctrl+Shift+Down` to the
+  clef for lower ones** — `clef bass` → `clef tenor` → `clef alto` → `clef treble`, stopping at
+  either end; `clef treble_8` steps from where it sorts (Up → `alto`, Down → `tenor`).
+  `Ctrl+Shift+PageUp` / `Ctrl+Shift+PageDown` move `treble` an octave (`clef treble` ⇄
+  `clef treble_8`). Only the clef changes, not the notes after it.
+
 ### Ctrl+Shift+Up / Down walk a key round the circle of fifths
 
 - **On a `key`, `Ctrl+Shift+Up` adds a sharp and `Ctrl+Shift+Down` a flat** — the key a fifth up
