@@ -307,7 +307,7 @@ const isDuration = (digits: string) => DURATIONS.includes(digits);
 // — a slur spans it, so the scan for the following note skips the whole command
 // (its operands included, or `key g major` would offer 'g' as the note).
 const MID_MUSIC_COMMAND =
-    /^(?:clef\s+[A-Za-z_][A-Za-z0-9_]*|key\s+[a-g](?:isis|eses|is|es)?\s+[A-Za-z]+|time\s+[0-9]+\s*\/\s*[0-9]+|partial\s+[0-9]+\.*|octave\s+[A-Za-z0-9]+|break)(?![A-Za-z0-9_])/;
+    /^(?:clef\s+[A-Za-z_][A-Za-z0-9_]*|key\s+[a-g](?:isis|eses|is|es)?\s+[A-Za-z]+|time\s+[0-9]+(?:\s*\+\s*[0-9]*)*\s*\/\s*[0-9]*|partial\s+[0-9]+\.*|octave\s+[A-Za-z0-9]+|break)(?![A-Za-z0-9_])/;
 
 // The insertions this module reacts to — the pairs VS Code auto-closes included.
 // Checked BEFORE the document text is read, so an ordinary letter, a space or a
@@ -948,7 +948,9 @@ function* musicEvents(text: string, from: number, end: number, bareDurations = f
             // (GRAMMAR §8.2 SlashNote). Only a slash that STANDS ALONE is one —
             // the other spellings of '/' are glued to what is before them
             // (`tuplet 3/2`, a chord entry's `c/g`; `time 4/4` never gets here,
-            // MID_MUSIC_COMMAND takes it whole) — and like a note it may not
+            // MID_MUSIC_COMMAND takes it whole — an additive `time 3+2/8` too, and
+            // one half typed, `time 2+/2`: the owner typed 3 there and got `2+/32`,
+            // 2026-10-16) — and like a note it may not
             // run into a word.
             const prev = text[i - 1];
             let j = i + 1;

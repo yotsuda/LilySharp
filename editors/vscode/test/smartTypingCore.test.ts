@@ -296,6 +296,10 @@ describe('slash notes', () => {
         typed('tuplet 3/2‸', '4', 'tuplet 3/24‸');
         typed('c/g‸', '8', 'c/g8‸');
         typed('time 3/4‸', '8', 'time 3/48‸');
+        // An additive meter, whole or half typed, is a meter: its '/' is no slash note.
+        typed('time 2+‸/2', '3', 'time 2+3‸/2');
+        typed('time 3+2/‸ c4', '8', 'time 3+2/8‸ c4');
+        typed('time 3+2/8 c‸4', '8', 'time 3+2/8 c‸8');
     });
 });
 

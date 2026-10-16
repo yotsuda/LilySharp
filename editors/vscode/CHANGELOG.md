@@ -43,6 +43,10 @@ All notable changes to the Lily# VS Code extension are documented here.
   (`mp`). The preview opens by itself, so lessons 2-12 no longer start with `// Preview: Ctrl+K V`;
   lesson 1 still says how to bring it back.
 
+- **Fixed: a digit typed in an additive `time` went to a duration**: in `time 2+|/2`, typing `3`
+  wrote `time 2+/32` — the `/2` was read as a slash note. An additive meter, whole (`3+2/8`) or
+  half typed, is now a meter to the typing aids, and the digit is typed as pressed.
+
 ### Ctrl+Shift+Up / Down step a clef
 
 - **On a `clef`, `Ctrl+Shift+Up` steps to the clef for higher notes and `Ctrl+Shift+Down` to the
