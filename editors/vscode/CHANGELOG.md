@@ -26,13 +26,13 @@ All notable changes to the Lily# VS Code extension are documented here.
 - **On a dynamic** (the caret after its `@`) either pair steps it a level, `pp` → `p` → `mp` →
   `mf` → `f` → `ff` (`ppppp` to `fffff`). On `@cresc` / `@decresc` / `@dim`, Up writes `@cresc`
   and Down `@decresc` — the same keys, nothing new to remember.
-- **On an articulation** (the caret after its `@`) either pair rotates it through its group,
-  the last wrapping to the first: `@upBow` ⇄ `@downBow`, `@hammerOn` ⇄ `@pullOff`,
-  `@staccatissimo` → `@staccato` → `@portato` → `@tenuto`, `@accent` ⇄ `@marcato`,
-  `@shortFermata` → `@fermata` → `@longFermata`, `@mordent` ⇄ `@prall`, `@turn` ⇄ `@reverseTurn`,
-  `@trill` ⇄ `@pralltriller`, `@heel` ⇄ `@toe`, `@scoop` ⇄ `@plop`, `@fall` ⇄ `@doit`,
-  `@breath` ⇄ `@caesura`. A `.up` / `.down` stays; a mark in no group (`@tap`, `@harmonic`)
-  says so in the status bar.
+- **On an articulation** (the caret after its `@`) either pair steps it along its group — Up
+  towards the up-bow, the hammer-on, the longer, the stronger, the one above — and stops at
+  either end: `@downBow` → `@upBow`, `@pullOff` → `@hammerOn`, `@staccatissimo` → `@staccato` →
+  `@portato` → `@tenuto`, `@accent` → `@marcato`, `@shortFermata` → `@fermata` → `@longFermata`,
+  `@mordent` → `@prall`, `@reverseTurn` → `@turn`, `@trill` → `@pralltriller`, `@heel` → `@toe`,
+  `@scoop` → `@plop`, `@fall` → `@doit`, `@breath` → `@caesura`; Down goes back. A `.up` /
+  `.down` stays; a mark in no group (`@tap`, `@harmonic`) says so in the status bar.
 - **On a `time`** `Ctrl+Shift+Up` / `Down` step the beats by 1 (`3/4` → `4/4`), and
   `Ctrl+Shift+PageUp` / `PageDown` walk the common meters by the length of the bar,
   `3/8` `2/4` `6/8` `3/4` `2/2` `4/4` `9/8` `12/8` (`6/8` ⇄ `3/4` is one press).

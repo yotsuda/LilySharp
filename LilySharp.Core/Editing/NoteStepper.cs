@@ -35,7 +35,7 @@ namespace LilySharp.Core.Editing;
 /// by 10 (owner's decision 2026-10-16, NoteStepper.Tempo.cs); on a <c>key</c> the semitone
 /// pair moves it a fifth round the circle (same day, NoteStepper.Key.cs); on a <c>clef</c> it
 /// steps to the clef for higher or lower notes (same day, NoteStepper.Clef.cs); on an
-/// articulation either pair rotates it through its group — <c>@upBow</c> ⇄ <c>@downBow</c>
+/// articulation either pair steps it along its group — <c>@downBow</c> ⇄ <c>@upBow</c>
 /// (same day, NoteStepper.Articulation.cs).
 /// </summary>
 /// <remarks>
@@ -106,7 +106,7 @@ public static partial class NoteStepper
         Clef,
         /// <summary>A dynamic — <c>@p</c> steps to <c>@mp</c>, <c>@decresc</c> to <c>@cresc</c> (NoteStepper.Values.cs).</summary>
         Dynamic,
-        /// <summary>An articulation — <c>@upBow</c> rotates to <c>@downBow</c> within its group (NoteStepper.Articulation.cs).</summary>
+        /// <summary>An articulation — <c>@downBow</c> steps to <c>@upBow</c> within its group (NoteStepper.Articulation.cs).</summary>
         Articulation,
         /// <summary>A <c>time</c> — its beats or its beat unit (NoteStepper.Values.cs).</summary>
         Time,

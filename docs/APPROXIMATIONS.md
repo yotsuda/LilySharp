@@ -251,7 +251,7 @@
 ### `LilySharp.Core/Editing/KeyRespeller.cs`
 - **`KeyRespeller`** LILYSHARP-OWN: an editor aid. The rule:
 ### `LilySharp.Core/Editing/NoteStepper.Articulation.cs`
-- **`NoteStepper`** bar says so. LILYSHARP-OWN: an editor convenience with no LilyPond counterpart.
+- **`NoteStepper`** @thumb stand alone, and the status bar says so. LILYSHARP-OWN: an editor convenience
 ### `LilySharp.Core/Editing/NoteStepper.cs`
 - **`NoteStepper.NoProgram`** LILYSHARP-OWN: the editor's audition has no LilyPond counterpart (the performer
 ### `LilySharp.Core/Harmony/KeyEstimator.cs`

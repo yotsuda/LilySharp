@@ -767,30 +767,35 @@ public class StepRequestTests
     }
 
     [Fact]
-    public void AnArticulation_RotatesThroughItsGroup_OnEitherPair()
+    public void AnArticulation_StepsAlongItsGroup_OnEitherPair()
     {
-        // The owner's two pairs: Up and Down both switch, and a second press comes back.
-        Assert.Equal(Plain("c'4@downBow d'"), Step(Plain("c'4@up‸Bow d'"), +1, semitone: true).After);
-        Assert.Equal(Plain("c'4@upBow d'"), Step(Plain("c'4@downBow‸ d'"), +1, semitone: true).After);
-        Assert.Equal(Plain("c'4@upBow d'"), Step(Plain("c'4@down‸Bow d'"), -1).After);
-        Assert.Equal(Plain("c'4@pullOff d'"), Step(Plain("c'4@h‸ammerOn d'"), +1, semitone: true).After);
-        Assert.Equal(Plain("c'4@hammerOn d'"), Step(Plain("c'4@pull‸Off d'"), -1, semitone: true).After);
-        // A longer group walks in order, the placement stays, and the ends wrap round.
+        // The owner's two pairs: Up is the up-bow and the hammer-on, Down the other; a press
+        // past the end stays (owner's decision 2026-10-16: small groups do not rotate).
+        Assert.Equal(Plain("c'4@upBow d'"), Step(Plain("c'4@down‸Bow d'"), +1, semitone: true).After);
+        Assert.Equal(Plain("c'4@downBow d'"), Step(Plain("c'4@upBow‸ d'"), -1, semitone: true).After);
+        Assert.Equal(Plain("c'4@upBow d'"), Step(Plain("c'4@down‸Bow d'"), +1).After);
+        Assert.Equal(Plain("c'4@hammerOn d'"), Step(Plain("c'4@p‸ullOff d'"), +1, semitone: true).After);
+        Assert.Equal(Plain("c'4@pullOff d'"), Step(Plain("c'4@hammer‸On d'"), -1, semitone: true).After);
+        var (end, same) = Step(Plain("c'4@up‸Bow d'"), +1, semitone: true);
+        Assert.False(end.Fallback);
+        Assert.Equal(Plain("c'4@upBow d'"), same);
+        Assert.Equal("@upBow: already the last of downBow / upBow", end.Message);
+        // A longer group walks in order, the placement stays, and the ends stop.
         Assert.Equal(Plain("c'4@portato.up d'"), Step(Plain("c'4@stacc‸ato.up d'"), +1, semitone: true).After);
         Assert.Equal(Plain("c'4@staccatissimo d'"), Step(Plain("c'4@stacc‸ato d'"), -1, semitone: true).After);
-        Assert.Equal(Plain("c'4@staccatissimo d'"), Step(Plain("c'4@ten‸uto d'"), +1, semitone: true).After);
+        Assert.Equal(Plain("c'4@tenuto d'"), Step(Plain("c'4@ten‸uto d'"), +1, semitone: true).After);
         Assert.Equal(Plain("c'4@longFermata d'"), Step(Plain("c'4@ferm‸ata d'"), +1, semitone: true).After);
-        Assert.Equal(Plain("c'4@shortFermata d'"), Step(Plain("c'4@longFermata‸ d'"), +1, semitone: true).After);
+        Assert.Equal(Plain("c'4@longFermata d'"), Step(Plain("c'4@longFermata‸ d'"), +1, semitone: true).After);
         Assert.Equal(Plain("c'4@prall d'"), Step(Plain("c'4@mor‸dent d'"), +1, semitone: true).After);
-        var (said, _) = Step(Plain("c'4@up‸Bow d'"), +1, semitone: true);
-        Assert.Equal("@downBow (upBow / downBow)", said.Message);
+        var (said, _) = Step(Plain("c'4@down‸Bow d'"), +1, semitone: true);
+        Assert.Equal("@upBow (downBow / upBow)", said.Message);
         // A mark in no group is steppable (no fallback to the editor's command) but stays.
         var (alone, after) = Step(Plain("c'4@t‸ap d'"), +1, semitone: true);
         Assert.False(alone.Fallback);
         Assert.Equal(Plain("c'4@tap d'"), after);
         Assert.Contains("no group", alone.Message);
         // Just before the '@' the caret is on the note.
-        Assert.Equal(Plain("d'4@upBow d'"), Step(Plain("c'4‸@upBow d'"), +1, semitone: true).After);
+        Assert.Equal(Plain("d'4@downBow d'"), Step(Plain("c'4‸@downBow d'"), +1, semitone: true).After);
     }
 
     [Fact]
