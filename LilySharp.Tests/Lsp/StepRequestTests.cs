@@ -847,6 +847,21 @@ public class StepRequestTests
         var (top, same) = Step(S("shift +1‸1"), +1, semitone: true);
         Assert.False(top.Fallback);
         Assert.Equal(S("shift +11"), same);
+        // The completion leaves `+1` SELECTED (owner's report 2026-10-17): a selection within
+        // one steppable thing steps it, as does one covering the whole line.
+        Assert.Equal(S("shift +2"), Step(S("shift «+1»"), +1, semitone: true).After);
+        Assert.Equal(S("shift -1"), Step(S("«shift 0»"), -1).After);
+    }
+
+    [Fact]
+    public void ASelectionWithinOneValue_StepsIt_AndOneAcrossTwoDoesNot()
+    {
+        Assert.Equal(Plain("c'4@mf d'"), Step(Plain("c'4@«mp» d'"), +1, semitone: true).After);
+        // Across two dynamics there is no ONE thing to step (and no note's pitch starts
+        // inside the selection), so the key's own command runs; a selection that reaches a
+        // note's pitch steps the note, as before.
+        Assert.True(Step(Plain("c'4@«mp@f» d'"), +1, semitone: true).Response.Fallback);
+        Assert.Equal(Plain("c'4@mp e'"), Step(Plain("c'4@«mp d»'"), +1, semitone: true).After);
     }
 
     [Fact]

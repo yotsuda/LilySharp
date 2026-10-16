@@ -203,11 +203,20 @@ public static partial class NoteStepper
                     Add(t);
                 continue;
             }
+            int before = targets.Count;
             foreach (var pitch in PitchLikeNodes(tree))
                 if (pitch.SourceStart >= start && pitch.SourceStart < end)
                     Add(pitch.Parent is NoteSyntax note
                         ? new Target(TargetKind.Note, note)
                         : new Target(TargetKind.Member, pitch));
+            // A selection with no note in it that lies within ONE steppable thing — the `+1` a
+            // completed `shift` leaves selected, a double-clicked tempo number, a dynamic's
+            // letters — steps that thing (owner's report 2026-10-17: the completion's selection
+            // made the key do nothing). Both ends must name the same target.
+            if (targets.Count == before
+                && TargetAt(text, tree, start) is { } first && TargetAt(text, tree, end) is { } last
+                && first.Kind == last.Kind && first.Key == last.Key)
+                Add(first);
         }
 
         if (targets.Count == 0)

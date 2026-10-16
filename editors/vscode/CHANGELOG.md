@@ -45,7 +45,9 @@ All notable changes to the Lily# VS Code extension are documented here.
   +11) and the status bar names the key the piece lands in (`shift +1: key c major -> des
   major`). A top-level `shift N` is new in Lily# itself: it moves the whole piece — every
   part, its own `transpose` included, the key signatures and the chord rows — the karaoke
-  move; see the compiler's changelog.
+  move; see the compiler's changelog. The `+1` the completion leaves selected steps too: a
+  selection with no note in it that lies within one steppable thing (a tempo's number, a
+  dynamic, the shift) now steps that thing instead of doing nothing.
 
 - **A new score's first lines point at the step keys**: File ▸ New File… ▸ Lily# Score now says
   to put the caret on a note, the tempo, the key or the clef and press `Ctrl+Shift+Up` / `Down`
