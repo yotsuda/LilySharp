@@ -140,18 +140,21 @@ public class CompletionAuditTests
     public void TopLevel_OffersTransposeUsingAndDrummap_AndEachCompiles()
     {
         var items = LilySharpLanguageServer.GetTopLevelCompletions().Items;
-        foreach (string label in new[] { "transpose", "using", "drummap" })
+        foreach (string label in new[] { "transpose", "shift", "using", "drummap" })
         {
             var item = Assert.Single(items, i => i.Label == label);
             Assert.False(string.IsNullOrEmpty(item.Detail), label + " has no help line");
-            // `transpose` wants a pitch, `using` a file name; the drummap snippet is whole.
+            // `transpose` wants a pitch, `using` a file name; `shift` carries its own `+1`
+            // placeholder and the drummap snippet is whole.
             string caret = label switch { "transpose" => "d", "using" => "other.lys", _ => "" };
             AssertCompiles(Book(top: Resolved(item, caret)), $"top-level `{label}`");
         }
-        // `transpose` is a file singleton — dropped once written, as `octave` is.
-        var after = LilySharpLanguageServer.GetTopLevelCompletions("transpose d\n").Items.Select(i => i.Label);
+        // `transpose` and `shift` are file singletons — dropped once written, as `octave` is.
+        var after = LilySharpLanguageServer.GetTopLevelCompletions("transpose d\nshift +1\n").Items.Select(i => i.Label).ToList();
         Assert.DoesNotContain("transpose", after);
+        Assert.DoesNotContain("shift", after);
         Assert.Contains("using", after);
+        Assert.Contains("shift", LilySharpLanguageServer.GetTopLevelCompletions("transpose d\n").Items.Select(i => i.Label));
     }
 
     // ================= time / tempo =================

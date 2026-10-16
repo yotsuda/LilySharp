@@ -1056,6 +1056,9 @@ public sealed partial class LilySharpLanguageServer
                 // alike a PITCH follows (`transpose bes,`), which no list can offer; an
                 // empty list keeps the popup from proposing the position's keywords there.
                 case "transpose": return CompletionContext.AfterTransposePitch;
+                // `shift |` — a number of semitones follows (`shift +1`), which no list can
+                // offer either; the same empty list keeps the keywords away (2026-10-17).
+                case "shift": return CompletionContext.AfterTransposePitch;
             }
 
             // `override [once] Grob.property = |` → the values that fit the property
