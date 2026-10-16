@@ -143,6 +143,39 @@ public class MultiMeasureRestLayoutTests
             + gate.LineStartRunNaturalDelta, 6);
     }
 
+    /// <summary>
+    /// The count over a rest is in the system's silhouette — the up extent the page's top and
+    /// title springs are floored on (LayoutUtilities.TitleToSystemSpring) and the staff above
+    /// is spaced off. Until 2026-10-16 no skyline carried the number and a first system's "4"
+    /// stood against the title (the OMR's report, <c>mmrest-count-under-title-2026-10-16.lys</c>).
+    /// </summary>
+    [Fact]
+    public void TheCount_IsInTheSystemsSilhouette()
+    {
+        static double UpExtent(string bar2)
+        {
+            var tree = SyntaxTree.Parse(
+                "octave absolute\ntime 3/4\npart m { clef bass }\n" +
+                $"section S {{ m {{ d4 d d | {bar2} | d4 d d | }} }}\n" +
+                "form { S }\nscore o { staff m }\n");
+            Assert.False(tree.HasErrors);
+            var score = LilySharp.Core.Svg.SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree));
+            var system = Assert.Single(new LayoutEngine().Layout(score).AllSystems);
+            var (up, _) = new SkylineBuilder(4.0, score.TextMetrics, score).BuildSystemSkylines(
+                score, system.Measures, 4.0, double.NaN, default, default, system.StaffGroups, null);
+            return LayoutUtilities.CalculateUpExtent(up);
+        }
+        // The "4" stands NumberStaffPadding over the top line and about two staff spaces tall —
+        // the system's tallest ink here (the d's stems point down, the bass clef stays low):
+        // its top, 2.05 + 0.4 + the digit's height over the middle, less the half staff to the
+        // system's origin.
+        double plain = UpExtent("R2.");
+        double counted = UpExtent("R2.*4");
+        Assert.True(plain < 2.4, $"plain {plain}");
+        Assert.Equal(MultiMeasureRestEngraver.NumberInkBox(4, 0.0, DynamicEngraver.StaffExtentToward(1.0, 5)).Top - 2.0,
+            counted, 6);
+    }
+
     [Fact]
     public void NoRests_ProducesNoMmrLayout()
     {

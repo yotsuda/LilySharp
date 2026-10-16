@@ -20,7 +20,9 @@ using LilySharp.Core.Midi;
 using LilySharp.Core.Music;
 using LilySharp.Core.MusicXml;
 using LilySharp.Core.Semantics;
+using LilySharp.Core.Svg;
 using LilySharp.Core.Svg.Collector;
+using LilySharp.Core.Svg.Layout;
 using LilySharp.Core.Svg.Model;
 using LilySharp.Core.Syntax;
 using Xunit;
@@ -168,8 +170,92 @@ public class BarRestTests
         Assert.Contains(DiagnosticCodes.BareBarRestNeedsABar, Codes(Book(time, music)));
     }
 
+    /// <summary>A run <c>R&lt;dur&gt;*N</c> is dur × N in whole bars of the meter
+    /// (<see cref="BarRest.WholeBars"/>): <c>R4*5</c> in 5/4 is the bar's rest and <c>R4*40</c>
+    /// eight bars of it, each the sign a bare <c>R</c> draws — not N bars of dur, which drew
+    /// five quarter rests under LYS2001 and left 32 empty bars after <c>R4*40</c> (the OMR's
+    /// report, 2026-10-16).</summary>
+    [Theory]
+    [InlineData("5/4", "R4*5", 1)]
+    [InlineData("5/4", "R4*40", 8)]
+    [InlineData("5/4", "R8*20", 2)]
+    [InlineData("9/8", "R8*18", 2)]
+    [InlineData("3/4", "R1*3", 4)]
+    [InlineData("4/4", "R1*3", 3)]
+    public void ARestRun_IsItsLengthInWholeBarsOfTheMeter(string time, string run, int bars)
+    {
+        var parts = time.Split('/');
+        var bar = new Fraction(int.Parse(parts[0]), int.Parse(parts[1]));
+        string book = Book(time, $"{run} | R |");
+        Assert.Empty(Codes(book));
+        var measures = new MeasureCollector().Collect(Parse(book), "m").Voice.Measures;
+        Assert.Equal(bars + 1, measures.Count());
+        Assert.All(measures, m => Assert.Equal(bar, m.Items.OfType<RestItem>().Single().Duration));
+        Assert.All(measures, m => Assert.True(m.Items.OfType<RestItem>().Single().IsMultiMeasure));
+        // ONE written run, then the bare R's: the interior bars open no run of their own.
+        Assert.Equal(2, measures.Count(m => m.Items.OfType<RestItem>().Single().OpensWrittenRun));
+    }
+
+    /// <summary>The run is one symbol with its count on the page.</summary>
+    [Fact]
+    public void ARestRun_InAnOddMeter_IsOneSymbolWithItsCount()
+    {
+        var tree = Parse(Book("5/4", "c'4 d' e' f' g' | R4*40 | c'4 d' e' f' g' |"));
+        var layout = new LayoutEngine().Layout(SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree)));
+        var mmr = Assert.Single(layout.MultiMeasureRestLayouts);
+        Assert.Equal((1, 8), (mmr.StartMeasureIndex, mmr.MeasureCount));
+    }
+
+    /// <summary>A run that is not whole bars of the meter stays N rests of its value, and the
+    /// bar check says so, as before.</summary>
+    [Fact]
+    public void ARestRun_ThatIsNotWholeBars_IsReportedAsBefore()
+    {
+        Assert.Contains(DiagnosticCodes.MeasureIncomplete, Codes(Book("5/4", "c'4 d' e' f' g' | R4*3 | c'4 d' e' f' g' |")));
+    }
+
+    /// <summary>Against another part, the run is its whole bars (MeasureModel).</summary>
+    [Fact]
+    public void ARestRun_IsItsWholeBars_AgainstAnotherPart()
+    {
+        const string book = """
+            octave absolute
+            time 5/4
+            part up { clef treble }
+            part low { clef bass }
+            section A {
+              up { R4*10 | c'4 d' e' f' g' | }
+              low { c4 d e f g | c4 d e f g | c4 d e f g | }
+            }
+            form { ~A }
+            score { staff up  staff low }
+            """;
+        Assert.Empty(Codes(book));
+    }
+
     [Fact]
     public void TheMidi_RestsForTheBars()
+    {
+        int Start(string time, string music) => new MidiExporter().Export(Parse(Book(time, music)))
+            .Tracks.SelectMany(t => t.Notes).Min(n => n.StartTick);
+        // A run's length is dur × N whatever bars it makes: `R4*40` in 5/4 is eight of them.
+        Assert.Equal(8 * 2400, Start("5/4", "R4*40 | c'1 r4 |"));
+    }
+
+    [Fact]
+    public void TheMusicXml_WritesARestRunsWholeBars()
+    {
+        var measures = new MusicXmlExporter().Export(Parse(Book("5/4", "R4*10 | c'4 d' e' f' g' |"))).Parts.Single().Measures;
+        Assert.Equal(3, measures.Count);
+        Assert.Equal(2, measures[0].Attributes?.MultipleRest);
+        var rest = measures[0].Notes.Single();
+        Assert.True(rest.IsMeasureRest);
+        Assert.Null(rest.Type);
+        Assert.Equal(measures[2].Notes.Sum(n => n.Duration), rest.Duration);
+    }
+
+    [Fact]
+    public void TheMidi_RestsForTheBareBars()
     {
         int Start(string time, string music) => new MidiExporter().Export(Parse(Book(time, music)))
             .Tracks.SelectMany(t => t.Notes).Min(n => n.StartTick);

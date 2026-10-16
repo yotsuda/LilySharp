@@ -846,7 +846,7 @@
 "Svg/Layout/HairpinEngraver.cs","HairpinEngraver.WedgeSkylines","2.0","double half = EngravingDefaults.StaffLineThickness / 2.0;","(file-level) LILYPOND-REF: lily/hairpin.cc:110-358","Yellow"
 "Svg/Layout/HairpinEngraver.cs","HairpinEngraver.CircleRadius","0.525","internal const double CircleRadius = Height * 0.525;","LILYPOND-REF: lily/hairpin.cc:150-160 Hairpin::print — circled_tip; Real rad = height * 0.525","Green"
 "Svg/Layout/HairpinEngraver.cs","HairpinEngraver.CircleThickness","1.0","internal static readonly double CircleThickness = 1.0 * EngravingDefaults.StaffLineThickness;","LILYPOND-REF: scm/define-grobs.scm Hairpin (thickness . 1.0)","Green"
-"Svg/Layout/HairpinEngraver.cs","HairpinEngraver.CalculateEndX","0.5","return endMeasure.X + endItem.X - BoundPadding * 0.5;","(file-level) LILYPOND-REF: lily/hairpin.cc:110-358","Yellow"
+"Svg/Layout/HairpinEngraver.cs","HairpinEngraver.CalculateEndX","0.5","hpMeasures, hairpin.EndMeasureIndex, hairpin.EndItemIndex, endMeasure) - BoundPadding * 0.5;","(file-level) LILYPOND-REF: lily/hairpin.cc:110-358","Yellow"
 "Svg/Layout/DynamicEngraver.cs","DynamicEngraver.TextOffsetInSpanner","0.6","=> 0.6 * LabelEm(fonts) / DynamicFontSize;","(file-level) LILYPOND-REF: define-grobs.scm:1433-1460 DynamicText grob","Yellow"
 "Svg/Layout/DynamicEngraver.cs","DynamicEngraver.StaffMiddle","4.0","private const double StaffMiddle = EngravingDefaults.StaffMiddle;  // staff bottom (4.0) / 2","(file-level) LILYPOND-REF: define-grobs.scm:1433-1460 DynamicText grob","Yellow"
 "Svg/Layout/DynamicEngraver.cs","DynamicEngraver.FallbackAscent","1.2","private const double FallbackAscent = 1.2;","(file-level) LILYPOND-REF: define-grobs.scm:1433-1460 DynamicText grob","Yellow"

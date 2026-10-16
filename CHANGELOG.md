@@ -6,6 +6,20 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+### A rest run is its length in whole bars of the meter
+
+- **`R4*5` in 5/4 is one bar's rest, and `R4*40` eight bars of it** — a run `R<dur>*N` is
+  dur × N of silence in whole bars of the meter, as LilyPond reads it (`R1*3` in 3/4 is four
+  bars). It was N bars of dur: `R4*5` drew five quarter rests under LYS2001, and `R4*40` left
+  32 empty bars after it. A run that is not whole bars (`R4*3` in 5/4) is still N rests of
+  its value, and the bar check says so. (Found by the OMR, 2026-10-16.)
+- **A hairpin on a lower staff opens at its own note** — on a grand staff, a left hand's
+  crescendo under a resting right hand opened at the right hand's column of the same index,
+  or at the bar's start when the right hand had fewer items. (Found by the OMR, 2026-10-14.)
+- **The count over a multi-measure rest is in the page's silhouette** — a "4" over the
+  first system no longer touches the title, and a staff above a run keeps clear of its number.
+  (Found by the OMR, 2026-10-16.)
+
 ### Guess Section Key reads the chord names too
 
 - **Lily#: Guess Section Key… now reads a section's chord rows as well as its notes** — a

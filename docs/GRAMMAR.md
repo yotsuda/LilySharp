@@ -2068,8 +2068,18 @@ MidMusicCommand = 'clef' , [ '!' ] , ClefName       (* '!' forces a clef that ch
 ### 8.2 Notes, Rests, Chords
 
 Note           = PitchToken , [ DurationToken ] , { Annotation } ;
-Rest           = ( 'r' | 's' | 'R' ) , [ DurationToken ] , { Annotation } ;
-                 (* r = plain rest, s = invisible spacer, R = full-measure rest *)
+Rest           = ( 'r' | 's' | 'R' ) , [ DurationToken ] , [ '*' , Integer ] , { Annotation } ;
+                 (* r = plain rest, s = invisible spacer, R = full-measure rest.
+                    A bare 'R' lasts its bar whatever the meter, 'R*N' N bars of it. A RUN
+                    'R<dur>*N' is dur × N of silence in WHOLE BARS OF THE METER, as LilyPond
+                    reads it: 'R1*4' four bars of 4/4, 'R4*5' ONE bar of 5/4, 'R4*40' eight of
+                    them, 'R1*3' in 3/4 four bars (2026-10-16 — until then it was N bars of
+                    dur, so 'R4*5' drew five quarter rests under LYS2001 and 'R4*40' left 32
+                    empty bars after it; found by the OMR). Where dur × N is not whole bars
+                    ('R4*3' in 5/4) it is N rests of dur, which the bar check reports; a run
+                    opening mid-bar is read the same way. One rule, one place:
+                    Music.BarRest.WholeBars (the collector, MeasureModel, the bar-count walk,
+                    the validator and the MusicXML writer all ask it). *)
 
 (* RHYTHM (COMPING) NOTATION, 2026-08-19. A SLASH NOTE is a pitchless note drawn
    as a slash head on the MIDDLE staff line — the token depicts the printed ink,

@@ -3956,6 +3956,12 @@ internal sealed class MultiStaffLayouter
                 var insideSky = skylineBuilder.BuildInsideStaffSkylines(
                     staff, measureLayouts, articulations, tupletBrackets, slurs, ties, beams,
                     CurrentIndent, restShifts, fingerings, graceSeeds);
+                // ...and the COUNT over this staff's multi-measure rests: inside-staff ink in
+                // LilyPond (MultiMeasureRestNumber declares no outside-staff-priority), and in
+                // no Lily# skyline until 2026-10-16 — a first system's "4" stood against the
+                // title (the OMR's report). Both passes below: the number is a text, pure.
+                MultiMeasureRestEngraver.SeedCountNumbers(score, staff, measureLayouts,
+                    insideSky.Up, NotationStaffLinesOf(staff), LineSpacingOf(staff));
                 inside.Add(insideSky);
                 // The staff's HAIRPINS, laid out once for both passes below.
                 var hairpins = StaffHairpinLayouts(
@@ -3980,6 +3986,9 @@ internal sealed class MultiStaffLayouter
                             ImmutableArray<TupletBracketLayout>.Empty, slurs,
                             ImmutableArray<TieLayout>.Empty, beams,
                             CurrentIndent, restShifts, fingerings, graceSeeds);
+                    if (!layoutPass)
+                        MultiMeasureRestEngraver.SeedCountNumbers(score, staff, measureLayouts,
+                            inSky.Up, NotationStaffLinesOf(staff), LineSpacingOf(staff));
                     // ...and the room's own view: the same profile with the priority-250 movers
                     // placed on a COPY, so the shared one stays the inside profile.
                     var sky = skylineBuilder.PlaceDynamicsOn(

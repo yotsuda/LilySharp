@@ -339,7 +339,8 @@ internal static class MultiMeasureRestEngraver
                 // Centre the rest between the INNER edges of the bounding break alignments,
                 // not the outer measure box: a repeat `:|`'s dots, a key or time change after
                 // the opening bar line, a clef before the closing one all stay outside (BarWidth).
-                var (startX, endX) = BarWidth(score.TextMetrics, staves, startSystem,
+                var (startX, endX) = BarWidth(score.TextMetrics, staves,
+                    !startSystem.Measures.IsDefaultOrEmpty && startSystem.Measures[0].MeasureIndex == runStart,
                     startMeasure, runStart, voice.Measures[runStart].StartBarline,
                     endMeasure, runEnd, voice.Measures[runEnd].EndBarline);
                 // EVERY resting staff gets its own symbol, and within a staff every VOICE
@@ -429,7 +430,8 @@ internal static class MultiMeasureRestEngraver
             if (inRun.Contains(m) || m >= voice.Measures.Length)
                 continue;
             var (system, measure) = measureMap[m];
-            var (startX, endX) = BarWidth(score.TextMetrics, staves, system,
+            var (startX, endX) = BarWidth(score.TextMetrics, staves,
+                !system.Measures.IsDefaultOrEmpty && system.Measures[0].MeasureIndex == m,
                 measure, m, voice.Measures[m].StartBarline,
                 measure, m, voice.Measures[m].EndBarline);
             foreach (int si in StaffIndicesIn(system, staffIndex))
@@ -489,11 +491,9 @@ internal static class MultiMeasureRestEngraver
     /// </remarks>
     private static (double StartX, double EndX) BarWidth(
         Rendering.ScoreTextMetrics fonts, ImmutableArray<ImmutableArray<Voice>> staves,
-        SystemLayout system, MeasureLayout first, int firstIndex, BarlineType firstStartBarline,
+        bool opensSystem, MeasureLayout first, int firstIndex, BarlineType firstStartBarline,
         MeasureLayout last, int lastIndex, BarlineType lastEndBarline)
     {
-        bool opensSystem = !system.Measures.IsDefaultOrEmpty
-            && system.Measures[0].MeasureIndex == firstIndex;
         double reach = 0, clef = 0;
         foreach (var voices in staves)
         {
@@ -538,6 +538,69 @@ internal static class MultiMeasureRestEngraver
                     break;
             }
             return false;
+        }
+    }
+
+    /// <summary>
+    /// Seeds the count numbers of <paramref name="staff"/>'s runs that open on the system
+    /// <paramref name="measureLayouts"/> lays out into the staff's inside UP skyline
+    /// (<paramref name="up"/>, Y-up about the staff middle): each number's ink box
+    /// (<see cref="NumberInkBox"/>) centred on the symbol <see cref="Calculate"/> centres the
+    /// same way (BarWidth), over the staff's outer line — so the staff above, the title and the
+    /// page's extents are spaced off it. ⚠️ No skyline carried the number until 2026-10-16: a
+    /// first system's "4" stood against the title (the OMR's report of that day).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-grobs.scm:2397-2419 MultiMeasureRestNumber side-position-interface::y-aligned-side
+    ///   — over the rest, with no outside-staff-priority, so it is in the VerticalAxisGroup's
+    ///   own skyline (lily/axis-group-interface.cc:914-935 inside_staff_skylines).
+    /// A run broken over a line, or one under a percent sign, seeds nothing here (the pieces
+    /// and the sign are <see cref="Calculate"/>'s); full size only, as the other seeds.
+    /// </remarks>
+    internal static void SeedCountNumbers(
+        MultiStaffScore score, Staff staff, ImmutableArray<MeasureLayout> measureLayouts,
+        VerticalSkyline up, int staffLines, double lineSpacing, double middleUp = 0.0)
+    {
+        if (measureLayouts.IsDefaultOrEmpty || StaffSize.Of(staff).Span(1.0) != 1.0)
+            return;
+        var runs = MmrRunMap.ForScore(score);
+        ImmutableArray<ImmutableArray<Voice>> staves = default;
+        double staffExtent = DynamicEngraver.StaffExtentToward(1.0, staffLines) * lineSpacing;
+        foreach (var first in measureLayouts)
+        {
+            if (!runs.TryGetRunStartingAt(first.MeasureIndex, out var run) || run.Count <= 1)
+                continue;
+            int runStart = run.StartMeasureIndex, runEnd = runStart + run.Count - 1;
+            MeasureLayout? last = null;
+            foreach (var ml in measureLayouts)
+                if (ml.MeasureIndex == runEnd)
+                    last = ml;
+            if (last is null)
+                continue;
+            // The staff's own rest opens the run (a staff holding the run's skips draws no number).
+            bool rests = false;
+            foreach (var v in staff.Voices)
+                if (runStart < v.Measures.Length && BarRestIndex(v.Measures[runStart]) >= 0)
+                    rests = true;
+            if (!rests)
+                continue;
+            if (staves.IsDefault)
+            {
+                var all = ImmutableArray.CreateBuilder<ImmutableArray<Voice>>();
+                foreach (var group in score.StaffGroups)
+                    foreach (var s in group.Staves)
+                        all.Add(s.Voices);
+                staves = all.ToImmutable();
+            }
+            var primary = staff.PrimaryVoice.Measures;
+            if (runEnd >= primary.Length)
+                continue;
+            var (startX, endX) = BarWidth(score.TextMetrics, staves,
+                measureLayouts[0].MeasureIndex == runStart,
+                first, runStart, primary[runStart].StartBarline,
+                last, runEnd, primary[runEnd].EndBarline);
+            var (left, right, bottom, top) = NumberInkBox(run.Count, (startX + endX) / 2.0, staffExtent);
+            up.MergeBox(left, right, bottom + middleUp, top + middleUp);
         }
     }
 

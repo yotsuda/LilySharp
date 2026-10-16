@@ -301,15 +301,7 @@ public sealed partial class MeasureCollector
     {
         // A bare `R` lasts the bar it opens (BarRest), and leaves the running duration alone.
         if (forcedDuration == null && bar is { } length && Music.BarRest.IsBare(rest))
-        {
-            var (value, barDots, scale) = Music.BarRest.Shape(length);
-            return new RestItem(Fraction.FromNoteValue(value), barDots, rest.SourceStart)
-            {
-                TimeScale = new Fraction(scale),
-                IsMultiMeasure = true,
-                TodoKey = TodoKeyOf(rest), TodoMemo = TodoMemoOf(rest), TodoBelow = TodoBelowOf(rest),
-            };
-        }
+            return CreateBarRestItem(rest, length);
         // An arpeggio member has no written duration — the group forces the
         // equal-subdivision value/dots on it (and must not disturb the default carry).
         var duration = rest.DurationReading;
@@ -328,6 +320,20 @@ public sealed partial class MeasureCollector
             // Capital R = explicit multi-measure rest (centred). Lowercase r = plain
             // rest at beat 1, even when it fills the measure.
             IsMultiMeasure = rest.RestText == "R",
+            TodoKey = TodoKeyOf(rest), TodoMemo = TodoMemoOf(rest), TodoBelow = TodoBelowOf(rest),
+        };
+    }
+
+    /// <summary>The sign of a bar of <paramref name="length"/> as one rest item (BarRest.Shape):
+    /// what a bare <c>R</c> makes, and each bar of a run <c>R4*5</c> reads as whole bars of
+    /// (BarRest.WholeBars). Leaves the running duration alone.</summary>
+    private RestItem CreateBarRestItem(RestSyntax rest, Fraction length)
+    {
+        var (value, barDots, scale) = Music.BarRest.Shape(length);
+        return new RestItem(Fraction.FromNoteValue(value), barDots, rest.SourceStart)
+        {
+            TimeScale = new Fraction(scale),
+            IsMultiMeasure = true,
             TodoKey = TodoKeyOf(rest), TodoMemo = TodoMemoOf(rest), TodoBelow = TodoBelowOf(rest),
         };
     }

@@ -1145,9 +1145,70 @@ public sealed partial class MeasureCollector
         // this walk nor hand the page a count to pad up to — a collect that overran its
         // budget pads nothing (ProcessSection), so the ceiling only has to keep the sum sane.
         int budget = DefaultExpansionBudgetCap;
-        WalkBars(scope.Green, ref bars, ref pendingMusic, ref confirmable, phrases, activeRefs: null, ref budget);
+        var meter = ScoreMeterBefore(scope);
+        WalkBars(scope.Green, ref bars, ref pendingMusic, ref confirmable, ref meter, phrases, activeRefs: null, ref budget);
         trailingOpen = pendingMusic;
         return Math.Min(DefaultExpansionBudgetCap, bars + (pendingMusic ? 1 : 0));
+    }
+
+    /// <summary>
+    /// The meter in force where <paramref name="scope"/> opens — what a run <c>R4*40</c> is
+    /// whole bars of (the walks' Rest arm, <see cref="Music.BarRest.WholeBars"/>): the last
+    /// score-level <c>time</c> written before the scope's top-level declaration, as the
+    /// semantic count arms it (<see cref="SectionBarCounts.SemanticVoices"/>); 4/4 with none;
+    /// null under <c>time none</c>. The walk itself meets a section's or a part block's own
+    /// <c>time</c>, and every one in the music. For the root (the whole book) there is nothing
+    /// before: the walk meets them all.
+    /// </summary>
+    private static Semantics.Fraction? ScoreMeterBefore(SyntaxNode scope)
+    {
+        Semantics.Fraction? meter = Semantics.DurationCalculator.ParseTimeSignature(4, 4);
+        var top = scope;
+        while (top.Parent is { } parent && parent is not CompilationUnitSyntax)
+            top = parent;
+        if (top.Parent is not CompilationUnitSyntax root)
+            return meter;
+        foreach (var child in root.ChildNodes())
+        {
+            if (child == top)
+                break;
+            if (child is TimeSignatureSyntax time)
+                meter = MeterOf(time);
+        }
+        return meter;
+    }
+
+    /// <summary>A <c>time</c>'s bar length, or null for <c>time none</c>.</summary>
+    private static Semantics.Fraction? MeterOf(TimeSignatureSyntax time)
+        => time.IsSenzaMisura ? null : Semantics.DurationCalculator.ParseTimeSignature(time.Beats, time.BeatType);
+
+    /// <summary>
+    /// <see cref="MeterOf(TimeSignatureSyntax)"/> off the green (the walk builds no red): the
+    /// numerator tokens' sum (<c>3+2/8</c> is 5) over the denominator — the slots
+    /// <see cref="TimeSignatureSyntax.Beats"/> and <c>BeatType</c> read — null for
+    /// <c>time none</c> (the numerator slot a word) or a broken one.
+    /// </summary>
+    private static Semantics.Fraction? MeterOf(InternalSyntax.GreenNode time)
+    {
+        int beats = 0, beatType = 0;
+        bool any = false, pastSlash = false;
+        for (int i = 3; i < time.SlotCount; i++)
+        {
+            if (time.GetSlot(i) is not InternalSyntax.SyntaxToken t)
+                continue;
+            if (t.Kind == SyntaxKind.Slash) { pastSlash = true; continue; }
+            if (t.Kind == SyntaxKind.OpenParen)
+                break; // the beat grouping
+            if (!int.TryParse(t.Text, out int v))
+            {
+                if (!pastSlash && t.Kind == SyntaxKind.Identifier)
+                    return null; // `time none`
+                continue;
+            }
+            if (!pastSlash) { beats += v; any = true; }
+            else if (beatType == 0) beatType = v;
+        }
+        return any && beatType > 0 ? Semantics.DurationCalculator.ParseTimeSignature(beats, beatType) : null;
     }
 
     /// <summary>
@@ -1164,8 +1225,9 @@ public sealed partial class MeasureCollector
     internal sealed class PhraseBarTable
     {
         public Dictionary<string, InternalSyntax.GreenNode> Greens { get; } = new(StringComparer.Ordinal);
-        /// <summary>(name, confirmable at entry) → (bars the body adds, whether it leaves a bar open).</summary>
-        public Dictionary<(string Name, bool Confirmable), (int Bars, bool Pending)> Memo { get; } = new();
+        /// <summary>(name, confirmable at entry, the meter at entry) → (bars the body adds, whether it
+        /// leaves a bar open, the meter at its exit — a `time` in the body arms what follows).</summary>
+        public Dictionary<(string Name, bool Confirmable, Semantics.Fraction? Meter), (int Bars, bool Pending, Semantics.Fraction? MeterOut)> Memo { get; } = new();
     }
 
     /// <inheritdoc cref="PhraseBarTable"/>
@@ -1201,7 +1263,7 @@ public sealed partial class MeasureCollector
     /// as its oracle.
     /// </summary>
     private static void WalkBars(InternalSyntax.GreenNode node, ref int bars, ref bool pendingMusic, ref bool confirmable,
-        PhraseBarTable? phrases, HashSet<string>? activeRefs, ref int budget)
+        ref Semantics.Fraction? meter, PhraseBarTable? phrases, HashSet<string>? activeRefs, ref int budget)
     {
         for (int i = 0; i < node.SlotCount; i++)
         {
@@ -1212,11 +1274,28 @@ public sealed partial class MeasureCollector
             {
                 case SyntaxKind.Rest:
                     // `R1*N` is N bars written as one token (RestGreen's slot 3 is the count):
-                    // N−1 here, the last one when the bar closes or stays pending.
+                    // N−1 here, the last one when the bar closes or stays pending. A run with
+                    // a written value is dur × N in WHOLE BARS OF THE METER — `R4*5` in 5/4 is
+                    // one bar, `R4*40` eight (BarRest.WholeBars, the collector's and
+                    // MeasureModel's reading; counted as 40, the page padded 32 empty bars
+                    // after it — the OMR's report, 2026-10-16). A bare `R*N` is N bars of
+                    // whatever the meter is.
                     pendingMusic = true;
                     if (child.GetSlot(3) is InternalSyntax.SyntaxToken count
                         && int.TryParse(count.Text, out int n) && n > 1)
+                    {
+                        if (child.GetSlot(0)!.Text == "R"
+                            && new DurationReading(child.GetSlot(1)) is { IsPresent: true } written
+                            && Music.BarRest.WholeBars(
+                                Semantics.Fraction.FromNoteValue(written.Value).Dotted(written.DotCount), n, meter) is int whole)
+                            n = whole;
                         bars = (int)Math.Min(DefaultExpansionBudgetCap, (long)bars + n - 1);
+                    }
+                    break;
+                case SyntaxKind.TimeSignature:
+                    // The meter the runs after it are whole bars of: a section's or a part
+                    // block's own `time`, or one in the music.
+                    meter = MeterOf(child);
                     break;
                 case SyntaxKind.RepeatExpression:
                     // Played length, MeasureModel's reading (its class remarks): the body's
@@ -1241,7 +1320,7 @@ public sealed partial class MeasureCollector
                         const int turns = 1;
                         int bodyBars = 0; bool bodyPending = false; bool bodyConfirmable = false;
                         if (child.GetSlot(3) is { } body)
-                            WalkBars(body, ref bodyBars, ref bodyPending, ref bodyConfirmable, phrases, activeRefs, ref budget);
+                            WalkBars(body, ref bodyBars, ref bodyPending, ref bodyConfirmable, ref meter, phrases, activeRefs, ref budget);
                         if (bodyBars == 0)
                         {
                             pendingMusic = true;
@@ -1251,7 +1330,7 @@ public sealed partial class MeasureCollector
                         pendingMusic = bodyPending;
                         // The alternative clause's endings are written bars of their own.
                         if (child.GetSlot(4) is { } alternative)
-                            WalkBars(alternative, ref bars, ref pendingMusic, ref confirmable, phrases, activeRefs, ref budget);
+                            WalkBars(alternative, ref bars, ref pendingMusic, ref confirmable, ref meter, phrases, activeRefs, ref budget);
                         // A closed body's exit is a bar boundary: a `|` right after it confirms
                         // the close (`repeat percent 2 { c4 e g e | } |` is two bars, not three).
                         confirmable = !pendingMusic;
@@ -1276,21 +1355,24 @@ public sealed partial class MeasureCollector
                     {
                         budget--;
                         // The body's count depends on the walk's state only through
-                        // `confirmable` (a leading `|` confirms or counts); pending music at
-                        // the entry is closed by the body's first bar line exactly as a
-                        // leading empty bar would count, so the memo is keyed on that one bit.
-                        var key = (nameTok.Text, confirmable);
+                        // `confirmable` (a leading `|` confirms or counts) and the meter (a
+                        // run's whole bars); pending music at the entry is closed by the body's
+                        // first bar line exactly as a leading empty bar would count, so the
+                        // memo is keyed on that bit and the meter.
+                        var key = (nameTok.Text, confirmable, meter);
                         if (!phrases.Memo.TryGetValue(key, out var counted))
                         {
                             activeRefs ??= new HashSet<string>(StringComparer.Ordinal);
                             if (!activeRefs.Add(nameTok.Text))
                                 break; // a cycle: walked once, nothing on re-entry
                             int bodyBars = 0; bool bodyPending = false; bool bodyConfirmable = confirmable;
-                            WalkBars(phraseBody, ref bodyBars, ref bodyPending, ref bodyConfirmable, phrases, activeRefs, ref budget);
+                            var bodyMeter = meter;
+                            WalkBars(phraseBody, ref bodyBars, ref bodyPending, ref bodyConfirmable, ref bodyMeter, phrases, activeRefs, ref budget);
                             activeRefs.Remove(nameTok.Text);
-                            counted = (bodyBars, bodyPending);
+                            counted = (bodyBars, bodyPending, bodyMeter);
                             phrases.Memo[key] = counted;
                         }
+                        meter = counted.MeterOut;
                         if (counted.Bars == 0 && !counted.Pending)
                             break; // an empty body touches nothing
                         bars = Math.Min(DefaultExpansionBudgetCap, bars + counted.Bars);
@@ -1343,13 +1425,13 @@ public sealed partial class MeasureCollector
                     {
                         if (child.GetSlot(v) is { Kind: SyntaxKind.MusicBlock } firstVoice)
                         {
-                            WalkBars(firstVoice, ref bars, ref pendingMusic, ref confirmable, phrases, activeRefs, ref budget);
+                            WalkBars(firstVoice, ref bars, ref pendingMusic, ref confirmable, ref meter, phrases, activeRefs, ref budget);
                             break;
                         }
                     }
                     break;
                 default:
-                    WalkBars(child, ref bars, ref pendingMusic, ref confirmable, phrases, activeRefs, ref budget);
+                    WalkBars(child, ref bars, ref pendingMusic, ref confirmable, ref meter, phrases, activeRefs, ref budget);
                     break;
             }
         }
@@ -1368,11 +1450,14 @@ public sealed partial class MeasureCollector
         int bars = 0;
         bool pendingMusic = false;
         bool confirmable = false;
-        WalkBarsRed(scope, ref bars, ref pendingMusic, ref confirmable);
+        var meter = ScoreMeterBefore(scope);
+        WalkBarsRed(scope, ref bars, ref pendingMusic, ref confirmable, ref meter);
         return bars + (pendingMusic ? 1 : 0);
     }
 
-    private static void WalkBarsRed(SyntaxNode node, ref int bars, ref bool pendingMusic, ref bool confirmable)
+    // (the meter: the one addition since — a run's whole bars, as the green walk's Rest arm)
+    private static void WalkBarsRed(SyntaxNode node, ref int bars, ref bool pendingMusic, ref bool confirmable,
+        ref Semantics.Fraction? meter)
     {
         for (int i = 0; i < node.SlotCount; i++)
         {
@@ -1380,6 +1465,9 @@ public sealed partial class MeasureCollector
             switch (child)
             {
                 case null:
+                    break;
+                case TimeSignatureSyntax time:
+                    meter = MeterOf(time);
                     break;
                 case BarlineSyntax bar:
                     if (pendingMusic)
@@ -1404,7 +1492,13 @@ public sealed partial class MeasureCollector
                 case RestSyntax rest:
                     pendingMusic = true;
                     if (rest.MeasureCount > 1)
-                        bars = (int)Math.Min(DefaultExpansionBudgetCap, (long)bars + rest.MeasureCount - 1);
+                    {
+                        int n = rest.MeasureCount;
+                        if (rest.RestText == "R" && rest.Duration is { } written
+                            && Music.BarRest.WholeBars(written.ToFraction(), n, meter) is int whole)
+                            n = whole;
+                        bars = (int)Math.Min(DefaultExpansionBudgetCap, (long)bars + n - 1);
+                    }
                     break;
                 case PercentMarkSyntax mark:
                     pendingMusic = true;
@@ -1420,7 +1514,7 @@ public sealed partial class MeasureCollector
                     {
                         const int turns = 1;
                         int bodyBars = 0; bool bodyPending = false; bool bodyConfirmable = false;
-                        WalkBarsRed(rep.Body, ref bodyBars, ref bodyPending, ref bodyConfirmable);
+                        WalkBarsRed(rep.Body, ref bodyBars, ref bodyPending, ref bodyConfirmable, ref meter);
                         if (bodyBars == 0)
                         {
                             pendingMusic = true;
@@ -1443,10 +1537,10 @@ public sealed partial class MeasureCollector
                 case ParallelExpressionSyntax parallel:
                     var first = parallel.Voices.FirstOrDefault();
                     if (first != null)
-                        WalkBarsRed(first, ref bars, ref pendingMusic, ref confirmable);
+                        WalkBarsRed(first, ref bars, ref pendingMusic, ref confirmable, ref meter);
                     break;
                 default:
-                    WalkBarsRed(child, ref bars, ref pendingMusic, ref confirmable);
+                    WalkBarsRed(child, ref bars, ref pendingMusic, ref confirmable, ref meter);
                     break;
             }
         }

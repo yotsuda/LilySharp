@@ -115,6 +115,14 @@ internal sealed class SkylineBuilder
             EdgeGraceSeeds(score, firstStaff, measureLayouts), pureBeams);
         SeedLineStartKey(score, firstStaff, measureLayouts, firstStaffMiddleUp, systemLeft,
             upSkyline, downSkyline);
+        // ...and the COUNT over the top staff's multi-measure rests, the one piece of a rest's
+        // ink outside the staff: the page's top spring and the title spring are floored on this
+        // silhouette, and until 2026-10-16 it carried no number — a first system's "4" stood
+        // against the title (the OMR's report). The same seed the staff's own profile takes.
+        if (firstStaff is not null)
+            MultiMeasureRestEngraver.SeedCountNumbers(score, firstStaff, measureLayouts, upSkyline,
+                MultiStaffLayouter.NotationStaffLinesOf(firstStaff), MultiStaffLayouter.LineSpacingOf(firstStaff),
+                middleUp: firstStaffMiddleUp);
 
         // Process bottommost staff for DOWN skyline (elements below the system)
         // LILYPOND-REF: lily/page-layout-problem.cc:1075-1124 build_system_skyline

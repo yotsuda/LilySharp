@@ -4668,6 +4668,16 @@ public sealed class MusicXmlExporter
         var (type, dots) = bare && Music.BarRest.Shape(duration).Scale != 1
             ? ((string?)null, 0) : GetNoteType(duration);
         int bars = rest.MeasureCount;
+        // `R4*5` in 5/4 is one whole-measure rest, `R4*40` eight (BarRest.WholeBars) — as the
+        // page lays the run out; not whole bars, it stays N rests of its value.
+        if (bars > 1 && !bare && rest.RestText == "R" && !_bars.SenzaMisura
+            && Music.BarRest.WholeBars(duration, bars, _bars.BarLength) is int wholeBars)
+        {
+            bars = wholeBars;
+            duration = _bars.BarLength;
+            durationTicks = FractionToTicks(duration);
+            (type, dots) = Music.BarRest.Shape(duration).Scale != 1 ? ((string?)null, 0) : GetNoteType(duration);
+        }
         // A rest inside a tuplet plays its share like a note (the pitched rest above stamps
         // the same): without the ratio a reader sees a plain eighth where a triplet eighth
         // stands, and a bracket opening on the rest has no ratio to open with.

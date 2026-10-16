@@ -1344,6 +1344,8 @@ internal sealed partial class LayoutEngine
                     staffByIndex: ctx.StaffByIndex)
                 : ImmutableArray<TieVariantLayout>.Empty,
             // LILYPOND-REF: lily/multi-measure-rest.cc — Multi_measure_rest grob.
+            // (The count's ink is in the staff's own skyline — MultiMeasureRestEngraver.SeedCountNumbers —
+            // so the preliminary extents carry it without laying the rests out here.)
             MultiMeasureRests: score != null && drawn
                 ? MultiMeasureRestEngraver.Calculate(score, systems, _options.StaffHeight,
                     voicesByStaff: voicesByStaff, prebuiltMeasureMap: tailMeasureMap,

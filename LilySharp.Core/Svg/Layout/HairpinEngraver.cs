@@ -387,7 +387,7 @@ internal static class HairpinEngraver
             }
             else
             {
-                ownEndX = CalculateEndX(hairpin, measureLayouts);
+                ownEndX = CalculateEndX(hairpin, hpMeasures, measureLayouts);
             }
         }
 
@@ -415,7 +415,7 @@ internal static class HairpinEngraver
                     out var startDyn)
                 && (startDyn.GlyphRunWidth ?? DynamicOutline.AdvanceWidth(startDyn.Text)) is { } startW
                 ? startDyn.X + startW / 2.0 + BoundPadding
-                : CalculateStartX(hairpin, measureLayouts);
+                : CalculateStartX(hairpin, hpMeasures, measureLayouts);
 
         {
             {
@@ -782,10 +782,26 @@ internal static class HairpinEngraver
         return index;
     }
 
-    private static double CalculateStartX(HairpinItem hairpin, ImmutableArray<MeasureLayout> measureLayouts)
+    /// <summary>
+    /// The items of the hairpin's own staff in <paramref name="measure"/>: the layout's on a
+    /// single staff (its Items are that voice's), the staff's own measure's on a multi-staff
+    /// system, where the layout's Items are the FIRST staff's and every staff reads its columns
+    /// through <see cref="LayoutUtilities.GetItemXOffset"/>. ⚠️ The two bounds below indexed the
+    /// layout's Items directly until 2026-10-16: a wedge on a lower staff opened at the upper
+    /// staff's column of the same index, or at the bar's start when the index ran past them
+    /// (a left hand's crescendo under a resting right hand drawn from the system's start —
+    /// the OMR's report of 2026-10-14).
+    /// </summary>
+    private static int StaffItemCount(ImmutableArray<Measure> hpMeasures, int measure, MeasureLayout layout)
+        => layout.Columns.IsDefaultOrEmpty || hpMeasures.IsDefaultOrEmpty || measure >= hpMeasures.Length
+            ? layout.Items.Length
+            : hpMeasures[measure].Items.Length;
+
+    private static double CalculateStartX(HairpinItem hairpin, ImmutableArray<Measure> hpMeasures,
+        ImmutableArray<MeasureLayout> measureLayouts)
     {
         var startMeasure = measureLayouts[hairpin.StartMeasureIndex];
-        if (hairpin.StartItemIndex < startMeasure.Items.Length)
+        if (hairpin.StartItemIndex < StaffItemCount(hpMeasures, hairpin.StartMeasureIndex, startMeasure))
         {
             // The LEFT bound on a note is the note column's LEFT edge, unpadded:
             // the default endpoint-alignments pick e[LEFT] for a musical bound, and
@@ -801,19 +817,20 @@ internal static class HairpinEngraver
             //   extent: a down-stem chord with a second flips a head a full head-width
             //   LEFT of it, and LilyPond's generic_bound_extent would start the wedge
             //   there. No pair measures it (needs a hairpin opening on such a chord).
-            var startItem = startMeasure.Items[hairpin.StartItemIndex];
-            return startMeasure.X + startItem.X;
+            return startMeasure.X + LayoutUtilities.GetItemXOffset(
+                hpMeasures, hairpin.StartMeasureIndex, hairpin.StartItemIndex, startMeasure);
         }
         return startMeasure.X + BoundPadding;
     }
 
-    private static double CalculateEndX(HairpinItem hairpin, ImmutableArray<MeasureLayout> measureLayouts)
+    private static double CalculateEndX(HairpinItem hairpin, ImmutableArray<Measure> hpMeasures,
+        ImmutableArray<MeasureLayout> measureLayouts)
     {
         var endMeasure = measureLayouts[hairpin.EndMeasureIndex];
-        if (hairpin.EndItemIndex < endMeasure.Items.Length)
+        if (hairpin.EndItemIndex < StaffItemCount(hpMeasures, hairpin.EndMeasureIndex, endMeasure))
         {
-            var endItem = endMeasure.Items[hairpin.EndItemIndex];
-            return endMeasure.X + endItem.X - BoundPadding * 0.5;
+            return endMeasure.X + LayoutUtilities.GetItemXOffset(
+                hpMeasures, hairpin.EndMeasureIndex, hairpin.EndItemIndex, endMeasure) - BoundPadding * 0.5;
         }
         return endMeasure.X + endMeasure.Width - BoundPadding;
     }

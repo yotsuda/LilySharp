@@ -245,12 +245,6 @@ internal static class MeasureModel
             // meter is their length, as the page's spacers fill them.
             if (node is PercentMarkSyntax)
                 itemDuration = meter;
-            total += itemDuration;
-            current.Add(node);
-            if (index != null)
-                pendingKeys.Add((chain, node.Span.Start));
-            if (callSites.Count > 0)
-                phraseInBar = true;
             // A bar of an `R1*N` or of a `%N` closes where its beats fill (Bar.Flowed): no
             // bar line can be written inside them.
             int written = node switch
@@ -259,6 +253,21 @@ internal static class MeasureModel
                 PercentMarkSyntax mark => Math.Max(1, mark.Bars),
                 _ => 1,
             };
+            // `R4*5` opening a 5/4 bar is ONE bar of it, `R4*40` eight (BarRest.WholeBars) — the
+            // collector's reading (MeasureCollector.MusicWalk's RestSyntax arm); a run that is not
+            // whole bars, or opens mid-bar, stays N bars of its value.
+            if (written > 1 && node is RestSyntax { RestText: "R" } && !senzaMisura && total.Numerator == 0
+                && Music.BarRest.WholeBars(itemDuration, written, meter) is int wholeBars)
+            {
+                written = wholeBars;
+                itemDuration = meter;
+            }
+            total += itemDuration;
+            current.Add(node);
+            if (index != null)
+                pendingKeys.Add((chain, node.Span.Start));
+            if (callSites.Count > 0)
+                phraseInBar = true;
             if (written > 1)
                 flows = true;
 

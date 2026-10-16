@@ -655,6 +655,7 @@ internal sealed class MeasureValidator : ISemanticValidator
             // for the measure that carries the \partial.
             var expected = partialLength ?? _bars.MeterLength;
             duration += BareBarRests(barItems, expected, i == 0 && leadIn is not null);
+            duration += RunFill(barItems, expected, i == 0 && leadIn is not null);
 
             // Remember the opening pickup: the first sounding bar, when shorter
             // than a full bar (a bare anacrusis or a declared \partial). Its
@@ -879,6 +880,31 @@ internal sealed class MeasureValidator : ISemanticValidator
             }
         }
         return worth;
+    }
+
+    /// <summary>
+    /// What a run <c>R&lt;dur&gt;*N</c> opening the bar is worth beyond the one written value
+    /// the tally counted: a run that is whole bars of <paramref name="expected"/>
+    /// (<see cref="Music.BarRest.WholeBars"/> — <c>R4*5</c> in 5/4, <c>R4*40</c>) fills the
+    /// bar, as the page draws it, and its other bars close where their beats fill
+    /// (MeasureModel.Bar.Flowed). Zero for every other bar: a run that is not whole bars
+    /// (<c>R4*3</c> in 5/4) is N rests of dur and is reported as such; one that does not open
+    /// its bar is read as it was.
+    /// </summary>
+    private Fraction RunFill(List<SyntaxNode> barItems, Fraction expected, bool startsMidBar)
+    {
+        if (_bars.SenzaMisura || startsMidBar)
+            return Fraction.Zero;
+        var running = Fraction.Quarter;
+        foreach (var item in barItems)
+        {
+            var worth = MeasureDurations.ItemDuration(item, ref running);
+            if (item is RestSyntax { MeasureCount: > 1, RestText: "R" } run)
+                return Music.BarRest.WholeBars(worth, run.MeasureCount, expected) is int ? expected - worth : Fraction.Zero;
+            if (worth != Fraction.Zero)
+                return Fraction.Zero;
+        }
+        return Fraction.Zero;
     }
 
     /// <summary>

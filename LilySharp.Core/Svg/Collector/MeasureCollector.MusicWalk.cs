@@ -1227,6 +1227,20 @@ public sealed partial class MeasureCollector
                     int restItemIndex = builder.CurrentItemCount;
                     Fraction restAnchorTiming = builder.CurrentDuration;
                     int count = rest.MeasureCount;
+                    // `R4*5` in 5/4 is the bar's rest and `R4*40` eight bars of it: a run
+                    // R<dur>*N opening a bar is dur × N of silence in whole bars of the meter
+                    // (BarRest.WholeBars), each bar the sign a bare R draws. Read as N bars of
+                    // dur, as it was until 2026-10-16, five quarter rests stood in the bar under
+                    // LYS2001 and `R4*40` left 32 empty bars after it (the OMR's report). A run
+                    // that is not whole bars (`R4*3` in 5/4), or opens mid-bar, stays N rests
+                    // of dur, which the bar check reports as before.
+                    if (count > 1 && rest.RestText == "R" && !builder.SenzaMisura
+                        && builder.CurrentDuration.Numerator == 0
+                        && Music.BarRest.WholeBars(restItem.Duration, count, builder.CurrentMeasureLength) is int wholeBars)
+                    {
+                        count = wholeBars;
+                        restItem = CreateBarRestItem(rest, builder.CurrentMeasureLength);
+                    }
                     if (count <= 1)
                     {
                         builder.AddItem(WithBowSources(restItem with
