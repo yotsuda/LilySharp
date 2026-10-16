@@ -81,8 +81,10 @@ public static partial class NoteStepper
         return null;
     }
 
-    /// <summary>One step of an articulation: the edit (null when it has no group) and the
-    /// message — the new name, with the group it was chosen from.</summary>
+    /// <summary>One step of an articulation: the edit (null when it has no group, or stands at
+    /// an end) and the message — the group's names, nothing more (owner's decision 2026-10-16:
+    /// repeating the current name is redundant, and "already the last" was noise), or why
+    /// nothing moved.</summary>
     private static (Edit? Edit, string Message) ArticulationEdit(ArticulationSyntax articulation, int dir)
     {
         var token = articulation.NameToken;
@@ -98,10 +100,9 @@ public static partial class NoteStepper
         if (to < 0 || to >= group.Length)
         {
             if (group.Length < RotatesFrom)
-                return (null, $"@{name}: already the {(dir > 0 ? "last" : "first")} of {listed}");
+                return (null, listed);
             to = (to + group.Length) % group.Length;
         }
-        string next = group[to];
-        return (new Edit(token.Span.Start, token.Span.End, next), $"@{next} ({listed})");
+        return (new Edit(token.Span.Start, token.Span.End, group[to]), listed);
     }
 }

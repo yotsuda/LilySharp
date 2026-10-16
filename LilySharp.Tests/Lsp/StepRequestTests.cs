@@ -779,7 +779,7 @@ public class StepRequestTests
         var (end, same) = Step(Plain("c'4@up‸Bow d'"), +1, semitone: true);
         Assert.False(end.Fallback);
         Assert.Equal(Plain("c'4@upBow d'"), same);
-        Assert.Equal("@upBow: already the last of downBow / upBow", end.Message);
+        Assert.Equal("downBow / upBow", end.Message);
         // A longer group walks in order, the placement stays, and the ends stop.
         Assert.Equal(Plain("c'4@portato.up d'"), Step(Plain("c'4@stacc‸ato.up d'"), +1, semitone: true).After);
         Assert.Equal(Plain("c'4@staccatissimo d'"), Step(Plain("c'4@stacc‸ato d'"), -1, semitone: true).After);
@@ -787,8 +787,9 @@ public class StepRequestTests
         Assert.Equal(Plain("c'4@longFermata d'"), Step(Plain("c'4@ferm‸ata d'"), +1, semitone: true).After);
         Assert.Equal(Plain("c'4@longFermata d'"), Step(Plain("c'4@longFermata‸ d'"), +1, semitone: true).After);
         Assert.Equal(Plain("c'4@prall d'"), Step(Plain("c'4@mor‸dent d'"), +1, semitone: true).After);
-        var (said, _) = Step(Plain("c'4@down‸Bow d'"), +1, semitone: true);
-        Assert.Equal("@upBow (downBow / upBow)", said.Message);
+        // The status bar lists the group, nothing more (owner's decision 2026-10-16).
+        var (said, _) = Step(Plain("c'4@ferm‸ata d'"), +1, semitone: true);
+        Assert.Equal("shortFermata / fermata / longFermata", said.Message);
         // A mark in no group is steppable (no fallback to the editor's command) but stays.
         var (alone, after) = Step(Plain("c'4@t‸ap d'"), +1, semitone: true);
         Assert.False(alone.Fallback);
