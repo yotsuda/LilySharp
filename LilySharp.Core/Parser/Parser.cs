@@ -586,6 +586,7 @@ internal sealed partial class Parser
             SyntaxKind.ClefKeyword => ParseClefDeclaration(),
             SyntaxKind.OctaveKeyword => ParseOctaveDirective(),
             SyntaxKind.TransposeKeyword => ParseTopLevelTranspose(),
+            SyntaxKind.ShiftKeyword => ParseTopLevelShift(),
             SyntaxKind.PitchKeyword => ParsePitchDirective(),
 
             SyntaxKind.GraceKeyword or SyntaxKind.AcciaccaturaKeyword or

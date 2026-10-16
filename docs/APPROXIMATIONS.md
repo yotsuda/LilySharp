@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 63 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 63 | 観測者がゼロだと自認しているもの |
-| `OWN` | 258 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **384** | |
+| `OWN` | 259 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **385** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -246,7 +246,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（258 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（259 件）
 
 ### `LilySharp.Core/Editing/KeyRespeller.cs`
 - **`KeyRespeller`** LILYSHARP-OWN: an editor aid. The rule:
@@ -363,6 +363,8 @@
 - **`CapoAdvisor`** the barres and before the fret itself in the ranking. LILYSHARP-OWN: LilyPond has nothing
 ### `LilySharp.Core/Semantics/ChordAnnotation.cs`
 - **`ChordAnnotation`** LILYSHARP-OWN: LilyPond names a chord in a ChordNames context and draws a diagram in a
+### `LilySharp.Core/Semantics/FileShift.cs`
+- **`FileShift`** LILYSHARP-OWN: LilyPond has \transpose FROM TO and no number of semitones.
 ### `LilySharp.Core/Semantics/FontPlanReader.cs`
 - **`FontPlanReader.MaxStep`** LILYSHARP-OWN: a limit of the LANGUAGE, not a geometry — LilyPond's font-size
 - **`FontPlanReader.MinSize,MaxSize`** The range a size may take, in staff spaces. LILYSHARP-OWN, as

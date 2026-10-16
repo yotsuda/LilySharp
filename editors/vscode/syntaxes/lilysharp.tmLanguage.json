@@ -592,7 +592,7 @@
             "patterns": [
                 {
                     "name": "keyword.control.lilysharp",
-                    "match": "\\b(score|part|staff|grandStaff|staffGroup|choirStaff|condensedStaff|combinedStaff|tab|ossia|voice|phrase|section|form|using|drummap|transpose|repeat|grace|cue|tuplet|acciaccatura|appoggiatura|afterGrace|override|revert|once|lyrics|chords)\\b"
+                    "match": "\\b(score|part|staff|grandStaff|staffGroup|choirStaff|condensedStaff|combinedStaff|tab|ossia|voice|phrase|section|form|using|drummap|transpose|shift|repeat|grace|cue|tuplet|acciaccatura|appoggiatura|afterGrace|override|revert|once|lyrics|chords)\\b"
                 },
                 {
                     "comment": "Navigation marks, written bare in a form block: 'A dc al fine', 'to coda' (two words; the run-together 'tocoda' left the language 2026-09-02).",

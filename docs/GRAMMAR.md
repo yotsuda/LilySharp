@@ -114,7 +114,7 @@ Keyword = 'title' | 'subtitle' | 'composer' | 'poet' | 'tempo' | 'time' | 'key' 
         | 'staff' | 'grandStaff' | 'staffGroup' | 'choirStaff'
         | 'condensedStaff' | 'combinedStaff' | 'tab' | 'ossia' | 'voice'
         | 'lyrics' | 'chords' | 'tuning' | 'instrument' | 'percussion' | 'drummap'
-        | 'transpose' | 'octave' | 'pitch' | 'using' | 'break' | 'noBreak' | 'pageBreak' | 'noPageBreak' | 'partial'
+        | 'transpose' | 'shift' | 'octave' | 'pitch' | 'using' | 'break' | 'noBreak' | 'pageBreak' | 'noPageBreak' | 'partial'
         | 'tuplet' | 'grace' | 'acciaccatura' | 'appoggiatura' | 'afterGrace' | 'cue'
         | 'repeat' | 'embedded' | 'fonts' | 'paper' | 'layout'
         | 'override' | 'revert' | 'once'
@@ -264,6 +264,22 @@ PagePitchMode  = 'transposed' | 'concert' ;  (* a score header and a staff: how 
                     'written'). Semantics.ConcertPitch holds the rule. *)
 TransposeDecl  = 'transpose' , PitchToken ;
                  (* the file default: every part that sets no 'transpose' of its own *)
+ShiftDecl      = 'shift' , [ '+' | '-' ] , Integer ;
+                 (* The whole piece that many semitones up (or down), -11..11 — the karaoke /
+                    band-chart move (owner's request 2026-10-17; Semantics.FileShift). Unlike
+                    the top-level 'transpose' it is COMPOSED with every part's own 'transpose'
+                    and a transposing instrument's shift, and it moves the chord rows and the
+                    key signatures too; drum notes are not pitches and stay. The number is
+                    turned into ONE interval before anything moves: the file's first 'key'
+                    moved N semitones and brought into five flats … six sharps (the capo's
+                    pressed-name rule, sharp at the tritone) names the target key, and the
+                    music is transposed by the interval that reaches it — so C major +1 is
+                    D-flat major (c→des), −1 is B major, +6 is F-sharp major, and notes, key
+                    signatures and chord names agree. A row's WRITTEN chord shapes belong to
+                    the written chord, so under a shift its diagrams draw the shifted chord's
+                    usual shape instead (the "refret"; a capo is the writer's own
+                    'chordDiagrams … capo N'). '@chord' annotations are not moved. Top level
+                    only; 12 or more is refused at the number (an octave is 'octave N'). *)
 
 TempoDecl      = 'tempo' , [ Marking ] , [ DurationBase , [ Dots ] , '=' ] , [ Integer ] ,
                  [ FeelWord , [ Integer ] ] ;

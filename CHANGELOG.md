@@ -6,6 +6,22 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+### `shift +1` moves the whole piece a semitone
+
+- **A top-level `shift N` moves the whole piece N semitones up (or down, `shift -2`)** — the
+  karaoke move, or a band chart "half a step up": every part, its own `transpose` and a
+  transposing instrument's shift included, the key signatures and the chord rows, on the page,
+  in the MIDI, in the MusicXML and in the LilyPond export; drum notes stay. The number is spelled
+  as a key, not a count: the file's first `key` moved that far, kept within five flats to six
+  sharps — C major `shift +1` is D♭ major (c→des), `shift -1` B major, G major `shift -1` F♯
+  major — and notes, signatures and chord names all follow that one spelling. A chord shape
+  written for the old key is the old chord's, so under a shift a row's diagrams draw each
+  chord's usual shape on its new root instead (a capo stays your own `chordDiagrams … capo N`).
+  `@chord` annotations on notes are not moved. −11 to +11; 12 or more is refused (an octave is
+  the part's `octave N`). In the editor, `Ctrl+Shift+Up` / `Down` on the `shift` line step it a
+  semitone and the status bar names the key it lands in. The top-level `transpose <pitch>`
+  stays what it was: the default of the parts that write none.
+
 ### A rest run is its length in whole bars of the meter
 
 - **`R4*5` in 5/4 is one bar's rest, and `R4*40` eight bars of it** — a run `R<dur>*N` is

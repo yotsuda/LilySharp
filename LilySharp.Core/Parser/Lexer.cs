@@ -676,6 +676,9 @@ internal sealed class Lexer
 
             // Part options
             "transpose" => SyntaxKind.TransposeKeyword,
+            // `shift +1` — the whole piece N semitones (Semantics.FileShift). Reserved
+            // 2026-10-17: no tracked or Lab book writes the word outside a comment.
+            "shift" => SyntaxKind.ShiftKeyword,
             "octave" => SyntaxKind.OctaveKeyword,
             "instrument" => SyntaxKind.InstrumentKeyword,
             // `pitch concert` / `pitch written` — a file-level directive like `octave`, and a

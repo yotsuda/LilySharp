@@ -73,6 +73,13 @@ internal sealed class ChordNameCollector
     /// transposing part for its player), 0 for as written — set by the collector before each row.</summary>
     public int RowNameDrop { get; set; }
 
+    /// <summary>The file's <c>shift N</c> in semitones (<see cref="Semantics.FileShift"/>), 0 for
+    /// none — set by the collector before each row, beside <see cref="RowNameDrop"/>, which
+    /// already carries it for the NAMES. This one decides the DIAGRAMS: under a shift a written
+    /// shape is the written chord's, so the row draws the shifted chord's usual shape instead
+    /// (<see cref="DiagramOf"/>).</summary>
+    public int RowShift { get; set; }
+
     /// <summary>The <c>@todo</c> a chords-row entry or rest carries (docs/todo-memo-design.md §5),
     /// as <see cref="ChordNameItem.TodoKey"/> / <see cref="ChordNameItem.TodoMemo"/> /
     /// <see cref="ChordNameItem.TodoBelow"/> hold it — read the way a note's is
@@ -100,10 +107,22 @@ internal sealed class ChordNameCollector
         if ((words.Count == 0 && !DiagramsAll && Table == null)
             || Semantics.ChordDiagramsKey.Resolve(DiagramsWord, RowStaffTuning) is not { } tuning)
             return null;
+        // Under the file's `shift` the written shapes are the WRITTEN chord's (FileShift's
+        // remarks): the diagram draws the shifted chord's usual shape — a written shape still
+        // asks for a diagram, it just cannot be the one drawn, so the entry is read as if the
+        // score drew every chord. The spelling does not matter to a shape (pitch classes
+        // decide it), so the pressed name is read in C.
+        bool drawsDefault = DiagramsAll;
+        if (RowShift != 0 && structure != null)
+        {
+            structure = structure.Pressed(Semantics.FileShift.RowDrop(0, RowShift), 0);
+            drawsDefault |= words.Count > 0;
+            words = [];
+        }
         LilySharp.Core.Music.ChordShapes.ParseWords(
             [.. words.Select(w => w.Text)], entry.SymbolText, out var shapes);
         string? section = Table != null ? Semantics.ChordDiagramScores.SectionNameOf(entry) : null;
-        return LilySharp.Core.Music.ChordShapes.Drawn(tuning, shapes, DiagramsAll, structure, Table, section,
+        return LilySharp.Core.Music.ChordShapes.Drawn(tuning, shapes, drawsDefault, structure, Table, section,
             Spelling.Capo)?.FrameSpec;
     }
 

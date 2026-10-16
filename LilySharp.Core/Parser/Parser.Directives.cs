@@ -257,7 +257,7 @@ internal sealed partial class Parser
             // The break family is LilyPond's own spelling minus the backslash (`noBreak`,
             // `pageBreak`, `noPageBreak` — owner's decision 2026-09-02, which retired the
             // lowercase `nobreak`), so it takes the general command hint like `tempo` does.
-            "tempo" or "clef" or "key" or "time" or "transpose" or "octave"
+            "tempo" or "clef" or "key" or "time" or "transpose" or "shift" or "octave"
                 or "break" or "noBreak" or "pageBreak" or "noPageBreak"
                 => $"Lily# commands take no leading backslash — write '{word} …', not '\\{word} …'.",
             // A phrase reference is the commonest thing a LilyPond habit puts a backslash

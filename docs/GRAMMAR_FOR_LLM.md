@@ -1221,7 +1221,7 @@ music, so it is an identifier, a clef word (`treble bass alto tenor`) or a dynam
 Keywords:
 
 ```text
-section form using tab ossia transpose octave pitch instrument percussion drummap
+section form using tab ossia transpose shift octave pitch instrument percussion drummap
 score part staff grandStaff staffGroup choirStaff condensedStaff combinedStaff
 voice phrase repeat break noBreak pageBreak noPageBreak partial cue embedded fonts paper layout
 title subtitle composer poet tempo time key clef

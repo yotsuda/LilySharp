@@ -157,6 +157,19 @@ public static class PitchTransposer
         => StepFifths[toStep] + 7 * toAlteration;
 
     /// <summary>
+    /// <see cref="KeySignatureFifthsShift"/> inverted: the c→target interval (within an octave,
+    /// up) whose key-signature shift is <paramref name="fifths"/> — −5 is c→des, +6 c→fis,
+    /// 0 c→c. Every residue mod 7 is one step's, so the answer is unique.
+    /// </summary>
+    public static (int step, int alt) IntervalFromFifths(int fifths)
+    {
+        for (int s = 0; s < 7; s++)
+            if (Mod(StepFifths[s] - fifths, 7) == 0)
+                return (s, (fifths - StepFifths[s]) / 7);
+        throw new InvalidOperationException("every residue mod 7 is a step's");
+    }
+
+    /// <summary>
     /// The c-relative transpose target (for <see cref="Transpose"/>) that moves
     /// music from a home key's tonic to an ambient key's tonic by the NEAREST
     /// octave — up when the shift is a tritone or less, otherwise down. Returns

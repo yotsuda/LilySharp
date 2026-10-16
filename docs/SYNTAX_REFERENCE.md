@@ -2668,7 +2668,7 @@ phrase). Any other keyword — and `f`, which is the note F — is refused at th
 
 | Group | Words |
 |-------|-------|
-| Structure | `section` `form` `using` `tab` `ossia` `transpose` `octave` `pitch` `instrument` `percussion` `drummap` |
+| Structure | `section` `form` `using` `tab` `ossia` `transpose` `shift` `octave` `pitch` `instrument` `percussion` `drummap` |
 | Score / layout | `score` `part` `staff` `grandStaff` `staffGroup` `choirStaff` `condensedStaff` `combinedStaff` `voice` `phrase` `repeat` `break` `noBreak` `pageBreak` `noPageBreak` `partial` `embedded` `fonts` `paper` `layout` |
 | Metadata | `title` `subtitle` `composer` `poet` `tempo` `time` `key` `clef` |
 | Modes | `major` `minor` `ionian` `dorian` `phrygian` `lydian` `mixolydian` `aeolian` `locrian` |

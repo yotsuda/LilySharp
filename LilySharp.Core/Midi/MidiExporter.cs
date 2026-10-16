@@ -93,6 +93,10 @@ public sealed class MidiExporter
     // Whether the file is written at concert pitch (`pitch concert`), read once per export
     // like the transpose default above — ConcertPitch.FileIsConcert.
     private bool _fileConcert;
+    // The file's `shift N` (FileShift), read once per export: the interval every part's
+    // transpose composes with, and its semitones for the chord rows (sounding pitch).
+    private (int step, int alt, int oct)? _fileShift;
+    private int _fileShiftSemitones;
 
     // Per-PART relative-pitch state WITHIN one section, so a part whose music is split
     // over more than one block picks its own chain up again instead of inheriting the
@@ -573,6 +577,8 @@ public sealed class MidiExporter
         _sectionHeaders = Semantics.SectionHeaders.Read(sectionsInOrder);
         _scoreTransposeDefault = PartTranspose.ReadScoreDefault(_root);
         _fileConcert = ConcertPitch.FileIsConcert(_root);
+        _fileShiftSemitones = FileShift.ReadSemitones(_root);
+        _fileShift = FileShift.Interval(_fileShiftSemitones, FileShift.FirstKeySharps(_root));
         _homeTonic = ScoreHomeKey.Read(_root);
         _ambientTonic = _homeTonic;
         _homeKeySharps = ScoreHomeKey.Sharps(_root);
@@ -1497,8 +1503,9 @@ public sealed class MidiExporter
                     continue;
                 int position = entry.SourceStart;
                 int ordinal = NextOrdinal(position);
+                // A row is sounding pitch, moved only by the file's `shift N` (FileShift).
                 foreach (var tone in Music.ChordVoicing.Window(chord))
-                    track.Notes.Add(new MidiNote(track.Channel, SoundKey(tone.Midi, position), velocity,
+                    track.Notes.Add(new MidiNote(track.Channel, SoundKey(tone.Midi + _fileShiftSemitones, position), velocity,
                         onset, length, position, SourceOrdinal: ordinal, Timbre: timbre, Part: part));
             }
             bar.Clear();
@@ -1877,8 +1884,9 @@ public sealed class MidiExporter
     private int PartPlaybackShift(string partName)
     {
         var decl = _partDecls.TryGetValue(partName, out var pd) ? pd : null;
-        var written = (decl != null ? PartTranspose.Read(decl) : null) ?? _scoreTransposeDefault;
-        var transpose = PitchTransposer.Compose(ConcertPitch.InputShift(_fileConcert, decl), written);
+        // The one reader (PartTranspose.Read): own or default, the concert-pitch file's
+        // instrument shift inside, the file's `shift N` outside (FileShift).
+        var transpose = PartTranspose.Read(decl, _scoreTransposeDefault, _fileConcert, _fileShift);
         return (transpose is { } t ? PitchTransposer.IntervalSemitones(t.step, t.alt, t.oct) : 0)
             + PartSoundingShift(partName);
     }

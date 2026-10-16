@@ -39,6 +39,7 @@
 - [ ] **拍子**: `time 3/4` の上で ↑ → `time 4/4`。`time 6/8` で PgUp → `3/4`、PgDn → `2/4`。`time 2/2` で PgUp → `4/4`。小節線が組み直される。
 - [ ] **octave N**: `part lh { clef bass octave 3 }` の `3` の上で ↑ → `octave 4`。その part の音がプレビューで 1 オクターブ上に、再生でも上で鳴る。
 - [ ] **transpose**: `part cl { transpose d }` の上で ↑ → `transpose ees`（ステータスバー *up 3 semitones*）。`key e major` の本で `transpose c` ↑ → `des`（F 長調になる・`cis` ではない）。PgUp → `ees'`。
+- [ ] **shift**（2026-10-17 のユーザー要望＝曲全体の半音シフト）: `key c major` の本の先頭に `shift 0` と書き、その上で Ctrl+Shift+↑ → `shift +1`（ステータスバー *shift +1: key c major -> des major*）。プレビューで全パートの音符と調号が D♭ 長調に、コード行の名前も D♭・A♭7 に、再生も半音上に。↓ 2 回 → `shift -1`（B 長調）。`transpose d` を持つパートも一緒に動く。コード図は書いた形ではなく新しいコードの既定の形。ドラムは動かない。PgUp / PgDn でも同じ 1 半音。
 - [ ] 音符の上でない所で Ctrl+Shift+PgUp / PgDn → エディタのタブが左右に動く（VS Code 既定の Move Editor Left / Right in Group）。音符の上ではタブは動かず、オクターブが動く。
 
 > ⚠️ **音はプレビューの webview が鳴らす**（`stepAudition.ts` の頭の註・2026-09-28 のユーザー決定）＝**その本のプレビューが開いていないと、ステップも自動の試聴も黙って何も鳴らさない**（ステップはプレビューを開かない）。Alt+P / Alt+M だけは 1 回目でプレビューを開き、2 回目で鳴る。確かめる前に `Ctrl+K V` でプレビューを横に開く。音が出ないときの切り分け: ⑴ プレビューが開いているか ⑵ Alt+P で鳴るか（鳴らなければ webview の合成器＝`AudioContext` の側・第901 からは SoundFont シンセ＝出力チャネル「Lily# Extension」の `Preview synth …` の行を見る） ⑶ 出力チャネル「Lily#」に `step:` の行が出ていないか（サーバーが Fallback を返した） ⑷ `lilysharp.audition.enabled` が切られていないか。サーバーの `lilysharp/step` は SHOTLIST の 4 行の本で `pitches=[72]` を返す（第888 が使い捨ての試験で確認）。

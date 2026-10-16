@@ -274,10 +274,13 @@ public sealed partial class MeasureCollector
             : null;
 
     /// <summary>How many semitones down a chord row over <paramref name="partName"/>'s staff names
-    /// its chords on THIS score's page (<see cref="Semantics.ConcertPitch.ChordNameDrop"/>).</summary>
+    /// its chords on THIS score's page (<see cref="Semantics.ConcertPitch.ChordNameDrop"/>), with
+    /// the file's <c>shift</c> folded in (<see cref="Semantics.FileShift.RowDrop"/>: a row over no
+    /// staff moves with the piece too).</summary>
     private int ChordRowDrop(SyntaxNode root, string? partName)
-        => partName == null ? 0
-            : Semantics.ConcertPitch.ChordNameDrop(PagePitchOf(partName), _fileIsConcert, Semantics.ConcertPitch.FindPart(root, partName));
+        => Semantics.FileShift.RowDrop(partName == null ? 0
+            : Semantics.ConcertPitch.ChordNameDrop(PagePitchOf(partName), _fileIsConcert, Semantics.ConcertPitch.FindPart(root, partName)),
+            _fileShiftSemitones);
 
     /// <summary>Reads the tuning of <paramref name="partName"/> for the names its symbol-less
     /// <c>@chord</c> shapes derive, and its fretted tuning for the diagrams they draw.</summary>

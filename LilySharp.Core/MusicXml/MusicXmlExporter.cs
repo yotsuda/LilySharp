@@ -5922,7 +5922,9 @@ public sealed class MusicXmlExporter
                 {
                     var measure = part.Measures[start + k];
                     AddRowHarmonies(measure, bars[k], pending, tuning, k == 0 && measure.Implicit ? pending.Pickup : null,
-                        WrittenDrop(header.TranspositionSemitones));
+                        // The file's `shift N` moves the row's names with the piece (FileShift.RowDrop).
+                        Semantics.FileShift.RowDrop(WrittenDrop(header.TranspositionSemitones),
+                            _root != null ? Semantics.FileShift.ReadSemitones(_root) : 0));
                 }
             }
             else if (!scoreHasStaff)

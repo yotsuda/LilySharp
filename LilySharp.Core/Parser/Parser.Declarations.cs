@@ -386,6 +386,33 @@ internal sealed partial class Parser
         return new PropertyAssignmentGreen(keyword, null, [.. values]);
     }
 
+    // Top-level `shift N` (Semantics.FileShift, 2026-10-17): the whole piece N semitones up
+    // (`shift +1`, `shift 3`) or down (`shift -2`), composed outside every part's own transpose.
+    // The same property-node shape as the top-level `transpose`; the value is checked HERE,
+    // as `pitch`'s is: a missing number or one past eleven is reported at the word, and the
+    // node still carries what was written so the round trip holds.
+    private PropertyAssignmentGreen ParseTopLevelShift()
+    {
+        var keyword = Advance(); // shift
+        var values = new List<GreenNode?>();
+        if (Check(SyntaxKind.Plus) || Check(SyntaxKind.Minus))
+            values.Add(Advance());
+        if (Check(SyntaxKind.IntegerLiteral))
+        {
+            if (!int.TryParse(Current.Text, out int n) || n > Semantics.FileShift.Max)
+                _diagnostics.Error(new TextSpan(_textPosition, Math.Max(1, Current.FullWidth)), DiagnosticCodes.ExpectedToken,
+                    $"'shift {Current.Text}' is an octave or more. shift takes -{Semantics.FileShift.Max} to "
+                    + $"+{Semantics.FileShift.Max} semitones; an octave is the part's 'octave N'.");
+            values.Add(Advance());
+        }
+        else
+        {
+            _diagnostics.Error(new TextSpan(_textPosition, Math.Max(1, Current.FullWidth)), DiagnosticCodes.ExpectedToken,
+                "shift takes a number of semitones, e.g. 'shift +1' (up a semitone) or 'shift -2' (down a tone).");
+        }
+        return new PropertyAssignmentGreen(keyword, null, [.. values]);
+    }
+
     // `pitch concert` / `pitch written` — at the top level, whether the file's note letters
     // are SOUNDING pitches (a transposing part is then printed transposed) or the pitches
     // the player reads (the default); on a score header, how THAT score prints them

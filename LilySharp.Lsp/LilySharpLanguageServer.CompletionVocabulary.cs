@@ -3631,6 +3631,9 @@ public sealed partial class LilySharpLanguageServer
                 // UsingExpander) and the drum-table overrides (ParseDrummapDeclaration).
                 // `transpose` is a singleton like `octave`; the other two may recur.
                 new CompletionItem { Label = "transpose", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "transpose $0", Detail = "File-default transpose target pitch, e.g. `transpose d` — every part that sets no transpose of its own" },
+                // `shift N` (Semantics.FileShift, 2026-10-17): the whole piece N semitones, every
+                // part's own transpose included — the karaoke / band-chart move `transpose` is not.
+                new CompletionItem { Label = "shift", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "shift ${1:+1}", Detail = "Move the whole piece N semitones up or down, e.g. `shift +1`, `shift -2` — every part (its own transpose included), the key signatures and the chord rows; Ctrl+Shift+Up/Down step it" },
                 new CompletionItem { Label = "using", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "using \"$0\"", Detail = "Include another .lys file: its parts, sections and tracks join this file's (top level only)" },
                 new CompletionItem { Label = "drummap", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "drummap {\n\t${1:hh}: position ${2:6} notehead ${3:x}\n}", Detail = "Override the drum table for a kit name: position (staff line), notehead, midi, mark" },
                 ScoreTemplateItem(
@@ -3817,7 +3820,7 @@ public sealed partial class LilySharpLanguageServer
     /// (time/key/tempo/octave). Completion drops them once present; duplicable keywords are
     /// NOT listed here.</summary>
     private static readonly System.Collections.Generic.HashSet<string> GlobalSingletonKeywords =
-        new(StringComparer.Ordinal) { "title", "subtitle", "composer", "poet", "fonts", "paper", "layout", "tempo", "time", "key", "octave", "pitch", "transpose" };
+        new(StringComparer.Ordinal) { "title", "subtitle", "composer", "poet", "fonts", "paper", "layout", "tempo", "time", "key", "octave", "pitch", "transpose", "shift" };
 
     /// <summary>True when <paramref name="keyword"/> appears as a whole word at the GLOBAL
     /// scope (brace depth 0) in live code — not inside a block, a string, or a comment.</summary>

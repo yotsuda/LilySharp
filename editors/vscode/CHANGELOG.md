@@ -41,6 +41,11 @@ All notable changes to the Lily# VS Code extension are documented here.
   transposed key has the fewest sharps or flats (from the file's first `key`), and the status bar
   says how far; `Ctrl+Shift+PageUp` / `PageDown` add or take an octave mark. `transpose` still
   takes a pitch, not a number of semitones — a number would leave the spelling open.
+- **On the file's `shift`** either pair steps it a semitone (`shift +1` → `shift +2`, −11 to
+  +11) and the status bar names the key the piece lands in (`shift +1: key c major -> des
+  major`). A top-level `shift N` is new in Lily# itself: it moves the whole piece — every
+  part, its own `transpose` included, the key signatures and the chord rows — the karaoke
+  move; see the compiler's changelog.
 
 - **A new score's first lines point at the step keys**: File ▸ New File… ▸ Lily# Score now says
   to put the caret on a note, the tempo, the key or the clef and press `Ctrl+Shift+Up` / `Down`

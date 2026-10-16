@@ -48,7 +48,7 @@ public static class PartTranspose
         // ReadScoreDefault stays on the descendant walk, but no longer counts a
         // render block's own transpose as the file's default — see there.
         var partDecl = ConcertPitch.FindPart(root, partName);
-        return Read(partDecl, ReadScoreDefault(root), ConcertPitch.FileIsConcert(root));
+        return Read(partDecl, ReadScoreDefault(root), ConcertPitch.FileIsConcert(root), FileShift.Read(root));
     }
 
     /// <summary>
@@ -58,15 +58,18 @@ public static class PartTranspose
     /// page's collector reads both ONCE per collect, in the definitions walk it makes anyway
     /// (they are a function of the whole tree, not of the part), where asking
     /// <see cref="Read(SyntaxNode, string)"/> per part walked the tree twice for every part
-    /// it collected.
+    /// it collected. <paramref name="fileShift"/> is the file's <c>shift N</c>
+    /// (<see cref="FileShift.Read"/>), composed OUTSIDE all of it — the whole piece moves,
+    /// a part's own transpose included (2026-10-17).
     /// </summary>
     public static (int step, int alt, int oct)? Read(PartDeclarationSyntax? partDecl,
-        (int step, int alt, int oct)? scoreDefault, bool fileIsConcert)
+        (int step, int alt, int oct)? scoreDefault, bool fileIsConcert,
+        (int step, int alt, int oct)? fileShift = null)
     {
         // a part's own transpose overrides the default
         var written = (partDecl != null ? Read(partDecl) : null) ?? scoreDefault;
-        return PitchTransposer.NullIfIdentity(PitchTransposer.Compose(
-            ConcertPitch.InputShift(fileIsConcert, partDecl), written));
+        return PitchTransposer.NullIfIdentity(PitchTransposer.Compose(PitchTransposer.Compose(
+            ConcertPitch.InputShift(fileIsConcert, partDecl), written), fileShift));
     }
 
     /// <summary>

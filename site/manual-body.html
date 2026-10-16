@@ -699,6 +699,19 @@ part v1 { clef treble instrument "1st Violin" } // label only — no preset beha
   <code>transposition</code>, which takes an octave marker
   (<code>8va</code> / <code>8vb</code> / <code>15ma</code> / <code>15mb</code>) and overrides
   the preset's written-to-sounding octave.</p>
+  <p><b>Or move the whole piece by semitones: <code>shift</code>.</b> A top-level
+  <code>shift +1</code> raises everything a semitone, <code>shift -2</code> lowers it a tone
+  — the karaoke move, or a band chart "half a step up": every part (its own
+  <code>transpose</code> and a transposing instrument's shift included), the key signatures
+  and the chord rows, on the page, in the MIDI and in the exports; drum notes stay. Lily#
+  spells it as a key, not a count: the first <code>key</code> moved that far, kept within five
+  flats to six sharps — C major <code>shift +1</code> is D♭ major (not C♯), <code>shift -1</code>
+  B major, G major <code>shift -1</code> F♯ major — and notes, signatures and chord names all
+  follow that one spelling. Chord shapes written for the old key (<code>G(320003)</code>) are
+  the old chord's: under a shift the diagrams draw each chord's usual shape on its new root
+  instead; a capo is your own call (<a href="chords.html#capo"><code>chordDiagrams guitar capo N</code></a>).
+  On the <code>shift</code> line <kbd>Ctrl+Shift+Up</kbd> / <kbd>Down</kbd> step it a semitone and
+  the status bar names the new key. −11 to +11; an octave is the part's <code>octave N</code>.</p>
   <!--EXAMPLE:instrument-->
 
   <h3 id="drums">Drums</h3>

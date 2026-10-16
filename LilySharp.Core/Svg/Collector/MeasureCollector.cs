@@ -1134,7 +1134,7 @@ public sealed partial class MeasureCollector
             // Part-body grob defaults (`part <voice> { override … }`) — staff 0 here.
             CollectPartBodyOverrides(tree.GetRoot(), voiceName, _cursor.StaffIndex);
             var (partClef, partOctave, partExplicitOctave, partTranspose, partClefPos, partKey) = GetPartDefaults(
-                tree.GetRoot(), voiceName, PagePitchOf(voiceName), _fileTransposeDefault, _fileIsConcert);
+                tree.GetRoot(), voiceName, PagePitchOf(voiceName), _fileTransposeDefault, _fileIsConcert, FileShiftInterval);
             SetPartTuning(tree.GetRoot(), voiceName);
             // The POSITION follows the clef it describes. A part without its own
             // `clef` keeps the top-level one, so overwriting the offset regardless
@@ -1291,6 +1291,7 @@ public sealed partial class MeasureCollector
         {
             _chordNameCollector.RowStaffTuning = StaffDiagramTuning(tree.GetRoot(), renderSpec, voiceName, attachedChordPart);
             _chordNameCollector.RowNameDrop = ChordRowDrop(tree.GetRoot(), voiceName);
+            _chordNameCollector.RowShift = _fileShiftSemitones;
             _chordNameCollector.CollectAttached(
                 tree.GetRoot(), attachedChordPart, _sectionState.StartMeasure, _cursor.StaffIndex,
                 _meta.TimeBeats, _meta.TimeBeatType, attachedChordDisplay);
@@ -1852,7 +1853,7 @@ public sealed partial class MeasureCollector
 
             // Set clef and octave for this voice from part definition
             var (partClef, partOctave, partExplicitOctave, partTranspose, partClefPos, partKey) = GetPartDefaults(
-                tree.GetRoot(), voiceName, PagePitchOf(voiceName), _fileTransposeDefault, _fileIsConcert);
+                tree.GetRoot(), voiceName, PagePitchOf(voiceName), _fileTransposeDefault, _fileIsConcert, FileShiftInterval);
             SetPartTuning(tree.GetRoot(), voiceName);
             // A clef the staff item wrote (`staff bass melody`) wins over the part's: it is
             // this rendering's clef, the one the page draws (pitches do not depend on it).
@@ -1923,8 +1924,9 @@ public sealed partial class MeasureCollector
             _chordNameCollector.RowStaffTuning =
                 Semantics.ChordDiagramScores.RowStaffWord(tree.GetRoot(), renderSpec, rowName) is { } rowWord
                     ? Tablature.Tunings.Parse(rowWord) : null;
-            _chordNameCollector.RowNameDrop = renderSpec == null ? 0
-                : ChordRowDrop(tree.GetRoot(), Semantics.ChordDiagramScores.RowStaffPart(renderSpec, rowName));
+            _chordNameCollector.RowNameDrop = ChordRowDrop(tree.GetRoot(),
+                renderSpec == null ? null : Semantics.ChordDiagramScores.RowStaffPart(renderSpec, rowName));
+            _chordNameCollector.RowShift = _fileShiftSemitones;
             var rowMeasures = _chordNameCollector.CollectPart(
                 tree.GetRoot(), rowName, rowIdx, _sectionState.StartMeasure, _meta.TimeBeats, _meta.TimeBeatType, rowMode);
             staffVoices[rowName] = ImmutableArray.Create(new Voice(rowName, rowMeasures));
@@ -2139,6 +2141,7 @@ public sealed partial class MeasureCollector
                 Semantics.ChordDiagramScores.StaffWord(tree.GetRoot(), renderSpec, staffVoice, attachedPart) is { } staffWord
                     ? Tablature.Tunings.Parse(staffWord) : null;
             _chordNameCollector.RowNameDrop = ChordRowDrop(tree.GetRoot(), staffVoice);
+            _chordNameCollector.RowShift = _fileShiftSemitones;
             _chordNameCollector.CollectAttached(
                 tree.GetRoot(), attachedPart, _sectionState.StartMeasure, attachedStaff,
                 _meta.TimeBeats, _meta.TimeBeatType, attachedMode);
@@ -2625,6 +2628,7 @@ public sealed partial class MeasureCollector
         {
             _chordNameCollector.RowStaffTuning = StaffDiagramTuning(root, renderSpec, voiceName, attachedChordPart);
             _chordNameCollector.RowNameDrop = ChordRowDrop(root, voiceName);
+            _chordNameCollector.RowShift = _fileShiftSemitones;
             _chordNameCollector.CollectAttached(
                 root, attachedChordPart, _sectionState.StartMeasure, _cursor.StaffIndex,
                 _meta.TimeBeats, _meta.TimeBeatType, attachedChordDisplay);
@@ -2906,7 +2910,7 @@ public sealed partial class MeasureCollector
     private ImmutableArray<Measure> CollectMelodyFor(SyntaxTree tree, RenderSpec renderSpec, string partName)
     {
         var (partClef, _, _, _, _, _) = GetPartDefaults(
-            tree.GetRoot(), partName, PagePitchOf(partName), _fileTransposeDefault, _fileIsConcert);
+            tree.GetRoot(), partName, PagePitchOf(partName), _fileTransposeDefault, _fileIsConcert, FileShiftInterval);
         var spec = renderSpec with
         {
             Items = ImmutableArray.Create<RenderItemSpec>(

@@ -85,7 +85,8 @@ public sealed partial class MeasureCollector
     // edit), NOT folded into MaxSourceRead. See ProcessSection's matching note.
     private static (string? clef, int? octave, int? explicitOctave, (int step, int alt, int oct)? transpose, int clefPos, KeySignatureSyntax? key) GetPartDefaults(
         SyntaxNode root, string partName, bool? scoreConcert,
-        (int step, int alt, int oct)? fileTranspose, bool fileIsConcert)
+        (int step, int alt, int oct)? fileTranspose, bool fileIsConcert,
+        (int step, int alt, int oct)? fileShift = null)
     {
         foreach (var partDecl in root.ChildNodesOfKind<PartDeclarationSyntax>())
         {
@@ -148,8 +149,9 @@ public sealed partial class MeasureCollector
             // what the letters say, as ConcertPitch's table spells out. The two file
             // defaults come from the definitions walk (see the fields beside it) — asking
             // PartTranspose.Read(root, partName) here walked the whole tree twice per part.
+            // The file's `shift N` rides inside PartTranspose.Read, outermost (FileShift).
             transpose = PitchTransposer.NullIfIdentity(PitchTransposer.Compose(
-                PartTranspose.Read(partDecl, fileTranspose, fileIsConcert),
+                PartTranspose.Read(partDecl, fileTranspose, fileIsConcert, fileShift),
                 ConcertPitch.OutputShift(scoreConcert, fileIsConcert, partDecl)));
 
             // Resolve clef: explicit > instrument > null
@@ -200,6 +202,15 @@ public sealed partial class MeasureCollector
     private bool _fileTransposeDefaultSeen;
     private bool _fileIsConcert;
     private bool _fileIsConcertSeen;
+    // The file's `shift N` (FileShift, 2026-10-17): its semitones, read by the same walk, and
+    // the interval they spell — made once per collect, on first use, from the file's first
+    // key (FileShift.FirstKeySharps), which the walk has not necessarily met yet.
+    private int _fileShiftSemitones;
+    private bool _fileShiftSeen;
+    private (int step, int alt, int oct)? _fileShiftInterval;
+    private (int step, int alt, int oct)? FileShiftInterval
+        => _fileShiftSemitones == 0 ? null
+            : _fileShiftInterval ??= FileShift.Interval(_fileShiftSemitones, FileShift.FirstKeySharps(_root!));
     // The top-level `clef` (null = none): the clef of every part that names neither a clef
     // nor an instrument, on every path — the multi-staff one used to fall to treble.
     private string? _fileClef;
@@ -227,6 +238,9 @@ public sealed partial class MeasureCollector
         _fileTransposeDefaultSeen = false;
         _fileIsConcert = false;
         _fileIsConcertSeen = false;
+        _fileShiftSemitones = 0;
+        _fileShiftSeen = false;
+        _fileShiftInterval = null;
         _fileClef = null;
         _fileClefPosition = 0;
         _sectionDeclarationsInOrder.Clear();
@@ -381,6 +395,11 @@ public sealed partial class MeasureCollector
                     {
                         _fileIsConcertSeen = true;
                         _fileIsConcert = concert;
+                    }
+                    if (!_fileShiftSeen && FileShift.TryRead(prop, out int shiftSemitones))
+                    {
+                        _fileShiftSeen = true;
+                        _fileShiftSemitones = shiftSemitones;
                     }
                     break;
 

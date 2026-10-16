@@ -90,7 +90,7 @@ public static partial class NoteStepper
     private static PropertyAssignmentSyntax? ValuePropertyAt(SyntaxTree tree, int offset)
     {
         foreach (var p in tree.GetNodes<PropertyAssignmentSyntax>())
-            if (p.NameToken.Text is "octave" or "transpose"
+            if (p.NameToken.Text is "octave" or "transpose" or "shift"
                 && p.SourceStart <= offset && offset <= p.Span.End)
                 return p;
         return null;
@@ -158,6 +158,8 @@ public static partial class NoteStepper
         PropertyAssignmentSyntax property, int dir, bool semitone)
     {
         var values = property.Values.OfType<SyntaxTokenNode>().ToList();
+        if (property.NameToken.Text == "shift")
+            return ShiftEdit(tree, property, values, dir);
         if (property.NameToken.Text == "octave")
         {
             if (values is not [var only] || !int.TryParse(only.Text, out int octave))
@@ -208,6 +210,26 @@ public static partial class NoteStepper
             => string.Concat(v.Select(t => t.Text));
         static string Said(int semis) => semis == 0 ? "no shift"
             : $"{(semis > 0 ? "up" : "down")} {Math.Abs(semis)} semitone{(Math.Abs(semis) == 1 ? "" : "s")}";
+    }
+
+    /// <summary>One step of the file's <c>shift N</c> (<see cref="FileShift"/>, 2026-10-17): either
+    /// pair moves it a semitone, −11 to +11; the status bar names the key it lands in.</summary>
+    private static (Edit? Edit, string Message) ShiftEdit(SyntaxTree tree, PropertyAssignmentSyntax property,
+        System.Collections.Generic.List<SyntaxTokenNode> values, int dir)
+    {
+        if (values.Count == 0 || FileShift.Parse(property) is not int was)
+            return (null, $"shift {string.Concat(values.Select(t => t.Text))}: the step changes a number of semitones (shift +1)");
+        int next = was + dir;
+        if (next < -FileShift.Max || next > FileShift.Max)
+            return (null, $"shift {Signed(was)}: already {FileShift.Max} semitones {(dir > 0 ? "up" : "down")} - an octave is the part's octave N");
+        var (sharps, keyName) = FirstKey(tree);
+        string said = keyName is { } k
+            && TonicFor(FileShift.KeySharpsAfter(sharps, next), k.Mode, longFlats: true) is { } tonic
+            ? $"shift {Signed(next)}: key {k.Tonic} {k.Mode} -> {tonic} {k.Mode}"
+            : $"shift {Signed(next)}: {(next == 0 ? "as written" : $"{Math.Abs(next)} semitone{(Math.Abs(next) == 1 ? "" : "s")} {(next > 0 ? "up" : "down")}")}";
+        return (new Edit(values[0].Span.Start, values[^1].Span.End, Signed(next)), said);
+
+        static string Signed(int n) => n > 0 ? "+" + n : n.ToString();
     }
 
     /// <summary>The net octave of the <c>'</c> / <c>,</c> marks written at <paramref name="at"/>.</summary>

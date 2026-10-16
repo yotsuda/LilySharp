@@ -203,6 +203,8 @@ public enum SyntaxKind : ushort
     TuningKeyword,
     /// <summary>The <c>transpose</c> keyword.</summary>
     TransposeKeyword,
+    /// <summary>The <c>shift</c> keyword (<c>shift +1</c>: the whole piece a semitone up — Semantics.FileShift).</summary>
+    ShiftKeyword,
     /// <summary>The <c>octave</c> keyword.</summary>
     OctaveKeyword,
     /// <summary>The <c>pitch</c> keyword (<c>pitch concert</c> / <c>pitch written</c>: whether

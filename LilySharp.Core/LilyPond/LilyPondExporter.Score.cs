@@ -37,14 +37,22 @@ public sealed partial class LilyPondExporter
     /// </summary>
     private string ChordNamesTranspose(RenderDeclarationSyntax? render, string rowName)
     {
-        if (render == null || RenderSpecParser.Parse(render) is not { } spec
-            || Semantics.ChordDiagramScores.RowStaffPart(spec, rowName) is not { } partName)
+        if (render == null)
             return "";
         SyntaxNode root = render;
         while (root.Parent != null)
             root = root.Parent;
-        int drop = Semantics.ConcertPitch.ChordNameDrop(Semantics.ConcertPitch.PageMode(render, partName),
-            Semantics.ConcertPitch.FileIsConcert(root), Semantics.ConcertPitch.FindPart(root, partName));
+        int drop = RenderSpecParser.Parse(render) is { } spec
+            && Semantics.ChordDiagramScores.RowStaffPart(spec, rowName) is { } partName
+            ? Semantics.ConcertPitch.ChordNameDrop(Semantics.ConcertPitch.PageMode(render, partName),
+                Semantics.ConcertPitch.FileIsConcert(root), Semantics.ConcertPitch.FindPart(root, partName))
+            : 0;
+        // The file's `shift N` moves the row too (FileShift.RowDrop); alone, it is spelled as
+        // the notes are (FileShift.Interval) rather than by the drop's flat-leaning table.
+        int shift = Semantics.FileShift.ReadSemitones(root);
+        if (drop == 0 && Semantics.FileShift.Read(root) is { } shifted)
+            return "\\transpose c " + SpellPitch(shifted.step, shifted.alt) + OctaveMarks(shifted.oct) + " ";
+        drop = Semantics.FileShift.RowDrop(drop, shift);
         if (drop == 0)
             return "";
         var (step, alt, oct) = Semantics.PitchTransposer.IntervalFromSemitones(12 - drop);
