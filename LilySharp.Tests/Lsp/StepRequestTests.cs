@@ -767,12 +767,20 @@ public class StepRequestTests
     }
 
     [Fact]
-    public void ATime_StepsItsBeats_AndItsUnitOnTheOctaveKeys()
+    public void ATime_StepsItsBeats_AndWalksTheCommonMetersOnTheOctaveKeys()
     {
         Assert.Equal(Plain("time 4/4 c'4"), Step(Plain("ti‸me 3/4 c'4"), +1, semitone: true).After);
         Assert.Equal(Plain("time 2/4 c'4"), Step(Plain("time 3/4‸ c'4"), -1, semitone: true).After);
-        Assert.Equal(Plain("time 6/4 c'4"), Step(Plain("time 6/‸8 c'4"), -1).After);
-        Assert.Equal(Plain("time 6/16 c'4"), Step(Plain("time 6/‸8 c'4"), +1).After);
+        // 3/8 2/4 6/8 3/4 2/2 4/4 9/8 12/8, by the length of the bar.
+        Assert.Equal(Plain("time 3/4 c'4"), Step(Plain("time 6/‸8 c'4"), +1).After);
+        Assert.Equal(Plain("time 2/4 c'4"), Step(Plain("time 6/‸8 c'4"), -1).After);
+        Assert.Equal(Plain("time 4/4 c'4"), Step(Plain("‸time 2/2 c'4"), +1).After);
+        // Off the list: the next bar longer or shorter.
+        Assert.Equal(Plain("time 9/8 c'4"), Step(Plain("time 5/‸4 c'4"), -1).After);
+        Assert.Equal(Plain("time 6/8 c'4"), Step(Plain("time 5/‸8 c'4"), +1).After);
+        var (last, same) = Step(Plain("time 12/‸8 c'4"), +1);
+        Assert.False(last.Fallback);
+        Assert.Equal(Plain("time 12/8 c'4"), same);
         var (additive, after) = Step(Plain("time 3+2/‸8 c'8"), +1, semitone: true);
         Assert.False(additive.Fallback);
         Assert.Equal(Plain("time 3+2/8 c'8"), after);

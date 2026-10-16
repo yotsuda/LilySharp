@@ -35,8 +35,11 @@ namespace LilySharp.Core.Editing;
 /// not another. Lily#'s choices: the pair sets the direction rather than toggling, so a second
 /// press stays; <c>@sfz</c>, <c>@fp</c> and the like have no place on the ladder and say so.</item>
 /// <item>A <c>time</c>: the semitone pair steps the beats by 1 (<c>3/4</c> → <c>4/4</c>, never
-/// below 1), the octave pair doubles or halves the beat unit (<c>6/8</c> ⇄ <c>6/4</c>, 1 to 64).
-/// An additive meter (<c>3+2/8</c>) and <c>time none</c> step nothing.</item>
+/// below 1); the octave pair walks the common meters by the length of their bar,
+/// <see cref="CommonMeters"/> — owner's decision 2026-10-16, replacing the first day's doubling or
+/// halving of the beat unit (<c>6/8</c> ⇄ <c>6/4</c>), a change music seldom wants. A meter off
+/// the list steps to the next one longer or shorter. An additive meter (<c>3+2/8</c>) and
+/// <c>time none</c> step nothing.</item>
 /// <item>A part's <c>octave N</c>: either pair steps N by 1, 0 to 8 (Lily#'s bounds) — every
 /// bare note of the part moves with it.</item>
 /// <item>A <c>transpose</c> (a part's, or the top-level default): the semitone pair moves the
@@ -55,8 +58,11 @@ public static partial class NoteStepper
         [.. new[] { "ppppp", "pppp", "ppp", "pp", "p", "mp", "mf", "f", "ff", "fff", "ffff", "fffff" }
             .Where(SyntaxFacts.IsDynamicText)];
 
-    /// <summary>The beat units a <c>time</c> steps between.</summary>
-    private const int LargestBeatUnit = 64;
+    /// <summary>The meters the octave pair walks, shortest bar first; the bars of equal length
+    /// stand side by side (<c>6/8</c> ⇄ <c>3/4</c>, <c>2/2</c> ⇄ <c>4/4</c>), so one press compares
+    /// the two ways of counting it. Lily#'s list, the owner's decision to walk one.</summary>
+    private static readonly (int Beats, int Unit)[] CommonMeters =
+        [(3, 8), (2, 4), (6, 8), (3, 4), (2, 2), (4, 4), (9, 8), (12, 8)];
 
     /// <summary>The bounds of a part's <c>octave N</c> (Lily#'s choice: C0 to C8).</summary>
     private const int LowestOctave = 0, HighestOctave = 8;
@@ -133,10 +139,18 @@ public static partial class NoteStepper
             var n = time.Numerator;
             return (new Edit(n.Span.Start, n.Span.End, next.ToString()), $"time {next}/{unit}");
         }
-        int nextUnit = dir > 0 ? unit * 2 : unit / 2;
-        if (nextUnit < 1 || nextUnit > LargestBeatUnit || (dir < 0 && unit % 2 != 0))
-            return (null, $"time {beats}/{unit}: no {(dir > 0 ? "shorter" : "longer")} beat unit");
-        return (new Edit(unitToken.Span.Start, unitToken.Span.End, nextUnit.ToString()), $"time {beats}/{nextUnit}");
+        // The octave pair: the next common meter. On the list, its neighbour; off it, the first
+        // whose bar is longer (Up) or the last whose bar is shorter (Down).
+        int at = Array.IndexOf(CommonMeters, (beats, unit));
+        double length = (double)beats / unit;
+        int to = at >= 0 ? at + dir
+            : dir > 0 ? Array.FindIndex(CommonMeters, m => (double)m.Beats / m.Unit > length)
+            : Array.FindLastIndex(CommonMeters, m => (double)m.Beats / m.Unit < length);
+        if (to < 0 || to >= CommonMeters.Length)
+            return (null, $"time {beats}/{unit}: no common meter {(dir > 0 ? "longer" : "shorter")} "
+                + "(3/8 2/4 6/8 3/4 2/2 4/4 9/8 12/8) - Up / Down change the beats");
+        var (nb, nu) = CommonMeters[to];
+        return (new Edit(time.Numerator.Span.Start, unitToken.Span.End, $"{nb}/{nu}"), $"time {nb}/{nu}");
     }
 
     /// <summary>One step of a header's <c>octave N</c> or <c>transpose X</c>.</summary>

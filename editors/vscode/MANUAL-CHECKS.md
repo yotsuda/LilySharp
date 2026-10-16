@@ -35,7 +35,7 @@
 - [ ] **同主調・平行調**: `key c major` の上で Ctrl+Shift+PgUp → `key c minor`（同主調）、もう 1 回 → `key c major`。PgDn → `key a minor`（平行調・調号は変わらない）、もう 1 回 → `key c major`。タブは動かない。`key d dorian` の上ではステータスバーに *major and minor only*。
 - [ ] **音部記号**（2026-10-16 のユーザー要望）: `clef bass` の上で Ctrl+Shift+↑ → `clef tenor` → `clef alto` → `clef treble`、もう 1 回は動かずステータスバーに *already the highest*。↓ で逆に戻る。プレビューの音部記号が変わり、音符は書き換わらない。part の見出しの `clef bass`（サンプルの `part lh { clef bass octave 3 }`）でも同じに動く。見出しの `clef treble` で PgUp → `treble^8`・PgDn → `treble_8`、`clef bass` で PgDn → `bass_8`。音楽中の `clef treble` は PgDn → `treble_8` だけ。
 - [ ] **強弱**（2026-10-16 のユーザー決定）: `c'4@p` の `p` の上で Ctrl+Shift+↑ → `@mp` → `@mf`、↓ で戻る。`@decresc` の上で ↑ → `@cresc`、もう 1 回は動かない、↓ → `@decresc`。プレビューの記号が変わる。
-- [ ] **拍子**: `time 3/4` の上で ↑ → `time 4/4`。`time 6/8` で PgDn → `6/4`、PgUp → `6/16`。小節線が組み直される。
+- [ ] **拍子**: `time 3/4` の上で ↑ → `time 4/4`。`time 6/8` で PgUp → `3/4`、PgDn → `2/4`。`time 2/2` で PgUp → `4/4`。小節線が組み直される。
 - [ ] **octave N**: `part lh { clef bass octave 3 }` の `3` の上で ↑ → `octave 4`。その part の音がプレビューで 1 オクターブ上に、再生でも上で鳴る。
 - [ ] **transpose**: `part cl { transpose d }` の上で ↑ → `transpose ees`（ステータスバー *up 3 semitones*）。`key e major` の本で `transpose c` ↑ → `des`（F 長調になる・`cis` ではない）。PgUp → `ees'`。
 - [ ] 音符の上でない所で Ctrl+Shift+PgUp / PgDn → エディタのタブが左右に動く（VS Code 既定の Move Editor Left / Right in Group）。音符の上ではタブは動かず、オクターブが動く。

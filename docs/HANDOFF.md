@@ -142,6 +142,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **続けてユーザー要望「新規ファイルのテンプレート 1 行目に、いろんな場所で Ctrl+Shift+↑/PgUp を押してみて、と追記・Ctrl+K V は削除」**: `extension.ts` の `NEW_SCORE_TEMPLATE` を 2 行のコメントに（1 行目は lesson の案内のまま・2 行目がステップキー）。ユーザーの言：Lily# の弱点はキー操作が苦手なユーザーへの訴求で、ステップキーは大きな改善。`NewScoreTemplateTests` の 20 行の上限内（18 行）。
 - **続けてユーザー決定「lesson の `// Preview: Ctrl+K V` は消す（プレビューは自動で開く・開いた状態では押しても何も起きないように見える）・Ctrl+Shift+↑ の練習を lesson の最初の方に」**: lesson 2〜12 の 2 行目を削除（lesson-01 の「Not there? Ctrl+K V か右上のアイコン」は残す）。lesson-01 の STEP 4（`@mf` を書く）の続きに「`mf` の上で Ctrl+Shift+↑ → `f`・↓ 2 回 → `mp`」。STEP の番号は変えない（`LessonTests` が STEP 5 の印を読む）。網 1 本（`Lesson1_Step4_TheStepKeysOnTheMf_GiveFThenMp`）。`docs/learning-set-design.md` の lesson の型も直した。site の lesson ページは build-site が作る（git 管理外）。
 - **続けてユーザー報告「`time 2+|/2` で 3 を押すと `time 2+/32`」**: 入力補助（`smartTypingCore.ts`）の `MID_MUSIC_COMMAND` の `time` が `N/D` しか読まず、加法拍子（`3+2/8`）や書きかけ（`2+/2`）では `+` の後の `/2` がスラッシュ音符と読まれ、数字が音価に回っていた。正規表現を `time N(+N?)*/D?` に。網 3 つ（`smartTypingCore.test.ts` の slash notes）。
+- **続けてユーザーの問い「time の分母が PgUp で倍々になるのは妥当か・2 3 6 8 のように増える方が実際的では」→ Lily# の答え（分母は 2 の累乗＝倍々は正しいが使い道が少ない・よく使う拍子をたどる案）をユーザーが採用**: オクターブの組は `CommonMeters`＝3/8 2/4 6/8 3/4 2/2 4/4 9/8 12/8（小節の長さ順・同じ長さの 6/8⇄3/4・2/2⇄4/4 が隣）を 1 つずつ。表に無い拍子は長さで次に長い／短いもの。分子 ±1 の半音の組はそのまま。
 判定: 次の一手はユーザーの実機確認待ち ⇒ **この会話で続けてよい**。
 
 ## 以下は第905セッションの経緯

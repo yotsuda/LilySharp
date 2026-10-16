@@ -27,7 +27,8 @@ All notable changes to the Lily# VS Code extension are documented here.
   `mf` → `f` → `ff` (`ppppp` to `fffff`). On `@cresc` / `@decresc` / `@dim`, Up writes `@cresc`
   and Down `@decresc` — the same keys, nothing new to remember.
 - **On a `time`** `Ctrl+Shift+Up` / `Down` step the beats by 1 (`3/4` → `4/4`), and
-  `Ctrl+Shift+PageUp` / `PageDown` double or halve the beat unit (`6/8` → `6/16` / `6/4`).
+  `Ctrl+Shift+PageUp` / `PageDown` walk the common meters by the length of the bar,
+  `3/8` `2/4` `6/8` `3/4` `2/2` `4/4` `9/8` `12/8` (`6/8` ⇄ `3/4` is one press).
 - **On a part's `octave N`** either pair steps N by 1, 0 to 8; the part's bare notes move with it.
 - **On a `transpose`** `Ctrl+Shift+Up` / `Down` move the target a semitone, spelled so the
   transposed key has the fewest sharps or flats (from the file's first `key`), and the status bar
