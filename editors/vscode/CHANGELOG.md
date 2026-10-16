@@ -21,6 +21,19 @@ All notable changes to the Lily# VS Code extension are documented here.
   `lilysharp.stepSemitoneDown`, named when the step was a semitone). Off a note, those keys keep
   VS Code's own *Move Editor Left / Right in Group*.
 
+### Ctrl+Shift+Up / Down step a dynamic, a time, a part's octave and a transpose
+
+- **On a dynamic** (the caret after its `@`) either pair steps it a level, `pp` → `p` → `mp` →
+  `mf` → `f` → `ff` (`ppppp` to `fffff`). On `@cresc` / `@decresc` / `@dim`, Up writes `@cresc`
+  and Down `@decresc` — the same keys, nothing new to remember.
+- **On a `time`** `Ctrl+Shift+Up` / `Down` step the beats by 1 (`3/4` → `4/4`), and
+  `Ctrl+Shift+PageUp` / `PageDown` double or halve the beat unit (`6/8` → `6/16` / `6/4`).
+- **On a part's `octave N`** either pair steps N by 1, 0 to 8; the part's bare notes move with it.
+- **On a `transpose`** `Ctrl+Shift+Up` / `Down` move the target a semitone, spelled so the
+  transposed key has the fewest sharps or flats (from the file's first `key`), and the status bar
+  says how far; `Ctrl+Shift+PageUp` / `PageDown` add or take an octave mark. `transpose` still
+  takes a pitch, not a number of semitones — a number would leave the spelling open.
+
 ### Ctrl+Shift+Up / Down step a clef
 
 - **On a `clef`, `Ctrl+Shift+Up` steps to the clef for higher notes and `Ctrl+Shift+Down` to the

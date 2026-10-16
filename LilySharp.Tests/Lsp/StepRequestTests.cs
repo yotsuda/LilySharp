@@ -748,6 +748,69 @@ public class StepRequestTests
         Assert.Contains("highest", top.Message);
     }
 
+    // ---------------------------------------------------------------- a dynamic, a time, octave N, transpose
+
+    [Fact]
+    public void ADynamic_StepsALevel_AndAHairpinTurnsWithTheKeys()
+    {
+        Assert.Equal(Plain("c'4@mf d'"), Step(Plain("c'4@m‸p d'"), +1, semitone: true).After);
+        Assert.Equal(Plain("c'4@pp d'"), Step(Plain("c'4@p‸ d'"), -1).After);
+        Assert.Equal(Plain("c'4@f.up d'"), Step(Plain("c'4@m‸f.up d'"), +1, semitone: true).After);
+        Assert.Equal(Plain("c'4@cresc d'"), Step(Plain("c'4@de‸cresc d'"), +1, semitone: true).After);
+        Assert.Equal(Plain("c'4@decresc d'"), Step(Plain("c'4@cresc‸ d'"), -1, semitone: true).After);
+        Assert.Equal(Plain("c'4@cresc d'"), Step(Plain("c'4@‸dim d'"), +1, semitone: true).After);
+        var (again, after) = Step(Plain("c'4@cre‸sc d'"), +1, semitone: true);
+        Assert.False(again.Fallback);
+        Assert.Equal(Plain("c'4@cresc d'"), after);
+        // Just before the '@' the caret is on the note.
+        Assert.Equal(Plain("d'4@p d'"), Step(Plain("c'4‸@p d'"), +1, semitone: true).After);
+    }
+
+    [Fact]
+    public void ATime_StepsItsBeats_AndItsUnitOnTheOctaveKeys()
+    {
+        Assert.Equal(Plain("time 4/4 c'4"), Step(Plain("ti‸me 3/4 c'4"), +1, semitone: true).After);
+        Assert.Equal(Plain("time 2/4 c'4"), Step(Plain("time 3/4‸ c'4"), -1, semitone: true).After);
+        Assert.Equal(Plain("time 6/4 c'4"), Step(Plain("time 6/‸8 c'4"), -1).After);
+        Assert.Equal(Plain("time 6/16 c'4"), Step(Plain("time 6/‸8 c'4"), +1).After);
+        var (additive, after) = Step(Plain("time 3+2/‸8 c'8"), +1, semitone: true);
+        Assert.False(additive.Fallback);
+        Assert.Equal(Plain("time 3+2/8 c'8"), after);
+    }
+
+    [Fact]
+    public void APartsOctave_StepsByOne()
+    {
+        const string Book = "part lh {{ clef bass {0} }}\nsection A {{ lh {{ c4 d e f }} }}\n";
+        string S(string octave) => string.Format(Book, octave);
+        Assert.Equal(S("octave 4"), Step(S("oct‸ave 3"), +1, semitone: true).After);
+        Assert.Equal(S("octave 2"), Step(S("octave 3‸"), -1).After);
+        var (low, after) = Step(S("octave ‸0"), -1, semitone: true);
+        Assert.False(low.Fallback);
+        Assert.Equal(S("octave 0"), after);
+    }
+
+    [Fact]
+    public void ATranspose_StepsASemitone_SpelledForTheFewestAccidentals()
+    {
+        const string Book = "{0}part cl {{ clef treble transpose {1} }}\nsection A {{ cl {{ c'4 d e f }} }}\n";
+        string S(string key, string target) => string.Format(Book, key, target);
+        Assert.Equal(S("", "d"), Step(S("", "de‸s"), +1, semitone: true).After);
+        Assert.Equal(S("", "ees"), Step(S("", "d‸"), +1, semitone: true).After);
+        Assert.Equal(S("", "c'"), Step(S("", "‸b"), +1, semitone: true).After);
+        Assert.Equal(S("", "bes,"), Step(S("", "b‸,"), -1, semitone: true).After);
+        // The spelling keeps the transposed key smallest: E major up a semitone is F major
+        // (des), not E-sharp major (cis); B-flat major's is B major (cis), not C-flat major.
+        Assert.Equal(S("key e major\n", "des"), Step(S("key e major\n", "‸c"), +1, semitone: true).After);
+        Assert.Equal(S("key bes major\n", "cis"), Step(S("key bes major\n", "‸c"), +1, semitone: true).After);
+        // A tie (F major: G-flat or F-sharp major, six each) goes to the flat.
+        Assert.Equal(S("key f major\n", "des"), Step(S("key f major\n", "‸c"), +1, semitone: true).After);
+        Assert.Equal(S("", "d'"), Step(S("", "‸d"), +1).After);
+        Assert.Equal(S("", "bes"), Step(S("", "bes‸'"), -1).After);
+        var (said, _) = Step(S("key f major\n", "‸c"), +1, semitone: true);
+        Assert.Contains("up 1 semitone", said.Message);
+    }
+
     [Fact]
     public void ANoteAfterATempo_StillStepsAsANote()
         => Assert.Equal(Plain("tempo 120 d'4"), Step(Plain("tempo 120 ‸c'4"), +1, semitone: true).After);

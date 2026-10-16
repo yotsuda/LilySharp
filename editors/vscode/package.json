@@ -386,22 +386,22 @@
       {
         "command": "lilysharp.stepSemitoneUp",
         "category": "Lily#",
-        "title": "Step Up in the Key (note / chord shape / tempo / key / clef)"
+        "title": "Step Up in the Key (note / chord shape / tempo / key / clef / dynamic / time / octave / transpose)"
       },
       {
         "command": "lilysharp.stepSemitoneDown",
         "category": "Lily#",
-        "title": "Step Down in the Key (note / chord shape / tempo / key / clef)"
+        "title": "Step Down in the Key (note / chord shape / tempo / key / clef / dynamic / time / octave / transpose)"
       },
       {
         "command": "lilysharp.stepUp",
         "category": "Lily#",
-        "title": "Step Up an Octave (octave mark / chord shape)"
+        "title": "Step Up an Octave (octave mark / chord shape / tempo / key / clef / dynamic / time / octave / transpose)"
       },
       {
         "command": "lilysharp.stepDown",
         "category": "Lily#",
-        "title": "Step Down an Octave (octave mark / chord shape)"
+        "title": "Step Down an Octave (octave mark / chord shape / tempo / key / clef / dynamic / time / octave / transpose)"
       },
       {
         "command": "lilysharp.previewPlayFromHere",

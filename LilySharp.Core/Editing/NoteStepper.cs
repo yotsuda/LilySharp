@@ -102,7 +102,18 @@ public static partial class NoteStepper
         Key,
         /// <summary>A <c>clef</c> — the semitone pair walks bass, tenor, alto, treble (NoteStepper.Clef.cs).</summary>
         Clef,
+        /// <summary>A dynamic — <c>@p</c> steps to <c>@mp</c>, <c>@decresc</c> to <c>@cresc</c> (NoteStepper.Values.cs).</summary>
+        Dynamic,
+        /// <summary>A <c>time</c> — its beats or its beat unit (NoteStepper.Values.cs).</summary>
+        Time,
+        /// <summary>A header's <c>octave N</c> or <c>transpose X</c> (NoteStepper.Values.cs).</summary>
+        HeaderValue,
     }
+
+    /// <summary>The kinds whose step changes a setting, not a sound — the audition skips them.</summary>
+    private static bool IsSilent(TargetKind kind)
+        => kind is TargetKind.Tempo or TargetKind.Key or TargetKind.Clef or TargetKind.Dynamic
+            or TargetKind.Time or TargetKind.HeaderValue;
 
     /// <summary>A written thing the caret is on: its kind and its node (a
     /// <see cref="NoteSyntax"/>, a <see cref="PitchSyntax"/> or <see cref="ScaleDegreeSyntax"/>
@@ -234,6 +245,20 @@ public static partial class NoteStepper
                 stepped.Add(t);
                 continue;
             }
+            if (t.Kind is TargetKind.Dynamic or TargetKind.Time or TargetKind.HeaderValue)
+            {
+                var (valueEdit, valueSaid) = t.Kind switch
+                {
+                    TargetKind.Dynamic => DynamicEdit((DynamicSyntax)t.Node, dir),
+                    TargetKind.Time => TimeEdit((TimeSignatureSyntax)t.Node, dir, semitone),
+                    _ => ValuePropertyEdit(text, tree, (PropertyAssignmentSyntax)t.Node, dir, semitone),
+                };
+                message ??= valueSaid;
+                if (valueEdit is { } ve)
+                    edits.Add(ve);
+                stepped.Add(t);
+                continue;
+            }
             if (semitone && t.Kind == TargetKind.Chord)
             {
                 // A chord as a whole inverts (owner's decision 2026-10-16): its lowest member an
@@ -288,7 +313,7 @@ public static partial class NoteStepper
             var sounding = expand?.Invoke(newText) ?? newTree;
             foreach (var t in stepped)
             {
-                if (t.Kind is TargetKind.Tempo or TargetKind.Key or TargetKind.Clef)
+                if (IsSilent(t.Kind))
                     continue;
                 int at = MapThrough(edits, t.Key);
                 if (FindTarget(newTree, t.Kind, at) is not { } moved)
@@ -322,7 +347,7 @@ public static partial class NoteStepper
     public static Audition? AuditionAt(string text, SyntaxTree tree, int offset, SyntaxTree? sounding = null,
         bool includeStretch = false)
     {
-        if (TargetAt(text, tree, offset) is not { } target || target.Kind is TargetKind.Tempo or TargetKind.Key or TargetKind.Clef)
+        if (TargetAt(text, tree, offset) is not { } target || IsSilent(target.Kind))
             return null;
         // A chords-row entry sounds when STEPPED, not when the caret lands on it: the caret
         // audition stays what it was before row entries became steppable (Lily#'s choice,
@@ -362,6 +387,12 @@ public static partial class NoteStepper
             return new Target(TargetKind.Key, key);
         if (ClefAt(tree, offset) is { } clef)
             return new Target(TargetKind.Clef, clef);
+        if (TimeAt(tree, offset) is { } time)
+            return new Target(TargetKind.Time, time);
+        if (ValuePropertyAt(tree, offset) is { } property)
+            return new Target(TargetKind.HeaderValue, property);
+        if (DynamicAt(tree, offset) is { } dynamic)
+            return new Target(TargetKind.Dynamic, dynamic);
         // An @chord: strictly after its '@' — a caret just before the '@' is also just after
         // the note's duration, and belongs to the note.
         // A bare one on a chord(…) item names the item's words (ChordAnnotation.Of), so it
