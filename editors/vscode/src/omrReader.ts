@@ -66,11 +66,13 @@ export async function offerOmrExtension(): Promise<void> {
     }
 }
 
-/** Keeps the `lilysharp.omrAvailable` context (the Explorer's right-click) true to what is
- *  installed, now and whenever an extension is installed or removed. The palette's item does
- *  not wait for it: a context set here exists only once Lily# has activated (a .lys opened),
- *  so the palette reads VS Code's own `isWindows` instead (owner's report 2026-10-12: no item
- *  before a .lys was opened). ⚠️ The NAME `lilysharp.omrAvailable` is shared: the reader's
+/** Keeps the `lilysharp.omrAvailable` context true to what is installed, now and whenever an
+ *  extension is installed or removed. Neither menu item waits for it: a context set here exists
+ *  only once Lily# has activated (a .lys opened), so the palette's item and the Explorer's
+ *  right-click both read VS Code's own `isWindows` as well (owner's report 2026-10-12: no item
+ *  before a .lys was opened; owner's decision 2026-10-17: the right-click shows without the
+ *  reader too, and the command offers it). The context still shows the right-click for a reader
+ *  found off Windows (the environment variable). ⚠️ The NAME `lilysharp.omrAvailable` is shared: the reader's
  *  extension sets it to true on startup so the right-click shows before Lily# runs
  *  (LilySharp-Omr docs/repro/lilysharp-implemented-2026-10-12.md §2), and this overwrites it
  *  with Lily#'s own answer. Renaming it breaks that. */

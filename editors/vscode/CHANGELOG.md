@@ -71,7 +71,9 @@ All notable changes to the Lily# VS Code extension are documented here.
   place, and the step moved its pitch. A note, a bar and a title land where they did.
 
 - **Convert Image/PDF to Lily# (.lys)… asks for the Scan Import extension before the file
-  dialog** when the reader is not installed, instead of after you had chosen the files.
+  dialog** when the reader is not installed, instead of after you had chosen the files — and the
+  Explorer's right-click on an image or a PDF offers it the same way on Windows, where it used
+  to show only once the reader was installed.
 
 ### Ctrl+Shift+Up / Down step a clef
 

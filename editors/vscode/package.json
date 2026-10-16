@@ -671,7 +671,7 @@
         },
         {
           "command": "lilysharp.importImage",
-          "when": "lilysharp.omrAvailable && resourceExtname =~ /^\\.(png|jpe?g|bmp|tiff?|pdf)$/i",
+          "when": "(lilysharp.omrAvailable || isWindows) && resourceExtname =~ /^\\.(png|jpe?g|bmp|tiff?|pdf)$/i",
           "group": "7_modification"
         },
         {
