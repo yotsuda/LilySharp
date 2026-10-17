@@ -142,6 +142,11 @@ $template = @'
   figure.demo-video video { display:block; width:100%; max-width:960px; height:auto;
                             border:1px solid var(--rule); border-radius:10px; box-shadow:0 2px 14px var(--shadow); }
   figure.demo-video figcaption { color:var(--muted); font-size:14px; margin:8px 0 0; }
+  /* A still picture (a scan beside what the reader wrote of it), framed like a clip. */
+  figure.shot { margin:18px 0 22px; }
+  figure.shot img { display:block; width:100%; max-width:960px; height:auto;
+                    border:1px solid var(--rule); border-radius:10px; box-shadow:0 2px 14px var(--shadow); }
+  figure.shot figcaption { color:var(--muted); font-size:14px; margin:8px 0 0; }
   kbd { font:12.5px/1.3 "SFMono-Regular",Consolas,monospace; background:var(--code);
         border:1px solid var(--rule); border-bottom-width:2px; border-radius:4px; padding:1px 5px; white-space:nowrap; }
   /* the links along the top of every page (site-common.ps1) */
