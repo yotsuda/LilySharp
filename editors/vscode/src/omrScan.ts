@@ -27,7 +27,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import type { LanguageClient } from 'vscode-languageclient/node';
 import {
-    BarAnchor, PrintedBar, ScanSideFile, ScanTarget, ServerTodo, anchorsOf, barOnLine, flaggedBars, hiddenTodoKeys, parseSideFile, resolvedTodoKeys, barStaff,
+    BarAnchor, PrintedBar, ScanSideFile, ScanTarget, ServerTodo, anchorsOf, barOnLine, flaggedMarks, hiddenTodoKeys, parseSideFile, resolvedTodoKeys, barStaff,
     SCAN_DEFAULT_THRESHOLD, pageLabel, scanBarForPrinted, scanTitle, shiftAnchors, shownImage, sideFileOf, todoStroke,
     todoTarget, lineOfScanBar, scanBarForStart,
 } from './omrScanCore';
@@ -181,7 +181,7 @@ export async function showScan(
     panel.onDidDispose(() => {
         watcher.dispose();
         views.delete(lys.toString());
-        deps.postToPreview(lys, { type: 'markBars', bars: [] });
+        deps.postToPreview(lys, { type: 'markBars', marks: [] });
         // With the view gone nothing filters the marks: the preview shows them all again.
         deps.postToPreview(lys, { type: 'hideTodos', keys: [] });
     });
@@ -248,14 +248,15 @@ async function printedOf(view: ScanView, deps: OmrScanDeps): Promise<PrintedBar[
     return bars;
 }
 
-/** Frames, on the preview, the bars that carry a mark (B4: what the reader flagged, on both sides). */
+/** Frames, on the preview, the staff's bar each mark is written in (B4: what the reader flagged,
+ *  on both sides — one part's bar, as the scan's box; flaggedMarks). */
 async function markPreview(view: ScanView, deps: OmrScanDeps): Promise<void> {
     try {
         const doc = await vscode.workspace.openTextDocument(view.lys);
         const todos = await todosOf(view, doc, deps);
-        const bars = flaggedBars(todos,
+        const marks = flaggedMarks(todos,
             view.threshold === undefined ? [] : hiddenTodoKeys(view.side.todos, view.threshold));
-        deps.postToPreview(view.lys, { type: 'markBars', bars });
+        deps.postToPreview(view.lys, { type: 'markBars', marks });
         // …and the scan drops the frames of the marks the .lys no longer carries — only on a
         // real answer (todosOf caches nothing else), or every mark would look resolved.
         if (view.todos?.version === doc.version) {

@@ -143,16 +143,29 @@ export function hiddenTodoKeys(todos: readonly Pick<ScanTodo, 'key' | 'confidenc
     return [...new Set(todos.filter(t => !shownAt(t, threshold)).map(t => t.key))];
 }
 
-/** The printed bars the preview frames (B4): those holding a mark the slider shows — a mark
- *  whose key is hidden frames nothing, one the side file does not know (written by hand) is
- *  always shown. Each bar once, in the order met (owner's report 2026-10-12: the frames
- *  stayed when the slider hid their marks). */
-export function flaggedBars(todos: readonly ServerTodo[], hiddenKeys: readonly string[]): number[] {
+/** A mark the preview frames (B4): where it is written (`at`, its host's offset — the preview
+ *  frames the one staff's bar whose written stretch holds it, as the scan frames the reader's
+ *  box of one part; owner's request 2026-10-17: until then the whole system's bar was framed,
+ *  every part) and the bar the page prints for it (`bar`, the preview's fallback when no
+ *  staff's bar holds the offset; null when no score plays it). */
+export interface FlaggedMark { readonly at: number; readonly bar: number | null }
+
+/** The marks the preview frames: those the slider shows — a mark whose key is hidden frames
+ *  nothing, one the side file does not know (written by hand) is always shown. Each place
+ *  once, in the order met (owner's report 2026-10-12: the frames stayed when the slider hid
+ *  their marks). */
+export function flaggedMarks(todos: readonly ServerTodo[], hiddenKeys: readonly string[]): FlaggedMark[] {
     const hidden = new Set(hiddenKeys);
-    return [...new Set(todos
-        .filter(t => !(t.Key && hidden.has(t.Key)))
-        .map(t => t.Measure)
-        .filter((m): m is number => m !== null && m !== undefined))];
+    const seen = new Set<number>();
+    const marks: FlaggedMark[] = [];
+    for (const t of todos) {
+        if ((t.Key && hidden.has(t.Key)) || seen.has(t.HostStart)) {
+            continue;
+        }
+        seen.add(t.HostStart);
+        marks.push({ at: t.HostStart, bar: t.Measure ?? null });
+    }
+    return marks;
 }
 
 /** The side file's marks the .lys no longer carries — taken out once checked (owner's request

@@ -24,7 +24,7 @@ import * as path from 'node:path';
 import * as vm from 'node:vm';
 import {
     SCAN_DEFAULT_THRESHOLD, anchorsOf, barOnLine, markFactsOf, pageLabel, parseSideFile, scanBarForPrinted, scanTitle,
-    flaggedBars, hiddenTodoKeys, resolvedTodoKeys, shiftAnchors, shownAt, shownImage, sideFileOf, barStaff, todoStroke, todoTarget,
+    flaggedMarks, hiddenTodoKeys, resolvedTodoKeys, shiftAnchors, shownAt, shownImage, sideFileOf, barStaff, todoStroke, todoTarget,
     lineAround, lineOfScanBar, scanBarForStart,
 } from '../src/omrScanCore';
 
@@ -184,17 +184,20 @@ describe('how sure the reader is (LilySharp-Omr reply 2026-10-12: a confidence o
         assert.deepEqual(hiddenTodoKeys([{ key: 'b2', confidence: 0.5 }, { key: 'b2', confidence: 0.7 }], 0.3), ['b2']);
     });
 
-    it('frames on the preview only the bars whose marks the slider shows', () => {
+    it('frames on the preview only the marks the slider shows, each by where it is written', () => {
         const server = [
             { Key: 'b3', HostStart: 0, HostEnd: 1, Measure: 2 },
             { Key: 'b4', HostStart: 2, HostEnd: 3, Measure: 3 },
             { Key: 'b4', HostStart: 4, HostEnd: 5, Measure: 4 },
             { Key: null, HostStart: 6, HostEnd: 7, Measure: 3 },     // written by hand
             { Key: 'o9', HostStart: 8, HostEnd: 9, Measure: null },  // no score plays it
+            { Key: 'o9', HostStart: 8, HostEnd: 9, Measure: null },  // the same place twice
         ];
-        assert.deepEqual(flaggedBars(server, []), [2, 3, 4]);
-        assert.deepEqual(flaggedBars(server, hiddenTodoKeys(side.todos, SCAN_DEFAULT_THRESHOLD)), [2, 3]);
-        assert.deepEqual(flaggedBars(server, ['b3', 'b4']), [3]);
+        assert.deepEqual(flaggedMarks(server, []),
+            [{ at: 0, bar: 2 }, { at: 2, bar: 3 }, { at: 4, bar: 4 }, { at: 6, bar: 3 }, { at: 8, bar: null }]);
+        assert.deepEqual(flaggedMarks(server, hiddenTodoKeys(side.todos, SCAN_DEFAULT_THRESHOLD)),
+            [{ at: 0, bar: 2 }, { at: 6, bar: 3 }, { at: 8, bar: null }]);
+        assert.deepEqual(flaggedMarks(server, ['b3', 'b4']), [{ at: 6, bar: 3 }, { at: 8, bar: null }]);
     });
 
     it('calls a mark resolved once the .lys no longer carries it — never a quiet one', () => {

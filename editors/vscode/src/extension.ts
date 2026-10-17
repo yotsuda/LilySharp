@@ -3035,7 +3035,9 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         :root.todo-plain #svgContainer text[data-todo] {
             fill: currentColor;
         }
-        /* A bar an OMR reader flagged (the scan view's B4), framed as on the scan. */
+        /* A bar an OMR reader flagged (the scan view's B4), framed as on the scan: one staff's
+           bar (rect.bar-staff), the system's only when no staff's bar holds the mark. */
+        #svgContainer rect.bar-staff.flagged,
         #svgContainer rect.bar-box.flagged {
             stroke: #e53935;
             stroke-width: 2;
@@ -4830,13 +4832,32 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
 
         // The scan view's link (LilySharp-Omr proposal B4): the bar at the top of the
         // score goes out as the preview scrolls (the server's bar-box rects carry the
-        // printed number), a bar the scan asks for is brought to the top, and the bars
+        // printed number), a bar the scan asks for is brought to the top, and the marks
         // the reader flagged are framed. A scroll asked for here is not reported back.
-        let flaggedBars = new Set();
+        // A mark ({at, bar}: where it is written, and the bar the page prints for it) frames
+        // the one staff's bar whose written stretch (data-span) holds it — one part, as the
+        // scan frames the reader's box (owner's request 2026-10-17; until then the whole
+        // system's bar was framed) — and the system's bar (rect.bar-box) only when no staff's
+        // bar holds it.
+        let flaggedMarks = [];
         let barQuietUntil = 0, barReportTimer = null;
         function applyBarFlags() {
+            for (const r of svgContainer.querySelectorAll('rect.bar-staff.flagged, rect.bar-box.flagged')) r.classList.remove('flagged');
+            const staves = [];
+            for (const r of svgContainer.querySelectorAll('rect.bar-staff[data-span]')) {
+                const span = r.getAttribute('data-span').split(' ');
+                staves.push({ r, from: parseInt(span[0], 10), to: parseInt(span[1], 10) });
+            }
+            const systems = new Set();
+            for (const m of flaggedMarks) {
+                let held = false;
+                for (const s of staves) {
+                    if (m.at >= s.from && m.at <= s.to) { s.r.classList.add('flagged'); held = true; }
+                }
+                if (!held && Number.isInteger(m.bar)) systems.add(m.bar);
+            }
             for (const r of svgContainer.querySelectorAll('rect.bar-box')) {
-                r.classList.toggle('flagged', flaggedBars.has(Number(r.dataset.bar)));
+                if (systems.has(Number(r.dataset.bar))) r.classList.add('flagged');
             }
         }
         // The bar at the top edge of the view, and how much of it is cut off above that edge
@@ -4903,7 +4924,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                     showBar(message.bar, message.top === true, typeof message.cut === 'number' ? message.cut : 0);
                     break;
                 case 'markBars':
-                    flaggedBars = new Set(message.bars || []);
+                    flaggedMarks = Array.isArray(message.marks) ? message.marks : [];
                     applyBarFlags();
                     break;
                 case 'peerBars':
@@ -4923,7 +4944,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                     lastHighlightPos = -1;
                     lastHighlightTokenStart = -1;
                     lastHighlightRanges = null;
-                    flaggedBars = new Set();
+                    flaggedMarks = [];
                     hideErrorBanner();
                     svgContainer.classList.remove('stale');
                     svgContainer.innerHTML = '<div class="loading">Loading preview...</div>';
