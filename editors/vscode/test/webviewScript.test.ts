@@ -315,22 +315,36 @@ describe('the preview frames what the scan boxes', () => {
         if (html[i] === '{') depth++;
         else if (html[i] === '}' && --depth === 0) { close = i + 1; break; }
     }
-    const staff = (first: number, span?: string) => {
-        const cls = new Set<string>();
-        return {
-            cls,
-            getAttribute: (n: string) => n === 'data-start' ? String(first) : span ?? null,
-            hasAttribute: (n: string) => n === 'data-span' && span !== undefined,
-            classList: { add: (c: string) => cls.add(c), remove: (c: string) => cls.delete(c) },
-        };
-    };
+    // The frames are rects of their own (rect.flag-frame) beside the staff's bars; the fakes
+    // record them as the page would hold them.
+    type Frame = { attrs: Record<string, string>; remove: () => void };
+    const frames: Frame[] = [];
+    const parent = { insertBefore: (f: Frame) => frames.push(f) };
+    const staff = (first: number, span: string | undefined, x: number) => ({
+        x,
+        getAttribute: (n: string) => n === 'data-start' ? String(first) : n === 'data-span' ? span ?? null
+            : n === 'x' ? String(x) : n === 'y' ? '100' : n === 'width' ? '50' : '20',
+        hasAttribute: (n: string) => n === 'data-span' && span !== undefined,
+        parentNode: parent, nextSibling: null,
+    });
     // Bar 4 of three parts, each written on its own line: rh at 100.., lh at 200.., vc at 300..;
     // and the rh bar printed again (a section played twice), from the same place.
-    const staves = [staff(100, '100 120'), staff(200, '200 230'), staff(300, '300 320'), staff(100, '100 120')];
-    const svgContainer = { querySelectorAll: (sel: string) => sel.includes('.flagged') ? staves.filter(s => s.cls.has('flagged')) : staves };
+    const staves = [staff(100, '100 120', 0), staff(200, '200 230', 1), staff(300, '300 320', 2), staff(100, '100 120', 3)];
+    const svgContainer = { querySelectorAll: (sel: string) => sel.includes('flag-frame') ? [...frames] : staves };
+    const document = {
+        createElementNS: () => {
+            const attrs: Record<string, string> = {};
+            const f: Frame & { setAttribute: (k: string, v: unknown) => void } = {
+                attrs,
+                setAttribute: (k, v) => { attrs[k] = String(v); },
+                remove: () => { const i = frames.indexOf(f); if (i >= 0) frames.splice(i, 1); },
+            };
+            return f;
+        },
+    };
     const applyWith = new vm.Script('(marks => { let flaggedMarks = marks; return ' + html.slice(at, close) + '; })')
-        .runInNewContext({ svgContainer, Number, parseInt }) as (marks: unknown[]) => () => void;
-    const framed = () => staves.map(s => s.cls.has('flagged'));
+        .runInNewContext({ svgContainer, document, Number, parseInt }) as (marks: unknown[]) => () => void;
+    const framed = () => staves.map(s => frames.some(f => f.attrs.x === String(s.x)));
 
     it('finds the function in the page script', () => {
         assert.ok(at >= 0 && close > at, 'applyBarFlags is not in the page script');
@@ -338,6 +352,9 @@ describe('the preview frames what the scan boxes', () => {
     it('frames the staff\'s bars written on the mark\'s lines — one part, two, or every one', () => {
         applyWith([{ at: 205, lines: [[200, 230]] }])();
         assert.deepEqual(framed(), [false, true, false, false]);
+        // The frame is the scan's box: the bar's width, two staff spaces (half a staff) above and below.
+        assert.deepEqual([frames[0].attrs.x, frames[0].attrs.y, frames[0].attrs.width, frames[0].attrs.height], ['1', '90', '50', '40']);
+        assert.equal(frames[0].attrs['pointer-events'], 'none');
         applyWith([{ at: 101, lines: [[100, 120], [200, 230]] }])();      // a length mark: rh and lh are off
         assert.deepEqual(framed(), [true, true, false, true]);             // …and the rh copy too
         applyWith([{ at: 101, lines: [[100, 120], [200, 230], [300, 320]] }])();

@@ -154,6 +154,9 @@ All notable changes to the Lily# VS Code extension are documented here.
   frames on the scan, one per part-bar, where the reader drew one box round both (owner's
   report 2026-10-17: "破線の大きさが揃わない"). The frames share the mark's key, so the slider
   and a resolve take them together, and the slider's count stays a count of marks.
+- **The preview's frame is as tall as the scan's**: two staff spaces above the staff's top line
+  and two below its bottom one, the box the reader draws on the scan, instead of the staff's
+  lines exactly (owner's request 2026-10-17: the roomier frame is the easier to see).
 
 ### The scan and the preview are cut alike at the top, and both show their title at the top
 

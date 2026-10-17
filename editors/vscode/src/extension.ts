@@ -3035,8 +3035,9 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         :root.todo-plain #svgContainer text[data-todo] {
             fill: currentColor;
         }
-        /* A staff's bar an OMR reader flagged (the scan view's B4), framed as on the scan. */
-        #svgContainer rect.bar-staff.flagged {
+        /* A staff's bar an OMR reader flagged (the scan view's B4), framed as on the scan: the
+           frame applyBarFlags draws round it, two staff spaces taller above and below. */
+        #svgContainer rect.flag-frame {
             stroke: #e53935;
             stroke-width: 2;
             stroke-dasharray: 4 3;
@@ -4838,17 +4839,33 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         // lightPeerBars) frame every staff's bar whose first note is written on one of them;
         // a mark the scan does not know (no lines) frames the one staff's bar whose written
         // stretch (data-span) holds where it is written (at).
+        // The frame itself is a rect of its own beside the staff's bar (rect.flag-frame), the
+        // bar's X range and two staff spaces taller above and below — the box the reader draws
+        // round a part-bar on the scan (LilySharp-Omr Sidecar.AddPage: the staff's top line less
+        // two spaces to its bottom line plus two; a staff is four spaces), so the two views
+        // frame alike (owner's request 2026-10-17: the roomier frame is the easier to see).
         let flaggedMarks = [];
         let barQuietUntil = 0, barReportTimer = null;
         function applyBarFlags() {
-            for (const r of svgContainer.querySelectorAll('rect.bar-staff.flagged')) r.classList.remove('flagged');
+            for (const f of svgContainer.querySelectorAll('rect.flag-frame')) f.remove();
             for (const r of svgContainer.querySelectorAll('rect.bar-staff')) {
                 const start = parseInt(r.getAttribute('data-start'), 10);
                 const span = r.hasAttribute('data-span') ? r.getAttribute('data-span').split(' ').map(v => parseInt(v, 10)) : null;
                 const flagged = flaggedMarks.some(m => m.lines && m.lines.length > 0
                     ? m.lines.some(l => start >= l[0] && start <= l[1])
                     : span !== null && m.at >= span[0] && m.at <= span[1]);
-                if (flagged) r.classList.add('flagged');
+                if (!flagged) continue;
+                const x = Number(r.getAttribute('x')), y = Number(r.getAttribute('y'));
+                const w = Number(r.getAttribute('width')), h = Number(r.getAttribute('height'));
+                const f = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                f.setAttribute('class', 'flag-frame');
+                f.setAttribute('x', x);
+                f.setAttribute('y', y - h / 2);
+                f.setAttribute('width', w);
+                f.setAttribute('height', 2 * h);
+                f.setAttribute('fill', 'none');
+                f.setAttribute('pointer-events', 'none');
+                r.parentNode.insertBefore(f, r.nextSibling);
             }
         }
         // The bar at the top edge of the view, and how much of it is cut off above that edge
