@@ -135,7 +135,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **判断 2 つ**: 診断文に小節を足す案（`TODO (bar 7, p2): …`）は取り下げ＝ユーザー「`@todo` が正しい位置にあれば小節もパートも不要」。p1 側の長さの印は confidence 0.81〜0.89 で quiet（reader の `--todo-threshold 0.9` で出る・Lily# に設定なし＝要るならユーザー判断）。
 - **release 作業（午後）**: ユーザー「実機確認は済み・問題ない」→ MANUAL-CHECKS 107 / 107 を `[x]`（`f4a2a1a74`）／**Core 警告 6 を直した**（`8dd670247`＝`CollectMultiStaffPass` の非 null な `renderSpec` を `== null` 比較していたのが flow analysis を狂わせていた・1 行・0 警告）／版上げ 7 か所・両 CHANGELOG を `## 0.13.0` に（`117984578`・commit を見出しと本文に読み合わせて抜けなし・lockfile は `npm install --package-lock-only`）。
 - `-End p909`（版上げ後の 1 回目）は 4 赤: snapshot 2（`test/dead-note`・`test/system-count-line-start-ink`・x が 0.05 ずれ）は単独で回すと緑＝full 中に別の build（ユーザーの拡張の組み直し）と重なった疑い／`DeadCitationsDoNotGrow` 949 > 947＝LilySharp-Omr の commit hash 3 つを §1 に書いた（他 repo の hash は死んだ引用に数えられる＝**log の語で書く**）／`TheHandoffStaysReadable` 25,297 字 > 20,000＝この節を畳んだ。
-- `-End p909`（2 回目）: 下に追記。
+- `-End p909 -DiffBase 1a0f14ceb`（2 回目・HEAD `a84da76e1`）＝full **12417 / 0 / 2 / 12419**（開始と同数・Core 警告 **0**）。Core '+' 61 行・LILYPOND-REF 0・LILYSHARP-OWN 0。門は全部 OK（天井: HANDOFF 391,165 B・§1 現在便 14,724 字）。棚卸し差分なし。未 push 110（push はユーザー）。RELEASING §4 の残り: `dotnet build LilySharp.Cli -c Release` 0 エラー 0 警告・`lysc --version` = **0.13.0**。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。
 - 残り: **ユーザー**＝push（109+）→ CI 緑 → OMR 拡張 0.3.0 を Marketplace に公開 → `v0.13.0` の tag（RELEASING §5〜7）・PAT の期限の確認。Lily# 側の作業は無し。
 判定: 次の一手は全部ユーザー側（push・公開・tag）⇒ **この会話で続けてよい**（(a) 文脈は release の島・(b) 会話は重いが残りは短い）。
 
