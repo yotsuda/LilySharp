@@ -147,14 +147,19 @@ export async function showScan(
     watcher.onDidChange(reload);
     watcher.onDidCreate(reload);
 
-    panel.webview.onDidReceiveMessage(async (m: { type: string; index?: number; on?: boolean; value?: number }) => {
+    panel.webview.onDidReceiveMessage(async (m: { type: string; index?: number; on?: boolean; value?: number; top?: boolean; cut?: number }) => {
         try {
             if (m.type === 'bar' && Number.isInteger(m.index)) {
                 await goToBar(view, m.index!);
+            } else if (m.type === 'visibleBar' && m.top === true && view.linked) {
+                // Scrolled all the way up: the preview goes all the way up too (previewShowsBar).
+                deps.postToPreview(lys, { type: 'showBar', top: true });
             } else if (m.type === 'visibleBar' && Number.isInteger(m.index) && view.linked) {
                 const printed = (await printedOf(view, deps)).find(b => b.index === m.index)?.printed;
                 if (printed !== null && printed !== undefined) {
-                    deps.postToPreview(lys, { type: 'showBar', bar: printed });
+                    // cut: how much of the bar is above the scan's top edge; the preview cuts
+                    // its copy alike.
+                    deps.postToPreview(lys, { type: 'showBar', bar: printed, cut: typeof m.cut === 'number' ? m.cut : 0 });
                 }
             } else if (m.type === 'hoverBar') {
                 // The bar under the mouse lights on the preview too: each of its printed bars
@@ -261,15 +266,22 @@ async function markPreview(view: ScanView, deps: OmrScanDeps): Promise<void> {
     }
 }
 
-/** The preview of `lys` scrolled to the printed bar `bar`: the linked scan follows. */
-export async function previewShowsBar(lys: string, bar: number, deps: OmrScanDeps): Promise<void> {
+/** The preview of `lys` scrolled to the printed bar `bar`, cut off above its top edge by `cut`
+ *  of its height — or all the way up (`'top'`): the linked scan follows, to its copy of that bar
+ *  cut alike, or to its own top (the title stays in view on both; owner's requests 2026-10-17:
+ *  "片方を一番上にしたら相手も一番上に", "上部の見切れる位置が一致すると使いやすい"). */
+export async function previewShowsBar(lys: string, bar: number | 'top', deps: OmrScanDeps, cut = 0): Promise<void> {
     const view = views.get(lys);
     if (!view || !view.linked) {
         return;
     }
+    if (bar === 'top') {
+        void view.panel.webview.postMessage({ type: 'showBar', top: true });
+        return;
+    }
     const index = scanBarForPrinted(await printedOf(view, deps), bar);
     if (index !== undefined) {
-        void view.panel.webview.postMessage({ type: 'showBar', index });
+        void view.panel.webview.postMessage({ type: 'showBar', index, cut });
     }
 }
 
@@ -522,23 +534,35 @@ ${pages || '<p>The side file lists no page.</p>'}
   // The sticky head covers the top of the window: what counts as "the top" starts under it.
   const note = document.querySelector('.note');
   const topEdge = () => note.getBoundingClientRect().bottom;
+  // The bar at the top edge, and how much of it is cut off above the edge (0: its top is at the
+  // edge; 0.5: half out of sight; negative: it starts below the edge): the preview puts its copy
+  // of the bar at the same cut, so the two panes are cut alike (owner's request 2026-10-17).
   function topBar() {
-    let best = null, bestTop = Infinity, bestLeft = Infinity;
+    let best = null, bestTop = Infinity, bestLeft = Infinity, cut = 0;
     const edge = topEdge();
     for (const r of document.querySelectorAll('g.bar')) {
       const b = r.getBoundingClientRect();
-      if (b.bottom <= edge + 4 || b.top >= window.innerHeight) continue;
+      if (b.bottom <= edge + 4 || b.top >= window.innerHeight || b.height === 0) continue;
       const top = Math.round(Math.max(b.top, edge));
-      if (top < bestTop || (top === bestTop && b.left < bestLeft)) { best = r; bestTop = top; bestLeft = b.left; }
+      if (top < bestTop || (top === bestTop && b.left < bestLeft)) {
+        best = r; bestTop = top; bestLeft = b.left; cut = (edge - b.top) / b.height;
+      }
     }
-    return best;
+    return best ? { bar: best, cut } : null;
   }
+  // At the very top the view says so instead of naming its first bar, and the preview goes to
+  // its own top — title and all — as this view does when the preview is at its top (owner's
+  // request 2026-10-17: before, each put the other's first bar at the top edge, over the title).
   window.addEventListener('scroll', () => {
     if (!link.checked || Date.now() < quietUntil) return;
     clearTimeout(reportTimer);
     reportTimer = setTimeout(() => {
-      const r = topBar();
-      if (r) vscode.postMessage({ type: 'visibleBar', index: Number(r.dataset.i) });
+      if (window.scrollY <= 0) {
+        vscode.postMessage({ type: 'visibleBar', top: true });
+        return;
+      }
+      const t = topBar();
+      if (t) vscode.postMessage({ type: 'visibleBar', index: Number(t.bar.dataset.i), cut: t.cut });
     }, 150);
   });
 
@@ -555,10 +579,17 @@ ${pages || '<p>The side file lists no page.</p>'}
       return;
     }
     if (data.type === 'showBar') {
+      if (data.top) {
+        quietUntil = Date.now() + 400;
+        window.scrollTo({ top: 0 });
+        return;
+      }
       const r = document.querySelector('g.bar[data-i="' + data.index + '"]');
       if (!r) return;
       quietUntil = Date.now() + 400;
-      window.scrollBy({ top: r.getBoundingClientRect().top - topEdge() - 16 });
+      // The bar at the top edge, cut off above it as the preview's copy is (data.cut).
+      const b = r.getBoundingClientRect();
+      window.scrollBy({ top: b.top - topEdge() + (data.cut || 0) * b.height });
       return;
     }
     if (data.type !== 'light') return;

@@ -1228,9 +1228,12 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
                 return;
             }
             if (message.type === 'visibleBar') {
-                // Every settled scroll — not logged.
-                if (scanDeps && Number.isInteger(message.bar)) {
-                    void previewShowsBar(uri, message.bar, scanDeps);
+                // Every settled scroll — not logged. At the very top the preview says so
+                // instead of naming its first bar, and the scan goes to its own top.
+                if (scanDeps && message.top === true) {
+                    void previewShowsBar(uri, 'top', scanDeps);
+                } else if (scanDeps && Number.isInteger(message.bar)) {
+                    void previewShowsBar(uri, message.bar, scanDeps, typeof message.cut === 'number' ? message.cut : 0);
                 }
                 return;
             }
@@ -4836,29 +4839,49 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 r.classList.toggle('flagged', flaggedBars.has(Number(r.dataset.bar)));
             }
         }
+        // The bar at the top edge of the view, and how much of it is cut off above that edge
+        // (0: its top is at the edge; 0.5: half of it is out of sight; negative: it starts
+        // below the edge). The scan view puts its own copy of the bar at the same cut, so the
+        // two panes are cut alike at the top (owner's request 2026-10-17).
         function topVisibleBar() {
             const view = mainContent.getBoundingClientRect();
-            let best = null, bestTop = Infinity, bestLeft = Infinity;
+            let best = null, bestTop = Infinity, bestLeft = Infinity, cut = 0;
             for (const r of svgContainer.querySelectorAll('rect.bar-box')) {
                 const b = r.getBoundingClientRect();
                 if (b.bottom <= view.top + 4 || b.top >= view.bottom || b.height === 0) continue;
                 const top = Math.round(Math.max(b.top, view.top));
-                if (top < bestTop || (top === bestTop && b.left < bestLeft)) { best = r; bestTop = top; bestLeft = b.left; }
+                if (top < bestTop || (top === bestTop && b.left < bestLeft)) {
+                    best = r; bestTop = top; bestLeft = b.left; cut = (view.top - b.top) / b.height;
+                }
             }
-            return best;
+            return best ? { bar: best, cut } : null;
         }
-        function showBar(bar) {
+        // The scan view and this preview scroll together by the bar at the top of each, cut
+        // alike (cut, see topVisibleBar) — except at the very top, which is its own place:
+        // scrolled all the way up, a view says so (top: true) and the other goes all the way up
+        // too, title and all, instead of putting the first bar at its top edge and hiding the
+        // title (owner's request 2026-10-17).
+        function showBar(bar, top, cut) {
+            barQuietUntil = Date.now() + 400;
+            if (top) {
+                mainContent.scrollTop = 0;
+                return;
+            }
             const r = svgContainer.querySelector('rect.bar-box[data-bar="' + bar + '"]');
             if (!r) return;
-            barQuietUntil = Date.now() + 400;
-            mainContent.scrollTop += r.getBoundingClientRect().top - mainContent.getBoundingClientRect().top - 24;
+            const b = r.getBoundingClientRect();
+            mainContent.scrollTop += b.top - mainContent.getBoundingClientRect().top + (cut || 0) * b.height;
         }
         mainContent.addEventListener('scroll', () => {
             if (Date.now() < barQuietUntil) return;
             clearTimeout(barReportTimer);
             barReportTimer = setTimeout(() => {
-                const r = topVisibleBar();
-                if (r) vscode.postMessage({ type: 'visibleBar', bar: Number(r.dataset.bar) });
+                if (mainContent.scrollTop <= 0) {
+                    vscode.postMessage({ type: 'visibleBar', top: true });
+                    return;
+                }
+                const t = topVisibleBar();
+                if (t) vscode.postMessage({ type: 'visibleBar', bar: Number(t.bar.dataset.bar), cut: t.cut });
             }, 150);
         });
 
@@ -4877,7 +4900,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                     document.documentElement.classList.toggle('todo-plain', !message.on);
                     break;
                 case 'showBar':
-                    showBar(message.bar);
+                    showBar(message.bar, message.top === true, typeof message.cut === 'number' ? message.cut : 0);
                     break;
                 case 'markBars':
                     flaggedBars = new Set(message.bars || []);

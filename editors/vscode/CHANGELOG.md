@@ -139,6 +139,16 @@ All notable changes to the Lily# VS Code extension are documented here.
   each staff's bar from its first note to the bar line closing it (every printed copy), and it
   follows the caret and the edits.
 
+### The scan and the preview are cut alike at the top, and both show their title at the top
+
+- **With *Scroll with the preview* on, the two panes are cut off alike at their top edge**
+  (owner's request 2026-10-17): the bar at the top of the one you scroll is put at the top of
+  the other with the same share of it out of sight — half a bar hidden here is half a bar hidden
+  there — instead of a little below the edge whatever the cut.
+- **Scrolling either view all the way up takes the other all the way up too** (same day). Each
+  used to put the other's first bar at its top edge, which pushed the title — the score's on the
+  preview, the page's head on the scan — out of sight.
+
 ### A mark on the scan is a dashed red frame, and the bar under it is still a bar
 
 - **The red frame round a mark on Show Original Scan is dashed, as the preview's frame round a
