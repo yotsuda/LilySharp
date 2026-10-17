@@ -1345,7 +1345,9 @@ a2 b | c'2 d' | %2 | %2 |     // the two bars three times
 Marks in a row repeat the same bars; a mark of another length right after them is an error
 (LYS1048) — the bars a mark repeats are written bars. They must be whole bars of the meter
 (LYS1049): a beat repeated is written out. A `break` may stand beside a mark
-(`… | break % |`). The old `repeat percent N { … }` and `repeat unfold N { … }` are errors
+(`… | break % |`). Between two marks in a row the bar line may be left out: `c4 d e f | % % % |`
+reads as `c4 d e f | % | % | % |`, the written spelling, which is what the tools write (in the
+editor a space after a mark types the `| ` for you). The old `repeat percent N { … }` and `repeat unfold N { … }` are errors
 (LYS1047); the editor's quick fix and `lysc percent` rewrite them.
 
 ## Beaming

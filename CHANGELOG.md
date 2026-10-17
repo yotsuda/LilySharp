@@ -6,6 +6,16 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+### The bar line between percent marks may be left out
+
+- **`c4 d e f | % % % |` reads as `c4 d e f | % | % | % |`** — between two percent marks in a
+  row the bar line may be left out; the written spelling is the canonical one (the page draws
+  the bar line, `lysc percent` and the quick fix write it), the short one is for the hand. Only
+  between two marks with nothing but space between them, after a bar line: `% break %` and
+  `c4 % %` say to write the bar lines, as before (LYS1048). In the editor a space typed after a
+  mark writes the `| ` for you, as it does after the note that fills a bar, so `%␣%␣%␣` leaves
+  the written spelling.
+
 ### Editor
 
 - **The preview plays through a MIDI output port when `lilysharp.playback.output` names one** —

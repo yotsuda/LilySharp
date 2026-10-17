@@ -1182,6 +1182,14 @@ public sealed class BarlineSyntax : SyntaxNode
     public string BarText => Green.GetSlot(0)!.Text;
 
     /// <summary>
+    /// Whether the writer left this bar line out where the grammar lets them — between two
+    /// percent marks in a row (<c>% % %</c>; Parser.ReadBarLinesLeftOutBetweenMarks) — and the
+    /// parser put it where it is read: a <c>|</c> with no width, at the next mark's start, that
+    /// writes nothing. The written bar line is the spelling the tools write.
+    /// </summary>
+    public bool IsLeftOut => Green.GetSlot(0) is InternalSyntax.SyntaxToken { IsLeftOut: true };
+
+    /// <summary>
     /// Where the barline token's own INK starts — <c>BarToken.Span.Start</c>, computed the
     /// way that span is (the token's full start plus its leading trivia) without the red:
     /// the token is slot 0, so its full start is this node's.

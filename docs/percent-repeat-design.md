@@ -26,6 +26,15 @@ a2 b | c d | %2 | %2 |            the two-bar pattern twice more      (old: repe
   only item of its span: written between two bar lines, `| %4 |`, as `R1*4` is — the closing
   one may be the music's end, and a `break` may stand beside the mark (`… | break % |`, the
   shape the owner's books write between repetitions).
+- **The bar line between two marks in a row may be left out** (owner's decision 2026-10-18,
+  session 912): `c4 d e f | % % % |` reads as `c4 d e f | % | % | % |`. The written spelling is
+  the canonical one — the page draws a bar line there, and it is what `lysc percent`, the quick
+  fix and the OMR write; the short one is for the hand that finds `| ` after every mark tedious
+  (the editor types it: a space after a mark writes `| `, as it does after the note that fills a
+  bar). Only between two marks with nothing but whitespace between them, in a run that opens
+  after a bar line: `% break %` and `c4 % %` are LYS1048 as before, so the one exception to "the
+  bar lines are the bars" stays the inside of a mark whose length is in its spelling. No
+  diagnostic for the short spelling — a spelling accepted is not a spelling underlined.
 - **Several marks in a row repeat the same bars again**: `x | %2 | %2 |` is `x` three times. A
   mark of ANOTHER length right after them is an error — the bars a mark repeats are written
   bars, not repetitions (`a | % | %2 |` would have to mean `a a`, which nobody reads off it).
@@ -60,7 +69,13 @@ list is read, each run of marks is GROUPED with the bars it repeats into one nod
 `PercentRepeatSyntax`: its children are the body's items (bar lines between them included), the
 bar line before the first mark, and the marks with their bar lines between them — the source's
 own nodes in the source's order, so every position and the full text are unchanged. The bar
-line after the last mark stays outside, as `repeat percent N { … } |` writes it.
+line after the last mark stays outside, as `repeat percent N { … } |` writes it. A bar line
+left out between two marks (§1) is put into the item list where it was left out before the
+grouping runs (`Parser.ReadBarLinesLeftOutBetweenMarks`): a `BarlineSyntax` whose token is a
+`|` of no width and no trivia that writes nothing (`SyntaxToken.LeftOut`,
+`BarlineSyntax.IsLeftOut`), standing at the next mark's start. Every reader — the grouping, the
+page, the playback, the validators, the exporters — sees the bars as written and reads nothing
+new; the full text and every position are still the source's.
 
 The node answers what `RepeatExpressionSyntax` answered for a percent repeat: the body's items,
 the count (marks + 1), and where each repetition's sign is written (its mark). Every reader that

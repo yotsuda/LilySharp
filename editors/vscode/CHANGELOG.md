@@ -4,6 +4,14 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+### A space after a percent mark writes its bar line
+
+- **Type `%` and a space, and the `|` is written for you** (`| % | `) — a percent mark is its
+  bar (`%N` its N bars), so the space after one alone in its bar writes the bar line as it does
+  after the note that fills a bar; `%␣%␣%␣` leaves `% | % | % |`. (The compiler now also reads
+  `% % %` with the bar lines left out as that same spelling.) A `break` may stand before the
+  mark; a mark with music before it in the bar, or at the start of a block, writes nothing.
+
 ### Play through a MIDI output — your DAW, a VST host, or Windows' own synth
 
 - **`lilysharp.playback.output` names a MIDI output port of this machine** (**Lily#: Choose MIDI

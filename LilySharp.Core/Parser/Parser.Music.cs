@@ -68,6 +68,7 @@ internal sealed partial class Parser
     /// </remarks>
     private static void GroupPercentRepeats(List<GreenNode?> items)
     {
+        ReadBarLinesLeftOutBetweenMarks(items);
         for (int i = 1; i < items.Count; i++)
         {
             if (items[i] is not PercentMarkGreen mark)
@@ -128,20 +129,46 @@ internal sealed partial class Parser
             i = start;
         }
 
-        // The first item from `from` in direction `step` that is not a line break.
-        static int SkipBreaks(List<GreenNode?> list, int from, int step)
-        {
-            while (from >= 0 && from < list.Count && list[from]?.Kind == SyntaxKind.Break)
-                from += step;
-            return from;
-        }
-
         // The mark at `at` is followed, past any line breaks, by a bar line or the list's end.
         static bool ClosedAfter(List<GreenNode?> list, int at)
         {
             int after = SkipBreaks(list, at + 1, +1);
             return after >= list.Count || list[after]?.Kind == SyntaxKind.Barline;
         }
+    }
+
+    /// <summary>
+    /// The bar line between two percent marks in a row may be left out (owner's decision
+    /// 2026-10-18, session 912): <c>c4 d e f | % % % |</c> reads as <c>c4 d e f | % | % | % |</c>,
+    /// the spelling the tools write. A mark's length is in its spelling, so the bar line adds
+    /// nothing a reader needs — the one case besides <c>R1*N</c> where "the bar lines are the
+    /// bars" (GRAMMAR.md, the note on Barline) has nothing to hold. The bar line left out is put
+    /// into the item list where it was left out, as a zero-width <c>|</c>
+    /// (<see cref="SyntaxToken.LeftOut"/>, <c>BarlineSyntax.IsLeftOut</c>), so the grouping
+    /// below and every reader see the bars as written. Only between two marks with nothing but
+    /// whitespace between them, in a run that opens after a bar line: <c>% break %</c> and
+    /// <c>c4 % %</c> stay what they are (LYS1048 says to write the bar lines).
+    /// </summary>
+    private static void ReadBarLinesLeftOutBetweenMarks(List<GreenNode?> items)
+    {
+        for (int i = 1; i + 1 < items.Count; i++)
+        {
+            if (items[i] is not PercentMarkGreen || items[i + 1] is not PercentMarkGreen)
+                continue;
+            int before = SkipBreaks(items, i - 1, -1);
+            if (before < 0 || items[before]?.Kind != SyntaxKind.Barline)
+                continue;
+            items.Insert(i + 1, new BarlineGreen(SyntaxToken.LeftOut(SyntaxKind.Bar, "|")));
+        }
+    }
+
+    /// <summary>The first item from <paramref name="from"/> in direction <paramref name="step"/>
+    /// that is not a line break (the percent grouping reads past a <c>break</c> beside a mark).</summary>
+    private static int SkipBreaks(List<GreenNode?> list, int from, int step)
+    {
+        while (from >= 0 && from < list.Count && list[from]?.Kind == SyntaxKind.Break)
+            from += step;
+        return from;
     }
 
     /// <summary>The items written at a bar's head that take no time and are not repeated with

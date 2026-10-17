@@ -24,6 +24,7 @@ internal class SyntaxToken : GreenNode
     private readonly string _text;
     private readonly GreenNode? _leadingTrivia;
     private readonly GreenNode? _trailingTrivia;
+    private readonly bool _leftOut;
 
     public SyntaxToken(SyntaxKind kind, string text)
         : this(kind, text, null, null)
@@ -37,6 +38,26 @@ internal class SyntaxToken : GreenNode
         _leadingTrivia = leadingTrivia;
         _trailingTrivia = trailingTrivia;
     }
+
+    private SyntaxToken(SyntaxKind kind, string spelling, bool leftOut)
+        : base(kind, 0)
+    {
+        _text = spelling;
+        _leftOut = leftOut;
+    }
+
+    /// <summary>
+    /// A token the writer LEFT OUT where the grammar lets them — the bar line between two
+    /// percent marks in a row (<c>% % %</c> reads as <c>% | % | %</c>) — put into the tree
+    /// where it is read: it has the spelling every reader expects (<see cref="Text"/> is
+    /// <paramref name="spelling"/>), no width, no trivia, and writes nothing, so the tree's
+    /// full text and every position stay the source's. Not an error-recovery token
+    /// (those are empty, see Parser.Expect): nothing is reported for it.
+    /// </summary>
+    public static SyntaxToken LeftOut(SyntaxKind kind, string spelling) => new(kind, spelling, leftOut: true);
+
+    /// <summary>Whether this token stands for one the writer left out (<see cref="LeftOut"/>).</summary>
+    public bool IsLeftOut => _leftOut;
 
     private static int ComputeFullWidth(string text, GreenNode? leading, GreenNode? trailing)
     {
@@ -62,6 +83,8 @@ internal class SyntaxToken : GreenNode
 
     public override void WriteTo(System.IO.TextWriter writer)
     {
+        if (_leftOut)
+            return;
         _leadingTrivia?.WriteTo(writer);
         writer.Write(_text);
         _trailingTrivia?.WriteTo(writer);

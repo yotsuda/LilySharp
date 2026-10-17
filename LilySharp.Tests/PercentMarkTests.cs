@@ -80,6 +80,51 @@ public sealed class PercentMarkTests
             .Where(c => c is DiagnosticCodes.PercentMarkUngrouped or DiagnosticCodes.PercentBodyNotWholeBars));
     }
 
+    // --- the bar line between two marks may be left out (owner's decision 2026-10-18) ---
+
+    [Theory]
+    [InlineData("c4 d e f | % | % | % |", "c4 d e f | % % % |", 4)]
+    [InlineData("a2 b | c'2 d' | %2 | %2 |", "a2 b | c'2 d' | %2 %2 |", 3)]
+    [InlineData("c1 | break % | % |", "c1 | break % % |", 3)]
+    [InlineData("c1 | % | %", "c1 | % %", 3)]                    // the music's end closes the last
+    public void TheBarLineBetweenTwoMarks_MayBeLeftOut_AndReadsAsWritten(string written, string left, int count)
+    {
+        var tree = SyntaxTree.Parse(Book(left));
+        Assert.Equal(Book(left), tree.GetRoot().ToFullString());
+        var group = Assert.Single(tree.GetRoot().DescendantNodes().OfType<PercentRepeatSyntax>());
+        Assert.Equal(count, group.Count);
+        // The body's closing bar line is written; the ones between the marks are left out — a
+        // `|` of no width at the next mark's start, so every reader sees the bars as written.
+        var bars = group.ChildNodes().OfType<BarlineSyntax>()
+            .Where(b => b.Position >= group.BodyEndBar.Position).ToList();
+        Assert.Equal(count - 1, bars.Count);
+        Assert.False(bars[0].IsLeftOut);
+        foreach (var bar in bars.Skip(1))
+        {
+            Assert.True(bar.IsLeftOut);
+            Assert.Equal("|", bar.BarText);
+            Assert.Equal(0, bar.Span.Length);
+            Assert.Equal('%', Book(left)[bar.BarTokenStart]);
+        }
+        Assert.Equal(Codes(Book(written)), Codes(Book(left)));
+        Assert.Equal(Notes(written), Notes(left));
+    }
+
+    [Theory]
+    [InlineData("c1 | c4 % % |")]          // the run does not open after a bar line
+    [InlineData("c1 | % break % |")]       // a break between the marks: the bar line is written
+    public void TheBarLineIsLeftOutOnlyBetweenTwoMarksWithNothingBetween(string music)
+    {
+        Assert.Equal(2, Diagnose(Book(music)).Count(d => d.Code == DiagnosticCodes.PercentMarkUngrouped));
+        Assert.DoesNotContain(SyntaxTree.Parse(Book(music)).GetRoot().DescendantNodes().OfType<BarlineSyntax>(),
+            b => b.IsLeftOut);
+    }
+
+    private static List<(int Pitch, int Start, int Length)> Notes(string music) =>
+        new MidiExporter().Export(SyntaxTree.Parse(Book(music))).Tracks
+            .SelectMany(t => t.Notes).Select(n => (Pitch: n.Pitch, Start: n.StartTick, Length: n.DurationTicks))
+            .OrderBy(n => n.Start).ToList();
+
     // --- what cannot be grouped (LYS1048) ---
 
     [Theory]
@@ -141,11 +186,6 @@ public sealed class PercentMarkTests
     [Fact]
     public void ARepetition_SoundsExactlyTheBarsWrittenOut()
     {
-        static List<(int Pitch, int Start, int Length)> Notes(string music) =>
-            new MidiExporter().Export(SyntaxTree.Parse(Book(music))).Tracks
-                .SelectMany(t => t.Notes).Select(n => (Pitch: n.Pitch, Start: n.StartTick, Length: n.DurationTicks))
-                .OrderBy(n => n.Start).ToList();
-
         Assert.Equal(
             Notes("octave absolute a2 b | c'2 d' | a2 b | c'2 d' |"),
             Notes("octave absolute a2 b | c'2 d' | %2 |"));

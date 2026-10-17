@@ -397,8 +397,11 @@ c4 d e f | % | % | % |            // the bar, then one % per repetition
 a2 b | c'2 d' | %2 |              // %N repeats the N bars before it
 repeat tremolo 8 { c16 e } |      // N x the pair: 8 x two 16ths fills a 4/4 bar</pre>
   <p>A percent mark stands alone between bar lines and repeats the whole bars written just
-  before it. <code>repeat</code> is only for <code>tremolo</code>. Neither is how a repeat
-  sign is written; see <a href="#forms">Forms</a>.</p>
+  before it. Between two marks in a row the bar line may be left out — <code>| % % % |</code>
+  reads as <code>| % | % | % |</code>, the written spelling, which is what the tools write (in
+  the editor a space after a mark types the <code>| </code>). <code>repeat</code> is only for
+  <code>tremolo</code>. Neither is how a repeat sign is written; see
+  <a href="#forms">Forms</a>.</p>
   <h3>Cue notes</h3>
   <p>A cue is a <b>region</b>, not an annotation, so there is no <code>@cue</code>:</p>
 <pre>c4 cue { e4 f } g4 |            // small notes, a voice of their own

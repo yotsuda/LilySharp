@@ -2312,7 +2312,10 @@ RepeatEnd      = ':|' , [ '*' , Integer ] ;          (* :|*N plays the span N ti
      - a phrase body inlined into the bar is music like any other, held to the written bar it
        plays in (its own bar lines are bar lines);
      - where no bar line can be written — inside an 'R1*N' or a '%N' — the bars still close
-       where the beats fill.
+       where the beats fill;
+     - between two percent marks in a row the bar line MAY BE LEFT OUT (owner's decision,
+       2026-10-18): '% % %' is read as '% | % | %', the written spelling, which is what the
+       tools write and the editor's space after a mark types for you (see PercentMark).
    The playback re-syncs every part at every bar line: a short bar is filled with silence.
    One rule, one place: Semantics.WrittenBar (page: MeasureBuilder, playback: MidiExporter). *)
 
@@ -2660,7 +2663,15 @@ PercentMark    = '%' , [ Integer ] ;                 (* no space: '%2' *)
                     (the closing one may be the music's end; a 'break' may stand beside
                     it). Marks in a row repeat the SAME bars; a mark of another length
                     right after them is an error, since the bars a mark repeats are
-                    WRITTEN bars. "The bars before it" are counted back over the bar lines
+                    WRITTEN bars. The bar line BETWEEN two marks in a row may be left
+                    out (owner's decision, 2026-10-18): 'c4 d e f | % % % |' reads as
+                    'c4 d e f | % | % | % |' — only between two marks with nothing but
+                    space between them ('% break %' and 'c4 % %' are LYS1048 as before).
+                    The written spelling is the canonical one: it is what `lysc percent`,
+                    the quick fix and the page write, and the editor types the '| ' after
+                    a mark by itself. The parser puts the bar line left out into the tree
+                    where it is read, a '|' of no width (BarlineSyntax.IsLeftOut), so every
+                    reader sees the bars as written and no position moves. "The bars before it" are counted back over the bar lines
                     of the same music (a block, a part cell, a section's music, an
                     ending); the directives at the head of the first of them ('break',
                     'key', 'time', 'clef' …) are written before the bars, not repeated.

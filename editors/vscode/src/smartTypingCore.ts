@@ -2187,8 +2187,17 @@ export function autoBarlinePlan(text: string, offset: number): FixPlan | null {
         barsFromBlock = false;    // a pickup is shorter than the meter on purpose
     }
 
-    // A '*' scales what it follows (`R1*2`, `c4*2/3`), which the walk passes over.
     const barStart = barStartIn(before, blockStart, offset);
+    // A percent mark is its bar — `%` one bar, `%N` N bars, whole by the grammar — alone after
+    // a bar line (a `break` may stand before it): the space after it writes the bar line, so
+    // `%␣%␣%␣` leaves `% | % | % |`, the spelling the bar lines left out are read as.
+    if (!span && barStart > blockStart && /^(?:break\s+)?%\d*$/.test(before.slice(barStart, offset).trim())) {
+        return {
+            edits: [{ at: offset + 1, ins: '| ' }], caret: offset + 3,
+            what: 'space typed -> a percent mark is its bar: | written after it',
+        };
+    }
+    // A '*' scales what it follows (`R1*2`, `c4*2/3`), which the walk passes over.
     if (before.slice(barStart, offset).includes('*')) { return null; }
     if (barStart === blockStart && !barsFromBlock) { return null; }
     const running = runningBefore(before, blockStart, barStart, opening);

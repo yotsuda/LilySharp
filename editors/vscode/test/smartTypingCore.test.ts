@@ -481,6 +481,17 @@ describe('a space after the note that fills its bar writes the bar line (rule 32
         typed('section A { 8 8 8 8 8 8 8 8‸', ' ', 'section A { 8 8 8 8 8 8 8 8 ‸');        // nothing to repeat: LYS0016
         typed('section A { <<c e g>>2 2‸', ' ', 'section A { <<c e g>>2 2 ‸');           // after an arpeggio: LYS0016
     });
+    it('32. a percent mark is its bar: the space after it writes the bar line, so % % % leaves % | % | % |', () => {
+        typed('section A { c d e f | %‸', ' ', 'section A { c d e f | % | ‸');
+        typed('section A { c d e f | % | %‸', ' ', 'section A { c d e f | % | % | ‸');
+        typed('section A { a2 b | c d | %2‸', ' ', 'section A { a2 b | c d | %2 | ‸');
+        typed('section A { c d e f | break %‸', ' ', 'section A { c d e f | break % | ‸');
+        typed('section A { c d e f |\n  %‸', ' ', 'section A { c d e f |\n  % | ‸');
+        typed('section A { c d e f | %‸ }', ' ', 'section A { c d e f | % | ‸ }');
+        typed('section A { %‸', ' ', 'section A { % ‸');                          // nothing before it to repeat
+        typed('section A { c d e f | c4 %‸', ' ', 'section A { c d e f | c4 % ‸');  // not alone in its bar
+        typed('section A { c d e f | %‸ d', ' ', 'section A { c d e f | % ‸ d');    // music after it
+    });
     it('32. writes nothing short of the meter, mid-line, or where it cannot count for sure', () => {
         typed('section A { c d e‸', ' ', 'section A { c d e ‸');                  // not full
         typed('section A { c d e r‸ f', ' ', 'section A { c d e r ‸ f');          // music after it
