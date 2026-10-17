@@ -664,6 +664,16 @@ export function activate(context: vscode.ExtensionContext) {
                     });
                 }
             }
+            if (e.affectsConfiguration('lilysharp.playback.output')) {
+                // The port's name goes to every preview (each decides where its next sound
+                // goes); the server's playback, if one is on, stops, and the port it held is
+                // closed when the setting is emptied.
+                const name = midiOutputSetting();
+                for (const panel of previewPanels.values()) {
+                    panel.webview.postMessage({ type: 'setMidiOutput', name });
+                }
+                void midiOutRequest('lilysharp/midiOut/stop', {});
+            }
             if (!e.affectsConfiguration('lilysharp.preview.theme')) {
                 return;
             }
@@ -681,6 +691,9 @@ export function activate(context: vscode.ExtensionContext) {
         // request 2026-10-11). The choice is written to the user settings; the open
         // previews pick it up through onDidChangeConfiguration.
         vscode.commands.registerCommand('lilysharp.chooseSoundFont', () => chooseSoundFont(context)),
+        // `lilysharp.playback.output` through a picker of the machine's MIDI output ports
+        // (the server lists them); the open previews pick it up through onDidChangeConfiguration.
+        vscode.commands.registerCommand('lilysharp.chooseMidiOutput', () => chooseMidiOutput()),
         vscode.commands.registerCommand('lilysharp.openPreview', () => {
             outputChannel.appendLine('openPreview command triggered');
             openPreview(context, vscode.ViewColumn.Active);
@@ -1311,6 +1324,33 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
                 }
                 return;
             }
+            // MIDI out (docs/playback-design.md §6): the page decides what plays and the
+            // server is the port. A play answers when the playback's zero is on the wall
+            // clock, which the page's highlight then follows; a play the server could not
+            // start (the port is not there) is reported, and the page plays its own synth.
+            if (message.type === 'midiPlay') {
+                const r = await midiOutRequest<{ Started?: boolean; StartedAtMs?: number; EndSeconds?: number; Error?: string | null }>(
+                    'lilysharp/midiOut/play', { port: message.port, notes: message.notes, offset: message.offset });
+                if (r.Error) { reportMidiOutError(message.port, r.Error); }
+                panel.webview.postMessage({
+                    type: 'midiStarted', ok: !!r.Started, t0Ms: r.StartedAtMs ?? 0, end: r.EndSeconds ?? 0, error: r.Error ?? null,
+                });
+                return;
+            }
+            if (message.type === 'midiStop') {
+                void midiOutRequest('lilysharp/midiOut/stop', {});
+                return;
+            }
+            if (message.type === 'midiStrike') {
+                const r = await midiOutRequest<{ Channel?: number; Error?: string | null }>('lilysharp/midiOut/strike',
+                    { port: message.port, pitches: message.pitches, timbre: message.timbre, program: message.program });
+                if (r.Error) { reportMidiOutError(message.port, r.Error); }
+                return;
+            }
+            if (message.type === 'midiRelease') {
+                void midiOutRequest('lilysharp/midiOut/release', { channel: message.channel, pitches: message.pitches });
+                return;
+            }
             if (message.type === 'export') {
                 await exportPreview(uri, message.renderName);
             } else if (message.type === 'jumpToPosition') {
@@ -1363,7 +1403,8 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
     // Set initial HTML structure with font
     outputChannel.appendLine('Setting webview HTML');
     panel.webview.html = getPreviewHtml(fontUri.toString(), braceFontUri.toString(), panel.webview.cspSource, getNonce(), getPreviewTheme(),
-        textFontFaceCss(panel.webview, context.extensionUri), getHighlightTodos(), synthUrls(panel.webview, context.extensionUri));
+        textFontFaceCss(panel.webview, context.extensionUri), getHighlightTodos(), synthUrls(panel.webview, context.extensionUri),
+        midiOutputSetting());
 
     // Then load content
     outputChannel.appendLine('Calling updatePreviewContent');
@@ -2772,6 +2813,82 @@ async function chooseSoundFont(context: vscode.ExtensionContext): Promise<void> 
         value ? `Lily#: the preview plays ${path.basename(value)}` : 'Lily#: the preview plays the default sound', 5000);
 }
 
+// ---- MIDI out (docs/playback-design.md §6) ----
+
+/** `lilysharp.playback.output`: the name of the MIDI output port the sounds go to, or ''
+ *  for the preview's own synth. */
+function midiOutputSetting(): string {
+    return vscode.workspace.getConfiguration('lilysharp').get<string>('playback.output', '').trim();
+}
+
+/** The lilysharp/midiOut requests go one after another: the server dispatches requests
+ *  concurrently, and a Stop must not overtake the Play it follows. No server: an error
+ *  answer, as the server would give. */
+let midiOutChain: Promise<unknown> = Promise.resolve();
+function midiOutRequest<T extends { Error?: string | null }>(method: string, params: unknown): Promise<T> {
+    const next = midiOutChain.then(async (): Promise<T> => {
+        if (!client || !clientReady) { return { Error: 'language server not running' } as T; }
+        try {
+            return await client.sendRequest<T>(method, params);
+        } catch (e) {
+            return { Error: String(e) } as T;
+        }
+    });
+    midiOutChain = next.catch(() => undefined);
+    return next;
+}
+
+/** A port that is not there, or refused, is said once per port in the status bar and
+ *  every time in the output channel; the preview then plays its own synth. */
+const midiOutErrorsTold = new Set<string>();
+function reportMidiOutError(port: string, error: string): void {
+    outputChannel.appendLine(`MIDI output "${port}": ${error}`);
+    if (midiOutErrorsTold.has(port)) { return; }
+    midiOutErrorsTold.add(port);
+    vscode.window.setStatusBarMessage(`Lily#: ${error} — playing in the preview (see Lily# Extension output)`, 8000);
+}
+
+/** The picker behind `Lily#: Choose MIDI Output…` and the setting's link: the preview's
+ *  own synth (empties the setting), or one of the machine's MIDI output ports as the server
+ *  lists them now. Written to the user settings as `lilysharp.playback.output`. */
+async function chooseMidiOutput(): Promise<void> {
+    const current = midiOutputSetting();
+    type Pick = vscode.QuickPickItem & { name: string };
+    const items: Pick[] = [{
+        label: 'The preview\'s own synth', description: current ? '' : '(current)',
+        detail: 'The sound font (Lily#: Choose Sound Font…) — empties the setting', name: '',
+    }];
+    startClient();   // no .lys open yet: the server starts for the list
+    await clientReadyPromise;
+    const ports = await midiOutRequest<{ Ports?: string[]; Error?: string | null }>('lilysharp/midiOut/ports', {});
+    if (ports.Error) {
+        outputChannel.appendLine(`MIDI outputs: ${ports.Error}`);
+        items.push({ label: 'No MIDI output could be listed', detail: ports.Error, name: current, alwaysShow: true });
+    } else {
+        for (const name of ports.Ports ?? []) {
+            items.push({ label: name, description: name === current ? '(current)' : '',
+                detail: /GS Wavetable/i.test(name) ? 'Windows\' own General MIDI synth (plays with no setup)'
+                    : /loopMIDI|IAC/i.test(name) ? 'A virtual port: whatever listens on it (a DAW, a VST host) plays'
+                    : undefined, name });
+        }
+        if (current && !(ports.Ports ?? []).includes(current)) {
+            items.push({ label: current, description: '(current — not there now)', name: current });
+        }
+        if ((ports.Ports ?? []).length === 0) {
+            items.push({ label: 'This machine lists no MIDI output', detail: 'Install a virtual port (loopMIDI on Windows; an IAC bus in Audio MIDI Setup on a Mac) or plug an interface in', name: current, alwaysShow: true });
+        }
+    }
+    const picked = await vscode.window.showQuickPick(items, {
+        title: 'Lily#: where the preview\'s sounds go',
+        placeHolder: 'Each part keeps its channel and sends its General MIDI program; the drums are on channel 10',
+    });
+    if (!picked || picked.name === current) { return; }
+    await vscode.workspace.getConfiguration('lilysharp').update('playback.output', picked.name, vscode.ConfigurationTarget.Global);
+    midiOutErrorsTold.delete(picked.name);
+    vscode.window.setStatusBarMessage(
+        picked.name ? `Lily#: the preview plays through ${picked.name}` : 'Lily#: the preview plays its own synth', 5000);
+}
+
 /** The preview webview's resource roots: the music fonts, the text fonts, the synth
  *  and the sound font's folder. */
 function previewResourceRoots(extensionUri: vscode.Uri): vscode.Uri[] {
@@ -2822,7 +2939,8 @@ interface SynthUrls { script: string; processor: string; soundFont: string }
 function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string, nonce: string,
                         theme: 'auto' | 'light' | 'dark', textFontCss: string,
                         highlightTodos: boolean = true,
-                        synth: SynthUrls = { script: '', processor: '', soundFont: '' }): string {
+                        synth: SynthUrls = { script: '', processor: '', soundFont: '' },
+                        midiOutput: string = ''): string {
     return `<!DOCTYPE html>
 <html>
 <head>
@@ -2842,8 +2960,9 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             document.documentElement.classList.toggle('todo-plain', ${highlightTodos ? 'false' : 'true'});
         })();
         // The SoundFont synth's files (docs/playback-design.md): the worklet processor
-        // and the sound font ('' = none, the page then plays its oscillator patches).
-        window.lysSynthConfig = { processor: '${synth.processor}', soundFont: '${synth.soundFont}' };
+        // and the sound font ('' = none, the page then plays its oscillator patches); and
+        // the MIDI output port's name ('' = the synth here), lilysharp.playback.output.
+        window.lysSynthConfig = { processor: '${synth.processor}', soundFont: '${synth.soundFont}', midiOutput: ${JSON.stringify(midiOutput)} };
     </script>
     <script nonce="${nonce}" src="${synth.script}"></script>
     <style>
@@ -4450,11 +4569,24 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             const sf = soundFontSynth();
             if (sf) { sf.setSoundFont(uri || ''); }
         }
+        // MIDI out (docs/playback-design.md §6): the name of the port the sounds go to —
+        // lilysharp.playback.output — or '' for the synth here. The page still decides WHAT
+        // plays (the note list, the offset, an audition's pitches); the server is the port
+        // and answers with the wall-clock time of the playback's zero, which the highlight
+        // follows (Date.now() is the same clock). A changed setting stops what plays.
+        let midiOutput = (window.lysSynthConfig && window.lysSynthConfig.midiOutput) || '';
+        function setMidiOutput(name) {
+            stopPlayback();
+            stopHeldNote();
+            midiOutput = name || '';
+        }
 
         let playingOscs = [];
         let playEndTimer = null;
         let playheadTimer = null;
         let sfPlayer = null;        // the SoundFont player of the current playback
+        let midiPlaying = false;    // the current playback is the server's, on the MIDI output
+        let midiPlayPending = null; // a Play sent to the server, awaiting its start (generation, notes, offset)
         let playbackNotes = null;   // last received event list — enables click-to-seek
         let pendingStartPos = -1;   // play-button start point (the highlighted note)
         let lastResolvedPos = -1;   // the note the current highlight actually resolved to
@@ -4486,6 +4618,11 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 sfPlayer = null;
                 if (sfSynth) { sfSynth.stop(); }
             }
+            midiPlayPending = null;
+            if (midiPlaying) {
+                midiPlaying = false;
+                vscode.postMessage({ type: 'midiStop' });
+            }
             for (const o of playingOscs) {
                 try { o.stop(); } catch (e) { /* already ended */ }
             }
@@ -4499,7 +4636,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         // plays the oscillator patches only if it does not come. The generation makes a
         // Stop or another Play in the meantime cancel the wait.
         let playGeneration = 0;
-        function startPlayback(notes, offset, plainTones) {
+        function startPlayback(notes, offset, plainTones, here) {
             offset = offset || 0;
             stopPlayback();
             if (!notes || notes.length === 0) { return; }
@@ -4508,6 +4645,16 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             // worse than starting cleanly at the next onset).
             notes = notes.filter(n => n.T >= offset - 0.001);
             if (notes.length === 0) { return; }
+            if (midiOutput && !here) {
+                // The MIDI output: the server plays the list from the offset and answers
+                // (midiStarted) with the clock the highlight follows; a port that is not
+                // there comes back as an error, and the list plays here instead.
+                const gen = ++playGeneration;
+                midiPlayPending = { gen, notes, offset };
+                setPlayUi(true);
+                vscode.postMessage({ type: 'midiPlay', port: midiOutput, notes, offset });
+                return;
+            }
             const ctx = audio();
             const sf = soundFontSynth();
             if (sf && sf.state === 'loading' && !plainTones) {
@@ -4532,7 +4679,24 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             }
             setPlayUi(true);
             playEndTimer = setTimeout(stopPlayback, (end - offset + 0.5) * 1000);
-            followAlong(notes, offset, t0);
+            followAlong(notes, offset, () => audioCtx ? audioCtx.currentTime - t0 : 0);
+        }
+
+        // The server's answer to a midiPlay: started (the wall-clock zero and the end), or
+        // not — then the same list plays here, once, with the reason shown.
+        function midiStarted(message) {
+            const pending = midiPlayPending;
+            if (!pending || pending.gen !== playGeneration) { return; }   // stopped, or another Play, meanwhile
+            midiPlayPending = null;
+            if (!message.ok) {
+                flashInfo('MIDI output: ' + (message.error || 'did not start') + ' — playing here', 5000);
+                startPlayback(pending.notes, pending.offset, false, true);
+                return;
+            }
+            midiPlaying = true;
+            const t0Ms = message.t0Ms;
+            playEndTimer = setTimeout(stopPlayback, (message.end - pending.offset + 0.5) * 1000);
+            followAlong(pending.notes, pending.offset, () => (Date.now() - t0Ms) / 1000);
         }
 
         // Follow-along: light the notes SOUNDING now (a quarter stays lit while the other
@@ -4540,13 +4704,14 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         // ordinal (O), so repeats and seeks cannot drift — and keep the newest onset in
         // view without fighting manual scrolling more than needed. The cursor
         // (playbackCore.ts) walks the onsets once, so a tick costs what started since.
-        function followAlong(notes, offset, t0) {
+        // elapsed() is the playback's clock in seconds from the offset: the audio context's
+        // for the synth here, the wall clock from the server's zero for the MIDI output.
+        function followAlong(notes, offset, elapsed) {
             const Cursor = window.LysSynth ? window.LysSynth.SoundingCursor : null;
             if (!Cursor) { return; }
             const cursor = new Cursor(notes.map(n => ({ t: n.T - offset, d: n.D, s: n.S, o: n.O || 0 })));
             playheadTimer = setInterval(() => {
-                if (!audioCtx) return;
-                const r = cursor.at(audioCtx.currentTime - t0);
+                const r = cursor.at(elapsed());
                 if (!r.changed) return;
                 clearHighlights();
                 const painted = highlightPositions(r.sounding);
@@ -4675,8 +4840,9 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         // the SoundFont synth's (the part's program, PlaybackNote.G / the server's
         // Program) when it is ready, else an oscillator of the timbre family's wave.
         let heldOscs = [];
-        let heldPitches = [];       // ringing on the SoundFont synth, on heldChannel
+        let heldPitches = [];       // ringing on the SoundFont synth (or the MIDI output), on heldChannel
         let heldChannel = -1;
+        let heldMidi = false;       // the strike went to the MIDI output: the release goes there too
         let heldKey = '';           // what rings, so a fast repeat sustains instead of re-striking
         let heldWatchdog = null;
         let pendingAudition = null; // audition awaiting a fresh note list
@@ -4684,7 +4850,10 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
 
         function stopHeldNote() {
             if (heldWatchdog) { clearTimeout(heldWatchdog); heldWatchdog = null; }
-            if (heldPitches.length && sfSynth) { sfSynth.release(heldChannel, heldPitches); }
+            if (heldMidi) {
+                heldMidi = false;
+                if (heldPitches.length) { vscode.postMessage({ type: 'midiRelease', channel: heldChannel, pitches: heldPitches }); }
+            } else if (heldPitches.length && sfSynth) { sfSynth.release(heldChannel, heldPitches); }
             heldPitches = []; heldChannel = -1;
             if (heldOscs.length && audioCtx) {
                 const t = audioCtx.currentTime;
@@ -4706,24 +4875,33 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             const fresh = (heldOscs.length === 0 && heldPitches.length === 0) || key !== heldKey || gapMs > 700;
             if (fresh) {
                 stopHeldNote();
-                const ctx = audio();
-                const sf = soundFontSynth();
-                if (sf && sf.ready) {
-                    heldChannel = sf.strike(pitches, timbre, program, 100);
+                if (midiOutput) {
+                    // The server strikes on its audition channel (the drums on theirs) with
+                    // the part's program; the release names the same channel.
+                    heldMidi = true;
+                    heldChannel = timbre === 9 ? 9 : 15;
                     heldPitches = pitches.slice();
+                    vscode.postMessage({ type: 'midiStrike', port: midiOutput, pitches: heldPitches, timbre: timbre, program: program });
                 } else {
-                    const master = oscillatorOutput(ctx, 0.22);
-                    const t0 = ctx.currentTime;
-                    for (const p of pitches) {
-                        const osc = ctx.createOscillator();
-                        osc.type = AUD_WAVE[timbre] || 'triangle';
-                        osc.frequency.value = 440 * Math.pow(2, (p - 69) / 12);
-                        const g = ctx.createGain();
-                        g.gain.setValueAtTime(0, t0);
-                        g.gain.linearRampToValueAtTime(0.9, t0 + 0.02);
-                        osc.connect(g); g.connect(master);
-                        osc.start(t0);
-                        heldOscs.push({ osc, g });
+                    const ctx = audio();
+                    const sf = soundFontSynth();
+                    if (sf && sf.ready) {
+                        heldChannel = sf.strike(pitches, timbre, program, 100);
+                        heldPitches = pitches.slice();
+                    } else {
+                        const master = oscillatorOutput(ctx, 0.22);
+                        const t0 = ctx.currentTime;
+                        for (const p of pitches) {
+                            const osc = ctx.createOscillator();
+                            osc.type = AUD_WAVE[timbre] || 'triangle';
+                            osc.frequency.value = 440 * Math.pow(2, (p - 69) / 12);
+                            const g = ctx.createGain();
+                            g.gain.setValueAtTime(0, t0);
+                            g.gain.linearRampToValueAtTime(0.9, t0 + 0.02);
+                            osc.connect(g); g.connect(master);
+                            osc.start(t0);
+                            heldOscs.push({ osc, g });
+                        }
                     }
                 }
                 heldKey = key;
@@ -5058,6 +5236,12 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                     break;
                 case 'setSoundFont':
                     setSoundFont(message.uri);
+                    break;
+                case 'setMidiOutput':
+                    setMidiOutput(message.name);
+                    break;
+                case 'midiStarted':
+                    midiStarted(message);
                     break;
                 // Context-menu actions. Play reuses the Play button's path
                 // exactly (fetch the events, then start at pendingStartPos), so

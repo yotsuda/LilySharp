@@ -215,6 +215,12 @@
           "scope": "machine-overridable",
           "markdownDescription": "The sound font the preview plays with (the Play button, Alt+P / Alt+M and the auditions): a path to an `.sf2`, `.sf3` or `.dls` file on this machine — [choose a file…](command:lilysharp.chooseSoundFont) (also the **Lily#: Choose Sound Font…** command). Empty: the General MIDI bank your computer already has — Windows' `gm.dls`, macOS's DLS bank — or, where there is none, simple oscillator tones. For fuller instruments install a free sound font (the editor page of the Lily# site names three, with the steps) and choose it here. Each part plays the instrument its `midiInstrument` or preset names, as the exported MIDI does. Takes effect in open previews."
         },
+        "lilysharp.playback.output": {
+          "type": "string",
+          "default": "",
+          "scope": "machine-overridable",
+          "markdownDescription": "A MIDI output port of this machine to play through instead of the preview's own synth — the Play button, Alt+P / Alt+M and the auditions all go there — named as [choose a port…](command:lilysharp.chooseMidiOutput) (the **Lily#: Choose MIDI Output…** command) lists it. Empty: the preview's sound font. On Windows *Microsoft GS Wavetable Synth* plays with no setup; a virtual port (loopMIDI on Windows, an IAC bus on a Mac) carries the notes into a DAW or a VST host, where your own instruments are. Each part keeps its channel and sends its General MIDI program (its `midiInstrument` or preset), as the exported MIDI does; the drums are on channel 10. Takes effect on the next sound."
+        },
         "lilysharp.typingAids.enabled": {
           "type": "boolean",
           "default": true,
@@ -374,6 +380,11 @@
         "title": "Choose Sound Font…"
       },
       {
+        "command": "lilysharp.chooseMidiOutput",
+        "category": "Lily#",
+        "title": "Choose MIDI Output…"
+      },
+      {
         "command": "lilysharp.playNoteAtCursor",
         "category": "Lily#",
         "title": "Play Note at Cursor (hold)"
@@ -518,6 +529,9 @@
         },
         {
           "command": "lilysharp.chooseSoundFont"
+        },
+        {
+          "command": "lilysharp.chooseMidiOutput"
         },
         {
           "command": "lilysharp.openPreview",

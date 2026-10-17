@@ -25,9 +25,18 @@ try
     var server = new LilySharpLanguageServer(Console.OpenStandardInput(), Console.OpenStandardOutput());
     
     Console.Error.WriteLine("LSP Server initialized, starting to listen...");
-    
-    await server.RunAsync();
-    
+
+    try
+    {
+        await server.RunAsync();
+    }
+    finally
+    {
+        // The MIDI output, if one is open: every note off before the process goes, so a
+        // restart of the server (a window reload) leaves nothing ringing on a DAW.
+        server.DisposeMidiOut();
+    }
+
     Console.Error.WriteLine("LSP Server RunAsync completed");
 }
 catch (Exception ex)

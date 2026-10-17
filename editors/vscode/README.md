@@ -74,12 +74,23 @@ and `Alt+M` keep working either way. Nothing sounds while no preview is open.
 The preview's synth is a **SoundFont synthesizer** (spessasynth_lib, in an audio worklet):
 each part plays the General MIDI instrument its `midiInstrument` or preset names, as the
 exported MIDI does — drums on the drum channel, a quarter tone as a pitch bend — and the
-step keys and the caret strike the part's instrument too. A General MIDI sound font is
-bundled; `"lilysharp.playback.soundFont"` names an `.sf2`, `.sf3` or `.dls` of your own and
-takes effect in open previews. While no font is loaded the preview plays plain oscillator
-tones instead. The sound is allowed to start only once you have clicked or typed in the
-preview itself (the browser's autoplay rule); the status bar says so when a strike comes
-first.
+step keys and the caret strike the part's instrument too. By default it plays the General
+MIDI bank your computer already has (Windows' `gm.dls`, macOS's DLS bank; simple tones on
+Linux); `"lilysharp.playback.soundFont"` names an `.sf2`, `.sf3` or `.dls` of your own
+(**Lily#: Choose Sound Font…**) and takes effect in open previews. While no font is loaded the
+preview plays plain oscillator tones instead. The sound is allowed to start only once you have
+clicked or typed in the preview itself (the browser's autoplay rule); the status bar says so
+when a strike comes first.
+
+**Your own instruments.** `"lilysharp.playback.output"` names a MIDI output port of your
+machine (**Lily#: Choose MIDI Output…** lists them), and the Play button, `Alt+P` / `Alt+M` and
+the auditions go there instead of the preview's synth: on Windows the *Microsoft GS Wavetable
+Synth* plays with no setup, and a virtual port — loopMIDI on Windows, an IAC bus on a Mac, the
+ALSA sequencer on Linux — carries the notes into a DAW or a VST host. Each part keeps its
+channel and sends its General MIDI program, as the exported MIDI does; the drums are on
+channel 10; the follow-along highlight runs as before. A port that is not there makes the
+preview play its own synth, with the reason in the status bar. (Reached through each system's
+own MIDI API; tried so far on Windows.)
 
 To use other keys, open **Keyboard Shortcuts** (`Ctrl+K Ctrl+S`), search for
 `lilysharp.stepSemitoneUp` / `lilysharp.stepSemitoneDown` (a note of the key; the ids keep an earlier name) or `lilysharp.stepUp` /

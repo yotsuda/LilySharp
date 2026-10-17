@@ -8,6 +8,12 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Editor
 
+- **The preview plays through a MIDI output port when `lilysharp.playback.output` names one** —
+  Windows' GS Wavetable Synth, or a loopMIDI / IAC bus into a DAW or a VST host — the language
+  server sending the same note events the `.mid` export holds, each part on its channel with its
+  program, the auditions too (`lilysharp/midiOut/*`; *Lily#: Choose MIDI Output…* lists the
+  ports; `docs/playback-design.md` §6). Reached through each system's own MIDI API, with no new
+  dependency; tried so far on Windows.
 - **A `@todo` memo on the lower voice goes below the staff by itself** (the stems-down voice of
   `voice { } { }`, or the second part of a `combinedStaff`), where that voice is read; `.up`
   keeps it above. `lysc svg|png|pdf --todo` draws it there too.

@@ -4,6 +4,21 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+### Play through a MIDI output — your DAW, a VST host, or Windows' own synth
+
+- **`lilysharp.playback.output` names a MIDI output port of this machine** (**Lily#: Choose MIDI
+  Output…** lists them, and the setting's description links to it), and the Play button,
+  `Alt+P` / `Alt+M` and the auditions sound there instead of the preview's synth. On Windows the
+  *Microsoft GS Wavetable Synth* plays with no setup; a virtual port (loopMIDI on Windows, an IAC
+  bus on a Mac, the ALSA sequencer on Linux) carries the notes into a DAW, a VST host or a
+  hardware synth. Each part keeps its channel and sends its General MIDI program (its
+  `midiInstrument` or preset), the drums on channel 10, a quarter tone as a pitch bend — the
+  same events the exported MIDI holds — and the follow-along highlight runs from the clock the
+  language server answers with. A port that is not there, or a machine without one, makes the
+  preview play its own synth for that Play, with the reason in the status bar. The ports are
+  reached through each system's own API (winmm, CoreMIDI, the ALSA sequencer); tried so far on
+  Windows.
+
 ### Ctrl+Shift+Up / Down convert the octaves from an `octave relative` / `octave absolute`
 
 - **On an `octave absolute` / `octave relative`** — the file's or one inside music —

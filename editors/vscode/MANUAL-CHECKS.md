@@ -168,6 +168,18 @@
 - [x] .lys を閉じてプレビューだけ残す → プレビューの音符や小節をクリック → .lys がプレビューの左に（普通のタブで）開き直り、カレットがクリックした所に来る。
 - [x] Show Original Scan の小節: マウスを載せた小節と caret の小節が**五線の内側だけ**同じ青で塗られ、枠線は無い。プレビューのホバーと同じ色・同じ範囲。五線の外（box の上下）のクリックでもその小節へ飛ぶ。
 
+### 3.5 MIDI 出力（第911・`docs/playback-design.md` §6。Windows は網が実機の GS 音源を開いて鳴らして閉じた＝winmm は通る。**mac／Linux の CoreMIDI／ALSA は未実走**）
+
+- [ ] パレット **Lily#: Choose MIDI Output…** → 「The preview's own synth」の下にこの機械のポート（`Microsoft GS Wavetable Synth`・`ZOOM UAC-2 MIDI` …）が並ぶ（.lys を 1 つも開いていなくてもサーバーが立って並ぶ）。GS を選ぶ → 設定 `lilysharp.playback.output` に名前が入り、ステータスバーに `the preview plays through …`。設定 UI の説明の「choose a port…」リンクでも同じ picker。
+- [ ] ▶ → Windows の GS 音源で鳴り、プレビューの音源は鳴らない。追従の点灯が音に合う（ずれが分からない程度）。⏹ で直ちに止まり、音が残らない。再生中に音符をクリック → そこから鳴る。Alt+M → その小節だけ。▶ を押し直す → 頭から。
+- [ ] `part vn { midiInstrument "violin" }` と `part kit { clef percussion }` の本 → vn はバイオリン・kit はドラム（ch 10）の音。四分音（`cih`）の本 → ベンドで鳴って次の音は戻る。
+- [ ] Alt+P 長押し → 鳴り続けて離すと止まる（GS から・part の楽器）。Ctrl+Shift+↑ の後の音・カレットの着地・打鍵の音も同じ経路。
+- [ ] loopMIDI のポートを選び、DAW（または VST ホスト）のトラックをそのポート・その part のチャンネル（1 から score の順・ドラムは 10）で受ける → DAW の音源で鳴る。▶ の頭でプログラムチェンジが届く（GM 準拠の音源なら楽器が替わる）。
+- [ ] 設定を手で存在しない名前にして ▶ → ステータスバーに `MIDI output "…" is not there; this machine has: …` が 1 回、プレビューの音源で鳴る（2 回目からは出力チャネル「Lily# Extension」だけ）。
+- [ ] 再生中に Choose MIDI Output… で別のポート（または The preview's own synth）に替える → 止まる。次の ▶ は新しい方で鳴る。
+- [ ] 再生中に Reload Window → GS／DAW に音が残らない。
+- [ ] 設定を空に戻す → プレビューの音源に戻る。
+
 ## 4. §2 R13 ⒝ — 差分頁の配信（実機未確認・第404）
 
 - [x] 出力チャネル「Lily#」を開いたまま、1 頁の本で音を 1 つ打つ → `pages kept` の行（頁が丸ごと届き直していない）。

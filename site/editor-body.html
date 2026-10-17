@@ -12,6 +12,7 @@
     <li><a href="#step">Stepping: Ctrl+Shift+Up/Down, PageUp/PageDown</a></li>
     <li><a href="#audition">Audition</a></li>
     <li><a href="#soundfonts">Sound fonts</a></li>
+    <li><a href="#midi-out">MIDI output: your own instruments</a></li>
     <li><a href="#language">Completion, hover, fixes</a></li>
     <li><a href="#commands">Commands</a></li>
     <li><a href="#settings">Settings</a></li>
@@ -317,6 +318,35 @@
   holds the file's path.</p>
 </section>
 
+<section id="midi-out">
+  <h2>MIDI output: a DAW, a VST host, or the computer's own synth</h2>
+  <p>A sound font is one recording of the General MIDI instruments. For <b>your own</b>
+  instruments — a sampled piano in a DAW, a VST or AU synth, a hardware module — have Lily#
+  send <b>MIDI</b> instead: <code>lilysharp.playback.output</code> names a MIDI output port of
+  your machine, and the <b>▶</b> button, <kbd>Alt+P</kbd> / <kbd>Alt+M</kbd> and the auditions
+  all go there. The follow-along highlight runs as before.</p>
+  <ol>
+    <li>Have a port the receiver listens on. On Windows, <b>Microsoft GS Wavetable Synth</b> is
+    there already — the computer's own synth, with no setup; for a DAW or a VST host install
+    <a href="https://www.tobias-erichsen.de/software/loopmidi.html">loopMIDI</a> and add a
+    port. On a Mac, switch on the <b>IAC Driver</b> bus in Audio MIDI Setup. On Linux the ALSA
+    sequencer's clients are the ports: a FluidSynth / Qsynth, a DAW's input, whatever
+    <code>aconnect -l</code> lists.</li>
+    <li>In VS Code, open the command palette and choose <b>Lily#: Choose MIDI Output…</b>; pick
+    the port.</li>
+    <li>In the DAW, set a track (or a template with a track per part) to take MIDI from that
+    port on the part's channel — the parts take channels 1, 2, 3… in score order, as the
+    exported MIDI does, and the drums channel 10 — and press <b>▶</b>.</li>
+  </ol>
+  <p class="note">Each part sends its General MIDI program (its <code>midiInstrument</code> or
+  preset) when playback starts; a DAW track that keeps its own instrument ignores it. The
+  auditions strike on channel 16. To go back to the sound font, choose <b>The preview's own
+  synth</b> in the same picker. A port that is not there when you press ▶ — a device
+  unplugged — makes the preview play its own synth, with the reason in the status bar. The port
+  is reached through each system's own MIDI API (winmm, CoreMIDI, the ALSA sequencer); it has
+  been tried on Windows so far.</p>
+</section>
+
 <section id="language">
   <h2>Completion, hover, fixes</h2>
   <ul>
@@ -405,6 +435,7 @@
     <tr><td><code>lilysharp.preview.openOnOpen</code></td><td><code>true</code></td><td>open the preview beside a <code>.lys</code> file when it is opened (<a href="#preview">The preview</a>)</td></tr>
     <tr><td><code>lilysharp.preview.highlightTodos</code></td><td><code>true</code></td><td>draw the <code>@todo</code> rings and memos in the preview</td></tr>
     <tr><td><code>lilysharp.playback.soundFont</code></td><td>the computer's own</td><td>the sound font the preview plays with (<i>Lily#: Choose Sound Font…</i>) — <a href="#soundfonts">which to install, and how</a></td></tr>
+    <tr><td><code>lilysharp.playback.output</code></td><td>the preview's synth</td><td>a MIDI output port to play through instead (<i>Lily#: Choose MIDI Output…</i>) — <a href="#midi-out">a DAW, a VST host, the computer's own synth</a></td></tr>
     <tr><td><code>lilysharp.fontPaths</code></td><td></td><td>more folders to find SMuFL music fonts in, for <code>fonts { music "…" }</code></td></tr>
     <tr><td><code>lilysharp.typingAids.enabled</code></td><td><code>true</code></td><td>the typing aids above (<a href="#typing">Typing aids</a>)</td></tr>
     <tr><td><code>lilysharp.omr.verifyOnSave</code></td><td><code>false</code></td><td>on saving a score read from a scan, check it against the scan</td></tr>

@@ -4,9 +4,9 @@ The preview's Play button, Alt+P / Alt+M and the auditions (the step keys, the c
 note) sound through the preview webview. Until session 901 (2026-10-11) the webview voiced
 every note with a WebAudio oscillator — ten hand-tuned patches — which the owner called "a poor
 sound", and a dense score stuttered and dropped out. This page records what plays now, how the
-events are scheduled, where the sound font comes from, and the next stage: sending MIDI to a
-DAW or a VST host instead of hosting a VST ourselves. LILYSHARP-OWN throughout — LilyPond
-writes a `.mid` and plays nothing.
+events are scheduled, where the sound font comes from, and stage B (session 911, 2026-10-18):
+the language server sending MIDI to a port of the machine — a DAW or a VST host — instead of
+hosting a VST ourselves. LILYSHARP-OWN throughout — LilyPond writes a `.mid` and plays nothing.
 
 ## 1. What plays, and where
 
@@ -141,7 +141,7 @@ Now:
 - A held key re-arms a watchdog as before; the strike is a `noteOn` and the release a
   `noteOff`, so the font's own release plays.
 
-## 6. Limits, and the next stage
+## 6. Limits, and MIDI out (stage B — owner's decision 2026-10-18, session 911)
 
 - **Latency and polyphony are the worklet's**: a 128-sample quantum at the context's rate, and
   spessasynth's voice cap. Fine for playback and auditions; not a performance instrument.
@@ -149,16 +149,65 @@ Now:
 - **No VST, by design.** Hosting VST3 or CLAP in-process needs native code, an audio device,
   a window for the plugin's editor (the language server is headless and a VS Code extension
   cannot own a native window) and per-OS packaging — MuseScore 4's scale of work. The road to
-  a user's own instruments is **MIDI out from the language server** (stage B, not started):
-  `lilysharp.playback.output` naming a MIDI port (RtMidi-based .NET bindings cover Windows,
-  macOS and Linux), the server scheduling the same note list to it with the part's channel
-  and program change, the webview keeping the highlight clock from the server's start
-  acknowledgement. Windows then plays through the Microsoft GS Wavetable Synth with no
-  setup, and loopMIDI / IAC carry the stream to any DAW, Cantabile, Carla or a VST host; a
-  later `midiChannel` property on a part would pin a DAW template. Web MIDI from the webview
-  is not the route — VS Code is not expected to grant it the `midi` permission.
+  a user's own instruments is **MIDI out from the language server**, below. Web MIDI from the
+  webview is not the route — VS Code is not expected to grant it the `midi` permission.
 - **Offline rendering** (`lysc wav`) would reuse the same font through MeltySynth (pure C#,
   MIT) in Core, after the bundling decision.
+
+### MIDI out
+
+`lilysharp.playback.output` names a MIDI output port of the machine (empty: the preview's own
+synth, §1–§5 unchanged); **Lily#: Choose MIDI Output…** lists what the machine has, and the
+setting's description links to it. Windows then plays through the Microsoft GS Wavetable Synth
+with no setup, and a virtual port — loopMIDI on Windows, an IAC bus on a Mac, the ALSA
+sequencer's own graph on Linux — carries the stream to a DAW, Cantabile, Carla or any VST host,
+where the user's instruments are.
+
+- **Who decides what, and who holds the port.** The webview still decides WHAT plays — the
+  note list it fetched (`lilysharp/playback`), the offset (Play from the highlighted note, a
+  seek, Alt+M's measure), an audition's pitches — and **the server is the port**:
+  `lilysharp/midiOut/play` takes the list and the offset, `/stop` stops, `/strike` and
+  `/release` are the auditions, `/ports` is the picker's list
+  (`LilySharpLanguageServer.MidiOut.cs`, DTOs in `MidiOut/MidiOutDtos.cs`). The list is passed,
+  not recomputed, so what sounds and what the highlight follows are one list, and the measure
+  Alt+M cuts out plays as it does on the synth here. Every request names the port, so a changed
+  setting takes effect on the next sound; the host sends the requests one after another
+  (`midiOutRequest`), because the server dispatches concurrently and a Stop must not overtake
+  the Play it follows.
+- **The events are the same.** `MidiOutEvents.From` is the server-side twin of `toEvents`
+  (§2): each pitched channel's program once at the start, a quarter tone as the key below bent
+  up by the wheel and centred after, at one instant a note's off before its re-strike and the
+  programs and bends before the notes — so a DAW hears what the preview's synth hears. The
+  nets mirror `test/playbackCore.test.ts` case for case (`MidiOutTests`).
+- **The clock.** `MidiOutPlayer` runs one playback thread: it sleeps to about 2 ms before each
+  event and spins the rest (a timer's grain is 1–16 ms, and a note 10 ms late is heard); on
+  Windows the timer period is raised to 1 ms for the playback (`timeBeginPeriod`, as every MIDI
+  player does). The play's answer carries the wall-clock time (Unix ms) of the playback's zero,
+  and the webview's follow-along highlight runs from it — `Date.now()` is the same clock, so no
+  estimate of the round trip is needed (`followAlong` takes a clock function: the audio
+  context's for the synth here, this for the port). A stop wakes the thread at once and sends
+  every channel the playback touched All Notes Off, All Sound Off and a centred wheel; the
+  server does the same on its way down (`Program.cs`), so a window reload leaves nothing ringing
+  on a DAW.
+- **The ports, OS by OS, through P/Invoke only** — no package, no native binary of ours,
+  nothing for THIRD-PARTY-NOTICES. (The RtMidi bindings on NuGet date from 2023, cover Windows
+  and Mac only and carry Serilog; the one maintained pure-managed library reaches Linux through
+  rawmidi, which does not see the software synths. Each OS's own API is a hundred lines.)
+  `WinMmPort` (winmm, `midiOut*`); `CoreMidiPort` (CoreMIDI: one client and output port, a
+  destination by display name, the packet list built by `MIDIPacketListInit` / `Add` so its
+  layout — which differs between Intel and Apple silicon — is never spelled); `AlsaSeqPort` (the
+  ALSA **sequencer**, not rawmidi: FluidSynth, TiMidity and a DAW's input are sequencer
+  clients; a port is `client: port`; libasound2 must be installed, else the list is empty).
+  ⚠️ **Windows is verified on the machine** — `MidiOutTests.TheMachinesOwnSynth_…` opens the GS
+  synth, plays and closes it, on every Windows run; **the Mac and Linux ports are written
+  against the documented API and not yet run** (MANUAL-CHECKS §3.5).
+- **Failures are answers.** A port that is not there (unplugged, renamed, another machine's
+  setting) comes back as `Error`; the status bar says so once per port, the output channel every
+  time, and the preview plays its own synth for that Play. Nothing throws across the wire.
+- **What stays as it was.** Nothing sounds while no preview is open (the webview is still the
+  conductor; the auditions are its); one wheel per channel; the audition strikes on channel 16
+  (15 0-based) and the drums on 10 (9). A part's own channel (`midiChannel`, to pin a DAW
+  template) is the next step if a book needs it.
 
 ## 7. Where things are
 
@@ -172,4 +221,6 @@ Now:
 | The URLs, the roots, the setting, the CSP | `extension.ts`: `synthRoot`, `soundFontFile`, `previewResourceRoots`, `synthUrls`, `getPreviewHtml` |
 | The bundle | `editors/vscode/esbuild.js` (`copyWorkletProcessor`, the second context) |
 | The font | none bundled — `soundFontFile` / `osSoundFonts` in `extension.ts`; the advice for users: `site/editor-body.html` `#soundfonts` |
-| The nets | `PlaybackRequestTests`, `StepRequestTests.TheAudition_NamesTheProgramThePartPlays`, `test/playbackCore.test.ts`, `test/webviewScript.test.ts` (the page script still parses) |
+| MIDI out: the ports, the events, the player | `LilySharp.Lsp/MidiOut/` — `MidiOutPorts` (+ `WinMmPort`, `CoreMidiPort`, `AlsaSeqPort`), `MidiOutEvents`, `MidiOutPlayer`; the requests `LilySharpLanguageServer.MidiOut.cs`, the DTOs `MidiOut/MidiOutDtos.cs`; the close on exit `Program.cs` |
+| MIDI out: the setting, the picker, the relay, the page | `extension.ts`: `midiOutputSetting`, `chooseMidiOutput`, `midiOutRequest`, `reportMidiOutError`, the `midiPlay` / `midiStop` / `midiStrike` / `midiRelease` messages; the page script's `setMidiOutput`, `midiStarted`, `startPlayback`'s port branch, `holdNotes` / `stopHeldNote` |
+| The nets | `PlaybackRequestTests`, `StepRequestTests.TheAudition_NamesTheProgramThePartPlays`, `MidiOutTests`, `test/playbackCore.test.ts`, `test/midiOutputSetting.test.ts`, `test/webviewScript.test.ts` (the page script still parses) |
