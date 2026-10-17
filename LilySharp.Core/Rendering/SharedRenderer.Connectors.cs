@@ -842,7 +842,8 @@ internal static partial class SharedRenderer
     /// <remarks>
     /// LILYPOND-REF: lily/clef.cc:29-52 — calc_glyph_name appends "_change" suffix
     /// </remarks>
-    private static void DrawClefChange(ScoreTextMetrics fonts, ClefChangeItem clefChange, double x, double staffY, IDrawingContext gc)
+    private static void DrawClefChange(ScoreTextMetrics fonts, ClefChangeItem clefChange, double x, double staffY, IDrawingContext gc,
+        int staffLines = 5)
     {
         // A CUE clef is the PLAIN glyph shrunk, not the "_change" variant: MEASURED
         // (audit/lp-geometry/probes/cue-span.ly D-WITH) LilyPond's CueClef reads
@@ -867,7 +868,7 @@ internal static partial class SharedRenderer
                 clefChange.IsCue ? FontSize * EngravingDefaults.CueScale : FontSize);
             if (clefChange.NewClef is ClefType.Treble8Below or ClefType.Bass8Below or ClefType.Treble8Above)
                 DrawClefModifier8(fonts, clefChange.NewClef, x, clefY, staffY,
-                    clefChange.IsCue ? ClefModifierKind.Cue : ClefModifierKind.Change, gc);
+                    clefChange.IsCue ? ClefModifierKind.Cue : ClefModifierKind.Change, gc, staffLines);
         }
     }
 

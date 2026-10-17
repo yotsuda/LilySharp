@@ -157,7 +157,7 @@ internal static partial class SharedRenderer
                     // system-start clef (ResolveClef folds it) — drawing it here too
                     // would double-print the clef.
                     if (!IsSystemStartClefChange(voice, system, ml.MeasureIndex, clefChange))
-                        DrawClefChange(fonts, clefChange, itemX, staffY, gc);
+                        DrawClefChange(fonts, clefChange, itemX, staffY, gc, staffLines);
                     break;
                 case KeySignatureChangeItem keyChange:
                     // A change that OPENS a later system is folded into that

@@ -112,6 +112,26 @@ public sealed class ClefModifierTests
         Assert.InRange(y - ink.Top, want - 0.011, want + 0.011);
     }
 
+    /// <summary>A two-line staff draws its lines at ±2 of the five-line frame, so the staff
+    /// ends a space above the frame's bottom: the staff-padding is measured from the DRAWN
+    /// line (EngravingDefaults.StaffLinePositions), where the F clef's own ink reaches
+    /// further and wins. Until 2026-10-17 the digit cleared the frame's bottom instead (the
+    /// line count never reached the drawer), a space too low — session 910's probe of the
+    /// one- to five-line staves, Lab sessions/p910/probe.</summary>
+    [Fact]
+    public void OnATwoLineStaff_TheDigitClearsTheDrawnLines_NotTheFrame()
+    {
+        string svg = Svg("part m { clef bass_8 }\nsection A { m { c4 d e f | } }\nform { ~A }\nscore { staff m as lines 2 }\n");
+        var (_, y, em) = Digit(svg);
+        var clef = Clef(svg, EmmentalerGlyphs.FClef);
+        var ink = Fonts.Ink("8", em, TextRole.ClefOctave, FontStyle.Italic);
+        double inkTop = y - ink.Top;
+        double drawnBottom = StaffTop(svg) + 2;            // the pair is two spaces apart
+        double want = System.Math.Max(clef.Y - GlyphMetrics.ClefF.Bottom, drawnBottom + 0.7);
+        Assert.InRange(inkTop, want - 0.011, want + 0.011);
+        Assert.True(inkTop < drawnBottom + 1 + 0.7 - 0.1, $"the digit cleared the frame's bottom, not the drawn line: {inkTop}");
+    }
+
     /// <summary>Above the G clef: the ink bottom on the clef's box top (4.8 above its
     /// origin), centred +0.1 of the half-width right of the clef's centre.</summary>
     [Fact]

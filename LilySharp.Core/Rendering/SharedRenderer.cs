@@ -991,7 +991,7 @@ internal static partial class SharedRenderer
                     // answered by resolving rather than by dropping the tag.
                     using (SourceScope(sgc, clefPos))
                         prefixEndX = DrawClef(score.TextMetrics, clef, systemStartX, localStaffY, maxClefWidth,
-                            clefGroupInkLeft, sgc);
+                            clefGroupInkLeft, sgc, staff.Lines);
                 }
                 // Break-align gaps between prefix items, from the SAME space-alists
                 // CalculatePrefixWidth reserves by, so the drawn glyph lands where the spacing

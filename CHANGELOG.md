@@ -11,6 +11,9 @@ workflow attaches that section to the GitHub Release verbatim.
 - **A `@todo` memo on the lower voice goes below the staff by itself** (the stems-down voice of
   `voice { } { }`, or the second part of a `combinedStaff`), where that voice is read; `.up`
   keeps it above. `lysc svg|png|pdf --todo` draws it there too.
+- **The octavation digit of `bass_8` / `treble_8` / `treble^8` clears the drawn lines of a
+  reduced staff**, not the five-line frame: on `as lines 2` the `8` stood a space too low
+  (the line count never reached the digit's drawer).
 - **Converting to relative octaves keeps the file's `octave` line.** *Convert Octaves to
   Relative* and `lysc octave --relative` now rewrite the file's first `octave` directive to
   `octave relative` instead of removing it (relative being the default); a file whose only

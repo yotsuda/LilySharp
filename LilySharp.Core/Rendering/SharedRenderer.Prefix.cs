@@ -495,7 +495,7 @@ internal static partial class SharedRenderer
     };
 
     private static double DrawClef(ScoreTextMetrics fonts, ClefType clef, double x, double staffY,
-        double clefColumnWidth, double clefGroupInkLeft, IDrawingContext gc)
+        double clefColumnWidth, double clefGroupInkLeft, IDrawingContext gc, int staffLines = 5)
     {
         char glyph = Music(MusicGlyphs.Clef(clef));
         double clefY = staffY - ClefLineBelowTopLine(clef);
@@ -513,7 +513,7 @@ internal static partial class SharedRenderer
         double glyphX = x + EngravingDefaults.ClefGlyphXOffset - clefGroupInkLeft;
         gc.DrawGlyph(glyph, glyphX, clefY, FontSize);
         if (clef is ClefType.Treble8Below or ClefType.Bass8Below or ClefType.Treble8Above)
-            DrawClefModifier8(fonts, clef, glyphX, clefY, staffY, ClefModifierKind.Full, gc);
+            DrawClefModifier8(fonts, clef, glyphX, clefY, staffY, ClefModifierKind.Full, gc, staffLines);
         // Where the NEXT prefix item (key/time) starts: the LeftEdge->Clef offset plus the
         // SHARED clef-column width (the widest clef in the system, GlyphMetrics.MaxClefWidth),
         // so every staff's key/time break-aligns to one column and a grand staff's signatures
@@ -587,7 +587,14 @@ internal static partial class SharedRenderer
         double em = ClefModifierEm(fonts, kind);
         var style = ClefModifierStyle(fonts);
         var ink = fonts.Ink("8", em, TextRole.ClefOctave, style);   // about the baseline, up-positive
-        double staffTop = staffY, staffBottom = staffY - (staffLines - 1);
+        // The staff's DRAWN extent: a reduced staff draws inside the five-line frame
+        // (EngravingDefaults.StaffLinePositions — one line at the middle, two at ±2), and
+        // staff-padding keeps the digit 0.7 outside the drawn lines, not the frame. Until
+        // 2026-10-17 the bottom was the frame's, staffY − (staffLines − 1): right for five
+        // and four lines (−2…4), one to two spaces too high for one to three.
+        var lines = EngravingDefaults.StaffLinePositions(staffLines);
+        double staffTop = staffY - (StaffHeight - lines[^1]) / 2.0;
+        double staffBottom = staffY - (StaffHeight - lines[0]) / 2.0;
         const double staffPadding = 0.7;
         double baseline = above
             ? Math.Max(clefY + box.Top * glyphScale, staffTop + staffPadding) - ink.Bottom
