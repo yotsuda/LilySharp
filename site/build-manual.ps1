@@ -5,6 +5,7 @@
 #   chords.html   <- chords-body.html   chords and chord diagrams, step by step (under Reference)
 #   editor.html   <- editor-body.html   the VS Code extension and its AI features
 #   commands.html <- commands-body.html every editor command, one by one (under Editor)
+#   scan.html     <- scan-body.html     Scan Import: the reader extension, reading and checking a scan (under Editor)
 #   about.html    <- about-body.html    lineage, licence, speed, architecture
 # and the learn pages from the lessons themselves.
 # Shares its stylesheet with the showcase page: the CSS is lifted out of
@@ -103,6 +104,11 @@ $pages = @(
        Desc = 'Every Lily# command in VS Code — the right-click menus and the command palette: what each does, with examples.'
        Sub = 'Editor commands — what each one does'
        Authority = $byExtension },
+    @{ Out = 'scan.html'; Body = 'scan-body.html'; Section = 'editor.html'
+       Title = 'Lily# — Scan Import (Beta)'
+       Desc = 'Lily# Scan Import reads a scan or PDF of printed music into editable Lily# text, marks what it was unsure of, and opens the page beside the score to check against.'
+       Sub = 'Scan Import — printed music read from a scan or PDF (Beta)'
+       Authority = 'The two extensions are the authority: where this page and Lily# or Scan Import disagree, the extension is right and this page is a bug.' },
     @{ Out = 'about.html'; Body = 'about-body.html'; Section = 'about.html'
        Title = 'Lily# — about'
        Desc = 'What Lily# owes LilyPond, its licence and fonts, how it is put together, and why the preview keeps up.'

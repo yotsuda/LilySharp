@@ -94,6 +94,7 @@ Everything about writing music in Lily# lives on the website:
 | [Chords](https://yotsuda.github.io/LilySharp/chords.html) | Chord names, guitar chord diagrams and chords written from a shape |
 | [The editor and AI](https://yotsuda.github.io/LilySharp/editor.html) | Live preview, typing aids, audition, settings and the AI features |
 | [Editor commands](https://yotsuda.github.io/LilySharp/commands.html) | Every command in VS Code's menus and palette |
+| [Scan Import](https://yotsuda.github.io/LilySharp/scan.html) | Printed music read from a scan or PDF into Lily# text, with the doubtful places marked (a separate extension; Windows, Beta) |
 | [About](https://yotsuda.github.io/LilySharp/about.html) | What Lily# owes LilyPond, its licence and fonts, and how it is put together |
 
 In this repository, [`docs/GRAMMAR_FOR_LLM.md`](docs/GRAMMAR_FOR_LLM.md) is the language in one

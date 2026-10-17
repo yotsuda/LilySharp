@@ -1,0 +1,153 @@
+<div class="layout">
+
+<nav class="toc">
+  <p class="grp">Scan Import</p>
+  <ol>
+    <li><a href="#what">What it is</a></li>
+    <li><a href="#install">Install it</a></li>
+    <li><a href="#read">Read a scan</a></li>
+    <li><a href="#check">Check what it read</a></li>
+    <li><a href="#reads">What it reads, and not yet</a></li>
+    <li><a href="#terms">Privacy and terms</a></li>
+  </ol>
+</nav>
+
+<article>
+
+<section id="what">
+  <h2>What it is</h2>
+  <p><b>Lily# Scan Import</b> reads a page image or a PDF of printed music and writes it as
+  Lily# text — a <code>.lys</code> you edit, play and engrave like any other. It does not
+  pretend to read perfectly: the places it is unsure of are marked in the text with
+  <a href="grammar.html#todo"><code>@todo</code></a>, each with a note on what to check, and the
+  scanned page opens beside the score so you can compare the two bar by bar.</p>
+  <!-- The same picture as commands.html#import-image and the reader's Marketplace page:
+       Tchaikovsky op. 39 no. 5 from the 1904 Schirmer edition (IMSLP, public domain), and
+       the first bars as the reader wrote them, drawn with --todo. -->
+  <figure class="shot">
+    <img src="scan-import.png" alt="A scanned page of Tchaikovsky's March of the Wooden Soldiers, and the same bars as the reader wrote them, drawn by Lily# with two places marked in red" width="2200" height="2013" loading="lazy">
+    <figcaption>A 1904 scan (above) and the first bars as the reader wrote them, drawn by the
+    preview with its marks (below): two bars where the notes it read do not fill the time.</figcaption>
+  </figure>
+  <p>It is a <b>separate extension</b> by the same author, <i>Lily# Scan Import (Beta)</i>, that
+  carries the reader; the commands that run it are Lily#'s, and it shows nothing without Lily#.
+  It is in beta and free while it is: later versions may be offered for a fee. It runs on
+  Windows (x64) only, and needs the Lily# extension at 0.13.0 or later.</p>
+</section>
+
+<section id="install">
+  <h2>Install it</h2>
+  <p>Two ways, and both end the same:</p>
+  <ul>
+    <li><b>Let Lily# offer it.</b> On Windows, run <i>Convert Image/PDF to Lily# (.lys)…</i>
+    from the command palette (<kbd>Ctrl+Shift+P</kbd>). When the reader is not installed, the
+    command offers <b>Install Scan Import</b> first; accept, and VS Code installs it from the
+    Marketplace. Run the command again and it reads.</li>
+    <li><b>From the Extensions view.</b> <kbd>Ctrl+Shift+X</kbd>, search for <b>Lily# Scan
+    Import</b> and install the one by <i>yotsuda</i> — or open its
+    <a href="https://marketplace.visualstudio.com/items?itemName=yotsuda.lilysharp-omr">Marketplace
+    page</a>.</li>
+  </ul>
+  <p>VS Code keeps it up to date as it keeps every extension. When a Lily# needs a newer reader
+  than the one installed — a command, a field, a fixed reading it is written for — it offers
+  <b>Update Scan Import</b> before it reads; decline, and it reads with the one you have.
+  Not installed Lily# yet? <a href="start.html#install">Get started</a> walks through it.</p>
+</section>
+
+<section id="read">
+  <h2>Read a scan</h2>
+  <ol class="steps">
+    <li><b>Pick the pages</b>
+      <span>Right-click an image (<code>.png</code>, <code>.jpg</code>, <code>.bmp</code>,
+      <code>.tif</code>) or a PDF in the Explorer and choose <i>Convert Image/PDF to Lily#
+      (.lys)…</i>, or run it from the palette and choose the files. For a piece scanned page by
+      page, pick its pages in order; a PDF brings its pages with it.</span></li>
+    <li><b>Wait for the reader</b>
+      <span>It runs on your computer, page by page; a progress notice shows at the bottom right
+      until it is done.</span></li>
+    <li><b>The score opens</b>
+      <span>The <code>.lys</code> is written beside the image and opens with the preview. Two
+      files land beside it: <code>NAME.omr.json</code>, where each bar is on the page, and
+      <code>NAME.omr-pNN.png</code>, the pages with the marked places boxed. Lily# reads the
+      first to show the scan beside the score; neither is needed to compile the music.</span></li>
+  </ol>
+  <p>What the reader writes is ordinary Lily#: parts for the staves, a section for the piece
+  (one per rehearsal mark where the page has them), absolute octaves, the title, composer,
+  tempo and key and time signatures it found. A place it was unsure of carries a mark with a
+  short note — what it suspects, not where, since the mark already stands on the note:</p>
+<pre data-fragment>&lt;a d'&gt;8@todo(b11 "a quarter short of 2/4: a note or rest missed, or a duration misread?") d'8 |</pre>
+  <p>Fix the bar, delete the mark, and the red goes. A bar with no mark can still be wrong —
+  the marks say where the reader doubted itself, not where it was right.</p>
+</section>
+
+<section id="check">
+  <h2>Check what it read</h2>
+  <p>The marks show in red in the preview, as every <code>@todo</code> does; click one and the
+  editor goes to it. To check against the page itself, open <b>Show Original Scan</b> — the
+  picture button in the editor's title bar, or the palette. It opens the scanned pages in a
+  pane beside the score, and the two work as one:</p>
+  <ul>
+    <li><b>The same red frames on both.</b> Each mark is framed with a dashed red line on the
+    scan and in the preview, around the same bar of the same part on each side — heavier on the
+    scan where the reader was less sure.</li>
+    <li><b>Click to go.</b> A click on a bar of the scan puts the caret in that bar's music; the
+    caret, wherever you move it, lights the bar it is in on the scan.</li>
+    <li><b>They scroll together.</b> With <i>Scroll with the preview</i> ticked, scrolling either
+    pane scrolls the other to the same bar, cut at the same height — the top of one is the top of
+    the other. Drag the page to scroll it, <kbd>Ctrl</kbd>+wheel to zoom, right-click for
+    <i>Fit Width</i> and <i>Reset Zoom (1:1)</i>, as in the preview.</li>
+    <li><b>Marks below…</b> The slider hides the marks the reader was surer of than its setting
+    (its confidence, 0 to 1; the default shows those under 0.8), so you can take the doubtful
+    ones first and widen the net after.</li>
+  </ul>
+  <p>Once you have corrected a bar, you may want to know whether it now matches the page. With
+  the setting <code>lilysharp.omr.verifyOnSave</code> on, saving has the reader engrave the
+  corrected score again and compare it with the scan, bar by bar: the marks that still differ
+  stay, the rest go. It is off by default.</p>
+  <p>The commands themselves, one by one, are on
+  <a href="commands.html#import-image">Editor commands</a>; the setting is in the
+  <a href="editor.html#settings">settings table</a>.</p>
+</section>
+
+<section id="reads">
+  <h2>What it reads, and not yet</h2>
+  <p><b>Printed (engraved) music</b>: staves, clefs, key and time signatures, notes and chords,
+  rests, dots, accidentals, beams, tuplets, ties and slurs, grace notes, several voices on a
+  staff, piano systems, multi-bar rests, percent repeats, octave lines, guitar and bass TAB,
+  drums; dynamics, hairpins, pedal marks and articulations; the tempo marking, the title,
+  subtitle, composer and poet over the first system, and the rehearsal marks in boxes over the
+  staff, which become the sections of the file. Best results come from clean digital pages
+  (PDF or image exports of LilyPond, MuseScore, Dorico, Finale) and good black-and-white scans
+  at about 300 dpi.</p>
+  <p><b>Not yet, while in beta</b>:</p>
+  <ul>
+    <li>Lyrics and chord names are passed over — not misread as notes, but not written.</li>
+    <li>Repeat bar lines, volta brackets, D.S. and Coda are not read: the piece comes out as
+    played once through.</li>
+    <li>A rehearsal mark of a single letter in a box becomes a nameless section; section names
+    printed without a box are not read.</li>
+    <li>Lead sheets (melody, chord names and verses) and parts laid out in columns read
+    poorly. Handwritten music is not read; colour or low-contrast scans read worse than black
+    and white.</li>
+    <li>Words — title, tempo, rehearsal marks — are read with the text recognition built into
+    Windows, in the languages installed for it, so a Latin title on a Japanese-only PC may come
+    out with a wrong letter or two.</li>
+  </ul>
+  <p>The reader's own page on the Marketplace keeps this list current; where it and this page
+  disagree, it is right.</p>
+</section>
+
+<section id="terms">
+  <h2>Privacy and terms</h2>
+  <p>Everything runs on your computer: a small learnt symbol detector, the rules of notation and
+  Windows' own text recognition read the page. No image or result is sent anywhere, and the
+  extension keeps no account or key.</p>
+  <p>Scan Import is <b>not free software</b> and is not under Lily#'s licence: it is a separate
+  program, under its own terms of use (free of charge while in beta; no redistribution; no
+  warranty), that Lily# runs as a child process. It contains no Lily# code, and Lily# — GPL-3.0
+  or later — contains none of it; a Lily# without it loses the scan commands and nothing else.
+  The terms and the third-party notices are on its Marketplace page and in the extension.</p>
+</section>
+
+</article>
+</div>

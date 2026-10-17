@@ -75,7 +75,7 @@ $published = [System.Collections.Generic.HashSet[string]]::new([StringComparer]:
 $tmp = Join-Path ([IO.Path]::GetTempPath()) 'lilysharp-site-check'
 New-Item -ItemType Directory -Force -Path $tmp | Out-Null
 $pages = @('index.html', 'start.html', 'learn.html', 'grammar.html', 'ref-music.html', 'ref-structure.html',
-    'ref-output.html', 'ref-lookup.html', 'chords.html', 'editor.html', 'commands.html', 'about.html') +
+    'ref-output.html', 'ref-lookup.html', 'chords.html', 'editor.html', 'commands.html', 'scan.html', 'about.html') +
     @(Get-ChildItem (Join-Path $here '../LilySharp.Lsp/Lessons/en') -Filter 'lesson-*.lys' | Sort-Object Name | ForEach-Object { "$($_.BaseName).html" })
 foreach ($page in $pages) {
     $html = Get-Content (Join-Path $here $page) -Raw -Encoding UTF8
