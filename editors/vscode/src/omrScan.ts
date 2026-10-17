@@ -410,8 +410,10 @@ function render(view: ScanView): void {
   .note { position: sticky; top: 0; z-index: 1; margin: 0 -8px 8px; padding: 8px;
           background: var(--vscode-editor-background); }
   .note > span.text { opacity: .8; }
-  .page { position: relative; margin: 0 auto 12px; max-width: 100%; }
-  .page img { display: block; width: 100%; height: auto; background: #fff; }
+  /* The pages are dragged to scroll, as the preview's sheet is (installDragScroll below): an
+     open hand over them, a closed one while they move; a bar and a mark keep the pointer. */
+  .page { position: relative; margin: 0 auto 12px; max-width: 100%; cursor: grab; }
+  .page img { display: block; width: 100%; height: auto; background: #fff; -webkit-user-drag: none; user-select: none; }
   .page svg { position: absolute; inset: 0; width: 100%; height: 100%; }
   .page.missing { padding: 12px; border: 1px dashed var(--vscode-editorWidget-border, #888); }
   /* A bar: the click takes its whole box, the tint its staff alone — as in the preview, in the
@@ -425,6 +427,7 @@ function render(view: ScanView): void {
   .filter { display: inline-flex; align-items: center; gap: 6px; margin-left: 12px; }
   .filter input { width: 140px; }
   rect.light { fill: rgba(0, 120, 215, .14); stroke: none; pointer-events: none; }
+  body.dragging, body.dragging * { cursor: grabbing; }
 </style></head><body>
 <p class="note"><span class="text">${esc(path.basename(view.lys.fsPath))} — read from ${side.pages.length === 1 ? 'this page' : `these ${side.pages.length} pages`}. `
         + `Red: marked to check — heavier where the reader is less sure. A click goes to the music; the caret lights its bar here.</span> `
@@ -484,6 +487,53 @@ ${pages || '<p>The side file lists no page.</p>'}
   }
   document.addEventListener('mouseover', e => hover(e.target.closest ? e.target.closest('g.bar') : null));
   document.addEventListener('mouseout', e => { if (!e.relatedTarget) hover(null); });
+
+  // Drag the pages to scroll them (owner's request 2026-10-17), the preview's installDragScroll
+  // (extension.ts) on the document, since this view scrolls as one: a press becomes a drag only
+  // once the mouse has moved SLOP pixels, so a click on a bar or a mark still goes to the music,
+  // and the click a drag ends with is swallowed in the capture phase. Only the left button of a
+  // mouse with no modifier; a press on the sticky head, a control or a scroll bar is left alone.
+  // The pages are images, so their native drag is refused too (dragstart).
+  (function installDragScroll() {
+    const SLOP = 4;
+    const scroller = document.scrollingElement || document.documentElement;
+    let press = null, dragged = false;
+    document.addEventListener('pointerdown', e => {
+      dragged = false;
+      press = null;
+      if (e.pointerType !== 'mouse' || e.button !== 0 || e.shiftKey || e.ctrlKey || e.metaKey || e.altKey) return;
+      if (e.target.closest && e.target.closest('.note, button, input, select, textarea, a')) return;
+      const root = document.documentElement;
+      if (e.clientX >= root.clientWidth || e.clientY >= root.clientHeight) return;
+      press = { id: e.pointerId, x: e.clientX, y: e.clientY, left: scroller.scrollLeft, top: scroller.scrollTop };
+    });
+    document.addEventListener('pointermove', e => {
+      if (press === null || e.pointerId !== press.id) return;
+      const dx = e.clientX - press.x, dy = e.clientY - press.y;
+      if (!dragged) {
+        if (Math.abs(dx) < SLOP && Math.abs(dy) < SLOP) return;
+        dragged = true;
+        document.body.setPointerCapture(e.pointerId);
+        document.body.classList.add('dragging');
+      }
+      scroller.scrollLeft = press.left - dx;
+      scroller.scrollTop = press.top - dy;
+    });
+    const release = e => {
+      if (press === null || e.pointerId !== press.id) return;
+      press = null;
+      document.body.classList.remove('dragging');
+    };
+    document.addEventListener('pointerup', release);
+    document.addEventListener('pointercancel', e => { release(e); dragged = false; });
+    document.addEventListener('click', e => {
+      if (!dragged) return;
+      dragged = false;
+      e.stopImmediatePropagation();
+      e.preventDefault();
+    }, true);
+    document.addEventListener('dragstart', e => e.preventDefault());
+  })();
 
   // B4: the bar at the top of the view goes to the preview as the scan scrolls; a scroll
   // the preview asked for (showBar) is not reported back.

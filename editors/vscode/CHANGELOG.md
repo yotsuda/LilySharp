@@ -139,6 +139,14 @@ All notable changes to the Lily# VS Code extension are documented here.
   each staff's bar from its first note to the bar line closing it (every printed copy), and it
   follows the caret and the edits.
 
+### The scan view scrolls when you drag a page
+
+- **Show Original Scan scrolls when you drag a page** with the left mouse button, as the score
+  preview does (an open hand over the pages, a closed one while they move; owner's request
+  2026-10-17). A press becomes a drag only once the mouse has moved a few pixels, so a click on a
+  bar or a red mark still goes to the music, and the click that ends a drag does nothing. The
+  head line, its checkbox and slider, the scroll bars and touch work as before.
+
 ### The scan view's head stays put
 
 - **The line at the top of Show Original Scan — what was read, *Scroll with the preview*, the
