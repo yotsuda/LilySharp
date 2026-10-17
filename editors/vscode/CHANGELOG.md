@@ -2,7 +2,7 @@
 
 All notable changes to the Lily# VS Code extension are documented here.
 
-## Unreleased
+## 0.13.0
 
 ### Ctrl+Shift+Up / Down step a note to the next note of the key; the octave moves to PageUp / PageDown
 

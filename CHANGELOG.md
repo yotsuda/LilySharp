@@ -4,7 +4,7 @@ Notable changes to Lily# are recorded here, newest first. Release notes are take
 from this file: the topmost section is the version being tagged, and the release
 workflow attaches that section to the GitHub Release verbatim.
 
-## Unreleased
+## 0.13.0
 
 ### `shift +1` moves the whole piece a semitone
 
