@@ -150,6 +150,10 @@ All notable changes to the Lily# VS Code extension are documented here.
   the edits, as the hover between the two views does, so a section played twice frames both
   copies; a `@todo` the scan does not know (written by hand) frames the staff's bar it is written
   in.
+- **And the scan frames such a mark part by part too**: a mark over two parts' bars is two
+  frames on the scan, one per part-bar, where the reader drew one box round both (owner's
+  report 2026-10-17: "破線の大きさが揃わない"). The frames share the mark's key, so the slider
+  and a resolve take them together, and the slider's count stays a count of marks.
 
 ### The scan and the preview are cut alike at the top, and both show their title at the top
 

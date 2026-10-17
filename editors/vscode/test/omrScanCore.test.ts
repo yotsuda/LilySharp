@@ -24,7 +24,7 @@ import * as path from 'node:path';
 import * as vm from 'node:vm';
 import {
     SCAN_DEFAULT_THRESHOLD, anchorsOf, barOnLine, markFactsOf, pageLabel, parseSideFile, scanBarForPrinted, scanTitle,
-    ScanTodo, coverageOf, flaggedMarks, hiddenTodoKeys, resolvedTodoKeys, shiftAnchors, shownAt, shownImage, sideFileOf, barStaff, todoStroke, todoTarget,
+    ScanTodo, coverageOf, flaggedMarks, frameBoxesOf, hiddenTodoKeys, resolvedTodoKeys, shiftAnchors, shownAt, shownImage, sideFileOf, barStaff, todoStroke, todoTarget,
     lineAround, lineOfScanBar, scanBarForStart,
 } from '../src/omrScanCore';
 
@@ -201,6 +201,16 @@ describe('how sure the reader is (LilySharp-Omr reply 2026-10-12: a confidence o
         assert.deepEqual(at({ part: 'lh', bars: [{ measure: 4 }] }), [0, 1]);
         assert.deepEqual(at({ part: 'lh', bars: [{ measure: 5, part: 'rh' }] }), []);
         assert.deepEqual(coverageOf({ part: 'lh' }, scan), []);                       // no bar at all
+    });
+
+    it('frames a mark over several parts with one box per part-bar, as the preview draws it', () => {
+        const rh = scan.measures[0].box, lh = scan.measures[1].box;
+        assert.deepEqual(frameBoxesOf(scan.todos[0], scan), [scan.todos[0].box]);                     // b4-lh: its own
+        const two: ScanTodo = { ...scan.todos[0], key: 'b4', part: undefined, parts: ['rh', 'lh'] };
+        assert.deepEqual(frameBoxesOf(two, scan), [rh, lh]);
+        assert.deepEqual(frameBoxesOf({ ...two, parts: undefined }, scan), [rh, lh]);                 // the whole bar
+        assert.deepEqual(frameBoxesOf({ ...two, parts: ['lh'] }, scan), [two.box]);                   // one part: as drawn
+        assert.deepEqual(frameBoxesOf({ ...two, page: 2 }, scan), [two.box]);                         // its bars are not on its page
     });
 
     it('reads a length mark\'s parts and a mark\'s bars from the side file', () => {

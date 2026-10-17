@@ -149,6 +149,15 @@ export function hiddenTodoKeys(todos: readonly Pick<ScanTodo, 'key' | 'confidenc
     return [...new Set(todos.filter(t => !shownAt(t, threshold)).map(t => t.key))];
 }
 
+/** The boxes the scan frames a mark with: one per part-bar it covers when it covers more than
+ *  one on its page (the preview frames each staff's bar on its own, and the two views frame
+ *  alike — owner's report 2026-10-17: "元スキャンではパートふたつを囲む大きな枠になるが、lys 譜面は
+ *  パートごとに別の枠"), else its own box — a note's heads, a part's bar — as the reader drew it. */
+export function frameBoxesOf(todo: ScanTodo, side: ScanSideFile): Box[] {
+    const covered = coverageOf(todo, side).filter(i => side.measures[i].page === todo.page);
+    return covered.length >= 2 ? covered.map(i => side.measures[i].box) : [todo.box];
+}
+
 /** A mark the preview frames (B4): the part-bars it covers on the scan (`bars`, indices into the
  *  side file's measures — coverageOf; the preview frames the staff's bar written on each one's
  *  line, so the two views frame the same thing, owner's request 2026-10-17) and where it is

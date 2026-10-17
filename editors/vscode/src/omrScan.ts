@@ -27,7 +27,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import type { LanguageClient } from 'vscode-languageclient/node';
 import {
-    BarAnchor, PrintedBar, ScanSideFile, ScanTarget, ServerTodo, anchorsOf, barOnLine, flaggedMarks, hiddenTodoKeys, parseSideFile, resolvedTodoKeys, barStaff,
+    BarAnchor, PrintedBar, ScanSideFile, ScanTarget, ServerTodo, anchorsOf, barOnLine, flaggedMarks, frameBoxesOf, hiddenTodoKeys, parseSideFile, resolvedTodoKeys, barStaff,
     SCAN_DEFAULT_THRESHOLD, pageLabel, scanBarForPrinted, scanTitle, shiftAnchors, shownImage, sideFileOf, todoStroke,
     todoTarget, lineOfScanBar, scanBarForStart,
 } from './omrScanCore';
@@ -402,11 +402,14 @@ function render(view: ScanView): void {
         // A dashed outline, heavier and darker the less sure the reader is (a quiet one a faint
         // hairline); the slider hides the surer. Drawn after the bars, over them, and taking no
         // pointer (the CSS), so the bar under a mark is still the thing hovered and clicked.
-        const todos = side.todos.filter(t => t.page === p.page).map(t => {
+        // A mark over several parts is one frame per part-bar (frameBoxesOf), as the preview
+        // draws it; the frames share the mark's key, so the slider and a resolve take them together.
+        const todos = side.todos.filter(t => t.page === p.page).flatMap(t => {
             const s = todoStroke(t), sure = t.confidence === undefined ? '' : ` (${t.confidence.toFixed(2)})`;
-            return `<rect class="todo${t.quiet ? ' quiet' : ''}" ${rect(t.box)} data-key="${esc(t.key)}" `
+            return frameBoxesOf(t, side).map(box =>
+                `<rect class="todo${t.quiet ? ' quiet' : ''}" ${rect(box)} data-key="${esc(t.key)}" `
                 + `data-c="${t.confidence ?? ''}" style="stroke-width: ${s.width}px; stroke-opacity: ${s.opacity}">`
-                + `<title>${esc(t.memo ?? t.key)}${sure}</title></rect>`;
+                + `<title>${esc(t.memo ?? t.key)}${sure}</title></rect>`);
         }).join('');
         return `<section class="page" data-page="${p.page}" title="${esc(pageLabel(p))}">`
             + `<img src="${src}" alt="page ${p.page}">`
@@ -480,17 +483,18 @@ ${pages || '<p>The side file lists no page.</p>'}
   if (typeof state.threshold === 'number') thr.value = String(state.threshold);
   // The marks the .lys no longer carries (resolved, sent by the extension) show at no value.
   let resolved = new Set();
+  // Counted by key: a mark over several parts is several frames, one mark.
   function filter() {
     const v = Number(thr.value);
-    let shown = 0, total = 0;
+    const shown = new Set(), total = new Set();
     for (const r of document.querySelectorAll('rect.todo')) {
       if (resolved.has(r.dataset.key)) { r.style.display = 'none'; continue; }
-      total++;
+      total.add(r.dataset.key);
       const on = r.dataset.c === '' || v >= 1 || Number(r.dataset.c) < v;
       r.style.display = on ? '' : 'none';
-      if (on) shown++;
+      if (on) shown.add(r.dataset.key);
     }
-    thrOut.textContent = v.toFixed(2) + ' (' + shown + ' / ' + total + ')';
+    thrOut.textContent = v.toFixed(2) + ' (' + shown.size + ' / ' + total.size + ')';
   }
   thr.addEventListener('input', () => { state.threshold = Number(thr.value); vscode.setState(state); filter(); });
   // The preview of the .lys hides the same marks (the extension turns the value into keys).
