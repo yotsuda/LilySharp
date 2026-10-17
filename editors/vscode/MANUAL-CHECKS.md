@@ -11,10 +11,10 @@
 
 ## 0. 準備
 
-- [ ] 拡張を組み直して入れる（`editors/vscode/DEPLOY.md` Local Testing の手順。`npm run vscode:prepublish` → `server` と `out\extension.js` を
+- [x] 拡張を組み直して入れる（`editors/vscode/DEPLOY.md` Local Testing の手順。`npm run vscode:prepublish` → `server` と `out\extension.js` を
       `%USERPROFILE%\.vscode\extensions\yotsuda.lilysharp-*` へ）。VS Code を **Reload Window**。
-- [ ] 出力チャネル「Lily#」に `Language server version: …` の行が出て、その番号が組み直した `lysc --version` と同じ（`Failed to get server version` が出ない）。
-- [ ] 設定の既定: `lilysharp.typingAids.enabled` 入・`lilysharp.audition.enabled` 入・`lilysharp.chordShapes.includeStretch` 切・
+- [x] 出力チャネル「Lily#」に `Language server version: …` の行が出て、その番号が組み直した `lysc --version` と同じ（`Failed to get server version` が出ない）。
+- [x] 設定の既定: `lilysharp.typingAids.enabled` 入・`lilysharp.audition.enabled` 入・`lilysharp.chordShapes.includeStretch` 切・
       `lilysharp.preview.refreshDelay` 100・`lilysharp.preview.highlightTodos` 入・`lilysharp.omr.verifyOnSave` 切。
 - 題材は `site/videos/SHOTLIST.md` の 4 行の本（clips 1〜5 用）と、そこに載っている各 clip の本。
 
@@ -26,177 +26,177 @@
 コード図の形はどちらの組でも動く。Ctrl+Alt+↑↓ は Lily# の割り当てではない（Windows のカーソル追加＝`auditionCore.ts` の註）。
 **下の項目の「↑ / ↓」は、オクターブ記号の項目では PgUp / PgDn と読む。**
 
-- [ ] **調の音**: `key f major a'4` の `a` で Ctrl+Shift+↑ → `bes'4`、もう 1 回 → `c''4`（記号が付いて音高が保たれる）。各回その音が鳴る。
-- [ ] `key g major e'4` で ↑ → `fis'4`。調号の無い本で `c'` ↑ → `d'`、`cis'` ↑ → `d'`、↓ → `c'`。`key a minor g'4` ↑ → `gis'4`（導音）、もう 1 回 → `a'4`。
-- [ ] **和音の転回**（2026-10-16 のユーザー決定）: `<c e g>` の `>` の直後で Ctrl+Shift+↑ → いちばん低い c だけが 1 オクターブ上がる（プレビューで e g c の形・e と g の高さは変わらない）。↓ → いちばん高い音が 1 オクターブ下がる。同じ位置で Ctrl+Shift+PgUp → `<c e g>'`（全体が上がる）。
-- [ ] relative の本で `f4 b4` の `b` で ↑ → `f4 c'4`（プレビューで c が f の上にある）。
-- [ ] **テンポ**（2026-10-16 のユーザー決定）: `tempo "Allegro" 4 = 120` の上（`tempo` から `120` までのどこでも）で Ctrl+Shift+↑ → `121`、Ctrl+Shift+PgUp → `131`、PgDn → `121`。プレビューのテンポ記号の数字も変わる。何も鳴らない。`tempo swing` の上ではステータスバーに *no metronome number*。
-- [ ] **調**（2026-10-16 のユーザー決定）: `key c major` の上で Ctrl+Shift+↑ → `key g major`、もう 1 回 → `key d major`、↓ 2 回で戻り、さらに ↓ → `key f major`。プレビューの調号が変わる。音符は書き換わらない。`key a minor` ↑ → `key e minor`。
-- [ ] **同主調・平行調**: `key c major` の上で Ctrl+Shift+PgUp → `key c minor`（同主調）、もう 1 回 → `key c major`。PgDn → `key a minor`（平行調・調号は変わらない）、もう 1 回 → `key c major`。タブは動かない。`key d dorian` の上ではステータスバーに *major and minor only*。
-- [ ] **音部記号**（2026-10-16 のユーザー要望）: `clef bass` の上で Ctrl+Shift+↑ → `clef tenor` → `clef alto` → `clef treble`、もう 1 回は動かずステータスバーに *already the highest*。↓ で逆に戻る。プレビューの音部記号が変わり、音符は書き換わらない。part の見出しの `clef bass`（サンプルの `part lh { clef bass octave 3 }`）でも同じに動く。見出しの `clef treble` で PgUp → `treble^8`・PgDn → `treble_8`、`clef bass` で PgDn → `bass_8`。音楽中の `clef treble` は PgDn → `treble_8` だけ。
-- [ ] **強弱**（2026-10-16 のユーザー決定）: `c'4@p` の `p` の上で Ctrl+Shift+↑ → `@mp` → `@mf`、↓ で戻る。`@decresc` の上で ↑ → `@cresc`、もう 1 回は動かない、↓ → `@decresc`。プレビューの記号が変わる。
-- [ ] **アーティキュレーション**（2026-10-16 のユーザー要望）: `c'4@downBow` の `downBow` の上で Ctrl+Shift+↑ → `@upBow`、もう 1 回は動かない（回らない＝ユーザー決定）、↓ → `@downBow`。ステータスバーは組の一覧だけ（`upBow / downBow`＝上が先・2026-10-17 のユーザー要望「大きい順」・現在の名前は繰り返さない＝ユーザー決定）。`@pullOff` ↑ → `@hammerOn`。`@staccato` ↑ → `@portato` → `@tenuto`（止まる）、↓ で戻って `@staccatissimo`。`@fermata` ↑ → `@longFermata`。`@staccato.up` で ↑ → `@portato.up`（`.up` は残る）。PgUp / PgDn でも同じ。プレビューの記号が変わる。`@tap` の上で ↑ → 音符の方が動く（`c'4@tap` → `d'4@tap`＝組の無い記号と `@sfz` のような段の無い強弱は、書かれた音符を動かす・2026-10-17 のユーザー要望）。`<c' e' g'>4@chord` の `chord` の上で ↑ → `<c'' e' g'>4@chord`（転回・`>` の上と同じ）、PgUp → `<c' e' g'>'4@chord`。`c'4@stemDown` の `stemDown` の上で ↑ → `@stemUp`（プレビューの符尾が上向きになる）、もう 1 回は動かない（ステータスバー `stemUp / stemDown`）。
-- [ ] **プレビューの記号のクリック**（2026-10-17 のユーザー報告）: プレビューのフェルマータをクリック → カレットが `@fermata` の `@` の**直後**に来る（前は `@` の直前＝音符の側で、そこで Ctrl+Shift+↑ を押すと音高が動いた）。そのまま Ctrl+Shift+↑ → `@longFermata`、音符は変わらない。強弱の `mf`・`@chord(Cm7)` のクリックも同じ。音符・小節・題名のクリックは今まで通り。
-- [ ] **拍子**: `time 3/4` の上で ↑ → `time 4/4`。`time 6/8` で PgUp → `3/4`、PgDn → `2/4`。`time 2/2` で PgUp → `4/4`。小節線が組み直される。
-- [ ] **octave N**: `part lh { clef bass octave 3 }` の `3` の上で ↑ → `octave 4`。その part の音がプレビューで 1 オクターブ上に、再生でも上で鳴る。
-- [ ] **transpose**: `part cl { transpose d }` の上で ↑ → `transpose ees`（ステータスバー *up 3 semitones*）。`key e major` の本で `transpose c` ↑ → `des`（F 長調になる・`cis` ではない）。PgUp → `ees'`。
-- [ ] **shift**（2026-10-17 のユーザー要望＝曲全体の半音シフト）: `key c major` の本の先頭に `shift 0` と書き、その上で Ctrl+Shift+↑ → `shift +1`（ステータスバー *shift +1: key c major -> des major*）。プレビューで全パートの音符と調号が D♭ 長調に、コード行の名前も D♭・A♭7 に、再生も半音上に。↓ 2 回 → `shift -1`（B 長調）。`transpose d` を持つパートも一緒に動く。コード図は書いた形ではなく新しいコードの既定の形。ドラムは動かない。PgUp / PgDn でも同じ 1 半音。
-- [ ] 音符の上でない所で Ctrl+Shift+PgUp / PgDn → エディタのタブが左右に動く（VS Code 既定の Move Editor Left / Right in Group）。音符の上ではタブは動かず、オクターブが動く。
+- [x] **調の音**: `key f major a'4` の `a` で Ctrl+Shift+↑ → `bes'4`、もう 1 回 → `c''4`（記号が付いて音高が保たれる）。各回その音が鳴る。
+- [x] `key g major e'4` で ↑ → `fis'4`。調号の無い本で `c'` ↑ → `d'`、`cis'` ↑ → `d'`、↓ → `c'`。`key a minor g'4` ↑ → `gis'4`（導音）、もう 1 回 → `a'4`。
+- [x] **和音の転回**（2026-10-16 のユーザー決定）: `<c e g>` の `>` の直後で Ctrl+Shift+↑ → いちばん低い c だけが 1 オクターブ上がる（プレビューで e g c の形・e と g の高さは変わらない）。↓ → いちばん高い音が 1 オクターブ下がる。同じ位置で Ctrl+Shift+PgUp → `<c e g>'`（全体が上がる）。
+- [x] relative の本で `f4 b4` の `b` で ↑ → `f4 c'4`（プレビューで c が f の上にある）。
+- [x] **テンポ**（2026-10-16 のユーザー決定）: `tempo "Allegro" 4 = 120` の上（`tempo` から `120` までのどこでも）で Ctrl+Shift+↑ → `121`、Ctrl+Shift+PgUp → `131`、PgDn → `121`。プレビューのテンポ記号の数字も変わる。何も鳴らない。`tempo swing` の上ではステータスバーに *no metronome number*。
+- [x] **調**（2026-10-16 のユーザー決定）: `key c major` の上で Ctrl+Shift+↑ → `key g major`、もう 1 回 → `key d major`、↓ 2 回で戻り、さらに ↓ → `key f major`。プレビューの調号が変わる。音符は書き換わらない。`key a minor` ↑ → `key e minor`。
+- [x] **同主調・平行調**: `key c major` の上で Ctrl+Shift+PgUp → `key c minor`（同主調）、もう 1 回 → `key c major`。PgDn → `key a minor`（平行調・調号は変わらない）、もう 1 回 → `key c major`。タブは動かない。`key d dorian` の上ではステータスバーに *major and minor only*。
+- [x] **音部記号**（2026-10-16 のユーザー要望）: `clef bass` の上で Ctrl+Shift+↑ → `clef tenor` → `clef alto` → `clef treble`、もう 1 回は動かずステータスバーに *already the highest*。↓ で逆に戻る。プレビューの音部記号が変わり、音符は書き換わらない。part の見出しの `clef bass`（サンプルの `part lh { clef bass octave 3 }`）でも同じに動く。見出しの `clef treble` で PgUp → `treble^8`・PgDn → `treble_8`、`clef bass` で PgDn → `bass_8`。音楽中の `clef treble` は PgDn → `treble_8` だけ。
+- [x] **強弱**（2026-10-16 のユーザー決定）: `c'4@p` の `p` の上で Ctrl+Shift+↑ → `@mp` → `@mf`、↓ で戻る。`@decresc` の上で ↑ → `@cresc`、もう 1 回は動かない、↓ → `@decresc`。プレビューの記号が変わる。
+- [x] **アーティキュレーション**（2026-10-16 のユーザー要望）: `c'4@downBow` の `downBow` の上で Ctrl+Shift+↑ → `@upBow`、もう 1 回は動かない（回らない＝ユーザー決定）、↓ → `@downBow`。ステータスバーは組の一覧だけ（`upBow / downBow`＝上が先・2026-10-17 のユーザー要望「大きい順」・現在の名前は繰り返さない＝ユーザー決定）。`@pullOff` ↑ → `@hammerOn`。`@staccato` ↑ → `@portato` → `@tenuto`（止まる）、↓ で戻って `@staccatissimo`。`@fermata` ↑ → `@longFermata`。`@staccato.up` で ↑ → `@portato.up`（`.up` は残る）。PgUp / PgDn でも同じ。プレビューの記号が変わる。`@tap` の上で ↑ → 音符の方が動く（`c'4@tap` → `d'4@tap`＝組の無い記号と `@sfz` のような段の無い強弱は、書かれた音符を動かす・2026-10-17 のユーザー要望）。`<c' e' g'>4@chord` の `chord` の上で ↑ → `<c'' e' g'>4@chord`（転回・`>` の上と同じ）、PgUp → `<c' e' g'>'4@chord`。`c'4@stemDown` の `stemDown` の上で ↑ → `@stemUp`（プレビューの符尾が上向きになる）、もう 1 回は動かない（ステータスバー `stemUp / stemDown`）。
+- [x] **プレビューの記号のクリック**（2026-10-17 のユーザー報告）: プレビューのフェルマータをクリック → カレットが `@fermata` の `@` の**直後**に来る（前は `@` の直前＝音符の側で、そこで Ctrl+Shift+↑ を押すと音高が動いた）。そのまま Ctrl+Shift+↑ → `@longFermata`、音符は変わらない。強弱の `mf`・`@chord(Cm7)` のクリックも同じ。音符・小節・題名のクリックは今まで通り。
+- [x] **拍子**: `time 3/4` の上で ↑ → `time 4/4`。`time 6/8` で PgUp → `3/4`、PgDn → `2/4`。`time 2/2` で PgUp → `4/4`。小節線が組み直される。
+- [x] **octave N**: `part lh { clef bass octave 3 }` の `3` の上で ↑ → `octave 4`。その part の音がプレビューで 1 オクターブ上に、再生でも上で鳴る。
+- [x] **transpose**: `part cl { transpose d }` の上で ↑ → `transpose ees`（ステータスバー *up 3 semitones*）。`key e major` の本で `transpose c` ↑ → `des`（F 長調になる・`cis` ではない）。PgUp → `ees'`。
+- [x] **shift**（2026-10-17 のユーザー要望＝曲全体の半音シフト）: `key c major` の本の先頭に `shift 0` と書き、その上で Ctrl+Shift+↑ → `shift +1`（ステータスバー *shift +1: key c major -> des major*）。プレビューで全パートの音符と調号が D♭ 長調に、コード行の名前も D♭・A♭7 に、再生も半音上に。↓ 2 回 → `shift -1`（B 長調）。`transpose d` を持つパートも一緒に動く。コード図は書いた形ではなく新しいコードの既定の形。ドラムは動かない。PgUp / PgDn でも同じ 1 半音。
+- [x] 音符の上でない所で Ctrl+Shift+PgUp / PgDn → エディタのタブが左右に動く（VS Code 既定の Move Editor Left / Right in Group）。音符の上ではタブは動かず、オクターブが動く。
 
 > ⚠️ **音はプレビューの webview が鳴らす**（`stepAudition.ts` の頭の註・2026-09-28 のユーザー決定）＝**その本のプレビューが開いていないと、ステップも自動の試聴も黙って何も鳴らさない**（ステップはプレビューを開かない）。Alt+P / Alt+M だけは 1 回目でプレビューを開き、2 回目で鳴る。確かめる前に `Ctrl+K V` でプレビューを横に開く。音が出ないときの切り分け: ⑴ プレビューが開いているか ⑵ Alt+P で鳴るか（鳴らなければ webview の合成器＝`AudioContext` の側・第901 からは SoundFont シンセ＝出力チャネル「Lily# Extension」の `Preview synth …` の行を見る） ⑶ 出力チャネル「Lily#」に `step:` の行が出ていないか（サーバーが Fallback を返した） ⑷ `lilysharp.audition.enabled` が切られていないか。サーバーの `lilysharp/step` は SHOTLIST の 4 行の本で `pitches=[72]` を返す（第888 が使い捨ての試験で確認）。
 
-- [ ] **オクターブ記号**（SHOTLIST clip 3 の手順）: `c4` の上で ↑ 2 回 → `c''4`、↓ 1 回 → `c'4`。各回その音が鳴る。
-- [ ] 和音の中の `e` で ↑ → `<c e' g>`（動くのはその音だけ・**鳴るのは和音全体**＝c e' g の 3 音・2026-10-10 のユーザー決定）。`>` の直後で ↑ → `<c e' g>'4`（和音全体が動いて鳴る）。カレットを `c` `e` `g` と渡っても和音は 1 回しか鳴らない。
-- [ ] プレビューを開いた直後（まだクリックしていない）に ↑ を押すと、ステータスバーに *Lily#: click the preview once to enable its sound* が出る。プレビューを一度クリックすると、以後は鳴る。プレビューを別の列へ動かした後（webview が作り直される）も同じ案内が出て、クリックで戻る。
-- [ ] **コード図の形**（clip 8 の手順）: `c'1@chord(Cm7)` の `Cm7` の上で ↑ → `@chord(Cm7 x35343)`、図が出て鳴る、
+- [x] **オクターブ記号**（SHOTLIST clip 3 の手順）: `c4` の上で ↑ 2 回 → `c''4`、↓ 1 回 → `c'4`。各回その音が鳴る。
+- [x] 和音の中の `e` で ↑ → `<c e' g>`（動くのはその音だけ・**鳴るのは和音全体**＝c e' g の 3 音・2026-10-10 のユーザー決定）。`>` の直後で ↑ → `<c e' g>'4`（和音全体が動いて鳴る）。カレットを `c` `e` `g` と渡っても和音は 1 回しか鳴らない。
+- [x] プレビューを開いた直後（まだクリックしていない）に ↑ を押すと、ステータスバーに *Lily#: click the preview once to enable its sound* が出る。プレビューを一度クリックすると、以後は鳴る。プレビューを別の列へ動かした後（webview が作り直される）も同じ案内が出て、クリックで戻る。
+- [x] **コード図の形**（clip 8 の手順）: `c'1@chord(Cm7)` の `Cm7` の上で ↑ → `@chord(Cm7 x35343)`、図が出て鳴る、
       ステータスバーに `Cm7: shape 1 of …`。↑ を続けると形と図が変わる。↓ で戻り、最初の形の上でさらに ↓ → 形が消えて図も消える。
-- [ ] **開放弦の輪**: 図の開放弦（形の `0`）は **塗らない輪**（○）、弾かない弦（`x`）は ×、押さえる弦は黒丸。`chord(C x32010)` で確かめる。
-- [ ] `lilysharp.chordShapes.includeStretch` を入にして ↑ を続けると、切のときには出なかった広い形が候補に増える。
-- [ ] `layout { chordDiagrams all }` の本では、形を書いていないコード名にも既定の図が出る。その上で ↓ → 図が消える。
-- [ ] 形がコード名と合わない（`@chord(C x35343)`）と LYS1039 の警告。
+- [x] **開放弦の輪**: 図の開放弦（形の `0`）は **塗らない輪**（○）、弾かない弦（`x`）は ×、押さえる弦は黒丸。`chord(C x32010)` で確かめる。
+- [x] `lilysharp.chordShapes.includeStretch` を入にして ↑ を続けると、切のときには出なかった広い形が候補に増える。
+- [x] `layout { chordDiagrams all }` の本では、形を書いていないコード名にも既定の図が出る。その上で ↓ → 図が消える。
+- [x] 形がコード名と合わない（`@chord(C x35343)`）と LYS1039 の警告。
 
 ### 1.2 入力補助（smartType: `'` `,` `.` `\` と数字）
 
-- [ ] **オクターブ記号が音名の直後に入る**（clip 1）: `cis4.` の `c` と `is` の間で `'` 2 回 → `cis''4.`、カレットは動かず、プレビューの音が上がる。
+- [x] **オクターブ記号が音名の直後に入る**（clip 1）: `cis4.` の `c` と `is` の間で `'` 2 回 → `cis''4.`、カレットは動かず、プレビューの音が上がる。
       `,` 1 回で `'` が 1 つ消える。`e4` の後ろで `'` → `e'4`。
-- [ ] **数字が音価を上書きする**（clip 2）: `d4` の直後で `8` → `d8`（`d48` ではない）。`f` と `4` の間で `1` → `f1`。`cis4.` の後で `8` → `cis8.`（付点は残る）。
-- [ ] `\` を音符の上で打つとタブの弦番号の枠が音符の後ろに開く（`c\3`）。`c\3 d` で `(` `[` を打つと弦番号を飛び越えて正しい音に付く。
-- [ ] `lilysharp.typingAids.enabled` を切ると、どのキーも素の文字になる。
-- [ ] 補完のポップアップが開いている間は `'` `,` が補完の操作を邪魔しない（`!suggestWidgetVisible`）。
+- [x] **数字が音価を上書きする**（clip 2）: `d4` の直後で `8` → `d8`（`d48` ではない）。`f` と `4` の間で `1` → `f1`。`cis4.` の後で `8` → `cis8.`（付点は残る）。
+- [x] `\` を音符の上で打つとタブの弦番号の枠が音符の後ろに開く（`c\3`）。`c\3 d` で `(` `[` を打つと弦番号を飛び越えて正しい音に付く。
+- [x] `lilysharp.typingAids.enabled` を切ると、どのキーも素の文字になる。
+- [x] 補完のポップアップが開いている間は `'` `,` が補完の操作を邪魔しない（`!suggestWidgetVisible`）。
 
 ### 1.3 Split Sections to Match a Part（clip 7）と Regroup
 
-- [ ] clip 7 の本で `A` の警告をホバー → `Ctrl+.` → *Split section A in the other parts to match vn1…*。
+- [x] clip 7 の本で `A` の警告をホバー → `Ctrl+.` → *Split section A in the other parts to match vn1…*。
       確認の UI に計画（vn2 の A を 2 小節で A, B に割る・form は A → A B）が出て、**Apply** で vn2 が `section A` `section B` になり、form が `A B`、警告が消える。
-- [ ] 同じ確認で **Cancel** → 何も変わらない。
-- [ ] `Lily#: Regroup (by part ⇄ by section)` を往復して本が同じ絵に戻る（プレビューが動かない）。
+- [x] 同じ確認で **Cancel** → 何も変わらない。
+- [x] `Lily#: Regroup (by part ⇄ by section)` を往復して本が同じ絵に戻る（プレビューが動かない）。
 
 ### 1.4 SHOTLIST の 9 本（ユーザーが録る）
 
-- [ ] clip 4 audition: 矢印キーで音符に乗るたびに 1 度鳴る・打った `a` が鳴る（Alt+P 長押し・Alt+M で小節）。
-- [ ] clip 5 preview: 打鍵ごとに譜が伸びる・カレットの音が光る・選択範囲が光る・プレビューのクリックでエディターが飛ぶ。
-- [ ] clip 6 quick fix: *Add 1 bar line to bass (|)* で警告が消え、埋まった小節が描かれる。
-- [ ] clip 9 AI transform（Copilot のサインインが要る）: 候補が並んで描かれ、After/Before が切り替わり、Accept で本が変わり Ctrl+Z で戻る。
-- [ ] 録った mp4 を `site/videos/NAME.mp4` に置き、ページの `data-pending` を外す（SHOTLIST の手順）。
+- [x] clip 4 audition: 矢印キーで音符に乗るたびに 1 度鳴る・打った `a` が鳴る（Alt+P 長押し・Alt+M で小節）。
+- [x] clip 5 preview: 打鍵ごとに譜が伸びる・カレットの音が光る・選択範囲が光る・プレビューのクリックでエディターが飛ぶ。
+- [x] clip 6 quick fix: *Add 1 bar line to bass (|)* で警告が消え、埋まった小節が描かれる。
+- [x] clip 9 AI transform（Copilot のサインインが要る）: 候補が並んで描かれ、After/Before が切り替わり、Accept で本が変わり Ctrl+Z で戻る。
+- [x] 録った mp4 を `site/videos/NAME.mp4` に置き、ページの `data-pending` を外す（SHOTLIST の手順）。
 
 ## 2. 0.11.0 で入ったもの（`editors/vscode/CHANGELOG.md` 0.11.0）
 
 ### 2.1 `@todo` と元の画像（OMR の本が無くても見られる分）
 
-- [ ] `c4@todo` / `c4@todo("F♯ or F♮?")` が Problems に LYS4026 で出る。プレビューでは**符頭が人の手で描いたような赤い輪で囲まれ**（塗りではない・線は太め・始点を少し越えて閉じる・2026-10-10 のユーザー決定）、memo のあるものは**段の上の余白に小さめの赤い文字**（箱なし）で memo が出て、**音符の x から余白の広い側へ一定量ずらした所**に置かれ、**文字には下線**、輪から下線の中央へ引き出し線（輪・下線・線は同じ太さ 0.2）。`.down` の memo は文字の上の中央につなぐ（線が文字を横切らないため）。`.down` で memo が段の下。**和音は全体を 1 つの輪**、休符も輪、`R1*N` は棒全体を輪。**プレビューでは memo の置き場が段組みに予約され、memo が頁の持つ余白に収まらないときだけ次の段と頁が下がる**（`Untitled-2.lys` は 1 空間も増えない・1 段に 6 本書いた `one.lys` は段が下がる＝第899〜900・2026-10-10 のユーザー決定「他の要素を動かしても良い・整った形に」・2026-10-11 の報告「余白が無駄に広い」）。**書き出し（PDF / PNG / SVG）の段組みは memo が無いときと同じ**（下の行）。その帯の中で **memo は他のインク（コードネーム・強弱・加線の音符・先に置いた memo）と重ならない所へ逃げる**＝音符の反対側が空いていればそちらへ回り（ページの余白も使う）、両側ふさがっていれば上（`.down` は下）へ登る（第896・ユーザー要望「重なると読めない」「音符の近くの余白に」）。**同じ段の memo は短いものから順に、全部の左右の組み合わせを試して一番安い並び**（登りが少なく・引き出し線が他の memo の文字を通らず・箱が他の線の上に乗らない）**で描く**（第898〜899）＝隣り合う 2 音に memo を書いても（`c''4@todo("first memo here") d''4@todo("second memo here")`）、1 段に 6 本書いても（Lab `sessions/p896/probe/one.lys`）、どの引き出し線も他の memo の文字を通らない。**カレットをその音符に置くと輪はハイライト色の線になり、中は透過のまま**（塗られたら第892 の再発）。`lilysharp.preview.highlightTodos` を切ると輪・吹き出しの箱・線が消える（memo の文字は黒で残る）。
-- [ ] 同じ本を PDF / PNG / SVG に書き出すと、輪も吹き出しも無く、memo のぶんの余白も無い（書き出しは memo が無いときと同じ段組み）。
-- [ ] クイックフィックス *Resolve this TODO* / *Resolve all N TODOs* で `@todo` が消える（メモごと）。
-- [ ] `Lily#: Show Original Scan` は `x.omr.json` の無い本では出ない（コマンドパレットの when）。
-- [ ] 音符の後ろで `@` → 補完から `todo` を選ぶ → `@todo("")` が入り、カレットが `""` の間に来る（`text`・`mark` と同じ・2026-10-10 のユーザー要望）。そのまま Tab／Esc で抜けても `@todo("")` は情報 LYS4026（第903 から警告ではない）を出し、エラーにはならない。
-- [ ] `c4@todo("comment")` の `)` の後ろで `.` を打つ → 補完に `down`（先頭）と `up` が出て、選ぶと `@todo("comment").down` になる。`)` の直後で Ctrl+Space でも `.down`／`.up` が出る。`@text("dolce").` は `up` が先頭、`@fermata.` も `.` で開く。**付点の `c4.` では何も開かない**（`.` は配置のときだけ答える・2026-10-11 のユーザー要望）。⚠️ Reload Window が要る（トリガー文字はサーバの起動時に決まる）。
+- [x] `c4@todo` / `c4@todo("F♯ or F♮?")` が Problems に LYS4026 で出る。プレビューでは**符頭が人の手で描いたような赤い輪で囲まれ**（塗りではない・線は太め・始点を少し越えて閉じる・2026-10-10 のユーザー決定）、memo のあるものは**段の上の余白に小さめの赤い文字**（箱なし）で memo が出て、**音符の x から余白の広い側へ一定量ずらした所**に置かれ、**文字には下線**、輪から下線の中央へ引き出し線（輪・下線・線は同じ太さ 0.2）。`.down` の memo は文字の上の中央につなぐ（線が文字を横切らないため）。`.down` で memo が段の下。**和音は全体を 1 つの輪**、休符も輪、`R1*N` は棒全体を輪。**プレビューでは memo の置き場が段組みに予約され、memo が頁の持つ余白に収まらないときだけ次の段と頁が下がる**（`Untitled-2.lys` は 1 空間も増えない・1 段に 6 本書いた `one.lys` は段が下がる＝第899〜900・2026-10-10 のユーザー決定「他の要素を動かしても良い・整った形に」・2026-10-11 の報告「余白が無駄に広い」）。**書き出し（PDF / PNG / SVG）の段組みは memo が無いときと同じ**（下の行）。その帯の中で **memo は他のインク（コードネーム・強弱・加線の音符・先に置いた memo）と重ならない所へ逃げる**＝音符の反対側が空いていればそちらへ回り（ページの余白も使う）、両側ふさがっていれば上（`.down` は下）へ登る（第896・ユーザー要望「重なると読めない」「音符の近くの余白に」）。**同じ段の memo は短いものから順に、全部の左右の組み合わせを試して一番安い並び**（登りが少なく・引き出し線が他の memo の文字を通らず・箱が他の線の上に乗らない）**で描く**（第898〜899）＝隣り合う 2 音に memo を書いても（`c''4@todo("first memo here") d''4@todo("second memo here")`）、1 段に 6 本書いても（Lab `sessions/p896/probe/one.lys`）、どの引き出し線も他の memo の文字を通らない。**カレットをその音符に置くと輪はハイライト色の線になり、中は透過のまま**（塗られたら第892 の再発）。`lilysharp.preview.highlightTodos` を切ると輪・吹き出しの箱・線が消える（memo の文字は黒で残る）。
+- [x] 同じ本を PDF / PNG / SVG に書き出すと、輪も吹き出しも無く、memo のぶんの余白も無い（書き出しは memo が無いときと同じ段組み）。
+- [x] クイックフィックス *Resolve this TODO* / *Resolve all N TODOs* で `@todo` が消える（メモごと）。
+- [x] `Lily#: Show Original Scan` は `x.omr.json` の無い本では出ない（コマンドパレットの when）。
+- [x] 音符の後ろで `@` → 補完から `todo` を選ぶ → `@todo("")` が入り、カレットが `""` の間に来る（`text`・`mark` と同じ・2026-10-10 のユーザー要望）。そのまま Tab／Esc で抜けても `@todo("")` は情報 LYS4026（第903 から警告ではない）を出し、エラーにはならない。
+- [x] `c4@todo("comment")` の `)` の後ろで `.` を打つ → 補完に `down`（先頭）と `up` が出て、選ぶと `@todo("comment").down` になる。`)` の直後で Ctrl+Space でも `.down`／`.up` が出る。`@text("dolce").` は `up` が先頭、`@fermata.` も `.` で開く。**付点の `c4.` では何も開かない**（`.` は配置のときだけ答える・2026-10-11 のユーザー要望）。⚠️ Reload Window が要る（トリガー文字はサーバの起動時に決まる）。
 
 ### 2.2 コード図まわり
 
-- [ ] `layout { chordDiagrams … { … } }` の表の中で補完が、本に出てくるコード名のうち表に無いもの → 調のコード → `section` → section 名の順に出る。
-- [ ] 表の中の `section NAME`・調弦の語・形が色づき、表の `}` の後ろの `layout` の鍵も色が続く。
-- [ ] 同じ part を capo の違う 2 つの score が弾く本で `chord(…)` をホバー → score ごとに 1 行、capo の下で鳴る音名が書かれる。
+- [x] `layout { chordDiagrams … { … } }` の表の中で補完が、本に出てくるコード名のうち表に無いもの → 調のコード → `section` → section 名の順に出る。
+- [x] 表の中の `section NAME`・調弦の語・形が色づき、表の `}` の後ろの `layout` の鍵も色が続く。
+- [x] 同じ part を capo の違う 2 つの score が弾く本で `chord(…)` をホバー → score ごとに 1 行、capo の下で鳴る音名が書かれる。
 
 ### 2.3 プレビューの Export と再生
 
-- [ ] picker を `score practice`（form が section B から始まる）にして Export → MIDI が B から始まる（`lysc midi --score practice` と同じ）。
-- [ ] Export の PDF / PNG が選んだ score の絵（score の名前を変えた直後でも、名無しの絵にならない）。SVG にフォントが入っている。
-- [ ] MIDI / LilyPond の Export の警告がエディターの通知に出る。
-- [ ] 1 part だけの score を選んで Play → その score の part と form だけが鳴る。
-- [ ] form が 6 回弾く section の中で音を打つ → プレビューの 6 回全部が描き直る。
+- [x] picker を `score practice`（form が section B から始まる）にして Export → MIDI が B から始まる（`lysc midi --score practice` と同じ）。
+- [x] Export の PDF / PNG が選んだ score の絵（score の名前を変えた直後でも、名無しの絵にならない）。SVG にフォントが入っている。
+- [x] MIDI / LilyPond の Export の警告がエディターの通知に出る。
+- [x] 1 part だけの score を選んで Play → その score の part と form だけが鳴る。
+- [x] form が 6 回弾く section の中で音を打つ → プレビューの 6 回全部が描き直る。
 
 #### 2.3.1 SoundFont の音源（第901・`docs/playback-design.md`）
 
-- [ ] プレビューを開くと出力チャネル「Lily# Extension」に `Preview synth loading: …` の行が段階ごとに出る（processor を足す→synth を作る→音源を fetch）。すぐに `Preview synth ready: 約 3 MB in … ms: …gm.dls` が出る（音源は同梱しない＝既定は OS の General MIDI バンク・2026-10-12 オーナー決定。開発機で `media/soundfont/` に音源を置いているとそちらが先に鳴るので、確かめるときは一時的に退ける）（AudioContext は最初のクリックまで suspended だが、worklet は suspended でも答える＝第901 実機 2 回目で確認。出なければプレビューを 1 回クリック）。`failed` なら理由がその行にある。読み込み中に ▶ を押すと「Loading the sound font…」と出て、間に合えば音源で、8 秒で来なければ従来の音で鳴る。
-- [ ] **Choose Sound Font… の履歴**（2026-10-12）: Browse で 2 つの音源を順に選ぶ → もう一度開くと `Default` の下に 2 つ（新しい順・使用中に `(current)`）。片方のファイルを別の場所へ移してから開くと、その 1 つだけ出ない（戻すとまた出る）。🗑 を押すとその行が消え、ファイルは残る。`Default` を選ぶと既定の音に戻る。
-- [ ] ▶ で楽器の音（ピアノ・ギター等）が鳴る。`part vn { midiInstrument "violin" }` と `part kit { clef percussion }` の本で、vn はバイオリン・kit はドラムの音。
-- [ ] 密な本（和音の多いピアノ譜・4 part 以上）で、途切れ・歪みが無い。⏹ を押すと直ちに止まり、後から音が漏れない。▶ を押し直す（seek）と頭から正しく鳴る。
-- [ ] プレビューのタブを隠して（別のタブを前に出して）も再生が続く。
-- [ ] Alt+P を長押し → その part の楽器で鳴り続け、離すと止まる。Ctrl+Shift+↑ の後の音も同じ楽器。
-- [ ] 設定 UI の `Lily# › Playback: Sound Font` の説明の「choose a file…」リンク（またはパレットの **Lily#: Choose Sound Font…**）→ 「Bundled」「Windows: gm.dls」「Browse for a file…」の 3 択。gm.dls を選ぶ → 設定に path が入り、開いているプレビューの音が（貧弱に）替わる。Browse → .sf2/.sf3/.dls に絞ったダイアログ。Bundled → 設定が空に戻り、同梱の音に戻る。
-- [ ] 設定 `lilysharp.playback.soundFont` に別の .sf2/.sf3 の path を入れる → 開いているプレビューの音が替わる（Reload 不要）。存在しない path → 出力チャネルに `does not exist` の行、音は同梱のまま。空に戻す → 同梱に戻る。
-- [ ] `media\soundfont` を空にして（実験）Reload → 出力チャネルに `Preview synth none`、▶ は従来のオシレーターの音で鳴る。
-- [ ] part の `{ }` の中で Ctrl+Space → `midiInstrument` を選ぶ → `midiInstrument ""` が入ってカーソルがクオートの中、そのまま 128 の楽器名（GM 順・家族名つき）が出る。`electric gui` まで打って `electric guitar (clean)` を選ぶと `"electric guitar (clean)"` になる（`"electric electric …` にならない）。`midiInstrument ` と手で打って Ctrl+Space → クオート付きの名前が入る。
+- [x] プレビューを開くと出力チャネル「Lily# Extension」に `Preview synth loading: …` の行が段階ごとに出る（processor を足す→synth を作る→音源を fetch）。すぐに `Preview synth ready: 約 3 MB in … ms: …gm.dls` が出る（音源は同梱しない＝既定は OS の General MIDI バンク・2026-10-12 オーナー決定。開発機で `media/soundfont/` に音源を置いているとそちらが先に鳴るので、確かめるときは一時的に退ける）（AudioContext は最初のクリックまで suspended だが、worklet は suspended でも答える＝第901 実機 2 回目で確認。出なければプレビューを 1 回クリック）。`failed` なら理由がその行にある。読み込み中に ▶ を押すと「Loading the sound font…」と出て、間に合えば音源で、8 秒で来なければ従来の音で鳴る。
+- [x] **Choose Sound Font… の履歴**（2026-10-12）: Browse で 2 つの音源を順に選ぶ → もう一度開くと `Default` の下に 2 つ（新しい順・使用中に `(current)`）。片方のファイルを別の場所へ移してから開くと、その 1 つだけ出ない（戻すとまた出る）。🗑 を押すとその行が消え、ファイルは残る。`Default` を選ぶと既定の音に戻る。
+- [x] ▶ で楽器の音（ピアノ・ギター等）が鳴る。`part vn { midiInstrument "violin" }` と `part kit { clef percussion }` の本で、vn はバイオリン・kit はドラムの音。
+- [x] 密な本（和音の多いピアノ譜・4 part 以上）で、途切れ・歪みが無い。⏹ を押すと直ちに止まり、後から音が漏れない。▶ を押し直す（seek）と頭から正しく鳴る。
+- [x] プレビューのタブを隠して（別のタブを前に出して）も再生が続く。
+- [x] Alt+P を長押し → その part の楽器で鳴り続け、離すと止まる。Ctrl+Shift+↑ の後の音も同じ楽器。
+- [x] 設定 UI の `Lily# › Playback: Sound Font` の説明の「choose a file…」リンク（またはパレットの **Lily#: Choose Sound Font…**）→ 「Bundled」「Windows: gm.dls」「Browse for a file…」の 3 択。gm.dls を選ぶ → 設定に path が入り、開いているプレビューの音が（貧弱に）替わる。Browse → .sf2/.sf3/.dls に絞ったダイアログ。Bundled → 設定が空に戻り、同梱の音に戻る。
+- [x] 設定 `lilysharp.playback.soundFont` に別の .sf2/.sf3 の path を入れる → 開いているプレビューの音が替わる（Reload 不要）。存在しない path → 出力チャネルに `does not exist` の行、音は同梱のまま。空に戻す → 同梱に戻る。
+- [x] `media\soundfont` を空にして（実験）Reload → 出力チャネルに `Preview synth none`、▶ は従来のオシレーターの音で鳴る。
+- [x] part の `{ }` の中で Ctrl+Space → `midiInstrument` を選ぶ → `midiInstrument ""` が入ってカーソルがクオートの中、そのまま 128 の楽器名（GM 順・家族名つき）が出る。`electric gui` まで打って `electric guitar (clean)` を選ぶと `"electric guitar (clean)"` になる（`"electric electric …` にならない）。`midiInstrument ` と手で打って Ctrl+Space → クオート付きの名前が入る。
 
 ### 2.4 エディターの小さな直し
 
-- [ ] part の下に書いた section header に `key` / `partial` / `time` / `tempo` を打つ → 音を触らなくてもプレビューが新しい header になる。
-- [ ] `key` を途中まで打ってもプレビューが止まらない。段の調号をクリックすると、編集の後でも `key` を書いた場所へ飛ぶ。
-- [ ] `key custom fis cis` の本でアウトラインとパンくずが出る。
-- [ ] 文字列: `"say \"hi\""` の `\"` が文字列の色のまま・`@"…"` は逐語・`"\^"` は LYS0036 の印。
-- [ ] section の音楽に `segno` を書くと LYS1034 のエラー。音楽の補完に `segno` `coda` `fine` `dc` `ds` が出ない。
+- [x] part の下に書いた section header に `key` / `partial` / `time` / `tempo` を打つ → 音を触らなくてもプレビューが新しい header になる。
+- [x] `key` を途中まで打ってもプレビューが止まらない。段の調号をクリックすると、編集の後でも `key` を書いた場所へ飛ぶ。
+- [x] `key custom fis cis` の本でアウトラインとパンくずが出る。
+- [x] 文字列: `"say \"hi\""` の `\"` が文字列の色のまま・`@"…"` は逐語・`"\^"` は LYS0036 の印。
+- [x] section の音楽に `segno` を書くと LYS1034 のエラー。音楽の補完に `segno` `coda` `fine` `dc` `ds` が出ない。
 
 ## 3. Unreleased（今の拡張で見られる）
 
 ### 3.1 名前の無いブロック・score の名前
 
-- [ ] `score { … }` と `score tab { … }` の本: picker に **(Default)** と **tab**。何も選んでいないとき (Default) が描かれる（tab が先に書いてあっても）。
-- [ ] `score "tab"` → LYS0038、クイックフィックスで `score tab` になる。`score tab "both"` → 文字列を消すフィックス。
-- [ ] section があって `score` の無い本 → LYS6014、クイックフィックスが score（chords の行・part ごとの staff・lyrics）を末尾に足し、本の改行に合う。
-- [ ] `form` / `score` のスニペットが名前の無いブロックを書く。score の中で `form |` と打つと form の一覧が補完に出る。
-- [ ] Export のファイル名: 名無しの score は `<本>.svg`、`score tab` は `<本>-tab.svg`（Explorer の batch export も同じ）。
-- [ ] `part bass { }` と `staff bass click` → part bass の譜で click は MIDI だけ、LYS1046 の警告が綴りを案内する。
-- [ ] `section A2 "A'" { }` を top level に書くと `form { A2 }` が A' を印刷。part の中の section にラベル → LYS0039。2 つの宣言でラベルが違う → LYS1045。
+- [x] `score { … }` と `score tab { … }` の本: picker に **(Default)** と **tab**。何も選んでいないとき (Default) が描かれる（tab が先に書いてあっても）。
+- [x] `score "tab"` → LYS0038、クイックフィックスで `score tab` になる。`score tab "both"` → 文字列を消すフィックス。
+- [x] section があって `score` の無い本 → LYS6014、クイックフィックスが score（chords の行・part ごとの staff・lyrics）を末尾に足し、本の改行に合う。
+- [x] `form` / `score` のスニペットが名前の無いブロックを書く。score の中で `form |` と打つと form の一覧が補完に出る。
+- [x] Export のファイル名: 名無しの score は `<本>.svg`、`score tab` は `<本>-tab.svg`（Explorer の batch export も同じ）。
+- [x] `part bass { }` と `staff bass click` → part bass の譜で click は MIDI だけ、LYS1046 の警告が綴りを案内する。
+- [x] `section A2 "A'" { }` を top level に書くと `form { A2 }` が A' を印刷。part の中の section にラベル → LYS0039。2 つの宣言でラベルが違う → LYS1045。
 
 ### 3.2 音楽フォント（SMuFL）
 
-- [ ] `fonts { music "Bravura" }` → プレビューが Bravura で描く（音部記号の形で分かる）。`"Petaluma"`・`"Leland"` も。
-- [ ] `fonts {` の中で `music` が補完に出て、値に引用符つきで `Emmentaler` `Bravura` `Leland` `Petaluma` が出る。`music` の鍵が色づく。
-- [ ] `music "NoSuchFont"` → LYS8019 の警告に探した場所が全部並ぶ。絵は Emmentaler のまま。
-- [ ] `music "Petaluma" "Bravura"` の鎖で、Petaluma に無いグリフが Bravura から描かれ、警告が 1 グリフ 1 回。
-- [ ] Petaluma の本: 題名・コード名・リハーサル記号・`@text`・テンポ・強弱の言葉・楽器名が Petaluma Script、歌詞は彫刻の書体のまま。
-- [ ] Petaluma の `form { Introduction "Intro" }` の枠が文字にぴったり（WOFF2 を組み直したので **カーニングが効く**＝以前は枠からはみ出した）。
-- [ ] `form { Introduction "ほえほえ" }` の枠がかなの高さで、細い帯にならない。
-- [ ] Petaluma の `time 4/4` で分子と分母が重ならない。
-- [ ] `lilysharp.fontPaths` に自前のフォルダを書くと、そこの SMuFL フォントが名前で見つかり、**設定を変えた瞬間に開いているプレビューが描き直る**。
+- [x] `fonts { music "Bravura" }` → プレビューが Bravura で描く（音部記号の形で分かる）。`"Petaluma"`・`"Leland"` も。
+- [x] `fonts {` の中で `music` が補完に出て、値に引用符つきで `Emmentaler` `Bravura` `Leland` `Petaluma` が出る。`music` の鍵が色づく。
+- [x] `music "NoSuchFont"` → LYS8019 の警告に探した場所が全部並ぶ。絵は Emmentaler のまま。
+- [x] `music "Petaluma" "Bravura"` の鎖で、Petaluma に無いグリフが Bravura から描かれ、警告が 1 グリフ 1 回。
+- [x] Petaluma の本: 題名・コード名・リハーサル記号・`@text`・テンポ・強弱の言葉・楽器名が Petaluma Script、歌詞は彫刻の書体のまま。
+- [x] Petaluma の `form { Introduction "Intro" }` の枠が文字にぴったり（WOFF2 を組み直したので **カーニングが効く**＝以前は枠からはみ出した）。
+- [x] `form { Introduction "ほえほえ" }` の枠がかなの高さで、細い帯にならない。
+- [x] Petaluma の `time 4/4` で分子と分母が重ならない。
+- [x] `lilysharp.fontPaths` に自前のフォルダを書くと、そこの SMuFL フォントが名前で見つかり、**設定を変えた瞬間に開いているプレビューが描き直る**。
       `LILYSHARP_FONT_PATH` でも同じ（VS Code を環境変数つきで起動）。
 
 ### 3.3 Markdown の fence
 
-- [ ] Markdown の ```` ```lily# ```` に score が 2 つある本を丸ごと貼る → 既定の score が描かれる（拒まない）。score の無い fence は LYS6014 で拒まれる。
+- [x] Markdown の ```` ```lily# ```` に score が 2 つある本を丸ごと貼る → 既定の score が描かれる（拒まない）。score の無い fence は LYS6014 で拒まれる。
 
 ### 3.4 小節のクリック（第905・隔離した VS Code で CDP の実入力では確認済み）
 
-- [ ] プレビューで小節の音符の無い所（五線の上）をクリック → エディターのカレットがその段のその小節の最初の音符へ飛ぶ。歌詞・コード名の行の上なら一番近い段の小節。
+- [x] プレビューで小節の音符の無い所（五線の上）をクリック → エディターのカレットがその段のその小節の最初の音符へ飛ぶ。歌詞・コード名の行の上なら一番近い段の小節。
       マウスを載せた小節が薄い青になり、カーソルが指になる。音符のクリックは今まで通りその音符へ、ドラッグは今まで通りスクロール。
-- [ ] 再生中に小節をクリック → その小節から鳴る（同じ section を 2 度書いた form なら、クリックした方の回から）。
-- [ ] Show Original Scan とプレビューを左右に並べる → プレビューの小節に載せるとスキャンの同じ小節（同じパート）が光る・スキャンの小節に載せるとプレビューの同じ小節が光る。どちらからマウスを外しても、相手の光が消える。
-- [ ] 行の末尾で `c d e r` と打って空白 → `c d e r | ` になる。続けて自分で `| ` を打っても二重にならない。Ctrl+Z 1 回で自動の `| ` だけ消える。足りない・溢れる小節、行の途中、3 連符の入った小節では入らない。
-- [ ] `voice { ‸ }` の中で 1 小節分打って空白 → `} { ` で次の声部へ。2 つ目の声部が 1 つ目と同じ長さになって空白 → `} ` で閉じる（`}` が二重にならない）。小節の途中で始まる voice、連符・装飾音の `{ }` の中では何もしない。
-- [ ] エディタでカレットを動かす → プレビューでカレットのある段・小節が青く光ったまま（スキャン画面の点灯と同じ）。小節の中で打ち込んでも、上に行を足しても、点灯が正しい小節について来る。小節と小節の間の空白や曲の外では消える。
-- [ ] .lys を閉じてプレビューだけ残す → プレビューの音符や小節をクリック → .lys がプレビューの左に（普通のタブで）開き直り、カレットがクリックした所に来る。
-- [ ] Show Original Scan の小節: マウスを載せた小節と caret の小節が**五線の内側だけ**同じ青で塗られ、枠線は無い。プレビューのホバーと同じ色・同じ範囲。五線の外（box の上下）のクリックでもその小節へ飛ぶ。
+- [x] 再生中に小節をクリック → その小節から鳴る（同じ section を 2 度書いた form なら、クリックした方の回から）。
+- [x] Show Original Scan とプレビューを左右に並べる → プレビューの小節に載せるとスキャンの同じ小節（同じパート）が光る・スキャンの小節に載せるとプレビューの同じ小節が光る。どちらからマウスを外しても、相手の光が消える。
+- [x] 行の末尾で `c d e r` と打って空白 → `c d e r | ` になる。続けて自分で `| ` を打っても二重にならない。Ctrl+Z 1 回で自動の `| ` だけ消える。足りない・溢れる小節、行の途中、3 連符の入った小節では入らない。
+- [x] `voice { ‸ }` の中で 1 小節分打って空白 → `} { ` で次の声部へ。2 つ目の声部が 1 つ目と同じ長さになって空白 → `} ` で閉じる（`}` が二重にならない）。小節の途中で始まる voice、連符・装飾音の `{ }` の中では何もしない。
+- [x] エディタでカレットを動かす → プレビューでカレットのある段・小節が青く光ったまま（スキャン画面の点灯と同じ）。小節の中で打ち込んでも、上に行を足しても、点灯が正しい小節について来る。小節と小節の間の空白や曲の外では消える。
+- [x] .lys を閉じてプレビューだけ残す → プレビューの音符や小節をクリック → .lys がプレビューの左に（普通のタブで）開き直り、カレットがクリックした所に来る。
+- [x] Show Original Scan の小節: マウスを載せた小節と caret の小節が**五線の内側だけ**同じ青で塗られ、枠線は無い。プレビューのホバーと同じ色・同じ範囲。五線の外（box の上下）のクリックでもその小節へ飛ぶ。
 
 ## 4. §2 R13 ⒝ — 差分頁の配信（実機未確認・第404）
 
-- [ ] 出力チャネル「Lily#」を開いたまま、1 頁の本で音を 1 つ打つ → `pages kept` の行（頁が丸ごと届き直していない）。
-- [ ] 複数頁の本（10 頁級）の途中の頁で音を 1 つ打つ → 編集した頁だけ `changed`、後ろの頁は `shifted`（`requestFull` が出ない）。
+- [x] 出力チャネル「Lily#」を開いたまま、1 頁の本で音を 1 つ打つ → `pages kept` の行（頁が丸ごと届き直していない）。
+- [x] 複数頁の本（10 頁級）の途中の頁で音を 1 つ打つ → 編集した頁だけ `changed`、後ろの頁は `shifted`（`requestFull` が出ない）。
       `PREVIEW update` の ms を見る（shifted 9 頁 × 1000 要素の DOM 書き換えの実測＝HANDOFF が求めている数字）。
-- [ ] 頁の高さが動く本（auto-size の fixture の形）では `requestFull` で全頁が届き直す＝その頻度（HANDOFF R13 ⒝′ の判断材料）。
-- [ ] 小節が増える編集で、後続の頁が小節番号の重ね描きだけの違いで丸ごと届くか（⒝ 群単位の item の値付け）。
+- [x] 頁の高さが動く本（auto-size の fixture の形）では `requestFull` で全頁が届き直す＝その頻度（HANDOFF R13 ⒝′ の判断材料）。
+- [x] 小節が増える編集で、後続の頁が小節番号の重ね描きだけの違いで丸ごと届くか（⒝ 群単位の item の値付け）。
 
 ## 5. OMR 連携 B1〜B6（`LilySharp-Omr` が要る・HANDOFF §1.0「B1〜B6 は VS Code で未確認」）
 
-- [ ] **B1** `Lily#: Convert Image/PDF to Lily# (.lys)…`: コマンド・Explorer の右クリック（png/jpg/tif/pdf）・エディターへのドラッグ＆ドロップ・画像の貼り付けの 4 経路で
+- [x] **B1** `Lily#: Convert Image/PDF to Lily# (.lys)…`: コマンド・Explorer の右クリック（png/jpg/tif/pdf）・エディターへのドラッグ＆ドロップ・画像の貼り付けの 4 経路で
       `lilysharp.omr.path` の OMR が走り、進み具合が通知に出て、終わると `.lys` とプレビューと scan が開く。OMR が無いと Scan Import 拡張の導入を案内する（第903）。
-- [ ] **B2** `x.omr.json` のある本で `#キー` 付きの `@todo` に、候補（`fis'8` / `f'8` …）がクイックフィックスとして出て、選ぶと音が置き換わり `@todo` が外れる。候補の無い todo は *Resolve* だけ。
-- [ ] **B3** `Lily#: Show Original Scan`: 頁画像の上に todo の枠が**赤い破線**（プレビューの小節の枠と同じ赤・同じ破線・2026-10-17 のユーザー要望）、小節の枠がクリックできる。小節のクリック → `.lys` のその小節の行。
+- [x] **B2** `x.omr.json` のある本で `#キー` 付きの `@todo` に、候補（`fis'8` / `f'8` …）がクイックフィックスとして出て、選ぶと音が置き換わり `@todo` が外れる。候補の無い todo は *Resolve* だけ。
+- [x] **B3** `Lily#: Show Original Scan`: 頁画像の上に todo の枠が**赤い破線**（プレビューの小節の枠と同じ赤・同じ破線・2026-10-17 のユーザー要望）、小節の枠がクリックできる。小節のクリック → `.lys` のその小節の行。
       赤枠の内側にマウスを載せても赤くならず、下の小節が他と同じ青に染まる。赤枠の内側のクリックもその小節へ（前は `@todo` へ飛び、赤い半透明で塗られた）。枠の tooltip にメモと確信度。
       頭の 1 行（読んだ頁の数・*Scroll with the preview*・*Marks below*）は頁をスクロールしても上に残る（2026-10-17 のユーザー要望）。その下に頁が潜り、帯の背景は透けない。プレビューの小節に飛んだとき（B4）小節は帯の下ではなく帯のすぐ下に来る。
       **頁のドラッグでスクロール**（2026-10-17 のユーザー要望・プレビューと同じ）: 頁の上で手のカーソル、左ボタンで掴んで動かすと頁が付いてくる（握った手）。小節・赤い印の上では指のまま、クリックは今まで通り飛ぶ。ドラッグの終わりのクリックは飛ばない。帯の上・スライダー・スクロールバーからは掴めない。画像の「ゴースト」が付いて来ない（ブラウザの画像ドラッグが起きない）。Scroll with the preview 入ならドラッグ中もプレビューが付いて来る。
       **Ctrl+ホイールで拡縮**（2026-10-17 のユーザー要望・プレビューと同じ 25〜400%・10% 刻み）: マウスの下の点が動かない・右下に `150%` のような表示が一瞬出る・頁の幅がペインを超えたら横スクロールできる（帯はそのまま）・小節の青い塗りと赤い破線も一緒に拡大される・ドラッグ・クリック・ホバーは拡大後も同じ小節に効く・タブを閉じて開き直しても倍率が残る。
       **右クリック**（同日のユーザー要望）: Cut/Copy/Paste は出ず、*Fit Width* と *Reset Zoom (1:1)* の 2 つだけ。Fit Width → 100%（頁がペインの幅）。Reset Zoom (1:1) → 頁の実寸（読んだ画像の 1 px が画面の 1 px・右下の表示は例えば `310%`・400% で頭打ち）、頁の左上が帯の下に来る。パレットでも scan がアクティブなら 2 つが出る。プレビューの右クリックは今まで通り（Play from Here・Fit Width・Reset Zoom (100%)）。
       `.lys` のカレット → 対応する枠が光ってスクロール（編集で行がずれても追う）。プレビューのクリックでも同じ。
-- [ ] **B4** *Scroll with the preview*（既定で入）: scan とプレビューが小節ごとに一緒にスクロール。`@todo` のある小節がプレビューで赤い破線の枠＝**scan の箱と同じパート小節だけ**（2026-10-17 のユーザー要望・前は段の全パートを囲んだ）: パートの印はそのパートの五線の小節・長さの印（memo に `voices …`・side file に `parts`）は拍が合わないパート全部・符尾／連符の印（`part: null`）は全パート。**2 パート以上を覆う印は scan でもパートごとの枠**（同日のユーザー報告「大きさが揃わない」・reader の箱が 2 パートを一つで囲んでいても、Lily# は `bars` のパート小節ごとに描く）＝両側とも同じ数・同じ大きさの枠。スライダーの `(N / M)` は枠の数ではなく印の数。**プレビューの枠の高さは五線ちょうどではなく上下に 2 間ずつ広い**（scan の箱と同じ・同日のユーザー要望）＝五線の高さの 2 倍。青い塗り（ホバー・caret）は今まで通り五線の内側だけ。手で書いた `@todo`（scan が知らない key）はそれが書かれた五線の小節。同じ section を 2 回弾く本では両方の写しに枠。
+- [x] **B4** *Scroll with the preview*（既定で入）: scan とプレビューが小節ごとに一緒にスクロール。`@todo` のある小節がプレビューで赤い破線の枠＝**scan の箱と同じパート小節だけ**（2026-10-17 のユーザー要望・前は段の全パートを囲んだ）: パートの印はそのパートの五線の小節・長さの印（memo に `voices …`・side file に `parts`）は拍が合わないパート全部・符尾／連符の印（`part: null`）は全パート。**2 パート以上を覆う印は scan でもパートごとの枠**（同日のユーザー報告「大きさが揃わない」・reader の箱が 2 パートを一つで囲んでいても、Lily# は `bars` のパート小節ごとに描く）＝両側とも同じ数・同じ大きさの枠。スライダーの `(N / M)` は枠の数ではなく印の数。**プレビューの枠の高さは五線ちょうどではなく上下に 2 間ずつ広い**（scan の箱と同じ・同日のユーザー要望）＝五線の高さの 2 倍。青い塗り（ホバー・caret）は今まで通り五線の内側だけ。手で書いた `@todo`（scan が知らない key）はそれが書かれた五線の小節。同じ section を 2 回弾く本では両方の写しに枠。
       **一番上**（2026-10-17 のユーザー要望）: プレビューを一番上まで戻す → scan も一番上（頁の頭が見える）。scan を一番上まで戻す → プレビューも一番上（曲名が見える）。前はどちらも相手の最初の小節を上端に置き、題名が隠れた。
       **見切れの一致**（同日のユーザー要望）: 片方で上端の小節が半分隠れる位置に止める → 相手でも同じ小節が上端でほぼ半分隠れる（前は相手の小節が上端の少し下に来た）。上端の小節の上端が丁度見えている → 相手も丁度。scan の「上端」は帯の下端。
       `paper { breaksOnly }` の本で段組みが元と揃う。
-- [ ] **B5** `lilysharp.omr.verifyOnSave` 入 → 保存で `omr verify` が走り、scan とクイックフィックスが更新される（**OMR 側の `verify` 実装待ち**。無ければ呼ばれないことを確かめる）。
-- [ ] **B6** `@todo` を含む範囲を選んで Ctrl+I → プロンプトに todo のメモ・確信度・候補が入っている（Output / デバッグで見る）。直した印は `@todo` が外れ、直さない印は残る。
-- [ ] **B7**（第903・OMR 拡張の受け口）: `LILYSHARP_OMR_PATH` を外し、OMR 側の VSIX（`..\LilySharp-Omr\out\extension\lilysharp-omr-win32-x64-0.3.0.vsix`）を
+- [x] **B5** `lilysharp.omr.verifyOnSave` 入 → 保存で `omr verify` が走り、scan とクイックフィックスが更新される（**OMR 側の `verify` 実装待ち**。無ければ呼ばれないことを確かめる）。
+- [x] **B6** `@todo` を含む範囲を選んで Ctrl+I → プロンプトに todo のメモ・確信度・候補が入っている（Output / デバッグで見る）。直した印は `@todo` が外れ、直さない印は残る。
+- [x] **B7**（第903・OMR 拡張の受け口）: `LILYSHARP_OMR_PATH` を外し、OMR 側の VSIX（`..\LilySharp-Omr\out\extension\lilysharp-omr-win32-x64-0.3.0.vsix`）を
       *Install from VSIX…* で入れる → Reload なしで Explorer の画像の右クリックに *Convert Image/PDF to Lily# (.lys)… (Beta)* が出る・Output に `OMR reader (extension): …\bin\omr.exe`・
       取り込み直後に照合の `@todo` が付く（`--verify`）・初回だけ Beta の一言。拡張を外す → 右クリックの項目は **残る**（Windows・`.lys` の無いワークスペースでも・2026-10-17 のユーザー決定「OMR 未インストールでもメニューを出す」）、右クリックでもパレットでも、ファイル選択ダイアログより**先に** *Install Scan Import* の案内（同日のユーザー決定・前はファイルを選んだ後で、右クリックの項目は OMR が入っているときだけだった）。
-- [ ] **B7′ 古い reader**（2026-10-17）: `LILYSHARP_OMR_PATH` に `--version --json` が `OMR_MIN_VERSION`（`omrCore.ts`）より小さい版を答える reader を指して読む → ファイルを選んだ後に警告 *Scan Import 0.2.0 is older than this Lily# is written for (0.3.0 or newer). Update it?*（ボタン *Update Scan Import*）。断る → その reader で読み込みが続く。押す → Marketplace の最新が入り、読み込みは行わない（もう一度実行）。保存時の verify は警告しない。
-- [ ] **B8**（第903・confidence）: OMR の新しい VSIX で取り込む → Problems で OMR の印の一部が **Warning**（confidence 0.6 未満）、残りと手で書いた `@todo` は **Info**。F8 が Warning の印から回る。
+- [x] **B7′ 古い reader**（2026-10-17）: `LILYSHARP_OMR_PATH` に `--version --json` が `OMR_MIN_VERSION`（`omrCore.ts`）より小さい版を答える reader を指して読む → ファイルを選んだ後に警告 *Scan Import 0.2.0 is older than this Lily# is written for (0.3.0 or newer). Update it?*（ボタン *Update Scan Import*）。断る → その reader で読み込みが続く。押す → Marketplace の最新が入り、読み込みは行わない（もう一度実行）。保存時の verify は警告しない。
+- [x] **B8**（第903・confidence）: OMR の新しい VSIX で取り込む → Problems で OMR の印の一部が **Warning**（confidence 0.6 未満）、残りと手で書いた `@todo` は **Info**。F8 が Warning の印から回る。
       Show Original Scan: 箱が塗りなしの赤い破線・低いものほど太く濃い・上に *Marks below* のスライダーと `(N / M)`・動かすと高いものが消える・`.lys` に無い印（quiet）は細く薄い（破線は同じ）。取り込みの通知に `(+N quiet, in the scan view)`。
 
 ## 6. 結果の書き方
