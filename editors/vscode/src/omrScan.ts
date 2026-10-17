@@ -578,8 +578,8 @@ ${pages || '<p>The side file lists no page.</p>'}
     zoomHide = setTimeout(() => zoomInfo.classList.remove('visible'), 1500);
   }
   applyZoom(false);
-  // To `next`, keeping the page point at (clientX, clientY) under that spot — the wheel's point,
-  // or the top-left of the pages for the menu.
+  // To the zoom next, keeping the page point at (clientX, clientY) under that spot — the wheel's
+  // point, or the top-left of the pages for the menu.
   function setZoom(next, clientX, clientY) {
     next = Math.min(4, Math.max(0.25, next));
     if (next === zoom) return;
