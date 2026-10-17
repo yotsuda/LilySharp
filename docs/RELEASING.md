@@ -38,6 +38,10 @@ The eight `vsix` legs run **one at a time** (`max-parallel: 1`). See
 * ⚠️ **A PAT expires — one year at most.** Nothing warns you. Put its expiry date
   somewhere you will look, or the next release fails at the last step with the version
   already burned.
+  **Current PAT: created 2026-10-17, expires 2027-10-16** (`vsce verify-pat` passed the
+  same day). When you regenerate it, update it in **both** places it lives: the
+  `VSCE_PAT` repository secret (what `release.yml` publishes with) and `~/.vsce` via
+  `npx @vscode/vsce login yotsuda` (what a hand publish uses) — and rewrite this line.
 
 ---
 
