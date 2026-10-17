@@ -403,9 +403,13 @@ function render(view: ScanView): void {
 <html lang="en"><head><meta charset="UTF-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src ${panel.webview.cspSource}; style-src 'unsafe-inline'; script-src 'nonce-${nonce}';">
 <style>
-  body { margin: 0; padding: 8px; background: var(--vscode-editor-background); color: var(--vscode-foreground);
+  body { margin: 0; padding: 0 8px 8px; background: var(--vscode-editor-background); color: var(--vscode-foreground);
          font-family: var(--vscode-font-family); font-size: var(--vscode-font-size); }
-  .note { margin: 0 0 8px; opacity: .8; }
+  /* The head — what was read, the link checkbox, the slider — stays put while the pages scroll
+     under it (owner's request 2026-10-17); the script measures its bottom as the view's top edge. */
+  .note { position: sticky; top: 0; z-index: 1; margin: 0 -8px 8px; padding: 8px;
+          background: var(--vscode-editor-background); }
+  .note > span.text { opacity: .8; }
   .page { position: relative; margin: 0 auto 12px; max-width: 100%; }
   .page img { display: block; width: 100%; height: auto; background: #fff; }
   .page svg { position: absolute; inset: 0; width: 100%; height: 100%; }
@@ -422,8 +426,8 @@ function render(view: ScanView): void {
   .filter input { width: 140px; }
   rect.light { fill: rgba(0, 120, 215, .14); stroke: none; pointer-events: none; }
 </style></head><body>
-<p class="note">${esc(path.basename(view.lys.fsPath))} — read from ${side.pages.length === 1 ? 'this page' : `these ${side.pages.length} pages`}. `
-        + `Red: marked to check — heavier where the reader is less sure. A click goes to the music; the caret lights its bar here. `
+<p class="note"><span class="text">${esc(path.basename(view.lys.fsPath))} — read from ${side.pages.length === 1 ? 'this page' : `these ${side.pages.length} pages`}. `
+        + `Red: marked to check — heavier where the reader is less sure. A click goes to the music; the caret lights its bar here.</span> `
         + `<label><input type="checkbox" id="link" checked> Scroll with the preview</label>`
         + `<label class="filter" title="Show the marks the reader is less sure of than this (its confidence, 0 to 1)">`
         + `Marks below <input type="range" id="thr" min="0.05" max="1" step="0.05" value="${SCAN_DEFAULT_THRESHOLD}">`
@@ -484,12 +488,16 @@ ${pages || '<p>The side file lists no page.</p>'}
   // B4: the bar at the top of the view goes to the preview as the scan scrolls; a scroll
   // the preview asked for (showBar) is not reported back.
   let quietUntil = 0, reportTimer = null;
+  // The sticky head covers the top of the window: what counts as "the top" starts under it.
+  const note = document.querySelector('.note');
+  const topEdge = () => note.getBoundingClientRect().bottom;
   function topBar() {
     let best = null, bestTop = Infinity, bestLeft = Infinity;
+    const edge = topEdge();
     for (const r of document.querySelectorAll('g.bar')) {
       const b = r.getBoundingClientRect();
-      if (b.bottom <= 4 || b.top >= window.innerHeight) continue;
-      const top = Math.round(Math.max(b.top, 0));
+      if (b.bottom <= edge + 4 || b.top >= window.innerHeight) continue;
+      const top = Math.round(Math.max(b.top, edge));
       if (top < bestTop || (top === bestTop && b.left < bestLeft)) { best = r; bestTop = top; bestLeft = b.left; }
     }
     return best;
@@ -519,7 +527,7 @@ ${pages || '<p>The side file lists no page.</p>'}
       const r = document.querySelector('g.bar[data-i="' + data.index + '"]');
       if (!r) return;
       quietUntil = Date.now() + 400;
-      window.scrollBy({ top: r.getBoundingClientRect().top - 24 });
+      window.scrollBy({ top: r.getBoundingClientRect().top - topEdge() - 16 });
       return;
     }
     if (data.type !== 'light') return;
@@ -533,9 +541,9 @@ ${pages || '<p>The side file lists no page.</p>'}
     light.setAttribute('x', x0); light.setAttribute('y', y0);
     light.setAttribute('width', x1 - x0); light.setAttribute('height', y1 - y0);
     // Into view only when it is not: the scan must not jump while the caret walks a line.
-    const r = light.getBoundingClientRect();
-    if (r.top < 0 || r.bottom > window.innerHeight)
-      window.scrollBy({ top: r.top - window.innerHeight / 3, behavior: 'smooth' });
+    const r = light.getBoundingClientRect(), edge = topEdge();
+    if (r.top < edge || r.bottom > window.innerHeight)
+      window.scrollBy({ top: r.top - Math.max(edge + 8, window.innerHeight / 3), behavior: 'smooth' });
   });
 </script></body></html>`;
 }

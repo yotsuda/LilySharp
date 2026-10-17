@@ -139,6 +139,13 @@ All notable changes to the Lily# VS Code extension are documented here.
   each staff's bar from its first note to the bar line closing it (every printed copy), and it
   follows the caret and the edits.
 
+### The scan view's head stays put
+
+- **The line at the top of Show Original Scan — what was read, *Scroll with the preview*, the
+  *Marks below* slider — stays in view while the pages scroll under it** (owner's request
+  2026-10-17). The scan's own scrolling (the bar it reports to the preview, the bar the preview
+  asks for, the caret's bar coming into view) counts the top of the view from under that line.
+
 ### The scan view and the preview light each other's bar under the mouse
 
 - **With Show Original Scan beside the preview, the bar under the mouse lights on both**: hover a
