@@ -57,14 +57,18 @@ public class OctaveModeConverterTests
             .SelectMany(t => t.Notes).Select(n => n.Pitch).ToArray();
 
     [Fact]
-    public void ARelativeMelody_GoesAbsolute_AndComesBackAsWritten()
+    public void ARelativeMelody_GoesAbsolute_AndComesBackStatingRelative()
     {
         var relative = "part m { }\nsection A {\n  m { c4 d e f | g a b c | c' b, a g | }\n}" + Score;
         var absolute = Convert(relative, OctaveMode.Absolute);
         Assert.Equal(
             "octave absolute\npart m { }\nsection A {\n  m { c4 d e f | g a b c' | c'' b a g | }\n}" + Score,
             absolute);
-        Assert.Equal(relative, Convert(absolute, OctaveMode.Relative));
+        // The file's directive stays and names the mode (owner's report 2026-10-17: the line
+        // used to vanish, relative being written by removing it); a file that never wrote one
+        // is left as it is.
+        Assert.Equal("octave relative\n" + relative, Convert(absolute, OctaveMode.Relative));
+        Assert.Equal(relative, Convert(relative, OctaveMode.Relative));
     }
 
     [Fact]
@@ -76,8 +80,20 @@ public class OctaveModeConverterTests
         Assert.StartsWith("title \"t\"\nkey g major\ntime 3/4\noctave absolute\npart m { }", absolute);
         Assert.Single(SyntaxTree.Parse(absolute).GetRoot().DescendantNodes<OctaveDirectiveSyntax>());
 
+        // Relative too: the switches inside music go, and the file — which stated a mode —
+        // states relative once, after the header.
         var relative = Convert(src, OctaveMode.Relative);
-        Assert.Empty(SyntaxTree.Parse(relative).GetRoot().DescendantNodes<OctaveDirectiveSyntax>());
+        Assert.StartsWith("title \"t\"\nkey g major\ntime 3/4\noctave relative\npart m { }", relative);
+        Assert.Single(SyntaxTree.Parse(relative).GetRoot().DescendantNodes<OctaveDirectiveSyntax>());
+    }
+
+    [Fact]
+    public void AnAbsoluteFile_GoesRelative_KeepingItsLine()
+    {
+        var absolute = "octave absolute\npart m { }\nsection A {\n  m { c'4 d' e' f' | }\n}" + Score;
+        var relative = Convert(absolute, OctaveMode.Relative);
+        Assert.Equal("octave relative\npart m { }\nsection A {\n  m { c'4 d e f | }\n}" + Score, relative);
+        Assert.Equal(absolute, Convert(relative, OctaveMode.Absolute));
     }
 
     [Fact]
@@ -124,7 +140,7 @@ public class OctaveModeConverterTests
         var src = "part m { instrument bass5 \"bass\" }\nsection A {\n  m { g4 a b c | }\n}" + Score;
         var absolute = Convert(src, OctaveMode.Absolute);
         Assert.Contains("m { g,4 a, b, c | }", absolute);
-        Assert.Equal(src, Convert(absolute, OctaveMode.Relative));
+        Assert.Equal("octave relative\n" + src, Convert(absolute, OctaveMode.Relative));
     }
 
     [Fact]

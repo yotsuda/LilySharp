@@ -50,8 +50,9 @@ namespace LilySharp.Core.Editing;
 /// takes a <c>'</c> / <c>,</c> mark. The owner asked whether a NUMBER of semitones should be
 /// writable instead; the language keeps the pitch (a number leaves the spelling open — +1 from
 /// C major is D♭ or C♯), and the step gives the number's convenience.</item>
-/// <item>An <c>octave absolute</c> / <c>octave relative</c> — the file's, a part header's or one
-/// inside music: Up converts the file to absolute octaves, Down to relative, on either pair
+/// <item>An <c>octave absolute</c> / <c>octave relative</c> — the file's or one inside music (in
+/// a part header the mode is an error — a part's <c>octave</c> takes its base number): Up
+/// converts the file to absolute octaves, Down to relative, on either pair
 /// (a direction each, not a toggle — owner's decision 2026-10-17). The step makes no edit of
 /// its own: the editor runs its Convert Octaves to Absolute / Relative command
 /// (<see cref="OctaveModeConverter"/>), which re-marks every note to keep its pitch — the
@@ -115,17 +116,6 @@ public static partial class NoteStepper
                 return d;
         return null;
     }
-
-    /// <summary>The two octave modes, Up's first.</summary>
-    private const string AbsoluteMode = "absolute", RelativeMode = "relative";
-
-    /// <summary>Whether a header's <c>octave</c> property names a mode (<c>octave absolute</c>) —
-    /// the same property node as its <c>octave N</c>; the mode steps as the file's directive does
-    /// (<see cref="TargetKind.OctaveMode"/>), the number by one (<see cref="ValuePropertyEdit"/>).</summary>
-    private static bool IsOctaveMode(PropertyAssignmentSyntax property)
-        => property.NameToken.Text == "octave"
-            && property.Values.OfType<SyntaxTokenNode>().ToList() is [var word]
-            && word.Text is AbsoluteMode or RelativeMode;
 
     /// <summary>Whether the keys have a step for a dynamic of this name: a level on the ladder, or
     /// a hairpin word (cresc / decresc / dim). <c>@sfz</c>, <c>@fp</c> and the like have none, so
@@ -199,10 +189,10 @@ public static partial class NoteStepper
             return ShiftEdit(tree, property, values, dir);
         if (property.NameToken.Text == "octave")
         {
-            // A part header's `octave absolute` / `octave relative` never comes here: it is a
-            // TargetKind.OctaveMode (IsOctaveMode), and the editor converts the file.
+            // `octave absolute` in a part header is a mode where a number belongs (the
+            // validator says so): nothing to step, and the message says where the mode goes.
             if (values is not [var only] || !int.TryParse(only.Text, out int octave))
-                return (null, $"octave {Written(values)}: the step changes a number (octave 3)");
+                return (null, $"octave {Written(values)}: the step changes a number (octave 3) - a mode (octave absolute) is written at the top of the file or in the music");
             int next = octave + dir;
             if (next < LowestOctave || next > HighestOctave)
                 return (null, $"octave {octave}: already the {(dir > 0 ? "highest" : "lowest")} ({LowestOctave} to {HighestOctave})");

@@ -855,11 +855,12 @@ public class StepRequestTests
     [Fact]
     public void AnOctaveMode_UpConvertsToAbsolute_DownToRelative()
     {
-        // Owner's request and decision 2026-10-17: on the file's directive, a part header's
-        // property or one inside music, Up runs Convert Octaves to Absolute and Down Convert
-        // Octaves to Relative (the editor's command, every note keeping its pitch) — the
-        // pitches go with the word; a word alone is typed by hand. The step itself edits
-        // nothing, and a direction each (not a toggle): Up on `absolute` still asks for absolute.
+        // Owner's request and decision 2026-10-17: on the file's directive or one inside music,
+        // Up runs Convert Octaves to Absolute and Down Convert Octaves to Relative (the editor's
+        // command, every note keeping its pitch) — the pitches go with the word; a word alone
+        // is typed by hand. The step itself edits nothing, and a direction each (not a toggle):
+        // Up on `absolute` still asks for absolute. In a part header the mode is an error (a
+        // part's `octave` takes a number), so there the keys convert nothing and say so.
         const string Book = "{0}\npart lh {{ clef bass {1} }}\nsection A {{ lh {{ {2}c4 d e f }} }}\n";
         string S(string top = "octave relative", string part = "octave 3", string music = "")
             => string.Format(Book, top, part, music);
@@ -874,14 +875,17 @@ public class StepRequestTests
         Converts(S("octave rel‸ative"), +1, "absolute", semitone: true);
         Converts(S("oct‸ave absolute"), -1, "relative");
         Converts(S("octave abso‸lute"), +1, "absolute", semitone: true);
-        Converts(S(part: "octave ‸relative"), +1, "absolute", semitone: true);
-        Converts(S(part: "octave absolute‸"), -1, "relative", semitone: true);
         Converts(S(music: "octave relative‸ "), +1, "absolute");
         Converts(S(music: "‸octave absolute "), -1, "relative", semitone: true);
         // The part's `octave 3` still steps its number, and asks for no conversion.
         var (number, stepped) = Step(S(part: "octave ‸3"), +1);
         Assert.Equal(S(part: "octave 4"), stepped);
         Assert.Null(number.ConvertOctaves);
+        var (header, unchanged) = Step(S(part: "octave ‸absolute"), -1);
+        Assert.False(header.Fallback);
+        Assert.Null(header.ConvertOctaves);
+        Assert.Equal(S(part: "octave absolute"), unchanged);
+        Assert.Contains("at the top of the file or in the music", header.Message);
     }
 
     [Fact]

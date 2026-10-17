@@ -6,10 +6,14 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ### Ctrl+Shift+Up / Down convert the octaves from an `octave relative` / `octave absolute`
 
-- **On an `octave absolute` / `octave relative`** — the file's, a part's (`part lh { octave absolute }`)
-  or one inside music — `Ctrl+Shift+Up` runs *Convert Octaves to Absolute* and `Ctrl+Shift+Down`
-  *Convert Octaves to Relative* (`Ctrl+Shift+PageUp` / `PageDown` do the same): the whole file is
-  rewritten into that mode, every note keeping its pitch. To change the word alone, type it.
+- **On an `octave absolute` / `octave relative`** — the file's or one inside music —
+  `Ctrl+Shift+Up` runs *Convert Octaves to Absolute* and `Ctrl+Shift+Down` *Convert Octaves to
+  Relative* (`Ctrl+Shift+PageUp` / `PageDown` do the same): the whole file is rewritten into that
+  mode, every note keeping its pitch. To change the word alone, type it.
+- **Convert Octaves to Relative keeps the file's `octave` line**, rewriting it to `octave relative`
+  (it used to remove the line, relative being the default — so the key's Down made it vanish). A
+  file whose only directives stood inside music gets the line at the top, after the header; a file
+  that never wrote one is left as it is.
 
 ## 0.13.0
 

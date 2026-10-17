@@ -114,9 +114,10 @@ public static partial class NoteStepper
         Time,
         /// <summary>A header's <c>octave N</c> or <c>transpose X</c> (NoteStepper.Values.cs).</summary>
         HeaderValue,
-        /// <summary>An <c>octave absolute</c> / <c>octave relative</c> — the file's directive, a part
-        /// header's property or one inside music. Its step is no edit: the editor converts the whole
-        /// file, every note keeping its pitch (<see cref="StepResult.ConvertOctaves"/>; NoteStepper.Values.cs).</summary>
+        /// <summary>An <c>octave absolute</c> / <c>octave relative</c> directive — the file's or one
+        /// inside music (a part header's <c>octave</c> takes a number, <see cref="HeaderValue"/>). Its
+        /// step is no edit: the editor converts the whole file, every note keeping its pitch
+        /// (<see cref="StepResult.ConvertOctaves"/>; NoteStepper.Values.cs).</summary>
         OctaveMode,
     }
 
@@ -423,7 +424,7 @@ public static partial class NoteStepper
         if (TimeAt(tree, offset) is { } time)
             return new Target(TargetKind.Time, time);
         if (ValuePropertyAt(tree, offset) is { } property)
-            return new Target(IsOctaveMode(property) ? TargetKind.OctaveMode : TargetKind.HeaderValue, property);
+            return new Target(TargetKind.HeaderValue, property);
         if (OctaveModeAt(tree, offset) is { } octaveMode)
             return new Target(TargetKind.OctaveMode, octaveMode);
         // A mark with nothing of its own to step — a dynamic on no ladder (@sfz), an articulation

@@ -4,6 +4,17 @@ Notable changes to Lily# are recorded here, newest first. Release notes are take
 from this file: the topmost section is the version being tagged, and the release
 workflow attaches that section to the GitHub Release verbatim.
 
+## Unreleased
+
+### Editor
+
+- **Converting to relative octaves keeps the file's `octave` line.** *Convert Octaves to
+  Relative* and `lysc octave --relative` now rewrite the file's first `octave` directive to
+  `octave relative` instead of removing it (relative being the default); a file whose only
+  directives stood inside music gets the line at the top, after the header, and a file that
+  never wrote one is left as it is. The switches inside music still go, as they did. Found
+  through the editor's step keys, where Down on `octave absolute` made the line vanish.
+
 ## 0.13.0
 
 ### `shift +1` moves the whole piece a semitone

@@ -35,9 +35,11 @@ public enum OctaveMode
 
 /// <summary>
 /// Rewrites a whole <c>.lys</c> file from one octave mode to the other, keeping every note
-/// at the pitch it sounds now: the mode directives go, one file-level
-/// <c>octave absolute</c> comes (for <see cref="OctaveMode.Absolute"/>), and each written
-/// pitch's <c>'</c>/<c>,</c> marks are recomputed. Nothing else in the file is touched.
+/// at the pitch it sounds now: the file's first <c>octave</c> directive names the new mode
+/// (one is added at the top when the file had none — for <see cref="OctaveMode.Relative"/>
+/// only when a mode was stated somewhere, relative being the default), the switches inside
+/// music go, and each written pitch's <c>'</c>/<c>,</c> marks are recomputed. Nothing else
+/// in the file is touched.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -412,12 +414,17 @@ public static class OctaveModeConverter
     {
         var edits = new List<Edit>();
         var directives = root.DescendantNodes<OctaveDirectiveSyntax>().ToList();
+        string directive = target == OctaveMode.Absolute ? "octave absolute" : "octave relative";
         bool stated = false;
         foreach (var d in directives)
         {
-            if (target == OctaveMode.Absolute && !stated && d.Parent is CompilationUnitSyntax)
+            // The file's first directive stays and names the new mode, in either direction:
+            // the line is the writer's (owner's report 2026-10-17 — Down on `octave absolute`
+            // made the line vanish, when relative was written by removing it). The switches
+            // inside music go, since the whole file is now one mode.
+            if (!stated && d.Parent is CompilationUnitSyntax)
             {
-                edits.Add(new Edit(d.Span.Start, d.Span.End, "octave absolute"));
+                edits.Add(new Edit(d.Span.Start, d.Span.End, directive));
                 stated = true;
                 continue;
             }
@@ -437,7 +444,10 @@ public static class OctaveModeConverter
                             Kind: SyntaxKind.Apostrophe or SyntaxKind.Comma
                         } mark)
                         edits.Add(new Edit(mark.Span.Start, mark.Span.End, ""));
-        if (target == OctaveMode.Absolute && !stated)
+        // A file that stated its mode goes on stating it, at the top: absolute always (a bare
+        // file is relative, the default); relative when a directive stood somewhere — a file
+        // that never wrote one is left as it is.
+        if (!stated && (target == OctaveMode.Absolute || directives.Count > 0))
         {
             var first = root.DescendantNodes<SyntaxNode>()
                 .Where(n => n.Parent is CompilationUnitSyntax && n is not SyntaxTokenNode)
@@ -449,7 +459,7 @@ public static class OctaveModeConverter
                 at = first!.Span.Start;
                 indent = "";
             }
-            edits.Add(new Edit(at, at, indent + "octave absolute\n"));
+            edits.Add(new Edit(at, at, indent + directive + "\n"));
         }
         return edits;
     }
