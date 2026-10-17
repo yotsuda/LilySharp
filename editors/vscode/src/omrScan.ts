@@ -248,14 +248,21 @@ async function printedOf(view: ScanView, deps: OmrScanDeps): Promise<PrintedBar[
     return bars;
 }
 
-/** Frames, on the preview, the staff's bar each mark is written in (B4: what the reader flagged,
- *  on both sides — one part's bar, as the scan's box; flaggedMarks). */
+/** Frames, on the preview, what each mark covers on the scan (B4: what the reader flagged, on
+ *  both sides alike): the part-bars of its box (flaggedMarks → coverageOf), each as the line it
+ *  is written on (lineOfScanBar, carried through the edits) — the preview frames the staff's
+ *  bars whose first note is on it; a mark the side file does not know, by where it is written. */
 async function markPreview(view: ScanView, deps: OmrScanDeps): Promise<void> {
     try {
         const doc = await vscode.workspace.openTextDocument(view.lys);
         const todos = await todosOf(view, doc, deps);
-        const marks = flaggedMarks(todos,
-            view.threshold === undefined ? [] : hiddenTodoKeys(view.side.todos, view.threshold));
+        const text = doc.getText();
+        const marks = flaggedMarks(todos, view.side,
+            view.threshold === undefined ? [] : hiddenTodoKeys(view.side.todos, view.threshold))
+            .map(m => ({
+                at: m.at,
+                lines: m.bars.map(i => lineOfScanBar(view.side, view.anchors, text, i)).filter((l): l is [number, number] => !!l),
+            }));
         deps.postToPreview(view.lys, { type: 'markBars', marks });
         // …and the scan drops the frames of the marks the .lys no longer carries — only on a
         // real answer (todosOf caches nothing else), or every mark would look resolved.

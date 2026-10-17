@@ -139,16 +139,17 @@ All notable changes to the Lily# VS Code extension are documented here.
   each staff's bar from its first note to the bar line closing it (every printed copy), and it
   follows the caret and the edits.
 
-### The preview frames one part's bar for a mark, as the scan does
+### The preview frames what the scan boxes, part for part
 
-- **The red dashed frame the preview draws for an OMR reader's mark is round the bar of the one
-  staff the `@todo` is written in**, not round the whole system's bar across every part (owner's
-  request 2026-10-17: "なるべくピンポイントに", and the same region as the scan's box). The frame
-  follows where the mark is written (the bar's written stretch), so a section played twice
-  frames both copies; a mark no staff's bar holds — one beside the music — still frames the
-  system's bar.
-- The scan's box is the reader's own: it is one part's bar, or what the reader boxed; where the
-  reader boxed two parts, the preview still frames the one the `@todo` is written on.
+- **The red dashed frame the preview draws for an OMR reader's mark is round the same thing as
+  the reader's box on the scan**: the bar of the one part the mark is on; for a bar whose music
+  does not fill its time, the bars of the parts that are off (two, where the reader boxed two);
+  for a mark on the bar's stems or tuplets, every part (owner's request 2026-10-17: "なるべく
+  ピンポイントに", and the same region on both). Until now the preview framed the whole system's
+  bar, every part, whatever the mark. The frame follows the bars' lines in the `.lys` through
+  the edits, as the hover between the two views does, so a section played twice frames both
+  copies; a `@todo` the scan does not know (written by hand) frames the staff's bar it is written
+  in.
 
 ### The scan and the preview are cut alike at the top, and both show their title at the top
 

@@ -299,3 +299,56 @@ describe('the preview lights the bar the caret is in', () => {
         light(); assert.deepEqual(lit(), [true, false]);
     });
 });
+
+// The frames the preview draws for an OMR reader's marks (applyBarFlags): what each mark covers
+// on the scan, part for part (owner's request 2026-10-17) — the staff's bars whose first note is
+// on one of the mark's lines, or, for a mark the scan does not know, the one whose written
+// stretch holds where it is written.
+describe('the preview frames what the scan boxes', () => {
+    const source = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
+    const start = source.indexOf('return `<!DOCTYPE html>') + 'return '.length;
+    const end = source.indexOf('</html>`;', start) + '</html>`'.length;
+    const html = new vm.Script(source.slice(start, end).replace(/\$\{[^}]*\}/g, 'X')).runInNewContext({}) as string;
+    const at = html.indexOf('function applyBarFlags(');
+    let depth = 0, close = -1;
+    for (let i = html.indexOf('{', at); i < html.length; i++) {
+        if (html[i] === '{') depth++;
+        else if (html[i] === '}' && --depth === 0) { close = i + 1; break; }
+    }
+    const staff = (first: number, span?: string) => {
+        const cls = new Set<string>();
+        return {
+            cls,
+            getAttribute: (n: string) => n === 'data-start' ? String(first) : span ?? null,
+            hasAttribute: (n: string) => n === 'data-span' && span !== undefined,
+            classList: { add: (c: string) => cls.add(c), remove: (c: string) => cls.delete(c) },
+        };
+    };
+    // Bar 4 of three parts, each written on its own line: rh at 100.., lh at 200.., vc at 300..;
+    // and the rh bar printed again (a section played twice), from the same place.
+    const staves = [staff(100, '100 120'), staff(200, '200 230'), staff(300, '300 320'), staff(100, '100 120')];
+    const svgContainer = { querySelectorAll: (sel: string) => sel.includes('.flagged') ? staves.filter(s => s.cls.has('flagged')) : staves };
+    const applyWith = new vm.Script('(marks => { let flaggedMarks = marks; return ' + html.slice(at, close) + '; })')
+        .runInNewContext({ svgContainer, Number, parseInt }) as (marks: unknown[]) => () => void;
+    const framed = () => staves.map(s => s.cls.has('flagged'));
+
+    it('finds the function in the page script', () => {
+        assert.ok(at >= 0 && close > at, 'applyBarFlags is not in the page script');
+    });
+    it('frames the staff\'s bars written on the mark\'s lines — one part, two, or every one', () => {
+        applyWith([{ at: 205, lines: [[200, 230]] }])();
+        assert.deepEqual(framed(), [false, true, false, false]);
+        applyWith([{ at: 101, lines: [[100, 120], [200, 230]] }])();      // a length mark: rh and lh are off
+        assert.deepEqual(framed(), [true, true, false, true]);             // …and the rh copy too
+        applyWith([{ at: 101, lines: [[100, 120], [200, 230], [300, 320]] }])();
+        assert.deepEqual(framed(), [true, true, true, true]);
+    });
+    it('frames the one bar holding a mark the scan does not know, and clears what it framed before', () => {
+        applyWith([{ at: 305, lines: [] }])();
+        assert.deepEqual(framed(), [false, false, true, false]);
+        applyWith([{ at: 305 }])();
+        assert.deepEqual(framed(), [false, false, true, false]);
+        applyWith([])();
+        assert.deepEqual(framed(), [false, false, false, false]);
+    });
+});

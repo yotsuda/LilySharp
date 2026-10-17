@@ -24,7 +24,7 @@ import * as path from 'node:path';
 import * as vm from 'node:vm';
 import {
     SCAN_DEFAULT_THRESHOLD, anchorsOf, barOnLine, markFactsOf, pageLabel, parseSideFile, scanBarForPrinted, scanTitle,
-    flaggedMarks, hiddenTodoKeys, resolvedTodoKeys, shiftAnchors, shownAt, shownImage, sideFileOf, barStaff, todoStroke, todoTarget,
+    ScanTodo, coverageOf, flaggedMarks, hiddenTodoKeys, resolvedTodoKeys, shiftAnchors, shownAt, shownImage, sideFileOf, barStaff, todoStroke, todoTarget,
     lineAround, lineOfScanBar, scanBarForStart,
 } from '../src/omrScanCore';
 
@@ -184,20 +184,53 @@ describe('how sure the reader is (LilySharp-Omr reply 2026-10-12: a confidence o
         assert.deepEqual(hiddenTodoKeys([{ key: 'b2', confidence: 0.5 }, { key: 'b2', confidence: 0.7 }], 0.3), ['b2']);
     });
 
-    it('frames on the preview only the marks the slider shows, each by where it is written', () => {
+    // What a mark's box on the scan is the union of (Sidecar.BoxOf), so what the preview frames
+    // too (owner's request 2026-10-17): side.measures[0] is bar 4 rh, [1] bar 4 lh (bar 5 rh has
+    // no box, so it is not a scan bar).
+    const scan = parseSideFile(WRITTEN, path.join(WORK, 'omr.omr.json'))!;
+    it('knows the part-bars a mark covers, as the reader boxed them', () => {
+        const at = (t: Partial<ScanTodo>) => coverageOf({ measure: 4, ...t }, scan);
+        assert.deepEqual(coverageOf(scan.todos[0], scan), [1]);                       // b4-lh: its part's bar
+        assert.deepEqual(coverageOf({ measure: 9 }, scan), []);                       // b9: no bar 9 on the scan
+        assert.deepEqual(at({ part: 'rh' }), [0]);
+        assert.deepEqual(at({}), [0, 1]);                                             // the whole bar: every part
+        assert.deepEqual(at({ parts: ['lh', 'rh'] }), [0, 1]);                        // a length mark: the parts off
+        assert.deepEqual(at({ parts: ['lh'] }), [1]);
+        assert.deepEqual(at({ part: 'rh', parts: ['lh'] }), [1]);                     // parts before part
+        assert.deepEqual(at({ bars: [{ measure: 4, part: 'rh' }, { measure: 5 }] }), [0]); // named outright, first
+        assert.deepEqual(at({ part: 'lh', bars: [{ measure: 4 }] }), [0, 1]);
+        assert.deepEqual(at({ part: 'lh', bars: [{ measure: 5, part: 'rh' }] }), []);
+        assert.deepEqual(coverageOf({ part: 'lh' }, scan), []);                       // no bar at all
+    });
+
+    it('reads a length mark\'s parts and a mark\'s bars from the side file', () => {
+        const written = JSON.parse(WRITTEN);
+        written.todos.push(
+            { key: 'b4', measure: 4, part: null, page: 1, box: [1292, 900, 2223, 1203],
+              parts: [{ part: 'rh', delta: '-1/4' }, { part: 'lh', delta: '1/8', voices: ['1/8', '0'] }] },
+            { key: 'n4', measure: 4, part: 'rh', page: 1, box: [1300, 910, 1400, 1000],
+              bars: [{ measure: 4, part: 'rh' }, { measure: 5 }, { part: 'x' }] });
+        const parsed = parseSideFile(JSON.stringify(written), path.join(WORK, 'omr.omr.json'))!;
+        assert.deepEqual(parsed.todos.find(t => t.key === 'b4')?.parts, ['rh', 'lh']);
+        assert.equal(parsed.todos.find(t => t.key === 'b4-lh')?.parts, undefined);
+        assert.deepEqual(parsed.todos.find(t => t.key === 'n4')?.bars, [{ measure: 4, part: 'rh' }, { measure: 5 }]);
+        assert.deepEqual(coverageOf(parsed.todos.find(t => t.key === 'b4')!, parsed), [0, 1]);
+        assert.deepEqual(coverageOf(parsed.todos.find(t => t.key === 'n4')!, parsed), [0]);
+    });
+
+    it('frames on the preview only the marks the slider shows, each by what it covers', () => {
         const server = [
-            { Key: 'b3', HostStart: 0, HostEnd: 1, Measure: 2 },
-            { Key: 'b4', HostStart: 2, HostEnd: 3, Measure: 3 },
-            { Key: 'b4', HostStart: 4, HostEnd: 5, Measure: 4 },
+            { Key: 'b4-lh', HostStart: 0, HostEnd: 1, Measure: 4 },
+            { Key: 'b4', HostStart: 2, HostEnd: 3, Measure: 4 },     // the side file does not know this key
+            { Key: 'b9', HostStart: 4, HostEnd: 5, Measure: 9 },
             { Key: null, HostStart: 6, HostEnd: 7, Measure: 3 },     // written by hand
             { Key: 'o9', HostStart: 8, HostEnd: 9, Measure: null },  // no score plays it
             { Key: 'o9', HostStart: 8, HostEnd: 9, Measure: null },  // the same place twice
         ];
-        assert.deepEqual(flaggedMarks(server, []),
-            [{ at: 0, bar: 2 }, { at: 2, bar: 3 }, { at: 4, bar: 4 }, { at: 6, bar: 3 }, { at: 8, bar: null }]);
-        assert.deepEqual(flaggedMarks(server, hiddenTodoKeys(side.todos, SCAN_DEFAULT_THRESHOLD)),
-            [{ at: 0, bar: 2 }, { at: 6, bar: 3 }, { at: 8, bar: null }]);
-        assert.deepEqual(flaggedMarks(server, ['b3', 'b4']), [{ at: 6, bar: 3 }, { at: 8, bar: null }]);
+        assert.deepEqual(flaggedMarks(server, scan, []),
+            [{ at: 0, bars: [1] }, { at: 2, bars: [] }, { at: 4, bars: [] }, { at: 6, bars: [] }, { at: 8, bars: [] }]);
+        assert.deepEqual(flaggedMarks(server, scan, ['b4-lh', 'o9']),
+            [{ at: 2, bars: [] }, { at: 4, bars: [] }, { at: 6, bars: [] }]);
     });
 
     it('calls a mark resolved once the .lys no longer carries it — never a quiet one', () => {

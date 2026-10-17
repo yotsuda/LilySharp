@@ -3035,10 +3035,8 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         :root.todo-plain #svgContainer text[data-todo] {
             fill: currentColor;
         }
-        /* A bar an OMR reader flagged (the scan view's B4), framed as on the scan: one staff's
-           bar (rect.bar-staff), the system's only when no staff's bar holds the mark. */
-        #svgContainer rect.bar-staff.flagged,
-        #svgContainer rect.bar-box.flagged {
+        /* A staff's bar an OMR reader flagged (the scan view's B4), framed as on the scan. */
+        #svgContainer rect.bar-staff.flagged {
             stroke: #e53935;
             stroke-width: 2;
             stroke-dasharray: 4 3;
@@ -4834,30 +4832,23 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         // score goes out as the preview scrolls (the server's bar-box rects carry the
         // printed number), a bar the scan asks for is brought to the top, and the marks
         // the reader flagged are framed. A scroll asked for here is not reported back.
-        // A mark ({at, bar}: where it is written, and the bar the page prints for it) frames
-        // the one staff's bar whose written stretch (data-span) holds it — one part, as the
-        // scan frames the reader's box (owner's request 2026-10-17; until then the whole
-        // system's bar was framed) — and the system's bar (rect.bar-box) only when no staff's
-        // bar holds it.
+        // A mark frames what its box on the scan covers (owner's request 2026-10-17: the two
+        // views frame the same thing; until then the whole system's bar was framed): its
+        // lines ([from, to] of each part-bar it covers, as the scan's hover lights them —
+        // lightPeerBars) frame every staff's bar whose first note is written on one of them;
+        // a mark the scan does not know (no lines) frames the one staff's bar whose written
+        // stretch (data-span) holds where it is written (at).
         let flaggedMarks = [];
         let barQuietUntil = 0, barReportTimer = null;
         function applyBarFlags() {
-            for (const r of svgContainer.querySelectorAll('rect.bar-staff.flagged, rect.bar-box.flagged')) r.classList.remove('flagged');
-            const staves = [];
-            for (const r of svgContainer.querySelectorAll('rect.bar-staff[data-span]')) {
-                const span = r.getAttribute('data-span').split(' ');
-                staves.push({ r, from: parseInt(span[0], 10), to: parseInt(span[1], 10) });
-            }
-            const systems = new Set();
-            for (const m of flaggedMarks) {
-                let held = false;
-                for (const s of staves) {
-                    if (m.at >= s.from && m.at <= s.to) { s.r.classList.add('flagged'); held = true; }
-                }
-                if (!held && Number.isInteger(m.bar)) systems.add(m.bar);
-            }
-            for (const r of svgContainer.querySelectorAll('rect.bar-box')) {
-                if (systems.has(Number(r.dataset.bar))) r.classList.add('flagged');
+            for (const r of svgContainer.querySelectorAll('rect.bar-staff.flagged')) r.classList.remove('flagged');
+            for (const r of svgContainer.querySelectorAll('rect.bar-staff')) {
+                const start = parseInt(r.getAttribute('data-start'), 10);
+                const span = r.hasAttribute('data-span') ? r.getAttribute('data-span').split(' ').map(v => parseInt(v, 10)) : null;
+                const flagged = flaggedMarks.some(m => m.lines && m.lines.length > 0
+                    ? m.lines.some(l => start >= l[0] && start <= l[1])
+                    : span !== null && m.at >= span[0] && m.at <= span[1]);
+                if (flagged) r.classList.add('flagged');
             }
         }
         // The bar at the top edge of the view, and how much of it is cut off above that edge

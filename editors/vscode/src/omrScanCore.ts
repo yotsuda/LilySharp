@@ -71,6 +71,12 @@ export interface ScanTodo {
     /** The reader left the mark out of the .lys (`inSource: false`: above its threshold, or a
      *  bar the check found right) — kept here to be seen faintly, never in F8. */
     readonly quiet?: boolean;
+    /** A bar-length mark's parts that are off (the side file's `parts[].part`): the box covers
+     *  their bars, and the preview frames the same (coverageOf). */
+    readonly parts?: readonly string[];
+    /** The part-bars the mark covers, named outright (`bars`, proposed to the reader 2026-10-17;
+     *  a part left out means every part of that bar). Preferred over `parts` / `part` when present. */
+    readonly bars?: readonly { readonly measure: number; readonly part?: string }[];
 }
 
 export interface ScanSideFile {
@@ -143,18 +149,18 @@ export function hiddenTodoKeys(todos: readonly Pick<ScanTodo, 'key' | 'confidenc
     return [...new Set(todos.filter(t => !shownAt(t, threshold)).map(t => t.key))];
 }
 
-/** A mark the preview frames (B4): where it is written (`at`, its host's offset — the preview
- *  frames the one staff's bar whose written stretch holds it, as the scan frames the reader's
- *  box of one part; owner's request 2026-10-17: until then the whole system's bar was framed,
- *  every part) and the bar the page prints for it (`bar`, the preview's fallback when no
- *  staff's bar holds the offset; null when no score plays it). */
-export interface FlaggedMark { readonly at: number; readonly bar: number | null }
+/** A mark the preview frames (B4): the part-bars it covers on the scan (`bars`, indices into the
+ *  side file's measures — coverageOf; the preview frames the staff's bar written on each one's
+ *  line, so the two views frame the same thing, owner's request 2026-10-17) and where it is
+ *  written (`at`, its host's offset — what the preview frames when the side file does not know
+ *  the mark: the one staff's bar whose written stretch holds it). */
+export interface FlaggedMark { readonly at: number; readonly bars: readonly number[] }
 
 /** The marks the preview frames: those the slider shows — a mark whose key is hidden frames
  *  nothing, one the side file does not know (written by hand) is always shown. Each place
  *  once, in the order met (owner's report 2026-10-12: the frames stayed when the slider hid
  *  their marks). */
-export function flaggedMarks(todos: readonly ServerTodo[], hiddenKeys: readonly string[]): FlaggedMark[] {
+export function flaggedMarks(todos: readonly ServerTodo[], side: ScanSideFile, hiddenKeys: readonly string[]): FlaggedMark[] {
     const hidden = new Set(hiddenKeys);
     const seen = new Set<number>();
     const marks: FlaggedMark[] = [];
@@ -163,7 +169,8 @@ export function flaggedMarks(todos: readonly ServerTodo[], hiddenKeys: readonly 
             continue;
         }
         seen.add(t.HostStart);
-        marks.push({ at: t.HostStart, bar: t.Measure ?? null });
+        const known = t.Key ? side.todos.find(s => s.key === t.Key) : undefined;
+        marks.push({ at: t.HostStart, bars: known ? coverageOf(known, side) : [] });
     }
     return marks;
 }
@@ -263,6 +270,9 @@ export function parseSideFile(text: string, sideFilePath: string): ScanSideFile 
     const todos: ScanTodo[] = [];
     for (const t of list(root.todos)) {
         const key = str(t?.key), page = int(t?.page);
+        const parts = list(t?.parts).map(p => str(p?.part)).filter((p): p is string => !!p);
+        const bars = list(t?.bars).filter(b => int(b?.measure) !== undefined)
+            .map(b => ({ measure: b.measure as number, ...(str(b?.part) ? { part: b.part as string } : {}) }));
         if (key && page !== undefined && isBox(t?.box)) {
             todos.push({
                 key, page, box: t.box,
@@ -271,10 +281,33 @@ export function parseSideFile(text: string, sideFilePath: string): ScanSideFile 
                 ...(str(t?.memo) ? { memo: t.memo } : {}),
                 ...(typeof t?.confidence === 'number' && Number.isFinite(t.confidence) ? { confidence: t.confidence } : {}),
                 ...(t?.inSource === false ? { quiet: true } : {}),
+                ...(parts.length > 0 ? { parts } : {}),
+                ...(bars.length > 0 ? { bars } : {}),
             });
         }
     }
     return { pages, measures, todos };
+}
+
+/** The part-bars (indices into `side.measures`) a mark covers — what its box on the scan is the
+ *  union of (LilySharp-Omr Sidecar.BoxOf), and so what the preview frames too (owner's request
+ *  2026-10-17: the two views frame the same thing): the ones it names (`bars`), else a length
+ *  mark's parts that are off (`parts`), else its own part, else — a mark on the whole bar, its
+ *  stems or tuplets — every part of the bar. [] for a mark with no bar. */
+export function coverageOf(todo: Pick<ScanTodo, 'measure' | 'part' | 'parts' | 'bars'>, side: ScanSideFile): number[] {
+    const wanted: { measure: number; part?: string; parts?: readonly string[] }[] = todo.bars
+        ? todo.bars.map(b => ({ measure: b.measure, part: b.part }))
+        : todo.measure === undefined ? []
+        : todo.parts ? [{ measure: todo.measure, parts: todo.parts }]
+        : [{ measure: todo.measure, part: todo.part }];
+    const covered: number[] = [];
+    side.measures.forEach((m, i) => {
+        if (wanted.some(w => w.measure === m.measure
+            && (w.parts ? m.part !== undefined && w.parts.includes(m.part) : w.part === undefined || w.part === m.part))) {
+            covered.push(i);
+        }
+    });
+    return covered;
 }
 
 /** One reading the reader offers for a mark: `text` replaces the marked item (without the mark). */
