@@ -176,6 +176,11 @@ All notable changes to the Lily# VS Code extension are documented here.
   of 10%; owner's request 2026-10-17). 100% is a page as wide as the pane; the point under the
   mouse stays under it, the zoom shows for a moment at the bottom right, and each scan keeps its
   own zoom while it is open. The bars and marks on the pages scale with them.
+- **The scan's right-click menu is *Fit Width* and *Reset Zoom (1:1)***, as the preview's, in
+  place of the webview's own Cut, Copy and Paste, which had nothing to act on (same day). Fit
+  Width is 100%, a page as wide as the pane; 1:1 shows the page at the size it was read at, one
+  pixel of the scan to one on the screen (within 400%). Both are in the Command Palette too
+  while the scan is the active panel.
 
 ### The scan view scrolls when you drag a page
 

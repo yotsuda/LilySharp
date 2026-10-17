@@ -92,7 +92,21 @@ export function registerScanFollow(context: vscode.ExtensionContext, deps: OmrSc
                 shiftAnchors(view.anchors, e.contentChanges.map(c =>
                     ({ offset: c.rangeOffset, removed: c.rangeLength, inserted: c.text.length })));
             }
-        }));
+        }),
+        // The view's context menu (menus/webview/context, as the preview's: Fit Width and Reset
+        // Zoom in place of the webview's own Cut/Copy/Paste — owner's request 2026-10-17). Thin
+        // relays: the zoom lives in the webview, so the command only names the action.
+        vscode.commands.registerCommand('lilysharp.scanFitWidth', () => postToActiveScan('ctxFitWidth')),
+        vscode.commands.registerCommand('lilysharp.scanResetZoom', () => postToActiveScan('ctxResetZoom')));
+}
+
+function postToActiveScan(type: string): void {
+    for (const view of views.values()) {
+        if (view.panel.active) {
+            void view.panel.webview.postMessage({ type });
+            return;
+        }
+    }
 }
 
 /** The command: the active .lys's scan, beside it. */
@@ -437,7 +451,10 @@ function render(view: ScanView): void {
   .zoom-info { position: fixed; bottom: 10px; right: 10px; z-index: 2; background: rgba(0, 0, 0, .7); color: #fff;
                padding: 4px 8px; border-radius: 4px; font-family: monospace; font-size: 12px; opacity: 0; transition: opacity .3s; }
   .zoom-info.visible { opacity: 1; }
-</style></head><body>
+</style></head>
+<!-- preventDefaultContextMenuItems drops the webview's own Cut/Copy/Paste (nothing here to cut),
+     leaving what package.json contributes under menus/webview/context for 'lilysharpScan'. -->
+<body data-vscode-context='{"preventDefaultContextMenuItems": true}'>
 <p class="note"><span class="text">${esc(path.basename(view.lys.fsPath))} — read from ${side.pages.length === 1 ? 'this page' : `these ${side.pages.length} pages`}. `
         + `Red: marked to check — heavier where the reader is less sure. A click goes to the music; the caret lights its bar here.</span> `
         + `<label><input type="checkbox" id="link" checked> Scroll with the preview</label>`
@@ -561,21 +578,38 @@ ${pages || '<p>The side file lists no page.</p>'}
     zoomHide = setTimeout(() => zoomInfo.classList.remove('visible'), 1500);
   }
   applyZoom(false);
-  document.addEventListener('wheel', e => {
-    if (!e.ctrlKey) return;
-    e.preventDefault();
-    const next = Math.min(4, Math.max(0.25, Math.round((zoom + (e.deltaY > 0 ? -0.1 : 0.1)) * 10) / 10));
+  // To `next`, keeping the page point at (clientX, clientY) under that spot — the wheel's point,
+  // or the top-left of the pages for the menu.
+  function setZoom(next, clientX, clientY) {
+    next = Math.min(4, Math.max(0.25, next));
     if (next === zoom) return;
     const first = document.querySelector('.page');
     const r = first ? first.getBoundingClientRect() : { top: 0, left: 0 };
     const top = r.top + window.scrollY, left = r.left + window.scrollX;
-    const x = window.scrollX + e.clientX, y = window.scrollY + e.clientY, k = next / zoom;
+    const x = window.scrollX + clientX, y = window.scrollY + clientY, k = next / zoom;
     zoom = next;
     state.zoom = zoom;
     vscode.setState(state);
     applyZoom(true);
-    window.scrollTo(left + (x - left) * k - e.clientX, top + (y - top) * k - e.clientY);
+    window.scrollTo(left + (x - left) * k - clientX, top + (y - top) * k - clientY);
+  }
+  document.addEventListener('wheel', e => {
+    if (!e.ctrlKey) return;
+    e.preventDefault();
+    setZoom(Math.round((zoom + (e.deltaY > 0 ? -0.1 : 0.1)) * 10) / 10, e.clientX, e.clientY);
   }, { passive: false });
+  // The context menu's two (package.json menus/webview/context → omrScan.ts postToActiveScan):
+  // Fit Width is 100% (a page as wide as the pane); Reset Zoom (1:1) is one pixel of the page as
+  // loaded to one on the screen — the page's own width over the pane's, within the 25..400%.
+  function menuZoom(type) {
+    const head = document.querySelector('.note').getBoundingClientRect().bottom;
+    if (type === 'ctxFitWidth') {
+      setZoom(1, 0, head);
+    } else {
+      const img = document.querySelector('.page img'), pane = document.body.clientWidth - 16;
+      if (img && img.naturalWidth > 0 && pane > 0) setZoom(img.naturalWidth / pane, 0, head);
+    }
+  }
 
   // B4: the bar at the top of the view goes to the preview as the scan scrolls; a scroll
   // the preview asked for (showBar) is not reported back.
@@ -616,6 +650,10 @@ ${pages || '<p>The side file lists no page.</p>'}
   });
 
   window.addEventListener('message', ({ data }) => {
+    if (data.type === 'ctxFitWidth' || data.type === 'ctxResetZoom') {
+      menuZoom(data.type);
+      return;
+    }
     if (data.type === 'resolved') {
       resolved = new Set(data.keys || []);
       filter();

@@ -424,6 +424,16 @@
         "title": "Reset Zoom (100%)"
       },
       {
+        "command": "lilysharp.scanFitWidth",
+        "category": "Lily#",
+        "title": "Fit Width"
+      },
+      {
+        "command": "lilysharp.scanResetZoom",
+        "category": "Lily#",
+        "title": "Reset Zoom (1:1)"
+      },
+      {
         "command": "lilysharp.exportPdf",
         "category": "Lily#",
         "title": "Export as PDF"
@@ -613,6 +623,14 @@
           "when": "activeWebviewPanelId == 'lilysharpPreview'"
         },
         {
+          "command": "lilysharp.scanFitWidth",
+          "when": "activeWebviewPanelId == 'lilysharpScan'"
+        },
+        {
+          "command": "lilysharp.scanResetZoom",
+          "when": "activeWebviewPanelId == 'lilysharpScan'"
+        },
+        {
           "command": "lilysharp.exportPdf",
           "when": "resourceLangId == lilysharp"
         },
@@ -660,6 +678,16 @@
         {
           "command": "lilysharp.previewResetZoom",
           "when": "webviewId == 'lilysharpPreview'",
+          "group": "2_zoom@2"
+        },
+        {
+          "command": "lilysharp.scanFitWidth",
+          "when": "webviewId == 'lilysharpScan'",
+          "group": "2_zoom@1"
+        },
+        {
+          "command": "lilysharp.scanResetZoom",
+          "when": "webviewId == 'lilysharpScan'",
           "group": "2_zoom@2"
         }
       ],
