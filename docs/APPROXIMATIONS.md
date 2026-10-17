@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 63 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 63 | 観測者がゼロだと自認しているもの |
-| `OWN` | 260 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **386** | |
+| `OWN` | 262 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **388** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -246,7 +246,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（260 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（262 件）
 
 ### `LilySharp.Core/Editing/KeyRespeller.cs`
 - **`KeyRespeller`** LILYSHARP-OWN: an editor aid. The rule:
@@ -405,8 +405,12 @@
 ### `LilySharp.Core/Svg/Collector/MeasureCollector.MusicWalk.cs`
 - **`MeasureCollector.ProcessMusicNode`** not against the reset the head already stands on (LILYSHARP-OWN): a
 - **`MeasureCollector.ApplyMeterChange`** (MeasureBuilder.SectionHead, LILYSHARP-OWN).
+### `LilySharp.Core/Svg/Collector/MeasureCollector.Stems.cs`
+- **`MeasureCollector.ResolveVoiceStemDirections`** LILYSHARP-OWN — the memo is the preview's ink, not an engraved grob).
 ### `LilySharp.Core/Svg/Collector/MidBarBreaks.cs`
 - **`MidBarBreakTable`** a voice whose item sounds ACROSS the offset (LILYSHARP-OWN: LilyPond breaks under the
+### `LilySharp.Core/Svg/Collector/PartCombiner.cs`
+- **`PartCombiner.WithVoiceDirection`** the mark wrote .up (owner's decision 2026-10-17; LILYSHARP-OWN — the preview's ink).
 ### `LilySharp.Core/Svg/Collector/RenderSpec.cs`
 - **`StaffSpec.MaxLines`** LILYSHARP-OWN: the DEFAULT five is LilyPond's (scm/define-grobs.scm:3396,
 ### `LilySharp.Core/Svg/Collector/ScoreAssembler.cs`
