@@ -15,10 +15,10 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 // "Lily#: Show Original Scan" (LilySharp-Omr proposal B3): the pages an OMR reader read, beside
-// the .lys it wrote, with the marks it was unsure of boxed in red. A click on a box goes to the
-// music and the caret lights its box: a mark by its key (lilysharp/todos, so it is found
-// wherever the mark has moved), a bar by the line the reader wrote it on, carried through the
-// edits since (omrScanCore.anchorsOf — the reader's bar numbers are its own, not the page's).
+// the .lys it wrote, with the marks it was unsure of framed in red dashes. A click on a bar goes
+// to the line the reader wrote it on, carried through the edits since (omrScanCore.anchorsOf —
+// the reader's bar numbers are its own, not the page's); the caret lights its box: a mark by its
+// key (lilysharp/todos, so it is found wherever the mark has moved), a bar by that line.
 // omrScanCore.ts is the editor-free half; the side file x.omr.json is the reader's and is only
 // read.
 
@@ -147,11 +147,9 @@ export async function showScan(
     watcher.onDidChange(reload);
     watcher.onDidCreate(reload);
 
-    panel.webview.onDidReceiveMessage(async (m: { type: string; key?: string; index?: number; on?: boolean; value?: number }) => {
+    panel.webview.onDidReceiveMessage(async (m: { type: string; index?: number; on?: boolean; value?: number }) => {
         try {
-            if (m.type === 'todo' && m.key) {
-                await goToTodo(view, m.key, deps);
-            } else if (m.type === 'bar' && Number.isInteger(m.index)) {
+            if (m.type === 'bar' && Number.isInteger(m.index)) {
                 await goToBar(view, m.index!);
             } else if (m.type === 'visibleBar' && Number.isInteger(m.index) && view.linked) {
                 const printed = (await printedOf(view, deps)).find(b => b.index === m.index)?.printed;
@@ -331,25 +329,6 @@ async function editorOf(view: ScanView): Promise<vscode.TextEditor> {
     return vscode.window.showTextDocument(doc, { viewColumn: shown?.viewColumn ?? vscode.ViewColumn.One, preserveFocus: false });
 }
 
-async function goToTodo(view: ScanView, key: string, deps: OmrScanDeps): Promise<void> {
-    const editor = await editorOf(view);
-    const mark = (await todosOf(view, editor.document, deps)).find(t => t.Key === key);
-    if (!mark) {
-        // No mark with that key in the text — one the reader found on a check after the read
-        // (B5 writes the side file, never the .lys), or one already resolved: its bar's line.
-        const todo = view.side.todos.find(t => t.key === key);
-        const index = todo?.measure === undefined ? -1 : view.side.measures.findIndex(m =>
-            m.measure === todo.measure && (todo.part === undefined || m.part === todo.part));
-        if (index >= 0) {
-            await goToBar(view, index);
-            return;
-        }
-        vscode.window.showInformationMessage(`Lily#: the mark @todo(${key}) is not in ${path.basename(view.lys.fsPath)}.`);
-        return;
-    }
-    select(editor, mark.HostStart);
-}
-
 /** Goes to the line a bar of the side file (`side.measures[index]`) is written on. */
 async function goToBar(view: ScanView, index: number): Promise<void> {
     const bar = view.side.measures[index];
@@ -386,7 +365,9 @@ function render(view: ScanView): void {
         const bars = side.measures.map((m, i) => m.page !== p.page ? '' :
             `<g class="bar" data-i="${i}"><rect class="hit" ${rect(m.box)}/><rect class="tint" ${rect(barStaff(m))}/>`
             + `<title>bar ${m.measure}${m.part ? ` (${esc(m.part)})` : ''}</title></g>`).join('');
-        // An outline, heavier and darker the less sure the reader is; the slider hides the surer.
+        // A dashed outline, heavier and darker the less sure the reader is (a quiet one a faint
+        // hairline); the slider hides the surer. Drawn after the bars, over them, and taking no
+        // pointer (the CSS), so the bar under a mark is still the thing hovered and clicked.
         const todos = side.todos.filter(t => t.page === p.page).map(t => {
             const s = todoStroke(t), sure = t.confidence === undefined ? '' : ` (${t.confidence.toFixed(2)})`;
             return `<rect class="todo${t.quiet ? ' quiet' : ''}" ${rect(t.box)} data-key="${esc(t.key)}" `
@@ -421,9 +402,11 @@ function render(view: ScanView): void {
   g.bar { cursor: pointer; }
   g.bar rect { fill: transparent; stroke: none; }
   g.bar:hover rect.tint, g.bar.peer rect.tint { fill: rgba(0, 120, 215, .14); }
-  rect.todo { fill: transparent; stroke: #d00; vector-effect: non-scaling-stroke; cursor: pointer; }
-  rect.todo.quiet { stroke-dasharray: 4 3; }
-  rect.todo:hover { fill: rgba(220, 0, 0, .12); }
+  /* A mark's frame: the red dashes the preview frames a flagged bar with (rect.bar-box.flagged
+     in extension.ts), and no more than a frame — it takes no pointer, so the bar under it is
+     hovered, tinted and clicked as any other (owner's request 2026-10-17; until then the frame
+     was solid, filled red under the mouse, and its click went to the @todo). */
+  rect.todo { fill: none; stroke: #e53935; stroke-dasharray: 4 3; vector-effect: non-scaling-stroke; pointer-events: none; }
   .filter { display: inline-flex; align-items: center; gap: 6px; margin-left: 12px; }
   .filter input { width: 140px; }
   rect.light { fill: rgba(0, 120, 215, .14); stroke: none; pointer-events: none; }
@@ -471,10 +454,8 @@ ${pages || '<p>The side file lists no page.</p>'}
   vscode.postMessage({ type: 'threshold', value: Number(thr.value) });
   filter();
   document.addEventListener('click', e => {
-    const r = e.target.closest('rect.todo, g.bar');
-    if (!r) return;
-    if (r.classList.contains('todo')) vscode.postMessage({ type: 'todo', key: r.dataset.key });
-    else vscode.postMessage({ type: 'bar', index: Number(r.dataset.i) });
+    const r = e.target.closest('g.bar');
+    if (r) vscode.postMessage({ type: 'bar', index: Number(r.dataset.i) });
   });
 
   // The bar under the mouse lights on the preview too, and the preview's bar under the mouse

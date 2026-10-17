@@ -139,6 +139,15 @@ All notable changes to the Lily# VS Code extension are documented here.
   each staff's bar from its first note to the bar line closing it (every printed copy), and it
   follows the caret and the edits.
 
+### A mark on the scan is a dashed red frame, and the bar under it is still a bar
+
+- **The red frame round a mark on Show Original Scan is dashed, as the preview's frame round a
+  flagged bar is** (the same red, the same dashes; owner's request 2026-10-17). It is only a
+  frame now: the mouse over it tints the bar under it blue, as anywhere else on the bar, and a
+  click goes to that bar. Until now the frame was solid, filled red under the mouse, and its
+  click went to the `@todo` itself; the memo and the reader's confidence still show as its
+  tooltip, and the editor's caret on the `@todo` still lights its frame.
+
 ### The scan view scrolls when you drag a page
 
 - **Show Original Scan scrolls when you drag a page** with the left mouse button, as the score
