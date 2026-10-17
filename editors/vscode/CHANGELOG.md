@@ -170,6 +170,13 @@ All notable changes to the Lily# VS Code extension are documented here.
   click went to the `@todo` itself; the memo and the reader's confidence still show as its
   tooltip, and the editor's caret on the `@todo` still lights its frame.
 
+### Ctrl+wheel zooms the scan
+
+- **Show Original Scan zooms with Ctrl+wheel**, as the score preview does (25% to 400% in steps
+  of 10%; owner's request 2026-10-17). 100% is a page as wide as the pane; the point under the
+  mouse stays under it, the zoom shows for a moment at the bottom right, and each scan keeps its
+  own zoom while it is open. The bars and marks on the pages scale with them.
+
 ### The scan view scrolls when you drag a page
 
 - **Show Original Scan scrolls when you drag a page** with the left mouse button, as the score

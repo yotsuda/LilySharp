@@ -413,7 +413,9 @@ function render(view: ScanView): void {
   .note > span.text { opacity: .8; }
   /* The pages are dragged to scroll, as the preview's sheet is (installDragScroll below): an
      open hand over them, a closed one while they move; a bar and a mark keep the pointer. */
-  .page { position: relative; margin: 0 auto 12px; max-width: 100%; cursor: grab; }
+  /* Ctrl+wheel zooms the pages (the script sets --zoom; 1 = as wide as the pane): a real width,
+     not a transform, so the bars' and marks' geometry the script reads stays the drawn one. */
+  .page { position: relative; margin: 0 auto 12px; width: calc(var(--zoom, 1) * 100%); cursor: grab; }
   .page img { display: block; width: 100%; height: auto; background: #fff; -webkit-user-drag: none; user-select: none; }
   .page svg { position: absolute; inset: 0; width: 100%; height: 100%; }
   .page.missing { padding: 12px; border: 1px dashed var(--vscode-editorWidget-border, #888); }
@@ -431,6 +433,10 @@ function render(view: ScanView): void {
   .filter input { width: 140px; }
   rect.light { fill: rgba(0, 120, 215, .14); stroke: none; pointer-events: none; }
   body.dragging, body.dragging * { cursor: grabbing; }
+  /* The zoom read-out, as the preview's. */
+  .zoom-info { position: fixed; bottom: 10px; right: 10px; z-index: 2; background: rgba(0, 0, 0, .7); color: #fff;
+               padding: 4px 8px; border-radius: 4px; font-family: monospace; font-size: 12px; opacity: 0; transition: opacity .3s; }
+  .zoom-info.visible { opacity: 1; }
 </style></head><body>
 <p class="note"><span class="text">${esc(path.basename(view.lys.fsPath))} — read from ${side.pages.length === 1 ? 'this page' : `these ${side.pages.length} pages`}. `
         + `Red: marked to check — heavier where the reader is less sure. A click goes to the music; the caret lights its bar here.</span> `
@@ -439,6 +445,7 @@ function render(view: ScanView): void {
         + `Marks below <input type="range" id="thr" min="0.05" max="1" step="0.05" value="${SCAN_DEFAULT_THRESHOLD}">`
         + `<span id="thrOut"></span></label></p>
 ${pages || '<p>The side file lists no page.</p>'}
+<div class="zoom-info" id="zoomInfo">100%</div>
 <script nonce="${nonce}">
   const vscode = acquireVsCodeApi();
   const link = document.getElementById('link');
@@ -535,6 +542,40 @@ ${pages || '<p>The side file lists no page.</p>'}
     }, true);
     document.addEventListener('dragstart', e => e.preventDefault());
   })();
+
+  // Ctrl+wheel zooms the pages, as it zooms the preview's sheet (extension.ts: the same 0.25..4
+  // by 0.1; owner's request 2026-10-17). 1 is a page as wide as the pane. The zoom is a CSS
+  // variable the pages' width follows (a real width, so the bar and mark geometry the script
+  // reads is the drawn one); the page point under the mouse stays under it — the pages start
+  // under the head, whose height does not change, so the scroll is scaled from their top and
+  // left. Kept per view (state.zoom).
+  const zoomInfo = document.getElementById('zoomInfo');
+  let zoom = typeof state.zoom === 'number' && state.zoom >= 0.25 && state.zoom <= 4 ? state.zoom : 1;
+  let zoomHide = null;
+  function applyZoom(show) {
+    document.documentElement.style.setProperty('--zoom', String(zoom));
+    if (!show) return;
+    zoomInfo.textContent = Math.round(zoom * 100) + '%';
+    zoomInfo.classList.add('visible');
+    clearTimeout(zoomHide);
+    zoomHide = setTimeout(() => zoomInfo.classList.remove('visible'), 1500);
+  }
+  applyZoom(false);
+  document.addEventListener('wheel', e => {
+    if (!e.ctrlKey) return;
+    e.preventDefault();
+    const next = Math.min(4, Math.max(0.25, Math.round((zoom + (e.deltaY > 0 ? -0.1 : 0.1)) * 10) / 10));
+    if (next === zoom) return;
+    const first = document.querySelector('.page');
+    const r = first ? first.getBoundingClientRect() : { top: 0, left: 0 };
+    const top = r.top + window.scrollY, left = r.left + window.scrollX;
+    const x = window.scrollX + e.clientX, y = window.scrollY + e.clientY, k = next / zoom;
+    zoom = next;
+    state.zoom = zoom;
+    vscode.setState(state);
+    applyZoom(true);
+    window.scrollTo(left + (x - left) * k - e.clientX, top + (y - top) * k - e.clientY);
+  }, { passive: false });
 
   // B4: the bar at the top of the view goes to the preview as the scan scrolls; a scroll
   // the preview asked for (showBar) is not reported back.
