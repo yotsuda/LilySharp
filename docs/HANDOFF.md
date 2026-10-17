@@ -132,7 +132,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **罠**: ⑴ ページスクリプトのコメントにバッククォートを書いて template literal が閉じ、`webviewScript.test.ts` が 8 本 `Unexpected identifier 'elapsed'`＝第909 と同じ罠。⑵ Write ツールの新規 9 ファイルは LF＝直後に CRLF へ揃えた（CLAUDE-OPERATIONS §1）。
 - docs: `playback-design.md` §6・§7、拡張 README（「音源は同梱」の古い 1 文も直した）、両 CHANGELOG `## Unreleased`、site `editor-body.html`（toc・`#midi-out`・設定表）・`commands-body.html`、MANUAL-CHECKS **§3.5（`[ ]` 9 項目＝未確認）**。
 - 残り: **ユーザーの実機確認（MANUAL-CHECKS §3.5＝GS／loopMIDI→DAW）**・mac／Linux の実走は他の機械で・part の `midiChannel` は要るときに。
-- commit（code＋docs）→ `-End p911 -DiffBase 9dcbb766d`＝full（下の docs commit に数を書く）。未 push 12＋この便（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。
+- commit **`d3cae28bc`**（code＋docs・1 回）→ `-End p911 -DiffBase 9dcbb766d`＝full **12434 / 0 / 2 / 12436**（開始 +13 本＝MidiOutTests・Core '+' 0 行＝Core は触っていない・Core 警告 0・門は全部 OK・天井: HANDOFF 389,525 B・§1 現在便 14,768 / 20,000 字・Lab `sessions/p911/end.log`）→ この docs commit。未 push 12＋2（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。
 判定（2026-10-18）: 次の一手は**ユーザーの実機確認が先**（§3.5）。その後の候補は §1.0 ⒜（1 線譜表の中の `clef` 変更・`lysc wav`）。文脈は MIDI out の 1 島だけ＝実機の報告に対する直しは**この会話で続けるのが有利**（(a) この便のコードの上に立つ・(b) 圧縮はまだ無い）。
 
 ## 以下は第910セッションの経緯
