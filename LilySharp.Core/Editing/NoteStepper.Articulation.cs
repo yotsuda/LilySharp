@@ -97,8 +97,9 @@ public static partial class NoteStepper
 
     /// <summary>One step of an articulation: the edit (null when it has no group, or stands at
     /// an end) and the message — the group's names, nothing more (owner's decision 2026-10-16:
-    /// repeating the current name is redundant, and "already the last" was noise), or why
-    /// nothing moved.</summary>
+    /// repeating the current name is redundant, and "already the last" was noise), listed from
+    /// the top down (owner's request 2026-10-17: "upBow / downBow" reads as Up above Down, the
+    /// way the keys go), or why nothing moved.</summary>
     private static (Edit? Edit, string Message) ArticulationEdit(ArticulationSyntax articulation, int dir)
     {
         var token = articulation.NameToken;
@@ -108,7 +109,7 @@ public static partial class NoteStepper
             return (null, IsSteppable(name)
                 ? $"@{name}: in no group of marks to rotate through"
                 : $"@{name}: not an articulation Lily# knows");
-        string listed = string.Join(" / ", group);
+        string listed = string.Join(" / ", group.Reverse());
         int at = Array.IndexOf(group, name);
         int to = at + dir;
         if (to < 0 || to >= group.Length)

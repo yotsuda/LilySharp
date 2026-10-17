@@ -785,7 +785,7 @@ public class StepRequestTests
         var (end, same) = Step(Plain("c'4@up‸Bow d'"), +1, semitone: true);
         Assert.False(end.Fallback);
         Assert.Equal(Plain("c'4@upBow d'"), same);
-        Assert.Equal("downBow / upBow", end.Message);
+        Assert.Equal("upBow / downBow", end.Message);
         // A longer group walks in order, the placement stays, and the ends stop.
         Assert.Equal(Plain("c'4@portato.up d'"), Step(Plain("c'4@stacc‸ato.up d'"), +1, semitone: true).After);
         Assert.Equal(Plain("c'4@staccatissimo d'"), Step(Plain("c'4@stacc‸ato d'"), -1, semitone: true).After);
@@ -799,10 +799,11 @@ public class StepRequestTests
         var (stem, top) = Step(Plain("c'4@stem‸Up d'"), +1, semitone: true);
         Assert.False(stem.Fallback);
         Assert.Equal(Plain("c'4@stemUp d'"), top);
-        Assert.Equal("stemDown / stemUp", stem.Message);
-        // The status bar lists the group, nothing more (owner's decision 2026-10-16).
+        Assert.Equal("stemUp / stemDown", stem.Message);
+        // The status bar lists the group, nothing more (owner's decision 2026-10-16), from the
+        // top down (owner's request 2026-10-17: Up above Down, the way the keys go).
         var (said, _) = Step(Plain("c'4@ferm‸ata d'"), +1, semitone: true);
-        Assert.Equal("shortFermata / fermata / longFermata", said.Message);
+        Assert.Equal("longFermata / fermata / shortFermata", said.Message);
         // A mark in no group steps the note it is written on instead (owner's request 2026-10-17),
         // on either pair; so does a dynamic on no ladder, and a member's mark its member. A bare
         // @chord on a <…> chord is the chord's: the key pair inverts it, the octave pair moves it.
