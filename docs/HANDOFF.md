@@ -138,7 +138,8 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - `-End p909 -DiffBase 1a0f14ceb`（2 回目・HEAD `a84da76e1`）＝full **12417 / 0 / 2 / 12419**（開始と同数・Core 警告 **0**）。Core '+' 61 行・LILYPOND-REF 0・LILYSHARP-OWN 0。門は全部 OK（天井: HANDOFF 391,165 B・§1 現在便 14,724 字）。棚卸し差分なし。未 push 110（push はユーザー）。RELEASING §4 の残り: `dotnet build LilySharp.Cli -c Release` 0 エラー 0 警告・`lysc --version` = **0.13.0**。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。
 - **push 済・CI 緑**（ユーザー・HEAD `d4b6db3f2`）。PAT は作り直し＝**2027-10-16 失効**・`verify-pat` 通過＝RELEASING「一度だけの準備」に記録（`0f8c6df3e`・作り直したら secret `VSCE_PAT` と `~/.vsce` の 2 か所）。
 - **サイトに Scan Import の頁**（ユーザー「OMR を紹介するページを一枚」・reader の提案 `…site-figure.md` の図は朝に `84c5b0ffb` で済）: `scan.html` ← `site/scan-body.html`（What・Install・Read・Check・Reads/not yet・Privacy and terms＝reader の readme と LICENSE から・版番号は書かない）。Editor の下（`build-manual.ps1` の `$pages`・`build-site.ps1` の検査一覧・`site/.gitignore`）。リンク元: commands#import-image・editor §07 の表（Image/PDF の行を足した）・start「Where next」・README の頁表。`build-site.ps1` 緑（74 files）。
-- 残り: **ユーザー**＝OMR 拡張 0.3.0 を Marketplace に公開（まだ 0 件） → `v0.13.0` の tag（RELEASING §6〜7・§7 の照会はこちらで回す）。
+- **OMR 拡張 0.3.0 を Marketplace に公開**（ユーザー・`yotsuda.lilysharp-omr`・win32-x64・validated/public/preview・VSIX HEAD 200・床 0.3.0 / protocol 1 と一致）＝第903 の門は閉じた。
+- 残り: **ユーザー**＝push（RELEASING の PAT 行・scan 頁・この行）→ CI 緑 → `v0.13.0` の tag（RELEASING §6）→ §7 の照会はこちらで回す。
 判定: 次の一手は全部ユーザー側（push・公開・tag）⇒ **この会話で続けてよい**（(a) 文脈は release の島・(b) 会話は重いが残りは短い）。
 
 ## 以下は第908セッションの経緯
