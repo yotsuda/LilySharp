@@ -36,7 +36,9 @@ namespace LilySharp.Core.Editing;
 /// pair moves it a fifth round the circle (same day, NoteStepper.Key.cs); on a <c>clef</c> it
 /// steps to the clef for higher or lower notes (same day, NoteStepper.Clef.cs); on an
 /// articulation either pair steps it along its group — <c>@downBow</c> ⇄ <c>@upBow</c>
-/// (same day, NoteStepper.Articulation.cs).
+/// (same day, NoteStepper.Articulation.cs); on an <c>octave relative</c> / <c>octave absolute</c>
+/// Up writes <c>absolute</c> and Down <c>relative</c> (owner's request 2026-10-17,
+/// NoteStepper.Values.cs).
 /// </summary>
 /// <remarks>
 /// <para>
@@ -112,12 +114,15 @@ public static partial class NoteStepper
         Time,
         /// <summary>A header's <c>octave N</c> or <c>transpose X</c> (NoteStepper.Values.cs).</summary>
         HeaderValue,
+        /// <summary>An <c>octave absolute</c> / <c>octave relative</c> directive — the file's or one
+        /// inside music; a part header's is a <see cref="HeaderValue"/> (NoteStepper.Values.cs).</summary>
+        OctaveMode,
     }
 
     /// <summary>The kinds whose step changes a setting, not a sound — the audition skips them.</summary>
     private static bool IsSilent(TargetKind kind)
         => kind is TargetKind.Tempo or TargetKind.Key or TargetKind.Clef or TargetKind.Dynamic
-            or TargetKind.Articulation or TargetKind.Time or TargetKind.HeaderValue;
+            or TargetKind.Articulation or TargetKind.Time or TargetKind.HeaderValue or TargetKind.OctaveMode;
 
     /// <summary>A written thing the caret is on: its kind and its node (a
     /// <see cref="NoteSyntax"/>, a <see cref="PitchSyntax"/> or <see cref="ScaleDegreeSyntax"/>
@@ -258,13 +263,15 @@ public static partial class NoteStepper
                 stepped.Add(t);
                 continue;
             }
-            if (t.Kind is TargetKind.Dynamic or TargetKind.Articulation or TargetKind.Time or TargetKind.HeaderValue)
+            if (t.Kind is TargetKind.Dynamic or TargetKind.Articulation or TargetKind.Time or TargetKind.HeaderValue
+                or TargetKind.OctaveMode)
             {
                 var (valueEdit, valueSaid) = t.Kind switch
                 {
                     TargetKind.Dynamic => DynamicEdit((DynamicSyntax)t.Node, dir),
                     TargetKind.Articulation => ArticulationEdit((ArticulationSyntax)t.Node, dir),
                     TargetKind.Time => TimeEdit((TimeSignatureSyntax)t.Node, dir, semitone),
+                    TargetKind.OctaveMode => OctaveModeEdit(((OctaveDirectiveSyntax)t.Node).Mode, dir),
                     _ => ValuePropertyEdit(text, tree, (PropertyAssignmentSyntax)t.Node, dir, semitone),
                 };
                 message ??= valueSaid;
@@ -405,6 +412,8 @@ public static partial class NoteStepper
             return new Target(TargetKind.Time, time);
         if (ValuePropertyAt(tree, offset) is { } property)
             return new Target(TargetKind.HeaderValue, property);
+        if (OctaveModeAt(tree, offset) is { } octaveMode)
+            return new Target(TargetKind.OctaveMode, octaveMode);
         // A mark with nothing of its own to step — a dynamic on no ladder (@sfz), an articulation
         // in no group (@tap), a bare @chord on a <…> chord — steps the note, member or chord it is
         // written on instead (owner's request 2026-10-17: on the word of "<c e g>@chord" the keys

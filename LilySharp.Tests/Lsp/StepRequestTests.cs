@@ -853,6 +853,34 @@ public class StepRequestTests
     }
 
     [Fact]
+    public void AnOctaveMode_UpWritesAbsolute_DownRelative()
+    {
+        // Owner's request 2026-10-17: the file's directive, a part header's property and one
+        // inside music, on either pair. A direction each, so a second press stays; only the
+        // word changes, and the status bar names the convert command that keeps the pitches.
+        const string Book = "{0}\npart lh {{ clef bass {1} }}\nsection A {{ lh {{ {2}c4 d e f }} }}\n";
+        string S(string top = "octave relative", string part = "octave 3", string music = "")
+            => string.Format(Book, top, part, music);
+        Assert.Equal(S("octave absolute"), Step(S("octave rel‸ative"), +1, semitone: true).After);
+        Assert.Equal(S("octave relative"), Step(S("oct‸ave absolute"), -1).After);
+        Assert.Equal(S(part: "octave absolute"), Step(S(part: "octave ‸relative"), +1, semitone: true).After);
+        Assert.Equal(S(part: "octave relative"), Step(S(part: "octave absolute‸"), -1, semitone: true).After);
+        Assert.Equal(S(music: "octave absolute "), Step(S(music: "octave relative‸ "), +1).After);
+        Assert.Equal(S(music: "octave relative "), Step(S(music: "‸octave absolute "), -1, semitone: true).After);
+        var (same, after) = Step(S("octave abso‸lute"), +1, semitone: true);
+        Assert.False(same.Fallback);
+        Assert.Equal(S("octave absolute"), after);
+        Assert.Equal("octave absolute: absolute (Up) / relative (Down)", same.Message);
+        var (said, _) = Step(S("‸octave relative"), +1, semitone: true);
+        Assert.StartsWith("octave absolute:", said.Message);
+        Assert.Contains("Convert Octaves to Absolute", said.Message);
+        var (back, _) = Step(S(part: "octave ‸absolute"), -1);
+        Assert.Contains("Convert Octaves to Relative", back.Message);
+        // The part's `octave 3` still steps its number.
+        Assert.Equal(S(part: "octave 4"), Step(S(part: "octave ‸3"), +1).After);
+    }
+
+    [Fact]
     public void AShift_StepsASemitone_AndNamesTheKeyItLandsIn()
     {
         const string Book = "key {0}\n{1}\npart m {{ clef treble }}\nsection A {{ m {{ c4 d e f }} }}\nform {{ A }}\nscore {{ staff m }}\n";

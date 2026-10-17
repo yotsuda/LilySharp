@@ -24,7 +24,8 @@ namespace LilySharp.Core.Editing;
 
 /// <summary>
 /// The step keys on a dynamic, a <c>time</c>, a part's <c>octave N</c> and a <c>transpose</c>
-/// (owner's decision 2026-10-16, on Lily#'s proposal). Up is louder, more, higher; only the
+/// (owner's decision 2026-10-16, on Lily#'s proposal), and on an <c>octave absolute</c> /
+/// <c>octave relative</c> (owner's request 2026-10-17). Up is louder, more, higher; only the
 /// written value changes.
 /// </summary>
 /// <remarks>
@@ -49,6 +50,13 @@ namespace LilySharp.Core.Editing;
 /// takes a <c>'</c> / <c>,</c> mark. The owner asked whether a NUMBER of semitones should be
 /// writable instead; the language keeps the pitch (a number leaves the spelling open — +1 from
 /// C major is D♭ or C♯), and the step gives the number's convenience.</item>
+/// <item>An <c>octave absolute</c> / <c>octave relative</c> — the file's, a part header's or one
+/// inside music: Up writes <c>absolute</c>, Down <c>relative</c>, on either pair; a second press
+/// stays (a direction each, as the hairpin and the two-mark groups have — Lily#'s reading of the
+/// owner's decision 2026-10-16 that small groups do not rotate). ONLY THE WORD CHANGES, as a
+/// stepped <c>key</c> leaves its notes: the notes after it are read anew, and the status bar
+/// names the command that rewrites them to keep their pitches instead (Convert Octaves to
+/// Absolute / Relative, <see cref="OctaveModeConverter"/>).</item>
 /// </list>
 /// </remarks>
 public static partial class NoteStepper
@@ -86,7 +94,8 @@ public static partial class NoteStepper
         return null;
     }
 
-    /// <summary>A header's <c>octave N</c> or <c>transpose X</c> the caret is on, or null.</summary>
+    /// <summary>A header's <c>octave N</c> / <c>octave absolute</c> or <c>transpose X</c> the caret
+    /// is on, or null.</summary>
     private static PropertyAssignmentSyntax? ValuePropertyAt(SyntaxTree tree, int offset)
     {
         foreach (var p in tree.GetNodes<PropertyAssignmentSyntax>())
@@ -94,6 +103,38 @@ public static partial class NoteStepper
                 && p.SourceStart <= offset && offset <= p.Span.End)
                 return p;
         return null;
+    }
+
+    /// <summary>An <c>octave absolute</c> / <c>octave relative</c> directive the caret is on — the
+    /// file's, or one inside music (a part header's is a property, <see cref="ValuePropertyAt"/>) —
+    /// from its keyword to its mode, or null.</summary>
+    private static OctaveDirectiveSyntax? OctaveModeAt(SyntaxTree tree, int offset)
+    {
+        foreach (var d in tree.GetNodes<OctaveDirectiveSyntax>())
+            if (d.SourceStart <= offset && offset <= d.Span.End)
+                return d;
+        return null;
+    }
+
+    /// <summary>The two octave modes, Up's first.</summary>
+    private const string AbsoluteMode = "absolute", RelativeMode = "relative";
+
+    /// <summary>One step of an octave mode (owner's request 2026-10-17): Up writes
+    /// <c>absolute</c>, Down <c>relative</c>; a press that changes nothing says which key writes
+    /// the other. Only the word changes — the status bar names the convert command for a rewrite
+    /// that keeps the pitches.</summary>
+    private static (Edit? Edit, string Message) OctaveModeEdit(SyntaxTokenNode mode, int dir)
+    {
+        string was = mode.Text;
+        if (!was.Equals(AbsoluteMode, StringComparison.OrdinalIgnoreCase)
+            && !was.Equals(RelativeMode, StringComparison.OrdinalIgnoreCase))
+            return (null, "octave: write its mode first (octave absolute, octave relative)");
+        string next = dir > 0 ? AbsoluteMode : RelativeMode;
+        if (was.Equals(next, StringComparison.OrdinalIgnoreCase))
+            return (null, $"octave {next}: {AbsoluteMode} (Up) / {RelativeMode} (Down)");
+        return (new Edit(mode.Span.Start, mode.Span.End, next), dir > 0
+            ? "octave absolute: every ' and , now counts from the base (a bare c is C4) - to keep the pitches, run Convert Octaves to Absolute instead"
+            : "octave relative: every note is now read from the one before - to keep the pitches, run Convert Octaves to Relative instead");
     }
 
     /// <summary>Whether the keys have a step for a dynamic of this name: a level on the ladder, or
@@ -168,8 +209,12 @@ public static partial class NoteStepper
             return ShiftEdit(tree, property, values, dir);
         if (property.NameToken.Text == "octave")
         {
+            // A part header's `octave absolute` / `octave relative` (the same property node as
+            // its `octave N`): the mode steps, as the file's directive does.
+            if (values is [var word] && word.Text is AbsoluteMode or RelativeMode)
+                return OctaveModeEdit(word, dir);
             if (values is not [var only] || !int.TryParse(only.Text, out int octave))
-                return (null, $"octave {Written(values)}: the step changes a number (octave 3)");
+                return (null, $"octave {Written(values)}: the step changes a number (octave 3) or a mode (octave absolute)");
             int next = octave + dir;
             if (next < LowestOctave || next > HighestOctave)
                 return (null, $"octave {octave}: already the {(dir > 0 ? "highest" : "lowest")} ({LowestOctave} to {HighestOctave})");

@@ -39,6 +39,7 @@
 - [x] **プレビューの記号のクリック**（2026-10-17 のユーザー報告）: プレビューのフェルマータをクリック → カレットが `@fermata` の `@` の**直後**に来る（前は `@` の直前＝音符の側で、そこで Ctrl+Shift+↑ を押すと音高が動いた）。そのまま Ctrl+Shift+↑ → `@longFermata`、音符は変わらない。強弱の `mf`・`@chord(Cm7)` のクリックも同じ。音符・小節・題名のクリックは今まで通り。
 - [x] **拍子**: `time 3/4` の上で ↑ → `time 4/4`。`time 6/8` で PgUp → `3/4`、PgDn → `2/4`。`time 2/2` で PgUp → `4/4`。小節線が組み直される。
 - [x] **octave N**: `part lh { clef bass octave 3 }` の `3` の上で ↑ → `octave 4`。その part の音がプレビューで 1 オクターブ上に、再生でも上で鳴る。
+- [ ] **octave relative / absolute**（2026-10-17 のユーザー要望）: 先頭の `octave relative` の上で Ctrl+Shift+↑ → `octave absolute`（ステータスバーに *octave absolute: … Convert Octaves to Absolute …*）、もう 1 回は動かない（*absolute (Up) / relative (Down)*）、↓ → `octave relative`。語だけが変わるので、relative で書いた本はプレビューの音符が動く（`c' d' e'` が C5 から読まれる）。`part lh { clef bass octave absolute }` の `absolute` の上と、音楽の中の `octave absolute` でも同じ。PgUp / PgDn でも同じ。
 - [x] **transpose**: `part cl { transpose d }` の上で ↑ → `transpose ees`（ステータスバー *up 3 semitones*）。`key e major` の本で `transpose c` ↑ → `des`（F 長調になる・`cis` ではない）。PgUp → `ees'`。
 - [x] **shift**（2026-10-17 のユーザー要望＝曲全体の半音シフト）: `key c major` の本の先頭に `shift 0` と書き、その上で Ctrl+Shift+↑ → `shift +1`（ステータスバー *shift +1: key c major -> des major*）。プレビューで全パートの音符と調号が D♭ 長調に、コード行の名前も D♭・A♭7 に、再生も半音上に。↓ 2 回 → `shift -1`（B 長調）。`transpose d` を持つパートも一緒に動く。コード図は書いた形ではなく新しいコードの既定の形。ドラムは動かない。PgUp / PgDn でも同じ 1 半音。
 - [x] 音符の上でない所で Ctrl+Shift+PgUp / PgDn → エディタのタブが左右に動く（VS Code 既定の Move Editor Left / Right in Group）。音符の上ではタブは動かず、オクターブが動く。
