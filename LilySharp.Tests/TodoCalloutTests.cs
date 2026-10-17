@@ -21,6 +21,7 @@ using System.Text.RegularExpressions;
 using LilySharp.Core.Svg;
 using LilySharp.Core.Svg.Collector;
 using LilySharp.Core.Svg.Layout;
+using LilySharp.Core.Svg.Model;
 using LilySharp.Core.Svg.Renderer;
 using LilySharp.Core.Syntax;
 using Xunit;
@@ -152,6 +153,42 @@ public class TodoCalloutTests
         double TextX(string svg) => double.Parse(Regex.Match(svg, "<text [^>]*x=\"(-?[0-9.]+)\"[^>]*data-todo=\"\"[^>]*>memo<").Groups[1].Value);
         Assert.True(TextX(above) > up.X1 + 0.5, $"the memo stands off to the right: ring {up.X1}, text {TextX(above)}");
         Assert.True(TextX(below) > down.X1 + 0.5, $"the memo stands off to the right: ring {down.X1}, text {TextX(below)}");
+    }
+
+    [Fact]
+    public void TheLowerVoicesMemo_GoesBelow_UnlessItWroteItsSide()
+    {
+        // Owner's decision 2026-10-17: on a staff with two voices the lower voice's memo
+        // goes below the staff, where that voice is read, without `.down`; `.up` keeps it
+        // above. The upper voice's stays above. Both ways of having two voices on one
+        // staff: `voice { } { }` in one part, and two parts on a combinedStaff.
+        static (MusicItem Upper, MusicItem Lower) Voiced(string book)
+        {
+            var tree = SyntaxTree.Parse(book);
+            Assert.False(tree.HasErrors, string.Join("; ", tree.Diagnostics));
+            var staff = SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree)).EnumerateStaves().Single().Staff;
+            Assert.Equal(2, staff.Voices.Count());
+            return (staff.Voices[0].Measures[0].Items[0], staff.Voices[1].Measures[0].Items[0]);
+        }
+        var (upper, lower) = Voiced(Book("voice { c''4@todo(\"upper\") d''4 e''4 f''4 } { c'4@todo(\"lower\") d'4 e'4 f'4 } |"));
+        Assert.Equal(("upper", false), (upper.TodoMemo, upper.TodoBelow));
+        Assert.Equal(("lower", true), (lower.TodoMemo, lower.TodoBelow));
+        var (_, kept) = Voiced(Book("voice { c''4 d''4 e''4 f''4 } { c'4@todo(\"lower\").up d'4 e'4 f'4 } |"));
+        Assert.False(kept.TodoBelow);
+        Assert.True(kept.TodoSideWritten);
+        var (one, two) = Voiced("octave absolute\npart vone { clef treble }\npart vtwo { clef treble }\n"
+            // Different rhythms, so the combiner keeps two voices (the same rhythm would be
+            // chords of a shared voice, which has no side).
+            + "section A {\n  vone { c''4@todo(\"one\") d''4 e''4 f''4 | }\n  vtwo { c'2@todo(\"two\") d'2 | }\n}\n"
+            + "form { A }\nscore { combinedStaff { vone vtwo } }\n");
+        Assert.Equal(("one", false), (one.TodoMemo, one.TodoBelow));
+        Assert.Equal(("two", true), (two.TodoMemo, two.TodoBelow));
+        // And the picture: the lower voice's leader runs down from its ring, the upper's up.
+        string svg = SvgGenerator.Generate(SyntaxTree.Parse(Book("voice { c''4@todo(\"upper\") d''4 e''4 f''4 } { c'4@todo(\"lower\") d'4 e'4 f'4 } |")), SvgRenderOptions.Preview());
+        var leaders = Leaders(svg);
+        Assert.Equal(2, leaders.Count);
+        Assert.Contains(leaders, l => l.Y2 < l.Y1);
+        Assert.Contains(leaders, l => l.Y2 > l.Y1);
     }
 
     [Fact]

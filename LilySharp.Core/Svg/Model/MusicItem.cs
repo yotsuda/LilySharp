@@ -161,6 +161,7 @@ internal sealed record MusicItemRare
     public string? TodoKey { get; init; }
     public string? TodoMemo { get; init; }
     public bool TodoBelow { get; init; }
+    public bool TodoSideWritten { get; init; }
 }
 
 /// <summary>
@@ -232,7 +233,7 @@ public abstract record MusicItem
     /// The mark's memo (<c>@todo("memo")</c>), or null without one. Like <see cref="TodoKey"/>
     /// it engraves nothing and takes no space: the preview draws it as red ink OVER the page —
     /// a callout beside the staff with a leader to the ringed head (<c>SharedRenderer.DrawTodoMarks</c>),
-    /// above by default, below for <see cref="TodoBelow"/> (<c>.down</c>). Owner's decisions
+    /// above by default, below for <see cref="TodoBelow"/>. Owner's decisions
     /// 2026-10-10: nothing on the page moves for a mark, as nothing moves for a pencilled note.
     /// </summary>
     public string? TodoMemo
@@ -241,12 +242,31 @@ public abstract record MusicItem
         init { if (value != TodoMemo) _rareBase = (_rareBase ?? MusicItemRare.Empty) with { TodoMemo = value }; }
     }
 
-    /// <inheritdoc cref="TodoMemo"/>
+    /// <summary>
+    /// The memo's side: below the staff for <c>.down</c>, and — owner's decision 2026-10-17 —
+    /// for a note of the LOWER voice of a staff that has two (the stems-down voice of
+    /// <c>voice { } { }</c>, or the second part of a shared staff), since that voice is read
+    /// below; <c>.up</c> keeps such a memo above. Set with the voice's direction
+    /// (<c>MeasureCollector.Stems</c>, <c>PartCombiner</c>) unless <see cref="TodoSideWritten"/>.
+    /// </summary>
     public bool TodoBelow
     {
         get => _rareBase?.TodoBelow ?? false;
         init { if (value != TodoBelow) _rareBase = (_rareBase ?? MusicItemRare.Empty) with { TodoBelow = value }; }
     }
+
+    /// <summary>True when the mark wrote its side (<c>.up</c> / <c>.down</c>), so the voice's
+    /// direction leaves <see cref="TodoBelow"/> alone.</summary>
+    public bool TodoSideWritten
+    {
+        get => _rareBase?.TodoSideWritten ?? false;
+        init { if (value != TodoSideWritten) _rareBase = (_rareBase ?? MusicItemRare.Empty) with { TodoSideWritten = value }; }
+    }
+
+    /// <summary>This item's memo moved to the side its voice reads from — below for the lower
+    /// voice — unless the mark wrote its side. Identity for an item without a memo.</summary>
+    public MusicItem WithTodoSideOfVoice(bool up)
+        => TodoMemo == null || TodoSideWritten || TodoBelow == !up ? this : this with { TodoBelow = !up };
 
     /// <summary>
     /// Whether this item is the FIRST note or chord of its <c>cue { … }</c> region — the stamp

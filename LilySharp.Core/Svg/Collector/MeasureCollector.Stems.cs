@@ -176,6 +176,12 @@ public sealed partial class MeasureCollector
                             => r with { VoiceDirection = restDir },
                         _ => null,
                     };
+                    // A @todo memo too reads from the voice's side: the lower voice's goes
+                    // below the staff unless the mark wrote .up (owner's decision 2026-10-17;
+                    // LILYSHARP-OWN — the memo is the preview's ink, not an engraved grob).
+                    var sided = (updated ?? items[ii]).WithTodoSideOfVoice(forced);
+                    if (!ReferenceEquals(sided, updated ?? items[ii]))
+                        updated = sided;
                     if (updated == null)
                         continue;
                     switch (items[ii])

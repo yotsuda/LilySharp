@@ -1738,7 +1738,7 @@ internal static class PartCombiner
     /// LILYPOND-REF: scm/music-functions.scm:617-634 direction-polyphonic-grobs — Tie, Slur,
     /// LaissezVibrerTie, RepeatTie are in the list make-voice-props-set (:666-674) sets.
     /// </remarks>
-    private static MusicItem WithVoiceDirection(MusicItem item, bool up) => item switch
+    private static MusicItem WithVoiceDirection(MusicItem item, bool up) => (item switch
     {
         NoteItem n => n with { StemUpOverride = n.ForcedStemUp is null ? up : n.StemUpOverride, VoiceStemUp = up },
         ChordItem c => c with { StemUpOverride = c.ForcedStemUp is null ? up : c.StemUpOverride, VoiceStemUp = up },
@@ -1746,7 +1746,10 @@ internal static class PartCombiner
         // LILYPOND-REF: scm/music-functions.scm:617-634 direction-polyphonic-grobs
         RestItem { IsSpacer: false } r => r with { VoiceDirection = up ? 1 : -1 },
         _ => item,
-    };
+    })
+        // A @todo memo reads from the voice's side too: "two"'s goes below the staff unless
+        // the mark wrote .up (owner's decision 2026-10-17; LILYSHARP-OWN — the preview's ink).
+        .WithTodoSideOfVoice(up);
 
     /// <summary>Strips the direction off an item routed to the shared or solo voice: those
     /// contexts carry no voice settings, so the stem follows the pitch.</summary>

@@ -192,7 +192,7 @@ public sealed partial class MeasureCollector
             RepeatTieSourcePosition = hasRepeatTie
                 ? NamedArticulationSourceOf(note, "repeatTie") : MusicItem.NoSourcePosition,
             LineStartAccidental = lineStartAccidental,
-            TodoKey = TodoKeyOf(note), TodoMemo = TodoMemoOf(note), TodoBelow = TodoBelowOf(note),
+            TodoKey = TodoKeyOf(note), TodoMemo = TodoMemoOf(note), TodoBelow = TodoBelowOf(note), TodoSideWritten = TodoSideWrittenOf(note),
         };
     }
 
@@ -217,12 +217,23 @@ public sealed partial class MeasureCollector
     }
 
     /// <summary>Whether the mark asks for its callout BELOW the staff (<c>@todo("…").down</c>,
-    /// <see cref="MusicItem.TodoBelow"/>); above is the default.</summary>
+    /// <see cref="MusicItem.TodoBelow"/>); above is the default here — the lower voice of a
+    /// two-voice staff turns an unwritten side below when its direction is stamped
+    /// (<see cref="MusicItem.WithTodoSideOfVoice"/>).</summary>
     private static bool TodoBelowOf(SyntaxNode node)
     {
         foreach (var annotation in ArticulationsOf(node))
             if (Semantics.TodoAnnotation.Of(annotation) is not null)
                 return annotation is MusicMarkSyntax mark && mark.ForcedAbove == false;
+        return false;
+    }
+
+    /// <summary>Whether the mark wrote its side (<c>.up</c> / <c>.down</c>), <see cref="MusicItem.TodoSideWritten"/>.</summary>
+    private static bool TodoSideWrittenOf(SyntaxNode node)
+    {
+        foreach (var annotation in ArticulationsOf(node))
+            if (Semantics.TodoAnnotation.Of(annotation) is not null)
+                return annotation is MusicMarkSyntax mark && mark.ForcedAbove != null;
         return false;
     }
 
@@ -254,7 +265,7 @@ public sealed partial class MeasureCollector
             Notehead = info.Notehead,
             Midi = info.GmKey,
             ForcedStemUp = GetStemDirectionOverride(drum),
-            TodoKey = TodoKeyOf(drum), TodoMemo = TodoMemoOf(drum), TodoBelow = TodoBelowOf(drum),
+            TodoKey = TodoKeyOf(drum), TodoMemo = TodoMemoOf(drum), TodoBelow = TodoBelowOf(drum), TodoSideWritten = TodoSideWrittenOf(drum),
         };
     }
 
@@ -292,7 +303,7 @@ public sealed partial class MeasureCollector
         return new RestItem(Fraction.FromNoteValue(noteValue), dots, note.SourceStart)
         {
             StaffPosition = rp.StaffPosition,
-            TodoKey = TodoKeyOf(note), TodoMemo = TodoMemoOf(note), TodoBelow = TodoBelowOf(note),
+            TodoKey = TodoKeyOf(note), TodoMemo = TodoMemoOf(note), TodoBelow = TodoBelowOf(note), TodoSideWritten = TodoSideWrittenOf(note),
         };
     }
 
@@ -320,7 +331,7 @@ public sealed partial class MeasureCollector
             // Capital R = explicit multi-measure rest (centred). Lowercase r = plain
             // rest at beat 1, even when it fills the measure.
             IsMultiMeasure = rest.RestText == "R",
-            TodoKey = TodoKeyOf(rest), TodoMemo = TodoMemoOf(rest), TodoBelow = TodoBelowOf(rest),
+            TodoKey = TodoKeyOf(rest), TodoMemo = TodoMemoOf(rest), TodoBelow = TodoBelowOf(rest), TodoSideWritten = TodoSideWrittenOf(rest),
         };
     }
 
@@ -334,7 +345,7 @@ public sealed partial class MeasureCollector
         {
             TimeScale = new Fraction(scale),
             IsMultiMeasure = true,
-            TodoKey = TodoKeyOf(rest), TodoMemo = TodoMemoOf(rest), TodoBelow = TodoBelowOf(rest),
+            TodoKey = TodoKeyOf(rest), TodoMemo = TodoMemoOf(rest), TodoBelow = TodoBelowOf(rest), TodoSideWritten = TodoSideWrittenOf(rest),
         };
     }
 
@@ -843,7 +854,7 @@ public sealed partial class MeasureCollector
             SlurEndHeadPosition = slurEndHead,
             // A chord has ONE stem, so @stemUp / @stemDown on it is the same wish a note's is.
             ForcedStemUp = GetStemDirectionOverride(chord),
-            TodoKey = TodoKeyOf(chord), TodoMemo = TodoMemoOf(chord), TodoBelow = TodoBelowOf(chord),
+            TodoKey = TodoKeyOf(chord), TodoMemo = TodoMemoOf(chord), TodoBelow = TodoBelowOf(chord), TodoSideWritten = TodoSideWrittenOf(chord),
             // Read in the FACTORY so every chord-creating walk arm gets it — a walk-arm
             // read is exactly how a chord's @glissando was silently swallowed until
             // 2026-08-07 (regression glissando-accidental.ly: the event parsed, no
@@ -956,7 +967,7 @@ public sealed partial class MeasureCollector
             // The repetition's OWN post-events only — the original's are not copied.
             ForcedStemUp = GetStemDirectionOverride(rep),
             HasGlissando = HasGlissandoArticulation(rep),
-            TodoKey = TodoKeyOf(rep), TodoMemo = TodoMemoOf(rep), TodoBelow = TodoBelowOf(rep),
+            TodoKey = TodoKeyOf(rep), TodoMemo = TodoMemoOf(rep), TodoBelow = TodoBelowOf(rep), TodoSideWritten = TodoSideWrittenOf(rep),
         };
     }
 
@@ -1015,7 +1026,7 @@ public sealed partial class MeasureCollector
             ForcedStemUp = GetStemDirectionOverride(slash),
             // `/4@todo("…")` is ringed like a note — `lysc check` counted it while the page
             // dropped it in silence (found writing the slash-chart lesson, 2026-10-12).
-            TodoKey = TodoKeyOf(slash), TodoMemo = TodoMemoOf(slash), TodoBelow = TodoBelowOf(slash),
+            TodoKey = TodoKeyOf(slash), TodoMemo = TodoMemoOf(slash), TodoBelow = TodoBelowOf(slash), TodoSideWritten = TodoSideWrittenOf(slash),
         };
     }
 
@@ -1091,7 +1102,7 @@ public sealed partial class MeasureCollector
                 {
                     ForcedStemUp = GetStemDirectionOverride(bare),
                     HasGlissando = HasGlissandoArticulation(bare),
-                    TodoKey = TodoKeyOf(bare), TodoMemo = TodoMemoOf(bare), TodoBelow = TodoBelowOf(bare),
+                    TodoKey = TodoKeyOf(bare), TodoMemo = TodoMemoOf(bare), TodoBelow = TodoBelowOf(bare), TodoSideWritten = TodoSideWrittenOf(bare),
                 };
             }
 

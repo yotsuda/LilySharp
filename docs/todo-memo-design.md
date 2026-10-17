@@ -50,7 +50,15 @@ page records the placing, which sessions 896–899 built up and session 899 sett
 
 ## 3. A system's arrangement
 
-The memos above one system (below, for `.down`) are arranged together:
+A memo's side is above the staff, or below for `.down` — and, owner's decision 2026-10-17,
+below for the LOWER voice of a staff that has two (the stems-down voice of `voice { } { }`,
+or the second part of a `combinedStaff`), where that voice is read; `.up` keeps such a memo
+above. The side is stamped with the voice's direction (`MeasureCollector.Stems`,
+`PartCombiner.WithVoiceDirection` → `MusicItem.WithTodoSideOfVoice`) unless the mark wrote
+one (`MusicItem.TodoSideWritten`); a shared or solo voice of a combined staff has no side,
+so its memos stay above. Guard: `TodoCalloutTests.TheLowerVoicesMemo_GoesBelow_UnlessItWroteItsSide`.
+
+The memos above one system (below, for the other side) are arranged together:
 
 - in order of width, the short ones first (left to right among equals): a short memo stays
   by its note on the first row, a long one climbs or crosses round it;

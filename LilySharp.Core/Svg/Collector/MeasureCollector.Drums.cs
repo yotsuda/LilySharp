@@ -528,7 +528,7 @@ public sealed partial class MeasureCollector
         // (the merge rebuilt that silence). Until 2026-10-11 neither reached the page.
         if ((piece.MarkedRest as SyntaxNode ?? piece.Hits?.Select(h => h.Node).FirstOrDefault(n => TodoKeyOf(n) != null)) is { } todo
             && TodoKeyOf(todo) != null)
-            item = item with { TodoKey = TodoKeyOf(todo), TodoMemo = TodoMemoOf(todo), TodoBelow = TodoBelowOf(todo) };
+            item = item with { TodoKey = TodoKeyOf(todo), TodoMemo = TodoMemoOf(todo), TodoBelow = TodoBelowOf(todo), TodoSideWritten = TodoSideWrittenOf(todo) };
         if (scaled is { } scale)
             builder.AddItemWithoutDuration(item switch
             {

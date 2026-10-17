@@ -8,6 +8,9 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Editor
 
+- **A `@todo` memo on the lower voice goes below the staff by itself** (the stems-down voice of
+  `voice { } { }`, or the second part of a `combinedStaff`), where that voice is read; `.up`
+  keeps it above. `lysc svg|png|pdf --todo` draws it there too.
 - **Converting to relative octaves keeps the file's `octave` line.** *Convert Octaves to
   Relative* and `lysc octave --relative` now rewrite the file's first `octave` directive to
   `octave relative` instead of removing it (relative being the default); a file whose only

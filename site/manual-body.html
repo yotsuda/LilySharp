@@ -368,7 +368,8 @@ score { staff vc }</pre>
   <p><code>@todo</code> marks a note, rest or chord to come back to. It prints nothing and
   plays nothing. The editor lists each one as a warning, and the preview rings the item in
   red and writes the memo, underlined, in its staff's margin with a line down to the ring
-  (<code>.down</code> puts the memo below the staff). Done? Delete the
+  (<code>.down</code> puts the memo below the staff, where the lower voice of a two-voice
+  staff puts its own; <code>.up</code> brings one back). Done? Delete the
   mark, or press <kbd>Ctrl+.</kbd> on it: <i>Resolve this TODO</i>.</p>
 <pre>c'4 fis'8@todo("F# or F natural?") e'8 g'2 |
 r2@todo("bar 12 is only 7/8").down d'2 |
