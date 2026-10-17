@@ -1924,8 +1924,10 @@ public sealed partial class MeasureCollector
             _chordNameCollector.RowStaffTuning =
                 Semantics.ChordDiagramScores.RowStaffWord(tree.GetRoot(), renderSpec, rowName) is { } rowWord
                     ? Tablature.Tunings.Parse(rowWord) : null;
+            // (renderSpec is never null on this road — a null test here made the flow analysis
+            // doubt it for the rest of the pass: six CS8602/CS8604 from one `== null`.)
             _chordNameCollector.RowNameDrop = ChordRowDrop(tree.GetRoot(),
-                renderSpec == null ? null : Semantics.ChordDiagramScores.RowStaffPart(renderSpec, rowName));
+                Semantics.ChordDiagramScores.RowStaffPart(renderSpec, rowName));
             _chordNameCollector.RowShift = _fileShiftSemitones;
             var rowMeasures = _chordNameCollector.CollectPart(
                 tree.GetRoot(), rowName, rowIdx, _sectionState.StartMeasure, _meta.TimeBeats, _meta.TimeBeatType, rowMode);
