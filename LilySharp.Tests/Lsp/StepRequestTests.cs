@@ -853,31 +853,35 @@ public class StepRequestTests
     }
 
     [Fact]
-    public void AnOctaveMode_UpWritesAbsolute_DownRelative()
+    public void AnOctaveMode_UpConvertsToAbsolute_DownToRelative()
     {
-        // Owner's request 2026-10-17: the file's directive, a part header's property and one
-        // inside music, on either pair. A direction each, so a second press stays; only the
-        // word changes, and the status bar names the convert command that keeps the pitches.
+        // Owner's request and decision 2026-10-17: on the file's directive, a part header's
+        // property or one inside music, Up runs Convert Octaves to Absolute and Down Convert
+        // Octaves to Relative (the editor's command, every note keeping its pitch) — the
+        // pitches go with the word; a word alone is typed by hand. The step itself edits
+        // nothing, and a direction each (not a toggle): Up on `absolute` still asks for absolute.
         const string Book = "{0}\npart lh {{ clef bass {1} }}\nsection A {{ lh {{ {2}c4 d e f }} }}\n";
         string S(string top = "octave relative", string part = "octave 3", string music = "")
             => string.Format(Book, top, part, music);
-        Assert.Equal(S("octave absolute"), Step(S("octave rel‸ative"), +1, semitone: true).After);
-        Assert.Equal(S("octave relative"), Step(S("oct‸ave absolute"), -1).After);
-        Assert.Equal(S(part: "octave absolute"), Step(S(part: "octave ‸relative"), +1, semitone: true).After);
-        Assert.Equal(S(part: "octave relative"), Step(S(part: "octave absolute‸"), -1, semitone: true).After);
-        Assert.Equal(S(music: "octave absolute "), Step(S(music: "octave relative‸ "), +1).After);
-        Assert.Equal(S(music: "octave relative "), Step(S(music: "‸octave absolute "), -1, semitone: true).After);
-        var (same, after) = Step(S("octave abso‸lute"), +1, semitone: true);
-        Assert.False(same.Fallback);
-        Assert.Equal(S("octave absolute"), after);
-        Assert.Equal("octave absolute: absolute (Up) / relative (Down)", same.Message);
-        var (said, _) = Step(S("‸octave relative"), +1, semitone: true);
-        Assert.StartsWith("octave absolute:", said.Message);
-        Assert.Contains("Convert Octaves to Absolute", said.Message);
-        var (back, _) = Step(S(part: "octave ‸absolute"), -1);
-        Assert.Contains("Convert Octaves to Relative", back.Message);
-        // The part's `octave 3` still steps its number.
-        Assert.Equal(S(part: "octave 4"), Step(S(part: "octave ‸3"), +1).After);
+        void Converts(string marked, int direction, string mode, bool semitone = false)
+        {
+            var (response, after) = Step(marked, direction, semitone: semitone);
+            Assert.False(response.Fallback);
+            Assert.Equal(mode, response.ConvertOctaves);
+            Assert.Empty(response.Edits);
+            Assert.Equal(marked.Replace("‸", ""), after);
+        }
+        Converts(S("octave rel‸ative"), +1, "absolute", semitone: true);
+        Converts(S("oct‸ave absolute"), -1, "relative");
+        Converts(S("octave abso‸lute"), +1, "absolute", semitone: true);
+        Converts(S(part: "octave ‸relative"), +1, "absolute", semitone: true);
+        Converts(S(part: "octave absolute‸"), -1, "relative", semitone: true);
+        Converts(S(music: "octave relative‸ "), +1, "absolute");
+        Converts(S(music: "‸octave absolute "), -1, "relative", semitone: true);
+        // The part's `octave 3` still steps its number, and asks for no conversion.
+        var (number, stepped) = Step(S(part: "octave ‸3"), +1);
+        Assert.Equal(S(part: "octave 4"), stepped);
+        Assert.Null(number.ConvertOctaves);
     }
 
     [Fact]

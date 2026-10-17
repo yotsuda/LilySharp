@@ -707,6 +707,11 @@ public class StepResponse
     /// when its document is still that version.</summary>
     public int Version { get; set; }
     public string? Error { get; set; }
+    /// <summary>"absolute" or "relative" when the step was on an <c>octave absolute</c> /
+    /// <c>octave relative</c> (owner's decision 2026-10-17): the editor runs its Convert Octaves
+    /// to Absolute / Relative command instead of applying edits (there are none), so every note
+    /// keeps its pitch. Null otherwise.</summary>
+    public string? ConvertOctaves { get; set; }
 }
 
 /// <summary>Parameters for lilysharp/auditionAt: the caret as a 0-based character offset.</summary>

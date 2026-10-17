@@ -59,6 +59,7 @@ public sealed partial class LilySharpLanguageServer
                 Timbre = result.Timbre,
                 Program = result.Program,
                 Version = doc.Version,
+                ConvertOctaves = result.ConvertOctaves?.ToString().ToLowerInvariant(),
             };
         }
         catch (Exception ex)

@@ -114,8 +114,9 @@ public static partial class NoteStepper
         Time,
         /// <summary>A header's <c>octave N</c> or <c>transpose X</c> (NoteStepper.Values.cs).</summary>
         HeaderValue,
-        /// <summary>An <c>octave absolute</c> / <c>octave relative</c> directive — the file's or one
-        /// inside music; a part header's is a <see cref="HeaderValue"/> (NoteStepper.Values.cs).</summary>
+        /// <summary>An <c>octave absolute</c> / <c>octave relative</c> — the file's directive, a part
+        /// header's property or one inside music. Its step is no edit: the editor converts the whole
+        /// file, every note keeping its pitch (<see cref="StepResult.ConvertOctaves"/>; NoteStepper.Values.cs).</summary>
         OctaveMode,
     }
 
@@ -141,11 +142,14 @@ public static partial class NoteStepper
     /// the part's, as the .mid plays it — <see cref="Midi.MidiTrack.Program"/>; -1 when the
     /// sound comes from no part, and the preview then picks one for the timbre), and
     /// <see cref="Fallback"/> when no selection was on anything steppable — the editor then
-    /// runs the key's own command.
+    /// runs the key's own command. <see cref="ConvertOctaves"/>: the step was on an
+    /// <c>octave absolute</c> / <c>octave relative</c>, and instead of an edit the editor runs its
+    /// whole-file conversion into that mode (Convert Octaves to Absolute / Relative,
+    /// <see cref="OctaveModeConverter"/>), which re-marks every note to keep its pitch.
     /// </summary>
     public sealed record StepResult(
         bool Fallback, ImmutableArray<Edit> Edits, string? Message,
-        ImmutableArray<int> Pitches, int Timbre, int Program = -1);
+        ImmutableArray<int> Pitches, int Timbre, int Program = -1, OctaveMode? ConvertOctaves = null);
 
     /// <summary>What the caret is on and what it sounds (MIDI, lowest first), with the timbre
     /// and the program as <see cref="StepResult"/> carries them.</summary>
@@ -229,6 +233,7 @@ public static partial class NoteStepper
 
         var edits = new List<Edit>();
         string? message = null;
+        OctaveMode? convert = null;
         var stepped = new List<Target>();
         var bySemitone = new List<PitchSyntax>();
         var inverted = new List<SyntaxNode>();
@@ -263,15 +268,22 @@ public static partial class NoteStepper
                 stepped.Add(t);
                 continue;
             }
-            if (t.Kind is TargetKind.Dynamic or TargetKind.Articulation or TargetKind.Time or TargetKind.HeaderValue
-                or TargetKind.OctaveMode)
+            if (t.Kind == TargetKind.OctaveMode)
+            {
+                // Up converts the file to absolute octaves, Down to relative — the editor's own
+                // Convert Octaves command, every note keeping its pitch (owner's decision
+                // 2026-10-17: the pitches go with the word; a word alone is typed by hand).
+                convert = dir > 0 ? OctaveMode.Absolute : OctaveMode.Relative;
+                stepped.Add(t);
+                continue;
+            }
+            if (t.Kind is TargetKind.Dynamic or TargetKind.Articulation or TargetKind.Time or TargetKind.HeaderValue)
             {
                 var (valueEdit, valueSaid) = t.Kind switch
                 {
                     TargetKind.Dynamic => DynamicEdit((DynamicSyntax)t.Node, dir),
                     TargetKind.Articulation => ArticulationEdit((ArticulationSyntax)t.Node, dir),
                     TargetKind.Time => TimeEdit((TimeSignatureSyntax)t.Node, dir, semitone),
-                    TargetKind.OctaveMode => OctaveModeEdit(((OctaveDirectiveSyntax)t.Node).Mode, dir),
                     _ => ValuePropertyEdit(text, tree, (PropertyAssignmentSyntax)t.Node, dir, semitone),
                 };
                 message ??= valueSaid;
@@ -352,7 +364,7 @@ public static partial class NoteStepper
         }
 
         return new StepResult(false, [.. edits], message,
-            [.. pitches.Take(MaxAuditionPitches)], Math.Max(timbre, 0), program);
+            [.. pitches.Take(MaxAuditionPitches)], Math.Max(timbre, 0), program, convert);
     }
 
     // ------------------------------------------------------------------ the audition
@@ -411,7 +423,7 @@ public static partial class NoteStepper
         if (TimeAt(tree, offset) is { } time)
             return new Target(TargetKind.Time, time);
         if (ValuePropertyAt(tree, offset) is { } property)
-            return new Target(TargetKind.HeaderValue, property);
+            return new Target(IsOctaveMode(property) ? TargetKind.OctaveMode : TargetKind.HeaderValue, property);
         if (OctaveModeAt(tree, offset) is { } octaveMode)
             return new Target(TargetKind.OctaveMode, octaveMode);
         // A mark with nothing of its own to step — a dynamic on no ladder (@sfz), an articulation

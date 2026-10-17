@@ -53,6 +53,9 @@ interface StepResponse {
     Program?: number;
     Version: number;
     Error?: string | null;
+    /** "absolute" / "relative": the step was on an `octave absolute` / `octave relative`,
+     *  and the editor runs Convert Octaves to Absolute / Relative instead of applying edits. */
+    ConvertOctaves?: 'absolute' | 'relative' | null;
 }
 
 interface AuditionAtResponse {
@@ -157,6 +160,13 @@ export function registerStepAudition(context: vscode.ExtensionContext, deps: Ste
         }
         // Typed into while the server thought: the offsets are about another text.
         if (doc.version !== version || response.Version !== version) { return; }
+        if (response.ConvertOctaves) {
+            // An `octave absolute` / `octave relative`: the whole file converts, every note
+            // keeping its pitch — the Convert Octaves command, with its own messages.
+            await vscode.commands.executeCommand(response.ConvertOctaves === 'absolute'
+                ? 'lilysharp.convertOctavesToAbsolute' : 'lilysharp.convertOctavesToRelative');
+            return;
+        }
         if (response.Edits.length > 0) {
             // ONE undo step for every cursor's edit.
             const applied = await editor.edit(b => {
