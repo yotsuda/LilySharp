@@ -160,6 +160,20 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第912セッションの経緯
+
+### 1.1 第912セッション（2026-10-18・YT-DELL2）
+
+同じ会話の続き（第911 の後）。`-Start p912`（開始 HEAD `7ac63f2bb`・未 push 14・full **12434 / 0 / 2 / 12436**・第910 を ARCHIVE へ）。作業場所は Lab `sessions/p912/`（start.log・end.log・notes.md）。
+- **文法: 続けて書く `%` と `%` のあいだの小節線は省略できる（ユーザー決定 2026-10-18「見た目は barline があった方がレンダと揃う。ただ入力が面倒。正規の綴りは省略しない、でも省略しても良い」）**: `c4 d e f | % % % |` は `c4 d e f | % | % | % |` と読む。正規は `|` あり（譜面は小節線を描く・`lysc percent`／クイックフィックス／OMR はそれを書く）、省略は手の都合。範囲は狭い＝**印と印のあいだに空白しか無く、その並びが小節線（`break` は挟んでよい）の後に始まるときだけ**。`% break %`・`c4 % %` は従来どおり LYS1048。省略形に診断は出さない（受け付ける綴りに線を引かない）。「小節線が小節」（第904）の例外は印の内側 1 種のまま。
+- **作り**: `Parser.ReadBarLinesLeftOutBetweenMarks`（`GroupPercentRepeats` の前）が隣り合う 2 つの `PercentMarkGreen` のあいだに**幅 0 の `|`**（`SyntaxToken.LeftOut(Bar, "|")`＝text は `|`・幅 0・trivia 無し・`WriteTo` は何も書かない）の `BarlineGreen` を差し込む。`BarlineSyntax.IsLeftOut` で読める。**読み手（譜面・MIDI・MusicXML・ly・検証器）は書いた綴りと同じ木を見る**＝一箇所の変更で全経路・位置も全文も動かない。Expect の欠損トークン（text 空）でなく text `|` にした理由: `MeasureModel`（206）・`SectionMeterPlan`（182・192）・`MeasureCollector.Form`（1479）が小節線の *text* で「素の `|` か飾りか」を分ける＝空だと飾りと読まれる。token の `.Text` から文を組み立て直す所は無い（`DescendantTokens()` の利用 0）＝幅 0 の `|` が出力に漏れる経路は無い。
+- **入力補助（規則 32・`autoBarlinePlan`）**: 小節線の後に `%`／`%N` だけ（前に `break` は可）の小節は満ちている＝直後の空白で `| ` を書く。`%␣%␣%␣` で正規の綴りになる＝**文法の省略可は VS Code の外で書いた本のための寛容さ**という位置づけ。ブロック先頭・voice span の中・`c4 %` は書かない。
+- **網**: `PercentMarkTests` +2（4 形の木＝round trip・`IsLeftOut`・幅 0・位置は次の印の頭・診断の列が正規形と同じ・MIDI が同じ／ungrouped に留まる 2 形）、`smartTypingCore.test.ts` +9 例（npm test 314）。`scratchpad/pct/{written,left}.lys` の svg（data-pos を伏せて）・midi・ly・xml が等しい（Lab notes）。
+- **罠**: ⑴ `%` の後の空白は印トークンの*後置* trivia＝省略された小節線の位置は「次の印の頭」（最初の網は `text[BarTokenStart-1]=='%'` と仮定して赤）。⑵ 2 小節体の `PercentRepeatSyntax.ChildNodes()` には本体内部の `|` も居る＝印の小節線は `BodyEndBar.Position` 以降で数える。⑶ `-End` の full が 3 分 33 秒（`-Start` は 1 分）＝testhost の CPU は進んでいた（遅いだけ・CLAUDE-OPERATIONS §3 の「本当に遅いだけの顔」）。
+- docs: GRAMMAR（Barline の注・PercentMark の注）・`percent-repeat-design.md` §1・§3・SYNTAX_REFERENCE・site `manual-body.html`・両 CHANGELOG・MANUAL-CHECKS §1.2 に `[ ]` 1 項目。
+- commit **`b37bffc78`**（code＋docs・1 回）→ `-End p912 -DiffBase 7ac63f2bb`＝full **12437 / 3 / 2 / 12442**（開始 +6 本・赤 3 は `HandoffArchiveContinuityTests`＝この語りを書く前の状態で、書いた後に 3 本だけ回して緑・Core '+' 66 行・Core 警告 0・門は全部 OK・天井: HANDOFF 385,990 B・§1 現在便 約 14,300 / 20,000 字（手計測）・Lab `sessions/p912/end.log`）→ この docs commit。未 push 15＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。
+判定（2026-10-18）: 次の一手は**ユーザーの実機確認**（MANUAL-CHECKS §3.5 の MIDI out と §1.2 の `%␣`＝拡張を組み直してから）。候補は §1.0 ⒜ のまま。この会話は MIDI out と `%` の 2 島＝次も言語・エディタの直しなら (a) で**続ける**のが有利・圧縮は 1 回起きた（第911 の細部は要約）。
+
 ## 以下は第911セッションの経緯
 
 ### 1.1 第911セッション（2026-10-18・YT-DELL2）

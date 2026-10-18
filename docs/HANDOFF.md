@@ -82,6 +82,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **第870〜871（2026-10-09）ユーザー決定**: 名前の無い form／score／part／chords／lyrics とスコアの中の上書き・**score の名前は識別子 1 つ（`score "x"` は LYS0038・名前の無い score はプレビューで `(Default)`）**＝実装済み（`docs/anonymous-blocks-design.md` §7・**`staff bass` は「bass という part」のまま＝第880 ユーザー決定**・§6 の既定のスコアは**入れない＝ユーザー決定 2026-10-17・第910**）。**第880 ユーザー決定: `as lines 1` は今のまま**（音高どおりに頭を置く 1 本線の譜・RhythmicStaff の潰しはしない・双子は Clef／Key engraver を外すだけ）。⚠️ プレビューの `(Default)` は拡張を作り直してからユーザーが見る。Petaluma の文字は歌詞以外すべて Petaluma Script・SMuFL の強弱記号は字形。⚠️ Lab `corpora/` の書き換え 470 冊は未 commit（ユーザー）。
 - ⚠️ **Lab の作業ツリーに*この会話より前からの*未 commit の変更が 138 ファイル（`corpora/` のユーザーの本・`sessions/p739/twin` ほか）＋未追跡多数**＝Claude は `sessions/pNNN` と notes だけを path 指定で commit している。中身はユーザーが判断
 - **第904（2026-10-14）ユーザー決定＝小節線が小節**（LP と違い `|` は検査ではない）: 長すぎる小節は 1 小節のまま＝小節の終わりより後に始まる音は描かず鳴らさない（LYS2002 がそう言う）・**小節線の書き忘れ**（2 小節以上の整数小節に 1/4 小節以内の区間）は音を全部残して拍子ごとに区切り、**エラー LYS2017**・音の後に書いた `time` も同じ LYS2017・拍で自動で閉じるのは小節線を書けない `R1*N` と `%N` の内側だけ（フレーズの中身も入れ子も規則に従う）・**文法に例外を設けず例を直す**（ユーザー指摘）。再生は小節線ごとに全パートを揃える。規則は `docs/GRAMMAR.md` の Barline の注と `Semantics.WrittenBar`（譜面 `MeasureBuilder.OverflowsTheWrittenBar`・再生 `MidiExporter.AlignBarLine`・検証 `MeasureValidator.EmitOverfull`）。**LYS2017 が出るユーザーの本 9 冊は直さない（ユーザー決定「lys ファイルの修正は不要」）**。フレーズ本体の `voice { }` は検証器が第 1 声で数える・`time` を含むフレーズの小節は検証器が数えられないので譜面・再生とも拍で閉じて音を全部残す（§1.1 第904）。**第912（2026-10-18・ユーザー決定）: 続く `%` と `%` のあいだの小節線は省略可**（`| % % % |`＝`| % | % | % |`・正規は `|` あり・エディタは `%␣` で `| ` を書く・§1.1 第912）。
+- **第914（2026-10-18・ユーザー決定）＝和音は先頭の音として読む**（「ユーザーはまだ少ない・後方互換と移行はコストと考えない」）: relative の和音の anchor は**先頭の音が鳴る位置**（文字を直前から nearest・その音の `'` `,`）＝単音とまったく同じ読み。残りの音はその上に積む・和音の後の音はそこから数える。`<c' e g>` = C5 E5 G5・次の裸の c は C5（`<c e g>'` と同じ）・`<c' e' g'>` = C5 **E6 G6**（後続の音の印は積んだ位置から＝密集なら `<c' e g>`）・`<c, e g> <c, e g>` は `c, c,` と同じく 1 オクターブ落ちる・`<< >>` の root も同じ。2026-09-27〜10-18 の「裸の文字が anchor・先頭の印は局所」（`<c' e g>` = C5 E4 G4）は廃止＝ユーザー報告 `g2 <c,, f>` の f が F3（`<d, f>` は F2）に上がる罠が理由。度数和音（主音の床）は変えない。規則は GRAMMAR.md の Chord の注・§1.1 第914。
 
 **第815〜816（2026-10-05）OMR の提案**（`..\LilySharp-Omr\docs\repro\lilysharp-proposal-2026-10-04.md`・全文は ARCHIVE「§1.0 から移した閉じた段落」）: 0・A1・B1〜B6・C1〜C3・P1〜P5 は閉じた・P6（SMuFL）は第857 から。残り: ⚠️ **B1〜B6 は VS Code で未確認**／**B5 は OMR の `omr verify` 待ち**／**配布は 2026-10-12 オーナー決定で「別の VS Code 拡張（`yotsuda.lilysharp-omr`・Beta・win-x64）」に変わった**（`lilysharp-handoff-2026-10-12.md`・10-05 の L2〜L6・L8 は作らない）。**Lily# 側の受け口は第903 で実装**（`omrReader.ts`・§1.1 第903）＝残りは `MANUAL-CHECKS.md` §5 B7 の実機確認と表示名・利用条件（オーナー）。
 
@@ -123,6 +124,21 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第914セッション（2026-10-18・YT-DELL2）
+
+同じ会話の続き（第913 の後）。`-Start p914`（開始 HEAD `f75e187b0`・未 push 20・full **12442 / 0 / 2 / 12444**・第912 を ARCHIVE へ＝MCP コンソールが 262 s で戻って出力が途切れたので `-Archive 912` を手で）。作業場所は Lab `sessions/p914/`（start.log・end.log・archive.log・notes.md・corpus-diff.txt）。
+- **ユーザー報告** `Downloads/Untitled-1.lys`: `g2 <d, f>` は D1 F2 なのに `g2 <c,, f>` は C1 **F3**＝低音を下げたら上の音が上がる。原因は規則そのもの＝anchor が先頭の*裸の文字*（g から c は上・d は下に nearest）で先頭の印は局所、残りは裸の anchor の上に積む。**ユーザー決定（§1.0 第914）＝和音は先頭の音として読む**。候補は 3 つ並べた（現行／B＝床だけ実音・後の基準は裸の文字／B′＝床も後の基準も実音／C＝各音を直前から独立に nearest＝`<c e g>` の転回が直前の音で変わるので却下）。B は「和音の先頭の印は後に伝わらない」という単音と違う例外を 1 つ残す＝ユーザーが「単純で分かりやすいか」と問い、**B′** に改めた＝規則は「和音は先頭の音と同じ（nearest・自分の印・後の音はそこから）＋残りはその上に積む」の 2 行。LP との違いも一文（LP は各音を直前の構成音から・Lily# は先頭から＝順序が効かない）。
+- **作り（読み手ごとに 1 行）**: ページ `MeasureCollector.CreateChordItem`（anchor ＝ 裸の解決 ＋ 先頭の印 ＋ 和音の印・**`firstOctave = rp.RelativeOctave`**＝解決後の値。`anchor` のままだと `OctaveModeConverter` が root を強制したとき残りの音が付いて来ず VERIFY が `<< c, e g >>` を拒んだ）・`BuildArpeggioNoteItems`／MIDI `ResolveChordMemberPitch`・`EmitArpeggioMidiPitch`／MusicXML の同名 2 つ／双子 `EmitChord`（両モードとも anchorOctave ＝ 解決 ＋ root の印 ＋ off・root は anchor に書く）・arpeggio の root・`EmitArpeggioChord`／取り込み `LysWriter.Chord`（基準は root の実音へ進む）。度数和音（主音の床・`<1' 3 5>` は C5 E4 G4 のまま）・`OctaveModeConverter`（collector を回すだけ）・試聴（MIDI を読む）は触らない。双子は `a4 <c, e g> b <c, e g>` を逐語で書くようになった＝LP の ret_first と Lily# の anchor が root 付きの和音で一致（分かれるのは度数和音と壊した群だけ）。
+- **帰結（知っておく）**: `<c' e g>` = C5 E5 G5・次の裸の c は C5（`<c e g>'` と同じ音・同じ基準）／`<c' e' g'>` = C5 **E6 G6**（後続の印は積んだ位置から＝密集を 1 オクターブ上は `<c' e g>`）／`<c, e g> <c, e g>` は `c, c,` と同じく落ちる／`<< g' e c >>` は G5 E6 C6（上から降りる形は `<< g' e, c, >>`＝旧規則の「先頭の局所の印」が root の下に音を置く唯一の手だった）。
+- **網**: 11 本の期待値を書き換え（ChordRelativeFrame・ExportTieAndOctave・DoubleAngleArpeggio・ChordRepetition・OctaveModeConverter・LilyPondExporter・ChordHover・GraceBodyValidator＝`<d' e'>` は D5 E6 になるので `<d' e>`・LedgerAccidentalShortening＝`<c'' dis>`）・ユーザーの例を `ChordRelativeFrameTests` の行に（`g2 <d, f> g2 <c,, f>` = 55 38 41 43 24 29・ページ／MIDI／MusicXML）。関連 2,953 本緑。
+- **コーパス**: repo の追跡 .lys 679 ＋ Lab `corpora/` 515 ＝ 1,194 冊を 10-17 の Release lysc（前）と Debug（後）の `check --pitches` で比べて **15 冊が変わる**（20 分・Lab `corpus-diff.txt`）。repo の 10 冊（fixture 3・audit 5・`samples/harbour-lights`・`site/petite-valse`）は**音が変わらないように綴り直した**＝旧 lysc `octave --absolute` → 新 lysc `octave --relative`（入った `octave relative` 行は外す・改行は元のまま・**解決した音の列**で検証＝`check --pitches` の行は綴りと列も持つので行比較は使えない）。harbour-lights は `<ees, g, bes,>` → `<ees, g bes>`＝旧規則が強いた「全部の音に印」の癖が消える。README の写しも追随（`ReadmeSampleTests`）。Lab の 5 冊（ベースタブLy 4・dogfood 1）はユーザーの本＝触らない（一覧は notes）。
+- **罠**: ⑴ `-Start` の出力が 262 s で途切れた（MCP コンソールが戻った・テストは trx まで走った）＝`-Archive 912` を手で。⑵ pwsh-dev の `[IO.File]` は相対パスをプロセスの cwd（`C:\Users\ytsud`）で解く＝絶対パスで。⑶ snapshot 3 枚は 0 px の差（data-pos の列だけ）＝`Approve-Snapshots.ps1` は `-Name` を 1 つずつ。
+- docs: GRAMMAR の Chord の注（候補と経緯・2026-09-27〜10-18 の規則を ⚠️ で残す）・GRAMMAR_FOR_LLM・SYNTAX_REFERENCE・site `manual-body.html`・`arpeggio-rework-handoff.md`・CHANGELOG `## Unreleased` に H3 1 つ・§1.0 に第914 の決定。
+- commit **`ece474ae6`**（code＋網＋docs＋綴り直し 10 冊＋README）→ `-End p914 -DiffBase f75e187b0`＝full **12436 / 7 / 2 / 12445**（開始 +1 本・赤 7 ＝ 継ぎ目 3（この語りを書く前）＋綴り直した fixture の snapshot 3 ＋ fixture の文を見る網 1 → **`081f97723`** で snapshot を承認し網を直して緑・Core '+' 116 行・Core 警告 0・門は全部 OK・天井: HANDOFF 380,773 B・Lab `sessions/p914/end.log`）→ この docs commit。未 push 20＋3（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。
+判定（2026-10-18）: この島は閉じた。次はユーザーの実機確認（MANUAL-CHECKS §1.2・§2.1・§3.5）と、Lab の 5 冊を綴り直すかの判断（ユーザー）。続けるなら新しい島＝(c) で差は小さい。圧縮は 1 回。
+
+## 以下は第913セッションの経緯
+
 ### 1.1 第913セッション（2026-10-18・YT-DELL2）
 
 同じ会話の続き（第912 の後）。`-Start p913`（開始 HEAD `0bf38dd78`・未 push 16・full **12440 / 0 / 2 / 12442**・第911 を ARCHIVE へ）。作業場所は Lab `sessions/p913/`（start.log・end.log・notes.md）。
@@ -132,20 +148,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - docs: CHANGELOG `## Unreleased` に H3 1 つ・§1.0 ⒜ の起票を閉じた。
 - commit **`9cec0e671`**（code＋CHANGELOG・1 回）→ `-End p913 -DiffBase 0bf38dd78`＝full **12442 / 0 / 2 / 12444**（開始 +2 本・Core '+' 80 行・Core 警告 0・門は全部 OK・天井: HANDOFF 383,971 B・§1 現在便 13,655 / 20,000 字・Lab `sessions/p913/end.log`）→ この docs commit。未 push 16＋2（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。
 判定（2026-10-18）: §1.0 ⒜ で手が動くのは残り `lysc wav`（B の後と決めてある）と part の `midiChannel`（要るときに）＝**次はユーザーの実機確認（MANUAL-CHECKS §1.2・§2.1・§3.5）が先**。続けるなら新しい島＝この会話の文脈（percent・MIDI out・clef）は要らないので (c) で差は小さい。圧縮は 1 回。
-
-## 以下は第912セッションの経緯
-
-### 1.1 第912セッション（2026-10-18・YT-DELL2）
-
-同じ会話の続き（第911 の後）。`-Start p912`（開始 HEAD `7ac63f2bb`・未 push 14・full **12434 / 0 / 2 / 12436**・第910 を ARCHIVE へ）。作業場所は Lab `sessions/p912/`（start.log・end.log・notes.md）。
-- **文法: 続けて書く `%` と `%` のあいだの小節線は省略できる（ユーザー決定 2026-10-18「見た目は barline があった方がレンダと揃う。ただ入力が面倒。正規の綴りは省略しない、でも省略しても良い」）**: `c4 d e f | % % % |` は `c4 d e f | % | % | % |` と読む。正規は `|` あり（譜面は小節線を描く・`lysc percent`／クイックフィックス／OMR はそれを書く）、省略は手の都合。範囲は狭い＝**印と印のあいだに空白しか無く、その並びが小節線（`break` は挟んでよい）の後に始まるときだけ**。`% break %`・`c4 % %` は従来どおり LYS1048。省略形に診断は出さない（受け付ける綴りに線を引かない）。「小節線が小節」（第904）の例外は印の内側 1 種のまま。
-- **作り**: `Parser.ReadBarLinesLeftOutBetweenMarks`（`GroupPercentRepeats` の前）が隣り合う 2 つの `PercentMarkGreen` のあいだに**幅 0 の `|`**（`SyntaxToken.LeftOut(Bar, "|")`＝text は `|`・幅 0・trivia 無し・`WriteTo` は何も書かない）の `BarlineGreen` を差し込む。`BarlineSyntax.IsLeftOut` で読める。**読み手（譜面・MIDI・MusicXML・ly・検証器）は書いた綴りと同じ木を見る**＝一箇所の変更で全経路・位置も全文も動かない。Expect の欠損トークン（text 空）でなく text `|` にした理由: `MeasureModel`（206）・`SectionMeterPlan`（182・192）・`MeasureCollector.Form`（1479）が小節線の *text* で「素の `|` か飾りか」を分ける＝空だと飾りと読まれる。token の `.Text` から文を組み立て直す所は無い（`DescendantTokens()` の利用 0）＝幅 0 の `|` が出力に漏れる経路は無い。
-- **入力補助（規則 32・`autoBarlinePlan`）**: 小節線の後に `%`／`%N` だけ（前に `break` は可）の小節は満ちている＝直後の空白で `| ` を書く。`%␣%␣%␣` で正規の綴りになる＝**文法の省略可は VS Code の外で書いた本のための寛容さ**という位置づけ。ブロック先頭・voice span の中・`c4 %` は書かない。
-- **網**: `PercentMarkTests` +2（4 形の木＝round trip・`IsLeftOut`・幅 0・位置は次の印の頭・診断の列が正規形と同じ・MIDI が同じ／ungrouped に留まる 2 形）、`smartTypingCore.test.ts` +9 例（npm test 314）。`scratchpad/pct/{written,left}.lys` の svg（data-pos を伏せて）・midi・ly・xml が等しい（Lab notes）。
-- **罠**: ⑴ `%` の後の空白は印トークンの*後置* trivia＝省略された小節線の位置は「次の印の頭」（最初の網は `text[BarTokenStart-1]=='%'` と仮定して赤）。⑵ 2 小節体の `PercentRepeatSyntax.ChildNodes()` には本体内部の `|` も居る＝印の小節線は `BodyEndBar.Position` 以降で数える。⑶ `-End` の full が 3 分 33 秒（`-Start` は 1 分）＝testhost の CPU は進んでいた（遅いだけ・CLAUDE-OPERATIONS §3 の「本当に遅いだけの顔」）。
-- docs: GRAMMAR（Barline の注・PercentMark の注）・`percent-repeat-design.md` §1・§3・SYNTAX_REFERENCE・site `manual-body.html`・両 CHANGELOG・MANUAL-CHECKS §1.2 に `[ ]` 1 項目。
-- commit **`b37bffc78`**（code＋docs・1 回）→ `-End p912 -DiffBase 7ac63f2bb`＝full **12437 / 3 / 2 / 12442**（開始 +6 本・赤 3 は `HandoffArchiveContinuityTests`＝この語りを書く前の状態で、書いた後に 3 本だけ回して緑・Core '+' 66 行・Core 警告 0・門は全部 OK・天井: HANDOFF 385,990 B・§1 現在便 約 14,300 / 20,000 字（手計測）・Lab `sessions/p912/end.log`）→ この docs commit。未 push 15＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。
-判定（2026-10-18）: 次の一手は**ユーザーの実機確認**（MANUAL-CHECKS §3.5 の MIDI out と §1.2 の `%␣`＝拡張を組み直してから）。候補は §1.0 ⒜ のまま。この会話は MIDI out と `%` の 2 島＝次も言語・エディタの直しなら (a) で**続ける**のが有利・圧縮は 1 回起きた（第911 の細部は要約）。
 
 ## 2. 開いている作業
 
