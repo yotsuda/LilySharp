@@ -160,6 +160,20 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第911セッションの経緯
+
+### 1.1 第911セッション（2026-10-18・YT-DELL2）
+
+新しい会話。`-Start p911`（開始 HEAD `9dcbb766d`・未 push 12＝origin/master は `158529cd8`・full **12421 / 0 / 2 / 12423**・Core 0 警告・第909 を ARCHIVE へ）。作業場所は Lab `sessions/p911/`（start.log・end.log）。
+- **再生の次段 B＝MIDI 出力ポート（ユーザー決定 2026-10-18「VST 音源とか、もっときれいな音源を鳴らせる」）を実装した**。設計は `docs/playback-design.md` §6「MIDI out」に書いた。要点: ⑴ **webview が「何を鳴らすか」を決め、サーバーが「ポート」**＝`lilysharp/midiOut/{ports,play,stop,strike,release}`（`LilySharpLanguageServer.MidiOut.cs`・DTO は `MidiOut/MidiOutDtos.cs`）。play は webview が持つ note list と offset をそのまま渡す（再計算しない＝鳴る list と点灯の list が同じ・Alt+M の小節の切り出しも seek もそのまま効く）。host は `midiOutRequest` で要求を直列化（サーバーは OffDispatch で並行＝Stop が Play を追い越しうる）。⑵ **イベントは `toEvents` の双子 `MidiOutEvents.From`**（program を先頭に 1 回・四分音は下の鍵＋ベンド・同時刻は off→program→bend→on）。網は `test/playbackCore.test.ts` を 1 件ずつ写した。⑶ **時計＝`MidiOutPlayer` のスレッド**（2 ms 手前まで sleep → spin・Windows は `timeBeginPeriod(1)`）。play の答えに**壁時計の零点（Unix ms）**を返し、webview の `followAlong` はそれから `Date.now()` で追従（`followAlong(notes, offset, elapsed)` に時計関数を渡す形に変えた）。Stop は触った全チャンネルに CC123・CC120・ベンド中央。サーバー終了時（Program.cs の finally）も同じ＝Reload で DAW に音が残らない。⑷ **ポートは OS の API を P/Invoke だけ**（パッケージ無し・THIRD-PARTY 追記なし）: `WinMmPort`（winmm）／`CoreMidiPort`（CoreMIDI・packet list は `MIDIPacketListInit/Add` に組ませる）／`AlsaSeqPort`（**rawmidi でなく sequencer**＝FluidSynth・DAW は sequencer client・名前は `client: port`・libasound2 が無ければ空）。NuGet の RtMidi.Core は 2023・Win/Mac のみ・Serilog 依存、Haukcode.MidiDevice は Linux が rawmidi＝両方却下。⑸ **失敗は全部 Error の答え**（無いポート → ステータスバーに 1 ポート 1 回＋出力チャネル・その ▶ はプレビューの音源で鳴る）。
+- **拡張**: 設定 `lilysharp.playback.output`（machine-overridable・説明から `command:lilysharp.chooseMidiOutput`）・コマンド **Choose MIDI Output…**（サーバーの一覧＋「The preview's own synth」・.lys 未開でも `startClient()` して並べる）・設定変更で全プレビューに `setMidiOutput`＋サーバー stop。ページ: `startPlayback(notes, offset, plainTones, here)` の port 分岐→`midiPlay`→`midiStarted`（ok なら壁時計で追従・だめなら `here=true` で自分の音源）・`holdNotes` の分岐→`midiStrike`（ch 15・drums 9）・`stopHeldNote`→`midiRelease`・`stopPlayback`→`midiStop`。
+- **網**: `MidiOutTests` 13 本（イベント 6・player 4＝recorder port で順序・零点・Stop の沈黙・ポートの付け替え・strike／release・要求 2＝無いポートは Error・**実機 1＝Windows で `Microsoft GS Wavetable Synth` を本当に開いて 3 音鳴らし閉じる**（CI の windows 脚でも走る・mac／Linux は何もしない））。拡張 `npm test` 313 本（+4＝manifest とページの分岐）・tsc・esbuild 通過。この機械のポート: GS Wavetable・ZOOM UAC-2 MIDI ×2（winmm の列挙を pwsh の Add-Type で先に確かめた）。
+- **罠**: ⑴ ページスクリプトのコメントにバッククォートを書いて template literal が閉じ、`webviewScript.test.ts` が 8 本 `Unexpected identifier 'elapsed'`＝第909 と同じ罠。⑵ Write ツールの新規 9 ファイルは LF＝直後に CRLF へ揃えた（CLAUDE-OPERATIONS §1）。
+- docs: `playback-design.md` §6・§7、拡張 README（「音源は同梱」の古い 1 文も直した）、両 CHANGELOG `## Unreleased`、site `editor-body.html`（toc・`#midi-out`・設定表）・`commands-body.html`、MANUAL-CHECKS **§3.5（`[ ]` 9 項目＝未確認）**。
+- 残り: **ユーザーの実機確認（MANUAL-CHECKS §3.5＝GS／loopMIDI→DAW）**・mac／Linux の実走は他の機械で・part の `midiChannel` は要るときに。
+- commit **`d3cae28bc`**（code＋docs・1 回）→ `-End p911 -DiffBase 9dcbb766d`＝full **12434 / 0 / 2 / 12436**（開始 +13 本＝MidiOutTests・Core '+' 0 行＝Core は触っていない・Core 警告 0・門は全部 OK・天井: HANDOFF 389,525 B・§1 現在便 14,768 / 20,000 字・Lab `sessions/p911/end.log`）→ この docs commit。未 push 12＋2（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。
+判定（2026-10-18）: 次の一手は**ユーザーの実機確認が先**（§3.5）。その後の候補は §1.0 ⒜（1 線譜表の中の `clef` 変更・`lysc wav`）。文脈は MIDI out の 1 島だけ＝実機の報告に対する直しは**この会話で続けるのが有利**（(a) この便のコードの上に立つ・(b) 圧縮はまだ無い）。
+
 ## 以下は第910セッションの経緯
 
 ### 1.1 第910セッション（2026-10-17・YT-DELL2）
