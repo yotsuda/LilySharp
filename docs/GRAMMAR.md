@@ -2172,44 +2172,52 @@ Chord          = '<' , ( ChordNote , { ChordNote | ScaleDegree }
                , '>' , { "'" | ',' } , [ DurationToken ] , { Annotation } ;
 ChordNote      = PitchToken , { Annotation } ;
 
-(* Chord/arpeggio OCTAVES — the anchor model. One rule: a mark moves only what it is
-   attached to.
-   - ANCHOR: letter mode anchors on the FIRST member's bare LETTER, resolved nearest in
-     the incoming relative frame; degree mode anchors on the key TONIC (degree 1),
-     resolved the same way. The anchor is where the group SITS, and it is the FRAME the
-     group hands on (user decision, 2026-09-27): a group is ONE item of the relative
-     chain, like a note, so what follows it is relative to its anchor. In
-     'g1 | <c e g>1 | <f a c>1' the f reads the chord's c; rewriting 'g1' as 'f1' moves
-     neither chord. ⚠️ Between 2026-09-16 and 2026-09-27 a group read the frame and
-     never wrote it, and that rule made exactly that edit move the SECOND chord an
-     octave while the first stayed put — the note after a chord was relative to the
-     note two items back. The price of the chain is the price single notes already
-     pay: '<c e g> | <d f a> | <g b d> | <c e g>' climbs an octave like 'c d g c', and
-     '<g b d>,' brings it down, like 'g,'.
-     Why the BARE letter, not the first member's sounding pitch (LilyPond's ret_first):
-     '<c, e g> <c, e g>' must repeat the same C3 E4 G4 however often it is pasted, and in
-     'x <c, e g> b <c, e g>' the two chords must agree. Why the TONIC in degree mode, not
-     the first degree written: degrees are STACKED upward from the tonic, never chosen
-     nearest, so handing on the first degree climbs — '<1 3 5> <5 7 2> <1 3 5>' would end
-     on C5.
+(* Chord/arpeggio OCTAVES — the anchor model. Two rules: a chord is READ AS ITS FIRST
+   NOTE, and a mark on a later member moves only that member.
+   - ANCHOR: letter mode anchors where the FIRST member SOUNDS — its bare letter resolved
+     nearest in the incoming relative frame, then its own '/, marks — exactly as a single
+     note is read; degree mode anchors on the key TONIC (degree 1), resolved nearest the
+     same way. The anchor is where the group SITS, and it is the FRAME the group hands on
+     (user decision, 2026-09-27): a group is ONE item of the relative chain, like a note,
+     so what follows it is relative to its anchor. In 'g1 | <c e g>1 | <f a c>1' the f
+     reads the chord's c; rewriting 'g1' as 'f1' moves neither chord. ⚠️ Between
+     2026-09-16 and 2026-09-27 a group read the frame and never wrote it, and that rule
+     made exactly that edit move the SECOND chord an octave while the first stayed put —
+     the note after a chord was relative to the note two items back. The price of the
+     chain is the price single notes already pay: '<c e g> | <d f a> | <g b d> | <c e g>'
+     climbs an octave like 'c d g c', '<g b d>,' brings it down like 'g,', and
+     '<c, e g> <c, e g>' falls an octave like 'c, c,' — write the mark once.
+     ⚠️ From 2026-09-27 to 2026-10-18 the anchor was the first member's BARE letter and
+     its own marks were local to it: '<c' e g>' was C5 E4 G4 with the next bare c at C4,
+     and 'g2 <c,, f>' put the f at F3 where 'g2 <d, f>' had F2 — lowering the root RAISED
+     the rest, because a bare c resolves above g while a bare d resolves below it (the
+     owner's report, session 914). The owner's decision (2026-10-18, "users are few;
+     compatibility is no cost"): the chord is its first note. The exception that kept a
+     pasted '<c, e g>' from falling was one more rule to learn, and single notes fall anyway.
+     Why the TONIC in degree mode, not the first degree written: degrees are STACKED
+     upward from the tonic, never chosen nearest, so handing on the first degree climbs —
+     '<1 3 5> <5 7 2> <1 3 5>' would end on C5.
    - MEMBERS place themselves at-or-above the anchor: a letter takes the same-letter
      pitch in the octave at/above it; degree N sits N−1 diatonic steps above it (8/9/13
-     carry upward, no special case). A member's own '/, marks shift THAT ONE note only —
-     the first member's included: <c' e g> = C5 E4 G4, and the next bare c is still C4.
-     Letter mode is order-independent except the first slot (<c e g> = <c g e>, but
-     <g c e> anchors on g); degree mode is FULLY order-independent (<2 4 6> = <6 2 4>
-     = D F A in C major, and degrees follow the key: Dm in C, D-major shapes in D).
+     carry upward, no special case). A LATER member's own '/, marks shift THAT ONE note
+     from its stacked spot: <c e g'> = C4 E4 G5; <c' e g> = C5 E5 G5 (the first member's
+     mark moved the floor); <c' e' g'> = C5 E6 G6 (each later mark counts from its stacked
+     spot — the close chord an octave up is <c' e g> or <c e g>'). Letter mode is
+     order-independent except the first slot (<c e g> = <c g e>, but <g c e> anchors on
+     g); degree mode is FULLY order-independent (<2 4 6> = <6 2 4> = D F A in C major, and
+     degrees follow the key: Dm in C, D-major shapes in D). LilyPond measures each member
+     from the one written before it (its chain); Lily# measures every member from the
+     first, which is what frees the order — for an ascending chord the two readings agree.
    - Marks AFTER '>' / '>>' move the WHOLE group an octave each, anchor included, so
-     they DO propagate: <c e g>' c = C5 E5 G5 then C5, whereas <c' e' g'> sounds the same
-     close-position chord but the next bare c stays C4 (the anchor is the bare c). A
-     group with no pitched member ('<< r r >>', '<>') anchors nothing and hands the
-     incoming frame on, shifted by its marks. (A deliberate Lily# divergence from
-     LilyPond's per-member relative chain, whose frame leaves a chord on its FIRST
-     MEMBER's sounding pitch and an arpeggio on its LAST — the twin exporter tracks the
-     two frames apart and spells the difference onto the next event.) In 'octave absolute' mode
-     every member is a fixed pitch — no stacking, no frame — and the trailing marks
-     STILL shift the whole group, so <c e g>' is C5 E5 G5 and <c e g>, is C3 E3 G3 there
-     too. Read off the page: noteheads at y 13.85/12.85/11.85 and 20.85/19.85/18.85
+     they DO propagate: <c e g>' c = C5 E5 G5 then C5 — the same sound and the same frame
+     as <c' e g> c. A group with no pitched member ('<< r r >>', '<>') anchors nothing and
+     hands the incoming frame on, shifted by its marks. (A deliberate Lily# divergence
+     from LilyPond's per-member relative chain; LilyPond's frame leaves a chord on its
+     FIRST MEMBER's sounding pitch, as Lily#'s does, and an arpeggio on its LAST — the
+     twin exporter tracks the two frames apart and spells the difference onto the next
+     event.) In 'octave absolute' mode every member is a fixed pitch — no stacking, no
+     frame — and the trailing marks STILL shift the whole group, so <c e g>' is C5 E5 G5
+     and <c e g>, is C3 E3 G3 there too. Read off the page: noteheads at y 13.85/12.85/11.85 and 20.85/19.85/18.85
      against treble staff lines 12.35…16.35, and each absolute book's SVG is identical
      to its relative twin's (data-pos masked).
      ⚠️ This paragraph said the opposite between 2026-08-16 and 2026-08-16 — "they do
@@ -2264,10 +2272,11 @@ ShapeChord     = 'chord' , '(' , ChordArgument , ')'    (* ChordArgument: 8.4, n
    4 are eighths under 4:3, 3 are three plain eighths.
    A trailing DurationToken sets the total; without one the group inherits the
    running duration and acts like a single note. Octaves follow the chord anchor model
-   (above): the anchor is the first pitched member's bare letter — or the key tonic when
+   (above): the anchor is where the first pitched member sounds — or the key tonic when
    the group opens with degrees, so a descending figure needs no marks: << 8 5 3 1 >> =
-   C5 G4 E4 C4. Each member's own marks are local; marks after '>>' shift the whole group
-   and propagate. Members may be pitches, scale degrees, chords or rests.
+   C5 G4 E4 C4. A later member's own marks shift that member from its stacked spot; the
+   root's, and marks after '>>', shift the whole group and propagate. Members may be
+   pitches, scale degrees, chords or rests.
    A bare pitch member carries post-events like a note ('<< c@accent e\3 g@finger(1) >>':
    scripts, fingering, a dynamic, a string number) and a slur mark after it ('<< c( e g) >>').
    A SHARE DOT — '.' written spaced, as its own token after a member — holds that member one

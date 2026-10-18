@@ -144,29 +144,31 @@ score t { staff melody }
     }
 
     [Fact]
-    public void Chord_MemberOctaveMarks_AreLocalToThatMember()
+    public void Chord_ALaterMembersOctaveMark_ShiftsItFromItsStackedSpot()
     {
-        // A member's '/, marks shift only that ONE note from its stacked position —
-        // the root's included: <c' e g> = C5 E4 G4 (e and g stack above the BARE c),
-        // and <c' e' g'> is the close position C5 E5 G5, not a spread E6/G6.
-        Assert.Equal(new[] { 72, 64, 67 }, MidiPitches("<c' e g>4"));
-        Assert.Equal(new[] { 72, 76, 79 }, MidiPitches("<c' e' g'>4"));
+        // The chord is read as its first note, the others stack on where it sounds: <c' e g>
+        // is the close position C5 E5 G5. A later member's '/, marks shift that ONE note from
+        // its stacked spot, so <c' e' g'> is the spread C5 E6 G6 (session 914; until then the
+        // root's mark was local and <c' e g> was C5 E4 G4).
+        Assert.Equal(new[] { 72, 76, 79 }, MidiPitches("<c' e g>4"));
+        Assert.Equal(new[] { 72, 88, 91 }, MidiPitches("<c' e' g'>4"));
+        Assert.Equal(new[] { 60, 64, 79 }, MidiPitches("<c e g'>4"));
     }
 
     [Fact]
-    public void Chord_RootOctaveMark_DoesNotPropagateToTheNextNote()
+    public void Chord_RootOctaveMark_MovesTheChord_AndPropagates()
     {
-        // The chord's anchor is the root's bare LETTER: after <c' e g> the next bare
-        // c returns to C4 even though the root sounded at C5.
-        Assert.Equal(new[] { 72, 64, 67, 60 }, MidiPitches("<c' e g>4 c4"));
+        // The chord's anchor is where the root SOUNDS: after <c' e g> the next bare c is C5,
+        // as after a single c'.
+        Assert.Equal(new[] { 72, 76, 79, 72 }, MidiPitches("<c' e g>4 c4"));
     }
 
     [Fact]
     public void Chord_TrailingOctaveMark_MovesTheAnchor_AndPropagates()
     {
         // <c e g>' shifts the whole chord AND the next bare note continues in the
-        // new register — the anchor itself moved to C5. <c' e g> sounds the same
-        // chord but does NOT move the anchor: that is the distinction.
+        // new register — the anchor itself moved to C5: the same sound and the same
+        // frame as <c' e g>.
         Assert.Equal(new[] { 72, 76, 79, 72 }, MidiPitches("<c e g>'4 c4"));
     }
 }

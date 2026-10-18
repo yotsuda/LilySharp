@@ -321,18 +321,21 @@ a slash has no fret number: a `tab` that draws stems shows its stem and beam, on
 shows nothing. `time 4/4`,
 `tuplet 3/2` and `c/g` keep their own `/`.
 
-Chord octaves — the ANCHOR model (one rule: a mark moves only what it is attached to):
-the anchor is the first member's bare LETTER (or the key tonic for a degrees-only
-chord), resolved nearest to the previous note; members sit at-or-above it, so order is
-free except the first slot (`<c e g>` = `<c g e>`; degrees are fully order-free). A
-`'`/`,` on a member moves THAT note only — the first member's included: `<c' e g>` =
-C5 E4 G4 and the next bare c is still C4. A `'`/`,` AFTER the `>` (before the duration)
-moves the whole chord AND the anchor, so it propagates: `<c e g>'4 c` = C5 E5 G5, C5.
-The note AFTER a chord is relative to the chord's ANCHOR, exactly as after a single note
-— a chord is ONE item of the relative chain: `g1 <c e g>1 <f a c>1` = G3, C4 E4 G4,
-F4 A4 C5 (the f reads the chord's c, not the g), and `<c, e g> <c, e g>` repeats the
-same C3 E4 G4 because the anchor is the bare c, not the lowered one. Degree chords
-hand on the TONIC, not the first degree written.
+Chord octaves — the ANCHOR model (two rules: a chord is read as its FIRST note, and a
+mark on a later member moves only that member): the anchor is where the first member
+SOUNDS — its letter nearest to the previous note, then its own `'`/`,` (or the key tonic
+for a degrees-only chord); the other members sit at-or-above it, so order is free except
+the first slot (`<c e g>` = `<c g e>`; degrees are fully order-free). The first member's
+mark moves the whole chord and propagates: `<c' e g>` = C5 E5 G5 and the next bare c is
+C5 — the same as `<c e g>'`, a `'`/`,` AFTER the `>` (before the duration). A mark on a
+later member moves THAT note from its stacked spot: `<c e g'>` = C4 E4 G5, `<c' e' g'>` =
+C5 E6 G6 (a spread chord; the close chord an octave up is `<c' e g>`). The note AFTER a
+chord is relative to the chord's ANCHOR, exactly as after a single note — a chord is ONE
+item of the relative chain: `g1 <c e g>1 <f a c>1` = G3, C4 E4 G4, F4 A4 C5 (the f reads
+the chord's c, not the g), and `<c, e g> <c, e g>` falls an octave, as `c, c,` does — write
+the mark once. Degree chords hand on the TONIC, not the first degree written. (Until
+2026-10-18 the anchor was the first member's BARE letter and its mark local: `<c' e g>`
+was C5 E4 G4 with the next c at C4 — superseded.)
 
 A CHORD FROM A SHAPE — `chord(SYMBOL SHAPE)` + a chord's tail (duration, dots, ties, slurs,
 beams, scripts, dynamics): writes the notes a fretted shape sounds (2026-09-28).

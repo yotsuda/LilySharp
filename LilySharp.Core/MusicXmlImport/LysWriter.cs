@@ -1229,28 +1229,27 @@ internal static class LysWriter
             return token;
         }
 
-        /// <summary>Spell a chord the way Lily# reads one: the root's bare LETTER, placed
-        /// relative to the running reference, is the chord's ANCHOR; every member's own
-        /// <c>'</c>/<c>,</c> marks — the root's included — are local to that member; every
-        /// later member STACKS above the anchor (at or above its letter); and the reference
-        /// then advances to the ANCHOR, not to the root's sounding octave.</summary>
+        /// <summary>Spell a chord the way Lily# reads one: the root is a single note — its
+        /// letter placed nearest the running reference, then its own <c>'</c>/<c>,</c> marks —
+        /// and where it SOUNDS is the chord's ANCHOR; every later member STACKS above the
+        /// anchor (at or above its letter), its own marks local to it; and the reference then
+        /// advances to the anchor.</summary>
         /// <remarks>
         /// The rule is the page's and the exporter's (<c>MusicXmlExporter.ResolveChordMemberPitch</c>,
-        /// user decision 2026-09-27). ⚠️ Until 2026-09-30 this stacked the members above the
-        /// root's SOUNDING octave and advanced to it, which agrees only while the root needs
-        /// no marks: <c>c'''4 &lt;e' g'&gt;4</c> came back as <c>&lt;e,, g&gt;</c> — E5 and G7 —
-        /// and every note after it two octaves high.
+        /// user decision 2026-10-18, session 914, which put the anchor on the root's sounding
+        /// octave; from 2026-09-30 to then the anchor was the root's BARE letter, the members
+        /// stacked above that and the reference advanced to it, and this writer followed).
         /// </remarks>
         public string Chord(IReadOnlyList<ImportNote> members)
         {
             int rootStep = Mod7(members[0].Step);
-            int anchorOctave = DefaultOctave(_ref, rootStep);
+            int anchorOctave = members[0].Octave; // where the root sounds
             var parts = new List<string>();
             for (int i = 0; i < members.Count; i++)
             {
                 var m = members[i];
                 int letter = Mod7(m.Step);
-                int placed = i == 0 ? anchorOctave : anchorOctave + (letter >= rootStep ? 0 : 1);
+                int placed = i == 0 ? DefaultOctave(_ref, rootStep) : anchorOctave + (letter >= rootStep ? 0 : 1);
                 parts.Add(Format(letter, m.Alter, m.Octave - placed) + MemberMarks(m));
             }
             _ref = anchorOctave * 7 + rootStep;

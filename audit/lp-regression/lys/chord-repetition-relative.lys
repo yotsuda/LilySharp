@@ -12,8 +12,8 @@ part v { clef treble }
 
 section Main {
   v {
-    <c'' d' g'>4@text("absolute").up q q q |
-    <c'' d' g'>4@text("relative").up q q q |
+    <c'' d, g,>4@text("absolute").up q q q |
+    <c d, g,>4@text("relative").up q q q |
   }
 }
 

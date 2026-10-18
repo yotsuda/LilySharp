@@ -5,7 +5,7 @@ part melody
 
 section A {
   melody {
-    e'4@marcato <e e>@marcato@p <c e e>@marcato@f <a, d e>@marcato
+    e'4@marcato <e e>@marcato@p <c e e>@marcato@f <a, d' e'>@marcato
   }
 }
 

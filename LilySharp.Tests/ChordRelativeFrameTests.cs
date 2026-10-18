@@ -25,14 +25,17 @@ namespace LilySharp.Tests;
 
 /// <summary>
 /// A chord (and an arpeggio) is ONE item of the relative chain: the note after it is relative
-/// to its ANCHOR — the first member's bare letter, or the key tonic for a degree chord — plus
-/// the marks after <c>&gt;</c> (user decision, 2026-09-27; GRAMMAR.md "Chord/arpeggio
-/// OCTAVES"). The owner's report: in <c>g1 | &lt;c e g&gt;1 | &lt;f a c&gt;1</c>, rewriting the
-/// g as f left the first chord where it was and moved the second an octave, because a chord
-/// then handed the frame on untouched and the second chord read the note two items back.
-/// Every case is asked of the three readers that resolve pitches on their own — the page,
-/// MIDI and MusicXML — since they have disagreed about this sentence before (session 394
-/// changed two of four and left the other two for a day).
+/// to its ANCHOR — where the first member SOUNDS (its letter nearest the frame, then its own
+/// marks: the chord is read as its first note), or the key tonic for a degree chord — plus
+/// the marks after <c>&gt;</c> (user decisions 2026-09-27 and 2026-10-18; GRAMMAR.md
+/// "Chord/arpeggio OCTAVES"). The owner's first report: in <c>g1 | &lt;c e g&gt;1 | &lt;f a
+/// c&gt;1</c>, rewriting the g as f left the first chord where it was and moved the second an
+/// octave, because a chord then handed the frame on untouched and the second chord read the
+/// note two items back. The second report (session 914): with the anchor on the root's BARE
+/// letter, <c>g2 &lt;c,, f&gt;</c> put the f at F3 while <c>g2 &lt;d, f&gt;</c> had it at F2 —
+/// lowering the root raised the rest. Every case is asked of the three readers that resolve
+/// pitches on their own — the page, MIDI and MusicXML — since they have disagreed about this
+/// sentence before (session 394 changed two of four and left the other two for a day).
 /// </summary>
 public sealed class ChordRelativeFrameTests
 {
@@ -40,12 +43,16 @@ public sealed class ChordRelativeFrameTests
     // The report, both spellings: the second chord is F4 A4 C5 either way.
     [InlineData("g1 <c e g>1 <f a c>1", new[] { 55, 60, 64, 67, 65, 69, 72 })]
     [InlineData("f1 <c e g>1 <f a c>1", new[] { 65, 60, 64, 67, 65, 69, 72 })]
-    // The anchor is the BARE letter: a dropped root repeats without falling, and a note
-    // between two copies does not part them.
-    [InlineData("<c, e g>4 <c, e g> <c, e g>", new[] { 48, 64, 67, 48, 64, 67, 48, 64, 67 })]
-    [InlineData("a4 <c, e g> b <c, e g>", new[] { 57, 48, 64, 67, 59, 48, 64, 67 })]
-    // A root's own mark stays local: the next bare c reads the bare anchor.
-    [InlineData("<c' e g>4 c4", new[] { 72, 64, 67, 60 })]
+    // The chord is its first note: a dropped root is read as `c,` is, so pasting it falls
+    // an octave each time, exactly as `c, c, c,` does, and a note between two copies reads
+    // the first one's C3.
+    [InlineData("<c, e g>4 <c, e g> <c, e g>", new[] { 48, 52, 55, 36, 40, 43, 24, 28, 31 })]
+    [InlineData("a4 <c, e g> b <c, e g>", new[] { 57, 48, 52, 55, 47, 36, 40, 43 })]
+    // A root's own mark moves the chord and propagates: <c' e g> = <c e g>'.
+    [InlineData("<c' e g>4 c4", new[] { 72, 76, 79, 72 })]
+    // The owner's report (session 914): lowering the root lowers the chord — F2 under D2,
+    // F1 under C1 — where the bare-letter anchor had put the second f at F3.
+    [InlineData("g2 <d, f> g2 <c,, f>", new[] { 55, 38, 41, 43, 24, 29 })]
     // Marks after '>' move the anchor, so they propagate — and climb when pasted.
     [InlineData("<c e g>'4 c <c e g>'4", new[] { 72, 76, 79, 72, 84, 88, 91 })]
     // A run of chords climbs the way `c d g c` does; `<g b d>,` brings it back.
@@ -55,7 +62,7 @@ public sealed class ChordRelativeFrameTests
     [InlineData("<1 3 5>4 <5 7 2> <1 3 5> c", new[] { 60, 64, 67, 67, 71, 62, 60, 64, 67, 60 })]
     // An arpeggio hands on its anchor too, not its last member; rests only are transparent.
     [InlineData("g4 << c e g >>2 f4", new[] { 55, 60, 64, 67, 65 })]
-    [InlineData("<< c, e g >>2 << c, e g >>2", new[] { 48, 64, 67, 48, 64, 67 })]
+    [InlineData("<< c, e g >>2 << c, e g >>2", new[] { 48, 52, 55, 36, 40, 43 })]
     [InlineData("g4 << r r >>2 a4", new[] { 55, 57 })]
     // A chord as the arpeggio's root: the later members stack on the CHORD's anchor (C4), so
     // g is G4 — under the 2026-09-16 rule the chord handed back the incoming G3 and the g

@@ -758,9 +758,9 @@ public sealed partial class MeasureCollector
         int octaveShift, ArpeggioMarks marks, int? groupString)
     {
         // Stacked members arrive in forced-absolute mode and keep the plain path.
-        // The ROOT, in relative mode, anchors on its bare LETTER: its own '/, marks
-        // are LOCAL to its sounding pitch (<< c' e g >> = C5 E4 G4) and do not move
-        // the anchor the group stacks on and propagates.
+        // The ROOT, in relative mode, is read as a single note — nearest, then its own
+        // '/, marks — and where it sounds is the anchor the group stacks on and
+        // propagates (<< c' e g >> = C5 E5 G5; session 914, as a chord's root).
         ResolvedPitch rp;
         if (_octave.OctaveAbsolute)
         {
@@ -771,10 +771,9 @@ public sealed partial class MeasureCollector
         {
             char name = pitch.PitchName.ToLowerInvariant()[0];
             int step = GetPitchIndex(name);
-            int anchor = _octave.Resolve(step, 0, name) + octaveShift;
-            rp = ResolveAbsolutePitch(step, pitch.AccidentalOffset,
-                anchor + pitch.OctaveOffset, pitch.SourceStart);
-            _octave.CurrentOctave = anchor;
+            int anchor = _octave.Resolve(step, 0, name) + pitch.OctaveOffset + octaveShift;
+            rp = ResolveAbsolutePitch(step, pitch.AccidentalOffset, anchor, pitch.SourceStart);
+            _octave.CurrentOctave = rp.RelativeOctave; // the resolved (maybe forced) octave, as a chord's root
         }
         int staffPosition = rp.StaffPosition;
         var (accidental, styleCourtesy) =

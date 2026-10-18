@@ -55,17 +55,17 @@ section Song {
   }
   rh {
     r8 g'@p bes ees r g, bes ees | r8 g, bes ees r g, bes d |
-    r8 aes c ees r f, aes d | <ees, g, bes,>2 <g, bes, ees,>2@arpeggio |
-    r8 aes, c ees r aes, c ees | r8 f, aes c r f, aes d |
-    r8 g, bes d r g, bes e | <f, aes, c,>2 <f, aes, d,>2 |
-    <ees, g, bes, ees>1@arpeggio@fermata |.
+    r8 aes c ees r f, aes d | <ees, g bes>2 <g bes ees>2@arpeggio |
+    r8 aes c ees r aes, c ees | r8 f, aes c r f, aes d |
+    r8 g, bes d r g, bes e | <f, aes c>2 <f aes d>2 |
+    <ees g bes ees'>1@arpeggio@fermata |.
   }
   lh {
     ees,2@sustain bes' | c2@sustain g |
     aes2@sustain bes@sustain | ees,2@sustain bes'4 g |
     aes8@sustain ees' aes ees aes, ees' aes ees | f,8@sustain c' f aes bes,@sustain f' aes d, |
     g,8@sustain d' f bes c,@sustain g' bes e, | f,2@sustain bes@sustain |
-    <ees, bes, ees>1@fermata@!sustain |.
+    <ees, bes ees'>1@fermata@!sustain |.
   }
 }
 

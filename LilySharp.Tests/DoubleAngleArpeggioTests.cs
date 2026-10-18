@@ -140,18 +140,20 @@ public class DoubleAngleArpeggioTests
         // A member's ' shifts that ONE note from its stacked position: g' = G5 above
         // the untouched c e.
         Assert.Equal(new[] { 60, 64, 79 }, MidiPitches("<< c e g' >>"));
-        // The marks are LOCAL — the root's included: `<< c' e' g' >>` is the close
-        // position C5 E5 G5 (each member +1 from its own stacked spot), NOT a spread
-        // E6/G6 — the root's ' does not move the anchor the others stack on.
-        Assert.Equal(new[] { 72, 76, 79 }, MidiPitches("<< c' e' g' >>"));
+        // The root is read as a single note and the others stack on where it sounds:
+        // `<< c' e g >>` is the close position C5 E5 G5, and `<< c' e' g' >>` the spread
+        // C5 E6 G6 — each later member's ' counts from its own stacked spot (session 914;
+        // until then the root's mark was local and the spread form was the close one).
+        Assert.Equal(new[] { 72, 76, 79 }, MidiPitches("<< c' e g >>"));
+        Assert.Equal(new[] { 72, 88, 91 }, MidiPitches("<< c' e' g' >>"));
     }
 
     [Fact]
-    public void RootOctaveMark_IsLocal_AndDoesNotMoveTheAnchor()
+    public void RootOctaveMark_MovesTheAnchor_LikeAChordsRoot()
     {
-        // `<< c' e g >>` — the root SOUNDS at C5 but the group's anchor is its bare
-        // LETTER (C4): e and g stack above C4, and the next bare c returns to C4.
-        Assert.Equal(new[] { 72, 64, 67, 60 }, MidiPitches("<< c' e g >> c"));
+        // `<< c' e g >>` — the root sounds at C5 and that IS the group's anchor: e and g
+        // stack above C5, and the next bare c continues at C5, as after a single c'.
+        Assert.Equal(new[] { 72, 76, 79, 72 }, MidiPitches("<< c' e g >> c"));
     }
 
     [Fact]

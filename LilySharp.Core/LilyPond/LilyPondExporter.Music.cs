@@ -1210,17 +1210,17 @@ public sealed partial class LilyPondExporter
         int chainStep = _lyStep, chainOctave = _lyOctave;
         int firstStep = -1, firstOctave = 0;
 
-        // Lily#'s anchor: the root's LETTER resolved bare in the incoming frame, plus the
-        // whole-chord marks. The root's OWN marks are local to its sounding pitch — the anchor
-        // is what the degrees stack on and what the next event is relative to
-        // (MeasureCollector.ItemFactory CreateChordItem).
+        // Lily#'s anchor: where the root SOUNDS — its letter resolved nearest in the incoming
+        // frame, its own marks, the whole-chord marks (session 914; the same sum in both
+        // modes). The anchor is what the degrees stack on and what the next event is
+        // relative to (MeasureCollector.ItemFactory CreateChordItem).
         int anchorStep = _lysStep, anchorOctave = _lysOctave;
         if (c.Root is { } root)
         {
             anchorStep = RelativeOctave.StepIndex(root.PitchName[0]);
-            anchorOctave = _octaveAbsolute
-                ? _absoluteBaseOctave + root.OctaveOffset + off
-                : RelativeOctave.Resolve(_lysStep, _lysOctave, anchorStep, 0) + off;
+            anchorOctave = (_octaveAbsolute
+                ? _absoluteBaseOctave
+                : RelativeOctave.Resolve(_lysStep, _lysOctave, anchorStep, 0)) + root.OctaveOffset + off;
         }
         else if (hasDegrees)
         {
@@ -1244,8 +1244,8 @@ public sealed partial class LilyPondExporter
                 sb.Append("\\parenthesize ");
             if (first && !_octaveAbsolute)
             {
-                // The root, written where Lily# sounds it: the anchor plus its own marks.
-                int want = anchorOctave + p.OctaveOffset;
+                // The root, written where Lily# sounds it: the anchor.
+                int want = anchorOctave;
                 sb.Append(p.PitchToken.Text)
                   .Append(OctaveMarks(want - RelativeOctave.Resolve(chainStep, chainOctave, anchorStep, 0)));
                 chainStep = firstStep = anchorStep;
@@ -1411,12 +1411,13 @@ public sealed partial class LilyPondExporter
             first = false;
         }
 
-        // Where the two sides stand now: Lily# on the chord's ANCHOR (the root's bare letter,
+        // Where the two sides stand now: Lily# on the chord's ANCHOR (where the root sounds,
         // or the tonic, plus the whole-chord marks — MeasureCollector.ItemFactory
         // CreateChordItem), LilyPond on its FIRST member (ret_first, cited in this method's
-        // remarks). Equal for an ordinary chord; a root with its own marks or a degree chord
-        // parts them, and tracking the two apart is what lets the events AFTER the chord be
-        // spelled against LilyPond's frame while sounding Lily#'s pitches.
+        // remarks). Equal for any chord with a written root (since session 914 the root's own
+        // marks are in the anchor); a degree chord parts them, and tracking the two apart is
+        // what lets the events AFTER the chord be spelled against LilyPond's frame while
+        // sounding Lily#'s pitches.
         if (!_octaveAbsolute && firstStep >= 0)
         {
             bool anchored = c.Root is not null || hasDegrees;
@@ -1987,22 +1988,15 @@ public sealed partial class LilyPondExporter
                     int want;
                     if (!rootSet)
                     {
-                        // The root. Relative: the anchor is its bare letter in the frame plus
-                        // the group's marks, and its own marks are local. Absolute: there is
-                        // no frame, so the anchor is where it sounds, marks included — the
-                        // collector's two arms (BuildArpeggioNoteItems).
+                        // The root: the anchor is where it sounds, its own marks and the
+                        // group's included — relative from the frame, absolute from the base
+                        // (the collector's two arms, BuildArpeggioNoteItems; session 914).
                         rootSet = true;
                         rootStep = step;
-                        if (_octaveAbsolute)
-                        {
-                            anchorOctave = _absoluteBaseOctave + p.OctaveOffset + groupOctave;
-                            want = anchorOctave;
-                        }
-                        else
-                        {
-                            anchorOctave = RelativeOctave.Resolve(_lysStep, _lysOctave, step, 0) + groupOctave;
-                            want = anchorOctave + p.OctaveOffset;
-                        }
+                        anchorOctave = (_octaveAbsolute
+                            ? _absoluteBaseOctave
+                            : RelativeOctave.Resolve(_lysStep, _lysOctave, step, 0)) + p.OctaveOffset + groupOctave;
+                        want = anchorOctave;
                     }
                     else
                     {
@@ -2143,9 +2137,8 @@ public sealed partial class LilyPondExporter
         bool isRoot = !rootSet;
 
         // The chord's own root letter, the octave its degrees stack on (CreateChordItem's
-        // firstOctave: the bare anchor in relative mode, the root's sounding octave in
-        // absolute mode), where its first pitch sounds, and — for a stacked chord — the base
-        // every member is read from.
+        // firstOctave: where the root sounds, in both modes — session 914), where its first
+        // pitch sounds, and — for a stacked chord — the base every member is read from.
         int chordRootStep, chordRootOctave, firstPitchOctave = 0, stackedBase = 0;
         if (letter is { } l)
         {
@@ -2155,18 +2148,11 @@ public sealed partial class LilyPondExporter
             {
                 rootSet = true;
                 rootStep = chordRootStep;
-                if (_octaveAbsolute)
-                {
-                    anchorOctave = _absoluteBaseOctave + rootMarks + chordOff + groupOctave;
-                    chordRootOctave = firstPitchOctave = anchorOctave;
-                }
-                else
-                {
-                    anchorOctave = RelativeOctave.Resolve(_lysStep, _lysOctave, chordRootStep, 0)
-                        + chordOff + groupOctave;
-                    chordRootOctave = anchorOctave;
-                    firstPitchOctave = anchorOctave + rootMarks; // its own marks are local
-                }
+                anchorOctave = (_octaveAbsolute
+                    ? _absoluteBaseOctave
+                    : RelativeOctave.Resolve(_lysStep, _lysOctave, chordRootStep, 0))
+                    + rootMarks + chordOff + groupOctave;
+                chordRootOctave = firstPitchOctave = anchorOctave;
             }
             else
             {

@@ -50,14 +50,15 @@ it makes rhythm unintuitive — see the design discussion; the user agreed to dr
   → triplet; 5 → quintuplet; 9 → nonuplet (the guitar fast-picking use case). This is the
   main change from today's behavior (today it scales the members' *natural* durations).
 
-**Octaves (SUPERSEDED 2026-07 by the anchor model — see `GRAMMAR.md` §8.2):**
-- The group's **anchor** = the first pitched member's **bare LETTER** (or the key TONIC when
-  the group opens with degrees), resolved in the current octave mode and the incoming frame.
-  The note after the group is relative to the anchor.
-- Every member (the first included) places itself at-or-above the anchor; a member's own
-  `'` / `,` marks shift **that one note only** (`<< c' e' g' >>` = the close position
-  C5 E5 G5, MIDI `72 76 79` — the root's `'` no longer moves the stack). Marks after
-  `>>` shift the whole group AND the anchor (they propagate); marks inside never do.
+**Octaves (SUPERSEDED 2026-07 by the anchor model — see `GRAMMAR.md` §8.2; the anchor
+moved to where the root SOUNDS on 2026-10-18, session 914):**
+- The group's **anchor** = where the first pitched member **sounds** — its bare letter
+  resolved nearest in the incoming frame, then its own marks (or the key TONIC when the
+  group opens with degrees). The note after the group is relative to the anchor.
+- Every later member places itself at-or-above the anchor; a later member's own
+  `'` / `,` marks shift **that one note only** from its stacked spot (`<< c' e g >>` = the
+  close position C5 E5 G5, MIDI `72 76 79`; `<< c' e' g' >>` = C5 E6 G6). The root's own
+  marks and marks after `>>` shift the whole group AND the anchor (they propagate).
 
 **Degrees** resolve against the **anchor's step/octave + the current key** (see `ChordDegrees.Resolve`).
 `<< c 3 5 >>` in C major = c, e, g. `<< d 3 5 >>` = d, f, a. A degree member is placed by the

@@ -3709,8 +3709,8 @@ public sealed class MusicXmlExporter
             .FirstOrDefault()?.StringNumber ?? groupString;
         var (step, alter) = ParsePitch(pitch);
         // Stacked members arrive in forced-absolute mode (plain path). The ROOT, in
-        // relative mode, anchors on its bare LETTER: its own '/, marks are LOCAL to
-        // its sounding pitch and do not move the anchor the group propagates.
+        // relative mode, is read as a single note — nearest, then its own '/, marks —
+        // and where it sounds is the anchor the group stacks on and propagates (session 914).
         int targetOctave;
         if (_octaveAbsolute)
         {
@@ -3720,8 +3720,9 @@ public sealed class MusicXmlExporter
         else
         {
             int stepIdx = RelativeOctave.StepIndex(pitch.BaseName);
-            int anchor = RelativeOctave.Resolve(_currentStep, _currentOctave, stepIdx, 0) + octaveShift;
-            targetOctave = anchor + pitch.OctaveOffset;
+            int anchor = RelativeOctave.Resolve(_currentStep, _currentOctave, stepIdx, 0)
+                + pitch.OctaveOffset + octaveShift;
+            targetOctave = anchor;
             _currentStep = stepIdx;
             _currentOctave = anchor;
         }
@@ -4113,12 +4114,13 @@ public sealed class MusicXmlExporter
     /// has already had to unify four times (see <c>ProcessGraceNotes</c>' remark on the grace
     /// group's own duration memory).
     /// <para>
-    /// The first member is the ROOT: its bare LETTER is the chord's ANCHOR; every other member
-    /// STACKS above the anchor — the same octave placement as a scale degree, so the chord's
-    /// pitches are independent of the written order (<c>&lt;c e g&gt;</c> ==
-    /// <c>&lt;c 3 5&gt;</c> == <c>&lt;c g e&gt;</c>). Each member's own <c>'</c>/<c>,</c> marks
-    /// (the root's included) are LOCAL to that one note. A deliberate Lily# divergence from
-    /// LilyPond, matching <c>MidiExporter</c> and <c>MeasureCollector</c>.
+    /// The first member is the ROOT, read as a single note (nearest, then its own marks); where
+    /// it SOUNDS is the chord's ANCHOR, and every other member STACKS above the anchor — the
+    /// same octave placement as a scale degree, so the chord's pitches are independent of the
+    /// written order (<c>&lt;c e g&gt;</c> == <c>&lt;c 3 5&gt;</c> == <c>&lt;c g e&gt;</c>). A
+    /// later member's own <c>'</c>/<c>,</c> marks are LOCAL to that one note; the root's move
+    /// the anchor (session 914). A deliberate Lily# divergence from LilyPond, matching
+    /// <c>MidiExporter</c> and <c>MeasureCollector</c>.
     /// </para>
     /// <para>
     /// ⚠️ THE CALLER DECIDES THE FRAME THE CHORD LEAVES. This advances the running state to
@@ -4143,12 +4145,13 @@ public sealed class MusicXmlExporter
             }
             else
             {
-                // The root's LETTER resolved bare = the chord's ANCHOR; its own
-                // '/, marks are LOCAL to its sounding pitch (<c' e g> = C5 E4 G4,
-                // and the next note stays relative to C4).
+                // The root where it SOUNDS — nearest, then its own '/, marks — is the
+                // chord's ANCHOR (<c' e g> = C5 E5 G5, and the next note is relative to
+                // C5; session 914).
                 int stepIdx = RelativeOctave.StepIndex(pitch.BaseName);
-                int anchor = RelativeOctave.Resolve(_currentStep, _currentOctave, stepIdx, 0) + chordOctave;
-                targetOctave = anchor + pitch.OctaveOffset;
+                int anchor = RelativeOctave.Resolve(_currentStep, _currentOctave, stepIdx, 0)
+                    + pitch.OctaveOffset + chordOctave;
+                targetOctave = anchor;
                 _currentStep = stepIdx;
                 _currentOctave = anchor;
                 firstOctave = anchor;
@@ -4233,12 +4236,13 @@ public sealed class MusicXmlExporter
         // Emit pending dynamic as direction before the chord
         EmitPendingDynamic();
 
-        // The first member is the ROOT: its bare LETTER is the chord's ANCHOR; every
-        // other member STACKS above the anchor — the same octave placement as a
-        // scale degree, so the chord's pitches are independent of the written order
-        // (<c e g> == <c 3 5> == <c g e>). Each member's own '/, marks (the root's
-        // included) are LOCAL to that one note. A deliberate Lily# divergence from
-        // LilyPond, matching MidiExporter and MeasureCollector.
+        // The first member is the ROOT, read as a single note; where it SOUNDS is the
+        // chord's ANCHOR, and every other member STACKS above the anchor — the same
+        // octave placement as a scale degree, so the chord's pitches are independent of
+        // the written order (<c e g> == <c 3 5> == <c g e>). A later member's own '/,
+        // marks are LOCAL to that one note; the root's move the anchor (session 914). A
+        // deliberate Lily# divergence from LilyPond, matching MidiExporter and
+        // MeasureCollector.
         // Octave marks after the closing '>' (<1 3 5>' / <c e g>,,) shift the whole
         // chord; folding it into firstOctave flows through every stacked/degree member,
         // matching MidiExporter and MeasureCollector. extraOctave is the enclosing

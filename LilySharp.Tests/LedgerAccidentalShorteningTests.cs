@@ -102,10 +102,10 @@ public sealed class LedgerAccidentalShorteningTests
     [Fact]
     public void AChordsSharedLine_IsTheUnionOfItsHeads()
     {
-        // <c'' dis''>: D♯6 (position 9) shortens its line at 8 — but C6 (position 8) shares
-        // that line with no accidental, so the line keeps C's full extent (and, the two
-        // being a second, spans both shifted heads).
-        var l = Ledgers(Svg("<c'' dis''>4 r r r |"));
+        // <c'' dis>: D♯6 (position 9; the dis stacks on the C6 the root sounds at) shortens
+        // its line at 8 — but C6 (position 8) shares that line with no accidental, so the line
+        // keeps C's full extent (and, the two being a second, spans both shifted heads).
+        var l = Ledgers(Svg("<c'' dis>4 r r r |"));
         var atEight = l.OrderBy(x => x.Y).First();
         Assert.True(atEight.W >= Full - 0.01, $"the shared line must not be shortened: {atEight.W}");
     }

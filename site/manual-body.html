@@ -244,15 +244,17 @@ score {               // one or more render blocks
   and prints no accidental. On anything but a note it is an error.</p>
 
   <h3>Chord octaves — the anchor model</h3>
-  <p>One rule: <b>a mark moves only what it is attached to.</b> The anchor is the first
-  member's bare letter (or the key tonic for a degrees-only chord), resolved nearest the
-  running frame; members sit at or above it, so order is free except the first slot. The
-  chord never moves the frame itself — only a mark after the <code>&gt;</code> does.</p>
+  <p>Two rules: <b>a chord is read as its first note</b>, and <b>a mark on a later member
+  moves only that member</b>. The anchor is where the first member sounds — its letter
+  resolved nearest the running frame, then its own marks (or the key tonic for a
+  degrees-only chord); the other members sit at or above it, so order is free except the
+  first slot. The note after the chord is relative to the anchor, as after a single note.</p>
   <table class="g">
     <tr><th>Written</th><th>Sounds</th><th>Next bare <code>c</code></th></tr>
     <tr><td><code>&lt;c e g&gt;</code> = <code>&lt;c g e&gt;</code></td><td>C4 E4 G4</td><td>C4</td></tr>
-    <tr><td><code>&lt;c' e g&gt;</code></td><td>C5 E4 G4 — the mark moved that note only</td><td>C4</td></tr>
-    <tr><td><code>&lt;c e g&gt;'4</code></td><td>C5 E5 G5 — after the <code>&gt;</code>, it moves the chord <i>and</i> the frame</td><td>C5</td></tr>
+    <tr><td><code>&lt;c' e g&gt;</code> = <code>&lt;c e g&gt;'</code></td><td>C5 E5 G5 — the first member's mark, or one after the <code>&gt;</code>, moves the chord <i>and</i> the frame</td><td>C5</td></tr>
+    <tr><td><code>&lt;c g,&gt;</code></td><td>C4 G3 — a later member's mark moves that note only</td><td>C4</td></tr>
+    <tr><td><code>&lt;c' e' g'&gt;</code></td><td>C5 E6 G6 — each later mark counts from its stacked spot; the close chord an octave up is <code>&lt;c' e g&gt;</code></td><td>C5</td></tr>
   </table>
 
   <h3>Arpeggios — written-out broken chords</h3>

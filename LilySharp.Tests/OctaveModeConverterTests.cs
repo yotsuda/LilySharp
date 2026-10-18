@@ -112,8 +112,10 @@ public class OctaveModeConverterTests
         var src = "part m { }\nsection A {\n  m { <c e g>'2 c | << c e g >>,4 c <c' 3 5> e | }\n}" + Score;
         var absolute = Convert(src, OctaveMode.Absolute);
         // <c e g>' is C5 E5 G5 and leaves the frame at C5; << c e g >>, then reads C5 and
-        // drops a whole octave — C4 E4 G4 — which absolute spells bare.
-        Assert.Contains("<c' e' g'>2 c' | << c e g >>4 c <c' 3, 5,> e |", absolute);
+        // drops a whole octave — C4 E4 G4 — which absolute spells bare. <c' 3 5> is read as
+        // its first note: C5, the degrees stacked on it (E5 G5), the frame left at C5, so
+        // the e after it is E5 (session 914; the bare-letter anchor had E4 G4 and E4).
+        Assert.Contains("<c' e' g'>2 c' | << c e g >>4 c <c' 3 5> e' |", absolute);
         Convert(absolute, OctaveMode.Relative);
     }
 

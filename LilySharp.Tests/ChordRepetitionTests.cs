@@ -205,8 +205,9 @@ public class ChordRepetitionTests
     public void Repetition_InsideTuplet_TakesTheTupletScale()
     {
         // Regression chord-repetition-times: repetitions are expanded late, so
-        // \tuplet still applies to them.
-        var items = Items("time 2/4 <c' e g>4 r4 | tuplet 3/2 { <c' e g>4 q q }");
+        // \tuplet still applies to them. (The second chord is bare: a chord is read as
+        // its first note, so a second <c' e g> would climb an octave, as `c' c'` does.)
+        var items = Items("time 2/4 <c' e g>4 r4 | tuplet 3/2 { <c e g>4 q q }");
         var scaled = items.OfType<ChordItem>().Where(c => c.TimeScale != new Fraction(1, 1)).ToList();
         Assert.Equal(3, scaled.Count);
         Assert.All(scaled, c => Assert.Equal(new Fraction(2, 3), c.TimeScale));

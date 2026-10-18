@@ -1405,9 +1405,9 @@ public class LilyPondExporterTests
     /// <summary>Re-octaving the members does not move what comes AFTER the chord.</summary>
     /// <remarks>
     /// LilyPond leaves an EventChord standing on its FIRST member (music-sequence.cc
-    /// :213-219 <c>ret_first</c>) and Lily# on the chord's anchor — the root's bare letter —
-    /// so the two agree for an ordinary chord however the other members are spelled. The
-    /// following note therefore keeps the source's own marks.
+    /// :213-219 <c>ret_first</c>) and Lily# on the chord's anchor — where the root sounds —
+    /// so the two agree for any chord with a written root however the other members are
+    /// spelled. The following note therefore keeps the source's own marks.
     /// </remarks>
     [Fact]
     public void ChordMembers_ReOctaving_LeavesTheFollowingNoteAlone()
@@ -1425,19 +1425,20 @@ public class LilyPondExporterTests
     /// <summary>The twin follows Lily#'s chord frame: the note after a chord or an arpeggio
     /// is relative to the group's ANCHOR (GRAMMAR.md "Chord/arpeggio OCTAVES", 2026-09-27).</summary>
     /// <remarks>
-    /// LilyPond leaves a chord on its first member's SOUNDING pitch and an arpeggio (a plain
-    /// sequence in the twin) on its last, so the two frames part whenever the root carries its
-    /// own mark or a group is broken, and the next note's marks carry the difference. Each
-    /// row is the pitch sequence Lily# sounds, read back through LilyPond's \relative by
-    /// hand: G3, C4 E4 G4, F4 A4 C5 — the owner's report (the old frame, G3, gave F3);
-    /// A3, C3 E4 G4, B3, C3 E4 G4 — the `b'` is there because LilyPond stands on C3;
-    /// G3, C4 E4 G4, F4 — LilyPond stands on the last g, Lily# on the c, and both reach F4
-    /// (the old frame, G3, gave F3); C4 E4 G4, G4 B4 D4, C4 E4 G4, C4 — the degree chord
-    /// hands on the tonic.
+    /// LilyPond leaves a chord on its first member's SOUNDING pitch — as Lily# does since
+    /// session 914 — and an arpeggio (a plain sequence in the twin) on its last, so the two
+    /// frames part when a group is broken or a degree chord hands on the tonic, and the next
+    /// note's marks carry the difference. Each row is the pitch sequence Lily# sounds, read
+    /// back through LilyPond's \relative by hand: G3, C4 E4 G4, F4 A4 C5 — the owner's
+    /// report (the old frame, G3, gave F3); A3, C3 E3 G3, B2, C2 E2 G2 — both engines stand
+    /// on the sounding c, so the source comes through verbatim (until session 914 Lily# stood
+    /// on the bare C4 and the twin wrote `b'`); G3, C4 E4 G4, F4 — LilyPond stands on the
+    /// last g, Lily# on the c, and both reach F4 (the old frame, G3, gave F3); C4 E4 G4,
+    /// G4 B4 D4, C4 E4 G4, C4 — the degree chord hands on the tonic.
     /// </remarks>
     [Theory]
     [InlineData("g2 <c e g>4 <f a c>4", "g2 <c e g>4 <f a c>4")]
-    [InlineData("a4 <c, e g> b <c, e g>", "a4 <c, e' g> b' <c, e' g>")]
+    [InlineData("a4 <c, e g> b <c, e g>", "a4 <c, e g> b <c, e g>")]
     [InlineData("g4 << c e g >>2 f4", "g4 \\tuplet 3/2 { c4 e4 g4 } f4")]
     [InlineData("<1 3 5>4 <5 7 2> <1 3 5> c", "<c e g>4 <g' b d,> <c, e g> c")]
     public void TheNoteAfterAGroup_IsWrittenAgainstTheGroupsAnchor(string music, string expected)

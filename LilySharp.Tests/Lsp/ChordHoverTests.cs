@@ -116,9 +116,11 @@ public class ChordHoverTests
     public void AnArpeggio_HoversAsItsSymbol() =>
         Assert.Equal("`C (I)` \u00A0C4 \u00A0E4 \u00A0G4", HoverAt("<< c e g >>"));
 
+    /// <summary>Played order, not sorted: the root g' sounds G5 (after the D4 the q before it
+    /// left) and e, c stack above it \u2014 E6, C6 (session 914; the bare-letter anchor had E5 C5).</summary>
     [Fact]
     public void AnArpeggio_ListsItsPitchesInPlayedOrder() =>
-        Assert.EndsWith("G5 \u00A0E5 \u00A0C5", HoverAt("<< g' e c >>"));
+        Assert.EndsWith("G5 \u00A0E6 \u00A0C6", HoverAt("<< g' e c >>"));
 
     [Fact]
     public void AChordRepetition_HoversAsWhatItRepeats() =>

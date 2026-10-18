@@ -468,18 +468,19 @@ public class GraceBodyValidatorTests
     [Fact]
     public void AGraceChordReadsLilyPondsOwnChordRules()
     {
-        // A THIRD needs no shift: both heads stand at the column's own x.
-        Assert.Single(GraceHeadXs(Page("grace { <d' f'>8 } c'1 | e'1 |")).Distinct());
+        // A THIRD needs no shift: both heads stand at the column's own x. (The later member
+        // stacks on the root where it sounds, so <d' f> is D5 F5 — a mark on it would spread.)
+        Assert.Single(GraceHeadXs(Page("grace { <d' f>8 } c'1 | e'1 |")).Distinct());
 
         // A SECOND does: the upper head is reversed to the far side of the stem.
-        var second = GraceHeadXs(Page("grace { <d' e'>8 } c'1 | e'1 |")).ToArray();
+        var second = GraceHeadXs(Page("grace { <d' e>8 } c'1 | e'1 |")).ToArray();
         Assert.Equal(2, second.Length);
         Assert.NotEqual(second[0], second[1]);
 
         // Two accidentals a second apart STACK — two different x, where a third apart the
         // wide one still stacks (position_apes packs every ape, not just colliding ones) but
         // both heads stay put.
-        var acc = GraceAccidentalXs(Page("grace { <dis' eis'>8 } c'1 | e'1 |")).ToArray();
+        var acc = GraceAccidentalXs(Page("grace { <dis' eis>8 } c'1 | e'1 |")).ToArray();
         Assert.Equal(2, acc.Length);
         Assert.NotEqual(acc[0], acc[1]);
     }

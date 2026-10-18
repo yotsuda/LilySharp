@@ -16,7 +16,7 @@ key g major
 section A { partial 8 }
 
 part melody {
-  section A { voice { f'8 } { <bes' ges c>8 } }
+  section A { voice { f'8 } { <bes' ges, c,>8 } }
 }
 
 form { A }

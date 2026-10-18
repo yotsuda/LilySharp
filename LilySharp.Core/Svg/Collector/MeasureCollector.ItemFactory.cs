@@ -527,13 +527,14 @@ public sealed partial class MeasureCollector
             ResolvedPitch rp;
             if (notes.Count == 0)
             {
-                // The first member is the ROOT: its LETTER, resolved bare in the
-                // incoming frame, is the chord's ANCHOR — the base every other
-                // member stacks on and the frame the next chord/note reads. The
-                // root's own '/, marks are LOCAL to its sounding pitch
-                // (<c' e g> = C5 E4 G4, and the next bare c is still C4). Absolute
-                // mode has no frame: the root's marks are its register and anchor
-                // the degrees as written.
+                // The first member is the ROOT, read exactly as a single note would be:
+                // its letter resolved nearest in the incoming frame, then its own '/,
+                // marks. Where it SOUNDS is the chord's ANCHOR — the base every other
+                // member stacks on and the frame the next chord/note reads (<c' e g> =
+                // C5 E5 G5, and the next bare c is C5; user decision 2026-10-18, session
+                // 914, replacing the bare-letter anchor of 2026-09-27). Absolute mode has
+                // no frame: the root's marks are its register and anchor the degrees as
+                // written.
                 firstPitchName = pitch.PitchName.ToLowerInvariant()[0];
                 rootStepForStack = GetPitchIndex(firstPitchName);
                 if (_octave.OctaveAbsolute)
@@ -543,10 +544,14 @@ public sealed partial class MeasureCollector
                 }
                 else
                 {
-                    int anchor = _octave.Resolve(rootStepForStack, 0, firstPitchName) + chordOctave;
+                    int anchor = _octave.Resolve(rootStepForStack, 0, firstPitchName)
+                        + pitch.OctaveOffset + chordOctave;
                     rp = ResolveAbsolutePitch(rootStepForStack, pitch.AccidentalOffset,
-                        anchor + pitch.OctaveOffset, pitch.SourceStart);
-                    firstOctave = anchor;
+                        anchor, pitch.SourceStart);
+                    // The RESOLVED octave, not `anchor`: the octave-mode converter may have
+                    // forced the root (OctaveOverride), and the members and the next note
+                    // must follow the root it will write.
+                    firstOctave = rp.RelativeOctave;
                     anchored = true;
                 }
             }
@@ -780,16 +785,18 @@ public sealed partial class MeasureCollector
             _resolvedSpellingLog.Add((chord, memberArray));
 
         // THE CHORD WRITES THE FRAME: the next chord/note is relative to the chord's
-        // ANCHOR — the root's bare letter (the tonic for a degree chord) plus the
-        // whole-chord marks after '>'; the members' own marks stay local (user decision,
-        // 2026-09-27, replacing 2026-09-16's "a chord reads the frame and never writes
-        // it"). A chord is then ONE item of the relative chain, like a note: in
+        // ANCHOR — where the root sounds (the tonic for a degree chord) plus the
+        // whole-chord marks after '>'; the other members' own marks stay local (user
+        // decision, 2026-09-27, replacing 2026-09-16's "a chord reads the frame and never
+        // writes it"). A chord is then ONE item of the relative chain, like a note: in
         // `g1 | <c e g>1 | <f a c>` the last chord reads the chord before it, so
         // rewriting the g cannot move it while the chord in between stays put (under the
-        // old rule it read the g, two items back, and jumped an octave). The anchor, not
-        // the root's sounding pitch, so `<c, e g> <c, e g>` repeats without falling.
-        // A chord that anchors nothing (`<>`, drums only) and absolute mode hand the
-        // incoming frame on, shifted by the marks.
+        // old rule it read the g, two items back, and jumped an octave). The root's own
+        // marks are IN the anchor (user decision 2026-10-18, session 914; from 2026-09-27
+        // the anchor was the root's bare letter), so `<c, e g> <c, e g>` falls an octave
+        // exactly as `c, c,` does — the chord is its first note. A chord that anchors
+        // nothing (`<>`, drums only) and absolute mode hand the incoming frame on,
+        // shifted by the marks.
         _octave.CurrentOctave = anchored ? firstOctave : frameOctaveIn + chordOctave;
         _octave.LastPitchName = anchored ? firstPitchName : framePitchNameIn;
         // A chord from a shape hands on its LOWEST sounding note, as written — as a chord

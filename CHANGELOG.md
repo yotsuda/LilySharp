@@ -6,6 +6,20 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+### A chord is read as its first note
+
+- **In relative mode a chord's anchor is where its first member sounds** — the letter nearest
+  the note before, then its own `'`/`,` — exactly as a single note is read; the other members
+  stack at or above it and the note after the chord is relative to it. So `<c' e g>` is C5 E5
+  G5 and the next bare `c` is C5, the same as `<c e g>'`; `g2 <c,, f>` is C1 F1 under G2 (it
+  was C1 **F3**: the anchor was the first member's *bare* letter, its mark local to it, and
+  lowering the root could raise the rest — the owner's report). A later member's mark still
+  moves that note only, from its stacked spot: `<c g,>` = C4 G3, and `<c' e' g'>` is now the
+  spread C5 E6 G6 (the close chord an octave up is `<c' e g>`). A pasted `<c, e g> <c, e g>`
+  falls an octave, as `c, c,` does. Arpeggios (`<< >>`) read their root the same way; the page,
+  MIDI, MusicXML, the LilyPond twin, the octave converter and the MusicXML importer agree.
+  (Owner's decision 2026-10-18: one rule for notes and chords, no exception to learn.)
+
 ### The bar line between percent marks may be left out
 
 - **`c4 d e f | % % % |` reads as `c4 d e f | % | % | % |`** — between two percent marks in a
