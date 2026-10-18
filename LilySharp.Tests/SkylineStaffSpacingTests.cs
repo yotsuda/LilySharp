@@ -494,10 +494,13 @@ public class SkylineStaffSpacingTests
             "LilySharp.Tests", "Fixtures", "test", "grandstaff-high-bass.lys");
         var asWritten = File.ReadAllText(path);
 
-        const string high = "<c'' e'' g''>";
+        // C5-E5-G5 under the lower staff's `octave 3`: a chord is read as its first note and
+        // the others stack on it (session 914; it was spelled <c'' e'' g''> under the
+        // bare-letter anchor).
+        const string high = "<c'' e g>";
         Assert.Contains(high, asWritten);   // the pair below is built by replacing this
 
-        string oneOctaveDown = asWritten.Replace(high, "<c' e' g'>");
+        string oneOctaveDown = asWritten.Replace(high, "<c' e g>");
         string twoOctavesDown = asWritten.Replace(high, "<c e g>");
 
         double open = LpFidelity.RenderedGeometry.Render(asWritten).StaffGapAt(0);
