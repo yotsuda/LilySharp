@@ -155,8 +155,9 @@ internal static partial class SharedRenderer
                 case ClefChangeItem clefChange:
                     // A leading clef change that opens a system is already drawn as the
                     // system-start clef (ResolveClef folds it) — drawing it here too
-                    // would double-print the clef.
-                    if (!IsSystemStartClefChange(voice, system, ml.MeasureIndex, clefChange))
+                    // would double-print the clef. A BLANKED one (a one-line staff, which
+                    // engraves no clef: ClefChangeItem.Blanked) is drawn nowhere.
+                    if (!clefChange.Blanked && !IsSystemStartClefChange(voice, system, ml.MeasureIndex, clefChange))
                         DrawClefChange(fonts, clefChange, itemX, staffY, gc, staffLines);
                     break;
                 case KeySignatureChangeItem keyChange:

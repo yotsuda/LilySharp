@@ -765,8 +765,8 @@ internal static class LineStartColumn
             {
                 if (item.Duration > Semantics.Fraction.Zero)
                     break;
-                clef |= item is Model.ClefChangeItem;
-                key |= item is Model.KeySignatureChangeItem;
+                clef |= item is Model.ClefChangeItem { Blanked: false };
+                key |= item is Model.KeySignatureChangeItem { Blanked: false };
             }
         }
         return (clef, key);

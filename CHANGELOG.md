@@ -16,6 +16,14 @@ workflow attaches that section to the GitHub Release verbatim.
   mark writes the `| ` for you, as it does after the note that fills a bar, so `%␣%␣%␣` leaves
   the written spelling.
 
+### A one-line staff draws no clef change
+
+- **A `clef` written in the music of an `as lines 1` staff draws nothing and takes no room** —
+  the staff engraves no clef at the line start (LilyPond's RhythmicStaff has no Clef_engraver),
+  and now none mid-piece either; it still moves the clef the notes after it are placed by. It
+  drew the small change clef, with its 8, and paid the clef's column. A five-line staff beside
+  it keeps its own change. (Found by session 910's one-to-five-line sweep.)
+
 ### Editor
 
 - **The preview plays through a MIDI output port when `lilysharp.playback.output` names one** —

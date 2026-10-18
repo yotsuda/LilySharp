@@ -94,7 +94,8 @@ internal static partial class SpacingRules
     /// </para>
     /// </remarks>
     internal static bool ChangeItemHasInk(MusicItem item) =>
-        item is not (TimeSignatureChangeItem { Blanked: true } or KeySignatureChangeItem { Blanked: true });
+        item is not (TimeSignatureChangeItem { Blanked: true } or KeySignatureChangeItem { Blanked: true }
+            or ClefChangeItem { Blanked: true });
 
     /// <summary>
     /// Whether this item stands in the non-musical change column rather than the musical
@@ -882,7 +883,7 @@ internal static partial class SpacingRules
                 // ChangeColumnLeftMinDistance).
                 for (int j = 0; j < columnItems.Count; j++)
                 {
-                    if (columnItems[j] is not ClefChangeItem clef)
+                    if (columnItems[j] is not ClefChangeItem { Blanked: false } clef)
                         continue;
                     var b = GlyphMetrics.ClefChangeBBox(clef.NewClef);
                     double lineUp = 2.0 - Rendering.SharedRenderer.ClefLineBelowTopLine(clef.NewClef);

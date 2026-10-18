@@ -1727,6 +1727,24 @@ public sealed record ClefChangeItem : MusicItem
     /// </remarks>
     public bool IsCue { get; }
 
+    /// <summary>
+    /// Whether NO staff holding this voice engraves a clef — a one-line staff (<c>as lines 1</c>,
+    /// LilyPond's RhythmicStaff, which removes the Clef_engraver; <see cref="Svg.Layout.SpacingRules.EngravesClef"/>)
+    /// — so the change draws nothing and puts nothing in the non-musical column: no glyph, no
+    /// width, no break-align gap, no space-alist distance. It still moves the running clef,
+    /// which places the notes after it.
+    /// </summary>
+    /// <remarks>
+    /// The clef's counterpart of <see cref="KeySignatureChangeItem.Blanked"/>, set by the same
+    /// pass (<c>MeterStencil.Blank</c>). Per VOICE rather than per score: a clef is a staff's
+    /// own grob, so a five-line staff beside the one-line staff keeps its change, and a voice
+    /// shown on both a one-line and a multi-line staff (the same objects, RenderSpec.ToStaffGroups)
+    /// keeps the glyph for the staff that draws it. Until session 913 a one-line staff drew the
+    /// small change clef (and its 8) and paid its column, although its line-start clef is not
+    /// engraved at all (SpacingRules.EngravesClef).
+    /// </remarks>
+    public bool Blanked { get; init; }
+
     /// <summary>Initializes a new <see cref="ClefChangeItem"/>.</summary>
     public ClefChangeItem(ClefType newClef, int sourcePosition, bool isCue = false)
     {

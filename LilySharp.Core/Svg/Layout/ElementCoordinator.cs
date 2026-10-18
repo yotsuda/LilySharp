@@ -720,7 +720,7 @@ internal sealed class ElementCoordinator
 
         switch (item)
         {
-            case ClefChangeItem { IsCue: false } clef:
+            case ClefChangeItem { IsCue: false, Blanked: false } clef:
             {
                 // The glyph's origin is on the line the clef names (scm/parser-clef.scm
                 // supported-clefs — the same positions SharedRenderer.DrawClefChange anchors at).

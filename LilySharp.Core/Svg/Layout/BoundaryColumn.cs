@@ -107,7 +107,8 @@ internal sealed class BoundaryColumn
         {
             foreach (var item in leadingItems)
             {
-                if (item is ClefChangeItem c) clef = c;
+                // A blanked clef change (a one-line staff engraves no clef) is stepped over too.
+                if (item is ClefChangeItem c) { if (!c.Blanked) clef = c; }
                 // A blanked key change (no staff engraves one) is stepped over like a blanked meter.
                 else if (item is KeySignatureChangeItem k) { if (!k.Blanked) key = k; }
                 // A BLANKED meter is stepped over rather than collected: its extent is empty,
@@ -207,9 +208,11 @@ internal sealed class BoundaryColumn
     {
         foreach (var item in leadingItems)
         {
-            if (item is ClefChangeItem)
+            // A blanked clef change (ClefChangeItem.Blanked, a one-line staff) is no grob: the
+            // closing gap reserves nothing for it, as for a bar opening on music.
+            if (item is ClefChangeItem { Blanked: false })
                 return true;
-            if (item is KeySignatureChangeItem or TimeSignatureChangeItem)
+            if (item is ClefChangeItem or KeySignatureChangeItem or TimeSignatureChangeItem)
                 continue;
             if (item.Duration > Fraction.Zero)
                 break; // reached the music
