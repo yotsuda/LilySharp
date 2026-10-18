@@ -342,7 +342,9 @@
   preset) when playback starts; a DAW track that keeps its own instrument ignores it. The
   auditions strike on channel 16. To go back to the sound font, choose <b>The preview's own
   synth</b> in the same picker. A port that is not there when you press ▶ — a device
-  unplugged — makes the preview play its own synth, with the reason in the status bar. The port
+  unplugged — makes the preview play its own synth, with the reason in the status bar. With
+  both settings set, the port wins: the sound font plays only while no port is named or the
+  named port is not there. The port
   is reached through each system's own MIDI API (winmm, CoreMIDI, the ALSA sequencer); it has
   been tried on Windows so far.</p>
 </section>

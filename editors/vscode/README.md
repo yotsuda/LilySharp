@@ -89,8 +89,9 @@ Synth* plays with no setup, and a virtual port — loopMIDI on Windows, an IAC b
 ALSA sequencer on Linux — carries the notes into a DAW or a VST host. Each part keeps its
 channel and sends its General MIDI program, as the exported MIDI does; the drums are on
 channel 10; the follow-along highlight runs as before. A port that is not there makes the
-preview play its own synth, with the reason in the status bar. (Reached through each system's
-own MIDI API; tried so far on Windows.)
+preview play its own synth, with the reason in the status bar. When both settings are set, the
+port wins: the sound font plays only while no port is named or the named port is not there.
+(Reached through each system's own MIDI API; tried so far on Windows.)
 
 To use other keys, open **Keyboard Shortcuts** (`Ctrl+K Ctrl+S`), search for
 `lilysharp.stepSemitoneUp` / `lilysharp.stepSemitoneDown` (a note of the key; the ids keep an earlier name) or `lilysharp.stepUp` /

@@ -161,7 +161,10 @@ synth, §1–§5 unchanged); **Lily#: Choose MIDI Output…** lists what the mac
 setting's description links to it. Windows then plays through the Microsoft GS Wavetable Synth
 with no setup, and a virtual port — loopMIDI on Windows, an IAC bus on a Mac, the ALSA
 sequencer's own graph on Linux — carries the stream to a DAW, Cantabile, Carla or any VST host,
-where the user's instruments are.
+where the user's instruments are. **With both settings set, the port wins**: the webview's one
+test (`midiOutput` non-empty, `extension.ts` `startPlayback` / the strike) sends the sound to
+the server, and the sound font plays only while no port is named or the named port is not there
+(the fallback below).
 
 - **Who decides what, and who holds the port.** The webview still decides WHAT plays — the
   note list it fetched (`lilysharp/playback`), the offset (Play from the highlighted note, a
