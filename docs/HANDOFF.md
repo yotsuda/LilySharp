@@ -124,6 +124,19 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第915セッション（2026-10-20・YT-DELL2）
+
+新しい会話。`-Start p915`（開始 HEAD `edddc4978`・未 push 23・full **12443 / 0 / 2 / 12445**・第913 を ARCHIVE へ）。作業場所は Lab `sessions/p915/`（start.log・repro・before/after の png・lp・sweep・full1）。
+- **OMR の不具合レポート 2026-10-20**（`..\LilySharp-Omr\docs\repro\lilysharp-bug-report-2026-10-20.md`・10 件）＝**ユーザー指示「すべて直して」**。再現 10 冊を Lab `repro/` に写し、HEAD の Debug（`exe-base`）で全部再現した。
+- **1〜3・6 は一つの形**＝声部の中の番号を、レイアウトの item 枠（＝大譜表では上の五線、1 譜では 1 声目）の番号として引いていた。text spanner（`BoundX`）・trill（`VoiceItemX`）・ottava（`ItemX`＝字と支え）を `GetItemXOffset`＋その声部の小節に。text spanner／ottava は開始の印の `VoiceIndex`、arpeggio は `VoiceIndex` を持つ。**6 のもう半分**＝ottava の続きの断片が*開始小節の*段の staff offset を読んでいた（`(8vb)` が前の段の位置で吊られて別の五線に出る）→断片ごとの段。hairpin（2026-10-16 に直した）と同じ病の残り 3 本。
+- **4** 連符の腕（`EmitScaledItem`）が `hasArpeggio: false` で arpeggio を登録しなかった→`AddArpeggio` を 1 か所に。**7** 連符の中は `CurrentDuration` が止まる＝中の印が全部連符の頭の時刻を持った→`MeasureBuilder.CurrentMoment`（時計＋未加算の member）。**5** 段をまたぐ trill の右端が `system.Width`（字下げを引いた幅）＝1 段目で字下げより段末に近い trill は始点＞終点で捨てられた→最後の小節の右端。
+- **8・10・9 は LP 2.26 で描いて裁定**（Lab `lp/check.ly`）: 8＝LP は五線ごと（♮・♭ を付ける）＝不具合。10＝LP も付けない（音高で覚える）。9＝LP も連桁の acciaccatura に斜線なし＝LP どおり・変えない。**8・10 は `StaffAccidentals`（収集の後の五線ごとの後処理・足すだけ）**: ⑴ 同じ音名・オクターブが最後に*別の声部*で違う変化量 ⑵ 同じ線・間に最後に*別オクターブ*の違う変化量（ottava の両側・LILYSHARP-OWN＝§1.0 第751 の方針で描かれた位置を優先）。既定の様式だけ・小節内の clef 変更は ⑵ を飛ばす・タイの続きは付けない・同時の声部は互いに見ない。音符と和音の構成音が `WrittenPitch`（音名・オクターブ・変化量を詰めた int）を持つ。呼び所は `ResolveStaffColumns`（全経路の五線）・1 声の ottava の後・多五線の ottava の後（足したら `RepackAccidentalColumns`）。⚠️ condensed staff（`RenderSpec`）は通していない。
+- **網** `OmrReport20261020Tests` 9 本（報告の本で・HEAD の Core に戻すと 9 本とも赤＝バイト退避で確認）。**掃き**（p723 の sweep-all・1,015 冊／1,240 svg）で動いたのは **1 枚**＝`audit/lp-regression/lys/collisions.lys` 6 小節目の 3 声目の e に ♮（2 声目の es の後）＝⑴ の正しい帰結。
+- commit **`1aca41cd2`**（code＋網＋CHANGELOG＋目録 2 枚）→ `-End p915 -DiffBase edddc4978`＝full **12452 / 0 / 2 / 12454**（開始 +9 本＝網）・Core '+' 574 行・Core 警告 0・門は全部 OK・天井: HANDOFF 386,571 B・Lab `sessions/p915/end.log`）→ この docs commit。未 push 23＋2（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。
+判定（2026-10-20）: OMR の 10 件は閉じた（9 は LP どおり・10 は LP と違う選択＝OMR へ伝えること）。残りは condensed staff の ⑴ と、OMR 側での生成譜の取り直し。続けるなら新しい島＝(c) で差は小さい。
+
+## 以下は第914セッションの経緯
+
 ### 1.1 第914セッション（2026-10-18・YT-DELL2）
 
 同じ会話の続き（第913 の後）。`-Start p914`（開始 HEAD `f75e187b0`・未 push 20・full **12442 / 0 / 2 / 12444**・第912 を ARCHIVE へ＝MCP コンソールが 262 s で戻って出力が途切れたので `-Archive 912` を手で）。作業場所は Lab `sessions/p914/`（start.log・end.log・archive.log・notes.md・corpus-diff.txt）。
@@ -136,18 +149,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - docs: GRAMMAR の Chord の注（候補と経緯・2026-09-27〜10-18 の規則を ⚠️ で残す）・GRAMMAR_FOR_LLM・SYNTAX_REFERENCE・site `manual-body.html`・`arpeggio-rework-handoff.md`・CHANGELOG `## Unreleased` に H3 1 つ・§1.0 に第914 の決定。
 - commit **`ece474ae6`**（code＋網＋docs＋綴り直し 10 冊＋README）→ `-End p914 -DiffBase f75e187b0`＝full **12436 / 7 / 2 / 12445**（開始 +1 本・赤 7 ＝ 継ぎ目 3（この語りを書く前）＋綴り直した fixture の snapshot 3 ＋ fixture の文を見る網 1 → **`081f97723`** で snapshot を承認し網を直して緑・Core '+' 116 行・Core 警告 0・門は全部 OK・天井: HANDOFF 380,773 B・Lab `sessions/p914/end.log`）→ この docs commit。未 push 20＋3（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。
 判定（2026-10-18）: この島は閉じた。次はユーザーの実機確認（MANUAL-CHECKS §1.2・§2.1・§3.5）と、Lab の 5 冊を綴り直すかの判断（ユーザー）。続けるなら新しい島＝(c) で差は小さい。圧縮は 1 回。
-
-## 以下は第913セッションの経緯
-
-### 1.1 第913セッション（2026-10-18・YT-DELL2）
-
-同じ会話の続き（第912 の後）。`-Start p913`（開始 HEAD `0bf38dd78`・未 push 16・full **12440 / 0 / 2 / 12442**・第911 を ARCHIVE へ）。作業場所は Lab `sessions/p913/`（start.log・end.log・notes.md）。
-- **§1.0 ⒜ の線数の少ない譜表の島の残り 1 件＝1 線譜表の中の `clef` 変更を閉じた**。1 線譜表（`as lines 1`＝LP の RhythmicStaff・Clef_engraver 無し）は段頭の clef を描かない（`SpacingRules.EngravesClef`）のに、音楽の中の `clef` は小さな変更 clef（と 8）を描いて列の幅も払っていた。**作り**: 起票時の案（描き手 1 か所＋間隔 10 か所余を `Lines > 1` で門する）ではなく、**空白にした拍子・調と同じ形**＝`ClefChangeItem.Blanked` を collect の最後の `MeterStencil.Blank` が立て、全部の列の歩きが訊く 1 つの述語 `SpacingRules.ChangeItemHasInk` と、描き手・`BoundaryColumn`（Build／OpensWithClefChange）・梁の covered box（`ElementCoordinator`）・変更列の skyline の箱・`LineStartColumn.OpeningChanges` が読む。**譜表ごと（声部ごと）で、スコア全体ではない**＝clef は譜表自身の grob（拍子・調は paper column が譜表をまとめるのでスコア単位）。`CleflessVoices`＝1 線譜表の声部 − clef を描く譜表の声部（両方に出る声部は描く側＝OR・文書化）。音の配置は触っていない（collector は pass の前に配置し `MeasureContextChain` は Blanked に関係なく NewClef を読む）。
-- **網**: `OneLineStaffClefChangeTests` 2 本＝単独（変更 glyph 0・段頭 clef 0・全符頭の x が変更無しの本と同じ＝列は*無い*・3 つ目の符頭の y は clef で動く）／5 線譜表と並べる（そちらは変更 1 つ・段頭 1 つ・2 譜表の符頭は同じ x）。Lab `sessions/p910/probe/lines.lys` を描いた（scratchpad `p913/lines.png`）: Tone（lines 1）の 2 小節目前の変更 clef が消え、Ttwo／Tthree は残る。関連 1,402 本緑。
-- **罠（網の側）**: ⑴ 既定は relative octave＝`b'4 a' c'' b'` が 2 オクターブ登って加線が 4 列目を 0.25 広げ、間隔の欠陥に見えた → `octave absolute`。⑵ 頁の y は skyline で 0.05 動く＝符頭の y は 1 つ目からの差で比べる。⑶ 符尾の向きも間隔に効く＝対照の本は符尾の並びを揃える。**見かけて同じ会話で裏取り（第914 相当・docs のみ）**: 「Tone では `clef treble_8` で符頭が動かず、Ttwo では動く」は見間違い＝1・2・5 線とも 2 小節目の符頭の y は 1 小節目と同じ（scratchpad `p914/{tone,ttwo,five}.lys`・`clef bass` だけ動く）。**設計どおり**（0.8.0「clef は音高を動かさない」＝`treble_8` は treble の位置に描いて 1 オクターブ下で鳴る・ARCHIVE 第2便の「treble_8 の譜表が ly 出力で 1 オクターブ上」）。欠陥ではない・起票しない。
-- docs: CHANGELOG `## Unreleased` に H3 1 つ・§1.0 ⒜ の起票を閉じた。
-- commit **`9cec0e671`**（code＋CHANGELOG・1 回）→ `-End p913 -DiffBase 0bf38dd78`＝full **12442 / 0 / 2 / 12444**（開始 +2 本・Core '+' 80 行・Core 警告 0・門は全部 OK・天井: HANDOFF 383,971 B・§1 現在便 13,655 / 20,000 字・Lab `sessions/p913/end.log`）→ この docs commit。未 push 16＋2（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。
-判定（2026-10-18）: §1.0 ⒜ で手が動くのは残り `lysc wav`（B の後と決めてある）と part の `midiChannel`（要るときに）＝**次はユーザーの実機確認（MANUAL-CHECKS §1.2・§2.1・§3.5）が先**。続けるなら新しい島＝この会話の文脈（percent・MIDI out・clef）は要らないので (c) で差は小さい。圧縮は 1 回。
 
 ## 2. 開いている作業
 
