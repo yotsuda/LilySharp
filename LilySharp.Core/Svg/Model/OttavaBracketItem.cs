@@ -81,7 +81,10 @@ public sealed record OttavaBracketItem(
     Semantics.Fraction? EndMoment = null,
     // With EndMoment: the index, in the closing mark's voice, of the note that closes the
     // span (exclusive) — the item-slot path's right bound is the item before it.
-    int EndItemIndex = -1
+    int EndItemIndex = -1,
+    // The voice of that staff the start mark was written in: StartItemIndex counts THAT
+    // voice's items, so the left bound is resolved through it.
+    int VoiceIndex = 0
 )
 {
     // Identity, not value equality: see ModelIdentity.

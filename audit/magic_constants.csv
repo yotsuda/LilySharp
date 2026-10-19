@@ -982,7 +982,7 @@
 "Svg/Layout/OttavaBracketEngraver.cs","OttavaBracketEngraver.Calculate","2.0","double yUp = lineMiddleFrame - 2.0 - staffOffset;","(file-level) LILYPOND-REF: lily/ottava-bracket.cc Ottava_bracket::print()","Yellow"
 "Svg/Layout/OttavaBracketEngraver.cs","OttavaBracketEngraver.AlignedSideLineY","1.0, 1.0","double dir = isAbove ? 1.0 : -1.0;","(file-level) LILYPOND-REF: lily/ottava-bracket.cc Ottava_bracket::print()","Yellow"
 "Svg/Layout/OttavaBracketEngraver.cs","OttavaBracketEngraver.AlignedSideLineY","0.0","endX, edgeHeight, isAbove, 0.0);","(file-level) LILYPOND-REF: lily/ottava-bracket.cc Ottava_bracket::print()","Yellow"
-"Svg/Layout/OttavaBracketEngraver.cs","OttavaBracketEngraver.AlignedSideLineY","0.0","columns.Add((mi, ii, ml.X + (ii < ml.Items.Length ? ml.Items[ii].X : 0.0)));","(file-level) LILYPOND-REF: lily/ottava-bracket.cc Ottava_bracket::print()","Yellow"
+"Svg/Layout/OttavaBracketEngraver.cs","OttavaBracketEngraver.AlignedSideLineY","0.0","columns.Add((mi, ii, ml.X + (ItemX(ml, voices, vi, mi, ii) ?? 0.0)));","(file-level) LILYPOND-REF: lily/ottava-bracket.cc Ottava_bracket::print()","Yellow"
 "Svg/Layout/OttavaBracketEngraver.cs","OttavaBracketEngraver.AlignedSideLineY","0.0","totalOff += dir * Math.Max(diff, 0.0);","(file-level) LILYPOND-REF: lily/ottava-bracket.cc Ottava_bracket::print()","Yellow"
 "Svg/Layout/PedalEngraver.cs","PedalEngraver.BoundPadding","1.0","private const double BoundPadding = 1.0;","LILYPOND-REF: define-grobs.scm:2857 bound-padding = 1.0","Green"
 "Svg/Layout/PedalEngraver.cs","PedalEngraver.EdgeHeight","1.0","private const double EdgeHeight = 1.0;","LILYPOND-REF: define-grobs.scm:2860 edge-height = (1.0 . 1.0)","Green"

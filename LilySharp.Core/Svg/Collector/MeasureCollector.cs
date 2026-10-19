@@ -1275,6 +1275,9 @@ public sealed partial class MeasureCollector
         // (etc.) while sounding at their written pitch. Single-staff score, so
         // every ottava mark is on staff 0. See OttavaTransposer.
         voice = OttavaTransposer.Transpose(voice, DetectOttavaSpans(0));
+        // …and the accidentals owed where an ottava line's two sides draw two octaves on one
+        // line or space (StaffAccidentals ⑵ — one voice has no ⑴).
+        voice = StaffAccidentals.Apply(ImmutableArray.Create(voice), _accidentalStyle)[0];
 
         // Lyrics attach EXPLICITLY via `score { staff X with lyrics L }`. There is NO
         // implicit auto-attach anywhere: a `lyrics {}` block that no score references is a
@@ -2295,10 +2298,20 @@ public sealed partial class MeasureCollector
                         .Select(st =>
                         {
                             var spans = DetectOttavaSpans(ottavaStaffIndex++);
-                            return spans.Count == 0
-                                ? st
-                                : st with { Voices = st.Voices
-                                    .Select(v => OttavaTransposer.Transpose(v, spans)).ToImmutableArray() };
+                            if (spans.Count == 0)
+                                return st;
+                            var transposed = st.Voices
+                                .Select(v => OttavaTransposer.Transpose(v, spans)).ToImmutableArray();
+                            // The drawn-position half of the staff's accidentals reads where the
+                            // heads now stand (StaffAccidentals ⑵); the staff's accidental
+                            // columns are packed again when it adds any.
+                            if (!st.IsTab)
+                            {
+                                var owed = StaffAccidentals.Apply(transposed, _accidentalStyle);
+                                if (owed != transposed)
+                                    transposed = RepackAccidentalColumns(owed);
+                            }
+                            return st with { Voices = transposed };
                         })
                         .ToImmutableArray()
                 })
@@ -2666,7 +2679,18 @@ public sealed partial class MeasureCollector
         // …and under the score's music font, whose head boxes the packing reads
         // (StaffAccidentalColumns' sized font; docs/smufl-design.md §6 ② ⒝).
         using var music = Layout.MusicFont.Use(Layout.MusicFonts.Of(_meta.Fonts));
-        return StaffAccidentalColumns.Resolve(ResolveVoiceStemDirections(voices));
+        // The accidentals the STAFF owes across its voices first — the packing reads them.
+        return StaffAccidentalColumns.Resolve(ResolveVoiceStemDirections(
+            StaffAccidentals.Apply(voices, _accidentalStyle)));
+    }
+
+    /// <summary>The staff's accidental columns packed again, under the same scopes as
+    /// <see cref="ResolveStaffColumns"/> — after a later pass added accidentals.</summary>
+    private ImmutableArray<Voice> RepackAccidentalColumns(ImmutableArray<Voice> voices)
+    {
+        using var style = EngravingStyle.Use(_meta.Paper.Style);
+        using var music = Layout.MusicFont.Use(Layout.MusicFonts.Of(_meta.Fonts));
+        return StaffAccidentalColumns.Resolve(voices);
     }
 
     /// <summary>

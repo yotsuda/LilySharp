@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 63 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 63 | 観測者がゼロだと自認しているもの |
-| `OWN` | 262 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **388** | |
+| `OWN` | 263 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **389** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -246,7 +246,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（262 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（263 件）
 
 ### `LilySharp.Core/Editing/KeyRespeller.cs`
 - **`KeyRespeller`** LILYSHARP-OWN: an editor aid. The rule:
@@ -419,6 +419,8 @@
 - **`SectionTieCarry`** LILYSHARP-OWN: the hanging tie is drawn as a laissez-vibrer tie, LilyPond's short half-tie,
 ### `LilySharp.Core/Svg/Collector/StaffAccidentalColumns.cs`
 - **`StaffAccidentalColumns.Resolve`** ⚠️ LILYSHARP-OWN GATE, and a DIVERGENCE: LilyPond packs a cue accidental into
+### `LilySharp.Core/Svg/Collector/StaffAccidentals.cs`
+- **`StaffAccidentals`** LILYSHARP-OWN, two ways, both because a reader reads what is drawn (owner's decision
 ### `LilySharp.Core/Svg/Collector/TabResolver.cs`
 - **`TabResolver.ResolveTabStrings`** built on (LILYSHARP-OWN and deliberately not LilyPond's). REFINED 2026-09-14: only a
 ### `LilySharp.Core/Svg/EngravingDefaults.cs`

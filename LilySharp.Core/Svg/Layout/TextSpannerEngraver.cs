@@ -197,7 +197,8 @@ internal static class TextSpannerEngraver
         ImmutableArray<MeasureLayout> measureLayouts,
         ImmutableArray<DynamicLayout> dynamicLayouts,
         Func<int, int, double>? staffYAt = null,
-        ScoreTextMetrics? fonts = null)
+        ScoreTextMetrics? fonts = null,
+        Dictionary<int, ImmutableArray<Voice>>? voicesByStaff = null)
     {
         if (textSpanners.IsDefaultOrEmpty)
             return ImmutableArray<TextSpannerLayout>.Empty;
@@ -235,11 +236,13 @@ internal static class TextSpannerEngraver
                 //   details flip attach-dir to RIGHT (scm/define-grobs.scm, TextSpanner
                 //   bound-details) and that branch is NOT PORTED HERE. No ledger point reads a
                 //   broken piece's left edge, so it is named rather than guessed at.
+                var spannerVoices = voicesByStaff != null
+                    && voicesByStaff.TryGetValue(spanner.StaffIndex, out var vv) ? vv : default;
                 double startX;
-                if (segment.IsFirst && spanner.StartItemIndex < measureLayouts[segment.StartMeasureIndex].Items.Length)
+                if (segment.IsFirst && BoundX(measureLayouts[segment.StartMeasureIndex], spannerVoices,
+                        spanner.VoiceIndex, spanner.StartMeasureIndex, spanner.StartItemIndex) is { } startItemX)
                 {
-                    var startItem = measureLayouts[segment.StartMeasureIndex].Items[spanner.StartItemIndex];
-                    startX = measureLayouts[segment.StartMeasureIndex].X + startItem.X + BoundPadding;
+                    startX = measureLayouts[segment.StartMeasureIndex].X + startItemX + BoundPadding;
                 }
                 else
                 {
@@ -257,10 +260,10 @@ internal static class TextSpannerEngraver
                 if (segment.IsLast)
                 {
                     var endMeasure = measureLayouts[segment.EndMeasureIndex];
-                    if (spanner.EndItemIndex < endMeasure.Items.Length)
+                    if (BoundX(endMeasure, spannerVoices, spanner.VoiceIndex,
+                            spanner.EndMeasureIndex, spanner.EndItemIndex) is { } endItemX)
                     {
-                        var endItem = endMeasure.Items[spanner.EndItemIndex];
-                        endX = endMeasure.X + endItem.X - BoundPadding;
+                        endX = endMeasure.X + endItemX - BoundPadding;
                     }
                     else
                     {
@@ -311,6 +314,32 @@ internal static class TextSpannerEngraver
         }
 
         return layouts.ToImmutable();
+    }
+
+    /// <summary>
+    /// The measure-relative X of the bound note — item <paramref name="itemIndex"/> of the
+    /// spanner's OWN voice in <paramref name="measureIndex"/> — or null when that voice has no
+    /// such item (the bound is then the measure's edge).
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ The indices count the voice's items, and on a multi-staff layout the layout's item
+    /// slots are the FIRST staff's: until 2026-10-20 a left hand's `@rit` was drawn from the
+    /// right hand's slot of the same index (OMR report 2026-10-20, item 1) — the hairpin's
+    /// defect of 2026-10-16 in another engraver. With no voices supplied (a harness that
+    /// builds layouts directly) the slots are read as before.
+    /// </remarks>
+    private static double? BoundX(MeasureLayout ml, ImmutableArray<Voice> voices,
+        int voiceIndex, int measureIndex, int itemIndex)
+    {
+        if (itemIndex < 0)
+            return null;
+        if (voices.IsDefaultOrEmpty)
+            return itemIndex < ml.Items.Length ? ml.Items[itemIndex].X : null;
+        var measures = LayoutUtilities.ResolveVoiceMeasures(voices, voiceIndex, default);
+        if (measureIndex < 0 || measureIndex >= measures.Length
+            || itemIndex >= measures[measureIndex].Items.Length)
+            return null;
+        return LayoutUtilities.GetItemXOffset(measures, measureIndex, itemIndex, ml);
     }
 
     /// <summary>
@@ -506,7 +535,8 @@ internal static class TextSpannerEngraver
                     Style: TextSpannerStyle.DashedLine,
                     SourcePosition: start.Mark.SourcePosition,
                     SourceIndex: start.Index,
-                    StaffIndex: start.Mark.StaffIndex));
+                    StaffIndex: start.Mark.StaffIndex,
+                    VoiceIndex: start.Mark.VoiceIndex));
                 continue;
             }
 
@@ -572,7 +602,8 @@ internal static class TextSpannerEngraver
         ScoreTextMetrics fonts,
         ImmutableArray<TextSpannerItem> spanners,
         ImmutableArray<MeasureLayout> measureLayouts,
-        VerticalSkyline accumulatedUp)
+        VerticalSkyline accumulatedUp,
+        ImmutableArray<Voice> voices = default)
     {
         var ink = new VerticalSkyline(VerticalDirection.Up);
         if (spanners.IsDefaultOrEmpty || measureLayouts.IsDefaultOrEmpty)
@@ -602,11 +633,13 @@ internal static class TextSpannerEngraver
             if (startLayout is null || endLayout is null)
                 continue;
 
-            double startX = startsHere && spanner.StartItemIndex < startLayout.Items.Length
-                ? startLayout.X + startLayout.Items[spanner.StartItemIndex].X + BoundPadding
+            double startX = startsHere && BoundX(startLayout, voices, spanner.VoiceIndex,
+                    spanner.StartMeasureIndex, spanner.StartItemIndex) is { } sx
+                ? startLayout.X + sx + BoundPadding
                 : startLayout.X + BoundPadding;
-            double endX = endsHere && spanner.EndItemIndex < endLayout.Items.Length
-                ? endLayout.X + endLayout.Items[spanner.EndItemIndex].X - BoundPadding
+            double endX = endsHere && BoundX(endLayout, voices, spanner.VoiceIndex,
+                    spanner.EndMeasureIndex, spanner.EndItemIndex) is { } ex
+                ? endLayout.X + ex - BoundPadding
                 : endLayout.X + endLayout.Width - BoundPadding;
             if (endX <= startX)
                 continue;

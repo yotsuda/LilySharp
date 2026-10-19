@@ -4036,7 +4036,7 @@ internal sealed class MultiStaffLayouter
                     if (!staffSpanners.IsEmpty)
                     {
                         var spannerInk = TextSpannerEngraver.InkAboveStaff(
-                            score.TextMetrics, staffSpanners, measureLayouts, sky.Up);
+                            score.TextMetrics, staffSpanners, measureLayouts, sky.Up, staff.Voices);
                         if (!spannerInk.IsEmpty)
                             sky.Up.Merge(spannerInk);
                     }

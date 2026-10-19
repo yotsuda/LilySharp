@@ -794,7 +794,8 @@ internal sealed partial class LayoutEngine
         var textSpannerItems = TabStaffStencils.Blank(
             ctx.MultiScore, TextSpannerEngraver.DetectTextSpanners(musicMarks, sectionPlays),
             static t => t.StaffIndex);
-        var textSpannerLayouts = TextSpannerEngraver.Calculate(textSpannerItems, systems, ml, dynamicLayouts, staffYAt, ctx.Fonts);
+        var textSpannerLayouts = TextSpannerEngraver.Calculate(textSpannerItems, systems, ml, dynamicLayouts, staffYAt, ctx.Fonts,
+            voicesByStaff);
 
         // Detect and layout ottava brackets from ottava/loco marks
         var ottavaItems = OttavaBracketEngraver.DetectOttavaBrackets(musicMarks, sectionPlays);
@@ -807,7 +808,9 @@ internal sealed partial class LayoutEngine
             voicesByStaff, beamLayouts ?? ImmutableArray<BeamLayout>.Empty, staffLinesOf);
 
         // Layout arpeggio markings
-        var arpeggioLayouts = ArpeggioEngraver.Calculate(arpeggios, systems, measures, measuresByStaff);
+        var arpeggioLayouts = ArpeggioEngraver.Calculate(arpeggios, systems, measures, measuresByStaff,
+            voicesByStaff,
+            score != null && staffVoices.IsDefaultOrEmpty ? ImmutableArray.Create(score.Voice) : staffVoices);
 
         // Piano pedal marks render per the part's `pedal` style (Staff.PedalStyle):
         //   bracket (Lily# default) / mixed  -> a spanning bracket, and the "Ped." /

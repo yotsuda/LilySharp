@@ -6,6 +6,25 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+### Lower staves, second voices and tuplets: spanners, arpeggios and accidentals where they belong
+
+- **A lower staff's `@rit`, trill line and ottava are bound by its own notes.** On a grand staff
+  the left hand's `@rit`, `@startTrillSpan` and `@ottava(bassa)` started (and ended) at the right
+  hand's note of the same number in the bar, and an 8vb's continuation "(8vb)" could stand over
+  the wrong staff of the next system. A second voice's `@arpeggio` stood before the first voice's
+  item of the same number; it now stands before its own chord.
+- **A rolled chord inside a `tuplet` draws its arpeggio** (it drew none, silently).
+- **A mark inside a tuplet reads its own note's moment**, not the tuplet's first: an `@!ottava`
+  on a tuplet's second note ended the octavation before the first, which was drawn at its
+  sounding pitch.
+- **A trill line starting near the end of the first system draws its "tr" and its wave** there
+  (the first system's edge was read without its indent, and the piece was dropped).
+- **An accidental holds for every voice of its staff to the bar line**, as in LilyPond: the lower
+  voice's `f'` after the upper voice's `fes'` prints its natural. A voice's own reminders are
+  kept. And a head drawn on the line or space an ottava's other side used, in another octave and
+  with another alteration, prints its accidental (LilyPond remembers by pitch and prints none).
+  The OMR's report of 2026-10-20 found all of these.
+
 ### A chord is read as its first note
 
 - **In relative mode a chord's anchor is where its first member sounds** — the letter nearest

@@ -237,7 +237,15 @@ internal static class TrillSpannerEngraver
                 }
                 else
                 {
-                    endX = system.Width - BoundPadding;
+                    // The system's right edge is where its staff lines END — the last bar's
+                    // right edge, in the frame the measures' X are in (indent included).
+                    // ⚠️ It read system.Width until 2026-10-20, the target width WITHOUT the
+                    // indent: on the first system the edge stood an indent short, and a trill
+                    // starting closer to the end than that dropped its first piece — glyph and
+                    // wave — in silence (OMR report 2026-10-20, item 5).
+                    endX = system.Measures.IsDefaultOrEmpty
+                        ? system.Indent + system.Width - BoundPadding
+                        : system.Measures[^1].X + system.Measures[^1].Width - BoundPadding;
                 }
 
                 if (endX <= glyphX)
@@ -536,10 +544,21 @@ internal static class TrillSpannerEngraver
     /// LILYPOND-REF: the note column IS shared across voices at one moment (one
     /// PaperColumn per timestep), so timing is the identity that finds it.
     /// </summary>
+    /// <remarks>
+    /// ⚠️ On a MULTI-STAFF layout the item slots are the FIRST STAFF's, not this staff's
+    /// primary voice's, so every voice of a lower staff — its first included — goes through
+    /// the timing columns (<see cref="LayoutUtilities.GetItemXOffset"/>). Until 2026-10-20 a
+    /// left hand's trill read the right hand's slot of the same index (OMR report 2026-10-20,
+    /// item 2) — the hairpin's defect of 2026-10-16 in another engraver.
+    /// </remarks>
     private static double VoiceItemX(
         ImmutableArray<Voice> voices, int voiceIndex, MeasureLayout ml,
         int measureIndex, int itemIndex)
     {
+        if (!ml.Columns.IsDefaultOrEmpty && !voices.IsDefaultOrEmpty
+            && voiceIndex >= 0 && voiceIndex < voices.Length
+            && measureIndex < voices[voiceIndex].Measures.Length)
+            return LayoutUtilities.GetItemXOffset(voices[voiceIndex].Measures, measureIndex, itemIndex, ml);
         if (voiceIndex <= 0 || voices.IsDefaultOrEmpty || voiceIndex >= voices.Length
             || measureIndex >= voices[voiceIndex].Measures.Length)
             return itemIndex < ml.Items.Length ? ml.Items[itemIndex].X : 0.0;

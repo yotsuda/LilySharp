@@ -288,7 +288,9 @@ internal static class ArpeggioEngraver
         ImmutableArray<ArpeggioItem> arpeggios,
         ImmutableArray<SystemLayout> systems,
         ImmutableArray<Measure> measures = default,
-        Dictionary<int, ImmutableArray<Measure>>? measuresByStaff = null)
+        Dictionary<int, ImmutableArray<Measure>>? measuresByStaff = null,
+        Dictionary<int, ImmutableArray<Voice>>? voicesByStaff = null,
+        ImmutableArray<Voice> voices = default)
     {
         if (arpeggios.IsDefaultOrEmpty || arpeggios.Length == 0)
             return ImmutableArray<ArpeggioLayout>.Empty;
@@ -316,7 +318,13 @@ internal static class ArpeggioEngraver
             // The staff's vertical offset is no longer needed here: the Y is stored
             // relative to the staff middle (frame B) and resolved to the right staff
             // at draw time.
-            var arpMeasures = LayoutUtilities.ResolveStaffMeasures(measuresByStaff, arp.StaffIndex, measures);
+            // …and of its OWN voice: ItemIndex counts the items of the voice the chord was
+            // written in, and a second voice's index read against the staff's (first voice's)
+            // list stood the wiggle at another column (OMR report 2026-10-20, item 3).
+            var arpVoices = voicesByStaff != null
+                && voicesByStaff.TryGetValue(arp.StaffIndex, out var vv) ? vv : voices;
+            var arpMeasures = LayoutUtilities.ResolveVoiceMeasures(arpVoices, arp.VoiceIndex,
+                LayoutUtilities.ResolveStaffMeasures(measuresByStaff, arp.StaffIndex, measures));
 
             // Get X position of the chord item, then place arpeggio to the left
             // LILYPOND-REF: scm/define-grobs.scm:206 (direction . ,LEFT)

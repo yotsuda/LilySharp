@@ -721,6 +721,12 @@ public sealed record NoteItem : MusicItem
     /// and the accidental is decided once per PART, before the score binds that part to a
     /// staff.</remarks>
     public string? Accidental { get; init; }
+    /// <summary>The displayed pitch <see cref="Accidental"/> was decided for, packed
+    /// (<see cref="Model.WrittenPitch"/>), or 0 where none was (a drum or slash note).</summary>
+    /// <remarks>The collect decides an accidental one VOICE at a time; this is what lets the
+    /// per-staff pass (<see cref="Collector.StaffAccidentals"/>) read every voice's heads in
+    /// time order afterwards, as LilyPond's Staff-context Accidental_engraver does.</remarks>
+    public int WrittenPitch { get; init; }
     /// <summary>Number of tremolo beams (0 = no tremolo, 1-3 = tremolo).</summary>
     public int TremoloBeams => _rare?.TremoloBeams ?? 0;
     /// <summary>Two-note (chord) tremolo: the BETWEEN-stems beam count. The
@@ -1463,8 +1469,37 @@ public readonly record struct ChordNoteInfo(
     string? LineStartAccidental = null,
     // THIS member's head stands in parentheses (a member's @parenthesize, or the chord's for
     // every member) — see NoteItem.Parenthesized.
-    bool Parenthesized = false
+    bool Parenthesized = false,
+    // The displayed pitch the accidental was decided for, packed (WrittenPitch) — 0 where
+    // none was (a drum member). See NoteItem.WrittenPitch.
+    int WrittenPitch = 0
 );
+
+/// <summary>
+/// The displayed pitch an accidental is decided for — diatonic step, octave and alteration —
+/// packed into one int that a note or chord member carries, so a per-STAFF pass can read the
+/// accidentals of all the staff's voices together (<see cref="Collector.StaffAccidentals"/>).
+/// 0 means "none recorded".
+/// </summary>
+public static class WrittenPitch
+{
+    /// <summary>Packs a step (0–6), an alteration (−2…2) and an octave.</summary>
+    public static int Pack(int step, int alter, int octave)
+        => 1 + step + 7 * (octave + 50) + 1000 * (alter + 3);
+
+    /// <summary>The (step, octave) part — equal for two heads of the same note name in the
+    /// same octave, whatever their alterations.</summary>
+    public static int StepOctave(int packed) => packed % 1000;
+
+    /// <summary>The diatonic step (0–6) of a packed pitch.</summary>
+    public static int Step(int packed) => (packed % 1000 - 1) % 7;
+
+    /// <summary>The octave of a packed pitch.</summary>
+    public static int Octave(int packed) => (packed % 1000 - 1) / 7 - 50;
+
+    /// <summary>The alteration of a packed pitch, in semitones.</summary>
+    public static int Alter(int packed) => packed / 1000 - 3;
+}
 
 /// <summary>
 /// The line-start face of an item whose tied accidental waits for a line break

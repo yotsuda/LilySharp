@@ -806,6 +806,9 @@ public sealed partial class MeasureCollector
                 hasRepeatTie: first && hasRepeatTie)
             {
                 Midi = midi,
+                // The first part only: the rest are its tied continuations.
+                WrittenPitch = first && pitch.QuarterOffset == 0
+                    ? WrittenPitch.Pack(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave) : 0,
                 StringNumber = stringNumber,
                 IsDead = isDead,
                 // The dead note's cross head (ItemFactory's note arm says why).
@@ -846,6 +849,7 @@ public sealed partial class MeasureCollector
                 isCourtesy: first && styleCourtesy)
             {
                 Midi = midi,
+                WrittenPitch = first ? WrittenPitch.Pack(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave) : 0,
                 StringNumber = groupString,
                 TieStartSourcePosition = tieStart ? (last ? marks.TieSource : degree.SourceStart) : MusicItem.NoSourcePosition,
                 SlurStartSourcePosition = first && marks.SlurStart ? marks.SlurStartSource : MusicItem.NoSourcePosition,
@@ -1424,13 +1428,7 @@ public sealed partial class MeasureCollector
                     CollectChordNames(chord, measureIndex, itemIndex, chordAnchorTiming);
                     CollectCrossStaff(chord, measureIndex, itemIndex);
                     // Collect arpeggio if present (bracket or wiggle — see arpBracket above).
-                    if ((hasArpeggio || arpBracket) && chordItem.Notes.Length > 0)
-                    {
-                        int minPos = chordItem.Notes.Min(n => n.StaffPosition);
-                        int maxPos = chordItem.Notes.Max(n => n.StaffPosition);
-                        _arpeggios.Add(new ArpeggioItem(measureIndex, itemIndex, minPos, maxPos, chord.SourceStart, _cursor.StaffIndex,
-                            Bracket: arpBracket));
-                    }
+                    AddArpeggio(chordItem, hasArpeggio, arpBracket, measureIndex, itemIndex, chord.SourceStart);
                 }
                 break;
 
@@ -1465,13 +1463,7 @@ public sealed partial class MeasureCollector
                     CollectFiguredBass(rep, measureIndex, itemIndex);
                     CollectChordNames(rep, measureIndex, itemIndex, repAnchorTiming);
                     CollectCrossStaff(rep, measureIndex, itemIndex);
-                    if ((hasArpeggio || arpBracket) && chordCopy.Notes.Length > 0)
-                    {
-                        int minPos = chordCopy.Notes.Min(n => n.StaffPosition);
-                        int maxPos = chordCopy.Notes.Max(n => n.StaffPosition);
-                        _arpeggios.Add(new ArpeggioItem(measureIndex, itemIndex, minPos, maxPos, rep.SourceStart, _cursor.StaffIndex,
-                            Bracket: arpBracket));
-                    }
+                    AddArpeggio(chordCopy, hasArpeggio, arpBracket, measureIndex, itemIndex, rep.SourceStart);
                 }
                 break;
 
@@ -2378,6 +2370,24 @@ public sealed partial class MeasureCollector
     }
 
     /// <summary>
+    /// Lists a chord's arpeggio (wiggle or bracket) for the engraver — ONE home for the main
+    /// walk's chord and <c>q</c> arms and the tuplet arm's, which drew none until 2026-10-20.
+    /// The item carries the VOICE it was written in: its index counts that voice's items, and
+    /// a second voice's chord read against the first voice's list stood at another column
+    /// (OMR report 2026-10-20, item 3).
+    /// </summary>
+    private void AddArpeggio(ChordItem chordItem, bool hasArpeggio, bool bracket,
+        int measureIndex, int itemIndex, int sourceStart)
+    {
+        if (!(hasArpeggio || bracket) || chordItem.Notes.Length == 0)
+            return;
+        int minPos = chordItem.Notes.Min(n => n.StaffPosition);
+        int maxPos = chordItem.Notes.Max(n => n.StaffPosition);
+        _arpeggios.Add(new ArpeggioItem(measureIndex, itemIndex, minPos, maxPos, sourceStart, _cursor.StaffIndex,
+            Bracket: bracket, VoiceIndex: _cursor.VoiceIndex));
+    }
+
+    /// <summary>
     /// Emits one note / rest / chord at a tuplet-scaled duration (TimeScale carries the
     /// notation-vs-time factor) with its post-events, and returns its WRITTEN duration.
     /// Shared by <see cref="ProcessTuplet"/> and the arpeggio auto-tuplet.
@@ -2401,7 +2411,9 @@ public sealed partial class MeasureCollector
 
         int annMeasureIndex = builder.CurrentMeasureIndex + _cursor.MetadataMeasureOffset;
         int annItemIndex = builder.CurrentItemCount;
-        Fraction annAnchor = builder.CurrentDuration;
+        // The member's OWN moment, not the group's: the clock stands still over the body
+        // (MeasureBuilder.CurrentMoment).
+        Fraction annAnchor = builder.CurrentMoment;
         switch (item)
         {
             case GraceExpressionSyntax grace:
@@ -2490,16 +2502,26 @@ public sealed partial class MeasureCollector
             {
                 (annItemIndex, bool isCue, _) =
                     OpenSoundingItem(chord, builder, annMeasureIndex, annItemIndex, ref hasSlurEndAfter);
+                // The arpeggio as the main walk's arm reads it. This arm passed false and
+                // never listed one, so a rolled chord inside a tuplet drew no wiggle and said
+                // nothing (OMR report 2026-10-20, item 4).
+                bool hasArpeggio = HasArpeggioArticulation(chord);
+                bool arpBracket = chord.Articulations.Any(art =>
+                    art is MusicMarkSyntax { } am
+                    && Semantics.AnnotationValues.IsArpeggioBracket(am));
                 var chordItem = CreateChordItem(chord, hasBeamStartAfter, hasBeamEndAfter,
-                    hasArpeggio: false, isCue, hasTieAfter, hasSlurStartAfter, hasSlurEndAfter, builder: builder);
+                    hasArpeggio, isCue, hasTieAfter, hasSlurStartAfter, hasSlurEndAfter, builder: builder);
                 Fraction written = chordItem.Duration;
                 chordItem = DecorateSoundingItem(chordItem with { TimeScale = scale }, chord, isCue);
+                if (arpBracket)
+                    chordItem = chordItem with { HasArpeggioBracket = true };
                 builder.AddItemWithoutDuration(WithBowSources(chordItem, m));
                 CollectDynamics(chord, annMeasureIndex, annItemIndex);
                 CollectArticulations(chord, annMeasureIndex, annItemIndex, chordItem.StemUp, anchorTiming: annAnchor);
                 CollectFiguredBass(chord, annMeasureIndex, annItemIndex);
                 CollectChordNames(chord, annMeasureIndex, annItemIndex, annAnchor);
                 CollectCrossStaff(chord, annMeasureIndex, annItemIndex);
+                AddArpeggio(chordItem, hasArpeggio, arpBracket, annMeasureIndex, annItemIndex, chord.SourceStart);
                 return written;
             }
             case ChordRepetitionSyntax rep:
@@ -2508,14 +2530,21 @@ public sealed partial class MeasureCollector
                 // \tuplet still applies to them (regression chord-repetition-times).
                 (annItemIndex, bool isCue, _) =
                     OpenSoundingItem(rep, builder, annMeasureIndex, annItemIndex, ref hasSlurEndAfter);
+                bool hasArpeggio = HasArpeggioArticulation(rep);
+                bool arpBracket = rep.Articulations.Any(art =>
+                    art is MusicMarkSyntax { } am
+                    && Semantics.AnnotationValues.IsArpeggioBracket(am));
                 var repItem = CreateChordRepetitionItem(rep, hasBeamStartAfter, hasBeamEndAfter,
-                    hasArpeggio: false, isCue, hasTieAfter: hasTieAfter,
+                    hasArpeggio, isCue, hasTieAfter: hasTieAfter,
                     hasSlurStartAfter: hasSlurStartAfter, hasSlurEndAfter: hasSlurEndAfter, builder: builder);
                 if (repItem is ChordItem chordCopy)
                 {
                     Fraction written = chordCopy.Duration;
                     chordCopy = DecorateSoundingItem(chordCopy with { TimeScale = scale }, rep, isCue);
+                    if (arpBracket)
+                        chordCopy = chordCopy with { HasArpeggioBracket = true };
                     builder.AddItemWithoutDuration(WithBowSources(chordCopy, m));
+                    AddArpeggio(chordCopy, hasArpeggio, arpBracket, annMeasureIndex, annItemIndex, rep.SourceStart);
                     CollectDynamics(rep, annMeasureIndex, annItemIndex);
                     CollectArticulations(rep, annMeasureIndex, annItemIndex, chordCopy.StemUp, anchorTiming: annAnchor);
                     CollectFiguredBass(rep, annMeasureIndex, annItemIndex);

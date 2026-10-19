@@ -192,6 +192,8 @@ public sealed partial class MeasureCollector
             RepeatTieSourcePosition = hasRepeatTie
                 ? NamedArticulationSourceOf(note, "repeatTie") : MusicItem.NoSourcePosition,
             LineStartAccidental = lineStartAccidental,
+            WrittenPitch = pitch.QuarterOffset != 0 ? 0
+                : WrittenPitch.Pack(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave),
             TodoKey = TodoKeyOf(note), TodoMemo = TodoMemoOf(note), TodoBelow = TodoBelowOf(note), TodoSideWritten = TodoSideWrittenOf(note),
         };
     }
@@ -642,7 +644,9 @@ public sealed partial class MeasureCollector
                 // member-level one and its '@' is then the character that wrote every tie.
                 LaissezVibrerSourcePosition: memberLv?.SourceStart ?? MusicItem.NoSourcePosition,
                 RepeatTieSourcePosition: memberRt?.SourceStart ?? MusicItem.NoSourcePosition,
-                LineStartAccidental: memberLineStart));
+                LineStartAccidental: memberLineStart,
+                WrittenPitch: pitch.QuarterOffset != 0 ? 0
+                    : WrittenPitch.Pack(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave)));
             members.Add(new ResolvedChordMember(staffPosition, rp.DisplayStep, rp.DisplayAlteration,
                 rp.DisplayOctave, NoteheadStyle.Default, PitchToMidi(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave)));
         }
@@ -679,7 +683,8 @@ public sealed partial class MeasureCollector
                     LaissezVibrerUp: chordLvUp,
                     HasRepeatTie: chordRt,
                     RepeatTieUp: chordRtUp,
-                    LineStartAccidental: memberLineStart));
+                    LineStartAccidental: memberLineStart,
+                    WrittenPitch: WrittenPitch.Pack(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave)));
                 members.Add(new ResolvedChordMember(rp.StaffPosition, rp.DisplayStep, rp.DisplayAlteration,
                     rp.DisplayOctave, NoteheadStyle.Default, midi));
             }
@@ -753,7 +758,8 @@ public sealed partial class MeasureCollector
                 HasLaissezVibrer: chordLv,
                 LaissezVibrerUp: chordLvUp,
                 HasRepeatTie: chordRt,
-                RepeatTieUp: chordRtUp));
+                RepeatTieUp: chordRtUp,
+                WrittenPitch: WrittenPitch.Pack(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave)));
             members.Add(new ResolvedChordMember(rp.StaffPosition, rp.DisplayStep, rp.DisplayAlteration,
                 rp.DisplayOctave, NoteheadStyle.Default, PitchToMidi(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave)));
         }
@@ -966,7 +972,8 @@ public sealed partial class MeasureCollector
                 Notehead: m.Notehead,
                 Midi: m.Midi,
                 SourcePosition: rep.SourceStart,
-                LineStartAccidental: memberLineStart));
+                LineStartAccidental: memberLineStart,
+                WrittenPitch: m.Step is { } ps ? WrittenPitch.Pack(ps, m.Alter!.Value, m.Octave!.Value) : 0));
         }
 
         return new ChordItem(notes.ToImmutableArray(), Fraction.FromNoteValue(noteValue), dots, rep.SourceStart, tremoloBeams, hasBeamStartAfter, hasBeamEndAfter, hasArpeggio, isCue, hasTieStart: hasTieAfter, hasSlurStart: hasSlurStartAfter, hasSlurEnd: hasSlurEndAfter)
@@ -1103,7 +1110,8 @@ public sealed partial class MeasureCollector
                         IsCourtesy: styleCourtesy,
                         Notehead: m.Notehead,
                         Midi: m.Midi,
-                        SourcePosition: bare.SourceStart));
+                        SourcePosition: bare.SourceStart,
+                        WrittenPitch: m.Step is { } ps ? WrittenPitch.Pack(ps, m.Alter!.Value, m.Octave!.Value) : 0));
                 }
                 return new ChordItem(notes.ToImmutableArray(), Fraction.FromNoteValue(noteValue), dots, bare.SourceStart, tremoloBeams, hasBeamStartAfter, hasBeamEndAfter, hasArpeggio: false, isCue, hasTieStart: hasTieAfter, hasSlurStart: hasSlurStartAfter, hasSlurEnd: hasSlurEndAfter)
                 {
@@ -1136,6 +1144,7 @@ public sealed partial class MeasureCollector
                 {
                     Midi = m.Midi,
                     ForcedStemUp = GetStemDirectionOverride(bare),
+                    WrittenPitch = m.Step is { } ps ? WrittenPitch.Pack(ps, m.Alter!.Value, m.Octave!.Value) : 0,
                 };
             }
 

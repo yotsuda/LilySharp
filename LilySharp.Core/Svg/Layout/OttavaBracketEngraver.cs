@@ -292,10 +292,8 @@ internal static class OttavaBracketEngraver
 
             bool isAbove = bracket.Type == OttavaType.Ottava8va ||
                            bracket.Type == OttavaType.Quindicesima15ma;
-            // Offset to this bracket's OWN staff on a grand staff, so an 8va over
-            // the lower staff sits above THAT staff, not the top one. Single-staff
-            // (offset 0) is unchanged. Mirrors HairpinEngraver/TrillSpannerEngraver.
-            double staffOffset = staffYAt?.Invoke(bracket.StartMeasureIndex, bracket.StaffIndex) ?? 0;
+            // The offset to this bracket's OWN staff on a grand staff (so an 8va over the lower
+            // staff sits above THAT staff) is read per broken piece below.
 
             var ottavaVoices = voicesByStaff != null
                 && voicesByStaff.TryGetValue(bracket.StaffIndex, out var vv)
@@ -340,10 +338,10 @@ internal static class OttavaBracketEngraver
                 // ⚠️ A CONTINUATION piece keeps the measure's origin: its bound is broken,
                 //   and LilyPond's broken branch takes generic_bound_extent and sets
                 //   shorten to 0, which is a different arithmetic with no point on it yet.
-                double startX = segment.IsFirst && bracket.StartItemIndex >= 0
-                        && bracket.StartItemIndex < segStartMeasure.Items.Length
-                    ? segStartMeasure.X + segStartMeasure.Items[bracket.StartItemIndex].X
-                        + LeftShorten
+                double startX = segment.IsFirst
+                        && ItemX(segStartMeasure, ottavaVoices, bracket.VoiceIndex,
+                            bracket.StartMeasureIndex, bracket.StartItemIndex) is { } startItemX
+                    ? segStartMeasure.X + startItemX + LeftShorten
                     : segStartMeasure.X + LeftShorten;
                 double endX = segment.IsLast && bracket.EndMoment is { } endMoment
                         && LastColumnBefore(segEndMeasure, endMoment, bracket.EndItemIndex) is { } lastColX
@@ -379,6 +377,11 @@ internal static class OttavaBracketEngraver
                 // staff-to-line entries read); this record's frame has its origin on the
                 // staff TOP line, 2 above it, and carries the staff's own within-system
                 // downward offset, which SUBTRACTS.
+                // ⚠️ THE PIECE'S OWN SYSTEM: a continuation stands on another system, whose
+                // staves sit at their own offsets. Until 2026-10-20 every piece read the START
+                // measure's, so a lower staff's "(8vb)" after a break was hung from the offset
+                // of the system before — over the wrong staff (OMR report 2026-10-20, item 6).
+                double staffOffset = staffYAt?.Invoke(segment.StartMeasureIndex, bracket.StaffIndex) ?? 0;
                 double yUp = lineMiddleFrame - 2.0 - staffOffset;
 
                 layouts.Add(new OttavaBracketLayout(
@@ -399,6 +402,32 @@ internal static class OttavaBracketEngraver
         }
 
         return layouts.ToImmutable();
+    }
+
+    /// <summary>
+    /// The measure-relative X of item <paramref name="itemIndex"/> of the staff's voice
+    /// <paramref name="voiceIndex"/>, or null when there is no such item.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ On a multi-staff layout the item slots are the FIRST staff's, so a lower staff's
+    /// items — and any later voice's — are found through the timing columns
+    /// (<see cref="LayoutUtilities.GetItemXOffset"/>). Until 2026-10-20 the bracket's label and
+    /// its supports read the slots directly, and a left hand's "8vb" stood at the right hand's
+    /// column of the same index, up to 46 spaces away (OMR report 2026-10-20, item 6). With no
+    /// voices supplied the slots are read as before.
+    /// </remarks>
+    private static double? ItemX(MeasureLayout ml, ImmutableArray<Voice> voices,
+        int voiceIndex, int measureIndex, int itemIndex)
+    {
+        if (itemIndex < 0)
+            return null;
+        if (voices.IsDefaultOrEmpty)
+            return itemIndex < ml.Items.Length ? ml.Items[itemIndex].X : null;
+        var measures = LayoutUtilities.ResolveVoiceMeasures(voices, voiceIndex, default);
+        if (measureIndex < 0 || measureIndex >= measures.Length
+            || itemIndex >= measures[measureIndex].Items.Length)
+            return null;
+        return LayoutUtilities.GetItemXOffset(measures, measureIndex, itemIndex, ml);
     }
 
     /// <summary>
@@ -498,7 +527,7 @@ internal static class OttavaBracketEngraver
                 int count = mi < voices[vi].Measures.Length
                     ? voices[vi].Measures[mi].Items.Length : 0;
                 for (int ii = 0; ii < count; ii++)
-                    columns.Add((mi, ii, ml.X + (ii < ml.Items.Length ? ml.Items[ii].X : 0.0)));
+                    columns.Add((mi, ii, ml.X + (ItemX(ml, voices, vi, mi, ii) ?? 0.0)));
             }
             if (columns.Count == 0)
                 continue;
@@ -695,7 +724,8 @@ internal static class OttavaBracketEngraver
             StartItemIndex: start.Mark.AnchorItemIndex,
             StartMoment: MidMeasureMoment(start.Mark),
             EndMoment: endMeasure >= start.Mark.MeasureIndex ? closeAt : null,
-            EndItemIndex: closeAt is null ? -1 : closer.AnchorItemIndex);
+            EndItemIndex: closeAt is null ? -1 : closer.AnchorItemIndex,
+            VoiceIndex: start.Mark.VoiceIndex);
     }
 
     /// <summary>The bracket one open START makes when the section carry rule refuses its end:
@@ -712,7 +742,8 @@ internal static class OttavaBracketEngraver
             StartItemIndex: start.Mark.AnchorItemIndex,
             StartMoment: MidMeasureMoment(start.Mark),
             EndMoment: null,
-            EndItemIndex: -1);
+            EndItemIndex: -1,
+            VoiceIndex: start.Mark.VoiceIndex);
 
     /// <summary>A mark's moment within its measure when it is past the measure's first one,
     /// else null (the measure's start, or no anchor — <c>AnchorTiming</c>'s default is 0/0).</summary>

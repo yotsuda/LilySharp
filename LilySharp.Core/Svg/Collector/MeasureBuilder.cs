@@ -1162,8 +1162,28 @@ internal sealed class MeasureBuilder
         // A tuplet's member is sounding music after a mid-bar `break` too (its duration
         // arrives later through AddDuration); grace time is not — it takes no bar time.
         if (_graceDepth == 0 && GetItemDuration(item) > Fraction.Zero)
+        {
+            _unclockedTime += GetItemDuration(item);
             RequestPendingMidBar();
+        }
     }
+
+    /// <summary>
+    /// The moment the NEXT item starts at within the current measure: the clock plus the
+    /// members added without duration that the clock has not been handed yet (a tuplet's,
+    /// whose scaled total arrives in one <see cref="AddDuration"/> when the group closes).
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ <see cref="CurrentDuration"/> stands still for the whole of a tuplet body, so a mark
+    /// written on the group's second member read the group's FIRST moment. An `@!ottava` on a
+    /// tuplet's second note then ended the octavation before the first one, which was drawn at
+    /// its sounding pitch (OMR report 2026-10-20, item 7).
+    /// </remarks>
+    public Fraction CurrentMoment => _currentDuration + _unclockedTime;
+
+    /// <summary>The scaled time of the members added since the clock last moved — see
+    /// <see cref="CurrentMoment"/>.</summary>
+    private Fraction _unclockedTime = Fraction.Zero;
 
     /// <summary>
     /// Adds duration and triggers auto-completion if time signature is reached.
@@ -1175,6 +1195,8 @@ internal sealed class MeasureBuilder
         // into the clock. A tuplet reports its scaled duration here after its members have
         // been added, and a tuplet inside a grace body would otherwise advance the bar by the
         // sounding length of music the bar does not contain.
+        // The members' time reaches the clock now (CurrentMoment stops counting it twice).
+        _unclockedTime = Fraction.Zero;
         if (_graceDepth > 0 || _overflowing)
             return;
 
@@ -1503,6 +1525,7 @@ internal sealed class MeasureBuilder
         _pendingEndBarline = BarlineType.None;
         _measureSourceStart = sourceEnd;
         _currentDuration = Fraction.Zero;
+        _unclockedTime = Fraction.Zero;
         _hasMeasureContent = false;
         // The bar is over: a split's second half closed it, or a whole bar did. Either way
         // the next measure begins a new bar, and no mid-bar break is still waiting.
@@ -2096,6 +2119,7 @@ internal sealed class MeasureBuilder
             _measures[^1] = last;
         _currentItems.Clear();
         _currentDuration = Fraction.Zero;
+        _unclockedTime = Fraction.Zero;
         _hasMeasureContent = false;
         _continuesBar = false;
         _pendingMidBar = null;

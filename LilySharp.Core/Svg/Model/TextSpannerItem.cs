@@ -66,7 +66,11 @@ public sealed record TextSpannerItem(
     // so a reused layout re-derives data-pos from the live score. -1 = unresolved.
     int SourceIndex = -1,
     // The staff this spanner belongs to (0 = first/only staff).
-    int StaffIndex = 0
+    int StaffIndex = 0,
+    // The voice of that staff the start mark was written in: the item indices count THAT
+    // voice's items (Text_spanner_engraver is a Voice-context engraver), so both bounds are
+    // resolved through it (see TextSpannerEngraver.BoundX).
+    int VoiceIndex = 0
 )
 {
     // Identity, not value equality: see ModelIdentity.

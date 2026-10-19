@@ -576,7 +576,7 @@ internal sealed partial class LayoutEngine
         if (!closingSpanners.IsEmpty)
         {
             var spannerInk = TextSpannerEngraver.InkAboveStaff(
-                score.TextMetrics, closingSpanners, measures, up);
+                score.TextMetrics, closingSpanners, measures, up, closingStaff.Voices);
             if (!spannerInk.IsEmpty)
                 up.Merge(spannerInk);
         }
