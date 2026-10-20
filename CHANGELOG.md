@@ -29,6 +29,13 @@ workflow attaches that section to the GitHub Release verbatim.
   own system and every piece takes its share of one continuous slope, as if the systems stood
   in a row (they were horizontals at the start and at the target pitch). A later piece that
   spans no musical time — the target is the next system's first note — is not drawn.
+- **An ottava bracket stands outside what its staff holds.** A lower staff's 8va was not counted
+  when the staves were spaced, so it printed through the upper staff's lower voice; now the
+  staves stand apart for it. An 8vb under the staff was never stacked against what is there
+  already, and its label printed into a tuplet's number and its dashes over the tuplet's
+  bracket; now it stands below both, and below the dynamics and hairpins.
+- **A grace note's accidental holds for the staff too:** the lower voice's `grace { b'16 }` after
+  the upper voice's `bes'` prints its natural, as an ordinary note already did.
 
 ### A chord is read as its first note
 

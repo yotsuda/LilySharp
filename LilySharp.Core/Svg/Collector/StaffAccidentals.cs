@@ -181,6 +181,10 @@ internal static class StaffAccidentals
                 }
                 if (copy == null)
                     continue;
+                // A grace run's heads are ALSO read off its main item's LeadingGrace columns
+                // (MeasureCollector.DeriveGraceColumns copied them when the run was walked):
+                // re-read the accidentals there from the run's items as they now stand.
+                SyncLeadingGrace(copy);
                 rebuilt ??= measures.ToBuilder();
                 rebuilt[mi] = measures[mi] with
                 {
@@ -237,6 +241,113 @@ internal static class StaffAccidentals
                 return previous;
         }
         return null;
+    }
+
+    /// <summary>
+    /// Re-reads each main item's <c>LeadingGrace</c> head accidentals off the grace items
+    /// that stand before it in <paramref name="items"/> — the run
+    /// <c>MeasureCollector.DeriveGraceColumns</c> made the columns from, one column per note,
+    /// chord or rest, in order. A run that does not line up column for column is left alone.
+    /// </summary>
+    private static void SyncLeadingGrace(MusicItem[] items)
+    {
+        for (int m = 0; m < items.Length; m++)
+        {
+            var lead = items[m] switch
+            {
+                NoteItem n => n.LeadingGrace,
+                ChordItem c => c.LeadingGrace,
+                RestItem r => r.LeadingGrace,
+                _ => default,
+            };
+            if (lead.IsDefaultOrEmpty)
+                continue;
+            var run = new List<MusicItem>();
+            for (int j = m - 1; j >= 0 && items[j].GraceTime; j--)
+                if (items[j] is NoteItem or ChordItem { Notes.Length: > 0 } or RestItem)
+                    run.Insert(0, items[j]);
+            if (run.Count != lead.Length)
+                continue;
+            ImmutableArray<GraceColumnInfo>.Builder? b = null;
+            for (int k = 0; k < run.Count; k++)
+            {
+                var heads = lead[k].Heads;
+                var newHeads = heads;
+                for (int h = 0; h < heads.Length; h++)
+                {
+                    string? acc = run[k] switch
+                    {
+                        NoteItem n when n.StaffPosition == heads[h].StaffPosition => n.Accidental,
+                        ChordItem c => c.Notes.FirstOrDefault(x => x.StaffPosition == heads[h].StaffPosition).Accidental,
+                        _ => heads[h].Accidental,
+                    };
+                    if (acc != heads[h].Accidental)
+                        newHeads = newHeads.SetItem(h, heads[h] with { Accidental = acc });
+                }
+                if (newHeads != heads)
+                    (b ??= lead.ToBuilder())[k] = lead[k] with { Heads = newHeads };
+            }
+            if (b == null)
+                continue;
+            var synced = b.MoveToImmutable();
+            items[m] = items[m] switch
+            {
+                NoteItem n => n with { LeadingGrace = synced },
+                ChordItem c => c with { LeadingGrace = synced },
+                RestItem r => r with { LeadingGrace = synced },
+                _ => items[m],
+            };
+        }
+    }
+
+    /// <summary>
+    /// The score-level grace groups' columns re-read off their main items' <c>LeadingGrace</c>
+    /// (<see cref="SyncLeadingGrace"/> keeps those current) — the copy the grace engraver
+    /// draws from. <paramref name="voicesOfStaff"/> answers a global staff index's voices.
+    /// </summary>
+    public static void SyncGraceNotes(List<GraceNoteItem> graceNotes,
+        Func<int, ImmutableArray<Voice>> voicesOfStaff)
+    {
+        for (int g = 0; g < graceNotes.Count; g++)
+        {
+            var gn = graceNotes[g];
+            var voices = voicesOfStaff(gn.StaffIndex);
+            if (voices.IsDefaultOrEmpty || gn.VoiceIndex < 0 || gn.VoiceIndex >= voices.Length)
+                continue;
+            var measures = voices[gn.VoiceIndex].Measures;
+            if (gn.MeasureIndex < 0 || gn.MeasureIndex >= measures.Length)
+                continue;
+            var items = measures[gn.MeasureIndex].Items;
+            if (gn.MainNoteItemIndex < 0 || gn.MainNoteItemIndex >= items.Length)
+                continue;
+            var lead = items[gn.MainNoteItemIndex] switch
+            {
+                NoteItem n => n.LeadingGrace,
+                ChordItem c => c.LeadingGrace,
+                RestItem r => r.LeadingGrace,
+                _ => default,
+            };
+            if (lead.IsDefaultOrEmpty || lead.Length != gn.Columns.Length)
+                continue;
+            ImmutableArray<GraceColumnInfo>.Builder? b = null;
+            for (int k = 0; k < lead.Length; k++)
+            {
+                var heads = gn.Columns[k].Heads;
+                if (heads.Length != lead[k].Heads.Length)
+                    continue;
+                var newHeads = heads;
+                for (int h = 0; h < heads.Length; h++)
+                    if (heads[h].StaffPosition == lead[k].Heads[h].StaffPosition
+                        && heads[h].Accidental != lead[k].Heads[h].Accidental)
+                        newHeads = newHeads.SetItem(h, heads[h] with { Accidental = lead[k].Heads[h].Accidental });
+                if (newHeads != heads)
+                    (b ??= gn.Columns.ToBuilder())[k] = gn.Columns[k] with { Heads = newHeads };
+            }
+            if (b != null)
+                graceNotes[g] = new GraceNoteItem(gn.Type, b.MoveToImmutable(), gn.MeasureIndex,
+                    gn.MainNoteItemIndex, gn.SourcePosition, gn.StaffIndex, gn.VoiceIndex, gn.ColumnItemIndices)
+                { IsAfterGrace = gn.IsAfterGrace };
+        }
     }
 
     /// <summary>Whether <paramref name="a"/> sounds before <paramref name="b"/>: in one voice,

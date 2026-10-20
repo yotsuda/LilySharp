@@ -1300,6 +1300,9 @@ public sealed partial class MeasureCollector
                 _meta.TimeBeats, _meta.TimeBeatType, attachedChordDisplay);
         }
 
+        // The grace groups' heads as the voice now has them (StaffAccidentals added some).
+        var finalVoices = ImmutableArray.Create(voice);
+        StaffAccidentals.SyncGraceNotes(_graceNotes, _ => finalVoices);
         return ScoreAssembler.BuildScore(voice, CaptureScoreContent(voice.Measures.Length));
     }
 
@@ -2318,6 +2321,13 @@ public sealed partial class MeasureCollector
                 .ToImmutableArray();
         }
 
+        // The grace groups' heads as the staves' voices now have them (StaffAccidentals added
+        // some), by the global staff index the groups carry — the walk order above.
+        {
+            var stavesInOrder = staffGroups.SelectMany(sg => sg.Staves).ToList();
+            StaffAccidentals.SyncGraceNotes(_graceNotes, si => si >= 0 && si < stavesInOrder.Count
+                ? stavesInOrder[si].Voices : default);
+        }
         var content = CaptureScoreContent(
             staffGroups.SelectMany(sg => sg.Staves).SelectMany(st => st.Voices)
                 .Select(v => v.Measures.Length).DefaultIfEmpty(0).Max());
@@ -2652,8 +2662,11 @@ public sealed partial class MeasureCollector
         // A single-staff score surfaces the same annotations whether it has one
         // voice or several — a multi-voice (voice { } blocks) score keeps its chord
         // names / percent repeats, which the old construction here silently dropped.
+        var resolved = ResolveStaffColumns(voices.ToImmutableArray());
+        // The grace groups' heads as the voices now have them (StaffAccidentals added some).
+        StaffAccidentals.SyncGraceNotes(_graceNotes, _ => resolved);
         return ScoreAssembler.BuildScore(
-            ResolveStaffColumns(voices.ToImmutableArray()),
+            resolved,
             CaptureScoreContent(voices.Select(v => v.Measures.Length).DefaultIfEmpty(0).Max()));
     }
 

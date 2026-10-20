@@ -2681,6 +2681,146 @@ internal static class OutsideStaffStacker
         return b.MoveToImmutable(); // ToBuilder's array IS the result (Count == Capacity) — see Rebuild
     }
 
+    /// <summary>
+    /// The BELOW-staff ottava brackets (8vb / 15mb, priority 400) placed against what their
+    /// staff holds below it by then: the staff's inside ink (heads, stems, beams, the tuplet
+    /// brackets and numbers, ties, slurs) and the movers of lower priority the below pass has
+    /// placed — the dynamics and hairpins (250), a down trill (50), a fermata-family script (75).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/axis-group-interface.cc:860-985 skyline_spacing — every grob of
+    ///   one priority is placed against the inside-staff skylines plus everything placed at a
+    ///   lower priority; scm/define-grobs.scm OttavaBracket outside-staff-priority 400.
+    /// The above side has run this since 2026-08-02 (<see cref="PlaceOttavas"/>); the below
+    /// side ran NOTHING until 2026-10-20 — an 8vb stood where aligned_side put it against its
+    /// note columns alone, through a tuplet's number and bracket ("8vb3"; OMR request
+    /// 2026-10-20, item 2). LilyPond 2.26.0 puts the number under the beam and the bracket
+    /// under the number.
+    /// ⚠️ NOT IN THE BELOW PASS ITSELF, and named: the free texts below the staff (TextScript,
+    /// 450) are placed by <see cref="StackBelowStaff"/> without seeing the brackets, where
+    /// LilyPond places them after. No book puts a below @text under an 8vb.
+    /// </remarks>
+    internal static ImmutableArray<OttavaBracketLayout> PlaceBelowOttavas(
+        ScoreTextMetrics fonts,
+        ImmutableArray<SystemLayout> systems,
+        ImmutableArray<OttavaBracketLayout> ottavas,
+        ImmutableArray<DynamicLayout> dynamics,
+        ImmutableArray<HairpinLayout> hairpins,
+        ImmutableArray<TrillSpannerLayout> trills,
+        ImmutableArray<ArticulationLayout> articulations,
+        ImmutableArray<TupletBracketLayout> tupletBrackets,
+        bool applyStaffOffsets,
+        Func<int, int, (VerticalSkyline Up, VerticalSkyline Down)?>? staffProfile,
+        IReadOnlyDictionary<int, int> measureToSystem)
+    {
+        if (ottavas.IsDefaultOrEmpty || systems.IsDefaultOrEmpty || !ottavas.Any(o => !o.IsAbove))
+            return ottavas;
+
+        double OffsetOf(int sys, int staff)
+            => applyStaffOffsets && sys >= 0 && sys < systems.Length
+                ? LayoutUtilities.StaffOffsetInSystemDown(systems[sys], staff) : 0;
+
+        var trackers = new Dictionary<(int Sys, int Staff), OutsideStaffSkylines>();
+        OutsideStaffSkylines Track(int sys, int staff)
+        {
+            if (trackers.TryGetValue((sys, staff), out var t))
+                return t;
+            double off = OffsetOf(sys, staff);
+            // The same base StackBelowStaffCore's tracker takes: the staff's inside profile
+            // about its refpoint, raised into the system-relative Y-up frame.
+            if (staffProfile?.Invoke(sys, staff) is { } p)
+            {
+                double toSystem = -(off + RefpointBelowTop(systems, sys, staff));
+                t = new OutsideStaffSkylines(dir: -1,
+                    VerticalSkyline.RaisedCopy(p.Up, toSystem),
+                    VerticalSkyline.RaisedCopy(p.Down, toSystem));
+            }
+            else
+            {
+                double edge = -(StaffBottom + off);
+                t = new OutsideStaffSkylines(dir: -1,
+                    FlatBase(edge, VerticalDirection.Up), FlatBase(edge, VerticalDirection.Down));
+            }
+            // The lower priorities already placed below this staff, where they landed.
+            if (!dynamics.IsDefaultOrEmpty)
+                foreach (var d in dynamics)
+                    if (!d.IsAbove && !d.IsExpressiveText && d.StaffIndex == staff
+                        && measureToSystem.TryGetValue(d.MeasureIndex, out int ds) && ds == sys)
+                        t.MergeSupport(down: DynamicEngraver.LabelSkylines(fonts, d.Text, d.IsExpressiveText,
+                            d.X, d.YUp - off - EngravingDefaults.StaffMiddle, d.IsSubito).Down);
+            if (!hairpins.IsDefaultOrEmpty)
+                foreach (var h in hairpins)
+                    if (h.StaffIndex == staff
+                        && measureToSystem.TryGetValue(h.StartMeasureIndex, out int hs) && hs == sys)
+                        t.MergeSupport(down: HairpinEngraver.WedgeSkylines(
+                            h.StartX, h.EndX, h.StartOpening, h.EndOpening, h.YUp, h.CircleX).Down);
+            if (!trills.IsDefaultOrEmpty)
+                foreach (var tr in trills)
+                    if (tr.Direction < 0 && tr.StaffIndex == staff
+                        && measureToSystem.TryGetValue(tr.StartMeasureIndex, out int ts) && ts == sys)
+                        t.MergeSupport(down: TrillProfileSkylines(tr).Down);
+            if (!articulations.IsDefaultOrEmpty)
+                foreach (var a in articulations)
+                    if (!a.IsAbove && a.OutsideStaffPriority is < 400 && a.StaffIndex == staff
+                        && measureToSystem.TryGetValue(a.MeasureIndex, out int asys) && asys == sys)
+                        t.MergeSupport(down: ArticulationEngraver.ScriptSkylines(
+                            a, a.YUp - off - EngravingDefaults.StaffMiddle).Down);
+            // The DRAWN below-staff tuplet brackets and numbers — the mirror of the above
+            // side's seed (SeedAboveTrackers): inside-staff ink in LilyPond (TupletBracket and
+            // TupletNumber declare no outside-staff-priority). The staff profile carries the
+            // room's own estimate of them, which can stand elsewhere than the drawn ones.
+            if (!tupletBrackets.IsDefaultOrEmpty)
+                foreach (var tb in tupletBrackets)
+                {
+                    if (tb.IsStemUp || tb.StaffIndex != staff
+                        || !measureToSystem.TryGetValue(tb.MeasureIndex, out int tbs) || tbs != sys)
+                        continue;
+                    if (tb.ShowBracket)
+                    {
+                        double lineBottom = Math.Min(tb.StartYUp, tb.EndYUp)
+                            - EngravingDefaults.TupletBracketThickness / 2.0;
+                        t.MergeSupport(down: VerticalSkyline.FromBox(
+                            tb.StartX, tb.EndX, lineBottom, lineBottom, VerticalDirection.Down));
+                    }
+                    if (!string.IsNullOrEmpty(tb.NumberText))
+                    {
+                        // The number's glyph OUTLINE where it is drawn (centred on its advance
+                        // and its ink, SharedRenderer.DrawTupletBrackets): an italic digit's
+                        // ink leans out of the advance box, and a box let the 8vb's "b" stand
+                        // under the "3"'s foot.
+                        double fs = TupletBracketEngraver.NumberEm(fonts);
+                        var tupletStyle = TupletBracketEngraver.NumberStyle(fonts);
+                        double adv = fonts.Advance(tb.NumberText, fs, TextRole.Tuplet, tupletStyle);
+                        var ink = fonts.Ink(tb.NumberText, fs, TextRole.Tuplet, tupletStyle);
+                        var (_, numberDown) = TextOutlineSkylines.Place(
+                            tb.NumberText, fs, fonts.Face(TextRole.Tuplet, tupletStyle),
+                            tb.NumberX - adv / 2, tb.NumberYUp - (ink.Top + ink.Bottom) / 2);
+                        t.MergeSupport(down: numberDown);
+                    }
+                }
+            trackers[(sys, staff)] = t;
+            return t;
+        }
+
+        var b = ottavas.ToBuilder();
+        for (int i = 0; i < b.Count; i++)
+        {
+            var o = b[i];
+            if (o.IsAbove || !measureToSystem.TryGetValue(o.StartMeasureIndex, out int sysIdx))
+                continue;
+            // System-relative Y-up, as the above side reads it (PlaceOttavas).
+            var (myUp, myDown) = OttavaBracketEngraver.Skylines(
+                fonts, o.Text, o.StartX,
+                OttavaBracketEngraver.LineStartX(
+                    fonts, o.Text, o.StartX, OttavaBracketEngraver.LabelEm(fonts)),
+                o.EndX, o.EdgeHeight, o.IsAbove, o.YUp);
+            double move = Track(sysIdx, o.StaffIndex).Place(myUp, myDown, OutsideStaffPadding);
+            if (move != 0)
+                b[i] = o with { YUp = o.YUp + move };
+        }
+        return b.MoveToImmutable(); // ToBuilder's array IS the result (Count == Capacity) — see Rebuild
+    }
+
     // ---- 450: TextScript (^"...") ----
     private static ImmutableArray<CustomTextLayout> PlaceCustomTexts(
         ScoreTextMetrics fonts,

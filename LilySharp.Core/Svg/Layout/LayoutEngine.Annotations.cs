@@ -1206,6 +1206,12 @@ internal sealed partial class LayoutEngine
             restShiftsOf: si => staffByIndex is { } rsStaves && rsStaves.TryGetValue(si, out var rsStaff)
                 ? ctx.RestCollisionsOf(rsStaff)
                 : null);
+        // The 8vb / 15mb brackets (priority 400) against what their staff holds below it: the
+        // inside ink, the tuplet numbers and brackets just laid out, and the movers the below
+        // pass placed (OutsideStaffStacker.PlaceBelowOttavas).
+        ottavaLayouts = OutsideStaffStacker.PlaceBelowOttavas(ctx.Fonts, systems, ottavaLayouts,
+            stackedDynamics, stackedHairpins, belowStackedTrills, stackedArticulations,
+            tupletBracketLayouts, applyStaffOffsets: staffYAt != null, staffProfile, measureToSystem);
         // TEXT-style pedal words were solved where the room was built (the same
         // skyline-time solve the brackets take); hand the draw those baselines, keyed
         // (staff, system, the mark's anchor — SolvedPedalRow.Names), Y-up about the mark's

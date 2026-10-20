@@ -755,6 +755,9 @@ internal sealed class MeasureBuilder
                 StringNumber = n.StringNumber,
                 SlurStartSourcePosition = n.SlurStartSourcePosition,
                 SlurEndSourcePosition = n.SlurEndSourcePosition,
+                // The pitch the accidental was decided for, which the per-staff pass reads
+                // (StaffAccidentals) — a grace's accidental holds for the staff like any other.
+                WrittenPitch = n.WrittenPitch,
             },
 
             ChordItem c => new ChordItem(
@@ -763,7 +766,7 @@ internal sealed class MeasureBuilder
                 c.Notes.Select(static m => new ChordNoteInfo(
                     m.StaffPosition, m.Accidental,
                     StringNumber: m.StringNumber, Midi: m.Midi,
-                    SourcePosition: m.SourcePosition)).ToImmutableArray(),
+                    SourcePosition: m.SourcePosition, WrittenPitch: m.WrittenPitch)).ToImmutableArray(),
                 c.BaseDuration, c.Dots, c.SourcePosition, isCue: c.IsCue,
                 hasSlurStart: c.HasSlurStart, hasSlurEnd: c.HasSlurEnd)
             {

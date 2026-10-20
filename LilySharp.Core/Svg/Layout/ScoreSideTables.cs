@@ -277,6 +277,23 @@ internal static class ScoreSideTables
                     t => t.StaffIndex));
 
     private static readonly System.Runtime.CompilerServices
+        .ConditionalWeakTable<MultiStaffScore, IndexBuckets<OttavaBracketItem>> _ottavasByScore = new();
+
+    /// <summary>
+    /// The score's OTTAVA brackets — derived from the marks, the SAME detection the annotation
+    /// pass draws from (<c>LayoutEngine.Annotations</c>) — bucketed by global staff index
+    /// (memoized per score, for the reason <see cref="TextSpannersByStaff"/> gives). The
+    /// staff-skyline pass reserves each staff's brackets on every system.
+    /// </summary>
+    internal static IndexBuckets<OttavaBracketItem> OttavaBracketsByStaff(MultiStaffScore score)
+        => score.MusicMarks.IsDefaultOrEmpty
+            ? IndexBuckets<OttavaBracketItem>.Empty
+            : _ottavasByScore.GetValue(score,
+                s => IndexBuckets<OttavaBracketItem>.Build(
+                    OttavaBracketEngraver.DetectOttavaBrackets(s.MusicMarks, Collector.SectionPlays.For(s)),
+                    o => o.StaffIndex));
+
+    private static readonly System.Runtime.CompilerServices
         .ConditionalWeakTable<MultiStaffScore, Dictionary<int, int>> _chordRowAboveByScore = new();
 
     /// <summary>

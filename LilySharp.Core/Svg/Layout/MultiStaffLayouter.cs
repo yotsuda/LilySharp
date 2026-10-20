@@ -4040,6 +4040,19 @@ internal sealed class MultiStaffLayouter
                         if (!spannerInk.IsEmpty)
                             sky.Up.Merge(spannerInk);
                     }
+                    // …and this staff's OTTAVA brackets (priority 400), above or below it, placed
+                    // against everything the staff holds by now: outside-staff ink LilyPond
+                    // leaves in the axis group's skyline, so the neighbouring staff is spaced off
+                    // the label and the dashes. Nothing reserved them until 2026-10-20: a left
+                    // hand's 8va printed through the right hand's lower voice, the staves standing
+                    // CLOSER with the line than without it (OMR request 2026-10-20, item 1).
+                    // LILYPOND-REF: lily/axis-group-interface.cc:952-972 add_grobs_of_one_priority.
+                    if (StaffOttavaInk(score, staff, thisStaff, measureLayouts, beams,
+                            sky.Up, sky.Down) is { } ottavaInk)
+                    {
+                        sky.Up.Merge(ottavaInk.Up);
+                        sky.Down.Merge(ottavaInk.Down);
+                    }
                     // …and the form-level texts (TextScript, priority 450), on the staff they
                     // resolve to — the TOP SPACEABLE one, which is what their -1 means
                     // (LayoutUtilities.ResolveScoreGrobStaff) — so a leading chord row clears
@@ -4444,6 +4457,104 @@ internal sealed class MultiStaffLayouter
                 : Math.Max(0.0, qDown.Distance(insideUp) + OutsideStaffStacker.OutsideStaffPadding);
             if (move != 0.0)
                 (qUp, qDown) = OutsideStaffStacker.TrillProfileSkylines(placed with { YUp = placed.YUp + move });
+            up.Merge(qUp);
+            down.Merge(qDown);
+        }
+        return (up, down);
+    }
+
+    /// <summary>
+    /// This staff's OTTAVA brackets on one system as outside-staff ink in the staff's own
+    /// skyline frame (origin = the staff's MIDDLE line, up-positive): laid out by the engraver
+    /// on a trivial one-staff system, as <see cref="StaffTrillInk"/> lays out the trills, then
+    /// moved clear of what the staff holds by outside-staff-padding.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ A BRACKET CROSSING A LINE BREAK is reserved clipped to this system, its label spelt
+    /// as the first piece's ("8va", not "(8va)" — a few hundredths narrower than a
+    /// continuation's) and its broken end without a hook: the whole score's systems do not
+    /// exist yet here.
+    /// </remarks>
+    private (VerticalSkyline Up, VerticalSkyline Down)? StaffOttavaInk(
+        MultiStaffScore score, Staff staff, int staffIndex,
+        ImmutableArray<MeasureLayout> measureLayouts, ImmutableArray<BeamLayout> beamLayouts,
+        VerticalSkyline supportUp, VerticalSkyline supportDown)
+    {
+        var staffOttavas = ScoreSideTables.OttavaBracketsByStaff(score).At(staffIndex);
+        if (staffOttavas.IsEmpty || measureLayouts.IsDefaultOrEmpty)
+            return null;
+
+        int firstMeasure = int.MaxValue, maxMeasureIndex = -1;
+        foreach (var ml in measureLayouts)
+        {
+            firstMeasure = Math.Min(firstMeasure, ml.MeasureIndex);
+            maxMeasureIndex = Math.Max(maxMeasureIndex, ml.MeasureIndex);
+        }
+        var onThisSystem = ImmutableArray.CreateBuilder<OttavaBracketItem>();
+        foreach (var o in staffOttavas)
+        {
+            if (o.EndMeasureIndex < firstMeasure || o.StartMeasureIndex > maxMeasureIndex)
+                continue;
+            bool clipStart = o.StartMeasureIndex < firstMeasure;
+            bool clipEnd = o.EndMeasureIndex > maxMeasureIndex;
+            onThisSystem.Add(!clipStart && !clipEnd ? o : o with
+            {
+                StartMeasureIndex = clipStart ? firstMeasure : o.StartMeasureIndex,
+                StartItemIndex = clipStart ? -1 : o.StartItemIndex,
+                StartMoment = clipStart ? null : o.StartMoment,
+                EndMeasureIndex = clipEnd ? maxMeasureIndex : o.EndMeasureIndex,
+                EndMoment = clipEnd ? null : o.EndMoment,
+                EndItemIndex = clipEnd ? -1 : o.EndItemIndex,
+            });
+        }
+        if (onThisSystem.Count == 0)
+            return null;
+
+        var byMeasureIndex = new MeasureLayout[maxMeasureIndex + 1];
+        foreach (var ml in measureLayouts)
+            byMeasureIndex[ml.MeasureIndex] = ml;
+        var keyed = System.Runtime.InteropServices.ImmutableCollectionsMarshal
+            .AsImmutableArray(byMeasureIndex);
+        var staffLayout = new StaffLayout(
+            0, staff.Clef, Y: 0, Height: _options.StaffHeight,
+            StaffAffinity: staff.StaffAffinity);
+        var system = new SystemLayout(
+            SystemIndex: 0, Y: 0,
+            Width: _options.ContentWidth,
+            PrefixWidth: 0,
+            Measures: measureLayouts,
+            StaffGroups: ImmutableArray.Create(StaffGroupLayout.CreateSingle(staffLayout, 0, _options.StaffHeight)),
+            Indent: 0);
+
+        var fonts = score.TextMetrics;
+        var layouts = OttavaBracketEngraver.Calculate(
+            fonts, onThisSystem.ToImmutable(), ImmutableArray.Create(system), keyed,
+            staffYAt: null,
+            voicesByStaff: new Dictionary<int, ImmutableArray<Voice>> { [staffIndex] = staff.Voices },
+            beamLayouts: RestampedToStaff(beamLayouts, staffIndex),
+            staffLinesOf: _ => NotationStaffLinesOf(staff));
+        if (layouts.IsDefaultOrEmpty)
+            return null;
+
+        var up = new VerticalSkyline(VerticalDirection.Up);
+        var down = new VerticalSkyline(VerticalDirection.Down);
+        foreach (var o in layouts)
+        {
+            // The engraver's YUp is about the staff's TOP line (offset 0 here); this
+            // profile's frame is the MIDDLE line.
+            double lineY = o.YUp + EngravingDefaults.StaffMiddle;
+            double lineStart = OttavaBracketEngraver.LineStartX(
+                fonts, o.Text, o.StartX, OttavaBracketEngraver.LabelEm(fonts));
+            var (qUp, qDown) = OttavaBracketEngraver.Skylines(
+                fonts, o.Text, o.StartX, lineStart, o.EndX, o.EdgeHeight, o.IsAbove, lineY);
+            // The stacker's move: the nearest allowed one clear of the support by
+            // outside-staff-padding (OutsideStaffStacker.PlaceOttavas).
+            double move = o.IsAbove
+                ? Math.Max(0.0, qDown.Distance(supportUp) + OutsideStaffStacker.OutsideStaffPadding)
+                : -Math.Max(0.0, qUp.Distance(supportDown) + OutsideStaffStacker.OutsideStaffPadding);
+            if (move != 0.0)
+                (qUp, qDown) = OttavaBracketEngraver.Skylines(
+                    fonts, o.Text, o.StartX, lineStart, o.EndX, o.EdgeHeight, o.IsAbove, lineY + move);
             up.Merge(qUp);
             down.Merge(qDown);
         }
