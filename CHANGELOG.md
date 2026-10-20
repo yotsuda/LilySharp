@@ -24,6 +24,11 @@ workflow attaches that section to the GitHub Release verbatim.
   kept. And a head drawn on the line or space an ottava's other side used, in another octave and
   with another alteration, prints its accidental (LilyPond remembers by pitch and prints none).
   The OMR's report of 2026-10-20 found all of these.
+- **A glissando across a line break is drawn as LilyPond draws it.** Its later piece stood
+  against the first system — above it, at the page's left edge. Now each piece stands on its
+  own system and every piece takes its share of one continuous slope, as if the systems stood
+  in a row (they were horizontals at the start and at the target pitch). A later piece that
+  spans no musical time — the target is the next system's first note — is not drawn.
 
 ### A chord is read as its first note
 

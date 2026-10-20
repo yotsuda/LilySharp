@@ -1384,15 +1384,18 @@ internal static partial class SharedRenderer
             using var staffScope = gc.Staff(g.StaffIndex);
             // MeasureIndex -1 = direct unit-test construction: no page identity,
             // draw unconditionally.
-            if (g.MeasureIndex >= 0 && !sysTopYUp.ContainsKey(g.MeasureIndex))
+            // The PIECE's own system — a broken glissando's later piece stands on another
+            // system (and maybe another page) than its start note.
+            int placed = g.PlacedMeasureIndex;
+            if (placed >= 0 && !sysTopYUp.ContainsKey(placed))
                 continue; // other page
             // Frame B -> device: reflect each endpoint against this glissando's own
             // staff middle (the shared per-grob draw boundary), then apply ossia.
-            double midYup = os.StaffMiddleYUp(g.StaffIndex, g.MeasureIndex, StaffHeight);
+            double midYup = os.StaffMiddleYUp(g.StaffIndex, placed, StaffHeight);
             using (gc.Source(g.SourcePosition))
                 gc.DrawLine(
-                    g.StartX, os.YUp(midYup + g.StartYUp, g.StaffIndex, g.MeasureIndex),
-                    g.EndX, os.YUp(midYup + g.EndYUp, g.StaffIndex, g.MeasureIndex),
+                    g.StartX, os.YUp(midYup + g.StartYUp, g.StaffIndex, placed),
+                    g.EndX, os.YUp(midYup + g.EndYUp, g.StaffIndex, placed),
                     Color.Black, thickness);
         }
     }

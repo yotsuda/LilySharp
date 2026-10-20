@@ -61,7 +61,17 @@ public readonly record struct GlissandoLayout(
     // Voice the start note lives in (0 = primary), so the locator resolves against
     // the RIGHT voice on a polyphonic staff — a second voice's glissando must not
     // re-derive its data-pos from the primary voice's note at the same index.
-    int VoiceIndex = 0);
+    int VoiceIndex = 0,
+    // The first measure of THIS piece's system — where the piece is drawn (its page and its
+    // staff middle). -1 = the same as MeasureIndex (an unbroken glissando). MeasureIndex
+    // stays the start note's locator for click-to-source; until 2026-10-20 it placed every
+    // piece too, so a glissando broken across a line drew its second piece against the
+    // FIRST system (OMR request 2026-10-20, item 2).
+    int SystemMeasureIndex = -1)
+{
+    /// <summary>The measure that names the system this piece is drawn on.</summary>
+    public int PlacedMeasureIndex => SystemMeasureIndex >= 0 ? SystemMeasureIndex : MeasureIndex;
+}
 
 /// <summary>
 /// Calculates glissando layouts from detected glissando items.
@@ -136,69 +146,94 @@ internal static class GlissandoEngraver
                 + (LeftmostAccidentalInkX(endItem)
                    ?? HeadInkEdge(endItem, gliss.EndMemberIndex, right: false));
 
+            // Native Y-up (staff-spaces above this glissando's staff middle):
+            // a staff position p sits p/2 spaces above the middle line. The former
+            // ResolveStaffMiddleY round-trip (PositionToDevice, then ToUp at store)
+            // cancelled exactly, so no staff-middle resolution is needed here.
+            // LILYPOND-REF: lily/line-spanner.cc:416-421 calc_bound_info — y = the bound head's extent (Y_AXIS).center ()
+            // ⚠️ ...which equals the staff position only because a DEFAULT head's ink
+            //   is symmetric about it (s2 spans ±0.545). A styled head's is not —
+            //   s2triangle spans −0.7828..0.6566, so LilyPond's anchor sits 0.0631
+            //   BELOW the position. Unspelled here (no book glisses a shape head);
+            //   ticketed 2026-08-07, session 109 audit.
+            double startStaffY = gliss.StartStaffPosition * 0.5;
+            double endStaffY = gliss.EndStaffPosition * 0.5;
+
+            // The broken pieces' X first: a piece's share of the slope is its share of the
+            // whole length.
+            // LILYPOND-REF: lily/spanner.cc:124-137 — bounds reattached to system edges.
+            var pieces = new List<(SpannerBreakSegment Segment, SystemLayout System, double StartX, double EndX)>();
             foreach (var (segment, system) in SpannerBreakSubstitution.BrokenPieces(
                 gliss.StartMeasureIndex, gliss.EndMeasureIndex, systems, measureToSystemIdx))
             {
-                // Native Y-up (staff-spaces above this glissando's staff middle):
-                // a staff position p sits p/2 spaces above the middle line. The former
-                // ResolveStaffMiddleY round-trip (PositionToDevice, then ToUp at store)
-                // cancelled exactly, so no staff-middle resolution is needed here.
-                // LILYPOND-REF: lily/line-spanner.cc:416-421 calc_bound_info — y = the bound head's extent (Y_AXIS).center ()
-                // ⚠️ ...which equals the staff position only because a DEFAULT head's ink
-                //   is symmetric about it (s2 spans ±0.545). A styled head's is not —
-                //   s2triangle spans −0.7828..0.6566, so LilyPond's anchor sits 0.0631
-                //   BELOW the position. Unspelled here (no book glisses a shape head);
-                //   ticketed 2026-08-07, session 109 audit.
-                double startStaffY = gliss.StartStaffPosition * 0.5;
-                double endStaffY = gliss.EndStaffPosition * 0.5;
+                var (sx, ex) = SpannerBreakSubstitution.ReattachSpanX(segment, system, realStartX, realEndX);
+                // A piece broken on its LEFT starts past the line-start column — the clef,
+                // key and meter — not at the system's left edge: the left bound-details'
+                // attach-dir RIGHT read on the NonMusicalPaperColumn the piece is bound to.
+                // LILYPOND-REF: lily/line-spanner.cc:128-135 calc_bound_info — an unfinished
+                //   bound reads the `left` details (plus any `left-broken`, which Glissando
+                //   has none of); :171-175 — a paper column's generic_bound_extent at attach.
+                if (!segment.IsFirst && staffIndex >= 0)
+                    sx = system.Measures[0].X + system.LineStartRightOf(staffIndex);
+                pieces.Add((segment, system, sx, ex));
+            }
+            double totalLength = 0;
+            foreach (var p in pieces)
+                totalLength += Math.Max(0, p.EndX - p.StartX);
 
-                // Resolve segment-local X bounds against the system's measure layouts.
-                // LILYPOND-REF: lily/spanner.cc:124-137 — bounds reattached to system edges.
-                var (segStartX, segEndX) = SpannerBreakSubstitution.ReattachSpanX(
-                    segment, system, realStartX, realEndX);
+            double before = 0;
+            foreach (var (segment, system, pieceStartX, pieceEndX) in pieces)
+            {
+                double segStartX = pieceStartX, segEndX = pieceEndX;
 
-                // ⚠️ LILYSHARP-OWN (disclosed 2026-08-07, session 109 audit): Y at the
-                //   broken edge "freezes" at the destination pitch — a visual cue that
-                //   the slide continues on the adjacent system.
-                //   departs from: lily/line-spanner.cc:247-406 calc_bound_info — LilyPond
-                //     gives every broken piece ONE continuous slope, aligning the middles
-                //     of each pair of staves ("the choice of Solomon") so the pieces would
-                //     read as one line if the systems stood in a row.
-                //   observed by: NOTHING — no corpus book renders a glissando ACROSS a
-                //     break (glissando-chord-linebreak.ly breaks BETWEEN glissandi and is
-                //     exact); when one does, its twin measures this branch.
-                double segStartY = segment.IsFirst ? startStaffY : endStaffY;
-                double segEndY = segment.IsLast ? endStaffY : startStaffY;
-                if (segment.IsMiddle)
-                {
-                    double mid = (startStaffY + endStaffY) / 2.0;
-                    segStartY = mid;
-                    segEndY = mid;
-                }
+                // ONE CONTINUOUS SLOPE over every broken piece, as if the systems stood in a
+                // row: each piece covers the share of the whole rise its share of the whole
+                // length is. (An unbroken glissando is the one piece covering all of it.)
+                // LILYPOND-REF: lily/line-spanner.cc:247-406 calc_bound_info — a broken
+                //   bound's y is the FAR end's note ("the choice of Solomon": the staves'
+                //   middles aligned), so every piece spans the whole rise …
+                // LILYPOND-REF: lily/spanner.cc:496-539 calc_normalized_endpoints — … and
+                //   lily/line-spanner.cc:582-587 print cuts it to the piece's normalized
+                //   share of the summed piece lengths.
+                // Until 2026-10-20 the pieces were LILYSHARP-OWN horizontals (the first at
+                // the start pitch, the next at the target's), which on paper read like a tie
+                // or nothing at all (OMR request 2026-10-20, item 2).
+                double pieceLength = Math.Max(0, pieceEndX - pieceStartX);
+                double from = totalLength > 0 ? before / totalLength : 0;
+                double to = totalLength > 0 ? (before + pieceLength) / totalLength : 1;
+                before += pieceLength;
+                double segStartY = startStaffY + from * (endStaffY - startStaffY);
+                double segEndY = startStaffY + to * (endStaffY - startStaffY);
+
+                // A later piece that spans no musical time — from the line start to a target
+                // note standing on the system's first moment — is not drawn. Its length still
+                // counted in the slope's shares above, as the piece still exists there.
+                // LILYPOND-REF: scm/define-grobs.scm:1694 Glissando after-line-breaking
+                //   ly:spanner::kill-zero-spanned-time (lily/spanner.cc) — measured on
+                //   LilyPond 2.26.0 (Lab sessions/p915/lp/gliss.ly): the target on the next
+                //   system's first note gets no second piece.
+                if (!segment.IsFirst && segment.StartMeasureIndex == gliss.EndMeasureIndex
+                    && !measures.IsDefaultOrEmpty && gliss.EndMeasureIndex < measures.Length
+                    && LayoutUtilities.ItemOnset(measures[gliss.EndMeasureIndex], gliss.EndItemIndex) == Semantics.Fraction.Zero)
+                    continue;
 
                 // The padding: each bound pulled 0.5 inward ALONG the line (so its X
-                // share shrinks as the line steepens), applied only at real-note
-                // bounds (not at system-edge cuts). A line too short to pay both
-                // paddings is not drawn at all.
+                // share shrinks as the line steepens) — at a broken edge too, which reads
+                // the same `left`/`right` details (Glissando has no `*-broken` ones). A
+                // line too short to pay both paddings is not drawn at all.
+                // LILYPOND-REF: lily/line-spanner.cc:128-135 calc_bound_info — the broken bound's details
                 // LILYPOND-REF: lily/line-spanner.cc:599 span_points[d] += -d * gaps[d] * magstep * dz.direction()
                 // LILYPOND-REF: lily/line-spanner.cc:591-594 Line_spanner::print — gaps beyond dz.length () print nothing
                 double dx = segEndX - segStartX;
                 double dy = segEndY - segStartY;
                 double length = Math.Sqrt(dx * dx + dy * dy);
-                double paddings = (segment.IsFirst ? Padding : 0) + (segment.IsLast ? Padding : 0);
-                if (length <= paddings)
+                if (length <= 2 * Padding)
                     continue;
                 double gapRatio = Padding / length;
-                if (segment.IsFirst)
-                {
-                    segStartX += dx * gapRatio;
-                    segStartY += dy * gapRatio;
-                }
-                if (segment.IsLast)
-                {
-                    segEndX -= dx * gapRatio;
-                    segEndY -= dy * gapRatio;
-                }
+                segStartX += dx * gapRatio;
+                segStartY += dy * gapRatio;
+                segEndX -= dx * gapRatio;
+                segEndY -= dy * gapRatio;
 
                 // The segment/gap geometry above ran directly in the native Y-up frame
                 // (line math is frame-invariant — dy just carries its Y-up sign), so
@@ -212,14 +247,13 @@ internal static class GlissandoEngraver
                     SourcePosition: gliss.SourcePosition,
                     StaffIndex: staffIndex,
                     // MeasureIndex is the START-note data-pos locator, shared by ALL
-                    // broken segments. The draw resolves the staff middle from it, so a
-                    // glissando broken across a SYSTEM would resolve later segments
-                    // against the first system's staff middle. No such case is in
-                    // coverage today; a proper fix needs a separate per-segment system
-                    // reference (MeasureIndex can't move — it drives click-to-source).
+                    // broken segments (it drives click-to-source); the piece's OWN system
+                    // is named by SystemMeasureIndex, which the draw places it by.
                     MeasureIndex: gliss.StartMeasureIndex,
                     ItemIndex: gliss.StartItemIndex,
-                    VoiceIndex: gliss.VoiceIndex));
+                    VoiceIndex: gliss.VoiceIndex,
+                    SystemMeasureIndex: segment.StartMeasureIndex != gliss.StartMeasureIndex
+                        ? segment.StartMeasureIndex : -1));
             }
         }
 

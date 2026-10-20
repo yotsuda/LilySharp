@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 63 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 63 | 観測者がゼロだと自認しているもの |
-| `OWN` | 263 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **389** | |
+| `OWN` | 262 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **388** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -246,7 +246,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（263 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（262 件）
 
 ### `LilySharp.Core/Editing/KeyRespeller.cs`
 - **`KeyRespeller`** LILYSHARP-OWN: an editor aid. The rule:
@@ -476,8 +476,6 @@
 - **`FiguredBassGlyphRun.Pieces`** ⚠️ LILYSHARP-OWN: the fallback branch. A character with no bass-figure glyph is
 ### `LilySharp.Core/Svg/Layout/FingeringGlyphRun.cs`
 - **`FingeringGlyphRun.Pieces`** ⚠️ LILYSHARP-OWN: the fallback branch. A fingering is an integer, so the only way a
-### `LilySharp.Core/Svg/Layout/GlissandoEngraver.cs`
-- **`GlissandoEngraver.Calculate`** ⚠️ LILYSHARP-OWN (disclosed 2026-08-07, session 109 audit): Y at the
 ### `LilySharp.Core/Svg/Layout/GlyphMetrics.cs`
 - **`GlyphMetrics.MinItemGap`** LILYSHARP-OWN: the gap Lily# leaves between a LYRIC syllable and its neighbour.
 - **`GlyphMetrics.AccidentalLedgerShorteningRange`** reaches — LILYSHARP-OWN. Measured before (Lab sessions/p871/probe/ledger, 30 accidentals
