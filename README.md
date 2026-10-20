@@ -148,6 +148,7 @@ lysc --help                             # every command; lysc svg --help for one
 |---------|--------|
 | `svg` `pdf` `png` | Engraved sheet music |
 | `midi` | MIDI, with dynamics and articulations |
+| `wav` | That MIDI played through a SoundFont 2 you name (`--soundfont`) |
 | `xml` | MusicXML |
 | `ly` | LilyPond source |
 | `vsqx` | VOCALOID sequence (vocal part + lyrics) |

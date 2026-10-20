@@ -74,6 +74,7 @@ static int Dispatch(string command, string[] args) => command switch
     "png" => RunPng(args),
     "boxes" => RunBoxes(args),
     "midi" => RunMidi(args),
+    "wav" => RunWav(args),
     "xml" => RunXml(args),
     "ly" => RunLy(args),
     "import" => RunImport(args),
@@ -104,6 +105,7 @@ static void ShowHelp()
           png        Convert to PNG (raster image)
           boxes      Write every drawn symbol's box as JSON (for OMR training data)
           midi       Convert to MIDI (audio)
+          wav        Render to sound through a SoundFont (WAV)
           vsqx       Convert to VOCALOID sequence (vocal part + lyrics)
 
           xml        Convert to MusicXML
@@ -466,7 +468,8 @@ static void ShowPngHelp()
           -d, --out-dir <folder> Write into this folder (default: the input's folder)
           --score <name>         Write only the named score
           --scale <factor>       Scale factor (default: 2.0 = 192 DPI)
-          --crop                 Trim whitespace to the content bounding box          --todo                 Draw the @todo marks as the preview shows them (red rings, memos)
+          --crop                 Trim whitespace to the content bounding box
+          --todo                 Draw the @todo marks as the preview shows them (red rings, memos)
           --set <KEY=VALUE>      Override a paper or layout value (repeatable): spacingIncrement=1.6,
                                  staffStaffSpacing.basicDistance=9, leftMargin=20mm, raggedRight=false,
                                  systemsPerPage=4, staffSpace=1.5mm, Stem.thickness=1.5 (CLI_REFERENCE)
@@ -516,6 +519,66 @@ static void ShowMidiHelp()
           lysc midi score.lys
           lysc midi -d out score.lys
           lysc midi --score movement2 multi-movement.lys
+        """);
+}
+
+// ============ WAV Command ============
+
+static int RunWav(string[] args)
+{
+    if (WantsHelp(args))
+    {
+        ShowWavHelp();
+        return 0;
+    }
+
+    var r = OutputOptions()
+        .Value("score", "--score requires a score name", "--score")
+        .Value("soundfont", "--soundfont requires a SoundFont 2 file (.sf2)", "--soundfont")
+        .Parse(args);
+    if (r.Error != null) return OptionError(r.Error, "wav");
+
+    // No font is bundled (owner's decision 2026-10-12): the user names one, here or once in
+    // the environment.
+    string? font = r.Get("soundfont") ?? Environment.GetEnvironmentVariable("LILYSHARP_SOUNDFONT");
+    if (string.IsNullOrWhiteSpace(font))
+        return OptionError("name a SoundFont 2 (.sf2) with --soundfont <file>, or set LILYSHARP_SOUNDFONT", "wav");
+    if (LilySharp.Core.Audio.WavRenderer.SoundFontProblem(font) is { } problem)
+        return OptionError(problem, "wav");
+
+    var options = new ExportOptions { SoundFont = font };
+    return RunScoreOutputs("wav", r, ".wav", (tree, output) =>
+    {
+        int rc = Report(ScoreExport.Write(tree, "wav", output.Path, output.Score, options));
+        if (rc == 0 && output.Score == null) WarnFormsLeftOut(tree);
+        return rc;
+    });
+}
+
+static void ShowWavHelp()
+{
+    Console.WriteLine("""
+        Render Lily# source to sound (WAV)
+
+        Usage: lysc wav --soundfont <file.sf2> [options] <input.lys>
+
+        Plays the MIDI that `lysc midi` writes through a SoundFont and writes the sound:
+        <input>.wav for the unnamed score and <input>-<name>.wav for each other one
+        (16-bit stereo, 44.1 kHz, two seconds after the last note for it to ring out).
+
+        No sound font comes with Lily#: name a SoundFont 2 (.sf2) — GeneralUser GS is
+        one — with --soundfont, or once in the LILYSHARP_SOUNDFONT environment variable.
+        A compressed .sf3 and Windows' gm.dls (DLS) cannot be read here.
+
+        Options:
+          --soundfont <file>     The SoundFont 2 to play through (default: LILYSHARP_SOUNDFONT)
+          -d, --out-dir <folder> Write into this folder (default: the input's folder)
+          --score <name>         Write only the named score's form
+          -h, --help             Show this help
+
+        Examples:
+          lysc wav --soundfont GeneralUser.sf2 score.lys
+          lysc wav --soundfont GeneralUser.sf2 -d out --score movement2 suite.lys
         """);
 }
 

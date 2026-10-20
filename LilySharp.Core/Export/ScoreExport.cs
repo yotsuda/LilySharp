@@ -60,6 +60,10 @@ public sealed class ExportOptions
     /// the preview shows them (<c>lysc svg|png|pdf --todo</c>).</summary>
     public bool TodoMarks { get; init; }
 
+    /// <summary>WAV: the SoundFont 2 (<c>.sf2</c>) the score's MIDI is played through
+    /// (<c>lysc wav --soundfont</c>). No font is bundled, so a WAV export without one fails.</summary>
+    public string? SoundFont { get; init; }
+
     public static ExportOptions Default { get; } = new();
 }
 
@@ -190,6 +194,34 @@ public static class ScoreExport
                 // format loses that the page and the MusicXML keep — said in Warnings.
                 return new ExportResult([outputPath],
                     [$"Tracks: {midi.Tracks.Count}", $"Notes: {midi.Tracks.Skip(1).Sum(t => t.Notes.Count)}"],
+                    exporter.Warnings.ToList());
+            }
+
+            case "wav":
+            {
+                // The .mid export's own MIDI, played through the named font (Audio.WavRenderer).
+                // A command-line format only: not in Extensions, since no editor door has a font
+                // to hand it (none is bundled).
+                if (string.IsNullOrEmpty(options.SoundFont))
+                    throw new ArgumentException("a WAV export needs a SoundFont 2 (.sf2)");
+                if (Audio.WavRenderer.SoundFontProblem(options.SoundFont) is { } problem)
+                    throw new InvalidDataException(problem);
+                var exporter = new MidiExporter { Form = form, Score = spec };
+                var midi = exporter.Export(tree);
+                TimeSpan length;
+                try
+                {
+                    using var stream = File.Create(outputPath);
+                    length = Audio.WavRenderer.Render(midi, options.SoundFont, stream);
+                }
+                catch
+                {
+                    // No half-written file left where the user will look for the sound.
+                    File.Delete(outputPath);
+                    throw;
+                }
+                return new ExportResult([outputPath],
+                    [$"Length: {length:m\\:ss}", $"Sound font: {Path.GetFileName(options.SoundFont)}"],
                     exporter.Warnings.ToList());
             }
 

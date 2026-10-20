@@ -90,8 +90,8 @@ one system costs under a millisecond of the preview's render.
   starts it (now read off the ring's own box, `SharedRenderer.TodoInkBox`, never the stem).
   Guard: `TodoCalloutTests.AMemo_UnderTheTitle_StaysUnderIt`.
 - A memo is never shortened; a very long memo spans the margin (undecided since session 891).
-- `lysc png --todo` would draw the preview's picture as pixels; `PngDocumentOptions.EditorMarks`
-  is the door, not yet opened in the CLI.
+- ~~`lysc png --todo`~~ BUILT (`0668a9705`): `lysc svg|png|pdf --todo` draws the preview's
+  marks through each format's `EditorMarks`.
 
 ## 5. A mark on a chord row's symbol (owner's decision 2026-10-11)
 

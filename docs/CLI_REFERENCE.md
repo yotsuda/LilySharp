@@ -327,6 +327,35 @@ lysc midi -d out score.lys            # The same, into out/
 lysc midi --score movement2 suite.lys # One named movement: suite-movement2.mid
 ```
 
+### wav - Render to sound (WAV)
+
+```bash
+lysc wav --soundfont <file.sf2> [options] <input.lys>
+```
+
+Plays the MIDI that `lysc midi` writes through a SoundFont and writes the sound: 16-bit
+stereo PCM at 44.1 kHz, with two seconds after the last note so it rings out. The synthesizer
+is MeltySynth. No sound font comes with Lily#: name a **SoundFont 2** (`.sf2`; GeneralUser GS
+is one) with `--soundfont`, or once in the `LILYSHARP_SOUNDFONT` environment variable. A
+compressed `.sf3` (MuseScore's) and a DLS bank (Windows' `gm.dls`, which the preview plays)
+cannot be read here, and are refused with that sentence.
+
+**Options:**
+| Option | Description |
+|--------|-------------|
+| `--soundfont <file>` | The SoundFont 2 to play through (default: `LILYSHARP_SOUNDFONT`) |
+| `-d, --out-dir <folder>` | Write into this folder (default: the input's folder) |
+| `--score <name>` | Write only the named score's form |
+| `-h, --help` | Show help |
+
+One file holds one form, as for `midi`.
+
+**Examples:**
+```bash
+lysc wav --soundfont GeneralUser.sf2 score.lys           # Creates score.wav (+ score-<name>.wav)
+lysc wav --soundfont GeneralUser.sf2 -d out score.lys    # The same, into out/
+```
+
 ### xml - Export to MusicXML
 
 ```bash

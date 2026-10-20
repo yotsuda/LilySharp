@@ -6,6 +6,15 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## 0.14.0
 
+### `lysc wav` renders a score to sound
+
+- **`lysc wav --soundfont <file.sf2> score.lys` writes `score.wav`**: the MIDI `lysc midi`
+  writes, played through the SoundFont you name (16-bit stereo, 44.1 kHz, two seconds after the
+  last note). No sound font comes with Lily#, so name one with `--soundfont` or once in
+  `LILYSHARP_SOUNDFONT`. It must be a SoundFont 2 (`.sf2` — GeneralUser GS is one); a compressed
+  `.sf3` and Windows' `gm.dls` are refused with that sentence. The synthesizer is MeltySynth
+  (MIT, in THIRD-PARTY-NOTICES).
+
 ### Lower staves, second voices and tuplets: spanners, arpeggios and accidentals where they belong
 
 - **A lower staff's `@rit`, trill line and ottava are bound by its own notes.** On a grand staff

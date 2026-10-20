@@ -151,8 +151,14 @@ Now:
   cannot own a native window) and per-OS packaging — MuseScore 4's scale of work. The road to
   a user's own instruments is **MIDI out from the language server**, below. Web MIDI from the
   webview is not the route — VS Code is not expected to grant it the `midi` permission.
-- **Offline rendering** (`lysc wav`) would reuse the same font through MeltySynth (pure C#,
-  MIT) in Core, after the bundling decision.
+- **Offline rendering — `lysc wav`, built 2026-10-20 (session 916)**: the `.mid` export's MIDI
+  played through MeltySynth (pure C#, MIT) in Core (`Audio/WavRenderer.cs`), 16-bit stereo at
+  44.1 kHz with a 2 s tail, written a block at a time. Since nothing is bundled, the user names
+  the font (`--soundfont`, or `LILYSHARP_SOUNDFONT`). ⚠️ NOT the preview's font set: MeltySynth
+  reads SoundFont 2 only — neither the `.sf3` the recommendations list first nor the OS's DLS
+  bank the preview defaults to — so those are refused with that sentence before the synth is
+  asked; GeneralUser GS (`.sf2`) is the recommendation that works for both. No editor door yet
+  (`ScoreExport.Extensions` leaves `wav` out: the Export button has no font to hand it).
 
 ### MIDI out
 

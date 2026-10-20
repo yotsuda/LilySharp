@@ -100,6 +100,7 @@ bundles, or in both.
 | MessagePack, MessagePack.Annotations | © Yoshifumi Kawai and contributors | MIT |
 | PolyType | © Eirik Tsarpalis | MIT |
 | Newtonsoft.Json | © James Newton-King 2008 | MIT |
+| MeltySynth | © 2021 Nobuaki Tanaka; including C# Synth © 2014 Alex Veltsistas, TinySoundFont © 2017, 2018 Bernhard Schelling, based on SFZero © 2012 Steve Folta | MIT |
 
 SixLabors.ImageSharp, which PdfSharpCore depends on for raster images, is not
 among them: Lily#'s PDFs carry no images, and the package is referenced for its
@@ -137,6 +138,8 @@ The VS Code extension bundles no sound font (owner's decision, 2026-10-12). The 
 the General MIDI bank the operating system ships for its own synthesizer — Windows'
 `gm.dls`, macOS's DLS bank — read in place where it is installed, never copied or
 redistributed; or a sound font the user downloads and names in `lilysharp.playback.soundFont`.
+`lysc wav` likewise plays through a SoundFont 2 the user names (`--soundfont`); MeltySynth,
+above, is the synthesizer.
 
 ## Deliberately NOT bundled
 
