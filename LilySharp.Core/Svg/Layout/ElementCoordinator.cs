@@ -371,7 +371,7 @@ internal sealed class ElementCoordinator
                 score.Voices[group.VoiceIndex].Measures[group.MeasureIndex],
                 group,
                 itemXPositions,
-                score.TextMetrics, fromColumns, measureLayout.ChangeColumnHangs);
+                score.TextMetrics, fromColumns, measureLayout.ChangeColumnHangs, voiceShifts);
 
             // Also keep the beam clear of the OTHER voices' notes/rests (a
             // polyphonic staff's stem-up beam rides over a high note held below).
@@ -561,13 +561,15 @@ internal sealed class ElementCoordinator
             group.VoiceIndex,
             restStems: renumberedRests.ToImmutableArray());
 
-        // Cross-measure collision detection is deferred — pass empty list for now.
+        var collisions = CollectCrossMeasureBeamCollisions(
+            score, group, renumberedGroup, memberXs, measureMap, voiceShifts, ResolveX);
+
         var beamLayout = _beamEngraver.CalculateBeamLayout(
             renumberedGroup,
             memberXs.Concat(restXs).ToList(),
             staffIndex: staffIndex,
             systemIndex: systemIndex,
-            collisions: null,
+            collisions: collisions,
             staffLines: staffLines);
 
         // The dense renumbering above exists ONLY so the scorer can index
@@ -592,6 +594,82 @@ internal sealed class ElementCoordinator
             restXPositions: beamLayout.RestXPositions);
     }
 
+    /// <summary>
+    /// The covered grobs of a beam piece that crosses a bar line: every measure it spans is
+    /// asked as a one-measure beam's is — its own voice's non-members and accidentals, a clef
+    /// or key change between the outer members, and the other voices' items — each measure in
+    /// its own x table, all measured from the piece's own left stem.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/beam-collision-engraver.cc:115-194 Beam_collision_engraver::finalize — a covered grob is any
+    ///   one whose column span meets the beam's, whatever bar it stands in.
+    /// <para>
+    /// ⚠️ This used to pass NO collisions at all ("deferred"): a manual beam across a bar line
+    /// ran through another voice's head. Measured (Lab sessions/p916/xbar/probe.ly, score X):
+    /// <c>r4 r8 c''8[ | d''8]</c> over another voice's <c>a''4 | a''4</c> is
+    /// <c>(4.19 . 4.5)</c> in LilyPond, and Lily# drew the control's <c>(3.19 . 3.5)</c>.
+    /// </para>
+    /// </remarks>
+    private List<BeamCollision>? CollectCrossMeasureBeamCollisions(
+        Score score, BeamGroup group, BeamGroup renumberedGroup, List<double> memberXs,
+        IReadOnlyDictionary<int, (SystemLayout System, MeasureLayout Measure)> measureMap,
+        VoiceCollisionTable voiceShifts, Func<int, int, double?> resolveX)
+    {
+        int n = group.Members.Length;
+        if (n == 0)
+            return null;
+        double halfStemWidth = EngravingDefaults.StemThickness / 2;
+        double beamOriginX = BeamStemX(renumberedGroup, 0, memberXs[0]);
+        double beamEdgeLeftX = beamOriginX - halfStemWidth;
+        double beamEdgeRightX = BeamStemX(renumberedGroup, n - 1, memberXs[n - 1]) + halfStemWidth;
+
+        var memberAt = new HashSet<(int Measure, int Item)>();
+        foreach (var m in group.Members)
+            memberAt.Add((m.ResolveMeasureIndex(group.MeasureIndex), m.ItemIndex));
+        var first = (Measure: group.Members[0].ResolveMeasureIndex(group.MeasureIndex),
+                     Item: group.Members[0].ItemIndex);
+        var last = (Measure: group.Members[^1].ResolveMeasureIndex(group.MeasureIndex),
+                    Item: group.Members[^1].ItemIndex);
+
+        var voiceMeasures = score.Voices[group.VoiceIndex].Measures;
+        List<BeamCollision>? collisions = null;
+        for (int mi = first.Measure; mi <= last.Measure; mi++)
+        {
+            if (mi >= voiceMeasures.Length || !measureMap.TryGetValue(mi, out var info))
+                continue;
+            var measureLayout = info.Measure;
+            var measure = voiceMeasures[mi];
+
+            // This measure's x table, the members' own resolver: a measure whose items it
+            // cannot place (a secondary voice on the item-slot path) books nothing, as the
+            // one-measure path skips such a beam.
+            var itemXs = new double[measure.Items.Length];
+            bool placed = true;
+            for (int k = 0; k < itemXs.Length && placed; k++)
+            {
+                if (resolveX(mi, k) is { } x) itemXs[k] = x;
+                else placed = false;
+            }
+
+            int measureIndex = mi;
+            if (placed)
+            {
+                bool fromColumns = !measureLayout.Columns.IsDefaultOrEmpty
+                    && measureLayout.Columns.Length > 0;
+                CollectMeasureBeamCollisions(ref collisions, measure, itemXs,
+                    i => voiceShifts.ShiftOf(measureIndex, group.VoiceIndex + 1, i),
+                    i => memberAt.Contains((measureIndex, i)),
+                    i => (measureIndex, i).CompareTo(first) > 0 && (measureIndex, i).CompareTo(last) < 0,
+                    score.TextMetrics, fromColumns, measureLayout.ChangeColumnHangs,
+                    beamEdgeLeftX, beamEdgeRightX, beamOriginX);
+            }
+
+            AppendCrossVoiceMeasureCollisions(ref collisions, score, group.VoiceIndex, mi,
+                measureLayout, voiceShifts, beamEdgeLeftX, beamEdgeRightX, beamOriginX);
+        }
+        return collisions;
+    }
+
     private static Fraction GetItemDuration(MusicItem item) => item switch
     {
         NoteItem n => n.Duration,
@@ -609,7 +687,8 @@ internal sealed class ElementCoordinator
         IReadOnlyList<double> itemXPositions,
         Rendering.ScoreTextMetrics fonts,
         bool fromColumns,
-        ImmutableDictionary<Fraction, double>? changeHangs)
+        ImmutableDictionary<Fraction, double>? changeHangs,
+        VoiceCollisionTable voiceShifts)
     {
         List<BeamCollision>? collisions = null;
         var beamMemberIndices = new HashSet<int>(group.Members.Select(m => m.ItemIndex));
@@ -626,9 +705,40 @@ internal sealed class ElementCoordinator
         double beamEdgeRightX =
             BeamStemX(group, group.Members.Length - 1, beamRightX) + halfStemWidth;
 
+        bool shifted = voiceShifts.AnyShiftIn(group.MeasureIndex);
+        CollectMeasureBeamCollisions(ref collisions, measure, itemXPositions,
+            i => shifted ? voiceShifts.ShiftOf(group.MeasureIndex, group.VoiceIndex + 1, i) : 0.0,
+            beamMemberIndices.Contains, i => i > firstMemberIndex && i < lastMemberIndex,
+            fonts, fromColumns, changeHangs, beamEdgeLeftX, beamEdgeRightX, beamOriginX);
+        return collisions;
+    }
+
+    /// <summary>
+    /// The body of <see cref="CollectBeamCollisions"/> for ONE measure of the beam's own voice:
+    /// every non-member item and every printed accidental, in that measure's x table. A beam
+    /// that crosses a bar line asks it once per measure it spans
+    /// (<see cref="LayoutSingleSystemBeamPiece"/>).
+    /// </summary>
+    /// <param name="isMember">Whether item i of this measure is one of the beam's members.</param>
+    /// <param name="isBetweenMembers">Whether item i stands between the beam's outer members —
+    /// the only place a clef or key change can be under it.</param>
+    /// <param name="shiftOf">The note-collision shift inside item i's x (see
+    /// <see cref="AddAccidentalCollisions"/>).</param>
+    private void CollectMeasureBeamCollisions(
+        ref List<BeamCollision>? collisions,
+        Measure measure,
+        IReadOnlyList<double> itemXPositions,
+        Func<int, double> shiftOf,
+        Func<int, bool> isMember,
+        Func<int, bool> isBetweenMembers,
+        Rendering.ScoreTextMetrics fonts,
+        bool fromColumns,
+        ImmutableDictionary<Fraction, double>? changeHangs,
+        double beamEdgeLeftX, double beamEdgeRightX, double beamOriginX)
+    {
         for (int i = 0; i < measure.Items.Length; i++)
         {
-            if (beamMemberIndices.Contains(i))
+            if (isMember(i))
                 continue;
 
             var item = measure.Items[i];
@@ -661,7 +771,7 @@ internal sealed class ElementCoordinator
             // beam; the ones outside stand left of its first stem or right of its last.
             if (item is ClefChangeItem or KeySignatureChangeItem)
             {
-                if (i > firstMemberIndex && i < lastMemberIndex)
+                if (isBetweenMembers(i))
                     AddChangeCollisions(ref collisions, fonts, measure, i, itemX, fromColumns, changeHangs,
                                         beamEdgeLeftX, beamEdgeRightX, beamOriginX);
                 continue;
@@ -672,9 +782,8 @@ internal sealed class ElementCoordinator
                               _beamEngraver.Parameters.StemCollisionFactor);
         }
 
-        AddAccidentalCollisions(ref collisions, measure, itemXPositions,
+        AddAccidentalCollisions(ref collisions, measure, itemXPositions, shiftOf,
                                 beamEdgeLeftX, beamEdgeRightX, beamOriginX);
-        return collisions;
     }
 
     /// <summary>
@@ -1076,9 +1185,13 @@ internal sealed class ElementCoordinator
     /// only the head and stem of a member that the quanter handles through its stem model.
     /// </para>
     /// </remarks>
+    /// <param name="shiftOf">The note-collision shift item i of this measure was drawn with
+    /// (already inside <paramref name="itemXPositions"/>). A PACKED accidental is measured from
+    /// the staff column, so the shift is taken back out for it, as the renderer does
+    /// (SharedRenderer.Noteheads: <c>x - voiceX + packedX</c>).</param>
     private void AddAccidentalCollisions(
         ref List<BeamCollision>? collisions, Measure measure,
-        IReadOnlyList<double> itemXPositions,
+        IReadOnlyList<double> itemXPositions, Func<int, double> shiftOf,
         double beamEdgeLeftX, double beamEdgeRightX, double beamOriginX)
     {
         for (int i = 0; i < measure.Items.Length; i++)
@@ -1088,24 +1201,38 @@ internal sealed class ElementCoordinator
             {
                 case NoteItem note when note.Accidental != null:
                     // A note sharing its column with another voice was packed into that
-                    // column's one accidental column, in this same (column) frame.
-                    AccidentalLayout? single = note.AccidentalX is { } packedX
-                        ? new AccidentalLayout(
-                            note.StaffPosition, note.Accidental, packedX, note.IsCourtesy)
-                        : BeamAccidentalColumn.CalculateSinglePosition(
-                            note, CueAccidentalFont(note.IsCue), CueAccidentalFont(note.IsCue));
-                    if (single is { } singleLayout)
+                    // column's one accidental column, measured from the COLUMN — not from
+                    // the head, which the note collision may have moved sideways.
+                    // ⚠️ Adding the packed x to the SHIFTED head booked a third voice's sharp
+                    // a shift's width to the right, under a beam LilyPond leaves alone
+                    // (test/dot-cross-voice-spacing: -5.19 against LilyPond's -4.81, the
+                    // moment other voices' accidentals were booked at all — session 916).
+                    if (note.AccidentalX is { } packedX)
+                    {
+                        AddAccidentalCollision(
+                            ref collisions,
+                            new AccidentalLayout(note.StaffPosition, note.Accidental, packedX, note.IsCourtesy),
+                            itemX - shiftOf(i), note.IsCue ? CueAccidentalScale : 1.0,
+                            beamEdgeLeftX, beamEdgeRightX, beamOriginX);
+                    }
+                    else if (BeamAccidentalColumn.CalculateSinglePosition(
+                                 note, CueAccidentalFont(note.IsCue), CueAccidentalFont(note.IsCue))
+                             is { } singleLayout)
+                    {
                         AddAccidentalCollision(
                             ref collisions, singleLayout, itemX, note.IsCue ? CueAccidentalScale : 1.0,
                             beamEdgeLeftX, beamEdgeRightX, beamOriginX);
+                    }
                     break;
 
                 case ChordItem chord:
                     // The stagger the renderer uses: reversed heads move their accidentals,
-                    // so the column must be solved, not assumed.
+                    // so the column must be solved, not assumed. A packed chord is measured
+                    // from the column, as a packed note is (SharedRenderer's accOriginX).
                     // LILYPOND-REF: lily/accidental-placement.cc position_apes.
+                    double chordOrigin = chord.HasPackedAccidentals ? itemX - shiftOf(i) : itemX;
                     foreach (var al in ChordAccidentalLayouts(chord))
-                        AddAccidentalCollision(ref collisions, al, itemX, 1.0,
+                        AddAccidentalCollision(ref collisions, al, chordOrigin, 1.0,
                                                beamEdgeLeftX, beamEdgeRightX, beamOriginX);
                     break;
             }
@@ -1224,15 +1351,36 @@ internal sealed class ElementCoordinator
         double beamEdgeLeftX = beamOriginX - halfStemWidth;
         double beamEdgeRightX =
             BeamStemX(group, group.Members.Length - 1, beamRightX) + halfStemWidth;
+        AppendCrossVoiceMeasureCollisions(ref collisions, score, group.VoiceIndex,
+            group.MeasureIndex, measureLayout, voiceShifts,
+            beamEdgeLeftX, beamEdgeRightX, beamOriginX);
+    }
+
+    /// <summary>
+    /// The body of <see cref="AppendCrossVoiceBeamCollisions"/> for ONE measure: the other
+    /// voices' items of measure <paramref name="measureIndex"/>, at the x they are drawn at.
+    /// A beam that crosses a bar line asks it once per measure it spans.
+    /// </summary>
+    private void AppendCrossVoiceMeasureCollisions(
+        ref List<BeamCollision>? collisions, Score score, int beamVoiceIndex,
+        int measureIndex, MeasureLayout measureLayout, VoiceCollisionTable voiceShifts,
+        double beamEdgeLeftX, double beamEdgeRightX, double beamOriginX)
+    {
+        if (score.Voices.Length <= 1
+            || measureLayout.Columns.IsDefaultOrEmpty || measureLayout.Columns.Length == 0)
+            return;
+
         for (int v = 0; v < score.Voices.Length; v++)
         {
-            if (v == group.VoiceIndex) continue;
+            if (v == beamVoiceIndex) continue;
             var measures = score.Voices[v].Measures;
-            if (group.MeasureIndex >= measures.Length) continue;
+            if (measureIndex >= measures.Length) continue;
 
             var timing = Fraction.Zero;
-            var items = measures[group.MeasureIndex].Items;
-            bool shifted = voiceShifts.AnyShiftIn(group.MeasureIndex);
+            var measure = measures[measureIndex];
+            var items = measure.Items;
+            bool shifted = voiceShifts.AnyShiftIn(measureIndex);
+            var itemXs = new double[items.Length];
             for (int i = 0; i < items.Length; i++)
             {
                 var item = items[i];
@@ -1241,7 +1389,8 @@ internal sealed class ElementCoordinator
                 // renderer draws it and LilyPond measures the grob's own extent
                 // (beam-quanting.cc:379). VoiceId is 1-based (ApplyVoiceCollisionShifts).
                 double itemX = measureLayout.X + measureLayout.GetXForTiming(timing)
-                    + (shifted ? voiceShifts.ShiftOf(group.MeasureIndex, v + 1, i) : 0.0);
+                    + (shifted ? voiceShifts.ShiftOf(measureIndex, v + 1, i) : 0.0);
+                itemXs[i] = itemX;
                 timing += GetItemDuration(item);
                 // No window here: the x-span reject IS LilyPond's, against the beam's
                 // drawn extent and the grob's own box (AddBoxCollision, :381).
@@ -1249,6 +1398,17 @@ internal sealed class ElementCoordinator
                                   beamEdgeLeftX, beamEdgeRightX, beamOriginX,
                                   _beamEngraver.Parameters.StemCollisionFactor);
             }
+
+            // The other voice's ACCIDENTALS are covered grobs too: the engraver acknowledges
+            // every inline accidental, whatever voice it is in
+            // (lily/beam-collision-engraver.cc:209-214 acknowledge_accidental). Booked in the
+            // same frame as the beam's own voice's (AddAccidentalCollisions). Measured (Lab
+            // sessions/p916/xbar/acc.ly): c''8[ d'' e'' d''] over another voice's ais''4 is
+            // (5.19 . 5.5) in LilyPond against (4.19 . 4.5) over a''4; Lily# drew 4.19 for both.
+            int voiceId = v + 1;
+            AddAccidentalCollisions(ref collisions, measure, itemXs,
+                                    i => shifted ? voiceShifts.ShiftOf(measureIndex, voiceId, i) : 0.0,
+                                    beamEdgeLeftX, beamEdgeRightX, beamOriginX);
         }
     }
 

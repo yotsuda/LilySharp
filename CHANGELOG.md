@@ -57,6 +57,10 @@ workflow attaches that section to the GitHub Release verbatim.
   (and an unbeamed note's flag), as LilyPond's does: it rose for the other voice's notes but not
   for a stem without a beam of its own. The other voice's notes are also measured where they are
   drawn, after being set aside, not at their column.
+- **A beam across a bar line keeps clear of what is under it**, as a beam inside a bar always
+  did: `r8 c'8[ | d'8]` over another voice's note ran straight through its head (such a beam
+  avoided nothing at all, not even its own voice's accidentals or a clef change). And **a beam
+  clears another voice's sharp or flat**, not only its notes and stems.
 
 ### A chord is read as its first note
 

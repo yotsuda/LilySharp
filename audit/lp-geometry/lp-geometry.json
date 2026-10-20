@@ -2473,6 +2473,55 @@
       "residual": 0.0,
       "why": "EXACT. The right end of the control beam."
     },
+    "beam.quant.across-bar.covered.left": {
+      "probe": "beam-covered-across-voices.ly",
+      "score": "X",
+      "lilypond": 4.190000,
+      "residual": 0.0,
+      "why": "EXACT. A manual beam across the bar line, r4 r8 c''8[ | d''8], over another voice's a''4 | a''4. Lily# passed a beam that crosses a bar line NO collisions at all (the cross-measure piece said 'deferred') and drew the control's 3.19; now each measure the piece spans is asked as a one-measure beam's is (ElementCoordinator.CollectCrossMeasureBeamCollisions)."
+    },
+    "beam.quant.across-bar.covered.right": {
+      "probe": "beam-covered-across-voices.ly",
+      "score": "X",
+      "lilypond": 4.500000,
+      "residual": 0.0,
+      "why": "EXACT. The right end, in the second bar: the covered head there is booked from that bar's own x table."
+    },
+    "beam.quant.across-bar.control.left": {
+      "probe": "beam-covered-across-voices.ly",
+      "score": "XC",
+      "lilypond": 3.190000,
+      "residual": 0.0,
+      "why": "EXACT. The CONTROL for beam.quant.across-bar.covered.left: the same beam over a spacer voice. It says the 1.0 of lift is the other voice's doing."
+    },
+    "beam.quant.other-voice-accidental.sharp.left": {
+      "probe": "beam-covered-across-voices.ly",
+      "score": "OA",
+      "lilypond": 5.190000,
+      "residual": 0.0,
+      "why": "EXACT. Another voice's ais''4 under c''8[ d'' e'' d'']. Lily# booked the other voices' heads and stems but not their accidentals (the engraver acknowledges every inline accidental, beam-collision-engraver.cc acknowledge_accidental) and drew the control's 4.19."
+    },
+    "beam.quant.other-voice-accidental.sharp.right": {
+      "probe": "beam-covered-across-voices.ly",
+      "score": "OA",
+      "lilypond": 5.500000,
+      "residual": 0.0,
+      "why": "EXACT. The right end of the same beam (control 4.5)."
+    },
+    "beam.quant.other-voice-accidental.control.left": {
+      "probe": "beam-covered-across-voices.ly",
+      "score": "OC",
+      "lilypond": 4.190000,
+      "residual": 0.0,
+      "why": "EXACT. The CONTROL: a''4 without the sharp. The head alone lifts the beam this far; the sharp is the next 1.0."
+    },
+    "beam.quant.other-voice-accidental.flat.left": {
+      "probe": "beam-covered-across-voices.ly",
+      "score": "OF",
+      "lilypond": 6.000000,
+      "residual": 0.0,
+      "why": "EXACT. A flat reaches higher than a sharp: bes''4 lifts the beam to 6.0, where b''4 alone leaves it at 4.81 (score OFC). Lily# drew 4.81 for both."
+    },
     "beam.beamlet.peak-8-16-8.left": {
       "probe": "beam-beamlet.ly",
       "score": "A",

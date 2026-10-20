@@ -9339,6 +9339,39 @@ internal static class LpGeometryProbes
         score BFS { staff m }
         """;
 
+    /// <summary>
+    /// The covered grobs a beam across a bar line and another voice's accidental supply —
+    /// two supplies Lily# lacked (session 916). LilyPond twin:
+    /// audit/lp-geometry/probes/beam-covered-across-voices.ly, one score per book below.
+    /// </summary>
+    /// <remarks>
+    /// <see cref="BCX"/> a manual beam across the bar over another voice's a''4 | a''4:
+    /// <c>(4.19 . 4.5)</c>, control <see cref="BCXC"/> <c>(3.19 . 3.5)</c>.
+    /// <see cref="BCA"/> another voice's ais''4 under c''8[ d'' e'' d'']: <c>(5.19 . 5.5)</c>,
+    /// control <see cref="BCAC"/> (a''4) <c>(4.19 . 4.5)</c>. <see cref="BCF"/> the same with
+    /// bes''4: <c>(6.0 . 6.19)</c>. ⚠️ Lily#'s <c>octave absolute</c> sits an octave above
+    /// LilyPond's.
+    /// </remarks>
+    private static string CoveredBook(string body) => $$"""
+        octave absolute
+        time 2/4
+        key c major
+
+        part m { clef treble }
+
+        section Main { m { {{body}} } }
+
+        form { ~Main }
+
+        score S { staff m }
+        """;
+
+    private static readonly string BCX = CoveredBook("voice { r4 r8 c'8[ | d'8] r8 r4 } { r4 a'4 | a'4 r4 }");
+    private static readonly string BCXC = CoveredBook("voice { r4 r8 c'8[ | d'8] r8 r4 } { s2 | s2 }");
+    private static readonly string BCA = CoveredBook("voice { c'8[ d' e' d'] } { r8 ais'4 r8 }");
+    private static readonly string BCAC = CoveredBook("voice { c'8[ d' e' d'] } { r8 a'4 r8 }");
+    private static readonly string BCF = CoveredBook("voice { c'8[ d' e' d'] } { r8 bes'4 r8 }");
+
     /// <summary>The control for <see cref="BFS"/>: the same bar without the third voice.</summary>
     private static readonly string BFSC = """
         time 2/4
@@ -17374,6 +17407,15 @@ internal static class LpGeometryProbes
         new("beam.quant.over-free-stem.right", BFS, g => g.BeamPositionAboveStaffMiddle(0, true)),
         new("beam.quant.over-free-stem.control-left", BFSC, g => g.BeamPositionAboveStaffMiddle(0, false)),
         new("beam.quant.over-free-stem.control-right", BFSC, g => g.BeamPositionAboveStaffMiddle(0, true)),
+        // A beam across a bar line over another voice's head, and another voice's
+        // accidental under a beam, each with its control.
+        new("beam.quant.across-bar.covered.left", BCX, g => g.BeamPositionAboveStaffMiddle(0, false)),
+        new("beam.quant.across-bar.covered.right", BCX, g => g.BeamPositionAboveStaffMiddle(0, true)),
+        new("beam.quant.across-bar.control.left", BCXC, g => g.BeamPositionAboveStaffMiddle(0, false)),
+        new("beam.quant.other-voice-accidental.sharp.left", BCA, g => g.BeamPositionAboveStaffMiddle(0, false)),
+        new("beam.quant.other-voice-accidental.sharp.right", BCA, g => g.BeamPositionAboveStaffMiddle(0, true)),
+        new("beam.quant.other-voice-accidental.control.left", BCAC, g => g.BeamPositionAboveStaffMiddle(0, false)),
+        new("beam.quant.other-voice-accidental.flat.left", BCF, g => g.BeamPositionAboveStaffMiddle(0, false)),
         // A beam over CHORDS, which no point above reaches, and the only ledger entry whose
         // job is to keep a FALSIFIED claim dead (see BQC). Both ends because the beam is
         // sloped; the single-note control must print the same pair, because LilyPond does.
