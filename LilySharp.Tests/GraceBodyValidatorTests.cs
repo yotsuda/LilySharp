@@ -69,12 +69,11 @@ public class GraceBodyValidatorTests
     [Theory]
     // ⚠️ `grace { d'8@staccato }` LEFT THIS THEORY ON 2026-10-21 (session 916): a stem-side
     // script on a grace note is drawn now, at the grace's size and X (ledger script.grace.*).
-    // See AStemSideScriptOnAGrace_IsDrawn_AndNotReported. @trill below stays: the ornaments
-    // and the fermata family are not carried yet (GraceBodySupport.IsCarriedScript).
+    // See AStemSideScriptOnAGrace_IsDrawn_AndNotReported. `grace { d'8@trill }` LEFT with the
+    // ornaments and the fermata family the same day (ledger script.grace.mover.*).
     [InlineData("grace { d'8@text(\"hi\") } c'1 | e'1 |", "grace { d'8 } c'1 | e'1 |")]
     [InlineData("grace { d'8@f } c'1 | e'1 |", "grace { d'8 } c'1 | e'1 |")]
     [InlineData("grace { d'8@finger(3) } c'1 | e'1 |", "grace { d'8 } c'1 | e'1 |")]
-    [InlineData("grace { d'8@trill } c'1 | e'1 |", "grace { d'8 } c'1 | e'1 |")]
     // ⚠️ `grace { d'8. }` LEFT THIS THEORY ON 2026-08-30 (session 299), which is the way a
     // row is meant to leave it: the dot is drawn now, so the line asserting it is missing
     // went red and taking it out was part of closing the hole. See ADottedGrace_IsDrawn.
@@ -132,6 +131,13 @@ public class GraceBodyValidatorTests
     [InlineData("grace { d'8@marcato } c'1 | e'1 |")]
     [InlineData("grace { d'8@tenuto } c'1 | e'1 |")]
     [InlineData("grace { d'8@portato } c'1 | e'1 |")]
+    // …and the movers above the staff: the fermata family and the ornaments (ledger
+    // script.grace.mover.*).
+    [InlineData("grace { d'8@fermata } c'1 | e'1 |")]
+    [InlineData("grace { d'8@trill } c'1 | e'1 |")]
+    [InlineData("grace { d'8@prall } c'1 | e'1 |")]
+    [InlineData("grace { d'8@mordent } c'1 | e'1 |")]
+    [InlineData("grace { d'8@turn } c'1 | e'1 |")]
     public void AStemSideScriptOnAGrace_IsDrawn_AndNotReported(string written)
     {
         Assert.Empty(Warnings(Book(written)));
@@ -194,10 +200,10 @@ public class GraceBodyValidatorTests
     [Fact]
     public void TheWarningStandsAtWhatWasWritten()
     {
-        // A trill, not a staccato: since session 916 a stem-side script on a grace is drawn.
-        string source = Book("grace { d'8@trill } c'1 | e'1 |");
+        // A dynamic, not a script: since session 916 the scripts on a grace are drawn.
+        string source = Book("grace { d'8@f } c'1 | e'1 |");
         var warning = Assert.Single(Warnings(source));
-        Assert.Equal(source.IndexOf("@trill", System.StringComparison.Ordinal),
+        Assert.Equal(source.IndexOf("@f", System.StringComparison.Ordinal),
             warning.Span.Start);
     }
 
@@ -487,8 +493,8 @@ public class GraceBodyValidatorTests
         Assert.Empty(Warnings(Book("grace { d'16 <c' e'>16 f'16 } c'1 | e'1 |")));
 
         // An annotation a grace does not carry is still reported on a chord MEMBER, at the
-        // member (a stem-side script there is drawn since session 916; a trill is not).
-        var onMember = Assert.Single(Warnings(Book("grace { <d'@trill f'>8 } c'1 | e'1 |")));
+        // member (a script there is drawn since session 916; a fingering is not).
+        var onMember = Assert.Single(Warnings(Book("grace { <d'@finger(3) f'>8 } c'1 | e'1 |")));
         Assert.Contains("is not engraved", onMember.Message);
     }
 

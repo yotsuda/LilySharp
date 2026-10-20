@@ -2659,7 +2659,8 @@ Grace          = ( 'grace' | 'acciaccatura' | 'appoggiatura' | 'afterGrace' ) , 
                     ties a grace note to the very next note, the next grace note or the
                     main note — 'grace { g16~ } g4' (session 916). The stem-side SCRIPTS
                     '@staccato' '@staccatissimo' '@accent' '@marcato' '@tenuto' '@portato'
-                    are drawn on a grace note too, at the grace size (session 916). *)
+                    are drawn on a grace note too, at the grace size, and so are the fermatas
+                    and the ornaments (session 916). *)
 Repeat         = 'repeat' , 'tremolo' , Integer , MusicBlock ;
                  (* a tremolo: the note, or the two notes, alternated Integer times.
                     Volta repeats use the form's |: … :|, NOT a 'repeat' keyword.

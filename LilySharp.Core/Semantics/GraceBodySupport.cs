@@ -313,8 +313,10 @@ internal static class GraceBodySupport
     /// drop list both ask, as <see cref="NeedsNoColumn"/> is for the other two.
     /// </summary>
     /// <remarks>
-    /// The fermata family and the ornaments are not here yet: they are outside-staff movers,
-    /// whose stacking on a grace column has not been measured. They stay reported (LYS4020).
+    /// The fermata family and the ornaments joined the same day, measured where the page puts
+    /// them (ledger script.grace.mover.*: the fermata is a mover, and the collision pass lifts
+    /// it on a grace column exactly as on a full-size one). Dynamics, texts and fingerings on a
+    /// grace stay reported (LYS4020): they are other engravers.
     /// LILYPOND-REF: lily/script-engraver.cc — a Voice engraver; a grace note's Script is an
     /// ordinary one at general-grace-settings' font-size (scm/music-functions.scm:636-650).
     /// </remarks>
@@ -323,7 +325,14 @@ internal static class GraceBodySupport
         {
             Type: ArticulationType.Staccato or ArticulationType.Staccatissimo
                 or ArticulationType.Accent or ArticulationType.Marcato
-                or ArticulationType.Tenuto or ArticulationType.Portato,
+                or ArticulationType.Tenuto or ArticulationType.Portato
+                // The fermata family and the ornaments, above the staff (session 916, the
+                // second family; ledger script.grace.mover.*).
+                or ArticulationType.Fermata or ArticulationType.FermataShort
+                or ArticulationType.FermataLong
+                or ArticulationType.Trill or ArticulationType.Mordent or ArticulationType.Prall
+                or ArticulationType.Turn or ArticulationType.InvertedTurn
+                or ArticulationType.PrallTriller,
         };
 
     /// <summary>
