@@ -8865,6 +8865,12 @@ internal static class LpGeometryProbes
         }
         """;
 
+    // A script on a grace note (audit/lp-geometry/probes/grace-script.ly, GSA..GSD).
+    private static readonly string GRSA = GraceTieBook("c4 grace { d16@staccato } e4 c2 |", "GRSA");
+    private static readonly string GRSB = GraceTieBook("c4 grace { d16@accent } e4 c2 |", "GRSB");
+    private static readonly string GRSC = GraceTieBook("c4 grace { d''16@staccato } e4 c2 |", "GRSC");
+    private static readonly string GRSD = GraceTieBook("c4 d16@staccato e8. c2 |", "GRSD");
+
     private static readonly string GTA = GraceTieBook("c4 grace { g16~ } g4 c2 |", "GTA");
     private static readonly string GTB = GraceTieBook("c4 grace { d'16~ d'16 } c'4 c2 |", "GTB");
     private static readonly string GTC = GraceTieBook("c4 g16~ g8. c2 |", "GTC");
@@ -17247,6 +17253,11 @@ internal static class LpGeometryProbes
         new("tie.grace.inside.width", GTB, g => g.BowSpan(0)),
         new("tie.grace.inside.y", GTB, g => g.BowAttachmentAboveStaffMiddle(0)),
         new("tie.grace.control.width", GTC, g => g.BowSpan(0)),
+        // A script on a grace note, and the full-size control of the first.
+        new("script.grace.staccato.below", GRSA, g => g.GlyphAboveStaffMiddle('\uE04A', 0)),
+        new("script.grace.accent.below", GRSB, g => g.GlyphAboveStaffMiddle('\uE048', 0)),
+        new("script.grace.staccato.quantized", GRSC, g => g.GlyphAboveStaffMiddle('\uE04A', 0)),
+        new("script.grace.control", GRSD, g => g.GlyphAboveStaffMiddle('\uE04A', 0)),
 
         // ...and the one quantity that tie's residual is made of, measured on its own. The
         // BLACK head is the control and the HALF head the divergence -- same bar, same pitch,

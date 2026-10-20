@@ -1152,7 +1152,7 @@ else. Everything else written inside is not drawn, and Lily# says so at what was
 (LYS4020):
 
 ```
-grace { d16@staccato } c4     // the staccato is not drawn      (LYS4020)
+grace { d16@f } c4            // the dynamic is not drawn       (LYS4020)
 grace { d16. } c4             // the dot is not drawn           (LYS4020)
 grace { d16 r16 } c4          // the rest is not drawn          (LYS4020)
 grace { <d f>16 } c4          // no grace at all is drawn       (LYS4020)
@@ -1178,6 +1178,10 @@ unless the voice fixes the side (`voice { … } { … }`).
 **A tie IS drawn in grace time too**: it ties a grace note to the very next note — the next
 grace note (`grace { d16~ d16 } c4`) or the main note (`grace { g16~ } g4`) — at the grace
 notes' size, as LilyPond draws it.
+
+**So is a stem-side script** — `@staccato`, `@staccatissimo`, `@accent`, `@marcato`, `@tenuto`,
+`@portato` on a grace note is drawn small, on the grace note (`grace { d16@staccato } c4`).
+A fermata or an ornament there is not drawn yet (LYS4020).
 
 LilyPond draws all of the spellings above, so each warning says "not drawn yet", not "do not
 write this".

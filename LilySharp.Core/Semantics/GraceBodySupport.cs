@@ -307,6 +307,26 @@ internal static class GraceBodySupport
     };
 
     /// <summary>
+    /// True for a SCRIPT a grace note engraves: the stem-side articulations — staccato,
+    /// staccatissimo, accent, marcato, tenuto, portato — set at the grace's Script font-size on
+    /// the grace column (session 916, HANDOFF §2 U8 ⒟). THE question the collector and the
+    /// drop list both ask, as <see cref="NeedsNoColumn"/> is for the other two.
+    /// </summary>
+    /// <remarks>
+    /// The fermata family and the ornaments are not here yet: they are outside-staff movers,
+    /// whose stacking on a grace column has not been measured. They stay reported (LYS4020).
+    /// LILYPOND-REF: lily/script-engraver.cc — a Voice engraver; a grace note's Script is an
+    /// ordinary one at general-grace-settings' font-size (scm/music-functions.scm:636-650).
+    /// </remarks>
+    internal static bool IsCarriedScript(SyntaxNode annotation)
+        => annotation is ArticulationSyntax
+        {
+            Type: ArticulationType.Staccato or ArticulationType.Staccatissimo
+                or ArticulationType.Accent or ArticulationType.Marcato
+                or ArticulationType.Tenuto or ArticulationType.Portato,
+        };
+
+    /// <summary>
     /// The <c>\N</c> a grace note carries, or null for automatic string selection.
     /// </summary>
     /// <remarks>
@@ -549,7 +569,7 @@ internal static class GraceBodySupport
             // column a thing asks for. See GraceColumnInfo.Dots and Svg.Layout.DotColumn.
             foreach (var annotation in CarriedAnnotations(item))
             {
-                if (NeedsNoColumn(annotation))
+                if (NeedsNoColumn(annotation) || IsCarriedScript(annotation))
                     continue;
                 yield return new GraceDrop(
                     GraceDropKind.Annotation, annotation.Span, Describe(annotation), via);

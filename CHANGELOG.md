@@ -63,7 +63,10 @@ workflow attaches that section to the GitHub Release verbatim.
   clears another voice's sharp or flat**, not only its notes and stems.
 - **A grace note can be tied.** `grace { g16~ } g4` ties the grace note into its main note,
   and `grace { d'16~ d'16 }` ties two grace notes, drawn at the grace notes' size and place as
-  LilyPond draws them (LYS4020 said the `~` was dropped).
+  LilyPond draws them (LYS4020 said the `~` was dropped). **A grace note takes a staccato,
+  staccatissimo, accent, marcato, tenuto or portato** — drawn small, as LilyPond draws it, where
+  it was dropped before. (A fermata, an ornament, a dynamic, a text or a fingering on a grace
+  note is still reported as not drawn.)
 - **A trill line keeps the music around it at a distance.** A trill over the lower staff of
   a grand staff that runs on to the next line now opens the staves as one that ends on its
   own line does (it was drawn through the right hand's beams). And a trill or an ottava

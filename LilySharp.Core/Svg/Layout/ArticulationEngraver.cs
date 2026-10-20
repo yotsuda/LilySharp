@@ -446,7 +446,8 @@ internal static class ArticulationEngraver
         ImmutableArray<SlurLayout> slurLayouts,
         ImmutableArray<FingeringLayout> fingerings,
         out ImmutableArray<FingeringLayout> adjustedFingerings,
-        IReadOnlyDictionary<int, (SystemLayout System, MeasureLayout Measure)>? prebuiltMeasureMap = null)
+        IReadOnlyDictionary<int, (SystemLayout System, MeasureLayout Measure)>? prebuiltMeasureMap = null,
+        ImmutableArray<GraceNoteItem> graceNotes = default)
     {
         adjustedFingerings = fingerings;
         // ⚠️ THE FINGERINGS ARE A SECOND REASON TO BE HERE, and until 2026-08-11 they were
@@ -819,6 +820,25 @@ internal static class ArticulationEngraver
                 continue;
             var item = measure.Items[articulation.ItemIndex];
 
+            // A SCRIPT ON A GRACE NOTE (session 916, HANDOFF §2 U8 ⒟): its X is the grace
+            // column's, read off the run as a grace tie's or slur's bound is
+            // (ElementCoordinator.GraceColumnHeadLeftX); it is set at the grace's Script
+            // font-size and clears the grace head and stem (below). A caller that was not handed
+            // the grace groups (the per-staff skyline pass) places no grace script rather than
+            // place one on the main grid.
+            double? graceHeadLeft = null;
+            if (item.GraceTime)
+            {
+                if (graceNotes.IsDefaultOrEmpty || articulation.VoiceIndex >= artVoices.Length)
+                    continue;
+                graceHeadLeft = ElementCoordinator.GraceColumnHeadLeftX(
+                    artVoices[articulation.VoiceIndex], graceNotes, articulation.StaffIndex,
+                    articulation.VoiceIndex, articulation.MeasureIndex, articulation.ItemIndex,
+                    measureLayout, SpacingRules.VoiceCollisionShiftsOf(artVoices));
+                if (graceHeadLeft is null)
+                    continue;
+            }
+
             // Fall / doit — LilyPond's BendAfter spanner, printed by bend::print: the curve
             // leaves the note head's ink right (or its dots', when the dots sit on the head's
             // own row) by BendAfterGeometry.Padding, ends Padding short of the next column's
@@ -1030,6 +1050,10 @@ internal static class ArticulationEngraver
             // Get staff position of the note
             int staffPosition = GetStaffPosition(item);
             bool stemUp = GetStemUp(item, staffPosition);
+            // A grace column's stem is UP whatever its pitch, DOWN in a lower voice — the
+            // renderer's direction, not the model's ungraced default.
+            if (item.GraceTime)
+                stemUp = !item.GraceStemDown;
 
             // In LilyPond the actual Stem grob — carrying the voice's forced
             // direction (\voiceOne up, \voiceTwo down) — is added as a side-position
@@ -1198,12 +1222,17 @@ internal static class ArticulationEngraver
             // land the glyph centre on the notehead centre rather than its left edge; the
             // glyph's own centre is taken off below (OriginFromCentre).
             // LILYPOND-REF: define-grobs.scm:3001 self-alignment-X = CENTER
-            double x = measureLayout.X
+            double x = (graceHeadLeft ?? measureLayout.X
                 + LayoutUtilities.GetItemXOffset(artMeasures,
-                    articulation.MeasureIndex, articulation.ItemIndex, measureLayout)
+                    articulation.MeasureIndex, articulation.ItemIndex, measureLayout))
                 + NoteheadHalfWidth(item);
 
-            double fontSizeStep = 0.0;
+            // A grace note's script is set at general-grace-settings' size (GrobFontSize:
+            // Script −3). MEASURED (2.26.0, Lab sessions/p916/u8/script.ly): the staccato on
+            // `\grace { d16-. }` is font-size −3, centred on the grace head, its padding 0.2 the
+            // full-size one's.
+            double fontSizeStep = item.GraceTime ? GrobFontSize.StepOf(item, SizedGrob.Script) : 0.0;
+            double scriptStep = fontSizeStep;
             if (articulation.IsEditorialAccidental)
             {
                 fontSizeStep = EditorialFontSizeStep;
@@ -1243,18 +1272,25 @@ internal static class ArticulationEngraver
             double yUp = CalculateYPosition(effArt, staffPosition, stemUp, item,
                 NoteColumnLayout.Of(item, stemUp, memberBeam, memberStemX), fonts,
                 staffByIndex != null && staffByIndex.TryGetValue(effArt.StaffIndex, out var scriptStaff)
-                    ? scriptStaff.Lines : EngravingDefaults.DefaultStaffLines);
+                    ? scriptStaff.Lines : EngravingDefaults.DefaultStaffLines,
+                scriptStep);
 
             // `fonts`, not score.TextMetrics: the score here is the one-voice walk Score, which
             // carries no plan — a stepped diagram / tabTechnique was measured at the default
             // size and drawn at the stepped one (Lab sessions/p646 fr3, 2026-09-26).
             var seedBBox = GetSeedBBoxFor(effArt, fonts);
+            if (scriptStep != 0.0)
+            {
+                double s = EmmentalerDesignSize.Magstep(scriptStep);
+                seedBBox = new GlyphMetrics.BBox(seedBBox.Left * s, seedBBox.Bottom * s,
+                    seedBBox.Right * s, seedBBox.Top * s);
+            }
             // A chord diagram is a TextScript markup, not a centred script: its grid centre
             // stands where LilyPond's fret-diagram alignment puts it off the column's origin.
             if (effArt.Type == ArticulationType.FretFrame)
                 x += FretFrameGeometry.GridCentreFromColumnOrigin(seedBBox) - NoteheadHalfWidth(item);
             else if (!effArt.IsEditorialAccidental)
-                x += OriginFromCentre(effArt.GetGlyph());
+                x += OriginFromCentre(effArt.GetGlyph(), scriptStep);
             var layout = new ArticulationLayout(
                 effArt.MeasureIndex,
                 effArt.ItemIndex,
@@ -2020,7 +2056,11 @@ internal static class ArticulationEngraver
     /// a slash stood inside the slash's ink (owner's report 2026-10-12: <c>/4@accent</c>).
     /// </summary>
     private static GlyphMetrics.BBox ScriptHeadBox(MusicItem item)
-        => GlyphMetrics.GetNoteheadBBox(GlyphMetrics.StaffHeadFont, ScriptHeadStyle(item), ScriptHeadNoteValue(item));
+        => GlyphMetrics.GetNoteheadBBox(
+            // A grace head is set at the grace's NoteHead size (GrobFontSize), and its script
+            // centres on and clears THAT head (session 916).
+            item.GraceTime ? GrobFontSize.FontOf(item, SizedGrob.NoteHead) : GlyphMetrics.StaffHeadFont,
+            ScriptHeadStyle(item), ScriptHeadNoteValue(item));
 
     private static NoteheadStyle ScriptHeadStyle(MusicItem item) => item switch
     {
@@ -2042,12 +2082,14 @@ internal static class ArticulationEngraver
     /// the page does not move); a SMuFL font draws them from the left (<c>bBoxSW</c> x = 0), and
     /// placed by the origin they stood half a width right of the head (Lab sessions/p869).
     /// </remarks>
-    private static double OriginFromCentre(MusicGlyph? glyph)
-        => glyph is { } g && MusicFont.Current.FullSize.Metrics(g).DesignBox is { } box ? -box.CenterX : 0.0;
+    private static double OriginFromCentre(MusicGlyph? glyph, double fontSizeStep = 0.0)
+        => glyph is { } g
+           && (fontSizeStep == 0.0 ? MusicFont.Current.FullSize : MusicFont.Current.SizedAt(fontSizeStep))
+               .Metrics(g).DesignBox is { } box ? -box.CenterX : 0.0;
 
-    /// <inheritdoc cref="OriginFromCentre(MusicGlyph?)"/>
-    private static double OriginFromCentre(string glyph)
-        => glyph.Length == 1 ? OriginFromCentre(MusicFont.Current.GlyphOf(glyph[0])) : 0.0;
+    /// <inheritdoc cref="OriginFromCentre(MusicGlyph?, double)"/>
+    private static double OriginFromCentre(string glyph, double fontSizeStep = 0.0)
+        => glyph.Length == 1 ? OriginFromCentre(MusicFont.Current.GlyphOf(glyph[0]), fontSizeStep) : 0.0;
 
     /// <summary>The note value whose head a script centres on — one home for its X and
     /// for the head's range in <see cref="HeadRangeAboutScript"/>.</summary>
@@ -2672,13 +2714,16 @@ internal static class ArticulationEngraver
     /// own boxes (NearExtentOf).
     /// </remarks>
     private static double NearReachOver(ArticulationItem a, bool isAbove, ScoreTextMetrics? fonts,
-        double xFrom = double.NegativeInfinity, double xTo = double.PositiveInfinity)
+        double xFrom = double.NegativeInfinity, double xTo = double.PositiveInfinity,
+        double scriptStep = 0.0)
     {
         if (IsEditorialType(a.Type) || TabTechniqueLetterOf(a) is not null)
             return NearExtentOf(a, isAbove, fonts);
         string glyph = a.GetGlyph();
-        var probe = new ArticulationLayout(a.MeasureIndex, a.ItemIndex, OriginFromCentre(glyph), 0.0, glyph,
-            isAbove, a.SourcePosition, 0.0, GetSeedBBox(a.Type, isAbove),
+        // A script set at another size (a grace note's) is read at that size: the outline the
+        // drawer and the skyline use (ScriptSkyline reads the layout's FontSizeStep).
+        var probe = new ArticulationLayout(a.MeasureIndex, a.ItemIndex, OriginFromCentre(glyph, scriptStep), 0.0, glyph,
+            isAbove, a.SourcePosition, scriptStep, GetSeedBBox(a.Type, isAbove),
             SkylineHorizontalPadding: ArticulationSpacing.SkylineHorizontalPadding(a.Type));
         var sky = ScriptSkyline(probe, 0.0,
             isAbove ? VerticalDirection.Down : VerticalDirection.Up, extraPad: ScriptHorizonPadding);
@@ -2705,17 +2750,34 @@ internal static class ArticulationEngraver
     /// LILYPOND-REF: scm/define-grobs.scm:2994 Script — (add-stem-support . #t)
     /// </remarks>
     private static double SupportReach(ArticulationItem articulation, bool isAbove, bool stemUp,
-        MusicItem? item, NoteColumnLayout? column, ScoreTextMetrics? fonts)
+        MusicItem? item, NoteColumnLayout? column, ScoreTextMetrics? fonts, double scriptStep = 0.0)
     {
         var (headFrom, headTo) = item is null
             ? (double.NegativeInfinity, double.PositiveInfinity)
             : HeadRangeAboutScript(item);
-        double reach = HeadSupportExtent(column)
-                       + NearReachOver(articulation, isAbove, fonts, headFrom, headTo);
+        // A GRACE head is the grace's own (ScriptHeadBox), and so is its stem: the grace rule
+        // the renderer draws it by (GraceStemDetails), from the head on the script's side.
+        double head = item is { GraceTime: true } ? ScriptHeadBox(item).Top : HeadSupportExtent(column);
+        double reach = head + NearReachOver(articulation, isAbove, fonts, headFrom, headTo, scriptStep);
         if (isAbove == stemUp)
-            reach = Math.Max(reach, StemSupportExtent(item, column)
-                                    + NearReachOver(articulation, isAbove, fonts));
+        {
+            double stem = item is { GraceTime: true } && column is { } gc
+                ? GraceStemReach(item, gc, stemUp)
+                : StemSupportExtent(item, column);
+            reach = Math.Max(reach, stem + NearReachOver(articulation, isAbove, fonts, scriptStep: scriptStep));
+        }
         return reach;
+    }
+
+    /// <summary>A grace stem's reach past the head it leaves, in staff spaces — the grace rule
+    /// (length-fraction 0.8, no-stem-extend) the renderer draws it by.</summary>
+    private static double GraceStemReach(MusicItem item, NoteColumnLayout column, bool stemUp)
+    {
+        int lo = column.HeadPositionToward(false), hi = column.HeadPositionToward(true);
+        int from = stemUp ? hi : lo;
+        double tip = StemCalculator.CalculateStemEndPosition(
+            stemUp, StemCalculator.GetDurationLog(column.NoteValue), from, GrobFontSize.GraceStemDetails);
+        return Math.Abs(tip - from) * 0.5;
     }
 
     /// <summary>The head's X range about the script's X (the head's centre,
@@ -2945,9 +3007,12 @@ internal static class ArticulationEngraver
         return (yBottom, yTop, bbox.Left + origin, bbox.Right + origin);
     }
 
+    /// <param name="scriptStep">The script's own font-size (a grace note's −3): its outline is
+    /// read at that size. Padding and staff-padding stay in the staff's own spaces — measured on
+    /// a grace staccato, 0.2 as at full size (Lab sessions/p916/u8/script.ly).</param>
     private static double CalculateYPosition(ArticulationItem articulation, int staffPosition, bool stemUp,
         MusicItem? item = null, NoteColumnLayout? column = null, ScoreTextMetrics? fonts = null,
-        int staffLines = EngravingDefaults.DefaultStaffLines)
+        int staffLines = EngravingDefaults.DefaultStaffLines, double scriptStep = 0.0)
     {
         // LILYPOND-REF: define-grobs.scm:1365 fermata: direction = UP
         // LILYPOND-REF: define-grobs.scm:4075 TrillSpanner: direction = UP
@@ -2986,9 +3051,9 @@ internal static class ArticulationEngraver
         // which a tab reads in its own staff space. The reach as a height on the script's side
         // (dir-relative): the anchor head plus the distance to the script's outline.
         int dir = isAbove ? 1 : -1;
-        double supportReach = dir * noteUp + SupportReach(articulation, isAbove, stemUp, item, column, fonts);
+        double supportReach = dir * noteUp + SupportReach(articulation, isAbove, stemUp, item, column, fonts, scriptStep);
         return AlignedSideUp(articulation, isAbove, supportReach, staffSpace: 1.0, staffLines,
-            onNoteHead: item is NoteItem or ChordItem, fonts, drawnLines: true);
+            onNoteHead: item is NoteItem or ChordItem, fonts, drawnLines: true, scriptStep);
     }
 
     /// <summary>
@@ -3094,7 +3159,7 @@ internal static class ArticulationEngraver
     /// </remarks>
     private static double AlignedSideUp(ArticulationItem articulation, bool isAbove,
         double supportReach, double staffSpace, int staffLines, bool onNoteHead,
-        ScoreTextMetrics? fonts, bool drawnLines = false)
+        ScoreTextMetrics? fonts, bool drawnLines = false, double scriptStep = 0.0)
     {
         int dir = isAbove ? 1 : -1;
         bool quantize = ShouldQuantize(articulation.Type);
@@ -3114,7 +3179,7 @@ internal static class ArticulationEngraver
                              + EngravingDefaults.StaffLineThickness / 2;
         double reach = supportReach;
         if (!quantize)
-            reach = Math.Max(reach, staffExtent + NearReachOver(articulation, isAbove, fonts));
+            reach = Math.Max(reach, staffExtent + NearReachOver(articulation, isAbove, fonts, scriptStep: scriptStep));
         double up = dir * (reach + staffSpace * PaddingFor(articulation.Type));
         if (quantize)
         {

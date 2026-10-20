@@ -67,7 +67,10 @@ public class GraceBodyValidatorTests
     /// without it. The warning and the missing ink are asserted together.
     /// </summary>
     [Theory]
-    [InlineData("grace { d'8@staccato } c'1 | e'1 |", "grace { d'8 } c'1 | e'1 |")]
+    // ⚠️ `grace { d'8@staccato }` LEFT THIS THEORY ON 2026-10-21 (session 916): a stem-side
+    // script on a grace note is drawn now, at the grace's size and X (ledger script.grace.*).
+    // See AStemSideScriptOnAGrace_IsDrawn_AndNotReported. @trill below stays: the ornaments
+    // and the fermata family are not carried yet (GraceBodySupport.IsCarriedScript).
     [InlineData("grace { d'8@text(\"hi\") } c'1 | e'1 |", "grace { d'8 } c'1 | e'1 |")]
     [InlineData("grace { d'8@f } c'1 | e'1 |", "grace { d'8 } c'1 | e'1 |")]
     [InlineData("grace { d'8@finger(3) } c'1 | e'1 |", "grace { d'8 } c'1 | e'1 |")]
@@ -115,6 +118,24 @@ public class GraceBodyValidatorTests
     {
         Assert.Empty(Warnings(Book(written)));
         Assert.NotEqual(Page(control), Page(written));
+    }
+
+    /// <summary>
+    /// A stem-side script on a grace note — staccato, staccatissimo, accent, marcato, tenuto,
+    /// portato — is drawn and LYS4020 says nothing about it (GraceBodySupport.IsCarriedScript,
+    /// the predicate the collector reads too). Its height is LilyPond's: ledger script.grace.*.
+    /// </summary>
+    [Theory]
+    [InlineData("grace { d'8@staccato } c'1 | e'1 |")]
+    [InlineData("grace { d'8@staccatissimo } c'1 | e'1 |")]
+    [InlineData("grace { d'8@accent } c'1 | e'1 |")]
+    [InlineData("grace { d'8@marcato } c'1 | e'1 |")]
+    [InlineData("grace { d'8@tenuto } c'1 | e'1 |")]
+    [InlineData("grace { d'8@portato } c'1 | e'1 |")]
+    public void AStemSideScriptOnAGrace_IsDrawn_AndNotReported(string written)
+    {
+        Assert.Empty(Warnings(Book(written)));
+        Assert.NotEqual(Page("grace { d'8 } c'1 | e'1 |"), Page(written));
     }
 
     /// <summary>
@@ -173,9 +194,10 @@ public class GraceBodyValidatorTests
     [Fact]
     public void TheWarningStandsAtWhatWasWritten()
     {
-        string source = Book("grace { d'8@staccato } c'1 | e'1 |");
+        // A trill, not a staccato: since session 916 a stem-side script on a grace is drawn.
+        string source = Book("grace { d'8@trill } c'1 | e'1 |");
         var warning = Assert.Single(Warnings(source));
-        Assert.Equal(source.IndexOf("@staccato", System.StringComparison.Ordinal),
+        Assert.Equal(source.IndexOf("@trill", System.StringComparison.Ordinal),
             warning.Span.Start);
     }
 
@@ -464,9 +486,9 @@ public class GraceBodyValidatorTests
         Assert.Empty(Warnings(Book("grace { <d' f'>8 } c'1 | e'1 |")));
         Assert.Empty(Warnings(Book("grace { d'16 <c' e'>16 f'16 } c'1 | e'1 |")));
 
-        // An annotation on a chord MEMBER is still reported, at the member: the chord became
-        // a column, and a column still has no itemIndex for a script to hang off.
-        var onMember = Assert.Single(Warnings(Book("grace { <d'@staccato f'>8 } c'1 | e'1 |")));
+        // An annotation a grace does not carry is still reported on a chord MEMBER, at the
+        // member (a stem-side script there is drawn since session 916; a trill is not).
+        var onMember = Assert.Single(Warnings(Book("grace { <d'@trill f'>8 } c'1 | e'1 |")));
         Assert.Contains("is not engraved", onMember.Message);
     }
 

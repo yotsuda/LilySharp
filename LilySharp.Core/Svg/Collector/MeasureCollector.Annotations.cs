@@ -654,11 +654,13 @@ public sealed partial class MeasureCollector
         // a script to hang off, so collecting one here would file it against an item index
         // nothing draws at. That is exactly the loss LYS4020 reports, and it stays reported
         // until the ordinary engravers draw grace time (HANDOFF §2 U8 ⒝2).
-        if (_graceDepth > 0)
-        {
+        // ⚠️ AND THE STEM-SIDE SCRIPTS (session 916, ⒟'s first family): a grace note IS a
+        // measure item now (⒝2), and ArticulationEngraver places a script on a grace column at
+        // the grace's X and Script size. Only what GraceBodySupport.IsCarriedScript names is
+        // kept — the one predicate the drop list (LYS4020) reads too.
+        bool graceTime = _graceDepth > 0;
+        if (graceTime)
             CollectGraceColumnlessAnnotations(ArticulationsOf(node), measureIndex);
-            return;
-        }
         // Under a % sign nothing that rides a note is collected — see _percentCoveredDepth.
         if (_percentCoveredDepth > 0)
             return;
@@ -726,6 +728,8 @@ public sealed partial class MeasureCollector
 
         void Collect(SyntaxNode articulation, bool isChordMember)
         {
+            if (graceTime && !Semantics.GraceBodySupport.IsCarriedScript(articulation))
+                return;
             if (articulation is ArticulationSyntax articulationSyntax)
             {
                 var type = articulationSyntax.Type;

@@ -3992,6 +3992,17 @@ internal sealed class ElementCoordinator
     }
 
     /// <summary>
+    /// The head left edge of the grace column standing as item <paramref name="itemIndex"/> of
+    /// measure <paramref name="measureIndex"/> in voice <paramref name="voiceIndex"/> of staff
+    /// <paramref name="staffIndex"/>, or null when it is no grace column a group publishes — the
+    /// X a tie's or a script's grace bound reads (the chain a grace slur reads).
+    /// </summary>
+    internal static double? GraceColumnHeadLeftX(Voice voice, ImmutableArray<GraceNoteItem> graceNotes,
+        int staffIndex, int voiceIndex, int measureIndex, int itemIndex, MeasureLayout ml,
+        VoiceCollisionTable voiceShifts)
+        => new GraceBounds(graceNotes, staffIndex).ColumnX(voice, voiceIndex, measureIndex, itemIndex, ml, voiceShifts);
+
+    /// <summary>
     /// The grace groups of one staff, as a tie bound reads them: where a GRACE column's head
     /// stands, by the same chain a grace slur's bound reads (<see cref="GraceColumnX"/>), its
     /// group geometry solved once and cached.
