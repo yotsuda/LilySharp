@@ -4390,10 +4390,17 @@ internal sealed class MultiStaffLayouter
     /// staff's down-stems ran into the "tr".
     /// Entered on the same one-staff system at offset 0 the hairpin seed uses, with the
     /// measures re-keyed by index (<see cref="StaffHairpinLayouts"/>).
-    /// ⚠️ ONLY A TRILL THAT STARTS AND ENDS ON THIS SYSTEM is reserved: the engraver reads a
-    /// broken piece's bounds from the whole score's systems, which do not exist yet here.
-    /// A trill crossing a line break is placed and drawn as before but holds no room —
-    /// named, not measured.
+    /// ⚠️ A TRILL CROSSING A LINE BREAK is reserved clipped to this system, as
+    /// <see cref="StaffOttavaInk"/> clips a bracket: the whole score's systems do not exist
+    /// yet here. A piece running on to the next system ends at this system's last bar (the
+    /// engraver's own barline bound for a stop it cannot see); a piece continued from the
+    /// system before starts at this system's first column and carries no "tr" — the glyph's
+    /// room is folded into the line, so the Y the engraver solved with the glyph is kept
+    /// (a hair higher than a continuation's own, never lower).
+    /// Until 2026-10-20 such a trill held NO room: OMR request 2026-10-20 (late), item 1
+    /// (piano003 bars 4-5): the left hand's trill running into the next system was drawn
+    /// between the staves, straight through the right hand's lower voice's beams, where
+    /// LilyPond 2.26.0 opens the staves for it.
     /// </remarks>
     private (VerticalSkyline Up, VerticalSkyline Down)? StaffTrillInk(
         MultiStaffScore score, Staff staff, int staffIndex,
@@ -4411,10 +4418,25 @@ internal sealed class MultiStaffLayouter
             maxMeasureIndex = Math.Max(maxMeasureIndex, ml.MeasureIndex);
         }
         var onThisSystem = ImmutableArray.CreateBuilder<TrillSpannerItem>();
+        // The pieces continued from the system before, laid out on their own so their glyph
+        // can be taken back off (see the remarks).
+        var continued = ImmutableArray.CreateBuilder<TrillSpannerItem>();
         foreach (var t in staffTrills)
-            if (t.StartMeasureIndex >= firstMeasure && t.EndMeasureIndex <= maxMeasureIndex)
-                onThisSystem.Add(t);
-        if (onThisSystem.Count == 0)
+        {
+            if (t.EndMeasureIndex < firstMeasure || t.StartMeasureIndex > maxMeasureIndex)
+                continue;
+            bool clipStart = t.StartMeasureIndex < firstMeasure;
+            bool clipEnd = t.EndMeasureIndex > maxMeasureIndex;
+            (clipStart ? continued : onThisSystem).Add(!clipStart && !clipEnd ? t : t with
+            {
+                StartMeasureIndex = clipStart ? firstMeasure : t.StartMeasureIndex,
+                StartItemIndex = clipStart ? 0 : t.StartItemIndex,
+                EndMeasureIndex = clipEnd ? maxMeasureIndex : t.EndMeasureIndex,
+                // Past the voice's last item: GetEndX's bar-line bound.
+                EndItemIndex = clipEnd ? int.MaxValue : t.EndItemIndex,
+            });
+        }
+        if (onThisSystem.Count == 0 && continued.Count == 0)
             return null;
 
         var byMeasureIndex = new MeasureLayout[maxMeasureIndex + 1];
@@ -4433,12 +4455,26 @@ internal sealed class MultiStaffLayouter
             StaffGroups: ImmutableArray.Create(StaffGroupLayout.CreateSingle(staffLayout, 0, _options.StaffHeight)),
             Indent: 0);
 
-        var layouts = TrillSpannerEngraver.Calculate(
-            onThisSystem.ToImmutable(), ImmutableArray.Create(system), keyed,
-            staffYAt: null,
-            voicesByStaff: new Dictionary<int, ImmutableArray<Voice>> { [staffIndex] = staff.Voices },
-            beamLayouts: RestampedToStaff(beamLayouts, staffIndex),
-            staffLinesOf: _ => NotationStaffLinesOf(staff));
+        ImmutableArray<TrillSpannerLayout> Lay(ImmutableArray<TrillSpannerItem> items)
+            => items.IsEmpty
+                ? ImmutableArray<TrillSpannerLayout>.Empty
+                : TrillSpannerEngraver.Calculate(
+                    items, ImmutableArray.Create(system), keyed,
+                    staffYAt: null,
+                    voicesByStaff: new Dictionary<int, ImmutableArray<Voice>> { [staffIndex] = staff.Voices },
+                    beamLayouts: RestampedToStaff(beamLayouts, staffIndex),
+                    staffLinesOf: _ => NotationStaffLinesOf(staff));
+        var layouts = Lay(onThisSystem.ToImmutable());
+        var continuedLayouts = Lay(continued.ToImmutable());
+        if (!continuedLayouts.IsDefaultOrEmpty)
+        {
+            // A continuation has no "tr": its line starts where the glyph would have stood
+            // (GlyphX == LineStartX is the continuation's spelling, as the engraver writes it).
+            var all = (layouts.IsDefault ? ImmutableArray<TrillSpannerLayout>.Empty : layouts).ToBuilder();
+            foreach (var c in continuedLayouts)
+                all.Add(c with { LineStartX = c.GlyphX });
+            layouts = all.ToImmutable();
+        }
         if (layouts.IsDefaultOrEmpty)
             return null;
 

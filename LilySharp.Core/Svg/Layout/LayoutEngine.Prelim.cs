@@ -399,6 +399,7 @@ internal sealed partial class LayoutEngine
             prelimAnn.Dynamics,
             prelimAnn.BarNumbers, prelimAnn.TupletBrackets, allPrelimSlurs,
             allPrelimTies, prelimAnn.TextSpanners,
+            prelimAnn.TrillSpanners, prelimAnn.OttavaBrackets,
             systemCache, lyricBands, pedalLines, breakerUps, breakerDowns, breakerBases,
             breakerSplits, todoBoxesOf);
         if (todoBoxes is not null)

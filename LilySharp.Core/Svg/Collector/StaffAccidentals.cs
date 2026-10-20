@@ -47,7 +47,11 @@ namespace LilySharp.Core.Svg.Collector;
 /// of an ottava line's end — gets its accidental when the alterations differ. LilyPond
 /// remembers by pitch, so `\ottava #1 cisis'' \ottava #0 cis'` draws the second head on the
 /// first one's space with no sharp and reads as c-double-sharp (OMR report 2026-10-20, item
-/// 10; LilyPond 2.26.0 draws it so, the same book).
+/// 10; LilyPond 2.26.0 draws it so, the same book);
+/// ⑶ a head whose pitch was last shown on ANOTHER line or space (the ottava's other side)
+/// gets its accidental when the alteration a reader assumes on its own line or space — the
+/// last one shown there, else the key's — differs (OMR request 2026-10-20 late, item 3; see
+/// <c>OwedWhereDrawn</c>). Only the callers that pass the opening key reach ⑶.
 /// </para>
 /// <para>
 /// Runs under the DEFAULT accidental style only: the other styles are rule sets of their own,
@@ -61,13 +65,18 @@ internal static class StaffAccidentals
 {
     private readonly record struct Head(
         int Voice, int Item, int Member, Fraction Onset, int GraceRank,
-        int Packed, int StaffPosition, bool HasAccidental, bool TiedIn);
+        int Packed, int StaffPosition, bool HasAccidental, bool TiedIn, KeySignature? Key);
 
     /// <summary>
     /// Returns <paramref name="voices"/> with the accidentals the staff owes added, or the
     /// same array when it owes none.
     /// </summary>
-    public static ImmutableArray<Voice> Apply(ImmutableArray<Voice> voices, AccidentalStyleSpec style)
+    /// <param name="openingKey">The staff's key at its first bar. Given where an ottava has
+    /// moved heads (the callers after OttavaTransposer), it turns on rule ⑶, which needs the
+    /// key a reader assumes on a line or space nothing in the bar has marked yet; the key
+    /// changes are read off the voices' own <see cref="KeySignatureChangeItem"/>s.</param>
+    public static ImmutableArray<Voice> Apply(ImmutableArray<Voice> voices, AccidentalStyleSpec style,
+        KeySignature? openingKey = null)
     {
         if (voices.IsDefaultOrEmpty || !ReferenceEquals(style, AccidentalStyles.Default))
             return voices;
@@ -82,6 +91,7 @@ internal static class StaffAccidentals
         for (int vi = 0; vi < voices.Length; vi++)
         {
             MusicItem? previous = null;
+            KeySignature? key = openingKey;
             var measures = voices[vi].Measures;
             for (int mi = 0; mi < measures.Length; mi++)
             {
@@ -95,12 +105,16 @@ internal static class StaffAccidentals
                         case ClefChangeItem:
                             clefChange[mi] = true;
                             break;
+                        case KeySignatureChangeItem change:
+                            if (key != null)
+                                key = change.NewKey;
+                            break;
                         case NoteItem n:
                             if (n.WrittenPitch != 0)
                                 (heads[mi] ??= new()).Add(new Head(vi, ii, -1, onset, n.GraceTime ? 0 : 1,
                                     n.WrittenPitch, n.StaffPosition,
                                     n.Accidental != null || n.LineStartAccidental != null || n.EditorialAccidental != null,
-                                    TiedInto(previous, n.StaffPosition, n.Midi)));
+                                    TiedInto(previous, n.StaffPosition, n.Midi), key));
                             previous = n;
                             break;
                         case ChordItem c:
@@ -111,7 +125,7 @@ internal static class StaffAccidentals
                                     (heads[mi] ??= new()).Add(new Head(vi, ii, k, onset, c.GraceTime ? 0 : 1,
                                         member.WrittenPitch, member.StaffPosition,
                                         member.Accidental != null || member.LineStartAccidental != null,
-                                        TiedInto(previous, member.StaffPosition, member.Midi)));
+                                        TiedInto(previous, member.StaffPosition, member.Midi), key));
                             }
                             previous = c;
                             break;
@@ -145,6 +159,10 @@ internal static class StaffAccidentals
                         e => e.StaffPosition == head.StaffPosition
                              && WrittenPitch.Step(e.Packed) == WrittenPitch.Step(head.Packed),
                         e => WrittenPitch.Octave(e.Packed) != WrittenPitch.Octave(head.Packed));
+                // ⑶ The pitch's memory came from a head drawn ELSEWHERE (an ottava's other side),
+                // and this line or space reads otherwise.
+                if (owed is null && !clefChange[mi])
+                    owed = OwedWhereDrawn(bar, head, alter);
                 if (owed is { } previousAlter)
                     (added ??= new())[(head.Voice, mi, head.Item, head.Member)] =
                         Name(alter, previousAlter, style.ExtraNatural);
@@ -241,6 +259,63 @@ internal static class StaffAccidentals
                 return previous;
         }
         return null;
+    }
+
+    /// <summary>
+    /// Rule ⑶: the alteration a reader assumes on <paramref name="head"/>'s line or space, when
+    /// it differs from <paramref name="alter"/> and the head printed nothing only because its
+    /// PITCH was last shown on another line or space — else null.
+    /// </summary>
+    /// <remarks>
+    /// The walk decides accidentals by sounding pitch, before an ottava moves the heads
+    /// (OttavaTransposer runs after it), so a pitch shown under the line and again past it is
+    /// remembered across the two places although the eye sees two different lines. The reader's
+    /// alteration on this line or space is the last one shown there in the bar (any octave, any
+    /// voice), else the key's. OMR request 2026-10-20 (late), item 3: in G major
+    /// <c>fis,,,16@ottava(bassa) ges,,,16 … ges,,,8@!ottava</c> drew the second G-flat on G1
+    /// with no flat, where nothing in the bar had flattened G1 — read as g. LilyPond 2.26.0 draws
+    /// the same (it remembers by pitch); this is the drawn-position rule of ⑵ carried to the
+    /// line or space nothing else marked. Needs the key (<see cref="Head.Key"/>), so only the
+    /// callers that pass the opening key reach it.
+    /// </remarks>
+    private static int? OwedWhereDrawn(List<Head> bar, Head head, int alter)
+    {
+        if (head.Key is not { } key)
+            return null;
+        // The latest earlier showing of the same pitch, any voice: the walk's memory.
+        Head? lastPitch = null;
+        Head? lastHere = null;
+        foreach (var e in bar)
+        {
+            if (!Earlier(e, head))
+                continue;
+            if (WrittenPitch.StepOctave(e.Packed) == WrittenPitch.StepOctave(head.Packed)
+                && (lastPitch is not { } p || Earlier(p, e)))
+                lastPitch = e;
+            if (e.StaffPosition == head.StaffPosition
+                && WrittenPitch.Step(e.Packed) == WrittenPitch.Step(head.Packed)
+                && (lastHere is not { } h || Earlier(h, e)))
+                lastHere = e;
+        }
+        if (lastPitch is not { } shown || shown.StaffPosition == head.StaffPosition)
+            return null;
+        int reader = lastHere is { } here
+            ? WrittenPitch.Alter(here.Packed)
+            : KeyAlteration(key, WrittenPitch.Step(head.Packed));
+        return reader != alter ? reader : null;
+    }
+
+    /// <summary>The alteration <paramref name="key"/> gives diatonic <paramref name="step"/>.</summary>
+    private static int KeyAlteration(KeySignature key, int step)
+    {
+        if (key.Custom != null)
+        {
+            foreach (var (s, a) in KeySignature.DecodeCustom(key.Custom))
+                if (s == step)
+                    return a;
+            return 0;
+        }
+        return Music.KeySpelling.Alteration(step, key.Sharps);
     }
 
     /// <summary>

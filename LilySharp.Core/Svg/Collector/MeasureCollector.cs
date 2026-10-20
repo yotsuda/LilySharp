@@ -1277,7 +1277,8 @@ public sealed partial class MeasureCollector
         voice = OttavaTransposer.Transpose(voice, DetectOttavaSpans(0));
         // …and the accidentals owed where an ottava line's two sides draw two octaves on one
         // line or space (StaffAccidentals ⑵ — one voice has no ⑴).
-        voice = StaffAccidentals.Apply(ImmutableArray.Create(voice), _accidentalStyle)[0];
+        voice = StaffAccidentals.Apply(ImmutableArray.Create(voice), _accidentalStyle,
+            new KeySignature(_meta.InitialKeySharps, _meta.InitialKeyCustom))[0];
 
         // Lyrics attach EXPLICITLY via `score { staff X with lyrics L }`. There is NO
         // implicit auto-attach anywhere: a `lyrics {}` block that no score references is a
@@ -2331,7 +2332,10 @@ public sealed partial class MeasureCollector
                             // columns are packed again when it adds any.
                             if (!st.IsTab)
                             {
-                                var owed = StaffAccidentals.Apply(transposed, _accidentalStyle);
+                                var owed = StaffAccidentals.Apply(transposed, _accidentalStyle,
+                                    st.Voices.Length > 0 && voiceKeyDict.TryGetValue(st.Voices[0].Name, out var partKey)
+                                        ? partKey
+                                        : new KeySignature(_meta.InitialKeySharps, _meta.InitialKeyCustom));
                                 if (owed != transposed)
                                     transposed = RepackAccidentalColumns(owed);
                             }
@@ -2683,7 +2687,10 @@ public sealed partial class MeasureCollector
         // A single-staff score surfaces the same annotations whether it has one
         // voice or several — a multi-voice (voice { } blocks) score keeps its chord
         // names / percent repeats, which the old construction here silently dropped.
-        var resolved = ResolveStaffColumns(voices.ToImmutableArray());
+        // The opening key turns on StaffAccidentals ⑶ (a line or space an ottava's other side
+        // left unmarked); it can only fire where the ottava moved heads.
+        var resolved = ResolveStaffColumns(voices.ToImmutableArray(),
+            multiVoiceOttava.Count > 0 ? new KeySignature(_meta.InitialKeySharps, _meta.InitialKeyCustom) : null);
         // The grace groups' heads as the voices now have them (StaffAccidentals added some).
         StaffAccidentals.SyncGraceNotes(_graceNotes, _ => resolved);
         return ScoreAssembler.BuildScore(
@@ -2707,7 +2714,8 @@ public sealed partial class MeasureCollector
     /// <c>Dots.padding</c> move what it bakes — which the collect, unlike the layout and the
     /// renderer, does not otherwise hold.
     /// </remarks>
-    private ImmutableArray<Voice> ResolveStaffColumns(ImmutableArray<Voice> voices)
+    private ImmutableArray<Voice> ResolveStaffColumns(ImmutableArray<Voice> voices,
+        KeySignature? openingKey = null)
     {
         using var style = EngravingStyle.Use(_meta.Paper.Style);
         // …and under the score's music font, whose head boxes the packing reads
@@ -2715,7 +2723,7 @@ public sealed partial class MeasureCollector
         using var music = Layout.MusicFont.Use(Layout.MusicFonts.Of(_meta.Fonts));
         // The accidentals the STAFF owes across its voices first — the packing reads them.
         return StaffAccidentalColumns.Resolve(ResolveVoiceStemDirections(
-            StaffAccidentals.Apply(voices, _accidentalStyle)));
+            StaffAccidentals.Apply(voices, _accidentalStyle, openingKey)));
     }
 
     /// <summary>The staff's accidental columns packed again, under the same scopes as

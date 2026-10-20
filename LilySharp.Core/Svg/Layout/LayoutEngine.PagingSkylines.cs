@@ -903,6 +903,8 @@ internal sealed partial class LayoutEngine
         ImmutableArray<SlurLayout> slurs = default,
         ImmutableArray<TieLayout> ties = default,
         ImmutableArray<TextSpannerLayout> textSpanners = default,
+        ImmutableArray<TrillSpannerLayout> trillSpanners = default,
+        ImmutableArray<OttavaBracketLayout> ottavaBrackets = default,
         SystemLayoutCache? systemCache = null,
         IReadOnlyList<VerticalSkyline?>? lyricBands = null,
         IReadOnlyList<List<ImmutableArray<PedalEngraver.SolvedPedalLine>>>? pedalLines = null,
@@ -1444,6 +1446,58 @@ internal sealed partial class LayoutEngine
                 if (sp.EndX > sp.LineStartX)
                     AddMarkBox(sp.StartMeasureIndex, sp.LineStartX, sp.EndX,
                         sp.YUp + spLineHalf, sp.YUp - spLineHalf);
+            }
+        }
+
+        // THE TRILL LINE and THE OTTAVA BRACKET, X-AWARE, for the same reason as the text
+        // spanner one arm up: both reached the scalar extents only, which the page's spring does
+        // not read once a system has a skyline, so the next system was spaced as if they were
+        // not there. OMR request 2026-10-20 (late), item 2 (ledger002): a last system's "tr"
+        // and wave printed into the low notes hanging under the system above, where LilyPond
+        // 2.26.0 opens the gap. Two boxes for the trill as for the text spanner — the "tr"
+        // glyph's height only where the glyph is, the wave's reach along the line — and the
+        // ottava's label, line and hook the way its own skyline pair builds them.
+        // LILYPOND-REF: lily/page-layout-problem.cc:1093-1108 build_system_skyline — every
+        //   element's vertical-skylines merged into the system's.
+        if (!trillSpanners.IsDefaultOrEmpty)
+        {
+            double glyphTop = MusicFont.Current.FullSize.Box(MusicGlyph.OrnamentTrill).Top;
+            double wave = TrillWaveOutline.InkReach;
+            foreach (var tr in trillSpanners)
+            {
+                if (tr.GlyphX < tr.LineStartX)
+                    AddMarkBox(tr.StartMeasureIndex, tr.GlyphX, tr.LineStartX,
+                        tr.YUp + glyphTop - EngravingDefaults.TrillSpannerTextOffsetDown,
+                        tr.YUp - EngravingDefaults.TrillSpannerTextOffsetDown);
+                if (tr.LineEndX > tr.LineStartX)
+                    AddMarkBox(tr.StartMeasureIndex, tr.LineStartX, tr.LineEndX,
+                        tr.YUp + wave, tr.YUp - wave);
+            }
+        }
+        if (!ottavaBrackets.IsDefaultOrEmpty)
+        {
+            double half = EngravingDefaults.StaffLineThickness / 2.0;
+            double em = OttavaBracketEngraver.LabelEm(fonts);
+            foreach (var ob in ottavaBrackets)
+            {
+                double lineStart = ob.StartX;
+                if (!string.IsNullOrEmpty(ob.Text))
+                {
+                    // The label's ink is centred on the line (OttavaBracketEngraver.Skylines).
+                    var ink = fonts.Ink(ob.Text, em, TextRole.Ottava, OttavaBracketEngraver.LabelStyle(fonts));
+                    double halfInk = (ink.Top - ink.Bottom) / 2.0;
+                    lineStart = OttavaBracketEngraver.LineStartX(fonts, ob.Text, ob.StartX, em);
+                    AddMarkBox(ob.StartMeasureIndex, ob.StartX, lineStart,
+                        ob.YUp + halfInk, ob.YUp - halfInk);
+                }
+                if (ob.EndX > lineStart)
+                    AddMarkBox(ob.StartMeasureIndex, lineStart, ob.EndX, ob.YUp + half, ob.YUp - half);
+                if (ob.EdgeHeight > 0)
+                {
+                    double tip = ob.YUp + (ob.IsAbove ? -ob.EdgeHeight : ob.EdgeHeight);
+                    AddMarkBox(ob.StartMeasureIndex, ob.EndX - half, ob.EndX + half,
+                        Math.Max(ob.YUp + half, tip), Math.Min(ob.YUp - half, tip));
+                }
             }
         }
 

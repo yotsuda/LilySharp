@@ -61,6 +61,16 @@ workflow attaches that section to the GitHub Release verbatim.
   did: `r8 c'8[ | d'8]` over another voice's note ran straight through its head (such a beam
   avoided nothing at all, not even its own voice's accidentals or a clef change). And **a beam
   clears another voice's sharp or flat**, not only its notes and stems.
+- **A trill line keeps the music around it at a distance.** A trill over the lower staff of
+  a grand staff that runs on to the next line now opens the staves as one that ends on its
+  own line does (it was drawn through the right hand's beams). And a trill or an ottava
+  bracket over (or under) a line is counted when the lines are spaced: a trill could print into
+  the low notes of the line above.
+- **Past an ottava line, a note keeps its accidental where it is drawn.** In G major,
+  `ges,,,16` under an 8vb and `ges,,,8` after it drew the second G-flat on another line with
+  no flat, where nothing had flattened that line: it read as G. It now prints its flat.
+  (LilyPond remembers the pitch and prints none; Lily# goes by what the reader sees, as it
+  already did for a note on the same line.)
 
 ### A chord is read as its first note
 
