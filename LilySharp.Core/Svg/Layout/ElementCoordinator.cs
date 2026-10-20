@@ -378,7 +378,7 @@ internal sealed class ElementCoordinator
             double beamLeftX = itemXPositions[group.Members[0].ItemIndex];
             double beamRightX = itemXPositions[group.Members[^1].ItemIndex];
             AppendCrossVoiceBeamCollisions(
-                ref collisions, score, group, measureLayout, beamLeftX, beamRightX);
+                ref collisions, score, group, measureLayout, beamLeftX, beamRightX, voiceShifts);
 
             // The system comes from the SAME measureMap lookup that gave the X positions, so
             // the stamp and the frame the X is in cannot disagree.
@@ -828,6 +828,93 @@ internal sealed class ElementCoordinator
 
         if (anyBooked)
             AddStemCollision(ref collisions, item, itemX, beamOriginX, stemCollisionFactor);
+
+        AddFreeStemAndFlagCollisions(ref collisions, item, itemX,
+                                     beamEdgeLeftX, beamEdgeRightX, beamOriginX);
+    }
+
+    /// <summary>
+    /// Books an UNBEAMED stem, and its flag, as covered grobs in their own right: the
+    /// stem's drawn box and the flag's box, each through the same x-span reject and width
+    /// weight as a head.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/beam-collision-engraver.cc:202-206 acknowledge_stem and :240-244
+    ///   acknowledge_flag put every Stem and Flag on the covered list; :179-181 drops a stem
+    ///   only when it carries a beam. lily/beam-quanting.cc:377-392 then books each one's
+    ///   extent like any other box.
+    /// LILYPOND-REF: lily/stem.cc:847-887 Stem::internal_height — the stem's Y extent runs
+    ///   from <c>stem-begin-position</c> (the head's attachment) to the end, here
+    ///   <see cref="StemCalculator.CalculateStemEndPosition"/>.
+    /// <para>
+    /// ⚠️ THIS BOX IS WHAT LIFTS THE BEAM, not the half-plane <see cref="AddStemCollision"/>
+    /// books for the same stem. That interval runs to infinity, so every beam position above
+    /// the head overlaps it and pays the same demerit; it cannot tell one quant from another.
+    /// The box ends at the stem's tip, so only a beam that clears the tip by the collision
+    /// padding escapes it. Measured (Lab sessions/p916/2beam/probe.ly): voice one's
+    /// <c>b,8 g'</c> beam over a third voice's up-stemmed <c>d2</c> goes from
+    /// <c>(2.81 . 4.19)</c> without that voice to <c>(3.5 . 4.81)</c> with it; the stem's
+    /// extent is <c>(0.259 . 3.333)</c>. Before this booking the beam stayed at the lower
+    /// height and the other voice's stem ran into it.
+    /// </para>
+    /// </remarks>
+    private static void AddFreeStemAndFlagCollisions(
+        ref List<BeamCollision>? collisions, MusicItem item, double itemX,
+        double beamEdgeLeftX, double beamEdgeRightX, double beamOriginX)
+    {
+        bool up;
+        int noteValue;
+        int startPosition;
+        int tipHeadPosition;
+        switch (item)
+        {
+            case NoteItem note when !note.IsBeamed:
+                up = note.StemUp;
+                noteValue = LayoutUtilities.GetNoteValueFromFraction(note.BaseDuration);
+                startPosition = note.StaffPosition;
+                tipHeadPosition = note.StaffPosition;
+                break;
+            case ChordItem chord when !chord.IsBeamed && chord.Notes.Length > 0:
+                up = chord.StemUp;
+                noteValue = LayoutUtilities.GetNoteValueFromFraction(chord.BaseDuration);
+                int low = chord.Notes.Min(n => n.StaffPosition);
+                int high = chord.Notes.Max(n => n.StaffPosition);
+                startPosition = up ? low : high;
+                tipHeadPosition = up ? high : low;
+                break;
+            default:
+                return;
+        }
+
+        // Stem::is_normal_stem — a whole note's Stem draws nothing and has no extent.
+        if (noteValue < 2)
+            return;
+
+        var style = LayoutUtilities.NoteheadStyleOf(item);
+        double begin = startPosition * 0.5
+            + GlyphMetrics.GetNoteheadStemAttachment(
+                GrobFontSize.FontOf(item, SizedGrob.NoteHead), style, up, noteValue).Y;
+        double tip = StemCalculator.CalculateStemEndPosition(
+            up, StemCalculator.GetDurationLog(noteValue), tipHeadPosition,
+            Rendering.SharedRenderer.StemDetailsOf(item)) * 0.5;
+        double stemX = LayoutUtilities.StemX(itemX, up, noteValue, style);
+        double halfStem = EngravingDefaults.StemThickness / 2;
+        AddBoxCollision(ref collisions, stemX - halfStem, stemX + halfStem,
+                        Math.Min(begin, tip), Math.Max(begin, tip),
+                        beamEdgeLeftX, beamEdgeRightX, beamOriginX);
+
+        // The flag hangs half a blot inside the tip (LayoutUtilities.FlagPlacementY); its
+        // grob extent is the glyph's box from the stem's centre (Flag::width).
+        if (noteValue < 8)
+            return;
+        var flagBox = GlyphMetrics.GetFlagBBox(
+            GrobFontSize.FontOf(item, SizedGrob.Flag), noteValue, up);
+        if (flagBox == default)
+            return;
+        double flagY = LayoutUtilities.FlagPlacementY(tip, up);
+        AddBoxCollision(ref collisions, stemX + flagBox.Left, stemX + flagBox.Right,
+                        flagY + flagBox.Bottom, flagY + flagBox.Top,
+                        beamEdgeLeftX, beamEdgeRightX, beamOriginX);
     }
 
     /// <summary>
@@ -845,10 +932,12 @@ internal sealed class ElementCoordinator
     /// quanted the covered stem's length may not be settled either (it belongs to another
     /// beam, whose own quanting has not run), so LilyPond reserves the whole half-plane and
     /// discounts it to a tenth. A FREE stem's length IS known, and LilyPond charges it full
-    /// weight — such a stem is also a covered grob in its own right
-    /// (lily/beam-collision-engraver.cc:179-181 drops only BEAMED stems), whose drawn box
-    /// this interval strictly contains at a heavier weight, so booking it again as a box
-    /// would change nothing.
+    /// weight — and such a stem is also a covered grob in its own right
+    /// (lily/beam-collision-engraver.cc:179-181 drops only BEAMED stems), booked by
+    /// <see cref="AddFreeStemAndFlagCollisions"/> as its drawn box.
+    /// ⚠️ The box is NOT redundant with this interval (session 916 corrected a remark that
+    /// said it was): an interval running to infinity overlaps every beam on that side and so
+    /// costs every quant alike, while the box ends at the tip and is what moves the beam.
     /// </para>
     /// <para>
     /// ⚠️ A rest brings no stem: <c>Rest</c> is not in the Beam's
@@ -1118,7 +1207,7 @@ internal sealed class ElementCoordinator
     private void AppendCrossVoiceBeamCollisions(
         ref List<BeamCollision>? collisions,
         Score score, BeamGroup group, MeasureLayout measureLayout,
-        double beamLeftX, double beamRightX)
+        double beamLeftX, double beamRightX, VoiceCollisionTable voiceShifts)
     {
         // ⚠️ INTO THE CALLER'S LIST. It used to build one of its own and hand it back to an
         // AddRange, and over the reader's corpus that list was ALWAYS EMPTY — 19.03 builds a
@@ -1142,9 +1231,17 @@ internal sealed class ElementCoordinator
             if (group.MeasureIndex >= measures.Length) continue;
 
             var timing = Fraction.Zero;
-            foreach (var item in measures[group.MeasureIndex].Items)
+            var items = measures[group.MeasureIndex].Items;
+            bool shifted = voiceShifts.AnyShiftIn(group.MeasureIndex);
+            for (int i = 0; i < items.Length; i++)
             {
-                double itemX = measureLayout.X + measureLayout.GetXForTiming(timing);
+                var item = items[i];
+                // ⚠️ WHERE THE ITEM IS DRAWN: a voice the note collision pushed sideways (a
+                // third voice's head beside the first's) is booked at its shifted x, as the
+                // renderer draws it and LilyPond measures the grob's own extent
+                // (beam-quanting.cc:379). VoiceId is 1-based (ApplyVoiceCollisionShifts).
+                double itemX = measureLayout.X + measureLayout.GetXForTiming(timing)
+                    + (shifted ? voiceShifts.ShiftOf(group.MeasureIndex, v + 1, i) : 0.0);
                 timing += GetItemDuration(item);
                 // No window here: the x-span reject IS LilyPond's, against the beam's
                 // drawn extent and the grob's own box (AddBoxCollision, :381).

@@ -647,7 +647,7 @@ internal static partial class SharedRenderer
     /// dot is gated on now moves with the shortening, which is what LilyPond does
     /// (scratch/p315/measurements.md). See <see cref="GrobFontSize.GraceStemDetails"/>.
     /// </remarks>
-    private static StemDetails? StemDetailsOf(MusicItem item)
+    internal static StemDetails? StemDetailsOf(MusicItem item)
         => item.GraceTime ? GrobFontSize.GraceStemDetails
          : item switch
            {

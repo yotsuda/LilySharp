@@ -9316,6 +9316,44 @@ internal static class LpGeometryProbes
         """;
 
     /// <summary>
+    /// A beam over another voice's UNBEAMED STEM — the owner's report of 2026-10-20
+    /// (scratch/2beam.lys): the third voice's up-stemmed half note, shifted beside the first
+    /// voice's head, ran its stem into the first voice's beam.
+    /// </summary>
+    /// <remarks>
+    /// LilyPond twin (audit/lp-geometry/probes/beam-over-free-stem.ly): score A
+    /// <c>Beam.positions</c> <c>(3.5 . 4.81)</c> for the first group, score B (no third voice,
+    /// <see cref="BFSC"/>) <c>(2.81 . 4.19)</c>. The lift is the Stem grob's own box, tip
+    /// 3.333 (ElementCoordinator.AddFreeStemAndFlagCollisions).
+    /// </remarks>
+    private static readonly string BFS = """
+        time 2/4
+        key c major
+
+        part m { clef bass }
+
+        section Main { m { voice { b,8 g' g, a' } { b,8. a16 g4 } { d,2 } } }
+
+        form { ~Main }
+
+        score BFS { staff m }
+        """;
+
+    /// <summary>The control for <see cref="BFS"/>: the same bar without the third voice.</summary>
+    private static readonly string BFSC = """
+        time 2/4
+        key c major
+
+        part m { clef bass }
+
+        section Main { m { voice { b,8 g' g, a' } { b,8. a16 g4 } } }
+
+        form { ~Main }
+
+        score BFSC { staff m }
+        """;
+
+    /// <summary>
     /// A beam running over a note SUSTAINED IN ANOTHER VOICE — the cross-voice half of the
     /// covered-grob supply, and the source of test/multivoice-beam-collision.
     /// </summary>
@@ -17330,6 +17368,12 @@ internal static class LpGeometryProbes
         new("beam.quant.over-stem.beamed", BQM, g => g.BeamPositionAboveStaffMiddle(0, false)),
         new("beam.quant.over-stem.unbeamed", BQU, g => g.BeamPositionAboveStaffMiddle(0, false)),
         new("beam.quant.over-stem.free", BQF, g => g.BeamPositionAboveStaffMiddle(0, false)),
+        // Another voice's FREE stem under the beam, and its control: the stem's own box is
+        // what lifts the beam (the half-plane above costs every quant alike).
+        new("beam.quant.over-free-stem.left", BFS, g => g.BeamPositionAboveStaffMiddle(0, false)),
+        new("beam.quant.over-free-stem.right", BFS, g => g.BeamPositionAboveStaffMiddle(0, true)),
+        new("beam.quant.over-free-stem.control-left", BFSC, g => g.BeamPositionAboveStaffMiddle(0, false)),
+        new("beam.quant.over-free-stem.control-right", BFSC, g => g.BeamPositionAboveStaffMiddle(0, true)),
         // A beam over CHORDS, which no point above reaches, and the only ledger entry whose
         // job is to keep a FALSIFIED claim dead (see BQC). Both ends because the beam is
         // sloped; the single-note control must print the same pair, because LilyPond does.

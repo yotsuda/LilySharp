@@ -51,6 +51,12 @@ workflow attaches that section to the GitHub Release verbatim.
 - **A grace note's accidental holds for the staff too:** the lower voice's `grace { b'16 }` after
   the upper voice's `bes'` prints its natural, as an ordinary note already did. So does a
   `condensedStaff`: the second part's `f'` after the first part's `fes'` prints its natural.
+- **A beam rises clear of another voice's stem.** In `voice { b,8 g' g, a' } { b,8. a16 g4 }
+  { d,2 }` the third voice's half note, set beside the first voice's head, ran its stem up into
+  the first voice's beam and read as one more note of the group. The beam now clears that stem
+  (and an unbeamed note's flag), as LilyPond's does: it rose for the other voice's notes but not
+  for a stem without a beam of its own. The other voice's notes are also measured where they are
+  drawn, after being set aside, not at their column.
 
 ### A chord is read as its first note
 

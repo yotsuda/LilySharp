@@ -2445,6 +2445,34 @@
       "residual": 0.0,
       "why": "EXACT. The CONTROL for the two above: the same two eighths with nobody overhead. It says the 5.81 they record is 2.81 of real lift and not a floor, and it is the falsifier for the port — a change that moves this reading has changed the beam's own seat rather than what it is quanted against. The second voice is kept as a bar of skips rather than deleted, because a lone voice would let Lily# take the stem direction from the pitch and b sits ON the middle line."
     },
+    "beam.quant.over-free-stem.left": {
+      "probe": "beam-over-free-stem.ly",
+      "score": "A",
+      "lilypond": 3.500000,
+      "residual": 0.0,
+      "why": "EXACT. Owner's report 2026-10-20 (scratch/2beam.lys): the third voice's up-stemmed d2, shifted beside the first voice's head, ran its stem into the first voice's beam because Lily# stayed at the control's 2.81. The stem was booked only as the half-plane from its head to infinity, which every quant above the head overlaps alike, so it moved nothing; LilyPond also books the Stem grob's own box (beam-collision-engraver.cc acknowledge_stem drops only BEAMED stems), tip 3.333, and that box lifts the beam to 3.5. The head was also booked at its unshifted column x; it now sits where the note collision put it."
+    },
+    "beam.quant.over-free-stem.right": {
+      "probe": "beam-over-free-stem.ly",
+      "score": "A",
+      "lilypond": 4.810000,
+      "residual": 0.0,
+      "why": "EXACT. The right end of the same beam: the lift moves both ends (control 4.19), so the stem's box chose a different quant, not a different slope rule."
+    },
+    "beam.quant.over-free-stem.control-left": {
+      "probe": "beam-over-free-stem.ly",
+      "score": "B",
+      "lilypond": 2.810000,
+      "residual": 0.0,
+      "why": "EXACT. The CONTROL for beam.quant.over-free-stem.left: the same bar without the third voice. It says the 3.5 is the free stem's doing."
+    },
+    "beam.quant.over-free-stem.control-right": {
+      "probe": "beam-over-free-stem.ly",
+      "score": "B",
+      "lilypond": 4.190000,
+      "residual": 0.0,
+      "why": "EXACT. The right end of the control beam."
+    },
     "beam.beamlet.peak-8-16-8.left": {
       "probe": "beam-beamlet.ly",
       "score": "A",
