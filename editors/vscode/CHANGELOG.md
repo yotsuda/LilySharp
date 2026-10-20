@@ -2,7 +2,7 @@
 
 All notable changes to the Lily# VS Code extension are documented here.
 
-## Unreleased
+## 0.14.0
 
 ### A space after a percent mark writes its bar line
 

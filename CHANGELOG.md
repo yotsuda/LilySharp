@@ -4,7 +4,7 @@ Notable changes to Lily# are recorded here, newest first. Release notes are take
 from this file: the topmost section is the version being tagged, and the release
 workflow attaches that section to the GitHub Release verbatim.
 
-## Unreleased
+## 0.14.0
 
 ### Lower staves, second voices and tuplets: spanners, arpeggios and accidentals where they belong
 
