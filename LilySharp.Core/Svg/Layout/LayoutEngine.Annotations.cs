@@ -1208,8 +1208,9 @@ internal sealed partial class LayoutEngine
                 : null);
         // The 8vb / 15mb brackets (priority 400) against what their staff holds below it: the
         // inside ink, the tuplet numbers and brackets just laid out, and the movers the below
-        // pass placed (OutsideStaffStacker.PlaceBelowOttavas).
-        ottavaLayouts = OutsideStaffStacker.PlaceBelowOttavas(ctx.Fonts, systems, ottavaLayouts,
+        // pass placed (OutsideStaffStacker.PlaceBelowOttavas) — and then the below free texts
+        // (450) on those staves, which LilyPond places after the brackets.
+        (ottavaLayouts, stackedDynamics, stackedArticulations) = OutsideStaffStacker.PlaceBelowOttavas(ctx.Fonts, systems, ottavaLayouts,
             stackedDynamics, stackedHairpins, belowStackedTrills, stackedArticulations,
             tupletBracketLayouts, applyStaffOffsets: staffYAt != null, staffProfile, measureToSystem);
         // TEXT-style pedal words were solved where the room was built (the same

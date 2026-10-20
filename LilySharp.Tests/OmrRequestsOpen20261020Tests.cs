@@ -154,6 +154,63 @@ public class OmrRequestsOpen20261020Tests
         Assert.True(line.EndX < chord, $"the hook at {line.EndX:F3} stands before the chord ({chord:F3})");
     }
 
+    // A free text below the staff (TextScript, 450) stands outside an 8vb (400) — LilyPond's
+    // order. It was placed before the bracket existed, and "dolce" printed over the dashes.
+    [Fact]
+    public void AFreeTextBelow_StandsOutsideAnOttavaBelow()
+    {
+        var (score, layout) = Render("""
+            octave absolute
+            time 4/4
+            part p1 { clef bass }
+            section Piece {
+              p1 {
+                c,4@ottava(bassa) d,4@text("dolce") e,4 f,4@!ottava | c1 |
+              }
+            }
+            score { staff p1 }
+            """);
+        var line = Assert.Single(layout.OttavaBracketLayouts);
+        var text = Assert.Single(layout.DynamicLayouts.Where(d => d.IsExpressiveText));
+        Assert.False(text.IsAbove);
+        // The text's baseline Y is about the staff middle; the line's about the system top,
+        // 2 above the middle on this one staff. The text's ink top stands below the line.
+        var (textUp, _) = DynamicEngraver.LabelSkylines(score.TextMetrics, text.Text,
+            text.IsExpressiveText, text.X, text.YUp - 2.0, text.IsSubito);
+        double textTopInSystem = double.NegativeInfinity;
+        for (double x = line.StartX; x <= line.EndX; x += 0.05)
+            if (!double.IsInfinity(textUp.Height(x)))
+                textTopInSystem = System.Math.Max(textTopInSystem, textUp.Height(x));
+        Assert.False(double.IsNegativeInfinity(textTopInSystem), "the text stands under the line");
+        Assert.True(textTopInSystem < line.YUp - 0.05,
+            $"the text's top {textTopInSystem:F3} stands below the line {line.YUp:F3}");
+    }
+
+    // The staff memory on a CONDENSED staff, whose voices come from several parts: each part's
+    // own pass sees only its own voices, so the staff's pass runs again over the condensed
+    // voices (the gap the first fix of 2026-10-20 named).
+    [Fact]
+    public void ACondensedStaff_HoldsAnAccidentalAcrossItsParts()
+    {
+        var (score, _) = Render("""
+            octave absolute
+            time 4/4
+            key des major
+            part fl1 { clef treble }
+            part fl2 { clef treble }
+            section Piece {
+              fl1 { fes'4 ges'4 aes'4 bes'4 | }
+              fl2 { des'4 ees'4 f'4 ges'4 | }
+            }
+            form { ~Piece }
+            score { condensedStaff { fl1 fl2 } }
+            """);
+        var staff = score.StaffGroups.SelectMany(g => g.Staves).Single();
+        Assert.Equal(2, staff.Voices.Length);
+        // The second part's f' after the first part's fes' prints its natural.
+        Assert.Equal("natural", Assert.IsType<NoteItem>(staff.Voices[1].Measures[0].Items[2]).Accidental);
+    }
+
     // Item 3: a grace note's accidental is decided by the staff's memory too — drawn from the
     // grace groups' columns, which carry it as well as the grace's item does.
     [Fact]

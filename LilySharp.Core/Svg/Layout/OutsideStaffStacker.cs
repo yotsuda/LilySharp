@@ -2696,11 +2696,15 @@ internal static class OutsideStaffStacker
     /// note columns alone, through a tuplet's number and bracket ("8vb3"; OMR request
     /// 2026-10-20, item 2). LilyPond 2.26.0 puts the number under the beam and the bracket
     /// under the number.
-    /// ⚠️ NOT IN THE BELOW PASS ITSELF, and named: the free texts below the staff (TextScript,
-    /// 450) are placed by <see cref="StackBelowStaff"/> without seeing the brackets, where
-    /// LilyPond places them after. No book puts a below @text under an 8vb.
+    /// ⚠️ NOT IN THE BELOW PASS ITSELF: the free texts below the staff (TextScript, 450) were
+    /// placed by <see cref="StackBelowStaff"/> before the brackets existed, where LilyPond
+    /// places them after. So once the brackets stand, those texts on a staff that holds one
+    /// are placed again against the same tracker — brackets and all — and moved only further
+    /// out, never in (they already clear everything else).
     /// </remarks>
-    internal static ImmutableArray<OttavaBracketLayout> PlaceBelowOttavas(
+    internal static (ImmutableArray<OttavaBracketLayout> Ottavas,
+                     ImmutableArray<DynamicLayout> Dynamics,
+                     ImmutableArray<ArticulationLayout> Articulations) PlaceBelowOttavas(
         ScoreTextMetrics fonts,
         ImmutableArray<SystemLayout> systems,
         ImmutableArray<OttavaBracketLayout> ottavas,
@@ -2714,7 +2718,7 @@ internal static class OutsideStaffStacker
         IReadOnlyDictionary<int, int> measureToSystem)
     {
         if (ottavas.IsDefaultOrEmpty || systems.IsDefaultOrEmpty || !ottavas.Any(o => !o.IsAbove))
-            return ottavas;
+            return (ottavas, dynamics, articulations);
 
         double OffsetOf(int sys, int staff)
             => applyStaffOffsets && sys >= 0 && sys < systems.Length
@@ -2818,7 +2822,56 @@ internal static class OutsideStaffStacker
             if (move != 0)
                 b[i] = o with { YUp = o.YUp + move };
         }
-        return b.MoveToImmutable(); // ToBuilder's array IS the result (Count == Capacity) — see Rebuild
+        var placedOttavas = b.MoveToImmutable(); // ToBuilder's array IS the result (Count == Capacity) — see Rebuild
+
+        // 450 after 400: the below TextScripts (free expressive text, a text-stage script) on a
+        // staff that now holds a bracket, against the tracker that holds it.
+        var adjDynamics = dynamics;
+        if (!dynamics.IsDefaultOrEmpty)
+        {
+            ImmutableArray<DynamicLayout>.Builder? db = null;
+            for (int i = 0; i < dynamics.Length; i++)
+            {
+                var d = dynamics[i];
+                if (d.IsAbove || !d.IsExpressiveText
+                    || !measureToSystem.TryGetValue(d.MeasureIndex, out int ds)
+                    || !trackers.TryGetValue((ds, d.StaffIndex), out var t))
+                    continue;
+                double off = OffsetOf(ds, d.StaffIndex);
+                var (myUp, myDown) = DynamicEngraver.LabelSkylines(
+                    fonts, d.Text, d.IsExpressiveText, d.X,
+                    d.YUp - off - EngravingDefaults.StaffMiddle, d.IsSubito);
+                double move = t.Place(myUp, myDown, OutsideStaffPadding, OutsideStaffHorizontalPadding);
+                if (move != 0)
+                    (db ??= dynamics.ToBuilder())[i] = d with { YUp = d.YUp + move };
+            }
+            if (db != null)
+                adjDynamics = db.MoveToImmutable();
+        }
+        var adjArticulations = articulations;
+        if (!articulations.IsDefaultOrEmpty)
+        {
+            ImmutableArray<ArticulationLayout>.Builder? ab = null;
+            for (int i = 0; i < articulations.Length; i++)
+            {
+                var a = articulations[i];
+                if (a.IsAbove || a.OutsideStaffPriority is not { } osp
+                    || !ArticulationSpacing.IsTextScriptStage(osp)
+                    || !measureToSystem.TryGetValue(a.MeasureIndex, out int asys)
+                    || !trackers.TryGetValue((asys, a.StaffIndex), out var t))
+                    continue;
+                double off = OffsetOf(asys, a.StaffIndex);
+                var (myUp, myDown) = ArticulationEngraver.ScriptSkylines(
+                    a, a.YUp - off - EngravingDefaults.StaffMiddle);
+                double move = t.Place(myUp, myDown,
+                    a.OnMultiMeasureRest ? ArticulationEngraver.MmrScriptOutsideStaffPadding : OutsideStaffPadding);
+                if (move != 0)
+                    (ab ??= articulations.ToBuilder())[i] = a with { YUp = a.YUp + move };
+            }
+            if (ab != null)
+                adjArticulations = ab.MoveToImmutable();
+        }
+        return (placedOttavas, adjDynamics, adjArticulations);
     }
 
     // ---- 450: TextScript (^"...") ----

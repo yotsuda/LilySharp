@@ -2176,6 +2176,27 @@ public sealed partial class MeasureCollector
                 combinedAddressings)
                 .ToImmutableArray();
         }
+        // A staff built from SEVERAL parts (condensed, combined) owes the accidentals its parts'
+        // voices did not decide against each other — each part's own pass ran per part
+        // (ResolveStaffColumns). A staff that holds one part's voices as they are is skipped:
+        // its pass already ran on exactly these voices.
+        {
+            var partVoices = staffVoices.Values.ToList();
+            staffGroups = staffGroups
+                .Select(sg => sg with
+                {
+                    Staves = sg.Staves
+                        .Select(st =>
+                        {
+                            if (st.IsTab || st.Voices.Length < 2 || partVoices.Any(v => v == st.Voices))
+                                return st;
+                            var owed = StaffAccidentals.Apply(st.Voices, _accidentalStyle);
+                            return owed == st.Voices ? st : st with { Voices = RepackAccidentalColumns(owed) };
+                        })
+                        .ToImmutableArray()
+                })
+                .ToImmutableArray();
+        }
 
         // Per-staff facts only the collector knows, stamped onto the staves the render
         // spec just built (a staff is keyed by its primary voice's name):

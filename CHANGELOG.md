@@ -36,9 +36,11 @@ workflow attaches that section to the GitHub Release verbatim.
   bracket; now it stands below both, and below the dynamics and hairpins. An ottava that stops
   inside a bar ends after its own staff's last covered note: on a grand staff the other
   staff's notes could stand in for it, and the hook was drawn past the next note — which a
-  reader takes as still under the line.
+  reader takes as still under the line. A free text below the staff (`@text`) stands below an
+  8vb rather than over its dashes.
 - **A grace note's accidental holds for the staff too:** the lower voice's `grace { b'16 }` after
-  the upper voice's `bes'` prints its natural, as an ordinary note already did.
+  the upper voice's `bes'` prints its natural, as an ordinary note already did. So does a
+  `condensedStaff`: the second part's `f'` after the first part's `fes'` prints its natural.
 
 ### A chord is read as its first note
 
