@@ -160,6 +160,21 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第914セッションの経緯
+
+### 1.1 第914セッション（2026-10-18・YT-DELL2）
+
+同じ会話の続き（第913 の後）。`-Start p914`（開始 HEAD `f75e187b0`・未 push 20・full **12442 / 0 / 2 / 12444**・第912 を ARCHIVE へ＝MCP コンソールが 262 s で戻って出力が途切れたので `-Archive 912` を手で）。作業場所は Lab `sessions/p914/`（start.log・end.log・archive.log・notes.md・corpus-diff.txt）。
+- **ユーザー報告** `Downloads/Untitled-1.lys`: `g2 <d, f>` は D1 F2 なのに `g2 <c,, f>` は C1 **F3**＝低音を下げたら上の音が上がる。原因は規則そのもの＝anchor が先頭の*裸の文字*（g から c は上・d は下に nearest）で先頭の印は局所、残りは裸の anchor の上に積む。**ユーザー決定（§1.0 第914）＝和音は先頭の音として読む**。候補は 3 つ並べた（現行／B＝床だけ実音・後の基準は裸の文字／B′＝床も後の基準も実音／C＝各音を直前から独立に nearest＝`<c e g>` の転回が直前の音で変わるので却下）。B は「和音の先頭の印は後に伝わらない」という単音と違う例外を 1 つ残す＝ユーザーが「単純で分かりやすいか」と問い、**B′** に改めた＝規則は「和音は先頭の音と同じ（nearest・自分の印・後の音はそこから）＋残りはその上に積む」の 2 行。LP との違いも一文（LP は各音を直前の構成音から・Lily# は先頭から＝順序が効かない）。
+- **作り（読み手ごとに 1 行）**: ページ `MeasureCollector.CreateChordItem`（anchor ＝ 裸の解決 ＋ 先頭の印 ＋ 和音の印・**`firstOctave = rp.RelativeOctave`**＝解決後の値。`anchor` のままだと `OctaveModeConverter` が root を強制したとき残りの音が付いて来ず VERIFY が `<< c, e g >>` を拒んだ）・`BuildArpeggioNoteItems`／MIDI `ResolveChordMemberPitch`・`EmitArpeggioMidiPitch`／MusicXML の同名 2 つ／双子 `EmitChord`（両モードとも anchorOctave ＝ 解決 ＋ root の印 ＋ off・root は anchor に書く）・arpeggio の root・`EmitArpeggioChord`／取り込み `LysWriter.Chord`（基準は root の実音へ進む）。度数和音（主音の床・`<1' 3 5>` は C5 E4 G4 のまま）・`OctaveModeConverter`（collector を回すだけ）・試聴（MIDI を読む）は触らない。双子は `a4 <c, e g> b <c, e g>` を逐語で書くようになった＝LP の ret_first と Lily# の anchor が root 付きの和音で一致（分かれるのは度数和音と壊した群だけ）。
+- **帰結（知っておく）**: `<c' e g>` = C5 E5 G5・次の裸の c は C5（`<c e g>'` と同じ音・同じ基準）／`<c' e' g'>` = C5 **E6 G6**（後続の印は積んだ位置から＝密集を 1 オクターブ上は `<c' e g>`）／`<c, e g> <c, e g>` は `c, c,` と同じく落ちる／`<< g' e c >>` は G5 E6 C6（上から降りる形は `<< g' e, c, >>`＝旧規則の「先頭の局所の印」が root の下に音を置く唯一の手だった）。
+- **網**: 11 本の期待値を書き換え（ChordRelativeFrame・ExportTieAndOctave・DoubleAngleArpeggio・ChordRepetition・OctaveModeConverter・LilyPondExporter・ChordHover・GraceBodyValidator＝`<d' e'>` は D5 E6 になるので `<d' e>`・LedgerAccidentalShortening＝`<c'' dis>`）・ユーザーの例を `ChordRelativeFrameTests` の行に（`g2 <d, f> g2 <c,, f>` = 55 38 41 43 24 29・ページ／MIDI／MusicXML）。関連 2,953 本緑。
+- **コーパス**: repo の追跡 .lys 679 ＋ Lab `corpora/` 515 ＝ 1,194 冊を 10-17 の Release lysc（前）と Debug（後）の `check --pitches` で比べて **15 冊が変わる**（20 分・Lab `corpus-diff.txt`）。repo の 10 冊（fixture 3・audit 5・`samples/harbour-lights`・`site/petite-valse`）は**音が変わらないように綴り直した**＝旧 lysc `octave --absolute` → 新 lysc `octave --relative`（入った `octave relative` 行は外す・改行は元のまま・**解決した音の列**で検証＝`check --pitches` の行は綴りと列も持つので行比較は使えない）。harbour-lights は `<ees, g, bes,>` → `<ees, g bes>`＝旧規則が強いた「全部の音に印」の癖が消える。README の写しも追随（`ReadmeSampleTests`）。Lab の 5 冊（ベースタブLy 4・dogfood 1）はユーザーの本＝触らない（一覧は notes）。
+- **罠**: ⑴ `-Start` の出力が 262 s で途切れた（MCP コンソールが戻った・テストは trx まで走った）＝`-Archive 912` を手で。⑵ pwsh-dev の `[IO.File]` は相対パスをプロセスの cwd（`C:\Users\ytsud`）で解く＝絶対パスで。⑶ snapshot 3 枚は 0 px の差（data-pos の列だけ）＝`Approve-Snapshots.ps1` は `-Name` を 1 つずつ。
+- docs: GRAMMAR の Chord の注（候補と経緯・2026-09-27〜10-18 の規則を ⚠️ で残す）・GRAMMAR_FOR_LLM・SYNTAX_REFERENCE・site `manual-body.html`・`arpeggio-rework-handoff.md`・CHANGELOG `## Unreleased` に H3 1 つ・§1.0 に第914 の決定。
+- commit **`ece474ae6`**（code＋網＋docs＋綴り直し 10 冊＋README）→ `-End p914 -DiffBase f75e187b0`＝full **12436 / 7 / 2 / 12445**（開始 +1 本・赤 7 ＝ 継ぎ目 3（この語りを書く前）＋綴り直した fixture の snapshot 3 ＋ fixture の文を見る網 1 → **`081f97723`** で snapshot を承認し網を直して緑・Core '+' 116 行・Core 警告 0・門は全部 OK・天井: HANDOFF 380,773 B・Lab `sessions/p914/end.log`）→ この docs commit。未 push 20＋3（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。
+判定（2026-10-18）: この島は閉じた。次はユーザーの実機確認（MANUAL-CHECKS §1.2・§2.1・§3.5）と、Lab の 5 冊を綴り直すかの判断（ユーザー）。続けるなら新しい島＝(c) で差は小さい。圧縮は 1 回。
+
 ## 以下は第913セッションの経緯
 
 ### 1.1 第913セッション（2026-10-18・YT-DELL2）
