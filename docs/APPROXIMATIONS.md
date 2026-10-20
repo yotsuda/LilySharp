@@ -12,10 +12,10 @@
 
 | 区分 | 件数 | 意味 |
 |---|---:|---|
-| `APPROX` | 63 | LP に対応物はあるが、形が違うと自認しているもの |
+| `APPROX` | 64 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 63 | 観測者がゼロだと自認しているもの |
 | `OWN` | 262 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **388** | |
+| **計** | **389** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -34,7 +34,7 @@
 | `LilySharp.Core/Rendering/SharedRenderer.Marks.cs` | 6 |
 | `LilySharp.Core/Rendering/SharedRenderer.Overlays.cs` | 6 |
 
-## APPROX — LP に対応物はあるが、形が違うと自認しているもの（63 件）
+## APPROX — LP に対応物はあるが、形が違うと自認しているもの（64 件）
 
 ### `LilySharp.Core/Music/ChordStructure.cs`
 - **`ChordQualityRegistry.SymbolSuffix`** ⚠️ THE SIZE AND THE RAISE ARE NOT PORTED — Lily# draws a chord name as one baseline
@@ -113,6 +113,7 @@
 - **`NoteCollision.DotColumnSupportMinX`** ⚠️ NOT PORTED: the FLAG boxes of the support heads' stems (dot-column.cc:135-141
 - **`NoteCollision.NormalSideStaffPositions`** whole note reads [0, 0.375] — is not ported: Lily# has no producer for a
 ### `LilySharp.Core/Svg/Layout/OttavaBracketEngraver.cs`
+- **`OttavaBracketEngraver.Calculate`** so the hook stands after the label instead of on it. Not ported until
 - **`OttavaBracketEngraver.PairOttavaBrackets`** ⚠️⚠️ LILYPOND'S ANSWER FOR AN UNCLOSED OTTAVA IS **NOT PORTED HERE**, deliberately.
 ### `LilySharp.Core/Svg/Layout/PedalEngraver.cs`
 - **`PedalEngraver.PairPedalBrackets`** ⚠️ LILYPOND'S ANSWER FOR AN UNCLOSED PEDAL IS **NOT PORTED HERE** either:

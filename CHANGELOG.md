@@ -37,7 +37,8 @@ workflow attaches that section to the GitHub Release verbatim.
   inside a bar ends after its own staff's last covered note: on a grand staff the other
   staff's notes could stand in for it, and the hook was drawn past the next note — which a
   reader takes as still under the line. A free text below the staff (`@text`) stands below an
-  8vb rather than over its dashes.
+  8vb rather than over its dashes. An ottava over a note too short for its label slides the
+  label left, as LilyPond does, so the hook stands after "8va" rather than on it.
 - **A grace note's accidental holds for the staff too:** the lower voice's `grace { b'16 }` after
   the upper voice's `bes'` prints its natural, as an ordinary note already did. So does a
   `condensedStaff`: the second part's `f'` after the first part's `fes'` prints its natural.

@@ -104,6 +104,13 @@ public class OmrRequestsOpen20261020Tests
             score { staff lh "Left" }
             """);
         const double outsideStaffPadding = 0.46, halfLine = 0.05;
+        // Bar 1: the span (one eighth) is shorter than the label, so the label slides left until
+        // the minimum line (0.3) stands between it and the hook — not the hook through the "b".
+        var line1 = layout.OttavaBracketLayouts.Single(o => o.StartMeasureIndex == 0);
+        double label = OttavaBracketEngraver.LineStartX(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled,
+            line1.Text, 0.0, OttavaBracketEngraver.LabelEm(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled));
+        Assert.True(line1.StartX + label + 0.3 <= line1.EndX + 1e-9,
+            $"bar 1's label ends at {line1.StartX + label:F3}, the hook stands at {line1.EndX:F3}");
         // Bar 2: the number rides under the beam (no bracket); the dashed line runs under it.
         var number = layout.TupletBracketLayouts.Single(t => t.MeasureIndex == 1);
         var line2 = layout.OttavaBracketLayouts.Single(o => o.StartMeasureIndex == 1);

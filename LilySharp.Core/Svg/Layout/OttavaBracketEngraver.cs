@@ -158,6 +158,15 @@ internal static class OttavaBracketEngraver
     private const double LabelLineItalicCorrection = 0.3;
 
     /// <summary>
+    /// The shortest dashed line the label leaves before the right end: a span too short for
+    /// its label slides the LABEL left until this much line remains.
+    /// </summary>
+    /// <remarks>LILYPOND-REF: scm/define-grobs.scm OttavaBracket (minimum-length . 0.3), read by
+    /// lily/ottava-bracket.cc:131-134 Ottava_bracket::print —
+    /// <c>span_points[LEFT] = min (span_points[LEFT], span_points[RIGHT] - text_size - minimum-length)</c>.</remarks>
+    private const double MinimumLength = 0.3;
+
+    /// <summary>
     /// Where the dashed line starts: past the label's ADVANCE plus
     /// <see cref="LabelLineItalicCorrection"/>. The one spelling the draw and the
     /// reservations share.
@@ -365,6 +374,16 @@ internal static class OttavaBracketEngraver
                 // Last segment carries the hook; non-last ends are open.
                 string segText = segment.IsFirst ? text : $"({text})";
                 double segEdgeHeight = segment.IsLast ? EndEdgeHeight : 0;
+
+                // A span shorter than its label plus the minimum line slides the label LEFT,
+                // so the hook stands after the label instead of on it. Not ported until
+                // 2026-10-20: an 8vb over one eighth drew its hook through the "b" (OMR's
+                // requests of 2026-10-20, item 2's book, bar 1).
+                // LILYPOND-REF: lily/ottava-bracket.cc:127-134 Ottava_bracket::print —
+                //   text_size = text.extent (X_AXIS)[RIGHT] + 0.3, then
+                //   span_points[LEFT] = min (span_points[LEFT], span_points[RIGHT] - text_size - minimum-length).
+                double textSize = LineStartX(fonts, segText, 0.0, LabelEm(fonts));
+                startX = Math.Min(startX, endX - textSize - MinimumLength);
 
                 // EACH broken piece sides off ITS OWN system's columns, the way LilyPond's
                 // per-system clone does — and it must, now that the reading is pointwise:
