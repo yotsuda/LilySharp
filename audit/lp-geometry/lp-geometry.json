@@ -7220,9 +7220,9 @@
     "text.grace.below": {
       "probe": "grace-text.ly",
       "score": "GXA",
-      "lilypond": -5.063242,
-      "residual": 0.024242,
-      "why": "OPEN (session 916), the cause NOT identified -- named, not fitted. A text below a grace note, `\\grace { d'16_\\\"dolce\\\" }`: Lily# now draws it (it was dropped, LYS4020) on the grace column, ink left on the grace head's left edge as LilyPond's TextScript stands, at full size. The height is 0.024 high. DECOMPOSED (Lab sessions/p916/u8/grace-text2.ly, the TextScript's own extent (-0.033 . 1.621)): LilyPond's text top is -3.4418, i.e. it clears something at about -2.982 by the outside-staff padding 0.46 -- NOT the grace head, whose box bottom is -2.894 (that would give -4.975); Lily#'s top -3.4176 clears about -2.958. Both engines bind on an object some 0.07..0.09 below the grace head, and they disagree about it by 0.024. The full-size control (text.grace.control) is exact, so the gap is grace-specific: the next reading is which grace grob stands there (dump the system's skyline over x 10.9..12 in both)."
+      "lilypond": -5.039035,
+      "residual": 0.000035,
+      "why": "A text below a grace note, `grace { d16@text(\\\"dolce\\\") }`: Lily# draws it on the grace column, ink left on the grace head's left edge as LilyPond's TextScript stands, at full size. 0.000035 -- the text's outline walk, as in the control. The binding is NOT the grace head: it is the bar's LAST head (c'2, box bottom -3.545) under the text's `e`, cleared by the outside-staff padding 0.46 (Lab sessions/p917/gt: the system's skylines dumped; with that note raised to g' both engines bind on the grace head instead, LilyPond -4.947515, Lily# -4.947475). Until session 917 this read 0.024 OPEN: the probe wrote a bare `_\\\"dolce\\\"`, UPRIGHT in the machine's fontconfig serif, while Lily# draws `@text` in serif ITALIC -- the grace head ends half-way along the `d` stem's sloped top, so the face shows here and not under a full-size head."
     },
     "text.grace.above": {
       "probe": "grace-text.ly",
@@ -7234,9 +7234,9 @@
     "text.grace.control": {
       "probe": "grace-text.ly",
       "score": "GXC",
-      "lilypond": -5.126481,
-      "residual": 0.000081,
-      "why": "The CONTROL: the same text below a full-size d. 0.000081 -- the text's outline walk, as in the other text points; the 0.46 clearance from the head's box bottom -3.045 is LilyPond's exactly."
+      "lilypond": -5.126444,
+      "residual": 0.000044,
+      "why": "The CONTROL: the same text below a full-size d. 0.000044 -- the text's outline walk, as in the other text points; the 0.46 clearance from the head's box bottom -3.045 is LilyPond's exactly."
     },
     "script.grace.staccato.below": {
       "probe": "grace-script.ly",
