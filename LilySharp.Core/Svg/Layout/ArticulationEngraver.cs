@@ -1701,7 +1701,7 @@ internal static class ArticulationEngraver
     /// </summary>
     private static ArticulationLayout FingeringScriptLayout(ScoreTextMetrics fonts, in FingeringLayout fg)
     {
-        var (_, ink, width) = FingeringEngraver.DigitRun(fonts, fg.Number);
+        var (_, ink, width) = FingeringEngraver.DigitRun(fonts, fg.Number, fg.FontSizeStep);
         return new ArticulationLayout(
             fg.MeasureIndex, fg.ItemIndex,
             X: fg.X - width / 2.0,
@@ -1709,7 +1709,7 @@ internal static class ArticulationEngraver
             Glyph: string.Empty,
             IsAbove: true,
             SourcePosition: fg.SourcePosition,
-            FontSizeStep: -5.0,
+            FontSizeStep: fg.FontSizeStep,
             Ink: ink,
             StaffIndex: Math.Max(fg.StaffIndex, 0));
     }

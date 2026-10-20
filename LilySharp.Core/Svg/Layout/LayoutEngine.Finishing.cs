@@ -48,7 +48,8 @@ internal sealed partial class LayoutEngine
         Rendering.ScoreTextMetrics fonts,
         Score? score, ImmutableArray<SystemLayout> systems,
         Dictionary<int, ImmutableArray<Voice>>? voicesByStaff,
-        ImmutableArray<BeamLayout> beamLayouts = default)
+        ImmutableArray<BeamLayout> beamLayouts = default,
+        ImmutableArray<GraceNoteItem> graceNotes = default)
     {
         if (score == null)
             return ImmutableArray<FingeringLayout>.Empty;
@@ -63,11 +64,11 @@ internal sealed partial class LayoutEngine
                 // carries none.
                 var staffScore = new Score(kv.Value[0], score.TimeSignature,
                     score.KeySignature, score.Clef, score.Tempo);
-                fb.AddRange(FingeringEngraver.Calculate(fonts, staffScore, systems, kv.Key, beamLayouts));
+                fb.AddRange(FingeringEngraver.Calculate(fonts, staffScore, systems, kv.Key, beamLayouts, graceNotes));
             }
             return fb.ToImmutable();
         }
-        return FingeringEngraver.Calculate(fonts, score, systems, -1, beamLayouts);
+        return FingeringEngraver.Calculate(fonts, score, systems, -1, beamLayouts, graceNotes);
     }
 
     /// <summary>
@@ -155,7 +156,7 @@ internal sealed partial class LayoutEngine
         if (memo == null || score == null)
         {
             var islands = anyFingering
-                ? ComputeFingeringIslands(ctx.Fonts, score, systems, voicesByStaff, beamLayouts)
+                ? ComputeFingeringIslands(ctx.Fonts, score, systems, voicesByStaff, beamLayouts, ctx.GraceNotes)
                 : ImmutableArray<FingeringLayout>.Empty;
             var scripts = ImmutableArray<ArticulationLayout>.Empty;
             if (score != null)
@@ -222,7 +223,7 @@ internal sealed partial class LayoutEngine
         }
         if (!splittable)
         {
-            var wholeIslands = ComputeFingeringIslands(ctx.Fonts, score, systems, voicesByStaff, beamLayouts);
+            var wholeIslands = ComputeFingeringIslands(ctx.Fonts, score, systems, voicesByStaff, beamLayouts, ctx.GraceNotes);
             var wholeScripts = ArticulationEngraver.CalculateWithFingerings(
                 ctx.Fonts, score, articulations, ml, measuresByStaff, staffYAt, staffByIndex,
                 beamLayouts, ctx.TieLayouts, ctx.SlurLayouts, wholeIslands, out wholeIslands,
@@ -286,7 +287,7 @@ internal sealed partial class LayoutEngine
                     // (staff, measure, item) lookup this unit's island can make with the
                     // value the whole-score map would give.
                     var built = FingeringEngraver.CalculateWithUnitBeams(
-                        ctx.Fonts, staffScore, layouts, staffIndex, beams);
+                        ctx.Fonts, staffScore, layouts, staffIndex, beams, ctx.GraceNotes);
                     liveSpans.Add((units.Count, live.Count, built.Length));
                     live.AddRange(built);
                 }

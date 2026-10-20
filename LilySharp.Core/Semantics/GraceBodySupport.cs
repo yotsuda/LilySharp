@@ -316,8 +316,8 @@ internal static class GraceBodySupport
     /// The fermata family and the ornaments joined the same day, measured where the page puts
     /// them (ledger script.grace.mover.*: the fermata is a mover, and the collision pass lifts
     /// it on a grace column exactly as on a full-size one). Dynamic levels have their own
-    /// predicate (<see cref="IsCarriedDynamic"/>); texts and fingerings on a grace stay reported
-    /// (LYS4020): they are other engravers.
+    /// predicate (<see cref="IsCarriedDynamic"/>), and so do texts and fingerings
+    /// (<see cref="IsCarriedText"/>, <see cref="IsCarriedFingering"/>): they are other engravers.
     /// LILYPOND-REF: lily/script-engraver.cc — a Voice engraver; a grace note's Script is an
     /// ordinary one at general-grace-settings' font-size (scm/music-functions.scm:636-650).
     /// </remarks>
@@ -363,6 +363,20 @@ internal static class GraceBodySupport
         => annotation is MusicMarkSyntax mark
            && mark.Name.Equals("text", StringComparison.Ordinal)
            && AnnotationValues.Text(mark) is not null;
+
+    /// <summary>
+    /// True for a FINGERING a grace note engraves — <c>@finger(1)</c>: LilyPond's Fingering at the
+    /// grace's font-size −8, centred on the grace head and clearing it as a full-size digit
+    /// clears its own (session 917; ledger fingering.grace.*). It rides the note
+    /// (<c>NoteItem.Fingering</c>, kept by <c>MeasureBuilder.NarrowToGraceTime</c>), so
+    /// FingeringEngraver places it off the grace column.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/new-fingering-engraver.cc — a Voice engraver;
+    ///   scm/music-functions.scm:636-650 general-grace-settings — (Voice Fingering font-size -8).
+    /// </remarks>
+    internal static bool IsCarriedFingering(SyntaxNode annotation)
+        => annotation is MusicMarkSyntax mark && AnnotationValues.Finger(mark) is not null;
 
     /// <summary>
     /// The <c>\N</c> a grace note carries, or null for automatic string selection.
@@ -608,7 +622,7 @@ internal static class GraceBodySupport
             foreach (var annotation in CarriedAnnotations(item))
             {
                 if (NeedsNoColumn(annotation) || IsCarriedScript(annotation) || IsCarriedDynamic(annotation)
-                    || IsCarriedText(annotation))
+                    || IsCarriedText(annotation) || IsCarriedFingering(annotation))
                     continue;
                 yield return new GraceDrop(
                     GraceDropKind.Annotation, annotation.Span, Describe(annotation), via);

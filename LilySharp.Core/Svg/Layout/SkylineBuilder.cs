@@ -2567,7 +2567,7 @@ internal sealed class SkylineBuilder
             return;
         foreach (var f in fingerings)
         {
-            var (_, ink, width) = FingeringEngraver.DigitRun(_fonts, f.Number);
+            var (_, ink, width) = FingeringEngraver.DigitRun(_fonts, f.Number, f.FontSizeStep);
             double baseline = size.Span(f.YUp) + staffMiddleUp;
             double bottom = baseline + ink.Bottom;
             double top = baseline + ink.Top;

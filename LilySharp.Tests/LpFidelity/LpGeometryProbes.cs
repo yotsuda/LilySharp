@@ -8883,6 +8883,12 @@ internal static class LpGeometryProbes
     private static readonly string GRXA = GraceTieBook("c4 grace { d16@text(\"dolce\") } e4 c2 |", "GRXA");
     private static readonly string GRXB = GraceTieBook("c4 grace { d16@text(\"dolce\").up } e4 c2 |", "GRXB");
     private static readonly string GRXC = GraceTieBook("c4 d16@text(\"dolce\") e8. c2 |", "GRXC");
+    // A fingering on a grace note (audit/lp-geometry/probes/grace-fingering.ly).
+    private static readonly string GRFA = GraceTieBook("c4 grace { d16@finger(1) } e4 c2 |", "GRFA");
+    private static readonly string GRFB = GraceTieBook("c4 grace { b16@finger(3) } e4 c2 |", "GRFB");
+    private static readonly string GRFC = GraceTieBook("c4 grace { <d@finger(1) f@finger(3)>16 } e4 c2 |", "GRFC");
+    private static readonly string GRFD = GraceTieBook("c4 grace { a16@finger(1) b16 } e4 c2 |", "GRFD");
+    private static readonly string GRFE = GraceTieBook("c4 <d@finger(1) f@finger(3)>16 e8. c2 |", "GRFE");
     // A hairpin over a grace note (audit/lp-geometry/probes/grace-hairpin.ly; samples/nocturne bar 5).
     private static readonly string GRHA = """
         part rh { clef treble }
@@ -17297,6 +17303,16 @@ internal static class LpGeometryProbes
         new("text.grace.below", GRXA, g => g.TextBaselineAboveStaffLine(LilySharp.Core.Rendering.TextRole.Text, 0, 2)),
         new("text.grace.above", GRXB, g => g.TextBaselineAboveStaffLine(LilySharp.Core.Rendering.TextRole.Text, 0, 2)),
         new("text.grace.control", GRXC, g => g.TextBaselineAboveStaffLine(LilySharp.Core.Rendering.TextRole.Text, 0, 2)),
+        new("fingering.grace.above.staff-to-ink-bottom", GRFA,
+            g => g.FingeringInkEdgeAboveStaff('1', lilyPondStep: LilySharp.Core.Svg.Layout.GrobFontSize.GraceFingeringFontSizeStep)),
+        new("fingering.grace.head-to-box-left", GRFA, g => g.NoteheadAnchorToFingeringBoxLeft('1', headIndex: 1)),
+        new("fingering.grace.flagged-stem.staff-to-ink-bottom", GRFB,
+            g => g.FingeringInkEdgeAboveStaff('3', lilyPondStep: LilySharp.Core.Svg.Layout.GrobFontSize.GraceFingeringFontSizeStep)),
+        new("fingering.grace.chord-below.staff-to-ink-top", GRFC,
+            g => g.FingeringInkEdgeAboveStaff('1', above: false, lilyPondStep: LilySharp.Core.Svg.Layout.GrobFontSize.GraceFingeringFontSizeStep)),
+        new("fingering.grace.beamed-stem.staff-to-ink-bottom", GRFD,
+            g => g.FingeringInkEdgeAboveStaff('1', lilyPondStep: LilySharp.Core.Svg.Layout.GrobFontSize.GraceFingeringFontSizeStep)),
+        new("fingering.grace.control-below.staff-to-ink-top", GRFE, g => g.FingeringInkEdgeAboveStaff('1', above: false)),
         new("script.grace.control", GRSD, g => g.GlyphAboveStaffMiddle('\uE04A', 0)),
 
         // ...and the one quantity that tie's residual is made of, measured on its own. The

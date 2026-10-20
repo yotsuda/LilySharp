@@ -1146,16 +1146,12 @@ gives up the time. The main note is the note, chord or rest written just before 
 slur mark between them is fine: `g1~ afterGrace { a16 b } | g4`, and the tie reaches past
 the run); written anywhere else, the run is not engraved (LYS4020).
 
-**A grace body is parsed as a full music block, and engraved much more narrowly than that.**
-The engraver reads a **bare note's pitch and its duration VALUE** out of the body and nothing
-else. Everything else written inside is not drawn, and Lily# says so at what was written
-(LYS4020):
+**A grace body is parsed as a full music block, and engraved almost as fully.** Its notes,
+chords, rests and dots are drawn at the grace size, with what is written on them (below). What
+is still not drawn, Lily# says so at what was written (LYS4020):
 
 ```
-grace { d16@finger(2) } c4    // the fingering is not drawn     (LYS4020)
-grace { d16. } c4             // the dot is not drawn           (LYS4020)
-grace { d16 r16 } c4          // the rest is not drawn          (LYS4020)
-grace { <d f>16 } c4          // no grace at all is drawn       (LYS4020)
+grace { d16@cresc } c4 e4@f   // the hairpin start is not drawn   (LYS4020)
 ```
 
 **Two annotations ARE carried, and the line between them and the rest is whether they want a
@@ -1183,7 +1179,8 @@ notes' size, as LilyPond draws it.
 `@portato` on a grace note is drawn small, on the grace note (`grace { d16@staccato } c4`),
 and so are a fermata and an ornament (`@trill`, `@prall`, `@mordent`, `@turn`, …) above it.
 A dynamic there is drawn too, at full size (`grace { d16@f } c4`), and a text
-(`@text("dolce")`); a fingering or a hairpin start is not drawn yet (LYS4020).
+(`@text("dolce")`), and a fingering (`grace { d16@finger(2) } c4`, small, as LilyPond
+sets it); a hairpin start is not drawn yet (LYS4020).
 
 LilyPond draws all of the spellings above, so each warning says "not drawn yet", not "do not
 write this".

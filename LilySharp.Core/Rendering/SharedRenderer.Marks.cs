@@ -555,13 +555,18 @@ internal static partial class SharedRenderer
         // The em and the design at the SCORE's step (FingeringGlyphRun.Step — the grob's −5
         // plus the plan's `finger step`), the same two the metric home measured with.
         double size = FingeringGlyphRun.Em(fonts);
-        // The design the metrics came out of, opened once for the whole pass: every
-        // fingering in a score is at the same font-size, so this scope never nests.
+        // The design the metrics came out of, opened once for the whole pass — and once more,
+        // inside it, for a GRACE note's digit (−8, its own em and design; FingeringLayout.
+        // FontSizeStep), the one fingering a score sets at another size.
         using var face = gc.MusicFace(FingeringGlyphRun.Design(fonts));
         foreach (var f in pageItems)
         {
             // Which staff it hangs on, for lysc boxes (a no-op in every picture).
             using var staffScope = gc.Staff(f.StaffIndex);
+            bool resized = f.FontSizeStep != FingeringGlyphRun.FontSizeStep;
+            using var graceFace = resized
+                ? gc.MusicFace(FingeringGlyphRun.Design(fonts, f.FontSizeStep)) : null;
+            double em = resized ? FingeringGlyphRun.Em(fonts, f.FontSizeStep) : size;
             // Frame B -> device: reflect the Y-up baseline against this fingering's
             // own staff middle (the shared per-grob draw boundary), then apply ossia.
             double midYup = os.StaffMiddleYUp(f.StaffIndex, f.MeasureIndex, StaffHeight);
@@ -569,19 +574,19 @@ internal static partial class SharedRenderer
             // The metric home is DigitRun (memoized for the ten single digits — the
             // preview redraws this every frame); a single-glyph run draws without
             // building a pieces array, the multi-glyph rarity walks the run.
-            var (glyphs, _, width) = FingeringEngraver.DigitRun(fonts, f.Number);
+            var (glyphs, _, width) = FingeringEngraver.DigitRun(fonts, f.Number, f.FontSizeStep);
             double x0 = f.X - width / 2.0;
             using (gc.Source(f.SourcePosition))
             {
                 if (glyphs.Length == 1)
-                    gc.DrawGlyph(glyphs[0], x0, y, size, Color.Black);
+                    gc.DrawGlyph(glyphs[0], x0, y, em, Color.Black);
                 else
-                    foreach (var piece in FingeringGlyphRun.Pieces(fonts, f.Number.ToString()))
+                    foreach (var piece in FingeringGlyphRun.Pieces(fonts, f.Number.ToString(), f.FontSizeStep))
                     {
                         if (piece.IsGlyph)
-                            gc.DrawGlyph(piece.Ch, x0 + piece.X, y, size, Color.Black);
+                            gc.DrawGlyph(piece.Ch, x0 + piece.X, y, em, Color.Black);
                         else
-                            gc.DrawText(piece.Ch.ToString(), x0 + piece.X, y, size, TextRole.Fingering,
+                            gc.DrawText(piece.Ch.ToString(), x0 + piece.X, y, em, TextRole.Fingering,
                                 FontStyle.Regular, TextAnchor.Start, Color.Black);
                     }
             }

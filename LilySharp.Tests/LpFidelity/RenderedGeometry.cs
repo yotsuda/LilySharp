@@ -5389,7 +5389,8 @@ internal sealed class RenderedGeometry
     /// The digit is named rather than indexed for the same reason the ink-edge reader names
     /// one: which digit is where is part of what the fingering books are asking.
     /// </remarks>
-    public double NoteheadAnchorToFingeringBoxLeft(char digit, int page = 0)
+    /// <param name="headIndex">Which notehead (left to right) the reading starts from — a grace probe reads the GRACE head, so the run's own placement does not enter.</param>
+    public double NoteheadAnchorToFingeringBoxLeft(char digit, int page = 0, int headIndex = 0)
     {
         var hits = _pages[page].Glyphs
             .Where(g => FingeringDigitChar(g.Glyph) == digit)
@@ -5401,7 +5402,7 @@ internal sealed class RenderedGeometry
                 + $"{hits.Count} — the probe is not measuring what it claims.\n"
                 + "Drawn geometry:\n" + Describe());
         }
-        return hits[0].X - NoteheadAnchor(0);
+        return hits[0].X - NoteheadAnchor(headIndex);
     }
 
     /// <summary>
@@ -5425,7 +5426,8 @@ internal sealed class RenderedGeometry
     /// (LilyPond dumps ext=(0.0 . 1.12…) on all three digits of both books), so the ink
     /// bottom is the baseline itself and the ink top is the baseline plus the run's height.
     /// </remarks>
-    public double FingeringInkEdgeAboveStaff(char digit, bool above = true, int page = 0)
+    /// <param name="lilyPondStep">The digit's font-size: the Fingering's −5, or a grace note's −8 — the run the ink edge is read off.</param>
+    public double FingeringInkEdgeAboveStaff(char digit, bool above = true, int page = 0, double lilyPondStep = FingeringGlyphRun.FontSizeStep)
     {
         var refs = StaffRefpoints(page);
         if (refs.Count != 1)
@@ -5446,8 +5448,8 @@ internal sealed class RenderedGeometry
         }
         string text = digit.ToString();
         double edge = above
-            ? FingeringGlyphRun.InkBottom(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, text)
-            : FingeringGlyphRun.InkTop(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, text);
+            ? FingeringGlyphRun.InkBottom(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, text, lilyPondStep)
+            : FingeringGlyphRun.InkTop(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, text, lilyPondStep);
         // Device-down: an edge `e` staff-spaces up from the drawn origin sits at Y - e.
         return refs[0] - (hits[0].Y - edge);
     }

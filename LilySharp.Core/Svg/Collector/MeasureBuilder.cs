@@ -747,10 +747,13 @@ internal sealed class MeasureBuilder
             // ⚠️ THE TIE MARK SURVIVES (session 916, HANDOFF §2 U8 ⒞): a grace column is a tie
             // bound like any note — `grace { g'16~ } g'4`, `grace { d''16~ d''16 }` — paired by
             // the ordinary TieDetector and laid out at the grace's own X and head size.
+            // ⚠️ THE FINGERING SURVIVES (session 917, ⒟): FingeringEngraver centres a grace note's
+            // digit on the grace column's head at the grace's Fingering size (−8).
             NoteItem n => new NoteItem(
                 n.StaffPosition, n.BaseDuration, n.Dots, n.Accidental,
                 n.SourcePosition, hasTieStart: n.HasTieStart,
-                hasSlurStart: n.HasSlurStart, hasSlurEnd: n.HasSlurEnd, isCue: n.IsCue)
+                hasSlurStart: n.HasSlurStart, hasSlurEnd: n.HasSlurEnd, isCue: n.IsCue,
+                fingering: n.Fingering)
             {
                 GraceTime = true,
                 GraceSlash = slash,
@@ -766,10 +769,11 @@ internal sealed class MeasureBuilder
             },
 
             ChordItem c => new ChordItem(
-                // The members keep the same seven answers and nothing else — a member can carry
-                // its own fingering and its own notehead style, and both are drops here too.
+                // The members keep the same seven answers and their fingerings (session 917) —
+                // a member can carry its own notehead style too, and that is a drop here.
                 c.Notes.Select(static m => new ChordNoteInfo(
                     m.StaffPosition, m.Accidental,
+                    Fingering: m.Fingering,
                     StringNumber: m.StringNumber, Midi: m.Midi,
                     SourcePosition: m.SourcePosition, WrittenPitch: m.WrittenPitch)).ToImmutableArray(),
                 c.BaseDuration, c.Dots, c.SourcePosition, isCue: c.IsCue,

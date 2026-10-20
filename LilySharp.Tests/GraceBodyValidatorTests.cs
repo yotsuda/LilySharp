@@ -73,8 +73,9 @@ public class GraceBodyValidatorTests
     // ornaments and the fermata family the same day (ledger script.grace.mover.*), and
     // `grace { d'8@f }` with the dynamic levels (ledger dynamic.grace.*; see
     // ADynamicOnAGrace_IsDrawn_AndNotReported), and `grace { d'8@text("hi") }` with the texts
-    // (ledger text.grace.*).
-    [InlineData("grace { d'8@finger(3) } c'1 | e'1 |", "grace { d'8 } c'1 | e'1 |")]
+    // (ledger text.grace.*), and grace { d'8@finger(3) } with the fingerings (session 917, ledger
+    // fingering.grace.*; see AFingeringOnAGrace_IsDrawn_AndNotReported).
+    [InlineData("grace { d'8@cresc } c'1 | e'1@f |", "grace { d'8 } c'1 | e'1@f |")]
     // ⚠️ `grace { d'8. }` LEFT THIS THEORY ON 2026-08-30 (session 299), which is the way a
     // row is meant to leave it: the dot is drawn now, so the line asserting it is missing
     // went red and taking it out was part of closing the hole. See ADottedGrace_IsDrawn.
@@ -163,6 +164,22 @@ public class GraceBodyValidatorTests
     }
 
     /// <summary>
+    /// A FINGERING on a grace note is drawn (session 917, HANDOFF §2 U8 ⒟): the digit at the
+    /// grace's font-size −8, centred on the grace head (ledger fingering.grace.*) — on a note,
+    /// on a chord member (the lower half goes down), and over a beamed grace, whose stem is a
+    /// support. Nothing is reported about it.
+    /// </summary>
+    [Theory]
+    [InlineData("grace { d'8@finger(3) } c'1 | e'1 |")]
+    [InlineData("grace { <d'@finger(1) f'@finger(3)>8 } c'1 | e'1 |")]
+    [InlineData("grace { a'16@finger(1) b'16 } c'1 | e'1 |")]
+    public void AFingeringOnAGrace_IsDrawn_AndNotReported(string written)
+    {
+        Assert.Empty(Warnings(Book(written)));
+        Assert.NotEqual(Page(written.Replace("@finger(1)", "").Replace("@finger(3)", "")), Page(written));
+    }
+
+    /// <summary>
     /// The grace body that draws exactly what it says draws no warning either. This is the
     /// case that catches a validator that has quietly become "warn about every grace".
     /// </summary>
@@ -218,10 +235,11 @@ public class GraceBodyValidatorTests
     [Fact]
     public void TheWarningStandsAtWhatWasWritten()
     {
-        // A fingering: since session 916 the scripts and the dynamics on a grace are drawn.
-        string source = Book("grace { d'8@finger(3) } c'1 | e'1 |");
+        // A hairpin's start: since sessions 916-917 the scripts, the dynamics, the texts and the
+        // fingerings on a grace are drawn.
+        string source = Book("grace { d'8@cresc } c'1 | e'1@f |");
         var warning = Assert.Single(Warnings(source));
-        Assert.Equal(source.IndexOf("@finger", System.StringComparison.Ordinal),
+        Assert.Equal(source.IndexOf("@cresc", System.StringComparison.Ordinal),
             warning.Span.Start);
     }
 
@@ -511,8 +529,9 @@ public class GraceBodyValidatorTests
         Assert.Empty(Warnings(Book("grace { d'16 <c' e'>16 f'16 } c'1 | e'1 |")));
 
         // An annotation a grace does not carry is still reported on a chord MEMBER, at the
-        // member (a script there is drawn since session 916; a fingering is not).
-        var onMember = Assert.Single(Warnings(Book("grace { <d'@finger(3) f'>8 } c'1 | e'1 |")));
+        // member (a script there is drawn since session 916, a fingering since 917; a hairpin's
+        // start is not).
+        var onMember = Assert.Single(Warnings(Book("grace { <d'@cresc f'>8 } c'1 | e'1@f |")));
         Assert.Contains("is not engraved", onMember.Message);
     }
 

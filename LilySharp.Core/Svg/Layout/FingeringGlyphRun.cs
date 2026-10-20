@@ -92,12 +92,15 @@ internal static class FingeringGlyphRun
     /// </summary>
     /// <remarks>The −5 is the music font's to apply (<see cref="MusicFont.TextCutStep"/>): a
     /// SMuFL font's digits are already that size.</remarks>
-    internal static double Step(ScoreTextMetrics fonts)
-        => MusicFont.Current.TextCutStep(MusicGlyph.Fingering0, FontSizeStep)
+    /// <param name="lilyPondStep">The grob's own <c>font-size</c>: <see cref="FontSizeStep"/>, or a grace
+    /// note's −8 (<see cref="GrobFontSize.GraceFingeringFontSizeStep"/>, general-grace-settings).</param>
+    internal static double Step(ScoreTextMetrics fonts, double lilyPondStep = FontSizeStep)
+        => MusicFont.Current.TextCutStep(MusicGlyph.Fingering0, lilyPondStep)
            + fonts.StepOf(TextRole.Fingering, EngravingEm);
 
     /// <summary>The em a fingering is drawn at for THIS score.</summary>
-    internal static double Em(ScoreTextMetrics fonts) => 4.0 * EmmentalerDesignSize.Magstep(Step(fonts));
+    internal static double Em(ScoreTextMetrics fonts, double lilyPondStep = FontSizeStep)
+        => 4.0 * EmmentalerDesignSize.Magstep(Step(fonts, lilyPondStep));
 
     /// <summary>
     /// The Emmentaler design a fingering is drawn from — the PEN needs it as well as the
@@ -105,7 +108,8 @@ internal static class FingeringGlyphRun
     /// </summary>
     /// <remarks>LILYPOND-REF: lily/font-select.cc:41-70 best_rounded_design_size — 20·magstep(−5)
     /// = 11.2246 pt lands on <c>emmentaler-11</c>.</remarks>
-    internal static int Design(ScoreTextMetrics fonts) => MusicFont.Current.DesignAt(Step(fonts)).Rounded;
+    internal static int Design(ScoreTextMetrics fonts, double lilyPondStep = FontSizeStep)
+        => MusicFont.Current.DesignAt(Step(fonts, lilyPondStep)).Rounded;
 
     /// <summary>That design's table, already in the PAGE's staff spaces.</summary>
     private static MusicFontDesign Font(double step) => MusicFont.Current.SizedAt(step);
@@ -137,9 +141,9 @@ internal static class FingeringGlyphRun
     /// non-digit reaches here is a negative number's sign; it is drawn in the serif face at
     /// this em so that a nonsense input still has one metric home rather than none.
     /// </remarks>
-    internal static ImmutableArray<Piece> Pieces(ScoreTextMetrics fonts, string text)
+    internal static ImmutableArray<Piece> Pieces(ScoreTextMetrics fonts, string text, double lilyPondStep = FontSizeStep)
     {
-        var run = FetaTextRun.Pieces(text, Lookup(Step(fonts)), Em(fonts));
+        var run = FetaTextRun.Pieces(text, Lookup(Step(fonts, lilyPondStep)), Em(fonts, lilyPondStep));
         var pieces = ImmutableArray.CreateBuilder<Piece>(run.Length);
         foreach (var p in run) pieces.Add(new Piece(p.Ch, p.X, p.Advance, p.IsGlyph));
         return pieces.ToImmutable();
@@ -150,8 +154,8 @@ internal static class FingeringGlyphRun
     /// <remarks>LILYPOND-REF: lily/pango-font.cc:358-360 Pango_font::pango_item_string_stencil
     /// — <c>Interval (PANGO_LBEARING
     /// (logical_rect), PANGO_RBEARING (logical_rect))</c>.</remarks>
-    internal static double Width(ScoreTextMetrics fonts, string text)
-        => FetaTextRun.Width(text, Lookup(Step(fonts)), Em(fonts));
+    internal static double Width(ScoreTextMetrics fonts, string text, double lilyPondStep = FontSizeStep)
+        => FetaTextRun.Width(text, Lookup(Step(fonts, lilyPondStep)), Em(fonts, lilyPondStep));
 
     /// <summary>The run's ink above its baseline — the union of its glyphs' outline tops.</summary>
     /// <remarks>
@@ -164,8 +168,8 @@ internal static class FingeringGlyphRun
     ///   (lily/modified-font-metric.cc:125-143 Modified_font_metric::text_stencil — the same argument
     ///   <see cref="GlyphMetrics.TryGetDynamicInk"/> carries).
     /// </remarks>
-    internal static double InkTop(ScoreTextMetrics fonts, string text)
-        => FetaTextRun.InkTop(text, Lookup(Step(fonts)), Em(fonts));
+    internal static double InkTop(ScoreTextMetrics fonts, string text, double lilyPondStep = FontSizeStep)
+        => FetaTextRun.InkTop(text, Lookup(Step(fonts, lilyPondStep)), Em(fonts, lilyPondStep));
 
     /// <summary>The run's ink BELOW its baseline (≤ 0) — the other end of the same box.</summary>
     /// <remarks>
@@ -173,8 +177,8 @@ internal static class FingeringGlyphRun
     /// sit ON the baseline and the seven hangs 0.004 design-ss below it, which LilyPond dumps
     /// as <c>yext = (-0.002234 . 1.122528)</c> on a fingering "7".
     /// </remarks>
-    internal static double InkBottom(ScoreTextMetrics fonts, string text)
-        => FetaTextRun.InkBottom(text, Lookup(Step(fonts)), Em(fonts));
+    internal static double InkBottom(ScoreTextMetrics fonts, string text, double lilyPondStep = FontSizeStep)
+        => FetaTextRun.InkBottom(text, Lookup(Step(fonts, lilyPondStep)), Em(fonts, lilyPondStep));
 
     /// <summary>
     /// The glyph, its outline box and its UNHINTED advance for one digit, all in the page's

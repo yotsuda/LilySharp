@@ -62,7 +62,11 @@ public readonly record struct FingeringLayout(
     // LILYPOND-REF: lily/new-fingering-engraver.cc:334-335 set_property
     //   "script-priority" (finger_prio + d * ft.position_);
     //   scm/define-grobs.scm:1554 Fingering script-priority = 100.
-    int ColumnPriority = int.MinValue);
+    int ColumnPriority = int.MinValue,
+    // The grob's own font-size: the Fingering's −5, or a GRACE note's −8 (general-grace-settings)
+    // — the size the pen, the script column and the reservation all read the digit run at
+    // (FingeringEngraver.DigitRun).
+    double FontSizeStep = FingeringGlyphRun.FontSizeStep);
 
 /// <summary>
 /// Calculates positions for fingering numbers attached to notes.
@@ -141,7 +145,7 @@ internal static class FingeringEngraver
     /// </para>
     /// </remarks>
     internal static (string Glyphs, GlyphMetrics.BBox Ink, double Width) DigitRun(
-        Rendering.ScoreTextMetrics fonts, int number)
+        Rendering.ScoreTextMetrics fonts, int number, double lilyPondStep = FingeringGlyphRun.FontSizeStep)
     {
         // The ten single digits — every fingering in practice — are answered from a
         // table built once: DigitRun runs per fingering in the island pass, the
@@ -153,6 +157,9 @@ internal static class FingeringEngraver
         // …and per MUSIC FONT: the glyphs are the font's characters and the box its metrics,
         // so a preview that draws a Bravura score after an Emmentaler one must not be handed
         // Emmentaler's (the §6 ② ⒞ rule for character-keyed caches; Lab sessions/p869).
+        // A grace note's digit (−8) is the rarity and builds per call, as a stepped plan does.
+        if (lilyPondStep != FingeringGlyphRun.FontSizeStep)
+            return BuildDigitRun(fonts, number, lilyPondStep);
         if (number is >= 0 and <= 9 && FingeringGlyphRun.Step(fonts)
                 == MusicFont.Current.TextCutStep(MusicGlyph.Fingering0, FingeringGlyphRun.FontSizeStep))
         {
@@ -166,17 +173,17 @@ internal static class FingeringEngraver
         SingleDigitRuns = new();
 
     private static (string Glyphs, GlyphMetrics.BBox Ink, double Width) BuildDigitRun(
-        Rendering.ScoreTextMetrics fonts, int number)
+        Rendering.ScoreTextMetrics fonts, int number, double lilyPondStep = FingeringGlyphRun.FontSizeStep)
     {
         string text = number.ToString(System.Globalization.CultureInfo.InvariantCulture);
         var glyphs = new System.Text.StringBuilder(text.Length);
-        foreach (var piece in FingeringGlyphRun.Pieces(fonts, text))
+        foreach (var piece in FingeringGlyphRun.Pieces(fonts, text, lilyPondStep))
             if (piece.IsGlyph)
                 glyphs.Append(piece.Ch);
-        double width = FingeringGlyphRun.Width(fonts, text);
+        double width = FingeringGlyphRun.Width(fonts, text, lilyPondStep);
         return (glyphs.ToString(),
-            new GlyphMetrics.BBox(0.0, FingeringGlyphRun.InkBottom(fonts, text),
-                width, FingeringGlyphRun.InkTop(fonts, text)),
+            new GlyphMetrics.BBox(0.0, FingeringGlyphRun.InkBottom(fonts, text, lilyPondStep),
+                width, FingeringGlyphRun.InkTop(fonts, text, lilyPondStep)),
             width);
     }
 
@@ -192,18 +199,19 @@ internal static class FingeringEngraver
         Score score,
         ImmutableArray<SystemLayout> systems,
         int staffIndex = -1,
-        ImmutableArray<BeamLayout> beamLayouts = default)
+        ImmutableArray<BeamLayout> beamLayouts = default,
+        ImmutableArray<GraceNoteItem> graceNotes = default)
     {
         if (score.Voices.IsDefaultOrEmpty)
             return ImmutableArray<FingeringLayout>.Empty;
 
         var measureMap = LayoutUtilities.BuildMeasureLayoutMap(systems);
         var systemMap = LayoutUtilities.BuildMeasureMap(systems);
-        return Calculate(fonts, score, measureMap, systemMap.ContainsKey, staffIndex, beamLayouts.AsSpan());
+        return Calculate(fonts, score, measureMap, systemMap.ContainsKey, staffIndex, beamLayouts.AsSpan(), graceNotes);
     }
 
     /// <summary>
-    /// <see cref="Calculate(Rendering.ScoreTextMetrics, Score, ImmutableArray{SystemLayout}, int, ImmutableArray{BeamLayout})"/>
+    /// <see cref="Calculate(Rendering.ScoreTextMetrics, Score, ImmutableArray{SystemLayout}, int, ImmutableArray{BeamLayout}, ImmutableArray{GraceNoteItem})"/>
     /// for a caller that
     /// holds ONE system's measure layouts rather than the placed systems — the shape the
     /// per-staff skyline pass runs in.
@@ -222,18 +230,19 @@ internal static class FingeringEngraver
         Score score,
         ImmutableArray<MeasureLayout> measureLayouts,
         int staffIndex,
-        ImmutableArray<BeamLayout> beamLayouts = default)
+        ImmutableArray<BeamLayout> beamLayouts = default,
+        ImmutableArray<GraceNoteItem> graceNotes = default)
     {
         if (score.Voices.IsDefaultOrEmpty || measureLayouts.IsDefaultOrEmpty)
             return ImmutableArray<FingeringLayout>.Empty;
         var map = RentUnitMap(measureLayouts);
-        var fingerings = Calculate(fonts, score, map, _ => true, staffIndex, beamLayouts.AsSpan());
+        var fingerings = Calculate(fonts, score, map, _ => true, staffIndex, beamLayouts.AsSpan(), graceNotes);
         GiveUnitMap(map);
         return fingerings;
     }
 
     /// <summary>
-    /// <see cref="Calculate(Rendering.ScoreTextMetrics, Score, ImmutableArray{MeasureLayout}, int, ImmutableArray{BeamLayout})"/>
+    /// <see cref="Calculate(Rendering.ScoreTextMetrics, Score, ImmutableArray{MeasureLayout}, int, ImmutableArray{BeamLayout}, ImmutableArray{GraceNoteItem})"/>
     /// for a caller that runs this body per (staff, system) — the shape
     /// <see cref="FingScriptMemo"/> runs in — and hands it THAT unit's beams, the ones the
     /// caller already attributes to the unit.
@@ -253,13 +262,14 @@ internal static class FingeringEngraver
         Score score,
         ImmutableArray<MeasureLayout> measureLayouts,
         int staffIndex,
-        List<BeamLayout> unitBeams)
+        List<BeamLayout> unitBeams,
+        ImmutableArray<GraceNoteItem> graceNotes = default)
     {
         if (score.Voices.IsDefaultOrEmpty || measureLayouts.IsDefaultOrEmpty)
             return ImmutableArray<FingeringLayout>.Empty;
         var map = RentUnitMap(measureLayouts);
         var fingerings = Calculate(fonts, score, map, _ => true, staffIndex,
-            System.Runtime.InteropServices.CollectionsMarshal.AsSpan(unitBeams));
+            System.Runtime.InteropServices.CollectionsMarshal.AsSpan(unitBeams), graceNotes);
         GiveUnitMap(map);
         return fingerings;
     }
@@ -270,7 +280,7 @@ internal static class FingeringEngraver
     /// </summary>
     /// <remarks>
     /// MEASURED (session 475's census at HEAD, Release, the reader's corpus, eight forward
-    /// keystrokes a book): the unsized one (<see cref="Calculate(Rendering.ScoreTextMetrics, Score, ImmutableArray{MeasureLayout}, int, ImmutableArray{BeamLayout})"/>)
+    /// keystrokes a book): the unsized one (<see cref="Calculate(Rendering.ScoreTextMetrics, Score, ImmutableArray{MeasureLayout}, int, ImmutableArray{BeamLayout}, ImmutableArray{GraceNoteItem})"/>)
     /// was 1.77 builds a keystroke at 3.93 measures (max 8), 770 B a keystroke, none reachable
     /// once the render returned; the sized one (<see cref="CalculateWithUnitBeams"/>) is the
     /// same map the census does not price. The body walks the map's KEYS (the measures it
@@ -306,7 +316,7 @@ internal static class FingeringEngraver
     }
 
     /// <summary>
-    /// The beamed-stem-tip map <see cref="Calculate(Rendering.ScoreTextMetrics, Score, Dictionary{int, MeasureLayout}, System.Func{int, bool}, int, ReadOnlySpan{BeamLayout})"/>
+    /// The beamed-stem-tip map <see cref="Calculate(Rendering.ScoreTextMetrics, Score, Dictionary{int, MeasureLayout}, System.Func{int, bool}, int, ReadOnlySpan{BeamLayout}, ImmutableArray{GraceNoteItem})"/>
     /// reads, lent from one map the thread keeps between calls.
     /// </summary>
     /// <remarks>
@@ -364,7 +374,8 @@ internal static class FingeringEngraver
         Dictionary<int, MeasureLayout> measureMap,
         System.Func<int, bool> isPlaced,
         int staffIndex,
-        ReadOnlySpan<BeamLayout> beamLayouts)
+        ReadOnlySpan<BeamLayout> beamLayouts,
+        ImmutableArray<GraceNoteItem> graceNotes)
     {
         // ⚠️ IT WAITS FOR THE FIRST FINGERED NOTE. `ImmutableArray.CreateBuilder<T>()` lays
         // out its first block — 88 B for a reference element — before a single Add, and over
@@ -398,19 +409,38 @@ internal static class FingeringEngraver
             for (int ii = 0; ii < measure.Items.Length; ii++)
             {
                 var item = measure.Items[ii];
+                // A FINGERING ON A GRACE NOTE (session 917, HANDOFF §2 U8 ⒟): centred on the grace
+                // column's head, read off the run as a grace script's X is
+                // (ElementCoordinator.GraceColumnHeadLeftX), at the grace's Fingering size. A
+                // caller that was not handed the grace groups places none rather than place one
+                // on the main grid.
+                double? graceHeadLeft = null;
+                if (item.GraceTime && (item is NoteItem { Fingering: not null } || item is ChordItem gc && AnyFingered(gc)))
+                {
+                    if (graceNotes.IsDefaultOrEmpty)
+                        continue;
+                    graceHeadLeft = ElementCoordinator.GraceColumnHeadLeftX(voice, graceNotes,
+                        System.Math.Max(staffIndex, 0), 0, mi, ii, measureLayout,
+                        SpacingRules.VoiceCollisionShiftsOf(score.Voices));
+                    if (graceHeadLeft is null)
+                        continue;
+                }
+                double? graceStemTip = graceHeadLeft is null ? null
+                    : BeamedGraceStemTip(graceNotes, System.Math.Max(staffIndex, 0), mi, ii, measureLayout, voice.Measures);
                 if (item is NoteItem note && note.Fingering.HasValue)
                 {
                     layouts ??= ImmutableArray.CreateBuilder<FingeringLayout>();
-                    var column = ColumnOf(ref beamedTips, beamLayouts, item, staffIndex, mi, ii);
+                    var column = item.GraceTime ? null : ColumnOf(ref beamedTips, beamLayouts, item, staffIndex, mi, ii);
                     BuildLayouts(fonts,
                         new[] { (note.StaffPosition, note.Fingering.Value) },
                         new[] { note.StaffPosition },
                         note.BaseDuration, note.SourcePosition,
-                        mi, ii, measureLayout, staffIndex, layouts, voice.Measures, column);
+                        mi, ii, measureLayout, staffIndex, layouts, voice.Measures, column,
+                        item.GraceTime ? item : null, graceHeadLeft ?? 0, graceStemTip);
                 }
                 else if (item is ChordItem chord && AnyFingered(chord))
                 {
-                    var column = ColumnOf(ref beamedTips, beamLayouts, item, staffIndex, mi, ii);
+                    var column = item.GraceTime ? null : ColumnOf(ref beamedTips, beamLayouts, item, staffIndex, mi, ii);
                     var fingered = chord.Notes
                         .Where(n => n.Fingering.HasValue)
                         .Select(n => (n.StaffPosition, n.Fingering!.Value))
@@ -422,7 +452,8 @@ internal static class FingeringEngraver
                         fingered,
                         chord.Notes.Select(n => n.StaffPosition).ToArray(),
                         chord.BaseDuration, chord.SourcePosition,
-                        mi, ii, measureLayout, staffIndex, layouts, voice.Measures, column);
+                        mi, ii, measureLayout, staffIndex, layouts, voice.Measures, column,
+                        item.GraceTime ? item : null, graceHeadLeft ?? 0, graceStemTip);
                 }
             }
         }
@@ -451,6 +482,49 @@ internal static class FingeringEngraver
         return beamedTips.TryGetValue((System.Math.Max(0, staffIndex), 0, mi, ii), out var beamTip)
             ? NoteColumnLayout.Of(item, beamTip.StemUp, beamTip.Beam, beamTip.StemX)
             : null;
+    }
+
+    /// <summary>
+    /// Where the stem of grace column <paramref name="itemIndex"/> of measure
+    /// <paramref name="measureIndex"/> (voice 0 of staff <paramref name="staffIndex"/>) ends,
+    /// in staff spaces above the middle line, when that column is in its run's BEAMED prefix —
+    /// the grace beam's line read at that column, the quanter's two ends as the renderer and
+    /// the reservation read them (<c>SkylineBuilder.AddGraceBeamsToSkyline</c>). Null for a
+    /// flagged grace, an unquanted run, or a column no run publishes.
+    /// </summary>
+    /// <remarks>
+    /// The line is evaluated in the run's own column offsets: the stem's X offset off its
+    /// head is the same at every column of a run (one head font, one direction), so it cancels
+    /// out of the slope, and the run's X is not needed.
+    /// </remarks>
+    private static double? BeamedGraceStemTip(ImmutableArray<GraceNoteItem> graceNotes,
+        int staffIndex, int measureIndex, int itemIndex, MeasureLayout measureLayout,
+        ImmutableArray<Measure> measures)
+    {
+        foreach (var grace in graceNotes)
+        {
+            if (grace.StaffIndex != staffIndex || grace.VoiceIndex != 0
+                || grace.MeasureIndex != measureIndex || grace.ColumnItemIndices.IsDefaultOrEmpty)
+                continue;
+            int k = grace.ColumnItemIndices.IndexOf(itemIndex);
+            if (k < 0)
+                continue;
+            int prefix = GraceNoteEngraver.BeamedPrefix(grace.Columns);
+            if (k >= prefix || grace.MeasureIndex >= measures.Length)
+                return null;
+            var (_, _, columns) = GraceNoteEngraver.RunPlacement(
+                grace, measureLayout, measures, ImmutableArray<ArticulationItem>.Empty);
+            var offsets = columns.Offsets;
+            if (offsets.IsDefaultOrEmpty || offsets.Length < prefix)
+                return null;
+            var (left, right) = GraceNoteEngraver.QuantGraceBeam(grace, offsets);
+            if (left is not { } l || right is not { } r)
+                return null;
+            double span = offsets[prefix - 1] - offsets[0];
+            double at = span > 0.001 ? (offsets[k] - offsets[0]) / span : 0.0;
+            return (l + (r - l) * at) / 2.0;
+        }
+        return null;
     }
 
     /// <summary>Whether any head of <paramref name="chord"/> carries a digit — asked before
@@ -540,13 +614,31 @@ internal static class FingeringEngraver
         MeasureLayout measureLayout, int staffIndex,
         ImmutableArray<FingeringLayout>.Builder layouts,
         ImmutableArray<Measure> measures,
-        NoteColumnLayout? column = null)
+        NoteColumnLayout? column = null,
+        MusicItem? graceItem = null, double graceHeadLeft = 0, double? graceStemTip = null)
     {
         if (measureLayout.Columns.IsDefaultOrEmpty
             && itemIndex >= measureLayout.Items.Length)
             return;
 
-        double centerX = CentreX(baseDuration, measureIndex, itemIndex, measureLayout, measures);
+        int noteValue = baseDuration.Numerator == 1 ? (int)baseDuration.Denominator : 1;
+        // A GRACE head is the grace's own (the fourteen design at magstep(−3)), and so is its
+        // digit (−8): LilyPond 2.26.0 centres the digit on that head and clears its ink by the
+        // same 0.5 (ledger fingering.grace.*, probes/grace-fingering.ly).
+        // LILYPOND-REF: scm/music-functions.scm:636-650 general-grace-settings —
+        //   (Voice Fingering font-size -8).
+        // ⚠️ A BEAMED grace's stem is not a support here (column is null for a grace): the
+        // grace beams are not among the beam layouts the tip map folds. Named, not observed —
+        // no point puts a digit over a beamed grace.
+        var headBox = graceItem is { } gi
+            ? GlyphMetrics.GetNoteheadBBox(GrobFontSize.FontOf(gi, SizedGrob.NoteHead), NoteheadStyle.Default, noteValue)
+            : GlyphMetrics.GetNoteheadBBox(noteValue);
+        double step = graceItem is { } gs
+            ? GrobFontSize.StepOf(gs, SizedGrob.Fingering)
+            : FingeringGlyphRun.FontSizeStep;
+        double centerX = graceItem is not null
+            ? graceHeadLeft + headBox.CenterX
+            : CentreX(baseDuration, measureIndex, itemIndex, measureLayout, measures);
 
         // The support set: every head's own INK edge, and the staff's.
         // ⚠️ DERIVATION, NOT A TRANSCRIPTION, and it is the shape of the code that differs:
@@ -563,8 +655,7 @@ internal static class FingeringEngraver
         // named fork 4.000000 did not fire). EngravingDefaults.NoteheadHalfHeight's own
         // remark listed this site as one that could not be corrected while no point
         // observed it; one does now.
-        int noteValue = baseDuration.Numerator == 1 ? (int)baseDuration.Denominator : 1;
-        double headHalfInk = GlyphMetrics.GetNoteheadBBox(noteValue).Top;
+        double headHalfInk = headBox.Top;
         double headsTop = double.NegativeInfinity, headsBottom = double.PositiveInfinity;
         foreach (int p in headPositions)
         {
@@ -587,13 +678,28 @@ internal static class FingeringEngraver
             stemUpReach = EngravingDefaults.StaffMiddle - col.OutwardTipDeviceY(towardUp: true);
             stemDownReach = EngravingDefaults.StaffMiddle - col.OutwardTipDeviceY(towardUp: false);
         }
+        // A BEAMED grace's stem, ending on the grace beam (BeamedGraceStemTip) — the same gate:
+        // add-stem-support only-if-beamed. Its extent runs to the beam's OUTER edge, half the
+        // grace beam's thickness past the beam's line (LilyPond 2.26.0: the digit over
+        // `\grace { a16-1 b16 }` stands 0.5 off 2.349033, the line 2.157033 + 0.192).
+        // LILYPOND-REF: lily/stem.cc:141-142 Stem::set_stem_positions — height[d] = se ×
+        //   half_space + beam_end_corrective; :829-844 Stem::beam_end_corrective — dir ×
+        //   beam-thickness × 0.5.
+        else if (graceItem is not null && graceStemTip is { } tip)
+        {
+            double halfBeam = EngravingDefaults.GraceBeamThickness / 2.0;
+            if (graceItem.GraceStemDown)
+                stemDownReach = tip - halfBeam;
+            else
+                stemUpReach = tip + halfBeam;
+        }
 
         // UP, inner to outer: priority 100 + position ascends with the position, so the
         // bucket is walked in the order it was just sorted into.
         double support = System.Math.Max(System.Math.Max(StaffInk, headsTop), stemUpReach);
         for (int i = center; i < sorted.Length; i++)
         {
-            var ink = DigitRun(fonts, sorted[i].Number).Ink;
+            var ink = DigitRun(fonts, sorted[i].Number, step).Ink;
             double yUp = support + Padding - ink.Bottom;
             layouts.Add(new FingeringLayout(
                 MeasureIndex: measureIndex,
@@ -604,7 +710,8 @@ internal static class FingeringEngraver
                 IsAbove: true,
                 SourcePosition: sourcePosition,
                 StaffIndex: staffIndex,
-                ColumnPriority: 100 + sorted[i].Position));
+                ColumnPriority: 100 + sorted[i].Position,
+                FontSizeStep: step));
             support = yUp + ink.Top;
         }
 
@@ -620,7 +727,7 @@ internal static class FingeringEngraver
         support = System.Math.Min(System.Math.Min(-StaffInk, headsBottom), stemDownReach);
         for (int i = center - 1; i >= 0; i--)
         {
-            var ink = DigitRun(fonts, sorted[i].Number).Ink;
+            var ink = DigitRun(fonts, sorted[i].Number, step).Ink;
             double yUp = support - Padding - ink.Top;
             layouts.Add(new FingeringLayout(
                 MeasureIndex: measureIndex,
@@ -631,7 +738,8 @@ internal static class FingeringEngraver
                 IsAbove: false,
                 SourcePosition: sourcePosition,
                 StaffIndex: staffIndex,
-                ColumnPriority: 100 - sorted[i].Position));
+                ColumnPriority: 100 - sorted[i].Position,
+                FontSizeStep: step));
             support = yUp + ink.Bottom;
         }
     }

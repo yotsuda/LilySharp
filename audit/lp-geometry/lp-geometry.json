@@ -7238,6 +7238,48 @@
       "residual": 0.000044,
       "why": "The CONTROL: the same text below a full-size d. 0.000044 -- the text's outline walk, as in the other text points; the 0.46 clearance from the head's box bottom -3.045 is LilyPond's exactly."
     },
+    "fingering.grace.above.staff-to-ink-bottom": {
+      "probe": "grace-fingering.ly",
+      "score": "GFA",
+      "lilypond": 2.550000,
+      "residual": 0.0,
+      "why": "EXACT. A fingering on a grace note, `grace { d16@finger(1) }`: LilyPond's Fingering at the grace's font-size -8 (general-grace-settings), its ink bottom on the staff's clamp 2.05 + padding 0.5 -- the grace head and its flagged stem stand below that."
+    },
+    "fingering.grace.head-to-box-left": {
+      "probe": "grace-fingering.ly",
+      "score": "GFA",
+      "lilypond": 0.168751,
+      "residual": 0.0,
+      "why": "EXACT. The same digit's box left off the GRACE head's anchor (10.986796 -> 11.155547): centred on the grace head's ink (the fourteen design at magstep(-3), 0.917938 wide), the run's advance at -8 (0.580436) halved. Read from the grace head, so the run's own placement does not enter."
+    },
+    "fingering.grace.flagged-stem.staff-to-ink-bottom": {
+      "probe": "grace-fingering.ly",
+      "score": "GFB",
+      "lilypond": 2.550000,
+      "residual": 0.0,
+      "why": "EXACT. Over a grace b' whose FLAGGED stem reaches 2.7, the digit still stands on the staff's clamp: Fingering's add-stem-support is only-if-beamed, so an unbeamed grace stem is no support -- the same gate as full size (fingering.chord.flagged-inner)."
+    },
+    "fingering.grace.chord-below.staff-to-ink-top": {
+      "probe": "grace-fingering.ly",
+      "score": "GFC",
+      "lilypond": -3.394060,
+      "residual": 0.0,
+      "why": "A grace chord `<d@finger(1) f@finger(3)>16`: the lower digit goes DOWN (fingeringOrientations '(up down), the bucket split at size/2), its ink top 0.5 under the grace head's box bottom -2.894059."
+    },
+    "fingering.grace.beamed-stem.staff-to-ink-bottom": {
+      "probe": "grace-fingering.ly",
+      "score": "GFD",
+      "lilypond": 2.849033,
+      "residual": 0.0,
+      "why": "EXACT. A BEAMED grace, `grace { a16@finger(1) b16 }`: its stem is a support (only-if-beamed), and its extent runs to the grace beam's OUTER edge -- the beam's line at that stem (2.157033, QuantGraceBeam) + half the grace beam's 0.384 (Stem::beam_end_corrective) = 2.349033, + padding 0.5. Reading the beam's centre line instead would put the digit 0.192 low."
+    },
+    "fingering.grace.control-below.staff-to-ink-top": {
+      "probe": "grace-fingering.ly",
+      "score": "GFE",
+      "lilypond": -3.545000,
+      "residual": 0.0,
+      "why": "The CONTROL of fingering.grace.chord-below: the same chord at full size, the lower digit's ink top 0.5 under the head's box bottom -3.045."
+    },
     "script.grace.staccato.below": {
       "probe": "grace-script.ly",
       "score": "GSA",

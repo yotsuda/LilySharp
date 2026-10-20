@@ -2661,7 +2661,8 @@ Grace          = ( 'grace' | 'acciaccatura' | 'appoggiatura' | 'afterGrace' ) , 
                     '@staccato' '@staccatissimo' '@accent' '@marcato' '@tenuto' '@portato'
                     are drawn on a grace note too, at the grace size, and so are the fermatas
                     and the ornaments, a dynamic level and an '@text' at full size
-                    (session 916). *)
+                    (session 916), and a fingering '@finger(N)' at the grace's -8
+                    (session 917). *)
 Repeat         = 'repeat' , 'tremolo' , Integer , MusicBlock ;
                  (* a tremolo: the note, or the two notes, alternated Integer times.
                     Volta repeats use the form's |: … :|, NOT a 'repeat' keyword.

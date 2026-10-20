@@ -791,7 +791,6 @@
 "Svg/Layout/ArticulationEngraver.cs","ArticulationEngraver.CalculateWithFingerings","0.0","if (shift != 0.0)","(file-level) LILYPOND-REF: define-grobs.scm:2992-3024 Script grob","Yellow"
 "Svg/Layout/ArticulationEngraver.cs","ArticulationEngraver.SortByColumnPriority","16, 16","Span<int> keys = n <= 16 ? stackalloc int[16] : new int[n];","(file-level) LILYPOND-REF: define-grobs.scm:2992-3024 Script grob","Yellow"
 "Svg/Layout/ArticulationEngraver.cs","ArticulationEngraver.FingeringScriptLayout","2.0","X: fg.X - width / 2.0,","(file-level) LILYPOND-REF: define-grobs.scm:2992-3024 Script grob","Yellow"
-"Svg/Layout/ArticulationEngraver.cs","ArticulationEngraver.FingeringScriptLayout","5.0","FontSizeStep: -5.0,","(file-level) LILYPOND-REF: define-grobs.scm:2992-3024 Script grob","Yellow"
 "Svg/Layout/ArticulationEngraver.cs","ArticulationEngraver.ScriptSlurPadding","0.2","private const double ScriptSlurPadding = 0.2;","LILYPOND-REF: scm/define-grobs.scm Script, the slur-padding declaration (0.2).","Green"
 "Svg/Layout/ArticulationEngraver.cs","ArticulationEngraver.SlurAvoidanceShift","0.0","return 0.0;","(file-level) LILYPOND-REF: define-grobs.scm:2992-3024 Script grob","Yellow"
 "Svg/Layout/ArticulationEngraver.cs","ArticulationEngraver.SlurAvoidanceShift","0.0","return 0.0;","(file-level) LILYPOND-REF: define-grobs.scm:2992-3024 Script grob","Yellow"

@@ -4739,7 +4739,9 @@ internal sealed class MultiStaffLayouter
         // real index — the same restamp StaffArticulationLayouts makes, for the same reason.
         var localBeams = RestampedToStaff(beamLayouts, staffIndex);
         // The plan is the SCORE's, not the one-voice staffScore's (which carries none).
-        return FingeringEngraver.Calculate(score.TextMetrics, staffScore, measureLayouts, staffIndex, localBeams);
+        // …and the score's grace groups, so a grace note's digit is reserved where it is drawn.
+        return FingeringEngraver.Calculate(score.TextMetrics, staffScore, measureLayouts, staffIndex, localBeams,
+            score.GraceNotes);
     }
 
     /// <summary>
