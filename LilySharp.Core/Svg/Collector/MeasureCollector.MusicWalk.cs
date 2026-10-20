@@ -1021,9 +1021,14 @@ public sealed partial class MeasureCollector
         // (ElementCoordinator.LayoutSlurs). Before that the hand-written `(` on the LAST column
         // was read here into the group (GraceNoteItem.ExplicitSlur, a bow the renderer drew)
         // and every other one was dropped.
+        // THE TIE MARK RIDES TOO (session 916, ⒝2's tie half, HANDOFF §2 U8 ⒞): `grace { g16~ }
+        // g4` and `grace { d'16~ d'16 }` are paired by the ordinary TieDetector and laid out by
+        // the ordinary tie layout, whose grace bounds stand at the run's own X with the grace's
+        // head size (ElementCoordinator.BuildTieSpecification / BuildTieColumn). The manual BEAM
+        // marks are still dropped — a grace run is beamed by its own rule (GraceNoteEngraver).
         if (_graceDepth > 0)
-            m = new MarkerFlags(false, m.HasSlurStartAfter, m.HasSlurEndAfter, false, false,
-                SlurStartSource: m.SlurStartSource, SlurEndSource: m.SlurEndSource);
+            m = new MarkerFlags(m.HasTieAfter, m.HasSlurStartAfter, m.HasSlurEndAfter, false, false,
+                TieSource: m.TieSource, SlurStartSource: m.SlurStartSource, SlurEndSource: m.SlurEndSource);
 
         // ⚠️ The two bool reads come FIRST on purpose: they are false for every item of
         // every score that never writes `<>`, and that short-circuit keeps the type switch

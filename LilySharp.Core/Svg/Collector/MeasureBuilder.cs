@@ -744,15 +744,20 @@ internal sealed class MeasureBuilder
             // ⚠️ THE SLUR MARKS SURVIVE (session 725): a grace column is a slur bound like any
             // note, paired by the ordinary SlurDetector and laid out at the grace's own X and
             // font (ElementCoordinator.LayoutSlurs) — `grace { d'16( e') }`, `grace { g16( } a8)`.
+            // ⚠️ THE TIE MARK SURVIVES (session 916, HANDOFF §2 U8 ⒞): a grace column is a tie
+            // bound like any note — `grace { g'16~ } g'4`, `grace { d''16~ d''16 }` — paired by
+            // the ordinary TieDetector and laid out at the grace's own X and head size.
             NoteItem n => new NoteItem(
                 n.StaffPosition, n.BaseDuration, n.Dots, n.Accidental,
-                n.SourcePosition, hasSlurStart: n.HasSlurStart, hasSlurEnd: n.HasSlurEnd, isCue: n.IsCue)
+                n.SourcePosition, hasTieStart: n.HasTieStart,
+                hasSlurStart: n.HasSlurStart, hasSlurEnd: n.HasSlurEnd, isCue: n.IsCue)
             {
                 GraceTime = true,
                 GraceSlash = slash,
                 GraceStemDown = _graceStemDown,
                 Midi = n.Midi,
                 StringNumber = n.StringNumber,
+                TieStartSourcePosition = n.TieStartSourcePosition,
                 SlurStartSourcePosition = n.SlurStartSourcePosition,
                 SlurEndSourcePosition = n.SlurEndSourcePosition,
                 // The pitch the accidental was decided for, which the per-staff pass reads
@@ -768,11 +773,13 @@ internal sealed class MeasureBuilder
                     StringNumber: m.StringNumber, Midi: m.Midi,
                     SourcePosition: m.SourcePosition, WrittenPitch: m.WrittenPitch)).ToImmutableArray(),
                 c.BaseDuration, c.Dots, c.SourcePosition, isCue: c.IsCue,
+                hasTieStart: c.HasTieStart,
                 hasSlurStart: c.HasSlurStart, hasSlurEnd: c.HasSlurEnd)
             {
                 GraceTime = true,
                 GraceSlash = slash,
                 GraceStemDown = _graceStemDown,
+                TieStartSourcePosition = c.TieStartSourcePosition,
                 SlurStartSourcePosition = c.SlurStartSourcePosition,
                 SlurEndSourcePosition = c.SlurEndSourcePosition,
                 SlurStartHeadPosition = c.SlurStartHeadPosition,

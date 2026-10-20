@@ -8841,6 +8841,34 @@ internal static class LpGeometryProbes
     private static readonly string TW3S = TieWidthBook("<c d g>2~ <c d g>2 |", "TW3S");
 
     // The two chord-flag books are bass-clef, keyed: the owner's corpus shapes cut to one bar.
+    /// <summary>
+    /// A tie in GRACE TIME — a grace column to its main note (GTA) and between two grace
+    /// columns (GTB), with the full-size control of GTA (GTC). Until session 916 Lily# dropped
+    /// the `~` in a grace body (LYS4020); LilyPond ties a grace note as any Voice event.
+    /// </summary>
+    /// <remarks>LilyPond twin: audit/lp-geometry/probes/grace-tie.ly, scores GTA / GTB / GTC
+    /// (`\fixed c'`).</remarks>
+    private static string GraceTieBook(string music, string name) => $$"""
+        octave absolute
+        time 4/4
+
+        part m { clef treble }
+
+        section Main {
+          m { {{music}} }
+        }
+
+        form { ~Main }
+
+        score {{name}} {
+          staff m
+        }
+        """;
+
+    private static readonly string GTA = GraceTieBook("c4 grace { g16~ } g4 c2 |", "GTA");
+    private static readonly string GTB = GraceTieBook("c4 grace { d'16~ d'16 } c'4 c2 |", "GTB");
+    private static readonly string GTC = GraceTieBook("c4 g16~ g8. c2 |", "GTC");
+
     private static string TieChordFlagBook(string key, string music, string name) => $$"""
         octave absolute
         key {{key}}
@@ -17213,6 +17241,12 @@ internal static class LpGeometryProbes
         // tie, the other the height it pushes the tie to. See probes TCFX / TCFY.
         new("tie.width.chord-flag", TCFX, g => g.BowSpan(0)),
         new("tie.y.chord-flag", TCFY, g => g.BowAttachmentAboveStaffMiddle(0)),
+        // A tie in grace time, and the full-size control of the first.
+        new("tie.grace.to-main.width", GTA, g => g.BowSpan(0)),
+        new("tie.grace.to-main.y", GTA, g => g.BowAttachmentAboveStaffMiddle(0)),
+        new("tie.grace.inside.width", GTB, g => g.BowSpan(0)),
+        new("tie.grace.inside.y", GTB, g => g.BowAttachmentAboveStaffMiddle(0)),
+        new("tie.grace.control.width", GTC, g => g.BowSpan(0)),
 
         // ...and the one quantity that tie's residual is made of, measured on its own. The
         // BLACK head is the control and the HALF head the divergence -- same bar, same pitch,

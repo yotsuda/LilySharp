@@ -5097,7 +5097,7 @@ internal sealed class MultiStaffLayouter
         var items = StaffSpannerItemsOf(score, staff);
         return _elementCoordinator.LayoutTies(
             score.TextMetrics, items.Ties, items.LocalScore, ImmutableArray.Create(system),
-            staffIndex: 0, staff);
+            staffIndex: 0, staff, score.GraceNotes, graceStaffIndex: staffIndex);
     }
 
     /// <summary>

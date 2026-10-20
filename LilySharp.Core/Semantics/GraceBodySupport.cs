@@ -511,6 +511,13 @@ internal static class GraceBodySupport
             // LILYPOND-REF: lily/slur-engraver.cc — a Voice engraver, deaf to grace time.
             if (item is SlurSyntax)
                 continue;
+            // …and so is a tie (session 916): the walk keeps the `~` on its column, the
+            // ordinary TieDetector pairs it with the very next item — the next grace column or
+            // the main note, `grace { g16~ } g4` — and the tie layout reads the grace bound.
+            // A tie with nothing equal to bind is the tie validator's to report, as anywhere.
+            // LILYPOND-REF: lily/tie-engraver.cc — a Voice engraver, deaf to grace time.
+            if (item is TieSyntax)
+                continue;
             // The container was expanded, so its NOTES are gone from this list and its
             // decoration is what is left to report. The span comes off the tuplet as
             // WRITTEN: the marker is zero-width and stands at position 0, so on its own it

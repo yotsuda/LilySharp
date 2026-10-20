@@ -2647,7 +2647,7 @@ Grace          = ( 'grace' | 'acciaccatura' | 'appoggiatura' | 'afterGrace' ) , 
                  (* THE BLOCK IS FULL AND THE ENGRAVING IS NARROW. The body parses as any
                     music block, but only a BARE NOTE is engraved, and of it only the pitch
                     and the duration VALUE. A chord, a rest, a tuplet, a phrase reference,
-                    a dot, a beam/tie mark and every note-anchored annotation are
+                    a dot, a manual beam mark and every note-anchored annotation are
                     dropped and reported (LYS4020) — a body with no bare note in it draws
                     no grace at all. The two annotations that DO come through are the ones
                     that want no column: '@mark("A")' (its grob is the Score's) and the
@@ -2655,7 +2655,9 @@ Grace          = ( 'grace' | 'acciaccatura' | 'appoggiatura' | 'afterGrace' ) , 
                     A SLUR mark '(' ')' is not dropped: it is an ordinary slur wherever it
                     stands in grace time — inside the body, out to the main note, or in
                     from a main note — DOWN when it starts in the body unless the voice
-                    fixes the side (session 725). *)
+                    fixes the side (session 725). A TIE mark '~' is not dropped either: it
+                    ties a grace note to the very next note, the next grace note or the
+                    main note — 'grace { g16~ } g4' (session 916). *)
 Repeat         = 'repeat' , 'tremolo' , Integer , MusicBlock ;
                  (* a tremolo: the note, or the two notes, alternated Integer times.
                     Volta repeats use the form's |: … :|, NOT a 'repeat' keyword.

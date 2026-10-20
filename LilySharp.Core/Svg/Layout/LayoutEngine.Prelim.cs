@@ -220,7 +220,7 @@ internal sealed partial class LayoutEngine
             prelimBeams.AddRange(staffPrelimBeams);
             var staffPrelimTies = LayoutPreliminaryStaffTies(
                 score.TextMetrics, staffBows.Ties, staffSpannerScore, prelimSystems, staffIndex, staff,
-                systemCache, commonShortestDuration);
+                systemCache, commonShortestDuration, score.GraceNotes);
             prelimTiesByStaff[staffIndex] = staffPrelimTies;
             // The same 'inside script boxes the FINAL pass scores its bows against
             // (LayoutAllSpanners) — a prelim bow that ignored them would shape the
@@ -790,11 +790,12 @@ internal sealed partial class LayoutEngine
     private ImmutableArray<TieLayout> LayoutPreliminaryStaffTies(
         Rendering.ScoreTextMetrics fonts, ImmutableArray<TieItem> ties,
         Score staffSpannerScore, ImmutableArray<SystemLayout> prelimSystems, int staffIndex,
-        Staff staff, SystemLayoutCache? systemCache, double commonShortestDuration)
+        Staff staff, SystemLayoutCache? systemCache, double commonShortestDuration,
+        ImmutableArray<GraceNoteItem> graceNotes)
     {
         if (systemCache is null || prelimSystems.Length == 0)
             return _elementCoordinator.LayoutTies(
-                fonts, ties, staffSpannerScore, prelimSystems, staffIndex, staff);
+                fonts, ties, staffSpannerScore, prelimSystems, staffIndex, staff, graceNotes, staffIndex);
         if (ties.IsEmpty)
             return ImmutableArray<TieLayout>.Empty;
         // A numbers-only tab draws no tie — the plain call's own first answer
@@ -806,7 +807,7 @@ internal sealed partial class LayoutEngine
             return ImmutableArray<TieLayout>.Empty;
 
         ImmutableArray<TieLayout> Fallback() => _elementCoordinator.LayoutTies(
-            fonts, ties, staffSpannerScore, prelimSystems, staffIndex, staff);
+            fonts, ties, staffSpannerScore, prelimSystems, staffIndex, staff, graceNotes, staffIndex);
 
         var measureToSystem = MeasureToSystemOf(prelimSystems);
 
@@ -870,7 +871,8 @@ internal sealed partial class LayoutEngine
                 if (Straddles(tie))
                     straddlerTies.Add(tie);
             straddled = _elementCoordinator.LayoutTies(
-                fonts, straddlerTies.ToImmutable(), staffSpannerScore, prelimSystems, staffIndex, staff);
+                fonts, straddlerTies.ToImmutable(), staffSpannerScore, prelimSystems, staffIndex, staff,
+                graceNotes, staffIndex);
         }
 
         // One memoized solve per system, over that system's ties in original order, in the
@@ -896,10 +898,11 @@ internal sealed partial class LayoutEngine
                 sys.Indent, commonShortestDuration,
                 (Coordinator: _elementCoordinator, Fonts: fonts, Ties: buckets.Flat,
                     Start: buckets.Start[k], Count: buckets.Count[k],
-                    Score: staffSpannerScore, Sys: sys, StaffIndex: staffIndex, Staff: staff),
+                    Score: staffSpannerScore, Sys: sys, StaffIndex: staffIndex, Staff: staff,
+                    Graces: graceNotes),
                 static s => s.Coordinator.LayoutTies(
                     s.Fonts, ImmutableArray.Create(s.Ties, s.Start, s.Count), s.Score,
-                    ImmutableArray.Create(s.Sys), s.StaffIndex, s.Staff));
+                    ImmutableArray.Create(s.Sys), s.StaffIndex, s.Staff, s.Graces, s.StaffIndex));
         }
 
         // Column-major reassembly in detection order, one layout per tie (an
@@ -1536,7 +1539,9 @@ internal sealed partial class LayoutEngine
                 ? default
                 : ReanchorBows(prelimTiesByStaff[staffIndex], bowShifts, bowSystemOf);
             if (staffTies.IsDefault)
-                staffTies = _elementCoordinator.LayoutTies(score.TextMetrics, staffSpannerScore, systemsArray, staffIndex, staff);
+                staffTies = _elementCoordinator.LayoutTies(score.TextMetrics,
+                    _elementCoordinator.DetectTies(staffSpannerScore), staffSpannerScore, systemsArray, staffIndex, staff,
+                    score.GraceNotes, staffIndex);
             allTieLayouts.AddRange(staffTies);
             var staffSlurs = bowShifts is null
                 ? default

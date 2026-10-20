@@ -79,7 +79,9 @@ public class GraceBodyValidatorTests
     // meant to leave it: a slur in grace time is an ordinary slur now, drawn at the grace's X
     // and font, and this row went red on its own. See GraceExplicitSlurTests.
     [InlineData("grace { d'8[ e'8] } c'1 | e'1 |", "grace { d'8 e'8 } c'1 | e'1 |")]
-    [InlineData("grace { d'8~ d'8 } c'1 | e'1 |", "grace { d'8 d'8 } c'1 | e'1 |")]
+    // ⚠️ `grace { d'8~ d'8 }` LEFT THIS THEORY ON 2026-10-20 (session 916), the slur row's way:
+    // a tie in grace time is an ordinary tie now, laid out at the grace's X and head size, and
+    // this row went red on its own. See ATieInGraceTime_IsDrawn_AndNotReported.
     // ⚠️ `grace { d'8 r8 }` LEFT THIS THEORY ON 2026-08-31 (session 308), one commit
     // after the chord row did and for the same reason: a rest is a COLUMN with no head
     // now, it is drawn, and this row went red on its own. See ARestInAGraceBody_IsDrawn
@@ -98,6 +100,21 @@ public class GraceBodyValidatorTests
     {
         Assert.NotEmpty(Warnings(Book(written)));
         Assert.Equal(Page(control), Page(written));
+    }
+
+    /// <summary>
+    /// A tie in grace time — between two grace columns, or from the last one into its main
+    /// note — is drawn (the page differs from the untied control) and LYS4020 says nothing
+    /// about it. Its geometry is LilyPond's to the micro-staff-space: ledger tie.grace.*.
+    /// </summary>
+    [Theory]
+    // Relative octaves (this class's Book): the second d is the SAME pitch as the first.
+    [InlineData("grace { d'8~ d8 } c1 | e1 |", "grace { d'8 d8 } c1 | e1 |")]
+    [InlineData("grace { g16~ } g4 c'2. | e'1 |", "grace { g16 } g4 c'2. | e'1 |")]
+    public void ATieInGraceTime_IsDrawn_AndNotReported(string written, string control)
+    {
+        Assert.Empty(Warnings(Book(written)));
+        Assert.NotEqual(Page(control), Page(written));
     }
 
     /// <summary>

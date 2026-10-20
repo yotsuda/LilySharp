@@ -2306,6 +2306,13 @@ internal sealed class ElementCoordinator
         double headLeftInk = headBBox.Left;
         double headRightInk = headBBox.Right;
         bool stemUp = item is ChordItem c1 ? c1.StemUp : ((NoteItem)item).StemUp;
+        // A GRACE column's stem is UP whatever its pitch (DOWN in a lower voice), as the renderer
+        // draws it, and its head-hung grobs are at the grace size (BowFont) — the slur's bound
+        // reads them the same way (ResolveSlurEdge).
+        bool grace = item.GraceTime;
+        if (grace)
+            stemUp = !item.GraceStemDown;
+        var graceFont = grace ? BowFont(item) : null;
 
         // Every head of the column, with the seconds displacement the renderer draws it at.
         // One entry per chord member, or one for a lone note — the branch's own trip count
@@ -2403,12 +2410,19 @@ internal sealed class ElementCoordinator
         // had left (-0.073200 = 1.377400 - 1.304200 on this book's HALF-note chord).
         // LILYPOND-REF: lily/tie-formatting-problem.cc:149 Tie_formatting_problem::set_column_chord_outline
         //   — stem->relative_coordinate (x_refpoint_, X_AXIS).
-        var stemInfo = SpacingRules.StemSpacingInfo(item);
+        var stemInfo = SpacingRules.StemSpacingInfo(item, grace ? stemUp : null);
+        double stemTipY = stemInfo is { } si ? (stemUp ? si.StemMax : si.StemMin) * 0.5 : 0;
+        if (grace && stemInfo is not null)
+            // A grace stem by the rule the renderer draws it with (GraceStemDetails:
+            // length-fraction 0.8, no-stem-extend) — as ResolveSlurEdge reads it.
+            stemTipY = StemCalculator.CalculateStemEndPosition(
+                stemUp, StemCalculator.GetDurationLog(noteValue), stemUp ? highPos : lowPos,
+                GrobFontSize.GraceStemDetails) * 0.5;
         var stem = new TieOutlineStem(
             IsNormal: stemInfo is not null,
             CentreX: LayoutUtilities.StemX(supportLeft, stemUp, noteValue,
-                LayoutUtilities.NoteheadStyleOf(item)),
-            TipY: stemInfo is { } si ? (stemUp ? si.StemMax : si.StemMin) * 0.5 : 0,
+                LayoutUtilities.NoteheadStyleOf(item), graceFont),
+            TipY: stemTipY,
             NearHeadPosition: supportPos,
             SupportHeadCentreX: supportLeft + (headLeftInk + headRightInk) / 2.0);
 
@@ -2447,10 +2461,12 @@ internal sealed class ElementCoordinator
         if (isLeftBound && stemInfo is not null && noteValue >= 8
             && item is NoteItem { IsBeamed: false } or ChordItem { IsBeamed: false })
         {
-            var flagBBox = GlyphMetrics.GetFlagBBox(noteValue, stemUp);
+            var flagBBox = graceFont is { } gf
+                ? GlyphMetrics.GetFlagBBox(gf, noteValue, stemUp)
+                : GlyphMetrics.GetFlagBBox(noteValue, stemUp);
             if (flagBBox != default)
             {
-                double tipY = (stemUp ? stemInfo.Value.StemMax : stemInfo.Value.StemMin) * 0.5;
+                double tipY = stemTipY;
                 // The glyph sits half a blot INSIDE the stem's end — LayoutUtilities.FlagPlacementY,
                 // the one house the drawn flag, its dot support and its spacing band already
                 // read. Until session 525 this box alone stood on the tip itself, 0.04 further
@@ -2462,7 +2478,7 @@ internal sealed class ElementCoordinator
                 //   it carries that offset.
                 double flagY = LayoutUtilities.FlagPlacementY(tipY, stemUp);
                 double flagX = LayoutUtilities.StemX(supportLeft, stemUp, noteValue,
-                    LayoutUtilities.NoteheadStyleOf(item));
+                    LayoutUtilities.NoteheadStyleOf(item), graceFont);
                 (flag ??= []).Add(new TieOutlineBox(
                     flagY + flagBBox.Bottom, flagY + flagBBox.Top, flagX, flagX + flagBBox.Width));
             }
@@ -2522,7 +2538,8 @@ internal sealed class ElementCoordinator
     /// whose em is the plan's (<see cref="TabConstants.FretEm"/>). Passed rather than read
     /// off <paramref name="score"/>: a per-staff <c>Score</c> carries no plan.</param>
     public ImmutableArray<TieLayout> LayoutTies(Rendering.ScoreTextMetrics fonts, Score score, ImmutableArray<SystemLayout> systems, int staffIndex = -1, Model.Staff? staff = null)
-        => LayoutTies(fonts, _tieDetector.DetectTies(score), score, systems, staffIndex, staff);
+        => LayoutTies(fonts, _tieDetector.DetectTies(score), score, systems, staffIndex, staff,
+            score.GraceNotes, Math.Max(staffIndex, 0));
 
     /// <summary>The detectors themselves, for a caller that must run them ONCE and lay out
     /// per system — see the remark on the pre-detected overloads below. They live here
@@ -2549,13 +2566,21 @@ internal sealed class ElementCoordinator
     /// <c>MultiStaffLayouter.StaffSpannerItemsOf</c>, which is the memo that fixes it.
     /// </para>
     /// </remarks>
+    /// <param name="graceNotes">The score's grace groups — the X of a tie bound that is a grace
+    /// column is read off them (<see cref="GraceColumnX"/>), as a grace slur's is. Only the
+    /// groups of staff <paramref name="graceStaffIndex"/> (the GLOBAL staff index, which a
+    /// per-staff layout's <paramref name="staffIndex"/> of 0 is not) are read.</param>
     internal ImmutableArray<TieLayout> LayoutTies(
         Rendering.ScoreTextMetrics fonts,
         ImmutableArray<TieItem> ties, Score score, ImmutableArray<SystemLayout> systems,
-        int staffIndex = -1, Model.Staff? staff = null)
+        int staffIndex, Model.Staff? staff,
+        ImmutableArray<GraceNoteItem> graceNotes, int graceStaffIndex)
     {
         if (ties.Length == 0)
             return ImmutableArray<TieLayout>.Empty;
+        // The grace column bounds' geometry, solved once a call (GraceGeomOf) — allocated only
+        // when a tie touches grace time.
+        var graces = new GraceBounds(graceNotes, graceStaffIndex);
 
         // A NUMBERS-ONLY TAB DRAWS NO TIE, and the suppression is here rather than at the
         // draw site so the tie is not in the skylines either — a bow nothing prints must not
@@ -2716,7 +2741,8 @@ internal sealed class ElementCoordinator
                 {
                     specs.Add(BuildTieSpecification(
                         fonts, score, systems, staff, staffIndex, ordered[i], segments[s],
-                        startMeasure, endMeasure, tiedPositions, tabCurveUp?[i], brokenCurveUp, endTiedPositions));
+                        startMeasure, endMeasure, tiedPositions, tabCurveUp?[i], brokenCurveUp, endTiedPositions,
+                        graces));
                 }
 
                 // The thread's lent problem (TieFormattingProblem.SolveColumn) — one column a
@@ -2941,9 +2967,10 @@ internal sealed class ElementCoordinator
         MeasureLayout? startMeasure,
         MeasureLayout? endMeasure,
         List<int> tiedPositions,
-        bool? tabCurveUp = null,
-        bool? brokenCurveUp = null,
-        List<int>? endTiedPositions = null)
+        bool? tabCurveUp,
+        bool? brokenCurveUp,
+        List<int>? endTiedPositions,
+        GraceBounds graces)
     {
         int startDots = tie.StartNote.Dots;
 
@@ -2966,6 +2993,18 @@ internal sealed class ElementCoordinator
         double endColumnX = endMeasure is null ? double.NaN : endMeasure.X
             + GetItemXOffset(score.Voices[tie.VoiceIndex], tie.EndMeasureIndex, tie.EndItemIndex, endMeasure)
             + voiceShifts.ShiftOf(tie.EndMeasureIndex, tie.VoiceIndex + 1, tie.EndItemIndex);
+        // A GRACE bound stands where its grace run puts it, not on the main grid (a grace item
+        // takes no time, so GetItemXOffset would answer its main note's column) — the same
+        // chain a grace slur's bound reads (session 916, HANDOFF §2 U8 ⒞).
+        var tieVoice = score.Voices[tie.VoiceIndex];
+        if (startMeasure is not null && ItemAt(tieVoice, tie.StartMeasureIndex, tie.StartItemIndex) is { GraceTime: true }
+            && graces.ColumnX(tieVoice, tie.VoiceIndex, tie.StartMeasureIndex, tie.StartItemIndex,
+                startMeasure, voiceShifts) is { } graceStartX)
+            startColumnX = graceStartX;
+        if (endMeasure is not null && ItemAt(tieVoice, tie.EndMeasureIndex, tie.EndItemIndex) is { GraceTime: true }
+            && graces.ColumnX(tieVoice, tie.VoiceIndex, tie.EndMeasureIndex, tie.EndItemIndex,
+                endMeasure, voiceShifts) is { } graceEndX)
+            endColumnX = graceEndX;
 
         double segStartX;
         TieColumnParts? startColumn = null;
@@ -3237,6 +3276,10 @@ internal sealed class ElementCoordinator
             case ChordItem c: stemUp = c.StemUp; baseDuration = c.BaseDuration; break;
             default: return null;   // rest / spacer — no stem
         }
+        // A grace column's stem is UP whatever its pitch, DOWN in a lower voice — the
+        // renderer's direction, not the ungraced default the model's StemUp holds.
+        if (items[itemIndex].GraceTime)
+            stemUp = !items[itemIndex].GraceStemDown;
         // Whole notes (value 1) and breves have no stem, as in ResolveSlurEdge.
         return GlyphMetrics.NoteValueOf(baseDuration) >= 2 ? stemUp : null;
     }
@@ -3946,6 +3989,40 @@ internal sealed class ElementCoordinator
                 return (gi, k);
         }
         return null;
+    }
+
+    /// <summary>
+    /// The grace groups of one staff, as a tie bound reads them: where a GRACE column's head
+    /// stands, by the same chain a grace slur's bound reads (<see cref="GraceColumnX"/>), its
+    /// group geometry solved once and cached.
+    /// </summary>
+    private sealed class GraceBounds(ImmutableArray<GraceNoteItem> graceNotes, int staffIndex)
+    {
+        private GraceObstacleGeom?[]? _cache;
+
+        /// <summary>The head left edge of the grace column standing as item
+        /// <paramref name="itemIndex"/> of measure <paramref name="measureIndex"/> in voice
+        /// <paramref name="voiceIndex"/>, or null when it is no grace column this staff's groups
+        /// publish.</summary>
+        public double? ColumnX(Voice voice, int voiceIndex, int measureIndex, int itemIndex,
+            MeasureLayout ml, VoiceCollisionTable voiceShifts)
+        {
+            if (graceNotes.IsDefaultOrEmpty)
+                return null;
+            for (int gi = 0; gi < graceNotes.Length; gi++)
+            {
+                var g = graceNotes[gi];
+                if (g.StaffIndex != staffIndex || g.VoiceIndex != voiceIndex || g.MeasureIndex != measureIndex
+                    || g.ColumnItemIndices.IsDefaultOrEmpty || g.ColumnItemIndices.Length != g.Columns.Length)
+                    continue;
+                int k = g.ColumnItemIndices.IndexOf(itemIndex);
+                if (k < 0)
+                    continue;
+                _cache ??= new GraceObstacleGeom?[graceNotes.Length];
+                return GraceColumnX(voice, graceNotes, gi, k, _cache, ml, voiceIndex, voiceShifts);
+            }
+            return null;
+        }
     }
 
     /// <summary>The head left edge of column <paramref name="column"/> of grace group

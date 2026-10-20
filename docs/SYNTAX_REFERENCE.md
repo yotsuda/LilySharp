@@ -1175,6 +1175,10 @@ not bare notes go missing.
 a main note into the body (`b4( grace { d16) } c4`). One that starts in the body bends down,
 unless the voice fixes the side (`voice { … } { … }`).
 
+**A tie IS drawn in grace time too**: it ties a grace note to the very next note — the next
+grace note (`grace { d16~ d16 } c4`) or the main note (`grace { g16~ } g4`) — at the grace
+notes' size, as LilyPond draws it.
+
 LilyPond draws all of the spellings above, so each warning says "not drawn yet", not "do not
 write this".
 

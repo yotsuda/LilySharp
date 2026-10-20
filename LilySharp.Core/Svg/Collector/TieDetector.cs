@@ -37,7 +37,11 @@ internal sealed class TieDetector
 
         // Each voice runs its own tie engraver; VoiceScan walks them all so a
         // second voice's ties are not lost. LILYPOND-REF: ly/engraver-init.ly.
-        foreach (var (v, measures, measureIdx, itemIdx, item) in VoiceScan.WalkVoiceItems(score))
+        // GRACE TIME INCLUDED (session 916, HANDOFF §2 U8 ⒞): a grace column carries its own
+        // `~` since NarrowToGraceTime keeps it, and binds the item right after it — the next
+        // grace column or the main note (FindNextTimedItem). A MAIN note's tie still steps
+        // over grace time to the next main note, as before.
+        foreach (var (v, measures, measureIdx, itemIdx, item) in VoiceScan.WalkVoiceItemsWithGraceTime(score))
         {
             if (item is (NoteItem { HasTieStart: true } or ChordItem { HasTieStart: true }) && v != graphVoice)
             {
@@ -192,6 +196,12 @@ internal sealed class TieDetector
     private static (int MeasureIdx, int ItemIdx, MusicItem Item)? FindNextTimedItem(
         ImmutableArray<Measure> measures, int measureIdx, int itemIdx, SectionPlayGraph? graph)
     {
+        // A GRACE column's tie binds the very next item, grace or main: in LilyPond the grace
+        // is an ordinary Voice event in grace time and its Tie_engraver meets the next heads
+        // like any other. MEASURED (2.26.0, Lab sessions/p916/u8/tie.ly): `\grace { g'16~ } g'4`
+        // and `\grace { d''16~ d''16 }` each make one Tie.
+        if (measures[measureIdx].Items[itemIdx].GraceTime)
+            return NextItemIncludingGrace(measures, measureIdx, itemIdx);
         var next = NoteScan.FindNext(measures, measureIdx, itemIdx,
             x => x is NoteItem or ChordItem or RestItem);
         // An afterGrace's run and its closing spacer stand inside the main note's time, so the
@@ -205,6 +215,21 @@ internal sealed class TieDetector
             && !graph.PrintedNextIsPlayedNext(graph.PlayOf(measureIdx, itemIdx)))
             return null;
         return next;
+    }
+
+    /// <summary>The first note, chord or rest after (<paramref name="measureIdx"/>,
+    /// <paramref name="itemIdx"/>), grace time included — a grace column's tie target.</summary>
+    private static (int MeasureIdx, int ItemIdx, MusicItem Item)? NextItemIncludingGrace(
+        ImmutableArray<Measure> measures, int measureIdx, int itemIdx)
+    {
+        for (int m = measureIdx, i = itemIdx + 1; m < measures.Length; m++, i = 0)
+        {
+            var items = measures[m].Items;
+            for (; i < items.Length; i++)
+                if (items[i] is NoteItem or ChordItem or RestItem)
+                    return (m, i, items[i]);
+        }
+        return null;
     }
 
     /// <summary>The index of the afterGrace spacer that the grace items from

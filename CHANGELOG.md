@@ -61,6 +61,9 @@ workflow attaches that section to the GitHub Release verbatim.
   did: `r8 c'8[ | d'8]` over another voice's note ran straight through its head (such a beam
   avoided nothing at all, not even its own voice's accidentals or a clef change). And **a beam
   clears another voice's sharp or flat**, not only its notes and stems.
+- **A grace note can be tied.** `grace { g16~ } g4` ties the grace note into its main note,
+  and `grace { d'16~ d'16 }` ties two grace notes, drawn at the grace notes' size and place as
+  LilyPond draws them (LYS4020 said the `~` was dropped).
 - **A trill line keeps the music around it at a distance.** A trill over the lower staff of
   a grand staff that runs on to the next line now opens the staves as one that ends on its
   own line does (it was drawn through the right hand's beams). And a trill or an ottava
