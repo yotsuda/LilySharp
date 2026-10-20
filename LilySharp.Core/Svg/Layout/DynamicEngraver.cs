@@ -200,7 +200,8 @@ internal static class DynamicEngraver
         Dictionary<int, ImmutableArray<Measure>>? measuresByStaff = null,
         ImmutableArray<BeamLayout> beamLayouts = default,
         HashSet<(int Staff, int Measure, int Item, int Source)>? circled = null,
-        Func<int, int>? staffLinesOf = null)
+        Func<int, int>? staffLinesOf = null,
+        ImmutableArray<GraceNoteItem> graceNotes = default)
     {
         if (dynamics.IsDefaultOrEmpty)
             return ImmutableArray<DynamicLayout>.Empty;
@@ -288,6 +289,21 @@ internal static class DynamicEngraver
             //   lily/self-alignment-interface.cc:159-175 (non-number aligns add 0).
             double xColumn = measureLayout.X + LayoutUtilities.GetItemXOffset(
                 dynMeasures, dynamic.MeasureIndex, dynamic.ItemIndex, measureLayout);
+            // A DYNAMIC ON A GRACE NOTE (session 916, HANDOFF §2 U8 ⒟) stands on the grace
+            // column, read off the run as a grace tie's, slur's or script's bound is. It keeps
+            // the full size: general-grace-settings names no DynamicText (MEASURED, 2.26.0, Lab
+            // sessions/p916/u8/dyn.ly: font-size unset, centred on the grace head). A caller that
+            // was not handed the grace groups (the per-staff hairpin pass) places none.
+            if (AnchorItem(dynVoices, dynamic.VoiceIndex, dynamic.MeasureIndex, dynamic.ItemIndex)
+                is { GraceTime: true })
+            {
+                if (graceNotes.IsDefaultOrEmpty || dynamic.VoiceIndex >= dynVoices.Length
+                    || ElementCoordinator.GraceColumnHeadLeftX(dynVoices[dynamic.VoiceIndex], graceNotes,
+                        dynamic.StaffIndex, dynamic.VoiceIndex, dynamic.MeasureIndex, dynamic.ItemIndex,
+                        measureLayout, SpacingRules.VoiceCollisionShiftsOf(dynVoices)) is not { } graceX)
+                    continue;
+                xColumn = graceX;
+            }
             string labelText = dynamic.Text ?? string.Empty;
             // A niente no hairpin's circle stands for is the WORD, printed as free expressive
             // text is: plain italic, LilyPond's TextScript (the twin writes it as \markup
@@ -708,6 +724,12 @@ internal static class DynamicEngraver
                 var beamInfo = beamOf?.Invoke(vi);
                 if (beamInfo is { } bi)
                     forcedStemUp = bi.StemUp;
+                // A grace column's stem is UP whatever its pitch, DOWN in a lower voice.
+                if (item.GraceTime)
+                {
+                    forcedStemUp = !item.GraceStemDown;
+                    beamInfo = null;
+                }
                 if (NoteColumnLayout.Of(item, forcedStemUp,
                         beamInfo?.Beam, beamInfo?.StemX ?? 0.0) is { } col)
                 {
@@ -721,7 +743,7 @@ internal static class DynamicEngraver
                     // the ink, where the advances are 1.960 and 1.304. This box took its Y
                     // from the ink and its X from the advance, which is one head framed two
                     // ways inside one function.
-                    var ink = GlyphMetrics.GetNoteheadBBox(col.NoteValue);
+                    var ink = HeadBoxOf(item, col.NoteValue);
                     double headTop = col.TopHeadPosition * 0.5 + ink.Top;
                     double headBottom = col.BottomHeadPosition * 0.5 + ink.Bottom;
                     up.MergeBox(
@@ -737,8 +759,14 @@ internal static class DynamicEngraver
                     {
                         double tipUp = StaffMiddle - col.OutwardTipDeviceY(col.StemUp);
                         double anchorUp = col.HeadPositionToward(col.StemUp) * 0.5;
+                        // A grace stem by the grace rule (GraceStemDetails), at the grace head.
+                        if (item.GraceTime)
+                            tipUp = StemCalculator.CalculateStemEndPosition(
+                                col.StemUp, StemCalculator.GetDurationLog(col.NoteValue),
+                                col.HeadPositionToward(col.StemUp), GrobFontSize.GraceStemDetails) * 0.5;
                         double stemCentre = LayoutUtilities.StemX(
-                            xColumn, col.StemUp, col.NoteValue, col.Notehead);
+                            xColumn, col.StemUp, col.NoteValue, col.Notehead,
+                            item.GraceTime ? GrobFontSize.FontOf(item, SizedGrob.NoteHead) : null);
                         double half = EngravingDefaults.StemThickness / 2;
                         if (col.StemUp)
                             up.MergeBox(stemCentre - half, stemCentre + half, anchorUp, tipUp);
@@ -898,13 +926,21 @@ internal static class DynamicEngraver
     /// </remarks>
     internal static double AnchorCentreOffset(MusicItem? item) => item switch
     {
-        NoteItem n => GlyphMetrics.GetNoteheadBBox(
-            LayoutUtilities.GetNoteValueFromFraction(n.BaseDuration)).CenterX,
-        ChordItem c when c.Notes.Length > 0 => GlyphMetrics.GetNoteheadBBox(
+        // A grace head is the grace's NoteHead size (GrobFontSize), and a label on it centres
+        // on THAT head (session 916, Lab sessions/p916/u8/dyn.ly: the \f on `\grace { d16\f }`
+        // centres on the grace head's extent).
+        NoteItem n => HeadBoxOf(n, LayoutUtilities.GetNoteValueFromFraction(n.BaseDuration)).CenterX,
+        ChordItem c when c.Notes.Length > 0 => HeadBoxOf(c,
             LayoutUtilities.GetNoteValueFromFraction(c.BaseDuration)).CenterX,
         RestItem r => RestInkCentre(r),
         _ => 0.0,
     };
+
+    /// <summary>The head's ink box — the grace's own size for a grace column.</summary>
+    private static GlyphMetrics.BBox HeadBoxOf(MusicItem item, int noteValue)
+        => item.GraceTime
+            ? GlyphMetrics.GetNoteheadBBox(GrobFontSize.FontOf(item, SizedGrob.NoteHead), noteValue)
+            : GlyphMetrics.GetNoteheadBBox(noteValue);
 
     private static double RestInkCentre(RestItem r)
     {

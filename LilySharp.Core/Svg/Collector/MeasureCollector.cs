@@ -5341,9 +5341,10 @@ public sealed partial class MeasureCollector
     /// </remarks>
     private void CollectDynamics(SyntaxNode node, int measureIndex, int itemIndex)
     {
-        // Grace time has no column for it to hang off — see CollectArticulations.
-        if (_graceDepth > 0)
-            return;
+        // In grace time only a dynamic LEVEL rides (session 916, GraceBodySupport.IsCarriedDynamic,
+        // the predicate LYS4020 reads too): DynamicEngraver stands it on the grace column. A
+        // hairpin or a text there stays dropped and reported.
+        bool graceTime = _graceDepth > 0;
         // Under a % sign nothing that rides a note is collected — see _percentCoveredDepth.
         if (_percentCoveredDepth > 0)
             return;
@@ -5352,6 +5353,8 @@ public sealed partial class MeasureCollector
 
         foreach (var articulation in articulations)
         {
+            if (graceTime && !Semantics.GraceBodySupport.IsCarriedDynamic(articulation))
+                continue;
             if (articulation is DynamicSyntax dynamicSyntax)
             {
                 var level = dynamicSyntax.Level;

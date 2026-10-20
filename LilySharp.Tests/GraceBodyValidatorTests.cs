@@ -70,9 +70,10 @@ public class GraceBodyValidatorTests
     // ⚠️ `grace { d'8@staccato }` LEFT THIS THEORY ON 2026-10-21 (session 916): a stem-side
     // script on a grace note is drawn now, at the grace's size and X (ledger script.grace.*).
     // See AStemSideScriptOnAGrace_IsDrawn_AndNotReported. `grace { d'8@trill }` LEFT with the
-    // ornaments and the fermata family the same day (ledger script.grace.mover.*).
+    // ornaments and the fermata family the same day (ledger script.grace.mover.*), and
+    // `grace { d'8@f }` with the dynamic levels (ledger dynamic.grace.*; see
+    // ADynamicOnAGrace_IsDrawn_AndNotReported).
     [InlineData("grace { d'8@text(\"hi\") } c'1 | e'1 |", "grace { d'8 } c'1 | e'1 |")]
-    [InlineData("grace { d'8@f } c'1 | e'1 |", "grace { d'8 } c'1 | e'1 |")]
     [InlineData("grace { d'8@finger(3) } c'1 | e'1 |", "grace { d'8 } c'1 | e'1 |")]
     // ⚠️ `grace { d'8. }` LEFT THIS THEORY ON 2026-08-30 (session 299), which is the way a
     // row is meant to leave it: the dot is drawn now, so the line asserting it is missing
@@ -145,6 +146,20 @@ public class GraceBodyValidatorTests
     }
 
     /// <summary>
+    /// A dynamic LEVEL on a grace note is drawn (full size, on the grace column) and not
+    /// reported; a hairpin started there still is (GraceBodySupport.IsCarriedDynamic).
+    /// </summary>
+    [Theory]
+    [InlineData("grace { d'8@f } c'1 | e'1 |")]
+    [InlineData("grace { d'8@pp } c'1 | e'1 |")]
+    [InlineData("grace { d'8@sfz } c'1 | e'1 |")]
+    public void ADynamicOnAGrace_IsDrawn_AndNotReported(string written)
+    {
+        Assert.Empty(Warnings(Book(written)));
+        Assert.NotEqual(Page("grace { d'8 } c'1 | e'1 |"), Page(written));
+    }
+
+    /// <summary>
     /// The grace body that draws exactly what it says draws no warning either. This is the
     /// case that catches a validator that has quietly become "warn about every grace".
     /// </summary>
@@ -200,10 +215,10 @@ public class GraceBodyValidatorTests
     [Fact]
     public void TheWarningStandsAtWhatWasWritten()
     {
-        // A dynamic, not a script: since session 916 the scripts on a grace are drawn.
-        string source = Book("grace { d'8@f } c'1 | e'1 |");
+        // A fingering: since session 916 the scripts and the dynamics on a grace are drawn.
+        string source = Book("grace { d'8@finger(3) } c'1 | e'1 |");
         var warning = Assert.Single(Warnings(source));
-        Assert.Equal(source.IndexOf("@f", System.StringComparison.Ordinal),
+        Assert.Equal(source.IndexOf("@finger", System.StringComparison.Ordinal),
             warning.Span.Start);
     }
 

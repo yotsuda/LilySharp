@@ -2723,6 +2723,12 @@ internal sealed class SkylineBuilder
             if (layoutIdx < 0)
                 continue;
             var measureLayout = measureLayouts[layoutIdx];
+            // A dynamic on a GRACE note is not seeded here: its X is the grace run's, which this
+            // per-staff pass is not handed (DynamicEngraver.Calculate places it in the
+            // annotation pass). LILYSHARP-OWN, named: the inter-staff profile misses that label.
+            if (DynamicEngraver.AnchorItem(voices, dyn.VoiceIndex, dyn.MeasureIndex, dyn.ItemIndex)
+                is { GraceTime: true })
+                continue;
 
             var key = (dyn.MeasureIndex, dyn.ItemIndex, dyn.IsAbove);
             int depth = stackAt.GetValueOrDefault(key, 0);

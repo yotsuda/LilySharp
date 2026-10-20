@@ -315,8 +315,9 @@ internal static class GraceBodySupport
     /// <remarks>
     /// The fermata family and the ornaments joined the same day, measured where the page puts
     /// them (ledger script.grace.mover.*: the fermata is a mover, and the collision pass lifts
-    /// it on a grace column exactly as on a full-size one). Dynamics, texts and fingerings on a
-    /// grace stay reported (LYS4020): they are other engravers.
+    /// it on a grace column exactly as on a full-size one). Dynamic levels have their own
+    /// predicate (<see cref="IsCarriedDynamic"/>); texts and fingerings on a grace stay reported
+    /// (LYS4020): they are other engravers.
     /// LILYPOND-REF: lily/script-engraver.cc — a Voice engraver; a grace note's Script is an
     /// ordinary one at general-grace-settings' font-size (scm/music-functions.scm:636-650).
     /// </remarks>
@@ -334,6 +335,19 @@ internal static class GraceBodySupport
                 or ArticulationType.Turn or ArticulationType.InvertedTurn
                 or ArticulationType.PrallTriller,
         };
+
+    /// <summary>
+    /// True for a DYNAMIC a grace note engraves — a level (<c>@f</c>, <c>@p</c>, <c>@sfz</c>, …),
+    /// at full size on the grace column (session 916; ledger dynamic.grace.*). A hairpin start
+    /// and the other spanners stay reported. THE question the collector and the drop list both
+    /// ask.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/dynamic-engraver.cc — a Voice engraver; general-grace-settings
+    /// (scm/music-functions.scm:636-650) names no DynamicText, so the label keeps its size.
+    /// </remarks>
+    internal static bool IsCarriedDynamic(SyntaxNode annotation)
+        => annotation is DynamicSyntax { Level: not DynamicLevel.None };
 
     /// <summary>
     /// The <c>\N</c> a grace note carries, or null for automatic string selection.
@@ -578,7 +592,7 @@ internal static class GraceBodySupport
             // column a thing asks for. See GraceColumnInfo.Dots and Svg.Layout.DotColumn.
             foreach (var annotation in CarriedAnnotations(item))
             {
-                if (NeedsNoColumn(annotation) || IsCarriedScript(annotation))
+                if (NeedsNoColumn(annotation) || IsCarriedScript(annotation) || IsCarriedDynamic(annotation))
                     continue;
                 yield return new GraceDrop(
                     GraceDropKind.Annotation, annotation.Span, Describe(annotation), via);

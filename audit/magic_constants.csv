@@ -892,6 +892,7 @@
 "Svg/Layout/DynamicEngraver.cs","DynamicEngraver.MergeColumnSupport","0.5","double headTop = col.TopHeadPosition * 0.5 + ink.Top;","(file-level) LILYPOND-REF: define-grobs.scm:1433-1460 DynamicText grob","Yellow"
 "Svg/Layout/DynamicEngraver.cs","DynamicEngraver.MergeColumnSupport","0.5","double headBottom = col.BottomHeadPosition * 0.5 + ink.Bottom;","(file-level) LILYPOND-REF: define-grobs.scm:1433-1460 DynamicText grob","Yellow"
 "Svg/Layout/DynamicEngraver.cs","DynamicEngraver.MergeColumnSupport","0.5","double anchorUp = col.HeadPositionToward(col.StemUp) * 0.5;","(file-level) LILYPOND-REF: define-grobs.scm:1433-1460 DynamicText grob","Yellow"
+"Svg/Layout/DynamicEngraver.cs","DynamicEngraver.MergeColumnSupport","0.5","col.HeadPositionToward(col.StemUp), GrobFontSize.GraceStemDetails) * 0.5;","(file-level) LILYPOND-REF: define-grobs.scm:1433-1460 DynamicText grob","Yellow"
 "Svg/Layout/DynamicEngraver.cs","DynamicEngraver.LabelSkylines","2.0","&& DynamicOutline.Place(text, xCentre - w / 2.0, yBaseline) is { } outline)","(file-level) LILYPOND-REF: define-grobs.scm:1433-1460 DynamicText grob","Yellow"
 "Svg/Layout/DynamicEngraver.cs","DynamicEngraver.BelowCollisionMove","0.0","return d > 0 ? -d : 0.0;","(file-level) LILYPOND-REF: define-grobs.scm:1433-1460 DynamicText grob","Yellow"
 "Svg/Layout/DynamicEngraver.cs","DynamicEngraver.AnchorCentreOffset","0.0","_ => 0.0,","(file-level) LILYPOND-REF: define-grobs.scm:1433-1460 DynamicText grob","Yellow"

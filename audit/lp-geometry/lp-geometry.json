@@ -7196,6 +7196,27 @@
       "residual": 0.0,
       "why": "EXACT. The CONTROL: the same fermata on a full-size d. It sits at script.quiet's 2.05 + 0.46 regime (2.586 = its ink bottom 2.511 + 0.075), so the grace fermata's 0.008 below it is the smaller outline, not a different rule."
     },
+    "dynamic.grace.below": {
+      "probe": "grace-dynamic.ly",
+      "score": "GDA",
+      "lilypond": -5.298316,
+      "residual": 0.000058,
+      "why": "A dynamic on a grace note, `\\grace { d'16\\f } e'4`: FULL size (general-grace-settings names no DynamicText), centred on the grace head, sided off the grace head's ink and the staff. Until session 916 Lily# dropped it (LYS4020); DynamicEngraver now stands it on the grace column (ElementCoordinator.GraceColumnHeadLeftX) with the grace head's box and stem as supports (MergeColumnSupport). The 0.22 it sits above the full-size control is the smaller grace head. ⚠️ The +0.000058 is NOT the grace change: the full-size control (dynamic.grace.control) carries the same +0.000067 -- the first baseline reading of a dynamic in this ledger (the others read staff gaps), named and not fitted."
+    },
+    "dynamic.grace.control": {
+      "probe": "grace-dynamic.ly",
+      "score": "GDB",
+      "lilypond": -5.518788,
+      "residual": 0.000067,
+      "why": "The CONTROL: the same \\f on a full-size d. Its +0.000067 is a property of the ordinary dynamic baseline (no ledger point read a dynamic's baseline before this book): named, not fitted."
+    },
+    "hairpin.over-grace.staff-to-wedge": {
+      "probe": "grace-hairpin.ly",
+      "score": "hp",
+      "lilypond": 4.021815,
+      "residual": 0.00001,
+      "why": "EXACT (1e-5). A crescendo running over a grace note: the grace column is one of the DynamicLineSpanner's supports with its own head and its own UP stem. Lily# read the grace item's head at full size and its stem in the UNGRACED direction (the b' on the middle line: DOWN, 3.5 long), so the wedge stood 0.24 lower (4.26). Session 916's dynamic work made DynamicEngraver.MergeColumnSupport read a grace column as the grace it is, and this moved with it; the SVG sweep found it in samples/nocturne.lys bar 5, the one page it changed."
+    },
     "script.grace.staccato.below": {
       "probe": "grace-script.ly",
       "score": "GSA",

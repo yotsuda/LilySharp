@@ -8876,6 +8876,25 @@ internal static class LpGeometryProbes
     private static readonly string GRMC = GraceTieBook("c4 grace { g16@trill } e4 c2 |", "GRMC");
     private static readonly string GRMD = GraceTieBook("c4 grace { d''16@fermata } e4 c2 |", "GRMD");
     private static readonly string GRME = GraceTieBook("c4 d16@fermata e8. c2 |", "GRME");
+    // A dynamic on a grace note (audit/lp-geometry/probes/grace-dynamic.ly, GDA/GDB).
+    private static readonly string GRDA = GraceTieBook("c4 grace { d16@f } e4 c2 |", "GRDA");
+    private static readonly string GRDB = GraceTieBook("c4 d16@f e8. c2 |", "GRDB");
+    // A hairpin over a grace note (audit/lp-geometry/probes/grace-hairpin.ly; samples/nocturne bar 5).
+    private static readonly string GRHA = """
+        part rh { clef treble }
+
+        section A {
+          rh {
+            a'4 cis e@cresc d |
+            grace { b16 } a4 cis8 e g4 fis8 e |
+            <fis a>1@f |
+          }
+        }
+
+        form { ~A }
+
+        score { staff rh }
+        """;
 
     private static readonly string GTA = GraceTieBook("c4 grace { g16~ } g4 c2 |", "GTA");
     private static readonly string GTB = GraceTieBook("c4 grace { d'16~ d'16 } c'4 c2 |", "GTB");
@@ -17268,6 +17287,9 @@ internal static class LpGeometryProbes
         new("script.grace.mover.trill", GRMC, g => g.GlyphAboveStaffMiddle('\uE05E', 0)),
         new("script.grace.mover.fermata-high", GRMD, g => g.GlyphAboveStaffMiddle('\uE039', 0)),
         new("script.grace.mover.control", GRME, g => g.GlyphAboveStaffMiddle('\uE039', 0)),
+        new("dynamic.grace.below", GRDA, g => g.DynamicBaselineAboveStaffLine(0, 2)),
+        new("dynamic.grace.control", GRDB, g => g.DynamicBaselineAboveStaffLine(0, 2)),
+        new("hairpin.over-grace.staff-to-wedge", GRHA, g => g.HairpinWedgeCentreBelowStaff()),
         new("script.grace.control", GRSD, g => g.GlyphAboveStaffMiddle('\uE04A', 0)),
 
         // ...and the one quantity that tie's residual is made of, measured on its own. The
