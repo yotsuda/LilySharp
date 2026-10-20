@@ -66,8 +66,9 @@ workflow attaches that section to the GitHub Release verbatim.
   LilyPond draws them (LYS4020 said the `~` was dropped). **A grace note takes a staccato,
   staccatissimo, accent, marcato, tenuto or portato** — drawn small, as LilyPond draws it, where
   it was dropped before, and a fermata or an ornament (`@trill`, `@prall`, `@mordent`,
-  `@turn`, …) above it, and a dynamic (`grace { d16@f } e4`, full size). (A text, a fingering
-  or a hairpin start on a grace note is still reported as not drawn.) A hairpin running over a
+  `@turn`, …) above it, a dynamic (`grace { d16@f } e4`, full size) and a text
+  (`@text("dolce")`). (A fingering or a hairpin start on a grace note is still reported as not
+  drawn.) A hairpin running over a
   grace note also stands where LilyPond puts it — it read the grace note's stem as a full-size
   down stem and sat a quarter space too low.
 - **A trill line keeps the music around it at a distance.** A trill over the lower staff of

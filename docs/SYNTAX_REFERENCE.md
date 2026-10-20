@@ -1182,8 +1182,8 @@ notes' size, as LilyPond draws it.
 **So is a stem-side script** — `@staccato`, `@staccatissimo`, `@accent`, `@marcato`, `@tenuto`,
 `@portato` on a grace note is drawn small, on the grace note (`grace { d16@staccato } c4`),
 and so are a fermata and an ornament (`@trill`, `@prall`, `@mordent`, `@turn`, …) above it.
-A dynamic there is drawn too, at full size (`grace { d16@f } c4`); a text, a fingering or a
-hairpin start is not drawn yet (LYS4020).
+A dynamic there is drawn too, at full size (`grace { d16@f } c4`), and a text
+(`@text("dolce")`); a fingering or a hairpin start is not drawn yet (LYS4020).
 
 LilyPond draws all of the spellings above, so each warning says "not drawn yet", not "do not
 write this".

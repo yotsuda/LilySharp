@@ -350,6 +350,21 @@ internal static class GraceBodySupport
         => annotation is DynamicSyntax { Level: not DynamicLevel.None };
 
     /// <summary>
+    /// True for a free TEXT a grace note engraves — <c>@text("dolce")</c>: LilyPond's
+    /// TextScript, full size, its ink left on the grace column (session 916; ledger
+    /// text.grace.*). It rides the expressive-text arm of the dynamics, so it reaches the page
+    /// through DynamicEngraver's grace column as a dynamic level does.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/text-engraver.cc — a Voice engraver; general-grace-settings names no
+    /// TextScript.
+    /// </remarks>
+    internal static bool IsCarriedText(SyntaxNode annotation)
+        => annotation is MusicMarkSyntax mark
+           && mark.Name.Equals("text", StringComparison.Ordinal)
+           && AnnotationValues.Text(mark) is not null;
+
+    /// <summary>
     /// The <c>\N</c> a grace note carries, or null for automatic string selection.
     /// </summary>
     /// <remarks>
@@ -592,7 +607,8 @@ internal static class GraceBodySupport
             // column a thing asks for. See GraceColumnInfo.Dots and Svg.Layout.DotColumn.
             foreach (var annotation in CarriedAnnotations(item))
             {
-                if (NeedsNoColumn(annotation) || IsCarriedScript(annotation) || IsCarriedDynamic(annotation))
+                if (NeedsNoColumn(annotation) || IsCarriedScript(annotation) || IsCarriedDynamic(annotation)
+                    || IsCarriedText(annotation))
                     continue;
                 yield return new GraceDrop(
                     GraceDropKind.Annotation, annotation.Span, Describe(annotation), via);

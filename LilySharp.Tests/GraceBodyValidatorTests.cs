@@ -72,8 +72,8 @@ public class GraceBodyValidatorTests
     // See AStemSideScriptOnAGrace_IsDrawn_AndNotReported. `grace { d'8@trill }` LEFT with the
     // ornaments and the fermata family the same day (ledger script.grace.mover.*), and
     // `grace { d'8@f }` with the dynamic levels (ledger dynamic.grace.*; see
-    // ADynamicOnAGrace_IsDrawn_AndNotReported).
-    [InlineData("grace { d'8@text(\"hi\") } c'1 | e'1 |", "grace { d'8 } c'1 | e'1 |")]
+    // ADynamicOnAGrace_IsDrawn_AndNotReported), and `grace { d'8@text("hi") }` with the texts
+    // (ledger text.grace.*).
     [InlineData("grace { d'8@finger(3) } c'1 | e'1 |", "grace { d'8 } c'1 | e'1 |")]
     // ⚠️ `grace { d'8. }` LEFT THIS THEORY ON 2026-08-30 (session 299), which is the way a
     // row is meant to leave it: the dot is drawn now, so the line asserting it is missing
@@ -153,6 +153,9 @@ public class GraceBodyValidatorTests
     [InlineData("grace { d'8@f } c'1 | e'1 |")]
     [InlineData("grace { d'8@pp } c'1 | e'1 |")]
     [InlineData("grace { d'8@sfz } c'1 | e'1 |")]
+    // …and a free text, which rides the dynamics' expressive arm (ledger text.grace.*).
+    [InlineData("grace { d'8@text(\"hi\") } c'1 | e'1 |")]
+    [InlineData("grace { d'8@text(\"hi\").up } c'1 | e'1 |")]
     public void ADynamicOnAGrace_IsDrawn_AndNotReported(string written)
     {
         Assert.Empty(Warnings(Book(written)));

@@ -728,7 +728,8 @@ public sealed partial class MeasureCollector
 
         void Collect(SyntaxNode articulation, bool isChordMember)
         {
-            if (graceTime && !Semantics.GraceBodySupport.IsCarriedScript(articulation))
+            if (graceTime && !Semantics.GraceBodySupport.IsCarriedScript(articulation)
+                && !Semantics.GraceBodySupport.IsCarriedText(articulation))
                 return;
             if (articulation is ArticulationSyntax articulationSyntax)
             {

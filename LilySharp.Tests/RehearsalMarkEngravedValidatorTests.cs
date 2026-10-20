@@ -117,9 +117,12 @@ public class RehearsalMarkEngravedValidatorTests
         Assert.Empty(Warnings(book));
         Assert.Contains(">P</text>", LiveRender.Svg(book));
 
-        // The company it keeps is still on the floor — and no longer silent about it.
-        string svg = LiveRender.Svg(OneStaff("grace { d'8@staccato@text(\"hi\") } c'1 | e'1 |"));
-        Assert.DoesNotContain(">hi</text>", svg);
+        // The company it keeps that a grace does not carry yet — a fingering (the scripts,
+        // dynamics and texts are drawn since session 916) — is still on the floor, and no
+        // longer silent about it (LYS4020, GraceBodyValidatorTests).
+        string fingered = OneStaff("grace { d'8@finger(3) } c'1 | e'1 |");
+        static string Ink(string svg) => System.Text.RegularExpressions.Regex.Replace(svg, " data-pos=\"\\d+\"", "");
+        Assert.Equal(Ink(LiveRender.Svg(OneStaff("grace { d'8 } c'1 | e'1 |"))), Ink(LiveRender.Svg(fingered)));
     }
 
     /// <summary>

@@ -8879,6 +8879,10 @@ internal static class LpGeometryProbes
     // A dynamic on a grace note (audit/lp-geometry/probes/grace-dynamic.ly, GDA/GDB).
     private static readonly string GRDA = GraceTieBook("c4 grace { d16@f } e4 c2 |", "GRDA");
     private static readonly string GRDB = GraceTieBook("c4 d16@f e8. c2 |", "GRDB");
+    // A text on a grace note (audit/lp-geometry/probes/grace-text.ly, GXA..GXC).
+    private static readonly string GRXA = GraceTieBook("c4 grace { d16@text(\"dolce\") } e4 c2 |", "GRXA");
+    private static readonly string GRXB = GraceTieBook("c4 grace { d16@text(\"dolce\").up } e4 c2 |", "GRXB");
+    private static readonly string GRXC = GraceTieBook("c4 d16@text(\"dolce\") e8. c2 |", "GRXC");
     // A hairpin over a grace note (audit/lp-geometry/probes/grace-hairpin.ly; samples/nocturne bar 5).
     private static readonly string GRHA = """
         part rh { clef treble }
@@ -17290,6 +17294,9 @@ internal static class LpGeometryProbes
         new("dynamic.grace.below", GRDA, g => g.DynamicBaselineAboveStaffLine(0, 2)),
         new("dynamic.grace.control", GRDB, g => g.DynamicBaselineAboveStaffLine(0, 2)),
         new("hairpin.over-grace.staff-to-wedge", GRHA, g => g.HairpinWedgeCentreBelowStaff()),
+        new("text.grace.below", GRXA, g => g.TextBaselineAboveStaffLine(LilySharp.Core.Rendering.TextRole.Text, 0, 2)),
+        new("text.grace.above", GRXB, g => g.TextBaselineAboveStaffLine(LilySharp.Core.Rendering.TextRole.Text, 0, 2)),
+        new("text.grace.control", GRXC, g => g.TextBaselineAboveStaffLine(LilySharp.Core.Rendering.TextRole.Text, 0, 2)),
         new("script.grace.control", GRSD, g => g.GlyphAboveStaffMiddle('\uE04A', 0)),
 
         // ...and the one quantity that tie's residual is made of, measured on its own. The
