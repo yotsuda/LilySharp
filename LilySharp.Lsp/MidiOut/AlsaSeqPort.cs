@@ -161,7 +161,16 @@ internal sealed class AlsaSeqPort : IMidiOutPort
 
     public static AlsaSeqPort Open(string name)
     {
-        IntPtr handle = OpenSequencer();
+        // The sentence names the output the user asked for, as WinMmPort's does: a machine
+        // without the sequencer (no /dev/snd/seq — a container, a CI runner) fails here,
+        // before the list is read, and "the ALSA sequencer could not be opened" alone does
+        // not say which setting was being tried.
+        IntPtr handle;
+        try { handle = OpenSequencer(); }
+        catch (InvalidOperationException ex)
+        {
+            throw new InvalidOperationException($"MIDI output \"{name}\" could not be opened: {ex.Message}", ex);
+        }
         try
         {
             var destinations = Destinations(handle);

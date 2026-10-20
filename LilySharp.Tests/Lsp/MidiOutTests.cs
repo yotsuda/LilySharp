@@ -228,6 +228,13 @@ public class MidiOutTests
     /// sent a program, three short notes, a strike and its release, silenced and closed — in
     /// under half a second. Elsewhere, or without it, the net passes on nothing: the
     /// CoreMIDI and ALSA ports are not reachable from a CI runner.
+    /// <para>
+    /// ⚠️ LISTED IS NOT OPENABLE: the GitHub Windows runner lists the synth but has no audio
+    /// device, and winmm refuses the open (MMSYSERR_ERROR, "Undefined external error" — CI
+    /// 2026-10-20). That refusal is a sentence the user would read, which is the product
+    /// working; the net then has nothing to play through and stops there. The not-there
+    /// sentence needs only the list, so it is checked first, on every Windows machine.
+    /// </para>
     /// </summary>
     [Fact]
     public void TheMachinesOwnSynth_WhereThereIsOne_OpensPlaysAndCloses()
@@ -236,17 +243,28 @@ public class MidiOutTests
         var names = MidiOutPorts.Names();
         const string gs = "Microsoft GS Wavetable Synth";
         if (!names.Contains(gs)) return;
+        // A port that is not there, on this OS's own list — the sentence names what is.
+        var ex = Assert.Throws<InvalidOperationException>(() => MidiOutPorts.Open("no such port — lily# test"));
+        Assert.Contains(gs, ex.Message);
+
         using var player = new MidiOutPlayer();
-        var (startedAt, end) = player.Play(gs, [Note(0, 0.05, 60, g: 0), Note(0.06, 0.05, 64), Note(0.12, 0.05, 67)], 0);
+        double end;
+        try
+        {
+            (_, end) = player.Play(gs, [Note(0, 0.05, 60, g: 0), Note(0.06, 0.05, 64), Note(0.12, 0.05, 67)], 0);
+        }
+        catch (InvalidOperationException refused) when (refused.Message.Contains("could not be opened"))
+        {
+            // Listed but refused (no audio device): nothing was started.
+            Assert.Null(player.PortName);
+            return;
+        }
         Assert.Equal(0.17, end, 6);
         Assert.Equal(gs, player.PortName);
         Thread.Sleep(220);
         Assert.Equal(MidiOutEvents.AuditionChannel, player.Strike(gs, [72.0], timbre: 0, program: 0));
         player.Release(MidiOutEvents.AuditionChannel, [72.0]);
         player.Stop();
-        // A port that is not there, on this OS's own list — the sentence names what is.
-        var ex = Assert.Throws<InvalidOperationException>(() => MidiOutPorts.Open("no such port — lily# test"));
-        Assert.Contains(gs, ex.Message);
     }
 
     // ---- the requests ----
