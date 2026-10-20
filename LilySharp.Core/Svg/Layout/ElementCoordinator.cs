@@ -2789,7 +2789,7 @@ internal sealed class ElementCoordinator
     }
 
     /// <summary>
-    /// The key → column index map <see cref="LayoutTies(Rendering.ScoreTextMetrics, ImmutableArray{TieItem}, Score, ImmutableArray{SystemLayout}, int, Model.Staff?)"/>
+    /// The key → column index map <see cref="LayoutTies(Rendering.ScoreTextMetrics, ImmutableArray{TieItem}, Score, ImmutableArray{SystemLayout}, int, Model.Staff?, ImmutableArray{GraceNoteItem}, int)"/>
     /// buckets a staff's ties into columns with, lent from one map the thread keeps between calls.
     /// </summary>
     /// <remarks>
@@ -4717,7 +4717,7 @@ internal sealed class ElementCoordinator
             graceNotes, beamLayouts, insideScripts, tieLayouts);
 
     /// <summary>The same, on slurs the caller has ALREADY detected — the slur twin of
-    /// <see cref="LayoutTies(Rendering.ScoreTextMetrics, ImmutableArray{TieItem}, Score, ImmutableArray{SystemLayout}, int, Model.Staff?)"/>,
+    /// <see cref="LayoutTies(Rendering.ScoreTextMetrics, ImmutableArray{TieItem}, Score, ImmutableArray{SystemLayout}, int, Model.Staff?, ImmutableArray{GraceNoteItem}, int)"/>,
     /// and for the same reason.</summary>
     /// <param name="insideScripts">This staff's <c>avoid-slur = #'inside</c> marks, already
     /// placed in the staff's own frame — see

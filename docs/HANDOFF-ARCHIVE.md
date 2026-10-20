@@ -160,6 +160,23 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第915セッションの経緯
+
+### 1.1 第915セッション（2026-10-20・YT-DELL2）
+
+新しい会話。`-Start p915`（開始 HEAD `edddc4978`・未 push 23・full **12443 / 0 / 2 / 12445**・第913 を ARCHIVE へ）。作業場所は Lab `sessions/p915/`（start.log・repro・before/after の png・lp・sweep・full1）。
+- **OMR の不具合レポート 2026-10-20**（`..\LilySharp-Omr\docs\repro\lilysharp-bug-report-2026-10-20.md`・10 件）＝**ユーザー指示「すべて直して」**。再現 10 冊を Lab `repro/` に写し、HEAD の Debug（`exe-base`）で全部再現した。
+- **1〜3・6 は一つの形**＝声部の中の番号を、レイアウトの item 枠（＝大譜表では上の五線、1 譜では 1 声目）の番号として引いていた。text spanner（`BoundX`）・trill（`VoiceItemX`）・ottava（`ItemX`＝字と支え）を `GetItemXOffset`＋その声部の小節に。text spanner／ottava は開始の印の `VoiceIndex`、arpeggio は `VoiceIndex` を持つ。**6 のもう半分**＝ottava の続きの断片が*開始小節の*段の staff offset を読んでいた（`(8vb)` が前の段の位置で吊られて別の五線に出る）→断片ごとの段。hairpin（2026-10-16 に直した）と同じ病の残り 3 本。
+- **4** 連符の腕（`EmitScaledItem`）が `hasArpeggio: false` で arpeggio を登録しなかった→`AddArpeggio` を 1 か所に。**7** 連符の中は `CurrentDuration` が止まる＝中の印が全部連符の頭の時刻を持った→`MeasureBuilder.CurrentMoment`（時計＋未加算の member）。**5** 段をまたぐ trill の右端が `system.Width`（字下げを引いた幅）＝1 段目で字下げより段末に近い trill は始点＞終点で捨てられた→最後の小節の右端。
+- **8・10・9 は LP 2.26 で描いて裁定**（Lab `lp/check.ly`）: 8＝LP は五線ごと（♮・♭ を付ける）＝不具合。10＝LP も付けない（音高で覚える）。9＝LP も連桁の acciaccatura に斜線なし＝LP どおり・変えない。**8・10 は `StaffAccidentals`（収集の後の五線ごとの後処理・足すだけ）**: ⑴ 同じ音名・オクターブが最後に*別の声部*で違う変化量 ⑵ 同じ線・間に最後に*別オクターブ*の違う変化量（ottava の両側・LILYSHARP-OWN＝§1.0 第751 の方針で描かれた位置を優先）。既定の様式だけ・小節内の clef 変更は ⑵ を飛ばす・タイの続きは付けない・同時の声部は互いに見ない。音符と和音の構成音が `WrittenPitch`（音名・オクターブ・変化量を詰めた int）を持つ。呼び所は `ResolveStaffColumns`（全経路の五線）・1 声の ottava の後・多五線の ottava の後（足したら `RepackAccidentalColumns`）。⚠️ condensed staff（`RenderSpec`）は通していない。
+- **網** `OmrReport20261020Tests` 9 本（報告の本で・HEAD の Core に戻すと 9 本とも赤＝バイト退避で確認）。**掃き**（p723 の sweep-all・1,015 冊／1,240 svg）で動いたのは **1 枚**＝`audit/lp-regression/lys/collisions.lys` 6 小節目の 3 声目の e に ♮（2 声目の es の後）＝⑴ の正しい帰結。
+- commit **`1aca41cd2`**（code＋網＋CHANGELOG＋目録 2 枚）→ `-End p915 -DiffBase edddc4978`＝full **12452 / 0 / 2 / 12454**（開始 +9 本＝網）・Core '+' 574 行・Core 警告 0・門は全部 OK・天井: HANDOFF 386,571 B・Lab `sessions/p915/end.log`）→ この docs commit。未 push 23＋2（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。
+- **同じ日の午後＝OMR の依頼 3 件**（`..\LilySharp-Omr\docs\repro\lilysharp-requests-2026-10-20.md`・返事は Lab `sessions/p915/lilysharp-fix-report-2026-10-20.md` と同じ場所の `lilysharp-reply-2026-10-20.md`）: ⑴ **版番号＝0.14.0 を用意した（`92ff1ac81`・RELEASING §2 の 7 か所・両 changelog の Unreleased を改題・§4 の検証済み）。0.13.1 でないのは和音の読みの変更（`ece474ae6`）が言語の破壊的変更だから。push・CI・tag はオーナー**。⑵ 段をまたぐグリッサンド＝後ろの断片が*始まりの段*で描かれていた（`MeasureIndex` で置いていた）→ `SystemMeasureIndex`／`PlacedMeasureIndex`。ついでに LILYSHARP-OWN の水平線をやめ LP に合わせた（1 本の傾きを断片の長さで按分・左の切れ目は段頭の列の右から・切れ目にも padding・時間 0 の断片は描かない＝LP 2.26 で実測 Lab `lp/gliss.ly`）。`d3ef0dab7`・網 `GlissandoAcrossBreakTests` 2 本・掃き 0 枚。⑶ 松葉の先端がペダルのかぎに触れる＝**LP も同じ絵**（Lab `lp/pedal.ly`）＝変えない。
+- **同じ日の深夜＝OMR の開いた依頼 3 件**（`..\LilySharp-Omr\docs\repro\lilysharp-requests-open-2026-10-20.md`・返事は Lab `sessions/p915/lilysharp-reply-open-2026-10-20.md`）＝`78164829a`: ⑴ 下の五線の 8va が間隔に入っていなかった→`MultiStaffLayouter.StaffOttavaInk`（StaffTrillInk の型・段で切る）／⑵ 下向きのオッターヴァは外側の積み上げを一度も通っていなかった（`PlaceOttavas` は上だけ）→`OutsideStaffStacker.PlaceBelowOttavas`（内側の輪郭＋*描く*連符の括弧と数字の輪郭＋下の 250 以下の mover・注釈の pass で連符の後）。⚠️ LP の既定の字は「8」、Lily# は「8vb」＝数字の横に字が並ぶ形が残る（インクは離れる）／⑶ `NarrowToGraceTime` が `WrittenPitch` を落としていた＋装飾音の写し 2 つ（本音符の `LeadingGrace`・score の `GraceNotes`）を合わせ直す。網 `OmrRequestsOpen20261020Tests` 3 本・掃き 0 枚。⑷（観察・OMR は見なくてよいと）は未着手。
+- **OMR の観察 4（かぎが次の音符の上まで）＝`0d68051af`**: 小節の途中で止まるオッターヴァの右端が、系の*全五線共通の*時刻の列から「終わりの前の最後の列」を取っていた＝他の五線の 16 分音符が拾われ、かぎが閉じる和音の先に出た → 自分の五線の声部の最後の音符（`StaffLastColumnBefore`・LP は Staff の engraver）。網 Item4・掃き 0 枚。返事は Lab `sessions/p915/lilysharp-reply-followup-2026-10-20.md`。
+- **名前を付けて残した穴 2 つを閉じた＝`7d6b0eacb`**: condensed／combined staff（複数パートの五線）にも `StaffAccidentals` をもう一度（1 パートの五線は配列の参照で見分けて飛ばす）／下の自由なテキスト（450）を下向きのオッターヴァ（400）の後に置き直す（`PlaceBelowOttavas` の後段）。網 2 本・掃き 0 枚・full **12460 / 0 / 2 / 12462**。
+判定（2026-10-20）: OMR の 10 件・依頼 3 件・観察 4 は閉じた（9・依頼 3 は LP どおり・10 は LP と違う選択・「8vb3」の並びは OMR が困らないので今のまま）。**v0.14.0 は用意したが公開はまだ（オーナー 2026-10-20「0.14.0 はまだ」）**＝master の版は 0.14.0、CHANGELOG の 0.14.0 節に以後の直しも足してある。残りは OMR 側の生成譜の取り直しと、次の報告。続けるなら新しい島＝(c) で差は小さい。
+
 ## 以下は第914セッションの経緯
 
 ### 1.1 第914セッション（2026-10-18・YT-DELL2）

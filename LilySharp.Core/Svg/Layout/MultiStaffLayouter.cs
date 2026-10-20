@@ -5075,7 +5075,7 @@ internal sealed class MultiStaffLayouter
     /// their bows — the tie analogue of <see cref="StaffSlurLayouts"/>. Same trivial
     /// one-staff-at-offset-0 system, reusing
     /// <see cref="ElementCoordinator.LayoutTies(Rendering.ScoreTextMetrics, ImmutableArray{Model.TieItem}, Model.Score,
-    /// ImmutableArray{SystemLayout}, int, Model.Staff)"/>
+    /// ImmutableArray{SystemLayout}, int, Model.Staff, ImmutableArray{Model.GraceNoteItem}, int)"/>
     /// whole; tie geometry is fixed by note X and pitch, so it is sound to compute before
     /// the inter-staff spacing is decided.
     /// </summary>
