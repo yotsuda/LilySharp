@@ -33,7 +33,10 @@ workflow attaches that section to the GitHub Release verbatim.
   when the staves were spaced, so it printed through the upper staff's lower voice; now the
   staves stand apart for it. An 8vb under the staff was never stacked against what is there
   already, and its label printed into a tuplet's number and its dashes over the tuplet's
-  bracket; now it stands below both, and below the dynamics and hairpins.
+  bracket; now it stands below both, and below the dynamics and hairpins. An ottava that stops
+  inside a bar ends after its own staff's last covered note: on a grand staff the other
+  staff's notes could stand in for it, and the hook was drawn past the next note — which a
+  reader takes as still under the line.
 - **A grace note's accidental holds for the staff too:** the lower voice's `grace { b'16 }` after
   the upper voice's `bes'` prints its natural, as an ordinary note already did.
 

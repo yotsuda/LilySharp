@@ -344,7 +344,8 @@ internal static class OttavaBracketEngraver
                     ? segStartMeasure.X + startItemX + LeftShorten
                     : segStartMeasure.X + LeftShorten;
                 double endX = segment.IsLast && bracket.EndMoment is { } endMoment
-                        && LastColumnBefore(segEndMeasure, endMoment, bracket.EndItemIndex) is { } lastColX
+                        && (StaffLastColumnBefore(segEndMeasure, ottavaVoices, bracket.EndMeasureIndex, endMoment)
+                            ?? LastColumnBefore(segEndMeasure, endMoment, bracket.EndItemIndex)) is { } lastColX
                     // A span stopping INSIDE its last bar ends where LilyPond's does: just after
                     // the last note head it covers, by the shorten-pair's right half.
                     // LILYPOND-REF: lily/ottava-engraver.cc:168-191 typeset_all — the RIGHT bound
@@ -428,6 +429,49 @@ internal static class OttavaBracketEngraver
             || itemIndex >= measures[measureIndex].Items.Length)
             return null;
         return LayoutUtilities.GetItemXOffset(measures, measureIndex, itemIndex, ml);
+    }
+
+    /// <summary>
+    /// The X of the last note column OF THIS STAFF before <paramref name="endMoment"/> in
+    /// <paramref name="measure"/> — the latest note, chord or rest any of its voices starts
+    /// there — or null when the staff has none there (or no voices were supplied).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/ottava-engraver.cc:168-191 typeset_all — the right bound is the last
+    ///   NoteColumn the Staff-context engraver acknowledged, so another staff's columns are not
+    ///   candidates. ⚠️ <see cref="LastColumnBefore"/> read the system's timing columns, which
+    ///   every staff shares: a right hand's sixteenth between a left hand's last covered note and
+    ///   its closing chord became the bound, and the hook stood past the chord — read as under
+    ///   the line (OMR follow-up 2026-10-20, `ottava-hook-over-next-2026-10-20.lys`).
+    /// </remarks>
+    private static double? StaffLastColumnBefore(MeasureLayout measure, ImmutableArray<Voice> voices,
+        int measureIndex, Fraction endMoment)
+    {
+        if (voices.IsDefaultOrEmpty)
+            return null;
+        Fraction? best = null;
+        double bestX = 0;
+        for (int vi = 0; vi < voices.Length; vi++)
+        {
+            var measures = voices[vi].Measures;
+            if (measureIndex < 0 || measureIndex >= measures.Length)
+                continue;
+            var items = measures[measureIndex].Items;
+            var onset = Fraction.Zero;
+            for (int ii = 0; ii < items.Length; ii++)
+            {
+                var item = items[ii];
+                bool column = !item.GraceTime
+                    && item is NoteItem or ChordItem or RestItem { IsSpacer: false };
+                if (column && onset < endMoment && (best is null || onset > best.Value))
+                {
+                    best = onset;
+                    bestX = measure.X + LayoutUtilities.GetItemXOffset(measures, measureIndex, ii, measure);
+                }
+                onset += item.Duration;
+            }
+        }
+        return best is null ? null : bestX;
     }
 
     /// <summary>

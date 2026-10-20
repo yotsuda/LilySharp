@@ -118,6 +118,42 @@ public class OmrRequestsOpen20261020Tests
             $"bar 3's line at {line3.YUp:F3} clears the bracket at {System.Math.Min(bracket.StartYUp, bracket.EndYUp):F3}");
     }
 
+    // Follow-up, item 4: an ottava stopping inside a bar ends after ITS OWN STAFF's last
+    // covered note. The right bound read the system's timing columns, which the other staff
+    // shares: a right hand's sixteenth between the left hand's ces,, and its closing chord
+    // became the bound, and the hook stood past the chord (OMR follow-up 2026-10-20).
+    [Fact]
+    public void Item4_AnOttavasHook_StopsBeforeTheNextNoteOfItsStaff()
+    {
+        var (score, layout) = Render("""
+            octave absolute
+            time 4/4
+            key ges major
+            part rh { clef treble }
+            part lh { clef bass }
+            section Piece {
+              rh {
+                voice { aes'8. ges'16 fes'16 <fis' ges'>16 <ges' aes'>8 <ces' ees'>8 des'16 des'16 ees'8. f'16 } { r8. ees16 f4 aes16 <f aes ces'>16 ees16 aes16 <f aes ces'>8. ces16 } |
+                voice { r16 ges'16 f'16 f'16 r8 f'8 f'8. <ees' f'>16 f'8. ges'16 } { ges4. f8 aes4 ges16 f16 r8 } |
+              }
+              lh {
+                tuplet 3/2 { g,8 ges,,8@ottava(bassa) f,,8 } ees,,4. f,,8 bes,,8 ces,8 |
+                bes,,8 <ges,, bes,, des,>16 <f,, aes,,>16 tuplet 3/2 { des,,8 ces,,8 <f, ges,>8@!ottava } ees,4 r8 f,8 |
+              }
+            }
+            form { ~Piece }
+            score { grandStaff { staff rh "Right" staff lh "Left" } }
+            """);
+        var lh = score.StaffGroups[0].Staves[1].PrimaryVoice.Measures;
+        var bar2 = layout.AllSystems.SelectMany(s => s.Measures).Single(m => m.MeasureIndex == 1);
+        // ces,, is the left hand's item 4 in bar 2, the chord its item 5.
+        double ces = bar2.X + LayoutUtilities.GetItemXOffset(lh, 1, 4, bar2);
+        double chord = bar2.X + LayoutUtilities.GetItemXOffset(lh, 1, 5, bar2);
+        var line = Assert.Single(layout.OttavaBracketLayouts);
+        Assert.True(line.EndX > ces, $"the hook at {line.EndX:F3} stands after ces,, ({ces:F3})");
+        Assert.True(line.EndX < chord, $"the hook at {line.EndX:F3} stands before the chord ({chord:F3})");
+    }
+
     // Item 3: a grace note's accidental is decided by the staff's memory too — drawn from the
     // grace groups' columns, which carry it as well as the grace's item does.
     [Fact]
