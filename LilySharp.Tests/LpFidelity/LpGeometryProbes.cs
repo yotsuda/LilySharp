@@ -8994,6 +8994,12 @@ internal static class LpGeometryProbes
     private static readonly string GBRH = GraceTieBook("c4 grace { d16@breath e16 f16 } g4 c2 |", "GBRH");
     private static readonly string GBRI = GraceTieBook("c4 grace { d16@breath e16@breath } f4 c2 |", "GBRI");
     private static readonly string GBRJ = GraceTieBook("c4 grace { d16 e16@breath f16 g16 } a4 c2 |", "GBRJ");
+    // A breathing sign or caesura between two notes the auto-beamer would beam
+    // (audit/lp-geometry/probes/breath-beam.ly; session 937).
+    private static readonly string BBA = GraceTieBook("c4 d16@breath e16 f8 c2 |", "BBA");
+    private static readonly string BBC = GraceTieBook("c4 d16@caesura e16 f8 c2 |", "BBC");
+    private static readonly string BBD = GraceTieBook("c4 d8@caesura e8 c2 |", "BBD");
+    private static readonly string BBE = GraceTieBook("c4 d8 e8 c2 |", "BBE");
     // A half-tie on a grace note (audit/lp-geometry/probes/grace-semitie.ly).
     private static readonly string GLVA = GraceTieBook("c4 grace { d16@laissezVibrer } e4 f4 g4 |", "GLVA");
     private static readonly string GLVB = GraceTieBook("c4 d16@laissezVibrer e8. f4 g4 |", "GLVB");
@@ -17576,6 +17582,18 @@ internal static class LpGeometryProbes
         new("breath.grace.inner.beamed.sign-to-grace", GBRJ, g => g.NoteheadFromBreath(3)),
         new("breath.grace.inner.beamed.flagged-gap", GBRJ, g => g.NoteheadToNotehead(3, 4)),
         new("breath.grace.inner.beamed.to-main", GBRJ, g => g.NoteheadToNotehead(4, 5)),
+        new("breath.beam.note-to-sign", BBA, g => g.BreathFromNotehead(1)),
+        new("breath.beam.sign-to-note", BBA, g => g.NoteheadFromBreath(2)),
+        new("breath.beam.beamed-pair", BBA, g => g.NoteheadToNotehead(2, 3)),
+        new("caesura.beam.note-to-sign", BBC, g => g.BreathFromNotehead(1)),
+        new("caesura.beam.sign-to-note", BBC, g => g.NoteheadFromBreath(2)),
+        new("caesura.beam.beamed-pair", BBC, g => g.NoteheadToNotehead(2, 3)),
+        new("caesura.beam.eighths.note-to-sign", BBD, g => g.BreathFromNotehead(1)),
+        new("caesura.beam.eighths.sign-to-note", BBD, g => g.NoteheadFromBreath(2)),
+        new("caesura.beam.eighths.control.pair", BBE, g => g.NoteheadToNotehead(1, 2)),
+        new("breath.beam.stems", BBA, g => g.BeamGroupStemCount(0)),
+        new("caesura.beam.stems", BBC, g => g.BeamGroupStemCount(0)),
+        new("caesura.beam.eighths.stems", BBD, g => g.BeamGroupStemCount(0)),
         new("semitie.grace.lv.start-to-notehead", GLVA, g => g.BowStartToNotehead(0, 1)),
         new("semitie.grace.lv.span", GLVA, g => g.BowSpan(0)),
         new("semitie.grace.lv.end-to-next", GLVA, g => g.BowEndToNotehead(0, 2)),

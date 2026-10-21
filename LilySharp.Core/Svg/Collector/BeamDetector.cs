@@ -950,6 +950,18 @@ internal sealed class BeamDetector
             //   ADD_ACKNOWLEDGER list: stem, beam, breathing_sign, rest.
             if (item is ClefChangeItem or KeySignatureChangeItem)
                 continue;
+            // …and so is a CAESURA's column (session 937), although its grob is a BreathingSign:
+            // Caesura_engraver is a STAFF engraver, and an acknowledger hears only the grobs of
+            // its own context and those below, so the Voice's Auto_beam_engraver never sees it.
+            // A breathing sign's engraver is the Voice's own, and its column falls through to the
+            // not-beamable arm below and ends the beam. MEASURED (2.26.0,
+            // audit/lp-geometry/probes/breath-beam.ly, ledger caesura.beam.* / breath.beam.*):
+            // `d16 \caesura e16 f8` one Beam over the three, `d16 \breathe e16 f8` d flagged and
+            // e f beamed; Lily# split the caesura's beam too, and its flagged d stood the caesura 0.5382 too far off.
+            // LILYPOND-REF: ly/engraver-init.ly:66 Staff — \consists Caesura_engraver.
+            // LILYPOND-REF: ly/engraver-init.ly:384 Voice — \consists Breathing_sign_engraver.
+            if (item is BreathingSignItem { Type: LilySharp.Core.Syntax.ArticulationType.Caesura })
+                continue;
 
             // A rest, a note too long to be beamed, and a stem that already carries a beam of
             // its own (manual, or a cross-measure pair claimed by the first pass) all end the

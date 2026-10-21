@@ -8148,6 +8148,90 @@
       "residual": 0.0,
       "why": "EXACT from its first reading (session 936): the last flagged grace -> main note."
     },
+    "breath.beam.note-to-sign": {
+      "probe": "breath-beam.ly",
+      "score": "BBA",
+      "lilypond": 1.9976,
+      "residual": 0.0,
+      "why": "EXACT. The CONTROL of the caesura books (session 937): a breathing sign between two sixteenths stands in its column (BreathingSignItem), the note -> sign the Note_spacing wish into it, 1.9976."
+    },
+    "breath.beam.sign-to-note": {
+      "probe": "breath-beam.ly",
+      "score": "BBA",
+      "lilypond": 1.5066,
+      "residual": 0.0,
+      "why": "EXACT. The sign -> next note: first-note fixed-space 1.0 past the comma's ink (0.5066 + 1.0)."
+    },
+    "breath.beam.beamed-pair": {
+      "probe": "breath-beam.ly",
+      "score": "BBA",
+      "lilypond": 2.5042,
+      "residual": 0.0,
+      "why": "EXACT. The two notes after the breathing sign are beamed by a NEW automatic beam (the sign ended the first: the d before it is flagged)."
+    },
+    "caesura.beam.note-to-sign": {
+      "probe": "breath-beam.ly",
+      "score": "BBC",
+      "lilypond": 2.0042,
+      "residual": 0.0,
+      "why": "EXACT since session 937, by the port caesura.beam.stems names: the d is BEAMED into the caesura (one beam over d e f), and the caesura's 2.0-wide column floors the Note_spacing wish at (ideal + min) / 2, 2.0042. AS OPENED (the port removed): 2.5424 (+0.5382) — Lily# flagged the d, and the flag stands in the caesura's band, so the wish's skyline distance grew by the flag's reach."
+    },
+    "caesura.beam.sign-to-note": {
+      "probe": "breath-beam.ly",
+      "score": "BBC",
+      "lilypond": 3.0,
+      "residual": 0.0,
+      "why": "EXACT: (2.0 + 1.0)."
+    },
+    "caesura.beam.beamed-pair": {
+      "probe": "breath-beam.ly",
+      "score": "BBC",
+      "lilypond": 2.5042,
+      "residual": 0.0,
+      "why": "EXACT: the beamed sixteenth -> eighth, 2.5042, as without the caesura."
+    },
+    "caesura.beam.eighths.note-to-sign": {
+      "probe": "breath-beam.ly",
+      "score": "BBD",
+      "lilypond": 2.0042,
+      "residual": 0.0,
+      "why": "EXACT since session 937 (the same port): the beamed eighth -> caesura, 2.0042. AS OPENED: 2.5424, the flagged eighth's."
+    },
+    "caesura.beam.eighths.sign-to-note": {
+      "probe": "breath-beam.ly",
+      "score": "BBD",
+      "lilypond": 3.0,
+      "residual": 0.0,
+      "why": "EXACT: (2.0 + 1.0)."
+    },
+    "caesura.beam.eighths.control.pair": {
+      "probe": "breath-beam.ly",
+      "score": "BBE",
+      "lilypond": 2.5042,
+      "residual": 0.0,
+      "why": "EXACT. The CONTROL without the caesura: the beamed eighth pair, 2.5042."
+    },
+    "breath.beam.stems": {
+      "probe": "breath-beam.ly",
+      "score": "BBA",
+      "lilypond": 2,
+      "residual": 0.0,
+      "why": "EXACT. A breathing sign ENDS the automatic beam (lily/auto-beam-engraver.cc:319-322 acknowledge_breathing_sign: force_end_ — Breathing_sign_engraver is the Voice's own, ly/engraver-init.ly:384): the beam holds the two notes after it, the d before it flagged. What turns this red: stepping over a breathing sign's column in BeamDetector."
+    },
+    "caesura.beam.stems": {
+      "probe": "breath-beam.ly",
+      "score": "BBC",
+      "lilypond": 3,
+      "residual": 0.0,
+      "why": "EXACT since session 937: closed by the port its opening named — a CAESURA does not end the automatic beam (probe BBC: one Beam over d e f). Caesura_engraver is a STAFF engraver (ly/engraver-init.ly:66) and an acknowledger hears only its own context's grobs and those below, so the Voice's Auto_beam_engraver never sees the caesura's BreathingSign; BeamDetector now steps over a caesura's column as over a clef's. AS OPENED (the same commit, the port removed): 2 — Lily# ended the beam at every BreathingSignItem, flagging the d and beaming e f."
+    },
+    "caesura.beam.eighths.stems": {
+      "probe": "breath-beam.ly",
+      "score": "BBD",
+      "lilypond": 2,
+      "residual": 0.0,
+      "why": "EXACT since session 937 (the same port): `d8 \\caesura e8` is one beam over the two eighths. AS OPENED: 0 — no beam at all, both eighths flagged."
+    },
     "semitie.grace.lv.start-to-notehead": {
       "probe": "grace-semitie.ly",
       "score": "LVA",
