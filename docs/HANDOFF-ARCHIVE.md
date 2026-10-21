@@ -160,6 +160,17 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第923セッションの経緯
+
+### 1.1 第923セッション（2026-10-21・YT-DELL2）
+
+第922 と同じ会話の続き（ユーザー「続けて」）。`-Start p923`（開始 HEAD `5794d8e67`・未 push 21・full **12579 / 0 / 2 / 12581**・第921 を ARCHIVE へ）。作業場所は Lab `sessions/p923/`。
+- **棚卸し**: grace に書くと今も LYS4020 の注釈を lysc で全部当てた＝38 種（Lab `sessions/p923/survey`・一覧は §2 U8 の ⒟ の進み）。
+- **弓の記号 5 種を描く＝`7e5c47b48`**: `@upBow`・`@downBow`・`@flageolet`（`@harmonic`）・`@stopped`・`@snapPizz` を `GraceBodySupport.IsCarriedScript` に足した（配置は第916 の grace の経路のまま）。LP 2.26（`probes/grace-bowing.ly`）＝台帳 7 点一致（`script.grace.bowing.*`・対照 2 つ）。`\thumb` は LP では Script として刷られない（grace でも普通の音でも＝Lab `p923/bow/thumb.log`・別の grob の族）＝`@thumb` は報告のまま。毒＝5 種を外して 11 赤。掃き 1,242 枚で 0。
+- **breath は測っただけ**（Lab `p923/br`）: LP は grace の後ろに breath の列を立て、主音符が 0.46 右へ動く（BRA 13.385 対 対照 BRB 12.925）・breath の左 11.878 は grace の頭の右 11.905 に重なる。grace の列組み（`SpacingRules.GraceColumns`）に非音楽の列を足す仕事＝次の候補。
+- `-End p923 -DiffBase 5794d8e67`＝full **12592 / 0 / 2 / 12594**（前便末 +13）・Core 警告 0・門は全部 OK（Lab `sessions/p923/end.log`）→ この docs commit。未 push 22＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。
+判定（2026-10-21）: 弓の記号は閉じた。grace の LYS4020 の残りは 30 種余り（一覧は §2 U8）＝次は breath（測定済み・列組みの仕事）か、Script と同じ経路で済む族があればそれから。
+
 ## 以下は第922セッションの経緯
 
 ### 1.1 第922セッション（2026-10-21・YT-DELL2）
