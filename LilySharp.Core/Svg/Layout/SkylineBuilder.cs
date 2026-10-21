@@ -942,6 +942,11 @@ internal sealed class SkylineBuilder
                             // — the same split the full-size walk makes with suppressStems.
                             reserveStem: !seed.Beamed,
                             clef: staff.Clef, staffLines: staff.Lines);
+                        // A grace's half-ties (session 930), at the column the run placed.
+                        if (TieVariantEngraver.HasSemiTie(item))
+                            AddSemiTiesToSkylines(voice, measureIndex, itemIndex, item, seed.X,
+                                measureLayout, staffMiddleUp, StaffSize.Of(staff),
+                                upSkyline, downSkyline, graceColumn: true);
                         continue;
                     }
                     double itemX = measureLayout.X + LayoutUtilities.GetItemXOffset(
@@ -1052,9 +1057,10 @@ internal sealed class SkylineBuilder
     private static void AddSemiTiesToSkylines(
         Voice voice, int measureIndex, int itemIndex, MusicItem item, double columnX,
         MeasureLayout measureLayout, double staffMiddleUp, StaffSize size,
-        VerticalSkyline upSkyline, VerticalSkyline downSkyline)
+        VerticalSkyline upSkyline, VerticalSkyline downSkyline, bool graceColumn = false)
     {
-        double slotX = itemIndex < measureLayout.Items.Length
+        // A grace column has no item slot of its own (session 930): its X is the run's.
+        double slotX = !graceColumn && itemIndex < measureLayout.Items.Length
             ? measureLayout.X + measureLayout.Items[itemIndex].X
             : columnX;
         var bows = new List<TieVariantLayout>(2);

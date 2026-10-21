@@ -97,6 +97,9 @@ workflow attaches that section to the GitHub Release verbatim.
   **An editorial accidental on one note of a chord is drawn** (`<d f@editorial>4`), over the
   chord; it drew nothing before, and said nothing. Two of them in one chord stack, the lower
   note's nearer the staff.
+  **A half-tie is drawn on a grace note** (`grace { d16@laissezVibrer } e4`,
+  `grace { d16@repeatTie } e4`), off the small head, and the notes around it make room for it as
+  they do for a full-size one.
   A hairpin running over a
   grace note also stands where LilyPond puts it — it read the grace note's stem as a full-size
   down stem and sat a quarter space too low.

@@ -6522,6 +6522,13 @@ public sealed partial class MeasureCollector
                         PhrasingSlurStart = items[i].HasPhrasingSlurStart,
                         PhrasingSlurEnd = items[i].HasPhrasingSlurEnd,
                     };
+                // The half-ties (session 930), solved as the page draws them: the run's rods
+                // read their boxes (GraceColumnInfo.SemiTieBoxes).
+                if (Svg.Layout.TieVariantEngraver.HasSemiTie(items[i]))
+                    columns[^1] = columns[^1] with
+                    {
+                        SemiTieBoxes = Svg.Layout.TieVariantEngraver.GraceSemiTieBoxes(items[i]),
+                    };
             }
         }
         return (columns.ToImmutable(), indices.ToImmutable());

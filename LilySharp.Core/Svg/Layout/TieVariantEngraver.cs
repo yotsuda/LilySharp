@@ -316,7 +316,8 @@ internal static class TieVariantEngraver
         ImmutableArray<SystemLayout> systems,
         int staffIndex = -1,
         IReadOnlyDictionary<int, (SystemLayout System, MeasureLayout Measure)>? measureMap = null,
-        IReadOnlyDictionary<int, Staff>? staffByIndex = null)
+        IReadOnlyDictionary<int, Staff>? staffByIndex = null,
+        ImmutableArray<GraceNoteItem> graceNotes = default)
     {
         if (score.Voices.IsDefaultOrEmpty)
             return ImmutableArray<TieVariantLayout>.Empty;
@@ -347,7 +348,7 @@ internal static class TieVariantEngraver
                         foreach (var measureLayout in system.Measures)
                             for (int vi = 0; vi < staff.Voices.Length; vi++)
                                 AppendMeasure(ref builder, system, measureLayout,
-                                    staff.Voices[vi], vi, placed.StaffIndex);
+                                    staff.Voices[vi], vi, placed.StaffIndex, graceNotes, staff.Voices);
                     }
                 }
             }
@@ -364,7 +365,8 @@ internal static class TieVariantEngraver
             var voice = score.Voices[vi];
             for (int mi = 0; mi < voice.Measures.Length; mi++)
                 if (map.TryGetValue(mi, out var info))
-                    AppendMeasure(ref builder, info.System, info.Measure, voice, vi, staffIndex);
+                    AppendMeasure(ref builder, info.System, info.Measure, voice, vi, staffIndex,
+                        graceNotes, score.Voices);
         }
         return builder?.ToImmutable() ?? [];
     }
@@ -373,7 +375,8 @@ internal static class TieVariantEngraver
     /// staff skyline reserves them at (<c>SkylineBuilder.AddSemiTiesToSkylines</c>).</summary>
     private static void AppendMeasure(
         ref ImmutableArray<TieVariantLayout>.Builder? builder, SystemLayout system,
-        MeasureLayout measureLayout, Voice voice, int voiceIndex, int staffIndex)
+        MeasureLayout measureLayout, Voice voice, int voiceIndex, int staffIndex,
+        ImmutableArray<GraceNoteItem> graceNotes, ImmutableArray<Voice> voices)
     {
         int mi = measureLayout.MeasureIndex;
         if (mi >= voice.Measures.Length)
@@ -402,11 +405,27 @@ internal static class TieVariantEngraver
                 // X the renderer draws the notehead at even when a bar opens with a mid-piece
                 // time/clef change; single-staff layouts have no columns and the slot is
                 // already the grid.
-                double columnX = measureLayout.X
-                    + LayoutUtilities.GetItemXOffset(voice.Measures, mi, ii, measureLayout);
-                double slotX = ii < measureLayout.Items.Length
-                    ? measureLayout.X + measureLayout.Items[ii].X
-                    : columnX;
+                // A GRACE item (session 930, HANDOFF §2 U8) is its grace column, read off the
+                // run: GetItemXOffset answers no grace column. Its head and stem are the grace's
+                // (BuildTieColumn reads them at the grace font).
+                double columnX, slotX;
+                if (item.GraceTime)
+                {
+                    if (graceNotes.IsDefaultOrEmpty
+                        || ElementCoordinator.GraceColumnHeadLeftX(voice, graceNotes,
+                            Math.Max(staffIndex, 0), voiceIndex, mi, ii, measureLayout,
+                            SpacingRules.VoiceCollisionShiftsOf(voices)) is not { } graceX)
+                        continue;
+                    columnX = slotX = graceX;
+                }
+                else
+                {
+                    columnX = measureLayout.X
+                        + LayoutUtilities.GetItemXOffset(voice.Measures, mi, ii, measureLayout);
+                    slotX = ii < measureLayout.Items.Length
+                        ? measureLayout.X + measureLayout.Items[ii].X
+                        : columnX;
+                }
                 // Within-system Y offset (device, down from the system top) of the staff
                 // middle, NOT an absolute page Y — so the tie's Y/control points are
                 // independent of where paging places the system. DrawTieVariants resolves
@@ -422,6 +441,46 @@ internal static class TieVariantEngraver
                     staffMiddleDown, staffIndex, voiceIndex);
             }
         }
+    }
+
+    /// <summary>
+    /// A GRACE column's half-ties as SPACING boxes (<see cref="GraceColumnInfo.SemiTieBoxes"/>),
+    /// solved exactly as the page draws them — <see cref="AppendItemSemiTies"/> off the column
+    /// at X 0 (the head's left edge) about the staff middle, the item standing alone in its own
+    /// one-measure voice, which is all the solve reads of a voice (the item, its stem).
+    /// Each box is the bow widened as <see cref="ItemSkylineFactory"/>'s full-size
+    /// <c>AddSemiTies</c> widens its: half the line thickness everywhere, the declared
+    /// extra-spacing-height above and below.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED (2.26.0, audit/lp-geometry/probes/grace-semitie.ly): `\grace { d16\laissezVibrer }`
+    /// draws a 1.620688 bow (the grace flag's reach + 1.5, not the full-size 1.1) and stands the
+    /// main note 0.34 after its end; `\grace { d16\repeatTie }` stands its bow 0.34 after the
+    /// previous head and pushes the grace 0.5424 right — both rods of the paper column's
+    /// elements, as a full-size half-tie's (ledger semitie.grace.*).
+    /// </remarks>
+    internal static ImmutableArray<GraceSemiTieBox> GraceSemiTieBoxes(MusicItem item)
+    {
+        if (!HasSemiTie(item))
+            return default;
+        var voice = new Voice("grace", ImmutableArray.Create(new Measure(
+            ImmutableArray.Create(item), BarlineType.None, BarlineType.None, null, 0, 0)));
+        var bows = new List<TieVariantLayout>(2);
+        AppendItemSemiTies(bows, voice, 0, 0, item, columnX: 0, slotX: 0, staffMiddleDown: 0,
+            staffIndex: -1, voiceIndex: 0);
+        if (bows.Count == 0)
+            return default;
+        double halfLine = 0.5 * LineThickness;
+        double reach = halfLine + ExtraSpacingHeight;
+        var boxes = ImmutableArray.CreateBuilder<GraceSemiTieBox>(bows.Count);
+        foreach (var b in bows)
+        {
+            // A symmetric bezier peaks three quarters of the way to its control points.
+            double peak = b.Y + 0.75 * (b.Control1.Y - b.Y);
+            boxes.Add(new GraceSemiTieBox(Math.Min(b.Y, peak) - reach, Math.Max(b.Y, peak) + reach,
+                Math.Min(b.StartX, b.EndX) - halfLine, Math.Max(b.StartX, b.EndX) + halfLine));
+        }
+        return boxes.MoveToImmutable();
     }
 
     /// <summary>The cheap flag scan: does <paramref name="item"/> carry a half-tie of either

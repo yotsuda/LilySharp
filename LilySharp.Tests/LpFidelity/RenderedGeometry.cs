@@ -2972,6 +2972,42 @@ internal sealed class RenderedGeometry
     }
 
     /// <summary>
+    /// How far bow <paramref name="index"/> STARTS right of notehead <paramref name="headIndex"/>'s
+    /// origin (heads left to right, grace heads among them) — a half-tie's start off its host
+    /// head, or a repeat tie's start off the head before it.
+    /// </summary>
+    public double BowStartToNotehead(int index, int headIndex, int page = 0)
+        => Bow(index, page).P0.X - HeadAt(headIndex, page).X;
+
+    /// <summary>
+    /// How far notehead <paramref name="headIndex"/>'s origin stands right of bow
+    /// <paramref name="index"/>'s END — a repeat tie's end before its host head, or the gap a
+    /// laissez-vibrer leaves before the next column.
+    /// </summary>
+    public double BowEndToNotehead(int index, int headIndex, int page = 0)
+        => HeadAt(headIndex, page).X - Bow(index, page).P1.X;
+
+    private DrawnBezier Bow(int index, int page)
+    {
+        var bows = _pages[page].Beziers;
+        if (index < 0 || index >= bows.Count)
+            throw new InvalidOperationException(
+                $"page {page}: asked for bow {index} but {bows.Count} were drawn.\n"
+                + "Drawn geometry:\n" + Describe());
+        return bows[index];
+    }
+
+    private DrawnGlyph HeadAt(int headIndex, int page)
+    {
+        var heads = _pages[page].Glyphs.Where(g => IsNotehead(g.Glyph)).OrderBy(g => g.X).ToList();
+        if (headIndex < 0 || headIndex >= heads.Count)
+            throw new InvalidOperationException(
+                $"page {page}: asked for notehead {headIndex} but {heads.Count} were drawn.\n"
+                + "Drawn geometry:\n" + Describe());
+        return heads[headIndex];
+    }
+
+    /// <summary>
     /// Where bow <paramref name="index"/> ENDS, page X — LilyPond's <c>control-points</c>
     /// [3].x plus its grob's X. The bound a piece broken at a line end reads is this, not
     /// the span: the span also carries where the tie chose to START.

@@ -542,6 +542,20 @@ internal static class GraceBodySupport
     internal static bool IsCarriedEditorial(SyntaxNode annotation)
         => annotation is ArticulationSyntax { Name: "editorial" };
 
+    /// <summary>
+    /// True for a HALF-TIE a grace note carries — <c>@laissezVibrer</c> (LilyPond's
+    /// <c>\laissezVibrer</c>) or <c>@repeatTie</c>: the bow hangs off the grace column, read off
+    /// the run, and its outline is the grace's own head and stem (session 930; ledger
+    /// semitie.grace.*). It rides the note (<c>HasLaissezVibrer</c> / <c>HasRepeatTie</c>, kept by
+    /// <c>MeasureBuilder.NarrowToGraceTime</c>), so TieVariantEngraver lays it out.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/laissez-vibrer-engraver.cc acknowledge_note_head — a Voice engraver,
+    ///   one tie per head, a grace's as any; lily/repeat-tie-engraver.cc inherits it.
+    /// </remarks>
+    internal static bool IsCarriedSemiTie(SyntaxNode annotation)
+        => annotation is ArticulationSyntax { Name: "laissezVibrer" or "repeatTie" };
+
     private static bool IsOttavaType(Svg.Model.MusicMarkType? type)
         => type is Svg.Model.MusicMarkType.OttavaUp or Svg.Model.MusicMarkType.OttavaDown
             or Svg.Model.MusicMarkType.QuindicesUp or Svg.Model.MusicMarkType.QuindicesDown
@@ -801,7 +815,8 @@ internal static class GraceBodySupport
                     || IsCarriedGlissando(annotation) || IsCarriedTextSpan(annotation)
                     || IsCarriedPedal(annotation) || IsCarriedTrillSpan(annotation)
                     || IsCarriedOttava(annotation) || IsCarriedPhrasingSlur(annotation)
-                    || IsCarriedCourtesy(annotation) || IsCarriedEditorial(annotation))
+                    || IsCarriedCourtesy(annotation) || IsCarriedEditorial(annotation)
+                    || IsCarriedSemiTie(annotation))
                     continue;
                 yield return new GraceDrop(
                     GraceDropKind.Annotation, annotation.Span, Describe(annotation), via);

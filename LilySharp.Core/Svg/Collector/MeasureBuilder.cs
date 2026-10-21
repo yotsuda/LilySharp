@@ -780,8 +780,15 @@ internal sealed class MeasureBuilder
                 hasGlissando: n.HasGlissando,
                 // ⚠️ THE COURTESY PARENS SURVIVE (session 927): the ordinary note drawer draws a
                 // grace's accidental, and it reads them off the item.
-                isCourtesy: n.IsCourtesy)
+                isCourtesy: n.IsCourtesy,
+                // ⚠️ THE HALF-TIES SURVIVE (session 930): TieVariantEngraver bounds an l.v. or a
+                // repeat tie at the grace column, read off the run, with the grace's head.
+                hasLaissezVibrer: n.HasLaissezVibrer, hasRepeatTie: n.HasRepeatTie)
             {
+                LaissezVibrerUp = n.LaissezVibrerUp,
+                RepeatTieUp = n.RepeatTieUp,
+                LaissezVibrerSourcePosition = n.LaissezVibrerSourcePosition,
+                RepeatTieSourcePosition = n.RepeatTieSourcePosition,
                 GraceTime = true,
                 GraceSlash = slash,
                 GraceStemDown = _graceStemDown,
@@ -809,7 +816,12 @@ internal sealed class MeasureBuilder
                     m.StaffPosition, m.Accidental, IsCourtesy: m.IsCourtesy,
                     Fingering: m.Fingering,
                     StringNumber: m.StringNumber, Midi: m.Midi,
-                    SourcePosition: m.SourcePosition, WrittenPitch: m.WrittenPitch)).ToImmutableArray(),
+                    SourcePosition: m.SourcePosition, WrittenPitch: m.WrittenPitch,
+                    // The half-ties (session 930), per member as TieVariantEngraver fans them.
+                    HasLaissezVibrer: m.HasLaissezVibrer, LaissezVibrerUp: m.LaissezVibrerUp,
+                    HasRepeatTie: m.HasRepeatTie, RepeatTieUp: m.RepeatTieUp,
+                    LaissezVibrerSourcePosition: m.LaissezVibrerSourcePosition,
+                    RepeatTieSourcePosition: m.RepeatTieSourcePosition)).ToImmutableArray(),
                 c.BaseDuration, c.Dots, c.SourcePosition, isCue: c.IsCue,
                 hasTieStart: c.HasTieStart,
                 hasSlurStart: c.HasSlurStart, hasSlurEnd: c.HasSlurEnd,
@@ -820,6 +832,8 @@ internal sealed class MeasureBuilder
             {
                 HasArpeggioBracket = c.HasArpeggioBracket,
                 HasGlissando = c.HasGlissando,
+                LaissezVibrerSourcePosition = c.LaissezVibrerSourcePosition,
+                RepeatTieSourcePosition = c.RepeatTieSourcePosition,
                 GraceTime = true,
                 GraceSlash = slash,
                 GraceStemDown = _graceStemDown,

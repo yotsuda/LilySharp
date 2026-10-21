@@ -8943,6 +8943,11 @@ internal static class LpGeometryProbes
     private static readonly string ECHA = GraceKeyBook("", "c4 <d f@editorial>4 e4 g4 |", "ECHA");
     private static readonly string ECHB = GraceKeyBook("", "c4 <dis@editorial f@editorial>4 e4 g4 |", "ECHB");
     private static readonly string ECHC = GraceKeyBook("", "c4 grace { <d f@editorial>16 } e4 g4 a4 |", "ECHC");
+    // A half-tie on a grace note (audit/lp-geometry/probes/grace-semitie.ly).
+    private static readonly string GLVA = GraceTieBook("c4 grace { d16@laissezVibrer } e4 f4 g4 |", "GLVA");
+    private static readonly string GLVB = GraceTieBook("c4 d16@laissezVibrer e8. f4 g4 |", "GLVB");
+    private static readonly string GSTA = GraceTieBook("c4 grace { d16@repeatTie } e4 f4 g4 |", "GSTA");
+    private static readonly string GSTB = GraceTieBook("c4 d16@repeatTie e8. f4 g4 |", "GSTB");
     // A phrasing slur starting, stopping or closing on grace notes (audit/lp-geometry/probes/grace-phrasing.ly).
     private static readonly string GPHA = GraceTieBook("c4 grace { d16@phrasingSlur } e4 f4 g4@!phrasingSlur |", "GPHA");
     private static readonly string GPHB = GraceTieBook("c4 d16@phrasingSlur e8. f4 g4@!phrasingSlur |", "GPHB");
@@ -17446,6 +17451,19 @@ internal static class LpGeometryProbes
         new("editorial.chord.two.upper.above-staff-middle", ECHB, g => g.GlyphAboveStaffMiddle(EmmentalerGlyphs.AccidentalNatural, 0)),
         new("editorial.chord.grace.to-notehead", ECHC, g => g.SuggestionToNoteheadAnchor(EmmentalerGlyphs.AccidentalNatural)),
         new("editorial.chord.grace.above-staff-middle", ECHC, g => g.GlyphAboveStaffMiddle(EmmentalerGlyphs.AccidentalNatural, 0)),
+        new("semitie.grace.lv.start-to-notehead", GLVA, g => g.BowStartToNotehead(0, 1)),
+        new("semitie.grace.lv.span", GLVA, g => g.BowSpan(0)),
+        new("semitie.grace.lv.end-to-next", GLVA, g => g.BowEndToNotehead(0, 2)),
+        new("semitie.grace.lv.attachment", GLVA, g => g.BowAttachmentAboveStaffMiddle(0)),
+        new("semitie.grace.lv.control.start-to-notehead", GLVB, g => g.BowStartToNotehead(0, 1)),
+        new("semitie.grace.lv.control.span", GLVB, g => g.BowSpan(0)),
+        new("semitie.grace.lv.control.end-to-next", GLVB, g => g.BowEndToNotehead(0, 2)),
+        new("semitie.grace.rt.end-to-notehead", GSTA, g => g.BowEndToNotehead(0, 1)),
+        new("semitie.grace.rt.span", GSTA, g => g.BowSpan(0)),
+        new("semitie.grace.rt.start-to-previous", GSTA, g => g.BowStartToNotehead(0, 0)),
+        new("semitie.grace.rt.control.end-to-notehead", GSTB, g => g.BowEndToNotehead(0, 1)),
+        new("semitie.grace.rt.control.span", GSTB, g => g.BowSpan(0)),
+        new("semitie.grace.rt.control.start-to-previous", GSTB, g => g.BowStartToNotehead(0, 0)),
         new("phrasing.grace.left-attachment", GPHA, g => g.BowAttachmentAboveStaffMiddle(0)),
         new("phrasing.grace.span", GPHA, g => g.BowSpan(0)),
         new("phrasing.grace.control.left-attachment", GPHB, g => g.BowAttachmentAboveStaffMiddle(0)),

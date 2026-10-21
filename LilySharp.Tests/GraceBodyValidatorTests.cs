@@ -348,6 +348,19 @@ public class GraceBodyValidatorTests
         Assert.NotEqual(Page(control), Page(written));
     }
 
+    /// <summary>
+    /// A HALF-TIE on a grace note — an l.v. or a repeat tie — is drawn off the grace head, and
+    /// the run makes room for it (session 930, ledger semitie.grace.*). Nothing is reported.
+    /// </summary>
+    [Theory]
+    [InlineData("grace { d'8@laissezVibrer } c'1 | e'1 |", "grace { d'8 } c'1 | e'1 |")]
+    [InlineData("c'2 grace { d'8@repeatTie } e'2 | e'1 |", "c'2 grace { d'8 } e'2 | e'1 |")]
+    [InlineData("grace { <d' f'>8@laissezVibrer } c'1 | e'1 |", "grace { <d' f'>8 } c'1 | e'1 |")]
+    public void AHalfTieOnAGrace_IsDrawn_AndNotReported(string written, string control)
+    {
+        Assert.Empty(Warnings(Book(written)));
+        Assert.NotEqual(Page(control), Page(written));
+    }
 
     /// <summary>
     /// The grace body that draws exactly what it says draws no warning either. This is the

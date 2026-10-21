@@ -138,7 +138,14 @@ public readonly record struct GraceColumnInfo(
     // The PHRASING slur marks this column's item carries (session 926): the PhrasingSlur's
     // minimum-length rods two columns it binds as the Slur's does (SpacingRules.GraceColumns).
     bool PhrasingSlurStart = false,
-    bool PhrasingSlurEnd = false
+    bool PhrasingSlurEnd = false,
+    // The HALF-TIES this column's item carries (session 930) — an l.v. to its right, a repeat
+    // tie to its left — as boxes in the column's own frame (origin the head's left edge, staff
+    // middle at y = 0, y down), solved by TieVariantEngraver.GraceSemiTieBoxes exactly as the
+    // page draws them. They are elements of the PAPER column, so the run's rods read them
+    // (ItemSkylineFactory.CreateGraceDotRightSkyline / CreateGraceLeftSkyline) and the wish
+    // does not, as a full-size column's (ItemSkylineFactory.AddSemiTies).
+    ImmutableArray<GraceSemiTieBox> SemiTieBoxes = default
 )
 {
     /// <summary>Whether this column's stem points up — <c>!</c><see cref="StemDown"/>.</summary>
@@ -231,6 +238,13 @@ public readonly record struct GraceColumnInfo(
             || Arpeggio != other.Arpeggio || ArpeggioBracket != other.ArpeggioBracket
             || PhrasingSlurStart != other.PhrasingSlurStart || PhrasingSlurEnd != other.PhrasingSlurEnd)
             return false;
+        if (SemiTieBoxes.IsDefaultOrEmpty || other.SemiTieBoxes.IsDefaultOrEmpty)
+        {
+            if (!(SemiTieBoxes.IsDefaultOrEmpty && other.SemiTieBoxes.IsDefaultOrEmpty))
+                return false;
+        }
+        else if (!SemiTieBoxes.AsSpan().SequenceEqual(other.SemiTieBoxes.AsSpan()))
+            return false;
         if (Heads.IsDefaultOrEmpty || other.Heads.IsDefaultOrEmpty)
             return Heads.IsDefaultOrEmpty && other.Heads.IsDefaultOrEmpty;
         if (Heads.Length != other.Heads.Length)
@@ -257,6 +271,9 @@ public readonly record struct GraceColumnInfo(
         hc.Add(ArpeggioBracket);
         hc.Add(PhrasingSlurStart);
         hc.Add(PhrasingSlurEnd);
+        if (!SemiTieBoxes.IsDefaultOrEmpty)
+            foreach (var box in SemiTieBoxes)
+                hc.Add(box);
         if (!Heads.IsDefaultOrEmpty)
             foreach (var head in Heads)
                 hc.Add(head);
@@ -568,3 +585,9 @@ public sealed record GraceNoteItem
     /// <summary><see cref="HeadScaleOf"/> for this run.</summary>
     internal double HeadScale => HeadScaleOf(Columns);
 }
+
+/// <summary>
+/// One HALF-TIE's spacing box on a grace column (<see cref="GraceColumnInfo.SemiTieBoxes"/>), in
+/// the column's own frame: origin the head's left edge, staff middle at y = 0, y DOWN.
+/// </summary>
+public readonly record struct GraceSemiTieBox(double YTop, double YBottom, double XLeft, double XRight);

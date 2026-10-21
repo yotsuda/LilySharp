@@ -2676,7 +2676,8 @@ Grace          = ( 'grace' | 'acciaccatura' | 'appoggiatura' | 'afterGrace' ) , 
                     span before it), and a phrasing slur's '@phrasingSlur'
                     '@!phrasingSlur' (session 926), and a '@courtesy' accidental in
                     parentheses (session 927), and an '@editorial' accidental above
-                     the grace head (session 928). *)
+                     the grace head (session 928), and a half-tie's '@laissezVibrer'
+                     '@repeatTie' off the grace head (session 930). *)
 Repeat         = 'repeat' , 'tremolo' , Integer , MusicBlock ;
                  (* a tremolo: the note, or the two notes, alternated Integer times.
                     Volta repeats use the form's |: … :|, NOT a 'repeat' keyword.

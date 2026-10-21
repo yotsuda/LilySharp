@@ -339,7 +339,11 @@ internal static partial class SpacingRules
     private static double GraceDotRod(GraceColumnInfo left, bool beamed,
                                       GraceColumnInfo? next, MusicItem? mainItem)
     {
-        if (left.Dots == 0 || left.IsRest)
+        // The half-ties are the column's other rod elements (session 930): an l.v. off this
+        // column, a repeat tie on the next (CreateGraceDotRightSkyline / CreateGraceLeftSkyline).
+        bool semiTies = !left.SemiTieBoxes.IsDefaultOrEmpty
+                        || next is { SemiTieBoxes.IsDefaultOrEmpty: false };
+        if ((left.Dots == 0 && !semiTies) || left.IsRest)
             return double.NegativeInfinity;
         HorizontalSkyline? nextLeft = next is { } n
             ? ItemSkylineFactory.CreateGraceLeftSkyline(n)
@@ -753,8 +757,15 @@ internal static partial class SpacingRules
             grace[0], GraceNoteEngraver.BeamedPrefix(grace) > 0, HorizontalDirection.Left);
         double sky = SkylineFloorPair(
             ItemSkylineFactory.SharedWishRightSkylineAtColumn(prev, 0.0, 0.0, staffLines), first).SkyMin;
-        double rod = SkylineFloorPair(
-            ItemSkylineFactory.SharedRightSkylineAtColumn(prev, 0.0, 0.0, staffLines), first).Rod;
+        var prevRight = ItemSkylineFactory.SharedRightSkylineAtColumn(prev, 0.0, 0.0, staffLines);
+        double rod = SkylineFloorPair(prevRight, first).Rod;
+        // A repeat tie on the first grace (session 930) is a paper-column element left of its
+        // head, so the rod reads it as it reads a full-size one. MEASURED (2.26.0,
+        // probes/grace-semitie.ly RTA): the bow stands 0.34 after the previous head and the grace
+        // 0.5424 right of where it stands without it (ledger semitie.grace.rt.start-to-previous).
+        if (!grace[0].SemiTieBoxes.IsDefaultOrEmpty)
+            rod = Math.Max(rod, SeparationRodPadding
+                + prevRight.Distance(ItemSkylineFactory.CreateGraceLeftSkyline(grace[0])));
         return (sky, rod);
     }
 

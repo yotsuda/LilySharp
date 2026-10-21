@@ -7630,6 +7630,97 @@
       "residual": 0.0,
       "why": "EXACT. The grace chord's suggestion at the staff's height, as the full-size one."
     },
+    "semitie.grace.lv.start-to-notehead": {
+      "probe": "grace-semitie.ly",
+      "score": "LVA",
+      "lilypond": 1.117938619198039,
+      "residual": 0.0,
+      "why": "EXACT. `grace { d16@laissezVibrer }`: the l.v. leaves the GRACE head (its -3 box, 0.917939 wide) 0.2 right of it, as a full-size one leaves its own -- the bow is TieVariantEngraver's, bounded at the grace column read off the run (ElementCoordinator.GraceColumnHeadLeftX). Before session 930 the half-tie was dropped from a grace (NarrowToGraceTime) and reported (LYS4020)."
+    },
+    "semitie.grace.lv.span": {
+      "probe": "grace-semitie.ly",
+      "score": "LVA",
+      "lilypond": 1.620688445633439,
+      "residual": 0.0,
+      "why": "EXACT. 1.620688, not the full-size 1.1: the semi-tie's open end is the column outline's extreme + 1.5, and on an unbeamed grace that extreme is the grace FLAG (BuildTieColumn reads it at the grace font)."
+    },
+    "semitie.grace.lv.end-to-next": {
+      "probe": "grace-semitie.ly",
+      "score": "LVA",
+      "lilypond": 0.34,
+      "residual": 0.0,
+      "why": "EXACT. The main note stands 0.34 after the l.v.'s end -- the bow's box (curve + 0.04, extra-spacing-width 0.1) + the rod padding 0.1 + the head's 0.1: the half-tie is a PAPER-column element of the grace column, solved by the collector (GraceColumnInfo.SemiTieBoxes) and read by the run's rod. Before the rod: -0.8, the e4 standing inside the bow."
+    },
+    "semitie.grace.lv.attachment": {
+      "probe": "grace-semitie.ly",
+      "score": "LVA",
+      "lilypond": -3.0,
+      "residual": 0.0,
+      "why": "EXACT. The l.v. hangs 0.5 below the d's head, as a full-size one."
+    },
+    "semitie.grace.lv.control.start-to-notehead": {
+      "probe": "grace-semitie.ly",
+      "score": "LVB",
+      "lilypond": 1.5042,
+      "residual": 0.0,
+      "why": "EXACT. The full-size CONTROL (d16@laissezVibrer on the main grid): start 0.2 off the head."
+    },
+    "semitie.grace.lv.control.span": {
+      "probe": "grace-semitie.ly",
+      "score": "LVB",
+      "lilypond": 1.1,
+      "residual": 0.0,
+      "why": "EXACT. The control's 1.1."
+    },
+    "semitie.grace.lv.control.end-to-next": {
+      "probe": "grace-semitie.ly",
+      "score": "LVB",
+      "lilypond": 0.34,
+      "residual": 0.0,
+      "why": "EXACT. The control's 0.34 -- the same rod, which is what makes the grace's a port and not a guess."
+    },
+    "semitie.grace.rt.end-to-notehead": {
+      "probe": "grace-semitie.ly",
+      "score": "RTA",
+      "lilypond": 0.2,
+      "residual": 0.0,
+      "why": "EXACT. `grace { d16@repeatTie }`: the repeat tie ends 0.2 left of the GRACE head."
+    },
+    "semitie.grace.rt.span": {
+      "probe": "grace-semitie.ly",
+      "score": "RTA",
+      "lilypond": 1.1,
+      "residual": 0.0,
+      "why": "EXACT. Its 1.1: the open end of a repeat tie is on the LEFT, where the grace has no flag, so it is the full-size length."
+    },
+    "semitie.grace.rt.start-to-previous": {
+      "probe": "grace-semitie.ly",
+      "score": "RTA",
+      "lilypond": 1.6442,
+      "residual": 0.0,
+      "why": "EXACT. The bow stands 0.34 after the previous head (c4): the repeat tie is the grace column's left rod element, read by the approach floor (SpacingRules.GraceApproachFloor) -- the grace 0.5424 right of where it stands without one. Before the rod: 1.101796, the bow over the c4's head."
+    },
+    "semitie.grace.rt.control.end-to-notehead": {
+      "probe": "grace-semitie.ly",
+      "score": "RTB",
+      "lilypond": 0.2,
+      "residual": 0.0,
+      "why": "EXACT. The full-size CONTROL: 0.2 before its head."
+    },
+    "semitie.grace.rt.control.span": {
+      "probe": "grace-semitie.ly",
+      "score": "RTB",
+      "lilypond": 1.1,
+      "residual": 0.0,
+      "why": "EXACT. The control's 1.1."
+    },
+    "semitie.grace.rt.control.start-to-previous": {
+      "probe": "grace-semitie.ly",
+      "score": "RTB",
+      "lilypond": 3.6042,
+      "residual": 0.0,
+      "why": "EXACT. The control's distance from the previous head (its ordinary spring, wider than the rod)."
+    },
     "phrasing.grace.left-attachment": {
       "probe": "grace-phrasing.ly",
       "score": "PHA",

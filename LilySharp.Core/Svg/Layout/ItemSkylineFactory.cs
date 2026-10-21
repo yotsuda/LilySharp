@@ -548,6 +548,9 @@ internal static class ItemSkylineFactory
                 }
             }
         }
+        // ...and its half-ties (session 930), the other paper-column elements a grace's rod can
+        // be won by: an l.v. reaching right of the head (AddGraceSemiTieParts).
+        AddGraceSemiTieParts(parts, column);
         return GraceSkyline(parts, ColumnElements.Elements, HorizontalDirection.Right);
     }
 
@@ -585,8 +588,30 @@ internal static class ItemSkylineFactory
             }
             if (GraceArpeggioPart(column) is { } arpeggio)
                 parts.Add(arpeggio);
+            // A repeat tie reaching left of the head (session 930; AddGraceSemiTieParts).
+            AddGraceSemiTieParts(parts, column);
         }
         return GraceSkyline(parts, ColumnElements.All, HorizontalDirection.Left);
+    }
+
+    /// <summary>
+    /// A grace column's HALF-TIES as rod parts in its own frame — the boxes the collector solved
+    /// (<see cref="GraceColumnInfo.SemiTieBoxes"/>), members of the paper column and not of the
+    /// note column, with the default extra-spacing-width, as <see cref="AddSemiTies"/> reserves a
+    /// full-size column's.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED (2.26.0, audit/lp-geometry/probes/grace-semitie.ly): the main note stands 0.34
+    /// after a grace's l.v., and a grace's repeat tie 0.34 after the previous head — the full-size
+    /// half-tie's own rod (ledger semitie.grace.*).
+    /// </remarks>
+    private static void AddGraceSemiTieParts(List<ColumnPart> parts, GraceColumnInfo column)
+    {
+        if (column.SemiTieBoxes.IsDefaultOrEmpty)
+            return;
+        foreach (var b in column.SemiTieBoxes)
+            parts.Add(ColumnPart.Ink(b.YTop, b.YBottom, b.XLeft, b.XRight)
+                with { NoteColumnMember = false });
     }
 
     /// <summary>
