@@ -160,6 +160,18 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第918セッションの経緯
+
+### 1.1 第918セッション（2026-10-21・YT-DELL2）
+
+第917 と同じ会話の続き（ユーザー「続けて」）。`-Start p918`（開始 HEAD `560cf61bd`・未 push 11・build 0 警告・第916 を ARCHIVE へ）。作業場所は Lab `sessions/p918/`。
+- **grace のヘアピンの開始を描く**（§2 U8 ⒟ の続き）: `grace { d16@cresc }`・`@decresc`・`@dim`＝`GraceBodySupport.IsCarriedHairpinStart`。左端は grace の列の頭の左端か、同じ grace の強弱の右＋1.0（`HairpinEngraver.GraceColumnX`＝`GetItemXOffset` は grace の項目の自分の列を答えない）。支えの列も grace の X で読む＝`HairpinEngraver.SpanColumns` と `DynamicAlignEngraver.SpanColumns`（後者を直すまで `@p@cresc` の組は 0.14 浅かった）。LP 2.26 の 5 冊（Lab `p918/hp/ghs.ly`）と台帳 9 点一致（`hairpin.grace.*`・`p` の組だけ 3.2e-5＝`p` の輪郭）。
+- **楔の輪郭の修正（grace と無関係・全部の楔に効く）**: grace の対照（普通の大きさ）も −0.002 だったので普通の楔 3 冊を測った（`ctl2.ly`＝cresc −0.0029・decresc +0.0045）。LP の skyline は線の端を横に線幅の半分だけ伸ばす（`lazy-skyline-pair.hh:66-94`）が、`WedgeSkylines` は伸ばしていなかった → 直して 3 冊とも 0（台帳 `hairpin.outline.*`）。**第277 から未解決だった `hairpin.under-fermata` の +0.004449 も 0 になった**（原因は fermata の輪郭ではなく楔の輪郭だった・`over-grace` も 1e-5 → 2.5e-7）。掃きで動いた svg は 12 / 1,242 枚＝どれも楔と、その下に積まれたもの（ペダルの括弧・強弱）が小数第 2 位で 1 つ動いただけ（最大 0.02）。スナップショット 4 枚を取り直した。
+- 和音の構成音の `@cresc`／`@f` は LP も描かない（`mem.ly`）＝Lily# の普通の大きさと同じなので、grace でも描かず報告もしない（テストに注）。「まだ落ちる例」は `@glissando` に替えた（テスト 3 か所・SYNTAX_REFERENCE）。
+- 毒 3 本＝grace の X を読まない 7 赤・輪郭を戻す 10 赤・述語を false 10 赤。⚠️ **計器の罠**: `cmd /d /s /c "… --filter ""A|B"" …"` の二重引用の中では `|` に `^` は要らず、`^` は文字として残って**その節は何にも当たらない**（黙って半分だけ走る）。第917 の「`^|`」は引用無しの形の話。
+- 製品 `6bc7ea2fc`。`-End p918 -DiffBase 560cf61bd`＝full **12534 / 0 / 2 / 12536**（前便末 +15）・Core 警告 0・門は全部 OK（Lab `sessions/p918/end.log`）→ この docs commit。未 push 12＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。
+判定（2026-10-21）: grace のヘアピンの開始は閉じ、楔の輪郭の修正で第277 の OPEN も閉じた。U8 ⒟ の残りは `@sustain`・`@rit`・`@glissando`・`@arpeggio`（§2 U8）。
+
 ## 以下は第917セッションの経緯
 
 ### 1.1 第917セッション（2026-10-21・YT-DELL2）
