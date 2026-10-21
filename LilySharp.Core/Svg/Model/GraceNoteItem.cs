@@ -603,7 +603,7 @@ public sealed record GraceNoteItem
     /// tie broken by e's 4 positions below the middle against d's 0). Columns that agree answer
     /// their own direction, as before the knee existed.
     /// LILYPOND-REF: lily/beam.cc:876-940 Beam::get_default_dir — count, then total / count, then total.
-    /// LILYPOND-REF: scm/define-grobs.scm:531 Beam (neutral-direction . DOWN).
+    /// LILYPOND-REF: scm/define-grobs.scm Beam — (neutral-direction . DOWN).
     /// </remarks>
     internal static bool BeamStemUpOf(ImmutableArray<GraceColumnInfo> columns)
     {

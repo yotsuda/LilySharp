@@ -148,8 +148,8 @@ internal sealed class BeamScoringProblem
     // stack's extreme rank toward the stem's direction, in beam translations. 0 for every stem
     // whose stack hangs toward its own head (every stem off a knee); a knee's stem on the far
     // side of the stack reaches through it (session 935).
-    // LILYPOND-REF: lily/beam-quanting.cc:307-312 base_lengths_ — Beam::calc_stem_y with
-    //   pos = 0, i.e. beam_translation * beam_multiplicity[stem_dir] (lily/beam.cc:1129-1145).
+    // LILYPOND-REF: lily/beam-quanting.cc:307-312 base_lengths_ — Beam::calc_stem_y with pos = 0.
+    // LILYPOND-REF: lily/beam.cc:1145 Beam::calc_stem_y — beam_translation * beam_multiplicity[stem_dir].
     private double[] _baseLengths;
 
     // Where each member's stem stands in the beaming walk (rests interleave) — the index the
