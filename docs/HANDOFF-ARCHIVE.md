@@ -160,6 +160,15 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第930セッションの経緯
+
+### 1.1 第930セッション（2026-10-21・YT-DELL2）
+
+第929 と同じ会話の続き（ユーザー「続けて」）。`-Start p930`（開始 HEAD `9cd56bfaa`・未 push 38・full **12647 / 0 / 2 / 12649**・第928 を ARCHIVE へ）。作業場所は Lab `sessions/p930/`。
+- **grace の `@laissezVibrer` / `@repeatTie`（half-tie）を描き、その分の間隔もとる＝`870fe44b8`**: 印を grace の項目に残す（`NarrowToGraceTime`・和音の構成音と和音の source 位置も）・`TieVariantEngraver` は grace の項目を grace の列の X（`ElementCoordinator.GraceColumnHeadLeftX`）で解く（`BuildTieColumn` は第916 から grace の頭・符尾・旗を grace の字形で読む）・縦の skyline にも grace の half-tie（`SkylineBuilder` の grace の枝）・述語 `GraceBodySupport.IsCarriedSemiTie` は LYS4020 が読む。**間隔**: half-tie は紙の列の要素＝rod にだけ効く（full-size の `ItemSkylineFactory.AddSemiTies` と同じ）。grace の列は `GraceColumnInfo` しか見ないので、`DeriveGraceColumns` が grace の項目を 1 項目の voice に立てて本物の解き方（`TieVariantEngraver.GraceSemiTieBoxes`＝`AppendItemSemiTies` を X 0 で）で箱にし、`GraceColumnInfo.SemiTieBoxes` に載せる → 右の rod（`CreateGraceDotRightSkyline`＝l.v.）・左の rod（`CreateGraceLeftSkyline`＝repeat tie・`GraceApproachFloor` も読む）。LP 2.26（`probes/grace-semitie.ly` LVA/LVB/RTA/RTB）＝台帳 13 点すべて 1e-6 未満（`semitie.grace.*`）。grace の l.v. は 1.620688（open end＝列の輪郭の端＝grace の**旗**＋1.5・full-size は 1.1）・次の主音符は l.v. の端の 0.34 後（直す前は −0.80＝弧の中）・repeat tie は前の頭の 0.34 後で grace を 0.5424 右へ押す（直す前は 1.101796＝弧が c4 の頭の上）。毒＝印を落とす 9 赤・X 4 赤・箱 2 赤・approach の rod 1 赤・述語 3 赤。全 svg の掃き 1,242 枚で 0（grace の half-tie はコーパスに無い）。⚠️ 縦の skyline の grace の枝は毒で見ていない（台帳に縦の点が無い）。
+- `-End p930 -DiffBase 9cd56bfaa`＝full **12663 / 0 / 2 / 12665**（前便末 +16）（Lab `sessions/p930/end.log`）→ この docs commit。未 push 39＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。
+判定（2026-10-21）: grace の half-tie は閉じた。grace の LYS4020 の残り＝`@breath`・`@caesura`（列組み・未特定 2 つ）・`@pluck`・`@diagram`・`@notehead(…)`・`@cross`・`@dead`/`@parenthesize`・`@stemUp`/`@stemDown`・`@figuredBass`・`@chord`・TAB の技法。
+
 ## 以下は第929セッションの経緯
 
 ### 1.1 第929セッション（2026-10-21・YT-DELL2）

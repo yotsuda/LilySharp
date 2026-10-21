@@ -124,21 +124,21 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第932セッション（2026-10-21・YT-DELL2）
+
+第931 と同じ会話の続き（ユーザー「続けて」）。`-Start p932`（開始 HEAD `68d9d6588`・未 push 42・full **12677 / 0 / 2 / 12679**・第930 を ARCHIVE へ）。作業場所は Lab `sessions/p932/`。
+- **grace の `@notehead(diamond|triangle|slash|xcircle)` を描き、頭の幅で間隔を測る＝`bad6258ae`**: LP 2.26（`probes/grace-head-shapes.ly`）の grace の間隔は**頭の幅だけ**で決まる（主音符まで＝幅＋1.020688・次の grace まで＝幅＋0.5・符尾の右端＝頭の右端）。`GraceColumnInfo.HeadStyle`（`DeriveGraceColumns` が grace の項目の `Notehead` から）と `HeadBox`（字形の設計×形の箱）を足し、grace の列の頭の箱と符尾の X を読む所を全部それに替えた（`SpacingRules.GraceHeadEnd`・旗の届き・`ItemSkylineFactory` の grace の 2 つの skyline・`GraceColumnHeads.HeadInkRight`／臨時記号の符尾・`GraceNoteEngraver`・`DotColumn.ReservedForGrace`・`ElementCoordinator` の grace の符尾 X・`GlissandoEngraver`）。`NarrowToGraceTime` は頭の形をそのまま残す（第931 の × だけの `GraceHeadStyle` は消した）・述語 `IsCarriedHeadMark` は 6 形とも通す。⚠️ 和音の秒の押し出し（`ChordHeadPositioning`）と slur の障害物の頭の幅（`ElementCoordinator` の `obstacleX`）は黒い頭のまま。台帳 12 点（`headstyle.grace.shape.*`・4 形 × 符尾／主音符まで／次の grace まで）が 1 回目で 1e-6 以内。計器 `HeadAt` は形のある黒い頭と xcircle も頭と数える。毒＝列の形 8 赤・項目の形 17 赤・skyline の符尾 4 赤・述語 2 赤。全 svg の掃き 1,242 枚で 0（形のある grace の頭はコーパスに無い）。
+- `-End p932 -DiffBase 68d9d6588`＝full **12691 / 0 / 2 / 12693**（前便末 +14）（Lab `sessions/p932/end.log`）→ この docs commit。未 push 43＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。
+判定（2026-10-21）: grace の頭の形は閉じた。grace の LYS4020 の残り＝`@breath`・`@caesura`（列組み・未特定 2 つ）・`@pluck`・`@diagram`・`@cross`（譜表をまたぐ）・`@stemUp`/`@stemDown`・`@figuredBass`・`@chord`・TAB の技法。
+
+## 以下は第931セッションの経緯
+
 ### 1.1 第931セッション（2026-10-21・YT-DELL2）
 
 第930 と同じ会話の続き（ユーザー「続けて」）。`-Start p931`（開始 HEAD `db5e3f26f`・未 push 40・full **12663 / 0 / 2 / 12665**・第929 を ARCHIVE へ）。作業場所は Lab `sessions/p931/`。
 - **grace の `@dead`・`@notehead(x)`／`(cross)`・`@parenthesize` を描く＝`b66da1cf4`**: `NarrowToGraceTime` が `IsDead`・`Parenthesized`・頭の形を残す（和音とその構成音も）。**頭の形は × だけ**（`MeasureBuilder.GraceHeadStyle`）＝LP の grace の × 頭は黒い頭と箱も符尾の位置も同じ（幅 0.917939・符尾の右端＝頭の右端）なので、黒い頭で測る grace の列の間隔がそのまま正しい。他の形（diamond・triangle・slash・xcircle）は幅が違う＝まだ LYS4020（述語 `GraceBodySupport.IsCarriedHeadMark` が x/cross だけを通す）。括弧は普通の描き手のまま font-size が頭の −3 に −6 を足して −9（LP の `fs=-9.0` と同じ）・LP は括弧で列を広げない（grace も普通も）。LP 2.26（`probes/grace-head-style.ly` DHA/DHB/PRA/PRB）＝台帳 10 点（`headstyle.grace.*`・× 頭の 5 点は完全一致・括弧の 4 点は 3e-6 未満の残差で普通の大きさの対照にも同じ量＝括弧の字形の箱の側）。計器: `HeadAt` は × も頭と数える（古い `IsNotehead` は数えない）・`StemRightFromNotehead`・`NoteheadToNotehead`・`NoteheadIsCross`・`HeadParensLeftGap`。⚠️ 説明文に `\grace` と書くと JSON のエスケープになり台帳全体が読めなくなる（1196 赤）＝`\\` と書く。毒＝頭の形 3 赤・括弧 3 赤・述語 3 赤。全 svg の掃き 1,242 枚で 0。
 - `-End p931 -DiffBase db5e3f26f`＝full **12677 / 0 / 2 / 12679**（前便末 +14）（Lab `sessions/p931/end.log`）→ この docs commit。未 push 41＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。
 判定（2026-10-21）: grace の × 頭と括弧は閉じた。grace の LYS4020 の残り＝`@breath`・`@caesura`（列組み・未特定 2 つ）・`@notehead(…)` の × 以外の形（grace の列に頭の形を持たせて間隔を測る）・`@pluck`・`@diagram`・`@cross`（譜表をまたぐ）・`@stemUp`/`@stemDown`・`@figuredBass`・`@chord`・TAB の技法。
-
-## 以下は第930セッションの経緯
-
-### 1.1 第930セッション（2026-10-21・YT-DELL2）
-
-第929 と同じ会話の続き（ユーザー「続けて」）。`-Start p930`（開始 HEAD `9cd56bfaa`・未 push 38・full **12647 / 0 / 2 / 12649**・第928 を ARCHIVE へ）。作業場所は Lab `sessions/p930/`。
-- **grace の `@laissezVibrer` / `@repeatTie`（half-tie）を描き、その分の間隔もとる＝`870fe44b8`**: 印を grace の項目に残す（`NarrowToGraceTime`・和音の構成音と和音の source 位置も）・`TieVariantEngraver` は grace の項目を grace の列の X（`ElementCoordinator.GraceColumnHeadLeftX`）で解く（`BuildTieColumn` は第916 から grace の頭・符尾・旗を grace の字形で読む）・縦の skyline にも grace の half-tie（`SkylineBuilder` の grace の枝）・述語 `GraceBodySupport.IsCarriedSemiTie` は LYS4020 が読む。**間隔**: half-tie は紙の列の要素＝rod にだけ効く（full-size の `ItemSkylineFactory.AddSemiTies` と同じ）。grace の列は `GraceColumnInfo` しか見ないので、`DeriveGraceColumns` が grace の項目を 1 項目の voice に立てて本物の解き方（`TieVariantEngraver.GraceSemiTieBoxes`＝`AppendItemSemiTies` を X 0 で）で箱にし、`GraceColumnInfo.SemiTieBoxes` に載せる → 右の rod（`CreateGraceDotRightSkyline`＝l.v.）・左の rod（`CreateGraceLeftSkyline`＝repeat tie・`GraceApproachFloor` も読む）。LP 2.26（`probes/grace-semitie.ly` LVA/LVB/RTA/RTB）＝台帳 13 点すべて 1e-6 未満（`semitie.grace.*`）。grace の l.v. は 1.620688（open end＝列の輪郭の端＝grace の**旗**＋1.5・full-size は 1.1）・次の主音符は l.v. の端の 0.34 後（直す前は −0.80＝弧の中）・repeat tie は前の頭の 0.34 後で grace を 0.5424 右へ押す（直す前は 1.101796＝弧が c4 の頭の上）。毒＝印を落とす 9 赤・X 4 赤・箱 2 赤・approach の rod 1 赤・述語 3 赤。全 svg の掃き 1,242 枚で 0（grace の half-tie はコーパスに無い）。⚠️ 縦の skyline の grace の枝は毒で見ていない（台帳に縦の点が無い）。
-- `-End p930 -DiffBase 9cd56bfaa`＝full **12663 / 0 / 2 / 12665**（前便末 +16）（Lab `sessions/p930/end.log`）→ この docs commit。未 push 39＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。
-判定（2026-10-21）: grace の half-tie は閉じた。grace の LYS4020 の残り＝`@breath`・`@caesura`（列組み・未特定 2 つ）・`@pluck`・`@diagram`・`@notehead(…)`・`@cross`・`@dead`/`@parenthesize`・`@stemUp`/`@stemDown`・`@figuredBass`・`@chord`・TAB の技法。
 
 ## 2. 開いている作業
 
