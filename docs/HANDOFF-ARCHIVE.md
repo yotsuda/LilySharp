@@ -160,6 +160,16 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第928セッションの経緯
+
+### 1.1 第928セッション（2026-10-21・YT-DELL2）
+
+第927 と同じ会話の続き（ユーザー「続けて」）。`-Start p928`（開始 HEAD `ef88e4b63`・未 push 34・full **12629 / 0 / 2 / 12631**・第926 を ARCHIVE へ）。作業場所は Lab `sessions/p928/`。
+- **grace の `@editorial`（上に置く小さい臨時記号）を描く＋普通の大きさの高さを LP に合わせる＝`450f96aa9`**: 述語 `GraceBodySupport.IsCarriedEditorial` を収集（`CollectArticulations` の grace の門）と LYS4020 が読む。grace でも大きさは −2 のまま（`general-grace-settings` に AccidentalSuggestion が無い＝`ArticulationEngraver` の editorial の枝で `scriptStep = 0`）。X は grace の頭の中心＝そのまま一致した。**高さは普通の大きさから違っていた**: LP の AccidentalSuggestion は **outside-staff-priority 0 の mover** で、輪郭ではなく**箱**の skyline（vertical-skylines を宣言しない＝`grob.cc` の既定）。箱の下端が譜表の墨（上の線＋0.05）から outside-staff-padding 0.46 上に立つ（Lab `sessions/p928/ed/y2.ly`＝♯・♮・♭ とも）。Lily# は譜表の中の skyline に staff-padding 0.25 で置いていた＝**譜表の上に乗るとき 0.26 低かった**（符尾の先が決める 16 分は −0.075）→ `ArticulationSpacing.OutsideStaffPriority` に editorial＝0・`ScriptSkyline(s)` は suggestion の字形だけ箱（`IsSuggestionGlyph`）。LP 2.26（`probes/grace-editorial.ly` EGA〜EGE）＝台帳 9 点すべて 1e-7 未満（`editorial.grace.*` 7 点・`editorial.accidental.{natural,flat}.above-notehead` 2 点）。毒＝述語 4 赤・優先度 6 赤・輪郭 6 赤（♮ +0.022・♭ +0.019）・grace の大きさ 2 赤。snapshot `test/editorial-accidental` は suggestion だけが譜表に対して 0.26 上がった（その分だけ譜表が下がる）。全 svg の掃き 1,242 枚で 3 枚（`grammar-tour`・`editorial-accidental`・`feature-tour`＝どれも suggestion 1〜3 個が 0.26 上がっただけ）。
+- ⚠️ **見つけたが直していない: 和音の構成音の `@editorial`（`<d' f'@editorial>4`）は普通の大きさでも何も描かない**（svg の差は `data-pos` だけ・警告も無い）。`CollectArticulations` の editorial の枝は音の `EditorialAccidental` を要るが、和音の構成音には渡らない。grace の試験はこの行を外した。
+- `-End p928 -DiffBase ef88e4b63`＝full **12639 / 0 / 2 / 12641**（前便末 +10）（Lab `sessions/p928/end.log`・commit の前に census を作り直し・full を先に緑にした）→ この docs commit。未 push 35＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。
+判定（2026-10-21）: grace の `@editorial` は閉じた。grace の LYS4020 の残り＝`@breath`・`@caesura`（列組み・未特定 2 つ）・`@pluck`・`@diagram`・`@notehead(…)`・`@cross`・`@laissezVibrer`/`@repeatTie`・`@dead`/`@parenthesize`・`@stemUp`/`@stemDown`・`@figuredBass`・`@chord`・TAB の技法。別に、和音の構成音の `@editorial`（普通の大きさから描かない）。
+
 ## 以下は第927セッションの経緯
 
 ### 1.1 第927セッション（2026-10-21・YT-DELL2）

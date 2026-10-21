@@ -124,22 +124,21 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第930セッション（2026-10-21・YT-DELL2）
+
+第929 と同じ会話の続き（ユーザー「続けて」）。`-Start p930`（開始 HEAD `9cd56bfaa`・未 push 38・full **12647 / 0 / 2 / 12649**・第928 を ARCHIVE へ）。作業場所は Lab `sessions/p930/`。
+- **grace の `@laissezVibrer` / `@repeatTie`（half-tie）を描き、その分の間隔もとる＝`870fe44b8`**: 印を grace の項目に残す（`NarrowToGraceTime`・和音の構成音と和音の source 位置も）・`TieVariantEngraver` は grace の項目を grace の列の X（`ElementCoordinator.GraceColumnHeadLeftX`）で解く（`BuildTieColumn` は第916 から grace の頭・符尾・旗を grace の字形で読む）・縦の skyline にも grace の half-tie（`SkylineBuilder` の grace の枝）・述語 `GraceBodySupport.IsCarriedSemiTie` は LYS4020 が読む。**間隔**: half-tie は紙の列の要素＝rod にだけ効く（full-size の `ItemSkylineFactory.AddSemiTies` と同じ）。grace の列は `GraceColumnInfo` しか見ないので、`DeriveGraceColumns` が grace の項目を 1 項目の voice に立てて本物の解き方（`TieVariantEngraver.GraceSemiTieBoxes`＝`AppendItemSemiTies` を X 0 で）で箱にし、`GraceColumnInfo.SemiTieBoxes` に載せる → 右の rod（`CreateGraceDotRightSkyline`＝l.v.）・左の rod（`CreateGraceLeftSkyline`＝repeat tie・`GraceApproachFloor` も読む）。LP 2.26（`probes/grace-semitie.ly` LVA/LVB/RTA/RTB）＝台帳 13 点すべて 1e-6 未満（`semitie.grace.*`）。grace の l.v. は 1.620688（open end＝列の輪郭の端＝grace の**旗**＋1.5・full-size は 1.1）・次の主音符は l.v. の端の 0.34 後（直す前は −0.80＝弧の中）・repeat tie は前の頭の 0.34 後で grace を 0.5424 右へ押す（直す前は 1.101796＝弧が c4 の頭の上）。毒＝印を落とす 9 赤・X 4 赤・箱 2 赤・approach の rod 1 赤・述語 3 赤。全 svg の掃き 1,242 枚で 0（grace の half-tie はコーパスに無い）。⚠️ 縦の skyline の grace の枝は毒で見ていない（台帳に縦の点が無い）。
+- `-End p930 -DiffBase 9cd56bfaa`＝full **12663 / 0 / 2 / 12665**（前便末 +16）（Lab `sessions/p930/end.log`）→ この docs commit。未 push 39＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。
+判定（2026-10-21）: grace の half-tie は閉じた。grace の LYS4020 の残り＝`@breath`・`@caesura`（列組み・未特定 2 つ）・`@pluck`・`@diagram`・`@notehead(…)`・`@cross`・`@dead`/`@parenthesize`・`@stemUp`/`@stemDown`・`@figuredBass`・`@chord`・TAB の技法。
+
+## 以下は第929セッションの経緯
+
 ### 1.1 第929セッション（2026-10-21・YT-DELL2）
 
 第928 と同じ会話の続き（ユーザー「続けて」）。`-Start p929`（開始 HEAD `149a86c01`・未 push 36・full **12639 / 0 / 2 / 12641**・第927 を ARCHIVE へ）。作業場所は Lab `sessions/p929/`。
 - **和音の構成音の `@editorial` を描く＝`90c755d83`**（第928 が見つけた穴＝`<d f@editorial>4` は普通の大きさでも黙って何も描かなかった）: `CreateChordItem` が構成音ごとに単音と同じ規則で種類を決め（無ければ調の臨時記号・左の臨時記号は消す）、注釈の位置を鍵に `_memberEditorialBySource` へ残す。`CollectArticulations` の editorial の枝は構成音ならそれを引く。置き方は単音の suggestion のまま（第928 の mover＋箱）。LP 2.26（`probes/editorial-chord.ly` ECA〜ECC）＝台帳 6 点が 1 回目で一致（`editorial.chord.*`・2 つの構成音は下の音の分が先に譜表に乗り、もう一方はその箱の上に 0.46 で積む＝LP と同じ順・grace の和音も）。毒＝解決を外す 6 赤・左の臨時記号を残す 1 赤。全 svg の掃き 1,242 枚で 0（構成音の `@editorial` はコーパスに無い）。
 - `-End p929 -DiffBase 149a86c01`＝full **12647 / 0 / 2 / 12649**（前便末 +8）（Lab `sessions/p929/end.log`）→ この docs commit。未 push 37＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。
 判定（2026-10-21）: 和音の構成音の `@editorial` は閉じた。grace の LYS4020 の残り＝`@breath`・`@caesura`（列組み・未特定 2 つ）・`@pluck`・`@diagram`・`@notehead(…)`・`@cross`・`@laissezVibrer`/`@repeatTie`・`@dead`/`@parenthesize`・`@stemUp`/`@stemDown`・`@figuredBass`・`@chord`・TAB の技法。
-
-## 以下は第928セッションの経緯
-
-### 1.1 第928セッション（2026-10-21・YT-DELL2）
-
-第927 と同じ会話の続き（ユーザー「続けて」）。`-Start p928`（開始 HEAD `ef88e4b63`・未 push 34・full **12629 / 0 / 2 / 12631**・第926 を ARCHIVE へ）。作業場所は Lab `sessions/p928/`。
-- **grace の `@editorial`（上に置く小さい臨時記号）を描く＋普通の大きさの高さを LP に合わせる＝`450f96aa9`**: 述語 `GraceBodySupport.IsCarriedEditorial` を収集（`CollectArticulations` の grace の門）と LYS4020 が読む。grace でも大きさは −2 のまま（`general-grace-settings` に AccidentalSuggestion が無い＝`ArticulationEngraver` の editorial の枝で `scriptStep = 0`）。X は grace の頭の中心＝そのまま一致した。**高さは普通の大きさから違っていた**: LP の AccidentalSuggestion は **outside-staff-priority 0 の mover** で、輪郭ではなく**箱**の skyline（vertical-skylines を宣言しない＝`grob.cc` の既定）。箱の下端が譜表の墨（上の線＋0.05）から outside-staff-padding 0.46 上に立つ（Lab `sessions/p928/ed/y2.ly`＝♯・♮・♭ とも）。Lily# は譜表の中の skyline に staff-padding 0.25 で置いていた＝**譜表の上に乗るとき 0.26 低かった**（符尾の先が決める 16 分は −0.075）→ `ArticulationSpacing.OutsideStaffPriority` に editorial＝0・`ScriptSkyline(s)` は suggestion の字形だけ箱（`IsSuggestionGlyph`）。LP 2.26（`probes/grace-editorial.ly` EGA〜EGE）＝台帳 9 点すべて 1e-7 未満（`editorial.grace.*` 7 点・`editorial.accidental.{natural,flat}.above-notehead` 2 点）。毒＝述語 4 赤・優先度 6 赤・輪郭 6 赤（♮ +0.022・♭ +0.019）・grace の大きさ 2 赤。snapshot `test/editorial-accidental` は suggestion だけが譜表に対して 0.26 上がった（その分だけ譜表が下がる）。全 svg の掃き 1,242 枚で 3 枚（`grammar-tour`・`editorial-accidental`・`feature-tour`＝どれも suggestion 1〜3 個が 0.26 上がっただけ）。
-- ⚠️ **見つけたが直していない: 和音の構成音の `@editorial`（`<d' f'@editorial>4`）は普通の大きさでも何も描かない**（svg の差は `data-pos` だけ・警告も無い）。`CollectArticulations` の editorial の枝は音の `EditorialAccidental` を要るが、和音の構成音には渡らない。grace の試験はこの行を外した。
-- `-End p928 -DiffBase ef88e4b63`＝full **12639 / 0 / 2 / 12641**（前便末 +10）（Lab `sessions/p928/end.log`・commit の前に census を作り直し・full を先に緑にした）→ この docs commit。未 push 35＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。
-判定（2026-10-21）: grace の `@editorial` は閉じた。grace の LYS4020 の残り＝`@breath`・`@caesura`（列組み・未特定 2 つ）・`@pluck`・`@diagram`・`@notehead(…)`・`@cross`・`@laissezVibrer`/`@repeatTie`・`@dead`/`@parenthesize`・`@stemUp`/`@stemDown`・`@figuredBass`・`@chord`・TAB の技法。別に、和音の構成音の `@editorial`（普通の大きさから描かない）。
 
 ## 2. 開いている作業
 
