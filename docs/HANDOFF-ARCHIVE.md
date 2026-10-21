@@ -160,6 +160,15 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第933セッションの経緯
+
+### 1.1 第933セッション（2026-10-21・YT-DELL2）
+
+第932 と同じ会話の続き（ユーザー「続けて」）。`-Start p933`（開始 HEAD `6853720f1`・未 push 44・full **12691 / 0 / 2 / 12693**・第931 を ARCHIVE へ）。作業場所は Lab `sessions/p933/`。
+- **grace の `@stemUp`/`@stemDown` で群の符尾を向ける＝`7cfdd619d`**: LP 2.26（`probes/grace-stem-direction.ly`）は grace の符尾を**全部 forced** にする（score-grace-settings）ので、連桁は forced の多数決で向きを決め、反対を書いた符尾はそのまま残す＝**向きが割れた本体は膝の連桁**（SDC・SDE）。Lily# の grace の連桁は膝を描けない ⇒ `GraceBodySupport.CarriedStemDirection` は**符尾のある列（音・ドラム・和音の自分の注記）が全部同じ向きを書いたときだけ**その向きを答え、collector（`ProcessGraceRegion`）は群全体を下の声部の grace と同じ形に向ける。割れた本体は声部の向きのまま・書いた向きは全部 LYS4020（和音の構成音の向きも）。下向きの grace は旗が頭の下＝主音符まで幅＋0.5。**前の音符からのばねの符尾補正は最初の grace 自身の符尾の帯で読む**（`SpacingRules.ApproachStemBand`・普通の大きさの代役は付け根が普通の大きさで、上→下の重なりが 0.255＜LP 0.399）。台帳 11 点（`stemdir.grace.*`）＝9 点は完全一致・連桁の符尾 2 点は −0.192（連桁の中心線まで描く／LP の Stem は外縁まで＝連桁の下で見えない）。計器 `StemLeftFromNotehead`・`StemBottomBelowNotehead`（`StemAt` に括った）。毒＝本体の答え 14 赤・collector 14 赤・ばねの帯 1 赤・drop list 5 赤。全 svg の掃き 1,242 枚で 0。
+- `-End p933 -DiffBase 6853720f1`＝full **12710 / 0 / 2 / 12712**（前便末 +19）（Lab `sessions/p933/end.log`）→ この docs commit。未 push 45＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。
+判定（2026-10-21）: grace の符尾の向きは（そろったときは）閉じた。残り＝向きが割れた grace の膝の連桁（`DrawGraceBeam` と quanter に列ごとの向きを通す）。grace の LYS4020 の残り＝`@breath`・`@caesura`（列組み・未特定 2 つ）・`@pluck`・`@diagram`・`@cross`（譜表をまたぐ）・`@figuredBass`・`@chord`・TAB の技法。
+
 ## 以下は第932セッションの経緯
 
 ### 1.1 第932セッション（2026-10-21・YT-DELL2）
