@@ -160,6 +160,17 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第917セッションの経緯
+
+### 1.1 第917セッション（2026-10-21・YT-DELL2）
+
+新しい会話。`-Start p917`（開始 HEAD `87e47fc9a`・未 push 7・full **12510 / 0 / 2 / 12512**・CI 緑・第915 を ARCHIVE へ）。作業場所は Lab `sessions/p917/`。⚠️ 第916 の docs commit の後に U8 の commit 5 本（`12c824fcd`〜`87e47fc9a`＝grace のタイ・符尾側の記号・fermata と装飾・強弱・文字）があり、経緯は §2 U8 の「⒟ の進み」にだけ書かれていた（§1 には無い）。
+- **Core の CS1574 が 3 件**（`-Start` の build）＝grace のタイで `LayoutTies` に `graceNotes`／`graceStaffIndex` が増え、cref 3 つが古かった → 直して Core 0 警告。
+- **`text.grace.below` の +0.024（第916 の OPEN）は計器だった＝`f96e0afb6`**: プローブが裸の `_"dolce"`（立体・機械の serif）で、Lily# の `@text` は serif の斜体。`\markup \italic`＋`fonts.serif = "LilyPond Serif"` で下 3.5e-5・上 0・対照 4.4e-5。LP の系の skyline を刷ると（Lab `p917/gt/sky.ly`）下で効くのは grace の頭ではなく最後の c'2 の頭（`e` の下）。字面の差が grace だけに出たのは、grace の頭の右端が `d` の縦棒の傾いた上端の途中に当たるから（普通の頭は縦棒を覆う）。製品の変更なし。
+- **grace の運指を描く＝`a8a1635b4`**（§2 U8 ⒟ の続き）: LP 2.26 で 5 冊（Lab `p917/gf`）＝font-size −8・grace の頭の中心・上は五線の 2.55・和音の下半分は下・旗の符尾は支えでない・**梁の付いた grace の符尾は支え**（梁の線＋厚みの半分）。台帳 6 点一致。⚠️ 罠 2 つを踏んだ: ⑴ 置換の組の新に `+` を書いてシグネチャ行が消えた（CLAUDE-OPERATIONS §1 の 4 例目）⑵ cmd の中の `--filter A|B` がパイプになり止まった（`^|`）。毒 2 本（梁の厚み 0＝1 赤・運指を落とす＝6 赤）。掃き 0/1,242。SYNTAX_REFERENCE の grace の例（付点・休符・和音を「描かない」）は第299〜308 から古かった＝今も報告される `@cresc` の 1 行に。full **12519 / 0 / 2 / 12521**。
+- `-End p917 -DiffBase 87e47fc9a`＝full **12519 / 0 / 2 / 12521**（開始 +9）・Core 警告 0・門は全部 OK（Lab `sessions/p917/end.log`）→ この docs commit。未 push 10＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。
+判定（2026-10-21）: grace の文字の OPEN と運指は閉じた。U8 ⒟ の残りは `@cresc`・`@sustain`・`@rit`・`@glissando`・`@arpeggio`（§2 U8）。
+
 ## 以下は第916セッションの経緯
 
 ### 1.1 第916セッション（2026-10-20・YT-DELL2）
