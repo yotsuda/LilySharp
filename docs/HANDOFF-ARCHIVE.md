@@ -160,6 +160,15 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第919セッションの経緯
+
+### 1.1 第919セッション（2026-10-21・YT-DELL2）
+
+第918 と同じ会話の続き（ユーザー「続けて」）。`-Start p919`（開始 HEAD `75994c6bc`・未 push 13・full **12534 / 0 / 2 / 12536**・第917 を ARCHIVE へ）。作業場所は Lab `sessions/p919/`。⚠️ 開始チェックが #15076 を塞いでいる間、次のコマンドが別の既存コンソール（mcp-sitter にいた #40056）に回されかけた（場所違いで実行されず）→ 自分の非管理者コンソール #41368 を開いて続けた。
+- **grace の和音のアルペッジョを描く**（§2 U8 ⒟ の続き）: 第918 までは波線が `_arpeggios` に入って grace の頭の上に**重ねて描かれ**、場所は空かず、LYS4020 は「描かない」と言っていた（narrowing で `HasArpeggio` が落ち、`ArpeggioEngraver` は主の列の X で読んでいた）。LP 2.26 の 6 冊（Lab `p919/arp`）＝波線も括弧（`-\nonArpeggiato` の ChordBracket）も**普通の大きさ**で grace の頭か grace の臨時記号の 0.5 左・grace の列はその分右へ（前の c4 の頭から波線の左端まで 1.6042・波線あり／なしで grace の頭は 2.9042／2.401796）。実装＝`GraceColumnInfo.Arpeggio`／`ArpeggioBracket`・`NarrowToGraceTime` が印を残す・`ItemSkylineFactory.GraceArpeggioPart`（grace の列の左の rod／wish の輪郭に条件付きの部品）・`GraceColumnHeads.SupportLeftReach`・`ArpeggioEngraver.GraceColumnOf`・述語 `GraceBodySupport.IsCarriedArpeggio`（LYS4020 が読む・収集は述語を読まない＝既存の `HasArpeggioArticulation`）。台帳 12 点一致（`arpeggio.grace.*`・`chordbracket.grace.*`・`probes/grace-arpeggio.ly`）。計器 `ArpeggioRightToNextNoteheadLeft`／`ChordBracketRightToNextNoteheadLeft` を足した（既存の読みは全部の頭の最左＝前の c4 を拾う）。毒 3 本＝輪郭から外す 5 赤・X を主の列で読む 5 赤・述語 false 2 赤。掃き 0 / 1,242（grace の和音に arpeggio を書いた本がコーパスに無い）。
+- 製品 `4ce3f45ef`。`-End p919 -DiffBase 75994c6bc`＝full **12549 / 0 / 2 / 12551**（前便末 +15）・Core 警告 0・門は全部 OK（Lab `sessions/p919/end.log`）→ この docs commit。未 push 14＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。
+判定（2026-10-21）: grace のアルペッジョは閉じた。U8 ⒟ の残りは `@sustain`・`@rit`・`@glissando`（§2 U8）。
+
 ## 以下は第918セッションの経緯
 
 ### 1.1 第918セッション（2026-10-21・YT-DELL2）
