@@ -1122,6 +1122,17 @@ internal static partial class SpacingRules
         if (!leftBeamed && !left.IsRest
             && left.BaseDuration.Numerator == 1 && left.BaseDuration.Denominator >= 8)
             return 0;
+        // A KNEE inside the run's one beam (session 935): two beamed columns whose stems point
+        // opposite ways take the knee term, which REPLACES the overlap one — read off the grace
+        // head's own box, not the full-size stand-in's. MEASURED (2.26.0, Lab sessions/p935/lp
+        // knee.ly KG): `\grace { d16 e16 }` with e turned down stands 2.185939 apart, the ideal
+        // 1.397939 + (0.917939 − 0.13); turned the other way (KA) the term pulls and the
+        // spring's minimum stops it, as at full size (KneeCorrection's remarks).
+        // LILYPOND-REF: lily/note-spacing.cc:288-293 stem_dir_correction — beams_drul[LEFT] == beams_drul[RIGHT].
+        if (leftBeamed && nextBeamed && nextGrace is { } kneeRight && !left.IsRest && !kneeRight.IsRest
+            && left.StemUp != kneeRight.StemUp)
+            return -(kneeRight.HeadBox.Right - EngravingDefaults.StemThickness)
+                   * (kneeRight.StemUp ? 1 : -1) * noteParams.KneeSpacingCorrection;
         var leftBand = GraceStemBand(left, leftBeamed);
         var rightBand = nextGrace is { } g ? GraceStemBand(g, nextBeamed) : StemSpacingInfo(mainItem);
         MusicItem? nextItem = nextGrace is { } ng

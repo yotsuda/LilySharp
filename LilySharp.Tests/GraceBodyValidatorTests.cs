@@ -419,30 +419,51 @@ public class GraceBodyValidatorTests
     }
 
     /// <summary>
-    /// A STEM DIRECTION written on EVERY stem of a grace body turns the whole run (session 933,
-    /// ledger stemdir.grace.*) — a rest has no stem and does not vote. Nothing is reported.
+    /// A STEM DIRECTION on a grace note or chord turns that stem (sessions 933, 935; ledger
+    /// stemdir.grace.*, knee.grace.*) — on every stem it turns the run, on some of them it makes
+    /// the beam a knee, as in LilyPond. Nothing is reported.
     /// </summary>
     [Theory]
+    [InlineData("grace { d'16@stemDown e'16 } c'1 | e'1 |", "grace { d'16 e'16 } c'1 | e'1 |")]
+    [InlineData("grace { d'16 e'16@stemDown f'16@stemDown } c'1 | e'1 |", "grace { d'16 e'16 f'16 } c'1 | e'1 |")]
+    [InlineData("grace { d'8@stemDown e'4 } c'1 | e'1 |", "grace { d'8 e'4 } c'1 | e'1 |")]
     [InlineData("grace { d'8@stemDown } c'1 | e'1 |", "grace { d'8 } c'1 | e'1 |")]
     [InlineData("grace { d'16@stemDown e'16@stemDown } c'1 | e'1 |", "grace { d'16 e'16 } c'1 | e'1 |")]
     [InlineData("grace { <d' f'>8@stemDown } c'1 | e'1 |", "grace { <d' f'>8 } c'1 | e'1 |")]
     [InlineData("grace { d'16@stemDown r16 e'16@stemDown } c'1 | e'1 |", "grace { d'16 r16 e'16 } c'1 | e'1 |")]
     [InlineData("voice { c''1 } { grace { d'8@stemUp } c'1 } | e'1 |", "voice { c''1 } { grace { d'8 } c'1 } | e'1 |")]
-    public void AStemDirectionOnEveryGraceStem_TurnsTheRun_AndIsNotReported(string written, string control)
+    public void AStemDirectionOnAGraceStem_TurnsIt_AndIsNotReported(string written, string control)
     {
         Assert.Empty(Warnings(Book(written)));
         Assert.NotEqual(Page(control), Page(written));
     }
 
     /// <summary>
-    /// A run whose stems DISAGREE is a kneed beam in LilyPond (every grace stem is a forced one,
-    /// GraceBodySupport.CarriedStemDirection), which the grace beam does not draw: the run keeps
-    /// its voice's direction, the page is the control's, and every direction written is reported
-    /// — a chord MEMBER's too, a chord having one stem.
+    /// The BEAM's side over a kneed run is LilyPond's vote among its forced stems
+    /// (GraceNoteItem.BeamStemUpOf) — MEASURED, the Beam grob's own direction in Lab
+    /// sessions/p935/lp knee.ly: KA / KB up (a 1-1 tie broken by the heads, then 2 up to 1),
+    /// KG up (the tie broken the other way), KD / KF down (2 down to 1).
     /// </summary>
     [Theory]
-    [InlineData("grace { d'16@stemDown e'16 } c'1 | e'1 |", 1, "grace { d'16 e'16 } c'1 | e'1 |")]
-    [InlineData("grace { d'16@stemDown e'16@stemUp } c'1 | e'1 |", 2, "grace { d'16 e'16 } c'1 | e'1 |")]
+    // `octave absolute`: Lily#'s d is LilyPond's d' (the twin's \fixed c').
+    [InlineData("grace { d16@stemDown e16 } f1 |", true)]
+    [InlineData("grace { d16@stemDown e16 f16 } g1 |", true)]
+    [InlineData("grace { d16 e16@stemDown } f1 |", true)]
+    [InlineData("grace { d16@stemDown e16@stemDown f16 } g1 |", false)]
+    [InlineData("grace { d16 e16@stemDown f16@stemDown } g1 |", false)]
+    public void AKneedGraceBeam_StandsOnTheSideItsStemsVoteFor(string music, bool up)
+    {
+        var grace = Assert.Single(new LilySharp.Core.Svg.Collector.MeasureCollector()
+            .Collect(SyntaxTree.Parse("octave absolute\n" + Book(music))).GraceNotes);
+        Assert.True(LilySharp.Core.Svg.Model.GraceNoteItem.IsKneeOf(grace.Columns));
+        Assert.Equal(up, grace.BeamStemUp);
+    }
+
+    /// <summary>
+    /// A stem direction on a chord MEMBER is no stem's — a chord has one — so nothing turns and
+    /// it is reported (GraceBodySupport.IsCarriedStemDirection).
+    /// </summary>
+    [Theory]
     [InlineData("grace { <d'@stemDown f'>8 } c'1 | e'1 |", 1, "grace { <d' f'>8 } c'1 | e'1 |")]
     public void AStemDirectionTheRunDisagreesWith_IsReported_AndNotDrawn(string written, int reported, string control)
     {

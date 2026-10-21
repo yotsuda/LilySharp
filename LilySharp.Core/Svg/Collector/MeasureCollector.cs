@@ -6304,7 +6304,7 @@ public sealed partial class MeasureCollector
         // An acciaccatura's stroke is a property of each item's own Flag, not of the group —
         // see MusicItem.GraceSlash for LilyPond's spelling of it.
         bool slash = type == GraceNoteType.Acciaccatura;
-        // The grace's stem direction, decided ONCE for the group (MusicItem.GraceStemDown):
+        // The grace's stem direction, the VOICE's for the whole group (MusicItem.GraceStemDown):
         // a voice's \voiceN props replace graceSettings with general-grace-settings, which
         // states no Stem direction, so the grace keeps its voice's — DOWN for the second and
         // fourth voice. A voice past the first is only ever written inside a voice { } span,
@@ -6315,15 +6315,13 @@ public sealed partial class MeasureCollector
         // shared staff (the base CollectScore hands each binding), not at 0, so its grace
         // points DOWN as LilyPond's << \a \\ \b >> draws it (SharedStaffVoiceSlotTests).
         bool graceStemDown = VoiceDefaults.GetDefaultStemUp(_cursor.VoiceIndex + 1) == false;
-        // …unless the body turns it: a run whose every stem writes the same @stemUp / @stemDown
-        // takes that direction, the one question the drop list asks too (session 933;
-        // GraceBodySupport.CarriedStemDirection holds why a run that disagrees keeps its voice's).
+        // …and a stem that writes @stemUp / @stemDown keeps its own (MeasureBuilder.NarrowToGraceTime,
+        // session 935): every grace stem is a forced one, so a beam over stems that disagree is
+        // kneed (GraceNoteItem.BeamStemUpOf).
         int bodyBudget = DefaultExpansionBudgetCap;
         var bodyElements = Semantics.GraceBodySupport.BodyElements(
             grace, name => _variables.TryGetValue(name, out var body) ? body : null,
             () => bodyBudget-- > 0);
-        if (Semantics.GraceBodySupport.CarriedStemDirection(bodyElements) is { } writtenUp)
-            graceStemDown = !writtenUp;
         var carriedBreath = Semantics.GraceBodySupport.CarriedBreath(bodyElements, grace.IsAfterGrace);
         _carriedGraceBreathStart = carriedBreath?.SourceStart ?? -1;
         builder.EnterGraceTime(slash, graceStemDown);
@@ -6503,7 +6501,9 @@ public sealed partial class MeasureCollector
                             note.Midi, note.StringNumber, IsCourtesy: note.IsCourtesy)),
                         note.BaseDuration, note.Dots)
                     {
-                        ContextFontSizeStep = note.IsCue ? EngravingDefaults.CueFontSizeStep : 0, StemDown = stemDown,
+                        ContextFontSizeStep = note.IsCue ? EngravingDefaults.CueFontSizeStep : 0,
+                        // The stem's own direction (session 935): the voice's, or what it wrote.
+                        StemDown = note.GraceStemDown,
                         // The head's style (session 932): the column's head box is its own.
                         HeadStyle = note.Notehead,
                     });
@@ -6524,7 +6524,7 @@ public sealed partial class MeasureCollector
                         columns.Add(new GraceColumnInfo(
                             heads.ToImmutable(), chord.BaseDuration, chord.Dots,
                             ContextFontSizeStep: chord.IsCue ? EngravingDefaults.CueFontSizeStep : 0,
-                            StemDown: stemDown,
+                            StemDown: chord.GraceStemDown,
                             Arpeggio: chord.HasArpeggio, ArpeggioBracket: chord.HasArpeggioBracket,
                             HeadStyle: chord.Notehead));
                     }

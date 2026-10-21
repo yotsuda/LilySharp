@@ -3046,6 +3046,14 @@ internal sealed class RenderedGeometry
             : throw new InvalidOperationException(
                 $"page {page}: no breathing sign or caesura was drawn.\nDrawn geometry:\n" + Describe());
 
+    /// <summary>How far stem <paramref name="stemIndex"/>'s upper end lies ABOVE notehead
+    /// <paramref name="headIndex"/>'s centre — an up stem's length from its head.</summary>
+    public double StemTopAboveNotehead(int stemIndex, int headIndex, int page = 0)
+    {
+        var stem = StemAt(stemIndex, page);
+        return HeadAt(headIndex, page).Y - Math.Min(stem.Y1, stem.Y2);
+    }
+
     private DrawnLine StemAt(int stemIndex, int page)
     {
         var stems = _pages[page].Lines

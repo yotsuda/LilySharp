@@ -585,14 +585,64 @@ public sealed record GraceNoteItem
         return ScaleFactor;
     }
 
-    /// <summary>Whether this run's stems point up — the group-level reading of
-    /// <see cref="GraceColumnInfo.StemDown"/>, which every column of a group shares (one voice
-    /// writes a group). UP for a group with no columns.</summary>
-    internal bool StemUp => StemUpOf(Columns);
+    /// <summary>The direction of this run's BEAM — see <see cref="BeamStemUpOf"/>.</summary>
+    internal bool BeamStemUp => BeamStemUpOf(Columns);
 
-    /// <summary><see cref="StemUp"/> for a run held only as its columns (a layout's copy).</summary>
-    internal static bool StemUpOf(ImmutableArray<GraceColumnInfo> columns)
-        => columns.IsDefaultOrEmpty || columns[0].StemUp;
+    /// <summary>
+    /// Which side a grace run's BEAM stands on — LilyPond's vote among its stems — for a run held
+    /// only as its columns (a layout's copy). Without a beam, the first column's own direction.
+    /// UP for a run with no columns.
+    /// </summary>
+    /// <remarks>
+    /// Every grace stem is a FORCED one (score-grace-settings), so the beam's direction is the
+    /// forced branch of Beam::get_default_dir over the beamed columns: more stems one way wins;
+    /// a tie goes to the side whose heads lie farther from the middle line on average, then in
+    /// total; then the Beam's neutral-direction, DOWN. Each column keeps its own direction
+    /// (<see cref="GraceColumnInfo.StemDown"/>), so a run whose columns disagree is KNEED (session
+    /// 935; Lab sessions/p935/lp knee.ly: `d16` turned down before an `e16` draws an UP beam, the
+    /// tie broken by e's 4 positions below the middle against d's 0). Columns that agree answer
+    /// their own direction, as before the knee existed.
+    /// LILYPOND-REF: lily/beam.cc:876-940 Beam::get_default_dir — count, then total / count, then total.
+    /// LILYPOND-REF: scm/define-grobs.scm:531 Beam (neutral-direction . DOWN).
+    /// </remarks>
+    internal static bool BeamStemUpOf(ImmutableArray<GraceColumnInfo> columns)
+    {
+        if (columns.IsDefaultOrEmpty)
+            return true;
+        int beamed = Svg.Layout.GraceNoteEngraver.BeamedPrefix(columns);
+        if (beamed < 2)
+            return columns[0].StemUp;
+        int countUp = 0, countDown = 0, totalUp = 0, totalDown = 0;
+        for (int i = 0; i < beamed; i++)
+        {
+            var c = columns[i];
+            // total[d] += max (-d * head_positions[-d], 0): the head at the far end from the beam.
+            if (c.StemUp) { countUp++; totalUp += Math.Max(-c.Lowest.StaffPosition, 0); }
+            else { countDown++; totalDown += Math.Max(c.Highest.StaffPosition, 0); }
+        }
+        if (countUp != countDown)
+            return countUp > countDown;
+        // Integer division, as LilyPond's Drul_array<int> divides.
+        if (countUp > 0 && totalUp / countUp != totalDown / countDown)
+            return totalUp / countUp > totalDown / countDown;
+        if (totalUp != totalDown)
+            return totalUp > totalDown;
+        return false;
+    }
+
+    /// <summary>Whether this run's beam is KNEED — a beamed column whose own direction is not the
+    /// beam's (<see cref="BeamStemUpOf"/>).</summary>
+    internal static bool IsKneeOf(ImmutableArray<GraceColumnInfo> columns)
+    {
+        int beamed = Svg.Layout.GraceNoteEngraver.BeamedPrefix(columns);
+        if (beamed < 2)
+            return false;
+        bool up = BeamStemUpOf(columns);
+        for (int i = 0; i < beamed; i++)
+            if (columns[i].StemUp != up)
+                return true;
+        return false;
+    }
 
     /// <summary><see cref="HeadFontOf"/> for this run.</summary>
     internal Svg.Layout.MusicFontDesign HeadFont => HeadFontOf(Columns);

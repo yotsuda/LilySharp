@@ -409,7 +409,8 @@ internal static class GraceNoteEngraver
         // LILYPOND-REF: scm/music-functions.scm:652-656 score-grace-settings —
         //   ((Voice Stem direction ,UP)): a grace stem is forced up whatever the pitch; a lower
         //   voice's is DOWN (make-voice-props-set, :666-674 — GraceColumnInfo.StemDown).
-        bool stemUp = grace.StemUp;
+        // The BEAM's side is the stems' vote (GraceNoteItem.BeamStemUpOf); every stem keeps its own.
+        bool stemUp = grace.BeamStemUp;
         var members = ImmutableArray.CreateBuilder<BeamMember>(beamed);
         var xs = new double[beamed];
         for (int i = 0; i < beamed; i++)
@@ -433,7 +434,8 @@ internal static class GraceNoteEngraver
             members.Add(new BeamMember(
                 GraceColumnHeads.StandIn(notes[i], grace.SourcePosition),
                 counts[i], left, right, sum / heads.Length, i,
-                memberStemUp: stemUp,
+                // Each stem its own (session 935): a column turned against the beam is a knee.
+                memberStemUp: notes[i].StemUp,
                 headPositionMin: lo,
                 headPositionMax: hi));
         }

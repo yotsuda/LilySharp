@@ -579,53 +579,27 @@ internal static class GraceBodySupport
     };
 
     /// <summary>
-    /// True for a STEM DIRECTION a grace note writes — <c>@stemUp</c> / <c>@stemDown</c> (LilyPond's
-    /// <c>\once \override Stem.direction</c>). Whether it is carried is a question about the
-    /// whole body, not this annotation: see <see cref="CarriedStemDirection"/>.
-    /// </summary>
-    internal static bool IsStemDirection(SyntaxNode annotation)
-        => annotation is ArticulationSyntax { Type: ArticulationType.None, Name: "stemUp" or "stemDown" };
-
-    /// <summary>
-    /// The stem direction a grace body's run takes from what it writes — true for up, false for
-    /// down — or null when the run keeps its voice's (session 933). THE question the collector
-    /// (<c>MeasureCollector.ProcessGraceRegion</c>) and the drop list both ask.
+    /// True for a STEM DIRECTION a grace note or chord writes at its own level — <c>@stemUp</c> /
+    /// <c>@stemDown</c> (LilyPond's once-override of Stem.direction): that stem points that
+    /// way and the others keep the voice's (sessions 933, 935; ledger stemdir.grace.*,
+    /// knee.grace.*). THE question the collector (<c>MeasureBuilder.NarrowToGraceTime</c>, through
+    /// the item's ForcedStemUp) and the drop list both ask.
     /// </summary>
     /// <remarks>
-    /// Carried only when EVERY column with a stem (a note, a drum, a chord — its own
-    /// annotations, not a member's) writes the SAME direction: then the whole run turns, and
-    /// it is drawn exactly as a lower voice's run is (<c>GraceColumnInfo.StemDown</c>) — the
-    /// heads, the flags, the beam and the spacing all read that one stamp.
-    /// <para>
-    /// ⚠️ A RUN THAT DISAGREES IS NOT DRAWN, AND THAT IS LILYPOND'S SHAPE RATHER THAN A
-    /// SHORTCUT. score-grace-settings forces EVERY grace stem UP, so each stem of a grace beam
-    /// is a forced one, and Beam::get_default_dir then votes among them while
-    /// Beam::set_stem_directions leaves every forced stem where it was: <c>\grace { \once
-    /// \override Stem.direction = #DOWN d16 e16 }</c> draws a KNEED beam, the first stem
-    /// under the heads and the second above (measured on 2.26.0, Lab sessions/p933/lp
-    /// stemdir.ly SDC / SDE). The grace beam draws no knee yet, so such a body keeps its
-    /// voice's direction and every direction it writes is reported (LYS4020).
-    /// </para>
+    /// ⚠️ EVERY GRACE STEM IS A FORCED ONE, and that is what makes a single answer per stem
+    /// right: score-grace-settings forces each grace stem UP, so a stem the writer turned is one
+    /// forced stem among forced stems. A beam over them votes (Beam::get_default_dir) and leaves
+    /// each where it was (Beam::set_stem_directions): a grace pair whose first stem is turned
+    /// DOWN draws a KNEED beam (Lab sessions/p935/lp knee.ly; the beam's own direction is
+    /// <c>GraceNoteItem.BeamStemUpOf</c>). A chord MEMBER's direction is no stem's (a chord has
+    /// one) and a drum's is not read: both stay reported.
     /// LILYPOND-REF: scm/music-functions.scm:652-656 score-grace-settings (Stem direction UP);
     /// lily/beam.cc:876-956 get_default_dir / set_stem_directions.
     /// </remarks>
-    internal static bool? CarriedStemDirection(IReadOnlyList<GraceBodyElement> elements)
-    {
-        bool? direction = null;
-        foreach (var (item, _) in elements)
-        {
-            if (StemOwnAnnotations(item) is not { } own)
-                continue;
-            bool? written = null;
-            foreach (var a in own)
-                if (IsStemDirection(a))
-                    written = ((ArticulationSyntax)a).Name == "stemUp";
-            if (written is null || (direction is { } d && d != written))
-                return null;
-            direction = written;
-        }
-        return direction;
-    }
+    internal static bool IsCarriedStemDirection(SyntaxNode item, SyntaxNode annotation)
+        => annotation is ArticulationSyntax { Type: ArticulationType.None, Name: "stemUp" or "stemDown" }
+           && (CarriedNote(item) is { } note ? note.Articulations.Contains(annotation)
+               : CarriedChord(item) is { } chord && chord.Articulations.Contains(annotation));
 
     /// <summary>
     /// The breathing sign or caesura a grace body ENDS on — <c>@breath</c> / <c>@caesura</c>
@@ -672,15 +646,6 @@ internal static class GraceBodySupport
         }
         return null;
     }
-
-    /// <summary>The annotations a grace column with a STEM writes at its own level — a note's,
-    /// a drum's, a chord's (not a member's: a chord has one stem); null for a rest or anything
-    /// that is not a column.</summary>
-    private static IEnumerable<SyntaxNode>? StemOwnAnnotations(SyntaxNode item)
-        => CarriedNote(item) is { } note ? note.Articulations
-            : CarriedChord(item) is { } chord ? chord.Articulations
-            : CarriedDrum(item) is { } drum ? drum.Articulations
-            : null;
 
     private static bool IsOttavaType(Svg.Model.MusicMarkType? type)
         => type is Svg.Model.MusicMarkType.OttavaUp or Svg.Model.MusicMarkType.OttavaDown
@@ -887,10 +852,7 @@ internal static class GraceBodySupport
     /// </summary>
     internal static IEnumerable<GraceDrop> Drops(IReadOnlyList<GraceBodyElement> elements, bool afterGrace = false)
     {
-        // A body-level answer (session 933), asked once: a stem direction is carried only when
-        // the whole run agrees on it.
-        bool stemDirectionCarried = CarriedStemDirection(elements) is not null;
-        // …and so is a breathing sign (session 934): only the one the body ends on.
+        // A body-level answer (session 934), asked once: only the breathing sign the body ends on.
         var carriedBreath = CarriedBreath(elements, afterGrace);
         for (int index = 0; index < elements.Count; index++)
         {
@@ -948,8 +910,7 @@ internal static class GraceBodySupport
                     || IsCarriedOttava(annotation) || IsCarriedPhrasingSlur(annotation)
                     || IsCarriedCourtesy(annotation) || IsCarriedEditorial(annotation)
                     || IsCarriedSemiTie(annotation) || IsCarriedHeadMark(annotation)
-                    || (stemDirectionCarried && IsStemDirection(annotation)
-                        && StemOwnAnnotations(item)?.Contains(annotation) == true)
+                    || IsCarriedStemDirection(item, annotation)
                     || ReferenceEquals(annotation, carriedBreath))
                     continue;
                 yield return new GraceDrop(

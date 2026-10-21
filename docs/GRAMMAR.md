@@ -2680,9 +2680,9 @@ Grace          = ( 'grace' | 'acciaccatura' | 'appoggiatura' | 'afterGrace' ) , 
                      '@repeatTie' off the grace head (session 930), and the head's
                      '@dead' / '@notehead(x)' cross and '@parenthesize' (session 931), and
                      the head's other '@notehead(…)' styles (session 932), and a
-                     '@stemUp' / '@stemDown' written on EVERY stem of the body, which
-                     turns the run (session 933; a body that disagrees is a kneed
-                     beam in LilyPond, not drawn yet — reported), and a '@breath' /
+                     '@stemUp' / '@stemDown' on a grace note or chord, which turns that
+                     stem (session 933; a beam over stems that disagree is a knee,
+                     session 935), and a '@breath' /
                      '@caesura' on the body's LAST note or chord, a column of its own
                      between the run and the main note (session 934; on an inner grace
                      or an afterGrace it is reported). *)

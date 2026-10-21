@@ -94,6 +94,9 @@ internal static partial class SharedRenderer
             // one for a single head; see the note where they are filled.
             var headTopY = new List<double>(g.Columns.Length);
             var beamCounts = new List<int>(g.Columns.Length);
+            // Each stem's own direction (GraceColumnInfo.StemDown, session 935): a kneed beam
+            // carries stems on both sides.
+            var stemUps = new List<bool>(g.Columns.Length);
             // WHICH columns the one beam covers. Asked ONCE, of the house that owns the
             // sentence, and handed down rather than re-decided — the ordinary pass withholds
             // its stems from exactly these columns by asking the same question
@@ -158,6 +161,7 @@ internal static partial class SharedRenderer
                     headY.Add(lowestY);
                     headTopY.Add(highestY);
                     beamCounts.Add(BeamCountForDuration(note.BaseDuration.Denominator));
+                    stemUps.Add(note.StemUp);
                     headIndex++;
                 }
 
@@ -185,8 +189,8 @@ internal static partial class SharedRenderer
                         ? (os.YUp(staffMiddleY + bl / 2.0, g.StaffIndex, g.MeasureIndex),
                            os.YUp(staffMiddleY + br / 2.0, g.StaffIndex, g.MeasureIndex))
                         : null;
-                DrawGraceBeam(headX, headY, headTopY, beamCounts, eff, graceFont,
-                    beamEnds, beamedPrefix, GraceNoteItem.StemUpOf(g.Columns), gc);
+                DrawGraceBeam(headX, headY, headTopY, beamCounts, stemUps, eff, graceFont,
+                    beamEnds, beamedPrefix, gc);
 
                 // The grace slur (last grace column → main note) is NOT drawn here any more:
                 // since session 724 it is an ordinary slur, laid out with the rest
@@ -315,10 +319,12 @@ internal static partial class SharedRenderer
     ///   the heads, i.e. downward on the page). The ordinary pass is told the same, at the
     ///   item (SharedRenderer.DrawStaffMeasures).
     /// LILYPOND-REF: scm/music-functions.scm:666-674 make-voice-props-set — a lower voice's
-    ///   graceSettings name no direction, so its run is DOWN (<paramref name="stemUp"/>): the
+    ///   graceSettings name no direction, so its run is DOWN (<paramref name="stemUps"/>): the
     ///   stems stand on the TOP heads, the beam hangs below, the secondaries stack upward.
     /// LILYPOND-REF: lily/beam.cc secondary beams translated by beam-thickness + gap.
     /// </remarks>
+    /// <param name="stemUps">Each column's own stem direction (GraceColumnInfo.StemDown) — both,
+    /// in a kneed run (session 935).</param>
     /// <param name="beamEnds">
     /// The quanted beam's Y at its two OUTER STEMS, from GraceNoteEngraver.QuantGraceBeam —
     /// which is where BeamScoringProblem.Solve answers, its last step being AtOuterStems.
@@ -340,10 +346,10 @@ internal static partial class SharedRenderer
     /// (Stem::chord_start_y, lily/stem.cc:114-122). Equal to <paramref name="ys"/>
     /// entry for entry unless a column is a chord.</param>
     private static void DrawGraceBeam(
-        List<double> xs, List<double> ys, List<double> topYs, List<int> beamCounts,
+        List<double> xs, List<double> ys, List<double> topYs, List<int> beamCounts, List<bool> stemUps,
         double scale,
         MusicFontDesign headFont,
-        (double Left, double Right)? beamEnds, int beamedCount, bool stemUp,
+        (double Left, double Right)? beamEnds, int beamedCount,
         IDrawingContext gc)
     {
         // ONE COLUMN IS A FLAG, NOT A BEAM, and the ordinary pass has already drawn it: the
@@ -382,17 +388,19 @@ internal static partial class SharedRenderer
         //   LILYPOND-REF: lily/note-head.cc:207 internal_print — the glyph comes from the
         //     duration log.
         const int graceHeadNoteValue = 4;
+        // Each stem stands on its OWN side of its head (stemUps — a kneed beam has both);
+        // The BEAM's side (GraceNoteItem.BeamStemUpOf) is the quanter's; here only the stack's side is.
         double StemX(int i) =>
-            LayoutUtilities.StemX(xs[i], up: stemUp, graceHeadNoteValue,
+            LayoutUtilities.StemX(xs[i], up: stemUps[i], graceHeadNoteValue,
                 NoteheadStyle.Default, headFont);
         // Stem end: the up-stem runs from the head to stemLen above it — up is larger
         // Y-up, so add in the native page Y-up frame. Only the FALLBACK reads it (a group
         // the layout could not quant); a quanted beam gives every stem its own end.
         // A lower voice's DOWN stem (GraceColumnInfo.StemDown) runs the other way, from the top
         // head down past the bottom one.
-        double StemEndY(int i) => stemUp ? topYs[i] + stemLen : ys[i] - stemLen;
+        double StemEndY(int i) => stemUps[i] ? topYs[i] + stemLen : ys[i] - stemLen;
         // The stem's FOOT is the head at the far end from the beam.
-        double StemFootY(int i) => stemUp ? ys[i] : topYs[i];
+        double StemFootY(int i) => stemUps[i] ? ys[i] : topYs[i];
 
         // OVER THE PREFIX, NOT OVER THE RUN. beamedCount is GraceNoteEngraver.BeamedPrefix —
         // the same sentence the reservation, the quanter and the ordinary pass's withholding
@@ -432,9 +440,24 @@ internal static partial class SharedRenderer
         double beamSlope = span > 0.001 ? (beamRightY - beamLeftY) / span : 0.0;
         double BeamY(double x) => beamLeftY + beamSlope * (x - edgeL);
 
+        // THE STACK STANDS ON THE FIRST STEM'S HEAD SIDE, and each stem runs THROUGH it to the far
+        // line on its own side. Without a knee that is the old picture (the secondaries hang toward
+        // the heads, every stem ends on the primary); in a knee it is not the beam's side.
+        // MEASURED (2.26.0, Lab sessions/p935/lp knee.ly — beam-segments' vertical-count): KA
+        // (d16 turned down, e16; the beam UP) stacks the second line ABOVE the first, the down
+        // stem of d ending at the first line's lower face and the up stem of e at the second
+        // line's upper face; KF (d16 up, e16 f16 turned down; the beam DOWN) stacks it BELOW.
+        // Drawn to the far line's centre, as every beamed grace stem is (ledger
+        // stemdir.grace.down.beamed.first-stem).
+        // LILYPOND-REF: lily/beam.cc:457-531 Beam::calc_beam_segments — the stems' beaming ranks.
+        double stackSign = stemUps[0] ? -1 : 1;
+        double stackTrans = EngravingDefaults.BeamTranslationOf(
+            EngravingDefaults.GraceBeamThickness, EngravingDefaults.GraceBeamLengthFraction, maxBeams);
+        double StemTipY(int i) => BeamY(StemX(i))
+            + (stemUps[i] == (stackSign > 0) ? stackSign * (beamCounts[i] - 1) * stackTrans : 0.0);
         using (gc.Kind("stem"))
             for (int i = 0; i < beamedCount; i++)
-                gc.DrawLine(StemX(i), StemFootY(i), StemX(i), BeamY(StemX(i)), Color.Black, stemThick);
+                gc.DrawLine(StemX(i), StemFootY(i), StemX(i), StemTipY(i), Color.Black, stemThick);
 
         // A grace beam's thickness is DECLARED, not scaled: scm/music-functions.scm:635-648
         // general-grace-settings has (Voice Beam beam-thickness 0.384) where
@@ -483,9 +506,10 @@ internal static partial class SharedRenderer
         Beam(0, last, 0);                     // primary across the beamed prefix
         for (int level = 1; level < maxBeams; level++)
         {
-            // Secondaries stack toward the heads: below an up-stem beam (the negative direction
-            // in the page Y-up frame), above a down-stem one.
-            double off = (stemUp ? -1 : 1) * (level * beamTrans);
+            // Secondaries stack toward the FIRST stem's heads (stackSign): below an up-stem beam
+            // (the negative direction in the page Y-up frame), above a down-stem one — and in a
+            // knee on that first stem's side, whichever way the beam points.
+            double off = stackSign * (level * beamTrans);
             int i = 0;
             while (i < last)
             {

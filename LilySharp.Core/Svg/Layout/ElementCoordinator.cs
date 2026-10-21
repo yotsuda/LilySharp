@@ -4108,9 +4108,11 @@ internal sealed class ElementCoordinator
             return null;
         double groupX = GraceGroupX(voice, g, geom, ml, voiceIndex, voiceShifts);
         var font = g.HeadFont;
-        bool up = g.StemUp;
-        double xL = LayoutUtilities.StemX(groupX + geom.Offsets[0], up, noteValue: 4, g.Columns[0].HeadStyle, font);
-        double xR = LayoutUtilities.StemX(groupX + geom.Offsets[last], up, noteValue: 4, g.Columns[last].HeadStyle, font);
+        // The beam's side is the stems' vote; each outer stem stands on its own side of its head
+        // (a kneed run, session 935 — GraceNoteItem.BeamStemUpOf).
+        bool up = g.BeamStemUp;
+        double xL = LayoutUtilities.StemX(groupX + geom.Offsets[0], g.Columns[0].StemUp, noteValue: 4, g.Columns[0].HeadStyle, font);
+        double xR = LayoutUtilities.StemX(groupX + geom.Offsets[last], g.Columns[last].StemUp, noteValue: 4, g.Columns[last].HeadStyle, font);
         double t = xR - xL > 0.001 ? (stemX - xL) / (xR - xL) : 0.0;
         double centerUp = (bl + (br - bl) * t) / 2.0;
         return staffMiddleDown - (centerUp + (up ? 1 : -1) * EngravingDefaults.GraceBeamThickness / 2.0);
@@ -4179,11 +4181,12 @@ internal sealed class ElementCoordinator
             // scored line's staff-position pair at the two OUTER STEMS, exactly
             // what the renderer anchors the drawn beam on.
             var (beamL, beamR) = (geom.BeamLeftY, geom.BeamRightY);
-            // The run's stem direction: up, or a lower voice's down (GraceColumnInfo.StemDown).
-            bool stemUp = g.StemUp;
+            // Each column's own stem direction: up, a lower voice's down (GraceColumnInfo.StemDown),
+            // or what the writer turned it to — a kneed run has both (session 935).
+            bool StemUpAt(int k) => k >= g.Columns.Length || g.Columns[k].StemUp;
             double StemXAt(int k) => LayoutUtilities.StemX(
                 groupX + (k < geom.Offsets.Length ? geom.Offsets[k] : 0.0),
-                stemUp, noteValue: 4,
+                StemUpAt(k), noteValue: 4,
                 k < g.Columns.Length ? g.Columns[k].HeadStyle : NoteheadStyle.Default, font);
 
             for (int k = 0; k < g.Columns.Length; k++)
@@ -4230,6 +4233,7 @@ internal sealed class ElementCoordinator
                 // voice — so the stem participates only under a slur on its side.
                 double stemY = double.NaN;
                 double obstacleX = hx + font.Advance(MusicGlyph.NoteheadBlack) / 2.0;
+                bool stemUp = StemUpAt(k);
                 if (slur.CurveUp == stemUp)
                 {
                     double stemX = StemXAt(k);
@@ -4242,6 +4246,8 @@ internal sealed class ElementCoordinator
                         double xL = StemXAt(0), xR = StemXAt(g.Columns.Length - 1);
                         double t = xR - xL > 0.001 ? (stemX - xL) / (xR - xL) : 0.0;
                         double centerUp = (bl + (br - bl) * t) / 2.0;
+                        // ⒝ A kneed column's tip is read at the primary line, as the run's other
+                        // stems are (its stem ends on the nearest secondary — SharedRenderer.DrawGraceBeam).
                         stemY = staffMiddleDown
                             - (centerUp + (stemUp ? 1 : -1) * EngravingDefaults.GraceBeamThickness);
                     }

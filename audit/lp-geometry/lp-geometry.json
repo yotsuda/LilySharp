@@ -7861,6 +7861,118 @@
       "residual": 0.0,
       "why": "EXACT. Turned up in a lower voice, the grace's flag stands right of its stem again: the main note is the head width + 1.020688 off."
     },
+    "knee.grace.down-up.gap": {
+      "probe": "grace-knee.ly",
+      "score": "KA",
+      "lilypond": 1.417938619198038,
+      "residual": 0.0,
+      "why": "EXACT. A down stem then an up one in the same beam: the knee term pulls (-(0.917939 - 0.13)) and the spring's minimum stops it at the head width + 0.5, as with no knee (SpacingRules.GraceStemCorrection)."
+    },
+    "knee.grace.down-up.to-main": {
+      "probe": "grace-knee.ly",
+      "score": "KA",
+      "lilypond": 1.41793861919804,
+      "residual": 0.0,
+      "why": "EXACT. The beamed run's last grace to the main note, unchanged by the knee."
+    },
+    "knee.grace.down-up.first-stem-left": {
+      "probe": "grace-knee.ly",
+      "score": "KA",
+      "lilypond": 0.0,
+      "residual": 0.0,
+      "why": "EXACT. The turned stem stands on its own head's left edge: each grace column keeps its own direction (MeasureBuilder.NarrowToGraceTime, GraceColumnInfo.StemDown), the beam the stems' vote (GraceNoteItem.BeamStemUpOf: a 1-1 tie broken by e's 4 positions below the middle)."
+    },
+    "knee.grace.down-up.second-stem-right": {
+      "probe": "grace-knee.ly",
+      "score": "KA",
+      "lilypond": 0.917938619198038,
+      "residual": 0.0,
+      "why": "EXACT. The unturned stem stays up, on its head's right edge."
+    },
+    "knee.grace.down-up.first-stem-bottom": {
+      "probe": "grace-knee.ly",
+      "score": "KA",
+      "lilypond": 2.080692780713713,
+      "residual": -0.192,
+      "why": "The beam is LilyPond's: the quanter scores each stem's END a stack past the primary when the stem reaches through it (BeamScoringProblem._baseLengths, beam-quanting.cc:1130 current_y = beam_y + base_lengths_[i]; it was beam_y alone, and 0 off a knee, which is why every earlier beam held), quanting KA to -8.777 / -1.223 at the stems where it gave -8.750 / -0.250. The residual is half the grace beam thickness: Lily# draws the stem to the far line's centre, LilyPond's Stem extent to its face (as stemdir.grace.down.beamed.*). The stack stands on the FIRST stem's head side (above, here): the down stem runs through it to the lower line."
+    },
+    "knee.grace.down-up.second-stem-top": {
+      "probe": "grace-knee.ly",
+      "score": "KA",
+      "lilypond": 2.228692780713714,
+      "residual": -0.192,
+      "why": "The beam is LilyPond's: the quanter scores each stem's END a stack past the primary when the stem reaches through it (BeamScoringProblem._baseLengths, beam-quanting.cc:1130 current_y = beam_y + base_lengths_[i]; it was beam_y alone, and 0 off a knee, which is why every earlier beam held), quanting KA to -8.777 / -1.223 at the stems where it gave -8.750 / -0.250. The residual is half the grace beam thickness: Lily# draws the stem to the far line's centre, LilyPond's Stem extent to its face (as stemdir.grace.down.beamed.*). The up stem of e reaches the UPPER line, one translation past the primary (its base length)."
+    },
+    "knee.grace.up-down.gap": {
+      "probe": "grace-knee.ly",
+      "score": "KG",
+      "lilypond": 2.185877238396077,
+      "residual": 0.0,
+      "why": "EXACT. An up stem then a down one in the same beam: the knee term pushes e (0.917939 - 0.13) right of the ideal 1.397939 - read off the grace head's own box, not the full-size stand-in's 1.3042."
+    },
+    "knee.grace.up-down.to-main": {
+      "probe": "grace-knee.ly",
+      "score": "KG",
+      "lilypond": 1.41793861919804,
+      "residual": 0.0,
+      "why": "EXACT. The last grace to the main note."
+    },
+    "knee.grace.up-down.first-stem-top": {
+      "probe": "grace-knee.ly",
+      "score": "KG",
+      "lilypond": 2.064377072252846,
+      "residual": -0.192,
+      "why": "The beam is LilyPond's: the quanter scores each stem's END a stack past the primary when the stem reaches through it (BeamScoringProblem._baseLengths, beam-quanting.cc:1130 current_y = beam_y + base_lengths_[i]; it was beam_y alone, and 0 off a knee, which is why every earlier beam held), quanting KA to -8.777 / -1.223 at the stems where it gave -8.750 / -0.250. The residual is half the grace beam thickness: Lily# draws the stem to the far line's centre, LilyPond's Stem extent to its face (as stemdir.grace.down.beamed.*)."
+    },
+    "knee.grace.up-down.second-stem-bottom": {
+      "probe": "grace-knee.ly",
+      "score": "KG",
+      "lilypond": 2.212377072252845,
+      "residual": -0.192,
+      "why": "The beam is LilyPond's: the quanter scores each stem's END a stack past the primary when the stem reaches through it (BeamScoringProblem._baseLengths, beam-quanting.cc:1130 current_y = beam_y + base_lengths_[i]; it was beam_y alone, and 0 off a knee, which is why every earlier beam held), quanting KA to -8.777 / -1.223 at the stems where it gave -8.750 / -0.250. The residual is half the grace beam thickness: Lily# draws the stem to the far line's centre, LilyPond's Stem extent to its face (as stemdir.grace.down.beamed.*)."
+    },
+    "knee.grace.up-down-down.gap": {
+      "probe": "grace-knee.ly",
+      "score": "KF",
+      "lilypond": 2.185877238396077,
+      "residual": 0.0,
+      "why": "EXACT. The knee term between the first (up) and second (down) graces; the beam is DOWN by two stems to one."
+    },
+    "knee.grace.up-down-down.inner-gap": {
+      "probe": "grace-knee.ly",
+      "score": "KF",
+      "lilypond": 1.417938619198039,
+      "residual": 0.0,
+      "why": "EXACT. Two down stems: no knee between them."
+    },
+    "knee.grace.up-down-down.first-stem-top": {
+      "probe": "grace-knee.ly",
+      "score": "KF",
+      "lilypond": 2.070643958634664,
+      "residual": -0.192,
+      "why": "The beam is LilyPond's: the quanter scores each stem's END a stack past the primary when the stem reaches through it (BeamScoringProblem._baseLengths, beam-quanting.cc:1130 current_y = beam_y + base_lengths_[i]; it was beam_y alone, and 0 off a knee, which is why every earlier beam held), quanting KA to -8.777 / -1.223 at the stems where it gave -8.750 / -0.250. The residual is half the grace beam thickness: Lily# draws the stem to the far line's centre, LilyPond's Stem extent to its face (as stemdir.grace.down.beamed.*). The stack stands on the first (up) stem's head side, BELOW the primary (beam-segments vertical-count -1)."
+    },
+    "knee.grace.up-down-down.last-stem-bottom": {
+      "probe": "grace-knee.ly",
+      "score": "KF",
+      "lilypond": 5.218643958634663,
+      "residual": -0.192,
+      "why": "The beam is LilyPond's: the quanter scores each stem's END a stack past the primary when the stem reaches through it (BeamScoringProblem._baseLengths, beam-quanting.cc:1130 current_y = beam_y + base_lengths_[i]; it was beam_y alone, and 0 off a knee, which is why every earlier beam held), quanting KA to -8.777 / -1.223 at the stems where it gave -8.750 / -0.250. The residual is half the grace beam thickness: Lily# draws the stem to the far line's centre, LilyPond's Stem extent to its face (as stemdir.grace.down.beamed.*)."
+    },
+    "beam.quant.knee.sixteenth.down-stem": {
+      "probe": "grace-knee.ly",
+      "score": "K16",
+      "lilypond": 2.639417706858834,
+      "residual": -0.24,
+      "why": "The beam is LilyPond's since session 935: the quanter scores a stem's END a stack past the primary when the stem reaches through it (BeamScoringProblem._baseLengths, lily/beam-quanting.cc:1130 current_y = beam_y + base_lengths_[i]). Without it this FULL-SIZE kneed pair of sixteenths read -0.261 / +0.739 - the beam almost a staff space off at e - and no earlier point could see it: every knee on the ledger is of eighths, whose stack is one line (base length 0). The residual is half the beam thickness 0.48: the stem is drawn to the far line's centre, LilyPond's Stem extent to its face."
+    },
+    "beam.quant.knee.sixteenth.up-stem": {
+      "probe": "grace-knee.ly",
+      "score": "K16",
+      "lilypond": 2.759417706858836,
+      "residual": -0.24,
+      "why": "The beam is LilyPond's since session 935: the quanter scores a stem's END a stack past the primary when the stem reaches through it (BeamScoringProblem._baseLengths, lily/beam-quanting.cc:1130 current_y = beam_y + base_lengths_[i]). Without it this FULL-SIZE kneed pair of sixteenths read -0.261 / +0.739 - the beam almost a staff space off at e - and no earlier point could see it: every knee on the ledger is of eighths, whose stack is one line (base length 0). The residual is half the beam thickness 0.48: the stem is drawn to the far line's centre, LilyPond's Stem extent to its face."
+    },
     "breath.grace.prev-to-grace": {
       "probe": "grace-breath.ly",
       "score": "GBA",

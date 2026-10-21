@@ -144,6 +144,18 @@ internal sealed class BeamScoringProblem
     // Per-member stem directions (needed for kneed beams)
     private int[] _memberBeamDirs;
 
+    // Per-member BASE LENGTH: how far past the primary line this stem's end lies — its beam
+    // stack's extreme rank toward the stem's direction, in beam translations. 0 for every stem
+    // whose stack hangs toward its own head (every stem off a knee); a knee's stem on the far
+    // side of the stack reaches through it (session 935).
+    // LILYPOND-REF: lily/beam-quanting.cc:307-312 base_lengths_ — Beam::calc_stem_y with
+    //   pos = 0, i.e. beam_translation * beam_multiplicity[stem_dir] (lily/beam.cc:1129-1145).
+    private double[] _baseLengths;
+
+    // Where each member's stem stands in the beaming walk (rests interleave) — the index the
+    // base length reads its ranks at. Scratch, as the per-member tables are.
+    private int[] _memberBeaming;
+
     // Per-member beam count (1 = eighth, 2 = sixteenth, ...). This is the stem's OWN
     // multiplicity, and it is what the beam ENDS are checked with (_edgeBeamCounts).
     private int[] _memberBeamCounts;
@@ -297,6 +309,8 @@ internal sealed class BeamScoringProblem
         _headMax = [];
         _isNormal = [];
         _memberBeamDirs = [];
+        _baseLengths = [];
+        _memberBeaming = [];
         _memberBeamCounts = [];
         _stemInfos = [];
     }
@@ -839,6 +853,7 @@ internal sealed class BeamScoringProblem
         // Lent (ListPool), and given back after the segments are built: CalcBeaming and
         // CalcBeamSegments read it as an IReadOnlyList, whose Count is the walk's own.
         var beaming = ListPool<BeamSubdivision.StemBeaming>.Rent();
+        _memberBeaming = ScratchArray.Grow(_memberBeaming, group.Members.Length);
         {
             int r = 0;
             for (int i = 0; i <= group.Members.Length; i++)
@@ -850,6 +865,8 @@ internal sealed class BeamScoringProblem
                         (restXPositions![r] - _leftX) + halfBeamOverhang));
                     r++;
                 }
+                if (i < group.Members.Length)
+                    _memberBeaming[i] = beaming.Count;
                 if (i < group.Members.Length)
                     beaming.Add(new BeamSubdivision.StemBeaming(
                         group.Members[i].BeamCountLeft, group.Members[i].BeamCountRight,
@@ -863,8 +880,12 @@ internal sealed class BeamScoringProblem
         // Lent, and given back at the end of this constructor: the collision booking below is
         // its only reader (see BeamSubdivision.RentSegments).
         var segments = BeamSubdivision.RentSegments();
+        var ranks = BeamSubdivision.CalcBeaming(beaming);
+        _baseLengths = ScratchArray.Grow(_baseLengths, _memberCount);
+        for (int i = 0; i < _memberCount; i++)
+            _baseLengths[i] = _beamTranslation * ranks[_memberBeaming[i]].Multiplicity(StemDirOf(i));
         BeamSubdivision.CalcBeamSegments(
-            beaming, BeamSubdivision.CalcBeaming(beaming),
+            beaming, ranks,
             EngravingDefaults.BeamletLength, EngravingDefaults.BeamletMaxLengthProportion,
             halfBeamOverhang, segments);
         segments.Sort(static (a, b) => a.XLeft.CompareTo(b.XLeft));
@@ -2154,7 +2175,9 @@ internal sealed class BeamScoringProblem
                 ? config.RightY * x / _xSpan + config.LeftY * (_xSpan - x) / _xSpan
                 : (config.RightY + config.LeftY) / 2;
 
-            double currentY = beamY;  // beam Y at this stem
+            // LILYPOND-REF: lily/beam-quanting.cc:1130 current_y = beam_y + base_lengths_[i] — the
+            // stem's END, one stack past the primary for a knee's stem on the stack's far side.
+            double currentY = beamY + _baseLengths[i];
 
             // For kneed beams, use per-member stem direction
             int memberDir = StemDirOf(i);

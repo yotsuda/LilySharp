@@ -8962,6 +8962,27 @@ internal static class LpGeometryProbes
     private static readonly string GSDA8 = GraceTieBook("c4 grace { d8@stemDown } e4 f4 g4 |", "GSDA8");
     private static readonly string GSDB = GraceTieBook("c4 grace { d16@stemDown e16@stemDown } f4 g4 a4 |", "GSDB");
     private static readonly string GSUV = GraceTieBook("voice { c''4 d'' e'' f'' } { c4 grace { d16@stemUp } e4 f4 g4 } |", "GSUV");
+    // A KNEED grace beam — one stem turned against the others (audit/lp-geometry/probes/grace-knee.ly).
+    private static readonly string GKNA = GraceTieBook("c4 grace { d16@stemDown e16 } f4 g4 a4 |", "GKNA");
+    private static readonly string GKNG = GraceTieBook("c4 grace { d16 e16@stemDown } f4 g4 a4 |", "GKNG");
+    private static readonly string GKNF = GraceTieBook("c4 grace { d16 e16@stemDown f16@stemDown } g4 a4 b4 |", "GKNF");
+    // …and a FULL-SIZE kneed sixteenth pair, the same quanter term (score K16 of the same probe).
+    private static readonly string BK16 = """
+        octave absolute
+        time 2/4
+
+        part m { clef treble }
+
+        section Main {
+          m { d16@stemDown[ e16] g8 a4 | }
+        }
+
+        form { ~Main }
+
+        score BK16 {
+          staff m
+        }
+        """;
     // A breathing sign or caesura on the last grace note (audit/lp-geometry/probes/grace-breath.ly).
     private static readonly string GBRA = GraceTieBook("c4 grace { d16@breath } e4 c2 |", "GBRA");
     private static readonly string GBRC = GraceTieBook("c4 grace { d16@caesura } e4 c2 |", "GBRC");
@@ -17508,6 +17529,22 @@ internal static class LpGeometryProbes
         new("stemdir.grace.down.beamed.second-stem", GSDB, g => g.StemBottomBelowNotehead(2, 2)),
         new("stemdir.grace.up-in-lower-voice.stem-right", GSUV, g => g.StemRightFromNotehead(2, 2)),
         new("stemdir.grace.up-in-lower-voice.to-main", GSUV, g => g.NoteheadToNotehead(2, 3)),
+        new("beam.quant.knee.sixteenth.down-stem", BK16, g => g.StemBottomBelowNotehead(0, 0)),
+        new("beam.quant.knee.sixteenth.up-stem", BK16, g => g.StemTopAboveNotehead(1, 1)),
+        new("knee.grace.down-up.gap", GKNA, g => g.NoteheadToNotehead(1, 2)),
+        new("knee.grace.down-up.to-main", GKNA, g => g.NoteheadToNotehead(2, 3)),
+        new("knee.grace.down-up.first-stem-left", GKNA, g => g.StemLeftFromNotehead(1, 1)),
+        new("knee.grace.down-up.second-stem-right", GKNA, g => g.StemRightFromNotehead(2, 2)),
+        new("knee.grace.down-up.first-stem-bottom", GKNA, g => g.StemBottomBelowNotehead(1, 1)),
+        new("knee.grace.down-up.second-stem-top", GKNA, g => g.StemTopAboveNotehead(2, 2)),
+        new("knee.grace.up-down.gap", GKNG, g => g.NoteheadToNotehead(1, 2)),
+        new("knee.grace.up-down.to-main", GKNG, g => g.NoteheadToNotehead(2, 3)),
+        new("knee.grace.up-down.first-stem-top", GKNG, g => g.StemTopAboveNotehead(1, 1)),
+        new("knee.grace.up-down.second-stem-bottom", GKNG, g => g.StemBottomBelowNotehead(2, 2)),
+        new("knee.grace.up-down-down.gap", GKNF, g => g.NoteheadToNotehead(1, 2)),
+        new("knee.grace.up-down-down.inner-gap", GKNF, g => g.NoteheadToNotehead(2, 3)),
+        new("knee.grace.up-down-down.first-stem-top", GKNF, g => g.StemTopAboveNotehead(1, 1)),
+        new("knee.grace.up-down-down.last-stem-bottom", GKNF, g => g.StemBottomBelowNotehead(3, 3)),
         new("breath.grace.prev-to-grace", GBRA, g => g.NoteheadToNotehead(0, 1)),
         new("breath.grace.grace-to-sign", GBRA, g => g.BreathFromNotehead(1)),
         new("breath.grace.sign-to-main", GBRA, g => g.NoteheadFromBreath(2)),

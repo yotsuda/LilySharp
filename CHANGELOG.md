@@ -108,8 +108,11 @@ workflow attaches that section to the GitHub Release verbatim.
   **A grace note's stem can be turned** (`grace { d16@stemDown } e4`,
   `grace { d16@stemDown e16@stemDown } f4`, `@stemUp` in a lower voice): written on every grace note
   of the group, the whole group turns, beam and flags included, spaced as LilyPond spaces it.
-  Written on only some of them, LilyPond would draw a beam with stems on both sides, which Lily#
-  does not draw yet: the group keeps its direction and the warning says so.
+  Written on only some of them, each of those stems turns and the beam takes stems on both sides
+  (a knee), placed, stacked and spaced as LilyPond does it.
+  **A kneed beam of sixteenths or shorter is placed as LilyPond places it**: a stem that reaches
+  through the beam's stack to its far line is scored at that line; without it a kneed pair of
+  sixteenths stood almost a staff space off at one end.
   **A breathing sign or caesura on the last grace note is drawn** (`grace { d16@breath } e4`):
   it stands between the grace notes and the main note, which moves right to make room, as in
   LilyPond.

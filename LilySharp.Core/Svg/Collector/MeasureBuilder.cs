@@ -693,7 +693,8 @@ internal sealed class MeasureBuilder
     /// </param>
     /// <param name="stemDown">
     /// True for a grace written by a lower voice: every note and chord added inside the region
-    /// carries <see cref="MusicItem.GraceStemDown"/> (see that member for LilyPond's rule).
+    /// carries <see cref="MusicItem.GraceStemDown"/> (see that member for LilyPond's rule) —
+    /// unless it writes its own @stemUp / @stemDown (NarrowToGraceTime).
     /// </param>
     public void EnterGraceTime(bool slash = false, bool stemDown = false)
     {
@@ -798,7 +799,10 @@ internal sealed class MeasureBuilder
                 RepeatTieSourcePosition = n.RepeatTieSourcePosition,
                 GraceTime = true,
                 GraceSlash = slash,
-                GraceStemDown = _graceStemDown,
+                // ⚠️ EACH GRACE STEM IS ITS OWN (session 935): score-grace-settings forces every
+                // grace stem, so a written @stemUp / @stemDown is that stem's and the others keep
+                // the voice's — a beam over both is kneed (GraceNoteItem.BeamStemUpOf).
+                GraceStemDown = n.ForcedStemUp is { } forcedUp ? !forcedUp : _graceStemDown,
                 Midi = n.Midi,
                 StringNumber = n.StringNumber,
                 TieStartSourcePosition = n.TieStartSourcePosition,
@@ -847,7 +851,7 @@ internal sealed class MeasureBuilder
                 Parenthesized = c.Parenthesized,
                 GraceTime = true,
                 GraceSlash = slash,
-                GraceStemDown = _graceStemDown,
+                GraceStemDown = c.ForcedStemUp is { } forcedUp ? !forcedUp : _graceStemDown,
                 TieStartSourcePosition = c.TieStartSourcePosition,
                 SlurStartSourcePosition = c.SlurStartSourcePosition,
                 SlurEndSourcePosition = c.SlurEndSourcePosition,

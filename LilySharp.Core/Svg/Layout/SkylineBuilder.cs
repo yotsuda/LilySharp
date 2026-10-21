@@ -1215,7 +1215,11 @@ internal sealed class SkylineBuilder
             // A lower voice's run points DOWN (GraceColumnInfo.StemDown): its beam is the run's
             // BOTTOM edge, seeded into the down skyline from the bottom head, as the renderer
             // draws it.
-            bool up = run.Run.StemUp;
+            // A KNEED run (session 935) is not seeded, exactly as a kneed ordinary beam is not
+            // (AddBeamsToSkyline): its stems stand on both sides of a beam that crosses the staff.
+            if (GraceNoteItem.IsKneeOf(run.Run.Columns))
+                continue;
+            bool up = run.Run.BeamStemUp;
             double sign = up ? 1 : -1;
             double StemX(int i) => run.X + run.Columns.Offsets[i]
                 + size.Span(LayoutUtilities.StemX(0.0, up, graceHeadNoteValue,
