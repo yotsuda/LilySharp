@@ -3733,6 +3733,65 @@ internal sealed class RenderedGeometry
         return heads.Min(h => h.X) - ArpeggioExtent().Right;
     }
 
+    /// <summary>The sole glissando: the one slanted rule at the 0.1 line thickness on the page,
+    /// its ends ordered left to right (device frame).</summary>
+    private (double X1, double Y1, double X2, double Y2) SoleGlissando(int page = 0)
+    {
+        var lines = _pages[page].Lines
+            .Where(l => Math.Abs(l.StrokeWidth - 0.1) < 1e-9
+                        && Math.Abs(l.Y1 - l.Y2) > 1e-6 && Math.Abs(l.X1 - l.X2) > 1e-6)
+            .ToList();
+        if (lines.Count != 1)
+            throw new InvalidOperationException(
+                $"page {page}: expected exactly ONE glissando line, found {lines.Count}.\n"
+                + "Drawn geometry:\n" + Describe());
+        var l = lines[0];
+        return l.X1 <= l.X2 ? (l.X1, l.Y1, l.X2, l.Y2) : (l.X2, l.Y2, l.X1, l.Y1);
+    }
+
+    /// <summary>
+    /// The sole glissando's LEFT end minus notehead <paramref name="headIndex"/>'s anchor —
+    /// LilyPond's draw-line start (its Glissando stencil expression, not the grob's X-extent,
+    /// which a round cap widens by half the line).
+    /// </summary>
+    public double GlissandoStartXFromHead(int headIndex) => SoleGlissando().X1 - NoteheadAnchor(headIndex);
+
+    /// <summary>Notehead <paramref name="headIndex"/>'s anchor minus the sole glissando's RIGHT
+    /// end: the gap left before the target head.</summary>
+    public double GlissandoEndXToHead(int headIndex) => NoteheadAnchor(headIndex) - SoleGlissando().X2;
+
+    /// <summary>
+    /// The length of the sole LEVEL glissando — a glissando between two heads at one pitch is a
+    /// horizontal rule at the 0.1 line, which the slanted selection above passes over; it is
+    /// found as the one horizontal 0.1 rule shorter than 1.0 standing off every staff line.
+    /// </summary>
+    public double LevelGlissandoLength(int page = 0)
+    {
+        var staffYs = StaffLineYs(page);
+        var lines = _pages[page].Lines
+            .Where(l => Math.Abs(l.StrokeWidth - 0.1) < 1e-9 && Math.Abs(l.Y1 - l.Y2) < 1e-9
+                        && Math.Abs(l.X2 - l.X1) > 1e-6 && Math.Abs(l.X2 - l.X1) < 1.0
+                        && staffYs.All(y => Math.Abs(y - l.Y1) > 1e-6))
+            .ToList();
+        if (lines.Count != 1)
+            throw new InvalidOperationException(
+                $"page {page}: expected exactly ONE level glissando, found {lines.Count}.\n"
+                + "Drawn geometry:\n" + Describe());
+        return Math.Abs(lines[0].X2 - lines[0].X1);
+    }
+
+    /// <summary>The sole glissando's LEFT end above the staff's middle line (up positive).</summary>
+    public double GlissandoStartAboveStaffMiddle()
+    {
+        var staffLines = StaffLineYs(0);
+        return staffLines[2] - SoleGlissando().Y1;
+    }
+
+    /// <summary>How many glissando lines (slanted rules at the 0.1 line thickness) are drawn.</summary>
+    public int GlissandoCount(int page = 0) => _pages[page].Lines
+        .Count(l => Math.Abs(l.StrokeWidth - 0.1) < 1e-9
+                    && Math.Abs(l.Y1 - l.Y2) > 1e-6 && Math.Abs(l.X1 - l.X2) > 1e-6);
+
     /// <summary>
     /// The arpeggio wiggle's ink RIGHT edge → the NEXT notehead to its right: the padding read
     /// in a book whose earlier columns stand left of the wiggle (a grace chord after a main

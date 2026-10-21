@@ -35,7 +35,8 @@ internal static class NoteScan
         ImmutableArray<Measure> measures,
         int startMeasureIdx,
         int startItemIdx,
-        Func<MusicItem, bool> match)
+        Func<MusicItem, bool> match,
+        bool includeGraceTime = false)
     {
         // GRACE TIME IS INVISIBLE TO THIS SCAN, for the same reason VoiceScan.WalkVoiceItems
         // steps past it: every caller is looking for the note a span REACHES, and a grace
@@ -46,20 +47,25 @@ internal static class NoteScan
         // ⚠️ SCAFFOLDING; it goes with the rest when ⒝2 lets the ordinary engravers draw
         // grace time (HANDOFF §2 U8), at which point a grace note IS a legal span bound —
         // which is exactly what LilyPond makes of one.
-        static bool Reachable(MusicItem item, Func<MusicItem, bool> match)
-            => !item.GraceTime && match(item);
+        // ⚠️ THE GLISSANDO NO LONGER ASKS FOR IT (session 920, <paramref name="includeGraceTime"/>):
+        // LilyPond 2.26.0 ends `c'4\glissando \grace { g'16 } a'4` AT THE GRACE g (Lab
+        // sessions/p920/gl, ledger glissando.grace.*) — the remark's "slid to the GRACE" was
+        // LilyPond's answer, and its horizontal line came from the bound being read at the
+        // main column, which GlissandoEngraver now reads at the grace's own.
+        static bool Reachable(MusicItem item, Func<MusicItem, bool> match, bool includeGraceTime)
+            => (includeGraceTime || !item.GraceTime) && match(item);
 
         // Rest of the start measure, then every following measure from its first item.
         var current = measures[startMeasureIdx];
         for (int i = startItemIdx + 1; i < current.Items.Length; i++)
-            if (Reachable(current.Items[i], match))
+            if (Reachable(current.Items[i], match, includeGraceTime))
                 return (startMeasureIdx, i, current.Items[i]);
 
         for (int m = startMeasureIdx + 1; m < measures.Length; m++)
         {
             var measure = measures[m];
             for (int i = 0; i < measure.Items.Length; i++)
-                if (Reachable(measure.Items[i], match))
+                if (Reachable(measure.Items[i], match, includeGraceTime))
                     return (m, i, measure.Items[i]);
         }
 
@@ -85,6 +91,8 @@ internal static class NoteScan
     public static (int MeasureIdx, int ItemIdx, MusicItem Item)? FindNextNoteOrChord(
         ImmutableArray<Measure> measures,
         int startMeasureIdx,
-        int startItemIdx)
-        => FindNext(measures, startMeasureIdx, startItemIdx, x => x is NoteItem or ChordItem);
+        int startItemIdx,
+        bool includeGraceTime = false)
+        => FindNext(measures, startMeasureIdx, startItemIdx, x => x is NoteItem or ChordItem,
+            includeGraceTime);
 }

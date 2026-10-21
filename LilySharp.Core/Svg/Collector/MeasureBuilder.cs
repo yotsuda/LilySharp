@@ -753,7 +753,10 @@ internal sealed class MeasureBuilder
                 n.StaffPosition, n.BaseDuration, n.Dots, n.Accidental,
                 n.SourcePosition, hasTieStart: n.HasTieStart,
                 hasSlurStart: n.HasSlurStart, hasSlurEnd: n.HasSlurEnd, isCue: n.IsCue,
-                fingering: n.Fingering)
+                fingering: n.Fingering,
+                // ⚠️ THE GLISSANDO SURVIVES (session 920, ⒟): GlissandoEngraver bounds a line
+                // at a grace head through ElementCoordinator.GraceColumnAt.
+                hasGlissando: n.HasGlissando)
             {
                 GraceTime = true,
                 GraceSlash = slash,
@@ -785,6 +788,7 @@ internal sealed class MeasureBuilder
                 hasArpeggio: c.HasArpeggio)
             {
                 HasArpeggioBracket = c.HasArpeggioBracket,
+                HasGlissando = c.HasGlissando,
                 GraceTime = true,
                 GraceSlash = slash,
                 GraceStemDown = _graceStemDown,

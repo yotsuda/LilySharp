@@ -8902,6 +8902,12 @@ internal static class LpGeometryProbes
     private static readonly string GRAD = GraceTieBook("c4 grace { <d f a>16 } e4 c2 |", "GRAD");
     private static readonly string GRAE = GraceTieBook("c4 grace { <d f a>16@arpeggio(bracket) } e4 c2 |", "GRAE");
     private static readonly string GRAF = GraceTieBook("c4 grace { <d f a>16@arpeggio <e g b>16 } e4 c2 |", "GRAF");
+    // A glissando from or to a grace note (audit/lp-geometry/probes/grace-glissando.ly).
+    private static readonly string GRGA = GraceTieBook("c4 grace { d16@glissando } a4 c2 |", "GRGA");
+    private static readonly string GRGB = GraceTieBook("c4 d16@glissando a8. c2 |", "GRGB");
+    private static readonly string GRGC = GraceTieBook("c4@glissando grace { g16 } a4 c2 |", "GRGC");
+    private static readonly string GRGD = GraceTieBook("c4 grace { d16@glissando e16 } a4 c2 |", "GRGD");
+    private static readonly string GRGS = GraceTieBook("r2 d4@glissando grace { d8 } c4 |", "GRGS");
     // A hairpin's own outline against a head (audit/lp-geometry/probes/hairpin-arm-outline.ly).
     private static readonly string HPOA = GraceTieBook("c4 d4@cresc e4 f4@!cresc |", "HPOA");
     private static readonly string HPOB = GraceTieBook("c4 d4@decresc e4 f4@!cresc |", "HPOB");
@@ -17341,6 +17347,16 @@ internal static class LpGeometryProbes
         new("chordbracket.grace.previous-head-to-bracket", GRAE, g => g.PreviousHeadToChordBracket()),
         new("chordbracket.grace.right-edge-to-head", GRAE, g => g.ChordBracketRightToNextNoteheadLeft()),
         new("chordbracket.grace.length", GRAE, g => g.ChordBracketLength()),
+        new("glissando.grace.start-from-head", GRGA, g => g.GlissandoStartXFromHead(1)),
+        new("glissando.grace.end-to-head", GRGA, g => g.GlissandoEndXToHead(2)),
+        new("glissando.grace.start-above-middle", GRGA, g => g.GlissandoStartAboveStaffMiddle()),
+        new("glissando.grace.control.start-from-head", GRGB, g => g.GlissandoStartXFromHead(1)),
+        new("glissando.grace.control.end-to-head", GRGB, g => g.GlissandoEndXToHead(2)),
+        new("glissando.into-grace.start-from-head", GRGC, g => g.GlissandoStartXFromHead(0)),
+        new("glissando.into-grace.end-to-head", GRGC, g => g.GlissandoEndXToHead(1)),
+        new("glissando.into-grace.start-above-middle", GRGC, g => g.GlissandoStartAboveStaffMiddle()),
+        new("glissando.grace-to-grace.line-count", GRGD, g => g.GlissandoCount()),
+        new("glissando.into-grace.same-pitch.length", GRGS, g => g.LevelGlissandoLength()),
         new("text.grace.below", GRXA, g => g.TextBaselineAboveStaffLine(LilySharp.Core.Rendering.TextRole.Text, 0, 2)),
         new("text.grace.above", GRXB, g => g.TextBaselineAboveStaffLine(LilySharp.Core.Rendering.TextRole.Text, 0, 2)),
         new("text.grace.control", GRXC, g => g.TextBaselineAboveStaffLine(LilySharp.Core.Rendering.TextRole.Text, 0, 2)),

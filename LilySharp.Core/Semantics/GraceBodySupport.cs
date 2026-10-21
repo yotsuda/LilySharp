@@ -408,6 +408,20 @@ internal static class GraceBodySupport
            || annotation is MusicMarkSyntax mark && AnnotationValues.IsArpeggioBracket(mark);
 
     /// <summary>
+    /// True for a GLISSANDO a grace note starts — <c>@glissando</c> (or <c>@slide</c>): a line
+    /// from the grace head to the next note's, each bound a grace head read off the run when it
+    /// is one (session 920; ledger glissando.grace.*). It rides the note
+    /// (<c>HasGlissando</c>, kept by <c>MeasureBuilder.NarrowToGraceTime</c>), so the ordinary
+    /// GlissandoDetector pairs it.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/scheme-engravers.scm Glissando_engraver — a Voice engraver; its bounds
+    ///   are the note heads, a grace's as any.
+    /// </remarks>
+    internal static bool IsCarriedGlissando(SyntaxNode annotation)
+        => annotation is ArticulationSyntax { Name: "glissando" or "slide" };
+
+    /// <summary>
     /// The <c>\N</c> a grace note carries, or null for automatic string selection.
     /// </summary>
     /// <remarks>
@@ -652,7 +666,8 @@ internal static class GraceBodySupport
             {
                 if (NeedsNoColumn(annotation) || IsCarriedScript(annotation) || IsCarriedDynamic(annotation)
                     || IsCarriedText(annotation) || IsCarriedFingering(annotation)
-                    || IsCarriedHairpinStart(annotation) || IsCarriedArpeggio(annotation))
+                    || IsCarriedHairpinStart(annotation) || IsCarriedArpeggio(annotation)
+                    || IsCarriedGlissando(annotation))
                     continue;
                 yield return new GraceDrop(
                     GraceDropKind.Annotation, annotation.Span, Describe(annotation), via);

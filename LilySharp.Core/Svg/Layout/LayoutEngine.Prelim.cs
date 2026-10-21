@@ -1570,7 +1570,7 @@ internal sealed partial class LayoutEngine
                     tieLayouts: staffTies);
             }
             allSlurLayouts.AddRange(staffSlurs);
-            allGlissandoLayouts.AddRange(_elementCoordinator.LayoutGlissandos(staffSpannerScore, systemsArray, staffIndex));
+            allGlissandoLayouts.AddRange(_elementCoordinator.LayoutGlissandos(staffSpannerScore, systemsArray, staffIndex, score.GraceNotes));
         }
         var ties = allTieLayouts.ToImmutableArray();
         var slurs = allSlurLayouts.ToImmutableArray();

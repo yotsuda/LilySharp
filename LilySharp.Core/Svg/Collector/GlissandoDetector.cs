@@ -36,7 +36,9 @@ internal sealed class GlissandoDetector
         // Each voice runs its own glissando engraver; VoiceScan walks them all so a
         // second voice's glissando is not lost.
         // LILYPOND-REF: scm/scheme-engravers.scm — Glissando_engraver per Voice.
-        foreach (var (v, measures, measureIdx, itemIdx, item) in VoiceScan.WalkVoiceItems(score))
+        // GRACE TIME IS WALKED (session 920, HANDOFF §2 U8 ⒟): a grace note starts a glissando
+        // and ends one, as in LilyPond — each bound a head, a grace head as any.
+        foreach (var (v, measures, measureIdx, itemIdx, item) in VoiceScan.WalkVoiceItemsWithGraceTime(score))
         {
             // The start column contributes every note head as a line of its own — a
             // chord glissando is a FAN, one Glissando per member. A chord start used
@@ -58,7 +60,7 @@ internal sealed class GlissandoDetector
 
             // Glissandos connect to the next note of any pitch — a note OR
             // a chord (a chord endpoint used to be skipped, dropping the gliss).
-            var endItem = NoteScan.FindNextNoteOrChord(measures, measureIdx, itemIdx);
+            var endItem = NoteScan.FindNextNoteOrChord(measures, measureIdx, itemIdx, includeGraceTime: true);
             if (endItem == null)
                 continue;
             var (endMeasureIdx, endItemIdx, endNode) = endItem.Value;

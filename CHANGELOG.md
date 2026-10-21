@@ -72,7 +72,10 @@ workflow attaches that section to the GitHub Release verbatim.
   (`grace { d16@cresc } e4 f4 g4@f` — the wedge opens at the grace note, or just after a
   dynamic written on it), and **a grace chord takes an arpeggio**
   (`grace { <d f a>16@arpeggio } e4`, or the bracket) — full size, with room made for it; it was
-  drawn over the grace notes before, while a warning said it was dropped. A hairpin running over a
+  drawn over the grace notes before, while a warning said it was dropped. **A glissando can start
+  on a grace note** (`grace { d16@glissando } a4`), and **one written into a grace note ends at
+  it**, as LilyPond draws it — `c4@glissando grace { g16 } a4` ran over the grace note to the a.
+  A hairpin running over a
   grace note also stands where LilyPond puts it — it read the grace note's stem as a full-size
   down stem and sat a quarter space too low.
 - **A hairpin sits where LilyPond puts it when a note under it is what holds it down.** Lily#

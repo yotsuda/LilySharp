@@ -7385,6 +7385,76 @@
       "residual": 0.0,
       "why": "EXACT. The bracket's length, full size: the head interval widened 0.75 either side."
     },
+    "glissando.grace.start-from-head": {
+      "probe": "grace-glissando.ly",
+      "score": "GGA",
+      "lilypond": 1.14522331,
+      "residual": 0.0,
+      "why": "EXACT. `grace { d16@glissando } a4`: the line starts at the GRACE head's right edge (its ink out of the grace's head font) pulled 0.5 inward along the line; the value is the line's left end minus the grace head's anchor. Until session 920 the grace's glissando was dropped (LYS4020): the narrowed note had lost HasGlissando, GlissandoDetector walked past grace time, and GlissandoEngraver read a grace item at the main column."
+    },
+    "glissando.grace.end-to-head": {
+      "probe": "grace-glissando.ly",
+      "score": "GGA",
+      "lilypond": 0.227284691,
+      "residual": 0.0,
+      "why": "EXACT. The same line's right end to the main a's head: the padding taken along a line that rises one staff space over 1.02."
+    },
+    "glissando.grace.start-above-middle": {
+      "probe": "grace-glissando.ly",
+      "score": "GGA",
+      "lilypond": -2.054644334,
+      "residual": 0.0,
+      "why": "EXACT. The left end's height: the grace d's position plus the padding's rise share."
+    },
+    "glissando.grace.control.start-from-head": {
+      "probe": "grace-glissando.ly",
+      "score": "GGB",
+      "lilypond": 1.597683786,
+      "residual": 0.0,
+      "why": "EXACT. The full-size CONTROL: the same line from a d16 on the main grid. The ledger's first glissando points (the bound law itself had only GlissandoBoundTests' 0.01 literals)."
+    },
+    "glissando.grace.control.end-to-head": {
+      "probe": "grace-glissando.ly",
+      "score": "GGB",
+      "lilypond": 0.293483786,
+      "residual": 0.0,
+      "why": "EXACT. The control's right end."
+    },
+    "glissando.into-grace.start-from-head": {
+      "probe": "grace-glissando.ly",
+      "score": "GGC",
+      "lilypond": 1.576339645,
+      "residual": 0.0,
+      "why": "EXACT. `c4@glissando grace { g16 } a4`: LilyPond ends the line AT THE GRACE g -- the next note head of the voice, grace or not. Until session 920 Lily# skipped grace time on purpose (NoteScan's remark called the grace target a defect) and drew the line through the grace head to the a's column: the start sat 1.70 from the c (now 1.576340), the end 1.54 PAST the grace head."
+    },
+    "glissando.into-grace.end-to-head": {
+      "probe": "grace-glissando.ly",
+      "score": "GGC",
+      "lilypond": 0.272139645,
+      "residual": 0.0,
+      "why": "EXACT. The line stops the padding short of the grace g's head (its left ink at the grace's font)."
+    },
+    "glissando.into-grace.start-above-middle": {
+      "probe": "grace-glissando.ly",
+      "score": "GGC",
+      "lilypond": -2.58054796,
+      "residual": 0.0,
+      "why": "EXACT. The slope is c' to the grace g' (it read c' to a' until session 920)."
+    },
+    "glissando.into-grace.same-pitch.length": {
+      "probe": "grace-glissando.ly",
+      "score": "GGS",
+      "lilypond": 0.097595999,
+      "residual": 0.0,
+      "why": "EXACT. `d4@glissando grace { d8 } c4`: LilyPond ends the line at the grace d, a short LEVEL line (0.097596 long) stopping the padding short of the grace head. NoteScan's remark called this very book a defect and skipped grace time so the line slid on to the c; test/ossia-beams.lys is the one corpus page it moves (session 920)."
+    },
+    "glissando.grace-to-grace.line-count": {
+      "probe": "grace-glissando.ly",
+      "score": "GGD",
+      "lilypond": 0.0,
+      "residual": 0.0,
+      "why": "EXACT. `grace { d16@glissando e16 }`: the two grace heads stand 0.5 apart and a step apart, so the line is shorter than its two paddings (1.0) and neither engine draws it (LilyPond's Glissando X-extent is empty)."
+    },
     "text.grace.below": {
       "probe": "grace-text.ly",
       "score": "GXA",

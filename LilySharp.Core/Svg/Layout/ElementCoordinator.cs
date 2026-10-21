@@ -4003,6 +4003,37 @@ internal sealed class ElementCoordinator
         => new GraceBounds(graceNotes, staffIndex).ColumnX(voice, voiceIndex, measureIndex, itemIndex, ml, voiceShifts);
 
     /// <summary>
+    /// The GRACE column item <paramref name="itemIndex"/> of measure <paramref name="measureIndex"/>
+    /// in voice <paramref name="voiceIndex"/> stands as — its <see cref="GraceColumnInfo"/> and its
+    /// head left X — or null when the item is no grace column a group publishes. For the readers
+    /// that need the column's own heads and accidentals at the grace's fonts as well as its X
+    /// (an arpeggio's support, a glissando's bound; sessions 919-920).
+    /// </summary>
+    internal static (GraceColumnInfo Column, double HeadLeftX)? GraceColumnAt(Voice voice,
+        ImmutableArray<GraceNoteItem> graceNotes, int staffIndex, int voiceIndex, int measureIndex,
+        int itemIndex, MeasureLayout ml, VoiceCollisionTable voiceShifts)
+    {
+        if (graceNotes.IsDefaultOrEmpty || measureIndex >= voice.Measures.Length
+            || itemIndex < 0 || itemIndex >= voice.Measures[measureIndex].Items.Length
+            || !voice.Measures[measureIndex].Items[itemIndex].GraceTime)
+            return null;
+        foreach (var g in graceNotes)
+        {
+            if (g.StaffIndex != staffIndex || g.VoiceIndex != voiceIndex || g.MeasureIndex != measureIndex
+                || g.ColumnItemIndices.IsDefaultOrEmpty || g.ColumnItemIndices.Length != g.Columns.Length)
+                continue;
+            int k = g.ColumnItemIndices.IndexOf(itemIndex);
+            if (k < 0)
+                continue;
+            return GraceColumnHeadLeftX(voice, graceNotes, staffIndex, voiceIndex, measureIndex,
+                    itemIndex, ml, voiceShifts) is { } x
+                ? (g.Columns[k], x)
+                : null;
+        }
+        return null;
+    }
+
+    /// <summary>
     /// The grace groups of one staff, as a tie bound reads them: where a GRACE column's head
     /// stands, by the same chain a grace slur's bound reads (<see cref="GraceColumnX"/>), its
     /// group geometry solved once and cached.
@@ -5774,7 +5805,7 @@ internal sealed class ElementCoordinator
     /// <remarks>
     /// LILYPOND-REF: scm/scheme-engravers.scm
     /// </remarks>
-    public ImmutableArray<GlissandoLayout> LayoutGlissandos(Score score, ImmutableArray<SystemLayout> systems, int staffIndex = -1)
+    public ImmutableArray<GlissandoLayout> LayoutGlissandos(Score score, ImmutableArray<SystemLayout> systems, int staffIndex = -1, ImmutableArray<GraceNoteItem> graceNotes = default)
     {
         var glissandos = _glissandoDetector.DetectGlissandos(score);
 
@@ -5787,7 +5818,10 @@ internal sealed class ElementCoordinator
         foreach (var group in glissandos.GroupBy(g => g.VoiceIndex))
             layouts.AddRange(GlissandoEngraver.Calculate(
                 group.ToImmutableArray(), systems, staffIndex,
-                score.Voices[group.Key].Measures));
+                score.Voices[group.Key].Measures,
+                // A bound on a GRACE note reads the grace column (session 920).
+                graceNotes.IsDefault ? score.GraceNotes : graceNotes, score.Voices[group.Key], group.Key,
+                SpacingRules.VoiceCollisionShiftsOf(score.Voices)));
         return layouts.ToImmutable();
     }
 }

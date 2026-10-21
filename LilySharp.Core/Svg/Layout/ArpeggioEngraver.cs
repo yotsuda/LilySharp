@@ -412,26 +412,8 @@ internal static class ArpeggioEngraver
     {
         if (graceNotes.IsDefaultOrEmpty || voices.IsDefaultOrEmpty || arp.VoiceIndex >= voices.Length)
             return null;
-        var voice = voices[arp.VoiceIndex];
-        if (arp.MeasureIndex >= voice.Measures.Length
-            || arp.ItemIndex >= voice.Measures[arp.MeasureIndex].Items.Length
-            || !voice.Measures[arp.MeasureIndex].Items[arp.ItemIndex].GraceTime)
-            return null;
-        foreach (var g in graceNotes)
-        {
-            if (g.StaffIndex != arp.StaffIndex || g.VoiceIndex != arp.VoiceIndex
-                || g.MeasureIndex != arp.MeasureIndex || g.ColumnItemIndices.IsDefaultOrEmpty
-                || g.ColumnItemIndices.Length != g.Columns.Length)
-                continue;
-            int k = g.ColumnItemIndices.IndexOf(arp.ItemIndex);
-            if (k < 0)
-                continue;
-            return ElementCoordinator.GraceColumnHeadLeftX(voice, graceNotes, arp.StaffIndex,
-                    arp.VoiceIndex, arp.MeasureIndex, arp.ItemIndex, measure,
-                    SpacingRules.VoiceCollisionShiftsOf(voices)) is { } x
-                ? (g.Columns[k], x)
-                : null;
-        }
-        return null;
+        return ElementCoordinator.GraceColumnAt(voices[arp.VoiceIndex], graceNotes, arp.StaffIndex,
+            arp.VoiceIndex, arp.MeasureIndex, arp.ItemIndex, measure,
+            SpacingRules.VoiceCollisionShiftsOf(voices));
     }
 }

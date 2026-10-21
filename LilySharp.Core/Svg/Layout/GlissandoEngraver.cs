@@ -106,7 +106,11 @@ internal static class GlissandoEngraver
         ImmutableArray<GlissandoItem> glissandos,
         ImmutableArray<SystemLayout> systems,
         int staffIndex = -1,
-        ImmutableArray<Measure> measures = default)
+        ImmutableArray<Measure> measures = default,
+        ImmutableArray<GraceNoteItem> graceNotes = default,
+        Voice? voice = null,
+        int voiceIndex = 0,
+        VoiceCollisionTable? voiceShifts = null)
     {
         if (glissandos.IsDefaultOrEmpty || glissandos.Length == 0)
             return ImmutableArray<GlissandoLayout>.Empty;
@@ -145,6 +149,16 @@ internal static class GlissandoEngraver
                 measures, gliss.EndMeasureIndex, gliss.EndItemIndex, endMeasure)
                 + (LeftmostAccidentalInkX(endItem)
                    ?? HeadInkEdge(endItem, gliss.EndMemberIndex, right: false));
+            // A bound on a GRACE note (session 920, HANDOFF §2 U8 ⒟) is the grace HEAD: its
+            // column's X read off the run, its ink and its accidentals out of the grace's own
+            // fonts. GetItemXOffset answers no grace column, and until session 920 a glissando
+            // INTO a grace note (`c4@glissando grace { g16 } a4`) ran over the grace head to the
+            // main note's column. MEASURED (2.26.0, audit/lp-geometry/probes/grace-glissando.ly).
+            if (GraceBound(gliss.StartMeasureIndex, gliss.StartItemIndex, startMeasure) is { } gs)
+                realStartX = gs.HeadLeftX + GraceHeadInkEdge(gs.Column, gliss.StartStaffPosition, right: true);
+            if (GraceBound(gliss.EndMeasureIndex, gliss.EndItemIndex, endMeasure) is { } ge)
+                realEndX = ge.HeadLeftX + (GraceAccidentalInkLeft(ge.Column)
+                    ?? GraceHeadInkEdge(ge.Column, gliss.EndStaffPosition, right: false));
 
             // Native Y-up (staff-spaces above this glissando's staff middle):
             // a staff position p sits p/2 spaces above the middle line. The former
@@ -258,6 +272,41 @@ internal static class GlissandoEngraver
         }
 
         return layouts.ToImmutableArray();
+
+        (GraceColumnInfo Column, double HeadLeftX)? GraceBound(int measureIndex, int itemIndex, MeasureLayout ml)
+            => voice is null || graceNotes.IsDefaultOrEmpty
+                ? null
+                : ElementCoordinator.GraceColumnAt(voice, graceNotes, Math.Max(staffIndex, 0), voiceIndex,
+                    measureIndex, itemIndex, ml, voiceShifts ?? SpacingRules.VoiceCollisionShiftsOf(ImmutableArray.Create(voice)));
+    }
+
+    /// <summary>A grace bound head's ink edge in its column's frame — the head at
+    /// <paramref name="staffPosition"/> (a chord's member), out of the grace's head font.</summary>
+    private static double GraceHeadInkEdge(GraceColumnInfo column, int staffPosition, bool right)
+    {
+        var offsets = GraceColumnHeads.HeadOffsets(column);
+        double offset = 0;
+        if (!offsets.IsDefaultOrEmpty)
+            for (int i = 0; i < column.Heads.Length && i < offsets.Length; i++)
+                if (column.Heads[i].StaffPosition == staffPosition)
+                {
+                    offset = offsets[i];
+                    break;
+                }
+        return offset + (right
+            ? GlyphMetrics.GetNoteheadBBox(column.Font, GlyphMetrics.NoteValueOf(column.BaseDuration)).Right
+            : 0);
+    }
+
+    /// <summary>The LEFT ink edge of a grace target column's accidentals in its frame, out
+    /// of the grace's accidental font, or null when it prints none.</summary>
+    private static double? GraceAccidentalInkLeft(GraceColumnInfo column)
+    {
+        double? best = null;
+        foreach (var x in GraceColumnHeads.AccidentalOffsets(column))
+            if (x is { } v && (best is not { } b || v < b))
+                best = v;
+        return best;
     }
 
     /// <summary>The item a glissando bound resolves against, or null off the map.</summary>
