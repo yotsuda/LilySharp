@@ -160,6 +160,15 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第929セッションの経緯
+
+### 1.1 第929セッション（2026-10-21・YT-DELL2）
+
+第928 と同じ会話の続き（ユーザー「続けて」）。`-Start p929`（開始 HEAD `149a86c01`・未 push 36・full **12639 / 0 / 2 / 12641**・第927 を ARCHIVE へ）。作業場所は Lab `sessions/p929/`。
+- **和音の構成音の `@editorial` を描く＝`90c755d83`**（第928 が見つけた穴＝`<d f@editorial>4` は普通の大きさでも黙って何も描かなかった）: `CreateChordItem` が構成音ごとに単音と同じ規則で種類を決め（無ければ調の臨時記号・左の臨時記号は消す）、注釈の位置を鍵に `_memberEditorialBySource` へ残す。`CollectArticulations` の editorial の枝は構成音ならそれを引く。置き方は単音の suggestion のまま（第928 の mover＋箱）。LP 2.26（`probes/editorial-chord.ly` ECA〜ECC）＝台帳 6 点が 1 回目で一致（`editorial.chord.*`・2 つの構成音は下の音の分が先に譜表に乗り、もう一方はその箱の上に 0.46 で積む＝LP と同じ順・grace の和音も）。毒＝解決を外す 6 赤・左の臨時記号を残す 1 赤。全 svg の掃き 1,242 枚で 0（構成音の `@editorial` はコーパスに無い）。
+- `-End p929 -DiffBase 149a86c01`＝full **12647 / 0 / 2 / 12649**（前便末 +8）（Lab `sessions/p929/end.log`）→ この docs commit。未 push 37＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。
+判定（2026-10-21）: 和音の構成音の `@editorial` は閉じた。grace の LYS4020 の残り＝`@breath`・`@caesura`（列組み・未特定 2 つ）・`@pluck`・`@diagram`・`@notehead(…)`・`@cross`・`@laissezVibrer`/`@repeatTie`・`@dead`/`@parenthesize`・`@stemUp`/`@stemDown`・`@figuredBass`・`@chord`・TAB の技法。
+
 ## 以下は第928セッションの経緯
 
 ### 1.1 第928セッション（2026-10-21・YT-DELL2）
