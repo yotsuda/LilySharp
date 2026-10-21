@@ -647,7 +647,8 @@ internal static class GraceBodySupport
     /// holds no column for yet; an afterGrace's run hangs off the spacer that ends its main
     /// note, with no change column after it. Both stay reported (LYS4020).
     /// </para>
-    /// LILYPOND-REF: lily/breathing-sign-engraver.cc — a Voice engraver, deaf to grace time;
+    /// LILYPOND-REF: scm/scheme-engravers.scm:43 Breathing_sign_engraver process-music — a Voice engraver, deaf to grace time.
+    /// LILYPOND-REF: lily/caesura-engraver.cc:237 Caesura_engraver::make_or_remake_grobs — the caesura's, the same.
     /// scm/define-grobs.scm:697-731 BreathingSign (break-aligned, non-musical).
     /// </remarks>
     internal static ArticulationSyntax? CarriedBreath(IReadOnlyList<GraceBodyElement> elements, bool afterGrace)

@@ -5,7 +5,7 @@
 %%
 %% Run:  cmd /d /s /c "lilypond.exe -dbackend=null grace-breath.ly < NUL > out.log 2>&1"
 %%
-%% LILYPOND-REF: lily/breathing-sign-engraver.cc — a Voice engraver, deaf to grace time;
+%% LILYPOND-REF: scm/scheme-engravers.scm:43 Breathing_sign_engraver process-music — a Voice engraver, deaf to grace time;
 %%   scm/define-grobs.scm:697-731 BreathingSign (break-aligned, first-note fixed-space 1.0).
 %% GBB is the control without the sign; an INNER grace's sign (Lab sessions/p923/br BRD) is
 %% not ported (Lily# reports it).
