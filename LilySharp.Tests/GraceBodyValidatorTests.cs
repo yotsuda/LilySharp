@@ -80,7 +80,8 @@ public class GraceBodyValidatorTests
     // arpeggios (session 919, ledger arpeggio.grace.*; see
     // AnArpeggioOnAGraceChord_IsDrawn_AndNotReported).
     // `grace { d'8@glissando }` LEFT with the glissandos (session 920, ledger glissando.grace.*;
-    // see AGlissandoFromAGrace_IsDrawn_AndNotReported).
+    // see AGlissandoFromAGrace_IsDrawn_AndNotReported). The text spanners followed (session 921;
+    // see ATextSpannerOnAGrace_IsDrawn_AndNotReported).
     [InlineData("grace { d'8@sustain } c'1 | e'1 |", "grace { d'8 } c'1 | e'1 |")]
     // ⚠️ `grace { d'8. }` LEFT THIS THEORY ON 2026-08-30 (session 299), which is the way a
     // row is meant to leave it: the dot is drawn now, so the line asserting it is missing
@@ -234,6 +235,22 @@ public class GraceBodyValidatorTests
     {
         Assert.Empty(Warnings(Book(written)));
         Assert.NotEqual(Page(written.Replace("@glissando", "")), Page(written));
+    }
+
+    /// <summary>
+    /// A TEXT SPANNER that starts or ends on a grace note is drawn (session 921, HANDOFF §2 U8
+    /// ⒟): the bound is the grace column (ledger textspanner.grace.*). Nothing is reported. An
+    /// `@!rit` on a grace used to be dropped, which left its spanner unclosed (LYS4018) and
+    /// undrawn.
+    /// </summary>
+    [Theory]
+    [InlineData("grace { d'8@rit } c'1 | e'1@!rit |", "grace { d'8 } c'1 | e'1 |")]
+    [InlineData("c'1@rit | grace { d'8@!rit } e'1 |", "c'1 | grace { d'8 } e'1 |")]
+    [InlineData("grace { d'8@textSpan(\"poco rit.\") } c'1 | e'1@!textSpan |", "grace { d'8 } c'1 | e'1 |")]
+    public void ATextSpannerOnAGrace_IsDrawn_AndNotReported(string written, string control)
+    {
+        Assert.Empty(Warnings(Book(written)));
+        Assert.NotEqual(Page(control), Page(written));
     }
 
     /// <summary>

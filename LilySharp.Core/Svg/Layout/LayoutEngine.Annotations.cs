@@ -796,7 +796,9 @@ internal sealed partial class LayoutEngine
             ctx.MultiScore, TextSpannerEngraver.DetectTextSpanners(musicMarks, sectionPlays),
             static t => t.StaffIndex);
         var textSpannerLayouts = TextSpannerEngraver.Calculate(textSpannerItems, systems, ml, dynamicLayouts, staffYAt, ctx.Fonts,
-            voicesByStaff);
+            voicesByStaff,
+            score != null && staffVoices.IsDefaultOrEmpty ? ImmutableArray.Create(score.Voice) : staffVoices,
+            ctx.GraceNotes);
 
         // Detect and layout ottava brackets from ottava/loco marks
         var ottavaItems = OttavaBracketEngraver.DetectOttavaBrackets(musicMarks, sectionPlays);

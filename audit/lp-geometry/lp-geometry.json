@@ -7455,6 +7455,34 @@
       "residual": 0.0,
       "why": "EXACT. `grace { d16@glissando e16 }`: the two grace heads stand 0.5 apart and a step apart, so the line is shorter than its two paddings (1.0) and neither engine draws it (LilyPond's Glissando X-extent is empty)."
     },
+    "textspanner.grace.label-to-notehead": {
+      "probe": "grace-textspanner.ly",
+      "score": "GRA",
+      "lilypond": 0.25,
+      "residual": 0.0,
+      "why": "EXACT. `grace { d16@rit }`: the \"rit.\" starts the bound padding 0.25 right of the GRACE head -- TextSpannerEngraver.BoundX reads a grace bound off the run (ElementCoordinator.GraceColumnAt). Until session 921 the grace's @rit was dropped (LYS4020): the collector's grace gate let no text span through."
+    },
+    "textspanner.grace.staff-to-line": {
+      "probe": "grace-textspanner.ly",
+      "score": "GRA",
+      "lilypond": 2.85,
+      "residual": 0.0,
+      "why": "EXACT. Its level: the floor, as for the control (the small grace head reaches nothing up there)."
+    },
+    "textspanner.grace.control.label-to-notehead": {
+      "probe": "grace-textspanner.ly",
+      "score": "GRB",
+      "lilypond": 0.25,
+      "residual": 0.0,
+      "why": "EXACT. The full-size CONTROL: the same spanner from a d16 on the main grid."
+    },
+    "textspanner.grace.ends-on-grace.label-to-notehead": {
+      "probe": "grace-textspanner.ly",
+      "score": "GRC",
+      "lilypond": 0.25,
+      "residual": 0.0,
+      "why": "EXACT. A spanner from the c4 that ENDS on a grace note (`grace { f16@!rit }`): its start stands as ever. Until session 921 the grace's @!rit was dropped, so the spanner was never closed: LYS4018 (an error) and nothing drawn. The right end now stops at the grace column; its arithmetic is the unported right bound every text spanner shares (LilyPond 14.758355 against the grace head's 14.239041 -- TextSpannerEngraver's remark), so no point reads it."
+    },
     "text.grace.below": {
       "probe": "grace-text.ly",
       "score": "GXA",

@@ -422,6 +422,25 @@ internal static class GraceBodySupport
         => annotation is ArticulationSyntax { Name: "glissando" or "slide" };
 
     /// <summary>
+    /// True for a TEXT SPANNER's start or end a grace note carries — <c>@rit</c>,
+    /// <c>@accel</c>, <c>@rall</c>, <c>@textSpan("…")</c> and the <c>@!rit</c> that ends one:
+    /// the bound is the grace column, read off the run (session 921; ledger
+    /// textspanner.grace.*). THE question the collector and the drop list both ask.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/text-spanner-engraver.cc — a Voice engraver; its bounds are note
+    ///   columns, a grace's as any.
+    /// </remarks>
+    internal static bool IsCarriedTextSpan(SyntaxNode annotation) => annotation switch
+    {
+        ArticulationSyntax a => Svg.Model.MusicMarkItem.ParseMarkName(a.Name) == Svg.Model.MusicMarkType.TextSpanStart,
+        MusicMarkSyntax { IsSpanEnd: true } end
+            => Svg.Model.MusicMarkItem.ParseSpanEndName(end.Name) == Svg.Model.MusicMarkType.TextSpanStop,
+        MusicMarkSyntax mark => Svg.Model.MusicMarkItem.ParseMarkName(mark.Name) == Svg.Model.MusicMarkType.TextSpanStart,
+        _ => false,
+    };
+
+    /// <summary>
     /// The <c>\N</c> a grace note carries, or null for automatic string selection.
     /// </summary>
     /// <remarks>
@@ -667,7 +686,7 @@ internal static class GraceBodySupport
                 if (NeedsNoColumn(annotation) || IsCarriedScript(annotation) || IsCarriedDynamic(annotation)
                     || IsCarriedText(annotation) || IsCarriedFingering(annotation)
                     || IsCarriedHairpinStart(annotation) || IsCarriedArpeggio(annotation)
-                    || IsCarriedGlissando(annotation))
+                    || IsCarriedGlissando(annotation) || IsCarriedTextSpan(annotation))
                     continue;
                 yield return new GraceDrop(
                     GraceDropKind.Annotation, annotation.Span, Describe(annotation), via);

@@ -1184,8 +1184,9 @@ sets it), and a hairpin that starts there (`grace { d16@cresc } c4 e4@f` — the
 the grace note), and an arpeggio on a grace chord (`grace { <d f a>16@arpeggio } e4`, full size,
 the grace chord moving right to make room, as in LilyPond; `@arpeggio(bracket)` too), and a
 glissando from a grace note (`grace { d16@glissando } a4`). A glissando INTO a grace note ends
-there, as in LilyPond: `c4@glissando grace { g16 } a4` slides from the c to the grace g. A
-sustain pedal and a text spanner (`@rit`) on a grace note are not drawn yet (LYS4020).
+there, as in LilyPond: `c4@glissando grace { g16 } a4` slides from the c to the grace g. A text
+spanner can start or end on a grace note too (`grace { d16@rit } e4 f g@!rit`,
+`c4@rit e grace { f16@!rit } g`). A sustain pedal on a grace note is not drawn yet (LYS4020).
 
 LilyPond draws all of the spellings above, so each warning says "not drawn yet", not "do not
 write this".

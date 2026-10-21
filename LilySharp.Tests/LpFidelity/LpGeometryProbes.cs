@@ -8908,6 +8908,10 @@ internal static class LpGeometryProbes
     private static readonly string GRGC = GraceTieBook("c4@glissando grace { g16 } a4 c2 |", "GRGC");
     private static readonly string GRGD = GraceTieBook("c4 grace { d16@glissando e16 } a4 c2 |", "GRGD");
     private static readonly string GRGS = GraceTieBook("r2 d4@glissando grace { d8 } c4 |", "GRGS");
+    // A text spanner from or to a grace note (audit/lp-geometry/probes/grace-textspanner.ly).
+    private static readonly string GRTA = GraceTieBook("c4 grace { d16@rit } e4 f4 g4@!rit |", "GRTA");
+    private static readonly string GRTB = GraceTieBook("c4 d16@rit e8. f4 g4@!rit |", "GRTB");
+    private static readonly string GRTC = GraceTieBook("c4@rit e4 grace { f16@!rit } g4 a4 |", "GRTC");
     // A hairpin's own outline against a head (audit/lp-geometry/probes/hairpin-arm-outline.ly).
     private static readonly string HPOA = GraceTieBook("c4 d4@cresc e4 f4@!cresc |", "HPOA");
     private static readonly string HPOB = GraceTieBook("c4 d4@decresc e4 f4@!cresc |", "HPOB");
@@ -17356,6 +17360,10 @@ internal static class LpGeometryProbes
         new("glissando.into-grace.end-to-head", GRGC, g => g.GlissandoEndXToHead(1)),
         new("glissando.into-grace.start-above-middle", GRGC, g => g.GlissandoStartAboveStaffMiddle()),
         new("glissando.grace-to-grace.line-count", GRGD, g => g.GlissandoCount()),
+        new("textspanner.grace.label-to-notehead", GRTA, g => g.TextSpannerLabelPenToNotehead(1)),
+        new("textspanner.grace.staff-to-line", GRTA, g => g.TextSpannerLineAboveStaff()),
+        new("textspanner.grace.control.label-to-notehead", GRTB, g => g.TextSpannerLabelPenToNotehead(1)),
+        new("textspanner.grace.ends-on-grace.label-to-notehead", GRTC, g => g.TextSpannerLabelPenToNotehead(0)),
         new("glissando.into-grace.same-pitch.length", GRGS, g => g.LevelGlissandoLength()),
         new("text.grace.below", GRXA, g => g.TextBaselineAboveStaffLine(LilySharp.Core.Rendering.TextRole.Text, 0, 2)),
         new("text.grace.above", GRXB, g => g.TextBaselineAboveStaffLine(LilySharp.Core.Rendering.TextRole.Text, 0, 2)),

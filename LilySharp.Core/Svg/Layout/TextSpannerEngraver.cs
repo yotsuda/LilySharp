@@ -198,7 +198,9 @@ internal static class TextSpannerEngraver
         ImmutableArray<DynamicLayout> dynamicLayouts,
         Func<int, int, double>? staffYAt = null,
         ScoreTextMetrics? fonts = null,
-        Dictionary<int, ImmutableArray<Voice>>? voicesByStaff = null)
+        Dictionary<int, ImmutableArray<Voice>>? voicesByStaff = null,
+        ImmutableArray<Voice> voices = default,
+        ImmutableArray<GraceNoteItem> graceNotes = default)
     {
         if (textSpanners.IsDefaultOrEmpty)
             return ImmutableArray<TextSpannerLayout>.Empty;
@@ -237,9 +239,9 @@ internal static class TextSpannerEngraver
                 //   bound-details) and that branch is NOT PORTED HERE. No ledger point reads a
                 //   broken piece's left edge, so it is named rather than guessed at.
                 var spannerVoices = voicesByStaff != null
-                    && voicesByStaff.TryGetValue(spanner.StaffIndex, out var vv) ? vv : default;
+                    && voicesByStaff.TryGetValue(spanner.StaffIndex, out var vv) ? vv : voices;
                 double startX;
-                if (segment.IsFirst && BoundX(measureLayouts[segment.StartMeasureIndex], spannerVoices,
+                if (segment.IsFirst && BoundX(measureLayouts[segment.StartMeasureIndex], spannerVoices, graceNotes, spanner.StaffIndex,
                         spanner.VoiceIndex, spanner.StartMeasureIndex, spanner.StartItemIndex) is { } startItemX)
                 {
                     startX = measureLayouts[segment.StartMeasureIndex].X + startItemX + BoundPadding;
@@ -260,7 +262,7 @@ internal static class TextSpannerEngraver
                 if (segment.IsLast)
                 {
                     var endMeasure = measureLayouts[segment.EndMeasureIndex];
-                    if (BoundX(endMeasure, spannerVoices, spanner.VoiceIndex,
+                    if (BoundX(endMeasure, spannerVoices, graceNotes, spanner.StaffIndex, spanner.VoiceIndex,
                             spanner.EndMeasureIndex, spanner.EndItemIndex) is { } endItemX)
                     {
                         endX = endMeasure.X + endItemX - BoundPadding;
@@ -329,10 +331,19 @@ internal static class TextSpannerEngraver
     /// builds layouts directly) the slots are read as before.
     /// </remarks>
     private static double? BoundX(MeasureLayout ml, ImmutableArray<Voice> voices,
+        ImmutableArray<GraceNoteItem> graceNotes, int staffIndex,
         int voiceIndex, int measureIndex, int itemIndex)
     {
         if (itemIndex < 0)
             return null;
+        // A bound on a GRACE note (session 921, HANDOFF §2 U8 ⒟) is the grace column, read off
+        // the run: GetItemXOffset answers no grace column. MEASURED (2.26.0,
+        // audit/lp-geometry/probes/grace-spanners.ly GRA): `grace { d16@rit }` starts its "rit."
+        // the padding 0.25 right of the grace head, as a main note's does of its own.
+        if (!graceNotes.IsDefaultOrEmpty && !voices.IsDefaultOrEmpty && voiceIndex < voices.Length
+            && ElementCoordinator.GraceColumnAt(voices[voiceIndex], graceNotes, staffIndex, voiceIndex,
+                measureIndex, itemIndex, ml, SpacingRules.VoiceCollisionShiftsOf(voices)) is { } grace)
+            return grace.HeadLeftX - ml.X;
         if (voices.IsDefaultOrEmpty)
             return itemIndex < ml.Items.Length ? ml.Items[itemIndex].X : null;
         var measures = LayoutUtilities.ResolveVoiceMeasures(voices, voiceIndex, default);
@@ -603,7 +614,8 @@ internal static class TextSpannerEngraver
         ImmutableArray<TextSpannerItem> spanners,
         ImmutableArray<MeasureLayout> measureLayouts,
         VerticalSkyline accumulatedUp,
-        ImmutableArray<Voice> voices = default)
+        ImmutableArray<Voice> voices = default,
+        ImmutableArray<GraceNoteItem> graceNotes = default)
     {
         var ink = new VerticalSkyline(VerticalDirection.Up);
         if (spanners.IsDefaultOrEmpty || measureLayouts.IsDefaultOrEmpty)
@@ -633,11 +645,11 @@ internal static class TextSpannerEngraver
             if (startLayout is null || endLayout is null)
                 continue;
 
-            double startX = startsHere && BoundX(startLayout, voices, spanner.VoiceIndex,
+            double startX = startsHere && BoundX(startLayout, voices, graceNotes, spanner.StaffIndex, spanner.VoiceIndex,
                     spanner.StartMeasureIndex, spanner.StartItemIndex) is { } sx
                 ? startLayout.X + sx + BoundPadding
                 : startLayout.X + BoundPadding;
-            double endX = endsHere && BoundX(endLayout, voices, spanner.VoiceIndex,
+            double endX = endsHere && BoundX(endLayout, voices, graceNotes, spanner.StaffIndex, spanner.VoiceIndex,
                     spanner.EndMeasureIndex, spanner.EndItemIndex) is { } ex
                 ? endLayout.X + ex - BoundPadding
                 : endLayout.X + endLayout.Width - BoundPadding;
