@@ -124,6 +124,16 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第936セッション（2026-10-22・YT-DELL2）
+
+第935 と同じ会話の続き（ユーザー「続けて」）。`-Start p936`（開始 HEAD `b64fc092b`・未 push 52・full **12746 / 0 / 2 / 12748**・第934 を ARCHIVE へ）。作業場所は Lab `sessions/p936/`。
+- **途中の grace の `@breath`/`@caesura` を描く＝`ef7f22351`**: 第923 の BRD の「次の grace は記号の右 0.699（一部説明できない）」は**記号の右端から測っていた**のが原因＝記号の**左端**から測ると (0.5066 + 1.0) × 0.8 = 1.205280 で、「grace の前に書いた変更」（`midmeasure.clef.clef-to-grace`＝Staff_spacing × 0.8）と同じ規則。grace → 記号は最後の grace の記号と同じ 0.891339（左の列にも grace 部分があるので 0.8 は掛からない＝spacing-spanner.cc:396-403）。caesura は (2.0 + 1.0) × 0.8 = 2.4。⚠️ **LP の自動連桁は呼吸記号で終わり、記号より後の grace は二度と連桁にならない（旗付き）**（auto-beam-engraver.cc:319-322 `acknowledge_breathing_sign`・GBH／GBJ）。**caesura は終わらせない**（GBG＝1 本の連桁）。手書きの `[ ]` は記号をまたいで続く（Lab `p936/lp/fl.ly` FK）＝⒝（Lily# は grace の連桁を全部自動として読む）。実装: `GraceBodySupport.InnerBreaths`（音か和音の自分の注記・次の列も音か和音・afterGrace と休符の前は LYS4020 のまま）→ collector が門を通し、grace 時間の `AddBreathingSignColumn` が列を記録して `GraceColumnInfo.BreathAfter` に刻む → `SpacingRules.InnerBreathSprings` がその間隔を 2 本のばねに割る（`GraceIntoChangeColumn` は列を取るようにした）・`BeamedPrefix` は呼吸記号の列で連桁を終える → `ElementCoordinator.GraceInnerBreathX` が次の列から記号のばねの分だけ戻して描く（記号のばねは fixed-space＝伸びた段でも正確）。⒝ 縮んだ段では 2 本を 1 つの間隔として縮める（rod と縮みの強さを足す）。台帳 17 点（`breath.grace.inner.*`・`caesura.grace.inner.*`・probe `grace-breath.ly` GBF〜GBJ）＝**1 回目の読みで全部 1e-6 以内**。毒 10 本は全部赤（分割 4・連桁の終わり 8・caesura も終える 2・0.8 倍 5・記号の X 7・注記の門 7・報告の一覧 4・列の記録 16・列の指定 1・描く分岐 7）。全 svg の掃き 1,242 枚で 0。定数の棚卸しは改行だけ（中身の差 0）。`RehearsalMarkEngravedValidatorTests` と `TheWarningStandsAtWhatWasWritten` の「まだ描かない記号」は休符の前の記号に替えた。SYNTAX_REFERENCE の LYS4020 の例（第934 から古かった `grace { d16@breath }`）は afterGrace に替えた。
+- ⚠️ **普通の大きさの caesura で連桁が LP と違う（新しい欠陥・未着手）**: LP は呼吸記号で自動連桁を終え（Lab `p936/lp/fl2.ly` BN＝`d16 \breathe e16 f8` の d は旗付き・e f は連桁＝Lily# も同じ）、**caesura では終えない**（CN＝d〜f の 1 本の連桁）。Lily# は `c4 d16@caesura e16 f8` でも d を旗付きにして連桁を切る（Lab `p936/look/full.lys` の png）。
+- `-End p936 -DiffBase b64fc092b` ＝full **12770 / 0 / 2 / 12772**（前便末 +24）（Lab `sessions/p936/end.log`）→ この docs commit。未 push 53＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。
+判定（2026-10-22）: grace の呼吸記号は途中も最後も閉じた（休符の前と afterGrace は LYS4020 のまま）。次の候補＝普通の大きさの caesura が連桁を切る欠陥（上の ⚠️・⒜＝LP で測れる）・slur が膝の grace 連桁を避ける形（主線で読む＝⒝）・grace の LYS4020 の残り（`@pluck`・TAB の技法・`@diagram`・`@cross`・`@figuredBass`・`@chord`）。
+
+## 以下は第935セッションの経緯
+
 ### 1.1 第935セッション（2026-10-22・YT-DELL2）
 
 第934 と同じ会話の続き（ユーザー「続けて」）。`-Start p935`（開始 HEAD `162e3c8fd`・未 push 49・full **12724 / 0 / 2 / 12726**・第933 を ARCHIVE へ）。作業場所は Lab `sessions/p935/`。
@@ -131,16 +141,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - 1 回目の `-End` は full で 1 赤＝`CitationsThatNameNothing_DoNotGrow`（括弧の中の `lily/beam.cc:1129-1145` と `define-grobs.scm:531 Beam (neutral-direction . DOWN)`＝検査が記号と読むのは `_` を含むか 3 語以上のハイフン語だけ・define-grobs の行は囲む form の名前も照合される）＝`46b5a1bd8` で直した。
 - `-End p935 -DiffBase 162e3c8fd`（2 回目）＝full **12746 / 0 / 2 / 12748**（前便末 +22）（Lab `sessions/p935/end.log`）→ この docs commit。未 push 51＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。
 判定（2026-10-22）: grace の符尾の向きと膝の連桁は閉じた。残り＝途中の grace の呼吸記号（grace の列組みに変更の列）・slur が膝の grace 連桁を避ける形（主線で読む＝⒝）。grace の LYS4020 の残り＝`@pluck`・TAB の技法（字形も置き場所も Lily# 独自＝LP と照合できる部分が少ない）・`@diagram`・`@cross`（譜表をまたぐ）・`@figuredBass`・`@chord`。
-
-## 以下は第934セッションの経緯
-
-### 1.1 第934セッション（2026-10-22・YT-DELL2）
-
-第933 と同じ会話の続き（ユーザー「続けて」）。`-Start p934`（開始 HEAD `7f0df8fa7`・未 push 46・full **12710 / 0 / 2 / 12712**・第932 を ARCHIVE へ）。作業場所は Lab `sessions/p934/`。
-- **grace の最後の音の `@breath`/`@caesura` を描く＝`66bd26f5d`**: LP 2.26（`probes/grace-breath.ly`）は記号に**自分の列**を grace の時刻に立てる＝最後の grace と主音符の間・主音符は記号＋first-note fixed-space 1.0 だけ右へ。これは「grace の後ろに書いた変更」（`grace { d16 } clef bass e4`・台帳 `midmeasure.clef.grace-then-clef.*`）と同じ並び ⇒ `GraceBodySupport.CarriedBreath`（本体の**最後の**列＝音か和音の自分の注記・afterGrace は除く）を collector（`ProcessGraceRegion`＝grace の歩きの後に普通の `BreathingSignItem` を足す・`AddBreathingSignColumn` は grace 時間では何もしない）と drop list が読み、grace 時間の注記の門はその 1 つだけを書いた位置（`_carriedGraceBreathStart`）で通す＝`ArticulationEngraver` が列の位置に描く。既存の `MidMeasureChangeAfterGraceSeries` がそのまま値を出した＝台帳 8 点（`breath.grace.*`・`caesura.grace.*`）が 1 回目で 1e-6 以内。計器 `BreathFromNotehead`・`NoteheadFromBreath`。⚠️ 途中の grace の記号（grace の列と列の間に列が要る・Lab `p923/br` BRD＝次の grace は記号の右 0.699）と afterGrace の記号は LYS4020 のまま。毒＝本体の答え 11 赤・注記の門 11 赤・列を足さない 7 赤・drop list 4 赤・grace 時間の門 1 赤（最初は緑＝誰も読まない grace 時間の item が残るだけ ⇒ `ABreathOnTheLastGrace_IsOneColumnBeforeTheMainNote` を足して赤）。全 svg の掃き 1,242 枚で 0。
-- 1 回目の `-End` は full で 2 赤＝⑴ 引用 `lily/breathing-sign-engraver.cc` は LP に無い（呼吸記号は `scm/scheme-engravers.scm` の `Breathing_sign_engraver`・caesura は `lily/caesura-engraver.cc`・1 行 1 引用でないと記号の照合が誤る）⑵ `RehearsalMarkEngravedValidatorTests` が「grace の @breath は描かれない」を主張していた＝途中の grace の記号に替えた＝`fc5740ac1`。⚠️ grace の振る舞いを変えたら、`GraceBodyValidatorTests` の外にも grace の否定を主張する試験がある（今回は `RehearsalMarkEngraved…`）＝絞った filter では見えない。
-- `-End p934 -DiffBase 7f0df8fa7`（2 回目）＝full **12724 / 0 / 2 / 12726**（前便末 +14）（Lab `sessions/p934/end.log`）→ この docs commit。未 push 48＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。
-判定（2026-10-22）: grace の最後の呼吸記号は閉じた。残り＝途中の grace の呼吸記号（grace の列組みに変更の列を挟む）・向きが割れた grace の膝の連桁。grace の LYS4020 の残り＝`@pluck`・`@diagram`・`@cross`（譜表をまたぐ）・`@figuredBass`・`@chord`・TAB の技法。
 
 ## 2. 開いている作業
 

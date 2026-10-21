@@ -160,6 +160,16 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第934セッションの経緯
+
+### 1.1 第934セッション（2026-10-22・YT-DELL2）
+
+第933 と同じ会話の続き（ユーザー「続けて」）。`-Start p934`（開始 HEAD `7f0df8fa7`・未 push 46・full **12710 / 0 / 2 / 12712**・第932 を ARCHIVE へ）。作業場所は Lab `sessions/p934/`。
+- **grace の最後の音の `@breath`/`@caesura` を描く＝`66bd26f5d`**: LP 2.26（`probes/grace-breath.ly`）は記号に**自分の列**を grace の時刻に立てる＝最後の grace と主音符の間・主音符は記号＋first-note fixed-space 1.0 だけ右へ。これは「grace の後ろに書いた変更」（`grace { d16 } clef bass e4`・台帳 `midmeasure.clef.grace-then-clef.*`）と同じ並び ⇒ `GraceBodySupport.CarriedBreath`（本体の**最後の**列＝音か和音の自分の注記・afterGrace は除く）を collector（`ProcessGraceRegion`＝grace の歩きの後に普通の `BreathingSignItem` を足す・`AddBreathingSignColumn` は grace 時間では何もしない）と drop list が読み、grace 時間の注記の門はその 1 つだけを書いた位置（`_carriedGraceBreathStart`）で通す＝`ArticulationEngraver` が列の位置に描く。既存の `MidMeasureChangeAfterGraceSeries` がそのまま値を出した＝台帳 8 点（`breath.grace.*`・`caesura.grace.*`）が 1 回目で 1e-6 以内。計器 `BreathFromNotehead`・`NoteheadFromBreath`。⚠️ 途中の grace の記号（grace の列と列の間に列が要る・Lab `p923/br` BRD＝次の grace は記号の右 0.699）と afterGrace の記号は LYS4020 のまま。毒＝本体の答え 11 赤・注記の門 11 赤・列を足さない 7 赤・drop list 4 赤・grace 時間の門 1 赤（最初は緑＝誰も読まない grace 時間の item が残るだけ ⇒ `ABreathOnTheLastGrace_IsOneColumnBeforeTheMainNote` を足して赤）。全 svg の掃き 1,242 枚で 0。
+- 1 回目の `-End` は full で 2 赤＝⑴ 引用 `lily/breathing-sign-engraver.cc` は LP に無い（呼吸記号は `scm/scheme-engravers.scm` の `Breathing_sign_engraver`・caesura は `lily/caesura-engraver.cc`・1 行 1 引用でないと記号の照合が誤る）⑵ `RehearsalMarkEngravedValidatorTests` が「grace の @breath は描かれない」を主張していた＝途中の grace の記号に替えた＝`fc5740ac1`。⚠️ grace の振る舞いを変えたら、`GraceBodyValidatorTests` の外にも grace の否定を主張する試験がある（今回は `RehearsalMarkEngraved…`）＝絞った filter では見えない。
+- `-End p934 -DiffBase 7f0df8fa7`（2 回目）＝full **12724 / 0 / 2 / 12726**（前便末 +14）（Lab `sessions/p934/end.log`）→ この docs commit。未 push 48＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。
+判定（2026-10-22）: grace の最後の呼吸記号は閉じた。残り＝途中の grace の呼吸記号（grace の列組みに変更の列を挟む）・向きが割れた grace の膝の連桁。grace の LYS4020 の残り＝`@pluck`・`@diagram`・`@cross`（譜表をまたぐ）・`@figuredBass`・`@chord`・TAB の技法。
+
 ## 以下は第933セッションの経緯
 
 ### 1.1 第933セッション（2026-10-21・YT-DELL2）
