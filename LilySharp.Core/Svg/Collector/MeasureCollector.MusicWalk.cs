@@ -2212,7 +2212,10 @@ public sealed partial class MeasureCollector
                 _meta.Clef = clefAfterGrace;
             itemIndex = builder.CurrentItemCount;
         }
-        if (node is NoteSyntax note && HasCourtesyAnnotation(note))
+        // In grace time the question is LYS4020's own (GraceBodySupport.IsCarriedCourtesy), so
+        // the parens are drawn exactly when they are not reported (session 927).
+        if (node is NoteSyntax note && HasCourtesyAnnotation(note)
+            && (_graceDepth == 0 || ArticulationsOf(note).Any(Semantics.GraceBodySupport.IsCarriedCourtesy)))
             _courtesySourcePositions.Add(note.SourceStart);
         return (itemIndex, _cueDepth > 0, GetFeatherDirection(node));
     }

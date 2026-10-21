@@ -747,7 +747,7 @@ internal static partial class SharedRenderer
                        ? gc.MusicFace(GrobFontSize.DesignOf(note, SizedGrob.Accidental))
                        : NullScope.Instance)
                     DrawAccidentalAtInkLeft(note.Accidental, note.IsCourtesy, inkLeft, noteY,
-                        note.SourcePosition, gc, accScale);
+                        note.SourcePosition, gc, accScale, accFont);
         }
 
         // Notehead — skipped when this head merges with another voice's (head wipe)
@@ -1137,7 +1137,7 @@ internal static partial class SharedRenderer
                    ? gc.MusicFace(GrobFontSize.DesignOf(chord, SizedGrob.Accidental))
                    : NullScope.Instance)
                 DrawAccidentalAtInkLeft(al.Accidental, al.IsCourtesy,
-                    accOriginX + al.XOffset, ay, accSource, gc, accScale);
+                    accOriginX + al.XOffset, ay, accSource, gc, accScale, chordAccFont);
         }
 
         // topY/bottomY are the visually top/bottom heads. In the Y-up frame the top

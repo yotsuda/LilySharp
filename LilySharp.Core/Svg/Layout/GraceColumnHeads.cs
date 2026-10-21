@@ -239,7 +239,7 @@ internal static class GraceColumnHeads
         {
             var h = column.Heads[i];
             notes[i] = new ChordNoteInfo(
-                h.StaffPosition, h.Accidental, IsCourtesy: false);
+                h.StaffPosition, h.Accidental, IsCourtesy: h.IsCourtesy);
         }
         return notes;
     }

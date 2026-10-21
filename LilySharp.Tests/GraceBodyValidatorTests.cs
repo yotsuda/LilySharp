@@ -321,6 +321,19 @@ public class GraceBodyValidatorTests
     }
 
     /// <summary>
+    /// A COURTESY accidental on a grace note is drawn in parentheses (session 927, ledger
+    /// courtesy.grace.*). Nothing is reported.
+    /// </summary>
+    [Theory]
+    [InlineData("grace { d'8@courtesy } c'1 | e'1 |", "grace { d'8 } c'1 | e'1 |")]
+    [InlineData("grace { fis'8@courtesy } c'1 | e'1 |", "grace { fis'8 } c'1 | e'1 |")]
+    public void ACourtesyAccidentalOnAGrace_IsDrawn_AndNotReported(string written, string control)
+    {
+        Assert.Empty(Warnings(Book(written)));
+        Assert.NotEqual(Page(control), Page(written));
+    }
+
+    /// <summary>
     /// The grace body that draws exactly what it says draws no warning either. This is the
     /// case that catches a validator that has quietly become "warn about every grace".
     /// </summary>

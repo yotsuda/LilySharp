@@ -87,6 +87,9 @@ workflow attaches that section to the GitHub Release verbatim.
   written on a grace ends the bracket before it, as LilyPond's `\ottava #0` there does.
   **A phrasing slur can start, stop or close on grace notes** (`grace { d16@phrasingSlur } e4 f4
   g4@!phrasingSlur`); one inside a grace body keeps its two grace notes apart by its minimum length.
+  **A courtesy accidental is drawn in parentheses on a grace note** (`grace { fis16@courtesy } g4`).
+  A reduced courtesy accidental (a grace's, a cue's) assembles its parentheses from its own small
+  font's shapes; the right one stood a little short before.
   A hairpin running over a
   grace note also stands where LilyPond puts it — it read the grace note's stem as a full-size
   down stem and sat a quarter space too low.

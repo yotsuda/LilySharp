@@ -6469,8 +6469,11 @@ public sealed partial class MeasureCollector
                 // (GrobFontSize's remarks name that gap), so a rest column stays at 0.
                 case NoteItem note:
                     columns.Add(new GraceColumnInfo(
-                        note.StaffPosition, note.Accidental,
-                        note.BaseDuration, note.Midi, note.StringNumber, note.Dots)
+                        // The courtesy parens ride the head (session 927): the column's packing
+                        // and skylines read them as a full-size note's do.
+                        ImmutableArray.Create(new GraceHeadInfo(note.StaffPosition, note.Accidental,
+                            note.Midi, note.StringNumber, IsCourtesy: note.IsCourtesy)),
+                        note.BaseDuration, note.Dots)
                     { ContextFontSizeStep = note.IsCue ? EngravingDefaults.CueFontSizeStep : 0, StemDown = stemDown });
                     break;
 
@@ -6484,7 +6487,7 @@ public sealed partial class MeasureCollector
                         foreach (var member in chord.Notes)
                             heads.Add(new GraceHeadInfo(
                                 member.StaffPosition, member.Accidental,
-                                member.Midi, member.StringNumber));
+                                member.Midi, member.StringNumber, IsCourtesy: member.IsCourtesy));
                         heads.Sort(static (a, b) => a.StaffPosition.CompareTo(b.StaffPosition));
                         columns.Add(new GraceColumnInfo(
                             heads.ToImmutable(), chord.BaseDuration, chord.Dots,

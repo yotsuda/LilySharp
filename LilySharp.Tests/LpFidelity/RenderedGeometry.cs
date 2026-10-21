@@ -3884,6 +3884,48 @@ internal sealed class RenderedGeometry
         return accs.Min(AccidentalInkLeft) - ArpeggioExtent().Right;
     }
 
+    /// <summary>
+    /// The sole COURTESY accidental's parenthesised extent: the left paren's box left to the
+    /// right paren's box right, at the size they were drawn — LilyPond's AccidentalCautionary
+    /// X-extent, which is the parenthesised stencil's.
+    /// </summary>
+    private (double Left, double Right) CourtesyParens()
+    {
+        var lefts = Glyphs.Where(g => g.Glyph == EmmentalerGlyphs.AccidentalLeftParen).ToList();
+        var rights = Glyphs.Where(g => g.Glyph == EmmentalerGlyphs.AccidentalRightParen).ToList();
+        if (lefts.Count != 1 || rights.Count != 1)
+            throw new InvalidOperationException(
+                $"expected ONE courtesy accidental, found {lefts.Count} left / {rights.Count} right parens.\n"
+                + "Drawn geometry:\n" + Describe());
+        // The DESIGN the drawn size selects — the font-size step back from the point size
+        // (6 steps an octave) — because Emmentaler is optically sized: a grace's −4 parens are
+        // the fourteen design's, not the twenty's shrunk.
+        var font = LilySharp.Core.Svg.Layout.MusicFont.Current.SizedAt((int)Math.Round(
+            6 * Math.Log2(lefts[0].FontSize / LilySharp.Core.Rendering.SharedRenderer.FontSize)));
+        double l = lefts[0].X + font.Box(LilySharp.Core.Svg.MusicGlyph.AccidentalParensLeft).Left;
+        double r = rights[0].X + font.Box(LilySharp.Core.Svg.MusicGlyph.AccidentalParensRight).Right;
+        return (l, r);
+    }
+
+    /// <summary>The sole courtesy accidental's width, parens included.</summary>
+    public double CourtesyParensSpan()
+    {
+        var (l, r) = CourtesyParens();
+        return r - l;
+    }
+
+    /// <summary>The sole courtesy accidental's right paren → the anchor of the first notehead
+    /// right of it: the gap it keeps from the head it belongs to.</summary>
+    public double CourtesyParensToNotehead()
+    {
+        var (_, r) = CourtesyParens();
+        foreach (var g in Glyphs)   // left to right
+            if (g.X > r - 1e-9 && IsNotehead(g.Glyph))
+                return g.X - r;
+        throw new InvalidOperationException(
+            "no notehead after the courtesy accidental.\nDrawn geometry:\n" + Describe());
+    }
+
     /// <summary>An accidental glyph's ink LEFT edge: its draw origin plus the glyph's own
     /// left bearing at the size it was drawn.</summary>
     private static double AccidentalInkLeft(DrawnGlyph g)

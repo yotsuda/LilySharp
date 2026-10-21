@@ -66,7 +66,10 @@ public readonly record struct GraceHeadInfo(
     // MEASURED (scratch/p308/lp, y1_gsecond `\grace { <c' d'>16 }` against y2_nsecond):
     // LilyPond shifts the upper head of a second inside a GRACE chord by 0.8530 where it
     // shifts a full-size one by 1.2392 — the ordinary chord rule at the grace's scale.
-    double HeadXOffset = 0
+    double HeadXOffset = 0,
+    // The head's accidental is a COURTESY one, in parentheses (`@courtesy`, LilyPond's `?`) —
+    // session 927: the column's packing and skylines read the parens as a full-size note's do.
+    bool IsCourtesy = false
 );
 
 /// <summary>

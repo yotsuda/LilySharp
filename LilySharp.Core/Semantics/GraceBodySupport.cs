@@ -513,6 +513,20 @@ internal static class GraceBodySupport
         _ => false,
     };
 
+    /// <summary>
+    /// True for a COURTESY accidental a grace note carries — <c>@courtesy</c>, LilyPond's
+    /// <c>?</c>: the accidental is drawn in parentheses at the grace's accidental size, and the
+    /// grace column's packing and skylines read the parens (session 927; ledger
+    /// courtesy.grace.*). THE question the collector and the drop list both ask.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/accidental-engraver.cc — the cautionary accidental is an
+    ///   AccidentalCautionary grob of the grace's Voice, at general-grace-settings' Accidental
+    ///   font-size like any grace accidental.
+    /// </remarks>
+    internal static bool IsCarriedCourtesy(SyntaxNode annotation)
+        => annotation is ArticulationSyntax { Name: "courtesy" };
+
     private static bool IsOttavaType(Svg.Model.MusicMarkType? type)
         => type is Svg.Model.MusicMarkType.OttavaUp or Svg.Model.MusicMarkType.OttavaDown
             or Svg.Model.MusicMarkType.QuindicesUp or Svg.Model.MusicMarkType.QuindicesDown
@@ -771,7 +785,8 @@ internal static class GraceBodySupport
                     || IsCarriedHairpinStart(annotation) || IsCarriedArpeggio(annotation)
                     || IsCarriedGlissando(annotation) || IsCarriedTextSpan(annotation)
                     || IsCarriedPedal(annotation) || IsCarriedTrillSpan(annotation)
-                    || IsCarriedOttava(annotation) || IsCarriedPhrasingSlur(annotation))
+                    || IsCarriedOttava(annotation) || IsCarriedPhrasingSlur(annotation)
+                    || IsCarriedCourtesy(annotation))
                     continue;
                 yield return new GraceDrop(
                     GraceDropKind.Annotation, annotation.Span, Describe(annotation), via);

@@ -8912,6 +8912,27 @@ internal static class LpGeometryProbes
     private static readonly string GRTA = GraceTieBook("c4 grace { d16@rit } e4 f4 g4@!rit |", "GRTA");
     private static readonly string GRTB = GraceTieBook("c4 d16@rit e8. f4 g4@!rit |", "GRTB");
     private static readonly string GRTC = GraceTieBook("c4@rit e4 grace { f16@!rit } g4 a4 |", "GRTC");
+    // A courtesy accidental on a grace note (audit/lp-geometry/probes/grace-courtesy.ly).
+    private static string GraceKeyBook(string key, string music, string name) => $$"""
+        octave absolute
+        time 4/4
+        {{key}}
+
+        part m { clef treble }
+
+        section Main {
+          m { {{music}} }
+        }
+
+        form { ~Main }
+
+        score {{name}} {
+          staff m
+        }
+        """;
+    private static readonly string GCTA = GraceKeyBook("key g major", "c4 grace { fis16@courtesy } e4 f4 g4 |", "GCTA");
+    private static readonly string GCTC = GraceKeyBook("key g major", "c4 fis16@courtesy e8. f4 g4 |", "GCTC");
+    private static readonly string GCTD = GraceKeyBook("", "c4 grace { d16@courtesy } e4 f4 g4 |", "GCTD");
     // A phrasing slur starting, stopping or closing on grace notes (audit/lp-geometry/probes/grace-phrasing.ly).
     private static readonly string GPHA = GraceTieBook("c4 grace { d16@phrasingSlur } e4 f4 g4@!phrasingSlur |", "GPHA");
     private static readonly string GPHB = GraceTieBook("c4 d16@phrasingSlur e8. f4 g4@!phrasingSlur |", "GPHB");
@@ -17394,6 +17415,12 @@ internal static class LpGeometryProbes
         new("textspanner.grace.staff-to-line", GRTA, g => g.TextSpannerLineAboveStaff()),
         new("textspanner.grace.control.label-to-notehead", GRTB, g => g.TextSpannerLabelPenToNotehead(1)),
         new("textspanner.grace.ends-on-grace.label-to-notehead", GRTC, g => g.TextSpannerLabelPenToNotehead(0)),
+        new("courtesy.grace.sharp.span", GCTA, g => g.CourtesyParensSpan()),
+        new("courtesy.grace.sharp.to-notehead", GCTA, g => g.CourtesyParensToNotehead()),
+        new("courtesy.grace.natural.span", GCTD, g => g.CourtesyParensSpan()),
+        new("courtesy.grace.natural.to-notehead", GCTD, g => g.CourtesyParensToNotehead()),
+        new("courtesy.grace.control.span", GCTC, g => g.CourtesyParensSpan()),
+        new("courtesy.grace.control.to-notehead", GCTC, g => g.CourtesyParensToNotehead()),
         new("phrasing.grace.left-attachment", GPHA, g => g.BowAttachmentAboveStaffMiddle(0)),
         new("phrasing.grace.span", GPHA, g => g.BowSpan(0)),
         new("phrasing.grace.control.left-attachment", GPHB, g => g.BowAttachmentAboveStaffMiddle(0)),

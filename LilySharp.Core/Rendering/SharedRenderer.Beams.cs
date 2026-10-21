@@ -753,7 +753,7 @@ internal static partial class SharedRenderer
     /// <remarks>LILYPOND-REF: lily/accidental-placement.cc position_apes.</remarks>
     private static void DrawAccidentalAtInkLeft(
         string accidentalKind, bool isCourtesy, double inkLeftX, double noteheadY,
-        int sourcePosition, IDrawingContext gc, double scale = 1.0)
+        int sourcePosition, IDrawingContext gc, double scale = 1.0, MusicFontDesign? font = null)
     {
         var accBBox = GlyphMetrics.GetAccidentalBBox(accidentalKind);
         // Cue columns pass scale < 1: the glyph AND its bbox-derived offsets shrink
@@ -786,16 +786,24 @@ internal static partial class SharedRenderer
         {
             // Same paren assembly as DrawAccidental, anchored at the ink left.
             // LILYPOND-REF: lily/accidental.cc:35-46 — parenthesize()
-            var leftParen = MusicFont.Current.FullSize.Box(MusicGlyph.AccidentalParensLeft);
-            var rightParen = MusicFont.Current.FullSize.Box(MusicGlyph.AccidentalParensRight);
-            double accInkLeft = inkLeftX + leftParen.Width * scale;
+            // ⚠️ A REDUCED accidental (a grace's −4, a cue's) assembles out of ITS OWN design's
+            // boxes, which the placement packed it by (AccidentalPlacement's glyph pair): the
+            // optically sized design is not the twenty shrunk. Until session 927 the parens
+            // read the twenty scaled, and a grace's right paren stood 0.0244 left of where its
+            // own skyline put it (ledger courtesy.grace.*). `font` is null at full size, so
+            // that path is the old arithmetic, byte for byte.
+            double k = font is null ? scale : 1.0;
+            var leftParen = (font ?? MusicFont.Current.FullSize).Box(MusicGlyph.AccidentalParensLeft);
+            var rightParen = (font ?? MusicFont.Current.FullSize).Box(MusicGlyph.AccidentalParensRight);
+            var bodyBox = font is null ? accBBox : GlyphMetrics.GetAccidentalBBox(font, accidentalKind);
+            double accInkLeft = inkLeftX + leftParen.Width * k;
             using (gc.Source(sourcePosition))
             {
                 gc.DrawAttachedGlyph(Music(MusicGlyph.AccidentalParensLeft),
-                    accInkLeft - leftParen.Right * scale, noteheadY, fs);
-                DrawBody(accInkLeft - accBBox.Left * scale);
+                    accInkLeft - leftParen.Right * k, noteheadY, fs);
+                DrawBody(accInkLeft - bodyBox.Left * k);
                 gc.DrawAttachedGlyph(Music(MusicGlyph.AccidentalParensRight),
-                    accInkLeft + accBBox.Width * scale - rightParen.Left * scale, noteheadY, fs);
+                    accInkLeft + bodyBox.Width * k - rightParen.Left * k, noteheadY, fs);
             }
         }
         else

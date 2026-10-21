@@ -777,7 +777,10 @@ internal sealed class MeasureBuilder
                 fingering: n.Fingering,
                 // ⚠️ THE GLISSANDO SURVIVES (session 920, ⒟): GlissandoEngraver bounds a line
                 // at a grace head through ElementCoordinator.GraceColumnAt.
-                hasGlissando: n.HasGlissando)
+                hasGlissando: n.HasGlissando,
+                // ⚠️ THE COURTESY PARENS SURVIVE (session 927): the ordinary note drawer draws a
+                // grace's accidental, and it reads them off the item.
+                isCourtesy: n.IsCourtesy)
             {
                 GraceTime = true,
                 GraceSlash = slash,
@@ -803,7 +806,7 @@ internal sealed class MeasureBuilder
                 // The members keep the same seven answers and their fingerings (session 917) —
                 // a member can carry its own notehead style too, and that is a drop here.
                 c.Notes.Select(static m => new ChordNoteInfo(
-                    m.StaffPosition, m.Accidental,
+                    m.StaffPosition, m.Accidental, IsCourtesy: m.IsCourtesy,
                     Fingering: m.Fingering,
                     StringNumber: m.StringNumber, Midi: m.Midi,
                     SourcePosition: m.SourcePosition, WrittenPitch: m.WrittenPitch)).ToImmutableArray(),

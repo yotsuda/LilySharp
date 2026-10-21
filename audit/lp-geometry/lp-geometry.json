@@ -7483,6 +7483,48 @@
       "residual": 0.0,
       "why": "EXACT. A spanner from the c4 that ENDS on a grace note (`grace { f16@!rit }`): its start stands as ever. Until session 921 the grace's @!rit was dropped, so the spanner was never closed: LYS4018 (an error) and nothing drawn. The right end now stops at the grace column; its arithmetic is the unported right bound every text spanner shares (LilyPond 14.758355 against the grace head's 14.239041 -- TextSpannerEngraver's remark), so no point reads it."
     },
+    "courtesy.grace.sharp.span": {
+      "probe": "grace-courtesy.ly",
+      "score": "CTA",
+      "lilypond": 1.473307678504051,
+      "residual": -0.000004509504,
+      "why": "`grace { fis16@courtesy }` in G major (LilyPond's fis?16): the cautionary sharp in parentheses at the grace's Accidental font-size -4, its width parens included. Until session 927 the grace's @courtesy was reported (LYS4020) and the parens were not drawn; the flag now rides the grace item (NarrowToGraceTime) and its head (GraceHeadInfo.IsCourtesy, read by the column's packing), and the ordinary note drawer assembles the parens out of the -4 design's OWN boxes (SharedRenderer.DrawAccidentalAtInkLeft's font) -- with the twenty's boxes scaled the right paren stood 0.0244 short. The -4.5e-6 left is unexplained (below any drawn difference)."
+    },
+    "courtesy.grace.sharp.to-notehead": {
+      "probe": "grace-courtesy.ly",
+      "score": "CTA",
+      "lilypond": 0.350399974936476,
+      "residual": 0.000001310063524,
+      "why": "The right paren to the grace head: the accidental's padding at the grace's size, as the full-size control keeps 0.35. The +1.3e-6 is the same unexplained term as the span's (with it, the left paren stands 3.2e-6 right and the right one 1.3e-6 left of LilyPond's)."
+    },
+    "courtesy.grace.natural.span": {
+      "probe": "grace-courtesy.ly",
+      "score": "CTD",
+      "lilypond": 1.200324784360162,
+      "residual": -0.00000366936,
+      "why": "A cautionary NATURAL on a grace (`grace { d16@courtesy }`, LilyPond's d?16): the same assembly with the natural's box."
+    },
+    "courtesy.grace.natural.to-notehead": {
+      "probe": "grace-courtesy.ly",
+      "score": "CTD",
+      "lilypond": 0.350399974936474,
+      "residual": 0.000001310063526,
+      "why": "Its gap, the sharp's to nine digits."
+    },
+    "courtesy.grace.control.span": {
+      "probe": "grace-courtesy.ly",
+      "score": "CTC",
+      "lilypond": 2.3,
+      "residual": 0.0,
+      "why": "EXACT. The full-size CONTROL of CTA (fis?16 on the main grid), drawn by the twenty's boxes as before."
+    },
+    "courtesy.grace.control.to-notehead": {
+      "probe": "grace-courtesy.ly",
+      "score": "CTC",
+      "lilypond": 0.35,
+      "residual": 0.0,
+      "why": "EXACT. The control's gap."
+    },
     "phrasing.grace.left-attachment": {
       "probe": "grace-phrasing.ly",
       "score": "PHA",
