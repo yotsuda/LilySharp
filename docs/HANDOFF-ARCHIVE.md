@@ -160,6 +160,17 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第925セッションの経緯
+
+### 1.1 第925セッション（2026-10-21・YT-DELL2）
+
+第924 と同じ会話の続き（ユーザー「続けて」）。`-Start p925`（開始 HEAD `646975cfe`・未 push 25・full 12599 / **1** / 2 / 12602＝`MagicConstantInventoryTests.TheCensusIsNotStale`・開始チェックのビルド中にこちらが源を書き換えていた・第923 を ARCHIVE へ）。作業場所は Lab `sessions/p925/`。
+- **grace の ottava（`@ottava`・`@ottava(bassa)`・`@quindicesima`・`@!ottava`）を描く＝`e23469eaf`**: `GraceBodySupport.IsCarriedOttava`・`OttavaBracketEngraver.ItemX` が grace の項目を `GraceColumnAt` で読む（始まりと支えの列）。**grace で止める形は直す所が無かった**＝右端は `StaffLastColumnBefore` が grace を飛ばして直前の主音符で止め（LP の `\ottava #0` を grace の中に書いた形と同じ）、`OttavaTransposer` の窓も止めの項目で終わる＝grace は書いた高さ。8va の範囲の中の grace は前から移調されていた。LP 2.26（`probes/grace-ottava.ly` OGA〜OGJ）＝台帳 8 点・5 点一致（始まり −0.8・鉤 1.9042 ×2・床 4.05 ×2）。毒＝述語で 7 赤・grace の X だけで 2 赤。
+- ⚠️ **高さの 3 点は grace の項ではない（名前付きの残差）**: ⒜ `ottava.stem-up-start`（**普通の大きさ**・上向き符尾で始まる 8va）＝LP 4.25 対 Lily# 5.650（+1.40）。LP は字「8va」のインクが符尾の左で終わり、**破線**が符尾を越える。Lily# は字の輪郭が線の始まり（advance＋0.5＝台帳 `ottava.x.line-start-to-notehead` の残差 2.71）まで伸び、符尾が**字の下**に入る ⒝ `ottava.grace.staff-to-line`（OGE）＝+0.74 は ⒜ と同じ形（grace の符尾は上向き） ⒞ `ottava.grace.after-high-note`（OGA）＝−0.24＝LP は**範囲の外の左隣**の c''' の頭（括弧の左端の 0.0135 左）に押される（OGE・OGF は 4.15）。直すなら ⒜ の字の幅（LP は字の extent 右＋0.3）＝grace の便ではない。
+- ⚠️ **census（`audit/magic_constants.csv`）は源の行の文字列を持つ**＝`ItemX(...)` の引数を足した 1 行で `TheCensusIsNotStale` が赤（開始チェックの 1 赤も同じ＝開始ビルドの最中に ottava を書き換えていた）。`LILYSHARP_UPDATE_DOCS=1` で再生成・差分はその 1 行だけ＝`d8a5f07b6`。⚠️ **`-End` の「4 棚卸し OK」はこの赤を見ない**（最初の `-End`＝12610 / 1 でも OK と出た）＝full の FAILED 行を必ず読む。
+- `-End p925 -DiffBase 646975cfe`（2 回目）＝full **12611 / 0 / 2 / 12613**（前便末 +11）・Core 警告 0・門は全部 OK（Lab `sessions/p925/end2.log`）→ この docs commit。未 push 27＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。掃き 1,242 枚で 0。
+判定（2026-10-21）: grace の ottava は閉じた（高さの残差 3 点は grace の項ではない＝字の幅）。次の候補＝`@phrasingSlur`（grace の上の普通のスラーは第725 が描く＝その経路に乗るか）か、ottava の字の幅（⒜・普通の大きさの欠陥＝台帳 2 点が動く）。
+
 ## 以下は第924セッションの経緯
 
 ### 1.1 第924セッション（2026-10-21・YT-DELL2）
