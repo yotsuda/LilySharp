@@ -476,6 +476,30 @@ internal static class GraceBodySupport
     internal static bool IsCarriedTrillSpan(SyntaxNode annotation)
         => annotation is ArticulationSyntax { Name: "startTrillSpan" or "stopTrillSpan" };
 
+    /// <summary>
+    /// True for an OTTAVA's start or stop a grace note carries — <c>@ottava</c>,
+    /// <c>@ottava(bassa)</c>, <c>@quindicesima</c> and the <c>@!ottava</c> that ends any of
+    /// them: the bracket starts on the grace column, and a stop on a grace ends the span
+    /// before it, as LilyPond's <c>\ottava #0</c> in a grace body does (session 925; ledger
+    /// ottava.grace.*).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/ottava-engraver.cc — a Staff engraver; its bounds are the note
+    ///   columns it acknowledges, a grace's as any.
+    /// </remarks>
+    internal static bool IsCarriedOttava(SyntaxNode annotation) => annotation switch
+    {
+        ArticulationSyntax a => IsOttavaType(Svg.Model.MusicMarkItem.ParseMarkName(a.Name)),
+        MusicMarkSyntax { IsSpanEnd: true } end => IsOttavaType(Svg.Model.MusicMarkItem.ParseSpanEndName(end.Name)),
+        MusicMarkSyntax mark => IsOttavaType(Svg.Model.MusicMarkItem.ParseMarkName(mark.MarkName)),
+        _ => false,
+    };
+
+    private static bool IsOttavaType(Svg.Model.MusicMarkType? type)
+        => type is Svg.Model.MusicMarkType.OttavaUp or Svg.Model.MusicMarkType.OttavaDown
+            or Svg.Model.MusicMarkType.QuindicesUp or Svg.Model.MusicMarkType.QuindicesDown
+            or Svg.Model.MusicMarkType.OttavaStop;
+
     private static bool IsPedalType(Svg.Model.MusicMarkType? type)
         => type is Svg.Model.MusicMarkType.SustainOn or Svg.Model.MusicMarkType.SustainOff
             or Svg.Model.MusicMarkType.SostenutoOn or Svg.Model.MusicMarkType.SostenutoOff
@@ -728,7 +752,8 @@ internal static class GraceBodySupport
                     || IsCarriedText(annotation) || IsCarriedFingering(annotation)
                     || IsCarriedHairpinStart(annotation) || IsCarriedArpeggio(annotation)
                     || IsCarriedGlissando(annotation) || IsCarriedTextSpan(annotation)
-                    || IsCarriedPedal(annotation) || IsCarriedTrillSpan(annotation))
+                    || IsCarriedPedal(annotation) || IsCarriedTrillSpan(annotation)
+                    || IsCarriedOttava(annotation))
                     continue;
                 yield return new GraceDrop(
                     GraceDropKind.Annotation, annotation.Span, Describe(annotation), via);

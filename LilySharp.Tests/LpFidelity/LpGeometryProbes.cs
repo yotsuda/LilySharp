@@ -8912,6 +8912,13 @@ internal static class LpGeometryProbes
     private static readonly string GRTA = GraceTieBook("c4 grace { d16@rit } e4 f4 g4@!rit |", "GRTA");
     private static readonly string GRTB = GraceTieBook("c4 d16@rit e8. f4 g4@!rit |", "GRTB");
     private static readonly string GRTC = GraceTieBook("c4@rit e4 grace { f16@!rit } g4 a4 |", "GRTC");
+    // An ottava starting or stopping on a grace note (audit/lp-geometry/probes/grace-ottava.ly).
+    private static readonly string GOTA = GraceTieBook("c''4 grace { d''16@ottava } e''4 f''4 g'4@!ottava |", "GOTA");
+    private static readonly string GOTB = GraceTieBook("c''4 d''16@ottava e''8. f''4 g'4@!ottava |", "GOTB");
+    private static readonly string GOTC = GraceTieBook("c''4@ottava e''4 grace { f'16@!ottava } g'4 a'4 |", "GOTC");
+    private static readonly string GOTD = GraceTieBook("c''4@ottava e''4 f'16@!ottava g'8. a'4 |", "GOTD");
+    private static readonly string GOTE = GraceTieBook("c4 grace { d''16@ottava } e''4 f''4 g'4@!ottava |", "GOTE");
+    private static readonly string GOTJ = GraceTieBook("c4 d''16@ottava@stemUp e''8. f''4 g'4@!ottava |", "GOTJ");
     // A trill spanner starting or stopping on a grace note (audit/lp-geometry/probes/grace-trill.ly).
     private static readonly string GTSA = GraceTieBook("c4 grace { d16@startTrillSpan } e4 f4 g4@stopTrillSpan |", "GTSA");
     private static readonly string GTSB = GraceTieBook("c4 d16@startTrillSpan e8. f4 g4@stopTrillSpan |", "GTSB");
@@ -17383,6 +17390,15 @@ internal static class LpGeometryProbes
         new("textspanner.grace.staff-to-line", GRTA, g => g.TextSpannerLineAboveStaff()),
         new("textspanner.grace.control.label-to-notehead", GRTB, g => g.TextSpannerLabelPenToNotehead(1)),
         new("textspanner.grace.ends-on-grace.label-to-notehead", GRTC, g => g.TextSpannerLabelPenToNotehead(0)),
+        new("ottava.grace.label-to-notehead", GOTA, g => g.OttavaLabelPenToNotehead(1)),
+        new("ottava.grace.staff-to-line", GOTE, g => g.OttavaLineAboveStaff()),
+        new("ottava.grace.after-high-note.staff-to-line", GOTA, g => g.OttavaLineAboveStaff()),
+        new("ottava.stem-up-start.staff-to-line", GOTJ, g => g.OttavaLineAboveStaff()),
+        new("ottava.grace.control.label-to-notehead", GOTB, g => g.OttavaLabelPenToNotehead(1)),
+        new("ottava.grace.control.staff-to-line", GOTB, g => g.OttavaLineAboveStaff()),
+        new("ottava.grace.stops-on-grace.hook-to-notehead", GOTC, g => g.OttavaHookToNotehead(1)),
+        new("ottava.grace.stops-on-grace.staff-to-line", GOTC, g => g.OttavaLineAboveStaff()),
+        new("ottava.grace.stops-control.hook-to-notehead", GOTD, g => g.OttavaHookToNotehead(1)),
         new("trill.grace.staff-to-line", GTSA, g => g.TrillLineAboveStaff()),
         new("trill.grace.control.staff-to-line", GTSB, g => g.TrillLineAboveStaff()),
         new("trill.grace.stops-on-grace.staff-to-line", GTSC, g => g.TrillLineAboveStaff()),

@@ -279,7 +279,8 @@ internal static class OttavaBracketEngraver
         Func<int, int, double>? staffYAt = null,
         Dictionary<int, ImmutableArray<Voice>>? voicesByStaff = null,
         ImmutableArray<BeamLayout> beamLayouts = default,
-        Func<int, int>? staffLinesOf = null)
+        Func<int, int>? staffLinesOf = null,
+        ImmutableArray<GraceNoteItem> graceNotes = default)
     {
         if (ottavaBrackets.IsDefaultOrEmpty)
             return ImmutableArray<OttavaBracketLayout>.Empty;
@@ -349,7 +350,8 @@ internal static class OttavaBracketEngraver
                 //   shorten to 0, which is a different arithmetic with no point on it yet.
                 double startX = segment.IsFirst
                         && ItemX(segStartMeasure, ottavaVoices, bracket.VoiceIndex,
-                            bracket.StartMeasureIndex, bracket.StartItemIndex) is { } startItemX
+                            bracket.StartMeasureIndex, bracket.StartItemIndex,
+                            graceNotes, bracket.StaffIndex) is { } startItemX
                     ? segStartMeasure.X + startItemX + LeftShorten
                     : segStartMeasure.X + LeftShorten;
                 double endX = segment.IsLast && bracket.EndMoment is { } endMoment
@@ -392,7 +394,7 @@ internal static class OttavaBracketEngraver
                 double lineMiddleFrame = AlignedSideLineY(
                     fonts, segText, startX, endX, segEdgeHeight, isAbove,
                     segment, ottavaVoices, measureLayouts, beamMembers, bracket.StaffIndex,
-                    staffLines);
+                    staffLines, graceNotes);
                 // aligned_side answers in the staff-MIDDLE frame (the frame the ledger's
                 // staff-to-line entries read); this record's frame has its origin on the
                 // staff TOP line, 2 above it, and carries the staff's own within-system
@@ -435,12 +437,21 @@ internal static class OttavaBracketEngraver
     /// its supports read the slots directly, and a left hand's "8vb" stood at the right hand's
     /// column of the same index, up to 46 spaces away (OMR report 2026-10-20, item 6). With no
     /// voices supplied the slots are read as before.
+    /// A GRACE item (session 925, HANDOFF §2 U8) is its grace column, read off the run:
+    /// GetItemXOffset answers no grace column. It is a start's bound and, inside the piece, a
+    /// support at its own X.
     /// </remarks>
     private static double? ItemX(MeasureLayout ml, ImmutableArray<Voice> voices,
-        int voiceIndex, int measureIndex, int itemIndex)
+        int voiceIndex, int measureIndex, int itemIndex,
+        ImmutableArray<GraceNoteItem> graceNotes = default, int staffIndex = 0)
     {
         if (itemIndex < 0)
             return null;
+        if (!graceNotes.IsDefaultOrEmpty && !voices.IsDefaultOrEmpty
+            && voiceIndex >= 0 && voiceIndex < voices.Length
+            && ElementCoordinator.GraceColumnAt(voices[voiceIndex], graceNotes, staffIndex, voiceIndex,
+                measureIndex, itemIndex, ml, SpacingRules.VoiceCollisionShiftsOf(voices)) is { } grace)
+            return grace.HeadLeftX - ml.X;
         if (voices.IsDefaultOrEmpty)
             return itemIndex < ml.Items.Length ? ml.Items[itemIndex].X : null;
         var measures = LayoutUtilities.ResolveVoiceMeasures(voices, voiceIndex, default);
@@ -565,7 +576,7 @@ internal static class OttavaBracketEngraver
         ImmutableArray<MeasureLayout> measureLayouts,
         Dictionary<(int Staff, int Voice, int Measure, int Item),
             (BeamLayout Beam, double StemX, bool StemUp)> beamMembers,
-        int staffIndex, int staffLines)
+        int staffIndex, int staffLines, ImmutableArray<GraceNoteItem> graceNotes = default)
     {
         double dir = isAbove ? 1.0 : -1.0;
         // :225-259 — my_dim, the grob's own profile about its line (Y = 0 here).
@@ -590,7 +601,7 @@ internal static class OttavaBracketEngraver
                 int count = mi < voices[vi].Measures.Length
                     ? voices[vi].Measures[mi].Items.Length : 0;
                 for (int ii = 0; ii < count; ii++)
-                    columns.Add((mi, ii, ml.X + (ItemX(ml, voices, vi, mi, ii) ?? 0.0)));
+                    columns.Add((mi, ii, ml.X + (ItemX(ml, voices, vi, mi, ii, graceNotes, staffIndex) ?? 0.0)));
             }
             if (columns.Count == 0)
                 continue;

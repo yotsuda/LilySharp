@@ -83,7 +83,8 @@ workflow attaches that section to the GitHub Release verbatim.
   note is drawn** too (`grace { d16@upBow }`, `@downBow`, `@flageolet`, `@stopped`, `@snapPizz`),
   small, over the grace note. **A trill spanner can start or stop on a grace note**
   (`grace { d16@startTrillSpan } e4 f4 g4@stopTrillSpan`); a high grace's stem lifts the line,
-  as in LilyPond.
+  as in LilyPond. **So can an ottava** (`grace { d''16@ottava } e''4 f''4 g'4@!ottava`); an `@!ottava`
+  written on a grace ends the bracket before it, as LilyPond's `\ottava #0` there does.
   A hairpin running over a
   grace note also stands where LilyPond puts it — it read the grace note's stem as a full-size
   down stem and sat a quarter space too low.

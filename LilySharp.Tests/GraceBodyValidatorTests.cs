@@ -293,6 +293,20 @@ public class GraceBodyValidatorTests
     }
 
     /// <summary>
+    /// An OTTAVA that starts or stops on a grace note is drawn (session 925): the bracket starts
+    /// on the grace column, and a stop on a grace ends the span before it, so the grace keeps
+    /// its written octave (ledger ottava.grace.*). Nothing is reported.
+    /// </summary>
+    [Theory]
+    [InlineData("grace { d''8@ottava } c''1 | e''1@!ottava |", "grace { d''8 } c''1 | e''1 |")]
+    [InlineData("c''1@ottava | grace { d''8@!ottava } e''1 |", "c''1 | grace { d''8 } e''1 |")]
+    public void AnOttavaOnAGrace_IsDrawn_AndNotReported(string written, string control)
+    {
+        Assert.Empty(Warnings(Book(written)));
+        Assert.NotEqual(Page(control), Page(written));
+    }
+
+    /// <summary>
     /// The grace body that draws exactly what it says draws no warning either. This is the
     /// case that catches a validator that has quietly become "warn about every grace".
     /// </summary>

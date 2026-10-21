@@ -2671,7 +2671,9 @@ Grace          = ( 'grace' | 'acciaccatura' | 'appoggiatura' | 'afterGrace' ) , 
                     spanner's start or end '@rit' '@!rit' (session 921), and a pedal's
                     engage or release '@sustain' '@!sustain' (and the sostenuto and una
                     corda), bound and supported by the grace column (session 922), and a
-                    trill spanner's '@startTrillSpan' '@stopTrillSpan' (session 924). *)
+                    trill spanner's '@startTrillSpan' '@stopTrillSpan' (session 924), and an
+                    ottava's '@ottava' '@!ottava' (session 925: a stop on a grace ends the
+                    span before it). *)
 Repeat         = 'repeat' , 'tremolo' , Integer , MusicBlock ;
                  (* a tremolo: the note, or the two notes, alternated Integer times.
                     Volta repeats use the form's |: … :|, NOT a 'repeat' keyword.

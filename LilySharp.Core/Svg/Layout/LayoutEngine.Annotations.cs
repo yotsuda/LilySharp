@@ -808,7 +808,7 @@ internal sealed partial class LayoutEngine
         // stem ends at the quanted beam face — the same ingredients the trill reads.
         var ottavaLayouts = OttavaBracketEngraver.Calculate(
             ctx.Fonts, ottavaItems, systems, ml, staffYAt,
-            voicesByStaff, beamLayouts ?? ImmutableArray<BeamLayout>.Empty, staffLinesOf);
+            voicesByStaff, beamLayouts ?? ImmutableArray<BeamLayout>.Empty, staffLinesOf, ctx.GraceNotes);
 
         // Layout arpeggio markings
         var arpeggioLayouts = ArpeggioEngraver.Calculate(arpeggios, systems, measures, measuresByStaff,

@@ -7483,6 +7483,69 @@
       "residual": 0.0,
       "why": "EXACT. A spanner from the c4 that ENDS on a grace note (`grace { f16@!rit }`): its start stands as ever. Until session 921 the grace's @!rit was dropped, so the spanner was never closed: LYS4018 (an error) and nothing drawn. The right end now stops at the grace column; its arithmetic is the unported right bound every text spanner shares (LilyPond 14.758355 against the grace head's 14.239041 -- TextSpannerEngraver's remark), so no point reads it."
     },
+    "ottava.grace.label-to-notehead": {
+      "probe": "grace-ottava.ly",
+      "score": "OGA",
+      "lilypond": -0.8,
+      "residual": 0.0,
+      "why": "EXACT. `grace { d''16@ottava }`: the bracket's left bound is the GRACE head, less the shorten-pair 0.8, as a main note's is (OGB). OttavaBracketEngraver.ItemX reads a grace item off the run (ElementCoordinator.GraceColumnAt). Until session 925 the grace's @ottava was dropped (LYS4020): no bracket, and the lone @!ottava closed nothing."
+    },
+    "ottava.grace.staff-to-line": {
+      "probe": "grace-ottava.ly",
+      "score": "OGE",
+      "lilypond": 4.15,
+      "residual": 0.739593153,
+      "why": "NOT A GRACE TERM -- the residual ottava.stem-up-start.staff-to-line carries on a full-size note. The grace's UP stem (tip 3.60 over the middle line, both engines) is a support: LilyPond's bracket clears it with its dashed LINE (3.60 + padding 0.5 + the line's half pen = 4.15), because its label's ink ends 0.09 left of the stem. Lily#'s label profile reaches the line start (advance + 0.5, the 2.71 of ottava.x.line-start-to-notehead), so the stem stands under the LABEL and the bracket rides 0.74 higher. MEASURED session 925: a grace g' (stem tip below the label) reads LilyPond's floor 4.05 (probe OGG); the grace is read at the right X and height (OttavaBracketEngraver.ItemX)."
+    },
+    "ottava.grace.after-high-note.staff-to-line": {
+      "probe": "grace-ottava.ly",
+      "score": "OGA",
+      "lilypond": 5.320638,
+      "residual": -0.241391833,
+      "why": "NOT A GRACE TERM. The c''' BEFORE the span (Lily# c''), its head top 4.545 over the middle line and its right edge 0.0135 short of the bracket's left end, holds LilyPond's bracket at 5.320638: OGE (a low first note) and OGF (a rest between; Lily# draws no line on so short a span, so no point) both read 4.15. Lily# does not see that neighbour (the bracket's own support set reads it at a disjoint X) and stands on the grace's stem under its label instead (ottava.grace.staff-to-line's +0.74), landing 0.24 low."
+    },
+    "ottava.stem-up-start.staff-to-line": {
+      "probe": "grace-ottava.ly",
+      "score": "OGJ",
+      "lilypond": 4.25,
+      "residual": 1.399684324,
+      "why": "OPENED session 925, FULL SIZE, the term ottava.grace.staff-to-line rides on: a stem-UP note at the ottava's start (`d''16@ottava@stemUp`, LilyPond's \\stemUp d'''16 under \\ottava #1). LilyPond's label ink ends left of the stem and the dashed LINE clears it (4.25); Lily#'s label profile runs to the line start (advance + 0.5 -- ottava.x.line-start-to-notehead's 2.71), so the stem stands under the label and the bracket rides 1.40 higher. Fixing it is the label's own width (LilyPond: text extent right + 0.3), not anything a grace adds."
+    },
+    "ottava.grace.control.label-to-notehead": {
+      "probe": "grace-ottava.ly",
+      "score": "OGB",
+      "lilypond": -0.8,
+      "residual": 0.0,
+      "why": "EXACT. The full-size CONTROL of OGA."
+    },
+    "ottava.grace.control.staff-to-line": {
+      "probe": "grace-ottava.ly",
+      "score": "OGB",
+      "lilypond": 4.05,
+      "residual": 0.0,
+      "why": "EXACT. The control's floor."
+    },
+    "ottava.grace.stops-on-grace.hook-to-notehead": {
+      "probe": "grace-ottava.ly",
+      "score": "OGC",
+      "lilypond": 1.9042,
+      "residual": 0.0,
+      "why": "EXACT. An ottava STOPPED on a grace (`grace { f'16@!ottava }`) ends the span BEFORE the grace, as LilyPond's \\ottava #0 in a grace body does: the hook stands at the last covered head (the e) + 0.6 (OttavaBracketEngraver's StaffLastColumnBefore skips grace items; LilyPond's X-extent right 13.791445 less the hook's half pen). The grace itself is drawn at its written octave (the transposer's window ends at the stop item)."
+    },
+    "ottava.grace.stops-on-grace.staff-to-line": {
+      "probe": "grace-ottava.ly",
+      "score": "OGC",
+      "lilypond": 4.05,
+      "residual": 0.0,
+      "why": "EXACT. Its floor."
+    },
+    "ottava.grace.stops-control.hook-to-notehead": {
+      "probe": "grace-ottava.ly",
+      "score": "OGD",
+      "lilypond": 1.9042,
+      "residual": 0.0,
+      "why": "EXACT. The CONTROL of OGC: stopped on a main-grid f16, the same hook."
+    },
     "trill.grace.staff-to-line": {
       "probe": "grace-trill.ly",
       "score": "TSA",

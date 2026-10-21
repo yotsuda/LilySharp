@@ -2466,6 +2466,31 @@ internal sealed class RenderedGeometry
     }
 
     /// <summary>
+    /// The sole ottava bracket's end HOOK X, relative to notehead
+    /// <paramref name="noteheadIndex"/> — where the span's right bound fell.
+    /// </summary>
+    /// <remarks>
+    /// The hook is the one vertical rule of staff-line thickness above the staff's top line
+    /// (stems are thicker, bar lines are boxes). LilyPond's OttavaBracket X-extent right is the
+    /// hook widened by half the pen (lily/line-interface.cc make_line), so a ledger value read
+    /// off LilyPond takes 0.05 back off.
+    /// </remarks>
+    public double OttavaHookToNotehead(int noteheadIndex, int page = 0)
+    {
+        double staffTop = StaffRefpoints(page).Min() - 2.0;
+        var hooks = _pages[page].Lines
+            .Where(l => Math.Abs(l.X1 - l.X2) < 1e-9
+                && Math.Abs(l.StrokeWidth - StaffLineThickness) < 1e-9
+                && Math.Max(l.Y1, l.Y2) < staffTop)
+            .Select(l => l.X1).Distinct().ToList();
+        if (hooks.Count != 1)
+            throw new InvalidOperationException(
+                $"page {page}: expected exactly ONE ottava hook above the staff, found {hooks.Count}.\n"
+                + "Drawn geometry:\n" + Describe());
+        return hooks[0] - NoteheadAnchor(noteheadIndex);
+    }
+
+    /// <summary>
     /// Where the ottava's dashed LINE starts, relative to notehead
     /// <paramref name="noteheadIndex"/>.
     /// </summary>
