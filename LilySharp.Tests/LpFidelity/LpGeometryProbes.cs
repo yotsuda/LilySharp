@@ -8939,6 +8939,10 @@ internal static class LpGeometryProbes
     private static readonly string GEDC = GraceKeyBook("", "c4 grace { bes'16@editorial } e4 f4 g4 |", "GEDC");
     private static readonly string GEDD = GraceKeyBook("", "c4 e4 f4@editorial g4 |", "GEDD");
     private static readonly string GEDE = GraceKeyBook("", "c4 e4 bes4@editorial g4 |", "GEDE");
+    // An editorial accidental on a chord member (audit/lp-geometry/probes/editorial-chord.ly).
+    private static readonly string ECHA = GraceKeyBook("", "c4 <d f@editorial>4 e4 g4 |", "ECHA");
+    private static readonly string ECHB = GraceKeyBook("", "c4 <dis@editorial f@editorial>4 e4 g4 |", "ECHB");
+    private static readonly string ECHC = GraceKeyBook("", "c4 grace { <d f@editorial>16 } e4 g4 a4 |", "ECHC");
     // A phrasing slur starting, stopping or closing on grace notes (audit/lp-geometry/probes/grace-phrasing.ly).
     private static readonly string GPHA = GraceTieBook("c4 grace { d16@phrasingSlur } e4 f4 g4@!phrasingSlur |", "GPHA");
     private static readonly string GPHB = GraceTieBook("c4 d16@phrasingSlur e8. f4 g4@!phrasingSlur |", "GPHB");
@@ -17436,6 +17440,12 @@ internal static class LpGeometryProbes
         new("editorial.grace.control.above-notehead", GEDB, g => g.SuggestionAboveNotehead(EmmentalerGlyphs.AccidentalSharp)),
         new("editorial.accidental.natural.above-notehead", GEDD, g => g.SuggestionAboveNotehead(EmmentalerGlyphs.AccidentalNatural)),
         new("editorial.accidental.flat.above-notehead", GEDE, g => g.SuggestionAboveNotehead(EmmentalerGlyphs.AccidentalFlat)),
+        new("editorial.chord.member.to-notehead", ECHA, g => g.SuggestionToNoteheadAnchor(EmmentalerGlyphs.AccidentalNatural)),
+        new("editorial.chord.member.above-staff-middle", ECHA, g => g.GlyphAboveStaffMiddle(EmmentalerGlyphs.AccidentalNatural, 0)),
+        new("editorial.chord.two.lower.above-staff-middle", ECHB, g => g.GlyphAboveStaffMiddle(EmmentalerGlyphs.AccidentalSharp, 0)),
+        new("editorial.chord.two.upper.above-staff-middle", ECHB, g => g.GlyphAboveStaffMiddle(EmmentalerGlyphs.AccidentalNatural, 0)),
+        new("editorial.chord.grace.to-notehead", ECHC, g => g.SuggestionToNoteheadAnchor(EmmentalerGlyphs.AccidentalNatural)),
+        new("editorial.chord.grace.above-staff-middle", ECHC, g => g.GlyphAboveStaffMiddle(EmmentalerGlyphs.AccidentalNatural, 0)),
         new("phrasing.grace.left-attachment", GPHA, g => g.BowAttachmentAboveStaffMiddle(0)),
         new("phrasing.grace.span", GPHA, g => g.BowSpan(0)),
         new("phrasing.grace.control.left-attachment", GPHB, g => g.BowAttachmentAboveStaffMiddle(0)),

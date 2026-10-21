@@ -94,6 +94,9 @@ workflow attaches that section to the GitHub Release verbatim.
   and at its usual size. An editorial accidental now stands as high as LilyPond puts it: clear of
   the staff by LilyPond's outside-staff padding, not tucked against it — a quarter of a staff
   space higher than before over a note inside the staff.
+  **An editorial accidental on one note of a chord is drawn** (`<d f@editorial>4`), over the
+  chord; it drew nothing before, and said nothing. Two of them in one chord stack, the lower
+  note's nearer the staff.
   A hairpin running over a
   grace note also stands where LilyPond puts it — it read the grace note's stem as a full-size
   down stem and sat a quarter space too low.

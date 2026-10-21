@@ -594,6 +594,23 @@ public sealed partial class MeasureCollector
             if (memberCourtesy && accidental == null)
                 accidental = KeySignatureAccidentalName(rp.DisplayStep);
 
+            // Per-pitch @editorial (<d f@editorial>): the member's accidental becomes the
+            // suggestion above the chord instead of the one at its left, the key-matching
+            // one when nothing would print — CreateNoteItem's rule. The kind is kept by the
+            // annotation's position for CollectArticulations, which places the suggestion.
+            // Until session 929 a member's @editorial drew nothing at all, in silence.
+            // LILYPOND-REF: lily/accidental-engraver.cc make_suggested_accidental — one
+            //   AccidentalSuggestion per note head, a chord member's as any.
+            foreach (var a in pitch.Articulations)
+                if (a is ArticulationSyntax { Type: ArticulationType.None } ea
+                    && ea.Name.Equals("editorial", StringComparison.Ordinal))
+                {
+                    _memberEditorialBySource[ea.SourceStart] =
+                        accidental ?? KeySignatureAccidentalName(rp.DisplayStep);
+                    accidental = null;
+                    break;
+                }
+
             // A tied member keeps its accidental for a line start only (CreateNoteItem).
             string? memberLineStart = null;
             if (accidental != null && !memberCourtesy && builder != null

@@ -338,6 +338,10 @@ public class GraceBodyValidatorTests
     /// </summary>
     [Theory]
     [InlineData("grace { fis'8@editorial } c'1 | e'1 |", "grace { fis'8 } c'1 | e'1 |")]
+    // A chord member's (session 929; ledger editorial.chord.*): until then it drew nothing
+    // at any size.
+    [InlineData("grace { <d' f'@editorial>8 } c'1 | e'1 |", "grace { <d' f'>8 } c'1 | e'1 |")]
+    [InlineData("<d' f'@editorial>1 | e'1 |", "<d' f'>1 | e'1 |")]
     public void AnEditorialAccidentalOnAGrace_IsDrawn_AndNotReported(string written, string control)
     {
         Assert.Empty(Warnings(Book(written)));

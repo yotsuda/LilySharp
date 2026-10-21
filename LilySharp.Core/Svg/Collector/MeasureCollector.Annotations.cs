@@ -808,13 +808,16 @@ public sealed partial class MeasureCollector
                         // Explicit @courtesy annotation forces courtesy (parenthesized) accidental
                         _courtesySourcePositions.Add(node.SourceStart);
                     }
-                    else if (nameText == "editorial" && editorialAccidental != null)
+                    else if (nameText == "editorial"
+                             && (isChordMember
+                                 ? _memberEditorialBySource.GetValueOrDefault(articulationSyntax.SourceStart)
+                                 : editorialAccidental) is { } editorialKind)
                     {
                         // Editorial (suggestion) accidental: a small accidental
                         // ABOVE the note; the kind was resolved in CreateNoteItem.
                         // LILYPOND-REF: scm/define-grobs.scm:96-123 AccidentalSuggestion
                         _articulations.Add(new ArticulationItem(
-                            ArticulationItem.EditorialTypeFor(editorialAccidental),
+                            ArticulationItem.EditorialTypeFor(editorialKind),
                             measureIndex, itemIndex, isAbove: true,
                             articulationSyntax.SourceStart, _cursor.StaffIndex)
                         { VoiceIndex = _cursor.VoiceIndex, IsChordMember = isChordMember });

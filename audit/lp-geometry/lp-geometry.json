@@ -7588,6 +7588,48 @@
       "residual": 0.0,
       "why": "EXACT. Full size: the flat, whose box is not symmetric about its origin (-0.5177 . 1.4294 at -2), so this is the reading that tells box from outline. Before session 928: 2.767730853 (-0.26); with the outline instead of the box: 3.046541556 (+0.019)."
     },
+    "editorial.chord.member.to-notehead": {
+      "probe": "editorial-chord.ly",
+      "score": "ECA",
+      "lilypond": 0.3875331580053,
+      "residual": 0.0,
+      "why": "EXACT. `<d f@editorial>4` (LP `<d f!>` under suggestAccidentals): the member's suggestion centred on ITS head, the same arithmetic as a single note's. Before session 929 a chord member's @editorial drew nothing at all, in silence (poison: the member's resolution in CreateChordItem off -- the reading throws)."
+    },
+    "editorial.chord.member.above-staff-middle": {
+      "probe": "editorial-chord.ly",
+      "score": "ECA",
+      "lilypond": 3.7005007763406115,
+      "residual": 0.0,
+      "why": "EXACT. Its height: a mover at priority 0 whose box bottom stands 0.46 over the staff's ink, as on a single note (editorial.accidental.natural.above-notehead)."
+    },
+    "editorial.chord.two.lower.above-staff-middle": {
+      "probe": "editorial-chord.ly",
+      "score": "ECB",
+      "lilypond": 3.700500776340612,
+      "residual": 0.0,
+      "why": "EXACT. `<dis@editorial f@editorial>4`: two suggestions, one column. The lower member's is placed first and sits on the staff as a lone one does. Poison (the member keeps its left accidental too): the full-size sharp at the left is read instead."
+    },
+    "editorial.chord.two.upper.above-staff-middle": {
+      "probe": "editorial-chord.ly",
+      "score": "ECB",
+      "lilypond": 6.5415023290218345,
+      "residual": 0.0,
+      "why": "EXACT. The upper member's stacks on the first: its box bottom 0.46 over the sharp's box top -- two movers at priority 0 (lily/axis-group-interface.cc avoid_outside_staff_collisions), placed in note order."
+    },
+    "editorial.chord.grace.to-notehead": {
+      "probe": "editorial-chord.ly",
+      "score": "ECC",
+      "lilypond": 0.19440246760432,
+      "residual": 0.0,
+      "why": "EXACT. `grace { <d f@editorial>16 }`: the member suggestion on a grace chord, centred on the -3 head at its own size -2 (editorial.grace.*)."
+    },
+    "editorial.chord.grace.above-staff-middle": {
+      "probe": "editorial-chord.ly",
+      "score": "ECC",
+      "lilypond": 3.7005007763406115,
+      "residual": 0.0,
+      "why": "EXACT. The grace chord's suggestion at the staff's height, as the full-size one."
+    },
     "phrasing.grace.left-attachment": {
       "probe": "grace-phrasing.ly",
       "score": "PHA",

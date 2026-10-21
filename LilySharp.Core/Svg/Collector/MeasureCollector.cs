@@ -629,6 +629,9 @@ public sealed partial class MeasureCollector
     private Semantics.ChordSpelling _chordSpelling = Semantics.ChordSpelling.Default;
     // Notes explicitly marked with @courtesy annotation
     private readonly HashSet<int> _courtesySourcePositions = new();
+    // A chord member's @editorial: the annotation's source position → the accidental kind
+    // its suggestion prints (CreateChordItem resolves it, CollectArticulations reads it).
+    private readonly Dictionary<int, string> _memberEditorialBySource = new();
     /// <summary>
     /// Maps a note's source position to its finger number (extracted from <c>@finger.N</c>).
     /// </summary>
@@ -3841,6 +3844,7 @@ public sealed partial class MeasureCollector
         _variableDeclarationsInOrder.Clear();
         _phraseGreens = null;
         _courtesySourcePositions.Clear();
+        _memberEditorialBySource.Clear();
         _measureAccidentals.Clear();
         _keyCourtesySeen.Clear();
         _keyCourtesyStaff = -1;
