@@ -8148,6 +8148,41 @@
       "residual": 0.0,
       "why": "EXACT from its first reading (session 936): the last flagged grace -> main note."
     },
+    "breath.grace.before-rest.grace-to-sign": {
+      "probe": "grace-breath.ly",
+      "score": "GBK",
+      "lilypond": 0.89133861919804,
+      "residual": 0.0,
+      "why": "EXACT from its first reading (session 938). A breathing sign before a grace REST stands in its own column between the grace and the rest (GraceBodySupport.InnerBreaths now takes a rest after the column; SpacingRules.InnerBreathSprings prices it): grace -> sign 0.891339, as before a note."
+    },
+    "breath.grace.before-rest.sign-to-next": {
+      "probe": "grace-breath.ly",
+      "score": "GBK",
+      "lilypond": 2.90528,
+      "residual": 0.0,
+      "why": "EXACT from its first reading (session 938): the sign's Staff_spacing x 0.8 to the rest's left edge, 1.205280 — the rest column has no left skyline to raise the minimum — then the rest's flat 1.7 to the next grace."
+    },
+    "breath.grace.before-rest.across": {
+      "probe": "grace-breath.ly",
+      "score": "GBK",
+      "lilypond": 3.79661861919804,
+      "residual": 0.0,
+      "why": "EXACT from its first reading (session 938): the grace before the sign -> the grace after the rest, 0.891339 + 1.205280 + 1.7."
+    },
+    "breath.grace.before-rest.to-main": {
+      "probe": "grace-breath.ly",
+      "score": "GBK",
+      "lilypond": 1.93862706483148,
+      "residual": 0.0,
+      "why": "EXACT. The CONTROL: the grace after the rest -> main note, untouched (flagged, 1.938627)."
+    },
+    "breath.grace.before-last-rest.sign-to-main": {
+      "probe": "grace-breath.ly",
+      "score": "GBL",
+      "lilypond": 2.90528,
+      "residual": 0.0,
+      "why": "EXACT from its first reading (session 938): the rest is the run's LAST column, 1.205280 + its 1.7 to the main note."
+    },
     "breath.beam.note-to-sign": {
       "probe": "breath-beam.ly",
       "score": "BBA",

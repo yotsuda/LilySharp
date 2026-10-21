@@ -649,8 +649,8 @@ internal static class GraceBodySupport
 
     /// <summary>
     /// The breathing signs and caesuras written on an INNER column of a grace body — a note or
-    /// a chord (its own annotation, not a member's) that another note or chord follows — one
-    /// per column, in source order (session 936). THE question the collector
+    /// a chord (its own annotation, not a member's) that another note, chord or rest follows —
+    /// one per column, in source order (sessions 936, 938). THE question the collector
     /// (<c>MeasureCollector.ProcessGraceRegion</c>) and the drop list both ask; the sign on the
     /// LAST column is <see cref="CarriedBreath"/>'s.
     /// </summary>
@@ -663,8 +663,13 @@ internal static class GraceBodySupport
     /// collector stamps it on the column (<c>GraceColumnInfo.BreathAfter</c>) and the run's
     /// spacing splits the gap (<c>SpacingRules.InnerBreathSprings</c>).
     /// <para>
-    /// ⚠️ Not before a rest or a spacer (a gap the run prices by flat reaches, with no
-    /// Note_spacing wish to split), and not on an afterGrace: both stay reported (LYS4020).
+    /// Before a REST the same (session 938, probes/grace-breath.ly GBK/GBL): the rest's left
+    /// edge stands the sign's Staff_spacing × 0.8 on, a rest's column having no left skyline
+    /// to raise the minimum.
+    /// ⚠️ Not before a spacer (unmeasured), and not on an afterGrace: its graces stand at a
+    /// moment inside the main note, so the sign's column lands on a MAIN moment and the spring
+    /// out of it is another (Lab sessions/p938/lp/rest.ly AA: the next main note 2.5311 past
+    /// the sign's ink left, not 1.5066). Both stay reported (LYS4020).
     /// </para>
     /// LILYPOND-REF: lily/auto-beam-engraver.cc:319-322 Auto_beam_engraver::acknowledge_breathing_sign — force_end_: the sign ends the automatic beam.
     /// </remarks>
@@ -679,7 +684,9 @@ internal static class GraceBodySupport
             var item = element.Node;
             if (!IsCarried(item))
                 continue;
-            if (previous != null && (CarriedNote(item) != null || CarriedChord(item) != null)
+            if (previous != null
+                && (CarriedNote(item) != null || CarriedChord(item) != null
+                    || CarriedRest(item) is { RestText: not "s" })
                 && OwnBreath(previous) is { } sign)
                 (signs ??= []).Add(sign);
             previous = item;

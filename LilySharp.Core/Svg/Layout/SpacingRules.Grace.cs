@@ -452,7 +452,9 @@ internal static partial class SpacingRules
             || notes[column].BreathAfter is not { } type)
             return null;
         var next = notes[column + 1];
-        if (next.IsRest || next.TabDigitHalfWidth > 0)
+        // A REST next (session 938) is priced the same way: its left skyline is empty, so the
+        // sign's spring keeps its ideal and the rest's left edge stands there (GBK/GBL).
+        if (next.IsSpacer || next.TabDigitHalfWidth > 0)
             return null;
         // The sign's column, read by the change column's own rules (its box at the top line,
         // its width, its space-alist) — a breathing sign reads no text font.

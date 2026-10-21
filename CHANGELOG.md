@@ -117,7 +117,8 @@ workflow attaches that section to the GitHub Release verbatim.
   it stands between the grace notes and the main note, which moves right to make room, as in
   LilyPond. **On an inner grace note it is drawn too** (`grace { d16@breath e16 } f4`): it stands
   between the two grace notes, which move apart to make room, and a breathing sign ends the grace
-  beam there, so the grace notes after it take flags — as in LilyPond (a caesura does not).
+  beam there, so the grace notes after it take flags — as in LilyPond (a caesura does not). Before
+  a grace rest it is drawn the same way (`grace { d16@breath r16 e16 } f4`).
   **A caesura no longer breaks an automatic beam** (`d16@caesura e16 f8`): one beam runs across
   it, as in LilyPond, where it split the beam and stood the caesura half a space too far off. A
   breathing sign still ends the beam, as LilyPond's does.
