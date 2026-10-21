@@ -160,6 +160,16 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第922セッションの経緯
+
+### 1.1 第922セッション（2026-10-21・YT-DELL2）
+
+第921 と同じ会話の続き（ユーザー「続けて」）。`-Start p922`（開始 HEAD `a2690d2c9`・未 push 19・full **12568 / 0 / 2 / 12570**・第920 を ARCHIVE へ）。作業場所は Lab `sessions/p922/`。
+- **grace のペダル（`@sustain`・`@sostenuto`・`@unaCorda`）を描く＝`103e32453`**: 収集の grace の関所が engage と release を通す（`GraceBodySupport.IsCarriedPedal`＝LYS4020 も読む）・`PedalBracketItem` に 2 つの印の声部（`StartVoiceIndex`／`EndVoiceIndex`）・`PedalEngraver.GraceAnchors` が grace の端を `GraceColumnAt` で読み、**X と支えの切り取り（部屋の解き `SolveAndSeed` と描画 `Calculate` の両方）**に使う。LP 2.26（`probes/grace-pedal.ly`）＝括弧は grace の頭の左端から・grace で終わるなら grace の頭の左端まで・高さは grace の小さな頭（5.144060 対 対照 5.295）＝台帳 7 点一致（`pedal.grace.*`）。毒 2 本＝述語で 9 赤・支えの切り取りだけで 1 赤（線は 4.404059＝0.74 高い・台帳の why はこの実測で書いた）。掃き 1,242 枚で 0。**⒟ の 8 族（第298 の表）は全部閉じた**。「まだ落ちる例」は `@breath` へ（LP は grace の後の breath を描く＝Lab `p922/ped/br.ly`）。⚠️ ペダルの**語**（text 方式・mixed 方式の先頭の語）は grace に書いても主の列に立つ（`MusicMarkEngraver` の腕・名前付き）。
+- **ユーザー決定（2026-10-21）「パフォーマンス計測以外は、全ていつでも実行して良い」**＝full test・`-End`・掃き・LP の実測は訊かない（Lab `notes/CLAUDE-OPERATIONS.md` のベンチの項に書いた）。
+- `-End p922 -DiffBase a2690d2c9`＝full **12579 / 0 / 2 / 12581**（前便末 +11）・Core 警告 0・門は全部 OK（Lab `sessions/p922/end.log`）→ この docs commit。未 push 20＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。
+判定（2026-10-21）: U8 ⒟（第298 の表の 8 族）は閉じた。U8 の残りは表に無い注釈（`@breath` など・LYS4020 が名指す）と、ペダルの語の X（名前付き）。
+
 ## 以下は第921セッションの経緯
 
 ### 1.1 第921セッション（2026-10-21・YT-DELL2）
