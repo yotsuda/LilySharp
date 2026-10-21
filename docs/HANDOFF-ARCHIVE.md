@@ -160,6 +160,16 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第935セッションの経緯
+
+### 1.1 第935セッション（2026-10-22・YT-DELL2）
+
+第934 と同じ会話の続き（ユーザー「続けて」）。`-Start p935`（開始 HEAD `162e3c8fd`・未 push 49・full **12724 / 0 / 2 / 12726**・第933 を ARCHIVE へ）。作業場所は Lab `sessions/p935/`。
+- **grace の符尾は各自の向き・割れたら膝の連桁＝`c86a430de`**: LP は grace の符尾を全部 forced にする＝書いた向きはその符尾だけ・残りは声部の向き（第933 の「全部そろったら群ごと」はこの規則の特別な場合）。`NarrowToGraceTime` が項目ごとに `ForcedStemUp` から `GraceStemDown`・`DeriveGraceColumns` は列ごと・述語 `IsCarriedStemDirection`（音と和音の自分の注記・構成音は報告のまま）。LP 2.26（`probes/grace-knee.ly`）で分かった膝の 4 規則: ⑴ 連桁の側は forced の多数決（`GraceNoteItem.BeamStemUpOf`＝数→頭の平均→合計→neutral DOWN）⑵ 2 本目以降は**最初の符尾の頭の側**へ重なり、各符尾は束を貫いて自分の側の最外線まで（`DrawGraceBeam`・beam-segments の vertical-count で確認）⑶ 同じ連桁の上→下は knee の補正で広がる（2.185939＝1.397939＋(0.917939−0.13)・grace の頭の箱で・`GraceStemCorrection`）⑷ **量子化は束を貫く符尾の端を採点する**（`BeamScoringProblem._baseLengths`＝beam-quanting.cc:1130 `current_y = beam_y + base_lengths_[i]`）＝**この項は全ての連桁で抜けていた**（膝以外は 0 なので誰も動かなかった）＝普通の大きさの 16 分の膝も直った（台帳 `beam.quant.knee.sixteenth.*`・外すと −0.261／+0.739）。slur の grace 障害物は列ごとの符尾・膝の grace 連桁は skyline に入れない（普通の膝と同じ前例）。台帳 16 点（`knee.grace.*` 14・`beam.quant.knee.sixteenth.*` 2）＝位置は 1e-6・符尾の端は連桁の厚みの半分（中心線まで描く約束）。毒＝項目の向き 25 赤・多数決 3 赤（最初は緑＝LP の Beam の direction を直接見る `AKneedGraceBeam_StandsOnTheSideItsStemsVoteFor` を足して赤）・束の側 6 赤・束を貫く 3 赤・量子化の項 6 赤・knee 補正 6 赤・述語 8 赤・**skyline の膝の除外は緑のまま＝網なし**。全 svg の掃き 1,242 枚で 0。⚠️ 棚卸しで新しい定数が出たら `git checkout` で消さない（今回 1 度消して作り直した＝stackalloc の 64 を ScratchArray に替えて定数を無くした）。
+- 1 回目の `-End` は full で 1 赤＝`CitationsThatNameNothing_DoNotGrow`（括弧の中の `lily/beam.cc:1129-1145` と `define-grobs.scm:531 Beam (neutral-direction . DOWN)`＝検査が記号と読むのは `_` を含むか 3 語以上のハイフン語だけ・define-grobs の行は囲む form の名前も照合される）＝`46b5a1bd8` で直した。
+- `-End p935 -DiffBase 162e3c8fd`（2 回目）＝full **12746 / 0 / 2 / 12748**（前便末 +22）（Lab `sessions/p935/end.log`）→ この docs commit。未 push 51＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。
+判定（2026-10-22）: grace の符尾の向きと膝の連桁は閉じた。残り＝途中の grace の呼吸記号（grace の列組みに変更の列）・slur が膝の grace 連桁を避ける形（主線で読む＝⒝）。grace の LYS4020 の残り＝`@pluck`・TAB の技法（字形も置き場所も Lily# 独自＝LP と照合できる部分が少ない）・`@diagram`・`@cross`（譜表をまたぐ）・`@figuredBass`・`@chord`。
+
 ## 以下は第934セッションの経緯
 
 ### 1.1 第934セッション（2026-10-22・YT-DELL2）

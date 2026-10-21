@@ -124,6 +124,15 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第937セッション（2026-10-22・YT-DELL2）
+
+第936 と同じ会話の続き（ユーザー「続けて」）。`-Start p937`（開始 HEAD `81fe65a50`・未 push 54・full **12770 / 0 / 2 / 12772**・第935 を ARCHIVE へ）。作業場所は Lab `sessions/p937/`。
+- **caesura は自動の連桁を終わらせない＝`1d0f70ff1`**（第936 が見つけた欠陥）: LP の Caesura_engraver は **Staff** の engraver（engraver-init.ly:66）で、acknowledger は自分の context とその下の grob しか聞かない＝Voice の Auto_beam_engraver に caesura の BreathingSign は届かない。呼吸記号の engraver は Voice（:384）なので届いて連桁を終える。Lily# は `BreathingSignItem` を全部「連桁にできない item」として連桁を切っていた → `BeamDetector` が caesura の列を clef・key と同じく素通りする。⚠️ 連桁の有無は間隔にも効く: 旗付きの d は旗が caesura の高さに入り、記号が 0.5382 遠かった（毒で分かった＝最初に書いた理由「旗でも連桁でも同じ」は誤りで、直した）。probe `breath-beam.ly`（BBA〜BBE）・台帳 12 点（`breath.beam.*`・`caesura.beam.*`）＝stem 数（`BeamGroupStemCount`）と間隔。caesura の 3 点は「開いた値」2 本／0 本／+0.5382 を毒で確かめた。毒 2 本＝素通りを外す 4 赤・呼吸記号も素通り 2 赤。全 svg の掃き 1,242 枚で 0（連桁にできる音の間の caesura を書いた本が無い）。棚卸しは中身の差 0。
+- `-End p937 -DiffBase 81fe65a50` ＝full **12782 / 0 / 2 / 12784**（前便末 +12）（Lab `sessions/p937/end.log`）→ この docs commit。未 push 55＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。
+判定（2026-10-22）: 呼吸記号と caesura の連桁は grace も普通の大きさも LP と同じになった。次の候補＝slur が膝の grace 連桁を避ける形（主線で読む＝⒝）・grace の LYS4020 の残り（休符の前と afterGrace の呼吸記号・`@pluck`・TAB の技法・`@diagram`・`@cross`・`@figuredBass`・`@chord`）。
+
+## 以下は第936セッションの経緯
+
 ### 1.1 第936セッション（2026-10-22・YT-DELL2）
 
 第935 と同じ会話の続き（ユーザー「続けて」）。`-Start p936`（開始 HEAD `b64fc092b`・未 push 52・full **12746 / 0 / 2 / 12748**・第934 を ARCHIVE へ）。作業場所は Lab `sessions/p936/`。
@@ -131,16 +140,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - ⚠️ **普通の大きさの caesura で連桁が LP と違う（新しい欠陥・未着手）**: LP は呼吸記号で自動連桁を終え（Lab `p936/lp/fl2.ly` BN＝`d16 \breathe e16 f8` の d は旗付き・e f は連桁＝Lily# も同じ）、**caesura では終えない**（CN＝d〜f の 1 本の連桁）。Lily# は `c4 d16@caesura e16 f8` でも d を旗付きにして連桁を切る（Lab `p936/look/full.lys` の png）。
 - `-End p936 -DiffBase b64fc092b` ＝full **12770 / 0 / 2 / 12772**（前便末 +24）（Lab `sessions/p936/end.log`）→ この docs commit。未 push 53＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。
 判定（2026-10-22）: grace の呼吸記号は途中も最後も閉じた（休符の前と afterGrace は LYS4020 のまま）。次の候補＝普通の大きさの caesura が連桁を切る欠陥（上の ⚠️・⒜＝LP で測れる）・slur が膝の grace 連桁を避ける形（主線で読む＝⒝）・grace の LYS4020 の残り（`@pluck`・TAB の技法・`@diagram`・`@cross`・`@figuredBass`・`@chord`）。
-
-## 以下は第935セッションの経緯
-
-### 1.1 第935セッション（2026-10-22・YT-DELL2）
-
-第934 と同じ会話の続き（ユーザー「続けて」）。`-Start p935`（開始 HEAD `162e3c8fd`・未 push 49・full **12724 / 0 / 2 / 12726**・第933 を ARCHIVE へ）。作業場所は Lab `sessions/p935/`。
-- **grace の符尾は各自の向き・割れたら膝の連桁＝`c86a430de`**: LP は grace の符尾を全部 forced にする＝書いた向きはその符尾だけ・残りは声部の向き（第933 の「全部そろったら群ごと」はこの規則の特別な場合）。`NarrowToGraceTime` が項目ごとに `ForcedStemUp` から `GraceStemDown`・`DeriveGraceColumns` は列ごと・述語 `IsCarriedStemDirection`（音と和音の自分の注記・構成音は報告のまま）。LP 2.26（`probes/grace-knee.ly`）で分かった膝の 4 規則: ⑴ 連桁の側は forced の多数決（`GraceNoteItem.BeamStemUpOf`＝数→頭の平均→合計→neutral DOWN）⑵ 2 本目以降は**最初の符尾の頭の側**へ重なり、各符尾は束を貫いて自分の側の最外線まで（`DrawGraceBeam`・beam-segments の vertical-count で確認）⑶ 同じ連桁の上→下は knee の補正で広がる（2.185939＝1.397939＋(0.917939−0.13)・grace の頭の箱で・`GraceStemCorrection`）⑷ **量子化は束を貫く符尾の端を採点する**（`BeamScoringProblem._baseLengths`＝beam-quanting.cc:1130 `current_y = beam_y + base_lengths_[i]`）＝**この項は全ての連桁で抜けていた**（膝以外は 0 なので誰も動かなかった）＝普通の大きさの 16 分の膝も直った（台帳 `beam.quant.knee.sixteenth.*`・外すと −0.261／+0.739）。slur の grace 障害物は列ごとの符尾・膝の grace 連桁は skyline に入れない（普通の膝と同じ前例）。台帳 16 点（`knee.grace.*` 14・`beam.quant.knee.sixteenth.*` 2）＝位置は 1e-6・符尾の端は連桁の厚みの半分（中心線まで描く約束）。毒＝項目の向き 25 赤・多数決 3 赤（最初は緑＝LP の Beam の direction を直接見る `AKneedGraceBeam_StandsOnTheSideItsStemsVoteFor` を足して赤）・束の側 6 赤・束を貫く 3 赤・量子化の項 6 赤・knee 補正 6 赤・述語 8 赤・**skyline の膝の除外は緑のまま＝網なし**。全 svg の掃き 1,242 枚で 0。⚠️ 棚卸しで新しい定数が出たら `git checkout` で消さない（今回 1 度消して作り直した＝stackalloc の 64 を ScratchArray に替えて定数を無くした）。
-- 1 回目の `-End` は full で 1 赤＝`CitationsThatNameNothing_DoNotGrow`（括弧の中の `lily/beam.cc:1129-1145` と `define-grobs.scm:531 Beam (neutral-direction . DOWN)`＝検査が記号と読むのは `_` を含むか 3 語以上のハイフン語だけ・define-grobs の行は囲む form の名前も照合される）＝`46b5a1bd8` で直した。
-- `-End p935 -DiffBase 162e3c8fd`（2 回目）＝full **12746 / 0 / 2 / 12748**（前便末 +22）（Lab `sessions/p935/end.log`）→ この docs commit。未 push 51＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。
-判定（2026-10-22）: grace の符尾の向きと膝の連桁は閉じた。残り＝途中の grace の呼吸記号（grace の列組みに変更の列）・slur が膝の grace 連桁を避ける形（主線で読む＝⒝）。grace の LYS4020 の残り＝`@pluck`・TAB の技法（字形も置き場所も Lily# 独自＝LP と照合できる部分が少ない）・`@diagram`・`@cross`（譜表をまたぐ）・`@figuredBass`・`@chord`。
 
 ## 2. 開いている作業
 
