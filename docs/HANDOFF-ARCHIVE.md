@@ -160,6 +160,16 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第921セッションの経緯
+
+### 1.1 第921セッション（2026-10-21・YT-DELL2）
+
+第920 と同じ会話の続き（ユーザー「続けて」）。`-Start p921`（開始 HEAD `4188b1d37`・未 push 17・full **12561 / 0 / 2 / 12563**・第919 を ARCHIVE へ）。作業場所は Lab `sessions/p921/`（開始チェックの間は非管理者コンソール #39644）。
+- **grace の text spanner（`@rit` 等）を描く＝`9fc50c571`**: 収集の grace の関所が span の始まりと終わりを通す（`GraceBodySupport.IsCarriedTextSpan`＝LYS4020 も読む）・`TextSpannerEngraver.BoundX` が grace の端を `GraceColumnAt` で読む。LP 2.26（Lab `p921/sp`）＝"rit." は grace の頭の 0.25 右・高さは対照と同じ 2.85＝台帳 4 点一致（`textspanner.grace.*`）。**grace の `@!rit` は落ちて span が閉じず LYS4018（エラー）で何も描かれなかった**＝閉じた。右端の算術（LP は列の中央寄り）は全 text spanner で未移植のまま（名前付き・点なし）。輪郭の予約 `InkAboveStaff` は grace の群を省略可能な引数で受け取るが、呼び手はまだ渡していない（予約だけ grace の X を読まない・名前付き）。毒 2 本＝1・6 赤。掃き 0。
+- **ペダル（`@sustain` 族）は測っただけ＝次便**: LP（`p921/sp/sp.ly` GPA〜GPC・`pedalSustainStyle bracket`）＝括弧は grace の頭の左端（−0.05＝線の半分）から・**高さは grace の小さな頭で決まる**（GPA −5.144060 対 対照 GPB −5.295000）・grace で終わるなら grace の頭の左端（＋0.05）まで（GPC 14.289041 対 grace の頭 14.239041）。直す場所: ⑴ 収集の関所（`Collect` の grace 判定＝述語 `IsCarriedPedal`）⑵ `PedalEngraver.AnchorX`／`AnchorColumnSpan`（X を時刻か `ml.Items` で読む＝grace は主の列になる・呼び手 4 か所）⑶ `PedalBracketItem` に staff／voice が無い（`MusicMarkItem` は持つ）⑷ 高さは「部屋」（`SolveAndSeedText`／線の解き＝支えを列の範囲で切り取る）が解く＝grace の列の範囲を通さないと −5.295 側になる。
+- `-End p921 -DiffBase 4188b1d37`＝full **12568 / 0 / 2 / 12570**（前便末 +7）・Core 警告 0・門は全部 OK（Lab `sessions/p921/end.log`）→ この docs commit。未 push 18＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。
+判定（2026-10-21）: grace の text spanner は閉じた。U8 ⒟ の残りはペダル 1 族（測定済み・直す場所 4 つ＝上）。
+
 ## 以下は第920セッションの経緯
 
 ### 1.1 第920セッション（2026-10-21・YT-DELL2）

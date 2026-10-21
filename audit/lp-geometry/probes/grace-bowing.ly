@@ -6,7 +6,7 @@
 %% (scm/script.scm), set at general-grace-settings' Script font-size -3 over the grace column.
 %%
 %%   GBA  c'4 \grace { d'16\upbow } e'4 c'2           GBE  ... \snappizzicato
-%%   GBB  c'4 \grace { d'16\downbow } e'4 c'2         GBF  ... \thumb (no Script is printed)
+%%   GBB  c'4 \grace { d'16\downbow } e'4 c'2         GBF  ... \thumb (no Script, nor on a full-size note)
 %%   GBC  c'4 \grace { d'16\flageolet } e'4 c'2       GBG  c'4 d'16\upbow e'8. c'2      control
 %%   GBD  c'4 \grace { d'16\stopped } e'4 c'2         GBH  c'4 d'16\flageolet e'8. c'2  control
 %%
