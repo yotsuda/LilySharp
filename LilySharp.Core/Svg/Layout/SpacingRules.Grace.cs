@@ -239,7 +239,13 @@ internal static partial class SpacingRules
                 ? notes[i + 1].SlurEnd
                 : mainItem is not null
                   && Collector.SlurDetector.TryGetSlurFlags(mainItem, out _, out bool mainEnd) && mainEnd;
-            if (notes[i].SlurStart && nextEndsSlur)
+            // The PHRASING slur's minimum-length rods its two columns the same way (session 926).
+            // MEASURED (2.26.0, probes/grace-phrasing.ly PHD): `\grace { d16\( e16\) }` stands its
+            // two heads 1.5 apart. LILYPOND-REF: scm/define-grobs.scm:2840 PhrasingSlur (minimum-length . 1.5).
+            bool nextEndsPhrasing = i + 1 < notes.Length
+                ? notes[i + 1].PhrasingSlurEnd
+                : mainItem is { HasPhrasingSlurEnd: true };
+            if ((notes[i].SlurStart && nextEndsSlur) || (notes[i].PhrasingSlurStart && nextEndsPhrasing))
             {
                 gap = Math.Max(gap, SlurScoringProblem.MinimumLengthSpaces);
                 rod = Math.Max(rod, SlurScoringProblem.MinimumLengthSpaces);

@@ -495,6 +495,24 @@ internal static class GraceBodySupport
         _ => false,
     };
 
+    /// <summary>
+    /// True for a PHRASING SLUR's start or end a grace note carries — <c>@phrasingSlur</c>,
+    /// <c>@!phrasingSlur</c>: the grace column binds it as any column does, paired by
+    /// SlurDetector and laid out by the slur pass at the grace's own X (session 926; ledger
+    /// phrasing.grace.*). THE question the collector's stamp and the drop list both answer.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/phrasing-slur-engraver.cc — a Voice engraver; its bounds are note
+    ///   columns, a grace's as any. score-grace-settings (scm/music-functions.scm) turns only
+    ///   the Slur DOWN, so a phrasing slur keeps its ordinary direction rule on a grace.
+    /// </remarks>
+    internal static bool IsCarriedPhrasingSlur(SyntaxNode annotation) => annotation switch
+    {
+        ArticulationSyntax a => AnnotationValues.IsPhrasingSlurName(a.Name),
+        MusicMarkSyntax { IsSpanEnd: true } end => AnnotationValues.IsPhrasingSlurName(end.Name),
+        _ => false,
+    };
+
     private static bool IsOttavaType(Svg.Model.MusicMarkType? type)
         => type is Svg.Model.MusicMarkType.OttavaUp or Svg.Model.MusicMarkType.OttavaDown
             or Svg.Model.MusicMarkType.QuindicesUp or Svg.Model.MusicMarkType.QuindicesDown
@@ -753,7 +771,7 @@ internal static class GraceBodySupport
                     || IsCarriedHairpinStart(annotation) || IsCarriedArpeggio(annotation)
                     || IsCarriedGlissando(annotation) || IsCarriedTextSpan(annotation)
                     || IsCarriedPedal(annotation) || IsCarriedTrillSpan(annotation)
-                    || IsCarriedOttava(annotation))
+                    || IsCarriedOttava(annotation) || IsCarriedPhrasingSlur(annotation))
                     continue;
                 yield return new GraceDrop(
                     GraceDropKind.Annotation, annotation.Span, Describe(annotation), via);

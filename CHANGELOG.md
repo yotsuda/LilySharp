@@ -85,6 +85,8 @@ workflow attaches that section to the GitHub Release verbatim.
   (`grace { d16@startTrillSpan } e4 f4 g4@stopTrillSpan`); a high grace's stem lifts the line,
   as in LilyPond. **So can an ottava** (`grace { d''16@ottava } e''4 f''4 g'4@!ottava`); an `@!ottava`
   written on a grace ends the bracket before it, as LilyPond's `\ottava #0` there does.
+  **A phrasing slur can start, stop or close on grace notes** (`grace { d16@phrasingSlur } e4 f4
+  g4@!phrasingSlur`); one inside a grace body keeps its two grace notes apart by its minimum length.
   A hairpin running over a
   grace note also stands where LilyPond puts it — it read the grace note's stem as a full-size
   down stem and sat a quarter space too low.

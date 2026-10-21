@@ -307,6 +307,20 @@ public class GraceBodyValidatorTests
     }
 
     /// <summary>
+    /// A PHRASING SLUR that starts, stops or closes on grace notes is drawn (session 926): the
+    /// grace column binds it as it binds a slur (ledger phrasing.grace.*). Nothing is reported.
+    /// </summary>
+    [Theory]
+    [InlineData("grace { d'8@phrasingSlur } c'1 | e'1@!phrasingSlur |", "grace { d'8 } c'1 | e'1 |")]
+    [InlineData("c'1@phrasingSlur | grace { d'8@!phrasingSlur } e'1 |", "c'1 | grace { d'8 } e'1 |")]
+    [InlineData("grace { d'16@phrasingSlur e'16@!phrasingSlur } c'1 | e'1 |", "grace { d'16 e'16 } c'1 | e'1 |")]
+    public void APhrasingSlurOnAGrace_IsDrawn_AndNotReported(string written, string control)
+    {
+        Assert.Empty(Warnings(Book(written)));
+        Assert.NotEqual(Page(control), Page(written));
+    }
+
+    /// <summary>
     /// The grace body that draws exactly what it says draws no warning either. This is the
     /// case that catches a validator that has quietly become "warn about every grace".
     /// </summary>

@@ -59,9 +59,10 @@ internal sealed class SlurDetector
                 currentVoice = v;
             }
 
-            // Grace time is walked for the SLUR pairing below (and enters the section cursor
-            // as SlurPairingScanner's raw item walk always entered it); the phrasing slur's
-            // marks there stay where LYS4020 reports them (GraceBodySupport).
+            // Grace time is walked for the slur AND the phrasing slur (session 926: a grace
+            // column binds a phrasing slur as any column does — GraceBodySupport.
+            // IsCarriedPhrasingSlur), and enters the section cursor as SlurPairingScanner's
+            // raw item walk always entered it.
             if (plays.Enter(item))
             {
                 for (int k = 0; k < openSlurs.Count; k++)
@@ -73,7 +74,7 @@ internal sealed class SlurDetector
 
             // Close before open, as for a slur below (lily/slur-engraver.cc:295-324 is the
             // phrasing engraver's process_music too).
-            if (!item.GraceTime && item.HasPhrasingSlurEnd && openPhrasing is { } op)
+            if (item.HasPhrasingSlurEnd && openPhrasing is { } op)
             {
                 openPhrasing = null;
                 // A written side wins over the slur's own rule.
@@ -93,7 +94,7 @@ internal sealed class SlurDetector
                     IsPhrasing = true,
                 });
             }
-            if (!item.GraceTime && item.HasPhrasingSlurStart && openPhrasing is null)
+            if (item.HasPhrasingSlurStart && openPhrasing is null)
             {
                 openPhrasing = (measureIdx, itemIdx, item);
                 openPhrasingPlay = plays.Play;

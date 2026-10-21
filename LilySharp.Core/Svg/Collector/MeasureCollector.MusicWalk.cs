@@ -255,9 +255,9 @@ public sealed partial class MeasureCollector
     /// written — or null when it carries neither, or when the walk is where bows are dropped.
     /// </summary>
     /// <remarks>
-    /// ⚠️ DROPPED in grace time (LYS4020's drop list — the group is drawn from its derived
-    /// GraceNoteItem; the SLUR rides there since session 725, the phrasing slur not yet) and
-    /// under a % sign (<see cref="WithoutBowsUnderPercent"/>), where the two bows keep one
+    /// ⚠️ CARRIED in grace time since session 926 (the grace slot,
+    /// <c>MeasureBuilder.PendingGracePhrasingSlur</c>; the SLUR rides there since session 725),
+    /// DROPPED under a % sign (<see cref="WithoutBowsUnderPercent"/>), where the two bows keep one
     /// rule. The marks are post-events of the note, so they are read
     /// off its annotation list, the one <c>CollectArticulations</c> reads; a chord member's
     /// own list is not read — a phrasing slur binds to the column, as LilyPond's does.
@@ -269,6 +269,10 @@ public sealed partial class MeasureCollector
         int start = MusicItem.NoSourcePosition, end = MusicItem.NoSourcePosition, dir = 0;
         foreach (var a in ArticulationsOf(node))
         {
+            // In grace time the question is LYS4020's own (GraceBodySupport.IsCarriedPhrasingSlur),
+            // so the mark is drawn exactly when it is not reported.
+            if (_graceDepth > 0 && !Semantics.GraceBodySupport.IsCarriedPhrasingSlur(a))
+                continue;
             if (a is ArticulationSyntax art
                 && Semantics.AnnotationValues.IsPhrasingSlurName(art.Name))
             {
@@ -289,17 +293,21 @@ public sealed partial class MeasureCollector
     /// </summary>
     /// <remarks>
     /// ⚠️ OVERWRITTEN AT EVERY NOTE-LIKE NODE, null included: a mark on something that adds
-    /// no column (a spacer) must not survive to the next note. ⚠️ AND NOT TOUCHED IN GRACE
-    /// TIME: a grace body can be walked while the note it precedes is being emitted, and its
-    /// notes must neither take the main note's mark nor wipe it (the builder refuses to stamp
-    /// in grace time for the same reason).
+    /// no column (a spacer) must not survive to the next note. ⚠️ AND THE MAIN SLOT IS NOT
+    /// TOUCHED IN GRACE TIME: a grace body can be walked while the note it precedes is being
+    /// emitted, and its notes must neither take the main note's mark nor wipe it — a grace
+    /// note's own marks go to the grace slot (session 926), which only a grace column takes.
     /// </remarks>
     private void HandPhrasingSlurTo(MeasureBuilder builder, SyntaxNode node)
     {
-        if (_graceDepth > 0)
+        if (node is not (NoteSyntax or ChordSyntax or ChordRepetitionSyntax or SlashNoteSyntax
+                or BareDurationSyntax or RestSyntax))
             return;
-        if (node is NoteSyntax or ChordSyntax or ChordRepetitionSyntax or SlashNoteSyntax
-                or BareDurationSyntax or RestSyntax)
+        // A grace note's own marks go to the grace slot (session 926), which the main note's
+        // never shares — see MeasureBuilder.PendingGracePhrasingSlur.
+        if (_graceDepth > 0)
+            builder.PendingGracePhrasingSlur = PhrasingSlurMarksOn(node);
+        else
             builder.PendingPhrasingSlur = PhrasingSlurMarksOn(node);
     }
 

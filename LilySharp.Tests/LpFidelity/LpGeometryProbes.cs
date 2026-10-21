@@ -8912,6 +8912,11 @@ internal static class LpGeometryProbes
     private static readonly string GRTA = GraceTieBook("c4 grace { d16@rit } e4 f4 g4@!rit |", "GRTA");
     private static readonly string GRTB = GraceTieBook("c4 d16@rit e8. f4 g4@!rit |", "GRTB");
     private static readonly string GRTC = GraceTieBook("c4@rit e4 grace { f16@!rit } g4 a4 |", "GRTC");
+    // A phrasing slur starting, stopping or closing on grace notes (audit/lp-geometry/probes/grace-phrasing.ly).
+    private static readonly string GPHA = GraceTieBook("c4 grace { d16@phrasingSlur } e4 f4 g4@!phrasingSlur |", "GPHA");
+    private static readonly string GPHB = GraceTieBook("c4 d16@phrasingSlur e8. f4 g4@!phrasingSlur |", "GPHB");
+    private static readonly string GPHC = GraceTieBook("c4@phrasingSlur e4 grace { f16@!phrasingSlur } g4 a4 |", "GPHC");
+    private static readonly string GPHD = GraceTieBook("c4 grace { d16@phrasingSlur e16@!phrasingSlur } f4 g4 a4 |", "GPHD");
     // An ottava starting or stopping on a grace note (audit/lp-geometry/probes/grace-ottava.ly).
     private static readonly string GOTA = GraceTieBook("c''4 grace { d''16@ottava } e''4 f''4 g'4@!ottava |", "GOTA");
     private static readonly string GOTB = GraceTieBook("c''4 d''16@ottava e''8. f''4 g'4@!ottava |", "GOTB");
@@ -17389,6 +17394,14 @@ internal static class LpGeometryProbes
         new("textspanner.grace.staff-to-line", GRTA, g => g.TextSpannerLineAboveStaff()),
         new("textspanner.grace.control.label-to-notehead", GRTB, g => g.TextSpannerLabelPenToNotehead(1)),
         new("textspanner.grace.ends-on-grace.label-to-notehead", GRTC, g => g.TextSpannerLabelPenToNotehead(0)),
+        new("phrasing.grace.left-attachment", GPHA, g => g.BowAttachmentAboveStaffMiddle(0)),
+        new("phrasing.grace.span", GPHA, g => g.BowSpan(0)),
+        new("phrasing.grace.control.left-attachment", GPHB, g => g.BowAttachmentAboveStaffMiddle(0)),
+        new("phrasing.grace.control.span", GPHB, g => g.BowSpan(0)),
+        new("phrasing.grace.stops-on-grace.left-attachment", GPHC, g => g.BowAttachmentAboveStaffMiddle(0)),
+        new("phrasing.grace.stops-on-grace.span", GPHC, g => g.BowSpan(0)),
+        new("phrasing.grace.inside.left-attachment", GPHD, g => g.BowAttachmentAboveStaffMiddle(0)),
+        new("phrasing.grace.inside.span", GPHD, g => g.BowSpan(0)),
         new("ottava.grace.label-to-notehead", GOTA, g => g.OttavaLabelPenToNotehead(1)),
         new("ottava.grace.staff-to-line", GOTE, g => g.OttavaLineAboveStaff()),
         new("ottava.grace.after-high-note.staff-to-line", GOTA, g => g.OttavaLineAboveStaff()),

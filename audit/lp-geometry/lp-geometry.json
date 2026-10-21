@@ -7483,6 +7483,62 @@
       "residual": 0.0,
       "why": "EXACT. A spanner from the c4 that ENDS on a grace note (`grace { f16@!rit }`): its start stands as ever. Until session 921 the grace's @!rit was dropped, so the spanner was never closed: LYS4018 (an error) and nothing drawn. The right end now stops at the grace column; its arithmetic is the unported right bound every text spanner shares (LilyPond 14.758355 against the grace head's 14.239041 -- TextSpannerEngraver's remark), so no point reads it."
     },
+    "phrasing.grace.left-attachment": {
+      "probe": "grace-phrasing.ly",
+      "score": "PHA",
+      "lilypond": -3.3940595074787834,
+      "residual": 0.0,
+      "why": "EXACT. `grace { d16@phrasingSlur }`: the phrasing slur starts on the grace column, below it (a phrasing slur keeps its ordinary direction rule; score-grace-settings turns only the Slur DOWN). Until session 926 the grace's marks were dropped (LYS4020) and the walk refused to stamp them in grace time; they now ride the builder's GRACE slot (MeasureBuilder.PendingGracePhrasingSlur), survive NarrowToGraceTime, and SlurDetector pairs them, so the slur pass lays the bow out at the grace's own X as it has a slur's since session 725."
+    },
+    "phrasing.grace.span": {
+      "probe": "grace-phrasing.ly",
+      "score": "PHA",
+      "lilypond": 8.155019770659806,
+      "residual": 0.0,
+      "why": "EXACT. The same bow end to end: the grace head to the g4."
+    },
+    "phrasing.grace.control.left-attachment": {
+      "probe": "grace-phrasing.ly",
+      "score": "PHB",
+      "lilypond": -3.5450000000000004,
+      "residual": 0.0,
+      "why": "EXACT. The full-size CONTROL of PHA."
+    },
+    "phrasing.grace.control.span": {
+      "probe": "grace-phrasing.ly",
+      "score": "PHB",
+      "lilypond": 11.814555000865388,
+      "residual": 0.0,
+      "why": "EXACT. The control's span."
+    },
+    "phrasing.grace.stops-on-grace.left-attachment": {
+      "probe": "grace-phrasing.ly",
+      "score": "PHC",
+      "lilypond": -4.045,
+      "residual": 0.0,
+      "why": "EXACT. A phrasing slur from the c4 that STOPS on a grace (`grace { f16@!phrasingSlur }`)."
+    },
+    "phrasing.grace.stops-on-grace.span": {
+      "probe": "grace-phrasing.ly",
+      "score": "PHC",
+      "lilypond": 5.423650981728407,
+      "residual": 0.0,
+      "why": "EXACT. Its span ends at the grace column."
+    },
+    "phrasing.grace.inside.left-attachment": {
+      "probe": "grace-phrasing.ly",
+      "score": "PHD",
+      "lilypond": -3.3940595074787834,
+      "residual": 0.0,
+      "why": "EXACT. A phrasing slur opened and closed inside one grace body."
+    },
+    "phrasing.grace.inside.span": {
+      "probe": "grace-phrasing.ly",
+      "score": "PHD",
+      "lilypond": 1.5,
+      "residual": 0.0,
+      "why": "EXACT. 1.5 = the PhrasingSlur's minimum-length (scm/define-grobs.scm:2840) rodding the two grace columns apart, as a Slur's does (SpacingRules.GraceColumns; GraceColumnInfo.PhrasingSlurStart/End). Without the rod the run's floor gave 1.417938446."
+    },
     "ottava.grace.label-to-notehead": {
       "probe": "grace-ottava.ly",
       "score": "OGA",

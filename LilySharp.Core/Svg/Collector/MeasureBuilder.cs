@@ -360,6 +360,14 @@ internal sealed class MeasureBuilder
     /// </remarks>
     public (int Start, int End, int Direction)? PendingPhrasingSlur { get; set; }
 
+    /// <summary>
+    /// <see cref="PendingPhrasingSlur"/>'s GRACE-TIME twin: a grace note's own marks, handed
+    /// to the next grace column (session 926, HANDOFF §2 U8). A second slot, not the first:
+    /// a grace body can be walked while the note it precedes is being emitted, and the main
+    /// note's mark must neither go to a grace nor be wiped by one.
+    /// </summary>
+    public (int Start, int End, int Direction)? PendingGracePhrasingSlur { get; set; }
+
     /// <summary>The columns a phrasing slur binds to — the same three a slur does
     /// (<c>SlurDetector.TryGetSlurFlags</c>): a note, a chord, a sounding rest.</summary>
     private static bool BindsAPhrasingSlur(MusicItem item)
@@ -372,10 +380,23 @@ internal sealed class MeasureBuilder
     private MusicItem TakePendingPhrasingSlur(MusicItem item)
     {
         item = TakePendingSectionPlay(item);
-        // Not in grace time: a grace column is not the note the mark was written on.
-        if (_graceDepth > 0 || PendingPhrasingSlur is not { } phrasing || !BindsAPhrasingSlur(item))
+        // In grace time a grace column takes the GRACE slot only: it is not the note the main
+        // slot's mark was written on.
+        if (_graceDepth > 0)
+        {
+            if (PendingGracePhrasingSlur is not { } gracePhrasing || !BindsAPhrasingSlur(item))
+                return item;
+            PendingGracePhrasingSlur = null;
+            return WithPhrasingSlur(item, gracePhrasing);
+        }
+        if (PendingPhrasingSlur is not { } phrasing || !BindsAPhrasingSlur(item))
             return item;
         PendingPhrasingSlur = null;
+        return WithPhrasingSlur(item, phrasing);
+    }
+
+    private static MusicItem WithPhrasingSlur(MusicItem item, (int Start, int End, int Direction) phrasing)
+    {
         return item with
         {
             HasPhrasingSlurStart = phrasing.Start >= 0,
@@ -769,6 +790,13 @@ internal sealed class MeasureBuilder
                 // The pitch the accidental was decided for, which the per-staff pass reads
                 // (StaffAccidentals) — a grace's accidental holds for the staff like any other.
                 WrittenPitch = n.WrittenPitch,
+                // ⚠️ THE PHRASING SLUR SURVIVES (session 926): a grace column is a phrasing-slur
+                // bound as it is a slur's, paired by SlurDetector and laid out by the slur pass.
+                HasPhrasingSlurStart = n.HasPhrasingSlurStart,
+                PhrasingSlurStartSourcePosition = n.PhrasingSlurStartSourcePosition,
+                HasPhrasingSlurEnd = n.HasPhrasingSlurEnd,
+                PhrasingSlurEndSourcePosition = n.PhrasingSlurEndSourcePosition,
+                PhrasingSlurDirection = n.PhrasingSlurDirection,
             },
 
             ChordItem c => new ChordItem(
@@ -797,6 +825,11 @@ internal sealed class MeasureBuilder
                 SlurEndSourcePosition = c.SlurEndSourcePosition,
                 SlurStartHeadPosition = c.SlurStartHeadPosition,
                 SlurEndHeadPosition = c.SlurEndHeadPosition,
+                HasPhrasingSlurStart = c.HasPhrasingSlurStart,
+                PhrasingSlurStartSourcePosition = c.PhrasingSlurStartSourcePosition,
+                HasPhrasingSlurEnd = c.HasPhrasingSlurEnd,
+                PhrasingSlurEndSourcePosition = c.PhrasingSlurEndSourcePosition,
+                PhrasingSlurDirection = c.PhrasingSlurDirection,
             },
 
             // A REST TAKES NO SLASH: the stroke is the Flag's, and a rest has none.
@@ -808,6 +841,11 @@ internal sealed class MeasureBuilder
                 HasSlurEnd = r.HasSlurEnd,
                 SlurStartSourcePosition = r.SlurStartSourcePosition,
                 SlurEndSourcePosition = r.SlurEndSourcePosition,
+                HasPhrasingSlurStart = r.HasPhrasingSlurStart,
+                PhrasingSlurStartSourcePosition = r.PhrasingSlurStartSourcePosition,
+                HasPhrasingSlurEnd = r.HasPhrasingSlurEnd,
+                PhrasingSlurEndSourcePosition = r.PhrasingSlurEndSourcePosition,
+                PhrasingSlurDirection = r.PhrasingSlurDirection,
             },
 
             _ => item with { GraceTime = true },

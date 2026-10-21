@@ -131,7 +131,11 @@ public readonly record struct GraceColumnInfo(
     // column's own heads and accidentals; the column's left skylines carry it, so the run makes
     // room for it (session 919; ledger arpeggio.grace.*).
     bool Arpeggio = false,
-    bool ArpeggioBracket = false
+    bool ArpeggioBracket = false,
+    // The PHRASING slur marks this column's item carries (session 926): the PhrasingSlur's
+    // minimum-length rods two columns it binds as the Slur's does (SpacingRules.GraceColumns).
+    bool PhrasingSlurStart = false,
+    bool PhrasingSlurEnd = false
 )
 {
     /// <summary>Whether this column's stem points up — <c>!</c><see cref="StemDown"/>.</summary>
@@ -221,7 +225,8 @@ public readonly record struct GraceColumnInfo(
             || ContextFontSizeStep != other.ContextFontSizeStep || StemDown != other.StemDown
             || SlurStart != other.SlurStart || SlurEnd != other.SlurEnd
             || TabDigitHalfWidth != other.TabDigitHalfWidth || TabStringCount != other.TabStringCount
-            || Arpeggio != other.Arpeggio || ArpeggioBracket != other.ArpeggioBracket)
+            || Arpeggio != other.Arpeggio || ArpeggioBracket != other.ArpeggioBracket
+            || PhrasingSlurStart != other.PhrasingSlurStart || PhrasingSlurEnd != other.PhrasingSlurEnd)
             return false;
         if (Heads.IsDefaultOrEmpty || other.Heads.IsDefaultOrEmpty)
             return Heads.IsDefaultOrEmpty && other.Heads.IsDefaultOrEmpty;
@@ -247,6 +252,8 @@ public readonly record struct GraceColumnInfo(
         hc.Add(TabStringCount);
         hc.Add(Arpeggio);
         hc.Add(ArpeggioBracket);
+        hc.Add(PhrasingSlurStart);
+        hc.Add(PhrasingSlurEnd);
         if (!Heads.IsDefaultOrEmpty)
             foreach (var head in Heads)
                 hc.Add(head);

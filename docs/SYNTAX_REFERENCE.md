@@ -1194,6 +1194,8 @@ sign on a grace note is not drawn yet (LYS4020 names it, and every other mark st
 A trill spanner can start or stop on a grace note (`grace { d16@startTrillSpan } e4 f g@stopTrillSpan`),
 and so can an ottava (`grace { d''16@ottava } e''4 f'' g'@!ottava`) — an `@!ottava` on a grace ends
 the span before it, as LilyPond's `\ottava #0` there does, so that grace keeps its written octave.
+A phrasing slur can start, stop or close on grace notes too (`grace { d16@phrasingSlur } e4 f
+g@!phrasingSlur`, `grace { d16@phrasingSlur e16@!phrasingSlur } f4`).
 
 LilyPond draws all of the spellings above, so each warning says "not drawn yet", not "do not
 write this".
