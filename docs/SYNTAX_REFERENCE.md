@@ -1200,7 +1200,8 @@ g@!phrasingSlur`, `grace { d16@phrasingSlur e16@!phrasingSlur } f4`), and a cour
 drawn in parentheses on a grace note (`grace { fis16@courtesy } g4` — LilyPond's `fis?16`), and an
 editorial one above it, at the size it has on any note (`grace { fis16@editorial } g4`). A half-tie
 hangs off a grace note too (`grace { d16@laissezVibrer } e4`, `grace { d16@repeatTie } e4`), and the
-grace notes make room for it as any note does.
+grace notes make room for it as any note does. A grace head can be a dead note's cross
+(`grace { d16@dead } e4`, or `@notehead(x)`) or stand in parentheses (`grace { d16@parenthesize } e4`).
 
 LilyPond draws all of the spellings above, so each warning says "not drawn yet", not "do not
 write this".

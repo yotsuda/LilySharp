@@ -8943,6 +8943,11 @@ internal static class LpGeometryProbes
     private static readonly string ECHA = GraceKeyBook("", "c4 <d f@editorial>4 e4 g4 |", "ECHA");
     private static readonly string ECHB = GraceKeyBook("", "c4 <dis@editorial f@editorial>4 e4 g4 |", "ECHB");
     private static readonly string ECHC = GraceKeyBook("", "c4 grace { <d f@editorial>16 } e4 g4 a4 |", "ECHC");
+    // A grace head drawn another way: a dead note's cross, and parentheses (audit/lp-geometry/probes/grace-head-style.ly).
+    private static readonly string GDHA = GraceTieBook("c4 grace { d16@dead } e4 f4 g4 |", "GDHA");
+    private static readonly string GDHB = GraceTieBook("c4 d16@dead e8. f4 g4 |", "GDHB");
+    private static readonly string GPRA = GraceTieBook("c4 grace { d16@parenthesize } e4 f4 g4 |", "GPRA");
+    private static readonly string GPRB = GraceTieBook("c4 d16@parenthesize e8. f4 g4 |", "GPRB");
     // A half-tie on a grace note (audit/lp-geometry/probes/grace-semitie.ly).
     private static readonly string GLVA = GraceTieBook("c4 grace { d16@laissezVibrer } e4 f4 g4 |", "GLVA");
     private static readonly string GLVB = GraceTieBook("c4 d16@laissezVibrer e8. f4 g4 |", "GLVB");
@@ -17451,6 +17456,16 @@ internal static class LpGeometryProbes
         new("editorial.chord.two.upper.above-staff-middle", ECHB, g => g.GlyphAboveStaffMiddle(EmmentalerGlyphs.AccidentalNatural, 0)),
         new("editorial.chord.grace.to-notehead", ECHC, g => g.SuggestionToNoteheadAnchor(EmmentalerGlyphs.AccidentalNatural)),
         new("editorial.chord.grace.above-staff-middle", ECHC, g => g.GlyphAboveStaffMiddle(EmmentalerGlyphs.AccidentalNatural, 0)),
+        new("headstyle.grace.dead.is-cross", GDHA, g => g.NoteheadIsCross(1)),
+        new("headstyle.grace.dead.stem-right", GDHA, g => g.StemRightFromNotehead(1, 1)),
+        new("headstyle.grace.dead.to-main", GDHA, g => g.NoteheadToNotehead(1, 2)),
+        new("headstyle.grace.dead.control.stem-right", GDHB, g => g.StemRightFromNotehead(1, 1)),
+        new("headstyle.grace.dead.control.to-next", GDHB, g => g.NoteheadToNotehead(1, 2)),
+        new("headstyle.grace.parens.span", GPRA, g => g.CourtesyParensSpan()),
+        new("headstyle.grace.parens.left-gap", GPRA, g => g.HeadParensLeftGap()),
+        new("headstyle.grace.parens.to-main", GPRA, g => g.NoteheadToNotehead(1, 2)),
+        new("headstyle.grace.parens.control.span", GPRB, g => g.CourtesyParensSpan()),
+        new("headstyle.grace.parens.control.left-gap", GPRB, g => g.HeadParensLeftGap()),
         new("semitie.grace.lv.start-to-notehead", GLVA, g => g.BowStartToNotehead(0, 1)),
         new("semitie.grace.lv.span", GLVA, g => g.BowSpan(0)),
         new("semitie.grace.lv.end-to-next", GLVA, g => g.BowEndToNotehead(0, 2)),

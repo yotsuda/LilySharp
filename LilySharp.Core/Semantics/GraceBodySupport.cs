@@ -556,6 +556,27 @@ internal static class GraceBodySupport
     internal static bool IsCarriedSemiTie(SyntaxNode annotation)
         => annotation is ArticulationSyntax { Name: "laissezVibrer" or "repeatTie" };
 
+    /// <summary>
+    /// True for a HEAD mark a grace note carries — <c>@dead</c> (LilyPond's <c>\deadNote</c>),
+    /// <c>@notehead(x)</c> / <c>@notehead(cross)</c>, and <c>@parenthesize</c>: the grace head is
+    /// drawn as a cross, or in parentheses at the head's font-size − 6 (−9 on a grace), by the
+    /// ordinary note drawer (session 931; ledger headstyle.grace.*). The cross alone of the head
+    /// styles: its box is the black head's, so the grace column's spacing holds — LilyPond moves
+    /// nothing for it, nor for the parentheses.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: ly/property-init.ly deadNote / xNote — a NoteHead.style tweak, on a grace's
+    ///   NoteHead as any. LILYPOND-REF: lily/parenthesis-engraver.cc — the Parentheses' font-size
+    ///   adds the grob's, so a grace's parens are −6 − 3.
+    /// </remarks>
+    internal static bool IsCarriedHeadMark(SyntaxNode annotation) => annotation switch
+    {
+        ArticulationSyntax { Name: "dead" or "parenthesize" } => true,
+        MusicMarkSyntax mark when mark.Name.Equals("notehead", StringComparison.Ordinal)
+            && mark.HasArgumentList => AnnotationValues.Notehead(mark) is "x" or "cross",
+        _ => false,
+    };
+
     private static bool IsOttavaType(Svg.Model.MusicMarkType? type)
         => type is Svg.Model.MusicMarkType.OttavaUp or Svg.Model.MusicMarkType.OttavaDown
             or Svg.Model.MusicMarkType.QuindicesUp or Svg.Model.MusicMarkType.QuindicesDown
@@ -816,7 +837,7 @@ internal static class GraceBodySupport
                     || IsCarriedPedal(annotation) || IsCarriedTrillSpan(annotation)
                     || IsCarriedOttava(annotation) || IsCarriedPhrasingSlur(annotation)
                     || IsCarriedCourtesy(annotation) || IsCarriedEditorial(annotation)
-                    || IsCarriedSemiTie(annotation))
+                    || IsCarriedSemiTie(annotation) || IsCarriedHeadMark(annotation))
                     continue;
                 yield return new GraceDrop(
                     GraceDropKind.Annotation, annotation.Span, Describe(annotation), via);

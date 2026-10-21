@@ -2997,9 +2997,38 @@ internal sealed class RenderedGeometry
         return bows[index];
     }
 
+    /// <summary>Notehead <paramref name="to"/>'s origin minus notehead <paramref name="from"/>'s
+    /// (heads left to right, grace heads among them).</summary>
+    public double NoteheadToNotehead(int from, int to, int page = 0)
+        => HeadAt(to, page).X - HeadAt(from, page).X;
+
+    /// <summary>Stem <paramref name="stemIndex"/>'s RIGHT edge (stems left to right) minus
+    /// notehead <paramref name="headIndex"/>'s origin — <see cref="UpStemRightFromHeadAnchor"/>
+    /// for a page whose heads include a cross.</summary>
+    public double StemRightFromNotehead(int stemIndex, int headIndex, int page = 0)
+    {
+        var stems = _pages[page].Lines
+            .Where(l => Math.Abs(l.X1 - l.X2) < 1e-9
+                        && Math.Abs(l.StrokeWidth - LilySharp.Core.Svg.EngravingDefaults.StemThickness) < 1e-9)
+            .OrderBy(l => l.X1).ToList();
+        if (stemIndex < 0 || stemIndex >= stems.Count)
+            throw new InvalidOperationException(
+                $"page {page}: asked for stem {stemIndex} but {stems.Count} were drawn.\n"
+                + "Drawn geometry:\n" + Describe());
+        return stems[stemIndex].X1 + stems[stemIndex].StrokeWidth / 2 - HeadAt(headIndex, page).X;
+    }
+
+    /// <summary>1 when notehead <paramref name="headIndex"/> (left to right) is drawn as a
+    /// CROSS — a dead note's head, LilyPond's <c>noteheads.s2cross</c> — 0 otherwise.</summary>
+    public double NoteheadIsCross(int headIndex, int page = 0)
+        => HeadAt(headIndex, page).Glyph == LilySharp.Core.Svg.EmmentalerGlyphs.NoteheadCrossBlack ? 1 : 0;
+
     private DrawnGlyph HeadAt(int headIndex, int page)
     {
-        var heads = _pages[page].Glyphs.Where(g => IsNotehead(g.Glyph)).OrderBy(g => g.X).ToList();
+        // A dead note's CROSS is a head too (IsNotehead, older than it, does not know it).
+        var heads = _pages[page].Glyphs
+            .Where(g => IsNotehead(g.Glyph) || g.Glyph == LilySharp.Core.Svg.EmmentalerGlyphs.NoteheadCrossBlack)
+            .OrderBy(g => g.X).ToList();
         if (headIndex < 0 || headIndex >= heads.Count)
             throw new InvalidOperationException(
                 $"page {page}: asked for notehead {headIndex} but {heads.Count} were drawn.\n"
@@ -3941,6 +3970,17 @@ internal sealed class RenderedGeometry
         double l = lefts[0].X + font.Box(LilySharp.Core.Svg.MusicGlyph.AccidentalParensLeft).Left;
         double r = rights[0].X + font.Box(LilySharp.Core.Svg.MusicGlyph.AccidentalParensRight).Right;
         return (l, r);
+    }
+
+    /// <summary>The sole parenthesized head's LEFT paren box → that head's anchor (the head
+    /// nearest the parens): the Parentheses' padding plus the paren's own reach.</summary>
+    public double HeadParensLeftGap()
+    {
+        var (l, r) = CourtesyParens();
+        double centre = (l + r) / 2;
+        var head = Glyphs.Where(g => IsNotehead(g.Glyph)).OrderBy(g => Math.Abs(g.X - centre)).ToList()
+            .FirstOrDefault(g => true, throw_: "no notehead inside the parentheses.\nDrawn geometry:\n" + Describe());
+        return head.X - l;
     }
 
     /// <summary>The sole courtesy accidental's width, parens included.</summary>

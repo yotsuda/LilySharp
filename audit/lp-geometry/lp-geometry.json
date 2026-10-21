@@ -7630,6 +7630,76 @@
       "residual": 0.0,
       "why": "EXACT. The grace chord's suggestion at the staff's height, as the full-size one."
     },
+    "headstyle.grace.dead.is-cross": {
+      "probe": "grace-head-style.ly",
+      "score": "DHA",
+      "lilypond": 1.0,
+      "residual": 0.0,
+      "why": "EXACT. `grace { d16@dead }` (LP `\\grace { \\deadNote d16 }`): the grace head is the cross, noteheads.s2cross at the grace font. Before session 931 the style was narrowed away (NarrowToGraceTime) and @dead reported (LYS4020)."
+    },
+    "headstyle.grace.dead.stem-right": {
+      "probe": "grace-head-style.ly",
+      "score": "DHA",
+      "lilypond": 0.917938619198038,
+      "residual": 0.0,
+      "why": "EXACT. Its stem stands where a black grace head's does (the stem's right edge on the head's, 0.917939): the cross's attachment is the black head's."
+    },
+    "headstyle.grace.dead.to-main": {
+      "probe": "grace-head-style.ly",
+      "score": "DHA",
+      "lilypond": 1.938627064831479,
+      "residual": 0.0,
+      "why": "EXACT. And the main note stands where it does after a black grace (1.938627, the plain grace's gap): the cross's box is the black head's at the grace font too, so the column's spacing, read off the black head, holds."
+    },
+    "headstyle.grace.dead.control.stem-right": {
+      "probe": "grace-head-style.ly",
+      "score": "DHB",
+      "lilypond": 1.3042,
+      "residual": 0.0,
+      "why": "EXACT. The full-size CONTROL's stem."
+    },
+    "headstyle.grace.dead.control.to-next": {
+      "probe": "grace-head-style.ly",
+      "score": "DHB",
+      "lilypond": 2.5042,
+      "residual": 0.0,
+      "why": "EXACT. The full-size control's gap, unchanged by the cross."
+    },
+    "headstyle.grace.parens.span": {
+      "probe": "grace-head-style.ly",
+      "score": "PRA",
+      "lilypond": 1.760353022400317,
+      "residual": -0.000001904,
+      "why": "UNEXPLAINED, under 2e-6: `grace { d16@parenthesize }` -- the Parentheses at font-size -9 (the grob's -6 + the grace head's -3; lily/parenthesis-engraver.cc), drawn by the ordinary note drawer. The full-size control carries the same order of residual (-0.000002449), so it is the paren boxes', not the grace's."
+    },
+    "headstyle.grace.parens.left-gap": {
+      "probe": "grace-head-style.ly",
+      "score": "PRA",
+      "lilypond": 0.421207201601139,
+      "residual": -0.000000865,
+      "why": "UNEXPLAINED, under 1e-6: the left paren box to the grace head -- the Parentheses' padding 0.2 plus the -9 paren's reach."
+    },
+    "headstyle.grace.parens.to-main": {
+      "probe": "grace-head-style.ly",
+      "score": "PRA",
+      "lilypond": 1.938627064831479,
+      "residual": 0.0,
+      "why": "EXACT. LilyPond widens no column for the Parentheses, on a grace as on a full-size note: the main note stands where it does after a plain grace."
+    },
+    "headstyle.grace.parens.control.span": {
+      "probe": "grace-head-style.ly",
+      "score": "PRB",
+      "lilypond": 2.329868449197861,
+      "residual": -0.000002449,
+      "why": "UNEXPLAINED, under 3e-6: the full-size CONTROL's span (Parentheses at -6) -- the order of the courtesy parens' residuals (courtesy.grace.*)."
+    },
+    "headstyle.grace.parens.control.left-gap": {
+      "probe": "grace-head-style.ly",
+      "score": "PRB",
+      "lilypond": 0.512834224598932,
+      "residual": -0.000001225,
+      "why": "UNEXPLAINED, under 2e-6: the full-size control's left gap."
+    },
     "semitie.grace.lv.start-to-notehead": {
       "probe": "grace-semitie.ly",
       "score": "LVA",

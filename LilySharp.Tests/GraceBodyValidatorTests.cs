@@ -363,6 +363,22 @@ public class GraceBodyValidatorTests
     }
 
     /// <summary>
+    /// A grace head drawn another way — a dead note's CROSS (also `@notehead(x)`), or in
+    /// PARENTHESES — is drawn so on the grace (session 931, ledger headstyle.grace.*). Nothing is
+    /// reported.
+    /// </summary>
+    [Theory]
+    [InlineData("grace { d'8@dead } c'1 | e'1 |", "grace { d'8 } c'1 | e'1 |")]
+    [InlineData("grace { d'8@notehead(x) } c'1 | e'1 |", "grace { d'8 } c'1 | e'1 |")]
+    [InlineData("grace { d'8@parenthesize } c'1 | e'1 |", "grace { d'8 } c'1 | e'1 |")]
+    [InlineData("grace { <d' f'@parenthesize>8 } c'1 | e'1 |", "grace { <d' f'>8 } c'1 | e'1 |")]
+    public void AHeadMarkOnAGrace_IsDrawn_AndNotReported(string written, string control)
+    {
+        Assert.Empty(Warnings(Book(written)));
+        Assert.NotEqual(Page(control), Page(written));
+    }
+
+    /// <summary>
     /// The grace body that draws exactly what it says draws no warning either. This is the
     /// case that catches a validator that has quietly become "warn about every grace".
     /// </summary>
