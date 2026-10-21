@@ -464,6 +464,18 @@ internal static class GraceBodySupport
         _ => false,
     };
 
+    /// <summary>
+    /// True for a TRILL SPANNER's start or stop a grace note carries — <c>@startTrillSpan</c>,
+    /// <c>@stopTrillSpan</c>: the bound is the grace column, read off the run, and the grace's
+    /// head and stem are among its supports (session 924; ledger trill.grace.*).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/scheme-engravers.scm Trill_spanner_engraver — a Voice engraver; its
+    ///   bounds and side supports are note columns, a grace's as any.
+    /// </remarks>
+    internal static bool IsCarriedTrillSpan(SyntaxNode annotation)
+        => annotation is ArticulationSyntax { Name: "startTrillSpan" or "stopTrillSpan" };
+
     private static bool IsPedalType(Svg.Model.MusicMarkType? type)
         => type is Svg.Model.MusicMarkType.SustainOn or Svg.Model.MusicMarkType.SustainOff
             or Svg.Model.MusicMarkType.SostenutoOn or Svg.Model.MusicMarkType.SostenutoOff
@@ -716,7 +728,7 @@ internal static class GraceBodySupport
                     || IsCarriedText(annotation) || IsCarriedFingering(annotation)
                     || IsCarriedHairpinStart(annotation) || IsCarriedArpeggio(annotation)
                     || IsCarriedGlissando(annotation) || IsCarriedTextSpan(annotation)
-                    || IsCarriedPedal(annotation))
+                    || IsCarriedPedal(annotation) || IsCarriedTrillSpan(annotation))
                     continue;
                 yield return new GraceDrop(
                     GraceDropKind.Annotation, annotation.Span, Describe(annotation), via);

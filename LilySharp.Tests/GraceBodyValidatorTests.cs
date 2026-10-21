@@ -279,6 +279,20 @@ public class GraceBodyValidatorTests
     }
 
     /// <summary>
+    /// A TRILL SPANNER that starts or stops on a grace note is drawn (session 924): the bound is
+    /// the grace column, and the grace's head and up stem are among its supports (ledger
+    /// trill.grace.*). Nothing is reported.
+    /// </summary>
+    [Theory]
+    [InlineData("grace { d'8@startTrillSpan } c'1 | e'1@stopTrillSpan |", "grace { d'8 } c'1 | e'1 |")]
+    [InlineData("c'1@startTrillSpan | grace { d'8@stopTrillSpan } e'1 |", "c'1 | grace { d'8 } e'1 |")]
+    public void ATrillSpanOnAGrace_IsDrawn_AndNotReported(string written, string control)
+    {
+        Assert.Empty(Warnings(Book(written)));
+        Assert.NotEqual(Page(control), Page(written));
+    }
+
+    /// <summary>
     /// The grace body that draws exactly what it says draws no warning either. This is the
     /// case that catches a validator that has quietly become "warn about every grace".
     /// </summary>

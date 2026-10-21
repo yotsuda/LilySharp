@@ -81,7 +81,9 @@ workflow attaches that section to the GitHub Release verbatim.
   starts or stops at the grace note, and the small grace head sets its height, as in LilyPond.
   Before, the grace's mark was dropped and no bracket was drawn at all. **A bowing mark on a grace
   note is drawn** too (`grace { d16@upBow }`, `@downBow`, `@flageolet`, `@stopped`, `@snapPizz`),
-  small, over the grace note.
+  small, over the grace note. **A trill spanner can start or stop on a grace note**
+  (`grace { d16@startTrillSpan } e4 f4 g4@stopTrillSpan`); a high grace's stem lifts the line,
+  as in LilyPond.
   A hairpin running over a
   grace note also stands where LilyPond puts it — it read the grace note's stem as a full-size
   down stem and sat a quarter space too low.

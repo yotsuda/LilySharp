@@ -1191,6 +1191,7 @@ spanner can start or end on a grace note too (`grace { d16@rit } e4 f g@!rit`,
 g@!sustain`, `c4@sustain e grace { f16@!sustain } g`; `@sostenuto`, `@unaCorda` too) — it starts
 or stops at the grace note, and the small grace head sets its height, as in LilyPond. A breathing
 sign on a grace note is not drawn yet (LYS4020 names it, and every other mark still dropped).
+A trill spanner can start or stop on a grace note (`grace { d16@startTrillSpan } e4 f g@stopTrillSpan`).
 
 LilyPond draws all of the spellings above, so each warning says "not drawn yet", not "do not
 write this".

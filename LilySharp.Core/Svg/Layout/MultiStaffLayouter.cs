@@ -4463,7 +4463,8 @@ internal sealed class MultiStaffLayouter
                     staffYAt: null,
                     voicesByStaff: new Dictionary<int, ImmutableArray<Voice>> { [staffIndex] = staff.Voices },
                     beamLayouts: RestampedToStaff(beamLayouts, staffIndex),
-                    staffLinesOf: _ => NotationStaffLinesOf(staff));
+                    staffLinesOf: _ => NotationStaffLinesOf(staff),
+                    graceNotes: score.GraceNotes);
         var layouts = Lay(onThisSystem.ToImmutable());
         var continuedLayouts = Lay(continued.ToImmutable());
         if (!continuedLayouts.IsDefaultOrEmpty)

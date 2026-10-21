@@ -731,7 +731,8 @@ public sealed partial class MeasureCollector
             if (graceTime && !Semantics.GraceBodySupport.IsCarriedScript(articulation)
                 && !Semantics.GraceBodySupport.IsCarriedText(articulation)
                 && !Semantics.GraceBodySupport.IsCarriedTextSpan(articulation)
-                && !Semantics.GraceBodySupport.IsCarriedPedal(articulation))
+                && !Semantics.GraceBodySupport.IsCarriedPedal(articulation)
+                && !Semantics.GraceBodySupport.IsCarriedTrillSpan(articulation))
                 return;
             if (articulation is ArticulationSyntax articulationSyntax)
             {

@@ -7483,6 +7483,48 @@
       "residual": 0.0,
       "why": "EXACT. A spanner from the c4 that ENDS on a grace note (`grace { f16@!rit }`): its start stands as ever. Until session 921 the grace's @!rit was dropped, so the spanner was never closed: LYS4018 (an error) and nothing drawn. The right end now stops at the grace column; its arithmetic is the unported right bound every text spanner shares (LilyPond 14.758355 against the grace head's 14.239041 -- TextSpannerEngraver's remark), so no point reads it."
     },
+    "trill.grace.staff-to-line": {
+      "probe": "grace-trill.ly",
+      "score": "TSA",
+      "lilypond": 3.55,
+      "residual": 0.0,
+      "why": "EXACT. `grace { d16@startTrillSpan }`: the trill starts on the grace column at its quiet level (the low grace reaches nothing up there). Until session 924 the grace's @startTrillSpan was dropped (LYS4020) and the lone @stopTrillSpan closed nothing; TrillSpannerEngraver.VoiceItemX now reads a grace item off the run (ElementCoordinator.GraceColumnAt)."
+    },
+    "trill.grace.control.staff-to-line": {
+      "probe": "grace-trill.ly",
+      "score": "TSB",
+      "lilypond": 3.55,
+      "residual": 0.0,
+      "why": "EXACT. The full-size CONTROL of TSA."
+    },
+    "trill.grace.stops-on-grace.staff-to-line": {
+      "probe": "grace-trill.ly",
+      "score": "TSC",
+      "lilypond": 3.55,
+      "residual": 0.0,
+      "why": "EXACT. A trill from the c4 that STOPS on a grace (`grace { f16@stopTrillSpan }`): its right bound is the grace column's left edge."
+    },
+    "trill.grace.high.staff-to-line": {
+      "probe": "grace-trill.ly",
+      "score": "TSD",
+      "lilypond": 7.1,
+      "residual": 0.0,
+      "why": "EXACT. From a HIGH grace, `grace { a'16@startTrillSpan }` (LilyPond's a''): a grace stem is UP whatever the pitch, so its tip is the binding support and the line stands 2.055 over the control's (TSE, stem down). The support is the grace column at its own X, its head at the grace's size and its stem by the grace rule (DynamicEngraver.ColumnSupportSkylines)."
+    },
+    "trill.grace.high.control.staff-to-line": {
+      "probe": "grace-trill.ly",
+      "score": "TSE",
+      "lilypond": 5.045,
+      "residual": 0.0,
+      "why": "EXACT. The full-size CONTROL of TSD: the a'16 is stem DOWN, so its head binds."
+    },
+    "trill.grace.stops-on-high-grace.staff-to-line": {
+      "probe": "grace-trill.ly",
+      "score": "TSF",
+      "lilypond": 3.55,
+      "residual": 0.0,
+      "why": "EXACT. A trill STOPPING on a high grace stays quiet: the line ends at the grace column's left edge (its drawn waves end short of it), so the grace's head and stem stand right of all its ink."
+    },
     "script.grace.bowing.upbow": {
       "probe": "grace-bowing.ly",
       "score": "GBA",

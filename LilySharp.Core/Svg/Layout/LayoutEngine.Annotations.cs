@@ -1016,7 +1016,7 @@ internal sealed partial class LayoutEngine
         // LILYPOND-REF: scm/scheme-engravers.scm — trill spanner positioning
         var trillSpannerLayouts = TrillSpannerEngraver.Calculate(
             trillSpanners ?? ImmutableArray<TrillSpannerItem>.Empty, systems, ml, staffYAt,
-            voicesByStaff, beamLayouts ?? ImmutableArray<BeamLayout>.Empty, staffLinesOf);
+            voicesByStaff, beamLayouts ?? ImmutableArray<BeamLayout>.Empty, staffLinesOf, ctx.GraceNotes);
 
         // Calculate volta brackets first — needed by MusicMarkEngraver for collision avoidance
         // LILYPOND-REF: axis-group-interface.cc — elements sorted by outside-staff-priority

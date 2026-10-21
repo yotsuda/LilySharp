@@ -8912,6 +8912,13 @@ internal static class LpGeometryProbes
     private static readonly string GRTA = GraceTieBook("c4 grace { d16@rit } e4 f4 g4@!rit |", "GRTA");
     private static readonly string GRTB = GraceTieBook("c4 d16@rit e8. f4 g4@!rit |", "GRTB");
     private static readonly string GRTC = GraceTieBook("c4@rit e4 grace { f16@!rit } g4 a4 |", "GRTC");
+    // A trill spanner starting or stopping on a grace note (audit/lp-geometry/probes/grace-trill.ly).
+    private static readonly string GTSA = GraceTieBook("c4 grace { d16@startTrillSpan } e4 f4 g4@stopTrillSpan |", "GTSA");
+    private static readonly string GTSB = GraceTieBook("c4 d16@startTrillSpan e8. f4 g4@stopTrillSpan |", "GTSB");
+    private static readonly string GTSC = GraceTieBook("c4@startTrillSpan e4 grace { f16@stopTrillSpan } g4 a4 |", "GTSC");
+    private static readonly string GTSD = GraceTieBook("c4 grace { a'16@startTrillSpan } e4 f4 g4@stopTrillSpan |", "GTSD");
+    private static readonly string GTSE = GraceTieBook("c4 a'16@startTrillSpan e8. f4 g4@stopTrillSpan |", "GTSE");
+    private static readonly string GTSF = GraceTieBook("c4@startTrillSpan e4 grace { a'16@stopTrillSpan } g4 a4 |", "GTSF");
     // A bowing mark or another up-script on a grace note (audit/lp-geometry/probes/grace-bowing.ly).
     private static readonly string GBWA = GraceTieBook("c4 grace { d16@upBow } e4 c2 |", "GBWA");
     private static readonly string GBWB = GraceTieBook("c4 grace { d16@downBow } e4 c2 |", "GBWB");
@@ -17376,6 +17383,12 @@ internal static class LpGeometryProbes
         new("textspanner.grace.staff-to-line", GRTA, g => g.TextSpannerLineAboveStaff()),
         new("textspanner.grace.control.label-to-notehead", GRTB, g => g.TextSpannerLabelPenToNotehead(1)),
         new("textspanner.grace.ends-on-grace.label-to-notehead", GRTC, g => g.TextSpannerLabelPenToNotehead(0)),
+        new("trill.grace.staff-to-line", GTSA, g => g.TrillLineAboveStaff()),
+        new("trill.grace.control.staff-to-line", GTSB, g => g.TrillLineAboveStaff()),
+        new("trill.grace.stops-on-grace.staff-to-line", GTSC, g => g.TrillLineAboveStaff()),
+        new("trill.grace.high.staff-to-line", GTSD, g => g.TrillLineAboveStaff()),
+        new("trill.grace.high.control.staff-to-line", GTSE, g => g.TrillLineAboveStaff()),
+        new("trill.grace.stops-on-high-grace.staff-to-line", GTSF, g => g.TrillLineAboveStaff()),
         new("script.grace.bowing.upbow", GBWA, g => g.GlyphAboveStaffMiddle('\uE056', 0)),
         new("script.grace.bowing.downbow", GBWB, g => g.GlyphAboveStaffMiddle('\uE058', 0)),
         new("script.grace.bowing.flageolet", GBWC, g => g.GlyphAboveStaffMiddle('\uE064', 0)),

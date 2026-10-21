@@ -110,7 +110,8 @@ internal static class TrillSpannerEngraver
         Func<int, int, double>? staffYAt = null,
         Dictionary<int, ImmutableArray<Voice>>? voicesByStaff = null,
         ImmutableArray<BeamLayout> beamLayouts = default,
-        Func<int, int>? staffLinesOf = null)
+        Func<int, int>? staffLinesOf = null,
+        ImmutableArray<GraceNoteItem> graceNotes = default)
     {
         if (trillSpanners.IsDefaultOrEmpty)
             return ImmutableArray<TrillSpannerLayout>.Empty;
@@ -153,7 +154,7 @@ internal static class TrillSpannerEngraver
 
             double startX = startMeasure.X + VoiceItemX(
                 trillVoices, spanner.VoiceIndex, startMeasure,
-                spanner.StartMeasureIndex, spanner.StartItemIndex);
+                spanner.StartMeasureIndex, spanner.StartItemIndex, graceNotes, spanner.StaffIndex);
 
             // The grob's direction: the writer's ^/_ wins, then the voice default
             // (TrillSpanner is a direction-polyphonic grob, so an even voice's trills
@@ -233,7 +234,7 @@ internal static class TrillSpannerEngraver
                 {
                     endX = endsOnMeasureStart
                         ? BarlineLeftEdge(spanner.EndMeasureIndex - 1, measureLayouts, trillVoices)
-                        : GetEndX(spanner, measureLayouts, trillVoices);
+                        : GetEndX(spanner, measureLayouts, trillVoices, graceNotes);
                 }
                 else
                 {
@@ -283,7 +284,7 @@ internal static class TrillSpannerEngraver
             {
                 double lineUp = AlignedSideLineY(
                     spanner, piece.Segment, piece.GlyphX, piece.LineStartX, piece.EndX,
-                    trillVoices, measureLayouts, beamMembers, dir, staffLines);
+                    trillVoices, measureLayouts, beamMembers, dir, staffLines, graceNotes);
                 // AlignedSideLineY answers in the staff-MIDDLE frame (the frame the ledger's
                 // staff-to-line entries read); this record's frame has its origin on the
                 // staff TOP line, 2 above it, and carries the staff's own offset within the
@@ -353,7 +354,7 @@ internal static class TrillSpannerEngraver
         ImmutableArray<Voice> voices, ImmutableArray<MeasureLayout> measureLayouts,
         Dictionary<(int Staff, int Voice, int Measure, int Item),
             (BeamLayout Beam, double StemX, bool StemUp)> beamMembers,
-        int dir, int staffLines)
+        int dir, int staffLines, ImmutableArray<GraceNoteItem> graceNotes = default)
     {
         // The DOWN arm (dir = −1) is the same aligned_side with every side flipped: my_dim
         // becomes the grob's UP profile (skyp[-dir]), the supports contribute their DOWN
@@ -429,7 +430,7 @@ internal static class TrillSpannerEngraver
                 : count - 1;
             for (int ii = first; ii <= last; ii++)
             {
-                double xColumn = ml.X + VoiceItemX(voices, voiceIndex, ml, mi, ii);
+                double xColumn = ml.X + VoiceItemX(voices, voiceIndex, ml, mi, ii, graceNotes, spanner.StaffIndex);
                 int cmi = mi, cii = ii;
                 var (up, down) = DynamicEngraver.ColumnSupportSkylines(voices, voiceIndex, mi, ii,
                     xColumn,
@@ -505,7 +506,8 @@ internal static class TrillSpannerEngraver
     ///   bound exactly; the remainder goes when the wave becomes the real glyph run.
     /// </remarks>
     private static double GetEndX(TrillSpannerItem spanner,
-        ImmutableArray<MeasureLayout> measureLayouts, ImmutableArray<Voice> voices)
+        ImmutableArray<MeasureLayout> measureLayouts, ImmutableArray<Voice> voices,
+        ImmutableArray<GraceNoteItem> graceNotes = default)
     {
         if (spanner.EndMeasureIndex < measureLayouts.Length)
         {
@@ -514,7 +516,7 @@ internal static class TrillSpannerEngraver
                     voices, spanner.VoiceIndex, spanner.EndMeasureIndex, endMeasure))
                 return endMeasure.X + VoiceItemX(
                     voices, spanner.VoiceIndex, endMeasure,
-                    spanner.EndMeasureIndex, spanner.EndItemIndex);
+                    spanner.EndMeasureIndex, spanner.EndItemIndex, graceNotes, spanner.StaffIndex);
             // No stop column: the bound is the bar line (to-barline #t). Lily# stops a
             // BoundPadding short of the measure's end — a device, kept (LILYSHARP-OWN,
             // named at the constant), because no point measures a barline-bound trill.
@@ -550,11 +552,20 @@ internal static class TrillSpannerEngraver
     /// the timing columns (<see cref="LayoutUtilities.GetItemXOffset"/>). Until 2026-10-20 a
     /// left hand's trill read the right hand's slot of the same index (OMR report 2026-10-20,
     /// item 2) — the hairpin's defect of 2026-10-16 in another engraver.
+    /// A GRACE item (session 924, HANDOFF §2 U8) is its grace column, read off the run:
+    /// GetItemXOffset answers no grace column. It is the start's and the stop's bound and,
+    /// inside the span, a support at its own X.
     /// </remarks>
     private static double VoiceItemX(
         ImmutableArray<Voice> voices, int voiceIndex, MeasureLayout ml,
-        int measureIndex, int itemIndex)
+        int measureIndex, int itemIndex,
+        ImmutableArray<GraceNoteItem> graceNotes = default, int staffIndex = 0)
     {
+        if (!graceNotes.IsDefaultOrEmpty && !voices.IsDefaultOrEmpty
+            && voiceIndex >= 0 && voiceIndex < voices.Length
+            && ElementCoordinator.GraceColumnAt(voices[voiceIndex], graceNotes, staffIndex, voiceIndex,
+                measureIndex, itemIndex, ml, SpacingRules.VoiceCollisionShiftsOf(voices)) is { } grace)
+            return grace.HeadLeftX - ml.X;
         if (!ml.Columns.IsDefaultOrEmpty && !voices.IsDefaultOrEmpty
             && voiceIndex >= 0 && voiceIndex < voices.Length
             && measureIndex < voices[voiceIndex].Measures.Length)
