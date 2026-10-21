@@ -7861,6 +7861,62 @@
       "residual": 0.0,
       "why": "EXACT. Turned up in a lower voice, the grace's flag stands right of its stem again: the main note is the head width + 1.020688 off."
     },
+    "breath.grace.prev-to-grace": {
+      "probe": "grace-breath.ly",
+      "score": "GBA",
+      "lilypond": 2.401796,
+      "residual": 0.0,
+      "why": "EXACT. The approach into the run is unchanged by the sign (x 0.8, as with no sign)."
+    },
+    "breath.grace.grace-to-sign": {
+      "probe": "grace-breath.ly",
+      "score": "GBA",
+      "lilypond": 0.89133861919804,
+      "residual": 0.0,
+      "why": "EXACT. A breathing sign on the LAST grace note stands in a column of its own at the main note's moment, between the run and the main note (GraceBodySupport.CarriedBreath; MeasureCollector.ProcessGraceRegion adds the BreathingSignItem after the grace walk), the order a change written after a grace has (midmeasure.clef.grace-then-clef.*): SpacingRules.MidMeasureChangeAfterGraceSeries prices it. Last grace -> sign is a grace Note_spacing spring into a NonMusical column (lily/note-spacing.cc:103-108)."
+    },
+    "breath.grace.sign-to-main": {
+      "probe": "grace-breath.ly",
+      "score": "GBA",
+      "lilypond": 1.5066,
+      "residual": 0.0,
+      "why": "EXACT. Sign -> main note: the BreathingSign space-alist's first-note fixed-space 1.0 past the sign's ink (0.5066 + 1.0), no 0.8."
+    },
+    "caesura.grace.grace-to-sign": {
+      "probe": "grace-breath.ly",
+      "score": "GBC",
+      "lilypond": 0.69896930960902,
+      "residual": 0.0,
+      "why": "EXACT. As breath.grace.grace-to-sign with the caesura's wider box: the :105 floor (ideal + min) / 2, the value a clef after a grace takes (0.698969)."
+    },
+    "caesura.grace.sign-to-main": {
+      "probe": "grace-breath.ly",
+      "score": "GBC",
+      "lilypond": 3.0,
+      "residual": 0.0,
+      "why": "EXACT. The caesura's 2.0 width + the fixed 1.0."
+    },
+    "breath.grace.beamed.grace-to-sign": {
+      "probe": "grace-breath.ly",
+      "score": "GBD",
+      "lilypond": 0.891338619198038,
+      "residual": 0.0,
+      "why": "EXACT. On the last grace of a beamed run: the same spring from the last column."
+    },
+    "breath.grace.beamed.sign-to-main": {
+      "probe": "grace-breath.ly",
+      "score": "GBD",
+      "lilypond": 1.5066,
+      "residual": 0.0,
+      "why": "EXACT. As breath.grace.sign-to-main."
+    },
+    "breath.grace.chord.grace-to-sign": {
+      "probe": "grace-breath.ly",
+      "score": "GBE",
+      "lilypond": 0.89133861919804,
+      "residual": 0.0,
+      "why": "EXACT. On a grace chord: the chord's own @breath, the same column."
+    },
     "semitie.grace.lv.start-to-notehead": {
       "probe": "grace-semitie.ly",
       "score": "LVA",

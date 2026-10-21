@@ -3028,6 +3028,24 @@ internal sealed class RenderedGeometry
         return Math.Max(stem.Y1, stem.Y2) - HeadAt(headIndex, page).Y;
     }
 
+    /// <summary>The breathing sign's (or caesura's) ink left — its glyph origin, the box's
+    /// left being 0 — minus notehead <paramref name="headIndex"/>'s origin.</summary>
+    public double BreathFromNotehead(int headIndex, int page = 0)
+        => BreathSign(page).X - HeadAt(headIndex, page).X;
+
+    /// <summary>Notehead <paramref name="headIndex"/>'s origin minus the breathing sign's (or
+    /// caesura's) ink left.</summary>
+    public double NoteheadFromBreath(int headIndex, int page = 0)
+        => HeadAt(headIndex, page).X - BreathSign(page).X;
+
+    private DrawnGlyph BreathSign(int page)
+        => _pages[page].Glyphs.SingleOrDefault(g => g.Glyph
+                is LilySharp.Core.Svg.EmmentalerGlyphs.BreathComma
+                or LilySharp.Core.Svg.EmmentalerGlyphs.CaesuraStraight) is { Glyph: not '\0' } sign
+            ? sign
+            : throw new InvalidOperationException(
+                $"page {page}: no breathing sign or caesura was drawn.\nDrawn geometry:\n" + Describe());
+
     private DrawnLine StemAt(int stemIndex, int page)
     {
         var stems = _pages[page].Lines

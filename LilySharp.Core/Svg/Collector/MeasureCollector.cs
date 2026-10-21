@@ -6238,6 +6238,12 @@ public sealed partial class MeasureCollector
         };
     }
 
+    /// <summary>Where the breathing sign the grace body being walked ends on was written
+    /// (<c>GraceBodySupport.CarriedBreath</c>), or -1 — the one breath the grace-time
+    /// annotation gate lets through (CollectArticulations), so ArticulationEngraver draws it in
+    /// the column ProcessGraceRegion adds after the run.</summary>
+    private int _carriedGraceBreathStart = -1;
+
     /// <summary>
     /// Walks a <c>grace { }</c> body with the ORDINARY walker, into the ORDINARY builder, so
     /// its notes become real measure items with real item indices; then derives the grace
@@ -6312,11 +6318,14 @@ public sealed partial class MeasureCollector
         // …unless the body turns it: a run whose every stem writes the same @stemUp / @stemDown
         // takes that direction, the one question the drop list asks too (session 933;
         // GraceBodySupport.CarriedStemDirection holds why a run that disagrees keeps its voice's).
-        int stemBudget = DefaultExpansionBudgetCap;
-        if (Semantics.GraceBodySupport.CarriedStemDirection(Semantics.GraceBodySupport.BodyElements(
-                grace, name => _variables.TryGetValue(name, out var body) ? body : null,
-                () => stemBudget-- > 0)) is { } writtenUp)
+        int bodyBudget = DefaultExpansionBudgetCap;
+        var bodyElements = Semantics.GraceBodySupport.BodyElements(
+            grace, name => _variables.TryGetValue(name, out var body) ? body : null,
+            () => bodyBudget-- > 0);
+        if (Semantics.GraceBodySupport.CarriedStemDirection(bodyElements) is { } writtenUp)
             graceStemDown = !writtenUp;
+        var carriedBreath = Semantics.GraceBodySupport.CarriedBreath(bodyElements, grace.IsAfterGrace);
+        _carriedGraceBreathStart = carriedBreath?.SourceStart ?? -1;
         builder.EnterGraceTime(slash, graceStemDown);
         // The body items are reds already (a grace body is always live), exactly as
         // ProcessCueRegion's are.
@@ -6332,6 +6341,13 @@ public sealed partial class MeasureCollector
         ProcessMusicNodeSequence(graceSites, builder);
         builder.ExitGraceTime(slash);
         _graceDepth--;
+        // The breathing sign the body ends on stands in a column of its own between the last
+        // grace and the main note — added HERE, out of grace time, in the order a change written
+        // after the grace has (GraceBodySupport.CarriedBreath; the walk adds none in grace time,
+        // AddBreathingSignColumn). DeriveGraceColumns passes over it: it is not a column.
+        _carriedGraceBreathStart = -1;
+        if (carriedBreath is { } breath)
+            builder.AddItem(new BreathingSignItem(breath.Type, breath.SourceStart));
 
         _defaultDuration = savedDuration;
         _defaultDots = savedDots;

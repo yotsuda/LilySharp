@@ -1883,8 +1883,10 @@ public sealed partial class MeasureCollector
     /// </remarks>
     private void AddBreathingSignColumn(IEnumerable<SyntaxNode> articulations, MeasureBuilder builder, int measureIndex)
     {
+        // In grace time the sign is the grace region's to place (GraceBodySupport.CarriedBreath,
+        // MeasureCollector.ProcessGraceRegion): it stands after the whole run, not after its note.
         if (builder.CurrentMeasureIndex + _cursor.MetadataMeasureOffset != measureIndex
-            || builder.CurrentItemCount == 0)
+            || builder.CurrentItemCount == 0 || _graceDepth > 0)
             return;
         foreach (var a in articulations)
         {

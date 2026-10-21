@@ -110,6 +110,9 @@ workflow attaches that section to the GitHub Release verbatim.
   of the group, the whole group turns, beam and flags included, spaced as LilyPond spaces it.
   Written on only some of them, LilyPond would draw a beam with stems on both sides, which Lily#
   does not draw yet: the group keeps its direction and the warning says so.
+  **A breathing sign or caesura on the last grace note is drawn** (`grace { d16@breath } e4`):
+  it stands between the grace notes and the main note, which moves right to make room, as in
+  LilyPond.
   A hairpin running over a
   grace note also stands where LilyPond puts it — it read the grace note's stem as a full-size
   down stem and sat a quarter space too low.

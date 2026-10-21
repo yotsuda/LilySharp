@@ -734,7 +734,11 @@ public sealed partial class MeasureCollector
                 && !Semantics.GraceBodySupport.IsCarriedPedal(articulation)
                 && !Semantics.GraceBodySupport.IsCarriedTrillSpan(articulation)
                 && !Semantics.GraceBodySupport.IsCarriedOttava(articulation)
-                && !Semantics.GraceBodySupport.IsCarriedEditorial(articulation))
+                && !Semantics.GraceBodySupport.IsCarriedEditorial(articulation)
+                // The breathing sign the body ends on (session 934) — a body-level answer, so it
+                // is matched by where it was written (_carriedGraceBreathStart).
+                && !(articulation is ArticulationSyntax { Type: ArticulationType.Breath or ArticulationType.Caesura } breathSign
+                     && breathSign.SourceStart == _carriedGraceBreathStart))
                 return;
             if (articulation is ArticulationSyntax articulationSyntax)
             {

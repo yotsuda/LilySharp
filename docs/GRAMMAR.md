@@ -2682,7 +2682,10 @@ Grace          = ( 'grace' | 'acciaccatura' | 'appoggiatura' | 'afterGrace' ) , 
                      the head's other '@notehead(…)' styles (session 932), and a
                      '@stemUp' / '@stemDown' written on EVERY stem of the body, which
                      turns the run (session 933; a body that disagrees is a kneed
-                     beam in LilyPond, not drawn yet — reported). *)
+                     beam in LilyPond, not drawn yet — reported), and a '@breath' /
+                     '@caesura' on the body's LAST note or chord, a column of its own
+                     between the run and the main note (session 934; on an inner grace
+                     or an afterGrace it is reported). *)
 Repeat         = 'repeat' , 'tremolo' , Integer , MusicBlock ;
                  (* a tremolo: the note, or the two notes, alternated Integer times.
                     Volta repeats use the form's |: … :|, NOT a 'repeat' keyword.

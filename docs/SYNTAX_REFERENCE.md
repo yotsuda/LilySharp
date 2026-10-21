@@ -1191,7 +1191,10 @@ spanner can start or end on a grace note too (`grace { d16@rit } e4 f g@!rit`,
 `c4@rit e grace { f16@!rit } g`), and so can a pedal bracket (`grace { d16@sustain } e4 f
 g@!sustain`, `c4@sustain e grace { f16@!sustain } g`; `@sostenuto`, `@unaCorda` too) — it starts
 or stops at the grace note, and the small grace head sets its height, as in LilyPond. A breathing
-sign on a grace note is not drawn yet (LYS4020 names it, and every other mark still dropped).
+sign or caesura on the LAST grace note is drawn between the grace notes and the main note, which
+moves right to make room (`grace { d16@breath } e4`, `grace { d16 e16@caesura } f4`); one on an
+inner grace note, or after an `afterGrace`, is not drawn yet (LYS4020 names it, and every other
+mark still dropped).
 A trill spanner can start or stop on a grace note (`grace { d16@startTrillSpan } e4 f g@stopTrillSpan`),
 and so can an ottava (`grace { d''16@ottava } e''4 f'' g'@!ottava`) — an `@!ottava` on a grace ends
 the span before it, as LilyPond's `\ottava #0` there does, so that grace keeps its written octave.

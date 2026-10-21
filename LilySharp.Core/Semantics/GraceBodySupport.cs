@@ -627,6 +627,51 @@ internal static class GraceBodySupport
         return direction;
     }
 
+    /// <summary>
+    /// The breathing sign or caesura a grace body ENDS on — <c>@breath</c> / <c>@caesura</c>
+    /// written on the body's LAST column, a note or a chord (its own annotation, not a
+    /// member's) — or null (session 934). THE question the collector
+    /// (<c>MeasureCollector.ProcessGraceRegion</c>) and the drop list both ask.
+    /// </summary>
+    /// <remarks>
+    /// LilyPond gives the sign a column of its own at grace time, between the last grace and
+    /// the main note — the main note moves right by the sign plus its space (measured, 2.26.0,
+    /// Lab sessions/p923/br BRA: 13.3847 against 12.9254 without it). That is the order a
+    /// change written AFTER a grace already has (`grace { d16 } clef bass e4`, ledger
+    /// midmeasure.clef.grace-then-clef.*), so the collector adds the sign there, after the
+    /// grace walk, as the ordinary <c>BreathingSignItem</c>, and the change-after-grace spacing
+    /// (<c>SpacingRules.MidMeasureChangeAfterGraceSeries</c>) places it.
+    /// <para>
+    /// ⚠️ ONLY AT THE END, and not on an afterGrace. A sign written on an INNER grace stands
+    /// between two grace columns (BRD: the next grace 0.699 right of it), which the grace run
+    /// holds no column for yet; an afterGrace's run hangs off the spacer that ends its main
+    /// note, with no change column after it. Both stay reported (LYS4020).
+    /// </para>
+    /// LILYPOND-REF: lily/breathing-sign-engraver.cc — a Voice engraver, deaf to grace time;
+    /// scm/define-grobs.scm:697-731 BreathingSign (break-aligned, non-musical).
+    /// </remarks>
+    internal static ArticulationSyntax? CarriedBreath(IReadOnlyList<GraceBodyElement> elements, bool afterGrace)
+    {
+        if (afterGrace)
+            return null;
+        for (int i = elements.Count - 1; i >= 0; i--)
+        {
+            var item = elements[i].Node;
+            if (!IsCarried(item))
+                continue;
+            IEnumerable<SyntaxNode>? own = CarriedNote(item) is { } note ? note.Articulations
+                : CarriedChord(item) is { } chord ? chord.Articulations
+                : null;
+            if (own is null)
+                return null;
+            foreach (var a in own)
+                if (a is ArticulationSyntax { Type: ArticulationType.Breath or ArticulationType.Caesura } sign)
+                    return sign;
+            return null;
+        }
+        return null;
+    }
+
     /// <summary>The annotations a grace column with a STEM writes at its own level — a note's,
     /// a drum's, a chord's (not a member's: a chord has one stem); null for a rest or anything
     /// that is not a column.</summary>
@@ -839,11 +884,13 @@ internal static class GraceBodySupport
     /// Everything in <paramref name="elements"/> that the collector will not engrave,
     /// in source order, each at the span it was written at.
     /// </summary>
-    internal static IEnumerable<GraceDrop> Drops(IReadOnlyList<GraceBodyElement> elements)
+    internal static IEnumerable<GraceDrop> Drops(IReadOnlyList<GraceBodyElement> elements, bool afterGrace = false)
     {
         // A body-level answer (session 933), asked once: a stem direction is carried only when
         // the whole run agrees on it.
         bool stemDirectionCarried = CarriedStemDirection(elements) is not null;
+        // …and so is a breathing sign (session 934): only the one the body ends on.
+        var carriedBreath = CarriedBreath(elements, afterGrace);
         for (int index = 0; index < elements.Count; index++)
         {
             var (item, via) = elements[index];
@@ -901,7 +948,8 @@ internal static class GraceBodySupport
                     || IsCarriedCourtesy(annotation) || IsCarriedEditorial(annotation)
                     || IsCarriedSemiTie(annotation) || IsCarriedHeadMark(annotation)
                     || (stemDirectionCarried && IsStemDirection(annotation)
-                        && StemOwnAnnotations(item)?.Contains(annotation) == true))
+                        && StemOwnAnnotations(item)?.Contains(annotation) == true)
+                    || ReferenceEquals(annotation, carriedBreath))
                     continue;
                 yield return new GraceDrop(
                     GraceDropKind.Annotation, annotation.Span, Describe(annotation), via);

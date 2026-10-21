@@ -102,7 +102,7 @@ internal sealed class GraceBodyValidator : ISemanticValidator
             // "no grace note is drawn at all" twice about one silence.
             bool engravesNothing = GraceBodySupport.EngravesNothing(elements);
 
-            foreach (var drop in GraceBodySupport.Drops(elements))
+            foreach (var drop in GraceBodySupport.Drops(elements, grace.IsAfterGrace))
             {
                 // ASCII punctuation only: these strings reach legacy-codepage consoles
                 // through the CLI.
