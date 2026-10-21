@@ -3025,9 +3025,15 @@ internal sealed class RenderedGeometry
 
     private DrawnGlyph HeadAt(int headIndex, int page)
     {
-        // A dead note's CROSS is a head too (IsNotehead, older than it, does not know it).
+        // A styled head is a head too — a dead note's cross, a diamond, a triangle, a slash, an
+        // xcircle (IsNotehead, older than them, knows the round heads only).
         var heads = _pages[page].Glyphs
-            .Where(g => IsNotehead(g.Glyph) || g.Glyph == LilySharp.Core.Svg.EmmentalerGlyphs.NoteheadCrossBlack)
+            .Where(g => IsNotehead(g.Glyph) || g.Glyph
+                is LilySharp.Core.Svg.EmmentalerGlyphs.NoteheadCrossBlack
+                or LilySharp.Core.Svg.EmmentalerGlyphs.NoteheadDiamondBlack
+                or LilySharp.Core.Svg.EmmentalerGlyphs.NoteheadTriangleBlack
+                or LilySharp.Core.Svg.EmmentalerGlyphs.NoteheadSlashBlack
+                or LilySharp.Core.Svg.EmmentalerGlyphs.NoteheadXCircle)
             .OrderBy(g => g.X).ToList();
         if (headIndex < 0 || headIndex >= heads.Count)
             throw new InvalidOperationException(

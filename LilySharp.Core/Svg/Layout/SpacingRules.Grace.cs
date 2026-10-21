@@ -440,7 +440,7 @@ internal static partial class SpacingRules
     /// six places. <see cref="GraceColumnInfo.Font"/> is that font (the −7 one inside a cue),
     /// so this reads a width and multiplies nothing.
     /// </remarks>
-    private static double GraceHeadEnd(GraceColumnInfo column) => column.Font.Box(MusicGlyph.NoteheadBlack).Width;
+    private static double GraceHeadEnd(GraceColumnInfo column) => column.HeadBox.Width;
 
     /// <summary>
     /// How far a grace column's ink reaches RIGHT of its origin, in the separation-skyline
@@ -513,7 +513,7 @@ internal static partial class SpacingRules
                 ink = Math.Max(ink,
                     LayoutUtilities.StemAttachX(
                         up, GlyphMetrics.NoteValueOf(note.BaseDuration),
-                        NoteheadStyle.Default, font)
+                        note.HeadStyle, font)
                     + flag.Width);
         }
         // ⚠️ THE DOTS ARE NOT ADDED HERE, and not because they reserve nothing: a Dots grob is

@@ -373,7 +373,7 @@ internal static class DotColumn
             bool up = column.StemUp;
             int anchor = up ? headPositions.Max() : headPositions.Min();
             double stemX = LayoutUtilities.StemAttachX(
-                up, noteValue, NoteheadStyle.Default, font);
+                up, noteValue, column.HeadStyle, font);
             supports[supportCount++] = StemSupport(anchor, up,
                 stemX + EngravingDefaults.StemThickness / 2);
             var flagBox = GlyphMetrics.GetFlagBBox(font, noteValue, up);

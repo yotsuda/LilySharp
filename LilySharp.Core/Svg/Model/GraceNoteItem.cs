@@ -145,7 +145,12 @@ public readonly record struct GraceColumnInfo(
     // page draws them. They are elements of the PAPER column, so the run's rods read them
     // (ItemSkylineFactory.CreateGraceDotRightSkyline / CreateGraceLeftSkyline) and the wish
     // does not, as a full-size column's (ItemSkylineFactory.AddSemiTies).
-    ImmutableArray<GraceSemiTieBox> SemiTieBoxes = default
+    ImmutableArray<GraceSemiTieBox> SemiTieBoxes = default,
+    // The column's HEAD STYLE — `@dead`'s cross, `@notehead(diamond)` … (session 932): every
+    // reader of the column's head box and stem attachment asks it (HeadBox), because LilyPond
+    // spaces a grace by its head's own extent — a diamond grace stands its main note 0.138821
+    // further off than a black one (ledger headstyle.grace.shape.*).
+    Svg.Model.NoteheadStyle HeadStyle = Svg.Model.NoteheadStyle.Default
 )
 {
     /// <summary>Whether this column's stem points up — <c>!</c><see cref="StemDown"/>.</summary>
@@ -165,6 +170,14 @@ public readonly record struct GraceColumnInfo(
         => ContextFontSizeStep == 0
             ? GraceNoteItem.Font
             : Svg.Layout.MusicFont.Current.SizedAt(GraceNoteItem.FontSizeStep + ContextFontSizeStep);
+
+    /// <summary>
+    /// This column's HEAD box, out of its font in its style (<see cref="HeadStyle"/>) — the box
+    /// every grace reader of the head's extent takes.
+    /// </summary>
+    internal Svg.Layout.GlyphMetrics.BBox HeadBox
+        => Svg.Layout.GlyphMetrics.GetNoteheadBBox(Font, HeadStyle,
+            Svg.Layout.GlyphMetrics.NoteValueOf(BaseDuration));
 
     /// <summary>This column's ACCIDENTAL font — <see cref="GraceNoteItem.AccidentalFont"/>
     /// shifted by <see cref="ContextFontSizeStep"/> the same way <see cref="Font"/> is.</summary>
@@ -236,7 +249,8 @@ public readonly record struct GraceColumnInfo(
             || SlurStart != other.SlurStart || SlurEnd != other.SlurEnd
             || TabDigitHalfWidth != other.TabDigitHalfWidth || TabStringCount != other.TabStringCount
             || Arpeggio != other.Arpeggio || ArpeggioBracket != other.ArpeggioBracket
-            || PhrasingSlurStart != other.PhrasingSlurStart || PhrasingSlurEnd != other.PhrasingSlurEnd)
+            || PhrasingSlurStart != other.PhrasingSlurStart || PhrasingSlurEnd != other.PhrasingSlurEnd
+            || HeadStyle != other.HeadStyle)
             return false;
         if (SemiTieBoxes.IsDefaultOrEmpty || other.SemiTieBoxes.IsDefaultOrEmpty)
         {
@@ -271,6 +285,7 @@ public readonly record struct GraceColumnInfo(
         hc.Add(ArpeggioBracket);
         hc.Add(PhrasingSlurStart);
         hc.Add(PhrasingSlurEnd);
+        hc.Add(HeadStyle);
         if (!SemiTieBoxes.IsDefaultOrEmpty)
             foreach (var box in SemiTieBoxes)
                 hc.Add(box);

@@ -8948,6 +8948,15 @@ internal static class LpGeometryProbes
     private static readonly string GDHB = GraceTieBook("c4 d16@dead e8. f4 g4 |", "GDHB");
     private static readonly string GPRA = GraceTieBook("c4 grace { d16@parenthesize } e4 f4 g4 |", "GPRA");
     private static readonly string GPRB = GraceTieBook("c4 d16@parenthesize e8. f4 g4 |", "GPRB");
+    // A grace head in the other styles (audit/lp-geometry/probes/grace-head-shapes.ly).
+    private static readonly string GHSD = GraceTieBook("c4 grace { d16@notehead(diamond) } e4 f4 g4 |", "GHSD");
+    private static readonly string GHSD2 = GraceTieBook("c4 grace { d16@notehead(diamond) e16 } f4 g4 a4 |", "GHSD2");
+    private static readonly string GHST = GraceTieBook("c4 grace { d16@notehead(triangle) } e4 f4 g4 |", "GHST");
+    private static readonly string GHST2 = GraceTieBook("c4 grace { d16@notehead(triangle) e16 } f4 g4 a4 |", "GHST2");
+    private static readonly string GHSS = GraceTieBook("c4 grace { d16@notehead(slash) } e4 f4 g4 |", "GHSS");
+    private static readonly string GHSS2 = GraceTieBook("c4 grace { d16@notehead(slash) e16 } f4 g4 a4 |", "GHSS2");
+    private static readonly string GHSX = GraceTieBook("c4 grace { d16@notehead(xcircle) } e4 f4 g4 |", "GHSX");
+    private static readonly string GHSX2 = GraceTieBook("c4 grace { d16@notehead(xcircle) e16 } f4 g4 a4 |", "GHSX2");
     // A half-tie on a grace note (audit/lp-geometry/probes/grace-semitie.ly).
     private static readonly string GLVA = GraceTieBook("c4 grace { d16@laissezVibrer } e4 f4 g4 |", "GLVA");
     private static readonly string GLVB = GraceTieBook("c4 d16@laissezVibrer e8. f4 g4 |", "GLVB");
@@ -17466,6 +17475,18 @@ internal static class LpGeometryProbes
         new("headstyle.grace.parens.to-main", GPRA, g => g.NoteheadToNotehead(1, 2)),
         new("headstyle.grace.parens.control.span", GPRB, g => g.CourtesyParensSpan()),
         new("headstyle.grace.parens.control.left-gap", GPRB, g => g.HeadParensLeftGap()),
+        new("headstyle.grace.shape.diamond.stem-right", GHSD, g => g.StemRightFromNotehead(1, 1)),
+        new("headstyle.grace.shape.diamond.to-main", GHSD, g => g.NoteheadToNotehead(1, 2)),
+        new("headstyle.grace.shape.diamond.to-next-grace", GHSD2, g => g.NoteheadToNotehead(1, 2)),
+        new("headstyle.grace.shape.triangle.stem-right", GHST, g => g.StemRightFromNotehead(1, 1)),
+        new("headstyle.grace.shape.triangle.to-main", GHST, g => g.NoteheadToNotehead(1, 2)),
+        new("headstyle.grace.shape.triangle.to-next-grace", GHST2, g => g.NoteheadToNotehead(1, 2)),
+        new("headstyle.grace.shape.slash.stem-right", GHSS, g => g.StemRightFromNotehead(1, 1)),
+        new("headstyle.grace.shape.slash.to-main", GHSS, g => g.NoteheadToNotehead(1, 2)),
+        new("headstyle.grace.shape.slash.to-next-grace", GHSS2, g => g.NoteheadToNotehead(1, 2)),
+        new("headstyle.grace.shape.xcircle.stem-right", GHSX, g => g.StemRightFromNotehead(1, 1)),
+        new("headstyle.grace.shape.xcircle.to-main", GHSX, g => g.NoteheadToNotehead(1, 2)),
+        new("headstyle.grace.shape.xcircle.to-next-grace", GHSX2, g => g.NoteheadToNotehead(1, 2)),
         new("semitie.grace.lv.start-to-notehead", GLVA, g => g.BowStartToNotehead(0, 1)),
         new("semitie.grace.lv.span", GLVA, g => g.BowSpan(0)),
         new("semitie.grace.lv.end-to-next", GLVA, g => g.BowEndToNotehead(0, 2)),

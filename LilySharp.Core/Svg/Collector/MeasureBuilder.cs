@@ -722,11 +722,6 @@ internal sealed class MeasureBuilder
             _graceStemDown = false;
     }
 
-    /// <summary>The head style a GRACE note keeps (session 931): the cross, whose box is the
-    /// black head's, and nothing else — see <see cref="NarrowToGraceTime"/>.</summary>
-    private static NoteheadStyle GraceHeadStyle(NoteheadStyle style)
-        => style == NoteheadStyle.Cross ? style : NoteheadStyle.Default;
-
     /// <summary>
     /// Reduces an item entering grace time to what a grace column can still be engraved
     /// from, and stamps it <see cref="MusicItem.GraceTime"/>.
@@ -792,13 +787,12 @@ internal sealed class MeasureBuilder
             {
                 LaissezVibrerUp = n.LaissezVibrerUp,
                 RepeatTieUp = n.RepeatTieUp,
-                // ⚠️ THE CROSS HEAD AND THE PARENTHESES SURVIVE (session 931): the ordinary note
-                // drawer draws a grace's head, at the grace font, and its Parentheses at that
-                // font-size − 6. Only the CROSS of the head styles: its box is the black head's
-                // (ledger headstyle.grace.*), so the column's spacing, read off the black head,
-                // holds; the other styles are still LYS4020's (GraceBodySupport.IsCarriedHeadMark).
+                // ⚠️ THE HEAD STYLE AND THE PARENTHESES SURVIVE (sessions 931-932): the ordinary
+                // note drawer draws a grace's head, at the grace font, and its Parentheses at that
+                // font-size − 6; the column carries the style too (GraceColumnInfo.HeadStyle), so
+                // the run's spacing reads the head's own box (ledger headstyle.grace.*).
                 IsDead = n.IsDead,
-                Notehead = GraceHeadStyle(n.Notehead),
+                Notehead = n.Notehead,
                 Parenthesized = n.Parenthesized,
                 LaissezVibrerSourcePosition = n.LaissezVibrerSourcePosition,
                 RepeatTieSourcePosition = n.RepeatTieSourcePosition,
@@ -824,7 +818,7 @@ internal sealed class MeasureBuilder
 
             ChordItem c => new ChordItem(
                 // The members keep the same seven answers and their fingerings (session 917) —
-                // a member can carry its own notehead style too, and that is a drop here.
+                // a member can carry its own notehead style too, and keeps it (session 931).
                 c.Notes.Select(static m => new ChordNoteInfo(
                     m.StaffPosition, m.Accidental, IsCourtesy: m.IsCourtesy,
                     Fingering: m.Fingering,
@@ -836,7 +830,7 @@ internal sealed class MeasureBuilder
                     LaissezVibrerSourcePosition: m.LaissezVibrerSourcePosition,
                     RepeatTieSourcePosition: m.RepeatTieSourcePosition,
                     // The cross head and the parentheses (session 931), per member.
-                    Notehead: GraceHeadStyle(m.Notehead), Parenthesized: m.Parenthesized)).ToImmutableArray(),
+                    Notehead: m.Notehead, Parenthesized: m.Parenthesized)).ToImmutableArray(),
                 c.BaseDuration, c.Dots, c.SourcePosition, isCue: c.IsCue,
                 hasTieStart: c.HasTieStart,
                 hasSlurStart: c.HasSlurStart, hasSlurEnd: c.HasSlurEnd,
@@ -849,7 +843,7 @@ internal sealed class MeasureBuilder
                 HasGlissando = c.HasGlissando,
                 LaissezVibrerSourcePosition = c.LaissezVibrerSourcePosition,
                 RepeatTieSourcePosition = c.RepeatTieSourcePosition,
-                Notehead = GraceHeadStyle(c.Notehead),
+                Notehead = c.Notehead,
                 Parenthesized = c.Parenthesized,
                 GraceTime = true,
                 GraceSlash = slash,

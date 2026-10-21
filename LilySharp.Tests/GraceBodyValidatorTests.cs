@@ -370,6 +370,9 @@ public class GraceBodyValidatorTests
     [Theory]
     [InlineData("grace { d'8@dead } c'1 | e'1 |", "grace { d'8 } c'1 | e'1 |")]
     [InlineData("grace { d'8@notehead(x) } c'1 | e'1 |", "grace { d'8 } c'1 | e'1 |")]
+    // The other head styles (session 932): the run is spaced by the styled head's own box.
+    [InlineData("grace { d'8@notehead(diamond) } c'1 | e'1 |", "grace { d'8 } c'1 | e'1 |")]
+    [InlineData("grace { d'8@notehead(slash) } c'1 | e'1 |", "grace { d'8 } c'1 | e'1 |")]
     [InlineData("grace { d'8@parenthesize } c'1 | e'1 |", "grace { d'8 } c'1 | e'1 |")]
     [InlineData("grace { <d' f'@parenthesize>8 } c'1 | e'1 |", "grace { <d' f'>8 } c'1 | e'1 |")]
     public void AHeadMarkOnAGrace_IsDrawn_AndNotReported(string written, string control)

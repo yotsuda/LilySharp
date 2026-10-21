@@ -4109,8 +4109,8 @@ internal sealed class ElementCoordinator
         double groupX = GraceGroupX(voice, g, geom, ml, voiceIndex, voiceShifts);
         var font = g.HeadFont;
         bool up = g.StemUp;
-        double xL = LayoutUtilities.StemX(groupX + geom.Offsets[0], up, noteValue: 4, NoteheadStyle.Default, font);
-        double xR = LayoutUtilities.StemX(groupX + geom.Offsets[last], up, noteValue: 4, NoteheadStyle.Default, font);
+        double xL = LayoutUtilities.StemX(groupX + geom.Offsets[0], up, noteValue: 4, g.Columns[0].HeadStyle, font);
+        double xR = LayoutUtilities.StemX(groupX + geom.Offsets[last], up, noteValue: 4, g.Columns[last].HeadStyle, font);
         double t = xR - xL > 0.001 ? (stemX - xL) / (xR - xL) : 0.0;
         double centerUp = (bl + (br - bl) * t) / 2.0;
         return staffMiddleDown - (centerUp + (up ? 1 : -1) * EngravingDefaults.GraceBeamThickness / 2.0);
@@ -4183,7 +4183,8 @@ internal sealed class ElementCoordinator
             bool stemUp = g.StemUp;
             double StemXAt(int k) => LayoutUtilities.StemX(
                 groupX + (k < geom.Offsets.Length ? geom.Offsets[k] : 0.0),
-                stemUp, noteValue: 4, NoteheadStyle.Default, font);
+                stemUp, noteValue: 4,
+                k < g.Columns.Length ? g.Columns[k].HeadStyle : NoteheadStyle.Default, font);
 
             for (int k = 0; k < g.Columns.Length; k++)
             {

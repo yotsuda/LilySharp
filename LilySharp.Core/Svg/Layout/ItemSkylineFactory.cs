@@ -569,8 +569,7 @@ internal static class ItemSkylineFactory
         var parts = new List<ColumnPart>();
         if (!column.IsRest)
         {
-            var head = GlyphMetrics.GetNoteheadBBox(
-                column.Font, GlyphMetrics.NoteValueOf(column.BaseDuration));
+            var head = column.HeadBox;
             var headOffsets = GraceColumnHeads.HeadOffsets(column);
             var accidentalXs = GraceColumnHeads.AccidentalOffsets(column);
             for (int i = 0; i < column.Heads.Length; i++)
@@ -680,7 +679,7 @@ internal static class ItemSkylineFactory
         {
             var font = column.Font;
             int noteValue = GlyphMetrics.NoteValueOf(column.BaseDuration);
-            var head = GlyphMetrics.GetNoteheadBBox(font, noteValue);
+            var head = column.HeadBox;
             var headOffsets = GraceColumnHeads.HeadOffsets(column);
             var accidentalXs = direction == HorizontalDirection.Left
                 ? GraceColumnHeads.AccidentalOffsets(column)
@@ -703,7 +702,7 @@ internal static class ItemSkylineFactory
             if (SpacingRules.GraceStemBand(column, beamed) is { } stem)
             {
                 double centreX = LayoutUtilities.StemX(0.0, stem.StemUp, noteValue,
-                    NoteheadStyle.Default, font);
+                    column.HeadStyle, font);
                 double half = EngravingDefaults.StemThickness / 2;
                 parts.Add(ColumnPart.Ink(-stem.StemMax / 2.0, -stem.StemMin / 2.0,
                     centreX - half, centreX + half));

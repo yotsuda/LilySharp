@@ -7700,6 +7700,90 @@
       "residual": -0.000001225,
       "why": "UNEXPLAINED, under 2e-6: the full-size control's left gap."
     },
+    "headstyle.grace.shape.diamond.stem-right": {
+      "probe": "grace-head-shapes.ly",
+      "score": "HSD",
+      "lilypond": 1.056759582746402,
+      "residual": 0.0,
+      "why": "EXACT. `grace { d16@notehead(diamond) }` (LP `\\once \\override NoteHead.style = #'diamond`): the head is the diamond glyph at the grace font, and the stem's right edge is that head's right edge -- the stem attaches to the styled head as at full size. Before session 932 the style was narrowed away (NarrowToGraceTime) and reported (LYS4020)."
+    },
+    "headstyle.grace.shape.diamond.to-main": {
+      "probe": "grace-head-shapes.ly",
+      "score": "HSD",
+      "lilypond": 2.077448028379843,
+      "residual": 0.0,
+      "why": "EXACT. The main note stands the head's OWN width + 1.020688 off: the grace column carries the style (GraceColumnInfo.HeadStyle) and the run's spacing reads the styled head's box (HeadBox), as LilyPond spaces a grace by its head's extent."
+    },
+    "headstyle.grace.shape.diamond.to-next-grace": {
+      "probe": "grace-head-shapes.ly",
+      "score": "HSD2",
+      "lilypond": 1.556759582746402,
+      "residual": 0.0,
+      "why": "EXACT. Inside a run the next grace stands the styled head's width + 0.5 off -- the same box, read by the run's own spring."
+    },
+    "headstyle.grace.shape.triangle.stem-right": {
+      "probe": "grace-head-shapes.ly",
+      "score": "HST",
+      "lilypond": 1.015753390343787,
+      "residual": 0.0,
+      "why": "EXACT. `grace { d16@notehead(triangle) }` (LP `\\once \\override NoteHead.style = #'triangle`): the head is the triangle glyph at the grace font, and the stem's right edge is that head's right edge -- the stem attaches to the styled head as at full size. Before session 932 the style was narrowed away (NarrowToGraceTime) and reported (LYS4020)."
+    },
+    "headstyle.grace.shape.triangle.to-main": {
+      "probe": "grace-head-shapes.ly",
+      "score": "HST",
+      "lilypond": 2.036441835977227,
+      "residual": 0.0,
+      "why": "EXACT. The main note stands the head's OWN width + 1.020688 off: the grace column carries the style (GraceColumnInfo.HeadStyle) and the run's spacing reads the styled head's box (HeadBox), as LilyPond spaces a grace by its head's extent."
+    },
+    "headstyle.grace.shape.triangle.to-next-grace": {
+      "probe": "grace-head-shapes.ly",
+      "score": "HST2",
+      "lilypond": 1.515753390343787,
+      "residual": 0.0,
+      "why": "EXACT. Inside a run the next grace stands the styled head's width + 0.5 off -- the same box, read by the run's own spring."
+    },
+    "headstyle.grace.shape.slash.stem-right": {
+      "probe": "grace-head-shapes.ly",
+      "score": "HSS",
+      "lilypond": 1.224184865873175,
+      "residual": 0.0,
+      "why": "EXACT. `grace { d16@notehead(slash) }` (LP `\\once \\override NoteHead.style = #'slash`): the head is the slash glyph at the grace font, and the stem's right edge is that head's right edge -- the stem attaches to the styled head as at full size. Before session 932 the style was narrowed away (NarrowToGraceTime) and reported (LYS4020)."
+    },
+    "headstyle.grace.shape.slash.to-main": {
+      "probe": "grace-head-shapes.ly",
+      "score": "HSS",
+      "lilypond": 2.244873311506614,
+      "residual": 0.0,
+      "why": "EXACT. The main note stands the head's OWN width + 1.020688 off: the grace column carries the style (GraceColumnInfo.HeadStyle) and the run's spacing reads the styled head's box (HeadBox), as LilyPond spaces a grace by its head's extent."
+    },
+    "headstyle.grace.shape.slash.to-next-grace": {
+      "probe": "grace-head-shapes.ly",
+      "score": "HSS2",
+      "lilypond": 1.724184865873175,
+      "residual": 0.0,
+      "why": "EXACT. Inside a run the next grace stands the styled head's width + 0.5 off -- the same box, read by the run's own spring."
+    },
+    "headstyle.grace.shape.xcircle.stem-right": {
+      "probe": "grace-head-shapes.ly",
+      "score": "HSX",
+      "lilypond": 1.091564838736913,
+      "residual": 0.0,
+      "why": "EXACT. `grace { d16@notehead(xcircle) }` (LP `\\once \\override NoteHead.style = #'xcircle`): the head is the xcircle glyph at the grace font, and the stem's right edge is that head's right edge -- the stem attaches to the styled head as at full size. Before session 932 the style was narrowed away (NarrowToGraceTime) and reported (LYS4020)."
+    },
+    "headstyle.grace.shape.xcircle.to-main": {
+      "probe": "grace-head-shapes.ly",
+      "score": "HSX",
+      "lilypond": 2.112253284370354,
+      "residual": 0.0,
+      "why": "EXACT. The main note stands the head's OWN width + 1.020688 off: the grace column carries the style (GraceColumnInfo.HeadStyle) and the run's spacing reads the styled head's box (HeadBox), as LilyPond spaces a grace by its head's extent."
+    },
+    "headstyle.grace.shape.xcircle.to-next-grace": {
+      "probe": "grace-head-shapes.ly",
+      "score": "HSX2",
+      "lilypond": 1.591564838736913,
+      "residual": 0.0,
+      "why": "EXACT. Inside a run the next grace stands the styled head's width + 0.5 off -- the same box, read by the run's own spring."
+    },
     "semitie.grace.lv.start-to-notehead": {
       "probe": "grace-semitie.ly",
       "score": "LVA",

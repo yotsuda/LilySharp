@@ -665,7 +665,7 @@ internal static class GraceNoteEngraver
                 if (flag != default)
                     return LayoutUtilities.StemAttachX(
                         up, GlyphMetrics.NoteValueOf(d),
-                        NoteheadStyle.Default, font) + flag.Width;
+                        grace.Columns[0].HeadStyle, font) + flag.Width;
             }
         }
         return graceGroupWidth;

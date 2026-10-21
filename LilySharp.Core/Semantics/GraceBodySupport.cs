@@ -559,10 +559,10 @@ internal static class GraceBodySupport
     /// <summary>
     /// True for a HEAD mark a grace note carries — <c>@dead</c> (LilyPond's <c>\deadNote</c>),
     /// <c>@notehead(x)</c> / <c>@notehead(cross)</c>, and <c>@parenthesize</c>: the grace head is
-    /// drawn as a cross, or in parentheses at the head's font-size − 6 (−9 on a grace), by the
-    /// ordinary note drawer (session 931; ledger headstyle.grace.*). The cross alone of the head
-    /// styles: its box is the black head's, so the grace column's spacing holds — LilyPond moves
-    /// nothing for it, nor for the parentheses.
+    /// drawn as a cross (or a diamond, triangle, slash or xcircle — session 932), or in
+    /// parentheses at the head's font-size − 6 (−9 on a grace), by the ordinary note drawer
+    /// (session 931; ledger headstyle.grace.*). The run is spaced by the head's own box
+    /// (GraceColumnInfo.HeadStyle); LilyPond moves nothing for the parentheses.
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: ly/property-init.ly deadNote / xNote — a NoteHead.style tweak, on a grace's
@@ -573,7 +573,8 @@ internal static class GraceBodySupport
     {
         ArticulationSyntax { Name: "dead" or "parenthesize" } => true,
         MusicMarkSyntax mark when mark.Name.Equals("notehead", StringComparison.Ordinal)
-            && mark.HasArgumentList => AnnotationValues.Notehead(mark) is "x" or "cross",
+            && mark.HasArgumentList => AnnotationValues.Notehead(mark)
+                is "x" or "cross" or "diamond" or "triangle" or "slash" or "xcircle",
         _ => false,
     };
 

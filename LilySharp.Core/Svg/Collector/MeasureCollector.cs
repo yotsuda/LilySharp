@@ -6478,7 +6478,11 @@ public sealed partial class MeasureCollector
                         ImmutableArray.Create(new GraceHeadInfo(note.StaffPosition, note.Accidental,
                             note.Midi, note.StringNumber, IsCourtesy: note.IsCourtesy)),
                         note.BaseDuration, note.Dots)
-                    { ContextFontSizeStep = note.IsCue ? EngravingDefaults.CueFontSizeStep : 0, StemDown = stemDown });
+                    {
+                        ContextFontSizeStep = note.IsCue ? EngravingDefaults.CueFontSizeStep : 0, StemDown = stemDown,
+                        // The head's style (session 932): the column's head box is its own.
+                        HeadStyle = note.Notehead,
+                    });
                     break;
 
                 case ChordItem chord when chord.Notes.Length > 0:
@@ -6497,7 +6501,8 @@ public sealed partial class MeasureCollector
                             heads.ToImmutable(), chord.BaseDuration, chord.Dots,
                             ContextFontSizeStep: chord.IsCue ? EngravingDefaults.CueFontSizeStep : 0,
                             StemDown: stemDown,
-                            Arpeggio: chord.HasArpeggio, ArpeggioBracket: chord.HasArpeggioBracket));
+                            Arpeggio: chord.HasArpeggio, ArpeggioBracket: chord.HasArpeggioBracket,
+                            HeadStyle: chord.Notehead));
                     }
                     break;
 

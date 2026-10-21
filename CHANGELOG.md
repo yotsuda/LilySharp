@@ -102,7 +102,9 @@ workflow attaches that section to the GitHub Release verbatim.
   they do for a full-size one.
   **A grace note can be a dead note or stand in parentheses** (`grace { d16@dead } e4`,
   `grace { d16@notehead(x) } e4`, `grace { d16@parenthesize } e4`): the cross and the parentheses
-  come at the grace's size.
+  come at the grace's size. **A grace head can take the other head styles too**
+  (`grace { d16@notehead(diamond) } e4`, triangle, slash, xcircle), and the grace notes are spaced
+  by that head's own width.
   A hairpin running over a
   grace note also stands where LilyPond puts it — it read the grace note's stem as a full-size
   down stem and sat a quarter space too low.

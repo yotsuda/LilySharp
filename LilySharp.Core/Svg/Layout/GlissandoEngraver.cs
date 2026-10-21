@@ -294,7 +294,7 @@ internal static class GlissandoEngraver
                     break;
                 }
         return offset + (right
-            ? GlyphMetrics.GetNoteheadBBox(column.Font, GlyphMetrics.NoteValueOf(column.BaseDuration)).Right
+            ? column.HeadBox.Right
             : 0);
     }
 
