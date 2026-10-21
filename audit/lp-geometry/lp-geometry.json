@@ -7525,6 +7525,69 @@
       "residual": 0.0,
       "why": "EXACT. The control's gap."
     },
+    "editorial.grace.sharp.to-notehead": {
+      "probe": "grace-editorial.ly",
+      "score": "EGA",
+      "lilypond": 0.022459026625533,
+      "residual": 0.0,
+      "why": "EXACT. `grace { fis16@editorial }`: the suggestion is CENTRED on the grace head (X parent = the note head, lily/accidental-engraver.cc make_suggested_accidental) and keeps its own font-size -2 -- general-grace-settings names no AccidentalSuggestion. 0.193 short of the control (EGB) = the half-width difference of a -3 head and a full one. Poison IsCarriedEditorial: no suggestion is drawn (the reading throws)."
+    },
+    "editorial.grace.sharp.above-notehead": {
+      "probe": "grace-editorial.ly",
+      "score": "EGA",
+      "lilypond": 5.2005007763406115,
+      "residual": 0.0,
+      "why": "EXACT. The suggestion's box bottom stands outside-staff-padding 0.46 over the staff's ink (top line + 0.05): AccidentalSuggestion is a MOVER (outside-staff-priority 0) whose vertical skyline is its BOX (it declares no vertical-skylines; lily/grob.cc gives the extents default). Before session 928 Lily# placed it inside the staff's skyline at staff-padding 0.25 -- 4.940500786, -0.26 (poison: priority null). Poison scriptStep (the grace's Script -3 on its padding and box): 4.940500786 again."
+    },
+    "editorial.grace.flat.to-notehead": {
+      "probe": "grace-editorial.ly",
+      "score": "EGC",
+      "lilypond": 0.197303200465509,
+      "residual": 0.0,
+      "why": "EXACT. The flat: the same centring off a grace head as the sharp, its own box."
+    },
+    "editorial.grace.flat.above-notehead": {
+      "probe": "grace-editorial.ly",
+      "score": "EGC",
+      "lilypond": 3.577730803086793,
+      "residual": 0.0,
+      "why": "EXACT. `grace { bes'16@editorial }` (bes' above the staff): the grace STEM is the support, and the box bottom clears the stem's skyline by 0.46. Before: 3.317730853 (-0.26, priority null)."
+    },
+    "editorial.grace.after-grace.natural.above-notehead": {
+      "probe": "grace-editorial.ly",
+      "score": "EGA",
+      "lilypond": 5.2005007763406115,
+      "residual": 0.0,
+      "why": "EXACT. The natural on the main note after the grace, the same 0.46 over the staff's ink: its 16-design box is +-1.5 like the sharp's, so the two stand at one height. Poison outline-skyline (the Script's outline walk): 5.222774404, +0.022, the natural's ink bottom below its box."
+    },
+    "editorial.grace.control.to-notehead": {
+      "probe": "grace-editorial.ly",
+      "score": "EGB",
+      "lilypond": 0.215589717026514,
+      "residual": 0.0,
+      "why": "EXACT. The full-size CONTROL of EGA (fis16@editorial on the main grid): its full head."
+    },
+    "editorial.grace.control.above-notehead": {
+      "probe": "grace-editorial.ly",
+      "score": "EGB",
+      "lilypond": 5.2005007763406115,
+      "residual": 0.0,
+      "why": "EXACT. The control's height: the stem-up fis16's tip ends on the top line, so the staff's ink decides as on the grace. Before: 5.125812455 (-0.075)."
+    },
+    "editorial.accidental.natural.above-notehead": {
+      "probe": "grace-editorial.ly",
+      "score": "EGD",
+      "lilypond": 5.2005007763406115,
+      "residual": 0.0,
+      "why": "EXACT. Full size, no grace: a natural alone over f' -- the box bottom 0.46 over the staff's ink (Lab sessions/p928/ed y2.ly N2). Before session 928: 4.940500786 (-0.26)."
+    },
+    "editorial.accidental.flat.above-notehead": {
+      "probe": "grace-editorial.ly",
+      "score": "EGE",
+      "lilypond": 3.027730803086793,
+      "residual": 0.0,
+      "why": "EXACT. Full size: the flat, whose box is not symmetric about its origin (-0.5177 . 1.4294 at -2), so this is the reading that tells box from outline. Before session 928: 2.767730853 (-0.26); with the outline instead of the box: 3.046541556 (+0.019)."
+    },
     "phrasing.grace.left-attachment": {
       "probe": "grace-phrasing.ly",
       "score": "PHA",

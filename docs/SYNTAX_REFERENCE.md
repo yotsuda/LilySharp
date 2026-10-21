@@ -1196,7 +1196,8 @@ and so can an ottava (`grace { d''16@ottava } e''4 f'' g'@!ottava`) — an `@!ot
 the span before it, as LilyPond's `\ottava #0` there does, so that grace keeps its written octave.
 A phrasing slur can start, stop or close on grace notes too (`grace { d16@phrasingSlur } e4 f
 g@!phrasingSlur`, `grace { d16@phrasingSlur e16@!phrasingSlur } f4`), and a courtesy accidental is
-drawn in parentheses on a grace note (`grace { fis16@courtesy } g4` — LilyPond's `fis?16`).
+drawn in parentheses on a grace note (`grace { fis16@courtesy } g4` — LilyPond's `fis?16`), and an
+editorial one above it, at the size it has on any note (`grace { fis16@editorial } g4`).
 
 LilyPond draws all of the spellings above, so each warning says "not drawn yet", not "do not
 write this".

@@ -527,6 +527,21 @@ internal static class GraceBodySupport
     internal static bool IsCarriedCourtesy(SyntaxNode annotation)
         => annotation is ArticulationSyntax { Name: "courtesy" };
 
+    /// <summary>
+    /// True for an EDITORIAL accidental a grace note carries — <c>@editorial</c>, LilyPond's
+    /// <c>!</c> under <c>suggestAccidentals</c>: the suggestion stands above the grace head,
+    /// centred on it, at its own font-size −2 (session 928; ledger editorial.grace.*). THE
+    /// question the collector and the drop list both ask.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/accidental-engraver.cc make_suggested_accidental — the
+    ///   AccidentalSuggestion's X parent and support are the note head, a grace's as any;
+    ///   general-grace-settings (scm/music-functions.scm) names no AccidentalSuggestion, so it
+    ///   keeps its size.
+    /// </remarks>
+    internal static bool IsCarriedEditorial(SyntaxNode annotation)
+        => annotation is ArticulationSyntax { Name: "editorial" };
+
     private static bool IsOttavaType(Svg.Model.MusicMarkType? type)
         => type is Svg.Model.MusicMarkType.OttavaUp or Svg.Model.MusicMarkType.OttavaDown
             or Svg.Model.MusicMarkType.QuindicesUp or Svg.Model.MusicMarkType.QuindicesDown
@@ -786,7 +801,7 @@ internal static class GraceBodySupport
                     || IsCarriedGlissando(annotation) || IsCarriedTextSpan(annotation)
                     || IsCarriedPedal(annotation) || IsCarriedTrillSpan(annotation)
                     || IsCarriedOttava(annotation) || IsCarriedPhrasingSlur(annotation)
-                    || IsCarriedCourtesy(annotation))
+                    || IsCarriedCourtesy(annotation) || IsCarriedEditorial(annotation))
                     continue;
                 yield return new GraceDrop(
                     GraceDropKind.Annotation, annotation.Span, Describe(annotation), via);

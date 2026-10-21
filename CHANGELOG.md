@@ -90,6 +90,10 @@ workflow attaches that section to the GitHub Release verbatim.
   **A courtesy accidental is drawn in parentheses on a grace note** (`grace { fis16@courtesy } g4`).
   A reduced courtesy accidental (a grace's, a cue's) assembles its parentheses from its own small
   font's shapes; the right one stood a little short before.
+  **An editorial accidental is drawn on a grace note** (`grace { fis16@editorial } g4`), above it
+  and at its usual size. An editorial accidental now stands as high as LilyPond puts it: clear of
+  the staff by LilyPond's outside-staff padding, not tucked against it — a quarter of a staff
+  space higher than before over a note inside the staff.
   A hairpin running over a
   grace note also stands where LilyPond puts it — it read the grace note's stem as a full-size
   down stem and sat a quarter space too low.

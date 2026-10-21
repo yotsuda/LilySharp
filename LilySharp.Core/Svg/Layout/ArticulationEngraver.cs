@@ -1236,6 +1236,9 @@ internal static class ArticulationEngraver
             if (articulation.IsEditorialAccidental)
             {
                 fontSizeStep = EditorialFontSizeStep;
+                // On a grace note too: general-grace-settings names no AccidentalSuggestion,
+                // so it keeps its own size and its full-size padding (ledger editorial.grace.*).
+                scriptStep = 0.0;
                 // Accidental glyphs are anchored at the left baseline, not
                 // origin-centred like script glyphs — shift so the INK centre
                 // lands on the notehead centre.
@@ -2242,6 +2245,21 @@ internal static class ArticulationEngraver
         };
     }
 
+    /// <summary>
+    /// True for the glyph of an editorial (suggestion) accidental — the only accidental a
+    /// script layout carries. Its profile is its BOX, not its outline: the AccidentalSuggestion
+    /// declares no vertical-skylines, so it takes the grob default, skylines from its extents.
+    /// MEASURED (2.26.0, Lab sessions/p928/ed y2.ly): the sharp, the natural and the flat all
+    /// stand with their box bottom exactly outside-staff-padding 0.46 over the staff's ink.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/grob.cc Grob::Grob — an unset vertical-skylines becomes
+    ///   simple_vertical_skylines_from_extents.
+    /// </remarks>
+    private static bool IsSuggestionGlyph(MusicGlyph glyph) => glyph
+        is MusicGlyph.AccidentalSharp or MusicGlyph.AccidentalFlat or MusicGlyph.AccidentalNatural
+        or MusicGlyph.AccidentalDoubleSharp or MusicGlyph.AccidentalDoubleFlat;
+
     /// <summary>Editorial (suggestion) accidental types.</summary>
     private static bool IsEditorialType(ArticulationType type) => type
         is ArticulationType.EditorialSharp or ArticulationType.EditorialFlat
@@ -2335,7 +2353,8 @@ internal static class ArticulationEngraver
         bool up = direction == VerticalDirection.Up;
         // The layout carries the font's CHARACTER (ArticulationItem.GetGlyph); the font gives
         // the glyph back, and the outline is asked by the glyph.
-        if (a.Glyph.Length == 1 && MusicFont.Current.GlyphOf(a.Glyph[0]) is { } glyph)
+        if (a.Glyph.Length == 1 && MusicFont.Current.GlyphOf(a.Glyph[0]) is { } glyph
+            && !IsSuggestionGlyph(glyph))
         {
             var placed = TextOutlineSkylines.PlaceMusicGlyphSide(
                 glyph, WalkSize(a, magnification), a.X, anchorY, direction,
@@ -2353,7 +2372,8 @@ internal static class ArticulationEngraver
         in ArticulationLayout a, double anchorY, double magnification = 1.0,
         double extraPad = 0.0)
     {
-        if (a.Glyph.Length == 1 && MusicFont.Current.GlyphOf(a.Glyph[0]) is { } glyph)
+        if (a.Glyph.Length == 1 && MusicFont.Current.GlyphOf(a.Glyph[0]) is { } glyph
+            && !IsSuggestionGlyph(glyph))
         {
             var (up, down) = TextOutlineSkylines.PlaceMusicGlyph(
                 glyph, WalkSize(a, magnification), a.X, anchorY,

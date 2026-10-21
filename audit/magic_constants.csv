@@ -782,6 +782,7 @@
 "Svg/Layout/ArticulationEngraver.cs","ArticulationEngraver.CalculateWithFingerings","2.0","TabConstants.FretEm(fonts, geom.StringCount)) / 2.0;","(file-level) LILYPOND-REF: define-grobs.scm:2992-3024 Script grob","Yellow"
 "Svg/Layout/ArticulationEngraver.cs","ArticulationEngraver.CalculateWithFingerings","0.0","tabGlyph, tabAbove, articulation.SourcePosition, FontSizeStep: 0.0,","(file-level) LILYPOND-REF: define-grobs.scm:2992-3024 Script grob","Yellow"
 "Svg/Layout/ArticulationEngraver.cs","ArticulationEngraver.CalculateWithFingerings","0.0","double fontSizeStep = item.GraceTime ? GrobFontSize.StepOf(item, SizedGrob.Script) : 0.0;","(file-level) LILYPOND-REF: define-grobs.scm:2992-3024 Script grob","Yellow"
+"Svg/Layout/ArticulationEngraver.cs","ArticulationEngraver.CalculateWithFingerings","0.0","scriptStep = 0.0;","LILYPOND-REF: define-grobs.scm:104-106 AccidentalSuggestion","Green"
 "Svg/Layout/ArticulationEngraver.cs","ArticulationEngraver.CalculateWithFingerings","2.0","x -= accBBox.Left + accBBox.Width / 2.0;","(file-level) LILYPOND-REF: define-grobs.scm:2992-3024 Script grob","Yellow"
 "Svg/Layout/ArticulationEngraver.cs","ArticulationEngraver.CalculateWithFingerings","0.0","if (scriptStep != 0.0)","(file-level) LILYPOND-REF: define-grobs.scm:2992-3024 Script grob","Yellow"
 "Svg/Layout/ArticulationEngraver.cs","ArticulationEngraver.CalculateWithFingerings","0.0","double tieMove = Math.Max(0.0, closestTie + PaddingFor(effArt.Type));","(file-level) LILYPOND-REF: define-grobs.scm:2992-3024 Script grob","Yellow"

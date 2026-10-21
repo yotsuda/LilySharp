@@ -5253,6 +5253,27 @@ internal sealed class RenderedGeometry
         return acc.X - head.X;
     }
 
+    /// <summary>
+    /// A MUSICA FICTA (suggestion) accidental's draw origin ABOVE the notehead it annotates
+    /// (staff spaces, up positive) — the Y the side-position pass gave it over the head and
+    /// stem it supports, with the head the one nearest the suggestion in X as in
+    /// <see cref="SuggestionToNoteheadAnchor"/>.
+    /// </summary>
+    public double SuggestionAboveNotehead(char accidentalGlyph)
+    {
+        const double fullSize = LilySharp.Core.Rendering.SharedRenderer.FontSize;
+        var acc = Glyphs.FirstOrDefault(
+            g => g.Glyph == accidentalGlyph && g.FontSize < fullSize - 1e-9,
+            throw_: $"no SMALL accidental U+{(int)accidentalGlyph:X4} in the probe.\n"
+                    + "Drawn geometry:\n" + Describe());
+        var heads = Glyphs.Where(g => IsNotehead(g.Glyph)).ToList();
+        if (heads.Count == 0)
+            throw new InvalidOperationException(
+                "no notehead in the probe.\nDrawn geometry:\n" + Describe());
+        var head = heads.OrderBy(g => Math.Abs(g.X - acc.X)).First();
+        return head.Y - acc.Y;
+    }
+
     /// <summary>Single-note NATURAL accidental to the notehead it precedes (see the char overload).</summary>
     public double NaturalToNoteheadAnchor() =>
         AccidentalToNoteheadAnchor(EmmentalerGlyphs.AccidentalNatural);

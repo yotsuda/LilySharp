@@ -332,6 +332,18 @@ public class GraceBodyValidatorTests
         Assert.Empty(Warnings(Book(written)));
         Assert.NotEqual(Page(control), Page(written));
     }
+    /// <summary>
+    /// An EDITORIAL accidental on a grace note is drawn above it, at its own size (session 928,
+    /// ledger editorial.grace.*). Nothing is reported.
+    /// </summary>
+    [Theory]
+    [InlineData("grace { fis'8@editorial } c'1 | e'1 |", "grace { fis'8 } c'1 | e'1 |")]
+    public void AnEditorialAccidentalOnAGrace_IsDrawn_AndNotReported(string written, string control)
+    {
+        Assert.Empty(Warnings(Book(written)));
+        Assert.NotEqual(Page(control), Page(written));
+    }
+
 
     /// <summary>
     /// The grace body that draws exactly what it says draws no warning either. This is the

@@ -117,6 +117,9 @@ internal static class ArticulationSpacing
         ArticulationType.Fermata or ArticulationType.FermataShort
             or ArticulationType.FermataLong => 75,
         ArticulationType.FretFrame => TextScriptOutsideStaffPriority,
+        ArticulationType.EditorialSharp or ArticulationType.EditorialFlat
+            or ArticulationType.EditorialNatural or ArticulationType.EditorialDoubleSharp
+            or ArticulationType.EditorialDoubleFlat => 0,
         _ => null,
     };
 
