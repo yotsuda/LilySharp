@@ -148,6 +148,13 @@ public class GraceBodyValidatorTests
     [InlineData("grace { d'8@prall } c'1 | e'1 |")]
     [InlineData("grace { d'8@mordent } c'1 | e'1 |")]
     [InlineData("grace { d'8@turn } c'1 | e'1 |")]
+    // …and the bowing marks and the other up-scripts (session 923, ledger script.grace.bowing.*).
+    [InlineData("grace { d'8@upBow } c'1 | e'1 |")]
+    [InlineData("grace { d'8@downBow } c'1 | e'1 |")]
+    [InlineData("grace { d'8@flageolet } c'1 | e'1 |")]
+    [InlineData("grace { d'8@harmonic } c'1 | e'1 |")]
+    [InlineData("grace { d'8@stopped } c'1 | e'1 |")]
+    [InlineData("grace { d'8@snapPizz } c'1 | e'1 |")]
     public void AStemSideScriptOnAGrace_IsDrawn_AndNotReported(string written)
     {
         Assert.Empty(Warnings(Book(written)));

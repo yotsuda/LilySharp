@@ -334,7 +334,12 @@ internal static class GraceBodySupport
                 or ArticulationType.FermataLong
                 or ArticulationType.Trill or ArticulationType.Mordent or ArticulationType.Prall
                 or ArticulationType.Turn or ArticulationType.InvertedTurn
-                or ArticulationType.PrallTriller,
+                or ArticulationType.PrallTriller
+                // The bowing marks and the other up-scripts (session 923; ledger
+                // script.grace.bowing.*): the same Script, the same grace column.
+                or ArticulationType.UpBow or ArticulationType.DownBow
+                or ArticulationType.Flageolet or ArticulationType.Stopped
+                or ArticulationType.SnapPizz,
         };
 
     /// <summary>

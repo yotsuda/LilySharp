@@ -1177,7 +1177,8 @@ notes' size, as LilyPond draws it.
 
 **So is a stem-side script** — `@staccato`, `@staccatissimo`, `@accent`, `@marcato`, `@tenuto`,
 `@portato` on a grace note is drawn small, on the grace note (`grace { d16@staccato } c4`),
-and so are a fermata and an ornament (`@trill`, `@prall`, `@mordent`, `@turn`, …) above it.
+and so are a fermata and an ornament (`@trill`, `@prall`, `@mordent`, `@turn`, …) above it,
+and a bowing mark (`@upBow`, `@downBow`), `@flageolet` / `@harmonic`, `@stopped` and `@snapPizz`.
 A dynamic there is drawn too, at full size (`grace { d16@f } c4`), and a text
 (`@text("dolce")`), and a fingering (`grace { d16@finger(2) } c4`, small, as LilyPond
 sets it), and a hairpin that starts there (`grace { d16@cresc } c4 e4@f` — the wedge opens at

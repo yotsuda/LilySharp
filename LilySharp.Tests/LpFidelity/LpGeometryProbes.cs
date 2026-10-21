@@ -8912,6 +8912,14 @@ internal static class LpGeometryProbes
     private static readonly string GRTA = GraceTieBook("c4 grace { d16@rit } e4 f4 g4@!rit |", "GRTA");
     private static readonly string GRTB = GraceTieBook("c4 d16@rit e8. f4 g4@!rit |", "GRTB");
     private static readonly string GRTC = GraceTieBook("c4@rit e4 grace { f16@!rit } g4 a4 |", "GRTC");
+    // A bowing mark or another up-script on a grace note (audit/lp-geometry/probes/grace-bowing.ly).
+    private static readonly string GBWA = GraceTieBook("c4 grace { d16@upBow } e4 c2 |", "GBWA");
+    private static readonly string GBWB = GraceTieBook("c4 grace { d16@downBow } e4 c2 |", "GBWB");
+    private static readonly string GBWC = GraceTieBook("c4 grace { d16@flageolet } e4 c2 |", "GBWC");
+    private static readonly string GBWD = GraceTieBook("c4 grace { d16@stopped } e4 c2 |", "GBWD");
+    private static readonly string GBWE = GraceTieBook("c4 grace { d16@snapPizz } e4 c2 |", "GBWE");
+    private static readonly string GBWG = GraceTieBook("c4 d16@upBow e8. c2 |", "GBWG");
+    private static readonly string GBWH = GraceTieBook("c4 d16@flageolet e8. c2 |", "GBWH");
     // A pedal bracket engaged or released on a grace note (audit/lp-geometry/probes/grace-pedal.ly).
     private static readonly string GPDA = GraceTieBook("c4 grace { d16@sustain } e4 f4 g4@!sustain |", "GPDA");
     private static readonly string GPDB = GraceTieBook("c4 d16@sustain e8. f4 g4@!sustain |", "GPDB");
@@ -17368,6 +17376,13 @@ internal static class LpGeometryProbes
         new("textspanner.grace.staff-to-line", GRTA, g => g.TextSpannerLineAboveStaff()),
         new("textspanner.grace.control.label-to-notehead", GRTB, g => g.TextSpannerLabelPenToNotehead(1)),
         new("textspanner.grace.ends-on-grace.label-to-notehead", GRTC, g => g.TextSpannerLabelPenToNotehead(0)),
+        new("script.grace.bowing.upbow", GBWA, g => g.GlyphAboveStaffMiddle('\uE056', 0)),
+        new("script.grace.bowing.downbow", GBWB, g => g.GlyphAboveStaffMiddle('\uE058', 0)),
+        new("script.grace.bowing.flageolet", GBWC, g => g.GlyphAboveStaffMiddle('\uE064', 0)),
+        new("script.grace.bowing.stopped", GBWD, g => g.GlyphAboveStaffMiddle('\uE055', 0)),
+        new("script.grace.bowing.snappizz", GBWE, g => g.GlyphAboveStaffMiddle('\uE082', 0)),
+        new("script.grace.bowing.control.upbow", GBWG, g => g.GlyphAboveStaffMiddle('\uE056', 0)),
+        new("script.grace.bowing.control.flageolet", GBWH, g => g.GlyphAboveStaffMiddle('\uE064', 0)),
         new("pedal.grace.start-to-notehead", GPDA, g => g.PedalBracketLineEndToNotehead(end: false, 1)),
         new("pedal.grace.end-to-notehead", GPDA, g => g.PedalBracketLineEndToNotehead(end: true, 4)),
         new("pedal.grace.staff-to-line", GPDA, g => g.PedalBracketLineBelowStaff()),

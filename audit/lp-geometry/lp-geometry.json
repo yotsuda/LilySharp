@@ -7483,6 +7483,55 @@
       "residual": 0.0,
       "why": "EXACT. A spanner from the c4 that ENDS on a grace note (`grace { f16@!rit }`): its start stands as ever. Until session 921 the grace's @!rit was dropped, so the spanner was never closed: LYS4018 (an error) and nothing drawn. The right end now stops at the grace column; its arithmetic is the unported right bound every text spanner shares (LilyPond 14.758355 against the grace head's 14.239041 -- TextSpannerEngraver's remark), so no point reads it."
     },
+    "script.grace.bowing.upbow": {
+      "probe": "grace-bowing.ly",
+      "score": "GBA",
+      "lilypond": 2.3,
+      "residual": 0.0,
+      "why": "EXACT. `grace { d16@upBow }`: the bow sits over the grace column at the staff-padding floor, as the full-size control does (the small grace head inside the staff reaches nothing). Until session 923 every bowing mark on a grace was dropped (LYS4020); GraceBodySupport.IsCarriedScript now names the five up-scripts and ArticulationEngraver's grace path (session 916) places them."
+    },
+    "script.grace.bowing.downbow": {
+      "probe": "grace-bowing.ly",
+      "score": "GBB",
+      "lilypond": 2.3,
+      "residual": 0.0,
+      "why": "EXACT. The down-bow, the same floor."
+    },
+    "script.grace.bowing.flageolet": {
+      "probe": "grace-bowing.ly",
+      "score": "GBC",
+      "lilypond": 2.532843,
+      "residual": 0.0,
+      "why": "EXACT. The flageolet circle at the grace's Script font-size -3: its smaller ink rests on the same floor, so its origin stands lower than the full-size control's 2.65."
+    },
+    "script.grace.bowing.stopped": {
+      "probe": "grace-bowing.ly",
+      "score": "GBD",
+      "lilypond": 2.637495,
+      "residual": 0.0,
+      "why": "EXACT. The stopped '+' at the grace's size."
+    },
+    "script.grace.bowing.snappizz": {
+      "probe": "grace-bowing.ly",
+      "score": "GBE",
+      "lilypond": 2.626181,
+      "residual": 0.0,
+      "why": "EXACT. The snap pizzicato at the grace's size."
+    },
+    "script.grace.bowing.control.upbow": {
+      "probe": "grace-bowing.ly",
+      "score": "GBG",
+      "lilypond": 2.3,
+      "residual": 0.0,
+      "why": "EXACT. The full-size CONTROL of GBA: an up-bow on a d16 of the main grid."
+    },
+    "script.grace.bowing.control.flageolet": {
+      "probe": "grace-bowing.ly",
+      "score": "GBH",
+      "lilypond": 2.65,
+      "residual": 0.0,
+      "why": "EXACT. The full-size CONTROL of GBC."
+    },
     "pedal.grace.start-to-notehead": {
       "probe": "grace-pedal.ly",
       "score": "GPA",
