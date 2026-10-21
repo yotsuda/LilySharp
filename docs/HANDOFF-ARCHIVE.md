@@ -160,6 +160,16 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第924セッションの経緯
+
+### 1.1 第924セッション（2026-10-21・YT-DELL2）
+
+第923 と同じ会話の続き（ユーザー「続けて」）。`-Start p924`（開始 HEAD `cf939e6fe`・未 push 23・full **12592 / 0 / 2 / 12594**・第922 を ARCHIVE へ）。作業場所は Lab `sessions/p924/`。
+- **breath を測り直して区切った**（Lab `p924/br/br2.log`・LP 2.26）: grace の後ろの breath は**右端**が「grace の列＋普通の音符のバネ」（1.28 − 0.8 ＋頭の幅 0.917939＝1.397939・BRA/BRE/BRH/BRI/BRK で一致）・主音符はその **1.0 右**（first-note fixed-space・BRA の主音符まで 2.397939 は完全一致）。⚠️ 閉じない 2 つ: ⒜ breath の次が **grace** だと 1.0 でなく **0.69868**（BRE/BRF/BRJ・音高に依らない・出どころ未特定）⒝ **下向き符尾**の grace（`b16`・BRG）では breath の右端が 1.397939 でなく 2.4452（輪郭の rod が効いている形・未特定）。⇒ grace の列組み（`SpacingRules.GraceColumns`）に非音楽の列を足す仕事＝⒜⒝ を LP の `staff-spacing.cc`／`note-spacing.cc` で読んでから。
+- **grace の trill spanner を描く＝`159baab01`**: `GraceBodySupport.IsCarriedTrillSpan`（収集の関所と LYS4020）・`TrillSpannerEngraver.VoiceItemX` が grace の項目を `GraceColumnAt` で読む（始まり・止まり・**支えの列**の 3 か所）・支えの中身（grace の頭の大きさ・上向きの grace 符尾）は第916 の `DynamicEngraver.ColumnSupportSkylines` が既に知っていた。LP 2.26（`probes/grace-trill.ly`）＝台帳 6 点一致（`trill.grace.*`・高い grace は符尾が上向きなので対照より 2.055 高い）。毒＝述語で 4 赤・grace の X だけで 1 赤（高い grace で止まる形が 6.464 に持ち上がる）。⚠️ **計器の罠（この便で踏んだ）**: PowerShell の単一引用符の中で LP の `a''` が `a'` に縮む＝プローブの綴りは var で渡すか、実際の音高（NoteHead の y）で確かめる。
+- `-End p924 -DiffBase cf939e6fe`＝full **12600 / 0 / 2 / 12602**（前便末 +8）・Core 警告 0・門は全部 OK（Lab `sessions/p924/end.log`）→ この docs commit。未 push 24＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。掃き 1,242 枚で 0。
+判定（2026-10-21）: grace の trill spanner は閉じた。breath は ⒜⒝ が未特定のまま区切った。次の候補＝`@ottava`（同じ「端を grace の列で読む」形）か `@phrasingSlur`。
+
 ## 以下は第923セッションの経緯
 
 ### 1.1 第923セッション（2026-10-21・YT-DELL2）
