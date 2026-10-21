@@ -160,6 +160,15 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第931セッションの経緯
+
+### 1.1 第931セッション（2026-10-21・YT-DELL2）
+
+第930 と同じ会話の続き（ユーザー「続けて」）。`-Start p931`（開始 HEAD `db5e3f26f`・未 push 40・full **12663 / 0 / 2 / 12665**・第929 を ARCHIVE へ）。作業場所は Lab `sessions/p931/`。
+- **grace の `@dead`・`@notehead(x)`／`(cross)`・`@parenthesize` を描く＝`b66da1cf4`**: `NarrowToGraceTime` が `IsDead`・`Parenthesized`・頭の形を残す（和音とその構成音も）。**頭の形は × だけ**（`MeasureBuilder.GraceHeadStyle`）＝LP の grace の × 頭は黒い頭と箱も符尾の位置も同じ（幅 0.917939・符尾の右端＝頭の右端）なので、黒い頭で測る grace の列の間隔がそのまま正しい。他の形（diamond・triangle・slash・xcircle）は幅が違う＝まだ LYS4020（述語 `GraceBodySupport.IsCarriedHeadMark` が x/cross だけを通す）。括弧は普通の描き手のまま font-size が頭の −3 に −6 を足して −9（LP の `fs=-9.0` と同じ）・LP は括弧で列を広げない（grace も普通も）。LP 2.26（`probes/grace-head-style.ly` DHA/DHB/PRA/PRB）＝台帳 10 点（`headstyle.grace.*`・× 頭の 5 点は完全一致・括弧の 4 点は 3e-6 未満の残差で普通の大きさの対照にも同じ量＝括弧の字形の箱の側）。計器: `HeadAt` は × も頭と数える（古い `IsNotehead` は数えない）・`StemRightFromNotehead`・`NoteheadToNotehead`・`NoteheadIsCross`・`HeadParensLeftGap`。⚠️ 説明文に `\grace` と書くと JSON のエスケープになり台帳全体が読めなくなる（1196 赤）＝`\\` と書く。毒＝頭の形 3 赤・括弧 3 赤・述語 3 赤。全 svg の掃き 1,242 枚で 0。
+- `-End p931 -DiffBase db5e3f26f`＝full **12677 / 0 / 2 / 12679**（前便末 +14）（Lab `sessions/p931/end.log`）→ この docs commit。未 push 41＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。
+判定（2026-10-21）: grace の × 頭と括弧は閉じた。grace の LYS4020 の残り＝`@breath`・`@caesura`（列組み・未特定 2 つ）・`@notehead(…)` の × 以外の形（grace の列に頭の形を持たせて間隔を測る）・`@pluck`・`@diagram`・`@cross`（譜表をまたぐ）・`@stemUp`/`@stemDown`・`@figuredBass`・`@chord`・TAB の技法。
+
 ## 以下は第930セッションの経緯
 
 ### 1.1 第930セッション（2026-10-21・YT-DELL2）
