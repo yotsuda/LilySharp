@@ -290,7 +290,8 @@ internal static class ArpeggioEngraver
         ImmutableArray<Measure> measures = default,
         Dictionary<int, ImmutableArray<Measure>>? measuresByStaff = null,
         Dictionary<int, ImmutableArray<Voice>>? voicesByStaff = null,
-        ImmutableArray<Voice> voices = default)
+        ImmutableArray<Voice> voices = default,
+        ImmutableArray<GraceNoteItem> graceNotes = default)
     {
         if (arpeggios.IsDefaultOrEmpty || arpeggios.Length == 0)
             return ImmutableArray<ArpeggioLayout>.Empty;
@@ -355,6 +356,16 @@ internal static class ArpeggioEngraver
             {
                 supportReach = SpacingRules.ChordSupportLeftReach(arpChord);
             }
+            // A GRACE CHORD'S arpeggio (session 919, HANDOFF §2 U8 ⒟) stands left of the GRACE
+            // column — its X read off the run, its support reach out of the grace's own fonts —
+            // at full size, as LilyPond leaves it (general-grace-settings names no Arpeggio).
+            // MEASURED (2.26.0, audit/lp-geometry/probes/grace-arpeggio.ly): the wiggle's right
+            // edge stands the padding 0.5 left of the grace head, or of the grace accidental.
+            if (GraceColumnOf(graceNotes, arp, arpVoices, measure) is { } grace)
+            {
+                itemX = grace.HeadLeftX;
+                supportReach = GraceColumnHeads.SupportLeftReach(grace.Column);
+            }
             double columnLeftX = itemX - supportReach;
 
             // Y-up staff-space from the staff middle line (frame B): a head at
@@ -389,5 +400,38 @@ internal static class ArpeggioEngraver
         }
 
         return layouts.ToImmutableArray();
+    }
+
+    /// <summary>
+    /// The grace column the arpeggio's chord stands as, and that column's head left X — or
+    /// null when the chord is on the main grid (or the caller handed over no grace groups).
+    /// </summary>
+    private static (GraceColumnInfo Column, double HeadLeftX)? GraceColumnOf(
+        ImmutableArray<GraceNoteItem> graceNotes, ArpeggioItem arp, ImmutableArray<Voice> voices,
+        MeasureLayout measure)
+    {
+        if (graceNotes.IsDefaultOrEmpty || voices.IsDefaultOrEmpty || arp.VoiceIndex >= voices.Length)
+            return null;
+        var voice = voices[arp.VoiceIndex];
+        if (arp.MeasureIndex >= voice.Measures.Length
+            || arp.ItemIndex >= voice.Measures[arp.MeasureIndex].Items.Length
+            || !voice.Measures[arp.MeasureIndex].Items[arp.ItemIndex].GraceTime)
+            return null;
+        foreach (var g in graceNotes)
+        {
+            if (g.StaffIndex != arp.StaffIndex || g.VoiceIndex != arp.VoiceIndex
+                || g.MeasureIndex != arp.MeasureIndex || g.ColumnItemIndices.IsDefaultOrEmpty
+                || g.ColumnItemIndices.Length != g.Columns.Length)
+                continue;
+            int k = g.ColumnItemIndices.IndexOf(arp.ItemIndex);
+            if (k < 0)
+                continue;
+            return ElementCoordinator.GraceColumnHeadLeftX(voice, graceNotes, arp.StaffIndex,
+                    arp.VoiceIndex, arp.MeasureIndex, arp.ItemIndex, measure,
+                    SpacingRules.VoiceCollisionShiftsOf(voices)) is { } x
+                ? (g.Columns[k], x)
+                : null;
+        }
+        return null;
     }
 }

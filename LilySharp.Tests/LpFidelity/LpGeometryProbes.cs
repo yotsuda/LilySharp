@@ -8895,6 +8895,13 @@ internal static class LpGeometryProbes
     private static readonly string GRPC = GraceTieBook("c4 grace { d16@decresc } e4 f4 g4@!cresc |", "GRPC");
     private static readonly string GRPD = GraceTieBook("c4 d16@cresc e8. f4 g4@!cresc |", "GRPD");
     private static readonly string GRPE = GraceTieBook("c4 grace { a16@cresc b16 } e4 f4 g4@!cresc |", "GRPE");
+    // An arpeggio on a grace chord (audit/lp-geometry/probes/grace-arpeggio.ly).
+    private static readonly string GRAA = GraceTieBook("c4 grace { <d f a>16@arpeggio } e4 c2 |", "GRAA");
+    private static readonly string GRAB = GraceTieBook("c4 <d f a>16@arpeggio e8. c2 |", "GRAB");
+    private static readonly string GRAC = GraceTieBook("c4 grace { <d fis a>16@arpeggio } e4 c2 |", "GRAC");
+    private static readonly string GRAD = GraceTieBook("c4 grace { <d f a>16 } e4 c2 |", "GRAD");
+    private static readonly string GRAE = GraceTieBook("c4 grace { <d f a>16@arpeggio(bracket) } e4 c2 |", "GRAE");
+    private static readonly string GRAF = GraceTieBook("c4 grace { <d f a>16@arpeggio <e g b>16 } e4 c2 |", "GRAF");
     // A hairpin's own outline against a head (audit/lp-geometry/probes/hairpin-arm-outline.ly).
     private static readonly string HPOA = GraceTieBook("c4 d4@cresc e4 f4@!cresc |", "HPOA");
     private static readonly string HPOB = GraceTieBook("c4 d4@decresc e4 f4@!cresc |", "HPOB");
@@ -17322,6 +17329,18 @@ internal static class LpGeometryProbes
         new("hairpin.outline.cresc.staff-to-wedge", HPOA, g => g.HairpinWedgeCentreBelowStaff()),
         new("hairpin.outline.decresc.staff-to-wedge", HPOB, g => g.HairpinWedgeCentreBelowStaff()),
         new("hairpin.outline.stems.staff-to-wedge", HPOC, g => g.HairpinWedgeCentreBelowStaff()),
+        new("arpeggio.grace.previous-head-to-wiggle", GRAA, g => g.PreviousHeadToArpeggio(0)),
+        new("arpeggio.grace.right-edge-to-head", GRAA, g => g.ArpeggioRightToNextNoteheadLeft()),
+        new("arpeggio.grace.length", GRAA, g => g.ArpeggioLength()),
+        new("arpeggio.grace.main-head-to-grace-head", GRAA, g => g.NoteheadAnchor(1) - g.NoteheadAnchor(0)),
+        new("arpeggio.grace.plain.main-head-to-grace-head", GRAD, g => g.NoteheadAnchor(1) - g.NoteheadAnchor(0)),
+        new("arpeggio.grace.control.previous-head-to-wiggle", GRAB, g => g.PreviousHeadToArpeggio(0)),
+        new("arpeggio.grace.right-edge-to-accidental", GRAC, g => g.ArpeggioRightToAccidentalLeft()),
+        new("arpeggio.grace.accidental.previous-head-to-wiggle", GRAC, g => g.PreviousHeadToArpeggio(0)),
+        new("arpeggio.grace.beamed.previous-head-to-wiggle", GRAF, g => g.PreviousHeadToArpeggio(0)),
+        new("chordbracket.grace.previous-head-to-bracket", GRAE, g => g.PreviousHeadToChordBracket()),
+        new("chordbracket.grace.right-edge-to-head", GRAE, g => g.ChordBracketRightToNextNoteheadLeft()),
+        new("chordbracket.grace.length", GRAE, g => g.ChordBracketLength()),
         new("text.grace.below", GRXA, g => g.TextBaselineAboveStaffLine(LilySharp.Core.Rendering.TextRole.Text, 0, 2)),
         new("text.grace.above", GRXB, g => g.TextBaselineAboveStaffLine(LilySharp.Core.Rendering.TextRole.Text, 0, 2)),
         new("text.grace.control", GRXC, g => g.TextBaselineAboveStaffLine(LilySharp.Core.Rendering.TextRole.Text, 0, 2)),

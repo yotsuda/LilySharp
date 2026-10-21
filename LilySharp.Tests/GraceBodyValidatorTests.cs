@@ -76,7 +76,9 @@ public class GraceBodyValidatorTests
     // (ledger text.grace.*), and grace { d'8@finger(3) } with the fingerings (session 917, ledger
     // fingering.grace.*; see AFingeringOnAGrace_IsDrawn_AndNotReported), and
     // grace { d'8@cresc } with the hairpin starts (session 918, ledger hairpin.grace.*; see
-    // AHairpinStartOnAGrace_IsDrawn_AndNotReported).
+    // AHairpinStartOnAGrace_IsDrawn_AndNotReported), and `grace { <d' f'>8@arpeggio }` with the
+    // arpeggios (session 919, ledger arpeggio.grace.*; see
+    // AnArpeggioOnAGraceChord_IsDrawn_AndNotReported).
     [InlineData("grace { d'8@glissando } c'1 | e'1 |", "grace { d'8 } c'1 | e'1 |")]
     // ⚠️ `grace { d'8. }` LEFT THIS THEORY ON 2026-08-30 (session 299), which is the way a
     // row is meant to leave it: the dot is drawn now, so the line asserting it is missing
@@ -199,6 +201,23 @@ public class GraceBodyValidatorTests
     {
         Assert.Empty(Warnings(Book(written)));
         Assert.NotEqual(Page(written.Replace(start, "")), Page(written));
+    }
+
+    /// <summary>
+    /// An ARPEGGIO on a grace chord is drawn (session 919, HANDOFF §2 U8 ⒟): the wiggle or the
+    /// bracket at full size, the padding left of the grace column, the run making room for it
+    /// (ledger arpeggio.grace.*, chordbracket.grace.*). Nothing is reported about it. Until
+    /// session 919 the wiggle was drawn over the grace heads with no room kept, and LYS4020
+    /// called it dropped.
+    /// </summary>
+    [Theory]
+    [InlineData("grace { <d' f' a'>8@arpeggio } c'1 | e'1 |", "@arpeggio")]
+    [InlineData("grace { <d' f' a'>8@arpeggio(bracket) } c'1 | e'1 |", "@arpeggio(bracket)")]
+    [InlineData("grace { <d' f' a'>16@arpeggio <e' g' b'>16 } c'1 | e'1 |", "@arpeggio")]
+    public void AnArpeggioOnAGraceChord_IsDrawn_AndNotReported(string written, string mark)
+    {
+        Assert.Empty(Warnings(Book(written)));
+        Assert.NotEqual(Page(written.Replace(mark, "")), Page(written));
     }
 
     /// <summary>

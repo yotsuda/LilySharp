@@ -155,6 +155,29 @@ internal static class GraceColumnHeads
     }
 
     /// <summary>
+    /// How far the column's own ink reaches LEFT of its origin, as a positive number — a head
+    /// reversed to the left of a down stem, or the leftmost accidental: the ink an arpeggio
+    /// stands <c>padding</c> clear of. The grace column's
+    /// <see cref="SpacingRules.ChordSupportLeftReach"/>, out of the grace's own fonts.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/arpeggio-engraver.cc:112-122 acknowledge_rhythmic_head and
+    ///   lily/accidental-engraver.cc:298-307 make_standard_accidental — every head and every
+    ///   accidental is a side-position support of the arpeggio.
+    /// </remarks>
+    internal static double SupportLeftReach(GraceColumnInfo column)
+    {
+        double reach = AccidentalInkLeft(column);
+        var offsets = HeadOffsets(column);
+        if (offsets.IsDefaultOrEmpty)
+            return reach;
+        foreach (double o in offsets)
+            if (o < 0)
+                reach = System.Math.Max(reach, -o);
+        return reach;
+    }
+
+    /// <summary>
     /// The column as a full-size <see cref="MusicItem"/>, for the houses that take one and ask
     /// it only about pitches and duration — the beam quanter's member item (<c>BeamGroup.ItemOf</c>) and the
     /// spacing's approach column.

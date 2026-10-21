@@ -7301,6 +7301,90 @@
       "residual": 0.0,
       "why": "EXACT since session 918. A crescendo over g' a' b' c'': the down stems of b' and c'' bind, thin supports under the arm: -0.0006 before the fix."
     },
+    "arpeggio.grace.previous-head-to-wiggle": {
+      "probe": "grace-arpeggio.ly",
+      "score": "GAA",
+      "lilypond": 1.6042,
+      "residual": 0.0,
+      "why": "EXACT. `grace { <d f a>16@arpeggio }` after a c4: the wiggle on the grace chord, full size (general-grace-settings names no Arpeggio). Its left edge stands 1.6042 after the c4's head anchor -- the grace column is spaced to make room for it, the wiggle a conditional part of the grace column's left skylines (ItemSkylineFactory.GraceArpeggioPart). Until session 919 the wiggle was collected (it rode the chord into the arpeggio list) but the narrowed grace chord had lost HasArpeggio: the wiggle was drawn over the grace heads with no room kept, while LYS4020 called it dropped."
+    },
+    "arpeggio.grace.right-edge-to-head": {
+      "probe": "grace-arpeggio.ly",
+      "score": "GAA",
+      "lilypond": 0.5,
+      "residual": 0.0,
+      "why": "EXACT. The wiggle's right edge to the grace head: the Arpeggio's padding 0.5, off the GRACE column (ArpeggioEngraver reads its X off the run, ElementCoordinator.GraceColumnHeadLeftX)."
+    },
+    "arpeggio.grace.length": {
+      "probe": "grace-arpeggio.ly",
+      "score": "GAA",
+      "lilypond": 3.0,
+      "residual": 0.0,
+      "why": "EXACT. The wiggle's length: the same full-size pile of whole glyphs as the control's (LilyPond's Y-extent (-6.776 . -3.776) in both books)."
+    },
+    "arpeggio.grace.main-head-to-grace-head": {
+      "probe": "grace-arpeggio.ly",
+      "score": "GAA",
+      "lilypond": 2.9042,
+      "residual": 0.0,
+      "why": "EXACT. The c4 head anchor to the grace chord's head: 0.5024 further right than without the wiggle (arpeggio.grace.plain.main-head-to-grace-head) -- the room the wiggle takes."
+    },
+    "arpeggio.grace.plain.main-head-to-grace-head": {
+      "probe": "grace-arpeggio.ly",
+      "score": "GAD",
+      "lilypond": 2.401796,
+      "residual": 0.0,
+      "why": "EXACT. The CONTROL of GAA without the wiggle: where the plain grace chord stands."
+    },
+    "arpeggio.grace.control.previous-head-to-wiggle": {
+      "probe": "grace-arpeggio.ly",
+      "score": "GAB",
+      "lilypond": 3.6042,
+      "residual": 0.0,
+      "why": "EXACT. The full-size control: the same chord as a sixteenth on the main grid."
+    },
+    "arpeggio.grace.right-edge-to-accidental": {
+      "probe": "grace-arpeggio.ly",
+      "score": "GAC",
+      "lilypond": 0.5,
+      "residual": 0.0,
+      "why": "EXACT. `<d fis a>`: the wiggle clears the grace SHARP by the padding -- every accidental is a support of the arpeggio, read out of the grace's accidental font (GraceColumnHeads.SupportLeftReach)."
+    },
+    "arpeggio.grace.accidental.previous-head-to-wiggle": {
+      "probe": "grace-arpeggio.ly",
+      "score": "GAC",
+      "lilypond": 1.6042,
+      "residual": 0.0,
+      "why": "EXACT. With the sharp the wiggle stands where it did without it (the grace column moves right instead): the leftmost conditional ink keeps its distance from the c4."
+    },
+    "arpeggio.grace.beamed.previous-head-to-wiggle": {
+      "probe": "grace-arpeggio.ly",
+      "score": "GAF",
+      "lilypond": 1.6042,
+      "residual": 0.0,
+      "why": "EXACT. The wiggle on the first of two beamed grace chords."
+    },
+    "chordbracket.grace.previous-head-to-bracket": {
+      "probe": "grace-arpeggio.ly",
+      "score": "GAE",
+      "lilypond": 1.6042,
+      "residual": 0.0,
+      "why": "EXACT. `grace { <d f a>16@arpeggio(bracket) }` -- LilyPond's `-\\nonArpeggiato`, a ChordBracket: its left edge stands where the wiggle's does."
+    },
+    "chordbracket.grace.right-edge-to-head": {
+      "probe": "grace-arpeggio.ly",
+      "score": "GAE",
+      "lilypond": 0.5,
+      "residual": 0.0,
+      "why": "EXACT. The bracket's right edge to the grace head: the padding again (the bracket is 0.5 wide where the wiggle is 0.8, so the grace heads stand 0.3 left of GAA's)."
+    },
+    "chordbracket.grace.length": {
+      "probe": "grace-arpeggio.ly",
+      "score": "GAE",
+      "lilypond": 3.5,
+      "residual": 0.0,
+      "why": "EXACT. The bracket's length, full size: the head interval widened 0.75 either side."
+    },
     "text.grace.below": {
       "probe": "grace-text.ly",
       "score": "GXA",

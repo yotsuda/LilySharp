@@ -125,7 +125,13 @@ public readonly record struct GraceColumnInfo(
     // The string count of that TAB staff (0 off a tab) — stamped beside TabDigitHalfWidth so the
     // run's spacing reads the staff's own fret face for the MAIN note's digit too
     // (TabConstants.FretGlyphWidthAtDefault; the reduced face of 6+ strings, session 733).
-    int TabStringCount = 0
+    int TabStringCount = 0,
+    // The chord's ARPEGGIO — a wiggle (`@arpeggio`) or a bracket (`@arpeggio(bracket)`) — at
+    // FULL size (general-grace-settings names no Arpeggio), standing `padding` left of the grace
+    // column's own heads and accidentals; the column's left skylines carry it, so the run makes
+    // room for it (session 919; ledger arpeggio.grace.*).
+    bool Arpeggio = false,
+    bool ArpeggioBracket = false
 )
 {
     /// <summary>Whether this column's stem points up — <c>!</c><see cref="StemDown"/>.</summary>
@@ -214,7 +220,8 @@ public readonly record struct GraceColumnInfo(
         if (BaseDuration != other.BaseDuration || Dots != other.Dots
             || ContextFontSizeStep != other.ContextFontSizeStep || StemDown != other.StemDown
             || SlurStart != other.SlurStart || SlurEnd != other.SlurEnd
-            || TabDigitHalfWidth != other.TabDigitHalfWidth || TabStringCount != other.TabStringCount)
+            || TabDigitHalfWidth != other.TabDigitHalfWidth || TabStringCount != other.TabStringCount
+            || Arpeggio != other.Arpeggio || ArpeggioBracket != other.ArpeggioBracket)
             return false;
         if (Heads.IsDefaultOrEmpty || other.Heads.IsDefaultOrEmpty)
             return Heads.IsDefaultOrEmpty && other.Heads.IsDefaultOrEmpty;
@@ -238,6 +245,8 @@ public readonly record struct GraceColumnInfo(
         hc.Add(SlurEnd);
         hc.Add(TabDigitHalfWidth);
         hc.Add(TabStringCount);
+        hc.Add(Arpeggio);
+        hc.Add(ArpeggioBracket);
         if (!Heads.IsDefaultOrEmpty)
             foreach (var head in Heads)
                 hc.Add(head);

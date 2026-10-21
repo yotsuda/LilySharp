@@ -393,6 +393,21 @@ internal static class GraceBodySupport
         => annotation is DynamicSyntax { Level: DynamicLevel.None };
 
     /// <summary>
+    /// True for an ARPEGGIO a grace chord engraves — the wiggle <c>@arpeggio</c> or the bracket
+    /// <c>@arpeggio(bracket)</c>: full size, the padding 0.5 left of the grace column's heads and
+    /// accidentals, the run making room for it (session 919; ledger arpeggio.grace.*). It rides
+    /// the chord (<c>ChordItem.HasArpeggio</c>, kept by <c>MeasureBuilder.NarrowToGraceTime</c>,
+    /// and <c>GraceColumnInfo.Arpeggio</c>), so ArpeggioEngraver places it off the grace column.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/arpeggio-engraver.cc — a Voice engraver; general-grace-settings
+    ///   (scm/music-functions.scm:636-650) names no Arpeggio, so it keeps its size.
+    /// </remarks>
+    internal static bool IsCarriedArpeggio(SyntaxNode annotation)
+        => annotation is ArticulationSyntax { Name: "arpeggio" }
+           || annotation is MusicMarkSyntax mark && AnnotationValues.IsArpeggioBracket(mark);
+
+    /// <summary>
     /// The <c>\N</c> a grace note carries, or null for automatic string selection.
     /// </summary>
     /// <remarks>
@@ -637,7 +652,7 @@ internal static class GraceBodySupport
             {
                 if (NeedsNoColumn(annotation) || IsCarriedScript(annotation) || IsCarriedDynamic(annotation)
                     || IsCarriedText(annotation) || IsCarriedFingering(annotation)
-                    || IsCarriedHairpinStart(annotation))
+                    || IsCarriedHairpinStart(annotation) || IsCarriedArpeggio(annotation))
                     continue;
                 yield return new GraceDrop(
                     GraceDropKind.Annotation, annotation.Span, Describe(annotation), via);

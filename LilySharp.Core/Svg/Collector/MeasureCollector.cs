@@ -6489,7 +6489,8 @@ public sealed partial class MeasureCollector
                         columns.Add(new GraceColumnInfo(
                             heads.ToImmutable(), chord.BaseDuration, chord.Dots,
                             ContextFontSizeStep: chord.IsCue ? EngravingDefaults.CueFontSizeStep : 0,
-                            StemDown: stemDown));
+                            StemDown: stemDown,
+                            Arpeggio: chord.HasArpeggio, ArpeggioBracket: chord.HasArpeggioBracket));
                     }
                     break;
 

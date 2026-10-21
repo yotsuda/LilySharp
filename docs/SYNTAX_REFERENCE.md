@@ -1181,8 +1181,9 @@ and so are a fermata and an ornament (`@trill`, `@prall`, `@mordent`, `@turn`, â
 A dynamic there is drawn too, at full size (`grace { d16@f } c4`), and a text
 (`@text("dolce")`), and a fingering (`grace { d16@finger(2) } c4`, small, as LilyPond
 sets it), and a hairpin that starts there (`grace { d16@cresc } c4 e4@f` â€” the wedge opens at
-the grace note). A sustain pedal, a text spanner (`@rit`), a glissando and an arpeggio on a
-grace note are not drawn yet (LYS4020).
+the grace note), and an arpeggio on a grace chord (`grace { <d f a>16@arpeggio } e4`, full size,
+the grace chord moving right to make room, as in LilyPond; `@arpeggio(bracket)` too). A sustain
+pedal, a text spanner (`@rit`) and a glissando on a grace note are not drawn yet (LYS4020).
 
 LilyPond draws all of the spellings above, so each warning says "not drawn yet", not "do not
 write this".

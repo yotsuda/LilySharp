@@ -778,8 +778,13 @@ internal sealed class MeasureBuilder
                     SourcePosition: m.SourcePosition, WrittenPitch: m.WrittenPitch)).ToImmutableArray(),
                 c.BaseDuration, c.Dots, c.SourcePosition, isCue: c.IsCue,
                 hasTieStart: c.HasTieStart,
-                hasSlurStart: c.HasSlurStart, hasSlurEnd: c.HasSlurEnd)
+                hasSlurStart: c.HasSlurStart, hasSlurEnd: c.HasSlurEnd,
+                // ⚠️ THE ARPEGGIO SURVIVES (session 919, ⒟): the wiggle or bracket stands at
+                // full size left of the grace column (ArpeggioEngraver), and the column's left
+                // skylines make room for it (GraceColumnInfo.Arpeggio).
+                hasArpeggio: c.HasArpeggio)
             {
+                HasArpeggioBracket = c.HasArpeggioBracket,
                 GraceTime = true,
                 GraceSlash = slash,
                 GraceStemDown = _graceStemDown,

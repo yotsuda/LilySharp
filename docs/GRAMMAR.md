@@ -2663,7 +2663,8 @@ Grace          = ( 'grace' | 'acciaccatura' | 'appoggiatura' | 'afterGrace' ) , 
                     and the ornaments, a dynamic level and an '@text' at full size
                     (session 916), and a fingering '@finger(N)' at the grace's -8
                     (session 917), and a hairpin start '@cresc' '@decresc' '@dim', the
-                    wedge opening at the grace note (session 918). *)
+                    wedge opening at the grace note (session 918), and an '@arpeggio' on
+                    a grace chord at full size (session 919). *)
 Repeat         = 'repeat' , 'tremolo' , Integer , MusicBlock ;
                  (* a tremolo: the note, or the two notes, alternated Integer times.
                     Volta repeats use the form's |: … :|, NOT a 'repeat' keyword.

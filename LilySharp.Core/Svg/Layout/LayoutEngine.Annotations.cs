@@ -811,7 +811,8 @@ internal sealed partial class LayoutEngine
         // Layout arpeggio markings
         var arpeggioLayouts = ArpeggioEngraver.Calculate(arpeggios, systems, measures, measuresByStaff,
             voicesByStaff,
-            score != null && staffVoices.IsDefaultOrEmpty ? ImmutableArray.Create(score.Voice) : staffVoices);
+            score != null && staffVoices.IsDefaultOrEmpty ? ImmutableArray.Create(score.Voice) : staffVoices,
+            ctx.GraceNotes);
 
         // Piano pedal marks render per the part's `pedal` style (Staff.PedalStyle):
         //   bracket (Lily# default) / mixed  -> a spanning bracket, and the "Ped." /

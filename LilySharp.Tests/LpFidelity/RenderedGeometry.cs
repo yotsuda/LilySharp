@@ -3734,6 +3734,21 @@ internal sealed class RenderedGeometry
     }
 
     /// <summary>
+    /// The arpeggio wiggle's ink RIGHT edge → the NEXT notehead to its right: the padding read
+    /// in a book whose earlier columns stand left of the wiggle (a grace chord after a main
+    /// note), where <see cref="ArpeggioRightToNoteheadLeft"/>'s leftmost head is the wrong one.
+    /// </summary>
+    public double ArpeggioRightToNextNoteheadLeft()
+    {
+        double right = ArpeggioExtent().Right;
+        var after = Noteheads.Where(h => h.X > right - 1e-9).ToList();
+        if (after.Count == 0)
+            throw new InvalidOperationException(
+                "no notehead is drawn right of the arpeggio.\nDrawn geometry:\n" + Describe());
+        return after.Min(h => h.X) - right;
+    }
+
+    /// <summary>
     /// The arpeggio wiggle's ink RIGHT edge → the ink LEFT edge of the chord's leftmost
     /// ACCIDENTAL: the Arpeggio's <c>padding</c> again, off the accidental this time, because
     /// the Accidental_engraver adds every accidental it makes to the support of the arpeggio
@@ -3951,6 +3966,20 @@ internal sealed class RenderedGeometry
                 "the probe drew no notehead for the chord bracket to stand left of."
                 + "\nDrawn geometry:\n" + Describe());
         return heads.Min(h => h.X) - ChordBracketExtent().Right;
+    }
+
+    /// <summary>
+    /// The chord bracket's ink RIGHT edge → the NEXT notehead to its right (see
+    /// <see cref="ArpeggioRightToNextNoteheadLeft"/>).
+    /// </summary>
+    public double ChordBracketRightToNextNoteheadLeft()
+    {
+        double right = ChordBracketExtent().Right;
+        var after = Noteheads.Where(h => h.X > right - 1e-9).ToList();
+        if (after.Count == 0)
+            throw new InvalidOperationException(
+                "no notehead is drawn right of the chord bracket.\nDrawn geometry:\n" + Describe());
+        return after.Min(h => h.X) - right;
     }
 
     /// <summary>

@@ -70,7 +70,9 @@ workflow attaches that section to the GitHub Release verbatim.
   (`@text("dolce")`), and **a fingering** (`grace { d16@finger(2) } e4`, small, centred on the
   grace note, over a beamed grace's stem), and **a hairpin can start on a grace note**
   (`grace { d16@cresc } e4 f4 g4@f` — the wedge opens at the grace note, or just after a
-  dynamic written on it). A hairpin running over a
+  dynamic written on it), and **a grace chord takes an arpeggio**
+  (`grace { <d f a>16@arpeggio } e4`, or the bracket) — full size, with room made for it; it was
+  drawn over the grace notes before, while a warning said it was dropped. A hairpin running over a
   grace note also stands where LilyPond puts it — it read the grace note's stem as a full-size
   down stem and sat a quarter space too low.
 - **A hairpin sits where LilyPond puts it when a note under it is what holds it down.** Lily#

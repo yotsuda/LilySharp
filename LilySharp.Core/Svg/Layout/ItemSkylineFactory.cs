@@ -583,8 +583,48 @@ internal static class ItemSkylineFactory
                     parts.Add(Accidental(y - box.Top, y - box.Bottom, ax, ax + box.Width));
                 }
             }
+            if (GraceArpeggioPart(column) is { } arpeggio)
+                parts.Add(arpeggio);
         }
         return GraceSkyline(parts, ColumnElements.All, HorizontalDirection.Left);
+    }
+
+    /// <summary>
+    /// A GRACE chord's arpeggio as a conditional part in the grace column's own frame (origin
+    /// the head's left edge, staff middle at y = 0, y down), or null when it has none: the
+    /// full-size wiggle or bracket <see cref="AddArpeggio"/> reserves, standing
+    /// <see cref="ArpeggioEngraver.Padding"/> clear of the column's own heads and accidentals
+    /// (<see cref="GraceColumnHeads.SupportLeftReach"/>), where ArpeggioEngraver draws it.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED (2.26.0, audit/lp-geometry/probes/grace-arpeggio.ly): the grace chord's
+    /// Arpeggio has the full-size X-extent 0.8 and Y-extent (general-grace-settings names no
+    /// Arpeggio), and moves the grace head 0.50 right of where the plain grace chord stands.
+    /// </remarks>
+    private static ColumnPart? GraceArpeggioPart(GraceColumnInfo column)
+    {
+        if ((!column.Arpeggio && !column.ArpeggioBracket) || column.Heads.IsDefaultOrEmpty)
+            return null;
+        double arpRight = -GraceColumnHeads.SupportLeftReach(column) - ArpeggioEngraver.Padding;
+        int minPosition = column.Lowest.StaffPosition;
+        int maxPosition = column.Highest.StaffPosition;
+        double arpLeft, bottomYUp, topYUp;
+        if (column.ArpeggioBracket)
+        {
+            arpLeft = arpRight - ArpeggioEngraver.BracketWidth;
+            (bottomYUp, topYUp) = ArpeggioEngraver.BracketExtent(minPosition, maxPosition);
+        }
+        else
+        {
+            arpLeft = arpRight - ArpeggioEngraver.WiggleWidth;
+            (bottomYUp, int copies) = ArpeggioEngraver.Pile(minPosition, maxPosition);
+            topYUp = bottomYUp + copies * ArpeggioEngraver.WiggleHeight;
+        }
+        // Y-up staff spaces to the frame's y down: the ends swap (AddArpeggio's frame note).
+        return new ColumnPart(-topYUp, -bottomYUp, arpLeft, arpRight,
+                              -SpacingRules.DefaultExtraSpacingWidth,
+                              SpacingRules.DefaultExtraSpacingWidth,
+                              Conditional: true);
     }
 
     /// <summary>
@@ -633,6 +673,8 @@ internal static class ItemSkylineFactory
                     parts.Add(Accidental(y - box.Top, y - box.Bottom, ax, ax + box.Width));
                 }
             }
+            if (direction == HorizontalDirection.Left && GraceArpeggioPart(column) is { } arpeggio)
+                parts.Add(arpeggio);
             if (SpacingRules.GraceStemBand(column, beamed) is { } stem)
             {
                 double centreX = LayoutUtilities.StemX(0.0, stem.StemUp, noteValue,
