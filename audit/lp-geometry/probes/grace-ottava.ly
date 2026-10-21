@@ -33,7 +33,12 @@
 %%   OGJ  c''4 \ottava #1 \stemUp d'''16 ...     full size, stem forced UP  y 4.25
 %% OGA's 5.320638 is its first note c''' (head top 4.545), standing 0.0135 left of the
 %% bracket. OGE's 0.1 over the floor is the grace's UP stem (tip 3.60) under the dashed
-%% LINE (+ padding 0.5 + half pen); OGJ shows a full-size up stem doing the same.
+%% LINE (+ padding 0.5 + half pen) -- under LilyPond's default label "8", which is SHORT.
+%% (OGJ's d16 is beamed to the e8., and LilyPond warns about the beam: no point reads it.)
+%%
+%% The same books with the label spelled "8va" as Lily# writes it (session 926):
+%%   VGA  as OGA   y 5.320638     VGE  as OGE   y 4.887332     VGJ  as OGJ   y 4.908984
+%% Under "8va" the grace's stem stands under the LABEL in both engines (VGE).
 %%
 %% ⚠️ `\fixed c'` is LOAD-BEARING: Lily#'s absolute `c` is LilyPond's `c'` (RULES 6).
 #(define (dump-final tag)
@@ -79,3 +84,10 @@
   \score { \new Staff { \time 4/4 \fixed c' { c'4 \ottava #1 d''16 e''8. f''4 \ottava #0 g'4 \bar "|." } } } }
 \book { \paper { indent = 0 ragged-right = ##t page-post-process = #(dump-final "OGJ") }
   \score { \new Staff { \time 4/4 \fixed c' { c'4 \ottava #1 \stemUp d''16 \stemNeutral e''8. f''4 \ottava #0 g'4 \bar "|." } } } }
+o = { \set Staff.ottavationMarkups = #ottavation-simple-ordinals }
+\book { \paper { indent = 0 ragged-right = ##t page-post-process = #(dump-final "VGA") }
+  \score { \new Staff { \time 4/4 \o \fixed c' { c''4 \grace { \ottava #1 d''16 } e''4 f''4 \ottava #0 g'4 \bar "|." } } } }
+\book { \paper { indent = 0 ragged-right = ##t page-post-process = #(dump-final "VGE") }
+  \score { \new Staff { \time 4/4 \o \fixed c' { c'4 \grace { \ottava #1 d''16 } e''4 f''4 \ottava #0 g'4 \bar "|." } } } }
+\book { \paper { indent = 0 ragged-right = ##t page-post-process = #(dump-final "VGJ") }
+  \score { \new Staff { \time 4/4 \o \fixed c' { c'4 \ottava #1 \stemUp d''16 \stemNeutral e''8. f''4 \ottava #0 g'4 \bar "|." } } } }

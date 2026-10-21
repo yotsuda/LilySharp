@@ -7492,24 +7492,17 @@
     },
     "ottava.grace.staff-to-line": {
       "probe": "grace-ottava.ly",
-      "score": "OGE",
-      "lilypond": 4.15,
-      "residual": 0.739593153,
-      "why": "NOT A GRACE TERM -- the residual ottava.stem-up-start.staff-to-line carries on a full-size note. The grace's UP stem (tip 3.60 over the middle line, both engines) is a support: LilyPond's bracket clears it with its dashed LINE (3.60 + padding 0.5 + the line's half pen = 4.15), because its label's ink ends 0.09 left of the stem. Lily#'s label profile reaches the line start (advance + 0.5, the 2.71 of ottava.x.line-start-to-notehead), so the stem stands under the LABEL and the bracket rides 0.74 higher. MEASURED session 925: a grace g' (stem tip below the label) reads LilyPond's floor 4.05 (probe OGG); the grace is read at the right X and height (OttavaBracketEngraver.ItemX)."
+      "score": "VGE",
+      "lilypond": 4.887332,
+      "residual": 0.002261153,
+      "why": "The grace's UP stem (tip 3.60 over the middle line in both engines) is a support under the LABEL: LilyPond spelled \"8va\" as Lily# does (ottavationMarkups = ottavation-simple-ordinals, book VGE) reads 4.887332 and Lily# 4.889593. The 0.0023 left is the label's own outline (the text.width family), not a grace term. CORRECTED session 926: session 925 read this against LilyPond's default label \"8\" (book OGE, 4.15) and charged Lily# +0.74 -- that was the SPELLING (Lily# writes \"8va\", the user's decision; ottava.x.line-start-to-notehead carries the same spelling term), a shorter label leaving the stem under LilyPond's dashed line instead."
     },
     "ottava.grace.after-high-note.staff-to-line": {
       "probe": "grace-ottava.ly",
-      "score": "OGA",
+      "score": "VGA",
       "lilypond": 5.320638,
       "residual": -0.241391833,
-      "why": "NOT A GRACE TERM. The c''' BEFORE the span (Lily# c''), its head top 4.545 over the middle line and its right edge 0.0135 short of the bracket's left end, holds LilyPond's bracket at 5.320638: OGE (a low first note) and OGF (a rest between; Lily# draws no line on so short a span, so no point) both read 4.15. Lily# does not see that neighbour (the bracket's own support set reads it at a disjoint X) and stands on the grace's stem under its label instead (ottava.grace.staff-to-line's +0.74), landing 0.24 low."
-    },
-    "ottava.stem-up-start.staff-to-line": {
-      "probe": "grace-ottava.ly",
-      "score": "OGJ",
-      "lilypond": 4.25,
-      "residual": 1.399684324,
-      "why": "OPENED session 925, FULL SIZE, the term ottava.grace.staff-to-line rides on: a stem-UP note at the ottava's start (`d''16@ottava@stemUp`, LilyPond's \\stemUp d'''16 under \\ottava #1). LilyPond's label ink ends left of the stem and the dashed LINE clears it (4.25); Lily#'s label profile runs to the line start (advance + 0.5 -- ottava.x.line-start-to-notehead's 2.71), so the stem stands under the label and the bracket rides 1.40 higher. Fixing it is the label's own width (LilyPond: text extent right + 0.3), not anything a grace adds."
+      "why": "NOT A GRACE TERM. The c''' BEFORE the span (Lily# c''), its head top 4.545 over the middle line and its right edge 0.0135 short of the bracket's left end, holds LilyPond's bracket at 5.320638 -- with either spelling (OGA \"8\" and VGA \"8va\" read the same), and OGE / OGF (a low first note, a rest between) fall to 4.15 under \"8\". Lily# does not see that neighbour (it stands X-disjoint from the bracket) and stands on the grace's stem under its label (4.889593 in VGE), landing 0.24 low. LilyPond's reach to a head 0.0135 outside the bracket is unexplained (no horizon padding is declared on OttavaBracket)."
     },
     "ottava.grace.control.label-to-notehead": {
       "probe": "grace-ottava.ly",
