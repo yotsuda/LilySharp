@@ -105,6 +105,11 @@ workflow attaches that section to the GitHub Release verbatim.
   come at the grace's size. **A grace head can take the other head styles too**
   (`grace { d16@notehead(diamond) } e4`, triangle, slash, xcircle), and the grace notes are spaced
   by that head's own width.
+  **A grace note's stem can be turned** (`grace { d16@stemDown } e4`,
+  `grace { d16@stemDown e16@stemDown } f4`, `@stemUp` in a lower voice): written on every grace note
+  of the group, the whole group turns, beam and flags included, spaced as LilyPond spaces it.
+  Written on only some of them, LilyPond would draw a beam with stems on both sides, which Lily#
+  does not draw yet: the group keeps its direction and the warning says so.
   A hairpin running over a
   grace note also stands where LilyPond puts it — it read the grace note's stem as a full-size
   down stem and sat a quarter space too low.

@@ -2679,7 +2679,10 @@ Grace          = ( 'grace' | 'acciaccatura' | 'appoggiatura' | 'afterGrace' ) , 
                      the grace head (session 928), and a half-tie's '@laissezVibrer'
                      '@repeatTie' off the grace head (session 930), and the head's
                      '@dead' / '@notehead(x)' cross and '@parenthesize' (session 931), and
-                     the head's other '@notehead(…)' styles (session 932). *)
+                     the head's other '@notehead(…)' styles (session 932), and a
+                     '@stemUp' / '@stemDown' written on EVERY stem of the body, which
+                     turns the run (session 933; a body that disagrees is a kneed
+                     beam in LilyPond, not drawn yet — reported). *)
 Repeat         = 'repeat' , 'tremolo' , Integer , MusicBlock ;
                  (* a tremolo: the note, or the two notes, alternated Integer times.
                     Volta repeats use the form's |: … :|, NOT a 'repeat' keyword.

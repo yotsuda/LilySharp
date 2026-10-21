@@ -8957,6 +8957,11 @@ internal static class LpGeometryProbes
     private static readonly string GHSS2 = GraceTieBook("c4 grace { d16@notehead(slash) e16 } f4 g4 a4 |", "GHSS2");
     private static readonly string GHSX = GraceTieBook("c4 grace { d16@notehead(xcircle) } e4 f4 g4 |", "GHSX");
     private static readonly string GHSX2 = GraceTieBook("c4 grace { d16@notehead(xcircle) e16 } f4 g4 a4 |", "GHSX2");
+    // A grace stem turned by @stemUp / @stemDown (audit/lp-geometry/probes/grace-stem-direction.ly).
+    private static readonly string GSDA = GraceTieBook("c4 grace { d16@stemDown } e4 f4 g4 |", "GSDA");
+    private static readonly string GSDA8 = GraceTieBook("c4 grace { d8@stemDown } e4 f4 g4 |", "GSDA8");
+    private static readonly string GSDB = GraceTieBook("c4 grace { d16@stemDown e16@stemDown } f4 g4 a4 |", "GSDB");
+    private static readonly string GSUV = GraceTieBook("voice { c''4 d'' e'' f'' } { c4 grace { d16@stemUp } e4 f4 g4 } |", "GSUV");
     // A half-tie on a grace note (audit/lp-geometry/probes/grace-semitie.ly).
     private static readonly string GLVA = GraceTieBook("c4 grace { d16@laissezVibrer } e4 f4 g4 |", "GLVA");
     private static readonly string GLVB = GraceTieBook("c4 d16@laissezVibrer e8. f4 g4 |", "GLVB");
@@ -17487,6 +17492,17 @@ internal static class LpGeometryProbes
         new("headstyle.grace.shape.xcircle.stem-right", GHSX, g => g.StemRightFromNotehead(1, 1)),
         new("headstyle.grace.shape.xcircle.to-main", GHSX, g => g.NoteheadToNotehead(1, 2)),
         new("headstyle.grace.shape.xcircle.to-next-grace", GHSX2, g => g.NoteheadToNotehead(1, 2)),
+        new("stemdir.grace.down.stem-left", GSDA, g => g.StemLeftFromNotehead(1, 1)),
+        new("stemdir.grace.down.stem-length", GSDA, g => g.StemBottomBelowNotehead(1, 1)),
+        new("stemdir.grace.down.eighth.stem-length", GSDA8, g => g.StemBottomBelowNotehead(1, 1)),
+        new("stemdir.grace.down.from-previous", GSDA, g => g.NoteheadToNotehead(0, 1)),
+        new("stemdir.grace.down.to-main", GSDA, g => g.NoteheadToNotehead(1, 2)),
+        new("stemdir.grace.down.beamed.to-next-grace", GSDB, g => g.NoteheadToNotehead(1, 2)),
+        new("stemdir.grace.down.beamed.to-main", GSDB, g => g.NoteheadToNotehead(2, 3)),
+        new("stemdir.grace.down.beamed.first-stem", GSDB, g => g.StemBottomBelowNotehead(1, 1)),
+        new("stemdir.grace.down.beamed.second-stem", GSDB, g => g.StemBottomBelowNotehead(2, 2)),
+        new("stemdir.grace.up-in-lower-voice.stem-right", GSUV, g => g.StemRightFromNotehead(2, 2)),
+        new("stemdir.grace.up-in-lower-voice.to-main", GSUV, g => g.NoteheadToNotehead(2, 3)),
         new("semitie.grace.lv.start-to-notehead", GLVA, g => g.BowStartToNotehead(0, 1)),
         new("semitie.grace.lv.span", GLVA, g => g.BowSpan(0)),
         new("semitie.grace.lv.end-to-next", GLVA, g => g.BowEndToNotehead(0, 2)),

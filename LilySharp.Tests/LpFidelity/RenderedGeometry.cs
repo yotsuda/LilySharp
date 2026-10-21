@@ -3007,6 +3007,29 @@ internal sealed class RenderedGeometry
     /// for a page whose heads include a cross.</summary>
     public double StemRightFromNotehead(int stemIndex, int headIndex, int page = 0)
     {
+        var stem = StemAt(stemIndex, page);
+        return stem.X1 + stem.StrokeWidth / 2 - HeadAt(headIndex, page).X;
+    }
+
+    /// <summary>Stem <paramref name="stemIndex"/>'s LEFT edge (stems left to right) minus
+    /// notehead <paramref name="headIndex"/>'s origin — 0 for a down stem, which stands on the
+    /// head's left edge.</summary>
+    public double StemLeftFromNotehead(int stemIndex, int headIndex, int page = 0)
+    {
+        var stem = StemAt(stemIndex, page);
+        return stem.X1 - stem.StrokeWidth / 2 - HeadAt(headIndex, page).X;
+    }
+
+    /// <summary>How far stem <paramref name="stemIndex"/>'s lower end lies BELOW notehead
+    /// <paramref name="headIndex"/>'s centre — a down stem's length from its head.</summary>
+    public double StemBottomBelowNotehead(int stemIndex, int headIndex, int page = 0)
+    {
+        var stem = StemAt(stemIndex, page);
+        return Math.Max(stem.Y1, stem.Y2) - HeadAt(headIndex, page).Y;
+    }
+
+    private DrawnLine StemAt(int stemIndex, int page)
+    {
         var stems = _pages[page].Lines
             .Where(l => Math.Abs(l.X1 - l.X2) < 1e-9
                         && Math.Abs(l.StrokeWidth - LilySharp.Core.Svg.EngravingDefaults.StemThickness) < 1e-9)
@@ -3015,7 +3038,7 @@ internal sealed class RenderedGeometry
             throw new InvalidOperationException(
                 $"page {page}: asked for stem {stemIndex} but {stems.Count} were drawn.\n"
                 + "Drawn geometry:\n" + Describe());
-        return stems[stemIndex].X1 + stems[stemIndex].StrokeWidth / 2 - HeadAt(headIndex, page).X;
+        return stems[stemIndex];
     }
 
     /// <summary>1 when notehead <paramref name="headIndex"/> (left to right) is drawn as a

@@ -7784,6 +7784,83 @@
       "residual": 0.0,
       "why": "EXACT. Inside a run the next grace stands the styled head's width + 0.5 off -- the same box, read by the run's own spring."
     },
+    "stemdir.grace.down.stem-left": {
+      "probe": "grace-stem-direction.ly",
+      "score": "SDA",
+      "lilypond": 0.0,
+      "residual": 0.0,
+      "why": "EXACT. A grace written @stemDown turns the whole run (GraceBodySupport.CarriedStemDirection) and is drawn as a lower voice's grace is: the down stem stands on the head's left edge."
+    },
+    "stemdir.grace.down.stem-length": {
+      "probe": "grace-stem-direction.ly",
+      "score": "SDA",
+      "lilypond": 2.6,
+      "residual": 0.0,
+      "why": "EXACT. The down stem of a grace sixteenth runs 2.6 below its head: the grace stem rule (length-fraction 0.8) read downward."
+    },
+    "stemdir.grace.down.eighth.stem-length": {
+      "probe": "grace-stem-direction.ly",
+      "score": "SDA8",
+      "lilypond": 2.4,
+      "residual": 0.0,
+      "why": "EXACT. A grace eighth's down stem runs 2.4 below its head."
+    },
+    "stemdir.grace.down.from-previous": {
+      "probe": "grace-stem-direction.ly",
+      "score": "SDA",
+      "lilypond": 2.424582596071845,
+      "residual": 0.0,
+      "why": "EXACT. The previous note's up stem against the grace's DOWN stem takes the opposite-direction correction, read off the grace stem's own band (SpacingRules.ApproachStemBand): overlap 0.399 positions x 0.5 / 7, then x 0.8. The full-size stand-in's band gave 0.255 (-0.0082)."
+    },
+    "stemdir.grace.down.to-main": {
+      "probe": "grace-stem-direction.ly",
+      "score": "SDA",
+      "lilypond": 1.417938619198038,
+      "residual": 0.0,
+      "why": "EXACT. A down-stemmed grace hangs its flag under the head, so the main note stands the head width + 0.5 off (an up grace's flag makes it + 1.020688)."
+    },
+    "stemdir.grace.down.beamed.to-next-grace": {
+      "probe": "grace-stem-direction.ly",
+      "score": "SDB",
+      "lilypond": 1.417938619198038,
+      "residual": 0.0,
+      "why": "EXACT. Inside a down-beamed run the next grace stands the head width + 0.5 off."
+    },
+    "stemdir.grace.down.beamed.to-main": {
+      "probe": "grace-stem-direction.ly",
+      "score": "SDB",
+      "lilypond": 1.41793861919804,
+      "residual": 0.0,
+      "why": "EXACT. The beamed run's last grace to the main note: the head width + 0.5."
+    },
+    "stemdir.grace.down.beamed.first-stem": {
+      "probe": "grace-stem-direction.ly",
+      "score": "SDB",
+      "lilypond": 2.17696710417881,
+      "residual": -0.192,
+      "why": "The beam is LilyPond's (the quanter places it below the heads); the residual is half the grace beam thickness 0.384: Lily# draws a beamed stem to the beam's centre line (SharedRenderer.DrawGraceBeam), LilyPond's Stem extent reaches its outer edge. The beam covers the difference; nothing visible moves."
+    },
+    "stemdir.grace.down.beamed.second-stem": {
+      "probe": "grace-stem-direction.ly",
+      "score": "SDB",
+      "lilypond": 2.349032895821189,
+      "residual": -0.192,
+      "why": "As first-stem: half the grace beam thickness, under the beam."
+    },
+    "stemdir.grace.up-in-lower-voice.stem-right": {
+      "probe": "grace-stem-direction.ly",
+      "score": "SUV",
+      "lilypond": 0.917938619198038,
+      "residual": 0.0,
+      "why": "EXACT. A lower voice's grace written @stemUp points UP: its stem's right edge is the head's right edge."
+    },
+    "stemdir.grace.up-in-lower-voice.to-main": {
+      "probe": "grace-stem-direction.ly",
+      "score": "SUV",
+      "lilypond": 1.93862706483148,
+      "residual": 0.0,
+      "why": "EXACT. Turned up in a lower voice, the grace's flag stands right of its stem again: the main note is the head width + 1.020688 off."
+    },
     "semitie.grace.lv.start-to-notehead": {
       "probe": "grace-semitie.ly",
       "score": "LVA",

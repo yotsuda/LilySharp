@@ -824,6 +824,31 @@ internal static partial class SpacingRules
     }
 
     /// <summary>
+    /// The stem band the approach's correction reads at its RIGHT end — the first grace's own
+    /// (<see cref="GraceStemBand"/>) when <paramref name="item"/> leads with a run, else the
+    /// item's (<see cref="StemSpacingInfo"/>).
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ NOT THE STAND-IN'S: <see cref="ApproachColumn"/> answers a full-size note, whose stem
+    /// meets the head at the full-size attachment and runs the full-size length. Only the
+    /// opposite-direction branch reads the band, and nothing reached it until a grace could
+    /// turn its stem against the previous note's (session 933): MEASURED (2.26.0,
+    /// probes/grace-stem-direction.ly SDA) `c'4 \grace { d'16 }` with the grace stem DOWN
+    /// overlaps the c's up stem by 0.399 positions — the grace head's own attachment — where
+    /// the stand-in's gave 0.255 (ledger stemdir.grace.down.from-previous, −0.0082).
+    /// LILYPOND-REF: lily/note-spacing.cc:272-273 stem_dir_correction — the right stem's
+    /// pure_y_extent, the grace Stem's own.
+    /// </remarks>
+    private static (bool StemUp, double StemMin, double StemMax, double HeadMin, double HeadMax,
+                    int? BeamId)? ApproachStemBand(MusicItem? item, MusicItem? approach)
+    {
+        var grace = item is null ? default : GraceNotesOf(item);
+        return grace.IsDefaultOrEmpty
+            ? StemSpacingInfo(approach)
+            : GraceStemBand(grace[0], GraceNoteEngraver.BeamedPrefix(grace) > 0);
+    }
+
+    /// <summary>
     /// The bar line's optical correction when a grace run opens the bar: the max over the
     /// columns that carry a leading grace, each read through its first grace
     /// (<see cref="ApproachColumn"/>) — the grace column's own stems, which are the only note

@@ -382,6 +382,40 @@ public class GraceBodyValidatorTests
     }
 
     /// <summary>
+    /// A STEM DIRECTION written on EVERY stem of a grace body turns the whole run (session 933,
+    /// ledger stemdir.grace.*) — a rest has no stem and does not vote. Nothing is reported.
+    /// </summary>
+    [Theory]
+    [InlineData("grace { d'8@stemDown } c'1 | e'1 |", "grace { d'8 } c'1 | e'1 |")]
+    [InlineData("grace { d'16@stemDown e'16@stemDown } c'1 | e'1 |", "grace { d'16 e'16 } c'1 | e'1 |")]
+    [InlineData("grace { <d' f'>8@stemDown } c'1 | e'1 |", "grace { <d' f'>8 } c'1 | e'1 |")]
+    [InlineData("grace { d'16@stemDown r16 e'16@stemDown } c'1 | e'1 |", "grace { d'16 r16 e'16 } c'1 | e'1 |")]
+    [InlineData("voice { c''1 } { grace { d'8@stemUp } c'1 } | e'1 |", "voice { c''1 } { grace { d'8 } c'1 } | e'1 |")]
+    public void AStemDirectionOnEveryGraceStem_TurnsTheRun_AndIsNotReported(string written, string control)
+    {
+        Assert.Empty(Warnings(Book(written)));
+        Assert.NotEqual(Page(control), Page(written));
+    }
+
+    /// <summary>
+    /// A run whose stems DISAGREE is a kneed beam in LilyPond (every grace stem is a forced one,
+    /// GraceBodySupport.CarriedStemDirection), which the grace beam does not draw: the run keeps
+    /// its voice's direction, the page is the control's, and every direction written is reported
+    /// — a chord MEMBER's too, a chord having one stem.
+    /// </summary>
+    [Theory]
+    [InlineData("grace { d'16@stemDown e'16 } c'1 | e'1 |", 1, "grace { d'16 e'16 } c'1 | e'1 |")]
+    [InlineData("grace { d'16@stemDown e'16@stemUp } c'1 | e'1 |", 2, "grace { d'16 e'16 } c'1 | e'1 |")]
+    [InlineData("grace { <d'@stemDown f'>8 } c'1 | e'1 |", 1, "grace { <d' f'>8 } c'1 | e'1 |")]
+    public void AStemDirectionTheRunDisagreesWith_IsReported_AndNotDrawn(string written, int reported, string control)
+    {
+        var warnings = Warnings(Book(written));
+        Assert.Equal(reported, warnings.Count);
+        Assert.All(warnings, w => Assert.Contains("is not engraved", w.Message));
+        Assert.Equal(Page(control), Page(written));
+    }
+
+    /// <summary>
     /// The grace body that draws exactly what it says draws no warning either. This is the
     /// case that catches a validator that has quietly become "warn about every grace".
     /// </summary>

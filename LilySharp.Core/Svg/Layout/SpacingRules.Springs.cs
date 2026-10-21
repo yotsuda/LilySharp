@@ -454,7 +454,8 @@ internal static partial class SpacingRules
                 ? StemCorrectionOf(TabStemSpacingInfo(left, tab, voice),
                     TabStemSpacingInfo(approach, tab, voice),
                     left, approach, accidentalsSeen: false, noteParams, increment)
-                : CalculateStemCorrection(left, approach, noteParams, increment);
+                : StemCorrectionOf(StemSpacingInfo(left), ApproachStemBand(right, approach),
+                    left, approach, accidentalsSeen: true, noteParams, increment);
             // LILYPOND-REF: lily/note-spacing.cc:111-113 Note_spacing::get_spacing — stem_dir_correction adjusts the
             // ideal and hands it to base.set_ideal_distance, which does not touch either
             // strength (lily/spring.cc:131-141). The clamp is at ZERO, not at the minimum

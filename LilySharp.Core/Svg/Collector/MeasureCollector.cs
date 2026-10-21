@@ -6309,6 +6309,14 @@ public sealed partial class MeasureCollector
         // shared staff (the base CollectScore hands each binding), not at 0, so its grace
         // points DOWN as LilyPond's << \a \\ \b >> draws it (SharedStaffVoiceSlotTests).
         bool graceStemDown = VoiceDefaults.GetDefaultStemUp(_cursor.VoiceIndex + 1) == false;
+        // …unless the body turns it: a run whose every stem writes the same @stemUp / @stemDown
+        // takes that direction, the one question the drop list asks too (session 933;
+        // GraceBodySupport.CarriedStemDirection holds why a run that disagrees keeps its voice's).
+        int stemBudget = DefaultExpansionBudgetCap;
+        if (Semantics.GraceBodySupport.CarriedStemDirection(Semantics.GraceBodySupport.BodyElements(
+                grace, name => _variables.TryGetValue(name, out var body) ? body : null,
+                () => stemBudget-- > 0)) is { } writtenUp)
+            graceStemDown = !writtenUp;
         builder.EnterGraceTime(slash, graceStemDown);
         // The body items are reds already (a grace body is always live), exactly as
         // ProcessCueRegion's are.

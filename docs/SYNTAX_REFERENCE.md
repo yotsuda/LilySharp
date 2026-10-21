@@ -1203,7 +1203,10 @@ hangs off a grace note too (`grace { d16@laissezVibrer } e4`, `grace { d16@repea
 grace notes make room for it as any note does. A grace head can be a dead note's cross
 (`grace { d16@dead } e4`, or `@notehead(x)`) or another head style (`@notehead(diamond)`,
 `(triangle)`, `(slash)`, `(xcircle)` — the grace notes are spaced by that head's own width), or stand
-in parentheses (`grace { d16@parenthesize } e4`).
+in parentheses (`grace { d16@parenthesize } e4`). A grace group's stems turn when EVERY grace
+note in it writes the same direction (`grace { d16@stemDown }`, `grace { d16@stemDown e16@stemDown }`,
+`@stemUp` in a lower voice); a group whose notes disagree — LilyPond draws that as a beam with stems
+on both sides — keeps its voice's direction, and the directions are reported (LYS4020).
 
 LilyPond draws all of the spellings above, so each warning says "not drawn yet", not "do not
 write this".
