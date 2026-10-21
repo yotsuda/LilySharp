@@ -160,6 +160,15 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第920セッションの経緯
+
+### 1.1 第920セッション（2026-10-21・YT-DELL2）
+
+第919 と同じ会話の続き（ユーザー「続けて」）。`-Start p920`（開始 HEAD `9cbc9870f`・未 push 15・full **12549 / 0 / 2 / 12551**・第918 を ARCHIVE へ）。作業場所は Lab `sessions/p920/`。開始チェックの間は自分の非管理者コンソールを新しく開いた（#34056）。
+- **grace のグリッサンドを描く**（§2 U8 ⒟ の続き）: LP 2.26 の 5 冊（Lab `p920/gl`・線の端は Glissando の stencil の `draw-line` で読む＝X の範囲は丸い端で半線幅広い）。grace から主へ・**主から grace へ（grace で終わる）**・grace どうし（短すぎて描かない）・同じ高さの grace へ（短い水平線）。直したのは 3 つ: ⑴ `NarrowToGraceTime` が `HasGlissando` を残す ⑵ `GlissandoDetector` が grace を含めて歩き（`WalkVoiceItemsWithGraceTime`）、行き先も grace を含めて探す（`NoteScan.FindNext` の `includeGraceTime`）⑶ `GlissandoEngraver` の grace の端＝`ElementCoordinator.GraceColumnAt`（新設・grace の列の情報と頭の左 X・`ArpeggioEngraver` もこれに乗せ替え）の頭の幅と臨時記号を grace の大きさで。per-staff の score は grace の群を持たないので `LayoutGlissandos` に `score.GraceNotes` を渡す（slur と同じ形）。述語 `IsCarriedGlissando`。台帳 10 点一致（`glissando.grace.*`・`glissando.into-grace.*`・`glissando.grace-to-grace.*`＝台帳初の glissando の点）。⚠️ **NoteScan の古い注は「`d4@glissando grace { d8 } c` が grace へ滑るのは欠陥」と書いていたが、LP はまさにそう描く**（水平 0.0976）＝注を直した。掃きで動いたのはその本 1 枚（`test/ossia-beams.lys`・スナップショット取り直し）。計器 `GlissandoStartXFromHead`／`GlissandoEndXToHead`／`GlissandoStartAboveStaffMiddle`／`GlissandoCount`／`LevelGlissandoLength`。毒 4 本＝7・5・4・2 赤。「まだ落ちる例」は `@sustain` に。⚠️ 原因の切り分けに一時的なファイル書き出しを `GlissandoEngraver` に入れた（バイト退避で戻した・`git diff` で確認）。
+- 製品 `16d184313`。`-End p920 -DiffBase 9cbc9870f`＝full **12561 / 0 / 2 / 12563**（前便末 +12）・Core 警告 0・門は全部 OK（Lab `sessions/p920/end.log`）→ この docs commit。未 push 16＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。
+判定（2026-10-21）: grace のグリッサンドは閉じた。U8 ⒟ の残りは `@sustain`・`@rit`（§2 U8）。
+
 ## 以下は第919セッションの経緯
 
 ### 1.1 第919セッション（2026-10-21・YT-DELL2）
