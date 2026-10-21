@@ -124,23 +124,22 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第928セッション（2026-10-21・YT-DELL2）
+
+第927 と同じ会話の続き（ユーザー「続けて」）。`-Start p928`（開始 HEAD `ef88e4b63`・未 push 34・full **12629 / 0 / 2 / 12631**・第926 を ARCHIVE へ）。作業場所は Lab `sessions/p928/`。
+- **grace の `@editorial`（上に置く小さい臨時記号）を描く＋普通の大きさの高さを LP に合わせる＝`450f96aa9`**: 述語 `GraceBodySupport.IsCarriedEditorial` を収集（`CollectArticulations` の grace の門）と LYS4020 が読む。grace でも大きさは −2 のまま（`general-grace-settings` に AccidentalSuggestion が無い＝`ArticulationEngraver` の editorial の枝で `scriptStep = 0`）。X は grace の頭の中心＝そのまま一致した。**高さは普通の大きさから違っていた**: LP の AccidentalSuggestion は **outside-staff-priority 0 の mover** で、輪郭ではなく**箱**の skyline（vertical-skylines を宣言しない＝`grob.cc` の既定）。箱の下端が譜表の墨（上の線＋0.05）から outside-staff-padding 0.46 上に立つ（Lab `sessions/p928/ed/y2.ly`＝♯・♮・♭ とも）。Lily# は譜表の中の skyline に staff-padding 0.25 で置いていた＝**譜表の上に乗るとき 0.26 低かった**（符尾の先が決める 16 分は −0.075）→ `ArticulationSpacing.OutsideStaffPriority` に editorial＝0・`ScriptSkyline(s)` は suggestion の字形だけ箱（`IsSuggestionGlyph`）。LP 2.26（`probes/grace-editorial.ly` EGA〜EGE）＝台帳 9 点すべて 1e-7 未満（`editorial.grace.*` 7 点・`editorial.accidental.{natural,flat}.above-notehead` 2 点）。毒＝述語 4 赤・優先度 6 赤・輪郭 6 赤（♮ +0.022・♭ +0.019）・grace の大きさ 2 赤。snapshot `test/editorial-accidental` は suggestion だけが譜表に対して 0.26 上がった（その分だけ譜表が下がる）。全 svg の掃き 1,242 枚で 3 枚（`grammar-tour`・`editorial-accidental`・`feature-tour`＝どれも suggestion 1〜3 個が 0.26 上がっただけ）。
+- ⚠️ **見つけたが直していない: 和音の構成音の `@editorial`（`<d' f'@editorial>4`）は普通の大きさでも何も描かない**（svg の差は `data-pos` だけ・警告も無い）。`CollectArticulations` の editorial の枝は音の `EditorialAccidental` を要るが、和音の構成音には渡らない。grace の試験はこの行を外した。
+- `-End p928 -DiffBase ef88e4b63`＝full **12639 / 0 / 2 / 12641**（前便末 +10）（Lab `sessions/p928/end.log`・commit の前に census を作り直し・full を先に緑にした）→ この docs commit。未 push 35＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。
+判定（2026-10-21）: grace の `@editorial` は閉じた。grace の LYS4020 の残り＝`@breath`・`@caesura`（列組み・未特定 2 つ）・`@pluck`・`@diagram`・`@notehead(…)`・`@cross`・`@laissezVibrer`/`@repeatTie`・`@dead`/`@parenthesize`・`@stemUp`/`@stemDown`・`@figuredBass`・`@chord`・TAB の技法。別に、和音の構成音の `@editorial`（普通の大きさから描かない）。
+
+## 以下は第927セッションの経緯
+
 ### 1.1 第927セッション（2026-10-21・YT-DELL2）
 
 第926 と同じ会話の続き（ユーザー「続けて」）。`-Start p927`（開始 HEAD `ab8f35957`・未 push 32・full **12621 / 0 / 2 / 12623**・第925 を ARCHIVE へ）。作業場所は Lab `sessions/p927/`。
 - **grace の `@courtesy`（括弧つきの臨時記号）を描く＝`54c0d1e92`**: 旗を項目に残す（`NarrowToGraceTime` の `isCourtesy`・和音の構成音も）・grace の頭に旗（`GraceHeadInfo.IsCourtesy`＝列の詰めと輪郭が括弧を読む・`GraceColumnHeads.AsChordNotes`）・述語 `GraceBodySupport.IsCarriedCourtesy` は収集（`_courtesySourcePositions` の grace の枝）と LYS4020 が読む。描くのは普通の音の描き手（⒝2 以来）。**ついでに直したもの**: 小さい臨時記号（grace の −4・cue）の括弧の組み立てが**大きい字形の寸法を縮めて**使っていた＝`SharedRenderer.DrawAccidentalAtInkLeft` に字形の設計を渡す（括弧の枝だけ・普通の大きさは null で同じ計算）。直す前は grace の右括弧が 0.0244 左。計器 `CourtesyParensSpan`／`CourtesyParensToNotehead` も描かれた大きさの設計で読む（同じ罠を計器に作りかけた）。LP 2.26（`probes/grace-courtesy.ly` CTA/CTC/CTD・`AccidentalCautionary` の grob 名に注意）＝台帳 6 点（対照 2 点は完全一致・grace 4 点は 5e-6 未満の残差・出どころ未特定）。毒＝述語で 6 赤・設計の受け渡しで 4 赤。掃き 1,242 枚で 0（cue の括弧つきもコーパスに無い）。
 - `-End p927 -DiffBase ab8f35957`＝full **12629 / 0 / 2 / 12631**（前便末 +8）・Core 警告 0・門は全部 OK（Lab `sessions/p927/end.log`・commit の前に census／引用の照合／GraceBody を先回りで回した＝第925・第926 の 1 赤を繰り返さない）→ この docs commit。未 push 33＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。
 判定（2026-10-21）: grace の `@courtesy` は閉じた。grace の LYS4020 の残り＝`@breath`・`@caesura`（列組み・未特定 2 つ）・`@editorial`（上に置く小さい臨時記号＝次の候補）・`@pluck`・`@diagram`・`@notehead(…)`・`@cross`・`@laissezVibrer`/`@repeatTie`・`@dead`/`@parenthesize`・`@stemUp`/`@stemDown`・`@figuredBass`・`@chord`・TAB の技法。
-
-## 以下は第926セッションの経緯
-
-### 1.1 第926セッション（2026-10-21・YT-DELL2）
-
-第925 と同じ会話の続き（ユーザー「続けて」）。`-Start p926`（開始 HEAD `1ad0f7370`・未 push 28・full **12611 / 0 / 2 / 12613**・第924 を ARCHIVE へ）。作業場所は Lab `sessions/p926/`。
-- **第925 の ottava の高さの診断を訂正＝`ea56d33f0`**: LP 2.26 の ottava の既定の字は「8」で、Lily# は「8va」（ユーザー決定）。第925 の +0.74 と「普通の大きさの欠陥 +1.40」は**綴りの差**だった＝短い「8」なら上向きの符尾は破線の下、「8va」なら字の下。LP も「8va」で測る（`ottavationMarkups = #ottavation-simple-ordinals`・VGA/VGE/VGJ）と grace の点は 4.887332 対 Lily# 4.889593（残差 0.0023＝字の輪郭）。`ottava.stem-up-start` は撤回（その d16 は e8. と連桁で、LP 自身が連桁の警告を出す）。左隣の高い音の −0.24 はどちらの綴りでも残る。⇒ **教訓: ottava を LP と比べるときは字を「8va」に揃える**（`ottava.x.line-start-to-notehead` の綴りの項と同じ根）。
-- **grace の phrasing slur を描く＝`3cc2cb95c`**: 印の受け皿を grace 用に 1 つ足した（`MeasureBuilder.PendingGracePhrasingSlur`＝主音符の印とは混ざらない）・`NarrowToGraceTime` が phrasing の印を残す・`SlurDetector` の grace 除けを外した・述語 `GraceBodySupport.IsCarriedPhrasingSlur` は描く側（`PhrasingSlurMarksOn`）と LYS4020 の両方が読む・grace の中で閉じる phrasing slur は最小の長さ 1.5 で列を離す（`GraceColumnInfo.PhrasingSlurStart/End`・`SpacingRules.GraceColumns`＝`define-grobs.scm:2840`）。配置はスラーの既存の経路（第725）のまま。LP 2.26（`probes/grace-phrasing.ly` PHA〜PHD）＝台帳 8 点一致（`phrasing.grace.*`）。毒＝述語で 9 赤・最小の長さで 1 赤（1.417938）。
-- ⚠️ **引用の照合（`LpReferenceCitationTests.CitationsThatNameNothing_DoNotGrow`）**: 行番号つきの LILYPOND-REF は、その後ろに LilyPond の識別子（`_` を含む名前か 3 つ以上に切れるハイフン名）を要る＝`define-grobs.scm:2840 PhrasingSlur (minimum-length . 1.5)` は 1 赤（681→682）。行番号を外した＝`222a2ea6e`。
-- `-End p926 -DiffBase 1ad0f7370`（2 回目）＝full **12621 / 0 / 2 / 12623**（前便末 +10）・Core 警告 0・門は全部 OK（Lab `sessions/p926/end2.log`）→ この docs commit。未 push 31＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。掃き 1,242 枚で 0。
-判定（2026-10-21）: grace の phrasing slur は閉じた・ottava の高さは綴りで説明がついた。grace の LYS4020 の残り＝`@breath`・`@caesura`（列組み・未特定 2 つ）・`@pluck`・`@diagram`・`@notehead(…)`・`@courtesy`/`@editorial`・`@cross`・`@laissezVibrer`/`@repeatTie`・`@dead`/`@parenthesize`・`@stemUp`/`@stemDown`・`@figuredBass`・`@chord`・TAB の技法。
 
 ## 2. 開いている作業
 
