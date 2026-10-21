@@ -5341,9 +5341,10 @@ public sealed partial class MeasureCollector
     /// </remarks>
     private void CollectDynamics(SyntaxNode node, int measureIndex, int itemIndex)
     {
-        // In grace time only a dynamic LEVEL rides (session 916, GraceBodySupport.IsCarriedDynamic,
-        // the predicate LYS4020 reads too): DynamicEngraver stands it on the grace column. A
-        // hairpin or a text there stays dropped and reported.
+        // In grace time a dynamic LEVEL rides (session 916, GraceBodySupport.IsCarriedDynamic,
+        // the predicate LYS4020 reads too): DynamicEngraver stands it on the grace column. So
+        // does a hairpin START (session 918, IsCarriedHairpinStart): the wedge opens on the
+        // grace column, which HairpinEngraver reads off the mark's item index.
         bool graceTime = _graceDepth > 0;
         // Under a % sign nothing that rides a note is collected — see _percentCoveredDepth.
         if (_percentCoveredDepth > 0)
@@ -5353,7 +5354,8 @@ public sealed partial class MeasureCollector
 
         foreach (var articulation in articulations)
         {
-            if (graceTime && !Semantics.GraceBodySupport.IsCarriedDynamic(articulation))
+            if (graceTime && !Semantics.GraceBodySupport.IsCarriedDynamic(articulation)
+                && !Semantics.GraceBodySupport.IsCarriedHairpinStart(articulation))
                 continue;
             if (articulation is DynamicSyntax dynamicSyntax)
             {

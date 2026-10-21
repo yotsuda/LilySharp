@@ -74,7 +74,7 @@
   <text x="44.06" y="31.22" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="250">p</text>
   <text x="53.07" y="30.46" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="264">f</text>
   <text x="57.40" y="30.46" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="273">f</text>
-  <text x="66.42" y="30.75" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="289">p</text>
+  <text x="66.42" y="30.76" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="289">p</text>
   <text x="70.35" y="31.64" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="376">p</text>
   <text x="73.35" y="32.00" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="387">f</text>
   <text x="76.35" y="30.47" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="398">mf</text>
@@ -84,8 +84,8 @@
   <text class="music" x="79.35" y="23.33" font-size="4.00" data-pos="403"></text>
   <line x1="46.41" y1="29.86" x2="51.44" y2="29.19" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="254"/>
   <line x1="46.41" y1="29.86" x2="51.44" y2="30.52" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="254"/>
-  <line x1="59.75" y1="29.49" x2="64.69" y2="30.15" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="277"/>
-  <line x1="59.75" y1="30.82" x2="64.69" y2="30.15" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="277"/>
+  <line x1="59.75" y1="29.49" x2="64.69" y2="30.16" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="277"/>
+  <line x1="59.75" y1="30.82" x2="64.69" y2="30.16" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="277"/>
   <text class="music" x="13.42" y="22.54" font-size="3.56" data-pos="58"></text>
   <line x1="14.52" y1="22.38" x2="14.52" y2="19.87" stroke="#000000" stroke-width="0.116" data-pos="58"/>
   <text x="15.20" y="23.03" font-size="2.20" data-pos="58">= 120</text>

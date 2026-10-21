@@ -316,8 +316,9 @@ internal static class GraceBodySupport
     /// The fermata family and the ornaments joined the same day, measured where the page puts
     /// them (ledger script.grace.mover.*: the fermata is a mover, and the collision pass lifts
     /// it on a grace column exactly as on a full-size one). Dynamic levels have their own
-    /// predicate (<see cref="IsCarriedDynamic"/>), and so do texts and fingerings
-    /// (<see cref="IsCarriedText"/>, <see cref="IsCarriedFingering"/>): they are other engravers.
+    /// predicate (<see cref="IsCarriedDynamic"/>), and so do texts, fingerings and hairpin starts
+    /// (<see cref="IsCarriedText"/>, <see cref="IsCarriedFingering"/>,
+    /// <see cref="IsCarriedHairpinStart"/>): they are other engravers.
     /// LILYPOND-REF: lily/script-engraver.cc — a Voice engraver; a grace note's Script is an
     /// ordinary one at general-grace-settings' font-size (scm/music-functions.scm:636-650).
     /// </remarks>
@@ -339,8 +340,8 @@ internal static class GraceBodySupport
     /// <summary>
     /// True for a DYNAMIC a grace note engraves — a level (<c>@f</c>, <c>@p</c>, <c>@sfz</c>, …),
     /// at full size on the grace column (session 916; ledger dynamic.grace.*). A hairpin start
-    /// and the other spanners stay reported. THE question the collector and the drop list both
-    /// ask.
+    /// is <see cref="IsCarriedHairpinStart"/> (session 918). THE question the collector and the
+    /// drop list both ask.
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: lily/dynamic-engraver.cc — a Voice engraver; general-grace-settings
@@ -377,6 +378,19 @@ internal static class GraceBodySupport
     /// </remarks>
     internal static bool IsCarriedFingering(SyntaxNode annotation)
         => annotation is MusicMarkSyntax mark && AnnotationValues.Finger(mark) is not null;
+
+    /// <summary>
+    /// True for a HAIRPIN START a grace note engraves — <c>@cresc</c>, <c>@decresc</c>,
+    /// <c>@dim</c>: the wedge opens on the grace column, at its head's left edge or a full
+    /// bound-padding right of a dynamic on the same grace (session 918; ledger hairpin.grace.*).
+    /// The hairpin rides the mark's item index, so HairpinEngraver reads the grace column's X.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/dynamic-engraver.cc — a Voice engraver; the grace's NoteColumn is the
+    ///   hairpin's LEFT bound (acknowledge_note_column) as any column is.
+    /// </remarks>
+    internal static bool IsCarriedHairpinStart(SyntaxNode annotation)
+        => annotation is DynamicSyntax { Level: DynamicLevel.None };
 
     /// <summary>
     /// The <c>\N</c> a grace note carries, or null for automatic string selection.
@@ -622,7 +636,8 @@ internal static class GraceBodySupport
             foreach (var annotation in CarriedAnnotations(item))
             {
                 if (NeedsNoColumn(annotation) || IsCarriedScript(annotation) || IsCarriedDynamic(annotation)
-                    || IsCarriedText(annotation) || IsCarriedFingering(annotation))
+                    || IsCarriedText(annotation) || IsCarriedFingering(annotation)
+                    || IsCarriedHairpinStart(annotation))
                     continue;
                 yield return new GraceDrop(
                     GraceDropKind.Annotation, annotation.Span, Describe(annotation), via);

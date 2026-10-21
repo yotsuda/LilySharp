@@ -152,7 +152,8 @@ internal static class HairpinEngraver
         Dictionary<int, ImmutableArray<Measure>>? measuresByStaff = null,
         ImmutableArray<BeamLayout> beamLayouts = default,
         ImmutableArray<DynamicLayout> dynamicLayouts = default,
-        Func<int, int>? staffLinesOf = null)
+        Func<int, int>? staffLinesOf = null,
+        ImmutableArray<GraceNoteItem> graceNotes = default)
     {
         if (hairpins.IsDefaultOrEmpty)
             return ImmutableArray<HairpinLayout>.Empty;
@@ -236,7 +237,7 @@ internal static class HairpinEngraver
             foreach (var (segment, system) in SpannerBreakSubstitution.BrokenPieces(
                 hairpin.StartMeasureIndex, endMeasureIdx, systems, measureToSystemIdx))
                 layouts.Add(LayoutPiece(hairpin, segment, system, endMeasureIdx, measureLayouts,
-                    staffOffset, hpVoices, hpMeasures, beamMembers, dynamicAt, staffLines));
+                    staffOffset, hpVoices, hpMeasures, beamMembers, dynamicAt, staffLines, graceNotes));
         }
 
         return layouts.ToImmutable();
@@ -275,7 +276,8 @@ internal static class HairpinEngraver
         ImmutableArray<Measure> staffMeasures,
         ImmutableArray<BeamLayout> beamLayouts,
         ImmutableArray<DynamicLayout> dynamicLayouts,
-        int staffLines = EngravingDefaults.DefaultStaffLines)
+        int staffLines = EngravingDefaults.DefaultStaffLines,
+        ImmutableArray<GraceNoteItem> graceNotes = default)
     {
         if (hairpins.IsDefaultOrEmpty || system.Measures.IsDefaultOrEmpty)
             return ImmutableArray<HairpinLayout>.Empty;
@@ -312,7 +314,8 @@ internal static class HairpinEngraver
                 EndMeasureIndex: Math.Min(endMeasureIdx, last),
                 IsFirst: isFirst, IsLast: isLast, IsMiddle: !isFirst && !isLast);
             layouts.Add(LayoutPiece(hairpin, segment, system, endMeasureIdx, byMeasureIndex,
-                staffOffset: 0.0, staffVoices, staffMeasures, beamMembers, dynamicAt, staffLines));
+                staffOffset: 0.0, staffVoices, staffMeasures, beamMembers, dynamicAt, staffLines,
+                graceNotes));
         }
 
         return layouts.ToImmutable();
@@ -333,7 +336,7 @@ internal static class HairpinEngraver
         Dictionary<(int Staff, int Voice, int Measure, int Item),
             (BeamLayout Beam, double StemX, bool StemUp)> beamMembers,
         Dictionary<(int Measure, int Item, int Staff), DynamicLayout> dynamicAt,
-        int staffLines)
+        int staffLines, ImmutableArray<GraceNoteItem> graceNotes)
     {
         int staffIdx = hairpin.StaffIndex;
 
@@ -415,7 +418,9 @@ internal static class HairpinEngraver
                     out var startDyn)
                 && (startDyn.GlyphRunWidth ?? DynamicOutline.AdvanceWidth(startDyn.Text)) is { } startW
                 ? startDyn.X + startW / 2.0 + BoundPadding
-                : CalculateStartX(hairpin, hpMeasures, measureLayouts);
+                : GraceColumnX(graceNotes, hpVoices, staffIdx, hairpin.StartMeasureIndex,
+                      hairpin.StartItemIndex, measureLayouts)
+                  ?? CalculateStartX(hairpin, hpMeasures, measureLayouts);
 
         {
             {
@@ -527,7 +532,7 @@ internal static class HairpinEngraver
                 //   (DynamicText, DynamicTextSpanner, and Hairpin)".
                 var support = DynamicEngraver.SpanSupportSkylines(
                     hpVoices, VoiceIndex,
-                    SpanColumns(hairpin, segment, hpMeasures, measureLayouts),
+                    SpanColumns(hairpin, segment, hpMeasures, measureLayouts, graceNotes, hpVoices),
                     (vi, mi, ii) => beamMembers.TryGetValue((staffIdx, vi, mi, ii), out var b)
                         ? b : null,
                     staffLines);
@@ -592,14 +597,23 @@ internal static class HairpinEngraver
         double startX, double endX, double startOpening, double endOpening, double centreYUp,
         double circleX = double.NaN)
     {
+        // Each arm is a segment of the rule's thickness, as LilyPond's skyline builder takes a
+        // drawn line: lengthened by HALF the thickness at both ends along X, keeping its two
+        // end heights, and shifted by the same half toward the side the skyline faces — so the
+        // slope flattens a little over the longer run. ⚠️ Until session 918 the arm was only
+        // shifted, not lengthened: a crescendo bound by a head near its tip sat 0.003 shallower
+        // than LilyPond's and a decrescendo 0.0045 deeper (Lab sessions/p918/hp ctl2.ly).
+        // LILYPOND-REF: lily/include/lazy-skyline-pair.hh:66-94 Lazy_skyline_pair::add_segment —
+        //   p1 -= widen; p2 += widen (widen[X] = radius); per_dir_todo_[d] gets p ± d·pad.
+        // LILYPOND-REF: lily/stencil-integral.cc:113-129 add_draw_line_segments.
         double half = EngravingDefaults.StaffLineThickness / 2.0;
         var up = VerticalSkyline.FromSlope(
-            startX, centreYUp + startOpening + half,
-            endX, centreYUp + endOpening + half,
+            startX - half, centreYUp + startOpening + half,
+            endX + half, centreYUp + endOpening + half,
             thickness: 0, VerticalDirection.Up);
         var down = VerticalSkyline.FromSlope(
-            startX, centreYUp - startOpening - half,
-            endX, centreYUp - endOpening - half,
+            startX - half, centreYUp - startOpening - half,
+            endX + half, centreYUp - endOpening - half,
             thickness: 0, VerticalDirection.Down);
         if (!double.IsNaN(circleX))
         {
@@ -741,7 +755,8 @@ internal static class HairpinEngraver
     /// </remarks>
     private static IEnumerable<(int Measure, int Item, double X)> SpanColumns(
         HairpinItem hairpin, SpannerBreakSegment segment,
-        ImmutableArray<Measure> staffMeasures, ImmutableArray<MeasureLayout> measureLayouts)
+        ImmutableArray<Measure> staffMeasures, ImmutableArray<MeasureLayout> measureLayouts,
+        ImmutableArray<GraceNoteItem> graceNotes, ImmutableArray<Voice> voices)
     {
         // No measures means no caller supplied a staff — the harness case (a unit test that
         // builds layouts directly). The support is then the staff's own extent alone, which
@@ -761,8 +776,34 @@ internal static class HairpinEngraver
             int to = m == hairpin.EndMeasureIndex ? hairpin.EndItemIndex : itemCount - 1;
             for (int i = Math.Max(0, from); i <= to && i < itemCount; i++)
                 yield return (m, i,
-                    layout.X + LayoutUtilities.GetItemXOffset(staffMeasures, m, i, layout));
+                    GraceColumnX(graceNotes, voices, hairpin.StaffIndex, m, i, measureLayouts)
+                    ?? layout.X + LayoutUtilities.GetItemXOffset(staffMeasures, m, i, layout));
         }
+    }
+
+    /// <summary>
+    /// The head left edge of the GRACE column standing as item <paramref name="item"/> of
+    /// <paramref name="measure"/> in the support voice, or null when that item is no grace
+    /// column (a main-grid item, or a caller that handed over no grace groups). A grace item
+    /// stands in its voice's measure but not on the main grid, so
+    /// <see cref="LayoutUtilities.GetItemXOffset"/> does not answer the grace's own column; the
+    /// grace's own X is read off its group, as a grace dynamic's is (session 918: a hairpin
+    /// opening on a grace note, ledger hairpin.grace.*). DynamicAlignEngraver's line reads its
+    /// columns through here too, in the line's own voice.
+    /// </summary>
+    internal static double? GraceColumnX(ImmutableArray<GraceNoteItem> graceNotes,
+        ImmutableArray<Voice> voices, int staffIndex, int measure, int item,
+        ImmutableArray<MeasureLayout> measureLayouts, int voiceIndex = VoiceIndex)
+    {
+        if (graceNotes.IsDefaultOrEmpty || voices.IsDefaultOrEmpty || voiceIndex >= voices.Length
+            || measure >= measureLayouts.Length || measureLayouts[measure] is not { } layout)
+            return null;
+        var voice = voices[voiceIndex];
+        if (measure >= voice.Measures.Length || item < 0 || item >= voice.Measures[measure].Items.Length
+            || !voice.Measures[measure].Items[item].GraceTime)
+            return null;
+        return ElementCoordinator.GraceColumnHeadLeftX(voice, graceNotes, staffIndex, voiceIndex,
+            measure, item, layout, SpacingRules.VoiceCollisionShiftsOf(voices));
     }
 
     /// <summary>

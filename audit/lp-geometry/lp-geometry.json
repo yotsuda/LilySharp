@@ -5344,8 +5344,8 @@
       "probe": "hairpin-neighbour.ly",
       "score": "HPF",
       "lilypond": 5.08997818620712,
-      "residual": 0.004449172,
-      "why": "OPENED AND MOSTLY CLOSED THE SAME DAY, 2026-08-28 (session 277): -0.258678186 -> +0.004449172. READ THE SIGN, IT FLIPPED. The reading is a DEPTH below the staff's middle line, so the old residual means Lily#'s wedge sat 0.258678186 TOO SHALLOW -- the direction that prints a collision -- and the new one means it sits 0.004449172 too DEEP. That is not a shrunken version of the old gap, it is a different and much smaller quantity, and it has NOT been isolated. THIS ENTRY IS NOT CLOSED. HOW THE PAIR CAME TO EXIST: sessions 275/276 left a flat box (OutsideStaffStacker.HairpinHalfHeight = 0.6666/2) blocked behind a remark claiming no book in the corpus draws an arrangement that could watch it. The two arrangements that remark NAMED -- a TextScript below the staff, a second dynamic on the same DynamicLineSpanner -- were then measured to be incapable of moving a wedge in LilyPond at all (probe books HN1..HN4: TextScript declares outside-staff-priority 450 against DynamicLineSpanner's 250, so the dynamic line is placed first and the script outside it; and a Hairpin and a DynamicText share ONE DynamicLineSpanner, placed once by its union extent, with no collision pass between them). The arrangement that CAN was then deduced from the priorities instead of guessed at: only an outside-staff grob ranking BELOW 250 can push a wedge, and below the staff LilyPond declares exactly two, TrillSpanner 50 and the fermata family 75. Books HPC/HPF are that pair, one variable apart. WHAT LILY# COMPUTED BEFORE THE PORT: the lone-wedge arm of StackBelowStaffCore placed the wedge through the flat box, so the reading was obstacle 4.038000 + outside-staff-padding 0.460000 + 0.333300 = 4.831300. WHAT LILYPOND COMPUTES: skyline_spacing pads the fermata's outline against the WEDGE'S OWN SLOPED OUTLINE, and a decrescendo over the fermata's X is near its wide end, about 0.59 above its centre -- neither the box's flat 0.3333 nor the 0.7166 of the wedge's widest point. THE DEFECT WAS THE SHAPE, NOT THE VALUE, AND TWO MEASUREMENTS SAID SO BEFORE ANYTHING WAS CHANGED (both with HPC unmoved at 3.366600000): (a) the box raised to LilyPond's own Hairpin Y-extent 0.716600 -- the declared height 0.6666 plus half the 0.1 line -- reads 5.214600000, residual +0.124621814, i.e. it OVERSHOOTS, because a box at the wedge's widest is too tall over an obstacle standing where the wedge has already narrowed; (b) the box replaced by HairpinEngraver.WedgeSkylines -- the sloped outline the GROUPED arm of the same method, twenty lines below, had always used -- reads 5.094427358, residual +0.004449172, i.e. 98.3% of the gap. One quantity, two spellings, one method (RULES 5.2.1(2)). THE PORT LANDED THE SAME DAY, with the user's approval, and it is (b): the flat box is gone and HairpinHalfHeight died with it. WHAT SAYS THE PORT TOUCHED THE CLEARANCE AND NOT THE FLOOR: hairpin.plain.staff-to-wedge, the control, read 3.366600000 before it and 3.366600000 after. WHAT SAYS IT WAS SAFE TO DELETE RATHER THAN MERELY DESIRABLE: with the port applied the whole tree was swept and 0 OF 573 BOOKS MOVED, while the change was demonstrably live in that same build state because exactly one test in the suite went red and it was THIS entry. So no tracked picture changed, no snapshot was rebased, and this pair is the only observer of that arm anywhere in the repository -- which is also why the port could not have been done first. NOT THE SPAN: the two engines' wedges are the same length to nine digits (5.250045 centre-line on both; LilyPond's grob X-extent of 5.350045 is that plus 0.05 of round line cap at each end), so nothing here rides on Lily#'s grammar having no hairpin terminator. That check is now load-bearing rather than tidy: the flat box was span-blind and the outline is not, so any book added to this family owes it again. WHAT REMAINS, +0.004449172, IS NOT ATTRIBUTED. What is known: Lily#'s fermata LILC ink bottom is 4.036000000, IDENTICAL to LilyPond's Script Y-extent bottom, while the obstacle the old box actually cleared sat at 4.038000, so 0.002 of the remainder is an outline-versus-box term on the FERMATA. LilyPond binds on an outline there too, and neither engine's extents report that, so the remainder cannot be settled from the numbers already in this entry -- it needs its own measurement. Do not call it closed, and do not tune anything to make it zero. ⇒ NARROWED THE SAME DAY BY THE FAMILY'S OTHER MEMBER: hairpin.under-trill.staff-to-wedge (book HPT, a DOWN trill at priority 50) is EXACT. It goes through the same lone-wedge placement with the same padding and the same wedge outline, so the remainder here is not in any of those three -- it is in the FERMATA'S OWN PROFILE. A trill's wave is flat along the span and so binds where the wedge is at full opening; a fermata's arch is cleared mid-slope, which is the only thing the two books do differently. STILL UNCUT: a book carrying BOTH movers, which would additionally read the pass ORDER (StackBelowStaffCore places the trill at 50 before the fermata at 75) -- worth writing once this entry is exact, and not before, since a reading that can move for two reasons cannot say which one moved it. LILYPOND-REF: scm/define-grobs.scm:1785 Hairpin (height . 0.6666); scm/define-grobs.scm:1401-1440 DynamicLineSpanner (outside-staff-priority . 250); scm/script.scm the fermata family's 75; lily/axis-group-interface.cc:860-985 skyline_spacing."
+      "residual": 0.0,
+      "why": "CLOSED IN SESSION 918 (2026-10-21): +0.004449172 -> 0. The remainder was the WEDGE'S outline after all, not the fermata's profile: LilyPond's skyline builder lengthens each arm by half the 0.1 rule at both ends along X before shifting it outward (lily/include/lazy-skyline-pair.hh add_segment; ledger hairpin.outline.*), and HairpinEngraver.WedgeSkylines only shifted it. A fermata cleared mid-slope sees the flatter arm; the trill, flat along the span, binds where the lengthening does not show, which is why HPT was already exact. The 0.05 of round line cap noted below under NOT THE SPAN was that same half-thickness. The history below is kept as written. -- OPENED AND MOSTLY CLOSED THE SAME DAY, 2026-08-28 (session 277): -0.258678186 -> +0.004449172. READ THE SIGN, IT FLIPPED. The reading is a DEPTH below the staff's middle line, so the old residual means Lily#'s wedge sat 0.258678186 TOO SHALLOW -- the direction that prints a collision -- and the new one means it sits 0.004449172 too DEEP. That is not a shrunken version of the old gap, it is a different and much smaller quantity, and it has NOT been isolated. THIS ENTRY IS NOT CLOSED. HOW THE PAIR CAME TO EXIST: sessions 275/276 left a flat box (OutsideStaffStacker.HairpinHalfHeight = 0.6666/2) blocked behind a remark claiming no book in the corpus draws an arrangement that could watch it. The two arrangements that remark NAMED -- a TextScript below the staff, a second dynamic on the same DynamicLineSpanner -- were then measured to be incapable of moving a wedge in LilyPond at all (probe books HN1..HN4: TextScript declares outside-staff-priority 450 against DynamicLineSpanner's 250, so the dynamic line is placed first and the script outside it; and a Hairpin and a DynamicText share ONE DynamicLineSpanner, placed once by its union extent, with no collision pass between them). The arrangement that CAN was then deduced from the priorities instead of guessed at: only an outside-staff grob ranking BELOW 250 can push a wedge, and below the staff LilyPond declares exactly two, TrillSpanner 50 and the fermata family 75. Books HPC/HPF are that pair, one variable apart. WHAT LILY# COMPUTED BEFORE THE PORT: the lone-wedge arm of StackBelowStaffCore placed the wedge through the flat box, so the reading was obstacle 4.038000 + outside-staff-padding 0.460000 + 0.333300 = 4.831300. WHAT LILYPOND COMPUTES: skyline_spacing pads the fermata's outline against the WEDGE'S OWN SLOPED OUTLINE, and a decrescendo over the fermata's X is near its wide end, about 0.59 above its centre -- neither the box's flat 0.3333 nor the 0.7166 of the wedge's widest point. THE DEFECT WAS THE SHAPE, NOT THE VALUE, AND TWO MEASUREMENTS SAID SO BEFORE ANYTHING WAS CHANGED (both with HPC unmoved at 3.366600000): (a) the box raised to LilyPond's own Hairpin Y-extent 0.716600 -- the declared height 0.6666 plus half the 0.1 line -- reads 5.214600000, residual +0.124621814, i.e. it OVERSHOOTS, because a box at the wedge's widest is too tall over an obstacle standing where the wedge has already narrowed; (b) the box replaced by HairpinEngraver.WedgeSkylines -- the sloped outline the GROUPED arm of the same method, twenty lines below, had always used -- reads 5.094427358, residual +0.004449172, i.e. 98.3% of the gap. One quantity, two spellings, one method (RULES 5.2.1(2)). THE PORT LANDED THE SAME DAY, with the user's approval, and it is (b): the flat box is gone and HairpinHalfHeight died with it. WHAT SAYS THE PORT TOUCHED THE CLEARANCE AND NOT THE FLOOR: hairpin.plain.staff-to-wedge, the control, read 3.366600000 before it and 3.366600000 after. WHAT SAYS IT WAS SAFE TO DELETE RATHER THAN MERELY DESIRABLE: with the port applied the whole tree was swept and 0 OF 573 BOOKS MOVED, while the change was demonstrably live in that same build state because exactly one test in the suite went red and it was THIS entry. So no tracked picture changed, no snapshot was rebased, and this pair is the only observer of that arm anywhere in the repository -- which is also why the port could not have been done first. NOT THE SPAN: the two engines' wedges are the same length to nine digits (5.250045 centre-line on both; LilyPond's grob X-extent of 5.350045 is that plus 0.05 of round line cap at each end), so nothing here rides on Lily#'s grammar having no hairpin terminator. That check is now load-bearing rather than tidy: the flat box was span-blind and the outline is not, so any book added to this family owes it again. WHAT REMAINS, +0.004449172, IS NOT ATTRIBUTED. What is known: Lily#'s fermata LILC ink bottom is 4.036000000, IDENTICAL to LilyPond's Script Y-extent bottom, while the obstacle the old box actually cleared sat at 4.038000, so 0.002 of the remainder is an outline-versus-box term on the FERMATA. LilyPond binds on an outline there too, and neither engine's extents report that, so the remainder cannot be settled from the numbers already in this entry -- it needs its own measurement. Do not call it closed, and do not tune anything to make it zero. ⇒ NARROWED THE SAME DAY BY THE FAMILY'S OTHER MEMBER: hairpin.under-trill.staff-to-wedge (book HPT, a DOWN trill at priority 50) is EXACT. It goes through the same lone-wedge placement with the same padding and the same wedge outline, so the remainder here is not in any of those three -- it is in the FERMATA'S OWN PROFILE. A trill's wave is flat along the span and so binds where the wedge is at full opening; a fermata's arch is cleared mid-slope, which is the only thing the two books do differently. STILL UNCUT: a book carrying BOTH movers, which would additionally read the pass ORDER (StackBelowStaffCore places the trill at 50 before the fermata at 75) -- worth writing once this entry is exact, and not before, since a reading that can move for two reasons cannot say which one moved it. LILYPOND-REF: scm/define-grobs.scm:1785 Hairpin (height . 0.6666); scm/define-grobs.scm:1401-1440 DynamicLineSpanner (outside-staff-priority . 250); scm/script.scm the fermata family's 75; lily/axis-group-interface.cc:860-985 skyline_spacing."
     },
     "hairpin.under-trill.staff-to-wedge": {
       "probe": "hairpin-neighbour.ly",
@@ -7214,8 +7214,92 @@
       "probe": "grace-hairpin.ly",
       "score": "hp",
       "lilypond": 4.021815,
-      "residual": 0.00001,
-      "why": "EXACT (1e-5). A crescendo running over a grace note: the grace column is one of the DynamicLineSpanner's supports with its own head and its own UP stem. Lily# read the grace item's head at full size and its stem in the UNGRACED direction (the b' on the middle line: DOWN, 3.5 long), so the wedge stood 0.24 lower (4.26). Session 916's dynamic work made DynamicEngraver.MergeColumnSupport read a grace column as the grace it is, and this moved with it; the SVG sweep found it in samples/nocturne.lys bar 5, the one page it changed."
+      "residual": 0.0,
+      "why": "EXACT (2.5e-7 since session 918's arm-outline fix, hairpin.outline.*; 1e-5 before it). A crescendo running over a grace note: the grace column is one of the DynamicLineSpanner's supports with its own head and its own UP stem. Lily# read the grace item's head at full size and its stem in the UNGRACED direction (the b' on the middle line: DOWN, 3.5 long), so the wedge stood 0.24 lower (4.26). Session 916's dynamic work made DynamicEngraver.MergeColumnSupport read a grace column as the grace it is, and this moved with it; the SVG sweep found it in samples/nocturne.lys bar 5, the one page it changed."
+    },
+    "hairpin.grace.start.head-to-wedge-left": {
+      "probe": "grace-hairpin-start.ly",
+      "score": "GHA",
+      "lilypond": 0.0,
+      "residual": 0.0,
+      "why": "EXACT. A crescendo written on a grace note, `grace { d16@cresc }`: the wedge opens on the grace column, its arms starting at the grace head's left edge, as LilyPond's Dynamic_engraver bounds it by the grace's NoteColumn. Until session 918 the start was dropped (LYS4020). HairpinEngraver reads the grace column's X off its group (GraceColumnX): GetItemXOffset does not answer a grace item's own column. LilyPond's value is its Hairpin xext.left + 0.05 (half the arm's rule) - the grace head's X."
+    },
+    "hairpin.grace.start.staff-to-wedge": {
+      "probe": "grace-hairpin-start.ly",
+      "score": "GHA",
+      "lilypond": 3.613088,
+      "residual": 0.0,
+      "why": "EXACT. The same wedge's level: side-positioned off the grace column's own head and UP stem, which the span's supports now read at the grace's X. Exact only after the arm-outline fix of the same day (hairpin.outline.*): before it this read -0.0029, as the full-size control did."
+    },
+    "hairpin.grace.start-at-text.head-to-wedge-left": {
+      "probe": "grace-hairpin-start.ly",
+      "score": "GHB",
+      "lilypond": 2.19305,
+      "residual": 0.0,
+      "why": "EXACT. `grace { d16@p@cresc }`: the dynamic on the grace is the LEFT bound (Text_interface) - the wedge opens bound-padding 1.0 right of the p's ink, the p standing on the grace column (dynamic.grace.*)."
+    },
+    "hairpin.grace.start-at-text.staff-to-wedge": {
+      "probe": "grace-hairpin-start.ly",
+      "score": "GHB",
+      "lilypond": 4.062091,
+      "residual": -0.000032,
+      "why": "The p and the wedge share one DynamicLineSpanner (DynamicAlignEngraver): the wedge 0.6 above the p, the p bound by the grace head as it is alone. Until session 918 the LINE's supports (DynamicAlignEngraver.SpanColumns) took the grace head at the next main column's X, and the pair sat 0.14 too high (3.922). -0.000032 is the p's outline walk (a lone grace p reads -4.662059 against LilyPond's -4.662091)."
+    },
+    "hairpin.grace.decresc.staff-to-wedge": {
+      "probe": "grace-hairpin-start.ly",
+      "score": "GHC",
+      "lilypond": 4.207094,
+      "residual": 0.0,
+      "why": "EXACT. A decrescendo from a grace: the open end stands over the grace head. Exact only after the arm-outline fix (it read +0.0036, as the full-size decrescendo of hairpin.outline.decresc did)."
+    },
+    "hairpin.grace.control.head-to-wedge-left": {
+      "probe": "grace-hairpin-start.ly",
+      "score": "GHD",
+      "lilypond": 0.0,
+      "residual": 0.0,
+      "why": "EXACT. The CONTROL of GHA: the same crescendo on a full-size d16."
+    },
+    "hairpin.grace.control.staff-to-wedge": {
+      "probe": "grace-hairpin-start.ly",
+      "score": "GHD",
+      "lilypond": 3.76329,
+      "residual": 0.0,
+      "why": "EXACT. The control's level. It read -0.0020 before the arm-outline fix of the same day, which is what showed the grace books' residual was the wedge's outline and not the grace."
+    },
+    "hairpin.grace.beamed.head-to-wedge-left": {
+      "probe": "grace-hairpin-start.ly",
+      "score": "GHE",
+      "lilypond": 0.0,
+      "residual": 0.0,
+      "why": "EXACT. A crescendo from the first of two BEAMED graces: the left bound is that grace's column."
+    },
+    "hairpin.grace.beamed.staff-to-wedge": {
+      "probe": "grace-hairpin-start.ly",
+      "score": "GHE",
+      "lilypond": 3.456979,
+      "residual": 0.0,
+      "why": "EXACT. Its level, off the beamed graces' heads and stems."
+    },
+    "hairpin.outline.cresc.staff-to-wedge": {
+      "probe": "hairpin-arm-outline.ly",
+      "score": "GHH",
+      "lilypond": 3.816845,
+      "residual": 0.0,
+      "why": "EXACT since session 918. A crescendo whose d' head binds near the tip, where the wedge is thin. LilyPond's skyline builder lengthens each arm by half the 0.1 rule at both ends along X, keeping its end heights, then shifts it half outward (lily/include/lazy-skyline-pair.hh add_segment); HairpinEngraver.WedgeSkylines shifted without lengthening, so the arm was a touch steeper and thinner at the tip: -0.0029."
+    },
+    "hairpin.outline.decresc.staff-to-wedge": {
+      "probe": "hairpin-arm-outline.ly",
+      "score": "GHI",
+      "lilypond": 4.357101,
+      "residual": 0.0,
+      "why": "EXACT since session 918. The decrescendo of GHH: the head binds at the OPEN end, where the unlengthened arm reached deeper: +0.0045."
+    },
+    "hairpin.outline.stems.staff-to-wedge": {
+      "probe": "hairpin-arm-outline.ly",
+      "score": "GHJ",
+      "lilypond": 4.270591,
+      "residual": 0.0,
+      "why": "EXACT since session 918. A crescendo over g' a' b' c'': the down stems of b' and c'' bind, thin supports under the arm: -0.0006 before the fix."
     },
     "text.grace.below": {
       "probe": "grace-text.ly",

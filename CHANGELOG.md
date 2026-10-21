@@ -68,10 +68,14 @@ workflow attaches that section to the GitHub Release verbatim.
   it was dropped before, and a fermata or an ornament (`@trill`, `@prall`, `@mordent`,
   `@turn`, …) above it, a dynamic (`grace { d16@f } e4`, full size) and a text
   (`@text("dolce")`), and **a fingering** (`grace { d16@finger(2) } e4`, small, centred on the
-  grace note, over a beamed grace's stem). (A hairpin start on a grace note is still reported as
-  not drawn.) A hairpin running over a
+  grace note, over a beamed grace's stem), and **a hairpin can start on a grace note**
+  (`grace { d16@cresc } e4 f4 g4@f` — the wedge opens at the grace note, or just after a
+  dynamic written on it). A hairpin running over a
   grace note also stands where LilyPond puts it — it read the grace note's stem as a full-size
   down stem and sat a quarter space too low.
+- **A hairpin sits where LilyPond puts it when a note under it is what holds it down.** Lily#
+  measured the wedge's outline a hair short at both ends, so a crescendo stood a little high and
+  a decrescendo a little low over a low note (a few thousandths of a space; now exact).
 - **A trill line keeps the music around it at a distance.** A trill over the lower staff of
   a grand staff that runs on to the next line now opens the staves as one that ends on its
   own line does (it was drawn through the right hand's beams). And a trill or an ottava

@@ -74,8 +74,10 @@ public class GraceBodyValidatorTests
     // `grace { d'8@f }` with the dynamic levels (ledger dynamic.grace.*; see
     // ADynamicOnAGrace_IsDrawn_AndNotReported), and `grace { d'8@text("hi") }` with the texts
     // (ledger text.grace.*), and grace { d'8@finger(3) } with the fingerings (session 917, ledger
-    // fingering.grace.*; see AFingeringOnAGrace_IsDrawn_AndNotReported).
-    [InlineData("grace { d'8@cresc } c'1 | e'1@f |", "grace { d'8 } c'1 | e'1@f |")]
+    // fingering.grace.*; see AFingeringOnAGrace_IsDrawn_AndNotReported), and
+    // grace { d'8@cresc } with the hairpin starts (session 918, ledger hairpin.grace.*; see
+    // AHairpinStartOnAGrace_IsDrawn_AndNotReported).
+    [InlineData("grace { d'8@glissando } c'1 | e'1 |", "grace { d'8 } c'1 | e'1 |")]
     // ⚠️ `grace { d'8. }` LEFT THIS THEORY ON 2026-08-30 (session 299), which is the way a
     // row is meant to leave it: the dot is drawn now, so the line asserting it is missing
     // went red and taking it out was part of closing the hole. See ADottedGrace_IsDrawn.
@@ -148,7 +150,8 @@ public class GraceBodyValidatorTests
 
     /// <summary>
     /// A dynamic LEVEL on a grace note is drawn (full size, on the grace column) and not
-    /// reported; a hairpin started there still is (GraceBodySupport.IsCarriedDynamic).
+    /// reported (GraceBodySupport.IsCarriedDynamic); so is a hairpin started there since session
+    /// 918 (AHairpinStartOnAGrace_IsDrawn_AndNotReported).
     /// </summary>
     [Theory]
     [InlineData("grace { d'8@f } c'1 | e'1 |")]
@@ -177,6 +180,25 @@ public class GraceBodyValidatorTests
     {
         Assert.Empty(Warnings(Book(written)));
         Assert.NotEqual(Page(written.Replace("@finger(1)", "").Replace("@finger(3)", "")), Page(written));
+    }
+
+    /// <summary>
+    /// A HAIRPIN START on a grace note is drawn (session 918, HANDOFF §2 U8 ⒟): the wedge opens
+    /// on the grace column — at its head's left edge, or bound-padding right of a dynamic on the
+    /// same grace (ledger hairpin.grace.*). Nothing is reported about it.
+    /// </summary>
+    [Theory]
+    [InlineData("grace { d'8@cresc } c'1 | e'1@f |", "@cresc")]
+    [InlineData("grace { d'8@decresc } c'1 | e'1@p |", "@decresc")]
+    [InlineData("grace { d'8@p@cresc } c'1 | e'1@f |", "@cresc")]
+    // ⚠️ NOT a chord MEMBER's `<d'@cresc f'>8`: LilyPond draws no hairpin (and no dynamic) from a
+    // chord member at any size — Dynamic_engraver hears only the chord's own post-events (Lab
+    // sessions/p918/hp mem.ly, books MA/MB) — and Lily#'s full-size chord does the same, so the
+    // grace chord drawing nothing there is LilyPond's answer, not a drop.
+    public void AHairpinStartOnAGrace_IsDrawn_AndNotReported(string written, string start)
+    {
+        Assert.Empty(Warnings(Book(written)));
+        Assert.NotEqual(Page(written.Replace(start, "")), Page(written));
     }
 
     /// <summary>
@@ -235,11 +257,11 @@ public class GraceBodyValidatorTests
     [Fact]
     public void TheWarningStandsAtWhatWasWritten()
     {
-        // A hairpin's start: since sessions 916-917 the scripts, the dynamics, the texts and the
-        // fingerings on a grace are drawn.
-        string source = Book("grace { d'8@cresc } c'1 | e'1@f |");
+        // A glissando: since sessions 916-918 the scripts, the dynamics, the texts, the
+        // fingerings and the hairpin starts on a grace are drawn.
+        string source = Book("grace { d'8@glissando } c'1 | e'1 |");
         var warning = Assert.Single(Warnings(source));
-        Assert.Equal(source.IndexOf("@cresc", System.StringComparison.Ordinal),
+        Assert.Equal(source.IndexOf("@glissando", System.StringComparison.Ordinal),
             warning.Span.Start);
     }
 
@@ -529,9 +551,9 @@ public class GraceBodyValidatorTests
         Assert.Empty(Warnings(Book("grace { d'16 <c' e'>16 f'16 } c'1 | e'1 |")));
 
         // An annotation a grace does not carry is still reported on a chord MEMBER, at the
-        // member (a script there is drawn since session 916, a fingering since 917; a hairpin's
-        // start is not).
-        var onMember = Assert.Single(Warnings(Book("grace { <d'@cresc f'>8 } c'1 | e'1@f |")));
+        // member (a script there is drawn since session 916, a fingering since 917, a hairpin's
+        // start since 918; a glissando is not).
+        var onMember = Assert.Single(Warnings(Book("grace { <d'@glissando f'>8 } c'1 | e'1 |")));
         Assert.Contains("is not engraved", onMember.Message);
     }
 

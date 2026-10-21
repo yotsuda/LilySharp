@@ -770,7 +770,8 @@ internal sealed partial class LayoutEngine
         var hairpinLayouts = HairpinEngraver.Calculate(hairpinItems, systems, ml, staffYAt,
             score != null && staffVoices.IsDefaultOrEmpty
                 ? ImmutableArray.Create(score.Voice) : staffVoices,
-            voicesByStaff, measuresByStaff, beamLayouts ?? default, dynamicLayouts, staffLinesOf);
+            voicesByStaff, measuresByStaff, beamLayouts ?? default, dynamicLayouts, staffLinesOf,
+            ctx.GraceNotes);
 
         // Texts and wedges linked by RUNNING hairpins ride one DynamicLineSpanner: the
         // group is side-positioned once and every member re-seats on the shared line
@@ -783,7 +784,7 @@ internal sealed partial class LayoutEngine
             ctx.Fonts, hairpinItems, dynamics, dynamicLayouts, hairpinLayouts, systems, ml, staffYAt,
             score != null && staffVoices.IsDefaultOrEmpty
                 ? ImmutableArray.Create(score.Voice) : staffVoices,
-            voicesByStaff, measuresByStaff, beamLayouts ?? default, staffLinesOf);
+            voicesByStaff, measuresByStaff, beamLayouts ?? default, staffLinesOf, ctx.GraceNotes);
 
         // Detect and layout text spanners from rit/accel marks (outside-staff-priority: 350)
         // Pass dynamic layouts so text spanners can stack below them

@@ -1636,6 +1636,36 @@ internal sealed class RenderedGeometry
     /// </remarks>
     public double HairpinWedgeCentreBelowStaff(int page = 0)
     {
+        var (arms, staffMiddle) = SoleHairpinArms(page);
+        double atLeft = (arms[0].Y1 + arms[1].Y1) / 2.0;
+        double atRight = (arms[0].Y2 + arms[1].Y2) / 2.0;
+        if (Math.Abs(atLeft - atRight) > 1e-9)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: the wedge's arms are not mirrored about one centre "
+                + $"({atLeft:F9} at its left end, {atRight:F9} at its right) — the reading of "
+                + "its centre is not well defined.\nDrawn geometry:\n" + Describe());
+        }
+        return atLeft - staffMiddle;
+    }
+
+    /// <summary>
+    /// The sole hairpin's LEFT END (where its two arms start) minus notehead
+    /// <paramref name="headIndex"/>'s anchor — the wedge's left bound read against the column
+    /// it opens on. The arms are found as <see cref="HairpinWedgeCentreBelowStaff"/> finds them.
+    /// </summary>
+    /// <remarks>
+    /// LilyPond's own Hairpin X-extent is the stencil's, widened by half the 0.1 line on each
+    /// side (lily/line-interface.cc make_line), so its arms start 0.05 inside its extent's left:
+    /// the ledger's LilyPond value is <c>xext.left + 0.05 − head.x</c>.
+    /// </remarks>
+    public double HairpinWedgeLeftToNoteheadAnchor(int headIndex, int page = 0)
+        => SoleHairpinArms(page).Arms[0].X1 - NoteheadAnchor(headIndex);
+
+    /// <summary>The two arms of the sole hairpin below the sole staff, and that staff's middle
+    /// line — the selection <see cref="HairpinWedgeCentreBelowStaff"/>'s remarks explain.</summary>
+    private (List<DrawnLine> Arms, double StaffMiddle) SoleHairpinArms(int page)
+    {
         var staffLines = StaffLineYs(page);
         if (staffLines.Count != 5)
         {
@@ -1665,16 +1695,7 @@ internal sealed class RenderedGeometry
                 $"page {page}: the two rules below the staff do not span the same X — they "
                 + "are not one wedge's arms.\nDrawn geometry:\n" + Describe());
         }
-        double atLeft = (arms[0].Y1 + arms[1].Y1) / 2.0;
-        double atRight = (arms[0].Y2 + arms[1].Y2) / 2.0;
-        if (Math.Abs(atLeft - atRight) > 1e-9)
-        {
-            throw new InvalidOperationException(
-                $"page {page}: the wedge's arms are not mirrored about one centre "
-                + $"({atLeft:F9} at its left end, {atRight:F9} at its right) — the reading of "
-                + "its centre is not well defined.\nDrawn geometry:\n" + Describe());
-        }
-        return atLeft - staffMiddle;
+        return (arms, staffMiddle);
     }
 
     /// <summary>The sole drawn pedal glyph run spelling <paramref name="word"/> — the

@@ -1151,7 +1151,7 @@ chords, rests and dots are drawn at the grace size, with what is written on them
 is still not drawn, Lily# says so at what was written (LYS4020):
 
 ```
-grace { d16@cresc } c4 e4@f   // the hairpin start is not drawn   (LYS4020)
+grace { d16@glissando } c4   // the glissando is not drawn   (LYS4020)
 ```
 
 **Two annotations ARE carried, and the line between them and the rest is whether they want a
@@ -1180,7 +1180,9 @@ notes' size, as LilyPond draws it.
 and so are a fermata and an ornament (`@trill`, `@prall`, `@mordent`, `@turn`, …) above it.
 A dynamic there is drawn too, at full size (`grace { d16@f } c4`), and a text
 (`@text("dolce")`), and a fingering (`grace { d16@finger(2) } c4`, small, as LilyPond
-sets it); a hairpin start is not drawn yet (LYS4020).
+sets it), and a hairpin that starts there (`grace { d16@cresc } c4 e4@f` — the wedge opens at
+the grace note). A sustain pedal, a text spanner (`@rit`), a glissando and an arpeggio on a
+grace note are not drawn yet (LYS4020).
 
 LilyPond draws all of the spellings above, so each warning says "not drawn yet", not "do not
 write this".

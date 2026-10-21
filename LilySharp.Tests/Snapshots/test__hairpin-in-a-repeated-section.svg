@@ -45,9 +45,9 @@
   <rect x="63.93" y="17.06" width="0.19" height="4.00" data-pos="845"/>
   <rect x="73.54" y="17.06" width="0.19" height="4.00" data-pos="855"/>
   <line x1="17.12" y1="23.10" x2="24.70" y2="22.43" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="834"/>
-  <line x1="17.12" y1="23.10" x2="24.70" y2="23.77" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="834"/>
+  <line x1="17.12" y1="23.10" x2="24.70" y2="23.76" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="834"/>
   <line x1="55.54" y1="23.10" x2="63.12" y2="22.43" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="834"/>
-  <line x1="55.54" y1="23.10" x2="63.12" y2="23.77" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="834"/>
+  <line x1="55.54" y1="23.10" x2="63.12" y2="23.76" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="834"/>
   <rect x="11.90" y="13.47" width="2.75" height="2.74" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="815"/>
   <text x="13.28" y="15.86" font-size="2.77" text-anchor="middle" data-pos="815">A</text>
   <rect x="33.98" y="13.51" width="2.48" height="2.71" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="861"/>

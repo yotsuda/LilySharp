@@ -4662,7 +4662,7 @@ internal sealed class MultiStaffLayouter
         return HairpinEngraver.CalculateOnSystem(
             staffHairpins, system, staff.PrimaryVoice.Measures.Length, keyed,
             staff.Voices, staff.PrimaryVoice.Measures, staffBeams, dynamicLayouts,
-            NotationStaffLinesOf(staff));
+            NotationStaffLinesOf(staff), score.GraceNotes);
     }
 
     /// <summary>

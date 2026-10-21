@@ -8889,6 +8889,16 @@ internal static class LpGeometryProbes
     private static readonly string GRFC = GraceTieBook("c4 grace { <d@finger(1) f@finger(3)>16 } e4 c2 |", "GRFC");
     private static readonly string GRFD = GraceTieBook("c4 grace { a16@finger(1) b16 } e4 c2 |", "GRFD");
     private static readonly string GRFE = GraceTieBook("c4 <d@finger(1) f@finger(3)>16 e8. c2 |", "GRFE");
+    // A hairpin opening ON a grace note (audit/lp-geometry/probes/grace-hairpin-start.ly).
+    private static readonly string GRPA = GraceTieBook("c4 grace { d16@cresc } e4 f4 g4@!cresc |", "GRPA");
+    private static readonly string GRPB = GraceTieBook("c4 grace { d16@p@cresc } e4 f4 g4@!cresc |", "GRPB");
+    private static readonly string GRPC = GraceTieBook("c4 grace { d16@decresc } e4 f4 g4@!cresc |", "GRPC");
+    private static readonly string GRPD = GraceTieBook("c4 d16@cresc e8. f4 g4@!cresc |", "GRPD");
+    private static readonly string GRPE = GraceTieBook("c4 grace { a16@cresc b16 } e4 f4 g4@!cresc |", "GRPE");
+    // A hairpin's own outline against a head (audit/lp-geometry/probes/hairpin-arm-outline.ly).
+    private static readonly string HPOA = GraceTieBook("c4 d4@cresc e4 f4@!cresc |", "HPOA");
+    private static readonly string HPOB = GraceTieBook("c4 d4@decresc e4 f4@!cresc |", "HPOB");
+    private static readonly string HPOC = GraceTieBook("g4 a4@cresc b4 c'4@!cresc |", "HPOC");
     // A hairpin over a grace note (audit/lp-geometry/probes/grace-hairpin.ly; samples/nocturne bar 5).
     private static readonly string GRHA = """
         part rh { clef treble }
@@ -17300,6 +17310,18 @@ internal static class LpGeometryProbes
         new("dynamic.grace.below", GRDA, g => g.DynamicBaselineAboveStaffLine(0, 2)),
         new("dynamic.grace.control", GRDB, g => g.DynamicBaselineAboveStaffLine(0, 2)),
         new("hairpin.over-grace.staff-to-wedge", GRHA, g => g.HairpinWedgeCentreBelowStaff()),
+        new("hairpin.grace.start.head-to-wedge-left", GRPA, g => g.HairpinWedgeLeftToNoteheadAnchor(headIndex: 1)),
+        new("hairpin.grace.start.staff-to-wedge", GRPA, g => g.HairpinWedgeCentreBelowStaff()),
+        new("hairpin.grace.start-at-text.head-to-wedge-left", GRPB, g => g.HairpinWedgeLeftToNoteheadAnchor(headIndex: 1)),
+        new("hairpin.grace.start-at-text.staff-to-wedge", GRPB, g => g.HairpinWedgeCentreBelowStaff()),
+        new("hairpin.grace.decresc.staff-to-wedge", GRPC, g => g.HairpinWedgeCentreBelowStaff()),
+        new("hairpin.grace.control.head-to-wedge-left", GRPD, g => g.HairpinWedgeLeftToNoteheadAnchor(headIndex: 1)),
+        new("hairpin.grace.control.staff-to-wedge", GRPD, g => g.HairpinWedgeCentreBelowStaff()),
+        new("hairpin.grace.beamed.head-to-wedge-left", GRPE, g => g.HairpinWedgeLeftToNoteheadAnchor(headIndex: 1)),
+        new("hairpin.grace.beamed.staff-to-wedge", GRPE, g => g.HairpinWedgeCentreBelowStaff()),
+        new("hairpin.outline.cresc.staff-to-wedge", HPOA, g => g.HairpinWedgeCentreBelowStaff()),
+        new("hairpin.outline.decresc.staff-to-wedge", HPOB, g => g.HairpinWedgeCentreBelowStaff()),
+        new("hairpin.outline.stems.staff-to-wedge", HPOC, g => g.HairpinWedgeCentreBelowStaff()),
         new("text.grace.below", GRXA, g => g.TextBaselineAboveStaffLine(LilySharp.Core.Rendering.TextRole.Text, 0, 2)),
         new("text.grace.above", GRXB, g => g.TextBaselineAboveStaffLine(LilySharp.Core.Rendering.TextRole.Text, 0, 2)),
         new("text.grace.control", GRXC, g => g.TextBaselineAboveStaffLine(LilySharp.Core.Rendering.TextRole.Text, 0, 2)),

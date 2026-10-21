@@ -104,7 +104,8 @@ internal static class DynamicAlignEngraver
             Dictionary<int, ImmutableArray<Voice>>? voicesByStaff,
             Dictionary<int, ImmutableArray<Measure>>? measuresByStaff,
             ImmutableArray<BeamLayout> beamLayouts,
-            Func<int, int>? staffLinesOf = null)
+            Func<int, int>? staffLinesOf = null,
+            ImmutableArray<GraceNoteItem> graceNotes = default)
     {
         if (hairpinItems.IsDefaultOrEmpty || hairpinLayouts.IsDefaultOrEmpty)
             return (dynamicLayouts, hairpinLayouts, ImmutableArray<AlignedLineGroup>.Empty);
@@ -222,7 +223,8 @@ internal static class DynamicAlignEngraver
                     ?? EngravingDefaults.DefaultStaffLines;
                 var support = DynamicEngraver.SpanSupportSkylines(
                     lineVoices, voiceIndex,
-                    SpanColumns(line, sysIdx, lineMeasures, measureLayouts, measureToSystem),
+                    SpanColumns(line, sysIdx, lineMeasures, measureLayouts, measureToSystem,
+                        graceNotes, lineVoices, voiceIndex),
                     (vi, mi, ii) => beamMembers.TryGetValue((line.StaffIndex, vi, mi, ii), out var b)
                         ? b : null,
                     staffLines);
@@ -340,11 +342,16 @@ internal static class DynamicAlignEngraver
     /// system — the heads and stems LilyPond's engraver adds as support at each
     /// stop_translation_timestep while the line is alive.
     /// </summary>
-    /// <remarks>LILYPOND-REF: lily/dynamic-align-engraver.cc:222-223 add_support.</remarks>
+    /// <remarks>LILYPOND-REF: lily/dynamic-align-engraver.cc:222-223 add_support. A GRACE
+    /// column stands at its own X (<see cref="HairpinEngraver.GraceColumnX"/>), not its main
+    /// note's: until session 918 a line opening at a dynamic on a grace note took the grace
+    /// head's support at the next main column, and sat 0.14 too high (ledger
+    /// hairpin.grace.start-at-text.*).</remarks>
     private static IEnumerable<(int Measure, int Item, double X)> SpanColumns(
         DynamicLine line, int sysIdx,
         ImmutableArray<Measure> staffMeasures, ImmutableArray<MeasureLayout> measureLayouts,
-        IReadOnlyDictionary<int, int> measureToSystem)
+        IReadOnlyDictionary<int, int> measureToSystem,
+        ImmutableArray<GraceNoteItem> graceNotes, ImmutableArray<Voice> voices, int voiceIndex)
     {
         if (staffMeasures.IsDefaultOrEmpty)
             yield break;
@@ -360,7 +367,9 @@ internal static class DynamicAlignEngraver
             int to = m == line.EndMeasureIndex ? line.EndItemIndex : itemCount - 1;
             for (int i = Math.Max(0, from); i <= to && i < itemCount; i++)
                 yield return (m, i,
-                    layout.X + LayoutUtilities.GetItemXOffset(staffMeasures, m, i, layout));
+                    HairpinEngraver.GraceColumnX(graceNotes, voices, line.StaffIndex, m, i,
+                        measureLayouts, voiceIndex)
+                    ?? layout.X + LayoutUtilities.GetItemXOffset(staffMeasures, m, i, layout));
         }
     }
 }
