@@ -617,9 +617,9 @@ internal static class GraceBodySupport
     /// (<c>SpacingRules.MidMeasureChangeAfterGraceSeries</c>) places it.
     /// <para>
     /// ⚠️ ONLY AT THE END, and not on an afterGrace. A sign written on an INNER grace stands
-    /// between two grace columns (BRD: the next grace 0.699 right of it), which the grace run
-    /// holds no column for yet; an afterGrace's run hangs off the spacer that ends its main
-    /// note, with no change column after it. Both stay reported (LYS4020).
+    /// between two grace columns, inside the run (<see cref="InnerBreaths"/>, session 936); an
+    /// afterGrace's run hangs off the spacer that ends its main note, with no change column
+    /// after it, and stays reported (LYS4020).
     /// </para>
     /// LILYPOND-REF: scm/scheme-engravers.scm:43 Breathing_sign_engraver process-music — a Voice engraver, deaf to grace time.
     /// LILYPOND-REF: lily/caesura-engraver.cc:237 Caesura_engraver::make_or_remake_grobs — the caesura's, the same.
@@ -645,6 +645,59 @@ internal static class GraceBodySupport
             return null;
         }
         return null;
+    }
+
+    /// <summary>
+    /// The breathing signs and caesuras written on an INNER column of a grace body — a note or
+    /// a chord (its own annotation, not a member's) that another note or chord follows — one
+    /// per column, in source order (session 936). THE question the collector
+    /// (<c>MeasureCollector.ProcessGraceRegion</c>) and the drop list both ask; the sign on the
+    /// LAST column is <see cref="CarriedBreath"/>'s.
+    /// </summary>
+    /// <remarks>
+    /// LilyPond stands the sign in a column of its own at the next grace's moment, between the
+    /// two grace columns: the next grace stands the sign's Staff_spacing × 0.8 right of the
+    /// sign's ink left — (0.5066 + 1.0) × 0.8 for the comma, (2.0 + 1.0) × 0.8 for the caesura
+    /// (measured, 2.26.0, audit/lp-geometry/probes/grace-breath.ly GBF-GBI) — the order a change
+    /// written BEFORE a grace has toward that grace (ledger midmeasure.clef.clef-to-grace). The
+    /// collector stamps it on the column (<c>GraceColumnInfo.BreathAfter</c>) and the run's
+    /// spacing splits the gap (<c>SpacingRules.InnerBreathSprings</c>).
+    /// <para>
+    /// ⚠️ Not before a rest or a spacer (a gap the run prices by flat reaches, with no
+    /// Note_spacing wish to split), and not on an afterGrace: both stay reported (LYS4020).
+    /// </para>
+    /// LILYPOND-REF: lily/auto-beam-engraver.cc:319-322 Auto_beam_engraver::acknowledge_breathing_sign — force_end_: the sign ends the automatic beam.
+    /// </remarks>
+    internal static IReadOnlyList<ArticulationSyntax> InnerBreaths(IReadOnlyList<GraceBodyElement> elements, bool afterGrace)
+    {
+        if (afterGrace)
+            return [];
+        List<ArticulationSyntax>? signs = null;
+        SyntaxNode? previous = null;
+        foreach (var element in elements)
+        {
+            var item = element.Node;
+            if (!IsCarried(item))
+                continue;
+            if (previous != null && (CarriedNote(item) != null || CarriedChord(item) != null)
+                && OwnBreath(previous) is { } sign)
+                (signs ??= []).Add(sign);
+            previous = item;
+        }
+        return signs ?? (IReadOnlyList<ArticulationSyntax>)[];
+
+        static ArticulationSyntax? OwnBreath(SyntaxNode column)
+        {
+            IEnumerable<SyntaxNode>? own = CarriedNote(column) is { } note ? note.Articulations
+                : CarriedChord(column) is { } chord ? chord.Articulations
+                : null;
+            if (own is null)
+                return null;
+            foreach (var a in own)
+                if (a is ArticulationSyntax { Type: ArticulationType.Breath or ArticulationType.Caesura } sign)
+                    return sign;
+            return null;
+        }
     }
 
     private static bool IsOttavaType(Svg.Model.MusicMarkType? type)
@@ -852,8 +905,10 @@ internal static class GraceBodySupport
     /// </summary>
     internal static IEnumerable<GraceDrop> Drops(IReadOnlyList<GraceBodyElement> elements, bool afterGrace = false)
     {
-        // A body-level answer (session 934), asked once: only the breathing sign the body ends on.
+        // Body-level answers, asked once: the breathing sign the body ends on (session 934) and
+        // the ones on its inner columns (session 936).
         var carriedBreath = CarriedBreath(elements, afterGrace);
+        var innerBreaths = InnerBreaths(elements, afterGrace);
         for (int index = 0; index < elements.Count; index++)
         {
             var (item, via) = elements[index];
@@ -911,7 +966,8 @@ internal static class GraceBodySupport
                     || IsCarriedCourtesy(annotation) || IsCarriedEditorial(annotation)
                     || IsCarriedSemiTie(annotation) || IsCarriedHeadMark(annotation)
                     || IsCarriedStemDirection(item, annotation)
-                    || ReferenceEquals(annotation, carriedBreath))
+                    || ReferenceEquals(annotation, carriedBreath)
+                    || (annotation is ArticulationSyntax inner && innerBreaths.Contains(inner)))
                     continue;
                 yield return new GraceDrop(
                     GraceDropKind.Annotation, annotation.Span, Describe(annotation), via);

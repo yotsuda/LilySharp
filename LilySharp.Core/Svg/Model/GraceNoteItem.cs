@@ -150,7 +150,14 @@ public readonly record struct GraceColumnInfo(
     // reader of the column's head box and stem attachment asks it (HeadBox), because LilyPond
     // spaces a grace by its head's own extent — a diamond grace stands its main note 0.138821
     // further off than a black one (ledger headstyle.grace.shape.*).
-    Svg.Model.NoteheadStyle HeadStyle = Svg.Model.NoteheadStyle.Default
+    Svg.Model.NoteheadStyle HeadStyle = Svg.Model.NoteheadStyle.Default,
+    // The breathing sign or caesura written on this column when another column of the run
+    // follows it (session 936; GraceBodySupport.InnerBreaths) — null otherwise. LilyPond stands
+    // the sign in a column of its own between this column and the next, so the run's gap here
+    // is two springs (SpacingRules.InnerBreathSprings), and the sign ends the run's beam
+    // (GraceNoteEngraver.BeamedPrefix). The sign on the LAST column is not here: it is the
+    // ordinary BreathingSignItem after the run (GraceBodySupport.CarriedBreath).
+    LilySharp.Core.Syntax.ArticulationType? BreathAfter = null
 )
 {
     /// <summary>Whether this column's stem points up — <c>!</c><see cref="StemDown"/>.</summary>

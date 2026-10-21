@@ -8029,6 +8029,125 @@
       "residual": 0.0,
       "why": "EXACT. On a grace chord: the chord's own @breath, the same column."
     },
+    "breath.grace.inner.prev-to-grace": {
+      "probe": "grace-breath.ly",
+      "score": "GBF",
+      "lilypond": 2.40179599930769,
+      "residual": 0.0,
+      "why": "EXACT. The CONTROL: the previous note -> the first grace, untouched by the sign written after that grace (the run hangs off its main note; the sign widens the run, not the approach)."
+    },
+    "breath.grace.inner.grace-to-sign": {
+      "probe": "grace-breath.ly",
+      "score": "GBF",
+      "lilypond": 0.89133861919804,
+      "residual": 0.0,
+      "why": "EXACT from its first reading (session 936). A breathing sign on an INNER grace stands in a column of its own at the next grace's moment, between the two grace columns (GraceBodySupport.InnerBreaths; GraceColumnInfo.BreathAfter; SpacingRules.InnerBreathSprings splits the run's gap). Grace -> sign is the Note_spacing wish GraceIntoChangeColumn prices for a sign on the LAST grace, the same 0.891339 (breath.grace.grace-to-sign): the 0.8 is not taken, its left column has a grace part too (lily/spacing-spanner.cc:396-403)."
+    },
+    "breath.grace.inner.sign-to-grace": {
+      "probe": "grace-breath.ly",
+      "score": "GBF",
+      "lilypond": 1.20528,
+      "residual": 0.0,
+      "why": "EXACT from its first reading (session 936). Sign -> next grace is the sign's Staff_spacing, first-note fixed-space 1.0 past its ink (0.5066 + 1.0), scaled by 0.8 because the grace column has a grace part (lily/spacing-spanner.cc:519-527) = 1.205280, the shape of a change written before a grace (midmeasure.clef.clef-to-grace). The renderer stands the sign that far back from the next column (ElementCoordinator.GraceInnerBreathX)."
+    },
+    "breath.grace.inner.grace-to-main": {
+      "probe": "grace-breath.ly",
+      "score": "GBF",
+      "lilypond": 1.938627064831479,
+      "residual": 0.0,
+      "why": "EXACT from its first reading (session 936). The grace after the sign is FLAGGED: the sign ends the automatic beam (lily/auto-beam-engraver.cc:319-322) and LilyPond beams no grace after it (GraceNoteEngraver.BeamedPrefix), so a lone flagged grace -> main note, 1.938627, as with no sign."
+    },
+    "caesura.grace.inner.grace-to-sign": {
+      "probe": "grace-breath.ly",
+      "score": "GBG",
+      "lilypond": 0.69896930959902,
+      "residual": 0.0,
+      "why": "EXACT from its first reading (session 936). The caesura's 2.0-wide column: the Note_spacing wish floors at (ideal + min) / 2 (lily/note-spacing.cc:103-108), 0.698969, as on the last grace."
+    },
+    "caesura.grace.inner.sign-to-grace": {
+      "probe": "grace-breath.ly",
+      "score": "GBG",
+      "lilypond": 2.4,
+      "residual": 0.0,
+      "why": "EXACT from its first reading (session 936): (2.0 + 1.0) x 0.8 = 2.4."
+    },
+    "caesura.grace.inner.grace-to-main": {
+      "probe": "grace-breath.ly",
+      "score": "GBG",
+      "lilypond": 1.41793861919804,
+      "residual": 0.0,
+      "why": "EXACT from its first reading (session 936). A CAESURA does not end the beam (probe GBG: one Beam over d and e), so the second grace is beamed and stands the beamed floor 1.417939 off the main note; GraceNoteEngraver.BeamedPrefix ends the prefix for a breath only. What turns this red: ending it for either sign."
+    },
+    "breath.grace.inner.three.sign-to-grace": {
+      "probe": "grace-breath.ly",
+      "score": "GBH",
+      "lilypond": 1.20528,
+      "residual": 0.0,
+      "why": "EXACT from its first reading (session 936): the sign before a run of two, 1.205280."
+    },
+    "breath.grace.inner.three.flagged-gap": {
+      "probe": "grace-breath.ly",
+      "score": "GBH",
+      "lilypond": 1.938627064831479,
+      "residual": 0.0,
+      "why": "EXACT from its first reading (session 936). After the sign NEITHER grace is beamed again (probe GBH: two Flags, no Beam), so grace -> grace is the flagged floor 1.538627 + 0.1 + 0.3 = 1.938627, not the beamed 1.417939. What turns this red: a beam restarted after the sign."
+    },
+    "breath.grace.inner.three.to-main": {
+      "probe": "grace-breath.ly",
+      "score": "GBH",
+      "lilypond": 1.938627064831477,
+      "residual": 0.0,
+      "why": "EXACT from its first reading (session 936): the last, flagged, grace -> main note."
+    },
+    "breath.grace.inner-and-last.gap": {
+      "probe": "grace-breath.ly",
+      "score": "GBI",
+      "lilypond": 2.09661861919804,
+      "residual": 0.0,
+      "why": "EXACT from its first reading (session 936). A sign on both graces: the inner one splits the run's gap, 0.891339 + 1.205280 = 2.096619."
+    },
+    "breath.grace.inner-and-last.to-main": {
+      "probe": "grace-breath.ly",
+      "score": "GBI",
+      "lilypond": 2.39793861919804,
+      "residual": 0.0,
+      "why": "EXACT from its first reading (session 936). The last one is the ordinary column after the run (GraceBodySupport.CarriedBreath): 0.891339 + 1.5066 = 2.397939; the two rules compose."
+    },
+    "breath.grace.inner.beamed.gap": {
+      "probe": "grace-breath.ly",
+      "score": "GBJ",
+      "lilypond": 1.417938619198038,
+      "residual": 0.0,
+      "why": "EXACT from its first reading (session 936). The sign after the SECOND grace leaves the first two beamed: the beamed floor 1.417939."
+    },
+    "breath.grace.inner.beamed.grace-to-sign": {
+      "probe": "grace-breath.ly",
+      "score": "GBJ",
+      "lilypond": 0.891338619198038,
+      "residual": 0.0,
+      "why": "EXACT from its first reading (session 936). From the beam's last column (no flag) into the sign: 0.891339, the flagged one's number too (the comma stands above both)."
+    },
+    "breath.grace.inner.beamed.sign-to-grace": {
+      "probe": "grace-breath.ly",
+      "score": "GBJ",
+      "lilypond": 1.20528,
+      "residual": 0.0,
+      "why": "EXACT from its first reading (session 936): 1.205280."
+    },
+    "breath.grace.inner.beamed.flagged-gap": {
+      "probe": "grace-breath.ly",
+      "score": "GBJ",
+      "lilypond": 1.938627064831477,
+      "residual": 0.0,
+      "why": "EXACT from its first reading (session 936). The two graces after the sign are flagged (probe GBJ: the Beam ends at the second grace): 1.938627."
+    },
+    "breath.grace.inner.beamed.to-main": {
+      "probe": "grace-breath.ly",
+      "score": "GBJ",
+      "lilypond": 1.93862706483148,
+      "residual": 0.0,
+      "why": "EXACT from its first reading (session 936): the last flagged grace -> main note."
+    },
     "semitie.grace.lv.start-to-notehead": {
       "probe": "grace-semitie.ly",
       "score": "LVA",

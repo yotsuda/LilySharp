@@ -83,9 +83,9 @@ public class GraceBodyValidatorTests
     // see AGlissandoFromAGrace_IsDrawn_AndNotReported). The text spanners followed (session 921;
     // see ATextSpannerOnAGrace_IsDrawn_AndNotReported). `grace { d'8@sustain }` LEFT with the
     // pedals (session 922, ledger pedal.grace.*; see APedalOnAGrace_IsDrawn_AndNotReported).
-    // A breathing sign on an INNER grace (one on the last is drawn since session 934, see
-    // ABreathOnTheLastGrace_IsDrawn_AndNotReported).
-    [InlineData("grace { d'16@breath e'16 } c'1 | e'1 |", "grace { d'16 e'16 } c'1 | e'1 |")]
+    // A breathing sign before a grace REST (one on the last grace is drawn since session 934, one
+    // on an inner grace before a note since session 936: see ABreathOnAnInnerGrace_IsDrawn_AndNotReported).
+    [InlineData("grace { d'16@breath r16 e'16 } c'1 | e'1 |", "grace { d'16 r16 e'16 } c'1 | e'1 |")]
     [InlineData("c'1 afterGrace { d'16@breath } | e'1 |", "c'1 afterGrace { d'16 } | e'1 |")]
     // ⚠️ `grace { d'8. }` LEFT THIS THEORY ON 2026-08-30 (session 299), which is the way a
     // row is meant to leave it: the dot is drawn now, so the line asserting it is missing
@@ -419,6 +419,42 @@ public class GraceBodyValidatorTests
     }
 
     /// <summary>
+    /// A BREATHING SIGN or caesura on an INNER grace note stands in a column of its own between
+    /// that grace and the next (session 936, ledger breath.grace.inner.* / caesura.grace.inner.*).
+    /// Nothing is reported.
+    /// </summary>
+    [Theory]
+    [InlineData("grace { d'16@breath e'16 } c'1 | e'1 |", "grace { d'16 e'16 } c'1 | e'1 |")]
+    [InlineData("grace { d'16@caesura e'16 } c'1 | e'1 |", "grace { d'16 e'16 } c'1 | e'1 |")]
+    [InlineData("grace { <d' f'>16@breath e'16 } c'1 | e'1 |", "grace { <d' f'>16 e'16 } c'1 | e'1 |")]
+    [InlineData("grace { d'16 e'16@breath f'16 } c'1 | e'1 |", "grace { d'16 e'16 f'16 } c'1 | e'1 |")]
+    public void ABreathOnAnInnerGrace_IsDrawn_AndNotReported(string written, string control)
+    {
+        Assert.Empty(Warnings(Book(written)));
+        Assert.NotEqual(Page(control), Page(written));
+    }
+
+    /// <summary>
+    /// The inner sign is no item of its own — it rides the column it was written on
+    /// (GraceColumnInfo.BreathAfter), the run's gap after that column is the two springs — and a
+    /// BREATH ends the run's beam there while a caesura does not (LilyPond's auto-beam,
+    /// probes/grace-breath.ly GBJ / GBG).
+    /// </summary>
+    [Theory]
+    [InlineData("grace { d'16 e'16@breath f'16 g'16 } c'1 | e'1 |", 1, 2)]
+    [InlineData("grace { d'16@breath e'16 f'16 } c'1 | e'1 |", 0, 0)]
+    [InlineData("grace { d'16@caesura e'16 } c'1 | e'1 |", 0, 2)]
+    public void ABreathOnAnInnerGrace_RidesItsColumn_AndABreathEndsTheBeam(string music, int column, int beamed)
+    {
+        var collected = new LilySharp.Core.Svg.Collector.MeasureCollector().Collect(SyntaxTree.Parse(Book(music)));
+        Assert.DoesNotContain(collected.Voice.Measures[0].Items, i => i is LilySharp.Core.Svg.Model.BreathingSignItem);
+        var grace = Assert.Single(collected.GraceNotes);
+        Assert.Equal(Enumerable.Range(0, grace.Columns.Length).Select(k => k == column),
+            grace.Columns.Select(c => c.BreathAfter != null));
+        Assert.Equal(beamed, LilySharp.Core.Svg.Layout.GraceNoteEngraver.BeamedPrefix(grace.Columns));
+    }
+
+    /// <summary>
     /// A STEM DIRECTION on a grace note or chord turns that stem (sessions 933, 935; ledger
     /// stemdir.grace.*, knee.grace.*) — on every stem it turns the run, on some of them it makes
     /// the beam a knee, as in LilyPond. Nothing is reported.
@@ -531,8 +567,9 @@ public class GraceBodyValidatorTests
     {
         // A breathing sign: since sessions 916-922 the scripts, the dynamics, the texts, the
         // fingerings, the hairpin starts, the arpeggios, the glissandos, the text spanners and
-        // the pedals on a grace are drawn.
-        string source = Book("grace { d'8@breath e'8 } c'1 | e'1 |");
+        // the pedals on a grace are drawn; a sign on the last grace since 934, on an inner one
+        // before a note since 936 — one before a grace REST is still reported.
+        string source = Book("grace { d'8@breath r8 e'8 } c'1 | e'1 |");
         var warning = Assert.Single(Warnings(source));
         Assert.Equal(source.IndexOf("@breath", System.StringComparison.Ordinal),
             warning.Span.Start);

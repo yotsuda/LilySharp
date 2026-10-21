@@ -8988,6 +8988,12 @@ internal static class LpGeometryProbes
     private static readonly string GBRC = GraceTieBook("c4 grace { d16@caesura } e4 c2 |", "GBRC");
     private static readonly string GBRD = GraceTieBook("c4 grace { d16 e16@breath } f4 c2 |", "GBRD");
     private static readonly string GBRE = GraceTieBook("c4 grace { <d f>16@breath } e4 c2 |", "GBRE");
+    // …and on an INNER grace note (session 936; the same probe, GBF-GBJ).
+    private static readonly string GBRF = GraceTieBook("c4 grace { d16@breath e16 } f4 c2 |", "GBRF");
+    private static readonly string GBRG = GraceTieBook("c4 grace { d16@caesura e16 } f4 c2 |", "GBRG");
+    private static readonly string GBRH = GraceTieBook("c4 grace { d16@breath e16 f16 } g4 c2 |", "GBRH");
+    private static readonly string GBRI = GraceTieBook("c4 grace { d16@breath e16@breath } f4 c2 |", "GBRI");
+    private static readonly string GBRJ = GraceTieBook("c4 grace { d16 e16@breath f16 g16 } a4 c2 |", "GBRJ");
     // A half-tie on a grace note (audit/lp-geometry/probes/grace-semitie.ly).
     private static readonly string GLVA = GraceTieBook("c4 grace { d16@laissezVibrer } e4 f4 g4 |", "GLVA");
     private static readonly string GLVB = GraceTieBook("c4 d16@laissezVibrer e8. f4 g4 |", "GLVB");
@@ -17553,6 +17559,23 @@ internal static class LpGeometryProbes
         new("breath.grace.beamed.grace-to-sign", GBRD, g => g.BreathFromNotehead(2)),
         new("breath.grace.beamed.sign-to-main", GBRD, g => g.NoteheadFromBreath(3)),
         new("breath.grace.chord.grace-to-sign", GBRE, g => g.BreathFromNotehead(1)),
+        new("breath.grace.inner.prev-to-grace", GBRF, g => g.NoteheadToNotehead(0, 1)),
+        new("breath.grace.inner.grace-to-sign", GBRF, g => g.BreathFromNotehead(1)),
+        new("breath.grace.inner.sign-to-grace", GBRF, g => g.NoteheadFromBreath(2)),
+        new("breath.grace.inner.grace-to-main", GBRF, g => g.NoteheadToNotehead(2, 3)),
+        new("caesura.grace.inner.grace-to-sign", GBRG, g => g.BreathFromNotehead(1)),
+        new("caesura.grace.inner.sign-to-grace", GBRG, g => g.NoteheadFromBreath(2)),
+        new("caesura.grace.inner.grace-to-main", GBRG, g => g.NoteheadToNotehead(2, 3)),
+        new("breath.grace.inner.three.sign-to-grace", GBRH, g => g.NoteheadFromBreath(2)),
+        new("breath.grace.inner.three.flagged-gap", GBRH, g => g.NoteheadToNotehead(2, 3)),
+        new("breath.grace.inner.three.to-main", GBRH, g => g.NoteheadToNotehead(3, 4)),
+        new("breath.grace.inner-and-last.gap", GBRI, g => g.NoteheadToNotehead(1, 2)),
+        new("breath.grace.inner-and-last.to-main", GBRI, g => g.NoteheadToNotehead(2, 3)),
+        new("breath.grace.inner.beamed.gap", GBRJ, g => g.NoteheadToNotehead(1, 2)),
+        new("breath.grace.inner.beamed.grace-to-sign", GBRJ, g => g.BreathFromNotehead(2)),
+        new("breath.grace.inner.beamed.sign-to-grace", GBRJ, g => g.NoteheadFromBreath(3)),
+        new("breath.grace.inner.beamed.flagged-gap", GBRJ, g => g.NoteheadToNotehead(3, 4)),
+        new("breath.grace.inner.beamed.to-main", GBRJ, g => g.NoteheadToNotehead(4, 5)),
         new("semitie.grace.lv.start-to-notehead", GLVA, g => g.BowStartToNotehead(0, 1)),
         new("semitie.grace.lv.span", GLVA, g => g.BowSpan(0)),
         new("semitie.grace.lv.end-to-next", GLVA, g => g.BowEndToNotehead(0, 2)),

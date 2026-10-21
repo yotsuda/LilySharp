@@ -1009,7 +1009,15 @@ internal static class ArticulationEngraver
                 // A sign on the bar's LAST note keeps the old offset below (no column here).
                 double bx;
                 int signIndex = articulation.ItemIndex + 1;
-                if (signIndex < measure.Items.Length && measure.Items[signIndex] is BreathingSignItem sign)
+                // A sign on an INNER grace column (session 936) stands in the run, between that
+                // column and the next (SpacingRules.InnerBreathSprings).
+                if (graceHeadLeft != null
+                    && ElementCoordinator.GraceInnerBreathX(
+                        artVoices[articulation.VoiceIndex], graceNotes, articulation.StaffIndex,
+                        articulation.VoiceIndex, articulation.MeasureIndex, articulation.ItemIndex,
+                        measureLayout, SpacingRules.VoiceCollisionShiftsOf(artVoices)) is { } innerX)
+                    bx = innerX;
+                else if (signIndex < measure.Items.Length && measure.Items[signIndex] is BreathingSignItem sign)
                 {
                     double columnX = LayoutUtilities.GetItemXOffset(
                         artMeasures, articulation.MeasureIndex, signIndex, measureLayout);

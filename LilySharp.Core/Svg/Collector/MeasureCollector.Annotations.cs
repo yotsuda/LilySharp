@@ -738,7 +738,9 @@ public sealed partial class MeasureCollector
                 // The breathing sign the body ends on (session 934) — a body-level answer, so it
                 // is matched by where it was written (_carriedGraceBreathStart).
                 && !(articulation is ArticulationSyntax { Type: ArticulationType.Breath or ArticulationType.Caesura } breathSign
-                     && breathSign.SourceStart == _carriedGraceBreathStart))
+                     && (breathSign.SourceStart == _carriedGraceBreathStart
+                         // …and the ones on its inner columns (session 936; _innerGraceBreathStarts).
+                         || _innerGraceBreathStarts?.Contains(breathSign.SourceStart) == true)))
                 return;
             if (articulation is ArticulationSyntax articulationSyntax)
             {

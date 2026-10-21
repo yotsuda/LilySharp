@@ -1886,8 +1886,23 @@ public sealed partial class MeasureCollector
         // In grace time the sign is the grace region's to place (GraceBodySupport.CarriedBreath,
         // MeasureCollector.ProcessGraceRegion): it stands after the whole run, not after its note.
         if (builder.CurrentMeasureIndex + _cursor.MetadataMeasureOffset != measureIndex
-            || builder.CurrentItemCount == 0 || _graceDepth > 0)
+            || builder.CurrentItemCount == 0)
             return;
+        if (_graceDepth > 0)
+        {
+            // …except that a sign on an INNER grace stands between this column and the next,
+            // inside the run (GraceBodySupport.InnerBreaths, session 936): its column is the
+            // run's to price, so only the item it follows is recorded (DeriveGraceColumns).
+            if (_innerGraceBreathStarts != null)
+                foreach (var a in articulations)
+                    if (a is ArticulationSyntax { Type: ArticulationType.Breath or ArticulationType.Caesura } inner
+                        && _innerGraceBreathStarts.Contains(inner.SourceStart))
+                    {
+                        (_innerGraceBreathItems ??= [])[builder.CurrentItemCount - 1] = inner.Type;
+                        break;
+                    }
+            return;
+        }
         foreach (var a in articulations)
         {
             if (a is ArticulationSyntax { Type: ArticulationType.Breath or ArticulationType.Caesura } sign)

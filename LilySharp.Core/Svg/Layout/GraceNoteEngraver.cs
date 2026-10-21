@@ -534,6 +534,15 @@ internal static class GraceNoteEngraver
             if (note.IsRest || BeamCountForDuration(note.BaseDuration.Denominator) < 1)
                 break;
             n++;
+            // A breathing sign on the column ends the beam after it (session 936): the columns
+            // after the sign take flags. MEASURED (2.26.0, audit/lp-geometry/probes/grace-breath.ly
+            // GBH, GBJ): `\grace { d16 e16 \breathe f16 g16 }` beams d e and flags f and g; with
+            // the sign after d no column is beamed. A CAESURA does not end it (GBG: one beam
+            // across `d16 \caesura e16`). ⒝ A manual `[ ]` runs across the sign (Lab
+            // sessions/p936/lp/fl.ly FK, one beam d..f) — this reads every grace beam as automatic.
+            // LILYPOND-REF: lily/auto-beam-engraver.cc:319-322 Auto_beam_engraver::acknowledge_breathing_sign — force_end_.
+            if (note.BreathAfter == LilySharp.Core.Syntax.ArticulationType.Breath)
+                break;
         }
         return n >= 2 ? n : 0;
     }

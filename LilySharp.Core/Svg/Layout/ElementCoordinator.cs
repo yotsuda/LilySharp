@@ -4003,6 +4003,41 @@ internal sealed class ElementCoordinator
         => new GraceBounds(graceNotes, staffIndex).ColumnX(voice, voiceIndex, measureIndex, itemIndex, ml, voiceShifts);
 
     /// <summary>
+    /// Where a breathing sign written on INNER grace column item <paramref name="itemIndex"/>
+    /// stands — its ink left, the sign's own spring (<see cref="SpacingRules.InnerBreathSprings"/>'
+    /// Out) before the NEXT column — or null when the item is no grace column carrying one
+    /// (session 936).
+    /// </summary>
+    /// <remarks>
+    /// Read back from the next column because the sign's spring is fixed-space and does not
+    /// stretch: on a stretched line the grace → sign spring takes the whole growth of the gap
+    /// (<see cref="SpacingRules.StretchGraceColumns"/>).
+    /// </remarks>
+    internal static double? GraceInnerBreathX(Voice voice, ImmutableArray<GraceNoteItem> graceNotes,
+        int staffIndex, int voiceIndex, int measureIndex, int itemIndex, MeasureLayout ml,
+        VoiceCollisionTable voiceShifts)
+    {
+        if (graceNotes.IsDefaultOrEmpty)
+            return null;
+        foreach (var g in graceNotes)
+        {
+            if (g.StaffIndex != staffIndex || g.VoiceIndex != voiceIndex || g.MeasureIndex != measureIndex
+                || g.ColumnItemIndices.IsDefaultOrEmpty || g.ColumnItemIndices.Length != g.Columns.Length)
+                continue;
+            int k = g.ColumnItemIndices.IndexOf(itemIndex);
+            if (k < 0)
+                continue;
+            if (SpacingRules.InnerBreathSprings(g.Columns, k) is not { } breath)
+                return null;
+            return GraceColumnHeadLeftX(voice, graceNotes, staffIndex, voiceIndex, measureIndex,
+                    g.ColumnItemIndices[k + 1], ml, voiceShifts) is { } next
+                ? next - breath.Out.IdealDistance
+                : null;
+        }
+        return null;
+    }
+
+    /// <summary>
     /// The GRACE column item <paramref name="itemIndex"/> of measure <paramref name="measureIndex"/>
     /// in voice <paramref name="voiceIndex"/> stands as — its <see cref="GraceColumnInfo"/> and its
     /// head left X — or null when the item is no grace column a group publishes. For the readers

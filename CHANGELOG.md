@@ -115,7 +115,9 @@ workflow attaches that section to the GitHub Release verbatim.
   sixteenths stood almost a staff space off at one end.
   **A breathing sign or caesura on the last grace note is drawn** (`grace { d16@breath } e4`):
   it stands between the grace notes and the main note, which moves right to make room, as in
-  LilyPond.
+  LilyPond. **On an inner grace note it is drawn too** (`grace { d16@breath e16 } f4`): it stands
+  between the two grace notes, which move apart to make room, and a breathing sign ends the grace
+  beam there, so the grace notes after it take flags — as in LilyPond (a caesura does not).
   A hairpin running over a
   grace note also stands where LilyPond puts it — it read the grace note's stem as a full-size
   down stem and sat a quarter space too low.

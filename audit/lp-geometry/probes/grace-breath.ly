@@ -7,9 +7,11 @@
 %%
 %% LILYPOND-REF: scm/scheme-engravers.scm:43 Breathing_sign_engraver process-music — a Voice engraver, deaf to grace time;
 %%   scm/define-grobs.scm:697-731 BreathingSign (break-aligned, first-note fixed-space 1.0).
-%% GBB is the control without the sign; an INNER grace's sign (Lab sessions/p923/br BRD) is
-%% not ported (Lily# reports it).
-%% Dumped: each NoteHead's and BreathingSign's X extent, against the system.
+%% GBB is the control without the sign. GBF-GBI (session 936) put the sign on an INNER grace:
+%% its column stands between two grace columns, and the next grace is the sign's space x 0.8 on.
+%% A breathing sign ends the automatic beam and the graces after it are not beamed again (GBH,
+%% GBJ: Flags, no Beam after the sign); a caesura does not end it (GBG: one Beam).
+%% Dumped: each NoteHead's, BreathingSign's, Flag's and Beam's X extent, against the system.
 #(define (dump-final tag)
    (lambda (layout pages)
      (for-each (lambda (page) (for-each (lambda (sys)
@@ -18,7 +20,7 @@
            (let* ((all (ly:grob-array->list (ly:grob-object sg 'all-elements))))
              (for-each (lambda (g)
                (let ((nm (assq-ref (ly:grob-property g 'meta) 'name)))
-                 (if (memq nm '(NoteHead BreathingSign))
+                 (if (memq nm '(NoteHead BreathingSign Flag Beam))
                    (format #t "\nPROBE ~a ~a ext=~a\n" tag nm (ly:grob-extent g sg X)))))
                all)))))
        (ly:prob-property page 'lines))) pages)))
@@ -32,3 +34,13 @@
   \score { \new Staff { \time 4/4 \fixed c' { c4 \grace { d16 e16 \breathe } f4 c2 \bar "|." } } } }
 \book { \paper { indent = 0 ragged-right = ##t page-post-process = #(dump-final "GBE") }
   \score { \new Staff { \time 4/4 \fixed c' { c4 \grace { <d f>16 \breathe } e4 c2 \bar "|." } } } }
+\book { \paper { indent = 0 ragged-right = ##t page-post-process = #(dump-final "GBF") }
+  \score { \new Staff { \time 4/4 \fixed c' { c4 \grace { d16 \breathe e16 } f4 c2 \bar "|." } } } }
+\book { \paper { indent = 0 ragged-right = ##t page-post-process = #(dump-final "GBG") }
+  \score { \new Staff { \time 4/4 \fixed c' { c4 \grace { d16 \caesura e16 } f4 c2 \bar "|." } } } }
+\book { \paper { indent = 0 ragged-right = ##t page-post-process = #(dump-final "GBH") }
+  \score { \new Staff { \time 4/4 \fixed c' { c4 \grace { d16 \breathe e16 f16 } g4 c2 \bar "|." } } } }
+\book { \paper { indent = 0 ragged-right = ##t page-post-process = #(dump-final "GBI") }
+  \score { \new Staff { \time 4/4 \fixed c' { c4 \grace { d16 \breathe e16 \breathe } f4 c2 \bar "|." } } } }
+\book { \paper { indent = 0 ragged-right = ##t page-post-process = #(dump-final "GBJ") }
+  \score { \new Staff { \time 4/4 \fixed c' { c4 \grace { d16 e16 \breathe f16 g16 } a4 c2 \bar "|." } } } }

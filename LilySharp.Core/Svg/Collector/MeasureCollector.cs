@@ -6244,6 +6244,16 @@ public sealed partial class MeasureCollector
     /// the column ProcessGraceRegion adds after the run.</summary>
     private int _carriedGraceBreathStart = -1;
 
+    /// <summary>Where the breathing signs on the grace body's INNER columns were written
+    /// (<c>GraceBodySupport.InnerBreaths</c>, session 936), or null — the grace-time annotation
+    /// gate lets them through (CollectArticulations), and AddBreathingSignColumn records each
+    /// one's column in <see cref="_innerGraceBreathItems"/>.</summary>
+    private HashSet<int>? _innerGraceBreathStarts;
+
+    /// <summary>The item index of each grace column an inner breathing sign was written on, and
+    /// the sign — read by DeriveGraceColumns into <c>GraceColumnInfo.BreathAfter</c>.</summary>
+    private Dictionary<int, ArticulationType>? _innerGraceBreathItems;
+
     /// <summary>
     /// Walks a <c>grace { }</c> body with the ORDINARY walker, into the ORDINARY builder, so
     /// its notes become real measure items with real item indices; then derives the grace
@@ -6324,6 +6334,9 @@ public sealed partial class MeasureCollector
             () => bodyBudget-- > 0);
         var carriedBreath = Semantics.GraceBodySupport.CarriedBreath(bodyElements, grace.IsAfterGrace);
         _carriedGraceBreathStart = carriedBreath?.SourceStart ?? -1;
+        var innerBreaths = Semantics.GraceBodySupport.InnerBreaths(bodyElements, grace.IsAfterGrace);
+        _innerGraceBreathStarts = innerBreaths.Count == 0 ? null : innerBreaths.Select(b => b.SourceStart).ToHashSet();
+        _innerGraceBreathItems = null;
         builder.EnterGraceTime(slash, graceStemDown);
         // The body items are reds already (a grace body is always live), exactly as
         // ProcessCueRegion's are.
@@ -6344,13 +6357,16 @@ public sealed partial class MeasureCollector
         // after the grace has (GraceBodySupport.CarriedBreath; the walk adds none in grace time,
         // AddBreathingSignColumn). DeriveGraceColumns passes over it: it is not a column.
         _carriedGraceBreathStart = -1;
+        _innerGraceBreathStarts = null;
+        var innerBreathItems = _innerGraceBreathItems;
+        _innerGraceBreathItems = null;
         if (carriedBreath is { } breath)
             builder.AddItem(new BreathingSignItem(breath.Type, breath.SourceStart));
 
         _defaultDuration = savedDuration;
         _defaultDots = savedDots;
 
-        var (graceColumns, columnItemIndices) = DeriveGraceColumns(builder, firstItemIndex, graceStemDown);
+        var (graceColumns, columnItemIndices) = DeriveGraceColumns(builder, firstItemIndex, graceStemDown, innerBreathItems);
         if (graceColumns.Length == 0)
             return;
 
@@ -6473,7 +6489,8 @@ public sealed partial class MeasureCollector
     /// </para>
     /// </remarks>
     private static (ImmutableArray<GraceColumnInfo> Columns, ImmutableArray<int> ItemIndices)
-        DeriveGraceColumns(MeasureBuilder builder, int firstItemIndex, bool stemDown)
+        DeriveGraceColumns(MeasureBuilder builder, int firstItemIndex, bool stemDown,
+            Dictionary<int, ArticulationType>? innerBreaths = null)
     {
         var items = builder.CurrentItems;
         if (firstItemIndex >= items.Count)
@@ -6558,6 +6575,10 @@ public sealed partial class MeasureCollector
                     {
                         SemiTieBoxes = Svg.Layout.TieVariantEngraver.GraceSemiTieBoxes(items[i]),
                     };
+                // The breathing sign on an inner column (session 936): the run's gap after it
+                // is two springs, and the sign ends the beam (GraceColumnInfo.BreathAfter).
+                if (innerBreaths != null && innerBreaths.TryGetValue(i, out var sign))
+                    columns[^1] = columns[^1] with { BreathAfter = sign };
             }
         }
         return (columns.ToImmutable(), indices.ToImmutable());

@@ -260,6 +260,19 @@ internal static partial class SpacingRules
             // LILYPOND-REF: lily/spacing-spanner.cc:228-297 set_column_rods — the rod, padding + skyline distance.
             double inverseCompress = Math.Max(0.0,
                 CreateGraceSpring(notes[i].Length, gp, dtMin).IdealDistance - gp.SpacingIncrement);
+            // A breathing sign between this column and the next (session 936) stands in a column
+            // of its own there: the gap is the two springs in series, grace → sign and sign →
+            // next grace (InnerBreathSprings), each at its own length.
+            if (InnerBreathSprings(notes, i) is { } breath)
+            {
+                gap = breath.Into.IdealDistance + breath.Out.IdealDistance;
+                // ⒝ UNDER COMPRESSION the pair closes as ONE gap — its rods and compress
+                // strengths summed — where LilyPond closes each part to its own rod; at force
+                // 0 and stretched (the sign's spring is fixed-space: it does not stretch) the
+                // lengths are LilyPond's.
+                rod = breath.IntoRod + Math.Max(breath.OutRod, breath.Out.MinDistance);
+                inverseCompress = breath.Into.InverseCompressStrength + breath.Out.InverseCompressStrength;
+            }
             gaps.Add((Math.Min(rod, gap), inverseCompress));
             if (i + 1 < notes.Length) x += gap; else toMain = gap;
         }
@@ -379,16 +392,21 @@ internal static partial class SpacingRules
     /// for every gap of a run.
     /// </remarks>
     internal static (Spring Spring, double Rod)? GraceIntoChangeColumn(
-        ImmutableArray<GraceColumnInfo> notes, HorizontalSkyline changeLeft, double changeWidth)
+        ImmutableArray<GraceColumnInfo> notes, HorizontalSkyline changeLeft, double changeWidth,
+        int column = -1)
     {
         if (notes.IsDefaultOrEmpty)
             return null;
-        var last = notes[^1];
+        // The run's LAST column by default; an inner breathing sign's column (session 936,
+        // InnerBreathSprings) names its own.
+        if (column < 0)
+            column = notes.Length - 1;
+        var last = notes[column];
         if (last.IsRest || last.TabDigitHalfWidth > 0)
             return null;
         var gp = GraceSpacingParameters.Default;
         double dtMin = CalculateGraceGroupShortestDuration(notes);
-        bool beamed = notes.Length - 1 < GraceNoteEngraver.BeamedPrefix(notes);
+        bool beamed = column < GraceNoteEngraver.BeamedPrefix(notes);
         var baseSpring = CreateGraceSpring(last.Length, gp, dtMin);
 
         double ideal = baseSpring.IdealDistance - gp.SpacingIncrement + GraceHeadEnd(last);
@@ -407,6 +425,49 @@ internal static partial class SpacingRules
         var spring = new Spring(ideal, minDistance, GraceSpringInverseStretch(gp),
             Math.Max(0.0, baseSpring.IdealDistance - gp.SpacingIncrement));
         return (spring, rod);
+    }
+
+    /// <summary>
+    /// The two springs across a breathing sign written on INNER column <paramref name="column"/>
+    /// of a run (<see cref="GraceColumnInfo.BreathAfter"/>, session 936) — the grace column into
+    /// the sign's column, and the sign's column to the next grace — with each pair's column rod.
+    /// Null when the column carries no sign, or when either side is a rest or a tab digit.
+    /// </summary>
+    /// <remarks>
+    /// The sign's column stands at the NEXT grace's moment, so it is the shape of a change
+    /// written before a grace (<see cref="MidMeasureChangeBeforeGraceSeries"/>) with a grace
+    /// column on its left as well: into it the Note_spacing wish <see cref="GraceIntoChangeColumn"/>
+    /// prices — its right column has a grace part, but the 0.8 is not taken there (the left
+    /// column has one too) — and out of it Staff_spacing scaled by 0.8.
+    /// LILYPOND-REF: lily/spacing-spanner.cc:396-403 musical_column_spacing — *= 0.8 only when the right column has a grace part and the left none.
+    /// LILYPOND-REF: lily/spacing-spanner.cc:519-527 breakable_column_spacing — the right spring *= 0.8 (the grace column has a grace part).
+    /// MEASURED (2.26.0, audit/lp-geometry/probes/grace-breath.ly GBF-GBI, ledger
+    /// breath.grace.inner.*): the grace → comma 0.891339 as on the last grace (GBA), the comma's
+    /// ink left → the next grace 1.205280 = (0.5066 + 1.0) × 0.8; the caesura's 2.4 = (2.0 + 1.0) × 0.8.
+    /// </remarks>
+    internal static (Spring Into, double IntoRod, Spring Out, double OutRod)? InnerBreathSprings(
+        ImmutableArray<GraceColumnInfo> notes, int column)
+    {
+        if (notes.IsDefaultOrEmpty || column < 0 || column + 1 >= notes.Length
+            || notes[column].BreathAfter is not { } type)
+            return null;
+        var next = notes[column + 1];
+        if (next.IsRest || next.TabDigitHalfWidth > 0)
+            return null;
+        // The sign's column, read by the change column's own rules (its box at the top line,
+        // its width, its space-alist) — a breathing sign reads no text font.
+        var fonts = Rendering.ScoreTextMetrics.Bundled;
+        var signColumn = new ItemColumn(new BreathingSignItem(type, 0));
+        var (width, _, lastChange) = MeasureChangeColumn(fonts, signColumn);
+        if (lastChange == null
+            || GraceIntoChangeColumn(notes, ChangeColumnLeftSkyline(fonts, signColumn, default), width, column)
+               is not { } into)
+            return null;
+        double rightDistance = ChangeColumnRightSkyline(fonts, signColumn)
+            .Distance(ItemSkylineFactory.CreateGraceLeftSkyline(next));
+        var outOf = ChangeColumnStaffSpacing(width, lastChange, Math.Max(0.0, rightDistance))
+            .Scale(GraceApproachScale);
+        return (into.Spring, into.Rod, outOf, SeparationRodPadding + rightDistance);
     }
 
     /// <summary>One gap of a grace run — the spring, floored by the skyline distance.</summary>
