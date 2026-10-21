@@ -160,6 +160,16 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第936セッションの経緯
+
+### 1.1 第936セッション（2026-10-22・YT-DELL2）
+
+第935 と同じ会話の続き（ユーザー「続けて」）。`-Start p936`（開始 HEAD `b64fc092b`・未 push 52・full **12746 / 0 / 2 / 12748**・第934 を ARCHIVE へ）。作業場所は Lab `sessions/p936/`。
+- **途中の grace の `@breath`/`@caesura` を描く＝`ef7f22351`**: 第923 の BRD の「次の grace は記号の右 0.699（一部説明できない）」は**記号の右端から測っていた**のが原因＝記号の**左端**から測ると (0.5066 + 1.0) × 0.8 = 1.205280 で、「grace の前に書いた変更」（`midmeasure.clef.clef-to-grace`＝Staff_spacing × 0.8）と同じ規則。grace → 記号は最後の grace の記号と同じ 0.891339（左の列にも grace 部分があるので 0.8 は掛からない＝spacing-spanner.cc:396-403）。caesura は (2.0 + 1.0) × 0.8 = 2.4。⚠️ **LP の自動連桁は呼吸記号で終わり、記号より後の grace は二度と連桁にならない（旗付き）**（auto-beam-engraver.cc:319-322 `acknowledge_breathing_sign`・GBH／GBJ）。**caesura は終わらせない**（GBG＝1 本の連桁）。手書きの `[ ]` は記号をまたいで続く（Lab `p936/lp/fl.ly` FK）＝⒝（Lily# は grace の連桁を全部自動として読む）。実装: `GraceBodySupport.InnerBreaths`（音か和音の自分の注記・次の列も音か和音・afterGrace と休符の前は LYS4020 のまま）→ collector が門を通し、grace 時間の `AddBreathingSignColumn` が列を記録して `GraceColumnInfo.BreathAfter` に刻む → `SpacingRules.InnerBreathSprings` がその間隔を 2 本のばねに割る（`GraceIntoChangeColumn` は列を取るようにした）・`BeamedPrefix` は呼吸記号の列で連桁を終える → `ElementCoordinator.GraceInnerBreathX` が次の列から記号のばねの分だけ戻して描く（記号のばねは fixed-space＝伸びた段でも正確）。⒝ 縮んだ段では 2 本を 1 つの間隔として縮める（rod と縮みの強さを足す）。台帳 17 点（`breath.grace.inner.*`・`caesura.grace.inner.*`・probe `grace-breath.ly` GBF〜GBJ）＝**1 回目の読みで全部 1e-6 以内**。毒 10 本は全部赤（分割 4・連桁の終わり 8・caesura も終える 2・0.8 倍 5・記号の X 7・注記の門 7・報告の一覧 4・列の記録 16・列の指定 1・描く分岐 7）。全 svg の掃き 1,242 枚で 0。定数の棚卸しは改行だけ（中身の差 0）。`RehearsalMarkEngravedValidatorTests` と `TheWarningStandsAtWhatWasWritten` の「まだ描かない記号」は休符の前の記号に替えた。SYNTAX_REFERENCE の LYS4020 の例（第934 から古かった `grace { d16@breath }`）は afterGrace に替えた。
+- ⚠️ **普通の大きさの caesura で連桁が LP と違う（新しい欠陥・未着手）**: LP は呼吸記号で自動連桁を終え（Lab `p936/lp/fl2.ly` BN＝`d16 \breathe e16 f8` の d は旗付き・e f は連桁＝Lily# も同じ）、**caesura では終えない**（CN＝d〜f の 1 本の連桁）。Lily# は `c4 d16@caesura e16 f8` でも d を旗付きにして連桁を切る（Lab `p936/look/full.lys` の png）。
+- `-End p936 -DiffBase b64fc092b` ＝full **12770 / 0 / 2 / 12772**（前便末 +24）（Lab `sessions/p936/end.log`）→ この docs commit。未 push 53＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。
+判定（2026-10-22）: grace の呼吸記号は途中も最後も閉じた（休符の前と afterGrace は LYS4020 のまま）。次の候補＝普通の大きさの caesura が連桁を切る欠陥（上の ⚠️・⒜＝LP で測れる）・slur が膝の grace 連桁を避ける形（主線で読む＝⒝）・grace の LYS4020 の残り（`@pluck`・TAB の技法・`@diagram`・`@cross`・`@figuredBass`・`@chord`）。
+
 ## 以下は第935セッションの経緯
 
 ### 1.1 第935セッション（2026-10-22・YT-DELL2）
