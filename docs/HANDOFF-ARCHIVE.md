@@ -160,6 +160,15 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第932セッションの経緯
+
+### 1.1 第932セッション（2026-10-21・YT-DELL2）
+
+第931 と同じ会話の続き（ユーザー「続けて」）。`-Start p932`（開始 HEAD `68d9d6588`・未 push 42・full **12677 / 0 / 2 / 12679**・第930 を ARCHIVE へ）。作業場所は Lab `sessions/p932/`。
+- **grace の `@notehead(diamond|triangle|slash|xcircle)` を描き、頭の幅で間隔を測る＝`bad6258ae`**: LP 2.26（`probes/grace-head-shapes.ly`）の grace の間隔は**頭の幅だけ**で決まる（主音符まで＝幅＋1.020688・次の grace まで＝幅＋0.5・符尾の右端＝頭の右端）。`GraceColumnInfo.HeadStyle`（`DeriveGraceColumns` が grace の項目の `Notehead` から）と `HeadBox`（字形の設計×形の箱）を足し、grace の列の頭の箱と符尾の X を読む所を全部それに替えた（`SpacingRules.GraceHeadEnd`・旗の届き・`ItemSkylineFactory` の grace の 2 つの skyline・`GraceColumnHeads.HeadInkRight`／臨時記号の符尾・`GraceNoteEngraver`・`DotColumn.ReservedForGrace`・`ElementCoordinator` の grace の符尾 X・`GlissandoEngraver`）。`NarrowToGraceTime` は頭の形をそのまま残す（第931 の × だけの `GraceHeadStyle` は消した）・述語 `IsCarriedHeadMark` は 6 形とも通す。⚠️ 和音の秒の押し出し（`ChordHeadPositioning`）と slur の障害物の頭の幅（`ElementCoordinator` の `obstacleX`）は黒い頭のまま。台帳 12 点（`headstyle.grace.shape.*`・4 形 × 符尾／主音符まで／次の grace まで）が 1 回目で 1e-6 以内。計器 `HeadAt` は形のある黒い頭と xcircle も頭と数える。毒＝列の形 8 赤・項目の形 17 赤・skyline の符尾 4 赤・述語 2 赤。全 svg の掃き 1,242 枚で 0（形のある grace の頭はコーパスに無い）。
+- `-End p932 -DiffBase 68d9d6588`＝full **12691 / 0 / 2 / 12693**（前便末 +14）（Lab `sessions/p932/end.log`）→ この docs commit。未 push 43＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。
+判定（2026-10-21）: grace の頭の形は閉じた。grace の LYS4020 の残り＝`@breath`・`@caesura`（列組み・未特定 2 つ）・`@pluck`・`@diagram`・`@cross`（譜表をまたぐ）・`@stemUp`/`@stemDown`・`@figuredBass`・`@chord`・TAB の技法。
+
 ## 以下は第931セッションの経緯
 
 ### 1.1 第931セッション（2026-10-21・YT-DELL2）

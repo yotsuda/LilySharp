@@ -124,21 +124,22 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第934セッション（2026-10-22・YT-DELL2）
+
+第933 と同じ会話の続き（ユーザー「続けて」）。`-Start p934`（開始 HEAD `7f0df8fa7`・未 push 46・full **12710 / 0 / 2 / 12712**・第932 を ARCHIVE へ）。作業場所は Lab `sessions/p934/`。
+- **grace の最後の音の `@breath`/`@caesura` を描く＝`66bd26f5d`**: LP 2.26（`probes/grace-breath.ly`）は記号に**自分の列**を grace の時刻に立てる＝最後の grace と主音符の間・主音符は記号＋first-note fixed-space 1.0 だけ右へ。これは「grace の後ろに書いた変更」（`grace { d16 } clef bass e4`・台帳 `midmeasure.clef.grace-then-clef.*`）と同じ並び ⇒ `GraceBodySupport.CarriedBreath`（本体の**最後の**列＝音か和音の自分の注記・afterGrace は除く）を collector（`ProcessGraceRegion`＝grace の歩きの後に普通の `BreathingSignItem` を足す・`AddBreathingSignColumn` は grace 時間では何もしない）と drop list が読み、grace 時間の注記の門はその 1 つだけを書いた位置（`_carriedGraceBreathStart`）で通す＝`ArticulationEngraver` が列の位置に描く。既存の `MidMeasureChangeAfterGraceSeries` がそのまま値を出した＝台帳 8 点（`breath.grace.*`・`caesura.grace.*`）が 1 回目で 1e-6 以内。計器 `BreathFromNotehead`・`NoteheadFromBreath`。⚠️ 途中の grace の記号（grace の列と列の間に列が要る・Lab `p923/br` BRD＝次の grace は記号の右 0.699）と afterGrace の記号は LYS4020 のまま。毒＝本体の答え 11 赤・注記の門 11 赤・列を足さない 7 赤・drop list 4 赤・grace 時間の門 1 赤（最初は緑＝誰も読まない grace 時間の item が残るだけ ⇒ `ABreathOnTheLastGrace_IsOneColumnBeforeTheMainNote` を足して赤）。全 svg の掃き 1,242 枚で 0。
+- 1 回目の `-End` は full で 2 赤＝⑴ 引用 `lily/breathing-sign-engraver.cc` は LP に無い（呼吸記号は `scm/scheme-engravers.scm` の `Breathing_sign_engraver`・caesura は `lily/caesura-engraver.cc`・1 行 1 引用でないと記号の照合が誤る）⑵ `RehearsalMarkEngravedValidatorTests` が「grace の @breath は描かれない」を主張していた＝途中の grace の記号に替えた＝`fc5740ac1`。⚠️ grace の振る舞いを変えたら、`GraceBodyValidatorTests` の外にも grace の否定を主張する試験がある（今回は `RehearsalMarkEngraved…`）＝絞った filter では見えない。
+- `-End p934 -DiffBase 7f0df8fa7`（2 回目）＝full **12724 / 0 / 2 / 12726**（前便末 +14）（Lab `sessions/p934/end.log`）→ この docs commit。未 push 48＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。
+判定（2026-10-22）: grace の最後の呼吸記号は閉じた。残り＝途中の grace の呼吸記号（grace の列組みに変更の列を挟む）・向きが割れた grace の膝の連桁。grace の LYS4020 の残り＝`@pluck`・`@diagram`・`@cross`（譜表をまたぐ）・`@figuredBass`・`@chord`・TAB の技法。
+
+## 以下は第933セッションの経緯
+
 ### 1.1 第933セッション（2026-10-21・YT-DELL2）
 
 第932 と同じ会話の続き（ユーザー「続けて」）。`-Start p933`（開始 HEAD `6853720f1`・未 push 44・full **12691 / 0 / 2 / 12693**・第931 を ARCHIVE へ）。作業場所は Lab `sessions/p933/`。
 - **grace の `@stemUp`/`@stemDown` で群の符尾を向ける＝`7cfdd619d`**: LP 2.26（`probes/grace-stem-direction.ly`）は grace の符尾を**全部 forced** にする（score-grace-settings）ので、連桁は forced の多数決で向きを決め、反対を書いた符尾はそのまま残す＝**向きが割れた本体は膝の連桁**（SDC・SDE）。Lily# の grace の連桁は膝を描けない ⇒ `GraceBodySupport.CarriedStemDirection` は**符尾のある列（音・ドラム・和音の自分の注記）が全部同じ向きを書いたときだけ**その向きを答え、collector（`ProcessGraceRegion`）は群全体を下の声部の grace と同じ形に向ける。割れた本体は声部の向きのまま・書いた向きは全部 LYS4020（和音の構成音の向きも）。下向きの grace は旗が頭の下＝主音符まで幅＋0.5。**前の音符からのばねの符尾補正は最初の grace 自身の符尾の帯で読む**（`SpacingRules.ApproachStemBand`・普通の大きさの代役は付け根が普通の大きさで、上→下の重なりが 0.255＜LP 0.399）。台帳 11 点（`stemdir.grace.*`）＝9 点は完全一致・連桁の符尾 2 点は −0.192（連桁の中心線まで描く／LP の Stem は外縁まで＝連桁の下で見えない）。計器 `StemLeftFromNotehead`・`StemBottomBelowNotehead`（`StemAt` に括った）。毒＝本体の答え 14 赤・collector 14 赤・ばねの帯 1 赤・drop list 5 赤。全 svg の掃き 1,242 枚で 0。
 - `-End p933 -DiffBase 6853720f1`＝full **12710 / 0 / 2 / 12712**（前便末 +19）（Lab `sessions/p933/end.log`）→ この docs commit。未 push 45＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。
 判定（2026-10-21）: grace の符尾の向きは（そろったときは）閉じた。残り＝向きが割れた grace の膝の連桁（`DrawGraceBeam` と quanter に列ごとの向きを通す）。grace の LYS4020 の残り＝`@breath`・`@caesura`（列組み・未特定 2 つ）・`@pluck`・`@diagram`・`@cross`（譜表をまたぐ）・`@figuredBass`・`@chord`・TAB の技法。
-
-## 以下は第932セッションの経緯
-
-### 1.1 第932セッション（2026-10-21・YT-DELL2）
-
-第931 と同じ会話の続き（ユーザー「続けて」）。`-Start p932`（開始 HEAD `68d9d6588`・未 push 42・full **12677 / 0 / 2 / 12679**・第930 を ARCHIVE へ）。作業場所は Lab `sessions/p932/`。
-- **grace の `@notehead(diamond|triangle|slash|xcircle)` を描き、頭の幅で間隔を測る＝`bad6258ae`**: LP 2.26（`probes/grace-head-shapes.ly`）の grace の間隔は**頭の幅だけ**で決まる（主音符まで＝幅＋1.020688・次の grace まで＝幅＋0.5・符尾の右端＝頭の右端）。`GraceColumnInfo.HeadStyle`（`DeriveGraceColumns` が grace の項目の `Notehead` から）と `HeadBox`（字形の設計×形の箱）を足し、grace の列の頭の箱と符尾の X を読む所を全部それに替えた（`SpacingRules.GraceHeadEnd`・旗の届き・`ItemSkylineFactory` の grace の 2 つの skyline・`GraceColumnHeads.HeadInkRight`／臨時記号の符尾・`GraceNoteEngraver`・`DotColumn.ReservedForGrace`・`ElementCoordinator` の grace の符尾 X・`GlissandoEngraver`）。`NarrowToGraceTime` は頭の形をそのまま残す（第931 の × だけの `GraceHeadStyle` は消した）・述語 `IsCarriedHeadMark` は 6 形とも通す。⚠️ 和音の秒の押し出し（`ChordHeadPositioning`）と slur の障害物の頭の幅（`ElementCoordinator` の `obstacleX`）は黒い頭のまま。台帳 12 点（`headstyle.grace.shape.*`・4 形 × 符尾／主音符まで／次の grace まで）が 1 回目で 1e-6 以内。計器 `HeadAt` は形のある黒い頭と xcircle も頭と数える。毒＝列の形 8 赤・項目の形 17 赤・skyline の符尾 4 赤・述語 2 赤。全 svg の掃き 1,242 枚で 0（形のある grace の頭はコーパスに無い）。
-- `-End p932 -DiffBase 68d9d6588`＝full **12691 / 0 / 2 / 12693**（前便末 +14）（Lab `sessions/p932/end.log`）→ この docs commit。未 push 43＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。
-判定（2026-10-21）: grace の頭の形は閉じた。grace の LYS4020 の残り＝`@breath`・`@caesura`（列組み・未特定 2 つ）・`@pluck`・`@diagram`・`@cross`（譜表をまたぐ）・`@stemUp`/`@stemDown`・`@figuredBass`・`@chord`・TAB の技法。
 
 ## 2. 開いている作業
 
