@@ -7483,6 +7483,55 @@
       "residual": 0.0,
       "why": "EXACT. A spanner from the c4 that ENDS on a grace note (`grace { f16@!rit }`): its start stands as ever. Until session 921 the grace's @!rit was dropped, so the spanner was never closed: LYS4018 (an error) and nothing drawn. The right end now stops at the grace column; its arithmetic is the unported right bound every text spanner shares (LilyPond 14.758355 against the grace head's 14.239041 -- TextSpannerEngraver's remark), so no point reads it."
     },
+    "pedal.grace.start-to-notehead": {
+      "probe": "grace-pedal.ly",
+      "score": "GPA",
+      "lilypond": 0.0,
+      "residual": 0.0,
+      "why": "EXACT. `grace { d16@sustain }`: the bracket starts at the GRACE head's left edge (LilyPond's X-extent 10.936796 is the line end widened by the half pen 0.05; the head 10.986796). PedalEngraver.GraceAnchors reads a grace bound off the run (ElementCoordinator.GraceColumnAt): AnchorX had read the item index's timing column, and until session 922 the grace's @sustain was dropped (LYS4020) and the lone @!sustain closed nothing (LYS4018) -- no bracket at all."
+    },
+    "pedal.grace.end-to-notehead": {
+      "probe": "grace-pedal.ly",
+      "score": "GPA",
+      "lilypond": 0.0,
+      "residual": 0.0,
+      "why": "EXACT. The same bracket's release on the main-grid g4: its end stands as ever (18.979913 - 0.05 = the g head 18.929913)."
+    },
+    "pedal.grace.staff-to-line": {
+      "probe": "grace-pedal.ly",
+      "score": "GPA",
+      "lilypond": 5.144059507,
+      "residual": 0.0,
+      "why": "EXACT. The line is pushed by the grace's SMALL head: its ink bottom 2.894060 under the middle line + padding 1.2 + hook 1.05. The grace column is one of the bracket's acknowledged supports, so GraceAnchors gives the support clip the grace column's own ink span (accidentals to the rightmost head); MEASURED by poisoning that clip alone (session 922): without the grace column the bracket's support misses the grace head and the line stands at 4.404059, 0.74 too high."
+    },
+    "pedal.grace.control.start-to-notehead": {
+      "probe": "grace-pedal.ly",
+      "score": "GPB",
+      "lilypond": 0.0,
+      "residual": 0.0,
+      "why": "EXACT. The full-size CONTROL: the same bracket from a d16 on the main grid (13.4392 + 0.05 = the head 13.4892)."
+    },
+    "pedal.grace.control.staff-to-line": {
+      "probe": "grace-pedal.ly",
+      "score": "GPB",
+      "lilypond": 5.295,
+      "residual": 0.0,
+      "why": "EXACT. The control's line: the full-size d's ink bottom 3.045 + 1.2 + 1.05, as probes/pedal-lyric-stack.ly PLB."
+    },
+    "pedal.grace.ends-on-grace.end-to-notehead": {
+      "probe": "grace-pedal.ly",
+      "score": "GPC",
+      "lilypond": 0.0,
+      "residual": 0.0,
+      "why": "EXACT. A bracket from the c4 RELEASED on a grace note (`grace { f16@!sustain }`): it ends at the grace head's left edge (14.289041 - 0.05 = the grace head 14.239041), not at the g4 the grace leans on."
+    },
+    "pedal.grace.ends-on-grace.staff-to-line": {
+      "probe": "grace-pedal.ly",
+      "score": "GPC",
+      "lilypond": 5.795,
+      "residual": 0.0,
+      "why": "EXACT. Its line: the c4's ledger-line head, 3.545 + 1.2 + 1.05 (the grace f is no lower)."
+    },
     "text.grace.below": {
       "probe": "grace-text.ly",
       "score": "GXA",

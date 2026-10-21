@@ -8912,6 +8912,10 @@ internal static class LpGeometryProbes
     private static readonly string GRTA = GraceTieBook("c4 grace { d16@rit } e4 f4 g4@!rit |", "GRTA");
     private static readonly string GRTB = GraceTieBook("c4 d16@rit e8. f4 g4@!rit |", "GRTB");
     private static readonly string GRTC = GraceTieBook("c4@rit e4 grace { f16@!rit } g4 a4 |", "GRTC");
+    // A pedal bracket engaged or released on a grace note (audit/lp-geometry/probes/grace-pedal.ly).
+    private static readonly string GPDA = GraceTieBook("c4 grace { d16@sustain } e4 f4 g4@!sustain |", "GPDA");
+    private static readonly string GPDB = GraceTieBook("c4 d16@sustain e8. f4 g4@!sustain |", "GPDB");
+    private static readonly string GPDC = GraceTieBook("c4@sustain e4 grace { f16@!sustain } g4 a4 |", "GPDC");
     // A hairpin's own outline against a head (audit/lp-geometry/probes/hairpin-arm-outline.ly).
     private static readonly string HPOA = GraceTieBook("c4 d4@cresc e4 f4@!cresc |", "HPOA");
     private static readonly string HPOB = GraceTieBook("c4 d4@decresc e4 f4@!cresc |", "HPOB");
@@ -17364,6 +17368,13 @@ internal static class LpGeometryProbes
         new("textspanner.grace.staff-to-line", GRTA, g => g.TextSpannerLineAboveStaff()),
         new("textspanner.grace.control.label-to-notehead", GRTB, g => g.TextSpannerLabelPenToNotehead(1)),
         new("textspanner.grace.ends-on-grace.label-to-notehead", GRTC, g => g.TextSpannerLabelPenToNotehead(0)),
+        new("pedal.grace.start-to-notehead", GPDA, g => g.PedalBracketLineEndToNotehead(end: false, 1)),
+        new("pedal.grace.end-to-notehead", GPDA, g => g.PedalBracketLineEndToNotehead(end: true, 4)),
+        new("pedal.grace.staff-to-line", GPDA, g => g.PedalBracketLineBelowStaff()),
+        new("pedal.grace.control.start-to-notehead", GPDB, g => g.PedalBracketLineEndToNotehead(end: false, 1)),
+        new("pedal.grace.control.staff-to-line", GPDB, g => g.PedalBracketLineBelowStaff()),
+        new("pedal.grace.ends-on-grace.end-to-notehead", GPDC, g => g.PedalBracketLineEndToNotehead(end: true, 2)),
+        new("pedal.grace.ends-on-grace.staff-to-line", GPDC, g => g.PedalBracketLineBelowStaff()),
         new("glissando.into-grace.same-pitch.length", GRGS, g => g.LevelGlissandoLength()),
         new("text.grace.below", GRXA, g => g.TextBaselineAboveStaffLine(LilySharp.Core.Rendering.TextRole.Text, 0, 2)),
         new("text.grace.above", GRXB, g => g.TextBaselineAboveStaffLine(LilySharp.Core.Rendering.TextRole.Text, 0, 2)),

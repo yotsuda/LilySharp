@@ -76,7 +76,10 @@ workflow attaches that section to the GitHub Release verbatim.
   on a grace note** (`grace { d16@glissando } a4`), and **one written into a grace note ends at
   it**, as LilyPond draws it — `c4@glissando grace { g16 } a4` ran over the grace note to the a.
   **A text spanner can start or end on a grace note** (`grace { d16@rit } …`); an `@!rit` written
-  on a grace note was dropped, which left its spanner unclosed (an error) and undrawn.
+  on a grace note was dropped, which left its spanner unclosed (an error) and undrawn. **So can a
+  pedal bracket** (`grace { d16@sustain } e4 f4 g4@!sustain`, `@sostenuto`, `@unaCorda` too): it
+  starts or stops at the grace note, and the small grace head sets its height, as in LilyPond.
+  Before, the grace's mark was dropped and no bracket was drawn at all.
   A hairpin running over a
   grace note also stands where LilyPond puts it — it read the grace note's stem as a full-size
   down stem and sat a quarter space too low.

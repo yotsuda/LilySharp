@@ -357,6 +357,9 @@ internal static class PedalEngraver
 
         int loMeasure = measureLayouts[0].MeasureIndex;
         int hiMeasure = measureLayouts[^1].MeasureIndex;
+        // A bound on a grace note reads its grace column, and that column is the bracket's
+        // support (GraceAnchors' remark carries the measurement).
+        var grace = new GraceAnchors(staff.Voices, score.GraceNotes, staffIndex);
         MeasureLayout? LayoutOf(int measureIndex)
         {
             foreach (var m in measureLayouts)
@@ -385,10 +388,10 @@ internal static class PedalEngraver
             // The portion on THIS system: a broken end runs to the system edge, hook-less,
             // exactly as the drawn spanner breaks.
             double startX = startLayout != null
-                ? AnchorX(startLayout, bracket.StartItemIndex, bracket.StartTiming)
+                ? AnchorX(startLayout, bracket.StartItemIndex, bracket.StartTiming, grace, bracket.StartVoiceIndex)
                 : measureLayouts[0].X;
             double endX = endLayout != null
-                ? AnchorX(endLayout, bracket.EndItemIndex, bracket.EndTiming)
+                ? AnchorX(endLayout, bracket.EndItemIndex, bracket.EndTiming, grace, bracket.EndVoiceIndex)
                 : measureLayouts[^1].X + measureLayouts[^1].Width;
             if (endX - startX < 2.0)
                 endX = startX + 2.0; // the same minimum Calculate applies
@@ -396,10 +399,10 @@ internal static class PedalEngraver
             // this spanner acknowledged (SupportProfile's remark). A broken end's support
             // runs to the system edge, like the drawn portion.
             double supportLeft = startLayout != null
-                ? AnchorColumnSpan(startLayout, bracket.StartItemIndex, bracket.StartTiming).Left
+                ? AnchorColumnSpan(startLayout, bracket.StartItemIndex, bracket.StartTiming, grace, bracket.StartVoiceIndex).Left
                 : measureLayouts[0].X;
             double supportRight = endLayout != null
-                ? AnchorColumnSpan(endLayout, bracket.EndItemIndex, bracket.EndTiming).Right
+                ? AnchorColumnSpan(endLayout, bracket.EndItemIndex, bracket.EndTiming, grace, bracket.EndVoiceIndex).Right
                 : measureLayouts[^1].X + measureLayouts[^1].Width;
             portions.Add((bracket.Type, bracket.StartMeasureIndex, startX, endX,
                 // MIXED draws the leading word where a bracket-style LEFT hook would be.
@@ -615,11 +618,12 @@ internal static class PedalEngraver
                 carrySink?.Add(plays.Refused(down.SourcePosition, Collector.SectionSpanKind.Pedal,
                     fault, down.MeasureIndex));
                 return new PedalBracketItem(pedalType, down.MeasureIndex, plays.CutMeasure(down.MeasureIndex),
-                    down.SourcePosition, down.AnchorItemIndex, 0, down.AnchorTiming, Fraction.Zero);
+                    down.SourcePosition, down.AnchorItemIndex, 0, down.AnchorTiming, Fraction.Zero,
+                    down.VoiceIndex, 0);
             }
             return new PedalBracketItem(pedalType, down.MeasureIndex, closer.MeasureIndex,
                 down.SourcePosition, down.AnchorItemIndex, closer.AnchorItemIndex,
-                down.AnchorTiming, closer.AnchorTiming);
+                down.AnchorTiming, closer.AnchorTiming, down.VoiceIndex, closer.VoiceIndex);
         }
 
         foreach (var mark in marks)
@@ -680,7 +684,8 @@ internal static class PedalEngraver
         ImmutableArray<MeasureLayout> measureLayouts,
         bool isMixed = false,
         Func<int, PedalType, double?>? solvedLineUpOf = null,
-        Func<int, double?>? staffTopDownOf = null)
+        Func<int, double?>? staffTopDownOf = null,
+        GraceAnchors? grace = null)
     {
         if (brackets.IsDefaultOrEmpty)
             return ImmutableArray<PedalBracketLayout>.Empty;
@@ -749,8 +754,8 @@ internal static class PedalEngraver
             {
                 // One system (or measures no system holds): the bracket whole.
                 AddPortion(bi, bracket, bracket.StartMeasureIndex,
-                    AnchorX(measureLayouts[bracket.StartMeasureIndex], bracket.StartItemIndex, bracket.StartTiming),
-                    AnchorX(measureLayouts[bracket.EndMeasureIndex], bracket.EndItemIndex, bracket.EndTiming),
+                    AnchorX(measureLayouts[bracket.StartMeasureIndex], bracket.StartItemIndex, bracket.StartTiming, grace, bracket.StartVoiceIndex),
+                    AnchorX(measureLayouts[bracket.EndMeasureIndex], bracket.EndItemIndex, bracket.EndTiming, grace, bracket.EndVoiceIndex),
                     brokenLeft: false, brokenRight: false);
                 continue;
             }
@@ -761,10 +766,10 @@ internal static class PedalEngraver
                 int firstMeasure = sys.Measures[0].MeasureIndex;
                 int lastMeasure = sys.Measures[^1].MeasureIndex;
                 double startX = first
-                    ? AnchorX(measureLayouts[bracket.StartMeasureIndex], bracket.StartItemIndex, bracket.StartTiming)
+                    ? AnchorX(measureLayouts[bracket.StartMeasureIndex], bracket.StartItemIndex, bracket.StartTiming, grace, bracket.StartVoiceIndex)
                     : measureLayouts[firstMeasure].X;
                 double endX = last
-                    ? AnchorX(measureLayouts[bracket.EndMeasureIndex], bracket.EndItemIndex, bracket.EndTiming)
+                    ? AnchorX(measureLayouts[bracket.EndMeasureIndex], bracket.EndItemIndex, bracket.EndTiming, grace, bracket.EndVoiceIndex)
                     : measureLayouts[lastMeasure].X + measureLayouts[lastMeasure].Width;
                 AddPortion(bi, bracket, first ? bracket.StartMeasureIndex : firstMeasure, startX, endX,
                     brokenLeft: !first, brokenRight: !last);
@@ -842,12 +847,55 @@ internal static class PedalEngraver
     }
 
     /// <summary>
+    /// The grace columns one staff's pedal brackets may be bounded by: an engage or a release
+    /// written on a grace note (session 922, HANDOFF §2 U8 ⒟) names the grace's item, which no
+    /// timing column and no main item slot answers — read off the run instead.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED (2.26.0, audit/lp-geometry/probes/grace-pedal.ly): the bracket starts at the
+    /// grace head's left edge (its stencil the half pen left of it, as a main note's), ends at
+    /// the left edge of a grace it releases on, and its line is pushed by the grace's SMALL
+    /// head — the grace column is an acknowledged support like any (GPA 5.144060 under the
+    /// staff against the full-size control's 5.295000).
+    /// ⚠️ THE BRACKET ONLY, named rather than hidden: a pedal WORD ("Ped.", "*" of the text
+    /// style, the mixed style's leading word) is drawn by MusicMarkEngraver's pedal arm, which
+    /// still reads the main column, and SolveAndSeedText does not read this either — a word
+    /// written on a grace stands at the note the grace leans on. No probe measures it.
+    /// </remarks>
+    internal sealed class GraceAnchors(
+        ImmutableArray<Voice> voices, ImmutableArray<GraceNoteItem> graceNotes, int staffIndex)
+    {
+        private VoiceCollisionTable? _shifts;
+
+        /// <summary>The grace column item <paramref name="itemIndex"/> of voice
+        /// <paramref name="voiceIndex"/> stands as in <paramref name="ml"/>: its head left X and
+        /// the X span of its own ink (accidentals to the rightmost head), or null for a main
+        /// item.</summary>
+        public (double X, double Left, double Right)? Column(MeasureLayout ml, int voiceIndex, int itemIndex)
+        {
+            if (graceNotes.IsDefaultOrEmpty || voices.IsDefaultOrEmpty
+                || voiceIndex < 0 || voiceIndex >= voices.Length)
+                return null;
+            if (ElementCoordinator.GraceColumnAt(voices[voiceIndex], graceNotes, staffIndex, voiceIndex,
+                    ml.MeasureIndex, itemIndex, ml, _shifts ??= SpacingRules.VoiceCollisionShiftsOf(voices))
+                is not { } g)
+                return null;
+            return (g.HeadLeftX, g.HeadLeftX - GraceColumnHeads.SupportLeftReach(g.Column),
+                g.HeadLeftX + GraceColumnHeads.HeadInkRight(g.Column));
+        }
+    }
+
+    /// <summary>
     /// X of the note column a pedal mark attaches to. Multi-staff layouts use the
     /// shared, voice-independent timing columns (like MetronomeMark); single-staff
-    /// uses the item slot; falls back to a small inset at the measure start.
+    /// uses the item slot; falls back to a small inset at the measure start. A grace
+    /// bound reads its grace column (<see cref="GraceAnchors"/>).
     /// </summary>
-    private static double AnchorX(MeasureLayout ml, int itemIndex, Fraction timing)
+    private static double AnchorX(MeasureLayout ml, int itemIndex, Fraction timing,
+        GraceAnchors? grace = null, int voiceIndex = 0)
     {
+        if (grace?.Column(ml, voiceIndex, itemIndex) is { } g)
+            return g.X;
         if (!ml.Columns.IsDefaultOrEmpty)
             return ml.X + ml.GetXForTiming(timing);
         if (itemIndex >= 0 && itemIndex < ml.Items.Length)
@@ -860,8 +908,11 @@ internal static class PedalEngraver
     /// SUPPORTS a pedal item there. Same resolution order as <see cref="AnchorX"/>.
     /// </summary>
     private static (double Left, double Right) AnchorColumnSpan(
-        MeasureLayout ml, int itemIndex, Fraction timing)
+        MeasureLayout ml, int itemIndex, Fraction timing,
+        GraceAnchors? grace = null, int voiceIndex = 0)
     {
+        if (grace?.Column(ml, voiceIndex, itemIndex) is { } g)
+            return (g.Left, g.Right);
         if (!ml.Columns.IsDefaultOrEmpty)
         {
             foreach (var c in ml.Columns)

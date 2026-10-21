@@ -1613,6 +1613,34 @@ internal sealed class RenderedGeometry
     }
 
     /// <summary>
+    /// The sole pedal bracket LINE's start (or, with <paramref name="end"/>, its end) X
+    /// against notehead <paramref name="noteheadIndex"/>'s anchor — which column the bracket
+    /// is bounded by.
+    /// </summary>
+    /// <remarks>
+    /// The same selection as <see cref="PedalBracketLineBelowStaff"/>. Lily#'s number is the
+    /// rule's endpoint; LilyPond's PianoPedalBracket X-extent is that point widened by half
+    /// the pen (0.05) on both sides (lily/line-interface.cc:178-192 make_line), so a ledger
+    /// value read off LilyPond takes the half pen back in (left + 0.05, right − 0.05).
+    /// </remarks>
+    public double PedalBracketLineEndToNotehead(bool end, int noteheadIndex, int page = 0)
+    {
+        double staffBottomEdge = StaffRefpoints(page).Min() + 2.0;
+        var rules = _pages[page].Lines
+            .Where(l => Math.Abs(l.Y1 - l.Y2) < 1e-9
+                && Math.Abs(l.StrokeWidth - StaffLineThickness) < 1e-9
+                && Math.Abs(l.X2 - l.X1) >= 1.0
+                && l.Y1 > staffBottomEdge)
+            .ToList();
+        if (rules.Count != 1)
+            throw new InvalidOperationException(
+                $"page {page}: expected exactly ONE pedal bracket line below the staff, "
+                + $"found {rules.Count}.\nDrawn geometry:\n" + Describe());
+        double x = end ? Math.Max(rules[0].X1, rules[0].X2) : Math.Min(rules[0].X1, rules[0].X2);
+        return x - NoteheadAnchor(noteheadIndex);
+    }
+
+    /// <summary>
     /// The sole hairpin's WEDGE CENTRE below the staff's middle line — the drawn mirror of
     /// the Hairpin grob's own reference point.
     /// </summary>

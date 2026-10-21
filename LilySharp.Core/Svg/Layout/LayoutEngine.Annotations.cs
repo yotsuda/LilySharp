@@ -897,7 +897,14 @@ internal sealed partial class LayoutEngine
                 (pedalBracketBuilder ??= ImmutableArray.CreateBuilder<PedalBracketLayout>())
                     .AddRange(
                         PedalEngraver.Calculate(brackets, systems, ml,
-                            isMixed: style == PedalStyle.Mixed, solvedLineUpOf, staffTopDownOf));
+                            isMixed: style == PedalStyle.Mixed, solvedLineUpOf, staffTopDownOf,
+                            // A bound on a grace note reads its grace column (session 922), off
+                            // the staff's own voices as the text spanners read theirs.
+                            new PedalEngraver.GraceAnchors(
+                                voicesByStaff != null && voicesByStaff.TryGetValue(staffIndex, out var pv) ? pv
+                                : score != null && staffVoices.IsDefaultOrEmpty ? ImmutableArray.Create(score.Voice)
+                                : staffVoices,
+                                ctx.GraceNotes, staffIndex)));
             }
         }
         var pedalBracketLayouts = pedalBracketBuilder?.ToImmutable() ?? [];

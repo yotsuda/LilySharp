@@ -52,5 +52,9 @@ public readonly record struct PedalBracketItem(
     int StartItemIndex = 0,
     int EndItemIndex = 0,
     Fraction StartTiming = default,
-    Fraction EndTiming = default
+    Fraction EndTiming = default,
+    // The voices the engaging and releasing marks were written in — the address a GRACE
+    // bound's column is read at (session 922: a grace's item index names no main column).
+    int StartVoiceIndex = 0,
+    int EndVoiceIndex = 0
 );

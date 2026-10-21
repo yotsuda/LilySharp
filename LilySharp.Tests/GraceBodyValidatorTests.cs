@@ -81,8 +81,9 @@ public class GraceBodyValidatorTests
     // AnArpeggioOnAGraceChord_IsDrawn_AndNotReported).
     // `grace { d'8@glissando }` LEFT with the glissandos (session 920, ledger glissando.grace.*;
     // see AGlissandoFromAGrace_IsDrawn_AndNotReported). The text spanners followed (session 921;
-    // see ATextSpannerOnAGrace_IsDrawn_AndNotReported).
-    [InlineData("grace { d'8@sustain } c'1 | e'1 |", "grace { d'8 } c'1 | e'1 |")]
+    // see ATextSpannerOnAGrace_IsDrawn_AndNotReported). `grace { d'8@sustain }` LEFT with the
+    // pedals (session 922, ledger pedal.grace.*; see APedalOnAGrace_IsDrawn_AndNotReported).
+    [InlineData("grace { d'8@breath } c'1 | e'1 |", "grace { d'8 } c'1 | e'1 |")]
     // ⚠️ `grace { d'8. }` LEFT THIS THEORY ON 2026-08-30 (session 299), which is the way a
     // row is meant to leave it: the dot is drawn now, so the line asserting it is missing
     // went red and taking it out was part of closing the hole. See ADottedGrace_IsDrawn.
@@ -254,6 +255,23 @@ public class GraceBodyValidatorTests
     }
 
     /// <summary>
+    /// A PEDAL engaged or released on a grace note is drawn (session 922, HANDOFF §2 U8 ⒟): the
+    /// bracket's bound is the grace column and the grace's small head is its support (ledger
+    /// pedal.grace.*). Nothing is reported. The grace's mark used to be dropped, which left a
+    /// release closing nothing (or an engage never released, LYS4018) and no bracket drawn.
+    /// </summary>
+    [Theory]
+    [InlineData("grace { d'8@sustain } c'1 | e'1@!sustain |", "grace { d'8 } c'1 | e'1 |")]
+    [InlineData("c'1@sustain | grace { d'8@!sustain } e'1 |", "c'1 | grace { d'8 } e'1 |")]
+    [InlineData("grace { d'8@unaCorda } c'1 | e'1@treCorde |", "grace { d'8 } c'1 | e'1 |")]
+    [InlineData("grace { d'8@sostenuto } c'1 | e'1@!sostenuto |", "grace { d'8 } c'1 | e'1 |")]
+    public void APedalOnAGrace_IsDrawn_AndNotReported(string written, string control)
+    {
+        Assert.Empty(Warnings(Book(written)));
+        Assert.NotEqual(Page(control), Page(written));
+    }
+
+    /// <summary>
     /// The grace body that draws exactly what it says draws no warning either. This is the
     /// case that catches a validator that has quietly become "warn about every grace".
     /// </summary>
@@ -309,11 +327,12 @@ public class GraceBodyValidatorTests
     [Fact]
     public void TheWarningStandsAtWhatWasWritten()
     {
-        // A sustain pedal: since sessions 916-920 the scripts, the dynamics, the texts, the
-        // fingerings, the hairpin starts, the arpeggios and the glissandos on a grace are drawn.
-        string source = Book("grace { d'8@sustain } c'1 | e'1 |");
+        // A breathing sign: since sessions 916-922 the scripts, the dynamics, the texts, the
+        // fingerings, the hairpin starts, the arpeggios, the glissandos, the text spanners and
+        // the pedals on a grace are drawn.
+        string source = Book("grace { d'8@breath } c'1 | e'1 |");
         var warning = Assert.Single(Warnings(source));
-        Assert.Equal(source.IndexOf("@sustain", System.StringComparison.Ordinal),
+        Assert.Equal(source.IndexOf("@breath", System.StringComparison.Ordinal),
             warning.Span.Start);
     }
 
@@ -604,8 +623,8 @@ public class GraceBodyValidatorTests
 
         // An annotation a grace does not carry is still reported on a chord MEMBER, at the
         // member (a script there is drawn since session 916, a fingering since 917, a hairpin's
-        // start since 918; a sustain pedal is not).
-        var onMember = Assert.Single(Warnings(Book("grace { <d'@sustain f'>8 } c'1 | e'1 |")));
+        // start since 918, a pedal since 922; a breathing sign is not).
+        var onMember = Assert.Single(Warnings(Book("grace { <d'@breath f'>8 } c'1 | e'1 |")));
         Assert.Contains("is not engraved", onMember.Message);
     }
 

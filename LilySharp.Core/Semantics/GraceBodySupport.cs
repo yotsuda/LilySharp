@@ -441,6 +441,30 @@ internal static class GraceBodySupport
     };
 
     /// <summary>
+    /// True for a PEDAL's engage or release a grace note carries — <c>@sustain</c>,
+    /// <c>@sostenuto</c>, <c>@unaCorda</c>, <c>@treCorde</c> and the <c>@!sustain</c> family:
+    /// the bracket's bound is the grace column, read off the run, and the grace's small head is
+    /// its support (session 922; ledger pedal.grace.*). THE question the collector and the drop
+    /// list both ask.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/piano-pedal-engraver.cc — a Staff engraver; the bracket's bounds are
+    ///   the note columns it acknowledges, a grace's as any.
+    /// </remarks>
+    internal static bool IsCarriedPedal(SyntaxNode annotation) => annotation switch
+    {
+        ArticulationSyntax a => IsPedalType(Svg.Model.MusicMarkItem.ParseMarkName(a.Name)),
+        MusicMarkSyntax { IsSpanEnd: true } end => IsPedalType(Svg.Model.MusicMarkItem.ParseSpanEndName(end.Name)),
+        MusicMarkSyntax mark => IsPedalType(Svg.Model.MusicMarkItem.ParseMarkName(mark.Name)),
+        _ => false,
+    };
+
+    private static bool IsPedalType(Svg.Model.MusicMarkType? type)
+        => type is Svg.Model.MusicMarkType.SustainOn or Svg.Model.MusicMarkType.SustainOff
+            or Svg.Model.MusicMarkType.SostenutoOn or Svg.Model.MusicMarkType.SostenutoOff
+            or Svg.Model.MusicMarkType.UnaCordaOn or Svg.Model.MusicMarkType.UnaCordaOff;
+
+    /// <summary>
     /// The <c>\N</c> a grace note carries, or null for automatic string selection.
     /// </summary>
     /// <remarks>
@@ -686,7 +710,8 @@ internal static class GraceBodySupport
                 if (NeedsNoColumn(annotation) || IsCarriedScript(annotation) || IsCarriedDynamic(annotation)
                     || IsCarriedText(annotation) || IsCarriedFingering(annotation)
                     || IsCarriedHairpinStart(annotation) || IsCarriedArpeggio(annotation)
-                    || IsCarriedGlissando(annotation) || IsCarriedTextSpan(annotation))
+                    || IsCarriedGlissando(annotation) || IsCarriedTextSpan(annotation)
+                    || IsCarriedPedal(annotation))
                     continue;
                 yield return new GraceDrop(
                     GraceDropKind.Annotation, annotation.Span, Describe(annotation), via);

@@ -117,11 +117,11 @@ public class RehearsalMarkEngravedValidatorTests
         Assert.Empty(Warnings(book));
         Assert.Contains(">P</text>", LiveRender.Svg(book));
 
-        // The company it keeps that a grace does not carry yet — a sustain pedal (the scripts,
+        // The company it keeps that a grace does not carry yet — a breathing sign (the scripts,
         // dynamics and texts are drawn since session 916, the fingerings since 917, the hairpin
-        // starts since 918) — is still on the floor, and no longer silent about it (LYS4020,
-        // GraceBodyValidatorTests).
-        string started = OneStaff("grace { d'8@sustain } c'1 | e'1 |");
+        // starts since 918, the pedals since 922) — is still on the floor, and no longer silent
+        // about it (LYS4020, GraceBodyValidatorTests).
+        string started = OneStaff("grace { d'8@breath } c'1 | e'1 |");
         static string Ink(string svg) => System.Text.RegularExpressions.Regex.Replace(svg, " data-pos=\"\\d+\"", "");
         Assert.Equal(Ink(LiveRender.Svg(OneStaff("grace { d'8 } c'1 | e'1 |"))), Ink(LiveRender.Svg(started)));
     }
