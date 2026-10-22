@@ -160,6 +160,19 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第963セッションの経緯
+
+### 1.1 第963セッション（2026-10-23・YT-DELL2）
+
+第962 と同じ会話の続き（ユーザー「続けて」＝grace の束の残り ⑵ `@todo`）。`-Start p963`（開始 HEAD `3ca893daf`・未 push 6・第961 を ARCHIVE へ・full 12952 / 0 / 2 / 12954）。作業場所は Lab `sessions/p963/`（probe `probe/gracetodo.lys`・絵 `probe/out/gracetodo.png`・毒 `poisons.ps1`・掃き `svg/`）。
+- **grace の `@todo`＝閉じた `7886aa026`**: ⑴ `MeasureBuilder.NarrowToGraceTime` が note／chord／rest の `TodoKey`・`TodoMemo`・`TodoBelow`・`TodoSideWritten` を残す（白リストに 4 項目）／⑵ `GraceBodySupport.IsCarriedTodo`（`TodoAnnotation.Of` が非 null）を drop list に＝LYS4020 が報告しない／⑶ 描画 `SharedRenderer.DrawTodoMarks` と予約 `TodoMemoBand.BoxesFor` の両方が `item.GraceTime` のとき **`SharedRenderer.GraceTodoInkBox`** で輪の箱を取る＝`ElementCoordinator.GraceColumnAt` の列（`HeadBox`＝grace フォントの頭の箱・和音は `GraceColumnHeads.HeadOffsets`・休符は中立位置＋shift の実寸）と `HeadLeftX`。voice の衝突表は譜ごとに 1 度（`SpacingRules.VoiceCollisionShiftsOf(staff)`）。memo の側は従来どおり（下の声部は下・`.down`）。⚠️ tab の grace の輪は数字ではなく五線の箱（`TabTodoInkBox` は実寸の数字を読む・本には無い）。
+- **網**: `TodoCalloutTests.AMarkOnAGraceNote_RingsItsSmallHead_AndSetsItsMemo` 5 綴り（grace・grace 和音・`.down`・acciaccatura の 1 つ目・afterGrace）＝輪 2 つ・grace の輪は実寸の頭より 0.2〜0.5 低い（和音は 0.4〜1.0 高い）・grace の輪は主音符の左・memo と leader（`.down` は下）・輸出に輪も memo も無い／`GraceBodyValidatorTests.ATodoOnAGrace_IsNotReported_AndTheExportDrawsNothingForIt` 4 綴り（警告 0・`data-todo` を伏せた輸出が対照と同一）。毒 3 本（drop list を忘れる＝validator 4 赤／narrowing が `TodoKey` を落とす＝callout 4 赤／`GraceTodoInkBox` が null＝callout 5 赤）→ 戻して緑。掃き 1,015 冊 1,248 枚で **0**（輸出は印を描かない・本に grace の `@todo` は無い）。
+- 計器の罠: ⒜ 輪の高さは手描きの輪の揺れで「頭の高さ×magstep＋余白」に 0.1 で合わない＝実寸の輪との差（−0.2〜−0.5）で読む／⒝ `LiveRender.Svg` の輸出にも `data-todo` の印は乗る（ink は無い）＝同一性の網は属性を伏せる／⒞ 掃きの最中に別の console が busy だと `execute_command` が 4 つ目の console を立てる（害は無い）。
+- docs: CHANGELOG（本体 `## Unreleased`・VS Code は `## Unreleased` を新設）・`docs/todo-memo-design.md` §1 に grace の段落・APPROXIMATIONS（OWN +2＝`IsCarriedTodo`・`GraceTodoInkBox`）。
+
+- `-End p963 -DiffBase 3ca893daf` ＝full **12961 / 0 / 2 / 12963**（前便末 12952 ＋ 9＝callout 5 ＋ validator 4）（Lab `sessions/p963/end.log`）→ この docs commit。本体 `7886aa026`。Core '+' 121 行／LILYPOND-REF 0／LILYSHARP-OWN 2（編集者の印＝LP に対応物なし）。未 push 7＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。⚠️ 拡張は入れ直していない（プレビューで見るには `tools\Deploy-Lsp.ps1` → Reload Window＝ユーザー）。
+判定（2026-10-23）: grace の LYS4020 の残りは **⑶ `@chord`／`@figuredBass`／`@diagram` を grace へ**（別 engraver・`@chord`／`@figuredBass` は LP と照合可）だけ → 単一譜の `@cross` の警告（要ユーザー判断）→ §2 E ⑹ → 続きのトリルの OPEN 0.040。次の一手は grace の文脈を使う＝(a) この会話で続ける。
+
 ## 以下は第962セッションの経緯
 
 ### 1.1 第962セッション（2026-10-23・YT-DELL2）

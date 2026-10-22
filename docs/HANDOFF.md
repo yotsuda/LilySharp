@@ -126,6 +126,18 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第965セッション（2026-10-23・YT-DELL2）
+
+第964 と同じ会話の続き（ユーザー「続けて」）。`-Start p965`（開始 HEAD `80a83ccb1`・未 push 10・第963 を ARCHIVE へ・full 12998 / 0 / 2 / 13000）。次の候補のうち要ユーザー判断でない **続きのトリルの OPEN 0.040** を先に閉じ、単一譜の `@cross` は事実を揃えて質問にした（下）。作業場所は Lab `sessions/p965/`（LP の計器 `lp/bound.ly`＝TrillSpanner の left-bound-info と stencil を刷る・掃き `svg/`）。
+- **続きのトリルの OPEN 0.040＝閉じた `82031adc1`**: 第961 の「LP は続きの『tr』の板を数えていない」は読み違い＝板の深さを 1.5 と見積もって 5.045 を予想していたが、板は線の 1.0 下（stencil-offset）で **4.545 ＝ g''4 の頭の上 3.045 ＋ padding 0.5 ＋ 1.0** そのもの（Lab `sessions/p961/probe/ly/dump2.log` の数字を読み直した・`\fixed c'` なので本の音は 1 オクターブ上）。Lily# は `AlignedSideLineY` の板を最初の piece にしか与えていなかった（`segment.IsFirst`）ので続きは a''8 の上の波で 4.505 に決まっていた → **全 piece に板**（続きも「tr」を刷る＝第961）。1 行の修正＋註。`TrillSpannerTests.ChainedTrills_OverABreak…` の期待を 4.505 → 4.545 に（OPEN の註を閉じた文に）。⚠️ 続きの「tr」の X は LP の `left-bound-info` で裏を取った＝`(X . 6.4521)`＝最初の列の中心・`attach-dir 0`（第961 の `FirstColumnCentre` は正しい）。
+- **網**: `TrillSpannerTests` 16 本＋`Trill*` 37 本緑（観測者は上の 1 本＝1 行を戻せば 4.505 で赤）。掃き 1,015 冊 1,248 枚で **0**（段をまたぐトリルは本に無い）。棚卸し 2 枚は差分なし。CHANGELOG `## Unreleased` の「Trill lines over a line break」に 1 項。
+- **単一譜の `@cross`＝質問（ユーザー判断待ち）**: `@cross` は grand staff の反対の譜へ移す注釈で、`CrossStaffEngraver.Calculate` は `staffCount < 2` で空を返す＝単一譜では黙って何もしない・警告なし。**ユーザー自身の本 `LilySharp-Lab\corpora\dogfood\blues.lys` 26 行 `b4@cross`（単一譜・冒頭の註は「cross noteheads」）＝× 符頭のつもりで書いて何も起きていない実例**。repo 内の `@cross` は `audit/lpreg/gliss-xstaff.lys`（grand staff・正しい用法）だけ。提案＝警告 LYS4031（候補）「`@cross` は grand staff の隣の譜へ移す印・この譜には相手が無い＝× 符頭なら `@dead` か `@notehead(cross)`」（LYS40xx の最後は LYS4030）。GRAMMAR に cross-staff の節が無いのも同じ便で足せる。
+
+- `-End p965 -DiffBase 80a83ccb1` ＝full **12998 / 0 / 2 / 13000**（前便と同数＝新しい試験なし）（Lab `sessions/p965/end.log`）→ この docs commit。本体 `82031adc1`。Core '+' 13 行／LILYPOND-REF 0／LILYSHARP-OWN 0（1 行の修正＋註＝既存の aligned_side の REF の下）。未 push 11＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。
+判定（2026-10-23）: 次は **単一譜の `@cross` の警告（上の質問の答え待ち）** → §2 E ⑹（開いた和音入力＝綴りの合意が先・これも要ユーザー判断）。どちらもユーザーの答えが先＝答えが来たらその便で。会話は続けてよい（(c)）。
+
+## 以下は第964セッションの経緯
+
 ### 1.1 第964セッション（2026-10-23・YT-DELL2）
 
 第963 と同じ会話の続き（ユーザー「続けて」＝grace の束の残り ⑶ `@chord`／`@figuredBass`／`@diagram` を grace へ）。`-Start p964`（開始 HEAD `732d466b3`・未 push 8・第962 を ARCHIVE へ・full 12961 / 0 / 2 / 12963）。作業場所は Lab `sessions/p964/`（LP の計器 `lp/probe.ly`〜`probe3.ly` と `lp/*.log`・probe `probe/gracechord.lys`・絵 `probe/out/gracechord.png`・毒 `poisons.ps1`・掃き `svg/`・台帳の記入 `ledger-fill.ps1`）。
@@ -137,19 +149,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 
 - `-End p964 -DiffBase 732d466b3` ＝full **12998 / 0 / 2 / 13000**（前便末 12963 ＋ 37＝validator 7 ＋ GraceChordNameAndDiagram 10 ＋ 台帳 20）（Lab `sessions/p964/end.log`）→ この docs commit。本体 `3bde0e276`。Core '+' 776 行／LILYPOND-REF 6／LILYSHARP-OWN 2（横並びの図の rod・grace の名前の自然長）。台帳 1403 点・exact 1167・OPEN 0。未 push 9＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。⚠️ 拡張は入れ直していない（プレビューで見るには `tools\Deploy-Lsp.ps1` → Reload Window＝ユーザー）。
 判定（2026-10-23）: **grace の LYS4020 の残りはこれで尽きた**（`CarriedKinds` の 4 種に乗る注釈は全部 grace に載る・残るのは §2 U8 ⒞ の休符の部分連桁の模型と ⒝ の小さな残り）。次は 単一譜の `@cross` の警告（要ユーザー判断）→ §2 E ⑹（開いた和音入力＝綴りの合意が先）→ 続きのトリルの OPEN 0.040。次の一手は grace の文脈を使わない＝(c) 無関係の島＝既定は続ける。
-
-## 以下は第963セッションの経緯
-
-### 1.1 第963セッション（2026-10-23・YT-DELL2）
-
-第962 と同じ会話の続き（ユーザー「続けて」＝grace の束の残り ⑵ `@todo`）。`-Start p963`（開始 HEAD `3ca893daf`・未 push 6・第961 を ARCHIVE へ・full 12952 / 0 / 2 / 12954）。作業場所は Lab `sessions/p963/`（probe `probe/gracetodo.lys`・絵 `probe/out/gracetodo.png`・毒 `poisons.ps1`・掃き `svg/`）。
-- **grace の `@todo`＝閉じた `7886aa026`**: ⑴ `MeasureBuilder.NarrowToGraceTime` が note／chord／rest の `TodoKey`・`TodoMemo`・`TodoBelow`・`TodoSideWritten` を残す（白リストに 4 項目）／⑵ `GraceBodySupport.IsCarriedTodo`（`TodoAnnotation.Of` が非 null）を drop list に＝LYS4020 が報告しない／⑶ 描画 `SharedRenderer.DrawTodoMarks` と予約 `TodoMemoBand.BoxesFor` の両方が `item.GraceTime` のとき **`SharedRenderer.GraceTodoInkBox`** で輪の箱を取る＝`ElementCoordinator.GraceColumnAt` の列（`HeadBox`＝grace フォントの頭の箱・和音は `GraceColumnHeads.HeadOffsets`・休符は中立位置＋shift の実寸）と `HeadLeftX`。voice の衝突表は譜ごとに 1 度（`SpacingRules.VoiceCollisionShiftsOf(staff)`）。memo の側は従来どおり（下の声部は下・`.down`）。⚠️ tab の grace の輪は数字ではなく五線の箱（`TabTodoInkBox` は実寸の数字を読む・本には無い）。
-- **網**: `TodoCalloutTests.AMarkOnAGraceNote_RingsItsSmallHead_AndSetsItsMemo` 5 綴り（grace・grace 和音・`.down`・acciaccatura の 1 つ目・afterGrace）＝輪 2 つ・grace の輪は実寸の頭より 0.2〜0.5 低い（和音は 0.4〜1.0 高い）・grace の輪は主音符の左・memo と leader（`.down` は下）・輸出に輪も memo も無い／`GraceBodyValidatorTests.ATodoOnAGrace_IsNotReported_AndTheExportDrawsNothingForIt` 4 綴り（警告 0・`data-todo` を伏せた輸出が対照と同一）。毒 3 本（drop list を忘れる＝validator 4 赤／narrowing が `TodoKey` を落とす＝callout 4 赤／`GraceTodoInkBox` が null＝callout 5 赤）→ 戻して緑。掃き 1,015 冊 1,248 枚で **0**（輸出は印を描かない・本に grace の `@todo` は無い）。
-- 計器の罠: ⒜ 輪の高さは手描きの輪の揺れで「頭の高さ×magstep＋余白」に 0.1 で合わない＝実寸の輪との差（−0.2〜−0.5）で読む／⒝ `LiveRender.Svg` の輸出にも `data-todo` の印は乗る（ink は無い）＝同一性の網は属性を伏せる／⒞ 掃きの最中に別の console が busy だと `execute_command` が 4 つ目の console を立てる（害は無い）。
-- docs: CHANGELOG（本体 `## Unreleased`・VS Code は `## Unreleased` を新設）・`docs/todo-memo-design.md` §1 に grace の段落・APPROXIMATIONS（OWN +2＝`IsCarriedTodo`・`GraceTodoInkBox`）。
-
-- `-End p963 -DiffBase 3ca893daf` ＝full **12961 / 0 / 2 / 12963**（前便末 12952 ＋ 9＝callout 5 ＋ validator 4）（Lab `sessions/p963/end.log`）→ この docs commit。本体 `7886aa026`。Core '+' 121 行／LILYPOND-REF 0／LILYSHARP-OWN 2（編集者の印＝LP に対応物なし）。未 push 7＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。⚠️ 拡張は入れ直していない（プレビューで見るには `tools\Deploy-Lsp.ps1` → Reload Window＝ユーザー）。
-判定（2026-10-23）: grace の LYS4020 の残りは **⑶ `@chord`／`@figuredBass`／`@diagram` を grace へ**（別 engraver・`@chord`／`@figuredBass` は LP と照合可）だけ → 単一譜の `@cross` の警告（要ユーザー判断）→ §2 E ⑹ → 続きのトリルの OPEN 0.040。次の一手は grace の文脈を使う＝(a) この会話で続ける。
 
 ## 2. 開いている作業
 
