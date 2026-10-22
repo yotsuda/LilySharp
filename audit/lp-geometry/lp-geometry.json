@@ -8904,12 +8904,26 @@
       "residual": 0.002261153,
       "why": "The grace's UP stem (tip 3.60 over the middle line in both engines) is a support under the LABEL: LilyPond spelled \"8va\" as Lily# does (ottavationMarkups = ottavation-simple-ordinals, book VGE) reads 4.887332 and Lily# 4.889593. The 0.0023 left is the label's own outline (the text.width family), not a grace term. CORRECTED session 926: session 925 read this against LilyPond's default label \"8\" (book OGE, 4.15) and charged Lily# +0.74 -- that was the SPELLING (Lily# writes \"8va\", the user's decision; ottava.x.line-start-to-notehead carries the same spelling term), a shorter label leaving the stem under LilyPond's dashed line instead."
     },
+    "ottava.grace.after-high-note.high-to-grace": {
+      "probe": "grace-ottava.ly",
+      "score": "VGA",
+      "lilypond": 2.117729,
+      "residual": 0.0,
+      "why": "CLOSED IN SESSION 952. The high c''' to the grace the ottava starts on, which LilyPond spaces as the d'' it draws (2.117729, the same as an unbracketed d'' grace; Lab sessions/p952/no.ly NOB/NOC). Lily# read 2.40, the d''' it was written as, with its ledger lines -- the LeadingGrace the spacing reads kept the written position (OttavaTransposer.Shift)."
+    },
+    "ottava.grace.after-high-note.grace-to-main": {
+      "probe": "grace-ottava.ly",
+      "score": "VGA",
+      "lilypond": 1.938627,
+      "residual": 0.0,
+      "why": "CLOSED IN SESSION 952. The grace to its main note: 1.938627 for the d'' grace whatever the bracket (NOA..NOE). Lily# read 1.40, the written d'''s flag clearing the e by far -- the score's grace group kept the written position (StaffAccidentals.SyncGraceNotes now copies the moved one)."
+    },
     "ottava.grace.after-high-note.staff-to-line": {
       "probe": "grace-ottava.ly",
       "score": "VGA",
       "lilypond": 5.320638,
-      "residual": -0.241391833,
-      "why": "NOT A GRACE TERM. The c''' BEFORE the span (Lily# c''), its head top 4.545 over the middle line and its right edge 0.0135 short of the bracket's left end, holds LilyPond's bracket at 5.320638 -- with either spelling (OGA \"8\" and VGA \"8va\" read the same), and OGE / OGF (a low first note, a rest between) fall to 4.15 under \"8\". Lily# does not see that neighbour (it stands X-disjoint from the bracket) and stands on the grace's stem under its label (4.889593 in VGE), landing 0.24 low. IDENTIFIED IN SESSION 951 (it was 'unexplained'): what LilyPond reaches is not the head but the c'''s LEDGER LINE. A LedgerLineSpanner is an inside-staff grob, so the staff's vertical skyline carries each ledger at its own height (pos/2 + half its thickness 0.2 = 4.1 here) and its own width, the head's widened by length-fraction 0.25 each side -- 0.326 past the head's right, under the left end of the label. The OUTSIDE-STAFF pass lifts the bracket off it (outside-staff-priority ##f leaves the bracket at 4.887332, VGE's height; the VerticalAxisGroup dump shows the 4.1 building to 9.902729), and moving the bracket's left end right (shorten-pair -0.80 .. -0.40) lowers it smoothly along the label's bottom outline until the gap passes the ledger's end (Lab sessions/p951/sp.ly, vag.ly, os.ly). Lily#'s staff skyline (SkylineBuilder) carries NO ledger lines -- the renderer plans and draws them (SharedRenderer DrawPlannedLedgers) after layout -- so the bracket stands on the grace's stem instead. OPEN: the port is the ledger plan as a layout-time skyline seed, which reaches every outside-staff grob beside a ledgered note, not the ottava alone."
+      "residual": -0.000368531,
+      "why": "CLOSED IN SESSION 952 (was -0.241391833, OPEN since session 925). What LilyPond reaches is the first note c'''s LEDGER LINE: it stands at its own height (pos 8/2 + half its 0.2 = 4.1) and runs 0.326 (length-fraction 0.25 of the head) past the head's right, under the left end of the label, and the outside-staff pass lifts the bracket off it (outside-staff-priority ##f leaves it at 4.887332; Lab sessions/p951). Lily#'s staff skyline carries the ledger too (SkylineBuilder.AddNoteBoxToSkylines) -- session 951 said it did not, wrongly -- but Lily# stood the grace 0.28 further right, so the label began 0.03 short of the ledger's end: OttavaTransposer moved the grace ITEM an octave down and left the main item's LeadingGrace and the score's grace group at the written d''', so the run was spaced as a grace with ledger lines (ottava.grace.after-high-note.high-to-grace). It moves them together now. The -0.000369 left is the label's bold-italic outline over the ledger's end, the text family's own small term."
     },
     "ottava.grace.control.label-to-notehead": {
       "probe": "grace-ottava.ly",

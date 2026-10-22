@@ -411,10 +411,17 @@ internal static class StaffAccidentals
                 if (heads.Length != lead[k].Heads.Length)
                     continue;
                 var newHeads = heads;
+                // …and the head's POSITION (session 952): an ottava that covers the run moved the
+                // main item's LeadingGrace by whole octaves (OttavaTransposer), and the group is
+                // the copy the grace engraver places and draws from.
                 for (int h = 0; h < heads.Length; h++)
-                    if (heads[h].StaffPosition == lead[k].Heads[h].StaffPosition
-                        && heads[h].Accidental != lead[k].Heads[h].Accidental)
-                        newHeads = newHeads.SetItem(h, heads[h] with { Accidental = lead[k].Heads[h].Accidental });
+                    if (heads[h].StaffPosition != lead[k].Heads[h].StaffPosition
+                        || heads[h].Accidental != lead[k].Heads[h].Accidental)
+                        newHeads = newHeads.SetItem(h, heads[h] with
+                        {
+                            StaffPosition = lead[k].Heads[h].StaffPosition,
+                            Accidental = lead[k].Heads[h].Accidental,
+                        });
                 if (newHeads != heads)
                     (b ??= gn.Columns.ToBuilder())[k] = gn.Columns[k] with { Heads = newHeads };
             }

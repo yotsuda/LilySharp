@@ -17768,6 +17768,8 @@ internal static class LpGeometryProbes
         new("ottava.grace.label-to-notehead", GOTA, g => g.OttavaLabelPenToNotehead(1)),
         new("ottava.grace.staff-to-line", GOTE, g => g.OttavaLineAboveStaff()),
         new("ottava.grace.after-high-note.staff-to-line", GOTA, g => g.OttavaLineAboveStaff()),
+        new("ottava.grace.after-high-note.high-to-grace", GOTA, g => g.NoteheadToNotehead(0, 1)),
+        new("ottava.grace.after-high-note.grace-to-main", GOTA, g => g.NoteheadToNotehead(1, 2)),
         new("ottava.grace.control.label-to-notehead", GOTB, g => g.OttavaLabelPenToNotehead(1)),
         new("ottava.grace.control.staff-to-line", GOTB, g => g.OttavaLineAboveStaff()),
         new("ottava.grace.stops-on-grace.hook-to-notehead", GOTC, g => g.OttavaHookToNotehead(1)),

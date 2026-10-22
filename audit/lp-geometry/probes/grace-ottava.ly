@@ -39,6 +39,10 @@
 %% The same books with the label spelled "8va" as Lily# writes it (session 926):
 %%   VGA  as OGA   y 5.320638     VGE  as OGE   y 4.887332     VGJ  as OGJ   y 4.908984
 %% Under "8va" the grace's stem stands under the LABEL in both engines (VGE).
+%% VGA's SPACING (session 952): c''' head to grace head 2.117729, grace head to e''' head
+%% 1.938627 -- the grace spaced as the d'' it draws, the same as an unbracketed d'' grace
+%% (Lab sessions/p952/no.ly). VGA's 5.320638 is the bracket lifted off the c''''s LEDGER LINE,
+%% which runs 0.326 past the head under the label's left end (Lab sessions/p951).
 %%
 %% ⚠️ `\fixed c'` is LOAD-BEARING: Lily#'s absolute `c` is LilyPond's `c'` (RULES 6).
 #(define (dump-final tag)

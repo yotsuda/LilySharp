@@ -47,7 +47,10 @@ workflow attaches that section to the GitHub Release verbatim.
   staff's notes could stand in for it, and the hook was drawn past the next note — which a
   reader takes as still under the line. A free text below the staff (`@text`) stands below an
   8vb rather than over its dashes. An ottava over a note too short for its label slides the
-  label left, as LilyPond does, so the hook stands after "8va" rather than on it.
+  label left, as LilyPond does, so the hook stands after "8va" rather than on it. A grace note
+  an ottava starts on is spaced as the note it is drawn as (`c'''4 grace { d'''16@ottava } e'''4`
+  was spaced as though the grace still stood an octave up, with its ledger lines), so the
+  bracket over it stands where LilyPond puts it, clear of the previous note's ledger line.
 - **A grace note's accidental holds for the staff too:** the lower voice's `grace { b'16 }` after
   the upper voice's `bes'` prints its natural, as an ordinary note already did. So does a
   `condensedStaff`: the second part's `f'` after the first part's `fes'` prints its natural.

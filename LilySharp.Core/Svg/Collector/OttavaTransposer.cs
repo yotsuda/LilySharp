@@ -129,10 +129,36 @@ internal static class OttavaTransposer
         return changed ? voice with { Measures = rebuilt.MoveToImmutable() } : voice;
     }
 
+    // ⚠️ AND THE MAIN ITEM'S LeadingGrace WITH IT (session 952): the grace columns the SPACING
+    // reads (SpacingRules.GraceNotesOf) ride the main item, and the score's grace groups are
+    // re-read off them (StaffAccidentals.SyncGraceNotes), yet they kept the WRITTEN positions
+    // while the grace items in the list moved. `c'''4 \grace { \ottava #1 d'''16 } e'''4` was
+    // drawn as a d'' grace and spaced as a d''' one — c→grace 2.40 / grace→main 1.40 where
+    // LilyPond 2.26.0 reads 2.117739 / 1.938627, as for any d'' grace (Lab sessions/p952/no.ly)
+    // — which also kept the c''''s ledger line from under the bracket's label (ledger
+    // ottava.grace.after-high-note.staff-to-line). The run shares the main item's onset, so it
+    // moves exactly when the main item does, as the grace items in the list do.
     private static MusicItem Shift(MusicItem item, int off) => item switch
     {
-        NoteItem n => n with { StaffPosition = n.StaffPosition + off },
-        ChordItem c => c with { Notes = ImmutableArray.CreateRange(c.Notes, cn => cn with { StaffPosition = cn.StaffPosition + off }) },
+        NoteItem n => n with
+        {
+            StaffPosition = n.StaffPosition + off,
+            LeadingGrace = ShiftGrace(n.LeadingGrace, off),
+        },
+        ChordItem c => c with
+        {
+            Notes = ImmutableArray.CreateRange(c.Notes, cn => cn with { StaffPosition = cn.StaffPosition + off }),
+            LeadingGrace = ShiftGrace(c.LeadingGrace, off),
+        },
+        RestItem { LeadingGrace.IsDefaultOrEmpty: false } r => r with { LeadingGrace = ShiftGrace(r.LeadingGrace, off) },
         _ => item
     };
+
+    private static ImmutableArray<GraceColumnInfo> ShiftGrace(ImmutableArray<GraceColumnInfo> run, int off)
+        => run.IsDefaultOrEmpty
+            ? run
+            : ImmutableArray.CreateRange(run, col => col with
+            {
+                Heads = ImmutableArray.CreateRange(col.Heads, h => h with { StaffPosition = h.StaffPosition + off }),
+            });
 }
