@@ -160,6 +160,19 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第953セッションの経緯
+
+### 1.1 第953セッション（2026-10-22・YT-DELL2）
+
+第952 と同じ会話の続き（ユーザー「1」＝第952 の候補 ⑴ 台帳の残りの OPEN）。`-Start p953`（開始 HEAD `2cb51c5f7`・未 push 87・第951 を ARCHIVE へ）。作業場所は Lab `sessions/p953/`（LP の試料 `sbr.ly`／`sbri.ly`・`sky.ly`・`lp-*.ly`・掃きの一覧 `sweep-diff.txt`）。
+- **残りの OPEN 7 点の読み直し**: 歌詞の verse-hole の族（0.136）は歌詞の字面の項（Lily# の gjy の上端 1.629815／LP 1.765782）＝why が「0 にしない」と言う＝既決。staff-staff-inside（−0.0066）・volta（0.0026）・textscript（−0.001）も名指し済みの床。**残る実の OPEN は `slur.beamed.reserved-text`（−0.062・"not decomposed"）だけ**だった。
+- **それを分解して閉じた**（`522952c2c`）: ⑴ **計器の字面 0.039**＝probe の裸の `^"sul D"` は LP の立体の代替字、Lily# の `@text` は serif の斜体（第917 の textscript-ink の罠と同じ）→ `\markup \italic`＋`fonts.serif = "LilyPond Serif"` で LP 2.634165（probe 更新）。⑵ **slur の skyline の継ぎ目 0.025**＝LP の Slur／Tie の skyline は sandwich の stencil から: 各 bezier を制御多角形の長さ／0.2 に分け（stencil-integral.cc `add_draw_bezier_segments`・`QUANTIZATION_UNIT`）、各区間の両端を**X 方向に**ペンの半径だけ広げてから半径だけ持ち上げる（lazy-skyline-pair.hh `add_segment`）＝斜面では継ぎ目で前の区間が次より高い段になる。Lily# は 16 等分を半径だけ上げていた＋内側の制御点を perp の Y 成分だけ動かしていた（`Lookup::slur` は X も）。`SkylineBuilder.MergeBowOuterEdge` を LP の通りに（両 bezier）。結果 −0.000266（斜体の輪郭の差）。
+- **ついでに一致したもの**: `system.{slur,tie,voice2-*}-{over,under}-notes` 6 点＝4〜5e-4 → 完全一致。`staff.staff.tie-*`（所有者決定の自前の差）0.323572 → 0.322907。lpreg `lymelmel`＝slur の下の melisma の歌詞 6.18 → 6.31（LP 6.311689）・`slurav`＝slur の下の五線 11.01 → 11.04（LP 11.038）。
+- ⚠️ **OPEN（`ArticulationPlacementTests` に記録）**: tie を**支え**にする script（tie の上のアクセント等）も一様に ~+0.008 上がった。LP からの差は前が −0.008〜+0.005（平均 ≈ 0）、今は +0.001〜+0.014（sctchord の 5 アクセントのうち 2 つは近づき 3 つは遠のく・テヌート 2 つも +0.013）。slur の点は完全一致したので**模型は LP**＝LP が tie を支えとして読むものが stencil の skyline でない（pure の高さ？）見込み。
+- **網**: 台帳 9 点の residual を更新（slur.beamed＋system 6＋staff.staff 2）。毒 3 本＝X に広げない 1・perp の Y だけ 1・粗い分割 9＝全部赤。掃き 1,248 枚で **77 枚動いた**（64 枚は 0.04 以下＝SVG の 0.01 刻み・大きいのは lpreg の上の 2 冊＝どちらも LP に寄った）。snapshot 2 枚を承認（`test/slur-obstacle-clearance`・`test/pedal-under-next-system`）。`StaffSkylineFrameTests` の bow の頂点は 1e-5 で（t = 0.5 が標本でない多角形がある）。棚卸し＝16 が消え 0.2 に引用。引用の網: `QUANTIZATION_UNIT` は 2 つめ以降の大文字で C# の名と見なされる＝行番号を外した。計器: 使い捨て `Zz953ProbeTests`（RenderedGeometry の private を反射で読む・旧 `SkylineBuilder.cs` を差し替えて比べる＝⚠️ **差し替えは時刻を新しくしないと build が古いままになる**）は消した。
+- `-End p953 -DiffBase 2cb51c5f7` ＝full **12911 / 0 / 2 / 12913**（前便末と同数＝期待値の更新だけ）（Lab `sessions/p953/end.log`）→ この docs commit。本体 `522952c2c`。未 push 88＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。
+判定（2026-10-22）: 台帳に「分解されていない」残差は無くなった（名指しの床と決定済みだけ）。slur／tie の skyline は LP の作り方になった。次の候補＝⑴ tie を支えにする script の +0.008（LP が tie を支えとして何を読むか＝LP で dump）・⑵ 和音の fall（要ユーザー判断）・⑶ `@pluck`・H/P/T・`@scoop`/`@plop`/`@bend`・§2 E ⑹⑺（要ユーザー判断）。
+
 ## 以下は第952セッションの経緯
 
 ### 1.1 第952セッション（2026-10-22・YT-DELL2）

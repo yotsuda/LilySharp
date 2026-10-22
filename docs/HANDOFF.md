@@ -124,6 +124,18 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第955セッション（2026-10-22・YT-DELL2）
+
+第954 と同じ会話の続き（ユーザー「音楽的には、和音の fall は書けるほうがいいのかな」→ 提案「最高音の頭から 1 本」に「良い。着手して」）。`-Start p955`（開始 HEAD `736d0a336`・未 push 91・第953 を ARCHIVE へ）。作業場所は Lab `sessions/p955/`（目視の probe `probe/fall.lys`＝before／after の png・掃き `svg/`）。
+- **ユーザー決定（2026-10-22）＝和音の fall／doit は描く・最高音の頭から 1 本**。LP が描かないのは `Bend_engraver` が和音の 2 つめの頭の acknowledge で spanner を止める副作用（第947・Lab `sessions/p947/bendch.ly`）＝音楽的判断ではない（第751 の方針: 意味論は音楽的妥当性）。実譜の慣例はセクションの fall-off もピアノの和音も最高音から 1 本。
+- **直した**（本体 `d3da03c35`）: `ArticulationEngraver` の fall 枝＝和音は最高音の頭（`ChordHeadPositioning.CalculateOffsets` の反転ずれ込み）の ink 右から・その頭の段に吊る・付点はその頭の段に乗るときだけ左端に読む。grace 和音も同じ（`GraceColumnHeads.HeadOffsets`）。それまでは外側 2 音の中点（どの頭も無い高さ）だった。`GetStaffPosition` の ChordItem の枝（中点）は bend-up／scoop 等が今も読む＝残した。member の `<g c@fall>` も同じ 1 本（和音の gesture は 1 つ）。tab の和音は従来どおり先頭の音の弦（未変更）。LILYSHARP-OWN を fall 枝に置いた（OWN 263 → 264）。GRAMMAR.md の注釈一覧に 1 行。
+- **網**: `BendAfterGeometryTests.AChordsGestureLeavesItsTopHead`（4 行の theory＝素・上向き符尾の 2 度で最高音が反転した頭・付点が最高音の段に乗る・乗らない）＋ `AGraceChordsGestureHangsAtItsTopHead`（4 度＝中点との差 1 空間。⚠️ 2 度だと整数除算の中点が最高音と一致して毒が効かなかった）。毒 2 本＝中点に戻す: 4 赤・grace 1 赤。掃き 1,248 枚で **1 枚**（アシンメトリー `<b, e>@fall`＝曲線が 1 空間上がった・4 token）。棚卸し 2 枚再生成。
+- 計器の罠: ⒜ Edit ツールは bytes で戻した直後のファイルに当てられない＝毒は pwsh の `Replace`（hits==1 の門）で当てるほうが速い／⒝ grace の頭の `<text>` は `style="font-family…"` を x の前に持つ＝SVG を正規表現で読む網は `(?: style="[^"]*")?` を挟む／⒞ `-End` を §1 の語りを立てる前に回すと `HandoffArchiveContinuityTests` 3 本が赤（第955 が踏んだ＝順序は load-bearing・本体の網は緑のまま）。
+- `-End p955 -DiffBase 736d0a336` ＝full **12916 / 0 / 2 / 12918**（前便末 +5＝新しい網）（Lab `sessions/p955/end.log`）→ この docs commit。本体 `d3da03c35`。未 push 92＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。
+判定（2026-10-22）: 和音の fall は閉じた（ユーザー決定・最高音から 1 本）。次の候補＝⑴ `@pluck`・H/P/T・`@scoop`/`@plop`/`@bend`・§2 E ⑹⑺（要ユーザー判断）・⑵ 台帳は名指しの床と決定済みだけ＝触らない。
+
+## 以下は第954セッションの経緯
+
 ### 1.1 第954セッション（2026-10-22・YT-DELL2）
 
 第953 と同じ会話の続き（ユーザー「次を読んで作業に着手して」＝第953 の候補 ⑴ tie を支えにする script の +0.008）。`-Start p954`（開始 HEAD `89ed22627`・未 push 89・第952 を ARCHIVE へ）。作業場所は Lab `sessions/p954/`（LP の dump `tiesky.ly`／`tiesky.log`・使い捨て計器 `Zz954ProbeTests.cs.txt`・pad の掃き `probe2.log`・svg の掃き `svg/`）。
@@ -135,19 +147,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 
 - `-End p954 -DiffBase 89ed22627` ＝full **12911 / 0 / 2 / 12913**（前便末と同数＝期待値の更新と snapshot 1 枚）（Lab `sessions/p954/end.log`・1 回目は棚卸し 2 枚の鮮度と LILYPOND-REF の無名 1 件＝`Skyline::padded` は計器の綴りで名前にならない→`pad_buildings` を添えて amend）→ この docs commit。本体 `eecd4005d`。未 push 90＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。
 判定（2026-10-22）: 第953 の OPEN（tie を支えにする script の +0.008）は閉じた＝原因は tie でも bow でもなく horizon-padding を盛る側。次の候補＝⑴ 和音の fall（要ユーザー判断）・⑵ `@pluck`・H/P/T・`@scoop`/`@plop`/`@bend`・§2 E ⑹⑺（要ユーザー判断）。台帳は名指しの床と決定済みだけ＝触らない。
-
-## 以下は第953セッションの経緯
-
-### 1.1 第953セッション（2026-10-22・YT-DELL2）
-
-第952 と同じ会話の続き（ユーザー「1」＝第952 の候補 ⑴ 台帳の残りの OPEN）。`-Start p953`（開始 HEAD `2cb51c5f7`・未 push 87・第951 を ARCHIVE へ）。作業場所は Lab `sessions/p953/`（LP の試料 `sbr.ly`／`sbri.ly`・`sky.ly`・`lp-*.ly`・掃きの一覧 `sweep-diff.txt`）。
-- **残りの OPEN 7 点の読み直し**: 歌詞の verse-hole の族（0.136）は歌詞の字面の項（Lily# の gjy の上端 1.629815／LP 1.765782）＝why が「0 にしない」と言う＝既決。staff-staff-inside（−0.0066）・volta（0.0026）・textscript（−0.001）も名指し済みの床。**残る実の OPEN は `slur.beamed.reserved-text`（−0.062・"not decomposed"）だけ**だった。
-- **それを分解して閉じた**（`522952c2c`）: ⑴ **計器の字面 0.039**＝probe の裸の `^"sul D"` は LP の立体の代替字、Lily# の `@text` は serif の斜体（第917 の textscript-ink の罠と同じ）→ `\markup \italic`＋`fonts.serif = "LilyPond Serif"` で LP 2.634165（probe 更新）。⑵ **slur の skyline の継ぎ目 0.025**＝LP の Slur／Tie の skyline は sandwich の stencil から: 各 bezier を制御多角形の長さ／0.2 に分け（stencil-integral.cc `add_draw_bezier_segments`・`QUANTIZATION_UNIT`）、各区間の両端を**X 方向に**ペンの半径だけ広げてから半径だけ持ち上げる（lazy-skyline-pair.hh `add_segment`）＝斜面では継ぎ目で前の区間が次より高い段になる。Lily# は 16 等分を半径だけ上げていた＋内側の制御点を perp の Y 成分だけ動かしていた（`Lookup::slur` は X も）。`SkylineBuilder.MergeBowOuterEdge` を LP の通りに（両 bezier）。結果 −0.000266（斜体の輪郭の差）。
-- **ついでに一致したもの**: `system.{slur,tie,voice2-*}-{over,under}-notes` 6 点＝4〜5e-4 → 完全一致。`staff.staff.tie-*`（所有者決定の自前の差）0.323572 → 0.322907。lpreg `lymelmel`＝slur の下の melisma の歌詞 6.18 → 6.31（LP 6.311689）・`slurav`＝slur の下の五線 11.01 → 11.04（LP 11.038）。
-- ⚠️ **OPEN（`ArticulationPlacementTests` に記録）**: tie を**支え**にする script（tie の上のアクセント等）も一様に ~+0.008 上がった。LP からの差は前が −0.008〜+0.005（平均 ≈ 0）、今は +0.001〜+0.014（sctchord の 5 アクセントのうち 2 つは近づき 3 つは遠のく・テヌート 2 つも +0.013）。slur の点は完全一致したので**模型は LP**＝LP が tie を支えとして読むものが stencil の skyline でない（pure の高さ？）見込み。
-- **網**: 台帳 9 点の residual を更新（slur.beamed＋system 6＋staff.staff 2）。毒 3 本＝X に広げない 1・perp の Y だけ 1・粗い分割 9＝全部赤。掃き 1,248 枚で **77 枚動いた**（64 枚は 0.04 以下＝SVG の 0.01 刻み・大きいのは lpreg の上の 2 冊＝どちらも LP に寄った）。snapshot 2 枚を承認（`test/slur-obstacle-clearance`・`test/pedal-under-next-system`）。`StaffSkylineFrameTests` の bow の頂点は 1e-5 で（t = 0.5 が標本でない多角形がある）。棚卸し＝16 が消え 0.2 に引用。引用の網: `QUANTIZATION_UNIT` は 2 つめ以降の大文字で C# の名と見なされる＝行番号を外した。計器: 使い捨て `Zz953ProbeTests`（RenderedGeometry の private を反射で読む・旧 `SkylineBuilder.cs` を差し替えて比べる＝⚠️ **差し替えは時刻を新しくしないと build が古いままになる**）は消した。
-- `-End p953 -DiffBase 2cb51c5f7` ＝full **12911 / 0 / 2 / 12913**（前便末と同数＝期待値の更新だけ）（Lab `sessions/p953/end.log`）→ この docs commit。本体 `522952c2c`。未 push 88＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。
-判定（2026-10-22）: 台帳に「分解されていない」残差は無くなった（名指しの床と決定済みだけ）。slur／tie の skyline は LP の作り方になった。次の候補＝⑴ tie を支えにする script の +0.008（LP が tie を支えとして何を読むか＝LP で dump）・⑵ 和音の fall（要ユーザー判断）・⑶ `@pluck`・H/P/T・`@scoop`/`@plop`/`@bend`・§2 E ⑹⑺（要ユーザー判断）。
 
 ## 2. 開いている作業
 
