@@ -12,10 +12,10 @@
 
 | 区分 | 件数 | 意味 |
 |---|---:|---|
-| `APPROX` | 65 | LP に対応物はあるが、形が違うと自認しているもの |
+| `APPROX` | 64 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 62 | 観測者がゼロだと自認しているもの |
 | `OWN` | 263 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **390** | |
+| **計** | **389** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -34,7 +34,7 @@
 | `LilySharp.Core/Rendering/SharedRenderer.Marks.cs` | 6 |
 | `LilySharp.Core/Rendering/SharedRenderer.Overlays.cs` | 6 |
 
-## APPROX — LP に対応物はあるが、形が違うと自認しているもの（65 件）
+## APPROX — LP に対応物はあるが、形が違うと自認しているもの（64 件）
 
 ### `LilySharp.Core/Music/ChordStructure.cs`
 - **`ChordQualityRegistry.SymbolSuffix`** ⚠️ THE SIZE AND THE RAISE ARE NOT PORTED — Lily# draws a chord name as one baseline
@@ -123,8 +123,6 @@
 - **`SlurScoringProblem.ScoreExtraEncompass`** approximation there); RIGHT wins when both edges match, as LP's
 ### `LilySharp.Core/Svg/Layout/SpacingRules.BarlineSkyline.cs`
 - **`SpacingRules.BarlineToColumnMinimum`** NOT PORTED HERE: the box's reach toward the OTHER neighbour. LilyPond grows it from
-### `LilySharp.Core/Svg/Layout/SpacingRules.Grace.cs`
-- **`SpacingRules.GraceColumns`** 2.318436 where SpringIntoGraceRun gives the Note_spacing 2.401796) — not ported.
 ### `LilySharp.Core/Svg/Layout/SpacingRules.TimingSprings.cs`
 - **`SpacingRules.CrossesVoiceBoundary`** ⚠️ THIS IS A DERIVATION, NOT A TRANSCRIPTION, and it rests on one premise worth
 ### `LilySharp.Core/Svg/Layout/StaffAffinity.cs`

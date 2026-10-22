@@ -649,6 +649,23 @@ internal static partial class SpacingRules
         return series;
     }
 
+    /// <summary>
+    /// Whether the widest leading grace run at this moment (<see cref="WidestLeadingGraceItem"/>)
+    /// opens on a SPACER — `c4 grace { s16 d16 } e4` (session 943).
+    /// </summary>
+    /// <remarks>
+    /// LilyPond's first grace column then holds no note: the previous column's Note_spacing wish
+    /// reaches the next NOTE, not it, so the spring into it is the bare duration spring with its
+    /// minimum dropped to 0 (lily/spacing-spanner.cc:380-391 musical_column_spacing, no matching
+    /// wish and a musical right column), then the 0.8 of a column with a grace part, and its empty
+    /// extent puts no rod on the pair. MEASURED (2.26.0, probes/grace-breath.ly GBY): c4 -> the
+    /// spacer's column 2.318436 = 2.898045 x 0.8, where the Note_spacing approach gives 2.401796.
+    /// </remarks>
+    internal static bool LeadingGraceOpensOnSpacer(in ItemColumn items)
+        => WidestLeadingGraceItem(items) is { } item
+           && GraceNotesOf(item) is { IsDefaultOrEmpty: false } grace
+           && grace[0].IsSpacer;
+
     /// <summary>The main item at this moment whose leading grace run is the widest — the run the
     /// slot's springs are built from (<see cref="LeadingGraceRun"/>'s choice). Null when none leads
     /// with a grace.</summary>

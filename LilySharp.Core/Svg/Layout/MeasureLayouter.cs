@@ -1189,6 +1189,16 @@ internal sealed class MeasureLayouter
                 spring.InverseStretchStrength);
         }
 
+        // A run opening on a SPACER (session 943): no wish reaches its empty first column, so the
+        // approach is the bare duration spring, minimum 0, no rod (SpacingRules.LeadingGraceOpensOnSpacer).
+        if (SpacingRules.LeadingGraceOpensOnSpacer(nextItems))
+        {
+            // LILYPOND-REF: lily/spacing-spanner.cc:380-391 musical_column_spacing — no wish matches the column: set_min_distance (0.0), no rod over its empty extent.
+            spring = baseSpring.WithMinDistance(0.0);
+            // LILYPOND-REF: lily/spacing-spanner.cc:228-297 set_column_rods — an empty extent puts no rod.
+            graceFloor = (0.0, 0.0);
+        }
+
         // Leading grace on the next note hangs left of that column; reserve its width here
         // so the renderer's hung glyphs have room — and shrink the APPROACH by LilyPond's
         // 0.8 first, which is the half this used to skip (SpacingRules.SpringIntoGraceRun).

@@ -9011,6 +9011,7 @@ internal static class LpGeometryProbes
     private static readonly string GBRV = GraceTieBook("c4 grace { d16 s16 e16 } f4 c2 |", "GBRV");
     private static readonly string GBRW = GraceTieBook("c4 grace { d16 s8 e16 } f4 c2 |", "GBRW");
     private static readonly string GBRX = GraceTieBook("c4 grace { d16 s16 } e4 c2 |", "GBRX");
+    private static readonly string GBRY = GraceTieBook("c4 grace { s16 d16 } e4 c2 |", "GBRY");
     // A breathing sign or caesura between two notes the auto-beamer would beam
     // (audit/lp-geometry/probes/breath-beam.ly; session 937).
     private static readonly string BBA = GraceTieBook("c4 d16@breath e16 f8 c2 |", "BBA");
@@ -17632,6 +17633,8 @@ internal static class LpGeometryProbes
         new("spacer.grace.inner-eighth.across", GBRW, g => g.NoteheadToNotehead(1, 2)),
         new("spacer.grace.inner-eighth.to-main", GBRW, g => g.NoteheadToNotehead(2, 3)),
         new("spacer.grace.last.to-main", GBRX, g => g.NoteheadToNotehead(1, 2)),
+        new("spacer.grace.leading.prev-to-grace", GBRY, g => g.NoteheadToNotehead(0, 1)),
+        new("spacer.grace.leading.to-main", GBRY, g => g.NoteheadToNotehead(1, 2)),
         new("breath.beam.note-to-sign", BBA, g => g.BreathFromNotehead(1)),
         new("breath.beam.sign-to-note", BBA, g => g.NoteheadFromBreath(2)),
         new("breath.beam.beamed-pair", BBA, g => g.NoteheadToNotehead(2, 3)),

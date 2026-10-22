@@ -307,9 +307,15 @@ internal static partial class SpacingRules
             // CreateSpring has already added this pair's stem_dir_correction (:111), so this
             // is the point LilyPond clamps at; ApplyLeftHeadWidth (:77) does not clamp.
             spring = spring.WithIdealDistance(Math.Max(0.0, spring.IdealDistance));
+            // A run opening on a SPACER: the bare duration spring into its empty first column —
+            // mirror of MeasureLayouter.CreateInterColumnSpring (LeadingGraceOpensOnSpacer, session 943).
+            bool spacerFirst = LeadingGraceOpensOnSpacer(One(nextItem));
+            if (spacerFirst)
+                spring = CreateTimingSpringMultiVoice(nextOnset - prevOnset, SoloShortestPlaying(kept, i), spacing)
+                    .WithMinDistance(0.0);
             spring = AdjustSpringForGraceNotes(
                 spring, GraceNotesOf(nextItem), graceParams: null, mainItem: nextItem,
-                approachFloor: GraceApproachFloor(prevItem, nextItem));
+                approachFloor: spacerFirst ? (0.0, 0.0) : GraceApproachFloor(prevItem, nextItem));
             // A pair touching a mid-measure change column is priced by the change column,
             // not by duration — and NOT by merge_springs' headroom afterwards, which would
             // add 0.3 to a gap LilyPond has already fixed.

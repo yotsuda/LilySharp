@@ -77,3 +77,5 @@
   \score { \new Staff { \time 4/4 \fixed c' { c4 \grace { d16 s8 e16 } f4 c2 \bar "|." } } } }
 \book { \paper { indent = 0 ragged-right = ##t page-post-process = #(dump-final "GBX") }
   \score { \new Staff { \time 4/4 \fixed c' { c4 \grace { d16 s16 } e4 c2 \bar "|." } } } }
+\book { \paper { indent = 0 ragged-right = ##t page-post-process = #(dump-final "GBY") }
+  \score { \new Staff { \time 4/4 \fixed c' { c4 \grace { s16 d16 } e4 c2 \bar "|." } } } }

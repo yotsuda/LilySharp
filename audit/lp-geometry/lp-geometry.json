@@ -8379,6 +8379,20 @@
       "residual": 0.0,
       "why": "EXACT since session 942: a spacer ending the run, d -> s -> main both bare, 2.56. AS OPENED: 3.336566 (+0.776566)."
     },
+    "spacer.grace.leading.prev-to-grace": {
+      "probe": "grace-breath.ly",
+      "score": "GBY",
+      "lilypond": 3.598436,
+      "residual": 0.0,
+      "why": "EXACT since session 943: a run opening on a SPACER — the previous column's wish reaches the next NOTE, not the spacer's empty column, so the approach is the bare duration spring with no minimum, x 0.8 (2.898045 x 0.8 = 2.318436; SpacingRules.LeadingGraceOpensOnSpacer, MeasureLayouter.CreateInterColumnSpring and its CreateSpringsForMeasure mirror), then the spacer's bare 1.28 (session 942). AS OPENED: 3.681796 (+0.083360 = 0.8 x the c's head-width refinement, 1.3042 - 1.2), the Note_spacing approach."
+    },
+    "spacer.grace.leading.to-main": {
+      "probe": "grace-breath.ly",
+      "score": "GBY",
+      "lilypond": 1.938627064831478,
+      "residual": 0.0,
+      "why": "EXACT. The CONTROL: the grace after the spacer -> main note, 1.938627."
+    },
     "breath.beam.note-to-sign": {
       "probe": "breath-beam.ly",
       "score": "BBA",

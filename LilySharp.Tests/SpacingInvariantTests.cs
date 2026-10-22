@@ -450,6 +450,8 @@ public class SpacingInvariantTests
     [InlineData("c'2 afterGrace { d'16 e'16 f'16 } g'2")]
     [InlineData("c'4 afterGrace { d'16 } e'4 f'2")]
     [InlineData("c'1 afterGrace { d'16 }")]
+    // …and around a grace run that opens on a SPACER (session 943, ledger spacer.grace.leading.*).
+    [InlineData("c'4 grace { s16 d'16 } e'4 c'2")]
     public void BothSpringSystems_AgreeAroundAnAfterGrace(string bar)
     {
         // An afterGrace's main note plays for its written length, its run's last gap is the bare

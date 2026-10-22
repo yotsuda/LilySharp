@@ -273,9 +273,9 @@ internal static partial class SpacingRules
             // and the gap out of it are both the bare grace spring of their left column.
             // MEASURED (2.26.0, Lab sessions/p942/lp/sp.ly, sp2.ly): `\grace { d16 s16 e16 }` d -> e
             // 2.56 = 1.28 + 1.28 (Lily# drew 3.34 off the spacer's invented width); `{ d16 s8 e16 }`
-            // 1.28 + 2.08; `{ d16 s16 } e4` d -> main 2.56. ⒝ A LEADING spacer's gap out is the same,
-            // but the approach into it is LilyPond's bare duration spring x 0.8 (`c4 \grace { s16 d16 }`:
-            // 2.318436 where SpringIntoGraceRun gives the Note_spacing 2.401796) — not ported.
+            // 1.28 + 2.08; `{ d16 s16 } e4` d -> main 2.56. A LEADING spacer's gap out is the same,
+            // and the approach into it is the bare duration spring x 0.8 (session 943,
+            // SpacingRules.LeadingGraceOpensOnSpacer).
             if ((i + 1 == notes.Length && mainItem is RestItem { IsSpacer: true, LeadingGrace.IsDefaultOrEmpty: false })
                 || notes[i].IsSpacer || next is { IsSpacer: true })
             {
