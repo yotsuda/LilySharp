@@ -160,6 +160,15 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第941セッションの経緯
+
+### 1.1 第941セッション（2026-10-22・YT-DELL2）
+
+第940 と同じ会話の続き（ユーザー「続けて」）。`-Start p941`（開始 HEAD `0b4807a0c`・未 push 62・full **12813 / 0 / 2 / 12815**・第939 を ARCHIVE へ）。作業場所は Lab `sessions/p941/`。
+- **2 つのばねの系の最小値 0.1 の差＝見積もり側の音 → 音のばねに列の rod が無かった＝`4f5b429c0`**（第940 の ⚠️）: 計器 Zz941（削除済み）で afterGrace と無関係に**音 → 音のばね全部**で差が出ると確認（`c'4 d'4 e'4 f'4` も）。描画側（`CreateInterColumnSpring`）は 0.3 の持ち上げの後に列の rod（分離 skyline＋0.1・トレモロ・slur の最小の長さ）を床に入れる。見積もり側（`CreateSpringsForMeasure`）は小節中のマークの列と小節線のばねにだけ入れていた ⇒ 同じ rod を同じ順で入れた。**見積もりの最小値が頁に出るのは列の無い小節の予備経路（`LayoutItems`）だけ**＝掃き 1,248 枚で 0・理想値（改行の小節幅）はもとから一致。網: `BothSpringSystems_AgreeAroundAnAfterGrace` に最小値の比較を戻した（毒＝rod を 0 にすると赤）・`BothSpringSystems_BuildANoteSpringInLilyPondsOrder` は「持ち上げは rod の 0.1 下の skyline の上に立つ」に読み替えた。CHANGELOG なし（描画に出ない）。
+- `-End p941 -DiffBase 0b4807a0c` ＝full **12813 / 0 / 2 / 12815**（前便末 ±0＝試験の数は変わらない）（Lab `sessions/p941/end.log`）→ この docs commit。未 push 63＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。
+判定（2026-10-22）: 2 つのばねの系は afterGrace の前後でも最小値まで一致。次の候補＝slur が膝の grace 連桁を避ける形（主線で読む＝⒝）・grace の LYS4020 の残り（spacer の前の呼吸記号・`@pluck`・TAB の技法・`@diagram`・`@cross`・`@figuredBass`・`@chord`＝字形も置き場所も Lily# 独自が多く LP と照合できる部分が少ない）。
+
 ## 以下は第940セッションの経緯
 
 ### 1.1 第940セッション（2026-10-22・YT-DELL2）

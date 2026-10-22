@@ -124,6 +124,15 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第943セッション（2026-10-22・YT-DELL2）
+
+第942 と同じ会話の続き（ユーザー「続けて」）。`-Start p943`（開始 HEAD `4295c5978`・未 push 67・full は**走行中に台帳を足した 2 点だけ赤**＝HEAD は 12823 / 0 / 2 / 12825・第941 を ARCHIVE へ）。作業場所は Lab `sessions/p943/`。
+- **先頭の spacer の接近＝`9567b2ff7`**（第942 の ⒝）: LP は `c4 \grace { s16 d16 } e4` の最初の grace の列に音が無い＝前の列の願いは次の**音**へ届き、空の列には合わない ⇒ 接近は素の duration のばね（最小 0）× 0.8＝2.898045 × 0.8 = 2.318436・rod 無し（GBY）。Lily# は Note_spacing の接近で 0.083360（＝0.8 × c の符頭幅の補正 1.3042 − 1.2）遠かった。`SpacingRules.LeadingGraceOpensOnSpacer`・描画側（`CreateInterColumnSpring`）と見積もり側の両方。台帳 2 点 EXACT・`BothSpringSystems_AgreeAroundAnAfterGrace` に 1 行。毒 2 本赤（描画 2・見積もり 1）。掃き 0。近似の棚卸しから「未移植」1 件が消えた（APPROX 65→64）・定数の棚卸しに `0.0` 2 行（引用つきで緑）。⚠️ **定数の棚卸しで中身の差 13 行を一度 `git checkout` で消した**（第935 と同じ誤り）＝作り直して確かめ、引用を置いて commit に入れた ⇒ **差の行数が 0 でないときは消す前に必ず中身を見る**（`git --no-pager diff --no-color`）。
+- `-End p943 -DiffBase 4295c5978` ＝full **12826 / 0 / 2 / 12828**（前便末 +3）（Lab `sessions/p943/end.log`）→ この docs commit。未 push 68＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。
+判定（2026-10-22）: grace の spacer と呼吸記号の島は閉じた。次の候補＝slur が膝の grace 連桁を避ける形（⒝）・grace の LYS4020 の残り（構成音の呼吸記号・`@pluck`・TAB の技法・`@diagram`・`@cross`・`@figuredBass`・`@chord`＝LP と照合しにくい）・§2 E ⑹⑺（和音入力・Ignatzek＝要ユーザー判断）。
+
+## 以下は第942セッションの経緯
+
 ### 1.1 第942セッション（2026-10-22・YT-DELL2）
 
 第941 と同じ会話の続き（ユーザー「続けて」）。`-Start p942`（開始 HEAD `642378e5d`・未 push 64・full **12813 / 0 / 2 / 12815**・第940 を ARCHIVE へ）。作業場所は Lab `sessions/p942/`。
@@ -131,15 +140,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - 1 回目の `-End` は full で 1 赤＝`ApproximationInventoryTests.TheInventoryIsNotStale`（spacer の古い注記の「観測者なし」の印を消し、先頭の spacer の「未移植」を書いた＝UNWATCHED 63→62・APPROX 64→65）＝`docs/APPROXIMATIONS.md` を作り直して `85d475b47`。⚠️ 近似の印（departs from／observed by など）を消す・足すときは棚卸しの作り直しが要る。
 - `-End p942 -DiffBase 642378e5d`（2 回目）＝full **12823 / 0 / 2 / 12825**（前便末 +10）（Lab `sessions/p942/end.log`）→ この docs commit。未 push 66＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。
 判定（2026-10-22）: grace の呼吸記号は和音の構成音の上を除いて全部描く。次の候補＝先頭の spacer の接近（⒝・小）・slur が膝の grace 連桁を避ける形（⒝）・grace の LYS4020 の残り（構成音の呼吸記号・`@pluck`・TAB の技法・`@diagram`・`@cross`・`@figuredBass`・`@chord`）・§2 E ⑹⑺（和音入力・Ignatzek＝要ユーザー判断）。
-
-## 以下は第941セッションの経緯
-
-### 1.1 第941セッション（2026-10-22・YT-DELL2）
-
-第940 と同じ会話の続き（ユーザー「続けて」）。`-Start p941`（開始 HEAD `0b4807a0c`・未 push 62・full **12813 / 0 / 2 / 12815**・第939 を ARCHIVE へ）。作業場所は Lab `sessions/p941/`。
-- **2 つのばねの系の最小値 0.1 の差＝見積もり側の音 → 音のばねに列の rod が無かった＝`4f5b429c0`**（第940 の ⚠️）: 計器 Zz941（削除済み）で afterGrace と無関係に**音 → 音のばね全部**で差が出ると確認（`c'4 d'4 e'4 f'4` も）。描画側（`CreateInterColumnSpring`）は 0.3 の持ち上げの後に列の rod（分離 skyline＋0.1・トレモロ・slur の最小の長さ）を床に入れる。見積もり側（`CreateSpringsForMeasure`）は小節中のマークの列と小節線のばねにだけ入れていた ⇒ 同じ rod を同じ順で入れた。**見積もりの最小値が頁に出るのは列の無い小節の予備経路（`LayoutItems`）だけ**＝掃き 1,248 枚で 0・理想値（改行の小節幅）はもとから一致。網: `BothSpringSystems_AgreeAroundAnAfterGrace` に最小値の比較を戻した（毒＝rod を 0 にすると赤）・`BothSpringSystems_BuildANoteSpringInLilyPondsOrder` は「持ち上げは rod の 0.1 下の skyline の上に立つ」に読み替えた。CHANGELOG なし（描画に出ない）。
-- `-End p941 -DiffBase 0b4807a0c` ＝full **12813 / 0 / 2 / 12815**（前便末 ±0＝試験の数は変わらない）（Lab `sessions/p941/end.log`）→ この docs commit。未 push 63＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。
-判定（2026-10-22）: 2 つのばねの系は afterGrace の前後でも最小値まで一致。次の候補＝slur が膝の grace 連桁を避ける形（主線で読む＝⒝）・grace の LYS4020 の残り（spacer の前の呼吸記号・`@pluck`・TAB の技法・`@diagram`・`@cross`・`@figuredBass`・`@chord`＝字形も置き場所も Lily# 独自が多く LP と照合できる部分が少ない）。
 
 ## 2. 開いている作業
 
