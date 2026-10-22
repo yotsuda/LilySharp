@@ -9069,6 +9069,19 @@ internal static class LpGeometryProbes
     private static readonly string GBWE = GraceTieBook("c4 grace { d16@snapPizz } e4 c2 |", "GBWE");
     private static readonly string GBWG = GraceTieBook("c4 d16@upBow e8. c2 |", "GBWG");
     private static readonly string GBWH = GraceTieBook("c4 d16@flageolet e8. c2 |", "GBWH");
+    // The organ's heel and toe on a grace note (audit/lp-geometry/probes/grace-pedal-mark.ly).
+    private static readonly string GPMA = GraceTieBook("c4 grace { d16@heel } e4 c2 |", "GPMA");
+    private static readonly string GPMB = GraceTieBook("c4 grace { d16@heel.down } e4 c2 |", "GPMB");
+    private static readonly string GPMC = GraceTieBook("c4 d16@heel e8. c2 |", "GPMC");
+    private static readonly string GPMD = GraceTieBook("c4 d16@heel.down e8. c2 |", "GPMD");
+    private static readonly string GPME = GraceTieBook("c4 grace { d16@toe } e4 c2 |", "GPME");
+    private static readonly string GPMF = GraceTieBook("c4 grace { d16@toe.down } e4 c2 |", "GPMF");
+    private static readonly string GPMG = GraceTieBook("c4 d16@toe e8. c2 |", "GPMG");
+    private static readonly string GPMH = GraceTieBook("c4 d16@toe.down e8. c2 |", "GPMH");
+    private static readonly string GPMI = GraceTieBook("c4 grace { a16@heel } e4 c2 |", "GPMI");
+    private static readonly string GPMJ = GraceTieBook("c4 grace { a16@toe.down } e4 c2 |", "GPMJ");
+    private static readonly string GPMK = GraceTieBook("c4 a16@heel e8. c2 |", "GPMK");
+    private static readonly string GPML = GraceTieBook("c4 a16@toe.down e8. c2 |", "GPML");
     // A pedal bracket engaged or released on a grace note (audit/lp-geometry/probes/grace-pedal.ly).
     private static readonly string GPDA = GraceTieBook("c4 grace { d16@sustain } e4 f4 g4@!sustain |", "GPDA");
     private static readonly string GPDB = GraceTieBook("c4 d16@sustain e8. f4 g4@!sustain |", "GPDB");
@@ -17739,6 +17752,18 @@ internal static class LpGeometryProbes
         new("script.grace.bowing.snappizz", GBWE, g => g.GlyphAboveStaffMiddle('\uE082', 0)),
         new("script.grace.bowing.control.upbow", GBWG, g => g.GlyphAboveStaffMiddle('\uE056', 0)),
         new("script.grace.bowing.control.flageolet", GBWH, g => g.GlyphAboveStaffMiddle('\uE064', 0)),
+        new("script.grace.pedal.heel", GPMA, g => g.GlyphAboveStaffMiddle('', 0)),
+        new("script.grace.pedal.heel.below", GPMB, g => g.GlyphAboveStaffMiddle('', 0)),
+        new("script.grace.pedal.control.heel", GPMC, g => g.GlyphAboveStaffMiddle('', 0)),
+        new("script.grace.pedal.control.heel.below", GPMD, g => g.GlyphAboveStaffMiddle('', 0)),
+        new("script.grace.pedal.toe", GPME, g => g.GlyphAboveStaffMiddle('', 0)),
+        new("script.grace.pedal.toe.below", GPMF, g => g.GlyphAboveStaffMiddle('', 0)),
+        new("script.grace.pedal.control.toe", GPMG, g => g.GlyphAboveStaffMiddle('', 0)),
+        new("script.grace.pedal.control.toe.below", GPMH, g => g.GlyphAboveStaffMiddle('', 0)),
+        new("script.grace.pedal.high.heel", GPMI, g => g.GlyphAboveStaffMiddle('', 0)),
+        new("script.grace.pedal.high.toe.below", GPMJ, g => g.GlyphAboveStaffMiddle('', 0)),
+        new("script.grace.pedal.control.high.heel", GPMK, g => g.GlyphAboveStaffMiddle('', 0)),
+        new("script.grace.pedal.control.high.toe.below", GPML, g => g.GlyphAboveStaffMiddle('', 0)),
         new("pedal.grace.start-to-notehead", GPDA, g => g.PedalBracketLineEndToNotehead(end: false, 1)),
         new("pedal.grace.end-to-notehead", GPDA, g => g.PedalBracketLineEndToNotehead(end: true, 4)),
         new("pedal.grace.staff-to-line", GPDA, g => g.PedalBracketLineBelowStaff()),

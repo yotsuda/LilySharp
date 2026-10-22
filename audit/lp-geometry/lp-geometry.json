@@ -8988,6 +8988,90 @@
       "residual": 0.0,
       "why": "EXACT. The full-size CONTROL of GBC."
     },
+    "script.grace.pedal.heel": {
+      "probe": "grace-pedal-mark.ly",
+      "score": "GPMA",
+      "lilypond": 2.3,
+      "residual": 0.0,
+      "why": "EXACT. `grace { d16@heel }`: the organ heel is a Script of the same table (scm/script.scm heel, direction UP), set at the grace's Script font-size -3 over the grace column, on the staff-padding floor as the full-size control. Until session 946 a heel or a toe on a grace was dropped (LYS4020); GraceBodySupport.IsCarriedScript now names both."
+    },
+    "script.grace.pedal.heel.below": {
+      "probe": "grace-pedal-mark.ly",
+      "score": "GPMB",
+      "lilypond": -3.91996,
+      "residual": 0.0,
+      "why": "EXACT. `@heel.down` on the grace: below, clearing the grace head at the grace's size. LilyPond's _\\heel keeps the glyph upedalheel on this side too."
+    },
+    "script.grace.pedal.control.heel": {
+      "probe": "grace-pedal-mark.ly",
+      "score": "GPMC",
+      "lilypond": 2.3,
+      "residual": 0.0,
+      "why": "EXACT. The full-size CONTROL of GPMA."
+    },
+    "script.grace.pedal.control.heel.below": {
+      "probe": "grace-pedal-mark.ly",
+      "score": "GPMD",
+      "lilypond": -4.413,
+      "residual": 0.0,
+      "why": "EXACT. The full-size CONTROL of GPMB, and the row that caught the glyph: until session 946 Lily# drew dpedalheel below, where LilyPond's _\\heel draws upedalheel."
+    },
+    "script.grace.pedal.toe": {
+      "probe": "grace-pedal-mark.ly",
+      "score": "GPME",
+      "lilypond": 2.3,
+      "residual": 0.0,
+      "why": "EXACT. `grace { d16@toe }`: the toe is dpedaltoe on either side (scm/script.scm toe), at the grace's size."
+    },
+    "script.grace.pedal.toe.below": {
+      "probe": "grace-pedal-mark.ly",
+      "score": "GPMF",
+      "lilypond": -3.91996,
+      "residual": 0.0,
+      "why": "EXACT. `@toe.down` on the grace."
+    },
+    "script.grace.pedal.control.toe": {
+      "probe": "grace-pedal-mark.ly",
+      "score": "GPMG",
+      "lilypond": 2.3,
+      "residual": 0.0,
+      "why": "EXACT. The full-size CONTROL of GPME, and the other row that caught the glyph: until session 946 Lily# drew upedaltoe above, where LilyPond's \\toe draws dpedaltoe."
+    },
+    "script.grace.pedal.control.toe.below": {
+      "probe": "grace-pedal-mark.ly",
+      "score": "GPMH",
+      "lilypond": -4.413,
+      "residual": 0.0,
+      "why": "EXACT. The full-size CONTROL of GPMF."
+    },
+    "script.grace.pedal.high.heel": {
+      "probe": "grace-pedal-mark.ly",
+      "score": "GPMI",
+      "lilypond": 2.5,
+      "residual": 0.0,
+      "why": "EXACT. A heel over a grace a: the grace's up stem is what the script clears."
+    },
+    "script.grace.pedal.high.toe.below": {
+      "probe": "grace-pedal-mark.ly",
+      "score": "GPMJ",
+      "lilypond": -3.075901,
+      "residual": 0.0,
+      "why": "EXACT. A toe under a grace a: the small grace head is the support."
+    },
+    "script.grace.pedal.control.high.heel": {
+      "probe": "grace-pedal-mark.ly",
+      "score": "GPMK",
+      "lilypond": 3.227917,
+      "residual": 0.0,
+      "why": "EXACT. The full-size CONTROL of GPMI: the full-size stem reaches higher."
+    },
+    "script.grace.pedal.control.high.toe.below": {
+      "probe": "grace-pedal-mark.ly",
+      "score": "GPML",
+      "lilypond": -3.418,
+      "residual": 0.0,
+      "why": "EXACT. The full-size CONTROL of GPMJ."
+    },
     "pedal.grace.start-to-notehead": {
       "probe": "grace-pedal.ly",
       "score": "GPA",

@@ -172,8 +172,12 @@ public sealed record ArticulationItem
         ArticulationType.Flageolet => MusicGlyph.StringsHarmonic,
         ArticulationType.Stopped => MusicGlyph.BrassMuteClosed,
         ArticulationType.Thumb => MusicGlyph.StringsThumbPosition,
-        ArticulationType.Heel => isAbove ? MusicGlyph.KeyboardPedalHeel1 : MusicGlyph.KeyboardPedalHeel2,
-        ArticulationType.Toe => isAbove ? MusicGlyph.KeyboardPedalToe1 : MusicGlyph.KeyboardPedalToe2,
+        // ONE glyph on either side, as LilyPond's \heel and \toe draw: scm/script.scm gives heel
+        // (upedalheel . upedalheel) and toe (dpedaltoe . dpedaltoe). Until session 946 the side
+        // picked the glyph (2026-07-06, before anything was measured), so an @toe above and an
+        // @heel below drew the other one (Lab sessions/p946/heel.ly).
+        ArticulationType.Heel => MusicGlyph.KeyboardPedalHeel1,
+        ArticulationType.Toe => MusicGlyph.KeyboardPedalToe2,
         // The font's own scripts.snappizzicato — this was the "snappizz" sentinel with
         // hand-drawn circle+line primitives ~0.5 ss taller than the glyph, while the
         // engraver reserved the fallback half-space box: draw and reserve disagreed with

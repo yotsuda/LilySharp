@@ -339,7 +339,10 @@ internal static class GraceBodySupport
                 // script.grace.bowing.*): the same Script, the same grace column.
                 or ArticulationType.UpBow or ArticulationType.DownBow
                 or ArticulationType.Flageolet or ArticulationType.Stopped
-                or ArticulationType.SnapPizz,
+                or ArticulationType.SnapPizz
+                // The organ's heel and toe (session 946; ledger script.grace.pedal.*): Scripts
+                // of the same table, at the same grace size, above or below.
+                or ArticulationType.Heel or ArticulationType.Toe,
         };
 
     /// <summary>

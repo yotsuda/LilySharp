@@ -158,6 +158,9 @@ public class GraceBodyValidatorTests
     [InlineData("grace { d'8@harmonic } c'1 | e'1 |")]
     [InlineData("grace { d'8@stopped } c'1 | e'1 |")]
     [InlineData("grace { d'8@snapPizz } c'1 | e'1 |")]
+    // …and the organ's heel and toe (session 946, ledger script.grace.pedal.*).
+    [InlineData("grace { d'8@heel } c'1 | e'1 |")]
+    [InlineData("grace { d'8@toe.down } c'1 | e'1 |")]
     public void AStemSideScriptOnAGrace_IsDrawn_AndNotReported(string written)
     {
         Assert.Empty(Warnings(Book(written)));
