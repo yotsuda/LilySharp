@@ -106,10 +106,16 @@ public sealed partial class LilyPondExporter
     /// ends with no bar check, since under <c>\cadenzaOn</c> LilyPond counts nothing and a
     /// <c>|</c> in a lyric or chord line fails ("bar check failed", session 762's chorale) —
     /// the music line draws the bar with <c>\bar "|"</c> instead (<c>BarlineText</c>).</param>
+    /// <param name="graceRun">For an entry on a GRACE column (session 964), the whole
+    /// <c>\grace { … }</c> its run writes — every column of the run at its written value, the
+    /// entries' columns with their entries and the others silent — or null for an entry on a
+    /// main column. The run is written ONCE, before the main entry at its moment (the entries
+    /// of one run answer one string), and takes no time of the bar's.</param>
     private void EmitTimedStream<T>(string varName, string mode, string silence,
         System.Collections.Immutable.ImmutableArray<Svg.Model.Measure> measures,
         IReadOnlyList<Fraction> meters, List<(T Item, int Measure, Fraction Onset)> items,
-        Action<StringBuilder, T, string> entry, bool[]? senza = null)
+        Action<StringBuilder, T, string> entry, bool[]? senza = null,
+        Func<T, string?>? graceRun = null)
     {
         _sb.Append(varName).Append(" = \\").Append(mode).Append(" {\n");
         int k = 0;
@@ -118,9 +124,24 @@ public sealed partial class LilyPondExporter
             var length = BarLength(measures[m], meters, m);
             var line = new StringBuilder("  ");
             var at = Fraction.Zero;
+            string? lastRun = null;
             while (k < items.Count && items[k].Measure == m)
             {
                 var (item, _, onset) = items[k++];
+                if (graceRun?.Invoke(item) is { } run)
+                {
+                    // A grace run stands at its main moment and lasts nothing: silence up to
+                    // it, the run once, and the moment stays open for the main entry.
+                    if (onset > at)
+                    {
+                        AppendToken(line, silence + ChordModeDuration(onset - at), "  ");
+                        at = onset;
+                    }
+                    if (!string.Equals(run, lastRun, StringComparison.Ordinal))
+                        AppendToken(line, run, "  ");
+                    lastRun = run;
+                    continue;
+                }
                 if (onset < at)
                     continue;   // the same moment as the entry just written: the first wins
                 if (onset > at)
@@ -195,10 +216,56 @@ public sealed partial class LilyPondExporter
 
             string varName = VarName(partName + "InlineChords");
             _inlineChordVars[partName] = varName;
-            EmitTimedStream(varName, "chordmode", "s", staff.PrimaryVoice.Measures, meters, items,
-                (line, c, duration) => AppendToken(line, InlineChordEntry(c, duration), "  "), SenzaMisuraByBar(score));
+            var measures = staff.PrimaryVoice.Measures;
+            EmitTimedStream(varName, "chordmode", "s", measures, meters, items,
+                (line, c, duration) => AppendToken(line, InlineChordEntry(c, duration), "  "), SenzaMisuraByBar(score),
+                // A symbol on a GRACE column (session 964): its run, in \chordmode, as
+                // `\grace { s16 d16 }` — every column at the staff's own written values, so
+                // LilyPond's ChordNames context makes its grace columns at the staff's grace
+                // moments (a column at another moment would be a column of its own).
+                c => GraceRunOf(measures, c.MeasureIndex, c.ItemIndex, "@chord",
+                    column => column.ChordName is { } symbol ? sym => InlineChordEntry(symbol, sym) : null));
         }
     }
+
+    /// <summary>
+    /// The <c>\grace { … }</c> a stream writes for the run that the grace column item
+    /// <paramref name="itemIndex"/> of measure <paramref name="measureIndex"/> belongs to, or
+    /// null for a main-column item (session 964): each column at its written value, with the
+    /// entry <paramref name="entryOf"/> gives it (taking the written duration) or silent. A run
+    /// hanging off an afterGrace's closing spacer is not written — LilyPond's
+    /// <c>\afterGrace</c> wants the main entry split around it — and is warned about once.
+    /// </summary>
+    private string? GraceRunOf(System.Collections.Immutable.ImmutableArray<Svg.Model.Measure> measures,
+        int measureIndex, int itemIndex, string what,
+        Func<Svg.Model.GraceColumnInfo, Func<string, string>?> entryOf)
+    {
+        if (measureIndex < 0 || measureIndex >= measures.Length)
+            return null;
+        var measure = measures[measureIndex];
+        if (itemIndex < 0 || itemIndex >= measure.Items.Length || !measure.Items[itemIndex].GraceTime
+            || Svg.Layout.SpacingRules.LeadingGraceColumnOf(measure, itemIndex) is not { } at)
+            return null;
+        var anchor = measure.Items[at.AnchorIndex];
+        if (anchor is Svg.Model.RestItem { IsSpacer: true })
+        {
+            if (_graceRunWarned.Add(what))
+                _warnings.Add($"{what} on an afterGrace note is not written: LilyPond's \\afterGrace splits the main entry around the run");
+            return null;
+        }
+        var run = Svg.Layout.SpacingRules.GraceNotesOf(anchor);
+        var sb = new StringBuilder("\\grace { ");
+        for (int k = 0; k < run.Length; k++)
+        {
+            string value = ChordModeDuration(run[k].BaseDuration) + new string('.', run[k].Dots);
+            if (k > 0)
+                sb.Append(' ');
+            sb.Append(entryOf(run[k]) is { } entry ? entry(value) : "s" + value);
+        }
+        return sb.Append(" }").ToString();
+    }
+
+    private readonly HashSet<string> _graceRunWarned = new(StringComparer.Ordinal);
 
     /// <summary>
     /// One <c>\figuremode</c> variable per staff carrying <c>@figuredBass</c> marks, read off
@@ -246,10 +313,40 @@ public sealed partial class LilyPondExporter
             foreach (var (f, _, _) in items)
                 _shared.FigureMarks.Add(f.SourcePosition);
 
+            // The groups on GRACE columns (session 964), by their run's anchor and column — a
+            // figure item is not stamped on its column as a chord symbol is.
+            Dictionary<(int Measure, int Anchor), Svg.Model.FiguredBassItem?[]>? graceGroups = null;
+            foreach (var (f, m, _) in items)
+            {
+                var measure = measures[m];
+                if (!measure.Items[f.ItemIndex].GraceTime
+                    || Svg.Layout.SpacingRules.LeadingGraceColumnOf(measure, f.ItemIndex) is not { } at)
+                    continue;
+                graceGroups ??= new();
+                if (!graceGroups.TryGetValue((m, at.AnchorIndex), out var columns))
+                    graceGroups[(m, at.AnchorIndex)] = columns = new Svg.Model.FiguredBassItem?[
+                        Svg.Layout.SpacingRules.GraceNotesOf(measure.Items[at.AnchorIndex]).Length];
+                if (at.Column < columns.Length)
+                    columns[at.Column] = f;
+            }
+            if (graceGroups != null)
+                _warnings.Add("@figuredBass on a grace note: LilyPond keeps the figure before it sounding at the grace, so the two stack there");
+
             string varName = VarName(partName + "Figures");
             _figureVars[partName] = varName;
             EmitTimedStream(varName, "figuremode", "s", measures, meters, items,
-                (line, f, duration) => AppendToken(line, FigureGroup(f) + duration, "  "), SenzaMisuraByBar(score));
+                (line, f, duration) => AppendToken(line, FigureGroup(f) + duration, "  "), SenzaMisuraByBar(score),
+                graceGroups == null ? null : f =>
+                {
+                    var measure = measures[f.MeasureIndex];
+                    if (!measure.Items[f.ItemIndex].GraceTime
+                        || Svg.Layout.SpacingRules.LeadingGraceColumnOf(measure, f.ItemIndex) is not { } at
+                        || !graceGroups.TryGetValue((f.MeasureIndex, at.AnchorIndex), out var columns))
+                        return null;
+                    int k = -1;
+                    return GraceRunOf(measures, f.MeasureIndex, f.ItemIndex, "@figuredBass",
+                        _ => ++k < columns.Length && columns[k] is { } group ? value => FigureGroup(group) + value : null);
+                });
         }
     }
 

@@ -171,12 +171,15 @@ internal static partial class SpacingRules
         // LilyPond beams only the prefix).
         int beamedPrefix = GraceNoteEngraver.BeamedPrefix(notes);
 
-        var offsets = ImmutableArray.CreateBuilder<double>(notes.Length);
-        var gaps = ImmutableArray.CreateBuilder<(double Rod, double InverseCompress)>(notes.Length);
-        double x = 0, toMain = 0;
+        // Per gap (the last is the gap to the main note): its natural length, its rod and its
+        // inverse compress strength — gathered first, because the column DECORATIONS (a chord
+        // symbol's name chain, a diagram's box; session 964) rod gaps the loop has already
+        // priced, and the offsets are summed once those rods are in.
+        var gapLengths = new double[notes.Length];
+        var rods = new double[notes.Length];
+        var compresses = new double[notes.Length];
         for (int i = 0; i < notes.Length; i++)
         {
-            offsets.Add(x);
             bool beamed = i < beamedPrefix;
             GraceColumnInfo? next = i + 1 < notes.Length ? notes[i + 1] : null;
             bool nextBeamed = i + 1 < beamedPrefix;
@@ -295,10 +298,211 @@ internal static partial class SpacingRules
                 rod = breath.IntoRod + Math.Max(breath.OutRod, breath.Out.MinDistance);
                 inverseCompress = breath.Into.InverseCompressStrength + breath.Out.InverseCompressStrength;
             }
-            gaps.Add((Math.Min(rod, gap), inverseCompress));
-            if (i + 1 < notes.Length) x += gap; else toMain = gap;
+            gapLengths[i] = gap;
+            rods[i] = rod;
+            compresses[i] = inverseCompress;
+        }
+        ApplyChordNameChain(notes, gapLengths, rods);
+        ApplyDiagramRods(notes, mainItem, beamedPrefix, gapLengths, rods);
+
+        var offsets = ImmutableArray.CreateBuilder<double>(notes.Length);
+        var gaps = ImmutableArray.CreateBuilder<(double Rod, double InverseCompress)>(notes.Length);
+        double x = 0, toMain = 0;
+        for (int i = 0; i < notes.Length; i++)
+        {
+            offsets.Add(x);
+            gaps.Add((Math.Min(rods[i], gapLengths[i]), compresses[i]));
+            if (i + 1 < notes.Length) x += gapLengths[i]; else toMain = gapLengths[i];
         }
         return new GraceColumnLayout(offsets.ToImmutable(), toMain, gaps.MoveToImmutable());
+    }
+
+    /// <summary>
+    /// The CHORD SYMBOLS on a run's columns (session 964): LilyPond's ChordName rods, name to
+    /// name — a named column stands its symbol's width + 0.5 + 0.5 + 0.1 before the next NAMED
+    /// column, a grace column's or the main note's (<see cref="GraceColumnInfo.MainHasChordName"/>),
+    /// across any unnamed column between them. A deficit is split evenly over the gaps it
+    /// spans — LilyPond's rod over several springs of one strength stretches each the same.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-grobs.scm:837-855 ChordName extra-spacing-width (-0.5 . 0.5);
+    ///   lily/spacing-spanner.cc:228-297 set_column_rods — the rod reaches every earlier column
+    ///   whose box still meets it, grace columns among them, plus the column padding 0.1.
+    /// MEASURED (2.26.0, Lab sessions/p964/lp/probe.ly): `c4 \grace { d8 } e4` with names C, D, E
+    ///   stands the grace 2.977882 = 1.877882 (C) + 1.1 past c's head and e 2.977882 past the
+    ///   grace (GCA); with no name on the grace the gaps are the bare 2.401796 / 1.938627
+    ///   (GCB); a wide C♯m7 on the grace holds e 7.352762 off (GCC); the second of two graces
+    ///   named stands its D 2.977882 before e while the first keeps the bare gap (GCD); a name
+    ///   on the grace alone (GCG) leaves the grace → e gap bare and rods only to the next name.
+    /// ⒝ The symbol's width is read in the bundled faces (<see cref="Rendering.ScoreTextMetrics.Bundled"/>):
+    ///   the run's placement and its spacing share this one reading and neither is handed the
+    ///   score's fonts, as the tab digits' (TabConstants.FretGlyphWidthAtDefault). A score whose
+    ///   <c>fonts { }</c> restyle the chord face prices the default's width here.
+    /// </remarks>
+    private static void ApplyChordNameChain(ImmutableArray<GraceColumnInfo> notes, double[] gapLengths, double[] rods)
+    {
+        int n = notes.Length;
+        for (int i = 0; i < n; i++)
+        {
+            if (notes[i].ChordName is not { } symbol)
+                continue;
+            int j = -1;
+            for (int k = i + 1; k < n && j < 0; k++)
+                if (notes[k].ChordName != null)
+                    j = k;
+            if (j < 0 && notes[i].MainHasChordName)
+                j = n;
+            if (j < 0)
+                continue;
+            double needed = ChordNameEngraver.FootprintWidth(Rendering.ScoreTextMetrics.Bundled, symbol)
+                            + 2 * ChordNameExtraSpacingWidth + SeparationRodPadding;
+            double natural = 0, rod = 0;
+            for (int k = i; k < j; k++)
+            {
+                natural += gapLengths[k];
+                rod += rods[k];
+            }
+            int gapsSpanned = j - i;
+            if (natural < needed)
+            {
+                double each = (needed - natural) / gapsSpanned;
+                for (int k = i; k < j; k++)
+                    gapLengths[k] += each;
+            }
+            if (rod < needed)
+            {
+                double each = (needed - rod) / gapsSpanned;
+                for (int k = i; k < j; k++)
+                    rods[k] += each;
+            }
+        }
+    }
+
+    /// <summary>
+    /// The CHORD DIAGRAMS on a run's columns (session 964): Lily#'s own side-by-side rule
+    /// (<see cref="ApplyFretFrameSpacing"/>, LilyPond's <c>\textLengthOn</c>) rods a column's
+    /// diagram box against the column before it and the column after it — a grace's or the
+    /// main note's — the box's height being unbounded.
+    /// </summary>
+    /// <remarks>
+    /// LILYSHARP-OWN: the owner's decision of session 646 (diagrams side by side, the bar
+    ///   widening), carried into the run as the twin's <c>\textLengthOn</c> carries it.
+    ///   departs from: LilyPond's default, which lets a TextScript overhang its neighbours.
+    ///   goes away when: never (the owner's rule).
+    ///   observed by: GraceChordNameAndDiagramTests (ADiagramOnAGrace_RodsTheRunsNeighbours),
+    ///   ledger diagram.grace.textlength.*.
+    /// MEASURED (2.26.0 with \textLengthOn, Lab sessions/p964/lp/probe3.ly GDD/GDF): the
+    ///   grid's left edge stands 0.2 past the previous head's right (its 0.1 extra-spacing-width
+    ///   plus the column padding 0.1), and the next head 0.6 past the grid's right (0.4 + 0.1 +
+    ///   0.1) — on a grace column exactly as on a full-size one (session 835's 4.542).
+    /// ⒝ The box is measured in the bundled faces, as the name chain's width is.
+    /// </remarks>
+    private static void ApplyDiagramRods(ImmutableArray<GraceColumnInfo> notes, MusicItem? mainItem,
+        int beamedPrefix, double[] gapLengths, double[] rods)
+    {
+        int n = notes.Length;
+        for (int i = 0; i < n; i++)
+        {
+            if (notes[i].FrameSpec is not { } spec)
+                continue;
+            var box = FretFrameGeometry.Box(spec, Rendering.ScoreTextMetrics.Bundled);
+            double centre = FretFrameGeometry.GridCentreFromColumnOrigin(box);
+            double leftReach = -(centre + box.Left);
+            double rightReach = centre + box.Right + TextLengthRightExtra;
+            if (i > 0)
+            {
+                double before = GraceColumnRightReach(notes[i - 1], i - 1 < beamedPrefix)
+                                + SeparationRodPadding + leftReach;
+                gapLengths[i - 1] = Math.Max(gapLengths[i - 1], before);
+                rods[i - 1] = Math.Max(rods[i - 1], before);
+            }
+            double after = rightReach + SeparationRodPadding
+                           + (i + 1 < n ? GraceColumnLeftReach(notes[i + 1]) : MainColumnLeftReach(mainItem));
+            gapLengths[i] = Math.Max(gapLengths[i], after);
+            rods[i] = Math.Max(rods[i], after);
+        }
+    }
+
+    /// <summary>
+    /// Where the grace column standing as item <paramref name="itemIndex"/> of
+    /// <paramref name="measure"/> belongs: the index of the item its run hangs off (the main
+    /// note, or an afterGrace's closing spacer — the item whose <c>LeadingGrace</c> is the run)
+    /// and the column's index in that run; null when the item is no grace column of a run.
+    /// </summary>
+    /// <remarks>
+    /// Read off the ITEMS alone, so that a reader holding only a voice's measures — the chord
+    /// name and figured bass engravers, the spacing's symbol pricing — can find a grace column
+    /// without the score-level groups: the run's columns are the note, chord and rest items in
+    /// grace time between the run's first and its anchor, in order (DeriveGraceColumns reads
+    /// them the same way).
+    /// </remarks>
+    internal static (int AnchorIndex, int Column)? LeadingGraceColumnOf(Measure measure, int itemIndex)
+    {
+        var items = measure.Items;
+        if (itemIndex < 0 || itemIndex >= items.Length || !items[itemIndex].GraceTime)
+            return null;
+        // The anchor: the next sounding column out of grace time. A breathing sign the body
+        // ends on, or a clef / key / meter written after the run, stands between the two and
+        // is no column of either (GraceBodySupport.CarriedBreath; MeasureBuilder's
+        // WrittenAfterGrace).
+        int anchor = itemIndex + 1;
+        while (anchor < items.Length && (items[anchor].GraceTime || !IsColumnItem(items[anchor])))
+            anchor++;
+        if (anchor >= items.Length)
+            return null;
+        var run = GraceNotesOf(items[anchor]);
+        if (run.IsDefaultOrEmpty)
+            return null;
+        // The run's columns are the grace items before the anchor, counted back to the first
+        // sounding column out of grace time.
+        int fromEnd = -1;
+        for (int i = anchor - 1; i >= 0; i--)
+        {
+            if (!items[i].GraceTime)
+            {
+                if (IsColumnItem(items[i]))
+                    break;
+                continue;
+            }
+            if (!IsColumnItem(items[i]))
+                continue;
+            fromEnd++;
+            if (i == itemIndex)
+                return fromEnd < run.Length ? (anchor, run.Length - 1 - fromEnd) : null;
+        }
+        return null;
+
+        static bool IsColumnItem(MusicItem item) => item is NoteItem or ChordItem or RestItem;
+    }
+
+    /// <summary>
+    /// Where a symbol on a grace column stands in its run (session 964): the column's index,
+    /// the run's column count, and the natural distance from the column to the one the run
+    /// hangs off — the run's span less the column's offset (<see cref="GraceColumns"/> at
+    /// force 0). What the timing-column spacing reads to price the symbol
+    /// (<see cref="ApplyChordRowSpacing"/>, <see cref="ApplyFretFrameSpacing"/>): the run's
+    /// springs are the parts of the series spring into its main column, part 0 the approach
+    /// and part k + 1 the gap after column k.
+    /// </summary>
+    internal readonly record struct GraceSymbolPlace(int Column, int Columns, double ToMain);
+
+    /// <summary>
+    /// The <see cref="GraceSymbolPlace"/> of the grace column standing as item
+    /// <paramref name="itemIndex"/> of measure <paramref name="measureIndex"/>, or null when the
+    /// item is no grace column of a run.
+    /// </summary>
+    internal static GraceSymbolPlace? LeadingGraceColumnPlace(ImmutableArray<Measure> measures, int measureIndex, int itemIndex)
+    {
+        if (measures.IsDefault || measureIndex < 0 || measureIndex >= measures.Length)
+            return null;
+        var measure = measures[measureIndex];
+        if (LeadingGraceColumnOf(measure, itemIndex) is not { } at)
+            return null;
+        var anchorItem = measure.Items[at.AnchorIndex];
+        var run = GraceColumns(GraceNotesOf(anchorItem), anchorItem);
+        return at.Column < run.Offsets.Length
+            ? new GraceSymbolPlace(at.Column, run.Offsets.Length, run.Span - run.Offsets[at.Column])
+            : null;
     }
 
     /// <summary>

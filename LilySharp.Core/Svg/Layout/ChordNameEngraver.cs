@@ -932,12 +932,30 @@ internal static class ChordNameEngraver
     /// at that timing), exactly as bound-voice lyrics are. The note-attached <c>@chord</c>
     /// path keeps the item-index offset instead.
     /// </summary>
+    /// <remarks>
+    /// A symbol on a GRACE column (session 964) stands on that column's X, read off the run
+    /// the column belongs to (<see cref="ElementCoordinator.LeadingGraceColumnHeadLeftX"/>), as
+    /// LilyPond's ChordName stands on the grace's paper column (ledger chordname.grace.*).
+    /// The rods that hold its neighbours off are <c>SpacingRules.ApplyChordRowSpacing</c>'s
+    /// (the previous name, over the run's own springs) and <c>GraceColumns</c>' name chain.
+    /// ⒝ <paramref name="staffMeasures"/> are the staff's PRIMARY voice's: a symbol on a grace
+    /// of a second voice whose item index names no grace column there falls back to the
+    /// item-index path.
+    /// </remarks>
     private static double SymbolX(
         ChordNameItem chord, MeasureLayout ml, ImmutableArray<Measure> staffMeasures)
-        => chord.UseTiming
-            ? ml.X + ml.GetXForTiming(chord.Timing)
-            : ml.X + LayoutUtilities.GetItemXOffset(
-                staffMeasures, chord.MeasureIndex, chord.ItemIndex, ml);
+    {
+        if (chord.UseTiming)
+            return ml.X + ml.GetXForTiming(chord.Timing);
+        if (!staffMeasures.IsDefault && chord.MeasureIndex < staffMeasures.Length
+            && chord.ItemIndex < staffMeasures[chord.MeasureIndex].Items.Length
+            && staffMeasures[chord.MeasureIndex].Items[chord.ItemIndex].GraceTime
+            && ElementCoordinator.LeadingGraceColumnHeadLeftX(
+                staffMeasures, chord.MeasureIndex, chord.ItemIndex, ml) is { } graceX)
+            return graceX;
+        return ml.X + LayoutUtilities.GetItemXOffset(
+            staffMeasures, chord.MeasureIndex, chord.ItemIndex, ml);
+    }
 
     /// <summary>
     /// A chord symbol's ink width: its text advance in the SANS face at

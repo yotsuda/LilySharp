@@ -1513,6 +1513,30 @@ internal sealed class MultiStaffLayouter
         KeySignatureChangeItem? LeadingKeyChange = null);
 
     /// <summary>
+    /// Where a note-attached symbol on a GRACE column stands in its run (session 964;
+    /// <see cref="SpacingRules.LeadingGraceColumnPlace"/>), or null for a symbol on the column
+    /// itself — what <see cref="SpacingRules.ApplyChordRowSpacing"/> and
+    /// <c>SpacingRules.ChordInkRightReachPerColumn</c> ask. The symbol's voice is found by its
+    /// staff and voice indices; a symbol no voice's measures hold answers null.
+    /// </summary>
+    private static Func<ChordNameItem, SpacingRules.GraceSymbolPlace?> GraceSymbolToMainOf(MultiStaffScore score)
+        => cn =>
+        {
+            if (cn.UseTiming || cn.IsChordRow)
+                return null;
+            foreach (var (_, staff, index) in score.EnumerateStaves())
+            {
+                if (index != cn.StaffIndex)
+                    continue;
+                if (cn.VoiceIndex < 0 || cn.VoiceIndex >= staff.Voices.Length)
+                    return null;
+                return SpacingRules.LeadingGraceColumnPlace(
+                    staff.Voices[cn.VoiceIndex].Measures, cn.MeasureIndex, cn.ItemIndex);
+            }
+            return null;
+        };
+
+    /// <summary>
     /// How far each of measure <paramref name="measureIndex"/>'s columns' own ink reaches past
     /// the column, on each side — LilyPond's <c>keep_inside_line_ = col->extent (col, X_AXIS)</c>,
     /// negated on the left. ONE home for the system layout's keep-inside rods and the break
@@ -1573,7 +1597,7 @@ internal sealed class MultiStaffLayouter
             alignmentEdges, lyricLeft, lyricRight, ownEdge);
         SpacingRules.ChordInkRightReachPerColumn(score.TextMetrics,
             allTimings, measureIndex, chordsByMeasure.At(measureIndex),
-            includeAttached: !score.IsLeadSheet, chordWidth);
+            includeAttached: !score.IsLeadSheet, chordWidth, GraceSymbolToMainOf(score));
         // …and so does the MUSICAL ink on the column, which is the rest of
         // col->extent (col, X_AXIS).
         SpacingRules.MusicalInkOverhangsPerColumn(
@@ -2589,7 +2613,8 @@ internal sealed class MultiStaffLayouter
             // extra-spacing-width.
             springs = SpacingRules.ApplyChordRowSpacing(
                 score.TextMetrics, springs, allTimings, measureIndex,
-                ScoreSideTables.ChordNames(score).At(measureIndex), includeAttached: true);
+                ScoreSideTables.ChordNames(score).At(measureIndex), includeAttached: true,
+                gracePlace: GraceSymbolToMainOf(score));
         }
 
         // Tab fret digits (a Lily# enlargement of LilyPond's tiny numbers) are

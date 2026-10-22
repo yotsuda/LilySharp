@@ -1304,8 +1304,10 @@ public sealed partial class MeasureCollector
                 _meta.TimeBeats, _meta.TimeBeatType, attachedChordDisplay);
         }
 
-        // The grace groups' heads as the voice now has them (StaffAccidentals added some).
-        var finalVoices = ImmutableArray.Create(voice);
+        // The grace groups' heads as the voice now has them (StaffAccidentals added some) —
+        // and the main-note symbols their grace symbols are rodded to (session 964).
+        var finalVoices = StampGraceMainChordNames(ImmutableArray.Create(voice), _cursor.StaffIndex);
+        voice = finalVoices[0];
         StaffAccidentals.SyncGraceNotes(_graceNotes, _ => finalVoices);
         return ScoreAssembler.BuildScore(voice, CaptureScoreContent(voice.Measures.Length));
     }
@@ -2349,6 +2351,25 @@ public sealed partial class MeasureCollector
                 .ToImmutableArray();
         }
 
+        // The main-note chord symbols the grace symbols are rodded to (session 964), by the
+        // same global staff index.
+        {
+            int gsi = 0;
+            staffGroups = staffGroups
+                .Select(sg => sg with
+                {
+                    Staves = sg.Staves
+                        .Select(st =>
+                        {
+                            int idx = gsi++;
+                            var stamped = StampGraceMainChordNames(st.Voices, idx);
+                            return stamped == st.Voices ? st : st with { Voices = stamped };
+                        })
+                        .ToImmutableArray()
+                })
+                .ToImmutableArray();
+        }
+
         // The grace groups' heads as the staves' voices now have them (StaffAccidentals added
         // some), by the global staff index the groups carry — the walk order above.
         {
@@ -2694,6 +2715,8 @@ public sealed partial class MeasureCollector
         // left unmarked); it can only fire where the ottava moved heads.
         var resolved = ResolveStaffColumns(voices.ToImmutableArray(),
             multiVoiceOttava.Count > 0 ? new KeySignature(_meta.InitialKeySharps, _meta.InitialKeyCustom) : null);
+        // The main-note chord symbols the grace symbols are rodded to (session 964).
+        resolved = StampGraceMainChordNames(resolved, _cursor.StaffIndex);
         // The grace groups' heads as the voices now have them (StaffAccidentals added some).
         StaffAccidentals.SyncGraceNotes(_graceNotes, _ => resolved);
         return ScoreAssembler.BuildScore(
@@ -6343,6 +6366,8 @@ public sealed partial class MeasureCollector
         _innerGraceBreathStarts = innerBreaths.Count == 0 ? null : innerBreaths.Select(b => b.SourceStart).ToHashSet();
         _innerGraceBreathItems = null;
         _graceTupletSpans = null;
+        _graceChordNames = null;
+        _graceFrameSpecs = null;
         builder.EnterGraceTime(slash, graceStemDown);
         // The body items are reds already (a grace body is always live), exactly as
         // ProcessCueRegion's are.
@@ -6366,13 +6391,20 @@ public sealed partial class MeasureCollector
         _innerGraceBreathStarts = null;
         var innerBreathItems = _innerGraceBreathItems;
         _innerGraceBreathItems = null;
+        // The chord symbols and diagrams the body's columns carry (session 964), stamped on
+        // the columns below so the run's own springs price them.
+        var graceChordNames = _graceChordNames;
+        var graceFrameSpecs = _graceFrameSpecs;
+        _graceChordNames = null;
+        _graceFrameSpecs = null;
         if (carriedBreath is { } breath)
             builder.AddItem(new BreathingSignItem(breath.Type, breath.SourceStart));
 
         _defaultDuration = savedDuration;
         _defaultDots = savedDots;
 
-        var (graceColumns, columnItemIndices) = DeriveGraceColumns(builder, firstItemIndex, graceStemDown, innerBreathItems);
+        var (graceColumns, columnItemIndices) = DeriveGraceColumns(builder, firstItemIndex, graceStemDown,
+            innerBreathItems, graceChordNames, graceFrameSpecs);
         if (graceColumns.Length == 0)
             return;
         // The beam's beamlet counts, in the meter's beat grid and the body's tuplets
@@ -6514,7 +6546,9 @@ public sealed partial class MeasureCollector
     /// </remarks>
     private static (ImmutableArray<GraceColumnInfo> Columns, ImmutableArray<int> ItemIndices)
         DeriveGraceColumns(MeasureBuilder builder, int firstItemIndex, bool stemDown,
-            Dictionary<int, ArticulationType>? innerBreaths = null)
+            Dictionary<int, ArticulationType>? innerBreaths = null,
+            Dictionary<int, ChordNameItem>? chordNames = null,
+            Dictionary<int, string>? frameSpecs = null)
     {
         var items = builder.CurrentItems;
         if (firstItemIndex >= items.Count)
@@ -6603,9 +6637,94 @@ public sealed partial class MeasureCollector
                 // is two springs, and the sign ends the beam (GraceColumnInfo.BreathAfter).
                 if (innerBreaths != null && innerBreaths.TryGetValue(i, out var sign))
                     columns[^1] = columns[^1] with { BreathAfter = sign };
+                // The chord symbol and the diagram on this column (session 964): the run's
+                // springs price them (SpacingRules.GraceColumns' name chain and diagram rods),
+                // and the main note's own symbol is stamped later (StampGraceMainChordNames).
+                if (chordNames != null && chordNames.TryGetValue(i, out var symbol))
+                    columns[^1] = columns[^1] with { ChordName = symbol };
+                if (frameSpecs != null && frameSpecs.TryGetValue(i, out var frame))
+                    columns[^1] = columns[^1] with { FrameSpec = frame };
             }
         }
         return (columns.ToImmutable(), indices.ToImmutable());
+    }
+
+    /// <summary>
+    /// Stamps <see cref="GraceColumnInfo.MainHasChordName"/> on every run whose MAIN column
+    /// carries an inline chord symbol (session 964) — on the main item's <c>LeadingGrace</c> and
+    /// on the score-level group alike, the two copies <c>StaffAccidentals.SyncGraceNotes</c>
+    /// keeps in step. The far end of a grace symbol's rod is that main symbol
+    /// (SpacingRules.GraceColumns), and the main note is collected AFTER its run is derived, so
+    /// the fact has to be stamped once both are known: here, on the finished voices.
+    /// </summary>
+    private ImmutableArray<Voice> StampGraceMainChordNames(ImmutableArray<Voice> voices, int staffIndex)
+    {
+        if (_graceNotes.Count == 0 || voices.IsDefaultOrEmpty)
+            return voices;
+        HashSet<(int Voice, int Measure, int Item)>? named = null;
+        foreach (var cn in _chordNameCollector.Items)
+            if (!cn.UseTiming && !cn.IsChordRow && cn.StaffIndex == staffIndex)
+                (named ??= new()).Add((cn.VoiceIndex, cn.MeasureIndex, cn.ItemIndex));
+        if (named == null)
+            return voices;
+        var vb = voices.ToBuilder();
+        bool anyVoice = false;
+        for (int v = 0; v < vb.Count; v++)
+        {
+            var measures = vb[v].Measures.ToBuilder();
+            bool anyMeasure = false;
+            for (int m = 0; m < measures.Count; m++)
+            {
+                var items = measures[m].Items;
+                ImmutableArray<MusicItem>.Builder? ib = null;
+                for (int ii = 0; ii < items.Length; ii++)
+                {
+                    var lead = Svg.Layout.SpacingRules.GraceNotesOf(items[ii]);
+                    if (lead.IsDefaultOrEmpty || items[ii].GraceTime || !named.Contains((v, m, ii)))
+                        continue;
+                    bool anyNamed = false;
+                    foreach (var c in lead)
+                        if (c.ChordName != null)
+                            anyNamed = true;
+                    if (!anyNamed)
+                        continue;
+                    var stamped = ImmutableArray.CreateBuilder<GraceColumnInfo>(lead.Length);
+                    foreach (var c in lead)
+                        stamped.Add(c with { MainHasChordName = true });
+                    var columns = stamped.MoveToImmutable();
+                    MusicItem? updated = items[ii] switch
+                    {
+                        NoteItem n => n with { LeadingGrace = columns },
+                        ChordItem c => c with { LeadingGrace = columns },
+                        RestItem r => r with { LeadingGrace = columns },
+                        _ => null,
+                    };
+                    if (updated is null)
+                        continue;
+                    (ib ??= items.ToBuilder())[ii] = updated;
+                    for (int g = 0; g < _graceNotes.Count; g++)
+                    {
+                        var gn = _graceNotes[g];
+                        if (gn.StaffIndex == staffIndex && gn.VoiceIndex == v && gn.MeasureIndex == m
+                            && gn.MainNoteItemIndex == ii && gn.Columns.Length == columns.Length)
+                            _graceNotes[g] = new GraceNoteItem(gn.Type, columns, gn.MeasureIndex,
+                                gn.MainNoteItemIndex, gn.SourcePosition, gn.StaffIndex, gn.VoiceIndex,
+                                gn.ColumnItemIndices) { IsAfterGrace = gn.IsAfterGrace };
+                    }
+                }
+                if (ib is not null)
+                {
+                    measures[m] = measures[m] with { Items = ib.MoveToImmutable() };
+                    anyMeasure = true;
+                }
+            }
+            if (anyMeasure)
+            {
+                vb[v] = vb[v] with { Measures = measures.MoveToImmutable() };
+                anyVoice = true;
+            }
+        }
+        return anyVoice ? vb.MoveToImmutable() : voices;
     }
 
     /// <summary>

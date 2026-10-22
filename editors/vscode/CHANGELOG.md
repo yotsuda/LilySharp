@@ -4,6 +4,12 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+### A chord symbol, figured bass and a chord diagram on a grace note
+
+- **`@chord`, `@figuredBass` and `@diagram` on a grace note are drawn in the preview** — the
+  name over the grace, the figures under it, the diagram at full size — and the Problems view
+  no longer says they are not engraved.
+
 ### `@todo` on a grace note
 
 - **A `@todo` on a grace note, chord or rest is ringed and its memo set in the preview**, as a

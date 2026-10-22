@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 65 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 64 | 観測者がゼロだと自認しているもの |
-| `OWN` | 270 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **399** | |
+| `OWN` | 272 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **401** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -248,7 +248,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（270 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（272 件）
 
 ### `LilySharp.Core/Editing/KeyRespeller.cs`
 - **`KeyRespeller`** LILYSHARP-OWN: an editor aid. The rule:
@@ -596,7 +596,10 @@
 - **`SpacingRules.AnyStaffEngravesTime`** LILYSHARP-OWN, a DECIDED divergence (user decision 2026-08-20, HANDOFF §3):
 ### `LilySharp.Core/Svg/Layout/SpacingRules.EmptyBar.cs`
 - **`SpacingRules.EmptyBarSprings`** LILYSHARP-OWN: LilyPond has no such spring because it has no such column — the
+### `LilySharp.Core/Svg/Layout/SpacingRules.Grace.cs`
+- **`SpacingRules.ApplyDiagramRods`** LILYSHARP-OWN: the owner's decision of session 646 (diagrams side by side, the bar
 ### `LilySharp.Core/Svg/Layout/SpacingRules.MeasureSprings.cs`
+- **`SpacingRules.ApplyChordRowSpacing`** column, d being the run's remaining length. ⚠️ LILYSHARP-OWN in one respect — d is
 - **`SpacingRules.EnsureLeadSheetBarWidth`** LILYSHARP-OWN: LilyPond has no such floor — a chords-only chart's bar width is
 - **`SpacingRules.ApplyFretFrameSpacing`** ⚠️ LILYSHARP-OWN by the owner's decision (session 646: "コード図は、横に並べてほしい。
 ### `LilySharp.Core/Svg/Layout/StaffSize.cs`

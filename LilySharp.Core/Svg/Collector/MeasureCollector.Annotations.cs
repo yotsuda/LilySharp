@@ -51,9 +51,10 @@ public sealed partial class MeasureCollector
     /// </remarks>
     private void CollectFiguredBass(SyntaxNode node, int measureIndex, int itemIndex)
     {
-        // Grace time has no column for it to hang off — see CollectArticulations.
-        if (_graceDepth > 0)
-            return;
+        // In grace time too (session 964, GraceBodySupport.IsCarriedFiguredBass): a grace
+        // column is a measure item, and FiguredBassEngraver stands the group at the grace
+        // column's X (ElementCoordinator.LeadingGraceColumnHeadLeftX). Until then this returned
+        // at `_graceDepth > 0` and LYS4020 reported the figures.
         var articulations = ArticulationsOf(node);
 
         foreach (var child in articulations)
@@ -116,9 +117,12 @@ public sealed partial class MeasureCollector
     {
         if (RecordsChordFacts && node is ChordSyntax or ArpeggioSyntax or ChordRepetitionSyntax)
             RecordChordFacts(node, measureIndex);
-        // Grace time has no column for it to hang off — see CollectArticulations.
-        if (_graceDepth > 0)
-            return;
+        // In grace time too (session 964, GraceBodySupport.IsCarriedChordName): the symbol is
+        // the ordinary ChordNameItem at the grace's item index — ChordNameEngraver stands it on
+        // the grace column (ElementCoordinator.LeadingGraceColumnHeadLeftX), and the run's
+        // springs price it (GraceColumnInfo.ChordName, stamped through _graceChordNames by
+        // DeriveGraceColumns). Until then this returned at `_graceDepth > 0`.
+        bool graceTime = _graceDepth > 0;
         var articulations = ArticulationsOf(node);
 
         foreach (var child in articulations)
@@ -162,10 +166,12 @@ public sealed partial class MeasureCollector
                     if (fromFrets != null)
                     {
                         var named = fromFrets.PrintedSymbol(_chordSpelling, keySharps);
-                        _chordNameCollector.AddInline(
+                        var shapeSymbol = _chordNameCollector.AddInline(
                             named.Text, measureIndex, itemIndex, anchorTiming, markSyntax.SourceStart,
                             _cursor.StaffIndex, fromFrets, named.SuperFrom, named.BracketSuperFrom,
-                            diagram?.FrameSpec);
+                            diagram?.FrameSpec, _cursor.VoiceIndex);
+                        if (graceTime)
+                            (_graceChordNames ??= new())[itemIndex] = shapeSymbol;
                     }
                 }
                 continue;
@@ -195,13 +201,27 @@ public sealed partial class MeasureCollector
             // where its derived name draws the default like any name; nor does a name with no
             // shape for the tuning. Quoted text names no chord: never a diagram.
             var drawn = DiagramFor(structure);
-            _chordNameCollector.AddInline(
+            var symbol = _chordNameCollector.AddInline(
                 chordText, measureIndex, itemIndex, anchorTiming, markSyntax.SourceStart,
-                _cursor.StaffIndex, structure, superFrom, bracketSuperFrom, drawn?.FrameSpec);
+                _cursor.StaffIndex, structure, superFrom, bracketSuperFrom, drawn?.FrameSpec,
+                _cursor.VoiceIndex);
+            if (graceTime)
+                (_graceChordNames ??= new())[itemIndex] = symbol;
             if (drawn != null)
                 AddChordDiagram(markSyntax, drawn.FrameSpec, measureIndex, itemIndex);
         }
     }
+
+    /// <summary>The chord symbols written on the grace body being walked, by the grace column's
+    /// item index (session 964) — read by DeriveGraceColumns into
+    /// <see cref="GraceColumnInfo.ChordName"/>, the stamp the run's spacing prices.</summary>
+    private Dictionary<int, ChordNameItem>? _graceChordNames;
+
+    /// <summary>The chord diagrams on the grace body being walked — an <c>@diagram</c>'s spec
+    /// or the shape an <c>@chord</c> chose — by the grace column's item index (session 964);
+    /// read by DeriveGraceColumns into <see cref="GraceColumnInfo.FrameSpec"/>, the box the run's
+    /// spacing rods against its neighbours.</summary>
+    private Dictionary<int, string>? _graceFrameSpecs;
 
     /// <summary>
     /// The chord diagram an <c>@chord</c> chose, as the page's diagram — the very item
@@ -222,7 +242,8 @@ public sealed partial class MeasureCollector
     /// </remarks>
     private void AddChordDiagram(MusicMarkSyntax markSyntax, string frameSpec,
         int measureIndex, int itemIndex)
-        => _articulations.Add(new ArticulationItem(
+    {
+        _articulations.Add(new ArticulationItem(
             ArticulationType.FretFrame, measureIndex, itemIndex, true,
             markSyntax.SourceStart, _cursor.StaffIndex)
         {
@@ -232,6 +253,10 @@ public sealed partial class MeasureCollector
             VoiceIndex = _cursor.VoiceIndex,
             UnderChordName = true,
         });
+        // On a grace column the run's spacing rods the box (GraceColumnInfo.FrameSpec, session 964).
+        if (_graceDepth > 0)
+            (_graceFrameSpecs ??= new())[itemIndex] = frameSpec;
+    }
 
     /// <summary>The key signature as WRITTEN at this point of the walk — the one a chord
     /// named from notes is spelled in (<see cref="TryNameChord"/> reads it the same way).</summary>
@@ -739,6 +764,8 @@ public sealed partial class MeasureCollector
                 && !Semantics.GraceBodySupport.IsCarriedTrillSpan(articulation)
                 && !Semantics.GraceBodySupport.IsCarriedOttava(articulation)
                 && !Semantics.GraceBodySupport.IsCarriedEditorial(articulation)
+                // The chord diagram (session 964): a TextScript on the grace column.
+                && !Semantics.GraceBodySupport.IsCarriedDiagram(articulation)
                 // The breathing sign the body ends on (session 934) — a body-level answer, so it
                 // is matched by where it was written (_carriedGraceBreathStart).
                 && !(articulation is ArticulationSyntax { Type: ArticulationType.Breath or ArticulationType.Caesura } breathSign
@@ -904,6 +931,10 @@ public sealed partial class MeasureCollector
                         VoiceIndex = _cursor.VoiceIndex,
                         DirectionForced = markSyntax.ForcedAbove is not null,
                     });
+                    // On a grace column (session 964, GraceBodySupport.IsCarriedDiagram) the
+                    // run's spacing rods the box against its neighbours (GraceColumnInfo.FrameSpec).
+                    if (graceTime)
+                        (_graceFrameSpecs ??= new())[itemIndex] = spec;
                 }
                 else if (Semantics.AnnotationValues.Bend(markSyntax) is { } semitones)
                 {

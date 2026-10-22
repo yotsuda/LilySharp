@@ -277,14 +277,23 @@ internal sealed class ChordNameCollector
     /// <c>UseTiming</c> stays false — the symbol is drawn at its note's item — but
     /// <paramref name="timing"/> is the note's onset, the column the spacing prices the
     /// symbol on (see <c>MeasureCollector.CollectChordNames</c>).</summary>
-    public void AddInline(string text, int measureIndex, int itemIndex, Fraction timing,
+    /// <returns>The symbol added — a grace column's is stamped on the column
+    /// (<c>GraceColumnInfo.ChordName</c>, session 964).</returns>
+    public ChordNameItem AddInline(string text, int measureIndex, int itemIndex, Fraction timing,
         int position, int staffIndex, LilySharp.Core.Music.ChordStructure? structure = null,
         int superFrom = LilySharp.Core.Music.ChordSymbolText.NoSuperscript,
         int bracketSuperFrom = LilySharp.Core.Music.ChordSymbolText.NoSuperscript,
-        string? drawnShape = null)
-        => _items.Add(new ChordNameItem(text, measureIndex, itemIndex, position, staffIndex,
+        string? drawnShape = null, int voiceIndex = 0)
+    {
+        var item = new ChordNameItem(text, measureIndex, itemIndex, position, staffIndex,
             timing: timing, structure: structure)
-        { SuperFrom = superFrom, BracketSuperFrom = bracketSuperFrom, DrawnShape = drawnShape });
+        {
+            SuperFrom = superFrom, BracketSuperFrom = bracketSuperFrom, DrawnShape = drawnShape,
+            VoiceIndex = voiceIndex,
+        };
+        _items.Add(item);
+        return item;
+    }
 
     /// <summary>Applies a display mode to the INLINE <c>@chord</c> symbols already
     /// collected on a staff (aligned/row items already carry their own mode). Called

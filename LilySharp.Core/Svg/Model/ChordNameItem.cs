@@ -107,6 +107,12 @@ public sealed record ChordNameItem
     /// routing; see <c>DynamicItem.StaffIndex</c>). 0 for single-staff.</summary>
     public int StaffIndex { get; }
 
+    /// <summary>The voice of the staff whose item list <see cref="ItemIndex"/> counts — a
+    /// note-attached <c>@chord</c>'s writing voice (session 964; a row symbol's is 0). Read
+    /// where the item has to be found: a symbol on a GRACE column is placed off that voice's
+    /// run (<c>ChordNameEngraver.SymbolX</c>, <c>MeasureCollector.StampGraceMainChordNames</c>).</summary>
+    public int VoiceIndex { get; init; }
+
     /// <summary>
     /// When true the chord is placed by its musical moment (<see cref="Timing"/>)
     /// against the shared column grid, not by <see cref="ItemIndex"/>. Set for

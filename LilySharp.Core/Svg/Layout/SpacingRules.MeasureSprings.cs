@@ -439,18 +439,37 @@ internal static partial class SpacingRules
     /// bench / chord / blogger stand 5–9 staff spaces wider than LilyPond's.
     /// </para>
     /// </remarks>
+    /// <param name="gracePlace">For a symbol on a GRACE column (session 964), where it stands
+    /// in its run (<see cref="LeadingGraceColumnPlace"/>); null for a symbol on the column
+    /// itself. Such a symbol's rod from the previous name runs through the run's own springs
+    /// — the parts of the series spring into its main column — and its ink reaches past the
+    /// main column by its width less the run's remaining length.</param>
     public static ImmutableArray<Spring> ApplyChordRowSpacing(
         Rendering.ScoreTextMetrics fonts,
         ImmutableArray<Spring> springs,
         IReadOnlyList<Fraction> timings,
         int measureIndex,
         ImmutableArray<ChordNameItem> chordNames,
-        bool includeAttached = false)
+        bool includeAttached = false,
+        Func<ChordNameItem, GraceSymbolPlace?>? gracePlace = null)
     {
         if (chordNames.IsDefaultOrEmpty || springs.Length != timings.Count + 1)
             return springs;
 
         var width = new double[timings.Count];
+        var has = new bool[timings.Count];
+        // The grace symbols on each column's run (session 964): the rod from the previous
+        // name to such a symbol is laid over the run's own springs (Spring.WithRangeRod —
+        // LilyPond's rod over the columns between), and its ink reaches w − d past the main
+        // column, d being the run's remaining length. ⚠️ LILYSHARP-OWN in one respect — d is
+        // the run's NATURAL length where the reach is priced on the timing column: LilyPond
+        // rods the grace's own paper column, which stretches and compresses with the line.
+        //   departs from: lily/spacing-spanner.cc set_column_rods on the grace column itself.
+        //   goes away when: grace columns become columns of the spring system (HANDOFF §2 U8).
+        //   observed by: GraceChordNameAndDiagramTests (the natural-length cases; ledger
+        //   chordname.grace.*).
+        List<(GraceSymbolPlace Place, double Width)>?[]? graceAt = null;
+        double[]? graceLeft = null, graceRight = null;
         bool any = false;
         foreach (var cn in chordNames)
         {
@@ -467,12 +486,24 @@ internal static partial class SpacingRules
             // both spellings, so one price.
             if (!cn.IsChordRow && !includeAttached)
                 continue;
+            GraceSymbolPlace? place = gracePlace?.Invoke(cn);
             for (int t = 0; t < timings.Count; t++)
             {
                 if (timings[t] == cn.Timing)
                 {
-                    width[t] = Math.Max(width[t],
-                        ChordNameEngraver.FootprintWidth(fonts, cn));
+                    double w = ChordNameEngraver.FootprintWidth(fonts, cn);
+                    has[t] = true;
+                    if (place is { } p)
+                    {
+                        graceAt ??= new List<(GraceSymbolPlace, double)>?[timings.Count];
+                        (graceAt[t] ??= new()).Add((p, w));
+                        graceLeft ??= new double[timings.Count];
+                        graceRight ??= new double[timings.Count];
+                        graceLeft[t] = Math.Max(graceLeft[t], p.ToMain);
+                        graceRight[t] = Math.Max(graceRight[t], w - p.ToMain);
+                    }
+                    else
+                        width[t] = Math.Max(width[t], w);
                     any = true;
                     break;
                 }
@@ -485,7 +516,7 @@ internal static partial class SpacingRules
         // (-0.5 . 0.5): the symbol's spacing extent is its ink (0 . w) grown by
         // 0.5 on each side, so it clears a bar line on its left by 0.5, reaches
         // w + 0.5 to its right, and two adjacent symbols keep 1.0 between them.
-        const double edgeGap = 0.5;
+        const double edgeGap = ChordNameExtraSpacingWidth;
         // LILYPOND-REF: lily/spacing-spanner.cc:315-316 generate_springs — the rod between
         // two columns is the Separation_item distance PLUS the column's `padding`, default
         // 0.1 (`set_column_rods (cols, padding)`), the same 0.1 the note-to-note rods carry.
@@ -507,8 +538,12 @@ internal static partial class SpacingRules
         }
         // How far a column's symbol reaches on each side, extra-spacing-width included.
         // A column with no symbol reaches nowhere: LilyPond has no grob there to grow.
-        double LeftReach(int t) => width[t] > 0 ? edgeGap : 0;
-        double RightReach(int t) => width[t] > 0 ? width[t] + edgeGap : 0;
+        // A grace column's symbol (session 964) reaches its run's distance further left —
+        // where the rod cannot be laid over the run's own parts — and w − d past the column.
+        double LeftReach(int t, bool withGrace = true) => has[t] ? edgeGap + (withGrace ? graceLeft?[t] ?? 0 : 0) : 0;
+        double RightReach(int t) => has[t]
+            ? Math.Max(width[t], graceRight?[t] ?? 0) + edgeGap
+            : 0;
         // A rod exists only where the symbol contributed a box; a zero reach means no box,
         // so no padding either (the other content's rods are made elsewhere).
         double Rod(double reach) => reach > 0 ? reach + rodPadding : 0;
@@ -527,8 +562,26 @@ internal static partial class SpacingRules
             // Two adjacent symbols always price so they never overprint, and the
             // bar EDGES below price the full width so an all-rest (R1) attached
             // bar, whose only column is the rest, still clears the barlines.
-            if (includeAttached && (width[t] <= 0 || width[t + 1] <= 0))
+            if (includeAttached && (!has[t] || !has[t + 1]))
                 continue;
+            // The symbols on the next column's GRACE run (session 964): the rod from this
+            // column's name to each runs over the series spring's parts up to that grace
+            // column — the approach and the gaps before it — exactly as LilyPond rods the
+            // two columns with the others between (Spring.WithRangeRod). The main column's
+            // own name, if any, keeps the whole-spring rod below with no grace term.
+            // MEASURED (2.26.0, probes/grace-chordname.ly GCA): c's C to the grace's D is
+            // 1.877882 + 1.1, to six digits.
+            if (graceAt?[t + 1] is { } graceSymbols && result[t + 1].IsSeries
+                && result[t + 1].Series.Length == graceSymbols[0].Place.Columns + 1 && RightReach(t) > 0)
+            {
+                var s = result[t + 1];
+                foreach (var (place, _) in graceSymbols)
+                    s = s.WithRangeRod(0, place.Column + 1, Rod(RightReach(t) + edgeGap));
+                result[t + 1] = s;
+                if (width[t + 1] > 0)
+                    Widen(t + 1, Rod(RightReach(t) + LeftReach(t + 1, withGrace: false)));
+                continue;
+            }
             // The LEFT symbol's whole width lies between the two columns; the right
             // one's lies beyond them. So the gap owes (w[t] + 0.5) + 0.5, plus the
             // one rod padding — it is a per-rod term, not a per-box one.
@@ -548,7 +601,7 @@ internal static partial class SpacingRules
         for (int t = 0; t <= timings.Count; t++)
         {
             bool edge = t == timings.Count;
-            if (!edge && width[t] <= 0)
+            if (!edge && !has[t])
                 continue;
             if (previous >= 0 && t - previous > 1)
                 (spans ??= new()).Add((previous + 1, t + 1,
@@ -598,7 +651,8 @@ internal static partial class SpacingRules
         int measureIndex,
         ImmutableArray<ChordNameItem> chordNames,
         bool includeAttached,
-        Span<double> width)
+        Span<double> width,
+        Func<ChordNameItem, GraceSymbolPlace?>? gracePlace = null)
     {
         width.Clear();
         if (chordNames.IsDefaultOrEmpty || timings.Count == 0)
@@ -614,12 +668,29 @@ internal static partial class SpacingRules
             for (int t = 0; t < timings.Count; t++)
                 if (timings[t] == cn.Timing)
                 {
-                    width[t] = Math.Max(width[t],
-                        ChordNameEngraver.FootprintWidth(fonts, cn));
+                    // A grace column's symbol (session 964) stands its run's distance left of
+                    // the column, so it reaches that much less past it (ApplyChordRowSpacing).
+                    double reach = ChordNameEngraver.FootprintWidth(fonts, cn)
+                                   - (gracePlace?.Invoke(cn)?.ToMain ?? 0);
+                    width[t] = Math.Max(width[t], reach);
                     break;
                 }
         }
     }
+
+    /// <summary>
+    /// LilyPond's ChordName <c>extra-spacing-width</c>, each side: what a symbol's spacing box
+    /// grows past its ink (<see cref="ApplyChordRowSpacing"/>; the run's name chain).
+    /// LILYPOND-REF: scm/define-grobs.scm:837-855 ChordName (extra-spacing-width . (-0.5 . 0.5)).
+    /// </summary>
+    internal const double ChordNameExtraSpacingWidth = 0.5;
+
+    /// <summary>
+    /// <c>\textLengthOn</c>'s extra-spacing-width right of a text (<c>(-0.0 . 0.4)</c>): the
+    /// gap a chord diagram owes on its right (<see cref="ApplyFretFrameSpacing"/>; the run's
+    /// diagram rods). LILYPOND-REF: ly/property-init.ly textLengthOn.
+    /// </summary>
+    internal const double TextLengthRightExtra = 0.4;
 
     /// <summary>
     /// How far the MUSICAL ink on each timing column reaches past that column, on each side —
@@ -1541,8 +1612,8 @@ internal static partial class SpacingRules
         if (articulations.IsDefaultOrEmpty || springs.Length != timings.Count + 1)
             return springs;
 
-        // textLengthOn's extra-spacing-width (-0.0 . 0.4): the gap is owed on the right only.
-        const double TextLengthRightExtra = 0.4;
+        // textLengthOn's extra-spacing-width (-0.0 . 0.4): the gap is owed on the right only
+        // (TextLengthRightExtra).
         // Per column: how far its diagram reaches left and right of the column (0 = none).
         double[]? left = null, right = null;
         bool[]? has = null;
@@ -1572,12 +1643,17 @@ internal static partial class SpacingRules
             // (FretFrameGeometry.GridCentreFromColumnOrigin).
             var box = FretFrameGeometry.Box(art.FrameSpec, fonts);
             double centre = FretFrameGeometry.GridCentreFromColumnOrigin(box);
+            // A diagram on a GRACE column (session 964) stands its run's natural distance left
+            // of the timing column it is priced on: it reaches that much further left toward
+            // the previous column and that much less right (the rods inside the run are
+            // GraceColumns' ApplyDiagramRods; ⒝ the run's stretch as ApplyChordRowSpacing's).
+            double toMain = LeadingGraceColumnPlace(voices[art.VoiceIndex].Measures, measureIndex, art.ItemIndex)?.ToMain ?? 0;
             left ??= new double[timings.Count];
             right ??= new double[timings.Count];
             has ??= new bool[timings.Count];
             has[t] = true;
-            left[t] = Math.Max(left[t], -(centre + box.Left));
-            right[t] = Math.Max(right[t], centre + box.Right + TextLengthRightExtra);
+            left[t] = Math.Max(left[t], -(centre + box.Left) + toMain);
+            right[t] = Math.Max(right[t], centre + box.Right + TextLengthRightExtra - toMain);
         }
         if (left is null || right is null || has is null)
             return springs;

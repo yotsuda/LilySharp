@@ -25,6 +25,23 @@ workflow attaches that section to the GitHub Release verbatim.
   rule: the rest stays where the voice puts it, the mark floats. Found by the OMR on a piano
   piece's right hand.
 
+### A chord symbol, figured bass and a chord diagram on a grace note
+
+- `[engraving]` **A grace note takes a chord symbol** (`grace { d8@chord(D) } e4@chord(E)`): the
+  name stands over the grace column as LilyPond's ChordNames context stands it, and the
+  neighbouring names keep their usual gap on either side — the run makes the room (a wide name
+  on the grace pushes the main note out, as in LilyPond). A bare `@chord` on a grace chord
+  names its notes, and `@chord(x32010)` draws its diagram there. `lysc check` stops reporting
+  it as not engraved (LYS4020). The twin writes the run into the part's `\chordmode` stream
+  (`c4 \grace { d8 } e4`), and MusicXML its `<harmony>` before the grace `<note>`.
+- `[engraving]` **A grace note takes figured bass** (`grace { d,8@figuredBass(6) }`): the figures
+  stand under the grace column at its X, in the staff's figure row. The twin writes the group
+  as `\grace { <6>8 }` in the `\figuremode` stream, with a warning that LilyPond keeps the
+  figure before it sounding at the grace (the two stack there); MusicXML its `<figured-bass>`.
+- `[engraving]` **A grace note takes a chord diagram** (`grace { d8@diagram(x32010) }`): drawn at
+  full size where it stands off a full-size note, and the diagrams stand side by side as
+  everywhere else — the run widens for the box, before and after it.
+
 ### `@todo` on a grace note
 
 - **A `@todo` written on a grace note, chord or rest is a mark like any other**: the preview

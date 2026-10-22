@@ -672,6 +672,58 @@ internal static class GraceBodySupport
         => TodoAnnotation.Of(annotation) is not null;
 
     /// <summary>
+    /// True for a CHORD SYMBOL a grace note, chord or rest carries — <c>@chord(D)</c>, the
+    /// bare <c>@chord</c>, a shape <c>@chord(x32010)</c> (session 964): the symbol stands on
+    /// the grace column's X as LilyPond's ChordName stands on its paper column, at full size,
+    /// and the name-to-name rods run through the grace column (ledger chordname.grace.*). It is
+    /// the ordinary <c>ChordNameItem</c> at the grace's item index, placed by ChordNameEngraver
+    /// off the run (ElementCoordinator.LeadingGraceColumnHeadLeftX) and priced by the run's
+    /// own springs (GraceColumnInfo.ChordName). THE question the collector and the drop list
+    /// both ask.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/scheme-engravers.scm Chord_name_engraver (the ChordNames context) —
+    ///   a note event in grace time makes a ChordName at the grace's paper column; MEASURED
+    ///   (2.26.0, Lab sessions/p964/lp/probe.ly GCA..GCG): the name's X is the grace head's X
+    ///   to six digits, and the neighbours stand w + 0.5 + 0.5 + 0.1 off as any two names do.
+    /// </remarks>
+    internal static bool IsCarriedChordName(SyntaxNode annotation)
+        => annotation is MusicMarkSyntax mark && ChordAnnotation.Of(mark) is not null;
+
+    /// <summary>
+    /// True for a FIGURED BASS group a grace note carries — <c>@figuredBass(6)</c> (session
+    /// 964): the figures stand under the grace column at its X, in the staff's figure row, as
+    /// LilyPond's BassFigureAlignment stands at the grace's column (ledger figbass.grace.*). It
+    /// is the ordinary <c>FiguredBassItem</c> at the grace's item index.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/figured-bass-engraver.cc — a figure event in grace time makes its
+    ///   BassFigureAlignment on the grace's column; MEASURED (2.26.0, Lab
+    ///   sessions/p964/lp/probe.ly GFA..GFF): the figure's X is the grace head's X, and the run's
+    ///   spacing does not move (the figure is narrower than the grace spring).
+    /// </remarks>
+    internal static bool IsCarriedFiguredBass(SyntaxNode annotation)
+        => annotation is MusicMarkSyntax mark && AnnotationValues.Figures(mark) is not null;
+
+    /// <summary>
+    /// True for a CHORD DIAGRAM a grace note carries — <c>@diagram(x32010)</c> (session 964):
+    /// LilyPond's <c>\fret-diagram</c> TextScript on the grace column, its grid where it stands
+    /// off a full-size column, in the outside-staff stack (ledger diagram.grace.*); Lily#'s own
+    /// side-by-side rule (<c>\textLengthOn</c>, ApplyFretFrameSpacing) rods its box against the
+    /// run's neighbouring columns (GraceColumnInfo.FrameSpec). THE question the collector and the
+    /// drop list both ask.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/text-engraver.cc — a Voice engraver; general-grace-settings names no
+    ///   TextScript, so the diagram keeps its size. MEASURED (2.26.0, Lab
+    ///   sessions/p964/lp/probe3.ly GDA/GDB/GDD): the grid's left edge is 1.689495 left of the
+    ///   column on a grace and on a full-size note alike; under \textLengthOn the grace column
+    ///   stands 0.2 past the previous head and the next head 0.6 past the grid.
+    /// </remarks>
+    internal static bool IsCarriedDiagram(SyntaxNode annotation)
+        => annotation is MusicMarkSyntax mark && AnnotationValues.Frame(mark) is not null;
+
+    /// <summary>
     /// True for a STEM DIRECTION a grace note or chord writes at its own level — <c>@stemUp</c> /
     /// <c>@stemDown</c> (LilyPond's once-override of Stem.direction): that stem points that
     /// way and the others keep the voice's (sessions 933, 935; ledger stemdir.grace.*,
@@ -1075,6 +1127,8 @@ internal static class GraceBodySupport
                     || IsCarriedCourtesy(annotation) || IsCarriedEditorial(annotation)
                     || IsCarriedSemiTie(annotation) || IsCarriedHeadMark(annotation)
                     || IsCarriedTodo(annotation)
+                    || IsCarriedChordName(annotation) || IsCarriedFiguredBass(annotation)
+                    || IsCarriedDiagram(annotation)
                     || IsCarriedStemDirection(item, annotation)
                     || ReferenceEquals(annotation, carriedBreath)
                     || (annotation is ArticulationSyntax inner && innerBreaths.Contains(inner)))

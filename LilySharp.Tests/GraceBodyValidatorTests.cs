@@ -213,6 +213,27 @@ public class GraceBodyValidatorTests
     }
 
     /// <summary>
+    /// A chord symbol, a figured bass group and a chord diagram on a grace note are carried
+    /// (session 964; GraceBodySupport.IsCarriedChordName / IsCarriedFiguredBass /
+    /// IsCarriedDiagram): nothing is reported, and the page draws them (the X and the spacing
+    /// are GraceChordNameAndDiagramTests' and the ledger's chordname.grace.* / figbass.grace.* /
+    /// diagram.grace.*).
+    /// </summary>
+    [Theory]
+    [InlineData("grace { d'8@chord(D) } c'1 | e'1 |", "grace { d'8 } c'1 | e'1 |")]
+    [InlineData("grace { <d' f'>8@chord } c'1 | e'1 |", "grace { <d' f'>8 } c'1 | e'1 |")]
+    [InlineData("grace { d'8@chord(x32010) } c'1 | e'1 |", "grace { d'8 } c'1 | e'1 |")]
+    [InlineData("grace { d'8@figuredBass(6) } c'1 | e'1 |", "grace { d'8 } c'1 | e'1 |")]
+    [InlineData("grace { d'8@figuredBass(6 4) e'8 } c'1 | e'1 |", "grace { d'8 e'8 } c'1 | e'1 |")]
+    [InlineData("grace { d'8@diagram(x32010) } c'1 | e'1 |", "grace { d'8 } c'1 | e'1 |")]
+    [InlineData("grace { d'8@diagram(x32010).down } c'1 | e'1 |", "grace { d'8 } c'1 | e'1 |")]
+    public void AChordSymbolFiguresOrDiagramOnAGrace_IsDrawn_AndNotReported(string written, string control)
+    {
+        Assert.Empty(Warnings(Book(written)));
+        Assert.NotEqual(Page(control), Page(written));
+    }
+
+    /// <summary>
     /// A dynamic LEVEL on a grace note is drawn (full size, on the grace column) and not
     /// reported (GraceBodySupport.IsCarriedDynamic); so is a hairpin started there since session
     /// 918 (AHairpinStartOnAGrace_IsDrawn_AndNotReported).

@@ -4738,6 +4738,32 @@ internal sealed class RenderedGeometry
     }
 
     /// <summary>
+    /// The <paramref name="figureIndex"/>-th bass figure COLUMN's box left (left to right,
+    /// figures sharing one X counted once) minus notehead <paramref name="headIndex"/>'s anchor
+    /// — the per-column form of <see cref="NoteheadAnchorToBassFigureBoxLeft"/>, for a figure
+    /// on a GRACE column (session 964), whose head is not the first.
+    /// </summary>
+    public double BassFigureBoxLeftToNoteheadAnchor(int figureIndex, int headIndex, int page = 0)
+    {
+        var columns = _pages[page].Glyphs
+            .Where(g => IsFiguredBassGlyph(g.Glyph)
+                        && Math.Abs(g.FontSize - EngravingDefaults.FiguredBassFontSize) < 1e-9)
+            .Select(g => g.X)
+            .OrderBy(x => x)
+            .Aggregate(new List<double>(), (acc, x) =>
+            {
+                if (acc.Count == 0 || Math.Abs(acc[^1] - x) > 1e-9)
+                    acc.Add(x);
+                return acc;
+            });
+        if (figureIndex < 0 || figureIndex >= columns.Count)
+            throw new InvalidOperationException(
+                $"wanted figure column #{figureIndex} but the probe drew {columns.Count}.\n"
+                + "Drawn geometry:\n" + Describe());
+        return columns[figureIndex] - NoteheadAnchor(headIndex);
+    }
+
+    /// <summary>
     /// The topmost bass-figure baseline below staff <paramref name="staffIndex"/>, measured
     /// from that staff's middle line.
     /// </summary>

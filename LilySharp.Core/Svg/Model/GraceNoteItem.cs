@@ -164,7 +164,21 @@ public readonly record struct GraceColumnInfo(
     // hand-built run nobody stamped (GraceNoteItem.BeamletCountsAt then reads the column's own
     // count inward). Stamped by GraceNoteItem.WithBeamletCounts, which knows the meter.
     int BeamLeft = 0,
-    int BeamRight = 0
+    int BeamRight = 0,
+    // The CHORD SYMBOL written on this column — `grace { d8@chord(D) }` (session 964) — the
+    // very ChordNameItem the page draws, so the run's spacing prices the symbol's own width
+    // (SpacingRules.GraceColumns' name chain: LilyPond's ChordName rods, name to name through
+    // the grace column). Stamped by MeasureCollector.DeriveGraceColumns; null without one.
+    ChordNameItem? ChordName = null,
+    // Whether the run's MAIN column carries a chord symbol too — the far end of the LAST
+    // named grace column's rod (SpacingRules.GraceColumns). Stamped on every column of the
+    // run by MeasureCollector.StampGraceMainChordNames once the main note is collected.
+    bool MainHasChordName = false,
+    // The CHORD DIAGRAM written on this column — `grace { d8@diagram(x32010) }`, or the
+    // shape an `@chord` chose (session 964) — as the page's spec: Lily#'s own `\textLengthOn`
+    // rule rods its box against the neighbouring columns of the run
+    // (SpacingRules.GraceColumns), as ApplyFretFrameSpacing rods a full-size note's.
+    string? FrameSpec = null
 )
 {
     /// <summary>Whether this column's stem points up — <c>!</c><see cref="StemDown"/>.</summary>

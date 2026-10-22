@@ -4121,6 +4121,36 @@ internal sealed class ElementCoordinator
     }
 
     /// <summary>
+    /// The head left edge of the grace column standing as item <paramref name="itemIndex"/> of
+    /// measure <paramref name="measureIndex"/> in <paramref name="measures"/> — read off the
+    /// ITEMS alone (<see cref="SpacingRules.LeadingGraceColumnOf"/>), for the readers that hold
+    /// a voice's measures and no score-level grace group: the chord name and figured bass
+    /// engravers (session 964). Null when the item is no grace column of a run.
+    /// </summary>
+    /// <remarks>
+    /// The same chain <see cref="GraceColumnHeadLeftX"/> reads — the run placed at the line's
+    /// force (<see cref="GraceNoteEngraver.PlacedColumns"/>) hanging off its anchor's column —
+    /// less the two-voice collision shift, which a chord symbol or a figure does not take (⒝
+    /// a symbol on a grace of a shifted second voice stands at the unshifted column).
+    /// </remarks>
+    internal static double? LeadingGraceColumnHeadLeftX(ImmutableArray<Measure> measures,
+        int measureIndex, int itemIndex, MeasureLayout ml)
+    {
+        if (measures.IsDefault || measureIndex < 0 || measureIndex >= measures.Length)
+            return null;
+        var measure = measures[measureIndex];
+        if (SpacingRules.LeadingGraceColumnOf(measure, itemIndex) is not { } at)
+            return null;
+        var anchorItem = measure.Items[at.AnchorIndex];
+        var run = GraceNoteEngraver.PlacedColumns(
+            SpacingRules.GraceNotesOf(anchorItem), anchorItem, measure, at.AnchorIndex, ml);
+        if (at.Column >= run.Offsets.Length)
+            return null;
+        return ml.X + LayoutUtilities.GetItemXOffset(measures, measureIndex, at.AnchorIndex, ml)
+               - run.Span + run.Offsets[at.Column];
+    }
+
+    /// <summary>
     /// Whether the GRACE column item <paramref name="itemIndex"/> stands under its group's beam
     /// (<see cref="GraceNoteEngraver.BeamedPrefix"/>) — what its dot column reads, a beamed stem
     /// carrying no flag (<see cref="DotColumn.ReservedForGrace"/>).

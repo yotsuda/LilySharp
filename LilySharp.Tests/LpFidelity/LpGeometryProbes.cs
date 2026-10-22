@@ -8865,6 +8865,39 @@ internal static class LpGeometryProbes
         }
         """;
 
+    // A chord symbol on a grace note (audit/lp-geometry/probes/grace-chordname.ly, GCA/GCB/GCD/GCG;
+    // session 964): the name stands on the grace column and the ChordName rods run through it.
+    private static readonly string GRCA = GraceTieBook("c4@chord(C) grace { d8@chord(D) } e4@chord(E) c2@chord(C) |", "GRCA");
+    private static readonly string GRCB = GraceTieBook("c4@chord(C) grace { d8 } e4@chord(E) c2@chord(C) |", "GRCB");
+    private static readonly string GRCD = GraceTieBook("c4@chord(C) grace { d8 e8@chord(D) } f4@chord(E) c2@chord(C) |", "GRCD");
+    private static readonly string GRCG = GraceTieBook("c4@chord(C) grace { d8@chord(D) } e4 c2@chord(C) |", "GRCG");
+    // A figured bass group on a grace note (audit/lp-geometry/probes/grace-figuredbass.ly,
+    // GFA/GFB/GFF; session 964) — bass clef, `\fixed c` there is `c,` here.
+    private static string GraceBassBook(string music, string name) => $$"""
+        octave absolute
+        time 4/4
+
+        part m { clef bass }
+
+        section Main {
+          m { {{music}} }
+        }
+
+        form { ~Main }
+
+        score {{name}} {
+          staff m
+        }
+        """;
+    private static readonly string GRBA = GraceBassBook("c,4@figuredBass(5) grace { d,8@figuredBass(6) } e,4@figuredBass(3) c,2 |", "GRBA");
+    private static readonly string GRBB = GraceBassBook("c,4@figuredBass(5) grace { d,8 } e,4@figuredBass(3) c,2 |", "GRBB");
+    private static readonly string GRBF = GraceBassBook("c,4@figuredBass(5) grace { d,8 e,8@figuredBass(6) } f,4@figuredBass(3) c,2 |", "GRBF");
+    // A chord diagram on a grace note (audit/lp-geometry/probes/grace-diagram.ly, GDD/GDE/GDF;
+    // session 964): Lily#'s side-by-side rule (\textLengthOn in the twin) rods the grace column.
+    private static readonly string GRDD = GraceTieBook("c4 grace { d8@diagram(x32010) } e4 c2 |", "GRDD");
+    private static readonly string GRDE = GraceTieBook("c4 d8@diagram(x32010) e8 c2 |", "GRDE");
+    private static readonly string GRDF = GraceTieBook("c4 grace { d8 e8@diagram(x32010) } f4 c2 |", "GRDF");
+
     // A script on a grace note (audit/lp-geometry/probes/grace-script.ly, GSA..GSD).
     private static readonly string GRSA = GraceTieBook("c4 grace { d16@staccato } e4 c2 |", "GRSA");
     private static readonly string GRSB = GraceTieBook("c4 grace { d16@accent } e4 c2 |", "GRSB");
@@ -17850,6 +17883,35 @@ internal static class LpGeometryProbes
             g => g.FingeringInkEdgeAboveStaff('1', lilyPondStep: LilySharp.Core.Svg.Layout.GrobFontSize.GraceFingeringFontSizeStep)),
         new("fingering.grace.control-below.staff-to-ink-top", GRFE, g => g.FingeringInkEdgeAboveStaff('1', above: false)),
         new("script.grace.control", GRSD, g => g.GlyphAboveStaffMiddle('\uE04A', 0)),
+
+        // A chord symbol on a grace note (session 964; probes/grace-chordname.ly). The name's
+        // anchor is the grace head's (heads and symbols both left to right: c, grace, e, c),
+        // and the head steps carry the ChordName rods w + 1.1 through the grace column.
+        new("chordname.grace.name-on-grace-head", GRCA, g => g.ChordSymbolAnchor(1) - g.NoteheadAnchor(1)),
+        new("chordname.grace.previous-head-to-grace-head", GRCA, g => g.NoteheadAnchorStep(0)),
+        new("chordname.grace.grace-head-to-main-head", GRCA, g => g.NoteheadAnchorStep(1)),
+        new("chordname.grace.control.previous-head-to-grace-head", GRCB, g => g.NoteheadAnchorStep(0)),
+        new("chordname.grace.control.grace-head-to-main-head", GRCB, g => g.NoteheadAnchorStep(1)),
+        new("chordname.grace.second-of-two.first-gap", GRCD, g => g.NoteheadAnchorStep(1)),
+        new("chordname.grace.second-of-two.grace-head-to-main-head", GRCD, g => g.NoteheadAnchorStep(2)),
+        new("chordname.grace.unnamed-main.previous-head-to-grace-head", GRCG, g => g.NoteheadAnchorStep(0)),
+        new("chordname.grace.unnamed-main.grace-head-to-main-head", GRCG, g => g.NoteheadAnchorStep(1)),
+        // A figured bass group on a grace note (probes/grace-figuredbass.ly): the group's box
+        // left on the grace head (the full-size reading is figbass.alone.head-anchor-to-box-left),
+        // and the run's spacing unmoved by it.
+        new("figbass.grace.figure-on-grace-head", GRBA, g => g.BassFigureBoxLeftToNoteheadAnchor(1, 1)),
+        new("figbass.grace.previous-head-to-grace-head", GRBA, g => g.NoteheadAnchorStep(0)),
+        new("figbass.grace.grace-head-to-main-head", GRBA, g => g.NoteheadAnchorStep(1)),
+        new("figbass.grace.control.grace-head-to-main-head", GRBB, g => g.NoteheadAnchorStep(1)),
+        new("figbass.grace.second-of-two.figure-on-grace-head", GRBF, g => g.BassFigureBoxLeftToNoteheadAnchor(1, 2)),
+        // A chord diagram on a grace note (probes/grace-diagram.ly, \textLengthOn): the grid's
+        // left off the grace head as off a full-size one, and the box's rods on the run.
+        new("diagram.grace.textlength.previous-head-to-grace-head", GRDD, g => g.NoteheadAnchorStep(0)),
+        new("diagram.grace.textlength.grace-head-to-main-head", GRDD, g => g.NoteheadAnchorStep(1)),
+        new("diagram.grace.textlength.control.previous-head-to-head", GRDE, g => g.NoteheadAnchorStep(0)),
+        new("diagram.grace.textlength.control.head-to-next-head", GRDE, g => g.NoteheadAnchorStep(1)),
+        new("diagram.grace.textlength.second-of-two.first-gap", GRDF, g => g.NoteheadAnchorStep(1)),
+        new("diagram.grace.textlength.second-of-two.grace-head-to-main-head", GRDF, g => g.NoteheadAnchorStep(2)),
 
         // ...and the one quantity that tie's residual is made of, measured on its own. The
         // BLACK head is the control and the HALF head the divergence -- same bar, same pitch,

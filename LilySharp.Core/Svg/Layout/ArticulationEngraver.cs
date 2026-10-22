@@ -1377,7 +1377,9 @@ internal static class ArticulationEngraver
             double scriptStep = fontSizeStep;
             // A tab technique letter keeps its size on a grace (session 958): the renderer draws
             // it at TabTechniqueEm whatever the step, so the box it reserves must be that size too.
-            if (TabTechniqueLetterOf(articulation) is not null)
+            // So does a chord diagram (session 964): LilyPond's \fret-diagram is a TextScript,
+            // which general-grace-settings does not size (ledger diagram.grace.*).
+            if (TabTechniqueLetterOf(articulation) is not null || articulation.Type == ArticulationType.FretFrame)
             {
                 fontSizeStep = 0.0;
                 scriptStep = 0.0;

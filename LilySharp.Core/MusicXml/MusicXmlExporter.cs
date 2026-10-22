@@ -4768,6 +4768,19 @@ public sealed class MusicXmlExporter
         }
     }
 
+    /// <summary>The chord symbol and the figured bass a grace note or chord carries (session 964;
+    /// GraceBodySupport.IsCarriedChordName / IsCarriedFiguredBass), written through the same
+    /// reader a full-size note's are (<see cref="ProcessDirectionMark"/>) — a <c>&lt;harmony&gt;</c>
+    /// and a <c>&lt;figured-bass&gt;</c> stand before their note, a grace's as any.</summary>
+    private void EmitGraceDirectionMarks(IEnumerable<SyntaxNode> annotations)
+    {
+        foreach (var annotation in annotations)
+            if (annotation is MusicMarkSyntax mark
+                && (Semantics.GraceBodySupport.IsCarriedChordName(mark)
+                    || Semantics.GraceBodySupport.IsCarriedFiguredBass(mark)))
+                ProcessDirectionMark(mark);
+    }
+
     /// <summary>
     /// Writes the grace notes of a <c>grace { … }</c> body.
     /// </summary>
@@ -4952,6 +4965,9 @@ public sealed class MusicXmlExporter
                     foreach (var stringNumber in note.Articulations.OfType<StringNumberAnnotationSyntax>())
                         xmlNote.Technicals.Add(new System.Xml.Linq.XElement("string", stringNumber.StringNumber));
 
+                    // Its chord symbol and figures (session 964), as <harmony> / <figured-bass>
+                    // before the grace <note>, exactly as before a full-size one.
+                    EmitGraceDirectionMarks(note.Articulations);
                     _currentMeasure.Notes.Add(xmlNote);
                     (lastGrace, graceSlurOn) = (xmlNote, null);
                     break;
@@ -5003,6 +5019,8 @@ public sealed class MusicXmlExporter
                         graceDuration = chord.Duration.ToFraction();
                     var (chordType, _) = GetNoteType(graceDuration);
                     var (chordActual, chordNormal) = CurrentTupletRatio();
+                    // The chord's own symbol and figures (session 964) stand before its members.
+                    EmitGraceDirectionMarks(chord.Articulations);
                     int graceChordAt = _currentMeasure.Notes.Count;
                     int chordOctave = chord.ChordOctaveOffset;
                     int frameStepIn = _currentStep, frameOctaveIn = _currentOctave;

@@ -252,8 +252,7 @@ internal static class FiguredBassEngraver
             if (layoutIdx < 0) continue;
             var measureLayout = measureLayouts[layoutIdx];
             // The SAME X the engraver computes (Calculate), so seed and draw agree.
-            double x = measureLayout.X + LayoutUtilities.GetItemXOffset(
-                staffMeasures, fb.MeasureIndex, fb.ItemIndex, measureLayout);
+            double x = GroupX(fb, measureLayout, staffMeasures);
             var texts = fb.Figures.Select(f => f.DisplayText).ToImmutableArray();
             string topText = texts.Length > 0 ? texts[0] : string.Empty;
             columns.Add(new BassFigureAlignment.Column(x, texts));
@@ -293,6 +292,25 @@ internal static class FiguredBassEngraver
         return ink;
     }
 
+    /// <summary>
+    /// A figure group's X: its bass note's column — or, on a GRACE column (session 964), that
+    /// column's head left edge read off the run (<see cref="ElementCoordinator.LeadingGraceColumnHeadLeftX"/>),
+    /// as LilyPond's BassFigureAlignment stands on the grace's paper column (ledger
+    /// figbass.grace.*). The ONE reading the reservation (<see cref="RowInkBelowStaff"/>) and
+    /// the placement (<see cref="Calculate"/>) take.
+    /// </summary>
+    private static double GroupX(FiguredBassItem fb, MeasureLayout measureLayout, ImmutableArray<Measure> staffMeasures)
+    {
+        if (!staffMeasures.IsDefault && fb.MeasureIndex < staffMeasures.Length
+            && fb.ItemIndex < staffMeasures[fb.MeasureIndex].Items.Length
+            && staffMeasures[fb.MeasureIndex].Items[fb.ItemIndex].GraceTime
+            && ElementCoordinator.LeadingGraceColumnHeadLeftX(
+                staffMeasures, fb.MeasureIndex, fb.ItemIndex, measureLayout) is { } graceX)
+            return graceX;
+        return measureLayout.X + LayoutUtilities.GetItemXOffset(
+            staffMeasures, fb.MeasureIndex, fb.ItemIndex, measureLayout);
+    }
+
     public static ImmutableArray<FiguredBassLayout> Calculate(
         Rendering.ScoreTextMetrics fonts,
         ImmutableArray<FiguredBassItem> figuredBasses,
@@ -326,8 +344,7 @@ internal static class FiguredBassEngraver
             // staff middle (frame B) and resolved to the right staff at each consumer.
             var fbMeasures = LayoutUtilities.ResolveStaffMeasures(measuresByStaff, fb.StaffIndex, measures);
 
-            double x = measureLayout.X + LayoutUtilities.GetItemXOffset(
-                fbMeasures, fb.MeasureIndex, fb.ItemIndex, measureLayout);
+            double x = GroupX(fb, measureLayout, fbMeasures);
             // Y-up (frame B): the topmost figure starts on aligned_side's floor below the
             // staff middle, and ApplySkylineDrop then lowers it until it clears its own
             // staff's ink (the support half of the same aligned_side). The floor is the

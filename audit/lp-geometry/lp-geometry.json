@@ -9511,7 +9511,147 @@
       "score": "TCFY",
       "lilypond": -0.350129,
       "residual": -4.32E-07,
-      "why": "OPENED 2026-09-23 (session 524) WITH tie.width.chord-flag, the other half of the same box. The same shape an octave lower (Let's Stay Together, bass, F major, d,4. <d, fis>8 ~ <d, fis>4 e,,8 f,,): the lower head sits ON the middle line, and here the flag does not narrow its tie -- the width is 0.665000 with the box and without it -- but pushes it further DOWN. LilyPond seats the tie at -0.350129 below the middle line; without the flag box Lily# seated it at -0.315322, +0.034807, because nothing was in its way. That is why this book reads the HEIGHT and TCFX the width: each reads the one quantity the box changes in it. PREDICTION, written before the reading: 0 to six digits (Lab sessions/p524/result.txt read -0.350129 off the patched engine), and it is the half that says the box is built in the RIGHT PLACE vertically while TCFX says its left edge is 0.04 off -- a box wrong in Y would open this one and could still leave TCFX at +0.04. OUTCOME: -0.000000432 (Lily# -0.350129432; LilyPond prints six digits), the prediction held. SESSION 525: TCFX's 0.04 turned out to BE the box's Y (half a blot, see tie.width.chord-flag) -- and this point did not move when it was fixed, exactly as its prediction said: here the tie's direct reading is the HEAD box and its close-by reading lands INSIDE the flag box in both engines, so the box's top edge never decides it."    }
+      "why": "OPENED 2026-09-23 (session 524) WITH tie.width.chord-flag, the other half of the same box. The same shape an octave lower (Let's Stay Together, bass, F major, d,4. <d, fis>8 ~ <d, fis>4 e,,8 f,,): the lower head sits ON the middle line, and here the flag does not narrow its tie -- the width is 0.665000 with the box and without it -- but pushes it further DOWN. LilyPond seats the tie at -0.350129 below the middle line; without the flag box Lily# seated it at -0.315322, +0.034807, because nothing was in its way. That is why this book reads the HEIGHT and TCFX the width: each reads the one quantity the box changes in it. PREDICTION, written before the reading: 0 to six digits (Lab sessions/p524/result.txt read -0.350129 off the patched engine), and it is the half that says the box is built in the RIGHT PLACE vertically while TCFX says its left edge is 0.04 off -- a box wrong in Y would open this one and could still leave TCFX at +0.04. OUTCOME: -0.000000432 (Lily# -0.350129432; LilyPond prints six digits), the prediction held. SESSION 525: TCFX's 0.04 turned out to BE the box's Y (half a blot, see tie.width.chord-flag) -- and this point did not move when it was fixed, exactly as its prediction said: here the tie's direct reading is the HEAD box and its close-by reading lands INSIDE the flag box in both engines, so the box's top edge never decides it."    },
+    "chordname.grace.name-on-grace-head": {
+      "probe": "grace-chordname.ly",
+      "score": "GCA",
+      "lilypond": 0.0,
+      "residual": 0.0,
+      "why": "EXACT. The grace's D has the grace head's anchor: ChordNameEngraver.SymbolX reads a grace column's X off its run (ElementCoordinator.LeadingGraceColumnHeadLeftX), as LilyPond's ChordName stands on the grace's own paper column (session 964)."
+    },
+    "chordname.grace.previous-head-to-grace-head": {
+      "probe": "grace-chordname.ly",
+      "score": "GCA",
+      "lilypond": 2.977882,
+      "residual": -0.000000110,
+      "why": "EXACT (LilyPond prints six digits). c's C to the grace's D: 1.877882 (the C's width, which chord.symbol-width.* already hold to LilyPond) + 0.5 + 0.5 + 0.1 -- the ChordName rod laid over the run's approach spring, the series part before the grace column (ApplyChordRowSpacing, Spring.WithRangeRod). Until the part rod it read +0.100000: the whole-series EnsureMinDistance lands on the approach's skyline floor, which carries the separation padding once more."
+    },
+    "chordname.grace.grace-head-to-main-head": {
+      "probe": "grace-chordname.ly",
+      "score": "GCA",
+      "lilypond": 2.977882,
+      "residual": -0.000000110,
+      "why": "EXACT. The grace's D to e's E: 1.877882 + 1.1, the rod INSIDE the run -- GraceColumns' name chain to the main column (GraceColumnInfo.MainHasChordName, stamped once the main note is collected)."
+    },
+    "chordname.grace.control.previous-head-to-grace-head": {
+      "probe": "grace-chordname.ly",
+      "score": "GCB",
+      "lilypond": 2.401796,
+      "residual": -0.000000001,
+      "why": "EXACT. The control with no name on the grace: the bare approach, 0.8 x 3.002245 (grace.column.approach)."
+    },
+    "chordname.grace.control.grace-head-to-main-head": {
+      "probe": "grace-chordname.ly",
+      "score": "GCB",
+      "lilypond": 1.938627,
+      "residual": 0.000000215,
+      "why": "EXACT. The control's bare grace -> main spring, 1.938627 (grace.column.single.to-main)."
+    },
+    "chordname.grace.second-of-two.first-gap": {
+      "probe": "grace-chordname.ly",
+      "score": "GCD",
+      "lilypond": 1.417939,
+      "residual": -0.000000554,
+      "why": "EXACT. The beamed pair's first gap stays the bare 1.417939: a D on the SECOND column rods nothing before it."
+    },
+    "chordname.grace.second-of-two.grace-head-to-main-head": {
+      "probe": "grace-chordname.ly",
+      "score": "GCD",
+      "lilypond": 2.977882,
+      "residual": -0.000000110,
+      "why": "EXACT. The second column's D to f's E: 1.877882 + 1.1, the name chain's last gap."
+    },
+    "chordname.grace.unnamed-main.previous-head-to-grace-head": {
+      "probe": "grace-chordname.ly",
+      "score": "GCG",
+      "lilypond": 2.977882,
+      "residual": -0.000000110,
+      "why": "EXACT. c's C to the grace's D with the main note UNNAMED: the approach rod is the same, it reaches the grace, not the main."
+    },
+    "chordname.grace.unnamed-main.grace-head-to-main-head": {
+      "probe": "grace-chordname.ly",
+      "score": "GCG",
+      "lilypond": 1.938627,
+      "residual": 0.000000215,
+      "why": "EXACT. No name on e: the D rods nothing into it and the gap stays the bare 1.938627 -- the next name (c2's C) is further off than the rod reaches, as in LilyPond."
+    },
+    "figbass.grace.figure-on-grace-head": {
+      "probe": "grace-figuredbass.ly",
+      "score": "GFA",
+      "lilypond": 0.0,
+      "residual": 0.0,
+      "why": "EXACT. The 6's box left on the grace head: FiguredBassEngraver.GroupX reads the grace column off the run; figbass.alone.head-anchor-to-box-left is the full-size reading it mirrors."
+    },
+    "figbass.grace.previous-head-to-grace-head": {
+      "probe": "grace-figuredbass.ly",
+      "score": "GFA",
+      "lilypond": 2.401796,
+      "residual": -0.000000001,
+      "why": "EXACT. The figure moves nothing in front of the grace: the bare approach 2.401796."
+    },
+    "figbass.grace.grace-head-to-main-head": {
+      "probe": "grace-figuredbass.ly",
+      "score": "GFA",
+      "lilypond": 1.938627,
+      "residual": 0.000000215,
+      "why": "EXACT. The bare 1.938627: a one-digit figure is narrower than the grace spring, and neither engine's spacing binds on it here (Lily# prices no figure width at all)."
+    },
+    "figbass.grace.control.grace-head-to-main-head": {
+      "probe": "grace-figuredbass.ly",
+      "score": "GFB",
+      "lilypond": 1.938627,
+      "residual": 0.000000215,
+      "why": "EXACT. The control without the grace figure: the same 1.938627."
+    },
+    "figbass.grace.second-of-two.figure-on-grace-head": {
+      "probe": "grace-figuredbass.ly",
+      "score": "GFF",
+      "lilypond": 0.0,
+      "residual": 0.0,
+      "why": "EXACT. The 6 on the second column of a beamed grace pair, on that column's head."
+    },
+    "diagram.grace.textlength.previous-head-to-grace-head": {
+      "probe": "grace-diagram.ly",
+      "score": "GDD",
+      "lilypond": 3.193695,
+      "residual": 0.000000354,
+      "why": "EXACT. Under \\\\\\\\textLengthOn the grace column stands where its diagram's box clears c's head: 1.304200 (the head) + 0.1 (its extra-spacing-width) + 0.1 (the column padding) + 1.689495 (the grid's reach left of the column) = 3.193695 -- ApplyFretFrameSpacing with the run's natural distance folded into the box's reach (LeadingGraceColumnPlace)."
+    },
+    "diagram.grace.textlength.grace-head-to-main-head": {
+      "probe": "grace-diagram.ly",
+      "score": "GDD",
+      "lilypond": 4.542156,
+      "residual": -0.000000173,
+      "why": "EXACT. The grid's right + 0.4 + 0.1 + 0.1 to e's head, 4.542156 -- the diagram rod inside the run (GraceColumns' ApplyDiagramRods), the same number a full-size note's diagram reads (session 835)."
+    },
+    "diagram.grace.textlength.control.previous-head-to-head": {
+      "probe": "grace-diagram.ly",
+      "score": "GDE",
+      "lilypond": 3.704200,
+      "residual": 0.0,
+      "why": "EXACT. The full-size control: c to the eighth carrying the diagram, the \\\\\\\\textLengthOn rods ApplyFretFrameSpacing has laid since session 835."
+    },
+    "diagram.grace.textlength.control.head-to-next-head": {
+      "probe": "grace-diagram.ly",
+      "score": "GDE",
+      "lilypond": 4.542156,
+      "residual": -0.000000173,
+      "why": "EXACT. The control's 4.542156 (session 835's number)."
+    },
+    "diagram.grace.textlength.second-of-two.first-gap": {
+      "probe": "grace-diagram.ly",
+      "score": "GDF",
+      "lilypond": 2.807434,
+      "residual": -0.000000199,
+      "why": "EXACT. The first grace to the second, which carries the diagram: 0.917939 (the grace head) + 0.1 + 0.1 + 1.689495 = 2.807434 -- the diagram rod on the gap BEFORE its column, inside the run."
+    },
+    "diagram.grace.textlength.second-of-two.grace-head-to-main-head": {
+      "probe": "grace-diagram.ly",
+      "score": "GDF",
+      "lilypond": 4.542156,
+      "residual": -0.000000173,
+      "why": "EXACT. 4.542156 again, from the second column to f."
+    }
   }
 }
 
