@@ -160,6 +160,17 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第946セッションの経緯
+
+### 1.1 第946セッション（2026-10-22・YT-DELL2）
+
+第945 と同じ会話の続き（ユーザー「1」＝第945 の候補 ⑴ grace の LYS4020 の残り）。`-Start p946`（開始 HEAD `7eb70d9b3`・未 push 73・第944 を ARCHIVE へ）。作業場所は Lab `sessions/p946/`（LP の試料は `heel.ly`）。
+- **調べた順と分かったこと**: `@pluck` は LP の StrokeFinger（New_fingering_engraver・grace でも普通の大きさ）だが、Lily# の主の音の `@pluck` は自前の字（TabTechnique の面）で LP と字面が違う＝LP の台帳に載らない（`LilyPondExporter.StrokeFinger` の註が自認）。H/P/T も LP に grob が無い（`ArticulationEngraver` の「NO LILYPOND-REF, ON PURPOSE」）。そこで既知の annotation を全部 grace に書いて LYS4020 を数えた（Lab `p946/probe.lys`）→ §2 U8 の一覧から**漏れていた族**が出た＝`@heel`・`@toe`（LP の Script）・`@fall`・`@doit`（LP の BendAfter）・`@scoop`・`@plop`・`@bend`。
+- **grace の heel と toe を描く・普通の音の字も直す**（`3d866c010`）: ⑴ `GraceBodySupport.IsCarriedScript` に Heel・Toe＝grace の Script font-size −3・第916 の経路のまま。⑵ **字の取り違え**: script.scm は heel＝`(upedalheel . upedalheel)`・toe＝`(dpedaltoe . dpedaltoe)`＝どちら側でも 1 つの字。Lily# の `ArticulationItem.GlyphOf` は側で字を替えていた（2026-07-06 の exotica set 1＝測る前）＝`@heel.down` と上の `@toe` が別の字だった。heel/toe を書く本は 0 冊（第350 の数え）＝掃きで 0 枚。
+- **網**: 台帳 12 点（`script.grace.pedal.*`＝grace 6・普通の大きさの対照 6・probe `grace-pedal-mark.ly`）全部一致。LYS4020 の網 2 行。毒 3 本＝側で字を替える 4 赤・両方外す 8 赤・toe だけ外す 4 赤。掃き 1,248 枚で 0。棚卸しは差なし。
+- `-End p946 -DiffBase 7eb70d9b3` ＝full **12871 / 0 / 2 / 12873**（前便末 +14）（Lab `sessions/p946/end.log`）→ この docs commit。本体 `3d866c010`。未 push 74＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。
+判定（2026-10-22）: grace の heel と toe は LP と同じ。普通の音の heel/toe の字も LP と同じになった。次の候補＝⑴ grace の `@fall`/`@doit`（LP の BendAfter・grace でも普通の大きさ＝LP で照合できる）・⑵ `@thumb`（LP では Fingering＝grace で −8・普通の音でも Lily# は Script として置く＝主の音から LP と照合し直す）・⑶ `@pluck`・H/P/T（Lily# 自前の字＝LP の台帳なし・同一性の網で）・§2 E ⑹⑺（要ユーザー判断）。
+
 ## 以下は第945セッションの経緯
 
 ### 1.1 第945セッション（2026-10-22・YT-DELL2）
