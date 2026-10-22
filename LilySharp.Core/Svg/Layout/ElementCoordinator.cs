@@ -4019,20 +4019,28 @@ internal sealed class ElementCoordinator
     {
         if (graceNotes.IsDefaultOrEmpty)
             return null;
-        foreach (var g in graceNotes)
+        for (int gi = 0; gi < graceNotes.Length; gi++)
         {
+            var g = graceNotes[gi];
             if (g.StaffIndex != staffIndex || g.VoiceIndex != voiceIndex || g.MeasureIndex != measureIndex
                 || g.ColumnItemIndices.IsDefaultOrEmpty || g.ColumnItemIndices.Length != g.Columns.Length)
                 continue;
             int k = g.ColumnItemIndices.IndexOf(itemIndex);
             if (k < 0)
                 continue;
-            if (SpacingRules.InnerBreathSprings(g.Columns, k) is not { } breath)
+            var mainItem = ItemAt(voice, g.MeasureIndex, g.MainNoteItemIndex);
+            if (SpacingRules.InnerBreathSprings(g.Columns, k, mainItem) is not { } breath)
                 return null;
-            return GraceColumnHeadLeftX(voice, graceNotes, staffIndex, voiceIndex, measureIndex,
-                    g.ColumnItemIndices[k + 1], ml, voiceShifts) is { } next
-                ? next - breath.Out.IdealDistance
-                : null;
+            if (k + 1 < g.Columns.Length)
+                return GraceColumnHeadLeftX(voice, graceNotes, staffIndex, voiceIndex, measureIndex,
+                        g.ColumnItemIndices[k + 1], ml, voiceShifts) is { } next
+                    ? next - breath.Out.IdealDistance
+                    : null;
+            // An afterGrace's last column (session 939): back from the closing spacer's column,
+            // which the run hangs off — its group X plus the run's span.
+            var geom = GraceGeomOf(voice, graceNotes, gi, new GraceObstacleGeom?[graceNotes.Length], ml);
+            return GraceGroupX(voice, g, geom, ml, voiceIndex, voiceShifts) + geom.Span
+                   - breath.Out.IdealDistance;
         }
         return null;
     }

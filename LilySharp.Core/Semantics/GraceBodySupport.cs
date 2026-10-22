@@ -618,8 +618,8 @@ internal static class GraceBodySupport
     /// <para>
     /// ⚠️ ONLY AT THE END, and not on an afterGrace. A sign written on an INNER grace stands
     /// between two grace columns, inside the run (<see cref="InnerBreaths"/>, session 936); an
-    /// afterGrace's run hangs off the spacer that ends its main note, with no change column
-    /// after it, and stays reported (LYS4020).
+    /// afterGrace's run hangs off the spacer that ends its main note, so the sign on its last
+    /// column stands before that spacer's column, inside the run too (InnerBreaths, session 939).
     /// </para>
     /// LILYPOND-REF: scm/scheme-engravers.scm:43 Breathing_sign_engraver process-music — a Voice engraver, deaf to grace time.
     /// LILYPOND-REF: lily/caesura-engraver.cc:237 Caesura_engraver::make_or_remake_grobs — the caesura's, the same.
@@ -666,17 +666,19 @@ internal static class GraceBodySupport
     /// Before a REST the same (session 938, probes/grace-breath.ly GBK/GBL): the rest's left
     /// edge stands the sign's Staff_spacing × 0.8 on, a rest's column having no left skyline
     /// to raise the minimum.
-    /// ⚠️ Not before a spacer (unmeasured), and not on an afterGrace: its graces stand at a
-    /// moment inside the main note, so the sign's column lands on a MAIN moment and the spring
-    /// out of it is another (Lab sessions/p938/lp/rest.ly AA: the next main note 2.5311 past
-    /// the sign's ink left, not 1.5066). Both stay reported (LYS4020).
+    /// ⚠️ Not before a spacer written in the body (unmeasured): reported (LYS4020).
+    /// </para>
+    /// <para>
+    /// An AFTERGRACE's sign (session 939, probes/grace-breath.ly GBM-GBN): one on an inner column
+    /// the same; one on the LAST column too, because the run hangs off the spacer that ends its
+    /// main note (<c>RestItem.LeadingGrace</c>) — LilyPond's empty musical column at the grace's
+    /// main moment, which the sign's column stands in front of. The spring out of the sign to
+    /// that column is the sign's Staff_spacing UNSCALED: the empty column has no grace part.
     /// </para>
     /// LILYPOND-REF: lily/auto-beam-engraver.cc:319-322 Auto_beam_engraver::acknowledge_breathing_sign — force_end_: the sign ends the automatic beam.
     /// </remarks>
     internal static IReadOnlyList<ArticulationSyntax> InnerBreaths(IReadOnlyList<GraceBodyElement> elements, bool afterGrace)
     {
-        if (afterGrace)
-            return [];
         List<ArticulationSyntax>? signs = null;
         SyntaxNode? previous = null;
         foreach (var element in elements)
@@ -691,6 +693,9 @@ internal static class GraceBodySupport
                 (signs ??= []).Add(sign);
             previous = item;
         }
+        // An afterGrace's LAST column: the closing spacer's column follows it.
+        if (afterGrace && previous != null && OwnBreath(previous) is { } last)
+            (signs ??= []).Add(last);
         return signs ?? (IReadOnlyList<ArticulationSyntax>)[];
 
         static ArticulationSyntax? OwnBreath(SyntaxNode column)

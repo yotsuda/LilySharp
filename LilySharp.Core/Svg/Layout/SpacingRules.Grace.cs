@@ -263,7 +263,7 @@ internal static partial class SpacingRules
             // A breathing sign between this column and the next (session 936) stands in a column
             // of its own there: the gap is the two springs in series, grace → sign and sign →
             // next grace (InnerBreathSprings), each at its own length.
-            if (InnerBreathSprings(notes, i) is { } breath)
+            if (InnerBreathSprings(notes, i, mainItem) is { } breath)
             {
                 gap = breath.Into.IdealDistance + breath.Out.IdealDistance;
                 // ⒝ UNDER COMPRESSION the pair closes as ONE gap — its rods and compress
@@ -430,8 +430,10 @@ internal static partial class SpacingRules
     /// <summary>
     /// The two springs across a breathing sign written on INNER column <paramref name="column"/>
     /// of a run (<see cref="GraceColumnInfo.BreathAfter"/>, session 936) — the grace column into
-    /// the sign's column, and the sign's column to the next grace — with each pair's column rod.
-    /// Null when the column carries no sign, or when either side is a rest or a tab digit.
+    /// the sign's column, and the sign's column to the next grace (or rest, or an afterGrace's
+    /// closing spacer) — with each pair's column rod. Null when the column carries no sign, when
+    /// either side is a tab digit or the next is a spacer written in the body, or when the run's
+    /// LAST column is not followed by an afterGrace's closing spacer.
     /// </summary>
     /// <remarks>
     /// The sign's column stands at the NEXT grace's moment, so it is the shape of a change
@@ -446,15 +448,24 @@ internal static partial class SpacingRules
     /// ink left → the next grace 1.205280 = (0.5066 + 1.0) × 0.8; the caesura's 2.4 = (2.0 + 1.0) × 0.8.
     /// </remarks>
     internal static (Spring Into, double IntoRod, Spring Out, double OutRod)? InnerBreathSprings(
-        ImmutableArray<GraceColumnInfo> notes, int column)
+        ImmutableArray<GraceColumnInfo> notes, int column, MusicItem? mainItem = null)
     {
-        if (notes.IsDefaultOrEmpty || column < 0 || column + 1 >= notes.Length
+        if (notes.IsDefaultOrEmpty || column < 0 || column >= notes.Length
             || notes[column].BreathAfter is not { } type)
             return null;
-        var next = notes[column + 1];
+        // An AFTERGRACE's last column (session 939): the run hangs off the spacer that closes its
+        // main note — LilyPond's EMPTY musical column at the grace's main moment (Lab
+        // sessions/p939/lp/cols.ly: `when=3/8`, extent empty) — and the sign's column stands in
+        // front of it. That column has no grace part, so the spring out of the sign is NOT scaled
+        // (lily/spacing-spanner.cc:519-527 asks the right column), and its empty extent puts no
+        // minimum or rod under it.
+        bool beforeSpacer = column + 1 == notes.Length;
+        if (beforeSpacer && mainItem is not RestItem { IsSpacer: true })
+            return null;
+        GraceColumnInfo? next = beforeSpacer ? null : notes[column + 1];
         // A REST next (session 938) is priced the same way: its left skyline is empty, so the
         // sign's spring keeps its ideal and the rest's left edge stands there (GBK/GBL).
-        if (next.IsSpacer || next.TabDigitHalfWidth > 0)
+        if (next is { IsSpacer: true } or { TabDigitHalfWidth: > 0 })
             return null;
         // The sign's column, read by the change column's own rules (its box at the top line,
         // its width, its space-alist) — a breathing sign reads no text font.
@@ -465,8 +476,10 @@ internal static partial class SpacingRules
             || GraceIntoChangeColumn(notes, ChangeColumnLeftSkyline(fonts, signColumn, default), width, column)
                is not { } into)
             return null;
+        if (next is not { } nextColumn)
+            return (into.Spring, into.Rod, ChangeColumnStaffSpacing(width, lastChange, 0.0), double.NegativeInfinity);
         double rightDistance = ChangeColumnRightSkyline(fonts, signColumn)
-            .Distance(ItemSkylineFactory.CreateGraceLeftSkyline(next));
+            .Distance(ItemSkylineFactory.CreateGraceLeftSkyline(nextColumn));
         var outOf = ChangeColumnStaffSpacing(width, lastChange, Math.Max(0.0, rightDistance))
             .Scale(GraceApproachScale);
         return (into.Spring, into.Rod, outOf, SeparationRodPadding + rightDistance);

@@ -87,7 +87,6 @@ public class GraceBodyValidatorTests
     // one on an inner grace since 936, one before a grace rest since 938: see
     // ABreathOnAnInnerGrace_IsDrawn_AndNotReported).
     [InlineData("grace { d'16@breath s16 e'16 } c'1 | e'1 |", "grace { d'16 s16 e'16 } c'1 | e'1 |")]
-    [InlineData("c'1 afterGrace { d'16@breath } | e'1 |", "c'1 afterGrace { d'16 } | e'1 |")]
     // ⚠️ `grace { d'8. }` LEFT THIS THEORY ON 2026-08-30 (session 299), which is the way a
     // row is meant to leave it: the dot is drawn now, so the line asserting it is missing
     // went red and taking it out was part of closing the hole. See ADottedGrace_IsDrawn.
@@ -432,6 +431,9 @@ public class GraceBodyValidatorTests
     // …before a grace rest too (session 938, ledger breath.grace.before-rest.*).
     [InlineData("grace { d'16@breath r16 e'16 } c'1 | e'1 |", "grace { d'16 r16 e'16 } c'1 | e'1 |")]
     [InlineData("grace { d'16@breath r16 } c'1 | e'1 |", "grace { d'16 r16 } c'1 | e'1 |")]
+    // …and in an afterGrace, on its last grace as well (session 939, ledger breath.aftergrace.*).
+    [InlineData("c'1 afterGrace { d'16@breath } | e'1 |", "c'1 afterGrace { d'16 } | e'1 |")]
+    [InlineData("c'1 afterGrace { d'16@breath e'16 } | e'1 |", "c'1 afterGrace { d'16 e'16 } | e'1 |")]
     public void ABreathOnAnInnerGrace_IsDrawn_AndNotReported(string written, string control)
     {
         Assert.Empty(Warnings(Book(written)));

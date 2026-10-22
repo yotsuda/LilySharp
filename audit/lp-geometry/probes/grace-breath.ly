@@ -13,6 +13,9 @@
 %% GBJ: Flags, no Beam after the sign); a caesura does not end it (GBG: one Beam).
 %% GBK-GBL (session 938) put the sign before a grace REST: the rest's left edge stands where a
 %% grace head would, the sign's space x 0.8 on.
+%% GBM-GBO (session 939) put the sign in an \afterGrace: on its last grace the sign's column stands
+%% before the EMPTY musical column at the grace's main moment, and the spring out of it is not
+%% scaled (that column has no grace part).
 %% Dumped: each NoteHead's, BreathingSign's, Flag's, Beam's and Rest's X extent, against the system.
 #(define (dump-final tag)
    (lambda (layout pages)
@@ -50,3 +53,11 @@
   \score { \new Staff { \time 4/4 \fixed c' { c4 \grace { d16 \breathe r16 e16 } f4 c2 \bar "|." } } } }
 \book { \paper { indent = 0 ragged-right = ##t page-post-process = #(dump-final "GBL") }
   \score { \new Staff { \time 4/4 \fixed c' { c4 \grace { d16 \breathe r16 } f4 c2 \bar "|." } } } }
+\book { \paper { indent = 0 ragged-right = ##t page-post-process = #(dump-final "GBM") }
+  \score { \new Staff { \time 4/4 \fixed c' { \afterGrace c2 { d16 \breathe } e2 \bar "|." } } } }
+\book { \paper { indent = 0 ragged-right = ##t page-post-process = #(dump-final "GBN") }
+  \score { \new Staff { \time 4/4 \fixed c' { \afterGrace c2 { d16 \breathe e16 } f2 \bar "|." } } } }
+\book { \paper { indent = 0 ragged-right = ##t page-post-process = #(dump-final "GBO") }
+  \score { \new Staff { \time 4/4 \fixed c' { \afterGrace c2 { d16 e16 \breathe } f2 \bar "|." } } } }
+\book { \paper { indent = 0 ragged-right = ##t page-post-process = #(dump-final "GBP") }
+  \score { \new Staff { \time 4/4 \fixed c' { \afterGrace c2 { d16 } e2 \bar "|." } } } }

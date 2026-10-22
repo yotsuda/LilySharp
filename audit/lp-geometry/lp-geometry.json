@@ -8183,6 +8183,76 @@
       "residual": 0.0,
       "why": "EXACT from its first reading (session 938): the rest is the run's LAST column, 1.205280 + its 1.7 to the main note."
     },
+    "breath.aftergrace.main-to-grace": {
+      "probe": "grace-breath.ly",
+      "score": "GBM",
+      "lilypond": 2.600746999480768,
+      "residual": 0.421173,
+      "why": "OPEN since session 939 (+0.421173): "
+    },
+    "breath.aftergrace.grace-to-sign": {
+      "probe": "grace-breath.ly",
+      "score": "GBM",
+      "lilypond": 0.891338619198037,
+      "residual": 0.0,
+      "why": "EXACT from its first reading (session 939). A sign on an afterGrace's LAST grace stands in a column of its own before the EMPTY musical column at the grace's main moment (Lab sessions/p939/lp/cols.ly), and the grace -> sign is the Note_spacing wish of every other grace sign, 0.891339 (GraceBodySupport.InnerBreaths takes the afterGrace's last column; SpacingRules.InnerBreathSprings with the closing spacer as the next column)."
+    },
+    "breath.aftergrace.sign-to-main": {
+      "probe": "grace-breath.ly",
+      "score": "GBM",
+      "lilypond": 2.531111249783655,
+      "residual": 0.975489,
+      "why": "OPEN since session 939 (+0.975489 = 2.0 - 1.024511). The sign -> the empty column is LilyPond's own 1.5066 (its Staff_spacing, unscaled: that column has no grace part; Lab sessions/p939/lp/cols.ly 12.077086 -> 13.583686), and Lily# answers it; what is left is the closing spacer -> next note. "
+    },
+    "breath.aftergrace.inner.sign-to-grace": {
+      "probe": "grace-breath.ly",
+      "score": "GBN",
+      "lilypond": 1.20528,
+      "residual": 0.0,
+      "why": "EXACT from its first reading (session 939): a sign on an INNER afterGrace column is an ordinary inner sign, (0.5066 + 1.0) x 0.8."
+    },
+    "breath.aftergrace.inner.grace-to-main": {
+      "probe": "grace-breath.ly",
+      "score": "GBN",
+      "lilypond": 2.304511249783653,
+      "residual": 1.634116,
+      "why": "OPEN since session 939 (+1.634116), the control's residual: "
+    },
+    "breath.aftergrace.beamed.gap": {
+      "probe": "grace-breath.ly",
+      "score": "GBO",
+      "lilypond": 1.417938619198038,
+      "residual": 0.0,
+      "why": "EXACT. The CONTROL inside the run: the beamed pair before the sign, 1.417939."
+    },
+    "breath.aftergrace.beamed.grace-to-sign": {
+      "probe": "grace-breath.ly",
+      "score": "GBO",
+      "lilypond": 0.891338619198039,
+      "residual": 0.0,
+      "why": "EXACT from its first reading (session 939): from a beamed last grace, 0.891339."
+    },
+    "breath.aftergrace.beamed.sign-to-main": {
+      "probe": "grace-breath.ly",
+      "score": "GBO",
+      "lilypond": 2.531111249783653,
+      "residual": 0.975489,
+      "why": "OPEN since session 939 (+0.975489), as breath.aftergrace.sign-to-main: "
+    },
+    "breath.aftergrace.control.main-to-grace": {
+      "probe": "grace-breath.ly",
+      "score": "GBP",
+      "lilypond": 2.600746999480768,
+      "residual": 0.421173,
+      "why": "OPEN since session 939 (+0.421173), the CONTROL with no sign: "
+    },
+    "breath.aftergrace.control.grace-to-main": {
+      "probe": "grace-breath.ly",
+      "score": "GBP",
+      "lilypond": 2.304511249783653,
+      "residual": 1.634116,
+      "why": "OPEN since session 939 (+1.634116 = (1.938627 + 2.0) - (1.28 + 1.024511)), the CONTROL with no sign: "
+    },
     "breath.beam.note-to-sign": {
       "probe": "breath-beam.ly",
       "score": "BBA",
