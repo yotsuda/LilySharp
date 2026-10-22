@@ -89,15 +89,16 @@ public sealed class OwnGestureGeometryTests
 
     private static double D(Group g) => double.Parse(g.Value, CultureInfo.InvariantCulture);
 
-    /// <summary>The note heads (notation) or fret digits (tab) with their source positions.</summary>
+    /// <summary>The note heads (notation) or fret digits (tab) with their source positions — a
+    /// grace's head carries its own font family (style) before the X.</summary>
     private static List<(int Pos, double X, double Y)> Heads(string svg) => Regex.Matches(svg,
-            "<text class=\"music\" x=\"([-\\d.]+)\" y=\"([-\\d.]+)\" font-size=\"[\\d.]+\" data-pos=\"(\\d+)\">(.)</text>")
+            "<text class=\"music\"(?: style=\"[^\"]*\")? x=\"([-\\d.]+)\" y=\"([-\\d.]+)\" font-size=\"[\\d.]+\" data-pos=\"(\\d+)\">(.)</text>")
         .Where(m => m.Groups[4].Value[0] is LilySharp.Core.Svg.EmmentalerGlyphs.NoteheadBlack)
         .Select(m => (int.Parse(m.Groups[3].Value, CultureInfo.InvariantCulture), D(m.Groups[1]), D(m.Groups[2])))
         .ToList();
 
     private static List<(int Pos, double X, double Y)> Digits(string svg) => Regex.Matches(svg,
-            "<text x=\"([-\\d.]+)\" y=\"([-\\d.]+)\" font-size=\"[\\d.]+\" text-anchor=\"middle\" data-pos=\"(\\d+)\">\\d+</text>")
+            "<text(?: style=\"[^\"]*\")? x=\"([-\\d.]+)\" y=\"([-\\d.]+)\" font-size=\"[\\d.]+\" text-anchor=\"middle\" data-pos=\"(\\d+)\">\\d+</text>")
         .Select(m => (int.Parse(m.Groups[3].Value, CultureInfo.InvariantCulture), D(m.Groups[1]), D(m.Groups[2])))
         .ToList();
 
@@ -198,6 +199,57 @@ public sealed class OwnGestureGeometryTests
     public void TheBendUp_OnATabStaff_LeavesTheDigitOnItsString()
     {
         var svg = RenderTab("c4 e@bend(full) g a |");
+        var all = Segments(svg);
+        int pos = all.Select(s => s.Pos).Distinct().Single();
+        var digit = OwnerOf(Digits(svg), pos);
+        var curve = all.Where(s => Math.Abs(s.Width - 0.13) < 1e-9).ToList();
+        double row = StaffLineNearest(svg, digit.Y);
+        AssertPoint((digit.X + BendTabXOffset, row), curve[0].X1, curve[0].Y1, "the curve's start");
+        AssertPoint((digit.X + BendTabXOffset + BendReach, row - BendRise), curve[^1].X2, curve[^1].Y2, "the tip");
+    }
+
+    /// <summary>
+    /// On a GRACE note (session 957) the gestures hang off the grace column's own head at the
+    /// grace's size and keep their own: the approach curve ends 1.55 left of the grace head,
+    /// the bend-up leaves the grace head's box right + 0.15 — and on a tab staff the grace
+    /// digit, which is centred ON its column (no TabHeadCenterOffset). Until session 957 a
+    /// gesture on a grace was dropped with LYS4020.
+    /// </summary>
+    [Theory]
+    [InlineData("grace { c16@scoop } d4 e f g |", +1)]
+    [InlineData("grace { c16@plop } d4 e f g |", -1)]
+    public void TheApproachCurve_OnAGraceNote_ArrivesAtTheGraceHead(string music, int startSide)
+    {
+        var svg = Render(music);
+        var gesture = Assert.Single(Gestures(svg));
+        var head = OwnerOf(Heads(svg), gesture[0].Pos);
+        Assert.Equal(ApproachSegments, gesture.Count);
+        AssertPoint((head.X - ApproachXOffset, head.Y), gesture[^1].X2, gesture[^1].Y2, "the curve's end");
+        AssertPoint((head.X - ApproachXOffset - ApproachLength, head.Y + startSide * ApproachDepth),
+            gesture[0].X1, gesture[0].Y1, "the curve's start");
+    }
+
+    [Fact]
+    public void TheBendUp_OnAGraceNote_LeavesTheGraceHeadsRight()
+    {
+        var svg = Render("grace { c16@bend(full) } d4 e f g |");
+        var all = Segments(svg);
+        int pos = all.Select(s => s.Pos).Distinct().Single();
+        var head = OwnerOf(Heads(svg), pos);
+        var curve = all.Where(s => Math.Abs(s.Width - 0.13) < 1e-9).ToList();
+        Assert.Equal(BendSegments, curve.Count);
+        // The grace head's own box: the FOURTEEN design at the grace's font-size step.
+        double graceWidth = GlyphMetrics.GetNoteheadBBox(
+            MusicFont.Current.SizedAt(LilySharp.Core.Svg.Model.GraceNoteItem.FontSizeStep), 4).Width;
+        var start = (head.X + graceWidth + BendHeadPadding, head.Y);
+        AssertPoint(start, curve[0].X1, curve[0].Y1, "the curve's start");
+        AssertPoint((start.Item1 + BendReach, head.Y - BendRise), curve[^1].X2, curve[^1].Y2, "the tip");
+    }
+
+    [Fact]
+    public void TheBendUp_OnATabGraceNote_LeavesTheGraceDigitOnItsString()
+    {
+        var svg = RenderTab("grace { c16@bend(full) } d4 e f g |");
         var all = Segments(svg);
         int pos = all.Select(s => s.Pos).Distinct().Single();
         var digit = OwnerOf(Digits(svg), pos);

@@ -375,6 +375,25 @@ internal static class GraceBodySupport
         => annotation is ArticulationSyntax { Type: ArticulationType.Fall or ArticulationType.Doit };
 
     /// <summary>
+    /// True for one of Lily#'s OWN gestures a grace note carries — the scoop and the plop
+    /// (an approach curve into the head) and the guitar bend-up (<c>@bend(N)</c>) — drawn off
+    /// the grace column at full size, as the fall is (session 957; OwnGestureGeometryTests).
+    /// THE question the collector and the drop list both ask.
+    /// </summary>
+    /// <remarks>
+    /// LILYSHARP-OWN: LilyPond has no scoop or plop, and its guitar bend is the unported
+    ///   BendSpanner, so there is no engraver to cite for grace time; the gesture reads the
+    ///   grace column as the BendAfter does (ArticulationEngraver's gesture branch).
+    ///   departs from: nothing — no LilyPond counterpart.
+    ///   goes away when: never (the scoop and plop); the bend spanner's port (the bend-up).
+    ///   observed by: OwnGestureGeometryTests (the grace cases; identity values).
+    /// </remarks>
+    internal static bool IsCarriedGesture(SyntaxNode annotation)
+        => annotation is ArticulationSyntax { Type: ArticulationType.Scoop or ArticulationType.Plop }
+           // The bend-up carries its amount, so it is a mark (@bend(full) — AnnotationValues.Bend).
+           || (annotation is MusicMarkSyntax mark && AnnotationValues.Bend(mark) is not null);
+
+    /// <summary>
     /// True for a DYNAMIC a grace note engraves — a level (<c>@f</c>, <c>@p</c>, <c>@sfz</c>, …),
     /// at full size on the grace column (session 916; ledger dynamic.grace.*). A hairpin start
     /// is <see cref="IsCarriedHairpinStart"/> (session 918). THE question the collector and the
@@ -1003,7 +1022,7 @@ internal static class GraceBodySupport
             foreach (var annotation in CarriedAnnotations(item))
             {
                 if (NeedsNoColumn(annotation) || IsCarriedScript(annotation) || IsCarriedBendAfter(annotation)
-                    || IsCarriedThumb(annotation)
+                    || IsCarriedGesture(annotation) || IsCarriedThumb(annotation)
                     || IsCarriedDynamic(annotation)
                     || IsCarriedText(annotation) || IsCarriedFingering(annotation)
                     || IsCarriedHairpinStart(annotation) || IsCarriedArpeggio(annotation)

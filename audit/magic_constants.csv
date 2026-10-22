@@ -780,6 +780,7 @@
 "Svg/Layout/ArticulationEngraver.cs","ArticulationEngraver.CalculateWithFingerings","0.0","double topOffset = 0.0;","(file-level) LILYPOND-REF: define-grobs.scm:2992-3024 Script grob","Yellow"
 "Svg/Layout/ArticulationEngraver.cs","ArticulationEngraver.CalculateWithFingerings","0.5","bendYUp = topPosition * 0.5;","(file-level) LILYPOND-REF: define-grobs.scm:2992-3024 Script grob","Yellow"
 "Svg/Layout/ArticulationEngraver.cs","ArticulationEngraver.CalculateWithFingerings","0.0","FontSizeStep: 0.0,","(file-level) LILYPOND-REF: define-grobs.scm:2992-3024 Script grob","Yellow"
+"Svg/Layout/ArticulationEngraver.cs","ArticulationEngraver.CalculateWithFingerings","0.5, 0.0","fyUp = gc.Heads.Length > 0 ? gc.Heads[top].StaffPosition * 0.5 : 0.0;","(file-level) LILYPOND-REF: define-grobs.scm:2992-3024 Script grob","Yellow"
 "Svg/Layout/ArticulationEngraver.cs","ArticulationEngraver.CalculateWithFingerings","2.0","fx = noteX + 2.0 * NoteheadHalfWidth(item) + BendHeadPadding;","(file-level) LILYPOND-REF: define-grobs.scm:2992-3024 Script grob","Yellow"
 "Svg/Layout/ArticulationEngraver.cs","ArticulationEngraver.CalculateWithFingerings","0.5","fyUp = GetStaffPosition(item) * 0.5;","(file-level) LILYPOND-REF: define-grobs.scm:2992-3024 Script grob","Yellow"
 "Svg/Layout/ArticulationEngraver.cs","ArticulationEngraver.CalculateWithFingerings","0.0","bendGlyph, true, articulation.SourcePosition, FontSizeStep: 0.0,","(file-level) LILYPOND-REF: define-grobs.scm:2992-3024 Script grob","Yellow"

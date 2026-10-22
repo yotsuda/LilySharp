@@ -1010,8 +1010,15 @@ internal static class ArticulationEngraver
             // staff off the fret digit's string row), or arriving from its left.
             if (articulation.Type is ArticulationType.Bend or ArticulationType.Scoop or ArticulationType.Plop)
             {
-                double itemX = measureLayout.X + LayoutUtilities.GetItemXOffset(
+                // On a GRACE note (session 957) the gesture hangs off the grace column's own
+                // head at the grace's size, read off the run as the fall's is; the gesture itself
+                // keeps its size, as the BendAfter does (GraceBodySupport.IsCarriedGesture).
+                double itemX = graceHeadLeft ?? measureLayout.X + LayoutUtilities.GetItemXOffset(
                     artMeasures, articulation.MeasureIndex, articulation.ItemIndex, measureLayout);
+                var graceGestureColumn = graceHeadLeft is null ? null
+                    : ElementCoordinator.GraceColumnAt(artVoices[articulation.VoiceIndex], graceNotes,
+                        articulation.StaffIndex, articulation.VoiceIndex, articulation.MeasureIndex,
+                        articulation.ItemIndex, measureLayout, SpacingRules.VoiceCollisionShiftsOf(artVoices));
                 double fx, fyUp;
                 Staff? tabBendStaff = null;
                 if (staffByIndex != null
@@ -1020,14 +1027,28 @@ internal static class ArticulationEngraver
                     tabBendStaff = ts;
                 // The fret digit sits a TabHeadCenterOffset right of the note column
                 // (see EngravingDefaults) — the gesture hangs off the digit, not the column.
-                double noteX = tabBendStaff != null ? itemX + EngravingDefaults.TabHeadCenterOffset : itemX;
+                // A GRACE digit is centred ON its column (SharedRenderer.TabGraceDigits).
+                double noteX = tabBendStaff != null && graceHeadLeft is null
+                    ? itemX + EngravingDefaults.TabHeadCenterOffset : itemX;
                 if (tabBendStaff is { Tuning: { } tt })
                 {
                     int strings = Tunings.GetStringCount(tt);
                     double space = EngravingDefaults.TabStringSpace(strings);
-                    int midi = item switch { NoteItem n => n.Midi,
-                        ChordItem c when c.Notes.Length > 0 => c.Notes[0].Midi, _ => 0 };
-                    int? sn = item is NoteItem ni ? ni.StringNumber : null;
+                    int midi;
+                    int? sn;
+                    if (graceGestureColumn is { Column: { Heads.Length: > 0 } tgc })
+                    {
+                        // The grace's first head — the digit the renderer draws first; the main
+                        // path below reads a chord's first note the same way.
+                        midi = tgc.Heads[0].Midi;
+                        sn = tgc.Heads[0].StringNumber;
+                    }
+                    else
+                    {
+                        midi = item switch { NoteItem n => n.Midi,
+                            ChordItem c when c.Notes.Length > 0 => c.Notes[0].Midi, _ => 0 };
+                        sn = item is NoteItem ni ? ni.StringNumber : null;
+                    }
                     var (strNum, _) = Tunings.CalculateFret(
                         midi + Tunings.SoundingShift(tabBendStaff.TabSourceClef, tabBendStaff.Transposition),
                         Tunings.GetTuning(tt), sn ?? 0);
@@ -1035,6 +1056,17 @@ internal static class ArticulationEngraver
                     // Y-up: the string row sits (strNum−1)·space below the (notation)
                     // staff middle. No staff offset — resolved at draw time.
                     fyUp = StaffMiddle - (strNum - 1) * space;
+                }
+                else if (graceGestureColumn is { Column: var gc })
+                {
+                    // The grace head's own box at the grace font; a grace chord's top head's
+                    // row (the fall's rule, session 955).
+                    fx = noteX + gc.HeadBox.Width + BendHeadPadding;
+                    int top = 0;
+                    for (int k = 1; k < gc.Heads.Length; k++)
+                        if (gc.Heads[k].StaffPosition > gc.Heads[top].StaffPosition)
+                            top = k;
+                    fyUp = gc.Heads.Length > 0 ? gc.Heads[top].StaffPosition * 0.5 : 0.0;
                 }
                 else
                 {

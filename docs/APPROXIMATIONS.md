@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 64 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 63 | 観測者がゼロだと自認しているもの |
-| `OWN` | 264 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **391** | |
+| `OWN` | 265 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **392** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -246,7 +246,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（264 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（265 件）
 
 ### `LilySharp.Core/Editing/KeyRespeller.cs`
 - **`KeyRespeller`** LILYSHARP-OWN: an editor aid. The rule:
@@ -370,6 +370,8 @@
 - **`FontPlanReader.MinSize,MaxSize`** The range a size may take, in staff spaces. LILYSHARP-OWN, as
 ### `LilySharp.Core/Semantics/FormRoute.cs`
 - **`FormRoute`** LILYSHARP-OWN: LilyPond's \jump (lily/jump-engraver.cc) is a mark only — its MIDI
+### `LilySharp.Core/Semantics/GraceBodySupport.cs`
+- **`GraceBodySupport.IsCarriedGesture`** LILYSHARP-OWN: LilyPond has no scoop or plop, and its guitar bend is the unported
 ### `LilySharp.Core/Semantics/LayoutPlan.cs`
 - **`ChordNameMode`** LILYSHARP-OWN: LilyPond 2.26 has no capo property on its ChordNames context (its
 - **`ChordListKey`** LILYSHARP-OWN: LilyPond has no such list; the twin writes a \markup line of
