@@ -160,6 +160,20 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第954セッションの経緯
+
+### 1.1 第954セッション（2026-10-22・YT-DELL2）
+
+第953 と同じ会話の続き（ユーザー「次を読んで作業に着手して」＝第953 の候補 ⑴ tie を支えにする script の +0.008）。`-Start p954`（開始 HEAD `89ed22627`・未 push 89・第952 を ARCHIVE へ）。作業場所は Lab `sessions/p954/`（LP の dump `tiesky.ly`／`tiesky.log`・使い捨て計器 `Zz954ProbeTests.cs.txt`・pad の掃き `probe2.log`・svg の掃き `svg/`）。
+- **LP で dump して分解した**: Tie の制御点・stencil の skyline（UP の点列）・Script の最終 Y と DOWN の skyline を `page-post-process` で刷り、Lily# 側は RenderedGeometry の bezier（centreline）と `SkylineBuilder.MergeBowOuterEdge` の高さを同じ x で並べた。**tie の制御点は 6 桁一致・bow の skyline も一致（max 5.354082）・accent の輪郭の skyline も建物単位で一致**＝模型は全部 LP。残ったのは距離の式＝**horizon-padding をどちらに盛るか**。
+- **原因＝LP は*支え*を pad する**（`dim.distance (my_dim, horizon_padding)` は `padded_this = padded (hp)`＝supports を merge した `dim` の側・skyline.cc:545-555）。Lily# は script の側を pad していた（`extraPad`・2026-08-17 の「順序の決定」＝LP の「other を pad するのは hp を倍にするのと同じ」という註を同値と読んだ）。**`Skyline::padded` は Minkowski 和ではない**（各 building の*端の高さ*で棚を出して 45° で落とす＝相手の立ち上がる斜面には届かない）ので、支えが斜め（tie の尻尾）か script の輪郭が斜め（accent の山形の上の portato）なら答えが変わる。数値: tie END の accent は script 側 pad 5.772008／支え側 pad **5.758705 = LP**・tie START は 5.427867／**5.428860 = LP**（`Zz954ProbeTests.AccentOverTieEnd`・pad 0〜0.2 の掃きの表は `probe2.log`）。
+- **直した**（本体 commit）: ⑴ tie の支え＝`bowSky.Distance(mine, ScriptHorizonPadding)`（bow を pad・script は裸）／⑵ chain＝支えが 1 つならその skyline を pad・2 つ以上は merge してから 1 回 pad（LP の順序＝下の script の棚が上に隠れる）／⑶ `NearReachOver`（頭・符尾の支え）＝高さ 0 の棚 `[xFrom,xTo]` を pad して裸の輪郭との距離＝reach。**`extraPad` は消した**（`ScriptSkyline`／`ScriptSkylines`／`TextOutlineSkylines` の cache の鍵から）。sctchord の 10 点が全部 LP と 6 桁一致（accent 5.428860／5.758705／6.399068／5.758233／5.794212・tenuto 5.352255／5.712255／4.825×2・portato 7.312805）。
+- **網**: `ArticulationPlacementTests.Scripts_AvoidTies_ButChordMemberScriptsDoNot` を SVG の 2 桁から RenderedGeometry の 4 桁（LP の 6 桁の値）へ。`ScriptProfilePaddingTests` は宣言の pad だけの性質に書き直した。毒 3 本＝tie 側を script pad: 1 赤／chain 1 つ: snapshot `test/script-stacking` 赤／chain merged: sctchord 赤（6.3933）。**`NearReachOver` の毒は観測者なし**（1,965 本緑＝頭の範囲＋0.1 の外に最寄り点がある script が無い・註に書いた）。掃き 1,248 枚で **13 枚動いた・最大 0.04**（script の積みと tie 上の script の probe 11＋Boogie Oogie Oogie 2＝0.01〜0.02）。snapshot 1 枚承認（`test/script-stacking`）。台帳 1383 点は動かず（毒の run で緑）。棚卸し 2 枚は行番号だけ再生成。
+- 計器の罠: ⒜ Edit ツールは bytes で戻したファイルに当てられない（Read し直す）／⒝ `Select-String` は既定で大文字小文字を区別しない＝毒の印は `-CaseSensitive` で数える／⒞ 掃きの base は HEAD を `git worktree add --detach` した scratch で組んだ（stash を使わない）／⒟ `cmd … | ForEach` の中で例外が出ると後段の毒の戻しが走らない＝`try/catch` の外に戻しを置く。
+
+- `-End p954 -DiffBase 89ed22627` ＝full **12911 / 0 / 2 / 12913**（前便末と同数＝期待値の更新と snapshot 1 枚）（Lab `sessions/p954/end.log`・1 回目は棚卸し 2 枚の鮮度と LILYPOND-REF の無名 1 件＝`Skyline::padded` は計器の綴りで名前にならない→`pad_buildings` を添えて amend）→ この docs commit。本体 `eecd4005d`。未 push 90＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。
+判定（2026-10-22）: 第953 の OPEN（tie を支えにする script の +0.008）は閉じた＝原因は tie でも bow でもなく horizon-padding を盛る側。次の候補＝⑴ 和音の fall（要ユーザー判断）・⑵ `@pluck`・H/P/T・`@scoop`/`@plop`/`@bend`・§2 E ⑹⑺（要ユーザー判断）。台帳は名指しの床と決定済みだけ＝触らない。
+
 ## 以下は第953セッションの経緯
 
 ### 1.1 第953セッション（2026-10-22・YT-DELL2）
