@@ -4834,7 +4834,10 @@ internal sealed class MultiStaffLayouter
             staffByIndex: new Dictionary<int, Staff> { [staffIndex] = staff },
             beamLayouts: staffBeams,
             tieLayouts: staffTies,
-            slurLayouts: staffSlurs);
+            slurLayouts: staffSlurs,
+            // ...and the rests of the staff's other voices, where the room's memo put them —
+            // the band reserved for a script lifted over one is the band the page draws.
+            restShiftsOf: RestCollisionsOfDelegate);
     }
 
     /// <summary>

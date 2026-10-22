@@ -298,9 +298,11 @@ internal static class ArticulationEngraver
         Dictionary<int, Staff>? staffByIndex = null,
         ImmutableArray<BeamLayout> beamLayouts = default,
         ImmutableArray<TieLayout> tieLayouts = default,
-        ImmutableArray<SlurLayout> slurLayouts = default)
+        ImmutableArray<SlurLayout> slurLayouts = default,
+        Func<Staff, ImmutableDictionary<RestShiftKey, double>>? restShiftsOf = null)
         => CalculateWithFingerings(fonts, score, articulations, measureLayouts, measuresByStaff,
-            staffYAt, staffByIndex, beamLayouts, tieLayouts, slurLayouts, default, out _);
+            staffYAt, staffByIndex, beamLayouts, tieLayouts, slurLayouts, default, out _,
+            restShiftsOf: restShiftsOf);
 
     /// <summary>Whether a mark is one the SLUR has to be scored around rather than one the
     /// slur pushes aside — <c>avoid-slur = #'inside</c>.</summary>
@@ -447,7 +449,8 @@ internal static class ArticulationEngraver
         ImmutableArray<FingeringLayout> fingerings,
         out ImmutableArray<FingeringLayout> adjustedFingerings,
         IReadOnlyDictionary<int, (SystemLayout System, MeasureLayout Measure)>? prebuiltMeasureMap = null,
-        ImmutableArray<GraceNoteItem> graceNotes = default)
+        ImmutableArray<GraceNoteItem> graceNotes = default,
+        Func<Staff, ImmutableDictionary<RestShiftKey, double>>? restShiftsOf = null)
     {
         adjustedFingerings = fingerings;
         // ⚠️ THE FINGERINGS ARE A SECOND REASON TO BE HERE, and until 2026-08-11 they were
@@ -1512,6 +1515,53 @@ internal static class ArticulationEngraver
                 }
             }
 
+            // ANOTHER VOICE'S REST sounding at this note's moment supports this script too:
+            // the rest's drawn outline (where Rest_collision put it) is a side-position support
+            // the script clears at its own padding, the same reading as the tie fold above and
+            // the chain below. Session 962, OMR REQUESTS #3: a lower voice's `a8@portato.up`
+            // under the upper voice's r4 printed its dash through the rest and its dot inside
+            // the rest's ink — unreadable to a person and to the reader.
+            // LILYSHARP-OWN: LilyPond prints the collision. Its Script_engraver acknowledges
+            //   only its own Voice's heads and stems (ly/engraver-init.ly:414-416, the
+            //   REF at the voice lookup above), and Rest_collision moves a rest off another
+            //   voice's NOTES, never off its scripts (lily/rest-collision.cc:211-290, the
+            //   port in ElementCoordinator.CalculateRestNoteCollisions) — so no grob of
+            //   either voice ever sees the other's. MEASURED (LilyPond 2.26.0 at 600 dpi, the
+            //   OMR's report of 2026-10-21): the same picture. Owner's decision (RULES §5.2:
+            //   LilyPond rules drawing and placement; a mark nobody can read is not a
+            //   placement to keep).
+            //   departs from: lily/script-engraver.cc:234-250 acknowledge_rhythmic_head — the
+            //     support set is the script's own voice's; this adds the other voices' rests.
+            //   goes away when: never — a deliberate improvement over LilyPond's picture; the
+            //     twin (lysc ly) keeps LilyPond's.
+            //   observed by: ScriptOverOtherVoiceRestTests (the OMR's bar and its mirror).
+            // ⚠️ THE REST'S OWN VOICE IS ANY OTHER VOICE OF THE STAFF, found by MUSIC (the rest
+            //   whose span covers this note's onset), not by item index — the voices need not
+            //   share a rhythm. Its position is the renderer's: the staff's neutral letter plus
+            //   the collision memo's shift (SkylineBuilder's rest seed reads the same pair), so
+            //   the support is the glyph that prints. A grace script and a tab script take no
+            //   rest support (the grace's moment is not an onset; the tab branch is above).
+            // ⚠️ NOT in the slur scorer's slur-free run of this walk (InsideSlurScriptLayouts'
+            //   three callers hand no memo): an 'inside mark lifted over a rest hands the bow
+            //   the band it would have had without the rest — the same approximation that
+            //   method's remark records for the fingerings. No book reaches the pairing.
+            if (restShiftsOf != null && !item.GraceTime && staffByIndex != null
+                && staffByIndex.TryGetValue(effArt.StaffIndex, out var restStaff)
+                && restStaff.Voices.Length > 1
+                && OtherVoiceRestSupport(restStaff, effArt, measure, measureLayout, restShiftsOf)
+                    is { IsEmpty: false } restSupport)
+            {
+                var mine = ScriptSkyline(
+                    layout, yUp, effArt.IsAbove ? VerticalDirection.Down : VerticalDirection.Up);
+                double closestRest = restSupport.Distance(mine, ScriptHorizonPadding);
+                double restMove = Math.Max(0.0, closestRest + PaddingFor(effArt.Type));
+                if (restMove > 0)
+                {
+                    yUp += effArt.IsAbove ? restMove : -restMove;
+                    layout = layout with { YUp = yUp };
+                }
+            }
+
             // Stack multiple scripts on one note & side by the support chain, not by
             // box arithmetic: the next script sits at pointwise distance + its OWN
             // padding over the placed profiles, maxed with its own note answer (one
@@ -2092,6 +2142,73 @@ internal static class ArticulationEngraver
         if (!doShift || double.IsInfinity(extreme))
             return 0.0;
         return extreme - (dir > 0 ? yBottom : yTop);
+    }
+
+    /// <summary>
+    /// The rests of the OTHER voices of <paramref name="staff"/> that sound at the script's
+    /// note's onset, as one support profile on the script's side, in the script frame
+    /// (staff-spaces about the staff's middle line, up-positive, no staff offset) — null when
+    /// no such rest sounds there. The glyph is the one the renderer draws at the position it
+    /// draws it (the neutral letter plus the collision memo's shift, ledgered when pushed off
+    /// the lines), walked as the staff skyline's rest seed walks it
+    /// (<c>SkylineBuilder.AddMusicItemToSkylines</c>); its box when the font cannot be walked.
+    /// The rule and its LILYSHARP-OWN declaration are at the one call site in
+    /// <see cref="CalculateWithFingerings"/>.
+    /// </summary>
+    private static VerticalSkyline? OtherVoiceRestSupport(
+        Staff staff, ArticulationItem script, Measure ownMeasure, MeasureLayout measureLayout,
+        Func<Staff, ImmutableDictionary<RestShiftKey, double>> restShiftsOf)
+    {
+        var onset = LayoutUtilities.ItemOnset(ownMeasure, script.ItemIndex);
+        var direction = script.IsAbove ? VerticalDirection.Up : VerticalDirection.Down;
+        VerticalSkyline? support = null;
+        ImmutableDictionary<RestShiftKey, double>? shifts = null;
+        var zero = Semantics.Fraction.Zero;
+        for (int o = 0; o < staff.Voices.Length; o++)
+        {
+            if (o == script.VoiceIndex)
+                continue;
+            var otherMeasures = staff.Voices[o].Measures;
+            if (script.MeasureIndex >= otherMeasures.Length)
+                continue;
+            var others = otherMeasures[script.MeasureIndex].Items;
+            var t = zero;
+            for (int oi = 0; oi < others.Length; oi++)
+            {
+                var other = others[oi];
+                var d = other.Duration;
+                if (other is RestItem { IsSpacer: false, IsMultiMeasure: false, GraceTime: false } rest
+                    && t <= onset && onset < t + d)
+                {
+                    shifts ??= restShiftsOf(staff);
+                    double shift = shifts.TryGetValue(
+                        new RestShiftKey(script.MeasureIndex, o, oi), out var s) ? s : 0.0;
+                    int restValue = GlyphMetrics.NoteValueOf(rest.BaseDuration);
+                    double restPosition =
+                        ElementCoordinator.NeutralRestPosition(staff.Lines, restValue) + shift;
+                    double restX = measureLayout.X + LayoutUtilities.GetItemXOffset(
+                        otherMeasures, script.MeasureIndex, oi, measureLayout);
+                    double restOriginUp = restPosition / 2.0;
+                    var restGlyph = MusicGlyphs.Rest(restValue, restPosition, staff.Lines);
+                    support ??= new VerticalSkyline(direction);
+                    var (restUp, restDown) = TextOutlineSkylines.MusicGlyphProfile(
+                        restGlyph, Rendering.SharedRenderer.FontSize);
+                    var side = direction == VerticalDirection.Up ? restUp : restDown;
+                    if (restUp.Count > 0 || restDown.Count > 0)
+                        support.Merge(side, restX, restOriginUp);
+                    else
+                    {
+                        var box = GlyphMetrics.GetRestSkylineBBox(restValue,
+                            ledgered: restGlyph is MusicGlyph.RestWholeLegerLine
+                                or MusicGlyph.RestHalfLegerLine or MusicGlyph.RestDoubleWholeLegerLine);
+                        support.MergeBox(restX + box.Left, restX + box.Right,
+                            restOriginUp + box.Bottom, restOriginUp + box.Top);
+                    }
+                }
+                t += d;
+            }
+        }
+        return support;
     }
 
     /// <summary>

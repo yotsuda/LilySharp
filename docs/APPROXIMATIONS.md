@@ -12,19 +12,19 @@
 
 | 区分 | 件数 | 意味 |
 |---|---:|---|
-| `APPROX` | 64 | LP に対応物はあるが、形が違うと自認しているもの |
-| `UNWATCHED` | 63 | 観測者がゼロだと自認しているもの |
-| `OWN` | 266 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **393** | |
+| `APPROX` | 65 | LP に対応物はあるが、形が違うと自認しているもの |
+| `UNWATCHED` | 64 | 観測者がゼロだと自認しているもの |
+| `OWN` | 268 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **397** | |
 
 ## 密度の高いファイル（上位 12）
 
 | ファイル | 件数 |
 |---|---:|
 | `LilySharp.Core/Svg/Layout/MusicMarkEngraver.cs` | 21 |
+| `LilySharp.Core/Svg/Layout/ArticulationEngraver.cs` | 16 |
 | `LilySharp.Core/Svg/Layout/MultiStaffLayouter.cs` | 13 |
 | `LilySharp.Core/Svg/EngravingDefaults.cs` | 12 |
-| `LilySharp.Core/Svg/Layout/ArticulationEngraver.cs` | 12 |
 | `LilySharp.Core/Svg/Layout/NoteCollision.cs` | 9 |
 | `LilySharp.Core/Svg/Layout/SkylineBuilder.cs` | 9 |
 | `LilySharp.Core/Svg/Layout/ElementCoordinator.cs` | 8 |
@@ -34,7 +34,7 @@
 | `LilySharp.Core/Rendering/SharedRenderer.Marks.cs` | 6 |
 | `LilySharp.Core/Rendering/SharedRenderer.Overlays.cs` | 6 |
 
-## APPROX — LP に対応物はあるが、形が違うと自認しているもの（64 件）
+## APPROX — LP に対応物はあるが、形が違うと自認しているもの（65 件）
 
 ### `LilySharp.Core/Music/ChordStructure.cs`
 - **`ChordQualityRegistry.SymbolSuffix`** ⚠️ THE SIZE AND THE RAISE ARE NOT PORTED — Lily# draws a chord name as one baseline
@@ -69,6 +69,7 @@
 - **`AlignmentWalk.Seed`** ⚠️ THE ONE LINE OF THAT BRANCH NOT PORTED is its dy,
 ### `LilySharp.Core/Svg/Layout/ArticulationEngraver.cs`
 - **`ArticulationEngraver.CalculateWithFingerings`** that does not exist yet. Named, not silently approximated.
+- **`ArticulationEngraver.CalculateWithFingerings`** the band it would have had without the rest — the same approximation that
 ### `LilySharp.Core/Svg/Layout/BarNumberEngraver.cs`
 - **`BarNumberEngraver.AnchorStaff`** ⚠️ The X test itself is NOT ported HERE: a row's ink X-range is not on StaffLayout.
 ### `LilySharp.Core/Svg/Layout/ChordNameGlyphRun.cs`
@@ -140,7 +141,7 @@
 ### `LilySharp.Core/Svg/Model/BeamGroup.cs`
 - **`BeamRestStem`** ⚠️ One more LilyPond clamp is NOT ported: lily/beam.cc:1260-1262 (Beam::set_beaming)
 
-## UNWATCHED — 観測者がゼロだと自認しているもの（63 件）
+## UNWATCHED — 観測者がゼロだと自認しているもの（64 件）
 
 ### `LilySharp.Core/Rendering/SharedRenderer.Beams.cs`
 - **`SharedRenderer.AccidentalGroupLength`** no observer; add the paren widths when a book brings one. The unpacked
@@ -168,6 +169,7 @@
 - **`ArpeggioEngraver.BracketExtent`** fixture carries one, so there is no ledger point and no twin — it is ported literally
 ### `LilySharp.Core/Svg/Layout/ArticulationEngraver.cs`
 - **`ArticulationEngraver.InsideSlurScriptLayouts`** hands the scorer the band it would have had without the digit. No book reaches that
+- **`ArticulationEngraver.CalculateWithFingerings`** method's remark records for the fingerings. No book reaches the pairing.
 - **`ArticulationEngraver.TabTechniqueFontSize`** them as markup — so there is no LP geometry to port and no ledger point can observe
 - **`ArticulationEngraver.ScriptSkyline`** see the difference, and no fixture and no ledger point reaches it.
 - **`ArticulationEngraver.NearReachOver`** ⚠️ NO OBSERVER TELLS THIS FROM THE OLD READING (the script padded, its extreme over
@@ -246,7 +248,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（266 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（268 件）
 
 ### `LilySharp.Core/Editing/KeyRespeller.cs`
 - **`KeyRespeller`** LILYSHARP-OWN: an editor aid. The rule:
@@ -441,6 +443,8 @@
 - **`ArticulationEngraver.BendHeadPadding`** X gap between a bend-up's curve and the notehead's right edge. LILYSHARP-OWN (above).
 - **`ArticulationEngraver.BendApproachXOffset`** X offset for a curve that arrives FROM THE LEFT (scoop/plop). LILYSHARP-OWN (above).
 - **`ArticulationEngraver.CalculateWithFingerings`** LILYSHARP-OWN: LilyPond draws NO fall or doit on a chord at all — its
+- **`ArticulationEngraver.CalculateWithFingerings`** LILYSHARP-OWN: LilyPond prints the collision. Its Script_engraver acknowledges
+- **`ArticulationEngraver.OtherVoiceRestSupport`** The rule and its LILYSHARP-OWN declaration are at the one call site in
 - **`ArticulationEngraver.DiagramYUpOverInk`** LILYSHARP-OWN (2026-09-28, defect seen on the owner's "Shape chords" book: the Cm diagram's
 ### `LilySharp.Core/Svg/Layout/ArticulationSpacing.cs`
 - **`ArticulationSpacing.OutsideStaffPriority`** LILYSHARP-OWN (owner's decision 2026-09-27: "the diagram stands below the name, between

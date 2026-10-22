@@ -16,6 +16,15 @@ workflow attaches that section to the GitHub Release verbatim.
   continuation when the wave's last element reached under its "tr" — found by the OMR on a
   piano piece's left hand, where the lifted "tr" ran into the right hand's beams.
 
+### Scripts in two-voice music
+
+- `[engraving]` **An articulation of one voice stands clear of the other voice's rest** sounding
+  at its note: a lower voice's `a8@portato.up` under the upper voice's `r4` now sits above the
+  rest, where it was printed through it (the dash across the rest, the dot inside its ink).
+  LilyPond prints the collision — its scripts see only their own voice — so this is Lily#'s own
+  rule: the rest stays where the voice puts it, the mark floats. Found by the OMR on a piano
+  piece's right hand.
+
 ### Site
 
 - The scan page lists what the reader reads and does not yet, as the Marketplace README does,

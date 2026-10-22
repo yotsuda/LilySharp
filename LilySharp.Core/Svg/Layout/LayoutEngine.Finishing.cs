@@ -163,7 +163,7 @@ internal sealed partial class LayoutEngine
                 scripts = ArticulationEngraver.CalculateWithFingerings(
                     ctx.Fonts, score, articulations, ml, measuresByStaff, staffYAt, staffByIndex,
                     beamLayouts, ctx.TieLayouts, ctx.SlurLayouts, islands, out islands,
-                    prebuiltMeasureMap, ctx.GraceNotes);
+                    prebuiltMeasureMap, ctx.GraceNotes, ctx.RestCollisionsOf);
             return (scripts, islands);
         }
 
@@ -227,7 +227,7 @@ internal sealed partial class LayoutEngine
             var wholeScripts = ArticulationEngraver.CalculateWithFingerings(
                 ctx.Fonts, score, articulations, ml, measuresByStaff, staffYAt, staffByIndex,
                 beamLayouts, ctx.TieLayouts, ctx.SlurLayouts, wholeIslands, out wholeIslands,
-                passMap, ctx.GraceNotes);
+                passMap, ctx.GraceNotes, ctx.RestCollisionsOf);
             return (wholeScripts, wholeIslands);
         }
 
@@ -299,7 +299,7 @@ internal sealed partial class LayoutEngine
         var articulationLayouts = ArticulationEngraver.CalculateWithFingerings(
             ctx.Fonts, score, articulations, ml, measuresByStaff, staffYAt, staffByIndex,
             beamLayouts, ctx.TieLayouts, ctx.SlurLayouts, liveIslands,
-            out var liveAdjusted, passMap, ctx.GraceNotes);
+            out var liveAdjusted, passMap, ctx.GraceNotes, ctx.RestCollisionsOf);
 
         // Reassemble in unit order: a hit replays its stored digits, a miss takes its own
         // contiguous slice of the walk's answer and becomes the unit's new entry.
