@@ -287,10 +287,13 @@ public sealed class OwnGestureGeometryTests
         Assert.Equal(1.5, D(m.Groups[3]), 2);
     }
 
+    /// <summary>On a tab grace the letter goes UNDER the strings: a grace's stem is up (session
+    /// 959, the rule a tab grace accent follows — TabGraceScriptTests), and the letters sit
+    /// opposite the stem as every stem-coupled script does.</summary>
     [Theory]
-    [InlineData("r4 grace { c16@hammerOn } d4 e f |", "H", 0.42)]
-    [InlineData("r4 grace { c16@pluck(p) } d4 e f |", "p", 0.65)]
-    public void ATabTechniqueLetter_OnATabGraceNote_IsCentredOnTheGraceDigit(string music, string letter, double overTopString)
+    [InlineData("r4 grace { c16@hammerOn } d4 e f |", "H", 1.44)]
+    [InlineData("r4 grace { c16@pluck(p) } d4 e f |", "p", 1.06)]
+    public void ATabTechniqueLetter_OnATabGraceNote_IsCentredOnTheGraceDigit(string music, string letter, double underBottomString)
     {
         var svg = RenderTab(music);
         var m = Regex.Match(svg,
@@ -299,11 +302,11 @@ public sealed class OwnGestureGeometryTests
         Assert.True(m.Success, $"the letter {letter} is drawn with the mark's source position");
         int pos = int.Parse(m.Groups[4].Value, CultureInfo.InvariantCulture);
         var digit = OwnerOf(Digits(svg), pos);
-        double topString = Regex.Matches(svg,
+        double bottomString = Regex.Matches(svg,
                 "<line x1=\"[-\\d.]+\" y1=\"([-\\d.]+)\" x2=\"[-\\d.]+\" y2=\"[-\\d.]+\" stroke=\"#000000\" stroke-width=\"0.100\"/>")
-            .Select(l => D(l.Groups[1])).Min();   // a tab-only page: its top string
+            .Select(l => D(l.Groups[1])).Max();   // a tab-only page: its bottom string
         Assert.InRange(D(m.Groups[1]), digit.X - Tolerance, digit.X + Tolerance);
-        Assert.InRange(D(m.Groups[2]), topString - overTopString - 2 * Tolerance, topString - overTopString + 2 * Tolerance);
+        Assert.InRange(D(m.Groups[2]), bottomString + underBottomString - 2 * Tolerance, bottomString + underBottomString + 2 * Tolerance);
         Assert.Equal(1.5, D(m.Groups[3]), 2);
     }
 

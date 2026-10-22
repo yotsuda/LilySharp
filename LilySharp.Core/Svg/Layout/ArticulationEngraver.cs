@@ -1258,7 +1258,14 @@ internal static class ArticulationEngraver
                 // stem-coupled mark sits on the opposite (DOWN) side. A BEAMED note takes
                 // its whole beam's direction, not its own string: an inner note on a high
                 // string still points up with the group, so its staccato dot sits below.
-                bool tabStemUp = isTabBeamed ? tabBeamUp : geom.TabStemUp(item);
+                // A GRACE's stem is UP whatever its string (score-grace-settings; DOWN in a lower
+                // voice — the notation branch's rule), so its accent goes BELOW. MEASURED
+                // (2.26.0, Lab sessions/p959/probe/tabgrace.ly, \tabFullNotation): the grace
+                // accent's origin 0.646985 under the bottom string, the main note's 1.289309
+                // over the top one.
+                bool tabStemUp = isTabBeamed ? tabBeamUp
+                    : tabGrace ? !item.GraceStemDown
+                    : geom.TabStemUp(item);
                 // Fermata, ornaments and bow marks keep direction = UP on a tab
                 // staff too — LilyPond's TabVoice keeps the Script_engraver and
                 // the script side-positions above the staff symbol; only
