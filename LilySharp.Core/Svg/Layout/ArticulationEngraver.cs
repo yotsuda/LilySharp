@@ -886,38 +886,71 @@ internal static class ArticulationEngraver
                     // The grace head's ink right, or its dot's when the dot sits on the head's own
                     // row — the same reading as below, out of the grace's dot column
                     // (DotColumn.ReservedForGrace) at the grace font (Lab sessions/p947/bend.ly GFD).
-                    leftInk = bendItemX + GraceColumnHeads.HeadInkRight(gc);
-                    if (item is NoteItem && gc.Dots > 0 && !gc.IsRest && gc.Heads.Length > 0)
+                    // A grace CHORD's gesture leaves its top head (the main-note rule below).
+                    int top = 0;
+                    for (int k = 1; k < gc.Heads.Length; k++)
+                        if (gc.Heads[k].StaffPosition > gc.Heads[top].StaffPosition)
+                            top = k;
+                    var graceOffsets = GraceColumnHeads.HeadOffsets(gc);
+                    leftInk = bendItemX + (graceOffsets.IsDefaultOrEmpty ? 0.0 : graceOffsets[top])
+                        + gc.HeadBox.Right;
+                    if (gc.Dots > 0 && !gc.IsRest && gc.Heads.Length > 0)
                     {
                         var (dotOffset, rows) = DotColumn.ReservedForGrace(gc,
                             ElementCoordinator.GraceColumnIsBeamed(graceNotes, articulation.StaffIndex,
                                 articulation.VoiceIndex, articulation.MeasureIndex, articulation.ItemIndex));
-                        if (rows.Length > 0 && rows[0] == gc.Heads[0].StaffPosition)
+                        if (Array.IndexOf(rows, gc.Heads[top].StaffPosition) >= 0)
                             leftInk = Math.Max(leftInk, bendItemX + dotOffset
                                 + (2 * gc.Dots - 1) * gc.Font.Box(MusicGlyph.AugmentationDot).Width);
                     }
-                    bendYUp = GetStaffPosition(item) * 0.5;
+                    bendYUp = gc.Heads.Length > 0 ? gc.Heads[top].StaffPosition * 0.5 : 0.0;
                 }
                 else
                 {
                     int noteValue = GlyphMetrics.NoteValueOf(item);
                     double headRight = GlyphMetrics.GetNoteheadBBox(noteValue).Right;
-                    leftInk = bendItemX + headRight;
+                    // A CHORD's gesture is ONE curve off its TOP head — the way a section's
+                    // fall-off or a keyboard chord's fall is written — leaving that head's ink
+                    // right (a reversed second may have pushed it) and hanging at its row. A
+                    // member's `<g c@fall>` reads the same: the chord has one gesture. Until
+                    // session 955 the curve left the chord's MIDDLE (the mean of its outer
+                    // positions), a height no head stands at.
+                    // LILYSHARP-OWN: LilyPond draws NO fall or doit on a chord at all — its
+                    //   Bend_engraver stops the spanner when it acknowledges the chord's second
+                    //   head (Lab sessions/p947/bendch.ly CHA–CHE). Owner's decision (2026-10-22,
+                    //   session 955): the gesture is musical, so Lily# draws it, from the top head.
+                    //   departs from: scm/scheme-engravers.scm:2147-2159 Bend_engraver (stop-fall on the next note-head).
+                    //   goes away when: never — the decision is to draw what LilyPond cannot.
+                    //   observed by: BendAfterTests (a chord's fall leaves its top head; its own value).
+                    int topPosition = GetStaffPosition(item);
+                    double topOffset = 0.0;
+                    if (item is ChordItem chord && chord.Notes.Length > 0)
+                    {
+                        int top = 0;
+                        for (int k = 1; k < chord.Notes.Length; k++)
+                            if (chord.Notes[k].StaffPosition > chord.Notes[top].StaffPosition)
+                                top = k;
+                        topPosition = chord.Notes[top].StaffPosition;
+                        topOffset = ChordHeadPositioning.CalculateOffsets(
+                            chord.Notes, chord.StemUp, noteValue)[top];
+                    }
+                    leftInk = bendItemX + topOffset + headRight;
                     // The dots join the left bound only when they sit at the spanner's own Y,
                     // the head's — a note in a space; a line note's dot lifts a row and is not
                     // read. The dot column stands where DotColumn.Reserved puts it, the
                     // reservation's house (the renderer's DotColumn.OffsetX is the same rule).
                     // LILYPOND-REF: scm/output-lib.scm:1365-1376 bend::print — left-x takes the
                     //   dot's grob-robust-relative-extent end when (close dots-y spanner-y)
-                    if (item is NoteItem { Dots: > 0 } dotted)
+                    int dots = item switch { NoteItem n => n.Dots, ChordItem c => c.Dots, _ => 0 };
+                    if (dots > 0)
                     {
                         var (dotOffset, rows) = DotColumn.Reserved(item, noteValue, headRight);
-                        if (rows.Length > 0 && rows[0] == dotted.StaffPosition)
+                        if (Array.IndexOf(rows, topPosition) >= 0)
                             leftInk = Math.Max(leftInk, bendItemX + dotOffset
-                                + (2 * dotted.Dots - 1) * MusicFont.Current.FullSize.Box(MusicGlyph.AugmentationDot).Width);
+                                + (2 * dots - 1) * MusicFont.Current.FullSize.Box(MusicGlyph.AugmentationDot).Width);
                     }
-                    // Y-up: the gesture hangs at the note's own staff position (pos/2).
-                    bendYUp = GetStaffPosition(item) * 0.5;
+                    // Y-up: the gesture hangs at the (top) head's own staff position (pos/2).
+                    bendYUp = topPosition * 0.5;
                 }
                 double leftX = leftInk + BendAfterGeometry.Padding;
                 // The RIGHT bound's ink left: the next column's — LilyPond unites the note

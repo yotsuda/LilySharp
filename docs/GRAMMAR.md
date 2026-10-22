@@ -2617,7 +2617,8 @@ TwoDigitFret   = Digit , Digit ;                                 (* 10-15 *)
    - Effects:       @cross / @dead (x notehead) , @parenthesize (the head in
                     parentheses, a ghost note; on a chord one pair round it, on a member
                     its own; LilyPond's \parenthesize — the parentheses take no room) ,
-                    @fall @doit (jazz bends) , @breath @caesura
+                    @fall @doit (jazz bends; on a chord ONE curve off its top head —
+                    a section's fall-off — where LilyPond draws none) , @breath @caesura
                     (* a CUE is not an annotation — it is a region, 'cue { … }', below *)
    - Feathered beam: c16@feather(right) … (accel) / @feather(left) (rit)
    - Spanners:       @textSpan("poco rit.") … @!textSpan   [sugar: @rit @accel @rall,

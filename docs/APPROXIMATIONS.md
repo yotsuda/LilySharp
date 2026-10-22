@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 64 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 63 | 観測者がゼロだと自認しているもの |
-| `OWN` | 263 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **390** | |
+| `OWN` | 264 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **391** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -24,7 +24,7 @@
 | `LilySharp.Core/Svg/Layout/MusicMarkEngraver.cs` | 21 |
 | `LilySharp.Core/Svg/Layout/MultiStaffLayouter.cs` | 13 |
 | `LilySharp.Core/Svg/EngravingDefaults.cs` | 12 |
-| `LilySharp.Core/Svg/Layout/ArticulationEngraver.cs` | 11 |
+| `LilySharp.Core/Svg/Layout/ArticulationEngraver.cs` | 12 |
 | `LilySharp.Core/Svg/Layout/NoteCollision.cs` | 9 |
 | `LilySharp.Core/Svg/Layout/SkylineBuilder.cs` | 9 |
 | `LilySharp.Core/Svg/Layout/ElementCoordinator.cs` | 8 |
@@ -246,7 +246,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（263 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（264 件）
 
 ### `LilySharp.Core/Editing/KeyRespeller.cs`
 - **`KeyRespeller`** LILYSHARP-OWN: an editor aid. The rule:
@@ -437,6 +437,7 @@
 - **`ArticulationEngraver.BendTabXOffset`** X offset of a bend-up's curve from the fret digit on a TAB staff. LILYSHARP-OWN (above).
 - **`ArticulationEngraver.BendHeadPadding`** X gap between a bend-up's curve and the notehead's right edge. LILYSHARP-OWN (above).
 - **`ArticulationEngraver.BendApproachXOffset`** X offset for a curve that arrives FROM THE LEFT (scoop/plop). LILYSHARP-OWN (above).
+- **`ArticulationEngraver.CalculateWithFingerings`** LILYSHARP-OWN: LilyPond draws NO fall or doit on a chord at all — its
 - **`ArticulationEngraver.DiagramYUpOverInk`** LILYSHARP-OWN (2026-09-28, defect seen on the owner's "Shape chords" book: the Cm diagram's
 ### `LilySharp.Core/Svg/Layout/ArticulationSpacing.cs`
 - **`ArticulationSpacing.OutsideStaffPriority`** LILYSHARP-OWN (owner's decision 2026-09-27: "the diagram stands below the name, between

@@ -167,4 +167,62 @@ public sealed class BendAfterGeometryTests
         Assert.Equal(2.0 * EngravingDefaults.LineThickness, bends[0].Width, 3);
         Assert.Equal(2.0 * EngravingDefaults.LineThickness, bends[1].Width, 3);
     }
+
+    /// <summary>Every note head on the page with its position, X and (device) Y — a grace's
+    /// carries its own font family (style) before the X.</summary>
+    private static List<(int Pos, double X, double Y)> Heads(string svg) => Regex.Matches(svg,
+            "<text class=\"music\"(?: style=\"[^\"]*\")? x=\"([-\\d.]+)\" y=\"([-\\d.]+)\" font-size=\"[\\d.]+\" data-pos=\"(\\d+)\">(.)</text>")
+        .Where(m => m.Groups[4].Value[0] is EmmentalerGlyphs.NoteheadBlack or EmmentalerGlyphs.NoteheadHalf)
+        .Select(m => (int.Parse(m.Groups[3].Value, CultureInfo.InvariantCulture), D(m.Groups[1]), D(m.Groups[2])))
+        .ToList();
+
+    /// <summary>The bend's own CHORD's top head: of the heads before the mark, the last
+    /// member's column (its X within a head's width), and the highest of them.</summary>
+    private static (int Pos, double X, double Y) TopHeadOf(List<(int Pos, double X, double Y)> heads, Bend bend)
+    {
+        var before = heads.Where(h => h.Pos < bend.Pos).ToList();
+        double anchorX = before.Where(h => h.Pos == before.Max(b => b.Pos)).Min(h => h.X);
+        return before.Where(h => Math.Abs(h.X - anchorX) < 2.0).OrderBy(h => h.Y).First();
+    }
+
+    /// <summary>
+    /// A CHORD's gesture is ONE curve off its TOP head (owner's decision 2026-10-22, session
+    /// 955): it leaves that head's ink right — a reversed second's shift included — at that
+    /// head's own row, and the dot joins the bound only when it sits on THAT head's row.
+    /// LilyPond draws no chord fall at all (its Bend_engraver stops the spanner at the chord's
+    /// second head, Lab sessions/p947/bendch.ly), so these are Lily#'s own values. Until
+    /// session 955 the curve left the chord's MIDDLE (the mean of its outer positions), at
+    /// no head's X shift — the poison that reddens every row's Y and the second's X.
+    /// </summary>
+    [Theory]
+    [InlineData("<c e g>4@fall a |", false)]  // plain: the top g, no shift
+    [InlineData("<a b>4@fall c |", false)]    // up stem: the top b is the reversed head, right of the a
+    [InlineData("<a c>4.@fall d8 |", true)]   // the top c in a space: its dot on its row, read
+    [InlineData("<a b>4.@fall c8 |", false)]  // the top b on a line: its dot lifted, not read
+    public void AChordsGestureLeavesItsTopHead(string music, bool dotCounts)
+    {
+        var svg = Render(music);
+        var bend = Assert.Single(Bends(svg));
+        var top = TopHeadOf(Heads(svg), bend);
+        double expectedX0 = top.X + GlyphMetrics.GetNoteheadBBox(4).Right + Padding;
+        if (dotCounts)
+        {
+            double dotLeft = Glyphs(svg).Where(g => g.Glyph == EmmentalerGlyphs.AugmentationDot && g.X > top.X).Min(g => g.X);
+            expectedX0 = dotLeft + GlyphMetrics.AugmentationDot.Width + Padding;
+        }
+        Assert.InRange(bend.X0, expectedX0 - Tolerance, expectedX0 + Tolerance);
+        Assert.InRange(bend.Y0, top.Y - Tolerance, top.Y + Tolerance);
+    }
+
+    /// <summary>A grace CHORD's gesture, likewise, hangs at its top head's row — a fourth,
+    /// whose middle (the pre-955 reading) is a whole space under the top.</summary>
+    [Fact]
+    public void AGraceChordsGestureHangsAtItsTopHead()
+    {
+        var svg = Render("grace { <a d>16@fall } c4 d e f |");
+        var bend = Assert.Single(Bends(svg));
+        var top = TopHeadOf(Heads(svg), bend);
+        Assert.InRange(bend.Y0, top.Y - Tolerance, top.Y + Tolerance);
+        Assert.True(bend.X0 > top.X, $"the curve leaves the grace chord's top head: {bend.X0} vs {top.X}");
+    }
 }
