@@ -50,6 +50,8 @@
 | 13 | `commands-guess-key.mp4` | Editor commands — Guess Section Key | なし | 約 20 秒 |
 | 14 | `commands-extract-phrase.mp4` | Editor commands — Extract Phrase | なし | 約 15 秒 |
 | 15 | `about-speed.mp4` | About — Why the preview keeps up | なし | 約 15 秒 |
+| 16 | `scan-read.mp4` | scan — Read a scan | なし | 約 25 秒 |
+| 17 | `scan-transform.mp4` | scan — Check what it read | なし | 約 20 秒 |
 
 **一部だけ撮るなら 11・12・13 を先に**（2026-10-12 追加）: 11 と 12 は初めての人が最初に見るページ
 （Get started・Learn）、13 は静止画では説明できないコマンド。10 と 15 はあれば良い程度。
@@ -226,3 +228,23 @@ score { staff melody }
 `site/petite-valse.lys`（何段にもわたる大譜表）を開き、プレビューを横に。
 1. プレビューを曲の中ほどまでスクロールする。そこの小節で一定の速さで打つ — 音をいくつか、強弱記号 —
    ページ全体を見せたまま: 編集中の段だけが打つたびに詰め直され、ほかの段は動かない。
+
+### 16. `scan-read` — PDF を右クリックしてから、最初の印を直すまで
+素材は `scan-import.png` と同じ Tchaikovsky op. 39 no. 5（1904 年 Schirmer、IMSLP、パブリックドメイン）の
+PDF 1 ページ。Lily# と Scan Import を入れた VS Code、フォルダにその PDF だけ。
+1. エクスプローラーで PDF を右クリック → *Convert Image/PDF to Lily# (.lys)…*。ページの選択はそのまま OK。
+2. 右下の進み具合の通知を見せる（数秒）。`.lys` が開き、プレビューが右に出る。赤い印が 2 つ見える所まで
+   スクロール。
+3. エディタのタイトルバーの絵のボタン → *Show Original Scan*。スキャンがプレビューの横に開き、同じ小節に
+   赤い破線の枠。
+4. プレビューの赤い印をクリック → エディタがその小節へ飛ぶ。`@todo(… "a quarter short of 2/4 …")` を読ませる
+   （1 秒止める）。
+5. 足りない音を打ち、`@todo(…)` を消す。赤が消える。終わり。
+前後は切る。打鍵は Screencast Mode で見せる。
+
+### 17. `scan-transform` — 読んだ楽譜を AI に移調させる
+16 の続きのファイル（印を直した後）。GitHub Copilot か別のモデル提供元にサインイン済み。
+1. 右手の 1〜2 小節目を選択。`Ctrl+I`、*transpose up a fourth* と打って Enter。
+2. 元の横に彫られた候補が出るのを待つ。After/Before を 1 回切り替える。
+3. Accept。ファイルが変わり、プレビューも変わる。終わり。
+待ち時間が長ければ切る。

@@ -71,6 +71,14 @@
       <code>NAME.omr-pNN.png</code>, the pages with the marked places boxed. Lily# reads the
       first to show the scan beside the score; neither is needed to compile the music.</span></li>
   </ol>
+  <!-- videos/scan-read.mp4 (SHOTLIST 16): a PDF right-clicked in the Explorer, Convert Image/PDF
+       to Lily# (.lys)…, the progress notice, the .lys opening with its preview, Show Original Scan
+       beside it, a click on a red mark, the bar put right, the red gone. No sound: muted loop. -->
+  <figure class="demo-video" data-pending>
+    <video src="videos/scan-read.mp4" muted loop playsinline autoplay preload="metadata"></video>
+    <figcaption>A page read in a few seconds, and the first doubtful bar put right: the mark on the
+    scan and in the preview are the same bar, and the red goes when the bar does.</figcaption>
+  </figure>
   <p>What the reader writes is ordinary Lily#: parts for the staves, a section for the piece
   (one per rehearsal mark where the page has them), absolute octaves, the title, composer,
   tempo and key and time signatures it found. A place it was unsure of carries a mark with a
@@ -107,33 +115,51 @@
   <p>The commands themselves, one by one, are on
   <a href="commands.html#import-image">Editor commands</a>; the setting is in the
   <a href="editor.html#settings">settings table</a>.</p>
+  <!-- videos/scan-transform.mp4 (SHOTLIST 17): the score just read, a few bars selected, Ctrl+I,
+       "transpose up a fourth", the candidate engraved beside the original, Accept. No sound. -->
+  <figure class="demo-video" data-pending>
+    <video src="videos/scan-transform.mp4" muted loop playsinline autoplay preload="metadata"></video>
+    <figcaption>Once it is text, it is music you can ask about: the bars read from the page,
+    transposed by the editor's AI and engraved again before you accept.</figcaption>
+  </figure>
 </section>
 
 <section id="reads">
   <h2>What it reads, and not yet</h2>
   <p><b>Printed (engraved) music</b>: staves, clefs, key and time signatures, notes and chords,
   rests, dots, accidentals, beams, tuplets, ties and slurs, grace notes, several voices on a
-  staff, piano systems, multi-bar rests, percent repeats, octave lines, guitar and bass TAB,
-  drums; dynamics, hairpins, pedal marks and articulations; the tempo marking, the title,
-  subtitle, composer and poet over the first system, and the rehearsal marks in boxes over the
-  staff, which become the sections of the file. Best results come from clean digital pages
-  (PDF or image exports of LilyPond, MuseScore, Dorico, Finale) and good black-and-white scans
-  at about 300 dpi.</p>
+  staff, piano systems and groups of staves (the braces and brackets that join them), multi-bar
+  rests, percent repeats, octave lines, guitar and bass TAB, drums; dynamics, hairpins, pedal
+  marks, articulations and ornaments, trill lines (“tr” and a wave), arpeggios, glissandi;
+  common words of expression in italic (“dolce”, “rit.”, “a tempo”, “sempre p”) and “rit.” or
+  “accel.” with a dashed line; repeat bar lines, the endings with their numbers, segno and coda,
+  “To Coda”, “Fine”, “D.C. al Fine”, “D.S. al Coda” and the like, written as the file's
+  <code>form</code>; the tempo marking, the title, subtitle, composer and poet over the first
+  system, and the rehearsal marks in boxes over the staff, which become the sections of the file.
+  Best results come from clean digital pages (PDF or image exports of LilyPond, MuseScore, Dorico,
+  Finale) and good black-and-white scans at about 300 dpi.</p>
   <p><b>Not yet, while in beta</b>:</p>
   <ul>
     <li>Lyrics and chord names are passed over — not misread as notes, but not written.</li>
-    <li>Repeat bar lines, volta brackets, D.S. and Coda are not read: the piece comes out as
-    played once through.</li>
+    <li>A “D.S.” or “D.C.” standing alone, and a “Fine” among other words, are not read as part of
+    the form.</li>
+    <li>Words of expression are written only when they are among the common ones the reader knows
+    (“dolce”, “espress.”, “rit.”, “pizz.”, “sempre legato” and the like) and printed in italic;
+    others (“tenderly”, “sul G”) are passed over. A “rit.” with a dashed line too short to show a
+    dash is written as plain text.</li>
     <li>A rehearsal mark of a single letter in a box becomes a nameless section; section names
     printed without a box are not read.</li>
-    <li>Lead sheets (melody, chord names and verses) and parts laid out in columns read
-    poorly. Handwritten music is not read; colour or low-contrast scans read worse than black
-    and white.</li>
+    <li>Lead sheets: the melody, its header and marks are read over the chord diagrams and verses,
+    and the one-line rhythm staff under the melody is written as slashes; the chord names and
+    diagrams are passed over. Parts laid out in columns are read poorly.</li>
+    <li>Handwritten music is not read. Colour or low-contrast scans, and pages saved small (under
+    about 100 dpi), read worse than black-and-white scans at 300 dpi.</li>
     <li>Words — title, tempo, rehearsal marks — are read with the text recognition built into
     Windows, in the languages installed for it, so a Latin title on a Japanese-only PC may come
     out with a wrong letter or two.</li>
   </ul>
-  <p>The reader's own page on the Marketplace keeps this list current; where it and this page
+  <p>Check what it reads: a mark says where it was unsure, but a bar with no mark can still be
+  wrong. The reader's own page on the Marketplace keeps this list current; where it and this page
   disagree, it is right.</p>
 </section>
 

@@ -4,6 +4,23 @@ Notable changes to Lily# are recorded here, newest first. Release notes are take
 from this file: the topmost section is the version being tagged, and the release
 workflow attaches that section to the GitHub Release verbatim.
 
+## Unreleased
+
+### Trill lines over a line break
+
+- `[engraving]` **A trill line's continuation on the next system prints its "tr" again**, centred
+  on the first note it covers there, as LilyPond's does (its left-broken bound keeps the "tr").
+  Until now the continuation was the wave alone, from the system's start.
+- `[engraving]` **A trill line that ends where another starts stops before the next "tr"**
+  (LilyPond's adjust-on-neighbor): the second trill no longer rides a level above the first's
+  continuation when the wave's last element reached under its "tr" — found by the OMR on a
+  piano piece's left hand, where the lifted "tr" ran into the right hand's beams.
+
+### Site
+
+- The scan page lists what the reader reads and does not yet, as the Marketplace README does,
+  and has the places for its two videos; the home page's three ways in.
+
 ## 0.14.0
 
 ### `lysc wav` renders a score to sound

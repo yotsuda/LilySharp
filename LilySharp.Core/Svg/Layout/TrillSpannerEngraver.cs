@@ -127,10 +127,20 @@ internal static class TrillSpannerEngraver
         var beamMembers = DynamicEngraver.BuildBeamMembers(beamLayouts);
         var layouts = ImmutableArray.CreateBuilder<TrillSpannerLayout>();
 
+        // Every spanner's "tr" origin FIRST, because a spanner that ENDS where another starts
+        // reads that other's glyph (the neighbour rule in the piece loop below): LilyPond's
+        // engraver sets the ended trill's `right-neighbor` to the one it starts in the same
+        // step, and the ended line stops before the neighbour's true left edge.
+        // LILYPOND-REF: scm/scheme-engravers.scm:1821-1822 Trill_spanner_engraver — (ly:grob-set-object! ended-trill 'right-neighbor trill);
+        //   lily/line-spanner.cc:211-225 calc_bound_info — adjust-on-neighbor: x_coord = min (x_coord, neighbor_ext[LEFT]).
+        var origins = new double?[trillSpanners.Length];
+        for (int ti = 0; ti < trillSpanners.Length; ti++)
+            origins[ti] = GlyphOrigin(trillSpanners[ti], measureLayouts, voicesByStaff, graceNotes);
+
         for (int ti = 0; ti < trillSpanners.Length; ti++)
         {
             var spanner = trillSpanners[ti];
-            if (spanner.StartMeasureIndex >= measureLayouts.Length)
+            if (origins[ti] is not { } glyphOrigin)
                 continue;
 
             var trillVoices = voicesByStaff != null
@@ -141,20 +151,6 @@ internal static class TrillSpannerEngraver
             // on five.
             int staffLines = staffLinesOf?.Invoke(spanner.StaffIndex)
                 ?? EngravingDefaults.DefaultStaffLines;
-
-            var startMeasure = measureLayouts[spanner.StartMeasureIndex];
-            // Existence is the VOICE's — a later voice's item indices do not exist in
-            // the layout's item slots (those are the primary voice's), and reading them
-            // there dropped every voice-two trill whose index ran past the primary's
-            // count (trill-spanner-direction.ly: the spacer branch has ONE item, so
-            // trills 2..4 vanished and the first ran to the measure end).
-            if (spanner.StartItemIndex >= VoiceItemCount(
-                    trillVoices, spanner.VoiceIndex, spanner.StartMeasureIndex, startMeasure))
-                continue;
-
-            double startX = startMeasure.X + VoiceItemX(
-                trillVoices, spanner.VoiceIndex, startMeasure,
-                spanner.StartMeasureIndex, spanner.StartItemIndex, graceNotes, spanner.StaffIndex);
 
             // The grob's direction: the writer's ^/_ wins, then the voice default
             // (TrillSpanner is a direction-polyphonic grob, so an even voice's trills
@@ -183,9 +179,28 @@ internal static class TrillSpannerEngraver
             // is what sharing the house is for.
             // ⚠️ Named approximation: LilyPond takes the whole NoteColumn's extent, so an
             // accidental or a down stem widens it and shifts this centre.
-            double glyphOrigin = startX + DynamicEngraver.AnchorCentreOffset(
-                DynamicEngraver.AnchorItem(trillVoices, spanner.VoiceIndex,
-                    spanner.StartMeasureIndex, spanner.StartItemIndex));
+            // (glyphOrigin: GlyphOrigin, computed above for every spanner.)
+
+            // The NEIGHBOUR: a trill starting on this one's stop item in the same voice —
+            // `b'8@stopTrillSpan@startTrillSpan` — whose glyph's TRUE left edge caps this
+            // line's right end (adjust-on-neighbor). Without it the wave's last element ran
+            // into the next "tr" whenever the run's phase let it, and the outside-staff pass
+            // then stacked the next trill a level up (OMR report 2026-10-21, item 1: after a
+            // line break the continuation's phase did; on one system it happened not to).
+            // LILYPOND-REF: scm/define-grobs.scm:4072 TrillSpanner bound-details right (adjust-on-neighbor . #t);
+            //   scm/scheme-engravers.scm:1821-1822 right-neighbor; lily/line-spanner.cc:211-225 calc_bound_info.
+            double? neighbourLeft = null;
+            for (int tj = 0; tj < trillSpanners.Length; tj++)
+            {
+                var other = trillSpanners[tj];
+                if (tj == ti || origins[tj] is not { } otherOrigin
+                    || other.StaffIndex != spanner.StaffIndex || other.VoiceIndex != spanner.VoiceIndex
+                    || other.StartMeasureIndex != spanner.EndMeasureIndex
+                    || other.StartItemIndex != spanner.EndItemIndex)
+                    continue;
+                neighbourLeft = otherOrigin + MusicFont.Current.FullSize.Outline(MusicGlyph.OrnamentTrill).Left;
+                break;
+            }
 
             // The RIGHT bound under to-barline: a stop event landing on a measure START
             // binds the trill to the BAR LINE before it — TrillSpanner has to-barline
@@ -215,19 +230,23 @@ internal static class TrillSpannerEngraver
             foreach (var (segment, system) in SpannerBreakSubstitution.BrokenPieces(
                 spanner.StartMeasureIndex, lastSpannedMeasure, systems, measureToSystem))
             {
-                // First segment carries the "tr" glyph; continuation segments draw line only.
+                // EVERY piece carries the "tr" glyph (session 961; OMR report 2026-10-21, item
+                // 2): a continuation's left-broken bound keeps the `left` details' text —
+                // calc_bound_info APPENDS left-broken's keys to left's, and left-broken names
+                // only end-on-note — so the glyph is printed again, centred (attach-dir
+                // CENTER) on the piece's FIRST note column (end-on-note: columns.front ()).
+                // Until then a continuation drew the wave alone, from the system's prefix.
+                // LILYPOND-REF: lily/line-spanner.cc:128-135 calc_bound_info — details = ly_append (extra, details);
+                //   :160-169 end-on-note — bound_grob = columns.front () for the LEFT side;
+                //   scm/define-grobs.scm:4053-4071 TrillSpanner bound-details left / left-broken.
                 double glyphX, lineStartX;
                 if (segment.IsFirst)
-                {
                     glyphX = glyphOrigin;
-                    lineStartX = glyphX + MusicFont.Current.FullSize.Outline(MusicGlyph.OrnamentTrill).Right;
-                }
                 else
-                {
-                    // No glyph on continuation — set GlyphX == LineStartX so the renderer suppresses it.
-                    glyphX = system.PrefixWidth + BoundPadding;
-                    lineStartX = glyphX;
-                }
+                    glyphX = FirstColumnCentre(segment.StartMeasureIndex, spanner, measureLayouts,
+                                 trillVoices, graceNotes)
+                             ?? system.PrefixWidth + BoundPadding;
+                lineStartX = glyphX + MusicFont.Current.FullSize.Outline(MusicGlyph.OrnamentTrill).Right;
 
                 double endX;
                 if (segment.IsLast)
@@ -235,6 +254,8 @@ internal static class TrillSpannerEngraver
                     endX = endsOnMeasureStart
                         ? BarlineLeftEdge(spanner.EndMeasureIndex - 1, measureLayouts, trillVoices)
                         : GetEndX(spanner, measureLayouts, trillVoices, graceNotes);
+                    if (neighbourLeft is { } nl)
+                        endX = Math.Min(endX, nl);
                 }
                 else
                 {
@@ -485,6 +506,58 @@ internal static class TrillSpannerEngraver
             && measureIndex < voices[0].Measures.Length
             ? voices[0].Measures[measureIndex].EndBarline
             : BarlineType.Single;
+
+    /// <summary>
+    /// The "tr" glyph's origin for one spanner — the start column's X plus the drawn head's
+    /// ink centre — or null when the spanner starts past its measure's or voice's items (the
+    /// existence rule the calculate loop used to apply inline).
+    /// </summary>
+    private static double? GlyphOrigin(TrillSpannerItem spanner,
+        ImmutableArray<MeasureLayout> measureLayouts,
+        Dictionary<int, ImmutableArray<Voice>>? voicesByStaff,
+        ImmutableArray<GraceNoteItem> graceNotes)
+    {
+        if (spanner.StartMeasureIndex >= measureLayouts.Length)
+            return null;
+        var trillVoices = voicesByStaff != null
+            && voicesByStaff.TryGetValue(spanner.StaffIndex, out var vv)
+            ? vv : ImmutableArray<Voice>.Empty;
+        var startMeasure = measureLayouts[spanner.StartMeasureIndex];
+        // Existence is the VOICE's — a later voice's item indices do not exist in
+        // the layout's item slots (those are the primary voice's), and reading them
+        // there dropped every voice-two trill whose index ran past the primary's
+        // count (trill-spanner-direction.ly: the spacer branch has ONE item, so
+        // trills 2..4 vanished and the first ran to the measure end).
+        if (spanner.StartItemIndex >= VoiceItemCount(
+                trillVoices, spanner.VoiceIndex, spanner.StartMeasureIndex, startMeasure))
+            return null;
+        double startX = startMeasure.X + VoiceItemX(
+            trillVoices, spanner.VoiceIndex, startMeasure,
+            spanner.StartMeasureIndex, spanner.StartItemIndex, graceNotes, spanner.StaffIndex);
+        return startX + DynamicEngraver.AnchorCentreOffset(
+            DynamicEngraver.AnchorItem(trillVoices, spanner.VoiceIndex,
+                spanner.StartMeasureIndex, spanner.StartItemIndex));
+    }
+
+    /// <summary>
+    /// A continuation piece's "tr" origin: the centre of the first note column the piece
+    /// spans — item 0 of its starting measure in the spanner's voice — or null when that
+    /// measure has no item there (a caller without voices, an empty measure).
+    /// </summary>
+    private static double? FirstColumnCentre(int measureIndex, TrillSpannerItem spanner,
+        ImmutableArray<MeasureLayout> measureLayouts, ImmutableArray<Voice> trillVoices,
+        ImmutableArray<GraceNoteItem> graceNotes)
+    {
+        if (measureIndex >= measureLayouts.Length)
+            return null;
+        var ml = measureLayouts[measureIndex];
+        if (VoiceItemCount(trillVoices, spanner.VoiceIndex, measureIndex, ml) == 0)
+            return null;
+        double x = ml.X + VoiceItemX(trillVoices, spanner.VoiceIndex, ml,
+            measureIndex, 0, graceNotes, spanner.StaffIndex);
+        return x + DynamicEngraver.AnchorCentreOffset(
+            DynamicEngraver.AnchorItem(trillVoices, spanner.VoiceIndex, measureIndex, 0));
+    }
 
     /// <summary>
     /// The line's right end: the stop note column's LEFT edge.
