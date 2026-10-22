@@ -160,6 +160,19 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第956セッションの経緯
+
+### 1.1 第956セッション（2026-10-22・YT-DELL2）
+
+第955 と同じ会話の続き（ユーザー「(1)」＝候補 ⑴ の束 → 裏取りの上で 3 択を提示 → ユーザー「A: 自前の装置の網＋棚の修正」）。`-Start p956`（開始 HEAD `ac4b98a59`・未 push 93・第954 を ARCHIVE へ）。作業場所は Lab `sessions/p956/`（probe `probe/own.lys`／`owntab.lys`＝SVG の primitive を読んだ）。
+- **裏取り＝候補 ⑴ の束は 3 つの島だった**: ⒜ `@scoop`/`@plop`/`@bend(up)` は Lily# 自前の装置で「observed by: none」＝置き場所を固定する網が無い（試験は語彙だけ）／⒝ grace の LYS4020 の残り（`@pluck`・TAB 技法・`@diagram`・`@cross`・`@figuredBass`・`@chord` を grace に載せる＝別の仕事・未着手）／⒞ §2 E ⑺ Ignatzek は**済み＝棚が stale**（上付きと △ は 2026-09-11・名前と例外表は第846・GRAMMAR.md `chordQualities`）、⑹ 開いた和音入力は文法が `ChordEntry = ChordRoot [Quality] ['/' ChordRoot]` のままで未着手＝綴りの合意が先（要ユーザー判断のまま）。
+- **網（本体 commit）**: `OwnGestureGeometryTests`＝同一性の網 8 本（RULES §5.0・LP に照合先が無い装置は自前の値で固定）: scoop／plop は頭の 1.55 左に着く 1.25×1.7 の 8 分割折れ線（scoop は下から・plop は上から）・tab では数字の弦の段／bend-up は頭の ink 右＋0.15（tab は数字＋0.5）から 1.6×2.6 の 10 分割・矢印 0.32×0.55・ラベル（½／full／1½／2）は先端の 0.35 上・`BendLabelEm` 1.6 の斜体。毒 2 本（`BendApproachXOffset` 1.55→1.6・`rise` 2.6→2.5）＝8 本全部赤。3 つの LILYSHARP-OWN の「observed by」を書き換えた。**描画は 1 バイトも変えていない＝掃きは回していない**。
+- **棚の修正**: §2 E ⑺ に ✅（済みの出所つき）・⑹ に第956 の裏取りを添えた。`ChordStructure.cs` の「PLAIN TEXT … Phase-1 simplification」という remark を今の姿（LP の絵＝上付き・△・° + ø °7）に。
+- 計器の罠: ⒜ tab の数字 `<text>` の y は baseline＝弦の線はその 0.8 上＝「最寄りの線」ではなく「baseline の上で最寄りの線」で読む（最初の網は 1 本下の線を拾って赤だった）／⒝ grace と違い tab の数字には `class="music"` が無い＝head と digit の正規表現は別。
+
+- `-End p956 -DiffBase ac4b98a59` ＝full **12924 / 0 / 2 / 12926**（前便末 +8＝新しい網）（Lab `sessions/p956/end.log`）→ この docs commit。本体 `ae89aef0a`（Core の差は remark 8 行だけ）。未 push 94＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。
+判定（2026-10-22）: 自前の 3 装置に観測者が付き、§2 E ⑺ の stale は消えた。次の候補＝⑴ grace の LYS4020 の残り（`@pluck`・TAB 技法・`@diagram`・`@cross`・`@figuredBass`・`@chord`＝`@cross`／`@chord` は LP と照合できる）・⑵ §2 E ⑹ 開いた和音入力（綴りの合意が先＝要ユーザー判断）。台帳は名指しの床と決定済みだけ＝触らない。
+
 ## 以下は第955セッションの経緯
 
 ### 1.1 第955セッション（2026-10-22・YT-DELL2）
