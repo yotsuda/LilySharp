@@ -13,9 +13,9 @@
 | 区分 | 件数 | 意味 |
 |---|---:|---|
 | `APPROX` | 64 | LP に対応物はあるが、形が違うと自認しているもの |
-| `UNWATCHED` | 62 | 観測者がゼロだと自認しているもの |
+| `UNWATCHED` | 63 | 観測者がゼロだと自認しているもの |
 | `OWN` | 263 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **389** | |
+| **計** | **390** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -24,7 +24,7 @@
 | `LilySharp.Core/Svg/Layout/MusicMarkEngraver.cs` | 21 |
 | `LilySharp.Core/Svg/Layout/MultiStaffLayouter.cs` | 13 |
 | `LilySharp.Core/Svg/EngravingDefaults.cs` | 12 |
-| `LilySharp.Core/Svg/Layout/ArticulationEngraver.cs` | 10 |
+| `LilySharp.Core/Svg/Layout/ArticulationEngraver.cs` | 11 |
 | `LilySharp.Core/Svg/Layout/NoteCollision.cs` | 9 |
 | `LilySharp.Core/Svg/Layout/SkylineBuilder.cs` | 9 |
 | `LilySharp.Core/Svg/Layout/ElementCoordinator.cs` | 8 |
@@ -140,7 +140,7 @@
 ### `LilySharp.Core/Svg/Model/BeamGroup.cs`
 - **`BeamRestStem`** ⚠️ One more LilyPond clamp is NOT ported: lily/beam.cc:1260-1262 (Beam::set_beaming)
 
-## UNWATCHED — 観測者がゼロだと自認しているもの（62 件）
+## UNWATCHED — 観測者がゼロだと自認しているもの（63 件）
 
 ### `LilySharp.Core/Rendering/SharedRenderer.Beams.cs`
 - **`SharedRenderer.AccidentalGroupLength`** no observer; add the paren widths when a book brings one. The unpacked
@@ -170,6 +170,7 @@
 - **`ArticulationEngraver.InsideSlurScriptLayouts`** hands the scorer the band it would have had without the digit. No book reaches that
 - **`ArticulationEngraver.TabTechniqueFontSize`** them as markup — so there is no LP geometry to port and no ledger point can observe
 - **`ArticulationEngraver.ScriptSkyline`** see the difference, and no fixture and no ledger point reaches it.
+- **`ArticulationEngraver.NearReachOver`** ⚠️ NO OBSERVER TELLS THIS FROM THE OLD READING (the script padded, its extreme over
 - **`ArticulationEngraver.HeadSupportExtent`** box per duration, which Lily# does not read for this purpose. No ledger point observes
 ### `LilySharp.Core/Svg/Layout/ArticulationSpacing.cs`
 - **`ArticulationSpacing.OutsideStaffPriority`** number. No Lily# fixture and no ledger point reaches that regime — a fermata on a

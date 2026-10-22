@@ -293,37 +293,44 @@ public class ArticulationPlacementTests
         // All values pinned against LP on audit/lpreg/sctchord.{ly,lys}.
         // LILYPOND-REF: lily/script-engraver.cc:204-222 acknowledge_tie
         // LILYPOND-REF: lily/new-fingering-engraver.cc:144-157 add_script
-        string svg = LilySharp.Core.Svg.SvgGenerator.Generate(
-            SyntaxTree.Parse("time 4/4 r2. c''4@accent~ | c@accent r2. |" +
-                " r2. <g@tenuto c@accent>4@tenuto~ |" +
-                " <g@tenuto c>4@accent~ <g c@tenuto@portato>4@accent r2 |"),
-            new LilySharp.Core.Svg.Renderer.SvgRenderOptions { EmbedFont = false });
-        double middle = MiddleLineY(svg);
-        var glyphs = MusicGlyphs(svg);
-        var accents = glyphs.Where(g => g.Glyph == EmmentalerGlyphs.ArticAccentAbove)
-            .OrderBy(g => g.X).ToList();
-        Assert.Equal(5, accents.Count);
-        // ⚠️ SESSION 953 MOVED EVERY SCRIPT OVER A TIE UP BY ~0.008: the bow's skyline is
-        // LilyPond's stroked sandwich now (SkylineBuilder.MergeBowOuterEdge), which put the
-        // SLUR points exact, but here — a tie as a script's side support — the old readings sat
-        // scattered about LilyPond (−0.008 … +0.005, mean ≈ 0) and the new ones sit +0.001 …
-        // +0.014 (exact LP values in the comments; Lab sessions/p953). OPEN: what LilyPond reads
-        // of a tie as a support is likely not its stencil skyline (a pure height?).
-        Assert.Equal(5.43, middle - accents[0].Y, 2); // tie START lift (LP 5.428860)
-        Assert.Equal(5.77, middle - accents[1].Y, 2); // tie END lift (LP 5.758705)
-        Assert.Equal(6.41, middle - accents[2].Y, 2); // chord1 member accent — chain over the lifted tenutos (LP 6.399068)
-        Assert.Equal(5.77, middle - accents[3].Y, 2); // chord2 CHORD accent — the tie-end answer beats the chain (LP 5.758233)
-        Assert.Equal(5.80, middle - accents[4].Y, 2); // chord3 chord accent (LP 5.794212)
-        var tenutos = glyphs.Where(g => g.Glyph == EmmentalerGlyphs.ArticTenutoAbove)
-            .OrderBy(g => g.X).ThenBy(g => middle - g.Y).ToList();
-        Assert.Equal(4, tenutos.Count);
-        Assert.Equal(5.37, middle - tenutos[0].Y, 2); // chord1 CHORD tenuto lifts over its own tie (LP 5.352255)
-        Assert.Equal(5.73, middle - tenutos[1].Y, 2); // chord1 member tenuto — chain only (LP 5.712255)
-        Assert.Equal(4.83, middle - tenutos[2].Y, 2); // chord2 MEMBER tenuto — no tie support (LP 4.825)
-        Assert.Equal(4.83, middle - tenutos[3].Y, 2); // chord3 member tenuto (LP 4.825)
-        var portato = Assert.Single(
-            glyphs.Where(g => g.Glyph == EmmentalerGlyphs.ArticPortatoBelow));
-        Assert.Equal(7.34, middle - portato.Y, 2);    // chord3 member portato — chain (LP 7.31)
+        // ⚠️ EXACT SINCE SESSION 954, read at full precision (RenderedGeometry; the SVG's 0.01
+        // rounding put 5.758705 on either side of a 2-decimal assertion). Session 953 had put
+        // the bow's skyline in LilyPond's stroked-sandwich form and watched every script over
+        // a tie move +0.001 … +0.014 off LP while the slur points went exact; the cause was not
+        // the bow but WHICH SIDE the Script's horizon-padding went on — LP pads the SUPPORT,
+        // and Skyline::padded is a shelf at each building's end height, not a Minkowski sum,
+        // so padding the script instead is a different number under a sloped bow (the tie's
+        // END tail: 5.772008 vs 5.758705) and under a sloped outline (the portato over the
+        // chord accent: 7.337006 vs 7.312805). ArticulationEngraver.Calculate's chain remark
+        // has the measurement; the side-position reach (NearReachOver) pads its shelf the
+        // same way. The book is audit/lpreg/sctchord.lys, inline so the test owns it.
+        var g = LpFidelity.RenderedGeometry.Render(
+            "part melody\n" +
+            "section A {\n  melody {\n" +
+            "    r2. c''4@accent~ | c@accent r2. |\n" +
+            "    r2. <g@tenuto c@accent>4@tenuto~ | <g@tenuto c>4@accent~ <g c@tenuto@portato>4@accent r2 |\n" +
+            "  }\n}\n" +
+            "form { ~A }\n" +
+            "score { staff melody }\n");
+        // Glyph origins above the drawn middle line (line 2 of 5, top down), left to right.
+        double Accent(int i) => g.GlyphAboveStaffLine(EmmentalerGlyphs.ArticAccentAbove, i, 2);
+        double Tenuto(int i) => g.GlyphAboveStaffLine(EmmentalerGlyphs.ArticTenutoAbove, i, 2);
+        // LilyPond's values are printed to 6 decimals; 4 keeps a rounding boundary (5.3522546
+        // against 5.352255) from deciding, and is still 100× under the old SVG reading.
+        Assert.Equal(5.428860, Accent(0), 4); // tie START lift
+        Assert.Equal(5.758705, Accent(1), 4); // tie END lift
+        Assert.Equal(6.399068, Accent(2), 4); // chord1 member accent — chain over the lifted tenutos
+        Assert.Equal(5.758233, Accent(3), 4); // chord2 CHORD accent — the tie-end answer beats the chain
+        Assert.Equal(5.794212, Accent(4), 4); // chord3 chord accent
+        // chord1's two tenutos share an X; the lower is the CHORD's, lifted over its own tie,
+        // the upper the MEMBER's, chained over it.
+        var chord1 = new[] { Tenuto(0), Tenuto(1) }.OrderBy(y => y).ToArray();
+        Assert.Equal(5.352255, chord1[0], 4);
+        Assert.Equal(5.712255, chord1[1], 4);
+        Assert.Equal(4.825, Tenuto(2), 4);    // chord2 MEMBER tenuto — no tie support
+        Assert.Equal(4.825, Tenuto(3), 4);    // chord3 member tenuto
+        Assert.Equal(7.312805,                // chord3 member portato — chain over the accent's chevron
+            g.GlyphAboveStaffLine(EmmentalerGlyphs.ArticPortatoBelow, 0, 2), 4);
     }
 
     /// <summary>The one accent's height over the middle line, in staff spaces.</summary>

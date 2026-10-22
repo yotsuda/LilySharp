@@ -1372,8 +1372,9 @@ internal static class ArticulationEngraver
 
             // A tie starting or ending on this note supports this script: pointwise
             // distance over the bow's outline, the script's own horizon-padding spent
-            // in the distance call and its own padding on top — the same aligned_side
-            // reading the chain below makes, folded into the note answer BEFORE the
+            // in the distance call ON THE BOW (see the chain below for which side, and
+            // why it matters) and its own padding on top — the same aligned_side
+            // reading the chain makes, folded into the note answer BEFORE the
             // chain so the scripts stacked above ride up with it. The push is a push,
             // not a re-quantize (the chain's rule). Only the bow on the script's own
             // side can bind: the far-side bow hugs the head's other edge and tops out
@@ -1392,16 +1393,15 @@ internal static class ArticulationEngraver
                 && tiesAtBound.TryGetValue((effArt.StaffIndex, effArt.VoiceIndex,
                     effArt.MeasureIndex, effArt.ItemIndex), out var boundTies))
             {
-                var tiePadded = ScriptSkyline(
-                    layout, yUp, effArt.IsAbove ? VerticalDirection.Down : VerticalDirection.Up,
-                    extraPad: ScriptHorizonPadding);
+                var mine = ScriptSkyline(
+                    layout, yUp, effArt.IsAbove ? VerticalDirection.Down : VerticalDirection.Up);
                 double closestTie = double.NegativeInfinity;
                 foreach (var t in boundTies)
                 {
                     if (t.CurveUp != effArt.IsAbove)
                         continue;
                     var bowSky = TieSupportSkyline(t, staffOffset, effArt.IsAbove);
-                    closestTie = Math.Max(closestTie, tiePadded.Distance(bowSky));
+                    closestTie = Math.Max(closestTie, bowSky.Distance(mine, ScriptHorizonPadding));
                 }
                 double tieMove = Math.Max(0.0, closestTie + PaddingFor(effArt.Type));
                 if (tieMove > 0)
@@ -1454,23 +1454,47 @@ internal static class ArticulationEngraver
             }
             else if (supportScripts.TryGetValue(stackKey, out var supports))
             {
-                // Padding ONE side of the distance is LP's own equivalence (its
-                // distance(other, hpad) comment: padding other = doubling hpad), and the
-                // side it pads is THIS one — which does not depend on the support, so the
-                // padded copy is built ONCE here rather than inside every distance call.
+                // ⚠️ THE SIDE THE HORIZON-PADDING GOES ON IS LOAD-BEARING. LilyPond pads the
+                // SUPPORT (`dim.distance (my_dim, horizon_padding)` pads `dim`, the supports
+                // merged), and Skyline::padded is NOT a Minkowski sum: each building gets a
+                // flat shelf at its own END height and a 45° fall, so a rising edge of the
+                // other skyline is never reached by the shelf. Padding the script instead —
+                // LP's own distance(other, hpad) comment calls that "the same effect" — gives
+                // another number wherever the support slopes under a sloped outline:
+                // MEASURED (session 954, audit/lpreg/sctchord): the accent over a tie's END
+                // 5.772008 with the script padded, 5.758705 with the bow padded = LilyPond
+                // exactly; the portato over a chord accent 7.337006 vs LP 7.312805. So the
+                // script is read bare and the supports, merged, carry the padding — through
+                // Distance(other, hpad), which pads THIS once into a lent buffer.
                 // The THUMB clears what is under it as the fingering it is (session 949): its
                 // own padding 0.5 and no horizon-padding, as FlushFingerings spends them
                 // (LilyPond 2.26.0: `d'16\thumb\flageolet` stands 0.5 over the circle).
-                var myPadded = ScriptSkyline(
+                // LILYPOND-REF: lily/side-position-interface.cc:316-320 aligned_side — the supports merged into ONE `dim`;
+                // LILYPOND-REF: lily/side-position-interface.cc:353-357 aligned_side — dim.distance (my_dim, horizon-padding);
+                // LILYPOND-REF: lily/skyline.cc:545-555 Skyline::internal_distance — `padded_this = padded (horizon_padding)`;
+                // LILYPOND-REF: lily/skyline.cc:558-615 Skyline::padded (horizon_padding) — pad_buildings: a shelf at each building's end height, then the 45° fall.
+                var mine = ScriptSkyline(
                     layout, yUp,
-                    effArt.IsAbove ? VerticalDirection.Down : VerticalDirection.Up,
-                    extraPad: thumb ? 0.0 : ScriptHorizonPadding);
-                double closest = double.NegativeInfinity;
-                foreach (var s in supports)
+                    effArt.IsAbove ? VerticalDirection.Down : VerticalDirection.Up);
+                double hpad = thumb ? 0.0 : ScriptHorizonPadding;
+                double closest;
+                if (supports.Count == 1)
                 {
-                    var theirs = ScriptSkyline(s, s.YUp,
+                    closest = ScriptSkyline(supports[0], supports[0].YUp,
+                        effArt.IsAbove ? VerticalDirection.Up : VerticalDirection.Down)
+                        .Distance(mine, hpad);
+                }
+                else
+                {
+                    // Two or more stacked scripts overlap in X: the shelf of a lower one's
+                    // building that ends under the higher is NOT in the padded merge, so
+                    // merge first, then pad once — LP's order.
+                    var merged = new VerticalSkyline(
                         effArt.IsAbove ? VerticalDirection.Up : VerticalDirection.Down);
-                    closest = Math.Max(closest, myPadded.Distance(theirs));
+                    foreach (var s in supports)
+                        merged.Merge(ScriptSkyline(s, s.YUp,
+                            effArt.IsAbove ? VerticalDirection.Up : VerticalDirection.Down));
+                    closest = merged.Distance(mine, hpad);
                 }
                 double move = Math.Max(0.0, closest + (thumb ? FingeringPadding : PaddingFor(effArt.Type)));
                 if (move > 0)
@@ -2451,35 +2475,6 @@ internal static class ArticulationEngraver
     /// ⚠️ The optical DESIGN is still the one this grob's own font-size step selects: an
     /// ossia is <c>fontSize = #-3</c> in LilyPond and would select the 14, which is a
     /// separate island — the box spelling this replaced scaled the 20 the same way.</param>
-    /// <param name="extraPad">
-    /// The CONSUMER's horizon padding — the one LilyPond spends inside
-    /// <c>Skyline::distance(other, horizon_padding)</c> by building a padded copy of the
-    /// moving grob. Ask for it here and call the unpadded <c>Distance(other)</c>.
-    /// <para>
-    /// ⚠️ THIS IS A CHOICE OF ORDER, NOT AN OPTIMISATION THAT PRESERVES BITS, and it was made
-    /// deliberately (user decision, 2026-08-17). Padding grob-local and placing afterwards is
-    /// the same skyline as placing and then padding in exact arithmetic, but NOT the same
-    /// decomposition: the resolve's epsilons are ABSOLUTE, so how many buildings survive
-    /// depends on where the glyph sits. MEASURED — one fermata, one padding, placed at
-    /// x = 0 / 0.5 / 1 / 17.5 / 100 / 1000 came out as 35 / 37 / 37 / 33 / 39 / 33 buildings
-    /// under the old order. Padding grob-local removes that: the decomposition is now a
-    /// function of the glyph alone, which is also where LilyPond pads
-    /// (<c>Grob::vertical_skylines_from_stencil</c> pads the STENCIL's skyline).
-    /// </para>
-    /// <para>
-    /// ⚠️ WHAT WAS CHECKED BEFORE TAKING IT (the corpus alone could not decide this — every
-    /// one of these was byte-identical either way): 566-book SVG A/B 0 moved, the whole suite
-    /// green with snapshots unmoved, and the 516-point LP geometry ledger unchanged to its
-    /// full 9 decimals. The difference lives below every observer the repo has.
-    /// </para>
-    /// <para>
-    /// ⚠️ AND IT PAID FOR ITSELF: the padded copy inside the distance call was 875.8 MB of
-    /// perf-fingstack1k's 1362.0 MB keystroke — 64% of it, 28.7 KB per call — because
-    /// <c>Skyline::padded</c> is a full merge of three buildings per building and a script
-    /// paid it once per support. Folded into the profile cache it is paid once per
-    /// (glyph, size, design, pad, extraPad) for the whole session.
-    /// </para>
-    /// </param>
     /// <summary>
     /// ONE side of <see cref="ScriptSkylines"/>'s pair — the side the caller is about to
     /// measure with.
@@ -2490,10 +2485,20 @@ internal static class ArticulationEngraver
     /// every placement was allocated and dropped. Placing one side is the same skyline as
     /// placing both and taking one — the two directions are resolved independently, from
     /// separate cached profiles, and neither reads the other.
+    /// <para>
+    /// ⚠️ THE PROFILE CARRIES THE GROB'S OWN skyline-horizontal-padding AND NOTHING ELSE. Until
+    /// session 954 a consumer could ask for its horizon-padding to be folded in here too
+    /// (an `extraPad`, cached per glyph), on the reading that padding the moving grob is the
+    /// same distance as padding its supports; it is not — Skyline::padded is a shelf at each
+    /// building's end height, not a Minkowski sum — and LilyPond pads the SUPPORTS. The
+    /// consumer now spends its horizon-padding on the support side, through
+    /// <see cref="VerticalSkyline.Distance(VerticalSkyline, double)"/> (the chain in
+    /// <see cref="Calculate"/> has the measurement).
+    /// </para>
     /// </remarks>
     internal static VerticalSkyline ScriptSkyline(
         in ArticulationLayout a, double anchorY, VerticalDirection direction,
-        double magnification = 1.0, double extraPad = 0.0)
+        double magnification = 1.0)
     {
         bool up = direction == VerticalDirection.Up;
         // The layout carries the font's CHARACTER (ArticulationItem.GetGlyph); the font gives
@@ -2504,18 +2509,16 @@ internal static class ArticulationEngraver
             var placed = TextOutlineSkylines.PlaceMusicGlyphSide(
                 glyph, WalkSize(a, magnification), a.X, anchorY, direction,
                 MusicFont.Current.DesignAt(a.FontSizeStep).Rounded,
-                a.SkylineHorizontalPadding, extraPad);
+                a.SkylineHorizontalPadding);
             if (placed != null)
                 return placed;
         }
         var (bUp, bDown) = FallbackBoxSkylines(a, anchorY, magnification);
-        var box = up ? bUp : bDown;
-        return extraPad > 0.0 ? box.Padded(extraPad) : box;
+        return up ? bUp : bDown;
     }
 
     internal static (VerticalSkyline Up, VerticalSkyline Down) ScriptSkylines(
-        in ArticulationLayout a, double anchorY, double magnification = 1.0,
-        double extraPad = 0.0)
+        in ArticulationLayout a, double anchorY, double magnification = 1.0)
     {
         if (a.Glyph.Length == 1 && MusicFont.Current.GlyphOf(a.Glyph[0]) is { } glyph
             && !IsSuggestionGlyph(glyph) && !IsBoxProfileGlyph(glyph))
@@ -2523,12 +2526,11 @@ internal static class ArticulationEngraver
             var (up, down) = TextOutlineSkylines.PlaceMusicGlyph(
                 glyph, WalkSize(a, magnification), a.X, anchorY,
                 MusicFont.Current.DesignAt(a.FontSizeStep).Rounded,
-                a.SkylineHorizontalPadding, extraPad);
+                a.SkylineHorizontalPadding);
             if (!up.IsEmpty || !down.IsEmpty)
                 return (up, down);
         }
-        var (bUp, bDown) = FallbackBoxSkylines(a, anchorY, magnification);
-        return extraPad > 0.0 ? (bUp.Padded(extraPad), bDown.Padded(extraPad)) : (bUp, bDown);
+        return FallbackBoxSkylines(a, anchorY, magnification);
     }
 
     /// <summary>
@@ -2891,11 +2893,20 @@ internal static class ArticulationEngraver
             isAbove, a.SourcePosition, scriptStep, GetSeedBBox(a.Type, isAbove),
             SkylineHorizontalPadding: ArticulationSpacing.SkylineHorizontalPadding(a.Type));
         var sky = ScriptSkyline(probe, 0.0,
-            isAbove ? VerticalDirection.Down : VerticalDirection.Up, extraPad: ScriptHorizonPadding);
-        double edge = sky.MaxHeightInRange(xFrom, xTo);
-        if (double.IsInfinity(edge))
-            return double.NegativeInfinity;
-        return isAbove ? -edge : edge;
+            isAbove ? VerticalDirection.Down : VerticalDirection.Up);
+        // The support is a flat shelf over [xFrom, xTo] at height 0 (the caller adds the
+        // support's own height): LP pads the SUPPORT, not the script (the chain's remark on
+        // which side, in Calculate), so the shelf is padded and the bare outline measured
+        // against it — in the skyline's own internal frame that distance IS the reach
+        // toward the support (up-positive for an above script, down-positive below).
+        // ⚠️ NO OBSERVER TELLS THIS FROM THE OLD READING (the script padded, its extreme over
+        // [xFrom, xTo]): a flat shelf's padding IS a Minkowski tent, so the two differ only
+        // for a script whose nearest point lies OUTSIDE the head's range + 0.1, and every
+        // script's nearest point is near its own centre, over the head. Poisoned back in
+        // session 954: 1,965 tests green. Kept as LP's letter, like the chain's.
+        var shelf = VerticalSkyline.FromBox(xFrom, xTo, 0.0, 0.0,
+            isAbove ? VerticalDirection.Up : VerticalDirection.Down);
+        return shelf.Distance(sky, ScriptHorizonPadding);
     }
 
     /// <summary>

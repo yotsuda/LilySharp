@@ -23,19 +23,27 @@ using Xunit;
 namespace LilySharp.Tests.Svg;
 
 /// <summary>
-/// What a script's padded profile is now: a function of the GLYPH, not of where on the page
-/// the script happens to sit.
+/// What a script's padded profile is: a function of the GLYPH and its own declared
+/// skyline-horizontal-padding, not of where on the page the script happens to sit.
 /// </summary>
 /// <remarks>
 /// ⚠️ THIS IS THE PROPERTY THE PADDING ORDER WAS CHOSEN FOR (user decision, 2026-08-17), and
 /// nothing else in the repo can see it. LilyPond pads a grob's skyline grob-local
 /// (LILYPOND-REF: lily/stencil-integral.cc:881-893 vertical_skylines_from_stencil — it pads
-/// <c>skylines_from_stencil</c>'s answer, i.e. the grob's own frame), and the CONSUMER's half of
-/// the padding — the copy <c>Skyline::distance(other, horizon_padding)</c> builds — was
-/// applied to the PLACED skyline instead. Because the resolve's epsilons are absolute, that
-/// made the decomposition depend on the placement: MEASURED, one fermata with one padding,
-/// placed at x = 0 / 0.5 / 1 / 17.5 / 100 / 1000, resolved to 35 / 37 / 37 / 33 / 39 / 33
-/// buildings. The same mark, the same padding, six different skylines.
+/// <c>skylines_from_stencil</c>'s answer, i.e. the grob's own frame); padding the PLACED
+/// skyline instead made the decomposition depend on the placement, because the resolve's
+/// epsilons are absolute: MEASURED, one fermata with one padding, placed at
+/// x = 0 / 0.5 / 1 / 17.5 / 100 / 1000, resolved to 35 / 37 / 37 / 33 / 39 / 33 buildings.
+/// The same mark, the same padding, six different skylines.
+/// <para>
+/// ⚠️ UNTIL SESSION 954 THE CONSUMER'S HORIZON-PADDING WAS FOLDED IN HERE TOO (an
+/// <c>extraPad</c>), on the reading that padding the moving grob is the same distance as
+/// padding its supports. It is not: Skyline::padded is a shelf at each building's end
+/// height, not a Minkowski sum, and LilyPond pads the SUPPORTS — the accent over a tie's end
+/// stood 0.013 high (ArticulationEngraver.Calculate's chain remark). The consumer's padding
+/// now goes on the support side, inside <c>VerticalSkyline.Distance(other, hpad)</c>; what
+/// stays grob-local is the grob's OWN declaration, which is what these theories pad with.
+/// </para>
 /// <para>
 /// ⚠️ THE CORPUS IS NOT AN INSTRUMENT FOR THIS. Both orders gave a byte-identical 566-book
 /// SVG A/B, an unmoved 217-snapshot suite and an unmoved 516-point LP geometry ledger — the
@@ -46,9 +54,6 @@ namespace LilySharp.Tests.Svg;
 [Trait("Category", "Unit")]
 public class ScriptProfilePaddingTests
 {
-    /// <summary>ScriptHorizonPadding — the consumer's, folded into the profile.</summary>
-    private const double ExtraPad = 0.25;
-
     private static ArticulationLayout ScriptAt(string glyph, double declaredPad, double x)
         => new(MeasureIndex: 0, ItemIndex: 0, X: x, YUp: 3.25,
                Glyph: glyph, IsAbove: true, SourcePosition: 0,
@@ -59,13 +64,16 @@ public class ScriptProfilePaddingTests
     /// the order back (pad the placed copy) turns exactly ONE of these three red: the dot and
     /// the wedge are few enough buildings to survive either way, and a test built only from
     /// them would pass with the property gone. The other two are here to say that the
-    /// property is about the ORDER and not about that one glyph.
+    /// property is about the ORDER and not about that one glyph. The dot's 0.10 is its real
+    /// declaration (Script.skyline-horizontal-padding, scm/script.scm); the other two declare
+    /// none and are given one here, since the property is about where a declared padding is
+    /// applied, not about which grobs declare it.
     /// </summary>
     public static IEnumerable<object[]> Glyphs()
     {
         yield return [EmmentalerGlyphs.ArticStaccatoAbove.ToString(), 0.10];  // dot, declares padding
-        yield return [EmmentalerGlyphs.ArticMarcatoAbove.ToString(), 0.0];    // wedge, sloped roofs
-        yield return [EmmentalerGlyphs.FermataAbove.ToString(), 0.0];         // curve, 45 buildings
+        yield return [EmmentalerGlyphs.ArticMarcatoAbove.ToString(), 0.25];   // wedge, sloped roofs
+        yield return [EmmentalerGlyphs.FermataAbove.ToString(), 0.25];        // curve, 45 buildings
     }
 
     /// <summary>
@@ -78,14 +86,14 @@ public class ScriptProfilePaddingTests
         string glyph, double declaredPad)
     {
         var atOrigin = ArticulationEngraver.ScriptSkylines(
-            ScriptAt(glyph, declaredPad, 0.0), 3.25, extraPad: ExtraPad).Up;
+            ScriptAt(glyph, declaredPad, 0.0), 3.25).Up;
 
         // Spread over four decades: if the epsilons were still deciding, x = 1000 is where
         // it showed (the fermata lost six buildings there under the old order).
         foreach (double x in new[] { 0.5, 1.0, 17.5, 100.0, 1000.0 })
         {
             var placed = ArticulationEngraver.ScriptSkylines(
-                ScriptAt(glyph, declaredPad, x), 3.25, extraPad: ExtraPad).Up;
+                ScriptAt(glyph, declaredPad, x), 3.25).Up;
 
             Assert.True(atOrigin.Buildings.Count == placed.Buildings.Count,
                 $"x={x}: the padded profile resolved to {placed.Buildings.Count} buildings "
@@ -104,17 +112,16 @@ public class ScriptProfilePaddingTests
     }
 
     /// <summary>
-    /// The positive control: the consumer's padding is really being applied. Without this a
-    /// fold that silently dropped <c>extraPad</c> would pass the theory above perfectly —
-    /// an unpadded profile is just as placement-independent.
+    /// The positive control: the declared padding is really being applied. Without this a
+    /// fold that silently dropped it would pass the theory above perfectly — an unpadded
+    /// profile is just as placement-independent.
     /// </summary>
     [Theory]
     [MemberData(nameof(Glyphs))]
-    public void TheConsumersPaddingIsActuallyInTheProfile(string glyph, double declaredPad)
+    public void TheDeclaredPaddingIsActuallyInTheProfile(string glyph, double declaredPad)
     {
-        var script = ScriptAt(glyph, declaredPad, 17.5);
-        var bare = ArticulationEngraver.ScriptSkylines(script, 3.25).Up;
-        var padded = ArticulationEngraver.ScriptSkylines(script, 3.25, extraPad: ExtraPad).Up;
+        var bare = ArticulationEngraver.ScriptSkylines(ScriptAt(glyph, 0.0, 17.5), 3.25).Up;
+        var padded = ArticulationEngraver.ScriptSkylines(ScriptAt(glyph, declaredPad, 17.5), 3.25).Up;
 
         double bareLeft = bare.Buildings.Min(b => b.Start);
         double bareRight = bare.Buildings.Max(b => b.End);
@@ -124,11 +131,11 @@ public class ScriptProfilePaddingTests
         // LILYPOND-REF: lily/skyline.cc:558-615 Skyline::padded (horizon_padding) — flat for
         // the padding, then a 45° run-out, so the profile reaches at least that much further
         // each way.
-        Assert.True(bareLeft - paddedLeft >= ExtraPad - 1e-9,
+        Assert.True(bareLeft - paddedLeft >= declaredPad - 1e-9,
             $"the padded profile only reaches {bareLeft - paddedLeft:F6} further left, "
-            + $"not the declared {ExtraPad}");
-        Assert.True(paddedRight - bareRight >= ExtraPad - 1e-9,
+            + $"not the declared {declaredPad}");
+        Assert.True(paddedRight - bareRight >= declaredPad - 1e-9,
             $"the padded profile only reaches {paddedRight - bareRight:F6} further right, "
-            + $"not the declared {ExtraPad}");
+            + $"not the declared {declaredPad}");
     }
 }
