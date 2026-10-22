@@ -124,6 +124,15 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第941セッション（2026-10-22・YT-DELL2）
+
+第940 と同じ会話の続き（ユーザー「続けて」）。`-Start p941`（開始 HEAD `0b4807a0c`・未 push 62・full **12813 / 0 / 2 / 12815**・第939 を ARCHIVE へ）。作業場所は Lab `sessions/p941/`。
+- **2 つのばねの系の最小値 0.1 の差＝見積もり側の音 → 音のばねに列の rod が無かった＝`4f5b429c0`**（第940 の ⚠️）: 計器 Zz941（削除済み）で afterGrace と無関係に**音 → 音のばね全部**で差が出ると確認（`c'4 d'4 e'4 f'4` も）。描画側（`CreateInterColumnSpring`）は 0.3 の持ち上げの後に列の rod（分離 skyline＋0.1・トレモロ・slur の最小の長さ）を床に入れる。見積もり側（`CreateSpringsForMeasure`）は小節中のマークの列と小節線のばねにだけ入れていた ⇒ 同じ rod を同じ順で入れた。**見積もりの最小値が頁に出るのは列の無い小節の予備経路（`LayoutItems`）だけ**＝掃き 1,248 枚で 0・理想値（改行の小節幅）はもとから一致。網: `BothSpringSystems_AgreeAroundAnAfterGrace` に最小値の比較を戻した（毒＝rod を 0 にすると赤）・`BothSpringSystems_BuildANoteSpringInLilyPondsOrder` は「持ち上げは rod の 0.1 下の skyline の上に立つ」に読み替えた。CHANGELOG なし（描画に出ない）。
+- `-End p941 -DiffBase 0b4807a0c` ＝full **12813 / 0 / 2 / 12815**（前便末 ±0＝試験の数は変わらない）（Lab `sessions/p941/end.log`）→ この docs commit。未 push 63＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。
+判定（2026-10-22）: 2 つのばねの系は afterGrace の前後でも最小値まで一致。次の候補＝slur が膝の grace 連桁を避ける形（主線で読む＝⒝）・grace の LYS4020 の残り（spacer の前の呼吸記号・`@pluck`・TAB の技法・`@diagram`・`@cross`・`@figuredBass`・`@chord`＝字形も置き場所も Lily# 独自が多く LP と照合できる部分が少ない）。
+
+## 以下は第940セッションの経緯
+
 ### 1.1 第940セッション（2026-10-22・YT-DELL2）
 
 第939 と同じ会話の続き（ユーザー「続けて」）。`-Start p940`（開始 HEAD `a5f0009c1`・未 push 60・full **12800 / 0 / 2 / 12802**・第938 を ARCHIVE へ）。作業場所は Lab `sessions/p940/`。
@@ -131,16 +140,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **網**: 台帳 15 点（`breath.aftergrace.*` の開いていた 6 点＋`aftergrace.three/quarter/whole.*` 9 点）。毒 8 本全部赤（鳴っている長さ 12・最後の間隔 5・列の願い 3・小節線の願い 1・予約幅 1・`CreateSpring` の条件／見積もりの願い／見積もりの小節線＝最初は 3 本とも**緑**）。**コーパスに afterGrace を書いた本が 0 冊**なので掃き（1,248 枚で 0）では見えず、見積もりの系は台帳にも出ない ⇒ `SpacingInvariantTests.BothSpringSystems_AgreeAroundAnAfterGrace`（4 行・理想値の一致）を足して 3 本とも赤にした。⚠️ `c'4 afterGrace { d'16 } e'4 f'2` の e4 → f2 は 2 つの系で**最小値が 0.1 違う**（列 1.6042・見積もり 1.5042）＝afterGrace と無関係の既存の差・未調査（理想値は一致）。
 - `-End p940 -DiffBase a5f0009c1` ＝full **12813 / 0 / 2 / 12815**（前便末 +13）（Lab `sessions/p940/end.log`）→ この docs commit。未 push 61＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。
 判定（2026-10-22）: afterGrace の置き方と呼吸記号は LP どおり。次の候補＝上の ⚠️ の最小値 0.1 の差（2 つのばねの系）・slur が膝の grace 連桁を避ける形（⒝）・grace の LYS4020 の残り（spacer の前の呼吸記号・`@pluck`・TAB の技法・`@diagram`・`@cross`・`@figuredBass`・`@chord`）。
-
-## 以下は第939セッションの経緯
-
-### 1.1 第939セッション（2026-10-22・YT-DELL2）
-
-第938 と同じ会話の続き（ユーザー「続けて」）。`-Start p939`（開始 HEAD `924a2bb39`・未 push 58・full **12789 / 0 / 2 / 12791**・第937 を ARCHIVE へ）。作業場所は Lab `sessions/p939/`。
-- **afterGrace の呼吸記号を描く＝`b0e71bec6`**: 第938 の 2.5311 は LP の paper column を刷って解けた（Lab `p939/lp/cols.ly`＝`'columns` の `when` と X）。afterGrace の後ろには**時刻 3/8 の空の musical column**（extent 空）があり、記号なしは「最後の grace → 空の列 1.28（grace のばねそのもの＝Note_spacing が掛からない）→ 主音符 1.024511」、記号ありは「grace → 記号 0.891339 → 空の列 1.5066（Staff_spacing・空の列に grace 部分が無いので 0.8 なし）→ 主音符 1.024511」。Lily# は afterGrace の並びを閉じの spacer（`RestItem.LeadingGrace`）にぶら下げる＝spacer が空の列に当たる ⇒ `InnerBreaths` が afterGrace の最後の列の記号も返し、`InnerBreathSprings` は主が spacer のとき記号のばねを縮めずに返す・`GraceInnerBreathX` は並びの終わり（group X＋span）から戻す。途中の記号は普通の途中の記号と同じ（1.2053）。台帳 10 点（`breath.aftergrace.*`）＝記号の 2 本のばねと並びの中は EXACT。毒 3 本全部赤（最後の列 5・0.8 を掛ける 2・記号の X 4）。全 svg の掃き 0。
-- ⚠️ **afterGrace の置き方そのものが LP と違う＝新しい開いた残差（記号と無関係・対照 `breath.aftergrace.control.*` も同じ）**: LP は最後の grace → 空の列が素の grace のばね 1.28・空の列 → 次の主音符 1.024511・主音符 → 最初の grace 2.600747。Lily# は最後の間隔が Note_spacing の 1.938627・spacer → 次の音 2.0・接近 3.021920（残差 +0.421173／+1.634116／+0.975489）。**予測: afterGrace の置き方を移植すれば 6 点とも 0**。値付けの手がかり: 空の列の `when` は grace の主の時刻（`3/8`）、grace の列は `3/8G-1/16`。
-- `-End p939 -DiffBase 924a2bb39` ＝full **12800 / 0 / 2 / 12802**（前便末 +11）（Lab `sessions/p939/end.log`）→ この docs commit。未 push 59＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。
-判定（2026-10-22）: grace の呼吸記号は spacer の前を除いて全部描く。次の候補＝**afterGrace の置き方の移植**（上の ⚠️・⒜＝LP の列で測れていて予測つき）・slur が膝の grace 連桁を避ける形（⒝）・grace の LYS4020 の残り（`@pluck`・TAB の技法・`@diagram`・`@cross`・`@figuredBass`・`@chord`）。
 
 ## 2. 開いている作業
 
