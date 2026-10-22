@@ -160,6 +160,19 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第962セッションの経緯
+
+### 1.1 第962セッション（2026-10-23・YT-DELL2）
+
+新しい会話（ユーザー「HANDOFF.md を読んで作業に着手して」）。`-Start p962`（開始 HEAD `291796c17`・未 push 4・第960 を ARCHIVE へ・full 12949 / 0 / 2 / 12951）。§0 の規則どおり `REQUESTS.md` の open＝**#3** に着手。作業場所は Lab `sessions/p962/`（再現 `probe/portato.lys`・絵 `probe/before|after/portato.png`・掃き `svg/`・返事 `omr/lilysharp-reply-2026-10-23-3.md`）。
+- **REQUESTS #3（下の声部の `a8@portato.up` が上の声部の `r4` に重なる・LP も同じ絵・オーナー判断で直す）＝fixed `480fa6fda`・LILYSHARP-OWN**: `ArticulationEngraver.CalculateWithFingerings` のタイの fold の後・積み重ねの chain の前に、**同じ譜の別の声部の休符で、その音の onset を区間に含むもの**を 1 枚の支え（`OtherVoiceRestSupport`）にして、タイや積み重ねと同じ読み（支えの側に horizon-padding 0.1・記号は自分の padding）で外へ出す。休符は描かれる位置（`NeutralRestPosition` ＋ `RestCollisionsOf` の押し・押し出されれば ledger 付きの字形）の**輪郭**（`TextOutlineSkylines.MusicGlyphProfile`＝SkylineBuilder の休符の seed と同じ読み）。**休符は動かさない**。memo は新しい省略可能引数 `restShiftsOf` で渡す＝描画の便は `ctx.RestCollisionsOf`（`LayoutEngine.Finishing` の 3 か所）・譜ごとの skyline の便は `RestCollisionsOfDelegate`（`MultiStaffLayouter.StaffArticulationLayouts`）。**渡していない**: スラーの採点の slur-free run（`InsideSlurScriptLayouts` の 3 呼び手）＝'inside 記号が休符で持ち上がる前の箱でスラーが曲がる（remark に記録・本には無い）・装飾音の記号・tab の記号。
+- **網**: `ScriptOverOtherVoiceRestTests` 3 本＝OMR の小節（支えの padded 距離が実輪郭で −0.45・記号の ink が休符の ink の上）・休符を `s4` にした対照（g8 の記号は動かない・a8 のは 1 空間超持ち上がる・休符は動かない）・鏡像（上の声部の `.down` の下に下の声部の休符＝Rest_collision で −6 に落ちた休符の下）。毒（門の `!item.GraceTime` を反転）: 3/3 赤 → 戻して緑。掃き 1,015 冊 1,248 枚で **0**（本には無い形）。
+- 棚卸し: `LILYSHARP-OWN` 1 本（departs from script-engraver.cc:234-250・goes away never・observed by の網つき）＋ remark の ⚠️ 2 つが APPROX／UNWATCHED に 1 件ずつ増えた（393 → 397 件・再生成して CRLF に戻した）。CHANGELOG `## Unreleased` に `[engraving]`。
+- 計器の罠: ⒜ 箱で測ると「0.45 に足りない」と読む＝4 分休符の上は斜めで、点はその低い側の上に立つ（箱の上 0.26・輪郭の上 0.45）→ 網は実輪郭の `Distance` で読む／⒝ 2 つ目の console が busy のまま 3 つ目を打つと 4 つ目の console が立つ（`execute_command` は並走させない）。
+
+- `-End p962 -DiffBase 291796c17` ＝full **12952 / 0 / 2 / 12954**（前便末 12949 ＋ 3＝`ScriptOverOtherVoiceRestTests`）（Lab `sessions/p962/end.log`）→ この docs commit。本体 `480fa6fda`（engraver・網・棚卸し・CHANGELOG）。Core '+' 127 行／LILYPOND-REF 0／LILYSHARP-OWN 2（独自の規則なので REF は要らない＝LP の出典は OWN の departs from に在る）。未 push 5＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。OMR 側の `REQUESTS.md` の #3 の状態列は `fixed 480fa6fda` に書き換えた（Omr repo の commit は OMR 側の便に任せる）。**動画 16・17 の撮影（§1.0 ⒜）は手を付けていない**＝VS Code の画面収録（Screencast Mode・Copilot のサインイン・mp4 の書き出し）は人の手の作業で、この便では撮れない。
+判定（2026-10-23）: REQUESTS の open は 0。次便は **grace の束の残り**（⑵ `@todo`・⑶ `@chord`／`@figuredBass`／`@diagram`・§2 U8）→ 単一譜の `@cross` の警告（要ユーザー判断）→ §2 E ⑹ → 続きのトリルの OPEN 0.040。会話は続けてよい（(c) 次の島はこの便と無関係＝差は小さい・既定は続ける）。
+
 ## 以下は第961セッションの経緯
 
 ### 1.1 第961セッション（2026-10-23・YT-DELL2）
