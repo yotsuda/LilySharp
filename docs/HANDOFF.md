@@ -126,6 +126,20 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第966セッション（2026-10-23・YT-DELL2）
+
+第965 と同じ会話の続き（ユーザー「(a)」＝単一譜の `@cross` に警告を出す）。`-Start p966`（開始 HEAD `0de2cc46e`・未 push 12・第964 を ARCHIVE へ・full 12998 / 0 / 2 / 13000）。作業場所は Lab `sessions/p966/`（試し書き `single.lys`／`row.lys`＋絵 `out/row.png`・毒 `poisons.ps1`）。
+- **単一譜の `@cross`＝警告 LYS4031・閉じた `0d71a3f9e`**（ユーザー決定 2026-10-23 (a)）: `Semantics/CrossStaffValidator.cs`（`SemanticValidation` に登録）。`@cross` ごとに `ChordDiagramScores.PartNameOf` でパートを引き、`RenderSpecParser.FindAll` の score のうちそのパートを描くものが全部「記譜の譜 1 本」なら警告＝文面は「`@cross` は grand staff の隣の譜へ移す印・このパートを描く score はどれも譜が 1 本で相手が無い＝音はそのまま。× 符頭なら `@dead` か `@notehead(cross)`・移すなら grandStaff に」。**譜の数は score の項目から数える**（`NotationStaves`＝staff／tab／ossia／condensed／combined 各 1・群は中身・**chords／lyrics の行は 0**＝行は `GetVoiceBindings` では binding だが音の行き先ではない）。相手の譜があれば（grandStaff でも並んだ 2 譜でも＝engraver は次の譜へ移す）報告しない・phrase の中・どの score も描かないパートも判定しない。
+- **裏取り**: ⒜ **ユーザーの本 `corpora/dogfood/blues.lys` は今の文法では既に落ちる**（`chords prog { g:7 … }` の小文字＝error 12 件・`staff lead with chords prog` の `with`＝「Undefined part: 'with'」＝旧綴り）＝× 符頭のつもりの `b4@cross` の警告はその上に出る。本は直さない（ユーザーの本）／⒝ **engraver の譜数は行を数える**（`LayoutEngine` の `score.StaffGroups.Sum(StaffCount)`＝chords 行の下の譜で `@cross` は「staff 1＝行」へ filed されるが、絵は動かない＝Lab `sessions/p966/out/row.png`）＝害なし・validator は行を数えない（上）。
+- **網**: `CrossStaffWarningTests` 6 本（単一譜＝警告 1・文面に `'@dead'`／`'@notehead(cross)'`／パート名／grandStaff・並んだ 2 譜・2 score のうち 1 つが grandStaff＝0／描かれないパートと phrase＝0／譜の下の chords 行＝1）。毒 2 本（登録を外す＝2 赤／行を譜に数える＝1 赤）→ 戻して緑。svg の掃きは無し（validator だけ＝描画に触らない）。棚卸し 2 枚は差分なし。
+- docs: GRAMMAR.md（Effects の行に LYS4031・group の註に「CROSS-STAFF NOTES」の段落＝`@cross` の節は初）・GRAMMAR_FOR_LLM.md・CHANGELOG（本体・VS Code の `## Unreleased`）。
+- 計器の罠: `-Start` が HANDOFF を書き換えた後に Edit すると「modified since read」で弾かれる＝読み直してから書く（第963 と同じ）。1 度目の `-End` は §1 にこの便のブロックが無いまま回って継ぎ目の 3 本が赤＝ブロックを立ててから回し直した。
+
+- `-End p966 -DiffBase 0de2cc46e` ＝full **13004 / 0 / 2 / 13006**（前便末 13000 ＋ 6）（Lab `sessions/p966/end.log`）→ この docs commit。本体 `0d71a3f9e`。Core '+' 139 行／LILYPOND-REF 0／LILYSHARP-OWN 0（validator＝LP の規則ではない）。未 push 13＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。⚠️ 拡張は入れ直していない（Problems で見るには `tools\Deploy-Lsp.ps1` → Reload Window＝ユーザー）。
+判定（2026-10-23）: 残る候補は **§2 E ⑹ 開いた和音入力**（綴りの合意が先＝要ユーザー判断）だけ。grace の束・OMR の open・`@cross` は済み。次の島は無関係＝(c)・既定は続ける（ユーザーの指示待ち）。
+
+## 以下は第965セッションの経緯
+
 ### 1.1 第965セッション（2026-10-23・YT-DELL2）
 
 第964 と同じ会話の続き（ユーザー「続けて」）。`-Start p965`（開始 HEAD `80a83ccb1`・未 push 10・第963 を ARCHIVE へ・full 12998 / 0 / 2 / 13000）。次の候補のうち要ユーザー判断でない **続きのトリルの OPEN 0.040** を先に閉じ、単一譜の `@cross` は事実を揃えて質問にした（下）。作業場所は Lab `sessions/p965/`（LP の計器 `lp/bound.ly`＝TrillSpanner の left-bound-info と stencil を刷る・掃き `svg/`）。
@@ -135,20 +149,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 
 - `-End p965 -DiffBase 80a83ccb1` ＝full **12998 / 0 / 2 / 13000**（前便と同数＝新しい試験なし）（Lab `sessions/p965/end.log`）→ この docs commit。本体 `82031adc1`。Core '+' 13 行／LILYPOND-REF 0／LILYSHARP-OWN 0（1 行の修正＋註＝既存の aligned_side の REF の下）。未 push 11＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。
 判定（2026-10-23）: 次は **単一譜の `@cross` の警告（上の質問の答え待ち）** → §2 E ⑹（開いた和音入力＝綴りの合意が先・これも要ユーザー判断）。どちらもユーザーの答えが先＝答えが来たらその便で。会話は続けてよい（(c)）。
-
-## 以下は第964セッションの経緯
-
-### 1.1 第964セッション（2026-10-23・YT-DELL2）
-
-第963 と同じ会話の続き（ユーザー「続けて」＝grace の束の残り ⑶ `@chord`／`@figuredBass`／`@diagram` を grace へ）。`-Start p964`（開始 HEAD `732d466b3`・未 push 8・第962 を ARCHIVE へ・full 12961 / 0 / 2 / 12963）。作業場所は Lab `sessions/p964/`（LP の計器 `lp/probe.ly`〜`probe3.ly` と `lp/*.log`・probe `probe/gracechord.lys`・絵 `probe/out/gracechord.png`・毒 `poisons.ps1`・掃き `svg/`・台帳の記入 `ledger-fill.ps1`）。
-- **先に LP で測った（2.26.0・Lab `sessions/p964/lp/`）**: ⒜ **ChordNames の grace の名前は grace の列の X に立ち、名前どうしの rod（w + 0.5 + 0.5 + 0.1）が grace の列を通る**（GCA: c の C → grace の D 2.977882・D → e の E 2.977882・対照 GCB は 2.401796／1.938627・GCD 2 つ目の grace に名前＝1 つ目の間は素の 1.417939・GCG 主音符に名前なし＝grace → 主は素の 1.938627）／⒝ **FiguredBass の grace の数字は grace の列の X・間隔は動かない**（GFA/GFB）。⚠️ **LP は `<5>4 \grace { <6>8 }` で 5 を 6 の上に重ねて描く**（5 の終わりは主音符の瞬間＝grace の瞬間にはまだ鳴っている）。`<5>8. s16` で切ると s16 が列を作って間隔が変わる（GFD）＝双子では避けられない＝警告にした／⒞ **fret-diagram（TextScript）は grace でも全寸・格子の左は列の 1.689495 左＝普通の音符と同じ**（GDA/GDB）。`\textLengthOn`（Lily# の規則）では grace の列が箱で rod される＝前の頭の右 + 0.2・次の頭は格子の右 + 0.6（GDD/GDF）。
-- **閉じた `3bde0e276`**: ⑴ `GraceBodySupport.IsCarriedChordName`／`IsCarriedFiguredBass`／`IsCarriedDiagram` を drop list に＝LYS4020 が報告しない。`CollectChordNames`／`CollectFiguredBass` の `_graceDepth` の門を外し、`@diagram` は `CollectArticulations` の門に `IsCarriedDiagram`／⑵ **X**: `ChordNameEngraver.SymbolX`／`FiguredBassEngraver.GroupX` が `item.GraceTime` のとき `ElementCoordinator.LeadingGraceColumnHeadLeftX`（voice の measures だけから run を見つける＝`SpacingRules.LeadingGraceColumnOf`＝anchor は grace の後の最初の鳴る列・呼吸記号や clef 変更は飛ばす・`PlacedColumns` で置く）。`@diagram` は ArticulationEngraver の grace 枝のまま＝ただし FretFrame は Script の magstep を受けない（tab の字と同じ扱い）／⑶ **間隔**: `GraceColumnInfo` に `ChordName`（その列の ChordNameItem）・`MainHasChordName`・`FrameSpec` を刻む（collector の `_graceChordNames`／`_graceFrameSpecs` → `DeriveGraceColumns`・主音符の名前は collect の後に `StampGraceMainChordNames` で両写し（item の LeadingGrace と `_graceNotes`）に刻む）。`SpacingRules.GraceColumns` は gap／rod を配列に集めてから **`ApplyChordNameChain`**（名前→次の名前の列（grace か主）まで w + 1.1・複数 gap は等分）と **`ApplyDiagramRods`**（LILYSHARP-OWN＝第646 の横並びの規則を run の中へ）を掛ける。timing の層は `ApplyChordRowSpacing` に `gracePlace`（`LeadingGraceColumnPlace`＝列番号・列数・主までの自然長）: **前の名前 → grace の名前の rod は series spring の parts（approach＋その列までの gap）に `Spring.WithRangeRod`**＝LP の列どうしの rod そのもの。⚠️ 最初は series 全体に `EnsureMinDistance` して +0.1（approach の skyline の床が padding を 1 つ余計に持つ＝`Spring.EnsureMinDistance` の ⒝ の註のとおり）＝parts の rod に替えて exact。grace の名前の右への届きは w − d（d は自然長＝圧縮時は過剰予約＝LILYSHARP-OWN の註）。`ApplyFretFrameSpacing` も grace の箱を d だけ左へ寄せて読む／⑷ **双子**: `EmitTimedStream` に `graceRun`＝grace の項目は `\grace { s8 d8 }`（run の全列を譜の音価で・名前の無い列は s）を主の瞬間の前に 1 度書く（chordmode・figuremode とも）。afterGrace の run は書かずに警告（`\afterGrace` は主の項目を割る）。figures は「LP は前の数字を重ねる」警告／⑸ **MusicXML**: `ProcessGraceNotes` の note／chord の腕が `EmitGraceDirectionMarks`＝`<harmony>`／`<figured-bass>` を grace の `<note>` の前に。
-- **網**: 台帳 **20 点・全部 exact**（`chordname.grace.*` 9・`figbass.grace.*` 5・`diagram.grace.textlength.*` 6＝probes `grace-chordname.ly`／`grace-figuredbass.ly`／`grace-diagram.ly`・LpGeometryProbes GRCA〜GRDF・`RenderedGeometry.BassFigureBoxLeftToNoteheadAnchor` 新設）。⚠️ diagram の probe は `fonts.sans` を pin しないと svg backend で格子が 0.017 広がる（x・o は sans の字）。`GraceChordNameAndDiagramTests` 10 本（X・run の幅・2 つ目の grace・figures・diagram・双子 4・MusicXML）・`GraceBodyValidatorTests` 7 綴り。毒 3 本（drop list＝validator 5 赤／名前の鎖なし＝5 赤／figures が grace の列を無視＝3 赤）→ 戻して緑。掃き 1,015 冊 1,248 枚で **0**（本に grace の `@chord`／`@figuredBass`／`@diagram` は無い）。
-- 残り（⒝・小）: 2 声目の grace の名前は主声部の列で読む（`SymbolX` の ⒝）／afterGrace の run の名前は双子が書かない（警告）／`@diagram` だけの grace は MusicXML の `<frame>` に乗らない（`@chord` と同じ grace なら乗る）／grace の名前の幅は bundled の顔（tab の数字と同じ ⒝）。
-- docs: CHANGELOG（本体 `## Unreleased` 3 項・VS Code `## Unreleased` 1 項）・APPROXIMATIONS（OWN 270→272＝`ApplyDiagramRods`・`ApplyChordRowSpacing` の natural-length の註）・magic_constants 差分なし。
-
-- `-End p964 -DiffBase 732d466b3` ＝full **12998 / 0 / 2 / 13000**（前便末 12963 ＋ 37＝validator 7 ＋ GraceChordNameAndDiagram 10 ＋ 台帳 20）（Lab `sessions/p964/end.log`）→ この docs commit。本体 `3bde0e276`。Core '+' 776 行／LILYPOND-REF 6／LILYSHARP-OWN 2（横並びの図の rod・grace の名前の自然長）。台帳 1403 点・exact 1167・OPEN 0。未 push 9＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。⚠️ 拡張は入れ直していない（プレビューで見るには `tools\Deploy-Lsp.ps1` → Reload Window＝ユーザー）。
-判定（2026-10-23）: **grace の LYS4020 の残りはこれで尽きた**（`CarriedKinds` の 4 種に乗る注釈は全部 grace に載る・残るのは §2 U8 ⒞ の休符の部分連桁の模型と ⒝ の小さな残り）。次は 単一譜の `@cross` の警告（要ユーザー判断）→ §2 E ⑹（開いた和音入力＝綴りの合意が先）→ 続きのトリルの OPEN 0.040。次の一手は grace の文脈を使わない＝(c) 無関係の島＝既定は続ける。
 
 ## 2. 開いている作業
 
