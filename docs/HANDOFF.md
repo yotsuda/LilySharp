@@ -124,6 +124,19 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第957セッション（2026-10-22・YT-DELL2）
+
+第956 と同じ会話の続き（ユーザー「続けて」＝候補 B: grace の LYS4020 の残り）。`-Start p957`（開始 HEAD `0617c241f`・未 push 95・第955 を ARCHIVE へ）。作業場所は Lab `sessions/p957/`（棚卸しの probe `probe/drops.lys`＝各注釈を grace に書いて LYS4020 を数えた・目視 `probe/gg.lys`・掃き `svg/`）。
+- **実測の棚卸し（grace に載らない注釈）**: 13 件の LYS4020 のうち `@dead`・`@text`・`@harmonic` は載る。載らないのは **`@scoop`・`@plop`・`@bend(N)`（自前の装置）／`@pluck(p)`・TAB の `@hammerOn`・`@pullOff`・`@tap`（自前の字）／`@diagram`・`@chord(C)`・`@figuredBass(6)`（別 engraver・LP と照合可）／`@todo`（memo は LYS4026 で届くが頭の赤と予約は無い）／`@cross`**。⚠️ **`@cross` は x 符頭ではなく cross-staff**（`MeasureCollector.CollectCrossStaff`＝grand staff の反対の譜へ移す）＝GRAMMAR.md 2617 行の「@cross / @dead (x notehead)」は要点検（次便）。
+- **載せた＝自前の gesture 3 つ**（本体 commit）: `GraceBodySupport.IsCarriedGesture`（scoop／plop は ArticulationSyntax・`@bend(N)` は引数付きなので MusicMarkSyntax＝`AnnotationValues.Bend`）を drop list と collector の両方が読む。`ArticulationEngraver` の gesture 枝は `graceHeadLeft` と `GraceColumnAt` で grace 列の頭（`gc.HeadBox.Width`・和音は最高音の段＝第955 の規則）から・tab の grace は数字が列の上に中心＝`TabHeadCenterOffset` 無し（`SharedRenderer.TabGraceDigits`）で弦は `gc.Heads[0]` の Midi／StringNumber から。gesture 自体の大きさは変えない（fall と同じ・LP の general-grace-settings に相当物なし）。
+- **網**: `OwnGestureGeometryTests` に grace の 4 本（scoop／plop・bend-up 五線・bend-up tab）＋ `GraceBodyValidatorTests.AFallOnAGrace_IsDrawn_AndNotReported` に 3 行。毒 2 本＝drop list だけ忘れる: validator 3 赤／collector が落とす: 7 赤。**LYS4020 の probe は 13 → 9**。コーパスに grace の gesture を書く本は 0 冊（grep）＝掃きは形式上（結果は語りの末尾）。
+- 計器の罠: ⒜ `cmd /d /s /c "dotnet test --filter $var"` と変数で渡すと `""A|B""` が壊れて `'B""' is not recognized`＝filter は字面で書く（CLAUDE-OPERATIONS §1 の既知の罠の別の顔）／⒝ 先頭の grace の scoop は拍子記号の上に乗って見えない（gesture は何も予約しない＝自前の装置の既知の性質・main の音も同じ）。
+
+- `-End p957 -DiffBase 0617c241f` ＝full **12931 / 0 / 2 / 12933**（前便末 +7＝新しい網）（Lab `sessions/p957/end.log`）→ この docs commit。本体 `57c25c114`。掃き 1,248 枚で **0**（Lab `sessions/p957/svg/sweep.log`）。未 push 96＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。
+判定（2026-10-22）: grace の gesture は閉じた。次の候補（grace の LYS4020 の残り）＝⑴ `@todo`（memo の頭の赤と予約＝`docs/todo-memo-design.md` の規則を grace へ）・⑵ `@pluck`・TAB の H/P/T（自前の字＝`tabtech:` の経路を grace 列へ・同一性の網）・⑶ `@chord`／`@figuredBass`／`@diagram`（別 engraver・`@chord` と `@figuredBass` は LP と照合可）・⑷ GRAMMAR.md 2617 行の「@cross / @dead (x notehead)」の点検（`@cross` は cross-staff）。§2 E ⑹ 開いた和音入力は綴りの合意が先（要ユーザー判断）。
+
+## 以下は第956セッションの経緯
+
 ### 1.1 第956セッション（2026-10-22・YT-DELL2）
 
 第955 と同じ会話の続き（ユーザー「(1)」＝候補 ⑴ の束 → 裏取りの上で 3 択を提示 → ユーザー「A: 自前の装置の網＋棚の修正」）。`-Start p956`（開始 HEAD `ac4b98a59`・未 push 93・第954 を ARCHIVE へ）。作業場所は Lab `sessions/p956/`（probe `probe/own.lys`／`owntab.lys`＝SVG の primitive を読んだ）。
@@ -134,18 +147,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 
 - `-End p956 -DiffBase ac4b98a59` ＝full **12924 / 0 / 2 / 12926**（前便末 +8＝新しい網）（Lab `sessions/p956/end.log`）→ この docs commit。本体 `ae89aef0a`（Core の差は remark 8 行だけ）。未 push 94＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。
 判定（2026-10-22）: 自前の 3 装置に観測者が付き、§2 E ⑺ の stale は消えた。次の候補＝⑴ grace の LYS4020 の残り（`@pluck`・TAB 技法・`@diagram`・`@cross`・`@figuredBass`・`@chord`＝`@cross`／`@chord` は LP と照合できる）・⑵ §2 E ⑹ 開いた和音入力（綴りの合意が先＝要ユーザー判断）。台帳は名指しの床と決定済みだけ＝触らない。
-
-## 以下は第955セッションの経緯
-
-### 1.1 第955セッション（2026-10-22・YT-DELL2）
-
-第954 と同じ会話の続き（ユーザー「音楽的には、和音の fall は書けるほうがいいのかな」→ 提案「最高音の頭から 1 本」に「良い。着手して」）。`-Start p955`（開始 HEAD `736d0a336`・未 push 91・第953 を ARCHIVE へ）。作業場所は Lab `sessions/p955/`（目視の probe `probe/fall.lys`＝before／after の png・掃き `svg/`）。
-- **ユーザー決定（2026-10-22）＝和音の fall／doit は描く・最高音の頭から 1 本**。LP が描かないのは `Bend_engraver` が和音の 2 つめの頭の acknowledge で spanner を止める副作用（第947・Lab `sessions/p947/bendch.ly`）＝音楽的判断ではない（第751 の方針: 意味論は音楽的妥当性）。実譜の慣例はセクションの fall-off もピアノの和音も最高音から 1 本。
-- **直した**（本体 `d3da03c35`）: `ArticulationEngraver` の fall 枝＝和音は最高音の頭（`ChordHeadPositioning.CalculateOffsets` の反転ずれ込み）の ink 右から・その頭の段に吊る・付点はその頭の段に乗るときだけ左端に読む。grace 和音も同じ（`GraceColumnHeads.HeadOffsets`）。それまでは外側 2 音の中点（どの頭も無い高さ）だった。`GetStaffPosition` の ChordItem の枝（中点）は bend-up／scoop 等が今も読む＝残した。member の `<g c@fall>` も同じ 1 本（和音の gesture は 1 つ）。tab の和音は従来どおり先頭の音の弦（未変更）。LILYSHARP-OWN を fall 枝に置いた（OWN 263 → 264）。GRAMMAR.md の注釈一覧に 1 行。
-- **網**: `BendAfterGeometryTests.AChordsGestureLeavesItsTopHead`（4 行の theory＝素・上向き符尾の 2 度で最高音が反転した頭・付点が最高音の段に乗る・乗らない）＋ `AGraceChordsGestureHangsAtItsTopHead`（4 度＝中点との差 1 空間。⚠️ 2 度だと整数除算の中点が最高音と一致して毒が効かなかった）。毒 2 本＝中点に戻す: 4 赤・grace 1 赤。掃き 1,248 枚で **1 枚**（アシンメトリー `<b, e>@fall`＝曲線が 1 空間上がった・4 token）。棚卸し 2 枚再生成。
-- 計器の罠: ⒜ Edit ツールは bytes で戻した直後のファイルに当てられない＝毒は pwsh の `Replace`（hits==1 の門）で当てるほうが速い／⒝ grace の頭の `<text>` は `style="font-family…"` を x の前に持つ＝SVG を正規表現で読む網は `(?: style="[^"]*")?` を挟む／⒞ `-End` を §1 の語りを立てる前に回すと `HandoffArchiveContinuityTests` 3 本が赤（第955 が踏んだ＝順序は load-bearing・本体の網は緑のまま）。
-- `-End p955 -DiffBase 736d0a336` ＝full **12916 / 0 / 2 / 12918**（前便末 +5＝新しい網）（Lab `sessions/p955/end.log`）→ この docs commit。本体 `d3da03c35`。未 push 92＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。
-判定（2026-10-22）: 和音の fall は閉じた（ユーザー決定・最高音から 1 本）。次の候補＝⑴ `@pluck`・H/P/T・`@scoop`/`@plop`/`@bend`・§2 E ⑹⑺（要ユーザー判断）・⑵ 台帳は名指しの床と決定済みだけ＝触らない。
 
 ## 2. 開いている作業
 
