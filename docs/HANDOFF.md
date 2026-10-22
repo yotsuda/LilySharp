@@ -124,6 +124,18 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第960セッション（2026-10-22・YT-DELL2）
+
+第959 と同じ会話の続き（ユーザー「続けて」＝⑴ main の tab accent の 0.2575・⑷ GRAMMAR の `@cross`）。`-Start p960`（開始 HEAD `2eb9d493a`＝ユーザーが push し site の commit を足した後・未 push 0・第958 を ARCHIVE へ）。作業場所は Lab `sessions/p960/`（計器 `Zz960ProbeTests.cs.txt`・probe `probe/cross.lys`）。
+- **⑴ は名指しの床＝閉じた**: Lily# の 1.546850 ＝ ギター tab の数字「0」の ink 半高 **0.826850**（em 2.3 regular＝ユーザー決定 2026-10-01・`TabConstants.ReducedFretEm`）＋ accent の reach 0.42 ＋ padding 0.2×1.5＝6 桁で一致。LP の 1.289309 は同じ式で数字の半高が 0.569309（TabNoteHead −2）＝差 0.257541 は**決めた数字の大きさ**そのもの。第694 の bass tab の一致は符尾が支えを決める形だった。`TabGraceScriptTests` の remark に式を置いた。
+- **⑷ GRAMMAR の `@cross`**: `c4@cross` は x 符頭ではなく（probe＝普通の頭 U+E0FE・`@dead`／`@notehead(cross)` が U+E10A）、grand staff で**反対の譜へ移す** cross-staff（`CollectCrossStaff`・`CrossStaffTests`）。GRAMMAR.md 2617 行と GRAMMAR_FOR_LLM.md 467 行の「@cross / @dead (x notehead)」を直した。⚠️ cross-staff は GRAMMAR に節が無い（単一譜では黙って何もしない＝警告の候補）。
+- Core は触っていない＝掃き・棚卸し・毒なし（docs と remark の便）。
+
+- `-End p960 -DiffBase 2eb9d493a` ＝full **12941 / 0 / 2 / 12943**（前便末と同数）（Lab `sessions/p960/end.log`）→ この docs commit。本体 `1ef488bed`（test の remark と GRAMMAR 2 枚）。未 push 1＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。
+判定（2026-10-22）: grace の束（第957〜960）で残るのは ⑵ `@todo` を grace へ（`docs/todo-memo-design.md` の規則）・⑶ `@chord`／`@figuredBass`／`@diagram` を grace へ（別 engraver・`@chord`／`@figuredBass` は LP と照合可）。ほかに ⑷ 単一譜の `@cross` が黙って何もしない＝警告の候補（要ユーザー判断）・§2 E ⑹ 開いた和音入力（綴りの合意が先）。
+
+## 以下は第959セッションの経緯
+
 ### 1.1 第959セッション（2026-10-22・YT-DELL2）
 
 第958 と同じ会話の続き（ユーザー「続けて」＝⑷ tab の grace の script を LP の双子で照合）。`-Start p959`（開始 HEAD `8dee184b7`・未 push 99・第957 を ARCHIVE へ）。作業場所は Lab `sessions/p959/`（LP の dump `probe/tabgrace.ly`／`.log`）。
@@ -134,19 +146,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 
 - `-End p959 -DiffBase 8dee184b7` ＝full **12941 / 0 / 2 / 12943**（前便末 +1＝網の組み替え）（Lab `sessions/p959/end.log`）→ この docs commit。本体 `483264535`（Core の差は 8 行）。未 push 100＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。
 判定（2026-10-22）: tab の grace の script は LP の側と高さになった（grace の accent 3 桁一致）。次の候補＝⑴ **main の tab accent のギターの 0.2575**（`e@accent` 1.546850 vs LP 1.289309＝LP の dump は Lab `sessions/p959/probe/tabgrace.log` にある・Lily# の tab 枝の支え＝符尾の先か数字の高さを LP と並べる）・⑵ `@todo` を grace へ・⑶ `@chord`／`@figuredBass`／`@diagram` を grace へ・⑷ GRAMMAR.md の `@cross` 行の点検。§2 E ⑹ 開いた和音入力は綴りの合意が先（要ユーザー判断）。
-
-## 以下は第958セッションの経緯
-
-### 1.1 第958セッション（2026-10-22・YT-DELL2）
-
-第957 と同じ会話の続き（ユーザー「続けて」＝grace の残り ⑵ `@pluck`・TAB の H/P/T）。`-Start p958`（開始 HEAD `8c825d546`・未 push 97・第956 を ARCHIVE へ）。作業場所は Lab `sessions/p958/`（probe `probe/tl.lys`＝五線と tab の grace に H／p／accent・掃き `svg/`）。
-- **載せた＝TAB の技法の字 4 つ**（本体 commit）: `GraceBodySupport.IsCarriedTabTechnique`（`@hammerOn`/`@pullOff`/`@tap` は ArticulationSyntax・`@pluck(p)` は引数付きの Mark＝`AnnotationValues.Pluck`）を drop list と collector が読む。五線の grace では既存の Script の grace 経路（第916）がそのまま置く＝grace 頭の中心・字は自前の寸（`TabTechniqueEm` 1.5）のまま（LP の general-grace-settings に StrokeFinger は無い＝寸を変えない根拠は fall と同じ）。**字の予約箱も寸 0 に**（五線の grace 経路は箱だけ −3 に縮めていた＝描く字と予約が食い違っていた）。
-- **ついでに見つけて直した＝tab の grace の script は全部 main の数字の上に full 寸で立っていた**（grace item の列 offset は main のもの）: tab 枝で grace は `graceHeadLeft` を列に（grace の数字は列の上に中心＝`TabHeadCenterOffset` 無し・`SharedRenderer.TabGraceDigits`）・数字の高さと幅は `TabConstants.GraceFretScale`・符尾の支えは無し（tab の grace に符尾は無い）・script の寸は `GrobFontSize.StepOf(item, Script)`＝−3（五線の grace 経路と同じ・字は 0）。
-- **網**: `OwnGestureGeometryTests` に字の 4 本（五線: grace 頭の中心・H は 3.83 下／p は 3.46 下・寸 1.5／tab: grace 数字の中心・最上弦の 0.42／0.65 上）＋ `TabGraceScriptTests`（tab の grace の accent＝数字の中心・寸 −3・最上弦の上＝LP の双子は候補）＋ `GraceBodyValidatorTests` 4 行。毒 3 本＝drop list: 4 赤／collector: 8 赤／tab の列: 3 赤。
-- 計器の罠: ⒜ `cmd … --filter $var` は壊れる（第957 ⒜）＝関数の中でも字面で書いた／⒝ tab だけの頁の最上弦は 0.100 の線の min（五線つきの頁の「15 より下」は tab だけの頁で外れた）。
-
-- `-End p958 -DiffBase 8c825d546` ＝full **12940 / 0 / 2 / 12942**（前便末 +9＝新しい網）（Lab `sessions/p958/end.log`）→ この docs commit。本体 `dc6283b57`。掃き 1,248 枚で **0**（tab の grace に script を書く本もコーパスに無い・Lab `sessions/p958/svg/sweep.log`）。未 push 98＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。
-判定（2026-10-22）: grace の TAB の字は閉じた・tab の grace の script 全部の列と寸も直った。次の候補（grace の LYS4020 の残り）＝⑴ `@todo`（memo の頭の赤と予約を grace へ）・⑵ `@chord`／`@figuredBass`／`@diagram`（別 engraver・`@chord` と `@figuredBass` は LP と照合可）・⑶ GRAMMAR.md 2617 行の「@cross / @dead (x notehead)」の点検（`@cross` は cross-staff）・⑷ tab の grace の script を LP の双子で照合（`TabGraceScriptTests` は同一性＝台帳の点にできる）。§2 E ⑹ 開いた和音入力は綴りの合意が先（要ユーザー判断）。
 
 ## 2. 開いている作業
 

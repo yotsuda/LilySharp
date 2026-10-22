@@ -160,6 +160,19 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第958セッションの経緯
+
+### 1.1 第958セッション（2026-10-22・YT-DELL2）
+
+第957 と同じ会話の続き（ユーザー「続けて」＝grace の残り ⑵ `@pluck`・TAB の H/P/T）。`-Start p958`（開始 HEAD `8c825d546`・未 push 97・第956 を ARCHIVE へ）。作業場所は Lab `sessions/p958/`（probe `probe/tl.lys`＝五線と tab の grace に H／p／accent・掃き `svg/`）。
+- **載せた＝TAB の技法の字 4 つ**（本体 commit）: `GraceBodySupport.IsCarriedTabTechnique`（`@hammerOn`/`@pullOff`/`@tap` は ArticulationSyntax・`@pluck(p)` は引数付きの Mark＝`AnnotationValues.Pluck`）を drop list と collector が読む。五線の grace では既存の Script の grace 経路（第916）がそのまま置く＝grace 頭の中心・字は自前の寸（`TabTechniqueEm` 1.5）のまま（LP の general-grace-settings に StrokeFinger は無い＝寸を変えない根拠は fall と同じ）。**字の予約箱も寸 0 に**（五線の grace 経路は箱だけ −3 に縮めていた＝描く字と予約が食い違っていた）。
+- **ついでに見つけて直した＝tab の grace の script は全部 main の数字の上に full 寸で立っていた**（grace item の列 offset は main のもの）: tab 枝で grace は `graceHeadLeft` を列に（grace の数字は列の上に中心＝`TabHeadCenterOffset` 無し・`SharedRenderer.TabGraceDigits`）・数字の高さと幅は `TabConstants.GraceFretScale`・符尾の支えは無し（tab の grace に符尾は無い）・script の寸は `GrobFontSize.StepOf(item, Script)`＝−3（五線の grace 経路と同じ・字は 0）。
+- **網**: `OwnGestureGeometryTests` に字の 4 本（五線: grace 頭の中心・H は 3.83 下／p は 3.46 下・寸 1.5／tab: grace 数字の中心・最上弦の 0.42／0.65 上）＋ `TabGraceScriptTests`（tab の grace の accent＝数字の中心・寸 −3・最上弦の上＝LP の双子は候補）＋ `GraceBodyValidatorTests` 4 行。毒 3 本＝drop list: 4 赤／collector: 8 赤／tab の列: 3 赤。
+- 計器の罠: ⒜ `cmd … --filter $var` は壊れる（第957 ⒜）＝関数の中でも字面で書いた／⒝ tab だけの頁の最上弦は 0.100 の線の min（五線つきの頁の「15 より下」は tab だけの頁で外れた）。
+
+- `-End p958 -DiffBase 8c825d546` ＝full **12940 / 0 / 2 / 12942**（前便末 +9＝新しい網）（Lab `sessions/p958/end.log`）→ この docs commit。本体 `dc6283b57`。掃き 1,248 枚で **0**（tab の grace に script を書く本もコーパスに無い・Lab `sessions/p958/svg/sweep.log`）。未 push 98＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。
+判定（2026-10-22）: grace の TAB の字は閉じた・tab の grace の script 全部の列と寸も直った。次の候補（grace の LYS4020 の残り）＝⑴ `@todo`（memo の頭の赤と予約を grace へ）・⑵ `@chord`／`@figuredBass`／`@diagram`（別 engraver・`@chord` と `@figuredBass` は LP と照合可）・⑶ GRAMMAR.md 2617 行の「@cross / @dead (x notehead)」の点検（`@cross` は cross-staff）・⑷ tab の grace の script を LP の双子で照合（`TabGraceScriptTests` は同一性＝台帳の点にできる）。§2 E ⑹ 開いた和音入力は綴りの合意が先（要ユーザー判断）。
+
 ## 以下は第957セッションの経緯
 
 ### 1.1 第957セッション（2026-10-22・YT-DELL2）
