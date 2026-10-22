@@ -124,23 +124,24 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第952セッション（2026-10-22・YT-DELL2）
+
+第951 と同じ会話の続き（ユーザー「1」＝第951 の候補 ⑴ 加線を五線の skyline に）。`-Start p952`（開始 HEAD `8f05d9b41`・未 push 85・第950 を ARCHIVE へ）。作業場所は Lab `sessions/p952/`（LP の試料は `no.ly`）。
+- ⚠️ **第951 の見立ては誤りだった**: Lily# の五線の skyline は加線を**持っている**（`SkylineBuilder.AddNoteBoxToSkylines`＝頭の幅の 0.25 ずつ外へ・太さ 0.2）。描画側（`SharedRenderer.DrawPlannedLedgers`）を見て「skyline に無い」と書いたのは layout 側を読まなかったため。⇒ ⑴ の「加線を skyline に入れる」設計は**不要**。
+- **本当の原因＝ottava が grace の run を半分しか動かしていなかった**（`66c00e7de`）: `OttavaTransposer` は覆う grace の**item** を 1 オクターブ動かすが、主の item の `LeadingGrace`（間隔が読む `SpacingRules.GraceNotesOf`）と score の grace 群（`StaffAccidentals.SyncGraceNotes` は臨時記号しか写さない）は書いた位置のまま＝`c'''4 \grace { \ottava #1 d'''16 } e'''4` は d'' として描かれ d'''（加線つき）として間隔が取られた＝c→grace 2.40／grace→main 1.40（LP は d'' の grace と同じ 2.117729／1.938627＝`no.ly` NOA〜NOE）。grace が 0.28 右に立ったので「8va」の左端が c''' の加線の端に 0.03 しか重ならなかった＝これが `ottava.grace.after-high-note.staff-to-line` −0.2414 の全部。`Shift` が `LeadingGrace` を主の item と一緒に動かし（run は主の item と同じ onset）、`SyncGraceNotes` が位置も写すようにした。
+- **網**: 括弧の高さ −0.2414 → −0.000369（ラベルの bold-italic の輪郭が加線の端に乗る分＝文字の族の小さな項・why に名前）。台帳 2 点（`ottava.grace.after-high-note.{high-to-grace,grace-to-main}`）一致。毒 2 本＝`LeadingGrace` を動かさない 3 赤・群の位置を写さない 3 赤。掃き 1,248 枚で 0（grace で始まる ottava を書く本は無い）。棚卸しは差なし。計器: 使い捨ての `Zz952ProbeTests`（collect した item と `LeadingGrace`・群の位置を刷る）で原因を確かめて消した。
+- `-End p952 -DiffBase 8f05d9b41` ＝full **12911 / 0 / 2 / 12913**（前便末 +2）（Lab `sessions/p952/end.log`）→ この docs commit。本体 `66c00e7de`。未 push 86＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。
+判定（2026-10-22）: 第951 の最大の OPEN は閉じた（原因は加線でなく ottava と grace の run の食い違い）。台帳の OPEN は残り 7（いずれも 0.14 以下）。次の候補＝⑴ 残りの OPEN 7 点（`lyrics.row.between-staves.verse-hole.*` 0.136・`slur.beamed.reserved-text` −0.062 ほか＝第951 の `triage.tsv`）・⑵ 和音の fall（要ユーザー判断）・⑶ `@pluck`・H/P/T・`@scoop`/`@plop`/`@bend`・§2 E ⑹⑺（要ユーザー判断）。
+
+## 以下は第951セッションの経緯
+
 ### 1.1 第951セッション（2026-10-22・YT-DELL2）
 
 第950 と同じ会話の続き（ユーザー「3」＝第950 の候補 ⑶ 台帳の残差の点検）。`-Start p951`（開始 HEAD `6cca593f9`・未 push 83・第949 を ARCHIVE へ）。作業場所は Lab `sessions/p951/`（仕分け表 `triage.tsv`・LP の試料 `sp.ly`・`vag.ly`・`os.ly`）。
 - **仕分け**: |residual| > 1e-3 の 101 点を why の語で 3 つに分けた（`triage.tsv`）＝**決定済み 43**（ユーザー決定・宣言した逸脱・Lily# 自前＝例 `ottava.x.line-start-to-notehead` 2.71 は「8va」の綴り・`barnumber.rows-only` 2.6 は帯・tab の uniformBeamedLength）／**説明済み 50**（原因が名指されている＝例 grace の連桁の符尾 12 点 −0.192 と全大きさの膝 −0.24 は「符尾を梁の線の中心まで描く／LP の Stem の extent は面まで」＝梁が覆うので見える差なし・計器の定義の差）／**OPEN 8**。OPEN の最大は `ottava.grace.after-high-note` −0.2414。
-- **その原因を突き止めた（未移植）**: LP が届いているのは前の c''' の頭ではなく**その加線**＝LedgerLineSpanner は inside-staff の grob で、五線の縦の skyline に加線が自分の高さ（位置/2＋太さ 0.2 の半分＝4.1）と自分の幅（頭の幅の 0.25 ずつ外へ＝頭の右から 0.326）で入る＝ラベルの左端の下に来る。**outside-staff の pass がそれをよける**（outside-staff-priority ##f で 4.887332＝VGE の高さ・VerticalAxisGroup の dump に 4.1 の建物が 9.902729 まで・shorten-pair を −0.80→−0.40 と動かすと高さがラベルの下の輪郭に沿って滑らかに下がり、加線の端を越えて床に着く）。**Lily# の五線の skyline（`SkylineBuilder`）は加線を持たない**＝加線は描画時に `SharedRenderer.DrawPlannedLedgers` が計画して描くだけ。台帳の why を「unexplained」から名指しに更新（`584bd2366`）。⚠️ 移植は**加線の計画（隣の列どうしの短縮・臨時記号での短縮）を layout 時の skyline の種にする**こと＝加線のある音の脇の outside-staff の grob すべてに効く（ottava だけでない）＝頁が動く見込み・設計を要する。
+- **その原因を突き止めた（未移植）**: LP が届いているのは前の c''' の頭ではなく**その加線**＝LedgerLineSpanner は inside-staff の grob で、五線の縦の skyline に加線が自分の高さ（位置/2＋太さ 0.2 の半分＝4.1）と自分の幅（頭の幅の 0.25 ずつ外へ＝頭の右から 0.326）で入る＝ラベルの左端の下に来る。**outside-staff の pass がそれをよける**（outside-staff-priority ##f で 4.887332＝VGE の高さ・VerticalAxisGroup の dump に 4.1 の建物が 9.902729 まで・shorten-pair を −0.80→−0.40 と動かすと高さがラベルの下の輪郭に沿って滑らかに下がり、加線の端を越えて床に着く）。~~Lily# の五線の skyline（`SkylineBuilder`）は加線を持たない~~＝**誤り（第952 が訂正）**: `SkylineBuilder.AddNoteBoxToSkylines` が加線を入れている。本当の原因は ottava が grace の run の間隔を動かしていなかったこと（第952）。台帳の why を「unexplained」から名指しに更新（`584bd2366`）。⚠️ 移植は**加線の計画（隣の列どうしの短縮・臨時記号での短縮）を layout 時の skyline の種にする**こと＝加線のある音の脇の outside-staff の grob すべてに効く（ottava だけでない）＝頁が動く見込み・設計を要する。
 - `-End p951 -DiffBase 6cca593f9` ＝full **12909 / 0 / 2 / 12911**（前便末と同じ＝why の更新だけ）（Lab `sessions/p951/end.log`）→ この docs commit。本体 `584bd2366`。未 push 84＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。
 判定（2026-10-22）: 台帳の大きな残差は決定済みか説明済みで、未解決は 8 点。うち最大の原因は「五線の skyline に加線が無い」＝一般の欠陥。次の候補＝⑴ **加線を五線の skyline に入れる**（`DrawPlannedLedgers` の計画を純関数にして `SkylineBuilder` の種に・掃きで動く頁を LP と照合）・⑵ 和音の fall（要ユーザー判断）・⑶ `@pluck`・H/P/T・`@scoop`/`@plop`/`@bend`・§2 E ⑹⑺（要ユーザー判断）。
-
-## 以下は第950セッションの経緯
-
-### 1.1 第950セッション（2026-10-22・YT-DELL2）
-
-第949 と同じ会話の続き（ユーザー「2」＝第949 の候補 ⑵ 台帳 `grace.voice-two.bar-opening` の PENDING）。`-Start p950`（開始 HEAD `6ecf9c7e2`・未 push 81・第948 を ARCHIVE へ）。作業場所は Lab `sessions/p950/`（LP の試料は `open.ly`）。
-- **小節線の光学補正が先頭の grace の自分の符尾を読む**（`bc4c4f5c4`）: LP の小節線は下向きの符尾を、その pure extent のうち小節線が覆う長さで補正する（staff-spacing.cc optical_correction）＝grace の列なら **grace の Stem**（grace の頭の付け所・grace の符尾の規則）。`SpacingRules.LeadGraceOpticalCorrection` は普通の大きさの代役（`ApproachColumn`）の符尾を読んでいた＝**第933 が approach の帯で直したのと同じ誤り**が小節線の補正に残っていた。下の声部の grace d'' が小節頭で 0.005861 広く、b' は 0.003281 狭かった。`GraceStemBand`（最初の grace）を読むように直し、算術は `DownStemOpticalCorrection` として `StaffSpacingOpticalCorrection` と共有。
-- **台帳の唯一の PENDING が閉じた**: `grace.voice-two.bar-opening`（第726 から residual +0.005861・why "PENDING"）＝1.5e-8 で一致。対照と形 7 点（`grace.voice-two.bar-opening.*`＝probe `grace-voice-two-stem.ly` GOB〜GOH）: 元から一致の対照 3（符尾上向き・主の音・五線の下の grace）＋形 4（16 分・連桁・4 分・中央線）全部一致。毒 2 本＝代役の符尾 5 赤・位置を間として読む 5 赤。掃き 1,248 枚で 0。棚卸しは差なし。⚠️ 計器の罠: 台帳を行番号で書き換えるとき `[Array]::IndexOf` は 0 始まり・`Update-LinesInFile` は 1 始まり＝1 度 `lilypond` の行を潰した（git diff で確かめて直した）。
-- `-End p950 -DiffBase 6ecf9c7e2` ＝full **12909 / 0 / 2 / 12911**（前便末 +7）（Lab `sessions/p950/end.log`）→ この docs commit。本体 `bc4c4f5c4`。未 push 82＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。
-判定（2026-10-22）: 台帳に説明の無い残差は 0。次の候補＝⑴ 和音の fall を描くか（LP は描かない＝要ユーザー判断）・⑵ `@pluck`・H/P/T（Lily# 自前の字＝同一性の網で）・`@scoop`/`@plop`/`@bend`・⑶ OPEN の残差の点検（台帳の "OPEN:" を数えて LP と照合できるものから）・§2 E ⑹⑺（要ユーザー判断）。
 
 ## 2. 開いている作業
 

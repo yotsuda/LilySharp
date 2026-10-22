@@ -160,6 +160,16 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第950セッションの経緯
+
+### 1.1 第950セッション（2026-10-22・YT-DELL2）
+
+第949 と同じ会話の続き（ユーザー「2」＝第949 の候補 ⑵ 台帳 `grace.voice-two.bar-opening` の PENDING）。`-Start p950`（開始 HEAD `6ecf9c7e2`・未 push 81・第948 を ARCHIVE へ）。作業場所は Lab `sessions/p950/`（LP の試料は `open.ly`）。
+- **小節線の光学補正が先頭の grace の自分の符尾を読む**（`bc4c4f5c4`）: LP の小節線は下向きの符尾を、その pure extent のうち小節線が覆う長さで補正する（staff-spacing.cc optical_correction）＝grace の列なら **grace の Stem**（grace の頭の付け所・grace の符尾の規則）。`SpacingRules.LeadGraceOpticalCorrection` は普通の大きさの代役（`ApproachColumn`）の符尾を読んでいた＝**第933 が approach の帯で直したのと同じ誤り**が小節線の補正に残っていた。下の声部の grace d'' が小節頭で 0.005861 広く、b' は 0.003281 狭かった。`GraceStemBand`（最初の grace）を読むように直し、算術は `DownStemOpticalCorrection` として `StaffSpacingOpticalCorrection` と共有。
+- **台帳の唯一の PENDING が閉じた**: `grace.voice-two.bar-opening`（第726 から residual +0.005861・why "PENDING"）＝1.5e-8 で一致。対照と形 7 点（`grace.voice-two.bar-opening.*`＝probe `grace-voice-two-stem.ly` GOB〜GOH）: 元から一致の対照 3（符尾上向き・主の音・五線の下の grace）＋形 4（16 分・連桁・4 分・中央線）全部一致。毒 2 本＝代役の符尾 5 赤・位置を間として読む 5 赤。掃き 1,248 枚で 0。棚卸しは差なし。⚠️ 計器の罠: 台帳を行番号で書き換えるとき `[Array]::IndexOf` は 0 始まり・`Update-LinesInFile` は 1 始まり＝1 度 `lilypond` の行を潰した（git diff で確かめて直した）。
+- `-End p950 -DiffBase 6ecf9c7e2` ＝full **12909 / 0 / 2 / 12911**（前便末 +7）（Lab `sessions/p950/end.log`）→ この docs commit。本体 `bc4c4f5c4`。未 push 82＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。
+判定（2026-10-22）: 台帳に説明の無い残差は 0。次の候補＝⑴ 和音の fall を描くか（LP は描かない＝要ユーザー判断）・⑵ `@pluck`・H/P/T（Lily# 自前の字＝同一性の網で）・`@scoop`/`@plop`/`@bend`・⑶ OPEN の残差の点検（台帳の "OPEN:" を数えて LP と照合できるものから）・§2 E ⑹⑺（要ユーザー判断）。
+
 ## 以下は第949セッションの経緯
 
 ### 1.1 第949セッション（2026-10-22・YT-DELL2）
