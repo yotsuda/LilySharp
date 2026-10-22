@@ -126,6 +126,19 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第963セッション（2026-10-23・YT-DELL2）
+
+第962 と同じ会話の続き（ユーザー「続けて」＝grace の束の残り ⑵ `@todo`）。`-Start p963`（開始 HEAD `3ca893daf`・未 push 6・第961 を ARCHIVE へ・full 12952 / 0 / 2 / 12954）。作業場所は Lab `sessions/p963/`（probe `probe/gracetodo.lys`・絵 `probe/out/gracetodo.png`・毒 `poisons.ps1`・掃き `svg/`）。
+- **grace の `@todo`＝閉じた `7886aa026`**: ⑴ `MeasureBuilder.NarrowToGraceTime` が note／chord／rest の `TodoKey`・`TodoMemo`・`TodoBelow`・`TodoSideWritten` を残す（白リストに 4 項目）／⑵ `GraceBodySupport.IsCarriedTodo`（`TodoAnnotation.Of` が非 null）を drop list に＝LYS4020 が報告しない／⑶ 描画 `SharedRenderer.DrawTodoMarks` と予約 `TodoMemoBand.BoxesFor` の両方が `item.GraceTime` のとき **`SharedRenderer.GraceTodoInkBox`** で輪の箱を取る＝`ElementCoordinator.GraceColumnAt` の列（`HeadBox`＝grace フォントの頭の箱・和音は `GraceColumnHeads.HeadOffsets`・休符は中立位置＋shift の実寸）と `HeadLeftX`。voice の衝突表は譜ごとに 1 度（`SpacingRules.VoiceCollisionShiftsOf(staff)`）。memo の側は従来どおり（下の声部は下・`.down`）。⚠️ tab の grace の輪は数字ではなく五線の箱（`TabTodoInkBox` は実寸の数字を読む・本には無い）。
+- **網**: `TodoCalloutTests.AMarkOnAGraceNote_RingsItsSmallHead_AndSetsItsMemo` 5 綴り（grace・grace 和音・`.down`・acciaccatura の 1 つ目・afterGrace）＝輪 2 つ・grace の輪は実寸の頭より 0.2〜0.5 低い（和音は 0.4〜1.0 高い）・grace の輪は主音符の左・memo と leader（`.down` は下）・輸出に輪も memo も無い／`GraceBodyValidatorTests.ATodoOnAGrace_IsNotReported_AndTheExportDrawsNothingForIt` 4 綴り（警告 0・`data-todo` を伏せた輸出が対照と同一）。毒 3 本（drop list を忘れる＝validator 4 赤／narrowing が `TodoKey` を落とす＝callout 4 赤／`GraceTodoInkBox` が null＝callout 5 赤）→ 戻して緑。掃き 1,015 冊 1,248 枚で **0**（輸出は印を描かない・本に grace の `@todo` は無い）。
+- 計器の罠: ⒜ 輪の高さは手描きの輪の揺れで「頭の高さ×magstep＋余白」に 0.1 で合わない＝実寸の輪との差（−0.2〜−0.5）で読む／⒝ `LiveRender.Svg` の輸出にも `data-todo` の印は乗る（ink は無い）＝同一性の網は属性を伏せる／⒞ 掃きの最中に別の console が busy だと `execute_command` が 4 つ目の console を立てる（害は無い）。
+- docs: CHANGELOG（本体 `## Unreleased`・VS Code は `## Unreleased` を新設）・`docs/todo-memo-design.md` §1 に grace の段落・APPROXIMATIONS（OWN +2＝`IsCarriedTodo`・`GraceTodoInkBox`）。
+
+- `-End p963 -DiffBase 3ca893daf` ＝full **12961 / 0 / 2 / 12963**（前便末 12952 ＋ 9＝callout 5 ＋ validator 4）（Lab `sessions/p963/end.log`）→ この docs commit。本体 `7886aa026`。Core '+' 121 行／LILYPOND-REF 0／LILYSHARP-OWN 2（編集者の印＝LP に対応物なし）。未 push 7＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。⚠️ 拡張は入れ直していない（プレビューで見るには `tools\Deploy-Lsp.ps1` → Reload Window＝ユーザー）。
+判定（2026-10-23）: grace の LYS4020 の残りは **⑶ `@chord`／`@figuredBass`／`@diagram` を grace へ**（別 engraver・`@chord`／`@figuredBass` は LP と照合可）だけ → 単一譜の `@cross` の警告（要ユーザー判断）→ §2 E ⑹ → 続きのトリルの OPEN 0.040。次の一手は grace の文脈を使う＝(a) この会話で続ける。
+
+## 以下は第962セッションの経緯
+
 ### 1.1 第962セッション（2026-10-23・YT-DELL2）
 
 新しい会話（ユーザー「HANDOFF.md を読んで作業に着手して」）。`-Start p962`（開始 HEAD `291796c17`・未 push 4・第960 を ARCHIVE へ・full 12949 / 0 / 2 / 12951）。§0 の規則どおり `REQUESTS.md` の open＝**#3** に着手。作業場所は Lab `sessions/p962/`（再現 `probe/portato.lys`・絵 `probe/before|after/portato.png`・掃き `svg/`・返事 `omr/lilysharp-reply-2026-10-23-3.md`）。
@@ -136,22 +149,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 
 - `-End p962 -DiffBase 291796c17` ＝full **12952 / 0 / 2 / 12954**（前便末 12949 ＋ 3＝`ScriptOverOtherVoiceRestTests`）（Lab `sessions/p962/end.log`）→ この docs commit。本体 `480fa6fda`（engraver・網・棚卸し・CHANGELOG）。Core '+' 127 行／LILYPOND-REF 0／LILYSHARP-OWN 2（独自の規則なので REF は要らない＝LP の出典は OWN の departs from に在る）。未 push 5＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。OMR 側の `REQUESTS.md` の #3 の状態列は `fixed 480fa6fda` に書き換えた（Omr repo の commit は OMR 側の便に任せる）。**動画 16・17 の撮影（§1.0 ⒜）は手を付けていない**＝VS Code の画面収録（Screencast Mode・Copilot のサインイン・mp4 の書き出し）は人の手の作業で、この便では撮れない。
 判定（2026-10-23）: REQUESTS の open は 0。次便は **grace の束の残り**（⑵ `@todo`・⑶ `@chord`／`@figuredBass`／`@diagram`・§2 U8）→ 単一譜の `@cross` の警告（要ユーザー判断）→ §2 E ⑹ → 続きのトリルの OPEN 0.040。会話は続けてよい（(c) 次の島はこの便と無関係＝差は小さい・既定は続ける）。
-
-## 以下は第961セッションの経緯
-
-### 1.1 第961セッション（2026-10-23・YT-DELL2）
-
-第960 と同じ会話の続き（ユーザー「`C:\MyProj\LilySharp-Omr\docs\repro\REQUESTS.md` の open を見て」→ 途中で「HANDOFF に一点足して＝open があれば優先して着手」「Pages の OMR デモ動画（SHOTLIST 16・17）の撮影もタスクに」）。`-Start p961`（開始 HEAD `61990b13c`・未 push 2・第959 を ARCHIVE へ）。作業場所は Lab `sessions/p961/`（再現 `probe/`・LP の dump `probe/ly/dump.ly`／`dump2.ly`・返事 `omr/lilysharp-reply-2026-10-23.md`・掃き `svg/`）。
-- **§0 に規則を足した**（REQUESTS.md の open を優先）・**§1.0 ⒜ に動画の撮影を載せた**（ユーザー指示 2 件）。
-- **REQUESTS #1（段をまたいだトリルの続きで次の線が 1 段外へ）＝fixed**（本体 commit）: 原因は LP の **`adjust-on-neighbor`**（終わるトリルは `right-neighbor`＝同じ音符から始まる次のトリルの「tr」の真の左端の手前で止まる・scheme-engravers.scm:1821-1822・line-spanner.cc:211-225）が無く、波の最後の要素（幅 1.0）が位相しだいで次の「tr」の下まで走って outside-staff が 0.62 積んでいた。`TrillSpannerEngraver`: 全 spanner の「tr」の原点を先に取り（`GlyphOrigin`）、stop item で始まる spanner があれば `EndX = min(列の左端, その「tr」の `Outline.Left`)`。
-- **#2（続きの頭の「tr」）＝fixed・刷る**（LP どおり）: `calc_bound_info` は `left-broken` を `left` に **append** する（:128-135）ので `text` は残り、`end-on-note` で続きが最初に覆う音符列の中心（`FirstColumnCentre`）。OMR 側を合わせてほしい旨を返事に書いた。
-- **LP の実測**（`\paper { page-post-process }` で TrillSpanner の X/Y/skyline/side-support-elements を dump）: 1 本目 4.045・続き 4.545・2 本目 5.545。Lily# は 4.045／**4.505**／5.545 ＝ ⚠️ **OPEN 0.040（続き）**: LP は続きの「tr」の板（線の 1.0 下）を g'4 に対して数えていない形（4.545 ＝ b' の頭 4.045 ＋ 0.5）なのに dump の skyline は板を持つ＝機構は未特定（`TrillSpannerTests.ChainedTrills_OverABreak…` に記録）。
-- **網**: `TrillSpannerTests` に 2 本＝高さと「tr」の中心（RenderedGeometry・3 桁）＋ 7 綴りの theory「終わる波は次の「tr」の真の左端を越えない」（SVG）。毒＝neighbour を外す: theory 4/7 赤（高さの網は位相の都合で緑＝観測者は theory）／続きの「tr」を消す: 高さの網 1 赤（tr が 2 つ）。掃き 1,248 枚で **0**（段をまたぐトリルも連鎖するトリルも本に無い）。
-- **#4 サイト＝fixed**（`scan-body.html` に OMR の HTML を 3 か所・SHOTLIST 16・17）・**#5＝確認・異論なし**。**#3（下の声部の `.up` のポルタートが上の声部の休符に重なる・LP も同じ絵・オーナー判断で直す）は open＝次便 p962 で着手**（別の声部の休符を script の障害物に数える＝LILYSHARP-OWN の設計）。CHANGELOG `## Unreleased` を立て、組版の行に `[engraving]` 印（OMR の依頼）。
-- 計器の罠: ⒜ LP の svg は Edge headless の `--screenshot` で png にして Read できる（`msedge --headless=new --screenshot=… file:///…svg`）／⒝ RenderedGeometry は波の要素（trill_element）を glyph として記録しない＝波の端は SVG で読む／⒞ 「tr」の順序は Y→X で並べると続きの「tr」が最後になる＝同じ段で X 最大を取る／⒟ `site/scan-body.html` は Edit で LF 化した（CRLF に戻した）。
-
-- `-End p961 -DiffBase 61990b13c` ＝full **12949 / 0 / 2 / 12951**（前便末 12943 ＋ 8＝`TrillSpannerTests` の 1 本と theory 7 綴り）（Lab `sessions/p961/end.log`）→ この docs commit。本体 `ba4120841`（`TrillSpannerEngraver`・網・棚卸し・CHANGELOG・site）。Core '+' 100 行／LILYPOND-REF 3／LILYSHARP-OWN 0。未 push 3＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。OMR 側の `REQUESTS.md` の状態列は書き換えた（Omr repo の commit は OMR 側の便に任せる）。
-判定（2026-10-23）: 次便は **REQUESTS #3**（別の声部の休符を `.up`／`.down` の script の障害物に数える＝LILYSHARP-OWN・LP と違う絵になるので APPROXIMATIONS に理由を書く）。そのあと grace の束の残り（⑵ `@todo`・⑶ `@chord`／`@figuredBass`／`@diagram`）・単一譜の `@cross` の警告（要ユーザー判断）・§2 E ⑹・続きのトリルの OPEN 0.040。
 
 ## 2. 開いている作業
 

@@ -160,6 +160,22 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第961セッションの経緯
+
+### 1.1 第961セッション（2026-10-23・YT-DELL2）
+
+第960 と同じ会話の続き（ユーザー「`C:\MyProj\LilySharp-Omr\docs\repro\REQUESTS.md` の open を見て」→ 途中で「HANDOFF に一点足して＝open があれば優先して着手」「Pages の OMR デモ動画（SHOTLIST 16・17）の撮影もタスクに」）。`-Start p961`（開始 HEAD `61990b13c`・未 push 2・第959 を ARCHIVE へ）。作業場所は Lab `sessions/p961/`（再現 `probe/`・LP の dump `probe/ly/dump.ly`／`dump2.ly`・返事 `omr/lilysharp-reply-2026-10-23.md`・掃き `svg/`）。
+- **§0 に規則を足した**（REQUESTS.md の open を優先）・**§1.0 ⒜ に動画の撮影を載せた**（ユーザー指示 2 件）。
+- **REQUESTS #1（段をまたいだトリルの続きで次の線が 1 段外へ）＝fixed**（本体 commit）: 原因は LP の **`adjust-on-neighbor`**（終わるトリルは `right-neighbor`＝同じ音符から始まる次のトリルの「tr」の真の左端の手前で止まる・scheme-engravers.scm:1821-1822・line-spanner.cc:211-225）が無く、波の最後の要素（幅 1.0）が位相しだいで次の「tr」の下まで走って outside-staff が 0.62 積んでいた。`TrillSpannerEngraver`: 全 spanner の「tr」の原点を先に取り（`GlyphOrigin`）、stop item で始まる spanner があれば `EndX = min(列の左端, その「tr」の `Outline.Left`)`。
+- **#2（続きの頭の「tr」）＝fixed・刷る**（LP どおり）: `calc_bound_info` は `left-broken` を `left` に **append** する（:128-135）ので `text` は残り、`end-on-note` で続きが最初に覆う音符列の中心（`FirstColumnCentre`）。OMR 側を合わせてほしい旨を返事に書いた。
+- **LP の実測**（`\paper { page-post-process }` で TrillSpanner の X/Y/skyline/side-support-elements を dump）: 1 本目 4.045・続き 4.545・2 本目 5.545。Lily# は 4.045／**4.505**／5.545 ＝ ⚠️ **OPEN 0.040（続き）**: LP は続きの「tr」の板（線の 1.0 下）を g'4 に対して数えていない形（4.545 ＝ b' の頭 4.045 ＋ 0.5）なのに dump の skyline は板を持つ＝機構は未特定（`TrillSpannerTests.ChainedTrills_OverABreak…` に記録）。
+- **網**: `TrillSpannerTests` に 2 本＝高さと「tr」の中心（RenderedGeometry・3 桁）＋ 7 綴りの theory「終わる波は次の「tr」の真の左端を越えない」（SVG）。毒＝neighbour を外す: theory 4/7 赤（高さの網は位相の都合で緑＝観測者は theory）／続きの「tr」を消す: 高さの網 1 赤（tr が 2 つ）。掃き 1,248 枚で **0**（段をまたぐトリルも連鎖するトリルも本に無い）。
+- **#4 サイト＝fixed**（`scan-body.html` に OMR の HTML を 3 か所・SHOTLIST 16・17）・**#5＝確認・異論なし**。**#3（下の声部の `.up` のポルタートが上の声部の休符に重なる・LP も同じ絵・オーナー判断で直す）は open＝次便 p962 で着手**（別の声部の休符を script の障害物に数える＝LILYSHARP-OWN の設計）。CHANGELOG `## Unreleased` を立て、組版の行に `[engraving]` 印（OMR の依頼）。
+- 計器の罠: ⒜ LP の svg は Edge headless の `--screenshot` で png にして Read できる（`msedge --headless=new --screenshot=… file:///…svg`）／⒝ RenderedGeometry は波の要素（trill_element）を glyph として記録しない＝波の端は SVG で読む／⒞ 「tr」の順序は Y→X で並べると続きの「tr」が最後になる＝同じ段で X 最大を取る／⒟ `site/scan-body.html` は Edit で LF 化した（CRLF に戻した）。
+
+- `-End p961 -DiffBase 61990b13c` ＝full **12949 / 0 / 2 / 12951**（前便末 12943 ＋ 8＝`TrillSpannerTests` の 1 本と theory 7 綴り）（Lab `sessions/p961/end.log`）→ この docs commit。本体 `ba4120841`（`TrillSpannerEngraver`・網・棚卸し・CHANGELOG・site）。Core '+' 100 行／LILYPOND-REF 3／LILYSHARP-OWN 0。未 push 3＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。OMR 側の `REQUESTS.md` の状態列は書き換えた（Omr repo の commit は OMR 側の便に任せる）。
+判定（2026-10-23）: 次便は **REQUESTS #3**（別の声部の休符を `.up`／`.down` の script の障害物に数える＝LILYSHARP-OWN・LP と違う絵になるので APPROXIMATIONS に理由を書く）。そのあと grace の束の残り（⑵ `@todo`・⑶ `@chord`／`@figuredBass`／`@diagram`）・単一譜の `@cross` の警告（要ユーザー判断）・§2 E ⑹・続きのトリルの OPEN 0.040。
+
 ## 以下は第960セッションの経緯
 
 ### 1.1 第960セッション（2026-10-22・YT-DELL2）
