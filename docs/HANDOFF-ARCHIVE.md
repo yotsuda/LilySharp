@@ -160,6 +160,16 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第942セッションの経緯
+
+### 1.1 第942セッション（2026-10-22・YT-DELL2）
+
+第941 と同じ会話の続き（ユーザー「続けて」）。`-Start p942`（開始 HEAD `642378e5d`・未 push 64・full **12813 / 0 / 2 / 12815**・第940 を ARCHIVE へ）。作業場所は Lab `sessions/p942/`。
+- **grace の中の spacer と、その前の呼吸記号＝`4b9c77041`＋`85d475b47`**: LP（Lab `p942/lp/sp.ly`・`sp2.ly`）の spacer の列には音が無い＝Note_spacing の願いは出も入りもしない ⇒ spacer に入る間隔と出る間隔は**どちらも左の列の素の grace のばね**（`d16 s16 e16` 1.28＋1.28・`d16 s8 e16` 1.28＋2.08・`d16 s16 } e4` 2.56）＝第940 の afterGrace の空の列と同じ規則。Lily# は spacer の「発明した幅」と旗付きの d の届きで 3.336566（+0.776566）と描いていた（第308 が scratch で 0.78 を測ったまま「網なし」で残していた）。記号 → spacer の列は休符の前と同じ 1.205280。`GraceColumns` が両側を素のばねに・`InnerBreaths` が spacer を許す・`InnerBreathSprings` の spacer 除外を外した。台帳 9 点（`spacer.grace.*`・`breath.grace.before-spacer.*`）＝1 回目で全部一致。毒 3 本全部赤（spacer の間隔 5・構文の腕 4・ばねの除外 3）。掃き 1,248 枚で 0（grace の中に spacer を書いた本が無い）。報告される例は「和音の構成音の呼吸記号」に替えた（試験 3 か所・SYNTAX_REFERENCE）。⒝ **先頭の spacer の接近**＝LP は素の duration のばね × 0.8（`c4 \grace { s16 d16 }` 2.318436・Lily# は Note_spacing の 2.401796）＝未移植。
+- 1 回目の `-End` は full で 1 赤＝`ApproximationInventoryTests.TheInventoryIsNotStale`（spacer の古い注記の「観測者なし」の印を消し、先頭の spacer の「未移植」を書いた＝UNWATCHED 63→62・APPROX 64→65）＝`docs/APPROXIMATIONS.md` を作り直して `85d475b47`。⚠️ 近似の印（departs from／observed by など）を消す・足すときは棚卸しの作り直しが要る。
+- `-End p942 -DiffBase 642378e5d`（2 回目）＝full **12823 / 0 / 2 / 12825**（前便末 +10）（Lab `sessions/p942/end.log`）→ この docs commit。未 push 66＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。
+判定（2026-10-22）: grace の呼吸記号は和音の構成音の上を除いて全部描く。次の候補＝先頭の spacer の接近（⒝・小）・slur が膝の grace 連桁を避ける形（⒝）・grace の LYS4020 の残り（構成音の呼吸記号・`@pluck`・TAB の技法・`@diagram`・`@cross`・`@figuredBass`・`@chord`）・§2 E ⑹⑺（和音入力・Ignatzek＝要ユーザー判断）。
+
 ## 以下は第941セッションの経緯
 
 ### 1.1 第941セッション（2026-10-22・YT-DELL2）
