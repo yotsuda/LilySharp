@@ -124,6 +124,16 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第939セッション（2026-10-22・YT-DELL2）
+
+第938 と同じ会話の続き（ユーザー「続けて」）。`-Start p939`（開始 HEAD `924a2bb39`・未 push 58・full **12789 / 0 / 2 / 12791**・第937 を ARCHIVE へ）。作業場所は Lab `sessions/p939/`。
+- **afterGrace の呼吸記号を描く＝`b0e71bec6`**: 第938 の 2.5311 は LP の paper column を刷って解けた（Lab `p939/lp/cols.ly`＝`'columns` の `when` と X）。afterGrace の後ろには**時刻 3/8 の空の musical column**（extent 空）があり、記号なしは「最後の grace → 空の列 1.28（grace のばねそのもの＝Note_spacing が掛からない）→ 主音符 1.024511」、記号ありは「grace → 記号 0.891339 → 空の列 1.5066（Staff_spacing・空の列に grace 部分が無いので 0.8 なし）→ 主音符 1.024511」。Lily# は afterGrace の並びを閉じの spacer（`RestItem.LeadingGrace`）にぶら下げる＝spacer が空の列に当たる ⇒ `InnerBreaths` が afterGrace の最後の列の記号も返し、`InnerBreathSprings` は主が spacer のとき記号のばねを縮めずに返す・`GraceInnerBreathX` は並びの終わり（group X＋span）から戻す。途中の記号は普通の途中の記号と同じ（1.2053）。台帳 10 点（`breath.aftergrace.*`）＝記号の 2 本のばねと並びの中は EXACT。毒 3 本全部赤（最後の列 5・0.8 を掛ける 2・記号の X 4）。全 svg の掃き 0。
+- ⚠️ **afterGrace の置き方そのものが LP と違う＝新しい開いた残差（記号と無関係・対照 `breath.aftergrace.control.*` も同じ）**: LP は最後の grace → 空の列が素の grace のばね 1.28・空の列 → 次の主音符 1.024511・主音符 → 最初の grace 2.600747。Lily# は最後の間隔が Note_spacing の 1.938627・spacer → 次の音 2.0・接近 3.021920（残差 +0.421173／+1.634116／+0.975489）。**予測: afterGrace の置き方を移植すれば 6 点とも 0**。値付けの手がかり: 空の列の `when` は grace の主の時刻（`3/8`）、grace の列は `3/8G-1/16`。
+- `-End p939 -DiffBase 924a2bb39` ＝full **12800 / 0 / 2 / 12802**（前便末 +11）（Lab `sessions/p939/end.log`）→ この docs commit。未 push 59＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。
+判定（2026-10-22）: grace の呼吸記号は spacer の前を除いて全部描く。次の候補＝**afterGrace の置き方の移植**（上の ⚠️・⒜＝LP の列で測れていて予測つき）・slur が膝の grace 連桁を避ける形（⒝）・grace の LYS4020 の残り（`@pluck`・TAB の技法・`@diagram`・`@cross`・`@figuredBass`・`@chord`）。
+
+## 以下は第938セッションの経緯
+
 ### 1.1 第938セッション（2026-10-22・YT-DELL2）
 
 第937 と同じ会話の続き（ユーザー「続けて」）。`-Start p938`（開始 HEAD `20776fce0`・未 push 56・full **12782 / 0 / 2 / 12784**・第936 を ARCHIVE へ）。作業場所は Lab `sessions/p938/`。
@@ -131,15 +141,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - ⚠️ **afterGrace の呼吸記号は別の形＝LYS4020 のまま**（Lab `p938/lp/rest.ly` AA〜AC）: afterGrace の grace は主音符の中の時刻に立つので、記号の列は**主の時刻**に乗り、記号 → 次の主音符は 1.5066 ではなく記号の左端から 2.5311（AB の記号なしの grace → 主音符 2.3045 より 1.1179 遠い）。途中の記号（AC）の記号 → 次の grace は 1.2053 で同じ。最後の記号の値付けは未解明＝主の時刻の列から次の音までのばね（duration のばね）を読む必要がある。
 - `-End p938 -DiffBase 20776fce0` ＝full **12789 / 0 / 2 / 12791**（前便末 +7）（Lab `sessions/p938/end.log`）→ この docs commit。未 push 57＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。
 判定（2026-10-22）: grace の呼吸記号は音・和音・休符の前、最後の列のどれも LP と同じ。残り＝afterGrace の記号（上の ⚠️）と spacer の前（未測定）・slur が膝の grace 連桁を避ける形（⒝）・grace の LYS4020 の残り（`@pluck`・TAB の技法・`@diagram`・`@cross`・`@figuredBass`・`@chord`）。
-
-## 以下は第937セッションの経緯
-
-### 1.1 第937セッション（2026-10-22・YT-DELL2）
-
-第936 と同じ会話の続き（ユーザー「続けて」）。`-Start p937`（開始 HEAD `81fe65a50`・未 push 54・full **12770 / 0 / 2 / 12772**・第935 を ARCHIVE へ）。作業場所は Lab `sessions/p937/`。
-- **caesura は自動の連桁を終わらせない＝`1d0f70ff1`**（第936 が見つけた欠陥）: LP の Caesura_engraver は **Staff** の engraver（engraver-init.ly:66）で、acknowledger は自分の context とその下の grob しか聞かない＝Voice の Auto_beam_engraver に caesura の BreathingSign は届かない。呼吸記号の engraver は Voice（:384）なので届いて連桁を終える。Lily# は `BreathingSignItem` を全部「連桁にできない item」として連桁を切っていた → `BeamDetector` が caesura の列を clef・key と同じく素通りする。⚠️ 連桁の有無は間隔にも効く: 旗付きの d は旗が caesura の高さに入り、記号が 0.5382 遠かった（毒で分かった＝最初に書いた理由「旗でも連桁でも同じ」は誤りで、直した）。probe `breath-beam.ly`（BBA〜BBE）・台帳 12 点（`breath.beam.*`・`caesura.beam.*`）＝stem 数（`BeamGroupStemCount`）と間隔。caesura の 3 点は「開いた値」2 本／0 本／+0.5382 を毒で確かめた。毒 2 本＝素通りを外す 4 赤・呼吸記号も素通り 2 赤。全 svg の掃き 1,242 枚で 0（連桁にできる音の間の caesura を書いた本が無い）。棚卸しは中身の差 0。
-- `-End p937 -DiffBase 81fe65a50` ＝full **12782 / 0 / 2 / 12784**（前便末 +12）（Lab `sessions/p937/end.log`）→ この docs commit。未 push 55＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。
-判定（2026-10-22）: 呼吸記号と caesura の連桁は grace も普通の大きさも LP と同じになった。次の候補＝slur が膝の grace 連桁を避ける形（主線で読む＝⒝）・grace の LYS4020 の残り（休符の前と afterGrace の呼吸記号・`@pluck`・TAB の技法・`@diagram`・`@cross`・`@figuredBass`・`@chord`）。
 
 ## 2. 開いている作業
 

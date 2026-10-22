@@ -160,6 +160,15 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第937セッションの経緯
+
+### 1.1 第937セッション（2026-10-22・YT-DELL2）
+
+第936 と同じ会話の続き（ユーザー「続けて」）。`-Start p937`（開始 HEAD `81fe65a50`・未 push 54・full **12770 / 0 / 2 / 12772**・第935 を ARCHIVE へ）。作業場所は Lab `sessions/p937/`。
+- **caesura は自動の連桁を終わらせない＝`1d0f70ff1`**（第936 が見つけた欠陥）: LP の Caesura_engraver は **Staff** の engraver（engraver-init.ly:66）で、acknowledger は自分の context とその下の grob しか聞かない＝Voice の Auto_beam_engraver に caesura の BreathingSign は届かない。呼吸記号の engraver は Voice（:384）なので届いて連桁を終える。Lily# は `BreathingSignItem` を全部「連桁にできない item」として連桁を切っていた → `BeamDetector` が caesura の列を clef・key と同じく素通りする。⚠️ 連桁の有無は間隔にも効く: 旗付きの d は旗が caesura の高さに入り、記号が 0.5382 遠かった（毒で分かった＝最初に書いた理由「旗でも連桁でも同じ」は誤りで、直した）。probe `breath-beam.ly`（BBA〜BBE）・台帳 12 点（`breath.beam.*`・`caesura.beam.*`）＝stem 数（`BeamGroupStemCount`）と間隔。caesura の 3 点は「開いた値」2 本／0 本／+0.5382 を毒で確かめた。毒 2 本＝素通りを外す 4 赤・呼吸記号も素通り 2 赤。全 svg の掃き 1,242 枚で 0（連桁にできる音の間の caesura を書いた本が無い）。棚卸しは中身の差 0。
+- `-End p937 -DiffBase 81fe65a50` ＝full **12782 / 0 / 2 / 12784**（前便末 +12）（Lab `sessions/p937/end.log`）→ この docs commit。未 push 55＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。
+判定（2026-10-22）: 呼吸記号と caesura の連桁は grace も普通の大きさも LP と同じになった。次の候補＝slur が膝の grace 連桁を避ける形（主線で読む＝⒝）・grace の LYS4020 の残り（休符の前と afterGrace の呼吸記号・`@pluck`・TAB の技法・`@diagram`・`@cross`・`@figuredBass`・`@chord`）。
+
 ## 以下は第936セッションの経緯
 
 ### 1.1 第936セッション（2026-10-22・YT-DELL2）
