@@ -160,6 +160,17 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第947セッションの経緯
+
+### 1.1 第947セッション（2026-10-22・YT-DELL2）
+
+第946 と同じ会話の続き（ユーザー「1」＝第946 の候補 ⑴ grace の `@fall`/`@doit`）。`-Start p947`（開始 HEAD `ccefdc34a`・未 push 75・第945 を ARCHIVE へ）。作業場所は Lab `sessions/p947/`（LP の試料は `bend.ly`・`bendch.ly`・`bendj.ly`）。
+- **grace の fall と doit を描く・grace の前の fall は最初の grace で止まる**（`c191ca940`）: LP の Bend_engraver（scheme-engravers.scm:2096-2165）は左の bound を音符の頭（grace も同じ）・右を次の musical column に取る。general-grace-settings に BendAfter は無い＝曲線は普通の大きさ。⑴ `GraceBodySupport.IsCarriedBendAfter`（収集と LYS4020）。⑵ `ArticulationEngraver` の fall/doit の腕: grace の頭は run から（`ElementCoordinator.GraceColumnAt`）＝小さい頭のインクの右、点が頭の行にあれば点の右（`DotColumn.ReservedForGrace`・新 `ElementCoordinator.GraceColumnIsBeamed`）。⑶ 次の item が grace の列ならその頭で止まる＝**主の音の fall の後に grace が来ると、今までは grace を越えて次の主の音まで伸びていた**（LP は主の時刻で始まった fall を次の時刻の最初の列＝grace で止める）。次の主の音の臨時記号は読まない（LP の GFE＝頭の左 − 0.5）。
+- **網**: 台帳 10 点（`bendafter.*`＝grace の始点 4・届き 3・対照 1・grace の前の届き 2＝probe `grace-bendafter.ly`・新しい読み `RenderedGeometry.BendStartToNotehead`／`BendReach`）全部一致。LYS4020 の網 2 行。毒 4 本＝集めない 9 赤・次の grace を読まない 2 赤（⑶ の旧挙動が赤くなる＝主張の裏）・点を読まない 1 赤・普通の大きさの頭 4 赤。掃き 1,248 枚で 0。棚卸し＝grace の腕の `GetStaffPosition(item) * 0.5` 1 行（主の腕と同じ式）。
+- ⚠️ **和音の fall は LP では描かれない**（grace でも主の音でも＝Lab `bendch.ly` CHA〜CHE）: 2 つめの頭の acknowledge が 1 つめの fall をその列で止める（`(when (and note-head fall) (stop-fall))`）＝LP の挙動。**Lily# は和音にも描く（主・grace とも）＝変えていない・ユーザー判断**（LP に合わせると和音の fall が消える）。
+- `-End p947 -DiffBase ccefdc34a` ＝full **12883 / 0 / 2 / 12885**（前便末 +12）（Lab `sessions/p947/end.log`）→ この docs commit。本体 `c191ca940`。未 push 76＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。
+判定（2026-10-22）: grace の fall と doit は LP と同じ。主の音の fall が後の grace で止まるのも LP と同じになった。次の候補＝⑴ `@thumb`（LP では Fingering＝grace で −8・普通の音でも Lily# は Script として置く＝主の音から LP と照合し直す）・⑵ 和音の fall を描くか（LP は描かない＝要ユーザー判断）・⑶ `@pluck`・H/P/T（Lily# 自前の字＝同一性の網で）・`@scoop`/`@plop`/`@bend`（Lily# 自前の装置）・§2 E ⑹⑺（要ユーザー判断）。
+
 ## 以下は第946セッションの経緯
 
 ### 1.1 第946セッション（2026-10-22・YT-DELL2）
