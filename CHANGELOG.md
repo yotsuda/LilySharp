@@ -90,7 +90,9 @@ workflow attaches that section to the GitHub Release verbatim.
   note after them. **The thumb position (`@thumb`) is placed as LilyPond places it**: LilyPond's
   `\thumb` is a fingering, so it stands above the note whatever the stem (below with
   `@thumb.down`), half a staff space clear of the staff, the head or a beam; before, it went on
-  the side opposite the stem, as a staccato does. On a grace note it is drawn too, small.
+  the side opposite the stem, as a staccato does. On a grace note it is drawn too, small. With
+  other marks on the same note it stacks as in LilyPond: over an accent, staccato or harmonic
+  circle, under a bowing mark, trill or fermata (it used to stand through them).
   **A trill spanner can start or stop on a grace note**
   (`grace { d16@startTrillSpan } e4 f4 g4@stopTrillSpan`); a high grace's stem lifts the line,
   as in LilyPond. **So can an ottava** (`grace { d''16@ottava } e''4 f''4 g'4@!ottava`); an `@!ottava`

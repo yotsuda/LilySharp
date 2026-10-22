@@ -9101,6 +9101,14 @@ internal static class LpGeometryProbes
     private static readonly string THMG = GraceTieBook("c4 d16@thumb e16 e8 c2 |", "THMG");
     private static readonly string THMH = GraceTieBook("c4 d16@thumb@staccato e8. c2 |", "THMH");
     private static readonly string THMI = GraceTieBook("c4 grace { c'16@thumb.down } e4 c2 |", "THMI");
+    // The thumb in its note's script column (audit/lp-geometry/probes/thumb-stack.ly).
+    private static readonly string THSA = GraceTieBook("c4 d16@thumb@upBow e8. c2 |", "THSA");
+    private static readonly string THSB = GraceTieBook("c4 d16@thumb@fermata e8. c2 |", "THSB");
+    private static readonly string THSG = GraceTieBook("c4 grace { d16@thumb@upBow } e4 c2 |", "THSG");
+    private static readonly string THSI = GraceTieBook("c4 d''16@thumb@staccato e8. c2 |", "THSI");
+    private static readonly string THSJ = GraceTieBook("c4 c'4@thumb@accent e4 c4 |", "THSJ");
+    private static readonly string THSK = GraceTieBook("c4 d16@thumb@flageolet e8. c2 |", "THSK");
+    private static readonly string THSM = GraceTieBook("c4 d4@thumb@upBow@downBow e4 c4 |", "THSM");
     // A pedal bracket engaged or released on a grace note (audit/lp-geometry/probes/grace-pedal.ly).
     private static readonly string GPDA = GraceTieBook("c4 grace { d16@sustain } e4 f4 g4@!sustain |", "GPDA");
     private static readonly string GPDB = GraceTieBook("c4 d16@sustain e8. f4 g4@!sustain |", "GPDB");
@@ -17802,6 +17810,15 @@ internal static class LpGeometryProbes
         new("thumb.main.beamed", THMG, g => g.GlyphAboveStaffMiddle('', 0)),
         new("thumb.main.with-staccato", THMH, g => g.GlyphAboveStaffMiddle('', 0)),
         new("thumb.grace.high.below", THMI, g => g.GlyphAboveStaffMiddle('', 0)),
+        new("thumb.stack.under-upbow", THSA, g => g.GlyphAboveStaffMiddle('', 0)),
+        new("thumb.stack.upbow-over", THSA, g => g.GlyphAboveStaffMiddle('', 0)),
+        new("thumb.stack.fermata-over", THSB, g => g.GlyphAboveStaffMiddle('', 0)),
+        new("thumb.stack.grace.upbow-over", THSG, g => g.GlyphAboveStaffMiddle('', 0)),
+        new("thumb.stack.over-staccato", THSI, g => g.GlyphAboveStaffMiddle('', 0)),
+        new("thumb.stack.over-accent", THSJ, g => g.GlyphAboveStaffMiddle('', 0)),
+        new("thumb.stack.accent-under", THSJ, g => g.GlyphAboveStaffMiddle('', 0)),
+        new("thumb.stack.over-flageolet", THSK, g => g.GlyphAboveStaffMiddle('', 0)),
+        new("thumb.stack.downbow-over-upbow", THSM, g => g.GlyphAboveStaffMiddle('', 0)),
         new("pedal.grace.start-to-notehead", GPDA, g => g.PedalBracketLineEndToNotehead(end: false, 1)),
         new("pedal.grace.end-to-notehead", GPDA, g => g.PedalBracketLineEndToNotehead(end: true, 4)),
         new("pedal.grace.staff-to-line", GPDA, g => g.PedalBracketLineBelowStaff()),

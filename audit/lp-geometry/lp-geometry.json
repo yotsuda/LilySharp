@@ -9205,6 +9205,69 @@
       "residual": 0.000001159,
       "why": "CLOSED IN SESSION 948. `@thumb.down` under a grace c'': its ink 0.5 under the staff's ink. The last digits are the sign's box: Lily# reads it out of the design the Fingering's own font-size picks (emmentaler-11 at -5) and scales it by the markup's magstep 5; LilyPond's box is that one times 1.000004 on both edges (-0.800000 .. 0.500178 against -0.799997 .. 0.500176). OPEN: the factor is not found; it is under the reading of any drawn quantity."
     },
+    "thumb.stack.under-upbow": {
+      "probe": "thumb-stack.ly",
+      "score": "THSA",
+      "lilypond": 3.35,
+      "residual": -0.000003,
+      "why": "CLOSED IN SESSION 949. `d16\\thumb\\upbow`: the thumb (a Fingering, script-priority 100 + its head's -5) sits in the note's script column BELOW the up-bow (180), on its own staff floor. The last digits are the thumb box's: LilyPond's is the -5 design's times 1.000004 (see thumb.main; OPEN there)."
+    },
+    "thumb.stack.upbow-over": {
+      "probe": "thumb-stack.ly",
+      "score": "THSA",
+      "lilypond": 4.050178,
+      "residual": -0.000005,
+      "why": "CLOSED IN SESSION 949. The up-bow over it, 0.2 (its padding) over the thumb's BOX: a Fingering declares no vertical-skylines, so its profile is its extent (ArticulationEngraver.IsBoxProfileGlyph). Until session 949 the thumb was not in the walk at all and the bow stood on the staff floor through it. The last digits are the thumb box's: LilyPond's is the -5 design's times 1.000004 (see thumb.main; OPEN there)."
+    },
+    "thumb.stack.fermata-over": {
+      "probe": "thumb-stack.ly",
+      "score": "THSB",
+      "lilypond": 4.386178,
+      "residual": -0.000005,
+      "why": "CLOSED IN SESSION 949. A fermata over the thumb: a mover, placed by the outside-staff pass over the thumb's box. The last digits are the thumb box's: LilyPond's is the -5 design's times 1.000004 (see thumb.main; OPEN there)."
+    },
+    "thumb.stack.grace.upbow-over": {
+      "probe": "thumb-stack.ly",
+      "score": "THSG",
+      "lilypond": 3.669365,
+      "residual": -0.000003855,
+      "why": "CLOSED IN SESSION 949. The same stack on a grace d16: both at the grace's size. The last digits are the thumb box's: LilyPond's is the -5 design's times 1.000004 (see thumb.main; OPEN there)."
+    },
+    "thumb.stack.over-staccato": {
+      "probe": "thumb-stack.ly",
+      "score": "THSI",
+      "lilypond": 6.945,
+      "residual": -0.000003,
+      "why": "CLOSED IN SESSION 949. `d'''16\\thumb\\staccato` (stem down): the staccato (-100) above the head first, the thumb 0.5 (the Fingering's padding, no horizon-padding) over it. The last digits are the thumb box's: LilyPond's is the -5 design's times 1.000004 (see thumb.main; OPEN there)."
+    },
+    "thumb.stack.over-accent": {
+      "probe": "thumb-stack.ly",
+      "score": "THSJ",
+      "lilypond": 4.320671,
+      "residual": -0.000003632,
+      "why": "CLOSED IN SESSION 949. `c''4\\thumb\\accent`: the thumb clears the accent's OUTLINE under its whole BOX by 0.5 -- 0.43 over the accent's box top. With its own outline (the circle's narrow stem) it sank 0.102 into the accent's slope. The last digits are the thumb box's: LilyPond's is the -5 design's times 1.000004 (see thumb.main; OPEN there)."
+    },
+    "thumb.stack.over-flageolet": {
+      "probe": "thumb-stack.ly",
+      "score": "THSK",
+      "lilypond": 4.35,
+      "residual": -0.000003,
+      "why": "CLOSED IN SESSION 949. The flageolet (50) below the thumb, the thumb 0.5 over the circle. The last digits are the thumb box's: LilyPond's is the -5 design's times 1.000004 (see thumb.main; OPEN there)."
+    },
+    "thumb.stack.downbow-over-upbow": {
+      "probe": "thumb-stack.ly",
+      "score": "THSM",
+      "lilypond": 6.330178,
+      "residual": -0.000005,
+      "why": "CLOSED IN SESSION 949. Thumb, up-bow, down-bow: the down-bow over the up-bow over the thumb, each on the one below. The last digits are the thumb box's: LilyPond's is the -5 design's times 1.000004 (see thumb.main; OPEN there)."
+    },
+    "thumb.stack.accent-under": {
+      "probe": "thumb-stack.ly",
+      "score": "THSJ",
+      "lilypond": 2.67,
+      "residual": 0.0,
+      "why": "EXACT. The CONTROL of THSJ: the accent itself, which the thumb does not move."
+    },
     "pedal.grace.start-to-notehead": {
       "probe": "grace-pedal.ly",
       "score": "GPA",

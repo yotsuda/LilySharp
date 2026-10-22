@@ -1340,6 +1340,9 @@ internal static class ArticulationEngraver
                 seedBBox = new GlyphMetrics.BBox(seedBBox.Left * s, seedBBox.Bottom * s,
                     seedBBox.Right * s, seedBBox.Top * s);
             }
+            // The thumb's box is a fingering's, read out of the design LilyPond reads it from.
+            if (thumb)
+                seedBBox = ThumbInkBox(scriptStep);
             // A chord diagram is a TextScript markup, not a centred script: its grid centre
             // stands where LilyPond's fret-diagram alignment puts it off the column's origin.
             if (effArt.Type == ArticulationType.FretFrame)
@@ -1455,9 +1458,13 @@ internal static class ArticulationEngraver
                 // distance(other, hpad) comment: padding other = doubling hpad), and the
                 // side it pads is THIS one — which does not depend on the support, so the
                 // padded copy is built ONCE here rather than inside every distance call.
+                // The THUMB clears what is under it as the fingering it is (session 949): its
+                // own padding 0.5 and no horizon-padding, as FlushFingerings spends them
+                // (LilyPond 2.26.0: `d'16\thumb\flageolet` stands 0.5 over the circle).
                 var myPadded = ScriptSkyline(
-                    layout, yUp, effArt.IsAbove ? VerticalDirection.Down : VerticalDirection.Up,
-                    extraPad: ScriptHorizonPadding);
+                    layout, yUp,
+                    effArt.IsAbove ? VerticalDirection.Down : VerticalDirection.Up,
+                    extraPad: thumb ? 0.0 : ScriptHorizonPadding);
                 double closest = double.NegativeInfinity;
                 foreach (var s in supports)
                 {
@@ -1465,7 +1472,7 @@ internal static class ArticulationEngraver
                         effArt.IsAbove ? VerticalDirection.Up : VerticalDirection.Down);
                     closest = Math.Max(closest, myPadded.Distance(theirs));
                 }
-                double move = Math.Max(0.0, closest + PaddingFor(effArt.Type));
+                double move = Math.Max(0.0, closest + (thumb ? FingeringPadding : PaddingFor(effArt.Type)));
                 if (move > 0)
                 {
                     yUp += effArt.IsAbove ? move : -move;
@@ -2034,6 +2041,13 @@ internal static class ArticulationEngraver
         ArticulationType.Fermata or ArticulationType.FermataShort
             or ArticulationType.FermataLong => 175,
         ArticulationType.UpBow or ArticulationType.DownBow => 180,
+        // The THUMB is a fingering (session 949): New_fingering_engraver gives it 100 + d ×
+        // its head's position, which for any head a staff carries lies between the flageolet's
+        // 50 and the trill's 150 — so its slot in the walk is 100's. ⚠️ A thumb and a DIGIT on one
+        // note tie at 100 + position, where LilyPond keeps acknowledgment order; unmeasured.
+        // (lily/new-fingering-engraver.cc position_scripts, the "script-priority" it sets — the
+        // same citation FingeringLayout.ColumnPriority carries.)
+        ArticulationType.Thumb => 100,
         _ => 0,
     };
 
@@ -2138,13 +2152,8 @@ internal static class ArticulationEngraver
     private static double ThumbYUp(bool above, MusicItem item, NoteColumnLayout? beamedColumn,
         double scriptStep)
     {
-        // Read where LilyPond reads it: out of the design the Fingering's own font-size picks
-        // (−5, a grace's −8), then scaled by the markup's magstep 5 — the smaller design's top
-        // is 0.500178, the 20 design's 0.5 (ledger thumb.main.below).
-        const double markupScale = 5.0;
-        var box = MusicFont.Current.SizedAt(scriptStep - markupScale).Box(MusicGlyph.StringsThumbPosition);
-        double scale = EmmentalerDesignSize.Magstep(markupScale);
-        double inkBottom = box.Bottom * scale, inkTop = box.Top * scale;
+        var ink = ThumbInkBox(scriptStep);
+        double inkBottom = ink.Bottom, inkTop = ink.Top;
         double headInk = ScriptHeadBox(item).Top;
         double headsTop = double.NegativeInfinity, headsBottom = double.PositiveInfinity;
         foreach (int p in DotColumn.HeadPositions(item))
@@ -2163,6 +2172,28 @@ internal static class ArticulationEngraver
                 + FingeringEngraver.Padding - inkBottom
             : Math.Min(Math.Min(-FingeringEngraver.StaffInk, headsBottom), stemDownReach)
                 - FingeringEngraver.Padding - inkTop;
+    }
+
+    /// <summary>
+    /// The thumb sign's box about its origin at <paramref name="scriptStep"/> (0 on a note, a
+    /// grace's −3) — read where LilyPond reads it: out of the design the Fingering's own
+    /// font-size picks (−5, a grace's −8), scaled by the markup's magstep 5. The smaller
+    /// design's top is 0.500176, the 20 design's 0.5 (ledger thumb.main.below,
+    /// thumb.stack.upbow-over).
+    /// </summary>
+    /// <remarks>
+    /// THE BOX IS THE THUMB'S PROFILE TOO, not its outline: Fingering declares no
+    /// vertical-skylines, so LilyPond gives it the extent box (see FingeringScriptLayout) —
+    /// `c''4\thumb\accent` stands 0.5 over the accent's stroke under the WHOLE box, 0.10
+    /// higher than the circle's narrow stem would put it (ledger thumb.stack.over-accent).
+    /// </remarks>
+    private static GlyphMetrics.BBox ThumbInkBox(double scriptStep)
+    {
+        const double markupScale = 5.0;
+        var box = MusicFont.Current.SizedAt(scriptStep - markupScale).Box(MusicGlyph.StringsThumbPosition);
+        double scale = EmmentalerDesignSize.Magstep(markupScale);
+        return new GlyphMetrics.BBox(box.Left * scale, box.Bottom * scale,
+            box.Right * scale, box.Top * scale);
     }
 
     private static NoteheadStyle ScriptHeadStyle(MusicItem item) => item switch
@@ -2362,6 +2393,18 @@ internal static class ArticulationEngraver
         is MusicGlyph.AccidentalSharp or MusicGlyph.AccidentalFlat or MusicGlyph.AccidentalNatural
         or MusicGlyph.AccidentalDoubleSharp or MusicGlyph.AccidentalDoubleFlat;
 
+    /// <summary>
+    /// True for the THUMB sign: LilyPond's \thumb is a Fingering, which declares no
+    /// vertical-skylines, so its profile is its EXTENT BOX (ThumbInkBox) and not the glyph's
+    /// outline — the rule <see cref="FingeringScriptLayout"/> applies to a digit. Measured
+    /// (2.26.0, ledger thumb.stack.over-accent / fermata-over): the circle's narrow stem would
+    /// let it sink 0.10 into an accent's slope, and a fermata reads its box's top.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/grob.cc simple_vertical_skylines_from_extents_proc.
+    /// </remarks>
+    private static bool IsBoxProfileGlyph(MusicGlyph glyph) => glyph == MusicGlyph.StringsThumbPosition;
+
     /// <summary>Editorial (suggestion) accidental types.</summary>
     private static bool IsEditorialType(ArticulationType type) => type
         is ArticulationType.EditorialSharp or ArticulationType.EditorialFlat
@@ -2456,7 +2499,7 @@ internal static class ArticulationEngraver
         // The layout carries the font's CHARACTER (ArticulationItem.GetGlyph); the font gives
         // the glyph back, and the outline is asked by the glyph.
         if (a.Glyph.Length == 1 && MusicFont.Current.GlyphOf(a.Glyph[0]) is { } glyph
-            && !IsSuggestionGlyph(glyph))
+            && !IsSuggestionGlyph(glyph) && !IsBoxProfileGlyph(glyph))
         {
             var placed = TextOutlineSkylines.PlaceMusicGlyphSide(
                 glyph, WalkSize(a, magnification), a.X, anchorY, direction,
@@ -2475,7 +2518,7 @@ internal static class ArticulationEngraver
         double extraPad = 0.0)
     {
         if (a.Glyph.Length == 1 && MusicFont.Current.GlyphOf(a.Glyph[0]) is { } glyph
-            && !IsSuggestionGlyph(glyph))
+            && !IsSuggestionGlyph(glyph) && !IsBoxProfileGlyph(glyph))
         {
             var (up, down) = TextOutlineSkylines.PlaceMusicGlyph(
                 glyph, WalkSize(a, magnification), a.X, anchorY,
