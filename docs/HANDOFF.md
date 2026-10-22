@@ -124,22 +124,22 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第942セッション（2026-10-22・YT-DELL2）
+
+第941 と同じ会話の続き（ユーザー「続けて」）。`-Start p942`（開始 HEAD `642378e5d`・未 push 64・full **12813 / 0 / 2 / 12815**・第940 を ARCHIVE へ）。作業場所は Lab `sessions/p942/`。
+- **grace の中の spacer と、その前の呼吸記号＝`4b9c77041`＋`85d475b47`**: LP（Lab `p942/lp/sp.ly`・`sp2.ly`）の spacer の列には音が無い＝Note_spacing の願いは出も入りもしない ⇒ spacer に入る間隔と出る間隔は**どちらも左の列の素の grace のばね**（`d16 s16 e16` 1.28＋1.28・`d16 s8 e16` 1.28＋2.08・`d16 s16 } e4` 2.56）＝第940 の afterGrace の空の列と同じ規則。Lily# は spacer の「発明した幅」と旗付きの d の届きで 3.336566（+0.776566）と描いていた（第308 が scratch で 0.78 を測ったまま「網なし」で残していた）。記号 → spacer の列は休符の前と同じ 1.205280。`GraceColumns` が両側を素のばねに・`InnerBreaths` が spacer を許す・`InnerBreathSprings` の spacer 除外を外した。台帳 9 点（`spacer.grace.*`・`breath.grace.before-spacer.*`）＝1 回目で全部一致。毒 3 本全部赤（spacer の間隔 5・構文の腕 4・ばねの除外 3）。掃き 1,248 枚で 0（grace の中に spacer を書いた本が無い）。報告される例は「和音の構成音の呼吸記号」に替えた（試験 3 か所・SYNTAX_REFERENCE）。⒝ **先頭の spacer の接近**＝LP は素の duration のばね × 0.8（`c4 \grace { s16 d16 }` 2.318436・Lily# は Note_spacing の 2.401796）＝未移植。
+- 1 回目の `-End` は full で 1 赤＝`ApproximationInventoryTests.TheInventoryIsNotStale`（spacer の古い注記の「観測者なし」の印を消し、先頭の spacer の「未移植」を書いた＝UNWATCHED 63→62・APPROX 64→65）＝`docs/APPROXIMATIONS.md` を作り直して `85d475b47`。⚠️ 近似の印（departs from／observed by など）を消す・足すときは棚卸しの作り直しが要る。
+- `-End p942 -DiffBase 642378e5d`（2 回目）＝full **12823 / 0 / 2 / 12825**（前便末 +10）（Lab `sessions/p942/end.log`）→ この docs commit。未 push 66＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。
+判定（2026-10-22）: grace の呼吸記号は和音の構成音の上を除いて全部描く。次の候補＝先頭の spacer の接近（⒝・小）・slur が膝の grace 連桁を避ける形（⒝）・grace の LYS4020 の残り（構成音の呼吸記号・`@pluck`・TAB の技法・`@diagram`・`@cross`・`@figuredBass`・`@chord`）・§2 E ⑹⑺（和音入力・Ignatzek＝要ユーザー判断）。
+
+## 以下は第941セッションの経緯
+
 ### 1.1 第941セッション（2026-10-22・YT-DELL2）
 
 第940 と同じ会話の続き（ユーザー「続けて」）。`-Start p941`（開始 HEAD `0b4807a0c`・未 push 62・full **12813 / 0 / 2 / 12815**・第939 を ARCHIVE へ）。作業場所は Lab `sessions/p941/`。
 - **2 つのばねの系の最小値 0.1 の差＝見積もり側の音 → 音のばねに列の rod が無かった＝`4f5b429c0`**（第940 の ⚠️）: 計器 Zz941（削除済み）で afterGrace と無関係に**音 → 音のばね全部**で差が出ると確認（`c'4 d'4 e'4 f'4` も）。描画側（`CreateInterColumnSpring`）は 0.3 の持ち上げの後に列の rod（分離 skyline＋0.1・トレモロ・slur の最小の長さ）を床に入れる。見積もり側（`CreateSpringsForMeasure`）は小節中のマークの列と小節線のばねにだけ入れていた ⇒ 同じ rod を同じ順で入れた。**見積もりの最小値が頁に出るのは列の無い小節の予備経路（`LayoutItems`）だけ**＝掃き 1,248 枚で 0・理想値（改行の小節幅）はもとから一致。網: `BothSpringSystems_AgreeAroundAnAfterGrace` に最小値の比較を戻した（毒＝rod を 0 にすると赤）・`BothSpringSystems_BuildANoteSpringInLilyPondsOrder` は「持ち上げは rod の 0.1 下の skyline の上に立つ」に読み替えた。CHANGELOG なし（描画に出ない）。
 - `-End p941 -DiffBase 0b4807a0c` ＝full **12813 / 0 / 2 / 12815**（前便末 ±0＝試験の数は変わらない）（Lab `sessions/p941/end.log`）→ この docs commit。未 push 63＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。
 判定（2026-10-22）: 2 つのばねの系は afterGrace の前後でも最小値まで一致。次の候補＝slur が膝の grace 連桁を避ける形（主線で読む＝⒝）・grace の LYS4020 の残り（spacer の前の呼吸記号・`@pluck`・TAB の技法・`@diagram`・`@cross`・`@figuredBass`・`@chord`＝字形も置き場所も Lily# 独自が多く LP と照合できる部分が少ない）。
-
-## 以下は第940セッションの経緯
-
-### 1.1 第940セッション（2026-10-22・YT-DELL2）
-
-第939 と同じ会話の続き（ユーザー「続けて」）。`-Start p940`（開始 HEAD `a5f0009c1`・未 push 60・full **12800 / 0 / 2 / 12802**・第938 を ARCHIVE へ）。作業場所は Lab `sessions/p940/`。
-- **afterGrace の置き方を移植＝`9b13c9ad5`**（第939 が開いた 6 点＋新 9 点＝全部 EXACT・予測どおり）: LP は `\afterGrace c2 { d16 } e2` を「c2 の 1 event＋並行の skip」として持つ＝spacing engraver は c を**書いた長さ 1/2 のあいだ鳴っている**と数え、grace の列（`3/8G-1/16`）の後ろに**時刻 3/8 の空の musical column** が立つ（Lab `p940/lp/ag.ly` の `'columns` の dump）。⑴ c → 最初の grace＝c2 のばねの 3/4 × 0.8（2.600747）、空の列 → e＝その 1/4（1.024511）⑵ 最後の grace → 空の列＝素の grace のばね 1.28（音が無い＝Note_spacing の願いも最小も無い）⑶ 空の列からは次の音へも小節線へも願いが出ない（`musical_column_spacing` の願い無し分岐＝head 幅・0.3 の持ち上げ・rod 無し）。Lily# は 3.021920 + 1.938627 + 2.0 = 6.960547 と描いていた（LP 4.905258＝2 staff space 超広い）。実装: `MusicItem.AfterGracePlaying`（`MeasureBuilder` が刻む）を `ComputeShortestPlayingAt` と見積もり側の `SoloShortestPlaying` が読む・`CreateSpring` は「鳴っている最短」が delta より**長い**ときも使う（LP は delta に関係なく使う）・`GraceColumns` の afterGrace の最後の間隔＝素の grace のばね（`CalculateGraceGroupSpringWidth` も主を読む）・閉じの spacer（`SpacingRules.IsAfterGraceCarrier`）は列の系（`CreateInterColumnSpring`・`CreateLastToBarlineSpring`）でも見積もりの系でも願いを出さない。途中で出た 2 つの罠: ⒜ 時刻 3/8 には grace の item も同じ onset で並ぶので、閉じの spacer を願いにすると grace の墨が最小に入った（grace 3 つで +0.7797）⒝ 並びの予約幅は主を読まず Note_spacing の 1.9386 で数えていた＝4 分音符の短い接近でその最小が勝った（+0.6406）。
-- **網**: 台帳 15 点（`breath.aftergrace.*` の開いていた 6 点＋`aftergrace.three/quarter/whole.*` 9 点）。毒 8 本全部赤（鳴っている長さ 12・最後の間隔 5・列の願い 3・小節線の願い 1・予約幅 1・`CreateSpring` の条件／見積もりの願い／見積もりの小節線＝最初は 3 本とも**緑**）。**コーパスに afterGrace を書いた本が 0 冊**なので掃き（1,248 枚で 0）では見えず、見積もりの系は台帳にも出ない ⇒ `SpacingInvariantTests.BothSpringSystems_AgreeAroundAnAfterGrace`（4 行・理想値の一致）を足して 3 本とも赤にした。⚠️ `c'4 afterGrace { d'16 } e'4 f'2` の e4 → f2 は 2 つの系で**最小値が 0.1 違う**（列 1.6042・見積もり 1.5042）＝afterGrace と無関係の既存の差・未調査（理想値は一致）。
-- `-End p940 -DiffBase a5f0009c1` ＝full **12813 / 0 / 2 / 12815**（前便末 +13）（Lab `sessions/p940/end.log`）→ この docs commit。未 push 61＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。
-判定（2026-10-22）: afterGrace の置き方と呼吸記号は LP どおり。次の候補＝上の ⚠️ の最小値 0.1 の差（2 つのばねの系）・slur が膝の grace 連桁を避ける形（⒝）・grace の LYS4020 の残り（spacer の前の呼吸記号・`@pluck`・TAB の技法・`@diagram`・`@cross`・`@figuredBass`・`@chord`）。
 
 ## 2. 開いている作業
 

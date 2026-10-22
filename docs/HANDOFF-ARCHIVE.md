@@ -160,6 +160,16 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第940セッションの経緯
+
+### 1.1 第940セッション（2026-10-22・YT-DELL2）
+
+第939 と同じ会話の続き（ユーザー「続けて」）。`-Start p940`（開始 HEAD `a5f0009c1`・未 push 60・full **12800 / 0 / 2 / 12802**・第938 を ARCHIVE へ）。作業場所は Lab `sessions/p940/`。
+- **afterGrace の置き方を移植＝`9b13c9ad5`**（第939 が開いた 6 点＋新 9 点＝全部 EXACT・予測どおり）: LP は `\afterGrace c2 { d16 } e2` を「c2 の 1 event＋並行の skip」として持つ＝spacing engraver は c を**書いた長さ 1/2 のあいだ鳴っている**と数え、grace の列（`3/8G-1/16`）の後ろに**時刻 3/8 の空の musical column** が立つ（Lab `p940/lp/ag.ly` の `'columns` の dump）。⑴ c → 最初の grace＝c2 のばねの 3/4 × 0.8（2.600747）、空の列 → e＝その 1/4（1.024511）⑵ 最後の grace → 空の列＝素の grace のばね 1.28（音が無い＝Note_spacing の願いも最小も無い）⑶ 空の列からは次の音へも小節線へも願いが出ない（`musical_column_spacing` の願い無し分岐＝head 幅・0.3 の持ち上げ・rod 無し）。Lily# は 3.021920 + 1.938627 + 2.0 = 6.960547 と描いていた（LP 4.905258＝2 staff space 超広い）。実装: `MusicItem.AfterGracePlaying`（`MeasureBuilder` が刻む）を `ComputeShortestPlayingAt` と見積もり側の `SoloShortestPlaying` が読む・`CreateSpring` は「鳴っている最短」が delta より**長い**ときも使う（LP は delta に関係なく使う）・`GraceColumns` の afterGrace の最後の間隔＝素の grace のばね（`CalculateGraceGroupSpringWidth` も主を読む）・閉じの spacer（`SpacingRules.IsAfterGraceCarrier`）は列の系（`CreateInterColumnSpring`・`CreateLastToBarlineSpring`）でも見積もりの系でも願いを出さない。途中で出た 2 つの罠: ⒜ 時刻 3/8 には grace の item も同じ onset で並ぶので、閉じの spacer を願いにすると grace の墨が最小に入った（grace 3 つで +0.7797）⒝ 並びの予約幅は主を読まず Note_spacing の 1.9386 で数えていた＝4 分音符の短い接近でその最小が勝った（+0.6406）。
+- **網**: 台帳 15 点（`breath.aftergrace.*` の開いていた 6 点＋`aftergrace.three/quarter/whole.*` 9 点）。毒 8 本全部赤（鳴っている長さ 12・最後の間隔 5・列の願い 3・小節線の願い 1・予約幅 1・`CreateSpring` の条件／見積もりの願い／見積もりの小節線＝最初は 3 本とも**緑**）。**コーパスに afterGrace を書いた本が 0 冊**なので掃き（1,248 枚で 0）では見えず、見積もりの系は台帳にも出ない ⇒ `SpacingInvariantTests.BothSpringSystems_AgreeAroundAnAfterGrace`（4 行・理想値の一致）を足して 3 本とも赤にした。⚠️ `c'4 afterGrace { d'16 } e'4 f'2` の e4 → f2 は 2 つの系で**最小値が 0.1 違う**（列 1.6042・見積もり 1.5042）＝afterGrace と無関係の既存の差・未調査（理想値は一致）。
+- `-End p940 -DiffBase a5f0009c1` ＝full **12813 / 0 / 2 / 12815**（前便末 +13）（Lab `sessions/p940/end.log`）→ この docs commit。未 push 61＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。
+判定（2026-10-22）: afterGrace の置き方と呼吸記号は LP どおり。次の候補＝上の ⚠️ の最小値 0.1 の差（2 つのばねの系）・slur が膝の grace 連桁を避ける形（⒝）・grace の LYS4020 の残り（spacer の前の呼吸記号・`@pluck`・TAB の技法・`@diagram`・`@cross`・`@figuredBass`・`@chord`）。
+
 ## 以下は第939セッションの経緯
 
 ### 1.1 第939セッション（2026-10-22・YT-DELL2）
