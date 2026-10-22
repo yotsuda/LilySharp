@@ -818,6 +818,13 @@ internal sealed class MeasureBuilder
                 HasPhrasingSlurEnd = n.HasPhrasingSlurEnd,
                 PhrasingSlurEndSourcePosition = n.PhrasingSlurEndSourcePosition,
                 PhrasingSlurDirection = n.PhrasingSlurDirection,
+                // ⚠️ THE @todo SURVIVES (session 963): the preview rings the grace's small head
+                // and sets its memo as a full-size note's (SharedRenderer.GraceTodoInkBox); the
+                // mark engraves nothing, so an export is the same page either way.
+                TodoKey = n.TodoKey,
+                TodoMemo = n.TodoMemo,
+                TodoBelow = n.TodoBelow,
+                TodoSideWritten = n.TodoSideWritten,
             },
 
             ChordItem c => new ChordItem(
@@ -862,6 +869,11 @@ internal sealed class MeasureBuilder
                 HasPhrasingSlurEnd = c.HasPhrasingSlurEnd,
                 PhrasingSlurEndSourcePosition = c.PhrasingSlurEndSourcePosition,
                 PhrasingSlurDirection = c.PhrasingSlurDirection,
+                // The @todo (session 963), as on the note above.
+                TodoKey = c.TodoKey,
+                TodoMemo = c.TodoMemo,
+                TodoBelow = c.TodoBelow,
+                TodoSideWritten = c.TodoSideWritten,
             },
 
             // A REST TAKES NO SLASH: the stroke is the Flag's, and a rest has none.
@@ -878,6 +890,11 @@ internal sealed class MeasureBuilder
                 HasPhrasingSlurEnd = r.HasPhrasingSlurEnd,
                 PhrasingSlurEndSourcePosition = r.PhrasingSlurEndSourcePosition,
                 PhrasingSlurDirection = r.PhrasingSlurDirection,
+                // The @todo (session 963), as on the note above.
+                TodoKey = r.TodoKey,
+                TodoMemo = r.TodoMemo,
+                TodoBelow = r.TodoBelow,
+                TodoSideWritten = r.TodoSideWritten,
             },
 
             _ => item with { GraceTime = true },

@@ -100,6 +100,57 @@ public class TodoCalloutTests
         Assert.Contains(">push<", preview);
     }
 
+    /// <summary>
+    /// A mark on a GRACE note (session 963, HANDOFF §2 U8): the preview rings the grace's small
+    /// head where the run draws it — left of the main note, and a smaller ring than a full-size
+    /// head's — and sets its memo; nothing is reported about it (GraceBodyValidatorTests), and
+    /// the export is the page without the mark.
+    /// </summary>
+    [Theory]
+    [InlineData("grace { d'16@todo(\"ghost?\") } c'4@todo d'4 e'4 f'4 |", 1)]
+    [InlineData("grace { <d' f'>16@todo(\"ghost?\") } c'4@todo d'4 e'4 f'4 |", 2)]
+    [InlineData("grace { d'16@todo(\"ghost?\").down } c'4@todo d'4 e'4 f'4 |", 1)]
+    [InlineData("acciaccatura { d'16@todo(\"ghost?\") e'16 } c'4@todo d'4 e'4 f'4 |", 1)]
+    [InlineData("c'4 afterGrace { d'16@todo(\"ghost?\") } d'4@todo e'4 f'4 |", 1)]
+    public void AMarkOnAGraceNote_RingsItsSmallHead_AndSetsItsMemo(string music, int graceHeads)
+    {
+        var tree = SyntaxTree.Parse(Book(music));
+        string preview = SvgGenerator.Generate(tree, SvgRenderOptions.Preview());
+        var rings = RingHeights(preview);
+        Assert.Equal(2, rings.Count);
+        // By data-pos: the grace's mark is written before the ringed main note's in every
+        // spelling (the afterGrace's run stands before the d'4 it precedes on the page too).
+        int gracePos = rings.Keys.Min();
+        int mainPos = rings.Keys.Max();
+        // A grace head is drawn at font-size −3 (magstep 0.707): its ring — the head's box at
+        // that size plus the padding each way — is shorter than a full-size head's by a third
+        // of a space or so; a grace chord's (a third apart: the heads' centres a space apart)
+        // is taller than a full head's by half a space or so. The hand-drawn loop wobbles.
+        if (graceHeads == 1)
+            Assert.InRange(rings[gracePos], rings[mainPos] - 0.5, rings[mainPos] - 0.2);
+        else
+            Assert.InRange(rings[gracePos], rings[mainPos] + 0.4, rings[mainPos] + 1.0);
+        // The grace's ring stands LEFT of the main note's: the run's X, not the main column's.
+        static double RingX(string svg, int pos)
+            => RingPath.Matches(svg).Where(m => int.Parse(m.Groups[2].Value) == pos)
+                .Select(m => double.Parse(Regex.Match(m.Groups[1].Value, "-?[0-9.]+").Value)).Average();
+        Assert.True(RingX(preview, gracePos) < RingX(preview, mainPos) - 1.0,
+            $"grace ring at {RingX(preview, gracePos):F2}, main ring at {RingX(preview, mainPos):F2}");
+        // The memo and its leader, placed; .down puts it under the staff.
+        Assert.Contains(">ghost?<", preview);
+        // The leader runs from the ring (Y1) to the underline (Y2): up on the page for a memo
+        // over the staff, down for .down (device Y grows downward).
+        var leader = Assert.Single(Leaders(preview));
+        if (music.Contains(".down"))
+            Assert.True(leader.Y2 > leader.Y1, $"the .down memo's underline at {leader.Y2:F2} is not under its ring at {leader.Y1:F2}");
+        else
+            Assert.True(leader.Y2 < leader.Y1, $"the memo's underline at {leader.Y2:F2} is not over its ring at {leader.Y1:F2}");
+
+        string export = SvgGenerator.Generate(tree, SvgRenderOptions.Default);
+        Assert.Empty(RingPath.Matches(export));
+        Assert.DoesNotContain(">ghost?<", export);
+    }
+
     [Fact]
     public void ThePreviewDrawsTheRingsAndTheCallouts_AndTheExportNeither()
     {

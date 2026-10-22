@@ -26,6 +26,13 @@ page records the placing, which sessions 896–899 built up and session 899 sett
   `Untitled-2.lys`'s systems for nothing — owner's report 2026-10-11.) The owner's decision
   of 2026-10-10 allowed the page's other elements to move for a memo "so long as the result
   is tidy"; this is the one way they move.
+- **A grace note's mark is a mark like any other** (session 963): the ring goes round the
+  grace's small head — the run's head box at the grace font, at the X the run's layout gave
+  the column (`SharedRenderer.GraceTodoInkBox`, read by the drawer and by the band alike) — a
+  grace chord's heads together, a grace rest's glyph where the note pass draws it; the memo
+  is set as a full-size note's, below for `.down`. The mark rides the grace item through
+  `MeasureBuilder.NarrowToGraceTime`, and LYS4020 no longer reports it
+  (`GraceBodySupport.IsCarriedTodo`). A tab grace's ring is the notation box, not the digit's.
 - **The memos are set at render time**, where the page's ink is clear
   (`SharedRenderer.DrawTodoMarks`, pass 2). The page's device context is wrapped in an
   `InkRecorder` while it is drawn, so every glyph, text, line and curve is a box the memos can

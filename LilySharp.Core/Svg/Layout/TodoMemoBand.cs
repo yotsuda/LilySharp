@@ -187,8 +187,10 @@ internal static class TodoMemoBand
             int staffLines = MultiStaffLayouter.NotationStaffLinesOf(staff);
             double spacing = MultiStaffLayouter.LineSpacingOf(staff);
             double middle = double.NaN;
-            foreach (var voice in staff.Voices)
+            VoiceCollisionTable? voiceShifts = null;
+            for (int v = 0; v < staff.Voices.Length; v++)
             {
+                var voice = staff.Voices[v];
                 var measures = voice.Measures;
                 for (int mi = 0; mi < measures.Length; mi++)
                 {
@@ -208,7 +210,12 @@ internal static class TodoMemoBand
                         // top, and a floor read off the silhouette over the column reserved a memo
                         // over a note inside the staff a stem too high).
                         // A tab's ring goes round its fret digits (SharedRenderer.TabTodoInkBox).
-                        var ringBox = staff.IsTab
+                        // A grace's goes round its small head at the run's X (session 963;
+                        // SharedRenderer.GraceTodoInkBox — the drawer's reading).
+                        var ringBox = item.GraceTime
+                            ? SharedRenderer.GraceTodoInkBox(voice, score.GraceNotes, staffIndex, v, mi, ii,
+                                measureLayout, voiceShifts ??= SpacingRules.VoiceCollisionShiftsOf(staff), staffLines)
+                            : staff.IsTab
                             ? SharedRenderer.TabTodoInkBox(fonts, staff, item,
                                 measureLayout.X + LayoutUtilities.GetItemXOffset(measures, mi, ii, measureLayout))
                               ?? SharedRenderer.TodoInkBox(item, measureLayout, measures, mi, ii, staffLines, spacing)

@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 65 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 64 | 観測者がゼロだと自認しているもの |
-| `OWN` | 268 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **397** | |
+| `OWN` | 270 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **399** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -28,11 +28,11 @@
 | `LilySharp.Core/Svg/Layout/NoteCollision.cs` | 9 |
 | `LilySharp.Core/Svg/Layout/SkylineBuilder.cs` | 9 |
 | `LilySharp.Core/Svg/Layout/ElementCoordinator.cs` | 8 |
+| `LilySharp.Core/Rendering/SharedRenderer.Overlays.cs` | 7 |
 | `LilySharp.Core/Svg/Layout/FingeringEngraver.cs` | 7 |
 | `LilySharp.Core/Svg/Layout/LayoutEngine.Annotations.cs` | 7 |
 | `LilySharp.Core/Svg/Layout/TabStaffGeometry.cs` | 7 |
 | `LilySharp.Core/Rendering/SharedRenderer.Marks.cs` | 6 |
-| `LilySharp.Core/Rendering/SharedRenderer.Overlays.cs` | 6 |
 
 ## APPROX — LP に対応物はあるが、形が違うと自認しているもの（65 件）
 
@@ -248,7 +248,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（268 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（270 件）
 
 ### `LilySharp.Core/Editing/KeyRespeller.cs`
 - **`KeyRespeller`** LILYSHARP-OWN: an editor aid. The rule:
@@ -341,6 +341,7 @@
 - **`SharedRenderer.DrawStemlessTremolo`** LP: ss × length-fraction × 0.81. LILYSHARP-OWN: length-fraction is
 ### `LilySharp.Core/Rendering/SharedRenderer.Overlays.cs`
 - **`SharedRenderer.DrawTodoMarks`** LILYSHARP-OWN: an editor's mark, with no LilyPond counterpart.
+- **`SharedRenderer.GraceTodoInkBox`** LILYSHARP-OWN: an editor's mark (); a grace's is read off
 - **`SharedRenderer.DrawBendBefore`** LILYSHARP-OWN: LilyPond has no scoop or plop — no grob and no event spells either in
 - **`SharedRenderer.BendLabelEm`** The bend amount label's ENGRAVING em. LILYSHARP-OWN, as
 - **`SharedRenderer.DrawGuitarBend`** LILYSHARP-OWN: LilyPond's guitar bend is the BendSpanner (`\^`) — a line and curve to
@@ -375,6 +376,7 @@
 ### `LilySharp.Core/Semantics/GraceBodySupport.cs`
 - **`GraceBodySupport.IsCarriedGesture`** LILYSHARP-OWN: LilyPond has no scoop or plop, and its guitar bend is the unported
 - **`GraceBodySupport.IsCarriedTabTechnique`** LILYSHARP-OWN: the letters are Lily#'s own tablature ink (LilyPond's \rightHandFinger is
+- **`GraceBodySupport.IsCarriedTodo`** LILYSHARP-OWN: an editor's mark with no LilyPond counterpart (docs/todo-memo-design.md);
 ### `LilySharp.Core/Semantics/LayoutPlan.cs`
 - **`ChordNameMode`** LILYSHARP-OWN: LilyPond 2.26 has no capo property on its ChordNames context (its
 - **`ChordListKey`** LILYSHARP-OWN: LilyPond has no such list; the twin writes a \markup line of

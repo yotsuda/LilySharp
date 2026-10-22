@@ -193,6 +193,26 @@ public class GraceBodyValidatorTests
     }
 
     /// <summary>
+    /// The editor's <c>@todo</c> on a grace note, chord or rest is carried (session 963;
+    /// GraceBodySupport.IsCarriedTodo): nothing is reported, and — a mark engraving nothing —
+    /// the EXPORT is the control's page exactly. The preview's ring and memo are
+    /// TodoCalloutTests' (AMarkOnAGraceNote_RingsItsSmallHead_AndSetsItsMemo).
+    /// </summary>
+    [Theory]
+    [InlineData("grace { d'8@todo(\"why\") } c'1 | e'1 |", "grace { d'8 } c'1 | e'1 |")]
+    [InlineData("grace { d'8@todo } c'1 | e'1 |", "grace { d'8 } c'1 | e'1 |")]
+    [InlineData("grace { <d' f'>8@todo(k \"why\").down } c'1 | e'1 |", "grace { <d' f'>8 } c'1 | e'1 |")]
+    [InlineData("grace { r8@todo(\"why\") } c'1 | e'1 |", "grace { r8 } c'1 | e'1 |")]
+    public void ATodoOnAGrace_IsNotReported_AndTheExportDrawsNothingForIt(string written, string control)
+    {
+        Assert.Empty(Warnings(Book(written)));
+        // The export carries the mark's data-todo stamp on the grace's own glyphs (as a
+        // full-size note's does) and no ink: masked, the two pages are one.
+        static string Unstamped(string page) => Regex.Replace(page, " data-todo=\"[^\"]*\"", "");
+        Assert.Equal(Page(control), Unstamped(Page(written)));
+    }
+
+    /// <summary>
     /// A dynamic LEVEL on a grace note is drawn (full size, on the grace column) and not
     /// reported (GraceBodySupport.IsCarriedDynamic); so is a hairpin started there since session
     /// 918 (AHairpinStartOnAGrace_IsDrawn_AndNotReported).

@@ -148,6 +148,9 @@ internal static partial class SharedRenderer
         foreach (var (_, staff, staffIndex) in score.EnumerateStaves())
         {
             var (_, _, staffLines, spacing) = staffEdges[staffIndex];
+            // The voices' collision shifts, which a grace run's X reads — asked once per staff,
+            // and only by a staff that marks a grace (the memo answers a second ask from its table).
+            VoiceCollisionTable? voiceShifts = null;
             for (int v = 0; v < staff.Voices.Length; v++)
             {
                 var measures = staff.Voices[v].Measures;
@@ -171,7 +174,12 @@ internal static partial class SharedRenderer
                             continue;
                         // On a tab the ring goes round the fret DIGITS (owner's report 2026-10-12:
                         // the notehead's box drew a ring smaller than the number it marked).
-                        var inkBox = staff.IsTab
+                        // A GRACE's ring goes round its small head, at the run's X (session 963).
+                        var inkBox = item.GraceTime
+                            ? GraceTodoInkBox(staff.Voices[v], score.GraceNotes, staffIndex, v, mi, ii,
+                                measureLayout, voiceShifts ??= SpacingRules.VoiceCollisionShiftsOf(staff),
+                                staffLines, layout.GetRestShift(mi, v, ii))
+                            : staff.IsTab
                             ? TabTodoInkBox(fonts, staff, item,
                                 measureLayout.X + LayoutUtilities.GetItemXOffset(measures, mi, ii, measureLayout))
                               ?? TodoInkBox(item, measureLayout, measures, mi, ii, staffLines, spacing)
@@ -658,6 +666,72 @@ internal static partial class SharedRenderer
                 // pitched rest's own position is in that shift too — CalculateRestShifts).
                 double y = (ElementCoordinator.NeutralRestPosition(staffLines, noteValue) + restShift) / 2.0;
                 return (xColumn + box.Left, xColumn + box.Right, y + box.Bottom, y + box.Top);
+            }
+            default:
+                return null;
+        }
+    }
+
+    /// <summary>
+    /// <see cref="TodoInkBox"/> for a GRACE column (session 963): the ring goes round the
+    /// grace's small head — the column's own head box at the grace font, at the X the run's
+    /// layout gave the column (<see cref="ElementCoordinator.GraceColumnAt"/>) — a grace chord's
+    /// heads together (their seconds shifts as the run draws them), a grace rest's full-size
+    /// glyph where the note pass draws it (the neutral letter plus its shift). Null for an item
+    /// no run publishes (a spacer, a column the layout dropped). Same frame as
+    /// <see cref="TodoInkBox"/>: X on the page, Y over the staff middle, up.
+    /// </summary>
+    /// <remarks>
+    /// LILYSHARP-OWN: an editor's mark (<see cref="DrawTodoMarks"/>); a grace's is read off
+    ///   the same run geometry every grace engraver reads, so the ring stands on the drawn head.
+    ///   departs from: nothing — no LilyPond counterpart.
+    ///   goes away when: never.
+    ///   observed by: TodoCalloutTests (the grace cases).
+    /// ⚠️ A TAB's grace digit is ringed by this notation box, not by its digit
+    ///   (<see cref="TabTodoInkBox"/> reads the full-size digit): no book marks a tab grace.
+    /// </remarks>
+    internal static (double Left, double Right, double Bottom, double Top)? GraceTodoInkBox(
+        Voice voice, ImmutableArray<GraceNoteItem> graceNotes, int staffIndex, int voiceIndex,
+        int measureIndex, int itemIndex, MeasureLayout measureLayout, VoiceCollisionTable voiceShifts,
+        int staffLines, double restShift = 0)
+    {
+        if (measureIndex >= voice.Measures.Length || itemIndex >= voice.Measures[measureIndex].Items.Length)
+            return null;
+        var item = voice.Measures[measureIndex].Items[itemIndex];
+        if (ElementCoordinator.GraceColumnAt(voice, graceNotes, staffIndex, voiceIndex, measureIndex,
+                itemIndex, measureLayout, voiceShifts) is not var (column, headLeftX))
+            return null;
+        switch (item)
+        {
+            case NoteItem note:
+            {
+                var box = column.HeadBox;
+                double y = note.StaffPosition / 2.0;
+                return (headLeftX + box.Left, headLeftX + box.Right, y - box.Height / 2, y + box.Height / 2);
+            }
+            case ChordItem { Notes.Length: > 0 }:
+            {
+                var box = column.HeadBox;
+                var offsets = GraceColumnHeads.HeadOffsets(column);
+                double left = double.PositiveInfinity, right = double.NegativeInfinity;
+                double bottom = double.PositiveInfinity, top = double.NegativeInfinity;
+                for (int i = 0; i < column.Heads.Length; i++)
+                {
+                    double dx = !offsets.IsDefaultOrEmpty && i < offsets.Length ? offsets[i] : 0;
+                    left = Math.Min(left, headLeftX + dx + box.Left);
+                    right = Math.Max(right, headLeftX + dx + box.Right);
+                    double y = column.Heads[i].StaffPosition / 2.0;
+                    bottom = Math.Min(bottom, y - box.Height / 2);
+                    top = Math.Max(top, y + box.Height / 2);
+                }
+                return column.Heads.Length == 0 ? null : (left, right, bottom, top);
+            }
+            case RestItem { IsSpacer: false, IsMultiMeasure: false } rest:
+            {
+                int noteValue = GlyphMetrics.NoteValueOf(rest.BaseDuration);
+                var box = GlyphMetrics.GetRestBBox(noteValue);
+                double y = (ElementCoordinator.NeutralRestPosition(staffLines, noteValue) + restShift) / 2.0;
+                return (headLeftX + box.Left, headLeftX + box.Right, y + box.Bottom, y + box.Top);
             }
             default:
                 return null;

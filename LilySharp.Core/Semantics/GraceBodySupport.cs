@@ -653,6 +653,25 @@ internal static class GraceBodySupport
     };
 
     /// <summary>
+    /// True for the editor's <c>@todo</c> mark a grace note, chord or rest carries (session
+    /// 963): the preview rings the grace's small head (the chord's heads, the rest's glyph) and
+    /// sets its memo exactly as a full-size item's — <c>SharedRenderer.GraceTodoInkBox</c>, read
+    /// by the drawer and by the memo band's reservation alike — and an export draws nothing for
+    /// it, as for any mark. It rides the item (<c>MusicItem.TodoKey</c> and its three
+    /// companions, kept by <c>MeasureBuilder.NarrowToGraceTime</c>). THE question the collector
+    /// and the drop list both ask.
+    /// </summary>
+    /// <remarks>
+    /// LILYSHARP-OWN: an editor's mark with no LilyPond counterpart (docs/todo-memo-design.md);
+    ///   nothing to port for grace time either.
+    ///   departs from: nothing — no LilyPond counterpart.
+    ///   goes away when: never.
+    ///   observed by: TodoCalloutTests (the grace cases) and GraceBodyValidatorTests.
+    /// </remarks>
+    internal static bool IsCarriedTodo(SyntaxNode annotation)
+        => TodoAnnotation.Of(annotation) is not null;
+
+    /// <summary>
     /// True for a STEM DIRECTION a grace note or chord writes at its own level — <c>@stemUp</c> /
     /// <c>@stemDown</c> (LilyPond's once-override of Stem.direction): that stem points that
     /// way and the others keep the voice's (sessions 933, 935; ledger stemdir.grace.*,
@@ -1055,6 +1074,7 @@ internal static class GraceBodySupport
                     || IsCarriedOttava(annotation) || IsCarriedPhrasingSlur(annotation)
                     || IsCarriedCourtesy(annotation) || IsCarriedEditorial(annotation)
                     || IsCarriedSemiTie(annotation) || IsCarriedHeadMark(annotation)
+                    || IsCarriedTodo(annotation)
                     || IsCarriedStemDirection(item, annotation)
                     || ReferenceEquals(annotation, carriedBreath)
                     || (annotation is ArticulationSyntax inner && innerBreaths.Contains(inner)))

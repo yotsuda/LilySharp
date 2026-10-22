@@ -25,6 +25,13 @@ workflow attaches that section to the GitHub Release verbatim.
   rule: the rest stays where the voice puts it, the mark floats. Found by the OMR on a piano
   piece's right hand.
 
+### `@todo` on a grace note
+
+- **A `@todo` written on a grace note, chord or rest is a mark like any other**: the preview
+  rings the grace's small head and sets the memo (below for `.down`), `lysc check` stops
+  reporting it as not engraved (LYS4020), and an export is the page without it, as for every
+  mark. `lysc svg|png|pdf --todo` draws it too.
+
 ### Site
 
 - The scan page lists what the reader reads and does not yet, as the Marketplace README does,

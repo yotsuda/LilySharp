@@ -2,6 +2,13 @@
 
 All notable changes to the Lily# VS Code extension are documented here.
 
+## Unreleased
+
+### `@todo` on a grace note
+
+- **A `@todo` on a grace note, chord or rest is ringed and its memo set in the preview**, as a
+  full-size note's is (below for `.down`); the Problems view no longer says it is not engraved.
+
 ## 0.14.0
 
 ### A space after a percent mark writes its bar line
