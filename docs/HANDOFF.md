@@ -124,6 +124,19 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第953セッション（2026-10-22・YT-DELL2）
+
+第952 と同じ会話の続き（ユーザー「1」＝第952 の候補 ⑴ 台帳の残りの OPEN）。`-Start p953`（開始 HEAD `2cb51c5f7`・未 push 87・第951 を ARCHIVE へ）。作業場所は Lab `sessions/p953/`（LP の試料 `sbr.ly`／`sbri.ly`・`sky.ly`・`lp-*.ly`・掃きの一覧 `sweep-diff.txt`）。
+- **残りの OPEN 7 点の読み直し**: 歌詞の verse-hole の族（0.136）は歌詞の字面の項（Lily# の gjy の上端 1.629815／LP 1.765782）＝why が「0 にしない」と言う＝既決。staff-staff-inside（−0.0066）・volta（0.0026）・textscript（−0.001）も名指し済みの床。**残る実の OPEN は `slur.beamed.reserved-text`（−0.062・"not decomposed"）だけ**だった。
+- **それを分解して閉じた**（`522952c2c`）: ⑴ **計器の字面 0.039**＝probe の裸の `^"sul D"` は LP の立体の代替字、Lily# の `@text` は serif の斜体（第917 の textscript-ink の罠と同じ）→ `\markup \italic`＋`fonts.serif = "LilyPond Serif"` で LP 2.634165（probe 更新）。⑵ **slur の skyline の継ぎ目 0.025**＝LP の Slur／Tie の skyline は sandwich の stencil から: 各 bezier を制御多角形の長さ／0.2 に分け（stencil-integral.cc `add_draw_bezier_segments`・`QUANTIZATION_UNIT`）、各区間の両端を**X 方向に**ペンの半径だけ広げてから半径だけ持ち上げる（lazy-skyline-pair.hh `add_segment`）＝斜面では継ぎ目で前の区間が次より高い段になる。Lily# は 16 等分を半径だけ上げていた＋内側の制御点を perp の Y 成分だけ動かしていた（`Lookup::slur` は X も）。`SkylineBuilder.MergeBowOuterEdge` を LP の通りに（両 bezier）。結果 −0.000266（斜体の輪郭の差）。
+- **ついでに一致したもの**: `system.{slur,tie,voice2-*}-{over,under}-notes` 6 点＝4〜5e-4 → 完全一致。`staff.staff.tie-*`（所有者決定の自前の差）0.323572 → 0.322907。lpreg `lymelmel`＝slur の下の melisma の歌詞 6.18 → 6.31（LP 6.311689）・`slurav`＝slur の下の五線 11.01 → 11.04（LP 11.038）。
+- ⚠️ **OPEN（`ArticulationPlacementTests` に記録）**: tie を**支え**にする script（tie の上のアクセント等）も一様に ~+0.008 上がった。LP からの差は前が −0.008〜+0.005（平均 ≈ 0）、今は +0.001〜+0.014（sctchord の 5 アクセントのうち 2 つは近づき 3 つは遠のく・テヌート 2 つも +0.013）。slur の点は完全一致したので**模型は LP**＝LP が tie を支えとして読むものが stencil の skyline でない（pure の高さ？）見込み。
+- **網**: 台帳 9 点の residual を更新（slur.beamed＋system 6＋staff.staff 2）。毒 3 本＝X に広げない 1・perp の Y だけ 1・粗い分割 9＝全部赤。掃き 1,248 枚で **77 枚動いた**（64 枚は 0.04 以下＝SVG の 0.01 刻み・大きいのは lpreg の上の 2 冊＝どちらも LP に寄った）。snapshot 2 枚を承認（`test/slur-obstacle-clearance`・`test/pedal-under-next-system`）。`StaffSkylineFrameTests` の bow の頂点は 1e-5 で（t = 0.5 が標本でない多角形がある）。棚卸し＝16 が消え 0.2 に引用。引用の網: `QUANTIZATION_UNIT` は 2 つめ以降の大文字で C# の名と見なされる＝行番号を外した。計器: 使い捨て `Zz953ProbeTests`（RenderedGeometry の private を反射で読む・旧 `SkylineBuilder.cs` を差し替えて比べる＝⚠️ **差し替えは時刻を新しくしないと build が古いままになる**）は消した。
+- `-End p953 -DiffBase 2cb51c5f7` ＝full **12911 / 0 / 2 / 12913**（前便末と同数＝期待値の更新だけ）（Lab `sessions/p953/end.log`）→ この docs commit。本体 `522952c2c`。未 push 88＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。
+判定（2026-10-22）: 台帳に「分解されていない」残差は無くなった（名指しの床と決定済みだけ）。slur／tie の skyline は LP の作り方になった。次の候補＝⑴ tie を支えにする script の +0.008（LP が tie を支えとして何を読むか＝LP で dump）・⑵ 和音の fall（要ユーザー判断）・⑶ `@pluck`・H/P/T・`@scoop`/`@plop`/`@bend`・§2 E ⑹⑺（要ユーザー判断）。
+
+## 以下は第952セッションの経緯
+
 ### 1.1 第952セッション（2026-10-22・YT-DELL2）
 
 第951 と同じ会話の続き（ユーザー「1」＝第951 の候補 ⑴ 加線を五線の skyline に）。`-Start p952`（開始 HEAD `8f05d9b41`・未 push 85・第950 を ARCHIVE へ）。作業場所は Lab `sessions/p952/`（LP の試料は `no.ly`）。
@@ -132,16 +145,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **網**: 括弧の高さ −0.2414 → −0.000369（ラベルの bold-italic の輪郭が加線の端に乗る分＝文字の族の小さな項・why に名前）。台帳 2 点（`ottava.grace.after-high-note.{high-to-grace,grace-to-main}`）一致。毒 2 本＝`LeadingGrace` を動かさない 3 赤・群の位置を写さない 3 赤。掃き 1,248 枚で 0（grace で始まる ottava を書く本は無い）。棚卸しは差なし。計器: 使い捨ての `Zz952ProbeTests`（collect した item と `LeadingGrace`・群の位置を刷る）で原因を確かめて消した。
 - `-End p952 -DiffBase 8f05d9b41` ＝full **12911 / 0 / 2 / 12913**（前便末 +2）（Lab `sessions/p952/end.log`）→ この docs commit。本体 `66c00e7de`。未 push 86＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。
 判定（2026-10-22）: 第951 の最大の OPEN は閉じた（原因は加線でなく ottava と grace の run の食い違い）。台帳の OPEN は残り 7（いずれも 0.14 以下）。次の候補＝⑴ 残りの OPEN 7 点（`lyrics.row.between-staves.verse-hole.*` 0.136・`slur.beamed.reserved-text` −0.062 ほか＝第951 の `triage.tsv`）・⑵ 和音の fall（要ユーザー判断）・⑶ `@pluck`・H/P/T・`@scoop`/`@plop`/`@bend`・§2 E ⑹⑺（要ユーザー判断）。
-
-## 以下は第951セッションの経緯
-
-### 1.1 第951セッション（2026-10-22・YT-DELL2）
-
-第950 と同じ会話の続き（ユーザー「3」＝第950 の候補 ⑶ 台帳の残差の点検）。`-Start p951`（開始 HEAD `6cca593f9`・未 push 83・第949 を ARCHIVE へ）。作業場所は Lab `sessions/p951/`（仕分け表 `triage.tsv`・LP の試料 `sp.ly`・`vag.ly`・`os.ly`）。
-- **仕分け**: |residual| > 1e-3 の 101 点を why の語で 3 つに分けた（`triage.tsv`）＝**決定済み 43**（ユーザー決定・宣言した逸脱・Lily# 自前＝例 `ottava.x.line-start-to-notehead` 2.71 は「8va」の綴り・`barnumber.rows-only` 2.6 は帯・tab の uniformBeamedLength）／**説明済み 50**（原因が名指されている＝例 grace の連桁の符尾 12 点 −0.192 と全大きさの膝 −0.24 は「符尾を梁の線の中心まで描く／LP の Stem の extent は面まで」＝梁が覆うので見える差なし・計器の定義の差）／**OPEN 8**。OPEN の最大は `ottava.grace.after-high-note` −0.2414。
-- **その原因を突き止めた（未移植）**: LP が届いているのは前の c''' の頭ではなく**その加線**＝LedgerLineSpanner は inside-staff の grob で、五線の縦の skyline に加線が自分の高さ（位置/2＋太さ 0.2 の半分＝4.1）と自分の幅（頭の幅の 0.25 ずつ外へ＝頭の右から 0.326）で入る＝ラベルの左端の下に来る。**outside-staff の pass がそれをよける**（outside-staff-priority ##f で 4.887332＝VGE の高さ・VerticalAxisGroup の dump に 4.1 の建物が 9.902729 まで・shorten-pair を −0.80→−0.40 と動かすと高さがラベルの下の輪郭に沿って滑らかに下がり、加線の端を越えて床に着く）。~~Lily# の五線の skyline（`SkylineBuilder`）は加線を持たない~~＝**誤り（第952 が訂正）**: `SkylineBuilder.AddNoteBoxToSkylines` が加線を入れている。本当の原因は ottava が grace の run の間隔を動かしていなかったこと（第952）。台帳の why を「unexplained」から名指しに更新（`584bd2366`）。⚠️ 移植は**加線の計画（隣の列どうしの短縮・臨時記号での短縮）を layout 時の skyline の種にする**こと＝加線のある音の脇の outside-staff の grob すべてに効く（ottava だけでない）＝頁が動く見込み・設計を要する。
-- `-End p951 -DiffBase 6cca593f9` ＝full **12909 / 0 / 2 / 12911**（前便末と同じ＝why の更新だけ）（Lab `sessions/p951/end.log`）→ この docs commit。本体 `584bd2366`。未 push 84＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。
-判定（2026-10-22）: 台帳の大きな残差は決定済みか説明済みで、未解決は 8 点。うち最大の原因は「五線の skyline に加線が無い」＝一般の欠陥。次の候補＝⑴ **加線を五線の skyline に入れる**（`DrawPlannedLedgers` の計画を純関数にして `SkylineBuilder` の種に・掃きで動く頁を LP と照合）・⑵ 和音の fall（要ユーザー判断）・⑶ `@pluck`・H/P/T・`@scoop`/`@plop`/`@bend`・§2 E ⑹⑺（要ユーザー判断）。
 
 ## 2. 開いている作業
 

@@ -160,6 +160,16 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第951セッションの経緯
+
+### 1.1 第951セッション（2026-10-22・YT-DELL2）
+
+第950 と同じ会話の続き（ユーザー「3」＝第950 の候補 ⑶ 台帳の残差の点検）。`-Start p951`（開始 HEAD `6cca593f9`・未 push 83・第949 を ARCHIVE へ）。作業場所は Lab `sessions/p951/`（仕分け表 `triage.tsv`・LP の試料 `sp.ly`・`vag.ly`・`os.ly`）。
+- **仕分け**: |residual| > 1e-3 の 101 点を why の語で 3 つに分けた（`triage.tsv`）＝**決定済み 43**（ユーザー決定・宣言した逸脱・Lily# 自前＝例 `ottava.x.line-start-to-notehead` 2.71 は「8va」の綴り・`barnumber.rows-only` 2.6 は帯・tab の uniformBeamedLength）／**説明済み 50**（原因が名指されている＝例 grace の連桁の符尾 12 点 −0.192 と全大きさの膝 −0.24 は「符尾を梁の線の中心まで描く／LP の Stem の extent は面まで」＝梁が覆うので見える差なし・計器の定義の差）／**OPEN 8**。OPEN の最大は `ottava.grace.after-high-note` −0.2414。
+- **その原因を突き止めた（未移植）**: LP が届いているのは前の c''' の頭ではなく**その加線**＝LedgerLineSpanner は inside-staff の grob で、五線の縦の skyline に加線が自分の高さ（位置/2＋太さ 0.2 の半分＝4.1）と自分の幅（頭の幅の 0.25 ずつ外へ＝頭の右から 0.326）で入る＝ラベルの左端の下に来る。**outside-staff の pass がそれをよける**（outside-staff-priority ##f で 4.887332＝VGE の高さ・VerticalAxisGroup の dump に 4.1 の建物が 9.902729 まで・shorten-pair を −0.80→−0.40 と動かすと高さがラベルの下の輪郭に沿って滑らかに下がり、加線の端を越えて床に着く）。~~Lily# の五線の skyline（`SkylineBuilder`）は加線を持たない~~＝**誤り（第952 が訂正）**: `SkylineBuilder.AddNoteBoxToSkylines` が加線を入れている。本当の原因は ottava が grace の run の間隔を動かしていなかったこと（第952）。台帳の why を「unexplained」から名指しに更新（`584bd2366`）。⚠️ 移植は**加線の計画（隣の列どうしの短縮・臨時記号での短縮）を layout 時の skyline の種にする**こと＝加線のある音の脇の outside-staff の grob すべてに効く（ottava だけでない）＝頁が動く見込み・設計を要する。
+- `-End p951 -DiffBase 6cca593f9` ＝full **12909 / 0 / 2 / 12911**（前便末と同じ＝why の更新だけ）（Lab `sessions/p951/end.log`）→ この docs commit。本体 `584bd2366`。未 push 84＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。
+判定（2026-10-22）: 台帳の大きな残差は決定済みか説明済みで、未解決は 8 点。うち最大の原因は「五線の skyline に加線が無い」＝一般の欠陥。次の候補＝⑴ **加線を五線の skyline に入れる**（`DrawPlannedLedgers` の計画を純関数にして `SkylineBuilder` の種に・掃きで動く頁を LP と照合）・⑵ 和音の fall（要ユーザー判断）・⑶ `@pluck`・H/P/T・`@scoop`/`@plop`/`@bend`・§2 E ⑹⑺（要ユーザー判断）。
+
 ## 以下は第950セッションの経緯
 
 ### 1.1 第950セッション（2026-10-22・YT-DELL2）
