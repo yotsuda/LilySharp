@@ -160,6 +160,17 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第948セッションの経緯
+
+### 1.1 第948セッション（2026-10-22・YT-DELL2）
+
+第947 と同じ会話の続き（ユーザー「1」＝第947 の候補 ⑴ `@thumb`）。`-Start p948`（開始 HEAD `889b27fec`・未 push 77・第946 を ARCHIVE へ）。作業場所は Lab `sessions/p948/`（LP の試料は `thumb.ly`・`thumb2.ly`）。
+- **`@thumb` を LP の `\thumb`＝運指として置く・grace でも描く**（`75c4c3e5c`）: LP の `\thumb` は `\finger \markup \scale (magstep 5) \musicglyph "scripts.thumb"`（script-init.ly）＝Fingering。単独の運指は符尾に関係なく**上**（fingeringOrientations `'(up down)`）、インクが五線のインク・頭のインク・梁の付いた符尾から padding 0.5 離れる。magstep 5 が Fingering の font-size −5 を打ち消す＝普通の音で全大きさ、grace では −8＋5＝Script の −3。**Lily# は Script として符尾の反対側に置いていた**（`d16@thumb` が下 −3.745・LP は上 3.35）。`ArticulationEngraver.ThumbYUp`＝`FingeringEngraver` の規則（`StaffInk` を internal に）・字の箱は Fingering の font-size が選ぶ設計（−5＝emmentaler-11）×magstep 5。**字の箱が寸法表に無かった**＝`Extract-EmmentalerMetrics.py` に `scripts.thumb` を足して `GlyphMetricsGenerated.cs` を再生成（追加だけ）・`MusicFont` の対応・`GetGlyphBBox` も半間の代用をやめた。grace は `GraceBodySupport.IsCarriedThumb`（収集と LYS4020）。Leland（thumb を持たない）は Emmentaler で描く既存の警告どおり＝落ちない（確かめた）。⚠️ TMB の 3.71 は癖ではなく自動連桁の梁の支え（`c''16 e8.` が梁で結ばれる・`c''4` なら 2.55＝Lab `thumb2.ly`）。
+- **網**: 台帳 9 点（`thumb.*`＝主 6・grace 3・probe `thumb.ly`）各 3e-6 以内＝LP の箱は −5 の設計の 1.000004 倍（両端とも）＝因子は見つからない（OPEN・各 why に名前）。LYS4020 の網 1 行。毒 5 本＝符尾で側を決める 6・Script の配置 9・20 の設計 9・grace を集めない 4・梁を無視 1＝全部赤。掃き 1,248 枚で 0（`@thumb` を書く本は 0 冊）。棚卸し＝magstep 5 と位置の半分 2 行。引用の網＝行範囲の引用 2 つから行番号を外した（`thumb`・`Fingering` は記号でない）。
+- ⚠️ **未測定**: 和音の thumb は和音の全部の頭を読む／thumb は同じ側の他の記号と積まない（LP は script column で priority 100＋位置）／voice の中では voice の側が勝つ。
+- `-End p948 -DiffBase 889b27fec` ＝full **12893 / 0 / 2 / 12895**（前便末 +10）（Lab `sessions/p948/end.log`）→ この docs commit。本体 `75c4c3e5c`。未 push 78＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。
+判定（2026-10-22）: `@thumb` は主の音でも grace でも LP の位置（3e-6 以内）。次の候補＝⑴ 和音の fall を描くか（LP は描かない＝要ユーザー判断）・⑵ `@pluck`・H/P/T（Lily# 自前の字＝同一性の網で）・`@scoop`/`@plop`/`@bend`（Lily# 自前の装置）・⑶ thumb が同じ側の他の記号と積む形（LP で照合できる）・§2 E ⑹⑺（要ユーザー判断）。
+
 ## 以下は第947セッションの経緯
 
 ### 1.1 第947セッション（2026-10-22・YT-DELL2）

@@ -124,6 +124,16 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第950セッション（2026-10-22・YT-DELL2）
+
+第949 と同じ会話の続き（ユーザー「2」＝第949 の候補 ⑵ 台帳 `grace.voice-two.bar-opening` の PENDING）。`-Start p950`（開始 HEAD `6ecf9c7e2`・未 push 81・第948 を ARCHIVE へ）。作業場所は Lab `sessions/p950/`（LP の試料は `open.ly`）。
+- **小節線の光学補正が先頭の grace の自分の符尾を読む**（`bc4c4f5c4`）: LP の小節線は下向きの符尾を、その pure extent のうち小節線が覆う長さで補正する（staff-spacing.cc optical_correction）＝grace の列なら **grace の Stem**（grace の頭の付け所・grace の符尾の規則）。`SpacingRules.LeadGraceOpticalCorrection` は普通の大きさの代役（`ApproachColumn`）の符尾を読んでいた＝**第933 が approach の帯で直したのと同じ誤り**が小節線の補正に残っていた。下の声部の grace d'' が小節頭で 0.005861 広く、b' は 0.003281 狭かった。`GraceStemBand`（最初の grace）を読むように直し、算術は `DownStemOpticalCorrection` として `StaffSpacingOpticalCorrection` と共有。
+- **台帳の唯一の PENDING が閉じた**: `grace.voice-two.bar-opening`（第726 から residual +0.005861・why "PENDING"）＝1.5e-8 で一致。対照と形 7 点（`grace.voice-two.bar-opening.*`＝probe `grace-voice-two-stem.ly` GOB〜GOH）: 元から一致の対照 3（符尾上向き・主の音・五線の下の grace）＋形 4（16 分・連桁・4 分・中央線）全部一致。毒 2 本＝代役の符尾 5 赤・位置を間として読む 5 赤。掃き 1,248 枚で 0。棚卸しは差なし。⚠️ 計器の罠: 台帳を行番号で書き換えるとき `[Array]::IndexOf` は 0 始まり・`Update-LinesInFile` は 1 始まり＝1 度 `lilypond` の行を潰した（git diff で確かめて直した）。
+- `-End p950 -DiffBase 6ecf9c7e2` ＝full **12909 / 0 / 2 / 12911**（前便末 +7）（Lab `sessions/p950/end.log`）→ この docs commit。本体 `bc4c4f5c4`。未 push 82＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。
+判定（2026-10-22）: 台帳に説明の無い残差は 0。次の候補＝⑴ 和音の fall を描くか（LP は描かない＝要ユーザー判断）・⑵ `@pluck`・H/P/T（Lily# 自前の字＝同一性の網で）・`@scoop`/`@plop`/`@bend`・⑶ OPEN の残差の点検（台帳の "OPEN:" を数えて LP と照合できるものから）・§2 E ⑹⑺（要ユーザー判断）。
+
+## 以下は第949セッションの経緯
+
 ### 1.1 第949セッション（2026-10-22・YT-DELL2）
 
 第948 と同じ会話の続き（ユーザー「3」＝第948 の候補 ⑶ thumb と同じ側の他の記号）。`-Start p949`（開始 HEAD `70e57d1c7`・未 push 79・第947 を ARCHIVE へ）。作業場所は Lab `sessions/p949/`（LP の試料は `stack.ly`）。
@@ -133,17 +143,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - ⚠️ **未測定**: thumb と digit の運指が同じ音に在ると priority が同点（LP は受け取り順）／下向きの thumb は列に入るが、LP の下向きの運指の列の扱いは測っていない。
 - `-End p949 -DiffBase 70e57d1c7` ＝full **12902 / 0 / 2 / 12904**（前便末 +9）（Lab `sessions/p949/end.log`）→ この docs commit。本体 `ff9182cd8`。未 push 80＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。
 判定（2026-10-22）: thumb は他の記号と LP と同じ順・同じ間隔で積まれる（5e-6 以内）。次の候補＝⑴ 和音の fall を描くか（LP は描かない＝要ユーザー判断）・⑵ 台帳 `grace.voice-two.bar-opening` の PENDING の why（0.0059 の残差の原因を名指す）・⑶ `@pluck`・H/P/T（Lily# 自前の字＝同一性の網で）・`@scoop`/`@plop`/`@bend`・§2 E ⑹⑺（要ユーザー判断）。
-
-## 以下は第948セッションの経緯
-
-### 1.1 第948セッション（2026-10-22・YT-DELL2）
-
-第947 と同じ会話の続き（ユーザー「1」＝第947 の候補 ⑴ `@thumb`）。`-Start p948`（開始 HEAD `889b27fec`・未 push 77・第946 を ARCHIVE へ）。作業場所は Lab `sessions/p948/`（LP の試料は `thumb.ly`・`thumb2.ly`）。
-- **`@thumb` を LP の `\thumb`＝運指として置く・grace でも描く**（`75c4c3e5c`）: LP の `\thumb` は `\finger \markup \scale (magstep 5) \musicglyph "scripts.thumb"`（script-init.ly）＝Fingering。単独の運指は符尾に関係なく**上**（fingeringOrientations `'(up down)`）、インクが五線のインク・頭のインク・梁の付いた符尾から padding 0.5 離れる。magstep 5 が Fingering の font-size −5 を打ち消す＝普通の音で全大きさ、grace では −8＋5＝Script の −3。**Lily# は Script として符尾の反対側に置いていた**（`d16@thumb` が下 −3.745・LP は上 3.35）。`ArticulationEngraver.ThumbYUp`＝`FingeringEngraver` の規則（`StaffInk` を internal に）・字の箱は Fingering の font-size が選ぶ設計（−5＝emmentaler-11）×magstep 5。**字の箱が寸法表に無かった**＝`Extract-EmmentalerMetrics.py` に `scripts.thumb` を足して `GlyphMetricsGenerated.cs` を再生成（追加だけ）・`MusicFont` の対応・`GetGlyphBBox` も半間の代用をやめた。grace は `GraceBodySupport.IsCarriedThumb`（収集と LYS4020）。Leland（thumb を持たない）は Emmentaler で描く既存の警告どおり＝落ちない（確かめた）。⚠️ TMB の 3.71 は癖ではなく自動連桁の梁の支え（`c''16 e8.` が梁で結ばれる・`c''4` なら 2.55＝Lab `thumb2.ly`）。
-- **網**: 台帳 9 点（`thumb.*`＝主 6・grace 3・probe `thumb.ly`）各 3e-6 以内＝LP の箱は −5 の設計の 1.000004 倍（両端とも）＝因子は見つからない（OPEN・各 why に名前）。LYS4020 の網 1 行。毒 5 本＝符尾で側を決める 6・Script の配置 9・20 の設計 9・grace を集めない 4・梁を無視 1＝全部赤。掃き 1,248 枚で 0（`@thumb` を書く本は 0 冊）。棚卸し＝magstep 5 と位置の半分 2 行。引用の網＝行範囲の引用 2 つから行番号を外した（`thumb`・`Fingering` は記号でない）。
-- ⚠️ **未測定**: 和音の thumb は和音の全部の頭を読む／thumb は同じ側の他の記号と積まない（LP は script column で priority 100＋位置）／voice の中では voice の側が勝つ。
-- `-End p948 -DiffBase 889b27fec` ＝full **12893 / 0 / 2 / 12895**（前便末 +10）（Lab `sessions/p948/end.log`）→ この docs commit。本体 `75c4c3e5c`。未 push 78＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。
-判定（2026-10-22）: `@thumb` は主の音でも grace でも LP の位置（3e-6 以内）。次の候補＝⑴ 和音の fall を描くか（LP は描かない＝要ユーザー判断）・⑵ `@pluck`・H/P/T（Lily# 自前の字＝同一性の網で）・`@scoop`/`@plop`/`@bend`（Lily# 自前の装置）・⑶ thumb が同じ側の他の記号と積む形（LP で照合できる）・§2 E ⑹⑺（要ユーザー判断）。
 
 ## 2. 開いている作業
 
