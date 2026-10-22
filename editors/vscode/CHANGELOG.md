@@ -4,6 +4,11 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+### `@cross` with no other staff
+
+- **The Problems view reports an `@cross` whose part has no staff beside it** (LYS4031), and
+  says to write `@dead` or `@notehead(cross)` for an x head.
+
 ### A chord symbol, figured bass and a chord diagram on a grace note
 
 - **`@chord`, `@figuredBass` and `@diagram` on a grace note are drawn in the preview** — the

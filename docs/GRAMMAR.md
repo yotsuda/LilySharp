@@ -1765,7 +1765,15 @@ StaffGroupBody = '{' , { StaffRender | CondensedStaff | CombinedStaff
                     the established name of one; a staff group produces a GROUP OF STAVES and
                     says so. LilyPond spells its own contexts the same way, and for the same
                     reason: of its seventeen staff contexts, `StaffGroup` is the only one that
-                    is not a musical term. *)
+                    is not a musical term.
+
+                    CROSS-STAFF NOTES: a note of a part drawn in a group may be moved to the
+                    OTHER staff with `@cross` (`rh { e''2 a,,2@cross }` draws the a,, on the
+                    left hand's staff — LilyPond's `\change Staff` for one note; a group of
+                    more than two moves it to the next staff down). It is a note annotation,
+                    not a head style: `@cross` is NOT an x notehead (that is `@dead` or
+                    `@notehead(cross)`). On a part that no score draws beside another staff it
+                    moves nothing and is a warning, LYS4031, naming those two spellings. *)
 
 CondensedStaff = 'condensedStaff' , [ ClefName ] , '{' , PartRef , PartRef , { PartRef } , '}' ;
                  (* A CONDENSED score: the named parts, each of which would otherwise be its
@@ -2616,7 +2624,7 @@ TwoDigitFret   = Digit , Digit ;                                 (* 10-15 *)
    - Half ties:     c4@laissezVibrer (l.v. into silence) , c4@repeatTie (from a repeat)
    - Effects:       @dead (x notehead; '@notehead(cross)' is the same head — '@cross' is NOT:
                     it moves the note to the OTHER staff of a grand staff, and on a single
-                    staff does nothing) , @parenthesize (the head in
+                    staff does nothing and warns, LYS4031, naming these two) , @parenthesize (the head in
                     parentheses, a ghost note; on a chord one pair round it, on a member
                     its own; LilyPond's \parenthesize — the parentheses take no room) ,
                     @fall @doit (jazz bends; on a chord ONE curve off its top head —

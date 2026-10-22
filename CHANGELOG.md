@@ -29,6 +29,13 @@ workflow attaches that section to the GitHub Release verbatim.
   rule: the rest stays where the voice puts it, the mark floats. Found by the OMR on a piano
   piece's right hand.
 
+### `@cross` with no other staff
+
+- **An `@cross` on a part that no score draws beside another staff is a warning (LYS4031)**:
+  `@cross` moves the note to the other staff of a grand staff, and on a single staff it did
+  nothing in silence. The message names the x-head spellings (`@dead`, `@notehead(cross)`) —
+  the mistake the owner's own lead sheet had made.
+
 ### A chord symbol, figured bass and a chord diagram on a grace note
 
 - `[engraving]` **A grace note takes a chord symbol** (`grace { d8@chord(D) } e4@chord(E)`): the

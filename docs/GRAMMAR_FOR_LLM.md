@@ -465,7 +465,8 @@ Value words inside the parentheses are lowercase too (`@notehead(triangle)`,
 - Rehearsal mark: `c4@mark("A")`
 - Half ties: `c4@laissezVibrer` (l.v. into silence), `c4@repeatTie` (resume from a repeat)
 - Effects: `@dead` (x notehead; `@notehead(cross)` is the same head — `@cross` is NOT: it moves the
-  note to the other staff of a grand staff), `@parenthesize` (head in parentheses, a ghost note:
+  note to the other staff of a grand staff; on a part drawn with no staff beside it = warning
+  LYS4031 and the note stays), `@parenthesize` (head in parentheses, a ghost note:
   `sn16@parenthesize`; `<c e g>2@parenthesize` = one pair round the chord), `@fall`/`@doit` (jazz bends), `@breath`/`@caesura`
 - Cue notes: `cue { … }` — a REGION, not an annotation, so there is no `@cue`:
   `c4 d cue { e4 f } g4 |` (it maps onto LilyPond's CueVoice context). Name the quoted

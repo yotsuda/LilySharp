@@ -1439,7 +1439,18 @@ public static class DiagnosticCodes
     /// three or more kit pieces for the hands, three or more for the feet, or the closed and the
     /// open hi-hat together (owner's rule 2026-10-11). The chart still plays and draws them;
     /// lines that merely meet (a hi-hat and a snare on one beat) are not reported.</summary>
-    public const string DrumsUnplayable = "LYS4030";    /// <summary>A slur, phrasing slur, tie or hairpin — and, since 2026-09-29, a text spanner,
+    public const string DrumsUnplayable = "LYS4030";
+
+    /// <summary>Semantic warning: an <c>@cross</c> on a note whose part no score draws beside
+    /// another staff. <c>@cross</c> moves the note to the OTHER staff (a grand staff's, or the
+    /// next staff of the score — <c>CrossStaffEngraver</c>), and a score with one staff has
+    /// nowhere to move it: the note is drawn where it stands and nothing said so until
+    /// session 966 (owner's decision 2026-10-23, after the owner's own <c>blues.lys</c> wrote
+    /// <c>b4@cross</c> for an x head on a lead sheet). The message names the x head's
+    /// spellings (<c>@dead</c>, <c>@notehead(cross)</c>), the mistake that prompted it.</summary>
+    public const string CrossStaffWithoutPartner = "LYS4031";
+
+    /// <summary>A slur, phrasing slur, tie or hairpin — and, since 2026-09-29, a text spanner,
     /// ottava, pedal or trill span — that breaks the SECTION CARRY RULE
     /// (owner's decisions, 2026-09-28): a span open when a section ends is carried into the
     /// section the form plays next and must end there. Four faults, checked per form, per part
