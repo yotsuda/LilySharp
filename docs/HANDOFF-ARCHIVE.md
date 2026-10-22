@@ -160,6 +160,18 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第949セッションの経緯
+
+### 1.1 第949セッション（2026-10-22・YT-DELL2）
+
+第948 と同じ会話の続き（ユーザー「3」＝第948 の候補 ⑶ thumb と同じ側の他の記号）。`-Start p949`（開始 HEAD `70e57d1c7`・未 push 79・第947 を ARCHIVE へ）。作業場所は Lab `sessions/p949/`（LP の試料は `stack.ly`）。
+- **thumb を音符の script column に入れる**（`ff9182cd8`）: LP の Fingering は script-priority 100＋頭の位置（New_fingering_engraver）＝staccato（−100）・accent（0）・flageolet（50）の上、trill（150）・fermata（175）・弓（180）の下。Lily# の thumb（第948）は列に入らず、他の記号が thumb を突き抜けて立っていた。`ArticulationEngraver`: ⑴ `ScriptPriority` で thumb＝100（100＋位置はどの頭でも 50 と 150 の間）。⑵ 支えの鎖で thumb は下のものを Fingering の padding 0.5・horizon-padding 0 でよける（digit の `FlushFingerings` と同じ）。⑶ **thumb の輪郭は箱**＝Fingering は vertical-skylines を宣言しない（`IsBoxProfileGlyph`＝`ScriptSkyline`／`ScriptSkylines`・`FingeringScriptLayout` と同じ規則）・箱は LP が読む設計から（`ThumbInkBox`＝seed の箱にも）。輪郭のままだと丸の下の細い棒が accent の斜面に 0.102 沈んだ（`c''4\thumb\accent`）・20 の設計の箱だと上の弓・fermata が 1.8e-4 低かった。
+- **網**: 台帳 9 点（`thumb.stack.*`＝probe `thumb-stack.ly`）各 5e-6 以内（thumb の箱の 1.000004＝`thumb.main` の OPEN）・accent の対照は完全一致。毒 5 本＝priority 0 が 3・輪郭が 7・Script の padding が 3・Script の horizon-padding が 1・20 の設計の箱が 7＝全部赤。掃き 1,248 枚で 0。棚卸し＝thumb の priority と箱の倍率。⚠️ switch の腕の引用は平文にした（`LILYPOND-REF` は前後 5 行に付くので、弓の 180 が new-fingering-engraver を引いたことになっていた）。
+- ⚠️ **見つけたが触っていない**: 台帳 `grace.voice-two.bar-opening`（residual 0.005861）の why が `"PENDING"` のまま HEAD に在る（この便より前）＝説明の無い残差。
+- ⚠️ **未測定**: thumb と digit の運指が同じ音に在ると priority が同点（LP は受け取り順）／下向きの thumb は列に入るが、LP の下向きの運指の列の扱いは測っていない。
+- `-End p949 -DiffBase 70e57d1c7` ＝full **12902 / 0 / 2 / 12904**（前便末 +9）（Lab `sessions/p949/end.log`）→ この docs commit。本体 `ff9182cd8`。未 push 80＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。
+判定（2026-10-22）: thumb は他の記号と LP と同じ順・同じ間隔で積まれる（5e-6 以内）。次の候補＝⑴ 和音の fall を描くか（LP は描かない＝要ユーザー判断）・⑵ 台帳 `grace.voice-two.bar-opening` の PENDING の why（0.0059 の残差の原因を名指す）・⑶ `@pluck`・H/P/T（Lily# 自前の字＝同一性の網で）・`@scoop`/`@plop`/`@bend`・§2 E ⑹⑺（要ユーザー判断）。
+
 ## 以下は第948セッションの経緯
 
 ### 1.1 第948セッション（2026-10-22・YT-DELL2）
