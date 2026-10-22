@@ -1225,10 +1225,25 @@ internal static class ArticulationEngraver
                 double space = EngravingDefaults.TabStringSpace(strings);
                 // Centre on the fret digit, which sits a TabHeadCenterOffset right
                 // of the note column (see EngravingDefaults).
-                double colX = measureLayout.X
-                    + LayoutUtilities.GetItemXOffset(artMeasures,
-                        articulation.MeasureIndex, articulation.ItemIndex, measureLayout)
-                    + EngravingDefaults.TabHeadCenterOffset;
+                // A GRACE digit (session 958) is centred ON its column, read off the run as
+                // the notation staff's grace script is (SharedRenderer.TabGraceDigits draws it
+                // at currentX), and is drawn at TabConstants.GraceFretScale with no stem — so
+                // the column's X is the digit's, the digit is read at the grace scale, and the
+                // stem support below is skipped. Until session 958 a script on a tab grace
+                // stood over the MAIN note's digit (the grace item's offset is its main's).
+                bool tabGrace = graceHeadLeft is { } tabGraceX;
+                double colX = tabGrace
+                    ? graceHeadLeft!.Value
+                    : measureLayout.X
+                      + LayoutUtilities.GetItemXOffset(artMeasures,
+                          articulation.MeasureIndex, articulation.ItemIndex, measureLayout)
+                      + EngravingDefaults.TabHeadCenterOffset;
+                double digitScale = tabGrace ? TabConstants.GraceFretScale : 1.0;
+                // …and the script itself is set at general-grace-settings' Script size, as on
+                // the notation staff (the block below the tab's); a tab technique letter keeps
+                // its size (the renderer draws it at TabTechniqueEm whatever the step).
+                double tabStep = tabGrace && TabTechniqueLetterOf(articulation) is null
+                    ? GrobFontSize.StepOf(item, SizedGrob.Script) : 0.0;
                 var geom = new TabStaffGeometry(fonts,
                     tabStaff.Tuning.Value, staffOffset, tabStaff.TabSourceClef, tabStaff.Transposition);
                 beamGroups ??= BuildBeamGroupMap(beamLayouts, wantedBeamKeys);
@@ -1280,19 +1295,19 @@ internal static class ArticulationEngraver
                 // LILYPOND-REF: lily/side-position-interface.cc:273-281 aligned_side — `if (dir == -get_grob_direction (e)) continue;`
                 // The digit's box is the DRAWN digit's, Lily#'s larger one (TabConstants.FretFontSize):
                 // user decision 2026-09-30 — a script clears the digit it would otherwise touch.
-                double fretHalf = TabConstants.FretDigitHeight(fonts, geom.StringCount) / 2.0;
+                double fretHalf = TabConstants.FretDigitHeight(fonts, geom.StringCount) / 2.0 * digitScale;
                 int edgeString = geom.StemHeadString(item, stemUp: tabAbove);
                 // The script's outline meets the digit over the digit's own width (LP's TabNoteHead
                 // X extent is its text's), and the stem and the staff across the whole width
                 // (add-stem-support; include_staff) — see SupportReach for the notation staff's.
-                double nearAll = NearReachOver(articulation, tabAbove, fonts);
+                double nearAll = NearReachOver(articulation, tabAbove, fonts, scriptStep: tabStep);
                 var (_, edgeFret) = geom.StemRootDigit(item, stemUp: !tabAbove);
                 double digitHalf = TabConstants.FretGlyphWidth(fonts, geom.StringCount,
                     edgeFret.ToString(System.Globalization.CultureInfo.InvariantCulture),
-                    TabConstants.FretEm(fonts, geom.StringCount)) / 2.0;
+                    TabConstants.FretEm(fonts, geom.StringCount) * digitScale) / 2.0;
                 double support = dir * (tabMiddle - geom.StringY(edgeString)) + fretHalf
-                                 + NearReachOver(articulation, tabAbove, fonts, -digitHalf, digitHalf);
-                if (tabStemUp == tabAbove)
+                                 + NearReachOver(articulation, tabAbove, fonts, -digitHalf, digitHalf, tabStep);
+                if (tabStemUp == tabAbove && !tabGrace)
                 {
                     // A beamed stem ends at its beam's outer edge; an unbeamed one at its tip.
                     double? tip = tabBeam is not null
@@ -1305,7 +1320,7 @@ internal static class ArticulationEngraver
                 // (the string gap), line count (the strings) — AlignedSideUp. The script's X
                 // parent is the stem's first head, a TabNoteHead (a note head).
                 double scriptUp = AlignedSideUp(articulation, tabAbove, support, ss, strings,
-                    onNoteHead: item is NoteItem or ChordItem, fonts);
+                    onNoteHead: item is NoteItem or ChordItem, fonts, scriptStep: tabStep);
                 double tabY = tabMiddle - scriptUp;
                 // The glyph must match the side chosen HERE (the item's own
                 // IsAbove was resolved with notation-staff logic).
@@ -1317,10 +1332,17 @@ internal static class ArticulationEngraver
                 // geom all carry it); reflect to Y-up about that staff's middle so the
                 // stored value is offset-free (StaffMiddle + staffOffset as the mirror).
                 double tabYUp = (StaffMiddle + staffOffset) - tabY;
+                var tabSeed = GetSeedBBox(articulation.Type);
+                if (tabStep != 0.0)
+                {
+                    double s = EmmentalerDesignSize.Magstep(tabStep);
+                    tabSeed = new GlyphMetrics.BBox(tabSeed.Left * s, tabSeed.Bottom * s,
+                        tabSeed.Right * s, tabSeed.Top * s);
+                }
                 layouts.Add(new ArticulationLayout(
-                    articulation.MeasureIndex, articulation.ItemIndex, colX + OriginFromCentre(tabGlyph), tabYUp,
-                    tabGlyph, tabAbove, articulation.SourcePosition, FontSizeStep: 0.0,
-                    GetSeedBBox(articulation.Type), SourceIndex: arti,
+                    articulation.MeasureIndex, articulation.ItemIndex, colX + OriginFromCentre(tabGlyph, tabStep), tabYUp,
+                    tabGlyph, tabAbove, articulation.SourcePosition, FontSizeStep: tabStep,
+                    tabSeed, SourceIndex: arti,
                     StaffIndex: articulation.StaffIndex,
                     SkylineHorizontalPadding:
                         ArticulationSpacing.SkylineHorizontalPadding(articulation.Type)));
@@ -1343,6 +1365,13 @@ internal static class ArticulationEngraver
             // full-size one's.
             double fontSizeStep = item.GraceTime ? GrobFontSize.StepOf(item, SizedGrob.Script) : 0.0;
             double scriptStep = fontSizeStep;
+            // A tab technique letter keeps its size on a grace (session 958): the renderer draws
+            // it at TabTechniqueEm whatever the step, so the box it reserves must be that size too.
+            if (TabTechniqueLetterOf(articulation) is not null)
+            {
+                fontSizeStep = 0.0;
+                scriptStep = 0.0;
+            }
             if (articulation.IsEditorialAccidental)
             {
                 fontSizeStep = EditorialFontSizeStep;

@@ -181,6 +181,11 @@ public class GraceBodyValidatorTests
     [InlineData("grace { d'8@scoop } c'1 | e'1 |", "grace { d'8 } c'1 | e'1 |")]
     [InlineData("grace { d'8@plop } c'1 | e'1 |", "grace { d'8 } c'1 | e'1 |")]
     [InlineData("grace { d'8@bend(full) } c'1 | e'1 |", "grace { d'8 } c'1 | e'1 |")]
+    // …and the tab technique letters (session 958, GraceBodySupport.IsCarriedTabTechnique).
+    [InlineData("grace { d'8@hammerOn } c'1 | e'1 |", "grace { d'8 } c'1 | e'1 |")]
+    [InlineData("grace { d'8@pullOff } c'1 | e'1 |", "grace { d'8 } c'1 | e'1 |")]
+    [InlineData("grace { d'8@tap } c'1 | e'1 |", "grace { d'8 } c'1 | e'1 |")]
+    [InlineData("grace { d'8@pluck(p) } c'1 | e'1 |", "grace { d'8 } c'1 | e'1 |")]
     public void AFallOnAGrace_IsDrawn_AndNotReported(string written, string control)
     {
         Assert.Empty(Warnings(Book(written)));

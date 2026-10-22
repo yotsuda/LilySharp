@@ -259,6 +259,54 @@ public sealed class OwnGestureGeometryTests
         AssertPoint((digit.X + BendTabXOffset + BendReach, row - BendRise), curve[^1].X2, curve[^1].Y2, "the tip");
     }
 
+    /// <summary>
+    /// A TAB TECHNIQUE LETTER on a grace note (session 958, GraceBodySupport.IsCarriedTabTechnique)
+    /// is a side-positioned script off the grace column at the LETTER's own size: centred on the
+    /// grace head (its box right's half), under it by its own clearance. On a tab staff it is
+    /// centred on the grace DIGIT, which stands on its column. The clearances are Lily#'s own
+    /// (the letter's ink box through the Script's aligned_side), pinned here as drawn.
+    /// </summary>
+    [Theory]
+    [InlineData("r4 grace { c16@hammerOn } d4 e f |", "H", 3.83)]
+    [InlineData("r4 grace { c16@pluck(p) } d4 e f |", "p", 3.46)]
+    public void ATabTechniqueLetter_OnAGraceNote_IsCentredOnTheGraceHead(string music, string letter, double below)
+    {
+        var svg = Render(music);
+        var m = Regex.Match(svg,
+            "<text x=\"([-\\d.]+)\" y=\"([-\\d.]+)\" font-size=\"([\\d.]+)\" font-style=\"italic\" "
+            + "text-anchor=\"middle\" data-pos=\"(\\d+)\">" + letter + "</text>");
+        Assert.True(m.Success, $"the letter {letter} is drawn with the mark's source position");
+        int pos = int.Parse(m.Groups[4].Value, CultureInfo.InvariantCulture);
+        var head = OwnerOf(Heads(svg), pos);
+        double graceWidth = GlyphMetrics.GetNoteheadBBox(
+            MusicFont.Current.SizedAt(LilySharp.Core.Svg.Model.GraceNoteItem.FontSizeStep), 4).Width;
+        Assert.InRange(D(m.Groups[1]), head.X + graceWidth / 2 - Tolerance, head.X + graceWidth / 2 + Tolerance);
+        // Two rounded coordinates either side of the difference: twice the tolerance.
+        Assert.InRange(D(m.Groups[2]), head.Y + below - 2 * Tolerance, head.Y + below + 2 * Tolerance);
+        // Its own size, not the grace's: TabTechniqueEm (1.5) whatever the column's step.
+        Assert.Equal(1.5, D(m.Groups[3]), 2);
+    }
+
+    [Theory]
+    [InlineData("r4 grace { c16@hammerOn } d4 e f |", "H", 0.42)]
+    [InlineData("r4 grace { c16@pluck(p) } d4 e f |", "p", 0.65)]
+    public void ATabTechniqueLetter_OnATabGraceNote_IsCentredOnTheGraceDigit(string music, string letter, double overTopString)
+    {
+        var svg = RenderTab(music);
+        var m = Regex.Match(svg,
+            "<text x=\"([-\\d.]+)\" y=\"([-\\d.]+)\" font-size=\"([\\d.]+)\" font-style=\"italic\" "
+            + "text-anchor=\"middle\" data-pos=\"(\\d+)\">" + letter + "</text>");
+        Assert.True(m.Success, $"the letter {letter} is drawn with the mark's source position");
+        int pos = int.Parse(m.Groups[4].Value, CultureInfo.InvariantCulture);
+        var digit = OwnerOf(Digits(svg), pos);
+        double topString = Regex.Matches(svg,
+                "<line x1=\"[-\\d.]+\" y1=\"([-\\d.]+)\" x2=\"[-\\d.]+\" y2=\"[-\\d.]+\" stroke=\"#000000\" stroke-width=\"0.100\"/>")
+            .Select(l => D(l.Groups[1])).Min();   // a tab-only page: its top string
+        Assert.InRange(D(m.Groups[1]), digit.X - Tolerance, digit.X + Tolerance);
+        Assert.InRange(D(m.Groups[2]), topString - overTopString - 2 * Tolerance, topString - overTopString + 2 * Tolerance);
+        Assert.Equal(1.5, D(m.Groups[3]), 2);
+    }
+
     /// <summary>The Y of the string line a fret digit sits on: the digit is centred ON its
     /// line, so its baseline <paramref name="baselineY"/> hangs under it by less than a string
     /// space — the nearest drawn staff line (0.100 thick) ABOVE the baseline.</summary>

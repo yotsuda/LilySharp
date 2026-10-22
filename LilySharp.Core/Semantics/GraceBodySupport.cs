@@ -394,6 +394,29 @@ internal static class GraceBodySupport
            || (annotation is MusicMarkSyntax mark && AnnotationValues.Bend(mark) is not null);
 
     /// <summary>
+    /// True for a TAB TECHNIQUE LETTER a grace note carries — <c>@hammerOn</c> / <c>@pullOff</c>
+    /// / <c>@tap</c> (H / P / T) and <c>@pluck(p)</c>'s finger letter — a Script of the ordinary
+    /// side-position table, placed off the grace column as any script is, at the letter's own
+    /// size (session 958; OwnGestureGeometryTests' grace letters). THE question the collector
+    /// and the drop list both ask.
+    /// </summary>
+    /// <remarks>
+    /// LILYSHARP-OWN: the letters are Lily#'s own tablature ink (LilyPond's \rightHandFinger is
+    ///   a StrokeFinger, which general-grace-settings does not size either, and H / P / T have
+    ///   no grob at all), so there is no grace rule to port; the letter keeps its size as the
+    ///   fall and the gestures do.
+    ///   departs from: nothing — no LilyPond counterpart.
+    ///   goes away when: never.
+    ///   observed by: OwnGestureGeometryTests (the grace letters; identity values).
+    /// </remarks>
+    internal static bool IsCarriedTabTechnique(SyntaxNode annotation)
+        => annotation is ArticulationSyntax
+           {
+               Type: ArticulationType.HammerOn or ArticulationType.PullOff or ArticulationType.Tap
+           }
+           || (annotation is MusicMarkSyntax mark && AnnotationValues.Pluck(mark) is not null);
+
+    /// <summary>
     /// True for a DYNAMIC a grace note engraves — a level (<c>@f</c>, <c>@p</c>, <c>@sfz</c>, …),
     /// at full size on the grace column (session 916; ledger dynamic.grace.*). A hairpin start
     /// is <see cref="IsCarriedHairpinStart"/> (session 918). THE question the collector and the
@@ -1022,7 +1045,8 @@ internal static class GraceBodySupport
             foreach (var annotation in CarriedAnnotations(item))
             {
                 if (NeedsNoColumn(annotation) || IsCarriedScript(annotation) || IsCarriedBendAfter(annotation)
-                    || IsCarriedGesture(annotation) || IsCarriedThumb(annotation)
+                    || IsCarriedGesture(annotation) || IsCarriedTabTechnique(annotation)
+                    || IsCarriedThumb(annotation)
                     || IsCarriedDynamic(annotation)
                     || IsCarriedText(annotation) || IsCarriedFingering(annotation)
                     || IsCarriedHairpinStart(annotation) || IsCarriedArpeggio(annotation)
