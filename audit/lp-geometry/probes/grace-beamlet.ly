@@ -9,6 +9,10 @@
 % B1 `d16 e8 f16`: a beamlet right of d and left of f. B2 `d8 e16 f8`: e's on its LEFT
 % (rhythmic importance). B5 `d8. e16`. B9 `d16 (down) e8 f16`: a knee, d's beamlet ABOVE, f's BELOW.
 % SC `d8 (down) e16`: e's beamlet BELOW the up beam, so e's up stem ends on the primary.
+% TT `d16 \tuplet 3/2 { e8 f16 } g16` (session 945): f closes the tuplet's span, so it stays CENTER
+% and keeps its spare beam on BOTH sides; TU is the same notes without the tuplet (right only).
+% TV `\tuplet 3/2 { d8 e16 f8 } g16`: e keeps its spare beam on the LEFT, read at the SCALED moments.
+% TW `\tuplet 5/4 { d16 e8 f16 g8 }`: f keeps its spare beam on the LEFT, by the span's ratio.
 %
 % Output: PROBE <tag> stem=<i> beaming=<Stem.beaming: rank lists left . right> top=<the stem's
 %         upper end above its (single) head> bottom=<its lower end below it>.
@@ -35,3 +39,7 @@ D = \once \override Stem.direction = #DOWN
 \score { \new Staff { \time 4/4 \fixed c' { \override Beam.after-line-breaking = #(dump "B5") c4 \grace { d8. e16 } g4 a4 b4 \bar "|." } } }
 \score { \new Staff { \time 4/4 \fixed c' { \override Beam.after-line-breaking = #(dump "B9") c4 \grace { \D d16 e8 f16 } g4 a4 b4 \bar "|." } } }
 \score { \new Staff { \time 4/4 \fixed c' { \override Beam.after-line-breaking = #(dump "SC") c4 \grace { \D d8 e16 } f4 g4 a4 \bar "|." } } }
+\score { \new Staff { \time 4/4 \fixed c' { \override Beam.after-line-breaking = #(dump "TT") c4 \grace { d16 \tuplet 3/2 { e8 f16 } g16 } a4 b4 c'4 \bar "|." } } }
+\score { \new Staff { \time 4/4 \fixed c' { \override Beam.after-line-breaking = #(dump "TU") c4 \grace { d16 e8 f16 g16 } a4 b4 c'4 \bar "|." } } }
+\score { \new Staff { \time 4/4 \fixed c' { \override Beam.after-line-breaking = #(dump "TV") c4 \grace { \tuplet 3/2 { d8 e16 f8 } g16 } a4 b4 c'4 \bar "|." } } }
+\score { \new Staff { \time 4/4 \fixed c' { \override Beam.after-line-breaking = #(dump "TW") c4 \grace { \tuplet 5/4 { d16 e8 f16 g8 } } a4 b4 c'4 \bar "|." } } }

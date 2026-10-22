@@ -2166,6 +2166,12 @@ public sealed partial class MeasureCollector
                 _cursor.VoiceIndex
             ));
         }
+        // In grace time the span is kept for the grace beam's beamlets instead
+        // (GraceNoteItem.WithBeamletCounts): LilyPond's beam engraver hands every stem its
+        // Tuplet_description, a grace's too.
+        else if (endNoteIndex >= startNoteIndex)
+            (_graceTupletSpans ??= []).Add(
+                (startNoteIndex, endNoteIndex, tuplet.TupletRatio, tuplet.BaseDivision));
 
         // Only add duration to the measure at the top level
         // Nested tuplets return their duration to the parent for compounding

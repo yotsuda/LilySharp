@@ -8141,6 +8141,41 @@
       "residual": -0.192,
       "why": "As knee.grace.beamlet.last-stem-top: d8 (down) e16 stacks the beamlet of e BELOW the up beam, so the up stem of e ends on the primary (the session-935 rule ran it 0.648 further, to a line above). The residual is half the grace beam thickness."
     },
+    "beam.grace.beamlet.tuplet.end-left": {
+      "probe": "grace-beamlet.ly",
+      "score": "TT",
+      "lilypond": 2.0,
+      "residual": 0.0,
+      "why": "EXACT since session 945: a tuplet in the grace body is each member's Tuplet_description for the beam pattern (GraceNoteItem.WithBeamletCounts, the spans MeasureCollector keeps in grace time), so f, closing the span, stays CENTER and keeps its spare beam on both sides. Until session 945 the span was not read: 1, residual -1."
+    },
+    "beam.grace.beamlet.tuplet.end-right": {
+      "probe": "grace-beamlet.ly",
+      "score": "TT",
+      "lilypond": 2.0,
+      "residual": 0.0,
+      "why": "EXACT: the side f keeps either way (see beam.grace.beamlet.tuplet.end-left)."
+    },
+    "beam.grace.beamlet.tuplet.control.left": {
+      "probe": "grace-beamlet.ly",
+      "score": "TU",
+      "lilypond": 1.0,
+      "residual": 0.0,
+      "why": "EXACT: the same notes without the tuplet keep f's spare beam on the right only (the control for beam.grace.beamlet.tuplet.end-left)."
+    },
+    "beam.grace.beamlet.tuplet.scaled.left": {
+      "probe": "grace-beamlet.ly",
+      "score": "TV",
+      "lilypond": 2.0,
+      "residual": 0.0,
+      "why": "EXACT since session 945 (see beam.grace.beamlet.tuplet.end-left): the members' moments are their SOUNDING lengths, scaled by the tuplet, and the rhythmic importance read there puts e's spare beam on the LEFT. At the written lengths it went right (poisoned, session 945: 1)."
+    },
+    "beam.grace.beamlet.tuplet.ratio.left": {
+      "probe": "grace-beamlet.ly",
+      "score": "TW",
+      "lilypond": 2.0,
+      "residual": 0.0,
+      "why": "EXACT since session 945 (see beam.grace.beamlet.tuplet.end-left): the span carries LilyPond's numerator_ / denominator_ (the written 5/4 reversed), which the rhythmic importance ranks by; handed over unreversed, f's spare beam went right (poisoned, session 945: 1)."
+    },
     "beam.quant.knee.sixteenth.down-stem": {
       "probe": "grace-knee.ly",
       "score": "K16",

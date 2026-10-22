@@ -114,7 +114,8 @@ workflow attaches that section to the GitHub Release verbatim.
   half too close.
   **A grace beam over notes of different values draws its short beams** (`grace { d16 e8 f16 }`,
   `grace { d8. e16 }`): the extra beam of a sixteenth beside an eighth is a short stub, on the
-  side LilyPond puts it; before, it was left out.
+  side LilyPond puts it; before, it was left out. A tuplet inside the grace notes
+  (`grace { d16 tuplet 3/2 { e8 f16 } g16 }`) moves that stub as in LilyPond too.
   **The slur of an acciaccatura or appoggiatura of two or more notes starts on the first grace
   note** (`acciaccatura { e16 f } d4`), as in LilyPond; it started on the last.
   **A kneed beam of sixteenths or shorter is placed as LilyPond places it**: a stem that reaches

@@ -8981,6 +8981,11 @@ internal static class LpGeometryProbes
     private static readonly string GBL5 = GraceTieBook("c4 grace { d8. e16 } g4 a4 b4 |", "GBL5");
     private static readonly string GBL9 = GraceTieBook("c4 grace { d16@stemDown e8 f16 } g4 a4 b4 |", "GBL9");
     private static readonly string GBLC = GraceTieBook("c4 grace { d8@stemDown e16 } f4 g4 a4 |", "GBLC");
+    // A tuplet in the grace body (session 945, probes/grace-beamlet.ly TT / TU).
+    private static readonly string GBLT = GraceTieBook("c4 grace { d16 tuplet 3/2 { e8 f16 } g16 } a4 b4 c'4 |", "GBLT");
+    private static readonly string GBLU = GraceTieBook("c4 grace { d16 e8 f16 g16 } a4 b4 c'4 |", "GBLU");
+    private static readonly string GBLV = GraceTieBook("c4 grace { tuplet 3/2 { d8 e16 f8 } g16 } a4 b4 c'4 |", "GBLV");
+    private static readonly string GBLW = GraceTieBook("c4 grace { tuplet 5/4 { d16 e8 f16 g8 } } a4 b4 c'4 |", "GBLW");
     // …and a FULL-SIZE kneed sixteenth pair, the same quanter term (score K16 of the same probe).
     private static readonly string BK16 = """
         octave absolute
@@ -17615,6 +17620,11 @@ internal static class LpGeometryProbes
         new("knee.grace.beamlet.first-stem-bottom", GBL9, g => g.StemBottomBelowNotehead(1, 1)),
         new("knee.grace.beamlet.last-stem-top", GBL9, g => g.StemTopAboveNotehead(3, 3)),
         new("knee.grace.mixed.second-stem-top", GBLC, g => g.StemTopAboveNotehead(2, 2)),
+        new("beam.grace.beamlet.tuplet.end-left", GBLT, g => g.BeamletsAtStem(0, 2, rightSide: false)),
+        new("beam.grace.beamlet.tuplet.end-right", GBLT, g => g.BeamletsAtStem(0, 2, rightSide: true)),
+        new("beam.grace.beamlet.tuplet.control.left", GBLU, g => g.BeamletsAtStem(0, 2, rightSide: false)),
+        new("beam.grace.beamlet.tuplet.scaled.left", GBLV, g => g.BeamletsAtStem(0, 1, rightSide: false)),
+        new("beam.grace.beamlet.tuplet.ratio.left", GBLW, g => g.BeamletsAtStem(0, 2, rightSide: false)),
         new("breath.grace.prev-to-grace", GBRA, g => g.NoteheadToNotehead(0, 1)),
         new("breath.grace.grace-to-sign", GBRA, g => g.BreathFromNotehead(1)),
         new("breath.grace.sign-to-main", GBRA, g => g.NoteheadFromBreath(2)),

@@ -6254,6 +6254,11 @@ public sealed partial class MeasureCollector
     /// the sign — read by DeriveGraceColumns into <c>GraceColumnInfo.BreathAfter</c>.</summary>
     private Dictionary<int, ArticulationType>? _innerGraceBreathItems;
 
+    /// <summary>The tuplets written inside the grace body being walked, as ITEM index ranges with
+    /// their ratio (innermost first, the order ProcessTuplet closes them) — read once the body is
+    /// walked into the columns' beamlet counts (GraceNoteItem.WithBeamletCounts).</summary>
+    private List<(int Start, int End, int Actual, int Normal)>? _graceTupletSpans;
+
     /// <summary>
     /// Walks a <c>grace { }</c> body with the ORDINARY walker, into the ORDINARY builder, so
     /// its notes become real measure items with real item indices; then derives the grace
@@ -6337,6 +6342,7 @@ public sealed partial class MeasureCollector
         var innerBreaths = Semantics.GraceBodySupport.InnerBreaths(bodyElements, grace.IsAfterGrace);
         _innerGraceBreathStarts = innerBreaths.Count == 0 ? null : innerBreaths.Select(b => b.SourceStart).ToHashSet();
         _innerGraceBreathItems = null;
+        _graceTupletSpans = null;
         builder.EnterGraceTime(slash, graceStemDown);
         // The body items are reds already (a grace body is always live), exactly as
         // ProcessCueRegion's are.
@@ -6369,8 +6375,24 @@ public sealed partial class MeasureCollector
         var (graceColumns, columnItemIndices) = DeriveGraceColumns(builder, firstItemIndex, graceStemDown, innerBreathItems);
         if (graceColumns.Length == 0)
             return;
-        // The beam's beamlet counts, in the meter's beat grid (GraceNoteItem.WithBeamletCounts).
-        graceColumns = GraceNoteItem.WithBeamletCounts(graceColumns, builder.MeterInForce);
+        // The beam's beamlet counts, in the meter's beat grid and the body's tuplets
+        // (GraceNoteItem.WithBeamletCounts), the tuplets' item ranges read as column ranges.
+        List<(int First, int Last, int Actual, int Normal)>? columnTuplets = null;
+        if (_graceTupletSpans is { } graceTuplets)
+            foreach (var (start, end, actual, normal) in graceTuplets)
+            {
+                int first = -1, last = -1;
+                for (int k = 0; k < columnItemIndices.Length; k++)
+                    if (columnItemIndices[k] >= start && columnItemIndices[k] <= end)
+                    {
+                        if (first < 0) first = k;
+                        last = k;
+                    }
+                if (first >= 0)
+                    (columnTuplets ??= []).Add((first, last, actual, normal));
+            }
+        _graceTupletSpans = null;
+        graceColumns = GraceNoteItem.WithBeamletCounts(graceColumns, builder.MeterInForce, columnTuplets);
 
         _graceNotes.Add(new GraceNoteItem(
             type,

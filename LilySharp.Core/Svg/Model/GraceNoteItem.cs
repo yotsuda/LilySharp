@@ -681,32 +681,83 @@ public sealed record GraceNoteItem
     /// from it. MEASURED (2.26.0, Lab sessions/p944/lp mixed.ly — beam-segments): `\grace { d8
     /// e16 f8 }` keeps e's spare beam on its LEFT; `{ d16 e8 f16 }` gives d a beamlet right and f
     /// one left; `{ d8. e16 }` gives e one left. Lily# drew none of them until session 944.
-    /// ⒝ A tuplet inside the body is read without its span (Element.Tuplet null).
+    /// <para>
+    /// A TUPLET in the body is the stem's Tuplet_description, as for an ordinary beam: its span
+    /// stays CENTER at its boundaries and ranks the beamlet's side by its written proportion, and
+    /// its members' moments are scaled. MEASURED (2.26.0, Lab sessions/p945/lp tup.ly / tup2.ly):
+    /// `\grace { d16 \tuplet 3/2 { e8 f16 } g16 }` keeps f's spare beam on BOTH sides, where the
+    /// same notes without the tuplet keep it only on the right (T7 against T8). The spans are
+    /// the body's own (<paramref name="tuplets"/>: column ranges, innermost first).
+    /// </para>
     /// LILYPOND-REF: lily/template-engraver-for-beams.cc:40-53 begin_beam — the grace part as the measure position.
-    /// LILYPOND-REF: lily/template-engraver-for-beams.cc:69-78 add_stem — the grace part as the stem's moment.
+    /// LILYPOND-REF: lily/template-engraver-for-beams.cc:69-78 add_stem — the grace part as the stem's moment, and its currentTupletDescription.
     /// LILYPOND-REF: lily/beam.cc:1243-1274 Beam::set_beaming — clip-edges zeroes the outer sides.
     /// </remarks>
     internal static ImmutableArray<GraceColumnInfo> WithBeamletCounts(
-        ImmutableArray<GraceColumnInfo> columns, TimeSignature meter)
+        ImmutableArray<GraceColumnInfo> columns, TimeSignature meter,
+        IReadOnlyList<(int First, int Last, int Actual, int Normal)>? tuplets = null)
     {
         int beamed = Svg.Layout.GraceNoteEngraver.BeamedPrefix(columns);
         if (beamed < 2)
             return columns;
         var options = Svg.Collector.BeamingPattern.Options.For(meter);
+        // Each column's SOUNDING length: its written one scaled by every tuplet holding it.
+        var lengths = new Fraction[columns.Length];
+        for (int k = 0; k < columns.Length; k++)
+        {
+            lengths[k] = columns[k].Length;
+            if (tuplets is not null)
+                foreach (var t in tuplets)
+                    if (t.First <= k && k <= t.Last)
+                        lengths[k] *= new Fraction(t.Normal, t.Actual);
+        }
         // The run ends on the main note's moment, grace part 0: the first column's grace part
         // is minus the whole body, taken into the period that holds it.
         Fraction total = Fraction.Zero;
-        foreach (var c in columns)
-            total += c.Length;
+        foreach (var l in lengths)
+            total += l;
         Fraction start = options.Period;
         while (start < total)
             start += options.Period;
         start -= total;
+        var moments = new Fraction[columns.Length + 1];
+        moments[0] = start;
+        for (int k = 0; k < columns.Length; k++)
+            moments[k + 1] = moments[k] + lengths[k];
+        // One description per span, the parent the narrowest span holding it: they are listed
+        // innermost first, so a span's parent comes after it.
+        Svg.Collector.BeamingPattern.TupletDescription?[]? described = null;
+        if (tuplets is { Count: > 0 })
+        {
+            described = new Svg.Collector.BeamingPattern.TupletDescription?[tuplets.Count];
+            for (int s = tuplets.Count - 1; s >= 0; s--)
+            {
+                var t = tuplets[s];
+                Svg.Collector.BeamingPattern.TupletDescription? parent = null;
+                for (int p = s + 1; p < tuplets.Count; p++)
+                    if (tuplets[p].First <= t.First && t.Last <= tuplets[p].Last)
+                    {
+                        parent = described[p];
+                        break;
+                    }
+                // LilyPond's numerator_ is the written ratio's SECOND number (BeamingPattern.TupletDescription).
+                described[s] = new Svg.Collector.BeamingPattern.TupletDescription(
+                    moments[t.First], moments[t.Last + 1], t.Normal, t.Actual, parent);
+            }
+        }
         var infos = new Svg.Collector.BeamingPattern.Element[beamed];
         for (int i = 0; i < beamed; i++)
         {
-            infos[i] = new Svg.Collector.BeamingPattern.Element(start, columns[i].Length, BeamCountOf(columns[i]));
-            start += columns[i].Length;
+            Svg.Collector.BeamingPattern.TupletDescription? innermost = null;
+            if (described is not null)
+                for (int s = 0; s < tuplets!.Count; s++)
+                    if (tuplets[s].First <= i && i <= tuplets[s].Last)
+                    {
+                        innermost = described[s];
+                        break;
+                    }
+            infos[i] = new Svg.Collector.BeamingPattern.Element(
+                moments[i], lengths[i], BeamCountOf(columns[i]), innermost);
         }
         var counts = Svg.Collector.BeamingPattern.Beamify(infos, options);
         var b = columns.ToBuilder();
