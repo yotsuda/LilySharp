@@ -160,6 +160,17 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第952セッションの経緯
+
+### 1.1 第952セッション（2026-10-22・YT-DELL2）
+
+第951 と同じ会話の続き（ユーザー「1」＝第951 の候補 ⑴ 加線を五線の skyline に）。`-Start p952`（開始 HEAD `8f05d9b41`・未 push 85・第950 を ARCHIVE へ）。作業場所は Lab `sessions/p952/`（LP の試料は `no.ly`）。
+- ⚠️ **第951 の見立ては誤りだった**: Lily# の五線の skyline は加線を**持っている**（`SkylineBuilder.AddNoteBoxToSkylines`＝頭の幅の 0.25 ずつ外へ・太さ 0.2）。描画側（`SharedRenderer.DrawPlannedLedgers`）を見て「skyline に無い」と書いたのは layout 側を読まなかったため。⇒ ⑴ の「加線を skyline に入れる」設計は**不要**。
+- **本当の原因＝ottava が grace の run を半分しか動かしていなかった**（`66c00e7de`）: `OttavaTransposer` は覆う grace の**item** を 1 オクターブ動かすが、主の item の `LeadingGrace`（間隔が読む `SpacingRules.GraceNotesOf`）と score の grace 群（`StaffAccidentals.SyncGraceNotes` は臨時記号しか写さない）は書いた位置のまま＝`c'''4 \grace { \ottava #1 d'''16 } e'''4` は d'' として描かれ d'''（加線つき）として間隔が取られた＝c→grace 2.40／grace→main 1.40（LP は d'' の grace と同じ 2.117729／1.938627＝`no.ly` NOA〜NOE）。grace が 0.28 右に立ったので「8va」の左端が c''' の加線の端に 0.03 しか重ならなかった＝これが `ottava.grace.after-high-note.staff-to-line` −0.2414 の全部。`Shift` が `LeadingGrace` を主の item と一緒に動かし（run は主の item と同じ onset）、`SyncGraceNotes` が位置も写すようにした。
+- **網**: 括弧の高さ −0.2414 → −0.000369（ラベルの bold-italic の輪郭が加線の端に乗る分＝文字の族の小さな項・why に名前）。台帳 2 点（`ottava.grace.after-high-note.{high-to-grace,grace-to-main}`）一致。毒 2 本＝`LeadingGrace` を動かさない 3 赤・群の位置を写さない 3 赤。掃き 1,248 枚で 0（grace で始まる ottava を書く本は無い）。棚卸しは差なし。計器: 使い捨ての `Zz952ProbeTests`（collect した item と `LeadingGrace`・群の位置を刷る）で原因を確かめて消した。
+- `-End p952 -DiffBase 8f05d9b41` ＝full **12911 / 0 / 2 / 12913**（前便末 +2）（Lab `sessions/p952/end.log`）→ この docs commit。本体 `66c00e7de`。未 push 86＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。
+判定（2026-10-22）: 第951 の最大の OPEN は閉じた（原因は加線でなく ottava と grace の run の食い違い）。台帳の OPEN は残り 7（いずれも 0.14 以下）。次の候補＝⑴ 残りの OPEN 7 点（`lyrics.row.between-staves.verse-hole.*` 0.136・`slur.beamed.reserved-text` −0.062 ほか＝第951 の `triage.tsv`）・⑵ 和音の fall（要ユーザー判断）・⑶ `@pluck`・H/P/T・`@scoop`/`@plop`/`@bend`・§2 E ⑹⑺（要ユーザー判断）。
+
 ## 以下は第951セッションの経緯
 
 ### 1.1 第951セッション（2026-10-22・YT-DELL2）

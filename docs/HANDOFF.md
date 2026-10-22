@@ -124,6 +124,20 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第954セッション（2026-10-22・YT-DELL2）
+
+第953 と同じ会話の続き（ユーザー「次を読んで作業に着手して」＝第953 の候補 ⑴ tie を支えにする script の +0.008）。`-Start p954`（開始 HEAD `89ed22627`・未 push 89・第952 を ARCHIVE へ）。作業場所は Lab `sessions/p954/`（LP の dump `tiesky.ly`／`tiesky.log`・使い捨て計器 `Zz954ProbeTests.cs.txt`・pad の掃き `probe2.log`・svg の掃き `svg/`）。
+- **LP で dump して分解した**: Tie の制御点・stencil の skyline（UP の点列）・Script の最終 Y と DOWN の skyline を `page-post-process` で刷り、Lily# 側は RenderedGeometry の bezier（centreline）と `SkylineBuilder.MergeBowOuterEdge` の高さを同じ x で並べた。**tie の制御点は 6 桁一致・bow の skyline も一致（max 5.354082）・accent の輪郭の skyline も建物単位で一致**＝模型は全部 LP。残ったのは距離の式＝**horizon-padding をどちらに盛るか**。
+- **原因＝LP は*支え*を pad する**（`dim.distance (my_dim, horizon_padding)` は `padded_this = padded (hp)`＝supports を merge した `dim` の側・skyline.cc:545-555）。Lily# は script の側を pad していた（`extraPad`・2026-08-17 の「順序の決定」＝LP の「other を pad するのは hp を倍にするのと同じ」という註を同値と読んだ）。**`Skyline::padded` は Minkowski 和ではない**（各 building の*端の高さ*で棚を出して 45° で落とす＝相手の立ち上がる斜面には届かない）ので、支えが斜め（tie の尻尾）か script の輪郭が斜め（accent の山形の上の portato）なら答えが変わる。数値: tie END の accent は script 側 pad 5.772008／支え側 pad **5.758705 = LP**・tie START は 5.427867／**5.428860 = LP**（`Zz954ProbeTests.AccentOverTieEnd`・pad 0〜0.2 の掃きの表は `probe2.log`）。
+- **直した**（本体 commit）: ⑴ tie の支え＝`bowSky.Distance(mine, ScriptHorizonPadding)`（bow を pad・script は裸）／⑵ chain＝支えが 1 つならその skyline を pad・2 つ以上は merge してから 1 回 pad（LP の順序＝下の script の棚が上に隠れる）／⑶ `NearReachOver`（頭・符尾の支え）＝高さ 0 の棚 `[xFrom,xTo]` を pad して裸の輪郭との距離＝reach。**`extraPad` は消した**（`ScriptSkyline`／`ScriptSkylines`／`TextOutlineSkylines` の cache の鍵から）。sctchord の 10 点が全部 LP と 6 桁一致（accent 5.428860／5.758705／6.399068／5.758233／5.794212・tenuto 5.352255／5.712255／4.825×2・portato 7.312805）。
+- **網**: `ArticulationPlacementTests.Scripts_AvoidTies_ButChordMemberScriptsDoNot` を SVG の 2 桁から RenderedGeometry の 4 桁（LP の 6 桁の値）へ。`ScriptProfilePaddingTests` は宣言の pad だけの性質に書き直した。毒 3 本＝tie 側を script pad: 1 赤／chain 1 つ: snapshot `test/script-stacking` 赤／chain merged: sctchord 赤（6.3933）。**`NearReachOver` の毒は観測者なし**（1,965 本緑＝頭の範囲＋0.1 の外に最寄り点がある script が無い・註に書いた）。掃き 1,248 枚で **13 枚動いた・最大 0.04**（script の積みと tie 上の script の probe 11＋Boogie Oogie Oogie 2＝0.01〜0.02）。snapshot 1 枚承認（`test/script-stacking`）。台帳 1383 点は動かず（毒の run で緑）。棚卸し 2 枚は行番号だけ再生成。
+- 計器の罠: ⒜ Edit ツールは bytes で戻したファイルに当てられない（Read し直す）／⒝ `Select-String` は既定で大文字小文字を区別しない＝毒の印は `-CaseSensitive` で数える／⒞ 掃きの base は HEAD を `git worktree add --detach` した scratch で組んだ（stash を使わない）／⒟ `cmd … | ForEach` の中で例外が出ると後段の毒の戻しが走らない＝`try/catch` の外に戻しを置く。
+
+- `-End p954 -DiffBase 89ed22627` ＝full **12911 / 0 / 2 / 12913**（前便末と同数＝期待値の更新と snapshot 1 枚）（Lab `sessions/p954/end.log`・1 回目は棚卸し 2 枚の鮮度と LILYPOND-REF の無名 1 件＝`Skyline::padded` は計器の綴りで名前にならない→`pad_buildings` を添えて amend）→ この docs commit。本体 `eecd4005d`。未 push 90＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。
+判定（2026-10-22）: 第953 の OPEN（tie を支えにする script の +0.008）は閉じた＝原因は tie でも bow でもなく horizon-padding を盛る側。次の候補＝⑴ 和音の fall（要ユーザー判断）・⑵ `@pluck`・H/P/T・`@scoop`/`@plop`/`@bend`・§2 E ⑹⑺（要ユーザー判断）。台帳は名指しの床と決定済みだけ＝触らない。
+
+## 以下は第953セッションの経緯
+
 ### 1.1 第953セッション（2026-10-22・YT-DELL2）
 
 第952 と同じ会話の続き（ユーザー「1」＝第952 の候補 ⑴ 台帳の残りの OPEN）。`-Start p953`（開始 HEAD `2cb51c5f7`・未 push 87・第951 を ARCHIVE へ）。作業場所は Lab `sessions/p953/`（LP の試料 `sbr.ly`／`sbri.ly`・`sky.ly`・`lp-*.ly`・掃きの一覧 `sweep-diff.txt`）。
@@ -134,17 +148,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **網**: 台帳 9 点の residual を更新（slur.beamed＋system 6＋staff.staff 2）。毒 3 本＝X に広げない 1・perp の Y だけ 1・粗い分割 9＝全部赤。掃き 1,248 枚で **77 枚動いた**（64 枚は 0.04 以下＝SVG の 0.01 刻み・大きいのは lpreg の上の 2 冊＝どちらも LP に寄った）。snapshot 2 枚を承認（`test/slur-obstacle-clearance`・`test/pedal-under-next-system`）。`StaffSkylineFrameTests` の bow の頂点は 1e-5 で（t = 0.5 が標本でない多角形がある）。棚卸し＝16 が消え 0.2 に引用。引用の網: `QUANTIZATION_UNIT` は 2 つめ以降の大文字で C# の名と見なされる＝行番号を外した。計器: 使い捨て `Zz953ProbeTests`（RenderedGeometry の private を反射で読む・旧 `SkylineBuilder.cs` を差し替えて比べる＝⚠️ **差し替えは時刻を新しくしないと build が古いままになる**）は消した。
 - `-End p953 -DiffBase 2cb51c5f7` ＝full **12911 / 0 / 2 / 12913**（前便末と同数＝期待値の更新だけ）（Lab `sessions/p953/end.log`）→ この docs commit。本体 `522952c2c`。未 push 88＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。
 判定（2026-10-22）: 台帳に「分解されていない」残差は無くなった（名指しの床と決定済みだけ）。slur／tie の skyline は LP の作り方になった。次の候補＝⑴ tie を支えにする script の +0.008（LP が tie を支えとして何を読むか＝LP で dump）・⑵ 和音の fall（要ユーザー判断）・⑶ `@pluck`・H/P/T・`@scoop`/`@plop`/`@bend`・§2 E ⑹⑺（要ユーザー判断）。
-
-## 以下は第952セッションの経緯
-
-### 1.1 第952セッション（2026-10-22・YT-DELL2）
-
-第951 と同じ会話の続き（ユーザー「1」＝第951 の候補 ⑴ 加線を五線の skyline に）。`-Start p952`（開始 HEAD `8f05d9b41`・未 push 85・第950 を ARCHIVE へ）。作業場所は Lab `sessions/p952/`（LP の試料は `no.ly`）。
-- ⚠️ **第951 の見立ては誤りだった**: Lily# の五線の skyline は加線を**持っている**（`SkylineBuilder.AddNoteBoxToSkylines`＝頭の幅の 0.25 ずつ外へ・太さ 0.2）。描画側（`SharedRenderer.DrawPlannedLedgers`）を見て「skyline に無い」と書いたのは layout 側を読まなかったため。⇒ ⑴ の「加線を skyline に入れる」設計は**不要**。
-- **本当の原因＝ottava が grace の run を半分しか動かしていなかった**（`66c00e7de`）: `OttavaTransposer` は覆う grace の**item** を 1 オクターブ動かすが、主の item の `LeadingGrace`（間隔が読む `SpacingRules.GraceNotesOf`）と score の grace 群（`StaffAccidentals.SyncGraceNotes` は臨時記号しか写さない）は書いた位置のまま＝`c'''4 \grace { \ottava #1 d'''16 } e'''4` は d'' として描かれ d'''（加線つき）として間隔が取られた＝c→grace 2.40／grace→main 1.40（LP は d'' の grace と同じ 2.117729／1.938627＝`no.ly` NOA〜NOE）。grace が 0.28 右に立ったので「8va」の左端が c''' の加線の端に 0.03 しか重ならなかった＝これが `ottava.grace.after-high-note.staff-to-line` −0.2414 の全部。`Shift` が `LeadingGrace` を主の item と一緒に動かし（run は主の item と同じ onset）、`SyncGraceNotes` が位置も写すようにした。
-- **網**: 括弧の高さ −0.2414 → −0.000369（ラベルの bold-italic の輪郭が加線の端に乗る分＝文字の族の小さな項・why に名前）。台帳 2 点（`ottava.grace.after-high-note.{high-to-grace,grace-to-main}`）一致。毒 2 本＝`LeadingGrace` を動かさない 3 赤・群の位置を写さない 3 赤。掃き 1,248 枚で 0（grace で始まる ottava を書く本は無い）。棚卸しは差なし。計器: 使い捨ての `Zz952ProbeTests`（collect した item と `LeadingGrace`・群の位置を刷る）で原因を確かめて消した。
-- `-End p952 -DiffBase 8f05d9b41` ＝full **12911 / 0 / 2 / 12913**（前便末 +2）（Lab `sessions/p952/end.log`）→ この docs commit。本体 `66c00e7de`。未 push 86＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。
-判定（2026-10-22）: 第951 の最大の OPEN は閉じた（原因は加線でなく ottava と grace の run の食い違い）。台帳の OPEN は残り 7（いずれも 0.14 以下）。次の候補＝⑴ 残りの OPEN 7 点（`lyrics.row.between-staves.verse-hole.*` 0.136・`slur.beamed.reserved-text` −0.062 ほか＝第951 の `triage.tsv`）・⑵ 和音の fall（要ユーザー判断）・⑶ `@pluck`・H/P/T・`@scoop`/`@plop`/`@bend`・§2 E ⑹⑺（要ユーザー判断）。
 
 ## 2. 開いている作業
 
