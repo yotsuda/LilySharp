@@ -160,6 +160,18 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第960セッションの経緯
+
+### 1.1 第960セッション（2026-10-22・YT-DELL2）
+
+第959 と同じ会話の続き（ユーザー「続けて」＝⑴ main の tab accent の 0.2575・⑷ GRAMMAR の `@cross`）。`-Start p960`（開始 HEAD `2eb9d493a`＝ユーザーが push し site の commit を足した後・未 push 0・第958 を ARCHIVE へ）。作業場所は Lab `sessions/p960/`（計器 `Zz960ProbeTests.cs.txt`・probe `probe/cross.lys`）。
+- **⑴ は名指しの床＝閉じた**: Lily# の 1.546850 ＝ ギター tab の数字「0」の ink 半高 **0.826850**（em 2.3 regular＝ユーザー決定 2026-10-01・`TabConstants.ReducedFretEm`）＋ accent の reach 0.42 ＋ padding 0.2×1.5＝6 桁で一致。LP の 1.289309 は同じ式で数字の半高が 0.569309（TabNoteHead −2）＝差 0.257541 は**決めた数字の大きさ**そのもの。第694 の bass tab の一致は符尾が支えを決める形だった。`TabGraceScriptTests` の remark に式を置いた。
+- **⑷ GRAMMAR の `@cross`**: `c4@cross` は x 符頭ではなく（probe＝普通の頭 U+E0FE・`@dead`／`@notehead(cross)` が U+E10A）、grand staff で**反対の譜へ移す** cross-staff（`CollectCrossStaff`・`CrossStaffTests`）。GRAMMAR.md 2617 行と GRAMMAR_FOR_LLM.md 467 行の「@cross / @dead (x notehead)」を直した。⚠️ cross-staff は GRAMMAR に節が無い（単一譜では黙って何もしない＝警告の候補）。
+- Core は触っていない＝掃き・棚卸し・毒なし（docs と remark の便）。
+
+- `-End p960 -DiffBase 2eb9d493a` ＝full **12941 / 0 / 2 / 12943**（前便末と同数）（Lab `sessions/p960/end.log`）→ この docs commit。本体 `1ef488bed`（test の remark と GRAMMAR 2 枚）。未 push 1＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。
+判定（2026-10-22）: grace の束（第957〜960）で残るのは ⑵ `@todo` を grace へ（`docs/todo-memo-design.md` の規則）・⑶ `@chord`／`@figuredBass`／`@diagram` を grace へ（別 engraver・`@chord`／`@figuredBass` は LP と照合可）。ほかに ⑷ 単一譜の `@cross` が黙って何もしない＝警告の候補（要ユーザー判断）・§2 E ⑹ 開いた和音入力（綴りの合意が先）。
+
 ## 以下は第959セッションの経緯
 
 ### 1.1 第959セッション（2026-10-22・YT-DELL2）
