@@ -4121,6 +4121,28 @@ internal sealed class ElementCoordinator
     }
 
     /// <summary>
+    /// Whether the GRACE column item <paramref name="itemIndex"/> stands under its group's beam
+    /// (<see cref="GraceNoteEngraver.BeamedPrefix"/>) — what its dot column reads, a beamed stem
+    /// carrying no flag (<see cref="DotColumn.ReservedForGrace"/>).
+    /// </summary>
+    internal static bool GraceColumnIsBeamed(ImmutableArray<GraceNoteItem> graceNotes, int staffIndex,
+        int voiceIndex, int measureIndex, int itemIndex)
+    {
+        if (graceNotes.IsDefaultOrEmpty)
+            return false;
+        foreach (var g in graceNotes)
+        {
+            if (g.StaffIndex != staffIndex || g.VoiceIndex != voiceIndex || g.MeasureIndex != measureIndex
+                || g.ColumnItemIndices.IsDefaultOrEmpty || g.ColumnItemIndices.Length != g.Columns.Length)
+                continue;
+            int k = g.ColumnItemIndices.IndexOf(itemIndex);
+            if (k >= 0)
+                return k < GraceNoteEngraver.BeamedPrefix(g.Columns);
+        }
+        return false;
+    }
+
+    /// <summary>
     /// The grace groups of one staff, as a tie bound reads them: where a GRACE column's head
     /// stands, by the same chain a grace slur's bound reads (<see cref="GraceColumnX"/>), its
     /// group geometry solved once and cached.

@@ -9082,6 +9082,15 @@ internal static class LpGeometryProbes
     private static readonly string GPMJ = GraceTieBook("c4 grace { a16@toe.down } e4 c2 |", "GPMJ");
     private static readonly string GPMK = GraceTieBook("c4 a16@heel e8. c2 |", "GPMK");
     private static readonly string GPML = GraceTieBook("c4 a16@toe.down e8. c2 |", "GPML");
+    // A fall or doit on a grace note (audit/lp-geometry/probes/grace-bendafter.ly).
+    private static readonly string GFAA = GraceTieBook("c4 grace { d16@fall } e4 c2 |", "GFAA");
+    private static readonly string GFAB = GraceTieBook("c4 grace { d16@doit e16 } f4 c2 |", "GFAB");
+    private static readonly string GFAD = GraceTieBook("c4 grace { d8.@fall e16 } f4 c2 |", "GFAD");
+    private static readonly string GFAE = GraceTieBook("c4 grace { d16@fall } fis4 c2 |", "GFAE");
+    private static readonly string GFAF = GraceTieBook("c4 d16@fall e8. c2 |", "GFAF");
+    private static readonly string GFAI = GraceTieBook("c4 grace { d16 e16@fall } f4 c2 |", "GFAI");
+    private static readonly string GFAJ = GraceTieBook("c4 d4@fall grace { e16 } f4 c4 |", "GFAJ");
+    private static readonly string GFAK = GraceTieBook("c4 d4@fall f4 c4 |", "GFAK");
     // A pedal bracket engaged or released on a grace note (audit/lp-geometry/probes/grace-pedal.ly).
     private static readonly string GPDA = GraceTieBook("c4 grace { d16@sustain } e4 f4 g4@!sustain |", "GPDA");
     private static readonly string GPDB = GraceTieBook("c4 d16@sustain e8. f4 g4@!sustain |", "GPDB");
@@ -17764,6 +17773,16 @@ internal static class LpGeometryProbes
         new("script.grace.pedal.high.toe.below", GPMJ, g => g.GlyphAboveStaffMiddle('', 0)),
         new("script.grace.pedal.control.high.heel", GPMK, g => g.GlyphAboveStaffMiddle('', 0)),
         new("script.grace.pedal.control.high.toe.below", GPML, g => g.GlyphAboveStaffMiddle('', 0)),
+        new("bendafter.grace.start-to-notehead", GFAA, g => g.BendStartToNotehead(1)),
+        new("bendafter.grace.reach", GFAA, g => g.BendReach()),
+        new("bendafter.grace.to-grace.start-to-notehead", GFAB, g => g.BendStartToNotehead(1)),
+        new("bendafter.grace.to-grace.reach", GFAB, g => g.BendReach()),
+        new("bendafter.grace.dotted.start-to-notehead", GFAD, g => g.BendStartToNotehead(1)),
+        new("bendafter.grace.accidental.reach", GFAE, g => g.BendReach()),
+        new("bendafter.grace.control.start-to-notehead", GFAF, g => g.BendStartToNotehead(1)),
+        new("bendafter.grace.second.start-to-notehead", GFAI, g => g.BendStartToNotehead(2)),
+        new("bendafter.before-grace.reach", GFAJ, g => g.BendReach()),
+        new("bendafter.before-grace.control.reach", GFAK, g => g.BendReach()),
         new("pedal.grace.start-to-notehead", GPDA, g => g.PedalBracketLineEndToNotehead(end: false, 1)),
         new("pedal.grace.end-to-notehead", GPDA, g => g.PedalBracketLineEndToNotehead(end: true, 4)),
         new("pedal.grace.staff-to-line", GPDA, g => g.PedalBracketLineBelowStaff()),

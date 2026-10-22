@@ -168,6 +168,19 @@ public class GraceBodyValidatorTests
     }
 
     /// <summary>
+    /// A FALL or DOIT on a grace note — LilyPond's BendAfter — is drawn off the grace head, at
+    /// full size (session 947, ledger bendafter.grace.*). Nothing is reported.
+    /// </summary>
+    [Theory]
+    [InlineData("grace { d'8@fall } c'1 | e'1 |", "grace { d'8 } c'1 | e'1 |")]
+    [InlineData("grace { d'16@doit e'16 } c'1 | e'1 |", "grace { d'16 e'16 } c'1 | e'1 |")]
+    public void AFallOnAGrace_IsDrawn_AndNotReported(string written, string control)
+    {
+        Assert.Empty(Warnings(Book(written)));
+        Assert.NotEqual(Page(control), Page(written));
+    }
+
+    /// <summary>
     /// A dynamic LEVEL on a grace note is drawn (full size, on the grace column) and not
     /// reported (GraceBodySupport.IsCarriedDynamic); so is a hairpin started there since session
     /// 918 (AHairpinStartOnAGrace_IsDrawn_AndNotReported).

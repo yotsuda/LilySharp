@@ -9072,6 +9072,76 @@
       "residual": 0.0,
       "why": "EXACT. The full-size CONTROL of GPMJ."
     },
+    "bendafter.grace.start-to-notehead": {
+      "probe": "grace-bendafter.ly",
+      "score": "GFAA",
+      "lilypond": 1.417939,
+      "residual": 0.0,
+      "why": "EXACT. `grace { d16@fall }`: the curve leaves the small grace head's ink right by the padding 0.5 (bend::print left-x against the note head's extent), at the grace head's own height. Until session 947 a fall or a doit on a grace was dropped (LYS4020); GraceBodySupport.IsCarriedBendAfter now names both and ArticulationEngraver reads the grace column off the run."
+    },
+    "bendafter.grace.reach": {
+      "probe": "grace-bendafter.ly",
+      "score": "GFAA",
+      "lilypond": 0.5,
+      "residual": 0.0,
+      "why": "EXACT. Its reach: the main note stands close after the grace, so minimum-length 0.5 decides. The curve keeps its full size (general-grace-settings names no BendAfter)."
+    },
+    "bendafter.grace.to-grace.start-to-notehead": {
+      "probe": "grace-bendafter.ly",
+      "score": "GFAB",
+      "lilypond": 1.417939,
+      "residual": 0.0,
+      "why": "EXACT. A doit on the first of two graces."
+    },
+    "bendafter.grace.to-grace.reach": {
+      "probe": "grace-bendafter.ly",
+      "score": "GFAB",
+      "lilypond": 0.5,
+      "residual": 0.0,
+      "why": "EXACT. Its right bound is the NEXT GRACE column (Bend_engraver stops at the next musical column), which the minimum length outruns."
+    },
+    "bendafter.grace.dotted.start-to-notehead": {
+      "probe": "grace-bendafter.ly",
+      "score": "GFAD",
+      "lilypond": 2.035232,
+      "residual": 0.0,
+      "why": "EXACT. A dotted grace d8. whose dot sits on the head's own row: the curve leaves the DOT's right (bend::print reads the dot when dots-y is the spanner's y), the dot standing where the grace's dot column puts it."
+    },
+    "bendafter.grace.accidental.reach": {
+      "probe": "grace-bendafter.ly",
+      "score": "GFAE",
+      "lilypond": 1.570688,
+      "residual": 0.0,
+      "why": "EXACT. The main note after the grace carries a sharp, which spaces it wider: the curve ends the padding short of the main note's HEAD, not of its accidental."
+    },
+    "bendafter.grace.control.start-to-notehead": {
+      "probe": "grace-bendafter.ly",
+      "score": "GFAF",
+      "lilypond": 1.8042,
+      "residual": 0.0,
+      "why": "EXACT. The full-size CONTROL of GFAA: a d16 on the main grid."
+    },
+    "bendafter.grace.second.start-to-notehead": {
+      "probe": "grace-bendafter.ly",
+      "score": "GFAI",
+      "lilypond": 1.417938,
+      "residual": 0.0,
+      "why": "EXACT. A fall on the LAST of two graces, off its own head."
+    },
+    "bendafter.before-grace.reach": {
+      "probe": "grace-bendafter.ly",
+      "score": "GFAJ",
+      "lilypond": 0.5,
+      "residual": 0.0,
+      "why": "EXACT. A fall on a MAIN note followed by a grace: Bend_engraver ends a fall that starts in main time at the first column of the next moment, which is the grace's, so minimum-length decides. Until session 947 Lily# ran it on to the main note after the grace."
+    },
+    "bendafter.before-grace.control.reach": {
+      "probe": "grace-bendafter.ly",
+      "score": "GFAK",
+      "lilypond": 0.948045,
+      "residual": 0.0,
+      "why": "EXACT. The CONTROL of GFAJ without the grace: the curve ends the padding short of the next head."
+    },
     "pedal.grace.start-to-notehead": {
       "probe": "grace-pedal.ly",
       "score": "GPA",

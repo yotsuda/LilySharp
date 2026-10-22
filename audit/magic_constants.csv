@@ -775,6 +775,7 @@
 "Svg/Layout/ArticulationEngraver.cs","ArticulationEngraver.CalculateWithFingerings","0.0","double move = Math.Max(0.0, closest + FingeringPadding);","(file-level) LILYPOND-REF: define-grobs.scm:2992-3024 Script grob","Yellow"
 "Svg/Layout/ArticulationEngraver.cs","ArticulationEngraver.CalculateWithFingerings","0.0","if (slurShift != 0.0)","(file-level) LILYPOND-REF: define-grobs.scm:2992-3024 Script grob","Yellow"
 "Svg/Layout/ArticulationEngraver.cs","ArticulationEngraver.CalculateWithFingerings","0.5","bendYUp = GetStaffPosition(item) * 0.5;","(file-level) LILYPOND-REF: define-grobs.scm:2992-3024 Script grob","Yellow"
+"Svg/Layout/ArticulationEngraver.cs","ArticulationEngraver.CalculateWithFingerings","0.5","bendYUp = GetStaffPosition(item) * 0.5;","(file-level) LILYPOND-REF: define-grobs.scm:2992-3024 Script grob","Yellow"
 "Svg/Layout/ArticulationEngraver.cs","ArticulationEngraver.CalculateWithFingerings","0.0","FontSizeStep: 0.0,","(file-level) LILYPOND-REF: define-grobs.scm:2992-3024 Script grob","Yellow"
 "Svg/Layout/ArticulationEngraver.cs","ArticulationEngraver.CalculateWithFingerings","2.0","fx = noteX + 2.0 * NoteheadHalfWidth(item) + BendHeadPadding;","(file-level) LILYPOND-REF: define-grobs.scm:2992-3024 Script grob","Yellow"
 "Svg/Layout/ArticulationEngraver.cs","ArticulationEngraver.CalculateWithFingerings","0.5","fyUp = GetStaffPosition(item) * 0.5;","(file-level) LILYPOND-REF: define-grobs.scm:2992-3024 Script grob","Yellow"

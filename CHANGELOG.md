@@ -83,7 +83,11 @@ workflow attaches that section to the GitHub Release verbatim.
   note is drawn** too (`grace { d16@upBow }`, `@downBow`, `@flageolet`, `@stopped`, `@snapPizz`),
   small, over the grace note, and so is the organ's heel or toe (`grace { d16@heel }`,
   `@toe.down`). **The heel and the toe each keep one shape on either side of the note**, as in
-  LilyPond: `@heel.down` and an `@toe` above drew the other shape. **A trill spanner can start or stop on a grace note**
+  LilyPond: `@heel.down` and an `@toe` above drew the other shape. **A fall or doit on a grace
+  note is drawn** (`grace { d16@fall } e4`, `@doit`): it leaves the small grace head (or its dot)
+  and ends before the next note, a grace or the main one, at full size. A fall on a main note
+  followed by grace notes now ends before the first grace, as in LilyPond; it ran on to the main
+  note after them. **A trill spanner can start or stop on a grace note**
   (`grace { d16@startTrillSpan } e4 f4 g4@stopTrillSpan`); a high grace's stem lifts the line,
   as in LilyPond. **So can an ottava** (`grace { d''16@ottava } e''4 f''4 g'4@!ottava`); an `@!ottava`
   written on a grace ends the bracket before it, as LilyPond's `\ottava #0` there does.

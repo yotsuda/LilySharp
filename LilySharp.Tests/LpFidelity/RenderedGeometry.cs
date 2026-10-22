@@ -3038,6 +3038,33 @@ internal sealed class RenderedGeometry
     public double NoteheadFromBreath(int headIndex, int page = 0)
         => HeadAt(headIndex, page).X - BreathSign(page).X;
 
+    /// <summary>How far the page's one fall or doit (LilyPond's BendAfter, recorded as the line
+    /// between its ends) STARTS right of notehead <paramref name="headIndex"/>'s origin.</summary>
+    public double BendStartToNotehead(int headIndex, int page = 0)
+        => BendAfter(page).X1 - HeadAt(headIndex, page).X;
+
+    /// <summary>The page's one fall or doit's reach, its end's X minus its start's.</summary>
+    public double BendReach(int page = 0)
+    {
+        var bend = BendAfter(page);
+        return bend.X2 - bend.X1;
+    }
+
+    /// <summary>The BendAfter: the stroke of its own thickness whose ends lie its drop or rise
+    /// apart (<see cref="LilySharp.Core.Svg.Layout.BendAfterGeometry"/>).</summary>
+    private DrawnLine BendAfter(int page)
+    {
+        var bends = _pages[page].Lines.Where(l =>
+            Math.Abs(l.StrokeWidth - LilySharp.Core.Svg.Layout.BendAfterGeometry.Thickness) < 1e-9
+            && Math.Abs(Math.Abs(l.Y2 - l.Y1) - Math.Abs(LilySharp.Core.Svg.Layout.BendAfterGeometry.DeltaY)) < 1e-6)
+            .ToList();
+        if (bends.Count != 1)
+            throw new InvalidOperationException(
+                $"page {page}: wanted one fall or doit but {bends.Count} were drawn.\n"
+                + "Drawn geometry:\n" + Describe());
+        return bends[0];
+    }
+
     private DrawnGlyph BreathSign(int page)
         => _pages[page].Glyphs.SingleOrDefault(g => g.Glyph
                 is LilySharp.Core.Svg.EmmentalerGlyphs.BreathComma

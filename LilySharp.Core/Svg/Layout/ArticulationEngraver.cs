@@ -852,8 +852,15 @@ internal static class ArticulationEngraver
             //   the command column when a bar line stands there (currentBarLine).
             if (articulation.Type is ArticulationType.Fall or ArticulationType.Doit)
             {
-                double bendItemX = measureLayout.X + LayoutUtilities.GetItemXOffset(
+                // On a GRACE note (session 947) the left bound is the grace column's own head at
+                // the grace's size, read off the run; the curve itself keeps its size
+                // (general-grace-settings names no BendAfter).
+                double bendItemX = graceHeadLeft ?? measureLayout.X + LayoutUtilities.GetItemXOffset(
                     artMeasures, articulation.MeasureIndex, articulation.ItemIndex, measureLayout);
+                var graceBendColumn = graceHeadLeft is null ? null
+                    : ElementCoordinator.GraceColumnAt(artVoices[articulation.VoiceIndex], graceNotes,
+                        articulation.StaffIndex, articulation.VoiceIndex, articulation.MeasureIndex,
+                        articulation.ItemIndex, measureLayout, SpacingRules.VoiceCollisionShiftsOf(artVoices));
                 Staff? bendTab = null;
                 if (staffByIndex != null
                     && staffByIndex.TryGetValue(articulation.StaffIndex, out var bts)
@@ -873,6 +880,23 @@ internal static class ArticulationEngraver
                     // staff middle. No staff offset — resolved at draw time.
                     bendYUp = StaffMiddle
                         - (strNum - 1) * EngravingDefaults.TabStringSpace(tuning.Length);
+                }
+                else if (graceBendColumn is { Column: var gc })
+                {
+                    // The grace head's ink right, or its dot's when the dot sits on the head's own
+                    // row — the same reading as below, out of the grace's dot column
+                    // (DotColumn.ReservedForGrace) at the grace font (Lab sessions/p947/bend.ly GFD).
+                    leftInk = bendItemX + GraceColumnHeads.HeadInkRight(gc);
+                    if (item is NoteItem && gc.Dots > 0 && !gc.IsRest && gc.Heads.Length > 0)
+                    {
+                        var (dotOffset, rows) = DotColumn.ReservedForGrace(gc,
+                            ElementCoordinator.GraceColumnIsBeamed(graceNotes, articulation.StaffIndex,
+                                articulation.VoiceIndex, articulation.MeasureIndex, articulation.ItemIndex));
+                        if (rows.Length > 0 && rows[0] == gc.Heads[0].StaffPosition)
+                            leftInk = Math.Max(leftInk, bendItemX + dotOffset
+                                + (2 * gc.Dots - 1) * gc.Font.Box(MusicGlyph.AugmentationDot).Width);
+                    }
+                    bendYUp = GetStaffPosition(item) * 0.5;
                 }
                 else
                 {
@@ -903,7 +927,20 @@ internal static class ArticulationEngraver
                 // the end bar line's ink left as SharedRenderer.Barlines draws it (a thin
                 // bar; a heavier end bar stands its extra width further left, unread here).
                 double nextInkLeft;
-                if (articulation.ItemIndex + 1 < measure.Items.Length)
+                // The next column a GRACE one (session 947): its head left, read off the run;
+                // its accidentals are not read, as LilyPond's bound does not read the main
+                // note's (Lab sessions/p947/bend.ly GFE).
+                if (articulation.ItemIndex + 1 < measure.Items.Length
+                    && measure.Items[articulation.ItemIndex + 1].GraceTime
+                    && articulation.VoiceIndex < artVoices.Length
+                    && ElementCoordinator.GraceColumnHeadLeftX(artVoices[articulation.VoiceIndex], graceNotes,
+                        articulation.StaffIndex, articulation.VoiceIndex, articulation.MeasureIndex,
+                        articulation.ItemIndex + 1, measureLayout, SpacingRules.VoiceCollisionShiftsOf(artVoices))
+                    is { } nextGraceLeft)
+                {
+                    nextInkLeft = nextGraceLeft;
+                }
+                else if (articulation.ItemIndex + 1 < measure.Items.Length)
                 {
                     nextInkLeft = measureLayout.X + LayoutUtilities.GetItemXOffset(
                         artMeasures, articulation.MeasureIndex, articulation.ItemIndex + 1, measureLayout);

@@ -346,6 +346,21 @@ internal static class GraceBodySupport
         };
 
     /// <summary>
+    /// True for a FALL or DOIT a grace note starts — <c>@fall</c>, <c>@doit</c>, LilyPond's
+    /// <c>\bendAfter</c>: the curve leaves the small grace head (or its dot) and ends short of the
+    /// next column, a grace's or the main note's, at full size (session 947; ledger
+    /// bendafter.grace.*). THE question the collector and the drop list both ask.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/scheme-engravers.scm:2096-2165 Bend_engraver — a Voice engraver; its
+    ///   left bound is the grace's note head, its right the next musical column;
+    ///   general-grace-settings (scm/music-functions.scm:636-650) names no BendAfter, so it keeps
+    ///   its size.
+    /// </remarks>
+    internal static bool IsCarriedBendAfter(SyntaxNode annotation)
+        => annotation is ArticulationSyntax { Type: ArticulationType.Fall or ArticulationType.Doit };
+
+    /// <summary>
     /// True for a DYNAMIC a grace note engraves — a level (<c>@f</c>, <c>@p</c>, <c>@sfz</c>, …),
     /// at full size on the grace column (session 916; ledger dynamic.grace.*). A hairpin start
     /// is <see cref="IsCarriedHairpinStart"/> (session 918). THE question the collector and the
@@ -973,7 +988,8 @@ internal static class GraceBodySupport
             // column a thing asks for. See GraceColumnInfo.Dots and Svg.Layout.DotColumn.
             foreach (var annotation in CarriedAnnotations(item))
             {
-                if (NeedsNoColumn(annotation) || IsCarriedScript(annotation) || IsCarriedDynamic(annotation)
+                if (NeedsNoColumn(annotation) || IsCarriedScript(annotation) || IsCarriedBendAfter(annotation)
+                    || IsCarriedDynamic(annotation)
                     || IsCarriedText(annotation) || IsCarriedFingering(annotation)
                     || IsCarriedHairpinStart(annotation) || IsCarriedArpeggio(annotation)
                     || IsCarriedGlissando(annotation) || IsCarriedTextSpan(annotation)
