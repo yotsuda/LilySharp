@@ -399,12 +399,19 @@ internal static class TrillSpannerEngraver
         // "the merge was the problem".
         var facing = dir > 0 ? VerticalDirection.Down : VerticalDirection.Up;
         double reach = EngravingDefaults.TrillSpannerTextOffsetDown;
-        VerticalSkyline? plateau = segment.IsFirst
-            ? VerticalSkyline.FromBox(
-                glyphX + MusicFont.Current.FullSize.Outline(MusicGlyph.OrnamentTrill).Left,
-                glyphX + MusicFont.Current.FullSize.Outline(MusicGlyph.OrnamentTrill).Right,
-                -reach, MusicFont.Current.FullSize.Box(MusicGlyph.OrnamentTrill).Top - reach, facing)
-            : null;
+        // EVERY piece has the plateau, because every piece prints the glyph (the
+        // continuation's left-broken bound keeps the `left` text — Calculate's remark): the
+        // clone's stencil is the same two-piece shape, so its facing profile is too.
+        // MEASURED (2.26.0, Lab sessions/p961/probe/ly/dump2.log, read again in session 965):
+        // the continuation's line stands 4.545 = its first column g''4's head top 3.045 +
+        // padding 0.5 + the plateau's reach 1.0 — the plateau over the continuation's own
+        // "tr" binds. Until session 965 only the FIRST piece had one, and the continuation
+        // read 4.505 off its wave over a''8 (the 0.040 that session 961 left OPEN: it had
+        // priced the plateau at 1.5 and so believed LilyPond ignored it).
+        VerticalSkyline? plateau = VerticalSkyline.FromBox(
+            glyphX + MusicFont.Current.FullSize.Outline(MusicGlyph.OrnamentTrill).Left,
+            glyphX + MusicFont.Current.FullSize.Outline(MusicGlyph.OrnamentTrill).Right,
+            -reach, MusicFont.Current.FullSize.Box(MusicGlyph.OrnamentTrill).Top - reach, facing);
         // The line's own ink: the run of trill_element glyphs, pointwise.
         var runPair = lineStartX < endX
             ? TrillWaveOutline.Place(lineStartX, endX - lineStartX, 0.0)

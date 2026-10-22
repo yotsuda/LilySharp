@@ -313,12 +313,14 @@ score test { staff melody }
         Assert.Equal(3, tr.Count);
         double Line(int i, int staff) => refs[staff] - (tr[i].Y - EngravingDefaults.TrillSpannerTextOffsetDown);
         Assert.Equal(4.045, Line(0, 0), 3);
-        // ⚠️ OPEN 0.040 (session 961): LilyPond 4.545 = b'8's head top 4.045 + padding 0.5 and
-        // NOTHING for its continuation's glyph plateau over g'4 (which would bind at 5.045),
-        // although the dumped vertical-skylines carry the plateau at line − 1.0 over g'
-        // (Lab sessions/p961/probe/ly/dump2.log). Lily# reads 4.505. The 0.62 the OMR reported
-        // was the stacking; this is the residual under it, and the mechanism is not isolated.
-        Assert.Equal(4.505, Line(1, 1), 3);
+        // The continuation: 4.545 = its own "tr" plateau (line − 1.0) over g''4's head top
+        // 3.045 + padding 0.5 — a continuation prints the glyph, so it has the glyph's support
+        // profile too (session 965; AlignedSideLineY). Session 961 had left this OPEN at 4.505
+        // (the wave over a''8 binding, the plateau given to the first piece only) because it
+        // priced the plateau at 1.5 and so believed LilyPond ignored it; the dumped
+        // vertical-skylines (Lab sessions/p961/probe/ly/dump2.log) carry it at −1.0, and
+        // 3.045 + 0.5 + 1.0 is LilyPond's number to six digits.
+        Assert.Equal(4.545, Line(1, 1), 3);
         Assert.Equal(5.545, Line(2, 1), 3);
         // The continuation's "tr" is centred on g'4's head, the chained one's on b'8's: the
         // two heads of the second system at those positions.

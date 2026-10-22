@@ -15,6 +15,10 @@ workflow attaches that section to the GitHub Release verbatim.
   (LilyPond's adjust-on-neighbor): the second trill no longer rides a level above the first's
   continuation when the wave's last element reached under its "tr" — found by the OMR on a
   piano piece's left hand, where the lifted "tr" ran into the right hand's beams.
+- `[engraving]` **The continuation's "tr" clears the note under it as the first "tr" does**: its
+  glyph counts toward the line's height (LilyPond's: the glyph's flat profile a staff space
+  under the line), so a continuation opening over a high note stands where LilyPond stands it
+  (0.04 higher than before on the OMR's piece; exact now).
 
 ### Scripts in two-voice music
 
