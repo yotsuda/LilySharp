@@ -160,6 +160,19 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第957セッションの経緯
+
+### 1.1 第957セッション（2026-10-22・YT-DELL2）
+
+第956 と同じ会話の続き（ユーザー「続けて」＝候補 B: grace の LYS4020 の残り）。`-Start p957`（開始 HEAD `0617c241f`・未 push 95・第955 を ARCHIVE へ）。作業場所は Lab `sessions/p957/`（棚卸しの probe `probe/drops.lys`＝各注釈を grace に書いて LYS4020 を数えた・目視 `probe/gg.lys`・掃き `svg/`）。
+- **実測の棚卸し（grace に載らない注釈）**: 13 件の LYS4020 のうち `@dead`・`@text`・`@harmonic` は載る。載らないのは **`@scoop`・`@plop`・`@bend(N)`（自前の装置）／`@pluck(p)`・TAB の `@hammerOn`・`@pullOff`・`@tap`（自前の字）／`@diagram`・`@chord(C)`・`@figuredBass(6)`（別 engraver・LP と照合可）／`@todo`（memo は LYS4026 で届くが頭の赤と予約は無い）／`@cross`**。⚠️ **`@cross` は x 符頭ではなく cross-staff**（`MeasureCollector.CollectCrossStaff`＝grand staff の反対の譜へ移す）＝GRAMMAR.md 2617 行の「@cross / @dead (x notehead)」は要点検（次便）。
+- **載せた＝自前の gesture 3 つ**（本体 commit）: `GraceBodySupport.IsCarriedGesture`（scoop／plop は ArticulationSyntax・`@bend(N)` は引数付きなので MusicMarkSyntax＝`AnnotationValues.Bend`）を drop list と collector の両方が読む。`ArticulationEngraver` の gesture 枝は `graceHeadLeft` と `GraceColumnAt` で grace 列の頭（`gc.HeadBox.Width`・和音は最高音の段＝第955 の規則）から・tab の grace は数字が列の上に中心＝`TabHeadCenterOffset` 無し（`SharedRenderer.TabGraceDigits`）で弦は `gc.Heads[0]` の Midi／StringNumber から。gesture 自体の大きさは変えない（fall と同じ・LP の general-grace-settings に相当物なし）。
+- **網**: `OwnGestureGeometryTests` に grace の 4 本（scoop／plop・bend-up 五線・bend-up tab）＋ `GraceBodyValidatorTests.AFallOnAGrace_IsDrawn_AndNotReported` に 3 行。毒 2 本＝drop list だけ忘れる: validator 3 赤／collector が落とす: 7 赤。**LYS4020 の probe は 13 → 9**。コーパスに grace の gesture を書く本は 0 冊（grep）＝掃きは形式上（結果は語りの末尾）。
+- 計器の罠: ⒜ `cmd /d /s /c "dotnet test --filter $var"` と変数で渡すと `""A|B""` が壊れて `'B""' is not recognized`＝filter は字面で書く（CLAUDE-OPERATIONS §1 の既知の罠の別の顔）／⒝ 先頭の grace の scoop は拍子記号の上に乗って見えない（gesture は何も予約しない＝自前の装置の既知の性質・main の音も同じ）。
+
+- `-End p957 -DiffBase 0617c241f` ＝full **12931 / 0 / 2 / 12933**（前便末 +7＝新しい網）（Lab `sessions/p957/end.log`）→ この docs commit。本体 `57c25c114`。掃き 1,248 枚で **0**（Lab `sessions/p957/svg/sweep.log`）。未 push 96＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。
+判定（2026-10-22）: grace の gesture は閉じた。次の候補（grace の LYS4020 の残り）＝⑴ `@todo`（memo の頭の赤と予約＝`docs/todo-memo-design.md` の規則を grace へ）・⑵ `@pluck`・TAB の H/P/T（自前の字＝`tabtech:` の経路を grace 列へ・同一性の網）・⑶ `@chord`／`@figuredBass`／`@diagram`（別 engraver・`@chord` と `@figuredBass` は LP と照合可）・⑷ GRAMMAR.md 2617 行の「@cross / @dead (x notehead)」の点検（`@cross` は cross-staff）。§2 E ⑹ 開いた和音入力は綴りの合意が先（要ユーザー判断）。
+
 ## 以下は第956セッションの経緯
 
 ### 1.1 第956セッション（2026-10-22・YT-DELL2）
