@@ -268,7 +268,16 @@ internal static partial class SpacingRules
             // MEASURED (2.26.0, Lab sessions/p940/lp/ag.ly P1/P2): the last grace -> that column
             // 1.28 = 1.6 x 0.8, where the Note_spacing pair would give 1.938627.
             // LILYPOND-REF: lily/spacing-basic.cc:163-175 Spacing_spanner::note_spacing — the grace branch, Spring (len, increment).
-            if (i + 1 == notes.Length && mainItem is RestItem { IsSpacer: true, LeadingGrace.IsDefaultOrEmpty: false })
+            // A SPACER inside the run (session 942) is such a column too, on either side: no wish
+            // leaves it and none reaches it (its note column holds nothing), so the gap into it
+            // and the gap out of it are both the bare grace spring of their left column.
+            // MEASURED (2.26.0, Lab sessions/p942/lp/sp.ly, sp2.ly): `\grace { d16 s16 e16 }` d -> e
+            // 2.56 = 1.28 + 1.28 (Lily# drew 3.34 off the spacer's invented width); `{ d16 s8 e16 }`
+            // 1.28 + 2.08; `{ d16 s16 } e4` d -> main 2.56. ⒝ A LEADING spacer's gap out is the same,
+            // but the approach into it is LilyPond's bare duration spring x 0.8 (`c4 \grace { s16 d16 }`:
+            // 2.318436 where SpringIntoGraceRun gives the Note_spacing 2.401796) — not ported.
+            if ((i + 1 == notes.Length && mainItem is RestItem { IsSpacer: true, LeadingGrace.IsDefaultOrEmpty: false })
+                || notes[i].IsSpacer || next is { IsSpacer: true })
             {
                 gap = CreateGraceSpring(notes[i].Length, gp, dtMin).IdealDistance;
                 rod = 0.0;
@@ -477,8 +486,9 @@ internal static partial class SpacingRules
             return null;
         GraceColumnInfo? next = beforeSpacer ? null : notes[column + 1];
         // A REST next (session 938) is priced the same way: its left skyline is empty, so the
-        // sign's spring keeps its ideal and the rest's left edge stands there (GBK/GBL).
-        if (next is { IsSpacer: true } or { TabDigitHalfWidth: > 0 })
+        // sign's spring keeps its ideal and the rest's left edge stands there (GBK/GBL); so is a
+        // SPACER (session 942, Lab sessions/p942/lp/sp.ly SA: the spacer's column 1.205280 on).
+        if (next is { TabDigitHalfWidth: > 0 })
             return null;
         // The sign's column, read by the change column's own rules (its box at the top line,
         // its width, its space-alist) — a breathing sign reads no text font.
@@ -551,24 +561,12 @@ internal static partial class SpacingRules
         // the gap after a rest is 1.7000 where the gap after a grace head is 1.4180
         // (scratch/p308/lp2, r1_split and r3_resthead), and Lily# draws 1.70 against 1.42.
         //
-        // ⚠️ THE SPACER'S OWN WIDTH IS AN INVENTION, AND IT IS MEASURABLY TOO WIDE.
-        // A spacer has no ink, so this gives it nothing but the default box — and the gap
-        // that comes out is the SPRING's ideal rather than this floor, which LilyPond
-        // undercuts. MEASURED (scratch/p308/lp2/t1_spacermid against ab/e1_spacermid,
-        // `grace { d'16 s16 e'16 }`): LilyPond puts d' and e' 2.5600 apart and Lily# puts
-        // them 3.3400 apart — 0.78 too wide. The same pair with a REST between them agrees
-        // to the printed digit (3.6387 against 3.64), so what is wrong is the spacer's
-        // spring and not the column machinery.
-        //   departs from: lily/spacing-basic.cc — what a spring is worth over a column that
-        //     declares no grob at all is not the same question as over one that declares a
-        //     zero-width one, and this reads the second.
-        //   goes away when: someone measures LilyPond's grace spring over a spacer the way
-        //     grace.column.* measures it over a head, and puts the point in the ledger.
-        //   observed by: NOTHING. No ledger point covers a grace spacer, and the drawn
-        //     STRUCTURE is right (the spacer holds a column and ends the beamed prefix, both
-        //     measured), so the sweep and every net come through green on the 0.78.
-        // ⚠️ Reach measured before this was left standing: 2 books on a disk of 1997, and
-        // both are this session's own probes.
+        // A SPACER's flat reach is 0: it has no ink. ⚠️ Since session 942 this reach no longer
+        // sets a spacer's gaps: GraceColumns prices the gap into a spacer and the gap out of it as
+        // bare grace springs (no Note_spacing wish leaves or reaches a column with no note) —
+        // MEASURED (2.26.0, Lab sessions/p942/lp/sp.ly): `grace { d'16 s16 e'16 }` d -> e 2.56,
+        // where this reach's floor and the flagged d's spring drew 3.34 (scratch/p308/lp2 had
+        // measured the same 0.78 and left it open, observed by nothing; now ledger spacer.grace.*).
         if (note.IsRest)
             return (note.IsSpacer
                        ? 0

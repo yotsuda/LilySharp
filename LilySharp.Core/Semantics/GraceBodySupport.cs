@@ -666,7 +666,8 @@ internal static class GraceBodySupport
     /// Before a REST the same (session 938, probes/grace-breath.ly GBK/GBL): the rest's left
     /// edge stands the sign's Staff_spacing × 0.8 on, a rest's column having no left skyline
     /// to raise the minimum.
-    /// ⚠️ Not before a spacer written in the body (unmeasured): reported (LYS4020).
+    /// Before a SPACER too (session 942, Lab sessions/p942/lp/sp.ly SA/SC): the spacer's column
+    /// stands where a rest's would, and the gap after it is the bare grace spring.
     /// </para>
     /// <para>
     /// An AFTERGRACE's sign (session 939, probes/grace-breath.ly GBM-GBN): one on an inner column
@@ -688,7 +689,7 @@ internal static class GraceBodySupport
                 continue;
             if (previous != null
                 && (CarriedNote(item) != null || CarriedChord(item) != null
-                    || CarriedRest(item) is { RestText: not "s" })
+                    || CarriedRest(item) != null)
                 && OwnBreath(previous) is { } sign)
                 (signs ??= []).Add(sign);
             previous = item;

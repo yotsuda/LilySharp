@@ -9005,6 +9005,12 @@ internal static class LpGeometryProbes
     private static readonly string GBRQ = GraceTieBook("c2 afterGrace { d16 e16 f16 } g2 |", "GBRQ");
     private static readonly string GBRR = GraceTieBook("c4 afterGrace { d16 } e4 f2 |", "GBRR");
     private static readonly string GBRS = GraceTieBook("c1 afterGrace { d16 } | e1 |", "GBRS");
+    // A spacer in a grace run, and a sign before one (session 942; GBT-GBX).
+    private static readonly string GBRT = GraceTieBook("c4 grace { d16@breath s16 e16 } f4 c2 |", "GBRT");
+    private static readonly string GBRU = GraceTieBook("c4 grace { d16@breath s16 } f4 c2 |", "GBRU");
+    private static readonly string GBRV = GraceTieBook("c4 grace { d16 s16 e16 } f4 c2 |", "GBRV");
+    private static readonly string GBRW = GraceTieBook("c4 grace { d16 s8 e16 } f4 c2 |", "GBRW");
+    private static readonly string GBRX = GraceTieBook("c4 grace { d16 s16 } e4 c2 |", "GBRX");
     // A breathing sign or caesura between two notes the auto-beamer would beam
     // (audit/lp-geometry/probes/breath-beam.ly; session 937).
     private static readonly string BBA = GraceTieBook("c4 d16@breath e16 f8 c2 |", "BBA");
@@ -17617,6 +17623,15 @@ internal static class LpGeometryProbes
         new("aftergrace.quarter.next-pair", GBRR, g => g.NoteheadToNotehead(2, 3)),
         new("aftergrace.whole.main-to-grace", GBRS, g => g.NoteheadToNotehead(0, 1)),
         new("aftergrace.whole.grace-to-next-bar", GBRS, g => g.NoteheadToNotehead(1, 2)),
+        new("breath.grace.before-spacer.grace-to-sign", GBRT, g => g.BreathFromNotehead(1)),
+        new("breath.grace.before-spacer.sign-to-next", GBRT, g => g.NoteheadFromBreath(2)),
+        new("breath.grace.before-spacer.to-main", GBRT, g => g.NoteheadToNotehead(2, 3)),
+        new("breath.grace.before-last-spacer.sign-to-main", GBRU, g => g.NoteheadFromBreath(2)),
+        new("spacer.grace.inner.across", GBRV, g => g.NoteheadToNotehead(1, 2)),
+        new("spacer.grace.inner.to-main", GBRV, g => g.NoteheadToNotehead(2, 3)),
+        new("spacer.grace.inner-eighth.across", GBRW, g => g.NoteheadToNotehead(1, 2)),
+        new("spacer.grace.inner-eighth.to-main", GBRW, g => g.NoteheadToNotehead(2, 3)),
+        new("spacer.grace.last.to-main", GBRX, g => g.NoteheadToNotehead(1, 2)),
         new("breath.beam.note-to-sign", BBA, g => g.BreathFromNotehead(1)),
         new("breath.beam.sign-to-note", BBA, g => g.NoteheadFromBreath(2)),
         new("breath.beam.beamed-pair", BBA, g => g.NoteheadToNotehead(2, 3)),

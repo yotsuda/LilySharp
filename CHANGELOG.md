@@ -123,6 +123,9 @@ workflow attaches that section to the GitHub Release verbatim.
   **An `afterGrace` is spaced as LilyPond spaces it** (`c2 afterGrace { d16 } e2`): the main
   note keeps its whole value for spacing, the grace notes stand closer to the note after them,
   and that note is no longer pushed away — the bar was over two staff spaces too wide.
+  **A spacer inside a grace run takes LilyPond's room** (`grace { d16 s16 e16 }`): the grace
+  notes around it stood about 0.8 staff space too far apart. A breathing sign before a grace
+  spacer is drawn too.
   **A caesura no longer breaks an automatic beam** (`d16@caesura e16 f8`): one beam runs across
   it, as in LilyPond, where it split the beam and stood the caesura half a space too far off. A
   breathing sign still ends the beam, as LilyPond's does.

@@ -67,3 +67,13 @@
   \score { \new Staff { \time 4/4 \fixed c' { \afterGrace c4 { d16 } e4 f2 \bar "|." } } } }
 \book { \paper { indent = 0 ragged-right = ##t page-post-process = #(dump-final "GBS") }
   \score { \new Staff { \time 4/4 \fixed c' { \afterGrace c1 { d16 } e1 \bar "|." } } } }
+\book { \paper { indent = 0 ragged-right = ##t page-post-process = #(dump-final "GBT") }
+  \score { \new Staff { \time 4/4 \fixed c' { c4 \grace { d16 \breathe s16 e16 } f4 c2 \bar "|." } } } }
+\book { \paper { indent = 0 ragged-right = ##t page-post-process = #(dump-final "GBU") }
+  \score { \new Staff { \time 4/4 \fixed c' { c4 \grace { d16 \breathe s16 } f4 c2 \bar "|." } } } }
+\book { \paper { indent = 0 ragged-right = ##t page-post-process = #(dump-final "GBV") }
+  \score { \new Staff { \time 4/4 \fixed c' { c4 \grace { d16 s16 e16 } f4 c2 \bar "|." } } } }
+\book { \paper { indent = 0 ragged-right = ##t page-post-process = #(dump-final "GBW") }
+  \score { \new Staff { \time 4/4 \fixed c' { c4 \grace { d16 s8 e16 } f4 c2 \bar "|." } } } }
+\book { \paper { indent = 0 ragged-right = ##t page-post-process = #(dump-final "GBX") }
+  \score { \new Staff { \time 4/4 \fixed c' { c4 \grace { d16 s16 } e4 c2 \bar "|." } } } }

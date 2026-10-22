@@ -1152,7 +1152,7 @@ chords, rests and dots are drawn at the grace size, with what is written on them
 is still not drawn, Lily# says so at what was written (LYS4020):
 
 ```
-grace { d16@breath s16 e16 } c4   // the breathing sign is not drawn   (LYS4020)
+grace { <d@breath f>16 } c4   // a breathing sign on a chord member is not drawn   (LYS4020)
 ```
 
 **Two annotations ARE carried, and the line between them and the rest is whether they want a
@@ -1197,7 +1197,8 @@ inner grace note it stands between that grace note and the next, which move apar
 (`grace { d16@breath e16 } f4`), and a breathing sign (not a caesura) ends the grace beam there,
 so the grace notes after it take flags, as in LilyPond; before a grace rest it stands the same
 way (`grace { d16@breath r16 e16 } f4`), and in an `afterGrace` too (`c2 afterGrace { d16@breath } e2`).
-One before a grace spacer is not drawn yet (LYS4020 names it, and every other mark still dropped).
+Before a grace spacer it stands the same way. One written on a chord's member is not drawn yet
+(LYS4020 names it, and every other mark still dropped).
 A trill spanner can start or stop on a grace note (`grace { d16@startTrillSpan } e4 f g@stopTrillSpan`),
 and so can an ottava (`grace { d''16@ottava } e''4 f'' g'@!ottava`) — an `@!ottava` on a grace ends
 the span before it, as LilyPond's `\ottava #0` there does, so that grace keeps its written octave.

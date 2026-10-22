@@ -117,14 +117,15 @@ public class RehearsalMarkEngravedValidatorTests
         Assert.Empty(Warnings(book));
         Assert.Contains(">P</text>", LiveRender.Svg(book));
 
-        // The company it keeps that a grace does not carry yet — a breathing sign before a grace
-        // SPACER (the scripts, dynamics and texts are drawn since session 916, the fingerings
-        // since 917, the hairpin starts since 918, the pedals since 922, a sign on the LAST grace
-        // since 934, on an inner grace since 936, before a grace rest since 938) — is still on
-        // the floor, and no longer silent about it (LYS4020, GraceBodyValidatorTests).
-        string started = OneStaff("grace { d'16@breath s16 e'16 } c'1 | e'1 |");
+        // The company it keeps that a grace does not carry yet — a breathing sign on a grace
+        // chord's MEMBER (the scripts, dynamics and texts are drawn since session 916, the
+        // fingerings since 917, the hairpin starts since 918, the pedals since 922, a sign on the
+        // LAST grace since 934, on an inner grace since 936, before a rest since 938, before a
+        // spacer since 942) — is still on the floor, and no longer silent about it (LYS4020,
+        // GraceBodyValidatorTests).
+        string started = OneStaff("grace { <d'@breath f'>16 e'16 } c'1 | e'1 |");
         static string Ink(string svg) => System.Text.RegularExpressions.Regex.Replace(svg, " data-pos=\"\\d+\"", "");
-        Assert.Equal(Ink(LiveRender.Svg(OneStaff("grace { d'16 s16 e'16 } c'1 | e'1 |"))), Ink(LiveRender.Svg(started)));
+        Assert.Equal(Ink(LiveRender.Svg(OneStaff("grace { <d' f'>16 e'16 } c'1 | e'1 |"))), Ink(LiveRender.Svg(started)));
     }
 
     /// <summary>

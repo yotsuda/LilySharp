@@ -8316,6 +8316,69 @@
       "residual": 0.0,
       "why": "EXACT since session 940: 1.28, the empty column -> the bar line 1.324511 (a quarter of the whole note's spring, no wish: no head width, no headroom, no rod), then the bar line -> the next bar's note. It read 5.174200 (+0.479689) while the closing spacer still sent a wish to the bar line — step (3) of the afterGrace PLACEMENT port of session 940: (1) an afterGrace main note plays for its WRITTEN length (MusicItem.AfterGracePlaying; SpacingRules.ComputeShortestPlayingAt), so its column and the closing spacer's are priced as fractions of its own spring, as LilyPond's one note event under a parallel skip; (2) the run's last gap into the closing spacer — LilyPond's EMPTY musical column at the grace's main moment (Lab sessions/p939/lp/cols.ly) — is the bare grace spring 1.28 with no minimum (SpacingRules.GraceColumns; CalculateGraceGroupSpringWidth reads it too); (3) no Note_spacing wish leaves that column, toward the next note or the bar line (MeasureLayouter.CreateInterColumnSpring / CreateLastToBarlineSpring and their CreateSpringsForMeasure mirrors)."
     },
+    "breath.grace.before-spacer.grace-to-sign": {
+      "probe": "grace-breath.ly",
+      "score": "GBT",
+      "lilypond": 0.891338619198037,
+      "residual": 0.0,
+      "why": "EXACT from its first reading (session 942): a sign before a grace SPACER is priced as one before a note (GraceBodySupport.InnerBreaths now takes a spacer after the column), 0.891339."
+    },
+    "breath.grace.before-spacer.sign-to-next": {
+      "probe": "grace-breath.ly",
+      "score": "GBT",
+      "lilypond": 2.485280,
+      "residual": 0.0,
+      "why": "EXACT since session 942: the sign's Staff_spacing x 0.8 to the spacer's column (1.205280; its left skyline is empty), then the spacer -> next grace, the bare grace spring 1.28. With the sign drawn but the spacer's old gap it read 2.603218 (+0.117938)."
+    },
+    "breath.grace.before-spacer.to-main": {
+      "probe": "grace-breath.ly",
+      "score": "GBT",
+      "lilypond": 1.938627064831479,
+      "residual": 0.0,
+      "why": "EXACT. The CONTROL: the grace after the spacer -> main note, flagged, 1.938627."
+    },
+    "breath.grace.before-last-spacer.sign-to-main": {
+      "probe": "grace-breath.ly",
+      "score": "GBU",
+      "lilypond": 2.485280,
+      "residual": 0.0,
+      "why": "EXACT since session 942: the spacer is the run's LAST column, 1.205280 + its bare 1.28 to the main note. It read 2.603218 (+0.117938) on the spacer's old gap."
+    },
+    "spacer.grace.inner.across": {
+      "probe": "grace-breath.ly",
+      "score": "GBV",
+      "lilypond": 2.56,
+      "residual": 0.0,
+      "why": "EXACT since session 942 (SpacingRules.GraceColumns): a SPACER's column holds no note, so no Note_spacing wish leaves it or reaches it, and the gaps into and out of it are bare grace springs, 1.28 + 1.28. AS OPENED: 3.336566 (+0.776566), the spacer's invented flat width and the flagged d's reach against it (Lab scratch/p308 had measured 3.34 against 2.56)."
+    },
+    "spacer.grace.inner.to-main": {
+      "probe": "grace-breath.ly",
+      "score": "GBV",
+      "lilypond": 1.938627064831478,
+      "residual": 0.0,
+      "why": "EXACT. The CONTROL: the grace after the spacer -> main note, 1.938627."
+    },
+    "spacer.grace.inner-eighth.across": {
+      "probe": "grace-breath.ly",
+      "score": "GBW",
+      "lilypond": 3.36,
+      "residual": 0.0,
+      "why": "EXACT since session 942: d16 -> s8 the sixteenth's bare 1.28, s8 -> e16 the eighth's bare 2.08 (ratio 2 over the run's shortest). AS OPENED: 4.136566 (+0.776566)."
+    },
+    "spacer.grace.inner-eighth.to-main": {
+      "probe": "grace-breath.ly",
+      "score": "GBW",
+      "lilypond": 1.938627064831477,
+      "residual": 0.0,
+      "why": "EXACT. The CONTROL: 1.938627."
+    },
+    "spacer.grace.last.to-main": {
+      "probe": "grace-breath.ly",
+      "score": "GBX",
+      "lilypond": 2.56,
+      "residual": 0.0,
+      "why": "EXACT since session 942: a spacer ending the run, d -> s -> main both bare, 2.56. AS OPENED: 3.336566 (+0.776566)."
+    },
     "breath.beam.note-to-sign": {
       "probe": "breath-beam.ly",
       "score": "BBA",
