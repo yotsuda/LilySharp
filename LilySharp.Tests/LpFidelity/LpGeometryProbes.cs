@@ -9579,6 +9579,13 @@ internal static class LpGeometryProbes
     /// <summary>The lower voice's grace OPENS the second bar: the bar line's optical correction
     /// reads the grace column's DOWN stem (SpacingRules.LeadGraceOpticalCorrection).</summary>
     private static readonly string GDO = GraceSlurBook("GDO", "treble", "c1 | voice { s1 } { grace { d'8 } c'4 e4 f4 g4 } |");
+    private static readonly string GOB = GraceSlurBook("GOB", "treble", "c1 | grace { d'8 } c'4 e4 f4 g4 |");
+    private static readonly string GOC = GraceSlurBook("GOC", "treble", "c1 | voice { s1 } { d''4 e4 f4 g4 } |");
+    private static readonly string GOD = GraceSlurBook("GOD", "treble", "c1 | voice { s1 } { grace { d8 } c'4 e4 f4 g4 } |");
+    private static readonly string GOE = GraceSlurBook("GOE", "treble", "c1 | voice { s1 } { grace { d'16 } c'4 e4 f4 g4 } |");
+    private static readonly string GOF = GraceSlurBook("GOF", "treble", "c1 | voice { s1 } { grace { d'16 e'16 } c'4 e4 f4 g4 } |");
+    private static readonly string GOG = GraceSlurBook("GOG", "treble", "c1 | voice { s1 } { grace { b8 } c'4 e4 f4 g4 } |");
+    private static readonly string GOH = GraceSlurBook("GOH", "treble", "c1 | voice { s1 } { grace { d'4 } c'4 e4 f4 g4 } |");
 
     /// <summary>
     /// A beam whose left end runs over a printed ACCIDENTAL — the first book that reads the
@@ -18152,6 +18159,13 @@ internal static class LpGeometryProbes
         new("grace.voice-two.chord.flag", GDC, g => g.GlyphAboveStaffMiddle('', 0)),
         new("grace.voice-two.column.to-main", GDF, g => g.NoteheadAnchorStep(1)),
         new("grace.voice-two.bar-opening", GDO, g => g.BarlineRightToNextNotehead(0)),
+        new("grace.voice-two.bar-opening.stem-up", GOB, g => g.BarlineRightToNextNotehead(0)),
+        new("grace.voice-two.bar-opening.main", GOC, g => g.BarlineRightToNextNotehead(0)),
+        new("grace.voice-two.bar-opening.low", GOD, g => g.BarlineRightToNextNotehead(0)),
+        new("grace.voice-two.bar-opening.sixteenth", GOE, g => g.BarlineRightToNextNotehead(0)),
+        new("grace.voice-two.bar-opening.beamed", GOF, g => g.BarlineRightToNextNotehead(0)),
+        new("grace.voice-two.bar-opening.middle-line", GOG, g => g.BarlineRightToNextNotehead(0)),
+        new("grace.voice-two.bar-opening.quarter", GOH, g => g.BarlineRightToNextNotehead(0)),
         // A grace spring's skyline minimum and stem correction. See GKU.
         new("grace.column.same-direction.step", GKU, g => g.NoteheadAnchorStep(1)),
         new("grace.column.skyline.to-main", GKS, g => g.NoteheadAnchorStep(2)),

@@ -2267,8 +2267,57 @@
       "probe": "grace-voice-two-stem.ly",
       "score": "GDO",
       "lilypond": 0.804769495848520,
-      "residual": 0.005861361,
-      "why": "PENDING"
+      "residual": 0.0,
+      "why": "CLOSED IN SESSION 950 (was PENDING since session 726 at +0.005861361). A lower voice's grace d'' opens the bar: the bar line's optical correction (staff-spacing.cc optical_correction, a DOWN stem only) reads the GRACE stem's own pure extent -- the grace head's attachment and the grace stem rule -- and SpacingRules.LeadGraceOpticalCorrection now asks GraceStemBand for it. It read a full-size stand-in's stem (ApproachColumn), longer and from the full-size attachment, so the bar's covered part was too long and the gap 0.005861 too wide: the session-933 mistake of the approach's stem band, in the bar line's correction."
+    },
+    "grace.voice-two.bar-opening.stem-up": {
+      "probe": "grace-voice-two-stem.ly",
+      "score": "GOB",
+      "lilypond": 0.682,
+      "residual": 0.0,
+      "why": "EXACT. CONTROL: the same grace in one voice, stem UP: no correction (a DOWN stem only), the plain 0.682."
+    },
+    "grace.voice-two.bar-opening.main": {
+      "probe": "grace-voice-two-stem.ly",
+      "score": "GOC",
+      "lilypond": 1.014285714,
+      "residual": 0.0,
+      "why": "EXACT. CONTROL: a lower voice's MAIN d'' opens the bar: the full-size down stem's correction, which was always right."
+    },
+    "grace.voice-two.bar-opening.low": {
+      "probe": "grace-voice-two-stem.ly",
+      "score": "GOD",
+      "lilypond": 0.682,
+      "residual": 0.0,
+      "why": "EXACT. CONTROL: a grace d' below the staff with its stem down: the stem misses the bar's extent, no correction."
+    },
+    "grace.voice-two.bar-opening.sixteenth": {
+      "probe": "grace-voice-two-stem.ly",
+      "score": "GOE",
+      "lilypond": 0.804769496,
+      "residual": 0.0,
+      "why": "CLOSED IN SESSION 950. A sixteenth grace: the same stem as the eighth's (the grace stem rule), so the same 0.804769."
+    },
+    "grace.voice-two.bar-opening.beamed": {
+      "probe": "grace-voice-two-stem.ly",
+      "score": "GOF",
+      "lilypond": 0.804769496,
+      "residual": 0.0,
+      "why": "CLOSED IN SESSION 950. Two beamed graces: the band is the FIRST grace's, its unbeamed tip (GraceStemBand's remark), and LilyPond reads the same 0.804769."
+    },
+    "grace.voice-two.bar-opening.middle-line": {
+      "probe": "grace-voice-two-stem.ly",
+      "score": "GOG",
+      "lilypond": 0.768198067,
+      "residual": 0.0,
+      "why": "CLOSED IN SESSION 950. A grace b' on the middle line: its shorter covered part. The stand-in read it 0.003281 NARROW -- the stand-in's error has no one sign."
+    },
+    "grace.voice-two.bar-opening.quarter": {
+      "probe": "grace-voice-two-stem.ly",
+      "score": "GOH",
+      "lilypond": 0.804769496,
+      "residual": 0.0,
+      "why": "CLOSED IN SESSION 950. A quarter grace: the same stem."
     },
     "slur.rod.adjacent-columns": {
       "probe": "slur-spacing-rod.ly",

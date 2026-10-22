@@ -949,16 +949,26 @@ internal static partial class SpacingRules
     /// <remarks>
     /// LILYPOND-REF: lily/staff-spacing.cc:95-110 next_notes_correction — the max of
     /// optical_correction over the right column's note columns.
+    /// LILYPOND-REF: lily/staff-spacing.cc:43-67 Staff_spacing::optical_correction — the stem's
+    ///   pure_y_extent, the GRACE Stem's own.
+    /// ⚠️ THE GRACE'S OWN STEM BAND (<see cref="GraceStemBand"/>), not the stand-in's
+    /// (<see cref="ApproachColumn"/> answers a full-size note: its stem leaves the full-size
+    /// head's attachment and runs the full-size length). Until session 950 this read the stand-in,
+    /// and a lower voice's grace d'' opened its bar 0.005861 wide, a b' 0.003281 narrow (LilyPond
+    /// 2.26.0, ledger grace.voice-two.bar-opening*) — the session-933 mistake
+    /// (<see cref="ApproachStemBand"/>) in the bar line's correction.
     /// </remarks>
     private static double LeadGraceOpticalCorrection(in ItemColumn firstItems)
     {
         double max = 0;
         for (int i = 0; i < firstItems.Count; i++)
         {
-            var item = firstItems[i];
-            if (GraceNotesOf(item).IsDefaultOrEmpty)
+            var grace = GraceNotesOf(firstItems[i]);
+            if (grace.IsDefaultOrEmpty)
                 continue;
-            max = Math.Max(max, BarlineToStemOpticalCorrection(ApproachColumn(item)));
+            if (GraceStemBand(grace[0], GraceNoteEngraver.BeamedPrefix(grace) > 0)
+                is { StemUp: false } band)
+                max = Math.Max(max, DownStemOpticalCorrection(band.StemMin / 2, band.StemMax / 2, 2.0));
         }
         return max;
     }

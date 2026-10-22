@@ -906,6 +906,16 @@ internal static partial class SpacingRules
                 return 0;
             (lo, hi) = (s.StemMin / 2, s.StemMax / 2);
         }
+        return DownStemOpticalCorrection(lo, hi, barHalfSpaces);
+    }
+
+    /// <summary>
+    /// <see cref="StaffSpacingOpticalCorrection"/>'s arithmetic for a DOWN stem spanning
+    /// <paramref name="lo"/> … <paramref name="hi"/> (page units about the staff middle): the
+    /// part the bar line covers, over 7, at most 1, times stem-spacing-correction.
+    /// </summary>
+    internal static double DownStemOpticalCorrection(double lo, double hi, double barHalfSpaces)
+    {
         lo = Math.Max(lo, -barHalfSpaces);
         hi = Math.Min(hi, barHalfSpaces);
         return hi > lo ? Math.Min((hi - lo) / 7.0, 1.0) * StaffSpacingStemCorrection : 0;

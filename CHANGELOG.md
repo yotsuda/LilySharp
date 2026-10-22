@@ -121,7 +121,9 @@ workflow attaches that section to the GitHub Release verbatim.
   `grace { d16@stemDown e16@stemDown } f4`, `@stemUp` in a lower voice): written on every grace note
   of the group, the whole group turns, beam and flags included, spaced as LilyPond spaces it.
   Written on only some of them, each of those stems turns and the beam takes stems on both sides
-  (a knee), placed, stacked and spaced as LilyPond does it. A slur over or inside such a knee
+  (a knee), placed, stacked and spaced as LilyPond does it. A lower voice's grace note that
+  opens a bar stands as far from the bar line as in LilyPond (it was a few thousandths of a staff
+  space off: the bar line's correction read a full-size stem instead of the grace's). A slur over or inside such a knee
   clears the stems that reach through the beam, as in LilyPond — it sat up to a staff space and a
   half too close.
   **A grace beam over notes of different values draws its short beams** (`grace { d16 e8 f16 }`,

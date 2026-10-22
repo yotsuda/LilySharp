@@ -85,3 +85,37 @@ probe =
            \override BarLine.after-line-breaking = #(dump-bar "GDO")
            \override NoteHead.after-line-breaking = #(dump-ink "GDO")
          } { \clef "treble" \fixed c' { \time 4/4 c1 | << { s1 } \\ { \grace { d'8 } c'4 e4 f4 g4 } >> | } } }
+
+% GOB..GOH (session 950): GDO's controls and its other shapes. The ledger reads the bar line's ink
+% right to the next head's ink left. Output (LilyPond 2.26.0):
+%   GOB 0.682000000 (one voice, stem UP: no correction)   GOC 1.014285714 (a lower voice's MAIN d'')
+%   GOD 0.682000000 (a grace d' under the staff)          GOE / GOF / GOH 0.804769496 (16th, beamed, 4th)
+%   GOG 0.768198067 (a grace b' on the middle line)
+\score { \new Staff \with {
+           \override BarLine.after-line-breaking = #(dump-bar "GOB")
+           \override NoteHead.after-line-breaking = #(dump-ink "GOB")
+         } { \clef "treble" \fixed c' { \time 4/4 c1 | \grace { d'8 } c'4 e4 f4 g4 | } } }
+\score { \new Staff \with {
+           \override BarLine.after-line-breaking = #(dump-bar "GOC")
+           \override NoteHead.after-line-breaking = #(dump-ink "GOC")
+         } { \clef "treble" \fixed c' { \time 4/4 c1 | << { s1 } \\ { d''4 e4 f4 g4 } >> | } } }
+\score { \new Staff \with {
+           \override BarLine.after-line-breaking = #(dump-bar "GOD")
+           \override NoteHead.after-line-breaking = #(dump-ink "GOD")
+         } { \clef "treble" \fixed c' { \time 4/4 c1 | << { s1 } \\ { \grace { d8 } c'4 e4 f4 g4 } >> | } } }
+\score { \new Staff \with {
+           \override BarLine.after-line-breaking = #(dump-bar "GOE")
+           \override NoteHead.after-line-breaking = #(dump-ink "GOE")
+         } { \clef "treble" \fixed c' { \time 4/4 c1 | << { s1 } \\ { \grace { d'16 } c'4 e4 f4 g4 } >> | } } }
+\score { \new Staff \with {
+           \override BarLine.after-line-breaking = #(dump-bar "GOF")
+           \override NoteHead.after-line-breaking = #(dump-ink "GOF")
+         } { \clef "treble" \fixed c' { \time 4/4 c1 | << { s1 } \\ { \grace { d'16 e'16 } c'4 e4 f4 g4 } >> | } } }
+\score { \new Staff \with {
+           \override BarLine.after-line-breaking = #(dump-bar "GOG")
+           \override NoteHead.after-line-breaking = #(dump-ink "GOG")
+         } { \clef "treble" \fixed c' { \time 4/4 c1 | << { s1 } \\ { \grace { b8 } c'4 e4 f4 g4 } >> | } } }
+\score { \new Staff \with {
+           \override BarLine.after-line-breaking = #(dump-bar "GOH")
+           \override NoteHead.after-line-breaking = #(dump-ink "GOH")
+         } { \clef "treble" \fixed c' { \time 4/4 c1 | << { s1 } \\ { \grace { d'4 } c'4 e4 f4 g4 } >> | } } }
