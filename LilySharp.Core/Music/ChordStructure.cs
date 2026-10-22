@@ -546,8 +546,11 @@ public static class ChordQualityRegistry
 /// </summary>
 /// <remarks>
 /// LILYPOND-REF: scm/chord-ignatzek-names.scm — root + quality → printed name.
-/// Lily# renders the name as PLAIN TEXT (e.g. "Cmaj7"), not LilyPond's
-/// superscript/triangle typography — a deliberate Phase-1 simplification.
+/// The printed name is LilyPond's own picture since 2026-09-11 — everything after the root
+/// raised, the major seventh's triangle, the exception table's ° + ø °7 — through
+/// <see cref="ChordFormula"/> and <see cref="ChordSymbolText"/> (GRAMMAR.md, chordQualities).
+/// Until session 956 this remark still called the name "PLAIN TEXT … a deliberate Phase-1
+/// simplification", two sessions' worth of ports after it had stopped being one.
 /// </remarks>
 public sealed record ChordStructure(
     int RootStep,            // 0=C, 1=D, … 6=B (diatonic step)

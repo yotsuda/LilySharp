@@ -129,7 +129,7 @@ internal static class ArticulationEngraver
     //   and LilyPond has no scoop or plop at all (no grob and no event spells either).
     //   departs from: bend-spanner::print's bend::calc-bend-x-begin (the bend-up); nothing (scoop/plop).
     //   goes away when: the bend spanner is ported; never for the scoop and plop.
-    //   observed by: none against LilyPond.
+    //   observed by: OwnGestureGeometryTests (an identity net on the drawn values; none against LilyPond).
     /// <summary>X offset of a bend-up's curve from the fret digit on a TAB staff. LILYSHARP-OWN (above).</summary>
     private const double BendTabXOffset = 0.5;
     /// <summary>X gap between a bend-up's curve and the notehead's right edge. LILYSHARP-OWN (above).</summary>

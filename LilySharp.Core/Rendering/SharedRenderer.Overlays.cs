@@ -780,7 +780,7 @@ internal static partial class SharedRenderer
     /// shape (the fall itself is LilyPond's BendAfter since session 566, <see cref="DrawBendAfter"/>).
     ///   departs from: nothing — there is no LilyPond counterpart to depart from.
     ///   goes away when: LilyPond grows one.
-    ///   observed by: none against LilyPond.
+    ///   observed by: OwnGestureGeometryTests (an identity net on the drawn values; none against LilyPond).
     /// </summary>
     private static void DrawBendBefore(double x1, double y1, bool rise, IDrawingContext gc)
     {
@@ -957,7 +957,7 @@ internal static partial class SharedRenderer
     /// Lily# has not ported; this arrow is its own device.
     ///   departs from: scm/output-lib.scm:2844 bend-spanner::print (its geometry is not read here).
     ///   goes away when: the bend spanner is ported (with the layout's BendTabXOffset / BendHeadPadding).
-    ///   observed by: none against LilyPond.
+    ///   observed by: OwnGestureGeometryTests (an identity net on the drawn values; none against LilyPond).
     /// </summary>
     private static void DrawGuitarBend(ScoreTextMetrics fonts, double x0, double y0, int semitones, IDrawingContext gc)
     {
