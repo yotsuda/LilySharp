@@ -80,10 +80,15 @@ public sealed class TabGraceScriptTests
     /// <summary>LilyPond's height, at full precision: the grace accent under the bottom string
     /// (the grace stem is up).</summary>
     /// <remarks>
-    /// ⚠️ OPEN, NOT THIS ISLAND'S: the MAIN note's accent in the same book (<c>e@accent</c>, over
-    /// the top string) reads 1.546850 here against LilyPond's 1.289309 — a full-size tab script
-    /// on a main note, which session 694 measured as agreeing on a bass tab's four strings;
-    /// this guitar note's 0.2575 is unexplained and recorded in HANDOFF §1.1 session 959.
+    /// ⚠️ THE MAIN NOTE'S ACCENT IN THE SAME BOOK IS A DECIDED FLOOR, NOT A DEFECT (session 960):
+    /// <c>e@accent</c> over the top string reads 1.546850 here against LilyPond's 1.289309, and
+    /// the 0.257541 is the DIGIT. Both engines stand the accent at the digit's ink half-height
+    /// + its own reach 0.42 + padding 0.2 × the tab's staff-space 1.5: Lily#'s guitar digit is
+    /// em 2.3 regular (owner's decision 2026-10-01, TabConstants.ReducedFretEm), whose "0" inks
+    /// 1.653700 tall — half 0.826850 + 0.42 + 0.30 = 1.546850 exactly — where LilyPond's
+    /// TabNoteHead (font-size −2) inks 0.569309 over the string. Session 694's bass-tab
+    /// agreement was on notes whose STEM decided the support; an open-string note on the top
+    /// string is the shape the digit decides, and the decided digit shows.
     /// </remarks>
     [Fact]
     public void AnAccentOnATabGrace_StandsUnderTheBottomString_AsLilyPondsDoes()

@@ -2614,7 +2614,9 @@ TwoDigitFret   = Digit , Digit ;                                 (* 10-15 *)
                      it as data-todo on the head. Other arguments: LYS4027; a key twice in a
                      file: LYS4028. *)
    - Half ties:     c4@laissezVibrer (l.v. into silence) , c4@repeatTie (from a repeat)
-   - Effects:       @cross / @dead (x notehead) , @parenthesize (the head in
+   - Effects:       @dead (x notehead; '@notehead(cross)' is the same head — '@cross' is NOT:
+                    it moves the note to the OTHER staff of a grand staff, and on a single
+                    staff does nothing) , @parenthesize (the head in
                     parentheses, a ghost note; on a chord one pair round it, on a member
                     its own; LilyPond's \parenthesize — the parentheses take no room) ,
                     @fall @doit (jazz bends; on a chord ONE curve off its top head —
