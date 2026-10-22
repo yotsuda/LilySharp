@@ -8966,6 +8966,21 @@ internal static class LpGeometryProbes
     private static readonly string GKNA = GraceTieBook("c4 grace { d16@stemDown e16 } f4 g4 a4 |", "GKNA");
     private static readonly string GKNG = GraceTieBook("c4 grace { d16 e16@stemDown } f4 g4 a4 |", "GKNG");
     private static readonly string GKNF = GraceTieBook("c4 grace { d16 e16@stemDown f16@stemDown } g4 a4 b4 |", "GKNF");
+    // A SLUR OVER OR INSIDE A KNEED grace beam, and a grace beam's BEAMLETS (session 944,
+    // probes/grace-knee-slur.ly and probes/grace-beamlet.ly).
+    private static readonly string GKSA = GraceTieBook("c4( grace { d16@stemDown e16 } f4) g4 a4 |", "GKSA");
+    private static readonly string GKSH = GraceTieBook("c'4( grace { d'16@stemDown e'16 } f'4) g'4 a'4 |", "GKSH");
+    private static readonly string GKSE = GraceTieBook("c'4( grace { d'16 e'16 } f'4) g'4 a'4 |", "GKSE");
+    private static readonly string GKSB = GraceTieBook("c4( grace { d16@stemDown e16 f16 } g4) a4 b4 |", "GKSB");
+    private static readonly string GKSC = GraceTieBook("c4( grace { d8@stemDown e16 } f4) g4 a4 |", "GKSC");
+    private static readonly string GKSF = GraceTieBook("c4 grace { d16( e16@stemDown f16@stemDown) } g4 a4 b4 |", "GKSF");
+    private static readonly string GKSG = GraceTieBook("c4 grace { d16@stemDown( e16 f16@stemDown) } g4 a4 b4 |", "GKSG");
+    private static readonly string GKSK = GraceTieBook("c4 grace { d16@stemDown( e16) } f4 g4 a4 |", "GKSK");
+    private static readonly string GBL1 = GraceTieBook("c4 grace { d16 e8 f16 } g4 a4 b4 |", "GBL1");
+    private static readonly string GBL2 = GraceTieBook("c4 grace { d8 e16 f8 } g4 a4 b4 |", "GBL2");
+    private static readonly string GBL5 = GraceTieBook("c4 grace { d8. e16 } g4 a4 b4 |", "GBL5");
+    private static readonly string GBL9 = GraceTieBook("c4 grace { d16@stemDown e8 f16 } g4 a4 b4 |", "GBL9");
+    private static readonly string GBLC = GraceTieBook("c4 grace { d8@stemDown e16 } f4 g4 a4 |", "GBLC");
     // …and a FULL-SIZE kneed sixteenth pair, the same quanter term (score K16 of the same probe).
     private static readonly string BK16 = """
         octave absolute
@@ -9416,6 +9431,9 @@ internal static class LpGeometryProbes
     private static readonly string GSA = GraceSlurBook("GSA", "treble", "c'4 acciaccatura { e'8 } d'4 e'4 f'4 |");
     private static readonly string GSP = GraceSlurBook("GSP", "treble", "c'4 appoggiatura { e'8 } d'4 e'4 f'4 |");
     private static readonly string GSB = GraceSlurBook("GSB", "bass", "d,8 d, d, d, d, grace { a,16( } b,8) a, d, |");
+    // A run of TWO graces: the slur opens on the FIRST (session 944).
+    private static readonly string GSW = GraceSlurBook("GSW", "treble", "c4 appoggiatura { e16 f } d4 e4 f4 |");
+    private static readonly string GSWH = GraceSlurBook("GSWH", "treble", "c'4 acciaccatura { e'16 f' } d'4 e'4 f'4 |");
 
     // A SLUR WRITTEN ANYWHERE IN GRACE TIME (probes/grace-inner-slur.ly, session 725) — an
     // ordinary slur, DOWN when it starts in the body. LilyPond spelling:
@@ -17575,6 +17593,28 @@ internal static class LpGeometryProbes
         new("knee.grace.up-down-down.inner-gap", GKNF, g => g.NoteheadToNotehead(2, 3)),
         new("knee.grace.up-down-down.first-stem-top", GKNF, g => g.StemTopAboveNotehead(1, 1)),
         new("knee.grace.up-down-down.last-stem-bottom", GKNF, g => g.StemBottomBelowNotehead(3, 3)),
+        new("slur.grace.knee.over.down-up.left-attachment", GKSA, g => g.BowAttachmentAboveStaffMiddle(0)),
+        new("slur.grace.knee.over.high.left-attachment", GKSH, g => g.BowAttachmentAboveStaffMiddle(0)),
+        new("slur.grace.knee.over.high.control.left-attachment", GKSE, g => g.BowAttachmentAboveStaffMiddle(0)),
+        new("slur.grace.knee.over.three.left-attachment", GKSB, g => g.BowAttachmentAboveStaffMiddle(0)),
+        new("slur.grace.knee.over.three.span", GKSB, g => g.BowSpan(0)),
+        new("slur.grace.knee.over.mixed.left-attachment", GKSC, g => g.BowAttachmentAboveStaffMiddle(0)),
+        new("slur.in-grace.knee.down-down.left-attachment", GKSF, g => g.BowAttachmentAboveStaffMiddle(0)),
+        new("slur.in-grace.knee.down-down.span", GKSF, g => g.BowSpan(0)),
+        new("slur.in-grace.knee.down-bound.left-attachment", GKSG, g => g.BowAttachmentAboveStaffMiddle(0)),
+        new("slur.in-grace.knee.down-bound.span", GKSG, g => g.BowSpan(0)),
+        new("slur.in-grace.knee.down-bound.up-beam.left-attachment", GKSK, g => g.BowAttachmentAboveStaffMiddle(0)),
+        new("beam.grace.beamlet.peak.first-right", GBL1, g => g.BeamletsAtStem(0, 0, rightSide: true)),
+        new("beam.grace.beamlet.peak.middle-left", GBL1, g => g.BeamletsAtStem(0, 1, rightSide: false)),
+        new("beam.grace.beamlet.peak.last-left", GBL1, g => g.BeamletsAtStem(0, 2, rightSide: false)),
+        new("beam.grace.beamlet.dip.middle-left", GBL2, g => g.BeamletsAtStem(0, 1, rightSide: false)),
+        new("beam.grace.beamlet.dip.middle-right", GBL2, g => g.BeamletsAtStem(0, 1, rightSide: true)),
+        new("beam.grace.beamlet.dotted.last-left", GBL5, g => g.BeamletsAtStem(0, 1, rightSide: false)),
+        new("beam.grace.beamlet.knee.first-right", GBL9, g => g.BeamletsAtStem(0, 0, rightSide: true)),
+        new("beam.grace.beamlet.knee.last-left", GBL9, g => g.BeamletsAtStem(0, 2, rightSide: false)),
+        new("knee.grace.beamlet.first-stem-bottom", GBL9, g => g.StemBottomBelowNotehead(1, 1)),
+        new("knee.grace.beamlet.last-stem-top", GBL9, g => g.StemTopAboveNotehead(3, 3)),
+        new("knee.grace.mixed.second-stem-top", GBLC, g => g.StemTopAboveNotehead(2, 2)),
         new("breath.grace.prev-to-grace", GBRA, g => g.NoteheadToNotehead(0, 1)),
         new("breath.grace.grace-to-sign", GBRA, g => g.BreathFromNotehead(1)),
         new("breath.grace.sign-to-main", GBRA, g => g.NoteheadFromBreath(2)),
@@ -17997,6 +18037,10 @@ internal static class LpGeometryProbes
         new("slur.grace.appoggiatura.span", GSP, g => g.BowSpan(0)),
         new("slur.grace.beamed-main.left-attachment", GSB, g => g.BowAttachmentAboveStaffMiddle(0)),
         new("slur.grace.beamed-main.span", GSB, g => g.BowSpan(0)),
+        new("slur.grace.two.left-attachment", GSW, g => g.BowAttachmentAboveStaffMiddle(0)),
+        new("slur.grace.two.span", GSW, g => g.BowSpan(0)),
+        new("slur.grace.two.high.left-attachment", GSWH, g => g.BowAttachmentAboveStaffMiddle(0)),
+        new("slur.grace.two.high.span", GSWH, g => g.BowSpan(0)),
         new("slur.in-grace.inner.left-attachment", GIN, g => g.BowAttachmentAboveStaffMiddle(0)),
         new("slur.in-grace.inner.span", GIN, g => g.BowSpan(0)),
         new("slur.in-grace.first-column.left-attachment", GIF, g => g.BowAttachmentAboveStaffMiddle(0)),

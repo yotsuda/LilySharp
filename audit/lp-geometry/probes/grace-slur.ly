@@ -10,6 +10,9 @@
 % grace column, stands inside that beam's span) must not hang from the beam
 % (lily/slur-scoring.cc:549-554, !spanner_less || has_same_beam_) -- it ends on the head.
 %
+% TWO / TWOHIGH (session 944): a run of TWO graces — the slur opens on the FIRST of them
+% (grace-init.ly's <>\startGraceSlur stands before the grace music), not on the last.
+%
 % Output: PROBE <tag> p0=<first control point above the staff's middle line>
 %         span=<last control point x - first>, in staff spaces.
 
@@ -30,3 +33,7 @@
            c''4 \appoggiatura { e''8 } d''4 e''4 f''4 | } }
 \score { { \clef bass \override Slur.after-line-breaking = #(dump "BEAMED")
            d8 d d d d \grace { a16( } b8) a d | } }
+\score { { \override Slur.after-line-breaking = #(dump "TWO")
+           c'4 \appoggiatura { e'16 f' } d'4 e'4 f'4 | } }
+\score { { \override Slur.after-line-breaking = #(dump "TWOHIGH")
+           c''4 \acciaccatura { e''16 f'' } d''4 e''4 f''4 | } }

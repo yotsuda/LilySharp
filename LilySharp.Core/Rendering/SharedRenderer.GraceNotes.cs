@@ -190,7 +190,7 @@ internal static partial class SharedRenderer
                            os.YUp(staffMiddleY + br / 2.0, g.StaffIndex, g.MeasureIndex))
                         : null;
                 DrawGraceBeam(headX, headY, headTopY, beamCounts, stemUps, eff, graceFont,
-                    beamEnds, beamedPrefix, gc);
+                    beamEnds, beamedPrefix, GraceNoteItem.BeamRanksOf(g.Columns), gc);
 
                 // The grace slur (last grace column → main note) is NOT drawn here any more:
                 // since session 724 it is an ordinary slur, laid out with the rest
@@ -345,11 +345,15 @@ internal static partial class SharedRenderer
     /// which is what a stem's LENGTH is measured from for an up stem
     /// (Stem::chord_start_y, lily/stem.cc:114-122). Equal to <paramref name="ys"/>
     /// entry for entry unless a column is a chord.</param>
+    /// <param name="beaming">The beamed prefix's beamlet counts and line ranks
+    /// (GraceNoteItem.BeamRanksOf), entry for entry with the first <paramref name="beamedCount"/>
+    /// heads (a rest ends the prefix, so none stands among them).</param>
     private static void DrawGraceBeam(
         List<double> xs, List<double> ys, List<double> topYs, List<int> beamCounts, List<bool> stemUps,
         double scale,
         MusicFontDesign headFont,
         (double Left, double Right)? beamEnds, int beamedCount,
+        (BeamSubdivision.StemBeaming[] Stems, BeamSubdivision.StemRanks[] Ranks)? beaming,
         IDrawingContext gc)
     {
         // ONE COLUMN IS A FLAG, NOT A BEAM, and the ordinary pass has already drawn it: the
@@ -440,21 +444,24 @@ internal static partial class SharedRenderer
         double beamSlope = span > 0.001 ? (beamRightY - beamLeftY) / span : 0.0;
         double BeamY(double x) => beamLeftY + beamSlope * (x - edgeL);
 
-        // THE STACK STANDS ON THE FIRST STEM'S HEAD SIDE, and each stem runs THROUGH it to the far
-        // line on its own side. Without a knee that is the old picture (the secondaries hang toward
-        // the heads, every stem ends on the primary); in a knee it is not the beam's side.
+        // EACH LINE STANDS AT ITS RANK, and each stem runs THROUGH the lines to the one of its
+        // extreme rank toward its own side (GraceNoteItem.BeamRanksOf — LilyPond's rank walk).
+        // Without a knee that is the old picture (the secondaries hang toward the heads, every
+        // stem ends on the primary); in a knee the stack can stand on either side.
         // MEASURED (2.26.0, Lab sessions/p935/lp knee.ly — beam-segments' vertical-count): KA
         // (d16 turned down, e16; the beam UP) stacks the second line ABOVE the first, the down
         // stem of d ending at the first line's lower face and the up stem of e at the second
         // line's upper face; KF (d16 up, e16 f16 turned down; the beam DOWN) stacks it BELOW.
+        // And (Lab sessions/p944/lp kneedump2.ly SC) `d8 (down) e16` stacks e's beamlet BELOW the
+        // UP beam, e's stem ending on the primary — not on the first stem's head side.
         // Drawn to the far line's centre, as every beamed grace stem is (ledger
         // stemdir.grace.down.beamed.first-stem).
-        // LILYPOND-REF: lily/beam.cc:457-531 Beam::calc_beam_segments — the stems' beaming ranks.
-        double stackSign = stemUps[0] ? -1 : 1;
+        // LILYPOND-REF: lily/beam.cc:1113-1157 Beam::calc_stem_y — beam_translation * beam_multiplicity[stem_dir].
+        if (beaming is not { } bm || bm.Ranks.Length != beamedCount) return;
         double stackTrans = EngravingDefaults.BeamTranslationOf(
             EngravingDefaults.GraceBeamThickness, EngravingDefaults.GraceBeamLengthFraction, maxBeams);
         double StemTipY(int i) => BeamY(StemX(i))
-            + (stemUps[i] == (stackSign > 0) ? stackSign * (beamCounts[i] - 1) * stackTrans : 0.0);
+            + stackTrans * bm.Ranks[i].Multiplicity(stemUps[i] ? 1 : -1);
         using (gc.Kind("stem"))
             for (int i = 0; i < beamedCount; i++)
                 gc.DrawLine(StemX(i), StemFootY(i), StemX(i), StemTipY(i), Color.Black, stemThick);
@@ -491,9 +498,8 @@ internal static partial class SharedRenderer
         // triangle poking past the vertical stem. Corners are the left/right ends
         // (extended half a stem) at ±half the (vertical) beam thickness.
         double beamHalf = beamThick / 2;
-        void Beam(int a, int b, double off)
+        void Beam(double xL, double xR, double off)
         {
-            double xL = StemX(a) - halfStem, xR = StemX(b) + halfStem;
             double yL = BeamY(xL) + off, yR = BeamY(xR) + off;
             // Quad corner offsets flip with the Y-up frame so each vertex keeps its
             // original device Y (and emit slot).
@@ -503,26 +509,30 @@ internal static partial class SharedRenderer
                 (xR, yR - beamHalf), (xL, yL - beamHalf), Color.Black);
         }
 
-        Beam(0, last, 0);                     // primary across the beamed prefix
-        for (int level = 1; level < maxBeams; level++)
-        {
-            // Secondaries stack toward the FIRST stem's heads (stackSign): below an up-stem beam
-            // (the negative direction in the page Y-up frame), above a down-stem one — and in a
-            // knee on that first stem's side, whichever way the beam points.
-            double off = stackSign * (level * beamTrans);
-            int i = 0;
-            while (i < last)
-            {
-                if (beamCounts[i] > level && beamCounts[i + 1] > level)
-                {
-                    int j = i;
-                    while (j < last && beamCounts[j] > level && beamCounts[j + 1] > level) j++;
-                    Beam(i, j, off);
-                    i = j;
-                }
-                else i++;
-            }
-        }
+        // THE SEGMENTS ARE THE ORDINARY BEAM'S: each rank merged across the stems that carry it,
+        // a rank one stem carries alone a BEAMLET (beamlet-default-length 1.1, capped at 0.75 of
+        // the gap to the neighbour). Until session 944 a grace beam drew only the lines two
+        // neighbours share, and no beamlet. MEASURED (2.26.0, Lab sessions/p944/lp mixed.ly):
+        // `\grace { d16 e8 f16 }` — d's beamlet 1.128 long to the right (the cap: 0.75 x 1.418 +
+        // 0.065) and f's 1.165 to the left.
+        // LILYPOND-REF: lily/beam.cc:457-631 Beam::calc_beam_segments.
+        var stems = new BeamSubdivision.StemBeaming[beamedCount];
+        for (int i = 0; i < beamedCount; i++)
+            stems[i] = bm.Stems[i] with { X = StemX(i) };
+        var segments = BeamSubdivision.RentSegments();
+        BeamSubdivision.CalcBeamSegments(stems, bm.Ranks,
+            EngravingDefaults.BeamletLength, EngravingDefaults.BeamletMaxLengthProportion,
+            halfStem, segments);
+        // Drawn nearest-rank first — the primary, then outward — the order the levels were drawn
+        // in before, so a page whose beam did not change keeps its bytes.
+        int farthest = 0;
+        foreach (var seg in segments)
+            farthest = Math.Max(farthest, Math.Abs(seg.Rank));
+        for (int reach = 0; reach <= farthest; reach++)
+            foreach (var seg in segments)
+                if (Math.Abs(seg.Rank) == reach)
+                    Beam(seg.XLeft, seg.XRight, seg.Rank * beamTrans);
+        BeamSubdivision.GiveSegments(segments);
         // Beamed acciaccatura would carry the slash on the beam itself
         // (Beam.stencil = slashed-stencil); not yet ported — only the lone-note
         // flag dash above is. acciaccatura groups are almost always a single note.

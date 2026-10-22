@@ -6369,6 +6369,8 @@ public sealed partial class MeasureCollector
         var (graceColumns, columnItemIndices) = DeriveGraceColumns(builder, firstItemIndex, graceStemDown, innerBreathItems);
         if (graceColumns.Length == 0)
             return;
+        // The beam's beamlet counts, in the meter's beat grid (GraceNoteItem.WithBeamletCounts).
+        graceColumns = GraceNoteItem.WithBeamletCounts(graceColumns, builder.MeterInForce);
 
         _graceNotes.Add(new GraceNoteItem(
             type,

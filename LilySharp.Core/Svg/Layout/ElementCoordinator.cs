@@ -3545,6 +3545,44 @@ internal sealed class ElementCoordinator
     }
 
     /// <summary>
+    /// <paramref name="info"/> for a slur bound on a BEAMED grace column: its stem ends on the grace
+    /// beam (<see cref="GraceBeamedStemTipDeviceY"/>) and carries no flag. <see cref="ResolveSlurEdge"/>
+    /// reads the column's item, which knows nothing of the grace beam (it is not in the BeamLayouts),
+    /// so it took a FLAGGED stem: the flag's ink widened the stem's X extent and the stem ended short.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED (2.26.0, Lab sessions/p944/lp kneedump2.ly IG): `\grace { d16( (down) e16 f16) (down) }`
+    /// — the bow leaves d at 0.1645 right of its head's left edge (the stem's centre, moved by the
+    /// tilt), not past the flag Lily# reserved there.
+    /// LILYPOND-REF: lily/slur-scoring.cc:185-203 get_bound_info — stem_extent_ is the Stem's (∪ its Flag, none here).
+    /// LILYPOND-REF: lily/slur-configuration.cc:501-503 Slur_configuration::score_slopes — edge_has_beams_ lets the slur be steeper.
+    /// </remarks>
+    private static SlurEdgeInfo WithGraceBeamedStem(SlurEdgeInfo info, Voice voice,
+        ImmutableArray<GraceNoteItem> graceNotes, (int Group, int Column) at, GraceObstacleGeom?[] cache,
+        MeasureLayout ml, int voiceIndex, VoiceCollisionTable voiceShifts, double staffMiddleDown)
+    {
+        if (!info.HasStem || double.IsNaN(info.StemXLo))
+            return info;
+        var g = graceNotes[at.Group];
+        if (at.Column >= GraceNoteEngraver.BeamedPrefix(g.Columns))
+            return info;
+        double halfStem = EngravingDefaults.StemThickness / 2.0;
+        double stemX = info.StemXLo + halfStem;
+        if (GraceBeamedStemTipDeviceY(voice, graceNotes, at.Group, at.Column, cache, ml, voiceIndex,
+                voiceShifts, stemX, staffMiddleDown) is not { } tip)
+            return info;
+        var c = g.Columns[at.Column];
+        return info with
+        {
+            Beamed = true,
+            StemXHi = stemX + halfStem,
+            StemTipY = tip,
+            // The head the stem hangs off, no flag to push it.
+            StemBeginY = staffMiddleDown - (c.StemUp ? c.Lowest : c.Highest).StaffPosition / 2.0,
+        };
+    }
+
+    /// <summary>
     /// Half the endpoint note's notehead width, in staff-spaces (device X units). Lily#'s
     /// segStartX/segEndX are the head's LEFT-edge column X; LP attaches at the head CENTER
     /// (slur-scoring.cc:562 fh->extent(X).center()), so this is added to shift right. 0 for a
@@ -3884,11 +3922,11 @@ internal sealed class ElementCoordinator
     /// <summary>
     /// <paramref name="slurs"/> with this staff's GRACE slurs in front: one per grace run that
     /// slurs to its main note — an <c>acciaccatura</c> or an <c>appoggiatura</c> — from the run's
-    /// last column to the main note, DOWN (score-grace-settings) unless the voice fixes the
-    /// side (a \voiceOne's UP wins). A hand-written
+    /// FIRST column to the main note (session 944; it was the last), DOWN (score-grace-settings)
+    /// unless the voice fixes the side (a \voiceOne's UP wins). A hand-written
     /// <c>grace { g16( } a8)</c> is not made here: its marks ride the items, and the ordinary
     /// SlurDetector pairs them (session 725). A run whose columns publish
-    /// no item address, whose last column is a rest, or whose main note is no note, has none.
+    /// no item address, whose first column is a rest, or whose main note is no note, has none.
     /// </summary>
     /// <remarks>
     /// Every entry to the slur layout calls it (LayoutSlurs, and the preliminary pass before it
@@ -3918,8 +3956,14 @@ internal sealed class ElementCoordinator
                 if (g.ColumnItemIndices.IsDefaultOrEmpty || g.ColumnItemIndices.Length != g.Columns.Length
                     || g.VoiceIndex < 0 || g.VoiceIndex >= score.Voices.Length)
                     continue;
-                var last = g.Columns[^1];
-                if (last.IsRest)
+                // FROM THE RUN'S FIRST COLUMN: grace-init.ly opens the slur with `<>\startGraceSlur`
+                // BEFORE the grace music, so it binds the first grace, and closes it after the
+                // music, on the main note. MEASURED (2.26.0, Lab sessions/p944/lp acc.ly AC):
+                // `c4 \acciaccatura { e16 f } d4` bows from e, span 3.001956; Lily# bowed from f
+                // until session 944 (span 1.536225). ⒝ A run opening on a rest has none here.
+                // LILYPOND-REF: ly/grace-init.ly startAcciaccaturaMusic, startAppoggiaturaMusic — <>\startGraceSlur.
+                var first = g.Columns[0];
+                if (first.IsRest)
                     continue;
                 var main = ItemAt(score.Voices[g.VoiceIndex], g.MeasureIndex, g.MainNoteItemIndex);
                 if (main is not (NoteItem or ChordItem))
@@ -3928,12 +3972,12 @@ internal sealed class ElementCoordinator
                 // settings. MEASURED (probes/grace-inner-slur.ly VOICEACC, LilyPond 2.26.0): an
                 // acciaccatura's slur under \voiceOne is drawn UP, 3.89 above the middle line.
                 bool up = Collector.VoiceScan.ForcedCurveUpAt(
-                    score.Voices, g.VoiceIndex, g.MeasureIndex, g.ColumnItemIndices[^1]) ?? false;
+                    score.Voices, g.VoiceIndex, g.MeasureIndex, g.ColumnItemIndices[0]) ?? false;
                 (graceSlurs ??= new List<SlurItem>()).Add(new SlurItem(
-                    up ? last.Highest.StaffPosition : last.Lowest.StaffPosition,
+                    up ? first.Highest.StaffPosition : first.Lowest.StaffPosition,
                     MusicItem.EdgeStaffPosition(main, up) ?? 0,
                     curveUp: up,
-                    g.MeasureIndex, g.MeasureIndex, g.ColumnItemIndices[^1], g.MainNoteItemIndex,
+                    g.MeasureIndex, g.MeasureIndex, g.ColumnItemIndices[0], g.MainNoteItemIndex,
                     voiceIndex: g.VoiceIndex)
                 {
                     StartSourcePosition = g.SourcePosition,
@@ -4139,9 +4183,27 @@ internal sealed class ElementCoordinator
         int gi, int column, bool towardRight, GraceObstacleGeom?[] cache, MeasureLayout ml, int voiceIndex,
         VoiceCollisionTable voiceShifts, double stemX, double staffMiddleDown)
     {
+        int last = graceNotes[gi].Columns.Length - 1;
+        if (last < 1 || (towardRight ? column >= last : column <= 0))
+            return null;
+        return GraceBeamedStemTipDeviceY(voice, graceNotes, gi, column, cache, ml, voiceIndex, voiceShifts,
+            stemX, staffMiddleDown);
+    }
+
+    /// <summary>
+    /// Device Y where a beamed grace column's stem ENDS — the beam's face on the stem's own side,
+    /// at the line of its extreme rank (<see cref="GraceNoteItem.StemReachOf"/>) — at
+    /// <paramref name="stemX"/>; null for a lone or flagged column, or a run with a rest. LP's
+    /// <c>Stem</c> extent of a beamed stem, read the way <see cref="GraceBeamOuterFaceDeviceY"/>
+    /// reads the face a bound hangs from.
+    /// </summary>
+    private static double? GraceBeamedStemTipDeviceY(Voice voice, ImmutableArray<GraceNoteItem> graceNotes,
+        int gi, int column, GraceObstacleGeom?[] cache, MeasureLayout ml, int voiceIndex,
+        VoiceCollisionTable voiceShifts, double stemX, double staffMiddleDown)
+    {
         var g = graceNotes[gi];
         int last = g.Columns.Length - 1;
-        if (last < 1 || (towardRight ? column >= last : column <= 0))
+        if (last < 1 || column < 0 || column > last)
             return null;
         foreach (var c in g.Columns)
             if (c.IsRest)
@@ -4151,13 +4213,15 @@ internal sealed class ElementCoordinator
             return null;
         double groupX = GraceGroupX(voice, g, geom, ml, voiceIndex, voiceShifts);
         var font = g.HeadFont;
-        // The beam's side is the stems' vote; each outer stem stands on its own side of its head
-        // (a kneed run, session 935 — GraceNoteItem.BeamStemUpOf).
-        bool up = g.BeamStemUp;
+        // Each outer stem stands on its own side of its head (a kneed run, session 935), and the
+        // face is the one on the bound's own stem side, at the line its stem ends on
+        // (GraceNoteItem.StemReachOf) — in a knee not the beam's side.
+        bool up = g.Columns[column].StemUp;
         double xL = LayoutUtilities.StemX(groupX + geom.Offsets[0], g.Columns[0].StemUp, noteValue: 4, g.Columns[0].HeadStyle, font);
         double xR = LayoutUtilities.StemX(groupX + geom.Offsets[last], g.Columns[last].StemUp, noteValue: 4, g.Columns[last].HeadStyle, font);
         double t = xR - xL > 0.001 ? (stemX - xL) / (xR - xL) : 0.0;
-        double centerUp = (bl + (br - bl) * t) / 2.0;
+        double centerUp = (bl + (br - bl) * t) / 2.0
+            + GraceNoteItem.StemReachOf(g.Columns, GraceNoteItem.BeamRanksOf(g.Columns)?.Ranks, column);
         return staffMiddleDown - (centerUp + (up ? 1 : -1) * EngravingDefaults.GraceBeamThickness / 2.0);
     }
 
@@ -4224,6 +4288,7 @@ internal sealed class ElementCoordinator
             // scored line's staff-position pair at the two OUTER STEMS, exactly
             // what the renderer anchors the drawn beam on.
             var (beamL, beamR) = (geom.BeamLeftY, geom.BeamRightY);
+            var graceRanks = beamL is null ? null : GraceNoteItem.BeamRanksOf(g.Columns)?.Ranks;
             // Each column's own stem direction: up, a lower voice's down (GraceColumnInfo.StemDown),
             // or what the writer turned it to — a kneed run has both (session 935).
             bool StemUpAt(int k) => k >= g.Columns.Length || g.Columns[k].StemUp;
@@ -4288,9 +4353,14 @@ internal sealed class ElementCoordinator
                         // margin (slur-scoring.cc:149-150).
                         double xL = StemXAt(0), xR = StemXAt(g.Columns.Length - 1);
                         double t = xR - xL > 0.001 ? (stemX - xL) / (xR - xL) : 0.0;
-                        double centerUp = (bl + (br - bl) * t) / 2.0;
-                        // ⒝ A kneed column's tip is read at the primary line, as the run's other
-                        // stems are (its stem ends on the nearest secondary — SharedRenderer.DrawGraceBeam).
+                        // The stem ends on the line of its extreme rank toward its own side, as
+                        // the renderer draws it (GraceNoteItem.StemReachOf) — past the primary for
+                        // a kneed stem the stack stands beside.
+                        // MEASURED (2.26.0, Lab sessions/p944/lp slur-knee.ly HA): the bow over
+                        // `\grace { d''16 (down) e''16 }` attaches 2.545 above the middle, as over
+                        // the unkneed run; read at the primary line it sat 0.5 low.
+                        double centerUp = (bl + (br - bl) * t) / 2.0
+                            + GraceNoteItem.StemReachOf(g.Columns, graceRanks, k);
                         stemY = staffMiddleDown
                             - (centerUp + (stemUp ? 1 : -1) * EngravingDefaults.GraceBeamThickness);
                     }
@@ -5003,7 +5073,7 @@ internal sealed class ElementCoordinator
                 // grace slur's start (StartGraceGroup), and since session 725 either end of a
                 // hand-written slur in grace time — `grace { d'16( e') }`, `grace { g16( } a8)`.
                 var startGrace = slur.StartGraceGroup >= 0
-                    ? (Group: slur.StartGraceGroup, Column: graceNotes[slur.StartGraceGroup].Columns.Length - 1)
+                    ? (Group: slur.StartGraceGroup, Column: 0)
                     : GraceColumnOf(graceNotes, graceByMeasure, slur.VoiceIndex, slur.StartMeasureIndex, slur.StartItemIndex);
                 var endGrace = GraceColumnOf(graceNotes, graceByMeasure, slur.VoiceIndex, slur.EndMeasureIndex, slur.EndItemIndex);
                 double segStartX;
@@ -5123,6 +5193,12 @@ internal sealed class ElementCoordinator
                     ? ResolveSlurEdge(score.Voices[slur.VoiceIndex], slur.VoiceIndex, slur.EndMeasureIndex, slur.EndItemIndex, leftEdge: false,
                         windowEndX, staffMiddleDown, beamByMember)
                     : default;
+                if (segment.IsFirst && startGrace is { } sgs && graceGeomCache != null)
+                    leftEdgeInfo = WithGraceBeamedStem(leftEdgeInfo, score.Voices[slur.VoiceIndex], graceNotes, sgs,
+                        graceGeomCache, startMeasure, slur.VoiceIndex, voiceShifts, staffMiddleDown);
+                if (segment.IsLast && endGrace is { } egs && graceGeomCache != null)
+                    rightEdgeInfo = WithGraceBeamedStem(rightEdgeInfo, score.Voices[slur.VoiceIndex], graceNotes, egs,
+                        graceGeomCache, endMeasure, slur.VoiceIndex, voiceShifts, staffMiddleDown);
                 const double stemTipGap = 0.5; // staff-spaces beyond the beam (LP dir_*0.5*staff_space)
 
                 // A REST bound is not a note-column bound to LP: the fallback

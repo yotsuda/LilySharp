@@ -157,7 +157,14 @@ public readonly record struct GraceColumnInfo(
     // is two springs (SpacingRules.InnerBreathSprings), and the sign ends the run's beam
     // (GraceNoteEngraver.BeamedPrefix). The sign on the LAST column is not here: it is the
     // ordinary BreathingSignItem after the run (GraceBodySupport.CarriedBreath).
-    LilySharp.Core.Syntax.ArticulationType? BreathAfter = null
+    LilySharp.Core.Syntax.ArticulationType? BreathAfter = null,
+    // The beams this column's stem carries on its LEFT and RIGHT inside the run's beam — LilyPond's
+    // Stem.beaming before the ranks are assigned (session 944): Beaming_pattern::beamify over the
+    // beamed prefix in grace time, the outer edges clipped. 0 / 0 outside the prefix, and on a
+    // hand-built run nobody stamped (GraceNoteItem.BeamletCountsAt then reads the column's own
+    // count inward). Stamped by GraceNoteItem.WithBeamletCounts, which knows the meter.
+    int BeamLeft = 0,
+    int BeamRight = 0
 )
 {
     /// <summary>Whether this column's stem points up — <c>!</c><see cref="StemDown"/>.</summary>
@@ -257,7 +264,8 @@ public readonly record struct GraceColumnInfo(
             || TabDigitHalfWidth != other.TabDigitHalfWidth || TabStringCount != other.TabStringCount
             || Arpeggio != other.Arpeggio || ArpeggioBracket != other.ArpeggioBracket
             || PhrasingSlurStart != other.PhrasingSlurStart || PhrasingSlurEnd != other.PhrasingSlurEnd
-            || HeadStyle != other.HeadStyle)
+            || HeadStyle != other.HeadStyle
+            || BeamLeft != other.BeamLeft || BeamRight != other.BeamRight)
             return false;
         if (SemiTieBoxes.IsDefaultOrEmpty || other.SemiTieBoxes.IsDefaultOrEmpty)
         {
@@ -293,6 +301,8 @@ public readonly record struct GraceColumnInfo(
         hc.Add(PhrasingSlurStart);
         hc.Add(PhrasingSlurEnd);
         hc.Add(HeadStyle);
+        hc.Add(BeamLeft);
+        hc.Add(BeamRight);
         if (!SemiTieBoxes.IsDefaultOrEmpty)
             foreach (var box in SemiTieBoxes)
                 hc.Add(box);
@@ -649,6 +659,137 @@ public sealed record GraceNoteItem
             if (columns[i].StemUp != up)
                 return true;
         return false;
+    }
+
+    /// <summary>The beams a grace column's value carries: <c>duration_log - 2</c>.</summary>
+    internal static int BeamCountOf(GraceColumnInfo c)
+    {
+        int beams = 0;
+        for (int d = c.BaseDuration.Denominator; d >= 8; d /= 2) beams++;
+        return beams;
+    }
+
+    /// <summary>
+    /// <paramref name="columns"/> with <see cref="GraceColumnInfo.BeamLeft"/> /
+    /// <see cref="GraceColumnInfo.BeamRight"/> stamped on the beamed prefix — LilyPond's beamlet
+    /// counts for a grace beam, in <paramref name="meter"/>'s beat grid.
+    /// </summary>
+    /// <remarks>
+    /// A grace beam is beamified as an ordinary one, at GRACE moments: the beam engraver adds
+    /// each stem at its moment's grace part and opens the pattern at the measure position that
+    /// part names, so the grid's beats stand on the main note's time and the run is laid back
+    /// from it. MEASURED (2.26.0, Lab sessions/p944/lp mixed.ly — beam-segments): `\grace { d8
+    /// e16 f8 }` keeps e's spare beam on its LEFT; `{ d16 e8 f16 }` gives d a beamlet right and f
+    /// one left; `{ d8. e16 }` gives e one left. Lily# drew none of them until session 944.
+    /// ⒝ A tuplet inside the body is read without its span (Element.Tuplet null).
+    /// LILYPOND-REF: lily/template-engraver-for-beams.cc:40-53 begin_beam — the grace part as the measure position.
+    /// LILYPOND-REF: lily/template-engraver-for-beams.cc:69-78 add_stem — the grace part as the stem's moment.
+    /// LILYPOND-REF: lily/beam.cc:1243-1274 Beam::set_beaming — clip-edges zeroes the outer sides.
+    /// </remarks>
+    internal static ImmutableArray<GraceColumnInfo> WithBeamletCounts(
+        ImmutableArray<GraceColumnInfo> columns, TimeSignature meter)
+    {
+        int beamed = Svg.Layout.GraceNoteEngraver.BeamedPrefix(columns);
+        if (beamed < 2)
+            return columns;
+        var options = Svg.Collector.BeamingPattern.Options.For(meter);
+        // The run ends on the main note's moment, grace part 0: the first column's grace part
+        // is minus the whole body, taken into the period that holds it.
+        Fraction total = Fraction.Zero;
+        foreach (var c in columns)
+            total += c.Length;
+        Fraction start = options.Period;
+        while (start < total)
+            start += options.Period;
+        start -= total;
+        var infos = new Svg.Collector.BeamingPattern.Element[beamed];
+        for (int i = 0; i < beamed; i++)
+        {
+            infos[i] = new Svg.Collector.BeamingPattern.Element(start, columns[i].Length, BeamCountOf(columns[i]));
+            start += columns[i].Length;
+        }
+        var counts = Svg.Collector.BeamingPattern.Beamify(infos, options);
+        var b = columns.ToBuilder();
+        for (int i = 0; i < beamed; i++)
+            b[i] = columns[i] with
+            {
+                BeamLeft = i == 0 ? 0 : counts[i].Left,
+                BeamRight = i == beamed - 1 ? 0 : counts[i].Right,
+            };
+        return b.MoveToImmutable();
+    }
+
+    /// <summary>The (left, right) beams prefix column <paramref name="i"/> carries — what
+    /// <see cref="WithBeamletCounts"/> stamped, or on a run nobody stamped the column's own count
+    /// on each inward side.</summary>
+    internal static (int Left, int Right) BeamletCountsAt(
+        ImmutableArray<GraceColumnInfo> columns, int i, int beamed)
+    {
+        var c = columns[i];
+        if (c.BeamLeft != 0 || c.BeamRight != 0)
+            return (c.BeamLeft, c.BeamRight);
+        int n = BeamCountOf(c);
+        return (i > 0 ? n : 0, i < beamed - 1 ? n : 0);
+    }
+
+    /// <summary>
+    /// The ranks of the run's beam lines at each stem of the beamed prefix — LilyPond's
+    /// Beam::calc_beaming over <see cref="BeamletCountsAt"/> and each column's own direction
+    /// (null for a run with no beam). Rank 0 is the line the quanted positions name, larger is up;
+    /// a stem ends on the line of its extreme rank toward its own side (<see cref="StemReachOf"/>).
+    /// The stems' X is left 0: a reader that needs segments fills it.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ IT WAS ONE SIDE FOR ALL THE SECONDARIES until session 944 — the first stem's head side
+    /// (session 935, from equal counts). That is the rank walk's answer only when every stem carries
+    /// the same count. MEASURED (2.26.0, Lab sessions/p944/lp kneedump2.ly SC): `\grace { d8 (down)
+    /// e16 }` stacks e's second line BELOW the primary (vertical-count -1), against the first stem's
+    /// side, and e's up stem ends on the primary.
+    /// LILYPOND-REF: lily/beam.cc:294-373 Beam::calc_beaming — BeamSubdivision.CalcBeaming is its port.
+    /// </remarks>
+    internal static (Svg.Layout.BeamSubdivision.StemBeaming[] Stems, Svg.Layout.BeamSubdivision.StemRanks[] Ranks)?
+        BeamRanksOf(ImmutableArray<GraceColumnInfo> columns)
+    {
+        int beamed = Svg.Layout.GraceNoteEngraver.BeamedPrefix(columns);
+        if (beamed < 2)
+            return null;
+        var stems = new Svg.Layout.BeamSubdivision.StemBeaming[beamed];
+        for (int i = 0; i < beamed; i++)
+        {
+            var (left, right) = BeamletCountsAt(columns, i, beamed);
+            stems[i] = new Svg.Layout.BeamSubdivision.StemBeaming(left, right, columns[i].StemUp ? 1 : -1, 0.0);
+        }
+        return (stems, Svg.Layout.BeamSubdivision.CalcBeaming(stems));
+    }
+
+    /// <summary>The gap between a grace beam's lines over the beamed prefix — the count-aware
+    /// translation the quanter and the renderer both read.</summary>
+    internal static double BeamTranslationOf(ImmutableArray<GraceColumnInfo> columns)
+    {
+        int beamed = Svg.Layout.GraceNoteEngraver.BeamedPrefix(columns);
+        int maxBeams = 0;
+        for (int i = 0; i < beamed; i++)
+            maxBeams = Math.Max(maxBeams, BeamCountOf(columns[i]));
+        return EngravingDefaults.BeamTranslationOf(
+            EngravingDefaults.GraceBeamThickness, EngravingDefaults.GraceBeamLengthFraction, maxBeams);
+    }
+
+    /// <summary>How far column <paramref name="column"/>'s stem runs past the line the quanted
+    /// positions name to the line it ends on, in staff spaces, Y-up: the translation times its
+    /// extreme rank toward its own side. 0 outside the beamed prefix.</summary>
+    /// <remarks>
+    /// MEASURED (2.26.0, Lab sessions/p944/lp kneedump.ly HA): `c''4( \grace { d''16 (down)
+    /// e''16 } f''4)` — the beam DOWN at (-1.0, 2.858), its second line ABOVE (vertical-count 1),
+    /// e''s up stem ending 3.5907 above the middle line: that line's upper face, 0.648 over the
+    /// primary's.
+    /// LILYPOND-REF: lily/beam.cc:1113-1157 Beam::calc_stem_y — beam_translation * beam_multiplicity[stem_dir].
+    /// </remarks>
+    internal static double StemReachOf(ImmutableArray<GraceColumnInfo> columns,
+        Svg.Layout.BeamSubdivision.StemRanks[]? ranks, int column)
+    {
+        if (ranks is null || column < 0 || column >= ranks.Length)
+            return 0.0;
+        return BeamTranslationOf(columns) * ranks[column].Multiplicity(columns[column].StemUp ? 1 : -1);
     }
 
     /// <summary><see cref="HeadFontOf"/> for this run.</summary>

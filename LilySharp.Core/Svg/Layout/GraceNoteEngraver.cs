@@ -416,10 +416,15 @@ internal static class GraceNoteEngraver
         for (int i = 0; i < beamed; i++)
         {
             xs[i] = columnOffsets[i];
-            // A beam line reaches a neighbour only if BOTH stems carry it — and the LAST
-            // column of the prefix has no neighbour inside the beam, whatever stands after it.
-            int left = i > 0 ? Math.Min(counts[i], counts[i - 1]) : 0;
-            int right = i < beamed - 1 ? Math.Min(counts[i], counts[i + 1]) : 0;
+            // LilyPond's beamlet counts (GraceNoteItem.WithBeamletCounts): a stem keeps its own
+            // count on an inward side, so a spare beam is a beamlet there — and the LAST column of
+            // the prefix has no neighbour inside the beam, whatever stands after it. (Until
+            // session 944 this was the count both stems share, which drew no beamlet.)
+            // ⚠️ NOTHING OBSERVES THIS HERE: every measured grace beam quants the same either way
+            // (the shared count poisoned back in, session 944: green) — a beamlet leaves each
+            // stem's multiplicity where it was and moves only the collision segments. It is the
+            // renderer's and the slur's input too, which is why it is the one input.
+            var (left, right) = GraceNoteItem.BeamletCountsAt(notes, i, beamed);
             // A CHORD hands the quanter its head RANGE, not one of its heads: the beam's view
             // of a member is Stem::head_positions(me)[my_dir] (lily/stem.cc:1214), which for a
             // stem-up chord is the TOP head, and BeamMember says so through

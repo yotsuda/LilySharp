@@ -2109,6 +2109,34 @@
       "residual": 0.0,
       "why": "EXACT since session 724 (see slur.grace.acciaccatura.left-attachment): the main note is beamed on its left, so the slur - whose other bound, the grace column, stands inside that beam - ends on the head, not the beam (lily/slur-scoring.cc:549-554, !spanner_less || has_same_beam_). Before this clause the new grace slur hung from the beam, 3.4 low (Real Gone)."
     },
+    "slur.grace.two.left-attachment": {
+      "probe": "grace-slur.ly",
+      "score": "TWO",
+      "lilypond": -2.8940595074787834,
+      "residual": 0.0,
+      "why": "EXACT since session 944: the grace slur opens on the run's FIRST column (ly/grace-init.ly puts <>\\startGraceSlur before the grace music; ElementCoordinator.WithGraceSlurs). Until session 944 Lily# opened it on the last column: -2.394059, residual +0.5."
+    },
+    "slur.grace.two.span": {
+      "probe": "grace-slur.ly",
+      "score": "TWO",
+      "lilypond": 3.001956071290879,
+      "residual": 0.0,
+      "why": "EXACT since session 944 (see slur.grace.two.left-attachment). Until session 944: 1.536225, residual -1.465731."
+    },
+    "slur.grace.two.high.left-attachment": {
+      "probe": "grace-slur.ly",
+      "score": "TWOHIGH",
+      "lilypond": 0.5898849692889909,
+      "residual": 0.0,
+      "why": "EXACT since session 944 (see slur.grace.two.left-attachment). Until session 944: 0.548431, residual -0.041454."
+    },
+    "slur.grace.two.high.span": {
+      "probe": "grace-slur.ly",
+      "score": "TWOHIGH",
+      "lilypond": 2.1870031630235687,
+      "residual": 0.0,
+      "why": "EXACT since session 944 (see slur.grace.two.left-attachment). Until session 944: 1.553752, residual -0.633251."
+    },
     "slur.in-grace.inner.left-attachment": {
       "probe": "grace-inner-slur.ly",
       "score": "INNER",
@@ -7958,6 +7986,160 @@
       "lilypond": 5.218643958634663,
       "residual": -0.192,
       "why": "The beam is LilyPond's: the quanter scores each stem's END a stack past the primary when the stem reaches through it (BeamScoringProblem._baseLengths, beam-quanting.cc:1130 current_y = beam_y + base_lengths_[i]; it was beam_y alone, and 0 off a knee, which is why every earlier beam held), quanting KA to -8.777 / -1.223 at the stems where it gave -8.750 / -0.250. The residual is half the grace beam thickness: Lily# draws the stem to the far line's centre, LilyPond's Stem extent to its face (as stemdir.grace.down.beamed.*)."
+    },
+    "slur.grace.knee.over.down-up.left-attachment": {
+      "probe": "grace-knee-slur.ly",
+      "score": "SA",
+      "lilypond": -0.34988592022039056,
+      "residual": 0.0,
+      "why": "EXACT since session 944: a stem in a knee ends on the line of its extreme rank toward its own side (GraceNoteItem.StemReachOf, beam.cc calc_stem_y), and the slur over the run reads the up stem of e16 there, 0.648 over the primary. Until session 944 the obstacle read every grace stem at the primary: -0.734379, residual -0.384493."
+    },
+    "slur.grace.knee.over.high.left-attachment": {
+      "probe": "grace-knee-slur.ly",
+      "score": "HA",
+      "lilypond": 2.545,
+      "residual": 0.0,
+      "why": "EXACT since session 944 (see slur.grace.knee.over.down-up.left-attachment): the knee leaves the bow where the unkneed run puts it (its control). Until session 944: 2.045, residual -0.5."
+    },
+    "slur.grace.knee.over.high.control.left-attachment": {
+      "probe": "grace-knee-slur.ly",
+      "score": "HE",
+      "lilypond": 2.545,
+      "residual": 0.0,
+      "why": "EXACT: the control without the knee, unchanged by session 944."
+    },
+    "slur.grace.knee.over.three.left-attachment": {
+      "probe": "grace-knee-slur.ly",
+      "score": "SB",
+      "lilypond": 1.6949999999999998,
+      "residual": 0.0,
+      "why": "EXACT since session 944 (see slur.grace.knee.over.down-up.left-attachment). Until session 944: 0.695, residual -1.0."
+    },
+    "slur.grace.knee.over.three.span": {
+      "probe": "grace-knee-slur.ly",
+      "score": "SB",
+      "lilypond": 6.381409440160864,
+      "residual": 0.0,
+      "why": "EXACT since session 944 (see slur.grace.knee.over.down-up.left-attachment). Until session 944: 5.948398, residual -0.433011."
+    },
+    "slur.grace.knee.over.mixed.left-attachment": {
+      "probe": "grace-knee-slur.ly",
+      "score": "SC",
+      "lilypond": -0.30500000000000016,
+      "residual": 0.0,
+      "why": "EXACT: the guard against the session-935 stack rule. d8 (down) e16 stacks the beamlet of e BELOW the up beam (the rank walk, not the first stem head side), so e ends on the primary; read with the old rule the bow climbed to -0.271956 (measured mid-session 944)."
+    },
+    "slur.in-grace.knee.down-down.left-attachment": {
+      "probe": "grace-knee-slur.ly",
+      "score": "IF",
+      "lilypond": -5.394059507478783,
+      "residual": 0.0,
+      "why": "EXACT since session 944: a slur bound on a BEAMED grace column takes a beamed stem (ElementCoordinator.WithGraceBeamedStem: no flag in its X extent, its end on the grace beam, edge_has_beams_), and its end hangs from the line the stem ends on (GraceNoteItem.StemReachOf). Until session 944: -6.894059, residual -1.5."
+    },
+    "slur.in-grace.knee.down-down.span": {
+      "probe": "grace-knee-slur.ly",
+      "score": "IF",
+      "lilypond": 3.209846547995097,
+      "residual": 0.0,
+      "why": "EXACT since session 944 (see slur.in-grace.knee.down-down.left-attachment). Until session 944: 3.554203, residual +0.344356."
+    },
+    "slur.in-grace.knee.down-bound.left-attachment": {
+      "probe": "grace-knee-slur.ly",
+      "score": "IG",
+      "lilypond": -4.811647531859329,
+      "residual": 0.0,
+      "why": "EXACT, before session 944 too: the base attachment already hung from the beam (GraceBeamOuterFaceDeviceY)."
+    },
+    "slur.in-grace.knee.down-bound.span": {
+      "probe": "grace-knee-slur.ly",
+      "score": "IG",
+      "lilypond": 3.6038158575941157,
+      "residual": 0.0,
+      "why": "EXACT since session 944 (see slur.in-grace.knee.down-down.left-attachment): the down stem bound, read as FLAGGED, attached past the flag ink Lily# reserved for it. Until session 944: 2.185102, residual -1.418714."
+    },
+    "slur.in-grace.knee.down-bound.up-beam.left-attachment": {
+      "probe": "grace-knee-slur.ly",
+      "score": "IK",
+      "lilypond": -5.08447038864608,
+      "residual": 0.0,
+      "why": "EXACT since session 944: the down bound of an UP beam (the knee votes the beam up) hangs from the face on its OWN stem side, the lower face of the primary (GraceBeamOuterFaceDeviceY reads the column direction, not the beam). Until session 944 the face was the beam side, which reddens this point (poisoned, session 944)."
+    },
+    "beam.grace.beamlet.peak.first-right": {
+      "probe": "grace-beamlet.ly",
+      "score": "B1",
+      "lilypond": 2.0,
+      "residual": 0.0,
+      "why": "EXACT since session 944: a grace beam is beamified as an ordinary one at grace moments (GraceNoteItem.WithBeamletCounts) and drawn by its ranks (BeamSubdivision.CalcBeamSegments), beamlets included. Until session 944 it drew only the lines two neighbours share: 1, residual -1."
+    },
+    "beam.grace.beamlet.peak.middle-left": {
+      "probe": "grace-beamlet.ly",
+      "score": "B1",
+      "lilypond": 1.0,
+      "residual": 0.0,
+      "why": "EXACT: the eighth carries one line on each side, before and after session 944 (the control)."
+    },
+    "beam.grace.beamlet.peak.last-left": {
+      "probe": "grace-beamlet.ly",
+      "score": "B1",
+      "lilypond": 2.0,
+      "residual": 0.0,
+      "why": "EXACT since session 944 (see beam.grace.beamlet.peak.first-right). Until session 944: 1, residual -1."
+    },
+    "beam.grace.beamlet.dip.middle-left": {
+      "probe": "grace-beamlet.ly",
+      "score": "B2",
+      "lilypond": 2.0,
+      "residual": 0.0,
+      "why": "EXACT since session 944 (see beam.grace.beamlet.peak.first-right): the sixteenth between two eighths keeps its spare beam on the LEFT, by the rhythmic importance (beaming-pattern.cc flag_directions). Until session 944: 1, residual -1."
+    },
+    "beam.grace.beamlet.dip.middle-right": {
+      "probe": "grace-beamlet.ly",
+      "score": "B2",
+      "lilypond": 1.0,
+      "residual": 0.0,
+      "why": "EXACT: the side the spare beam does not take (see beam.grace.beamlet.dip.middle-left)."
+    },
+    "beam.grace.beamlet.dotted.last-left": {
+      "probe": "grace-beamlet.ly",
+      "score": "B5",
+      "lilypond": 2.0,
+      "residual": 0.0,
+      "why": "EXACT since session 944 (see beam.grace.beamlet.peak.first-right). Until session 944: 1, residual -1."
+    },
+    "beam.grace.beamlet.knee.first-right": {
+      "probe": "grace-beamlet.ly",
+      "score": "B9",
+      "lilypond": 2.0,
+      "residual": 0.0,
+      "why": "EXACT since session 944 (see beam.grace.beamlet.peak.first-right): in the knee the beamlet of the down stem stands ABOVE the primary and that of the up stem BELOW it, not both on the first stem head side the session-935 rule stacked every secondary on. Until session 944: 1, residual -1."
+    },
+    "beam.grace.beamlet.knee.last-left": {
+      "probe": "grace-beamlet.ly",
+      "score": "B9",
+      "lilypond": 2.0,
+      "residual": 0.0,
+      "why": "EXACT since session 944 (see beam.grace.beamlet.knee.first-right). Until session 944: 1, residual -1."
+    },
+    "knee.grace.beamlet.first-stem-bottom": {
+      "probe": "grace-beamlet.ly",
+      "score": "B9",
+      "lilypond": 2.0721737836154013,
+      "residual": -0.192,
+      "why": "The beam is LilyPond (its quant included): each stem ends on its extreme rank toward its own side, the primary for both outer stems here. The residual is half the grace beam thickness: Lily# draws the stem to the line centre, the LilyPond Stem extent reaches its face (as knee.grace.*)."
+    },
+    "knee.grace.beamlet.last-stem-top": {
+      "probe": "grace-beamlet.ly",
+      "score": "B9",
+      "lilypond": 5.430173783615402,
+      "residual": -0.192,
+      "why": "As knee.grace.beamlet.first-stem-bottom: the beamlet of the up stem stands BELOW the primary, so the stem ends on the primary; the session-935 stack rule ran it a line further. The residual is half the grace beam thickness."
+    },
+    "knee.grace.mixed.second-stem-top": {
+      "probe": "grace-beamlet.ly",
+      "score": "SC",
+      "lilypond": 2.0667793783029276,
+      "residual": -0.192,
+      "why": "As knee.grace.beamlet.last-stem-top: d8 (down) e16 stacks the beamlet of e BELOW the up beam, so the up stem of e ends on the primary (the session-935 rule ran it 0.648 further, to a line above). The residual is half the grace beam thickness."
     },
     "beam.quant.knee.sixteenth.down-stem": {
       "probe": "grace-knee.ly",
