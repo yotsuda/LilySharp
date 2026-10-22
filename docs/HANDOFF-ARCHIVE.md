@@ -160,6 +160,16 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第938セッションの経緯
+
+### 1.1 第938セッション（2026-10-22・YT-DELL2）
+
+第937 と同じ会話の続き（ユーザー「続けて」）。`-Start p938`（開始 HEAD `20776fce0`・未 push 56・full **12782 / 0 / 2 / 12784**・第936 を ARCHIVE へ）。作業場所は Lab `sessions/p938/`。
+- **grace の休符の前の呼吸記号を描く＝`ac0cb7b19`**: LP 2.26（`probes/grace-breath.ly` GBK・GBL）は grace の音の前と同じ＝grace → 記号 0.891339・記号の左端 → 休符の左端 (0.5066 + 1.0) × 0.8 = 1.205280（休符の列は左の skyline が空なので最小が上がらない）・休符の 1.7 はそのまま。`GraceBodySupport.InnerBreaths` が次の列に休符（spacer は除く）も許し、`SpacingRules.InnerBreathSprings` が値付けする。台帳 5 点（`breath.grace.before-rest.*`・`before-last-rest.*`）＝1 回目で全部一致。毒 3 本全部赤（休符の腕 6・ばねの休符除外 4・spacer も許す 3）。全 svg の掃き 1,242 枚で 0。報告の例は spacer の前の記号に替えた。
+- ⚠️ **afterGrace の呼吸記号は別の形＝LYS4020 のまま**（Lab `p938/lp/rest.ly` AA〜AC）: afterGrace の grace は主音符の中の時刻に立つので、記号の列は**主の時刻**に乗り、記号 → 次の主音符は 1.5066 ではなく記号の左端から 2.5311（AB の記号なしの grace → 主音符 2.3045 より 1.1179 遠い）。途中の記号（AC）の記号 → 次の grace は 1.2053 で同じ。最後の記号の値付けは未解明＝主の時刻の列から次の音までのばね（duration のばね）を読む必要がある。
+- `-End p938 -DiffBase 20776fce0` ＝full **12789 / 0 / 2 / 12791**（前便末 +7）（Lab `sessions/p938/end.log`）→ この docs commit。未 push 57＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。
+判定（2026-10-22）: grace の呼吸記号は音・和音・休符の前、最後の列のどれも LP と同じ。残り＝afterGrace の記号（上の ⚠️）と spacer の前（未測定）・slur が膝の grace 連桁を避ける形（⒝）・grace の LYS4020 の残り（`@pluck`・TAB の技法・`@diagram`・`@cross`・`@figuredBass`・`@chord`）。
+
 ## 以下は第937セッションの経緯
 
 ### 1.1 第937セッション（2026-10-22・YT-DELL2）
