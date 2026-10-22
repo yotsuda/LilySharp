@@ -124,6 +124,16 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第945セッション（2026-10-22・YT-DELL2）
+
+第944 と同じ会話の続き（ユーザー「2」＝第944 の候補 ⑵ grace の中の tuplet の beamlet）。`-Start p945`（開始 HEAD `8d82a7df7`・未 push 71・full **12852 / 0 / 2 / 12854**・第943 を ARCHIVE へ）。作業場所は Lab `sessions/p945/`（LP の試料は `lp/tup*.ly`）。
+- **grace の中の tuplet を連桁の型に渡す**（第944 の ⒝）: LP の beam engraver は grace の符尾にも `currentTupletDescription` を渡す＝tuplet の境の符尾は向きを CENTER のまま両側に余りの線を持ち、比は rhythmic importance に入り、時刻は縮めた長さで進む。`d16 \tuplet 3/2 { e8 f16 } g16` の f は両側 2（tuplet なしなら右だけ＝Lab `lp/tup.ly` T7・`tup2.ly` T8）。`MeasureCollector.ProcessTuplet` が grace の時刻では括弧の代わりに `_graceTupletSpans`（item の範囲・比）を残し、`ProcessGraceRegion` が列の範囲へ写して `GraceNoteItem.WithBeamletCounts(…, tuplets)` が縮めた長さ・`TupletDescription`（親つき・LP の numerator_ は書いた比の 2 つめ）で beamify する。LP と照合した 22 形（T1〜T12・U1〜U10）で Lily# と全部一致。
+- **網**: 台帳 5 点（`beam.grace.beamlet.tuplet.*`＝境の左右 2・対照 1・縮めた時刻 1・比 1）＝probe `grace-beamlet.ly` TT〜TW。毒 4 本＝範囲なし・記録なし・縮めない・比を裏返す＝全部赤（縮めないと比を裏返すは最初は**緑**＝効く形 U1・U4 を Zz945（削除済み）で探して足した）。掃き 1,248 枚で 0。棚卸しは差なし。
+- `-End p945 -DiffBase 8d82a7df7` ＝full **12857 / 0 / 2 / 12859**（前便末 +5）（Lab `sessions/p945/end.log`）→ この docs commit。本体 `54adb6e23`。未 push 72＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。
+判定（2026-10-22）: grace の連桁は tuplet の中でも LP と同じ beamlet を描く。LP と 1 便で照合しながら閉じられる grace の項目はこれで尽きた。次の候補＝grace の LYS4020 の残り（構成音の呼吸記号・`@pluck`・TAB の技法・`@diagram`・`@cross`・`@figuredBass`・`@chord`＝LP と照合しにくい）・§2 E ⑹⑺（和音入力・Ignatzek＝要ユーザー判断）。
+
+## 以下は第944セッションの経緯
+
 ### 1.1 第944セッション（2026-10-22・YT-DELL2）
 
 第943 と同じ会話の続き（ユーザー「3」＝第943 の候補 ⑶ slur が膝の grace 連桁をよける形）。`-Start p944`（開始 HEAD `5396a000d`・未 push 69・第942 を ARCHIVE へ）。作業場所は Lab `sessions/p944/`（LP の試料は `lp/`）。
@@ -132,15 +142,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - ⚠️ **残した差（台帳に入れない）**: `c''4 \grace { d''16( e''16 (down) f''16 (down)) }` のような**隣り合う音どうしの膝**は LP が「no viable initial configuration」を出す縮退した梁＝梁の高さが Lily# と 3.457 違う（slur の形は同じ＝Lab `lp/jf.ly`）。量子化の縮退の分岐＝未移植・実用で書かれない形。
 - `-End p944 -DiffBase 5396a000d` ＝full **12852 / 0 / 2 / 12854**（前便末 +26）（Lab `sessions/p944/end.log`）→ この docs commit。本体 `c8a7be390`。未 push 70＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。
 判定（2026-10-22）: 膝の grace 連桁と slur は LP と同じ（隣り合う音どうしの縮退した膝を除く）。grace の連桁は beamlet まで描く。次の候補＝grace の LYS4020 の残り（構成音の呼吸記号・`@pluck`・TAB の技法・`@diagram`・`@cross`・`@figuredBass`・`@chord`＝LP と照合しにくい）・grace の中の tuplet の beamlet（`WithBeamletCounts` は span を読まない＝⒝）・§2 E ⑹⑺（和音入力・Ignatzek＝要ユーザー判断）。
-
-## 以下は第943セッションの経緯
-
-### 1.1 第943セッション（2026-10-22・YT-DELL2）
-
-第942 と同じ会話の続き（ユーザー「続けて」）。`-Start p943`（開始 HEAD `4295c5978`・未 push 67・full は**走行中に台帳を足した 2 点だけ赤**＝HEAD は 12823 / 0 / 2 / 12825・第941 を ARCHIVE へ）。作業場所は Lab `sessions/p943/`。
-- **先頭の spacer の接近＝`9567b2ff7`**（第942 の ⒝）: LP は `c4 \grace { s16 d16 } e4` の最初の grace の列に音が無い＝前の列の願いは次の**音**へ届き、空の列には合わない ⇒ 接近は素の duration のばね（最小 0）× 0.8＝2.898045 × 0.8 = 2.318436・rod 無し（GBY）。Lily# は Note_spacing の接近で 0.083360（＝0.8 × c の符頭幅の補正 1.3042 − 1.2）遠かった。`SpacingRules.LeadingGraceOpensOnSpacer`・描画側（`CreateInterColumnSpring`）と見積もり側の両方。台帳 2 点 EXACT・`BothSpringSystems_AgreeAroundAnAfterGrace` に 1 行。毒 2 本赤（描画 2・見積もり 1）。掃き 0。近似の棚卸しから「未移植」1 件が消えた（APPROX 65→64）・定数の棚卸しに `0.0` 2 行（引用つきで緑）。⚠️ **定数の棚卸しで中身の差 13 行を一度 `git checkout` で消した**（第935 と同じ誤り）＝作り直して確かめ、引用を置いて commit に入れた ⇒ **差の行数が 0 でないときは消す前に必ず中身を見る**（`git --no-pager diff --no-color`）。
-- `-End p943 -DiffBase 4295c5978` ＝full **12826 / 0 / 2 / 12828**（前便末 +3）（Lab `sessions/p943/end.log`）→ この docs commit。未 push 68＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。
-判定（2026-10-22）: grace の spacer と呼吸記号の島は閉じた。次の候補＝slur が膝の grace 連桁を避ける形（⒝）・grace の LYS4020 の残り（構成音の呼吸記号・`@pluck`・TAB の技法・`@diagram`・`@cross`・`@figuredBass`・`@chord`＝LP と照合しにくい）・§2 E ⑹⑺（和音入力・Ignatzek＝要ユーザー判断）。
 
 ## 2. 開いている作業
 

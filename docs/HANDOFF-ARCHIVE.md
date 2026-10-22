@@ -160,6 +160,15 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第943セッションの経緯
+
+### 1.1 第943セッション（2026-10-22・YT-DELL2）
+
+第942 と同じ会話の続き（ユーザー「続けて」）。`-Start p943`（開始 HEAD `4295c5978`・未 push 67・full は**走行中に台帳を足した 2 点だけ赤**＝HEAD は 12823 / 0 / 2 / 12825・第941 を ARCHIVE へ）。作業場所は Lab `sessions/p943/`。
+- **先頭の spacer の接近＝`9567b2ff7`**（第942 の ⒝）: LP は `c4 \grace { s16 d16 } e4` の最初の grace の列に音が無い＝前の列の願いは次の**音**へ届き、空の列には合わない ⇒ 接近は素の duration のばね（最小 0）× 0.8＝2.898045 × 0.8 = 2.318436・rod 無し（GBY）。Lily# は Note_spacing の接近で 0.083360（＝0.8 × c の符頭幅の補正 1.3042 − 1.2）遠かった。`SpacingRules.LeadingGraceOpensOnSpacer`・描画側（`CreateInterColumnSpring`）と見積もり側の両方。台帳 2 点 EXACT・`BothSpringSystems_AgreeAroundAnAfterGrace` に 1 行。毒 2 本赤（描画 2・見積もり 1）。掃き 0。近似の棚卸しから「未移植」1 件が消えた（APPROX 65→64）・定数の棚卸しに `0.0` 2 行（引用つきで緑）。⚠️ **定数の棚卸しで中身の差 13 行を一度 `git checkout` で消した**（第935 と同じ誤り）＝作り直して確かめ、引用を置いて commit に入れた ⇒ **差の行数が 0 でないときは消す前に必ず中身を見る**（`git --no-pager diff --no-color`）。
+- `-End p943 -DiffBase 4295c5978` ＝full **12826 / 0 / 2 / 12828**（前便末 +3）（Lab `sessions/p943/end.log`）→ この docs commit。未 push 68＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。
+判定（2026-10-22）: grace の spacer と呼吸記号の島は閉じた。次の候補＝slur が膝の grace 連桁を避ける形（⒝）・grace の LYS4020 の残り（構成音の呼吸記号・`@pluck`・TAB の技法・`@diagram`・`@cross`・`@figuredBass`・`@chord`＝LP と照合しにくい）・§2 E ⑹⑺（和音入力・Ignatzek＝要ユーザー判断）。
+
 ## 以下は第942セッションの経緯
 
 ### 1.1 第942セッション（2026-10-22・YT-DELL2）
