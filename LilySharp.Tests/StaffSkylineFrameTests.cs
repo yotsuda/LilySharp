@@ -467,6 +467,11 @@ public class StaffSkylineFrameTests
     /// the cubic reaches three quarters of that at its midpoint, and the round pen adds half
     /// its own width.
     /// </summary>
+    /// <remarks>
+    /// To FIVE places since session 953: the bow is flattened as LilyPond flattens it, one
+    /// segment per 0.2 of its control polygon (SkylineBuilder.MergeStrokedBezier), and the
+    /// midpoint t = 0.5 is not a sample of every polygon — the tie below reads 5e-5 under it.
+    /// </remarks>
     [Fact]
     public void Slur_ArrivesInTheStaffTopFrameAndIsRebasedByAHalfStaff()
     {
@@ -480,7 +485,7 @@ public class StaffSkylineFrameTests
 
         double bowInk = 0.75 * (0.5 * EngravingDefaults.SlurMidThickness)
                         + 0.5 * EngravingDefaults.BowEndRounding;
-        Assert.Equal(y + bowInk + HalfStaff, up.MaxHeight(), 9);
+        Assert.Equal(y + bowInk + HalfStaff, up.MaxHeight(), 5);
     }
 
     /// <summary>
@@ -508,7 +513,7 @@ public class StaffSkylineFrameTests
         // those controls are pushed a further half-thickness out before it is sampled.
         double bowInk = 0.75 * (dip + 0.5 * EngravingDefaults.SlurMidThickness)
                         + 0.5 * EngravingDefaults.BowEndRounding;
-        Assert.Equal(y - bowInk + HalfStaff, down.MaxHeight(), 9);
+        Assert.Equal(y - bowInk + HalfStaff, down.MaxHeight(), 1e-4); // 5e-5 under: see the slur's remark
     }
 
     /// <summary>

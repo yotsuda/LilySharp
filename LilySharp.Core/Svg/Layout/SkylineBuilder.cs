@@ -2503,41 +2503,73 @@ internal sealed class SkylineBuilder
         double p0x, double p0y, (double X, double Y) c1, (double X, double Y) c2,
         double p3x, double p3y, double halfCurve, double halfPen)
     {
-        const int samples = 16;
         double dir = direction == VerticalDirection.Up ? 1.0 : -1.0;
 
-        // Shift the interior control points onto the outer edge. Only the Y component of the
-        // chord normal matters to this vertical skyline: |perp_Y| of a unit normal is
-        // |chord_x|/|chord|, so a flat bow shifts the full halfCurve and a steep one less.
+        // The sandwich's two beziers, LilyPond's spelling: the interior controls moved by
+        // ±perp, perp = halfCurve × the chord's unit normal — BOTH its components (the X one
+        // moves a sloped bow's controls sideways too).
+        // LILYPOND-REF: lily/lookup.cc Lookup::slur — perp = 0.5 * curvethick * (-dir_y, dir_x).
         double cdx = p3x - p0x, cdy = p3y - p0y;
         double clen = System.Math.Sqrt(cdx * cdx + cdy * cdy);
-        double ctrlOutY = dir * halfCurve * (clen > 1e-9 ? System.Math.Abs(cdx) / clen : 1.0);
-        double p1x = c1.X, p1y = c1.Y + ctrlOutY;
-        double p2x = c2.X, p2y = c2.Y + ctrlOutY;
-
-        double prevX = 0, prevY = 0;
-        for (int i = 0; i <= samples; i++)
-        {
-            double t = (double)i / samples;
-            double mt = 1 - t;
-            double b0 = mt * mt * mt, b1 = 3 * mt * mt * t, b2 = 3 * mt * t * t, b3 = t * t * t;
-            double x = b0 * p0x + b1 * p1x + b2 * p2x + b3 * p3x;
-            double y = b0 * p0y + b1 * p1y + b2 * p2y + b3 * p3y + dir * halfPen;
-            if (i > 0)
-            {
-                double xl = System.Math.Min(prevX, x), xr = System.Math.Max(prevX, x);
-                if (xr > xl)
-                {
-                    bool leftFirst = prevX <= x;
-                    double yl = leftFirst ? prevY : y;
-                    double yr = leftFirst ? y : prevY;
-                    sky.MergeSlope(xl, yl, xr, yr, thickness: 0);
-                }
-            }
-            prevX = x;
-            prevY = y;
-        }
+        double ux = clen > 1e-9 ? cdx / clen : 1.0, uy = clen > 1e-9 ? cdy / clen : 0.0;
+        double perpX = -uy * halfCurve, perpY = ux * halfCurve;
+        MergeStrokedBezier(sky, dir, p0x, p0y, c1.X + perpX, c1.Y + perpY,
+            c2.X + perpX, c2.Y + perpY, p3x, p3y, halfPen);
+        MergeStrokedBezier(sky, dir, p0x, p0y, c1.X - perpX, c1.Y - perpY,
+            c2.X - perpX, c2.Y - perpY, p3x, p3y, halfPen);
     }
+
+    /// <summary>
+    /// One bezier of a stroked path as LilyPond puts it in a skyline: flattened into one
+    /// segment per <see cref="BezierQuantizationUnit"/> of its control polygon's length, each
+    /// segment's ends pushed OUT ALONG X by the pen's radius and the whole raised (toward
+    /// <paramref name="dir"/>) by it. Until session 953 the bow was 16 fixed samples raised by
+    /// the radius alone: on a sloped stretch the widened segment stands higher at a joint than
+    /// the next one starts, which is the 0.025 a text over a slur's end stood low by (ledger
+    /// slur.beamed.reserved-text).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/stencil-integral.cc:316-352 add_draw_bezier_segments — quantization =
+    ///   len / QUANTIZATION_UNIT (0.2), points at t = i / quantization, last to control_[3].
+    /// LILYPOND-REF: lily/include/lazy-skyline-pair.hh:66-94 add_segment —
+    ///   radius = thickness / 2; p1 -= widen, p2 += widen (along X, the ends ordered by X), each
+    ///   side's copy shifted by ± radius.
+    /// </remarks>
+    private static void MergeStrokedBezier(VerticalSkyline sky, double dir,
+        double x0, double y0, double x1, double y1, double x2, double y2, double x3, double y3,
+        double radius)
+    {
+        double len = System.Math.Sqrt((x1 - x0) * (x1 - x0) + (y1 - y0) * (y1 - y0))
+            + System.Math.Sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1))
+            + System.Math.Sqrt((x3 - x2) * (x3 - x2) + (y3 - y2) * (y3 - y2));
+        int quantization = (int)System.Math.Max(0.0, len / BezierQuantizationUnit);
+        double lastX = x0, lastY = y0;
+        for (int i = 1; i < quantization; i++)
+        {
+            double t = (double)i / quantization, mt = 1 - t;
+            double b0 = mt * mt * mt, b1 = 3 * mt * mt * t, b2 = 3 * mt * t * t, b3 = t * t * t;
+            double x = b0 * x0 + b1 * x1 + b2 * x2 + b3 * x3;
+            double y = b0 * y0 + b1 * y1 + b2 * y2 + b3 * y3;
+            MergeStrokedSegment(sky, dir, lastX, lastY, x, y, radius);
+            lastX = x;
+            lastY = y;
+        }
+        MergeStrokedSegment(sky, dir, lastX, lastY, x3, y3, radius);
+    }
+
+    private static void MergeStrokedSegment(VerticalSkyline sky, double dir,
+        double ax, double ay, double bx, double by, double radius)
+    {
+        if (ax > bx)
+            (ax, ay, bx, by) = (bx, by, ax, ay);
+        double xl = ax - radius, xr = bx + radius;
+        if (xr > xl)
+            sky.MergeSlope(xl, ay + dir * radius, xr, by + dir * radius, thickness: 0);
+    }
+
+    /// <summary>The skyline's bezier flattening step, in staff spaces.</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc QUANTIZATION_UNIT = 0.2.</remarks>
+    private const double BezierQuantizationUnit = 0.2;
 
     /// <summary>
     /// Seeds each fingering's drawn digit run as a box in the staff's own inside profile:

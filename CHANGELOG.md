@@ -17,6 +17,12 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Lower staves, second voices and tuplets: spanners, arpeggios and accidentals where they belong
 
+- **A slur or tie takes the room LilyPond gives it.** Its outline for spacing is now built as
+  LilyPond builds it (the curve cut into short pieces, each widened by the pen), so a lyric line
+  under a slur, a text over its end and the gap between systems match LilyPond — a melisma's
+  syllables under a slur stood 0.13 staff space too high, a text over a slur's end 0.02 too low.
+  A script over a tie now stands up to 0.01 staff space higher than before.
+
 - **A lower staff's `@rit`, trill line and ottava are bound by its own notes.** On a grand staff
   the left hand's `@rit`, `@startTrillSpan` and `@ottava(bassa)` started (and ended) at the right
   hand's note of the same number in the bar, and an 8vb's continuation "(8vb)" could stand over

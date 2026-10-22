@@ -14,7 +14,10 @@
 % Output: PROBE TEXT ref = the TextScript's reference point (its baseline) above the staff's
 % middle line, in staff spaces.
 
-\paper { indent = 0 ragged-right = ##t }
+\paper { indent = 0 ragged-right = ##t property-defaults.fonts.serif = "LilyPond Serif" }
+% ⚠️ THE TEXT IS ITALIC AND THE SERIF IS PINNED (session 953): Lily#'s @text draws serif italic,
+% and a bare ^"sul D" here was LilyPond's upright fallback face -- 0.039 of the old -0.062 residual
+% was that face, not the engine (the textscript-ink.ly trap). Output: TEXT ref 2.634165.
 #(define (dump tag)
    (lambda (grob)
      (let* ((sys (ly:grob-system grob))
@@ -28,4 +31,4 @@
   \override TextScript.after-line-breaking = #(dump "TEXT")
   \override Beam.after-line-breaking = #(dump "BEAM")
 } }
-\relative { r4 e'8( g <>) ^"sul D" c8 c c c }
+\relative { r4 e'8( g <>) ^\markup \italic "sul D" c8 c c c }
