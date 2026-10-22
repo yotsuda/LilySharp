@@ -160,6 +160,17 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第944セッションの経緯
+
+### 1.1 第944セッション（2026-10-22・YT-DELL2）
+
+第943 と同じ会話の続き（ユーザー「3」＝第943 の候補 ⑶ slur が膝の grace 連桁をよける形）。`-Start p944`（開始 HEAD `5396a000d`・未 push 69・第942 を ARCHIVE へ）。作業場所は Lab `sessions/p944/`（LP の試料は `lp/`）。
+- **grace の連桁を LP の rank で描く・slur が膝をよける・grace の slur は最初の音から**（1 commit）: ⑴ **符尾の先は自分の側の極端な rank の線**（`Beam::calc_stem_y`＝translation × `beam_multiplicity[stem_dir]`）: 第935 の「束は最初の符尾の頭の側」は拍の数がそろうときだけの答え＝`d8 (down) e16` は e の beamlet を上向きの梁の**下**に置き、e の符尾は主線で止まる（Lab `lp/kneedump2.ly` SC）。`GraceColumnInfo.BeamLeft/BeamRight`＝grace の時刻で `BeamingPattern.Beamify`（`GraceNoteItem.WithBeamletCounts`・`MeasureCollector` が拍子つきで刻む）→ `GraceNoteItem.BeamRanksOf`（`BeamSubdivision.CalcBeaming`）→ `StemReachOf`。描画（`DrawGraceBeam`）は `CalcBeamSegments` で描く＝**beamlet を初めて描く**（`d16 e8 f16` の d の右・f の左、`d8 e16 f8` の e の左＝リズムの重み、`d8. e16`）。量子化も同じ数を受ける（⚠️ 観測者なし＝分け合う数に戻す毒は緑・註に書いた）。⑵ **slur の障害物と付け所が束を貫く符尾の先を読む**（`AddGraceObstaclesForMeasure`・`GraceBeamOuterFaceDeviceY`＝面は bound 自身の符尾の側）。⑶ **連桁した grace の bound は旗の無い連桁の符尾**（`WithGraceBeamedStem`＝`ResolveSlurEdge` は item しか見ず旗つきと読んでいた＝X が旗の分ずれ、`edge_has_beams_` も立たなかった）。⑷ **acciaccatura／appoggiatura の slur は最初の grace から**（`grace-init.ly` の `<>\startGraceSlur` は grace の音楽の前）＝`acciaccatura { e16 f } d4` の span 1.536225 → LP 3.001956（掃きで見つけた既存の欠陥）。
+- **網**: 台帳 26 点（`slur.grace.knee.*` 6・`slur.in-grace.knee.*` 5・`beam.grace.beamlet.*` 8・`knee.grace.beamlet.*`／`knee.grace.mixed.*` 3＝符尾の先は既存と同じ −0.192・`slur.grace.two.*` 4）。probe `grace-knee-slur.ly`・`grace-beamlet.ly`（新）・`grace-slur.ly`（TWO・TWOHIGH）。毒 11 本: 赤 9（rank の届き・刻み無し・連桁の bound・描画の届き・rank の符号・障害物の届き・面の側＝最初は**緑**→ IK を足して赤・slur の始まりの列 2 本）、緑 2（量子化の数＝註に開示・slur の向きを最初の列で読む＝声部の向きが grace の途中で変わらない限り同じ）。掃き 1,248 枚で 2 枚（`perf-slurgrace300`・showcase `02-ornaments`＝どちらも 2 音の acciaccatura の slur＝⑷）。定数の棚卸し＝関数名の移動と `/ 2.0` 2 行（中身を見てから commit）。
+- ⚠️ **残した差（台帳に入れない）**: `c''4 \grace { d''16( e''16 (down) f''16 (down)) }` のような**隣り合う音どうしの膝**は LP が「no viable initial configuration」を出す縮退した梁＝梁の高さが Lily# と 3.457 違う（slur の形は同じ＝Lab `lp/jf.ly`）。量子化の縮退の分岐＝未移植・実用で書かれない形。
+- `-End p944 -DiffBase 5396a000d` ＝full **12852 / 0 / 2 / 12854**（前便末 +26）（Lab `sessions/p944/end.log`）→ この docs commit。本体 `c8a7be390`。未 push 70＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。
+判定（2026-10-22）: 膝の grace 連桁と slur は LP と同じ（隣り合う音どうしの縮退した膝を除く）。grace の連桁は beamlet まで描く。次の候補＝grace の LYS4020 の残り（構成音の呼吸記号・`@pluck`・TAB の技法・`@diagram`・`@cross`・`@figuredBass`・`@chord`＝LP と照合しにくい）・grace の中の tuplet の beamlet（`WithBeamletCounts` は span を読まない＝⒝）・§2 E ⑹⑺（和音入力・Ignatzek＝要ユーザー判断）。
+
 ## 以下は第943セッションの経緯
 
 ### 1.1 第943セッション（2026-10-22・YT-DELL2）
