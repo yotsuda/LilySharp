@@ -87,7 +87,11 @@ workflow attaches that section to the GitHub Release verbatim.
   note is drawn** (`grace { d16@fall } e4`, `@doit`): it leaves the small grace head (or its dot)
   and ends before the next note, a grace or the main one, at full size. A fall on a main note
   followed by grace notes now ends before the first grace, as in LilyPond; it ran on to the main
-  note after them. **A trill spanner can start or stop on a grace note**
+  note after them. **The thumb position (`@thumb`) is placed as LilyPond places it**: LilyPond's
+  `\thumb` is a fingering, so it stands above the note whatever the stem (below with
+  `@thumb.down`), half a staff space clear of the staff, the head or a beam; before, it went on
+  the side opposite the stem, as a staccato does. On a grace note it is drawn too, small.
+  **A trill spanner can start or stop on a grace note**
   (`grace { d16@startTrillSpan } e4 f4 g4@stopTrillSpan`); a high grace's stem lifts the line,
   as in LilyPond. **So can an ottava** (`grace { d''16@ottava } e''4 f''4 g'4@!ottava`); an `@!ottava`
   written on a grace ends the bracket before it, as LilyPond's `\ottava #0` there does.

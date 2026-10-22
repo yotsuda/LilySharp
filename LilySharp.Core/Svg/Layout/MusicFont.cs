@@ -838,6 +838,7 @@ internal sealed class EmmentalerMusicFont : MusicFont
         MusicGlyph.StringsDownBow => new(d.ArticDownBowAboveGlyph, d.ArticDownBowAboveGlyphOutline, d.ArticDownBowAboveGlyphAdvance),
         MusicGlyph.StringsDownBowTurned => new(d.ArticDownBowBelowGlyph, d.ArticDownBowBelowGlyphOutline, d.ArticDownBowBelowGlyphAdvance),
         MusicGlyph.StringsHarmonic => new(d.ArticFlageoletGlyph, d.ArticFlageoletGlyphOutline, d.ArticFlageoletGlyphAdvance),
+        MusicGlyph.StringsThumbPosition => new(d.ArticThumbGlyph, d.ArticThumbGlyphOutline, d.ArticThumbGlyphAdvance),
         MusicGlyph.PluckedSnapPizzicatoAbove => new(d.ScriptSnappizzicato, d.ScriptSnappizzicatoOutline, d.ScriptSnappizzicatoAdvance),
         MusicGlyph.KeyboardPedalPed => new(d.PedalPed, d.PedalPedOutline, d.PedalPedAdvance),
         MusicGlyph.KeyboardPedalDot => new(d.PedalDot, d.PedalDotOutline, d.PedalDotAdvance),

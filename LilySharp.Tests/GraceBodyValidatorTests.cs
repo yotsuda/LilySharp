@@ -174,6 +174,8 @@ public class GraceBodyValidatorTests
     [Theory]
     [InlineData("grace { d'8@fall } c'1 | e'1 |", "grace { d'8 } c'1 | e'1 |")]
     [InlineData("grace { d'16@doit e'16 } c'1 | e'1 |", "grace { d'16 e'16 } c'1 | e'1 |")]
+    // …and the thumb position, a fingering in LilyPond (session 948, ledger thumb.grace.*).
+    [InlineData("grace { d'8@thumb } c'1 | e'1 |", "grace { d'8 } c'1 | e'1 |")]
     public void AFallOnAGrace_IsDrawn_AndNotReported(string written, string control)
     {
         Assert.Empty(Warnings(Book(written)));

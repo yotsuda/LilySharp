@@ -9142,6 +9142,69 @@
       "residual": 0.0,
       "why": "EXACT. The CONTROL of GFAJ without the grace: the curve ends the padding short of the next head."
     },
+    "thumb.main": {
+      "probe": "thumb.ly",
+      "score": "THMA",
+      "lilypond": 3.35,
+      "residual": -0.000003,
+      "why": "CLOSED IN SESSION 948. `d16@thumb`: LilyPond's \\thumb is \\finger \\markup \\scale (magstep 5) scripts.thumb, a FINGERING, so it stands ABOVE though the stem is up (fingeringOrientations '(up down)), its ink 0.5 over the staff's 2.05 (Fingering padding). Until session 948 Lily# made it a Script: below, opposite the stem, at -3.745. The last digits are the sign's box: Lily# reads it out of the design the Fingering's own font-size picks (emmentaler-11 at -5) and scales it by the markup's magstep 5; LilyPond's box is that one times 1.000004 on both edges (-0.800000 .. 0.500178 against -0.799997 .. 0.500176). OPEN: the factor is not found; it is under the reading of any drawn quantity."
+    },
+    "thumb.main.flag-beamed": {
+      "probe": "thumb.ly",
+      "score": "THMB",
+      "lilypond": 4.507557,
+      "residual": -0.000002748,
+      "why": "CLOSED IN SESSION 948. `c'16@thumb e8.`: the two are beamed, so the beamed stem is a support (add-stem-support only-if-beamed) and the sign clears the beam by 0.5. The last digits are the sign's box: Lily# reads it out of the design the Fingering's own font-size picks (emmentaler-11 at -5) and scales it by the markup's magstep 5; LilyPond's box is that one times 1.000004 on both edges (-0.800000 .. 0.500178 against -0.799997 .. 0.500176). OPEN: the factor is not found; it is under the reading of any drawn quantity."
+    },
+    "thumb.main.below": {
+      "probe": "thumb.ly",
+      "score": "THMC",
+      "lilypond": -4.045178,
+      "residual": 0.000002,
+      "why": "CLOSED IN SESSION 948. `@thumb.down` on d16: below, its ink 0.5 under the head's ink. The last digits are the sign's box: Lily# reads it out of the design the Fingering's own font-size picks (emmentaler-11 at -5) and scales it by the markup's magstep 5; LilyPond's box is that one times 1.000004 on both edges (-0.800000 .. 0.500178 against -0.799997 .. 0.500176). OPEN: the factor is not found; it is under the reading of any drawn quantity."
+    },
+    "thumb.grace": {
+      "probe": "thumb.ly",
+      "score": "THMD",
+      "lilypond": 3.115685,
+      "residual": -0.000001696,
+      "why": "CLOSED IN SESSION 948. `grace { d16@thumb }`: the Fingering's grace font-size -8 with the markup's magstep 5 is the grace Script's -3, and the sign stands on the same 2.55 floor. Until session 948 a thumb on a grace was dropped (LYS4020); GraceBodySupport.IsCarriedThumb names it. The last digits are the sign's box: Lily# reads it out of the design the Fingering's own font-size picks (emmentaler-11 at -5) and scales it by the markup's magstep 5; LilyPond's box is that one times 1.000004 on both edges (-0.800000 .. 0.500178 against -0.799997 .. 0.500176). OPEN: the factor is not found; it is under the reading of any drawn quantity."
+    },
+    "thumb.grace.high": {
+      "probe": "thumb.ly",
+      "score": "THME",
+      "lilypond": 3.115685,
+      "residual": -0.000001696,
+      "why": "CLOSED IN SESSION 948. A thumb over a grace c'': the small head inside the staff reaches nothing, the same floor. The last digits are the sign's box: Lily# reads it out of the design the Fingering's own font-size picks (emmentaler-11 at -5) and scales it by the markup's magstep 5; LilyPond's box is that one times 1.000004 on both edges (-0.800000 .. 0.500178 against -0.799997 .. 0.500176). OPEN: the factor is not found; it is under the reading of any drawn quantity."
+    },
+    "thumb.main.high": {
+      "probe": "thumb.ly",
+      "score": "THMF",
+      "lilypond": 6.345,
+      "residual": -0.000003,
+      "why": "CLOSED IN SESSION 948. A thumb over d'' above the staff: the head's ink is the support. The last digits are the sign's box: Lily# reads it out of the design the Fingering's own font-size picks (emmentaler-11 at -5) and scales it by the markup's magstep 5; LilyPond's box is that one times 1.000004 on both edges (-0.800000 .. 0.500178 against -0.799997 .. 0.500176). OPEN: the factor is not found; it is under the reading of any drawn quantity."
+    },
+    "thumb.main.beamed": {
+      "probe": "thumb.ly",
+      "score": "THMG",
+      "lilypond": 3.35,
+      "residual": -0.000003,
+      "why": "CLOSED IN SESSION 948. `d16@thumb e16 e8`, beamed with the stems up and the beam low enough to reach nothing: the staff floor. The last digits are the sign's box: Lily# reads it out of the design the Fingering's own font-size picks (emmentaler-11 at -5) and scales it by the markup's magstep 5; LilyPond's box is that one times 1.000004 on both edges (-0.800000 .. 0.500178 against -0.799997 .. 0.500176). OPEN: the factor is not found; it is under the reading of any drawn quantity."
+    },
+    "thumb.main.with-staccato": {
+      "probe": "thumb.ly",
+      "score": "THMH",
+      "lilypond": 3.35,
+      "residual": -0.000003,
+      "why": "CLOSED IN SESSION 948. A thumb and a staccato on one note: the staccato goes below opposite the stem, the thumb above; neither moves the other. The last digits are the sign's box: Lily# reads it out of the design the Fingering's own font-size picks (emmentaler-11 at -5) and scales it by the markup's magstep 5; LilyPond's box is that one times 1.000004 on both edges (-0.800000 .. 0.500178 against -0.799997 .. 0.500176). OPEN: the factor is not found; it is under the reading of any drawn quantity."
+    },
+    "thumb.grace.high.below": {
+      "probe": "thumb.ly",
+      "score": "THMI",
+      "lilypond": -2.903679,
+      "residual": 0.000001159,
+      "why": "CLOSED IN SESSION 948. `@thumb.down` under a grace c'': its ink 0.5 under the staff's ink. The last digits are the sign's box: Lily# reads it out of the design the Fingering's own font-size picks (emmentaler-11 at -5) and scales it by the markup's magstep 5; LilyPond's box is that one times 1.000004 on both edges (-0.800000 .. 0.500178 against -0.799997 .. 0.500176). OPEN: the factor is not found; it is under the reading of any drawn quantity."
+    },
     "pedal.grace.start-to-notehead": {
       "probe": "grace-pedal.ly",
       "score": "GPA",

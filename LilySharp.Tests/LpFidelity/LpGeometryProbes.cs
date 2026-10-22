@@ -9091,6 +9091,16 @@ internal static class LpGeometryProbes
     private static readonly string GFAI = GraceTieBook("c4 grace { d16 e16@fall } f4 c2 |", "GFAI");
     private static readonly string GFAJ = GraceTieBook("c4 d4@fall grace { e16 } f4 c4 |", "GFAJ");
     private static readonly string GFAK = GraceTieBook("c4 d4@fall f4 c4 |", "GFAK");
+    // The thumb position, LilyPond's \thumb = \finger \markup scripts.thumb (audit/lp-geometry/probes/thumb.ly).
+    private static readonly string THMA = GraceTieBook("c4 d16@thumb e8. c2 |", "THMA");
+    private static readonly string THMB = GraceTieBook("c4 c'16@thumb e8. c2 |", "THMB");
+    private static readonly string THMC = GraceTieBook("c4 d16@thumb.down e8. c2 |", "THMC");
+    private static readonly string THMD = GraceTieBook("c4 grace { d16@thumb } e4 c2 |", "THMD");
+    private static readonly string THME = GraceTieBook("c4 grace { c'16@thumb } e4 c2 |", "THME");
+    private static readonly string THMF = GraceTieBook("c4 d''16@thumb e8. c2 |", "THMF");
+    private static readonly string THMG = GraceTieBook("c4 d16@thumb e16 e8 c2 |", "THMG");
+    private static readonly string THMH = GraceTieBook("c4 d16@thumb@staccato e8. c2 |", "THMH");
+    private static readonly string THMI = GraceTieBook("c4 grace { c'16@thumb.down } e4 c2 |", "THMI");
     // A pedal bracket engaged or released on a grace note (audit/lp-geometry/probes/grace-pedal.ly).
     private static readonly string GPDA = GraceTieBook("c4 grace { d16@sustain } e4 f4 g4@!sustain |", "GPDA");
     private static readonly string GPDB = GraceTieBook("c4 d16@sustain e8. f4 g4@!sustain |", "GPDB");
@@ -17783,6 +17793,15 @@ internal static class LpGeometryProbes
         new("bendafter.grace.second.start-to-notehead", GFAI, g => g.BendStartToNotehead(2)),
         new("bendafter.before-grace.reach", GFAJ, g => g.BendReach()),
         new("bendafter.before-grace.control.reach", GFAK, g => g.BendReach()),
+        new("thumb.main", THMA, g => g.GlyphAboveStaffMiddle('', 0)),
+        new("thumb.main.flag-beamed", THMB, g => g.GlyphAboveStaffMiddle('', 0)),
+        new("thumb.main.below", THMC, g => g.GlyphAboveStaffMiddle('', 0)),
+        new("thumb.grace", THMD, g => g.GlyphAboveStaffMiddle('', 0)),
+        new("thumb.grace.high", THME, g => g.GlyphAboveStaffMiddle('', 0)),
+        new("thumb.main.high", THMF, g => g.GlyphAboveStaffMiddle('', 0)),
+        new("thumb.main.beamed", THMG, g => g.GlyphAboveStaffMiddle('', 0)),
+        new("thumb.main.with-staccato", THMH, g => g.GlyphAboveStaffMiddle('', 0)),
+        new("thumb.grace.high.below", THMI, g => g.GlyphAboveStaffMiddle('', 0)),
         new("pedal.grace.start-to-notehead", GPDA, g => g.PedalBracketLineEndToNotehead(end: false, 1)),
         new("pedal.grace.end-to-notehead", GPDA, g => g.PedalBracketLineEndToNotehead(end: true, 4)),
         new("pedal.grace.staff-to-line", GPDA, g => g.PedalBracketLineBelowStaff()),

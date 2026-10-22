@@ -249,6 +249,9 @@ BBOX_GLYPHS: list[GlyphSpec] = [
     GlyphSpec("ArticDownBowAboveGlyph", "scripts.udownbow", "Down-bow above (frog)", "mf/feta-scripts.mf — scripts.udownbow"),
     GlyphSpec("ArticDownBowBelowGlyph", "scripts.ddownbow", "Down-bow below (frog)", "mf/feta-scripts.mf — scripts.ddownbow"),
     GlyphSpec("ArticFlageoletGlyph", "scripts.flageolet", "Flageolet / harmonic circle",    "mf/feta-scripts.mf — scripts.flageolet"),
+    # The thumb position (session 948): LilyPond's \thumb is a Fingering whose markup is this
+    # glyph, and the fingering's rule clears its INK (ArticulationEngraver.ThumbYUp).
+    GlyphSpec("ArticThumbGlyph", "scripts.thumb", "Thumb position (cello)", "mf/feta-scripts.mf — scripts.thumb"),
     # --- Piano pedal word (a GLYPH path, not a text one) ---
     # lily/sustain-pedal.cc:47-76 Sustain_pedal::print calls
     # Font_interface::get_default_font(e)->find_by_name("pedal.Ped") and pastes the

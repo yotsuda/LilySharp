@@ -794,6 +794,15 @@ internal static partial class GlyphMetrics
     /// <summary>Flageolet / harmonic circle — advance width (next-glyph horizontal feed).</summary>
     public const double ArticFlageoletGlyphAdvance = 0.400000;
 
+    /// <summary>Thumb position (cello) — BBox (LILC bbox).</summary>
+    /// <remarks>LILYPOND-REF: mf/feta-scripts.mf — scripts.thumb (scripts.thumb = U+E047 in this build)</remarks>
+    public static readonly BBox ArticThumbGlyph = new(-0.400000, -0.800000, 0.400000, 0.500000);
+    /// <summary>Thumb position (cello) — the box its SKYLINE is built from (glyph outline).</summary>
+    /// <remarks>LILYPOND-REF: lily/stencil-integral.cc:535-563 add_named_glyph_segments.</remarks>
+    public static readonly BBox ArticThumbGlyphOutline = new(-0.400000, -0.800000, 0.400000, 0.500000);
+    /// <summary>Thumb position (cello) — advance width (next-glyph horizontal feed).</summary>
+    public const double ArticThumbGlyphAdvance = 0.400000;
+
     /// <summary>The Ped ligature of the sustain pedal's word — BBox (LILC bbox).</summary>
     /// <remarks>LILYPOND-REF: mf/feta-pedals.mf:320 fet_beginchar ("pedal Ped", "Ped") (pedal.Ped = U+E09D in this build)</remarks>
     public static readonly BBox PedalPed = new(0.000000, 0.000000, 3.192000, 2.000000);
@@ -1846,6 +1855,12 @@ internal static partial class GlyphMetrics
         public BBox ArticFlageoletGlyphOutline { get; init; }
         /// <summary>Flageolet / harmonic circle — advance width (next-glyph horizontal feed).</summary>
         public double ArticFlageoletGlyphAdvance { get; init; }
+        /// <summary>Thumb position (cello) — BBox (LILC bbox).</summary>
+        public BBox ArticThumbGlyph { get; init; }
+        /// <summary>Thumb position (cello) — the box its SKYLINE is built from (glyph outline).</summary>
+        public BBox ArticThumbGlyphOutline { get; init; }
+        /// <summary>Thumb position (cello) — advance width (next-glyph horizontal feed).</summary>
+        public double ArticThumbGlyphAdvance { get; init; }
         /// <summary>The Ped ligature of the sustain pedal's word — BBox (LILC bbox).</summary>
         public BBox PedalPed { get; init; }
         /// <summary>The Ped ligature of the sustain pedal's word — the box its SKYLINE is built from (glyph outline).</summary>
@@ -2553,6 +2568,11 @@ internal static partial class GlyphMetrics
             ArticFlageoletGlyphOutline = new(ArticFlageoletGlyphOutline.Left * magnification, ArticFlageoletGlyphOutline.Bottom * magnification,
                 ArticFlageoletGlyphOutline.Right * magnification, ArticFlageoletGlyphOutline.Top * magnification),
             ArticFlageoletGlyphAdvance = ArticFlageoletGlyphAdvance * magnification,
+            ArticThumbGlyph = new(ArticThumbGlyph.Left * magnification, ArticThumbGlyph.Bottom * magnification,
+                ArticThumbGlyph.Right * magnification, ArticThumbGlyph.Top * magnification),
+            ArticThumbGlyphOutline = new(ArticThumbGlyphOutline.Left * magnification, ArticThumbGlyphOutline.Bottom * magnification,
+                ArticThumbGlyphOutline.Right * magnification, ArticThumbGlyphOutline.Top * magnification),
+            ArticThumbGlyphAdvance = ArticThumbGlyphAdvance * magnification,
             PedalPed = new(PedalPed.Left * magnification, PedalPed.Bottom * magnification,
                 PedalPed.Right * magnification, PedalPed.Top * magnification),
             PedalPedOutline = new(PedalPedOutline.Left * magnification, PedalPedOutline.Bottom * magnification,
@@ -3017,6 +3037,9 @@ internal static partial class GlyphMetrics
         ArticFlageoletGlyph = new(-0.399999, -0.399999, 0.399999, 0.399999),
         ArticFlageoletGlyphOutline = new(-0.400000, -0.400000, 0.400000, 0.400000),
         ArticFlageoletGlyphAdvance = 0.396000,
+        ArticThumbGlyph = new(-0.399999, -0.799997, 0.399999, 0.500176),
+        ArticThumbGlyphOutline = new(-0.400000, -0.800000, 0.400000, 0.500000),
+        ArticThumbGlyphAdvance = 0.400000,
         PedalPed = new(0.000000, 0.000000, 3.192145, 1.999993),
         PedalPedOutline = new(-0.056000, 0.000000, 3.200000, 2.000000),
         PedalPedAdvance = 3.188000,
@@ -3410,6 +3433,9 @@ internal static partial class GlyphMetrics
         ArticFlageoletGlyph = new(-0.399999, -0.399999, 0.399999, 0.399999),
         ArticFlageoletGlyphOutline = new(-0.400000, -0.400000, 0.400000, 0.400000),
         ArticFlageoletGlyphAdvance = 0.396000,
+        ArticThumbGlyph = new(-0.399999, -0.799997, 0.399999, 0.499998),
+        ArticThumbGlyphOutline = new(-0.400000, -0.800000, 0.400000, 0.500000),
+        ArticThumbGlyphAdvance = 0.400000,
         PedalPed = new(0.000000, 0.000000, 3.192053, 1.999994),
         PedalPedOutline = new(-0.044000, 0.000000, 3.200000, 2.000000),
         PedalPedAdvance = 3.192000,
@@ -3803,6 +3829,9 @@ internal static partial class GlyphMetrics
         ArticFlageoletGlyph = new(-0.400000, -0.400000, 0.400000, 0.400000),
         ArticFlageoletGlyphOutline = new(-0.400000, -0.400000, 0.400000, 0.400000),
         ArticFlageoletGlyphAdvance = 0.396000,
+        ArticThumbGlyph = new(-0.400000, -0.800000, 0.400000, 0.500141),
+        ArticThumbGlyphOutline = new(-0.400000, -0.800000, 0.400000, 0.500000),
+        ArticThumbGlyphAdvance = 0.396000,
         PedalPed = new(0.000000, 0.000000, 3.192079, 2.000000),
         PedalPedOutline = new(-0.032000, 0.000000, 3.200000, 2.000000),
         PedalPedAdvance = 3.188000,
@@ -4196,6 +4225,9 @@ internal static partial class GlyphMetrics
         ArticFlageoletGlyph = new(-0.400000, -0.400000, 0.400000, 0.400000),
         ArticFlageoletGlyphOutline = new(-0.400000, -0.400000, 0.400000, 0.400000),
         ArticFlageoletGlyphAdvance = 0.396000,
+        ArticThumbGlyph = new(-0.400000, -0.800000, 0.400000, 0.500063),
+        ArticThumbGlyphOutline = new(-0.400000, -0.800000, 0.400000, 0.500000),
+        ArticThumbGlyphAdvance = 0.396000,
         PedalPed = new(0.000000, 0.000000, 3.191934, 2.000000),
         PedalPedOutline = new(-0.020000, 0.000000, 3.200000, 2.000000),
         PedalPedAdvance = 3.188000,
@@ -4589,6 +4621,9 @@ internal static partial class GlyphMetrics
         ArticFlageoletGlyph = new(-0.400000, -0.400000, 0.400000, 0.400000),
         ArticFlageoletGlyphOutline = new(-0.400000, -0.400000, 0.400000, 0.400000),
         ArticFlageoletGlyphAdvance = 0.396000,
+        ArticThumbGlyph = new(-0.400000, -0.800000, 0.400000, 0.500112),
+        ArticThumbGlyphOutline = new(-0.400000, -0.800000, 0.400000, 0.500000),
+        ArticThumbGlyphAdvance = 0.396000,
         PedalPed = new(0.000000, 0.000000, 3.191919, 2.000000),
         PedalPedOutline = new(-0.012000, 0.000000, 3.200000, 2.000000),
         PedalPedAdvance = 3.188000,
@@ -4984,6 +5019,9 @@ internal static partial class GlyphMetrics
         ArticFlageoletGlyph = ArticFlageoletGlyph,
         ArticFlageoletGlyphOutline = ArticFlageoletGlyphOutline,
         ArticFlageoletGlyphAdvance = ArticFlageoletGlyphAdvance,
+        ArticThumbGlyph = ArticThumbGlyph,
+        ArticThumbGlyphOutline = ArticThumbGlyphOutline,
+        ArticThumbGlyphAdvance = ArticThumbGlyphAdvance,
         PedalPed = PedalPed,
         PedalPedOutline = PedalPedOutline,
         PedalPedAdvance = PedalPedAdvance,
@@ -5377,6 +5415,9 @@ internal static partial class GlyphMetrics
         ArticFlageoletGlyph = new(-0.400000, -0.400000, 0.400000, 0.400000),
         ArticFlageoletGlyphOutline = new(-0.400000, -0.400000, 0.400000, 0.400000),
         ArticFlageoletGlyphAdvance = 0.396000,
+        ArticThumbGlyph = new(-0.400000, -0.800000, 0.400000, 0.499955),
+        ArticThumbGlyphOutline = new(-0.400000, -0.800000, 0.400000, 0.500000),
+        ArticThumbGlyphAdvance = 0.396000,
         PedalPed = new(0.000000, 0.000000, 3.191982, 2.000000),
         PedalPedOutline = new(0.004000, -0.004000, 3.200000, 2.000000),
         PedalPedAdvance = 3.188000,
@@ -5770,6 +5811,9 @@ internal static partial class GlyphMetrics
         ArticFlageoletGlyph = new(-0.400000, -0.400000, 0.400000, 0.400000),
         ArticFlageoletGlyphOutline = new(-0.400000, -0.400000, 0.400000, 0.400000),
         ArticFlageoletGlyphAdvance = 0.400000,
+        ArticThumbGlyph = new(-0.400000, -0.800000, 0.400000, 0.500000),
+        ArticThumbGlyphOutline = new(-0.400000, -0.800000, 0.400000, 0.500000),
+        ArticThumbGlyphAdvance = 0.400000,
         PedalPed = new(0.000000, 0.000000, 3.192063, 2.000000),
         PedalPedOutline = new(0.008000, -0.004000, 3.200000, 2.000000),
         PedalPedAdvance = 3.188000,

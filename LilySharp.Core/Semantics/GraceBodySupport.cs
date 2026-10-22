@@ -346,6 +346,20 @@ internal static class GraceBodySupport
         };
 
     /// <summary>
+    /// True for the THUMB position a grace note carries — <c>@thumb</c>, LilyPond's
+    /// <c>\thumb</c>: a fingering in LilyPond, so it stands above the grace and clears it as a
+    /// fingering does, at the grace's size (session 948; ledger thumb.grace.*). THE question
+    /// the collector and the drop list both ask.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: ly/script-init.ly thumb = \finger …; general-grace-settings
+    ///   (scm/music-functions.scm:636-650) sets the Fingering's font-size −8, which the
+    ///   markup's magstep 5 lifts to the grace Script's −3.
+    /// </remarks>
+    internal static bool IsCarriedThumb(SyntaxNode annotation)
+        => annotation is ArticulationSyntax { Type: ArticulationType.Thumb };
+
+    /// <summary>
     /// True for a FALL or DOIT a grace note starts — <c>@fall</c>, <c>@doit</c>, LilyPond's
     /// <c>\bendAfter</c>: the curve leaves the small grace head (or its dot) and ends short of the
     /// next column, a grace's or the main note's, at full size (session 947; ledger
@@ -989,6 +1003,7 @@ internal static class GraceBodySupport
             foreach (var annotation in CarriedAnnotations(item))
             {
                 if (NeedsNoColumn(annotation) || IsCarriedScript(annotation) || IsCarriedBendAfter(annotation)
+                    || IsCarriedThumb(annotation)
                     || IsCarriedDynamic(annotation)
                     || IsCarriedText(annotation) || IsCarriedFingering(annotation)
                     || IsCarriedHairpinStart(annotation) || IsCarriedArpeggio(annotation)

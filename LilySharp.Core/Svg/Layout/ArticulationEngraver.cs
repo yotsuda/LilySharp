@@ -1305,8 +1305,12 @@ internal static class ArticulationEngraver
             // Inside a voice span the VOICE decides (voiceScriptUp's remark above); an
             // explicit .up/.down still wins.
             bool forceAbove = IsForcedAbove(articulation);
+            // The THUMB is a fingering in LilyPond (\thumb = \finger \markup scripts.thumb), and
+            // a lone fingering goes UP whatever the stem (fingeringOrientations '(up down)); see
+            // ThumbYUp. ⚠️ Inside a voice span the voice's side still decides — unmeasured.
+            bool thumb = articulation.Type == ArticulationType.Thumb;
             bool effectiveAbove = articulation.DirectionForced
-                ? articulation.IsAbove : voiceScriptUp ?? (forceAbove || !stemUp);
+                ? articulation.IsAbove : voiceScriptUp ?? (thumb || forceAbove || !stemUp);
             // A voice-decided side travels as a FORCED one, so CalculateYPosition (which
             // re-reads the side and would put a forced-UP script back on top) keeps it.
             bool sideForced = articulation.DirectionForced || voiceScriptUp.HasValue;
@@ -1317,7 +1321,10 @@ internal static class ArticulationEngraver
             // Y-up placement (staff-spaces above the staff middle). No staff offset:
             // the renderer/skyline resolve the staff middle at their own boundary.
             // LILYPOND-REF: side-position-interface.cc:229-264 skyline calculation
-            double yUp = CalculateYPosition(effArt, staffPosition, stemUp, item,
+            double yUp = thumb
+                ? ThumbYUp(effArt.IsAbove, item, memberBeam is null ? (NoteColumnLayout?)null
+                    : NoteColumnLayout.Of(item, stemUp, memberBeam, memberStemX), scriptStep)
+                : CalculateYPosition(effArt, staffPosition, stemUp, item,
                 NoteColumnLayout.Of(item, stemUp, memberBeam, memberStemX), fonts,
                 staffByIndex != null && staffByIndex.TryGetValue(effArt.StaffIndex, out var scriptStaff)
                     ? scriptStaff.Lines : EngravingDefaults.DefaultStaffLines,
@@ -2110,6 +2117,54 @@ internal static class ArticulationEngraver
             item.GraceTime ? GrobFontSize.FontOf(item, SizedGrob.NoteHead) : GlyphMetrics.StaffHeadFont,
             ScriptHeadStyle(item), ScriptHeadNoteValue(item));
 
+    /// <summary>
+    /// Where the THUMB position sign's origin stands, Y-up about the staff middle: LilyPond's
+    /// <c>\thumb</c> is <c>\finger \markup \scale (magstep 5) scripts.thumb</c>, a FINGERING, so it
+    /// is placed by the fingering's rule (<see cref="FingeringEngraver"/>'s BuildLayouts) and not
+    /// by a Script's: its ink clears the staff's ink, the heads' ink and a beamed stem by the
+    /// Fingering's padding 0.5. The magstep 5 undoes the Fingering's font-size −5, so the sign is
+    /// full size on a note and at the grace's −3 (Fingering −8) on a grace — the script step.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: ly/script-init.ly thumb = \finger \markup \scale (magstep 5) \musicglyph "scripts.thumb".
+    /// LILYPOND-REF: scm/define-grobs.scm Fingering — font-size −5, padding 0.5, add-stem-support only-if-beamed.
+    /// MEASURED (2.26.0, Lab sessions/p948/thumb.ly; ledger thumb.*): `d16\thumb` stands above
+    /// with its ink 0.5 over the staff's 2.05, though its stem is up; until session 948 it was a
+    /// Script, below opposite the stem.
+    /// ⚠️ A chord's thumb reads all the chord's heads, and a thumb does not stack with another
+    /// script on its side (a fingering stands in the script column by its priority 100 + position;
+    /// the walk here does not) — neither is measured.
+    /// </remarks>
+    private static double ThumbYUp(bool above, MusicItem item, NoteColumnLayout? beamedColumn,
+        double scriptStep)
+    {
+        // Read where LilyPond reads it: out of the design the Fingering's own font-size picks
+        // (−5, a grace's −8), then scaled by the markup's magstep 5 — the smaller design's top
+        // is 0.500178, the 20 design's 0.5 (ledger thumb.main.below).
+        const double markupScale = 5.0;
+        var box = MusicFont.Current.SizedAt(scriptStep - markupScale).Box(MusicGlyph.StringsThumbPosition);
+        double scale = EmmentalerDesignSize.Magstep(markupScale);
+        double inkBottom = box.Bottom * scale, inkTop = box.Top * scale;
+        double headInk = ScriptHeadBox(item).Top;
+        double headsTop = double.NegativeInfinity, headsBottom = double.PositiveInfinity;
+        foreach (int p in DotColumn.HeadPositions(item))
+        {
+            headsTop = Math.Max(headsTop, p * 0.5 + headInk);
+            headsBottom = Math.Min(headsBottom, p * 0.5 - headInk);
+        }
+        double stemUpReach = double.NegativeInfinity, stemDownReach = double.PositiveInfinity;
+        if (beamedColumn is { } col)
+        {
+            stemUpReach = EngravingDefaults.StaffMiddle - col.OutwardTipDeviceY(towardUp: true);
+            stemDownReach = EngravingDefaults.StaffMiddle - col.OutwardTipDeviceY(towardUp: false);
+        }
+        return above
+            ? Math.Max(Math.Max(FingeringEngraver.StaffInk, headsTop), stemUpReach)
+                + FingeringEngraver.Padding - inkBottom
+            : Math.Min(Math.Min(-FingeringEngraver.StaffInk, headsBottom), stemDownReach)
+                - FingeringEngraver.Padding - inkTop;
+    }
+
     private static NoteheadStyle ScriptHeadStyle(MusicItem item) => item switch
     {
         NoteItem n => n.Notehead,
@@ -2271,6 +2326,8 @@ internal static class ArticulationEngraver
             ArticulationType.DownBow => isAbove
                 ? MusicFont.Current.FullSize.Box(MusicGlyph.StringsDownBow) : MusicFont.Current.FullSize.Box(MusicGlyph.StringsDownBowTurned),
             ArticulationType.Flageolet => MusicFont.Current.FullSize.Box(MusicGlyph.StringsHarmonic),
+            // The thumb's own box (−0.8 … 0.5, LilyPond's Fingering extent; session 948).
+            ArticulationType.Thumb => MusicFont.Current.FullSize.Box(MusicGlyph.StringsThumbPosition),
             // Chord diagram: anchored at the grid bottom; a six-string one at the default size
             // (the instance's own box, spec and score size, is FrameBox).
             ArticulationType.FretFrame => FretFrameGeometry.Box(null, ScoreTextMetrics.Bundled),
