@@ -1045,6 +1045,8 @@ internal sealed class MeasureBuilder
                 RestItem r => r with { TimeScale = r.TimeScale * afterScale },
                 _ => item,
             };
+            // …while the spacing engraver holds it playing for all of it (session 940).
+            item = item with { AfterGracePlaying = full };
             AfterGraceRemainder = full - GetItemDuration(item);
         }
 

@@ -67,7 +67,10 @@ internal static partial class SpacingRules
         // The controlling duration and the share of its spring this leg takes.
         // LILYPOND-REF: lily/spacing-basic.cc:151-157 note_spacing — len from the
         //   shortest playing duration, fraction = delta_t / shortest_playing.
-        Fraction controlling = shortestPlaying is { } sp && sp > Fraction.Zero && sp < prevDuration
+        // ⚠️ LONGER than the delta too (session 940): an afterGrace's main note plays on past its
+        // own column and its closing spacer's (MusicItem.AfterGracePlaying), and each leg is a
+        // fraction of ITS spring — LilyPond takes shortest_playing whatever the delta.
+        Fraction controlling = shortestPlaying is { } sp && sp > Fraction.Zero
             ? sp : prevDuration;
 
         // LilyPond builds a note spring in ONE ORDER, and this is it — the same order the

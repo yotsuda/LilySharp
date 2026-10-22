@@ -151,6 +151,7 @@ internal sealed record MusicItemRare
     public bool GraceSlash { get; init; }
     public bool GraceStemDown { get; init; }
     public bool WrittenAfterGrace { get; init; }
+    public Fraction? AfterGracePlaying { get; init; }
     public bool HasPhrasingSlurStart { get; init; }
     public bool HasPhrasingSlurEnd { get; init; }
     public int PhrasingSlurDirection { get; init; }
@@ -471,6 +472,26 @@ public abstract record MusicItem
     {
         get => _rareBase?.WrittenAfterGrace ?? false;
         init { if (value != WrittenAfterGrace) _rareBase = (_rareBase ?? MusicItemRare.Empty) with { WrittenAfterGrace = value }; }
+    }
+
+    /// <summary>
+    /// The WRITTEN length of an afterGrace's main note — <c>c2</c> in <c>c2 afterGrace { d16 }</c>
+    /// — when this item is one; null otherwise (session 940). The item sounds 3/4 of it in the
+    /// list (<see cref="Duration"/>), and a spacer carrying the run holds the rest, but LilyPond's
+    /// note is ONE event of the written length under a parallel skip, so the spacing engraver
+    /// holds it playing for all of it: the column at the grace and the column after it are both
+    /// priced as fractions of the main note's own spring
+    /// (<c>SpacingRules.ComputeShortestPlayingAt</c>).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: ly/music-functions-init.ly afterGrace — the main event keeps its duration under a parallel skip and \grace (afterGraceFraction).
+    /// MEASURED (2.26.0, Lab sessions/p940/lp/ag.ly P1): `\afterGrace c2 { d16 } e2` — the empty
+    /// column at 3/8 stands 1.024511 before the e, a quarter of the c2's spring (4.098045).
+    /// </remarks>
+    public Fraction? AfterGracePlaying
+    {
+        get => _rareBase?.AfterGracePlaying;
+        init { if (value != AfterGracePlaying) _rareBase = (_rareBase ?? MusicItemRare.Empty) with { AfterGracePlaying = value }; }
     }
 
     /// <summary>

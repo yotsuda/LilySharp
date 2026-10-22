@@ -62,9 +62,12 @@ internal static partial class SpacingRules
             Fraction t = Fraction.Zero;
             foreach (var item in m.Items)
             {
-                Fraction end = t + item.Duration;
+                // An afterGrace's main note plays for its WRITTEN length, the spacer that carries
+                // its run included (MusicItem.AfterGracePlaying, session 940).
+                Fraction playing = item.AfterGracePlaying ?? item.Duration;
+                Fraction end = t + playing;
                 // The note "plays" at `timing` iff t <= timing < end.
-                if (t <= timing && timing < end && item.Duration > Fraction.Zero)
+                if (t <= timing && timing < end && playing > Fraction.Zero)
                 {
                     // A beat slash's spacer is a REAL playing duration: the RepeatSlashEvent
                     // is a rhythmic event carrying the body's length, and the spacing
@@ -80,19 +83,47 @@ internal static partial class SpacingRules
                             foundSpacer = true;
                         }
                     }
-                    else if (!found || item.Duration < shortest)
+                    else if (!found || playing < shortest)
                     {
-                        shortest = item.Duration;
+                        shortest = playing;
                         found = true;
                     }
                 }
-                t = end;
+                t += item.Duration;
             }
         }
 
         return found ? shortest : shortestSpacer;
     }
 
+
+    /// <summary>
+    /// An afterGrace's closing spacer — the column that carries the run on its left and stands
+    /// for LilyPond's EMPTY musical column at the grace's main moment, from which no
+    /// Note_spacing wish leaves (session 940).
+    /// </summary>
+    internal static bool IsAfterGraceCarrier(MusicItem item)
+        => item is RestItem { IsSpacer: true, LeadingGrace.IsDefaultOrEmpty: false };
+
+    /// <summary>
+    /// The shortest duration playing at kept column <paramref name="i"/> of ONE voice — the
+    /// column's own item, except where an afterGrace's main note plays on (session 940): its
+    /// own column and the closing spacer's are priced against its WRITTEN length
+    /// (<see cref="MusicItem.AfterGracePlaying"/>), as <see cref="ComputeShortestPlayingAt"/>
+    /// prices them for the timing columns.
+    /// </summary>
+    private static Fraction SoloShortestPlaying(List<(MusicItem Item, Fraction Onset)> kept, int i)
+    {
+        var item = kept[i].Item;
+        if (item.AfterGracePlaying is { } playing)
+            return playing;
+        if (item is RestItem { IsSpacer: true } && i > 0
+            && kept[i - 1].Item.AfterGracePlaying is { } mainPlaying
+            && kept[i - 1].Onset + mainPlaying > kept[i].Onset)
+            // A real note playing outranks a spacer (ComputeShortestPlayingAt).
+            return mainPlaying;
+        return item.Duration;
+    }
 
     /// <summary>
     /// Creates all springs for a measure.
@@ -254,9 +285,19 @@ internal static partial class SpacingRules
                         Math.Max(TremoloPairRod(prevItem, nextItem), SlurPairRod(prevItem, nextItem)))));
                 continue;
             }
+            // An afterGrace's closing spacer: no wish leaves LilyPond's empty column there, so the
+            // leg is the bare duration spring with its minimum 0 — mirror of
+            // MeasureLayouter.CreateInterColumnSpring (session 940).
+            if (prevItem is RestItem { IsSpacer: true, LeadingGrace.IsDefaultOrEmpty: false })
+            {
+                springs.Add(CreateTimingSpringMultiVoice(nextOnset - prevOnset, SoloShortestPlaying(kept, i),
+                        spacing, measureLength: totalDuration)
+                    .WithMinDistance(0.0));
+                continue;
+            }
             var spring = CreateSpring(fonts, prevItem, nextItem, nextOnset - prevOnset,
                 spacing: spacing,
-                shortestPlaying: prevItem.Duration);
+                shortestPlaying: SoloShortestPlaying(kept, i));
             // Swap the generic spacing-increment for the LEFT column's real head
             // width, exactly as the timing-column system does (MeasureLayouter) —
             // this is LilyPond's ideal, and leaving it out made every spring here
@@ -289,27 +330,36 @@ internal static partial class SpacingRules
         var (lastItem, lastOnset) = kept[^1];
         var lastSpring = CreateSpring(fonts, lastItem, null, totalDuration - lastOnset,
             spacing: spacing,
-            shortestPlaying: lastItem.Duration);
+            shortestPlaying: SoloShortestPlaying(kept, kept.Count - 1));
         // The column's skyline against the bar line's box — the same pair the timing-column
         // system prices (MeasureLayouter.CreateLastToBarlineSpring); the rod is applied
         // after the headroom below. (The box grew toward the next measure's opening column
         // too until session 523 — the OWN note on the pair.)
-        var barPair = NoteColumnToBarlineFloorPair(fonts, lastItem);
-        lastSpring = lastSpring.EnsureMinDistance(barPair.SkyMin);
-        lastSpring = ApplyLeftHeadWidth(lastSpring, One(lastItem), (spacing ?? SpacingOptions.Default).Increment);
+        // An afterGrace's closing spacer closes the bar with NO wish (session 940; mirror of
+        // MeasureLayouter.CreateLastToBarlineSpring): the bare duration spring, no headroom, no rod.
+        bool wishless = IsAfterGraceCarrier(lastItem);
+        if (wishless)
+            lastSpring = CreateTimingSpringMultiVoice(totalDuration - lastOnset,
+                SoloShortestPlaying(kept, kept.Count - 1), spacing);
+        var barPair = wishless ? (SkyMin: 0.0, Rod: 0.0) : NoteColumnToBarlineFloorPair(fonts, lastItem);
+        if (!wishless)
+        {
+            lastSpring = lastSpring.EnsureMinDistance(barPair.SkyMin);
+            lastSpring = ApplyLeftHeadWidth(lastSpring, One(lastItem), (spacing ?? SpacingOptions.Default).Increment);
 
-        // The bar line stands in for the right-hand stem, so LilyPond runs
-        // stem_dir_correction on THIS spring too. CreateSpring's own
-        // CalculateStemCorrection sees no RIGHT item here and contributes nothing,
-        // so without this the two spring systems disagreed on every stemmed measure:
-        // the timing-column system (MeasureLayouter.CreateLastToBarlineSpring) has
-        // carried the correction since the bar-line spring was ported, this one never
-        // did. A measure has one voice, so this is the single-wish case of
-        // MergeVoiceStemWishesToBarline — merging one wish returns it unchanged.
-        // LILYPOND-REF: lily/note-spacing.cc:111 + :243-264; :113 clamps at 0.0.
-        lastSpring = lastSpring.WithIdealDistance(
-            Math.Max(0, lastSpring.IdealDistance
-                + CalculateStemCorrectionToBarline(lastItem, NoteSpacingParameters.Default)));
+            // The bar line stands in for the right-hand stem, so LilyPond runs
+            // stem_dir_correction on THIS spring too. CreateSpring's own
+            // CalculateStemCorrection sees no RIGHT item here and contributes nothing,
+            // so without this the two spring systems disagreed on every stemmed measure:
+            // the timing-column system (MeasureLayouter.CreateLastToBarlineSpring) has
+            // carried the correction since the bar-line spring was ported, this one never
+            // did. A measure has one voice, so this is the single-wish case of
+            // MergeVoiceStemWishesToBarline — merging one wish returns it unchanged.
+            // LILYPOND-REF: lily/note-spacing.cc:111 + :243-264; :113 clamps at 0.0.
+            lastSpring = lastSpring.WithIdealDistance(
+                Math.Max(0, lastSpring.IdealDistance
+                    + CalculateStemCorrectionToBarline(lastItem, NoteSpacingParameters.Default)));
+        }
 
         // Mirror of MeasureLayouter.CreateLastToBarlineSpring: a clef change opening the
         // NEXT measure is drawn before this bar line, so it widens the MINIMUM here. The
@@ -326,7 +376,8 @@ internal static partial class SpacingRules
         // (SpacingInvariantTests.BothSpringSystems_AgreeOnEveryMusicalSpring).
         // LILYPOND-REF: lily/spacing-spanner.cc:380-393 -> lily/spring.cc:122;
         //   lily/note-spacing.cc:78-83 for the padding-free minimum it floors from.
-        lastSpring = ApplyMergeSpringsHeadroom(lastSpring);
+        if (!wishless)
+            lastSpring = ApplyMergeSpringsHeadroom(lastSpring);
 
         // Mirror of MeasureLayouter.CreateLastToBarlineSpring: the next bar opening with a grace
         // puts this bar line at the grace's moment (IntoBarBeforeGrace).

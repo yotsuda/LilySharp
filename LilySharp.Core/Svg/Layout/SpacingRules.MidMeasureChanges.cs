@@ -1403,7 +1403,7 @@ internal static partial class SpacingRules
             var grace = GraceNotesOf(items[i]);
             if (grace.IsDefaultOrEmpty)
                 continue;
-            w = Math.Max(w, CalculateGraceGroupSpringWidth(grace));
+            w = Math.Max(w, CalculateGraceGroupSpringWidth(grace, mainItem: items[i]));
         }
         return w;
     }

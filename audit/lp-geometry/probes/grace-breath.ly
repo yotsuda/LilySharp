@@ -61,3 +61,9 @@
   \score { \new Staff { \time 4/4 \fixed c' { \afterGrace c2 { d16 e16 \breathe } f2 \bar "|." } } } }
 \book { \paper { indent = 0 ragged-right = ##t page-post-process = #(dump-final "GBP") }
   \score { \new Staff { \time 4/4 \fixed c' { \afterGrace c2 { d16 } e2 \bar "|." } } } }
+\book { \paper { indent = 0 ragged-right = ##t page-post-process = #(dump-final "GBQ") }
+  \score { \new Staff { \time 4/4 \fixed c' { \afterGrace c2 { d16 e16 f16 } g2 \bar "|." } } } }
+\book { \paper { indent = 0 ragged-right = ##t page-post-process = #(dump-final "GBR") }
+  \score { \new Staff { \time 4/4 \fixed c' { \afterGrace c4 { d16 } e4 f2 \bar "|." } } } }
+\book { \paper { indent = 0 ragged-right = ##t page-post-process = #(dump-final "GBS") }
+  \score { \new Staff { \time 4/4 \fixed c' { \afterGrace c1 { d16 } e1 \bar "|." } } } }

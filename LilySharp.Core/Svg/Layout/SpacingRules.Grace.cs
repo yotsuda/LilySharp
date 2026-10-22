@@ -260,6 +260,19 @@ internal static partial class SpacingRules
             // LILYPOND-REF: lily/spacing-spanner.cc:228-297 set_column_rods — the rod, padding + skyline distance.
             double inverseCompress = Math.Max(0.0,
                 CreateGraceSpring(notes[i].Length, gp, dtMin).IdealDistance - gp.SpacingIncrement);
+            // An AFTERGRACE's last gap (session 940): the run's main column is the closing
+            // spacer's — LilyPond's EMPTY musical column at the grace's main moment — which holds
+            // no note, so no Note_spacing wish reaches it: the gap is the bare grace spring, its
+            // minimum dropped to 0 (lily/spacing-spanner.cc:380-391 musical_column_spacing, no
+            // wishes and a musical right column), and the column's empty extent puts no rod on it.
+            // MEASURED (2.26.0, Lab sessions/p940/lp/ag.ly P1/P2): the last grace -> that column
+            // 1.28 = 1.6 x 0.8, where the Note_spacing pair would give 1.938627.
+            // LILYPOND-REF: lily/spacing-basic.cc:163-175 Spacing_spanner::note_spacing — the grace branch, Spring (len, increment).
+            if (i + 1 == notes.Length && mainItem is RestItem { IsSpacer: true, LeadingGrace.IsDefaultOrEmpty: false })
+            {
+                gap = CreateGraceSpring(notes[i].Length, gp, dtMin).IdealDistance;
+                rod = 0.0;
+            }
             // A breathing sign between this column and the next (session 936) stands in a column
             // of its own there: the gap is the two springs in series, grace → sign and sign →
             // next grace (InnerBreathSprings), each at its own length.
@@ -654,11 +667,16 @@ internal static partial class SpacingRules
     /// </remarks>
     public static double CalculateGraceGroupSpringWidth(
         ImmutableArray<GraceColumnInfo> notes,
-        GraceSpacingParameters? graceParams = null)
+        GraceSpacingParameters? graceParams = null,
+        MusicItem? mainItem = null)
     {
         if (notes.IsDefaultOrEmpty)
             return 0;
-        double span = GraceColumns(notes, mainItem: null, graceParams).Span;
+        // The main item decides only an AFTERGRACE's last gap (its closing spacer: the bare grace
+        // spring, GraceColumns) — session 940; every other run spans the same without it.
+        double span = GraceColumns(notes,
+            mainItem is RestItem { IsSpacer: true, LeadingGrace.IsDefaultOrEmpty: false } ? mainItem : null,
+            graceParams).Span;
         return span + GraceColumnLeftReach(notes[0]) - DefaultExtraSpacingWidth;
     }
 
@@ -729,7 +747,7 @@ internal static partial class SpacingRules
             ? spring
             : SpringIntoGraceRun(spring,
                 GraceColumns(graceNotes, mainItem, graceParams),
-                CalculateGraceGroupSpringWidth(graceNotes, graceParams),
+                CalculateGraceGroupSpringWidth(graceNotes, graceParams, mainItem),
                 GraceSpringInverseStretch(graceParams), approachFloor);
 
     /// <summary>

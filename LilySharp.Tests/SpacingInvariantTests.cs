@@ -443,6 +443,38 @@ public class SpacingInvariantTests
             && s.Series[^1].IdealDistance == SpacingRules.MarkColumnToNoteIdeal);
     }
 
+    [Theory]
+    [InlineData("c'2 afterGrace { d'16 } e'2")]
+    [InlineData("c'2 afterGrace { d'16 e'16 f'16 } g'2")]
+    [InlineData("c'4 afterGrace { d'16 } e'4 f'2")]
+    [InlineData("c'1 afterGrace { d'16 }")]
+    public void BothSpringSystems_AgreeAroundAnAfterGrace(string bar)
+    {
+        // An afterGrace's main note plays for its written length, its run's last gap is the bare
+        // grace spring, and its closing spacer sends no wish, to the next note or to the bar line
+        // (session 940; ledger aftergrace.* / breath.aftergrace.*). The ledger watches the drawn
+        // bar; this watches that the line breaker's estimate prices the same bar — no book in the
+        // corpus writes an afterGrace, so nothing else would.
+        var (timings, allMeasures, primary, _) = Collect($$"""
+            time 4/4
+            octave absolute
+            part melody
+            section Main { melody { {{bar}} | } }
+            form { Main }
+            score x { staff melody }
+            """);
+        var fonts = LilySharp.Core.Rendering.ScoreTextMetrics.Bundled;
+        var spacing = SpacingOptions.Default;
+        var columnSprings = new MeasureLayouter().CreateTimingSprings(fonts, primary, timings, spacing, allMeasures);
+        var itemSprings = SpacingRules.CreateSpringsForMeasure(fonts, primary, spacing);
+
+        Assert.Equal(columnSprings.Length, itemSprings.Length);
+        for (int i = 0; i < columnSprings.Length; i++)
+        {
+            Assert.Equal(columnSprings[i].IdealDistance, itemSprings[i].IdealDistance, 9);
+    }
+    }
+
     [Fact]
     public void MmrRodMinimumDistance_ReservesBreakAlignedChangeAtRunBound()
     {

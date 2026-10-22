@@ -9002,6 +9002,9 @@ internal static class LpGeometryProbes
     private static readonly string GBRN = GraceTieBook("c2 afterGrace { d16@breath e16 } f2 |", "GBRN");
     private static readonly string GBRO = GraceTieBook("c2 afterGrace { d16 e16@breath } f2 |", "GBRO");
     private static readonly string GBRP = GraceTieBook("c2 afterGrace { d16 } e2 |", "GBRP");
+    private static readonly string GBRQ = GraceTieBook("c2 afterGrace { d16 e16 f16 } g2 |", "GBRQ");
+    private static readonly string GBRR = GraceTieBook("c4 afterGrace { d16 } e4 f2 |", "GBRR");
+    private static readonly string GBRS = GraceTieBook("c1 afterGrace { d16 } | e1 |", "GBRS");
     // A breathing sign or caesura between two notes the auto-beamer would beam
     // (audit/lp-geometry/probes/breath-beam.ly; session 937).
     private static readonly string BBA = GraceTieBook("c4 d16@breath e16 f8 c2 |", "BBA");
@@ -17605,6 +17608,15 @@ internal static class LpGeometryProbes
         new("breath.aftergrace.beamed.sign-to-main", GBRO, g => g.NoteheadFromBreath(3)),
         new("breath.aftergrace.control.main-to-grace", GBRP, g => g.NoteheadToNotehead(0, 1)),
         new("breath.aftergrace.control.grace-to-main", GBRP, g => g.NoteheadToNotehead(1, 2)),
+        new("aftergrace.three.main-to-grace", GBRQ, g => g.NoteheadToNotehead(0, 1)),
+        new("aftergrace.three.first-gap", GBRQ, g => g.NoteheadToNotehead(1, 2)),
+        new("aftergrace.three.second-gap", GBRQ, g => g.NoteheadToNotehead(2, 3)),
+        new("aftergrace.three.grace-to-main", GBRQ, g => g.NoteheadToNotehead(3, 4)),
+        new("aftergrace.quarter.main-to-grace", GBRR, g => g.NoteheadToNotehead(0, 1)),
+        new("aftergrace.quarter.grace-to-main", GBRR, g => g.NoteheadToNotehead(1, 2)),
+        new("aftergrace.quarter.next-pair", GBRR, g => g.NoteheadToNotehead(2, 3)),
+        new("aftergrace.whole.main-to-grace", GBRS, g => g.NoteheadToNotehead(0, 1)),
+        new("aftergrace.whole.grace-to-next-bar", GBRS, g => g.NoteheadToNotehead(1, 2)),
         new("breath.beam.note-to-sign", BBA, g => g.BreathFromNotehead(1)),
         new("breath.beam.sign-to-note", BBA, g => g.NoteheadFromBreath(2)),
         new("breath.beam.beamed-pair", BBA, g => g.NoteheadToNotehead(2, 3)),

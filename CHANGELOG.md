@@ -120,6 +120,9 @@ workflow attaches that section to the GitHub Release verbatim.
   beam there, so the grace notes after it take flags — as in LilyPond (a caesura does not). Before
   a grace rest it is drawn the same way (`grace { d16@breath r16 e16 } f4`), and in an
   `afterGrace` (`c2 afterGrace { d16@breath } e2`).
+  **An `afterGrace` is spaced as LilyPond spaces it** (`c2 afterGrace { d16 } e2`): the main
+  note keeps its whole value for spacing, the grace notes stand closer to the note after them,
+  and that note is no longer pushed away — the bar was over two staff spaces too wide.
   **A caesura no longer breaks an automatic beam** (`d16@caesura e16 f8`): one beam runs across
   it, as in LilyPond, where it split the beam and stood the caesura half a space too far off. A
   breathing sign still ends the beam, as LilyPond's does.

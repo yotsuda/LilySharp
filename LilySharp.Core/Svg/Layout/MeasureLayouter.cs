@@ -921,6 +921,14 @@ internal sealed class MeasureLayouter
             var next = ItemStartingAt(vm, timings[i]);
             if (prev == null || next == null)
                 continue;
+            // An afterGrace's closing spacer is a column for the run it CARRIES (on its left),
+            // but LilyPond's column there is EMPTY: no note column, so no Note_spacing wish leaves
+            // it (session 940). The gap after it is the bare duration spring with its minimum 0
+            // (lily/spacing-spanner.cc:380-391 musical_column_spacing) — before this, the run's
+            // grace items standing at the same moment put their ink under the wish's minimum
+            // (`c2 afterGrace { d16 e16 f16 } g2`: 1.804200 for LilyPond's 1.024511).
+            if (prev is RestItem { IsSpacer: true, LeadingGrace.IsDefaultOrEmpty: false })
+                continue;
             anyWish = true;
             if (wishMany is not null) wishMany.Add(prev);
             else if (wish0 is null) wish0 = prev;
@@ -1235,7 +1243,16 @@ internal sealed class MeasureLayouter
         // compressed length alone, as on every inter-column spring.
         double maxRod = 0;
         var lastItems = columns[^1];
-        if (lastItems.Count > 0)
+        // An afterGrace's closing spacer closes the bar with NO wish (session 940): LilyPond's
+        // column there is empty, so the pair is the bare duration spring — no head width, no
+        // skyline minimum, no merge_springs headroom (lily/spacing-spanner.cc:380-393 takes
+        // merge_springs only over wishes), and no rod over the empty extent. MEASURED (2.26.0,
+        // Lab sessions/p940/lp/ag.ly P5): `\afterGrace c1 { d16 }` — the empty column at 3/4
+        // stands 1.324511 before the bar line, a quarter of the whole note's spring.
+        bool wishless = lastItems.Count > 0;
+        for (int q = 0; q < lastItems.Count; q++)
+            wishless &= SpacingRules.IsAfterGraceCarrier(lastItems[q]);
+        if (lastItems.Count > 0 && !wishless)
         {
             endSpring = TabVoiceWishes(measuresToScan, stavesOfMeasures, timings[^1]) is { } tabWishes
                 // A TAB voice closes the bar: one wish per voice, averaged as merge_springs
@@ -1324,7 +1341,8 @@ internal sealed class MeasureLayouter
         //   lily/spring.cc:122 avg_distance = max (min_distance + 0.3, avg_distance).
         // LILYPOND-REF: lily/note-spacing.cc:78-83 — the spring MINIMUM is the
         //   padding-free skyline distance, which is what the 0.3 is measured from.
-        endSpring = SpacingRules.ApplyMergeSpringsHeadroom(endSpring);
+        if (!wishless)
+            endSpring = SpacingRules.ApplyMergeSpringsHeadroom(endSpring);
 
         // The NEXT bar opening with a grace puts this bar line at the grace's moment, and a
         // spring into a column with a grace part takes LilyPond's 0.8 (SpacingRules.IntoBarBeforeGrace).
