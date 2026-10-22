@@ -52,7 +52,11 @@ $template = @'
 
   header { padding:80px 0 68px; }
   .brand { font-size:56px; line-height:1.05; margin:0 0 14px; letter-spacing:-.03em; font-weight:700; }
-  .tagline { font-size:20px; color:var(--muted); margin:0 0 48px; max-width:34em; }
+  .tagline { font-size:20px; color:var(--muted); margin:0 0 18px; max-width:34em; }
+  /* the three ways in, one per line: start, learn, or bring a scan in (the reader's page) */
+  ul.entries { list-style:none; margin:0 0 48px; padding:0; font-size:18px; }
+  ul.entries li { margin:0 0 6px; }
+  ul.entries .entry-note { color:var(--muted); font-size:14px; margin-left:6px; white-space:nowrap; }
 
   /* auto-fit + minmax reflows on the CONTAINER's width, not the viewport's.
      min-width:0 stops a wide child (a long code line, a big SVG) from forcing
@@ -167,9 +171,13 @@ $template = @'
 <header><div class="wrap">
   <h1 class="brand">Lily#</h1>
   <p class="tagline">Publication-quality sheet music from plain text — engraved by a
-  LilyPond port, edited in an IDE that keeps up with your keystrokes.
-  <a href="start.html">Get started &rarr;</a> ·
-  <a href="learn.html">Learn it lesson by lesson &rarr;</a></p>
+  LilyPond port, edited in an IDE that keeps up with your keystrokes.</p>
+  <ul class="entries">
+    <li><a href="start.html">Get started &rarr;</a></li>
+    <li><a href="learn.html">Learn it lesson by lesson &rarr;</a></li>
+    <li><a href="scan.html">Bring in printed music from a scan or PDF &rarr;</a>
+      <span class="entry-note">Windows · beta</span></li>
+  </ul>
   {{HERO_SHOT}}
   <p class="caption">The source and the engraving, side by side. The preview follows your
   keystrokes — it does not wait for a save.</p>
