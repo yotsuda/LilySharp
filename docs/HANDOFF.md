@@ -48,6 +48,7 @@ tools\Session-Check.ps1 -End pNNN -DiffBase <開始時 HEAD>   # 終了の機械
   `project-notes/` も `notes/`、`ベースタブLy`・`dogfood`・`samples-playground` は `corpora/`、その他の話題フォルダは
   `probes/<名前>/`、直下の単発ファイルは `probes/loose/YYYY-MM/`）。**生成物（絵・trx・バイナリ）は移していない**
   ＝要るなら取り直す。コード内コメントや ARCHIVE の `scratch/` 表記は書き換えない。
+- ★★★ **開始時に `C:\MyProj\LilySharp-Omr\docs\repro\REQUESTS.md` の `open` を見る＝open があればそれに優先的に着手する**（ユーザー指示 2026-10-23・第961）。OMR 側（楽譜画像 → `.lys`）からの依頼の 1 枚で、状態は両側で書き換える（直したら `fixed <commit>`・直さないなら `won't`・聞くなら `question`。長い返事は Lab の `sessions/pNNN/` に置いて行から指す）。
 - 証明 ⑴ の道具は `LilySharp-Lab\tools\rerender-ls.ps1`（RULES §5.5 のコマンド一覧）。
 - ★★★ **開始時に `LilySharp-Lab\notes\CLAUDE-OPERATIONS.md` も通読する**＝シェルと道具の使い方（Bash・PowerShell ツール・ripple は禁止・pwsh MCP の作法）・push や commit のユーザー規則・機械と社内環境の罠。**user memory は使わない**（2026-09-17・ユーザー決定。PC ローカルで他の PC に届かない）＝知見は RULES §4 の表の置き場所へ書く（公開してよい技術知見は RULES §5、private なものは Lab の notes）。
 ⚠️ **読み方の罠のうち、スクリプトが*刷れない*もの**（刷れる 4 つ——合計で読む・Release で測る・
@@ -87,6 +88,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 **第815〜816（2026-10-05）OMR の提案**（`..\LilySharp-Omr\docs\repro\lilysharp-proposal-2026-10-04.md`・全文は ARCHIVE「§1.0 から移した閉じた段落」）: 0・A1・B1〜B6・C1〜C3・P1〜P5 は閉じた・P6（SMuFL）は第857 から。残り: ⚠️ **B1〜B6 は VS Code で未確認**／**B5 は OMR の `omr verify` 待ち**／**配布は 2026-10-12 オーナー決定で「別の VS Code 拡張（`yotsuda.lilysharp-omr`・Beta・win-x64）」に変わった**（`lilysharp-handoff-2026-10-12.md`・10-05 の L2〜L6・L8 は作らない）。**Lily# 側の受け口は第903 で実装**（`omrReader.ts`・§1.1 第903）＝残りは `MANUAL-CHECKS.md` §5 B7 の実機確認と表示名・利用条件（オーナー）。
 
 **⒜ 今すぐ手が動く（計器も直し方も分かっている）**
+- **GitHub Pages の OMR デモ動画の撮影＝タスク（ユーザー指示 2026-10-23・第961）**: `site/videos/SHOTLIST.md` の **16 `scan-read.mp4`・17 `scan-transform.mp4`**（手順はそこ・第961 が OMR 側の `site-scan-2026-10-22.md` から写した）。置き場は `site/scan-body.html` の `figure.demo-video[data-pending]` 2 つ＝動画を置いたら `data-pending` を外す。収録の仕様は SHOTLIST「収録の仕様」（H.264・約 1280×720・5 MB 以下・5〜25 秒）。
 - **学習セットと Pages＝`docs/HANDOFF-LEARNING.md`**（レッスン 12 本・Pages の段 1〜4 は全部済＝判断待ちは無い・細かい残りはそこ。第910 が「段 1／3 済・判断待ち」の古い記述を直した）。
 - **プレビューの音源＝第901 で SoundFont シンセ（spessasynth_lib）に替えた**（`docs/playback-design.md`）。⑴ **音源＝同梱しない（2026-10-12 オーナー決定）**。既定は OS の GM バンク（`gm.dls` 等）、推奨と手順は `editor.html#soundfonts`（design §4・実機確認は §2.3.1 で済）／⑵ **次段 B＝LSP サーバーから MIDI 出力ポート＝第911 で実装**（ユーザー決定 2026-10-18・`lilysharp.playback.output`・*Choose MIDI Output…*・`LilySharp.Lsp/MidiOut/`＝winmm／CoreMIDI／ALSA sequencer を P/Invoke だけで・design §6）。**Windows は網が実機の GS 音源を開いて鳴らした・mac／Linux は未実走**＝**ユーザーの実機確認待ち**（`MANUAL-CHECKS.md` §3.5＝GS と loopMIDI→DAW）／⑶ **`lysc wav` は第916 で作った**（`758a2ac26`・MeltySynth・`--soundfont`／`LILYSHARP_SOUNDFONT`・SoundFont 2 だけ＝`.sf3` と DLS は断る・エディタの Export には未接続）／⑷ part の `midiChannel`（DAW テンプレートの固定）は要るときに。
 - **`@todo` の memo の置き場＝第899〜900 で「段組みが memo の置き場を予約（必要なときだけ段が下がる）＋並びの探索」まで閉じた**（規則は `docs/todo-memo-design.md`・残りは同 §4＝順番の探索・長い memo の切り詰め。`lysc svg|png|pdf --todo`＝`0668a9705` で済）。**下の声部の memo は自動で下＝ユーザー決定 2026-10-17「(a)」・第910 で実装**（`MusicItem.WithTodoSideOfVoice`・`.up` で上に戻る・MANUAL-CHECKS §2.1 に `[ ]` 1 項目）。**ユーザーの実機確認待ち**（Reload Window 後・`Untitled-2.lys`＝余白が増えない・`sessions/p896/probe/one.lys`＝段が下がって 6 本が収まる）
@@ -124,6 +126,22 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第961セッション（2026-10-23・YT-DELL2）
+
+第960 と同じ会話の続き（ユーザー「`C:\MyProj\LilySharp-Omr\docs\repro\REQUESTS.md` の open を見て」→ 途中で「HANDOFF に一点足して＝open があれば優先して着手」「Pages の OMR デモ動画（SHOTLIST 16・17）の撮影もタスクに」）。`-Start p961`（開始 HEAD `61990b13c`・未 push 2・第959 を ARCHIVE へ）。作業場所は Lab `sessions/p961/`（再現 `probe/`・LP の dump `probe/ly/dump.ly`／`dump2.ly`・返事 `omr/lilysharp-reply-2026-10-23.md`・掃き `svg/`）。
+- **§0 に規則を足した**（REQUESTS.md の open を優先）・**§1.0 ⒜ に動画の撮影を載せた**（ユーザー指示 2 件）。
+- **REQUESTS #1（段をまたいだトリルの続きで次の線が 1 段外へ）＝fixed**（本体 commit）: 原因は LP の **`adjust-on-neighbor`**（終わるトリルは `right-neighbor`＝同じ音符から始まる次のトリルの「tr」の真の左端の手前で止まる・scheme-engravers.scm:1821-1822・line-spanner.cc:211-225）が無く、波の最後の要素（幅 1.0）が位相しだいで次の「tr」の下まで走って outside-staff が 0.62 積んでいた。`TrillSpannerEngraver`: 全 spanner の「tr」の原点を先に取り（`GlyphOrigin`）、stop item で始まる spanner があれば `EndX = min(列の左端, その「tr」の `Outline.Left`)`。
+- **#2（続きの頭の「tr」）＝fixed・刷る**（LP どおり）: `calc_bound_info` は `left-broken` を `left` に **append** する（:128-135）ので `text` は残り、`end-on-note` で続きが最初に覆う音符列の中心（`FirstColumnCentre`）。OMR 側を合わせてほしい旨を返事に書いた。
+- **LP の実測**（`\paper { page-post-process }` で TrillSpanner の X/Y/skyline/side-support-elements を dump）: 1 本目 4.045・続き 4.545・2 本目 5.545。Lily# は 4.045／**4.505**／5.545 ＝ ⚠️ **OPEN 0.040（続き）**: LP は続きの「tr」の板（線の 1.0 下）を g'4 に対して数えていない形（4.545 ＝ b' の頭 4.045 ＋ 0.5）なのに dump の skyline は板を持つ＝機構は未特定（`TrillSpannerTests.ChainedTrills_OverABreak…` に記録）。
+- **網**: `TrillSpannerTests` に 2 本＝高さと「tr」の中心（RenderedGeometry・3 桁）＋ 7 綴りの theory「終わる波は次の「tr」の真の左端を越えない」（SVG）。毒＝neighbour を外す: theory 4/7 赤（高さの網は位相の都合で緑＝観測者は theory）／続きの「tr」を消す: 高さの網 1 赤（tr が 2 つ）。掃き 1,248 枚で **0**（段をまたぐトリルも連鎖するトリルも本に無い）。
+- **#4 サイト＝fixed**（`scan-body.html` に OMR の HTML を 3 か所・SHOTLIST 16・17）・**#5＝確認・異論なし**。**#3（下の声部の `.up` のポルタートが上の声部の休符に重なる・LP も同じ絵・オーナー判断で直す）は open＝次便 p962 で着手**（別の声部の休符を script の障害物に数える＝LILYSHARP-OWN の設計）。CHANGELOG `## Unreleased` を立て、組版の行に `[engraving]` 印（OMR の依頼）。
+- 計器の罠: ⒜ LP の svg は Edge headless の `--screenshot` で png にして Read できる（`msedge --headless=new --screenshot=… file:///…svg`）／⒝ RenderedGeometry は波の要素（trill_element）を glyph として記録しない＝波の端は SVG で読む／⒞ 「tr」の順序は Y→X で並べると続きの「tr」が最後になる＝同じ段で X 最大を取る／⒟ `site/scan-body.html` は Edit で LF 化した（CRLF に戻した）。
+
+- `-End p961 -DiffBase 61990b13c` ＝full **12949 / 0 / 2 / 12951**（前便末 12943 ＋ 8＝`TrillSpannerTests` の 1 本と theory 7 綴り）（Lab `sessions/p961/end.log`）→ この docs commit。本体 `ba4120841`（`TrillSpannerEngraver`・網・棚卸し・CHANGELOG・site）。Core '+' 100 行／LILYPOND-REF 3／LILYSHARP-OWN 0。未 push 3＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。OMR 側の `REQUESTS.md` の状態列は書き換えた（Omr repo の commit は OMR 側の便に任せる）。
+判定（2026-10-23）: 次便は **REQUESTS #3**（別の声部の休符を `.up`／`.down` の script の障害物に数える＝LILYSHARP-OWN・LP と違う絵になるので APPROXIMATIONS に理由を書く）。そのあと grace の束の残り（⑵ `@todo`・⑶ `@chord`／`@figuredBass`／`@diagram`）・単一譜の `@cross` の警告（要ユーザー判断）・§2 E ⑹・続きのトリルの OPEN 0.040。
+
+## 以下は第960セッションの経緯
+
 ### 1.1 第960セッション（2026-10-22・YT-DELL2）
 
 第959 と同じ会話の続き（ユーザー「続けて」＝⑴ main の tab accent の 0.2575・⑷ GRAMMAR の `@cross`）。`-Start p960`（開始 HEAD `2eb9d493a`＝ユーザーが push し site の commit を足した後・未 push 0・第958 を ARCHIVE へ）。作業場所は Lab `sessions/p960/`（計器 `Zz960ProbeTests.cs.txt`・probe `probe/cross.lys`）。
@@ -133,19 +151,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 
 - `-End p960 -DiffBase 2eb9d493a` ＝full **12941 / 0 / 2 / 12943**（前便末と同数）（Lab `sessions/p960/end.log`）→ この docs commit。本体 `1ef488bed`（test の remark と GRAMMAR 2 枚）。未 push 1＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。
 判定（2026-10-22）: grace の束（第957〜960）で残るのは ⑵ `@todo` を grace へ（`docs/todo-memo-design.md` の規則）・⑶ `@chord`／`@figuredBass`／`@diagram` を grace へ（別 engraver・`@chord`／`@figuredBass` は LP と照合可）。ほかに ⑷ 単一譜の `@cross` が黙って何もしない＝警告の候補（要ユーザー判断）・§2 E ⑹ 開いた和音入力（綴りの合意が先）。
-
-## 以下は第959セッションの経緯
-
-### 1.1 第959セッション（2026-10-22・YT-DELL2）
-
-第958 と同じ会話の続き（ユーザー「続けて」＝⑷ tab の grace の script を LP の双子で照合）。`-Start p959`（開始 HEAD `8dee184b7`・未 push 99・第957 を ARCHIVE へ）。作業場所は Lab `sessions/p959/`（LP の dump `probe/tabgrace.ly`／`.log`）。
-- **LP の dump**（`\tabFullNotation`＝素の TabStaff は Script を全部消す・Lily# の full tab は描く＝既決 `TabStaffStencils`）: `r4 \grace { c'16-> } d'4 e'-> f'`＝grace の accent（Script −3）は grace の TabNoteHead（−4）の中心で**最下弦の 0.646985 下**（grace の符尾は up＝score-grace-settings）・main の accent は最上線の 1.289309 上。
-- **直した**（本体 commit）: tab 枝の grace の符尾向き＝`!item.GraceStemDown`（五線の枝と同じ）＝accent と字は grace の**下**へ（Lily# は上に 0.65 だった＝量は合っていて側だけ逆）。grace の accent は LP と 3 桁一致（`TabGraceScriptTests`・RenderedGeometry）。第958 の字の同一性の網を「最下弦の下 1.44／1.06」に書き換え。毒＝符尾を弦から読む: 3 赤。
-- ⚠️ **OPEN（この島ではない）**: 同じ本の **main の tab accent（`e@accent`・ギター）は 1.546850 で LP の 1.289309 と 0.2575 違う**（第694 は bass tab の 4 弦で一致を測った＝ギターの e の形は未測・符尾の先か数字の高さの読みか）＝次便の候補。
-- 掃きは回していない＝第958 の掃き（tab の grace の script の列と寸を全部変えて 0 枚）が「tab の grace に script を書く本はコーパスに無い」と言った直後の、同じ経路の変更。
-
-- `-End p959 -DiffBase 8dee184b7` ＝full **12941 / 0 / 2 / 12943**（前便末 +1＝網の組み替え）（Lab `sessions/p959/end.log`）→ この docs commit。本体 `483264535`（Core の差は 8 行）。未 push 100＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。
-判定（2026-10-22）: tab の grace の script は LP の側と高さになった（grace の accent 3 桁一致）。次の候補＝⑴ **main の tab accent のギターの 0.2575**（`e@accent` 1.546850 vs LP 1.289309＝LP の dump は Lab `sessions/p959/probe/tabgrace.log` にある・Lily# の tab 枝の支え＝符尾の先か数字の高さを LP と並べる）・⑵ `@todo` を grace へ・⑶ `@chord`／`@figuredBass`／`@diagram` を grace へ・⑷ GRAMMAR.md の `@cross` 行の点検。§2 E ⑹ 開いた和音入力は綴りの合意が先（要ユーザー判断）。
 
 ## 2. 開いている作業
 

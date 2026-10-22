@@ -160,6 +160,19 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第959セッションの経緯
+
+### 1.1 第959セッション（2026-10-22・YT-DELL2）
+
+第958 と同じ会話の続き（ユーザー「続けて」＝⑷ tab の grace の script を LP の双子で照合）。`-Start p959`（開始 HEAD `8dee184b7`・未 push 99・第957 を ARCHIVE へ）。作業場所は Lab `sessions/p959/`（LP の dump `probe/tabgrace.ly`／`.log`）。
+- **LP の dump**（`\tabFullNotation`＝素の TabStaff は Script を全部消す・Lily# の full tab は描く＝既決 `TabStaffStencils`）: `r4 \grace { c'16-> } d'4 e'-> f'`＝grace の accent（Script −3）は grace の TabNoteHead（−4）の中心で**最下弦の 0.646985 下**（grace の符尾は up＝score-grace-settings）・main の accent は最上線の 1.289309 上。
+- **直した**（本体 commit）: tab 枝の grace の符尾向き＝`!item.GraceStemDown`（五線の枝と同じ）＝accent と字は grace の**下**へ（Lily# は上に 0.65 だった＝量は合っていて側だけ逆）。grace の accent は LP と 3 桁一致（`TabGraceScriptTests`・RenderedGeometry）。第958 の字の同一性の網を「最下弦の下 1.44／1.06」に書き換え。毒＝符尾を弦から読む: 3 赤。
+- ⚠️ **OPEN（この島ではない）**: 同じ本の **main の tab accent（`e@accent`・ギター）は 1.546850 で LP の 1.289309 と 0.2575 違う**（第694 は bass tab の 4 弦で一致を測った＝ギターの e の形は未測・符尾の先か数字の高さの読みか）＝次便の候補。
+- 掃きは回していない＝第958 の掃き（tab の grace の script の列と寸を全部変えて 0 枚）が「tab の grace に script を書く本はコーパスに無い」と言った直後の、同じ経路の変更。
+
+- `-End p959 -DiffBase 8dee184b7` ＝full **12941 / 0 / 2 / 12943**（前便末 +1＝網の組み替え）（Lab `sessions/p959/end.log`）→ この docs commit。本体 `483264535`（Core の差は 8 行）。未 push 100＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。
+判定（2026-10-22）: tab の grace の script は LP の側と高さになった（grace の accent 3 桁一致）。次の候補＝⑴ **main の tab accent のギターの 0.2575**（`e@accent` 1.546850 vs LP 1.289309＝LP の dump は Lab `sessions/p959/probe/tabgrace.log` にある・Lily# の tab 枝の支え＝符尾の先か数字の高さを LP と並べる）・⑵ `@todo` を grace へ・⑶ `@chord`／`@figuredBass`／`@diagram` を grace へ・⑷ GRAMMAR.md の `@cross` 行の点検。§2 E ⑹ 開いた和音入力は綴りの合意が先（要ユーザー判断）。
+
 ## 以下は第958セッションの経緯
 
 ### 1.1 第958セッション（2026-10-22・YT-DELL2）
