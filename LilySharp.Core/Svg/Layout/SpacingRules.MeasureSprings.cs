@@ -321,6 +321,14 @@ internal static partial class SpacingRules
             // Mirror of MeasureLayouter.CreateInterColumnSpring.
             // LILYPOND-REF: lily/spacing-spanner.cc:380-393 -> lily/spring.cc:122.
             spring = ApplyMergeSpringsHeadroom(spring);
+            // …and the column rod last, a floor on the compressed length only — mirror of
+            // MeasureLayouter.CreateInterColumnSpring, as the mark-column pair above and the bar
+            // line pair below already were. Until session 941 the ordinary pair had none, so the
+            // line breaker priced every compressed note-to-note gap 0.1 under the one the page
+            // draws (a black head's pair: 1.5042 against 1.6042).
+            // LILYPOND-REF: lily/spacing-spanner.cc:228-297 set_column_rods.
+            spring = spring.EnsureMinDistance(Math.Max(SeparationRodDistance(fonts, prevItem, nextItem, staffY: 0),
+                Math.Max(TremoloPairRod(prevItem, nextItem), SlurPairRod(prevItem, nextItem))));
             springs.Add(spring);
         }
 

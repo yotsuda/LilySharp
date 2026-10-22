@@ -330,7 +330,8 @@ public class SpacingInvariantTests
         // legs (springs 2..4) ask for 2 × len + the head refinement, which is UNDER the
         // 2.4 + 0.3 the increment floor lifted them to, and stretch at 2 × max (0.1, len − 1.2),
         // not at ideal − 1.2. ⑵ The quarters' legs (1 and 6) sit on merge_springs' headroom,
-        // which stands on the skyline minimum.
+        // which stands on the skyline minimum — 0.1 under the column rod that floors the
+        // reported minimum since session 941, in this system as in the column one.
         for (int i = 2; i <= 4; i++)
         {
             Assert.True(itemSprings[i].IdealDistance < 2.4 + 0.3,
@@ -338,7 +339,8 @@ public class SpacingInvariantTests
             Assert.Equal(0.2, itemSprings[i].InverseStretchStrength, 9);
         }
         foreach (int i in new[] { 1, 6 })
-            Assert.Equal(itemSprings[i].MinDistance + 0.3, itemSprings[i].IdealDistance, 9);
+            Assert.Equal(itemSprings[i].MinDistance - SpacingRules.SeparationRodPadding + 0.3,
+                itemSprings[i].IdealDistance, 9);
     }
 
     [Fact]
@@ -454,7 +456,9 @@ public class SpacingInvariantTests
         // grace spring, and its closing spacer sends no wish, to the next note or to the bar line
         // (session 940; ledger aftergrace.* / breath.aftergrace.*). The ledger watches the drawn
         // bar; this watches that the line breaker's estimate prices the same bar — no book in the
-        // corpus writes an afterGrace, so nothing else would.
+        // corpus writes an afterGrace, so nothing else would. The MINIMUMS agree too since session
+        // 941, when the estimate's note-to-note pairs took the column rod the drawn system had
+        // (`e'4 f'2` here: 1.6042 in both, where the estimate read 1.5042).
         var (timings, allMeasures, primary, _) = Collect($$"""
             time 4/4
             octave absolute
