@@ -76,16 +76,6 @@ public sealed partial class MeasureCollector
         return plan;
     }
 
-    /// <summary>How many voices a span puts on the staff: a merged chart one or two, any other
-    /// span one a block.</summary>
-    private int VoiceCountOf(ParallelExpressionSyntax parallel, Fraction startOffset, Fraction spanDuration,
-        int spanDots, MetadataState spanMeta)
-    {
-        if (parallel.IsDrums && DrumPlanOf(parallel, startOffset, BarLengthOf(spanMeta), spanDuration, spanDots) is { } plan)
-            return plan.Lower.Count > 0 ? 2 : 1;
-        return parallel.Voices.Count();
-    }
-
     private static Fraction BarLengthOf(MetadataState meta)
         => meta.TimeBeats > 0 && meta.TimeBeatType > 0 && !meta.TimeSenzaMisura
             ? new Fraction(meta.TimeBeats, meta.TimeBeatType)

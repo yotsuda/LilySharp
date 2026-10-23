@@ -166,7 +166,7 @@ public sealed partial class MeasureCollector
             SectionStartLogCount = _sectionStartLog.Count,
             TableCounts = counts,
             PendingInlineVoltaCount = _pendingInlineVoltas.Count,
-            ParallelSpanCount = _parallelSpans.Count,
+            SpanTrackCount = _spanTracks.Count,
             ResolvedSpellingCount = _resolvedSpellingLog.Count,
             RepetitionReadCount = _repetitionOriginalReads.Count,
             MeasureCount = builder.CurrentMeasureIndex,
@@ -219,23 +219,21 @@ public sealed partial class MeasureCollector
         _pendingInlineVoltas.Clear();
         for (int i = 0; i < ck.PendingInlineVoltaCount; i++)
             _pendingInlineVoltas.Add(rec.PendingInlineVoltas![i]);
-        // The spans are re-keyed onto this tree like the spellings below (the suffix
-        // splice's wall): their extra voices are walked LIVE after this walk, and an
-        // old-tree span hands them old-tree nodes — a bare duration in there asks
-        // OriginalOf for an OLD note and misses the re-keyed spelling. MEASURED
-        // (session 597, a fuzz of collision.lys that left `{ 2 e` in the second
-        // voice): the resumed collect drew the copy as a rest.
+        // The span tracks (session 970: what each span's voices PRODUCED — their measures are
+        // adopted like the primary's, a function of the unchanged prefix) with their node
+        // re-keyed onto this tree, as the spellings below are: the node is read for its
+        // named voices (BuildMultiVoiceScore), and an old-tree node must not outlive its tree.
         var idWindow = new CollectTailShifter.Window(int.MaxValue, int.MaxValue, 0);
-        _parallelSpans.Clear();
-        for (int i = 0; i < ck.ParallelSpanCount; i++)
+        _spanTracks.Clear();
+        for (int i = 0; i < ck.SpanTrackCount; i++)
         {
-            var (oldNode, startMeasure, startOffset, frame, duration, dots, meta) = rec.ParallelSpans![i];
+            var span = rec.SpanTracks![i];
             if (_root == null
-                || CollectTailShifter.ResolveShifted(_root, oldNode, idWindow)
+                || CollectTailShifter.ResolveShifted(_root, span.Node, idWindow)
                     is not ParallelExpressionSyntax rekeyed)
                 throw new CollectResumeAbortException(
                     "collect resume could not re-key an adopted parallel span");
-            _parallelSpans.Add((rekeyed, startMeasure, startOffset, frame, duration, dots, meta));
+            _spanTracks.Add(span with { Node = rekeyed });
         }
 
         // Resolved spellings (finding 3-4): the prefix's dictionary entries, RE-KEYED
@@ -368,10 +366,11 @@ public sealed partial class MeasureCollector
             // note typed after a body's last item, before its first, or between two
             // phrase references). Such a tail is the old node stream; it is still
             // right only when the edit changed no token (trivia: positions shift and
-            // nothing else), or when it lies inside an extra voice of a parallel span
-            // (re-walked live after the splice — the v2bow whole-walk shape). Anything
-            // else declines; candidates PAST the window are unaffected.
-            bool extraVoiceWindow = CollectResumePlanner.WindowInsideParallelExtraVoice(rec, w.Prefix, w.SuffixStart);
+            // nothing else). Anything else declines; candidates PAST the window are
+            // unaffected. (Until session 970 a window inside an EXTRA voice of a
+            // parallel span was the other exception — the extra voices were re-walked
+            // live after the splice; now their measures are part of the tail, so an edit
+            // in one is an edit in the tail, and the v2bow whole-walk shape declines.)
             // ⚠️ COUNTED (session 458, the reader's 231-book corpus, eight forward keystrokes a
             // book): this guard is asked 7,016 times a sweep — 3.80 a keystroke — and DECLINES
             // all 7,016. WindowIsTriviaOnly answered true zero times; the token walk behind it
@@ -386,7 +385,6 @@ public sealed partial class MeasureCollector
             // corpus's shapes are TrailingGapSpliceTests, which asserts the decline is THIS
             // guard's (so another guard taking over would not keep it green by accident).
             if (ck.NodeStart < w.Prefix
-                && !extraVoiceWindow
                 && !CollectResumePlanner.WindowIsTriviaOnly(WalkProbe!))
                 return DeclineSplice("the candidate stands before a content window its tail walks across");
 
@@ -407,11 +405,11 @@ public sealed partial class MeasureCollector
                     if (pre[i + 1].SourceStart >= right)
                         right = pre[i + 1].SourceStart;
                 }
-                else if (!extraVoiceWindow)
+                else
                 {
                     // The walk's furthest read bounds the last measure's trailing gap —
-                    // unless the window sits in an extra voice, whose text that read
-                    // extent covers but the primary measures never own.
+                    // including an extra voice's text, which the primary measures never
+                    // own but the span tracks in the tail do (session 970).
                     right = Math.Max(right, endCk.MaxSourceRead);
                 }
                 if (left < w.SuffixStart && right >= w.Prefix)
@@ -543,25 +541,34 @@ public sealed partial class MeasureCollector
             voltaTail.Add((v.Item1, v.Item2, v.Item3, v.Item4, vp));
         }
 
-        // The wall (HANDOFF §1 ⑶): the recorded spans hold OLD-tree node
-        // references, and their extra voices are walked LIVE after this walk —
-        // they must be re-resolved against the new tree, not adopted (except on
-        // the identity path, where the old tree's text IS the new text).
-        var spanTail = new List<(ParallelExpressionSyntax, int, Fraction, OctaveSnapshot, Fraction, int, MetadataState)>(
-            endCk.ParallelSpanCount - ck.ParallelSpanCount);
-        for (int i = ck.ParallelSpanCount; i < endCk.ParallelSpanCount; i++)
+        // The span tracks of the adopted tail (session 970): the children's measures are
+        // adopted as position-shifted COPIES exactly as the primary's tail measures are
+        // (a position inside the window declines), and the node is re-resolved on the
+        // new tree for its readers. Until session 970 the span was re-walked live after
+        // the splice; now its voices' output is part of the tail, so an edit inside an
+        // extra voice can no longer be spliced across (the straddle test above sees it
+        // through the primary's last measure's read extent).
+        var spanTail = new List<SpanTrack>(endCk.SpanTrackCount - ck.SpanTrackCount);
+        for (int i = ck.SpanTrackCount; i < endCk.SpanTrackCount; i++)
         {
-            var (oldNode, startMeasure, startOffset, frame, duration, dots, meta) = rec.ParallelSpans![i];
+            var span = rec.SpanTracks![i];
             if (identity)
             {
-                spanTail.Add((oldNode, startMeasure, startOffset, frame, duration, dots, meta));
+                spanTail.Add(span);
                 continue;
             }
             if (_root == null
-                || CollectTailShifter.ResolveShifted(_root, oldNode, w)
+                || CollectTailShifter.ResolveShifted(_root, span.Node, w)
                     is not ParallelExpressionSyntax resolved)
                 return DeclineSplice("a tail parallel span does not resolve on the new tree");
-            spanTail.Add((resolved, startMeasure, startOffset, frame, duration, dots, meta));
+            var shiftedMeasures = new List<Measure>(span.Measures.Count);
+            foreach (var m in span.Measures)
+            {
+                if (CollectTailShifter.ShiftMeasure(m, w) is not { } sm)
+                    return DeclineSplice("a tail parallel span's measure holds a position inside the window");
+                shiftedMeasures.Add(sm);
+            }
+            spanTail.Add(span with { Node = resolved, Measures = shiftedMeasures });
         }
 
         // Resolved spellings of the adopted tail (finding 3-4), re-keyed onto this
@@ -633,7 +640,7 @@ public sealed partial class MeasureCollector
             foreach (var entry in tailSlices[t])
                 dst[t].Add(entry);
         _pendingInlineVoltas.AddRange(voltaTail);
-        _parallelSpans.AddRange(spanTail);
+        _spanTracks.AddRange(spanTail);
         foreach (var (node, resolvedMembers) in spellTail)
         {
             if (node is NoteSyntax n)
@@ -792,19 +799,20 @@ public sealed partial class MeasureCollector
                 return DeclineSplice("a pending inline volta differs");
         }
 
-        if (_parallelSpans.Count != ck.ParallelSpanCount)
+        if (_spanTracks.Count != ck.SpanTrackCount)
             return DeclineSplice("parallel span count differs");
-        for (int i = 0; i < _parallelSpans.Count; i++)
+        for (int i = 0; i < _spanTracks.Count; i++)
         {
-            var (liveNode, liveStart, liveOffset, liveFrame, liveDuration, liveDots, liveMeta) = _parallelSpans[i];
-            var (recNode, recStart, recOffset, recFrame, recDuration, recDots, recMeta) = _suffixPlan!.Recording.ParallelSpans![i];
-            if (liveStart != recStart || liveOffset != recOffset || liveFrame != recFrame
-                || liveDuration != recDuration || liveDots != recDots || !liveMeta.SameAs(recMeta))
-                return DeclineSplice("a parallel span's start or frame differs");
-            if (!w.TryShift(recNode.FullSpan.Start, out int nodeStart)
-                || liveNode.FullSpan.Start != nodeStart
-                || liveNode.FullSpan.End - liveNode.FullSpan.Start
-                    != recNode.FullSpan.End - recNode.FullSpan.Start)
+            var liveSpan = _spanTracks[i];
+            var recordedSpan = _suffixPlan!.Recording.SpanTracks![i];
+            if (liveSpan.StartMeasure != recordedSpan.StartMeasure || liveSpan.Slot != recordedSpan.Slot
+                || liveSpan.VoiceCount != recordedSpan.VoiceCount
+                || liveSpan.Measures.Count != recordedSpan.Measures.Count)
+                return DeclineSplice("a parallel span's start or shape differs");
+            if (!w.TryShift(recordedSpan.Node.FullSpan.Start, out int nodeStart)
+                || liveSpan.Node.FullSpan.Start != nodeStart
+                || liveSpan.Node.FullSpan.End - liveSpan.Node.FullSpan.Start
+                    != recordedSpan.Node.FullSpan.End - recordedSpan.Node.FullSpan.Start)
                 return DeclineSplice("a parallel span's node differs");
         }
 

@@ -105,10 +105,10 @@ public class CollectEditResumeTests
         // correctness half. perf-v2bow1k is the SPLICE-ONLY shape: its entire
         // body is one parallel `voice {…} {…}` run, and checkpoints exist only at
         // the primary walk's TOP-LEVEL boundaries — so the prefix side has a
-        // single m=0 checkpoint and adopts NOTHING, but the suffix side splices
-        // the WHOLE recording: the bench token edits the SECOND voice, which the
-        // primary walk never adopts (voices 2..N are rebuilt live from the
-        // re-resolved parallel spans, so the edit is picked up there).
+        // single m=0 checkpoint and adopts NOTHING; the bench token edits the SECOND
+        // voice. Until session 970 the suffix side then spliced the WHOLE recording
+        // (voices 2..N were rebuilt live from the re-resolved spans); since session 970
+        // the second voice's measures are in the tail, so that edit runs live (below).
         // ⚠️ This book used to be excluded here under the claim "nothing is
         // adoptable" — measured false for the splice half in session 149, which
         // caught the splice firing on every keystroke with zero observers.
@@ -145,28 +145,36 @@ public class CollectEditResumeTests
             }
             else
             {
-                // The whole-book-span shape: prefix adopts nothing (m=0 is the
-                // only checkpoint) and the splice adopts the whole primary walk.
+                // The whole-book-span shape: prefix adopts nothing (m=0 is the only
+                // checkpoint). Until session 970 the splice adopted the whole primary walk
+                // and the edited second voice was re-walked live from the re-resolved span;
+                // since session 970 the span's voices are walked WITH the primary on one
+                // clock and their measures are part of the recorded tail — an edit inside
+                // the second voice is an edit inside the tail, so the splice declines and
+                // the walk runs live (docs/moment-walk-design.md §3.2 ⑤a: reuse lost on this
+                // one shape, never correctness — the output is the full collect's, above).
                 Assert.Equal(0, adopted);
-                Assert.True(spliced > 900,
-                    $"{book}: only {spliced} measures spliced — the m=0 whole-walk splice regressed");
+                Assert.Equal(0, spliced);
             }
         }
         Assert.True(failures.Count == 0, string.Join("\n", failures));
     }
 
     [Fact]
-    public void V2bowWholeBookSpan_SecondVoiceEdit_SplicesTheWholeWalk_ByteIdentical()
+    public void V2bowWholeBookSpan_SecondVoiceEdit_RunsLive_ByteIdentical()
     {
-        // Session 149's discovery, held: a book whose whole body is one
-        // `voice {…} {…}` parallel span splices its ENTIRE primary-walk
-        // recording at the m=0 checkpoint when the edit sits in a non-primary
-        // voice — the primary walk adopts no edited byte, and the edited voice
-        // is rebuilt live from the re-resolved spans (ResolveShifted). This is
-        // the production path (IncrementalCompiler), asserted byte-identical
-        // against a full recompile on BOTH alternation sides; the splice
-        // liveness assertion is what makes a silently-declining guard set fail
-        // here instead of reading as a pass.
+        // Session 149's discovery, and session 970's reversal of it: a book whose whole
+        // body is one `voice {…} {…}` parallel span used to splice its ENTIRE primary-walk
+        // recording at the m=0 checkpoint when the edit sat in a non-primary voice — the
+        // primary walk adopted no edited byte, and the edited voice was rebuilt live from
+        // the re-resolved spans. Since session 970 the span's voices are walked WITH the
+        // primary on one clock and their measures ARE the recorded tail, so an edit in the
+        // second voice is an edit inside the tail: the splice declines and the walk runs
+        // live (docs/moment-walk-design.md §3.2 ⑤a — reuse lost on this shape, correctness
+        // held). This is the production path (IncrementalCompiler), asserted byte-identical
+        // against a full recompile on BOTH alternation sides, and the decline is asserted
+        // too, so a splice that silently came back (adopting old second-voice measures)
+        // would fail here instead of reading as a pass.
         var path = Path.Combine(CollectResumeTests.FindRepoRoot(),
             "audit", "lpreg", "perf-v2bow1k.lys");
         // ⚠️ No File.Exists skip: this read scratch/lpreg until 2026-09-16, the
@@ -188,9 +196,10 @@ public class CollectEditResumeTests
             var incremental = compiler.RenderIncremental(SyntaxTree.Parse(text));
             var full = SvgGenerator.Generate(SyntaxTree.Parse(text), options);
             Assert.Equal(full, incremental);
-            Assert.True(compiler.LastCollectResume.SplicedMeasures > 900,
-                $"round {i} ({(i % 2 == 0 ? "edited" : "restore")}): spliced only "
-                + $"{compiler.LastCollectResume.SplicedMeasures} measures — the whole-walk splice regressed");
+            Assert.True(compiler.LastCollectResume.SplicedMeasures == 0,
+                $"round {i} ({(i % 2 == 0 ? "edited" : "restore")}): spliced "
+                + $"{compiler.LastCollectResume.SplicedMeasures} measures across an edit inside the second voice — "
+                + "the tail holds that voice's measures since session 970 and must not be adopted");
         }
     }
 
@@ -504,11 +513,13 @@ form { A }
     }
 
     /// <summary>
-    /// A `voice { } { }` in the restored prefix: its extra voices are walked live after the
-    /// walk, from the span the restore put back. That span held the RECORDING's node, so a
-    /// bare duration opening the second voice asked OriginalOf for an old-tree note and missed
-    /// the spelling the restore had re-keyed onto the new tree — the copy became a rest
-    /// (session 597, a random edit of collision.lys). The restore re-keys the spans now.
+    /// A `voice { } { }` in the restored prefix. Until session 970 its extra voices were walked
+    /// live after the walk, from the span the restore put back; that span held the RECORDING's
+    /// node, so a bare duration opening the second voice asked OriginalOf for an old-tree note
+    /// and missed the spelling the restore had re-keyed onto the new tree — the copy became a
+    /// rest (session 597, a random edit of collision.lys). The restore re-keyed the spans from
+    /// then on; since session 970 the extra voices' measures are adopted with the span track
+    /// (walked with the primary on one clock), and the node is still re-keyed for its readers.
     /// </summary>
     [Fact]
     public void PrefixResume_AParallelSpanInThePrefix_IsReKeyedOntoTheNewTree()
@@ -526,7 +537,7 @@ form { A }
         Assert.Equal(oldText.Length, newText.Length);
         var (resumer, _) = ResumeAndCompare(oldText, newText);
         // Non-vacuous: the restored checkpoint stands past the span.
-        Assert.Contains(resumer.ResumePlans.Values, p => p.Consumed && p.Checkpoint is { ParallelSpanCount: > 0 });
+        Assert.Contains(resumer.ResumePlans.Values, p => p.Consumed && p.Checkpoint is { SpanTrackCount: > 0 });
     }
 
     private static string FindRepoRootForTests() => CollectResumeTests.FindRepoRoot();

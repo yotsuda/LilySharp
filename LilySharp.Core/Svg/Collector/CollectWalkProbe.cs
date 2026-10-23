@@ -41,10 +41,10 @@ namespace LilySharp.Core.Svg.Collector;
 /// resumes each walk from its last checkpoint whose <b>entire read set</b> lies
 /// in the unchanged prefix (<see cref="WalkCheckpoint.MaxSourceRead"/> ≤ P) —
 /// so every adopted position is textually unchanged and NO position shifter is
-/// needed. That is also why adopting old-tree node references
-/// (<see cref="VoiceWalkRecording.ParallelSpans"/>) is sound here: their whole
-/// subtrees live in the unchanged prefix, so walking them later produces the
-/// same values a new-tree walk would.
+/// needed. That is also why adopting the recorded span tracks
+/// (<see cref="VoiceWalkRecording.SpanTracks"/> — since session 970 the measures the
+/// span's voices produced, walked with the primary on one clock) is sound here: they
+/// are a function of the unchanged prefix, like the primary's own measures.
 /// </para>
 /// <para>
 /// CROSS-EDIT SUFFIX SPLICE (⒭ ⑵, second slice — second half): once the live
@@ -58,9 +58,9 @@ namespace LilySharp.Core.Svg.Collector;
 /// shifted text, a phrase-expanded tail item cites an unshifted prefix body).
 /// When the state matches, the recorded tail — measures, cumulative side-table
 /// slices up to <see cref="VoiceWalkRecording.EndCheckpoint"/>'s watermarks,
-/// walk-local lists — is adopted as position-shifted COPIES, old-tree node
-/// references (<see cref="VoiceWalkRecording.ParallelSpans"/>) are re-resolved
-/// against the new tree, the collector's value state jumps to the recorded
+/// walk-local lists, the span tracks' measures — is adopted as position-shifted
+/// COPIES, the span tracks' nodes (<see cref="VoiceWalkRecording.SpanTracks"/>) are
+/// re-resolved against the new tree, the collector's value state jumps to the recorded
 /// end-of-walk state, and the rest of the walk is skipped. Any doubt — a
 /// position inside the window, an unresolvable node, a changed canonical bar
 /// count — declines the splice and the walk simply keeps running live: a
@@ -255,7 +255,7 @@ internal sealed class VoiceWalkRecording
     /// <summary>Walk-local, cleared-per-walk lists, copied at walk end. Their
     /// prefix (by checkpoint count) is what a resume adopts.</summary>
     public List<(int, int, string, bool, int)>? PendingInlineVoltas;
-    public List<(Syntax.ParallelExpressionSyntax, int, Fraction, OctaveSnapshot, Fraction, int, MetadataState)>? ParallelSpans;
+    public List<MeasureCollector.SpanTrack>? SpanTracks;
 
     /// <summary>The walk's resolved-spelling log, in insertion order: every note or
     /// chord this walk resolved that IS the original of some <c>q</c> / bare duration
@@ -495,7 +495,7 @@ internal sealed class WalkCheckpoint
     public required int[] TableCounts { get; init; }
     /// <summary>Counts of the walk-local lists (adopted from the recording).</summary>
     public required int PendingInlineVoltaCount { get; init; }
-    public required int ParallelSpanCount { get; init; }
+    public required int SpanTrackCount { get; init; }
     /// <summary>Watermarks into <see cref="VoiceWalkRecording.ResolvedSpellings"/> /
     /// <see cref="VoiceWalkRecording.RepetitionOriginalReads"/> (finding 3-4).</summary>
     public required int ResolvedSpellingCount { get; init; }

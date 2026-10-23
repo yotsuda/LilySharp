@@ -1092,58 +1092,12 @@ public sealed partial class MeasureCollector
                 break;
 
             case ParallelExpressionSyntax parallel:
-                {
-                    // << \\ >> span. Voice 0 joins the primary stream (this
-                    // builder) so measure indices stay continuous; the extra
-                    // voices are reconstructed later from the recorded span.
-                    var voiceBlocks = parallel.Voices.ToList();
-                    // The frame at the span's OPENING is what every voice reads from, and
-                    // what the music after the span reads from — a span of simultaneous
-                    // music does not move the relative frame (see _parallelSpans). Voice 0
-                    // is walked inline here, so it is saved and restored around that walk;
-                    // the other voices take the recorded frame in BuildExtraVoiceTracks.
-                    // The note-value default travels by the same rule (session 398): every
-                    // voice opens at the value in force at the span, and so does the music
-                    // after it — voice 0's last value used to leak out, the way its last
-                    // pitch did before 2026-08-01.
-                    var spanFrame = _octave.Snapshot();
-                    var (spanDuration, spanDots) = (_defaultDuration, _defaultDots);
-                    // The meter is the one IN FORCE at the span, not the piece's opening one:
-                    // a mid-piece `time` re-arms this builder only (the TimeSignatureChangeItem),
-                    // and the other voices used to measure their bars in the opening meter — a
-                    // 12/8 bar after 4/4 cut voice 2 at one whole note and dropped the rest
-                    // (LilySharp-Omr feedback #20).
-                    var spanMeta = _meta.Clone();
-                    // (A `time none` keeps the opening's numbers: the frozen clock has no bar.)
-                    if (builder.MeterInForce is { Beats: > 0, BeatType: > 0, SenzaMisura: false } inForce)
-                    {
-                        spanMeta.TimeBeats = inForce.Beats;
-                        spanMeta.TimeBeatType = inForce.BeatType;
-                        spanMeta.TimeBeatsText = inForce.BeatsText;
-                        spanMeta.TimeGrouping = inForce.Grouping;
-                    }
-                    _parallelSpans.Add(
-                        (parallel, builder.CurrentMeasureIndex, builder.CurrentDuration, spanFrame,
-                            spanDuration, spanDots, spanMeta));
-                    // A drum chart whose lines merge: the hands' voice is walked here, the
-                    // feet's in BuildExtraVoiceTracks (MeasureCollector.Drums).
-                    if (parallel.IsDrums
-                        && DrumPlanOf(parallel, builder.CurrentDuration, BarLengthOf(spanMeta), spanDuration, spanDots) is { } drums)
-                    {
-                        _cursor.VoiceScope = 1;
-                        await EmitDrumVoice(drums.Upper, builder, stemUp: true);
-                        _cursor.VoiceScope = null;
-                    }
-                    else if (voiceBlocks.Count > 0)
-                    {
-                        // Voice 0 is render voice 1: an override in its block scopes to it.
-                        _cursor.VoiceScope = 1;
-                        await ProcessMusicNodeSequence(GatherVoiceMusicNodes(voiceBlocks[0]), builder);
-                        _cursor.VoiceScope = null;
-                        _octave.Restore(spanFrame);
-                        (_defaultDuration, _defaultDots) = (spanDuration, spanDots);
-                    }
-                }
+                // << \\ >> span: its voices on one clock (MeasureCollector.Clock.cs). In its
+                // own method on purpose — the span driver's lambdas capture `builder`, and a
+                // closure over a parameter is allocated at the enclosing method's ENTRY, so
+                // written here it was paid on EVERY node of every walk (MEASURED, session 970:
+                // +1.4 MB on perf-plain1k's collect, a book with no span).
+                await ProcessParallelSpan(parallel, builder);
                 break;
 
             case NoteSyntax note:

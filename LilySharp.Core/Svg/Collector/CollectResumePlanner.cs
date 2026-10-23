@@ -413,34 +413,6 @@ internal static class CollectResumePlanner
         t_newTokens = stack;
     }
 
-    /// <summary>The window lies wholly inside an EXTRA voice (the second or later
-    /// block) of a parallel span the recording walked: the primary walk's measures come
-    /// from the first voice only, and the extra voices are re-walked live after a splice
-    /// (see <see cref="VoiceWalkRecording.ParallelSpans"/>), so a tail spanning such a
-    /// window is still sound — the shape perf-v2bow1k's whole-walk splice stands on.</summary>
-    internal static bool WindowInsideParallelExtraVoice(
-        VoiceWalkRecording rec, int prefix, int suffixStart)
-    {
-        if (rec.ParallelSpans == null)
-            return false;
-        foreach (var (node, _, _, _, _, _, _) in rec.ParallelSpans)
-        {
-            bool first = true;
-            foreach (var voice in node.Voices)
-            {
-                if (first)
-                {
-                    first = false;
-                    continue;
-                }
-                var s = voice.Span;
-                if (s.Start <= prefix && suffixStart <= s.End)
-                    return true;
-            }
-        }
-        return false;
-    }
-
     /// <summary>True when the dirty window intersects any phrase/variable
     /// declaration — walked over the narrow band of nodes that intersect the
     /// window only (O(depth + window nodes), never the whole tree).</summary>

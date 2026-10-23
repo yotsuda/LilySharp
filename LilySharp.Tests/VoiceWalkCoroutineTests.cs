@@ -53,6 +53,29 @@ public class VoiceWalkCoroutineTests
         Assert.Equal(0, collector.Clock.Suspensions);
     }
 
+    private const string TwoVoiceBook = """
+        part m { clef treble }
+        section A { m { voice { c'4 d' e' f' | g'2 g' | } { c4 d e f | g2 g | } } }
+        form { ~A }
+        score { staff m }
+        """;
+
+    /// <summary>Two voices of a span on one clock (stage ⑤a): the branches interleave by
+    /// moment, so at least one of them parks — the clock's work is visible in its counters —
+    /// and the span's driver hands the collect back complete.</summary>
+    [Fact]
+    public void TwoVoicesOnOneClock_InterleaveAndPark()
+    {
+        var collector = new MeasureCollector();
+        var score = collector.Collect(SyntaxTree.Parse(TwoVoiceBook));
+
+        Assert.Equal(2, score.Voices.Length);
+        Assert.Equal(1, collector.Clock.Spans);
+        Assert.True(collector.Clock.Suspensions > 0, "no branch ever parked: the voices did not share a clock");
+        Assert.True(collector.Clock.Reaches > collector.Clock.Suspensions);
+        Assert.Equal(score.Voices[0].Measures.Length, score.Voices[1].Measures.Length);
+    }
+
     /// <summary>The synchronous entry points run the coroutine to completion; a walk that
     /// suspended on its clock with no scheduler is an error, said in words, not a blocked thread.</summary>
     [Fact]

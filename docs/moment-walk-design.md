@@ -136,6 +136,16 @@ park し、生きている branch が全部 park したら時計を最小の ons
   `StaffAccidentals` を退役、全様式で LP と一致させる。**ここで初めて絵が動く**ので byte 同一ではなく LP 双子・
   台帳が門。voice 2 の中の clef／key が五線に効く規則もここ。
 
+**⑤a の実測（第970）**: ⑴ 当初の swap（切り替えごとに `new BranchState`＋`_meta.Clone()`）は restpoly1k を 76.2→85.6 MB にした
+→ Meta／Octave／list を参照ごと入れ替え・scalar は branch の record に in place で書く形にして 81.8 → ⑵ span の無い
+plain1k が 82.0→83.7 と増えた原因は funnel ではなく（fast path を置いても不変）**parallel の腕の lambda が引数 `builder` を
+捕まえ、C# が closure を `ProcessMusicNode` の入口で allocate していた**こと（collect 8.31→9.75 MB・計器 Zz970）→ 腕を
+`ProcessParallelSpan` に出して 8.31 に戻った。残る +3〜4 MB（span 本）は branch の park ごとの state machine の箱＋
+span ごとの child state＝coroutine の値段（LP の iterator も払う）。⑶ **失った再利用**＝全体が 1 つの span の本（v2bow1k）で
+第 2 声部を編集すると、以前は primary の walk 全体を splice して第 2 声部だけ live に作り直せたが、今は子の小節が tail の
+一部＝tail の外ではないので splice は decline して live（打鍵 40.3→44.6 MB）。取り戻すには「窓に触れた span だけを再 walk する」
+経路が要る＝⑥ で五線状態を共有すると sequential な再 walk は意味を変えるので、今は作らない（ユーザー判断があれば別）。
+
 ## 4. 段取り（各段に門・段 4 の前にもう一度ユーザー判断）
 
 | 段 | 内容 | 門 | 状態 |
@@ -144,7 +154,7 @@ park し、生きている branch が全部 park したら時計を最小の ons
 | ② | **B＝`StaffTimeline`** を建て、`StaffAccidentals`・`StaffAccidentalColumns`・`NoteCollision` の入力がそれを読む | 出力不変（掃き・snapshot・full） | ✅ 第969（`Svg/Collector/StaffTimeline.cs`＝1 小節の全声部の item を (onset, grace rank, voice) の k-way merge で・`VoiceCollector.CollectMeasure` と `StaffAccidentals.Apply` が読む・掃き 1,015 冊 1,248 枚 差 0・網 `StaffTimelineTests` 5 本・毒 3 本が各 2／6／10 赤） |
 | ③ | voice 0 だけを iterator 化（多声は従来経路のまま） | byte 同一 | ✅ 第969（§3.1 の形＝path 上の 27 本＋local function 4 本＋`ProcessMusicContainer`・`OpenSoundingItem` を `async ValueTask` に・funnel 51 か所は `MeasureCollector.Clock.cs` の gated wrapper 3 本へ・`Run` が境界＝`CollectMeasures`／`CollectMeasuresFromNode` の呼び手 4 か所・delegate 2 型を `Func<…, ValueTask>` に。svg 掃き 1,015 冊 1,248 枚 差 0・ly／xml／midi 掃き差 0・割当 plain1k 82.1／15.3 MB・fingbeam1k 363.7→363.6・v2bow1k 125.1／40.3・grace200 45.1＝同一・網 `VoiceWalkCoroutineTests` 2 本＝Reaches ≥ item 数・Suspensions 0・`Run` は未完了を拒む） |
 | ④ | 増分コンパイルの設計 | 設計書 → **ユーザー判断** | ✅ 設計 第970（§3.2＝checkpoint は span の外だけ＝目録は不変・変わるのは 3 か所）→ ⑤a へ進むかはユーザー判断 |
-| ⑤a | span 局所のスケジューラ（`VoiceClock` の本実装）・branch 1..N を branch 0 と同じ時計で・V 状態は切り替えごとに swap・`BuildExtraVoiceTracks` と `_parallelSpans` を退役・記録は全声部の小節を持つ | byte 同一（svg／ly／xml／midi の掃き）・増分 `== full`・割当 | |
+| ⑤a | span 局所のスケジューラ（`VoiceClock` の本実装）・branch 1..N を branch 0 と同じ時計で・V 状態は切り替えごとに swap・`BuildExtraVoiceTracks` と `_parallelSpans` を退役・記録は全声部の小節を持つ | byte 同一（svg／ly／xml／midi の掃き）・増分 `== full`・割当 | ✅ 第970（`MeasureCollector.Clock.cs`＝`VoiceClock`（span の stack・`ReachAwaitable` struct・park／resume）・`BranchState`（V の swap＝Meta／Octave／list は参照ごと・scalar は in place）・`ProcessParallelSpan`＋`RunSpanAsync`（driver＝LP の iterate）・`_parallelSpans`→`SpanTrack`（子の小節を持つ）・増分は restore＝採用・splice＝shift・比較＝形。掃き 4 種 差 0・網 2,231 緑・割当: span 無し同一（plain1k 82.1・fingbeam1k 363.6・grace200 45.1）、span 本 restpoly1k 76.2→80.1・v2bow1k 125.1→128.1／打鍵 40.3→44.6。**失ったもの**＝第 2 声部の編集で全 walk を splice する v2bow の形（子の小節が tail に入ったので tail の外ではない＝live）。**計器の教訓**＝parallel の腕の lambda が `builder`（引数）を捕まえ、closure が `ProcessMusicNode` の*入口*で allocate されて span の無い本で +1.4 MB／collect＝腕を自分のメソッドへ） |
 | ⑤b | V 45 本を `VoiceCursor` へ（任意・機械的） | byte 同一 | |
 | ⑥ | 五線状態 S の共有（臨時記号の記憶を branch 間で・`StaffAccidentals` 退役・voice 2 の clef／key が五線に効く） | **LP 双子・台帳**（絵が動く） | |
 

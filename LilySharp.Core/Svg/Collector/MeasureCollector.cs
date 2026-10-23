@@ -106,7 +106,9 @@ public sealed partial class MeasureCollector
     // The relative-octave chain plus the part transpose that composes on top of
     // it, bundled into one named collaborator (see OctaveContext). The main walk
     // drives this in place on every note / chord / grace / tuplet.
-    private readonly OctaveContext _octave = new();
+    // Not readonly since session 970: inside a span the field points at the running branch's
+    // own frame (BranchState, MeasureCollector.Clock.cs); outside, always at this one.
+    private OctaveContext _octave = new();
 
     // Dynamic markings
     private readonly List<DynamicItem> _dynamics = new();
@@ -118,7 +120,7 @@ public sealed partial class MeasureCollector
     // CollectMultiStaff, BuildExtraVoiceTracks' manual save/restore and
     // ProcessMusicNode, and this is that bundling — mechanical on purpose (every
     // reader keeps its meaning; only the spelling moved from four fields to one).
-    private struct CollectionCursor
+    internal struct CollectionCursor
     {
         // Global staff index currently being collected (multi-staff). Stamped onto
         // each dynamic so layout positions it under its own staff. 0 for the single-
@@ -153,24 +155,9 @@ public sealed partial class MeasureCollector
 
     private CollectionCursor _cursor;
 
-    // Saves the whole cursor on entry, installs the given one, and restores the
-    // saved cursor on Dispose — the using-scope BuildExtraVoiceTracks' manual
-    // save/restore became, so a new cursor coordinate is restored by
-    // construction instead of by whoever remembers to write the reset lines.
-    private readonly struct CursorScope : IDisposable
-    {
-        private readonly MeasureCollector _owner;
-        private readonly CollectionCursor _saved;
-
-        public CursorScope(MeasureCollector owner, CollectionCursor next)
-        {
-            _owner = owner;
-            _saved = owner._cursor;
-            owner._cursor = next;
-        }
-
-        public void Dispose() => _owner._cursor = _saved;
-    }
+    // (A CursorScope used to save and restore the cursor around each sequential sub-walk of a
+    // span's extra voice; since session 970 the cursor is one field of the voice state the
+    // span's driver swaps at every switch — BranchState, MeasureCollector.Clock.cs.)
     // Articulation marks
     private readonly List<ArticulationItem> _articulations = new();
     // Grace notes
@@ -231,7 +218,7 @@ public sealed partial class MeasureCollector
     private int _rowsOnlyFormGridBars;
     // Inline volta endings collected during the current voice walk; finalized
     // (and marked closed/open) once the whole voice has been processed.
-    private readonly List<(int startMeasure, int endMeasure, string voltaText, bool isClosed, int sourcePosition)> _pendingInlineVoltas = new();
+    private List<(int startMeasure, int endMeasure, string voltaText, bool isClosed, int sourcePosition)> _pendingInlineVoltas = new();
     // Parallel-voice spans (<< \\ >>) recorded during the primary (voice-0)
     // walk: the parallel node, the measure index where its content begins, and
     // the elapsed duration WITHIN that measure at the span's opening.
@@ -259,7 +246,12 @@ public sealed partial class MeasureCollector
     // `key e major voice { … } { <a' dis'>2 }` in a book that later returns to D-flat drew
     // voice 2 in D-flat, a ♮ on the a and a ♯ on the dis, and the ♯ ran into voice 1's flag
     // (03-piano-nocturne, 2026-09-26). LilyPond prints neither.
-    private readonly List<(ParallelExpressionSyntax Parallel, int StartMeasure, Fraction StartOffset, OctaveSnapshot Frame, Fraction Duration, int Dots, MetadataState Meta)> _parallelSpans = new();
+    // Since session 970 the extra voices are walked WITH the first, on one clock
+    // (MeasureCollector.Clock.cs), and what the walk keeps of a span is what its voices
+    // PRODUCED: each child's measures, laid into the staff's tracks once the walk is done
+    // (BuildExtraVoiceTracks). The frame rule above still holds — every branch opens in the
+    // frame, note-value default and metadata the span opened in (BranchState.ForChild).
+    private readonly List<SpanTrack> _spanTracks = new();
     // Whether the stream the last builder collected stops off the bar (MeasureBuilder.EndsOffTheBar),
     // read right after a PRIMARY stream's collect; and, on the multi-staff road, the staves whose
     // primary stream does. See DropFinalBarWhereTheMusicStopsOffTheBar.
@@ -585,7 +577,7 @@ public sealed partial class MeasureCollector
     // is what a checkpoint carries (WalkCheckpoint.Accidentals). ⚠️ The resume gate used
     // to demand the map EMPTY at every boundary instead, which no book under `modern` /
     // `noReset` satisfied after its first note: those books never resumed (session 396).
-    private readonly Dictionary<(int step, int octave), (int Alter, int Bar, int Order)>
+    private Dictionary<(int step, int octave), (int Alter, int Bar, int Order)>
         _measureAccidentals = new();
     // AdvanceAccidentalBar as the builder's MeasureCompleted delegate, made once per
     // collector (the method group was a fresh delegate per collect — session 535).
@@ -673,12 +665,12 @@ public sealed partial class MeasureCollector
     // The phrases the walk is inside, pushed and popped by the named reset/end markers
     // (ProcessMusicNodeSequence). A cue region gathers its body when it is walked, after the
     // enclosing expansion's cycle guard is gone, so it seeds its own guard from this list.
-    private readonly List<string> _openPhrases = new();
+    private List<string> _openPhrases = new();
     // …and where each of them is referenced (the reset marker's call site), outermost first:
     // the address WrittenBarAt finds the written bar of music inlined from a phrase body by
     // (MeasureModel.Split's index). Never open at a checkpoint (WalkCarriesNothing asks that
     // no phrase is open), so no checkpoint carries it.
-    private readonly List<int> _phraseCallSites = new();
+    private List<int> _phraseCallSites = new();
 
     /// <summary>
     /// How deep into <c>grace { }</c> bodies this walk currently is. Non-zero means the items
@@ -809,19 +801,21 @@ public sealed partial class MeasureCollector
     // Saved transpose targets around phrase-reference expansions (a stack so a
     // phrase referenced inside another restores cleanly). Pushed at the reset
     // marker, popped at the paired phrase-end marker.
-    private readonly Stack<(int step, int alt, int oct)?> _phraseTransposeSaves = new();
+    private Stack<(int step, int alt, int oct)?> _phraseTransposeSaves = new();
     // Each open reference's outgoing anchor (bare letter + octave, resolved in
     // the phrase's own frame at entry), handed to the relative chain at exit —
     // the chord rule; null = pitchless body. Pushed/popped alongside the above.
-    private readonly Stack<(char Name, int Octave)?> _phraseAnchorSaves = new();
+    private Stack<(char Name, int Octave)?> _phraseAnchorSaves = new();
     // Saved absolute-mode anchors (OctaveBase). A reference's trailing marks move
     // the frame the body resolves in; in ABSOLUTE mode the frame IS OctaveBase, so
     // that is what moves. Pushed/popped alongside the above.
-    private readonly Stack<int> _phraseAbsoluteBaseSaves = new();
+    private Stack<int> _phraseAbsoluteBaseSaves = new();
 
     // Piece-level metadata (title/composer/tempo/time/key/clef + header source
     // positions) grouped into one owner. See MetadataState.
-    private readonly MetadataState _meta = new();
+    // Not readonly since session 970: inside a span the field points at the running branch's
+    // own metadata (BranchState, MeasureCollector.Clock.cs); outside, always at this one.
+    private MetadataState _meta = new();
     // Active `repeat tremolo N { … }` transform: the body note prints ONCE at
     // the combined duration with the subdivision's stem slashes.
     private int _tremoloRepeatCount = 1;
@@ -1182,14 +1176,14 @@ public sealed partial class MeasureCollector
         // handled INLINE during this walk (its first voice flows into the
         // stream, the span is recorded in _parallelSpans), so sequential
         // measures and any number of parallel spans interleave correctly.
-        _parallelSpans.Clear();
+        _spanTracks.Clear();
         _openingKeyOverride = null;
         var measures = Run(CollectMeasures());
         // Read now: the omitted parts' harvest below collects again. A staff with parallel voices
         // keeps its last bar line — the longest voice decides where LilyPond's music ends, and
         // the primary stream alone cannot say (Lab sessions/p659: audit/lpreg/restdur, oice { g1 | g2 }
         // { … two full bars … }, ends ON the bar).
-        bool dropFinalBar = _lastEndsOffTheBar && _parallelSpans.Count == 0;
+        bool dropFinalBar = _lastEndsOffTheBar && _spanTracks.Count == 0;
         ResolveBeamStemDirections(measures);
 
         // Score-level structure from the parts this score OMITS (|: :|, navigation
@@ -1261,7 +1255,7 @@ public sealed partial class MeasureCollector
         // Pass the attached chord part through: BuildMultiVoiceScore collects it
         // itself (this method's CollectAttached below is never reached for the
         // multi-voice path).
-        if (_parallelSpans.Count > 0)
+        if (_spanTracks.Count > 0)
             return BuildMultiVoiceScore(measures, tree.GetRoot(), attachedChordPart, attachedChordDisplay, attachedLyricParts,
                 renderSpec, voiceName);
 
@@ -2625,7 +2619,7 @@ public sealed partial class MeasureCollector
         // Reset spans so a << \\ >> inside one staff doesn't leak into the next;
         // the caller (CollectStaffVoices) reads them back to rebuild this staff's
         // extra voices.
-        _parallelSpans.Clear();
+        _spanTracks.Clear();
 
         // 1. Check variables first
         if (_variables.TryGetValue(voiceName, out var variable))
@@ -2641,7 +2635,7 @@ public sealed partial class MeasureCollector
     /// <summary>
     /// Reconstructs a multi-voice <see cref="Score"/> after the primary stream
     /// (<paramref name="track0"/>) has been collected and the parallel
-    /// <c>voice { … }</c> spans recorded in <see cref="_parallelSpans"/>. Voice 0
+    /// <c>voice { … }</c> spans recorded in <see cref="_spanTracks"/>. Voice 0
     /// is the primary stream; each additional voice is a full-length, synchronized
     /// measure list that is empty except where a span supplies its sub-voice.
     /// </summary>
@@ -2671,7 +2665,7 @@ public sealed partial class MeasureCollector
 
         // Map named voices (voice sop { … }) to their measure track so a
         // `lyrics sop { … }` block can bind to it. Track 0 is voice 1, then extras.
-        foreach (var (parallel, _, _, _, _, _, _) in _parallelSpans)
+        foreach (var parallel in _spanTracks.Select(s => s.Node).Distinct())
         {
             int vi = 0;
             foreach (var (name, _) in parallel.NamedVoices)
@@ -2763,7 +2757,7 @@ public sealed partial class MeasureCollector
 
     /// <summary>
     /// Builds the measure tracks for voices 1..N-1 of a <c>&lt;&lt; \\ &gt;&gt;</c> mixed stream
-    /// from the spans recorded in <see cref="_parallelSpans"/>: each track is
+    /// from the spans recorded in <see cref="_spanTracks"/>: each track is
     /// full length, empty except where a span supplies its sub-voice. Shared by
     /// the single-staff Score path (<see cref="BuildMultiVoiceScore"/>) and the
     /// per-staff multi-staff path (<see cref="CollectStaffVoices"/>).
@@ -2772,9 +2766,15 @@ public sealed partial class MeasureCollector
     {
         int totalMeasures = track0.Count;
         int voiceCount = 1;
-        foreach (var (parallel, _, offset, _, duration, dots, meta) in _parallelSpans)
-            voiceCount = Math.Max(voiceCount, VoiceCountOf(parallel, offset, duration, dots, meta));
+        foreach (var span in _spanTracks)
+            voiceCount = Math.Max(voiceCount, span.VoiceCount);
 
+        // Since session 970 the children's measures are already walked — with branch 0, on the
+        // span's clock (MeasureCollector.Clock.cs) — and this lays each span's slot into the
+        // slot's full-length track, 0-based from the span's bar, exactly where the sequential
+        // sub-walks laid theirs. The cursor the children walked under (MetadataMeasureOffset =
+        // the span's bar, VoiceIndex counted from the part's own slot, VoiceScope = the voice's
+        // number within its part) is BranchState.ForChild's, from the parallel arm.
         var tracks = new List<ImmutableArray<Measure>>();
         for (int t = 1; t < voiceCount; t++)
         {
@@ -2782,74 +2782,18 @@ public sealed partial class MeasureCollector
             for (int m = 0; m < totalMeasures; m++)
                 trackMeasures[m] = EmptyMeasure(track0[m]);
 
-            foreach (var (parallel, start, startOffset, spanFrame, spanDuration, spanDots, spanMeta) in _parallelSpans)
+            foreach (var span in _spanTracks)
             {
-                var blocks = parallel.Voices.ToList();
-                // A merged drum chart has one more voice at most — the feet's (Drums.cs).
-                var drums = parallel.IsDrums
-                    ? DrumPlanOf(parallel, startOffset, BarLengthOf(spanMeta), spanDuration, spanDots)
-                    : null;
-                if (drums != null ? t > 1 || drums.Lower.Count == 0 : t >= blocks.Count)
+                if (span.Slot != t)
                     continue;
-
-                // Each sub-voice evaluates from the frame the SPAN OPENED IN — the same
-                // one voice 0 read, so the voices are order-independent and none of them
-                // drags the next (see _parallelSpans). ⚠️ It used to be the part's default
-                // octave, which made `voice { c'1 } voice { d1 }` after a low g read its d
-                // two octaves from where the MIDI put it. The note-value default is the
-                // opening's too (it used to be a fresh quarter — see the field's remarks).
-                // …and so is the key, clef and meter (the Meta field's remarks).
-                var savedOctave = _octave.Snapshot();
-                var savedDuration = _defaultDuration;
-                var savedDots = _defaultDots;
-                var savedMeta = _meta.Clone();
-                _octave.Restore(spanFrame);
-                _defaultDuration = spanDuration;
-                _defaultDots = spanDots;
-                _meta.CopyFrom(spanMeta);
-
-                // The sub-voice's cursor, installed for exactly the walk below:
-                //   * MetadataMeasureOffset — per-note metadata in this sub-voice is
-                //     keyed by its local 0-based measure index; shift it to the span's
-                //     real start so dynamics etc. land in the right measure.
-                //   * VoiceIndex — tag this sub-voice's tuplets so their beam-breaking
-                //     boundaries never leak into a sibling voice. Counted FROM THE PART'S
-                //     OWN SLOT, not from zero: on a shared staff the part's voices sit at
-                //     `_cursor.VoiceIndex + t` of Staff.Voices (the binding loop hands the
-                //     part its base; see VoiceSlotting), and on every staff of its own that
-                //     base is 0, which is the arithmetic this replaced.
-                //   * VoiceScope — render voice number is t+1; an override in this
-                //     sub-voice scopes to it. NOT slotted: it is the voice's number WITHIN
-                //     ITS PART (what `voice { } { }` wrote), which is what a part-scoped
-                //     override and the voice-1-up/voice-2-down default both mean.
-                // The scope RESTORES THE SAVED CURSOR where the manual lines it
-                // replaced reset to zeros — the same values, because this loop only
-                // ever runs on the primary stream's cursor (StaffIndex is carried
-                // through unchanged by the `with`, and the walk that fills
-                // _parallelSpans restores its own VoiceScope toggle before returning),
-                // and iteration t+1 saves what iteration t's Dispose just restored.
-                List<Measure> sub;
-                using (new CursorScope(this, _cursor with
-                {
-                    MetadataMeasureOffset = start,
-                    VoiceIndex = _cursor.VoiceIndex + t,
-                    VoiceScope = t + 1,
-                }))
-                {
-                    sub = Run(CollectMeasuresFromNode(drums != null ? parallel : blocks[t], applyFilePartial: start == 0,
-                        leadingOffset: startOffset,
-                        logicalIndexBase: MidBarBreaks?.ToLogical(start) ?? start,
-                        emit: drums != null ? b => EmitDrumVoice(drums.Lower, b, stemUp: false) : null));
-                    ResolveBeamStemDirections(sub, measureOffset: start);
-                }
-
-                _octave.Restore(savedOctave);
-                _defaultDuration = savedDuration;
-                _defaultDots = savedDots;
-                _meta.CopyFrom(savedMeta);
-
-                for (int k = 0; k < sub.Count && start + k < totalMeasures; k++)
-                    trackMeasures[start + k] = sub[k];
+                var sub = span.Measures;
+                // The beam stamp, here and not in the span's arm: after the primary's own
+                // stamp and slot by slot, span by span — the order the beam ids were always
+                // handed out in, which a resumed collect (adopting spans from its recording)
+                // must reproduce for the full collect's ids.
+                ResolveBeamStemDirections(sub, measureOffset: span.StartMeasure);
+                for (int k = 0; k < sub.Count && span.StartMeasure + k < totalMeasures; k++)
+                    trackMeasures[span.StartMeasure + k] = sub[k];
             }
 
             tracks.Add(trackMeasures.ToImmutableArray());
@@ -3916,7 +3860,7 @@ public sealed partial class MeasureCollector
         // Per-walk state that every walk clears/balances on its own; cleared here
         // too so an aborted collect (exception mid-walk) cannot leak into a reuse.
         _pendingInlineVoltas.Clear();
-        _parallelSpans.Clear();
+        _spanTracks.Clear();
         _walkHeaderReads.Clear();
         _walkCanonicalReads.Clear();
         _meterCursor = null;
@@ -4468,7 +4412,7 @@ public sealed partial class MeasureCollector
             // collector's final state does not retain them for this walk).
             recording.PreFinalizeMeasures = builder.MeasuresSnapshot();
             recording.PendingInlineVoltas = new(_pendingInlineVoltas);
-            recording.ParallelSpans = new(_parallelSpans);
+            recording.SpanTracks = new(_spanTracks);
             recording.HeaderReads = new(_walkHeaderReads);
             recording.CanonicalReads = new(_walkCanonicalReads);
             recording.ResolvedSpellings = new(_resolvedSpellingLog);
