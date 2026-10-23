@@ -599,10 +599,10 @@ async function onPanelMessage(deps: OmrAiFixDeps, m: { action?: string; index?: 
     switch (m.action) {
         case 'check':
             // Kept here too, so a panel drawn again (the next batch) keeps the boxes as they were.
-            if (row && textOf(row) !== undefined) { row.checked = !!m.on; }
+            if (row && row.state !== 'applied') { row.checked = !!m.on; }
             return;
         case 'accept': {
-            const chosen = run.rows.filter(r => textOf(r) !== undefined && (m.indices ?? []).includes(r.index));
+            const chosen = run.rows.filter(r => r.state !== 'applied' && (m.indices ?? []).includes(r.index));
             for (const r of run.rows) { r.checked = chosen.includes(r); }
             if (chosen.length === 0) {
                 vscode.window.showInformationMessage('Lily#: no proposal is checked — check the bars to write, or Cancel.');
@@ -627,14 +627,18 @@ async function onPanelMessage(deps: OmrAiFixDeps, m: { action?: string; index?: 
     panel.webview.html = panelHtml(deps, panel.webview, run);
 }
 
-/** What taking a row writes over its line: the model's bar, or — when the model read the bar
- *  as right ("unchanged") — the line without its @todo marks (owner's idea 2026-10-23);
- *  undefined: nothing to take. */
-function textOf(r: FixRow): string | undefined {
-    if (r.proposal?.bar) {
-        return r.proposal.bar;
-    }
-    return r.proposal?.unchanged ? resolvedLine(r.target.written) : undefined;
+/** Whether the row has a bar of the model's to write: one that compiles and fills its meter (a
+ *  proposal the scan contradicts, verify ✗, is the person's call and counts). */
+function hasProposal(r: FixRow): boolean {
+    return !!r.proposal?.bar && !(r.gate && !(r.gate.compile && r.gate.length));
+}
+
+/** What taking a row writes over its line: the model's bar, or — for every other row: the model
+ *  read the bar as right ("unchanged"), gave no proposal, no answer, or one that did not pass —
+ *  the line without its @todo marks, the notes as they are (owner's requests 2026-10-23: a bar
+ *  one checks by eye is resolved too, so no row's box is disabled). */
+function textOf(r: FixRow): string {
+    return hasProposal(r) ? r.proposal!.bar! : resolvedLine(r.target.written);
 }
 
 /** The light blue of the bar the panel is on, in the editor (owner's request 2026-10-23). */
@@ -652,8 +656,9 @@ async function showBar(run: FixRun, row: FixRow): Promise<void> {
     const shown = vscode.window.visibleTextEditors.find(e => e.document.uri.toString() === run.uri.toString());
     const editor = shown ?? await vscode.window.showTextDocument(doc, { viewColumn: vscode.ViewColumn.One, preserveFocus: true });
     const range = new vscode.Range(doc.positionAt(from), doc.positionAt(to));
-    // The bar's text selected (owner's request 2026-10-23): what Accept would replace.
-    editor.selection = new vscode.Selection(range.start, range.end);
+    // The caret at the bar's start, nothing selected: a selection lit every note of the bar in
+    // the preview and hid the bar's own tint (owner's report 2026-10-23).
+    editor.selection = new vscode.Selection(range.start, range.start);
     editor.revealRange(range, vscode.TextEditorRevealType.InCenterIfOutsideViewport);
     barMark ??= vscode.window.createTextEditorDecorationType({
         backgroundColor: 'rgba(0, 120, 215, 0.22)',
@@ -688,7 +693,7 @@ async function applyRows(run: FixRun, accepted: readonly FixRow[]): Promise<bool
             skipped.push(r);
             continue;
         }
-        edit.replace(run.uri, new vscode.Range(doc.positionAt(at), doc.positionAt(at + r.target.written.length)), textOf(r)!);
+        edit.replace(run.uri, new vscode.Range(doc.positionAt(at), doc.positionAt(at + r.target.written.length)), textOf(r));
         written.push(r);
     }
     const ok = written.length > 0 && await vscode.workspace.applyEdit(edit);
@@ -780,7 +785,7 @@ function panelHtml(deps: OmrAiFixDeps, webview: vscode.Webview, run: FixRun): st
         const t = r.target;
         // The two lines piece by piece: struck through in red what goes, in green what comes —
         // in the text under the pictures and on the drawn notes.
-        const diff = textOf(r) !== undefined ? wordDiff(t.written, textOf(r)!) : undefined;
+        const diff = wordDiff(t.written, textOf(r));
         const indent = t.start - (run.text.lastIndexOf('\n', t.start - 1) + 1);
         const page = t.crop ? pageUris.get(t.crop.page) : undefined;
         const crop = t.crop && page ? cropRect(t.crop.box, page) : undefined;
@@ -794,16 +799,16 @@ function panelHtml(deps: OmrAiFixDeps, webview: vscode.Webview, run: FixRun): st
         const after = r.after?.Svg ? symbolOf(r.after.Svg) : undefined;
         let proposal: string;
         if (!r.proposal) {
-            proposal = `<div class="none">no answer</div>`;
+            proposal = `<div class="none">no answer — Take removes the @todo</div>`;
         } else if (!r.proposal.bar) {
             proposal = r.proposal.unchanged
                 ? `<div class="none">unchanged — Take removes the @todo</div>`
-                : `<div class="none">no proposal</div>`;
+                : `<div class="none">no proposal — Take removes the @todo</div>`;
         } else if (after) {
             proposal = scoreCell(`after-${r.index}`, after, t.start, t.start + r.proposal.bar.length, true,
                 diff && { kind: 'add', ranges: rangesOf(diff.after, 'add', t.start, indent) });
         } else {
-            proposal = `<div class="none">${r.gate && !(r.gate.compile && r.gate.length) ? 'did not pass' : 'not rendered'}</div>`;
+            proposal = `<div class="none">${r.gate && !(r.gate.compile && r.gate.length) ? 'did not pass — Take removes the @todo' : 'not rendered'}</div>`;
         }
         const gates = r.gate
             ? `<span class="${r.gate.compile ? 'ok' : 'bad'}">compile ${r.gate.compile ? '✓' : '✗'}</span> `
@@ -818,10 +823,10 @@ function panelHtml(deps: OmrAiFixDeps, webview: vscode.Webview, run: FixRun): st
             : r.gate?.verify === false ? `${r.proposal.reason ? `${r.proposal.reason} — ` : ''}${r.gate.problems.filter(p => p.startsWith('the scan says')).join(' / ')}`
             : r.proposal.reason || '';
         const sure = r.proposal?.confidence === null || r.proposal?.confidence === undefined ? '' : ` · confidence ${r.proposal.confidence.toFixed(2)}`;
-        const can = textOf(r) !== undefined && r.state !== 'applied';
+        const can = r.state !== 'applied';
         const on = can && !!r.checked;
         const buttons = r.state === 'skipped' ? `<span class="memo bad">· not written last time: the line had changed</span>` : '';
-        const keep = !r.proposal?.bar && !!r.proposal?.unchanged;
+        const keep = !hasProposal(r);
         const box = can
             ? `<label class="take" title="${keep ? 'Remove this bar\'s @todo when you press Accept (the notes stay as they are)' : 'Write this proposal when you press Accept'}">`
               + `<input type="checkbox" class="take" data-i="${r.index}" ${on ? 'checked' : ''}> ${keep ? 'Take (remove @todo)' : 'Take'}</label>`
@@ -848,8 +853,8 @@ function panelHtml(deps: OmrAiFixDeps, webview: vscode.Webview, run: FixRun): st
 </tr>`;
     }).join('\n');
 
-    const takeable = run.rows.filter(r => textOf(r) !== undefined && r.state !== 'applied').length;
-    const checked = run.rows.filter(r => textOf(r) !== undefined && r.state !== 'applied' && r.checked).length;
+    const takeable = run.rows.filter(r => r.state !== 'applied').length;
+    const checked = run.rows.filter(r => r.state !== 'applied' && r.checked).length;
     const name = path.basename(run.uri.fsPath);
 
     return `<!DOCTYPE html>
