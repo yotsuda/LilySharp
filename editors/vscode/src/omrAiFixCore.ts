@@ -107,18 +107,23 @@ function doubtOf(t: FixTarget): number {
     return t.confidence === undefined ? -1 : t.confidence;
 }
 
+/** Where the bar is on the scan: a bar mark's box (the part-bars it covers), else the bar written
+ *  on the line (`measures[].line`), else a note mark's box — a note mark boxes the heads alone, and
+ *  the model, like the person, wants the bar around them. */
 function cropOf(keys: readonly string[], line: number, side?: ScanSideFile): FixTarget['crop'] | undefined {
     if (!side) {
         return undefined;
     }
-    for (const k of keys) {
-        const t = side.todos.find(s => s.key === k);
-        if (t) {
-            return { page: t.page, box: t.box };
-        }
+    const marks = keys.map(k => side.todos.find(s => s.key === k)).filter((t): t is NonNullable<typeof t> => !!t);
+    const barMark = marks.find(t => t.kind !== 'note');
+    if (barMark) {
+        return { page: barMark.page, box: barMark.box };
     }
     const bar = side.measures.find(m => m.line === line + 1);
-    return bar ? { page: bar.page, box: bar.box } : undefined;
+    if (bar) {
+        return { page: bar.page, box: bar.box };
+    }
+    return marks.length > 0 ? { page: marks[0].page, box: marks[0].box } : undefined;
 }
 
 /** Whether a target is checked by default: the scan view's slider shows its marks (shownAt). */

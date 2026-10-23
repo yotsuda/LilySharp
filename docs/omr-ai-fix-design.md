@@ -157,11 +157,13 @@ uri と印の offset）を出し、拡張はその行の対象だけを QuickPic
 - 限界: 連符の無印・声部の入れ替わり・歌詞の位置など「1 小節の文字と絵」で決まらないものは `null` が正解。パネルで
   「no proposal」として残り、人が直す。
 
-## 7. OMR 側へ頼むもの（REQUESTS.md に書く・M3 の前）
+## 7. OMR 側へ頼むもの（M3 の前）
 
-1. `omr verify --bars N[,M…]`（または `--measure`）: 小節を絞った照合（門 3 を数秒に）。
-2. `candidates[]`（S33 段 1 の `cands`）を `x.omr.json` に（段 2 の前提・既に「将来の依頼」にある）。
-3. `x.omr.json` の `pages[].image` の相対パス（今は絶対パス）。切り抜きには今のままでも読める。
+**依頼済（2026-10-23・第973）: `..\LilySharp-Omr\docs\repro\lilysharp-proposal-2026-10-23-ai-fix.md`**（REQUESTS.md「将来の依頼」から指した・返事は `lilysharp-reply-2026-10-23-ai-fix.md` の予定）。
+
+1. `omr verify <x.lys> --candidate <tmp.lys> --bars N[,M…] --no-write --progress json`: 提案を差し込んだ temp の本文を、小節を絞って、side file を書かずに照合し、小節ごとに `{"event":"bar","measure","part","differs","confidence","memo"}` を返す（門 3 を数秒に）。有無は `--version --json` の `features: ["verify-bars"]`。
+2. 長さの todo（`source: length|verify`）に **`readings[]`**（S33 段 1 の `Fixes.Cand` の `why`・`was`・`now`・`evidence`・`fills`・`x`・`y`）＝1 事象の別の読み。`candidates` は音符の todo のまま。
+3. `x.omr.json` の `pages[].image`（`annotated`・`source` も）を side file のフォルダーからの相対パスに（今は絶対パス・Lily# は両方読める）。
 
 ## 8. 開いている判断（オーナー）
 

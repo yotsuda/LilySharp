@@ -126,6 +126,23 @@ describe('the bars to fix', () => {
         assert.equal(labelOf(hand), 'bar 3 (p2)');
     });
 
+    it('crop a note mark to its bar, not to the heads it boxes', () => {
+        const sideText = JSON.stringify({
+            version: 1, pages: [{ page: 1, image: 'p01.png', width: 2400, height: 3500 }],
+            measures: [{ measure: 2, part: 'p1', line: 13, page: 1, box: [700, 1800, 1100, 1900] }],
+            todos: [
+                { key: 'o7', kind: 'note', measure: 2, part: 'p1', lines: [13], page: 1, box: [900, 1840, 930, 1860], memo: 'F# or F?', confidence: 0.4 },
+                { key: 'o8', kind: 'note', measure: 9, part: 'p1', lines: [40], page: 1, box: [100, 100, 130, 120], memo: 'alone' },
+            ],
+        });
+        const side = parseSideFile(sideText, SIDE_PATH)!;
+        const [t] = fixTargets(LYS, [{ Key: 'o7', Memo: 'F# or F?', HostStart: offsetOf('g8@todo(b2-p1'), HostEnd: 0, Measure: 2, Part: 'p1' }], side);
+        assert.deepEqual(t.crop, { page: 1, box: [700, 1800, 1100, 1900] });
+        // …and the heads when the side file knows no bar for the line.
+        const [alone] = fixTargets(LYS, [{ Key: 'o8', Memo: 'alone', HostStart: offsetOf('bes,4@todo("check'), HostEnd: 0, Measure: 3, Part: 'p2' }], side);
+        assert.deepEqual(alone.crop, { page: 1, box: [100, 100, 130, 120] });
+    });
+
     it('need no side file: the memo and the line are enough', () => {
         const bare = fixTargets(LYS, TODOS);
         assert.equal(bare.length, 3);
