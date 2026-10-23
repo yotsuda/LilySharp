@@ -38,6 +38,16 @@ namespace LilySharp.Core.Music;
 /// A quality the registry does not know (a raw suffix, <c>Cx</c>) has no interval set: it
 /// plays its root alone (and its slash bass). Tones that land on the same key sound once.
 /// </para>
+/// <para>
+/// A SLASH BASS THAT IS A CHORD TONE is an INVERSION (owner's decision 2026-10-23, session
+/// 967, HANDOFF §2 E ⑹ (a) ③): the tone sounds once, below — <c>C/E</c> plays E3 C4 G4, not
+/// E3 E4 as well — while a bass outside the chord is an ADDED note under the whole chord
+/// (<c>C/D</c> plays D3 C4 E4 G4). <see cref="ChordStructure.BassIsAdded"/> records which;
+/// the entry parser sets it from the tones.
+/// LILYPOND-REF: scm/chord-entry.scm:91-115 process-inversion, inside construct-chord-elements
+///   — a member pitch is moved below the root (removed from the upper set), a non-member
+///   becomes a plain bass.
+/// </para>
 /// </remarks>
 public static class ChordVoicing
 {
@@ -57,8 +67,15 @@ public static class ChordVoicing
     public static ImmutableArray<VoicedTone> Window(ChordStructure chord)
     {
         var voiced = ImmutableArray.CreateBuilder<VoicedTone>();
+        int invertedPc = -1;
         if (chord.BassStep is { } bassStep)
-            voiced.Add(Place(bassStep, chord.BassAlter ?? 0, WindowLow - 12));
+        {
+            var bass = Place(bassStep, chord.BassAlter ?? 0, WindowLow - 12);
+            voiced.Add(bass);
+            // An inversion's bass is a chord tone moved below: it does not sound again above.
+            if (!chord.BassIsAdded)
+                invertedPc = bass.Midi % 12;
+        }
 
         var upper = new System.Collections.Generic.List<VoicedTone>();
         if (chord.RawSuffix != null)
@@ -67,7 +84,7 @@ public static class ChordVoicing
             foreach (var tone in chord.Tones)
             {
                 var placed = Place(tone.Step, tone.Alter, WindowLow);
-                if (!upper.Any(u => u.Midi == placed.Midi))
+                if (placed.Midi % 12 != invertedPc && !upper.Any(u => u.Midi == placed.Midi))
                     upper.Add(placed);
             }
         voiced.AddRange(upper.OrderBy(u => u.Midi));

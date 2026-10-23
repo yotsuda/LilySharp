@@ -57,7 +57,9 @@ internal sealed partial class Parser
         // altered tensions (7#9, #11), and sharp figures (#6). It flows through
         // MusicMarkSyntax.MarkName / the chord-symbol token run to the chord /
         // figured-bass parsers. Track those regions so a '#' there is not
-        // flagged; every other BadToken (and '#' anywhere else) is.
+        // flagged; every other BadToken (and '#' anywhere else) is. The same regions
+        // tolerate the chart glyphs a symbol prints with — ♭ ♯ ° △ (session 967,
+        // Music.ChordSymbolSpelling.IsSymbolGlyph); Δ ø Ø are letters and need no exception.
         int scanPos = 0;
         int argDepth = 0;  // paren depth inside a @chord/@figuredBass argument (0 = outside)
         int stage = 0;     // 0 = idle, 1 = saw '@', 2 = saw '@chord'/'@figuredBass' name
@@ -94,7 +96,8 @@ internal sealed partial class Parser
             // A '^' glued after a '-' is LilyPond's marcato shorthand, which the music parse
             // reports as one (Parser.Music ReportLilyPondScript) — not a second error here.
             bool scriptShorthandTail = t.Text == "^" && glued && previous?.Kind == SyntaxKind.Minus;
-            if (t.Kind == SyntaxKind.BadToken && !(inChordFigArg && t.Text == "#") && lyricsDepth == 0
+            if (t.Kind == SyntaxKind.BadToken && !(inChordFigArg && Music.ChordSymbolSpelling.IsSymbolGlyph(t.Text))
+                && lyricsDepth == 0
                 && !scriptShorthandTail)
             {
                 // '?' is LilyPond's cautionary accidental; Lily# has no such
@@ -155,6 +158,10 @@ internal sealed partial class Parser
             else if (stage == 1 && t.Kind == SyntaxKind.Identifier
                      && (t.Text.Equals("chord", StringComparison.Ordinal)
                          || t.Text.Equals("figuredBass", StringComparison.Ordinal)))
+                stage = 2;
+            // The shape-chord ITEM, chord(C#m7 x46654): its words are an @chord's (session 967).
+            else if (stage == 0 && t.Kind == SyntaxKind.Identifier
+                     && t.Text.Equals(ShapeChordWord, StringComparison.Ordinal))
                 stage = 2;
             else if (stage == 2 && t.Kind == SyntaxKind.OpenParen)
             {

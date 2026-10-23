@@ -267,7 +267,17 @@ internal sealed class ImportHarmony : ImportItem
     public string? KindText { get; set; }
     public int? BassStep { get; set; }
     public int? BassAlter { get; set; }
+    /// <summary>The harmony's <c>&lt;degree&gt;</c> elements — a tone added, altered or taken
+    /// away from the kind (<c>C7♭9</c> is <c>dominant</c> + 9 add −1). Written back as the
+    /// symbol's parenthesized alteration list, <c>C7(b9)</c>.</summary>
+    public List<ImportDegree> Degrees { get; } = new();
 }
+
+/// <summary>One <c>&lt;degree&gt;</c> of a harmony.</summary>
+/// <param name="Value">The degree, 1-based (9 is the ninth).</param>
+/// <param name="Alter">Its chromatic alteration (−1 flat, 1 sharp).</param>
+/// <param name="Type"><c>add</c>, <c>alter</c> or <c>subtract</c>.</param>
+internal readonly record struct ImportDegree(int Value, int Alter, string Type);
 
 /// <summary>
 /// A figured-bass group (MusicXML <c>&lt;figured-bass&gt;</c>). Like a harmony it

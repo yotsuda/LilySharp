@@ -2245,16 +2245,33 @@ c4@figuredBass(6) d@figuredBass(6 4) e@figuredBass(5 3) |
 
 ## Chord Names
 
-Written as they print — an UPPERCASE root, `#`/`b`, a bare quality (`C`, `Am`,
-`G7`, `F#m`, `Bb7/D`; altered tensions spell `+`/`-`: `Gm7-5`):
+Written as they print — an UPPERCASE root, `#`/`b` (or `♯`/`♭`), a bare quality (`C`, `Am`,
+`G7`, `F#m`, `Bb7/D`; altered tensions spell `+`/`-`, `Gm7-5`, or sit in parentheses,
+`G7(b9, #11)`):
 
 ```
 c4@chord(C) d@chord(Dm) e@chord(Em) f@chord(F) |
 ```
 
+Every printed spelling of a quality is read as the one chord it names, and the page prints the
+canonical name: `CΔ7`, `C△7`, `CM7`, `CMa7`, `CMaj7` are Cmaj7; `Cø7`, `CØ7`, `C07` are Cm7♭5;
+`C°7`, `Co7` are Cdim7; `C+`, `C+7`, `C+maj7` augmented; `C-7`, `Cmi7`, `CMI7` are Cm7 (a `-`
+straight after the root is the minor third; `C-5` is refused — write `C(b5)`); `C7no3` is
+C7omit3. Inside the parentheses spaces and commas both separate: `C7(b9, #11)`, `Cm7(b5)`,
+`C(add9)`, `C7(omit3)`, `Cm(maj7)`, `C7(alt)`; a bare number is the extension when the quality
+has a seventh (`C7(9)` = C9, `Cmaj7(9)` = Cmaj9) and an added tone otherwise (`C(9)` = Cadd9,
+`C6(9)` = C69). A `b`/`#` glued after a letter or digit inside the quality stays refused
+(`C7b9`, `Cm7b5`): write `C7(b9)` or `C7-9`.
+
+A slash bass that is a chord tone is an inversion — the tone sounds once, below (`C/E` plays
+E3 G3 C4 in the MIDI and the hover) — and one outside the chord is an added note under the
+whole chord (`C/D`). The `.ly` twin writes LilyPond's `/` and `/+` accordingly; MusicXML
+writes an assembled quality as its nearest kind plus `<degree>` elements.
+
 The symbol is the FIRST word of the argument: the words after it are the shapes of its chord
 diagram (`@chord(Cm7 x3x546)`, see *Chord Diagrams*). A space therefore separates words —
-`@chord(C 7)` is C with a one-character shape (a warning), not C7 (write `@chord(C7)`). A bare
+`@chord(C 7)` is C with a one-character shape (a warning), not C7 (write `@chord(C7)`) — except
+inside the symbol's own parentheses, which are one word (`@chord(C7(b9, #11) x32310)`). A bare
 `@chord` names the chord from the notes it sits on.
 
 A chord symbol belongs to the beat, not to a note: it may sit on a rest, a spacer or a

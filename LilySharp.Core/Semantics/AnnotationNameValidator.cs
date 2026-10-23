@@ -539,10 +539,17 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
     /// </summary>
     private void WarnUnregisteredChordQuality(MusicMarkSyntax mark, string quality)
     {
+        // The spelling grammar names what it refused on purpose (C-5, C7b9, a word in the
+        // parentheses that is no alteration — ChordSymbolSpelling); else the general rule.
+        string? refusal = null;
+        if (ChordAnnotation.Of(mark)?.Symbol is { } symbol)
+            ChordStructure.TryParseChordEntry(symbol, out _, out refusal);
         var message =
             $"'{quality}' is not a chord quality Lily# knows, so this @chord names nothing "
-            + "and is ignored. An altered tension is spelled with '+' or '-' — '#' and 'b' "
-            + "belong to the root and the bass alone, which is what keeps 'Bb9' unambiguous.";
+            + "and is ignored. "
+            + (refusal ?? "An altered tension is spelled with '+' or '-' (C7-9, C7+11) or in parentheses "
+                + "(C7(b9), C7(#11)) - '#' and 'b' after a letter belong to the root and the bass alone, "
+                + "which is what keeps 'Bb9' unambiguous.");
 
         var altered = quality.Replace('b', '-').Replace('#', '+');
         if (!string.Equals(altered, quality, StringComparison.Ordinal)

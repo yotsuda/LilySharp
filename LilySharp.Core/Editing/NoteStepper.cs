@@ -824,17 +824,17 @@ public static partial class NoteStepper
         if (!Music.ChordStructure.TryParseChordEntry(sym, out var parsed))
             return (null, $"{sym}: the step writes shapes for a chord name, not a degree - its chord "
                 + "depends on the key.");
+        // The shapes' group — the second when the first is the symbol's alteration list
+        // (C7(b9)(x32310)); the symbol ends where that list ends.
         int symbolEnd = entry.SourceStart;
-        SyntaxTokenNode? open = null, close = null;
+        SyntaxTokenNode? open = entry.ShapesOpenParen, close = entry.ShapesCloseParen;
         for (int i = 0; i < entry.SlotCount; i++)
         {
             if (entry.GetChild(i) is not SyntaxTokenNode tk)
                 continue;
-            if (tk.Kind == SyntaxKind.OpenParen)
-                open ??= tk;
-            else if (tk.Kind == SyntaxKind.CloseParen && open != null)
-                close ??= tk;
-            else if (open == null && tk.Text.Length > 0)
+            if (open != null && tk.SourceStart >= open.SourceStart)
+                break;
+            if (tk.Text.Length > 0)
                 symbolEnd = tk.SourceStart + tk.Text.Length;
         }
         if (open != null && close == null)

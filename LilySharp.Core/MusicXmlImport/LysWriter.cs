@@ -1304,23 +1304,48 @@ internal static class LysWriter
         string? root = SymbolPitch(h.RootStep, h.RootAlter);
         string? quality = KindToToken(h.Kind);
         string? bass = h.BassStep is int bs ? SymbolPitch(bs, h.BassAlter ?? 0) : "";
-        if (root == null || quality == null || bass == null)
+        // The degrees as the symbol's parenthesized alteration list (session 967):
+        // add 9 alter −1 → b9, add 9 → add9, alter 5 → b5/#5, subtract 3 → omit3.
+        string? alterations = DegreeList(h.Degrees);
+        string? symbol = root == null || quality == null || bass == null || alterations == null
+            ? null
+            : root + quality + alterations + (bass.Length > 0 ? "/" + bass : "");
+        if (symbol == null || !ChordStructure.TryParseChordEntry(symbol, out _))
         {
-            // No clean symbol target (an unknown kind, or a double accidental the
-            // entry grammar does not spell): fall back to the quoted free-text
-            // escape hatch so nothing renders wrong.
+            // No clean symbol target (an unknown kind, a degree the entry grammar does not
+            // spell, or a double accidental): fall back to the quoted free-text escape hatch
+            // so nothing renders wrong.
             string text = ChordStructure.SpellPitch(h.RootStep, h.RootAlter)
                           + (h.KindText ?? h.Kind);
             report.Warn($"chord '{text}' has no Lily# entry spelling; emitted as text.");
             return "@chord(\"" + EscapeString(text) + "\")";
         }
+        return "@chord(" + symbol + ")";
+    }
 
-        var sb = new StringBuilder("@chord(");
-        sb.Append(root).Append(quality);
-        if (bass.Length > 0)
-            sb.Append('/').Append(bass);
-        sb.Append(')');
-        return sb.ToString();
+    private static string? DegreeList(List<ImportDegree> degrees)
+    {
+        if (degrees.Count == 0)
+            return "";
+        var words = new List<string>();
+        foreach (var d in degrees)
+        {
+            string? word = (d.Type, d.Alter) switch
+            {
+                ("add", 0) when d.Value == 7 => "7",
+                ("add", 0) when d.Value is 2 or 4 or 6 or 9 or 11 or 13 => "add" + d.Value,
+                ("add", -1) when d.Value is 5 or 9 or 11 or 13 => "b" + d.Value,
+                ("add", 1) when d.Value is 5 or 9 or 11 or 13 => "#" + d.Value,
+                ("alter", -1) when d.Value == 5 => "b5",
+                ("alter", 1) when d.Value == 5 => "#5",
+                ("subtract", _) when d.Value is 3 or 5 => "omit" + d.Value,
+                _ => null,
+            };
+            if (word == null)
+                return null;
+            words.Add(word);
+        }
+        return "(" + string.Join(",", words) + ")";
     }
 
     /// <summary>A symbol-entry pitch ("C", "F#", "Bb"), or null for an alteration
@@ -1384,7 +1409,17 @@ internal static class LysWriter
         "major-ninth" => "maj9",
         "minor-ninth" => "m9",
         "major-minor" => "mmaj7",
-        "half-diminished" => "m7b5",
+        // Until session 967 this wrote "m7b5", which the entry grammar refuses ('b' after a
+        // letter is the root's): the registered token is m7-5.
+        "half-diminished" => "m7-5",
+        "augmented-seventh" => "aug7",
+        "dominant-11th" => "11",
+        "major-11th" => "maj11",
+        "minor-11th" => "m11",
+        "dominant-13th" => "13",
+        "major-13th" => "maj13",
+        "minor-13th" => "m13",
+        "power" => "5",
         _ => null,
     };
 

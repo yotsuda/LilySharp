@@ -1348,7 +1348,9 @@ LyricSyllable  = LyricText , [ '-' ] | '--' | '-' | '~' | '_' ;
 
 ChordsBlock    = 'chords' , [ Identifier ] , '{' , { ChordRowEntry | ChordExtend | ChordRowRest | Barline } , '}' ;
                  (* The UNNAMED track (2026-10-09) is placed by a score's bare 'chords' row. *)
-ChordRowEntry  = ( ChordEntry | RomanEntry ) , [ '(' , ShapeWords , ')' ] , [ TodoMark ] ;   (* '(' GLUED to the symbol *)
+ChordRowEntry  = ( ChordEntry | RomanEntry ) , [ '(' , ShapeWords , ')' ] , [ TodoMark ] ;   (* '(' GLUED to the symbol;
+                                                                    the symbol's own '(' list (C7(b9, #11)) comes
+                                                                    first, the shapes in a second group *)
 ChordRowRest   = ( 'r' | 'R' ) , [ TodoMark ] ;
 TodoMark       = Annotation ;   (* GLUED: '@todo', '@todo(key)', '@todo("memo")', '@todo(key "memo")',
                                    with '.up' / '.down' after the argument *)
@@ -1374,10 +1376,50 @@ TodoMark       = Annotation ;   (* GLUED: '@todo', '@todo(key)', '@todo("memo")'
                     staff") was removed before the first tag (LYS0032): its
                     association was stated nowhere and broke down the moment a
                     section held two parts. *)
-ChordEntry     = ChordRoot , [ Quality ] , [ '/' , ChordRoot ] ;
-ChordRoot      = ( 'A' | 'B' | 'C' | 'D' | 'E' | 'F' | 'G' ) , [ '#' | 'b' ] ;
+ChordEntry     = ChordRoot , [ Quality ] , [ '(' , AlterationList , ')' ] , [ '/' , ChordRoot ] ;
+ChordRoot      = ( 'A' | 'B' | 'C' | 'D' | 'E' | 'F' | 'G' ) , [ '#' | 'b' | '♯' | '♭' ] ;
 ChordExtend    = '.' ;
-Quality        = RegisteredQuality | AssembledQuality ;
+Quality        = RegisteredQuality | AssembledQuality | SpelledQuality ;
+AlterationList = Alteration , { ( ',' | ' ' ) , Alteration } ;   (* spaces and commas inside the
+                                                                    parentheses, glued to the symbol:
+                                                                    C7(b9, #11), Cm7(b5), C(add9) *)
+Alteration     = ( 'b' | '#' | '♭' | '♯' | '-' | '+' ) , ( '5' | '9' | '11' | '13' )
+               | 'add' , ( '2' | '4' | '6' | '9' | '11' | '13' )
+               | ( 'omit' | 'no' ) , ( '3' | '5' )
+               | 'sus' | 'sus2' | 'sus4' | 'alt'
+               | MajorWord , [ '7' | '9' | '11' | '13' ]         (* Cm(maj7), C(maj9) *)
+               | '2' | '4' | '6' | '7' | '9' | '11' | '13' ;     (* a BARE number: the extension
+                                                                    when the quality has a seventh
+                                                                    (C7(9) = C9, C7(13) = C13,
+                                                                    Cmaj7(9) = Cmaj9), else an added
+                                                                    tone (C(9) = Cadd9, C6(9) = C69) *)
+MajorWord      = 'maj' | 'Maj' | 'MAJ' | 'Ma' | 'MA' | 'M' | 'Δ' | '△' ;
+SpelledQuality = (* THE PRINTED SPELLINGS (owner's decisions 2026-10-23, HANDOFF §2 E ⑹ "a+e"),
+                    each read as the canonical quality above — one tone set, one structure, one
+                    printed name (the Ignatzek name of the canonical form: Cø7 prints as Cm7♭5 or
+                    Cø by the chordQualities vocabulary, exactly as Cm7-5 does):
+                    MajorWord [N]        the major seventh: CΔ, CΔ7, C△7, CM7, CMa7, CMaj7, CΔ9 (maj9)
+                    'ø' | 'Ø' | '0' [7]  the half-diminished seventh: Cø, Cø7, CØ7, C07 (= Cm7-5)
+                    '°' | 'o' [7]        diminished: C°, C°7, Co7 (= Cdim, Cdim7)
+                    '+' [7 | MajorWord]  augmented: C+, C+7, C+maj7 — before any OTHER digit the
+                                         '+' keeps its older reading, the altered tension (C+5 =
+                                         Caug, C+9 = C with a ♯9)
+                    '-'                  straight after the root: the MINOR third — C-, C-7, C-9,
+                                         C-Δ7 (= Cm, Cm7, Cm9, Cmmaj7). ⚠️ C-5 is REFUSED and
+                                         names C(b5): a "minor fifth" is nobody's reading (until
+                                         2026-10-23 '-5' there was the flat five).
+                    'mi' | 'Mi' | 'MI'   minor (Cmi7); 'min' as before
+                    'no' N               omit: C7no3, Cno5 (= C7omit3, Comit5)
+                    '♭' | '♯'            the glyphs of 'b' / '#' wherever they are written —
+                                         root, bass, parentheses (B♭7/D♭, C7(♭9)).
+                    These compose: C-Δ7, CmM7, F♯ø7, B♭Δ7/D. STILL REFUSED: 'b' / '#' GLUED after
+                    a letter or digit inside the quality (C7b9, C7#9, Cm7b5) — after a letter the
+                    two are the root's and the bass's (Bb5 is B♭'s power chord), and the rule is
+                    kept one rule: write C7(b9) / C7-9, Cm7(b5) / Cm7-5. The parenthesized list
+                    is ONE WORD of the symbol, in a chords row (C7(b9, #11)/E, then the shapes in
+                    a SECOND group: C7(b9)(x32310)) and in '@chord(…)' / 'chord(…)' alike; a
+                    row tells the list from a shape group by its words (a shape is x/o/digits
+                    four or more long or dashed, a tuning a name). *)
                  (* RegisteredQuality: m min dim aug + 7 maj7 maj m7 min7 mmaj7 dim7
                     m7-5 6 m6 9 maj9 m9 sus2 sus4 sus 7sus4 7-5 7+5 7-9 7+9 7+11
                     add9 11 13 m11 m13 maj13 (and min6 min9 min11 min13). *)
@@ -1401,8 +1443,13 @@ AssembledQuality = [ 'm' | 'min' | 'dim' | 'aug' ] , [ 'maj' ]
                     GRAMMAR_AUDIT 8.1): C, Am, G7, F#m, Bb7, Gm7-5, Cmaj7/E. The
                     case is the grammar — an UPPERCASE letter is a root, so 'R'
                     (the rest) never collides, and 'b' after a root is a FLAT,
-                    which is why every altered tension spells '+'/'-' (Bb5 is
-                    B-flat's power chord; B's flat five is B-5). Placement is
+                    which is why every altered tension spells '+'/'-' or sits in
+                    parentheses (Bb5 is B-flat's power chord; B's flat five is
+                    B(b5)). A SLASH BASS that is a chord tone is an INVERSION
+                    (the tone sounds once, below: C/E plays E3 G3 C4), one outside
+                    the chord an ADDED note under the whole chord (C/D) — LilyPond's
+                    own reading of '/', and the twin writes '/+' for the latter
+                    (2026-10-23, HANDOFF §2 E ⑹ (a) ③). Placement is
                     MEASURE-RELATIVE, no durations: a bar's written slots —
                     entries, rests, '.' — divide it on the meter's own beat grid
                     (the beams' grid). One slot takes the bar. Slots = beats sit
@@ -1975,7 +2022,8 @@ DisplayName    = String ;
    a degree chart prints names by default and degrees under 'as roman', and a name chart
    does the same. A mid-piece 'key' rebases every degree after it.
    The degree grammar: an optional accidental 'b'/'#' (as many as needed), a numeral
-   I II III IV V VI VII, the ordinary quality (Imaj7, IIm7, V7, VIIdim, Vaug, IIm7-5),
+   I II III IV V VI VII, the ordinary quality in any of its spellings (Imaj7, IIm7, V7,
+   VIIdim, Vaug, IIm7-5, IIø7, V7(b9), IΔ7 — SpelledQuality and AlterationList above),
    and an optional '/' after it: a NUMERAL there is the target of a SECONDARY function,
    read in the major key on that degree (V7/V = D7 in C, IIm7/IV = Gm7, VIIdim7/V =
    F#dim7, V7/bVII = F7), and a DIGIT 1-7 with an optional 'b'/'#' is the BASS as the key's
@@ -2508,7 +2556,10 @@ Placement      = '.up' | '.down' ;   (* force above / below; default is automati
    plays nothing, but it points at ONE item, which is what the preview rings and an OMR key
    names; a doubt about a key, a meter or a form is a '//' comment. *)
 
-(* @chord's argument: its Args are WORDS (owner's decisions 2026-09-27 / 28). *)
+(* @chord's argument: its Args are WORDS (owner's decisions 2026-09-27 / 28). The symbol's
+   parenthesized alteration list is ONE word whatever it holds — '@chord(C7(b9, #11) x32310)'
+   is the symbol C7(b9,#11) and one shape (2026-10-23): inside a '(' … ')' neither whitespace
+   nor ',' separates, in every '@name(…)' argument (MarkArgument). *)
 ChordArgument  = ChordEntry , ShapeWords                         (* the name + its diagram's shapes *)
                | Shape , { Shape }                               (* the name comes from its notes *)
                | QuotedText ;                                    (* @chord("N.C.") *)
@@ -2597,7 +2648,9 @@ TwoDigitFret   = Digit , Digit ;                                 (* 10-15 *)
                     a tab staff too; the twin writes a text script -\markup { \italic "H" },
                     MusicXML <hammer-on> / <pull-off> (from the previous note) and <tap/>. *)
    - Chord name:    c4@chord(C) , d4@chord(Dm)   (* the SYMBOL as it prints — the same
-                    ChordEntry format as a chords row: Am7, G7, F#m, Bb7/D. The retired
+                    ChordEntry format as a chords row: Am7, G7, F#m, Bb7/D, and every
+                    printed spelling of a quality (CΔ7, Cø7, C°7, C-7, CM7, C7(b9, #11),
+                    B♭7 — SpelledQuality / AlterationList in the chords section). The retired
                     lowercase ':' entry ('@chord(a:m)') is NOT recognised — LYS1008 warns
                     and the symbol is not engraved. A bare '@chord' derives it from the notes.
                     The words after the symbol are the shapes of its chord DIAGRAM

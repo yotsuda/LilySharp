@@ -801,7 +801,7 @@ internal sealed class ChordNameCollector
     /// Resolves a chord entry — the printed symbol its token run spells — to its
     /// display text and (when the quality is registered) its structure, through
     /// the ONE string grammar <c>@chord</c> uses too
-    /// (<see cref="Music.ChordStructure.TryParseChordEntry"/>). An unregistered
+    /// (<see cref="Music.ChordStructure.TryParseChordEntry(string, out Music.ChordStructure)"/>). An unregistered
     /// quality on a valid root keeps the raw suffix: the interval set is unknown
     /// (no note expansion), but the root resolves to a Roman degree, so
     /// <c>Cm13</c> shows "Cm13" / "Im13" instead of an un-converted literal.

@@ -964,10 +964,18 @@ internal sealed partial class Parser
         if (Check(SyntaxKind.OpenParen))
         {
             openParen = Advance();
-            // Stop at a ')' — and at a '}' or the end, so an unclosed item cannot swallow the
-            // rest of its block (Expect reports the missing ')').
-            while (!Check(SyntaxKind.CloseParen) && !Check(SyntaxKind.CloseBrace) && !Check(SyntaxKind.EndOfFile))
+            // Stop at the ')' that matches — a symbol's alteration list nests its own pair,
+            // chord(C7(b9) x32310) (session 967) — and at a '}' or the end, so an unclosed
+            // item cannot swallow the rest of its block (Expect reports the missing ')').
+            int depth = 0;
+            while (!(Check(SyntaxKind.CloseParen) && depth == 0) && !Check(SyntaxKind.CloseBrace) && !Check(SyntaxKind.EndOfFile))
+            {
+                if (Check(SyntaxKind.OpenParen))
+                    depth++;
+                else if (Check(SyntaxKind.CloseParen))
+                    depth--;
                 tokens.Add(Advance());
+            }
             closeParen = Expect(SyntaxKind.CloseParen);
         }
         else
@@ -1557,8 +1565,18 @@ internal sealed partial class Parser
                     {
                         var name = Advance();
                         var parts = new List<SyntaxToken> { at, name, Advance() /* ( */ };
-                        while (!Check(SyntaxKind.CloseParen) && !Check(SyntaxKind.EndOfFile))
+                        // A '(' inside the argument opens a NESTED pair, closed by its own ')':
+                        // a chord symbol's alteration list, @chord(C7(b9, #11) x32310)
+                        // (session 967). The argument ends at the ')' that matches the opener.
+                        int depth = 0;
+                        while (!(Check(SyntaxKind.CloseParen) && depth == 0) && !Check(SyntaxKind.EndOfFile))
+                        {
+                            if (Check(SyntaxKind.OpenParen))
+                                depth++;
+                            else if (Check(SyntaxKind.CloseParen))
+                                depth--;
                             parts.Add(Advance()); // argument token (or a ',' separator)
+                        }
                         parts.Add(Expect(SyntaxKind.CloseParen));
                         // @text("…").up / .down — placement on the free-text
                         // annotation — @diagram(…).down, the fret diagram being

@@ -4,6 +4,18 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+### Chord symbols as a chart prints them
+
+- **A chord symbol may be written in any of its printed spellings** — `CΔ7`, `Cø7`, `C°7`,
+  `C+7`, `C-7`, `CM7`, `Cmi7`, `C7no3`, `B♭7`, and the parenthesized alteration list with
+  spaces or commas inside (`C7(b9, #11)`, `Cm7(b5)`, `C(add9)`, `Cm(maj7)`, `C7(9)` = C9) —
+  in a chords row, an `@chord(…)` and a `chord(…)` item; the preview prints the canonical name.
+  `C-5` and a glued `b`/`#` inside the quality (`C7b9`) are refused, and the Problems view
+  names the fixes (`C(b5)`; `C7(b9)` or `C7-9`).
+- **The hover and the playback treat a slash bass that is a chord tone as an inversion**: `C/E`
+  sounds E3 G3 C4 (the E once, below), a bass outside the chord (`C/D`) sounds under the whole
+  chord.
+
 ### `@cross` with no other staff
 
 - **The Problems view reports an `@cross` whose part has no staff beside it** (LYS4031), and

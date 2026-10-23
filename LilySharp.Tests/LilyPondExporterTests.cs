@@ -2772,7 +2772,11 @@ public class LilyPondExporterTests
     public void ChordRow_SlashBassAndAccidentals_SpellAsLilyPondEntries()
     {
         var ly = Export(ChordBook("F#m7-5/C# Bb7/D | Db/F Cmmaj7 |"));
-        Assert.Contains("fis2:m7.5-/cis bes2:7/d |", ly);
+        // A bass that is a chord tone is the inversion ('/'); one outside the chord — C♯
+        // under F♯m7♭5 — is LilyPond's added bass ('/+'), which it realizes exactly as it
+        // would the plain '/' of a non-member and prints the same (session 967, owner's
+        // decision 2026-10-23: BassIsAdded from the tones).
+        Assert.Contains("fis2:m7.5-/+cis bes2:7/d |", ly);
         Assert.Contains("des2/f c2:m7+ |", ly);
     }
 
@@ -2833,9 +2837,10 @@ public class LilyPondExporterTests
     [Fact]
     public void ChordRow_AnUnregisteredQuality_WritesTheRootAndSaysSo()
     {
-        var (ly, warnings) = ExportWithWarnings(ChordBook("CM7 | G |"));
+        // (`CM7` was the unregistered quality here until session 967 made M7 a spelling of maj7.)
+        var (ly, warnings) = ExportWithWarnings(ChordBook("Cx7 | G |"));
         Assert.Contains("c1 |", ly);
-        Assert.Contains(warnings, w => w.Contains("CM7") && w.Contains("chordmode"));
+        Assert.Contains(warnings, w => w.Contains("Cx7") && w.Contains("chordmode"));
     }
 
     [Fact]

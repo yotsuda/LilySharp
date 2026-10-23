@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 65 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 64 | 観測者がゼロだと自認しているもの |
-| `OWN` | 272 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **401** | |
+| `OWN` | 273 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **402** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -248,7 +248,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（272 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（273 件）
 
 ### `LilySharp.Core/Editing/KeyRespeller.cs`
 - **`KeyRespeller`** LILYSHARP-OWN: an editor aid. The rule:
@@ -296,6 +296,8 @@
 - **`ChordShapeTable`** LILYSHARP-OWN: LilyPond's FretBoards context draws every chord it is given, from its
 ### `LilySharp.Core/Music/ChordStructure.cs`
 - **`ChordStructure.ToRomanNumeral`** LILYSHARP-OWN: LilyPond has no Roman-numeral chord names. Owner's decision
+### `LilySharp.Core/Music/ChordSymbolSpelling.cs`
+- **`ChordSymbolSpelling`** LILYSHARP-OWN: LilyPond's chordmode reads c:m7.5- and names from the tones; it
 ### `LilySharp.Core/Music/ChordVoicing.cs`
 - **`ChordVoicing`** LILYSHARP-OWN (owner decision 2026-09-25, HANDOFF §1.1 第625): the WINDOW voicing. Every
 ### `LilySharp.Core/Music/ChordVoicings.cs`

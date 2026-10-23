@@ -1068,6 +1068,14 @@ internal static class MusicXmlReader
                 h.BassAlter = (int)Math.Round(ParseDouble(Local(bassEl, "bass-alter")?.Value));
             }
         }
+        foreach (var degreeEl in Els(el, "degree"))
+        {
+            if (!int.TryParse(Local(degreeEl, "degree-value")?.Value.Trim(), out int value))
+                continue;
+            int alter = (int)Math.Round(ParseDouble(Local(degreeEl, "degree-alter")?.Value));
+            string type = Local(degreeEl, "degree-type")?.Value.Trim().ToLowerInvariant() ?? "add";
+            h.Degrees.Add(new ImportDegree(value, alter, type));
+        }
         return h;
     }
 

@@ -431,10 +431,17 @@ Value words inside the parentheses are lowercase too (`@notehead(triangle)`,
 - Tab technique letters: `@hammerOn` (H), `@pullOff` (P), `@tap` (T) — small italic
   letters opposite the stem (`.up`/`.down` force), drawn on a `tab` staff too.
 - Chord names: `c4@chord(C)` , `d4@chord(Dm)` , `e4@chord(Am7)` — the SYMBOL as it
-  prints (`F#m`, `Bb7/D`, `Gm7-5`), the same format as a chords row. The retired
+  prints (`F#m`, `Bb7/D`, `Gm7-5`), the same format as a chords row, in every printed
+  spelling: `CΔ7`/`CM7`/`CMaj7` (maj7), `Cø7`/`C07` (m7-5), `C°7`/`Co7` (dim7), `C+7`,
+  `C-7`/`Cmi7` (m7), `C7no3`, `B♭7` (`♭`/`♯` for `b`/`#`), and a parenthesized alteration
+  list with spaces or commas inside — `C7(b9, #11)`, `Cm7(b5)`, `C(add9)`, `Cm(maj7)`,
+  `C7(9)` (= C9), `C(9)` (= Cadd9). `C-5` is refused (write `C(b5)`), and so is a `b`/`#`
+  glued after a letter inside the quality (`C7b9`: write `C7(b9)` or `C7-9`). The page prints
+  the canonical name whatever the spelling. The retired
   lowercase `:` entry (`@chord(a:m)`) is not recognised (LYS1008 warns, no symbol is
   engraved). A bare `@chord` derives it from the notes. The symbol is the FIRST word only:
-  `@chord(C 7)` is C with a one-character shape (warns) — write `@chord(C7)` for C7.
+  `@chord(C 7)` is C with a one-character shape (warns) — write `@chord(C7)` for C7; the
+  alteration list is part of that word (`@chord(C7(b9, #11) x32310)`).
   It may sit on a rest or spacer too (`s1@chord(C)`, name and diagram as on a note); a bare
   `@chord` there has no notes to name and warns (LYS1020) — write the name.
 - Chord diagrams (drawn under the name) appear ONLY where a chord WRITES its shape; a name
@@ -729,7 +736,8 @@ is the file's one chord track, named bare in the score (`chords`). An independen
 `score` with `chords NAME` / `lyrics NAME` (instead of `staff NAME`), renders WITHOUT
 a staff: just a grid of measure barlines, the chord symbols between them and the
 lyrics below. A chord entry is the SYMBOL as it prints — `C`, `Am`, `G7`, `F#m`,
-`Bb7`, `Gm7-5`, `C/G` — with NO durations: a bar's entries divide it on the meter's
+`Bb7`, `Gm7-5`, `C/G`, and the chart's other spellings (`CΔ7`, `Cø7`, `C°7`, `C-7`, `CM7`,
+`B♭7`, `C7(b9, #11)`, `Cm7(b5)`, `C7(9)`; see *Chord names* above) — with NO durations: a bar's entries divide it on the meter's
 beat grid (one entry = the bar, two in 4/4 = halves, four = beats), and `.` holds
 the previous chord one more beat (`| C . . G7 |`; a `.` never crosses a barline).
 `r`/`R` print "N.C." in their slot; a `.` at a bar's head is the bar's SILENT slot
@@ -754,7 +762,8 @@ score sheet { chords prog lyrics words }     // chords + lyrics rows, no staff
 ```
 
 **Roman numerals.** A chord entry may also be a DEGREE of the key in force at its bar —
-`I` `IIm7` `V7` `IVmaj7` `VIIm7-5` `bVII` (ASCII `b`/`#`, not `♭`/`♯`). After a `/`, a
+`I` `IIm7` `V7` `IVmaj7` `VIIm7-5` `bVII` (`b`/`#` or `♭`/`♯`; the quality in any of its
+spellings, `IIø7`, `V7(b9)`). After a `/`, a
 NUMERAL is a secondary function's target, read in the major key on it (`V7/V` = D7 in C,
 `IIm7/IV` = Gm7, `VIIdim7/V` = F#dim7), and a DIGIT 1-7 (with `b`/`#`) is the BASS as the
 key's scale degree (`I/3` = C/E, `V7/7` = G7/B, `IV/b7` = F/Bb; `V7/V/#4` = D7/F#, bass

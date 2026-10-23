@@ -568,30 +568,12 @@ public sealed partial class MusicMarkSyntax : SyntaxNode
             // to an exact array was a third of what one reading allocated — measured
             // session 408, HANDOFF §2 R13⒩. The slots are few and their reds are cached,
             // so walking them twice costs nothing worth naming.
-            int count = CountInteriorTokens();
+            int count = WalkInterior(null);
             if (count == 0)
                 return [];
 
             var interior = ImmutableArray.CreateBuilder<SyntaxTokenNode>(count);
-            bool open = false;
-            for (int i = 0; i < SlotCount; i++)
-            {
-                if (GetChild(i) is not SyntaxTokenNode token)
-                    continue;
-                if (token.Kind == SyntaxKind.OpenParen)
-                {
-                    open = true;
-                    interior.Clear();   // a later '(' replaces what an earlier one held
-                }
-                else if (token.Kind == SyntaxKind.CloseParen)
-                {
-                    open = false;
-                }
-                else if (open)
-                {
-                    interior.Add(token);
-                }
-            }
+            WalkInterior(interior);
             // Drain, not Move: a malformed '@x(a b)(c)' fills the builder past the count
             // the last pair asked for, and DrainToImmutable copies in that case instead
             // of throwing on the capacity mismatch.
@@ -600,29 +582,31 @@ public sealed partial class MusicMarkSyntax : SyntaxNode
     }
 
     /// <summary>
-    /// How many tokens the LAST '(' … ')' pair holds — the pair
-    /// <see cref="ArgumentTokens"/> returns, so that it can size its builder exactly.
+    /// The tokens the LAST OUTERMOST '(' … ')' pair holds — the pair
+    /// <see cref="ArgumentTokens"/> returns — counted, and added to <paramref name="sink"/>
+    /// when one is given (so the builder is sized exactly). A '(' inside the pair opens a
+    /// NESTED pair that is part of the interior, parentheses included: a chord symbol's
+    /// alteration list, <c>@chord(C7(b9, #11) x32310)</c> (session 967).
     /// </summary>
-    private int CountInteriorTokens()
+    private int WalkInterior(ImmutableArray<SyntaxTokenNode>.Builder? sink)
     {
-        int count = 0;
-        bool open = false;
+        int count = 0, depth = 0;
         for (int i = 0; i < SlotCount; i++)
         {
             if (GetChild(i) is not SyntaxTokenNode token)
                 continue;
-            if (token.Kind == SyntaxKind.OpenParen)
+            if (token.Kind == SyntaxKind.OpenParen && depth++ == 0)
             {
-                open = true;
-                count = 0;
+                count = 0;          // a later outermost '(' replaces what an earlier one held
+                sink?.Clear();
+                continue;
             }
-            else if (token.Kind == SyntaxKind.CloseParen)
-            {
-                open = false;
-            }
-            else if (open)
+            if (token.Kind == SyntaxKind.CloseParen && depth > 0 && --depth == 0)
+                continue;
+            if (depth > 0)
             {
                 count++;
+                sink?.Add(token);
             }
         }
         return count;

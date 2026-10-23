@@ -929,9 +929,16 @@ public sealed class ChordSyntax : SyntaxNode
         {
             if (!IsShapeChord)
                 return -1;
+            // The ')' that matches the item's '(' — a symbol's alteration list nests its
+            // own pair inside the words, chord(C7(b9) x32310) (session 967).
+            int depth = 0;
             for (int i = 2; i < SlotCount; i++)
-                if (Green.GetSlot(i) is { Kind: SyntaxKind.CloseParen })
+            {
+                if (Green.GetSlot(i) is { Kind: SyntaxKind.OpenParen })
+                    depth++;
+                else if (Green.GetSlot(i) is { Kind: SyntaxKind.CloseParen } && depth-- == 0)
                     return i;
+            }
             return SlotCount;
         }
     }
@@ -962,37 +969,9 @@ public sealed class ChordSyntax : SyntaxNode
     /// (<see cref="MarkArgument"/>): <c>chord(Cm7 x3x546)</c> → <c>Cm7</c>, <c>x3x546</c>.</summary>
     public ImmutableArray<MarkArgument> ShapeArguments => MarkArgument.FromTokens(ShapeTokens);
 
-    /// <summary>The source span of each of <see cref="ShapeArguments"/>, by the same run rule.</summary>
-    public IReadOnlyList<TextSpan> ShapeWordSpans
-    {
-        get
-        {
-            var spans = new List<TextSpan>();
-            int start = -1, end = -1;
-            foreach (var token in ShapeTokens)
-            {
-                if (token.Kind == SyntaxKind.Comma)
-                {
-                    if (start >= 0)
-                        spans.Add(new TextSpan(start, end - start));
-                    start = -1;
-                    continue;
-                }
-                if (start >= 0 && token.Span.Start == end)
-                {
-                    end = token.Span.End;
-                    continue;
-                }
-                if (start >= 0)
-                    spans.Add(new TextSpan(start, end - start));
-                start = token.Span.Start;
-                end = token.Span.End;
-            }
-            if (start >= 0)
-                spans.Add(new TextSpan(start, end - start));
-            return spans;
-        }
-    }
+    /// <summary>The source span of each of <see cref="ShapeArguments"/>, by the same run rule
+    /// (<see cref="MarkArgument.SpansOf"/>).</summary>
+    public IReadOnlyList<TextSpan> ShapeWordSpans => MarkArgument.SpansOf(ShapeTokens);
 
     /// <summary>The <c>'</c> / <c>,</c> tokens written after a shape chord's <c>)</c> — refused
     /// by the parser, kept so the tree spells the source.</summary>

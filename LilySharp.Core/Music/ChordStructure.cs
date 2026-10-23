@@ -1041,6 +1041,12 @@ public sealed record ChordStructure(
         if (string.IsNullOrEmpty(s))
             return false;
 
+        // The alteration list and the glyphs read as a name entry's (ChordSymbolSpelling):
+        // V7(b9), IIø7, bVIIΔ7.
+        s = ChordSymbolSpelling.Ascii(s);
+        if (!ChordSymbolSpelling.SplitAlterations(s, out s, out var alterations, out _))
+            return false;
+
         // DEGREE[/TARGET][/BASS]: a numeral after a '/' is the function's target (once, and
         // before the bass), a digit is the bass (last). See ToRomanNumeral's remarks.
         var parts = s.Split('/');
@@ -1070,11 +1076,14 @@ public sealed record ChordStructure(
             : (tonicStep, keySharps);
         if (!TryParseDegree(parts[0], keyStep, keyOfDegree, out int step, out int alter, out string qualStr))
             return false;
-        if (!TryResolveRomanQuality(qualStr, out var quality, out var formula))
+        if (!ChordSymbolSpelling.TryCanonicalQuality(qualStr, alterations, out string canonical, out _)
+            || !ChordQualityRegistry.TryResolve(canonical, out var quality, out var formula))
             return false;
+        bool added = bassStep is int b
+            && !IsChordTone(step, alter, formula?.Tones ?? ChordQualityRegistry.GetTones(quality), b, bassAlter ?? 0);
 
-        result = new ChordStructure(step, alter, quality, bassStep, bassAlter, Formula: formula,
-            SecondaryTarget: target);
+        result = new ChordStructure(step, alter, quality, bassStep, bassAlter, BassIsAdded: added,
+            Formula: formula, SecondaryTarget: target);
         return true;
     }
 
@@ -1133,21 +1142,6 @@ public sealed record ChordStructure(
         alter = KeySpelling.Alteration(step, keySharps) + acc;
         rest = tail.Substring(numeral.Length);
         return true;
-    }
-
-    /// <summary>The quality of a roman entry: the printed roman-only spellings first,
-    /// then the ordinary name-style registry.</summary>
-    private static bool TryResolveRomanQuality(string suffix, out ChordQuality quality, out ChordFormula? formula)
-    {
-        formula = null;
-        switch (suffix)
-        {
-            case "°": quality = ChordQuality.Diminished; return true;      // °
-            case "°7": quality = ChordQuality.Diminished7; return true;    // °7
-            case "ø7": quality = ChordQuality.HalfDiminished7; return true; // ø7
-            case "+": quality = ChordQuality.Augmented; return true;
-            default: return ChordQualityRegistry.TryResolve(suffix, out quality, out formula);
-        }
     }
 
     /// <summary>
@@ -1231,38 +1225,60 @@ public sealed record ChordStructure(
     /// <summary>
     /// Parses a <c>chords { }</c> chord entry — the ONE chord format Lily# accepts:
     /// the SYMBOL as it prints (GRAMMAR_AUDIT 8.1, decided 2026-08-21). An
-    /// UPPERCASE root <c>A</c>–<c>G</c>, an optional <c>#</c>/<c>b</c> accidental,
-    /// a bare quality (empty = major), and an optional <c>/</c> slash bass spelled
-    /// the same way. So "C", "Am", "G7", "F#m", "Bb7", "Cmaj7/E" parse; the
-    /// retired <c>:</c> entry form ("a:m", "g:7") and an unknown quality ("C7-9")
-    /// do not — an unknown quality still DISPLAYS verbatim in a chords row (the
-    /// collector's raw-suffix fallback), this strict parse is what @chord and the
-    /// completion build on. Shared by the <c>chords { }</c> block and @chord
-    /// annotations, so the two stay in one format.
+    /// UPPERCASE root <c>A</c>–<c>G</c>, an optional <c>#</c>/<c>b</c> accidental (or
+    /// its glyph <c>♯</c>/<c>♭</c>), a bare quality (empty = major) in any of its printed
+    /// spellings with an optional parenthesized alteration list
+    /// (<see cref="ChordSymbolSpelling"/>: <c>Cm7</c>, <c>C-7</c>, <c>CΔ7</c>, <c>Cø7</c>,
+    /// <c>C7(b9, #11)</c>), and an optional <c>/</c> slash bass spelled like the root. So
+    /// "C", "Am", "G7", "F#m", "Bb7", "Cmaj7/E", "C7(b9)/E" parse; the retired <c>:</c>
+    /// entry form ("a:m", "g:7") and an unknown quality ("C7x") do not — an unknown quality
+    /// still DISPLAYS verbatim in a chords row (the collector's raw-suffix fallback), this
+    /// strict parse is what @chord and the completion build on. Shared by the
+    /// <c>chords { }</c> block, @chord annotations and the layout's shape table, so they
+    /// stay in one format.
     /// </summary>
     /// <remarks>
-    /// The <c>/+</c> added-bass entry went with the <c>:</c> format: '+' now
-    /// spells altered tensions and the augmented triad inside the quality, and
-    /// LilyPond PRINTS /bass and /+bass identically anyway (the flag recorded
-    /// entry intent only — <see cref="BassIsAdded"/> stays on the model for the
-    /// MusicXML importer's sake, but no Lily# spelling sets it any more).
+    /// The <c>/+</c> added-bass ENTRY went with the <c>:</c> format: '+' spells altered
+    /// tensions and the augmented triad inside the quality, and LilyPond PRINTS /bass and
+    /// /+bass identically anyway. Since session 967 <see cref="BassIsAdded"/> is set FROM THE
+    /// TONES (owner's decision 2026-10-23, HANDOFF §2 E ⑹ (a) ③): a bass that is a chord tone
+    /// is an inversion, one outside the chord an added note — LilyPond's own rule for a
+    /// plain '/' (scm/chord-entry.scm:91-115 process-inversion, inside
+    /// construct-chord-elements), which the MIDI voicing (<see cref="ChordVoicing.Window"/>)
+    /// and the twin's <c>/+</c> follow.
     /// </remarks>
     public static bool TryParseChordEntry(string s, out ChordStructure result)
+        => TryParseChordEntry(s, out result, out _);
+
+    /// <summary>
+    /// <see cref="TryParseChordEntry(string, out ChordStructure)"/>, naming why a symbol was
+    /// refused when the spelling grammar refuses it ON PURPOSE (<paramref name="refusal"/>:
+    /// <c>C-5</c>, <c>C7b9</c>, an unclosed list, a word in the list that is no alteration);
+    /// null for a symbol that is simply not one.
+    /// </summary>
+    public static bool TryParseChordEntry(string s, out ChordStructure result, out string? refusal)
     {
         result = default!;
+        refusal = null;
         if (string.IsNullOrEmpty(s))
             return false;
 
-        int slash = s.IndexOf('/');
-        string main = slash >= 0 ? s.Substring(0, slash) : s;
-        string? bass = slash >= 0 ? s.Substring(slash + 1) : null;
-
-        if (!TryParseSymbolPitch(main, out int step, out int alter, out string qualStr))
+        s = ChordSymbolSpelling.Ascii(s);
+        if (!ChordSymbolSpelling.SplitAlterations(s, out string symbol, out var alterations, out refusal))
             return false;
-        if (!ChordQualityRegistry.TryResolve(qualStr, out var quality, out var formula))
+        int slash = symbol.IndexOf('/');
+        string main = slash >= 0 ? symbol.Substring(0, slash) : symbol;
+        string? bass = slash >= 0 ? symbol.Substring(slash + 1) : null;
+
+        if (!TryParseSymbolPitch(main, out int step, out int alter, out string head))
+            return false;
+        if (!ChordSymbolSpelling.TryCanonicalQuality(head, alterations, out string canonical, out refusal))
+            return false;
+        if (!ChordQualityRegistry.TryResolve(canonical, out var quality, out var formula))
             return false;
 
         int? bassStep = null, bassAlter = null;
+        bool added = false;
         if (bass != null)
         {
             if (!TryParseSymbolPitch(bass, out int bs, out int ba, out string rest)
@@ -1270,10 +1286,25 @@ public sealed record ChordStructure(
                 return false;
             bassStep = bs;
             bassAlter = ba;
+            added = !IsChordTone(step, alter, formula?.Tones ?? ChordQualityRegistry.GetTones(quality), bs, ba);
         }
 
-        result = new ChordStructure(step, alter, quality, bassStep, bassAlter, Formula: formula);
+        result = new ChordStructure(step, alter, quality, bassStep, bassAlter, BassIsAdded: added, Formula: formula);
         return true;
+    }
+
+    /// <summary>Whether the pitch class of <paramref name="bassStep"/>/<paramref name="bassAlter"/>
+    /// is one of <paramref name="tones"/> above the root — the inversion test
+    /// (<see cref="BassIsAdded"/>'s remark).</summary>
+    private static bool IsChordTone(int rootStep, int rootAlter, IReadOnlyList<ChordToneSpec> tones,
+        int bassStep, int bassAlter)
+    {
+        int rootPc = Wrap12(Semantics.RelativeOctave.StepSemitoneOf(Wrap7(rootStep)) + rootAlter);
+        int bassPc = Wrap12(Semantics.RelativeOctave.StepSemitoneOf(Wrap7(bassStep)) + bassAlter);
+        foreach (var t in tones)
+            if (Wrap12(rootPc + t.Semitone) == bassPc)
+                return true;
+        return false;
     }
 
     /// <summary>A symbol-format pitch: uppercase letter + optional '#'/'b',

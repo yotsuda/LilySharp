@@ -116,10 +116,17 @@ public sealed record MarkArgument(string Text, LysValue? Value)
             runLength = 0;
         }
 
+        // ⚠️ INSIDE A '(' … ')' NOTHING SEPARATES (session 967): a chord symbol's alteration
+        // list is one word of the symbol, so `@chord(C7(b9, #11) x32310)` is the two
+        // arguments `C7(b9,#11)` and `x32310` — the list's own whitespace and commas become
+        // ',' in the text (Concat) and the word ends at the ')' that matches. Nothing else
+        // ever wrote a '(' inside an argument (the parser closed the list at the first ')'
+        // until this session), so no other argument's reading changes.
+        int depth = 0;
         for (int i = 0; i < tokens.Count; i++)
         {
             var token = tokens[i];
-            if (token.Kind == SyntaxKind.Comma)
+            if (token.Kind == SyntaxKind.Comma && depth == 0)
             {
                 Flush();
                 runEnd = -1;
@@ -128,11 +135,15 @@ public sealed record MarkArgument(string Text, LysValue? Value)
 
             // Span excludes trivia, so "the previous token ended exactly where this one
             // begins" is precisely "nothing was written between them".
-            if (token.Span.Start != runEnd)
+            if (token.Span.Start != runEnd && depth == 0)
             {
                 Flush();
                 runStart = i;
             }
+            if (token.Kind == SyntaxKind.OpenParen)
+                depth++;
+            else if (token.Kind == SyntaxKind.CloseParen && depth > 0)
+                depth--;
 
             runTokens++;
             runLength += token.Text.Length;
@@ -151,12 +162,57 @@ public sealed record MarkArgument(string Text, LysValue? Value)
         return arguments.MoveToImmutable();
     }
 
-    /// <summary>The text of a multi-token run, which is the sub-language case.</summary>
+    /// <summary>The text of a multi-token run, which is the sub-language case. A gap inside
+    /// the run — whitespace inside a nested '(' … ')', the only place a run holds one — is
+    /// written as ',' unless a written ',' stands beside it, so <c>C7(b9 #11)</c> and
+    /// <c>C7(b9, #11)</c> read alike.</summary>
     private static string Concat(IReadOnlyList<SyntaxTokenNode> tokens, int start, int count, int length)
     {
-        var run = new StringBuilder(length);
+        var run = new StringBuilder(length + 4);
         for (int i = start; i < start + count; i++)
+        {
+            if (i > start && tokens[i].Span.Start != tokens[i - 1].Span.End
+                && tokens[i].Kind != SyntaxKind.Comma && tokens[i - 1].Kind != SyntaxKind.Comma)
+                run.Append(',');
             run.Append(tokens[i].Text);
+        }
         return run.ToString();
+    }
+
+    /// <summary>The source span of each argument <see cref="FromTokens"/> reads from
+    /// <paramref name="tokens"/>, in order — the same runs: whitespace and ',' separate at
+    /// depth 0, nothing does inside a '(' … ')'. Index i is the span of argument i.</summary>
+    public static List<TextSpan> SpansOf(IReadOnlyList<SyntaxTokenNode> tokens)
+    {
+        var spans = new List<TextSpan>();
+        int start = -1, end = -1, depth = 0;
+        foreach (var token in tokens)
+        {
+            if (token.Kind == SyntaxKind.Comma && depth == 0)
+            {
+                if (start >= 0)
+                    spans.Add(new TextSpan(start, end - start));
+                start = -1;
+                continue;
+            }
+            if (start >= 0 && (token.Span.Start == end || depth > 0))
+            {
+                end = token.Span.End;
+            }
+            else
+            {
+                if (start >= 0)
+                    spans.Add(new TextSpan(start, end - start));
+                start = token.Span.Start;
+                end = token.Span.End;
+            }
+            if (token.Kind == SyntaxKind.OpenParen)
+                depth++;
+            else if (token.Kind == SyntaxKind.CloseParen && depth > 0)
+                depth--;
+        }
+        if (start >= 0)
+            spans.Add(new TextSpan(start, end - start));
+        return spans;
     }
 }

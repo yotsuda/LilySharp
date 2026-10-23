@@ -6,6 +6,36 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+### Chord symbols as a chart prints them
+
+- `[language]` **A chord symbol may be written in any of its printed spellings**, in a chords
+  row, an `@chord(…)` and a `chord(…)` item alike: `CΔ7` / `C△7` / `CM7` / `CMa7` / `CMaj7`
+  (maj7), `Cø7` / `CØ7` / `C07` (m7♭5), `C°7` / `Co7` (dim7), `C+7` / `C+maj7` (augmented),
+  `C-7` / `Cmi7` / `CMI7` (m7 — a `-` straight after the root is the minor third), `C7no3`
+  (omit3), and the glyphs `♭` / `♯` wherever `b` / `#` are written (`B♭7/D♭`). Every spelling
+  is read as the one chord it names and the page prints the canonical name (`Cø7` prints as
+  LilyPond's `Cø` under the default vocabulary, as `Cm7-5` always did). `C-5` is refused and
+  names `C(b5)`; a `b` / `#` glued after a letter inside the quality (`C7b9`) stays refused and
+  now names both fixes, `C7(b9)` and `C7-9`.
+- `[language]` **The parenthesized alteration list**: `C7(b9, #11)`, `Cm7(b5)`, `C(add9)`,
+  `C7(omit3)`, `C7(sus4)`, `Cm(maj7)`, `C7(alt)`, `C7(b9)/E` — spaces or commas inside, the
+  `(` glued to the symbol. A bare number in it is the extension when the quality has a seventh
+  (`C7(9)` = C9, `C7(13)` = C13, `Cmaj7(9)` = Cmaj9) and an added tone otherwise (`C(9)` =
+  Cadd9, `C6(9)` = C69). In a chords row the diagram's shapes follow in a second group
+  (`C7(b9)(x32310)`); in `@chord(…)` the list is part of the symbol word
+  (`@chord(C7(b9, #11) x32310)`). A roman degree takes the same spellings (`IIø7`, `V7(b9)`).
+- `[midi]` **A slash bass that is a chord tone is an inversion**: the tone sounds once, below
+  — `C/E` plays E3 G3 C4 (it used to sound E4 again inside the window) — while a bass outside
+  the chord is an added note under the whole chord (`C/D`). This is LilyPond's own reading of
+  `/`; the `.ly` twin now writes `/+` for the added bass (LilyPond realizes and prints both
+  the same). The editor's hover lists the same notes.
+- `[musicxml]` **An assembled quality exports as its nearest kind plus `<degree>` elements**
+  (`C7♭9` is `dominant` + 9 add −1, `C9sus4` is `suspended-fourth` + 7 and 9, `C7omit3` is
+  `dominant` − 3, with the printed suffix as the kind's `text`), and the importer reads
+  `<degree>` back into the alteration list (`@chord(C7(b9,#11))`). The importer also writes
+  `m7-5` for `half-diminished` (it wrote `m7b5`, which the entry grammar refuses) and knows
+  `augmented-seventh`, the 11th and 13th kinds and `power`.
+
 ### Trill lines over a line break
 
 - `[engraving]` **A trill line's continuation on the next system prints its "tr" again**, centred

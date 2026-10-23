@@ -88,11 +88,14 @@ public class ChordHoverTests
     public void AChordRowEntry_HoversAsItsSymbolDegreeAndTones() =>
         Assert.Equal("`Dm (IIm)` \u00A0A3 \u00A0D4 \u00A0F4", ChordLine("Dm"));
 
+    /// <summary>An INVERSION's bass sounds once, below (session 967, owner's decision
+    /// 2026-10-23: LilyPond's process-inversion) \u2014 until then the hover listed B3 and E4
+    /// again inside the window.</summary>
     [Fact]
     public void AChordRowSlash_ListsTheBassAnOctaveBelowTheWindow()
     {
-        Assert.Equal("`G7/B (V7/7)` \u00A0B2 \u00A0G3 \u00A0B3 \u00A0D4 \u00A0F4", ChordLine("G7/B"));
-        Assert.Equal("`C/E (I/3)` \u00A0E3 \u00A0G3 \u00A0C4 \u00A0E4", ChordLine("C/E"));
+        Assert.Equal("`G7/B (V7/7)` \u00A0B2 \u00A0G3 \u00A0D4 \u00A0F4", ChordLine("G7/B"));
+        Assert.Equal("`C/E (I/3)` \u00A0E3 \u00A0G3 \u00A0C4", ChordLine("C/E"));
     }
 
     [Fact]

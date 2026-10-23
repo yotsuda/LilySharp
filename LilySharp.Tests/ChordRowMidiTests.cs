@@ -23,7 +23,8 @@ namespace LilySharp.Tests;
 
 /// <summary>
 /// A <c>chords { }</c> row the score places sounds in the MIDI (owner decision 2026-09-25):
-/// the WINDOW voicing (every tone in G3..F#4, a slash bass an octave below), on the row's
+/// the WINDOW voicing (every tone in G3..F#4, a slash bass an octave below — an inverted
+/// tone once, there alone), on the row's
 /// own track at 70% velocity, each symbol over exactly the span the page prints it, struck
 /// again at every written symbol. A row the score does not place sounds nothing.
 /// </summary>
@@ -54,7 +55,9 @@ public class ChordRowMidiTests
         {
             (0, 960, 55), (0, 960, 60), (0, 960, 64),                          // C: G3 C4 E4
             (960, 960, 55), (960, 960, 59), (960, 960, 62), (960, 960, 65),    // G7: G3 B3 D4 F4
-            (Bar, Bar, 53), (Bar, Bar, 57), (Bar, Bar, 62), (Bar, Bar, 65),    // Dm/F: F3 | A3 D4 F4
+            // Dm/F: F3 | A3 D4 — the inverted F sounds once, below (session 967; LilyPond's
+            // process-inversion). Until then F4 sounded again inside the window.
+            (Bar, Bar, 53), (Bar, Bar, 57), (Bar, Bar, 62),
         }, ChordNotes(midi));
         var track = midi.Tracks.Single(t => t.Name == "harmony (chords)");
         Assert.All(track.Notes, n => Assert.Equal(56, n.Velocity));

@@ -39,7 +39,7 @@ namespace LilySharp.Core.Semantics;
 /// @chord(Cm xx-10-12-13-11)            frets 10-15: a '-' each side of a two-digit fret (2026-09-28)
 /// @chord                               bare: the name is derived from the notes it is on
 /// </code>
-/// Word 1 is a chord symbol (<see cref="ChordStructure.TryParseChordEntry"/>) or a shape (it
+/// Word 1 is a chord symbol (<see cref="ChordStructure.TryParseChordEntry(string, out ChordStructure)"/>) or a shape (it
 /// starts with <c>x</c>, <c>o</c> or a digit). The words after a symbol are shapes, each
 /// optionally preceded by a tuning word — the same grammar a <c>chords</c> row's
 /// <c>F(133211 2010)</c> has (<see cref="ChordShapes.ParseWords"/>).
@@ -122,28 +122,8 @@ public sealed record ChordAnnotation
     public static List<(int Start, int End)> WordSpans(MusicMarkSyntax mark)
     {
         var spans = new List<(int Start, int End)>();
-        int start = -1, end = -1;
-        foreach (var token in mark.ArgumentTokens)
-        {
-            if (token.Kind == SyntaxKind.Comma)
-            {
-                if (start >= 0)
-                    spans.Add((start, end));
-                start = -1;
-                continue;
-            }
-            if (start >= 0 && token.Span.Start == end)
-            {
-                end = token.Span.End;
-                continue;
-            }
-            if (start >= 0)
-                spans.Add((start, end));
-            start = token.Span.Start;
-            end = token.Span.End;
-        }
-        if (start >= 0)
-            spans.Add((start, end));
+        foreach (var span in MarkArgument.SpansOf(mark.ArgumentTokens))
+            spans.Add((span.Start, span.End));
         return spans;
     }
 

@@ -225,82 +225,165 @@ public sealed class ChordEntrySyntax : SyntaxNode
 
     /// <summary>The symbol exactly as written — the run's token texts joined
     /// (adjacent by construction, so this is the source slice), up to the <c>(</c> that
-    /// opens its shapes.</summary>
+    /// opens its shapes — with its ALTERATION LIST, when the first glued group is one,
+    /// re-joined after it with commas: <c>C7(b9, #11)</c> and <c>C7(b9 #11)</c> both give
+    /// <c>C7(b9,#11)</c>, the one string <c>Music.ChordStructure.TryParseChordEntry</c> reads
+    /// (session 967, owner's decision: spaces inside the parentheses are allowed).</summary>
     public string SymbolText
     {
         get
         {
+            // The run's tokens outside the groups — the symbol, and the `/E` a chart writes
+            // after its alteration list (C7(b9)/E) — with the alteration group re-joined in
+            // its place and the shape group left out.
+            var alterations = AlterationGroup;
             var sb = new System.Text.StringBuilder();
+            int depth = 0;
             for (int i = 0; i < SlotCount; i++)
-                if (GetChild(i) is SyntaxTokenNode t)
+            {
+                if (GetChild(i) is not SyntaxTokenNode t)
+                    continue;
+                if (t.Kind == SyntaxKind.OpenParen)
                 {
-                    if (t.Kind == SyntaxKind.OpenParen)
-                        break;
-                    sb.Append(t.Text);
+                    if (depth++ == 0 && alterations != null && t.SourceStart == alterations.Open.SourceStart)
+                    {
+                        sb.Append('(');
+                        for (int w = 0; w < alterations.Words.Count; w++)
+                            sb.Append(w == 0 ? "" : ",").Append(alterations.Words[w].Text);
+                        sb.Append(')');
+                    }
+                    continue;
                 }
+                if (t.Kind == SyntaxKind.CloseParen)
+                {
+                    if (depth > 0)
+                        depth--;
+                    continue;
+                }
+                if (depth == 0)
+                    sb.Append(t.Text);
+            }
             return sb.ToString();
         }
     }
 
     /// <summary>The <c>(</c> that opens the entry's chord-diagram shapes
-    /// (<c>F(133211 2010)</c>), or null when it writes none.</summary>
-    public SyntaxTokenNode? ShapesOpenParen
+    /// (<c>F(133211 2010)</c>, the second group of <c>C7(b9)(x32310)</c>), or null when it
+    /// writes none.</summary>
+    public SyntaxTokenNode? ShapesOpenParen => ShapeGroup?.Open;
+
+    /// <summary>The <c>)</c> closing the entry's chord-diagram shapes, or null when it
+    /// writes none or the group is unclosed.</summary>
+    public SyntaxTokenNode? ShapesCloseParen => ShapeGroup?.Close;
+
+    /// <summary>
+    /// The words inside the entry's SHAPE parentheses — each a run of GLUED tokens, as a
+    /// <c>@chord</c>'s argument is, whitespace and ',' separating — with their spans; empty
+    /// when it writes none. Read by <c>Music.ChordShapes.ParseWords</c>. The alteration
+    /// list's words are not here: they are part of <see cref="SymbolText"/>.
+    /// </summary>
+    public IReadOnlyList<(string Text, TextSpan Span)> ShapeWords
+        => ShapeGroup?.Words ?? [];
+
+    /// <summary>The words of the entry's alteration list (<c>C7(b9, #11)</c>: <c>b9</c>,
+    /// <c>#11</c>) with their spans; empty when it writes none.</summary>
+    public IReadOnlyList<(string Text, TextSpan Span)> AlterationWords
+        => AlterationGroup?.Words ?? [];
+
+    /// <summary>One glued <c>( … )</c> group after the symbol: its parentheses (the close
+    /// null when unwritten) and its words.</summary>
+    private sealed record ParenGroup(SyntaxTokenNode Open, SyntaxTokenNode? Close,
+        IReadOnlyList<(string Text, TextSpan Span)> Words);
+
+    /// <summary>
+    /// The symbol's ALTERATION LIST — the first group when every word of it is an alteration
+    /// (<c>Music.ChordSymbolSpelling.IsAlterationList</c>: <c>b9</c>, <c>#11</c>, <c>add9</c>,
+    /// <c>omit3</c>, <c>sus4</c>, <c>maj7</c>, a bare <c>9</c>) — else null. A shape word is
+    /// never one (<c>x32010</c>, <c>0003</c>, <c>xx-10-12-13-11</c>, a tuning name), so the
+    /// two groups cannot be confused; an empty group is the shapes', as it always was.
+    /// </summary>
+    private ParenGroup? AlterationGroup
     {
         get
         {
-            for (int i = 0; i < SlotCount; i++)
-                if (GetChild(i) is SyntaxTokenNode { Kind: SyntaxKind.OpenParen } t)
-                    return t;
-            return null;
+            var groups = Groups();
+            return groups.Count > 0 && IsAlterationList(groups[0]) ? groups[0] : null;
         }
     }
 
-    /// <summary>
-    /// The words inside the entry's parentheses — each a run of GLUED tokens, as a
-    /// <c>@chord</c>'s argument is — with their spans; empty when it writes none. Read by
-    /// <c>Music.ChordShapes.ParseWords</c>.
-    /// </summary>
-    public IReadOnlyList<(string Text, TextSpan Span)> ShapeWords
+    /// <summary>The shapes' group: the group after the alteration list, else the first.</summary>
+    private ParenGroup? ShapeGroup
     {
         get
         {
-            var words = new List<(string, TextSpan)>();
-            bool inside = false;
-            var sb = new System.Text.StringBuilder();
-            int start = -1, end = -1;
-            void Flush()
-            {
-                if (sb.Length > 0)
-                    words.Add((sb.ToString(), new TextSpan(start, end - start)));
-                sb.Clear();
-                start = -1;
-            }
-            for (int i = 0; i < SlotCount; i++)
-            {
-                if (GetChild(i) is not SyntaxTokenNode t)
-                    continue;
-                if (!inside)
-                {
-                    inside = t.Kind == SyntaxKind.OpenParen;
-                    continue;
-                }
-                if (t.Kind == SyntaxKind.CloseParen)
-                    break;
-                if (t.Text.Length == 0)
-                    continue;
-                // A token after trivia starts a new word (the MarkArgument rule).
-                if (sb.Length > 0 && t.Green.LeadingTriviaWidth > 0)
-                    Flush();
-                if (start < 0)
-                    start = t.SourceStart;
-                sb.Append(t.Text);
-                end = t.SourceStart + t.Text.Length;
-                if (t.Green.TrailingTriviaWidth > 0)
-                    Flush();
-            }
-            Flush();
-            return words;
+            var groups = Groups();
+            int at = groups.Count > 0 && IsAlterationList(groups[0]) ? 1 : 0;
+            return at < groups.Count ? groups[at] : null;
         }
+    }
+
+    private static bool IsAlterationList(ParenGroup group)
+        => Music.ChordSymbolSpelling.IsAlterationList([.. group.Words.Select(w => w.Text)]);
+
+    // The glued groups in order, their words split as a @chord argument's are: a token
+    // after trivia or a ',' starts a new word.
+    private List<ParenGroup> Groups()
+    {
+        var groups = new List<ParenGroup>();
+        SyntaxTokenNode? open = null;
+        List<(string Text, TextSpan Span)>? words = null;
+        var sb = new System.Text.StringBuilder();
+        int start = -1, end = -1;
+        void Flush()
+        {
+            if (sb.Length > 0)
+                words!.Add((sb.ToString(), new TextSpan(start, end - start)));
+            sb.Clear();
+            start = -1;
+        }
+        for (int i = 0; i < SlotCount; i++)
+        {
+            if (GetChild(i) is not SyntaxTokenNode t)
+                continue;
+            if (open == null)
+            {
+                if (t.Kind == SyntaxKind.OpenParen)
+                {
+                    open = t;
+                    words = new();
+                }
+                continue;
+            }
+            if (t.Kind == SyntaxKind.CloseParen)
+            {
+                Flush();
+                groups.Add(new ParenGroup(open, t.Text.Length > 0 ? t : null, words!));
+                open = null;
+                continue;
+            }
+            if (t.Text.Length == 0)
+                continue;
+            if (t.Kind == SyntaxKind.Comma)
+            {
+                Flush();
+                continue;
+            }
+            // A token after trivia starts a new word (the MarkArgument rule).
+            if (sb.Length > 0 && t.Green.LeadingTriviaWidth > 0)
+                Flush();
+            if (start < 0)
+                start = t.SourceStart;
+            sb.Append(t.Text);
+            end = t.SourceStart + t.Text.Length;
+            if (t.Green.TrailingTriviaWidth > 0)
+                Flush();
+        }
+        if (open != null)
+        {
+            Flush();
+            groups.Add(new ParenGroup(open, null, words!));
+        }
+        return groups;
     }
 }
 

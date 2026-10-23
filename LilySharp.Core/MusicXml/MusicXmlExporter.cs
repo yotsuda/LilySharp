@@ -5481,7 +5481,7 @@ public sealed class MusicXmlExporter
             LilySharp.Core.Music.ChordStructure? derived = null;
             string? chordText =
                 LilySharp.Core.Semantics.AnnotationValues.Chord(
-                    mark, LilySharp.Core.Semantics.ChordSpelling.Canonical, out _)
+                    mark, LilySharp.Core.Semantics.ChordSpelling.Canonical, out var named)
                     is { Text.Length: > 0 } chordSymbol
                     ? chordSymbol.Text
                     : words.NamingShape(diagramTuning, _partTuning) is { } naming
@@ -5498,7 +5498,7 @@ public sealed class MusicXmlExporter
                 : null;
             if (chordText != null)
             {
-                if (BuildHarmony(chordText) is { } harmony)
+                if (BuildHarmony(chordText, named ?? derived) is { } harmony)
                 {
                     // The @chord's own diagram, else a @diagram on the same note — both nest
                     // inside the harmony (MusicXML <frame> is a harmony child).
@@ -5680,9 +5680,20 @@ public sealed class MusicXmlExporter
     }
 
     /// <summary>&lt;harmony&gt; from a chord display text ("Cm7", "B♭maj7",
-    /// "C/E"): root step + alter, a kind from the common-suffix map (unknown
-    /// suffixes keep kind "other" with the original text), optional bass.</summary>
-    private static System.Xml.Linq.XElement? BuildHarmony(string chordText)
+    /// "C/E"): root step + alter, a kind from the common-suffix map, optional bass. A
+    /// quality the map lacks is written from its TONES when <paramref name="chord"/> gives
+    /// them (session 967, HANDOFF §2 E ⑹ (a) ④): the nearest base kind, then one
+    /// <c>&lt;degree&gt;</c> per tone added, altered or taken away — <c>C7♭9</c> is
+    /// <c>dominant</c> + degree 9 add −1, <c>C9sus4</c> is <c>suspended-fourth</c> + 7 and 9
+    /// added, <c>C7omit3</c> is <c>dominant</c> − 3 — with the printed suffix as the kind's
+    /// <c>text</c>. Only a quality with no tone set keeps kind "other".</summary>
+    /// <remarks>
+    /// MusicXML 4.0 harmony.mod: a degree-alter of type <c>add</c> is relative to a DOMINANT
+    /// chord (major and perfect intervals, a minor seventh), of type <c>alter</c> or
+    /// <c>subtract</c> relative to the degree the kind already holds — which is why the
+    /// seventh's natural is 10 semitones here and the kind's own fifth is the base of a ♭5.
+    /// </remarks>
+    private static System.Xml.Linq.XElement? BuildHarmony(string chordText, LilySharp.Core.Music.ChordStructure? chord = null)
     {
         string text = chordText;
         string? bass = null;
@@ -5727,8 +5738,13 @@ public sealed class MusicXmlExporter
         if (rootAlter != 0)
             root.Add(new System.Xml.Linq.XElement("root-alter", rootAlter));
 
+        // A quality the map lacks, and every ASSEMBLED one (its printed suffix may read as a
+        // mapped kind — C7omit3 prints "7" — while its tones say more).
+        List<System.Xml.Linq.XElement>? degrees = null;
+        if ((kind == "other" || chord?.Formula != null) && chord is { RawSuffix: null } && chord.ToneSpecs.Count > 0)
+            kind = HarmonyKindOf(chord.ToneSpecs, out degrees);
         var kindEl = new System.Xml.Linq.XElement("kind", kind);
-        if (kind == "other")
+        if (kind == "other" || degrees != null)
             kindEl.Add(new System.Xml.Linq.XAttribute("text", suffix));
 
         var harmony = new System.Xml.Linq.XElement("harmony", root, kindEl);
@@ -5742,7 +5758,111 @@ public sealed class MusicXmlExporter
                 bassEl.Add(new System.Xml.Linq.XElement("bass-alter", 1));
             harmony.Add(bassEl);
         }
+        if (degrees != null)
+            foreach (var degree in degrees)
+                harmony.Add(degree);
         return harmony;
+    }
+
+    /// <summary>The MusicXML kind nearest a tone set, and the degrees that make up the
+    /// difference (<see cref="BuildHarmony"/>'s remark): the base is chosen by the third
+    /// (or the suspension), the fifth and the seventh; every other tone is an addition
+    /// relative to the dominant chord's intervals; a fifth the base does not have is an
+    /// alteration of it; a third or fifth not sounded is subtracted.</summary>
+    private static string HarmonyKindOf(IReadOnlyList<LilySharp.Core.Music.ChordToneSpec> tones,
+        out List<System.Xml.Linq.XElement> degrees)
+    {
+        degrees = new();
+        var bySt = new Dictionary<int, int>();
+        foreach (var t in tones)
+            bySt[t.DiatonicStep] = t.Semitone;
+        int? third = bySt.TryGetValue(2, out int th) ? th : null;
+        int? fifth = bySt.TryGetValue(4, out int fi) ? fi : null;
+        int? seventh = bySt.TryGetValue(6, out int se) ? se : null;
+        var used = new HashSet<int> { 0 };
+
+        string kind;
+        int baseFifth = 7;
+        int? baseSeventh = null;
+        if (third == null && seventh == null && fifth == 7 && tones.Count == 2)
+        {
+            kind = "power";
+        }
+        else if (third == null && (bySt.ContainsKey(3) || bySt.ContainsKey(1)))
+        {
+            // A suspension: the fourth wins when both are there (the second is then added).
+            bool four = bySt.ContainsKey(3);
+            kind = four ? "suspended-fourth" : "suspended-second";
+            used.Add(four ? 3 : 1);
+        }
+        else
+        {
+            int t3 = third ?? 4;
+            (kind, baseFifth, baseSeventh) = (t3, seventh, fifth) switch
+            {
+                (4, null, 8) => ("augmented", 8, (int?)null),
+                (3, null, 6) => ("diminished", 6, (int?)null),
+                (3, 10, 6) => ("half-diminished", 6, (int?)10),
+                (4, 10, 8) => ("augmented-seventh", 8, (int?)10),
+                (3, 9, _) => ("diminished-seventh", 6, (int?)9),
+                (4, 10, _) => ("dominant", 7, (int?)10),
+                (4, 11, _) => ("major-seventh", 7, (int?)11),
+                (3, 10, _) => ("minor-seventh", 7, (int?)10),
+                (3, 11, _) => ("major-minor", 7, (int?)11),
+                (3, _, _) => ("minor", 7, (int?)null),
+                _ => ("major", 7, (int?)null),
+            };
+            if (third != null)
+                used.Add(2);
+            else
+                degrees.Add(Degree(3, 0, "subtract"));
+            if (seventh != null && baseSeventh == null)
+            {
+                // A seventh on a triad base (a diminished-seventh's base is its own).
+                degrees.Add(Degree(7, seventh.Value - 10, "add"));
+                used.Add(6);
+            }
+            else if (seventh is int written && baseSeventh is int ofKind)
+            {
+                if (written != ofKind)
+                    degrees.Add(Degree(7, written - ofKind, "alter"));
+                used.Add(6);
+            }
+        }
+        if (fifth == null)
+            degrees.Add(Degree(5, 0, "subtract"));
+        else
+        {
+            if (fifth != baseFifth)
+                degrees.Add(Degree(5, fifth.Value - baseFifth, "alter"));
+            used.Add(4);
+        }
+        if (kind is "suspended-fourth" or "suspended-second" or "power")
+        {
+            if (seventh != null)
+            {
+                degrees.Add(Degree(7, seventh.Value - 10, "add"));
+                used.Add(6);
+            }
+        }
+        // Everything else is added, relative to the dominant chord's intervals.
+        foreach (var t in tones)
+            if (!used.Contains(t.DiatonicStep))
+                degrees.Add(Degree(t.DiatonicStep + 1, t.Semitone - DominantInterval(t.DiatonicStep), "add"));
+        return kind;
+
+        static System.Xml.Linq.XElement Degree(int value, int alter, string type)
+            => new("degree",
+                new System.Xml.Linq.XElement("degree-value", value),
+                new System.Xml.Linq.XElement("degree-alter", alter),
+                new System.Xml.Linq.XElement("degree-type", type));
+
+        // The dominant chord's semitones by 0-based step: the major scale, a minor seventh.
+        static int DominantInterval(int step)
+        {
+            int[] major = [0, 2, 4, 5, 7, 9, 10];
+            return major[step % 7] + 12 * (step / 7);
+        }
     }
 
     /// <summary>&lt;frame&gt; from a diagram spec ("x32010", LOW string
@@ -5982,7 +6102,7 @@ public sealed class MusicXmlExporter
             // trumpet's harmony is the chord a major second up — the name its page prints
             // (ConcertPitch.ChordNameDrop). The diagram stays the sounding chord's.
             var named = drop == 0 ? chord : chord.Pressed(drop, pending.Sharps);
-            if (BuildHarmony(named.PrintedSymbol(LilySharp.Core.Semantics.ChordSpelling.Canonical).Text) is not { } harmony)
+            if (BuildHarmony(named.PrintedSymbol(LilySharp.Core.Semantics.ChordSpelling.Canonical).Text, named) is not { } harmony)
                 continue;
             if (tuning is { } t)
             {

@@ -432,15 +432,15 @@ internal sealed partial class Parser
     }
 
     // A token a chord-symbol run may continue with, GLUED to the previous one:
-    // letters/digits (Am, G7, maj7), '#' (a BadToken everywhere else — sharp
-    // here, tolerated by the Parser constructor's chords-body region), '+'/'-'
-    // alterations (C7-9, C+), '/' bass. The STRING grammar is
+    // letters/digits (Am, G7, maj7), '#' and the chart glyphs ♭ ♯ ° △ (BadTokens
+    // everywhere else — tolerated by the Parser constructor's chords-body region),
+    // '+'/'-' alterations (C7-9, C+), '/' bass. The STRING grammar is
     // ChordStructure.TryParseChordEntry's; this set only bounds the run.
     private static bool IsChordSymbolToken(SyntaxToken token) => token.Kind switch
     {
         SyntaxKind.Identifier or SyntaxKind.IntegerLiteral
             or SyntaxKind.Minus or SyntaxKind.Plus or SyntaxKind.Slash => true,
-        SyntaxKind.BadToken => token.Text == "#",
+        SyntaxKind.BadToken => Music.ChordSymbolSpelling.IsSymbolGlyph(token.Text),
         _ => false,
     };
 
@@ -473,7 +473,10 @@ internal sealed partial class Parser
         // Music.ChordShapes.ParseWords, the grammar @chord's words share; the parser only
         // bounds them. '(' meant nothing in a chords body before (it fell to the stray-token
         // report), so no spelling changes meaning. A '(' after a space is still a stray.
-        if (prev.TrailingTriviaWidth == 0 && Check(SyntaxKind.OpenParen))
+        // A SECOND glued group (session 967): the first may be the symbol's alteration list
+        // — `C7(b9, #11)(x32310)` — which ChordEntrySyntax tells from the shapes by its
+        // words (Music.ChordSymbolSpelling.IsAlterationList); the parser bounds up to two.
+        for (int group = 0; group < 2 && prev.TrailingTriviaWidth == 0 && Check(SyntaxKind.OpenParen); group++)
         {
             tokens.Add(Advance());
             while (!Check(SyntaxKind.CloseParen) && !Check(SyntaxKind.CloseBrace)
@@ -482,6 +485,19 @@ internal sealed partial class Parser
                 tokens.Add(Advance());
             prev = Expect(SyntaxKind.CloseParen);
             tokens.Add(prev);
+            // The bass after the alteration list, as a chart prints it: `C7(b9)/E` — a glued
+            // '/' continues the symbol's run (and the shapes may still follow in a group).
+            if (group == 0 && prev.TrailingTriviaWidth == 0 && Check(SyntaxKind.Slash))
+            {
+                prev = Advance();
+                tokens.Add(prev);
+                while (prev.TrailingTriviaWidth == 0
+                       && (IsChordSymbolToken(Current) || IsFlatBassDigitAfterSlash(prev, Current)))
+                {
+                    prev = Advance();
+                    tokens.Add(prev);
+                }
+            }
         }
         // `G@todo("…")` — after the symbol, or after its shapes (ChordRowMarks).
         if (ChordRowMarks(prev) is { } marks)
