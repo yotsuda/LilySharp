@@ -134,7 +134,8 @@ park し、生きている branch が全部 park したら時計を最小の ons
 - **⑥（意味論・LP の双子が門）**: 五線状態 S の共有＝臨時記号の記憶を span の中で branch 間で共有し（今日は
   `ResetAccidentalMemory` が span 開始で各 branch を独立にする＋`StaffAccidentals` の後処理が足す）、
   `StaffAccidentals` を退役、全様式で LP と一致させる。**ここで初めて絵が動く**ので byte 同一ではなく LP 双子・
-  台帳が門。voice 2 の中の clef／key が五線に効く規則もここ。
+  台帳が門。voice 2 の中の clef／key が五線に効く規則もここ。**→ オーナー判断 2026-10-23: この段は key だけ**
+  （reminder は 2026-10-02 の決定どおり保つ・`StaffAccidentals` は残す）＝§3.3 末尾。
 
 **⑤a の実測（第970）**: ⑴ 当初の swap（切り替えごとに `new BranchState`＋`_meta.Clone()`）は restpoly1k を 76.2→85.6 MB にした
 → Meta／Octave／list を参照ごと入れ替え・scalar は branch の record に in place で書く形にして 81.8 → ⑵ span の無い
@@ -161,6 +162,18 @@ span の中で五線状態が共有されるべき 4 つの形を Lily#（⑤a�
 機構としては「五線の記憶を branch 間で共有する」1 本で、reminder を保つなら「自分の walk が決めた臨時記号は消さない」規則を
 その上に残す（今の `StaffAccidentals` の ⑴ と同じ文）。P3 は既に一致＝clef の item は五線の時刻順で描画側が読んでいる。
 
+**⑥ の決定と実装（第970・`afaa4a216`）**: オーナーは「key の共有だけ（reminder は維持）」を選んだ。機構は 1 本＝
+`ApplyKeySignatureChange` が走った branch の key（`_meta.KeySharps`／`KeyCustom`）と ambient tonic を、同じ clock 上の
+他の branch の `BranchState` に書く（`ShareKeyWithSpanBranches`・入れ子の span は全段・走っている branch と、その Meta を
+共有する外側の branch は飛ばす＝フィールドが生きた写しで次の capture が書き戻す）。`StaffAccidentals.Apply` の key は
+声部ごとの配列から五線 1 本（timeline 順に動く）に。P4 の双子が一致（次の小節の `f'` に ♮・voice 2 の `fis` は調の中＝
+記号なし）。門: svg／ly／xml／midi 掃き各 1,248 差 0（span の第 2 声部で key を変える本は追跡下に 1 冊もない＝絵が動くのは
+P4 の形だけ）・割当 同一（plain1k 82.1／15.3・v2bow1k 128.2／44.6・restpoly1k 80.1・fingbeam1k 363.6・grace200 45.1）・
+網 `KeyChangeInVoice2_GovernsVoice1FromThatMoment`。**残る隙**（網の本は踏まない）: LP は key event を timestep の頭で
+聞いてから音を判定する（`accidental-engraver.cc:495-500` が毎 timestep `keyAlterations` を読み直す）ので、**変更と同じ
+時刻の下位 branch の音**も新しい key で判定される。ここでは下位 branch がその時刻を先に走り終えているので旧 key のまま＝
+直すなら「同時刻の key は音より先に」の順序規則が driver に要る。P1／P2（reminder）は意味論の決定のまま・clef は P3 で一致済み。
+
 ## 4. 段取り（各段に門・段 4 の前にもう一度ユーザー判断）
 
 | 段 | 内容 | 門 | 状態 |
@@ -171,7 +184,7 @@ span の中で五線状態が共有されるべき 4 つの形を Lily#（⑤a�
 | ④ | 増分コンパイルの設計 | 設計書 → **ユーザー判断** | ✅ 設計 第970（§3.2＝checkpoint は span の外だけ＝目録は不変・変わるのは 3 か所）→ ⑤a へ進むかはユーザー判断 |
 | ⑤a | span 局所のスケジューラ（`VoiceClock` の本実装）・branch 1..N を branch 0 と同じ時計で・V 状態は切り替えごとに swap・`BuildExtraVoiceTracks` と `_parallelSpans` を退役・記録は全声部の小節を持つ | byte 同一（svg／ly／xml／midi の掃き）・増分 `== full`・割当 | ✅ 第970（`MeasureCollector.Clock.cs`＝`VoiceClock`（span の stack・`ReachAwaitable` struct・park／resume）・`BranchState`（V の swap＝Meta／Octave／list は参照ごと・scalar は in place）・`ProcessParallelSpan`＋`RunSpanAsync`（driver＝LP の iterate）・`_parallelSpans`→`SpanTrack`（子の小節を持つ）・増分は restore＝採用・splice＝shift・比較＝形。掃き 4 種 差 0・網 2,231 緑・割当: span 無し同一（plain1k 82.1・fingbeam1k 363.6・grace200 45.1）、span 本 restpoly1k 76.2→80.1・v2bow1k 125.1→128.1／打鍵 40.3→44.6。**失ったもの**＝第 2 声部の編集で全 walk を splice する v2bow の形（子の小節が tail に入ったので tail の外ではない＝live）。**計器の教訓**＝parallel の腕の lambda が `builder`（引数）を捕まえ、closure が `ProcessMusicNode` の*入口*で allocate されて span の無い本で +1.4 MB／collect＝腕を自分のメソッドへ） |
 | ⑤b | V 45 本を `VoiceCursor` へ（任意・機械的） | byte 同一 | |
-| ⑥ | 五線状態 S の共有（臨時記号の記憶を branch 間で・`StaffAccidentals` 退役・voice 2 の clef／key が五線に効く） | **LP 双子・台帳**（絵が動く） | |
+| ⑥ | 五線状態 S の共有 → **オーナー判断 2026-10-23: key だけ**（reminder は保つ＝2026-10-02・`StaffAccidentals` は残す・clef は P3 で一致済み） | **LP 双子・台帳**（絵が動く） | ✅ 第970（`afaa4a216`＝`ShareKeyWithSpanBranches`: 走った branch の key／tonic を同じ clock 上の他 branch の `BranchState` へ・`StaffAccidentals.Apply` の key を五線 1 本に。P4 双子一致・掃き 4 種 差 0・割当 同一・網 1 本。残る隙＝同時刻の下位 branch の音は旧 key＝§3.3 末尾） |
 
 ## 5. 案 B・案 C（判断材料として残す）
 
