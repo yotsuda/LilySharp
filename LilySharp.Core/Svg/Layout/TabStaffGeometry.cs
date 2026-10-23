@@ -462,7 +462,7 @@ internal static class TabBeamQuant
         {
             var m = group.Members[i];
             members.Add(new BeamMember(
-                group.ItemOf(i), m.BeamCount, m.BeamCountLeft, m.BeamCountRight, m.StaffPosition,
+                group.ItemOf(i), m.BeamCount, m.BeamCountLeft, m.BeamCountRight, m.HeadPositionMin,
                 m.ItemIndex, memberStemUp: stemUp, targetStaffIndex: m.TargetStaffIndex,
                 measureIndex: m.MeasureIndex,
                 headPositionMin: m.HeadPositionMin, headPositionMax: m.HeadPositionMax));

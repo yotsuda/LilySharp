@@ -531,7 +531,7 @@ internal sealed class ElementCoordinator
             // BeamScoringProblem's itemXPositions[member.ItemIndex] resolves.
             renumbered.Add(new BeamMember(
                 group.ItemOf(i), m.BeamCount, m.BeamCountLeft, m.BeamCountRight,
-                m.StaffPosition, itemIndex: i,
+                m.HeadPositionMin, itemIndex: i,
                 memberStemUp: m.MemberStemUp,
                 targetStaffIndex: m.TargetStaffIndex,
                 measureIndex: m.MeasureIndex,

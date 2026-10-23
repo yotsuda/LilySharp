@@ -367,7 +367,7 @@ internal sealed class BeamDetector
     /// (<see cref="IsBeamable"/>/<see cref="GetBeamCount"/>/<see cref="IsBeamedRest"/>),
     /// <c>HasBeamStart</c>/<c>HasBeamEnd</c> (manual ranges), <c>ForcedStemUp</c>
     /// (<see cref="ForcedStemUpOf"/>), <c>TremoloPairBeams</c>, head staff positions
-    /// (<see cref="GetStaffPosition"/>/<see cref="GetHeadRange"/> — direction, knees),
+    /// (<see cref="GetHeadRange"/> — direction, knees),
     /// <c>FeatherDirection</c> (grow direction), a rest's <c>IsSpacer</c>/
     /// <c>IsMultiMeasure</c>, and a mid-measure \time item's <c>NewTime</c> (the
     /// effective-signature update).
@@ -487,7 +487,6 @@ internal sealed class BeamDetector
                         || am.MemberStemUp != bm.MemberStemUp || am.BeamCount != bm.BeamCount
                         || am.BeamCountLeft != bm.BeamCountLeft
                         || am.BeamCountRight != bm.BeamCountRight
-                        || am.StaffPosition != bm.StaffPosition
                         || am.HeadPositionMin != bm.HeadPositionMin
                         || am.HeadPositionMax != bm.HeadPositionMax
                         || am.TargetStaffIndex != bm.TargetStaffIndex)
@@ -707,7 +706,7 @@ internal sealed class BeamDetector
             var headRange = GetHeadRange(item);
             stems[stemCount++] = new StemCandidate(
                 item, itemIdx, mi, GetBeamCount(item),
-                beamlets[i].Left, beamlets[i].Right, GetStaffPosition(item),
+                beamlets[i].Left, beamlets[i].Right,
                 headRange.Min, headRange.Max);
         }
         var visible = new ReadOnlySpan<StemCandidate>(stems, 0, stemCount);
@@ -731,7 +730,7 @@ internal sealed class BeamDetector
                 c.Item, c.BeamCount,
                 i == 0 && !boundRestLeft ? 0 : c.BeamletLeft,
                 i == stemCount - 1 && !boundRestRight ? 0 : c.BeamletRight,
-                c.StaffPosition, c.ItemIndex,
+                c.HeadMin, c.ItemIndex,
                 // A stem the writer turned keeps its own side (beam.cc:946-956).
                 memberStemUp: ForcedStemUpOf(c.Item) ?? stemUp,
                 measureIndex: c.MeasureIndex,
@@ -1103,7 +1102,7 @@ internal sealed class BeamDetector
             var headRange = GetHeadRange(item);
             stems[stemCount++] = new StemCandidate(
                 item, itemIndex, MeasureIndex: -1, GetBeamCount(item),
-                beamlets[i].Left, beamlets[i].Right, GetStaffPosition(item),
+                beamlets[i].Left, beamlets[i].Right,
                 headRange.Min, headRange.Max);
         }
         var visible = new ReadOnlySpan<StemCandidate>(stems, 0, stemCount);
@@ -1160,7 +1159,7 @@ internal sealed class BeamDetector
                 c.Item, c.BeamCount,
                 i == 0 && !boundRestLeft ? 0 : c.BeamletLeft,
                 i == stemCount - 1 && !boundRestRight ? 0 : c.BeamletRight,
-                c.StaffPosition, c.ItemIndex,
+                c.HeadMin, c.ItemIndex,
                 memberStemUp: memberUp,
                 measureIndex: c.MeasureIndex,
                 headPositionMin: c.HeadMin,
@@ -1618,31 +1617,12 @@ internal sealed class BeamDetector
         return Math.Max(0, log2 - 2);
     }
 
-    private int GetStaffPosition(MusicItem item)
-    {
-        return item switch
-        {
-            NoteItem note => note.StaffPosition,
-            ChordItem chord => GetChordStaffPosition(chord),
-            _ => 4
-        };
-    }
-
-    /// <summary>
-    /// A chord's single "staff position": the mean of its heads. See the warning on
-    /// <see cref="BeamMember.StaffPosition"/> — the beam geometry does not read this.
-    /// </summary>
-    private int GetChordStaffPosition(ChordItem chord)
-    {
-        if (chord.Notes.Length == 0)
-            return 4;
-
-        return (int)chord.Notes.Average(n => n.StaffPosition);
-    }
-
     /// <summary>
     /// Notehead staff-position range: single value for notes, bottom/top
-    /// chord notes for chords. Feeds concaveness's close/far heads.
+    /// chord notes for chords. Feeds concaveness's close/far heads, the direction rule
+    /// and the knee rule — the only "staff position" a beam member has (a chord's mean of
+    /// its heads, which once rode along as a third number, is not a quantity LilyPond
+    /// computes; see <see cref="BeamMember.HeadPositionMin"/>'s remarks).
     /// LILYPOND-REF: beam-quanting.cc calc_concaveness head_positions_.
     /// </summary>
     private static (int Min, int Max) GetHeadRange(MusicItem item) => item switch
@@ -1743,8 +1723,9 @@ internal sealed class BeamDetector
         //   (both sides non-empty), else `total[UP] - total[DOWN]`, else neutral-direction.
         // ⚠️ INTEGER division, because LilyPond's total_ and count_ are Drul_array<int>:
         //   two sides reaching 5 and 4 average the same there and fall through to the sum.
-        // ⚠️ This replaced the SUM OF THE MEMBERS' StaffPosition — a chord's arithmetic mean,
-        //   which is not a quantity LilyPond computes. MEASURED on the pair
+        // ⚠️ This replaced the SUM OF THE MEMBERS' mean staff position (a chord's arithmetic
+        //   mean of its heads, once `BeamMember.StaffPosition` — not a quantity LilyPond
+        //   computes; the property left with its last reader). MEASURED on the pair
         //   `<d' f'>8 <c'' g''>`: extremes tie at ±5 and the vote ties 1-1, LilyPond answers
         //   DOWN (both averages 5, both totals 5, so neutral wins) and the mean sum said −1
         //   and answered UP.
@@ -1773,7 +1754,7 @@ internal sealed class BeamDetector
     /// </remarks>
     private readonly record struct StemCandidate(
         MusicItem Item, int ItemIndex, int MeasureIndex, int BeamCount,
-        int BeamletLeft, int BeamletRight, int StaffPosition, int HeadMin, int HeadMax);
+        int BeamletLeft, int BeamletRight, int HeadMin, int HeadMax);
 
     /// <summary>
     /// The stem direction the writer asked for on this member (<c>@stemUp</c> /

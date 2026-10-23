@@ -341,23 +341,6 @@ public sealed record BeamMember
     /// </summary>
     public int BeamCountRight { get; }
 
-    /// <summary>
-    /// Staff position of the note; for a CHORD, the arithmetic mean of its heads
-    /// (rounded toward zero) — not a head, and not a quantity LilyPond computes.
-    /// </summary>
-    /// <remarks>
-    /// ⚠️ This is NOT the beam's view of the member: the quanter asks
-    /// <see cref="HeadPositionMin"/>/<see cref="HeadPositionMax"/> for the head on the
-    /// beam's side, which is what <c>Stem::head_positions (me)[my_dir]</c> and
-    /// <c>Stem::chord_start_y</c> both mean (lily/stem.cc:1214, :114-122). The mean used
-    /// to flow into the stem-length floor and put a beam over a chord a full staff space
-    /// too low. Its ONE remaining reader is the fully-balanced tiebreak in
-    /// <c>BeamDetector.DefaultBeamStemUp</c>, where LilyPond sums per-direction far-head
-    /// distances instead (lily/beam.cc:913-935) — a divergence that is named but not yet
-    /// measured, and the reason this property still exists.
-    /// </remarks>
-    public int StaffPosition { get; }
-
     /// <summary>Index of this member in the measure's items.</summary>
     public int ItemIndex { get; }
 
@@ -389,28 +372,39 @@ public sealed record BeamMember
     public int TargetStaffIndex { get; }
 
     /// <summary>
-    /// Lowest notehead staff position (= <see cref="StaffPosition"/> for
-    /// single notes; the bottom chord note for chords).
+    /// Lowest notehead staff position (the note's own for a single note; the bottom
+    /// chord note for chords). Staff positions: 0 = middle line, positive = above.
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: beam-quanting.cc calc_concaveness — head_positions_[i]
     /// (close/far head per beam direction).
+    /// ⚠️ The member has NO single "staff position" besides these two: a chord's
+    /// arithmetic mean of its heads (once a property here) is not a quantity LilyPond
+    /// computes — the quanter asks for the head on the beam's side
+    /// (<c>Stem::head_positions (me)[my_dir]</c>, <c>Stem::chord_start_y</c>;
+    /// lily/stem.cc:1214, :114-122) and the direction rule for the far head per side
+    /// (lily/beam.cc:880-889, :913-914). The mean once flowed into the stem-length floor
+    /// and put a beam over a chord a full staff space too low; its last reader, the
+    /// fully-balanced tiebreak, reads the per-side totals since 2026-08-02 (68ae7c295).
     /// </remarks>
     public int HeadPositionMin { get; }
 
     /// <summary>
-    /// Highest notehead staff position (= <see cref="StaffPosition"/> for
-    /// single notes; the top chord note for chords).
+    /// Highest notehead staff position (the note's own for a single note; the top
+    /// chord note for chords).
     /// </summary>
     public int HeadPositionMax { get; }
 
-    /// <summary>Creates a beam member describing one stem's beaming.</summary>
+    /// <summary>Creates a beam member describing one stem's beaming.
+    /// <paramref name="headPosition"/> is the single head's staff position — the value
+    /// both <see cref="HeadPositionMin"/> and <see cref="HeadPositionMax"/> take when the
+    /// caller gives no range (a note; the unit tests' hand-built members).</summary>
     public BeamMember(
         MusicItem item,
         int beamCount,
         int beamCountLeft,
         int beamCountRight,
-        int staffPosition,
+        int headPosition,
         int itemIndex,
         bool memberStemUp = true,
         int targetStaffIndex = -1,
@@ -422,13 +416,12 @@ public sealed record BeamMember
         BeamCount = beamCount;
         BeamCountLeft = beamCountLeft;
         BeamCountRight = beamCountRight;
-        StaffPosition = staffPosition;
         ItemIndex = itemIndex;
         MemberStemUp = memberStemUp;
         TargetStaffIndex = targetStaffIndex;
         MeasureIndex = measureIndex;
-        HeadPositionMin = headPositionMin ?? staffPosition;
-        HeadPositionMax = headPositionMax ?? staffPosition;
+        HeadPositionMin = headPositionMin ?? headPosition;
+        HeadPositionMax = headPositionMax ?? headPosition;
     }
 
     /// <summary>
@@ -444,7 +437,7 @@ public sealed record BeamMember
     internal BeamMember WithMeasureIndexShifted(int delta)
         => MeasureIndex < 0
             ? this
-            : new BeamMember(DetectedItem, BeamCount, BeamCountLeft, BeamCountRight, StaffPosition,
+            : new BeamMember(DetectedItem, BeamCount, BeamCountLeft, BeamCountRight, HeadPositionMin,
                 ItemIndex, MemberStemUp, TargetStaffIndex, MeasureIndex + delta,
                 HeadPositionMin, HeadPositionMax);
 }

@@ -77,9 +77,9 @@ public class SkylineStaffSpacingTests
         var n0 = new NoteItem(-9, Fraction.Eighth, 0, null, 0);
         var n1 = new NoteItem(knee ? 9 : -9, Fraction.Eighth, 0, null, 1);
         var members = ImmutableArray.Create(
-            new BeamMember(n0, 1, 1, 1, staffPosition: -9, itemIndex: 0,
+            new BeamMember(n0, 1, 1, 1, headPosition: -9, itemIndex: 0,
                 memberStemUp: false, targetStaffIndex: targetStaffIndex0),
-            new BeamMember(n1, 1, 1, 1, staffPosition: knee ? 9 : -9, itemIndex: 1,
+            new BeamMember(n1, 1, 1, 1, headPosition: knee ? 9 : -9, itemIndex: 1,
                 memberStemUp: knee, targetStaffIndex: targetStaffIndex1));
         var group = new BeamGroup(members, measureIndex: 0, startIndex: 0,
             stemUp: false, growDirection: 0, voiceIndex: 0);

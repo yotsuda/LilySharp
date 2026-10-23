@@ -209,7 +209,7 @@ public class BeamDetectionMemoTests
         + "|" + string.Join(",", g.Members.Select(m =>
             $"{m.ResolveMeasureIndex(g.MeasureIndex)}.{m.ItemIndex}"
             + $".{(m.MemberStemUp ? 'u' : 'd')}.{m.BeamCount}.{m.BeamCountLeft}.{m.BeamCountRight}"
-            + $".{m.HeadPositionMin}.{m.HeadPositionMax}.{m.StaffPosition}.{m.TargetStaffIndex}"))
+            + $".{m.HeadPositionMin}.{m.HeadPositionMax}.{m.TargetStaffIndex}"))
         + "|" + string.Join(",", g.RestStems.Select(r =>
             $"{r.ItemIndex}.{r.BeforeMember}.{r.CountLeft}.{r.CountRight}.{r.NoteValue}.{r.MeasureIndex}"));
 }

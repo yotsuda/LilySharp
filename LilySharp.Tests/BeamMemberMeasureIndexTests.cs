@@ -43,7 +43,7 @@ public class BeamMemberMeasureIndexTests
         var member = new BeamMember(
             item: MakeNote(),
             beamCount: 1, beamCountLeft: 0, beamCountRight: 0,
-            staffPosition: 0, itemIndex: 0);
+            headPosition: 0, itemIndex: 0);
 
         Assert.Equal(-1, member.MeasureIndex);
     }
@@ -54,7 +54,7 @@ public class BeamMemberMeasureIndexTests
         var member = new BeamMember(
             item: MakeNote(),
             beamCount: 1, beamCountLeft: 0, beamCountRight: 0,
-            staffPosition: 0, itemIndex: 0);
+            headPosition: 0, itemIndex: 0);
 
         Assert.Equal(7, member.ResolveMeasureIndex(defaultMeasureIndex: 7));
     }
@@ -65,7 +65,7 @@ public class BeamMemberMeasureIndexTests
         var member = new BeamMember(
             item: MakeNote(),
             beamCount: 1, beamCountLeft: 0, beamCountRight: 0,
-            staffPosition: 0, itemIndex: 0,
+            headPosition: 0, itemIndex: 0,
             measureIndex: 3);
 
         Assert.Equal(3, member.ResolveMeasureIndex(defaultMeasureIndex: 7));
@@ -77,7 +77,7 @@ public class BeamMemberMeasureIndexTests
         var member = new BeamMember(
             item: MakeNote(),
             beamCount: 1, beamCountLeft: 0, beamCountRight: 0,
-            staffPosition: 0, itemIndex: 5,
+            headPosition: 0, itemIndex: 5,
             measureIndex: 12);
 
         Assert.Equal(12, member.MeasureIndex);
