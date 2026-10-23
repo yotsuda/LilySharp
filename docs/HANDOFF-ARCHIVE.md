@@ -160,6 +160,18 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第965セッションの経緯
+
+### 1.1 第965セッション（2026-10-23・YT-DELL2）
+
+第964 と同じ会話の続き（ユーザー「続けて」）。`-Start p965`（開始 HEAD `80a83ccb1`・未 push 10・第963 を ARCHIVE へ・full 12998 / 0 / 2 / 13000）。次の候補のうち要ユーザー判断でない **続きのトリルの OPEN 0.040** を先に閉じ、単一譜の `@cross` は事実を揃えて質問にした（下）。作業場所は Lab `sessions/p965/`（LP の計器 `lp/bound.ly`＝TrillSpanner の left-bound-info と stencil を刷る・掃き `svg/`）。
+- **続きのトリルの OPEN 0.040＝閉じた `82031adc1`**: 第961 の「LP は続きの『tr』の板を数えていない」は読み違い＝板の深さを 1.5 と見積もって 5.045 を予想していたが、板は線の 1.0 下（stencil-offset）で **4.545 ＝ g''4 の頭の上 3.045 ＋ padding 0.5 ＋ 1.0** そのもの（Lab `sessions/p961/probe/ly/dump2.log` の数字を読み直した・`\fixed c'` なので本の音は 1 オクターブ上）。Lily# は `AlignedSideLineY` の板を最初の piece にしか与えていなかった（`segment.IsFirst`）ので続きは a''8 の上の波で 4.505 に決まっていた → **全 piece に板**（続きも「tr」を刷る＝第961）。1 行の修正＋註。`TrillSpannerTests.ChainedTrills_OverABreak…` の期待を 4.505 → 4.545 に（OPEN の註を閉じた文に）。⚠️ 続きの「tr」の X は LP の `left-bound-info` で裏を取った＝`(X . 6.4521)`＝最初の列の中心・`attach-dir 0`（第961 の `FirstColumnCentre` は正しい）。
+- **網**: `TrillSpannerTests` 16 本＋`Trill*` 37 本緑（観測者は上の 1 本＝1 行を戻せば 4.505 で赤）。掃き 1,015 冊 1,248 枚で **0**（段をまたぐトリルは本に無い）。棚卸し 2 枚は差分なし。CHANGELOG `## Unreleased` の「Trill lines over a line break」に 1 項。
+- **単一譜の `@cross`＝質問（ユーザー判断待ち）**: `@cross` は grand staff の反対の譜へ移す注釈で、`CrossStaffEngraver.Calculate` は `staffCount < 2` で空を返す＝単一譜では黙って何もしない・警告なし。**ユーザー自身の本 `LilySharp-Lab\corpora\dogfood\blues.lys` 26 行 `b4@cross`（単一譜・冒頭の註は「cross noteheads」）＝× 符頭のつもりで書いて何も起きていない実例**。repo 内の `@cross` は `audit/lpreg/gliss-xstaff.lys`（grand staff・正しい用法）だけ。提案＝警告 LYS4031（候補）「`@cross` は grand staff の隣の譜へ移す印・この譜には相手が無い＝× 符頭なら `@dead` か `@notehead(cross)`」（LYS40xx の最後は LYS4030）。GRAMMAR に cross-staff の節が無いのも同じ便で足せる。
+
+- `-End p965 -DiffBase 80a83ccb1` ＝full **12998 / 0 / 2 / 13000**（前便と同数＝新しい試験なし）（Lab `sessions/p965/end.log`）→ この docs commit。本体 `82031adc1`。Core '+' 13 行／LILYPOND-REF 0／LILYSHARP-OWN 0（1 行の修正＋註＝既存の aligned_side の REF の下）。未 push 11＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。
+判定（2026-10-23）: 次は **単一譜の `@cross` の警告（上の質問の答え待ち）** → §2 E ⑹（開いた和音入力＝綴りの合意が先・これも要ユーザー判断）。どちらもユーザーの答えが先＝答えが来たらその便で。会話は続けてよい（(c)）。
+
 ## 以下は第964セッションの経緯
 
 ### 1.1 第964セッション（2026-10-23・YT-DELL2）
