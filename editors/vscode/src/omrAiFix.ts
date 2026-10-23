@@ -897,9 +897,8 @@ ${before ? `<svg class="store" aria-hidden="true"><symbol id="before" viewBox="$
   <div class="cap">${run.rows.length} ${run.rows.length === 1 ? 'bar' : 'bars'} · ${takeable} with a proposal · `
         + `check the ones to take — nothing is written until Accept</div></div>
   <div class="spacer"></div>
+  <label class="take all" title="Check or uncheck every bar there is something to take"><input type="checkbox" id="all" ${takeable ? '' : 'disabled'} ${takeable && checked === takeable ? 'checked' : ''}> All</label>
   <span class="memo"><span id="count">${checked}</span> of ${takeable} checked</span>
-  <button id="checkAll" ${takeable ? '' : 'disabled'}>Check all</button>
-  <button id="uncheckAll" ${takeable ? '' : 'disabled'}>Uncheck all</button>
 </div>
 <div class="main">
 <table>
@@ -924,22 +923,28 @@ ${rows}
     for (const tr of document.querySelectorAll('tr.row[data-i="' + box.dataset.i + '"]')) tr.classList.toggle('taken', on);
     vscode.postMessage({ action: 'check', index: Number(box.dataset.i), on });
   }
+  // The header's All box: checked when every box is, a dash when some are (owner's request
+  // 2026-10-23, in place of Check all / Uncheck all buttons).
+  const all = document.getElementById('all');
   function recount() {
     const n = boxes().filter(b => b.checked).length;
+    all.checked = n > 0 && n === boxes().length;
+    all.indeterminate = n > 0 && n < boxes().length;
     document.getElementById('count').textContent = String(n);
     document.getElementById('acceptN').textContent = String(n);
     document.getElementById('accept').disabled = n === 0;
   }
   document.addEventListener('change', e => {
     if (e.target.matches && e.target.matches('input.take')) { setBox(e.target, e.target.checked); recount(); }
+    else if (e.target === all) { for (const x of boxes()) setBox(x, all.checked); recount(); }
   });
   document.addEventListener('click', e => {
     const b = e.target.closest('button');
     if (!b) return;
-    if (b.id === 'checkAll' || b.id === 'uncheckAll') { for (const x of boxes()) setBox(x, b.id === 'checkAll'); recount(); }
-    else if (b.id === 'accept') vscode.postMessage({ action: 'accept', indices: boxes().filter(x => x.checked).map(x => Number(x.dataset.i)) });
+    if (b.id === 'accept') vscode.postMessage({ action: 'accept', indices: boxes().filter(x => x.checked).map(x => Number(x.dataset.i)) });
     else if (b.id === 'cancel') vscode.postMessage({ action: 'cancel' });
   });
+  recount();   // the All box's first state (a dash when only some start checked)
   // A click on a bar's rows — its box included, and a box that cannot be checked — shows the bar
   // in the editor, lit light blue there (owner's request 2026-10-23, in place of a link).
   document.addEventListener('click', e => {
