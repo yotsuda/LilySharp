@@ -160,6 +160,20 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第971セッションの経緯
+
+### 1.1 第971セッション（2026-10-23・YT-DELL2）
+
+第970 と同じ会話の続き（ユーザー「続けて」）。`-Start p971`（開始 HEAD `70201ed9b`・未 push 13・第969 を ARCHIVE へ・full 13129 / 0 / 2 / 13131）。作業場所は Lab `sessions/p971/`。
+- **§2 C ⑴（多声 walk の moment 順への再設計）を ✅ で閉じた**＝段 ①〜⑥ が第969〜970 で済み・本文は ARCHIVE「閉じた §2 の本文」へ・残りは任意（design §4）。
+- **段 ⑤b＝閉じた（コード）**: ⑤a の `BranchState` をそのまま器に＝swap していた 40 本の宣言を註ごと `BranchState` へ移し、collector は `_v` 1 本で読む（参照 1,010 か所＝Lab `sessions/p971/cursorify.ps1` が機械的に・dry run → -Apply・Core 警告 0）。`CaptureBranch`／`RestoreBranch`（45 行 × 2）と span ごとの b0 の record は退役＝切り替えは `_v = branch.State` の付け替えだけ。V と分類した残り 8 本（`_sectionReset*` 4・`_sectionActiveGrobProps`・`_openingKeyOverride`・`_resolvedChordMembers`・`_resolvedNotes`）は ⑤a でも swap しておらず掃き 0＝span の外にしか書かれない part 級＝collector に残す（design §7 の註・`fields.ps1` は 172→135）。**門**: 掃き svg／ly／xml／midi 各 1,248 差 0・割当 同一（plain1k 82.0／15.3・v2bow1k 128.1／44.7・restpoly1k 80.1・fingbeam1k 363.6・grace200 45.1）・的を絞った網 1,659 緑。design §4 ⑤b ✅。
+- **ユーザー「残りをやって」→ 同時刻 key の順序規則＝閉じた（＋隣に居た既存の逸脱 1 つ）**: LP 双子 2 つを足した（Lab `sessions/p971/probe5/`）＝**P5** voice 2 の `key` が voice 1 の音と同時刻→ LP はその音に ♮・Lily# 無し／**P6** 単声 `f'4 key d major f'`→ LP は 2 つ目に ♮・Lily# 無し＝**key は臨時記号の記憶を空にする**（`accidental-engraver.cc:108-130 update_local_key_signature`・`\key` が来るたび）という多声と無関係の逸脱。直し 3 つ＝⑴ `ApplyKeySignatureChange` が記憶を空に（sibling も）／⑵ **決める前に時計を待つ**＝`ProcessMusicNode`・`OpenSoundingItem` の頭で `ReachAsync`（LP は clock が着くまで iterator を process しない・これまでは走って決めてから funnel で待っていた）／⑶ driver は同時刻に `key` で park した branch を先に resume（`Branch.PendingKey`）。P5・P6 一致・P4 不変。**門**: 掃き 4 種 差 0・割当は減（park が 1 段浅い＝v2bow1k 128.1→127.5／打鍵 44.7→44.0・restpoly1k 80.1→79.4）・網 ＋2。残る微差＝grace は LP では主音より前の moment で判定（網の本は踏まない・design §3.3 末尾）。
+- **`_cursor.MetadataMeasureOffset` の退役＝閉じた（design §6）**: sub-voice の builder が `MeasureBuilder.MeasureIndexBase`（`LogicalIndexBase` の物理の双子）で span の小節から数える＝walk の `+ offset` 35 か所と `Branch.MeasureBase` を撤去・`CollectionCursor` は 3 座標。副作用で正しくなった 2 点（voice 2 の `key` の `RecordKeyAtMeasure`・span 頭の `AtPieceOpening`）は追跡本が踏まない。**門**: 掃き 4 種 差 0・的を絞った網 3,611 緑・割当 同一。本体は上と同じ commit。
+- **ユーザー「設計書を書いて、良くなる見込みがあるか検討して」→ design §8＝見込み無し・見送り（C）**: span の長さを 1,015 冊で数えた（Lab `sessions/p971/spanstats.ps1`）＝span のある冊 91（実コーパス 5／336）・span の中の小節 3.1%・**実在の最長 span は 8 小節（air-in-d）・9 小節以上は合成の perf 本 2 冊だけ**。実在の形の perf 本 **`audit/lpreg/perf-v2short1k.lys`**（1,000 小節・4 小節 span を 20 小節ごと・この便で追加＝alloc の既定の列に加える）を ⑤a 前の worktree と比べると打鍵は **13.1→12.9**（span の外）・**14.0→13.8**（span の中）＝⑤a 後のほうが安い（span の記録を採用するぶん）。失ったのは全体 1 span の v2bow1k の 40.3→44.0 だけ。取り戻す 2 案（A replay＝側表 ~30 表の branch 札が要る／B span checkpoint＝Resume の芯の書き直し）は賞金に見合わない。将来、本全体を 1 span で書く実在の本が出たら B。
+- `-End p971 -DiffBase 70201ed9b`（⑤b 後）＝full **13129 / 0 / 2 / 13131**（`run2.trx`・`end1.log`）→ docs commit `e849871f5`。**残り 2 つの後の再 `-End`＝full 13131 / 0 / 2 / 13133**（＋2・`run3.trx`・Lab `sessions/p971/end2.log`・門 7 つ OK）→ docs commit `0c6295cc0`。**§8 と perf-v2short1k の後の 3 回目 `-End`＝同数 13131 / 0 / 2 / 13133**（`run4.trx`・`end3.log`）→ この docs commit。本体 `5a85ea6e2`（⑤b）＋`22ae9b521`（同時刻 key・記憶の reset・offset 退役）。Core '+' 1107／LILYPOND-REF 4／LILYSHARP-OWN 0。未 push 17＋1（push はユーザー）。
+- **ユーザー「OMR の結果を AI が精査して修正する機能に着手したい・UI とモデルは？」→ 設計を書いた（`docs/omr-ai-fix-design.md`・コード変更 0）**: 既存の部品の棚卸し（§1）と UI（§2）・1 小節の処理と門（§3）・モデル（§4＝`vscode.lm` 続行・画像の条件・直接 API なら `claude-opus-5-5` で 1 小節 $0.03〜0.04）・段取り M1〜M3（§5）・OMR 側へ頼む 3 つ（§7）・オーナー判断 3 つ（§8）。ユーザー「良い。進めて。次のセッションで取り組む方が有利なら handoff を書いて」→ この会話は moment-walk の文脈で長いので **次便で M1 から**＝§1.0 ⒜ の先頭に置いた。
+判定（2026-10-23）: moment-walk の題は終わり（段 ①〜⑥＋⑤b＋残り 2 つ・v2bow 形は design §8 で見送り）。**次は OMR の AI 修正 M1＝(c) 新しい会話＋HANDOFF から**（§1.0 ⒜ 先頭・`docs/omr-ai-fix-design.md` §5）。
+
 ## 以下は第970セッションの経緯
 
 ### 1.1 第970セッション（2026-10-23・YT-DELL2）
