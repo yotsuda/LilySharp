@@ -835,7 +835,9 @@ function panelHtml(deps: OmrAiFixDeps, webview: vscode.Webview, run: FixRun): st
         // the line, the time, the way to the editor — then the model's reason and the gates,
         // across the whole width too, and under them the three pictures. A column for either
         // was a fraction of the width and wrapped its text into a dozen short lines (owner's
-        // reports 2026-10-23).
+        // reports 2026-10-23). The pictures go the reader's, the scan, the proposal: the scan in
+        // the middle sits beside both, and the proposal is the one a person compares it with
+        // (owner, 2026-10-24: scan first put the proposal two pictures away from it).
         const cls = `row ${r.state}${on ? ' taken' : ''}`;
         return `<tr class="${cls} head" data-i="${r.index}">
   <td colspan="3" class="who">${box} <span class="label">${esc(labelOf(t))}</span>`
@@ -847,8 +849,8 @@ function panelHtml(deps: OmrAiFixDeps, webview: vscode.Webview, run: FixRun): st
             + `${sure ? ` <span class="dim">${sure.replace(/^ · /, '· ')}</span>` : ''}${buttons ? ` ${buttons}` : ''}</td>
 </tr>
 <tr class="${cls} body" data-i="${r.index}">
-  <td class="cell">${scan}</td>
   <td class="cell">${now}<pre class="src">${diff ? piecesHtml(diff.before) : esc(shortTodos(t.written))}</pre></td>
+  <td class="cell">${scan}</td>
   <td class="cell">${proposal}${diff ? `<pre class="src">${piecesHtml(diff.after)}</pre>` : ''}</td>
 </tr>`;
     }).join('\n');
@@ -928,7 +930,7 @@ ${before ? `<svg class="store" aria-hidden="true"><symbol id="before" viewBox="$
 </div>
 <div class="main">
 <table>
-<thead><tr><th>Scan</th><th>Now</th><th>Proposal</th></tr></thead>
+<thead><tr><th>Now (OMR)</th><th>Scan</th><th>Proposal</th></tr></thead>
 <tbody>
 ${rows}
 </tbody>
