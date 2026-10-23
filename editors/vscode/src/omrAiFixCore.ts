@@ -19,6 +19,8 @@
 // model is shown for one bar, how its answer is read, and the gates a proposal passes before
 // anyone sees it. Nothing here imports vscode, so `npm test` runs it.
 
+import * as jpeg from 'jpeg-js';
+import { PNG } from 'pngjs';
 import {
     Box, OmrMarkFacts, ScanBar, ScanSideFile, ServerTodo, lineAround, shownAt,
 } from './omrScanCore';
@@ -250,11 +252,20 @@ export interface TaskInput {
     readonly target: FixTarget;
     readonly neighbours: BarNeighbours;
     readonly diagnostics: readonly string[];
+    /** The message carries the scan of the bar (M2): the prompt says what the picture is. */
+    readonly image?: boolean;
 }
 
 export function taskPromptOf(input: TaskInput): string {
     const { head, target, neighbours, diagnostics } = input;
     const parts: string[] = [];
+    if (input.image) {
+        parts.push('The picture attached to this message is the scanned page around the marked bar — the bar the reader');
+        parts.push('wrote the marked line from, with a little of its neighbours. The picture is what the composer wrote;');
+        parts.push('the text below is only what the reader made of it. Read the notes, rests, dots, ties, beams and');
+        parts.push('tuplets from the picture, and count the beats.');
+        parts.push('');
+    }
     parts.push('The declarations of the file (its meter, key, parts and octave mode):');
     parts.push('<declarations>');
     parts.push(head);
@@ -484,6 +495,71 @@ export function anchorOf(current: string, target: FixTarget): number {
     }
     const first = current.indexOf(target.written);
     return first >= 0 && current.indexOf(target.written, first + 1) < 0 ? first : -1;
+}
+
+// ---------------------------------------------------------------------------------------------
+// The scan of a bar, for the model (M2: design §3.1 ④)
+// ---------------------------------------------------------------------------------------------
+
+/** Pixels, four bytes each (RGBA), rows top to bottom. */
+export interface Rgba { readonly width: number; readonly height: number; readonly data: Uint8Array; }
+
+/** The longest side a crop is sent at: more than this is more tokens, not more notes. */
+export const MAX_CROP_SIDE = 1568;
+
+/** The image the reader read, decoded: a PNG or a JPEG (the formats the reader keeps its pages
+ *  in; a TIFF or a PDF it copies to one of them). Undefined for anything else. */
+export function decodeImage(bytes: Uint8Array): Rgba | undefined {
+    try {
+        if (bytes.length > 8 && bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4E && bytes[3] === 0x47) {
+            const png = PNG.sync.read(Buffer.from(bytes.buffer, bytes.byteOffset, bytes.byteLength));
+            return { width: png.width, height: png.height, data: new Uint8Array(png.data.buffer, png.data.byteOffset, png.data.byteLength) };
+        }
+        if (bytes.length > 3 && bytes[0] === 0xFF && bytes[1] === 0xD8) {
+            const img = jpeg.decode(bytes, { useTArray: true, formatAsRGBA: true });
+            return { width: img.width, height: img.height, data: img.data };
+        }
+    } catch {
+        // not an image this reads
+    }
+    return undefined;
+}
+
+/**
+ * The rectangle of an image (cropRect's, in its pixels), sampled down by a whole factor when a
+ * side exceeds `maxSide` — nearest neighbour, which keeps a thin stem a stem; the model is not
+ * shown anything the page does not have.
+ */
+export function cropRgba(image: Rgba, rect: { x: number; y: number; width: number; height: number }, maxSide = MAX_CROP_SIDE): Rgba {
+    const x0 = Math.max(0, Math.floor(rect.x)), y0 = Math.max(0, Math.floor(rect.y));
+    const x1 = Math.min(image.width, Math.ceil(rect.x + rect.width)), y1 = Math.min(image.height, Math.ceil(rect.y + rect.height));
+    const w = Math.max(1, x1 - x0), h = Math.max(1, y1 - y0);
+    const step = Math.max(1, Math.ceil(Math.max(w, h) / maxSide));
+    const ow = Math.max(1, Math.floor(w / step)), oh = Math.max(1, Math.floor(h / step));
+    const out = new Uint8Array(ow * oh * 4);
+    for (let y = 0; y < oh; y++) {
+        const sy = y0 + y * step;
+        for (let x = 0; x < ow; x++) {
+            const si = (sy * image.width + x0 + x * step) * 4, oi = (y * ow + x) * 4;
+            out[oi] = image.data[si]; out[oi + 1] = image.data[si + 1]; out[oi + 2] = image.data[si + 2]; out[oi + 3] = 255;
+        }
+    }
+    return { width: ow, height: oh, data: out };
+}
+
+/** The pixels as a PNG file. */
+export function encodePng(image: Rgba): Uint8Array {
+    const png = new PNG({ width: image.width, height: image.height });
+    png.data = Buffer.from(image.data.buffer, image.data.byteOffset, image.data.byteLength);
+    const out = PNG.sync.write(png);
+    return new Uint8Array(out.buffer, out.byteOffset, out.byteLength);
+}
+
+/** The crop of a page around a box (cropRect) as a PNG, for the model; undefined when the page
+ *  cannot be decoded. */
+export function scanCropPng(page: Rgba, box: Box, margin = CROP_MARGIN): { png: Uint8Array; width: number; height: number } {
+    const crop = cropRgba(page, cropRect(box, page, margin));
+    return { png: encodePng(crop), width: crop.width, height: crop.height };
 }
 
 /** The line a bar of the webview is cropped to, from the preview's `rect.bar-staff` boxes: the

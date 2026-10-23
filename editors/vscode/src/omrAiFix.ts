@@ -30,11 +30,11 @@ import type { LanguageClient } from 'vscode-languageclient/node';
 import { AiTransformDeps, loadGrammar } from './aiTransform';
 import { ChatClient, ChatMessage, resolveChatClient } from './modelClient';
 import {
-    BarNeighbours, Diag, FixTarget, FixableTodo, GateVerdict, Proposal, acceptableByAll, anchorOf, averageOf, batchesOf,
-    checkedByDefault, cropRect, diagnosticsOn, estimateOf, fixTargets, gateOf, headOf, labelOf, neighboursOf, parseProposal,
-    repairPromptOf, spliceBar, systemPromptOf, targetsInLines, taskPromptOf, withSample,
+    BarNeighbours, Diag, FixTarget, FixableTodo, GateVerdict, Proposal, Rgba, acceptableByAll, anchorOf, averageOf, batchesOf,
+    checkedByDefault, cropRect, decodeImage, diagnosticsOn, estimateOf, fixTargets, gateOf, headOf, labelOf, neighboursOf,
+    parseProposal, repairPromptOf, scanCropPng, spliceBar, systemPromptOf, targetsInLines, taskPromptOf, withSample,
 } from './omrAiFixCore';
-import { SCAN_DEFAULT_THRESHOLD, ScanSideFile, markFactsOf, parseSideFile, shownImage, sideFileOf } from './omrScanCore';
+import { SCAN_DEFAULT_THRESHOLD, ScanSideFile, lineAround, markFactsOf, parseSideFile, shownImage, sideFileOf } from './omrScanCore';
 import { textFontFaceCss, textFontsRoot } from './scoreFonts';
 
 export interface OmrAiFixDeps extends AiTransformDeps {
@@ -73,6 +73,10 @@ interface FixRun {
     readonly side?: ScanSideFile;
     readonly before: SvgResponse;
     readonly rows: FixRow[];
+    /** Whether the scan goes to the model (`lilysharp.ai.omrFixImages`, and a page to crop). */
+    readonly images: boolean;
+    /** The pages decoded so far (null: the page could not be read), by page number. */
+    readonly pages: Map<number, Rgba | null>;
 }
 
 let output: vscode.OutputChannel | undefined;
@@ -80,10 +84,13 @@ let panel: vscode.WebviewPanel | undefined;
 let shownRun: FixRun | undefined;
 let lock: vscode.TextEditorDecorationType | undefined;
 
-/** Registers the command. */
+/** Registers the command. Its three doors (design §2.1) are its arguments: none from the palette
+ *  and the editor's menu (the active .lys); the document's uri from the scan view's button; the
+ *  uri and the offset of one mark from the quick fix (the server's "Fix this bar with AI…"). */
 export function registerOmrAiFix(context: vscode.ExtensionContext, deps: OmrAiFixDeps): void {
     context.subscriptions.push(
-        vscode.commands.registerCommand('lilysharp.omrFixWithAi', () => runOmrAiFix(context, deps)),
+        vscode.commands.registerCommand('lilysharp.omrFixWithAi',
+            (uri?: string | vscode.Uri, at?: number) => runOmrAiFix(context, deps, uri, Number.isInteger(at) ? at : undefined)),
         { dispose: () => { panel?.dispose(); lock?.dispose(); output?.dispose(); } });
 }
 
@@ -92,9 +99,24 @@ function log(line: string): void {
     output.appendLine(`${new Date().toISOString().slice(11, 19)} ${line}`);
 }
 
+/** The document the command is about, in an editor: the one named, else the active .lys. */
+async function editorFor(uriArg?: string | vscode.Uri): Promise<vscode.TextEditor | undefined> {
+    if (uriArg === undefined) {
+        const active = vscode.window.activeTextEditor;
+        return active && active.document.languageId === 'lilysharp' ? active : undefined;
+    }
+    const uri = typeof uriArg === 'string' ? vscode.Uri.parse(uriArg) : uriArg;
+    const shown = vscode.window.visibleTextEditors.find(e => e.document.uri.toString() === uri.toString());
+    if (shown) {
+        return shown;
+    }
+    const doc = await vscode.workspace.openTextDocument(uri);
+    return vscode.window.showTextDocument(doc, { viewColumn: vscode.ViewColumn.One, preserveFocus: true });
+}
+
 /** The whole command: which bars → the estimate → the run → the panel. */
-async function runOmrAiFix(context: vscode.ExtensionContext, deps: OmrAiFixDeps): Promise<void> {
-    const editor = vscode.window.activeTextEditor;
+async function runOmrAiFix(context: vscode.ExtensionContext, deps: OmrAiFixDeps, uriArg?: string | vscode.Uri, at?: number): Promise<void> {
+    const editor = await editorFor(uriArg);
     if (!editor || editor.document.languageId !== 'lilysharp') {
         vscode.window.showErrorMessage('Lily#: open the .lys an OMR reader wrote, then fix its marks with AI.');
         return;
@@ -127,19 +149,29 @@ async function runOmrAiFix(context: vscode.ExtensionContext, deps: OmrAiFixDeps)
         vscode.window.showInformationMessage(`Lily#: ${path.basename(doc.uri.fsPath)} carries no @todo mark to fix.`);
         return;
     }
-    // A selection narrows the marks to its lines, all of them checked.
-    const selected = !editor.selection.isEmpty;
-    if (selected) {
-        targets = targetsInLines(targets, editor.selection.start.line, editor.selection.end.line);
-        if (targets.length === 0) {
-            vscode.window.showInformationMessage('Lily#: the selection carries no @todo mark.');
+    let chosen: FixTarget[] | undefined;
+    if (at !== undefined) {
+        // The quick fix: the one bar the mark is on — no list, no question.
+        const [from, to] = lineAround(text, at);
+        chosen = targets.filter(t => t.start >= from && t.end <= to);
+        if (chosen.length === 0) {
+            vscode.window.showInformationMessage('Lily#: no @todo mark on that line any more.');
             return;
         }
+    } else {
+        // A selection narrows the marks to its lines, all of them checked.
+        const selected = uriArg === undefined && !editor.selection.isEmpty;
+        if (selected) {
+            targets = targetsInLines(targets, editor.selection.start.line, editor.selection.end.line);
+            if (targets.length === 0) {
+                vscode.window.showInformationMessage('Lily#: the selection carries no @todo mark.');
+                return;
+            }
+        }
+        const threshold = deps.scanThreshold(doc.uri.toString()) ?? SCAN_DEFAULT_THRESHOLD;
+        const perBar = averageOf(context.globalState.get<number[]>(TIMINGS_KEY, []));
+        chosen = await pickTargets(targets, t => selected || checkedByDefault(t, threshold), perBar);
     }
-
-    const threshold = deps.scanThreshold(doc.uri.toString()) ?? SCAN_DEFAULT_THRESHOLD;
-    const perBar = averageOf(context.globalState.get<number[]>(TIMINGS_KEY, []));
-    const chosen = await pickTargets(targets, t => selected || checkedByDefault(t, threshold), perBar);
     if (!chosen || chosen.length === 0) {
         return;
     }
@@ -148,14 +180,18 @@ async function runOmrAiFix(context: vscode.ExtensionContext, deps: OmrAiFixDeps)
     if (!chat) {
         return;
     }
-    const limit = vscode.workspace.getConfiguration('lilysharp').get<number>('ai.omrFixBatch', 25);
+    const cfg = vscode.workspace.getConfiguration('lilysharp');
+    const limit = cfg.get<number>('ai.omrFixBatch', 25);
     const batches = batchesOf(chosen, limit);
     const run: FixRun = {
         uri: doc.uri, version: doc.version, text, side,
         before: await client.sendRequest<SvgResponse>('lilysharp/renderText', { Text: text }),
         rows: [],
+        images: cfg.get<boolean>('ai.omrFixImages', true) && !!side && side.pages.length > 0,
+        pages: new Map(),
     };
     log(`Fix OMR marks: ${path.basename(doc.uri.fsPath)} — ${chosen.length} of ${targets.length} bars via ${chat.label}`
+        + `, scan ${run.images ? 'shown to the model' : cfg.get<boolean>('ai.omrFixImages', true) ? 'not available (no page beside the file)' : 'off (lilysharp.ai.omrFixImages)'}`
         + (batches.length > 1 ? `, in ${batches.length} batches of ${limit}` : ''));
 
     for (let b = 0; b < batches.length; b++) {
@@ -248,20 +284,60 @@ async function runBatch(
                     progress.report({ message: `${i + 1} / ${batch.length} bars, ${proposals} ${proposals === 1 ? 'proposal' : 'proposals'} — ${labelOf(target)}`,
                         increment: 100 / batch.length });
                     const started = Date.now();
-                    const row = await fixOne(client, chat, run, system, head, baseline, target, token, run.rows.length);
+                    const image = run.images ? scanOf(run, target) : undefined;
+                    const row = await fixOne(client, chat, run, system, head, baseline, target, image, token, run.rows.length);
                     const seconds = (Date.now() - started) / 1000;
                     run.rows.push({ ...row, seconds });
                     if (row.proposal?.bar) {
                         proposals++;
                     }
                     await context.globalState.update(TIMINGS_KEY, withSample(context.globalState.get<number[]>(TIMINGS_KEY, []), seconds));
-                    log(`  ${labelOf(target)}: ${seconds.toFixed(1)} s — ${outcomeOf(row)}`);
+                    const sent = chat.sentImages?.();
+                    const picture = !run.images ? '' : !image ? ' · no scan for this bar' : sent === false ? ' · scan not taken by the model (sent as text)'
+                        : ` · scan ${image.width}×${image.height}`;
+                    log(`  ${labelOf(target)}: ${seconds.toFixed(1)} s${picture} — ${outcomeOf(row)}`);
+                    if (run.images && image && sent === false && !saidRefused) {
+                        saidRefused = true;
+                        log(`  ${chat.label} takes no image: the bars go as text from here on (pick another model with "Lily#: Select AI Model…").`);
+                    }
                 }
             });
     } finally {
         clearLock();
     }
+    const done = run.rows.slice(-batch.length);
+    log(`Fix OMR marks: ${done.length} bars · ${done.filter(r => r.proposal?.bar).length} proposals`
+        + ` · scan ${run.images ? (chat.sentImages?.() === false ? 'refused' : 'on') : 'off'} · ${done.reduce((s, r) => s + r.seconds, 0).toFixed(0)} s`);
     return complete;
+}
+
+let saidRefused = false;
+
+/** The crop of the scan around a bar, as a PNG for the model (design §3.1 ④); undefined when the
+ *  bar has no box, or its page cannot be read. A page is decoded once a run. */
+function scanOf(run: FixRun, target: FixTarget): { data: Uint8Array; mime: string; width: number; height: number } | undefined {
+    if (!target.crop || !run.side) {
+        return undefined;
+    }
+    let page = run.pages.get(target.crop.page);
+    if (page === undefined) {
+        const info = run.side.pages.find(p => p.page === target.crop!.page);
+        const file = info ? shownImage(info) : undefined;
+        try {
+            page = file && fs.existsSync(file) ? decodeImage(fs.readFileSync(file)) ?? null : null;
+        } catch {
+            page = null;
+        }
+        run.pages.set(target.crop.page, page);
+        if (page === null) {
+            log(`  page ${target.crop.page}: ${file ? 'cannot be decoded (PNG or JPEG only)' : 'no image to crop'} — its bars go as text`);
+        }
+    }
+    if (!page) {
+        return undefined;
+    }
+    const crop = scanCropPng(page, target.crop.box);
+    return { data: crop.png, mime: 'image/png', width: crop.width, height: crop.height };
 }
 
 function outcomeOf(row: Omit<FixRow, 'seconds'>): string {
@@ -279,11 +355,16 @@ function outcomeOf(row: Omit<FixRow, 'seconds'>): string {
 /** One bar: the prompt → the model → the gates, once more with the compiler's words on a fail. */
 async function fixOne(
     client: LanguageClient, chat: ChatClient, run: FixRun, system: string, head: string, baseline: readonly Diag[],
-    target: FixTarget, token: vscode.CancellationToken, index: number): Promise<Omit<FixRow, 'seconds'>> {
+    target: FixTarget, image: { data: Uint8Array; mime: string } | undefined, token: vscode.CancellationToken, index: number,
+): Promise<Omit<FixRow, 'seconds'>> {
     const neighbours: BarNeighbours = neighboursOf(run.text, target, run.side);
     const messages: ChatMessage[] = [
         { role: 'system', content: system },
-        { role: 'user', content: taskPromptOf({ head, target, neighbours, diagnostics: diagnosticsOn(baseline, target) }) },
+        {
+            role: 'user',
+            content: taskPromptOf({ head, target, neighbours, diagnostics: diagnosticsOn(baseline, target), image: !!image }),
+            ...(image ? { images: [image] } : {}),
+        },
     ];
     let last: { proposal: Proposal; gate: GateVerdict; after?: SvgResponse } | undefined;
     for (let attempt = 0; attempt <= MAX_REPAIRS; attempt++) {
@@ -438,7 +519,9 @@ async function applyAccepted(run: FixRun): Promise<void> {
     const ok = written.length > 0 && await vscode.workspace.applyEdit(edit);
     if (ok) {
         for (const r of written) { r.state = 'applied'; }
+        const proposals = run.rows.filter(r => r.proposal?.bar).length;
         log(`Fix OMR marks: applied ${written.length} ${written.length === 1 ? 'bar' : 'bars'}`
+            + ` (${run.rows.filter(r => r.state === 'applied').length} of ${proposals} proposals taken so far, scan ${run.images ? 'on' : 'off'})`
             + (skipped.length ? `; ${skipped.length} skipped (the line moved and could not be found)` : ''));
         vscode.window.showInformationMessage(`Lily#: wrote ${written.length} ${written.length === 1 ? 'bar' : 'bars'} (Ctrl+Z undoes them all)`
             + (skipped.length ? `; ${skipped.length} skipped — ${skipped.map(r => labelOf(r.target)).join(', ')} could not be found.` : '.'));

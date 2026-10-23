@@ -16,6 +16,11 @@ All notable changes to the Lily# VS Code extension are documented here.
   the one *Lily#: Select AI Model…* names for it (`lilysharp.ai.omrFixModel`); a batch is
   `lilysharp.ai.omrFixBatch` bars (25) before it asks to continue; the *Lily# AI* output channel
   keeps a line a bar.
+- **The model is shown the scan of each bar** — the crop of the page the reader read, with a
+  little margin — not only the text (`lilysharp.ai.omrFixImages`, on; a model that takes no
+  image is sent the text alone, and the output channel says so). Two more doors to the same
+  command: **Fix this bar with AI…** among a `@todo`'s quick fixes (that one bar, no list), and
+  **Fix N marks with AI…** in the scan view's head, N being the marks its slider shows.
 
 ### Chord symbols as a chart prints them
 

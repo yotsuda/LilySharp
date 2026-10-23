@@ -22,10 +22,11 @@ import * as assert from 'node:assert/strict';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import {
-    Diag, FixableTodo, acceptableByAll, anchorOf, averageOf, barBoxFor, batchesOf, checkedByDefault, cropRect,
-    diagnosticsOn, estimateOf, fixTargets, gateOf, headOf, labelOf, neighboursOf, parseProposal, repairPromptOf,
-    spliceBar, stripTodoMarks, systemPromptOf, targetsInLines, taskPromptOf, withSample,
+    Diag, FixableTodo, Rgba, acceptableByAll, anchorOf, averageOf, barBoxFor, batchesOf, checkedByDefault, cropRect, cropRgba,
+    decodeImage, diagnosticsOn, encodePng, estimateOf, fixTargets, gateOf, headOf, labelOf, neighboursOf, parseProposal,
+    repairPromptOf, scanCropPng, spliceBar, stripTodoMarks, systemPromptOf, targetsInLines, taskPromptOf, withSample,
 } from '../src/omrAiFixCore';
+import * as jpeg from 'jpeg-js';
 import { markFactsOf, parseSideFile } from '../src/omrScanCore';
 
 // A score as an OMR reader writes one: a part's bar on a line of its own, a @todo on the first
@@ -190,7 +191,64 @@ describe('what the model is shown', () => {
         assert.match(task, /bar 2: 1760\/1920 ticks/);
         assert.match(task, /480 a quarter note/);
         assert.match(task, /confidence that the line needs no change: 0\.30/);
+        assert.doesNotMatch(task, /picture/);
         assert.match(repairPromptOf(['LYS2002: too long']), /LYS2002: too long/);
+    });
+
+    it('says what the picture is when the message carries the scan (M2)', () => {
+        const task = taskPromptOf({ head: '', target: bar2, neighbours: { others: [] }, diagnostics: [], image: true });
+        assert.match(task, /^The picture attached to this message is the scanned page/);
+        assert.match(task, /Read the notes, rests, dots, ties, beams and\ntuplets from the picture/);
+    });
+});
+
+describe('the scan of a bar, for the model', () => {
+    // A 40×30 page: white, with a black 10×6 block at (20, 10).
+    const page: Rgba = (() => {
+        const data = new Uint8Array(40 * 30 * 4).fill(255);
+        for (let y = 10; y < 16; y++) {
+            for (let x = 20; x < 30; x++) { const i = (y * 40 + x) * 4; data[i] = data[i + 1] = data[i + 2] = 0; }
+        }
+        return { width: 40, height: 30, data };
+    })();
+    const px = (img: Rgba, x: number, y: number) => img.data[(y * img.width + x) * 4];
+
+    it('crops the rectangle as it is', () => {
+        const c = cropRgba(page, { x: 18, y: 8, width: 14, height: 10 });
+        assert.deepEqual([c.width, c.height], [14, 10]);
+        assert.equal(px(c, 0, 0), 255);      // (18, 8): white
+        assert.equal(px(c, 2, 2), 0);        // (20, 10): the block's corner
+        assert.equal(px(c, 11, 7), 0);       // (29, 15): its far corner
+        assert.equal(px(c, 12, 8), 255);     // (30, 16): past it
+    });
+
+    it('keeps the crop on the page and samples a big one down by a whole factor', () => {
+        const c = cropRgba(page, { x: -5, y: -5, width: 100, height: 100 });
+        assert.deepEqual([c.width, c.height], [40, 30]);
+        const small = cropRgba(page, { x: 0, y: 0, width: 40, height: 30 }, 16);
+        assert.deepEqual([small.width, small.height], [13, 10]);   // step 3
+        assert.equal(px(small, 7, 4), 0);                           // (21, 12): in the block
+        assert.equal(px(small, 0, 0), 255);
+    });
+
+    it('reads a PNG and a JPEG back, and writes a PNG the reader can read', () => {
+        const png = encodePng(page);
+        assert.deepEqual([png[0], png[1], png[2], png[3]], [0x89, 0x50, 0x4E, 0x47]);
+        const back = decodeImage(png)!;
+        assert.deepEqual([back.width, back.height, px(back, 25, 12), px(back, 0, 0)], [40, 30, 0, 255]);
+        const jpg = jpeg.encode({ width: page.width, height: page.height, data: Buffer.from(page.data) }, 95).data;
+        const fromJpeg = decodeImage(new Uint8Array(jpg))!;
+        assert.deepEqual([fromJpeg.width, fromJpeg.height], [40, 30]);
+        assert.ok(px(fromJpeg, 25, 12) < 40 && px(fromJpeg, 2, 2) > 215);   // lossy, but black is black
+        assert.equal(decodeImage(new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8, 9])), undefined);
+    });
+
+    it('crops a page around a box with the margin, as a PNG', () => {
+        const out = scanCropPng(page, [20, 10, 30, 16]);
+        // cropRect: pad = 6 * 0.3 = 1.8 → x 18.2..31.8, y 8.2..17.8 → floor/ceil → 18..32 × 8..18
+        assert.deepEqual([out.width, out.height], [14, 10]);
+        const back = decodeImage(out.png)!;
+        assert.equal(px(back, 2, 2), 0);
     });
 });
 

@@ -575,10 +575,17 @@ public sealed partial class LilySharpLanguageServer
         return QuickFix($"Write '{wanted}'", doc, uri, diagnostic, EditOf(doc.Text, start, end, wanted));
     }
 
+    /// <summary>The editor's command that rewrites a marked bar with the language model
+    /// (editors/vscode omrAiFix.ts; docs/omr-ai-fix-design.md §2.1): its arguments are the
+    /// document's uri and the offset of the mark, so the command fixes that one bar.</summary>
+    internal const string OmrFixCommand = "lilysharp.omrFixWithAi";
+
     /// <summary>
     /// The quick fixes of a <c>@todo</c> mark (LYS4026, whose span is the mark itself, '@'
-    /// included): "resolve" deletes it, and — when the file has more than one — "resolve all"
-    /// deletes every one. A mark is a plain annotation, so deleting its text is the whole edit.
+    /// included): "resolve" deletes it, "fix this bar with AI" hands the bar to the editor's
+    /// command (<see cref="OmrFixCommand"/>; the model, the review and the write are the
+    /// editor's), and — when the file has more than one — "resolve all" deletes every one. A
+    /// mark is a plain annotation, so deleting its text is the whole edit.
     /// </summary>
     private static IEnumerable<CodeAction> ResolveTodoActions(
         Document doc, Uri uri, CoreDiagnostic diagnostic, IReadOnlyList<CoreDiagnostic> all)
@@ -593,6 +600,19 @@ public sealed partial class LilySharpLanguageServer
         if (!IsMark(diagnostic))
             yield break;
         yield return QuickFix("Resolve this TODO (remove @todo)", doc, uri, diagnostic, Delete(diagnostic));
+        const string fixTitle = "Fix this bar with AI…";
+        yield return new CodeAction
+        {
+            Title = fixTitle,
+            Kind = CodeActionKind.QuickFix,
+            Diagnostics = [ConvertDiagnostic(diagnostic, doc.Text, uri)],
+            Command = new Command
+            {
+                Title = fixTitle,
+                CommandIdentifier = OmrFixCommand,
+                Arguments = [uri.ToString(), TodoMarkAt(doc.Tree, diagnostic)!.Span.Start],
+            },
+        };
         var marks = all.Where(IsMark).DistinctBy(d => d.Span.Start).ToList();
         if (marks.Count > 1)
             yield return new CodeAction

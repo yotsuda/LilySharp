@@ -25,13 +25,19 @@
 import * as vscode from 'vscode';
 
 export type ChatRole = 'system' | 'user' | 'assistant';
-export interface ChatMessage { role: ChatRole; content: string; }
+/** A picture a user message carries (the scan of a bar, docs/omr-ai-fix-design.md §3.1 ④). */
+export interface ChatImage { readonly data: Uint8Array; readonly mime: string; }
+export interface ChatMessage { role: ChatRole; content: string; images?: readonly ChatImage[]; }
 
 export interface ChatClient {
     /** Human-readable label for logs, e.g. "copilot/claude-3.5". */
     readonly label: string;
     /** Runs the messages and returns the full response text. */
     send(messages: ChatMessage[], token: vscode.CancellationToken): Promise<string>;
+    /** Whether the last `send` carried the images its messages offered: false when this VS Code
+     *  has no image parts or the model refused them (the send went again as text, and every
+     *  later one goes as text), undefined when none were offered. */
+    sentImages?(): boolean | undefined;
 }
 
 /**
@@ -170,21 +176,51 @@ export async function pickAiModel(): Promise<void> {
 }
 
 function lmClient(model: vscode.LanguageModelChat): ChatClient {
+    // Image parts came to the API after the extension's floor (engines.vscode ^1.90): looked
+    // for at run time, so an older VS Code sends the text alone. A model that takes no image
+    // answers the request with an error; the request then goes again as text, and the client
+    // remembers (`refused`) so a batch of bars does not pay the error every time.
+    const api = vscode as unknown as { LanguageModelDataPart?: { image(data: Uint8Array, mime: string): unknown }; LanguageModelTextPart?: new (value: string) => unknown };
+    const canImage = typeof api.LanguageModelDataPart?.image === 'function' && typeof api.LanguageModelTextPart === 'function';
+    let refused = false;
+    let last: boolean | undefined;
+    const build = (messages: ChatMessage[], images: boolean) => messages.map(m => {
+        // vscode.lm has only User/Assistant roles; a system message rides as the first User message.
+        if (m.role === 'assistant') {
+            return vscode.LanguageModelChatMessage.Assistant(m.content);
+        }
+        if (images && m.images && m.images.length > 0) {
+            const parts = [new api.LanguageModelTextPart!(m.content), ...m.images.map(i => api.LanguageModelDataPart!.image(i.data, i.mime))];
+            return vscode.LanguageModelChatMessage.User(parts as any);
+        }
+        return vscode.LanguageModelChatMessage.User(m.content);
+    });
+    const run = async (lmMessages: vscode.LanguageModelChatMessage[], token: vscode.CancellationToken) => {
+        const response = await model.sendRequest(lmMessages, {}, token);
+        let text = '';
+        for await (const chunk of response.text) {
+            text += chunk;
+        }
+        return text;
+    };
     return {
         label: `${model.vendor}/${model.family}`,
         async send(messages, token) {
-            // vscode.lm has only User/Assistant roles; a system message rides as the
-            // first User message.
-            const lmMessages = messages.map(m =>
-                m.role === 'assistant'
-                    ? vscode.LanguageModelChatMessage.Assistant(m.content)
-                    : vscode.LanguageModelChatMessage.User(m.content));
-            const response = await model.sendRequest(lmMessages, {}, token);
-            let text = '';
-            for await (const chunk of response.text) {
-                text += chunk;
+            const offered = messages.some(m => m.images && m.images.length > 0);
+            const withImages = offered && canImage && !refused;
+            try {
+                const text = await run(build(messages, withImages), token);
+                last = offered ? withImages : undefined;
+                return text;
+            } catch (err) {
+                if (!withImages || token.isCancellationRequested) {
+                    throw err;
+                }
+                refused = true;
+                last = false;
+                return await run(build(messages, false), token);
             }
-            return text;
         },
+        sentImages: () => last,
     };
 }

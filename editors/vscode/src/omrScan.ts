@@ -193,6 +193,10 @@ export async function showScan(
                 view.threshold = m.value;
                 hidePreviewTodos(view, deps);
                 void markPreview(view, deps);   // the frames follow the marks they hold
+            } else if (m.type === 'fixWithAi') {
+                // The view's button (docs/omr-ai-fix-design.md §2.1): the command, on this .lys,
+                // which checks the marks below the slider by default (scanThresholdOf).
+                await vscode.commands.executeCommand('lilysharp.omrFixWithAi', lys.toString());
             }
         } catch (err) {
             deps.output.appendLine(`Scan: ${err}`);
@@ -454,6 +458,11 @@ function render(view: ScanView): void {
   rect.todo { fill: none; stroke: #e53935; stroke-dasharray: 4 3; vector-effect: non-scaling-stroke; pointer-events: none; }
   .filter { display: inline-flex; align-items: center; gap: 6px; margin-left: 12px; }
   .filter input { width: 140px; }
+  /* The marks the slider shows, handed to the language model (omrAiFix.ts). */
+  .note button { margin-left: 12px; padding: 2px 10px; font-size: inherit; border-radius: 3px; cursor: pointer;
+                 border: 1px solid var(--vscode-button-border, transparent);
+                 background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); }
+  .note button:disabled { opacity: .5; cursor: default; }
   rect.light { fill: rgba(0, 120, 215, .14); stroke: none; pointer-events: none; }
   body.dragging, body.dragging * { cursor: grabbing; }
   /* The zoom read-out, as the preview's. */
@@ -469,7 +478,9 @@ function render(view: ScanView): void {
         + `<label><input type="checkbox" id="link" checked> Scroll with the preview</label>`
         + `<label class="filter" title="Show the marks the reader is less sure of than this (its confidence, 0 to 1)">`
         + `Marks below <input type="range" id="thr" min="0.05" max="1" step="0.05" value="${SCAN_DEFAULT_THRESHOLD}">`
-        + `<span id="thrOut"></span></label></p>
+        + `<span id="thrOut"></span></label>`
+        + `<button id="fix" title="Rewrite the bars of the marks shown with the language model; every proposal is reviewed before it is written">`
+        + `Fix <span id="fixN">0</span> marks with AI…</button></p>
 ${pages || '<p>The side file lists no page.</p>'}
 <div class="zoom-info" id="zoomInfo">100%</div>
 <script nonce="${nonce}">
@@ -489,19 +500,25 @@ ${pages || '<p>The side file lists no page.</p>'}
   if (typeof state.threshold === 'number') thr.value = String(state.threshold);
   // The marks the .lys no longer carries (resolved, sent by the extension) show at no value.
   let resolved = new Set();
-  // Counted by key: a mark over several parts is several frames, one mark.
+  // Counted by key: a mark over several parts is several frames, one mark. The button counts
+  // the shown marks the .lys carries (a quiet one is not in it, so there is no bar to rewrite).
+  const fix = document.getElementById('fix'), fixN = document.getElementById('fixN');
   function filter() {
     const v = Number(thr.value);
-    const shown = new Set(), total = new Set();
+    const shown = new Set(), total = new Set(), fixable = new Set();
     for (const r of document.querySelectorAll('rect.todo')) {
       if (resolved.has(r.dataset.key)) { r.style.display = 'none'; continue; }
       total.add(r.dataset.key);
       const on = r.dataset.c === '' || v >= 1 || Number(r.dataset.c) < v;
       r.style.display = on ? '' : 'none';
       if (on) shown.add(r.dataset.key);
+      if (on && !r.classList.contains('quiet')) fixable.add(r.dataset.key);
     }
     thrOut.textContent = v.toFixed(2) + ' (' + shown.size + ' / ' + total.size + ')';
+    fixN.textContent = String(fixable.size);
+    fix.disabled = fixable.size === 0;
   }
+  fix.addEventListener('click', () => vscode.postMessage({ type: 'fixWithAi' }));
   thr.addEventListener('input', () => { state.threshold = Number(thr.value); vscode.setState(state); filter(); });
   // The preview of the .lys hides the same marks (the extension turns the value into keys).
   thr.addEventListener('input', () => vscode.postMessage({ type: 'threshold', value: Number(thr.value) }));

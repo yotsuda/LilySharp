@@ -273,6 +273,11 @@
           "default": "",
           "markdownDescription": "The language model *Fix OMR Marks with AI…* uses: a model id or family from **Lily#: Select AI Model…**. One request a bar, only when you run the command. Empty chooses automatically — the largest model on offer, as *Transform Selection* does; a faster model shortens a long batch at the cost of some readings."
         },
+        "lilysharp.ai.omrFixImages": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Show the model the scan of each bar *Fix OMR Marks with AI…* rewrites (the bar's crop of the page the OMR reader read, from `x.omr.json`), not only the text. A model that takes no image is sent the text alone, and the *Lily# AI* output channel says so. Off: text only — to compare, or to save tokens."
+        },
         "lilysharp.ai.omrFixBatch": {
           "type": "number",
           "default": 25,
@@ -994,11 +999,14 @@
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
+    "@types/pngjs": "^6.0.5",
     "@types/vscode": "^1.90.0",
     "esbuild": "^0.28.1",
     "typescript": "^5.3.0"
   },
   "dependencies": {
+    "jpeg-js": "^0.4.4",
+    "pngjs": "^7.0.0",
     "spessasynth_lib": "^4.3.14",
     "vscode-languageclient": "^9.0.1"
   },

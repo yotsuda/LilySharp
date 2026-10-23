@@ -104,6 +104,24 @@ public class TodoAnnotationTests
         }
     }
 
+    /// <summary>
+    /// "Fix this bar with AI…" (docs/omr-ai-fix-design.md §2.1) is a COMMAND, not an edit: the
+    /// editor's command takes the document and the mark's offset, asks the model, and lets the
+    /// person decide on the score before anything is written. Offered on every mark, keyed or
+    /// not; the server itself changes nothing.
+    /// </summary>
+    [Fact]
+    public void FixWithAi_IsACommandOnTheMark_WithTheDocumentAndTheMarksOffset()
+    {
+        string text = Book("c'4@todo(b1-m \"bar 1: 1440/1920 ticks\") d'4 e'4 |");
+        int at = text.IndexOf("@todo", System.StringComparison.Ordinal);
+        var action = Assert.Single(ActionsAt(text, text.IndexOf("bar 1", System.StringComparison.Ordinal)),
+            a => a.Title == "Fix this bar with AI…");
+        Assert.Null(action.Edit);
+        Assert.Equal(LilySharpLanguageServer.OmrFixCommand, action.Command!.CommandIdentifier);
+        Assert.Equal(["file:///todo.lys", at], action.Command.Arguments!.Select(a => a is int i ? (object)i : a.ToString()!));
+    }
+
     [Theory]
     [InlineData("c'4@todo(1x)")]                 // not a key
     [InlineData("c'4@todo(\"a\" \"b\")")]        // two memos

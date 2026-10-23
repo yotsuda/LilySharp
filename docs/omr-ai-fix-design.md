@@ -120,7 +120,7 @@ AI 変換の candidate panel を**一覧**にしたもの。1 行＝1 小節:
 | 段 | 内容 | 門 |
 |---|---|---|
 | **M1** ✅ 第972 | コマンド＋QuickPick＋見積もり＋進捗、文字だけの入力（memo・候補・前後と他パート）、門 1・2、一覧パネル（元画像の列は `box` の切り抜きを**表示だけ**）、Accept の WorkspaceEdit と `@todo` の削除。`ModelUse 'omrFix'`。 | headless の網: `omrAiFixCore.ts`（対象の選別・プロンプトの組み立て・JSON の読み・門 1・2 の判定・切り抜きの矩形）を `*Core.ts` の流儀で単体に。`.lys` 側は `OmrSideFile` の既存の網。手動: MANUAL-CHECKS に `[ ]` 3 項（入口 3 つ）。 |
-| **M2** | 画像をモデルに渡す（`LanguageModelDataPart.image`・engine の床・受けない模型の再送）。クイックフィックスと scan view のボタン。 | 同じ本で M1 と M2 の提案の採用率を出力チャネルで比べる（OMR の `data/eval` の既知の誤りの小節で） |
+| **M2** ✅ 第973（門はユーザー） | 画像をモデルに渡す（`LanguageModelDataPart.image`・engine の床・受けない模型の再送）。クイックフィックスと scan view のボタン。 | 同じ本で M1 と M2 の提案の採用率を出力チャネルで比べる（OMR の `data/eval` の既知の誤りの小節で） |
 | **M3** | 門 3（`omr verify` の小節単位）・OMR 側の `candidates` が来たらプロンプトに。費用の記録（所要時間の平均→見積もり）。 | OMR 側の数字（S33 段 1）と合わせて精度を 1 枚に |
 
 M1 は OMR 側の作業を待たない（`kind: "bar"` の todo と memo は今ある）。
@@ -134,6 +134,20 @@ M1 は OMR 側の作業を待たない（`kind: "bar"` の todo と memo は今�
 ⑶ Accept は印、**Apply が書く**（Accept したものだけ 1 つの WorkspaceEdit）。⑷ 模型の `bar` に残った `@todo` は剥がす。
 ⑸ 見積もりの秒数は直近 20 小節の平均を `globalState` に（出力チャネルの解析ではなく）。⑹ 入口は M1 ではパレットと `.lys` の
 右クリック（scan のある本）だけ＝クイックフィックスと scan view のボタンは M2 のまま。
+
+**M2 の実装（第973・2026-10-23）**: ⑴ **画像**＝`omrAiFixCore.decodeImage`／`cropRgba`／`encodePng`／`scanCropPng`（pure JS の
+`jpeg-js`・`pngjs`＝拡張に依存を 2 つ足した・esbuild が束ねる）。頁は 1 回の実行で 1 度だけ decode（`FixRun.pages`）・切り抜きは
+`cropRect`（余白 30%）を整数に丸め、長辺 1,568 px を超えるぶんは整数倍で間引く（nearest＝細い符尾を消さない）・PNG で
+`ChatMessage.images` に載せ、プロンプトの先頭に「絵が正本・文字は reader の読み」の段を足す（`TaskInput.image`）。
+⑵ **engine の床は上げない**＝`modelClient.lmClient` が `vscode.LanguageModelDataPart.image` の有無を実行時に見る（無い VS Code は文字だけ＝M1 の形）。
+**受けない模型**＝画像つきの `sendRequest` が投げたら文字だけで送り直し、以後その client は文字だけ（`refused`）・`ChatClient.sentImages()` で
+呼び手が知り、出力チャネルに 1 回だけ「この模型は画像を受けない」。⑶ **設定 `lilysharp.ai.omrFixImages`**（既定 on）＝門の A/B
+（同じ本で on／off の採用率を出力チャネルの集計行 `N bars · P proposals · scan on|off|refused` と Apply の `taken so far` で比べる）。
+⑷ **クイックフィックス**＝LSP `ResolveTodoActions` が Command 型の CodeAction「Fix this bar with AI…」（`lilysharp.omrFixWithAi`・引数は
+uri と印の offset）を出し、拡張はその行の対象だけを QuickPick なしで走らせる（網 `TodoAnnotationTests.FixWithAi_IsACommandOnTheMark…`）。
+⑸ **scan view のボタン**「Fix N marks with AI…」＝頭のバーのスライダーの隣・N はスライダーが見せる印のうち `.lys` に在るもの（quiet は除く）・
+押すと同じコマンドをその `.lys` の uri で（既定チェックはスライダー未満＝今までどおり）。⑹ 門（M1 と M2 の採用率）は Copilot の模型が要る＝
+ユーザーが `omrFixImages` の on／off で同じ本を 2 回回し、出力チャネルの集計行を比べる（MANUAL-CHECKS §5 B10）。
 
 ## 6. 費用と限界
 
