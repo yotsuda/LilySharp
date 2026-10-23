@@ -170,7 +170,8 @@ export interface ModelLike {
  * ghost completion, the rest by how much input they take.
  */
 export function pickModel<M extends ModelLike>(models: readonly M[], wantSmall: boolean): M | undefined {
-    const chat = models.filter(m => m.family.trim() !== '');
+    // (copilotcli has a family now — "auto" — and still answers nothing: never a chat model)
+    const chat = models.filter(m => m.family.trim() !== '' && m.vendor !== 'copilotcli');
     const copilot = chat.filter(m => m.vendor === 'copilot');
     const base = copilot.length > 0 ? copilot : chat.length > 0 ? chat : [...models];
     const small = (m: M) => /mini|nano|lite|haiku|flash|small/i.test(`${m.family} ${m.id}`);

@@ -41,6 +41,12 @@ describe('the automatic model', () => {
         assert.equal(pickModel(models, true)?.id, 'claude-haiku-5.5');
     });
 
+    it('passes over copilotcli with a family too (VS Code 1.142 names it "auto")', () => {
+        const auto = { id: 'auto', vendor: 'copilotcli', family: 'auto', maxInputTokens: 1_000_000 };
+        assert.equal(pickModel([auto, models[4]], false)?.id, 'local-big');
+        assert.equal(pickModel([auto], false)?.id, 'auto');                 // all there is: the caller says why it fails
+    });
+
     it('takes another vendor\'s chat model when Copilot offers none, and anything rather than nothing', () => {
         assert.equal(pickModel(models.filter(m => m.vendor !== 'copilot'), false)?.id, 'local-big');
         assert.equal(pickModel([models[0]], false)?.id, 'copilotcli');

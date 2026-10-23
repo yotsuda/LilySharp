@@ -133,6 +133,19 @@ export async function pickAiModel(): Promise<void> {
             + 'language-model provider).');
         return;
     }
+    if (!hasChatModel(models)) {
+        // Only doors that answer nothing (copilotcli with no Copilot sign-in, owner's report
+        // 2026-10-23): picking one of them cannot help, so say what would.
+        const signIn = 'How to get a model';
+        const pick = await vscode.window.showWarningMessage(NO_CHAT_MODEL, signIn, 'Show the list anyway');
+        if (pick === signIn) {
+            void vscode.env.openExternal(vscode.Uri.parse('https://code.visualstudio.com/docs/copilot/setup'));
+            return;
+        }
+        if (pick !== 'Show the list anyway') {
+            return;
+        }
+    }
     const cfg = vscode.workspace.getConfiguration('lilysharp');
     const shown = (use: ModelUse) => cfg.get<string>(SETTING[use], '').trim() || `Automatic (${autoPick(models, use)?.name ?? 'none'})`;
     type UseItem = vscode.QuickPickItem & { use: ModelUse };
@@ -173,6 +186,18 @@ export async function pickAiModel(): Promise<void> {
         return;
     }
     await cfg.update(SETTING[use], chosen.value, vscode.ConfigurationTarget.Global);
+}
+
+/** What to tell the person when VS Code offers no model that holds a conversation. */
+export const NO_CHAT_MODEL = 'Lily#: VS Code offers no chat model that answers — GitHub Copilot is not signed in, '
+    + 'so only Copilot CLI\'s entry is listed, and it answers nothing here. Sign in to GitHub Copilot in VS Code '
+    + '(the Accounts menu, bottom left), or add a model with your own key in the Chat view\'s model picker '
+    + '(Manage Models…); then choose it with "Lily#: Select AI Model…".';
+
+/** Whether VS Code offers a model that holds a plain conversation: a Copilot model, or another
+ *  vendor's with a family — not only Copilot CLI's door (aiTransformCore.pickModel). */
+export function hasChatModel(models: readonly vscode.LanguageModelChat[]): boolean {
+    return models.some(m => m.vendor !== 'copilotcli' && m.family.trim() !== '');
 }
 
 function lmClient(model: vscode.LanguageModelChat): ChatClient {

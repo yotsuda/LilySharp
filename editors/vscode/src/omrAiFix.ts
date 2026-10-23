@@ -30,7 +30,7 @@ import * as path from 'path';
 import { execFile } from 'child_process';
 import type { LanguageClient } from 'vscode-languageclient/node';
 import { AiTransformDeps, loadGrammar } from './aiTransform';
-import { ChatClient, ChatMessage, resolveChatClient } from './modelClient';
+import { ChatClient, ChatMessage, NO_CHAT_MODEL, availableModels, hasChatModel, resolveChatClient } from './modelClient';
 import {
     BarCheck, BarNeighbours, Diag, FixTarget, FixableTodo, GateVerdict, Proposal, Rgba, acceptableByAll, anchorOf, averageOf,
     batchesOf, checkedByDefault, cropRect, decodeImage, diagnosticsOn, estimateOf, fixTargets, gateOf, headOf, labelOf,
@@ -396,11 +396,19 @@ async function runBatch(
                     // The first bar came back empty: so will the rest. Stop, and say which model
                     // and where to pick another, rather than a list of empty rows.
                     if (i === 0 && row.noAnswer?.endsWith('returned nothing')) {
-                        log(`Fix OMR marks: ${chat.label} returned nothing — stopped. Pick a chat model with "Lily#: Select AI Model…" → Fix OMR marks with AI.`);
                         complete = false;
-                        void vscode.window.showWarningMessage(
-                            `Lily#: the model ${chat.label} returned nothing, so the fix stopped. Pick another model for "Fix OMR marks with AI".`,
-                            'Select AI Model…').then(c => { if (c) { void vscode.commands.executeCommand('lilysharp.selectAiModel'); } });
+                        // Copilot CLI's door is all VS Code lists when Copilot is not signed in:
+                        // there is no other model to pick, so say how to get one.
+                        const noModel = !hasChatModel(await availableModels());
+                        log(`Fix OMR marks: ${chat.label} returned nothing — stopped. `
+                            + (noModel ? 'VS Code offers no chat model (GitHub Copilot is not signed in).' : 'Pick a chat model with "Lily#: Select AI Model…" → Fix OMR marks with AI.'));
+                        if (noModel) {
+                            void vscode.window.showWarningMessage(NO_CHAT_MODEL);
+                        } else {
+                            void vscode.window.showWarningMessage(
+                                `Lily#: the model ${chat.label} returned nothing, so the fix stopped. Pick another model for "Fix OMR marks with AI".`,
+                                'Select AI Model…').then(c => { if (c) { void vscode.commands.executeCommand('lilysharp.selectAiModel'); } });
+                        }
                         return;
                     }
                 }
