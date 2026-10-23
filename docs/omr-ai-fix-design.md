@@ -131,7 +131,7 @@ M1 は OMR 側の作業を待たない（`kind: "bar"` の todo と memo は今�
 （字下げと改行は残す）を提案で置き換える。同じ行の印は全部その行と一緒に消える。⑵ 「今」「提案」の絵は 1 小節だけを
 `renderText` で切り出すのではなく、**全曲の SVG を `<symbol>` に 1 つ置き、`rect.bar-staff` の `data-span` がその行の span に
 触れる箱で viewBox を切る**（前後 1 小節の切り出しは文脈＝調・拍子・パートの宣言を要し、1 小節の文書を合成する手間に見合わない）。
-⑶ Accept は印、**Apply が書く**（Accept したものだけ 1 つの WorkspaceEdit）。⑷ 模型の `bar` に残った `@todo` は剥がす。
+⑶ ~~Accept は印、Apply が書く~~ → **第973 のユーザー報告（「Accept を押しただけでは Accept されないのが分かりにくい」）で、Accept がその場でその行を書き、Accept all が門 ✓ の行をまとめて 1 つの WorkspaceEdit で書く形に変えた**（Apply ボタンは廃止・どちらも Ctrl+Z で戻る）。⑷ 模型の `bar` に残った `@todo` は剥がす。
 ⑸ 見積もりの秒数は直近 20 小節の平均を `globalState` に（出力チャネルの解析ではなく）。⑹ 入口は M1 ではパレットと `.lys` の
 右クリック（scan のある本）だけ＝クイックフィックスと scan view のボタンは M2 のまま。
 
@@ -142,7 +142,7 @@ M1 は OMR 側の作業を待たない（`kind: "bar"` の todo と memo は今�
 ⑵ **engine の床は上げない**＝`modelClient.lmClient` が `vscode.LanguageModelDataPart.image` の有無を実行時に見る（無い VS Code は文字だけ＝M1 の形）。
 **受けない模型**＝画像つきの `sendRequest` が投げたら文字だけで送り直し、以後その client は文字だけ（`refused`）・`ChatClient.sentImages()` で
 呼び手が知り、出力チャネルに 1 回だけ「この模型は画像を受けない」。⑶ **設定 `lilysharp.ai.omrFixImages`**（既定 on）＝門の A/B
-（同じ本で on／off の採用率を出力チャネルの集計行 `N bars · P proposals · scan on|off|refused` と Apply の `taken so far` で比べる）。
+（同じ本で on／off の採用率を出力チャネルの集計行 `N bars · P proposals · scan on|off|refused` と書いたときの `taken so far` で比べる）。
 ⑷ **クイックフィックス**＝LSP `ResolveTodoActions` が Command 型の CodeAction「Fix this bar with AI…」（`lilysharp.omrFixWithAi`・引数は
 uri と印の offset）を出し、拡張はその行の対象だけを QuickPick なしで走らせる（網 `TodoAnnotationTests.FixWithAi_IsACommandOnTheMark…`）。
 ⑸ **scan view のボタン**「Fix N marks with AI…」＝頭のバーのスライダーの隣・N はスライダーが見せる印のうち `.lys` に在るもの（quiet は除く）・

@@ -19,7 +19,7 @@
 // around it and the compiler's report — never on its own: the command asks which bars, says
 // what the run will cost, and shows every proposal beside the scan and the score before a
 // single one is written. What passes the gates (compiles without a new error, fills its meter)
-// is listed; Accept marks a row, Apply writes the accepted rows as ONE WorkspaceEdit (one
+// is listed; Accept writes its row at once, Accept all the gated rows as ONE WorkspaceEdit (one
 // Ctrl+Z), and the marks go with the lines they were on. omrAiFixCore.ts is the editor-free
 // half; the scan's image goes to the model at M2 (here it is shown to the person only).
 
@@ -81,7 +81,7 @@ interface FixRow {
      *  sees what came back. */
     readonly noAnswer?: string;
     readonly seconds: number;
-    state: 'pending' | 'accepted' | 'rejected' | 'applied' | 'skipped';
+    state: 'pending' | 'rejected' | 'applied' | 'skipped';
 }
 
 /** The run a panel shows: the document as it was, the rows so far. */
@@ -589,26 +589,23 @@ async function onPanelMessage(deps: OmrAiFixDeps, m: { action?: string; index?: 
         return;
     }
     const row = Number.isInteger(m.index) ? run.rows.find(r => r.index === m.index) : undefined;
+    // Accept WRITES (owner's report 2026-10-23: an Accept that only marked a row, written later by
+    // a separate Apply, read as if nothing happened). Accept all writes every gated row the model
+    // is sure of at once, as one edit; each is undone with Ctrl+Z.
     switch (m.action) {
         case 'accept':
-            if (row && row.proposal?.bar && row.state !== 'applied') { row.state = row.state === 'accepted' ? 'pending' : 'accepted'; }
+            if (row && row.proposal?.bar && row.state !== 'applied') { await applyRows(run, [row]); }
             break;
         case 'reject':
             if (row && row.state !== 'applied') { row.state = row.state === 'rejected' ? 'pending' : 'rejected'; }
             break;
         case 'acceptAll':
-            for (const r of run.rows) {
-                if (r.proposal?.bar && r.gate && acceptableByAll(r.gate, r.proposal.confidence) && r.state === 'pending') {
-                    r.state = 'accepted';
-                }
-            }
+            await applyRows(run, run.rows.filter(r =>
+                r.proposal?.bar && r.gate && acceptableByAll(r.gate, r.proposal.confidence) && r.state === 'pending'));
             break;
         case 'open':
             if (row) { await openAt(run, row); }
             return;
-        case 'apply':
-            await applyAccepted(run);
-            break;
         case 'close':
             panel.dispose();
             return;
@@ -628,13 +625,11 @@ async function openAt(run: FixRun, row: FixRow): Promise<void> {
     editor.revealRange(new vscode.Range(pos, pos), vscode.TextEditorRevealType.InCenterIfOutsideViewport);
 }
 
-/** The accepted rows, as ONE WorkspaceEdit (one Ctrl+Z): each at its line as it is now; a line
- *  that moved is followed, one that is gone or doubled is skipped and said so. The @todo marks
- *  go with the lines (a proposal carries none). */
-async function applyAccepted(run: FixRun): Promise<void> {
-    const accepted = run.rows.filter(r => r.state === 'accepted' && r.proposal?.bar);
+/** Writes the rows' proposals as ONE WorkspaceEdit (one Ctrl+Z): each at its line as it is now;
+ *  a line that moved is followed, one that is gone or doubled is skipped and said so. The @todo
+ *  marks go with the lines (a proposal carries none). */
+async function applyRows(run: FixRun, accepted: readonly FixRow[]): Promise<void> {
     if (accepted.length === 0) {
-        vscode.window.showInformationMessage('Lily#: no row is accepted. Accept the proposals to write, then Apply.');
         return;
     }
     const doc = await vscode.workspace.openTextDocument(run.uri);
@@ -658,13 +653,17 @@ async function applyAccepted(run: FixRun): Promise<void> {
         log(`Fix OMR marks: applied ${written.length} ${written.length === 1 ? 'bar' : 'bars'}`
             + ` (${run.rows.filter(r => r.state === 'applied').length} of ${proposals} proposals taken so far, scan ${run.images ? 'on' : 'off'})`
             + (skipped.length ? `; ${skipped.length} skipped (the line moved and could not be found)` : ''));
-        vscode.window.showInformationMessage(`Lily#: wrote ${written.length} ${written.length === 1 ? 'bar' : 'bars'} (Ctrl+Z undoes them all)`
-            + (skipped.length ? `; ${skipped.length} skipped — ${skipped.map(r => labelOf(r.target)).join(', ')} could not be found.` : '.'));
+        for (const r of skipped) { r.state = 'skipped'; }
+        if (skipped.length) {
+            vscode.window.showWarningMessage(`Lily#: ${skipped.map(r => labelOf(r.target)).join(', ')} could not be found as written — `
+                + 'the line changed since the fix ran, so it was not written.');
+        }
     } else if (written.length > 0) {
         vscode.window.showErrorMessage('Lily#: the edit could not be applied.');
     } else {
         for (const r of skipped) { r.state = 'skipped'; }
-        vscode.window.showWarningMessage(`Lily#: none of the accepted lines could be found as written — the file changed too much. Run the fix again.`);
+        vscode.window.showWarningMessage(`Lily#: ${skipped.map(r => labelOf(r.target)).join(', ')} could not be found as written — `
+            + 'the line changed since the fix ran, so nothing was written. Run the fix again.');
     }
 }
 
@@ -750,10 +749,12 @@ function panelHtml(deps: OmrAiFixDeps, webview: vscode.Webview, run: FixRun): st
             : r.proposal.reason || '';
         const sure = r.proposal?.confidence === null || r.proposal?.confidence === undefined ? '' : ` · confidence ${r.proposal.confidence.toFixed(2)}`;
         const can = !!(r.proposal?.bar) && r.state !== 'applied' && r.state !== 'skipped';
-        const buttons = r.state === 'applied' ? `<span class="ok">written</span>`
-            : r.state === 'skipped' ? `<span class="bad">skipped</span>`
-            : `<button data-a="accept" data-i="${r.index}" class="${r.state === 'accepted' ? 'on' : ''}" ${can ? '' : 'disabled'}>Accept</button>`
-              + `<button data-a="reject" data-i="${r.index}" class="${r.state === 'rejected' ? 'on' : ''}">Reject</button>`;
+        const buttons = r.state === 'applied' ? `<span class="ok">✓ written</span><div class="memo dim">Ctrl+Z in the editor undoes it</div>`
+            : r.state === 'skipped' ? `<span class="bad">not written</span><div class="memo dim">the line changed since</div>`
+            : `<button data-a="accept" data-i="${r.index}" class="primary" ${can && r.state !== 'rejected' ? '' : 'disabled'} `
+              + `title="Write this proposal into the .lys now (Ctrl+Z undoes it)">Accept</button>`
+              + `<button data-a="reject" data-i="${r.index}" class="${r.state === 'rejected' ? 'on' : ''}" `
+              + `title="${r.state === 'rejected' ? 'Undo the reject' : 'Leave the bar as it is (its @todo stays)'}">${r.state === 'rejected' ? 'Rejected' : 'Reject'}</button>`;
         // Two rows a bar: a head across the whole width — the bar, the reader's memo, the line,
         // the time, the way to the editor — and under it the pictures, the reason and the
         // buttons. A column for the head was a third of the width and wrapped the memo into a
@@ -773,7 +774,7 @@ function panelHtml(deps: OmrAiFixDeps, webview: vscode.Webview, run: FixRun): st
 </tr>`;
     }).join('\n');
 
-    const accepted = run.rows.filter(r => r.state === 'accepted').length;
+    const written = run.rows.filter(r => r.state === 'applied').length;
     const acceptable = run.rows.filter(r => r.state === 'pending' && r.proposal?.bar && r.gate && acceptableByAll(r.gate, r.proposal.confidence)).length;
     const name = path.basename(run.uri.fsPath);
 
@@ -798,9 +799,8 @@ table { border-collapse:collapse; width:100%; }
 th { text-align:left; font-weight:600; font-size:12px; opacity:.8; padding:6px 8px; position:sticky; top:0;
      background: var(--vscode-editor-background); border-bottom:1px solid var(--vscode-panel-border); }
 td { vertical-align:top; padding:6px 8px; border-bottom:1px solid var(--vscode-panel-border); }
-tr.accepted { background: color-mix(in srgb, var(--vscode-testing-iconPassed, #3c3) 12%, transparent); }
+tr.applied { background: color-mix(in srgb, var(--vscode-testing-iconPassed, #3c3) 12%, transparent); }
 tr.rejected { opacity:.55; }
-tr.applied { opacity:.7; }
 /* The head row spans the table; the pictures' row under it closes the bar with the rule. */
 tr.head td { border-bottom:none; padding:10px 8px 2px; }
 tr.body td { padding-top: 2px; }
@@ -830,9 +830,10 @@ button.link { background:none; border:none; padding:0; margin-left:8px; color: v
 ${before ? `<svg class="store" aria-hidden="true"><symbol id="before" viewBox="${esc(before.viewBox)}">${before.inner}</symbol></svg>` : ''}
 <div class="header">
   <div><div class="title">OMR fixes — ${esc(name)}</div>
-  <div class="cap">${run.rows.length} ${run.rows.length === 1 ? 'bar' : 'bars'} · ${run.rows.filter(r => r.proposal?.bar).length} with a proposal · nothing is written until Apply</div></div>
+  <div class="cap">${run.rows.length} ${run.rows.length === 1 ? 'bar' : 'bars'} · ${run.rows.filter(r => r.proposal?.bar).length} with a proposal`
+        + `${written ? ` · ${written} written` : ''} · Accept writes the bar into the .lys at once (Ctrl+Z undoes it)</div></div>
   <div class="spacer"></div>
-  <button id="acceptAll" ${acceptable ? '' : 'disabled'} title="Accept every row whose gates pass and whose confidence is 0.5 or more">Accept all (${acceptable})</button>
+  <button id="acceptAll" ${acceptable ? '' : 'disabled'} title="Write every proposal whose gates pass and whose confidence is 0.5 or more, as one edit (one Ctrl+Z)">Accept all (${acceptable})</button>
 </div>
 <div class="main">
 <table>
@@ -843,7 +844,6 @@ ${rows}
 </table>
 </div>
 <div class="footer">
-  <button class="primary" id="apply" ${accepted ? '' : 'disabled'}>Apply ${accepted} accepted (one undo)</button>
   <div class="spacer"></div>
   <button id="close">Close</button>
 </div>
@@ -853,7 +853,6 @@ ${rows}
     const b = e.target.closest('button');
     if (!b) return;
     if (b.id === 'acceptAll') vscode.postMessage({ action: 'acceptAll' });
-    else if (b.id === 'apply') vscode.postMessage({ action: 'apply' });
     else if (b.id === 'close') vscode.postMessage({ action: 'close' });
     else if (b.dataset.a) vscode.postMessage({ action: b.dataset.a, index: Number(b.dataset.i) });
   });

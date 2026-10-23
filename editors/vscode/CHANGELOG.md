@@ -11,7 +11,7 @@ All notable changes to the Lily# VS Code extension are documented here.
   the scan view's slider checked, the estimate in the title), watch the progress, and review
   every proposal in the *OMR fixes* panel beside the scan's crop of the bar and the score as it
   is — with the model's reason and the gates it passed (compiles without a new error, fills its
-  meter). Nothing is written until you Apply the accepted rows, as one edit (one Ctrl+Z); the
+  meter). **Accept** writes that bar into the `.lys` at once, **Accept all** every gated proposal as one edit (Ctrl+Z undoes either); the
   marks go with the lines. A bar the model cannot read stays marked and says why. The model is
   the one *Lily#: Select AI Model…* names for it (`lilysharp.ai.omrFixModel`); a batch is
   `lilysharp.ai.omrFixBatch` bars (25) before it asks to continue; the *Lily# AI* output channel

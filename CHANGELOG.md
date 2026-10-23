@@ -13,7 +13,7 @@ workflow attaches that section to the GitHub Release verbatim.
   scan view's slider checked, the estimate in the title), then review every proposal in the *OMR
   fixes* panel beside the scan's crop of the bar and the score as it is, with the model's reason
   and the gates it passed (compiles without a new error, fills its meter). Nothing is written until
-  you Apply the accepted rows, as one edit (one Ctrl+Z); the marks go with the lines. A bar the
+  Accept writes that bar at once and *Accept all* the gated ones as one edit (Ctrl+Z undoes either); the marks go with the lines. A bar the
   model cannot read stays marked and says why (`docs/omr-ai-fix-design.md`, M1; the model is
   `lilysharp.ai.omrFixModel`, a batch `lilysharp.ai.omrFixBatch` bars). The model is shown the
   scan of each bar, the crop of the page the reader read (`lilysharp.ai.omrFixImages`; a model
