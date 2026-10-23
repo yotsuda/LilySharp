@@ -151,6 +151,33 @@ export function isUnchanged<S extends SpanLike>(edit: CandidateEdit<S>): boolean
     return edit.text === edit.snap.origSelectedText;
 }
 
+/** The fields of a VS Code chat model the automatic choice reads (vscode.LanguageModelChat). */
+export interface ModelLike {
+    readonly id: string;
+    readonly vendor: string;
+    readonly family: string;
+    readonly maxInputTokens?: number;
+}
+
+/**
+ * The model to use when the user has not picked one (modelClient.autoPick). Only a chat model
+ * that answers a plain request is a candidate: one with a family, from GitHub Copilot when it
+ * offers any. The owner's VS Code also lists `copilotcli` — the Copilot CLI agent's door, with no
+ * family and the largest input limit — which answers a plain request with nothing in a tenth of
+ * a second; picked by its input limit alone, it was the automatic model and every bar of "Fix
+ * OMR Marks with AI…" came back empty (owner's report 2026-10-23). Then, as before: the small
+ * ones (mini, nano, lite, haiku, flash) passed over for a deliberate request and preferred for
+ * ghost completion, the rest by how much input they take.
+ */
+export function pickModel<M extends ModelLike>(models: readonly M[], wantSmall: boolean): M | undefined {
+    const chat = models.filter(m => m.family.trim() !== '');
+    const copilot = chat.filter(m => m.vendor === 'copilot');
+    const base = copilot.length > 0 ? copilot : chat.length > 0 ? chat : [...models];
+    const small = (m: M) => /mini|nano|lite|haiku|flash|small/i.test(`${m.family} ${m.id}`);
+    const pool = base.some(m => small(m) === wantSmall) ? base.filter(m => small(m) === wantSmall) : base;
+    return [...pool].sort((a, b) => (b.maxInputTokens ?? 0) - (a.maxInputTokens ?? 0))[0];
+}
+
 /** A `@todo` mark inside the selection, as the prompt shows it. */
 export interface MarkInSelection {
     /** The 0-based line of its note, rest or chord. */

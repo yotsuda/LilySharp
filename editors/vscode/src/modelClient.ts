@@ -23,6 +23,7 @@
 // Code, and authentication is Copilot's, so nothing is stored in settings or SecretStorage.
 
 import * as vscode from 'vscode';
+import { pickModel } from './aiTransformCore';
 
 export type ChatRole = 'system' | 'user' | 'assistant';
 /** A picture a user message carries (the scan of a bar, docs/omr-ai-fix-design.md §3.1 ④). */
@@ -114,10 +115,9 @@ export async function availableModels(): Promise<vscode.LanguageModelChat[]> {
  * the suggestion. Both are guesses from the name; "Lily#: Select AI Model" is the way to be sure.
  */
 export function autoPick(models: readonly vscode.LanguageModelChat[], use: ModelUse = 'transform'): vscode.LanguageModelChat | undefined {
-    const small = (m: vscode.LanguageModelChat) => /mini|nano|lite|haiku|flash|small/i.test(`${m.family} ${m.id}`);
-    const wantSmall = use === 'ghost';
-    const pool = models.some(m => small(m) === wantSmall) ? models.filter(m => small(m) === wantSmall) : [...models];
-    return pool.sort((a, b) => (b.maxInputTokens ?? 0) - (a.maxInputTokens ?? 0))[0];
+    // aiTransformCore.pickModel: Copilot's chat models first, never a door with no family
+    // (copilotcli answered every bar with nothing, owner's report 2026-10-23).
+    return pickModel(models, use === 'ghost');
 }
 
 /**
@@ -204,7 +204,7 @@ function lmClient(model: vscode.LanguageModelChat): ChatClient {
         return text;
     };
     return {
-        label: `${model.vendor}/${model.family}`,
+        label: model.family ? `${model.vendor}/${model.family}` : `${model.vendor}/${model.id || model.name}`,
         async send(messages, token) {
             const offered = messages.some(m => m.images && m.images.length > 0);
             const withImages = offered && canImage && !refused;

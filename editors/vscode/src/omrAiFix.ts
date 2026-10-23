@@ -76,6 +76,10 @@ interface FixRow {
     readonly gate?: GateVerdict;
     /** The score with the proposal, when there is one that renders. */
     readonly after?: SvgResponse;
+    /** Why there is no answer at all (`proposal` null): the model returned nothing, failed, or
+     *  replied with something other than the JSON asked for — the reply's start, so the person
+     *  sees what came back. */
+    readonly noAnswer?: string;
     readonly seconds: number;
     state: 'pending' | 'accepted' | 'rejected' | 'applied' | 'skipped';
 }
@@ -389,6 +393,16 @@ async function runBatch(
                         saidRefused = true;
                         log(`  ${chat.label} takes no image: the bars go as text from here on (pick another model with "Lily#: Select AI Model…").`);
                     }
+                    // The first bar came back empty: so will the rest. Stop, and say which model
+                    // and where to pick another, rather than a list of empty rows.
+                    if (i === 0 && row.noAnswer?.endsWith('returned nothing')) {
+                        log(`Fix OMR marks: ${chat.label} returned nothing — stopped. Pick a chat model with "Lily#: Select AI Model…" → Fix OMR marks with AI.`);
+                        complete = false;
+                        void vscode.window.showWarningMessage(
+                            `Lily#: the model ${chat.label} returned nothing, so the fix stopped. Pick another model for "Fix OMR marks with AI".`,
+                            'Select AI Model…').then(c => { if (c) { void vscode.commands.executeCommand('lilysharp.selectAiModel'); } });
+                        return;
+                    }
                 }
             });
     } finally {
@@ -434,7 +448,7 @@ function scanOf(run: FixRun, target: FixTarget): { data: Uint8Array; mime: strin
 
 function outcomeOf(row: Omit<FixRow, 'seconds'>): string {
     if (!row.proposal) {
-        return 'no answer (the reply was not the JSON asked for)';
+        return `no answer (${row.noAnswer ?? 'the reply was not the JSON asked for'})`;
     }
     if (!row.proposal.bar) {
         return `no proposal (${row.proposal.reason || 'the model gave no reason'})`;
@@ -467,18 +481,26 @@ async function fixOne(
         try {
             raw = await chat.send(messages, token);
         } catch (err: any) {
-            log(`  ${labelOf(target)}: the model failed: ${err?.message ?? err}`);
-            return { index, target, proposal: null, state: 'pending' };
+            const why = `the model failed: ${err?.message ?? err}`;
+            log(`  ${labelOf(target)}: ${why}`);
+            return { index, target, proposal: null, noAnswer: why, state: 'pending' };
+        }
+        if (raw.trim() === '') {
+            // Nothing at all is not a malformed answer: asking again gets nothing again. A model
+            // that cannot hold a plain conversation (the owner's copilotcli, 2026-10-23) does this.
+            return { index, target, proposal: null, noAnswer: `${chat.label} returned nothing`, state: 'pending' };
         }
         const proposal = parseProposal(raw, target.written);
         if (!proposal) {
+            const head = raw.trim().replace(/\s+/g, ' ').slice(0, 160);
+            log(`  ${labelOf(target)}: not the JSON asked for: ${head}${raw.trim().length > 160 ? '…' : ''}`);
             // Not the JSON asked for: once more, with the contract restated.
             if (attempt < MAX_REPAIRS) {
                 messages.push({ role: 'assistant', content: raw });
                 messages.push({ role: 'user', content: 'Answer with the one JSON object only: {"bar": …, "reason": …, "confidence": …}.' });
                 continue;
             }
-            return { index, target, proposal: null, state: 'pending' };
+            return { index, target, proposal: null, noAnswer: `not the JSON asked for: "${head}"`, state: 'pending' };
         }
         if (!proposal.bar) {
             return { index, target, proposal, state: 'pending' };
@@ -714,7 +736,7 @@ function panelHtml(deps: OmrAiFixDeps, webview: vscode.Webview, run: FixRun): st
                   : `<span class="${r.gate.verify ? 'ok' : 'bad'}">verify ${r.gate.verify ? '✓' : '✗'}</span>`)
             : `<span class="dim">—</span>`;
         const failed = r.gate && !(r.gate.compile && r.gate.length);
-        const reason = !r.proposal ? 'The reply was not the JSON asked for.'
+        const reason = !r.proposal ? `No answer: ${r.noAnswer ?? 'the reply was not the JSON asked for'}.`
             : !r.proposal.bar ? (failed ? `No proposal passed: ${r.gate!.problems.join(' / ') || r.proposal.reason}` : r.proposal.reason || 'The model gave no reason.')
             : r.gate?.verify === false ? `${r.proposal.reason ? `${r.proposal.reason} — ` : ''}${r.gate.problems.filter(p => p.startsWith('the scan says')).join(' / ')}`
             : r.proposal.reason || '';

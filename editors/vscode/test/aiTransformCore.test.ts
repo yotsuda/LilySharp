@@ -22,8 +22,31 @@ import * as assert from 'node:assert/strict';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import {
-    SEL_CLOSE, SEL_OPEN, isUnchanged, marksContext, octaveOutliers, pitchToMidi, toCandidateEdit,
+    SEL_CLOSE, SEL_OPEN, isUnchanged, marksContext, octaveOutliers, pickModel, pitchToMidi, toCandidateEdit,
 } from '../src/aiTransformCore';
+
+describe('the automatic model', () => {
+    // What the owner's VS Code offered on 2026-10-23: Copilot's chat models, and copilotcli — the
+    // Copilot CLI agent's door, no family, the largest input limit, an empty answer to a plain request.
+    const models = [
+        { id: 'copilotcli', vendor: 'copilotcli', family: '', maxInputTokens: 1_000_000 },
+        { id: 'gpt-4o-mini', vendor: 'copilot', family: 'gpt-4o-mini', maxInputTokens: 128_000 },
+        { id: 'claude-fable-5.1', vendor: 'copilot', family: 'claude-fable-5.1', maxInputTokens: 200_000 },
+        { id: 'claude-haiku-5.5', vendor: 'copilot', family: 'claude-haiku-5.5', maxInputTokens: 200_000 },
+        { id: 'local-big', vendor: 'ollama', family: 'llama', maxInputTokens: 400_000 },
+    ];
+
+    it('never picks a door with no family, and prefers Copilot\'s chat models', () => {
+        assert.equal(pickModel(models, false)?.id, 'claude-fable-5.1');
+        assert.equal(pickModel(models, true)?.id, 'claude-haiku-5.5');
+    });
+
+    it('takes another vendor\'s chat model when Copilot offers none, and anything rather than nothing', () => {
+        assert.equal(pickModel(models.filter(m => m.vendor !== 'copilot'), false)?.id, 'local-big');
+        assert.equal(pickModel([models[0]], false)?.id, 'copilotcli');
+        assert.equal(pickModel([], false), undefined);
+    });
+});
 
 const FILE = 'part m { clef treble }\npart h { clef treble }\n\nsection A {\n  m { c4 d e f | }\n}\n\nscore {\n  staff m\n}\n';
 const SEL = 'c4 d e f |';
