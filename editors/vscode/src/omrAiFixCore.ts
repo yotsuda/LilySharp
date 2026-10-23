@@ -240,6 +240,21 @@ export function systemPromptOf(grammar: string): string {
         grammar,
         '</lilysharp-grammar>',
         '',
+        'WHAT DECIDES THE ANSWER, in this order:',
+        '1. The scanned page. The right line is the one that, engraved, looks like the page: the same notes and chords,',
+        '   rests, durations, dots, ties, tuplets and the same number of voices. When a picture comes with the task,',
+        '   read the whole bar again from it before you look at the reader\'s text.',
+        '2. The meter. The right line fills it — but filling it is a check on a reading of the page, not a goal of',
+        '   its own: a line that fills the meter while drawing something the page does not show is wrong.',
+        'Everything else is a clue to WHERE the reader went wrong, never to what the bar is: the reader\'s text, its',
+        'notes on the bar, its other readings and the compiler\'s messages. The reader\'s note names the symptom it',
+        'measured (say, a voice that comes up short), and its guess at the cause is often wrong. Keep nothing of the',
+        'reader\'s text only because it is there — its voices, its chords, its spacer rests (s), its octaves:',
+        '- If the page shows one voice where the reader wrote `voice { … } { … }`, write one voice.',
+        '- Never pad a bar with spacer rests (s), extra dots or longer notes to make the count come out. A missing',
+        '  beat is almost always a note the reader dropped, misread or put in the wrong voice or chord.',
+        '- Making the compiler\'s error go away is not the aim; a line can compile and still be wrong.',
+        '',
         'OUTPUT CONTRACT (strict — the answer is read by a program). Reply with ONE JSON object and nothing else:',
         '  {"bar": "<the whole line, rewritten>", "reason": "<one sentence>", "confidence": <0 to 1>}',
         '- "bar" is the complete replacement for the marked line: one line of Lily#, ending with its bar line "|".',
@@ -271,7 +286,8 @@ export function taskPromptOf(input: TaskInput): string {
         parts.push('The picture attached to this message is the scanned page around the marked bar — the bar the reader');
         parts.push('wrote the marked line from, with a little of its neighbours. The picture is what the composer wrote;');
         parts.push('the text below is only what the reader made of it. Read the notes, rests, dots, ties, beams and');
-        parts.push('tuplets from the picture, and count the beats.');
+        parts.push('tuplets from the picture, and count the beats. Read how many voices the bar has from the picture');
+        parts.push('too (stems up and down at once, rests set above or below the notes) — not from the reader\'s text.');
         parts.push('');
     }
     parts.push('The declarations of the file (its meter, key, parts and octave mode):');
@@ -286,13 +302,17 @@ export function taskPromptOf(input: TaskInput): string {
         for (const o of neighbours.others) { parts.push(`  the same bar in part ${o.part}: ${o.text}`); }
         parts.push('');
     }
-    parts.push(`The marked line to rewrite (${labelOf(target)}):`);
+    // The bar without its marks: a @todo("…") inside the music is the reader's guess sitting
+    // where the notes are, and a model reads it as part of the bar to keep or patch around
+    // (owner, 2026-10-24: a note marked "the upper voice is … short" came back padded with s32.).
+    // The notes go below, labelled as what they are.
+    parts.push(`The marked line to rewrite (${labelOf(target)}), as the reader wrote it:`);
     parts.push('<bar>');
-    parts.push(target.written);
+    parts.push(oneLine(stripTodoMarks(target.written)));
     parts.push('</bar>');
     if (target.memos.length > 0) {
         parts.push('');
-        parts.push('What the reader noted about it:');
+        parts.push('What the reader noted about it — the symptom it measured; its guess at the cause may be wrong:');
         for (const m of target.memos) { parts.push(`  - ${m}`); }
         parts.push(TICKS_NOTE);
     }
@@ -317,21 +337,29 @@ export function taskPromptOf(input: TaskInput): string {
     }
     if (diagnostics.length > 0) {
         parts.push('');
-        parts.push('What the Lily# compiler reports on this line as it stands:');
+        parts.push('What the Lily# compiler reports on this line as it stands (a clue to where, not to what):');
         for (const d of diagnostics) { parts.push(`  - ${d}`); }
     }
     parts.push('');
-    parts.push('Rewrite this one line so that it fills the meter exactly and keeps what the page most likely shows:');
-    parts.push('check the number of notes and rests, their durations, dots, ties and tuplets. Change as little as');
-    parts.push('the problem needs; the other bars are not yours to change. Answer with the JSON object only.');
+    if (input.image) {
+        parts.push('Write the line the picture shows: every note, chord, rest and voice of the bar as the page has it,');
+        parts.push('filling the meter because the page does. Rewrite as much of the line as the picture needs, voices');
+        parts.push('and chords included; the other bars are not yours to change. Answer with the JSON object only.');
+    } else {
+        parts.push('No scan of this bar comes with the task. Change it only where the clues above leave one reading that fills');
+        parts.push('the meter and is plausible music; never fill it with spacer rests (s) or extra dots. If more than one');
+        parts.push('reading fits, answer "bar": null. The other bars are not yours to change. Answer with the JSON object only.');
+    }
     return parts.join('\n');
 }
 
-/** The follow-up when a proposal fails a gate: the compiler's words, and the same contract. */
+/** The follow-up when a proposal fails a gate: what failed, and the same contract. */
 export function repairPromptOf(problems: readonly string[]): string {
     return [
-        'That line does not pass. The Lily# compiler reports:',
+        'That line does not pass:',
         ...problems.map(p => `  - ${p}`),
+        'Do not patch the line to silence this — no spacer rests (s), extra dots or longer notes added to make the',
+        'count come out. Read the bar from the page again; the failure says where your reading and the page part.',
         'Answer again with the JSON object only: a corrected "bar", or "bar": null if you cannot tell.',
     ].join('\n');
 }

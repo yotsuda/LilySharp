@@ -218,6 +218,38 @@ describe('what the model is shown', () => {
         assert.match(task, /^The picture attached to this message is the scanned page/);
         assert.match(task, /Read the notes, rests, dots, ties, beams and\ntuplets from the picture/);
     });
+
+    // Owner, 2026-10-24: "the upper voice is a double-dotted half note short" on
+    // `voice { s4 s16 s64 e,8@todo s2 s32 } { <a, c e>8 … }` came back as the same two voices with
+    // s32. added — it compiled and filled the bar; the page has one voice, `<fis, c e,>8` a chord.
+    it('ranks the page over the meter, and the reader\'s note and the compiler as clues only', () => {
+        const system = systemPromptOf('GRAMMAR');
+        assert.match(system, /1\. The scanned page\./);
+        assert.match(system, /2\. The meter\./);
+        assert.match(system, /its guess at the cause is often wrong/);
+        assert.match(system, /write one voice/);
+        assert.match(system, /Never pad a bar with spacer rests \(s\)/);
+        assert.match(system, /Making the compiler's error go away is not the aim/);
+    });
+
+    it('shows the bar without its marks, the note as a symptom, and asks for the picture\'s line', () => {
+        const marked = { ...bar2, written: 'voice { s4 e,8@todo("the upper voice is short") s2 } { <a, c e>8 } |' };
+        const task = taskPromptOf({ head: '', target: marked, neighbours: { others: [] }, diagnostics: [], image: true });
+        assert.match(task, /<bar>\nvoice \{ s4 e,8 s2 \} \{ <a, c e>8 \} \|\n<\/bar>/);
+        assert.doesNotMatch(task, /@todo/);
+        assert.match(task, /the symptom it measured; its guess at the cause may be wrong/);
+        assert.match(task, /voices\nand chords included/);
+        assert.doesNotMatch(task, /as little as/);
+        const blind = taskPromptOf({ head: '', target: marked, neighbours: { others: [] }, diagnostics: [] });
+        assert.match(blind, /No scan of this bar comes with the task/);
+        assert.match(blind, /answer "bar": null/);
+    });
+
+    it('asks a failed proposal to read the page again, not to patch the count', () => {
+        const repair = repairPromptOf(['LYS2001: too short']);
+        assert.match(repair, /Do not patch the line to silence this/);
+        assert.match(repair, /Read the bar from the page again/);
+    });
 });
 
 describe('the reader\'s other readings and its comparison (M3)', () => {
