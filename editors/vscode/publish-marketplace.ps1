@@ -93,6 +93,15 @@ try {
         # platform's SkiaSharp native. dotnet cross-publishes from any host.
         dotnet publish ../../LilySharp.Lsp -c Release -r $rid --self-contained true -o ./server
         if ($LASTEXITCODE -ne 0) { throw "dotnet publish failed for $rid" }
+        # lysc beside the server: the OMR reader engraves with it to check a scan against
+        # the text (import, verify on save, the AI fix's third gate), and without it those
+        # checks are silently skipped. Into the SAME folder, so it shares the runtime and
+        # LilySharp.Core.dll — MEASURED (session 975, win-x64): 244 files byte-identical,
+        # none different, 5 new (lysc.*, 0.4 MB). ⚠️ ReadyToRun MUST be passed here: the
+        # Lsp project turns it on for itself, the Cli project does not, and without it this
+        # publish overwrites the server's precompiled Core.dll with a JIT-only one.
+        dotnet publish ../../LilySharp.Cli -c Release -r $rid --self-contained true -p:PublishReadyToRun=true -o ./server
+        if ($LASTEXITCODE -ne 0) { throw "dotnet publish (lysc) failed for $rid" }
 
         if ($Publish) {
             # Spelled as two whole calls rather than a spliced argument array: the

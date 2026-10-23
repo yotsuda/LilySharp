@@ -27,6 +27,11 @@ All notable changes to the Lily# VS Code extension are documented here.
   bar). A proposal the scan contradicts is shown with *verify ✗* and its reason, and *Accept
   all* leaves it alone. The reader's other readings of a doubtful bar (`readings` in
   `x.omr.json`) go to the model as hints.
+- **`lysc` ships inside the extension**, beside the language server (`server/`, 0.4 MB, the same
+  runtime). The OMR reader engraves with it to check a scan against the text — after an import,
+  on save (`lilysharp.omr.verifyOnSave`) and as the AI fix's *verify* gate — and found none on a
+  machine without `lysc` on its PATH, so all three checks were skipped with no more than a line
+  in the output.
 
 ### The caret's bar
 

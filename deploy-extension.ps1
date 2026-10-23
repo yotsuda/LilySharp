@@ -119,6 +119,10 @@ try {
     # VSIX. (Marketplace builds for every platform: editors/vscode/publish-marketplace.ps1.)
     dotnet publish ../../LilySharp.Lsp -c Release -r win-x64 --self-contained true -p:Version=$newVersion -o ./server
     if ($LASTEXITCODE -ne 0) { Pop-Location; throw "Server self-contained publish failed" }
+    # lysc beside it, as the Marketplace VSIX carries it (publish-marketplace.ps1 says why,
+    # and why ReadyToRun has to be passed).
+    dotnet publish ../../LilySharp.Cli -c Release -r win-x64 --self-contained true -p:PublishReadyToRun=true -p:Version=$newVersion -o ./server
+    if ($LASTEXITCODE -ne 0) { Pop-Location; throw "lysc self-contained publish failed" }
     npx @vscode/vsce package --target win32-x64 --allow-missing-repository --skip-license --pre-release
     if ($LASTEXITCODE -ne 0) { Pop-Location; throw "VSIX build failed" }
     $vsix = Get-ChildItem *.vsix | Sort-Object LastWriteTime -Descending | Select-Object -First 1

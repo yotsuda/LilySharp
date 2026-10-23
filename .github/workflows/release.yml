@@ -166,11 +166,28 @@ jobs:
           -p:PublishReadyToRun=true
           -p:Version=${GITHUB_REF_NAME#v}
           -o editors/vscode/server
-      - name: Mark the apphost executable
+      - name: Publish lysc beside the server (${{ matrix.rid }})
+        # The OMR reader engraves with lysc to check a scan against the text (import,
+        # verify on save, the AI fix's third gate); without it those checks are silently
+        # skipped. Same folder, so it shares the runtime and LilySharp.Core.dll - MEASURED
+        # (session 975, win-x64): 244 files byte-identical, none different, 5 new (lysc.*,
+        # 0.4 MB). publish-marketplace.ps1 does the same.
+        # ⚠️ PublishReadyToRun is NOT redundant here: the Lsp project sets it for itself,
+        # the Cli project does not, and without it this overwrites the server's
+        # precompiled Core.dll with a JIT-only one.
+        run: >
+          dotnet publish LilySharp.Cli/LilySharp.Cli.csproj
+          -c Release
+          -r ${{ matrix.rid }}
+          --self-contained
+          -p:PublishReadyToRun=true
+          -p:Version=${GITHUB_REF_NAME#v}
+          -o editors/vscode/server
+      - name: Mark the apphosts executable
         # The mode has to be right BEFORE vsce zips it: a server that ships without
         # +x fails to spawn on macOS and Linux with a bare EACCES, which reads like a
         # corrupt install. No-op for the windows legs.
-        run: chmod +x editors/vscode/server/lilysharp-lsp || true
+        run: chmod +x editors/vscode/server/lilysharp-lsp editors/vscode/server/lysc || true
       - name: Bundle the license and third-party notices
         # Same set as the CLI archives: the notices are only complete if the
         # texts they refer to ship beside them.
