@@ -63,6 +63,29 @@
   `incremental == full`（`IncrementalCompilerTests`・`CollectEditResumeTests`）／exporter の掃き（ly・xml・midi）。
 - **回数で見た値段**: 1 回の collect の walk 回数は今「1 ＋ span の数」、後は 1。増分の再利用率は段 4 の設計で決まる。
 
+### 3.1 段 ③ の機構＝`async ValueTask` の coroutine（第969 が測って決めた）
+
+- **数**（計器 Lab `sessions/p969/callgraph.ps1` → `callgraph.txt`・2026-10-23）: `MeasureCollector` の宣言メソッド 314 本
+  のうち、moment が進む出口は `MeasureBuilder` の 3 本（`AddItem`・`AddItemWithoutDuration`・`AddDuration`）で、
+  それを呼ぶ**種メソッド 18 本**（呼び所 51）、その呼び手を遡った**path 上のメソッド 37 本**（`CollectMeasuresFromNode`
+  → `ProcessMusicNodeSequence` → `ProcessMusicNode` → tuplet／grace／cue／repeat／section／form／drums／arpeggio の腕）。
+  path 上に `ref`／`in`／`Span` は 0（`in GreenSite` は path 外の static helper 2 本・`stackalloc` は Resume.cs の表 1 か所）。
+  `ref struct` は Core に 0。`MusicFont.Current` は `[ThreadStatic]`＝scheduler が**同じスレッドで同期的に継続**する限り無害。
+- **形**: path 上の 37 本を `async ValueTask`（戻り値のあるものは `ValueTask<T>`）にし、3 本の出口の**直前**に
+  `await _clock.ReachAsync(onset)`（voice の次の item の onset まで五線の時計が進むのを待つ）を置く。
+  `VoiceScheduler` は LP の `Global_context::iterate` の形＝全 voice の iterator のうち pending moment が最小のものを
+  進め、揃ったら timestep を閉じる（五線状態 S をここで書く）。**単声（段 ③）では `ReachAsync` は常に完了済み＝
+  一度も suspend しない＝state machine の box は 1 つも allocate されない**（`async ValueTask` は suspend したときだけ
+  箱を作る）。外から見える API（`Collect`・`CollectMultiStaff`）は同期のまま＝中で scheduler を完走させる。
+- **なぜ async か**: ⑴ C# の正規の coroutine で再帰がそのまま書ける（`yield` の iterator は各段で子を yield し直す
+  必要があり毎回 allocate する）／⑵ スレッドで coroutine を作る形は `[ThreadStatic]` と例外の経路を壊す／⑶ 明示
+  スタック機械は 17k 行の再帰を手で平らにする仕事＝綴りが 2 つになる。
+- **門（段 ③）**: byte 同一（掃き・snapshot）・full・**割当バイトの before／after**（単声で suspend 0 なら増分は state
+  machine の struct 初期化だけ＝回数で読む: `ReachAsync` の呼び出し数＝item 数、suspend 数＝0）。
+- **段 ③ で触らないもの**: 増分（Resume／record）は path 上の 37 本の*中*に居る（`TryCaptureWalkCheckpoint` 等の呼び所）
+  が、同期的に完了する coroutine では checkpoint の意味は変わらない＝段 ④ の仕事。多声（`BuildExtraVoiceTracks`）も
+  従来どおり別 walk＝段 ⑤。
+
 ## 4. 段取り（各段に門・段 4 の前にもう一度ユーザー判断）
 
 | 段 | 内容 | 門 | 状態 |
