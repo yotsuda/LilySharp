@@ -22,6 +22,7 @@ workflow attaches that section to the GitHub Release verbatim.
   A reader that reports `verify-bars` compares each proposal with the scan before it is shown
   (the third gate, *verify*; `lilysharp.ai.omrFixVerify`), and its other readings of a bar
   (`readings`) go to the model as hints (M3).
+  The bar to write can be edited in the panel, its picture and gates following the typing.
   A bar can be taken and stay marked (`keep @todo`: a `@todo` at the note nearest the old mark,
   its key kept, the typed words as its memo); the pictures go *Now (OMR)*, *Scan*, *Proposal*;
   and the model is told the page decides — the meter is a check, the reader's note and the

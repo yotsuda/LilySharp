@@ -89,6 +89,13 @@ interface FixRow {
      *  2026-10-24: a proposal that is better but not right yet). */
     keepTodo?: boolean;
     todoMemo?: string;
+    /** The bar as the person edited it in the panel (owner's request 2026-10-24), with its own
+     *  gates and picture; undefined: the model's proposal stands. */
+    edited?: string;
+    editGate?: GateVerdict;
+    editAfter?: SvgResponse;
+    /** The page's count of edits to this row: an answer to an older one is dropped. */
+    editSeq?: number;
 }
 
 /** The run a panel shows: the document as it was, the rows so far. */
@@ -105,6 +112,10 @@ interface FixRun {
     readonly pages: Map<number, Rgba | null>;
     /** The reader for gate ③, when there is one that can (`verify-bars`) and the setting is on. */
     readonly verifier?: Verifier;
+    /** The server, and its diagnostics on the text as it was: an edit in the panel is gated and
+     *  drawn as the model's proposals were. */
+    readonly client: LanguageClient;
+    baseline?: readonly Diag[];
 }
 
 /** `omr --version --json` once per reader path (a run asks for every bar). */
@@ -292,6 +303,7 @@ async function runOmrAiFix(context: vscode.ExtensionContext, deps: OmrAiFixDeps,
         images: cfg.get<boolean>('ai.omrFixImages', true) && !!side && side.pages.length > 0,
         pages: new Map(),
         ...(verifier ? { verifier } : {}),
+        client,
     };
 
     for (let b = 0; b < batches.length; b++) {
@@ -360,6 +372,7 @@ async function runBatch(
     const system = systemPromptOf(grammar);
     const head = headOf(run.text);
     const baseline = (await client.sendRequest<CheckCandidateResponse>('lilysharp/checkCandidate', { Text: run.text })).Diagnostics ?? [];
+    run.baseline = baseline;
 
     softLock(editor, batch);
     let complete = true;
@@ -598,6 +611,7 @@ interface PanelMessage {
     index?: number;
     on?: boolean;
     text?: string;
+    seq?: number;
     indices?: number[];
     keeps?: { index: number; text: string }[];
 }
@@ -618,6 +632,9 @@ async function onPanelMessage(deps: OmrAiFixDeps, m: PanelMessage): Promise<void
             return;
         case 'keep':
             if (row && row.state !== 'applied') { row.keepTodo = !!m.on; row.todoMemo = m.text ?? row.todoMemo; }
+            return;
+        case 'edit':
+            if (row && row.state !== 'applied' && typeof m.text === 'string') { await editRow(run, row, m.text, m.seq ?? 0); }
             return;
         case 'accept': {
             const chosen = run.rows.filter(r => r.state !== 'applied' && (m.indices ?? []).includes(r.index));
@@ -661,8 +678,70 @@ function hasProposal(r: FixRow): boolean {
  *  the line without its @todo marks, the notes as they are (owner's requests 2026-10-23: a bar
  *  one checks by eye is resolved too, so no row's box is disabled). */
 function textOf(r: FixRow): string {
-    const bar = hasProposal(r) ? r.proposal!.bar! : resolvedLine(r.target.written);
+    const bar = barOf(r) ?? resolvedLine(r.target.written);
     return r.keepTodo ? withTodoMark(r.target.written, bar, r.todoMemo ?? '') ?? bar : bar;
+}
+
+/** The bar a row writes of its own: the person's edit, else the model's proposal that passed;
+ *  undefined when taking the row only removes its marks. */
+function barOf(r: FixRow): string | undefined {
+    return r.edited !== undefined ? r.edited : hasProposal(r) ? r.proposal!.bar! : undefined;
+}
+
+/** The pending verify of each row's latest edit, cancelled by the next one. */
+const editVerifies = new Map<number, vscode.CancellationTokenSource>();
+
+/**
+ * An edit of a row's bar in the panel (owner's request 2026-10-24): gated as a proposal is —
+ * compile and length at once, the scan's verify after it when there is a reader that can — and
+ * drawn, the row's parts sent back to the page as each answer comes. Text equal to what the row
+ * would write anyway (the model's bar, or the line without its marks) is no edit.
+ */
+async function editRow(run: FixRun, row: FixRow, raw: string, seq: number): Promise<void> {
+    row.editSeq = seq;
+    editVerifies.get(row.index)?.cancel();
+    editVerifies.delete(row.index);
+    const text = raw.replace(/\s+/g, ' ').trim();
+    const model = hasProposal(row) ? row.proposal!.bar! : resolvedLine(row.target.written).replace(/\s+/g, ' ').trim();
+    if (text === '' || text === model) {
+        row.edited = row.editGate = row.editAfter = undefined;
+        postRow(run, row, seq);
+        return;
+    }
+    row.edited = text;
+    const spliced = spliceBar(run.text, row.target, text);
+    const [check, after] = await Promise.all([
+        run.client.sendRequest<CheckCandidateResponse>('lilysharp/checkCandidate', { Text: spliced }),
+        run.client.sendRequest<SvgResponse>('lilysharp/renderText', { Text: spliced }),
+    ]);
+    if (row.editSeq !== seq) {
+        return;
+    }
+    const gate = gateOf(run.baseline ?? [], check.Diagnostics ?? [], { start: row.target.start, length: text.length });
+    row.editGate = gate;
+    row.editAfter = after;
+    postRow(run, row, seq);
+    if (gate.compile && gate.length && run.verifier) {
+        const cts = new vscode.CancellationTokenSource();
+        editVerifies.set(row.index, cts);
+        const verdict = await verifyProposal(run, row.target, spliced, cts.token);
+        if (row.editSeq !== seq || cts.token.isCancellationRequested) {
+            return;
+        }
+        editVerifies.delete(row.index);
+        row.editGate = withVerify(gate, verdict);
+        postRow(run, row, seq);
+    }
+}
+
+/** Sends one row's parts to the page, to replace in place (the text field keeps its focus). */
+function postRow(run: FixRun, row: FixRow, seq: number): void {
+    if (!panel || shownRun !== run) {
+        return;
+    }
+    const p = rowParts(run, row);
+    void panel.webview.postMessage({ type: 'row', index: row.index, seq, gates: p.gates, reason: p.reason, proposal: p.proposal,
+        now: p.nowText, after: p.afterText, del: p.del, take: p.takeWord, plain: barOf(row) ?? resolvedLine(row.target.written) });
 }
 
 /** The light blue of the bar the panel is on, in the editor (owner's request 2026-10-23). */
@@ -719,7 +798,7 @@ async function applyRows(run: FixRun, accepted: readonly FixRow[]): Promise<bool
         }
         edit.replace(run.uri, new vscode.Range(doc.positionAt(at), doc.positionAt(at + r.target.written.length)), textOf(r));
         written.push(r);
-        if (r.keepTodo && textOf(r) === (hasProposal(r) ? r.proposal!.bar! : resolvedLine(r.target.written))) {
+        if (r.keepTodo && textOf(r) === (barOf(r) ?? resolvedLine(r.target.written))) {
             log(`  ${labelOf(r.target)}: no note to keep the @todo on — written without it`);
         }
     }
@@ -794,6 +873,73 @@ function scoreCell(id: string, sym: NonNullable<ReturnType<typeof symbolOf>>, lo
         + `<use href="#${id}" x="${sym.x}" y="${sym.y}" width="${sym.w}" height="${sym.h}"/></svg>`;
 }
 
+/** The parts of a row that an edit changes — drawn with the page, and sent again in place
+ *  (postRow) as an edit is gated and drawn. */
+interface RowParts {
+    gates: string;
+    reason: string;
+    /** The proposal's picture (a score cell, or a box saying why there is none). */
+    proposal: string;
+    /** The two lines piece by piece, under the pictures. */
+    nowText: string;
+    afterText: string;
+    /** What the row takes out, to paint red in "Now" ("from:to,…"). */
+    del: string;
+    /** The word on the row's box: what checking it does. */
+    takeWord: string;
+}
+
+function gatesHtml(g: GateVerdict | undefined): string {
+    return g
+        ? `<span class="${g.compile ? 'ok' : 'bad'}">compile ${g.compile ? '✓' : '✗'}</span> `
+          + `<span class="${g.length ? 'ok' : 'bad'}">length ${g.length ? '✓' : '✗'}</span> `
+          + (g.verify === undefined ? `<span class="dim">verify —</span>`
+              : `<span class="${g.verify ? 'ok' : 'bad'}">verify ${g.verify ? '✓' : '✗'}</span>`)
+        : `<span class="dim">—</span>`;
+}
+
+function rowParts(run: FixRun, r: FixRow): RowParts {
+    const t = r.target;
+    // The two lines piece by piece: struck through in red what goes, in green what comes —
+    // in the text under the pictures and on the drawn notes.
+    const diff = wordDiff(t.written, textOf(r));
+    const indent = t.start - (run.text.lastIndexOf('\n', t.start - 1) + 1);
+    const add = { kind: 'add' as const, ranges: rangesOf(diff.after, 'add', t.start, indent) };
+    const del = rangesOf(diff.before, 'del', t.start, indent).map(x => x.join(':')).join(',');
+    const edited = r.edited !== undefined;
+    const gate = edited ? r.editGate : r.gate;
+    const after = (edited ? r.editAfter : r.after)?.Svg;
+    const sym = after ? symbolOf(after) : undefined;
+    let proposal: string;
+    if (edited) {
+        proposal = sym ? scoreCell(`after-${r.index}`, sym, t.start, t.start + r.edited!.length, true, add)
+            : `<div class="none">${gate ? 'not rendered' : 'checking…'}</div>`;
+    } else if (!r.proposal) {
+        proposal = `<div class="none">no answer — Take removes the @todo</div>`;
+    } else if (!r.proposal.bar) {
+        proposal = r.proposal.unchanged
+            ? `<div class="none">unchanged — Take removes the @todo</div>`
+            : `<div class="none">no proposal — Take removes the @todo</div>`;
+    } else if (sym) {
+        proposal = scoreCell(`after-${r.index}`, sym, t.start, t.start + r.proposal.bar.length, true, add);
+    } else {
+        proposal = `<div class="none">${r.gate && !(r.gate.compile && r.gate.length) ? 'did not pass — Take removes the @todo' : 'not rendered'}</div>`;
+    }
+    const failed = r.gate && !(r.gate.compile && r.gate.length);
+    const revert = `<button class="link revert" data-i="${r.index}" title="Back to the model's answer">use the model's</button>`;
+    const reason = edited
+        ? esc(gate && gate.problems.length ? `Your edit: ${gate.problems.join(' / ')}` : gate ? 'Your edit.' : 'Your edit — checking…') + ` ${revert}`
+        : esc(!r.proposal ? `No answer: ${r.noAnswer ?? 'the reply was not the JSON asked for'}.`
+            : r.proposal.unchanged ? `The model reads the bar as right${r.proposal.reason.replace(/^unchanged( — )?/, '') ? `: ${r.proposal.reason.replace(/^unchanged( — )?/, '')}` : '.'}`
+            : !r.proposal.bar ? (failed ? `No proposal passed: ${r.gate!.problems.join(' / ') || r.proposal.reason}` : r.proposal.reason || 'The model gave no reason.')
+            : r.gate?.verify === false ? `${r.proposal.reason ? `${r.proposal.reason} — ` : ''}${r.gate.problems.filter(p => p.startsWith('the scan says')).join(' / ')}`
+            : r.proposal.reason || '');
+    return {
+        gates: gatesHtml(gate), reason, proposal, nowText: piecesHtml(diff.before), afterText: piecesHtml(diff.after), del,
+        takeWord: barOf(r) === undefined ? 'Take (remove @todo)' : 'Take',
+    };
+}
+
 function panelHtml(deps: OmrAiFixDeps, webview: vscode.Webview, run: FixRun): string {
     const nonce = nonceOf();
     const fontUri = webview.asWebviewUri(vscode.Uri.joinPath(deps.extensionUri, 'media', 'fonts', 'emmentaler-20.woff2'));
@@ -810,10 +956,7 @@ function panelHtml(deps: OmrAiFixDeps, webview: vscode.Webview, run: FixRun): st
 
     const rows = run.rows.map(r => {
         const t = r.target;
-        // The two lines piece by piece: struck through in red what goes, in green what comes —
-        // in the text under the pictures and on the drawn notes.
-        const diff = wordDiff(t.written, textOf(r));
-        const indent = t.start - (run.text.lastIndexOf('\n', t.start - 1) + 1);
+        const parts = rowParts(run, r);
         const page = t.crop ? pageUris.get(t.crop.page) : undefined;
         const crop = t.crop && page ? cropRect(t.crop.box, page) : undefined;
         const scan = crop && page
@@ -821,42 +964,15 @@ function panelHtml(deps: OmrAiFixDeps, webview: vscode.Webview, run: FixRun): st
               + `<image href="${page.uri}" width="${page.width}" height="${page.height}"/></svg>`
             : `<div class="none">no scan</div>`;
         const now = before
-            ? scoreCell('before', before, t.start, t.end, false, diff && { kind: 'del', ranges: rangesOf(diff.before, 'del', t.start, indent) })
+            ? scoreCell('before', before, t.start, t.end, false, { kind: 'del', ranges: parts.del ? parts.del.split(',').map(s => s.split(':').map(Number) as [number, number]) : [] })
             : `<div class="none">not rendered</div>`;
-        const after = r.after?.Svg ? symbolOf(r.after.Svg) : undefined;
-        let proposal: string;
-        if (!r.proposal) {
-            proposal = `<div class="none">no answer — Take removes the @todo</div>`;
-        } else if (!r.proposal.bar) {
-            proposal = r.proposal.unchanged
-                ? `<div class="none">unchanged — Take removes the @todo</div>`
-                : `<div class="none">no proposal — Take removes the @todo</div>`;
-        } else if (after) {
-            proposal = scoreCell(`after-${r.index}`, after, t.start, t.start + r.proposal.bar.length, true,
-                diff && { kind: 'add', ranges: rangesOf(diff.after, 'add', t.start, indent) });
-        } else {
-            proposal = `<div class="none">${r.gate && !(r.gate.compile && r.gate.length) ? 'did not pass — Take removes the @todo' : 'not rendered'}</div>`;
-        }
-        const gates = r.gate
-            ? `<span class="${r.gate.compile ? 'ok' : 'bad'}">compile ${r.gate.compile ? '✓' : '✗'}</span> `
-              + `<span class="${r.gate.length ? 'ok' : 'bad'}">length ${r.gate.length ? '✓' : '✗'}</span> `
-              + (r.gate.verify === undefined ? `<span class="dim">verify —</span>`
-                  : `<span class="${r.gate.verify ? 'ok' : 'bad'}">verify ${r.gate.verify ? '✓' : '✗'}</span>`)
-            : `<span class="dim">—</span>`;
-        const failed = r.gate && !(r.gate.compile && r.gate.length);
-        const reason = !r.proposal ? `No answer: ${r.noAnswer ?? 'the reply was not the JSON asked for'}.`
-            : r.proposal.unchanged ? `The model reads the bar as right${r.proposal.reason.replace(/^unchanged( — )?/, '') ? `: ${r.proposal.reason.replace(/^unchanged( — )?/, '')}` : '.'}`
-            : !r.proposal.bar ? (failed ? `No proposal passed: ${r.gate!.problems.join(' / ') || r.proposal.reason}` : r.proposal.reason || 'The model gave no reason.')
-            : r.gate?.verify === false ? `${r.proposal.reason ? `${r.proposal.reason} — ` : ''}${r.gate.problems.filter(p => p.startsWith('the scan says')).join(' / ')}`
-            : r.proposal.reason || '';
         const sure = r.proposal?.confidence === null || r.proposal?.confidence === undefined ? '' : ` · confidence ${r.proposal.confidence.toFixed(2)}`;
         const can = r.state !== 'applied';
         const on = can && !!r.checked;
         const buttons = r.state === 'skipped' ? `<span class="memo bad">· not written last time: the line had changed</span>` : '';
-        const keep = !hasProposal(r);
         const box = can
-            ? `<label class="take" title="${keep ? 'Remove this bar\'s @todo when you press Accept (the notes stay as they are)' : 'Write this proposal when you press Accept'}">`
-              + `<input type="checkbox" class="take" data-i="${r.index}" ${on ? 'checked' : ''}> ${keep ? 'Take (remove @todo)' : 'Take'}</label>`
+            ? `<label class="take" title="Write this bar when you press Accept — without a bar of its own (the model's or your edit), its @todo is removed and the notes stay">`
+              + `<input type="checkbox" class="take" data-i="${r.index}" ${on ? 'checked' : ''}> <span class="take-word" data-i="${r.index}">${parts.takeWord}</span></label>`
             : `<label class="take dim" title="${r.state === 'applied' ? 'Written' : 'No proposal to take'}"><input type="checkbox" disabled> ${r.state === 'applied' ? 'Written' : 'Take'}</label>`;
         // Taken but still marked (owner's request 2026-10-24): the bar is written with a @todo at
         // the same note — the reader's key kept — and the words typed here as its memo.
@@ -879,13 +995,18 @@ function panelHtml(deps: OmrAiFixDeps, webview: vscode.Webview, run: FixRun): st
             + ` <span class="memo dim">· line ${t.line + 1}${t.confidence === undefined ? '' : ` · reader ${t.confidence.toFixed(2)}`} · ${r.seconds.toFixed(1)} s</span></td>
 </tr>
 <tr class="${cls} reason" data-i="${r.index}">
-  <td colspan="3" class="why"><span class="gates">${gates}</span>${reason ? ` <span>${esc(reason)}</span>` : ''}`
+  <td colspan="3" class="why"><span class="gates" data-i="${r.index}">${parts.gates}</span> <span class="reason-text" data-i="${r.index}">${parts.reason}</span>`
             + `${sure ? ` <span class="dim">${sure.replace(/^ · /, '· ')}</span>` : ''}${buttons ? ` ${buttons}` : ''}</td>
 </tr>
 <tr class="${cls} body" data-i="${r.index}">
-  <td class="cell">${now}<pre class="src">${diff ? piecesHtml(diff.before) : esc(shortTodos(t.written))}</pre></td>
+  <td class="cell">${now}<pre class="src now" data-i="${r.index}">${parts.nowText}</pre></td>
   <td class="cell">${scan}</td>
-  <td class="cell">${proposal}${diff ? `<pre class="src">${piecesHtml(diff.after)}</pre>` : ''}</td>
+  <td class="cell"><div class="after-pic" data-i="${r.index}">${parts.proposal}</div>`
+            // The bar to write, editable (owner's request 2026-10-24): a click opens it; the
+            // picture and the gates follow the typing.
+            + (can ? `<pre class="src after editable" data-i="${r.index}" title="Click to edit the bar — the picture and the gates follow">${parts.afterText}</pre>`
+                + `<textarea class="edit" data-i="${r.index}" spellcheck="false" hidden>${esc(barOf(r) ?? resolvedLine(t.written))}</textarea>`
+                : `<pre class="src after" data-i="${r.index}">${parts.afterText}</pre>`) + `</td>
 </tr>`;
     }).join('\n');
 
@@ -925,6 +1046,13 @@ tr.applied { opacity:.6; }
 label.take { font-size:12px; margin-right:8px; cursor:pointer; user-select:none; }
 label.take.dim { cursor:default; }
 label.take input { vertical-align:middle; margin:0 3px 0 0; cursor:inherit; }
+pre.src.editable { cursor:text; outline:1px dashed transparent; outline-offset:2px; }
+pre.src.editable:hover { outline-color: var(--vscode-focusBorder, #0078d7); }
+textarea.edit { display:block; width:100%; box-sizing:border-box; margin:4px 0 0; resize:vertical; min-height:3.2em;
+                font-family: var(--vscode-editor-font-family, monospace); font-size:11px;
+                background: var(--vscode-input-background); color: var(--vscode-input-foreground);
+                border:1px solid var(--vscode-focusBorder, #0078d7); }
+textarea.edit[hidden] { display:none; }
 input.note { font-size:12px; width:22em; margin-right:8px; padding:1px 4px; vertical-align:middle;
              background: var(--vscode-input-background); color: var(--vscode-input-foreground);
              border:1px solid var(--vscode-input-border, var(--vscode-panel-border)); }
@@ -1090,17 +1218,109 @@ ${rows}
       if (el.classList.contains('nh-hit') || (tag === 'rect' && !el.getAttribute('stroke') && el.getAttribute('fill'))) continue;
       const pos = [parseInt(el.getAttribute('data-pos'), 10), ...String(el.getAttribute('data-alt') || '').split(/\s+/).map(Number)];
       if (!pos.some(n => !isNaN(n) && hit(n))) continue;
-      if (tag === 'line' || (el.getAttribute('fill') === 'none' && el.getAttribute('stroke'))) el.setAttribute('stroke', color);
+      // The colour it had, kept once, so an edit can take a row's paint off again (color null).
+      if (!el.hasAttribute('data-was')) el.setAttribute('data-was', (el.getAttribute('fill') || '') + '|' + (el.getAttribute('stroke') || ''));
+      if (color === null) {
+        const was = el.getAttribute('data-was').split('|');
+        if (was[0]) el.setAttribute('fill', was[0]); else el.removeAttribute('fill');
+        if (was[1]) el.setAttribute('stroke', was[1]); else el.removeAttribute('stroke');
+      } else if (tag === 'line' || (el.getAttribute('fill') === 'none' && el.getAttribute('stroke'))) el.setAttribute('stroke', color);
       else el.setAttribute('fill', color);
     }
   }
+  const RED = '#e53935', GREEN = '#2e9e43';
   const boxesOf = {};
-  for (const svg of document.querySelectorAll('svg.score')) {
+  function setUp(svg) {
     const id = svg.dataset.sym;
-    boxesOf[id] = boxesOf[id] || Array.from(document.querySelectorAll('#' + id + ' rect.bar-staff'));
+    // A row's own symbol is drawn anew by an edit: its boxes are looked up again.
+    if (!boxesOf[id] || id !== 'before') boxesOf[id] = Array.from(document.querySelectorAll('#' + id + ' rect.bar-staff'));
     cropTo(svg, boxesOf[id], +svg.dataset.lo, +svg.dataset.hi);
-    if (svg.dataset.paint) paint(id, svg.dataset.paint === 'del' ? '#e53935' : '#2e9e43', svg.dataset.ranges);
+    if (svg.dataset.paint) paint(id, svg.dataset.paint === 'del' ? RED : GREEN, svg.dataset.ranges);
   }
+  for (const svg of document.querySelectorAll('svg.score')) setUp(svg);
+
+  // Editing the bar to write (owner's request 2026-10-24): a click on its text opens it; each
+  // pause in the typing sends it, and the extension answers with the row's gates, picture, text
+  // and what goes red in "Now" — put in place, the field keeping its focus. Enter closes it,
+  // Escape puts back what it held when opened; an edit takes the bar.
+  const q = (sel, i) => document.querySelector(sel + '[data-i="' + i + '"]');
+  const seqs = {}, timers = {}, sent = {};
+  function sendEdit(i) {
+    clearTimeout(timers[i]);
+    const ta = q('textarea.edit', i);
+    if (sent[i] === ta.value) return;
+    sent[i] = ta.value;
+    seqs[i] = (seqs[i] || 0) + 1;
+    vscode.postMessage({ action: 'edit', index: Number(i), text: ta.value, seq: seqs[i] });
+  }
+  function fit(ta) { ta.style.height = 'auto'; ta.style.height = (ta.scrollHeight + 2) + 'px'; }
+  function openEdit(i) {
+    const ta = q('textarea.edit', i);
+    if (!ta) return;
+    q('pre.src.after', i).hidden = true;
+    ta.hidden = false;
+    ta.dataset.opened = ta.value;
+    if (sent[i] === undefined) sent[i] = ta.value;
+    fit(ta);
+    ta.focus();
+  }
+  function closeEdit(i) {
+    sendEdit(i);
+    q('textarea.edit', i).hidden = true;
+    q('pre.src.after', i).hidden = false;
+  }
+  document.addEventListener('click', e => {
+    const pre = e.target.closest && e.target.closest('pre.src.editable');
+    if (pre) { openEdit(pre.dataset.i); return; }
+    const rv = e.target.closest && e.target.closest('button.revert');
+    if (rv) {
+      const i = rv.dataset.i;
+      seqs[i] = (seqs[i] || 0) + 1;
+      sent[i] = undefined;
+      vscode.postMessage({ action: 'edit', index: Number(i), text: '', seq: seqs[i] });
+    }
+  });
+  document.addEventListener('input', e => {
+    if (!(e.target.matches && e.target.matches('textarea.edit'))) return;
+    const i = e.target.dataset.i;
+    fit(e.target);
+    const b = boxes().find(x => x.dataset.i === i);
+    if (b && !b.checked) { setBox(b, true); recount(); }
+    clearTimeout(timers[i]);
+    timers[i] = setTimeout(() => sendEdit(i), 400);
+  });
+  document.addEventListener('keydown', e => {
+    if (!(e.target.matches && e.target.matches('textarea.edit'))) return;
+    const i = e.target.dataset.i;
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); closeEdit(i); }
+    else if (e.key === 'Escape') { e.preventDefault(); e.target.value = e.target.dataset.opened; closeEdit(i); }
+  });
+  document.addEventListener('focusout', e => {
+    if (e.target.matches && e.target.matches('textarea.edit') && !e.target.hidden) closeEdit(e.target.dataset.i);
+  });
+  window.addEventListener('message', e => {
+    const m = e.data;
+    if (!m || m.type !== 'row' || m.seq < (seqs[m.index] || 0)) return;
+    const i = m.index;
+    q('span.gates', i).innerHTML = m.gates;
+    q('span.reason-text', i).innerHTML = m.reason;
+    q('span.take-word', i).textContent = m.take;
+    const holder = q('div.after-pic', i);
+    holder.innerHTML = m.proposal;
+    for (const svg of holder.querySelectorAll('svg.score')) setUp(svg);
+    q('pre.src.now', i).innerHTML = m.now;
+    q('pre.src.after', i).innerHTML = m.after;
+    const ta = q('textarea.edit', i);
+    if (ta && document.activeElement !== ta) { ta.value = m.plain; sent[i] = m.plain; }
+    // "Now" is one symbol for every row: this row's old red comes off, its new red goes on.
+    const nowSvg = document.querySelector('tr.body[data-i="' + i + '"] svg.score[data-sym="before"]');
+    if (nowSvg) {
+      paint('before', null, nowSvg.dataset.ranges);
+      nowSvg.dataset.ranges = m.del;
+      nowSvg.dataset.paint = 'del';
+      paint('before', RED, m.del);
+    }
+  });
 </script>
 </body>
 </html>`;

@@ -27,6 +27,10 @@ All notable changes to the Lily# VS Code extension are documented here.
   bar). A proposal the scan contradicts is shown with *verify ✗* and its reason, and *Accept
   all* leaves it alone. The reader's other readings of a doubtful bar (`readings` in
   `x.omr.json`) go to the model as hints.
+- **The bar to write can be edited in the panel**: a click on the text under the proposal opens
+  it; as you type, the proposal's picture is drawn again with its notes coloured, and the gates
+  (compile, length, and the scan's verify when the reader can) are run on your line. *use the
+  model's* puts the answer back. A row with no proposal can be written by hand the same way.
 - **A bar can be taken and stay marked**: `keep @todo` beside *Take* writes the bar with a
   `@todo` still on it, at the note nearest the old mark (the reader's key kept), and the words
   typed beside it as its memo — for a proposal that is better but not right yet. The pictures
