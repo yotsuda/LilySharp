@@ -134,6 +134,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - OMR へ `..\LilySharp-Omr\docs\repro\lilysharp-notice-2026-10-24-lysc-decided.md`（OMR 側の作業なし）＋ `REQUESTS.md` の該当行に決定を追記（commit は OMR のセッション）。両 CHANGELOG の Unreleased に 1 項。
 - 効くのは次の版から（0.14.0 以前は利用者の PATH に lysc が無ければ照合しない）。8 target の実 publish は次の release で（ここでは win-x64 の手組みで確かめた）。
 - `-End p975 -DiffBase fb3940883`＝1 回目は `HandoffArchiveContinuityTests` 3 本赤（974 の前に区切りの `## 以下は第974セッションの経緯` を置き忘れた）→ 置いて 2 回目 full **13132 / 0 / 2 / 13134**・門 7 つ OK・Core 差分 0 → この docs commit。本体 `044429c2a`。未 push 46＋1（push はユーザー）。
+- **追記: オーナーが本物の模型で試した＝質が低い・`@todo` に引きずられる**（2 声の `s` に `s32.` を足して拍を合わせた・正しくは単一の声で `<fis, c e,>8` が和音）→ **プロンプトを組み直した**（`bc703098f`・design §3.1 ⑹）: 判断の順位＝①画像 ②拍子（検算）・reader の文字／memo／コンパイラーは「どこ」の手がかり・`s`／付点で数を合わせない・`voice{}{}` を 1 声に畳んでよい・小節は `@todo` を剥がして見せる・画像ありで「最小限」を言わない・直しの依頼は「ページを読み直す」。npm test 371。Deploy-Lsp 済＝**オーナーの再試行待ち**。
 判定（2026-10-24・第975 の終わり）: lysc の同梱は済んだ＝AI 修正の残りは**ユーザー側だけ**（Copilot にサインインして MANUAL-CHECKS §5 B9〜B11・採用率を OMR へ）。次の版を出せば利用者の照合も走る。
 
 ## 以下は第974セッションの経緯
