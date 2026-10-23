@@ -19,7 +19,7 @@
 // around it and the compiler's report — never on its own: the command asks which bars, says
 // what the run will cost, and shows every proposal beside the scan and the score before a
 // single one is written. What passes the gates (compiles without a new error, fills its meter)
-// is listed; Accept writes its row at once, Accept all the gated rows as ONE WorkspaceEdit (one
+// is listed with a check box a row (the gated ones the model is sure of checked); Accept writes the checked rows as ONE WorkspaceEdit (one
 // Ctrl+Z), and the marks go with the lines they were on. omrAiFixCore.ts is the editor-free
 // half; the scan's image goes to the model at M2 (here it is shown to the person only).
 
@@ -81,7 +81,10 @@ interface FixRow {
      *  sees what came back. */
     readonly noAnswer?: string;
     readonly seconds: number;
-    state: 'pending' | 'rejected' | 'applied' | 'skipped';
+    state: 'pending' | 'applied' | 'skipped';
+    /** The row's check box: Accept writes the checked rows. At first, the rows every gate passed
+     *  and the model is sure enough of (acceptableByAll). */
+    checked?: boolean;
 }
 
 /** The run a panel shows: the document as it was, the rows so far. */
@@ -380,7 +383,8 @@ async function runBatch(
                     const image = run.images ? scanOf(run, target) : undefined;
                     const row = await fixOne(client, chat, run, system, head, baseline, target, image, token, run.rows.length);
                     const seconds = (Date.now() - started) / 1000;
-                    run.rows.push({ ...row, seconds });
+                    run.rows.push({ ...row, seconds,
+                        checked: !!row.proposal?.bar && !!row.gate && acceptableByAll(row.gate, row.proposal.confidence) });
                     if (row.proposal?.bar) {
                         proposals++;
                     }
@@ -583,30 +587,38 @@ function showPanel(deps: OmrAiFixDeps, run: FixRun): void {
     panel.reveal(vscode.ViewColumn.Beside, true);
 }
 
-async function onPanelMessage(deps: OmrAiFixDeps, m: { action?: string; index?: number }): Promise<void> {
+async function onPanelMessage(deps: OmrAiFixDeps, m: { action?: string; index?: number; on?: boolean; indices?: number[] }): Promise<void> {
     const run = shownRun;
     if (!run || !panel) {
         return;
     }
     const row = Number.isInteger(m.index) ? run.rows.find(r => r.index === m.index) : undefined;
-    // Accept WRITES (owner's report 2026-10-23: an Accept that only marked a row, written later by
-    // a separate Apply, read as if nothing happened). Accept all writes every gated row the model
-    // is sure of at once, as one edit; each is undone with Ctrl+Z.
+    // A check box a row, toggled freely, writes nothing; Accept writes the checked rows at once as
+    // one edit and closes the panel; Cancel closes it writing nothing (owner's request 2026-10-23:
+    // an Accept a row that wrote at once could not be pressed again after Ctrl+Z).
     switch (m.action) {
-        case 'accept':
-            if (row && row.proposal?.bar && row.state !== 'applied') { await applyRows(run, [row]); }
+        case 'check':
+            // Kept here too, so a panel drawn again (the next batch) keeps the boxes as they were.
+            if (row && row.proposal?.bar) { row.checked = !!m.on; }
+            return;
+        case 'accept': {
+            const chosen = run.rows.filter(r => r.proposal?.bar && (m.indices ?? []).includes(r.index));
+            for (const r of run.rows) { r.checked = chosen.includes(r); }
+            if (chosen.length === 0) {
+                vscode.window.showInformationMessage('Lily#: no proposal is checked — check the bars to write, or Cancel.');
+                return;
+            }
+            if (await applyRows(run, chosen)) {
+                panel.dispose();
+                return;
+            }
             break;
-        case 'reject':
-            if (row && row.state !== 'applied') { row.state = row.state === 'rejected' ? 'pending' : 'rejected'; }
-            break;
-        case 'acceptAll':
-            await applyRows(run, run.rows.filter(r =>
-                r.proposal?.bar && r.gate && acceptableByAll(r.gate, r.proposal.confidence) && r.state === 'pending'));
-            break;
+        }
         case 'open':
             if (row) { await openAt(run, row); }
             return;
-        case 'close':
+        case 'cancel':
+            log(`Fix OMR marks: cancelled in the panel — nothing written (${run.rows.filter(r => r.proposal?.bar).length} proposals).`);
             panel.dispose();
             return;
         default:
@@ -628,9 +640,9 @@ async function openAt(run: FixRun, row: FixRow): Promise<void> {
 /** Writes the rows' proposals as ONE WorkspaceEdit (one Ctrl+Z): each at its line as it is now;
  *  a line that moved is followed, one that is gone or doubled is skipped and said so. The @todo
  *  marks go with the lines (a proposal carries none). */
-async function applyRows(run: FixRun, accepted: readonly FixRow[]): Promise<void> {
+async function applyRows(run: FixRun, accepted: readonly FixRow[]): Promise<boolean> {
     if (accepted.length === 0) {
-        return;
+        return false;
     }
     const doc = await vscode.workspace.openTextDocument(run.uri);
     const current = doc.getText();
@@ -655,9 +667,12 @@ async function applyRows(run: FixRun, accepted: readonly FixRow[]): Promise<void
             + (skipped.length ? `; ${skipped.length} skipped (the line moved and could not be found)` : ''));
         for (const r of skipped) { r.state = 'skipped'; }
         if (skipped.length) {
-            vscode.window.showWarningMessage(`Lily#: ${skipped.map(r => labelOf(r.target)).join(', ')} could not be found as written — `
-                + 'the line changed since the fix ran, so it was not written.');
+            vscode.window.showWarningMessage(`Lily#: wrote ${written.length} ${written.length === 1 ? 'bar' : 'bars'}; `
+                + `${skipped.map(r => labelOf(r.target)).join(', ')} could not be found as written — the line changed since the fix ran.`);
+        } else {
+            vscode.window.showInformationMessage(`Lily#: wrote ${written.length} ${written.length === 1 ? 'bar' : 'bars'} (Ctrl+Z undoes ${written.length === 1 ? 'it' : 'them all'}).`);
         }
+        return true;
     } else if (written.length > 0) {
         vscode.window.showErrorMessage('Lily#: the edit could not be applied.');
     } else {
@@ -665,6 +680,7 @@ async function applyRows(run: FixRun, accepted: readonly FixRow[]): Promise<void
         vscode.window.showWarningMessage(`Lily#: ${skipped.map(r => labelOf(r.target)).join(', ')} could not be found as written — `
             + 'the line changed since the fix ran, so nothing was written. Run the fix again.');
     }
+    return false;
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -748,24 +764,23 @@ function panelHtml(deps: OmrAiFixDeps, webview: vscode.Webview, run: FixRun): st
             : r.gate?.verify === false ? `${r.proposal.reason ? `${r.proposal.reason} — ` : ''}${r.gate.problems.filter(p => p.startsWith('the scan says')).join(' / ')}`
             : r.proposal.reason || '';
         const sure = r.proposal?.confidence === null || r.proposal?.confidence === undefined ? '' : ` · confidence ${r.proposal.confidence.toFixed(2)}`;
-        const can = !!(r.proposal?.bar) && r.state !== 'applied' && r.state !== 'skipped';
-        const buttons = r.state === 'applied' ? `<span class="ok">✓ written</span><div class="memo dim">Ctrl+Z in the editor undoes it</div>`
-            : r.state === 'skipped' ? `<span class="bad">not written</span><div class="memo dim">the line changed since</div>`
-            : `<button data-a="accept" data-i="${r.index}" class="primary" ${can && r.state !== 'rejected' ? '' : 'disabled'} `
-              + `title="Write this proposal into the .lys now (Ctrl+Z undoes it)">Accept</button>`
-              + `<button data-a="reject" data-i="${r.index}" class="${r.state === 'rejected' ? 'on' : ''}" `
-              + `title="${r.state === 'rejected' ? 'Undo the reject' : 'Leave the bar as it is (its @todo stays)'}">${r.state === 'rejected' ? 'Rejected' : 'Reject'}</button>`;
+        const can = !!(r.proposal?.bar) && r.state !== 'applied';
+        const on = can && !!r.checked;
+        const buttons = r.state === 'skipped' ? `<div class="memo bad">not written last time: the line had changed</div>` : '';
+        const box = can
+            ? `<label class="take" title="Write this proposal when you press Accept"><input type="checkbox" class="take" data-i="${r.index}" ${on ? 'checked' : ''}> Take</label>`
+            : `<label class="take dim" title="${r.state === 'applied' ? 'Written' : 'No proposal to take'}"><input type="checkbox" disabled> ${r.state === 'applied' ? 'Written' : 'Take'}</label>`;
         // Two rows a bar: a head across the whole width — the bar, the reader's memo, the line,
         // the time, the way to the editor — and under it the pictures, the reason and the
         // buttons. A column for the head was a third of the width and wrapped the memo into a
         // dozen short lines (owner's report 2026-10-23).
-        return `<tr class="row head ${r.state}" data-i="${r.index}">
-  <td colspan="5" class="who"><span class="label">${esc(labelOf(t))}</span>`
+        return `<tr class="row head ${r.state}${on ? ' on' : ''}" data-i="${r.index}">
+  <td colspan="5" class="who">${box} <span class="label">${esc(labelOf(t))}</span>`
             + (t.memos.length ? ` <span class="memo">${esc(t.memos.join('; '))}</span>` : '')
             + ` <span class="memo dim">· line ${t.line + 1}${t.confidence === undefined ? '' : ` · reader ${t.confidence.toFixed(2)}`} · ${r.seconds.toFixed(1)} s</span>`
             + ` <button data-a="open" data-i="${r.index}" class="link">Open in editor</button></td>
 </tr>
-<tr class="row body ${r.state}" data-i="${r.index}">
+<tr class="row body ${r.state}${on ? ' on' : ''}" data-i="${r.index}">
   <td class="cell">${scan}</td>
   <td class="cell">${now}<pre class="src">${esc(t.written)}</pre></td>
   <td class="cell">${proposal}${r.proposal?.bar ? `<pre class="src">${esc(r.proposal.bar)}</pre>` : ''}</td>
@@ -774,8 +789,8 @@ function panelHtml(deps: OmrAiFixDeps, webview: vscode.Webview, run: FixRun): st
 </tr>`;
     }).join('\n');
 
-    const written = run.rows.filter(r => r.state === 'applied').length;
-    const acceptable = run.rows.filter(r => r.state === 'pending' && r.proposal?.bar && r.gate && acceptableByAll(r.gate, r.proposal.confidence)).length;
+    const takeable = run.rows.filter(r => r.proposal?.bar && r.state !== 'applied').length;
+    const checked = run.rows.filter(r => r.proposal?.bar && r.state !== 'applied' && r.checked).length;
     const name = path.basename(run.uri.fsPath);
 
     return `<!DOCTYPE html>
@@ -799,8 +814,13 @@ table { border-collapse:collapse; width:100%; }
 th { text-align:left; font-weight:600; font-size:12px; opacity:.8; padding:6px 8px; position:sticky; top:0;
      background: var(--vscode-editor-background); border-bottom:1px solid var(--vscode-panel-border); }
 td { vertical-align:top; padding:6px 8px; border-bottom:1px solid var(--vscode-panel-border); }
-tr.applied { background: color-mix(in srgb, var(--vscode-testing-iconPassed, #3c3) 12%, transparent); }
-tr.rejected { opacity:.55; }
+/* A checked bar: the light blue the scan view and the preview tint a bar with (owner's request
+   2026-10-23), on both of its rows. */
+tr.on td { background: rgba(0, 120, 215, .14); }
+tr.applied { opacity:.6; }
+label.take { font-size:12px; margin-right:8px; cursor:pointer; user-select:none; }
+label.take.dim { cursor:default; }
+label.take input { vertical-align:middle; margin:0 3px 0 0; cursor:inherit; }
 /* The head row spans the table; the pictures' row under it closes the bar with the rule. */
 tr.head td { border-bottom:none; padding:10px 8px 2px; }
 tr.body td { padding-top: 2px; }
@@ -830,10 +850,12 @@ button.link { background:none; border:none; padding:0; margin-left:8px; color: v
 ${before ? `<svg class="store" aria-hidden="true"><symbol id="before" viewBox="${esc(before.viewBox)}">${before.inner}</symbol></svg>` : ''}
 <div class="header">
   <div><div class="title">OMR fixes — ${esc(name)}</div>
-  <div class="cap">${run.rows.length} ${run.rows.length === 1 ? 'bar' : 'bars'} · ${run.rows.filter(r => r.proposal?.bar).length} with a proposal`
-        + `${written ? ` · ${written} written` : ''} · Accept writes the bar into the .lys at once (Ctrl+Z undoes it)</div></div>
+  <div class="cap">${run.rows.length} ${run.rows.length === 1 ? 'bar' : 'bars'} · ${takeable} with a proposal · `
+        + `check the ones to take — nothing is written until Accept</div></div>
   <div class="spacer"></div>
-  <button id="acceptAll" ${acceptable ? '' : 'disabled'} title="Write every proposal whose gates pass and whose confidence is 0.5 or more, as one edit (one Ctrl+Z)">Accept all (${acceptable})</button>
+  <span class="memo"><span id="count">${checked}</span> of ${takeable} checked</span>
+  <button id="checkAll" ${takeable ? '' : 'disabled'}>Check all</button>
+  <button id="uncheckAll" ${takeable ? '' : 'disabled'}>Uncheck all</button>
 </div>
 <div class="main">
 <table>
@@ -844,16 +866,35 @@ ${rows}
 </table>
 </div>
 <div class="footer">
+  <button class="primary" id="accept" ${checked ? '' : 'disabled'} title="Write the checked bars into the .lys as one edit (one Ctrl+Z) and close">Accept <span id="acceptN">${checked}</span> checked</button>
   <div class="spacer"></div>
-  <button id="close">Close</button>
+  <button id="cancel" title="Close, writing nothing">Cancel</button>
 </div>
 <script nonce="${nonce}">
   const vscode = acquireVsCodeApi();
+  const boxes = () => Array.from(document.querySelectorAll('input.take'));
+  // A box lights its bar's two rows and is told to the extension (so a panel drawn again for the
+  // next batch keeps it); the counts follow.
+  function setBox(box, on) {
+    box.checked = on;
+    for (const tr of document.querySelectorAll('tr.row[data-i="' + box.dataset.i + '"]')) tr.classList.toggle('on', on);
+    vscode.postMessage({ action: 'check', index: Number(box.dataset.i), on });
+  }
+  function recount() {
+    const n = boxes().filter(b => b.checked).length;
+    document.getElementById('count').textContent = String(n);
+    document.getElementById('acceptN').textContent = String(n);
+    document.getElementById('accept').disabled = n === 0;
+  }
+  document.addEventListener('change', e => {
+    if (e.target.matches && e.target.matches('input.take')) { setBox(e.target, e.target.checked); recount(); }
+  });
   document.addEventListener('click', e => {
     const b = e.target.closest('button');
     if (!b) return;
-    if (b.id === 'acceptAll') vscode.postMessage({ action: 'acceptAll' });
-    else if (b.id === 'close') vscode.postMessage({ action: 'close' });
+    if (b.id === 'checkAll' || b.id === 'uncheckAll') { for (const x of boxes()) setBox(x, b.id === 'checkAll'); recount(); }
+    else if (b.id === 'accept') vscode.postMessage({ action: 'accept', indices: boxes().filter(x => x.checked).map(x => Number(x.dataset.i)) });
+    else if (b.id === 'cancel') vscode.postMessage({ action: 'cancel' });
     else if (b.dataset.a) vscode.postMessage({ action: b.dataset.a, index: Number(b.dataset.i) });
   });
 
