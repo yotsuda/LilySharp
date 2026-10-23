@@ -25,6 +25,7 @@ import {
     Diag, FixableTodo, Rgba, acceptableByAll, anchorOf, averageOf, barBoxFor, batchesOf, checkedByDefault, cropRect, cropRgba,
     decodeImage, diagnosticsOn, encodePng, estimateOf, fixTargets, gateOf, headOf, labelOf, neighboursOf, parseProposal,
     rangesOf, readerBarOf, repairPromptOf, resolvedLine, scanCropPng, shortTodos, spliceBar, stripTodoMarks, systemPromptOf, targetsInLines, taskPromptOf,
+    itemEndsOf, withTodoMark,
     verifyVerdict, withSample, withVerify, wordDiff,
 } from '../src/omrAiFixCore';
 import * as jpeg from 'jpeg-js';
@@ -243,6 +244,24 @@ describe('what the model is shown', () => {
         const blind = taskPromptOf({ head: '', target: marked, neighbours: { others: [] }, diagnostics: [] });
         assert.match(blind, /No scan of this bar comes with the task/);
         assert.match(blind, /answer "bar": null/);
+    });
+
+    // Owner, 2026-10-24: a proposal better but not right yet is taken with the bar still marked.
+    it('finds the items a mark can hang on: notes, rests, spacers, chords — not keywords or chord members', () => {
+        const line = 'break key d major voice { s4 e,8~ s2 } { <a, c e>8 a,,8[ fis8] R1*2 } |';
+        const ends = itemEndsOf(line).map(e => line.slice(0, e.at).split(/\s/).pop() + (e.spacer ? ' (s)' : ''));
+        assert.deepEqual(ends, ['s4 (s)', 'e,8', 's2 (s)', 'e>8', 'a,,8', 'fis8', 'R1*2']);
+    });
+
+    it('writes the proposal with a @todo at the nearest note, the key kept and the person\'s memo', () => {
+        const written = 'voice { s4 s16 s64 e,8@todo(b61-p2 "the upper voice is short") s2 s32 } { <a, c e>8 <a, c e>8 } |';
+        const bar = '<a, c e>8 <a, c e>8 a,,8 <fis, c e,>8 |';
+        assert.equal(withTodoMark(written, bar, 'the "e," may be wrong'),
+            '<a, c e>8 <a, c e>8 a,,8@todo(b61-p2 "the \\"e,\\" may be wrong") <fis, c e,>8 |');
+        assert.equal(withTodoMark(written, bar, '  '), '<a, c e>8 <a, c e>8 a,,8@todo(b61-p2) <fis, c e,>8 |');
+        assert.equal(withTodoMark('c4@todo.down d e f |', 'c4 d e f |', 'x'), 'c4@todo("x").down d e f |');
+        assert.equal(withTodoMark('s1@todo |', 's1 |', ''), 's1@todo |', 'a spacer when there is nothing else');
+        assert.equal(withTodoMark('c1@todo |', 'break |', ''), undefined);
     });
 
     it('asks a failed proposal to read the page again, not to patch the count', () => {

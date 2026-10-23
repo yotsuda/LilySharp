@@ -470,6 +470,75 @@ export function shortTodos(text: string): string {
     return text.replace(TODO_MARK, m => /\.(up|down)$/.test(m) ? `@todo${m.slice(m.lastIndexOf('.'))}` : '@todo');
 }
 
+/** A note, rest or spacer at the start of a piece: its pitch, octave marks, duration and dots
+ *  (and a full-bar rest's `*N`) — what a mark is glued after. */
+const ITEM_HEAD = /^(?:[a-g](?:is|es|s)*|[rsR])[',]*(?:\d+\.*)?(?:\*\d+(?:\/\d+)?)?/;
+/** What may follow an item in its piece: a tie, a slur, a beam, a mark, a brace. */
+const ITEM_GLUE = /^(?:$|[~()[\]@{}|\\^_-])/;
+/** Words whose next pieces are pitches that are not items (`key d major`, `transpose c d`). */
+const PITCH_WORDS: Readonly<Record<string, number>> = { key: 1, transpose: 2 };
+
+/**
+ * Where each music item of a line ends — a note, a rest, a spacer or a chord, with its duration
+ * and dots, before what is glued after it — the places a `@todo` can go (the grammar takes the
+ * mark before or after a tie, slur or beam alike). `spacer` marks an `s`.
+ */
+export function itemEndsOf(line: string): { at: number; spacer: boolean }[] {
+    const ends: { at: number; spacer: boolean }[] = [];
+    let skip = 0;
+    for (let i = 0; i < line.length;) {
+        if (/\s/.test(line[i])) { i++; continue; }
+        if (line[i] === '<' && line[i + 1] !== '<') {
+            // A chord: its members are not items; the chord ends after '>' and its duration.
+            const close = line.indexOf('>', i);
+            if (close < 0) { break; }
+            const tail = /^\d*\.*/.exec(line.slice(close + 1))![0];
+            ends.push({ at: close + 1 + tail.length, spacer: false });
+            i = close + 1 + tail.length;
+            continue;
+        }
+        let j = i;
+        while (j < line.length && !/\s/.test(line[j])) { j++; }
+        const piece = line.slice(i, j);
+        const lead = /^[{(]*/.exec(piece)![0].length;
+        const head = ITEM_HEAD.exec(piece.slice(lead));
+        if (skip > 0) {
+            skip--;
+        } else if (PITCH_WORDS[piece] !== undefined) {
+            skip = PITCH_WORDS[piece];
+        } else if (head && ITEM_GLUE.test(piece.slice(lead + head[0].length))) {
+            ends.push({ at: i + lead + head[0].length, spacer: piece[lead] === 's' });
+        }
+        i = j;
+    }
+    return ends;
+}
+
+/**
+ * The bar to write with a `@todo` still on it (owner's request 2026-10-24: a proposal that is
+ * better but not right yet is taken, and the bar stays marked): at the item nearest to where the
+ * written line's first mark was, a note before a spacer; the mark's key is kept, so the scan still
+ * knows the place, and its memo is the person's words (none: the mark alone), `.up` / `.down`
+ * kept. Undefined when the bar has no item to hang it on.
+ */
+export function withTodoMark(written: string, bar: string, memo: string): string | undefined {
+    const first = new RegExp(TODO_MARK.source).exec(written);
+    const at = first ? first.index : 0;
+    const key = first ? /^@todo\(\s*([A-Za-z][\w-]*)/.exec(first[0])?.[1] : undefined;
+    const side = first ? /\.(?:up|down)$/.exec(first[0])?.[0] ?? '' : '';
+    const ends = itemEndsOf(bar);
+    const notes = ends.filter(e => !e.spacer);
+    const pool = notes.length > 0 ? notes : ends;
+    if (pool.length === 0) {
+        return undefined;
+    }
+    const near = pool.reduce((best, e) => Math.abs(e.at - at) < Math.abs(best.at - at) ? e : best);
+    const words = memo.replace(/\s+/g, ' ').trim();
+    const args = [key, words ? `"${words.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"` : undefined].filter(Boolean);
+    const mark = `@todo${args.length ? `(${args.join(' ')})` : ''}${side}`;
+    return bar.slice(0, near.at) + mark + bar.slice(near.at);
+}
+
 /** A line's pieces: a @todo mark whole (its memo has spaces), an annotation (`@staccato`), and
  *  any other run of characters between spaces and `@`s — a note, `|`, `{`, `tuplet`, `3/2`. */
 const PIECE = /@todo(?:\((?:[^()"]|"(?:[^"\\]|\\.)*")*\))?(?:\.(?:up|down))?|@[^\s@]+|[^\s@]+/g;

@@ -27,6 +27,13 @@ All notable changes to the Lily# VS Code extension are documented here.
   bar). A proposal the scan contradicts is shown with *verify ✗* and its reason, and *Accept
   all* leaves it alone. The reader's other readings of a doubtful bar (`readings` in
   `x.omr.json`) go to the model as hints.
+- **A bar can be taken and stay marked**: `keep @todo` beside *Take* writes the bar with a
+  `@todo` still on it, at the note nearest the old mark (the reader's key kept), and the words
+  typed beside it as its memo — for a proposal that is better but not right yet. The pictures
+  go *Now (OMR)*, *Scan*, *Proposal*, so the scan sits beside the proposal it is compared with.
+  The model is told the page decides: the meter is a check on a reading, the reader's note and
+  the compiler's messages say where to look, not what to write, and a bar is never padded with
+  spacer rests or dots to make the count come out.
 - **`lysc` ships inside the extension**, beside the language server (`server/`, 0.4 MB, the same
   runtime). The OMR reader engraves with it to check a scan against the text — after an import,
   on save (`lilysharp.omr.verifyOnSave`) and as the AI fix's *verify* gate — and found none on a

@@ -34,7 +34,7 @@ import { ChatClient, ChatMessage, availableModels, hasChatModel, offerModelSetup
 import {
     BarCheck, BarNeighbours, Diag, FixTarget, FixableTodo, GateVerdict, Proposal, Rgba, acceptableByAll, anchorOf, averageOf,
     batchesOf, checkedByDefault, cropRect, decodeImage, diagnosticsOn, estimateOf, fixTargets, gateOf, headOf, labelOf,
-    neighboursOf, parseProposal, readerBarOf, repairPromptOf, resolvedLine, scanCropPng, spliceBar, systemPromptOf, targetsInLines, taskPromptOf,
+    neighboursOf, parseProposal, readerBarOf, repairPromptOf, resolvedLine, scanCropPng, spliceBar, systemPromptOf, targetsInLines, taskPromptOf, withTodoMark,
     verifyVerdict, withSample, withVerify, wordDiff, DiffPiece, rangesOf, shortTodos,
 } from './omrAiFixCore';
 import { OmrVersion, canVerifyBars, exitMeaning, launchOf, parseVersion, runOmr, verifyArguments } from './omrCore';
@@ -85,6 +85,10 @@ interface FixRow {
     /** The row's check box: Accept writes the checked rows. At first, the rows every gate passed
      *  and the model is sure enough of (acceptableByAll). */
     checked?: boolean;
+    /** Taken with a @todo still on it, and the memo the person typed for it (owner's request
+     *  2026-10-24: a proposal that is better but not right yet). */
+    keepTodo?: boolean;
+    todoMemo?: string;
 }
 
 /** The run a panel shows: the document as it was, the rows so far. */
@@ -579,7 +583,7 @@ function showPanel(deps: OmrAiFixDeps, run: FixRun): void {
             { viewColumn: vscode.ViewColumn.Beside, preserveFocus: true },
             { enableScripts: true, retainContextWhenHidden: true, localResourceRoots: roots });
         panel.onDidDispose(() => { panel = undefined; shownRun = undefined; clearBarMark(); });
-        panel.webview.onDidReceiveMessage((m: { action?: string; index?: number; on?: boolean; indices?: number[] }) => void onPanelMessage(deps, m));
+        panel.webview.onDidReceiveMessage((m: PanelMessage) => void onPanelMessage(deps, m));
     } else {
         panel.webview.options = { ...panel.webview.options, localResourceRoots: roots };
     }
@@ -587,7 +591,18 @@ function showPanel(deps: OmrAiFixDeps, run: FixRun): void {
     panel.reveal(vscode.ViewColumn.Beside, true);
 }
 
-async function onPanelMessage(deps: OmrAiFixDeps, m: { action?: string; index?: number; on?: boolean; indices?: number[] }): Promise<void> {
+/** What the panel's page posts. `keeps` (with accept): the checked rows taken with a @todo still
+ *  on them, and their memos. */
+interface PanelMessage {
+    action?: string;
+    index?: number;
+    on?: boolean;
+    text?: string;
+    indices?: number[];
+    keeps?: { index: number; text: string }[];
+}
+
+async function onPanelMessage(deps: OmrAiFixDeps, m: PanelMessage): Promise<void> {
     const run = shownRun;
     if (!run || !panel) {
         return;
@@ -601,9 +616,17 @@ async function onPanelMessage(deps: OmrAiFixDeps, m: { action?: string; index?: 
             // Kept here too, so a panel drawn again (the next batch) keeps the boxes as they were.
             if (row && row.state !== 'applied') { row.checked = !!m.on; }
             return;
+        case 'keep':
+            if (row && row.state !== 'applied') { row.keepTodo = !!m.on; row.todoMemo = m.text ?? row.todoMemo; }
+            return;
         case 'accept': {
             const chosen = run.rows.filter(r => r.state !== 'applied' && (m.indices ?? []).includes(r.index));
-            for (const r of run.rows) { r.checked = chosen.includes(r); }
+            for (const r of run.rows) {
+                r.checked = chosen.includes(r);
+                const keep = (m.keeps ?? []).find(k => k.index === r.index);
+                r.keepTodo = !!keep;
+                if (keep) { r.todoMemo = keep.text; }
+            }
             if (chosen.length === 0) {
                 vscode.window.showInformationMessage('Lily#: no proposal is checked — check the bars to write, or Cancel.');
                 return;
@@ -638,7 +661,8 @@ function hasProposal(r: FixRow): boolean {
  *  the line without its @todo marks, the notes as they are (owner's requests 2026-10-23: a bar
  *  one checks by eye is resolved too, so no row's box is disabled). */
 function textOf(r: FixRow): string {
-    return hasProposal(r) ? r.proposal!.bar! : resolvedLine(r.target.written);
+    const bar = hasProposal(r) ? r.proposal!.bar! : resolvedLine(r.target.written);
+    return r.keepTodo ? withTodoMark(r.target.written, bar, r.todoMemo ?? '') ?? bar : bar;
 }
 
 /** The light blue of the bar the panel is on, in the editor (owner's request 2026-10-23). */
@@ -695,6 +719,9 @@ async function applyRows(run: FixRun, accepted: readonly FixRow[]): Promise<bool
         }
         edit.replace(run.uri, new vscode.Range(doc.positionAt(at), doc.positionAt(at + r.target.written.length)), textOf(r));
         written.push(r);
+        if (r.keepTodo && textOf(r) === (hasProposal(r) ? r.proposal!.bar! : resolvedLine(r.target.written))) {
+            log(`  ${labelOf(r.target)}: no note to keep the @todo on — written without it`);
+        }
     }
     const ok = written.length > 0 && await vscode.workspace.applyEdit(edit);
     if (ok) {
@@ -831,6 +858,13 @@ function panelHtml(deps: OmrAiFixDeps, webview: vscode.Webview, run: FixRun): st
             ? `<label class="take" title="${keep ? 'Remove this bar\'s @todo when you press Accept (the notes stay as they are)' : 'Write this proposal when you press Accept'}">`
               + `<input type="checkbox" class="take" data-i="${r.index}" ${on ? 'checked' : ''}> ${keep ? 'Take (remove @todo)' : 'Take'}</label>`
             : `<label class="take dim" title="${r.state === 'applied' ? 'Written' : 'No proposal to take'}"><input type="checkbox" disabled> ${r.state === 'applied' ? 'Written' : 'Take'}</label>`;
+        // Taken but still marked (owner's request 2026-10-24): the bar is written with a @todo at
+        // the same note — the reader's key kept — and the words typed here as its memo.
+        const keepBox = can
+            ? `<label class="take keep" title="Write the bar with a @todo still on it, at the same note — for a bar that is better but not right yet">`
+              + `<input type="checkbox" class="keep" data-i="${r.index}" ${on && r.keepTodo ? 'checked' : ''}> keep @todo</label>`
+              + `<input type="text" class="note" data-i="${r.index}" value="${esc(r.todoMemo ?? '')}" placeholder="what is still wrong (optional)" ${on && r.keepTodo ? '' : 'hidden'}>`
+            : '';
         // Three rows a bar: a head across the whole width — the box, the bar, the reader's memo,
         // the line, the time, the way to the editor — then the model's reason and the gates,
         // across the whole width too, and under them the three pictures. A column for either
@@ -840,7 +874,7 @@ function panelHtml(deps: OmrAiFixDeps, webview: vscode.Webview, run: FixRun): st
         // (owner, 2026-10-24: scan first put the proposal two pictures away from it).
         const cls = `row ${r.state}${on ? ' taken' : ''}`;
         return `<tr class="${cls} head" data-i="${r.index}">
-  <td colspan="3" class="who">${box} <span class="label">${esc(labelOf(t))}</span>`
+  <td colspan="3" class="who">${box}${keepBox} <span class="label">${esc(labelOf(t))}</span>`
             + (t.memos.length ? ` <span class="memo">${esc(t.memos.join('; '))}</span>` : '')
             + ` <span class="memo dim">· line ${t.line + 1}${t.confidence === undefined ? '' : ` · reader ${t.confidence.toFixed(2)}`} · ${r.seconds.toFixed(1)} s</span></td>
 </tr>
@@ -891,6 +925,9 @@ tr.applied { opacity:.6; }
 label.take { font-size:12px; margin-right:8px; cursor:pointer; user-select:none; }
 label.take.dim { cursor:default; }
 label.take input { vertical-align:middle; margin:0 3px 0 0; cursor:inherit; }
+input.note { font-size:12px; width:22em; margin-right:8px; padding:1px 4px; vertical-align:middle;
+             background: var(--vscode-input-background); color: var(--vscode-input-foreground);
+             border:1px solid var(--vscode-input-border, var(--vscode-panel-border)); }
 /* The head and the reason rows span the table; the pictures' row under them closes the bar with the rule. */
 tr.head td { border-bottom:none; padding:10px 8px 2px; }
 tr.reason td { border-bottom:none; padding:2px 8px 4px; }
@@ -950,6 +987,18 @@ ${rows}
     box.checked = on;
     for (const tr of document.querySelectorAll('tr.row[data-i="' + box.dataset.i + '"]')) tr.classList.toggle('taken', on);
     vscode.postMessage({ action: 'check', index: Number(box.dataset.i), on });
+    if (!on) setKeep(box.dataset.i, false);
+  }
+  // "keep @todo": taken with a @todo still on the bar, its memo in the field beside it. Checking
+  // it takes the bar; a bar not taken keeps nothing.
+  const keepOf = i => document.querySelector('input.keep[data-i="' + i + '"]');
+  const noteOf = i => document.querySelector('input.note[data-i="' + i + '"]');
+  function setKeep(i, on) {
+    const k = keepOf(i), n = noteOf(i);
+    if (!k || (!on && !k.checked)) return;
+    k.checked = on;
+    n.hidden = !on;
+    vscode.postMessage({ action: 'keep', index: Number(i), on, text: n.value });
   }
   // The header's All box: checked when every box is, a dash when some are (owner's request
   // 2026-10-23, in place of Check all / Uncheck all buttons).
@@ -964,12 +1013,24 @@ ${rows}
   }
   document.addEventListener('change', e => {
     if (e.target.matches && e.target.matches('input.take')) { setBox(e.target, e.target.checked); recount(); }
+    else if (e.target.matches && e.target.matches('input.keep')) {
+      const i = e.target.dataset.i, on = e.target.checked;
+      if (on) { const b = boxes().find(x => x.dataset.i === i); if (b && !b.checked) setBox(b, true); }
+      e.target.checked = !on;   // setKeep reads the box as it was
+      setKeep(i, on);
+      if (on) noteOf(i).focus();
+      recount();
+    }
     else if (e.target === all) { for (const x of boxes()) setBox(x, all.checked); recount(); }
+  });
+  document.addEventListener('input', e => {
+    if (e.target.matches && e.target.matches('input.note')) vscode.postMessage({ action: 'keep', index: Number(e.target.dataset.i), on: true, text: e.target.value });
   });
   document.addEventListener('click', e => {
     const b = e.target.closest('button');
     if (!b) return;
-    if (b.id === 'accept') vscode.postMessage({ action: 'accept', indices: boxes().filter(x => x.checked).map(x => Number(x.dataset.i)) });
+    if (b.id === 'accept') vscode.postMessage({ action: 'accept', indices: boxes().filter(x => x.checked).map(x => Number(x.dataset.i)),
+      keeps: Array.from(document.querySelectorAll('input.keep')).filter(k => k.checked).map(k => ({ index: Number(k.dataset.i), text: noteOf(k.dataset.i).value })) });
     else if (b.id === 'cancel') vscode.postMessage({ action: 'cancel' });
   });
   recount();   // the All box's first state (a dash when only some start checked)

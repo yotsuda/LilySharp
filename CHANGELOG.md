@@ -22,6 +22,10 @@ workflow attaches that section to the GitHub Release verbatim.
   A reader that reports `verify-bars` compares each proposal with the scan before it is shown
   (the third gate, *verify*; `lilysharp.ai.omrFixVerify`), and its other readings of a bar
   (`readings`) go to the model as hints (M3).
+  A bar can be taken and stay marked (`keep @todo`: a `@todo` at the note nearest the old mark,
+  its key kept, the typed words as its memo); the pictures go *Now (OMR)*, *Scan*, *Proposal*;
+  and the model is told the page decides — the meter is a check, the reader's note and the
+  compiler point where to look, and a bar is never padded with spacer rests or dots.
 - **The VSIX carries `lysc` beside the language server** (`server/`, sharing its runtime: 0.4 MB
   more). The OMR reader engraves with it to check a scan against the text (after an import, on
   save, the AI fix's *verify* gate); on a machine without `lysc` on its PATH it found none and
