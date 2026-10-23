@@ -86,6 +86,56 @@
   が、同期的に完了する coroutine では checkpoint の意味は変わらない＝段 ④ の仕事。多声（`BuildExtraVoiceTracks`）も
   従来どおり別 walk＝段 ⑤。
 
+### 3.2 段 ④ の設計＝増分コンパイルは「設計し直し」ではなく 3 か所の調整で足りる（第970・2026-10-23）
+
+**鍵になる事実（実コードで裏取り）**: checkpoint は `voice { }` span の**中では取られない**＝`WalkCarriesNothing`
+（`Resume.cs:66-72`）が `_cursor.VoiceScope == null` を要求し、`voice { }` は入れ子にならない（LYS0010）。
+voices 2..N は span の中にしか存在しない（`BuildExtraVoiceTracks` が「span の供給する所以外は空の小節」で
+全長の track を作る）。⇒ **段 ⑤ で五線の全声部を 1 つの時計に載せても、checkpoint の時点で生きている
+iterator は primary の 1 本だけ**＝checkpoint の状態目録（`BuildWalkCheckpoint`・`Resume.cs:121-174`＝builder の
+capture・octave・meta・既定音価・ambient tonic・tremolo・臨時記号の記憶・grob prop・journal の watermark・
+side table の数・walk-local list の数・小節数）は**そのまま使える**。section プロローグ／エピローグ・form 走査も
+primary の 1 本が駆動するので、walk 順の住所（sectionVisit・invocation・nodeIndex）も変わらない。
+
+**⑤ のスケジューラは span 局所**: `ProcessMusicNode` の parallel の腕が、`_parallelSpans` に記録して branch 0 だけ
+歩く代わりに、branch 1..N の coroutine（今日の `CollectMeasuresFromNode` の sub-walk と同じ builder・同じ開始枠）を
+生み、branch 0（primary の builder にインライン）と一緒に `VoiceClock` で走らせ、span が終わったら全 branch を
+揃えて track に継ぐ（今日 `BuildExtraVoiceTracks` が walk の後にやっている継ぎを span の終わりに）。
+`VoiceClock.ReachAsync(builder)` の実装＝`Global_context::iterate`: 各 branch は「次の item の onset」を告げて
+park し、生きている branch が全部 park したら時計を最小の onset へ進め、timestep を閉じ（五線状態 S を書く
+場所）、その onset の branch を再開する。branch は同じスレッドで同期的に継続（`[ThreadStatic]` 無害）。
+
+**増分で変わる 3 か所**:
+1. **`_parallelSpans` の退役**: 記録の目的（後から再 walk するための node・frame・duration・meta）は要らなくなる。
+   残る読み手は collector 自身と増分（`CollectResumePlanner` 3・`CollectWalkProbe.VoiceWalkRecording.ParallelSpans`
+   の re-key・`WalkCheckpoint.ParallelSpanCount`）だけ＝exporter 2 つはコメントで言及するだけで自前の枠規則を
+   持ち、`VoiceDefaults` はモデルから span を読む。⇒ checkpoint から `ParallelSpanCount` と re-key を外す。
+2. **記録が全声部の小節を持つ**: 今日は primary の `PreFinalizeMeasures`／`builder.MeasuresSnapshot()` だけを採用し、
+   voices 2..N は span から**live に作り直す**。⑤ では extras の小節は walk の出力になるので、記録は track ごとの
+   小節列を持ち、restore／splice は checkpoint の `MeasureCount`（全 track 同じ長さ＝境界では揃っている）で
+   prefix／tail を採用する。
+3. **side table の watermark の順序**: extras の出力（dynamics・tuplet・articulation …の voice index つき）が今日は
+   primary の walk の*後*に append されるのが、⑤ では時間順に interleave される。append-only は保たれるので
+   watermark は単調のまま＝増分の論法は不変。ただし**walk 順に依存する 4 つ**（`_keyByMeasureLog` last-wins・
+   `_sectionStartLog` first-wins・`_musicMarks` の重複判定・`_nextBeamId`）は出力が動き得る＝⑤ の byte 同一の門で
+   捕まえ、必要なら span の終わりに voice 順で flush して今日の順序を再現する。
+
+**変わらないもの**: suffix splice の状態比較（`SuffixStateMatches`）・prefix restore・`CollectResumePlanner` の窓と
+読み集合の論法・`IncrementalCompiler` の record／resume の交代・`CollectEditResumeTests`（resumed == full）が門。
+
+**⑤ の本当の値段＝V 状態の分離**: branch を同時に走らせるには、各 branch が自分の V 状態（§7 の 45 本＝octave・
+既定音価・pending 系・句のスタック・grace の作業域 …）を持つ必要がある。今日の sub-walk は collector のフィールドを
+**逐次**に save／restore して使い回している。2 つの道:
+- **⑤a（swap 式・推奨）**: branch の切り替えごとに V 状態を capture／restore する（`OctaveSnapshot`・`MetadataState.Clone`
+  の型を 45 本に広げた `BranchState`）。切り替えは span の中の item ごと＝費用は span の中だけ・フィールド参照の
+  書き換え 0。byte 同一の門で閉じる。
+- **⑤b（cursor 式）**: V 45 本を `VoiceCursor` オブジェクトに移し walk が `_v.…` で読む。参照の書き換え数百か所＝
+  後から ⑤a の上に機械的にやれる（§7 の表がその編集一覧）。
+- **⑥（意味論・LP の双子が門）**: 五線状態 S の共有＝臨時記号の記憶を span の中で branch 間で共有し（今日は
+  `ResetAccidentalMemory` が span 開始で各 branch を独立にする＋`StaffAccidentals` の後処理が足す）、
+  `StaffAccidentals` を退役、全様式で LP と一致させる。**ここで初めて絵が動く**ので byte 同一ではなく LP 双子・
+  台帳が門。voice 2 の中の clef／key が五線に効く規則もここ。
+
 ## 4. 段取り（各段に門・段 4 の前にもう一度ユーザー判断）
 
 | 段 | 内容 | 門 | 状態 |
@@ -93,8 +143,10 @@
 | ① | 状態フィールド 172 の分類表（V／S／P／W／R／X） | 計器だけ・コード変更 0 | ✅ 第969（§7） |
 | ② | **B＝`StaffTimeline`** を建て、`StaffAccidentals`・`StaffAccidentalColumns`・`NoteCollision` の入力がそれを読む | 出力不変（掃き・snapshot・full） | ✅ 第969（`Svg/Collector/StaffTimeline.cs`＝1 小節の全声部の item を (onset, grace rank, voice) の k-way merge で・`VoiceCollector.CollectMeasure` と `StaffAccidentals.Apply` が読む・掃き 1,015 冊 1,248 枚 差 0・網 `StaffTimelineTests` 5 本・毒 3 本が各 2／6／10 赤） |
 | ③ | voice 0 だけを iterator 化（多声は従来経路のまま） | byte 同一 | ✅ 第969（§3.1 の形＝path 上の 27 本＋local function 4 本＋`ProcessMusicContainer`・`OpenSoundingItem` を `async ValueTask` に・funnel 51 か所は `MeasureCollector.Clock.cs` の gated wrapper 3 本へ・`Run` が境界＝`CollectMeasures`／`CollectMeasuresFromNode` の呼び手 4 か所・delegate 2 型を `Func<…, ValueTask>` に。svg 掃き 1,015 冊 1,248 枚 差 0・ly／xml／midi 掃き差 0・割当 plain1k 82.1／15.3 MB・fingbeam1k 363.7→363.6・v2bow1k 125.1／40.3・grace200 45.1＝同一・網 `VoiceWalkCoroutineTests` 2 本＝Reaches ≥ item 数・Suspensions 0・`Run` は未完了を拒む） |
-| ④ | 増分コンパイルの設計（checkpoint＝全 iterator の状態の組） | 設計書 → **ユーザー判断** | |
-| ⑤ | 多声をスケジューラへ・`BuildExtraVoiceTracks` を退役・exporter と `_parallelSpans` の読み手を移す | byte 同一・増分 `== full`・exporter の掃き | |
+| ④ | 増分コンパイルの設計 | 設計書 → **ユーザー判断** | ✅ 設計 第970（§3.2＝checkpoint は span の外だけ＝目録は不変・変わるのは 3 か所）→ ⑤a へ進むかはユーザー判断 |
+| ⑤a | span 局所のスケジューラ（`VoiceClock` の本実装）・branch 1..N を branch 0 と同じ時計で・V 状態は切り替えごとに swap・`BuildExtraVoiceTracks` と `_parallelSpans` を退役・記録は全声部の小節を持つ | byte 同一（svg／ly／xml／midi の掃き）・増分 `== full`・割当 | |
+| ⑤b | V 45 本を `VoiceCursor` へ（任意・機械的） | byte 同一 | |
+| ⑥ | 五線状態 S の共有（臨時記号の記憶を branch 間で・`StaffAccidentals` 退役・voice 2 の clef／key が五線に効く） | **LP 双子・台帳**（絵が動く） | |
 
 ## 5. 案 B・案 C（判断材料として残す）
 

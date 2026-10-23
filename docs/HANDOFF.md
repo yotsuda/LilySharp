@@ -126,6 +126,14 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第970セッション（2026-10-23・YT-DELL2）
+
+第969 と同じ会話の続き（ユーザー「続けて」＝段 ④ の設計へ）。`-Start p970`（開始 HEAD `4101fa58c`・未 push 6・第968 を ARCHIVE へ・full 13127 / 0 / 2 / 13129）。作業場所は Lab `sessions/p970/`。
+- **段 ④＝設計を書いた（design §3.2・コード変更 0）**: 増分の 3 ファイル（`Resume.cs`・`CollectResumePlanner`・`CollectWalkProbe`）を読んで**鍵の事実**＝checkpoint は `voice { }` span の中では取られない（`WalkCarriesNothing` が `VoiceScope == null`）・voices 2..N は span の中にしか居ない ⇒ **段 ⑤ で全声部を 1 つの時計に載せても checkpoint の時点で生きている iterator は primary 1 本＝状態目録も walk 順の住所も不変**。⑤ のスケジューラは **span 局所**（parallel の腕が branch 1..N の coroutine を生み、branch 0 と同じ `VoiceClock` で走らせ、span の終わりに track へ継ぐ＝`BuildExtraVoiceTracks` の継ぎを前倒し）。増分で変わるのは 3 か所＝`_parallelSpans` の退役（読み手は collector と増分だけ・exporter はコメント言及のみ・`VoiceDefaults` はモデルから読む）／記録が全声部の小節を持つ／side table の watermark が時間順に interleave（append-only は保つ・walk 順依存の 4 つは門で捕まえ必要なら span 末に voice 順 flush）。**⑤ の本当の値段は V 状態 45 本の分離**＝⑤a swap 式（切り替えごとに capture／restore・参照の書き換え 0・推奨）か ⑤b cursor 式。**⑥（新設）＝五線状態 S の共有**（臨時記号の記憶を branch 間で・`StaffAccidentals` 退役・voice 2 の clef／key が五線に効く）は**絵が動く**＝byte 同一ではなく LP 双子・台帳が門。§4 の表を ④ ✅ 設計／⑤a／⑤b／⑥ に組み替えた。
+- **次＝ユーザー判断**: ⑤a に進むか。進むなら門は svg／ly／xml／midi の掃き 差 0・増分 `== full`・割当。
+
+## 以下は第969セッションの経緯
+
 ### 1.1 第969セッション（2026-10-23・YT-DELL2）
 
 第968 と同じ会話の続き（ユーザー決定「多声 walk の moment 順への再設計（§2 C ⑴）」→ 設計から始めて承認ゲート）。`-Start p969`（開始 HEAD `555c119d6`・未 push 24・第967 を ARCHIVE へ・full 13120 / 0 / 2 / 13122）。作業場所は Lab `sessions/p969/`。
@@ -138,22 +146,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 
 - `-End p969 -DiffBase 555c119d6` ＝full **13127 / 0 / 2 / 13129**（＋7＝`StaffTimelineTests` 5・`VoiceWalkCoroutineTests` 2・`run2.trx`／`run3.trx`・Lab `sessions/p969/end*.log`・門 7 つ OK）→ この docs commit。本体 `77718d26f`（設計・段 ①）＋`0240b6303`（段 ②）＋`d3d00c16d`（§3.1）＋`2ab567587`（段 ③）。Core '+' 531／LILYPOND-REF 3（`StaffTimeline` 2・`Clock` 1＝global-context）／LILYSHARP-OWN 0。未 push 5＋1（push はユーザー）。
 判定（2026-10-23）: 次は段 ④ の設計（増分）＝この便の文脈（collector・Resume の読み・計器・`exe-base`）の上に立つ＝(a) で**この会話で続ける**。§1 の残り約 4,000 字＝先に `-Start p970`。
-
-## 以下は第968セッションの経緯
-
-### 1.1 第968セッション（2026-10-23・YT-DELL2）
-
-新しい会話（ユーザーの入力は `docs/HANDOFF.md` のパスだけ＝便の立ち上げ）。`-Start p968`（開始 HEAD `dd386d237`・未 push 16・第966 を ARCHIVE へ・full 13119 / 0 / 2 / 13121・build 0 エラー・CI は最新 push `2eb9d493a` の CI／Pages とも緑・作業ツリーの M 5 は `samples/*.lys`＝ユーザーの未 commit）。作業場所は Lab `sessions/p968/`（`start.log`・`run1.trx`）。
-- **OMR の REQUESTS #6（`x.omr.json` の todos に新しい `source: "fixed"`・「確認だけ」）＝`won't`（直すものなし）で返した**: Lily# の読み手 2 つ＝LSP `OmrSideFile.cs`（`key`・`confidence`・`candidates[].text/label` だけ）と拡張 `omrScanCore.ts` の `parseSideFile`（`key`・`page`・`box`・`measure`・`part`・`memo`・`confidence`・`inSource`・`parts`・`bars`）は **`source` も `kind` も読まない**＝知らない `source` はそのまま無視される。`inSource: false` なので `.lys` に `@todo` は無く F8 にも出ない・scan view では quiet の箱＝*Marks below* の既定 0.8 で confidence 1 は隠れ、スライダーを 1 にしたときだけ薄く見える（memo はそこで読める）。「元に戻す」のクイックフィックスは `.lys` に錨が無いので作らない＝要るならオーナー判断。`REQUESTS.md` の行を書き換えた（Omr repo・LF のまま＝隣の md も LF）。
-- **デモ動画（§1.0 ⒜ の 16・17）は未撮影のまま**＝`site/videos/` には `SHOTLIST.md` しか無い（1〜15 も 2026-10-12 の起票から未撮影）。実機の VS Code・Copilot のサインイン・音と画面の収録が要る＝Claude のコンソールからは撮れない＝ユーザーの手。
-- **ユーザー「続けて」→ §2 を通読して着手候補を探した**: ユーザー判断なしで動けるのは §2 B「梁の向きの完全同数 tiebreak が LP と別物」と §2 G「ペダルの段間隔（LP は実インク 1.961→2.443・Lily# は一律 2.46・台帳点なし）」の 2 つ。**§2 B は実コードでは既に閉じていた**＝`DefaultBeamStemUp` は `68ae7c295`（2026-08-02）で LP の `total/count` に移植済み（`<d' f'>8 <c'' g''>` で MEASURED の註あり）。残っていたのは stale 3 つ＝`BeamMember.StaffPosition`（和音の頭の平均）の remark「唯一の読み手は未測定の tiebreak」・§2 B の項・読み手を失ったその property。**`7b6fcf003` で畳んだ**: property と `GetStaffPosition`／`GetChordStaffPosition`・`StemCandidate.StaffPosition` を削除、コンストラクタの第 5 引数は `headPosition`（範囲が無いときの Min/Max の既定＝テストの手組みの member は無変更）、pass-through 4 軒（`WithMeasureIndexShifted`・`TabStaffGeometry` の張り替え・`ElementCoordinator` の renumber・memo の同値比較）は `HeadPositionMin` に、memo の署名テスト 2 本から欄を落とした。**出力不変（平均は誰も読んでいなかった）**＝掃き無し・Beam 系 282 緑・棚 2 枚は再生成して差分なし。⚠️ 計器の罠: `staffPosition:` の replace_all が `NoteItem` の named arg まで変えた（CS1739 で気づく）＝名前付き引数の一括置換は型を跨ぐ。
-- **§2 A ⒞「次の一手はここ＝`DrawNote`/`DrawChord` も `DotColumn` に訊く」も stale だった**＝両方とも `DotColumn.OffsetX` を読む（`SharedRenderer.Noteheads.cs`・予約は `DotColumn.Reserved`＝2026-09-10 から 1 軒）→ §2 の行を ✅ に。
-- **§2 G のペダルの段間隔も stale だった**＝第206 の 2 日後 `82c72f64a`（2026-08-20）で各語が自分の LineSpanner から下がる形に移植済み・台帳 `mark.pedal.rows.*` 3 点が残差 e-3（文字の輪郭の sliver）。「未移植」と書いた註 3 か所（`pedal-three.ly`・`PedalTests.cs`・`MusicMarkEngraver.cs`）と §2 G の行を直した。
-- **§2 U8 ⒝ の「残り」一覧（第323 行）も stale だった**＝27 種の注釈を grace に書いて `lysc check`（Lab `sessions/p968/probe/grace-survey*.lys`）→ LYS4020 は **`@cross` だけ**（grandStaff でも）。第923 の一覧は第924〜948 で全部描くようになっていた。**LYS4020 の落ちる先の文面「a grace note is not a measure item…」を「nothing moves or draws it in grace time yet - the grace note stays on its own staff」に直した＝`241992227`**（網 `ACrossStaffMarkOnAGrace_IsReported_AndTheGraceStaysOnItsStaff`＝警告 1・文言・`@cross` 無しの対照と頁同一／GRAMMAR の grace の註・CHANGELOG `## Unreleased`「Grace notes」）。実装するなら grace の列を隣の譜に立てる仕事・本 0＝提案しない。
-- **⇒ ユーザー判断なしで動ける §2 の島は尽きた**（残るのは §2 E の和音行の 1 量 −0.0131＝SVG 2 桁の下・機構未特定、のみ）。⚠️ 前の報告で「決定待ち」と挙げた入れ子 delimiter（§2 E）と ⒴(B)（§2 F）も実装済みだった（第376 第 9 便・第326＝行を ✅ に）＝**本当に残る決定は S5・多声 walk（§2 C ⑴）・perf 再開（第615 で一時停止）・R15 ⒠ の 2 綴り統合・行中 octave clef（提案しない）**。stale だった「次の一手」が 1 便で 3 つ（§2 A ⒞・§2 B・§2 G）＝**§2 の「未着手」は書いた日のスナップショット、着手前に台帳と git log -S で裏取りする**（RULES §5.0 の族）。
-
-- `-End p968 -DiffBase dd386d237` ＝full **13119 / 0 / 2 / 13121**（前便末と同じ＝網の増減 0・4 度回した: `run2.trx`＝docs だけ／`run3.trx`＝`7b6fcf003`／`run4.trx`＝`0d986c03a`／**`run5.trx`＝`241992227` の後＝13120 / 0 / 2 / 13122（＋1＝`@cross` の網）**・Lab `sessions/p968/end*.log`・門 7 つ全部 OK）→ この docs commit。本体 `7b6fcf003`（beam）＋`0d986c03a`（pedal の註 3 か所＝APPROXIMATIONS の APPROX 65→64）＋`241992227`（LYS4020 の文面）。Core '+' 51 行／LILYPOND-REF 0／LILYSHARP-OWN 0（新しい量なし）。未 push 22＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。Omr repo の `REQUESTS.md` の行は未 commit のまま（あちらの作業ツリーに OMR 側の未 commit の削除・変更が多数＝OMR のセッションが拾う）。
-判定（2026-10-23）: 開いた依頼は無い（REQUESTS の open 0）。**ユーザー判断なしで動ける §2 の島は尽きた**（§2 A ⒞・§2 B・§2 G・U8 ⒝ の残りは stale＝閉じていた。§2 U・T は通読済み）。§1.0 ⒜ の残りはユーザーの手の物（動画 16・17・実機確認・拡張の入れ直し）。次はユーザーの決定が要る島（§2 F の行中 octave clef・入れ子 delimiter の綴り・⒴(B) の切り替えの綴り・§2 C ⑴ 多声 walk・S5 など）＝ユーザーの指示待ち。会話はまだ軽い＝(b) で区切る理由なし。
 
 ## 2. 開いている作業
 
