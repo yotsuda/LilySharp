@@ -130,6 +130,10 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 
 第970 と同じ会話の続き（ユーザー「続けて」）。`-Start p971`（開始 HEAD `70201ed9b`・未 push 13・第969 を ARCHIVE へ・full 13129 / 0 / 2 / 13131）。作業場所は Lab `sessions/p971/`。
 - **§2 C ⑴（多声 walk の moment 順への再設計）を ✅ で閉じた**＝段 ①〜⑥ が第969〜970 で済み・本文は ARCHIVE「閉じた §2 の本文」へ・残りは任意（design §4）。
+- **段 ⑤b＝閉じた（コード）**: ⑤a の `BranchState` をそのまま器に＝swap していた 40 本の宣言を註ごと `BranchState` へ移し、collector は `_v` 1 本で読む（参照 1,010 か所＝Lab `sessions/p971/cursorify.ps1` が機械的に・dry run → -Apply・Core 警告 0）。`CaptureBranch`／`RestoreBranch`（45 行 × 2）と span ごとの b0 の record は退役＝切り替えは `_v = branch.State` の付け替えだけ。V と分類した残り 8 本（`_sectionReset*` 4・`_sectionActiveGrobProps`・`_openingKeyOverride`・`_resolvedChordMembers`・`_resolvedNotes`）は ⑤a でも swap しておらず掃き 0＝span の外にしか書かれない part 級＝collector に残す（design §7 の註・`fields.ps1` は 172→135）。**門**: 掃き svg／ly／xml／midi 各 1,248 差 0・割当 同一（plain1k 82.0／15.3・v2bow1k 128.1／44.7・restpoly1k 80.1・fingbeam1k 363.6・grace200 45.1）・的を絞った網 1,659 緑。design §4 ⑤b ✅。
+- **次（任意・ユーザー判断）**: 同時刻 key の順序規則（design §3.3 末尾・網の本は踏まない）／v2bow 形の再利用の取り戻し（span の中に checkpoint が無い限り全体 1 span の本では取り戻せない＝design §3.2 ⑶）／`_cursor.MetadataMeasureOffset` の退役（design §6）。moment-walk の仕事はここで区切れる。
+- `-End p971 -DiffBase 70201ed9b` ＝full **13129 / 0 / 2 / 13131**（同数＝⑤b は網を足していない・`run2.trx`・Lab `sessions/p971/end1.log`・門 7 つ OK）→ この docs commit。本体 `5a85ea6e2`（⑤b）。Core '+' 1002（宣言 40 本が Clock.cs へ動いた分）／LILYPOND-REF 3／LILYSHARP-OWN 0。未 push 15＋1（push はユーザー）。
+判定（2026-10-23）: moment-walk の段 ①〜⑥＋⑤b が閉じた。残りは任意でユーザー判断。別の題なら (c) 新しい会話＋HANDOFF から・この題の残りなら (a) この会話で。
 
 ## 以下は第970セッションの経緯
 

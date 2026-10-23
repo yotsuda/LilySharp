@@ -183,7 +183,7 @@ P4 の形だけ）・割当 同一（plain1k 82.1／15.3・v2bow1k 128.2／44.6�
 | ③ | voice 0 だけを iterator 化（多声は従来経路のまま） | byte 同一 | ✅ 第969（§3.1 の形＝path 上の 27 本＋local function 4 本＋`ProcessMusicContainer`・`OpenSoundingItem` を `async ValueTask` に・funnel 51 か所は `MeasureCollector.Clock.cs` の gated wrapper 3 本へ・`Run` が境界＝`CollectMeasures`／`CollectMeasuresFromNode` の呼び手 4 か所・delegate 2 型を `Func<…, ValueTask>` に。svg 掃き 1,015 冊 1,248 枚 差 0・ly／xml／midi 掃き差 0・割当 plain1k 82.1／15.3 MB・fingbeam1k 363.7→363.6・v2bow1k 125.1／40.3・grace200 45.1＝同一・網 `VoiceWalkCoroutineTests` 2 本＝Reaches ≥ item 数・Suspensions 0・`Run` は未完了を拒む） |
 | ④ | 増分コンパイルの設計 | 設計書 → **ユーザー判断** | ✅ 設計 第970（§3.2＝checkpoint は span の外だけ＝目録は不変・変わるのは 3 か所）→ ⑤a へ進むかはユーザー判断 |
 | ⑤a | span 局所のスケジューラ（`VoiceClock` の本実装）・branch 1..N を branch 0 と同じ時計で・V 状態は切り替えごとに swap・`BuildExtraVoiceTracks` と `_parallelSpans` を退役・記録は全声部の小節を持つ | byte 同一（svg／ly／xml／midi の掃き）・増分 `== full`・割当 | ✅ 第970（`MeasureCollector.Clock.cs`＝`VoiceClock`（span の stack・`ReachAwaitable` struct・park／resume）・`BranchState`（V の swap＝Meta／Octave／list は参照ごと・scalar は in place）・`ProcessParallelSpan`＋`RunSpanAsync`（driver＝LP の iterate）・`_parallelSpans`→`SpanTrack`（子の小節を持つ）・増分は restore＝採用・splice＝shift・比較＝形。掃き 4 種 差 0・網 2,231 緑・割当: span 無し同一（plain1k 82.1・fingbeam1k 363.6・grace200 45.1）、span 本 restpoly1k 76.2→80.1・v2bow1k 125.1→128.1／打鍵 40.3→44.6。**失ったもの**＝第 2 声部の編集で全 walk を splice する v2bow の形（子の小節が tail に入ったので tail の外ではない＝live）。**計器の教訓**＝parallel の腕の lambda が `builder`（引数）を捕まえ、closure が `ProcessMusicNode` の*入口*で allocate されて span の無い本で +1.4 MB／collect＝腕を自分のメソッドへ） |
-| ⑤b | V 45 本を `VoiceCursor` へ（任意・機械的） | byte 同一 | |
+| ⑤b | V 45 本を `VoiceCursor` へ（任意・機械的） | byte 同一 | ✅ 第971（⑤a の `BranchState` がそのまま器＝swap していた 40 本の宣言を註ごと `BranchState` に移し、collector は `_v` 1 本で読む（参照 1,010 か所を Lab `sessions/p971/cursorify.ps1` で機械的に）。`CaptureBranch`／`RestoreBranch`（45 行 × 2 の写し）は退役＝切り替えは `_v = branch.State` の付け替えだけ・span ごとの b0 の record 1 個も要らなくなった。V と分類した残り 8 本（`_sectionReset*` 4・`_sectionActiveGrobProps`・`_openingKeyOverride`・`_resolvedChordMembers`・`_resolvedNotes`）は ⑤a でも swap しておらず掃きが 0 だった＝section 頭の part 級の状態で span の外にしか書かれない＝collector に残す（§7 の註）。掃き 4 種 差 0・割当 同一（plain1k 82.0／15.3・v2bow1k 128.1／44.7・restpoly1k 80.1・fingbeam1k 363.6・grace200 45.1）・的を絞った網 1,659 緑） |
 | ⑥ | 五線状態 S の共有 → **オーナー判断 2026-10-23: key だけ**（reminder は保つ＝2026-10-02・`StaffAccidentals` は残す・clef は P3 で一致済み） | **LP 双子・台帳**（絵が動く） | ✅ 第970（`afaa4a216`＝`ShareKeyWithSpanBranches`: 走った branch の key／tonic を同じ clock 上の他 branch の `BranchState` へ・`StaffAccidentals.Apply` の key を五線 1 本に。P4 双子一致・掃き 4 種 差 0・割当 同一・網 1 本。残る隙＝同時刻の下位 branch の音は旧 key＝§3.3 末尾） |
 
 ## 5. 案 B・案 C（判断材料として残す）
@@ -256,3 +256,10 @@ header／`Fonts`／`Paper`／`LayoutPlan`／`Time*`／`Tempo*`／`Swing*`**・`_
 **X（1）**: `_parallelSpans`（＋読み手 8 ファイル・§1）。
 
 ⚠️ 表は 2026-10-23 のスナップショット。段 ③ 以降で動かすときは `fields.ps1` を回し直して差分から読む。
+**⑤b（第971）の後**: V のうち 40 本は `MeasureCollector.Clock.cs` の `BranchState` の public field（collector からは `_v.…`）＝
+`fields.ps1` の数え方（collector の `private` field）では 172→135 本（Lab `sessions/p971/fields.txt`＝−40＋`_clock`・`_v`・
+`_spanTracks`−`_parallelSpans`・宣言が 2 行だった `_measureAccidentals` を第969 の計器は数えていなかった）。V に残る 8 本＝
+`_sectionResetKeySharps`／`Custom`・`_sectionResetClef`・`_sectionResetOverrides`・`_sectionActiveGrobProps`・`_openingKeyOverride`・
+`_resolvedChordMembers`・`_resolvedNotes` は**この表の V が仮だった**＝section 頭の part 級の状態で、span の外（section 境界・
+piece opening・和音の解決）にしか書かれず、⑤a で swap しなくても掃きは 0。P に近い。`_cursor.MetadataMeasureOffset` も
+`_v.Cursor` の中に残っている（§6 の「消える」は未着手）。
