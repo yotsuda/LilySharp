@@ -63,7 +63,7 @@ public sealed partial class MeasureCollector
     /// checkpointed top-level walk (ProcessNodes), which skips an adopted
     /// prefix and a spliced tail without ever creating their reds.
     /// </summary>
-    private void ProcessMusicNodeSequence(List<GreenSite> musicNodes, MeasureBuilder builder)
+    private async ValueTask ProcessMusicNodeSequence(List<GreenSite> musicNodes, MeasureBuilder builder)
     {
         var nodes = MusicSiteList.Preset(musicNodes);
         for (int i = 0; i < musicNodes.Count; i++)
@@ -120,7 +120,7 @@ public sealed partial class MeasureCollector
             if (SyntaxFacts.IsAfterGraceMainKind(site.Kind)
                 && AfterGraceFollows(k => k < musicNodes.Count ? musicNodes[k] : null, i))
                 builder.PendingAfterGraceScale = AfterGraceFraction;
-            ProcessMusicNode(site.Node, builder, PeekMarkers(nodes, i, out _));
+            await ProcessMusicNode(site.Node, builder, PeekMarkers(nodes, i, out _));
             builder.ClearFollowingBarline();
         }
     }
@@ -500,7 +500,7 @@ public sealed partial class MeasureCollector
     /// hangs on the LAST member (<c>&gt;&gt;4~</c> ties it on, <c>&gt;&gt;4(</c> starts the
     /// bow there); a string number on the group is every member's.
     /// </remarks>
-    private void ProcessArpeggio(ArpeggioSyntax arpeggio, MeasureBuilder builder,
+    private async ValueTask ProcessArpeggio(ArpeggioSyntax arpeggio, MeasureBuilder builder,
         bool tieAfterGroup = false, bool slurStartAfterGroup = false, bool slurEndAfterGroup = false,
         int tieAfterSource = 0, int slurStartAfterSource = 0, int slurEndAfterSource = 0)
     {
@@ -575,7 +575,7 @@ public sealed partial class MeasureCollector
                     rootLetter = "cdefgab"[rootStep];
                     anchorOctave = _octave.Resolve(rootStep, 0, rootLetter) + groupOctave;
                 }
-                EmitArpeggioDegree(degree, builder, parts, scale, rootStep, anchorOctave, marks, groupString);
+                await EmitArpeggioDegree(degree, builder, parts, scale, rootStep, anchorOctave, marks, groupString);
                 continue;
             }
 
@@ -601,7 +601,7 @@ public sealed partial class MeasureCollector
             // string. The first one before any pitched member is the group's root — its lowest
             // note, as the item hands on (the marks after '>>' do not move it).
             _spreadNote = spreadNote is { } sn ? (member.Green, sn) : null;
-            EmitArpeggioMember(member, builder, parts, scale, isRoot ? groupOctave : 0, marks, groupString,
+            await EmitArpeggioMember(member, builder, parts, scale, isRoot ? groupOctave : 0, marks, groupString,
                 measureIndex, onset);
             _spreadNote = null;
             if (!rootSet && spreadNote is { } rootNote)
@@ -656,7 +656,7 @@ public sealed partial class MeasureCollector
         }
         // The group consumes exactly `total`; record it once (AddDuration may roll the bar,
         // which is why the bracket indices were captured above).
-        builder.AddDuration(total, arpeggio.SourceStart + 1);
+        await AddDurationAsync(builder, total, arpeggio.SourceStart + 1);
 
         // Acts like one note: a trailing `>>N` carries N as the running duration
         // (dots included, like any written duration).
@@ -684,7 +684,7 @@ public sealed partial class MeasureCollector
     /// ⚠️ It was not passed until 2026-09-26, so every member's mark anchored at the bar's
     /// start: a pedal change on the third group of a 12/8 bar landed on beat one, and the
     /// bracket lost whole bars (user report, a nocturne probe).</param>
-    private void EmitArpeggioMember(SyntaxNode member, MeasureBuilder builder,
+    private async ValueTask EmitArpeggioMember(SyntaxNode member, MeasureBuilder builder,
         IReadOnlyList<(int Value, int Dots)> parts, Fraction scale, int octaveShift,
         ArpeggioMarks marks, int? groupString, int measureIndex, Fraction onset)
     {
@@ -696,7 +696,7 @@ public sealed partial class MeasureCollector
                 for (int k = 0; k < items.Count; k++)
                 {
                     int itemIndex = builder.CurrentItemCount;
-                    builder.AddItemWithoutDuration(items[k] with { TimeScale = scale });
+                    await AddItemWithoutDurationAsync(builder, items[k] with { TimeScale = scale });
                     if (k == 0)
                     {
                         CollectDynamics(pitch, measureIndex, itemIndex);
@@ -709,7 +709,7 @@ public sealed partial class MeasureCollector
             // share is a silence, as the item alone is a spacer (LYS1040 says why).
             case ChordSyntax { IsShapeChord: true } unshaped when ShapeNotesOf(unshaped).IsEmpty:
                 foreach (var part in parts)
-                    builder.AddItemWithoutDuration(new RestItem(Fraction.FromNoteValue(part.Value), part.Dots,
+                    await AddItemWithoutDurationAsync(builder, new RestItem(Fraction.FromNoteValue(part.Value), part.Dots,
                         unshaped.SourceStart) { IsSpacer = true, TimeScale = scale });
                 break;
             case ChordSyntax chord:
@@ -734,7 +734,7 @@ public sealed partial class MeasureCollector
                         SlurStartSourcePosition = first && marks.SlurStart ? marks.SlurStartSource : MusicItem.NoSourcePosition,
                         SlurEndSourcePosition = last && marks.SlurEnd ? marks.SlurEndSource : MusicItem.NoSourcePosition,
                     };
-                    builder.AddItemWithoutDuration(item);
+                    await AddItemWithoutDurationAsync(builder, item);
                     if (first)
                     {
                         CollectDynamics(chord, measureIndex, itemIndex);
@@ -747,7 +747,7 @@ public sealed partial class MeasureCollector
                 for (int k = 0; k < parts.Count; k++)
                 {
                     int itemIndex = builder.CurrentItemCount;
-                    builder.AddItemWithoutDuration(
+                    await AddItemWithoutDurationAsync(builder, 
                         CreateRestItem(rest, forcedDuration: parts[k]) with { TimeScale = scale });
                     if (k == 0)
                         CollectArticulations(rest, measureIndex, itemIndex, stemUp: false, anchorTiming: onset);
@@ -834,7 +834,7 @@ public sealed partial class MeasureCollector
     /// pitched member precedes — the caller resolves it) by diatonic steps in the WRITTEN
     /// key (the transpose is applied once by <see cref="ResolveAbsolutePitch"/>). A degree
     /// carries no post-events of its own; the group's string number is its.</summary>
-    private void EmitArpeggioDegree(ScaleDegreeSyntax degree, MeasureBuilder builder,
+    private async ValueTask EmitArpeggioDegree(ScaleDegreeSyntax degree, MeasureBuilder builder,
         IReadOnlyList<(int Value, int Dots)> parts, Fraction scale, int rootStep, int anchorOctave,
         ArpeggioMarks marks, int? groupString)
     {
@@ -863,7 +863,7 @@ public sealed partial class MeasureCollector
                 SlurStartSourcePosition = first && marks.SlurStart ? marks.SlurStartSource : MusicItem.NoSourcePosition,
                 SlurEndSourcePosition = last && marks.SlurEnd ? marks.SlurEndSource : MusicItem.NoSourcePosition,
             };
-            builder.AddItemWithoutDuration(noteItem with { TimeScale = scale });
+            await AddItemWithoutDurationAsync(builder, noteItem with { TimeScale = scale });
         }
     }
 
@@ -979,7 +979,7 @@ public sealed partial class MeasureCollector
         _ => false,
     };
 
-    private void ProcessMusicNode(SyntaxNode node, MeasureBuilder builder, MarkerFlags m = default)
+    private async ValueTask ProcessMusicNode(SyntaxNode node, MeasureBuilder builder, MarkerFlags m = default)
     {
         // Record mode (CollectWalkProbe): every processed node at ANY depth funnels
         // through here — including phrase/variable bodies inlined from elsewhere in
@@ -1015,7 +1015,7 @@ public sealed partial class MeasureCollector
         if (_graceDepth > 0 && !CanStandInGraceTime(node))
             return;
         if (_meterCursor != null)
-            ApplyPlannedMeter(builder);
+            await ApplyPlannedMeter(builder);
 
         // THE TIE AND MANUAL-BEAM MARKERS WRITTEN ON WHAT DOES COME THROUGH ARE DROPPED, not
         // carried onto the item: both are on LYS4020's drop list, and letting the flag ride
@@ -1070,7 +1070,7 @@ public sealed partial class MeasureCollector
                 if (builder.AfterGraceRemainder is { } remainder && remainder > Fraction.Zero)
                 {
                     builder.AfterGraceRemainder = null;
-                    builder.AddItem(AfterGraceSpacer(afterGrace, builder, remainder));
+                    await AddItemAsync(builder, await AfterGraceSpacer(afterGrace, builder, remainder));
                 }
                 break;
 
@@ -1088,7 +1088,7 @@ public sealed partial class MeasureCollector
             // and that is the whole reason a per-note @cue could not work: those three are
             // invisible to a mark and would have to be guessed.
             case CueExpressionSyntax cue:
-                ProcessCueRegion(cue, builder);
+                await ProcessCueRegion(cue, builder);
                 break;
 
             case ParallelExpressionSyntax parallel:
@@ -1131,14 +1131,14 @@ public sealed partial class MeasureCollector
                         && DrumPlanOf(parallel, builder.CurrentDuration, BarLengthOf(spanMeta), spanDuration, spanDots) is { } drums)
                     {
                         _cursor.VoiceScope = 1;
-                        EmitDrumVoice(drums.Upper, builder, stemUp: true);
+                        await EmitDrumVoice(drums.Upper, builder, stemUp: true);
                         _cursor.VoiceScope = null;
                     }
                     else if (voiceBlocks.Count > 0)
                     {
                         // Voice 0 is render voice 1: an override in its block scopes to it.
                         _cursor.VoiceScope = 1;
-                        ProcessMusicNodeSequence(GatherVoiceMusicNodes(voiceBlocks[0]), builder);
+                        await ProcessMusicNodeSequence(GatherVoiceMusicNodes(voiceBlocks[0]), builder);
                         _cursor.VoiceScope = null;
                         _octave.Restore(spanFrame);
                         (_defaultDuration, _defaultDots) = (spanDuration, spanDots);
@@ -1156,7 +1156,7 @@ public sealed partial class MeasureCollector
                     // The grace group waiting for this note is walked BEFORE it (octave
                     // context), and the index re-read — OpenSoundingItem says why.
                     (itemIndex, bool isCue, int featherDir) =
-                        OpenSoundingItem(note, builder, measureIndex, itemIndex, ref hasSlurEndAfter);
+                        await OpenSoundingItem(note, builder, measureIndex, itemIndex, hasSlurEndAfter);
                     // `a4@rest` is a REST written at a pitch — LilyPond's `a4\rest`.
                     // It leaves the walk here rather than further down because it is
                     // not a note at all: nothing note-shaped (dynamics, figured bass,
@@ -1174,7 +1174,7 @@ public sealed partial class MeasureCollector
                         int prItemIndex = builder.CurrentItemCount;
                         Fraction prAnchorTiming = builder.CurrentDuration;
                         var pitchedRest = CreatePitchedRestItem(note);
-                        builder.AddItem(WithBowSources(pitchedRest with
+                        await AddItemAsync(builder, WithBowSources(pitchedRest with
                         {
                             HasSlurStart = hasSlurStartAfter,
                             HasSlurEnd = hasSlurEndAfter,
@@ -1199,8 +1199,8 @@ public sealed partial class MeasureCollector
                     var noteItem = DecorateSoundingItem(
                         CreateNoteItem(note, hasTieAfter, hasSlurStartAfter, hasSlurEndAfter, hasBeamStartAfter, hasBeamEndAfter, hasGliss, featherDir, isCue, builder),
                         note, isCue);
-                    builder.AddItem(WithBowSources(noteItem, m));
-                    AddBreathingSignColumn(note.Articulations, builder, measureIndex);
+                    await AddItemAsync(builder, WithBowSources(noteItem, m));
+                    await AddBreathingSignColumn(note.Articulations, builder, measureIndex);
                     CollectDynamics(note, measureIndex, itemIndex);
                     CollectArticulations(note, measureIndex, itemIndex, noteItem.StemUp,
                         noteItem.EditorialAccidental, noteAnchorTiming);
@@ -1219,9 +1219,9 @@ public sealed partial class MeasureCollector
                     // it: a flam (`acciaccatura { sn16 } sn4`) drew no grace until 2026-10-11,
                     // because this arm never walked it (and LYS4020 called the body empty).
                     (drumItemIndex, bool drumCue, _) =
-                        OpenSoundingItem(drumNote, builder, drumMeasureIndex, drumItemIndex, ref hasSlurEndAfter);
+                        await OpenSoundingItem(drumNote, builder, drumMeasureIndex, drumItemIndex, hasSlurEndAfter);
                     var drumItem = DecorateSoundingItem(CreateDrumNoteItem(drumNote), drumNote, drumCue);
-                    builder.AddItem(drumItem);
+                    await AddItemAsync(builder, drumItem);
                     CollectDrumNoteMarks(drumNote, drumItem, drumMeasureIndex, drumItemIndex, drumAnchorTiming);
                 }
                 break;
@@ -1259,7 +1259,7 @@ public sealed partial class MeasureCollector
                     }
                     if (count <= 1)
                     {
-                        builder.AddItem(WithBowSources(restItem with
+                        await AddItemAsync(builder, WithBowSources(restItem with
                         {
                             HasSlurStart = hasSlurStartAfter,
                             HasSlurEnd = hasSlurEndAfter,
@@ -1317,7 +1317,7 @@ public sealed partial class MeasureCollector
                         // moved when every copy took the bar's position).
                         var following = builder.FollowingBoundary;
                         builder.ClearFollowingBarline();
-                        builder.AddItem(restItem);
+                        await AddItemAsync(builder, restItem);
                         // The written event carries the rest's post-events, exactly as the
                         // count<=1 arm's does: `R1*4@fermata`, `R1*4@p`, `R1*4@text("tacet")`,
                         // `R1*2@mark("Q")`. ⚠️ This arm collected only the chord symbol until
@@ -1349,7 +1349,7 @@ public sealed partial class MeasureCollector
                                 break;
                             if (i == count - 1 && following.Start >= 0)
                                 builder.RestoreFollowingBoundary(following);
-                            builder.AddItem(interior);
+                            await AddItemAsync(builder, interior);
                         }
                     }
                 }
@@ -1408,7 +1408,7 @@ public sealed partial class MeasureCollector
                     // nothing is drawn. A bare @chord on it still names the item's symbol.
                     if (chord.IsShapeChord && ShapeNotesOf(chord).IsEmpty)
                     {
-                        builder.AddItem(WithBowSources(CreateShapeSpacerItem(chord), m));
+                        await AddItemAsync(builder, WithBowSources(CreateShapeSpacerItem(chord), m));
                         CollectDynamics(chord, measureIndex, itemIndex);
                         CollectChordNames(chord, measureIndex, itemIndex, chordAnchorTiming);
                         break;
@@ -1416,7 +1416,7 @@ public sealed partial class MeasureCollector
                     // The grace group waiting for this chord is walked BEFORE it (octave
                     // context), and the index re-read — OpenSoundingItem says why.
                     (itemIndex, bool isCue, _) =
-                        OpenSoundingItem(chord, builder, measureIndex, itemIndex, ref hasSlurEndAfter);
+                        await OpenSoundingItem(chord, builder, measureIndex, itemIndex, hasSlurEndAfter);
                     bool hasArpeggio = HasArpeggioArticulation(chord);
                     // @arpeggio(bracket) = non-arpeggiate (do NOT roll) — LilyPond's
                     // \nonArpeggiato, a ChordBracket rather than an Arpeggio.
@@ -1432,8 +1432,8 @@ public sealed partial class MeasureCollector
                         chord, isCue);
                     if (arpBracket)
                         chordItem = chordItem with { HasArpeggioBracket = true };
-                    builder.AddItem(WithBowSources(chordItem, m));
-                    AddBreathingSignColumn(chord.Articulations, builder, measureIndex);
+                    await AddItemAsync(builder, WithBowSources(chordItem, m));
+                    await AddBreathingSignColumn(chord.Articulations, builder, measureIndex);
                     CollectDynamics(chord, measureIndex, itemIndex);
                     // Use chord stem direction for articulation placement
                     CollectArticulations(chord, measureIndex, itemIndex, chordItem.StemUp, anchorTiming: chordAnchorTiming);
@@ -1454,7 +1454,7 @@ public sealed partial class MeasureCollector
                     int itemIndex = builder.CurrentItemCount;
                     Fraction repAnchorTiming = builder.CurrentDuration;
                     (itemIndex, bool isCue, _) =
-                        OpenSoundingItem(rep, builder, measureIndex, itemIndex, ref hasSlurEndAfter);
+                        await OpenSoundingItem(rep, builder, measureIndex, itemIndex, hasSlurEndAfter);
                     bool hasArpeggio = HasArpeggioArticulation(rep);
                     bool arpBracket = rep.Articulations.Any(art =>
                         art is MusicMarkSyntax { } am
@@ -1464,13 +1464,13 @@ public sealed partial class MeasureCollector
                     {
                         // Bad chord repetition: a spacer keeps the time; the
                         // validator reports it (nothing is silent).
-                        builder.AddItem(WithBowSources(repItem, m));
+                        await AddItemAsync(builder, WithBowSources(repItem, m));
                         break;
                     }
                     chordCopy = DecorateSoundingItem(chordCopy, rep, isCue);
                     if (arpBracket)
                         chordCopy = chordCopy with { HasArpeggioBracket = true };
-                    builder.AddItem(WithBowSources(chordCopy, m));
+                    await AddItemAsync(builder, WithBowSources(chordCopy, m));
                     CollectDynamics(rep, measureIndex, itemIndex);
                     CollectArticulations(rep, measureIndex, itemIndex, chordCopy.StemUp, anchorTiming: repAnchorTiming);
                     CollectFiguredBass(rep, measureIndex, itemIndex);
@@ -1490,11 +1490,11 @@ public sealed partial class MeasureCollector
                     int itemIndex = builder.CurrentItemCount;
                     Fraction slashAnchorTiming = builder.CurrentDuration;
                     (itemIndex, bool isCue, _) =
-                        OpenSoundingItem(slash, builder, measureIndex, itemIndex, ref hasSlurEndAfter);
+                        await OpenSoundingItem(slash, builder, measureIndex, itemIndex, hasSlurEndAfter);
                     var slashItem = DecorateSoundingItem(
                         CreateSlashNoteItem(slash, hasTieAfter, hasSlurStartAfter, hasSlurEndAfter, hasBeamStartAfter, hasBeamEndAfter, isCue),
                         slash, isCue);
-                    builder.AddItem(WithBowSources(slashItem, m));
+                    await AddItemAsync(builder, WithBowSources(slashItem, m));
                     CollectDynamics(slash, measureIndex, itemIndex);
                     CollectArticulations(slash, measureIndex, itemIndex, slashItem.StemUp, anchorTiming: slashAnchorTiming);
                     CollectFiguredBass(slash, measureIndex, itemIndex);
@@ -1512,11 +1512,11 @@ public sealed partial class MeasureCollector
                     int itemIndex = builder.CurrentItemCount;
                     Fraction bareAnchorTiming = builder.CurrentDuration;
                     (itemIndex, bool isCue, _) =
-                        OpenSoundingItem(bare, builder, measureIndex, itemIndex, ref hasSlurEndAfter);
+                        await OpenSoundingItem(bare, builder, measureIndex, itemIndex, hasSlurEndAfter);
                     var bareItem = DecorateSoundingItem(
                         CreateBareDurationItem(bare, hasTieAfter, hasSlurStartAfter, hasSlurEndAfter, hasBeamStartAfter, hasBeamEndAfter, isCue),
                         bare, isCue);
-                    builder.AddItem(WithBowSources(bareItem, m));
+                    await AddItemAsync(builder, WithBowSources(bareItem, m));
                     AddRepeatedDrumMark(bare, measureIndex, itemIndex);
                     bool bareStemUp = bareItem switch
                     {
@@ -1535,7 +1535,7 @@ public sealed partial class MeasureCollector
             case ArpeggioSyntax arpeggio:
                 // The markers after '>>' hang on the LAST member (a tie out of the group,
                 // a bow starting or ending on its last note).
-                ProcessArpeggio(arpeggio, builder, hasTieAfter, hasSlurStartAfter, hasSlurEndAfter,
+                await ProcessArpeggio(arpeggio, builder, hasTieAfter, hasSlurStartAfter, hasSlurEndAfter,
                     m.TieSource, m.SlurStartSource, m.SlurEndSource);
                 break;
 
@@ -1563,7 +1563,7 @@ public sealed partial class MeasureCollector
                     // the last is not known here, so each hands back and the builder takes the last
                     // hand-back away when music follows the group (MeasureBuilder.EndAlternative).
                     builder.BeginAlternatives();
-                    ProcessMusicNodeSequence(innerNodes, builder);
+                    await ProcessMusicNodeSequence(innerNodes, builder);
                     builder.EndAlternative(last: false);
 
                     int endMeasureIndex = builder.CurrentMeasureIndex + _cursor.MetadataMeasureOffset;
@@ -1688,7 +1688,7 @@ public sealed partial class MeasureCollector
                     // in front of it (see TimeDataPos for what that costs).
                     var clefChange = new ClefChangeItem(
                         ParseClefType(newClef), clefDecl.ClefName.Span.Start);
-                    builder.AddItem(clefChange);
+                    await AddItemAsync(builder, clefChange);
                 }
                 break;
 
@@ -1701,11 +1701,11 @@ public sealed partial class MeasureCollector
             case KeySignatureSyntax keySig:
                 // Mid-measure key signature change
                 // LILYPOND-REF: lily/key-engraver.cc — process_music() creates KeySignature grob
-                ApplyKeySignatureChange(keySig, builder);
+                await ApplyKeySignatureChange(keySig, builder);
                 break;
 
             case TimeSignatureSyntax timeSigChange:
-                ApplyMeterChange(timeSigChange, builder);
+                await ApplyMeterChange(timeSigChange, builder);
                 break;
 
             case TempoDeclarationSyntax tempoChange:
@@ -1766,22 +1766,22 @@ public sealed partial class MeasureCollector
 
             case TupletExpressionSyntax tuplet:
                 // LILYPOND-REF: lily/tuplet-engraver.cc - process tuplet as a unit
-                ProcessTuplet(tuplet, builder, nestingDepth: 0);
+                await ProcessTuplet(tuplet, builder, nestingDepth: 0);
                 break;
 
             case RepeatExpressionSyntax repeat:
                 // LILYPOND-REF: lily/percent-repeat-engraver.cc - percent repeat handling
-                ProcessRepeatExpression(repeat, builder);
+                await ProcessRepeatExpression(repeat, builder);
                 break;
 
             case PercentRepeatSyntax percent:
-                ProcessPercentRepeat(percent, builder);
+                await ProcessPercentRepeat(percent, builder);
                 break;
 
             case PercentMarkSyntax stray:
                 // A mark the parser could not group (reported, PercentMarkUngrouped): a bar
                 // of nothing, as the design says — the bar stays, nothing is invented.
-                WriteStrayPercentMark(stray, builder);
+                await WriteStrayPercentMark(stray, builder);
                 break;
 
             case OverrideDeclarationSyntax overrideDecl:
@@ -1806,7 +1806,7 @@ public sealed partial class MeasureCollector
 
     /// <summary>A <c>time</c> taking effect here — written in this voice's music, or written in
     /// another part's at the start of this bar (<see cref="ApplyPlannedMeter"/>).</summary>
-    private void ApplyMeterChange(TimeSignatureSyntax timeSigChange, MeasureBuilder builder)
+    private async ValueTask ApplyMeterChange(TimeSignatureSyntax timeSigChange, MeasureBuilder builder)
     {
         // LilyPond's Time_signature_engraver makes ONE TimeSignature
         // grob per timestep, reflecting the CURRENT value, and the very
@@ -1858,11 +1858,11 @@ public sealed partial class MeasureCollector
                 newTime.SenzaMisura);
             builder.MeterInForce = newTime;
             if (regrouped)
-                builder.AddItem(new TimeSignatureChangeItem(newTime, TimeDataPos(timeSigChange)) { Blanked = true });
+                await AddItemAsync(builder, new TimeSignatureChangeItem(newTime, TimeDataPos(timeSigChange)) { Blanked = true });
             return;
         }
         // The numerator, not the keyword — see TimeDataPos.
-        builder.AddItem(new TimeSignatureChangeItem(newTime, TimeDataPos(timeSigChange))
+        await AddItemAsync(builder, new TimeSignatureChangeItem(newTime, TimeDataPos(timeSigChange))
         {
             Blanked = timeSigChange.IsSenzaMisura,
         });
@@ -1881,7 +1881,7 @@ public sealed partial class MeasureCollector
     /// which this column model does not hold: that one keeps the old placement (the
     /// articulation's own offset) — named, not ported.
     /// </remarks>
-    private void AddBreathingSignColumn(IEnumerable<SyntaxNode> articulations, MeasureBuilder builder, int measureIndex)
+    private async ValueTask AddBreathingSignColumn(IEnumerable<SyntaxNode> articulations, MeasureBuilder builder, int measureIndex)
     {
         // In grace time the sign is the grace region's to place (GraceBodySupport.CarriedBreath,
         // MeasureCollector.ProcessGraceRegion): it stands after the whole run, not after its note.
@@ -1907,7 +1907,7 @@ public sealed partial class MeasureCollector
         {
             if (a is ArticulationSyntax { Type: ArticulationType.Breath or ArticulationType.Caesura } sign)
             {
-                builder.AddItem(new BreathingSignItem(sign.Type, sign.SourceStart));
+                await AddItemAsync(builder, new BreathingSignItem(sign.Type, sign.SourceStart));
                 return;
             }
         }
@@ -1920,7 +1920,7 @@ public sealed partial class MeasureCollector
     /// staff shows the change. Called before each node of the walk and before each padding
     /// bar; acts once per bar, and only while the bar holds nothing timed yet.
     /// </summary>
-    private void ApplyPlannedMeter(MeasureBuilder builder)
+    private async ValueTask ApplyPlannedMeter(MeasureBuilder builder)
     {
         if (_meterCursor is not { } cursor || builder.HasMeasureContent)
             return;
@@ -1929,7 +1929,7 @@ public sealed partial class MeasureCollector
             return;
         _meterCursor = cursor with { AppliedBar = bar };
         if (MeterPlan().ForeignChangeAt(cursor.Section, bar, cursor.Container) is { } time)
-            ApplyMeterChange(time, builder);
+            await ApplyMeterChange(time, builder);
     }
 
     /// <summary>
@@ -1947,7 +1947,7 @@ public sealed partial class MeasureCollector
     /// itself drawn small.
     /// </para>
     /// </remarks>
-    private void ProcessCueRegion(CueExpressionSyntax cue, MeasureBuilder builder)
+    private async ValueTask ProcessCueRegion(CueExpressionSyntax cue, MeasureBuilder builder)
     {
         string? outerClef = null;
         if (cue.ClefKeyword is { } clefToken)
@@ -1956,7 +1956,7 @@ public sealed partial class MeasureCollector
             string cueClef = clefToken.Text.ToLowerInvariant();
             _meta.Clef = cueClef;
             // The token's span, not its Position — the clef name, not the trivia.
-            builder.AddItem(new ClefChangeItem(
+            await AddItemAsync(builder, new ClefChangeItem(
                 ParseClefType(cueClef), clefToken.Span.Start, isCue: true));
         }
 
@@ -1979,7 +1979,7 @@ public sealed partial class MeasureCollector
         var openHere = new HashSet<string>(_openPhrases, StringComparer.Ordinal);
         foreach (var item in cue.Body.Items)
             GatherMusicSite(new GreenSite(item), cueSites, openHere);
-        ProcessMusicNodeSequence(cueSites, builder);
+        await ProcessMusicNodeSequence(cueSites, builder);
         // Cleared here too, for the region that emits no note or chord at all (`cue { r4 }`):
         // the stamp belongs to this region, not to the next item that happens to be cued.
         _cueRegionPending = false;
@@ -1988,7 +1988,7 @@ public sealed partial class MeasureCollector
         if (outerClef is not null)
         {
             _meta.Clef = outerClef;
-            builder.AddItem(new ClefChangeItem(
+            await AddItemAsync(builder, new ClefChangeItem(
                 ParseClefType(outerClef), cue.Body.SourceStart + cue.Body.FullWidth, isCue: true));
         }
     }
@@ -1999,9 +1999,9 @@ public sealed partial class MeasureCollector
     /// (RestItem.LeadingGrace), so the run hangs at 3/4 of the note as LilyPond's
     /// <c>s*3/4 \grace { … }</c> puts it. The caller adds it (with or without duration).
     /// </summary>
-    private RestItem AfterGraceSpacer(GraceExpressionSyntax afterGrace, MeasureBuilder builder, Fraction length)
+    private async ValueTask<RestItem> AfterGraceSpacer(GraceExpressionSyntax afterGrace, MeasureBuilder builder, Fraction length)
     {
-        ProcessGraceRegion(afterGrace, builder, builder.CurrentMeasureIndex + _cursor.MetadataMeasureOffset);
+        await ProcessGraceRegion(afterGrace, builder, builder.CurrentMeasureIndex + _cursor.MetadataMeasureOffset);
         var run = _pendingLeadingGrace;
         _pendingLeadingGrace = ImmutableArray<GraceColumnInfo>.Empty;
         return new RestItem(length, 0, afterGrace.SourceStart)
@@ -2035,7 +2035,7 @@ public sealed partial class MeasureCollector
     /// Only the top-level tuplet (nestingDepth=0) adds duration to the measure.
     /// </remarks>
     /// <returns>The actual (scaled) duration of this tuplet.</returns>
-    private Fraction ProcessTuplet(TupletExpressionSyntax tuplet, MeasureBuilder builder, int nestingDepth,
+    private async ValueTask<Fraction> ProcessTuplet(TupletExpressionSyntax tuplet, MeasureBuilder builder, int nestingDepth,
         Fraction? parentScale = null)
     {
         // ⚠️ + MetadataMeasureOffset, like every other side table the walk keys by bar: in
@@ -2093,15 +2093,15 @@ public sealed partial class MeasureCollector
                 // LILYPOND-REF: lily/tuplet-bracket.cc - nested tuplet processing
                 // Recursively process nested tuplet; its actual duration
                 // counts as "written" duration for this outer tuplet
-                writtenDuration += ProcessTuplet(nestedTuplet, builder, nestingDepth + 1, scale);
+                writtenDuration += await ProcessTuplet(nestedTuplet, builder, nestingDepth + 1, scale);
             }
             else if (item is GraceExpressionSyntax { IsAfterGrace: true } afterGrace)
             {
                 // The main note before it already counted its whole written length; the
                 // spacer holds the quarter it gave up, at the tuplet's scale, and adds none.
                 if (afterGraceWritten is { } w)
-                    builder.AddItemWithoutDuration(
-                        AfterGraceSpacer(afterGrace, builder, w * (new Fraction(1, 1) - AfterGraceFraction)) with { TimeScale = scale });
+                    await AddItemWithoutDurationAsync(builder, 
+                        await AfterGraceSpacer(afterGrace, builder, w * (new Fraction(1, 1) - AfterGraceFraction)) with { TimeScale = scale });
                 afterGraceWritten = null;
             }
             else
@@ -2110,7 +2110,7 @@ public sealed partial class MeasureCollector
                 // scaled length, as on the main walk (MeasureBuilder.PendingAfterGraceScale).
                 bool afterGraceMain = SyntaxFacts.IsAfterGraceMainKind(item.Kind)
                     && AfterGraceFollows(tupletItems, j);
-                var written = EmitScaledItem(item, builder, afterGraceMain ? scale * AfterGraceFraction : scale, flags);
+                var written = await EmitScaledItem(item, builder, afterGraceMain ? scale * AfterGraceFraction : scale, flags);
                 writtenDuration += written;
                 afterGraceWritten = afterGraceMain ? written : null;
             }
@@ -2177,7 +2177,7 @@ public sealed partial class MeasureCollector
         // Nested tuplets return their duration to the parent for compounding
         if (nestingDepth == 0)
         {
-            builder.AddDuration(actualDuration, lastSourcePosition + 1);
+            await AddDurationAsync(builder, actualDuration, lastSourcePosition + 1);
         }
 
         return actualDuration;
@@ -2208,8 +2208,8 @@ public sealed partial class MeasureCollector
     /// LILYPOND-REF: ly/music-functions-init.ly:2470-2495 tuplet — make-music 'TimeScaledMusic around the music given
     /// </para>
     /// </remarks>
-    private (int ItemIndex, bool IsCue, int FeatherDirection) OpenSoundingItem(
-        SyntaxNode node, MeasureBuilder builder, int measureIndex, int itemIndex, ref bool hasSlurEndAfter)
+    private async ValueTask<(int ItemIndex, bool IsCue, int FeatherDirection)> OpenSoundingItem(
+        SyntaxNode node, MeasureBuilder builder, int measureIndex, int itemIndex, bool hasSlurEndAfter)
     {
         if (_pendingGrace is { } pendingGrace)
         {
@@ -2230,7 +2230,7 @@ public sealed partial class MeasureCollector
                 clefAfterGrace = _meta.Clef;
                 _meta.Clef = graceClef;
             }
-            ProcessGraceRegion(pendingGrace, builder, measureIndex);
+            await ProcessGraceRegion(pendingGrace, builder, measureIndex);
             if (clefAfterGrace != null)
                 _meta.Clef = clefAfterGrace;
             itemIndex = builder.CurrentItemCount;
@@ -2431,7 +2431,7 @@ public sealed partial class MeasureCollector
     /// notation-vs-time factor) with its post-events, and returns its WRITTEN duration.
     /// Shared by <see cref="ProcessTuplet"/> and the arpeggio auto-tuplet.
     /// </summary>
-    private Fraction EmitScaledItem(SyntaxNode item, MeasureBuilder builder, Fraction scale,
+    private async ValueTask<Fraction> EmitScaledItem(SyntaxNode item, MeasureBuilder builder, Fraction scale,
         MarkerFlags m)
     {
         // The first item inside a tuplet can be the carrier for a slur mark left by an
@@ -2484,7 +2484,7 @@ public sealed partial class MeasureCollector
                         HasBeamStart = hasBeamStartAfter,
                         HasBeamEnd = hasBeamEndAfter,
                     };
-                    builder.AddItemWithoutDuration(WithBowSources(pitchedRest with { TimeScale = scale }, m));
+                    await AddItemWithoutDurationAsync(builder, WithBowSources(pitchedRest with { TimeScale = scale }, m));
                     CollectArticulations(note, annMeasureIndex, annItemIndex, stemUp: false, anchorTiming: annAnchor);
                     CollectDynamics(note, annMeasureIndex, annItemIndex);
                     CollectChordNames(note, annMeasureIndex, annItemIndex, annAnchor);
@@ -2494,13 +2494,13 @@ public sealed partial class MeasureCollector
                 // arm didn't, which is the same one-arm-of-two hole the rest dynamics
                 // above already had (a tuplet note's @glissando dropped silently).
                 (annItemIndex, bool isCue, int featherDir) =
-                    OpenSoundingItem(note, builder, annMeasureIndex, annItemIndex, ref hasSlurEndAfter);
+                    await OpenSoundingItem(note, builder, annMeasureIndex, annItemIndex, hasSlurEndAfter);
                 var noteItem = CreateNoteItem(note, hasTieAfter, hasSlurStartAfter, hasSlurEndAfter, hasBeamStartAfter, hasBeamEndAfter, HasGlissandoArticulation(note), featherDir, isCue, builder);
                 // The WRITTEN duration is read off the item BEFORE the scale goes on — the
                 // caller's clock is fed the sum of written values and scales it once.
                 Fraction written = noteItem.Duration;
                 noteItem = DecorateSoundingItem(noteItem with { TimeScale = scale }, note, isCue);
-                builder.AddItemWithoutDuration(WithBowSources(noteItem, m));
+                await AddItemWithoutDurationAsync(builder, WithBowSources(noteItem, m));
                 CollectDynamics(note, annMeasureIndex, annItemIndex);
                 CollectArticulations(note, annMeasureIndex, annItemIndex, noteItem.StemUp,
                     noteItem.EditorialAccidental, annAnchor);
@@ -2520,7 +2520,7 @@ public sealed partial class MeasureCollector
                     HasBeamStart = hasBeamStartAfter,
                     HasBeamEnd = hasBeamEndAfter,
                 };
-                builder.AddItemWithoutDuration(WithBowSources(restItem with { TimeScale = scale }, m));
+                await AddItemWithoutDurationAsync(builder, WithBowSources(restItem with { TimeScale = scale }, m));
                 CollectArticulations(rest, annMeasureIndex, annItemIndex, stemUp: false, anchorTiming: annAnchor);
                 // Same repair as the main walk's rest case: a rest carries dynamics too.
                 CollectDynamics(rest, annMeasureIndex, annItemIndex);
@@ -2532,7 +2532,7 @@ public sealed partial class MeasureCollector
             {
                 // A chord(…) item with no usable shape: a spacer (LYS1040), as the main arm.
                 var spacer = CreateShapeSpacerItem(chord);
-                builder.AddItemWithoutDuration(WithBowSources(spacer with { TimeScale = scale }, m));
+                await AddItemWithoutDurationAsync(builder, WithBowSources(spacer with { TimeScale = scale }, m));
                 CollectDynamics(chord, annMeasureIndex, annItemIndex);
                 CollectChordNames(chord, annMeasureIndex, annItemIndex, annAnchor);
                 return spacer.Duration;
@@ -2540,7 +2540,7 @@ public sealed partial class MeasureCollector
             case ChordSyntax chord:
             {
                 (annItemIndex, bool isCue, _) =
-                    OpenSoundingItem(chord, builder, annMeasureIndex, annItemIndex, ref hasSlurEndAfter);
+                    await OpenSoundingItem(chord, builder, annMeasureIndex, annItemIndex, hasSlurEndAfter);
                 // The arpeggio as the main walk's arm reads it. This arm passed false and
                 // never listed one, so a rolled chord inside a tuplet drew no wiggle and said
                 // nothing (OMR report 2026-10-20, item 4).
@@ -2554,7 +2554,7 @@ public sealed partial class MeasureCollector
                 chordItem = DecorateSoundingItem(chordItem with { TimeScale = scale }, chord, isCue);
                 if (arpBracket)
                     chordItem = chordItem with { HasArpeggioBracket = true };
-                builder.AddItemWithoutDuration(WithBowSources(chordItem, m));
+                await AddItemWithoutDurationAsync(builder, WithBowSources(chordItem, m));
                 CollectDynamics(chord, annMeasureIndex, annItemIndex);
                 CollectArticulations(chord, annMeasureIndex, annItemIndex, chordItem.StemUp, anchorTiming: annAnchor);
                 CollectFiguredBass(chord, annMeasureIndex, annItemIndex);
@@ -2568,7 +2568,7 @@ public sealed partial class MeasureCollector
                 // `q` inside a tuplet — LP expands repetitions late, so \times/
                 // \tuplet still applies to them (regression chord-repetition-times).
                 (annItemIndex, bool isCue, _) =
-                    OpenSoundingItem(rep, builder, annMeasureIndex, annItemIndex, ref hasSlurEndAfter);
+                    await OpenSoundingItem(rep, builder, annMeasureIndex, annItemIndex, hasSlurEndAfter);
                 bool hasArpeggio = HasArpeggioArticulation(rep);
                 bool arpBracket = rep.Articulations.Any(art =>
                     art is MusicMarkSyntax { } am
@@ -2582,7 +2582,7 @@ public sealed partial class MeasureCollector
                     chordCopy = DecorateSoundingItem(chordCopy with { TimeScale = scale }, rep, isCue);
                     if (arpBracket)
                         chordCopy = chordCopy with { HasArpeggioBracket = true };
-                    builder.AddItemWithoutDuration(WithBowSources(chordCopy, m));
+                    await AddItemWithoutDurationAsync(builder, WithBowSources(chordCopy, m));
                     AddArpeggio(chordCopy, hasArpeggio, arpBracket, annMeasureIndex, annItemIndex, rep.SourceStart);
                     CollectDynamics(rep, annMeasureIndex, annItemIndex);
                     CollectArticulations(rep, annMeasureIndex, annItemIndex, chordCopy.StemUp, anchorTiming: annAnchor);
@@ -2593,18 +2593,18 @@ public sealed partial class MeasureCollector
                 }
                 // Bad chord repetition: the spacer keeps the tuplet's time.
                 var spacer = (RestItem)repItem;
-                builder.AddItemWithoutDuration(spacer with { TimeScale = scale });
+                await AddItemWithoutDurationAsync(builder, spacer with { TimeScale = scale });
                 return spacer.Duration;
             }
             case SlashNoteSyntax slash:
             {
                 (annItemIndex, bool isCue, _) =
-                    OpenSoundingItem(slash, builder, annMeasureIndex, annItemIndex, ref hasSlurEndAfter);
+                    await OpenSoundingItem(slash, builder, annMeasureIndex, annItemIndex, hasSlurEndAfter);
                 var slashItem = CreateSlashNoteItem(slash, hasTieAfter, hasSlurStartAfter,
                     hasSlurEndAfter, hasBeamStartAfter, hasBeamEndAfter, isCue);
                 Fraction written = slashItem.Duration;
                 slashItem = DecorateSoundingItem(slashItem with { TimeScale = scale }, slash, isCue);
-                builder.AddItemWithoutDuration(WithBowSources(slashItem, m));
+                await AddItemWithoutDurationAsync(builder, WithBowSources(slashItem, m));
                 CollectDynamics(slash, annMeasureIndex, annItemIndex);
                 CollectArticulations(slash, annMeasureIndex, annItemIndex, slashItem.StemUp, anchorTiming: annAnchor);
                 CollectChordNames(slash, annMeasureIndex, annItemIndex, annAnchor);
@@ -2617,11 +2617,11 @@ public sealed partial class MeasureCollector
                 // drew nothing, played nothing and took no time, with no diagnostic (the
                 // owner's report on drum fills, a triplet fill being the common one).
                 (annItemIndex, bool isCue, _) =
-                    OpenSoundingItem(drumNote, builder, annMeasureIndex, annItemIndex, ref hasSlurEndAfter);
+                    await OpenSoundingItem(drumNote, builder, annMeasureIndex, annItemIndex, hasSlurEndAfter);
                 var drumItem = CreateDrumNoteItem(drumNote);
                 Fraction written = drumItem.Duration;
                 drumItem = DecorateSoundingItem(drumItem with { TimeScale = scale }, drumNote, isCue);
-                builder.AddItemWithoutDuration(WithBowSources(drumItem, m));
+                await AddItemWithoutDurationAsync(builder, WithBowSources(drumItem, m));
                 CollectDrumNoteMarks(drumNote, drumItem, annMeasureIndex, annItemIndex, annAnchor);
                 return written;
             }
@@ -2630,7 +2630,7 @@ public sealed partial class MeasureCollector
                 // Same late-expansion rule as `q`: the tuplet scale applies to
                 // the copy, whatever it resolved to.
                 (annItemIndex, bool isCue, _) =
-                    OpenSoundingItem(bare, builder, annMeasureIndex, annItemIndex, ref hasSlurEndAfter);
+                    await OpenSoundingItem(bare, builder, annMeasureIndex, annItemIndex, hasSlurEndAfter);
                 var bareItem = CreateBareDurationItem(bare, hasTieAfter, hasSlurStartAfter,
                     hasSlurEndAfter, hasBeamStartAfter, hasBeamEndAfter, isCue);
                 switch (bareItem)
@@ -2639,7 +2639,7 @@ public sealed partial class MeasureCollector
                     {
                         Fraction written = n.Duration;
                         n = DecorateSoundingItem(n with { TimeScale = scale }, bare, isCue);
-                        builder.AddItemWithoutDuration(WithBowSources(n, m));
+                        await AddItemWithoutDurationAsync(builder, WithBowSources(n, m));
                         AddRepeatedDrumMark(bare, annMeasureIndex, annItemIndex);
                         CollectDynamics(bare, annMeasureIndex, annItemIndex);
                         CollectArticulations(bare, annMeasureIndex, annItemIndex, n.StemUp, anchorTiming: annAnchor);
@@ -2650,7 +2650,7 @@ public sealed partial class MeasureCollector
                     {
                         Fraction written = c.Duration;
                         c = DecorateSoundingItem(c with { TimeScale = scale }, bare, isCue);
-                        builder.AddItemWithoutDuration(WithBowSources(c, m));
+                        await AddItemWithoutDurationAsync(builder, WithBowSources(c, m));
                         CollectDynamics(bare, annMeasureIndex, annItemIndex);
                         CollectArticulations(bare, annMeasureIndex, annItemIndex, c.StemUp, anchorTiming: annAnchor);
                         CollectChordNames(bare, annMeasureIndex, annItemIndex, annAnchor);
@@ -2658,7 +2658,7 @@ public sealed partial class MeasureCollector
                     }
                     default:
                         var bareSpacer = (RestItem)bareItem;
-                        builder.AddItemWithoutDuration(bareSpacer with { TimeScale = scale });
+                        await AddItemWithoutDurationAsync(builder, bareSpacer with { TimeScale = scale });
                         return bareSpacer.Duration;
                 }
             }

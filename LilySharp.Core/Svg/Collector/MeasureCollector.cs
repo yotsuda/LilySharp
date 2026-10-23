@@ -1184,7 +1184,7 @@ public sealed partial class MeasureCollector
         // measures and any number of parallel spans interleave correctly.
         _parallelSpans.Clear();
         _openingKeyOverride = null;
-        var measures = CollectMeasures();
+        var measures = Run(CollectMeasures());
         // Read now: the omitted parts' harvest below collects again. A staff with parallel voices
         // keeps its last bar line — the longest voice decides where LilyPond's music ends, and
         // the primary stream alone cannot say (Lab sessions/p659: audit/lpreg/restdur, oice { g1 | g2 }
@@ -2629,13 +2629,13 @@ public sealed partial class MeasureCollector
 
         // 1. Check variables first
         if (_variables.TryGetValue(voiceName, out var variable))
-            return CollectMeasuresFromNode(variable);
+            return Run(CollectMeasuresFromNode(variable));
 
         // 2. Delegate to the structure-aware CollectMeasures path so that
         //    structure { A B C ... } expansion concatenates all sections'
         //    PartBlocks for this voice. ProcessSection filters by _voiceName
         //    (already set by the caller) so only matching PartBlocks are taken.
-        return CollectMeasures();
+        return Run(CollectMeasures());
     }
 
     /// <summary>
@@ -2836,10 +2836,10 @@ public sealed partial class MeasureCollector
                     VoiceScope = t + 1,
                 }))
                 {
-                    sub = CollectMeasuresFromNode(drums != null ? parallel : blocks[t], applyFilePartial: start == 0,
+                    sub = Run(CollectMeasuresFromNode(drums != null ? parallel : blocks[t], applyFilePartial: start == 0,
                         leadingOffset: startOffset,
                         logicalIndexBase: MidBarBreaks?.ToLogical(start) ?? start,
-                        emit: drums != null ? b => EmitDrumVoice(drums.Lower, b, stemUp: false) : null);
+                        emit: drums != null ? b => EmitDrumVoice(drums.Lower, b, stemUp: false) : null));
                     ResolveBeamStemDirections(sub, measureOffset: start);
                 }
 
@@ -3667,9 +3667,9 @@ public sealed partial class MeasureCollector
     // it suppressed (see FinalizeMeasures). Do not reintroduce either.
     /// <param name="emit">Fills the builder in place of the walk of <paramref name="voiceNode"/>'s
     /// music — a drum chart's merged feet voice (Drums.cs), which has no block of its own.</param>
-    private List<Measure> CollectMeasuresFromNode(SyntaxNode voiceNode,
+    private async ValueTask<List<Measure>> CollectMeasuresFromNode(SyntaxNode voiceNode,
         bool applyFilePartial = true, Fraction? leadingOffset = null, int logicalIndexBase = 0,
-        Action<MeasureBuilder>? emit = null)
+        Func<MeasureBuilder, ValueTask>? emit = null)
     {
         var builder = new MeasureBuilder(ScoreMeter, voiceNode.SourceStart, _meta.TimeSenzaMisura)
         {
@@ -3692,7 +3692,7 @@ public sealed partial class MeasureCollector
         // (walked inline in the primary stream) already elapsed to. Same device
         // PartCombiner uses to pad a part up to an onset.
         if (leadingOffset is { } offset && offset != Fraction.Zero)
-            builder.AddItem(new RestItem(offset, 0, voiceNode.SourceStart) { IsSpacer = true, IsSpanLead = true });
+            await AddItemAsync(builder, new RestItem(offset, 0, voiceNode.SourceStart) { IsSpacer = true, IsSpanLead = true });
         ResetAccidentalMemory();
         builder.MeasureCompleted = _advanceAccidentalBar ??= AdvanceAccidentalBar;
         // A span's later voice keeps no key reminder (KeyCourtesyDue): its measures are
@@ -3707,7 +3707,7 @@ public sealed partial class MeasureCollector
         // path flattens << \\ >> (see GatherMusicSite), so its descendants
         // must reach the walk (includeParallel: false).
         if (emit != null)
-            emit(builder);
+            await emit(builder);
         else
         {
             var musicNodes = new List<GreenSite>();
@@ -3715,7 +3715,7 @@ public sealed partial class MeasureCollector
             foreach (var site in MusicSitesLazy(voiceNode, includeParallel: false))
                 GatherMusicSite(site, musicNodes);
 
-            ProcessMusicNodeSequence(musicNodes, builder);
+            await ProcessMusicNodeSequence(musicNodes, builder);
         }
 
         FinalizeInlineVoltas();
@@ -4058,7 +4058,7 @@ public sealed partial class MeasureCollector
         }
     }
 
-    private List<Measure> CollectMeasures()
+    private async ValueTask<List<Measure>> CollectMeasures()
     {
         // Snapshot this voice's score-level key (already transposed for the part)
         // so each section boundary can revert the running key to it.
@@ -4227,7 +4227,7 @@ public sealed partial class MeasureCollector
             }
         }
 
-        void ProcessNodes(MusicSiteList nodeList)
+        async ValueTask ProcessNodes(MusicSiteList nodeList)
         {
             // A spliced walk is done: everything after the adopted tail is state
             // the splice already restored (the end-of-walk checkpoint).
@@ -4400,7 +4400,7 @@ public sealed partial class MeasureCollector
                 if (SyntaxFacts.IsAfterGraceMainKind(site.Kind)
                     && AfterGraceFollows(k => nodeList.TryGet(k, out var s) ? s : null, i))
                     builder.PendingAfterGraceScale = AfterGraceFraction;
-                ProcessMusicNode(site.Node, builder, flags);
+                await ProcessMusicNode(site.Node, builder, flags);
                 builder.ClearFollowingBarline();
             }
         }
@@ -4408,7 +4408,7 @@ public sealed partial class MeasureCollector
         // Process based on structure or sections
         if (_form != null)
         {
-            ProcessForm(ProcessNodes, builder);
+            await ProcessForm(ProcessNodes, builder);
         }
         else if (_sectionState.Sections.Count > 0)
         {
@@ -4430,7 +4430,7 @@ public sealed partial class MeasureCollector
                     builder.SectionLabel = LabelForDeclarationOrder(section);
                     builder.SectionLabelPosition = section.Name.Span.Start;
                 }
-                ProcessSection(section, ProcessNodes, builder);
+                await ProcessSection(section, ProcessNodes, builder);
             }
         }
         else if (_root != null)
@@ -4443,7 +4443,7 @@ public sealed partial class MeasureCollector
             foreach (var s in MusicSitesLazy(_root, includeParallel: true))
                 if (IsCollectableMusicKind(s.Kind))
                     musicNodes.Add(s);
-            ProcessNodes(MusicSiteList.Preset(musicNodes));
+            await ProcessNodes(MusicSiteList.Preset(musicNodes));
         }
 
         if (_resumePending != null)
@@ -4663,7 +4663,7 @@ public sealed partial class MeasureCollector
         }
     }
 
-    private void ProcessForm(Action<MusicSiteList> processNodes, MeasureBuilder builder)
+    private async ValueTask ProcessForm(Func<MusicSiteList, ValueTask> processNodes, MeasureBuilder builder)
     {
         _pendingFormEdge = SectionPlayEdge.Sequential;
         _pendingRole = SectionRepeatRole.None;
@@ -4696,14 +4696,14 @@ public sealed partial class MeasureCollector
                             builder.SectionLabelPosition = SectionDeclPos(reference.SectionName);
                         }
                         SetLoneEndingAwareRole(reference);
-                        ProcessSection(section, processNodes, builder, reference.OctaveOffset);
+                        await ProcessSection(section, processNodes, builder, reference.OctaveOffset);
                         CloseDividerEndingAfter(reference, builder);
                     }
                     break;
 
                 case FormRepeatBlockSyntax repeat:
                     _formDividerClosed = false;
-                    ProcessRepeatBlock(repeat, processNodes, builder);
+                    await ProcessRepeatBlock(repeat, processNodes, builder);
                     break;
 
                 // An ending of a run a form-level `:|:` opened — `A :|: B [1. C] :| [2. D]`.
@@ -4833,7 +4833,7 @@ public sealed partial class MeasureCollector
                         builder.SectionLabelPosition = SectionDeclPos(nameTok.Text);
                     }
                     SetLoneEndingAwareRole(silent);
-                    ProcessSection(silentSection, processNodes, builder,
+                    await ProcessSection(silentSection, processNodes, builder,
                         SyntaxFacts.NetOctaveMarks(silent));
                     CloseDividerEndingAfter(silent, builder);
                     break;
@@ -4887,7 +4887,7 @@ public sealed partial class MeasureCollector
                     _formBarRead = formBar.Span;
                     try
                     {
-                        processNodes(MusicSiteList.Preset([new GreenSite(formBar)]));
+                        await processNodes(MusicSiteList.Preset([new GreenSite(formBar)]));
                     }
                     finally
                     {
@@ -5714,7 +5714,7 @@ public sealed partial class MeasureCollector
     /// is reported where written and drawn as its body once; a percent repeat is
     /// <see cref="ProcessPercentRepeat"/>.
     /// </summary>
-    private void ProcessRepeatExpression(RepeatExpressionSyntax repeat, MeasureBuilder builder)
+    private async ValueTask ProcessRepeatExpression(RepeatExpressionSyntax repeat, MeasureBuilder builder)
     {
         string type = repeat.RepeatType.Text;
         int count = int.TryParse(repeat.Count.Text, out int c) ? c : 2;
@@ -5738,7 +5738,7 @@ public sealed partial class MeasureCollector
         // Route through the shared sequence walker so ties/slurs/beams inside a
         // repeat body get the one-node marker lookahead (a manual per-item loop
         // here previously dropped them — e.g. `repeat volta 2 { c4( d e f) }`).
-        void ProcessBodyOnce() => ProcessMusicNodeSequence(bodyNodes, builder);
+        ValueTask ProcessBodyOnce() => ProcessMusicNodeSequence(bodyNodes, builder);
 
         // Every pass beyond the first re-emits the whole body, and passes nest
         // (an unfold inside an unfold multiplies) — the expansion budget charges
@@ -5759,7 +5759,7 @@ public sealed partial class MeasureCollector
             // LILYPOND-REF: lily/chord-tremolo-engraver.cc.
             _tremoloPairShape = pairShape;
             _tremoloPairFirst = true;
-            ProcessBodyOnce();
+            await ProcessBodyOnce();
             _tremoloPairShape = null;
         }
         else if (type == "tremolo" && bodyNodes.Count == 1
@@ -5772,7 +5772,7 @@ public sealed partial class MeasureCollector
             // quarter note whose stem carries the 32nd's three slashes (the
             // same drawing as the c4:32 suffix); the repetition is aural.
             _tremoloRepeatCount = count;
-            ProcessBodyOnce();
+            await ProcessBodyOnce();
             _tremoloRepeatCount = 1;
         }
         else
@@ -5803,7 +5803,7 @@ public sealed partial class MeasureCollector
                     _octave.LastPitchName = frame.PitchName;
                     (_defaultDuration, _defaultDots) = (frameDuration, frameDots);
                 }
-                ProcessBodyOnce();
+                await ProcessBodyOnce();
             }
         }
         GiveRepeatBody(bodyNodes);
@@ -5821,7 +5821,7 @@ public sealed partial class MeasureCollector
     /// marks are walked as written, so a repetition of N bars is N bars between two of them.
     /// </para>
     /// </remarks>
-    private void ProcessPercentRepeat(PercentRepeatSyntax repeat, MeasureBuilder builder)
+    private async ValueTask ProcessPercentRepeat(PercentRepeatSyntax repeat, MeasureBuilder builder)
     {
         // The body's phrase references expanded once, as a repeat body's were (see
         // ProcessRepeatExpression), and the bar line closing it walked with it.
@@ -5834,10 +5834,10 @@ public sealed partial class MeasureCollector
                 bodyNodes.Add(new GreenSite(item));
         }
         var bodyEndBar = repeat.BodyEndBar;
-        void ProcessBodyOnce()
+        async ValueTask ProcessBodyOnce()
         {
             bodyNodes.Add(new GreenSite(bodyEndBar));
-            ProcessMusicNodeSequence(bodyNodes, builder);
+            await ProcessMusicNodeSequence(bodyNodes, builder);
             bodyNodes.RemoveAt(bodyNodes.Count - 1);
         }
         int passCost = Math.Max(1, bodyNodes.Count);
@@ -5863,7 +5863,7 @@ public sealed partial class MeasureCollector
         // (`repeat percent 2 { c16 d e f }` writes the value once). Captured BEFORE the
         // first pass, which advances it.
         var defaultAtBody = _defaultDuration.Dotted(_defaultDots);
-        ProcessBodyOnce();
+        await ProcessBodyOnce();
         int bodyMeasureCount = builder.LogicalMeasureIndex - startMeasure;
         var bodyLength = builder.CurrentDuration - openAtStart;
         for (int m = 0; m < bodyMeasureCount; m++)
@@ -5958,7 +5958,7 @@ public sealed partial class MeasureCollector
         // piece — the column the RepeatSlash / DoubleRepeatSlash grob stands in, which
         // the spacing prices as a used column with a wish and the group's ink
         // (RestItem.RepeatSlashCount); the later pieces are the event still sounding.
-        void WriteRepetitionAsSpacers(Fraction length, int at, int? repeatSlashCount = null)
+        async ValueTask WriteRepetitionAsSpacers(Fraction length, int at, int? repeatSlashCount = null)
         {
             var remaining = length;
             while (remaining > Fraction.Zero)
@@ -5972,7 +5972,7 @@ public sealed partial class MeasureCollector
                 if (room <= Fraction.Zero)
                     room = bar;
                 var piece = remaining < room ? remaining : room;
-                builder.AddItem(
+                await AddItemAsync(builder, 
                     new RestItem(piece, 0, at)
                     {
                         IsSpacer = true,
@@ -6004,7 +6004,7 @@ public sealed partial class MeasureCollector
             if (child is not PercentMarkSyntax mark)
             {
                 barSite.Add(new GreenSite(child));
-                ProcessMusicNodeSequence(barSite, builder);
+                await ProcessMusicNodeSequence(barSite, builder);
                 barSite.Clear();
                 continue;
             }
@@ -6019,7 +6019,7 @@ public sealed partial class MeasureCollector
                 int slashMeasure = builder.CurrentMeasureIndex + _cursor.MetadataMeasureOffset;
                 var slashTiming = builder.CurrentDuration;
                 int slashItemIndex = builder.CurrentItemCount;
-                WriteRepetitionAsSpacers(bodyLength, at, slashCount);
+                await WriteRepetitionAsSpacers(bodyLength, at, slashCount);
                 _percentRepeats.Add(new PercentRepeatItem(
                     slashMeasure,
                     at,
@@ -6031,7 +6031,7 @@ public sealed partial class MeasureCollector
             }
 
             int iterStart = builder.CurrentMeasureIndex + _cursor.MetadataMeasureOffset;
-            WriteRepetitionAsSpacers(bodyLength, at);
+            await WriteRepetitionAsSpacers(bodyLength, at);
 
             // A TWO-MEASURE body gets ONE double-percent sign for the whole repetition,
             // on the bar line between its two measures — not a single sign in each.
@@ -6078,14 +6078,14 @@ public sealed partial class MeasureCollector
     /// A percent mark no repeat holds (reported where written): the bars it stands for, empty —
     /// spacers a bar at a time, so the bars after it fall where the writer counted them.
     /// </summary>
-    private void WriteStrayPercentMark(PercentMarkSyntax mark, MeasureBuilder builder)
+    private async ValueTask WriteStrayPercentMark(PercentMarkSyntax mark, MeasureBuilder builder)
     {
         for (int bar = 0; bar < Math.Max(1, mark.Bars); bar++)
         {
             var room = builder.CurrentMeasureLength - builder.CurrentDuration;
             if (room <= Fraction.Zero)
                 room = builder.CurrentMeasureLength;
-            builder.AddItem(new RestItem(room, 0, mark.SourceStart) { IsSpacer = true });
+            await AddItemAsync(builder, new RestItem(room, 0, mark.SourceStart) { IsSpacer = true });
         }
     }
 
@@ -6320,7 +6320,7 @@ public sealed partial class MeasureCollector
     /// LILYPOND-REF: scm/music-functions.scm:635-648 general-grace-settings — the font.
     /// </para>
     /// </remarks>
-    private void ProcessGraceRegion(
+    private async ValueTask ProcessGraceRegion(
         GraceExpressionSyntax grace, MeasureBuilder builder, int measureIndex)
     {
         var type = grace.IsAcciaccatura ? GraceNoteType.Acciaccatura
@@ -6380,7 +6380,7 @@ public sealed partial class MeasureCollector
         var graceSites = new List<GreenSite>();
         foreach (var item in grace.Body.Items)
             GatherMusicSite(new GreenSite(item), graceSites);
-        ProcessMusicNodeSequence(graceSites, builder);
+        await ProcessMusicNodeSequence(graceSites, builder);
         builder.ExitGraceTime(slash);
         _graceDepth--;
         // The breathing sign the body ends on stands in a column of its own between the last
@@ -6398,7 +6398,7 @@ public sealed partial class MeasureCollector
         _graceChordNames = null;
         _graceFrameSpecs = null;
         if (carriedBreath is { } breath)
-            builder.AddItem(new BreathingSignItem(breath.Type, breath.SourceStart));
+            await AddItemAsync(builder, new BreathingSignItem(breath.Type, breath.SourceStart));
 
         _defaultDuration = savedDuration;
         _defaultDots = savedDots;

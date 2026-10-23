@@ -28,7 +28,7 @@ namespace LilySharp.Core.Svg.Collector;
 // MeasureCollector.cs as a partial class; same instance state, no behavior change.
 public sealed partial class MeasureCollector
 {
-    private void ProcessRepeatBlock(FormRepeatBlockSyntax repeat, Action<MusicSiteList> processNodes, MeasureBuilder builder)
+    private async ValueTask ProcessRepeatBlock(FormRepeatBlockSyntax repeat, Func<MusicSiteList, ValueTask> processNodes, MeasureBuilder builder)
     {
         // Checkpoint/resume (finding 3-4): a repeat block's bookkeeping (the volta
         // start/end pairing below, the synthesized barlines between sections) lives
@@ -49,7 +49,7 @@ public sealed partial class MeasureCollector
         _pendingRunCount = Syntax.FormWalk.ExplicitPlayCount(repeat) ?? 0;
         try
         {
-            ProcessRepeatBlockCore(repeat, processNodes, builder);
+            await ProcessRepeatBlockCore(repeat, processNodes, builder);
         }
         finally
         {
@@ -75,7 +75,7 @@ public sealed partial class MeasureCollector
     private readonly List<NavigationMarkType> _pendingMarks = new();
     private string? _formTrailingMarks;
 
-    private void ProcessRepeatBlockCore(FormRepeatBlockSyntax repeat, Action<MusicSiteList> processNodes, MeasureBuilder builder)
+    private async ValueTask ProcessRepeatBlockCore(FormRepeatBlockSyntax repeat, Func<MusicSiteList, ValueTask> processNodes, MeasureBuilder builder)
     {
         bool afterRepeatStart = false;
         var pendingVoltaBrackets = new List<VoltaBracketItem>();
@@ -84,13 +84,13 @@ public sealed partial class MeasureCollector
         // written pair, because the author did not write two barlines next to each other —
         // one is the section's own close and this one is the structure's. See
         // MeasureBuilder.ArmBoundaryForStructuralBarline for what it cost to learn that.
-        void PushFormBarline(string barText, int position, TextSpan read)
+        async ValueTask PushFormBarline(string barText, int position, TextSpan read)
         {
             builder.ArmBoundaryForStructuralBarline();
             _formBarRead = read;
             try
             {
-                processNodes(MusicSiteList.Preset([new GreenSite(CreateBarlineSyntax(barText, position))]));
+                await processNodes(MusicSiteList.Preset([new GreenSite(CreateBarlineSyntax(barText, position))]));
             }
             finally
             {
@@ -113,12 +113,12 @@ public sealed partial class MeasureCollector
                     _pendingRunStart = true;
                 if (token.Text == "|:")
                 {
-                    PushFormBarline(token.Text, token.SourceStart, token.Span);
+                    await PushFormBarline(token.Text, token.SourceStart, token.Span);
                     afterRepeatStart = true;
                 }
                 else if (token.Text == ":|")
                 {
-                    PushFormBarline(token.Text, token.SourceStart, token.Span);
+                    await PushFormBarline(token.Text, token.SourceStart, token.Span);
                 }
                 else if (token.Text == ":|:")
                 {
@@ -126,8 +126,8 @@ public sealed partial class MeasureCollector
                     // the next. The adjacent ':|' + '|:' fuse into the RepeatBoth
                     // glyph at render time, and the following section is still marked
                     // as a repeat (StartBarline = RepeatStart) — exactly ':| |:'.
-                    PushFormBarline(":|", token.SourceStart, token.Span);
-                    PushFormBarline("|:", token.SourceStart, token.Span);
+                    await PushFormBarline(":|", token.SourceStart, token.Span);
+                    await PushFormBarline("|:", token.SourceStart, token.Span);
                     afterRepeatStart = true;
                 }
             }
@@ -160,7 +160,7 @@ public sealed partial class MeasureCollector
                             builder.SectionLabelPosition = SectionDeclPos(reference.SectionName);
                         }
                         _pendingRole = SectionRepeatRole.Body;
-                        ProcessSection(section, processNodes, builder, reference.OctaveOffset);
+                        await ProcessSection(section, processNodes, builder, reference.OctaveOffset);
                     }
                 }
                 else if (child is { Kind: SyntaxKind.SilentSectionReference } silent
@@ -178,7 +178,7 @@ public sealed partial class MeasureCollector
                         builder.SectionLabelPosition = SectionDeclPos(silentName.Text);
                     }
                     _pendingRole = SectionRepeatRole.Body;
-                    ProcessSection(silentSection, processNodes, builder,
+                    await ProcessSection(silentSection, processNodes, builder,
                         SyntaxFacts.NetOctaveMarks(silent));
                 }
                 else if (child is FormAlternativeSyntax alt)
@@ -221,7 +221,7 @@ public sealed partial class MeasureCollector
                             // An ending's section IS a section reference with a bracket around
                             // it, marks included: `[1. B']` opens B an octave up for that
                             // ending only.
-                            ProcessSection(section, processNodes, builder, SyntaxFacts.NetOctaveMarks(endingRef));
+                            await ProcessSection(section, processNodes, builder, SyntaxFacts.NetOctaveMarks(endingRef));
                             // The next section of the SAME ending follows this one on the same
                             // pass: a plain sequential edge (a slur may run from C into D).
                             _pendingRole = SectionRepeatRole.EndingContinued;
@@ -269,7 +269,7 @@ public sealed partial class MeasureCollector
                         if (IsLastWrittenEnding(repeat, i) && Semantics.RepeatPasses.EndingReturns(alt.Numbers, HighestPass(repeat)))
                         {
                             MarkFormEdge(SectionPlayEdge.Repeat);
-                            PushFormBarline(":|", alt.SourceStart, alt.Span);
+                            await PushFormBarline(":|", alt.SourceStart, alt.Span);
                         }
                     }
                 }
@@ -347,7 +347,7 @@ public sealed partial class MeasureCollector
     /// opened this play (<c>~B'</c> = +1, <c>~B,</c> = -1). It belongs to the play, not to
     /// the declaration, so it is threaded from the form walk rather than read off the
     /// section — the same section referenced twice can open at two different octaves.</param>
-    private void ProcessSection(SectionDeclarationSyntax section, Action<MusicSiteList> processNodes, MeasureBuilder builder, int octaveOffset = 0)
+    private async ValueTask ProcessSection(SectionDeclarationSyntax section, Func<MusicSiteList, ValueTask> processNodes, MeasureBuilder builder, int octaveOffset = 0)
     {
         // Checkpoint/resume gate (CollectWalkProbe): a section wholly before the
         // resume target is in the adopted prefix — prologue, music and epilogue —
@@ -417,7 +417,7 @@ public sealed partial class MeasureCollector
         }
         else
         {
-            ProcessSectionPrologue(section, builder, octaveOffset);
+            await ProcessSectionPrologue(section, builder, octaveOffset);
             // The play's first timed item carries the edge (MusicItem.BeginsSectionPlay).
             // Armed with the prologue, so a resume inside this play finds it in the
             // builder's checkpoint if no item has taken it yet.
@@ -426,14 +426,14 @@ public sealed partial class MeasureCollector
 
         int startMeasure = builder.CurrentMeasureIndex;
         _sectionStartMeasureForResume = startMeasure;
-        ProcessSectionBody(section, processNodes, builder, startMeasure);
+        await ProcessSectionBody(section, processNodes, builder, startMeasure);
     }
 
     /// <summary>The section-boundary prologue: frame/duration/meter/key/override
     /// reverts and the section's own header directives. Extracted verbatim from
     /// <see cref="ProcessSection"/> so the resume gate can skip it as one unit
     /// (it ran inside the adopted prefix when the resume target sits mid-section).</summary>
-    private void ProcessSectionPrologue(SectionDeclarationSyntax section, MeasureBuilder builder, int octaveOffset = 0)
+    private async ValueTask ProcessSectionPrologue(SectionDeclarationSyntax section, MeasureBuilder builder, int octaveOffset = 0)
     {
         // Reset the relative frame (and revert the octave mode to the file
         // default) at each section boundary. The default DURATION resets too, so a
@@ -535,7 +535,7 @@ public sealed partial class MeasureCollector
         if (_meta.Clef != _sectionResetClef)
         {
             _meta.Clef = _sectionResetClef;
-            builder.AddItem(new ClefChangeItem(ParseClefType(_sectionResetClef), sectionPos));
+            await AddItemAsync(builder, new ClefChangeItem(ParseClefType(_sectionResetClef), sectionPos));
         }
 
         // A section can state its own time (by-section or a standalone header): apply
@@ -571,7 +571,7 @@ public sealed partial class MeasureCollector
                 builder.MeterInForce = headerTime;
             else
                 // A `time none` header carries no ink and no width — TimeSignatureChangeItem.Blanked.
-                builder.AddItem(new TimeSignatureChangeItem(headerTime, sectionPos)
+                await AddItemAsync(builder, new TimeSignatureChangeItem(headerTime, sectionPos)
                 {
                     Blanked = sectionTime.IsSenzaMisura,
                 });
@@ -628,7 +628,7 @@ public sealed partial class MeasureCollector
         // section. An inline-music section walks its `key` as music, so it is not mapped.
         if (_sectionHeaders.Keys.TryGetValue(section.SectionName, out var sectionKey))
         {
-            ApplyKeySignatureChange(sectionKey, builder);
+            await ApplyKeySignatureChange(sectionKey, builder);
         }
         // ⚠️ THE TONIC COUNTS, NOT ONLY THE SIGNATURE: a section in E minor followed by one at
         // the score's G major is a key change with the same one sharp, and the twin restores
@@ -648,7 +648,7 @@ public sealed partial class MeasureCollector
             // read it in F until session 905 (C showed as V). A custom home key has no tonic.
             if (_sectionResetKeyCustom == null)
                 RecordKeyAtMeasure(builder.CurrentMeasureIndex, _meta.KeyTonicStep, _sectionResetKeySharps);
-            builder.AddItem(new KeySignatureChangeItem(
+            await AddItemAsync(builder, new KeySignatureChangeItem(
                 new KeySignature(_meta.KeySharps, _meta.KeyCustom), previousKey, sectionPos)
             {
                 // The section's clef revert above has already run, so this is the new clef.
@@ -666,8 +666,8 @@ public sealed partial class MeasureCollector
 
     /// <summary>The section's container walk and padding epilogue — the part of
     /// <see cref="ProcessSection"/> after the prologue (see the resume gate there).</summary>
-    private void ProcessSectionBody(SectionDeclarationSyntax section,
-        Action<MusicSiteList> processNodes, MeasureBuilder builder, int startMeasure)
+    private async ValueTask ProcessSectionBody(SectionDeclarationSyntax section,
+        Func<MusicSiteList, ValueTask> processNodes, MeasureBuilder builder, int startMeasure)
     {
         bool matched = false;
         // The score's meter in this section (SectionMeterPlan): armed for the play, so the
@@ -694,7 +694,7 @@ public sealed partial class MeasureCollector
             var partBlock = (PartBlockSyntax)section.GetChild(i)!;
             if (_voiceName == null || partBlock.Name == _voiceName)
             {
-                ProcessMusicContainer(partBlock, processNodes);
+                await ProcessMusicContainer(partBlock, processNodes);
                 matched = true;
 
                 // One part block per voice name; stop looking. (A null voice
@@ -708,7 +708,7 @@ public sealed partial class MeasureCollector
         if (!matched && _voiceName != null
             && _sectionState.GroupedByPartCells.TryGetValue((section.SectionName, _voiceName), out var cell))
         {
-            ProcessMusicContainer(cell, processNodes);
+            await ProcessMusicContainer(cell, processNodes);
             matched = true;
         }
 
@@ -731,7 +731,7 @@ public sealed partial class MeasureCollector
             if (WalkProbe is { IsRecording: false } resumer)
             {
                 var lazySites = RentGatherSites();
-                processNodes(MusicSiteList.Lazy(section, s_inlineSiteRule,
+                await processNodes(MusicSiteList.Lazy(section, s_inlineSiteRule,
                     InlineSectionSites(section), GatherContainerSiteDelegate, resumer, lazySites));
                 GiveGatherSites(lazySites);
             }
@@ -740,7 +740,7 @@ public sealed partial class MeasureCollector
                 var inline = RentGatherSites();
                 foreach (var site in InlineSectionSites(section))
                     GatherContainerSite(site, inline);
-                processNodes(MusicSiteList.Eager(inline, section));
+                await processNodes(MusicSiteList.Eager(inline, section));
                 GiveGatherSites(inline);
             }
         }
@@ -796,8 +796,8 @@ public sealed partial class MeasureCollector
             for (int i = produced; i < canonical; i++)
             {
                 // A padding bar is a bar of the score's meter there (SectionMeterPlan).
-                ApplyPlannedMeter(builder);
-                builder.AddItem(new RestItem(builder.CurrentMeasureLength, 0, section.SourceStart) { IsSpacer = true });
+                await ApplyPlannedMeter(builder);
+                await AddItemAsync(builder, new RestItem(builder.CurrentMeasureLength, 0, section.SourceStart) { IsSpacer = true });
             }
         }
         _meterCursor = null;
@@ -828,7 +828,7 @@ public sealed partial class MeasureCollector
     /// and the per-measure key map, and emit the <see cref="KeySignatureChangeItem"/>.
     /// Shared by a mid-music <c>key</c> and a by-section section's own <c>key</c>.
     /// </summary>
-    private void ApplyKeySignatureChange(KeySignatureSyntax keySig, MeasureBuilder builder)
+    private async ValueTask ApplyKeySignatureChange(KeySignatureSyntax keySig, MeasureBuilder builder)
     {
         var previousKey = new KeySignature(_meta.KeySharps, _meta.KeyCustom);
         var (previousTonicStep, previousTonicAlter, previousTonicValid)
@@ -895,7 +895,7 @@ public sealed partial class MeasureCollector
         }
 
         // The TONIC's token, not the declaration's Position — see KeyDataPos.
-        builder.AddItem(new KeySignatureChangeItem(newKey, previousKey, KeyDataPos(keySig))
+        await AddItemAsync(builder, new KeySignatureChangeItem(newKey, previousKey, KeyDataPos(keySig))
         {
             Clef = ParseClefType(_meta.Clef),
         });
@@ -1550,7 +1550,7 @@ public sealed partial class MeasureCollector
     /// Process the music inside a container node — a <c>part-block</c> (by-section)
     /// or a by-part inner <c>section</c>. Both expose their music as descendants.
     /// </summary>
-    private void ProcessMusicContainer(SyntaxNode container, Action<MusicSiteList> processNodes)
+    private async ValueTask ProcessMusicContainer(SyntaxNode container, Func<MusicSiteList, ValueTask> processNodes)
     {
         // Collect all music sites, expanding variable references. MusicSitesLazy
         // walks the green tree and yields only candidate sites outside processed
@@ -1578,7 +1578,7 @@ public sealed partial class MeasureCollector
         if (WalkProbe is { IsRecording: false } resumer && !IsUnderProcessedContainer(container, includeParallel: true))
         {
             var lazySites = RentGatherSites();
-            processNodes(MusicSiteList.Lazy(container, MusicSiteRule(includeParallel: true),
+            await processNodes(MusicSiteList.Lazy(container, MusicSiteRule(includeParallel: true),
                 MusicSitesLazy(container, includeParallel: true), GatherContainerSiteDelegate, resumer, lazySites));
             GiveGatherSites(lazySites);
             return;
@@ -1587,7 +1587,7 @@ public sealed partial class MeasureCollector
         var musicNodes = RentGatherSites();
         foreach (var site in MusicSitesLazy(container, includeParallel: true))
             GatherContainerSite(site, musicNodes);
-        processNodes(MusicSiteList.Eager(musicNodes, container));
+        await processNodes(MusicSiteList.Eager(musicNodes, container));
         GiveGatherSites(musicNodes);
     }
 

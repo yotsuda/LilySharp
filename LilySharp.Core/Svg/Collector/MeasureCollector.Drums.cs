@@ -438,14 +438,14 @@ public sealed partial class MeasureCollector
     /// does, and every hit's own marks — its automatic "+"/"○", its dynamics and scripts — on
     /// the item it joined.
     /// </summary>
-    private void EmitDrumVoice(List<DrumPiece> pieces, MeasureBuilder builder, bool stemUp)
+    private async ValueTask EmitDrumVoice(List<DrumPiece> pieces, MeasureBuilder builder, bool stemUp)
     {
         for (int i = 0; i < pieces.Count;)
         {
             var run = pieces[i].Run;
             if (run == null)
             {
-                EmitDrumPiece(pieces[i], builder, stemUp, scaled: null);
+                await EmitDrumPiece(pieces[i], builder, stemUp, scaled: null);
                 i++;
                 continue;
             }
@@ -453,10 +453,10 @@ public sealed partial class MeasureCollector
             int first = builder.CurrentItemCount;
             Fraction written = Fraction.Zero;
             for (; i < pieces.Count && pieces[i].Run == run; i++)
-                written += EmitDrumPiece(pieces[i], builder, stemUp, run.Scale);
+                written += await EmitDrumPiece(pieces[i], builder, stemUp, run.Scale);
             _tupletBrackets.Add(new TupletBracketItem(run.Ratio, run.Base, first, builder.CurrentItemCount - 1,
                 measureIndex, run.SourceStart, 0, _cursor.StaffIndex, _cursor.VoiceIndex));
-            builder.AddDuration(written * run.Scale, run.SourceStart + 1);
+            await AddDurationAsync(builder, written * run.Scale, run.SourceStart + 1);
         }
     }
 
@@ -466,7 +466,7 @@ public sealed partial class MeasureCollector
         => WritesParenthesize(h.Node) || (h.Member is { } m && m.Articulations.Any(IsParenthesizeMark));
 
     /// <summary>One piece of a merged voice; returns its written value.</summary>
-    private Fraction EmitDrumPiece(DrumPiece piece, MeasureBuilder builder, bool stemUp, Fraction? scaled)
+    private async ValueTask<Fraction> EmitDrumPiece(DrumPiece piece, MeasureBuilder builder, bool stemUp, Fraction? scaled)
     {
         int measureIndex = builder.CurrentMeasureIndex + _cursor.MetadataMeasureOffset;
         int itemIndex = builder.CurrentItemCount;
@@ -478,7 +478,7 @@ public sealed partial class MeasureCollector
             _pendingGrace = grace;
             _pendingGraceAt = (builder.CurrentMeasureIndex, builder.CurrentItemCount, _meta.Clef);
             bool noSlur = false;
-            (itemIndex, _, _) = OpenSoundingItem(graced.Node, builder, measureIndex, itemIndex, ref noSlur);
+            (itemIndex, _, _) = await OpenSoundingItem(graced.Node, builder, measureIndex, itemIndex, noSlur);
         }
         MusicItem item;
         if (piece.Hits is not { } hits)
@@ -530,7 +530,7 @@ public sealed partial class MeasureCollector
             && TodoKeyOf(todo) != null)
             item = item with { TodoKey = TodoKeyOf(todo), TodoMemo = TodoMemoOf(todo), TodoBelow = TodoBelowOf(todo), TodoSideWritten = TodoSideWrittenOf(todo) };
         if (scaled is { } scale)
-            builder.AddItemWithoutDuration(item switch
+            await AddItemWithoutDurationAsync(builder, item switch
             {
                 NoteItem n => n with { TimeScale = scale },
                 ChordItem c => c with { TimeScale = scale },
@@ -538,7 +538,7 @@ public sealed partial class MeasureCollector
                 _ => item,
             });
         else
-            builder.AddItem(item);
+            await AddItemAsync(builder, item);
 
         if (piece.MarkedRest is { } marked)
         {

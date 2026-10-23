@@ -92,7 +92,7 @@
 |---|---|---|---|
 | ① | 状態フィールド 172 の分類表（V／S／P／W／R／X） | 計器だけ・コード変更 0 | ✅ 第969（§7） |
 | ② | **B＝`StaffTimeline`** を建て、`StaffAccidentals`・`StaffAccidentalColumns`・`NoteCollision` の入力がそれを読む | 出力不変（掃き・snapshot・full） | ✅ 第969（`Svg/Collector/StaffTimeline.cs`＝1 小節の全声部の item を (onset, grace rank, voice) の k-way merge で・`VoiceCollector.CollectMeasure` と `StaffAccidentals.Apply` が読む・掃き 1,015 冊 1,248 枚 差 0・網 `StaffTimelineTests` 5 本・毒 3 本が各 2／6／10 赤） |
-| ③ | voice 0 だけを iterator 化（多声は従来経路のまま） | byte 同一 | |
+| ③ | voice 0 だけを iterator 化（多声は従来経路のまま） | byte 同一 | ✅ 第969（§3.1 の形＝path 上の 27 本＋local function 4 本＋`ProcessMusicContainer`・`OpenSoundingItem` を `async ValueTask` に・funnel 51 か所は `MeasureCollector.Clock.cs` の gated wrapper 3 本へ・`Run` が境界＝`CollectMeasures`／`CollectMeasuresFromNode` の呼び手 4 か所・delegate 2 型を `Func<…, ValueTask>` に。svg 掃き 1,015 冊 1,248 枚 差 0・ly／xml／midi 掃き差 0・割当 plain1k 82.1／15.3 MB・fingbeam1k 363.7→363.6・v2bow1k 125.1／40.3・grace200 45.1＝同一・網 `VoiceWalkCoroutineTests` 2 本＝Reaches ≥ item 数・Suspensions 0・`Run` は未完了を拒む） |
 | ④ | 増分コンパイルの設計（checkpoint＝全 iterator の状態の組） | 設計書 → **ユーザー判断** | |
 | ⑤ | 多声をスケジューラへ・`BuildExtraVoiceTracks` を退役・exporter と `_parallelSpans` の読み手を移す | byte 同一・増分 `== full`・exporter の掃き | |
 
