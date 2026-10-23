@@ -724,10 +724,17 @@ function panelHtml(deps: OmrAiFixDeps, webview: vscode.Webview, run: FixRun): st
             : r.state === 'skipped' ? `<span class="bad">skipped</span>`
             : `<button data-a="accept" data-i="${r.index}" class="${r.state === 'accepted' ? 'on' : ''}" ${can ? '' : 'disabled'}>Accept</button>`
               + `<button data-a="reject" data-i="${r.index}" class="${r.state === 'rejected' ? 'on' : ''}">Reject</button>`;
-        return `<tr class="row ${r.state}" data-i="${r.index}">
-  <td class="who"><div class="label">${esc(labelOf(t))}</div><div class="memo">${esc(t.memos.join('; '))}</div>
-    <div class="memo dim">line ${t.line + 1}${t.confidence === undefined ? '' : ` · reader ${t.confidence.toFixed(2)}`} · ${r.seconds.toFixed(1)} s</div>
-    <button data-a="open" data-i="${r.index}" class="link">Open in editor</button></td>
+        // Two rows a bar: a head across the whole width — the bar, the reader's memo, the line,
+        // the time, the way to the editor — and under it the pictures, the reason and the
+        // buttons. A column for the head was a third of the width and wrapped the memo into a
+        // dozen short lines (owner's report 2026-10-23).
+        return `<tr class="row head ${r.state}" data-i="${r.index}">
+  <td colspan="5" class="who"><span class="label">${esc(labelOf(t))}</span>`
+            + (t.memos.length ? ` <span class="memo">${esc(t.memos.join('; '))}</span>` : '')
+            + ` <span class="memo dim">· line ${t.line + 1}${t.confidence === undefined ? '' : ` · reader ${t.confidence.toFixed(2)}`} · ${r.seconds.toFixed(1)} s</span>`
+            + ` <button data-a="open" data-i="${r.index}" class="link">Open in editor</button></td>
+</tr>
+<tr class="row body ${r.state}" data-i="${r.index}">
   <td class="cell">${scan}</td>
   <td class="cell">${now}<pre class="src">${esc(t.written)}</pre></td>
   <td class="cell">${proposal}${r.proposal?.bar ? `<pre class="src">${esc(r.proposal.bar)}</pre>` : ''}</td>
@@ -764,11 +771,14 @@ td { vertical-align:top; padding:6px 8px; border-bottom:1px solid var(--vscode-p
 tr.accepted { background: color-mix(in srgb, var(--vscode-testing-iconPassed, #3c3) 12%, transparent); }
 tr.rejected { opacity:.55; }
 tr.applied { opacity:.7; }
-.who { width:150px; }
-.label { font-weight:600; }
+/* The head row spans the table; the pictures' row under it closes the bar with the rule. */
+tr.head td { border-bottom:none; padding:10px 8px 2px; }
+tr.body td { padding-top: 2px; }
+.who { white-space:normal; }
+.label { font-weight:600; margin-right:6px; }
 .memo { font-size:12px; opacity:.85; }
 .dim { opacity:.6; }
-.cell { width:24%; }
+.cell { width:26%; }
 .pic { display:block; width:100%; height:120px; background:#fff; border:1px solid var(--vscode-panel-border); }
 .none { height:120px; display:flex; align-items:center; justify-content:center; opacity:.6; border:1px dashed var(--vscode-panel-border); }
 .src { margin:4px 0 0; font-family: var(--vscode-editor-font-family, monospace); font-size:11px; white-space:pre-wrap; opacity:.9; }
@@ -781,7 +791,7 @@ button { padding:4px 10px; font-size:12px; border:1px solid var(--vscode-button-
          background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); }
 button.primary, button.on { background: var(--vscode-button-background); color: var(--vscode-button-foreground); }
 button:disabled { opacity:.4; cursor:default; }
-button.link { background:none; border:none; padding:0; color: var(--vscode-textLink-foreground); font-size:12px; }
+button.link { background:none; border:none; padding:0; margin-left:8px; color: var(--vscode-textLink-foreground); font-size:12px; }
 .footer { display:flex; gap:8px; padding:10px 12px; border-top:1px solid var(--vscode-panel-border); flex-shrink:0; align-items:center; }
 .store { position:absolute; width:0; height:0; overflow:hidden; }
 </style>
@@ -796,7 +806,7 @@ ${before ? `<svg class="store" aria-hidden="true"><symbol id="before" viewBox="$
 </div>
 <div class="main">
 <table>
-<thead><tr><th>Bar</th><th>Scan</th><th>Now</th><th>Proposal</th><th>Why · gates</th><th></th></tr></thead>
+<thead><tr><th>Scan</th><th>Now</th><th>Proposal</th><th>Why · gates</th><th></th></tr></thead>
 <tbody>
 ${rows}
 </tbody>
