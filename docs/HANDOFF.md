@@ -126,6 +126,18 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第968セッション（2026-10-23・YT-DELL2）
+
+新しい会話（ユーザーの入力は `docs/HANDOFF.md` のパスだけ＝便の立ち上げ）。`-Start p968`（開始 HEAD `dd386d237`・未 push 16・第966 を ARCHIVE へ・full 13119 / 0 / 2 / 13121・build 0 エラー・CI は最新 push `2eb9d493a` の CI／Pages とも緑・作業ツリーの M 5 は `samples/*.lys`＝ユーザーの未 commit）。作業場所は Lab `sessions/p968/`（`start.log`・`run1.trx`）。
+- **OMR の REQUESTS #6（`x.omr.json` の todos に新しい `source: "fixed"`・「確認だけ」）＝`won't`（直すものなし）で返した**: Lily# の読み手 2 つ＝LSP `OmrSideFile.cs`（`key`・`confidence`・`candidates[].text/label` だけ）と拡張 `omrScanCore.ts` の `parseSideFile`（`key`・`page`・`box`・`measure`・`part`・`memo`・`confidence`・`inSource`・`parts`・`bars`）は **`source` も `kind` も読まない**＝知らない `source` はそのまま無視される。`inSource: false` なので `.lys` に `@todo` は無く F8 にも出ない・scan view では quiet の箱＝*Marks below* の既定 0.8 で confidence 1 は隠れ、スライダーを 1 にしたときだけ薄く見える（memo はそこで読める）。「元に戻す」のクイックフィックスは `.lys` に錨が無いので作らない＝要るならオーナー判断。`REQUESTS.md` の行を書き換えた（Omr repo・LF のまま＝隣の md も LF）。
+- **デモ動画（§1.0 ⒜ の 16・17）は未撮影のまま**＝`site/videos/` には `SHOTLIST.md` しか無い（1〜15 も 2026-10-12 の起票から未撮影）。実機の VS Code・Copilot のサインイン・音と画面の収録が要る＝Claude のコンソールからは撮れない＝ユーザーの手。
+- コードは触っていない（Core '+' 0・網の増減 0・掃きも毒も無し）。
+
+- `-End p968 -DiffBase dd386d237` ＝full **13119 / 0 / 2 / 13121**（前便末と同じ・`run2.trx`・Lab `sessions/p968/end.log`・門 7 つ全部 OK）→ この docs commit。Core '+' 0／LILYPOND-REF 0／LILYSHARP-OWN 0。未 push 16＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。Omr repo の `REQUESTS.md` の行は未 commit のまま（あちらの作業ツリーに OMR 側の未 commit の削除・変更が多数＝OMR のセッションが拾う）。
+判定（2026-10-23）: 開いた依頼は無い（REQUESTS の open 0・§2 E ⑷〜⑺ 済・grace・`@cross` 済）。§1.0 ⒜ の残りはユーザーの手の物（動画 16・17・実機確認）。次の島は無関係＝(c)・既定は続ける（ユーザーの指示待ち）。
+
+## 以下は第967セッションの経緯
+
 ### 1.1 第967セッション（2026-10-23・YT-DELL2）
 
 第966 と同じ会話の続き（ユーザー「続けて」→ §2 E ⑹ 開いた和音入力の選択肢を出し、**ユーザー決定「a+e」＝(1b) 括弧の中のスペース可（文法の一貫性を確かめた上で）・(2a) 裸の数字＝7th があれば拡張／無ければ add・(3a) 印字は正規形の Ignatzek 名・(4a) Δ△ ø ° + ・(5a) 根音直後の `-` は短 3 度（`C-5` は拒否）・(6a) M7/Ma7/Maj7・mi/Mi/MI・o・0/Ø・no3・(6d) ♭♯＝b#・＋ (a) の③転回④MusicXML degree**）。`-Start p967`（開始 HEAD `713fac270`・未 push 14・第965 を ARCHIVE へ・full 13004 / 0 / 2 / 13006）。作業場所は Lab `sessions/p967/`（毒 `poisons.ps1`・svg 掃き `svg/`・和音本 25 冊の ly/xml/midi 掃き `chordsweep.ps1`・corpus の記号走査 `chordscan/`・base 作り `build-base.ps1`・commit 文 `commit-body.txt`）。
@@ -140,20 +152,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 
 - `-End p967 -DiffBase 713fac270` ＝full **13119 / 0 / 2 / 13121**（前便末 13006 ＋ 115＝`ChordSymbolSpellingTests` の例）（Lab `sessions/p967/end.log`・1 度目は上の 1 赤で `run2.trx`・2 度目 `run3.trx`）→ この docs commit。本体 `b10b7ca1c`。Core '+' 948 行／LILYPOND-REF 1（`ChordVoicing` の process-inversion）／LILYSHARP-OWN 1（`ChordSymbolSpelling`＝綴りを読むこと自体が LP に無い）。未 push 15＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。
 判定（2026-10-23）: §2 E ⑹ は閉じた（§2 E の ⑷〜⑺ が全部済み）。次の島は無関係＝(c)・既定は続ける（ユーザーの指示待ち）。
-
-## 以下は第966セッションの経緯
-
-### 1.1 第966セッション（2026-10-23・YT-DELL2）
-
-第965 と同じ会話の続き（ユーザー「(a)」＝単一譜の `@cross` に警告を出す）。`-Start p966`（開始 HEAD `0de2cc46e`・未 push 12・第964 を ARCHIVE へ・full 12998 / 0 / 2 / 13000）。作業場所は Lab `sessions/p966/`（試し書き `single.lys`／`row.lys`＋絵 `out/row.png`・毒 `poisons.ps1`）。
-- **単一譜の `@cross`＝警告 LYS4031・閉じた `0d71a3f9e`**（ユーザー決定 2026-10-23 (a)）: `Semantics/CrossStaffValidator.cs`（`SemanticValidation` に登録）。`@cross` ごとに `ChordDiagramScores.PartNameOf` でパートを引き、`RenderSpecParser.FindAll` の score のうちそのパートを描くものが全部「記譜の譜 1 本」なら警告＝文面は「`@cross` は grand staff の隣の譜へ移す印・このパートを描く score はどれも譜が 1 本で相手が無い＝音はそのまま。× 符頭なら `@dead` か `@notehead(cross)`・移すなら grandStaff に」。**譜の数は score の項目から数える**（`NotationStaves`＝staff／tab／ossia／condensed／combined 各 1・群は中身・**chords／lyrics の行は 0**＝行は `GetVoiceBindings` では binding だが音の行き先ではない）。相手の譜があれば（grandStaff でも並んだ 2 譜でも＝engraver は次の譜へ移す）報告しない・phrase の中・どの score も描かないパートも判定しない。
-- **裏取り**: ⒜ **ユーザーの本 `corpora/dogfood/blues.lys` は今の文法では既に落ちる**（`chords prog { g:7 … }` の小文字＝error 12 件・`staff lead with chords prog` の `with`＝「Undefined part: 'with'」＝旧綴り）＝× 符頭のつもりの `b4@cross` の警告はその上に出る。本は直さない（ユーザーの本）／⒝ **engraver の譜数は行を数える**（`LayoutEngine` の `score.StaffGroups.Sum(StaffCount)`＝chords 行の下の譜で `@cross` は「staff 1＝行」へ filed されるが、絵は動かない＝Lab `sessions/p966/out/row.png`）＝害なし・validator は行を数えない（上）。
-- **網**: `CrossStaffWarningTests` 6 本（単一譜＝警告 1・文面に `'@dead'`／`'@notehead(cross)'`／パート名／grandStaff・並んだ 2 譜・2 score のうち 1 つが grandStaff＝0／描かれないパートと phrase＝0／譜の下の chords 行＝1）。毒 2 本（登録を外す＝2 赤／行を譜に数える＝1 赤）→ 戻して緑。svg の掃きは無し（validator だけ＝描画に触らない）。棚卸し 2 枚は差分なし。
-- docs: GRAMMAR.md（Effects の行に LYS4031・group の註に「CROSS-STAFF NOTES」の段落＝`@cross` の節は初）・GRAMMAR_FOR_LLM.md・CHANGELOG（本体・VS Code の `## Unreleased`）。
-- 計器の罠: `-Start` が HANDOFF を書き換えた後に Edit すると「modified since read」で弾かれる＝読み直してから書く（第963 と同じ）。1 度目の `-End` は §1 にこの便のブロックが無いまま回って継ぎ目の 3 本が赤＝ブロックを立ててから回し直した。
-
-- `-End p966 -DiffBase 0de2cc46e` ＝full **13004 / 0 / 2 / 13006**（前便末 13000 ＋ 6）（Lab `sessions/p966/end.log`）→ この docs commit。本体 `0d71a3f9e`。Core '+' 139 行／LILYPOND-REF 0／LILYSHARP-OWN 0（validator＝LP の規則ではない）。未 push 13＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。⚠️ 拡張は入れ直していない（Problems で見るには `tools\Deploy-Lsp.ps1` → Reload Window＝ユーザー）。
-判定（2026-10-23）: 残る候補は **§2 E ⑹ 開いた和音入力**（綴りの合意が先＝要ユーザー判断）だけ。grace の束・OMR の open・`@cross` は済み。次の島は無関係＝(c)・既定は続ける（ユーザーの指示待ち）。
 
 ## 2. 開いている作業
 

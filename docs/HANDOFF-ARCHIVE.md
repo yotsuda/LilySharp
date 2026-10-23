@@ -160,6 +160,20 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第966セッションの経緯
+
+### 1.1 第966セッション（2026-10-23・YT-DELL2）
+
+第965 と同じ会話の続き（ユーザー「(a)」＝単一譜の `@cross` に警告を出す）。`-Start p966`（開始 HEAD `0de2cc46e`・未 push 12・第964 を ARCHIVE へ・full 12998 / 0 / 2 / 13000）。作業場所は Lab `sessions/p966/`（試し書き `single.lys`／`row.lys`＋絵 `out/row.png`・毒 `poisons.ps1`）。
+- **単一譜の `@cross`＝警告 LYS4031・閉じた `0d71a3f9e`**（ユーザー決定 2026-10-23 (a)）: `Semantics/CrossStaffValidator.cs`（`SemanticValidation` に登録）。`@cross` ごとに `ChordDiagramScores.PartNameOf` でパートを引き、`RenderSpecParser.FindAll` の score のうちそのパートを描くものが全部「記譜の譜 1 本」なら警告＝文面は「`@cross` は grand staff の隣の譜へ移す印・このパートを描く score はどれも譜が 1 本で相手が無い＝音はそのまま。× 符頭なら `@dead` か `@notehead(cross)`・移すなら grandStaff に」。**譜の数は score の項目から数える**（`NotationStaves`＝staff／tab／ossia／condensed／combined 各 1・群は中身・**chords／lyrics の行は 0**＝行は `GetVoiceBindings` では binding だが音の行き先ではない）。相手の譜があれば（grandStaff でも並んだ 2 譜でも＝engraver は次の譜へ移す）報告しない・phrase の中・どの score も描かないパートも判定しない。
+- **裏取り**: ⒜ **ユーザーの本 `corpora/dogfood/blues.lys` は今の文法では既に落ちる**（`chords prog { g:7 … }` の小文字＝error 12 件・`staff lead with chords prog` の `with`＝「Undefined part: 'with'」＝旧綴り）＝× 符頭のつもりの `b4@cross` の警告はその上に出る。本は直さない（ユーザーの本）／⒝ **engraver の譜数は行を数える**（`LayoutEngine` の `score.StaffGroups.Sum(StaffCount)`＝chords 行の下の譜で `@cross` は「staff 1＝行」へ filed されるが、絵は動かない＝Lab `sessions/p966/out/row.png`）＝害なし・validator は行を数えない（上）。
+- **網**: `CrossStaffWarningTests` 6 本（単一譜＝警告 1・文面に `'@dead'`／`'@notehead(cross)'`／パート名／grandStaff・並んだ 2 譜・2 score のうち 1 つが grandStaff＝0／描かれないパートと phrase＝0／譜の下の chords 行＝1）。毒 2 本（登録を外す＝2 赤／行を譜に数える＝1 赤）→ 戻して緑。svg の掃きは無し（validator だけ＝描画に触らない）。棚卸し 2 枚は差分なし。
+- docs: GRAMMAR.md（Effects の行に LYS4031・group の註に「CROSS-STAFF NOTES」の段落＝`@cross` の節は初）・GRAMMAR_FOR_LLM.md・CHANGELOG（本体・VS Code の `## Unreleased`）。
+- 計器の罠: `-Start` が HANDOFF を書き換えた後に Edit すると「modified since read」で弾かれる＝読み直してから書く（第963 と同じ）。1 度目の `-End` は §1 にこの便のブロックが無いまま回って継ぎ目の 3 本が赤＝ブロックを立ててから回し直した。
+
+- `-End p966 -DiffBase 0de2cc46e` ＝full **13004 / 0 / 2 / 13006**（前便末 13000 ＋ 6）（Lab `sessions/p966/end.log`）→ この docs commit。本体 `0d71a3f9e`。Core '+' 139 行／LILYPOND-REF 0／LILYSHARP-OWN 0（validator＝LP の規則ではない）。未 push 13＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。⚠️ 拡張は入れ直していない（Problems で見るには `tools\Deploy-Lsp.ps1` → Reload Window＝ユーザー）。
+判定（2026-10-23）: 残る候補は **§2 E ⑹ 開いた和音入力**（綴りの合意が先＝要ユーザー判断）だけ。grace の束・OMR の open・`@cross` は済み。次の島は無関係＝(c)・既定は続ける（ユーザーの指示待ち）。
+
 ## 以下は第965セッションの経緯
 
 ### 1.1 第965セッション（2026-10-23・YT-DELL2）
