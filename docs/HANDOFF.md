@@ -133,10 +133,11 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **デモ動画（§1.0 ⒜ の 16・17）は未撮影のまま**＝`site/videos/` には `SHOTLIST.md` しか無い（1〜15 も 2026-10-12 の起票から未撮影）。実機の VS Code・Copilot のサインイン・音と画面の収録が要る＝Claude のコンソールからは撮れない＝ユーザーの手。
 - **ユーザー「続けて」→ §2 を通読して着手候補を探した**: ユーザー判断なしで動けるのは §2 B「梁の向きの完全同数 tiebreak が LP と別物」と §2 G「ペダルの段間隔（LP は実インク 1.961→2.443・Lily# は一律 2.46・台帳点なし）」の 2 つ。**§2 B は実コードでは既に閉じていた**＝`DefaultBeamStemUp` は `68ae7c295`（2026-08-02）で LP の `total/count` に移植済み（`<d' f'>8 <c'' g''>` で MEASURED の註あり）。残っていたのは stale 3 つ＝`BeamMember.StaffPosition`（和音の頭の平均）の remark「唯一の読み手は未測定の tiebreak」・§2 B の項・読み手を失ったその property。**`7b6fcf003` で畳んだ**: property と `GetStaffPosition`／`GetChordStaffPosition`・`StemCandidate.StaffPosition` を削除、コンストラクタの第 5 引数は `headPosition`（範囲が無いときの Min/Max の既定＝テストの手組みの member は無変更）、pass-through 4 軒（`WithMeasureIndexShifted`・`TabStaffGeometry` の張り替え・`ElementCoordinator` の renumber・memo の同値比較）は `HeadPositionMin` に、memo の署名テスト 2 本から欄を落とした。**出力不変（平均は誰も読んでいなかった）**＝掃き無し・Beam 系 282 緑・棚 2 枚は再生成して差分なし。⚠️ 計器の罠: `staffPosition:` の replace_all が `NoteItem` の named arg まで変えた（CS1739 で気づく）＝名前付き引数の一括置換は型を跨ぐ。
 - **§2 A ⒞「次の一手はここ＝`DrawNote`/`DrawChord` も `DotColumn` に訊く」も stale だった**＝両方とも `DotColumn.OffsetX` を読む（`SharedRenderer.Noteheads.cs`・予約は `DotColumn.Reserved`＝2026-09-10 から 1 軒）→ §2 の行を ✅ に。
-- 残る着手候補（ユーザー判断なし）＝**§2 G のペダルの段間隔**（LP の実インク積み・台帳点を起票してから移植）／§2 E の和音行の 1 量 −0.0131（機構未特定・SVG 2 桁の下）。
+- **§2 G のペダルの段間隔も stale だった**＝第206 の 2 日後 `82c72f64a`（2026-08-20）で各語が自分の LineSpanner から下がる形に移植済み・台帳 `mark.pedal.rows.*` 3 点が残差 e-3（文字の輪郭の sliver）。「未移植」と書いた註 3 か所（`pedal-three.ly`・`PedalTests.cs`・`MusicMarkEngraver.cs`）と §2 G の行を直した。
+- **⇒ ユーザー判断なしで動ける §2 の島は尽きた**（残るのは §2 E の和音行の 1 量 −0.0131＝SVG 2 桁の下・機構未特定、のみ）。stale だった「次の一手」が 1 便で 3 つ（§2 A ⒞・§2 B・§2 G）＝**§2 の「未着手」は書いた日のスナップショット、着手前に台帳と git log -S で裏取りする**（RULES §5.0 の族）。
 
-- `-End p968 -DiffBase dd386d237` ＝full **13119 / 0 / 2 / 13121**（前便末と同じ＝網の増減 0・1 度目 `run2.trx`＝docs だけ・2 度目 `run3.trx`＝`7b6fcf003` の後・Lab `sessions/p968/end.log`／`end2.log`・門 7 つ全部 OK）→ この docs commit。本体 `7b6fcf003`。Core '+' 35 行／LILYPOND-REF 0／LILYSHARP-OWN 0（remark の移動だけ＝新しい量なし）。未 push 18＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。Omr repo の `REQUESTS.md` の行は未 commit のまま（あちらの作業ツリーに OMR 側の未 commit の削除・変更が多数＝OMR のセッションが拾う）。
-判定（2026-10-23）: 開いた依頼は無い（REQUESTS の open 0・§2 E ⑷〜⑺ 済・grace・`@cross` 済）。§1.0 ⒜ の残りはユーザーの手の物（動画 16・17・実機確認）。次の島は無関係＝(c)・既定は続ける（ユーザーの指示待ち）。
+- `-End p968 -DiffBase dd386d237` ＝full **13119 / 0 / 2 / 13121**（前便末と同じ＝網の増減 0・3 度回した: `run2.trx`＝docs だけ／`run3.trx`＝`7b6fcf003` の後／`run4.trx`＝`0d986c03a` の後・Lab `sessions/p968/end*.log`・門 7 つ全部 OK）→ この docs commit。本体 `7b6fcf003`（beam）＋`0d986c03a`（pedal の註 3 か所＝APPROXIMATIONS の APPROX 65→64＝stale な宣言が 1 つ消えた）。Core '+' 40 行／LILYPOND-REF 0／LILYSHARP-OWN 0（remark の移動だけ＝新しい量なし）。未 push 20＋1（push はユーザー）。`samples/*.lys` 5 冊はユーザーの未 commit＝触っていない。Omr repo の `REQUESTS.md` の行は未 commit のまま（あちらの作業ツリーに OMR 側の未 commit の削除・変更が多数＝OMR のセッションが拾う）。
+判定（2026-10-23）: 開いた依頼は無い（REQUESTS の open 0）。**ユーザー判断なしで動ける §2 の島は尽きた**（§2 A ⒞・§2 B・§2 G は stale＝閉じていた）。§1.0 ⒜ の残りはユーザーの手の物（動画 16・17・実機確認・拡張の入れ直し）。次はユーザーの決定が要る島（§2 F の行中 octave clef・入れ子 delimiter の綴り・⒴(B) の切り替えの綴り・§2 C ⑴ 多声 walk・S5 など）＝ユーザーの指示待ち。会話はまだ軽い＝(b) で区切る理由なし。
 
 ## 以下は第967セッションの経緯
 
@@ -1692,8 +1693,8 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
 > **第204 がペアだけから測った 2.443** と一致した。
 > ⚠️ **「Ped.」はテキストではなくグリフ**（`lily/sustain-pedal.cc`）なので、
 > **`<tspan>` を数える計器は 2 段を 3 段と報告しかける**——単独ペダル 3 スコアでラベルを同定した。
-> **残っているのは段の*間隔***: **LP は 1.961 → 2.443（各段の実インク）・Lily# は一律 2.46**。
-> **順序だけ移植した。台帳点は無い**（§1 ⑻ ⒝）。
+> ✅ **段の*間隔*も 2 日後に閉じていた（`82c72f64a`・2026-08-20・第968 が裏取り 2026-10-23）**＝台帳 `mark.pedal.rows.{una-corda,sostenuto,sustain}`（`pedal-rows.ly` の 9 桁 dump・残差 −0.00004／+0.0045／+0.0044＝文字の輪郭の sliver）: 各語は自分の LineSpanner で支持＋padding 1.2、同列の語だけ 0.46 で自分のインクで積む＝「一律 2.46」の定数は消えている。`pedal-three.ly`・`PedalTests`・`MusicMarkEngraver` の「未移植」の註も同日に直した。旧文: **残っているのは段の*間隔***: **LP は 1.961 → 2.443（各段の実インク）・Lily# は一律 2.46**。
+> **順序だけ移植した。台帳点は無い**（§1 ⑻ ⒝）＝2026-08-18 時点の記録。
 
 > ## ✅ XML doc の警告（2026-08-11・第135 起票／**2026-08-18・第199 で閉じた**）
 >
