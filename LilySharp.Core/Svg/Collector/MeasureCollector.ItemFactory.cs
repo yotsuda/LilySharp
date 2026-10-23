@@ -36,7 +36,7 @@ public sealed partial class MeasureCollector
         // array come to exist (session 521).
         var pitch = note.PitchReading;
         var rp = CalculateStaffPosition(pitch);
-        _octave.CurrentOctave = rp.RelativeOctave;
+        _v.Octave.CurrentOctave = rp.RelativeOctave;
         int staffPosition = rp.StaffPosition;
 
         // What a following bare duration copies (same contract as
@@ -58,14 +58,14 @@ public sealed partial class MeasureCollector
         }
 
         var duration = note.DurationReading;
-        int noteValue = duration.IsPresent ? duration.Value : (int)_defaultDuration.Denominator;
+        int noteValue = duration.IsPresent ? duration.Value : (int)_v.DefaultDuration.Denominator;
         // An undurated note takes the whole default — dots included (`c8. c` is two
         // dotted eighths). LILYPOND-REF: lily/parser.yy:3505-3514 optional_notemode_duration.
-        int dots = duration.IsPresent ? duration.DotCount : _defaultDots;
+        int dots = duration.IsPresent ? duration.DotCount : _v.DefaultDots;
         if (duration.IsPresent)
         {
-            _defaultDuration = Fraction.FromNoteValue(noteValue);
-            _defaultDots = dots;
+            _v.DefaultDuration = Fraction.FromNoteValue(noteValue);
+            _v.DefaultDots = dots;
         }
 
         // Parse tremolo suffix (:8 = 1 beam, :16 = 2 beams, :32 = 3 beams)
@@ -73,8 +73,8 @@ public sealed partial class MeasureCollector
 
         // Inside `repeat tremolo N { … }`: print ONE note at the combined
         // duration, slashes from the body's subdivision.
-        if (_tremoloRepeatCount > 1
-            && CombineTremoloDuration(_tremoloRepeatCount, noteValue) is { } combined)
+        if (_v.TremoloRepeatCount > 1
+            && CombineTremoloDuration(_v.TremoloRepeatCount, noteValue) is { } combined)
         {
             tremoloBeams = Math.Max(tremoloBeams, (int)Math.Log2(noteValue) - 2);
             noteValue = combined.Value;
@@ -82,7 +82,7 @@ public sealed partial class MeasureCollector
         }
 
         // Two-note tremolo: this note prints at the pair's total duration.
-        if (_tremoloPairShape is { } pairDisp)
+        if (_v.TremoloPairShape is { } pairDisp)
         {
             noteValue = pairDisp.Value;
             dots = pairDisp.Dots;
@@ -247,12 +247,12 @@ public sealed partial class MeasureCollector
     private NoteItem CreateDrumNoteItem(DrumNoteSyntax drum)
     {
         var info = DrumOverrides.Resolve(_drumOverrides, drum.DrumName);
-        int noteValue = drum.Duration?.Value ?? (int)_defaultDuration.Denominator;
-        int dots = drum.Duration?.DotCount ?? _defaultDots;
+        int noteValue = drum.Duration?.Value ?? (int)_v.DefaultDuration.Denominator;
+        int dots = drum.Duration?.DotCount ?? _v.DefaultDots;
         if (drum.Duration != null)
         {
-            _defaultDuration = Fraction.FromNoteValue(noteValue);
-            _defaultDots = dots;
+            _v.DefaultDuration = Fraction.FromNoteValue(noteValue);
+            _v.DefaultDots = dots;
         }
         int tremoloBeams = ParseTremoloBeams(drum.Tremolo);
 
@@ -291,15 +291,15 @@ public sealed partial class MeasureCollector
     private RestItem CreatePitchedRestItem(NoteSyntax note)
     {
         var rp = CalculateStaffPosition(note.PitchReading);
-        _octave.CurrentOctave = rp.RelativeOctave;
+        _v.Octave.CurrentOctave = rp.RelativeOctave;
 
         var duration = note.DurationReading;
-        int noteValue = duration.IsPresent ? duration.Value : (int)_defaultDuration.Denominator;
-        int dots = duration.IsPresent ? duration.DotCount : _defaultDots;
+        int noteValue = duration.IsPresent ? duration.Value : (int)_v.DefaultDuration.Denominator;
+        int dots = duration.IsPresent ? duration.DotCount : _v.DefaultDots;
         if (duration.IsPresent)
         {
-            _defaultDuration = Fraction.FromNoteValue(noteValue);
-            _defaultDots = dots;
+            _v.DefaultDuration = Fraction.FromNoteValue(noteValue);
+            _v.DefaultDots = dots;
         }
 
         return new RestItem(Fraction.FromNoteValue(noteValue), dots, note.SourceStart)
@@ -318,12 +318,12 @@ public sealed partial class MeasureCollector
         // An arpeggio member has no written duration — the group forces the
         // equal-subdivision value/dots on it (and must not disturb the default carry).
         var duration = rest.DurationReading;
-        int noteValue = forcedDuration?.Value ?? (duration.IsPresent ? duration.Value : (int)_defaultDuration.Denominator);
-        int dots = forcedDuration?.Dots ?? (duration.IsPresent ? duration.DotCount : _defaultDots);
+        int noteValue = forcedDuration?.Value ?? (duration.IsPresent ? duration.Value : (int)_v.DefaultDuration.Denominator);
+        int dots = forcedDuration?.Dots ?? (duration.IsPresent ? duration.DotCount : _v.DefaultDots);
         if (forcedDuration == null && duration.IsPresent)
         {
-            _defaultDuration = Fraction.FromNoteValue(noteValue);
-            _defaultDots = dots;
+            _v.DefaultDuration = Fraction.FromNoteValue(noteValue);
+            _v.DefaultDots = dots;
         }
 
         // 's' is a spacer rest: it occupies time/width but is never drawn (unlike 'r').
@@ -436,27 +436,22 @@ public sealed partial class MeasureCollector
     /// written here. Empty when no written shape fits — the walk then makes a spacer.</summary>
     private ImmutableArray<Music.ShapeNote> ShapeNotesOf(ChordSyntax chord)
         // A spread note of a << >> group (ArpeggioSpread) is the item narrowed to that one note.
-        => _spreadNote is { } spread && ReferenceEquals(spread.Item, chord.Green)
+        => _v.SpreadNote is { } spread && ReferenceEquals(spread.Item, chord.Green)
             ? [spread.Note]
             // A capo raises every string by its fret: the shape is pressed above it (2026-09-29).
             // The shift is "sounding = written + shift", so a higher sounding note is a SMALLER shift.
             : Music.ShapeChords.Notes(chord, _partShapeTuning, _partSoundingShift - _chordSpelling.Capo, WrittenKeySharps());
 
-    /// <summary>The <c>chord(…)</c> member of a <c>&lt;&lt; &gt;&gt;</c> group being played one
-    /// note at a time (<see cref="Music.ArpeggioSpread"/>) and the note it plays now; null
-    /// outside that member. Keyed by the item's green node — a red node is re-created per read.</summary>
-    private (Syntax.InternalSyntax.GreenNode Item, Music.ShapeNote Note)? _spreadNote;
-
     /// <summary>A <c>chord(…)</c> item with no usable shape as a SPACER of its written length —
     /// the duration carry as a chord's (LYS1040 says why nothing is drawn).</summary>
     private RestItem CreateShapeSpacerItem(ChordSyntax chord)
     {
-        int noteValue = chord.Duration?.Value ?? (int)_defaultDuration.Denominator;
-        int dots = chord.Duration?.DotCount ?? _defaultDots;
+        int noteValue = chord.Duration?.Value ?? (int)_v.DefaultDuration.Denominator;
+        int dots = chord.Duration?.DotCount ?? _v.DefaultDots;
         if (chord.Duration != null)
         {
-            _defaultDuration = Fraction.FromNoteValue(noteValue);
-            _defaultDots = dots;
+            _v.DefaultDuration = Fraction.FromNoteValue(noteValue);
+            _v.DefaultDots = dots;
         }
         return new RestItem(Fraction.FromNoteValue(noteValue), dots, chord.SourceStart) { IsSpacer = true };
     }
@@ -515,13 +510,13 @@ public sealed partial class MeasureCollector
         // THE INCOMING FRAME, saved for the chords that anchor nothing (`<>`, drums
         // only) and for absolute mode: those hand it back shifted only by the marks
         // after '>' (see the frame update at the end of this method).
-        int frameOctaveIn = _octave.CurrentOctave;
-        char framePitchNameIn = _octave.LastPitchName;
+        int frameOctaveIn = _v.Octave.CurrentOctave;
+        char framePitchNameIn = _v.Octave.LastPitchName;
         bool anchored = false;
 
         // The chord's ANCHOR — where it sits, and what the next chord/note is relative to.
-        int firstOctave = _octave.CurrentOctave;
-        char firstPitchName = _octave.LastPitchName;
+        int firstOctave = _v.Octave.CurrentOctave;
+        char firstPitchName = _v.Octave.LastPitchName;
         int rootStepForStack = 0;
 
         foreach (var pitch in chord.Pitches)
@@ -539,14 +534,14 @@ public sealed partial class MeasureCollector
                 // written.
                 firstPitchName = pitch.PitchName.ToLowerInvariant()[0];
                 rootStepForStack = GetPitchIndex(firstPitchName);
-                if (_octave.OctaveAbsolute)
+                if (_v.Octave.OctaveAbsolute)
                 {
                     rp = CalculateStaffPosition(pitch, chordOctave);
                     firstOctave = rp.RelativeOctave;
                 }
                 else
                 {
-                    int anchor = _octave.Resolve(rootStepForStack, 0, firstPitchName)
+                    int anchor = _v.Octave.Resolve(rootStepForStack, 0, firstPitchName)
                         + pitch.OctaveOffset + chordOctave;
                     rp = ResolveAbsolutePitch(rootStepForStack, pitch.AccidentalOffset,
                         anchor, pitch.SourceStart);
@@ -557,7 +552,7 @@ public sealed partial class MeasureCollector
                     anchored = true;
                 }
             }
-            else if (_octave.OctaveAbsolute)
+            else if (_v.Octave.OctaveAbsolute)
             {
                 // Absolute mode: every member is a fixed pitch (offset from the C
                 // anchor), already order-independent; no stacking.
@@ -744,11 +739,11 @@ public sealed partial class MeasureCollector
         // atonal key has no tonic, so fall back to C.
         if (chord.Root is null && chord.Degrees.Any())
         {
-            int tonicStep = _ambientTonicValid ? _ambientTonicStep : 0;
+            int tonicStep = _v.AmbientTonicValid ? _v.AmbientTonicStep : 0;
             char tonicName = "cdefgab"[tonicStep];
-            firstOctave = _octave.Resolve(tonicStep, 0, tonicName) + chordOctave;
+            firstOctave = _v.Octave.Resolve(tonicStep, 0, tonicName) + chordOctave;
             firstPitchName = tonicName;
-            anchored = !_octave.OctaveAbsolute;
+            anchored = !_v.Octave.OctaveAbsolute;
         }
 
         // Scale-degree members (<d 3 5 7,>): each stacks on the root by diatonic
@@ -758,7 +753,7 @@ public sealed partial class MeasureCollector
         // Degrees stack in the WRITTEN key; the part transpose is then applied
         // once by ResolveAbsolutePitch (TransposePitch). Using the displayed
         // (already-transposed) key here would transpose a degree chord twice.
-        int writtenKeySharps = _meta.KeySharps - _octave.TransposeKeySharps(0);
+        int writtenKeySharps = _v.Meta.KeySharps - _v.Octave.TransposeKeySharps(0);
         foreach (var degree in chord.Degrees)
         {
             var (step, alteration, octave) = ChordDegrees.Resolve(
@@ -820,31 +815,31 @@ public sealed partial class MeasureCollector
         // exactly as `c, c,` does — the chord is its first note. A chord that anchors
         // nothing (`<>`, drums only) and absolute mode hand the incoming frame on,
         // shifted by the marks.
-        _octave.CurrentOctave = anchored ? firstOctave : frameOctaveIn + chordOctave;
-        _octave.LastPitchName = anchored ? firstPitchName : framePitchNameIn;
+        _v.Octave.CurrentOctave = anchored ? firstOctave : frameOctaveIn + chordOctave;
+        _v.Octave.LastPitchName = anchored ? firstPitchName : framePitchNameIn;
         // A chord from a shape hands on its LOWEST sounding note, as written — as a chord
         // hands on its anchor (owner's decision 2026-09-28); absolute mode keeps the frame.
-        if (shapeLowest is { } low && !_octave.OctaveAbsolute)
+        if (shapeLowest is { } low && !_v.Octave.OctaveAbsolute)
         {
-            _octave.CurrentOctave = low.Octave;
-            _octave.LastPitchName = "cdefgab"[low.Step];
+            _v.Octave.CurrentOctave = low.Octave;
+            _v.Octave.LastPitchName = "cdefgab"[low.Step];
         }
 
         // An arpeggio member has no written duration — the group forces the
         // equal-subdivision value/dots on it (and must not disturb the default carry).
-        int noteValue = forcedDuration?.Value ?? chord.Duration?.Value ?? (int)_defaultDuration.Denominator;
-        int dots = forcedDuration?.Dots ?? chord.Duration?.DotCount ?? _defaultDots;
+        int noteValue = forcedDuration?.Value ?? chord.Duration?.Value ?? (int)_v.DefaultDuration.Denominator;
+        int dots = forcedDuration?.Dots ?? chord.Duration?.DotCount ?? _v.DefaultDots;
         if (forcedDuration == null && chord.Duration != null)
         {
-            _defaultDuration = Fraction.FromNoteValue(noteValue);
-            _defaultDots = dots;
+            _v.DefaultDuration = Fraction.FromNoteValue(noteValue);
+            _v.DefaultDots = dots;
         }
 
         int tremoloBeams = ParseTremoloBeams(chord.Tremolo);
 
         // Inside `repeat tremolo N { … }` (see CreateNoteItem).
-        if (_tremoloRepeatCount > 1
-            && CombineTremoloDuration(_tremoloRepeatCount, noteValue) is { } combined)
+        if (_v.TremoloRepeatCount > 1
+            && CombineTremoloDuration(_v.TremoloRepeatCount, noteValue) is { } combined)
         {
             tremoloBeams = Math.Max(tremoloBeams, (int)Math.Log2(noteValue) - 2);
             noteValue = combined.Value;
@@ -853,7 +848,7 @@ public sealed partial class MeasureCollector
 
         // Two-note tremolo: this chord prints at the pair's total duration
         // (same override as CreateNoteItem).
-        if (_tremoloPairShape is { } pairDisp)
+        if (_v.TremoloPairShape is { } pairDisp)
         {
             noteValue = pairDisp.Value;
             dots = pairDisp.Dots;
@@ -931,18 +926,18 @@ public sealed partial class MeasureCollector
 
         // The duration carry applies whether or not the q resolves — a bad
         // repetition still occupies its written time (LP keeps the empty chord).
-        int noteValue = forcedDuration?.Value ?? rep.Duration?.Value ?? (int)_defaultDuration.Denominator;
-        int dots = forcedDuration?.Dots ?? rep.Duration?.DotCount ?? _defaultDots;
+        int noteValue = forcedDuration?.Value ?? rep.Duration?.Value ?? (int)_v.DefaultDuration.Denominator;
+        int dots = forcedDuration?.Dots ?? rep.Duration?.DotCount ?? _v.DefaultDots;
         if (forcedDuration == null && rep.Duration != null)
         {
-            _defaultDuration = Fraction.FromNoteValue(noteValue);
-            _defaultDots = dots;
+            _v.DefaultDuration = Fraction.FromNoteValue(noteValue);
+            _v.DefaultDots = dots;
         }
         int tremoloBeams = ParseTremoloBeams(rep.Tremolo);
 
         // Inside `repeat tremolo N { … }` (see CreateNoteItem).
-        if (_tremoloRepeatCount > 1
-            && CombineTremoloDuration(_tremoloRepeatCount, noteValue) is { } combined)
+        if (_v.TremoloRepeatCount > 1
+            && CombineTremoloDuration(_v.TremoloRepeatCount, noteValue) is { } combined)
         {
             tremoloBeams = Math.Max(tremoloBeams, (int)Math.Log2(noteValue) - 2);
             noteValue = combined.Value;
@@ -953,7 +948,7 @@ public sealed partial class MeasureCollector
         // (same override as CreateNoteItem/CreateChordItem — the q arm used to
         // skip it, so `repeat tremolo 4 { c16 q16 }` printed the q at its
         // written 16th; regression repeat-tremolo-chord-rep.ly).
-        if (_tremoloPairShape is { } pairDisp)
+        if (_v.TremoloPairShape is { } pairDisp)
         {
             noteValue = pairDisp.Value;
             dots = pairDisp.Dots;
@@ -1013,22 +1008,22 @@ public sealed partial class MeasureCollector
     /// </summary>
     private NoteItem CreateSlashNoteItem(SlashNoteSyntax slash, bool hasTieAfter = false, bool hasSlurStartAfter = false, bool hasSlurEndAfter = false, bool hasBeamStartAfter = false, bool hasBeamEndAfter = false, bool isCue = false, (int Value, int Dots)? forcedDuration = null)
     {
-        int noteValue = forcedDuration?.Value ?? slash.Duration?.Value ?? (int)_defaultDuration.Denominator;
-        int dots = forcedDuration?.Dots ?? slash.Duration?.DotCount ?? _defaultDots;
+        int noteValue = forcedDuration?.Value ?? slash.Duration?.Value ?? (int)_v.DefaultDuration.Denominator;
+        int dots = forcedDuration?.Dots ?? slash.Duration?.DotCount ?? _v.DefaultDots;
         if (forcedDuration == null && slash.Duration != null)
         {
-            _defaultDuration = Fraction.FromNoteValue(noteValue);
-            _defaultDots = dots;
+            _v.DefaultDuration = Fraction.FromNoteValue(noteValue);
+            _v.DefaultDots = dots;
         }
         int tremoloBeams = ParseTremoloBeams(slash.Tremolo);
-        if (_tremoloRepeatCount > 1
-            && CombineTremoloDuration(_tremoloRepeatCount, noteValue) is { } combined)
+        if (_v.TremoloRepeatCount > 1
+            && CombineTremoloDuration(_v.TremoloRepeatCount, noteValue) is { } combined)
         {
             tremoloBeams = Math.Max(tremoloBeams, (int)Math.Log2(noteValue) - 2);
             noteValue = combined.Value;
             dots = combined.Dots;
         }
-        if (_tremoloPairShape is { } pairDisp)
+        if (_v.TremoloPairShape is { } pairDisp)
         {
             noteValue = pairDisp.Value;
             dots = pairDisp.Dots;
@@ -1089,18 +1084,18 @@ public sealed partial class MeasureCollector
         {
             // A bare duration ALWAYS sets the running default — it IS a written
             // duration (LP: music_embedded assigns parser->default_duration_).
-            _defaultDuration = Fraction.FromNoteValue(noteValue);
-            _defaultDots = dots;
+            _v.DefaultDuration = Fraction.FromNoteValue(noteValue);
+            _v.DefaultDots = dots;
         }
         int tremoloBeams = ParseTremoloBeams(bare.Tremolo);
-        if (_tremoloRepeatCount > 1
-            && CombineTremoloDuration(_tremoloRepeatCount, noteValue) is { } combined)
+        if (_v.TremoloRepeatCount > 1
+            && CombineTremoloDuration(_v.TremoloRepeatCount, noteValue) is { } combined)
         {
             tremoloBeams = Math.Max(tremoloBeams, (int)Math.Log2(noteValue) - 2);
             noteValue = combined.Value;
             dots = combined.Dots;
         }
-        if (_tremoloPairShape is { } pairDisp)
+        if (_v.TremoloPairShape is { } pairDisp)
         {
             noteValue = pairDisp.Value;
             dots = pairDisp.Dots;
@@ -1289,7 +1284,7 @@ public sealed partial class MeasureCollector
         // The relative chain runs on the ORIGINAL pitches; transpose is applied
         // afterwards, so a transposed part still resolves octaves from what the
         // user wrote.
-        int actualOctave = _octave.Resolve(step, pitch.OctaveOffset, pitchName) + groupOctaves;
+        int actualOctave = _v.Octave.Resolve(step, pitch.OctaveOffset, pitchName) + groupOctaves;
         return ResolveAbsolutePitch(step, pitch.AccidentalOffset, actualOctave, pitch.SourceStart);
     }
 
@@ -1317,11 +1312,11 @@ public sealed partial class MeasureCollector
         // armed the shift, so the written pitch reaches the transpose untouched.)
 
         // Display pitch = written pitch, transposed if the part has transpose:.
-        var (dStep, dAlt, dOctave) = _octave.TransposePitch(step, accidentalOffset, actualOctave);
+        var (dStep, dAlt, dOctave) = _v.Octave.TransposePitch(step, accidentalOffset, actualOctave);
 
         // Staff position 0 = middle line of the staff, and the pitch that sits there is the
         // clef's — MiddleLinePitch, the one table (the twin's slash pitch reads the same one).
-        var (middleStep, middleOctave) = MiddleLinePitch(ParseClefType(_meta.Clef));
+        var (middleStep, middleOctave) = MiddleLinePitch(ParseClefType(_v.Meta.Clef));
         int basePosition = dStep - middleStep + (dOctave - middleOctave) * 7;
 
         // RelativeOctave keeps the ORIGINAL octave for the next note's chain.

@@ -439,13 +439,13 @@ public sealed partial class MeasureCollector
                 i++;
                 continue;
             }
-            int measureIndex = builder.CurrentMeasureIndex + _cursor.MetadataMeasureOffset;
+            int measureIndex = builder.CurrentMeasureIndex + _v.Cursor.MetadataMeasureOffset;
             int first = builder.CurrentItemCount;
             Fraction written = Fraction.Zero;
             for (; i < pieces.Count && pieces[i].Run == run; i++)
                 written += await EmitDrumPiece(pieces[i], builder, stemUp, run.Scale);
             _tupletBrackets.Add(new TupletBracketItem(run.Ratio, run.Base, first, builder.CurrentItemCount - 1,
-                measureIndex, run.SourceStart, 0, _cursor.StaffIndex, _cursor.VoiceIndex));
+                measureIndex, run.SourceStart, 0, _v.Cursor.StaffIndex, _v.Cursor.VoiceIndex));
             await AddDurationAsync(builder, written * run.Scale, run.SourceStart + 1);
         }
     }
@@ -458,15 +458,15 @@ public sealed partial class MeasureCollector
     /// <summary>One piece of a merged voice; returns its written value.</summary>
     private async ValueTask<Fraction> EmitDrumPiece(DrumPiece piece, MeasureBuilder builder, bool stemUp, Fraction? scaled)
     {
-        int measureIndex = builder.CurrentMeasureIndex + _cursor.MetadataMeasureOffset;
+        int measureIndex = builder.CurrentMeasureIndex + _v.Cursor.MetadataMeasureOffset;
         int itemIndex = builder.CurrentItemCount;
         Fraction anchor = builder.CurrentDuration;
         var value = Fraction.FromNoteValue(piece.Value);
         // A flam: its grace is walked now, in front of the item its hit joined.
         if (piece.Hits?.FirstOrDefault(h => h.Grace != null) is { Grace: { } grace } graced)
         {
-            _pendingGrace = grace;
-            _pendingGraceAt = (builder.CurrentMeasureIndex, builder.CurrentItemCount, _meta.Clef);
+            _v.PendingGrace = grace;
+            _v.PendingGraceAt = (builder.CurrentMeasureIndex, builder.CurrentItemCount, _v.Meta.Clef);
             bool noSlur = false;
             (itemIndex, _, _) = await OpenSoundingItem(graced.Node, builder, measureIndex, itemIndex, noSlur);
         }

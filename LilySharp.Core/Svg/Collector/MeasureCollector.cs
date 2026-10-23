@@ -103,13 +103,12 @@ public sealed partial class MeasureCollector
     /// <c>MetadataState.LayoutPlan</c> (Semantics.LayoutPlanReader).</summary>
     public LayoutDeclarationSyntax? LayoutOverride { get; set; }
 
-    // The relative-octave chain plus the part transpose that composes on top of
-    // it, bundled into one named collaborator (see OctaveContext). The main walk
-    // drives this in place on every note / chord / grace / tuplet.
-    // Not readonly since session 970: inside a span the field points at the running branch's
-    // own frame (BranchState, MeasureCollector.Clock.cs); outside, always at this one.
-    private OctaveContext _octave = new();
-
+    /// <summary>
+    /// The voice state (docs/moment-walk-design.md §7, V): everything the walk owns per voice,
+    /// in ONE object — the primary's for the whole collect, and inside a span the running
+    /// branch's, which the span's driver points this at (stage ⑤b; <see cref="BranchState"/>).
+    /// </summary>
+    private BranchState _v = new();
     // Dynamic markings
     private readonly List<DynamicItem> _dynamics = new();
 
@@ -152,8 +151,6 @@ public sealed partial class MeasureCollector
         // its OWN frame and shift the staff-keyed tables back.
         public int MetadataMeasureOffset;
     }
-
-    private CollectionCursor _cursor;
 
     // (A CursorScope used to save and restore the cursor around each sequential sub-walk of a
     // span's extra voice; since session 970 the cursor is one field of the voice state the
@@ -216,9 +213,6 @@ public sealed partial class MeasureCollector
     private readonly Dictionary<int, BreakKind> _rowsOnlyFormBreaks = new();
     // Bars in that grid — the synthetic voice's length, so it never claims bars the rows lack.
     private int _rowsOnlyFormGridBars;
-    // Inline volta endings collected during the current voice walk; finalized
-    // (and marked closed/open) once the whole voice has been processed.
-    private List<(int startMeasure, int endMeasure, string voltaText, bool isClosed, int sourcePosition)> _pendingInlineVoltas = new();
     // Parallel-voice spans (<< \\ >>) recorded during the primary (voice-0)
     // walk: the parallel node, the measure index where its content begins, and
     // the elapsed duration WITHIN that measure at the span's opening.
@@ -255,7 +249,6 @@ public sealed partial class MeasureCollector
     // Whether the stream the last builder collected stops off the bar (MeasureBuilder.EndsOffTheBar),
     // read right after a PRIMARY stream's collect; and, on the multi-staff road, the staves whose
     // primary stream does. See DropFinalBarWhereTheMusicStopsOffTheBar.
-    private bool _lastEndsOffTheBar;
     private readonly HashSet<string> _offBarVoices = new();
     // Next beam identity handed out by ResolveBeamStemDirections. Runs across every call on
     // this collector so two voices of the same staff cannot be handed the same number.
@@ -560,34 +553,9 @@ public sealed partial class MeasureCollector
     private readonly List<GrobRevert> _grobReverts = new();
     // Trill spanner start/stop events (paired into TrillSpannerItems after collection)
     private readonly List<(bool isStart, int measureIndex, int itemIndex, int sourcePosition, int staffIndex, int voiceIndex, int forcedDir)> _trillSpannerEvents = new();
-    // The accidental memory — LilyPond's `localAlterations`: (diatonic step, octave) →
-    // the alteration last engraved for that pitch, the BAR it was engraved in, and the
-    // ORDER it was written in. A note prints an accidental when its alteration differs
-    // from what the score's style remembers (GetDisplayAccidental).
-    // LILYPOND-REF: lily/accidental-engraver.cc:396-420 stop_translation_timestep —
-    //   localAlterations entries are ((octave . notename) alter barnum . end-mom), and a
-    //   new one is PREPENDED (ly_assoc_prepend_x), which is what Order reproduces: the
-    //   any-octave rule reads the FIRST entry with a matching note name, i.e. the most
-    //   recently engraved octave (scm/music-functions.scm:1713-1720).
-    // At the bar line the map keeps only what a rule can still read: under a style that
-    // forgets there (AccidentalStyleSpec.ForgetsAtBar — the default's, and every style
-    // whose laziness is 0) it is CLEARED, under a lazier one the entries stamped further
-    // back than the laziest rule's reach are dropped (AdvanceAccidentalBar, the style's
-    // MemoryHorizon). Observationally the same as carrying every stamp — and what remains
-    // is what a checkpoint carries (WalkCheckpoint.Accidentals). ⚠️ The resume gate used
-    // to demand the map EMPTY at every boundary instead, which no book under `modern` /
-    // `noReset` satisfied after its first note: those books never resumed (session 396).
-    private Dictionary<(int step, int octave), (int Alter, int Bar, int Order)>
-        _measureAccidentals = new();
     // AdvanceAccidentalBar as the builder's MeasureCompleted delegate, made once per
     // collector (the method group was a fresh delegate per collect — session 535).
     private Action? _advanceAccidentalBar;
-
-    // The bar the walk is in, counted from its start, and the order counter above. Only
-    // DIFFERENCES of the bar number are read (AccidentalRule.RecentEnough), so counting
-    // from 0 per walk answers exactly what LilyPond's absolute measure number answers.
-    private int _accidentalBar;
-    private int _accidentalOrder;
 
     /// <summary>
     /// The measures that open a line of the laid-out score, from a first layout of the same
@@ -605,7 +573,6 @@ public sealed partial class MeasureCollector
     // KeyCourtesyDue's walk state: the primary walk's builder (null in a span's later
     // voice), the staff and measure the last pitched note stood in, the clef the line's key
     // signature was drawn in, and the note names already met in the bar.
-    private MeasureBuilder? _keyCourtesyBuilder;
     private int _keyCourtesyStaff = -1;
     private int _keyCourtesyMeasure = -1;
     private ClefType _keyCourtesyLineClef;
@@ -641,115 +608,20 @@ public sealed partial class MeasureCollector
     /// "where is the builder now", not "where was the mark written" — and a note that
     /// fills its bar has already carried the builder across the barline. This records the
     /// answer to the second question while the host note is still in hand.
-    /// It also carries <c>_cursor.MetadataMeasureOffset</c>, which the statement node does not
+    /// It also carries <c>_v.Cursor.MetadataMeasureOffset</c>, which the statement node does not
     /// apply — inside a <c>voice { … }</c> span the mark was shifted by that too.
     /// </remarks>
     private readonly Dictionary<int, int> _markHostMeasure = new();
-    // Pending grace notes to attach to the next main note
-    private GraceExpressionSyntax? _pendingGrace = null;
-    // Where the measure stood when the grace was written: a change added after this point and
-    // before the grace's body is walked was WRITTEN AFTER the grace (MusicItem.WrittenAfterGrace).
-    // The clef too: the grace is engraved in the clef in force where it was WRITTEN, not in a clef
-    // written between it and its main note (OpenSoundingItem).
-    private (int Measure, int ItemCount, string? Clef) _pendingGraceAt;
 
-    /// <summary>
-    /// How many <c>cue { … }</c> regions enclose the item being collected. A cue is a
-    /// REGION in LilyPond — the size comes from the CueVoice context's <c>fontSize = #-4</c>
-    /// and nothing is attached to a note — so this depth, not an annotation, is what makes
-    /// an item a cue. Nesting is rejected (Diagnostic LYS4013), so in practice it is 0 or 1;
-    /// it is a depth rather than a flag so an unbalanced walk cannot leave it stuck on.
-    /// See docs/cue-context-design.md.
-    /// </summary>
-    private int _cueDepth = 0;
-    // The phrases the walk is inside, pushed and popped by the named reset/end markers
-    // (ProcessMusicNodeSequence). A cue region gathers its body when it is walked, after the
-    // enclosing expansion's cycle guard is gone, so it seeds its own guard from this list.
-    private List<string> _openPhrases = new();
-    // …and where each of them is referenced (the reset marker's call site), outermost first:
-    // the address WrittenBarAt finds the written bar of music inlined from a phrase body by
-    // (MeasureModel.Split's index). Never open at a checkpoint (WalkCarriesNothing asks that
-    // no phrase is open), so no checkpoint carries it.
-    private List<int> _phraseCallSites = new();
-
-    /// <summary>
-    /// How deep into <c>grace { }</c> bodies this walk currently is. Non-zero means the items
-    /// being produced belong to GRACE TIME: they take no measure duration, they carry
-    /// <see cref="MusicItem.GraceTime"/>, and the annotation collectors stand down because the
-    /// grace group is still drawn from its derived <see cref="GraceNoteItem"/> and nothing
-    /// would place them (HANDOFF §2 U8 ⒝1).
-    /// </summary>
-    /// <remarks>
-    /// ⚠️ THE COLLECTOR'S COPY OF <c>MeasureBuilder.InGraceTime</c>, and the two are not
-    /// redundant: the builder's decides the CLOCK, at the one place that owns it; this one
-    /// gates walk-side work the builder never sees. They are entered and left together in
-    /// <c>ProcessGraceRegion</c>, and <see cref="WalkCarriesNothing"/> refuses a checkpoint
-    /// while either is open, exactly as it does for <see cref="_cueDepth"/>.
-    /// </remarks>
-    private int _graceDepth = 0;
-
-    /// <summary>
-    /// Non-zero while the walk is re-playing a <c>repeat percent</c> body for an iteration
-    /// that a % sign (or a double sign) stands for. LilyPond never plays those iterations:
-    /// its iterator hands the context ONE percent event in place of the music, so nothing
-    /// the body writes — no slur, no tie, no script, no dynamic — exists there at all.
-    /// LILYPOND-REF: lily/percent-repeat-iterator.cc:75-111 Percent_repeat_iterator::next_element —
-    ///   for every repetition after the first, <c>make_music_by_name (event_type_)</c> is
-    ///   reported and the body's music is not.
-    /// </summary>
-    /// <remarks>
-    /// ⚠️⚠️ NOTHING RAISES THIS DEPTH ANY MORE, and the reason is that the halfway house it
-    /// named is gone. Lily# used to re-walk the body for every repetition and hide the notes
-    /// by measure, keeping this depth to drop what RIDES those notes — a slur, a tie, a
-    /// script, a dynamic — because the engravers that draw those never ask which measures are
-    /// covered (measured 2026-09-02: scratch/ベースタブLy/tab-percent.lys drew the slur a
-    /// second time over the % sign, scratch/p320/percent-dyn.lys drew the <c>p</c>, the accent
-    /// and the <c>f</c> under it). Session 332 measured what the kept notes cost in SPACING —
-    /// a repeated bar came out as wide as the music underneath it, 13.11 ss against
-    /// LilyPond's 5.51 (scratch/p332/t7) — and replaced the re-walk with the spacers the beat
-    /// slash already used, so now no repetition writes a note and there is nothing left to
-    /// drop. The gate is honoured by absence rather than by a flag.
-    /// <para>
-    /// ⚠️ KEPT, NOT DELETED, because deletion is the user's call and because the readers below
-    /// state the rule they enforce: <see cref="WithoutBowsUnderPercent"/>, the annotation gates
-    /// in <c>MeasureCollector.Annotations</c>, and the resume gate. A shape that has to re-walk
-    /// a body some day re-arms them by raising this depth again. Until then they are correct
-    /// and unreachable, which is why no test can pin them.
-    /// </para>
-    /// </remarks>
-    private int _percentCoveredDepth = 0;
-
-    /// <summary>
-    /// True between entering a <c>cue { … }</c> region and the first note or chord it emits —
-    /// the one item that gets <see cref="MusicItem.BeginsCueRegion"/>. Set on entry and cleared
-    /// BOTH by that item and on the way out, so outside a region it is always false and a
-    /// checkpoint never carries it (<see cref="WalkCarriesNothing"/> already refuses to stand
-    /// inside a region at all).
-    /// </summary>
-    private bool _cueRegionPending = false;
-
-    /// <summary>Reads and clears <see cref="_cueRegionPending"/>: true for the first note or
+    /// <summary>Reads and clears <see cref="BranchState.CueRegionPending"/>: true for the first note or
     /// chord of a cue region, false for every later one.</summary>
     private bool TakeCueRegionStart()
     {
-        if (!_cueRegionPending)
+        if (!_v.CueRegionPending)
             return false;
-        _cueRegionPending = false;
+        _v.CueRegionPending = false;
         return true;
     }
-    // Grace-note infos of the just-collected leading grace group, stamped onto the
-    // main note/chord so the spacing can reserve space in front of its column.
-    private ImmutableArray<GraceColumnInfo> _pendingLeadingGrace = ImmutableArray<GraceColumnInfo>.Empty;
-    // Default (sticky) duration: an undurated note/rest/chord takes the WHOLE
-    // previous duration — dots included — so the pair travels together.
-    // LILYPOND-REF: lily/parser.yy:3505-3514 optional_notemode_duration —
-    //   default_duration_ is a full Duration (log AND dots). Until 2026-08-07 only
-    //   the value stuck and the dots silently reset to 0 (`r8. r` lost its dot,
-    //   dot-rest-beam-trigger.ly), while the SEMANTIC walk (MeasureDurations) and
-    //   the MIDI/MusicXML exporters carried ToFraction() with dots — the drawing
-    //   walk was the one liar.
-    private Fraction _defaultDuration = Fraction.Quarter;
-    private int _defaultDots;
 
     // This voice's score-level key, captured at collection start. A section
     // boundary reverts the running key to it (like octave/duration) so a section
@@ -767,9 +639,9 @@ public sealed partial class MeasureCollector
     // The score-level meter as the file-level walk left it (CollectDefinitions) — the HOME
     // every voice's builder is armed with (MeasureBuilder.SetHomeMeter, BarContext.HomeMeter),
     // which a section boundary with no section meter reverts to, like key/clef, so a
-    // mid-section `time` cannot leak into the next section. ⚠️ Not _meta at the voice's start:
-    // mid-music time changes MUTATE _meta.TimeBeats, and a `time` at the piece's opening (in
-    // the music, or in the opening section's header) rewrites _meta.Time* so the opening
+    // mid-section `time` cannot leak into the next section. ⚠️ Not _v.Meta at the voice's start:
+    // mid-music time changes MUTATE _v.Meta.TimeBeats, and a `time` at the piece's opening (in
+    // the music, or in the opening section's header) rewrites _v.Meta.Time* so the opening
     // signature reads it — the NEXT voice then took that as its score meter, its later
     // sections never reverted, and a grand staff's second staff lost the revert the first
     // staff drew (2026-09-26). (Until stage C6 each voice copied this into four
@@ -788,43 +660,6 @@ public sealed partial class MeasureCollector
     // reset (to the part default, or reverted) at the next section boundary.
     private readonly HashSet<(string Grob, string Prop)> _sectionActiveGrobProps = new();
 
-    // Running ambient key tonic (as WRITTEN, before any part transpose) tracked
-    // across the voice walk for phrase auto-transpose: a phrase written in the
-    // score's home key is shifted to whatever key is in effect where it is
-    // referenced. Reset to the home key per voice and at each section boundary,
-    // advanced by each mid-stream key change. Invalid = a custom/atonal ambient
-    // key (no tonic) → the phrase is placed unshifted.
-    private int _ambientTonicStep;
-    private int _ambientTonicAlter;
-    private bool _ambientTonicValid;
-
-    // Saved transpose targets around phrase-reference expansions (a stack so a
-    // phrase referenced inside another restores cleanly). Pushed at the reset
-    // marker, popped at the paired phrase-end marker.
-    private Stack<(int step, int alt, int oct)?> _phraseTransposeSaves = new();
-    // Each open reference's outgoing anchor (bare letter + octave, resolved in
-    // the phrase's own frame at entry), handed to the relative chain at exit —
-    // the chord rule; null = pitchless body. Pushed/popped alongside the above.
-    private Stack<(char Name, int Octave)?> _phraseAnchorSaves = new();
-    // Saved absolute-mode anchors (OctaveBase). A reference's trailing marks move
-    // the frame the body resolves in; in ABSOLUTE mode the frame IS OctaveBase, so
-    // that is what moves. Pushed/popped alongside the above.
-    private Stack<int> _phraseAbsoluteBaseSaves = new();
-
-    // Piece-level metadata (title/composer/tempo/time/key/clef + header source
-    // positions) grouped into one owner. See MetadataState.
-    // Not readonly since session 970: inside a span the field points at the running branch's
-    // own metadata (BranchState, MeasureCollector.Clock.cs); outside, always at this one.
-    private MetadataState _meta = new();
-    // Active `repeat tremolo N { … }` transform: the body note prints ONCE at
-    // the combined duration with the subdivision's stem slashes.
-    private int _tremoloRepeatCount = 1;
-    // Active two-note tremolo: (display value, display dots, between-beams,
-    // gapped-beam count); both notes print at the pair's TOTAL duration and
-    // sound half (TimeScale ½). GapCount = how many beams stop short of the
-    // stems (0 for a half-note pair — LP's duration_log == 1 exemption).
-    private (int Value, int Dots, int Beams, int GapCount)? _tremoloPairShape;
-    private bool _tremoloPairFirst;
     private Dictionary<string, DrumInfo>? _drumOverrides; // drummap { } per-score
     // measure -> (tonic step, sharps) at each key change, so a chord's Roman degree
     // follows the key in force at its bar (a mid-piece modulation re-bases the degrees).
@@ -980,7 +815,7 @@ public sealed partial class MeasureCollector
     /// declared, so the fold is the whole document there.</remarks>
     private (Fraction Length, int Start)? WrittenBarAt(int position)
     {
-        if (_root?.FindNode(_phraseCallSites.Count > 0 ? _phraseCallSites[0] : position) is not { } node)
+        if (_root?.FindNode(_v.PhraseCallSites.Count > 0 ? _v.PhraseCallSites[0] : position) is not { } node)
             return null;
         SyntaxNode? scope = null;
         for (var p = node; p != null && scope == null; p = p.Parent)
@@ -999,7 +834,7 @@ public sealed partial class MeasureCollector
                 ScoreMeter.Length, index: index);
             _writtenBars[scope] = split = (bars, index);
         }
-        string chain = _phraseCallSites.Count == 0 ? "" : string.Join("/", _phraseCallSites);
+        string chain = _v.PhraseCallSites.Count == 0 ? "" : string.Join("/", _v.PhraseCallSites);
         if (!split.Index.TryGetValue((chain, position), out int at))
             return null;
         var bar = split.Bars[at];
@@ -1024,15 +859,15 @@ public sealed partial class MeasureCollector
     /// <summary>
     /// Gets the time signature as a Fraction.
     /// </summary>
-    private Fraction TimeSignatureFraction => new(_meta.TimeBeats, _meta.TimeBeatType);
+    private Fraction TimeSignatureFraction => new(_v.Meta.TimeBeats, _v.Meta.TimeBeatType);
 
     /// <summary>The score-level meter as the bar context keeps it — a builder's opening meter.</summary>
-    private Meter ScoreMeter => new(_meta.TimeBeats, _meta.TimeBeatType, _meta.TimeBeatsText, _meta.TimeGrouping);
+    private Meter ScoreMeter => new(_v.Meta.TimeBeats, _v.Meta.TimeBeatType, _v.Meta.TimeBeatsText, _v.Meta.TimeGrouping);
 
     /// <summary>The running meter as written — <see cref="MeasureBuilder.MeterInForce"/>'s
     /// opening value.</summary>
     private TimeSignature MeterOfMeta()
-        => new(_meta.TimeBeats, _meta.TimeBeatType, _meta.TimeBeatsText, _meta.TimeSenzaMisura, _meta.TimeGrouping);
+        => new(_v.Meta.TimeBeats, _v.Meta.TimeBeatType, _v.Meta.TimeBeatsText, _v.Meta.TimeSenzaMisura, _v.Meta.TimeGrouping);
 
     /// <summary>
     /// Snapshots the accumulated piece-level metadata and annotation lists into an
@@ -1044,13 +879,13 @@ public sealed partial class MeasureCollector
     /// <param name="measureCount">Total measures collected — the virtual stop an
     /// unterminated trill spanner runs to (one past the last measure).</param>
     private ScoreContent CaptureScoreContent(int measureCount) => new(
-        new TimeSignature(_meta.TimeBeats, _meta.TimeBeatType, _meta.TimeBeatsText, _meta.TimeSenzaMisura, _meta.TimeGrouping),
-        new KeySignature(_meta.InitialKeySharps, _meta.InitialKeyCustom), // initial key, not the post-change state
-        _meta.InitialClef, // initial clef, not the post-change state
-        _meta.Tempo,
-        _meta.Title,
-        _meta.Composer,
-        _meta.SwingSubdivision,
+        new TimeSignature(_v.Meta.TimeBeats, _v.Meta.TimeBeatType, _v.Meta.TimeBeatsText, _v.Meta.TimeSenzaMisura, _v.Meta.TimeGrouping),
+        new KeySignature(_v.Meta.InitialKeySharps, _v.Meta.InitialKeyCustom), // initial key, not the post-change state
+        _v.Meta.InitialClef, // initial clef, not the post-change state
+        _v.Meta.Tempo,
+        _v.Meta.Title,
+        _v.Meta.Composer,
+        _v.Meta.SwingSubdivision,
         _dynamics.ToImmutableArray(),
         _articulations.ToImmutableArray(),
         _graceNotes.ToImmutableArray(),
@@ -1069,21 +904,21 @@ public sealed partial class MeasureCollector
         // The section carry rule's plays: every voice has been sanity-scanned by now (the
         // scan runs before the ottava display transposition, this after it).
         PairTrillSpannerEvents(measureCount, SectionPlays.Of(_sanityScannedVoiceList)),
-        new HeaderPositions(_meta.TitlePosition, _meta.ComposerPosition, _meta.TimePosition, _meta.KeyPosition, _meta.ClefPosition, _meta.TempoPosition,
-            _meta.SubtitlePosition, _meta.PoetPosition,
-            new TempoPiecePositions(_meta.TempoUnitPosition, _meta.TempoCountPosition, _meta.SwingPosition,
-                _meta.SwingValuePosition)),
-        _meta.TempoText,
-        _meta.TempoBeatUnit,
-        _meta.TempoDots,
-        _meta.Fonts,
-        _meta.Paper,
-        _meta.LayoutPlan,
-        _meta.Subtitle,
-        _meta.Poet,
+        new HeaderPositions(_v.Meta.TitlePosition, _v.Meta.ComposerPosition, _v.Meta.TimePosition, _v.Meta.KeyPosition, _v.Meta.ClefPosition, _v.Meta.TempoPosition,
+            _v.Meta.SubtitlePosition, _v.Meta.PoetPosition,
+            new TempoPiecePositions(_v.Meta.TempoUnitPosition, _v.Meta.TempoCountPosition, _v.Meta.SwingPosition,
+                _v.Meta.SwingValuePosition)),
+        _v.Meta.TempoText,
+        _v.Meta.TempoBeatUnit,
+        _v.Meta.TempoDots,
+        _v.Meta.Fonts,
+        _v.Meta.Paper,
+        _v.Meta.LayoutPlan,
+        _v.Meta.Subtitle,
+        _v.Meta.Poet,
         // "Capo 3" at the score's head, on the header's instrument line (owner's design
         // HANDOFF §2 K2; the row LilyPond's bookTitleMarkup gives header:instrument).
-        _meta.LayoutPlan.Chords.Capo > 0 ? "Capo " + _meta.LayoutPlan.Chords.Capo.ToString(System.Globalization.CultureInfo.InvariantCulture) : null);
+        _v.Meta.LayoutPlan.Chords.Capo > 0 ? "Capo " + _v.Meta.LayoutPlan.Chords.Capo.ToString(System.Globalization.CultureInfo.InvariantCulture) : null);
 
     /// <summary>
     /// Collects a Score from a syntax tree.
@@ -1129,7 +964,7 @@ public sealed partial class MeasureCollector
         if (voiceName != null)
         {
             // Part-body grob defaults (`part <voice> { override … }`) — staff 0 here.
-            CollectPartBodyOverrides(tree.GetRoot(), voiceName, _cursor.StaffIndex);
+            CollectPartBodyOverrides(tree.GetRoot(), voiceName, _v.Cursor.StaffIndex);
             var (partClef, partOctave, partExplicitOctave, partTranspose, partClefPos, partKey) = GetPartDefaults(
                 tree.GetRoot(), voiceName, PagePitchOf(voiceName), _fileTransposeDefault, _fileIsConcert, FileShiftInterval);
             SetPartTuning(tree.GetRoot(), voiceName);
@@ -1142,13 +977,13 @@ public sealed partial class MeasureCollector
                 partClef = InstrumentDefaults.ClefWord(writtenClef);
             if (partClef != null)
             {
-                _meta.Clef = partClef;
-                _meta.ClefPosition = partClefPos;
+                _v.Meta.Clef = partClef;
+                _v.Meta.ClefPosition = partClefPos;
             }
-            _octave.CurrentOctave = partOctave ?? InstrumentDefaults.DefaultAnchorOctave;
+            _v.Octave.CurrentOctave = partOctave ?? InstrumentDefaults.DefaultAnchorOctave;
             // ABSOLUTE mode reads the same chain (InstrumentDefaults.AbsoluteBaseOctave):
             // partOctave is already the part's `octave N`, else its preset's. Not the clef.
-            _octave.OctaveBase = InstrumentDefaults.AbsoluteBaseOctave(partOctave, instrumentPreset: null);
+            _v.Octave.OctaveBase = InstrumentDefaults.AbsoluteBaseOctave(partOctave, instrumentPreset: null);
             ApplyTranspose(partTranspose);
             // A part-header key overrides the file key for THIS part (CollectDefinitions
             // left the global key in place; a part that sets none keeps it).
@@ -1157,20 +992,20 @@ public sealed partial class MeasureCollector
             // Transpose the written key signature (CollectDefinitions set it
             // before the part option was known) so the displayed key and the
             // accidental engine match the transposed pitches.
-            _meta.KeySharps = _octave.TransposeKeySharps(_meta.KeySharps);
+            _v.Meta.KeySharps = _v.Octave.TransposeKeySharps(_v.Meta.KeySharps);
         }
         else
         {
-            _octave.CurrentOctave = InstrumentDefaults.DefaultAnchorOctave;
+            _v.Octave.CurrentOctave = InstrumentDefaults.DefaultAnchorOctave;
             SetPartTuning(tree.GetRoot(), null);
         }
-        _octave.InitialOctave = _octave.CurrentOctave;
-        _octave.InitialOctaveBase = _octave.OctaveBase; // absolute mode's section-reset target
-        _octave.SectionOctaveOffset = 0;                // …and no play's shift is open yet
-        _meta.InitialClef = _meta.Clef; // Preserve initial clef before music processing
-        _meta.InitialKeySharps = _meta.KeySharps; // Preserve initial key before music processing
-        _meta.InitialKeyCustom = _meta.KeyCustom;
-        _octave.InitialOctaveAbsolute = _octave.OctaveAbsolute; // file-level octave mode default
+        _v.Octave.InitialOctave = _v.Octave.CurrentOctave;
+        _v.Octave.InitialOctaveBase = _v.Octave.OctaveBase; // absolute mode's section-reset target
+        _v.Octave.SectionOctaveOffset = 0;                // …and no play's shift is open yet
+        _v.Meta.InitialClef = _v.Meta.Clef; // Preserve initial clef before music processing
+        _v.Meta.InitialKeySharps = _v.Meta.KeySharps; // Preserve initial key before music processing
+        _v.Meta.InitialKeyCustom = _v.Meta.KeyCustom;
+        _v.Octave.InitialOctaveAbsolute = _v.Octave.OctaveAbsolute; // file-level octave mode default
 
         // Phase 2: Collect the primary (voice-0) stream. A << \\ >> span is
         // handled INLINE during this walk (its first voice flows into the
@@ -1183,7 +1018,7 @@ public sealed partial class MeasureCollector
         // keeps its last bar line — the longest voice decides where LilyPond's music ends, and
         // the primary stream alone cannot say (Lab sessions/p659: audit/lpreg/restdur, oice { g1 | g2 }
         // { … two full bars … }, ends ON the bar).
-        bool dropFinalBar = _lastEndsOffTheBar && _spanTracks.Count == 0;
+        bool dropFinalBar = _v.LastEndsOffTheBar && _spanTracks.Count == 0;
         ResolveBeamStemDirections(measures);
 
         // Score-level structure from the parts this score OMITS (|: :|, navigation
@@ -1227,11 +1062,11 @@ public sealed partial class MeasureCollector
             MeasureBuilder.DropFinalBarLine(measures);
 
         // A section that OPENS with its own key folds into this single staff's opening
-        // signature (Score.KeySignature reads _meta.InitialKey*). See ApplyKeySignatureChange.
+        // signature (Score.KeySignature reads _v.Meta.InitialKey*). See ApplyKeySignatureChange.
         if (_openingKeyOverride is { } openingKey)
         {
-            _meta.InitialKeySharps = openingKey.Sharps;
-            _meta.InitialKeyCustom = openingKey.Custom;
+            _v.Meta.InitialKeySharps = openingKey.Sharps;
+            _v.Meta.InitialKeyCustom = openingKey.Custom;
         }
 
         // A bar a section boundary splits continues for the numbering — the same rule the
@@ -1245,7 +1080,7 @@ public sealed partial class MeasureCollector
 
         // Clef changes written at one moment fold into the last of them (ClefChangeCollapse —
         // the multi-staff road applies it in CollectStaffVoices).
-        ClefChangeCollapse.Apply(measures, ParseClefType(_meta.InitialClef));
+        ClefChangeCollapse.Apply(measures, ParseClefType(_v.Meta.InitialClef));
 
         // A tie carried over a repeat to a play that is not printed next: its repeat tie and
         // hanging tie (SectionTieCarry — the multi-staff road applies it in CollectStaffVoices).
@@ -1275,7 +1110,7 @@ public sealed partial class MeasureCollector
         // …and the accidentals owed where an ottava line's two sides draw two octaves on one
         // line or space (StaffAccidentals ⑵ — one voice has no ⑴).
         voice = StaffAccidentals.Apply(ImmutableArray.Create(voice), _accidentalStyle,
-            new KeySignature(_meta.InitialKeySharps, _meta.InitialKeyCustom))[0];
+            new KeySignature(_v.Meta.InitialKeySharps, _v.Meta.InitialKeyCustom))[0];
 
         // Lyrics attach EXPLICITLY via `score { staff X with lyrics L }`. There is NO
         // implicit auto-attach anywhere: a `lyrics {}` block that no score references is a
@@ -1294,13 +1129,13 @@ public sealed partial class MeasureCollector
             _chordNameCollector.RowNameDrop = ChordRowDrop(tree.GetRoot(), voiceName);
             _chordNameCollector.RowShift = _fileShiftSemitones;
             _chordNameCollector.CollectAttached(
-                tree.GetRoot(), attachedChordPart, _sectionState.StartMeasure, _cursor.StaffIndex,
-                _meta.TimeBeats, _meta.TimeBeatType, attachedChordDisplay);
+                tree.GetRoot(), attachedChordPart, _sectionState.StartMeasure, _v.Cursor.StaffIndex,
+                _v.Meta.TimeBeats, _v.Meta.TimeBeatType, attachedChordDisplay);
         }
 
         // The grace groups' heads as the voice now has them (StaffAccidentals added some) —
         // and the main-note symbols their grace symbols are rodded to (session 964).
-        var finalVoices = StampGraceMainChordNames(ImmutableArray.Create(voice), _cursor.StaffIndex);
+        var finalVoices = StampGraceMainChordNames(ImmutableArray.Create(voice), _v.Cursor.StaffIndex);
         voice = finalVoices[0];
         StaffAccidentals.SyncGraceNotes(_graceNotes, _ => finalVoices);
         return ScoreAssembler.BuildScore(voice, CaptureScoreContent(voice.Measures.Length));
@@ -1710,7 +1545,7 @@ public sealed partial class MeasureCollector
         var table = MidBarBreakTable.Build(
             _midBarBreakRequests,
             voices.Concat(_harvestedVoices),
-            new TimeSignature(_meta.TimeBeats, _meta.TimeBeatType, _meta.TimeBeatsText, _meta.TimeSenzaMisura, _meta.TimeGrouping),
+            new TimeSignature(_v.Meta.TimeBeats, _v.Meta.TimeBeatType, _v.Meta.TimeBeatsText, _v.Meta.TimeSenzaMisura, _v.Meta.TimeGrouping),
             _tupletBrackets, _percentRepeats, conflicts);
         _midBarBreakConflicts.Clear();
         _midBarBreakConflicts.AddRange(conflicts);
@@ -1740,19 +1575,19 @@ public sealed partial class MeasureCollector
         // Fall back to the primary form only when the reference is unresolved (a
         // validator error) so a typo still previews something.
         _form = renderSpec.Form ?? _form;
-        _meta.InitialKeySharps = _meta.KeySharps; // Preserve initial key before music processing
-        _meta.InitialKeyCustom = _meta.KeyCustom;
+        _v.Meta.InitialKeySharps = _v.Meta.KeySharps; // Preserve initial key before music processing
+        _v.Meta.InitialKeyCustom = _v.Meta.KeyCustom;
         // The file key's tonic/position too, so a part that sets its OWN header key
         // can be undone for the next part that sets none (restored per voice below).
-        int globalKeyTonicStep = _meta.KeyTonicStep;
-        int globalKeyTonicAlter = _meta.KeyTonicAlter;
-        int globalKeyPosition = _meta.KeyPosition;
+        int globalKeyTonicStep = _v.Meta.KeyTonicStep;
+        int globalKeyTonicAlter = _v.Meta.KeyTonicAlter;
+        int globalKeyPosition = _v.Meta.KeyPosition;
         // Capture the file-level `octave absolute/relative` default AFTER the
         // pre-scan, mirroring the single-staff path. Without this each part's
         // line-702 restore reads the post-Reset `false`, so a top-level
         // `octave absolute` was silently ignored for every staff in a
         // multi-part score (notes fell back to relative and ran off the staff).
-        _octave.InitialOctaveAbsolute = _octave.OctaveAbsolute;
+        _v.Octave.InitialOctaveAbsolute = _v.Octave.OctaveAbsolute;
 
         // Phase 2: Build voice dictionary. Each staff maps to ALL its voices
         // (the primary stream plus any from << \\ >> spans inside that staff).
@@ -1801,7 +1636,7 @@ public sealed partial class MeasureCollector
             // parts take the staff index already handed out instead of opening a new one
             // (see GetVoiceBindings) — otherwise every staff below would be tagged one
             // index too high.
-            _cursor.StaffIndex = slotting == VoiceSlotting.OwnStaff
+            _v.Cursor.StaffIndex = slotting == VoiceSlotting.OwnStaff
                 ? collectStaffIndex++
                 : collectStaffIndex - 1;
             // …and the voice slot those items are addressed by. A staff of its own starts
@@ -1814,24 +1649,24 @@ public sealed partial class MeasureCollector
             // CombinedStaffAddressing translates it once the staff has been built.
             if (slotting == VoiceSlotting.OwnStaff)
                 staffVoiceSlots = 0;
-            _cursor.VoiceIndex = staffVoiceSlots;
-            _octave.LastPitchName = 'c';
-            _defaultDuration = Fraction.Quarter;
-            _defaultDots = 0;
+            _v.Cursor.VoiceIndex = staffVoiceSlots;
+            _v.Octave.LastPitchName = 'c';
+            _v.DefaultDuration = Fraction.Quarter;
+            _v.DefaultDots = 0;
 
             // Part-body grob defaults (`part <voice> { override … }`) scope to this staff.
-            CollectPartBodyOverrides(tree.GetRoot(), voiceName, _cursor.StaffIndex);
+            CollectPartBodyOverrides(tree.GetRoot(), voiceName, _v.Cursor.StaffIndex);
 
             // `staff NAME with chords CHORDPART [as roman]`: remember the
             // attachment (and its display); the chord symbols are collected AFTER
             // the voice loop, once every section's start measure is registered.
             if (withChords != null)
-                attachedChords.Add((withChords, _cursor.StaffIndex, chordDisplay, voiceName));
+                attachedChords.Add((withChords, _v.Cursor.StaffIndex, chordDisplay, voiceName));
 
             // `staff NAME with lyrics L`: remember each named lyrics part to align
             // under THIS staff (post-loop, once section starts are registered).
             foreach (var lyName in withLyrics)
-                attachedLyrics.Add((lyName, _cursor.StaffIndex, voiceName));
+                attachedLyrics.Add((lyName, _v.Cursor.StaffIndex, voiceName));
 
             // An independent chord row (`chords name [as roman]` in the score).
             // Defer its collection until AFTER the music voices: the section start
@@ -1840,7 +1675,7 @@ public sealed partial class MeasureCollector
             // 0, overprinting them.
             if (renderSpec.Items.OfType<ChordRowSpec>().Any(c => c.PartName == voiceName))
             {
-                pendingChordRows.Add((voiceName, _cursor.StaffIndex, chordDisplay));
+                pendingChordRows.Add((voiceName, _v.Cursor.StaffIndex, chordDisplay));
                 staffVoices[voiceName] = ImmutableArray.Create(
                     new Voice(voiceName, ImmutableArray<Measure>.Empty));
                 continue;
@@ -1851,7 +1686,7 @@ public sealed partial class MeasureCollector
             // known, so one block of flat verses can auto-wrap to that bar count.
             if (renderSpec.Items.OfType<LyricsRowSpec>().FirstOrDefault(c => c.PartName == voiceName) is { } lyricsRow)
             {
-                pendingLyricsRows.Add((voiceName, _cursor.StaffIndex, lyricsRow.Sings));
+                pendingLyricsRows.Add((voiceName, _v.Cursor.StaffIndex, lyricsRow.Sings));
                 staffVoices[voiceName] = ImmutableArray.Create(
                     new Voice(voiceName, ImmutableArray<Measure>.Empty));
                 continue;
@@ -1867,21 +1702,21 @@ public sealed partial class MeasureCollector
                 partClef = InstrumentDefaults.ClefWord(writtenClef);
             // A part without a clef of its own reads the file's top-level one (GRAMMAR §2.1),
             // as the single-staff path does — this used to fall straight to treble.
-            _meta.Clef = partClef ?? _fileClef ?? "treble";
-            _meta.ClefPosition = partClef != null ? partClefPos : _fileClefPosition;
+            _v.Meta.Clef = partClef ?? _fileClef ?? "treble";
+            _v.Meta.ClefPosition = partClef != null ? partClefPos : _fileClefPosition;
             // …and remember it per VOICE: the staff built for this part carries its own
             // clef's offset, so a multi-staff score's line-start clefs each click through
             // to the `clef` that set them (stamped after ToStaffGroups below).
             voiceClefPosDict[voiceName] = partClefPos;
 
             // Set initial octave: explicit > instrument default > 4. The clef is drawing only.
-            _octave.CurrentOctave = partOctave ?? InstrumentDefaults.DefaultAnchorOctave;
-            _octave.InitialOctave = _octave.CurrentOctave;
+            _v.Octave.CurrentOctave = partOctave ?? InstrumentDefaults.DefaultAnchorOctave;
+            _v.Octave.InitialOctave = _v.Octave.CurrentOctave;
             // …and the ABSOLUTE base from the same chain (partOctave = `octave N`, else the preset).
-            _octave.OctaveBase = InstrumentDefaults.AbsoluteBaseOctave(partOctave, instrumentPreset: null);
-            _octave.InitialOctaveBase = _octave.OctaveBase; // absolute mode's section-reset target
-            _octave.SectionOctaveOffset = 0;                // …and no play's shift is open yet
-            _octave.OctaveAbsolute = _octave.InitialOctaveAbsolute; // restore file-level octave mode
+            _v.Octave.OctaveBase = InstrumentDefaults.AbsoluteBaseOctave(partOctave, instrumentPreset: null);
+            _v.Octave.InitialOctaveBase = _v.Octave.OctaveBase; // absolute mode's section-reset target
+            _v.Octave.SectionOctaveOffset = 0;                // …and no play's shift is open yet
+            _v.Octave.OctaveAbsolute = _v.Octave.InitialOctaveAbsolute; // restore file-level octave mode
             ApplyTranspose(partTranspose);
 
             // Re-arm this voice's running key. Restore the file key's tonic/custom
@@ -1889,21 +1724,21 @@ public sealed partial class MeasureCollector
             // sets none; then, if THIS part has its own header key, apply it. The
             // running key is transposed by THIS part's option so the accidental engine
             // suppresses in-key accidentals correctly and the key does not leak.
-            _meta.KeyCustom = _meta.InitialKeyCustom;
-            _meta.KeyTonicStep = globalKeyTonicStep;
-            _meta.KeyTonicAlter = globalKeyTonicAlter;
-            _meta.KeyPosition = globalKeyPosition;
+            _v.Meta.KeyCustom = _v.Meta.InitialKeyCustom;
+            _v.Meta.KeyTonicStep = globalKeyTonicStep;
+            _v.Meta.KeyTonicAlter = globalKeyTonicAlter;
+            _v.Meta.KeyPosition = globalKeyPosition;
             if (partKey != null)
             {
                 ApplyPartHeaderKey(partKey);
-                _meta.KeySharps = _octave.TransposeKeySharps(_meta.KeySharps);
-                voiceKeyDict[voiceName] = new KeySignature(_meta.KeySharps, _meta.KeyCustom);
+                _v.Meta.KeySharps = _v.Octave.TransposeKeySharps(_v.Meta.KeySharps);
+                voiceKeyDict[voiceName] = new KeySignature(_v.Meta.KeySharps, _v.Meta.KeyCustom);
             }
             else
             {
-                _meta.KeySharps = _octave.TransposeKeySharps(_meta.InitialKeySharps);
-                if (_octave.HasTranspose)
-                    voiceKeyDict[voiceName] = new KeySignature(_meta.KeySharps);
+                _v.Meta.KeySharps = _v.Octave.TransposeKeySharps(_v.Meta.InitialKeySharps);
+                if (_v.Octave.HasTranspose)
+                    voiceKeyDict[voiceName] = new KeySignature(_v.Meta.KeySharps);
             }
 
             _openingKeyOverride = null;
@@ -1936,7 +1771,7 @@ public sealed partial class MeasureCollector
                 Semantics.ChordDiagramScores.RowStaffPart(renderSpec, rowName));
             _chordNameCollector.RowShift = _fileShiftSemitones;
             var rowMeasures = _chordNameCollector.CollectPart(
-                tree.GetRoot(), rowName, rowIdx, _sectionState.StartMeasure, _meta.TimeBeats, _meta.TimeBeatType, rowMode);
+                tree.GetRoot(), rowName, rowIdx, _sectionState.StartMeasure, _v.Meta.TimeBeats, _v.Meta.TimeBeatType, rowMode);
             staffVoices[rowName] = ImmutableArray.Create(new Voice(rowName, rowMeasures));
         }
 
@@ -1980,7 +1815,7 @@ public sealed partial class MeasureCollector
                     }
                 }
                 var rowMeasures = _lyricsCollector.CollectRow(
-                    tree.GetRoot(), name, idx, wrapBars, _sectionState.StartMeasure, _meta.TimeBeats, _meta.TimeBeatType,
+                    tree.GetRoot(), name, idx, wrapBars, _sectionState.StartMeasure, _v.Meta.TimeBeats, _v.Meta.TimeBeatType,
                     _sectionState.AllStarts);
                 staffVoices[name] = ImmutableArray.Create(new Voice(name, rowMeasures));
             }
@@ -2152,7 +1987,7 @@ public sealed partial class MeasureCollector
             _chordNameCollector.RowShift = _fileShiftSemitones;
             _chordNameCollector.CollectAttached(
                 tree.GetRoot(), attachedPart, _sectionState.StartMeasure, attachedStaff,
-                _meta.TimeBeats, _meta.TimeBeatType, attachedMode);
+                _v.Meta.TimeBeats, _v.Meta.TimeBeatType, attachedMode);
         }
 
         // Phase 3: Build staff groups from render spec
@@ -2167,8 +2002,8 @@ public sealed partial class MeasureCollector
         // (RenderSpec.ToStaffGroups), under the same two scopes ResolveStaffColumns opens for
         // a part's own voices: the packing reads the engraving style and the music font's
         // head boxes. ToStaffGroups is lazy, so the scopes must outlive the ToImmutableArray.
-        using (EngravingStyle.Use(_meta.Paper.Style))
-        using (Layout.MusicFont.Use(Layout.MusicFonts.Of(_meta.Fonts)))
+        using (EngravingStyle.Use(_v.Meta.Paper.Style))
+        using (Layout.MusicFont.Use(Layout.MusicFonts.Of(_v.Meta.Fonts)))
         {
             staffGroups = renderSpec.ToStaffGroups(name =>
                 staffVoices.TryGetValue(name, out var v) ? v
@@ -2334,7 +2169,7 @@ public sealed partial class MeasureCollector
                                 var owed = StaffAccidentals.Apply(transposed, _accidentalStyle,
                                     st.Voices.Length > 0 && voiceKeyDict.TryGetValue(st.Voices[0].Name, out var partKey)
                                         ? partKey
-                                        : new KeySignature(_meta.InitialKeySharps, _meta.InitialKeyCustom));
+                                        : new KeySignature(_v.Meta.InitialKeySharps, _v.Meta.InitialKeyCustom));
                                 if (owed != transposed)
                                     transposed = RepackAccidentalColumns(owed);
                             }
@@ -2698,8 +2533,8 @@ public sealed partial class MeasureCollector
             _chordNameCollector.RowNameDrop = ChordRowDrop(root, voiceName);
             _chordNameCollector.RowShift = _fileShiftSemitones;
             _chordNameCollector.CollectAttached(
-                root, attachedChordPart, _sectionState.StartMeasure, _cursor.StaffIndex,
-                _meta.TimeBeats, _meta.TimeBeatType, attachedChordDisplay);
+                root, attachedChordPart, _sectionState.StartMeasure, _v.Cursor.StaffIndex,
+                _v.Meta.TimeBeats, _v.Meta.TimeBeatType, attachedChordDisplay);
         }
 
         // A single-staff score surfaces the same annotations whether it has one
@@ -2708,9 +2543,9 @@ public sealed partial class MeasureCollector
         // The opening key turns on StaffAccidentals ⑶ (a line or space an ottava's other side
         // left unmarked); it can only fire where the ottava moved heads.
         var resolved = ResolveStaffColumns(voices.ToImmutableArray(),
-            multiVoiceOttava.Count > 0 ? new KeySignature(_meta.InitialKeySharps, _meta.InitialKeyCustom) : null);
+            multiVoiceOttava.Count > 0 ? new KeySignature(_v.Meta.InitialKeySharps, _v.Meta.InitialKeyCustom) : null);
         // The main-note chord symbols the grace symbols are rodded to (session 964).
-        resolved = StampGraceMainChordNames(resolved, _cursor.StaffIndex);
+        resolved = StampGraceMainChordNames(resolved, _v.Cursor.StaffIndex);
         // The grace groups' heads as the voices now have them (StaffAccidentals added some).
         StaffAccidentals.SyncGraceNotes(_graceNotes, _ => resolved);
         return ScoreAssembler.BuildScore(
@@ -2737,10 +2572,10 @@ public sealed partial class MeasureCollector
     private ImmutableArray<Voice> ResolveStaffColumns(ImmutableArray<Voice> voices,
         KeySignature? openingKey = null)
     {
-        using var style = EngravingStyle.Use(_meta.Paper.Style);
+        using var style = EngravingStyle.Use(_v.Meta.Paper.Style);
         // …and under the score's music font, whose head boxes the packing reads
         // (StaffAccidentalColumns' sized font; docs/smufl-design.md §6 ② ⒝).
-        using var music = Layout.MusicFont.Use(Layout.MusicFonts.Of(_meta.Fonts));
+        using var music = Layout.MusicFont.Use(Layout.MusicFonts.Of(_v.Meta.Fonts));
         // The accidentals the STAFF owes across its voices first — the packing reads them.
         return StaffAccidentalColumns.Resolve(ResolveVoiceStemDirections(
             StaffAccidentals.Apply(voices, _accidentalStyle, openingKey)));
@@ -2750,8 +2585,8 @@ public sealed partial class MeasureCollector
     /// <see cref="ResolveStaffColumns"/> — after a later pass added accidentals.</summary>
     private ImmutableArray<Voice> RepackAccidentalColumns(ImmutableArray<Voice> voices)
     {
-        using var style = EngravingStyle.Use(_meta.Paper.Style);
-        using var music = Layout.MusicFont.Use(Layout.MusicFonts.Of(_meta.Fonts));
+        using var style = EngravingStyle.Use(_v.Meta.Paper.Style);
+        using var music = Layout.MusicFont.Use(Layout.MusicFonts.Of(_v.Meta.Fonts));
         return StaffAccidentalColumns.Resolve(voices);
     }
 
@@ -2888,10 +2723,10 @@ public sealed partial class MeasureCollector
     private ImmutableArray<Voice> CollectStaffVoices(string voiceName)
     {
         // The clef the walk starts from, read BEFORE the walk moves it (the single-staff road
-        // reads _meta.InitialClef, which that road alone sets).
-        var startClef = ParseClefType(_meta.Clef);
+        // reads _v.Meta.InitialClef, which that road alone sets).
+        var startClef = ParseClefType(_v.Meta.Clef);
         var track0 = CollectMeasuresForVoice(voiceName); // clears + fills _parallelSpans
-        if (_lastEndsOffTheBar)
+        if (_v.LastEndsOffTheBar)
             _offBarVoices.Add(voiceName);
         ResolveBeamStemDirections(track0);
         ClefChangeCollapse.Apply(track0, startClef);
@@ -3168,14 +3003,14 @@ public sealed partial class MeasureCollector
             if (starts.Contains(0) && _sectionHeaders.Times.TryGetValue(name, out var opening)
                 && !opening.IsSenzaMisura)
             {
-                _meta.TimeBeats = opening.Beats;
-                _meta.TimeBeatsText = opening.BeatsText;
-                _meta.TimeGrouping = opening.Grouping;
-                _meta.TimeBeatType = opening.BeatType;
+                _v.Meta.TimeBeats = opening.Beats;
+                _v.Meta.TimeBeatsText = opening.BeatsText;
+                _v.Meta.TimeGrouping = opening.Grouping;
+                _v.Meta.TimeBeatType = opening.BeatType;
                 break;
             }
-        var home = new Fraction(_meta.TimeBeats, _meta.TimeBeatType);
-        var homeSig = new TimeSignature(_meta.TimeBeats, _meta.TimeBeatType, _meta.TimeBeatsText, _meta.TimeSenzaMisura, _meta.TimeGrouping);
+        var home = new Fraction(_v.Meta.TimeBeats, _v.Meta.TimeBeatType);
+        var homeSig = new TimeSignature(_v.Meta.TimeBeats, _v.Meta.TimeBeatType, _v.Meta.TimeBeatsText, _v.Meta.TimeSenzaMisura, _v.Meta.TimeGrouping);
         var table = new List<RowsOnlyBar>(_rowsOnlyFormGridBars);
         for (int i = 0; i < _rowsOnlyFormGridBars; i++)
             table.Add(new RowsOnlyBar(home, false, homeSig, 0));
@@ -3280,7 +3115,7 @@ public sealed partial class MeasureCollector
         // Each part's key timeline as the collect spelled its notes: the opening key (the
         // part's own header key, else the score's) and its own key changes, in order.
         KeySignature OpeningKey(string part) => voiceKeyDict.TryGetValue(part, out var k)
-            ? k : new KeySignature(_meta.InitialKeySharps, _meta.InitialKeyCustom);
+            ? k : new KeySignature(_v.Meta.InitialKeySharps, _v.Meta.InitialKeyCustom);
         static List<(int Measure, Fraction Onset, KeySignatureChangeItem Item)> KeyEvents(ImmutableArray<Measure> measures)
         {
             var list = new List<(int, Fraction, KeySignatureChangeItem)>();
@@ -3615,7 +3450,7 @@ public sealed partial class MeasureCollector
         bool applyFilePartial = true, Fraction? leadingOffset = null, int logicalIndexBase = 0,
         Func<MeasureBuilder, ValueTask>? emit = null)
     {
-        var builder = new MeasureBuilder(ScoreMeter, voiceNode.SourceStart, _meta.TimeSenzaMisura)
+        var builder = new MeasureBuilder(ScoreMeter, voiceNode.SourceStart, _v.Meta.TimeSenzaMisura)
         {
             MeterInForce = MeterOfMeta(),
             MidBarBreaks = MidBarBreaks,
@@ -3641,10 +3476,10 @@ public sealed partial class MeasureCollector
         builder.MeasureCompleted = _advanceAccidentalBar ??= AdvanceAccidentalBar;
         // A span's later voice keeps no key reminder (KeyCourtesyDue): its measures are
         // counted from the span, not the score's. The walk it interrupts gets its own back.
-        var outerKeyCourtesyBuilder = _keyCourtesyBuilder;
-        _keyCourtesyBuilder = null;
+        var outerKeyCourtesyBuilder = _v.KeyCourtesyBuilder;
+        _v.KeyCourtesyBuilder = null;
 
-        _pendingInlineVoltas.Clear();
+        _v.PendingInlineVoltas.Clear();
 
         // Collect all music nodes, expanding variable references. Container
         // expressions travel as one wrapper — EXCEPT parallel: the per-voice
@@ -3665,8 +3500,8 @@ public sealed partial class MeasureCollector
         FinalizeInlineVoltas();
 
         var finalized = builder.FinalizeMeasures();
-        _lastEndsOffTheBar = builder.EndsOffTheBar;
-        _keyCourtesyBuilder = outerKeyCourtesyBuilder;
+        _v.LastEndsOffTheBar = builder.EndsOffTheBar;
+        _v.KeyCourtesyBuilder = outerKeyCourtesyBuilder;
         return finalized;
     }
 
@@ -3755,8 +3590,8 @@ public sealed partial class MeasureCollector
         _expansionBudgetExceededAtField = -1;
         // Balanced by the marker pairs within a walk; cleared per pass so a walk cut short
         // cannot leave a name that would stop a later cue from expanding it.
-        _openPhrases.Clear();
-        _phraseCallSites.Clear();
+        _v.OpenPhrases.Clear();
+        _v.PhraseCallSites.Clear();
         _offBarVoices.Clear();
 
         // The cumulative output tables clear FROM THE REGISTRY that names them
@@ -3778,9 +3613,9 @@ public sealed partial class MeasureCollector
         // manual reset verbatim (the bundling changed spellings, not behavior): it is
         // nonzero only inside BuildExtraVoiceTracks' span scope, which restores it
         // before anything can call Reset.
-        _cursor.StaffIndex = 0;
-        _cursor.VoiceIndex = 0;
-        _cursor.VoiceScope = null;
+        _v.Cursor.StaffIndex = 0;
+        _v.Cursor.VoiceIndex = 0;
+        _v.Cursor.VoiceScope = null;
         _chordNameCollector.Clear(); // grid warnings; its item list is registry-cleared
         _lyricsCollector.Clear();
         // The rows cut their bars by the same table the builders do (set for THIS pass by
@@ -3812,7 +3647,7 @@ public sealed partial class MeasureCollector
         _phraseGreens = null;
         _courtesySourcePositions.Clear();
         _memberEditorialBySource.Clear();
-        _measureAccidentals.Clear();
+        _v.MeasureAccidentals.Clear();
         _keyCourtesySeen.Clear();
         _keyCourtesyStaff = -1;
         _keyCourtesyMeasure = -1;
@@ -3853,13 +3688,13 @@ public sealed partial class MeasureCollector
         _formTrailingMarks = null;
         _filePartial = null;
         _root = null;
-        _octave.ResetAll();
-        _defaultDuration = Fraction.Quarter;
-        _defaultDots = 0;
-        _meta.Reset();
+        _v.Octave.ResetAll();
+        _v.DefaultDuration = Fraction.Quarter;
+        _v.DefaultDots = 0;
+        _v.Meta.Reset();
         // Per-walk state that every walk clears/balances on its own; cleared here
         // too so an aborted collect (exception mid-walk) cannot leak into a reuse.
-        _pendingInlineVoltas.Clear();
+        _v.PendingInlineVoltas.Clear();
         _spanTracks.Clear();
         _walkHeaderReads.Clear();
         _walkCanonicalReads.Clear();
@@ -3867,9 +3702,9 @@ public sealed partial class MeasureCollector
         _resolvedSpellingLog.Clear();
         _repetitionOriginalReads.Clear();
         _formRepeatDepth = 0;
-        _phraseTransposeSaves.Clear();
-        _phraseAnchorSaves.Clear();
-        _phraseAbsoluteBaseSaves.Clear();
+        _v.PhraseTransposeSaves.Clear();
+        _v.PhraseAnchorSaves.Clear();
+        _v.PhraseAbsoluteBaseSaves.Clear();
         // Probe bookkeeping restarts per collect; WalkProbe itself is the caller's
         // (set before Collect, read after).
         _walkOrdinal = 0;
@@ -3889,7 +3724,7 @@ public sealed partial class MeasureCollector
         // Bb-part-score of an already-transposed part is shifted exactly once more.
         // OctaveContext owns the transpose state + application; we only compose the
         // effective target here (ScoreTranspose is a collector-level concern).
-        _octave.SetTranspose(ComposeTranspose(transpose, ScoreTranspose));
+        _v.Octave.SetTranspose(ComposeTranspose(transpose, ScoreTranspose));
     }
 
     /// <summary>
@@ -3906,10 +3741,10 @@ public sealed partial class MeasureCollector
     /// <summary>Arms the running ambient tonic at the score's home key.</summary>
     private void ResetAmbientTonicToHome()
     {
-        _ambientTonicStep = _meta.KeyTonicStep;
-        _ambientTonicAlter = _meta.KeyTonicAlter;
+        _v.AmbientTonicStep = _v.Meta.KeyTonicStep;
+        _v.AmbientTonicAlter = _v.Meta.KeyTonicAlter;
         // A custom/atonal home key has no tonic to transpose from.
-        _ambientTonicValid = _meta.InitialKeyCustom == null;
+        _v.AmbientTonicValid = _v.Meta.InitialKeyCustom == null;
     }
 
     /// <summary>
@@ -3921,10 +3756,10 @@ public sealed partial class MeasureCollector
     /// </summary>
     private (int step, int alt, int oct)? PhraseTransposeTarget()
     {
-        if (!_ambientTonicValid || _meta.InitialKeyCustom != null)
+        if (!_v.AmbientTonicValid || _v.Meta.InitialKeyCustom != null)
             return null;
         return PitchTransposer.MovableInterval(
-            _meta.KeyTonicStep, _meta.KeyTonicAlter, _ambientTonicStep, _ambientTonicAlter);
+            _v.Meta.KeyTonicStep, _v.Meta.KeyTonicAlter, _v.AmbientTonicStep, _v.AmbientTonicAlter);
     }
 
     /// <summary>
@@ -3935,18 +3770,18 @@ public sealed partial class MeasureCollector
     /// </summary>
     private void EnterPhraseTranspose(int? anchorStep = null, int octaveOffset = 0, ChordSyntax? anchorShape = null)
     {
-        var saved = _octave.GetTranspose();
-        _phraseTransposeSaves.Push(saved);
+        var saved = _v.Octave.GetTranspose();
+        _v.PhraseTransposeSaves.Push(saved);
         if (PhraseTransposeTarget() is { } phrase)
-            _octave.SetTranspose(ComposeTranspose(phrase, saved));
+            _v.Octave.SetTranspose(ComposeTranspose(phrase, saved));
         // The reference's trailing marks (Chorus' / Chorus,) move the frame the body
         // resolves in. EnterDefaultFrame has already moved the RELATIVE frame; in
         // absolute mode there is no running frame, and the thing that plays its part —
         // the anchor bare c resolves against — is OctaveBase. Moving it here is what
         // makes `octave absolute` honour the marks, and nested references compose
         // additively because each pushes the base it found.
-        _phraseAbsoluteBaseSaves.Push(_octave.OctaveBase);
-        _octave.OctaveBase += octaveOffset;
+        _v.PhraseAbsoluteBaseSaves.Push(_v.Octave.OctaveBase);
+        _v.Octave.OctaveBase += octaveOffset;
         // Resolve the phrase's outgoing ANCHOR now, in the just-reset frame
         // (EnterDefaultFrame ran first at every call site): the bare-letter
         // resolution of the body's first pitched element — or the AMBIENT tonic
@@ -3963,14 +3798,14 @@ public sealed partial class MeasureCollector
         else if (anchorStep is { } astep)
         {
             int step = astep == Music.PhraseAnchor.Tonic
-                ? (_ambientTonicValid ? _ambientTonicStep : 0)
+                ? (_v.AmbientTonicValid ? _v.AmbientTonicStep : 0)
                 : astep;
             // Passing the frame's own letter back keeps Resolve's LastPitchName
             // write a no-op — the body's first note must still resolve against
             // the untouched reset frame.
-            anchor = ("cdefgab"[step], _octave.Resolve(step, 0, _octave.LastPitchName));
+            anchor = ("cdefgab"[step], _v.Octave.Resolve(step, 0, _v.Octave.LastPitchName));
         }
-        _phraseAnchorSaves.Push(anchor);
+        _v.PhraseAnchorSaves.Push(anchor);
     }
 
     /// <summary>
@@ -3991,14 +3826,14 @@ public sealed partial class MeasureCollector
     /// </remarks>
     private void ExitPhraseTranspose()
     {
-        if (_phraseTransposeSaves.Count > 0)
-            _octave.SetTranspose(_phraseTransposeSaves.Pop());
-        if (_phraseAbsoluteBaseSaves.Count > 0)
-            _octave.OctaveBase = _phraseAbsoluteBaseSaves.Pop();
-        if (_phraseAnchorSaves.Count > 0 && _phraseAnchorSaves.Pop() is { } anchor)
+        if (_v.PhraseTransposeSaves.Count > 0)
+            _v.Octave.SetTranspose(_v.PhraseTransposeSaves.Pop());
+        if (_v.PhraseAbsoluteBaseSaves.Count > 0)
+            _v.Octave.OctaveBase = _v.PhraseAbsoluteBaseSaves.Pop();
+        if (_v.PhraseAnchorSaves.Count > 0 && _v.PhraseAnchorSaves.Pop() is { } anchor)
         {
-            _octave.LastPitchName = anchor.Name;
-            _octave.CurrentOctave = anchor.Octave;
+            _v.Octave.LastPitchName = anchor.Name;
+            _v.Octave.CurrentOctave = anchor.Octave;
         }
     }
 
@@ -4006,34 +3841,34 @@ public sealed partial class MeasureCollector
     {
         // Snapshot this voice's score-level key (already transposed for the part)
         // so each section boundary can revert the running key to it.
-        _sectionResetKeySharps = _meta.KeySharps;
-        _sectionResetKeyCustom = _meta.KeyCustom;
+        _sectionResetKeySharps = _v.Meta.KeySharps;
+        _sectionResetKeyCustom = _v.Meta.KeyCustom;
         // Same for the clef: the part default a section without its own clef reverts to.
-        _sectionResetClef = _meta.Clef;
+        _sectionResetClef = _v.Meta.Clef;
         // The score-level meter a section without its own time reverts to is the file-level
-        // one, which _meta no longer holds once an earlier voice's opening `time` rewrote it
+        // one, which _v.Meta no longer holds once an earlier voice's opening `time` rewrote it
         // (see _scoreTime) — the builder below is armed with it as its home (SetHomeMeter).
-        // …and this voice STARTS in it too: the builder below is armed from _meta, and an
+        // …and this voice STARTS in it too: the builder below is armed from _v.Meta, and an
         // earlier voice's opening `time` left its own meter there — the second staff then
         // began in 3/4, its section reset drew a 4/4 "change", and its own opening `time
-        // 3/4` stood beside it ("3/4 C"). Each voice's opening `time` sets _meta again.
-        (_meta.TimeBeats, _meta.TimeBeatType, _meta.TimeBeatsText, _meta.TimeSenzaMisura, _meta.TimeGrouping) = _scoreTime;
+        // 3/4` stood beside it ("3/4 C"). Each voice's opening `time` sets _v.Meta again.
+        (_v.Meta.TimeBeats, _v.Meta.TimeBeatType, _v.Meta.TimeBeatsText, _v.Meta.TimeSenzaMisura, _v.Meta.TimeGrouping) = _scoreTime;
         // And the grob-override part default (global + this voice's part-body overrides,
         // already collected at (0,0)) — the state each section boundary reverts to.
         _sectionResetOverrides.Clear();
         foreach (var ov in _grobOverrides)
-            if (ov.StaffIndex is null || ov.StaffIndex == _cursor.StaffIndex)
+            if (ov.StaffIndex is null || ov.StaffIndex == _v.Cursor.StaffIndex)
                 _sectionResetOverrides[(ov.GrobType, ov.PropertyName)] = ov.Value;
         _sectionActiveGrobProps.Clear();
 
         // Arm the ambient tonic at the score's home key for this voice's walk
         // (phrase auto-transpose baseline).
         ResetAmbientTonicToHome();
-        _phraseTransposeSaves.Clear();
-        _phraseAnchorSaves.Clear();
-        _phraseAbsoluteBaseSaves.Clear();
+        _v.PhraseTransposeSaves.Clear();
+        _v.PhraseAnchorSaves.Clear();
+        _v.PhraseAbsoluteBaseSaves.Clear();
 
-        var builder = new MeasureBuilder(ScoreMeter, senzaMisura: _meta.TimeSenzaMisura)
+        var builder = new MeasureBuilder(ScoreMeter, senzaMisura: _v.Meta.TimeSenzaMisura)
         {
             MeterInForce = MeterOfMeta(),
             MidBarBreaks = MidBarBreaks,
@@ -4046,9 +3881,9 @@ public sealed partial class MeasureCollector
             builder.SetPartial(filePickup); // top-level partial N arms every voice
         ResetAccidentalMemory();
         builder.MeasureCompleted = _advanceAccidentalBar ??= AdvanceAccidentalBar;
-        _keyCourtesyBuilder = builder;
+        _v.KeyCourtesyBuilder = builder;
 
-        _pendingInlineVoltas.Clear();
+        _v.PendingInlineVoltas.Clear();
 
         // Checkpoint/resume probe (CollectWalkProbe). Walks are addressed by their
         // ordinal — the Nth CollectMeasures call of the collect — which is
@@ -4287,8 +4122,8 @@ public sealed partial class MeasureCollector
                                 new TextSpan(site.Position, reset.CallSiteEnd - site.Position), ValueOnly: true));
                         if (reset.PhraseName is { } opened)
                         {
-                            _openPhrases.Add(opened);
-                            _phraseCallSites.Add(reset.Position);
+                            _v.OpenPhrases.Add(opened);
+                            _v.PhraseCallSites.Add(reset.Position);
                         }
                         EnterDefaultFrame(reset.OctaveOffset);
                         EnterPhraseTranspose(reset.AnchorStep, reset.OctaveOffset, reset.AnchorShape);
@@ -4297,11 +4132,11 @@ public sealed partial class MeasureCollector
 
                     if (site.Node is PhraseEndMarker end)
                     {
-                        if (end.PhraseName is { } closed && _openPhrases.LastIndexOf(closed) is var at and >= 0)
+                        if (end.PhraseName is { } closed && _v.OpenPhrases.LastIndexOf(closed) is var at and >= 0)
                         {
-                            _openPhrases.RemoveAt(at);
-                            if (_phraseCallSites.Count > 0)
-                                _phraseCallSites.RemoveAt(_phraseCallSites.Count - 1);
+                            _v.OpenPhrases.RemoveAt(at);
+                            if (_v.PhraseCallSites.Count > 0)
+                                _v.PhraseCallSites.RemoveAt(_v.PhraseCallSites.Count - 1);
                         }
                         ExitPhraseTranspose();
                         builder.ResetMeasureBoundary(retargetableClose: true);
@@ -4411,7 +4246,7 @@ public sealed partial class MeasureCollector
             // mutates them, and the walk-local lists (cleared per walk, so the
             // collector's final state does not retain them for this walk).
             recording.PreFinalizeMeasures = builder.MeasuresSnapshot();
-            recording.PendingInlineVoltas = new(_pendingInlineVoltas);
+            recording.PendingInlineVoltas = new(_v.PendingInlineVoltas);
             recording.SpanTracks = new(_spanTracks);
             recording.HeaderReads = new(_walkHeaderReads);
             recording.CanonicalReads = new(_walkCanonicalReads);
@@ -4426,7 +4261,7 @@ public sealed partial class MeasureCollector
         FinalizeInlineVoltas();
 
         var finalized = builder.FinalizeMeasures();
-        _lastEndsOffTheBar = builder.EndsOffTheBar;
+        _v.LastEndsOffTheBar = builder.EndsOffTheBar;
         return finalized;
     }
 
@@ -4435,8 +4270,8 @@ public sealed partial class MeasureCollector
     /// <summary>The append-only output lists a walk grows CUMULATIVELY across the
     /// whole collect (never cleared between walks), in a fixed order shared by
     /// capture (counts) and restore (prefix adoption). Excluded on purpose:
-    /// <c>_pendingInlineVoltas</c>/<c>_parallelSpans</c> (cleared per walk —
-    /// adopted from the recording's copies), <c>_measureAccidentals</c> (value state —
+    /// <c>_v.PendingInlineVoltas</c>/<c>_parallelSpans</c> (cleared per walk —
+    /// adopted from the recording's copies), <c>_v.MeasureAccidentals</c> (value state —
     /// carried as <see cref="WalkCheckpoint.Accidentals"/>), <c>_courtesySourcePositions</c>/
     /// <c>_fingeringByPosition</c> (position-keyed; an item only ever reads its
     /// OWN position, so prefix entries have no reader in the resumed tail), and
@@ -4474,7 +4309,7 @@ public sealed partial class MeasureCollector
     /// bar 0 plus each mid-piece modulation, sorted ascending.</summary>
     private List<(int Measure, int TonicStep, int Sharps)> BuildKeyTimeline()
     {
-        var list = new List<(int, int, int)> { (0, _meta.KeyTonicStep, _meta.InitialKeySharps) };
+        var list = new List<(int, int, int)> { (0, _v.Meta.KeyTonicStep, _v.Meta.InitialKeySharps) };
         foreach (var (m, key) in _keyByMeasure)
             if (m > 0)
                 list.Add((m, key.TonicStep, key.Sharps));
@@ -5316,9 +5151,9 @@ public sealed partial class MeasureCollector
         // the predicate LYS4020 reads too): DynamicEngraver stands it on the grace column. So
         // does a hairpin START (session 918, IsCarriedHairpinStart): the wedge opens on the
         // grace column, which HairpinEngraver reads off the mark's item index.
-        bool graceTime = _graceDepth > 0;
-        // Under a % sign nothing that rides a note is collected — see _percentCoveredDepth.
-        if (_percentCoveredDepth > 0)
+        bool graceTime = _v.GraceDepth > 0;
+        // Under a % sign nothing that rides a note is collected — see _v.PercentCoveredDepth.
+        if (_v.PercentCoveredDepth > 0)
             return;
         var articulations = ArticulationsOf(node);
         bool levelTaken = false;
@@ -5346,10 +5181,10 @@ public sealed partial class MeasureCollector
                     if (levelTaken)
                         continue;
                     levelTaken = true;
-                    _dynamics.Add(new DynamicItem(level, measureIndex, itemIndex, dynamicSyntax.SourceStart, _cursor.StaffIndex)
+                    _dynamics.Add(new DynamicItem(level, measureIndex, itemIndex, dynamicSyntax.SourceStart, _v.Cursor.StaffIndex)
                     {
                         IsAbove = dynamicSyntax.ForcedAbove == true,
-                        VoiceIndex = _cursor.VoiceIndex,
+                        VoiceIndex = _v.Cursor.VoiceIndex,
                         IsSubito = dynamicSyntax.IsSubito,
                     });
                 }
@@ -5368,7 +5203,7 @@ public sealed partial class MeasureCollector
                     if (markType != null)
                     {
                         _musicMarks.Add(new MusicMarkItem(markType.Value, measureIndex,
-                            dynamicSyntax.SourceStart, itemIndex) { StaffIndex = _cursor.StaffIndex });
+                            dynamicSyntax.SourceStart, itemIndex) { StaffIndex = _v.Cursor.StaffIndex });
                     }
                 }
             }
@@ -5701,10 +5536,10 @@ public sealed partial class MeasureCollector
             // pair's total duration, sound half of it each, and are joined
             // by the subdivision's beams between the stems.
             // LILYPOND-REF: lily/chord-tremolo-engraver.cc.
-            _tremoloPairShape = pairShape;
-            _tremoloPairFirst = true;
+            _v.TremoloPairShape = pairShape;
+            _v.TremoloPairFirst = true;
             await ProcessBodyOnce();
-            _tremoloPairShape = null;
+            _v.TremoloPairShape = null;
         }
         else if (type == "tremolo" && bodyNodes.Count == 1
             && bodyNodes[0].Node is NoteSyntax or ChordSyntax or ChordRepetitionSyntax
@@ -5715,9 +5550,9 @@ public sealed partial class MeasureCollector
             // lily/stem-tremolo.cc — `\repeat tremolo 8 { c32 }` engraves ONE
             // quarter note whose stem carries the 32nd's three slashes (the
             // same drawing as the c4:32 suffix); the repetition is aural.
-            _tremoloRepeatCount = count;
+            _v.TremoloRepeatCount = count;
             await ProcessBodyOnce();
-            _tremoloRepeatCount = 1;
+            _v.TremoloRepeatCount = 1;
         }
         else
         {
@@ -5734,8 +5569,8 @@ public sealed partial class MeasureCollector
             // counts from the nearest g and the nearest g was the previous copy's.
             // ⚠️ The duration default is part of the frame for the same reason: the second
             // copy of `{ c4 d }` is two quarters, not whatever the last note left behind.
-            var frame = new OctaveSnapshot(_octave.CurrentOctave, _octave.LastPitchName);
-            var (frameDuration, frameDots) = (_defaultDuration, _defaultDots);
+            var frame = new OctaveSnapshot(_v.Octave.CurrentOctave, _v.Octave.LastPitchName);
+            var (frameDuration, frameDots) = (_v.DefaultDuration, _v.DefaultDots);
             int passes = type == "tremolo" ? count : 1;
             for (int i = 0; i < passes; i++)
             {
@@ -5743,9 +5578,9 @@ public sealed partial class MeasureCollector
                 {
                     if (!ChargeExpansion(passCost, repeat.SourceStart))
                         break;
-                    _octave.CurrentOctave = frame.Octave;
-                    _octave.LastPitchName = frame.PitchName;
-                    (_defaultDuration, _defaultDots) = (frameDuration, frameDots);
+                    _v.Octave.CurrentOctave = frame.Octave;
+                    _v.Octave.LastPitchName = frame.PitchName;
+                    (_v.DefaultDuration, _v.DefaultDots) = (frameDuration, frameDots);
                 }
                 await ProcessBodyOnce();
             }
@@ -5806,7 +5641,7 @@ public sealed partial class MeasureCollector
         // from the body's written durations and the first of them may inherit it
         // (`repeat percent 2 { c16 d e f }` writes the value once). Captured BEFORE the
         // first pass, which advances it.
-        var defaultAtBody = _defaultDuration.Dotted(_defaultDots);
+        var defaultAtBody = _v.DefaultDuration.Dotted(_v.DefaultDots);
         await ProcessBodyOnce();
         int bodyMeasureCount = builder.LogicalMeasureIndex - startMeasure;
         var bodyLength = builder.CurrentDuration - openAtStart;
@@ -5960,21 +5795,21 @@ public sealed partial class MeasureCollector
             {
                 // A beat slash covers no measure, so the sign needs the moment and the
                 // item slot it stands at inside the measure it lands in.
-                int slashMeasure = builder.CurrentMeasureIndex + _cursor.MetadataMeasureOffset;
+                int slashMeasure = builder.CurrentMeasureIndex + _v.Cursor.MetadataMeasureOffset;
                 var slashTiming = builder.CurrentDuration;
                 int slashItemIndex = builder.CurrentItemCount;
                 await WriteRepetitionAsSpacers(bodyLength, at, slashCount);
                 _percentRepeats.Add(new PercentRepeatItem(
                     slashMeasure,
                     at,
-                    _cursor.StaffIndex,
+                    _v.Cursor.StaffIndex,
                     BeatTiming: slashTiming,
                     BeatItemIndex: slashItemIndex,
                     SlashCount: slashCount));
                 continue;
             }
 
-            int iterStart = builder.CurrentMeasureIndex + _cursor.MetadataMeasureOffset;
+            int iterStart = builder.CurrentMeasureIndex + _v.Cursor.MetadataMeasureOffset;
             await WriteRepetitionAsSpacers(bodyLength, at);
 
             // A TWO-MEASURE body gets ONE double-percent sign for the whole repetition,
@@ -5987,7 +5822,7 @@ public sealed partial class MeasureCollector
                 _percentRepeats.Add(new PercentRepeatItem(
                     iterStart + 1,
                     at,
-                    _cursor.StaffIndex,
+                    _v.Cursor.StaffIndex,
                     IsDouble: true,
                     Bars: 2));
             }
@@ -5999,7 +5834,7 @@ public sealed partial class MeasureCollector
                 _percentRepeats.Add(new PercentRepeatItem(
                     iterStart + multiBars / 2,
                     at,
-                    _cursor.StaffIndex,
+                    _v.Cursor.StaffIndex,
                     IsDouble: multiBars % 2 == 0,
                     Bars: multiBars));
             }
@@ -6011,7 +5846,7 @@ public sealed partial class MeasureCollector
                     _percentRepeats.Add(new PercentRepeatItem(
                         iterStart + m,
                         at,
-                        _cursor.StaffIndex));
+                        _v.Cursor.StaffIndex));
                 }
             }
         }
@@ -6205,27 +6040,6 @@ public sealed partial class MeasureCollector
         };
     }
 
-    /// <summary>Where the breathing sign the grace body being walked ends on was written
-    /// (<c>GraceBodySupport.CarriedBreath</c>), or -1 — the one breath the grace-time
-    /// annotation gate lets through (CollectArticulations), so ArticulationEngraver draws it in
-    /// the column ProcessGraceRegion adds after the run.</summary>
-    private int _carriedGraceBreathStart = -1;
-
-    /// <summary>Where the breathing signs on the grace body's INNER columns were written
-    /// (<c>GraceBodySupport.InnerBreaths</c>, session 936), or null — the grace-time annotation
-    /// gate lets them through (CollectArticulations), and AddBreathingSignColumn records each
-    /// one's column in <see cref="_innerGraceBreathItems"/>.</summary>
-    private HashSet<int>? _innerGraceBreathStarts;
-
-    /// <summary>The item index of each grace column an inner breathing sign was written on, and
-    /// the sign — read by DeriveGraceColumns into <c>GraceColumnInfo.BreathAfter</c>.</summary>
-    private Dictionary<int, ArticulationType>? _innerGraceBreathItems;
-
-    /// <summary>The tuplets written inside the grace body being walked, as ITEM index ranges with
-    /// their ratio (innermost first, the order ProcessTuplet closes them) — read once the body is
-    /// walked into the columns' beamlet counts (GraceNoteItem.WithBeamletCounts).</summary>
-    private List<(int Start, int End, int Actual, int Normal)>? _graceTupletSpans;
-
     /// <summary>
     /// Walks a <c>grace { }</c> body with the ORDINARY walker, into the ORDINARY builder, so
     /// its notes become real measure items with real item indices; then derives the grace
@@ -6277,12 +6091,12 @@ public sealed partial class MeasureCollector
         // must come back untouched, because `grace { d'16 } c` gives the c the duration the
         // voice last wrote, not a sixteenth — a side effect the equivalent inline grace has
         // no way to produce.
-        Fraction savedDuration = _defaultDuration;
-        int savedDots = _defaultDots;
-        _defaultDuration = Fraction.Eighth;
-        _defaultDots = 0;
+        Fraction savedDuration = _v.DefaultDuration;
+        int savedDots = _v.DefaultDots;
+        _v.DefaultDuration = Fraction.Eighth;
+        _v.DefaultDots = 0;
 
-        _graceDepth++;
+        _v.GraceDepth++;
         // An acciaccatura's stroke is a property of each item's own Flag, not of the group —
         // see MusicItem.GraceSlash for LilyPond's spelling of it.
         bool slash = type == GraceNoteType.Acciaccatura;
@@ -6296,7 +6110,7 @@ public sealed partial class MeasureCollector
         // A condensedStaff's later part reaches this too: it is collected at its slot in the
         // shared staff (the base CollectScore hands each binding), not at 0, so its grace
         // points DOWN as LilyPond's << \a \\ \b >> draws it (SharedStaffVoiceSlotTests).
-        bool graceStemDown = VoiceDefaults.GetDefaultStemUp(_cursor.VoiceIndex + 1) == false;
+        bool graceStemDown = VoiceDefaults.GetDefaultStemUp(_v.Cursor.VoiceIndex + 1) == false;
         // …and a stem that writes @stemUp / @stemDown keeps its own (MeasureBuilder.NarrowToGraceTime,
         // session 935): every grace stem is a forced one, so a beam over stems that disagree is
         // kneed (GraceNoteItem.BeamStemUpOf).
@@ -6305,13 +6119,13 @@ public sealed partial class MeasureCollector
             grace, name => _variables.TryGetValue(name, out var body) ? body : null,
             () => bodyBudget-- > 0);
         var carriedBreath = Semantics.GraceBodySupport.CarriedBreath(bodyElements, grace.IsAfterGrace);
-        _carriedGraceBreathStart = carriedBreath?.SourceStart ?? -1;
+        _v.CarriedGraceBreathStart = carriedBreath?.SourceStart ?? -1;
         var innerBreaths = Semantics.GraceBodySupport.InnerBreaths(bodyElements, grace.IsAfterGrace);
-        _innerGraceBreathStarts = innerBreaths.Count == 0 ? null : innerBreaths.Select(b => b.SourceStart).ToHashSet();
-        _innerGraceBreathItems = null;
-        _graceTupletSpans = null;
-        _graceChordNames = null;
-        _graceFrameSpecs = null;
+        _v.InnerGraceBreathStarts = innerBreaths.Count == 0 ? null : innerBreaths.Select(b => b.SourceStart).ToHashSet();
+        _v.InnerGraceBreathItems = null;
+        _v.GraceTupletSpans = null;
+        _v.GraceChordNames = null;
+        _v.GraceFrameSpecs = null;
         builder.EnterGraceTime(slash, graceStemDown);
         // The body items are reds already (a grace body is always live), exactly as
         // ProcessCueRegion's are.
@@ -6326,26 +6140,26 @@ public sealed partial class MeasureCollector
             GatherMusicSite(new GreenSite(item), graceSites);
         await ProcessMusicNodeSequence(graceSites, builder);
         builder.ExitGraceTime(slash);
-        _graceDepth--;
+        _v.GraceDepth--;
         // The breathing sign the body ends on stands in a column of its own between the last
         // grace and the main note — added HERE, out of grace time, in the order a change written
         // after the grace has (GraceBodySupport.CarriedBreath; the walk adds none in grace time,
         // AddBreathingSignColumn). DeriveGraceColumns passes over it: it is not a column.
-        _carriedGraceBreathStart = -1;
-        _innerGraceBreathStarts = null;
-        var innerBreathItems = _innerGraceBreathItems;
-        _innerGraceBreathItems = null;
+        _v.CarriedGraceBreathStart = -1;
+        _v.InnerGraceBreathStarts = null;
+        var innerBreathItems = _v.InnerGraceBreathItems;
+        _v.InnerGraceBreathItems = null;
         // The chord symbols and diagrams the body's columns carry (session 964), stamped on
         // the columns below so the run's own springs price them.
-        var graceChordNames = _graceChordNames;
-        var graceFrameSpecs = _graceFrameSpecs;
-        _graceChordNames = null;
-        _graceFrameSpecs = null;
+        var graceChordNames = _v.GraceChordNames;
+        var graceFrameSpecs = _v.GraceFrameSpecs;
+        _v.GraceChordNames = null;
+        _v.GraceFrameSpecs = null;
         if (carriedBreath is { } breath)
             await AddItemAsync(builder, new BreathingSignItem(breath.Type, breath.SourceStart));
 
-        _defaultDuration = savedDuration;
-        _defaultDots = savedDots;
+        _v.DefaultDuration = savedDuration;
+        _v.DefaultDots = savedDots;
 
         var (graceColumns, columnItemIndices) = DeriveGraceColumns(builder, firstItemIndex, graceStemDown,
             innerBreathItems, graceChordNames, graceFrameSpecs);
@@ -6354,7 +6168,7 @@ public sealed partial class MeasureCollector
         // The beam's beamlet counts, in the meter's beat grid and the body's tuplets
         // (GraceNoteItem.WithBeamletCounts), the tuplets' item ranges read as column ranges.
         List<(int First, int Last, int Actual, int Normal)>? columnTuplets = null;
-        if (_graceTupletSpans is { } graceTuplets)
+        if (_v.GraceTupletSpans is { } graceTuplets)
             foreach (var (start, end, actual, normal) in graceTuplets)
             {
                 int first = -1, last = -1;
@@ -6367,7 +6181,7 @@ public sealed partial class MeasureCollector
                 if (first >= 0)
                     (columnTuplets ??= []).Add((first, last, actual, normal));
             }
-        _graceTupletSpans = null;
+        _v.GraceTupletSpans = null;
         graceColumns = GraceNoteItem.WithBeamletCounts(graceColumns, builder.MeterInForce, columnTuplets);
 
         _graceNotes.Add(new GraceNoteItem(
@@ -6379,14 +6193,14 @@ public sealed partial class MeasureCollector
             // for the same reason.
             builder.CurrentItemCount,
             grace.SourceStart,
-            _cursor.StaffIndex,
+            _v.Cursor.StaffIndex,
             // The voice whose item list MainNoteItemIndex counts — see GraceNoteItem.
-            _cursor.VoiceIndex,
+            _v.Cursor.VoiceIndex,
             // Where each column stands in that same list — the address the ordinary
             // engravers reach a grob by (GraceNoteItem.ColumnItemIndices).
             columnItemIndices) { IsAfterGrace = grace.IsAfterGrace });
         // Hand the infos to the next main note/chord so it can reserve front space.
-        _pendingLeadingGrace = graceColumns;
+        _v.PendingLeadingGrace = graceColumns;
     }
 
     /// <summary>

@@ -313,7 +313,7 @@ public sealed partial class MeasureCollector
     /// </summary>
     private ImmutableArray<Measure> OttavaDisplayProbe(List<Measure> measures, int measureOffset)
     {
-        int staff = _cursor.StaffIndex;
+        int staff = _v.Cursor.StaffIndex;
         bool any = false;
         foreach (var mark in _musicMarks)
             if (mark.StaffIndex == staff
@@ -345,7 +345,7 @@ public sealed partial class MeasureCollector
     /// </summary>
     /// <remarks>
     /// ⚠️ ONE COLLECTOR COLLECTS EVERY STAFF (the voice-binding loop bumps
-    /// <c>_cursor.StaffIndex</c>), and <c>_tupletBrackets</c> is never cleared, so by the time
+    /// <c>_v.Cursor.StaffIndex</c>), and <c>_tupletBrackets</c> is never cleared, so by the time
     /// staff N is probed the list also holds staves 0..N−1's brackets — and, inside a
     /// <c>&lt;&lt; \\ &gt;&gt;</c> span, the sibling voices'. Handed unfiltered, the detector reads
     /// every one of them as an index into THIS stream's items:
@@ -358,7 +358,7 @@ public sealed partial class MeasureCollector
     /// </remarks>
     /// <param name="measureOffset">Where the probed stream starts in the staff (see
     /// <see cref="ResolveBeamStemDirections"/>). The brackets are keyed by the STAFF's bar
-    /// (the walk adds <c>_cursor.MetadataMeasureOffset</c>), the probe's measures by the span's
+    /// (the walk adds <c>_v.Cursor.MetadataMeasureOffset</c>), the probe's measures by the span's
     /// own, so a sub-voice's brackets are shifted back into its frame (the same reason
     /// <see cref="OttavaDisplayProbe"/> shifts its spans). ⚠️ NO OUTPUT IS KNOWN TO DEPEND ON
     /// THIS, measured by poisoning it (VoiceSpanTupletBarTests): the probe's brackets reach
@@ -367,7 +367,7 @@ public sealed partial class MeasureCollector
     private ImmutableArray<TupletBracketItem> ProbeTupletBrackets(int measureOffset)
     {
         var own = TupletBracketItem.AddressedTo(
-            _tupletBrackets, _cursor.StaffIndex, _cursor.VoiceIndex);
+            _tupletBrackets, _v.Cursor.StaffIndex, _v.Cursor.VoiceIndex);
         if (measureOffset == 0 || own.IsEmpty)
             return own;
         var shifted = ImmutableArray.CreateBuilder<TupletBracketItem>(own.Length);
@@ -442,7 +442,7 @@ public sealed partial class MeasureCollector
         var probe = OttavaDisplayProbe(measures, measureOffset);
         var voice = new Voice("beam-direction-probe", probe);
         var groups = new BeamDetector().DetectBeamGroups(
-            voice, new TimeSignature(_meta.TimeBeats, _meta.TimeBeatType, _meta.TimeBeatsText, _meta.TimeSenzaMisura, _meta.TimeGrouping),
+            voice, new TimeSignature(_v.Meta.TimeBeats, _v.Meta.TimeBeatType, _v.Meta.TimeBeatsText, _v.Meta.TimeSenzaMisura, _v.Meta.TimeGrouping),
             ProbeTupletBrackets(measureOffset),
             memo: BeamMemo);
 

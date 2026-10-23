@@ -334,7 +334,7 @@ public sealed partial class MeasureCollector
     /// </summary>
     private VoltaBracketItem EndingBracket(FormAlternativeSyntax alt, int first, int last)
     {
-        var length = alt.LengthUnder(_meta.LayoutPlan.VoltaBracket);
+        var length = alt.LengthUnder(_v.Meta.LayoutPlan.VoltaBracket);
         int lastCovered = length.LastBar(first, last);
         bool cut = lastCovered < last;
         return new VoltaBracketItem(first, lastCovered, alt.PrintedText,
@@ -448,9 +448,9 @@ public sealed partial class MeasureCollector
         // other play of it. That is the whole of what the marks do — the duration and
         // the meter/key reverts below are unaffected, and a section's first note still
         // states its own value.
-        _octave.ResetForSection(octaveOffset);
-        _defaultDuration = Fraction.Quarter;
-        _defaultDots = 0;
+        _v.Octave.ResetForSection(octaveOffset);
+        _v.DefaultDuration = Fraction.Quarter;
+        _v.DefaultDots = 0;
 
         // A section is self-contained: settle the boundary so a section that OPENS with a
         // `|` closes an EMPTY measure of its own (owner's decision, 2026-08-28) rather than
@@ -460,16 +460,16 @@ public sealed partial class MeasureCollector
         // What is in force BEFORE the reset below, for the section head's restatements
         // (MeasureBuilder.SectionHead: one equal to this is no change, and is not drawn).
         builder.ArmSectionHead(new MeasureBuilder.SectionHeadState(
-            builder.MeterInForce, new KeySignature(_meta.KeySharps, _meta.KeyCustom),
-            _ambientTonicStep, _ambientTonicAlter, _ambientTonicValid, ParseClefType(_meta.Clef)));
+            builder.MeterInForce, new KeySignature(_v.Meta.KeySharps, _v.Meta.KeyCustom),
+            _v.AmbientTonicStep, _v.AmbientTonicAlter, _v.AmbientTonicValid, ParseClefType(_v.Meta.Clef)));
 
         // The phrase auto-transpose baseline reverts with the key: a mid-section
         // modulation must not carry into the next section (nor a reused copy).
         // Unconditional — the running tonic can differ from home even when the
         // sharp count matches (A minor → C major both have 0 sharps).
         // …and THAT is also a key change the revert below must draw, so it is read first.
-        bool tonicLeftHome = _ambientTonicValid
-            && (_ambientTonicStep != _meta.KeyTonicStep || _ambientTonicAlter != _meta.KeyTonicAlter);
+        bool tonicLeftHome = _v.AmbientTonicValid
+            && (_v.AmbientTonicStep != _v.Meta.KeyTonicStep || _v.AmbientTonicAlter != _v.Meta.KeyTonicAlter);
         ResetAmbientTonicToHome();
 
         // Time and key revert to the SCORE level too, for the same self-containment:
@@ -494,10 +494,10 @@ public sealed partial class MeasureCollector
             {
                 if (_sectionResetOverrides.TryGetValue((grob, prop), out var defaultValue))
                     _grobOverrides.Add(new GrobOverride(grob, prop, defaultValue,
-                        builder.CurrentMeasureIndex, builder.CurrentItemCount, false, _cursor.StaffIndex));
+                        builder.CurrentMeasureIndex, builder.CurrentItemCount, false, _v.Cursor.StaffIndex));
                 else
                     _grobReverts.Add(new GrobRevert(grob, prop,
-                        builder.CurrentMeasureIndex, builder.CurrentItemCount, _cursor.StaffIndex));
+                        builder.CurrentMeasureIndex, builder.CurrentItemCount, _v.Cursor.StaffIndex));
             }
             _sectionActiveGrobProps.Clear();
         }
@@ -521,7 +521,7 @@ public sealed partial class MeasureCollector
                     continue;
                 var secOv = (OverrideDeclarationSyntax)section.GetChild(i)!;
                 CollectOverride(secOv, builder.CurrentMeasureIndex, builder.CurrentItemCount,
-                    isOnce: false, staffIndex: _cursor.StaffIndex);
+                    isOnce: false, staffIndex: _v.Cursor.StaffIndex);
                 _sectionActiveGrobProps.Add((secOv.GrobName.Text, secOv.PropertyName.Text));
             }
         }
@@ -532,9 +532,9 @@ public sealed partial class MeasureCollector
         // its own `clef` overrides this at the music walk. Only redraw when it actually
         // differs (first section is a no-op). The octave frame is not touched: a clef is
         // drawing only (InstrumentDefaults.DefaultAnchorOctave).
-        if (_meta.Clef != _sectionResetClef)
+        if (_v.Meta.Clef != _sectionResetClef)
         {
-            _meta.Clef = _sectionResetClef;
+            _v.Meta.Clef = _sectionResetClef;
             await AddItemAsync(builder, new ClefChangeItem(ParseClefType(_sectionResetClef), sectionPos));
         }
 
@@ -550,11 +550,11 @@ public sealed partial class MeasureCollector
             // "C C" for a `section A { time 4/4 … }` that opens the form (2026-09-26).
             // LILYPOND-REF: lily/time-signature-engraver.cc:94-122 process_music — one
             //   TimeSignature per timestep.
-            _meta.TimeBeats = sectionTime.Beats;
-            _meta.TimeBeatsText = sectionTime.BeatsText;
-            _meta.TimeGrouping = sectionTime.Grouping;
-            _meta.TimeBeatType = sectionTime.BeatType;
-            _meta.TimeSenzaMisura = sectionTime.IsSenzaMisura;
+            _v.Meta.TimeBeats = sectionTime.Beats;
+            _v.Meta.TimeBeatsText = sectionTime.BeatsText;
+            _v.Meta.TimeGrouping = sectionTime.Grouping;
+            _v.Meta.TimeBeatType = sectionTime.BeatType;
+            _v.Meta.TimeSenzaMisura = sectionTime.IsSenzaMisura;
             builder.SetMeter(new Meter(sectionTime.Beats, sectionTime.BeatType, sectionTime.BeatsText, sectionTime.Grouping),
                 sectionTime.IsSenzaMisura);
             builder.MeterInForce = new TimeSignature(sectionTime.Beats, sectionTime.BeatType,
@@ -582,7 +582,7 @@ public sealed partial class MeasureCollector
         {
             // No section meter: revert the running meter to the SCORE level — the home the
             // builder was armed with (MeasureBuilder.SetHomeMeter, from _scoreTime: not
-            // _meta.Time, which a mid-music `time` in a prior section has mutated). Redrawn
+            // _v.Meta.Time, which a mid-music `time` in a prior section has mutated). Redrawn
             // only when the previous section left a different meter (MeasureBuilder.RevertMeterToHome).
             builder.RevertMeterToHome(sectionPos);
         }
@@ -637,22 +637,22 @@ public sealed partial class MeasureCollector
         // compared here, so the page kept silent where the twin's page redrew the sharp.
         // LILYPOND-REF: lily/key-engraver.cc:141-152 process_music — a key event creates the
         //   visible KeySignature (create_key (false)) whatever its alterations.
-        else if (_meta.KeySharps != _sectionResetKeySharps || _meta.KeyCustom != _sectionResetKeyCustom
+        else if (_v.Meta.KeySharps != _sectionResetKeySharps || _v.Meta.KeyCustom != _sectionResetKeyCustom
                  || tonicLeftHome)
         {
-            var previousKey = new KeySignature(_meta.KeySharps, _meta.KeyCustom);
-            _meta.KeySharps = _sectionResetKeySharps;
-            _meta.KeyCustom = _sectionResetKeyCustom;
+            var previousKey = new KeySignature(_v.Meta.KeySharps, _v.Meta.KeyCustom);
+            _v.Meta.KeySharps = _sectionResetKeySharps;
+            _v.Meta.KeyCustom = _sectionResetKeyCustom;
             // The revert is a key change for the Roman-numeral degrees too: a section after
             // one that wrote `key f major` is back in the home key, and `chords … as roman`
             // read it in F until session 905 (C showed as V). A custom home key has no tonic.
             if (_sectionResetKeyCustom == null)
-                RecordKeyAtMeasure(builder.CurrentMeasureIndex, _meta.KeyTonicStep, _sectionResetKeySharps);
+                RecordKeyAtMeasure(builder.CurrentMeasureIndex, _v.Meta.KeyTonicStep, _sectionResetKeySharps);
             await AddItemAsync(builder, new KeySignatureChangeItem(
-                new KeySignature(_meta.KeySharps, _meta.KeyCustom), previousKey, sectionPos)
+                new KeySignature(_v.Meta.KeySharps, _v.Meta.KeyCustom), previousKey, sectionPos)
             {
                 // The section's clef revert above has already run, so this is the new clef.
-                Clef = ParseClefType(_meta.Clef),
+                Clef = ParseClefType(_v.Meta.Clef),
             });
         }
 
@@ -769,7 +769,7 @@ public sealed partial class MeasureCollector
         // that did not write it — the page lost the whole section from that staff and every
         // later bar slid left (HANDOFF §2 F-hdrsilent: 4 bars drawn of 6, `lysc check`
         // silent). Each filler bar is worth what an empty bar is worth HERE (BarLength: the
-        // header's meter, its pickup first), not the score meter in _meta.
+        // header's meter, its pickup first), not the score meter in _v.Meta.
         if (_voiceName != null && !builder.HasMeasureContent)
         {
             // Record mode: the canonical bar count is a function of EVERY part's
@@ -830,30 +830,30 @@ public sealed partial class MeasureCollector
     /// </summary>
     private async ValueTask ApplyKeySignatureChange(KeySignatureSyntax keySig, MeasureBuilder builder)
     {
-        var previousKey = new KeySignature(_meta.KeySharps, _meta.KeyCustom);
+        var previousKey = new KeySignature(_v.Meta.KeySharps, _v.Meta.KeyCustom);
         var (previousTonicStep, previousTonicAlter, previousTonicValid)
-            = (_ambientTonicStep, _ambientTonicAlter, _ambientTonicValid);
+            = (_v.AmbientTonicStep, _v.AmbientTonicAlter, _v.AmbientTonicValid);
         KeySignature newKey;
         if (keySig.IsCustom)
         {
             // Custom signature: alterations as written (transpose does not respell a
             // custom map). A custom key has no tonic — phrases placed here are unshifted.
-            _meta.KeySharps = 0;
-            _meta.KeyCustom = KeySignature.EncodeCustom(keySig.CustomAlterations);
-            newKey = new KeySignature(0, _meta.KeyCustom);
-            _ambientTonicValid = false;
+            _v.Meta.KeySharps = 0;
+            _v.Meta.KeyCustom = KeySignature.EncodeCustom(keySig.CustomAlterations);
+            newKey = new KeySignature(0, _v.Meta.KeyCustom);
+            _v.AmbientTonicValid = false;
         }
         else
         {
-            int newSharps = _octave.TransposeKeySharps(CalculateKeySharps(keySig));
-            _meta.KeySharps = newSharps;
-            _meta.KeyCustom = null;
+            int newSharps = _v.Octave.TransposeKeySharps(CalculateKeySharps(keySig));
+            _v.Meta.KeySharps = newSharps;
+            _v.Meta.KeyCustom = null;
             newKey = new KeySignature(newSharps);
             // Advance the phrase auto-transpose baseline to this key's (written) tonic.
-            _ambientTonicStep = Math.Max(0,
+            _v.AmbientTonicStep = Math.Max(0,
                 LilySharp.Core.Music.KeySpelling.StepOf(keySig.Pitch.BaseName));
-            _ambientTonicAlter = keySig.Pitch.AccidentalOffset;
-            _ambientTonicValid = true;
+            _v.AmbientTonicAlter = keySig.Pitch.AccidentalOffset;
+            _v.AmbientTonicValid = true;
             // Record the modulation for Roman-numeral chord degrees at this bar onward
             // (per-voice walk, so the SortedDictionary dedups by measure).
             RecordKeyAtMeasure(builder.CurrentMeasureIndex,
@@ -868,14 +868,14 @@ public sealed partial class MeasureCollector
         // the first section's `key a major`. Fold it into the initial signature so the first
         // measure shows the FINAL key from the start, with no redundant change drawn. This
         // mirrors the opening time signature, which already collapses this way
-        // (CaptureScoreContent takes _meta.TimeBeats after the section's own time). The
+        // (CaptureScoreContent takes _v.Meta.TimeBeats after the section's own time). The
         // running key state above is left as set, so mid-piece changes still draw normally.
-        // Recorded PER VOICE (not the shared _meta.InitialKeySharps): in a multi-staff
+        // Recorded PER VOICE (not the shared _v.Meta.InitialKeySharps): in a multi-staff
         // score each staff keeps its own opening key, so `part a { key c … }` and
         // `part b { key a … }` do not overwrite each other.
         if (builder.AtPieceOpening)
         {
-            _openingKeyOverride = (_meta.KeySharps, _meta.KeyCustom);
+            _openingKeyOverride = (_v.Meta.KeySharps, _v.Meta.KeyCustom);
             return;
         }
 
@@ -886,10 +886,10 @@ public sealed partial class MeasureCollector
         var head = builder.SectionHead;
         bool unchanged = head is { } h
             ? h.Key == newKey && (newKey.Custom != null
-                || (h.TonicValid && h.TonicStep == _ambientTonicStep && h.TonicAlter == _ambientTonicAlter))
+                || (h.TonicValid && h.TonicStep == _v.AmbientTonicStep && h.TonicAlter == _v.AmbientTonicAlter))
             : previousKey == newKey && (newKey.Custom != null
-                || (previousTonicValid && previousTonicStep == _ambientTonicStep
-                    && previousTonicAlter == _ambientTonicAlter));
+                || (previousTonicValid && previousTonicStep == _v.AmbientTonicStep
+                    && previousTonicAlter == _v.AmbientTonicAlter));
         if (unchanged && !keySig.IsForced)
         {
             if (head != null)
@@ -900,7 +900,7 @@ public sealed partial class MeasureCollector
         // The TONIC's token, not the declaration's Position — see KeyDataPos.
         await AddItemAsync(builder, new KeySignatureChangeItem(newKey, previousKey, KeyDataPos(keySig))
         {
-            Clef = ParseClefType(_meta.Clef),
+            Clef = ParseClefType(_v.Meta.Clef),
         });
     }
 

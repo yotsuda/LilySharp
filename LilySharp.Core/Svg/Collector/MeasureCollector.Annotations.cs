@@ -54,7 +54,7 @@ public sealed partial class MeasureCollector
         // In grace time too (session 964, GraceBodySupport.IsCarriedFiguredBass): a grace
         // column is a measure item, and FiguredBassEngraver stands the group at the grace
         // column's X (ElementCoordinator.LeadingGraceColumnHeadLeftX). Until then this returned
-        // at `_graceDepth > 0` and LYS4020 reported the figures.
+        // at `_v.GraceDepth > 0` and LYS4020 reported the figures.
         var articulations = ArticulationsOf(node);
 
         foreach (var child in articulations)
@@ -69,7 +69,7 @@ public sealed partial class MeasureCollector
                         measureIndex,
                         itemIndex,
                         markSyntax.SourceStart,
-                        _cursor.StaffIndex));
+                        _v.Cursor.StaffIndex));
                 }
             }
         }
@@ -120,9 +120,9 @@ public sealed partial class MeasureCollector
         // In grace time too (session 964, GraceBodySupport.IsCarriedChordName): the symbol is
         // the ordinary ChordNameItem at the grace's item index — ChordNameEngraver stands it on
         // the grace column (ElementCoordinator.LeadingGraceColumnHeadLeftX), and the run's
-        // springs price it (GraceColumnInfo.ChordName, stamped through _graceChordNames by
-        // DeriveGraceColumns). Until then this returned at `_graceDepth > 0`.
-        bool graceTime = _graceDepth > 0;
+        // springs price it (GraceColumnInfo.ChordName, stamped through _v.GraceChordNames by
+        // DeriveGraceColumns). Until then this returned at `_v.GraceDepth > 0`.
+        bool graceTime = _v.GraceDepth > 0;
         var articulations = ArticulationsOf(node);
 
         foreach (var child in articulations)
@@ -168,10 +168,10 @@ public sealed partial class MeasureCollector
                         var named = fromFrets.PrintedSymbol(_chordSpelling, keySharps);
                         var shapeSymbol = _chordNameCollector.AddInline(
                             named.Text, measureIndex, itemIndex, anchorTiming, markSyntax.SourceStart,
-                            _cursor.StaffIndex, fromFrets, named.SuperFrom, named.BracketSuperFrom,
-                            diagram?.FrameSpec, _cursor.VoiceIndex);
+                            _v.Cursor.StaffIndex, fromFrets, named.SuperFrom, named.BracketSuperFrom,
+                            diagram?.FrameSpec, _v.Cursor.VoiceIndex);
                         if (graceTime)
-                            (_graceChordNames ??= new())[itemIndex] = shapeSymbol;
+                            (_v.GraceChordNames ??= new())[itemIndex] = shapeSymbol;
                     }
                 }
                 continue;
@@ -203,25 +203,14 @@ public sealed partial class MeasureCollector
             var drawn = DiagramFor(structure);
             var symbol = _chordNameCollector.AddInline(
                 chordText, measureIndex, itemIndex, anchorTiming, markSyntax.SourceStart,
-                _cursor.StaffIndex, structure, superFrom, bracketSuperFrom, drawn?.FrameSpec,
-                _cursor.VoiceIndex);
+                _v.Cursor.StaffIndex, structure, superFrom, bracketSuperFrom, drawn?.FrameSpec,
+                _v.Cursor.VoiceIndex);
             if (graceTime)
-                (_graceChordNames ??= new())[itemIndex] = symbol;
+                (_v.GraceChordNames ??= new())[itemIndex] = symbol;
             if (drawn != null)
                 AddChordDiagram(markSyntax, drawn.FrameSpec, measureIndex, itemIndex);
         }
     }
-
-    /// <summary>The chord symbols written on the grace body being walked, by the grace column's
-    /// item index (session 964) — read by DeriveGraceColumns into
-    /// <see cref="GraceColumnInfo.ChordName"/>, the stamp the run's spacing prices.</summary>
-    private Dictionary<int, ChordNameItem>? _graceChordNames;
-
-    /// <summary>The chord diagrams on the grace body being walked — an <c>@diagram</c>'s spec
-    /// or the shape an <c>@chord</c> chose — by the grace column's item index (session 964);
-    /// read by DeriveGraceColumns into <see cref="GraceColumnInfo.FrameSpec"/>, the box the run's
-    /// spacing rods against its neighbours.</summary>
-    private Dictionary<int, string>? _graceFrameSpecs;
 
     /// <summary>
     /// The chord diagram an <c>@chord</c> chose, as the page's diagram — the very item
@@ -245,22 +234,22 @@ public sealed partial class MeasureCollector
     {
         _articulations.Add(new ArticulationItem(
             ArticulationType.FretFrame, measureIndex, itemIndex, true,
-            markSyntax.SourceStart, _cursor.StaffIndex)
+            markSyntax.SourceStart, _v.Cursor.StaffIndex)
         {
             // The chosen shape's spec, its barre included (a predefined shape's; the fingers it
             // carries too are not drawn on a markup diagram — FretFrameGeometry).
             FrameSpec = frameSpec,
-            VoiceIndex = _cursor.VoiceIndex,
+            VoiceIndex = _v.Cursor.VoiceIndex,
             UnderChordName = true,
         });
         // On a grace column the run's spacing rods the box (GraceColumnInfo.FrameSpec, session 964).
-        if (_graceDepth > 0)
-            (_graceFrameSpecs ??= new())[itemIndex] = frameSpec;
+        if (_v.GraceDepth > 0)
+            (_v.GraceFrameSpecs ??= new())[itemIndex] = frameSpec;
     }
 
     /// <summary>The key signature as WRITTEN at this point of the walk — the one a chord
     /// named from notes is spelled in (<see cref="TryNameChord"/> reads it the same way).</summary>
-    private int WrittenKeySharps() => _meta.KeySharps - _octave.TransposeKeySharps(0);
+    private int WrittenKeySharps() => _v.Meta.KeySharps - _v.Octave.TransposeKeySharps(0);
 
     /// <summary>The open strings of the part being collected, LOW string first
     /// (<see cref="Semantics.PartHeaderDefaults.Tuning"/>): what a symbol-less
@@ -391,7 +380,7 @@ public sealed partial class MeasureCollector
         string? roman = null;
         if (structure != null)
         {
-            (int tonic, int sharps) = (_meta.KeyTonicStep, _meta.InitialKeySharps);
+            (int tonic, int sharps) = (_v.Meta.KeyTonicStep, _v.Meta.InitialKeySharps);
             foreach (var (m, key) in _keyByMeasure)
             {
                 if (m > measureIndex) break;
@@ -450,7 +439,7 @@ public sealed partial class MeasureCollector
             // be named by the write-order reader either, but letting it try keeps this
             // change from being able to LOSE a name.
         }
-        int keySharps = _meta.KeySharps - _octave.TransposeKeySharps(0); // written key
+        int keySharps = _v.Meta.KeySharps - _v.Octave.TransposeKeySharps(0); // written key
         // (Until 2026-08-28 a shifted phrase reference — Melody'(3) — made the chord
         // SOUND a diatonic interval away from what is written, and this named what
         // sounded. That spelling is gone, so written and sounding are the same again.)
@@ -471,7 +460,7 @@ public sealed partial class MeasureCollector
         else if (chord.Degrees.Any())
         {
             // Omitted root (<1 3 5>): the degrees stack on the key's tonic.
-            rootStep = _ambientTonicValid ? _ambientTonicStep : 0;
+            rootStep = _v.AmbientTonicValid ? _v.AmbientTonicStep : 0;
             rootAlter = LilySharp.Core.Music.KeySpelling.Alteration(rootStep, keySharps);
         }
         else
@@ -515,7 +504,7 @@ public sealed partial class MeasureCollector
     private bool TryNameArpeggio(ArpeggioSyntax arp, out ChordStructure? structure)
     {
         structure = null;
-        int keySharps = _meta.KeySharps - _octave.TransposeKeySharps(0); // written key
+        int keySharps = _v.Meta.KeySharps - _v.Octave.TransposeKeySharps(0); // written key
         var members = arp.Members
             .Where(m => m is PitchSyntax or ChordSyntax or ScaleDegreeSyntax).ToList();
         if (members.Count == 0)
@@ -529,7 +518,7 @@ public sealed partial class MeasureCollector
             && Music.ShapeChords.Lowest(ShapeNotesOf(firstShape)) is { } lowest)
             anchorStep = lowest.Step;   // the group's root is the shape's lowest note
         else if (members[0] is ScaleDegreeSyntax || firstPitch is null)
-            anchorStep = _ambientTonicValid ? _ambientTonicStep : 0;
+            anchorStep = _v.AmbientTonicValid ? _v.AmbientTonicStep : 0;
         else
             anchorStep = GetPitchIndex(firstPitch.PitchName.ToLowerInvariant()[0]);
 
@@ -593,7 +582,7 @@ public sealed partial class MeasureCollector
     private void CollectCrossStaff(SyntaxNode node, int measureIndex, int itemIndex)
     {
         // Grace time has no column for it to hang off — see CollectArticulations.
-        if (_graceDepth > 0)
+        if (_v.GraceDepth > 0)
             return;
         var articulations = ArticulationsOf(node);
 
@@ -626,7 +615,7 @@ public sealed partial class MeasureCollector
         // for round-tripping) moved into LysValue.FromToken, because they are properties
         // of the token rather than of any consumer. docs/VALUE_SITE_AUDIT.md §2.
         var value = LysValue.FromToken(node.ValueToken.Kind, node.ValueToken.Text);
-        _grobOverrides.Add(new GrobOverride(grobType, propertyName, value, measureIndex, itemIndex, isOnce, staffIndex, _cursor.VoiceScope));
+        _grobOverrides.Add(new GrobOverride(grobType, propertyName, value, measureIndex, itemIndex, isOnce, staffIndex, _v.Cursor.VoiceScope));
     }
 
     /// <summary>
@@ -637,7 +626,7 @@ public sealed partial class MeasureCollector
     {
         string grobType = node.GrobName.Text;
         string propertyName = node.PropertyName.Text;
-        _grobReverts.Add(new GrobRevert(grobType, propertyName, measureIndex, itemIndex, staffIndex, _cursor.VoiceScope));
+        _grobReverts.Add(new GrobRevert(grobType, propertyName, measureIndex, itemIndex, staffIndex, _v.Cursor.VoiceScope));
     }
 
     /// <summary>
@@ -683,11 +672,11 @@ public sealed partial class MeasureCollector
         // measure item now (⒝2), and ArticulationEngraver places a script on a grace column at
         // the grace's X and Script size. Only what GraceBodySupport.IsCarriedScript names is
         // kept — the one predicate the drop list (LYS4020) reads too.
-        bool graceTime = _graceDepth > 0;
+        bool graceTime = _v.GraceDepth > 0;
         if (graceTime)
             CollectGraceColumnlessAnnotations(ArticulationsOf(node), measureIndex);
-        // Under a % sign nothing that rides a note is collected — see _percentCoveredDepth.
-        if (_percentCoveredDepth > 0)
+        // Under a % sign nothing that rides a note is collected — see _v.PercentCoveredDepth.
+        if (_v.PercentCoveredDepth > 0)
             return;
         // A chord's scripts come from the whole-chord post-events AND from each
         // member (<c@staccato e@accent>), and the two are DIFFERENT GROBS in
@@ -767,11 +756,11 @@ public sealed partial class MeasureCollector
                 // The chord diagram (session 964): a TextScript on the grace column.
                 && !Semantics.GraceBodySupport.IsCarriedDiagram(articulation)
                 // The breathing sign the body ends on (session 934) — a body-level answer, so it
-                // is matched by where it was written (_carriedGraceBreathStart).
+                // is matched by where it was written (_v.CarriedGraceBreathStart).
                 && !(articulation is ArticulationSyntax { Type: ArticulationType.Breath or ArticulationType.Caesura } breathSign
-                     && (breathSign.SourceStart == _carriedGraceBreathStart
-                         // …and the ones on its inner columns (session 936; _innerGraceBreathStarts).
-                         || _innerGraceBreathStarts?.Contains(breathSign.SourceStart) == true)))
+                     && (breathSign.SourceStart == _v.CarriedGraceBreathStart
+                         // …and the ones on its inner columns (session 936; _v.InnerGraceBreathStarts).
+                         || _v.InnerGraceBreathStarts?.Contains(breathSign.SourceStart) == true)))
                 return;
             if (articulation is ArticulationSyntax articulationSyntax)
             {
@@ -809,10 +798,10 @@ public sealed partial class MeasureCollector
                     }
 
                     _articulations.Add(new ArticulationItem(type, measureIndex, itemIndex, isAbove,
-                        articulationSyntax.SourceStart, _cursor.StaffIndex)
+                        articulationSyntax.SourceStart, _v.Cursor.StaffIndex)
                     {
                         DirectionForced = directionForced,
-                        VoiceIndex = _cursor.VoiceIndex,
+                        VoiceIndex = _v.Cursor.VoiceIndex,
                         IsChordMember = isChordMember,
                     });
                 }
@@ -833,11 +822,11 @@ public sealed partial class MeasureCollector
                         {
                             true => 1, false => -1, null => 0,
                         };
-                        _trillSpannerEvents.Add((true, measureIndex, itemIndex, articulationSyntax.SourceStart, _cursor.StaffIndex, _cursor.VoiceIndex, forcedDir));
+                        _trillSpannerEvents.Add((true, measureIndex, itemIndex, articulationSyntax.SourceStart, _v.Cursor.StaffIndex, _v.Cursor.VoiceIndex, forcedDir));
                     }
                     else if (nameText == "stopTrillSpan")
                     {
-                        _trillSpannerEvents.Add((false, measureIndex, itemIndex, articulationSyntax.SourceStart, _cursor.StaffIndex, _cursor.VoiceIndex, 0));
+                        _trillSpannerEvents.Add((false, measureIndex, itemIndex, articulationSyntax.SourceStart, _v.Cursor.StaffIndex, _v.Cursor.VoiceIndex, 0));
                     }
                     else if (nameText == "courtesy")
                     {
@@ -856,8 +845,8 @@ public sealed partial class MeasureCollector
                         _articulations.Add(new ArticulationItem(
                             ArticulationItem.EditorialTypeFor(editorialKind),
                             measureIndex, itemIndex, isAbove: true,
-                            articulationSyntax.SourceStart, _cursor.StaffIndex)
-                        { VoiceIndex = _cursor.VoiceIndex, IsChordMember = isChordMember });
+                            articulationSyntax.SourceStart, _v.Cursor.StaffIndex)
+                        { VoiceIndex = _v.Cursor.VoiceIndex, IsChordMember = isChordMember });
                     }
                     else
                     {
@@ -881,8 +870,8 @@ public sealed partial class MeasureCollector
                         {
                             _musicMarks.Add(mark with
                             {
-                                StaffIndex = _cursor.StaffIndex,
-                                VoiceIndex = _cursor.VoiceIndex,
+                                StaffIndex = _v.Cursor.StaffIndex,
+                                VoiceIndex = _v.Cursor.VoiceIndex,
                             });
                         }
                     }
@@ -906,8 +895,8 @@ public sealed partial class MeasureCollector
                         _musicMarks.Add(new MusicMarkItem(
                             endType, measureIndex, markSyntax.SourceStart, itemIndex, anchorTiming)
                         {
-                            StaffIndex = _cursor.StaffIndex,
-                            VoiceIndex = _cursor.VoiceIndex,
+                            StaffIndex = _v.Cursor.StaffIndex,
+                            VoiceIndex = _v.Cursor.VoiceIndex,
                         });
                 }
                 else if (Semantics.AnnotationValues.Pluck(markSyntax) is { } pluckLetter)
@@ -915,8 +904,8 @@ public sealed partial class MeasureCollector
                     // p-i-m-a right-hand fingering, printed BELOW the note.
                     _articulations.Add(new ArticulationItem(
                         ArticulationType.Pluck, measureIndex, itemIndex, false,
-                        markSyntax.SourceStart, _cursor.StaffIndex)
-                    { PluckLetter = pluckLetter, VoiceIndex = _cursor.VoiceIndex });
+                        markSyntax.SourceStart, _v.Cursor.StaffIndex)
+                    { PluckLetter = pluckLetter, VoiceIndex = _v.Cursor.VoiceIndex });
                 }
                 else if (Semantics.AnnotationValues.Frame(markSyntax) is { } spec)
                 {
@@ -925,24 +914,24 @@ public sealed partial class MeasureCollector
                     _articulations.Add(new ArticulationItem(
                         ArticulationType.FretFrame, measureIndex, itemIndex,
                         markSyntax.ForcedAbove != false,
-                        markSyntax.SourceStart, _cursor.StaffIndex)
+                        markSyntax.SourceStart, _v.Cursor.StaffIndex)
                     {
                         FrameSpec = spec,
-                        VoiceIndex = _cursor.VoiceIndex,
+                        VoiceIndex = _v.Cursor.VoiceIndex,
                         DirectionForced = markSyntax.ForcedAbove is not null,
                     });
                     // On a grace column (session 964, GraceBodySupport.IsCarriedDiagram) the
                     // run's spacing rods the box against its neighbours (GraceColumnInfo.FrameSpec).
                     if (graceTime)
-                        (_graceFrameSpecs ??= new())[itemIndex] = spec;
+                        (_v.GraceFrameSpecs ??= new())[itemIndex] = spec;
                 }
                 else if (Semantics.AnnotationValues.Bend(markSyntax) is { } semitones)
                 {
                     // @bend(full|half|N) — guitar bend-up, N in semitones.
                     _articulations.Add(new ArticulationItem(
                         ArticulationType.Bend, measureIndex, itemIndex, true,
-                        markSyntax.SourceStart, _cursor.StaffIndex)
-                    { BendSemitones = semitones, VoiceIndex = _cursor.VoiceIndex });
+                        markSyntax.SourceStart, _v.Cursor.StaffIndex)
+                    { BendSemitones = semitones, VoiceIndex = _v.Cursor.VoiceIndex });
                 }
                 else if (Semantics.AnnotationValues.IsTextSpanAnnotation(markSyntax))
                 {
@@ -955,8 +944,8 @@ public sealed partial class MeasureCollector
                         MusicMarkType.TextSpanStart, Semantics.AnnotationValues.TextSpan(markSyntax) ?? "",
                         measureIndex, markSyntax.SourceStart, itemIndex, anchorTiming)
                     {
-                        StaffIndex = _cursor.StaffIndex,
-                        VoiceIndex = _cursor.VoiceIndex,
+                        StaffIndex = _v.Cursor.StaffIndex,
+                        VoiceIndex = _v.Cursor.VoiceIndex,
                     });
                 }
                 else if (markSyntax.Name.Equals("notehead", StringComparison.Ordinal)
@@ -993,10 +982,10 @@ public sealed partial class MeasureCollector
                     bool onMmr = node is RestSyntax { RestText: "R" };
                     if (Semantics.AnnotationValues.Text(markSyntax) is { } freeText)
                         _dynamics.Add(new DynamicItem(
-                            freeText, measureIndex, itemIndex, markSyntax.SourceStart, _cursor.StaffIndex)
+                            freeText, measureIndex, itemIndex, markSyntax.SourceStart, _v.Cursor.StaffIndex)
                         {
                             IsAbove = onMmr ? markSyntax.ForcedAbove != false : markSyntax.ForcedAbove == true,
-                            VoiceIndex = _cursor.VoiceIndex,
+                            VoiceIndex = _v.Cursor.VoiceIndex,
                             OnMultiMeasureRest = onMmr,
                         });
                 }
@@ -1009,7 +998,7 @@ public sealed partial class MeasureCollector
                     // (@!sustain), so they arrive through the articulation path
                     // above. Like the plain @ottava, anchor it to the
                     // host note's column via itemIndex/anchorTiming and — crucially —
-                    // carry _cursor.StaffIndex so the bracket and its octave
+                    // carry _v.Cursor.StaffIndex so the bracket and its octave
                     // transposition land on the AUTHORING staff. Without this the
                     // statement-level handler created it with no staff (defaulting to
                     // staff 0), so on a grand staff a lower-staff 8vb was attributed to
@@ -1021,8 +1010,8 @@ public sealed partial class MeasureCollector
                     _musicMarks.Add(new MusicMarkItem(
                         compoundMark, measureIndex, markSyntax.SourceStart, itemIndex, anchorTiming)
                     {
-                        StaffIndex = _cursor.StaffIndex,
-                        VoiceIndex = _cursor.VoiceIndex,
+                        StaffIndex = _v.Cursor.StaffIndex,
+                        VoiceIndex = _v.Cursor.VoiceIndex,
                     });
                 }
                 else if (Semantics.AnnotationValues.Rehearsal(markSyntax, out _) is { } rehearsalLabel)

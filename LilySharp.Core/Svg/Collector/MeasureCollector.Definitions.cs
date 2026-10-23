@@ -177,15 +177,15 @@ public sealed partial class MeasureCollector
     // caller can transpose it like it would the global key.
     private void ApplyPartHeaderKey(KeySignatureSyntax key)
     {
-        _meta.KeySharps = key.IsCustom ? 0 : CalculateKeySharps(key);
+        _v.Meta.KeySharps = key.IsCustom ? 0 : CalculateKeySharps(key);
         if (!key.IsCustom)
         {
-            _meta.KeyTonicStep = Math.Max(0,
+            _v.Meta.KeyTonicStep = Math.Max(0,
                 LilySharp.Core.Music.KeySpelling.StepOf(key.Pitch.BaseName));
-            _meta.KeyTonicAlter = key.Pitch.AccidentalOffset;
+            _v.Meta.KeyTonicAlter = key.Pitch.AccidentalOffset;
         }
-        _meta.KeyCustom = key.IsCustom ? KeySignature.EncodeCustom(key.CustomAlterations) : null;
-        _meta.KeyPosition = KeyDataPos(key);
+        _v.Meta.KeyCustom = key.IsCustom ? KeySignature.EncodeCustom(key.CustomAlterations) : null;
+        _v.Meta.KeyPosition = KeyDataPos(key);
     }
 
     // The file's two part-independent defaults — the top-level `transpose` and `pitch` —
@@ -250,7 +250,7 @@ public sealed partial class MeasureCollector
         List<DrummapDeclarationSyntax>? drummaps = null;
         // The paper a book without a `paper { }` lays out on: the defaults, or the snippet
         // layout a Markdown fence starts from (PaperBase). A written block overlays it below.
-        _meta.Paper = PaperBase;
+        _v.Meta.Paper = PaperBase;
 
         // A top-level `clef`/`key`/`time`/`tempo` is unconditionally the FILE DEFAULT.
         // It used to depend on whether bare music had already streamed past (the whole
@@ -290,7 +290,7 @@ public sealed partial class MeasureCollector
                     // block is a declaration (read when a score references it, below),
                     // and a node inside a score is that score's reference.
                     if (font.NameToken == null && !IsInsideRenderDeclaration(font))
-                        _meta.Fonts = Semantics.FontPlanReader.Read(font, out _);
+                        _v.Meta.Fonts = Semantics.FontPlanReader.Read(font, out _);
                     break;
 
                 case PaperDeclarationSyntax paper:
@@ -299,7 +299,7 @@ public sealed partial class MeasureCollector
                     // are that validator's job, and a refused entry is simply absent
                     // from the overlay. Same named/reference guard as fonts.
                     if (paper.NameToken == null && !IsInsideRenderDeclaration(paper))
-                        _meta.Paper = Semantics.PaperPlanReader.Read(paper, PaperBase, out _);
+                        _v.Meta.Paper = Semantics.PaperPlanReader.Read(paper, PaperBase, out _);
                     break;
 
                 case LayoutDeclarationSyntax layout:
@@ -307,7 +307,7 @@ public sealed partial class MeasureCollector
                     // contract as paper: the reading is shared with LayoutValidator, and
                     // only the UNNAMED top-level block is the file default.
                     if (layout.NameToken == null && !IsInsideRenderDeclaration(layout))
-                        _meta.LayoutPlan = Semantics.LayoutPlanReader.Read(layout, out _);
+                        _v.Meta.LayoutPlan = Semantics.LayoutPlanReader.Read(layout, out _);
                     break;
 
                 case TempoDeclarationSyntax tempoDecl:
@@ -324,12 +324,12 @@ public sealed partial class MeasureCollector
                     // TimeSignatureChangeItem re-arms the per-measure length).
                     if (!IsInsideMusicContent(timeSig))
                     {
-                        _meta.TimeBeats = timeSig.Beats;
-                        _meta.TimeBeatsText = timeSig.BeatsText;
-                        _meta.TimeGrouping = timeSig.Grouping;
-                        _meta.TimeSenzaMisura = timeSig.IsSenzaMisura;
-                        _meta.TimeBeatType = timeSig.BeatType;
-                        _meta.TimePosition = TimeDataPos(timeSig);
+                        _v.Meta.TimeBeats = timeSig.Beats;
+                        _v.Meta.TimeBeatsText = timeSig.BeatsText;
+                        _v.Meta.TimeGrouping = timeSig.Grouping;
+                        _v.Meta.TimeSenzaMisura = timeSig.IsSenzaMisura;
+                        _v.Meta.TimeBeatType = timeSig.BeatType;
+                        _v.Meta.TimePosition = TimeDataPos(timeSig);
                     }
                     break;
 
@@ -337,17 +337,17 @@ public sealed partial class MeasureCollector
                     // Only process top-level key declarations (not inside phrases/sections).
                     if (!IsInsideMusicContent(key))
                     {
-                        _meta.KeySharps = key.IsCustom ? 0 : CalculateKeySharps(key);
+                        _v.Meta.KeySharps = key.IsCustom ? 0 : CalculateKeySharps(key);
                         if (!key.IsCustom)
                         {
-                            _meta.KeyTonicStep = Math.Max(0,
+                            _v.Meta.KeyTonicStep = Math.Max(0,
                                 LilySharp.Core.Music.KeySpelling.StepOf(key.Pitch.BaseName));
-                            _meta.KeyTonicAlter = key.Pitch.AccidentalOffset;
+                            _v.Meta.KeyTonicAlter = key.Pitch.AccidentalOffset;
                         }
-                        _meta.KeyCustom = key.IsCustom
+                        _v.Meta.KeyCustom = key.IsCustom
                             ? KeySignature.EncodeCustom(key.CustomAlterations)
                             : null;
-                        _meta.KeyPosition = KeyDataPos(key);
+                        _v.Meta.KeyPosition = KeyDataPos(key);
                     }
                     break;
 
@@ -357,14 +357,14 @@ public sealed partial class MeasureCollector
                     // own position by the music walk (MeasureCollector.MusicWalk) — letting
                     // it land here made it the file default too, so a part that declared no
                     // clef of its own started in the CHANGED clef (wrong system-start glyph
-                    // and wrong default octave, since Phase 1.5 derives both from _meta.Clef).
+                    // and wrong default octave, since Phase 1.5 derives both from _v.Meta.Clef).
                     // The neighbouring key / octave / partial cases already guard this way.
                     if (!IsInsideMusicContent(clef))
                     {
-                        _meta.Clef = clef.ClefName.Text.ToLowerInvariant();
-                        _meta.ClefPosition = clef.ClefName.Span.Start;
-                        _fileClef = _meta.Clef;
-                        _fileClefPosition = _meta.ClefPosition;
+                        _v.Meta.Clef = clef.ClefName.Text.ToLowerInvariant();
+                        _v.Meta.ClefPosition = clef.ClefName.Span.Start;
+                        _fileClef = _v.Meta.Clef;
+                        _fileClefPosition = _v.Meta.ClefPosition;
                     }
                     break;
 
@@ -372,7 +372,7 @@ public sealed partial class MeasureCollector
                     // A top-level `octave absolute/relative` sets the file default;
                     // mid-music switches are handled in the music stream.
                     if (!IsInsideMusicContent(octaveDir))
-                        _octave.OctaveAbsolute = octaveDir.IsAbsolute;
+                        _v.Octave.OctaveAbsolute = octaveDir.IsAbsolute;
                     break;
 
                 case PartialDeclarationSyntax partialDecl:
@@ -508,57 +508,57 @@ public sealed partial class MeasureCollector
                 CollectMetadata(meta);
 
         // The score's fonts/paper references ride the same road, and RESOLVED values
-        // land in _meta — deliberately, for the incremental gate: MetaMatchesShifted
-        // compares _meta, so an edit inside a referenced named block changes what is
+        // land in _v.Meta — deliberately, for the incremental gate: MetaMatchesShifted
+        // compares _v.Meta, so an edit inside a referenced named block changes what is
         // compared and forces the recollect it needs. A reference REPLACES the file's
         // unnamed default (the audit's decision: no hidden three-layer chain); one
         // that resolves to nothing keeps it, refused all the way through.
         if (FontsOverride is { } fontsRef)
-            _meta.Fonts = Semantics.FontPlanReader.ReadReference(root, fontsRef, _meta.Fonts);
+            _v.Meta.Fonts = Semantics.FontPlanReader.ReadReference(root, fontsRef, _v.Meta.Fonts);
         if (PaperOverride is { } paperRef)
-            _meta.Paper = Semantics.PaperPlanReader.ReadReference(root, paperRef, _meta.Paper, PaperBase);
+            _v.Meta.Paper = Semantics.PaperPlanReader.ReadReference(root, paperRef, _v.Meta.Paper, PaperBase);
         // `lysc … --set KEY=VALUE`: the caller's paper values, over everything the file says —
         // and `--set music=NAME`, the one fonts key a setting reaches, over the file's chain.
         if (PaperOverrides is { } settings)
         {
-            _meta.Paper = settings.Apply(_meta.Paper);
-            _meta.Fonts = settings.ApplyFonts(_meta.Fonts);
+            _v.Meta.Paper = settings.Apply(_v.Meta.Paper);
+            _v.Meta.Fonts = settings.ApplyFonts(_v.Meta.Fonts);
         }
-        // `layout NAME`: the third reference of that shape, landed in _meta for the same
+        // `layout NAME`: the third reference of that shape, landed in _v.Meta for the same
         // incremental reason (MetaMatchesShifted compares it).
         if (LayoutOverride is { } layoutRef)
-            _meta.LayoutPlan = Semantics.LayoutPlanReader.ReadReference(root, layoutRef, _meta.LayoutPlan);
+            _v.Meta.LayoutPlan = Semantics.LayoutPlanReader.ReadReference(root, layoutRef, _v.Meta.LayoutPlan);
         // `lysc … --set Stem.thickness=1.5`: the caller's layout values, over everything the file says.
         if (PaperOverrides is { } layoutSettings)
-            _meta.LayoutPlan = layoutSettings.ApplyLayout(_meta.LayoutPlan);
+            _v.Meta.LayoutPlan = layoutSettings.ApplyLayout(_v.Meta.LayoutPlan);
         // The layout's line thicknesses and stem length ride on the paper, which is what the
         // layout engine and the renderer hold the engraving style from (Svg.EngravingStyle).
         // The music font fills what neither wrote from its engravingDefaults (MusicFont.Engrave;
         // Emmentaler's are LilyPond's, so its scores take the plan's style as it is).
-        _meta.Paper = _meta.Paper with { Style = Layout.MusicFonts.Of(_meta.Fonts).Engrave(_meta.LayoutPlan.EngravingStyle) };
+        _v.Meta.Paper = _v.Meta.Paper with { Style = Layout.MusicFonts.Of(_v.Meta.Fonts).Engrave(_v.Meta.LayoutPlan.EngravingStyle) };
         // …and the one switch the MUSIC WALK reads rather than the layout: which notes
         // carry a printed accidental. Every walk runs after this, so reading it once here
         // is reading it before the first note.
-        _accidentalStyle = _meta.LayoutPlan.AccidentalStyle;
+        _accidentalStyle = _v.Meta.LayoutPlan.AccidentalStyle;
         // …and the one the CHORD NAMERS read, for the same reason: every chord row and
         // every inline @chord is collected after this.
-        _chordSpelling = _meta.LayoutPlan.Chords;
+        _chordSpelling = _v.Meta.LayoutPlan.Chords;
         _chordNameCollector.Spelling = _chordSpelling;
         // …and the tuning chord diagrams draw on (chordDiagrams; absent = the part's instrument,
         // else the guitar — resolved per part and per row, ChordDiagramsKey.Resolve).
-        _chordDiagramsWord = _meta.LayoutPlan.ChordDiagrams;
+        _chordDiagramsWord = _v.Meta.LayoutPlan.ChordDiagrams;
         _chordNameCollector.DiagramsWord = _chordDiagramsWord;
         // …and whether every chord name draws one (`chordDiagrams … all`), not only a written shape.
-        _chordDiagramsAll = _meta.LayoutPlan.ChordDiagramsAll;
+        _chordDiagramsAll = _v.Meta.LayoutPlan.ChordDiagramsAll;
         _chordNameCollector.DiagramsAll = _chordDiagramsAll;
         // …and the layout's shape table (the chords that draw wherever they are named).
-        _chordDiagramTable = _meta.LayoutPlan.ChordDiagramTable;
+        _chordDiagramTable = _v.Meta.LayoutPlan.ChordDiagramTable;
         _chordNameCollector.Table = _chordDiagramTable;
-        // …and the score-level meter, while _meta still holds it: every voice's builder is
+        // …and the score-level meter, while _v.Meta still holds it: every voice's builder is
         // armed with THIS as its home (CollectMeasures, MeasureBuilder.SetHomeMeter), not with
-        // whatever _meta holds when that voice starts — the first voice's opening `time` has
+        // whatever _v.Meta holds when that voice starts — the first voice's opening `time` has
         // rewritten it by then.
-        _scoreTime = (_meta.TimeBeats, _meta.TimeBeatType, _meta.TimeBeatsText, _meta.TimeSenzaMisura, _meta.TimeGrouping);
+        _scoreTime = (_v.Meta.TimeBeats, _v.Meta.TimeBeatType, _v.Meta.TimeBeatsText, _v.Meta.TimeSenzaMisura, _v.Meta.TimeGrouping);
         // The section HEADER registry (Semantics.SectionHeaders, the one spelling): a section
         // that carries its own key / time / tempo / partial but no inline music applies those
         // to every part of the section — by-section (`section A { key g major  melody { … } }`)
@@ -622,29 +622,29 @@ public sealed partial class MeasureCollector
             case "title":
                 if (values.Count > 0 && values[0] is SyntaxTokenNode titleToken)
                 {
-                    _meta.Title = StringLiteral.Value(titleToken.Text);
-                    _meta.TitlePosition = titleToken.Span.Start;
+                    _v.Meta.Title = StringLiteral.Value(titleToken.Text);
+                    _v.Meta.TitlePosition = titleToken.Span.Start;
                 }
                 break;
             case "composer":
                 if (values.Count > 0 && values[0] is SyntaxTokenNode composerToken)
                 {
-                    _meta.Composer = StringLiteral.Value(composerToken.Text);
-                    _meta.ComposerPosition = composerToken.Span.Start;
+                    _v.Meta.Composer = StringLiteral.Value(composerToken.Text);
+                    _v.Meta.ComposerPosition = composerToken.Span.Start;
                 }
                 break;
             case "subtitle":
                 if (values.Count > 0 && values[0] is SyntaxTokenNode subtitleToken)
                 {
-                    _meta.Subtitle = StringLiteral.Value(subtitleToken.Text);
-                    _meta.SubtitlePosition = subtitleToken.Span.Start;
+                    _v.Meta.Subtitle = StringLiteral.Value(subtitleToken.Text);
+                    _v.Meta.SubtitlePosition = subtitleToken.Span.Start;
                 }
                 break;
             case "poet":
                 if (values.Count > 0 && values[0] is SyntaxTokenNode poetToken)
                 {
-                    _meta.Poet = StringLiteral.Value(poetToken.Text);
-                    _meta.PoetPosition = poetToken.Span.Start;
+                    _v.Meta.Poet = StringLiteral.Value(poetToken.Text);
+                    _v.Meta.PoetPosition = poetToken.Span.Start;
                 }
                 break;
         }
@@ -718,32 +718,32 @@ public sealed partial class MeasureCollector
         // step back from the `=` over the dot tokens plus a regex on the token before
         // them — beside the five on the syntax node. The two beat-unit readings
         // disagreed: on `tempo "x" = 90` this one matched nothing and silently left
-        // whatever the PREVIOUS tempo had put in _meta, while TempoValue.BeatUnit says
+        // whatever the PREVIOUS tempo had put in _v.Meta, while TempoValue.BeatUnit says
         // a quarter, which is what the '=' with no unit means.
         var tempo = tempoDecl.Value;
         var pieces = tempoDecl.ValuePositions;
         if (tempo.Bpm is int bpm)
         {
-            _meta.Tempo = bpm;
+            _v.Meta.Tempo = bpm;
             // The note and "= N" are this declaration's: a unit it does not write leaves
             // the note pointing at its bpm, not at an earlier declaration's unit.
-            _meta.TempoCountPosition = pieces.Count;
-            _meta.TempoUnitPosition = pieces.Unit;
+            _v.Meta.TempoCountPosition = pieces.Count;
+            _v.Meta.TempoUnitPosition = pieces.Unit;
         }
         if (tempo.Marking is string marking)
-            _meta.TempoText = marking;
-        _meta.TempoPosition = TempoDataPos(tempoDecl);
+            _v.Meta.TempoText = marking;
+        _v.Meta.TempoPosition = TempoDataPos(tempoDecl);
         // No '=' means no beat unit was written, so the standing one stays.
         if (tempo.BeatUnit is int unit)
         {
-            _meta.TempoBeatUnit = unit;
-            _meta.TempoDots = tempo.BeatDots;
+            _v.Meta.TempoBeatUnit = unit;
+            _v.Meta.TempoDots = tempo.BeatDots;
         }
         if (tempo.SwingSubdivision != 0)
         {
-            _meta.SwingSubdivision = tempo.SwingSubdivision;
-            _meta.SwingPosition = pieces.Feel;
-            _meta.SwingValuePosition = pieces.SwingValue;
+            _v.Meta.SwingSubdivision = tempo.SwingSubdivision;
+            _v.Meta.SwingPosition = pieces.Feel;
+            _v.Meta.SwingValuePosition = pieces.SwingValue;
         }
     }
 
@@ -759,14 +759,14 @@ public sealed partial class MeasureCollector
     /// </summary>
     private int GetKeySignatureAlteration(int step)
     {
-        if (_meta.KeyCustom != null)
+        if (_v.Meta.KeyCustom != null)
         {
-            foreach (var (s, a) in KeySignature.DecodeCustom(_meta.KeyCustom))
+            foreach (var (s, a) in KeySignature.DecodeCustom(_v.Meta.KeyCustom))
                 if (s == step)
                     return a;
             return 0;
         }
-        return LilySharp.Core.Music.KeySpelling.Alteration(step, _meta.KeySharps);
+        return LilySharp.Core.Music.KeySpelling.Alteration(step, _v.Meta.KeySharps);
     }
 
     /// <summary>The accidental glyph name ("doubleSharp" / "sharp" / "natural" / "flat" /
@@ -780,9 +780,9 @@ public sealed partial class MeasureCollector
     /// <summary>Starts a music walk's accidental memory: empty, at its first bar.</summary>
     private void ResetAccidentalMemory()
     {
-        _measureAccidentals.Clear();
-        _accidentalBar = 0;
-        _accidentalOrder = 0;
+        _v.MeasureAccidentals.Clear();
+        _v.AccidentalBar = 0;
+        _v.AccidentalOrder = 0;
     }
 
     /// <summary>
@@ -795,22 +795,22 @@ public sealed partial class MeasureCollector
     /// </summary>
     private void AdvanceAccidentalBar()
     {
-        _accidentalBar++;
+        _v.AccidentalBar++;
         int horizon = _accidentalStyle.MemoryHorizon;
         if (horizon == Semantics.AccidentalRule.Forever)
             return;
         if (horizon == 0)
         {
-            _measureAccidentals.Clear();
+            _v.MeasureAccidentals.Clear();
             return;
         }
         List<(int step, int octave)>? stale = null;
-        foreach (var (key, entry) in _measureAccidentals)
-            if (entry.Bar < _accidentalBar - horizon)
+        foreach (var (key, entry) in _v.MeasureAccidentals)
+            if (entry.Bar < _v.AccidentalBar - horizon)
                 (stale ??= new()).Add(key);
         if (stale != null)
             foreach (var key in stale)
-                _measureAccidentals.Remove(key);
+                _v.MeasureAccidentals.Remove(key);
     }
 
     /// <summary>
@@ -830,8 +830,8 @@ public sealed partial class MeasureCollector
     /// for this pitch wrote as <see cref="TiedAlteration"/> (the tied head's accidental).</summary>
     private void MarkAccidentalTied(int step, int octave)
     {
-        if (_measureAccidentals.TryGetValue((step, octave), out var entry))
-            _measureAccidentals[(step, octave)] = (TiedAlteration, entry.Bar, entry.Order);
+        if (_v.MeasureAccidentals.TryGetValue((step, octave), out var entry))
+            _v.MeasureAccidentals[(step, octave)] = (TiedAlteration, entry.Bar, entry.Order);
     }
 
     /// <summary>What one rule says about a pitch: whether an accidental is needed, and
@@ -865,14 +865,14 @@ public sealed partial class MeasureCollector
 
         int previous;
         if (!ignoreOctave
-            && _measureAccidentals.TryGetValue((step, octave), out var sameOctave)
-            && rule.RecentEnough(sameOctave.Bar, _accidentalBar))
+            && _v.MeasureAccidentals.TryGetValue((step, octave), out var sameOctave)
+            && rule.RecentEnough(sameOctave.Bar, _v.AccidentalBar))
         {
             previous = sameOctave.Alter;
         }
         else if (ignoreOctave
                  && MostRecentInAnyOctave(step) is { } other
-                 && rule.RecentEnough(other.Bar, _accidentalBar))
+                 && rule.RecentEnough(other.Bar, _v.AccidentalBar))
         {
             previous = other.Alter;
         }
@@ -909,7 +909,7 @@ public sealed partial class MeasureCollector
     private (int Alter, int Bar, int Order)? MostRecentInAnyOctave(int step)
     {
         (int Alter, int Bar, int Order)? best = null;
-        foreach (var (key, entry) in _measureAccidentals)
+        foreach (var (key, entry) in _v.MeasureAccidentals)
             if (key.step == step && (best is not { } b || entry.Order > b.Order))
                 best = entry;
         return best;
@@ -944,15 +944,15 @@ public sealed partial class MeasureCollector
     /// </remarks>
     private bool KeyCourtesyDue(int step, int actual)
     {
-        if (_keyCourtesyBuilder is not { } builder)
+        if (_v.KeyCourtesyBuilder is not { } builder)
             return false;
-        int measure = builder.CurrentMeasureIndex + _cursor.MetadataMeasureOffset;
-        var clef = ParseClefType(_meta.Clef);
-        if (_cursor.StaffIndex != _keyCourtesyStaff || measure < _keyCourtesyMeasure)
+        int measure = builder.CurrentMeasureIndex + _v.Cursor.MetadataMeasureOffset;
+        var clef = ParseClefType(_v.Meta.Clef);
+        if (_v.Cursor.StaffIndex != _keyCourtesyStaff || measure < _keyCourtesyMeasure)
         {
             // A new staff (or a walk that starts back at an earlier bar): what the line's
             // key signature stands in is re-read here.
-            _keyCourtesyStaff = _cursor.StaffIndex;
+            _keyCourtesyStaff = _v.Cursor.StaffIndex;
             _keyCourtesyMeasure = -1;
             _keyCourtesyLineClef = clef;
         }
@@ -1023,7 +1023,7 @@ public sealed partial class MeasureCollector
 
         // Remember this pitch's alteration — after every rule has read the memory, so a
         // rule never sees the note it is deciding about.
-        _measureAccidentals[(step, octave)] = (actual, _accidentalBar, _accidentalOrder++);
+        _v.MeasureAccidentals[(step, octave)] = (actual, _v.AccidentalBar, _v.AccidentalOrder++);
 
         if (!need.NeedAcc)
         {

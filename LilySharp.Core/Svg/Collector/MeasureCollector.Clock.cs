@@ -45,12 +45,12 @@ namespace LilySharp.Core.Svg.Collector;
 /// Until session 970 the extra voices of a span were not walked WITH the first: the span was
 /// recorded (node, opening frame, note-value default, metadata) and voices 2..N were re-walked
 /// one after another once the whole primary walk had finished (<c>BuildExtraVoiceTracks</c>'
-/// save/restore of the collector's fields around each sub-walk). The branches now run together
-/// and the collector's VOICE state (docs/moment-walk-design.md §7, V) is swapped in and out at
-/// every switch (<see cref="BranchState"/>) — the same fields the sequential sub-walks saved and
-/// restored, plus the ones they shared only because they ran after the primary walk was done.
-/// Byte-identical by measurement (session 970's sweeps), not by argument: the branches' own
-/// walks are untouched; what changed is WHEN they run.
+/// save/restore of the collector's fields around each sub-walk). The branches now run together,
+/// and the collector's VOICE state (docs/moment-walk-design.md §7, V) is one object per branch
+/// (<see cref="BranchState"/>) that the walk reads through <c>_v</c>: a switch points <c>_v</c>
+/// at the branch's (stage ⑤b, session 971; stage ⑤a copied the fields in and out instead).
+/// Byte-identical by measurement (sessions 970–971's sweeps), not by argument: the branches'
+/// own walks are untouched; what changed is WHEN they run and WHERE their state lives.
 /// </para>
 /// </remarks>
 public sealed partial class MeasureCollector
@@ -284,62 +284,251 @@ public sealed partial class MeasureCollector
     internal sealed record SpanTrack(ParallelExpressionSyntax Node, int StartMeasure, int Slot, int VoiceCount, List<Measure> Measures);
 
     /// <summary>
-    /// The collector's VOICE state (docs/moment-walk-design.md §7, V): everything a branch of a
-    /// span owns for itself and the driver swaps at every switch. The lists are swapped by
-    /// REFERENCE (a branch keeps its own), the value fields by copy. A child branch starts from
+    /// The collector's VOICE state (docs/moment-walk-design.md §7, V): everything the walk owns
+    /// per voice, as one object. The collector reads it through its <c>_v</c> field — the
+    /// primary's for the whole collect, and inside a span the running branch's, which the span's
+    /// driver points <c>_v</c> at on every switch (nothing is copied). A child branch starts from
     /// <see cref="ForChild"/> — the state the sequential sub-walk used to be given: the frame,
     /// note-value default and metadata the span opened in, its own cursor, and nothing pending.
+    /// The field initializers are the primary's opening values (what the collector's own fields
+    /// held until session 971) and a child's too, where ForChild does not say otherwise.
     /// </summary>
     internal sealed class BranchState
     {
         public CollectionCursor Cursor;
-        /// <summary>The branch's own frame and metadata OBJECTS, swapped by reference: the
-        /// collector's <c>_octave</c> / <c>_meta</c> fields point at the running branch's.</summary>
-        public OctaveContext Octave = null!;
-        public MetadataState Meta = null!;
-        public Fraction DefaultDuration;
+
+        // The relative-octave chain plus the part transpose that composes on top of
+        // it, bundled into one named collaborator (see OctaveContext). The main walk
+        // drives this in place on every note / chord / grace / tuplet. A child branch
+        // gets its own (ForChild), so inside a span every voice has its own frame.
+        public OctaveContext Octave = new();
+
+        // Piece-level metadata (title/composer/tempo/time/key/clef + header source
+        // positions) grouped into one owner. See MetadataState. A child branch gets a
+        // clone (ForChild); the key part of it is written across the branches by
+        // ShareKeyWithSpanBranches (stage ⑥).
+        public MetadataState Meta = new();
+
+        // Default (sticky) duration: an undurated note/rest/chord takes the WHOLE
+        // previous duration — dots included — so the pair travels together.
+        // LILYPOND-REF: lily/parser.yy:3505-3514 optional_notemode_duration —
+        //   default_duration_ is a full Duration (log AND dots). Until 2026-08-07 only
+        //   the value stuck and the dots silently reset to 0 (`r8. r` lost its dot,
+        //   dot-rest-beam-trigger.ly), while the SEMANTIC walk (MeasureDurations) and
+        //   the MIDI/MusicXML exporters carried ToFraction() with dots — the drawing
+        //   walk was the one liar.
+        public Fraction DefaultDuration = Fraction.Quarter;
         public int DefaultDots;
-        public GraceExpressionSyntax? PendingGrace;
+
+        // Pending grace notes to attach to the next main note
+        public GraceExpressionSyntax? PendingGrace = null;
+
+        // Where the measure stood when the grace was written: a change added after this point and
+        // before the grace's body is walked was WRITTEN AFTER the grace (MusicItem.WrittenAfterGrace).
+        // The clef too: the grace is engraved in the clef in force where it was WRITTEN, not in a clef
+        // written between it and its main note (OpenSoundingItem).
         public (int Measure, int ItemCount, string? Clef) PendingGraceAt;
-        public ImmutableArray<GraceColumnInfo> PendingLeadingGrace;
-        public int GraceDepth;
-        public int CueDepth;
-        public bool CueRegionPending;
-        public int PercentCoveredDepth;
-        public List<string> OpenPhrases = null!;
-        public List<int> PhraseCallSites = null!;
-        public Stack<(int step, int alt, int oct)?> PhraseTransposeSaves = null!;
-        public Stack<(char Name, int Octave)?> PhraseAnchorSaves = null!;
-        public Stack<int> PhraseAbsoluteBaseSaves = null!;
-        public int TremoloRepeatCount;
+
+        // Grace-note infos of the just-collected leading grace group, stamped onto the
+        // main note/chord so the spacing can reserve space in front of its column.
+        public ImmutableArray<GraceColumnInfo> PendingLeadingGrace = ImmutableArray<GraceColumnInfo>.Empty;
+
+        /// <summary>
+        /// How deep into <c>grace { }</c> bodies this walk currently is. Non-zero means the items
+        /// being produced belong to GRACE TIME: they take no measure duration, they carry
+        /// <see cref="MusicItem.GraceTime"/>, and the annotation collectors stand down because the
+        /// grace group is still drawn from its derived <see cref="GraceNoteItem"/> and nothing
+        /// would place them (HANDOFF §2 U8 ⒝1).
+        /// </summary>
+        /// <remarks>
+        /// ⚠️ THE COLLECTOR'S COPY OF <c>MeasureBuilder.InGraceTime</c>, and the two are not
+        /// redundant: the builder's decides the CLOCK, at the one place that owns it; this one
+        /// gates walk-side work the builder never sees. They are entered and left together in
+        /// <c>ProcessGraceRegion</c>, and <see cref="WalkCarriesNothing"/> refuses a checkpoint
+        /// while either is open, exactly as it does for <see cref="CueDepth"/>.
+        /// </remarks>
+        public int GraceDepth = 0;
+
+        /// <summary>
+        /// How many <c>cue { … }</c> regions enclose the item being collected. A cue is a
+        /// REGION in LilyPond — the size comes from the CueVoice context's <c>fontSize = #-4</c>
+        /// and nothing is attached to a note — so this depth, not an annotation, is what makes
+        /// an item a cue. Nesting is rejected (Diagnostic LYS4013), so in practice it is 0 or 1;
+        /// it is a depth rather than a flag so an unbalanced walk cannot leave it stuck on.
+        /// See docs/cue-context-design.md.
+        /// </summary>
+        public int CueDepth = 0;
+
+        /// <summary>
+        /// True between entering a <c>cue { … }</c> region and the first note or chord it emits —
+        /// the one item that gets <see cref="MusicItem.BeginsCueRegion"/>. Set on entry and cleared
+        /// BOTH by that item and on the way out, so outside a region it is always false and a
+        /// checkpoint never carries it (<see cref="WalkCarriesNothing"/> already refuses to stand
+        /// inside a region at all).
+        /// </summary>
+        public bool CueRegionPending = false;
+
+        /// <summary>
+        /// Non-zero while the walk is re-playing a <c>repeat percent</c> body for an iteration
+        /// that a % sign (or a double sign) stands for. LilyPond never plays those iterations:
+        /// its iterator hands the context ONE percent event in place of the music, so nothing
+        /// the body writes — no slur, no tie, no script, no dynamic — exists there at all.
+        /// LILYPOND-REF: lily/percent-repeat-iterator.cc:75-111 Percent_repeat_iterator::next_element —
+        ///   for every repetition after the first, <c>make_music_by_name (event_type_)</c> is
+        ///   reported and the body's music is not.
+        /// </summary>
+        /// <remarks>
+        /// ⚠️⚠️ NOTHING RAISES THIS DEPTH ANY MORE, and the reason is that the halfway house it
+        /// named is gone. Lily# used to re-walk the body for every repetition and hide the notes
+        /// by measure, keeping this depth to drop what RIDES those notes — a slur, a tie, a
+        /// script, a dynamic — because the engravers that draw those never ask which measures are
+        /// covered (measured 2026-09-02: scratch/ベースタブLy/tab-percent.lys drew the slur a
+        /// second time over the % sign, scratch/p320/percent-dyn.lys drew the <c>p</c>, the accent
+        /// and the <c>f</c> under it). Session 332 measured what the kept notes cost in SPACING —
+        /// a repeated bar came out as wide as the music underneath it, 13.11 ss against
+        /// LilyPond's 5.51 (scratch/p332/t7) — and replaced the re-walk with the spacers the beat
+        /// slash already used, so now no repetition writes a note and there is nothing left to
+        /// drop. The gate is honoured by absence rather than by a flag.
+        /// <para>
+        /// ⚠️ KEPT, NOT DELETED, because deletion is the user's call and because the readers below
+        /// state the rule they enforce: <see cref="WithoutBowsUnderPercent"/>, the annotation gates
+        /// in <c>MeasureCollector.Annotations</c>, and the resume gate. A shape that has to re-walk
+        /// a body some day re-arms them by raising this depth again. Until then they are correct
+        /// and unreachable, which is why no test can pin them.
+        /// </para>
+        /// </remarks>
+        public int PercentCoveredDepth = 0;
+
+        // The phrases the walk is inside, pushed and popped by the named reset/end markers
+        // (ProcessMusicNodeSequence). A cue region gathers its body when it is walked, after the
+        // enclosing expansion's cycle guard is gone, so it seeds its own guard from this list.
+        public List<string> OpenPhrases = new();
+
+        // …and where each of them is referenced (the reset marker's call site), outermost first:
+        // the address WrittenBarAt finds the written bar of music inlined from a phrase body by
+        // (MeasureModel.Split's index). Never open at a checkpoint (WalkCarriesNothing asks that
+        // no phrase is open), so no checkpoint carries it.
+        public List<int> PhraseCallSites = new();
+
+        // Saved transpose targets around phrase-reference expansions (a stack so a
+        // phrase referenced inside another restores cleanly). Pushed at the reset
+        // marker, popped at the paired phrase-end marker.
+        public Stack<(int step, int alt, int oct)?> PhraseTransposeSaves = new();
+
+        // Each open reference's outgoing anchor (bare letter + octave, resolved in
+        // the phrase's own frame at entry), handed to the relative chain at exit —
+        // the chord rule; null = pitchless body. Pushed/popped alongside the above.
+        public Stack<(char Name, int Octave)?> PhraseAnchorSaves = new();
+
+        // Saved absolute-mode anchors (OctaveBase). A reference's trailing marks move
+        // the frame the body resolves in; in ABSOLUTE mode the frame IS OctaveBase, so
+        // that is what moves. Pushed/popped alongside the above.
+        public Stack<int> PhraseAbsoluteBaseSaves = new();
+
+        // Active `repeat tremolo N { … }` transform: the body note prints ONCE at
+        // the combined duration with the subdivision's stem slashes.
+        public int TremoloRepeatCount = 1;
+
+        // Active two-note tremolo: (display value, display dots, between-beams,
+        // gapped-beam count); both notes print at the pair's TOTAL duration and
+        // sound half (TimeScale ½). GapCount = how many beams stop short of the
+        // stems (0 for a half-note pair — LP's duration_log == 1 exemption).
         public (int Value, int Dots, int Beams, int GapCount)? TremoloPairShape;
         public bool TremoloPairFirst;
+
+        // A slur mark written on an empty chord, waiting for the item that occupies the empty
+        // chord's moment. See TakeEmptyChordSlurs.
         public bool PendingEmptyChordSlurStart;
         public bool PendingEmptyChordSlurEnd;
+
+        // ...and where that mark was written, which travels with it: the bow drawn for
+        // `<>( c4 d4)` cites the `(` on the empty chord, not the note that carries it.
         public int PendingEmptyChordSlurStartSource;
         public int PendingEmptyChordSlurEndSource;
+
+        /// <summary>The <c>chord(…)</c> member of a <c>&lt;&lt; &gt;&gt;</c> group being played one
+        /// note at a time (<see cref="Music.ArpeggioSpread"/>) and the note it plays now; null
+        /// outside that member. Keyed by the item's green node — a red node is re-created per read.</summary>
         public (Syntax.InternalSyntax.GreenNode Item, Music.ShapeNote Note)? SpreadNote;
+
+        // Running ambient key tonic (as WRITTEN, before any part transpose) tracked
+        // across the voice walk for phrase auto-transpose: a phrase written in the
+        // score's home key is shifted to whatever key is in effect where it is
+        // referenced. Reset to the home key per voice and at each section boundary,
+        // advanced by each mid-stream key change. Invalid = a custom/atonal ambient
+        // key (no tonic) → the phrase is placed unshifted.
         public int AmbientTonicStep;
         public int AmbientTonicAlter;
         public bool AmbientTonicValid;
-        public List<(int startMeasure, int endMeasure, string voltaText, bool isClosed, int sourcePosition)> PendingInlineVoltas = null!;
-        public Dictionary<(int step, int octave), (int Alter, int Bar, int Order)> MeasureAccidentals = null!;
+
+        // Inline volta endings collected during the current voice walk; finalized
+        // (and marked closed/open) once the whole voice has been processed.
+        public List<(int startMeasure, int endMeasure, string voltaText, bool isClosed, int sourcePosition)> PendingInlineVoltas = new();
+
+        // The accidental memory — LilyPond's `localAlterations`: (diatonic step, octave) →
+        // the alteration last engraved for that pitch, the BAR it was engraved in, and the
+        // ORDER it was written in. A note prints an accidental when its alteration differs
+        // from what the score's style remembers (GetDisplayAccidental).
+        // LILYPOND-REF: lily/accidental-engraver.cc:396-420 stop_translation_timestep —
+        //   localAlterations entries are ((octave . notename) alter barnum . end-mom), and a
+        //   new one is PREPENDED (ly_assoc_prepend_x), which is what Order reproduces: the
+        //   any-octave rule reads the FIRST entry with a matching note name, i.e. the most
+        //   recently engraved octave (scm/music-functions.scm:1713-1720).
+        // At the bar line the map keeps only what a rule can still read: under a style that
+        // forgets there (AccidentalStyleSpec.ForgetsAtBar — the default's, and every style
+        // whose laziness is 0) it is CLEARED, under a lazier one the entries stamped further
+        // back than the laziest rule's reach are dropped (AdvanceAccidentalBar, the style's
+        // MemoryHorizon). Observationally the same as carrying every stamp — and what remains
+        // is what a checkpoint carries (WalkCheckpoint.Accidentals). ⚠️ The resume gate used
+        // to demand the map EMPTY at every boundary instead, which no book under `modern` /
+        // `noReset` satisfied after its first note: those books never resumed (session 396).
+        public Dictionary<(int step, int octave), (int Alter, int Bar, int Order)> MeasureAccidentals = new();
+
+        // The bar the walk is in, counted from its start, and the order counter above. Only
+        // DIFFERENCES of the bar number are read (AccidentalRule.RecentEnough), so counting
+        // from 0 per walk answers exactly what LilyPond's absolute measure number answers.
         public int AccidentalBar;
         public int AccidentalOrder;
         public MeasureBuilder? KeyCourtesyBuilder;
-        public int CarriedGraceBreathStart;
+
+        /// <summary>Where the breathing sign the grace body being walked ends on was written
+        /// (<c>GraceBodySupport.CarriedBreath</c>), or -1 — the one breath the grace-time
+        /// annotation gate lets through (CollectArticulations), so ArticulationEngraver draws it in
+        /// the column ProcessGraceRegion adds after the run.</summary>
+        public int CarriedGraceBreathStart = -1;
+
+        /// <summary>Where the breathing signs on the grace body's INNER columns were written
+        /// (<c>GraceBodySupport.InnerBreaths</c>, session 936), or null — the grace-time annotation
+        /// gate lets them through (CollectArticulations), and AddBreathingSignColumn records each
+        /// one's column in <see cref="InnerGraceBreathItems"/>.</summary>
         public HashSet<int>? InnerGraceBreathStarts;
+
+        /// <summary>The item index of each grace column an inner breathing sign was written on, and
+        /// the sign — read by DeriveGraceColumns into <c>GraceColumnInfo.BreathAfter</c>.</summary>
         public Dictionary<int, ArticulationType>? InnerGraceBreathItems;
+
+        /// <summary>The tuplets written inside the grace body being walked, as ITEM index ranges with
+        /// their ratio (innermost first, the order ProcessTuplet closes them) — read once the body is
+        /// walked into the columns' beamlet counts (GraceNoteItem.WithBeamletCounts).</summary>
         public List<(int Start, int End, int Actual, int Normal)>? GraceTupletSpans;
+
+        /// <summary>The chord symbols written on the grace body being walked, by the grace column's
+        /// item index (session 964) — read by DeriveGraceColumns into
+        /// <see cref="GraceColumnInfo.ChordName"/>, the stamp the run's spacing prices.</summary>
         public Dictionary<int, ChordNameItem>? GraceChordNames;
+
+        /// <summary>The chord diagrams on the grace body being walked — an <c>@diagram</c>'s spec
+        /// or the shape an <c>@chord</c> chose — by the grace column's item index (session 964);
+        /// read by DeriveGraceColumns into <see cref="GraceColumnInfo.FrameSpec"/>, the box the run's
+        /// spacing rods against its neighbours.</summary>
         public Dictionary<int, string>? GraceFrameSpecs;
         public bool LastEndsOffTheBar;
 
         /// <summary>A child branch's opening state: the span's frame, defaults and metadata,
-        /// its own cursor, its own empty lists, nothing pending — what
-        /// <c>BuildExtraVoiceTracks</c> installed around each sequential sub-walk, and what
-        /// the collector's fields held when those sub-walks ran (after the primary walk, with
-        /// every carry quiescent).</summary>
+        /// its own cursor, and otherwise the initializers — its own empty lists, nothing
+        /// pending — what <c>BuildExtraVoiceTracks</c> installed around each sequential
+        /// sub-walk, and what the collector's fields held when those sub-walks ran (after the
+        /// primary walk, with every carry quiescent).</summary>
         public static BranchState ForChild(CollectionCursor cursor, OctaveCheckpoint octave, OctaveSnapshot frame,
             Fraction duration, int dots, MetadataState meta)
         {
@@ -355,121 +544,16 @@ public sealed partial class MeasureCollector
                 Meta = meta.Clone(),
                 DefaultDuration = duration,
                 DefaultDots = dots,
-                PendingLeadingGrace = ImmutableArray<GraceColumnInfo>.Empty,
-                OpenPhrases = new(),
-                PhraseCallSites = new(),
-                PhraseTransposeSaves = new(),
-                PhraseAnchorSaves = new(),
-                PhraseAbsoluteBaseSaves = new(),
-                TremoloRepeatCount = 1,
-                PendingInlineVoltas = new(),
-                MeasureAccidentals = new(),
-                CarriedGraceBreathStart = -1,
             };
         }
-    }
-
-    /// <summary>The collector's voice state, as it stands, written INTO <paramref name="s"/>
-    /// (the branch's own record — a switch allocates nothing; the frame and metadata objects
-    /// are the branch's and travel by reference).</summary>
-    private BranchState CaptureBranch(BranchState? s = null)
-    {
-        s ??= new BranchState();
-        s.Cursor = _cursor;
-        s.Octave = _octave;
-        s.Meta = _meta;
-        s.DefaultDuration = _defaultDuration;
-        s.DefaultDots = _defaultDots;
-        s.PendingGrace = _pendingGrace;
-        s.PendingGraceAt = _pendingGraceAt;
-        s.PendingLeadingGrace = _pendingLeadingGrace;
-        s.GraceDepth = _graceDepth;
-        s.CueDepth = _cueDepth;
-        s.CueRegionPending = _cueRegionPending;
-        s.PercentCoveredDepth = _percentCoveredDepth;
-        s.OpenPhrases = _openPhrases;
-        s.PhraseCallSites = _phraseCallSites;
-        s.PhraseTransposeSaves = _phraseTransposeSaves;
-        s.PhraseAnchorSaves = _phraseAnchorSaves;
-        s.PhraseAbsoluteBaseSaves = _phraseAbsoluteBaseSaves;
-        s.TremoloRepeatCount = _tremoloRepeatCount;
-        s.TremoloPairShape = _tremoloPairShape;
-        s.TremoloPairFirst = _tremoloPairFirst;
-        s.PendingEmptyChordSlurStart = _pendingEmptyChordSlurStart;
-        s.PendingEmptyChordSlurEnd = _pendingEmptyChordSlurEnd;
-        s.PendingEmptyChordSlurStartSource = _pendingEmptyChordSlurStartSource;
-        s.PendingEmptyChordSlurEndSource = _pendingEmptyChordSlurEndSource;
-        s.SpreadNote = _spreadNote;
-        s.AmbientTonicStep = _ambientTonicStep;
-        s.AmbientTonicAlter = _ambientTonicAlter;
-        s.AmbientTonicValid = _ambientTonicValid;
-        s.PendingInlineVoltas = _pendingInlineVoltas;
-        s.MeasureAccidentals = _measureAccidentals;
-        s.AccidentalBar = _accidentalBar;
-        s.AccidentalOrder = _accidentalOrder;
-        s.KeyCourtesyBuilder = _keyCourtesyBuilder;
-        s.CarriedGraceBreathStart = _carriedGraceBreathStart;
-        s.InnerGraceBreathStarts = _innerGraceBreathStarts;
-        s.InnerGraceBreathItems = _innerGraceBreathItems;
-        s.GraceTupletSpans = _graceTupletSpans;
-        s.GraceChordNames = _graceChordNames;
-        s.GraceFrameSpecs = _graceFrameSpecs;
-        s.LastEndsOffTheBar = _lastEndsOffTheBar;
-        return s;
-    }
-
-    /// <summary>Installs <paramref name="s"/> as the collector's voice state.</summary>
-    private void RestoreBranch(BranchState s)
-    {
-        _cursor = s.Cursor;
-        _octave = s.Octave;
-        _meta = s.Meta;
-        _defaultDuration = s.DefaultDuration;
-        _defaultDots = s.DefaultDots;
-        _pendingGrace = s.PendingGrace;
-        _pendingGraceAt = s.PendingGraceAt;
-        _pendingLeadingGrace = s.PendingLeadingGrace;
-        _graceDepth = s.GraceDepth;
-        _cueDepth = s.CueDepth;
-        _cueRegionPending = s.CueRegionPending;
-        _percentCoveredDepth = s.PercentCoveredDepth;
-        _openPhrases = s.OpenPhrases;
-        _phraseCallSites = s.PhraseCallSites;
-        _phraseTransposeSaves = s.PhraseTransposeSaves;
-        _phraseAnchorSaves = s.PhraseAnchorSaves;
-        _phraseAbsoluteBaseSaves = s.PhraseAbsoluteBaseSaves;
-        _tremoloRepeatCount = s.TremoloRepeatCount;
-        _tremoloPairShape = s.TremoloPairShape;
-        _tremoloPairFirst = s.TremoloPairFirst;
-        _pendingEmptyChordSlurStart = s.PendingEmptyChordSlurStart;
-        _pendingEmptyChordSlurEnd = s.PendingEmptyChordSlurEnd;
-        _pendingEmptyChordSlurStartSource = s.PendingEmptyChordSlurStartSource;
-        _pendingEmptyChordSlurEndSource = s.PendingEmptyChordSlurEndSource;
-        _spreadNote = s.SpreadNote;
-        _ambientTonicStep = s.AmbientTonicStep;
-        _ambientTonicAlter = s.AmbientTonicAlter;
-        _ambientTonicValid = s.AmbientTonicValid;
-        _pendingInlineVoltas = s.PendingInlineVoltas;
-        _measureAccidentals = s.MeasureAccidentals;
-        _accidentalBar = s.AccidentalBar;
-        _accidentalOrder = s.AccidentalOrder;
-        _keyCourtesyBuilder = s.KeyCourtesyBuilder;
-        _carriedGraceBreathStart = s.CarriedGraceBreathStart;
-        _innerGraceBreathStarts = s.InnerGraceBreathStarts;
-        _innerGraceBreathItems = s.InnerGraceBreathItems;
-        _graceTupletSpans = s.GraceTupletSpans;
-        _graceChordNames = s.GraceChordNames;
-        _graceFrameSpecs = s.GraceFrameSpecs;
-        _lastEndsOffTheBar = s.LastEndsOffTheBar;
     }
 
     /// <summary>
     /// Stage ⑥, the key only: a <c>key</c> written in one branch of a span is the STAFF's, so
     /// the other branches' later notes read it. <c>ApplyKeySignatureChange</c> calls this once
     /// the running branch's key and tonic are set; it writes the same into every other branch's
-    /// state, at every level of nesting. The running branch's own record (and, in a nested span,
-    /// the enclosing branch's, which shares its metadata object) is skipped: the collector's
-    /// fields are the live copy, and the next capture writes them back.
+    /// state, at every level of nesting. The running branch's own state is <c>_v</c> itself (and
+    /// in a nested span the enclosing branch's shares its metadata object), so those are skipped.
     /// </summary>
     /// <remarks>
     /// <para>
@@ -494,13 +578,13 @@ public sealed partial class MeasureCollector
         foreach (var span in _clock.OpenSpans)
             foreach (var b in span.Branches)
             {
-                if (b.State is not { } s || ReferenceEquals(s.Meta, _meta))
+                if (b.State is not { } s || ReferenceEquals(s.Meta, _v.Meta))
                     continue;
-                s.Meta.KeySharps = _meta.KeySharps;
-                s.Meta.KeyCustom = _meta.KeyCustom;
-                s.AmbientTonicStep = _ambientTonicStep;
-                s.AmbientTonicAlter = _ambientTonicAlter;
-                s.AmbientTonicValid = _ambientTonicValid;
+                s.Meta.KeySharps = _v.Meta.KeySharps;
+                s.Meta.KeyCustom = _v.Meta.KeyCustom;
+                s.AmbientTonicStep = _v.AmbientTonicStep;
+                s.AmbientTonicAlter = _v.AmbientTonicAlter;
+                s.AmbientTonicValid = _v.AmbientTonicValid;
             }
     }
 
@@ -527,9 +611,9 @@ public sealed partial class MeasureCollector
     private async ValueTask ProcessParallelSpan(ParallelExpressionSyntax parallel, MeasureBuilder builder)
     {
         var voiceBlocks = parallel.Voices.ToList();
-        var spanFrame = _octave.Snapshot();
-        var (spanDuration, spanDots) = (_defaultDuration, _defaultDots);
-        var spanMeta = _meta.Clone();
+        var spanFrame = _v.Octave.Snapshot();
+        var (spanDuration, spanDots) = (_v.DefaultDuration, _v.DefaultDots);
+        var spanMeta = _v.Meta.Clone();
         // (A `time none` keeps the opening's numbers: the frozen clock has no bar.)
         if (builder.MeterInForce is { Beats: > 0, BeatType: > 0, SenzaMisura: false } inForce)
         {
@@ -550,9 +634,9 @@ public sealed partial class MeasureCollector
         // a child's cursor is the span's bar and its slot (what BuildExtraVoiceTracks' sequential
         // sub-walks installed until session 970). Branch 0 is render voice 1: an override in its
         // block scopes to it.
-        var opening = OctaveCheckpoint.Capture(_octave);
-        var outerCursor = _cursor;
-        _cursor.VoiceScope = 1;
+        var opening = OctaveCheckpoint.Capture(_v.Octave);
+        var outerCursor = _v.Cursor;
+        _v.Cursor.VoiceScope = 1;
         var children = await RunSpanAsync(
             builder,
             branch0: () => drums != null
@@ -572,7 +656,7 @@ public sealed partial class MeasureCollector
                 leadingOffset: spanOffset,
                 logicalIndexBase: MidBarBreaks?.ToLogical(spanStart) ?? spanStart,
                 emit: drums != null ? b => EmitDrumVoice(drums.Lower, b, stemUp: false) : null));
-        _cursor.VoiceScope = null;
+        _v.Cursor.VoiceScope = null;
         // The beam stamp (ResolveBeamStemDirections) is NOT taken here but where the tracks are
         // laid (BuildExtraVoiceTracks), after the primary's own: beam ids are handed out in that
         // order, and a resumed collect that adopts a span from its recording must hand out the
@@ -581,8 +665,8 @@ public sealed partial class MeasureCollector
             _spanTracks.Add(new SpanTrack(parallel, spanStart, t + 1, voiceCount, children[t]));
         if (drums == null)
         {
-            _octave.Restore(spanFrame);
-            (_defaultDuration, _defaultDots) = (spanDuration, spanDots);
+            _v.Octave.Restore(spanFrame);
+            (_v.DefaultDuration, _v.DefaultDots) = (spanDuration, spanDots);
         }
     }
 
@@ -596,7 +680,7 @@ public sealed partial class MeasureCollector
     /// <remarks>
     /// The loop is LilyPond's: pick the lowest branch standing at the clock; none — advance the
     /// clock to the earliest parked moment. A branch runs until it parks (its next item lies
-    /// past the clock) or finishes; every switch swaps the voice state. The branches' tasks
+    /// past the clock) or finishes; every switch points <c>_v</c> at the branch's state. The branches' tasks
     /// complete on this call stack, so a <c>CollectResumeAbortException</c> thrown inside one
     /// surfaces from the awaits at the end, as it did from the sequential sub-walks.
     /// </remarks>
@@ -617,18 +701,18 @@ public sealed partial class MeasureCollector
             span.Branches.Add(kids[t]);
         }
 
-        // Start branch 0 in the collector's live state, then each child in its own.
+        // Start branch 0 in the collector's live state (which becomes its own), then each
+        // child in its own.
         span.Current = b0;
+        b0.State = _v;
         b0.Task = branch0();
-        b0.State = CaptureBranch();
         b0.Done = b0.Task.IsCompleted;
         for (int t = 0; t < childCount; t++)
         {
             var kid = kids[t];
-            RestoreBranch(kid.State!);
+            _v = kid.State!;
             span.Current = kid;
             kidTasks[t] = childBody(t);
-            CaptureBranch(kid.State);
             kid.Done = kidTasks[t].IsCompleted;
         }
 
@@ -658,17 +742,16 @@ public sealed partial class MeasureCollector
                 span.Now = next;
                 continue;
             }
-            RestoreBranch(pick.State!);
+            _v = pick.State!;
             span.Current = pick;
             var resume = pick.Continuation!;
             pick.Continuation = null;
             pick.Parked = false;
             resume();
-            CaptureBranch(pick.State);
             pick.Done = pick.Index == 0 ? b0.Task.IsCompleted : kidTasks[pick.Index - 1].IsCompleted;
         }
 
-        RestoreBranch(b0.State!);
+        _v = b0.State!;
         span.Current = null;
         _clock.CloseSpan(span);
 

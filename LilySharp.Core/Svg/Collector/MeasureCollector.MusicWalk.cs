@@ -81,8 +81,8 @@ public sealed partial class MeasureCollector
                 {
                     if (reset.PhraseName is { } opened)
                     {
-                        _openPhrases.Add(opened);
-                        _phraseCallSites.Add(reset.Position);
+                        _v.OpenPhrases.Add(opened);
+                        _v.PhraseCallSites.Add(reset.Position);
                     }
                     EnterDefaultFrame(reset.OctaveOffset);
                     EnterPhraseTranspose(reset.AnchorStep, reset.OctaveOffset, reset.AnchorShape);
@@ -102,11 +102,11 @@ public sealed partial class MeasureCollector
                 // x | x }) owns the barline the phrase's trailing `|` drew.
                 if (site.Node is PhraseEndMarker end)
                 {
-                    if (end.PhraseName is { } closed && _openPhrases.LastIndexOf(closed) is var at and >= 0)
+                    if (end.PhraseName is { } closed && _v.OpenPhrases.LastIndexOf(closed) is var at and >= 0)
                     {
-                        _openPhrases.RemoveAt(at);
-                        if (_phraseCallSites.Count > 0)
-                            _phraseCallSites.RemoveAt(_phraseCallSites.Count - 1);
+                        _v.OpenPhrases.RemoveAt(at);
+                        if (_v.PhraseCallSites.Count > 0)
+                            _v.PhraseCallSites.RemoveAt(_v.PhraseCallSites.Count - 1);
                     }
                     ExitPhraseTranspose();
                     builder.ResetMeasureBoundary(retargetableClose: true);
@@ -240,12 +240,12 @@ public sealed partial class MeasureCollector
 
     /// <summary>
     /// The flags with the tie and slur markers cleared while the walk is inside a
-    /// percent-covered iteration (<see cref="_percentCoveredDepth"/>), unchanged otherwise.
+    /// percent-covered iteration (<see cref="BranchState.PercentCoveredDepth"/>), unchanged otherwise.
     /// Beams stay: the beam pass already hides them by covered measure, and the beam
     /// grouping decides stems the spacing pass reads even under the sign.
     /// </summary>
     private MarkerFlags WithoutBowsUnderPercent(MarkerFlags m)
-        => _percentCoveredDepth > 0
+        => _v.PercentCoveredDepth > 0
             ? m with { HasTieAfter = false, HasSlurStartAfter = false, HasSlurEndAfter = false }
             : m;
 
@@ -264,14 +264,14 @@ public sealed partial class MeasureCollector
     /// </remarks>
     private (int Start, int End, int Direction)? PhrasingSlurMarksOn(SyntaxNode node)
     {
-        if (_percentCoveredDepth > 0)
+        if (_v.PercentCoveredDepth > 0)
             return null;
         int start = MusicItem.NoSourcePosition, end = MusicItem.NoSourcePosition, dir = 0;
         foreach (var a in ArticulationsOf(node))
         {
             // In grace time the question is LYS4020's own (GraceBodySupport.IsCarriedPhrasingSlur),
             // so the mark is drawn exactly when it is not reported.
-            if (_graceDepth > 0 && !Semantics.GraceBodySupport.IsCarriedPhrasingSlur(a))
+            if (_v.GraceDepth > 0 && !Semantics.GraceBodySupport.IsCarriedPhrasingSlur(a))
                 continue;
             if (a is ArticulationSyntax art
                 && Semantics.AnnotationValues.IsPhrasingSlurName(art.Name))
@@ -305,7 +305,7 @@ public sealed partial class MeasureCollector
             return;
         // A grace note's own marks go to the grace slot (session 926), which the main note's
         // never shares — see MeasureBuilder.PendingGracePhrasingSlur.
-        if (_graceDepth > 0)
+        if (_v.GraceDepth > 0)
             builder.PendingGracePhrasingSlur = PhrasingSlurMarksOn(node);
         else
             builder.PendingPhrasingSlur = PhrasingSlurMarksOn(node);
@@ -455,16 +455,16 @@ public sealed partial class MeasureCollector
     /// UNSHIFTED").</summary>
     private void EnterDefaultFrame(int octaveOffset = 0)
     {
-        _octave.ResetToInitial();
-        _octave.CurrentOctave += octaveOffset;
+        _v.Octave.ResetToInitial();
+        _v.Octave.CurrentOctave += octaveOffset;
         // ⚠️ THE FRESH DURATION IS THE ENCLOSING TIME DOMAIN'S OPENING VALUE, not a literal
         // quarter. In grace time the running memory this resets IS the grace group's, and a
         // grace group opens at an eighth — `grace { c'16 G }` must give G's first undurated
         // note the group's eighth, exactly as `grace { G }` would. Before session 310 the
         // grace body had its own expander and reset that value itself; now the same walker
         // reaches both, and the one line that told them apart is this one.
-        _defaultDuration = _graceDepth > 0 ? Fraction.Eighth : Fraction.Quarter;
-        _defaultDots = 0;
+        _v.DefaultDuration = _v.GraceDepth > 0 ? Fraction.Eighth : Fraction.Quarter;
+        _v.DefaultDots = 0;
     }
 
 
@@ -477,9 +477,9 @@ public sealed partial class MeasureCollector
     /// </summary>
     private void FinalizeInlineVoltas()
     {
-        foreach (var (startMeasure, endMeasure, voltaText, isClosed, sourcePosition) in _pendingInlineVoltas)
+        foreach (var (startMeasure, endMeasure, voltaText, isClosed, sourcePosition) in _v.PendingInlineVoltas)
             AddVoltaBracket(new VoltaBracketItem(startMeasure, endMeasure, voltaText, isClosed, sourcePosition));
-        _pendingInlineVoltas.Clear();
+        _v.PendingInlineVoltas.Clear();
     }
 
     /// <summary>
@@ -512,12 +512,12 @@ public sealed partial class MeasureCollector
 
         // The group occupies its total — the trailing `>>N`, or (absent one) the inherited
         // running duration (it acts like a single note), dots included: a group after
-        // `c4.` spans a dotted quarter. This read missed the dots when _defaultDots
+        // `c4.` spans a dotted quarter. This read missed the dots when _v.DefaultDots
         // landed (2026-08-07) — the self-audit found it, not a book; no corpus twin
         // exercises a group after a dotted duration yet.
         // LILYPOND-REF: lily/parser.yy:3505-3514 optional_notemode_duration — default_duration_
         Fraction total = arpeggio.TotalDuration?.ToFraction()
-            ?? _defaultDuration.Dotted(_defaultDots);
+            ?? _v.DefaultDuration.Dotted(_v.DefaultDots);
         var sub = ArpeggioSubdivision.Compute(Music.ArpeggioSpread.ShareCount(members), total);
         Fraction scale = sub.TimeScale;
         // Octave marks after '>>' shift the whole group (like a chord's '<c e g>,'): the
@@ -529,7 +529,7 @@ public sealed partial class MeasureCollector
 
         // The staff's bar, not the builder's: see ProcessTuplet (the group's bracket, chord
         // name, dynamics and articulations are all keyed by it).
-        int measureIndex = builder.CurrentMeasureIndex + _cursor.MetadataMeasureOffset;
+        int measureIndex = builder.CurrentMeasureIndex + _v.Cursor.MetadataMeasureOffset;
         int startNoteIndex = builder.CurrentItemCount;
         Fraction startTiming = builder.CurrentDuration;
 
@@ -538,11 +538,11 @@ public sealed partial class MeasureCollector
         // member STACKS above it (the same octave placement as a `<c e g>` chord member, so
         // `<< c e g >>` == `<< c g >>` for g, and a `,` drops one below); rests keep the
         // normal frame; degrees stack on the root by diatonic steps in the key.
-        bool savedAbsolute = _octave.OctaveAbsolute;
-        int savedBase = _octave.OctaveBase;
+        bool savedAbsolute = _v.Octave.OctaveAbsolute;
+        int savedBase = _v.Octave.OctaveBase;
         // The incoming frame, saved for a group with no pitched member (see below).
-        int savedFrameOctave = _octave.CurrentOctave;
-        char savedFramePitchName = _octave.LastPitchName;
+        int savedFrameOctave = _v.Octave.CurrentOctave;
+        char savedFramePitchName = _v.Octave.LastPitchName;
         bool rootSet = false;
         int anchorOctave = 0;
         char rootLetter = 'c';
@@ -571,9 +571,9 @@ public sealed partial class MeasureCollector
                 if (!rootSet)
                 {
                     rootSet = true;
-                    rootStep = _ambientTonicValid ? _ambientTonicStep : 0;
+                    rootStep = _v.AmbientTonicValid ? _v.AmbientTonicStep : 0;
                     rootLetter = "cdefgab"[rootStep];
-                    anchorOctave = _octave.Resolve(rootStep, 0, rootLetter) + groupOctave;
+                    anchorOctave = _v.Octave.Resolve(rootStep, 0, rootLetter) + groupOctave;
                 }
                 await EmitArpeggioDegree(degree, builder, parts, scale, rootStep, anchorOctave, marks, groupString);
                 continue;
@@ -585,12 +585,12 @@ public sealed partial class MeasureCollector
             bool isRoot = !rootSet && letter is not null;
             if (rootSet && letter is { } l)
             {
-                _octave.OctaveAbsolute = true;
-                _octave.OctaveBase = anchorOctave + (GetPitchIndex(l) >= rootStep ? 0 : 1);
+                _v.Octave.OctaveAbsolute = true;
+                _v.Octave.OctaveBase = anchorOctave + (GetPitchIndex(l) >= rootStep ? 0 : 1);
             }
             else
             {
-                _octave.OctaveAbsolute = savedAbsolute; // the root, and any rest
+                _v.Octave.OctaveAbsolute = savedAbsolute; // the root, and any rest
             }
             // The member's ONSET — the group's start plus the members already emitted (they
             // go in without advancing the bar's clock, which the group advances once below).
@@ -600,10 +600,10 @@ public sealed partial class MeasureCollector
             // A spread note plays as its chord(…) item narrowed to that note: absolute, with its
             // string. The first one before any pitched member is the group's root — its lowest
             // note, as the item hands on (the marks after '>>' do not move it).
-            _spreadNote = spreadNote is { } sn ? (member.Green, sn) : null;
+            _v.SpreadNote = spreadNote is { } sn ? (member.Green, sn) : null;
             await EmitArpeggioMember(member, builder, parts, scale, isRoot ? groupOctave : 0, marks, groupString,
                 measureIndex, onset);
-            _spreadNote = null;
+            _v.SpreadNote = null;
             if (!rootSet && spreadNote is { } rootNote)
             {
                 rootSet = true;
@@ -614,13 +614,13 @@ public sealed partial class MeasureCollector
             else if (!rootSet && letter is { } rl)
             {
                 rootSet = true;
-                anchorOctave = _octave.CurrentOctave;
+                anchorOctave = _v.Octave.CurrentOctave;
                 rootLetter = rl;
                 rootStep = GetPitchIndex(rl);
             }
         }
-        _octave.OctaveAbsolute = savedAbsolute;
-        _octave.OctaveBase = savedBase;
+        _v.Octave.OctaveAbsolute = savedAbsolute;
+        _v.Octave.OctaveBase = savedBase;
         // THE GROUP WRITES THE FRAME the way a chord does (user decision, 2026-09-27): the
         // next note is relative to the group's ANCHOR — the root's bare letter (the tonic
         // when a degree comes first) plus the marks after '>>' — not to the last member
@@ -628,13 +628,13 @@ public sealed partial class MeasureCollector
         // shifted by the marks.
         if (rootSet && !savedAbsolute)
         {
-            _octave.CurrentOctave = anchorOctave;
-            _octave.LastPitchName = rootLetter;
+            _v.Octave.CurrentOctave = anchorOctave;
+            _v.Octave.LastPitchName = rootLetter;
         }
         else
         {
-            _octave.CurrentOctave = savedFrameOctave + groupOctave;
-            _octave.LastPitchName = savedFramePitchName;
+            _v.Octave.CurrentOctave = savedFrameOctave + groupOctave;
+            _v.Octave.LastPitchName = savedFramePitchName;
         }
 
         // Post-events after '>>': a chord name (bare '@chord' derives it from the
@@ -652,7 +652,7 @@ public sealed partial class MeasureCollector
             if (endNoteIndex >= startNoteIndex)
                 _tupletBrackets.Add(new TupletBracketItem(sub.TupletNum, sub.TupletBase,
                     startNoteIndex, endNoteIndex, measureIndex, arpeggio.SourceStart, 0,
-                    _cursor.StaffIndex, _cursor.VoiceIndex));
+                    _v.Cursor.StaffIndex, _v.Cursor.VoiceIndex));
         }
         // The group consumes exactly `total`; record it once (AddDuration may roll the bar,
         // which is why the bracket indices were captured above).
@@ -662,8 +662,8 @@ public sealed partial class MeasureCollector
         // (dots included, like any written duration).
         if (arpeggio.TotalDuration is { } td)
         {
-            _defaultDuration = Fraction.FromNoteValue(td.Value);
-            _defaultDots = td.DotCount;
+            _v.DefaultDuration = Fraction.FromNoteValue(td.Value);
+            _v.DefaultDots = td.DotCount;
         }
     }
 
@@ -717,12 +717,12 @@ public sealed partial class MeasureCollector
                 // A second part re-reads the chord, so the frame is put back to what the
                 // first part read: the root chord adds the group's marks to the anchor on
                 // every read, and a stacked one is read in absolute mode on its base.
-                var frame = (_octave.OctaveAbsolute, _octave.OctaveBase, _octave.CurrentOctave, _octave.LastPitchName);
+                var frame = (_v.Octave.OctaveAbsolute, _v.Octave.OctaveBase, _v.Octave.CurrentOctave, _v.Octave.LastPitchName);
                 for (int k = 0; k < parts.Count; k++)
                 {
                     bool first = k == 0, last = k == parts.Count - 1;
                     if (!first)
-                        (_octave.OctaveAbsolute, _octave.OctaveBase, _octave.CurrentOctave, _octave.LastPitchName) = frame;
+                        (_v.Octave.OctaveAbsolute, _v.Octave.OctaveBase, _v.Octave.CurrentOctave, _v.Octave.LastPitchName) = frame;
                     int itemIndex = builder.CurrentItemCount;
                     var item = CreateChordItem(chord, forcedDuration: parts[k], extraOctave: octaveShift, builder: builder,
                         hasTieAfter: !last || marks.TieAfter,
@@ -770,18 +770,18 @@ public sealed partial class MeasureCollector
         // '/, marks — and where it sounds is the anchor the group stacks on and
         // propagates (<< c' e g >> = C5 E5 G5; session 914, as a chord's root).
         ResolvedPitch rp;
-        if (_octave.OctaveAbsolute)
+        if (_v.Octave.OctaveAbsolute)
         {
             rp = CalculateStaffPosition(pitch, octaveShift);
-            _octave.CurrentOctave = rp.RelativeOctave;
+            _v.Octave.CurrentOctave = rp.RelativeOctave;
         }
         else
         {
             char name = pitch.PitchName.ToLowerInvariant()[0];
             int step = GetPitchIndex(name);
-            int anchor = _octave.Resolve(step, 0, name) + pitch.OctaveOffset + octaveShift;
+            int anchor = _v.Octave.Resolve(step, 0, name) + pitch.OctaveOffset + octaveShift;
             rp = ResolveAbsolutePitch(step, pitch.AccidentalOffset, anchor, pitch.SourceStart);
-            _octave.CurrentOctave = rp.RelativeOctave; // the resolved (maybe forced) octave, as a chord's root
+            _v.Octave.CurrentOctave = rp.RelativeOctave; // the resolved (maybe forced) octave, as a chord's root
         }
         int staffPosition = rp.StaffPosition;
         var (accidental, styleCourtesy) =
@@ -838,7 +838,7 @@ public sealed partial class MeasureCollector
         IReadOnlyList<(int Value, int Dots)> parts, Fraction scale, int rootStep, int anchorOctave,
         ArpeggioMarks marks, int? groupString)
     {
-        int writtenKeySharps = _meta.KeySharps - _octave.TransposeKeySharps(0);
+        int writtenKeySharps = _v.Meta.KeySharps - _v.Octave.TransposeKeySharps(0);
         var (step, alteration, octave) = ChordDegrees.Resolve(
             rootStep, anchorOctave, degree.Number, degree.Alteration, degree.OctaveOffset, writtenKeySharps);
         var rp = ResolveAbsolutePitch(step, alteration, octave, degree.SourceStart);
@@ -867,15 +867,6 @@ public sealed partial class MeasureCollector
         }
     }
 
-
-    // A slur mark written on an empty chord, waiting for the item that occupies the empty
-    // chord's moment. See TakeEmptyChordSlurs.
-    private bool _pendingEmptyChordSlurStart;
-    private bool _pendingEmptyChordSlurEnd;
-    // ...and where that mark was written, which travels with it: the bow drawn for
-    // `<>( c4 d4)` cites the `(` on the empty chord, not the note that carries it.
-    private int _pendingEmptyChordSlurStartSource;
-    private int _pendingEmptyChordSlurEndSource;
 
     /// <summary>
     /// Merges a slur mark carried by a preceding empty chord <c>&lt;&gt;</c> into the item
@@ -912,14 +903,14 @@ public sealed partial class MeasureCollector
     /// </remarks>
     private void TakeEmptyChordSlurs(ref MarkerFlags m)
     {
-        if (!_pendingEmptyChordSlurStart && !_pendingEmptyChordSlurEnd)
+        if (!_v.PendingEmptyChordSlurStart && !_v.PendingEmptyChordSlurEnd)
             return;
-        if (_pendingEmptyChordSlurStart && !m.HasSlurStartAfter)
-            m = m with { HasSlurStartAfter = true, SlurStartSource = _pendingEmptyChordSlurStartSource };
-        if (_pendingEmptyChordSlurEnd && !m.HasSlurEndAfter)
-            m = m with { HasSlurEndAfter = true, SlurEndSource = _pendingEmptyChordSlurEndSource };
-        _pendingEmptyChordSlurStart = false;
-        _pendingEmptyChordSlurEnd = false;
+        if (_v.PendingEmptyChordSlurStart && !m.HasSlurStartAfter)
+            m = m with { HasSlurStartAfter = true, SlurStartSource = _v.PendingEmptyChordSlurStartSource };
+        if (_v.PendingEmptyChordSlurEnd && !m.HasSlurEndAfter)
+            m = m with { HasSlurEndAfter = true, SlurEndSource = _v.PendingEmptyChordSlurEndSource };
+        _v.PendingEmptyChordSlurStart = false;
+        _v.PendingEmptyChordSlurEnd = false;
     }
 
     /// <summary>Stamps the offsets of the <c>~</c>, <c>(</c> and <c>)</c> that a run of
@@ -1012,7 +1003,7 @@ public sealed partial class MeasureCollector
         // gate turns back is ALREADY on LYS4020's drop list, which is what keeps this half
         // byte-identical (HANDOFF §2 U8 ⒝1). When the ordinary engravers draw grace time
         // (⒝2), this method loses the gate rather than gaining arms.
-        if (_graceDepth > 0 && !CanStandInGraceTime(node))
+        if (_v.GraceDepth > 0 && !CanStandInGraceTime(node))
             return;
         if (_meterCursor != null)
             await ApplyPlannedMeter(builder);
@@ -1034,14 +1025,14 @@ public sealed partial class MeasureCollector
         // the ordinary tie layout, whose grace bounds stand at the run's own X with the grace's
         // head size (ElementCoordinator.BuildTieSpecification / BuildTieColumn). The manual BEAM
         // marks are still dropped — a grace run is beamed by its own rule (GraceNoteEngraver).
-        if (_graceDepth > 0)
+        if (_v.GraceDepth > 0)
             m = new MarkerFlags(m.HasTieAfter, m.HasSlurStartAfter, m.HasSlurEndAfter, false, false,
                 TieSource: m.TieSource, SlurStartSource: m.SlurStartSource, SlurEndSource: m.SlurEndSource);
 
         // ⚠️ The two bool reads come FIRST on purpose: they are false for every item of
         // every score that never writes `<>`, and that short-circuit keeps the type switch
         // in BindsASlur out of the per-item path this walk runs on every keystroke.
-        if ((_pendingEmptyChordSlurStart || _pendingEmptyChordSlurEnd) && BindsASlur(node))
+        if ((_v.PendingEmptyChordSlurStart || _v.PendingEmptyChordSlurEnd) && BindsASlur(node))
             TakeEmptyChordSlurs(ref m);
 
         // Under a % sign the bows are dropped — AFTER the empty-chord take, so a pending
@@ -1076,8 +1067,8 @@ public sealed partial class MeasureCollector
 
             case GraceExpressionSyntax grace:
                 // Store grace expression to attach to the next note
-                _pendingGrace = grace;
-                _pendingGraceAt = (builder.CurrentMeasureIndex, builder.CurrentItemCount, _meta.Clef);
+                _v.PendingGrace = grace;
+                _v.PendingGraceAt = (builder.CurrentMeasureIndex, builder.CurrentItemCount, _v.Meta.Clef);
                 break;
 
             // A cue is a REGION, walked with the ordinary walker so that everything a voice
@@ -1102,7 +1093,7 @@ public sealed partial class MeasureCollector
 
             case NoteSyntax note:
                 {
-                    int measureIndex = builder.CurrentMeasureIndex + _cursor.MetadataMeasureOffset;
+                    int measureIndex = builder.CurrentMeasureIndex + _v.Cursor.MetadataMeasureOffset;
                     int itemIndex = builder.CurrentItemCount;
                     // Onset timing of this note (elapsed duration before it is added)
                     // — anchors note-attached marks to the right column.
@@ -1124,7 +1115,7 @@ public sealed partial class MeasureCollector
                     // reader for it at all — they emitted a sounding note here.
                     if (Semantics.PitchedRest.Is(note))
                     {
-                        int prMeasureIndex = builder.CurrentMeasureIndex + _cursor.MetadataMeasureOffset;
+                        int prMeasureIndex = builder.CurrentMeasureIndex + _v.Cursor.MetadataMeasureOffset;
                         int prItemIndex = builder.CurrentItemCount;
                         Fraction prAnchorTiming = builder.CurrentDuration;
                         var pitchedRest = CreatePitchedRestItem(note);
@@ -1166,7 +1157,7 @@ public sealed partial class MeasureCollector
 
             case DrumNoteSyntax drumNote:
                 {
-                    int drumMeasureIndex = builder.CurrentMeasureIndex + _cursor.MetadataMeasureOffset;
+                    int drumMeasureIndex = builder.CurrentMeasureIndex + _v.Cursor.MetadataMeasureOffset;
                     int drumItemIndex = builder.CurrentItemCount;
                     Fraction drumAnchorTiming = builder.CurrentDuration;
                     // Opened like every sounding item — above all for the grace waiting for
@@ -1193,7 +1184,7 @@ public sealed partial class MeasureCollector
                     var restItem = CreateRestItem(rest, bar: builder.SenzaMisura ? null
                         : builder.CurrentMeasureLength - builder.CurrentDuration is { Numerator: > 0 } left
                             ? left : builder.CurrentMeasureLength);
-                    int restMeasureIndex = builder.CurrentMeasureIndex + _cursor.MetadataMeasureOffset;
+                    int restMeasureIndex = builder.CurrentMeasureIndex + _v.Cursor.MetadataMeasureOffset;
                     int restItemIndex = builder.CurrentItemCount;
                     Fraction restAnchorTiming = builder.CurrentDuration;
                     int count = rest.MeasureCount;
@@ -1311,7 +1302,7 @@ public sealed partial class MeasureCollector
 
             case ChordSyntax chord:
                 {
-                    int measureIndex = builder.CurrentMeasureIndex + _cursor.MetadataMeasureOffset;
+                    int measureIndex = builder.CurrentMeasureIndex + _v.Cursor.MetadataMeasureOffset;
                     int itemIndex = builder.CurrentItemCount;
                     Fraction chordAnchorTiming = builder.CurrentDuration;
                     // The EMPTY chord <> is a zero-time carrier: it adds NO item,
@@ -1331,14 +1322,14 @@ public sealed partial class MeasureCollector
                         // side must not be the only one that knows this, or the two
                         // disagree again.
                         // LILYPOND-REF: lily/parser.yy:3505-3514 optional_notemode_duration
-                        //   — the same rule the neighbouring _defaultDuration writes already
+                        //   — the same rule the neighbouring _v.DefaultDuration writes already
                         //   cite; <> reaches it through note_chord_element (:3148-3164).
                         // Measured: MeasureDurations' ChordSyntax{IsEmpty} arm lists the
                         // three LP bar-checks that separate "takes time" from "sets default".
                         if (chord.Duration != null)
                         {
-                            _defaultDuration = Fraction.FromNoteValue(chord.Duration.Value);
-                            _defaultDots = chord.Duration.DotCount;
+                            _v.DefaultDuration = Fraction.FromNoteValue(chord.Duration.Value);
+                            _v.DefaultDots = chord.Duration.DotCount;
                         }
                         CollectDynamics(chord, measureIndex, itemIndex);
                         CollectArticulations(chord, measureIndex, itemIndex,
@@ -1349,12 +1340,12 @@ public sealed partial class MeasureCollector
                         // and, until the file had to be structured, said nothing either:
                         // the twin of regression empty-chord.ly lost its phrase mark in
                         // silence (LYS0020 work, 2026-08-09).
-                        if (hasSlurStartAfter && !_pendingEmptyChordSlurStart)
-                            _pendingEmptyChordSlurStartSource = m.SlurStartSource;
-                        if (hasSlurEndAfter && !_pendingEmptyChordSlurEnd)
-                            _pendingEmptyChordSlurEndSource = m.SlurEndSource;
-                        _pendingEmptyChordSlurStart |= hasSlurStartAfter;
-                        _pendingEmptyChordSlurEnd |= hasSlurEndAfter;
+                        if (hasSlurStartAfter && !_v.PendingEmptyChordSlurStart)
+                            _v.PendingEmptyChordSlurStartSource = m.SlurStartSource;
+                        if (hasSlurEndAfter && !_v.PendingEmptyChordSlurEnd)
+                            _v.PendingEmptyChordSlurEndSource = m.SlurEndSource;
+                        _v.PendingEmptyChordSlurStart |= hasSlurStartAfter;
+                        _v.PendingEmptyChordSlurEnd |= hasSlurEndAfter;
                         break;
                     }
                     // A chord(…) item with no shape its part's tuning can play: a SPACER of its
@@ -1404,7 +1395,7 @@ public sealed partial class MeasureCollector
             // expands q after \relative, so a q is transparent to the frame).
             case ChordRepetitionSyntax rep:
                 {
-                    int measureIndex = builder.CurrentMeasureIndex + _cursor.MetadataMeasureOffset;
+                    int measureIndex = builder.CurrentMeasureIndex + _v.Cursor.MetadataMeasureOffset;
                     int itemIndex = builder.CurrentItemCount;
                     Fraction repAnchorTiming = builder.CurrentDuration;
                     (itemIndex, bool isCue, _) =
@@ -1440,7 +1431,7 @@ public sealed partial class MeasureCollector
             // note.
             case SlashNoteSyntax slash:
                 {
-                    int measureIndex = builder.CurrentMeasureIndex + _cursor.MetadataMeasureOffset;
+                    int measureIndex = builder.CurrentMeasureIndex + _v.Cursor.MetadataMeasureOffset;
                     int itemIndex = builder.CurrentItemCount;
                     Fraction slashAnchorTiming = builder.CurrentDuration;
                     (itemIndex, bool isCue, _) =
@@ -1462,7 +1453,7 @@ public sealed partial class MeasureCollector
             // copy carries the original's absolute spelling).
             case BareDurationSyntax bare:
                 {
-                    int measureIndex = builder.CurrentMeasureIndex + _cursor.MetadataMeasureOffset;
+                    int measureIndex = builder.CurrentMeasureIndex + _v.Cursor.MetadataMeasureOffset;
                     int itemIndex = builder.CurrentItemCount;
                     Fraction bareAnchorTiming = builder.CurrentDuration;
                     (itemIndex, bool isCue, _) =
@@ -1508,7 +1499,7 @@ public sealed partial class MeasureCollector
                     // Render the ending's music in place (the body before |: … :| is
                     // written once; repeat barlines imply repetition) and overlay a
                     // volta bracket across the measures the ending occupies.
-                    int startMeasureIndex = builder.CurrentMeasureIndex + _cursor.MetadataMeasureOffset;
+                    int startMeasureIndex = builder.CurrentMeasureIndex + _v.Cursor.MetadataMeasureOffset;
 
                     var innerNodes = new List<GreenSite>();
                     foreach (var item in volta.Items)
@@ -1520,11 +1511,11 @@ public sealed partial class MeasureCollector
                     await ProcessMusicNodeSequence(innerNodes, builder);
                     builder.EndAlternative(last: false);
 
-                    int endMeasureIndex = builder.CurrentMeasureIndex + _cursor.MetadataMeasureOffset;
+                    int endMeasureIndex = builder.CurrentMeasureIndex + _v.Cursor.MetadataMeasureOffset;
                     if (builder.CurrentItemCount > 0)
                         endMeasureIndex++; // include the in-progress measure
                     int lastMeasure = Math.Max(startMeasureIndex, endMeasureIndex - 1);
-                    _pendingInlineVoltas.Add((startMeasureIndex, lastMeasure, volta.PrintedText, volta.IsClosed, volta.SourceStart));
+                    _v.PendingInlineVoltas.Add((startMeasureIndex, lastMeasure, volta.PrintedText, volta.IsClosed, volta.SourceStart));
                 }
                 break;
 
@@ -1563,7 +1554,7 @@ public sealed partial class MeasureCollector
                     // answer there is.
                     int markMeasure = _markHostMeasure.TryGetValue(mark.SourceStart, out int hostMeasure)
                         ? hostMeasure
-                        : builder.CurrentMeasureIndex + _cursor.MetadataMeasureOffset;
+                        : builder.CurrentMeasureIndex + _v.Cursor.MetadataMeasureOffset;
                     if (Semantics.AnnotationValues.Rehearsal(mark, out _) is { } label)
                     {
                         _musicMarks.Add(new MusicMarkItem(MusicMarkType.Rehearsal, label, markMeasure, mark.SourceStart));
@@ -1598,7 +1589,7 @@ public sealed partial class MeasureCollector
                     // read off the form alone); still placed, so the picture of a book with
                     // that error is whole. The mid-measure warning (LYS4003) retired with it.
                     var navType = NavigationToMusicMark(nav.MarkType);
-                    _musicMarks.Add(new MusicMarkItem(navType, NavigationMarkMeasure(navType, builder) + _cursor.MetadataMeasureOffset, nav.SourceStart));
+                    _musicMarks.Add(new MusicMarkItem(navType, NavigationMarkMeasure(navType, builder) + _v.Cursor.MetadataMeasureOffset, nav.SourceStart));
                 }
                 break;
 
@@ -1621,9 +1612,9 @@ public sealed partial class MeasureCollector
                     string newClef = clefDecl.ClefName.Text.ToLowerInvariant();
                     var newType = ParseClefType(newClef);
                     var head = builder.SectionHead;
-                    bool unchanged = head is { } h ? h.Clef == newType : newType == ParseClefType(_meta.Clef);
-                    bool theResetsChange = head != null && !unchanged && newType == ParseClefType(_meta.Clef);
-                    _meta.Clef = newClef;
+                    bool unchanged = head is { } h ? h.Clef == newType : newType == ParseClefType(_v.Meta.Clef);
+                    bool theResetsChange = head != null && !unchanged && newType == ParseClefType(_v.Meta.Clef);
+                    _v.Meta.Clef = newClef;
                     if (unchanged && !clefDecl.IsForced)
                     {
                         if (head != null)
@@ -1649,7 +1640,7 @@ public sealed partial class MeasureCollector
             case OctaveDirectiveSyntax octaveDir:
                 // Mid-stream octave-mode switch: affects only how subsequent
                 // pitches resolve '/, marks; emits no grob.
-                _octave.OctaveAbsolute = octaveDir.IsAbsolute;
+                _v.Octave.OctaveAbsolute = octaveDir.IsAbsolute;
                 break;
 
             case KeySignatureSyntax keySig:
@@ -1678,7 +1669,7 @@ public sealed partial class MeasureCollector
                         _musicMarks.Add(new MusicMarkItem(
                             MusicMarkType.Tempo, bpm.ToString(),
                             // The declaration's first VALUE — see TempoDataPos.
-                            builder.CurrentMeasureIndex + _cursor.MetadataMeasureOffset, TempoDataPos(tempoChange),
+                            builder.CurrentMeasureIndex + _v.Cursor.MetadataMeasureOffset, TempoDataPos(tempoChange),
                             builder.CurrentItemCount, builder.CurrentDuration)
                         {
                             // The mid-music path dropped everything but the
@@ -1695,7 +1686,7 @@ public sealed partial class MeasureCollector
                         _musicMarks.Add(new MusicMarkItem(
                             MusicMarkType.Tempo, "",
                             // The declaration's first VALUE — see TempoDataPos.
-                            builder.CurrentMeasureIndex + _cursor.MetadataMeasureOffset, TempoDataPos(tempoChange),
+                            builder.CurrentMeasureIndex + _v.Cursor.MetadataMeasureOffset, TempoDataPos(tempoChange),
                             builder.CurrentItemCount, builder.CurrentDuration)
                         {
                             TempoText = tempoChange.Marking,
@@ -1739,21 +1730,21 @@ public sealed partial class MeasureCollector
                 break;
 
             case OverrideDeclarationSyntax overrideDecl:
-                CollectOverride(overrideDecl, builder.CurrentMeasureIndex + _cursor.MetadataMeasureOffset, builder.CurrentItemCount, isOnce: false, staffIndex: _cursor.StaffIndex);
+                CollectOverride(overrideDecl, builder.CurrentMeasureIndex + _v.Cursor.MetadataMeasureOffset, builder.CurrentItemCount, isOnce: false, staffIndex: _v.Cursor.StaffIndex);
                 // Track it so the next section boundary reverts it to the part default.
                 _sectionActiveGrobProps.Add((overrideDecl.GrobName.Text, overrideDecl.PropertyName.Text));
                 break;
 
             case RevertDeclarationSyntax revertDecl:
-                CollectRevert(revertDecl, builder.CurrentMeasureIndex + _cursor.MetadataMeasureOffset, builder.CurrentItemCount, staffIndex: _cursor.StaffIndex);
+                CollectRevert(revertDecl, builder.CurrentMeasureIndex + _v.Cursor.MetadataMeasureOffset, builder.CurrentItemCount, staffIndex: _v.Cursor.StaffIndex);
                 _sectionActiveGrobProps.Remove((revertDecl.GrobName.Text, revertDecl.PropertyName.Text));
                 break;
 
             case OnceModifierSyntax onceModifier:
                 if (onceModifier.Command is OverrideDeclarationSyntax innerOverride)
-                    CollectOverride(innerOverride, builder.CurrentMeasureIndex + _cursor.MetadataMeasureOffset, builder.CurrentItemCount, isOnce: true, staffIndex: _cursor.StaffIndex);
+                    CollectOverride(innerOverride, builder.CurrentMeasureIndex + _v.Cursor.MetadataMeasureOffset, builder.CurrentItemCount, isOnce: true, staffIndex: _v.Cursor.StaffIndex);
                 else if (onceModifier.Command is RevertDeclarationSyntax innerRevert)
-                    CollectRevert(innerRevert, builder.CurrentMeasureIndex + _cursor.MetadataMeasureOffset, builder.CurrentItemCount, staffIndex: _cursor.StaffIndex);
+                    CollectRevert(innerRevert, builder.CurrentMeasureIndex + _v.Cursor.MetadataMeasureOffset, builder.CurrentItemCount, staffIndex: _v.Cursor.StaffIndex);
                 break;
         }
     }
@@ -1775,11 +1766,11 @@ public sealed partial class MeasureCollector
         //   timestep) and the last_spec_ comparison.
         if (builder.AtPieceOpening)
         {
-            _meta.TimeBeats = timeSigChange.Beats;
-            _meta.TimeBeatsText = timeSigChange.BeatsText;
-            _meta.TimeGrouping = timeSigChange.Grouping;
-            _meta.TimeBeatType = timeSigChange.BeatType;
-            _meta.TimeSenzaMisura = timeSigChange.IsSenzaMisura;
+            _v.Meta.TimeBeats = timeSigChange.Beats;
+            _v.Meta.TimeBeatsText = timeSigChange.BeatsText;
+            _v.Meta.TimeGrouping = timeSigChange.Grouping;
+            _v.Meta.TimeBeatType = timeSigChange.BeatType;
+            _v.Meta.TimeSenzaMisura = timeSigChange.IsSenzaMisura;
             builder.SetMeter(new Meter(timeSigChange.Beats, timeSigChange.BeatType, timeSigChange.BeatsText, timeSigChange.Grouping),
                 timeSigChange.IsSenzaMisura);
             builder.MeterInForce = new TimeSignature(timeSigChange.Beats,
@@ -1839,20 +1830,20 @@ public sealed partial class MeasureCollector
     {
         // In grace time the sign is the grace region's to place (GraceBodySupport.CarriedBreath,
         // MeasureCollector.ProcessGraceRegion): it stands after the whole run, not after its note.
-        if (builder.CurrentMeasureIndex + _cursor.MetadataMeasureOffset != measureIndex
+        if (builder.CurrentMeasureIndex + _v.Cursor.MetadataMeasureOffset != measureIndex
             || builder.CurrentItemCount == 0)
             return;
-        if (_graceDepth > 0)
+        if (_v.GraceDepth > 0)
         {
             // …except that a sign on an INNER grace stands between this column and the next,
             // inside the run (GraceBodySupport.InnerBreaths, session 936): its column is the
             // run's to price, so only the item it follows is recorded (DeriveGraceColumns).
-            if (_innerGraceBreathStarts != null)
+            if (_v.InnerGraceBreathStarts != null)
                 foreach (var a in articulations)
                     if (a is ArticulationSyntax { Type: ArticulationType.Breath or ArticulationType.Caesura } inner
-                        && _innerGraceBreathStarts.Contains(inner.SourceStart))
+                        && _v.InnerGraceBreathStarts.Contains(inner.SourceStart))
                     {
-                        (_innerGraceBreathItems ??= [])[builder.CurrentItemCount - 1] = inner.Type;
+                        (_v.InnerGraceBreathItems ??= [])[builder.CurrentItemCount - 1] = inner.Type;
                         break;
                     }
             return;
@@ -1891,7 +1882,7 @@ public sealed partial class MeasureCollector
     /// </summary>
     /// <remarks>
     /// The body goes through <see cref="ProcessMusicNodeSequence"/> unchanged; the only
-    /// state the region carries is <see cref="_cueDepth"/> (which makes the items cue-sized)
+    /// state the region carries is <see cref="BranchState.CueDepth"/> (which makes the items cue-sized)
     /// and, when a clef is given, LilyPond's <c>\cueClef</c> / <c>\cueClefUnset</c> pair.
     /// <para>
     /// ⚠️ BOTH clefs are emitted, and that is not tidiness: MEASURED
@@ -1906,18 +1897,18 @@ public sealed partial class MeasureCollector
         string? outerClef = null;
         if (cue.ClefKeyword is { } clefToken)
         {
-            outerClef = _meta.Clef;
+            outerClef = _v.Meta.Clef;
             string cueClef = clefToken.Text.ToLowerInvariant();
-            _meta.Clef = cueClef;
+            _v.Meta.Clef = cueClef;
             // The token's span, not its Position — the clef name, not the trivia.
             await AddItemAsync(builder, new ClefChangeItem(
                 ParseClefType(cueClef), clefToken.Span.Start, isCue: true));
         }
 
-        _cueDepth++;
+        _v.CueDepth++;
         // This region's first note or chord carries the edge stamp (NoteItem.BeginsCueRegion),
         // which is what tells THIS region from the one that may sit right next to it.
-        _cueRegionPending = true;
+        _v.CueRegionPending = true;
         // The body items are reds already (a cue region is always live).
         // ⚠️ GatherMusicSite, NOT a bare GreenSite each: a phrase reference is a CONTAINER,
         // and `cue { P }` must engrave what `cue { P's body }` does. Until session 397 the
@@ -1930,18 +1921,18 @@ public sealed partial class MeasureCollector
         // (session 571: lysc check died on a Lab probe whose parse recovery put the phrase's
         // own reference inside a cue). The cycle is PhraseCycleValidator's to report.
         var cueSites = new List<GreenSite>();
-        var openHere = new HashSet<string>(_openPhrases, StringComparer.Ordinal);
+        var openHere = new HashSet<string>(_v.OpenPhrases, StringComparer.Ordinal);
         foreach (var item in cue.Body.Items)
             GatherMusicSite(new GreenSite(item), cueSites, openHere);
         await ProcessMusicNodeSequence(cueSites, builder);
         // Cleared here too, for the region that emits no note or chord at all (`cue { r4 }`):
         // the stamp belongs to this region, not to the next item that happens to be cued.
-        _cueRegionPending = false;
-        _cueDepth--;
+        _v.CueRegionPending = false;
+        _v.CueDepth--;
 
         if (outerClef is not null)
         {
-            _meta.Clef = outerClef;
+            _v.Meta.Clef = outerClef;
             await AddItemAsync(builder, new ClefChangeItem(
                 ParseClefType(outerClef), cue.Body.SourceStart + cue.Body.FullWidth, isCue: true));
         }
@@ -1955,9 +1946,9 @@ public sealed partial class MeasureCollector
     /// </summary>
     private async ValueTask<RestItem> AfterGraceSpacer(GraceExpressionSyntax afterGrace, MeasureBuilder builder, Fraction length)
     {
-        await ProcessGraceRegion(afterGrace, builder, builder.CurrentMeasureIndex + _cursor.MetadataMeasureOffset);
-        var run = _pendingLeadingGrace;
-        _pendingLeadingGrace = ImmutableArray<GraceColumnInfo>.Empty;
+        await ProcessGraceRegion(afterGrace, builder, builder.CurrentMeasureIndex + _v.Cursor.MetadataMeasureOffset);
+        var run = _v.PendingLeadingGrace;
+        _v.PendingLeadingGrace = ImmutableArray<GraceColumnInfo>.Empty;
         return new RestItem(length, 0, afterGrace.SourceStart)
         {
             IsSpacer = true,
@@ -1996,11 +1987,11 @@ public sealed partial class MeasureCollector
         // voice 2..N of a `voice { } { }` span the builder counts the SPAN's bars from 0, and
         // the bracket is read against the whole staff's track. Without the offset, a tuplet
         // in voice 2 of bar 2 was drawn over bar 1's voice-2 notes and bar 2 got none.
-        int measureIndex = builder.CurrentMeasureIndex + _cursor.MetadataMeasureOffset;
+        int measureIndex = builder.CurrentMeasureIndex + _v.Cursor.MetadataMeasureOffset;
         int startNoteIndex = builder.CurrentItemCount;
         // A grace written BEFORE the tuplet is walked by the tuplet's first sounding item
         // (OpenSoundingItem), so its columns land inside the index range opened above.
-        bool graceAhead = _pendingGrace != null;
+        bool graceAhead = _v.PendingGrace != null;
 
         // Cumulative time scale for items inside this tuplet. Items store
         // their ACTUAL duration (written × base/ratio, compounded through
@@ -2106,7 +2097,7 @@ public sealed partial class MeasureCollector
         // still cannot hold, and GraceBodyValidator reports them as a Bracket drop; drawing
         // the bracket here would put a full-size one over columns that are not drawn.
         // ⚠️ SCAFFOLDING: ⒝2 draws it at the grace font and the drop retires.
-        if (endNoteIndex >= startNoteIndex && _graceDepth == 0)
+        if (endNoteIndex >= startNoteIndex && _v.GraceDepth == 0)
         {
             _tupletBrackets.Add(new TupletBracketItem(
                 tuplet.TupletRatio,
@@ -2116,15 +2107,15 @@ public sealed partial class MeasureCollector
                 measureIndex,
                 tuplet.SourceStart,
                 nestingDepth,
-                _cursor.StaffIndex,
-                _cursor.VoiceIndex
+                _v.Cursor.StaffIndex,
+                _v.Cursor.VoiceIndex
             ));
         }
         // In grace time the span is kept for the grace beam's beamlets instead
         // (GraceNoteItem.WithBeamletCounts): LilyPond's beam engraver hands every stem its
         // Tuplet_description, a grace's too.
         else if (endNoteIndex >= startNoteIndex)
-            (_graceTupletSpans ??= []).Add(
+            (_v.GraceTupletSpans ??= []).Add(
                 (startNoteIndex, endNoteIndex, tuplet.TupletRatio, tuplet.BaseDivision));
 
         // Only add duration to the measure at the top level
@@ -2165,13 +2156,13 @@ public sealed partial class MeasureCollector
     private async ValueTask<(int ItemIndex, bool IsCue, int FeatherDirection)> OpenSoundingItem(
         SyntaxNode node, MeasureBuilder builder, int measureIndex, int itemIndex, bool hasSlurEndAfter)
     {
-        if (_pendingGrace is { } pendingGrace)
+        if (_v.PendingGrace is { } pendingGrace)
         {
-            _pendingGrace = null;
+            _v.PendingGrace = null;
             // A change written between the grace and this note is already in the list, ahead
             // of the grace's items; say so on it (MusicItem.WrittenAfterGrace).
-            if (_pendingGraceAt.Measure == builder.CurrentMeasureIndex)
-                builder.MarkChangesWrittenAfterGrace(_pendingGraceAt.ItemCount);
+            if (_v.PendingGraceAt.Measure == builder.CurrentMeasureIndex)
+                builder.MarkChangesWrittenAfterGrace(_v.PendingGraceAt.ItemCount);
             // …and the grace is engraved in the clef it was written in: LilyPond's Clef_engraver
             // has not seen the later \clef when the grace's timestep is engraved, so its heads
             // take the old clef's staff positions (the cue region's save-and-restore,
@@ -2179,22 +2170,22 @@ public sealed partial class MeasureCollector
             // two does not restore the accidental state the grace reads.
             // LILYPOND-REF: lily/clef-engraver.cc:139-166 Clef_engraver::inspect_clef_properties — the clef in force at each timestep.
             string? clefAfterGrace = null;
-            if (_pendingGraceAt.Clef is { } graceClef && graceClef != _meta.Clef)
+            if (_v.PendingGraceAt.Clef is { } graceClef && graceClef != _v.Meta.Clef)
             {
-                clefAfterGrace = _meta.Clef;
-                _meta.Clef = graceClef;
+                clefAfterGrace = _v.Meta.Clef;
+                _v.Meta.Clef = graceClef;
             }
             await ProcessGraceRegion(pendingGrace, builder, measureIndex);
             if (clefAfterGrace != null)
-                _meta.Clef = clefAfterGrace;
+                _v.Meta.Clef = clefAfterGrace;
             itemIndex = builder.CurrentItemCount;
         }
         // In grace time the question is LYS4020's own (GraceBodySupport.IsCarriedCourtesy), so
         // the parens are drawn exactly when they are not reported (session 927).
         if (node is NoteSyntax note && HasCourtesyAnnotation(note)
-            && (_graceDepth == 0 || ArticulationsOf(note).Any(Semantics.GraceBodySupport.IsCarriedCourtesy)))
+            && (_v.GraceDepth == 0 || ArticulationsOf(note).Any(Semantics.GraceBodySupport.IsCarriedCourtesy)))
             _courtesySourcePositions.Add(note.SourceStart);
-        return (itemIndex, _cueDepth > 0, GetFeatherDirection(node));
+        return (itemIndex, _v.CueDepth > 0, GetFeatherDirection(node));
     }
 
     /// <summary>True for the <c>@parenthesize</c> annotation (LilyPond's <c>\parenthesize</c>).</summary>
@@ -2272,22 +2263,22 @@ public sealed partial class MeasureCollector
                     n = n with { Notehead = style };
                 if (WritesParenthesize(node))
                     n = n with { Parenthesized = true };
-                if (_tremoloPairShape is { } pair)
+                if (_v.TremoloPairShape is { } pair)
                 {
                     n = n with
                     {
                         TimeScale = n.TimeScale * new Fraction(1, 2),
                         TremoloPairBeams = pair.Beams,
                         TremoloGapCount = pair.GapCount,
-                        HasBeamStart = _tremoloPairFirst,
-                        HasBeamEnd = !_tremoloPairFirst,
+                        HasBeamStart = _v.TremoloPairFirst,
+                        HasBeamEnd = !_v.TremoloPairFirst,
                     };
-                    _tremoloPairFirst = false;
+                    _v.TremoloPairFirst = false;
                 }
-                if (_graceDepth == 0 && !_pendingLeadingGrace.IsDefaultOrEmpty)
+                if (_v.GraceDepth == 0 && !_v.PendingLeadingGrace.IsDefaultOrEmpty)
                 {
-                    n = n with { LeadingGrace = _pendingLeadingGrace };
-                    _pendingLeadingGrace = ImmutableArray<GraceColumnInfo>.Empty;
+                    n = n with { LeadingGrace = _v.PendingLeadingGrace };
+                    _v.PendingLeadingGrace = ImmutableArray<GraceColumnInfo>.Empty;
                 }
                 return (T)(MusicItem)n;
             }
@@ -2300,22 +2291,22 @@ public sealed partial class MeasureCollector
                 // A merged drum chart's chord takes its parentheses hit by hit (EmitDrumPiece).
                 if (node is not DrumNoteSyntax)
                     c = WithParenthesizedMembers(c, node);
-                if (_tremoloPairShape is { } pair)
+                if (_v.TremoloPairShape is { } pair)
                 {
                     c = c with
                     {
                         TimeScale = c.TimeScale * new Fraction(1, 2),
                         TremoloPairBeams = pair.Beams,
                         TremoloGapCount = pair.GapCount,
-                        HasBeamStart = _tremoloPairFirst,
-                        HasBeamEnd = !_tremoloPairFirst,
+                        HasBeamStart = _v.TremoloPairFirst,
+                        HasBeamEnd = !_v.TremoloPairFirst,
                     };
-                    _tremoloPairFirst = false;
+                    _v.TremoloPairFirst = false;
                 }
-                if (_graceDepth == 0 && !_pendingLeadingGrace.IsDefaultOrEmpty)
+                if (_v.GraceDepth == 0 && !_v.PendingLeadingGrace.IsDefaultOrEmpty)
                 {
-                    c = c with { LeadingGrace = _pendingLeadingGrace };
-                    _pendingLeadingGrace = ImmutableArray<GraceColumnInfo>.Empty;
+                    c = c with { LeadingGrace = _v.PendingLeadingGrace };
+                    _v.PendingLeadingGrace = ImmutableArray<GraceColumnInfo>.Empty;
                 }
                 return (T)(MusicItem)c;
             }
@@ -2347,8 +2338,8 @@ public sealed partial class MeasureCollector
             _articulations.Add(new ArticulationItem(
                 DrumNameRegistry.MarkArticulation(dInfoMark.Mark),
                 measureIndex, itemIndex, true,
-                sourceStart, _cursor.StaffIndex)
-            { VoiceIndex = _cursor.VoiceIndex });
+                sourceStart, _v.Cursor.StaffIndex)
+            { VoiceIndex = _v.Cursor.VoiceIndex });
     }
 
     /// <summary>
@@ -2376,8 +2367,8 @@ public sealed partial class MeasureCollector
             return;
         int minPos = chordItem.Notes.Min(n => n.StaffPosition);
         int maxPos = chordItem.Notes.Max(n => n.StaffPosition);
-        _arpeggios.Add(new ArpeggioItem(measureIndex, itemIndex, minPos, maxPos, sourceStart, _cursor.StaffIndex,
-            Bracket: bracket, VoiceIndex: _cursor.VoiceIndex));
+        _arpeggios.Add(new ArpeggioItem(measureIndex, itemIndex, minPos, maxPos, sourceStart, _v.Cursor.StaffIndex,
+            Bracket: bracket, VoiceIndex: _v.Cursor.VoiceIndex));
     }
 
     /// <summary>
@@ -2391,7 +2382,7 @@ public sealed partial class MeasureCollector
         // The first item inside a tuplet can be the carrier for a slur mark left by an
         // empty chord just before the group (the same hole the glissando note below records).
         // Flags first, as in ProcessMusicNode — this is the tuplet body's per-item path.
-        if ((_pendingEmptyChordSlurStart || _pendingEmptyChordSlurEnd) && BindsASlur(item))
+        if ((_v.PendingEmptyChordSlurStart || _v.PendingEmptyChordSlurEnd) && BindsASlur(item))
             TakeEmptyChordSlurs(ref m);
         m = WithoutBowsUnderPercent(m);
         HandPhrasingSlurTo(builder, item);
@@ -2402,7 +2393,7 @@ public sealed partial class MeasureCollector
         bool hasBeamStartAfter = m.HasBeamStartAfter;
         bool hasBeamEndAfter = m.HasBeamEndAfter;
 
-        int annMeasureIndex = builder.CurrentMeasureIndex + _cursor.MetadataMeasureOffset;
+        int annMeasureIndex = builder.CurrentMeasureIndex + _v.Cursor.MetadataMeasureOffset;
         int annItemIndex = builder.CurrentItemCount;
         // The member's OWN moment, not the group's: the clock stands still over the body
         // (MeasureBuilder.CurrentMoment).
@@ -2413,8 +2404,8 @@ public sealed partial class MeasureCollector
                 // Waits for the next sounding item of the body, exactly as the main walk's
                 // arm does — until session 397 this arm did not exist, and a grace written
                 // inside a tuplet body was dropped without a word (HANDOFF §2 R3).
-                _pendingGrace = grace;
-                _pendingGraceAt = (builder.CurrentMeasureIndex, builder.CurrentItemCount, _meta.Clef);
+                _v.PendingGrace = grace;
+                _v.PendingGraceAt = (builder.CurrentMeasureIndex, builder.CurrentItemCount, _v.Meta.Clef);
                 return Fraction.Zero;
             case NoteSyntax note:
             {

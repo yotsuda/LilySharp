@@ -64,24 +64,24 @@ public sealed partial class MeasureCollector
     /// <c>modern</c> / <c>noReset</c> had no checkpoint after its first note and
     /// re-collected in full on every keystroke.</summary>
     private bool WalkCarriesNothing()
-        => _pendingGrace == null && _pendingLeadingGrace.IsDefaultOrEmpty
-            && !_pendingEmptyChordSlurStart && !_pendingEmptyChordSlurEnd
-            && _tremoloPairShape == null
-            && _cueDepth == 0 && _percentCoveredDepth == 0
-            && _cursor.VoiceScope == null && _cursor.MetadataMeasureOffset == 0
-            && _phraseTransposeSaves.Count == 0;
+        => _v.PendingGrace == null && _v.PendingLeadingGrace.IsDefaultOrEmpty
+            && !_v.PendingEmptyChordSlurStart && !_v.PendingEmptyChordSlurEnd
+            && _v.TremoloPairShape == null
+            && _v.CueDepth == 0 && _v.PercentCoveredDepth == 0
+            && _v.Cursor.VoiceScope == null && _v.Cursor.MetadataMeasureOffset == 0
+            && _v.PhraseTransposeSaves.Count == 0;
 
     /// <summary>The accidental memory as <see cref="AccidentalMemorySnapshot"/> reads
     /// it: entries in engraving order, each bar as an offset behind the walk's current
     /// bar.</summary>
     private AccidentalMemorySnapshot CaptureAccidentalMemory()
     {
-        if (_measureAccidentals.Count == 0)
+        if (_v.MeasureAccidentals.Count == 0)
             return AccidentalMemorySnapshot.Empty;
-        var byOrder = new (int Step, int Octave, int Alter, int BarsBack, int Order)[_measureAccidentals.Count];
+        var byOrder = new (int Step, int Octave, int Alter, int BarsBack, int Order)[_v.MeasureAccidentals.Count];
         int n = 0;
-        foreach (var (key, entry) in _measureAccidentals)
-            byOrder[n++] = (key.step, key.octave, entry.Alter, _accidentalBar - entry.Bar, entry.Order);
+        foreach (var (key, entry) in _v.MeasureAccidentals)
+            byOrder[n++] = (key.step, key.octave, entry.Alter, _v.AccidentalBar - entry.Bar, entry.Order);
         Array.Sort(byOrder, static (a, b) => a.Order.CompareTo(b.Order));
         var entries = new (int Step, int Octave, int Alter, int BarsBack)[byOrder.Length];
         for (int i = 0; i < byOrder.Length; i++)
@@ -95,9 +95,9 @@ public sealed partial class MeasureCollector
     /// recording's.</summary>
     private void RestoreAccidentalMemory(AccidentalMemorySnapshot snapshot)
     {
-        _measureAccidentals.Clear();
+        _v.MeasureAccidentals.Clear();
         foreach (var (step, octave, alter, barsBack) in snapshot.Entries)
-            _measureAccidentals[(step, octave)] = (alter, _accidentalBar - barsBack, _accidentalOrder++);
+            _v.MeasureAccidentals[(step, octave)] = (alter, _v.AccidentalBar - barsBack, _v.AccidentalOrder++);
     }
 
     /// <summary>The empty grob-prop set every checkpoint taken outside a section-level
@@ -130,7 +130,7 @@ public sealed partial class MeasureCollector
         int[] counts = previous != null && live.SequenceEqual(previous.TableCounts)
             ? previous.TableCounts
             : live.ToArray();
-        var meta = previous != null && _meta.SameAs(previous.Meta) ? previous.Meta : _meta.Clone();
+        var meta = previous != null && _v.Meta.SameAs(previous.Meta) ? previous.Meta : _v.Meta.Clone();
         var props = _sectionActiveGrobProps.Count == 0
             ? s_noSectionGrobProps
             : new HashSet<(string, string)>(_sectionActiveGrobProps);
@@ -149,23 +149,23 @@ public sealed partial class MeasureCollector
             HeaderReadCount = _walkHeaderReads.Count,
             CanonicalReadCount = _walkCanonicalReads.Count,
             Builder = builder.Capture(),
-            Octave = OctaveCheckpoint.Capture(_octave),
+            Octave = OctaveCheckpoint.Capture(_v.Octave),
             Meta = meta,
-            DefaultDuration = _defaultDuration,
-            DefaultDots = _defaultDots,
-            AmbientTonicStep = _ambientTonicStep,
-            AmbientTonicAlter = _ambientTonicAlter,
-            AmbientTonicValid = _ambientTonicValid,
+            DefaultDuration = _v.DefaultDuration,
+            DefaultDots = _v.DefaultDots,
+            AmbientTonicStep = _v.AmbientTonicStep,
+            AmbientTonicAlter = _v.AmbientTonicAlter,
+            AmbientTonicValid = _v.AmbientTonicValid,
             OpeningKeyOverride = _openingKeyOverride,
-            TremoloRepeatCount = _tremoloRepeatCount,
-            TremoloPairShape = _tremoloPairShape,
-            TremoloPairFirst = _tremoloPairFirst,
+            TremoloRepeatCount = _v.TremoloRepeatCount,
+            TremoloPairShape = _v.TremoloPairShape,
+            TremoloPairFirst = _v.TremoloPairFirst,
             Accidentals = CaptureAccidentalMemory(),
             SectionActiveGrobProps = props,
             KeyLogCount = _keyByMeasureLog.Count,
             SectionStartLogCount = _sectionStartLog.Count,
             TableCounts = counts,
-            PendingInlineVoltaCount = _pendingInlineVoltas.Count,
+            PendingInlineVoltaCount = _v.PendingInlineVoltas.Count,
             SpanTrackCount = _spanTracks.Count,
             ResolvedSpellingCount = _resolvedSpellingLog.Count,
             RepetitionReadCount = _repetitionOriginalReads.Count,
@@ -187,17 +187,17 @@ public sealed partial class MeasureCollector
             throw new CollectResumeAbortException($"resuming an ineligible walk recording: {why}");
 
         // Value state.
-        ck.Octave.Restore(_octave);
-        _meta.CopyFrom(ck.Meta);
-        _defaultDuration = ck.DefaultDuration;
-        _defaultDots = ck.DefaultDots;
-        _ambientTonicStep = ck.AmbientTonicStep;
-        _ambientTonicAlter = ck.AmbientTonicAlter;
-        _ambientTonicValid = ck.AmbientTonicValid;
+        ck.Octave.Restore(_v.Octave);
+        _v.Meta.CopyFrom(ck.Meta);
+        _v.DefaultDuration = ck.DefaultDuration;
+        _v.DefaultDots = ck.DefaultDots;
+        _v.AmbientTonicStep = ck.AmbientTonicStep;
+        _v.AmbientTonicAlter = ck.AmbientTonicAlter;
+        _v.AmbientTonicValid = ck.AmbientTonicValid;
         _openingKeyOverride = ck.OpeningKeyOverride;
-        _tremoloRepeatCount = ck.TremoloRepeatCount;
-        _tremoloPairShape = ck.TremoloPairShape;
-        _tremoloPairFirst = ck.TremoloPairFirst;
+        _v.TremoloRepeatCount = ck.TremoloRepeatCount;
+        _v.TremoloPairShape = ck.TremoloPairShape;
+        _v.TremoloPairFirst = ck.TremoloPairFirst;
         _sectionActiveGrobProps.Clear();
         foreach (var prop in ck.SectionActiveGrobProps)
             _sectionActiveGrobProps.Add(prop);
@@ -207,18 +207,18 @@ public sealed partial class MeasureCollector
         RestoreKeyLog(plan.Source, rec.StartKeyLogCount, ck.KeyLogCount);
         RestoreSectionStartLog(plan.Source, rec.StartSectionStartLogCount, ck.SectionStartLogCount);
         RestoreAccidentalMemory(ck.Accidentals);
-        _pendingGrace = null;
-        _pendingLeadingGrace = ImmutableArray<GraceColumnInfo>.Empty;
-        _pendingEmptyChordSlurStart = false;
-        _pendingEmptyChordSlurEnd = false;
-        _pendingEmptyChordSlurStartSource = 0;
-        _pendingEmptyChordSlurEndSource = 0;
+        _v.PendingGrace = null;
+        _v.PendingLeadingGrace = ImmutableArray<GraceColumnInfo>.Empty;
+        _v.PendingEmptyChordSlurStart = false;
+        _v.PendingEmptyChordSlurEnd = false;
+        _v.PendingEmptyChordSlurStartSource = 0;
+        _v.PendingEmptyChordSlurEndSource = 0;
 
         // Walk-local lists: the recorded prefix (append-only within the walk, so
         // the recording's first N entries are exactly the checkpoint's state).
-        _pendingInlineVoltas.Clear();
+        _v.PendingInlineVoltas.Clear();
         for (int i = 0; i < ck.PendingInlineVoltaCount; i++)
-            _pendingInlineVoltas.Add(rec.PendingInlineVoltas![i]);
+            _v.PendingInlineVoltas.Add(rec.PendingInlineVoltas![i]);
         // The span tracks (session 970: what each span's voices PRODUCED — their measures are
         // adopted like the primary's, a function of the unchanged prefix) with their node
         // re-keyed onto this tree, as the spellings below are: the node is read for its
@@ -616,17 +616,17 @@ public sealed partial class MeasureCollector
         }
 
         // --- commit: jump to the recorded end of the walk ---
-        endCk.Octave.Restore(_octave);
-        _meta.CopyFrom(endMeta);
-        _defaultDuration = endCk.DefaultDuration;
-        _defaultDots = endCk.DefaultDots;
-        _ambientTonicStep = endCk.AmbientTonicStep;
-        _ambientTonicAlter = endCk.AmbientTonicAlter;
-        _ambientTonicValid = endCk.AmbientTonicValid;
+        endCk.Octave.Restore(_v.Octave);
+        _v.Meta.CopyFrom(endMeta);
+        _v.DefaultDuration = endCk.DefaultDuration;
+        _v.DefaultDots = endCk.DefaultDots;
+        _v.AmbientTonicStep = endCk.AmbientTonicStep;
+        _v.AmbientTonicAlter = endCk.AmbientTonicAlter;
+        _v.AmbientTonicValid = endCk.AmbientTonicValid;
         _openingKeyOverride = endCk.OpeningKeyOverride;
-        _tremoloRepeatCount = endCk.TremoloRepeatCount;
-        _tremoloPairShape = endCk.TremoloPairShape;
-        _tremoloPairFirst = endCk.TremoloPairFirst;
+        _v.TremoloRepeatCount = endCk.TremoloRepeatCount;
+        _v.TremoloPairShape = endCk.TremoloPairShape;
+        _v.TremoloPairFirst = endCk.TremoloPairFirst;
         _sectionActiveGrobProps.Clear();
         foreach (var prop in endCk.SectionActiveGrobProps)
             _sectionActiveGrobProps.Add(prop);
@@ -639,7 +639,7 @@ public sealed partial class MeasureCollector
         for (int t = 0; t < dst.Length; t++)
             foreach (var entry in tailSlices[t])
                 dst[t].Add(entry);
-        _pendingInlineVoltas.AddRange(voltaTail);
+        _v.PendingInlineVoltas.AddRange(voltaTail);
         _spanTracks.AddRange(spanTail);
         foreach (var (node, resolvedMembers) in spellTail)
         {
@@ -723,21 +723,21 @@ public sealed partial class MeasureCollector
             || live.MeasureSourceStart != sourceStart)
             return DeclineSplice("measure source start differs");
 
-        if (OctaveCheckpoint.Capture(_octave) != ck.Octave)
+        if (OctaveCheckpoint.Capture(_v.Octave) != ck.Octave)
             return DeclineSplice("octave frame differs");
         if (!MetaMatchesShifted(ck.Meta, w))
             return DeclineSplice("metadata differs");
-        if (_defaultDuration != ck.DefaultDuration || _defaultDots != ck.DefaultDots)
+        if (_v.DefaultDuration != ck.DefaultDuration || _v.DefaultDots != ck.DefaultDots)
             return DeclineSplice("default duration differs");
-        if (_ambientTonicStep != ck.AmbientTonicStep
-            || _ambientTonicAlter != ck.AmbientTonicAlter
-            || _ambientTonicValid != ck.AmbientTonicValid)
+        if (_v.AmbientTonicStep != ck.AmbientTonicStep
+            || _v.AmbientTonicAlter != ck.AmbientTonicAlter
+            || _v.AmbientTonicValid != ck.AmbientTonicValid)
             return DeclineSplice("ambient tonic differs");
         if (_openingKeyOverride != ck.OpeningKeyOverride)
             return DeclineSplice("opening key override differs");
-        if (_tremoloRepeatCount != ck.TremoloRepeatCount
-            || _tremoloPairShape != ck.TremoloPairShape
-            || _tremoloPairFirst != ck.TremoloPairFirst)
+        if (_v.TremoloRepeatCount != ck.TremoloRepeatCount
+            || _v.TremoloPairShape != ck.TremoloPairShape
+            || _v.TremoloPairFirst != ck.TremoloPairFirst)
             return DeclineSplice("tremolo state differs");
         // The accidental memory as the rules read it (re-based, so an inserted note
         // before the boundary does not decline every later one). Under `modern` the
@@ -785,14 +785,14 @@ public sealed partial class MeasureCollector
             if (tables[t].Count != ck.TableCounts[t])
                 return DeclineSplice("a side-table count differs");
 
-        if (_pendingInlineVoltas.Count != ck.PendingInlineVoltaCount)
+        if (_v.PendingInlineVoltas.Count != ck.PendingInlineVoltaCount)
             return DeclineSplice("pending inline volta count differs");
-        for (int i = 0; i < _pendingInlineVoltas.Count; i++)
+        for (int i = 0; i < _v.PendingInlineVoltas.Count; i++)
         {
             var recorded = planVolta(i);
             if (!w.TryShift(recorded.Item5, out int pos))
                 return DeclineSplice("a pending inline volta lies inside the window");
-            var liveVolta = _pendingInlineVoltas[i];
+            var liveVolta = _v.PendingInlineVoltas[i];
             if (liveVolta.Item1 != recorded.Item1 || liveVolta.Item2 != recorded.Item2
                 || !string.Equals(liveVolta.Item3, recorded.Item3, StringComparison.Ordinal)
                 || liveVolta.Item4 != recorded.Item4 || liveVolta.Item5 != pos)
@@ -827,45 +827,45 @@ public sealed partial class MeasureCollector
     /// are value scalars/strings.</summary>
     private bool MetaMatchesShifted(MetadataState rec, in CollectTailShifter.Window w)
     {
-        if (!w.TryShift(rec.TitlePosition, out int title) || _meta.TitlePosition != title
-            || !w.TryShift(rec.ComposerPosition, out int composer) || _meta.ComposerPosition != composer
-            || !w.TryShift(rec.SubtitlePosition, out int subtitle) || _meta.SubtitlePosition != subtitle
-            || !w.TryShift(rec.PoetPosition, out int poet) || _meta.PoetPosition != poet
-            || !w.TryShift(rec.TimePosition, out int time) || _meta.TimePosition != time
-            || !w.TryShift(rec.KeyPosition, out int key) || _meta.KeyPosition != key
-            || !w.TryShift(rec.ClefPosition, out int clef) || _meta.ClefPosition != clef
-            || !w.TryShift(rec.TempoPosition, out int tempo) || _meta.TempoPosition != tempo
-            || !w.TryShift(rec.TempoUnitPosition, out int unit) || _meta.TempoUnitPosition != unit
-            || !w.TryShift(rec.TempoCountPosition, out int count) || _meta.TempoCountPosition != count
-            || !w.TryShift(rec.SwingPosition, out int swing) || _meta.SwingPosition != swing
-            || !w.TryShift(rec.SwingValuePosition, out int swingValue) || _meta.SwingValuePosition != swingValue)
+        if (!w.TryShift(rec.TitlePosition, out int title) || _v.Meta.TitlePosition != title
+            || !w.TryShift(rec.ComposerPosition, out int composer) || _v.Meta.ComposerPosition != composer
+            || !w.TryShift(rec.SubtitlePosition, out int subtitle) || _v.Meta.SubtitlePosition != subtitle
+            || !w.TryShift(rec.PoetPosition, out int poet) || _v.Meta.PoetPosition != poet
+            || !w.TryShift(rec.TimePosition, out int time) || _v.Meta.TimePosition != time
+            || !w.TryShift(rec.KeyPosition, out int key) || _v.Meta.KeyPosition != key
+            || !w.TryShift(rec.ClefPosition, out int clef) || _v.Meta.ClefPosition != clef
+            || !w.TryShift(rec.TempoPosition, out int tempo) || _v.Meta.TempoPosition != tempo
+            || !w.TryShift(rec.TempoUnitPosition, out int unit) || _v.Meta.TempoUnitPosition != unit
+            || !w.TryShift(rec.TempoCountPosition, out int count) || _v.Meta.TempoCountPosition != count
+            || !w.TryShift(rec.SwingPosition, out int swing) || _v.Meta.SwingPosition != swing
+            || !w.TryShift(rec.SwingValuePosition, out int swingValue) || _v.Meta.SwingValuePosition != swingValue)
             return false;
 
-        return _meta.Title == rec.Title
-            && _meta.Composer == rec.Composer
-            && _meta.Subtitle == rec.Subtitle
-            && _meta.Poet == rec.Poet
-            && _meta.Fonts.Equals(rec.Fonts)
-            && _meta.Paper.Equals(rec.Paper)
-            && _meta.LayoutPlan.Equals(rec.LayoutPlan)
-            && _meta.Tempo == rec.Tempo
-            && _meta.TempoText == rec.TempoText
-            && _meta.TempoBeatUnit == rec.TempoBeatUnit
-            && _meta.TempoDots == rec.TempoDots
-            && _meta.SwingSubdivision == rec.SwingSubdivision
-            && _meta.TimeBeats == rec.TimeBeats
-            && _meta.TimeBeatsText == rec.TimeBeatsText
-            && _meta.TimeGrouping == rec.TimeGrouping
-            && _meta.TimeSenzaMisura == rec.TimeSenzaMisura
-            && _meta.TimeBeatType == rec.TimeBeatType
-            && _meta.KeySharps == rec.KeySharps
-            && _meta.KeyCustom == rec.KeyCustom
-            && _meta.InitialKeyCustom == rec.InitialKeyCustom
-            && _meta.InitialKeySharps == rec.InitialKeySharps
-            && _meta.KeyTonicStep == rec.KeyTonicStep
-            && _meta.KeyTonicAlter == rec.KeyTonicAlter
-            && _meta.Clef == rec.Clef
-            && _meta.InitialClef == rec.InitialClef;
+        return _v.Meta.Title == rec.Title
+            && _v.Meta.Composer == rec.Composer
+            && _v.Meta.Subtitle == rec.Subtitle
+            && _v.Meta.Poet == rec.Poet
+            && _v.Meta.Fonts.Equals(rec.Fonts)
+            && _v.Meta.Paper.Equals(rec.Paper)
+            && _v.Meta.LayoutPlan.Equals(rec.LayoutPlan)
+            && _v.Meta.Tempo == rec.Tempo
+            && _v.Meta.TempoText == rec.TempoText
+            && _v.Meta.TempoBeatUnit == rec.TempoBeatUnit
+            && _v.Meta.TempoDots == rec.TempoDots
+            && _v.Meta.SwingSubdivision == rec.SwingSubdivision
+            && _v.Meta.TimeBeats == rec.TimeBeats
+            && _v.Meta.TimeBeatsText == rec.TimeBeatsText
+            && _v.Meta.TimeGrouping == rec.TimeGrouping
+            && _v.Meta.TimeSenzaMisura == rec.TimeSenzaMisura
+            && _v.Meta.TimeBeatType == rec.TimeBeatType
+            && _v.Meta.KeySharps == rec.KeySharps
+            && _v.Meta.KeyCustom == rec.KeyCustom
+            && _v.Meta.InitialKeyCustom == rec.InitialKeyCustom
+            && _v.Meta.InitialKeySharps == rec.InitialKeySharps
+            && _v.Meta.KeyTonicStep == rec.KeyTonicStep
+            && _v.Meta.KeyTonicAlter == rec.KeyTonicAlter
+            && _v.Meta.Clef == rec.Clef
+            && _v.Meta.InitialClef == rec.InitialClef;
     }
 
     /// <summary>Re-homes a cloned <see cref="MetadataState"/>'s eight header
