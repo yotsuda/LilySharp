@@ -160,6 +160,17 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第972セッションの経緯
+
+### 1.1 第972セッション（2026-10-23・YT-DELL2）
+
+新しい会話（ユーザー「HANDOFF を読んで作業に着手して」）。`-Start p972`（開始 HEAD `08aefd1d2`・未 push 20・第970 を ARCHIVE へ・full 13131 / 0 / 2 / 13133・OMR `REQUESTS.md` の open 0・作業ツリーに前からの `samples/*.lys` 5 冊の変更＝触らない）。作業場所は Lab `sessions/p972/`。
+- **OMR の AI 修正 M1＝実装した（design §5 の M1 の行は全部）**: 新規 `editors/vscode/src/omrAiFixCore.ts`（編集器なし＝対象の選別と順序・プロンプト・JSON の読み・門 1・2・切り抜きの矩形・見積もり・anchor）＋ `omrAiFix.ts`（VS Code 側＝コマンド `lilysharp.omrFixWithAi`・QuickPick（確信度の低い順・既定チェック＝scan view のスライダー未満・選択範囲があればその行だけ・題名に見積もり）・`withProgress` キャンセル可・編集されたら中断・上限 `lilysharp.ai.omrFixBatch`（既定 25）を超えたら「続ける？」・パネル `Lily# — OMR fixes`＝元画像の切り抜き／今／提案／理由・門／Accept・Reject・Accept all（門 ✓ かつ confidence ≥ 0.5）・Apply＝1 つの WorkspaceEdit・Open in editor・出力チャネル「Lily# AI」に 1 小節 1 行・所要時間の平均は globalState）。`modelClient.ts` に `ModelUse 'omrFix'`＋設定 `lilysharp.ai.omrFixModel`（Select AI Model の 3 つ目）。`omrScanCore.ts` は side file の `kind`／`lines` を読む・`omrScan.ts` に `scanThresholdOf`。**門**: `npm test` 347（＋36）・`check-types` 0・`compile` OK・実在の OMR 出力（Omr `data/scans/揺れる思い/img_029`・印 232）で素振り＝前後と他パート 9 本・memo・切り抜きが prompt に入る（Lab `sessions/p972/dryrun.js`）。
+- 設計からの決定（design §5 末尾に書いた）: 行＝小節（reader はパートの小節を 1 行に書く）＝置き換えの単位は印のある行の音楽部分（字下げは残す）・提案の `@todo` は剥がす・「今」「提案」の絵は全曲の SVG を `<symbol>` に 1 つ置き `rect.bar-staff` の `data-span` で小節に切る（renderText を前後 1 小節で切り出す案はやめた）・Accept は印、Apply が書く・入口は M1 ではパレットと `.lys` の右クリックだけ（クイックフィックス・scan view のボタンは M2）。
+- **実機未確認＝MANUAL-CHECKS §5 B9／B9′／B9″（`[ ]` 3 項・Copilot のモデルが要る）**。次は M2（画像を模型へ＝`LanguageModelDataPart.image`・engine の床・受けない模型の再送・クイックフィックス・scan view のボタン）→ M3（design §5）。
+- `-End p972 -DiffBase 08aefd1d2`＝full **13131 / 0 / 2 / 13133**（Core 差分 0＝開始時と同数・`run2.trx`・Lab `sessions/p972/end1.log`・門 7 つ OK）→ この docs commit。本体 `9fa1b2b07`。未 push 20＋2（push はユーザー）。
+判定（2026-10-23）: M1 は閉じた。**次の M2 はこの便のコード（`omrAiFix.ts`・`modelClient.ts`）の上に立つので (a) この会話で続けるのが有利**＝ただし M2 の門は「同じ本で M1 と M2 の採用率を比べる」（design §5）で Copilot のモデルが要る＝**先にユーザーが B9 を実機で回す**（M1 が動いてから画像を足す）。B9 の報告が来たら、この会話で `-Start p973` を回して M2 へ。
+
 ## 以下は第971セッションの経緯
 
 ### 1.1 第971セッション（2026-10-23・YT-DELL2）
