@@ -25,7 +25,7 @@ import {
     Diag, FixableTodo, Rgba, acceptableByAll, anchorOf, averageOf, barBoxFor, batchesOf, checkedByDefault, cropRect, cropRgba,
     decodeImage, diagnosticsOn, encodePng, estimateOf, fixTargets, gateOf, headOf, labelOf, neighboursOf, parseProposal,
     readerBarOf, repairPromptOf, resolvedLine, scanCropPng, spliceBar, stripTodoMarks, systemPromptOf, targetsInLines, taskPromptOf,
-    verifyVerdict, withSample, withVerify,
+    verifyVerdict, withSample, withVerify, wordDiff,
 } from '../src/omrAiFixCore';
 import * as jpeg from 'jpeg-js';
 import { markFactsOf, parseSideFile } from '../src/omrScanCore';
@@ -361,6 +361,20 @@ describe('reading the answer', () => {
         assert.match(p!.reason, /^unchanged/);
         assert.equal(p?.unchanged, true);
         assert.equal(parseProposal('{"bar": null, "reason": "blurred"}', written)?.unchanged, undefined);
+    });
+
+    it('compares the written line and the proposal piece by piece', () => {
+        const show = (ps: { text: string; space: boolean; kind: string }[]) =>
+            ps.map(p => `${p.space ? ' ' : ''}${p.kind === 'same' ? p.text : `[${p.kind === 'del' ? '-' : '+'}${p.text}]`}`).join('').trim();
+        const d = wordDiff('a4@todo(b45-p1 "bar 45: 1680/1920 ticks") r8 a8 d\'8 tuplet 3/2 { c\'8 c\'8 bes8 } |',
+            'a4 r8 a8 d\'8 c\'8 c\'8 bes8 |');
+        assert.equal(show(d.before), 'a4[-@todo(b45-p1 "bar 45: 1680/1920 ticks")] r8 a8 d\'8 [-tuplet] [-3/2] [-{] c\'8 c\'8 bes8 [-}] |');
+        assert.equal(show(d.after), 'a4 r8 a8 d\'8 c\'8 c\'8 bes8 |');
+        const e = wordDiff('f,2 f,4@todo(b2-p2 "x") |', 'f,2 f,4. |');
+        assert.equal(show(e.before), 'f,2 [-f,4][-@todo(b2-p2 "x")] |');
+        assert.equal(show(e.after), 'f,2 [+f,4.] |');
+        const same = wordDiff('c4 d e f |', 'c4 d e f |');
+        assert.equal(same.before.every(p => p.kind === 'same') && same.after.every(p => p.kind === 'same'), true);
     });
 
     it('takes an unchanged line as the line without its marks, nothing else', () => {

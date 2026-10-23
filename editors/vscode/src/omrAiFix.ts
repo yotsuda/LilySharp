@@ -35,7 +35,7 @@ import {
     BarCheck, BarNeighbours, Diag, FixTarget, FixableTodo, GateVerdict, Proposal, Rgba, acceptableByAll, anchorOf, averageOf,
     batchesOf, checkedByDefault, cropRect, decodeImage, diagnosticsOn, estimateOf, fixTargets, gateOf, headOf, labelOf,
     neighboursOf, parseProposal, readerBarOf, repairPromptOf, resolvedLine, scanCropPng, spliceBar, systemPromptOf, targetsInLines, taskPromptOf,
-    verifyVerdict, withSample, withVerify,
+    verifyVerdict, withSample, withVerify, wordDiff, DiffPiece,
 } from './omrAiFixCore';
 import { OmrVersion, canVerifyBars, exitMeaning, launchOf, parseVersion, runOmr, verifyArguments } from './omrCore';
 import { findOmr } from './omrReader';
@@ -652,7 +652,8 @@ async function showBar(run: FixRun, row: FixRow): Promise<void> {
     const shown = vscode.window.visibleTextEditors.find(e => e.document.uri.toString() === run.uri.toString());
     const editor = shown ?? await vscode.window.showTextDocument(doc, { viewColumn: vscode.ViewColumn.One, preserveFocus: true });
     const range = new vscode.Range(doc.positionAt(from), doc.positionAt(to));
-    editor.selection = new vscode.Selection(range.start, range.start);
+    // The bar's text selected (owner's request 2026-10-23): what Accept would replace.
+    editor.selection = new vscode.Selection(range.start, range.end);
     editor.revealRange(range, vscode.TextEditorRevealType.InCenterIfOutsideViewport);
     barMark ??= vscode.window.createTextEditorDecorationType({
         backgroundColor: 'rgba(0, 120, 215, 0.22)',
@@ -721,6 +722,15 @@ async function applyRows(run: FixRun, accepted: readonly FixRow[]): Promise<bool
 
 function esc(s: string): string {
     return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+/** A line of the word diff as HTML: removed pieces in <del>, added ones in <ins>. */
+function piecesHtml(pieces: readonly DiffPiece[]): string {
+    return pieces.map((p, i) => {
+        const text = esc(p.text);
+        const body = p.kind === 'del' ? `<del>${text}</del>` : p.kind === 'add' ? `<ins>${text}</ins>` : text;
+        return (p.space && i > 0 ? ' ' : '') + body;
+    }).join('');
 }
 
 function nonceOf(): string {
@@ -812,6 +822,8 @@ function panelHtml(deps: OmrAiFixDeps, webview: vscode.Webview, run: FixRun): st
         // across the whole width too, and under them the three pictures. A column for either
         // was a fraction of the width and wrapped its text into a dozen short lines (owner's
         // reports 2026-10-23).
+        // The two lines under the pictures, piece by piece: what goes struck through in red, what comes in green.
+        const diff = textOf(r) !== undefined ? wordDiff(t.written, textOf(r)!) : undefined;
         const cls = `row ${r.state}${on ? ' taken' : ''}`;
         return `<tr class="${cls} head" data-i="${r.index}">
   <td colspan="3" class="who">${box} <span class="label">${esc(labelOf(t))}</span>`
@@ -824,8 +836,8 @@ function panelHtml(deps: OmrAiFixDeps, webview: vscode.Webview, run: FixRun): st
 </tr>
 <tr class="${cls} body" data-i="${r.index}">
   <td class="cell">${scan}</td>
-  <td class="cell">${now}<pre class="src">${esc(t.written)}</pre></td>
-  <td class="cell">${proposal}${textOf(r) !== undefined ? `<pre class="src">${esc(textOf(r)!)}</pre>` : ''}</td>
+  <td class="cell">${now}<pre class="src">${diff ? piecesHtml(diff.before) : esc(t.written)}</pre></td>
+  <td class="cell">${proposal}${diff ? `<pre class="src">${piecesHtml(diff.after)}</pre>` : ''}</td>
 </tr>`;
     }).join('\n');
 
@@ -877,6 +889,8 @@ tr.body td { padding-top: 2px; }
 .pic { display:block; width:100%; height:120px; background:#fff; border:1px solid var(--vscode-panel-border); }
 .none { height:120px; display:flex; align-items:center; justify-content:center; opacity:.6; border:1px dashed var(--vscode-panel-border); }
 .src { margin:4px 0 0; font-family: var(--vscode-editor-font-family, monospace); font-size:11px; white-space:pre-wrap; opacity:.9; }
+.src del { color: var(--vscode-gitDecoration-deletedResourceForeground, #e33); text-decoration: line-through; background: rgba(229, 57, 53, .15); }
+.src ins { color: var(--vscode-gitDecoration-addedResourceForeground, #3a3); text-decoration: none; background: rgba(46, 160, 67, .18); font-weight: 600; }
 .why { font-size:12px; white-space:normal; }
 .gates { margin-right:8px; white-space:nowrap; }
 .ok { color: var(--vscode-testing-iconPassed, #3c3); }

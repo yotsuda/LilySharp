@@ -412,6 +412,61 @@ export function parseProposal(raw: string, written: string): Proposal | null {
     return { bar, reason, confidence };
 }
 
+/** One piece of a line in the panel's word diff: its text, whether a space came before it in
+ *  its line, and whether it is in both lines, only the written one, or only the proposal. */
+export interface DiffPiece {
+    readonly text: string;
+    readonly space: boolean;
+    readonly kind: 'same' | 'del' | 'add';
+}
+
+/** A line's pieces: a @todo mark whole (its memo has spaces), an annotation (`@staccato`), and
+ *  any other run of characters between spaces and `@`s — a note, `|`, `{`, `tuplet`, `3/2`. */
+const PIECE = /@todo(?:\((?:[^()"]|"(?:[^"\\]|\\.)*")*\))?(?:\.(?:up|down))?|@[^\s@]+|[^\s@]+/g;
+
+function piecesOf(line: string): { text: string; space: boolean }[] {
+    const out: { text: string; space: boolean }[] = [];
+    let m: RegExpExecArray | null;
+    PIECE.lastIndex = 0;
+    while ((m = PIECE.exec(line))) {
+        out.push({ text: m[0], space: m.index > 0 && /\s/.test(line[m.index - 1]) });
+    }
+    return out;
+}
+
+/**
+ * The written line and the proposal, piece by piece (the longest common run kept, the rest
+ * marked): what the panel prints under its pictures, the removed pieces struck through in red
+ * and the added ones in green — the two whole lines were long and hard to compare (owner's
+ * report 2026-10-23).
+ */
+export function wordDiff(written: string, proposal: string): { before: DiffPiece[]; after: DiffPiece[] } {
+    const a = piecesOf(written), b = piecesOf(proposal);
+    const n = a.length, m = b.length;
+    const lcs: number[][] = Array.from({ length: n + 1 }, () => new Array<number>(m + 1).fill(0));
+    for (let i = n - 1; i >= 0; i--) {
+        for (let j = m - 1; j >= 0; j--) {
+            lcs[i][j] = a[i].text === b[j].text ? lcs[i + 1][j + 1] + 1 : Math.max(lcs[i + 1][j], lcs[i][j + 1]);
+        }
+    }
+    const before: DiffPiece[] = [], after: DiffPiece[] = [];
+    let i = 0, j = 0;
+    while (i < n && j < m) {
+        if (a[i].text === b[j].text) {
+            before.push({ ...a[i], kind: 'same' });
+            after.push({ ...b[j], kind: 'same' });
+            i++; j++;
+        } else if (lcs[i + 1][j] >= lcs[i][j + 1]) {
+            before.push({ ...a[i++], kind: 'del' });
+        } else {
+            after.push({ ...b[j++], kind: 'add' });
+        }
+    }
+    while (i < n) { before.push({ ...a[i++], kind: 'del' }); }
+    while (j < m) { after.push({ ...b[j++], kind: 'add' }); }
+    return { before, after };
+}
+
 /** The file with the target's line replaced by `bar`. */
 export function spliceBar(text: string, target: FixTarget, bar: string): string {
     return text.slice(0, target.start) + bar + text.slice(target.end);
