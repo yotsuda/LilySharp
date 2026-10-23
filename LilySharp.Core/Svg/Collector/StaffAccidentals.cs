@@ -85,57 +85,64 @@ internal static class StaffAccidentals
         foreach (var v in voices)
             measureCount = Math.Max(measureCount, v.Measures.Length);
 
-        // Per measure, every head of every voice, and whether the bar changes clef.
+        // Per measure, every head of every voice, and whether the bar changes clef — read off
+        // the staff's one timeline (StaffTimeline, session 969), which is where the onset and
+        // the grace rank Earlier compares come from. The key in force and the voice's last
+        // sounding item (TiedInto) are per voice, carried across the bars.
         var heads = new List<Head>[measureCount];
         var clefChange = new bool[measureCount];
+        var previous = new MusicItem?[voices.Length];
+        var key = new KeySignature?[voices.Length];
         for (int vi = 0; vi < voices.Length; vi++)
+            key[vi] = openingKey;
+        for (int mi = 0; mi < measureCount; mi++)
         {
-            MusicItem? previous = null;
-            KeySignature? key = openingKey;
-            var measures = voices[vi].Measures;
-            for (int mi = 0; mi < measures.Length; mi++)
+            foreach (var e in StaffTimeline.OfMeasure(voices, mi))
             {
-                var onset = Fraction.Zero;
-                var items = measures[mi].Items;
-                for (int ii = 0; ii < items.Length; ii++)
+                int vi = e.VoiceIndex;
+                switch (e.Item)
                 {
-                    var item = items[ii];
-                    switch (item)
-                    {
-                        case ClefChangeItem:
-                            clefChange[mi] = true;
-                            break;
-                        case KeySignatureChangeItem change:
-                            if (key != null)
-                                key = change.NewKey;
-                            break;
-                        case NoteItem n:
-                            if (n.WrittenPitch != 0)
-                                (heads[mi] ??= new()).Add(new Head(vi, ii, -1, onset, n.GraceTime ? 0 : 1,
-                                    n.WrittenPitch, n.StaffPosition,
-                                    n.Accidental != null || n.LineStartAccidental != null || n.EditorialAccidental != null,
-                                    TiedInto(previous, n.StaffPosition, n.Midi), key));
-                            previous = n;
-                            break;
-                        case ChordItem c:
-                            for (int k = 0; k < c.Notes.Length; k++)
-                            {
-                                var member = c.Notes[k];
-                                if (member.WrittenPitch != 0)
-                                    (heads[mi] ??= new()).Add(new Head(vi, ii, k, onset, c.GraceTime ? 0 : 1,
-                                        member.WrittenPitch, member.StaffPosition,
-                                        member.Accidental != null || member.LineStartAccidental != null,
-                                        TiedInto(previous, member.StaffPosition, member.Midi), key));
-                            }
-                            previous = c;
-                            break;
-                        case RestItem:
-                            previous = null;
-                            break;
-                    }
-                    onset += item.Duration;
+                    case ClefChangeItem:
+                        clefChange[mi] = true;
+                        break;
+                    case KeySignatureChangeItem change:
+                        if (key[vi] != null)
+                            key[vi] = change.NewKey;
+                        break;
+                    case NoteItem n:
+                        if (n.WrittenPitch != 0)
+                            (heads[mi] ??= new()).Add(new Head(vi, e.ItemIndex, -1, e.Onset, e.GraceRank,
+                                n.WrittenPitch, n.StaffPosition,
+                                n.Accidental != null || n.LineStartAccidental != null || n.EditorialAccidental != null,
+                                TiedInto(previous[vi], n.StaffPosition, n.Midi), key[vi]));
+                        previous[vi] = n;
+                        break;
+                    case ChordItem c:
+                        for (int k = 0; k < c.Notes.Length; k++)
+                        {
+                            var member = c.Notes[k];
+                            if (member.WrittenPitch != 0)
+                                (heads[mi] ??= new()).Add(new Head(vi, e.ItemIndex, k, e.Onset, e.GraceRank,
+                                    member.WrittenPitch, member.StaffPosition,
+                                    member.Accidental != null || member.LineStartAccidental != null,
+                                    TiedInto(previous[vi], member.StaffPosition, member.Midi), key[vi]));
+                        }
+                        previous[vi] = c;
+                        break;
+                    case RestItem:
+                        previous[vi] = null;
+                        break;
                 }
             }
+            // Owed scans a bar's heads in VOICE order (the order the voice-by-voice gather
+            // produced until session 969): when several heads at one moment in different
+            // voices differ, the first one scanned names the alteration the natural restores
+            // from, so the scan order is kept rather than left to the timeline's. ⚠️ No net
+            // observes it (session 969 poisoned it to Reverse(): 382 targeted nets stayed
+            // green) — the case needs two same-moment heads in different voices with
+            // different alterations, which no book in the nets writes.
+            heads[mi]?.Sort(static (a, b) => a.Voice != b.Voice ? a.Voice.CompareTo(b.Voice)
+                : a.Item != b.Item ? a.Item.CompareTo(b.Item) : a.Member.CompareTo(b.Member));
         }
 
         Dictionary<(int Voice, int Measure, int Item, int Member), string>? added = null;

@@ -68,7 +68,7 @@
 | 段 | 内容 | 門 | 状態 |
 |---|---|---|---|
 | ① | 状態フィールド 172 の分類表（V／S／P／W／R／X） | 計器だけ・コード変更 0 | ✅ 第969（§7） |
-| ② | **B＝`StaffTimeline`** を建て、`StaffAccidentals`・`StaffAccidentalColumns`・`NoteCollision` の入力がそれを読む | 出力不変（掃き・snapshot・full） | |
+| ② | **B＝`StaffTimeline`** を建て、`StaffAccidentals`・`StaffAccidentalColumns`・`NoteCollision` の入力がそれを読む | 出力不変（掃き・snapshot・full） | ✅ 第969（`Svg/Collector/StaffTimeline.cs`＝1 小節の全声部の item を (onset, grace rank, voice) の k-way merge で・`VoiceCollector.CollectMeasure` と `StaffAccidentals.Apply` が読む・掃き 1,015 冊 1,248 枚 差 0・網 `StaffTimelineTests` 5 本・毒 3 本が各 2／6／10 赤） |
 | ③ | voice 0 だけを iterator 化（多声は従来経路のまま） | byte 同一 | |
 | ④ | 増分コンパイルの設計（checkpoint＝全 iterator の状態の組） | 設計書 → **ユーザー判断** | |
 | ⑤ | 多声をスケジューラへ・`BuildExtraVoiceTracks` を退役・exporter と `_parallelSpans` の読み手を移す | byte 同一・増分 `== full`・exporter の掃き | |

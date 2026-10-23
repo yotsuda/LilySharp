@@ -118,80 +118,72 @@ internal sealed class VoiceCollector
     /// </summary>
     public static ImmutableArray<VoiceColumn> CollectMeasure(ImmutableArray<Voice> voices, int measureIndex)
     {
-        // Build the measure's timeline: time within the measure → entries, in voice order.
-        var timeline = new SortedDictionary<Fraction, List<VoiceEntry>>();
-
-        for (int voiceIndex = 0; voiceIndex < voices.Length; voiceIndex++)
-        {
-            var voice = voices[voiceIndex];
-            if (measureIndex >= voice.Measures.Length)
-                continue;
-            int voiceId = voiceIndex + 1;
-            var measure = voice.Measures[measureIndex];
-            var timePosition = Fraction.Zero;
-
-            for (int itemIndex = 0; itemIndex < measure.Items.Length; itemIndex++)
-            {
-                var item = measure.Items[itemIndex];
-
-                // Add non-rest items to timeline.
-                // ⚠️ AND NOT GRACE TIME. A grace takes no measure time, so it lands on
-                // the moment of the note it leads — putting a THIRD head into a column
-                // that holds one note from each voice, and the collision solver then
-                // shifts a head that is nowhere near it: MEASURED, in
-                // `voice { c''4 c''4 c''2 } { g4 grace { d''16 } g4 g2 }` the UPPER
-                // voice's second c'' moved 1.04 (a notehead) to the right, on account
-                // of a grace in the lower one.
-                // ⚠️ This is not a permanent answer, and HANDOFF §2 U8b is the open
-                // ticket for the real one: LilyPond DOES collide two simultaneous
-                // graces with each other (session 308 measured its two accidentals
-                // stacked at 16.2208 / 17.0831), and Lily# still draws them on top of
-                // each other. What the ticket needs is a column of grace time, beside
-                // this one — not grace heads inside this one.
-                // ⚠️ AND NOT A ZERO-LENGTH DIRECTIVE. A clef / key / time change is an item
-                // of the measure with no notehead, and it stands at the moment of the note
-                // after it: in a column it was a third and fourth "head" beside one note from
-                // each voice, and the solver then took the pair for a cluster and set the
-                // unison side by side instead of sharing its head — MEASURED, a
-                // condensedStaff's unison c'' at the head of a bar the section reset reverts
-                // to 4/4 (Lab corpora partial.lys bar 4, 2026-09-26), where the same unison
-                // without the change shares one head as LilyPond's does.
-                if (item is not RestItem && !item.GraceTime && item.Duration > Fraction.Zero)
-                {
-                    if (!timeline.TryGetValue(timePosition, out var entries))
-                    {
-                        entries = new List<VoiceEntry>();
-                        timeline[timePosition] = entries;
-                    }
-
-                    // Writer's @stemUp/@stemDown outranks the voice default
-                    // (must match ResolveVoiceStemDirections, which skips
-                    // these when baking).
-                    bool? writerAsk = item switch
-                    {
-                        NoteItem n => n.ForcedStemUp,
-                        ChordItem c => c.ForcedStemUp,
-                        _ => null,
-                    };
-                    // Forced stem direction for this voice, where the voice { } span
-                    // actually reaches — per item, since a span can open mid-bar.
-                    // LILYPOND-REF: scm/music-functions.scm:1042-1057 voicify-sublist / make-voice-props-set
-                    entries.Add(new VoiceEntry(voiceId, item, itemIndex,
-                        writerAsk ?? VoiceDefaults.GetDefaultStemUpAt(voices, voiceIndex, measureIndex, itemIndex)));
-                }
-
-                // Advance time position
-                timePosition = timePosition + item.Duration;
-            }
-        }
-
-        if (timeline.Count == 0)
+        // The measure's items in moment order — the staff's one timeline (StaffTimeline,
+        // session 969) — grouped by onset into columns. Within an onset the entries come in
+        // voice order, which is the merge's tie-break.
+        var timeline = StaffTimeline.OfMeasure(voices, measureIndex);
+        if (timeline.IsEmpty)
             return ImmutableArray<VoiceColumn>.Empty;
 
-        // Convert the timeline to voice columns
-        var columns = ImmutableArray.CreateBuilder<VoiceColumn>(timeline.Count);
-        foreach (var kvp in timeline)
-            columns.Add(new VoiceColumn(kvp.Value.ToImmutableArray(), measureIndex));
-        return columns.MoveToImmutable();
+        ImmutableArray<VoiceColumn>.Builder? columns = null;
+        List<VoiceEntry>? entries = null;
+        Fraction onset = default;
+        foreach (var e in timeline)
+        {
+            var item = e.Item;
+            // Add non-rest items to the columns.
+            // ⚠️ AND NOT GRACE TIME. A grace takes no measure time, so it lands on
+            // the moment of the note it leads — putting a THIRD head into a column
+            // that holds one note from each voice, and the collision solver then
+            // shifts a head that is nowhere near it: MEASURED, in
+            // `voice { c''4 c''4 c''2 } { g4 grace { d''16 } g4 g2 }` the UPPER
+            // voice's second c'' moved 1.04 (a notehead) to the right, on account
+            // of a grace in the lower one.
+            // ⚠️ This is not a permanent answer, and HANDOFF §2 U8b is the open
+            // ticket for the real one: LilyPond DOES collide two simultaneous
+            // graces with each other (session 308 measured its two accidentals
+            // stacked at 16.2208 / 17.0831), and Lily# still draws them on top of
+            // each other. What the ticket needs is a column of grace time, beside
+            // this one — not grace heads inside this one.
+            // ⚠️ AND NOT A ZERO-LENGTH DIRECTIVE. A clef / key / time change is an item
+            // of the measure with no notehead, and it stands at the moment of the note
+            // after it: in a column it was a third and fourth "head" beside one note from
+            // each voice, and the solver then took the pair for a cluster and set the
+            // unison side by side instead of sharing its head — MEASURED, a
+            // condensedStaff's unison c'' at the head of a bar the section reset reverts
+            // to 4/4 (Lab corpora partial.lys bar 4, 2026-09-26), where the same unison
+            // without the change shares one head as LilyPond's does.
+            if (item is RestItem || item.GraceTime || item.Duration <= Fraction.Zero)
+                continue;
+
+            if (entries == null || e.Onset != onset)
+            {
+                if (entries != null)
+                    (columns ??= ImmutableArray.CreateBuilder<VoiceColumn>()).Add(
+                        new VoiceColumn(entries.ToImmutableArray(), measureIndex));
+                entries = new List<VoiceEntry>();
+                onset = e.Onset;
+            }
+
+            // Writer's @stemUp/@stemDown outranks the voice default
+            // (must match ResolveVoiceStemDirections, which skips
+            // these when baking).
+            bool? writerAsk = item switch
+            {
+                NoteItem n => n.ForcedStemUp,
+                ChordItem c => c.ForcedStemUp,
+                _ => null,
+            };
+            // Forced stem direction for this voice, where the voice { } span
+            // actually reaches — per item, since a span can open mid-bar.
+            // LILYPOND-REF: scm/music-functions.scm:1042-1057 voicify-sublist / make-voice-props-set
+            entries.Add(new VoiceEntry(e.VoiceIndex + 1, item, e.ItemIndex,
+                writerAsk ?? VoiceDefaults.GetDefaultStemUpAt(voices, e.VoiceIndex, measureIndex, e.ItemIndex)));
+        }
+        if (entries == null)
+            return ImmutableArray<VoiceColumn>.Empty;
+        (columns ??= ImmutableArray.CreateBuilder<VoiceColumn>()).Add(
+            new VoiceColumn(entries.ToImmutableArray(), measureIndex));
+        return columns.ToImmutable();
     }
 }
