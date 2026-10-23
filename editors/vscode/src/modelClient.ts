@@ -58,11 +58,13 @@ export async function resolveChatClient(quiet: boolean, use: ModelUse = 'transfo
  * and VS Code cancels an inline suggestion the moment the caret moves — the automatic pick of
  * the strongest model (claude-fable-5.1) took 1.9–3.2 s a bar and every one was cancelled
  * before it could show (owner's log, 2026-09-26). So each has its own setting and its own
- * automatic choice.
+ * automatic choice. Fixing OMR marks (docs/omr-ai-fix-design.md §4) is a deliberate request too,
+ * and one that reads notation, so it wants the strong model as the transform does, under its own
+ * setting: a person may well pick a faster model for a batch of twenty-five bars.
  */
-export type ModelUse = 'transform' | 'ghost';
+export type ModelUse = 'transform' | 'ghost' | 'omrFix';
 
-const SETTING: Record<ModelUse, string> = { transform: 'ai.model', ghost: 'ai.ghostModel' };
+const SETTING: Record<ModelUse, string> = { transform: 'ai.model', ghost: 'ai.ghostModel', omrFix: 'ai.omrFixModel' };
 
 async function selectLmModel(use: ModelUse): Promise<vscode.LanguageModelChat | undefined> {
     const models = await availableModels();
@@ -114,8 +116,8 @@ export function autoPick(models: readonly vscode.LanguageModelChat[], use: Model
 
 /**
  * "Lily#: Select AI Model" — first which feature, then the models VS Code offers; the pick is
- * saved to `lilysharp.ai.model` (Transform Selection) or `lilysharp.ai.ghostModel` (Ghost
- * Completion).
+ * saved to `lilysharp.ai.model` (Transform Selection), `lilysharp.ai.ghostModel` (Ghost
+ * Completion) or `lilysharp.ai.omrFixModel` (Fix OMR marks).
  */
 export async function pickAiModel(): Promise<void> {
     const models = await availableModels();
@@ -131,6 +133,7 @@ export async function pickAiModel(): Promise<void> {
     const which = await vscode.window.showQuickPick<UseItem>([
         { label: 'Transform Selection with AI', description: shown('transform'), detail: 'One request at a time: a strong model is worth waiting for.', use: 'transform' },
         { label: 'Ghost Completion', description: shown('ghost'), detail: 'Answers as you type: a fast model, or the suggestion is cancelled before it shows.', use: 'ghost' },
+        { label: 'Fix OMR marks with AI', description: shown('omrFix'), detail: 'One request a bar, on request only: a strong model reads the notation best; a faster one shortens a long batch.', use: 'omrFix' },
     ], { title: 'Lily# — choose the AI model for…' });
     if (!which) {
         return;

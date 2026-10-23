@@ -77,6 +77,12 @@ export interface ScanTodo {
     /** The part-bars the mark covers, named outright (`bars`, proposed to the reader 2026-10-17;
      *  a part left out means every part of that bar). Preferred over `parts` / `part` when present. */
     readonly bars?: readonly { readonly measure: number; readonly part?: string }[];
+    /** What the mark is on: `note` (one event) or `bar` (a bar's length, stems or tuplets) —
+     *  the reader's `kind`; absent from an older side file. */
+    readonly kind?: string;
+    /** The lines of the .lys (from 1) the mark's bar is written on, one per part-bar it covers —
+     *  the reader's `lines`; absent from an older side file. */
+    readonly lines?: readonly number[];
 }
 
 export interface ScanSideFile {
@@ -282,6 +288,7 @@ export function parseSideFile(text: string, sideFilePath: string): ScanSideFile 
         const parts = list(t?.parts).map(p => str(p?.part)).filter((p): p is string => !!p);
         const bars = list(t?.bars).filter(b => int(b?.measure) !== undefined)
             .map(b => ({ measure: b.measure as number, ...(str(b?.part) ? { part: b.part as string } : {}) }));
+        const lines = list(t?.lines).filter(l => int(l) !== undefined && l > 0) as number[];
         if (key && page !== undefined && isBox(t?.box)) {
             todos.push({
                 key, page, box: t.box,
@@ -292,6 +299,8 @@ export function parseSideFile(text: string, sideFilePath: string): ScanSideFile 
                 ...(t?.inSource === false ? { quiet: true } : {}),
                 ...(parts.length > 0 ? { parts } : {}),
                 ...(bars.length > 0 ? { bars } : {}),
+                ...(str(t?.kind) ? { kind: t.kind } : {}),
+                ...(lines.length > 0 ? { lines } : {}),
             });
         }
     }

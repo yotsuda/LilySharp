@@ -268,6 +268,17 @@
           "default": "",
           "markdownDescription": "The language model Ghost Completion uses: a model id or family from **Lily#: Select AI Model…**. It answers as you type, and VS Code drops a suggestion the moment the caret moves, so it needs a FAST model — a large one is cancelled before it shows. Empty chooses automatically: a small model (mini, nano, lite, …)."
         },
+        "lilysharp.ai.omrFixModel": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "The language model *Fix OMR Marks with AI…* uses: a model id or family from **Lily#: Select AI Model…**. One request a bar, only when you run the command. Empty chooses automatically — the largest model on offer, as *Transform Selection* does; a faster model shortens a long batch at the cost of some readings."
+        },
+        "lilysharp.ai.omrFixBatch": {
+          "type": "number",
+          "default": 25,
+          "minimum": 1,
+          "markdownDescription": "How many bars *Fix OMR Marks with AI…* sends to the model in one go. Past this many it asks before continuing with the next batch."
+        },
         "lilysharp.ai.ghostCompletion": {
           "type": "boolean",
           "default": false,
@@ -368,6 +379,12 @@
         "category": "Lily#",
         "icon": "$(sparkle)",
         "title": "Transform Selection with AI…"
+      },
+      {
+        "command": "lilysharp.omrFixWithAi",
+        "category": "Lily#",
+        "icon": "$(sparkle)",
+        "title": "Fix OMR Marks with AI…"
       },
       {
         "command": "lilysharp.selectAiModel",
@@ -585,6 +602,10 @@
           "when": "resourceLangId == lilysharp && lilysharp.hasScan"
         },
         {
+          "command": "lilysharp.omrFixWithAi",
+          "when": "resourceLangId == lilysharp"
+        },
+        {
           "command": "lilysharp.aiTransform",
           "when": "resourceLangId == lilysharp"
         },
@@ -726,6 +747,11 @@
         {
           "command": "lilysharp.aiTransform",
           "when": "resourceLangId == lilysharp",
+          "group": "1_modification@1"
+        },
+        {
+          "command": "lilysharp.omrFixWithAi",
+          "when": "resourceLangId == lilysharp && lilysharp.hasScan",
           "group": "1_modification@1"
         },
         {

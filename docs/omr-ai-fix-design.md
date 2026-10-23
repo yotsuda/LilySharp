@@ -119,11 +119,21 @@ AI 変換の candidate panel を**一覧**にしたもの。1 行＝1 小節:
 
 | 段 | 内容 | 門 |
 |---|---|---|
-| **M1** | コマンド＋QuickPick＋見積もり＋進捗、文字だけの入力（memo・候補・前後と他パート）、門 1・2、一覧パネル（元画像の列は `box` の切り抜きを**表示だけ**）、Accept の WorkspaceEdit と `@todo` の削除。`ModelUse 'omrFix'`。 | headless の網: `omrAiFixCore.ts`（対象の選別・プロンプトの組み立て・JSON の読み・門 1・2 の判定・切り抜きの矩形）を `*Core.ts` の流儀で単体に。`.lys` 側は `OmrSideFile` の既存の網。手動: MANUAL-CHECKS に `[ ]` 3 項（入口 3 つ）。 |
+| **M1** ✅ 第972 | コマンド＋QuickPick＋見積もり＋進捗、文字だけの入力（memo・候補・前後と他パート）、門 1・2、一覧パネル（元画像の列は `box` の切り抜きを**表示だけ**）、Accept の WorkspaceEdit と `@todo` の削除。`ModelUse 'omrFix'`。 | headless の網: `omrAiFixCore.ts`（対象の選別・プロンプトの組み立て・JSON の読み・門 1・2 の判定・切り抜きの矩形）を `*Core.ts` の流儀で単体に。`.lys` 側は `OmrSideFile` の既存の網。手動: MANUAL-CHECKS に `[ ]` 3 項（入口 3 つ）。 |
 | **M2** | 画像をモデルに渡す（`LanguageModelDataPart.image`・engine の床・受けない模型の再送）。クイックフィックスと scan view のボタン。 | 同じ本で M1 と M2 の提案の採用率を出力チャネルで比べる（OMR の `data/eval` の既知の誤りの小節で） |
 | **M3** | 門 3（`omr verify` の小節単位）・OMR 側の `candidates` が来たらプロンプトに。費用の記録（所要時間の平均→見積もり）。 | OMR 側の数字（S33 段 1）と合わせて精度を 1 枚に |
 
 M1 は OMR 側の作業を待たない（`kind: "bar"` の todo と memo は今ある）。
+
+**M1 の実装（第972・2026-10-23）**: `editors/vscode/src/omrAiFixCore.ts`（編集器なし・網 `test/omrAiFixCore.test.ts` 36 本）＋
+`omrAiFix.ts`（コマンド `lilysharp.omrFixWithAi`・QuickPick・進捗・パネル `Lily# — OMR fixes`・Apply）。設計からの決定:
+⑴ **置き換えの単位は印のある行**（reader はパートの小節を 1 行に書く＝`measures[].line`・`todos[].lines`）＝行の音楽部分
+（字下げと改行は残す）を提案で置き換える。同じ行の印は全部その行と一緒に消える。⑵ 「今」「提案」の絵は 1 小節だけを
+`renderText` で切り出すのではなく、**全曲の SVG を `<symbol>` に 1 つ置き、`rect.bar-staff` の `data-span` がその行の span に
+触れる箱で viewBox を切る**（前後 1 小節の切り出しは文脈＝調・拍子・パートの宣言を要し、1 小節の文書を合成する手間に見合わない）。
+⑶ Accept は印、**Apply が書く**（Accept したものだけ 1 つの WorkspaceEdit）。⑷ 模型の `bar` に残った `@todo` は剥がす。
+⑸ 見積もりの秒数は直近 20 小節の平均を `globalState` に（出力チャネルの解析ではなく）。⑹ 入口は M1 ではパレットと `.lys` の
+右クリック（scan のある本）だけ＝クイックフィックスと scan view のボタンは M2 のまま。
 
 ## 6. 費用と限界
 

@@ -6,6 +6,17 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+### Editor
+
+- **Lily#: Fix OMR Marks with AI…** rewrites the bars an OMR reader marked as doubtful (`@todo`),
+  one request a bar, only when you run it: pick the bars (the least sure first, the ones below the
+  scan view's slider checked, the estimate in the title), then review every proposal in the *OMR
+  fixes* panel beside the scan's crop of the bar and the score as it is, with the model's reason
+  and the gates it passed (compiles without a new error, fills its meter). Nothing is written until
+  you Apply the accepted rows, as one edit (one Ctrl+Z); the marks go with the lines. A bar the
+  model cannot read stays marked and says why (`docs/omr-ai-fix-design.md`, M1; the model is
+  `lilysharp.ai.omrFixModel`, a batch `lilysharp.ai.omrFixBatch` bars).
+
 ### Grace notes
 
 - `[language]` **LYS4020 on a grace note's mark now says what is true.** Nearly every mark a

@@ -33,7 +33,8 @@ import { registerStepAudition } from './stepAudition';
 import { registerExportBatch } from './exportBatch';
 import { importFromImage } from './omrImport';
 import { registerOmrContexts } from './omrReader';
-import { OmrScanDeps, hasScan, previewHoversBar, previewReady, previewShowsBar, registerScanFollow, showScan } from './omrScan';
+import { OmrScanDeps, hasScan, previewHoversBar, previewReady, previewShowsBar, registerScanFollow, scanThresholdOf, showScan } from './omrScan';
+import { registerOmrAiFix } from './omrAiFix';
 import { registerVerifyOnSave } from './omrVerify';
 import { markdownItExtensionApi } from './markdownFence';
 import { svgPostKey, pagesSummary, SvgPages, previewOnEditorShown, sourceGroupToReveal, newPreviewColumn, scoreGroupFor, sourceGroupToOpen, SourceTab, jumpOffsetFor } from './previewCore';
@@ -812,6 +813,9 @@ export function activate(context: vscode.ExtensionContext) {
     registerAiTransform(context, aiDeps);
     // Second mode: validated ghost-text "next measure" completion (opt-in).
     registerAiComplete(context, aiDeps);
+    // Third: the bars an OMR reader marked, rewritten on request and reviewed beside the scan
+    // (docs/omr-ai-fix-design.md). The scan view's slider says which bars are checked at first.
+    registerOmrAiFix(context, { ...aiDeps, scanThreshold: scanThresholdOf });
     context.subscriptions.push(vscode.commands.registerCommand('lilysharp.selectAiModel', () => pickAiModel()));
 
     // The Explorer's batch export: right-click one or more .lys → the format

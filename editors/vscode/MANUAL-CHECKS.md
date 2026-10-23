@@ -213,6 +213,10 @@
 - [x] **B7′ 古い reader**（2026-10-17）: `LILYSHARP_OMR_PATH` に `--version --json` が `OMR_MIN_VERSION`（`omrCore.ts`）より小さい版を答える reader を指して読む → ファイルを選んだ後に警告 *Scan Import 0.2.0 is older than this Lily# is written for (0.3.0 or newer). Update it?*（ボタン *Update Scan Import*）。断る → その reader で読み込みが続く。押す → Marketplace の最新が入り、読み込みは行わない（もう一度実行）。保存時の verify は警告しない。
 - [x] **B8**（第903・confidence）: OMR の新しい VSIX で取り込む → Problems で OMR の印の一部が **Warning**（confidence 0.6 未満）、残りと手で書いた `@todo` は **Info**。F8 が Warning の印から回る。
       Show Original Scan: 箱が塗りなしの赤い破線・低いものほど太く濃い・上に *Marks below* のスライダーと `(N / M)`・動かすと高いものが消える・`.lys` に無い印（quiet）は細く薄い（破線は同じ）。取り込みの通知に `(+N quiet, in the scan view)`。
+- [ ] **B9**（第972・`docs/omr-ai-fix-design.md` M1・Copilot のモデルが要る）: `x.omr.json` のある本でパレット **Lily#: Fix OMR Marks with AI…**（`.lys` の右クリックにも・scan の無い本ではパレットだけ）→ QuickPick に印のある小節が**確信度の低い順**（確信度の無い印が先頭）・各行に memo と行番号・**scan view のスライダーより下の印にチェック**（scan view が無ければ 0.8 未満）・題名に `N bars · about X s`（初回は `(2–4 s a bar)`・2 回目からは実測の平均）・チェックを変えると数字が変わる。確定 → 通知の進捗 `k / n bars, p proposals — bar N (part)`（キャンセル可）・対象の行が薄く塗られる → パネル **Lily# — OMR fixes** に 1 小節 1 行: **Scan**（元画像のその小節の切り抜き・30% の余白）・**Now**（今の譜のその小節）・**Proposal**（提案の譜・下に文字）・**Why · gates**（理由・`compile ✓ length ✓ verify —`）・**Accept / Reject / Open in editor**。
+      通らなかった小節は *no proposal* と理由（黙って消えない）・模型が `null` を返した小節も同じ。**Accept all (N)** は門が両方 ✓ で confidence ≥ 0.5 の行だけ。**Apply N accepted** → 受けた行だけが書き換わり、その行の `@todo` が消える・**Ctrl+Z 1 回で全部戻る**・Problems の LYS2001/2002 がその小節から消える。出力チャネル **Lily# AI** に 1 小節 1 行（秒・proposal／no proposal・門）。
+- [ ] **B9′**: 範囲を選んで実行 → その行の印だけ全部チェック。実行中に `.lys` を編集 → 止まり、済んだ分だけパネルに出る（通知 *the file changed…*）。Apply の前に別の行を足して対象の行を動かす → 動いた行を追って書く・対象の行自体を書き換える → その行は *skipped* と名指し。`lilysharp.ai.omrFixBatch` を 2 にして 5 小節 → 2 小節ごとに *Continue with the next…*（断ると止まる）。
+- [ ] **B9″**: **Lily#: Select AI Model…** に 3 つ目 *Fix OMR marks with AI* → 選ぶと `lilysharp.ai.omrFixModel` に入り、次の実行の出力チャネルの 1 行目 `via <vendor/family>` が変わる。設定 UI に `lilysharp.ai.omrFixModel`・`lilysharp.ai.omrFixBatch`。
 
 ## 6. 結果の書き方
 

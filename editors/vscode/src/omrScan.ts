@@ -63,6 +63,12 @@ interface ScanView {
 
 const views = new Map<string, ScanView>();
 
+/** The *Marks below* slider of the open scan view of `lys` (a document uri string), or undefined
+ *  with no view open — what "Fix OMR marks with AI…" checks by default (omrAiFix.ts). */
+export function scanThresholdOf(lys: string): number | undefined {
+    return views.get(lys)?.threshold;
+}
+
 /** Whether the .lys at `uri` has a side file beside it (the command's when-clause). */
 export function hasScan(uri: vscode.Uri | undefined): boolean {
     return !!uri && uri.scheme === 'file' && /\.lys$/i.test(uri.fsPath) && fs.existsSync(sideFileOf(uri.fsPath));
