@@ -146,6 +146,21 @@ span ごとの child state＝coroutine の値段（LP の iterator も払う）�
 一部＝tail の外ではないので splice は decline して live（打鍵 40.3→44.6 MB）。取り戻すには「窓に触れた span だけを再 walk する」
 経路が要る＝⑥ で五線状態を共有すると sequential な再 walk は意味を変えるので、今は作らない（ユーザー判断があれば別）。
 
+### 3.3 段 ⑥ の実測（第970・コード変更 0・Lab `sessions/p970/probe6/`＝`.lys`・`lysc ly --pin-fonts` の双子・両者の png）
+
+span の中で五線状態が共有されるべき 4 つの形を Lily#（⑤a）と LP 2.26.0 で描いた:
+
+| # | 形 | LP 2.26.0 | Lily# | 判定 |
+|---|---|---|---|---|
+| P1 | 既定様式・voice 1 の `fis'` の後に voice 2 の `fis'`（同じ小節） | ♯ は五線で 1 回（Staff の記憶） | voice 2 の `fis'` にも ♯（自分の walk の記憶＋`StaffAccidentals` は足すだけ） | **意図した逸脱**＝オーナー決定 2026-10-02「reminder は正しく無害」。LP どおりにするには決定の取り消しが要る |
+| P2 | 同じ本・`accidentals modern` | P1 と同じ絵 | P1 と同じ絵 | この形では差なし（modern の追加規則は別の形で測る） |
+| P3 | voice 2 の中の `clef bass` | 以後の voice 1 の音も bass の位置 | **同じ**（voice 1 の音も bass の位置） | 一致＝⑥ の仕事なし |
+| P4 | voice 2 の中の `key d major`（voice 1 は `f'` を書き続ける） | 調号 ♯♯ を小節の途中に・次の小節の voice 1 の `f'` に **♮** | 調号 ♯♯ は同じ・**次の小節の `f'` に ♮ が無い** | **欠陥**: voice 1 の walk は自分の key（C）のまま＝描かれた譜は f♯ と読め、鳴るのは f＝読みと音が食い違う。LP は Key_engraver が Staff にあるので voice 2 の `key` が全声部に効く |
+
+⇒ **⑥ の核は P4＝key（と、同じ理屈の時刻つき五線状態）の共有**。P1 は意味論の決定（reminder を保つか）であって機構の話ではない＝
+機構としては「五線の記憶を branch 間で共有する」1 本で、reminder を保つなら「自分の walk が決めた臨時記号は消さない」規則を
+その上に残す（今の `StaffAccidentals` の ⑴ と同じ文）。P3 は既に一致＝clef の item は五線の時刻順で描画側が読んでいる。
+
 ## 4. 段取り（各段に門・段 4 の前にもう一度ユーザー判断）
 
 | 段 | 内容 | 門 | 状態 |
