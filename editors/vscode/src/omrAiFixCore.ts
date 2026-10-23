@@ -46,6 +46,10 @@ export interface FixTarget {
     /** The keys of the marks on the line (a mark written by hand has none). */
     readonly keys: readonly string[];
     readonly memos: readonly string[];
+    /** The memos a person wrote, not the reader: a mark without a key, or a keyed mark whose
+     *  words differ from the reader's own in the side file (owner, 2026-10-24: took a proposal,
+     *  saw it was still wrong, wrote what was left and asked again). */
+    readonly notes?: readonly string[];
     /** The bar the page prints and the part, from the server, when a score plays it. */
     readonly measure?: number | null;
     readonly part?: string | null;
@@ -85,6 +89,9 @@ export function fixTargets(
         }
         const keys = group.map(t => t.Key).filter((k): k is string => !!k);
         const memos = [...new Set(group.map(t => t.Memo).filter((m): m is string => !!m))];
+        const notes = [...new Set(group
+            .filter(t => !!t.Memo && (!t.Key || (side !== undefined && side.todos.find(s => s.key === t.Key)?.memo !== t.Memo)))
+            .map(t => t.Memo!))];
         const confidences = keys.map(k => side?.todos.find(s => s.key === k)?.confidence ?? facts?.get(k)?.confidence);
         const confidence = keys.length === 0 || confidences.some(c => c === undefined)
             ? undefined
@@ -96,6 +103,7 @@ export function fixTargets(
         const crop = cropOf(keys, line, side);
         targets.push({
             line, start, end, written: text.slice(start, end), keys, memos,
+            ...(notes.length > 0 ? { notes } : {}),
             measure: placed?.Measure ?? group[0].Measure, part: placed?.Part ?? group[0].Part,
             ...(confidence === undefined ? {} : { confidence }),
             ...(crop ? { crop } : {}),
@@ -243,7 +251,11 @@ export function systemPromptOf(grammar: string): string {
         'WHAT DECIDES THE ANSWER, in this order:',
         '1. The scanned page. The right line is the one that, engraved, looks like the page: the same notes and chords,',
         '   rests, durations, dots, ties, tuplets and the same number of voices. When a picture comes with the task,',
-        '   read the whole bar again from it before you look at the reader\'s text.',
+        '   read the whole bar again from it before you look at the reader\'s text. Then compare event by event:',
+        '   for every chord, count its noteheads on the page and read each one\'s line or space and accidental. A',
+        '   head set on the other side of the stem (two notes a second apart) and a head on a ledger line are the',
+        '   ones a reader drops most. The bar was marked for a reason: answer "unchanged" only when every event',
+        '   matches the page head for head, and say so in the reason.',
         '2. The meter. The right line fills it — but filling it is a check on a reading of the page, not a goal of',
         '   its own: a line that fills the meter while drawing something the page does not show is wrong.',
         'Everything else is a clue to WHERE the reader went wrong, never to what the bar is: the reader\'s text, its',
@@ -310,10 +322,21 @@ export function taskPromptOf(input: TaskInput): string {
     parts.push('<bar>');
     parts.push(oneLine(stripTodoMarks(target.written)));
     parts.push('</bar>');
-    if (target.memos.length > 0) {
+    // A person's words are not the reader's guess: they looked at the page — often after an
+    // earlier answer that was still wrong — and say what is left (owner, 2026-10-24: "beat 4 is
+    // two notes short" was passed as the reader's doubt, and the model answered "unchanged").
+    const notes = target.notes ?? [];
+    if (notes.length > 0) {
+        parts.push('');
+        parts.push('What a PERSON who compared this line with the page wrote about it (in any language). Trust it: the');
+        parts.push('line as written is wrong in that way. Find that place on the page and fix it; do not answer "unchanged":');
+        for (const n of notes) { parts.push(`  - ${n}`); }
+    }
+    const reader = target.memos.filter(m => !notes.includes(m));
+    if (reader.length > 0) {
         parts.push('');
         parts.push('What the reader noted about it — the symptom it measured; its guess at the cause may be wrong:');
-        for (const m of target.memos) { parts.push(`  - ${m}`); }
+        for (const m of reader) { parts.push(`  - ${m}`); }
         parts.push(TICKS_NOTE);
     }
     if (target.confidence !== undefined) {
@@ -799,22 +822,30 @@ export function decodeImage(bytes: Uint8Array): Rgba | undefined {
     return undefined;
 }
 
+/** A crop whose longer side is under this is enlarged by a whole factor (at most 3) towards
+ *  MAX_CROP_SIDE: a bar of a 300 dpi page is about 500 px wide, its noteheads some 20 px, and a
+ *  model reading it at that size misses a head set beside the stem (owner's Chopin Op. 28/4,
+ *  bar 4, 2026-10-24: the F of two F-G# seconds, dropped by the reader, and passed as right). */
+export const MIN_CROP_SIDE = 1000;
+
 /**
  * The rectangle of an image (cropRect's, in its pixels), sampled down by a whole factor when a
- * side exceeds `maxSide` — nearest neighbour, which keeps a thin stem a stem; the model is not
+ * side exceeds `maxSide`, up by one when the longer side is under `minSide` (scanCropPng passes
+ * MIN_CROP_SIDE) — nearest neighbour either way, which keeps a thin stem a stem; the model is not
  * shown anything the page does not have.
  */
-export function cropRgba(image: Rgba, rect: { x: number; y: number; width: number; height: number }, maxSide = MAX_CROP_SIDE): Rgba {
+export function cropRgba(image: Rgba, rect: { x: number; y: number; width: number; height: number }, maxSide = MAX_CROP_SIDE, minSide = 0): Rgba {
     const x0 = Math.max(0, Math.floor(rect.x)), y0 = Math.max(0, Math.floor(rect.y));
     const x1 = Math.min(image.width, Math.ceil(rect.x + rect.width)), y1 = Math.min(image.height, Math.ceil(rect.y + rect.height));
     const w = Math.max(1, x1 - x0), h = Math.max(1, y1 - y0);
     const step = Math.max(1, Math.ceil(Math.max(w, h) / maxSide));
-    const ow = Math.max(1, Math.floor(w / step)), oh = Math.max(1, Math.floor(h / step));
+    const up = step === 1 && Math.max(w, h) < minSide ? Math.max(1, Math.min(3, Math.floor(maxSide / Math.max(w, h)))) : 1;
+    const ow = Math.max(1, Math.floor(w / step)) * up, oh = Math.max(1, Math.floor(h / step)) * up;
     const out = new Uint8Array(ow * oh * 4);
     for (let y = 0; y < oh; y++) {
-        const sy = y0 + y * step;
+        const sy = y0 + Math.floor(y / up) * step;
         for (let x = 0; x < ow; x++) {
-            const si = (sy * image.width + x0 + x * step) * 4, oi = (y * ow + x) * 4;
+            const si = (sy * image.width + x0 + Math.floor(x / up) * step) * 4, oi = (y * ow + x) * 4;
             out[oi] = image.data[si]; out[oi + 1] = image.data[si + 1]; out[oi + 2] = image.data[si + 2]; out[oi + 3] = 255;
         }
     }
@@ -832,7 +863,7 @@ export function encodePng(image: Rgba): Uint8Array {
 /** The crop of a page around a box (cropRect) as a PNG, for the model; undefined when the page
  *  cannot be decoded. */
 export function scanCropPng(page: Rgba, box: Box, margin = CROP_MARGIN): { png: Uint8Array; width: number; height: number } {
-    const crop = cropRgba(page, cropRect(box, page, margin));
+    const crop = cropRgba(page, cropRect(box, page, margin), MAX_CROP_SIDE, MIN_CROP_SIDE);
     return { png: encodePng(crop), width: crop.width, height: crop.height };
 }
 

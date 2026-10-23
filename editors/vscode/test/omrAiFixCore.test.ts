@@ -264,6 +264,34 @@ describe('what the model is shown', () => {
         assert.equal(withTodoMark('c1@todo |', 'break |', ''), undefined);
     });
 
+    // Owner, 2026-10-24 (Chopin Op. 28/4, bar 4): took a proposal, saw it was still two notes short,
+    // rewrote the reader's memo and asked again — and the model, told the words were the reader's
+    // guess, answered "unchanged".
+    it('tells a person\'s words from the reader\'s: a keyless mark, or a keyed one the person rewrote', () => {
+        const lys = '    <f, a, ees>8@todo(b4-p2 "beat 4 is two notes short") 8 <gis, d>8 8 <gis, d>2 |\n    c4@todo("look") d e f |\n    c4@todo(b5-p2 "as read") d e f |\n';
+        const at = (s: string) => lys.indexOf(s);
+        const side = parseSideFile(JSON.stringify({ version: 1, pages: [{ page: 1, image: 'p01.png', width: 2400, height: 3500 }], measures: [], todos: [
+            { key: 'b4-p2', kind: 'bar', measure: 4, part: 'p2', lines: [1], page: 1, box: [0, 0, 10, 10], memo: 'the upper voice is a half note and an eighth short' },
+            { key: 'b5-p2', kind: 'bar', measure: 5, part: 'p2', lines: [3], page: 1, box: [0, 0, 10, 10], memo: 'as read' }] }), SIDE_PATH)!;
+        assert.equal(side.todos.length, 2);
+        const ts = fixTargets(lys, [
+            { Key: 'b4-p2', Memo: 'beat 4 is two notes short', HostStart: at('<f,'), HostEnd: 0, Measure: 4, Part: 'p2' },
+            { Key: null, Memo: 'look', HostStart: at('c4@todo("look'), HostEnd: 0, Measure: 5, Part: 'p2' },
+            { Key: 'b5-p2', Memo: 'as read', HostStart: at('c4@todo(b5'), HostEnd: 0, Measure: 5, Part: 'p2' }], side);
+        const byLine = (n: number) => ts.find(t => t.line === n)!;
+        assert.deepEqual(byLine(0).notes, ['beat 4 is two notes short']);
+        assert.deepEqual(byLine(1).notes, ['look']);
+        assert.equal(byLine(2).notes, undefined);
+        const task = taskPromptOf({ head: '', target: byLine(0), neighbours: { others: [] }, diagnostics: [], image: true });
+        assert.match(task, /What a PERSON who compared this line with the page wrote[\s\S]*do not answer "unchanged":\n {2}- beat 4 is two notes short/);
+        assert.doesNotMatch(task, /What the reader noted/);
+        const reader = taskPromptOf({ head: '', target: byLine(2), neighbours: { others: [] }, diagnostics: [], image: true });
+        assert.match(reader, /What the reader noted about it[^\n]*\n {2}- as read/);
+        assert.doesNotMatch(reader, /PERSON/);
+        assert.match(systemPromptOf('G'), /for every chord, count its noteheads on the page/);
+        assert.match(systemPromptOf('G'), /two notes a second apart/);
+    });
+
     it('asks a failed proposal to read the page again, not to patch the count', () => {
         const repair = repairPromptOf(['LYS2001: too short']);
         assert.match(repair, /Do not patch the line to silence this/);
@@ -369,9 +397,18 @@ describe('the scan of a bar, for the model', () => {
     it('crops a page around a box with the margin, as a PNG', () => {
         const out = scanCropPng(page, [20, 10, 30, 16]);
         // cropRect: pad = 6 * 0.3 = 1.8 → x 18.2..31.8, y 8.2..17.8 → floor/ceil → 18..32 × 8..18
-        assert.deepEqual([out.width, out.height], [14, 10]);
+        // ...and enlarged threefold, the most it is (MIN_CROP_SIDE): 42 × 30, each pixel a 3×3 block.
+        assert.deepEqual([out.width, out.height], [42, 30]);
         const back = decodeImage(out.png)!;
-        assert.equal(px(back, 2, 2), 0);
+        assert.deepEqual([px(back, 6, 6), px(back, 8, 8), px(back, 5, 5)], [0, 0, 255]);
+    });
+
+    it('enlarges a small crop by a whole factor, towards the largest side, at most three times', () => {
+        const big: Rgba = { width: 600, height: 300, data: new Uint8Array(600 * 300 * 4).fill(255) };
+        const two = cropRgba(big, { x: 0, y: 0, width: 600, height: 270 }, 1568, 1000);
+        assert.deepEqual([two.width, two.height], [1200, 540]);   // 1568 / 600 → 2
+        const none = cropRgba(big, { x: 0, y: 0, width: 600, height: 270 });
+        assert.deepEqual([none.width, none.height], [600, 270]);  // only when asked
     });
 });
 
