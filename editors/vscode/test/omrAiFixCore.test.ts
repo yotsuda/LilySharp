@@ -24,7 +24,7 @@ import * as path from 'node:path';
 import {
     Diag, FixableTodo, Rgba, acceptableByAll, anchorOf, averageOf, barBoxFor, batchesOf, checkedByDefault, cropRect, cropRgba,
     decodeImage, diagnosticsOn, encodePng, estimateOf, fixTargets, gateOf, headOf, labelOf, neighboursOf, parseProposal,
-    readerBarOf, repairPromptOf, scanCropPng, spliceBar, stripTodoMarks, systemPromptOf, targetsInLines, taskPromptOf,
+    readerBarOf, repairPromptOf, resolvedLine, scanCropPng, spliceBar, stripTodoMarks, systemPromptOf, targetsInLines, taskPromptOf,
     verifyVerdict, withSample, withVerify,
 } from '../src/omrAiFixCore';
 import * as jpeg from 'jpeg-js';
@@ -359,6 +359,13 @@ describe('reading the answer', () => {
         const p = parseProposal('{"bar": "break tuplet 3/2 { g8 f8~ } f2 r4 |", "reason": "looks right", "confidence": 0.9}', written);
         assert.equal(p?.bar, null);
         assert.match(p!.reason, /^unchanged/);
+        assert.equal(p?.unchanged, true);
+        assert.equal(parseProposal('{"bar": null, "reason": "blurred"}', written)?.unchanged, undefined);
+    });
+
+    it('takes an unchanged line as the line without its marks, nothing else', () => {
+        assert.equal(resolvedLine(written), 'break tuplet 3/2 { g8 f8~ } f2 r4 |');
+        assert.equal(resolvedLine('voice { c4@todo(k1 "a") d } { e4@todo.down f } |'), 'voice { c4 d } { e4 f } |');
     });
 
     it('clamps the confidence and tolerates its absence', () => {

@@ -34,7 +34,7 @@ import { ChatClient, ChatMessage, availableModels, hasChatModel, offerModelSetup
 import {
     BarCheck, BarNeighbours, Diag, FixTarget, FixableTodo, GateVerdict, Proposal, Rgba, acceptableByAll, anchorOf, averageOf,
     batchesOf, checkedByDefault, cropRect, decodeImage, diagnosticsOn, estimateOf, fixTargets, gateOf, headOf, labelOf,
-    neighboursOf, parseProposal, readerBarOf, repairPromptOf, scanCropPng, spliceBar, systemPromptOf, targetsInLines, taskPromptOf,
+    neighboursOf, parseProposal, readerBarOf, repairPromptOf, resolvedLine, scanCropPng, spliceBar, systemPromptOf, targetsInLines, taskPromptOf,
     verifyVerdict, withSample, withVerify,
 } from './omrAiFixCore';
 import { OmrVersion, canVerifyBars, exitMeaning, launchOf, parseVersion, runOmr, verifyArguments } from './omrCore';
@@ -185,7 +185,7 @@ export function registerOmrAiFix(context: vscode.ExtensionContext, deps: OmrAiFi
     context.subscriptions.push(
         vscode.commands.registerCommand('lilysharp.omrFixWithAi',
             (uri?: string | vscode.Uri, at?: number) => runOmrAiFix(context, deps, uri, Number.isInteger(at) ? at : undefined)),
-        { dispose: () => { panel?.dispose(); lock?.dispose(); output?.dispose(); } });
+        { dispose: () => { panel?.dispose(); lock?.dispose(); clearBarMark(); output?.dispose(); } });
 }
 
 function log(line: string): void {
@@ -578,8 +578,8 @@ function showPanel(deps: OmrAiFixDeps, run: FixRun): void {
         panel = vscode.window.createWebviewPanel('lilysharpOmrFixes', 'Lily# — OMR fixes',
             { viewColumn: vscode.ViewColumn.Beside, preserveFocus: true },
             { enableScripts: true, retainContextWhenHidden: true, localResourceRoots: roots });
-        panel.onDidDispose(() => { panel = undefined; shownRun = undefined; });
-        panel.webview.onDidReceiveMessage((m: { action?: string; index?: number }) => void onPanelMessage(deps, m));
+        panel.onDidDispose(() => { panel = undefined; shownRun = undefined; clearBarMark(); });
+        panel.webview.onDidReceiveMessage((m: { action?: string; index?: number; on?: boolean; indices?: number[] }) => void onPanelMessage(deps, m));
     } else {
         panel.webview.options = { ...panel.webview.options, localResourceRoots: roots };
     }
@@ -599,10 +599,10 @@ async function onPanelMessage(deps: OmrAiFixDeps, m: { action?: string; index?: 
     switch (m.action) {
         case 'check':
             // Kept here too, so a panel drawn again (the next batch) keeps the boxes as they were.
-            if (row && row.proposal?.bar) { row.checked = !!m.on; }
+            if (row && textOf(row) !== undefined) { row.checked = !!m.on; }
             return;
         case 'accept': {
-            const chosen = run.rows.filter(r => r.proposal?.bar && (m.indices ?? []).includes(r.index));
+            const chosen = run.rows.filter(r => textOf(r) !== undefined && (m.indices ?? []).includes(r.index));
             for (const r of run.rows) { r.checked = chosen.includes(r); }
             if (chosen.length === 0) {
                 vscode.window.showInformationMessage('Lily#: no proposal is checked — check the bars to write, or Cancel.');
@@ -614,8 +614,8 @@ async function onPanelMessage(deps: OmrAiFixDeps, m: { action?: string; index?: 
             }
             break;
         }
-        case 'open':
-            if (row) { await openAt(run, row); }
+        case 'focus':
+            if (row) { await showBar(run, row); }
             return;
         case 'cancel':
             log(`Fix OMR marks: cancelled in the panel — nothing written (${run.rows.filter(r => r.proposal?.bar).length} proposals).`);
@@ -627,14 +627,46 @@ async function onPanelMessage(deps: OmrAiFixDeps, m: { action?: string; index?: 
     panel.webview.html = panelHtml(deps, panel.webview, run);
 }
 
-/** The editor at the row's line, as it is now (anchorOf follows a moved line). */
-async function openAt(run: FixRun, row: FixRow): Promise<void> {
+/** What taking a row writes over its line: the model's bar, or — when the model read the bar
+ *  as right ("unchanged") — the line without its @todo marks (owner's idea 2026-10-23);
+ *  undefined: nothing to take. */
+function textOf(r: FixRow): string | undefined {
+    if (r.proposal?.bar) {
+        return r.proposal.bar;
+    }
+    return r.proposal?.unchanged ? resolvedLine(r.target.written) : undefined;
+}
+
+/** The light blue of the bar the panel is on, in the editor (owner's request 2026-10-23). */
+let barMark: vscode.TextEditorDecorationType | undefined;
+
+/** Shows the row's bar in the editor, as it is now (anchorOf follows a moved line), lit light
+ *  blue, the panel keeping the focus: a click on a row or its box (owner's request 2026-10-23,
+ *  in place of an "Open in editor" link). The preview follows the editor's caret on its own. */
+async function showBar(run: FixRun, row: FixRow): Promise<void> {
     const doc = await vscode.workspace.openTextDocument(run.uri);
-    const at = anchorOf(doc.getText(), row.target);
-    const pos = doc.positionAt(at >= 0 ? at : Math.min(row.target.start, doc.getText().length));
-    const editor = await vscode.window.showTextDocument(doc, { viewColumn: vscode.ViewColumn.One, preserveFocus: false });
-    editor.selection = new vscode.Selection(pos, pos);
-    editor.revealRange(new vscode.Range(pos, pos), vscode.TextEditorRevealType.InCenterIfOutsideViewport);
+    const text = doc.getText();
+    const at = anchorOf(text, row.target);
+    const from = at >= 0 ? at : Math.min(row.target.start, text.length);
+    const to = at >= 0 ? at + row.target.written.length : from;
+    const shown = vscode.window.visibleTextEditors.find(e => e.document.uri.toString() === run.uri.toString());
+    const editor = shown ?? await vscode.window.showTextDocument(doc, { viewColumn: vscode.ViewColumn.One, preserveFocus: true });
+    const range = new vscode.Range(doc.positionAt(from), doc.positionAt(to));
+    editor.selection = new vscode.Selection(range.start, range.start);
+    editor.revealRange(range, vscode.TextEditorRevealType.InCenterIfOutsideViewport);
+    barMark ??= vscode.window.createTextEditorDecorationType({
+        backgroundColor: 'rgba(0, 120, 215, 0.22)',
+        isWholeLine: true,
+        overviewRulerColor: 'rgba(0, 120, 215, 0.8)',
+        overviewRulerLane: vscode.OverviewRulerLane.Center,
+    });
+    for (const e of vscode.window.visibleTextEditors) { e.setDecorations(barMark, []); }
+    editor.setDecorations(barMark, [range]);
+}
+
+function clearBarMark(): void {
+    barMark?.dispose();
+    barMark = undefined;
 }
 
 /** Writes the rows' proposals as ONE WorkspaceEdit (one Ctrl+Z): each at its line as it is now;
@@ -655,7 +687,7 @@ async function applyRows(run: FixRun, accepted: readonly FixRow[]): Promise<bool
             skipped.push(r);
             continue;
         }
-        edit.replace(run.uri, new vscode.Range(doc.positionAt(at), doc.positionAt(at + r.target.written.length)), r.proposal!.bar!);
+        edit.replace(run.uri, new vscode.Range(doc.positionAt(at), doc.positionAt(at + r.target.written.length)), textOf(r)!);
         written.push(r);
     }
     const ok = written.length > 0 && await vscode.workspace.applyEdit(edit);
@@ -746,7 +778,9 @@ function panelHtml(deps: OmrAiFixDeps, webview: vscode.Webview, run: FixRun): st
         if (!r.proposal) {
             proposal = `<div class="none">no answer</div>`;
         } else if (!r.proposal.bar) {
-            proposal = `<div class="none">no proposal</div>`;
+            proposal = r.proposal.unchanged
+                ? `<div class="none">unchanged — Take removes the @todo</div>`
+                : `<div class="none">no proposal</div>`;
         } else if (after) {
             proposal = scoreCell(`after-${r.index}`, after, t.start, t.start + r.proposal.bar.length, true);
         } else {
@@ -760,27 +794,29 @@ function panelHtml(deps: OmrAiFixDeps, webview: vscode.Webview, run: FixRun): st
             : `<span class="dim">—</span>`;
         const failed = r.gate && !(r.gate.compile && r.gate.length);
         const reason = !r.proposal ? `No answer: ${r.noAnswer ?? 'the reply was not the JSON asked for'}.`
+            : r.proposal.unchanged ? `The model reads the bar as right${r.proposal.reason.replace(/^unchanged( — )?/, '') ? `: ${r.proposal.reason.replace(/^unchanged( — )?/, '')}` : '.'}`
             : !r.proposal.bar ? (failed ? `No proposal passed: ${r.gate!.problems.join(' / ') || r.proposal.reason}` : r.proposal.reason || 'The model gave no reason.')
             : r.gate?.verify === false ? `${r.proposal.reason ? `${r.proposal.reason} — ` : ''}${r.gate.problems.filter(p => p.startsWith('the scan says')).join(' / ')}`
             : r.proposal.reason || '';
         const sure = r.proposal?.confidence === null || r.proposal?.confidence === undefined ? '' : ` · confidence ${r.proposal.confidence.toFixed(2)}`;
-        const can = !!(r.proposal?.bar) && r.state !== 'applied';
+        const can = textOf(r) !== undefined && r.state !== 'applied';
         const on = can && !!r.checked;
         const buttons = r.state === 'skipped' ? `<span class="memo bad">· not written last time: the line had changed</span>` : '';
+        const keep = !r.proposal?.bar && !!r.proposal?.unchanged;
         const box = can
-            ? `<label class="take" title="Write this proposal when you press Accept"><input type="checkbox" class="take" data-i="${r.index}" ${on ? 'checked' : ''}> Take</label>`
+            ? `<label class="take" title="${keep ? 'Remove this bar\'s @todo when you press Accept (the notes stay as they are)' : 'Write this proposal when you press Accept'}">`
+              + `<input type="checkbox" class="take" data-i="${r.index}" ${on ? 'checked' : ''}> ${keep ? 'Take (remove @todo)' : 'Take'}</label>`
             : `<label class="take dim" title="${r.state === 'applied' ? 'Written' : 'No proposal to take'}"><input type="checkbox" disabled> ${r.state === 'applied' ? 'Written' : 'Take'}</label>`;
         // Three rows a bar: a head across the whole width — the box, the bar, the reader's memo,
         // the line, the time, the way to the editor — then the model's reason and the gates,
         // across the whole width too, and under them the three pictures. A column for either
         // was a fraction of the width and wrapped its text into a dozen short lines (owner's
         // reports 2026-10-23).
-        const cls = `row ${r.state}${on ? ' on' : ''}`;
+        const cls = `row ${r.state}${on ? ' taken' : ''}`;
         return `<tr class="${cls} head" data-i="${r.index}">
   <td colspan="3" class="who">${box} <span class="label">${esc(labelOf(t))}</span>`
             + (t.memos.length ? ` <span class="memo">${esc(t.memos.join('; '))}</span>` : '')
-            + ` <span class="memo dim">· line ${t.line + 1}${t.confidence === undefined ? '' : ` · reader ${t.confidence.toFixed(2)}`} · ${r.seconds.toFixed(1)} s</span>`
-            + ` <button data-a="open" data-i="${r.index}" class="link">Open in editor</button></td>
+            + ` <span class="memo dim">· line ${t.line + 1}${t.confidence === undefined ? '' : ` · reader ${t.confidence.toFixed(2)}`} · ${r.seconds.toFixed(1)} s</span></td>
 </tr>
 <tr class="${cls} reason" data-i="${r.index}">
   <td colspan="3" class="why"><span class="gates">${gates}</span>${reason ? ` <span>${esc(reason)}</span>` : ''}`
@@ -789,12 +825,12 @@ function panelHtml(deps: OmrAiFixDeps, webview: vscode.Webview, run: FixRun): st
 <tr class="${cls} body" data-i="${r.index}">
   <td class="cell">${scan}</td>
   <td class="cell">${now}<pre class="src">${esc(t.written)}</pre></td>
-  <td class="cell">${proposal}${r.proposal?.bar ? `<pre class="src">${esc(r.proposal.bar)}</pre>` : ''}</td>
+  <td class="cell">${proposal}${textOf(r) !== undefined ? `<pre class="src">${esc(textOf(r)!)}</pre>` : ''}</td>
 </tr>`;
     }).join('\n');
 
-    const takeable = run.rows.filter(r => r.proposal?.bar && r.state !== 'applied').length;
-    const checked = run.rows.filter(r => r.proposal?.bar && r.state !== 'applied' && r.checked).length;
+    const takeable = run.rows.filter(r => textOf(r) !== undefined && r.state !== 'applied').length;
+    const checked = run.rows.filter(r => textOf(r) !== undefined && r.state !== 'applied' && r.checked).length;
     const name = path.basename(run.uri.fsPath);
 
     return `<!DOCTYPE html>
@@ -820,7 +856,11 @@ th { text-align:left; font-weight:600; font-size:12px; opacity:.8; padding:6px 8
 td { vertical-align:top; padding:6px 8px; border-bottom:1px solid var(--vscode-panel-border); }
 /* A checked bar: the light blue the scan view and the preview tint a bar with (owner's request
    2026-10-23), on both of its rows. */
-tr.on td { background: rgba(0, 120, 215, .14); }
+tr.taken > td { background: color-mix(in srgb, #0078d7 26%, var(--vscode-editor-background)) !important; }
+/* The bar the editor shows (the last row clicked): an outline round its three rows. */
+tr.cur.head > td { box-shadow: inset 0 2px 0 #0078d7; }
+tr.cur > td:first-child { box-shadow: inset 3px 0 0 #0078d7; }
+tr.row { cursor: pointer; }
 tr.applied { opacity:.6; }
 label.take { font-size:12px; margin-right:8px; cursor:pointer; user-select:none; }
 label.take.dim { cursor:default; }
@@ -881,7 +921,7 @@ ${rows}
   // next batch keeps it); the counts follow.
   function setBox(box, on) {
     box.checked = on;
-    for (const tr of document.querySelectorAll('tr.row[data-i="' + box.dataset.i + '"]')) tr.classList.toggle('on', on);
+    for (const tr of document.querySelectorAll('tr.row[data-i="' + box.dataset.i + '"]')) tr.classList.toggle('taken', on);
     vscode.postMessage({ action: 'check', index: Number(box.dataset.i), on });
   }
   function recount() {
@@ -899,7 +939,15 @@ ${rows}
     if (b.id === 'checkAll' || b.id === 'uncheckAll') { for (const x of boxes()) setBox(x, b.id === 'checkAll'); recount(); }
     else if (b.id === 'accept') vscode.postMessage({ action: 'accept', indices: boxes().filter(x => x.checked).map(x => Number(x.dataset.i)) });
     else if (b.id === 'cancel') vscode.postMessage({ action: 'cancel' });
-    else if (b.dataset.a) vscode.postMessage({ action: b.dataset.a, index: Number(b.dataset.i) });
+  });
+  // A click on a bar's rows — its box included, and a box that cannot be checked — shows the bar
+  // in the editor, lit light blue there (owner's request 2026-10-23, in place of a link).
+  document.addEventListener('click', e => {
+    const tr = e.target.closest && e.target.closest('tr.row');
+    if (!tr) return;
+    for (const x of document.querySelectorAll('tr.row.cur')) x.classList.remove('cur');
+    for (const x of document.querySelectorAll('tr.row[data-i="' + tr.dataset.i + '"]')) x.classList.add('cur');
+    vscode.postMessage({ action: 'focus', index: Number(tr.dataset.i) });
   });
 
   // Each score cell is cropped to its bar: the preview's rect.bar-staff boxes carry where a bar

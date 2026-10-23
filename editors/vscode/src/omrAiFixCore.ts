@@ -347,6 +347,15 @@ export interface Proposal {
     readonly reason: string;
     /** 0..1, or null when the model gave none. */
     readonly confidence: number | null;
+    /** The model wrote the line back as it is: it reads the bar as right. Taking such a row
+     *  removes the line's @todo marks and nothing else (resolvedLine; owner's idea 2026-10-23). */
+    readonly unchanged?: boolean;
+}
+
+/** The written line with its @todo marks taken out and nothing else changed — what taking an
+ *  "unchanged" answer writes. */
+export function resolvedLine(written: string): string {
+    return stripTodoMarks(written);
 }
 
 /** A `@todo` mark as written — bare, keyed, with a memo, with `.up` / `.down`. */
@@ -398,7 +407,7 @@ export function parseProposal(raw: string, written: string): Proposal | null {
         bar += ' |';
     }
     if (bar === was || bar === oneLine(stripTodoMarks(written))) {
-        return { bar: null, reason: reason ? `unchanged — ${reason}` : 'unchanged', confidence };
+        return { bar: null, reason: reason ? `unchanged — ${reason}` : 'unchanged', confidence, unchanged: true };
     }
     return { bar, reason, confidence };
 }
