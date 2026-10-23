@@ -30,7 +30,7 @@ import * as path from 'path';
 import { execFile } from 'child_process';
 import type { LanguageClient } from 'vscode-languageclient/node';
 import { AiTransformDeps, loadGrammar } from './aiTransform';
-import { ChatClient, ChatMessage, NO_CHAT_MODEL, availableModels, hasChatModel, resolveChatClient } from './modelClient';
+import { ChatClient, ChatMessage, availableModels, hasChatModel, offerModelSetup, resolveChatClient } from './modelClient';
 import {
     BarCheck, BarNeighbours, Diag, FixTarget, FixableTodo, GateVerdict, Proposal, Rgba, acceptableByAll, anchorOf, averageOf,
     batchesOf, checkedByDefault, cropRect, decodeImage, diagnosticsOn, estimateOf, fixTargets, gateOf, headOf, labelOf,
@@ -403,7 +403,7 @@ async function runBatch(
                         log(`Fix OMR marks: ${chat.label} returned nothing — stopped. `
                             + (noModel ? 'VS Code offers no chat model (GitHub Copilot is not signed in).' : 'Pick a chat model with "Lily#: Select AI Model…" → Fix OMR marks with AI.'));
                         if (noModel) {
-                            void vscode.window.showWarningMessage(NO_CHAT_MODEL);
+                            void offerModelSetup();
                         } else {
                             void vscode.window.showWarningMessage(
                                 `Lily#: the model ${chat.label} returned nothing, so the fix stopped. Pick another model for "Fix OMR marks with AI".`,

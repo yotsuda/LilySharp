@@ -42,19 +42,18 @@ export interface ChatClient {
 }
 
 /**
- * Resolves the chat client from VS Code's language-model API. Returns undefined when no
- * model is available (Copilot not enabled / no provider registered). When `quiet` (ghost
- * completion), never shows an error.
+ * Resolves the chat client from VS Code's language-model API. Returns undefined when no model
+ * that answers is available — none at all, or only Copilot CLI's entry (no Copilot sign-in) —
+ * and then, unless `quiet` (ghost completion), offers the way to one (offerModelSetup) before
+ * anything runs.
  */
 export async function resolveChatClient(quiet: boolean, use: ModelUse = 'transform'): Promise<ChatClient | undefined> {
-    const model = await selectLmModel(use);
+    const model = hasChatModel(await availableModels()) ? await selectLmModel(use) : undefined;
     if (model) {
         return lmClient(model);
     }
     if (!quiet) {
-        vscode.window.showErrorMessage(
-            'Lily#: no language model available. Enable GitHub Copilot (or another VS Code '
-            + 'language-model provider) and pick a model.');
+        void offerModelSetup();
     }
     return undefined;
 }
@@ -127,24 +126,11 @@ export function autoPick(models: readonly vscode.LanguageModelChat[], use: Model
  */
 export async function pickAiModel(): Promise<void> {
     const models = await availableModels();
-    if (models.length === 0) {
-        vscode.window.showErrorMessage(
-            'Lily#: no language model available. Enable GitHub Copilot (or another VS Code '
-            + 'language-model provider).');
-        return;
-    }
     if (!hasChatModel(models)) {
         // Only doors that answer nothing (copilotcli with no Copilot sign-in, owner's report
-        // 2026-10-23): picking one of them cannot help, so say what would.
-        const signIn = 'How to get a model';
-        const pick = await vscode.window.showWarningMessage(NO_CHAT_MODEL, signIn, 'Show the list anyway');
-        if (pick === signIn) {
-            void vscode.env.openExternal(vscode.Uri.parse('https://code.visualstudio.com/docs/copilot/setup'));
-            return;
-        }
-        if (pick !== 'Show the list anyway') {
-            return;
-        }
+        // 2026-10-23): picking one of them cannot help, so offer what would.
+        await offerModelSetup();
+        return;
     }
     const cfg = vscode.workspace.getConfiguration('lilysharp');
     const shown = (use: ModelUse) => cfg.get<string>(SETTING[use], '').trim() || `Automatic (${autoPick(models, use)?.name ?? 'none'})`;
@@ -188,11 +174,29 @@ export async function pickAiModel(): Promise<void> {
     await cfg.update(SETTING[use], chosen.value, vscode.ConfigurationTarget.Global);
 }
 
-/** What to tell the person when VS Code offers no model that holds a conversation. */
-export const NO_CHAT_MODEL = 'Lily#: VS Code offers no chat model that answers — GitHub Copilot is not signed in, '
-    + 'so only Copilot CLI\'s entry is listed, and it answers nothing here. Sign in to GitHub Copilot in VS Code '
-    + '(the Accounts menu, bottom left), or add a model with your own key in the Chat view\'s model picker '
-    + '(Manage Models…); then choose it with "Lily#: Select AI Model…".';
+/**
+ * Says no AI model is available and offers the way to one, as two buttons (owner's report
+ * 2026-10-23: a long sentence with no button left him not knowing what to do). "Sign in to
+ * Copilot" runs VS Code's own sign-in — the command its chat uses for the same button
+ * (`workbench.action.chat.triggerSetupForceSignIn`, VS Code 1.142), else its chat setup;
+ * "Other ways…" opens VS Code's setup page (a model with one's own key is there too).
+ */
+export async function offerModelSetup(): Promise<void> {
+    const signIn = 'Sign in to Copilot', other = 'Other ways…';
+    const choice = await vscode.window.showWarningMessage(
+        'Lily#: no AI model is available. Sign in to GitHub Copilot, then run this again.', signIn, other);
+    if (choice === signIn) {
+        const commands = await vscode.commands.getCommands(true);
+        const id = ['workbench.action.chat.triggerSetupForceSignIn', 'workbench.action.chat.triggerSetup'].find(c => commands.includes(c));
+        if (id) {
+            await vscode.commands.executeCommand(id);
+            return;
+        }
+    }
+    if (choice === signIn || choice === other) {
+        await vscode.env.openExternal(vscode.Uri.parse('https://code.visualstudio.com/docs/copilot/setup'));
+    }
+}
 
 /** Whether VS Code offers a model that holds a plain conversation: a Copilot model, or another
  *  vendor's with a family — not only Copilot CLI's door (aiTransformCore.pickModel). */
