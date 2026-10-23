@@ -129,7 +129,10 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 ### 1.1 第969セッション（2026-10-23・YT-DELL2）
 
 第968 と同じ会話の続き（ユーザー決定「多声 walk の moment 順への再設計（§2 C ⑴）」→ 設計から始めて承認ゲート）。`-Start p969`（開始 HEAD `555c119d6`・未 push 24・第967 を ARCHIVE へ・full 13120 / 0 / 2 / 13122）。作業場所は Lab `sessions/p969/`。
-- **設計と判断材料＝Lab `sessions/p969/moment-walk-design.md`**（承認前なので Lab・承認されたら `docs/` へ）: 起票の欠陥 3 クラスのうち **⑴ 声部横断の復元♮は第915 の `StaffAccidentals`（五線ごとの後処理・時間順）で、⑵ cue の二重 walk は第98 で閉じていた＝踏む本 0**。現行 walk は 9 ファイル 17,306 行・状態 ~120 フィールド・**増分コンパイル（Resume／suffix splice）が声部ごとの逐次 walk を前提**＝全面書き換え（案 A）は増分の再設計込み・段取り 5 段を書いた。案 B＝五線時間順の merge 層 `StaffTimeline` を 1 本に正規化して後処理 3 つ（`StaffAccidentals`・`StaffAccidentalColumns`・`NoteCollision` の入力）が読む（1 便・出力不変）／案 C＝待つ（起票の「踏む本が溜まってから」のまま）。**推奨は B か C**。LP の引用は `global-context.cc:137-213 Global_context::iterate`・`simultaneous-music-iterator.cc:97-115`。コード変更 0。ユーザーの A/B/C 待ち。
+- **ユーザー決定（同日）: A を終点に、B をその段 0 として 5 段で進める**（問い「最終的に優れた実装を得たい。A と B はどちらが良いか」→ 答えは design §0）。**ユーザーが push した＝origin/master = `5a23e5059`（第969 の開始 HEAD の次）。push は今後もユーザー**・「おかしくなったらローカルの修正を破棄して巻き戻す」。
+- **段 ①＝閉じた（コード変更 0）**: 計器 Lab `sessions/p969/fields.ps1` が 9 ファイルの instance field **172 本**を註つきで `fields.txt` に刷り、**`docs/moment-walk-design.md` §7 に V 45／S 11＋`_meta` の一部／P 14（＋part 既定 6）／W 約 80／R 18／X 1 の分類表**。観察（§6）: 出力の side table は小節番号か source position 鍵の append-only＝interleave に耐える・例外は walk 順依存の 4 つ（`_keyByMeasureLog` last-wins・`_sectionStartLog` first-wins・`_musicMarks` の重複判定・`_nextBeamId`）／`MetadataState` は 3 層（header＝W・Time＝Score の clock＝W・Key／Clef＝S）／`CollectionCursor.MetadataMeasureOffset` はスケジューラが実小節で歩けば消える。設計書は Lab から `docs/moment-walk-design.md` へ移した（Lab の写しは消した）。
+- **次＝段 ②（B）**: `StaffTimeline` を建て、`StaffAccidentals`・`StaffAccidentalColumns`・`NoteCollision` の入力に読ませる。出力不変の門。
+- 設計と判断材料（第969 の最初の版・今は design §0〜§5）: 起票の欠陥 3 クラスのうち **⑴ 声部横断の復元♮は第915 の `StaffAccidentals`（五線ごとの後処理・時間順）で、⑵ cue の二重 walk は第98 で閉じていた＝踏む本 0**。現行 walk は 9 ファイル 17,306 行・状態 ~120 フィールド・**増分コンパイル（Resume／suffix splice）が声部ごとの逐次 walk を前提**＝全面書き換え（案 A）は増分の再設計込み・段取り 5 段を書いた。案 B＝五線時間順の merge 層 `StaffTimeline` を 1 本に正規化して後処理 3 つ（`StaffAccidentals`・`StaffAccidentalColumns`・`NoteCollision` の入力）が読む（1 便・出力不変）／案 C＝待つ（起票の「踏む本が溜まってから」のまま）。**推奨は B か C**。LP の引用は `global-context.cc:137-213 Global_context::iterate`・`simultaneous-music-iterator.cc:97-115`。コード変更 0。ユーザーの A/B/C 待ち。
 
 ## 以下は第968セッションの経緯
 
@@ -1805,7 +1808,7 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
 > ユーザー問「書き直したくなるコードはあるか」への答えを台帳化したもの。**優先順**。
 > ⑵⑷は §2A に既存項があるので**参照だけ**（二重台帳を作らない）。
 
-- ★★★ **⑴ 多声 walk の moment 順への再設計**（最大の構造負債・**未着手**）。
+- ★★★ **⑴ 多声 walk の moment 順への再設計**（最大の構造負債・**着手＝第969・2026-10-23 ユーザー決定「A を終点に B を段 0 として 5 段」・設計と段取りと状態の分類表は `docs/moment-walk-design.md`**・段 ① 済・以下は起票時の記録）。
   現行は `MeasureCollector`: **voice 0 だけ本流にインライン・他声部は `_parallelSpans` から
   後で再構築**（`BuildExtraVoiceTracks`）。この「voice 0 の全時系列が先」という順序が
   **staff 時間順の状態共有を原理的に不可能**にしている。出た欠陥クラス:
