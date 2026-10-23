@@ -173,7 +173,7 @@ bar 3 は `nothing to say`・verdict ✗／✓・side file は不変・1.1 秒�
 
 ## 7. OMR 側へ頼むもの（M3 の前）
 
-**依頼済（2026-10-23・第973）: `..\LilySharp-Omr\docs\repro\lilysharp-proposal-2026-10-23-ai-fix.md`** → **同日 3 件とも入った**（返事 `lilysharp-reply-2026-10-23-ai-fix.md`・OMR 0.3.0 のまま・`features: ["verify-bars"]`・`--candidate` は `--no-write` を含む・`readings` は `source: "length"` の todo だけ＝`verify` の印の小節には付かない（採用率を見てから）・`pages[].image` は side file の配下なら相対）。Lily# 側の受け口は上の「M3 の実装」。
+**依頼済（2026-10-23・第973）: `..\LilySharp-Omr\docs\repro\lilysharp-proposal-2026-10-23-ai-fix.md`** → **同日 3 件とも入った**（返事 `lilysharp-reply-2026-10-23-ai-fix.md`・OMR 0.3.0 のまま・`features: ["verify-bars"]`・`--candidate` は `--no-write` を含む・`readings` は `source: "length"` の todo だけ＝`verify` の印の小節には付かない（採用率を見てから）・`pages[].image` は side file の配下なら相対）。Lily# 側の受け口は上の「M3 の実装」。 **第973 夜**: Scan Import **0.3.1**（`features: ["verify-bars"]`）がこの PC にだけ入った（返事 `lilysharp-reply-2026-10-23-ai-fix-release.md`・Marketplace は未）。入った `bin\omr.exe` で門 3 の素振りは ✓。古い reader に更新を勧める案内は、0.3.1 が Marketplace に出てから入れる（OMR の依頼）。
 
 1. `omr verify <x.lys> --candidate <tmp.lys> --bars N[,M…] --no-write --progress json`: 提案を差し込んだ temp の本文を、小節を絞って、side file を書かずに照合し、小節ごとに `{"event":"bar","measure","part","differs","confidence","memo"}` を返す（門 3 を数秒に）。有無は `--version --json` の `features: ["verify-bars"]`。
 2. 長さの todo（`source: length|verify`）に **`readings[]`**（S33 段 1 の `Fixes.Cand` の `why`・`was`・`now`・`evidence`・`fills`・`x`・`y`）＝1 事象の別の読み。`candidates` は音符の todo のまま。
