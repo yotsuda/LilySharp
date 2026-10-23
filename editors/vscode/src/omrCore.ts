@@ -125,11 +125,32 @@ export function readArguments(inputs: readonly string[], outDir: string, lysc?: 
     return args;
 }
 
+/** What `omr verify` is asked beyond the .lys (LilySharp-Omr's reply of 2026-10-23 to the AI
+ *  fix's proposal): `candidate`, the text to compare in place of the .lys's own (an unsaved
+ *  proposal, written to a temp file; the side file and the pages stay the .lys's — and the
+ *  reader then writes nothing); `bars`, the reader's bar numbers to report a `bar` event for;
+ *  `noWrite`, leave the side file and the marked pages as they are. */
+export interface VerifyOptions {
+    readonly candidate?: string;
+    readonly bars?: readonly number[];
+    readonly noWrite?: boolean;
+}
+
 /** The arguments of `omr verify` (B5, proposed to LilySharp-Omr 2026-10-05): engrave the
  *  .lys again, compare it bar by bar with the pages its side file lists, and write the side
  *  file's todos anew — the .lys itself is not touched. An ARRAY, as readArguments'. */
-export function verifyArguments(lys: string, lysc?: string): string[] {
-    const args = ['verify', lys, '--progress', 'json'];
+export function verifyArguments(lys: string, lysc?: string, options: VerifyOptions = {}): string[] {
+    const args = ['verify', lys];
+    if (options.candidate) {
+        args.push('--candidate', options.candidate);
+    }
+    if (options.bars && options.bars.length > 0) {
+        args.push('--bars', options.bars.join(','));
+    }
+    if (options.noWrite) {
+        args.push('--no-write');
+    }
+    args.push('--progress', 'json');
     if (lysc) {
         args.push('--lysc', lysc);
     }
@@ -143,11 +164,20 @@ export interface OmrVersion {
     readonly inputs?: readonly string[];
     /** The commands it has beyond `read` (`verify`); absent in a reader that has only `read`. */
     readonly commands?: readonly string[];
+    /** What its commands can do beyond the agreement's floor (`verify-bars`: `omr verify
+     *  --candidate --bars --no-write` with a `bar` event); absent before 2026-10-23. */
+    readonly features?: readonly string[];
 }
 
 /** Whether the reader says it has `omr verify` (B5 asks it only then). */
 export function canVerify(v: OmrVersion): boolean {
     return Array.isArray(v.commands) && v.commands.includes('verify');
+}
+
+/** Whether the reader's `verify` takes a candidate text and reports bars (the AI fix's third
+ *  gate asks it only then; docs/omr-ai-fix-design.md §3.2 ③). */
+export function canVerifyBars(v: OmrVersion): boolean {
+    return canVerify(v) && Array.isArray(v.features) && v.features.includes('verify-bars');
 }
 
 /** Reads `omr --version --json`'s output, or undefined when it is not that. */
@@ -177,7 +207,12 @@ export type OmrEvent =
     | { event: 'start'; pages: number }
     | { event: 'page'; page: number; of: number }
     | { event: 'warning'; message: string }
-    | { event: 'done'; lys: string; json?: string; annotated?: string[]; todos?: number; quiet?: number }
+    /** One part-bar of `verify --bars` (the reply of 2026-10-23): `differs` when the comparison
+     *  marks anything there — a tie or a slur too, so `confidence` (the todo's, 1 for no mark)
+     *  says how much; `part` null for the bar's stems and tuplets as a whole. */
+    | { event: 'bar'; measure: number; part: string | null; differs: boolean; confidence: number; memo?: string }
+    | { event: 'done'; lys: string; json?: string; annotated?: string[]; todos?: number; quiet?: number;
+        candidate?: string; bars?: number; differing?: number }
     | { event: 'error'; code?: string; message: string };
 
 /** Reads one stdout line, or undefined for a line that is not an event (ignored, not fatal). */
@@ -192,6 +227,13 @@ export function parseEvent(line: string): OmrEvent | undefined {
             case 'start': return Number.isInteger(e.pages) ? e : undefined;
             case 'page': return Number.isInteger(e.page) && Number.isInteger(e.of) ? e : undefined;
             case 'warning': return typeof e.message === 'string' ? e : undefined;
+            case 'bar': return Number.isInteger(e.measure) && typeof e.differs === 'boolean'
+                ? {
+                    event: 'bar', measure: e.measure, part: typeof e.part === 'string' ? e.part : null, differs: e.differs,
+                    confidence: typeof e.confidence === 'number' && Number.isFinite(e.confidence) ? e.confidence : (e.differs ? 0 : 1),
+                    ...(typeof e.memo === 'string' ? { memo: e.memo } : {}),
+                }
+                : undefined;
             case 'done': return typeof e.lys === 'string' ? e : undefined;
             case 'error': return typeof e.message === 'string' ? e : undefined;
             default: return undefined;

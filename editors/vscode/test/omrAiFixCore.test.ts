@@ -24,7 +24,8 @@ import * as path from 'node:path';
 import {
     Diag, FixableTodo, Rgba, acceptableByAll, anchorOf, averageOf, barBoxFor, batchesOf, checkedByDefault, cropRect, cropRgba,
     decodeImage, diagnosticsOn, encodePng, estimateOf, fixTargets, gateOf, headOf, labelOf, neighboursOf, parseProposal,
-    repairPromptOf, scanCropPng, spliceBar, stripTodoMarks, systemPromptOf, targetsInLines, taskPromptOf, withSample,
+    readerBarOf, repairPromptOf, scanCropPng, spliceBar, stripTodoMarks, systemPromptOf, targetsInLines, taskPromptOf,
+    verifyVerdict, withSample, withVerify,
 } from '../src/omrAiFixCore';
 import * as jpeg from 'jpeg-js';
 import { markFactsOf, parseSideFile } from '../src/omrScanCore';
@@ -216,6 +217,60 @@ describe('what the model is shown', () => {
         const task = taskPromptOf({ head: '', target: bar2, neighbours: { others: [] }, diagnostics: [], image: true });
         assert.match(task, /^The picture attached to this message is the scanned page/);
         assert.match(task, /Read the notes, rests, dots, ties, beams and\ntuplets from the picture/);
+    });
+});
+
+describe('the reader\'s other readings and its comparison (M3)', () => {
+    const sideText = JSON.stringify({
+        version: 1, pages: [{ page: 1, image: 'p01.png', width: 2400, height: 3500 }],
+        measures: [{ measure: 7, part: 'p1', line: 13, page: 1, box: [700, 1800, 1100, 1900] }],   // the reader counts this bar as 7
+        todos: [{ key: 'b2-p1', kind: 'bar', source: 'length', measure: 7, part: 'p1', lines: [13], page: 1, box: [700, 1800, 1100, 1900],
+            memo: 'bar 7: 1760/1920 ticks', confidence: 0.3, candidates: [],
+            readings: [{ why: 'a dot more', was: 'f8~', now: 'f8.~', evidence: 0.63, fills: true, x: 1210, y: 1884 },
+                       { why: 'one duration longer', was: 'g8', now: 'g4', evidence: 0.22, fills: false }] }],
+    });
+    const side = parseSideFile(sideText, SIDE_PATH)!;
+    const [t] = fixTargets(LYS, TODOS.slice(0, 1), side, markFactsOf(sideText));
+
+    it('puts the readings in the prompt as hints, as written -> as it might be', () => {
+        assert.equal(t.readings.length, 2);
+        const task = taskPromptOf({ head: '', target: t, neighbours: { others: [] }, diagnostics: [] });
+        assert.match(task, /f8~ -> f8\.~ \(a dot more, evidence 0\.63, fills the bar\)/);
+        assert.match(task, /g8 -> g4 \(one duration longer, evidence 0\.22, does not fill the bar\)/);
+        assert.match(task, /hints from the page, not answers/);
+        assert.doesNotMatch(taskPromptOf({ head: '', target: fixTargets(LYS, TODOS.slice(0, 1))[0], neighbours: { others: [] }, diagnostics: [] }), /half-supports/);
+    });
+
+    it('asks the reader by ITS bar number and part, from the line, not by the printed bar', () => {
+        assert.deepEqual(readerBarOf(t, side), { measure: 7, part: 'p1' });
+        assert.deepEqual(readerBarOf(t), { measure: 2, part: 'p1' });                       // no side file: the server's
+        assert.equal(readerBarOf({ ...t, measure: null }), undefined);
+    });
+
+    it('passes when the bar\'s part and the bar as a whole show nothing, or nothing the reader is sure needs no edit', () => {
+        const bar = { measure: 7, part: 'p1' };
+        assert.deepEqual(verifyVerdict([
+            { measure: 7, part: 'p1', differs: false, confidence: 1, memo: 'bar 7: (nothing to say)' },
+            { measure: 7, part: 'p2', differs: true, confidence: 0.2, memo: 'another part' },            // not this bar's part
+        ], bar), { ok: true, memos: [] });
+        assert.deepEqual(verifyVerdict([{ measure: 7, part: 'p1', differs: true, confidence: 0.84, memo: 'bar 7: on the scan, not in the text: a dot' }], bar),
+            { ok: true, memos: [] });                                                                      // a dot alone: sure enough
+        assert.deepEqual(verifyVerdict([
+            { measure: 7, part: 'p1', differs: false, confidence: 1 },
+            { measure: 7, part: null, differs: true, confidence: 0.26, memo: 'bar 7: stems and tuplets: a tuplet 3 on the scan' },
+        ], bar), { ok: false, memos: ['bar 7: stems and tuplets: a tuplet 3 on the scan'] });
+        assert.deepEqual(verifyVerdict([{ measure: 7, part: 'p1', differs: true, confidence: 0.2 }], bar), { ok: false, memos: ['bar 7 (p1): differs from the scan'] });
+        assert.equal(verifyVerdict([{ measure: 8, part: 'p1', differs: true, confidence: 0 }], bar), undefined);
+    });
+
+    it('folds the verdict into the gate, and Accept all leaves a contradicted row alone', () => {
+        const ok = { compile: true, length: true, problems: [] };
+        assert.deepEqual(withVerify(ok, undefined), ok);
+        assert.deepEqual(withVerify(ok, { ok: true, memos: [] }), { ...ok, verify: true });
+        const bad = withVerify(ok, { ok: false, memos: ['bar 7: a half note short'] });
+        assert.deepEqual(bad, { compile: true, length: true, verify: false, problems: ['the scan says: bar 7: a half note short'] });
+        assert.equal(acceptableByAll(bad, 1), false);
+        assert.equal(acceptableByAll({ ...ok, verify: true }, 0.9), true);
     });
 });
 

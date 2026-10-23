@@ -331,10 +331,27 @@ export function coverageOf(todo: Pick<ScanTodo, 'measure' | 'part' | 'parts' | '
 /** One reading the reader offers for a mark: `text` replaces the marked item (without the mark). */
 export interface OmrCandidate { readonly label?: string; readonly text: string }
 
+/** One other reading of ONE event of a bar that does not fill its meter, as the reader's detector
+ *  half-supports it (`todos[].readings`, LilySharp-Omr's reply of 2026-10-23 to the AI fix's
+ *  proposal; its `Fixes.Cand`): `was` → `now` are the event as written in the .lys (`-`: none),
+ *  `why` the reader's word, `evidence` 0..1 the detector's, `fills` whether every voice of the
+ *  bar then fills the meter, `x`/`y` the event on the page (the box's pixels). */
+export interface OmrReading {
+    readonly why: string;
+    readonly was: string;
+    readonly now: string;
+    readonly evidence?: number;
+    readonly fills?: boolean;
+    readonly x?: number;
+    readonly y?: number;
+}
+
 /** What the side file says about a keyed mark, beyond its box (B6: the AI transform reads it). */
 export interface OmrMarkFacts {
     readonly confidence?: number;
     readonly candidates: readonly OmrCandidate[];
+    /** A length mark's other readings, when the reader offers any (absent otherwise). */
+    readonly readings?: readonly OmrReading[];
 }
 
 /** Each keyed todo's confidence and candidates, from the side file's text; empty when it is
@@ -360,7 +377,21 @@ export function markFactsOf(text: string): Map<string, OmrMarkFacts> {
             .filter((c: any) => str(c?.text))
             .map((c: any) => (str(c.label) ? { label: c.label, text: c.text } : { text: c.text }));
         const confidence = typeof t.confidence === 'number' && Number.isFinite(t.confidence) ? t.confidence : undefined;
-        facts.set(key, confidence === undefined ? { candidates } : { confidence, candidates });
+        const num = (v: unknown) => typeof v === 'number' && Number.isFinite(v) ? v : undefined;
+        const readings: OmrReading[] = (Array.isArray(t.readings) ? t.readings : [])
+            .filter((r: any) => typeof r?.why === 'string' && typeof r?.was === 'string' && typeof r?.now === 'string')
+            .map((r: any) => ({
+                why: r.why, was: r.was, now: r.now,
+                ...(num(r.evidence) !== undefined ? { evidence: r.evidence } : {}),
+                ...(typeof r.fills === 'boolean' ? { fills: r.fills } : {}),
+                ...(num(r.x) !== undefined ? { x: r.x } : {}),
+                ...(num(r.y) !== undefined ? { y: r.y } : {}),
+            }));
+        facts.set(key, {
+            ...(confidence === undefined ? {} : { confidence }),
+            candidates,
+            ...(readings.length > 0 ? { readings } : {}),
+        });
     }
     return facts;
 }

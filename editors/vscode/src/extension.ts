@@ -815,7 +815,7 @@ export function activate(context: vscode.ExtensionContext) {
     registerAiComplete(context, aiDeps);
     // Third: the bars an OMR reader marked, rewritten on request and reviewed beside the scan
     // (docs/omr-ai-fix-design.md). The scan view's slider says which bars are checked at first.
-    registerOmrAiFix(context, { ...aiDeps, scanThreshold: scanThresholdOf });
+    registerOmrAiFix(context, { ...aiDeps, scanThreshold: scanThresholdOf, lysc: bundledLysc });
     context.subscriptions.push(vscode.commands.registerCommand('lilysharp.selectAiModel', () => pickAiModel()));
 
     // The Explorer's batch export: right-click one or more .lys → the format

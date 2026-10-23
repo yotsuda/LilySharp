@@ -21,6 +21,12 @@ All notable changes to the Lily# VS Code extension are documented here.
   image is sent the text alone, and the output channel says so). Two more doors to the same
   command: **Fix this bar with AI…** among a `@todo`'s quick fixes (that one bar, no list), and
   **Fix N marks with AI…** in the scan view's head, N being the marks its slider shows.
+- **The reader checks each proposal against the scan before it is shown** — a third gate,
+  *verify*, beside *compile* and *length*: `omr verify` compares the bar as proposed with the
+  page (a reader that reports `verify-bars`; `lilysharp.ai.omrFixVerify`, on; a few seconds a
+  bar). A proposal the scan contradicts is shown with *verify ✗* and its reason, and *Accept
+  all* leaves it alone. The reader's other readings of a doubtful bar (`readings` in
+  `x.omr.json`) go to the model as hints.
 
 ### Chord symbols as a chart prints them
 

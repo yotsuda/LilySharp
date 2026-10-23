@@ -267,6 +267,21 @@ describe('the readings of a mark (B6)', () => {
         assert.deepEqual(facts.get('b9'), { candidates: [] });
     });
 
+    it('reads a length mark\'s other readings (the reader\'s reply of 2026-10-23), the ill-formed ones left out', () => {
+        const facts = markFactsOf(JSON.stringify({
+            version: 1,
+            todos: [{ key: 'b22-p1', kind: 'bar', source: 'length', confidence: 0.3, candidates: [], readings: [
+                { why: 'a dot more', was: 'a4', now: 'a4.', evidence: 0.67, fills: false, x: 718, y: 253 },
+                { why: 'a rest half seen', was: '-', now: 'r8', evidence: 0.41, fills: true },
+                { why: 'no was' },
+            ] }],
+        }));
+        assert.deepEqual(facts.get('b22-p1'), { confidence: 0.3, candidates: [], readings: [
+            { why: 'a dot more', was: 'a4', now: 'a4.', evidence: 0.67, fills: false, x: 718, y: 253 },
+            { why: 'a rest half seen', was: '-', now: 'r8', evidence: 0.41, fills: true },
+        ] });
+    });
+
     it('is nothing for what is not a side file', () => {
         assert.equal(markFactsOf('{').size, 0);
         assert.equal(markFactsOf(JSON.stringify({ version: 9, todos: [{ key: 'a' }] })).size, 0);

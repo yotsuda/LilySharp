@@ -22,7 +22,7 @@
 import * as jpeg from 'jpeg-js';
 import { PNG } from 'pngjs';
 import {
-    Box, OmrMarkFacts, ScanBar, ScanSideFile, ServerTodo, lineAround, shownAt,
+    Box, OmrMarkFacts, OmrReading, ScanBar, ScanSideFile, ServerTodo, lineAround, shownAt,
 } from './omrScanCore';
 import { cleanCandidate } from './aiTransformCore';
 
@@ -56,6 +56,8 @@ export interface FixTarget {
     readonly crop?: { readonly page: number; readonly box: Box };
     /** The readings the reader offers for the marks (its `candidates`), in its order. */
     readonly candidates: readonly { readonly label?: string; readonly text: string }[];
+    /** The reader's other readings of one event of the bar (its `readings`, M3), in its order. */
+    readonly readings: readonly OmrReading[];
 }
 
 /**
@@ -90,13 +92,14 @@ export function fixTargets(
         const line = text.slice(0, lineStart).split('\n').length - 1;
         const placed = group.find(t => t.Measure !== null && t.Measure !== undefined);
         const candidates = keys.flatMap(k => facts?.get(k)?.candidates ?? []);
+        const readings = keys.flatMap(k => facts?.get(k)?.readings ?? []);
         const crop = cropOf(keys, line, side);
         targets.push({
             line, start, end, written: text.slice(start, end), keys, memos,
             measure: placed?.Measure ?? group[0].Measure, part: placed?.Part ?? group[0].Part,
             ...(confidence === undefined ? {} : { confidence }),
             ...(crop ? { crop } : {}),
-            candidates,
+            candidates, readings,
         });
     }
     return targets.sort((a, b) => doubtOf(a) - doubtOf(b) || a.line - b.line);
@@ -301,6 +304,17 @@ export function taskPromptOf(input: TaskInput): string {
         parts.push('Other readings the reader offers for the marked item:');
         for (const c of target.candidates) { parts.push(`  - ${c.label ? `${c.text} (${c.label})` : c.text}`); }
     }
+    if (target.readings.length > 0) {
+        parts.push('');
+        parts.push('Other readings of ONE event of this bar that the reader\'s detector half-supports (as written -> as it');
+        parts.push('might be; "-" is no event; evidence 0..1 is the detector\'s; "fills" means every voice then fills the meter):');
+        for (const r of target.readings) {
+            const facts = [r.why, r.evidence === undefined ? null : `evidence ${r.evidence.toFixed(2)}`,
+                r.fills === undefined ? null : r.fills ? 'fills the bar' : 'does not fill the bar'].filter(Boolean);
+            parts.push(`  - ${r.was} -> ${r.now} (${facts.join(', ')})`);
+        }
+        parts.push('They are hints from the page, not answers: take one only if the picture and the beats agree with it.');
+    }
     if (diagnostics.length > 0) {
         parts.push('');
         parts.push('What the Lily# compiler reports on this line as it stands:');
@@ -406,12 +420,65 @@ export interface GateVerdict {
     readonly compile: boolean;
     /** The proposed bar is neither too short nor too long. */
     readonly length: boolean;
+    /** The reader's comparison of the proposal with the scan (gate ③, M3): true when the bar
+     *  shows no difference worth a note, false when it does; undefined when it was not run (no
+     *  reader with `verify-bars`, no side file, the setting off, or the first two gates failed). */
+    readonly verify?: boolean;
     /** What failed, in the compiler's words — what the model is told. */
     readonly problems: readonly string[];
 }
 
 /** A proposal below this is shown, but not taken by "Accept all". */
 export const SURE_ENOUGH = 0.5;
+
+/** A `bar` event of the reader's `verify --bars` (omrCore.OmrEvent), the fields the gate reads. */
+export interface BarCheck {
+    readonly measure: number;
+    readonly part: string | null;
+    readonly differs: boolean;
+    readonly confidence: number;
+    readonly memo?: string;
+}
+
+/** A difference the reader is at least this sure needs no edit does not fail the gate: a tie, a
+ *  slur, a dot it saw on the scan alone, a blank bar's rest are reported as differences at
+ *  0.6–0.9 (the reply of 2026-10-23), and are not what a bar's rewrite is about. */
+export const VERIFY_SURE = 0.8;
+
+/** The reader's own number for the bar written on the target's line (`measures[].line`), and the
+ *  part it read it as — what `verify --bars` and its `bar` events go by. The reader's count parts
+ *  from the page's printed numbers after a bar it wrote too long, so the server's `Measure` is
+ *  only the fallback. */
+export function readerBarOf(target: FixTarget, side?: ScanSideFile): { measure: number; part: string | null } | undefined {
+    const bar = side?.measures.find(m => m.line === target.line + 1);
+    if (bar) {
+        return { measure: bar.measure, part: bar.part ?? null };
+    }
+    return target.measure === null || target.measure === undefined ? undefined : { measure: target.measure, part: target.part ?? null };
+}
+
+/**
+ * Gate ③'s verdict from the reader's `bar` events: the checks of the bar's own part and of the
+ * bar as a whole (`part: null`, its stems and tuplets) must each show no difference, or one the
+ * reader is VERIFY_SURE of. Undefined when the reader reported nothing for the bar (the gate
+ * stays "—"). The memos of the failing checks are what the model is told.
+ */
+export function verifyVerdict(checks: readonly BarCheck[], bar: { measure: number; part: string | null }): { ok: boolean; memos: string[] } | undefined {
+    const mine = checks.filter(c => c.measure === bar.measure && (c.part === null || bar.part === null || c.part === bar.part));
+    if (mine.length === 0) {
+        return undefined;
+    }
+    const failing = mine.filter(c => c.differs && c.confidence < VERIFY_SURE);
+    return { ok: failing.length === 0, memos: failing.map(c => c.memo ?? `bar ${c.measure}${c.part ? ` (${c.part})` : ''}: differs from the scan`) };
+}
+
+/** The gate with the reader's verdict folded in: `verify` set, its memos among the problems. */
+export function withVerify(gate: GateVerdict, verdict: { ok: boolean; memos: string[] } | undefined): GateVerdict {
+    if (!verdict) {
+        return gate;
+    }
+    return { ...gate, verify: verdict.ok, problems: verdict.ok ? gate.problems : [...gate.problems, ...verdict.memos.map(m => `the scan says: ${m}`)] };
+}
 
 /**
  * Judges a proposal spliced in at `span` by the compiler's reports on the whole file before
@@ -434,9 +501,9 @@ export function gateOf(baseline: readonly Diag[], candidate: readonly Diag[], sp
     };
 }
 
-/** Whether "Accept all" takes a row: both gates passed and the model sure enough. */
+/** Whether "Accept all" takes a row: every gate that ran passed, and the model is sure enough. */
 export function acceptableByAll(gate: GateVerdict, confidence: number | null): boolean {
-    return gate.compile && gate.length && (confidence === null || confidence >= SURE_ENOUGH);
+    return gate.compile && gate.length && gate.verify !== false && (confidence === null || confidence >= SURE_ENOUGH);
 }
 
 // ---------------------------------------------------------------------------------------------

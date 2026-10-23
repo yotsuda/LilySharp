@@ -278,6 +278,11 @@
           "default": true,
           "markdownDescription": "Show the model the scan of each bar *Fix OMR Marks with AI…* rewrites (the bar's crop of the page the OMR reader read, from `x.omr.json`), not only the text. A model that takes no image is sent the text alone, and the *Lily# AI* output channel says so. Off: text only — to compare, or to save tokens."
         },
+        "lilysharp.ai.omrFixVerify": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Have the OMR reader compare each proposal *Fix OMR Marks with AI…* makes with the scanned page before it is shown (`omr verify --candidate --bars`, a few seconds a bar; needs a reader that reports `verify-bars`). A proposal the scan contradicts is shown with *verify ✗* and left out of *Accept all*. Off: the compile and bar-length gates only."
+        },
         "lilysharp.ai.omrFixBatch": {
           "type": "number",
           "default": 25,

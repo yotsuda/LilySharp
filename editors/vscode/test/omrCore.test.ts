@@ -25,7 +25,7 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import {
     OMR_EXTENSION_ID, OMR_INPUT_EXTENSIONS, OMR_MIN_VERSION, OMR_PATH_VARIABLE, exitMeaning, launchOf, locateOmr, omrRid,
-    parseEvent, parseVersion, canVerify, readArguments, readerIsOld, readerOfExports, runOmr, speaksProtocol, verifyArguments,
+    parseEvent, parseVersion, canVerify, canVerifyBars, readArguments, readerIsOld, readerOfExports, runOmr, speaksProtocol, verifyArguments,
 } from '../src/omrCore';
 
 describe('the core is editor-free', () => {
@@ -168,6 +168,28 @@ describe('checking an edited score against the scan (B5)', () => {
         assert.equal(canVerify({ version: '0.3.0', protocol: 1, commands: ['read', 'verify'] }), true);
         assert.equal(canVerify({ version: '0.3.0', protocol: 1, commands: ['read'] }), false);
         assert.equal(canVerify({ version: '0.2.0', protocol: 1 }), false);   // today's reader
+    });
+
+    it('compares a candidate text for some bars without writing, when the reader has verify-bars (the AI fix\'s gate ③)', () => {
+        assert.deepEqual(verifyArguments('C:\\s\\x.lys', 'C:\\x\\lysc.exe', { candidate: 'C:\\t\\c.lys', bars: [12, 13], noWrite: true }),
+            ['verify', 'C:\\s\\x.lys', '--candidate', 'C:\\t\\c.lys', '--bars', '12,13', '--no-write', '--progress', 'json', '--lysc', 'C:\\x\\lysc.exe']);
+        assert.deepEqual(verifyArguments('x.lys', undefined, { bars: [] }), ['verify', 'x.lys', '--progress', 'json']);
+        const reply = { version: '0.3.0', protocol: 1, commands: ['read', 'verify'], inputs: ['png'], features: ['verify-bars'] };
+        assert.equal(canVerifyBars(reply), true);
+        assert.equal(canVerifyBars({ ...reply, features: [] }), false);
+        assert.equal(canVerifyBars({ version: '0.3.0', protocol: 1, commands: ['read', 'verify'] }), false);
+        assert.deepEqual(parseVersion(JSON.stringify(reply))?.features, ['verify-bars']);
+    });
+
+    it('reads the bar events the comparison reports', () => {
+        assert.deepEqual(parseEvent('{"event":"bar","measure":2,"part":"p6","differs":true,"confidence":0.2,"memo":"bar 2: a half note short of 4/4"}'),
+            { event: 'bar', measure: 2, part: 'p6', differs: true, confidence: 0.2, memo: 'bar 2: a half note short of 4/4' });
+        assert.deepEqual(parseEvent('{"event":"bar","measure":2,"part":null,"differs":false,"confidence":1}'),
+            { event: 'bar', measure: 2, part: null, differs: false, confidence: 1 });
+        assert.deepEqual(parseEvent('{"event":"bar","measure":3,"differs":true}'), { event: 'bar', measure: 3, part: null, differs: true, confidence: 0 });
+        assert.equal(parseEvent('{"event":"bar","measure":"3","differs":true}'), undefined);
+        const done = parseEvent('{"event":"done","lys":"x.lys","candidate":"c.lys","bars":14,"differing":13}');
+        assert.equal(done?.event === 'done' && done.differing, 13);
     });
 });
 

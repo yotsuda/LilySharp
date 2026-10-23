@@ -25,21 +25,36 @@
 
 import * as vscode from 'vscode';
 import * as fs from 'fs';
+import * as os from 'os';
 import * as path from 'path';
+import { execFile } from 'child_process';
 import type { LanguageClient } from 'vscode-languageclient/node';
 import { AiTransformDeps, loadGrammar } from './aiTransform';
 import { ChatClient, ChatMessage, resolveChatClient } from './modelClient';
 import {
-    BarNeighbours, Diag, FixTarget, FixableTodo, GateVerdict, Proposal, Rgba, acceptableByAll, anchorOf, averageOf, batchesOf,
-    checkedByDefault, cropRect, decodeImage, diagnosticsOn, estimateOf, fixTargets, gateOf, headOf, labelOf, neighboursOf,
-    parseProposal, repairPromptOf, scanCropPng, spliceBar, systemPromptOf, targetsInLines, taskPromptOf, withSample,
+    BarCheck, BarNeighbours, Diag, FixTarget, FixableTodo, GateVerdict, Proposal, Rgba, acceptableByAll, anchorOf, averageOf,
+    batchesOf, checkedByDefault, cropRect, decodeImage, diagnosticsOn, estimateOf, fixTargets, gateOf, headOf, labelOf,
+    neighboursOf, parseProposal, readerBarOf, repairPromptOf, scanCropPng, spliceBar, systemPromptOf, targetsInLines, taskPromptOf,
+    verifyVerdict, withSample, withVerify,
 } from './omrAiFixCore';
+import { OmrVersion, canVerifyBars, exitMeaning, launchOf, parseVersion, runOmr, verifyArguments } from './omrCore';
+import { findOmr } from './omrReader';
 import { SCAN_DEFAULT_THRESHOLD, ScanSideFile, lineAround, markFactsOf, parseSideFile, shownImage, sideFileOf } from './omrScanCore';
 import { textFontFaceCss, textFontsRoot } from './scoreFonts';
 
 export interface OmrAiFixDeps extends AiTransformDeps {
     /** The *Marks below* slider of the document's scan view, if one is open (omrScan.scanThresholdOf). */
     scanThreshold: (lys: string) => number | undefined;
+    /** The lysc the reader engraves with when it verifies, if the extension carries one. */
+    lysc: () => string | undefined;
+}
+
+/** The reader that compares a proposal with the scan (gate ③): where it is, the lysc it draws
+ *  with, and the .lys whose side file and pages it compares against. */
+interface Verifier {
+    readonly launch: { command: string; prefix: string[] };
+    readonly lysc?: string;
+    readonly lysPath: string;
 }
 
 // ---- Server DTO mirrors (LspProtocolDtos.cs) ----
@@ -77,6 +92,78 @@ interface FixRun {
     readonly images: boolean;
     /** The pages decoded so far (null: the page could not be read), by page number. */
     readonly pages: Map<number, Rgba | null>;
+    /** The reader for gate ③, when there is one that can (`verify-bars`) and the setting is on. */
+    readonly verifier?: Verifier;
+}
+
+/** `omr --version --json` once per reader path (a run asks for every bar). */
+const versions = new Map<string, Promise<OmrVersion | undefined>>();
+
+/** The verifier for a run, or undefined with the reason logged: the setting, the side file, a
+ *  reader, and its `verify-bars` all have to be there. */
+async function verifierFor(context: vscode.ExtensionContext, deps: OmrAiFixDeps, doc: vscode.TextDocument, side: ScanSideFile | undefined): Promise<Verifier | undefined> {
+    if (!vscode.workspace.getConfiguration('lilysharp').get<boolean>('ai.omrFixVerify', true)) {
+        log('  gate verify: off (lilysharp.ai.omrFixVerify)');
+        return undefined;
+    }
+    if (!side || doc.uri.scheme !== 'file') {
+        log('  gate verify: no side file beside the .lys — not run');
+        return undefined;
+    }
+    const where = await findOmr(context);
+    if (!where) {
+        log('  gate verify: no OMR reader on this machine — not run');
+        return undefined;
+    }
+    const launch = launchOf(where.path);
+    if (!versions.has(where.path)) {
+        versions.set(where.path, new Promise(resolve =>
+            execFile(launch.command, [...launch.prefix, '--version', '--json'], { timeout: 20000, windowsHide: true },
+                (err, stdout) => resolve(err ? undefined : parseVersion(stdout)))));
+    }
+    const v = await versions.get(where.path);
+    if (!v || !canVerifyBars(v)) {
+        log(`  gate verify: the reader at ${where.path}${v ? ` (${v.version})` : ''} has no 'verify-bars' — not run`);
+        return undefined;
+    }
+    return { launch, lysc: deps.lysc(), lysPath: doc.uri.fsPath };
+}
+
+/**
+ * Gate ③: the reader compares the proposal — the whole file with the bar rewritten, in a temp
+ * file — with the scan, for this one bar (`omr verify x.lys --candidate tmp --bars N --no-write`),
+ * and the gate reads its `bar` events (verifyVerdict). Undefined when it could not say.
+ */
+async function verifyProposal(run: FixRun, target: FixTarget, spliced: string, token: vscode.CancellationToken): Promise<{ ok: boolean; memos: string[] } | undefined> {
+    const verifier = run.verifier;
+    const bar = readerBarOf(target, run.side);
+    if (!verifier || !bar) {
+        return undefined;
+    }
+    const tmp = path.join(os.tmpdir(), `lilysharp-omr-fix-${process.pid}-${Date.now()}-${Math.floor(Math.random() * 1e6)}.lys`);
+    const abort = new AbortController();
+    const sub = token.onCancellationRequested(() => abort.abort());
+    try {
+        fs.writeFileSync(tmp, spliced, 'utf8');
+        const checks: BarCheck[] = [];
+        const result = await runOmr(verifier.launch,
+            verifyArguments(verifier.lysPath, verifier.lysc, { candidate: tmp, bars: [bar.measure], noWrite: true }),
+            e => { if (e.event === 'bar') { checks.push(e); } }, () => { }, abort.signal);
+        const meaning = exitMeaning(result.exitCode);
+        if (meaning !== 'ok' && meaning !== 'partial') {
+            if (meaning !== 'stopped') {
+                log(`  ${labelOf(target)}: verify did not run (exit ${result.exitCode}): ${result.errors.concat(result.stderrTail).slice(-2).join(' / ')}`);
+            }
+            return undefined;
+        }
+        return verifyVerdict(checks, bar);
+    } catch (err) {
+        log(`  ${labelOf(target)}: verify could not start: ${err}`);
+        return undefined;
+    } finally {
+        sub.dispose();
+        try { fs.unlinkSync(tmp); } catch { /* gone already */ }
+    }
 }
 
 let output: vscode.OutputChannel | undefined;
@@ -183,16 +270,18 @@ async function runOmrAiFix(context: vscode.ExtensionContext, deps: OmrAiFixDeps,
     const cfg = vscode.workspace.getConfiguration('lilysharp');
     const limit = cfg.get<number>('ai.omrFixBatch', 25);
     const batches = batchesOf(chosen, limit);
+    log(`Fix OMR marks: ${path.basename(doc.uri.fsPath)} — ${chosen.length} of ${targets.length} bars via ${chat.label}`
+        + `, scan ${cfg.get<boolean>('ai.omrFixImages', true) && side && side.pages.length > 0 ? 'shown to the model' : cfg.get<boolean>('ai.omrFixImages', true) ? 'not available (no page beside the file)' : 'off (lilysharp.ai.omrFixImages)'}`
+        + (batches.length > 1 ? `, in ${batches.length} batches of ${limit}` : ''));
+    const verifier = await verifierFor(context, deps, doc, side);
     const run: FixRun = {
         uri: doc.uri, version: doc.version, text, side,
         before: await client.sendRequest<SvgResponse>('lilysharp/renderText', { Text: text }),
         rows: [],
         images: cfg.get<boolean>('ai.omrFixImages', true) && !!side && side.pages.length > 0,
         pages: new Map(),
+        ...(verifier ? { verifier } : {}),
     };
-    log(`Fix OMR marks: ${path.basename(doc.uri.fsPath)} — ${chosen.length} of ${targets.length} bars via ${chat.label}`
-        + `, scan ${run.images ? 'shown to the model' : cfg.get<boolean>('ai.omrFixImages', true) ? 'not available (no page beside the file)' : 'off (lilysharp.ai.omrFixImages)'}`
-        + (batches.length > 1 ? `, in ${batches.length} batches of ${limit}` : ''));
 
     for (let b = 0; b < batches.length; b++) {
         if (b > 0) {
@@ -306,8 +395,11 @@ async function runBatch(
         clearLock();
     }
     const done = run.rows.slice(-batch.length);
+    const verified = done.filter(r => r.gate?.verify !== undefined);
     log(`Fix OMR marks: ${done.length} bars · ${done.filter(r => r.proposal?.bar).length} proposals`
-        + ` · scan ${run.images ? (chat.sentImages?.() === false ? 'refused' : 'on') : 'off'} · ${done.reduce((s, r) => s + r.seconds, 0).toFixed(0)} s`);
+        + ` · scan ${run.images ? (chat.sentImages?.() === false ? 'refused' : 'on') : 'off'}`
+        + ` · verify ${run.verifier ? `${verified.filter(r => r.gate!.verify).length} ✓ ${verified.filter(r => !r.gate!.verify).length} ✗` : 'off'}`
+        + ` · ${done.reduce((s, r) => s + r.seconds, 0).toFixed(0)} s`);
     return complete;
 }
 
@@ -347,7 +439,9 @@ function outcomeOf(row: Omit<FixRow, 'seconds'>): string {
     if (!row.proposal.bar) {
         return `no proposal (${row.proposal.reason || 'the model gave no reason'})`;
     }
-    const gates = row.gate ? `compile ${row.gate.compile ? '✓' : '✗'} · length ${row.gate.length ? '✓' : '✗'}` : 'ungated';
+    const gates = row.gate
+        ? `compile ${row.gate.compile ? '✓' : '✗'} · length ${row.gate.length ? '✓' : '✗'} · verify ${row.gate.verify === undefined ? '—' : row.gate.verify ? '✓' : '✗'}`
+        : 'ungated';
     return `proposal ${JSON.stringify(row.proposal.bar)} (${gates}${row.proposal.confidence === null ? '' : `, confidence ${row.proposal.confidence.toFixed(2)}`})`
         + (row.proposal.reason ? ` — ${row.proposal.reason}` : '');
 }
@@ -366,7 +460,8 @@ async function fixOne(
             ...(image ? { images: [image] } : {}),
         },
     ];
-    let last: { proposal: Proposal; gate: GateVerdict; after?: SvgResponse } | undefined;
+    let last: { proposal: Proposal; gate: GateVerdict; spliced: string } | undefined;
+    const render = (spliced: string) => client.sendRequest<SvgResponse>('lilysharp/renderText', { Text: spliced });
     for (let attempt = 0; attempt <= MAX_REPAIRS; attempt++) {
         let raw: string;
         try {
@@ -390,19 +485,29 @@ async function fixOne(
         }
         const spliced = spliceBar(run.text, target, proposal.bar);
         const check = await client.sendRequest<CheckCandidateResponse>('lilysharp/checkCandidate', { Text: spliced });
-        const gate = gateOf(baseline, check.Diagnostics ?? [], { start: target.start, length: proposal.bar.length });
-        if (gate.compile && gate.length) {
-            const after = await client.sendRequest<SvgResponse>('lilysharp/renderText', { Text: spliced });
-            return { index, target, proposal, gate, after, state: 'pending' };
+        let gate = gateOf(baseline, check.Diagnostics ?? [], { start: target.start, length: proposal.bar.length });
+        if (gate.compile && gate.length && run.verifier) {
+            // Gate ③: the scan's word on a bar that compiles and fills its meter (a few seconds).
+            gate = withVerify(gate, await verifyProposal(run, target, spliced, token));
         }
-        last = { proposal, gate };
+        if (gate.compile && gate.length && gate.verify !== false) {
+            return { index, target, proposal, gate, after: await render(spliced), state: 'pending' };
+        }
+        last = { proposal, gate, spliced };
         if (attempt < MAX_REPAIRS) {
             messages.push({ role: 'assistant', content: raw });
             messages.push({ role: 'user', content: repairPromptOf(gate.problems) });
         }
     }
-    // Out of repairs: the row says what failed, as "no proposal (reason)" — never silently dropped.
-    return { index, target, proposal: last!.proposal, gate: last!.gate, state: 'pending' };
+    // Out of repairs. A proposal the scan alone contradicts is still shown — the comparison
+    // reports ties and slurs too — with "verify ✗", out of Accept all's reach; one that does
+    // not compile or fill its bar is a row saying what failed ("no proposal (reason)"), never
+    // silently dropped.
+    const { proposal, gate, spliced } = last!;
+    if (gate.compile && gate.length) {
+        return { index, target, proposal, gate, after: await render(spliced), state: 'pending' };
+    }
+    return { index, target, proposal, gate, state: 'pending' };
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -605,10 +710,13 @@ function panelHtml(deps: OmrAiFixDeps, webview: vscode.Webview, run: FixRun): st
         const gates = r.gate
             ? `<span class="${r.gate.compile ? 'ok' : 'bad'}">compile ${r.gate.compile ? '✓' : '✗'}</span> `
               + `<span class="${r.gate.length ? 'ok' : 'bad'}">length ${r.gate.length ? '✓' : '✗'}</span> `
-              + `<span class="dim">verify —</span>`
+              + (r.gate.verify === undefined ? `<span class="dim">verify —</span>`
+                  : `<span class="${r.gate.verify ? 'ok' : 'bad'}">verify ${r.gate.verify ? '✓' : '✗'}</span>`)
             : `<span class="dim">—</span>`;
+        const failed = r.gate && !(r.gate.compile && r.gate.length);
         const reason = !r.proposal ? 'The reply was not the JSON asked for.'
-            : !r.proposal.bar ? (r.gate ? `No proposal passed: ${r.gate.problems.join(' / ') || r.proposal.reason}` : r.proposal.reason || 'The model gave no reason.')
+            : !r.proposal.bar ? (failed ? `No proposal passed: ${r.gate!.problems.join(' / ') || r.proposal.reason}` : r.proposal.reason || 'The model gave no reason.')
+            : r.gate?.verify === false ? `${r.proposal.reason ? `${r.proposal.reason} — ` : ''}${r.gate.problems.filter(p => p.startsWith('the scan says')).join(' / ')}`
             : r.proposal.reason || '';
         const sure = r.proposal?.confidence === null || r.proposal?.confidence === undefined ? '' : ` · confidence ${r.proposal.confidence.toFixed(2)}`;
         const can = !!(r.proposal?.bar) && r.state !== 'applied' && r.state !== 'skipped';

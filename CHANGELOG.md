@@ -19,6 +19,9 @@ workflow attaches that section to the GitHub Release verbatim.
   scan of each bar, the crop of the page the reader read (`lilysharp.ai.omrFixImages`; a model
   that takes no image gets the text alone), and the same command is among a `@todo`'s quick
   fixes (*Fix this bar with AI…*) and in the scan view's head (*Fix N marks with AI…*) (M2).
+  A reader that reports `verify-bars` compares each proposal with the scan before it is shown
+  (the third gate, *verify*; `lilysharp.ai.omrFixVerify`), and its other readings of a bar
+  (`readings`) go to the model as hints (M3).
 
 ### Grace notes
 
