@@ -146,6 +146,7 @@ span ごとの child state＝coroutine の値段（LP の iterator も払う）�
 第 2 声部を編集すると、以前は primary の walk 全体を splice して第 2 声部だけ live に作り直せたが、今は子の小節が tail の
 一部＝tail の外ではないので splice は decline して live（打鍵 40.3→44.6 MB）。取り戻すには「窓に触れた span だけを再 walk する」
 経路が要る＝⑥ で五線状態を共有すると sequential な再 walk は意味を変えるので、今は作らない（ユーザー判断があれば別）。
+**→ 第971 が設計して見送った（§8）**＝失ったのは合成本 2 冊だけの形で、実在の本では ⑤a 後のほうが打鍵は安い。
 
 ### 3.3 段 ⑥ の実測（第970・コード変更 0・Lab `sessions/p970/probe6/`＝`.lys`・`lysc ly --pin-fonts` の双子・両者の png）
 
@@ -281,3 +282,62 @@ header／`Fonts`／`Paper`／`LayoutPlan`／`Time*`／`Tempo*`／`Swing*`**・`_
 `_resolvedChordMembers`・`_resolvedNotes` は**この表の V が仮だった**＝section 頭の part 級の状態で、span の外（section 境界・
 piece opening・和音の解決）にしか書かれず、⑤a で swap しなくても掃きは 0。P に近い。`_cursor.MetadataMeasureOffset` は
 同じ便で消えた（§6）＝`CollectionCursor` は 3 座標。
+
+## 8. span の中の増分＝v2bow 形の再利用を取り戻すか（第971・設計と見込み・コード変更 0）
+
+### 8.1 失ったものを正確に
+
+- **⑤a 前**: checkpoint は primary stream の小節境界（span の外）だけ。span の中を編集すると、primary は直前の checkpoint から
+  span の終わりまで再 walk し後ろを splice。**別に、voice 2..N は毎回の collect で全 span を sequential に再 walk していた**
+  （`BuildExtraVoiceTracks`＝resume した collect でも）。例外が 1 つ＝窓が span の第 2 声部のブロックの中にあるとき
+  （`WindowInsideParallelExtraVoice`）は primary の walk 全体を splice して voice 2 だけ再 walk＝全体が 1 span の本（v2bow1k）で
+  第 2 声部を編集すると打鍵 40.3 MB。
+- **⑤a 後**: span は 1 つの時計で全 branch が一緒に歩くので、編集が span の中なら span 全体（全 branch）を再 walk。代わりに
+  **resume した collect は span の記録（`SpanTrack`）を採用して再 walk しない**。全体が 1 span の v2bow1k は full と同じ＝打鍵 44.0 MB。
+
+### 8.2 どこで払うか（実測・Lab `sessions/p971/spanstats.ps1`／`alloc-v2short*.log`）
+
+span の長さ（text 級の数え＝`voice {` の最初のブロックの `|`）、追跡 679 冊＋実コーパス 336 冊:
+
+| | 冊 | span のある冊 | span の中の小節 | 最長 span |
+|---|---|---|---|---|
+| 全体 | 1,015 | 91 | 2,158 / 69,221（3.1%） | 1000（perf-v2bow1k）・999（perf-restpoly1k）・**実在の最長 8**（air-in-d） |
+| 実コーパス（ベースタブ） | 336 | 5 | — | 2 以下 |
+
+span のある 91 冊の最長 span の分布: 1–2 小節 77・3–8 小節 12・9–32 小節 0・33 以上 **2（合成の perf 本だけ）**。本の 90% 以上を
+1 つの span が占める実在の本は 0。
+
+同じ 1,000 小節で span を実在の形（4 小節の span を 20 小節ごと＝50 span・200 小節）にした **新 `audit/lpreg/perf-v2short1k.lys`**
+（この便で足した・alloc の既定の列に加える）と、span の中に打鍵の anchor を置いた一時変種で、⑤a 前（`4101fa58c` の worktree）と今:
+
+| 本・打鍵の場所 | ⑤a 前 full／打鍵 | 今 full／打鍵 |
+|---|---|---|
+| perf-v2short1k・span の外 | 56.6／13.1 | 57.2／**12.9** |
+| 同・span の中（4 小節 span の voice 2） | 66.9／14.0 | 67.4／**13.8** |
+| perf-v2bow1k・全体 1 span の voice 2 | 124.8／40.3 | 127.5／**44.0** |
+
+⇒ **実在の形では ⑤a 後のほうが打鍵は安い**（span の記録を採用し再 walk しないぶん・−1.5%）。full は coroutine の箱の分 +1%。
+失ったのは「本全体が 1 つの span」の合成本だけ＝+3.7 MB／打鍵（8.4%）。
+
+### 8.3 取り戻す 2 案と値段
+
+- **A. branch replay**: 窓が 1 つの branch のブロックの中なら、その branch だけ再 walk し、他 branch は記録を replay
+  （記録の `KeySignatureChangeItem` を時計の moment で event として流し＝⑥ の key 共有を保ち、小節は採用）。要るもの ⑴ replay
+  branch（coroutine・小）／⑵ decline の規則＝編集 branch に key があった／ある なら replay した heads が旧 key で stale
+  ／⑶ **side table（W・約 30 表）は ⑤a から時刻順に interleave して append される**ので、prefix の watermark では 1 branch
+  の分を切り出せない＝表ごとに branch の札か branch 別の副表が要る（増分の側表モデルの作り直し）。値段: 大。賞金: 合成本の
+  3.7 MB だけ。
+- **B. span checkpoint**: driver が Now を小節頭 (m, 0) に進めたとき、全 branch が小節線で park し carry が無ければ、全
+  `BranchState`＋全 builder を 1 つの checkpoint に取る（span の中の checkpoint）。restore は N branch で driver を再開、
+  splice は N 本の tail。既存機構と同形だが、`WalkCheckpoint`／`CollectWalkProbe`／`CollectResumePlanner`／`CollectTailShifter`
+  は builder 1 本・小節列 1 本を前提＝Resume.cs の芯の書き直し。利点: どの branch の編集にも効き、長い span 一般に効く
+  （⑤a 前より良い）。賞金: 合成本の 3.7 MB・実在の本では 0（span ≤ 8 小節）。
+- **C. 何もしない**: span が再 walk の単位。実在の本の打鍵は ⑤a 前より安い。
+
+### 8.4 見込み（判定）
+
+**良くなる見込みは無い＝C。** 取り戻す対象は合成の perf 本 2 冊だけで、実在の 1,015 冊に 9 小節を超える span は 1 つも無く、
+実在の形では ⑤a 後のほうが既に安い。A・B の値段（増分の側表モデルか Resume の芯の書き直し）は賞金（合成本の 8.4%）に
+見合わない。もし将来、本全体を 1 つの `voice { } { }` で書く本（ピアノ譜の書き方として有り得る）が実コーパスに現れたら、
+正しい形は **B**（A は key の規則で decline が増え、側表の作り直しも要る）。それまでは v2bow1k の打鍵の数字は「全体 1 span の中の
+編集」の計器として読み、実在の形は perf-v2short1k で測る。
