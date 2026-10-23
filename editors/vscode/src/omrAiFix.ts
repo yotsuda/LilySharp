@@ -766,26 +766,30 @@ function panelHtml(deps: OmrAiFixDeps, webview: vscode.Webview, run: FixRun): st
         const sure = r.proposal?.confidence === null || r.proposal?.confidence === undefined ? '' : ` · confidence ${r.proposal.confidence.toFixed(2)}`;
         const can = !!(r.proposal?.bar) && r.state !== 'applied';
         const on = can && !!r.checked;
-        const buttons = r.state === 'skipped' ? `<div class="memo bad">not written last time: the line had changed</div>` : '';
+        const buttons = r.state === 'skipped' ? `<span class="memo bad">· not written last time: the line had changed</span>` : '';
         const box = can
             ? `<label class="take" title="Write this proposal when you press Accept"><input type="checkbox" class="take" data-i="${r.index}" ${on ? 'checked' : ''}> Take</label>`
             : `<label class="take dim" title="${r.state === 'applied' ? 'Written' : 'No proposal to take'}"><input type="checkbox" disabled> ${r.state === 'applied' ? 'Written' : 'Take'}</label>`;
-        // Two rows a bar: a head across the whole width — the bar, the reader's memo, the line,
-        // the time, the way to the editor — and under it the pictures, the reason and the
-        // buttons. A column for the head was a third of the width and wrapped the memo into a
-        // dozen short lines (owner's report 2026-10-23).
-        return `<tr class="row head ${r.state}${on ? ' on' : ''}" data-i="${r.index}">
-  <td colspan="5" class="who">${box} <span class="label">${esc(labelOf(t))}</span>`
+        // Three rows a bar: a head across the whole width — the box, the bar, the reader's memo,
+        // the line, the time, the way to the editor — then the model's reason and the gates,
+        // across the whole width too, and under them the three pictures. A column for either
+        // was a fraction of the width and wrapped its text into a dozen short lines (owner's
+        // reports 2026-10-23).
+        const cls = `row ${r.state}${on ? ' on' : ''}`;
+        return `<tr class="${cls} head" data-i="${r.index}">
+  <td colspan="3" class="who">${box} <span class="label">${esc(labelOf(t))}</span>`
             + (t.memos.length ? ` <span class="memo">${esc(t.memos.join('; '))}</span>` : '')
             + ` <span class="memo dim">· line ${t.line + 1}${t.confidence === undefined ? '' : ` · reader ${t.confidence.toFixed(2)}`} · ${r.seconds.toFixed(1)} s</span>`
             + ` <button data-a="open" data-i="${r.index}" class="link">Open in editor</button></td>
 </tr>
-<tr class="row body ${r.state}${on ? ' on' : ''}" data-i="${r.index}">
+<tr class="${cls} reason" data-i="${r.index}">
+  <td colspan="3" class="why"><span class="gates">${gates}</span>${reason ? ` <span>${esc(reason)}</span>` : ''}`
+            + `${sure ? ` <span class="dim">${sure.replace(/^ · /, '· ')}</span>` : ''}${buttons ? ` ${buttons}` : ''}</td>
+</tr>
+<tr class="${cls} body" data-i="${r.index}">
   <td class="cell">${scan}</td>
   <td class="cell">${now}<pre class="src">${esc(t.written)}</pre></td>
   <td class="cell">${proposal}${r.proposal?.bar ? `<pre class="src">${esc(r.proposal.bar)}</pre>` : ''}</td>
-  <td class="why">${esc(reason)}${sure}<div class="gates">${gates}</div></td>
-  <td class="act">${buttons}</td>
 </tr>`;
     }).join('\n');
 
@@ -821,22 +825,22 @@ tr.applied { opacity:.6; }
 label.take { font-size:12px; margin-right:8px; cursor:pointer; user-select:none; }
 label.take.dim { cursor:default; }
 label.take input { vertical-align:middle; margin:0 3px 0 0; cursor:inherit; }
-/* The head row spans the table; the pictures' row under it closes the bar with the rule. */
+/* The head and the reason rows span the table; the pictures' row under them closes the bar with the rule. */
 tr.head td { border-bottom:none; padding:10px 8px 2px; }
+tr.reason td { border-bottom:none; padding:2px 8px 4px; }
 tr.body td { padding-top: 2px; }
 .who { white-space:normal; }
 .label { font-weight:600; margin-right:6px; }
 .memo { font-size:12px; opacity:.85; }
 .dim { opacity:.6; }
-.cell { width:26%; }
+.cell { width:33%; }
 .pic { display:block; width:100%; height:120px; background:#fff; border:1px solid var(--vscode-panel-border); }
 .none { height:120px; display:flex; align-items:center; justify-content:center; opacity:.6; border:1px dashed var(--vscode-panel-border); }
 .src { margin:4px 0 0; font-family: var(--vscode-editor-font-family, monospace); font-size:11px; white-space:pre-wrap; opacity:.9; }
-.why { font-size:12px; min-width:140px; }
-.gates { margin-top:6px; }
+.why { font-size:12px; white-space:normal; }
+.gates { margin-right:8px; white-space:nowrap; }
 .ok { color: var(--vscode-testing-iconPassed, #3c3); }
 .bad { color: var(--vscode-testing-iconFailed, #e33); }
-.act { white-space:nowrap; width:140px; }
 button { padding:4px 10px; font-size:12px; border:1px solid var(--vscode-button-border, transparent); border-radius:4px; cursor:pointer; margin:0 2px 4px 0;
          background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); }
 button.primary, button.on { background: var(--vscode-button-background); color: var(--vscode-button-foreground); }
@@ -859,7 +863,7 @@ ${before ? `<svg class="store" aria-hidden="true"><symbol id="before" viewBox="$
 </div>
 <div class="main">
 <table>
-<thead><tr><th>Scan</th><th>Now</th><th>Proposal</th><th>Why · gates</th><th></th></tr></thead>
+<thead><tr><th>Scan</th><th>Now</th><th>Proposal</th></tr></thead>
 <tbody>
 ${rows}
 </tbody>
