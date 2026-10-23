@@ -67,9 +67,13 @@ public sealed partial class MeasureCollector
         internal sealed class Branch
         {
             public required int Index;
-            /// <summary>The staff bar the branch's own builder counts its measure 0 from.</summary>
-            public required int MeasureBase;
+            /// <summary>The moment the branch is parked at, in the staff's bars (every builder
+            /// counts its bars from the staff's, <see cref="MeasureBuilder.MeasureIndexBase"/>).</summary>
             public (int Measure, Fraction Position) Target;
+            /// <summary>True while the branch is parked on a <c>key</c> change: the driver resumes
+            /// it before the branches parked on sounding items at the same moment, so the key is
+            /// the staff's for every head of the moment (<see cref="ReachAsync"/>).</summary>
+            public bool PendingKey;
             public Action? Continuation;
             public bool Parked;
             public bool Done;
@@ -131,7 +135,14 @@ public sealed partial class MeasureCollector
         /// is open, when the span has one branch, or when the moment is not past the clock;
         /// otherwise the awaiting branch parks until the span's driver brings the clock there.
         /// </summary>
-        public ReachAwaitable ReachAsync(MeasureBuilder builder)
+        /// <param name="keyChange">True when the item waiting to be added is a <c>key</c> change.
+        /// At its moment the driver resumes a branch parked on one BEFORE the branches parked on
+        /// sounding items, whatever their index — LilyPond hears the key event before any head of
+        /// the timestep is judged (lily/key-engraver.cc:164-202 Key_engraver::read_event sets
+        /// keyAlterations as the event arrives; lily/accidental-engraver.cc:495-500
+        /// Accidental_engraver::process_music reads it after). Scoped to the key with stage ⑥;
+        /// any other item keeps the branches' index order.</param>
+        public ReachAwaitable ReachAsync(MeasureBuilder builder, bool keyChange = false)
         {
             Reaches++;
             if (_spans.Count == 0)
@@ -140,10 +151,11 @@ public sealed partial class MeasureCollector
             var branch = span.Current;
             if (branch == null || span.Branches.Count <= 1)
                 return new ReachAwaitable(this, completed: true);
-            var target = (branch.MeasureBase + builder.CurrentMeasureIndex, builder.CurrentMoment);
+            var target = (builder.CurrentMeasureIndex, builder.CurrentMoment);
             if (Compare(target, span.Now) <= 0)
                 return new ReachAwaitable(this, completed: true);
             branch.Target = target;
+            branch.PendingKey = keyChange;
             return new ReachAwaitable(this, completed: false);
         }
 
@@ -208,8 +220,11 @@ public sealed partial class MeasureCollector
     internal static T RunForTests<T>(ValueTask<T> walk) => Run(walk);
 
     // The three funnels, gated. The walk calls these — never builder.Add* directly — so the
-    // one place a moment advances is the one place the clock is asked (the calls are the
-    // coroutine's yield points; a grep for `builder.Add` in the walk should find none).
+    // one place a moment advances is a place the clock is asked (a grep for `builder.Add` in
+    // the walk should find none). Since session 971 the clock is asked FIRST at the head of
+    // ProcessMusicNode / OpenSoundingItem, before anything about the node is decided (so a
+    // head reads the key a sibling wrote at the same moment); the funnel's ask is then
+    // answered at once, and parks only for a member the node emits at a later moment.
 
     // Each wrapper has a synchronous fast path for the common case — no span open, the clock
     // always reached — and awaits only inside a span: an `async` method costs a state machine
@@ -565,10 +580,11 @@ public sealed partial class MeasureCollector
     /// and scoped this stage to the key on 2026-10-23 (docs/moment-walk-design.md §3.3, §4 ⑥).
     /// </para>
     /// <para>
-    /// Known gap, written by no book in the nets: LilyPond hears the key event before any head of
-    /// the timestep is judged, so a head in a LOWER branch at the very moment of the change reads
-    /// the new key there; here that branch has already run at the moment (the driver runs the
-    /// branches standing at one moment lowest first) and judged its head against the old key.
+    /// The moment of the change: LilyPond hears the key event before any head of the timestep is
+    /// judged, so a head in a LOWER branch at that very moment reads the new key too. The span's
+    /// driver reproduces that by resuming a branch parked on a key change before the branches
+    /// parked on sounding items at the same moment (<see cref="VoiceClock.ReachAsync"/>'s
+    /// <c>keyChange</c>, session 971; until then that head was judged against the old key).
     /// </para>
     /// </remarks>
     private void ShareKeyWithSpanBranches()
@@ -585,6 +601,9 @@ public sealed partial class MeasureCollector
                 s.AmbientTonicStep = _v.AmbientTonicStep;
                 s.AmbientTonicAlter = _v.AmbientTonicAlter;
                 s.AmbientTonicValid = _v.AmbientTonicValid;
+                // The reset walks the Staff's children in LilyPond (update_local_key_signature's
+                // preorder_walk): every voice's memory empties at the key statement.
+                s.MeasureAccidentals.Clear();
             }
     }
 
@@ -637,24 +656,25 @@ public sealed partial class MeasureCollector
         var opening = OctaveCheckpoint.Capture(_v.Octave);
         var outerCursor = _v.Cursor;
         _v.Cursor.VoiceScope = 1;
+        // spanStart is the STAFF's bar already: every builder counts from the staff's
+        // (MeasureBuilder.MeasureIndexBase), a nested span's enclosing one included.
         var children = await RunSpanAsync(
             builder,
             branch0: () => drums != null
                 ? EmitDrumVoice(drums.Upper, builder, stemUp: true)
                 : ProcessMusicNodeSequence(GatherVoiceMusicNodes(voiceBlocks[0]), builder),
             childCount: voiceCount - 1,
-            childMeasureBase: spanStart + outerCursor.MetadataMeasureOffset,
             childState: t => BranchState.ForChild(outerCursor with
             {
-                MetadataMeasureOffset = spanStart + outerCursor.MetadataMeasureOffset,
                 VoiceIndex = outerCursor.VoiceIndex + t + 1,
                 VoiceScope = t + 2,
             }, opening, spanFrame, spanDuration, spanDots, spanMeta),
             childBody: t => CollectMeasuresFromNode(
                 drums != null ? parallel : voiceBlocks[t + 1],
-                applyFilePartial: spanStart + outerCursor.MetadataMeasureOffset == 0,
+                applyFilePartial: spanStart == 0,
                 leadingOffset: spanOffset,
                 logicalIndexBase: MidBarBreaks?.ToLogical(spanStart) ?? spanStart,
+                measureIndexBase: spanStart,
                 emit: drums != null ? b => EmitDrumVoice(drums.Lower, b, stemUp: false) : null));
         _v.Cursor.VoiceScope = null;
         // The beam stamp (ResolveBeamStemDirections) is NOT taken here but where the tracks are
@@ -685,19 +705,17 @@ public sealed partial class MeasureCollector
     /// surfaces from the awaits at the end, as it did from the sequential sub-walks.
     /// </remarks>
     private async ValueTask<List<List<Measure>>> RunSpanAsync(
-        MeasureBuilder primary, Func<ValueTask> branch0, int childCount, int childMeasureBase,
+        MeasureBuilder primary, Func<ValueTask> branch0, int childCount,
         Func<int, BranchState> childState, Func<int, ValueTask<List<Measure>>> childBody)
     {
-        var enclosing = _clock.CurrentSpan?.Current;
-        int primaryBase = enclosing?.MeasureBase ?? 0;
-        var span = _clock.OpenSpan((primaryBase + primary.CurrentMeasureIndex, primary.CurrentMoment));
-        var b0 = new VoiceClock.Branch { Index = 0, MeasureBase = primaryBase };
+        var span = _clock.OpenSpan((primary.CurrentMeasureIndex, primary.CurrentMoment));
+        var b0 = new VoiceClock.Branch { Index = 0 };
         span.Branches.Add(b0);
         var kids = new VoiceClock.Branch[childCount];
         var kidTasks = new ValueTask<List<Measure>>[childCount];
         for (int t = 0; t < childCount; t++)
         {
-            kids[t] = new VoiceClock.Branch { Index = t + 1, MeasureBase = childMeasureBase, State = childState(t) };
+            kids[t] = new VoiceClock.Branch { Index = t + 1, State = childState(t) };
             span.Branches.Add(kids[t]);
         }
 
@@ -719,6 +737,9 @@ public sealed partial class MeasureCollector
         // The loop.
         while (true)
         {
+            // The lowest branch standing at the clock — a branch parked on a `key` change
+            // before any other (VoiceClock.ReachAsync's keyChange), as LilyPond hears the event
+            // before it judges the moment's heads.
             VoiceClock.Branch? pick = null;
             (int Measure, Fraction Position)? earliest = null;
             foreach (var b in span.Branches)
@@ -729,8 +750,13 @@ public sealed partial class MeasureCollector
                     throw new InvalidOperationException("a span branch is neither done nor parked");
                 if (VoiceClock.Compare(b.Target, span.Now) <= 0)
                 {
-                    pick = b;
-                    break;
+                    if (b.PendingKey)
+                    {
+                        pick = b;
+                        break;
+                    }
+                    pick ??= b;
+                    continue;
                 }
                 if (earliest is not { } e || VoiceClock.Compare(b.Target, e) < 0)
                     earliest = b.Target;

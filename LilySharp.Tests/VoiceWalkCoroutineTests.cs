@@ -114,6 +114,56 @@ public class VoiceWalkCoroutineTests
         Assert.Null(fis.Accidental);
     }
 
+    /// <summary>The <c>key</c> at the very moment of voice 1's second <c>f'</c>: LilyPond hears the
+    /// key event before it judges the moment's heads, so that <c>f'</c> is a natural in D major too
+    /// (LilyPond 2.26.0 twin: Lab sessions/p971/probe5/p5-key-same-moment). The span's driver
+    /// resumes the branch parked on the key change first.</summary>
+    private const string KeyAtTheSameMomentBook = """
+        octave absolute
+        time 4/4
+        key c major
+        part m { clef treble }
+        section A { m { voice { f'4 f' g' a' | f'4 g' a' b' | } { d4 key d major e fis g | d4 e fis g | } } }
+        form { ~A }
+        score { staff m }
+        """;
+
+    [Fact]
+    public void KeyChangeInVoice2_AtTheSameMoment_GovernsVoice1sHeadThere()
+    {
+        var collector = new MeasureCollector();
+        var score = collector.Collect(SyntaxTree.Parse(KeyAtTheSameMomentBook));
+
+        var bar1 = score.Voices[0].Measures[0].Items.OfType<NoteItem>().ToList();
+        Assert.Null(bar1[0].Accidental);
+        Assert.Equal("natural", bar1[1].Accidental);
+        Assert.Equal("natural", Assert.IsType<NoteItem>(score.Voices[0].Measures[1].Items.First(i => i is NoteItem)).Accidental);
+    }
+
+    /// <summary>A key statement empties the accidental memory, in one voice as in LilyPond
+    /// (lily/accidental-engraver.cc:108-130 Accidental_engraver::update_local_key_signature):
+    /// <c>f'4 key d major f'</c> prints the natural on the second <c>f'</c>, which the bar's memory
+    /// of the first (a natural, in C) used to suppress (LilyPond 2.26.0 twin: Lab
+    /// sessions/p971/probe5/p6-key-resets-memory).</summary>
+    [Fact]
+    public void KeyChange_EmptiesTheAccidentalMemory()
+    {
+        const string book = """
+            octave absolute
+            time 4/4
+            key c major
+            part m { clef treble }
+            section A { m { f'4 key d major f' g' a' | f'4 g' a' b' | } }
+            form { ~A }
+            score { staff m }
+            """;
+        var score = new MeasureCollector().Collect(SyntaxTree.Parse(book));
+
+        var bar1 = score.Voices[0].Measures[0].Items.OfType<NoteItem>().ToList();
+        Assert.Null(bar1[0].Accidental);
+        Assert.Equal("natural", bar1[1].Accidental);
+    }
+
     /// <summary>The synchronous entry points run the coroutine to completion; a walk that
     /// suspended on its clock with no scheduler is an error, said in words, not a blocked thread.</summary>
     [Fact]

@@ -946,7 +946,7 @@ public sealed partial class MeasureCollector
     {
         if (_v.KeyCourtesyBuilder is not { } builder)
             return false;
-        int measure = builder.CurrentMeasureIndex + _v.Cursor.MetadataMeasureOffset;
+        int measure = builder.CurrentMeasureIndex;
         var clef = ParseClefType(_v.Meta.Clef);
         if (_v.Cursor.StaffIndex != _keyCourtesyStaff || measure < _keyCourtesyMeasure)
         {

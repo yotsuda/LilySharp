@@ -529,7 +529,7 @@ public sealed partial class MeasureCollector
 
         // The staff's bar, not the builder's: see ProcessTuplet (the group's bracket, chord
         // name, dynamics and articulations are all keyed by it).
-        int measureIndex = builder.CurrentMeasureIndex + _v.Cursor.MetadataMeasureOffset;
+        int measureIndex = builder.CurrentMeasureIndex;
         int startNoteIndex = builder.CurrentItemCount;
         Fraction startTiming = builder.CurrentDuration;
 
@@ -972,6 +972,18 @@ public sealed partial class MeasureCollector
 
     private async ValueTask ProcessMusicNode(SyntaxNode node, MeasureBuilder builder, MarkerFlags m = default)
     {
+        // The clock first: nothing about the node is decided before the staff's clock stands at
+        // its moment — LilyPond processes an iterator only once the global clock has reached it
+        // (Global_context::iterate), so a head is judged against the key the OTHER voices have
+        // written up to that moment, and a `key` writes the staff's key only when the moment is
+        // reached (stage ⑥, session 971; until then a branch ran ahead and decided its heads
+        // before a sibling's key at the same moment was heard). The funnels reach again as the
+        // item is added, trivially by then. Outside a span the ask is answered at once.
+        if (_clock.SpanOpen)
+            await _clock.ReachAsync(builder, keyChange: node is KeySignatureSyntax);
+        else
+            _clock.CountReach();
+
         // Record mode (CollectWalkProbe): every processed node at ANY depth funnels
         // through here — including phrase/variable bodies inlined from elsewhere in
         // the file, whose spans are NOT inside the flat-list caller's span. Folding
@@ -1093,7 +1105,7 @@ public sealed partial class MeasureCollector
 
             case NoteSyntax note:
                 {
-                    int measureIndex = builder.CurrentMeasureIndex + _v.Cursor.MetadataMeasureOffset;
+                    int measureIndex = builder.CurrentMeasureIndex;
                     int itemIndex = builder.CurrentItemCount;
                     // Onset timing of this note (elapsed duration before it is added)
                     // — anchors note-attached marks to the right column.
@@ -1115,7 +1127,7 @@ public sealed partial class MeasureCollector
                     // reader for it at all — they emitted a sounding note here.
                     if (Semantics.PitchedRest.Is(note))
                     {
-                        int prMeasureIndex = builder.CurrentMeasureIndex + _v.Cursor.MetadataMeasureOffset;
+                        int prMeasureIndex = builder.CurrentMeasureIndex;
                         int prItemIndex = builder.CurrentItemCount;
                         Fraction prAnchorTiming = builder.CurrentDuration;
                         var pitchedRest = CreatePitchedRestItem(note);
@@ -1157,7 +1169,7 @@ public sealed partial class MeasureCollector
 
             case DrumNoteSyntax drumNote:
                 {
-                    int drumMeasureIndex = builder.CurrentMeasureIndex + _v.Cursor.MetadataMeasureOffset;
+                    int drumMeasureIndex = builder.CurrentMeasureIndex;
                     int drumItemIndex = builder.CurrentItemCount;
                     Fraction drumAnchorTiming = builder.CurrentDuration;
                     // Opened like every sounding item — above all for the grace waiting for
@@ -1184,7 +1196,7 @@ public sealed partial class MeasureCollector
                     var restItem = CreateRestItem(rest, bar: builder.SenzaMisura ? null
                         : builder.CurrentMeasureLength - builder.CurrentDuration is { Numerator: > 0 } left
                             ? left : builder.CurrentMeasureLength);
-                    int restMeasureIndex = builder.CurrentMeasureIndex + _v.Cursor.MetadataMeasureOffset;
+                    int restMeasureIndex = builder.CurrentMeasureIndex;
                     int restItemIndex = builder.CurrentItemCount;
                     Fraction restAnchorTiming = builder.CurrentDuration;
                     int count = rest.MeasureCount;
@@ -1302,7 +1314,7 @@ public sealed partial class MeasureCollector
 
             case ChordSyntax chord:
                 {
-                    int measureIndex = builder.CurrentMeasureIndex + _v.Cursor.MetadataMeasureOffset;
+                    int measureIndex = builder.CurrentMeasureIndex;
                     int itemIndex = builder.CurrentItemCount;
                     Fraction chordAnchorTiming = builder.CurrentDuration;
                     // The EMPTY chord <> is a zero-time carrier: it adds NO item,
@@ -1395,7 +1407,7 @@ public sealed partial class MeasureCollector
             // expands q after \relative, so a q is transparent to the frame).
             case ChordRepetitionSyntax rep:
                 {
-                    int measureIndex = builder.CurrentMeasureIndex + _v.Cursor.MetadataMeasureOffset;
+                    int measureIndex = builder.CurrentMeasureIndex;
                     int itemIndex = builder.CurrentItemCount;
                     Fraction repAnchorTiming = builder.CurrentDuration;
                     (itemIndex, bool isCue, _) =
@@ -1431,7 +1443,7 @@ public sealed partial class MeasureCollector
             // note.
             case SlashNoteSyntax slash:
                 {
-                    int measureIndex = builder.CurrentMeasureIndex + _v.Cursor.MetadataMeasureOffset;
+                    int measureIndex = builder.CurrentMeasureIndex;
                     int itemIndex = builder.CurrentItemCount;
                     Fraction slashAnchorTiming = builder.CurrentDuration;
                     (itemIndex, bool isCue, _) =
@@ -1453,7 +1465,7 @@ public sealed partial class MeasureCollector
             // copy carries the original's absolute spelling).
             case BareDurationSyntax bare:
                 {
-                    int measureIndex = builder.CurrentMeasureIndex + _v.Cursor.MetadataMeasureOffset;
+                    int measureIndex = builder.CurrentMeasureIndex;
                     int itemIndex = builder.CurrentItemCount;
                     Fraction bareAnchorTiming = builder.CurrentDuration;
                     (itemIndex, bool isCue, _) =
@@ -1499,7 +1511,7 @@ public sealed partial class MeasureCollector
                     // Render the ending's music in place (the body before |: … :| is
                     // written once; repeat barlines imply repetition) and overlay a
                     // volta bracket across the measures the ending occupies.
-                    int startMeasureIndex = builder.CurrentMeasureIndex + _v.Cursor.MetadataMeasureOffset;
+                    int startMeasureIndex = builder.CurrentMeasureIndex;
 
                     var innerNodes = new List<GreenSite>();
                     foreach (var item in volta.Items)
@@ -1511,7 +1523,7 @@ public sealed partial class MeasureCollector
                     await ProcessMusicNodeSequence(innerNodes, builder);
                     builder.EndAlternative(last: false);
 
-                    int endMeasureIndex = builder.CurrentMeasureIndex + _v.Cursor.MetadataMeasureOffset;
+                    int endMeasureIndex = builder.CurrentMeasureIndex;
                     if (builder.CurrentItemCount > 0)
                         endMeasureIndex++; // include the in-progress measure
                     int lastMeasure = Math.Max(startMeasureIndex, endMeasureIndex - 1);
@@ -1554,7 +1566,7 @@ public sealed partial class MeasureCollector
                     // answer there is.
                     int markMeasure = _markHostMeasure.TryGetValue(mark.SourceStart, out int hostMeasure)
                         ? hostMeasure
-                        : builder.CurrentMeasureIndex + _v.Cursor.MetadataMeasureOffset;
+                        : builder.CurrentMeasureIndex;
                     if (Semantics.AnnotationValues.Rehearsal(mark, out _) is { } label)
                     {
                         _musicMarks.Add(new MusicMarkItem(MusicMarkType.Rehearsal, label, markMeasure, mark.SourceStart));
@@ -1589,7 +1601,7 @@ public sealed partial class MeasureCollector
                     // read off the form alone); still placed, so the picture of a book with
                     // that error is whole. The mid-measure warning (LYS4003) retired with it.
                     var navType = NavigationToMusicMark(nav.MarkType);
-                    _musicMarks.Add(new MusicMarkItem(navType, NavigationMarkMeasure(navType, builder) + _v.Cursor.MetadataMeasureOffset, nav.SourceStart));
+                    _musicMarks.Add(new MusicMarkItem(navType, NavigationMarkMeasure(navType, builder), nav.SourceStart));
                 }
                 break;
 
@@ -1669,7 +1681,7 @@ public sealed partial class MeasureCollector
                         _musicMarks.Add(new MusicMarkItem(
                             MusicMarkType.Tempo, bpm.ToString(),
                             // The declaration's first VALUE — see TempoDataPos.
-                            builder.CurrentMeasureIndex + _v.Cursor.MetadataMeasureOffset, TempoDataPos(tempoChange),
+                            builder.CurrentMeasureIndex, TempoDataPos(tempoChange),
                             builder.CurrentItemCount, builder.CurrentDuration)
                         {
                             // The mid-music path dropped everything but the
@@ -1686,7 +1698,7 @@ public sealed partial class MeasureCollector
                         _musicMarks.Add(new MusicMarkItem(
                             MusicMarkType.Tempo, "",
                             // The declaration's first VALUE — see TempoDataPos.
-                            builder.CurrentMeasureIndex + _v.Cursor.MetadataMeasureOffset, TempoDataPos(tempoChange),
+                            builder.CurrentMeasureIndex, TempoDataPos(tempoChange),
                             builder.CurrentItemCount, builder.CurrentDuration)
                         {
                             TempoText = tempoChange.Marking,
@@ -1730,21 +1742,21 @@ public sealed partial class MeasureCollector
                 break;
 
             case OverrideDeclarationSyntax overrideDecl:
-                CollectOverride(overrideDecl, builder.CurrentMeasureIndex + _v.Cursor.MetadataMeasureOffset, builder.CurrentItemCount, isOnce: false, staffIndex: _v.Cursor.StaffIndex);
+                CollectOverride(overrideDecl, builder.CurrentMeasureIndex, builder.CurrentItemCount, isOnce: false, staffIndex: _v.Cursor.StaffIndex);
                 // Track it so the next section boundary reverts it to the part default.
                 _sectionActiveGrobProps.Add((overrideDecl.GrobName.Text, overrideDecl.PropertyName.Text));
                 break;
 
             case RevertDeclarationSyntax revertDecl:
-                CollectRevert(revertDecl, builder.CurrentMeasureIndex + _v.Cursor.MetadataMeasureOffset, builder.CurrentItemCount, staffIndex: _v.Cursor.StaffIndex);
+                CollectRevert(revertDecl, builder.CurrentMeasureIndex, builder.CurrentItemCount, staffIndex: _v.Cursor.StaffIndex);
                 _sectionActiveGrobProps.Remove((revertDecl.GrobName.Text, revertDecl.PropertyName.Text));
                 break;
 
             case OnceModifierSyntax onceModifier:
                 if (onceModifier.Command is OverrideDeclarationSyntax innerOverride)
-                    CollectOverride(innerOverride, builder.CurrentMeasureIndex + _v.Cursor.MetadataMeasureOffset, builder.CurrentItemCount, isOnce: true, staffIndex: _v.Cursor.StaffIndex);
+                    CollectOverride(innerOverride, builder.CurrentMeasureIndex, builder.CurrentItemCount, isOnce: true, staffIndex: _v.Cursor.StaffIndex);
                 else if (onceModifier.Command is RevertDeclarationSyntax innerRevert)
-                    CollectRevert(innerRevert, builder.CurrentMeasureIndex + _v.Cursor.MetadataMeasureOffset, builder.CurrentItemCount, staffIndex: _v.Cursor.StaffIndex);
+                    CollectRevert(innerRevert, builder.CurrentMeasureIndex, builder.CurrentItemCount, staffIndex: _v.Cursor.StaffIndex);
                 break;
         }
     }
@@ -1830,7 +1842,7 @@ public sealed partial class MeasureCollector
     {
         // In grace time the sign is the grace region's to place (GraceBodySupport.CarriedBreath,
         // MeasureCollector.ProcessGraceRegion): it stands after the whole run, not after its note.
-        if (builder.CurrentMeasureIndex + _v.Cursor.MetadataMeasureOffset != measureIndex
+        if (builder.CurrentMeasureIndex != measureIndex
             || builder.CurrentItemCount == 0)
             return;
         if (_v.GraceDepth > 0)
@@ -1946,7 +1958,7 @@ public sealed partial class MeasureCollector
     /// </summary>
     private async ValueTask<RestItem> AfterGraceSpacer(GraceExpressionSyntax afterGrace, MeasureBuilder builder, Fraction length)
     {
-        await ProcessGraceRegion(afterGrace, builder, builder.CurrentMeasureIndex + _v.Cursor.MetadataMeasureOffset);
+        await ProcessGraceRegion(afterGrace, builder, builder.CurrentMeasureIndex);
         var run = _v.PendingLeadingGrace;
         _v.PendingLeadingGrace = ImmutableArray<GraceColumnInfo>.Empty;
         return new RestItem(length, 0, afterGrace.SourceStart)
@@ -1983,11 +1995,12 @@ public sealed partial class MeasureCollector
     private async ValueTask<Fraction> ProcessTuplet(TupletExpressionSyntax tuplet, MeasureBuilder builder, int nestingDepth,
         Fraction? parentScale = null)
     {
-        // ⚠️ + MetadataMeasureOffset, like every other side table the walk keys by bar: in
-        // voice 2..N of a `voice { } { }` span the builder counts the SPAN's bars from 0, and
-        // the bracket is read against the whole staff's track. Without the offset, a tuplet
-        // in voice 2 of bar 2 was drawn over bar 1's voice-2 notes and bar 2 got none.
-        int measureIndex = builder.CurrentMeasureIndex + _v.Cursor.MetadataMeasureOffset;
+        // The STAFF's bar, like every other side table the walk keys by bar: the bracket is read
+        // against the whole staff's track, and in voice 2..N of a `voice { } { }` span the
+        // builder counts its bars from the span's (MeasureBuilder.MeasureIndexBase; until
+        // session 971 the walk added the span's bar here itself — without it, a tuplet in
+        // voice 2 of bar 2 was drawn over bar 1's voice-2 notes and bar 2 got none).
+        int measureIndex = builder.CurrentMeasureIndex;
         int startNoteIndex = builder.CurrentItemCount;
         // A grace written BEFORE the tuplet is walked by the tuplet's first sounding item
         // (OpenSoundingItem), so its columns land inside the index range opened above.
@@ -2156,6 +2169,12 @@ public sealed partial class MeasureCollector
     private async ValueTask<(int ItemIndex, bool IsCue, int FeatherDirection)> OpenSoundingItem(
         SyntaxNode node, MeasureBuilder builder, int measureIndex, int itemIndex, bool hasSlurEndAfter)
     {
+        // The clock first, as at the head of ProcessMusicNode: a tuplet's members are several
+        // moments of one node, and each is judged once the clock stands at it.
+        if (_clock.SpanOpen)
+            await _clock.ReachAsync(builder);
+        else
+            _clock.CountReach();
         if (_v.PendingGrace is { } pendingGrace)
         {
             _v.PendingGrace = null;
@@ -2393,7 +2412,7 @@ public sealed partial class MeasureCollector
         bool hasBeamStartAfter = m.HasBeamStartAfter;
         bool hasBeamEndAfter = m.HasBeamEndAfter;
 
-        int annMeasureIndex = builder.CurrentMeasureIndex + _v.Cursor.MetadataMeasureOffset;
+        int annMeasureIndex = builder.CurrentMeasureIndex;
         int annItemIndex = builder.CurrentItemCount;
         // The member's OWN moment, not the group's: the clock stands still over the body
         // (MeasureBuilder.CurrentMoment).

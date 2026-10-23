@@ -291,8 +291,16 @@ internal sealed class MeasureBuilder
     /// reads this to decide whether reverting to the score meter needs a redrawn time signature.</summary>
     public Fraction CurrentMeasureLength => _bars.BarLength;
 
-    /// <summary>Current measure index (completed measures count).</summary>
-    public int CurrentMeasureIndex => _measures.Count;
+    // The staff bar this builder's first measure stands in: 0 for a part's own stream, the
+    // span's opening bar for a `voice { }` sub-voice (MeasureCollector.ProcessParallelSpan),
+    // whose measures are still LISTED from 0 (SpanTrack.Measures) but COUNTED from here. The
+    // physical twin of LogicalIndexBase. Until session 971 the walk added the same number
+    // itself, as the cursor's MetadataMeasureOffset, at every side table it keyed by bar.
+    internal int MeasureIndexBase { get; set; }
+
+    /// <summary>The bar under construction, counted in the staff's bars: the measures emitted so
+    /// far from <see cref="MeasureIndexBase"/>.</summary>
+    public int CurrentMeasureIndex => MeasureIndexBase + _measures.Count;
 
     /// <summary>Current item count within the current measure.</summary>
     public int CurrentItemCount => _currentItems.Count;
@@ -532,7 +540,7 @@ internal sealed class MeasureBuilder
     /// grobs like a clef may already sit there). A directive here (a section's own
     /// key / time / tempo overriding the score default) IS the opening value, not a change
     /// within the piece, so it collapses into the initial signature / mark.</summary>
-    public bool AtPieceOpening => _measures.Count == 0 && !_hasMeasureContent;
+    public bool AtPieceOpening => MeasureIndexBase == 0 && _measures.Count == 0 && !_hasMeasureContent;
 
     /// <summary>True when the current span holds measure-worthy content — something with
     /// duration (a note/rest/chord) — as opposed to only zero-duration directives (a

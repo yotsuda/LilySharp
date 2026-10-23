@@ -68,7 +68,7 @@ public sealed partial class MeasureCollector
             && !_v.PendingEmptyChordSlurStart && !_v.PendingEmptyChordSlurEnd
             && _v.TremoloPairShape == null
             && _v.CueDepth == 0 && _v.PercentCoveredDepth == 0
-            && _v.Cursor.VoiceScope == null && _v.Cursor.MetadataMeasureOffset == 0
+            && _v.Cursor.VoiceScope == null
             && _v.PhraseTransposeSaves.Count == 0;
 
     /// <summary>The accidental memory as <see cref="AccidentalMemorySnapshot"/> reads

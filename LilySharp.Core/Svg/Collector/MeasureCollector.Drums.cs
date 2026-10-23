@@ -439,7 +439,7 @@ public sealed partial class MeasureCollector
                 i++;
                 continue;
             }
-            int measureIndex = builder.CurrentMeasureIndex + _v.Cursor.MetadataMeasureOffset;
+            int measureIndex = builder.CurrentMeasureIndex;
             int first = builder.CurrentItemCount;
             Fraction written = Fraction.Zero;
             for (; i < pieces.Count && pieces[i].Run == run; i++)
@@ -458,7 +458,7 @@ public sealed partial class MeasureCollector
     /// <summary>One piece of a merged voice; returns its written value.</summary>
     private async ValueTask<Fraction> EmitDrumPiece(DrumPiece piece, MeasureBuilder builder, bool stemUp, Fraction? scaled)
     {
-        int measureIndex = builder.CurrentMeasureIndex + _v.Cursor.MetadataMeasureOffset;
+        int measureIndex = builder.CurrentMeasureIndex;
         int itemIndex = builder.CurrentItemCount;
         Fraction anchor = builder.CurrentDuration;
         var value = Fraction.FromNoteValue(piece.Value);

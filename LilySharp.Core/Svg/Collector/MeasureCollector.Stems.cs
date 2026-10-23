@@ -358,7 +358,7 @@ public sealed partial class MeasureCollector
     /// </remarks>
     /// <param name="measureOffset">Where the probed stream starts in the staff (see
     /// <see cref="ResolveBeamStemDirections"/>). The brackets are keyed by the STAFF's bar
-    /// (the walk adds <c>_v.Cursor.MetadataMeasureOffset</c>), the probe's measures by the span's
+    /// (the sub-voice's builder counts from the span's bar, <see cref="MeasureBuilder.MeasureIndexBase"/>), the probe's measures by the span's
     /// own, so a sub-voice's brackets are shifted back into its frame (the same reason
     /// <see cref="OttavaDisplayProbe"/> shifts its spans). ⚠️ NO OUTPUT IS KNOWN TO DEPEND ON
     /// THIS, measured by poisoning it (VoiceSpanTupletBarTests): the probe's brackets reach

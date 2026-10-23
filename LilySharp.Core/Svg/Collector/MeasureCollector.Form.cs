@@ -859,8 +859,17 @@ public sealed partial class MeasureCollector
             RecordKeyAtMeasure(builder.CurrentMeasureIndex,
                 Math.Max(0, LilySharp.Core.Music.KeySpelling.StepOf(keySig.Pitch.BaseName)), newSharps);
         }
-        // The key is the staff's: inside a span the other branches read it from here on
-        // (stage ⑥ of the moment-order walk; LilyPond's Key_engraver sits in Staff).
+        // A key statement empties the accidental memory — even one that changes nothing.
+        // LILYPOND-REF: lily/accidental-engraver.cc:108-130 Accidental_engraver::update_local_key_signature —
+        //   localAlterations is set to a copy of the new keyAlterations in this context and every
+        //   child, and process_music (:495-500) calls it whenever the key event handed over a new
+        //   alist, which every \key does. A head after the change is judged against the key alone:
+        //   `f'4 \key d \major f'` prints the natural on the second f' (LilyPond 2.26.0, Lab
+        //   sessions/p971/probe5/p6-key-resets-memory).
+        _v.MeasureAccidentals.Clear();
+        // The key is the staff's: inside a span the other branches read it from here on, and
+        // their memories empty too (stage ⑥ of the moment-order walk; LilyPond's Key_engraver
+        // sits in Staff and the reset above walks the Staff's children).
         ShareKeyWithSpanBranches();
 
         // A key change at the very opening (bar 0, before any note sounds) IS the piece's

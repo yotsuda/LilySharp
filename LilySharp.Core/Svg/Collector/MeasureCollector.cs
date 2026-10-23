@@ -119,6 +119,9 @@ public sealed partial class MeasureCollector
     // CollectMultiStaff, BuildExtraVoiceTracks' manual save/restore and
     // ProcessMusicNode, and this is that bundling — mechanical on purpose (every
     // reader keeps its meaning; only the spelling moved from four fields to one).
+    // Three since session 971: the fourth, MetadataMeasureOffset (the span's bar, which the
+    // walk added at every side table a sub-voice keyed by bar), is the sub-voice builder's
+    // MeasureIndexBase now — the builder counts its bars from the span's bar itself.
     internal struct CollectionCursor
     {
         // Global staff index currently being collected (multi-staff). Stamped onto
@@ -135,21 +138,6 @@ public sealed partial class MeasureCollector
         // around each parallel sub-voice's processing (voice 0 in ProcessMusicNode, the extras
         // in BuildExtraVoiceTracks).
         public int? VoiceScope;
-        // Added to the local measure index when collecting a parallel span's EXTRA
-        // voices (they're collected with a fresh 0-based builder), so their
-        // per-note metadata — dynamics, articulations, etc. — lands at the span's
-        // real measure index instead of measure 0. Zero for the primary stream.
-        // ⚠️ EVERY side table the music walk keys by bar adds it — builder.CurrentMeasureIndex
-        // alone is the SPAN's bar inside a sub-voice. Until 2026-09-28 tuplet brackets, << >>
-        // groups, overrides/reverts, tempo and navigation marks, inline voltas and percent
-        // signs did not, and each landed that many bars early (VoiceSpanTupletBarTests has
-        // one net per site). The reads that rightly go WITHOUT it: the section/form walk
-        // (RecordSectionStart, the form's nav marks and texts, Form.cs) and the
-        // _parallelSpans record run on the primary stream only — a `voice` block does not
-        // nest (LYS0010) — so the offset there is always 0; the resume checkpoints compare a
-        // builder with itself; and ProbeTupletBrackets/OttavaDisplayProbe read a sub-voice in
-        // its OWN frame and shift the staff-keyed tables back.
-        public int MetadataMeasureOffset;
     }
 
     // (A CursorScope used to save and restore the cursor around each sequential sub-walk of a
@@ -608,8 +596,8 @@ public sealed partial class MeasureCollector
     /// "where is the builder now", not "where was the mark written" — and a note that
     /// fills its bar has already carried the builder across the barline. This records the
     /// answer to the second question while the host note is still in hand.
-    /// It also carries <c>_v.Cursor.MetadataMeasureOffset</c>, which the statement node does not
-    /// apply — inside a <c>voice { … }</c> span the mark was shifted by that too.
+    /// (Until session 971 it also carried the span's bar for a sub-voice, which the statement
+    /// node did not add; the sub-voice's builder counts from that bar itself now.)
     /// </remarks>
     private readonly Dictionary<int, int> _markHostMeasure = new();
 
@@ -2607,9 +2595,10 @@ public sealed partial class MeasureCollector
         // Since session 970 the children's measures are already walked — with branch 0, on the
         // span's clock (MeasureCollector.Clock.cs) — and this lays each span's slot into the
         // slot's full-length track, 0-based from the span's bar, exactly where the sequential
-        // sub-walks laid theirs. The cursor the children walked under (MetadataMeasureOffset =
-        // the span's bar, VoiceIndex counted from the part's own slot, VoiceScope = the voice's
-        // number within its part) is BranchState.ForChild's, from the parallel arm.
+        // sub-walks laid theirs. The cursor the children walked under (VoiceIndex counted from
+        // the part's own slot, VoiceScope = the voice's number within its part) is
+        // BranchState.ForChild's, from the parallel arm; their builders counted bars from the
+        // span's bar (MeasureBuilder.MeasureIndexBase).
         var tracks = new List<ImmutableArray<Measure>>();
         for (int t = 1; t < voiceCount; t++)
         {
@@ -3446,9 +3435,12 @@ public sealed partial class MeasureCollector
     // it suppressed (see FinalizeMeasures). Do not reintroduce either.
     /// <param name="emit">Fills the builder in place of the walk of <paramref name="voiceNode"/>'s
     /// music — a drum chart's merged feet voice (Drums.cs), which has no block of its own.</param>
+    /// <param name="measureIndexBase">The staff bar the first measure stands in (a span's opening
+    /// bar), so the builder counts its bars as the primary stream does and every side table the
+    /// walk keys by bar lands at the staff's bar (<see cref="MeasureBuilder.MeasureIndexBase"/>).</param>
     private async ValueTask<List<Measure>> CollectMeasuresFromNode(SyntaxNode voiceNode,
         bool applyFilePartial = true, Fraction? leadingOffset = null, int logicalIndexBase = 0,
-        Func<MeasureBuilder, ValueTask>? emit = null)
+        int measureIndexBase = 0, Func<MeasureBuilder, ValueTask>? emit = null)
     {
         var builder = new MeasureBuilder(ScoreMeter, voiceNode.SourceStart, _v.Meta.TimeSenzaMisura)
         {
@@ -3459,6 +3451,7 @@ public sealed partial class MeasureCollector
             // The BAR this sub-voice's first measure stands in (a span's opening bar), so
             // its builder reads the split table at the same keys the primary stream does.
             LogicalIndexBase = logicalIndexBase,
+            MeasureIndexBase = measureIndexBase,
         };
         builder.SetHomeMeter(HomeMeterOfScore, _scoreTime.SenzaMisura);
         // The file-level pickup arms a sub-collection only when it really sits
@@ -3609,10 +3602,6 @@ public sealed partial class MeasureCollector
         _rowsOnlyFormBars.Clear();
         _rowsOnlyFormBreaks.Clear();
         _rowsOnlyFormGridBars = 0;
-        // ⚠️ MetadataMeasureOffset is deliberately NOT written here, preserving the
-        // manual reset verbatim (the bundling changed spellings, not behavior): it is
-        // nonzero only inside BuildExtraVoiceTracks' span scope, which restores it
-        // before anything can call Reset.
         _v.Cursor.StaffIndex = 0;
         _v.Cursor.VoiceIndex = 0;
         _v.Cursor.VoiceScope = null;
@@ -5795,7 +5784,7 @@ public sealed partial class MeasureCollector
             {
                 // A beat slash covers no measure, so the sign needs the moment and the
                 // item slot it stands at inside the measure it lands in.
-                int slashMeasure = builder.CurrentMeasureIndex + _v.Cursor.MetadataMeasureOffset;
+                int slashMeasure = builder.CurrentMeasureIndex;
                 var slashTiming = builder.CurrentDuration;
                 int slashItemIndex = builder.CurrentItemCount;
                 await WriteRepetitionAsSpacers(bodyLength, at, slashCount);
@@ -5809,7 +5798,7 @@ public sealed partial class MeasureCollector
                 continue;
             }
 
-            int iterStart = builder.CurrentMeasureIndex + _v.Cursor.MetadataMeasureOffset;
+            int iterStart = builder.CurrentMeasureIndex;
             await WriteRepetitionAsSpacers(bodyLength, at);
 
             // A TWO-MEASURE body gets ONE double-percent sign for the whole repetition,
