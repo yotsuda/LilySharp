@@ -35,7 +35,7 @@ import {
     BarCheck, BarNeighbours, Diag, FixTarget, FixableTodo, GateVerdict, Proposal, Rgba, acceptableByAll, anchorOf, averageOf,
     batchesOf, checkedByDefault, cropRect, decodeImage, diagnosticsOn, estimateOf, fixTargets, gateOf, headOf, labelOf,
     neighboursOf, parseProposal, readerBarOf, repairPromptOf, resolvedLine, scanCropPng, spliceBar, systemPromptOf, targetsInLines, taskPromptOf,
-    verifyVerdict, withSample, withVerify, wordDiff, DiffPiece,
+    verifyVerdict, withSample, withVerify, wordDiff, DiffPiece, rangesOf, shortTodos,
 } from './omrAiFixCore';
 import { OmrVersion, canVerifyBars, exitMeaning, launchOf, parseVersion, runOmr, verifyArguments } from './omrCore';
 import { findOmr } from './omrReader';
@@ -727,7 +727,7 @@ function esc(s: string): string {
 /** A line of the word diff as HTML: removed pieces in <del>, added ones in <ins>. */
 function piecesHtml(pieces: readonly DiffPiece[]): string {
     return pieces.map((p, i) => {
-        const text = esc(p.text);
+        const text = esc(shortTodos(p.text));
         const body = p.kind === 'del' ? `<del>${text}</del>` : p.kind === 'add' ? `<ins>${text}</ins>` : text;
         return (p.space && i > 0 ? ' ' : '') + body;
     }).join('');
@@ -752,8 +752,12 @@ function symbolOf(svg: string): { viewBox: string; x: number; y: number; w: numb
 
 /** A score cell: the symbol `id` drawn at 1:1 in the cell's user space (the <use> as large as the
  *  symbol's viewBox), so the cell's own viewBox — set by the page script — crops it to the bar. */
-function scoreCell(id: string, sym: NonNullable<ReturnType<typeof symbolOf>>, lo: number, hi: number, define: boolean): string {
-    return `<svg class="pic score" data-sym="${id}" data-lo="${lo}" data-hi="${hi}" viewBox="${esc(sym.viewBox)}" preserveAspectRatio="xMidYMid meet">`
+function scoreCell(id: string, sym: NonNullable<ReturnType<typeof symbolOf>>, lo: number, hi: number, define: boolean,
+    paint?: { kind: 'del' | 'add'; ranges: readonly [number, number][] }): string {
+    // The notes to paint (the word diff's pieces, by the source offsets the drawn notes carry):
+    // what the proposal takes out red in "Now", what it puts in green in "Proposal".
+    const marks = paint && paint.ranges.length ? ` data-paint="${paint.kind}" data-ranges="${paint.ranges.map(r => r.join(':')).join(',')}"` : '';
+    return `<svg class="pic score" data-sym="${id}" data-lo="${lo}" data-hi="${hi}"${marks} viewBox="${esc(sym.viewBox)}" preserveAspectRatio="xMidYMid meet">`
         + (define ? `<symbol id="${id}" viewBox="${esc(sym.viewBox)}">${sym.inner}</symbol>` : '')
         + `<use href="#${id}" x="${sym.x}" y="${sym.y}" width="${sym.w}" height="${sym.h}"/></svg>`;
 }
@@ -774,6 +778,10 @@ function panelHtml(deps: OmrAiFixDeps, webview: vscode.Webview, run: FixRun): st
 
     const rows = run.rows.map(r => {
         const t = r.target;
+        // The two lines piece by piece: struck through in red what goes, in green what comes —
+        // in the text under the pictures and on the drawn notes.
+        const diff = textOf(r) !== undefined ? wordDiff(t.written, textOf(r)!) : undefined;
+        const indent = t.start - (run.text.lastIndexOf('\n', t.start - 1) + 1);
         const page = t.crop ? pageUris.get(t.crop.page) : undefined;
         const crop = t.crop && page ? cropRect(t.crop.box, page) : undefined;
         const scan = crop && page
@@ -781,7 +789,7 @@ function panelHtml(deps: OmrAiFixDeps, webview: vscode.Webview, run: FixRun): st
               + `<image href="${page.uri}" width="${page.width}" height="${page.height}"/></svg>`
             : `<div class="none">no scan</div>`;
         const now = before
-            ? scoreCell('before', before, t.start, t.end, false)
+            ? scoreCell('before', before, t.start, t.end, false, diff && { kind: 'del', ranges: rangesOf(diff.before, 'del', t.start, indent) })
             : `<div class="none">not rendered</div>`;
         const after = r.after?.Svg ? symbolOf(r.after.Svg) : undefined;
         let proposal: string;
@@ -792,7 +800,8 @@ function panelHtml(deps: OmrAiFixDeps, webview: vscode.Webview, run: FixRun): st
                 ? `<div class="none">unchanged — Take removes the @todo</div>`
                 : `<div class="none">no proposal</div>`;
         } else if (after) {
-            proposal = scoreCell(`after-${r.index}`, after, t.start, t.start + r.proposal.bar.length, true);
+            proposal = scoreCell(`after-${r.index}`, after, t.start, t.start + r.proposal.bar.length, true,
+                diff && { kind: 'add', ranges: rangesOf(diff.after, 'add', t.start, indent) });
         } else {
             proposal = `<div class="none">${r.gate && !(r.gate.compile && r.gate.length) ? 'did not pass' : 'not rendered'}</div>`;
         }
@@ -822,8 +831,6 @@ function panelHtml(deps: OmrAiFixDeps, webview: vscode.Webview, run: FixRun): st
         // across the whole width too, and under them the three pictures. A column for either
         // was a fraction of the width and wrapped its text into a dozen short lines (owner's
         // reports 2026-10-23).
-        // The two lines under the pictures, piece by piece: what goes struck through in red, what comes in green.
-        const diff = textOf(r) !== undefined ? wordDiff(t.written, textOf(r)!) : undefined;
         const cls = `row ${r.state}${on ? ' taken' : ''}`;
         return `<tr class="${cls} head" data-i="${r.index}">
   <td colspan="3" class="who">${box} <span class="label">${esc(labelOf(t))}</span>`
@@ -836,7 +843,7 @@ function panelHtml(deps: OmrAiFixDeps, webview: vscode.Webview, run: FixRun): st
 </tr>
 <tr class="${cls} body" data-i="${r.index}">
   <td class="cell">${scan}</td>
-  <td class="cell">${now}<pre class="src">${diff ? piecesHtml(diff.before) : esc(t.written)}</pre></td>
+  <td class="cell">${now}<pre class="src">${diff ? piecesHtml(diff.before) : esc(shortTodos(t.written))}</pre></td>
   <td class="cell">${proposal}${diff ? `<pre class="src">${piecesHtml(diff.after)}</pre>` : ''}</td>
 </tr>`;
     }).join('\n');
@@ -1000,11 +1007,31 @@ ${rows}
     holder.setAttribute('viewBox', (u.x - u.h * 0.5) + ' ' + (u.y - u.h) + ' ' + (u.w + u.h) + ' ' + (u.h * 3));
     holder.setAttribute('preserveAspectRatio', 'xMidYMid meet');
   }
+  // Paints the drawn notes of the symbol 'id' whose source offset (data-pos, or one of data-alt)
+  // falls in one of 'ranges' ("from:to,…"): the preview's own rule for what may be recolored — not
+  // the transparent notehead click box (nh-hit), not a fill-only box (a tab digit's white backing);
+  // a line or an outline gets the stroke, anything else the fill. The symbol is shared by every
+  // <use> of it, so "Now" paints once for all the rows (each row's crop shows its own bar).
+  function paint(id, color, ranges) {
+    const spans = String(ranges || '').split(',').map(s => s.split(':').map(Number)).filter(s => s.length === 2 && !isNaN(s[0]));
+    const hit = n => spans.some(([a, b]) => n >= a && n < b);
+    const root = document.getElementById(id);
+    if (!root || spans.length === 0) return;
+    for (const el of root.querySelectorAll('[data-pos], [data-alt]')) {
+      const tag = el.tagName.toLowerCase();
+      if (el.classList.contains('nh-hit') || (tag === 'rect' && !el.getAttribute('stroke') && el.getAttribute('fill'))) continue;
+      const pos = [parseInt(el.getAttribute('data-pos'), 10), ...String(el.getAttribute('data-alt') || '').split(/\s+/).map(Number)];
+      if (!pos.some(n => !isNaN(n) && hit(n))) continue;
+      if (tag === 'line' || (el.getAttribute('fill') === 'none' && el.getAttribute('stroke'))) el.setAttribute('stroke', color);
+      else el.setAttribute('fill', color);
+    }
+  }
   const boxesOf = {};
   for (const svg of document.querySelectorAll('svg.score')) {
     const id = svg.dataset.sym;
     boxesOf[id] = boxesOf[id] || Array.from(document.querySelectorAll('#' + id + ' rect.bar-staff'));
     cropTo(svg, boxesOf[id], +svg.dataset.lo, +svg.dataset.hi);
+    if (svg.dataset.paint) paint(id, svg.dataset.paint === 'del' ? '#e53935' : '#2e9e43', svg.dataset.ranges);
   }
 </script>
 </body>

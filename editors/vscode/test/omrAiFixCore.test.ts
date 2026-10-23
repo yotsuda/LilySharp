@@ -24,7 +24,7 @@ import * as path from 'node:path';
 import {
     Diag, FixableTodo, Rgba, acceptableByAll, anchorOf, averageOf, barBoxFor, batchesOf, checkedByDefault, cropRect, cropRgba,
     decodeImage, diagnosticsOn, encodePng, estimateOf, fixTargets, gateOf, headOf, labelOf, neighboursOf, parseProposal,
-    readerBarOf, repairPromptOf, resolvedLine, scanCropPng, spliceBar, stripTodoMarks, systemPromptOf, targetsInLines, taskPromptOf,
+    rangesOf, readerBarOf, repairPromptOf, resolvedLine, scanCropPng, shortTodos, spliceBar, stripTodoMarks, systemPromptOf, targetsInLines, taskPromptOf,
     verifyVerdict, withSample, withVerify, wordDiff,
 } from '../src/omrAiFixCore';
 import * as jpeg from 'jpeg-js';
@@ -375,6 +375,22 @@ describe('reading the answer', () => {
         assert.equal(show(e.after), 'f,2 [+f,4.] |');
         const same = wordDiff('c4 d e f |', 'c4 d e f |');
         assert.equal(same.before.every(p => p.kind === 'same') && same.after.every(p => p.kind === 'same'), true);
+    });
+
+    it('places the pieces in the document, to paint the drawn notes', () => {
+        // A drawn note's data-pos is where the spaces before it start: each range reaches back to them.
+        const d = wordDiff('f,2 f,4@todo(b2-p2 "x") |', 'f,2 f,4. |');
+        assert.deepEqual(rangesOf(d.before, 'del', 100), [[103, 107], [107, 123]]);   // " f,4" and its mark (glued)
+        assert.deepEqual(rangesOf(d.after, 'add', 100), [[103, 108]]);                // " f,4."
+        assert.deepEqual(rangesOf(d.after, 'del', 100), []);
+        // The first piece of a line reaches back over the line's indentation.
+        const first = wordDiff('g8 f8 |', 'g4 f8 |');
+        assert.deepEqual(rangesOf(first.before, 'del', 100, 4), [[96, 102]]);
+    });
+
+    it('prints a @todo as the bare word, its key and memo left out', () => {
+        assert.equal(shortTodos('a4@todo(b45-p1 "bar 45: 1680/1920 ticks") r8 c4@todo("here").down d@todo |'),
+            'a4@todo r8 c4@todo.down d@todo |');
     });
 
     it('takes an unchanged line as the line without its marks, nothing else', () => {

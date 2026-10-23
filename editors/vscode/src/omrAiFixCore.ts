@@ -418,18 +418,42 @@ export interface DiffPiece {
     readonly text: string;
     readonly space: boolean;
     readonly kind: 'same' | 'del' | 'add';
+    /** Where the piece starts in its line. */
+    readonly start: number;
+    /** Where the spaces before it start (its start when it is glued to the piece before). */
+    readonly lead: number;
+}
+
+/**
+ * The offsets in the document of the pieces of one kind, as [from, to) — `base` being where the
+ * line's text starts there, `indent` how far its indentation reaches before that: what the panel
+ * paints in the pictures. A drawn note's `data-pos` is its node's FULL-span start — the spaces
+ * before it, and for the first thing on a line its indentation (previewCore.jumpOffsetFor) — so
+ * each range reaches back over the spaces before its piece.
+ */
+export function rangesOf(pieces: readonly DiffPiece[], kind: 'del' | 'add', base: number, indent = 0): [number, number][] {
+    return pieces.filter(p => p.kind === kind)
+        .map(p => [base + p.lead - (p.lead === 0 ? indent : 0), base + p.start + p.text.length]);
+}
+
+/** The line as the panel prints it: a @todo mark as the bare word, its key and memo left out
+ *  (owner's request 2026-10-23: the memo is already in the bar's head). Display only. */
+export function shortTodos(text: string): string {
+    return text.replace(TODO_MARK, m => /\.(up|down)$/.test(m) ? `@todo${m.slice(m.lastIndexOf('.'))}` : '@todo');
 }
 
 /** A line's pieces: a @todo mark whole (its memo has spaces), an annotation (`@staccato`), and
  *  any other run of characters between spaces and `@`s — a note, `|`, `{`, `tuplet`, `3/2`. */
 const PIECE = /@todo(?:\((?:[^()"]|"(?:[^"\\]|\\.)*")*\))?(?:\.(?:up|down))?|@[^\s@]+|[^\s@]+/g;
 
-function piecesOf(line: string): { text: string; space: boolean }[] {
-    const out: { text: string; space: boolean }[] = [];
+function piecesOf(line: string): { text: string; space: boolean; start: number; lead: number }[] {
+    const out: { text: string; space: boolean; start: number; lead: number }[] = [];
     let m: RegExpExecArray | null;
+    let end = 0;
     PIECE.lastIndex = 0;
     while ((m = PIECE.exec(line))) {
-        out.push({ text: m[0], space: m.index > 0 && /\s/.test(line[m.index - 1]) });
+        out.push({ text: m[0], space: m.index > 0 && /\s/.test(line[m.index - 1]), start: m.index, lead: end });
+        end = m.index + m[0].length;
     }
     return out;
 }
