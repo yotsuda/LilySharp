@@ -118,6 +118,31 @@ public class GraceBodyValidatorTests
     }
 
     /// <summary>
+    /// <c>@cross</c> is the one mark a grace note still does not carry — session 968 wrote
+    /// 27 annotation kinds into grace bodies and this was the only LYS4020 left (Lab
+    /// sessions/p968/probe/grace-survey*.lys). The grace note stays on its own staff, so the
+    /// page is the control's, and the sentence says that and no more: the old "there is no
+    /// column for it to hang off" stopped being true when grace notes became measure items
+    /// (HANDOFF §2 U8 ⒝2) and must not come back.
+    /// </summary>
+    [Fact]
+    public void ACrossStaffMarkOnAGrace_IsReported_AndTheGraceStaysOnItsStaff()
+    {
+        static string GrandBook(string rh) =>
+            "part rh { clef treble }\npart lh { clef bass }\nsection A {\n  rh { " + rh + " }\n"
+            + "  lh { c1 | e1 | }\n}\nform { ~A }\nscore { grandStaff { staff rh staff lh } }\n";
+        static string Masked(string book)
+            => Regex.Replace(LiveRender.Svg(book), "data-pos=\"\\d+\"", "data-pos=\"#\"");
+        string written = GrandBook("grace { d'8@cross } c'1 | e'1 |");
+        string control = GrandBook("grace { d'8 } c'1 | e'1 |");
+
+        var warning = Assert.Single(Warnings(written));
+        Assert.Contains("stays on its own staff", warning.Message);
+        Assert.DoesNotContain("no column", warning.Message);
+        Assert.Equal(Masked(control), Masked(written));
+    }
+
+    /// <summary>
     /// A tie in grace time — between two grace columns, or from the last one into its main
     /// note — is drawn (the page differs from the untied control) and LYS4020 says nothing
     /// about it. Its geometry is LilyPond's to the micro-staff-space: ledger tie.grace.*.

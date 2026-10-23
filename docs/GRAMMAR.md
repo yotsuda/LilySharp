@@ -2749,7 +2749,9 @@ Grace          = ( 'grace' | 'acciaccatura' | 'appoggiatura' | 'afterGrace' ) , 
                      session 935), and a '@breath' /
                      '@caesura' on the body's LAST note or chord, a column of its own
                      between the run and the main note (session 934; on an inner grace
-                     or an afterGrace it is reported). *)
+                     or an afterGrace it is reported). What is still reported (LYS4020)
+                     is '@cross': a grace note is not moved to the neighbouring staff
+                     (session 968 counted; '@diagram(…)' and '@pluck(…)' are drawn). *)
 Repeat         = 'repeat' , 'tremolo' , Integer , MusicBlock ;
                  (* a tremolo: the note, or the two notes, alternated Integer times.
                     Volta repeats use the form's |: … :|, NOT a 'repeat' keyword.

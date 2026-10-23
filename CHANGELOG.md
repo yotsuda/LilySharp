@@ -6,6 +6,16 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+### Grace notes
+
+- `[language]` **LYS4020 on a grace note's mark now says what is true.** Nearly every mark a
+  note carries is drawn on a grace note too (scripts, dynamics, texts, fingerings, spanners,
+  head styles, stem directions, breaths, diagrams, plucks); the one left is `@cross`, which
+  does not move a grace note to the neighbouring staff. The warning for it read "a grace note
+  is not a measure item, so there is no column for it to hang off", a sentence from before
+  grace notes were measure items; it now says the grace note stays on its own staff with what
+  it carries.
+
 ### Chord symbols as a chart prints them
 
 - `[language]` **A chord symbol may be written in any of its printed spellings**, in a chords

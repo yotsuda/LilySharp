@@ -144,11 +144,18 @@ internal sealed class GraceBodyValidator : ISemanticValidator
                         $"{drop.Written} inside {body} are not engraved: a grace column "
                         + "carries no tuplet bracket and no tuplet number"
                         + (engravesNothing ? "" : ", although the notes it holds ARE drawn"),
+                    // ⚠️ WHAT REACHES THIS ARM IS WHAT NO IsCarried* PREDICATE CLAIMS. Until
+                    // session 935 that was most annotation families and the sentence said "a
+                    // grace note is not a measure item, so there is no column for it to hang
+                    // off" — true before HANDOFF §2 U8 ⒝2 put grace notes in Measure.Items,
+                    // stale for every mark ported since (scripts, dynamics, texts, fingerings,
+                    // spanners, head styles, stem directions, breaths ...). Session 968 counted
+                    // what is left (Lab sessions/p968/probe/grace-survey*.lys): '@cross' alone,
+                    // and the sentence says only what is still true of it.
                     _ =>
-                        $"{drop.Written} on a grace note is not engraved: a grace note is not "
-                        + "a measure item, so there is no column for it to hang off. A "
-                        + "rehearsal mark is the one that still reaches the page - its grob "
-                        + "belongs to the bar rather than to the note",
+                        $"{drop.Written} on a grace note is not engraved: nothing moves or "
+                        + "draws it in grace time yet - the grace note stays on its own staff "
+                        + "with what it carries",
                 };
                 _diagnostics.Warning(drop.Span, DiagnosticCodes.UnengravedGraceContent, message);
             }
