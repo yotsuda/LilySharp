@@ -477,8 +477,8 @@ public sealed partial class MeasureCollector
     /// keyAlterations there; lily/accidental-engraver.cc:495-500 Accidental_engraver::process_music
     /// re-reads keyAlterations every timestep, so every voice of the staff judges its heads
     /// against the one key. The reminder memory (localAlterations) is NOT shared here: the owner
-    /// kept the cross-voice reminder on 2026-10-02 (LILYSHARP-OWN) and scoped this stage to the
-    /// key on 2026-10-23 (docs/moment-walk-design.md §3.3, §4 ⑥).
+    /// kept the cross-voice reminder on 2026-10-02 (the staff's own rule ⑴ in StaffAccidentals)
+    /// and scoped this stage to the key on 2026-10-23 (docs/moment-walk-design.md §3.3, §4 ⑥).
     /// </para>
     /// <para>
     /// Known gap, written by no book in the nets: LilyPond hears the key event before any head of

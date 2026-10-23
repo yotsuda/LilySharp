@@ -92,8 +92,10 @@ public class VoiceWalkCoroutineTests
         """;
 
     /// <summary>Stage ⑥, the key only: the key is the staff's, so a key change in one branch of
-    /// a span governs the other branches' later notes (LILYPOND-REF lily/key-engraver.cc:141-162,
-    /// the Key_engraver sits in Staff). The accidental memory stays per voice (owner, 2026-10-02).</summary>
+    /// a span governs the other branches' later notes. The accidental memory stays per voice
+    /// (owner, 2026-10-02).</summary>
+    /// <remarks>LILYPOND-REF: lily/key-engraver.cc:141-162 Key_engraver::process_music — the
+    /// engraver sits in Staff, so its keyAlterations are every voice's.</remarks>
     [Fact]
     public void KeyChangeInVoice2_GovernsVoice1FromThatMoment()
     {
