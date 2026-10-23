@@ -446,14 +446,31 @@ export function shortTodos(text: string): string {
  *  any other run of characters between spaces and `@`s — a note, `|`, `{`, `tuplet`, `3/2`. */
 const PIECE = /@todo(?:\((?:[^()"]|"(?:[^"\\]|\\.)*")*\))?(?:\.(?:up|down))?|@[^\s@]+|[^\s@]+/g;
 
+/** A slur, a beam or a tie glued to a note: its own piece, so a note keeps matching itself when a
+ *  mark between them goes (`g,8@todo(…)( a,8` against `g,8( a,8`: the owner's Largo, 2026-10-24). */
+const GLUE = /[()[\]~]|[^()[\]~]+/g;
+
 function piecesOf(line: string): { text: string; space: boolean; start: number; lead: number }[] {
     const out: { text: string; space: boolean; start: number; lead: number }[] = [];
     let m: RegExpExecArray | null;
     let end = 0;
     PIECE.lastIndex = 0;
     while ((m = PIECE.exec(line))) {
-        out.push({ text: m[0], space: m.index > 0 && /\s/.test(line[m.index - 1]), start: m.index, lead: end });
-        end = m.index + m[0].length;
+        const space = m.index > 0 && /\s/.test(line[m.index - 1]);
+        if (m[0].startsWith('@')) {
+            out.push({ text: m[0], space, start: m.index, lead: end });
+            end = m.index + m[0].length;
+            continue;
+        }
+        let g: RegExpExecArray | null;
+        GLUE.lastIndex = 0;
+        let first = true;
+        while ((g = GLUE.exec(m[0]))) {
+            const start = m.index + g.index;
+            out.push({ text: g[0], space: first && space, start, lead: end });
+            end = start + g[0].length;
+            first = false;
+        }
     }
     return out;
 }

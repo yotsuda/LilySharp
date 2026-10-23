@@ -373,6 +373,13 @@ describe('reading the answer', () => {
         const e = wordDiff('f,2 f,4@todo(b2-p2 "x") |', 'f,2 f,4. |');
         assert.equal(show(e.before), 'f,2 [-f,4][-@todo(b2-p2 "x")] |');
         assert.equal(show(e.after), 'f,2 [+f,4.] |');
+        // A slur glued to the note stays apart from it: removing the mark changes the mark only.
+        const glued = wordDiff('g,8@todo(b16-p2 "x")( a,8 cis4~ cis8 a,8) |', 'g,8( a,8 cis4~ cis8 a,8) |');
+        assert.equal(show(glued.before), 'g,8[-@todo(b16-p2 "x")]( a,8 cis4~ cis8 a,8) |');
+        assert.equal(show(glued.after), 'g,8( a,8 cis4~ cis8 a,8) |');
+        const pitch = wordDiff('a,4@p( fis4) a,8 |', 'a,4@p( f4) a,8 |');
+        assert.equal(show(pitch.before), 'a,4@p( [-fis4]) a,8 |');
+        assert.equal(show(pitch.after), 'a,4@p( [+f4]) a,8 |');
         const same = wordDiff('c4 d e f |', 'c4 d e f |');
         assert.equal(same.before.every(p => p.kind === 'same') && same.after.every(p => p.kind === 'same'), true);
     });

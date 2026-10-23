@@ -920,7 +920,7 @@ button.link { background:none; border:none; padding:0; margin-left:8px; color: v
 ${before ? `<svg class="store" aria-hidden="true"><symbol id="before" viewBox="${esc(before.viewBox)}">${before.inner}</symbol></svg>` : ''}
 <div class="header">
   <div><div class="title">OMR fixes — ${esc(name)}</div>
-  <div class="cap">${run.rows.length} ${run.rows.length === 1 ? 'bar' : 'bars'} · ${takeable} with a proposal · `
+  <div class="cap">${run.rows.length} ${run.rows.length === 1 ? 'bar' : 'bars'} · ${run.rows.filter(hasProposal).length} with a proposal · `
         + `check the ones to take — nothing is written until Accept</div></div>
   <div class="spacer"></div>
   <label class="take all" title="Check or uncheck every bar there is something to take"><input type="checkbox" id="all" ${takeable ? '' : 'disabled'} ${takeable && checked === takeable ? 'checked' : ''}> All</label>
