@@ -169,6 +169,8 @@
 - [x] .lys を閉じてプレビューだけ残す → プレビューの音符や小節をクリック → .lys がプレビューの左に（普通のタブで）開き直り、カレットがクリックした所に来る。
 - [x] Show Original Scan の小節: マウスを載せた小節と caret の小節が**五線の内側だけ**同じ青で塗られ、枠線は無い。プレビューのホバーと同じ色・同じ範囲。五線の外（box の上下）のクリックでもその小節へ飛ぶ。
 
+- [ ] **カーソルの小節の青（第973・ユーザー報告）**: `voice {`・`tuplet 3/2 {`・`break` で始まる小節の行で、カーソルを `voice` の上（音符より前・字下げの中）に置く → プレビューのその小節が青くなる（前は最初の音符まで動かす必要があった）。前の小節の中や、小節の無い行（`p1 {` だけの行）では、次の行の小節は光らない。Fix OMR Marks のパネルで `voice {` の小節の行をクリックしても同じ。
+
 ### 3.5 MIDI 出力（第911・`docs/playback-design.md` §6。Windows は網が実機の GS 音源を開いて鳴らして閉じた＝winmm は通る。**mac／Linux の CoreMIDI／ALSA は未実走**）
 
 - [ ] パレット **Lily#: Choose MIDI Output…** → 「The preview's own synth」の下にこの機械のポート（`Microsoft GS Wavetable Synth`・`ZOOM UAC-2 MIDI` …）が並ぶ（.lys を 1 つも開いていなくてもサーバーが立って並ぶ）。GS を選ぶ → 設定 `lilysharp.playback.output` に名前が入り、ステータスバーに `the preview plays through …`。設定 UI の説明の「choose a port…」リンクでも同じ picker。

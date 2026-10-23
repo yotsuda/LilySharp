@@ -1025,6 +1025,9 @@ export function activate(context: vscode.ExtensionContext) {
                         tokenStart,
                         // The caret itself, wherever it is: its bar stays lit (lightCaretBar).
                         caret: offset,
+                        // Where its line ends: a caret before a bar's first note on that line
+                        // (on `voice {`) lights the bar too.
+                        lineEnd: offset - col + line.length,
                     });
                 }
             }
@@ -4266,16 +4269,31 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         // lights it): every bar whose written stretch (data-span: its first note to the bar line
         // closing it) holds the caret — just after that bar line included — or the start of the
         // token under it; each printed copy of it. Kept across renders (the caret is re-applied
-        // with the bar flags), and moved by an edit's caret movement.
-        let caretAt = -1, caretToken = -1;
-        function lightCaretBar(caret, tokenStart) {
-            if (Number.isInteger(caret)) { caretAt = caret; caretToken = Number.isInteger(tokenStart) ? tokenStart : -1; }
+        // with the bar flags), and moved by an edit's caret movement. A caret before a bar's first
+        // note on the line that bar starts on — on 'voice {', 'tuplet 3/2 {', 'break', the
+        // indentation — lights that bar too (owner's report 2026-10-23: a bar that opens with
+        // 'voice {' lit only once the caret reached its first note): when no bar holds the caret,
+        // the first bar to start after it before the line ends (lineEnd, sent with the caret).
+        let caretAt = -1, caretToken = -1, caretLineEnd = -1;
+        function lightCaretBar(caret, tokenStart, lineEnd) {
+            if (Number.isInteger(caret)) {
+                caretAt = caret;
+                caretToken = Number.isInteger(tokenStart) ? tokenStart : -1;
+                caretLineEnd = Number.isInteger(lineEnd) ? lineEnd : -1;
+            }
             for (const r of svgContainer.querySelectorAll('rect.bar-staff.caret')) r.classList.remove('caret');
             if (caretAt < 0) return;
+            let lit = false, next = Infinity;
+            const spans = [];
             for (const r of svgContainer.querySelectorAll('rect.bar-staff[data-span]')) {
                 const span = r.getAttribute('data-span').split(' ');
                 const from = parseInt(span[0], 10), to = parseInt(span[1], 10);
-                if ((caretAt >= from && caretAt <= to + 1) || (caretToken >= from && caretToken <= to)) r.classList.add('caret');
+                spans.push([r, from]);
+                if ((caretAt >= from && caretAt <= to + 1) || (caretToken >= from && caretToken <= to)) { r.classList.add('caret'); lit = true; }
+                else if (from > caretAt && from <= caretLineEnd && from < next) next = from;
+            }
+            if (!lit && next !== Infinity) {
+                for (const [r, from] of spans) if (from === next) r.classList.add('caret');
             }
         }
         // The scan view's bar under the mouse, lit here: every bar whose first note is written
@@ -5309,7 +5327,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                     }
                     break;
                 case 'highlightPosition':
-                    lightCaretBar(message.caret, message.tokenStart);
+                    lightCaretBar(message.caret, message.tokenStart, message.lineEnd);
                     lastHighlightPos = message.position;
                     lastHighlightTokenStart = message.tokenStart;
                     lastHighlightRanges = null;

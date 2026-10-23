@@ -28,6 +28,12 @@ All notable changes to the Lily# VS Code extension are documented here.
   all* leaves it alone. The reader's other readings of a doubtful bar (`readings` in
   `x.omr.json`) go to the model as hints.
 
+### The caret's bar
+
+- **A caret before a bar's first note lights that bar in the preview** — on `voice {`,
+  `tuplet 3/2 {`, `break` or the indentation of the line the bar starts on; before, the bar lit
+  only once the caret reached its first note.
+
 ### Chord symbols as a chart prints them
 
 - **A chord symbol may be written in any of its printed spellings** — `CΔ7`, `Cø7`, `C°7`,

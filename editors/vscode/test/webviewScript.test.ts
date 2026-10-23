@@ -275,11 +275,12 @@ describe('the preview lights the bar the caret is in', () => {
         const cls = new Set<string>();
         return { cls, getAttribute: () => span, classList: { add: (c: string) => cls.add(c), remove: (c: string) => cls.delete(c) } };
     };
-    // bar 1 "c''1 |" at 10..15, bar 2 "d''2 e'' |" at 17..26.
-    const bars = [bar('10 15'), bar('17 26')];
+    // bar 1 "c''1 |" at 10..15; then a line "voice { d''2 e'' } |" from 17 to 31, whose bar 2 —
+    // its first note to its bar line — is 25..31.
+    const bars = [bar('10 15'), bar('25 31')];
     const svgContainer = { querySelectorAll: (sel: string) => sel.includes('.caret') ? bars.filter(b => b.cls.has('caret')) : bars };
-    const light = new vm.Script('(() => { let caretAt = -1, caretToken = -1; return ' + html.slice(at, close) + '; })()')
-        .runInNewContext({ svgContainer, Number, parseInt }) as (caret?: number, token?: number) => void;
+    const light = new vm.Script('(() => { let caretAt = -1, caretToken = -1, caretLineEnd = -1; return ' + html.slice(at, close) + '; })()')
+        .runInNewContext({ svgContainer, Number, parseInt, Infinity }) as (caret?: number, token?: number, lineEnd?: number) => void;
     const lit = () => bars.map(b => b.cls.has('caret'));
 
     it('finds the function in the page script', () => {
@@ -287,11 +288,19 @@ describe('the preview lights the bar the caret is in', () => {
     });
     it('lights the bar holding the caret, one at a time', () => {
         light(12, 10); assert.deepEqual(lit(), [true, false]);
-        light(20, 20); assert.deepEqual(lit(), [false, true]);
+        light(27, 25); assert.deepEqual(lit(), [false, true]);
     });
     it('keeps the bar just closed lit after its bar line, and none in the gap or outside', () => {
         light(16, -1); assert.deepEqual(lit(), [true, false]);
         light(5, -1); assert.deepEqual(lit(), [false, false]);
+    });
+    it('lights the bar a caret before its first note is on, on the same line (on "voice {")', () => {
+        // A caret on "voice" (18, its token at 17) lights bar 2, whose first note is later on the line.
+        light(18, 17, 31); assert.deepEqual(lit(), [false, true]);
+        // The same caret with the line ending before bar 2 starts: nothing.
+        light(18, 17, 22); assert.deepEqual(lit(), [false, false]);
+        // A caret inside bar 1 lights bar 1 alone, not the next one on the line.
+        light(12, 10, 31); assert.deepEqual(lit(), [true, false]);
     });
     it('lights again what it lit when called with no caret (after a render)', () => {
         light(12, 10);
