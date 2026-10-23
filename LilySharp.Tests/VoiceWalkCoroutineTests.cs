@@ -16,6 +16,7 @@
 
 using System.Threading.Tasks;
 using LilySharp.Core.Svg.Collector;
+using LilySharp.Core.Svg.Model;
 using LilySharp.Core.Syntax;
 using Xunit;
 
@@ -74,6 +75,41 @@ public class VoiceWalkCoroutineTests
         Assert.True(collector.Clock.Suspensions > 0, "no branch ever parked: the voices did not share a clock");
         Assert.True(collector.Clock.Reaches > collector.Clock.Suspensions);
         Assert.Equal(score.Voices[0].Measures.Length, score.Voices[1].Measures.Length);
+    }
+
+    /// <summary>A <c>key</c> in the second voice of a span, mid-bar; voice 1 reads it from there
+    /// on. Its <c>f'</c> in the next bar is a natural in D major (LilyPond 2.26.0 twin: Lab
+    /// sessions/p970/probe6/p4-key-in-voice2); its <c>f'</c> at the span's first beat, before the
+    /// change, is C major's and carries nothing.</summary>
+    private const string KeyInVoice2Book = """
+        octave absolute
+        time 4/4
+        key c major
+        part m { clef treble }
+        section A { m { voice { f'4 g' a' b' | f'4 g' a' b' | } { d4 key d major e fis g | d4 e fis g | } } }
+        form { ~A }
+        score { staff m }
+        """;
+
+    /// <summary>Stage ⑥, the key only: the key is the staff's, so a key change in one branch of
+    /// a span governs the other branches' later notes (LILYPOND-REF lily/key-engraver.cc:141-162,
+    /// the Key_engraver sits in Staff). The accidental memory stays per voice (owner, 2026-10-02).</summary>
+    [Fact]
+    public void KeyChangeInVoice2_GovernsVoice1FromThatMoment()
+    {
+        var collector = new MeasureCollector();
+        var score = collector.Collect(SyntaxTree.Parse(KeyInVoice2Book));
+
+        Assert.Equal(2, score.Voices.Length);
+        var voice1 = score.Voices[0].Measures;
+        var bar1F = Assert.IsType<NoteItem>(voice1[0].Items.First(i => i is NoteItem));
+        var bar2F = Assert.IsType<NoteItem>(voice1[1].Items.First(i => i is NoteItem));
+        Assert.Null(bar1F.Accidental);
+        Assert.Equal("natural", bar2F.Accidental);
+        // Voice 2's own fis after its key change is in the key: no sharp drawn.
+        var voice2 = score.Voices[1].Measures;
+        var fis = voice2[0].Items.OfType<NoteItem>().ElementAt(2);
+        Assert.Null(fis.Accidental);
     }
 
     /// <summary>The synchronous entry points run the coroutine to completion; a walk that

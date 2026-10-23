@@ -87,14 +87,14 @@ internal static class StaffAccidentals
 
         // Per measure, every head of every voice, and whether the bar changes clef — read off
         // the staff's one timeline (StaffTimeline, session 969), which is where the onset and
-        // the grace rank Earlier compares come from. The key in force and the voice's last
-        // sounding item (TiedInto) are per voice, carried across the bars.
+        // the grace rank Earlier compares come from. The key in force is the STAFF's, moved by
+        // any voice's key change in timeline order (stage ⑥ of the moment-order walk, as the
+        // collector shares it among a span's branches); the voice's last sounding item
+        // (TiedInto) is per voice. Both are carried across the bars.
         var heads = new List<Head>[measureCount];
         var clefChange = new bool[measureCount];
         var previous = new MusicItem?[voices.Length];
-        var key = new KeySignature?[voices.Length];
-        for (int vi = 0; vi < voices.Length; vi++)
-            key[vi] = openingKey;
+        var key = openingKey;
         for (int mi = 0; mi < measureCount; mi++)
         {
             foreach (var e in StaffTimeline.OfMeasure(voices, mi))
@@ -106,15 +106,15 @@ internal static class StaffAccidentals
                         clefChange[mi] = true;
                         break;
                     case KeySignatureChangeItem change:
-                        if (key[vi] != null)
-                            key[vi] = change.NewKey;
+                        if (key != null)
+                            key = change.NewKey;
                         break;
                     case NoteItem n:
                         if (n.WrittenPitch != 0)
                             (heads[mi] ??= new()).Add(new Head(vi, e.ItemIndex, -1, e.Onset, e.GraceRank,
                                 n.WrittenPitch, n.StaffPosition,
                                 n.Accidental != null || n.LineStartAccidental != null || n.EditorialAccidental != null,
-                                TiedInto(previous[vi], n.StaffPosition, n.Midi), key[vi]));
+                                TiedInto(previous[vi], n.StaffPosition, n.Midi), key));
                         previous[vi] = n;
                         break;
                     case ChordItem c:
@@ -125,7 +125,7 @@ internal static class StaffAccidentals
                                 (heads[mi] ??= new()).Add(new Head(vi, e.ItemIndex, k, e.Onset, e.GraceRank,
                                     member.WrittenPitch, member.StaffPosition,
                                     member.Accidental != null || member.LineStartAccidental != null,
-                                    TiedInto(previous[vi], member.StaffPosition, member.Midi), key[vi]));
+                                    TiedInto(previous[vi], member.StaffPosition, member.Midi), key));
                         }
                         previous[vi] = c;
                         break;

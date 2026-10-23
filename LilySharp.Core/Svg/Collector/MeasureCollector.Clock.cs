@@ -103,6 +103,10 @@ public sealed partial class MeasureCollector
 
         internal Span? CurrentSpan => _spans.Count > 0 ? _spans.Peek() : null;
 
+        /// <summary>The open spans, innermost first — for the staff-level state a branch shares
+        /// with every other branch on the clock (<see cref="ShareKeyWithSpanBranches"/>).</summary>
+        internal IEnumerable<Span> OpenSpans => _spans;
+
         /// <summary>Opens a span at <paramref name="now"/>, the moment the primary stands at.</summary>
         internal Span OpenSpan((int Measure, Fraction Position) now)
         {
@@ -457,6 +461,47 @@ public sealed partial class MeasureCollector
         _graceChordNames = s.GraceChordNames;
         _graceFrameSpecs = s.GraceFrameSpecs;
         _lastEndsOffTheBar = s.LastEndsOffTheBar;
+    }
+
+    /// <summary>
+    /// Stage ⑥, the key only: a <c>key</c> written in one branch of a span is the STAFF's, so
+    /// the other branches' later notes read it. <c>ApplyKeySignatureChange</c> calls this once
+    /// the running branch's key and tonic are set; it writes the same into every other branch's
+    /// state, at every level of nesting. The running branch's own record (and, in a nested span,
+    /// the enclosing branch's, which shares its metadata object) is skipped: the collector's
+    /// fields are the live copy, and the next capture writes them back.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// LILYPOND-REF: lily/key-engraver.cc:141-162 — Key_engraver lives in Staff and sets
+    /// keyAlterations there; lily/accidental-engraver.cc:495-500 Accidental_engraver::process_music
+    /// re-reads keyAlterations every timestep, so every voice of the staff judges its heads
+    /// against the one key. The reminder memory (localAlterations) is NOT shared here: the owner
+    /// kept the cross-voice reminder on 2026-10-02 (LILYSHARP-OWN) and scoped this stage to the
+    /// key on 2026-10-23 (docs/moment-walk-design.md §3.3, §4 ⑥).
+    /// </para>
+    /// <para>
+    /// Known gap, written by no book in the nets: LilyPond hears the key event before any head of
+    /// the timestep is judged, so a head in a LOWER branch at the very moment of the change reads
+    /// the new key there; here that branch has already run at the moment (the driver runs the
+    /// branches standing at one moment lowest first) and judged its head against the old key.
+    /// </para>
+    /// </remarks>
+    private void ShareKeyWithSpanBranches()
+    {
+        if (!_clock.SpanOpen)
+            return;
+        foreach (var span in _clock.OpenSpans)
+            foreach (var b in span.Branches)
+            {
+                if (b.State is not { } s || ReferenceEquals(s.Meta, _meta))
+                    continue;
+                s.Meta.KeySharps = _meta.KeySharps;
+                s.Meta.KeyCustom = _meta.KeyCustom;
+                s.AmbientTonicStep = _ambientTonicStep;
+                s.AmbientTonicAlter = _ambientTonicAlter;
+                s.AmbientTonicValid = _ambientTonicValid;
+            }
     }
 
     /// <summary>

@@ -859,6 +859,9 @@ public sealed partial class MeasureCollector
             RecordKeyAtMeasure(builder.CurrentMeasureIndex,
                 Math.Max(0, LilySharp.Core.Music.KeySpelling.StepOf(keySig.Pitch.BaseName)), newSharps);
         }
+        // The key is the staff's: inside a span the other branches read it from here on
+        // (stage ⑥ of the moment-order walk; LilyPond's Key_engraver sits in Staff).
+        ShareKeyWithSpanBranches();
 
         // A key change at the very opening (bar 0, before any note sounds) IS the piece's
         // opening key, not a change within it — e.g. a top-level `key d major` overridden by
