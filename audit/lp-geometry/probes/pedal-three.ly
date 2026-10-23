@@ -41,5 +41,8 @@
 %   attribute every label: without them "Sost. Ped." and "*" cannot be told apart from the
 %   sustain pair, and score 2 is what shows the "*" belongs to SOSTENUTO.
 %
-% ⚠️ NOT MEASURED INTO ANY PORT: the STEPS. LilyPond's rows step 1.961 then 2.443 (each row's
-%   own ink); Lily# uses one StackGap for both (2.46). Only the ORDER was ported.
+% ⚠️ THE STEPS (1.961 then 2.443, each row's own ink) were ported two days later, 2026-08-20
+%   (82c72f64a): each word hangs from its own LineSpanner and same-column words stack by their
+%   ink at 0.46 — ledger mark.pedal.rows.{una-corda,sostenuto,sustain} over pedal-rows.ly,
+%   the 9-digit dump twin of this book (this file's SVG read was a line-thickness off).
+%   Until then Lily# used one StackGap (2.46) for both and only the ORDER was ported here.

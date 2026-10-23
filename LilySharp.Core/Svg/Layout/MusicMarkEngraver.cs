@@ -1299,10 +1299,11 @@ internal static class MusicMarkEngraver
             //   probe. ⚠️ And the sustain row is found as GLYPHS, not text: LilyPond draws
             //   "Ped." with Emmentaler (lily/sustain-pedal.cc), so a probe scanning <tspan>
             //   sees the other two and silently misses this one (HANDOFF §5.3).
-            // ⚠️ WHAT IS NOT PORTED: the STEPS between rows. LilyPond's are 1.961 then 2.443
-            //   — each row's own ink — where Lily# uses one StackGap for both (2.46 measured).
-            //   Only the ORDER is fixed here; the step model is a separate quantity and has no
-            //   ledger point yet.
+            // The STEPS between rows are NOT this table's: a text-style word hangs from its own
+            //   LineSpanner (support + padding 1.2) and same-column words stack by their own
+            //   ink at the outside-staff padding 0.46 (82c72f64a, 2026-08-20) — LilyPond's
+            //   1.961 then 2.443 fall out of the profiles, ledger mark.pedal.rows.* (slivers of
+            //   e-3). This table fixes only the ORDER.
             // The row each pedal family occupies in this group, stacked outward.
             // ⚠️ NOT BUILT FOR A GROUP THAT HAS NO BELOW MARK, and that is nearly every
             // group. The rows are read at exactly one site — the pedal arm of the loop

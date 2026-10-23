@@ -444,9 +444,9 @@ public class PedalTests
     /// reported two rows and missed the third in silence.
     /// </para>
     /// <para>
-    /// The ORDER is asserted, not the distances: LilyPond's rows step 1.961 then 2.443 (each
-    /// row's own ink) where Lily# uses one StackGap for both, and that step model is a
-    /// separate quantity with no ledger point yet.
+    /// The ORDER is asserted, not the distances: the rows' steps (LilyPond's 1.961 then
+    /// 2.443, each row's own ink) are the ledger's — <c>mark.pedal.rows.*</c> over
+    /// <c>pedal-rows.ly</c>, ported 2026-08-20 (82c72f64a), slivers of e-3.
     /// </para>
     /// </remarks>
     [Fact]

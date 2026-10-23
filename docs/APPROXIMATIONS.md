@@ -12,16 +12,16 @@
 
 | 区分 | 件数 | 意味 |
 |---|---:|---|
-| `APPROX` | 65 | LP に対応物はあるが、形が違うと自認しているもの |
+| `APPROX` | 64 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 64 | 観測者がゼロだと自認しているもの |
 | `OWN` | 273 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **402** | |
+| **計** | **401** | |
 
 ## 密度の高いファイル（上位 12）
 
 | ファイル | 件数 |
 |---|---:|
-| `LilySharp.Core/Svg/Layout/MusicMarkEngraver.cs` | 21 |
+| `LilySharp.Core/Svg/Layout/MusicMarkEngraver.cs` | 20 |
 | `LilySharp.Core/Svg/Layout/ArticulationEngraver.cs` | 16 |
 | `LilySharp.Core/Svg/Layout/MultiStaffLayouter.cs` | 13 |
 | `LilySharp.Core/Svg/EngravingDefaults.cs` | 12 |
@@ -34,7 +34,7 @@
 | `LilySharp.Core/Svg/Layout/TabStaffGeometry.cs` | 7 |
 | `LilySharp.Core/Rendering/SharedRenderer.Marks.cs` | 6 |
 
-## APPROX — LP に対応物はあるが、形が違うと自認しているもの（65 件）
+## APPROX — LP に対応物はあるが、形が違うと自認しているもの（64 件）
 
 ### `LilySharp.Core/Music/ChordStructure.cs`
 - **`ChordQualityRegistry.SymbolSuffix`** ⚠️ THE SIZE AND THE RAISE ARE NOT PORTED — Lily# draws a chord name as one baseline
@@ -104,7 +104,6 @@
 - **`MultiStaffLayouter.StaffSprings`** ⚠️ WHAT IS STILL NOT PORTED, named rather than hidden: staff-refpoint-extent
 - **`MultiStaffLayouter.StaffFingeringLayouts`** same approximation the scripts' own remark records for the movers; the books that
 ### `LilySharp.Core/Svg/Layout/MusicMarkEngraver.cs`
-- **`MusicMarkEngraver.Calculate`** ⚠️ WHAT IS NOT PORTED: the STEPS between rows. LilyPond's are 1.961 then 2.443
 - **`MusicMarkEngraver.LabelFrameBottomAboveStaffMiddle`** ⚠️ The 0.46 outside-staff branch is NOT this number and is not ported here: it is what
 ### `LilySharp.Core/Svg/Layout/NoteCollision.cs`
 - **`NoteCollisionParameters`** non-default merge-differently-* switches. dot_wipe_head is NOT ported (no channel).
