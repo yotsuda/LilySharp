@@ -472,6 +472,9 @@ public static partial class NoteStepper
         int timbre = -1;
         int program = NoProgram;
         bool strum = false;
+        // A strum keeps its voice's own order — string after string — not the pitches sorted:
+        // a re-entrant ukulele strikes its high 4th string first (owner's report 2026-10-24).
+        ImmutableArray<int> strummed = [];
         try
         {
             var newTree = SyntaxTree.Parse(newText);
@@ -487,7 +490,11 @@ public static partial class NoteStepper
                 foreach (int pitch in voice.Pitches)
                     pitches.Add(pitch);
                 if (timbre < 0 && voice.Pitches.Length > 0)
+                {
                     (timbre, program, strum) = (voice.Timbre, voice.Program, voice.Strum);
+                    if (strum)
+                        strummed = voice.Pitches;
+                }
             }
         }
         catch (Exception)
@@ -496,7 +503,8 @@ public static partial class NoteStepper
         }
 
         return new StepResult(false, [.. edits], message,
-            [.. pitches.Take(MaxAuditionPitches)], Math.Max(timbre, 0), program, convert, strum);
+            strum ? [.. strummed.Take(MaxAuditionPitches)] : [.. pitches.Take(MaxAuditionPitches)],
+            Math.Max(timbre, 0), program, convert, strum);
     }
 
     // ------------------------------------------------------------------ the audition

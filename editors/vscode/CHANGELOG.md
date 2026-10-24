@@ -44,7 +44,8 @@ All notable changes to the Lily# VS Code extension are documented here.
 - **On a part's `tuning` they step through the tunings** — Down down the list `Ctrl+Space` shows,
   Up back up; `Ctrl+Shift+PageDown` / `PageUp`: a family at a time — guitars, basses, violin /
   viola / cello, banjos, ukuleles — **and the open
-  strings sound, one after another from the lowest up**, typed or completed words too.
+  strings sound, string after string from the highest-numbered** (a ukulele's high 4th-string G
+  first, then C E A), typed or completed words too.
 - **On a `clef`, `Ctrl+Shift+Up` / `Down` now step one clef at a time, in the order `Ctrl+Space`
   lists them** — `treble` at the top, Down down the list, Up back up — and **`Ctrl+Shift+PageUp` /
   `PageDown` jump a group** to its usual clef (`treble` ⇄ `alto` ⇄ `bass` ⇄ `percussion`). Before,

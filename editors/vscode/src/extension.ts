@@ -5001,14 +5001,15 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         // The extension sends the compiler's MIDI numbers and the part's program, so
         // no note list is needed here. Same voice as the held audition: a fresh strike
         // (the huge gap), then released after durationMs instead of waiting for key-repeats.
-        // strumMs > 0: the pitches one after another, lowest first, that far apart — a tuning's
-        // open strings (owner's request 2026-10-24), each joining the ones already ringing.
+        // strumMs > 0: the pitches one after another IN THE ORDER GIVEN, that far apart — a
+        // tuning's open strings string after string (owner's request 2026-10-24), each joining the
+        // ones already ringing. Not sorted: a re-entrant ukulele's high 4th string comes first.
         function playPitches(pitches, timbre, program, durationMs, strumMs) {
             if (!pitches || pitches.length === 0) { return; }
             stopHeldNote();
             const prog = typeof program === 'number' ? program : -1;
             if (strumMs > 0 && pitches.length > 1) {
-                const order = pitches.slice().sort((a, b) => a - b);
+                const order = pitches.slice();
                 holdNotes([order[0]], timbre || 0, prog, 1e9);
                 for (let i = 1; i < order.length; i++) {
                     strumTimers.push(setTimeout(() => addHeldNote(order[i], timbre || 0, prog), i * strumMs));

@@ -28,7 +28,7 @@ workflow attaches that section to the GitHub Release verbatim.
   `size` / `step` its number (`size 2.2` → `2.3`). **On a
   part's `midiInstrument "…"` they step the General MIDI name, and the new instrument sounds** —
   typed or completed names sound too. On a part's `tuning` they step the tuning, family by
-  family, and its open strings sound one after another from the lowest up. `Ctrl+Space` after `tuning` in a part header lists the
+  family, and its open strings sound string after string (a ukulele's high G first). `Ctrl+Space` after `tuning` in a part header lists the
   tunings with their open strings; completing `condensedStaff` / `combinedStaff` opens the clefs
   (and the brace with none), then the part names — or, in front of a written group body, puts
   its `staff` rows onto one staff (`condensedStaff treble { melody p2 }`). On a `clef` Up / Down now step one clef at a time in the

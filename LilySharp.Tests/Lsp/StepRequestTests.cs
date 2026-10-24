@@ -1431,6 +1431,28 @@ public class StepRequestTests
     }
 
     [Fact]
+    public void ATuningsStrum_GoesStringAfterString_NotLowestFirst()
+    {
+        // Owner's report 2026-10-24: a re-entrant ukulele's 4th string (G4) is higher than its 3rd
+        // (C4) and is struck first — G4 C4 E4 A4, not C4 E4 G4 A4.
+        var (ukulele, _) = Step(Tuning("‸ukuleled"), +1, semitone: true);
+        Assert.True(ukulele.Strum);
+        Assert.Equal([67, 60, 64, 69], ukulele.Pitches);
+        // The 5-string banjo's 5th string is its high drone, struck first too.
+        Assert.Equal([67, 50, 55, 59, 62], Step(Tuning("‸banjoc"), +1, semitone: true).Response.Pitches);
+        // On a guitar string order and pitch order agree.
+        Assert.Equal([40, 45, 50, 55, 59, 64], Step(Tuning("‸guitar7"), +1, semitone: true).Response.Pitches);
+        // Typed or completed: the audition answers in the same order.
+        string text = Tuning("ukulele");
+        var answer = Open(text).AuditionAt(new AuditionAtParams
+        {
+            TextDocument = new TextDocumentIdentifier { Uri = DocUri },
+            Offset = text.IndexOf("ukulele", StringComparison.Ordinal) + 7,
+        });
+        Assert.Equal([67, 60, 64, 69], answer.Pitches);
+    }
+
+    [Fact]
     public void ATuning_AnswersTheAudition_WithItsOpenStrings()
     {
         string text = Tuning("cello");

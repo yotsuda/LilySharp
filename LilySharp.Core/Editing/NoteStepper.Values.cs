@@ -839,7 +839,7 @@ public static partial class NoteStepper
         => string.Join(" ", Tablature.Tunings.GetTuning(Tablature.Tunings.Parse(word)).Select(SpellMidi));
 
     /// <summary>What a <c>tuning</c> sounds when it changes: its open strings one after another,
-    /// lowest first (<see cref="StepResult.Strum"/>), in the General MIDI program of its instrument (Lily#'s choice: the fingered bass,
+    /// in string order from the highest-numbered string (<see cref="StepResult.Strum"/>), in the General MIDI program of its instrument (Lily#'s choice: the fingered bass,
     /// the violin, viola and cello, the banjo, the nylon guitar for the guitars and the ukuleles).
     /// Silent for a word that is no tuning.</summary>
     private static Voice TuningVoice(PropertyAssignmentSyntax property)
@@ -860,8 +860,11 @@ public static partial class NoteStepper
             },
         };
         int program = Midi.GeneralMidi.ProgramOf(name)!.Value;
-        // Struck from the lowest string up, one after another (owner's request 2026-10-24).
-        return new Voice([.. Tablature.Tunings.GetTuning(type).Order()],
+        // Struck string after string, the highest-numbered string first — the table's own order
+        // (owner's request 2026-10-24) — NOT sorted by pitch: a re-entrant ukulele's 4th string is
+        // its high G, struck before the 3rd string's C (owner's report, same day). On a guitar the
+        // two orders agree.
+        return new Voice([.. Tablature.Tunings.GetTuning(type)],
             Midi.GeneralMidi.PreviewTimbreFamily(program), program, Strum: true);
     }
 
