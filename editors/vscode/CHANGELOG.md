@@ -9,7 +9,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 - **Lily#: Fix OMR Marks with AI…** rewrites the bars an OMR reader marked as doubtful (`@todo`),
   one request a bar, only when you run it: pick the bars (the least sure first, the ones below
   the scan view's slider checked, the estimate in the title), and review every proposal in the
-  *OMR fixes* panel beside the scan's crop of the bar and the score as it is — with the model's
+  *Bar fixes* panel beside the scan's crop of the bar and the score as it is — with the model's
   reason and the gates it passed (compiles without a new error, fills its meter). Each bar has
   **Accept** — written into the `.lys` at once (its own Ctrl+Z), and the row leaves the panel —
   and **Discard**, which drops the row; **Accept All (N)** writes, as one edit, the rows that are
@@ -43,7 +43,7 @@ All notable changes to the Lily# VS Code extension are documented here.
   by hand the same way; a click on a note of the picture puts the caret on that note's text.
 - **Lily#: Edit Bars Beside the Scan** opens the bars on the selected lines (the caret's line
   when nothing is selected, up to 30) in the same panel without the AI: **Now**, **Scan** and
-  **Edit**, the last the bar to click and edit, its picture and gates following the typing;
+  **Draft**, the last the bar to click and edit, its picture and gates following the typing;
   each row's *Accept* writes it. In the editor's menu of a `.lys` with a scan. On a bar with no
   mark the check box beside *Accept* reads `add @todo` (the mark goes on its first note), on one
   with a mark `keep @todo`. Rows written by their own Accept leave the panel and more bars can
@@ -62,7 +62,10 @@ All notable changes to the Lily# VS Code extension are documented here.
 - **A bar can be accepted and stay marked**: `keep @todo` beside *Accept* writes the bar with a
   `@todo` still on it, at the note nearest the old mark (the reader's key kept), and the words
   typed beside it as its memo — for a proposal that is better but not right yet. The pictures
-  go *Now (OMR)*, *Scan*, *Proposal*, so the scan sits beside the proposal it is compared with.
+  go *Now*, *Scan*, *Draft*, so the scan sits beside the bar it is compared with. The panel is
+  *Bar fixes* and its columns the same whichever command opened it; each Draft says over its
+  picture where it came from (*AI proposal*, *AI proposal, edited*, *your edit*, *waiting for
+  the AI…*, *the bar as it stands*).
   The model is told the page decides: the meter is a check on a reading, the reader's note and
   the compiler's messages say where to look, not what to write, and a bar is never padded with
   spacer rests or dots to make the count come out.

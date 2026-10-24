@@ -129,7 +129,7 @@ interface FixRow {
     /** The AI is about it (owner's request 2026-10-24: asked a row at a time, answered in the
      *  background while the other rows are edited): waiting in the queue, or being asked. */
     ai?: 'queued' | 'asking';
-    /** The AI has answered it once at least (its column is then "Proposal", not "Edit"). */
+    /** The AI has answered it once at least. */
     asked?: boolean;
     /** Taken with a @todo still on it, and the memo the person typed for it (owner's request
      *  2026-10-24: a proposal that is better but not right yet). */
@@ -138,6 +138,9 @@ interface FixRow {
     /** The bar as the person edited it in the panel (owner's request 2026-10-24), with its own
      *  gates and picture; undefined: the model's proposal stands. */
     edited?: string;
+    /** The edit was begun on the AI's bar (its Draft reads "AI proposal, edited"), not on the bar
+     *  as it stands ("your edit"). */
+    editedFromAi?: boolean;
     editGate?: GateVerdict;
     editAfter?: SvgResponse;
     /** The page's count of edits to this row: an answer to an older one is dropped. */
@@ -895,7 +898,7 @@ async function fixOne(
 }
 
 // ---------------------------------------------------------------------------------------------
-// The panel: Lily# — OMR fixes (design §2.3)
+// The panel: Lily# — Bar fixes (design §2.3)
 // ---------------------------------------------------------------------------------------------
 
 function showPanel(deps: OmrAiFixDeps, run: FixRun): void {
@@ -910,7 +913,7 @@ function showPanel(deps: OmrAiFixDeps, run: FixRun): void {
     // the scan view itself "Beside" made a new column), else beside the active one.
     const column = deps.scanColumn(run.uri.toString()) ?? vscode.ViewColumn.Beside;
     if (!panel) {
-        panel = vscode.window.createWebviewPanel('lilysharpOmrFixes', 'Lily# — OMR fixes',
+        panel = vscode.window.createWebviewPanel('lilysharpOmrFixes', 'Lily# — Bar fixes',
             { viewColumn: column, preserveFocus: true },
             { enableScripts: true, retainContextWhenHidden: true, localResourceRoots: roots });
         panel.onDidDispose(() => {
@@ -922,7 +925,7 @@ function showPanel(deps: OmrAiFixDeps, run: FixRun): void {
     } else {
         panel.webview.options = { ...panel.webview.options, localResourceRoots: roots };
     }
-    panel.title = run.manual ? 'Lily# — Bars beside the scan' : 'Lily# — OMR fixes';
+    panel.title = 'Lily# — Bar fixes';
     panel.webview.html = panelHtml(deps, panel.webview, run);
     panel.reveal(column, true);
 }
@@ -1083,9 +1086,12 @@ async function editRow(run: FixRun, row: FixRow, raw: string, seq: number): Prom
     const text = raw.replace(/\s+/g, ' ').trim();
     const model = hasProposal(row) ? row.proposal!.bar! : resolvedLine(row.target.written).replace(/\s+/g, ' ').trim();
     if (text === '' || text === model) {
-        row.edited = row.editGate = row.editAfter = undefined;
+        row.edited = row.editGate = row.editAfter = row.editedFromAi = undefined;
         postRow(run, row, seq);
         return;
+    }
+    if (row.edited === undefined) {
+        row.editedFromAi = hasProposal(row);
     }
     row.edited = text;
     const spliced = spliceBar(row.base.text, row.target, text);
@@ -1115,13 +1121,13 @@ async function editRow(run: FixRun, row: FixRow, raw: string, seq: number): Prom
 
 /** Sends one row's parts to the page, to replace in place (the text field keeps its focus).
  *  `seq`: the edit it answers (an answer to an older one is dropped there); `check`: the AI's
- *  answer checks the row's box. The panel's head goes along (its counts, its third column). */
+ *  answer checks the row's box. The panel's head goes along (its counts). */
 function postRow(run: FixRun, row: FixRow, seq = row.editSeq ?? 0): void {
     if (!panel || shownRun !== run || !isLive(row)) {
         return;
     }
     const p = rowParts(run, row);
-    void panel.webview.postMessage({ type: 'row', index: row.index, seq, gates: p.gates, reason: p.reason, proposal: p.proposal,
+    void panel.webview.postMessage({ type: 'row', index: row.index, seq, gates: p.gates, reason: p.reason, proposal: p.proposal, source: p.source,
         now: p.nowText, after: p.afterText, del: p.del, accept: p.accept, plain: barOf(row) ?? resolvedLine(row.target.written),
         secs: secondsOf(run, row), ...headerOf(run) });
 }
@@ -1131,9 +1137,10 @@ function secondsOf(run: FixRun, row: FixRow): string {
     return row.asked ? ` · ${row.seconds.toFixed(1)} s` : '';
 }
 
-/** The panel's head: the line under its title, and its third column's name — Proposal once the
- *  AI has answered a row, Edit while every bar is the person's (owner's choice 2026-10-24). */
-function headerOf(run: FixRun): { cap: string; third: string; ready: number } {
+/** The panel's head: the line under its title, and the count Accept All writes. Its columns are
+ *  Now / Scan / Draft whichever command opened it (owner's choice 2026-10-24: one panel, one
+ *  name); where a Draft came from is said in its own cell (rowParts' source). */
+function headerOf(run: FixRun): { cap: string; ready: number } {
     const live = run.rows.filter(isLive);
     const n = live.length;
     const proposals = live.filter(hasProposal).length;
@@ -1146,7 +1153,6 @@ function headerOf(run: FixRun): { cap: string; third: string; ready: number } {
             + (waiting ? ` · ${waiting} waiting for the AI` : '')
             + (written ? ` · ${written} written` : '')
             + ' · edit a bar (click a note or its text) or ask the AI; Accept writes a bar, Discard drops it',
-        third: asked ? 'Proposal' : 'Edit',
         ready: live.filter(isReady).length,
     };
 }
@@ -1273,7 +1279,7 @@ function symbolOf(svg: string): { viewBox: string; x: number; y: number; w: numb
 function scoreCell(id: string, sym: NonNullable<ReturnType<typeof symbolOf>>, lo: number, hi: number, define: boolean,
     paint?: { kind: 'del' | 'add'; ranges: readonly [number, number][] }): string {
     // The notes to paint (the word diff's pieces, by the source offsets the drawn notes carry):
-    // what the proposal takes out red in "Now", what it puts in green in "Proposal".
+    // what the proposal takes out red in "Now", what it puts in green in "Draft".
     const marks = paint && paint.ranges.length ? ` data-paint="${paint.kind}" data-ranges="${paint.ranges.map(r => r.join(':')).join(',')}"` : '';
     // A row's own picture (define) is drawn inline, not through a <use>: a click inside a <use>
     // is reported on the <use>, and the proposal's notes are clicked to edit them (owner's
@@ -1290,6 +1296,8 @@ interface RowParts {
     reason: string;
     /** The proposal's picture (a score cell, or a box saying why there is none). */
     proposal: string;
+    /** Where the Draft came from, said over its picture (AI proposal / your edit / …). */
+    source: string;
     /** The two lines piece by piece, under the pictures. */
     nowText: string;
     afterText: string;
@@ -1371,8 +1379,15 @@ function rowParts(run: FixRun, r: FixRow): RowParts {
     // with keep/add @todo — writes the mark; a bar with none of these has nothing to write.
     const marked = resolvedLine(t.written) !== t.written;
     const own = barOf(r) !== undefined;
+    // Where the Draft came from, over its picture.
+    const source = edited ? (r.editedFromAi ? 'AI proposal, edited' : 'your edit')
+        : r.ai === 'asking' ? 'asking the AI…'
+        : r.ai ? 'waiting for the AI…'
+        : hasProposal(r) ? 'AI proposal'
+        : r.asked ? 'no AI proposal — the bar as it stands'
+        : 'the bar as it stands';
     return {
-        gates: gatesHtml(gate), reason: lost + reason + sure + hint + aiNow, proposal, nowText: piecesHtml(diff.before), afterText: piecesHtml(diff.after), del,
+        gates: gatesHtml(gate), reason: lost + reason + sure + hint + aiNow, proposal, source, nowText: piecesHtml(diff.before), afterText: piecesHtml(diff.after), del,
         accept: { word: !own && marked && !r.keepTodo ? 'Accept (remove @todo)' : 'Accept', can: own || marked || !!r.keepTodo, ready: isReady(r) },
     };
 }
@@ -1458,7 +1473,7 @@ function rowHtml(run: FixRun, r: FixRow, pageUris: ReadonlyMap<number, { uri: st
 <tr class="${cls} body" data-i="${r.index}">
   <td class="cell">${now}<pre class="src now" data-i="${r.index}">${parts.nowText}</pre></td>
   <td class="cell">${scan}</td>
-  <td class="cell"><div class="after-pic" data-i="${r.index}">${parts.proposal}</div>`
+  <td class="cell"><div class="draft-of" data-i="${r.index}">${esc(parts.source)}</div><div class="after-pic" data-i="${r.index}">${parts.proposal}</div>`
         // The bar to write, editable (owner's request 2026-10-24): a click opens it; the
         // picture and the gates follow the typing.
         + (can ? `<pre class="src after editable" data-i="${r.index}" title="Click to edit the bar — the picture and the gates follow">${parts.afterText}</pre>`
@@ -1531,6 +1546,7 @@ tr.body td { padding-top: 2px; }
 .memo { font-size:12px; opacity:.85; }
 .dim { opacity:.6; }
 .cell { width:33%; }
+.draft-of { font-size:11px; opacity:.7; margin:0 0 2px; }
 .pic { display:block; width:100%; height:120px; background:#fff; border:1px solid var(--vscode-panel-border); }
 .none { height:120px; display:flex; align-items:center; justify-content:center; opacity:.6; border:1px dashed var(--vscode-panel-border); }
 .src { margin:4px 0 0; font-family: var(--vscode-editor-font-family, monospace); font-size:11px; white-space:pre-wrap; opacity:.9; }
@@ -1552,12 +1568,12 @@ button.link { background:none; border:none; padding:0; margin-left:8px; color: v
 <body>
 ${store}
 <div class="header">
-  <div><div class="title">${run.manual ? 'Bars beside the scan' : 'OMR fixes'} — ${esc(name)}</div>
+  <div><div class="title">Bar fixes — ${esc(name)}</div>
   <div class="cap" id="cap">${esc(head.cap)}</div></div>
 </div>
 <div class="main">
 <table>
-<thead><tr><th>${run.manual ? 'Now' : 'Now (OMR)'}</th><th>Scan</th><th id="third">${head.third}</th></tr></thead>
+<thead><tr><th>Now</th><th>Scan</th><th>Draft</th></tr></thead>
 <tbody>
 ${rows}
 </tbody>
@@ -1847,10 +1863,9 @@ ${rows}
   document.addEventListener('focusout', e => {
     if (e.target.matches && e.target.matches('textarea.edit') && !e.target.hidden) closeEdit(e.target.dataset.i);
   });
-  // The head: the line under the title, the third column's name (Edit until the AI answers).
+  // The head: the line under the title, and the count Accept All writes.
   function header(m) {
     if (typeof m.cap === 'string') document.getElementById('cap').textContent = m.cap;
-    if (typeof m.third === 'string') document.getElementById('third').textContent = m.third;
     if (typeof m.ready === 'number') {
       document.getElementById('readyN').textContent = String(m.ready);
       document.getElementById('acceptAll').disabled = m.ready === 0;
@@ -1893,6 +1908,8 @@ ${rows}
     // The row's Accept: its word, whether it writes anything, primary when the row is ready.
     const ab = q('button.row-accept', i);
     if (ab && m.accept) { ab.textContent = m.accept.word; ab.disabled = !m.accept.can; ab.classList.toggle('primary', !!m.accept.ready); }
+    const from = q('div.draft-of', i);
+    if (from && typeof m.source === 'string') from.textContent = m.source;
     const holder = q('div.after-pic', i);
     holder.innerHTML = m.proposal;
     for (const svg of holder.querySelectorAll('svg.score')) setUp(svg);

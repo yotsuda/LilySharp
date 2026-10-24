@@ -10,7 +10,7 @@ workflow attaches that section to the GitHub Release verbatim.
 
 - **Lily#: Fix OMR Marks with AI…** rewrites the bars an OMR reader marked as doubtful (`@todo`),
   one request a bar, only when you run it: pick the bars (the least sure first, the ones below the
-  scan view's slider checked, the estimate in the title), then review every proposal in the *OMR
+  scan view's slider checked, the estimate in the title), then review every proposal in the *Bar
   fixes* panel beside the scan's crop of the bar and the score as it is, with the model's reason
   and the gates it passed (compiles without a new error, fills its meter). Nothing is written until
   asked: a bar's *Accept* writes it at once (its own Ctrl+Z) and its *Discard* drops it, each row leaving
@@ -28,12 +28,13 @@ workflow attaches that section to the GitHub Release verbatim.
   (`readings`) go to the model as hints (M3).
   The bar to write can be edited in the panel, its picture and gates following the typing (a
   row with no proposal too); **Lily#: Edit Bars Beside the Scan** opens the selected bars in the
-  same panel without the AI (*Now*, *Scan*, *Edit*). Both are in the preview's and the scan view's
+  same panel without the AI (*Now*, *Scan*, *Draft*). Both are in the preview's and the scan view's
   context menu, on the bar right-clicked. The AI now answers a row at a time in the background
   (*Ask AI* on each row, *cancel*; the panel opens at once and fills in; a row edited meanwhile
   keeps the edit), and a second command on the same file adds its bars to the open panel.
   A bar can be taken and stay marked (`keep @todo`: a `@todo` at the note nearest the old mark,
-  its key kept, the typed words as its memo); the pictures go *Now (OMR)*, *Scan*, *Proposal*;
+  its key kept, the typed words as its memo); the pictures go *Now*, *Scan*, *Draft* (one panel, *Bar fixes*,
+  whichever command opened it; each Draft says where it came from: the AI, the AI's edited, yours);
   and the model is told the page decides — the meter is a check, the reader's note and the
   compiler point where to look, and a bar is never padded with spacer rests or dots.
 - **The VSIX carries `lysc` beside the language server** (`server/`, sharing its runtime: 0.4 MB
