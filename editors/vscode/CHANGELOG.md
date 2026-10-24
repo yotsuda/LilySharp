@@ -14,7 +14,7 @@ All notable changes to the Lily# VS Code extension are documented here.
   **Accept** — written into the `.lys` at once (its own Ctrl+Z), and the row leaves the panel —
   and **Discard**, which drops the row; **Accept All (N)** writes, as one edit, the rows that are
   ready (the AI's bars that pass every gate, and your edits that compile and fill their bar; their
-  Accept is the highlighted one), and **Cancel All** closes the panel writing nothing more. The
+  Accept is the highlighted one), and **Discard All** closes the panel writing nothing more. The
   panel closes by itself when its last row goes. A click on a bar shows it in the editor, its
   line lit light blue (the caret at its start, nothing selected); under the pictures the two
   lines are compared piece by piece (what goes struck through in red, what comes in green), and

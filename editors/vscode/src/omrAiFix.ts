@@ -948,7 +948,7 @@ async function onPanelMessage(deps: OmrAiFixDeps, m: PanelMessage): Promise<void
     const row = found && isLive(found) ? found : undefined;
     // Each row is accepted or discarded on its own, and leaves the panel (owner's request
     // 2026-10-24: a bar the person has looked at is done with there and then); Accept All writes
-    // the rows that are ready as ONE edit; Cancel All closes the panel writing nothing more. The
+    // the rows that are ready as ONE edit; Discard All closes the panel writing nothing more. The
     // panel closes by itself when its last row goes.
     switch (m.action) {
         case 'keep':
@@ -980,7 +980,7 @@ async function onPanelMessage(deps: OmrAiFixDeps, m: PanelMessage): Promise<void
         case 'acceptAll': {
             const ready = run.rows.filter(r => isLive(r) && isReady(r));
             if (ready.length === 0) {
-                vscode.window.showInformationMessage('Lily#: no bar is ready to write — accept or edit them one by one, or Cancel All.');
+                vscode.window.showInformationMessage('Lily#: no bar is ready to write — accept or edit them one by one, or Discard All.');
                 return;
             }
             const written = await applyRows(run, ready);
@@ -1006,7 +1006,7 @@ async function onPanelMessage(deps: OmrAiFixDeps, m: PanelMessage): Promise<void
             if (row) { await showBar(run, row); }
             return;
         case 'cancel':
-            log(`Fix OMR marks: Cancel All in the panel — ${run.rows.filter(isLive).length} bars left unwritten`
+            log(`Fix OMR marks: Discard All in the panel — ${run.rows.filter(isLive).length} bars left unwritten`
                 + ` (${run.rows.filter(r => r.state === 'applied').length} written before).`);
             panel.dispose();
             return;
@@ -1566,7 +1566,7 @@ ${rows}
 <div class="footer">
   <button class="primary" id="acceptAll" ${head.ready ? '' : 'disabled'} title="Write every ready bar — your edits that compile and fill their bar, and the AI's bars that pass every gate — as one edit (one Ctrl+Z)">Accept All (<span id="readyN">${head.ready}</span>)</button>
   <div class="spacer"></div>
-  <button id="cancel" title="Close the panel, writing nothing more">Cancel All</button>
+  <button id="cancel" title="Discard every remaining row and close the panel — bars already accepted stay written">Discard All</button>
 </div>
 <script nonce="${nonce}">
   const vscode = acquireVsCodeApi();
@@ -1585,7 +1585,7 @@ ${rows}
     if (e.target.matches && e.target.matches('input.note')) vscode.postMessage({ action: 'keep', index: Number(e.target.dataset.i), text: e.target.value });
   });
   // A row's Accept and Discard (owner's request 2026-10-24: each bar is done with on its own), and
-  // the footer's Accept All (the ready rows) and Cancel All. The field being typed in has closed
+  // the footer's Accept All (the ready rows) and Discard All. The field being typed in has closed
   // by then (focusout sends its text first), so a row's Accept writes what was typed last.
   document.addEventListener('click', e => {
     const b = e.target.closest && e.target.closest('button');

@@ -15,7 +15,7 @@ workflow attaches that section to the GitHub Release verbatim.
   and the gates it passed (compiles without a new error, fills its meter). Nothing is written until
   asked: a bar's *Accept* writes it at once (its own Ctrl+Z) and its *Discard* drops it, each row leaving
   the panel; *Accept All* writes the ready rows (the AI's bars that pass every gate, your edits
-  that compile and fill their bar) as one edit, *Cancel All* closes the panel; a click on a bar
+  that compile and fill their bar) as one edit, *Discard All* closes the panel; a click on a bar
   shows it in the editor, lit light blue, and a bar the model read as right can be accepted to
   remove its `@todo` alone; the marks go with the lines. A bar the
   model cannot read stays marked and says why (`docs/omr-ai-fix-design.md`, M1; the model is
