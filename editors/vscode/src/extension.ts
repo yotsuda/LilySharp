@@ -33,7 +33,7 @@ import { registerStepAudition } from './stepAudition';
 import { registerExportBatch } from './exportBatch';
 import { importFromImage } from './omrImport';
 import { registerOmrContexts } from './omrReader';
-import { OmrScanDeps, hasScan, previewHoversBar, previewReady, previewShowsBar, registerScanFollow, scanThresholdOf, showScan } from './omrScan';
+import { OmrScanDeps, hasScan, previewHoversBar, previewReady, previewShowsBar, registerScanFollow, scanBarAt, scanThresholdOf, showScan } from './omrScan';
 import { registerOmrAiFix } from './omrAiFix';
 import { registerVerifyOnSave } from './omrVerify';
 import { markdownItExtensionApi } from './markdownFence';
@@ -815,7 +815,21 @@ export function activate(context: vscode.ExtensionContext) {
     registerAiComplete(context, aiDeps);
     // Third: the bars an OMR reader marked, rewritten on request and reviewed beside the scan
     // (docs/omr-ai-fix-design.md). The scan view's slider says which bars are checked at first.
-    registerOmrAiFix(context, { ...aiDeps, scanThreshold: scanThresholdOf, lysc: bundledLysc });
+    // Its menu door in the preview and the scan view: the bar the right-click was on, the
+    // preview's as an offset in the file it shows, the scan view's as a bar of its side file.
+    registerOmrAiFix(context, {
+        ...aiDeps, scanThreshold: scanThresholdOf, lysc: bundledLysc,
+        barAtMenu: m => {
+            if (m.webview === 'lilysharpScan') {
+                return Number.isInteger(m.lysBar) && m.lysBar! >= 0 ? scanBarAt(m.lysBar!) : undefined;
+            }
+            if (m.webview === 'lilysharpPreview' && Number.isInteger(m.lysAt) && m.lysAt! >= 0) {
+                const shown = [...previewPanels.entries()].find(([, p]) => p.active);
+                return shown ? { uri: vscode.Uri.parse(shown[0]), at: m.lysAt! } : undefined;
+            }
+            return undefined;
+        },
+    });
     context.subscriptions.push(vscode.commands.registerCommand('lilysharp.selectAiModel', () => pickAiModel()));
 
     // The Explorer's batch export: right-click one or more .lys → the format
@@ -5448,8 +5462,23 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             ctxNotePos = (t && t.hasAttribute && t.hasAttribute('data-pos'))
                 ? parseInt(t.getAttribute('data-pos'), 10)
                 : -1;
+            // The bar under the pointer (owner's request 2026-10-24: Fix OMR Marks with AI and
+            // Edit Bars Beside the Scan on the bar right-clicked): the staff box of a bar that
+            // holds the point, where its text starts — else the note's own offset. The menu's
+            // command gets it as its argument (lysAt).
+            let ctxBarAt = -1;
+            for (const r of document.querySelectorAll('rect.bar-staff')) {
+                const b = r.getBoundingClientRect();
+                if (e.clientX >= b.left && e.clientX <= b.right && e.clientY >= b.top && e.clientY <= b.bottom) {
+                    const s = parseInt(r.getAttribute('data-start'), 10);
+                    if (!isNaN(s)) { ctxBarAt = s; break; }
+                }
+            }
+            if (ctxBarAt < 0) ctxBarAt = ctxNotePos;
             document.body.dataset.vscodeContext = JSON.stringify({
                 preventDefaultContextMenuItems: true,
+                lysOnBar: ctxBarAt >= 0,
+                lysAt: ctxBarAt,
                 lysNote: ctxNotePos >= 0,
                 // The Stop button's enabled state is the playback flag that also
                 // covers the optimistic window between Play and the first events.

@@ -24,7 +24,8 @@ workflow attaches that section to the GitHub Release verbatim.
   (`readings`) go to the model as hints (M3).
   The bar to write can be edited in the panel, its picture and gates following the typing (a
   row with no proposal too); **Lily#: Edit Bars Beside the Scan** opens the selected bars in the
-  same panel without the AI (*Now*, *Scan*, *Edit*).
+  same panel without the AI (*Now*, *Scan*, *Edit*). Both are in the preview's and the scan view's
+  context menu, on the bar right-clicked.
   A bar can be taken and stay marked (`keep @todo`: a `@todo` at the note nearest the old mark,
   its key kept, the typed words as its memo); the pictures go *Now (OMR)*, *Scan*, *Proposal*;
   and the model is told the page decides — the meter is a check, the reader's note and the

@@ -106,6 +106,21 @@ export function registerScanFollow(context: vscode.ExtensionContext, deps: OmrSc
         vscode.commands.registerCommand('lilysharp.scanResetZoom', () => postToActiveScan('ctxResetZoom')));
 }
 
+/** The bar a right-click in the active scan view was on (`side.measures[index]`): its .lys and
+ *  where it is written there now (the anchors follow the edits); undefined when the reader did
+ *  not say where it is written, or no scan view is active. */
+export function scanBarAt(index: number): { uri: vscode.Uri; at: number } | undefined {
+    for (const view of views.values()) {
+        if (!view.panel.active) {
+            continue;
+        }
+        const bar = view.side.measures[index];
+        const anchor = bar && view.anchors.find(a => a.bar === bar);
+        return anchor ? { uri: view.lys, at: anchor.offset } : undefined;
+    }
+    return undefined;
+}
+
 function postToActiveScan(type: string): void {
     for (const view of views.values()) {
         if (view.panel.active) {
@@ -528,6 +543,14 @@ ${pages || '<p>The side file lists no page.</p>'}
     const r = e.target.closest('g.bar');
     if (r) vscode.postMessage({ type: 'bar', index: Number(r.dataset.i) });
   });
+  // A right-click says which bar it is on (owner's request 2026-10-24): the menu's Fix OMR Marks
+  // with AI and Edit Bars Beside the Scan take that bar (lysBar, the side file's index). Written
+  // in the capture phase, before VS Code reads data-vscode-context off the body.
+  document.addEventListener('contextmenu', e => {
+    const g = e.target.closest ? e.target.closest('g.bar') : null;
+    document.body.dataset.vscodeContext = JSON.stringify({
+      preventDefaultContextMenuItems: true, lysOnBar: !!g, lysBar: g ? Number(g.dataset.i) : -1 });
+  }, true);
 
   // The bar under the mouse lights on the preview too, and the preview's bar under the mouse
   // lights here (peer) — the owner's request 2026-10-14. Sent when it changes only.

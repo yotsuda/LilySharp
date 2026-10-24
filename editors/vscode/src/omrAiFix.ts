@@ -47,6 +47,34 @@ export interface OmrAiFixDeps extends AiTransformDeps {
     scanThreshold: (lys: string) => number | undefined;
     /** The lysc the reader engraves with when it verifies, if the extension carries one. */
     lysc: () => string | undefined;
+    /** The bar a right-click in the preview or the scan view was on (the page's data-vscode-context,
+     *  which VS Code hands the menu's command): the .lys and an offset in it; undefined when the
+     *  click was on no bar or the view is gone. */
+    barAtMenu: (context: MenuContext) => { uri: vscode.Uri; at: number } | undefined;
+}
+
+/** What a webview's context menu hands its command: the view's type, and what its page wrote
+ *  into data-vscode-context at the right-click — the preview's offset, the scan view's bar. */
+export interface MenuContext {
+    readonly webview: string;
+    readonly lysAt?: number;
+    readonly lysBar?: number;
+}
+
+/** An offset moved past the spaces and line breaks at it: a bar's drawn position is its node's
+ *  full-span start, which can be the previous line's break or the indentation. */
+function pastSpace(text: string, at: number): number {
+    while (at < text.length && /\s/.test(text[at])) { at++; }
+    return at;
+}
+
+/** A command's first argument, read: a webview's menu context → its bar (null when it names
+ *  none); anything else (a uri, nothing) → undefined, the command's other doors. */
+function menuBar(deps: OmrAiFixDeps, arg: unknown): { uri: vscode.Uri; at: number } | null | undefined {
+    if (typeof arg !== 'object' || arg === null || arg instanceof vscode.Uri || typeof (arg as MenuContext).webview !== 'string') {
+        return undefined;
+    }
+    return deps.barAtMenu(arg as MenuContext) ?? null;
 }
 
 /** The reader that compares a proposal with the scan (gate ③): where it is, the lysc it draws
@@ -212,9 +240,25 @@ let lock: vscode.TextEditorDecorationType | undefined;
  *  uri and the offset of one mark from the quick fix (the server's "Fix this bar with AI…"). */
 export function registerOmrAiFix(context: vscode.ExtensionContext, deps: OmrAiFixDeps): void {
     context.subscriptions.push(
-        vscode.commands.registerCommand('lilysharp.omrFixWithAi',
-            (uri?: string | vscode.Uri, at?: number) => runOmrAiFix(context, deps, uri, Number.isInteger(at) ? at : undefined)),
-        vscode.commands.registerCommand('lilysharp.editBarsBesideScan', (uri?: string | vscode.Uri) => runEditBars(context, deps, uri)),
+        // A fourth door for both (owner's request 2026-10-24): the preview's and the scan view's
+        // context menu, on the bar right-clicked.
+        vscode.commands.registerCommand('lilysharp.omrFixWithAi', (uri?: string | vscode.Uri | MenuContext, at?: number) => {
+            const bar = menuBar(deps, uri);
+            if (bar === null) {
+                vscode.window.showInformationMessage('Lily#: right-click on a bar to fix it with AI.');
+                return;
+            }
+            return bar ? runOmrAiFix(context, deps, bar.uri, bar.at)
+                : runOmrAiFix(context, deps, uri as string | vscode.Uri | undefined, Number.isInteger(at) ? at : undefined);
+        }),
+        vscode.commands.registerCommand('lilysharp.editBarsBesideScan', (uri?: string | vscode.Uri | MenuContext) => {
+            const bar = menuBar(deps, uri);
+            if (bar === null) {
+                vscode.window.showInformationMessage('Lily#: right-click on a bar to edit it beside the scan.');
+                return;
+            }
+            return bar ? runEditBars(context, deps, bar.uri, bar.at) : runEditBars(context, deps, uri as string | vscode.Uri | undefined);
+        }),
         { dispose: () => { panel?.dispose(); lock?.dispose(); clearBarMark(); output?.dispose(); } });
 }
 
@@ -259,7 +303,7 @@ const MAX_EDIT_BARS = 30;
  * AI: Now, the Scan and Edit, the third the bar as it stands, to click and edit, gated and drawn
  * as it is typed; Accept writes the checked bars as one edit.
  */
-async function runEditBars(context: vscode.ExtensionContext, deps: OmrAiFixDeps, uriArg?: string | vscode.Uri): Promise<void> {
+async function runEditBars(context: vscode.ExtensionContext, deps: OmrAiFixDeps, uriArg?: string | vscode.Uri, at?: number): Promise<void> {
     const editor = await editorFor(uriArg);
     if (!editor || editor.document.languageId !== 'lilysharp') {
         vscode.window.showErrorMessage('Lily#: open a .lys, put the caret on a bar (or select bars), then run this again.');
@@ -272,8 +316,8 @@ async function runEditBars(context: vscode.ExtensionContext, deps: OmrAiFixDeps,
     }
     const doc = editor.document;
     const text = doc.getText();
-    const lines: number[] = [];
-    for (const s of editor.selections) {
+    const lines: number[] = at !== undefined ? [doc.positionAt(pastSpace(text, at)).line] : [];
+    for (const s of at !== undefined ? [] : editor.selections) {
         // A selection that ends at the start of a line does not take that line.
         const last = s.end.line > s.start.line && s.end.character === 0 ? s.end.line - 1 : s.end.line;
         for (let l = s.start.line; l <= last; l++) { lines.push(l); }
@@ -340,10 +384,14 @@ async function runOmrAiFix(context: vscode.ExtensionContext, deps: OmrAiFixDeps,
     let chosen: FixTarget[] | undefined;
     if (at !== undefined) {
         // The quick fix: the one bar the mark is on — no list, no question.
-        const [from, to] = lineAround(text, at);
+        const [from, to] = lineAround(text, pastSpace(text, at));
         chosen = targets.filter(t => t.start >= from && t.end <= to);
         if (chosen.length === 0) {
-            vscode.window.showInformationMessage('Lily#: no @todo mark on that line any more.');
+            const go = await vscode.window.showInformationMessage(
+                'Lily#: that bar carries no @todo mark. Edit Bars Beside the Scan opens it without the AI.', 'Edit Bars Beside the Scan');
+            if (go) {
+                await runEditBars(context, deps, doc.uri, at);
+            }
             return;
         }
     } else {

@@ -715,6 +715,16 @@
       ],
       "webview/context": [
         {
+          "command": "lilysharp.omrFixWithAi",
+          "when": "(webviewId == 'lilysharpPreview' || webviewId == 'lilysharpScan') && lysOnBar",
+          "group": "0_bar@1"
+        },
+        {
+          "command": "lilysharp.editBarsBesideScan",
+          "when": "(webviewId == 'lilysharpPreview' || webviewId == 'lilysharpScan') && lysOnBar",
+          "group": "0_bar@2"
+        },
+        {
           "command": "lilysharp.previewPlayFromHere",
           "when": "webviewId == 'lilysharpPreview' && lysNote",
           "group": "1_playback@1"

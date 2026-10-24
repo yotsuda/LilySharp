@@ -38,6 +38,9 @@ All notable changes to the Lily# VS Code extension are documented here.
   *Accept* writes the edited bars as one edit. In the editor's menu of a `.lys` with a scan. On
   a bar with no mark the check box beside *Take* reads `add @todo` (the mark goes on its first
   note), on one with a mark `keep @todo`.
+- **Both commands are in the preview's and the scan view's context menu**, on the bar
+  right-clicked: *Fix OMR Marks with AI…* sends that bar alone (a bar with no `@todo` offers *Edit
+  Bars Beside the Scan* instead), *Edit Bars Beside the Scan* opens it.
 - **A bar can be taken and stay marked**: `keep @todo` beside *Take* writes the bar with a
   `@todo` still on it, at the note nearest the old mark (the reader's key kept), and the words
   typed beside it as its memo — for a proposal that is better but not right yet. The pictures
