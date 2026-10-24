@@ -397,6 +397,11 @@
         "title": "Fix OMR Marks with AI…"
       },
       {
+        "command": "lilysharp.editBarsBesideScan",
+        "category": "Lily#",
+        "title": "Edit Bars Beside the Scan"
+      },
+      {
         "command": "lilysharp.selectAiModel",
         "category": "Lily#",
         "title": "Select AI Model…"
@@ -616,6 +621,10 @@
           "when": "resourceLangId == lilysharp"
         },
         {
+          "command": "lilysharp.editBarsBesideScan",
+          "when": "resourceLangId == lilysharp"
+        },
+        {
           "command": "lilysharp.aiTransform",
           "when": "resourceLangId == lilysharp"
         },
@@ -761,6 +770,11 @@
         },
         {
           "command": "lilysharp.omrFixWithAi",
+          "when": "resourceLangId == lilysharp && lilysharp.hasScan",
+          "group": "1_modification@1"
+        },
+        {
+          "command": "lilysharp.editBarsBesideScan",
           "when": "resourceLangId == lilysharp && lilysharp.hasScan",
           "group": "1_modification@1"
         },

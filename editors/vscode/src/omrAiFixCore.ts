@@ -137,6 +137,43 @@ function cropOf(keys: readonly string[], line: number, side?: ScanSideFile): Fix
     return marks.length > 0 ? { page: marks[0].page, box: marks[0].box } : undefined;
 }
 
+/**
+ * The bars on the given 0-based lines, as targets with no mark of their own — for opening bars
+ * beside the scan without the AI (owner's request 2026-10-24). A line counts when the side file
+ * pins a bar to it, or when it holds a bar line `|` outside a comment; the bar number, the part
+ * and the crop come from the side file when there is one. In line order, each line once.
+ */
+export function lineTargets(text: string, lines: readonly number[], side?: ScanSideFile): FixTarget[] {
+    const all = text.split('\n');
+    const starts: number[] = [];
+    for (let i = 0, at = 0; i < all.length; i++) { starts.push(at); at += all[i].length + 1; }
+    const targets: FixTarget[] = [];
+    for (const line of [...new Set(lines)].sort((a, b) => a - b)) {
+        if (line < 0 || line >= all.length) {
+            continue;
+        }
+        const raw = all[line].replace(/\r$/, '');
+        const bar = side?.measures.find(m => m.line === line + 1);
+        if (!bar && !/\|/.test(raw.replace(/\/\/.*$/, ''))) {
+            continue;
+        }
+        const lead = raw.length - raw.trimStart().length;
+        const written = raw.trim();
+        if (written.length === 0) {
+            continue;
+        }
+        const start = starts[line] + lead;
+        const crop = cropOf([], line, side);
+        targets.push({
+            line, start, end: start + written.length, written, keys: [], memos: [],
+            measure: bar?.measure ?? null, part: bar?.part ?? null,
+            ...(crop ? { crop } : {}),
+            candidates: [], readings: [],
+        });
+    }
+    return targets;
+}
+
 /** Whether a target is checked by default: the scan view's slider shows its marks (shownAt). */
 export function checkedByDefault(target: FixTarget, threshold: number): boolean {
     return shownAt({ confidence: target.confidence }, threshold);

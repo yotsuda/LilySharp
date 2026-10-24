@@ -34,7 +34,7 @@ import { ChatClient, ChatMessage, availableModels, hasChatModel, offerModelSetup
 import {
     BarCheck, BarNeighbours, Diag, FixTarget, FixableTodo, GateVerdict, Proposal, Rgba, acceptableByAll, anchorOf, averageOf,
     batchesOf, checkedByDefault, cropRect, decodeImage, diagnosticsOn, estimateOf, fixTargets, gateOf, headOf, labelOf,
-    neighboursOf, parseProposal, readerBarOf, repairPromptOf, resolvedLine, scanCropPng, spliceBar, systemPromptOf, targetsInLines, taskPromptOf, withTodoMark,
+    neighboursOf, parseProposal, readerBarOf, repairPromptOf, resolvedLine, scanCropPng, spliceBar, systemPromptOf, targetsInLines, taskPromptOf, withTodoMark, lineTargets,
     verifyVerdict, withSample, withVerify, wordDiff, DiffPiece, rangesOf, shortTodos,
 } from './omrAiFixCore';
 import { OmrVersion, canVerifyBars, exitMeaning, launchOf, parseVersion, runOmr, verifyArguments } from './omrCore';
@@ -96,6 +96,10 @@ interface FixRow {
     editAfter?: SvgResponse;
     /** The page's count of edits to this row: an answer to an older one is dropped. */
     editSeq?: number;
+    /** The bar as it stands (its marks taken out), drawn where a row has no bar of its own to
+     *  show — no proposal, or a bar opened without the AI — so it can be clicked and edited
+     *  (owner's request 2026-10-24). */
+    baseAfter?: SvgResponse;
 }
 
 /** The run a panel shows: the document as it was, the rows so far. */
@@ -116,6 +120,16 @@ interface FixRun {
      *  drawn as the model's proposals were. */
     readonly client: LanguageClient;
     baseline?: readonly Diag[];
+    /** Bars opened beside the scan by the person, without the AI (Edit Bars Beside the Scan). */
+    readonly manual?: boolean;
+}
+
+/** The bar as it stands, marks taken out, drawn: the whole text again only when the line carries
+ *  a mark (else it is the "before" picture already). */
+async function baseAfterOf(run: FixRun, target: FixTarget): Promise<SvgResponse> {
+    const line = resolvedLine(target.written);
+    return line === target.written ? run.before
+        : run.client.sendRequest<SvgResponse>('lilysharp/renderText', { Text: spliceBar(run.text, target, line) });
 }
 
 /** `omr --version --json` once per reader path (a run asks for every bar). */
@@ -200,6 +214,7 @@ export function registerOmrAiFix(context: vscode.ExtensionContext, deps: OmrAiFi
     context.subscriptions.push(
         vscode.commands.registerCommand('lilysharp.omrFixWithAi',
             (uri?: string | vscode.Uri, at?: number) => runOmrAiFix(context, deps, uri, Number.isInteger(at) ? at : undefined)),
+        vscode.commands.registerCommand('lilysharp.editBarsBesideScan', (uri?: string | vscode.Uri) => runEditBars(context, deps, uri)),
         { dispose: () => { panel?.dispose(); lock?.dispose(); clearBarMark(); output?.dispose(); } });
 }
 
@@ -221,6 +236,77 @@ async function editorFor(uriArg?: string | vscode.Uri): Promise<vscode.TextEdito
     }
     const doc = await vscode.workspace.openTextDocument(uri);
     return vscode.window.showTextDocument(doc, { viewColumn: vscode.ViewColumn.One, preserveFocus: true });
+}
+
+/** The reader's side file beside the document, read and parsed, when there is one. */
+function sideOf(doc: vscode.TextDocument): { side?: ScanSideFile; sideText?: string } {
+    const sidePath = doc.uri.scheme === 'file' ? sideFileOf(doc.uri.fsPath) : undefined;
+    if (sidePath && fs.existsSync(sidePath)) {
+        try {
+            const sideText = fs.readFileSync(sidePath, 'utf8');
+            return { side: parseSideFile(sideText, sidePath), sideText };
+        } catch { /* no side file: the memos still are */ }
+    }
+    return {};
+}
+
+/** How many bars Edit Bars Beside the Scan opens at once (each row draws the score). */
+const MAX_EDIT_BARS = 30;
+
+/**
+ * Edit Bars Beside the Scan (owner's request 2026-10-24): the bars on the selected lines — the
+ * caret's line when nothing is selected — in the same panel as the AI's proposals, without the
+ * AI: Now, the Scan and Edit, the third the bar as it stands, to click and edit, gated and drawn
+ * as it is typed; Accept writes the checked bars as one edit.
+ */
+async function runEditBars(context: vscode.ExtensionContext, deps: OmrAiFixDeps, uriArg?: string | vscode.Uri): Promise<void> {
+    const editor = await editorFor(uriArg);
+    if (!editor || editor.document.languageId !== 'lilysharp') {
+        vscode.window.showErrorMessage('Lily#: open a .lys, put the caret on a bar (or select bars), then run this again.');
+        return;
+    }
+    const client = deps.getClient();
+    if (!client || !deps.isReady()) {
+        vscode.window.showErrorMessage('Lily#: language server not ready.');
+        return;
+    }
+    const doc = editor.document;
+    const text = doc.getText();
+    const lines: number[] = [];
+    for (const s of editor.selections) {
+        // A selection that ends at the start of a line does not take that line.
+        const last = s.end.line > s.start.line && s.end.character === 0 ? s.end.line - 1 : s.end.line;
+        for (let l = s.start.line; l <= last; l++) { lines.push(l); }
+    }
+    const { side } = sideOf(doc);
+    let targets = lineTargets(text, lines, side);
+    if (targets.length === 0) {
+        vscode.window.showInformationMessage('Lily#: no bar on the selected lines (a line with a bar line "|", or one the scan\'s reader wrote).');
+        return;
+    }
+    if (targets.length > MAX_EDIT_BARS) {
+        vscode.window.showInformationMessage(`Lily#: ${targets.length} bars selected — opening the first ${MAX_EDIT_BARS}.`);
+        targets = targets.slice(0, MAX_EDIT_BARS);
+    }
+    await vscode.window.withProgress(
+        { location: vscode.ProgressLocation.Notification, title: 'Lily#: drawing the bars' },
+        async () => {
+            const verifier = await verifierFor(context, deps, doc, side);
+            const run: FixRun = {
+                uri: doc.uri, version: doc.version, text, side,
+                before: await client.sendRequest<SvgResponse>('lilysharp/renderText', { Text: text }),
+                rows: [], images: false, pages: new Map(),
+                ...(verifier ? { verifier } : {}),
+                client,
+                baseline: (await client.sendRequest<CheckCandidateResponse>('lilysharp/checkCandidate', { Text: text })).Diagnostics ?? [],
+                manual: true,
+            };
+            for (const target of targets) {
+                run.rows.push({ index: run.rows.length, target, proposal: null, seconds: 0, state: 'pending', checked: false,
+                    baseAfter: await baseAfterOf(run, target) });
+            }
+            showPanel(deps, run);
+        });
 }
 
 /** The whole command: which bars → the estimate → the run → the panel. */
@@ -245,14 +331,7 @@ async function runOmrAiFix(context: vscode.ExtensionContext, deps: OmrAiFixDeps,
         vscode.window.showErrorMessage(`Lily#: could not list the marks: ${todos.Error}`);
         return;
     }
-    const sidePath = doc.uri.scheme === 'file' ? sideFileOf(doc.uri.fsPath) : undefined;
-    let side: ScanSideFile | undefined, sideText: string | undefined;
-    if (sidePath && fs.existsSync(sidePath)) {
-        try {
-            sideText = fs.readFileSync(sidePath, 'utf8');
-            side = parseSideFile(sideText, sidePath);
-        } catch { /* no side file: the memos still are */ }
-    }
+    const { side, sideText } = sideOf(doc);
     let targets = fixTargets(text, todos.Todos ?? [], side, sideText ? markFactsOf(sideText) : undefined);
     if (targets.length === 0) {
         vscode.window.showInformationMessage(`Lily#: ${path.basename(doc.uri.fsPath)} carries no @todo mark to fix.`);
@@ -400,8 +479,10 @@ async function runBatch(
                     const image = run.images ? scanOf(run, target) : undefined;
                     const row = await fixOne(client, chat, run, system, head, baseline, target, image, token, run.rows.length);
                     const seconds = (Date.now() - started) / 1000;
+                    const bare = !row.proposal?.bar || !!(row.gate && !(row.gate.compile && row.gate.length));
                     run.rows.push({ ...row, seconds,
-                        checked: !!row.proposal?.bar && !!row.gate && acceptableByAll(row.gate, row.proposal.confidence) });
+                        checked: !!row.proposal?.bar && !!row.gate && acceptableByAll(row.gate, row.proposal.confidence),
+                        ...(bare ? { baseAfter: await baseAfterOf(run, target) } : {}) });
                     if (row.proposal?.bar) {
                         proposals++;
                     }
@@ -600,6 +681,7 @@ function showPanel(deps: OmrAiFixDeps, run: FixRun): void {
     } else {
         panel.webview.options = { ...panel.webview.options, localResourceRoots: roots };
     }
+    panel.title = run.manual ? 'Lily# — Bars beside the scan' : 'Lily# — OMR fixes';
     panel.webview.html = panelHtml(deps, panel.webview, run);
     panel.reveal(vscode.ViewColumn.Beside, true);
 }
@@ -913,10 +995,14 @@ function rowParts(run: FixRun, r: FixRow): RowParts {
     const gate = edited ? r.editGate : r.gate;
     const after = (edited ? r.editAfter : r.after)?.Svg;
     const sym = after ? symbolOf(after) : undefined;
+    // A row without a bar of its own shows the bar as it stands, to click and edit.
+    const base = r.baseAfter?.Svg ? symbolOf(r.baseAfter.Svg) : undefined;
     let proposal: string;
     if (edited) {
         proposal = sym ? scoreCell(`after-${r.index}`, sym, t.start, t.start + r.edited!.length, true, add)
             : `<div class="none">${gate ? 'not rendered' : 'checking…'}</div>`;
+    } else if (barOf(r) === undefined && base) {
+        proposal = scoreCell(`after-${r.index}`, base, t.start, t.start + resolvedLine(t.written).length, true, add);
     } else if (!r.proposal) {
         proposal = `<div class="none">no answer — Take removes the @todo</div>`;
     } else if (!r.proposal.bar) {
@@ -929,17 +1015,22 @@ function rowParts(run: FixRun, r: FixRow): RowParts {
         proposal = `<div class="none">${r.gate && !(r.gate.compile && r.gate.length) ? 'did not pass — Take removes the @todo' : 'not rendered'}</div>`;
     }
     const failed = r.gate && !(r.gate.compile && r.gate.length);
-    const revert = `<button class="link revert" data-i="${r.index}" title="Back to the model's answer">use the model's</button>`;
+    const revert = run.manual || !r.proposal?.bar
+        ? `<button class="link revert" data-i="${r.index}" title="Back to the bar as it stands">undo my edit</button>`
+        : `<button class="link revert" data-i="${r.index}" title="Back to the model's answer">use the model's</button>`;
     const reason = edited
         ? esc(gate && gate.problems.length ? `Your edit: ${gate.problems.join(' / ')}` : gate ? 'Your edit.' : 'Your edit — checking…') + ` ${revert}`
+        : run.manual ? esc('Click a note or the text under the picture to edit this bar.')
         : esc(!r.proposal ? `No answer: ${r.noAnswer ?? 'the reply was not the JSON asked for'}.`
             : r.proposal.unchanged ? `The model reads the bar as right${r.proposal.reason.replace(/^unchanged( — )?/, '') ? `: ${r.proposal.reason.replace(/^unchanged( — )?/, '')}` : '.'}`
             : !r.proposal.bar ? (failed ? `No proposal passed: ${r.gate!.problems.join(' / ') || r.proposal.reason}` : r.proposal.reason || 'The model gave no reason.')
             : r.gate?.verify === false ? `${r.proposal.reason ? `${r.proposal.reason} — ` : ''}${r.gate.problems.filter(p => p.startsWith('the scan says')).join(' / ')}`
             : r.proposal.reason || '');
+    const hint = !edited && !run.manual && barOf(r) === undefined && base
+        ? ' <span class="dim">— click a note or the text to edit the bar yourself</span>' : '';
     return {
-        gates: gatesHtml(gate), reason, proposal, nowText: piecesHtml(diff.before), afterText: piecesHtml(diff.after), del,
-        takeWord: barOf(r) === undefined ? 'Take (remove @todo)' : 'Take',
+        gates: gatesHtml(gate), reason: reason + hint, proposal, nowText: piecesHtml(diff.before), afterText: piecesHtml(diff.after), del,
+        takeWord: barOf(r) === undefined && resolvedLine(t.written) !== t.written ? 'Take (remove @todo)' : 'Take',
     };
 }
 
@@ -995,7 +1086,7 @@ function panelHtml(deps: OmrAiFixDeps, webview: vscode.Webview, run: FixRun): st
         return `<tr class="${cls} head" data-i="${r.index}">
   <td colspan="3" class="who">${box}${keepBox} <span class="label">${esc(labelOf(t))}</span>`
             + (t.memos.length ? ` <span class="memo">${esc(t.memos.join('; '))}</span>` : '')
-            + ` <span class="memo dim">· line ${t.line + 1}${t.confidence === undefined ? '' : ` · reader ${t.confidence.toFixed(2)}`} · ${r.seconds.toFixed(1)} s</span></td>
+            + ` <span class="memo dim">· line ${t.line + 1}${t.confidence === undefined ? '' : ` · reader ${t.confidence.toFixed(2)}`}${run.manual ? '' : ` · ${r.seconds.toFixed(1)} s`}</span></td>
 </tr>
 <tr class="${cls} reason" data-i="${r.index}">
   <td colspan="3" class="why"><span class="gates" data-i="${r.index}">${parts.gates}</span> <span class="reason-text" data-i="${r.index}">${parts.reason}</span>`
@@ -1090,16 +1181,17 @@ button.link { background:none; border:none; padding:0; margin-left:8px; color: v
 <body>
 ${before ? `<svg class="store" aria-hidden="true"><symbol id="before" viewBox="${esc(before.viewBox)}">${before.inner}</symbol></svg>` : ''}
 <div class="header">
-  <div><div class="title">OMR fixes — ${esc(name)}</div>
-  <div class="cap">${run.rows.length} ${run.rows.length === 1 ? 'bar' : 'bars'} · ${run.rows.filter(hasProposal).length} with a proposal · `
-        + `check the ones to take — nothing is written until Accept</div></div>
+  <div><div class="title">${run.manual ? 'Bars beside the scan' : 'OMR fixes'} — ${esc(name)}</div>
+  <div class="cap">${run.rows.length} ${run.rows.length === 1 ? 'bar' : 'bars'} · `
+        + (run.manual ? 'edit a bar (click a note or its text) — it is checked to take; nothing is written until Accept'
+            : `${run.rows.filter(hasProposal).length} with a proposal · check the ones to take — nothing is written until Accept`) + `</div></div>
   <div class="spacer"></div>
   <label class="take all" title="Check or uncheck every bar there is something to take"><input type="checkbox" id="all" ${takeable ? '' : 'disabled'} ${takeable && checked === takeable ? 'checked' : ''}> All</label>
   <span class="memo"><span id="count">${checked}</span> of ${takeable} checked</span>
 </div>
 <div class="main">
 <table>
-<thead><tr><th>Now (OMR)</th><th>Scan</th><th>Proposal</th></tr></thead>
+<thead><tr>${run.manual ? '<th>Now</th><th>Scan</th><th>Edit</th>' : '<th>Now (OMR)</th><th>Scan</th><th>Proposal</th>'}</tr></thead>
 <tbody>
 ${rows}
 </tbody>

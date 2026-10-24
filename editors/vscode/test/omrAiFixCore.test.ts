@@ -25,7 +25,7 @@ import {
     Diag, FixableTodo, Rgba, acceptableByAll, anchorOf, averageOf, barBoxFor, batchesOf, checkedByDefault, cropRect, cropRgba,
     decodeImage, diagnosticsOn, encodePng, estimateOf, fixTargets, gateOf, headOf, labelOf, neighboursOf, parseProposal,
     rangesOf, readerBarOf, repairPromptOf, resolvedLine, scanCropPng, shortTodos, spliceBar, stripTodoMarks, systemPromptOf, targetsInLines, taskPromptOf,
-    itemEndsOf, withTodoMark,
+    itemEndsOf, withTodoMark, lineTargets,
     verifyVerdict, withSample, withVerify, wordDiff,
 } from '../src/omrAiFixCore';
 import * as jpeg from 'jpeg-js';
@@ -290,6 +290,22 @@ describe('what the model is shown', () => {
         assert.doesNotMatch(reader, /PERSON/);
         assert.match(systemPromptOf('G'), /for every chord, count its noteheads on the page/);
         assert.match(systemPromptOf('G'), /two notes a second apart/);
+    });
+
+    // Owner, 2026-10-24: bars opened beside the scan without the AI.
+    it('takes the bars on chosen lines: a bar line or a side-file bar, its number, part and crop', () => {
+        const lys = 'section A {\n  p1 {\n    c4 d e f |  // a note\n    g1 | break\n  }\n}\n    a1  // no bar here\n';
+        const side = parseSideFile(JSON.stringify({ version: 1, pages: [{ page: 1, image: 'p01.png', width: 2400, height: 3500 }],
+            measures: [{ measure: 7, part: 'p1', line: 4, page: 1, box: [10, 20, 300, 120] }], todos: [] }), SIDE_PATH)!;
+        const ts = lineTargets(lys, [6, 3, 0, 1, 2, 3, 99], side);
+        assert.deepEqual(ts.map(t => [t.line, t.written, t.measure, t.part]), [
+            [2, 'c4 d e f |  // a note', null, null],
+            [3, 'g1 | break', 7, 'p1'],
+        ]);
+        assert.equal(lys.slice(ts[1].start, ts[1].end), 'g1 | break');
+        assert.deepEqual(ts[1].crop, { page: 1, box: [10, 20, 300, 120] });
+        assert.equal(labelOf(ts[0]), 'line 3');
+        assert.deepEqual(lineTargets('    a1 |\r\n', [0]).map(t => t.written), ['a1 |']);
     });
 
     it('asks a failed proposal to read the page again, not to patch the count', () => {
