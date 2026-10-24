@@ -4,6 +4,13 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+### A tuning's strum keeps its time
+
+- **The open strings sound one after another even with the preview behind another tab** — a
+  completed or typed `tuning` sounded one string, then the rest at once as a chord: each string
+  was a timer in the preview page, and a hidden page fires its timers about once a second. The
+  strings are timed on the audio clock now (and, through a MIDI output, by the extension).
+
 ### The status bar says what the setting under the caret does
 
 - **Rest the caret on a setting and the status bar explains it in one line** — `clef bass:

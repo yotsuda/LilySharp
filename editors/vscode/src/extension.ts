@@ -1249,6 +1249,11 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
 
     // Handle messages from webview
     const openedUri = uri;
+    // A strum's strings still to strike on the MIDI output (midiStrike with gapMs): timed HERE,
+    // where Node's timers keep time, not in the page, whose timers a hidden preview fires about
+    // once a second — the strings after the first came out together as a chord (owner's report
+    // 2026-10-24). A release drops the ones not struck yet.
+    let midiStrumTimers: ReturnType<typeof setTimeout>[] = [];
     panel.webview.onDidReceiveMessage(
         async message => {
             // The file the panel shows NOW: the follower turns, and an untitled save re-keys.
@@ -1378,12 +1383,24 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
                 return;
             }
             if (message.type === 'midiStrike') {
-                const r = await midiOutRequest<{ Channel?: number; Error?: string | null }>('lilysharp/midiOut/strike',
-                    { port: message.port, pitches: message.pitches, timbre: message.timbre, program: message.program });
-                if (r.Error) { reportMidiOutError(message.port, r.Error); }
+                const strike = async (pitches: number[]) => {
+                    const r = await midiOutRequest<{ Channel?: number; Error?: string | null }>('lilysharp/midiOut/strike',
+                        { port: message.port, pitches, timbre: message.timbre, program: message.program });
+                    if (r.Error) { reportMidiOutError(message.port, r.Error); }
+                };
+                const pitches: number[] = message.pitches ?? [];
+                if (message.gapMs > 0 && pitches.length > 1) {
+                    for (const t of midiStrumTimers) { clearTimeout(t); }
+                    midiStrumTimers = pitches.slice(1).map((p, i) => setTimeout(() => void strike([p]), (i + 1) * message.gapMs));
+                    await strike([pitches[0]]);
+                } else {
+                    await strike(pitches);
+                }
                 return;
             }
             if (message.type === 'midiRelease') {
+                for (const t of midiStrumTimers) { clearTimeout(t); }
+                midiStrumTimers = [];
                 void midiOutRequest('lilysharp/midiOut/release', { channel: message.channel, pitches: message.pitches });
                 return;
             }
@@ -4899,15 +4916,11 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         let heldMidi = false;       // the strike went to the MIDI output: the release goes there too
         let heldKey = '';           // what rings, so a fast repeat sustains instead of re-striking
         let heldWatchdog = null;
-        let strumTimers = [];       // a strum's strings still to come (playPitches)
         let pendingAudition = null; // audition awaiting a fresh note list
         const AUD_WAVE = ['triangle','sine','square','sawtooth','triangle','sine','sawtooth','square','sine','triangle'];
 
         function stopHeldNote() {
             if (heldWatchdog) { clearTimeout(heldWatchdog); heldWatchdog = null; }
-            // A strum still on its way stops with it: no string after the release.
-            for (const t of strumTimers) { clearTimeout(t); }
-            strumTimers = [];
             if (heldMidi) {
                 heldMidi = false;
                 if (heldPitches.length) { vscode.postMessage({ type: 'midiRelease', channel: heldChannel, pitches: heldPitches }); }
@@ -4926,7 +4939,12 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             heldOscs = []; heldKey = '';
         }
 
-        function holdNotes(pitches, timbre, program, gapMs) {
+        // strumS > 0: the pitches one after another in the order given, that many seconds apart
+        // (a strum, playPitches), on the AUDIO clock — or, for the MIDI output, on the extension
+        // host's — never on this page's timers: a hidden preview fires those about once a second,
+        // and the strings after the first came out together as a chord (owner's report 2026-10-24).
+        function holdNotes(pitches, timbre, program, gapMs, strumS) {
+            const strum = strumS > 0 ? strumS : 0;
             const key = pitches.slice().sort((a, b) => a - b).join(',') + '/' + timbre + '/' + program;
             // Fresh press (or a different note) re-attacks; a fast repeat of the SAME
             // note leaves the tone ringing and only re-arms the watchdog.
@@ -4939,27 +4957,32 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                     heldMidi = true;
                     heldChannel = timbre === 9 ? 9 : 15;
                     heldPitches = pitches.slice();
-                    vscode.postMessage({ type: 'midiStrike', port: midiOutput, pitches: heldPitches, timbre: timbre, program: program });
+                    vscode.postMessage({ type: 'midiStrike', port: midiOutput, pitches: heldPitches, timbre: timbre, program: program,
+                        gapMs: Math.round(strum * 1000) });
                 } else {
                     const ctx = audio();
                     const sf = soundFontSynth();
                     if (sf && sf.ready) {
-                        heldChannel = sf.strike(pitches, timbre, program, 100);
+                        heldChannel = sf.strike(pitches, timbre, program, 100, strum);
                         heldPitches = pitches.slice();
                     } else {
                         const master = oscillatorOutput(ctx, 0.22);
-                        const t0 = ctx.currentTime;
-                        for (const p of pitches) {
+                        const now = ctx.currentTime;
+                        pitches.forEach((p, i) => {
+                            const t0 = now + i * strum;
                             const osc = ctx.createOscillator();
                             osc.type = AUD_WAVE[timbre] || 'triangle';
                             osc.frequency.value = 440 * Math.pow(2, (p - 69) / 12);
                             const g = ctx.createGain();
+                            // Silent until its onset: a string released before it starts (the
+                            // release cancels the ramp) must not sound at the node's default gain.
+                            g.gain.value = 0;
                             g.gain.setValueAtTime(0, t0);
                             g.gain.linearRampToValueAtTime(0.9, t0 + 0.02);
                             osc.connect(g); g.connect(master);
                             osc.start(t0);
                             heldOscs.push({ osc, g });
-                        }
+                        });
                     }
                 }
                 heldKey = key;
@@ -5008,50 +5031,15 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         // (the huge gap), then released after durationMs instead of waiting for key-repeats.
         // strumMs > 0: the pitches one after another IN THE ORDER GIVEN, that far apart — a
         // tuning's open strings string after string (owner's request 2026-10-24), each joining the
-        // ones already ringing. Not sorted: a re-entrant ukulele's high 4th string comes first.
+        // ones already ringing (holdNotes times them). Not sorted: a re-entrant ukulele's high 4th
+        // string comes first.
         function playPitches(pitches, timbre, program, durationMs, strumMs) {
             if (!pitches || pitches.length === 0) { return; }
             stopHeldNote();
             const prog = typeof program === 'number' ? program : -1;
-            if (strumMs > 0 && pitches.length > 1) {
-                const order = pitches.slice();
-                holdNotes([order[0]], timbre || 0, prog, 1e9);
-                for (let i = 1; i < order.length; i++) {
-                    strumTimers.push(setTimeout(() => addHeldNote(order[i], timbre || 0, prog), i * strumMs));
-                }
-            } else {
-                holdNotes(pitches, timbre || 0, prog, 1e9);
-            }
+            holdNotes(pitches, timbre || 0, prog, 1e9, pitches.length > 1 ? (strumMs || 0) / 1000 : 0);
             if (heldWatchdog) { clearTimeout(heldWatchdog); }
             heldWatchdog = setTimeout(stopHeldNote, durationMs || 450);
-        }
-
-        // One more pitch on the notes already held (a strum's next string), on whichever output
-        // struck them; the release of the held notes releases it too.
-        function addHeldNote(p, timbre, program) {
-            if (heldMidi) {
-                heldPitches.push(p);
-                vscode.postMessage({ type: 'midiStrike', port: midiOutput, pitches: [p], timbre: timbre, program: program });
-                return;
-            }
-            const sf = sfSynth;
-            if (heldChannel >= 0 && sf && sf.ready) {
-                sf.strike([p], timbre, program, 100);
-                heldPitches.push(p);
-                return;
-            }
-            if (!audioCtx || heldOscs.length === 0) { return; }
-            const master = oscillatorOutput(audioCtx, 0.22);
-            const t0 = audioCtx.currentTime;
-            const osc = audioCtx.createOscillator();
-            osc.type = AUD_WAVE[timbre] || 'triangle';
-            osc.frequency.value = 440 * Math.pow(2, (p - 69) / 12);
-            const g = audioCtx.createGain();
-            g.gain.setValueAtTime(0, t0);
-            g.gain.linearRampToValueAtTime(0.9, t0 + 0.02);
-            osc.connect(g); g.connect(master);
-            osc.start(t0);
-            heldOscs.push({ osc, g });
         }
 
         document.getElementById('playBtn').addEventListener('click', () => {

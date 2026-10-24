@@ -135,6 +135,8 @@ export class PreviewSynth {
     private bankId: string | null = null;
     private quietAt = 0;
     private player: Player | null = null;
+    /** A strum's strings still queued (`strike` with a gap): pitch → its audio-time onset. */
+    private readonly onsets = new Map<number, number>();
     private readonly init: Promise<void>;
 
     constructor(readonly ctx: AudioContext, processorUrl: string, soundFontUrl: string,
@@ -255,19 +257,44 @@ export class PreviewSynth {
 
     /** Strikes an audition — pitches held until `release` — with a program (the part's,
      *  or -1 for the timbre family's); the drum family (timbre 9, which the server gives
-     *  drum notes alone) strikes the drum channel. Returns the channel struck. */
-    strike(pitches: readonly number[], timbre: number, program: number, velocity = 100): number {
+     *  drum notes alone) strikes the drum channel. Returns the channel struck.
+     *  `strumS` > 0: one after another in the order given, that many seconds apart, on the
+     *  AUDIO clock — the page's timers, which a hidden preview fires about once a second, sent
+     *  the strings after the first out together as a chord (owner's report 2026-10-24). */
+    strike(pitches: readonly number[], timbre: number, program: number, velocity = 100, strumS = 0): number {
         if (!this.synth) { return -1; }
         const drums = timbre === 9;
         const c = drums ? DRUM_CHANNEL : AUDITION_CHANNEL;
         if (!drums) { this.synth.programChange(c, programOf(program, timbre)); }
-        for (const p of pitches) { this.synth.noteOn(c, Math.max(0, Math.min(127, Math.round(p))), velocity); }
+        const now = this.ctx.currentTime;
+        pitches.forEach((p, i) => {
+            const key = Math.max(0, Math.min(127, Math.round(p)));
+            if (i === 0 || strumS <= 0) {
+                this.synth!.noteOn(c, key, velocity);
+                this.onsets.delete(key);
+            } else {
+                this.synth!.noteOn(c, key, velocity, { time: now + i * strumS });
+                this.onsets.set(key, now + i * strumS);
+            }
+        });
         return c;
     }
 
+    /** Releases what `strike` held. A strum's string still queued is released at its own
+     *  onset, behind it in the synth's time-ordered queue, so it never rings on. */
     release(channel: number, pitches: readonly number[]): void {
         if (!this.synth || channel < 0) { return; }
-        for (const p of pitches) { this.synth.noteOff(channel, Math.max(0, Math.min(127, Math.round(p)))); }
+        const now = this.ctx.currentTime;
+        for (const p of pitches) {
+            const key = Math.max(0, Math.min(127, Math.round(p)));
+            const onset = this.onsets.get(key);
+            this.onsets.delete(key);
+            if (onset !== undefined && onset > now) {
+                this.synth.noteOff(channel, key, { time: onset });
+            } else {
+                this.synth.noteOff(channel, key);
+            }
+        }
     }
 }
 
