@@ -4,6 +4,11 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+### A dashed bar line in a score of two or more staves
+
+- **`!` is drawn when the score has two or more staves** — it vanished from every staff before
+  (one staff drew it); in a `staffGroup` it runs across the staves.
+
 ### Ctrl+Shift+Up / Down pick a font and a MIDI instrument
 
 - **On a section a `form` names, and the part a lyrics track `sings`, they switch to the file's

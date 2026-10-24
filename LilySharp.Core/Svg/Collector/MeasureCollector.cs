@@ -1445,16 +1445,22 @@ public sealed partial class MeasureCollector
             return BarlineType.RepeatBoth;
         return Rank(a) >= Rank(b) ? a : b;
 
+        // ⚠️ EVERY TYPE IS RANKED, and an unranked one throws rather than ranking as None: the
+        // dashed bar fell to the old `_ => 0`, tied with None, and since None starts the fold
+        // it won — so a `!` written in every staff of a score of two or more vanished from the
+        // page (owner's report 2026-10-24; one staff never folds, and drew it). The dashed bar
+        // outranks the plain one, below the double: a look chosen on purpose, as `||` is.
         static int Rank(BarlineType t) => t switch
         {
             BarlineType.None => 0,
             BarlineType.Single => 1,
-            BarlineType.Double => 2,
-            BarlineType.RepeatStart => 3,
-            BarlineType.RepeatEnd => 3,
-            BarlineType.RepeatBoth => 4,
-            BarlineType.Final => 5,
-            _ => 0
+            BarlineType.Dashed => 2,
+            BarlineType.Double => 3,
+            BarlineType.RepeatStart => 4,
+            BarlineType.RepeatEnd => 4,
+            BarlineType.RepeatBoth => 5,
+            BarlineType.Final => 6,
+            _ => throw new ArgumentOutOfRangeException(nameof(t), t, "a bar line type with no rank"),
         };
     }
 

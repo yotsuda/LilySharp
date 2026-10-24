@@ -6,6 +6,13 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+### Engraving
+
+- **A dashed bar line (`!`) is drawn in a score of two or more staves.** The staves' bar lines
+  are folded into one per boundary, and the dashed one had no rank — it tied with "no bar line",
+  which won, so it vanished from every staff (one staff never folds, and drew it). It now ranks
+  above the plain bar and below the double, and spans the staves of a `staffGroup`.
+
 ### Language
 
 - **A second `as` in a staff or ossia row is LYS0042**, one error on that word
