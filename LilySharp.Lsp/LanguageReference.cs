@@ -240,7 +240,8 @@ internal static class LanguageReference
         var (clef, octave) = LilySharp.Core.Svg.Model.InstrumentDefaults.GetDefaults(preset);
         int shift = LilySharp.Core.Svg.Model.InstrumentDefaults.GetTransposition(preset);
         var sb = new System.Text.StringBuilder();
-        sb.Append($"**Instrument preset** `{preset}` — the defaults it sets; a property of the part replaces each:\n\n");
+        // The name in the bold too (owner's request 2026-10-24): **Instrument preset `violin`**.
+        sb.Append($"**Instrument preset `{preset}`** — the defaults it sets; a property of the part replaces each:\n\n");
         sb.Append(Line($"`clef {LilySharp.Core.Svg.Model.InstrumentDefaults.ClefWord(clef)}`", Own("clef"))).Append('\n');
         // `octave absolute` / `relative` choose a mode, not the register: only a number replaces it.
         sb.Append(Line($"`octave {octave}` — a bare `c` is written C{octave}",

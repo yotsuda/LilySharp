@@ -56,7 +56,7 @@ public class InstrumentPresetHoverTests
     {
         string? hover = HoverAt(Book("instrument bass"), "bass");
         Assert.NotNull(hover);
-        Assert.Contains("**Instrument preset** `bass`", hover);
+        Assert.StartsWith("**Instrument preset `bass`** — ", hover);
         Assert.Contains("- `clef bass`", hover);
         Assert.Contains("- `octave 3` — a bare `c` is written C3", hover);
         Assert.Contains("- `transposition 8vb` — sounds 12 semitones lower: written C3 sounds C2", hover);
@@ -98,7 +98,7 @@ public class InstrumentPresetHoverTests
     public void AHyphenatedPreset_AndOneThatSoundsAsWritten()
     {
         string? hover = HoverAt(Book("instrument piano-left"), "piano");
-        Assert.Contains("**Instrument preset** `piano-left`", hover);
+        Assert.StartsWith("**Instrument preset `piano-left`** — ", hover);
         Assert.Contains("- `transposition` — none, sounds as written", hover);
     }
 
