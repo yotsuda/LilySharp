@@ -99,6 +99,14 @@ public static class GeneralMidi
     public static int? ProgramOf(string name)
         => ProgramByName.TryGetValue(name, out int program) ? program : null;
 
+    /// <summary>The sixteen General MIDI families, eight programs each (<c>program / 8</c>) — the
+    /// editor's completion detail and its status line read this one list.</summary>
+    public static readonly IReadOnlyList<string> FamilyNames =
+    [
+        "piano", "chromatic percussion", "organ", "guitar", "bass", "strings", "ensemble", "brass",
+        "reed", "pipe", "synth lead", "synth pad", "synth effects", "ethnic", "percussive", "sound effects",
+    ];
+
     /// <summary>
     /// The editor preview synth's timbre family for a program (0 piano, 1 flute, 2 reed,
     /// 3 strings, 4 guitar, 5 bass, 6 brass, 7 organ, 8 voice; 9 is the drum patch).

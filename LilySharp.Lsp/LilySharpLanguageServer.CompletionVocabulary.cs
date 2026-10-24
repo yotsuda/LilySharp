@@ -3503,7 +3503,9 @@ public sealed partial class LilySharpLanguageServer
             {
                 Label = name,
                 Kind = CompletionItemKind.EnumMember,
-                Detail = "Instrument preset (clef/octave defaults)",
+                // What the preset sets, as the status line says it (owner's request 2026-10-24:
+                // tell the presets apart before picking one).
+                Detail = LilySharp.Core.Editing.NoteStepper.PresetDefaults(name),
                 SortText = i.ToString("D2"),
                 TextEdit = replaceRange == null
                     ? null
@@ -3511,13 +3513,6 @@ public sealed partial class LilySharpLanguageServer
             }).ToArray()
         };
     }
-
-    /// <summary>The sixteen General MIDI families, eight programs each — the item detail.</summary>
-    private static readonly string[] GeneralMidiFamilies =
-    [
-        "piano", "chromatic percussion", "organ", "guitar", "bass", "strings", "ensemble", "brass",
-        "reed", "pipe", "synth lead", "synth pad", "synth effects", "ethnic", "percussive", "sound effects",
-    ];
 
     /// <summary>
     /// LilyPond's 128 General MIDI names — the value of <c>midiInstrument "…"</c> — in GM
@@ -3557,7 +3552,7 @@ public sealed partial class LilySharpLanguageServer
             {
                 Label = name,
                 Kind = CompletionItemKind.EnumMember,
-                Detail = $"General MIDI {i + 1}: {GeneralMidiFamilies[i / 8]}",
+                Detail = $"General MIDI {i + 1}: {LilySharp.Core.Midi.GeneralMidi.FamilyNames[i / 8]}",
                 // GM order, as the standard numbers them — VS Code would otherwise sort by
                 // label and scatter the families.
                 SortText = i.ToString("D3"),

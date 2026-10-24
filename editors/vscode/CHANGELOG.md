@@ -4,6 +4,12 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+### The instrument completion says what each preset sets
+
+- **After `instrument `, each preset in the list shows its defaults** — `bass`: *clef bass ·
+  octave 3 · transposition 8vb (written C3 sounds C2) · tuning bass · midiInstrument "electric
+  bass (finger)"* — so the presets can be told apart before one is picked.
+
 ### A stringed midiInstrument strums
 
 - **`midiInstrument "acoustic guitar (steel)"`, `"slap bass 1"`, `"cello"`, `"banjo"` …** sound

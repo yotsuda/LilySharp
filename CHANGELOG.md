@@ -27,6 +27,8 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Editor
 
+- **The `instrument` completion shows each preset's defaults** (clef, octave, transposition,
+  tuning, MIDI sound) as its detail, the line the status bar says on it.
 - **A stringed `midiInstrument` strums its open strings** when it sounds (the guitars, the
   plucked basses — apart — the violin, viola, cello, contrabass and banjo); others one note.
 - **The step keys on a repeat's count** (the `3` of `:|*3`) play it once more or once fewer, from 2.

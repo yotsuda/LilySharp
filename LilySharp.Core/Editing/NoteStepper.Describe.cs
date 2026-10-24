@@ -30,13 +30,6 @@ namespace LilySharp.Core.Editing;
 /// </summary>
 public static partial class NoteStepper
 {
-    /// <summary>The 16 General MIDI families, eight programs each.</summary>
-    private static readonly string[] MidiFamilies =
-    [
-        "piano", "chromatic percussion", "organ", "guitar", "bass", "strings", "ensemble", "brass",
-        "reed", "pipe", "synth lead", "synth pad", "synth effects", "ethnic", "percussive", "sound effects",
-    ];
-
     /// <summary>
     /// The status line for the caret at <paramref name="offset"/>, or null when it is on nothing
     /// that has one (a note, a rest, a word whose line would say only its name).
@@ -156,7 +149,7 @@ public static partial class NoteStepper
             .Where(p => Svg.Model.InstrumentDefaults.GetMidiProgram(p) == program).ToList();
         string sound = presets.Count == 0 ? ""
             : $" · the sound of instrument {string.Join(", ", presets)}";
-        return $"midiInstrument {token.Text}: GM {program + 1}, the {MidiFamilies[program / 8]} family{sound}";
+        return $"midiInstrument {token.Text}: GM {program + 1}, the {Midi.GeneralMidi.FamilyNames[program / 8]} family{sound}";
     }
 
     /// <summary>A <c>tuning</c>: each string's open note by its number, and where a higher string
@@ -179,10 +172,21 @@ public static partial class NoteStepper
     /// <summary>An <c>instrument</c> preset: the defaults it sets, in one line (its hover lists them
     /// with the part's own properties struck through).</summary>
     private static string? PresetSays(PropertyAssignmentSyntax property)
+        => PresetOf(property) is { } written && Svg.Model.InstrumentDefaults.IsKnownInstrument(written.Name)
+            ? $"instrument {written.Name.ToLowerInvariant()}: {PresetDefaults(written.Name)}"
+            : null;
+
+    /// <summary>
+    /// What an <c>instrument</c> preset sets, in one line — <c>clef bass · octave 3 · transposition
+    /// 8vb (written C3 sounds C2) · tuning bass · midiInstrument "electric bass (finger)"</c> — for
+    /// the caret's status line and the completion's detail (owner's request 2026-10-24), or null
+    /// for a name that is no preset.
+    /// </summary>
+    public static string? PresetDefaults(string name)
     {
-        if (PresetOf(property) is not { } written || !Svg.Model.InstrumentDefaults.IsKnownInstrument(written.Name))
+        if (!Svg.Model.InstrumentDefaults.IsKnownInstrument(name))
             return null;
-        string preset = written.Name.ToLowerInvariant();
+        string preset = name.ToLowerInvariant();
         var (clef, octave) = Svg.Model.InstrumentDefaults.GetDefaults(preset);
         int shift = Svg.Model.InstrumentDefaults.GetTransposition(preset);
         string? marker = Svg.Model.InstrumentDefaults.TranspositionMarkers
@@ -200,7 +204,7 @@ public static partial class NoteStepper
             parts.Add($"tuning {tuning}");
         if (Svg.Model.InstrumentDefaults.GetMidiProgram(preset) is int program)
             parts.Add($"midiInstrument \"{Midi.GeneralMidi.InstrumentNames[program]}\"");
-        return $"instrument {preset}: {string.Join(" · ", parts)}";
+        return string.Join(" · ", parts);
     }
 
     /// <summary>A MIDI pitch spelled with flats, as a transposing instrument's key is (B♭3).</summary>
