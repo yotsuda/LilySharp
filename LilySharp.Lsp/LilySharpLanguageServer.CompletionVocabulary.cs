@@ -3503,9 +3503,16 @@ public sealed partial class LilySharpLanguageServer
             {
                 Label = name,
                 Kind = CompletionItemKind.EnumMember,
-                // What the preset sets, as the status line says it (owner's request 2026-10-24:
-                // tell the presets apart before picking one).
-                Detail = LilySharp.Core.Editing.NoteStepper.PresetDefaults(name),
+                // What the preset sets (owner's request 2026-10-24: tell the presets apart before
+                // picking one): short beside the name, and one line each in the details pane.
+                Detail = LilySharp.Core.Editing.NoteStepper.PresetSummary(name),
+                Documentation = LilySharp.Core.Editing.NoteStepper.PresetDefaultLines(name) is { } lines
+                    ? new MarkupContent
+                    {
+                        Kind = MarkupKind.Markdown,
+                        Value = string.Join("\n", lines.Select(l => "- " + l)),
+                    }
+                    : null,
                 SortText = i.ToString("D2"),
                 TextEdit = replaceRange == null
                     ? null

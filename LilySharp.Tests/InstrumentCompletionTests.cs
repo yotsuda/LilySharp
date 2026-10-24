@@ -123,11 +123,22 @@ public class InstrumentCompletionTests
     {
         // Owner's request 2026-10-24: tell the presets apart before picking one — each item's
         // detail is the line the status bar says on the preset.
+        // Short beside the name; in full, one line each (owner's request, same day: not joined by
+        // dots), in the details pane.
         var items = LilySharpLanguageServer.GetInstrumentCompletions().Items.ToDictionary(i => i.Label!);
-        Assert.Equal("clef bass · octave 3 · transposition 8vb (written C3 sounds C2) · tuning bass"
-            + " · midiInstrument \"electric bass (finger)\"", items["bass"].Detail);
-        Assert.Equal("clef treble · octave 4 · sounds 2 semitones lower (written C4 sounds B♭3)"
-            + " · midiInstrument \"clarinet\"", items["clarinet"].Detail);
+        Assert.Equal("clef bass · 8vb · tuning bass", items["bass"].Detail);
+        Assert.Equal("clef treble · -2 semitones", items["clarinet"].Detail);
+        Assert.Equal(string.Join("\n",
+            "- clef bass",
+            "- octave 3 — a bare c is written C3",
+            "- transposition 8vb — written C3 sounds C2",
+            "- tuning bass — E1 A1 D2 G2",
+            "- midiInstrument \"electric bass (finger)\""), Assert.IsType<MarkupContent>(items["bass"].Documentation).Value);
+        Assert.Equal(string.Join("\n",
+            "- clef treble",
+            "- octave 4 — a bare c is written C4",
+            "- sounds 2 semitones lower — written C4 sounds B♭3",
+            "- midiInstrument \"clarinet\""), Assert.IsType<MarkupContent>(items["clarinet"].Documentation).Value);
         Assert.All(items.Values, i => Assert.StartsWith("clef ", i.Detail));
     }
 }

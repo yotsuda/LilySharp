@@ -277,13 +277,22 @@ public static partial class NoteStepper
             ? $"instrument {written.Name.ToLowerInvariant()}: {PresetDefaults(written.Name)}"
             : null;
 
-    /// <summary>
-    /// What an <c>instrument</c> preset sets, in one line — <c>clef bass · octave 3 · transposition
-    /// 8vb (written C3 sounds C2) · tuning bass · midiInstrument "electric bass (finger)"</c> — for
-    /// the caret's status line and the completion's detail (owner's request 2026-10-24), or null
-    /// for a name that is no preset.
-    /// </summary>
-    public static string? PresetDefaults(string name)
+    /// <summary>What a preset sets, read once for its three wordings: the clef word, the octave, the
+    /// transposition (semitones, its ottava marker if one writes it), the tuning word and the MIDI
+    /// sound's name.</summary>
+    private readonly record struct PresetFacts(string Clef, int Octave, int Shift, string? Marker, string? Tuning,
+        string? Sound)
+    {
+        /// <summary>The transposition as the property would write it, or as words for a shift no
+        /// marker writes (the clarinet's −2).</summary>
+        public string ShiftWords => Marker != null ? $"transposition {Marker}"
+            : $"sounds {Math.Abs(Shift)} semitones {(Shift < 0 ? "lower" : "higher")}";
+
+        /// <summary>The bare <c>c</c> written and what it sounds: <c>written C3 sounds C2</c>.</summary>
+        public string BareC => $"written C{Octave} sounds {SpellFlat(12 * (Octave + 1) + Shift)}";
+    }
+
+    private static PresetFacts? FactsOf(string name)
     {
         if (!Svg.Model.InstrumentDefaults.IsKnownInstrument(name))
             return null;
@@ -292,19 +301,65 @@ public static partial class NoteStepper
         int shift = Svg.Model.InstrumentDefaults.GetTransposition(preset);
         string? marker = Svg.Model.InstrumentDefaults.TranspositionMarkers
             .FirstOrDefault(m => Svg.Model.InstrumentDefaults.ParseTranspositionSemitones(m) == shift);
-        int bare = 12 * (octave + 1);
-        var parts = new System.Collections.Generic.List<string>
+        return new PresetFacts(Svg.Model.InstrumentDefaults.ClefWord(clef), octave, shift, marker,
+            Svg.Model.InstrumentDefaults.GetTuning(preset),
+            Svg.Model.InstrumentDefaults.GetMidiProgram(preset) is int program ? Midi.GeneralMidi.InstrumentNames[program] : null);
+    }
+
+    /// <summary>
+    /// What an <c>instrument</c> preset sets, in one line — <c>clef bass · octave 3 · transposition
+    /// 8vb (written C3 sounds C2) · tuning bass · midiInstrument "electric bass (finger)"</c> — for
+    /// the caret's status line (owner's request 2026-10-24), or null for a name that is no preset.
+    /// </summary>
+    public static string? PresetDefaults(string name)
+    {
+        if (FactsOf(name) is not { } f)
+            return null;
+        var parts = new System.Collections.Generic.List<string> { $"clef {f.Clef}", $"octave {f.Octave}" };
+        if (f.Shift != 0)
+            parts.Add($"{f.ShiftWords} ({f.BareC})");
+        if (f.Tuning != null)
+            parts.Add($"tuning {f.Tuning}");
+        if (f.Sound != null)
+            parts.Add($"midiInstrument \"{f.Sound}\"");
+        return string.Join(" · ", parts);
+    }
+
+    /// <summary>
+    /// What an <c>instrument</c> preset sets, one line each — for the completion's documentation,
+    /// which shows them one under another (owner's request 2026-10-24: not joined by dots) — or
+    /// null for a name that is no preset. Each line starts with the property that would say it alone.
+    /// </summary>
+    public static System.Collections.Generic.IReadOnlyList<string>? PresetDefaultLines(string name)
+    {
+        if (FactsOf(name) is not { } f)
+            return null;
+        var lines = new System.Collections.Generic.List<string>
         {
-            $"clef {Svg.Model.InstrumentDefaults.ClefWord(clef)}",
-            $"octave {octave}",
+            $"clef {f.Clef}",
+            $"octave {f.Octave} — a bare c is written C{f.Octave}",
         };
-        if (shift != 0)
-            parts.Add($"{(marker != null ? $"transposition {marker}" : $"sounds {Math.Abs(shift)} semitones {(shift < 0 ? "lower" : "higher")}")} "
-                + $"(written C{octave} sounds {SpellFlat(bare + shift)})");
-        if (Svg.Model.InstrumentDefaults.GetTuning(preset) is { } tuning)
-            parts.Add($"tuning {tuning}");
-        if (Svg.Model.InstrumentDefaults.GetMidiProgram(preset) is int program)
-            parts.Add($"midiInstrument \"{Midi.GeneralMidi.InstrumentNames[program]}\"");
+        if (f.Shift != 0)
+            lines.Add($"{f.ShiftWords} — {f.BareC}");
+        if (f.Tuning != null)
+            lines.Add($"tuning {f.Tuning} — " + string.Join(" ",
+                Tablature.Tunings.GetTuning(Tablature.Tunings.Parse(f.Tuning)).Select(SpellMidi)));
+        if (f.Sound != null)
+            lines.Add($"midiInstrument \"{f.Sound}\"");
+        return lines;
+    }
+
+    /// <summary>A preset's defaults, short — <c>clef bass · 8vb · tuning bass</c> — for the
+    /// completion's detail beside the name (its documentation has them in full), or null.</summary>
+    public static string? PresetSummary(string name)
+    {
+        if (FactsOf(name) is not { } f)
+            return null;
+        var parts = new System.Collections.Generic.List<string> { $"clef {f.Clef}" };
+        if (f.Shift != 0)
+            parts.Add(f.Marker ?? $"{f.Shift:+0;-0} semitones");
+        if (f.Tuning != null)
+            parts.Add($"tuning {f.Tuning}");
         return string.Join(" · ", parts);
     }
 

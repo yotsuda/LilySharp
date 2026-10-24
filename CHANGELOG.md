@@ -40,8 +40,9 @@ workflow attaches that section to the GitHub Release verbatim.
   `form` names, its bars and which of the form's references to it this is. On a `time` the beat
   it is felt in, on a `tempo` how long a beat lasts, on a dynamic its meaning and MIDI velocity,
   on the common articulations and marks what they ask of the player.
-- **The `instrument` completion shows each preset's defaults** (clef, octave, transposition,
-  tuning, MIDI sound) as its detail, the line the status bar says on it.
+- **The `instrument` completion shows each preset's defaults**: in short as its detail
+  (`clef bass · 8vb · tuning bass`), and one line each — clef, octave, transposition, tuning, MIDI
+  sound — as its documentation.
 - **A stringed `midiInstrument` strums its open strings** when it sounds (the guitars, the
   plucked basses — apart — the violin, viola, cello, contrabass and banjo); others one note.
 - **The step keys on a repeat's count** (the `3` of `:|*3`) play it once more or once fewer, from 2.

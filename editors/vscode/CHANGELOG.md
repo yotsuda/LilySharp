@@ -24,9 +24,10 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ### The instrument completion says what each preset sets
 
-- **After `instrument `, each preset in the list shows its defaults** — `bass`: *clef bass ·
-  octave 3 · transposition 8vb (written C3 sounds C2) · tuning bass · midiInstrument "electric
-  bass (finger)"* — so the presets can be told apart before one is picked.
+- **After `instrument `, each preset in the list shows its defaults** — beside the name in short
+  (`bass`: *clef bass · 8vb · tuning bass*), and in the details pane one line each: the clef, the
+  octave (a bare c is written C3), the transposition (written C3 sounds C2), the tuning with its
+  open strings, the MIDI sound — so the presets can be told apart before one is picked.
 
 ### A stringed midiInstrument strums
 
