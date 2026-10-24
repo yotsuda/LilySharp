@@ -4894,11 +4894,15 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         let heldMidi = false;       // the strike went to the MIDI output: the release goes there too
         let heldKey = '';           // what rings, so a fast repeat sustains instead of re-striking
         let heldWatchdog = null;
+        let strumTimers = [];       // a strum's strings still to come (playPitches)
         let pendingAudition = null; // audition awaiting a fresh note list
         const AUD_WAVE = ['triangle','sine','square','sawtooth','triangle','sine','sawtooth','square','sine','triangle'];
 
         function stopHeldNote() {
             if (heldWatchdog) { clearTimeout(heldWatchdog); heldWatchdog = null; }
+            // A strum still on its way stops with it: no string after the release.
+            for (const t of strumTimers) { clearTimeout(t); }
+            strumTimers = [];
             if (heldMidi) {
                 heldMidi = false;
                 if (heldPitches.length) { vscode.postMessage({ type: 'midiRelease', channel: heldChannel, pitches: heldPitches }); }
@@ -4997,12 +5001,51 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         // The extension sends the compiler's MIDI numbers and the part's program, so
         // no note list is needed here. Same voice as the held audition: a fresh strike
         // (the huge gap), then released after durationMs instead of waiting for key-repeats.
-        function playPitches(pitches, timbre, program, durationMs) {
+        // strumMs > 0: the pitches one after another, lowest first, that far apart — a tuning's
+        // open strings (owner's request 2026-10-24), each joining the ones already ringing.
+        function playPitches(pitches, timbre, program, durationMs, strumMs) {
             if (!pitches || pitches.length === 0) { return; }
             stopHeldNote();
-            holdNotes(pitches, timbre || 0, typeof program === 'number' ? program : -1, 1e9);
+            const prog = typeof program === 'number' ? program : -1;
+            if (strumMs > 0 && pitches.length > 1) {
+                const order = pitches.slice().sort((a, b) => a - b);
+                holdNotes([order[0]], timbre || 0, prog, 1e9);
+                for (let i = 1; i < order.length; i++) {
+                    strumTimers.push(setTimeout(() => addHeldNote(order[i], timbre || 0, prog), i * strumMs));
+                }
+            } else {
+                holdNotes(pitches, timbre || 0, prog, 1e9);
+            }
             if (heldWatchdog) { clearTimeout(heldWatchdog); }
             heldWatchdog = setTimeout(stopHeldNote, durationMs || 450);
+        }
+
+        // One more pitch on the notes already held (a strum's next string), on whichever output
+        // struck them; the release of the held notes releases it too.
+        function addHeldNote(p, timbre, program) {
+            if (heldMidi) {
+                heldPitches.push(p);
+                vscode.postMessage({ type: 'midiStrike', port: midiOutput, pitches: [p], timbre: timbre, program: program });
+                return;
+            }
+            const sf = sfSynth;
+            if (heldChannel >= 0 && sf && sf.ready) {
+                sf.strike([p], timbre, program, 100);
+                heldPitches.push(p);
+                return;
+            }
+            if (!audioCtx || heldOscs.length === 0) { return; }
+            const master = oscillatorOutput(audioCtx, 0.22);
+            const t0 = audioCtx.currentTime;
+            const osc = audioCtx.createOscillator();
+            osc.type = AUD_WAVE[timbre] || 'triangle';
+            osc.frequency.value = 440 * Math.pow(2, (p - 69) / 12);
+            const g = audioCtx.createGain();
+            g.gain.setValueAtTime(0, t0);
+            g.gain.linearRampToValueAtTime(0.9, t0 + 0.02);
+            osc.connect(g); g.connect(master);
+            osc.start(t0);
+            heldOscs.push({ osc, g });
         }
 
         document.getElementById('playBtn').addEventListener('click', () => {
@@ -5284,7 +5327,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                     break;
                 }
                 case 'playPitches':
-                    playPitches(message.pitches, message.timbre, message.program, message.durationMs);
+                    playPitches(message.pitches, message.timbre, message.program, message.durationMs, message.strumMs || 0);
                     break;
                 case 'setSoundFont':
                     setSoundFont(message.uri);

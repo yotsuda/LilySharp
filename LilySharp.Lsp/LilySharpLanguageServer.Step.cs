@@ -49,7 +49,7 @@ public sealed partial class LilySharpLanguageServer
                 @params.Selections.Select(s => (s.Start, s.End)).ToList(), @params.Direction,
                 text => ExpandUsings(text, SyntaxTree.Parse(text), basePath,
                     p => System.IO.File.Exists(p) ? System.IO.File.ReadAllText(p) : null).Tree,
-                @params.IncludeStretch, @params.Semitone);
+                @params.IncludeStretch, @params.Semitone, FacesForStep);
             return new StepResponse
             {
                 Fallback = result.Fallback,
@@ -60,6 +60,7 @@ public sealed partial class LilySharpLanguageServer
                 Program = result.Program,
                 Version = doc.Version,
                 ConvertOctaves = result.ConvertOctaves?.ToString().ToLowerInvariant(),
+                Strum = result.Strum,
             };
         }
         catch (Exception ex)
@@ -69,6 +70,14 @@ public sealed partial class LilySharpLanguageServer
             return new StepResponse { Fallback = true, Error = ex.Message, Version = doc.Version };
         }
     }
+
+    /// <summary>The faces a <c>fonts</c> entry's text key steps through: the ones its completion
+    /// offers, in the popup's order (<see cref="GetFontNameCompletions"/>), each once.</summary>
+    private static IReadOnlyList<string> FacesForStep(string key)
+        => [.. GetFontNameCompletions(key).Items
+            .OrderBy(i => i.SortText ?? i.Label, StringComparer.Ordinal)
+            .Select(i => i.Label!)
+            .Distinct(StringComparer.OrdinalIgnoreCase)];
 
     [JsonRpcMethod("lilysharp/auditionAt", UseSingleObjectParameterDeserialization = true)]
     public Task<AuditionAtResponse> AuditionAtAsync(AuditionAtParams @params, CancellationToken token)
@@ -94,6 +103,7 @@ public sealed partial class LilySharpLanguageServer
                 Pitches = [.. audition.Pitches],
                 Timbre = audition.Timbre,
                 Program = audition.Program,
+                Strum = audition.Strum,
                 Version = doc.Version,
             };
         }

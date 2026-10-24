@@ -20,8 +20,9 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import {
     AuditionMemory, Debouncer, EDIT_SELECTION_WINDOW_MS, CHORD_MS, NOTE_MS, OCTAVE_DOWN_KEY, OCTAVE_UP_KEY,
-    STEP_DOWN_KEY, STEP_UP_KEY,
-    auditionDurationMs, caretMoveMaySound, mayChangeATypedPitch, stepFallbackCommand,
+    STEP_DOWN_KEY, STEP_UP_KEY, STRUM_MS,
+    INSTRUMENT_CHANGE_MAX, auditionDurationMs, caretMoveMaySound, mayChangeATypedPitch, mayChangeAnInstrument,
+    stepFallbackCommand,
 } from '../src/auditionCore';
 
 const DOC = 'file:///a.lys';
@@ -116,6 +117,30 @@ describe('the typing audition: a changed sound plays once', () => {
         assert.equal(mayChangeATypedPitch([{ text: '', rangeLength: 1 }]), false);
         assert.equal(mayChangeATypedPitch([{ text: "c'4 d'4 e'4 f'4", rangeLength: 0 }]), false);  // a paste
         assert.equal(mayChangeATypedPitch([{ text: 'c', rangeLength: 0 }, { text: 'c', rangeLength: 0 }]), false);
+    });
+
+    it('rings a strum a chord\'s length after its last string (a tuning, owner\'s request 2026-10-24)', () => {
+        assert.equal(auditionDurationMs(4, true), 3 * STRUM_MS + CHORD_MS);
+        assert.equal(auditionDurationMs(4, false), CHORD_MS);
+        assert.equal(auditionDurationMs(1, true), NOTE_MS);
+    });
+
+    it('sounds a midiInstrument changed to another program at the same pitch (owner\'s request 2026-10-24)', () => {
+        const m = new AuditionMemory();
+        assert.equal(m.typed(DOC, { key: 5, pitches: [60], program: 40 }), true);    // "violin"
+        assert.equal(m.typed(DOC, { key: 5, pitches: [60], program: 41 }), true);    // "viola"
+        assert.equal(m.typed(DOC, { key: 5, pitches: [60], program: 41 }), false);
+    });
+
+    it('asks about any keystroke, Backspace or completion on a midiInstrument line', () => {
+        const line = 'part vl { midiInstrument "viola" }';
+        assert.equal(mayChangeAnInstrument([{ text: 'a', rangeLength: 0 }], line), true);
+        assert.equal(mayChangeAnInstrument([{ text: '', rangeLength: 1 }], line), true);
+        assert.equal(mayChangeAnInstrument([{ text: 'electric guitar (clean)', rangeLength: 5 }], line), true);
+        assert.equal(mayChangeAnInstrument([{ text: '5', rangeLength: 0 }], 'part b { tuning bass5 }'), true);
+        assert.equal(mayChangeAnInstrument([{ text: 'a', rangeLength: 0 }], 'part vl { clef alto }'), false);
+        assert.equal(mayChangeAnInstrument([{ text: 'x'.repeat(INSTRUMENT_CHANGE_MAX + 1), rangeLength: 0 }], line), false);
+        assert.equal(mayChangeAnInstrument([{ text: 'a', rangeLength: 0 }, { text: 'a', rangeLength: 0 }], line), false);
     });
 });
 

@@ -334,6 +334,8 @@ public sealed partial class LilySharpLanguageServer
                     actions.Add(spelling);
                 if (ScoreNameQuotedAction(doc, uri, diagnostic) is { } bareName)
                     actions.Add(bareName);
+                if (RepeatedStaffSelectorAsAction(doc, uri, diagnostic) is { } oneAs)
+                    actions.Add(oneAs);
                 if (LilyPondScriptAction(doc, uri, diagnostic) is { } script)
                     actions.Add(script);
             }
@@ -449,6 +451,23 @@ public sealed partial class LilySharpLanguageServer
             start--;
         return QuickFix($"Write '@{annotation}'", doc, uri, diagnostic,
             EditOf(doc.Text, start, end, "@" + annotation));
+    }
+
+    /// <summary>
+    /// The quick fix for LYS0042, a second <c>as</c> in a staff row (owner's decision
+    /// 2026-10-24): <c>as pitch transposed as lines 1</c> becomes <c>as pitch transposed lines 1</c>
+    /// — the extra word deleted with the spaces before it.
+    /// </summary>
+    private static CodeAction? RepeatedStaffSelectorAsAction(Document doc, Uri uri, CoreDiagnostic diagnostic)
+    {
+        int start = diagnostic.Span.Start, end = diagnostic.Span.End;
+        if (diagnostic.Code != DiagnosticCodes.RepeatedStaffSelectorAs || end > doc.Text.Length
+            || doc.Text[start..end] != "as")
+            return null;
+        while (start > 0 && doc.Text[start - 1] is ' ' or '\t')
+            start--;
+        return QuickFix("Delete the extra 'as' - one 'as' takes every selector", doc, uri, diagnostic,
+            EditOf(doc.Text, start, end, ""));
     }
 
     /// <summary>

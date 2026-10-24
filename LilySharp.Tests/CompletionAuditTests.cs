@@ -474,10 +474,12 @@ public class CompletionAuditTests
             Assert.False(string.IsNullOrEmpty(item.Detail), item.Label + " has no help line");
             Assert.False(string.IsNullOrEmpty(item.InsertText), item.Label + " inserts nothing");
         }
-        // The rows that take a part (or a name) re-open the popup; a braced group does not.
-        foreach (string partTaking in new[] { "staff", "tab", "ossia", "chords", "lyrics" })
+        // The rows that take a part (or a name) re-open the popup; a braced group does not. The
+        // two one-staff kinds re-open too, on their optional clef and brace (owner's request
+        // 2026-10-24 — GetOneStaffHeadCompletions).
+        foreach (string partTaking in new[] { "staff", "tab", "ossia", "chords", "lyrics", "condensedStaff", "combinedStaff" })
             Assert.NotNull(items.Single(i => i.Label == partTaking).Command);
-        foreach (string braced in new[] { "grandStaff", "staffGroup", "choirStaff", "condensedStaff", "combinedStaff" })
+        foreach (string braced in new[] { "grandStaff", "staffGroup", "choirStaff" })
             Assert.Null(items.Single(i => i.Label == braced).Command);
         // (DocKeywordListTests holds the vocabulary itself to ParseRenderItem.)
     }

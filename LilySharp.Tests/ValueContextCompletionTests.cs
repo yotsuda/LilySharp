@@ -241,6 +241,125 @@ public class ValueContextCompletionTests
             ContextOf("section A { m { c4 d "));
     }
 
+    /// <summary>Owner's request 2026-10-24: right after <c>condensedStaff</c> the popup opens on
+    /// the clefs (and the brace with none), each writing its braces and re-opening on the parts.</summary>
+    [Theory]
+    [InlineData("score { condensedStaff ")]
+    [InlineData("score { combinedStaff ")]
+    [InlineData("score { grandStaff { staff rh condensedStaff ")]
+    public void AfterAOneStaffKeyword_TheClefsAndTheBraceAreOffered(string text)
+    {
+        Assert.Equal(LilySharpLanguageServer.CompletionContext.AfterOneStaffKeyword, ContextOf(text));
+    }
+
+    [Fact]
+    public void TheOneStaffHead_ListsTheBraceThenTheClefs_EachRetriggering()
+    {
+        var items = LilySharpLanguageServer.GetOneStaffHeadCompletions().Items
+            .OrderBy(i => i.SortText, StringComparer.Ordinal).ToList();
+        Assert.Equal(new[] { "{ }", "treble", "treble_8", "alto", "tenor", "bass" }, items.Select(i => i.Label));
+        // The body on its own indented line (owner's request 2026-10-24).
+        Assert.Equal("bass {\n\t$0\n}", items.Single(i => i.Label == "bass").InsertText);
+        Assert.Equal("{\n\t$0\n}", items.Single(i => i.Label == "{ }").InsertText);
+
+        // The body already written after the caret: the clef word alone, no second body
+        // (owner's report 2026-10-24).
+        const string Written = "score {\n  condensedStaff  {\n    melody\n    p2\n  }\n}\n";
+        int caret = Written.IndexOf("condensedStaff ", StringComparison.Ordinal) + "condensedStaff ".Length;
+        Assert.Equal(LilySharpLanguageServer.CompletionContext.AfterOneStaffKeyword,
+            LilySharpLanguageServer.GetCompletionContext(Written, caret));
+        var before = LilySharpLanguageServer.GetOneStaffHeadCompletions(Written, caret).Items;
+        Assert.DoesNotContain(before, i => i.Label == "{ }");
+        Assert.Equal("treble", before.Single(i => i.Label == "treble").InsertText);
+        Assert.Null(before.Single(i => i.Label == "treble").Command);
+        Assert.All(items, i => Assert.Equal("editor.action.triggerSuggest", i.Command?.CommandIdentifier));
+        // The keyword items write the keyword alone and open this list.
+        foreach (var list in new[] { LilySharpLanguageServer.GetScoreBlockCompletions(), LilySharpLanguageServer.GetStaffGroupBlockCompletions() })
+        {
+            var condensed = list.Items.Single(i => i.Label == "condensedStaff");
+            Assert.Equal("condensedStaff $0", condensed.InsertText);
+            Assert.Equal("editor.action.triggerSuggest", condensed.Command?.CommandIdentifier);
+        }
+    }
+
+    /// <summary>Owner's report 2026-10-24: completing <c>grandStaff</c> in front of a written body
+    /// wrote an empty <c>{ }</c> before it.</summary>
+    [Theory]
+    [InlineData("score {\n  ‸ {\n   staff treble melody\n   staff treble p2\n  }\n}\n")]
+    [InlineData("score {\n  gra‸ {\n   staff treble melody\n  }\n}\n")]
+    [InlineData("score {\n  choirStaff {\n    ‸ {\n      staff melody\n    }\n  }\n}\n")]
+    public void AGroupKeyword_InFrontOfAWrittenBody_WritesTheWordAlone(string marked)
+    {
+        int caret = marked.IndexOf('‸');
+        string text = marked.Remove(caret, 1);
+        var server = new LilySharpLanguageServer(System.IO.Stream.Null, System.IO.Stream.Null);
+        var uri = new Uri("file:///body.lys");
+        server.DidOpen(new LilySharp.Lsp.Protocol.DidOpenTextDocumentParams
+        {
+            TextDocument = new LilySharp.Lsp.Protocol.TextDocumentItem { Uri = uri, Text = text, LanguageId = "lilysharp", Version = 1 },
+        });
+        int line = text[..caret].Count(c => c == '\n');
+        int character = caret - (text.LastIndexOf('\n', Math.Max(caret - 1, 0)) + 1);
+        var items = server.Completion(new LilySharp.Lsp.Protocol.CompletionParams
+        {
+            TextDocument = new LilySharp.Lsp.Protocol.TextDocumentIdentifier { Uri = uri },
+            Position = new LilySharp.Lsp.Protocol.Position(line, character),
+        })!.Items;
+        var grand = items.Single(i => i.Label == "grandStaff");
+        Assert.Equal("grandStaff", grand.InsertText);
+        Assert.Null(grand.Command);
+        Assert.Equal("choirStaff", items.Single(i => i.Label == "choirStaff").InsertText);
+    }
+
+    /// <summary>Owner's request 2026-10-24: completing <c>condensedStaff</c> in front of a written
+    /// group body takes the rows' <c>staff</c> words away and writes their common clef once.</summary>
+    [Theory]
+    [InlineData("‸", "condensedStaff")]
+    [InlineData("cond‸", "condensedStaff")]
+    [InlineData("‸", "combinedStaff")]
+    public void AOneStaffKeyword_InFrontOfAGroupBody_PutsItOntoOneStaff(string typed, string label)
+    {
+        string before = "score {\n  " + typed + " {\n   staff treble melody\n   staff treble p2\n  }\n}\n";
+        string expected = "score {\n  " + label + " treble {\n   melody\n   p2\n  }\n}\n";
+        int caret = before.IndexOf('‸');
+        string text = before.Remove(caret, 1);
+        int wordStart = caret;
+        while (wordStart > 0 && char.IsLetter(text[wordStart - 1]))
+            wordStart--;
+        var item = LilySharpLanguageServer.KeywordOnlyBeforeAWrittenBody(
+            LilySharpLanguageServer.GetScoreBlockCompletions(), text, caret).Items.Single(i => i.Label == label);
+        Assert.Null(item.Command);
+        Assert.NotNull(item.AdditionalTextEdits);
+        // Apply as the editor does: the additional edits, then the word replaced by the insert.
+        var lines = text.Split('\n');
+        int OffsetOf(LilySharp.Lsp.Protocol.Position p) => lines.Take(p.Line).Sum(l => l.Length + 1) + p.Character;
+        string after = text;
+        foreach (var e in item.AdditionalTextEdits!.OrderByDescending(e => OffsetOf(e.Range.Start)))
+            after = after[..OffsetOf(e.Range.Start)] + e.NewText + after[OffsetOf(e.Range.End)..];
+        after = after[..wordStart] + item.InsertText + after[caret..];
+        Assert.Equal(expected, after);
+    }
+
+    [Fact]
+    public void AOneStaffKeyword_InFrontOfStavesOfDifferentClefs_WritesTheWordAlone()
+    {
+        const string text = "score {\n   {\n   staff treble melody\n   staff bass p2\n  }\n}\n";
+        int caret = text.IndexOf(" {", StringComparison.Ordinal);
+        var item = LilySharpLanguageServer.KeywordOnlyBeforeAWrittenBody(
+            LilySharpLanguageServer.GetScoreBlockCompletions(), text, caret).Items.Single(i => i.Label == "condensedStaff");
+        Assert.Null(item.AdditionalTextEdits);
+        Assert.Equal("condensedStaff $0", item.InsertText);
+    }
+
+    [Fact]
+    public void AGroupKeyword_WithNoBodyAfterIt_StillWritesItsBraces()
+    {
+        const string text = "score {\n  ";
+        var list = LilySharpLanguageServer.KeywordOnlyBeforeAWrittenBody(
+            LilySharpLanguageServer.GetScoreBlockCompletions(), text, text.Length);
+        Assert.Contains("{", list.Items.Single(i => i.Label == "grandStaff").InsertText);
+    }
+
     [Fact]
     public void StaffRef_OffersTheDeclaredPartNames()
     {

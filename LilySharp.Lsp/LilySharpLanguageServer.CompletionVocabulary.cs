@@ -177,9 +177,9 @@ public sealed partial class LilySharpLanguageServer
 
     // Prose per property, and whether the editor has a VALUE list to enumerate for it.
     // ⚠️ Values must be true only where a value context actually exists — AfterClef,
-    // AfterInstrument, AfterPitch, AfterMidiInstrument. It is false for `octave` because the part-header
-    // `octave` takes a NUMBER (the AfterOctave context is gated to the top-level directive),
-    // and false for `tuning`/`pedal`/`transposition`, which have no value context at
+    // AfterInstrument, AfterPitch, AfterMidiInstrument, AfterTuning. It is false for `octave` because the
+    // part-header `octave` takes a NUMBER (the AfterOctave context is gated to the top-level directive),
+    // and false for `pedal`/`transposition`, which have no value context at
     // all. Setting it re-opens suggestions onto whatever list is general to the position,
     // which is worse than not offering to help.
     // ⚠️ Where a description NAMES a vocabulary it is joined from the compiler's list, not
@@ -199,7 +199,7 @@ public sealed partial class LilySharpLanguageServer
             ["clef"] = ($"Clef — {LanguageVocabulary.PartClefNames.Count} names in a part header, "
                         + $"{LanguageVocabulary.ClefNames.Count} inside music", true),
             ["instrument"] = ("Instrument preset — sets the clef, octave and tuning defaults", true),
-            ["tuning"] = ($"Tab tuning ({string.Join("/", LanguageVocabulary.TuningNames)})", false),
+            ["tuning"] = ($"Tab tuning ({string.Join("/", LanguageVocabulary.TuningNames)})", true),
             ["octave"] = ("Base octave for this part — a whole number, e.g. `octave 3`. "
                           + "The words absolute and relative belong to the TOP-LEVEL octave "
                           + "directive and a part header refuses them", false),
@@ -270,7 +270,8 @@ public sealed partial class LilySharpLanguageServer
     // Prose per value, in the order a reader wants them (the two hiding modes, then the
     // default). As with ClefDetails, membership of this table decides NOTHING — the words
     // come from the compiler.
-    private static readonly string[] RemoveEmptyOrder = { "true", "all", "false" };
+    // The step keys walk the same order (NoteStepper.StaffSelectorEdit), so both read one list.
+    private static readonly string[] RemoveEmptyOrder = [.. LilySharp.Core.Editing.NoteStepper.RemoveEmptyOrder];
 
     private static readonly System.Collections.Generic.Dictionary<string, string> RemoveEmptyDetails = new()
     {
@@ -338,6 +339,39 @@ public sealed partial class LilySharpLanguageServer
             SortText = i.ToString(),
         }).ToArray()
     };
+
+    /// <summary>
+    /// <c>tuning |</c> in a part header (owner's request 2026-10-24): every tuning word, the
+    /// families together in <see cref="LilySharp.Core.Syntax.TuningType"/>'s order (guitars, basses, the orchestral
+    /// strings, banjos, ukuleles) with LilyPond's second spellings after their tuning, each with
+    /// its open strings.
+    /// </summary>
+    internal static CompletionList GetTuningCompletions()
+    {
+        var words = LanguageVocabulary.TuningNames
+            .OrderBy(n => LilySharp.Core.Tablature.Tunings.Parse(n))
+            .ThenBy(n => n.Length).ThenBy(n => n, StringComparer.Ordinal)
+            .ToList();
+        return new CompletionList
+        {
+            Items = words.Select((name, i) =>
+            {
+                var type = LilySharp.Core.Tablature.Tunings.Parse(name);
+                string strings = string.Join(" ", LilySharp.Core.Tablature.Tunings.GetTuning(type).Select(SpellOpenString));
+                string first = words.First(w => LilySharp.Core.Tablature.Tunings.Parse(w) == type);
+                return new CompletionItem
+                {
+                    Label = name,
+                    Kind = CompletionItemKind.EnumMember,
+                    Detail = first == name ? strings : $"{strings} - the same strings as {first}",
+                    SortText = i.ToString("D2", System.Globalization.CultureInfo.InvariantCulture),
+                };
+            }).ToArray(),
+        };
+
+        static string SpellOpenString(int midi)
+            => new[] { "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B" }[midi % 12] + (midi / 12 - 1);
+    }
 
     /// <summary>
     /// The values valid right after <c>pitch</c> — at the top level, in a part header and on
@@ -1908,10 +1942,13 @@ public sealed partial class LilySharpLanguageServer
             ["grandStaff"] = ("grandStaff {\n\t$0\n}", "Braced staff group (piano)", false),
             ["staffGroup"] = ("staffGroup {\n\t$0\n}", "Bracketed staff group (orchestral family)", false),
             ["choirStaff"] = ("choirStaff {\n\t$0\n}", "Choir staff group (vocal ensemble)", false),
-            ["condensedStaff"] = ("condensedStaff {\n\t$0\n}",
-                "One staff carrying several parts as voices — bare part names inside", false),
-            ["combinedStaff"] = ("combinedStaff {\n\t$0\n}",
-                "Two parts merged onto one staff, a2 where they agree — bare part names inside", false),
+            // These two take an optional clef before their brace: the item writes the keyword and
+            // re-opens the popup on the clefs and the brace (GetOneStaffHeadCompletions, owner's
+            // request 2026-10-24) instead of writing the brace itself.
+            ["condensedStaff"] = ("condensedStaff $0",
+                "One staff carrying several parts as voices — bare part names inside", true),
+            ["combinedStaff"] = ("combinedStaff $0",
+                "Two parts merged onto one staff, a2 where they agree — bare part names inside", true),
             ["tab"] = ("tab $0", "A tablature staff for the named part", true),
             ["ossia"] = ("ossia $0", "An ossia staff (small alternative reading) for the named part", true),
             ["chords"] = ("chords $0", "Chord row (no staff) for the named chord part", true),
@@ -1924,6 +1961,54 @@ public sealed partial class LilySharpLanguageServer
             ["paper"] = ("paper $0", "This score's page: reference a named top-level paper block", true),
             ["layout"] = ("layout $0", "This score's display switches (marks, barNumbers): reference a named top-level layout block", true),
         };
+
+    /// <summary>
+    /// <c>condensedStaff ▮</c> / <c>combinedStaff ▮</c> before the brace (owner's request
+    /// 2026-10-24: the clefs open right after the keyword): the brace with no clef — the staff
+    /// takes its first part's — then the clefs the staff may take
+    /// (<see cref="LanguageVocabulary.ClefNames"/>, the five a music <c>clef</c> takes, in
+    /// <see cref="ClefOrder"/>). Each item writes its braces too — the body on its own indented
+    /// line, as the groups' snippets do — and re-opens the popup inside on the part names.
+    /// <para>When the body is already written after the caret (<c>condensedStaff ▮ { melody p2 }</c>
+    /// — a clef added later), a clef item writes its word alone and the brace item is not
+    /// offered (owner's report 2026-10-24: the item wrote a second, empty body before it).</para>
+    /// </summary>
+    internal static CompletionList GetOneStaffHeadCompletions(string text = "", int offset = 0)
+    {
+        int next = offset;
+        while (next < text.Length && char.IsWhiteSpace(text[next]))
+            next++;
+        bool bodyWritten = next < text.Length && text[next] == '{';
+        var suggestParts = new Command { Title = "Suggest part name", CommandIdentifier = "editor.action.triggerSuggest" };
+        var items = new List<CompletionItem>();
+        if (!bodyWritten)
+            items.Add(new CompletionItem
+            {
+                Label = "{ }",
+                Kind = CompletionItemKind.Snippet,
+                InsertTextFormat = InsertTextFormat.Snippet,
+                InsertText = "{\n\t$0\n}",
+                Detail = "No clef: the staff takes its first part's",
+                SortText = "00",
+                Command = suggestParts,
+            });
+        var clefs = LanguageVocabulary.ClefNames
+            .OrderBy(n => ClefOrder.ToList().IndexOf(n) is var i && i >= 0 ? i : int.MaxValue).ToList();
+        for (int i = 0; i < clefs.Count; i++)
+            items.Add(new CompletionItem
+            {
+                Label = clefs[i],
+                Kind = CompletionItemKind.EnumMember,
+                InsertTextFormat = InsertTextFormat.Snippet,
+                // The body on its own lines, as the groups' snippets write it (owner's request
+                // 2026-10-24: `condensedStaff treble {` / the caret indented / `}`).
+                InsertText = bodyWritten ? clefs[i] : clefs[i] + " {\n\t$0\n}",
+                Detail = ClefDetails.TryGetValue(clefs[i], out var d) ? d : null,
+                SortText = (i + 1).ToString("D2", System.Globalization.CultureInfo.InvariantCulture),
+                Command = bodyWritten ? null : suggestParts,
+            });
+        return new CompletionList { Items = [.. items] };
+    }
 
     /// <summary>The render-spec keywords valid inside a score / grandStaff body — READ FROM
     /// THE COMPILER (<see cref="LanguageVocabulary.ScoreItemKeywords"/>, in its order); this
@@ -1950,6 +2035,67 @@ public sealed partial class LilySharpLanguageServer
                 };
             }).ToArray()
         };
+    }
+
+    /// <summary>
+    /// When a <c>{</c> already follows the word being completed (<c>▮ { staff melody … }</c> — a
+    /// keyword written in front of a body), the items that would write a body of their own write
+    /// their keyword alone, and do not re-open the popup (owner's report 2026-10-24: completing
+    /// <c>grandStaff</c> there wrote an empty <c>{ }</c> before the written one); and
+    /// <c>condensedStaff</c> / <c>combinedStaff</c> rewrite a written group body of <c>staff</c>
+    /// rows into their bare names (<c>▮ { staff treble melody … }</c> →
+    /// <c>condensedStaff treble { melody … }</c>).
+    /// </summary>
+    internal static CompletionList KeywordOnlyBeforeAWrittenBody(CompletionList list, string text, int offset)
+    {
+        static bool IsWordChar(char c) => char.IsLetterOrDigit(c) || c == '_';
+        int wordStart = offset;
+        while (wordStart > 0 && IsWordChar(text[wordStart - 1]))
+            wordStart--;
+        int wordEnd = offset;
+        while (wordEnd < text.Length && IsWordChar(text[wordEnd]))
+            wordEnd++;   // the rest of the word the item replaces
+        int next = wordEnd;
+        while (next < text.Length && char.IsWhiteSpace(text[next]))
+            next++;
+        if (next >= text.Length || text[next] != '{')
+            return list;
+        foreach (var item in list.Items)
+        {
+            if (item.Label is not { } label)
+                continue;
+            // condensedStaff / combinedStaff: the written group body goes onto one staff — its
+            // `staff [clef]` words go and the common clef follows the keyword (owner's request
+            // 2026-10-24, NoteStepper.OneStaffHeadBeforeABody). A body that does not go onto one
+            // staff keeps the item as it is (the keyword, then the clefs, which write words only).
+            if (IsBarePartNameGroup(label)
+                && LilySharp.Core.Editing.NoteStepper.OneStaffHeadBeforeABody(text, wordStart, wordEnd, label)
+                    is { } oneStaff)
+            {
+                item.InsertText = oneStaff.Head;
+                item.InsertTextFormat = InsertTextFormat.Plaintext;
+                item.Command = null;
+                item.AdditionalTextEdits = [.. oneStaff.BodyEdits.Select(e =>
+                {
+                    var (sl, sc) = GetLineAndCharacter(text, e.Start);
+                    var (el, ec) = GetLineAndCharacter(text, e.End);
+                    return new TextEdit
+                    {
+                        Range = new LilySharp.Lsp.Protocol.Range { Start = new Position(sl, sc), End = new Position(el, ec) },
+                        NewText = e.NewText,
+                    };
+                })];
+                continue;
+            }
+            if (item.InsertText is { } insert && insert.Contains('{')
+                && insert.StartsWith(label, StringComparison.Ordinal))
+            {
+                item.InsertText = label;
+                item.InsertTextFormat = InsertTextFormat.Plaintext;
+                item.Command = null;
+            }
+        }
+        return list;
     }
 
     /// <summary>
@@ -1982,12 +2128,13 @@ public sealed partial class LilySharpLanguageServer
                 Label = "condensedStaff",
                 Kind = CompletionItemKind.Keyword,
                 InsertTextFormat = InsertTextFormat.Snippet,
-                InsertText = "condensedStaff { $0 }",
+                InsertText = "condensedStaff $0",
                 Detail = "One staff of this group carrying several parts as voices",
                 SortText = "1",
+                // The clefs and the brace next (GetOneStaffHeadCompletions).
                 Command = new Command
                 {
-                    Title = "Suggest part name",
+                    Title = "Suggest clef",
                     CommandIdentifier = "editor.action.triggerSuggest",
                 },
             },
@@ -1996,12 +2143,12 @@ public sealed partial class LilySharpLanguageServer
                 Label = "combinedStaff",
                 Kind = CompletionItemKind.Keyword,
                 InsertTextFormat = InsertTextFormat.Snippet,
-                InsertText = "combinedStaff { $0 }",
+                InsertText = "combinedStaff $0",
                 Detail = "One staff of this group merging two parts (a2 / Solo)",
                 SortText = "2",
                 Command = new Command
                 {
-                    Title = "Suggest part name",
+                    Title = "Suggest clef",
                     CommandIdentifier = "editor.action.triggerSuggest",
                 },
             },
@@ -3261,12 +3408,11 @@ public sealed partial class LilySharpLanguageServer
     // because that is precisely what drifted: the table held the five a music block takes
     // and was offered in the part header too, where eleven are legal.
     // The order is high → low sounding pitch, which is the order a reader expects and is
-    // not alphabetical; SortText below preserves it against the client's own sorting.
-    private static readonly string[] ClefOrder =
-    {
-        "treble", "treble^8", "treble_8", "soprano", "mezzosoprano",
-        "alto", "tenor", "baritone", "bass", "bass_8", "percussion",
-    };
+    // not alphabetical; SortText below preserves it against the client's own sorting. It is
+    // the step keys' order too (owner's decision 2026-10-24: Ctrl+Shift+Up / Down switch in the
+    // order Ctrl+Space lists), so both read the one list, NoteStepper.ClefOrder.
+    private static System.Collections.Generic.IReadOnlyList<string> ClefOrder
+        => LilySharp.Core.Editing.NoteStepper.ClefOrder;
 
     private static readonly System.Collections.Generic.Dictionary<string, string> ClefDetails = new()
     {
@@ -3305,7 +3451,7 @@ public sealed partial class LilySharpLanguageServer
         // told how to describe — such a word is still OFFERED (the compiler accepts it), just
         // without prose. Dropping it is what turned a missing description into a missing clef.
         var ordered = legal.OrderBy(
-            n => System.Array.IndexOf(ClefOrder, n) is var i && i >= 0 ? i : int.MaxValue);
+            n => ClefOrder.ToList().IndexOf(n) is var i && i >= 0 ? i : int.MaxValue);
 
         return new CompletionList
         {

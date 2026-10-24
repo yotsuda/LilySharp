@@ -34,11 +34,16 @@ namespace LilySharp.Core.Editing;
 /// Ctrl+Alt before that. On a <c>tempo</c> the same pairs step the metronome number by 1 and
 /// by 10 (owner's decision 2026-10-16, NoteStepper.Tempo.cs); on a <c>key</c> the semitone
 /// pair moves it a fifth round the circle (same day, NoteStepper.Key.cs); on a <c>clef</c> it
-/// steps to the clef for higher or lower notes (same day, NoteStepper.Clef.cs); on an
+/// steps to the next clef, and the octave pair jumps a group of clefs (2026-10-24,
+/// NoteStepper.Clef.cs); on an
 /// articulation either pair steps it along its group — <c>@downBow</c> ⇄ <c>@upBow</c>
 /// (same day, NoteStepper.Articulation.cs); on an <c>octave relative</c> / <c>octave absolute</c>
 /// Up writes <c>absolute</c> and Down <c>relative</c> (owner's request 2026-10-17,
-/// NoteStepper.Values.cs).
+/// NoteStepper.Values.cs); on a <c>fonts { }</c> entry either pair writes the next font of its
+/// key — <c>music "…"</c> a music font the machine has, <c>bend "…"</c> a text face — and on a
+/// part's <c>midiInstrument "…"</c> the next General MIDI name, on its <c>tuning</c> the next
+/// tuning, each sounding the new one (owner's requests 2026-10-24,
+/// NoteStepper.Font.cs and NoteStepper.Values.cs).
 /// </summary>
 /// <remarks>
 /// <para>
@@ -119,12 +124,43 @@ public static partial class NoteStepper
         /// step is no edit: the editor converts the whole file, every note keeping its pitch
         /// (<see cref="StepResult.ConvertOctaves"/>; NoteStepper.Values.cs).</summary>
         OctaveMode,
+        /// <summary>A part's <c>midiInstrument "…"</c> — the General MIDI names; it sounds its
+        /// program (NoteStepper.Values.cs).</summary>
+        Instrument,
+        /// <summary>A part's <c>tuning</c> — the tunings; it sounds its open strings
+        /// (NoteStepper.Values.cs).</summary>
+        Tuning,
+        /// <summary>A percent mark, <c>%</c> / <c>%N</c> — the number of bars it repeats
+        /// (NoteStepper.Values.cs).</summary>
+        Percent,
+        /// <summary>A score's <c>grandStaff</c> / <c>staffGroup</c> / <c>choirStaff</c> /
+        /// <c>condensedStaff</c> keyword (NoteStepper.Values.cs).</summary>
+        StaffGroup,
+        /// <summary>A score's <c>staff</c> / <c>tab</c> row keyword (NoteStepper.Values.cs).</summary>
+        StaffOrTab,
+        /// <summary>A staff row's <c>as lines N</c> — its count (NoteStepper.Values.cs).</summary>
+        StaffLines,
+        /// <summary>A staff row's <c>as</c> selector — its word, or a <c>removeEmpty</c> /
+        /// <c>pitch</c> value (NoteStepper.Values.cs).</summary>
+        StaffSelector,
+        /// <summary>The part a score row names — <c>staff melody</c>'s <c>melody</c>
+        /// (NoteStepper.Values.cs).</summary>
+        ScorePart,
+        /// <summary>A <c>size N</c> / <c>step ±N</c> in a <c>fonts { }</c> block — its number
+        /// (NoteStepper.Font.cs).</summary>
+        FontSize,
+        /// <summary>An entry of a <c>fonts { }</c> block — either pair walks the fonts of its key
+        /// (NoteStepper.Font.cs).</summary>
+        Font,
     }
 
     /// <summary>The kinds whose step changes a setting, not a sound — the audition skips them.</summary>
     private static bool IsSilent(TargetKind kind)
         => kind is TargetKind.Tempo or TargetKind.Key or TargetKind.Clef or TargetKind.Dynamic
-            or TargetKind.Articulation or TargetKind.Time or TargetKind.HeaderValue or TargetKind.OctaveMode;
+            or TargetKind.Articulation or TargetKind.Time or TargetKind.HeaderValue or TargetKind.OctaveMode
+            or TargetKind.Font or TargetKind.FontSize or TargetKind.Percent or TargetKind.StaffGroup
+            or TargetKind.StaffOrTab or TargetKind.ScorePart or TargetKind.StaffLines
+            or TargetKind.StaffSelector;
 
     /// <summary>A written thing the caret is on: its kind and its node (a
     /// <see cref="NoteSyntax"/>, a <see cref="PitchSyntax"/> or <see cref="ScaleDegreeSyntax"/>
@@ -148,13 +184,17 @@ public static partial class NoteStepper
     /// whole-file conversion into that mode (Convert Octaves to Absolute / Relative,
     /// <see cref="OctaveModeConverter"/>), which re-marks every note to keep its pitch.
     /// </summary>
+    /// <remarks><see cref="Strum"/>: sound the pitches one after another, lowest first, rather than
+    /// together — a tuning's open strings (owner's request 2026-10-24).</remarks>
     public sealed record StepResult(
         bool Fallback, ImmutableArray<Edit> Edits, string? Message,
-        ImmutableArray<int> Pitches, int Timbre, int Program = -1, OctaveMode? ConvertOctaves = null);
+        ImmutableArray<int> Pitches, int Timbre, int Program = -1, OctaveMode? ConvertOctaves = null,
+        bool Strum = false);
 
-    /// <summary>What the caret is on and what it sounds (MIDI, lowest first), with the timbre
-    /// and the program as <see cref="StepResult"/> carries them.</summary>
-    public sealed record Audition(Target Target, ImmutableArray<int> Pitches, int Timbre, int Program = -1);
+    /// <summary>What the caret is on and what it sounds (MIDI, lowest first), with the timbre,
+    /// the program and the strum as <see cref="StepResult"/> carries them.</summary>
+    public sealed record Audition(Target Target, ImmutableArray<int> Pitches, int Timbre, int Program = -1,
+        bool Strum = false);
 
     /// <summary>The most pitches one audition sounds (a selection of a whole passage would
     /// otherwise strike every note of it at once).</summary>
@@ -173,8 +213,9 @@ public static partial class NoteStepper
     /// (<see cref="Svg.Model.InstrumentDefaults.GetMidiProgram"/>, the nylon guitar).</summary>
     private static readonly int GuitarProgram = Svg.Model.InstrumentDefaults.GetMidiProgram("guitar") ?? NoProgram;
 
-    /// <summary>What a target sounds: pitches (MIDI, lowest first), timbre family and program.</summary>
-    private readonly record struct Voice(ImmutableArray<int> Pitches, int Timbre, int Program)
+    /// <summary>What a target sounds: pitches (MIDI, lowest first), timbre family and program, and
+    /// whether they are struck one after another (<see cref="StepResult.Strum"/>).</summary>
+    private readonly record struct Voice(ImmutableArray<int> Pitches, int Timbre, int Program, bool Strum = false)
     {
         public static readonly Voice Silent = new([], 0, NoProgram);
     }
@@ -190,10 +231,13 @@ public static partial class NoteStepper
     /// <c>@chord</c> step through stretch shapes too (<see cref="ShapeOrder"/>).
     /// <paramref name="semitone"/> steps notes and members to the next tone of the key instead
     /// of by an octave mark (<see cref="SemitoneEdits"/>); a voicing steps its shape either way.
+    /// <paramref name="textFaces"/> gives the faces a <c>fonts</c> entry's text key walks, by key,
+    /// in the editor's order (the server's font completion); null walks the two bundled faces.
     /// </summary>
     public static StepResult Step(
         string text, SyntaxTree tree, IReadOnlyList<(int Start, int End)> selections, int direction,
-        Func<string, SyntaxTree>? expand = null, bool includeStretch = false, bool semitone = false)
+        Func<string, SyntaxTree>? expand = null, bool includeStretch = false, bool semitone = false,
+        Func<string, IReadOnlyList<string>>? textFaces = null)
     {
         int dir = direction >= 0 ? 1 : -1;
         var targets = new List<Target>();
@@ -261,7 +305,7 @@ public static partial class NoteStepper
             }
             if (t.Kind == TargetKind.Clef)
             {
-                // The semitone pair walks the clefs; the octave pair moves treble or bass an octave.
+                // The semitone pair walks the clefs one at a time; the octave pair jumps a group.
                 var (clefEdit, clefSaid) = ClefEdit(t.Node, dir, semitone);
                 message ??= clefSaid;
                 if (clefEdit is { } ce)
@@ -278,11 +322,28 @@ public static partial class NoteStepper
                 stepped.Add(t);
                 continue;
             }
-            if (t.Kind is TargetKind.Dynamic or TargetKind.Articulation or TargetKind.Time or TargetKind.HeaderValue)
+            if (t.Kind is TargetKind.Dynamic or TargetKind.Articulation or TargetKind.Time or TargetKind.HeaderValue
+                or TargetKind.Font or TargetKind.Instrument or TargetKind.Tuning or TargetKind.Percent
+                or TargetKind.StaffGroup or TargetKind.StaffOrTab or TargetKind.FontSize or TargetKind.ScorePart
+                or TargetKind.StaffLines or TargetKind.StaffSelector)
             {
                 var (valueEdit, valueSaid) = t.Kind switch
                 {
                     TargetKind.Dynamic => DynamicEdit((DynamicSyntax)t.Node, dir),
+                    TargetKind.Font => FontEdit((SyntaxTokenNode)t.Node, dir, textFaces),
+                    TargetKind.Instrument => MidiInstrumentEdit((PropertyAssignmentSyntax)t.Node, dir, semitone),
+                    TargetKind.Tuning => TuningEdit((PropertyAssignmentSyntax)t.Node, dir, semitone),
+                    TargetKind.Percent => PercentEdit((PercentMarkSyntax)t.Node, dir),
+                    TargetKind.StaffGroup => StaffGroupEdit(text, t.Node, dir, semitone),
+                    TargetKind.StaffOrTab => StaffOrTabEdit(t.Node),
+                    TargetKind.ScorePart => ScorePartNameEdit(tree, (SyntaxTokenNode)t.Node, dir),
+                    TargetKind.StaffLines => StaffLinesEdit((SyntaxTokenNode)t.Node, dir),
+                    TargetKind.StaffSelector => StaffSelectorAt(tree, t.Node.Span.Start) is { } sel
+                        ? StaffSelectorEdit(sel.Row, sel.Word, sel.Value, sel.OnValue, dir)
+                        : (null, "as: write a selector (as lines 1)"),
+                    TargetKind.FontSize => FontSizeAt(tree, t.Node.Span.Start) is { } size
+                        ? FontSizeEdit(size.Word, size.Operand, dir, semitone)
+                        : (null, "size: write its number first (lyrics size 2.2)"),
                     TargetKind.Articulation => ArticulationEdit((ArticulationSyntax)t.Node, dir),
                     TargetKind.Time => TimeEdit((TimeSignatureSyntax)t.Node, dir, semitone),
                     _ => ValuePropertyEdit(text, tree, (PropertyAssignmentSyntax)t.Node, dir, semitone),
@@ -341,6 +402,7 @@ public static partial class NoteStepper
         var pitches = new SortedSet<int>();
         int timbre = -1;
         int program = NoProgram;
+        bool strum = false;
         try
         {
             var newTree = SyntaxTree.Parse(newText);
@@ -356,7 +418,7 @@ public static partial class NoteStepper
                 foreach (int pitch in voice.Pitches)
                     pitches.Add(pitch);
                 if (timbre < 0 && voice.Pitches.Length > 0)
-                    (timbre, program) = (voice.Timbre, voice.Program);
+                    (timbre, program, strum) = (voice.Timbre, voice.Program, voice.Strum);
             }
         }
         catch (Exception)
@@ -365,7 +427,7 @@ public static partial class NoteStepper
         }
 
         return new StepResult(false, [.. edits], message,
-            [.. pitches.Take(MaxAuditionPitches)], Math.Max(timbre, 0), program, convert);
+            [.. pitches.Take(MaxAuditionPitches)], Math.Max(timbre, 0), program, convert, strum);
     }
 
     // ------------------------------------------------------------------ the audition
@@ -396,7 +458,7 @@ public static partial class NoteStepper
         if (ChordOfMember(target) is { } chord)
             target = new Target(TargetKind.Chord, chord);
         var voice = Sound(target, sounding ?? tree, includeStretch);
-        return voice.Pitches.IsEmpty ? null : new Audition(target, voice.Pitches, voice.Timbre, voice.Program);
+        return voice.Pitches.IsEmpty ? null : new Audition(target, voice.Pitches, voice.Timbre, voice.Program, voice.Strum);
     }
 
     /// <summary>The <c>&lt;…&gt;</c> a member target belongs to — what it SOUNDS as (owner's
@@ -423,10 +485,30 @@ public static partial class NoteStepper
             return new Target(TargetKind.Clef, clef);
         if (TimeAt(tree, offset) is { } time)
             return new Target(TargetKind.Time, time);
+        if (InstrumentAt(tree, offset) is { } instrument)
+            return new Target(TargetKind.Instrument, instrument);
+        if (TuningAt(tree, offset) is { } tuning)
+            return new Target(TargetKind.Tuning, tuning);
         if (ValuePropertyAt(tree, offset) is { } property)
             return new Target(TargetKind.HeaderValue, property);
         if (OctaveModeAt(tree, offset) is { } octaveMode)
             return new Target(TargetKind.OctaveMode, octaveMode);
+        if (FontSizeAt(tree, offset) is { } fontSize)
+            return new Target(TargetKind.FontSize, fontSize.Word);
+        if (FontEntryAt(tree, offset) is { } fontEntry)
+            return new Target(TargetKind.Font, fontEntry);
+        if (PercentAt(tree, offset) is { } percent)
+            return new Target(TargetKind.Percent, percent);
+        if (StaffGroupAt(tree, offset) is { } staffGroup)
+            return new Target(TargetKind.StaffGroup, staffGroup);
+        if (StaffOrTabAt(tree, offset) is { } staffOrTab)
+            return new Target(TargetKind.StaffOrTab, staffOrTab);
+        if (StaffLinesAt(tree, offset) is { } staffLines)
+            return new Target(TargetKind.StaffLines, staffLines);
+        if (StaffSelectorAt(tree, offset) is { } selector)
+            return new Target(TargetKind.StaffSelector, selector.OnValue && selector.Value != null ? selector.Value : selector.Word);
+        if (ScorePartNameAt(tree, offset) is { } scorePart)
+            return new Target(TargetKind.ScorePart, scorePart);
         // A mark with nothing of its own to step — a dynamic on no ladder (@sfz), an articulation
         // in no group (@tap), a bare @chord on a <…> chord — steps the note, member or chord it is
         // written on instead (owner's request 2026-10-17: on the word of "<c e g>@chord" the keys
@@ -611,6 +693,8 @@ public static partial class NoteStepper
                 TargetKind.Member => node is PitchSyntax or ScaleDegreeSyntax
                     && node.Parent is ChordSyntax or ArpeggioSyntax,
                 TargetKind.Chord => node is ChordSyntax or ArpeggioSyntax,
+                TargetKind.Instrument => node is PropertyAssignmentSyntax { NameToken.Text: "midiInstrument" },
+                TargetKind.Tuning => node is PropertyAssignmentSyntax { NameToken.Text: "tuning" },
                 _ => node is MusicMarkSyntax { Name: "chord" } or ChordEntrySyntax
                     or ChordSyntax { IsShapeChord: true },
             };
@@ -1092,6 +1176,11 @@ public static partial class NoteStepper
     /// to sound them in, read off <paramref name="sounding"/>.</summary>
     private static Voice Sound(Target target, SyntaxTree sounding, bool includeStretch)
     {
+        // An instrument sounds its program, not a written note: the same in every tree.
+        if (target.Kind == TargetKind.Instrument)
+            return InstrumentVoice((PropertyAssignmentSyntax)target.Node);
+        if (target.Kind == TargetKind.Tuning)
+            return TuningVoice((PropertyAssignmentSyntax)target.Node);
         var index = SoundIndex.Of(sounding);
         switch (target.Kind)
         {

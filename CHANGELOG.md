@@ -6,8 +6,35 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+### Language
+
+- **A second `as` in a staff or ossia row is LYS0042**, one error on that word
+  (`staff melody as pitch transposed as lines 1`: one `as` takes every selector, so write
+  `as pitch transposed lines 1`); the selectors after it still read, where the row used to give
+  three unrelated errors. The editor offers a quick fix that deletes the extra `as`.
+
 ### Editor
 
+- **`Ctrl+Shift+Up` / `Ctrl+Shift+Down` on a `fonts { }` entry step its font**: `music` through
+  the music fonts this machine can engrave in (Emmentaler, the bundled SMuFL fonts, then the
+  user's), a text key (`bend "TeX Gyre Heros"`) through the faces its completion offers, and a
+  `size` / `step` its number (`size 2.2` → `2.3`). **On a
+  part's `midiInstrument "…"` they step the General MIDI name, and the new instrument sounds** —
+  typed or completed names sound too. On a part's `tuning` they step the tuning, family by
+  family, and its open strings sound one after another from the lowest up. `Ctrl+Space` after `tuning` in a part header lists the
+  tunings with their open strings; completing `condensedStaff` / `combinedStaff` opens the clefs
+  (and the brace with none), then the part names — or, in front of a written group body, puts
+  its `staff` rows onto one staff (`condensedStaff treble { melody p2 }`). On a `clef` Up / Down now step one clef at a time in the
+  order `Ctrl+Space` lists them (`treble` at the top), and PageUp / PageDown jump a group (`treble`
+  ⇄ `alto` ⇄ `bass` ⇄ `percussion`), a score row's clef word too (`condensedStaff alto { … }`). On a percent mark they step the bars it repeats (`%` → `%2`
+  → `%3`), and on a score's `grandStaff` / `staffGroup` / `choirStaff` /
+  `condensedStaff` / `combinedStaff` the kind of group (rewriting the body into or out of the
+  one-staff kinds; `combinedStaff` only for two parts; PageUp / PageDown jump between the two
+  families, `grandStaff` ⇄ `condensedStaff`), on a
+  `staff` / `tab` row the one to the other, and on the part a row names (`staff melody`) the
+  file's next or previous part; on a staff row's `as lines N` the line count, on its `as`
+  selector word the selector (`lines` / `removeEmpty` / `pitch`), on a `removeEmpty` / `pitch`
+  value the value.
 - **Lily#: Fix OMR Marks with AI…** rewrites the bars an OMR reader marked as doubtful (`@todo`),
   one request a bar, only when you run it: pick the bars (the least sure first, the ones below the
   scan view's slider checked, the estimate in the title), then review every proposal in the *Bar

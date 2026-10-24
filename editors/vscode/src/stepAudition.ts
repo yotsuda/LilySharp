@@ -30,8 +30,8 @@
 import * as vscode from 'vscode';
 import type { LanguageClient } from 'vscode-languageclient/node';
 import {
-    AuditionMemory, CARET_DEBOUNCE_MS, Debouncer, TYPING_SETTLE_MS,
-    auditionDurationMs, caretMoveMaySound, mayChangeATypedPitch, stepFallbackCommand,
+    AuditionMemory, CARET_DEBOUNCE_MS, Debouncer, SOUNDS_WHEN_CHANGED, STRUM_MS, TYPING_SETTLE_MS,
+    auditionDurationMs, caretMoveMaySound, mayChangeATypedPitch, mayChangeAnInstrument, stepFallbackCommand,
 } from './auditionCore';
 
 export interface StepAuditionDeps {
@@ -56,6 +56,8 @@ interface StepResponse {
     /** "absolute" / "relative": the step was on an `octave absolute` / `octave relative`,
      *  and the editor runs Convert Octaves to Absolute / Relative instead of applying edits. */
     ConvertOctaves?: 'absolute' | 'relative' | null;
+    /** Strike the pitches one after another, lowest first (a tuning's open strings). */
+    Strum?: boolean;
 }
 
 interface AuditionAtResponse {
@@ -65,6 +67,7 @@ interface AuditionAtResponse {
     Timbre: number;
     Program?: number;
     Version: number;
+    Strum?: boolean;
 }
 
 /** lilysharp.audition.enabled: gates the three automatic auditions and the step's. */
@@ -88,12 +91,13 @@ export function registerStepAudition(context: vscode.ExtensionContext, deps: Ste
     const lastEdit = new Map<string, number>();
 
     /** Sends pitches to the document's preview synth; silent without a preview. */
-    const play = (uri: string, pitches: readonly number[], timbre: number, program?: number) => {
+    const play = (uri: string, pitches: readonly number[], timbre: number, program?: number, strum?: boolean) => {
         const panel = deps.getPreview(uri);
         if (!panel || pitches.length === 0) { return; }
         void panel.webview.postMessage({
             type: 'playPitches', pitches, timbre, program: program ?? -1,
-            durationMs: auditionDurationMs(pitches.length),
+            durationMs: auditionDurationMs(pitches.length, strum),
+            strumMs: strum ? STRUM_MS : 0,
         });
     };
 
@@ -181,11 +185,11 @@ export function registerStepAudition(context: vscode.ExtensionContext, deps: Ste
         }
         if (auditionEnabled() && response.Pitches.length > 0) {
             const uri = doc.uri.toString();
-            play(uri, response.Pitches, response.Timbre, response.Program);
+            play(uri, response.Pitches, response.Timbre, response.Program, response.Strum);
             // The caret now rests on what just sounded: remember it, so the caret
             // audition does not repeat it. The key is asked for, not guessed.
             const here = await askAt(editor);
-            if (here) { memory.record(uri, { key: here.Key, pitches: here.Pitches }); }
+            if (here) { memory.record(uri, { key: here.Key, pitches: here.Pitches, program: here.Program }); }
         }
     };
 
@@ -211,7 +215,10 @@ export function registerStepAudition(context: vscode.ExtensionContext, deps: Ste
             if (!auditionEnabled() || !deps.getPreview(uri)) { return; }
             const editor = vscode.window.activeTextEditor;
             if (!editor || editor.document !== doc) { return; }
-            if (!mayChangeATypedPitch(event.contentChanges)) {
+            const pitch = mayChangeATypedPitch(event.contentChanges);
+            const instrument = mayChangeAnInstrument(event.contentChanges,
+                doc.lineAt(event.contentChanges[0].range.start.line).text);
+            if (!pitch && !instrument) {
                 // A duration digit or a space after the note: nothing new to hear,
                 // but a note still settling keeps settling.
                 return;
@@ -219,8 +226,9 @@ export function registerStepAudition(context: vscode.ExtensionContext, deps: Ste
             typingWait.poke(async () => {
                 if (vscode.window.activeTextEditor !== editor) { return; }
                 const answer = await askAt(editor);
-                if (answer && memory.typed(uri, { key: answer.Key, pitches: answer.Pitches })) {
-                    play(uri, answer.Pitches, answer.Timbre, answer.Program);
+                if (!answer || !(SOUNDS_WHEN_CHANGED.has(answer.Kind ?? '') ? instrument : pitch)) { return; }
+                if (memory.typed(uri, { key: answer.Key, pitches: answer.Pitches, program: answer.Program })) {
+                    play(uri, answer.Pitches, answer.Timbre, answer.Program, answer.Strum);
                 }
             });
         }),
@@ -243,7 +251,9 @@ export function registerStepAudition(context: vscode.ExtensionContext, deps: Ste
                 // A note still settling from typing speaks for itself.
                 if (typingWait.pending) { return; }
                 const answer = await askAt(editor);
-                if (answer && memory.caretLanded(uri, { key: answer.Key, pitches: answer.Pitches })) {
+                // An instrument or a tuning sounds when it changes, not when the caret passes it.
+                if (answer && !SOUNDS_WHEN_CHANGED.has(answer.Kind ?? '')
+                    && memory.caretLanded(uri, { key: answer.Key, pitches: answer.Pitches, program: answer.Program })) {
                     play(uri, answer.Pitches, answer.Timbre, answer.Program);
                 }
             });

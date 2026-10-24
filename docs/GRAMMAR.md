@@ -1899,7 +1899,10 @@ StaffSelector  = 'lines' , Integer
                     (Semantics.ConcertPitch.PageMode). An 'ossia' refuses it: it prints its
                     part as the part's staff does. *)
                  (* ONE 'as', then any of the selectors in any order:
-                    'staff melody as lines 1 removeEmpty all'. Both are properties
+                    'staff melody as lines 1 removeEmpty all'. A second 'as' before a
+                    selector ('as pitch transposed as lines 1') is LYS0042 — one spelling,
+                    owner's decision 2026-10-24 — said once, on that word, and the
+                    selectors after it still read; the editor's quick fix deletes it. Both are properties
                     of THIS rendering, not of the part. 'lines N' (1..5) is the
                     staff's line count, so a lead sheet can write
                     'staff melody as lines 1' while the full score keeps five.

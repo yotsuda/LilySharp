@@ -171,6 +171,40 @@ public static class MusicFonts
         return names;
     }
 
+    /// <summary>
+    /// The names a score can write on THIS machine and be engraved in: <see cref="BundledNames"/>
+    /// in their order, then the fonts whose metadata lies in the user's folders
+    /// (<see cref="UserFontDirectories"/>) and the SMuFL specification's locations, by the name
+    /// the metadata states — each kept only when <see cref="Find"/> finds it by that name, so a
+    /// metadata file without its font program is no font here either. The editor's step keys
+    /// walk this list on a <c>music</c> entry (NoteStepper.Font.cs).
+    /// </summary>
+    public static IReadOnlyList<string> AvailableNames()
+    {
+        var names = new List<string>();
+        void Add(string name)
+        {
+            if (!names.Contains(name, StringComparer.OrdinalIgnoreCase) && Find(name, out _) is not null)
+                names.Add(name);
+        }
+        foreach (var name in BundledNames())
+            Add(name);
+        var installed = new List<string>();
+        foreach (var dir in UserFontDirectories())
+        {
+            installed.AddRange(ExistingFiles(dir, "*.json"));
+            foreach (var sub in ExistingDirectories(dir))
+                installed.AddRange(ExistingFiles(sub, "*.json"));
+        }
+        foreach (var dir in SmuflFontDirectories())
+            foreach (var sub in ExistingDirectories(dir))
+                installed.AddRange(ExistingFiles(sub, "*.json"));
+        foreach (var name in installed.Select(NameInMetadata).Distinct(StringComparer.OrdinalIgnoreCase)
+                     .OrderBy(n => n, StringComparer.OrdinalIgnoreCase))
+            Add(name);
+        return names;
+    }
+
     private static string NameInMetadata(string metadata)
     {
         try { return SmuflMetadata.Parse(File.ReadAllText(metadata)).FontName; }
@@ -324,6 +358,14 @@ public static class MusicFonts
         if (!Directory.Exists(dir))
             return [];
         try { return Directory.EnumerateFiles(dir, pattern).ToList(); }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException) { return []; }
+    }
+
+    private static IEnumerable<string> ExistingDirectories(string dir)
+    {
+        if (!Directory.Exists(dir))
+            return [];
+        try { return Directory.EnumerateDirectories(dir).ToList(); }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException) { return []; }
     }
 }

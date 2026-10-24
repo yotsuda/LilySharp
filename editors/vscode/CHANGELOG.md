@@ -4,6 +4,58 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+### Ctrl+Shift+Up / Down pick a font and a MIDI instrument
+
+- **On an entry of a `fonts { }` block, `Ctrl+Shift+Down` / `Ctrl+Shift+Up` write the next /
+  previous font for its key** (down / up the list as `Ctrl+Space` shows it), so the fonts can be
+  tried one press at a time: on `music` the music
+  fonts this machine has — Emmentaler, Bravura, Leland, Petaluma, then any SMuFL font in
+  `lilysharp.fontPaths`, `LILYSHARP_FONT_PATH` or the SMuFL folders; on a text key (`bend`,
+  `serif`, `lyrics` …) the faces its completion offers.
+- **On a `size` / `step` in a `fonts { }` block they change its number**: `size` by 0.1 staff
+  space (PageUp / PageDown: by 1), `step` by one font-size step; Up is larger.
+- **On a part's `midiInstrument "…"` they step through the 128 General MIDI names** — Down down
+  the list (program 1 at the top), Up back up; `Ctrl+Shift+PageUp` / `PageDown`: a family of eight
+  at a time — **and the new instrument
+  sounds** — also when the name is typed or completed (the caret passing over it stays silent).
+- **On a part's `tuning` they step through the tunings** — Down down the list `Ctrl+Space` shows,
+  Up back up; `Ctrl+Shift+PageDown` / `PageUp`: a family at a time — guitars, basses, violin /
+  viola / cello, banjos, ukuleles — **and the open
+  strings sound, one after another from the lowest up**, typed or completed words too.
+- **On a `clef`, `Ctrl+Shift+Up` / `Down` now step one clef at a time, in the order `Ctrl+Space`
+  lists them** — `treble` at the top, Down down the list, Up back up — and **`Ctrl+Shift+PageUp` /
+  `PageDown` jump a group** to its usual clef (`treble` ⇄ `alto` ⇄ `bass` ⇄ `percussion`). Before,
+  Up / Down walked only `bass` `tenor` `alto` `treble` and PageUp / PageDown moved `treble` / `bass`
+  an octave.
+- **On a score's `grandStaff` / `staffGroup` / `choirStaff` / `condensedStaff` / `combinedStaff`,
+  `Ctrl+Shift+Up` / `Down` switch it** in the order `Ctrl+Space` lists them (Down down the list),
+  keeping the staves inside — into and out of the one-staff kinds the `staff` rows and the bare
+  names are rewritten; `combinedStaff` is offered only to two parts, the number it takes.
+  `Ctrl+Shift+PageDown` / `PageUp` jump between the bracketed groups and the one-staff kinds
+  (`grandStaff` ⇄ `condensedStaff`).
+- **On a score's `staff` / `tab` row they switch the one to the other** (`staff gt` ⇄ `tab gt`).
+- **On the part a score row names (`staff melody`'s `melody`) they switch to the file's next /
+  previous part**, in the order the parts are declared.
+- **A score row's clef word steps like a clef** — the `alto` of `condensedStaff alto { … }`, a
+  `combinedStaff`'s, a `staff bass gt`'s — through the five a clef inside music takes.
+- **A second `as` in a staff row is one clear error with a quick fix** (LYS0042):
+  `staff melody as pitch transposed as lines 1` says *one 'as' takes every selector after it* on
+  the extra word — instead of three unrelated errors — and the fix deletes it.
+- **On a staff row's `as lines N` they change the line count** (`as lines 1` → `2`, 1 to 5), **and
+  on its `as` selector word they switch the selector** — `lines` / `removeEmpty` / `pitch`, each with
+  its first value, the ones the row already writes passed by — and the `removeEmpty` / `pitch` values.
+- **On a percent mark, `Ctrl+Shift+Up` / `Down` change the bars it repeats**: `%` → `%2` → `%3`,
+  and back to `%`.
+- **Completing `condensedStaff` / `combinedStaff` in front of a written group body puts it onto one
+  staff**: `▮ { staff treble melody  staff treble p2 }` becomes `condensedStaff treble { melody p2 }`
+  (the `staff` words go, the common clef is written once; staves of different clefs keep the body).
+- **Completing `condensedStaff` / `combinedStaff` opens the clefs at once**: `{ }` (no clef — the
+  first part's) and `treble` `treble_8` `alto` `tenor` `bass`; each writes its braces and opens the
+  part names inside.
+- **`tuning` completes its words**: `Ctrl+Space` right after `tuning` in a part header lists the
+  tunings, family by family, each with its open strings; picking `tuning` from the property list
+  opens that list at once.
+
 ### Fix OMR marks with AI
 
 - **Lily#: Fix OMR Marks with AI…** rewrites the bars an OMR reader marked as doubtful (`@todo`),

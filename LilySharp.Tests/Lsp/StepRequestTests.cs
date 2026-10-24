@@ -706,52 +706,463 @@ public class StepRequestTests
 
     // ---------------------------------------------------------------- a clef
 
+    // Owner's decisions 2026-10-24: Up / Down one clef at a time in the order Ctrl+Space lists
+    // them (treble at the top; Up up the list, Down down it), PageUp / PageDown a group.
+
     [Fact]
-    public void AClef_WalksBassTenorAltoTreble_OnTheSemitoneKeys()
+    public void AClef_StepsInTheOrderItsCompletionLists()
     {
-        Assert.Equal(Plain("clef tenor c4"), Step(Plain("cl‸ef bass c4"), +1, semitone: true).After);
-        Assert.Equal(Plain("clef alto c4"), Step(Plain("clef tenor‸ c4"), +1, semitone: true).After);
-        Assert.Equal(Plain("clef treble c4"), Step(Plain("‸clef alto c4"), +1, semitone: true).After);
-        Assert.Equal(Plain("clef alto c4"), Step(Plain("clef ‸treble c4"), -1, semitone: true).After);
-        Assert.Equal(Plain("clef alto c4"), Step(Plain("clef treble_8‸ c4"), +1, semitone: true).After);
-        Assert.Equal(Plain("clef tenor c4"), Step(Plain("clef treble_8‸ c4"), -1, semitone: true).After);
-        var (top, after) = Step(Plain("clef ‸treble c4"), +1, semitone: true);
-        Assert.False(top.Fallback);
-        Assert.Equal(Plain("clef treble c4"), after);
-        Assert.Contains("highest", top.Message);
-        Assert.Empty(top.Pitches);
+        foreach (bool header in new[] { false, true })
+        {
+            var listed = LilySharpLanguageServer.GetClefCompletions(header).Items
+                .OrderBy(i => i.SortText, StringComparer.Ordinal).Select(i => i.Label!).ToList();
+            Assert.Equal("treble", listed[0]);
+            string Book(string clef) => header
+                ? $"part lh {{ clef {clef} }}\nsection A {{ lh {{ c4 d e f }} }}\n"
+                : Plain($"clef {clef} c4");
+            for (int i = 0; i + 1 < listed.Count; i++)
+            {
+                Assert.Equal(Book(listed[i + 1]), Step(Book("‸" + listed[i]), -1, semitone: true).After);
+                Assert.Equal(Book(listed[i]), Step(Book("‸" + listed[i + 1]), +1, semitone: true).After);
+            }
+            var (top, after) = Step(Book("‸treble"), +1, semitone: true);
+            Assert.False(top.Fallback);
+            Assert.Equal(Book("treble"), after);
+            Assert.Contains("first", top.Message);
+            Assert.Empty(top.Pitches);
+        }
     }
 
     [Fact]
-    public void AClef_OnTheOctaveKeys_MovesTrebleAnOctave()
+    public void AClef_InMusic_WalksTheFiveItTakes()
     {
-        Assert.Equal(Plain("clef treble_8 c4"), Step(Plain("clef ‸treble c4"), -1).After);
-        Assert.Equal(Plain("clef treble c4"), Step(Plain("clef ‸treble_8 c4"), +1).After);
-        var (alto, after) = Step(Plain("clef ‸alto c4"), +1);
-        Assert.False(alto.Fallback);
-        Assert.Equal(Plain("clef alto c4"), after);
-        // Inside music a clef takes treble_8 only: treble^8 is a part header's.
-        var (up, same) = Step(Plain("clef ‸treble c4"), +1);
-        Assert.Equal(Plain("clef treble c4"), same);
-        Assert.Contains("header", up.Message);
+        Assert.Equal(Plain("clef treble_8 c4"), Step(Plain("cl‸ef treble c4"), -1, semitone: true).After);
+        Assert.Equal(Plain("clef alto c4"), Step(Plain("clef treble_8‸ c4"), -1, semitone: true).After);
+        Assert.Equal(Plain("clef tenor c4"), Step(Plain("‸clef alto c4"), -1, semitone: true).After);
+        Assert.Equal(Plain("clef bass c4"), Step(Plain("clef tenor‸ c4"), -1, semitone: true).After);
+        var (bottom, same) = Step(Plain("clef ‸bass c4"), -1, semitone: true);
+        Assert.Equal(Plain("clef bass c4"), same);
+        Assert.Contains("last", bottom.Message);
     }
 
     [Fact]
-    public void APartHeadersClef_Steps_TheWayMostBooksWriteIt()
+    public void AClef_OnTheOctaveKeys_JumpsAGroup_ToItsUsualClef()
     {
+        // G -> C -> F (-> percussion in a header): PageDown down the list, PageUp up it.
+        Assert.Equal(Plain("clef alto c4"), Step(Plain("clef ‸treble c4"), -1).After);
+        Assert.Equal(Plain("clef bass c4"), Step(Plain("clef ‸tenor c4"), -1).After);
+        Assert.Equal(Plain("clef treble c4"), Step(Plain("clef ‸alto c4"), +1).After);
+        Assert.Equal(Plain("clef alto c4"), Step(Plain("clef ‸bass c4"), +1).After);
+        // Inside music there is no percussion clef to jump to.
+        var (last, same) = Step(Plain("clef ‸bass c4"), -1);
+        Assert.False(last.Fallback);
+        Assert.Equal(Plain("clef bass c4"), same);
+        Assert.Contains("last", last.Message);
+
         const string Book = "part lh {{ clef {0} octave 3 }}\nsection A {{ lh {{ c4 d e f }} }}\n";
         string S(string clef) => string.Format(Book, clef);
-        Assert.Equal(S("tenor"), Step(S("ba‸ss"), +1, semitone: true).After);
-        Assert.Equal(S("bass"), Step(S("‸tenor"), -1, semitone: true).After);
-        Assert.Equal(S("bass"), Step(S("bass_8‸"), +1, semitone: true).After);
-        Assert.Equal(S("alto"), Step(S("mezzo‸soprano"), -1, semitone: true).After);
-        Assert.Equal(S("bass_8"), Step(S("ba‸ss"), -1).After);
-        Assert.Equal(S("treble^8"), Step(S("treb‸le"), +1).After);
-        Assert.Equal(S("treble"), Step(S("treble^8‸"), -1).After);
-        var (top, after) = Step(S("‸treble^8"), +1, semitone: true);
-        Assert.False(top.Fallback);
-        Assert.Equal(S("treble^8"), after);
-        Assert.Contains("highest", top.Message);
+        Assert.Equal(S("percussion"), Step(S("ba‸ss_8"), -1).After);
+        Assert.Equal(S("bass"), Step(S("‸percussion"), +1).After);
+        Assert.Equal(S("treble"), Step(S("‸soprano"), +1).After);
+    }
+
+    // ---------------------------------------------------------------- a music font
+
+    [Fact]
+    public void AMusicFont_WalksTheFontsThisMachineHas_OnEitherPair()
+    {
+        // Owner's request 2026-10-24: Ctrl+Shift+Up on `music` picks a font that is there.
+        var fonts = LilySharp.Core.Svg.Layout.MusicFonts.AvailableNames();
+        Assert.True(fonts.Count >= 2, string.Join(", ", fonts));
+        Assert.Equal("Emmentaler", fonts[0]);
+        const string Book = "fonts {{\n  music {0}\n}}\npart m {{ }}\nsection A {{ m {{ c4 d e f }} }}\n";
+        string S(string music) => string.Format(Book, music);
+        string Q(int i) => $"\"{fonts[i]}\"";
+
+        // Down goes down the list (the owner's decision, the reverse of the first day's).
+        var (down, after) = Step(S("‸music \"Emmentaler\""), -1, semitone: true);
+        Assert.False(down.Fallback, down.Error);
+        Assert.Equal(S("music " + Q(1)), after);
+        Assert.Contains($"2 of {fonts.Count}", down.Message);
+        Assert.Empty(down.Pitches);
+        Assert.Equal(S("music " + Q(1)), Step(S("music \"Emmen‸taler\""), -1).After);
+        Assert.Equal(S("music " + Q(0)), Step(S("mu‸sic " + Q(1)), +1, semitone: true).After);
+
+        // At either end it stays, and says so.
+        var (first, same) = Step(S("‸music \"Emmentaler\""), +1, semitone: true);
+        Assert.False(first.Fallback);
+        Assert.Equal(S("music \"Emmentaler\""), same);
+        Assert.Contains("first", first.Message);
+        // No name reads as the default; a name the machine lacks steps from the ends.
+        Assert.Equal(S("music " + Q(1)), Step(S("music‸"), -1).After);
+        Assert.Equal(S("music " + Q(0)), Step(S("music \"‸NoSuchFont\""), -1).After);
+        Assert.Equal(S("music " + Q(fonts.Count - 1)), Step(S("music \"NoSuchFont\"‸"), +1).After);
+        // In a fallback list the name under the caret steps.
+        Assert.Equal(S($"music {Q(0)} {Q(1)}"), Step(S($"music {Q(0)} ‸{Q(0)}"), -1).After);
+    }
+
+    [Fact]
+    public void ATextFont_WalksTheFacesItsCompletionOffers()
+    {
+        // Owner's request 2026-10-24: the same keys on `bend "TeX Gyre Heros"`.
+        var offered = LilySharpLanguageServer.GetFontNameCompletions("bend").Items
+            .OrderBy(i => i.SortText ?? i.Label, StringComparer.Ordinal).Select(i => i.Label!)
+            .Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        int at = offered.FindIndex(f => f == "TeX Gyre Heros");
+        Assert.True(at >= 0 && at + 1 < offered.Count, string.Join(", ", offered));
+        const string Book = "fonts {{\n  bend {0}\n}}\npart m {{ }}\nsection A {{ m {{ c4 d e f }} }}\n";
+        string S(string bend) => string.Format(Book, bend);
+
+        var (down, after) = Step(S("‸bend \"TeX Gyre Heros\""), -1, semitone: true);
+        Assert.False(down.Fallback, down.Error);
+        Assert.Equal(S($"bend \"{offered[at + 1]}\""), after);
+        Assert.Contains($"{at + 2} of {offered.Count}", down.Message);
+        Assert.Empty(down.Pitches);
+        Assert.Equal(S($"bend \"{offered[at]}\""), Step(S($"bend \"{offered[at + 1]}‸\""), +1).After);
+    }
+
+    [Fact]
+    public void AFontSize_AndAFontStep_StepTheirNumber()
+    {
+        // Owner's request 2026-10-24: size in tenths (PageUp / PageDown: whole staff spaces), step by one.
+        const string Book = "fonts {{\n  lyrics \"TeX Gyre Schola\" {0}\n}}\npart m {{ }}\nsection A {{ m {{ c4 d e f }} }}\n";
+        string S(string attribute) => string.Format(Book, attribute);
+        var (up, after) = Step(S("size ‸2.2"), +1, semitone: true);
+        Assert.False(up.Fallback, up.Error);
+        Assert.Equal(S("size 2.3"), after);
+        Assert.Contains("staff spaces", up.Message);
+        Assert.Equal(S("size 2.1"), Step(S("si‸ze 2.2"), -1, semitone: true).After);
+        Assert.Equal(S("size 3.2"), Step(S("size 2.2‸"), +1).After);
+        Assert.Equal(S("size 3"), Step(S("‸size 2.9"), +1, semitone: true).After);
+        var (top, same) = Step(S("‸size 20"), +1, semitone: true);
+        Assert.Equal(S("size 20"), same);
+        Assert.Contains("largest", top.Message);
+
+        Assert.Equal(S("step +2"), Step(S("step ‸+1"), +1, semitone: true).After);
+        Assert.Equal(S("step 0"), Step(S("‸step +1"), -1).After);
+        Assert.Equal(S("step -1"), Step(S("step 0‸"), -1, semitone: true).After);
+        // The entry's name still steps the face.
+        var (face, _) = Step(S("size 2.2").Replace("\"TeX", "\"‸TeX"), -1, semitone: true);
+        Assert.DoesNotContain("size", face.Message);
+    }
+
+    // ---------------------------------------------------------------- midiInstrument
+
+    private const string InstrumentBook = "part m {{ midiInstrument {0} }}\nsection A {{ m {{ c4 d e f }} }}\n";
+
+    private static string Instrument(string name) => string.Format(InstrumentBook, name);
+
+    [Fact]
+    public void AMidiInstrument_WalksTheGeneralMidiNames_AndSoundsTheNewOne()
+    {
+        // Owner's requests 2026-10-24: step it, and hear it. Down goes down the list (program 1
+        // at the top), Up up it — the owner's decision, the reverse of the first day's.
+        var (down, after) = Step(Instrument("‸\"acoustic grand\""), -1, semitone: true);
+        Assert.False(down.Fallback, down.Error);
+        Assert.Equal(Instrument("\"bright acoustic\""), after);
+        Assert.Contains("program 2 of 128", down.Message);
+        Assert.Equal([60], down.Pitches);
+        Assert.Equal(1, down.Program);
+        Assert.Equal(Instrument("\"acoustic grand\""), Step(Instrument("\"bright ‸acoustic\""), +1, semitone: true).After);
+
+        // The octave pair walks the families of eight: piano -> chromatic percussion -> organ.
+        Assert.Equal(Instrument("\"celesta\""), Step(Instrument("\"bright ‸acoustic\""), -1).After);
+        Assert.Equal(Instrument("\"acoustic grand\""), Step(Instrument("\"celesta\"‸"), +1).After);
+        Assert.Equal(Instrument("\"celesta\""), Step(Instrument("\"music box\"‸"), +1).After);
+        var (bass, _) = Step(Instrument("\"fretless ‸bass\""), -1, semitone: true);
+        Assert.Equal([43], bass.Pitches);
+        Assert.Equal(36, bass.Program);
+
+        // The ends stay; a name off the list steps from them.
+        var (first, same) = Step(Instrument("‸\"acoustic grand\""), +1, semitone: true);
+        Assert.Equal(Instrument("\"acoustic grand\""), same);
+        Assert.Contains("first", first.Message);
+        Assert.Equal(Instrument("\"gunshot\""), Step(Instrument("\"no‸ such\""), +1).After);
+    }
+
+    [Fact]
+    public void AMidiInstrument_AnswersTheAudition_WithItsProgram()
+    {
+        // Typing or completing the name sounds it: the editor asks auditionAt after the change.
+        string text = Instrument("\"viola\"");
+        var answer = Open(text).AuditionAt(new AuditionAtParams
+        {
+            TextDocument = new TextDocumentIdentifier { Uri = DocUri },
+            Offset = text.IndexOf("viola", StringComparison.Ordinal) + 5,
+        });
+        Assert.Equal("instrument", answer.Kind);
+        Assert.Equal([60], answer.Pitches);
+        Assert.Equal(41, answer.Program);
+        string partial = Instrument("\"viol\"");
+        var none = Open(partial).AuditionAt(new AuditionAtParams
+        {
+            TextDocument = new TextDocumentIdentifier { Uri = DocUri },
+            Offset = partial.IndexOf("viol", StringComparison.Ordinal) + 4,
+        });
+        Assert.Empty(none.Pitches);
+    }
+
+    // ---------------------------------------------------------------- a percent mark
+
+    [Fact]
+    public void APercentMark_StepsTheBarsItRepeats()
+    {
+        // Owner's request 2026-10-24: % -> %2 -> %3, and back.
+        const string Bars = "c'4 d' e' f' | g'1 | a'1 | ";
+        var (up, after) = Step(Plain(Bars + "‸% |"), +1, semitone: true);
+        Assert.False(up.Fallback, up.Error);
+        Assert.Equal(Plain(Bars + "%2 |"), after);
+        Assert.Contains("2 bars", up.Message);
+        Assert.Empty(up.Pitches);
+        Assert.Equal(Plain(Bars + "%3 |"), Step(Plain(Bars + "%2‸ |"), +1).After);
+        Assert.Equal(Plain(Bars + "% |"), Step(Plain(Bars + "%‸2 |"), -1, semitone: true).After);
+        var (one, same) = Step(Plain(Bars + "%‸ |"), -1, semitone: true);
+        Assert.False(one.Fallback);
+        Assert.Equal(Plain(Bars + "% |"), same);
+        Assert.Contains("one bar", one.Message);
+    }
+
+    // ---------------------------------------------------------------- a staff group
+
+    private static string Group(string keyword) => Score($"{keyword} {{ staff rh staff lh }}");
+
+    private static string Score(string body) =>
+        $"part rh {{ }}\npart lh {{ clef bass }}\nsection A {{ rh {{ c'1 }} lh {{ c1 }} }}\nform {{ A }}\nscore {{ {body} }}\n";
+
+    [Fact]
+    public void AGroup_CondensesAndOpensAgain_KeepingTheLayout()
+    {
+        // Owner's decision 2026-10-24: condensedStaff walks with the groups; its body is bare names.
+        Assert.Equal(Score("condensedStaff { rh lh }"), Step(Score("‸choirStaff { staff rh staff lh }"), -1, semitone: true).After);
+        Assert.Equal(Score("condensedStaff {\n    rh\n    lh\n  }"),
+            Step(Score("choir‸Staff {\n    staff rh\n    staff lh\n  }"), -1, semitone: true).After);
+        Assert.Equal(Score("choirStaff { staff rh staff lh }"), Step(Score("condensed‸Staff { rh lh }"), +1, semitone: true).After);
+        // A clef written on the condensed staff goes onto each staff.
+        Assert.Equal(Score("choirStaff { staff bass rh staff bass lh }"),
+            Step(Score("‸condensedStaff bass { rh lh }"), +1, semitone: true).After);
+        // Staves of different clefs do not go onto one staff.
+        var (refused, same) = Step(Score("‸choirStaff { staff bass rh staff lh }"), -1, semitone: true);
+        Assert.False(refused.Fallback);
+        Assert.Equal(Score("choirStaff { staff bass rh staff lh }"), same);
+        Assert.Contains("different clefs", refused.Message);
+        // The same clef on every staff goes after the keyword, once (owner's report 2026-10-24).
+        Assert.Equal(Score("condensedStaff treble {\n   rh\n   lh\n  }"),
+            Step(Score("‸choirStaff {\n   staff treble rh\n   staff treble lh\n  }"), -1, semitone: true).After);
+        Assert.Equal(Score("choirStaff { staff treble rh staff treble lh }"),
+            Step(Score("‸condensedStaff treble { rh lh }"), +1, semitone: true).After);
+        // A lyrics row stays a group.
+        var (lyrics, kept) = Step(Score("‸choirStaff { staff rh lyrics v staff lh }"), -1, semitone: true);
+        Assert.Equal(Score("choirStaff { staff rh lyrics v staff lh }"), kept);
+        Assert.Contains("lyrics row", lyrics.Message);
+    }
+
+    [Fact]
+    public void AScoreRowsClefWord_StepsLikeAClefInMusic()
+    {
+        // Owner's request 2026-10-24: the alto of `condensedStaff alto { … }` — the five music clefs.
+        Assert.Equal(Score("condensedStaff tenor { rh lh }"), Step(Score("condensedStaff al‸to { rh lh }"), -1, semitone: true).After);
+        Assert.Equal(Score("condensedStaff treble_8 { rh lh }"), Step(Score("condensedStaff ‸alto { rh lh }"), +1, semitone: true).After);
+        Assert.Equal(Score("condensedStaff bass { rh lh }"), Step(Score("condensedStaff alto‸ { rh lh }"), -1).After);
+        Assert.Equal(Score("combinedStaff treble { rh lh }"), Step(Score("combinedStaff ‸alto { rh lh }"), +1).After);
+        Assert.Equal(Score("staff tenor rh"), Step(Score("staff ‸bass rh"), +1, semitone: true).After);
+        var (top, same) = Step(Score("condensedStaff ‸treble { rh lh }"), +1, semitone: true);
+        Assert.Equal(Score("condensedStaff treble { rh lh }"), same);
+        Assert.Contains("first", top.Message);
+    }
+
+    [Fact]
+    public void AStaffGroup_OnTheOctaveKeys_JumpsBetweenTheFamilies()
+    {
+        // Owner's decision 2026-10-24: PageDown / PageUp — the brackets ⇄ one staff, to the
+        // family's usual kind (grandStaff, condensedStaff), the body rewritten as on Up / Down.
+        Assert.Equal(Score("condensedStaff { rh lh }"), Step(Score("‸staffGroup { staff rh staff lh }"), -1).After);
+        Assert.Equal(Score("condensedStaff { rh lh }"), Step(Score("‸choirStaff { staff rh staff lh }"), -1).After);
+        Assert.Equal(Score("grandStaff { staff rh staff lh }"), Step(Score("‸combinedStaff { rh lh }"), +1).After);
+        Assert.Equal(Score("grandStaff { staff treble rh staff treble lh }"), Step(Score("‸condensedStaff treble { rh lh }"), +1).After);
+        var (first, same) = Step(Score("‸grandStaff { staff rh staff lh }"), +1);
+        Assert.Equal(Score("grandStaff { staff rh staff lh }"), same);
+        Assert.Contains("first family", first.Message);
+        var (last, kept) = Step(Score("‸condensedStaff { rh lh }"), -1);
+        Assert.Equal(Score("condensedStaff { rh lh }"), kept);
+        Assert.Contains("last family", last.Message);
+    }
+
+    [Fact]
+    public void ACombinedStaff_WalksWithTheGroups_OnlyForTwoParts()
+    {
+        // Owner's question 2026-10-24: combinedStaff takes exactly two parts, so the walk offers
+        // it to a body of two and passes it by otherwise, saying so.
+        Assert.Equal(Score("combinedStaff { rh lh }"), Step(Score("‸condensedStaff { rh lh }"), -1, semitone: true).After);
+        Assert.Equal(Score("condensedStaff { rh lh }"), Step(Score("combined‸Staff { rh lh }"), +1, semitone: true).After);
+        // The walk down from a group of two, the layout kept, and back up to the group.
+        Assert.Equal(Score("condensedStaff {\n  rh\n  lh\n}"),
+            Step(Score("‸choirStaff {\n  staff rh\n  staff lh\n}"), -1, semitone: true).After);
+        Assert.Equal(Score("combinedStaff {\n  rh\n  lh\n}"),
+            Step(Score("‸condensedStaff {\n  rh\n  lh\n}"), -1, semitone: true).After);
+        Assert.Equal(Score("choirStaff { staff rh staff lh }"), Step(Score("‸condensedStaff { rh lh }"), +1, semitone: true).After);
+        // Between the two one-staff kinds only the word changes, a written clef kept.
+        Assert.Equal(Score("condensedStaff bass { rh lh }"), Step(Score("‸combinedStaff bass { rh lh }"), +1, semitone: true).After);
+        // Three parts: condensedStaff is the end of the walk.
+        const string Three = "part a {{ }}\npart b {{ }}\npart c {{ }}\nsection A {{ a {{ c'1 }} b {{ c'1 }} c {{ c'1 }} }}\nform {{ A }}\nscore {{ {0} }}\n";
+        var (end, same) = Step(string.Format(Three, "‸condensedStaff { a b c }"), -1, semitone: true);
+        Assert.Equal(string.Format(Three, "condensedStaff { a b c }"), same);
+        Assert.Contains("combinedStaff takes exactly two parts", end.Message);
+    }
+
+    [Fact]
+    public void AScoreRowsPart_StepsThroughTheFilesParts()
+    {
+        // Owner's request 2026-10-24: `staff melody` — the declared parts in order, Down down the list.
+        const string Book = "part melody {{ }}\npart bass {{ clef bass }}\nsection A {{ melody {{ c'1 }} bass {{ c1 }} drums {{ c1 }} }}\nform {{ A }}\nscore {{ {0} }}\n";
+        string S(string row) => string.Format(Book, row);
+        var (down, after) = Step(S("staff mel‸ody"), -1, semitone: true);
+        Assert.False(down.Fallback, down.Error);
+        Assert.Equal(S("staff bass"), after);
+        Assert.Contains("part 2 of 3", down.Message);
+        // A section's cell declares a part too.
+        Assert.Equal(S("staff drums"), Step(S("staff ‸bass"), -1).After);
+        Assert.Equal(S("staff melody"), Step(S("staff bass‸"), +1, semitone: true).After);
+        var (first, same) = Step(S("staff ‸melody"), +1, semitone: true);
+        Assert.Equal(S("staff melody"), same);
+        Assert.Contains("first", first.Message);
+        // The same on a tab's part and a condensed staff's member.
+        Assert.Equal(S("tab bass"), Step(S("tab ‸melody"), -1, semitone: true).After);
+        Assert.Equal(S("condensedStaff { melody drums }"), Step(S("condensedStaff { melody ‸bass }"), -1, semitone: true).After);
+    }
+
+    [Fact]
+    public void AStaffRowsLineCount_StepsByOneLine()
+    {
+        // Owner's request 2026-10-24: the 1 of `staff melody as lines 1`.
+        int max = LilySharp.Core.Semantics.LanguageVocabulary.MaxStaffLines;
+        var (up, after) = Step(Score("staff rh as lines ‸1"), +1, semitone: true);
+        Assert.False(up.Fallback, up.Error);
+        Assert.Equal(Score("staff rh as lines 2"), after);
+        Assert.Equal(Score("staff rh as lines 2"), Step(Score("staff rh as lines ‸3"), -1).After);
+        var (fewest, same) = Step(Score("staff rh as lines 1‸"), -1, semitone: true);
+        Assert.Equal(Score("staff rh as lines 1"), same);
+        Assert.Contains("fewest", fewest.Message);
+        var (most, kept) = Step(Score($"staff rh as lines ‸{max}"), +1, semitone: true);
+        Assert.Equal(Score($"staff rh as lines {max}"), kept);
+        Assert.Contains("most", most.Message);
+        // The row's part still steps the part.
+        Assert.Equal(Score("staff lh as lines 1"), Step(Score("staff ‸rh as lines 1"), -1, semitone: true).After);
+    }
+
+    [Fact]
+    public void AStaffRowsSelector_StepsItsWord_AndItsValue()
+    {
+        // Owner's request 2026-10-24: the word after `staff melody as` — lines, removeEmpty,
+        // pitch, Down down the list as the completion shows them, each with its first value.
+        var (down, after) = Step(Score("staff rh as ‸lines 1"), -1, semitone: true);
+        Assert.False(down.Fallback, down.Error);
+        Assert.Equal(Score("staff rh as removeEmpty true"), after);
+        Assert.Equal(Score("staff rh as pitch transposed"), Step(Score("staff rh as remove‸Empty all"), -1).After);
+        Assert.Equal(Score("staff rh as lines 1"), Step(Score("staff rh as removeEmpty‸ true"), +1, semitone: true).After);
+        var (first, same) = Step(Score("staff rh as ‸lines 3"), +1, semitone: true);
+        Assert.Equal(Score("staff rh as lines 3"), same);
+        Assert.Contains("first", first.Message);
+        // A selector the row already writes is passed by.
+        Assert.Equal(Score("staff rh as pitch transposed removeEmpty true"),
+            Step(Score("staff rh as ‸lines 1 removeEmpty true"), -1, semitone: true).After);
+        Assert.Equal(Score("staff rh as removeEmpty true lines 1"),
+            Step(Score("staff rh as ‸pitch concert lines 1"), +1, semitone: true).After);
+
+        // The values: removeEmpty true, all, false; pitch transposed, concert.
+        Assert.Equal(Score("staff rh as removeEmpty all"), Step(Score("staff rh as removeEmpty ‸true"), -1, semitone: true).After);
+        Assert.Equal(Score("staff rh as removeEmpty false"), Step(Score("staff rh as removeEmpty all‸"), -1).After);
+        Assert.Equal(Score("staff rh as pitch concert"), Step(Score("staff rh as pitch ‸transposed"), -1, semitone: true).After);
+        var (lastValue, kept) = Step(Score("staff rh as pitch ‸concert"), -1, semitone: true);
+        Assert.Equal(Score("staff rh as pitch concert"), kept);
+        Assert.Contains("last", lastValue.Message);
+    }
+
+    [Fact]
+    public void AStaffRow_AndATabRow_SwitchToEachOther()
+    {
+        // Owner's request 2026-10-24.
+        var (tab, after) = Step(Score("‸staff rh"), +1, semitone: true);
+        Assert.False(tab.Fallback, tab.Error);
+        Assert.Equal(Score("tab rh"), after);
+        Assert.Equal(Score("staff rh"), Step(Score("ta‸b rh"), -1).After);
+        // The word only one of them reads goes: a staff's clef, a tab's tuning.
+        Assert.Equal(Score("tab rh"), Step(Score("‸staff bass rh"), -1, semitone: true).After);
+        Assert.Equal(Score("staff rh"), Step(Score("tab‸ bass4 rh"), +1, semitone: true).After);
+        Assert.Equal(Score("staff rh as numbers"), Step(Score("‸tab rh as numbers"), -1).After);
+        // Inside a group a staff stays a staff.
+        var (inGroup, same) = Step(Score("grandStaff { ‸staff rh staff lh }"), +1, semitone: true);
+        Assert.Equal(Score("grandStaff { staff rh staff lh }"), same);
+        Assert.Contains("not a tab", inGroup.Message);
+    }
+
+    [Fact]
+    public void AStaffGroup_StepsItsKeyword_InTheOrderItsCompletionLists()
+    {
+        // Owner's request 2026-10-24: grandStaff, staffGroup, choirStaff — Down down the list.
+        var (down, after) = Step(Group("grand‸Staff"), -1, semitone: true);
+        Assert.False(down.Fallback, down.Error);
+        Assert.Equal(Group("staffGroup"), after);
+        Assert.Contains("bracket", down.Message);
+        Assert.Equal(Group("choirStaff"), Step(Group("‸staffGroup"), -1, semitone: true).After);
+        Assert.Equal(Group("staffGroup"), Step(Group("choirStaff‸"), +1, semitone: true).After);
+        var (last, stays) = Step(Score("‸combinedStaff { rh lh }"), -1, semitone: true);
+        Assert.Equal(Score("combinedStaff { rh lh }"), stays);
+        Assert.Contains("last", last.Message);
+        var (first, same) = Step(Group("‸grandStaff"), +1, semitone: true);
+        Assert.False(first.Fallback);
+        Assert.Equal(Group("grandStaff"), same);
+        Assert.Contains("first", first.Message);
+        // Inside the braces the keys are not the group's.
+        var (inside, unchanged) = Step(Group("grandStaff").Replace("{ staff rh", "{ ‸staff rh"), -1, semitone: true);
+        Assert.Equal(Group("grandStaff"), unchanged);
+        Assert.DoesNotContain("staffGroup", inside.Message ?? "");
+    }
+
+    // ---------------------------------------------------------------- tuning
+
+    private static string Tuning(string word) => $"part b {{ tuning {word} }}\nsection A {{ b {{ c4 d e f }} }}\n";
+
+    [Fact]
+    public void ATuning_WalksTheTunings_AndSoundsItsOpenStrings()
+    {
+        // Owner's request 2026-10-24: `tuning bass` as midiInstrument.
+        // Down goes down the list (the owner's decision, the reverse of the first day's).
+        var (down, after) = Step(Tuning("‸bass"), -1, semitone: true);
+        Assert.False(down.Fallback, down.Error);
+        Assert.Equal(Tuning("bassdropd"), after);
+        Assert.Contains("D1 A1 D2 G2", down.Message);
+        Assert.Equal([26, 33, 38, 43], down.Pitches);
+        Assert.Equal(33, down.Program);
+        Assert.True(down.Strum);   // the strings one after another, lowest first
+        Assert.Equal(Tuning("guitarasus4"), Step(Tuning("bass‸"), +1, semitone: true).After);
+        // A double steps from its tuning's place.
+        Assert.Equal(Tuning("bassdropd"), Step(Tuning("‸bass4"), -1, semitone: true).After);
+
+        // The octave pair: a family at a time; Up inside one goes to its first.
+        Assert.Equal(Tuning("violin"), Step(Tuning("ba‸ss"), -1).After);
+        Assert.Equal(Tuning("bass"), Step(Tuning("bass‸dropd"), +1).After);
+        Assert.Equal(Tuning("guitar"), Step(Tuning("‸bass"), +1).After);
+        var (first, same) = Step(Tuning("‸guitar"), +1);
+        Assert.Equal(Tuning("guitar"), same);
+        Assert.Contains("first", first.Message);
+        var (last, stays) = Step(Tuning("‸tenorukulele"), -1);
+        Assert.Equal(Tuning("tenorukulele"), stays);
+        Assert.Contains("last", last.Message);
+    }
+
+    [Fact]
+    public void ATuning_AnswersTheAudition_WithItsOpenStrings()
+    {
+        string text = Tuning("cello");
+        var answer = Open(text).AuditionAt(new AuditionAtParams
+        {
+            TextDocument = new TextDocumentIdentifier { Uri = DocUri },
+            Offset = text.IndexOf("cello", StringComparison.Ordinal) + 5,
+        });
+        Assert.Equal("tuning", answer.Kind);
+        Assert.Equal([36, 43, 50, 57], answer.Pitches);
+        Assert.Equal(42, answer.Program);
+        Assert.True(answer.Strum);
     }
 
     // ---------------------------------------------------------------- a dynamic, a time, octave N, transpose

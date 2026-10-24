@@ -962,6 +962,22 @@ internal sealed partial class Parser
                 any = true;
                 continue;
             }
+            // A second `as` before another selector (`as pitch transposed as lines 1`): one `as`
+            // takes them all (owner's decision 2026-10-24, LYS0042). Said once, here, and read
+            // past, so the selector after it counts and is not reported as a stray item.
+            if (any && string.Equals(Current.Text, "as", System.StringComparison.Ordinal)
+                && Peek(1) is { } afterAs
+                && (afterAs.Text is "lines" or "removeEmpty"
+                    || string.Equals(afterAs.Text, Semantics.ConcertPitch.Property, System.StringComparison.Ordinal)))
+            {
+                _diagnostics.Error(
+                    new TextSpan(_textPosition + Current.LeadingTriviaWidth, Current.Text.Length),
+                    DiagnosticCodes.RepeatedStaffSelectorAs,
+                    $"One 'as' takes every selector after it - delete this 'as' and write '{afterAs.Text} …' "
+                    + "after the first: 'as pitch transposed lines 1'.");
+                tokens.Add(Advance()); // the extra as
+                continue;
+            }
             break;
         }
         if (!any)

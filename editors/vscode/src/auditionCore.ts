@@ -71,8 +71,14 @@ export const EDIT_SELECTION_WINDOW_MS = 60;
 export const NOTE_MS = 450;
 export const CHORD_MS = 900;
 
-/** The ring length for an answer of `pitchCount` pitches. */
-export function auditionDurationMs(pitchCount: number): number {
+/** The time between two strings of a strum — a tuning's open strings struck lowest first, one
+ * after another (owner's request 2026-10-24: "ポロロンと"). */
+export const STRUM_MS = 90;
+
+/** The ring length for an answer of `pitchCount` pitches; a strum rings a chord's length after
+ * its last string. */
+export function auditionDurationMs(pitchCount: number, strum = false): number {
+    if (strum && pitchCount > 1) { return (pitchCount - 1) * STRUM_MS + CHORD_MS; }
     return pitchCount > 1 ? CHORD_MS : NOTE_MS;
 }
 
@@ -82,6 +88,9 @@ export function auditionDurationMs(pitchCount: number): number {
 export interface AuditionAnswer {
     readonly key: number;
     readonly pitches: readonly number[];
+    /** The General MIDI program they sound in (-1 or absent: the timbre's). Part of the sound,
+     * so a `midiInstrument` typed from "violin" to "viola" is news at the same pitch. */
+    readonly program?: number;
 }
 
 /**
@@ -131,7 +140,7 @@ export class AuditionMemory {
 }
 
 function signatureOf(answer: AuditionAnswer): string {
-    return `${answer.key}:${answer.pitches.join(',')}`;
+    return `${answer.key}:${answer.pitches.join(',')}:${answer.program ?? -1}`;
 }
 
 /** The facts of one selection change that decide whether it is a caret move worth
@@ -169,6 +178,29 @@ export function mayChangeATypedPitch(changes: readonly ChangeLike[]): boolean {
     if (c.text.length === 0 || c.text.length > 8 || c.rangeLength > 8) { return false; }
     return /[A-Za-z',]/.test(c.text);
 }
+
+/** The longest change that may still be a rename of a `midiInstrument` or a `tuning`: a
+ * completion writes the whole name ("electric guitar (clean)") in one change. */
+export const INSTRUMENT_CHANGE_MAX = 64;
+
+/**
+ * A document change that may have changed a part's `midiInstrument` or `tuning` (owner's
+ * requests 2026-10-24: hear the instrument when it changes, however it was changed): one change,
+ * a keystroke, a Backspace or a completion, on a line that names one of them. The server's
+ * answer then says whether the caret is on it (SOUNDS_WHEN_CHANGED), and AuditionMemory.typed()
+ * keeps an unchanged one silent — a half-typed name is no instrument and sounds nothing.
+ */
+export function mayChangeAnInstrument(changes: readonly ChangeLike[], lineText: string): boolean {
+    if (changes.length !== 1) { return false; }
+    const c = changes[0];
+    if (c.text.length > INSTRUMENT_CHANGE_MAX || c.rangeLength > INSTRUMENT_CHANGE_MAX) { return false; }
+    return /\b(midiInstrument|tuning)\b/.test(lineText);
+}
+
+/** The kinds the server names a `midiInstrument` and a `tuning` target
+ * (NoteStepper.TargetKind.Instrument / Tuning). They sound when they CHANGE, not when the caret
+ * lands on them. */
+export const SOUNDS_WHEN_CHANGED: ReadonlySet<string> = new Set(['instrument', 'tuning']);
 
 /**
  * The trailing-edge debounce both automatic auditions use: each `poke` restarts the

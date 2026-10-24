@@ -648,6 +648,14 @@ public static class DiagnosticCodes
     /// beats itself (<c>time 3+2+2/8 (2+2+3)</c>). Owner's decision 2026-10-12.</summary>
     public const string BeatGroupingMismatch = "LYS0041";
 
+    /// <summary>Parser error: a second <c>as</c> in a staff or ossia row —
+    /// <c>staff m as pitch transposed as lines 1</c>. One <c>as</c> takes every selector after it
+    /// (<c>as pitch transposed lines 1</c>): the grammar keeps the one spelling (owner's decision
+    /// 2026-10-24) and says so once, on the extra <c>as</c>, which is kept for its width and read
+    /// past, so the selectors after it count and nothing after it is reported a second time. The
+    /// editor's quick fix deletes the extra word.</summary>
+    public const string RepeatedStaffSelectorAs = "LYS0042";
+
     // Semantic errors (LYS1xxx)
 
     /// <summary>Semantic error: reference to an undefined variable.</summary>

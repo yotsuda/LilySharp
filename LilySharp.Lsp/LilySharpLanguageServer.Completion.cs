@@ -276,8 +276,11 @@ public sealed partial class LilySharpLanguageServer
             CompletionContext.FontEntryOpen => GetFontEntryContinuationCompletions(),
             // The render items, then the declared parts as bare MIDI-only items (GRAMMAR §7:
             // "a bare part name renders that part to MIDI only").
-            CompletionContext.ScoreBlock => WithMidiOnlyParts(GetScoreBlockCompletions(), doc.Text),
-            CompletionContext.StaffGroupBlock => GetStaffGroupBlockCompletions(),
+            // A keyword typed in front of a written body writes the keyword alone.
+            CompletionContext.ScoreBlock => KeywordOnlyBeforeAWrittenBody(
+                WithMidiOnlyParts(GetScoreBlockCompletions(), doc.Text), doc.Text, offset),
+            CompletionContext.StaffGroupBlock => KeywordOnlyBeforeAWrittenBody(
+                GetStaffGroupBlockCompletions(), doc.Text, offset),
             // `staff |` / `ossia |`: the parts, and the five clefs that may precede one.
             CompletionContext.AfterStaffRef => GetStaffRefCompletions(doc.Text),
             // `staff CLEF |`: the parts, and — the clef word being a legal part name too —
@@ -294,6 +297,8 @@ public sealed partial class LilySharpLanguageServer
                 GetTabTuningRefCompletions(doc.Text, WordBeforeCursor(doc.Text, offset)),
             // condensedStaff { } / combinedStaff { }: bare part names only.
             CompletionContext.BarePartNameList => GetDeclaredNameCompletions(doc.Text, "part", "Part"),
+            // `condensedStaff |` before the brace: a clef, or the brace with none.
+            CompletionContext.AfterOneStaffKeyword => GetOneStaffHeadCompletions(doc.Text, offset),
             // `score NAME |`: the header options and the body's braces.
             CompletionContext.AfterScoreHeader => GetScoreHeaderCompletions(),
             // `form |` in a score: the forms this document declares — the one thing that fits.
@@ -327,6 +332,7 @@ public sealed partial class LilySharpLanguageServer
             CompletionContext.AfterTabDisplayAs => GetTabDisplayModeCompletions(),
             CompletionContext.AfterInstrument => GetInstrumentCompletions(doc.Text, offset, position),
             CompletionContext.AfterMidiInstrument => GetMidiInstrumentCompletions(doc.Text, offset, position),
+            CompletionContext.AfterTuning => GetTuningCompletions(),
             CompletionContext.AfterRemoveEmpty => GetRemoveEmptyCompletions(),
             CompletionContext.AfterPitch => GetPitchModeCompletions(),
             CompletionContext.AfterPagePitch => GetPagePitchModeCompletions(),

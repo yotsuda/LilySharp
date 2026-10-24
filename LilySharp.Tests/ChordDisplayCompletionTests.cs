@@ -334,8 +334,9 @@ public class ChordDisplayCompletionTests
         var clef = props.Single(i => i.Label == "clef");
         Assert.Equal("clef $0", clef.InsertText);
         Assert.Equal("editor.action.triggerSuggest", clef.Command?.CommandIdentifier);
-        // A property with no value list stays a plain insert.
-        Assert.Null(props.Single(i => i.Label == "tuning").Command);
+        // A property with no value list stays a plain insert (`tuning` has had one since
+        // 2026-10-24 — AfterTuning).
+        Assert.Null(props.Single(i => i.Label == "pedal").Command);
     }
 
     [Fact]

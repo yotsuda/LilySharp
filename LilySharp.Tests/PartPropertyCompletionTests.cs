@@ -100,6 +100,39 @@ public class PartPropertyCompletionTests
             ContextOf(text) == LilySharpLanguageServer.CompletionContext.AfterMidiInstrument);
     }
 
+    /// <summary><c>tuning |</c> in a part header offers the tuning words (owner's request
+    /// 2026-10-24: Ctrl+Space right after <c>tuning</c>).</summary>
+    [Theory]
+    [InlineData("part b { tuning ", true)]
+    [InlineData("part b { tuning ba", true)]                    // mid-word
+    [InlineData("part b { clef bass tuning ", true)]
+    [InlineData("part b { tuning bass ", false)]                 // the value is written
+    [InlineData("lyrics { tuning ", false)]                      // not a part header
+    [InlineData("title \"tuning ", false)]                       // a title holding the word
+    [InlineData("section S { b { tuning ", false)]               // a part REFERENCE body
+    public void TuningContext_FiresInsideAPartHeader(string text, bool expected)
+    {
+        Assert.Equal(expected,
+            ContextOf(text) == LilySharpLanguageServer.CompletionContext.AfterTuning);
+    }
+
+    [Fact]
+    public void TheTuningWords_AreTheCompilers_FamiliesTogether_WithTheirOpenStrings()
+    {
+        var items = LilySharpLanguageServer.GetTuningCompletions().Items;
+        var labels = items.OrderBy(i => i.SortText, System.StringComparer.Ordinal).Select(i => i.Label).ToList();
+        Assert.Equal(LilySharp.Core.Tablature.Tunings.Names.OrderBy(n => n), labels.OrderBy(n => n));
+        Assert.Equal("guitar", labels[0]);
+        Assert.True(labels.IndexOf("bass") < labels.IndexOf("bass4"));
+        Assert.True(labels.IndexOf("bass6") < labels.IndexOf("violin"));
+        Assert.Equal("E1 A1 D2 G2", items.Single(i => i.Label == "bass").Detail);
+        Assert.Equal("E1 A1 D2 G2 - the same strings as bass", items.Single(i => i.Label == "doublebass").Detail);
+        // Picking `tuning` from the property list re-opens the popup on them.
+        var tuning = LilySharpLanguageServer.GetPartPropertyCompletions().Items.Single(i => i.Label == "tuning");
+        Assert.Equal("tuning $0", tuning.InsertText);
+        Assert.Equal("editor.action.triggerSuggest", tuning.Command?.CommandIdentifier);
+    }
+
     [Theory]
     [InlineData("part m { clef ", "AfterClef")]
     [InlineData("part m { instrument ", "AfterInstrument")]

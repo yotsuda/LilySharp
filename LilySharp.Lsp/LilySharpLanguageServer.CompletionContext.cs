@@ -727,6 +727,8 @@ public sealed partial class LilySharpLanguageServer
         /// <summary><c>midiInstrument "|"</c>, <c>midiInstrument "ele|"</c> or
         /// <c>midiInstrument |</c> in a part header — the 128 General MIDI names.</summary>
         AfterMidiInstrument,
+        /// <summary><c>tuning |</c> in a part header — the tuning words.</summary>
+        AfterTuning,
         AfterRemoveEmpty,
         /// <summary><c>pitch |</c> where it says how notes are TYPED (top level, part header):
         /// written | concert.</summary>
@@ -768,6 +770,9 @@ public sealed partial class LilySharpLanguageServer
         /// part name comes next (or, the word being a legal part name itself, the
         /// selectors).</summary>
         AfterStaffClefRef,
+        /// <summary><c>condensedStaff ▮</c> / <c>combinedStaff ▮</c> before its brace: the clefs
+        /// it may take, and the brace with no clef.</summary>
+        AfterOneStaffKeyword,
         /// <summary>Inside <c>condensedStaff { }</c> / <c>combinedStaff { }</c>: bare part
         /// names and nothing else (a clef or a <c>staff</c> item is LYS6004 / LYS6006).</summary>
         BarePartNameList,
@@ -1188,6 +1193,13 @@ public sealed partial class LilySharpLanguageServer
                 || (prevWord == "midiInstrument" && !IsInsideStringLiteral(text, offset))))
             return CompletionContext.AfterMidiInstrument;
 
+        // `tuning |` in a part header: the tuning words (owner's request 2026-10-24). Gated to a
+        // part body like `instrument` — the word is ordinary English in a lyric or a title.
+        if (prevWord == "tuning"
+            && IsInsidePartBlock(scan.Stack)
+            && !IsInsideStringLiteral(text, offset))
+            return CompletionContext.AfterTuning;
+
         // (`removeEmpty` left the part header on 2026-09-08 — it is a score selector now,
         // `staff m as removeEmpty V`, served inside the score branch below.)
 
@@ -1308,6 +1320,9 @@ public sealed partial class LilySharpLanguageServer
                 // `tab` references a part too, and an optional tuning may precede the
                 // name (`tab drop-d melody`) — its own list, parts and tunings.
                 case "tab": return CompletionContext.AfterTabRef;
+                // `condensedStaff ▮` / `combinedStaff ▮` before the brace: the optional clef,
+                // or the brace itself (owner's request 2026-10-24).
+                case "condensedStaff" or "combinedStaff": return CompletionContext.AfterOneStaffKeyword;
                 case "chords": return CompletionContext.AfterChordsRef;
                 case "lyrics": return CompletionContext.AfterLyricsRef;
                 // `lyrics NAME sings ▮` on a score row — the binding target, the
