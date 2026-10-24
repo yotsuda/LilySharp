@@ -125,6 +125,8 @@ internal static class LanguageReference
             return volta;
         if (CapoHover(node) is { } capo)
             return capo;
+        if (InstrumentPresetHover(node) is { } preset)
+            return preset;
         return node switch
         {
             NoteSyntax note => $"**Note**: {note.Pitch.PitchName}\n\nOctave offset: {note.Pitch.OctaveOffset}\n\nDuration: {note.Duration?.Value.ToString() ?? "inherited"}",
@@ -201,6 +203,74 @@ internal static class LanguageReference
         }
         return sb.ToString();
     }
+
+    /// <summary>
+    /// The hover for a part's <c>instrument</c> preset (owner's request 2026-10-24): the defaults
+    /// the preset fills in, one line each as the property that would say it alone — clef, octave,
+    /// transposition, tuning, MIDI sound — with the line a property of the part itself replaces
+    /// struck through. Not the name printed beside the staff (the owner's choice: that one shows
+    /// on the page). Null off an <c>instrument</c> property, or for a name that is not a preset.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ <c>octave</c> and the transposition read apart on purpose: the octave places the
+    /// WRITTEN notes, the transposition moves only the SOUND, so <c>instrument bass</c> writes a
+    /// bare <c>c</c> as C3 and plays C2. A part that writes <c>octave 2</c> meaning "a bass is low"
+    /// writes C2 and plays C1 — the line says both pitches so the two cannot be read as one.
+    /// </remarks>
+    private static string? InstrumentPresetHover(SyntaxNode node)
+    {
+        var property = node as PropertyAssignmentSyntax ?? node.Parent as PropertyAssignmentSyntax;
+        if (property is not { NameToken.Text: "instrument", Parent: PartDeclarationSyntax part })
+            return null;
+        var texts = property.Values.OfType<SyntaxTokenNode>().Select(t => t.Text);
+        string preset = LilySharp.Core.Svg.Model.InstrumentDefaults.SplitInstrument(texts).Preset;
+        if (!LilySharp.Core.Svg.Model.InstrumentDefaults.IsKnownInstrument(preset))
+            return null;
+        preset = preset.ToLowerInvariant();
+
+        // The part's own properties, which replace the preset's.
+        var own = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var p in part.Properties)
+            if (p.ValueText is { } v)
+                own[p.NameToken.Text] = v;
+        string? Own(string key) => own.TryGetValue(key, out var w) ? $"{key} {w}" : null;
+        static string Line(string text, string? replacedBy)
+            => replacedBy != null ? $"- ~~{text}~~ — this part writes `{replacedBy}`" : $"- {text}";
+
+        var (clef, octave) = LilySharp.Core.Svg.Model.InstrumentDefaults.GetDefaults(preset);
+        int shift = LilySharp.Core.Svg.Model.InstrumentDefaults.GetTransposition(preset);
+        var sb = new System.Text.StringBuilder();
+        sb.Append($"**Instrument preset** `{preset}` — the defaults it sets; a property of the part replaces each:\n\n");
+        sb.Append(Line($"`clef {LilySharp.Core.Svg.Model.InstrumentDefaults.ClefWord(clef)}`", Own("clef"))).Append('\n');
+        // `octave absolute` / `relative` choose a mode, not the register: only a number replaces it.
+        sb.Append(Line($"`octave {octave}` — a bare `c` is written C{octave}",
+            own.TryGetValue("octave", out var o) && int.TryParse(o, out _) ? Own("octave") : null)).Append('\n');
+        string marker = LilySharp.Core.Svg.Model.InstrumentDefaults.TranspositionMarkers
+            .FirstOrDefault(m => LilySharp.Core.Svg.Model.InstrumentDefaults.ParseTranspositionSemitones(m) == shift) is { } m2
+            ? $" (`transposition {m2}`)" : "";
+        int written = 12 * (octave + 1);   // that bare c, as MIDI
+        sb.Append(Line(shift == 0
+            ? "sounds as written"
+            : $"sounds {Math.Abs(shift)} semitones {(shift < 0 ? "lower" : "higher")}{marker}: "
+              + $"written C{octave} sounds {PitchName(written + shift, flats: true)}", Own("transposition"))).Append('\n');
+        if (LilySharp.Core.Svg.Model.InstrumentDefaults.GetTuning(preset) is { } tuningWord)
+        {
+            var strings = LilySharp.Core.Tablature.Tunings.GetTuning(LilySharp.Core.Tablature.Tunings.Parse(tuningWord));
+            sb.Append(Line($"`tuning {tuningWord}` — {string.Join(" ", strings.Select(s => PitchName(s, flats: false)))}"
+                + " (the strings a tab frets on)", Own("tuning"))).Append('\n');
+        }
+        if (LilySharp.Core.Svg.Model.InstrumentDefaults.GetMidiProgram(preset) is int program)
+            sb.Append(Line($"`midiInstrument \"{LilySharp.Core.Midi.GeneralMidi.InstrumentNames[program]}\"`",
+                own.TryGetValue("midiInstrument", out var mi) ? $"midiInstrument \"{mi}\"" : null));
+        return sb.ToString().TrimEnd();
+    }
+
+    /// <summary>A MIDI pitch as a letter, an accidental and an octave (<c>B♭3</c>, <c>F♯2</c>).</summary>
+    private static string PitchName(int midi, bool flats)
+        => (flats
+            ? new[] { "C", "D♭", "D", "E♭", "E", "F", "G♭", "G", "A♭", "A", "B♭", "B" }
+            : new[] { "C", "C♯", "D", "D♯", "E", "F", "F♯", "G", "G♯", "A", "A♯", "B" })[midi % 12]
+           + (midi / 12 - 1);
 
     /// <summary>The token before <paramref name="token"/> among <paramref name="layout"/>'s
     /// children, or null.</summary>

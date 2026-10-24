@@ -27,6 +27,10 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Editor
 
+- **Hovering a part's `instrument` preset lists the defaults it sets**: clef, octave, transposition
+  (the written and the sounding pitch, so `octave` and `transposition` cannot be read as one
+  shift), tuning and MIDI sound, the line a property of the part replaces struck through. The name
+  printed beside the staff is left out.
 - **`Ctrl+Shift+Up` / `Ctrl+Shift+Down` on a `fonts { }` entry step its font**: `music` through
   the music fonts this machine can engrave in (Emmentaler, the bundled SMuFL fonts, then the
   user's), a text key (`bend "TeX Gyre Heros"`) through the faces its completion offers, and a

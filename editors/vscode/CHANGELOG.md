@@ -4,6 +4,13 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+### Hovering an instrument preset lists what it sets
+
+- **`instrument bass` hovers as its defaults** — `clef bass`, `octave 3` (a bare `c` is written
+  C3), the transposition with both pitches (written C3 sounds C2), `tuning bass` with its open
+  strings, and the `midiInstrument` sound. A property the part writes itself strikes the line
+  it replaces.
+
 ### Tuning words are camelCase
 
 - **`banjoOpenD`, `guitarDropD`, `tenorUkulele`, …** — the 19 tuning words of several words are
