@@ -161,6 +161,13 @@ public static partial class NoteStepper
         PaperSize,
         /// <summary>A part's <c>instrument</c> preset — it sounds the new one (NoteStepper.Words.cs).</summary>
         InstrumentPreset,
+        /// <summary>A <c>tuplet N/M</c>'s ratio (NoteStepper.Words.cs).</summary>
+        TupletRatio,
+        /// <summary>A count in the music: a <c>repeat tremolo N</c>'s, a rest's <c>*N</c>
+        /// (NoteStepper.Words.cs).</summary>
+        MusicCount,
+        /// <summary>A <c>partial</c>'s length (NoteStepper.Words.cs).</summary>
+        PartialLength,
     }
 
     /// <summary>The kinds whose step changes a setting, not a sound — the audition skips them.</summary>
@@ -170,7 +177,7 @@ public static partial class NoteStepper
             or TargetKind.Font or TargetKind.FontSize or TargetKind.Percent or TargetKind.StaffGroup
             or TargetKind.StaffOrTab or TargetKind.ScorePart or TargetKind.StaffLines
             or TargetKind.StaffSelector or TargetKind.KeywordValue or TargetKind.BarNumberEvery
-            or TargetKind.PaperSize;
+            or TargetKind.PaperSize or TargetKind.TupletRatio or TargetKind.MusicCount or TargetKind.PartialLength;
 
     /// <summary>A written thing the caret is on: its kind and its node (a
     /// <see cref="NoteSyntax"/>, a <see cref="PitchSyntax"/> or <see cref="ScaleDegreeSyntax"/>
@@ -336,7 +343,8 @@ public static partial class NoteStepper
                 or TargetKind.Font or TargetKind.Instrument or TargetKind.Tuning or TargetKind.Percent
                 or TargetKind.StaffGroup or TargetKind.StaffOrTab or TargetKind.FontSize or TargetKind.ScorePart
                 or TargetKind.StaffLines or TargetKind.StaffSelector or TargetKind.KeywordValue
-                or TargetKind.BarNumberEvery or TargetKind.PaperSize or TargetKind.InstrumentPreset)
+                or TargetKind.BarNumberEvery or TargetKind.PaperSize or TargetKind.InstrumentPreset
+                or TargetKind.TupletRatio or TargetKind.MusicCount or TargetKind.PartialLength)
             {
                 var (valueEdit, valueSaid) = t.Kind switch
                 {
@@ -356,6 +364,10 @@ public static partial class NoteStepper
                         ? KeywordValueEdit(tree, kv.Keyword, kv.Value, dir)
                         : (null, "write a value"),
                     TargetKind.BarNumberEvery => CountEdit((SyntaxTokenNode)t.Node, dir, "barNumbers every"),
+                    TargetKind.TupletRatio => TupletRatioEdit((TupletExpressionSyntax)t.Node, dir),
+                    TargetKind.MusicCount => CountEdit((SyntaxTokenNode)t.Node, dir,
+                        t.Node.Parent is RestSyntax ? "bars of rest" : "tremolo strokes"),
+                    TargetKind.PartialLength => PartialLengthEdit(t.Node, dir),
                     TargetKind.PaperSize => PaperSizeAt(tree, t.Node.Span.Start) is { } page
                         ? PaperSizeEdit(page.First, page.Last, page.Name, dir)
                         : (null, "size: write a page (size a4)"),
@@ -528,6 +540,8 @@ public static partial class NoteStepper
             return new Target(TargetKind.StaffLines, staffLines);
         if (StaffSelectorAt(tree, offset) is { } selector)
             return new Target(TargetKind.StaffSelector, selector.OnValue && selector.Value != null ? selector.Value : selector.Word);
+        if (MusicNumberAt(tree, offset) is { } musicNumber)
+            return new Target(musicNumber.Kind, musicNumber.Node);
         if (BarNumberEveryAt(tree, offset) is { } every)
             return new Target(TargetKind.BarNumberEvery, every);
         if (PaperSizeAt(tree, offset) is { } pageSize)

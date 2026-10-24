@@ -6,6 +6,9 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ### Ctrl+Shift+Up / Down pick a font and a MIDI instrument
 
+- **On a number in the music they step it**: a `tuplet`'s ratio through the usual ones (`3/2` →
+  `4/3` → `5/4` …), a `repeat tremolo N` and a rest's `R1*N` by one, a `partial`'s length through
+  the note values (Up longer).
 - **On a part's `instrument` preset they step the presets**, and the new one sounds (typed or
   completed too).
 - **On a value word right after its keyword they step its values**, in the order `Ctrl+Space`

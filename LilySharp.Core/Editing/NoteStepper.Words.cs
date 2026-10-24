@@ -174,6 +174,67 @@ public static partial class NoteStepper
         return (new Edit(number.Span.Start, number.Span.End, next.ToString()), $"{what} {next}");
     }
 
+    // ------------------------------------------------------------------ numbers in the music
+
+    /// <summary>The tuplet ratios the keys walk, fewest notes first — each the usual way to write
+    /// that many notes (Lily#'s list: the denominator the note value they replace counts in).</summary>
+    private static readonly (int Notes, int InTimeOf)[] TupletRatios =
+        [(2, 3), (3, 2), (4, 3), (5, 4), (6, 4), (7, 4), (9, 8)];
+
+    /// <summary>A number in the music the caret is on — a tuplet's ratio, a tremolo's count, a
+    /// rest's <c>*N</c>, a <c>partial</c>'s length — as the node that holds it, or null.</summary>
+    private static (TargetKind Kind, SyntaxNode Node)? MusicNumberAt(SyntaxTree tree, int offset)
+    {
+        static bool On(SyntaxNode? n, int at) => n is { } x && x.Span.Start <= at && at <= x.Span.End;
+        foreach (var node in tree.GetNodes<SyntaxNode>())
+            switch (node)
+            {
+                case TupletExpressionSyntax tuplet when On(tuplet.Numerator, offset) || On(tuplet.Denominator, offset):
+                    return (TargetKind.TupletRatio, tuplet);
+                case RepeatExpressionSyntax repeat when On(repeat.Count, offset):
+                    return (TargetKind.MusicCount, repeat.Count);
+                case RestSyntax rest when rest.GetChild(3) is SyntaxTokenNode { Text.Length: > 0 } count && On(count, offset):
+                    return (TargetKind.MusicCount, count);
+                case PartialDeclarationSyntax pickup when On(pickup.Duration, offset):
+                    return (TargetKind.PartialLength, pickup.Duration);
+            }
+        return null;
+    }
+
+    /// <summary>One step of a tuplet's ratio: the next (Up, more notes) or previous (Down) of
+    /// <see cref="TupletRatios"/>; a ratio off the list steps from where its notes sort.</summary>
+    private static (Edit? Edit, string Message) TupletRatioEdit(TupletExpressionSyntax tuplet, int dir)
+    {
+        if (!int.TryParse(tuplet.Numerator.Text, out int notes) || !int.TryParse(tuplet.Denominator.Text, out int inTimeOf))
+            return (null, "tuplet: write its ratio (tuplet 3/2)");
+        int at = Array.IndexOf(TupletRatios, (notes, inTimeOf));
+        int to = at >= 0 ? at + dir
+            : dir > 0 ? Array.FindIndex(TupletRatios, r => r.Notes > notes)
+            : Array.FindLastIndex(TupletRatios, r => r.Notes < notes);
+        if (to < 0 || to >= TupletRatios.Length)
+            return (null, $"tuplet {notes}/{inTimeOf}: already the {(dir > 0 ? "most" : "fewest")} notes "
+                + $"({string.Join(" ", TupletRatios.Select(r => $"{r.Notes}/{r.InTimeOf}"))})");
+        var (n, d) = TupletRatios[to];
+        return (new Edit(tuplet.Numerator.Span.Start, tuplet.Denominator.Span.End, $"{n}/{d}"),
+            $"tuplet {n}/{d}: {n} notes in the time of {d}");
+    }
+
+    /// <summary>The note values a <c>partial</c> walks, longest first.</summary>
+    private static readonly int[] NoteValues = [1, 2, 4, 8, 16, 32, 64];
+
+    /// <summary>One step of a <c>partial</c>'s length: a longer pickup (Up) or a shorter one (Down),
+    /// the dots kept.</summary>
+    private static (Edit? Edit, string Message) PartialLengthEdit(SyntaxNode duration, int dir)
+    {
+        if (duration.GetChild(0) is not SyntaxTokenNode value || !int.TryParse(value.Text, out int n))
+            return (null, "partial: write its length (partial 4)");
+        int at = Array.IndexOf(NoteValues, n);
+        int to = at < 0 ? -1 : at - dir;
+        if (to < 0 || to >= NoteValues.Length)
+            return (null, $"partial {n}: already the {(dir > 0 ? "longest" : "shortest")} ({string.Join(" ", NoteValues)})");
+        return (new Edit(value.Span.Start, value.Span.End, NoteValues[to].ToString()), $"partial {NoteValues[to]}");
+    }
+
     // ------------------------------------------------------------------ paper size
 
     /// <summary>The page name of a <c>paper { size … }</c> the caret is on — the glued run of

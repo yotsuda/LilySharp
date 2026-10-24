@@ -1244,6 +1244,44 @@ public class StepRequestTests
         Assert.Single(answer.Pitches);
     }
 
+    [Fact]
+    public void ATupletsRatio_WalksTheUsualRatios()
+    {
+        Assert.Equal(Plain("tuplet 4/3 { c'8 d' e' }"), Step(Plain("tuplet ‸3/2 { c'8 d' e' }"), +1, semitone: true).After);
+        Assert.Equal(Plain("tuplet 5/4 { c'8 d' e' }"), Step(Plain("tuplet ‸4/3 { c'8 d' e' }"), +1).After);
+        Assert.Equal(Plain("tuplet 3/2 { c'8 d' e' }"), Step(Plain("tuplet 2/‸3 { c'8 d' e' }"), +1, semitone: true).After);
+        Assert.Equal(Plain("tuplet 3/2 { c'8 d' e' }"), Step(Plain("tuplet 4/3‸ { c'8 d' e' }"), -1, semitone: true).After);
+        var (fewest, same) = Step(Plain("tuplet ‸2/3 { c'8 d' }"), -1, semitone: true);
+        Assert.Equal(Plain("tuplet 2/3 { c'8 d' }"), same);
+        Assert.Contains("fewest", fewest.Message);
+        // A ratio off the list steps from where its notes sort.
+        Assert.Equal(Plain("tuplet 6/4 { c'8 d' e' }"), Step(Plain("tuplet ‸5/3 { c'8 d' e' }"), +1, semitone: true).After);
+    }
+
+    [Fact]
+    public void ATremolosCount_AndARestsBars_StepByOne()
+    {
+        Assert.Equal(Plain("repeat tremolo 5 { c'16 }"), Step(Plain("repeat tremolo ‸4 { c'16 }"), +1, semitone: true).After);
+        Assert.Equal(Plain("repeat tremolo 3 { c'16 }"), Step(Plain("repeat tremolo 4‸ { c'16 }"), -1).After);
+        Assert.Equal(Plain("R1*5"), Step(Plain("R1*‸4"), +1, semitone: true).After);
+        var (one, same) = Step(Plain("R1*‸1"), -1, semitone: true);
+        Assert.Equal(Plain("R1*1"), same);
+        Assert.Contains("fewest", one.Message);
+    }
+
+    [Fact]
+    public void APartialsLength_WalksTheNoteValues_LongerOnUp()
+    {
+        const string Book = "partial {0}\npart m {{ }}\nsection A {{ m {{ c'4 | c'1 }} }}\n";
+        string S(string length) => string.Format(Book, length);
+        Assert.Equal(S("2"), Step(S("‸4"), +1, semitone: true).After);
+        Assert.Equal(S("8"), Step(S("4‸"), -1).After);
+        Assert.Equal(S("8."), Step(S("‸4."), -1, semitone: true).After);
+        var (longest, same) = Step(S("‸1"), +1, semitone: true);
+        Assert.Equal(S("1"), same);
+        Assert.Contains("longest", longest.Message);
+    }
+
     // ---------------------------------------------------------------- tuning
 
     private static string Tuning(string word) => $"part b {{ tuning {word} }}\nsection A {{ b {{ c4 d e f }} }}\n";
