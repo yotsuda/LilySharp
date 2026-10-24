@@ -868,9 +868,12 @@ function scoreCell(id: string, sym: NonNullable<ReturnType<typeof symbolOf>>, lo
     // The notes to paint (the word diff's pieces, by the source offsets the drawn notes carry):
     // what the proposal takes out red in "Now", what it puts in green in "Proposal".
     const marks = paint && paint.ranges.length ? ` data-paint="${paint.kind}" data-ranges="${paint.ranges.map(r => r.join(':')).join(',')}"` : '';
-    return `<svg class="pic score" data-sym="${id}" data-lo="${lo}" data-hi="${hi}"${marks} viewBox="${esc(sym.viewBox)}" preserveAspectRatio="xMidYMid meet">`
-        + (define ? `<symbol id="${id}" viewBox="${esc(sym.viewBox)}">${sym.inner}</symbol>` : '')
-        + `<use href="#${id}" x="${sym.x}" y="${sym.y}" width="${sym.w}" height="${sym.h}"/></svg>`;
+    // A row's own picture (define) is drawn inline, not through a <use>: a click inside a <use>
+    // is reported on the <use>, and the proposal's notes are clicked to edit them (owner's
+    // request 2026-10-24). The shared "Now" stays one symbol for all the rows.
+    return `<svg class="pic score${define ? ' own' : ''}" data-sym="${id}" data-lo="${lo}" data-hi="${hi}"${marks} viewBox="${esc(sym.viewBox)}" preserveAspectRatio="xMidYMid meet">`
+        + (define ? `<g id="${id}">${sym.inner}</g>`
+            : `<use href="#${id}" x="${sym.x}" y="${sym.y}" width="${sym.w}" height="${sym.h}"/>`) + `</svg>`;
 }
 
 /** The parts of a row that an edit changes — drawn with the page, and sent again in place
@@ -1046,6 +1049,7 @@ tr.applied { opacity:.6; }
 label.take { font-size:12px; margin-right:8px; cursor:pointer; user-select:none; }
 label.take.dim { cursor:default; }
 label.take input { vertical-align:middle; margin:0 3px 0 0; cursor:inherit; }
+div.after-pic svg.own [data-pos] { cursor:pointer; }
 pre.src.editable { cursor:text; outline:1px dashed transparent; outline-offset:2px; }
 pre.src.editable:hover { outline-color: var(--vscode-focusBorder, #0078d7); }
 textarea.edit { display:block; width:100%; box-sizing:border-box; margin:4px 0 0; resize:vertical; min-height:3.2em;
@@ -1357,7 +1361,29 @@ ${rows}
     const a = document.activeElement;
     if (a && a.matches && a.matches('textarea.edit') && !a.hidden) lightSelection(a.dataset.i);
   });
+  // A click on a note of the proposal's picture opens the field with the caret on that note's
+  // text (owner's request 2026-10-24): its data-pos less where the bar starts — a chord's head
+  // is its member's own offset; a node's full-span start (the spaces before it, the line's
+  // indentation) steps forward to the text.
+  function editAt(i, pos) {
+    const ta = q('textarea.edit', i);
+    if (!ta) return;
+    if (ta.hidden) openEdit(i);
+    const v = ta.value;
+    let k = Math.max(0, Math.min(v.length, pos - +ta.dataset.base));
+    while (k < v.length && /\\s/.test(v[k])) k++;
+    ta.focus();
+    ta.setSelectionRange(k, k);
+    lightSelection(i);
+  }
   document.addEventListener('click', e => {
+    const note = e.target.closest && e.target.closest('div.after-pic svg.own [data-pos]');
+    if (note) {
+      const i = note.closest('div.after-pic').dataset.i;
+      const pos = parseInt(note.getAttribute('data-pos'), 10);
+      if (!isNaN(pos)) editAt(i, pos);
+      return;
+    }
     const pre = e.target.closest && e.target.closest('pre.src.editable');
     if (pre) { openEdit(pre.dataset.i); return; }
     const rv = e.target.closest && e.target.closest('button.revert');
