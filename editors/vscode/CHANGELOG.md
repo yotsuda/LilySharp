@@ -9,6 +9,10 @@ All notable changes to the Lily# VS Code extension are documented here.
 - **On a note or a chord: the part, the bar the page prints, the beat and the pitches** —
   `bar 12 · beat 2 + 1/2 · D4`; on a transposing part what it sounds too (`D4 sounds C4` on a
   clarinet, `E2 sounds E1` on a bass).
+- **On a `time`, a `tempo`, a dynamic or an articulation: what it means** — `time 6/8: 2 beats
+  of a dotted quarter`, `tempo 4 = 90: … a quarter lasts 0.67 s` (a marking alone is only
+  printed), `@mf: mezzo-forte - moderately loud · plays at velocity …`, `@staccato: short,
+  detached`, `@rit … @!rit`.
 - **On a section a `form` names: its length and which time this is** — `section A: 8 bars ·
   the 2nd of 3 times this form names it`.
 

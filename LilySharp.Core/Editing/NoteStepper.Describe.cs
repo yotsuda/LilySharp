@@ -40,10 +40,23 @@ public static partial class NoteStepper
         foreach (var p in tree.GetNodes<PropertyAssignmentSyntax>())
             if (p.NameToken.Text == "transposition" && p.SourceStart <= offset && offset <= p.Span.End)
                 return TranspositionSays(p.ValueText);
+        // A mark on a note says what it asks for, ahead of the note it stands on (a mark the
+        // keys do not step — @sfz, @fermata — is the note's target, TargetAt).
+        if (DynamicAt(tree, offset) is { } dynamic && DynamicSays(dynamic) is { } loud)
+            return loud;
+        if (ArticulationAt(tree, offset) is { } articulation && MarkMeaning(articulation.Name) is { } meant)
+            return $"@{articulation.Name}: {meant}";
+        foreach (var mark in tree.GetNodes<MusicMarkSyntax>())
+            if (mark.SourceStart < offset && offset <= mark.Span.End && MarkMeaning(mark.Name) is { } asks)
+                return text.Length > mark.Span.Start + 1 && text[mark.Span.Start + 1] == '!'
+                    ? $"@!{mark.Name}: ends the @{mark.Name}"
+                    : $"@{mark.Name}: {asks}";
         if (TargetAt(text, tree, offset) is not { } target)
             return null;
         return target.Kind switch
         {
+            TargetKind.Time => TimeSays((TimeSignatureSyntax)target.Node),
+            TargetKind.Tempo => TempoSays((TempoDeclarationSyntax)target.Node),
             TargetKind.Clef => ClefSays(target.Node),
             TargetKind.Key => KeySays((KeySignatureSyntax)target.Node),
             TargetKind.HeaderValue => OctaveSays((PropertyAssignmentSyntax)target.Node),
@@ -320,6 +333,119 @@ public static partial class NoteStepper
             return $":|*{count.Text} closes the repeat - it plays {count.Text} times";
         return BarlineSays(bar.Text, InForm(bar));
     }
+
+    /// <summary>A note value's name, as a beat is counted in it (<c>4</c> → quarter).</summary>
+    private static string ValueName(int value, int dots = 0) => (dots > 0 ? "dotted " : "") + value switch
+    {
+        1 => "whole",
+        2 => "half",
+        4 => "quarter",
+        8 => "eighth",
+        16 => "sixteenth",
+        32 => "32nd",
+        64 => "64th",
+        _ => $"1/{value}",
+    };
+
+    /// <summary>A <c>time</c> (owner's request 2026-10-24): what a bar holds and the beat it is
+    /// felt in — a compound meter's beats are dotted (<c>6/8</c>: 2 of a dotted quarter), an
+    /// additive one's groups are written (<c>3+2/8</c>).</summary>
+    private static string? TimeSays(TimeSignatureSyntax time)
+    {
+        string written = time.ToFullString().Trim();
+        if (time.IsSenzaMisura)
+            return $"{written}: unmeasured - a bar ends only where a bar line is written";
+        int beats = time.Beats, unit = time.BeatType;
+        string numerator = written[(written.IndexOf("time", StringComparison.Ordinal) + 4)..].Split('/')[0].Trim(' ', '!', ':');
+        if (numerator.Contains('+'))
+            return $"{written}: {beats} {ValueName(unit)}s a bar, felt in groups of {numerator}";
+        string unitName = ValueName(unit);
+        if (unit >= 8 && beats > 3 && beats % 3 == 0)
+            return $"{written}: {beats / 3} beats of a {ValueName(unit / 2, dots: 1)} ({beats} {unitName}s a bar)";
+        return $"{written}: {beats} beat{(beats == 1 ? "" : "s")} of a {unitName} a bar";
+    }
+
+    /// <summary>A <c>tempo</c> (owner's request 2026-10-24): how long a beat lasts; a marking
+    /// alone is printed and changes no speed.</summary>
+    private static string? TempoSays(TempoDeclarationSyntax tempo)
+    {
+        string written = tempo.ToFullString().Trim();
+        var value = tempo.Value;
+        if (value.Bpm is not int bpm || bpm <= 0)
+            return value.Marking != null ? $"{written}: printed only - the speed stays as it was" : null;
+        string seconds = (60.0 / bpm).ToString("0.##", CultureInfo.InvariantCulture);
+        string beat = value.BeatUnit is int unit ? $"a {ValueName(unit, value.BeatDots)}" : "a beat";
+        string swing = value.SwingSubdivision > 0 ? $" · swung {ValueName(value.SwingSubdivision)}s" : "";
+        return $"{written}: {bpm} a minute - {beat} lasts {seconds} s{swing}";
+    }
+
+    /// <summary>A dynamic (owner's request 2026-10-24): its name and how loud the MIDI plays it
+    /// (<see cref="DynamicSyntax.Velocity"/>, the exporter's own number); a hairpin word what it
+    /// does until the next dynamic.</summary>
+    private static string? DynamicSays(DynamicSyntax dynamic)
+    {
+        string name = dynamic.DynamicToken.Text;
+        string? meant = name switch
+        {
+            "ppppp" or "pppp" => "softer still",
+            "ppp" => "pianississimo - as soft as can be",
+            "pp" => "pianissimo - very soft",
+            "p" => "piano - soft",
+            "mp" => "mezzo-piano - moderately soft",
+            "mf" => "mezzo-forte - moderately loud",
+            "f" => "forte - loud",
+            "ff" => "fortissimo - very loud",
+            "fff" => "fortississimo - as loud as can be",
+            "ffff" or "fffff" => "louder still",
+            "sf" or "sfz" => "sforzando - a sudden, strong accent on this note",
+            "sffz" => "sforzatissimo - a sudden, very strong accent",
+            "fz" => "forzando - a strong accent",
+            "rf" or "rfz" => "rinforzando - a sudden reinforcement",
+            "fp" => "forte-piano - loud, then at once soft",
+            "sfp" => "sforzando-piano - accented, then at once soft",
+            "niente" => "niente - to nothing",
+            "cresc" => "crescendo - gradually louder, until the next dynamic",
+            "decresc" => "decrescendo - gradually softer, until the next dynamic",
+            "dim" => "diminuendo - gradually softer, until the next dynamic",
+            _ => null,
+        };
+        if (meant == null)
+            return null;
+        string velocity = dynamic.Velocity > 0 ? $" · plays at velocity {dynamic.Velocity} of 127" : "";
+        return $"@{name}{(dynamic.IsSubito ? ".subito" : "")}: {meant}{velocity}";
+    }
+
+    /// <summary>What an articulation or a mark on a note asks of the player, in a phrase, or null
+    /// for one this list does not explain (Lily#'s wording, owner's request 2026-10-24).</summary>
+    private static string? MarkMeaning(string name) => name switch
+    {
+        "staccato" => "short, detached",
+        "staccatissimo" => "very short",
+        "portato" => "lightly detached, each note held",
+        "tenuto" => "held its full length, a little stressed",
+        "accent" => "stressed",
+        "marcato" => "strongly stressed",
+        "fermata" => "held longer than written, as long as the player likes",
+        "upBow" => "an up-bow, from the tip",
+        "downBow" => "a down-bow, from the frog",
+        "harmonic" or "flageolet" => "a harmonic, the string touched lightly",
+        "trill" => "a trill - quick alternation with the note above",
+        "prall" => "a short trill - the note, the one above, the note",
+        "mordent" => "a mordent - the note, the one below, the note",
+        "turn" => "a turn - the note above, the note, the one below, the note",
+        "reverseTurn" => "a reversed turn - the note below first",
+        "glissando" => "a slide into the next note",
+        "arpeggio" => "the chord rolled, from the bottom up",
+        "laissezVibrer" => "let it ring",
+        "rit" => "ritardando - gradually slower, until @!rit",
+        "rall" => "rallentando - gradually slower, until @!rall",
+        "accel" => "accelerando - gradually faster, until @!accel",
+        "sustain" => "the sustain pedal down, until @!sustain",
+        "sostenuto" => "the sostenuto pedal down, until @!sostenuto",
+        "unaCorda" => "una corda - the soft pedal down",
+        "treCorde" => "tre corde - the soft pedal up",
+        _ => null,
+    };
 
     /// <summary>A section a <c>form</c> names (owner's request 2026-10-24): its length, as the page
     /// lays it out (<see cref="SectionSummary.Bars"/>), and which of the times this form names it

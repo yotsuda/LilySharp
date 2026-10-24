@@ -158,6 +158,35 @@ public class CaretInfoTests
     }
 
     [Fact]
+    public void ATime_SaysWhatABarHolds_AndItsBeat()
+    {
+        // Owner's request 2026-10-24.
+        Assert.Equal("time 4/4: 4 beats of a quarter a bar", InfoAt("time 4/4‸\n" + Part("clef treble")));
+        Assert.Equal("time 6/8: 2 beats of a dotted quarter (6 eighths a bar)", InfoAt("time 6/‸8\n" + Part("clef treble", "c8 d e f g a")));
+        Assert.Equal("time 3+2/8: 5 eighths a bar, felt in groups of 3+2", InfoAt("time 3+2/8‸\n" + Part("clef treble", "c8 d e f g")));
+    }
+
+    [Fact]
+    public void ATempo_SaysHowLongABeatLasts()
+    {
+        Assert.Equal("tempo 120: 120 a minute - a beat lasts 0.5 s", InfoAt("tempo 12‸0\n" + Part("clef treble")));
+        Assert.Equal("tempo 4 = 90: 90 a minute - a quarter lasts 0.67 s", InfoAt("tempo 4 = 9‸0\n" + Part("clef treble")));
+        Assert.Equal("tempo \"Allegro\": printed only - the speed stays as it was", InfoAt("tempo \"Alle‸gro\"\n" + Part("clef treble")));
+    }
+
+    [Fact]
+    public void AMarkOnANote_SaysWhatItAsks()
+    {
+        Assert.StartsWith("@mf: mezzo-forte - moderately loud · plays at velocity ", InfoAt(Part("clef treble", "c4@m‸f d e f")));
+        Assert.Equal("@cresc: crescendo - gradually louder, until the next dynamic", InfoAt(Part("clef treble", "c4@cre‸sc d e f@f")));
+        Assert.StartsWith("@sfz: sforzando - a sudden, strong accent on this note", InfoAt(Part("clef treble", "c4@sf‸z d e f")));
+        Assert.Equal("@staccato: short, detached", InfoAt(Part("clef treble", "c4@stacc‸ato d e f")));
+        Assert.Equal("@fermata: held longer than written, as long as the player likes", InfoAt(Part("clef treble", "c4 d e f@ferm‸ata")));
+        Assert.Equal("@rit: ritardando - gradually slower, until @!rit", InfoAt(Part("clef treble", "c4@r‸it d e f@!rit")));
+        Assert.Equal("@!rit: ends the @rit", InfoAt(Part("clef treble", "c4@rit d e f@!ri‸t")));
+    }
+
+    [Fact]
     public void ARest_HasNoLine()
         => Assert.Null(InfoAt(Part("clef treble", "r‸4 d e f")));
 }

@@ -37,7 +37,9 @@ workflow attaches that section to the GitHub Release verbatim.
   prints, the beat (`2 + 1/2` between beats; a pickup's from where its bar would start) and its
   written pitches, with what they sound on a transposing part (`D4 sounds C4`) —
   `NoteStepper.DescribeNote` over `NotePlaces`, cached per document version. On a section a
-  `form` names, its bars and which of the form's references to it this is.
+  `form` names, its bars and which of the form's references to it this is. On a `time` the beat
+  it is felt in, on a `tempo` how long a beat lasts, on a dynamic its meaning and MIDI velocity,
+  on the common articulations and marks what they ask of the player.
 - **The `instrument` completion shows each preset's defaults** (clef, octave, transposition,
   tuning, MIDI sound) as its detail, the line the status bar says on it.
 - **A stringed `midiInstrument` strums its open strings** when it sounds (the guitars, the
