@@ -108,6 +108,7 @@ public static class SemanticValidation
         new DuplicateScoreNameValidator(),  // two score blocks with the same name
         new SectionLabelConflictValidator(), // two top-level declarations giving one section two labels
         new StaffClefWordPartValidator(),   // staff/ossia X Y where X is a declared part and a clef word
+        new InstrumentPresetPropertyValidator(), // an octave or a tuning that slips against the part's preset
         new PercentRepeatValidator(),       // the old repeat percent/unfold; a % mark that repeats nothing
         new EmptyScoreValidator(),          // a score block with no staff to engrave
         new MissingScoreValidator(),        // a book with music and no score block at all

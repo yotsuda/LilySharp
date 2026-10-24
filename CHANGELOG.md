@@ -15,6 +15,12 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Language
 
+- **An `octave` that lowers a transposing preset twice is warned (LYS1050)**: `instrument bass
+  octave 2` writes a bare `c` as C2, and the preset plays it an octave lower still, C1. The
+  warning names both pitches and the preset's own octave.
+- **A `tuning` of another instrument than the part's preset is warned (LYS1051)**: `instrument
+  ukulele tuning guitar` frets on the guitar's strings. An override within the family
+  (`instrument guitar tuning guitarDropD`) is not warned.
 - **The tuning words of several words are camelCase**, like every other name of several words:
   `guitarDropD`, `guitarOpenG`, `guitarDadgad`, `bassDropD`, `doubleBass`, `banjoOpenD`,
   `banjoDoubleC`, `ukuleleD`, `tenorUkulele`, `baritoneUkulele` and the rest (19 in all; one-word

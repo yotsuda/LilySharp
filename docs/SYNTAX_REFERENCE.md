@@ -1474,6 +1474,14 @@ part leftHand {
 }
 ```
 
+An `instrument` preset sets the clef, the octave, the transposition, the tuning and the MIDI
+sound at once; a property the part writes itself replaces the preset's. Two of those are warned,
+since they are most often slips: an `octave` below the preset's where the preset already sounds
+an octave or more below the page (`instrument bass octave 2` writes a bare `c` as C2 and plays
+C1 — the octave is the WRITTEN register, LYS1050), and a `tuning` of another instrument's
+strings (`instrument ukulele tuning guitar`, LYS1051; `instrument guitar tuning guitarDropD` is
+an ordinary override and is not warned).
+
 ### One part, no names
 
 A piece with one part may leave the part, its chords and its lyrics unnamed — the score

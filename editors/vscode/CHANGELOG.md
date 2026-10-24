@@ -4,6 +4,12 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+### Two slips against an instrument preset are warned
+
+- **`instrument bass octave 2`** (LYS1050): the octave is the written register, and the preset
+  already plays an octave below the page — the part would sound two octaves low.
+- **`instrument ukulele tuning guitar`** (LYS1051): a tuning of another instrument's strings.
+
 ### The instrument completion says what each preset sets
 
 - **After `instrument `, each preset in the list shows its defaults** — `bass`: *clef bass ·

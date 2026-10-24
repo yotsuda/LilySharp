@@ -791,14 +791,7 @@ public static partial class NoteStepper
 
     /// <summary>A tuning's family, for the octave pair: guitars, basses, the orchestral strings,
     /// banjos, ukuleles.</summary>
-    private static int TuningFamily(TuningType type) => type switch
-    {
-        < TuningType.Bass => 0,
-        < TuningType.Violin => 1,
-        < TuningType.BanjoOpenG => 2,
-        < TuningType.Ukulele => 3,
-        _ => 4,
-    };
+    private static int TuningFamily(TuningType type) => Tablature.Tunings.Family(type);
 
     /// <summary>A part's <c>tuning</c> the caret at <paramref name="offset"/> is on, or null.</summary>
     private static PropertyAssignmentSyntax? TuningAt(SyntaxTree tree, int offset)

@@ -160,6 +160,21 @@ public static class Tunings
     public static int GetStringCount(TuningType type) => GetTuning(type).Length;
 
     /// <summary>
+    /// The family a tuning belongs to, in <see cref="TuningType"/>'s order: 0 the guitars, 1 the
+    /// basses, 2 the orchestral strings (the mandolin's are the violin's), 3 the banjos, 4 the
+    /// ukuleles. One home: the editor's step keys jump by it, and a tuning of another family than
+    /// the part's <c>instrument</c> preset is warned (LYS1051).
+    /// </summary>
+    public static int Family(TuningType type) => type switch
+    {
+        < TuningType.Bass => 0,
+        < TuningType.Violin => 1,
+        < TuningType.BanjoOpenG => 2,
+        < TuningType.Ukulele => 3,
+        _ => 4,
+    };
+
+    /// <summary>
     /// True for bass tunings, which sound an octave BELOW where they are written
     /// in bass clef (the bass guitar is a transposing instrument). Tab frets are
     /// therefore computed from the written pitch shifted down one octave.

@@ -774,6 +774,24 @@ public static class DiagnosticCodes
     /// repetition is as long as they are.</summary>
     public const string PercentBodyNotWholeBars = "LYS1049";
 
+    /// <summary>Warning: a part's <c>octave N</c> below its <c>instrument</c> preset's own octave,
+    /// where the part already sounds an octave or more below the page — <c>instrument bass
+    /// octave 2</c>: a bare <c>c</c> is written C2 and sounds C1. The octave is the WRITTEN
+    /// register; the preset's transposition moves the sound, so writing the octave down as well
+    /// lowers the part twice. Reported at the octave's number, naming both pitches.</summary>
+    /// <remarks>Owner's request 2026-10-24, after asking whether <c>octave</c> and
+    /// <c>transposition</c> together lower a part two octaves (they do when the octave is
+    /// written as if it were the sound).</remarks>
+    public const string OctaveBelowTransposingPreset = "LYS1050";
+
+    /// <summary>Warning: a part's <c>tuning</c> of another family than its <c>instrument</c>
+    /// preset's strings — <c>instrument ukulele tuning guitar</c>. The tuning wins (the tab and
+    /// the chord diagrams fret on it), which is right for an override within the family
+    /// (<c>instrument guitar tuning guitarDropD</c>) and most often a slip across families.
+    /// Reported at the tuning word, naming both sets of strings.</summary>
+    /// <remarks>Owner's request 2026-10-24. The families are <see cref="Tablature.Tunings.Family"/>'s.</remarks>
+    public const string TuningOfAnotherInstrument = "LYS1051";
+
     /// <summary>Syntax error: a phrase reference needs a <c>$</c> — write <c>$name</c>.</summary>
     public const string BareReferenceRequiresDollar = "LYS1012";
 
