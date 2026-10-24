@@ -556,14 +556,20 @@ public static partial class NoteStepper
         return (new Edit(first.Span.Start, last.Span.End, presets[to]), $"instrument {presets[to]}: {to + 1} of {presets.Count}");
     }
 
-    /// <summary>What a preset sounds: one note in its General MIDI program (the preset's own,
-    /// <see cref="Svg.Model.InstrumentDefaults.GetMidiProgram"/>), where its family sounds like
-    /// itself (<see cref="SampleVoice"/>); silent for a word that is no preset.</summary>
+    /// <summary>What a preset sounds, in its General MIDI program (the preset's own,
+    /// <see cref="Svg.Model.InstrumentDefaults.GetMidiProgram"/>): a preset with strings strums its
+    /// open strings as a <c>tuning</c> does (owner's request 2026-10-24) — string after string from
+    /// the highest-numbered, a ukulele's high G first; one without (a flute, a voice) one note where
+    /// its family sounds like itself (<see cref="SampleVoice"/>). Silent for a word that is no
+    /// preset.</summary>
     private static Voice PresetVoice(PropertyAssignmentSyntax property)
     {
-        if (PresetOf(property) is not { } preset
-            || Svg.Model.InstrumentDefaults.GetMidiProgram(preset.Name.ToLowerInvariant()) is not int program)
+        if (PresetOf(property) is not { } written
+            || Svg.Model.InstrumentDefaults.GetMidiProgram(written.Name.ToLowerInvariant()) is not int program)
             return Voice.Silent;
+        if (Svg.Model.InstrumentDefaults.GetTuning(written.Name.ToLowerInvariant()) is { } tuning)
+            return new Voice([.. Tablature.Tunings.GetTuning(Tablature.Tunings.Parse(tuning))],
+                Midi.GeneralMidi.PreviewTimbreFamily(program), program, Strum: true);
         return SampleVoice(program);
     }
 }

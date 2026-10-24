@@ -52,7 +52,8 @@ All notable changes to the Lily# VS Code extension are documented here.
   `4/3` → `5/4` …), a `repeat tremolo N` and a rest's `R1*N` by one, a `partial`'s length through
   the note values (Up longer).
 - **On a part's `instrument` preset they step the presets**, and the new one sounds (typed or
-  completed too).
+  completed too): a preset with strings strums its open strings as a `tuning` does (a ukulele's
+  high G first), one without sounds one note.
 - **On a value word right after its keyword they step its values**, in the order `Ctrl+Space`
   lists them: `transposition`, `pedal`, `pitch` (a file's, a part's, a score's), every layout word
   (`barNumbers`, with `every N`'s number, `accidentals`, `sectionLabels`, `markTempo`, the chord

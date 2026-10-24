@@ -1228,7 +1228,6 @@ public class StepRequestTests
         Assert.False(down.Fallback, down.Error);
         Assert.Equal(Header("instrument " + presets[1]), after);
         Assert.Contains($"2 of {presets.Count}", down.Message);
-        Assert.Single(down.Pitches);
         Assert.Equal(LilySharp.Core.Svg.Model.InstrumentDefaults.GetMidiProgram(presets[1]), down.Program);
         // A hyphenated preset is one word; a display name after it stays.
         int sax = presets.FindIndex(p => p.Contains('-'));
@@ -1243,7 +1242,40 @@ public class StepRequestTests
             Offset = text.IndexOf(presets[1], StringComparison.Ordinal) + 1,
         });
         Assert.Equal("instrumentpreset", answer.Kind);
-        Assert.Single(answer.Pitches);
+        Assert.NotEmpty(answer.Pitches);
+    }
+
+    [Fact]
+    public void AnInstrumentPreset_WithStrings_StrumsThemAsATuningDoes()
+    {
+        // Owner's request 2026-10-24: like `tuning`, string after string from the highest-numbered,
+        // in the preset's own sound — a ukulele's high 4th-string G first.
+        string Sounded(string preset)
+        {
+            string text = Header("instrument " + preset);
+            var answer = Open(text).AuditionAt(new AuditionAtParams
+            {
+                TextDocument = new TextDocumentIdentifier { Uri = DocUri },
+                Offset = text.IndexOf("instrument ", StringComparison.Ordinal) + "instrument ".Length + 1,
+            });
+            Assert.Equal(LilySharp.Core.Svg.Model.InstrumentDefaults.GetMidiProgram(preset), answer.Program);
+            return $"{string.Join(",", answer.Pitches)} strum={answer.Strum}";
+        }
+        Assert.Equal("67,60,64,69 strum=True", Sounded("ukulele"));
+        Assert.Equal("28,33,38,43 strum=True", Sounded("bass"));
+        Assert.Equal("40,45,50,55,59,64 strum=True", Sounded("guitar"));
+        Assert.Equal("55,62,69,76 strum=True", Sounded("violin"));
+        Assert.Equal("67,50,55,59,62 strum=True", Sounded("banjo"));
+        // No strings: the one note, struck once.
+        Assert.EndsWith("strum=False", Sounded("flute"));
+        Assert.DoesNotContain(",", Sounded("flute"));
+
+        // A step onto one strums it too.
+        var presets = LilySharp.Core.Semantics.LanguageVocabulary.InstrumentPresets.ToList();
+        int uke = presets.IndexOf("ukulele");
+        var (step, _) = Step(Header("instrument ‸" + presets[uke - 1]), -1, semitone: true);
+        Assert.Equal([67, 60, 64, 69], step.Pitches);
+        Assert.True(step.Strum);
     }
 
     [Fact]
