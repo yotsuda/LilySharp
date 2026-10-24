@@ -8,14 +8,23 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 - **Lily#: Fix OMR Marks with AI…** rewrites the bars an OMR reader marked as doubtful (`@todo`),
   one request a bar, only when you run it: pick the bars (the least sure first, the ones below
-  the scan view's slider checked, the estimate in the title), watch the progress, and review
-  every proposal in the *OMR fixes* panel beside the scan's crop of the bar and the score as it
-  is — with the model's reason and the gates it passed (compiles without a new error, fills its
-  meter). Each bar has a **Take** check box — the ones that pass every gate start checked, a checked bar shows in light blue, toggle freely — and **Accept N checked** writes them into the `.lys` as one edit (one Ctrl+Z) and closes the panel; **Cancel** writes nothing. A click on a bar shows it in the editor, its line lit light blue (the caret at its start, nothing selected); under the pictures the two lines are compared piece by piece (what goes struck through in red, what comes in green), and the pictures paint the same notes the same colours; a `@todo` is shown as the bare word; every bar can be taken: one with no proposal to write (the model read it as right, gave none, or gave one that did not pass) is taken as "remove its `@todo`", the notes left as they are; the
-  marks go with the lines. A bar the model cannot read stays marked and says why. The model is
-  the one *Lily#: Select AI Model…* names for it (`lilysharp.ai.omrFixModel`); a batch is
-  `lilysharp.ai.omrFixBatch` bars (25) before it asks to continue; the *Lily# AI* output channel
-  keeps a line a bar.
+  the scan view's slider checked, the estimate in the title), and review every proposal in the
+  *OMR fixes* panel beside the scan's crop of the bar and the score as it is — with the model's
+  reason and the gates it passed (compiles without a new error, fills its meter). Each bar has
+  **Accept** — written into the `.lys` at once (its own Ctrl+Z), and the row leaves the panel —
+  and **Discard**, which drops the row; **Accept All (N)** writes, as one edit, the rows that are
+  ready (the AI's bars that pass every gate, and your edits that compile and fill their bar; their
+  Accept is the highlighted one), and **Cancel All** closes the panel writing nothing more. The
+  panel closes by itself when its last row goes. A click on a bar shows it in the editor, its
+  line lit light blue (the caret at its start, nothing selected); under the pictures the two
+  lines are compared piece by piece (what goes struck through in red, what comes in green), and
+  the pictures paint the same notes the same colours; a `@todo` is shown as the bare word; a bar
+  with no proposal to write (the model read it as right, gave none, or gave one that did not
+  pass) is accepted as "remove its `@todo`", the notes left as they are; the marks go with the
+  lines. A bar the model cannot read stays marked and says why. The model is the one *Lily#:
+  Select AI Model…* names for it (`lilysharp.ai.omrFixModel`); more than
+  `lilysharp.ai.omrFixBatch` bars (25) asks first; the *Lily# AI* output channel keeps a line a
+  bar.
 - **The model is shown the scan of each bar** — the crop of the page the reader read, with a
   little margin — not only the text (`lilysharp.ai.omrFixImages`, on; a model that takes no
   image is sent the text alone, and the output channel says so). Two more doors to the same
@@ -25,7 +34,7 @@ All notable changes to the Lily# VS Code extension are documented here.
   *verify*, beside *compile* and *length*: `omr verify` compares the bar as proposed with the
   page (a reader that reports `verify-bars`; `lilysharp.ai.omrFixVerify`, on; a few seconds a
   bar). A proposal the scan contradicts is shown with *verify ✗* and its reason, and *Accept
-  all* leaves it alone. The reader's other readings of a doubtful bar (`readings` in
+  All* leaves it alone. The reader's other readings of a doubtful bar (`readings` in
   `x.omr.json`) go to the model as hints.
 - **The bar to write can be edited in the panel**: a click on the text under the proposal opens
   it; as you type, the proposal's picture is drawn again with its notes coloured, and the gates
@@ -35,12 +44,13 @@ All notable changes to the Lily# VS Code extension are documented here.
 - **Lily#: Edit Bars Beside the Scan** opens the bars on the selected lines (the caret's line
   when nothing is selected, up to 30) in the same panel without the AI: **Now**, **Scan** and
   **Edit**, the last the bar to click and edit, its picture and gates following the typing;
-  *Accept* writes the edited bars as one edit. In the editor's menu of a `.lys` with a scan. On
-  a bar with no mark the check box beside *Take* reads `add @todo` (the mark goes on its first
-  note), on one with a mark `keep @todo`.
+  each row's *Accept* writes it. In the editor's menu of a `.lys` with a scan. On a bar with no
+  mark the check box beside *Accept* reads `add @todo` (the mark goes on its first note), on one
+  with a mark `keep @todo`. Rows written by their own Accept leave the panel and more bars can
+  still be added to it.
 - **The AI answers a row at a time in the background.** Each row has *Ask AI*; while it waits
   ("waiting for the AI… / asking the AI…", with *cancel*) the other rows can be edited and
-  checked, and the answer replaces that row alone. A row edited meanwhile keeps the edit (*use
+  accepted, and the answer replaces that row alone. A row edited meanwhile keeps the edit (*use
   the AI's* brings the answer in); asked from a row being edited, the AI gets the edit as the
   person's attempt and the words beside `keep/add @todo` as their note. *Fix OMR Marks with AI…*
   opens the panel at once, its rows waiting, and fills it as the answers come (no notification,
@@ -49,7 +59,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 - **Both commands are in the preview's and the scan view's context menu**, on the bar
   right-clicked: *Fix OMR Marks with AI…* sends that bar alone (a bar with no `@todo` offers *Edit
   Bars Beside the Scan* instead), *Edit Bars Beside the Scan* opens it.
-- **A bar can be taken and stay marked**: `keep @todo` beside *Take* writes the bar with a
+- **A bar can be accepted and stay marked**: `keep @todo` beside *Accept* writes the bar with a
   `@todo` still on it, at the note nearest the old mark (the reader's key kept), and the words
   typed beside it as its memo — for a proposal that is better but not right yet. The pictures
   go *Now (OMR)*, *Scan*, *Proposal*, so the scan sits beside the proposal it is compared with.
