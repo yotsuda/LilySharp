@@ -102,7 +102,7 @@ export function registerStepAudition(context: vscode.ExtensionContext, deps: Ste
         void panel.webview.postMessage({
             type: 'playPitches', pitches, timbre, program: program ?? -1,
             durationMs: auditionDurationMs(pitches.length, strum, apart),
-            strumMs: strumGapMs(strum, apart),
+            strumMs: strumGapMs(strum),
             apart: !!(strum && apart),
         });
     };

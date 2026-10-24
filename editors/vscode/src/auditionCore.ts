@@ -75,21 +75,18 @@ export const CHORD_MS = 900;
  * after another (owner's request 2026-10-24: "ポロロンと"). */
 export const STRUM_MS = 90;
 
-/** The time between two strings struck APART — each stopping as the next sounds, a bass's
- * (owner's request 2026-10-24: a low chord is muddy and hard to hear). Wider than STRUM_MS: a
- * low note cut after 90 ms is too short to hear as a pitch. */
-export const STRUM_APART_MS = 200;
-
-/** The gap between a strum's strings (0: not a strum). */
-export function strumGapMs(strum = false, apart = false): number {
-    return strum ? (apart ? STRUM_APART_MS : STRUM_MS) : 0;
+/** The gap between a strum's strings (0: not a strum). A bass's, struck APART — each stopping as
+ * the next sounds (owner's request 2026-10-24: a low chord is muddy) — keep the same pace: a wider
+ * gap (200 ms) was tried first and the owner found it slow, the same day. */
+export function strumGapMs(strum = false): number {
+    return strum ? STRUM_MS : 0;
 }
 
 /** The ring length for an answer of `pitchCount` pitches; a strum rings a chord's length after
  * its last string, one struck apart a single note's (only the last string is still ringing). */
 export function auditionDurationMs(pitchCount: number, strum = false, apart = false): number {
     if (strum && pitchCount > 1) {
-        return (pitchCount - 1) * strumGapMs(true, apart) + (apart ? NOTE_MS : CHORD_MS);
+        return (pitchCount - 1) * strumGapMs(true) + (apart ? NOTE_MS : CHORD_MS);
     }
     return pitchCount > 1 ? CHORD_MS : NOTE_MS;
 }
