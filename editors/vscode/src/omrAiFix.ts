@@ -51,6 +51,8 @@ export interface OmrAiFixDeps extends AiTransformDeps {
      *  which VS Code hands the menu's command): the .lys and an offset in it; undefined when the
      *  click was on no bar or the view is gone. */
     barAtMenu: (context: MenuContext) => { uri: vscode.Uri; at: number } | undefined;
+    /** The column the document's scan view is in, if one is open (omrScan.scanColumnOf). */
+    scanColumn: (lys: string) => vscode.ViewColumn | undefined;
 }
 
 /** What a webview's context menu hands its command: the view's type, and what its page wrote
@@ -720,9 +722,13 @@ function showPanel(deps: OmrAiFixDeps, run: FixRun): void {
         const shown = shownImage(p);
         if (shown) { roots.push(vscode.Uri.file(path.dirname(shown))); }
     }
+    // In the scan view's column when the file has one open (owner's request 2026-10-24: opened
+    // from the preview it landed there, "Beside" the preview, and that was the handy place; from
+    // the scan view itself "Beside" made a new column), else beside the active one.
+    const column = deps.scanColumn(run.uri.toString()) ?? vscode.ViewColumn.Beside;
     if (!panel) {
         panel = vscode.window.createWebviewPanel('lilysharpOmrFixes', 'Lily# — OMR fixes',
-            { viewColumn: vscode.ViewColumn.Beside, preserveFocus: true },
+            { viewColumn: column, preserveFocus: true },
             { enableScripts: true, retainContextWhenHidden: true, localResourceRoots: roots });
         panel.onDidDispose(() => { panel = undefined; shownRun = undefined; clearBarMark(); });
         panel.webview.onDidReceiveMessage((m: PanelMessage) => void onPanelMessage(deps, m));
@@ -731,7 +737,7 @@ function showPanel(deps: OmrAiFixDeps, run: FixRun): void {
     }
     panel.title = run.manual ? 'Lily# — Bars beside the scan' : 'Lily# — OMR fixes';
     panel.webview.html = panelHtml(deps, panel.webview, run);
-    panel.reveal(vscode.ViewColumn.Beside, true);
+    panel.reveal(column, true);
 }
 
 /** What the panel's page posts. `keeps` (with accept): the checked rows taken with a @todo still

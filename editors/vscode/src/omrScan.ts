@@ -69,6 +69,12 @@ export function scanThresholdOf(lys: string): number | undefined {
     return views.get(lys)?.threshold;
 }
 
+/** The editor column the open scan view of `lys` (a document uri string) is in, or undefined
+ *  with none open — where the fixes panel opens, in place of the scan (omrAiFix.ts). */
+export function scanColumnOf(lys: string): vscode.ViewColumn | undefined {
+    return views.get(lys)?.panel.viewColumn;
+}
+
 /** Whether the .lys at `uri` has a side file beside it (the command's when-clause). */
 export function hasScan(uri: vscode.Uri | undefined): boolean {
     return !!uri && uri.scheme === 'file' && /\.lys$/i.test(uri.fsPath) && fs.existsSync(sideFileOf(uri.fsPath));
