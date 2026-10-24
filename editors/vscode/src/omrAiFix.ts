@@ -1208,7 +1208,7 @@ ${rows}
   // the transparent notehead click box (nh-hit), not a fill-only box (a tab digit's white backing);
   // a line or an outline gets the stroke, anything else the fill. The symbol is shared by every
   // <use> of it, so "Now" paints once for all the rows (each row's crop shows its own bar).
-  function paint(id, color, ranges) {
+  function paint(id, color, ranges, posOnly) {
     const spans = String(ranges || '').split(',').map(s => s.split(':').map(Number)).filter(s => s.length === 2 && !isNaN(s[0]));
     const hit = n => spans.some(([a, b]) => n >= a && n < b);
     const root = document.getElementById(id);
@@ -1216,7 +1216,9 @@ ${rows}
     for (const el of root.querySelectorAll('[data-pos], [data-alt]')) {
       const tag = el.tagName.toLowerCase();
       if (el.classList.contains('nh-hit') || (tag === 'rect' && !el.getAttribute('stroke') && el.getAttribute('fill'))) continue;
-      const pos = [parseInt(el.getAttribute('data-pos'), 10), ...String(el.getAttribute('data-alt') || '').split(/\\s+/).map(Number)];
+      // posOnly: the element's own offset alone — a chord's heads all carry the chord's '<' in
+      // data-alt, so a range that reaches the '<' would light every head.
+      const pos = [parseInt(el.getAttribute('data-pos'), 10), ...(posOnly ? [] : String(el.getAttribute('data-alt') || '').split(/\\s+/).map(Number))];
       if (!pos.some(n => !isNaN(n) && hit(n))) continue;
       // The colour it had, kept once, so an edit can take a row's paint off again (color null).
       if (!el.hasAttribute('data-was')) el.setAttribute('data-was', (el.getAttribute('fill') || '') + '|' + (el.getAttribute('stroke') || ''));
@@ -1261,27 +1263,61 @@ ${rows}
   // for the first piece over the line's indentation (as rangesOf does).
   const BLUE = '#0078d7';
   const afterSvg = i => { const h = q('div.after-pic', i); return h && h.querySelector('svg.score'); };
+  // The chord around offset c of v, when c is in one — from its '<' to the end of what is glued
+  // after its '>' (duration, marks) — with the '>' itself; null otherwise. '<<' is not a chord.
+  function chordAt(v, c) {
+    for (let k = 0; k < v.length; k++) {
+      if (v[k] !== '<') continue;
+      if (v[k + 1] === '<') { k++; continue; }
+      const gt = v.indexOf('>', k);
+      if (gt < 0) return null;
+      let end = gt + 1;
+      while (end < v.length && !/\\s/.test(v[end])) end++;
+      if (c >= k && c < end) return { lt: k, gt, end };
+      k = end;
+    }
+    return null;
+  }
+  // What the caret or the selection lights (owner's requests 2026-10-24): a selection, every
+  // note it covers; a caret on a chord's member, that head alone; on its '<', its '>' or what
+  // follows the '>' (duration, @marks), the whole chord; elsewhere the piece it is in.
+  function caretLight(v, s, e, base, indent) {
+    if (s === e) {
+      // The character the caret is on: the one after it, or before it at a space or the end.
+      const c = s < v.length && !/\\s/.test(v[s]) ? s : s - 1;
+      if (c < 0 || /\\s/.test(v[c] || ' ')) return null;
+      const ch = chordAt(v, c);
+      if (ch) {
+        if (c === ch.lt || c >= ch.gt) {
+          return { ranges: (base + ch.lt) + ':' + (base + ch.lt + 1) + ',' + (base + ch.gt) + ':' + (base + ch.end), posOnly: false };
+        }
+        let ms = c, me = c + 1;
+        while (ms > ch.lt + 1 && !/\\s/.test(v[ms - 1])) ms--;
+        while (me < ch.gt && !/\\s/.test(v[me])) me++;
+        return { ranges: (base + ms) + ':' + (base + me), posOnly: true };
+      }
+      s = c; e = c + 1;
+      while (s > 0 && !/\\s/.test(v[s - 1])) s--;
+      while (e < v.length && !/\\s/.test(v[e])) e++;
+    }
+    // A note's data-pos is its node's full-span start: reach back over the spaces before the
+    // piece, and for the first piece over the line's indentation.
+    let b = s;
+    while (b > 0 && /\\s/.test(v[b - 1])) b--;
+    return { ranges: (base + b - (b === 0 ? indent : 0)) + ':' + (base + e), posOnly: false };
+  }
   function lightSelection(i) {
     const ta = q('textarea.edit', i), svg = afterSvg(i);
     if (!ta || !svg) return;
     const id = svg.dataset.sym;
-    if (svg.dataset.lit) paint(id, null, svg.dataset.lit);
+    if (svg.dataset.lit) paint(id, null, svg.dataset.lit, svg.dataset.litPosOnly === '1');
     svg.dataset.lit = '';
     if (ta.hidden) return;
-    const v = ta.value;
-    let s = ta.selectionStart, e = ta.selectionEnd;
-    if (s === e) {
-      // A caret: the piece it is in or touches.
-      while (s > 0 && !/\\s/.test(v[s - 1])) s--;
-      while (e < v.length && !/\\s/.test(v[e])) e++;
-    }
-    if (s === e) return;
-    let b = s;
-    while (b > 0 && /\\s/.test(v[b - 1])) b--;
-    const base = +ta.dataset.base;
-    const lit = (base + b - (b === 0 ? +ta.dataset.indent : 0)) + ':' + (base + e);
-    svg.dataset.lit = lit;
-    paint(id, BLUE, lit);
+    const lit = caretLight(ta.value, ta.selectionStart, ta.selectionEnd, +ta.dataset.base, +ta.dataset.indent);
+    if (!lit) return;
+    svg.dataset.lit = lit.ranges;
+    svg.dataset.litPosOnly = lit.posOnly ? '1' : '';
+    paint(id, BLUE, lit.ranges, lit.posOnly);
   }
   function editLook(i, editing) {
     const svg = afterSvg(i);
