@@ -311,6 +311,13 @@ describe('what the model is shown', () => {
         assert.deepEqual(lineTargets('    a1 |\r\n', [0]).map(t => t.written), ['a1 |']);
     });
 
+    // Owner, 2026-10-24: Ask AI on a row the person is editing.
+    it('shows the person\'s edit so far as their attempt, and only when there is one', () => {
+        const task = taskPromptOf({ head: '', target: bar2, neighbours: { others: [] }, diagnostics: [], image: true, attempt: 'g8@todo  fis8 f2 r4 |' });
+        assert.match(task, /A PERSON comparing the line with the page has started to rewrite it[\s\S]*<attempt>\ng8 fis8 f2 r4 \|\n<\/attempt>/);
+        assert.doesNotMatch(taskPromptOf({ head: '', target: bar2, neighbours: { others: [] }, diagnostics: [] }), /<attempt>/);
+    });
+
     it('asks a failed proposal to read the page again, not to patch the count', () => {
         const repair = repairPromptOf(['LYS2001: too short']);
         assert.match(repair, /Do not patch the line to silence this/);

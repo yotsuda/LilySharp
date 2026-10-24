@@ -33,7 +33,7 @@ import { AiTransformDeps, loadGrammar } from './aiTransform';
 import { ChatClient, ChatMessage, availableModels, hasChatModel, offerModelSetup, resolveChatClient } from './modelClient';
 import {
     BarCheck, BarNeighbours, Diag, FixTarget, FixableTodo, GateVerdict, Proposal, Rgba, acceptableByAll, anchorOf, averageOf,
-    batchesOf, checkedByDefault, cropRect, decodeImage, diagnosticsOn, estimateOf, fixTargets, gateOf, headOf, labelOf,
+    checkedByDefault, cropRect, decodeImage, diagnosticsOn, estimateOf, fixTargets, gateOf, headOf, labelOf,
     neighboursOf, parseProposal, readerBarOf, repairPromptOf, resolvedLine, scanCropPng, spliceBar, systemPromptOf, targetsInLines, taskPromptOf, withTodoMark, lineTargets,
     verifyVerdict, withSample, withVerify, wordDiff, DiffPiece, rangesOf, shortTodos,
 } from './omrAiFixCore';
@@ -97,10 +97,8 @@ const MAX_REPAIRS = 1;
 /** Where the last bars' seconds are kept, for the estimate (globalState). */
 const TIMINGS_KEY = 'lilysharp.ai.omrFixSeconds';
 
-/** One bar's outcome, a row of the panel. */
-interface FixRow {
-    readonly index: number;
-    readonly target: FixTarget;
+/** The model's answer for one bar, as the gates left it. */
+interface Answer {
     readonly proposal: Proposal | null;
     /** The gates' verdict on the proposal (none without one). */
     readonly gate?: GateVerdict;
@@ -110,8 +108,24 @@ interface FixRow {
      *  replied with something other than the JSON asked for — the reply's start, so the person
      *  sees what came back. */
     readonly noAnswer?: string;
-    readonly seconds: number;
+}
+
+/** One bar, a row of the panel: the model's answer once there is one (the fields of Answer),
+ *  the person's edit and choices. */
+interface FixRow {
+    readonly index: number;
+    readonly target: FixTarget;
+    proposal: Proposal | null;
+    gate?: GateVerdict;
+    after?: SvgResponse;
+    noAnswer?: string;
+    seconds: number;
     state: 'pending' | 'applied' | 'skipped';
+    /** The AI is about it (owner's request 2026-10-24: asked a row at a time, answered in the
+     *  background while the other rows are edited): waiting in the queue, or being asked. */
+    ai?: 'queued' | 'asking';
+    /** The AI has answered it once at least (its column is then "Proposal", not "Edit"). */
+    asked?: boolean;
     /** The row's check box: Accept writes the checked rows. At first, the rows every gate passed
      *  and the model is sure enough of (acceptableByAll). */
     checked?: boolean;
@@ -150,8 +164,16 @@ interface FixRun {
      *  drawn as the model's proposals were. */
     readonly client: LanguageClient;
     baseline?: readonly Diag[];
-    /** Bars opened beside the scan by the person, without the AI (Edit Bars Beside the Scan). */
+    /** Opened by Edit Bars Beside the Scan, not by the AI command (the panel's title). */
     readonly manual?: boolean;
+    /** The rows waiting for the AI, in order, and the one being asked with its cancel. */
+    readonly queue: FixRow[];
+    current?: { row: FixRow; cts: vscode.CancellationTokenSource };
+    /** The model, the system prompt and the file's head, from the first ask on. */
+    ai?: { chat: ChatClient; system: string; head: string };
+    /** The queue is being worked; the panel went away (the queue stops). */
+    working?: boolean;
+    closed?: boolean;
 }
 
 /** The bar as it stands, marks taken out, drawn: the whole text again only when the line carries
@@ -235,12 +257,12 @@ async function verifyProposal(run: FixRun, target: FixTarget, spliced: string, t
 let output: vscode.OutputChannel | undefined;
 let panel: vscode.WebviewPanel | undefined;
 let shownRun: FixRun | undefined;
-let lock: vscode.TextEditorDecorationType | undefined;
 
 /** Registers the command. Its three doors (design §2.1) are its arguments: none from the palette
  *  and the editor's menu (the active .lys); the document's uri from the scan view's button; the
  *  uri and the offset of one mark from the quick fix (the server's "Fix this bar with AI…"). */
 export function registerOmrAiFix(context: vscode.ExtensionContext, deps: OmrAiFixDeps): void {
+    extensionContext = context;
     context.subscriptions.push(
         // A fourth door for both (owner's request 2026-10-24): the preview's and the scan view's
         // context menu, on the bar right-clicked.
@@ -261,7 +283,7 @@ export function registerOmrAiFix(context: vscode.ExtensionContext, deps: OmrAiFi
             }
             return bar ? runEditBars(context, deps, bar.uri, bar.at) : runEditBars(context, deps, uri as string | vscode.Uri | undefined);
         }),
-        { dispose: () => { panel?.dispose(); lock?.dispose(); clearBarMark(); output?.dispose(); } });
+        { dispose: () => { panel?.dispose(); clearBarMark(); output?.dispose(); } });
 }
 
 function log(line: string): void {
@@ -324,8 +346,12 @@ async function runEditBars(context: vscode.ExtensionContext, deps: OmrAiFixDeps,
         const last = s.end.line > s.start.line && s.end.character === 0 ? s.end.line - 1 : s.end.line;
         for (let l = s.start.line; l <= last; l++) { lines.push(l); }
     }
-    const { side } = sideOf(doc);
-    let targets = lineTargets(text, lines, side);
+    const { side, sideText } = sideOf(doc);
+    // A line that carries marks is the AI command's target (its memos, keys, crop and readings), so
+    // Ask AI on it is told what the reader saw; any other line is a bar with no mark.
+    const todos = await client.sendRequest<TodosResponse>('lilysharp/todos', { textDocument: { uri: doc.uri.toString() } });
+    const marked = todos.Todos ? fixTargets(text, todos.Todos, side, sideText ? markFactsOf(sideText) : undefined) : [];
+    let targets = lineTargets(text, lines, side).map(t => marked.find(m => m.line === t.line) ?? t);
     if (targets.length === 0) {
         vscode.window.showInformationMessage('Lily#: no bar on the selected lines (a line with a bar line "|", or one the scan\'s reader wrote).');
         return;
@@ -337,22 +363,89 @@ async function runEditBars(context: vscode.ExtensionContext, deps: OmrAiFixDeps,
     await vscode.window.withProgress(
         { location: vscode.ProgressLocation.Notification, title: 'Lily#: drawing the bars' },
         async () => {
-            const verifier = await verifierFor(context, deps, doc, side);
-            const run: FixRun = {
-                uri: doc.uri, version: doc.version, text, side,
-                before: await client.sendRequest<SvgResponse>('lilysharp/renderText', { Text: text }),
-                rows: [], images: false, pages: new Map(),
-                ...(verifier ? { verifier } : {}),
-                client,
-                baseline: (await client.sendRequest<CheckCandidateResponse>('lilysharp/checkCandidate', { Text: text })).Diagnostics ?? [],
-                manual: true,
-            };
-            for (const target of targets) {
-                run.rows.push({ index: run.rows.length, target, proposal: null, seconds: 0, state: 'pending', checked: false,
-                    baseAfter: await baseAfterOf(run, target) });
+            const opened = await runFor(context, deps, doc, side, client, true);
+            if (opened) {
+                await addRows(deps, opened.run, opened.fresh, targets, async row => { row.baseAfter = await baseAfterOf(opened.run, row.target); });
             }
-            showPanel(deps, run);
         });
+}
+
+/**
+ * The panel's run for this document: the one it shows when it shows this file as it is now — so
+ * a second command adds rows to it (owner's request 2026-10-24: a second Edit Bars Beside the
+ * Scan replaced the rows being edited) — else a new one, after asking when the panel holds work
+ * (a check, an edit, a question to the AI) that a new one would drop.
+ */
+async function runFor(context: vscode.ExtensionContext, deps: OmrAiFixDeps, doc: vscode.TextDocument, side: ScanSideFile | undefined,
+    client: LanguageClient, manual: boolean): Promise<{ run: FixRun; fresh: boolean } | undefined> {
+    const old = panel ? shownRun : undefined;
+    if (old && old.uri.toString() === doc.uri.toString() && old.version === doc.version) {
+        return { run: old, fresh: false };
+    }
+    if (old && old.rows.some(r => r.state !== 'applied' && (r.checked || r.edited !== undefined || r.ai))) {
+        const why = old.uri.toString() === doc.uri.toString()
+            ? `${path.basename(doc.uri.fsPath)} has changed since the panel opened`
+            : `the panel holds the bars of ${path.basename(old.uri.fsPath)}`;
+        const go = await vscode.window.showWarningMessage(`Lily#: ${why}. Open a new panel? Its checks and edits are dropped.`,
+            { modal: true }, 'Open a New Panel');
+        if (go !== 'Open a New Panel') {
+            return undefined;
+        }
+    }
+    if (old) {
+        stopQueue(old);
+    }
+    const cfg = vscode.workspace.getConfiguration('lilysharp');
+    const text = doc.getText();
+    const verifier = await verifierFor(context, deps, doc, side);
+    const run: FixRun = {
+        uri: doc.uri, version: doc.version, text, side,
+        before: await client.sendRequest<SvgResponse>('lilysharp/renderText', { Text: text }),
+        rows: [],
+        images: cfg.get<boolean>('ai.omrFixImages', true) && !!side && side.pages.length > 0,
+        pages: new Map(),
+        ...(verifier ? { verifier } : {}),
+        client,
+        baseline: (await client.sendRequest<CheckCandidateResponse>('lilysharp/checkCandidate', { Text: text })).Diagnostics ?? [],
+        manual,
+        queue: [],
+    };
+    return { run, fresh: true };
+}
+
+/**
+ * The run's rows for these bars: a bar already in the panel is its row (shown, not doubled); the
+ * others are new rows, `init` filling them in, added to the panel in place — the rows there keep
+ * their edits — or drawn with a new panel. In the targets' order.
+ */
+async function addRows(deps: OmrAiFixDeps, run: FixRun, fresh: boolean, targets: readonly FixTarget[],
+    init: (row: FixRow) => Promise<void> | void): Promise<FixRow[]> {
+    const rows: FixRow[] = [], added: FixRow[] = [];
+    for (const target of targets) {
+        const have = run.rows.find(r => r.target.line === target.line && r.state !== 'applied');
+        if (have) {
+            rows.push(have);
+            continue;
+        }
+        const row: FixRow = { index: run.rows.length, target, proposal: null, seconds: 0, state: 'pending', checked: false };
+        await init(row);
+        run.rows.push(row);
+        rows.push(row);
+        added.push(row);
+    }
+    if (fresh || !panel || shownRun !== run) {
+        showPanel(deps, run);
+    } else {
+        if (added.length > 0) {
+            void panel.webview.postMessage({ type: 'rows', html: added.map(r => rowHtml(run, r, pageUrisOf(panel!.webview, run), !!run.before.Svg)).join('\n'),
+                ...headerOf(run) });
+        }
+        panel.reveal(deps.scanColumn(run.uri.toString()) ?? panel.viewColumn, true);
+        if (rows.length > 0) {
+            void panel.webview.postMessage({ type: 'reveal', index: rows[0].index });
+        }
+    }
+    return rows;
 }
 
 /** The whole command: which bars → the estimate → the run → the panel. */
@@ -418,39 +511,36 @@ async function runOmrAiFix(context: vscode.ExtensionContext, deps: OmrAiFixDeps,
     if (!chat) {
         return;
     }
-    const cfg = vscode.workspace.getConfiguration('lilysharp');
-    const limit = cfg.get<number>('ai.omrFixBatch', 25);
-    const batches = batchesOf(chosen, limit);
-    log(`Fix OMR marks: ${path.basename(doc.uri.fsPath)} — ${chosen.length} of ${targets.length} bars via ${chat.label}`
-        + `, scan ${cfg.get<boolean>('ai.omrFixImages', true) && side && side.pages.length > 0 ? 'shown to the model' : cfg.get<boolean>('ai.omrFixImages', true) ? 'not available (no page beside the file)' : 'off (lilysharp.ai.omrFixImages)'}`
-        + (batches.length > 1 ? `, in ${batches.length} batches of ${limit}` : ''));
-    const verifier = await verifierFor(context, deps, doc, side);
-    const run: FixRun = {
-        uri: doc.uri, version: doc.version, text, side,
-        before: await client.sendRequest<SvgResponse>('lilysharp/renderText', { Text: text }),
-        rows: [],
-        images: cfg.get<boolean>('ai.omrFixImages', true) && !!side && side.pages.length > 0,
-        pages: new Map(),
-        ...(verifier ? { verifier } : {}),
-        client,
-    };
-
-    for (let b = 0; b < batches.length; b++) {
-        if (b > 0) {
-            const rest = chosen.length - b * limit;
-            const go = await vscode.window.showInformationMessage(
-                `Lily#: ${b * limit} bars done. Continue with the next ${Math.min(limit, rest)} of ${rest}?`,
-                { modal: true }, 'Continue');
-            if (go !== 'Continue') {
-                break;
-            }
+    // Many bars: say so once, before any is asked (lilysharp.ai.omrFixBatch). The panel opens at
+    // once and fills in as the answers come, so the first ones can be reviewed while the rest wait.
+    const limit = vscode.workspace.getConfiguration('lilysharp').get<number>('ai.omrFixBatch', 25);
+    if (chosen.length > limit) {
+        const all = `All ${chosen.length}`, first = `The first ${limit}`;
+        const go = await vscode.window.showInformationMessage(
+            `Lily#: ${chosen.length} bars — ${estimateOf(chosen.length, averageOf(context.globalState.get<number[]>(TIMINGS_KEY, [])))}, one request a bar. Ask about all of them?`,
+            { modal: true }, all, first);
+        if (!go) {
+            return;
         }
-        const done = await runBatch(context, deps, client, chat, editor, run, batches[b]);
-        showPanel(deps, run);
-        if (!done) {
-            break;
+        if (go === first) {
+            chosen = chosen.slice(0, limit);
         }
     }
+    const opened = await runFor(context, deps, doc, side, client, false);
+    if (!opened) {
+        return;
+    }
+    const run = opened.run;
+    run.ai ??= { chat, system: systemPromptOf(await loadGrammar(deps)), head: headOf(run.text) };
+    log(`Fix OMR marks: ${path.basename(doc.uri.fsPath)} — ${chosen.length} of ${targets.length} bars via ${run.ai.chat.label}, ${scanSaid(run)}`);
+    // New rows are made waiting, so a new panel draws them so before its page can hear a message.
+    askAi(deps, run, await addRows(deps, run, opened.fresh, chosen, row => { row.ai = 'queued'; }));
+}
+
+/** What the log says of the scan going to the model. */
+function scanSaid(run: FixRun): string {
+    const on = vscode.workspace.getConfiguration('lilysharp').get<boolean>('ai.omrFixImages', true);
+    return `scan ${run.images ? 'shown to the model' : on ? 'not available (no page beside the file)' : 'off (lilysharp.ai.omrFixImages)'}`;
 }
 
 /** The QuickPick: every bar, the least sure first, the ones below the slider checked; the title
@@ -488,95 +578,174 @@ async function pickTargets(
     });
 }
 
-/**
- * One batch, under a cancellable progress notification: a request a bar, the gates, the render.
- * Stops — and says so — when the document is edited meanwhile (the offsets would lie) or the
- * person cancels. True when every bar was done.
- */
-async function runBatch(
-    context: vscode.ExtensionContext, deps: OmrAiFixDeps, client: LanguageClient, chat: ChatClient,
-    editor: vscode.TextEditor, run: FixRun, batch: readonly FixTarget[]): Promise<boolean> {
-    const doc = editor.document;
-    const grammar = await loadGrammar(deps);
-    const system = systemPromptOf(grammar);
-    const head = headOf(run.text);
-    const baseline = (await client.sendRequest<CheckCandidateResponse>('lilysharp/checkCandidate', { Text: run.text })).Diagnostics ?? [];
-    run.baseline = baseline;
+// ---------------------------------------------------------------------------------------------
+// The AI, a row at a time in the background (owner's request 2026-10-24)
+// ---------------------------------------------------------------------------------------------
 
-    softLock(editor, batch);
-    let complete = true;
-    try {
-        await vscode.window.withProgress(
-            { location: vscode.ProgressLocation.Notification, title: 'Lily#: fixing OMR marks with AI', cancellable: true },
-            async (progress, token) => {
-                let proposals = 0;
-                for (let i = 0; i < batch.length; i++) {
-                    if (token.isCancellationRequested) {
-                        log('Fix OMR marks: cancelled.');
-                        complete = false;
-                        return;
-                    }
-                    if (doc.version !== run.version) {
-                        log('Fix OMR marks: the document was edited; stopped (the bars done so far are shown).');
-                        vscode.window.showWarningMessage('Lily#: the file changed while the AI was working — stopped. The bars done so far are shown.');
-                        complete = false;
-                        return;
-                    }
-                    const target = batch[i];
-                    progress.report({ message: `${i + 1} / ${batch.length} bars, ${proposals} ${proposals === 1 ? 'proposal' : 'proposals'} — ${labelOf(target)}`,
-                        increment: 100 / batch.length });
-                    const started = Date.now();
-                    const image = run.images ? scanOf(run, target) : undefined;
-                    const row = await fixOne(client, chat, run, system, head, baseline, target, image, token, run.rows.length);
-                    const seconds = (Date.now() - started) / 1000;
-                    const bare = !row.proposal?.bar || !!(row.gate && !(row.gate.compile && row.gate.length));
-                    run.rows.push({ ...row, seconds,
-                        checked: !!row.proposal?.bar && !!row.gate && acceptableByAll(row.gate, row.proposal.confidence),
-                        ...(bare ? { baseAfter: await baseAfterOf(run, target) } : {}) });
-                    if (row.proposal?.bar) {
-                        proposals++;
-                    }
-                    await context.globalState.update(TIMINGS_KEY, withSample(context.globalState.get<number[]>(TIMINGS_KEY, []), seconds));
-                    const sent = chat.sentImages?.();
-                    const picture = !run.images ? '' : !image ? ' · no scan for this bar' : sent === false ? ' · scan not taken by the model (sent as text)'
-                        : ` · scan ${image.width}×${image.height}`;
-                    log(`  ${labelOf(target)}: ${seconds.toFixed(1)} s${picture} — ${outcomeOf(row)}`);
-                    if (run.images && image && sent === false && !saidRefused) {
-                        saidRefused = true;
-                        log(`  ${chat.label} takes no image: the bars go as text from here on (pick another model with "Lily#: Select AI Model…").`);
-                    }
-                    // The first bar came back empty: so will the rest. Stop, and say which model
-                    // and where to pick another, rather than a list of empty rows.
-                    if (i === 0 && row.noAnswer?.endsWith('returned nothing')) {
-                        complete = false;
-                        // Copilot CLI's door is all VS Code lists when Copilot is not signed in:
-                        // there is no other model to pick, so say how to get one.
-                        const noModel = !hasChatModel(await availableModels());
-                        log(`Fix OMR marks: ${chat.label} returned nothing — stopped. `
-                            + (noModel ? 'VS Code offers no chat model (GitHub Copilot is not signed in).' : 'Pick a chat model with "Lily#: Select AI Model…" → Fix OMR marks with AI.'));
-                        if (noModel) {
-                            void offerModelSetup();
-                        } else {
-                            void vscode.window.showWarningMessage(
-                                `Lily#: the model ${chat.label} returned nothing, so the fix stopped. Pick another model for "Fix OMR marks with AI".`,
-                                'Select AI Model…').then(c => { if (c) { void vscode.commands.executeCommand('lilysharp.selectAiModel'); } });
-                        }
-                        return;
-                    }
-                }
-            });
-    } finally {
-        clearLock();
+/** The extension's context, for the timings the estimate reads (registerOmrAiFix sets it). */
+let extensionContext: vscode.ExtensionContext | undefined;
+
+/** The model, the system prompt and the head for a run: asked for the first time a row is put
+ *  to the AI; undefined when there is no model (the setup was offered). */
+async function aiOf(deps: OmrAiFixDeps, run: FixRun): Promise<FixRun['ai']> {
+    if (!run.ai) {
+        const chat = await resolveChatClient(false, 'omrFix');
+        if (!chat) {
+            return undefined;
+        }
+        run.ai = { chat, system: systemPromptOf(await loadGrammar(deps)), head: headOf(run.text) };
+        log(`Fix OMR marks: ${path.basename(run.uri.fsPath)} — asked from the panel via ${chat.label}, ${scanSaid(run)}`);
     }
-    const done = run.rows.slice(-batch.length);
-    const verified = done.filter(r => r.gate?.verify !== undefined);
-    log(`Fix OMR marks: ${done.length} bars · ${done.filter(r => r.proposal?.bar).length} proposals`
-        + ` · scan ${run.images ? (chat.sentImages?.() === false ? 'refused' : 'on') : 'off'}`
-        + ` · verify ${run.verifier ? `${verified.filter(r => r.gate!.verify).length} ✓ ${verified.filter(r => !r.gate!.verify).length} ✗` : 'off'}`
-        + ` · ${done.reduce((s, r) => s + r.seconds, 0).toFixed(0)} s`);
-    return complete;
+    return run.ai;
 }
 
+/** Puts rows to the AI: each waits in the run's queue (its row says so, with a cancel), and the
+ *  queue is worked in the background while the panel stays in the person's hands. */
+function askAi(deps: OmrAiFixDeps, run: FixRun, rows: readonly FixRow[]): void {
+    for (const row of rows) {
+        // A row already waiting or being asked stays where it is; one marked "queued" as it was
+        // made (drawn so by a new panel) joins the queue now.
+        if (row.state === 'applied' || run.queue.includes(row) || run.current?.row === row) {
+            continue;
+        }
+        row.ai = 'queued';
+        run.queue.push(row);
+        postRow(run, row);
+    }
+    void pump(deps, run);
+}
+
+/** Takes a row off the AI: out of the queue, or its question cancelled. */
+function cancelAsk(run: FixRun, row: FixRow): void {
+    if (run.current?.row === row) {
+        run.current.cts.cancel();
+        return;   // pump puts the row back as it was
+    }
+    const at = run.queue.indexOf(row);
+    if (at >= 0) {
+        run.queue.splice(at, 1);
+    }
+    row.ai = undefined;
+    postRow(run, row);
+}
+
+/** Stops a run's AI: the queue emptied, the question being asked cancelled. */
+function stopQueue(run: FixRun): void {
+    run.closed = true;
+    for (const row of run.queue.splice(0)) {
+        row.ai = undefined;
+    }
+    run.current?.cts.cancel();
+}
+
+/** What a row puts to the model: its bar, and the words typed beside its @todo box as a
+ *  person's note (what to look at — on a bar with no mark the only words there are). */
+function promptTargetOf(row: FixRow): FixTarget {
+    const memo = row.todoMemo?.trim();
+    return memo ? { ...row.target, notes: [...(row.target.notes ?? []), memo] } : row.target;
+}
+
+/**
+ * Works the queue, one bar at a time: the prompt (with the person's edit so far as their
+ * attempt), the gates, the picture — then that row alone is put back on the page. An answer for
+ * a row the person edited meanwhile leaves their edit standing ("use the AI's" brings it in). The
+ * first answer coming back empty stops the queue, and says which model and where to pick another.
+ */
+async function pump(deps: OmrAiFixDeps, run: FixRun): Promise<void> {
+    if (run.working || run.queue.length === 0) {
+        return;
+    }
+    run.working = true;
+    try {
+        const ai = await aiOf(deps, run);
+        if (!ai) {
+            for (const row of run.queue.splice(0)) {
+                row.ai = undefined;
+                postRow(run, row);
+            }
+            return;
+        }
+        const answered: FixRow[] = [];
+        await vscode.window.withProgress({ location: vscode.ProgressLocation.Window, title: 'Lily# AI' }, async progress => {
+            while (run.queue.length > 0 && !run.closed) {
+                const row = run.queue.shift()!;
+                row.ai = 'asking';
+                postRow(run, row);
+                progress.report({ message: `${labelOf(row.target)}${run.queue.length ? ` — ${run.queue.length} waiting` : ''}` });
+                const cts = new vscode.CancellationTokenSource();
+                run.current = { row, cts };
+                const started = Date.now();
+                const image = run.images ? scanOf(run, row.target) : undefined;
+                const answer = await fixOne(run.client, ai.chat, run, ai.system, ai.head, run.baseline ?? [], promptTargetOf(row), image,
+                    cts.token, row.edited);
+                const cancelled = cts.token.isCancellationRequested;
+                run.current = undefined;
+                cts.dispose();
+                row.ai = undefined;
+                if (cancelled || run.closed) {
+                    postRow(run, row);
+                    continue;
+                }
+                const seconds = (Date.now() - started) / 1000;
+                Object.assign(row, { proposal: answer.proposal, gate: answer.gate, after: answer.after, noAnswer: answer.noAnswer, seconds, asked: true });
+                if (!hasProposal(row) && !row.baseAfter) {
+                    row.baseAfter = await baseAfterOf(run, row.target);
+                }
+                // Checked as the batch's rows were, unless the person has their own edit there.
+                const check = row.edited === undefined && !row.checked && !!answer.proposal?.bar && !!answer.gate
+                    && acceptableByAll(answer.gate, answer.proposal.confidence);
+                if (check) {
+                    row.checked = true;
+                }
+                postRow(run, row, row.editSeq ?? 0, check);
+                answered.push(row);
+                if (extensionContext) {
+                    await extensionContext.globalState.update(TIMINGS_KEY, withSample(extensionContext.globalState.get<number[]>(TIMINGS_KEY, []), seconds));
+                }
+                const sent = ai.chat.sentImages?.();
+                const picture = !run.images ? '' : !image ? ' · no scan for this bar' : sent === false ? ' · scan not taken by the model (sent as text)'
+                    : ` · scan ${image.width}×${image.height}`;
+                log(`  ${labelOf(row.target)}: ${seconds.toFixed(1)} s${picture}${row.edited !== undefined ? ' · from the person\'s edit' : ''} — ${outcomeOf(answer)}`);
+                if (run.images && image && sent === false && !saidRefused) {
+                    saidRefused = true;
+                    log(`  ${ai.chat.label} takes no image: the bars go as text from here on (pick another model with "Lily#: Select AI Model…").`);
+                }
+                // The first bar came back empty: so will the rest. Stop, and say which model and
+                // where to pick another, rather than a list of empty rows.
+                if (answered.length === 1 && answer.noAnswer?.endsWith('returned nothing')) {
+                    for (const r of run.queue.splice(0)) {
+                        r.ai = undefined;
+                        postRow(run, r);
+                    }
+                    const label = ai.chat.label;
+                    run.ai = undefined;   // the next ask picks a model again
+                    const noModel = !hasChatModel(await availableModels());
+                    log(`Fix OMR marks: ${label} returned nothing — stopped. `
+                        + (noModel ? 'VS Code offers no chat model (GitHub Copilot is not signed in).' : 'Pick a chat model with "Lily#: Select AI Model…" → Fix OMR marks with AI.'));
+                    if (noModel) {
+                        void offerModelSetup();
+                    } else {
+                        void vscode.window.showWarningMessage(
+                            `Lily#: the model ${label} returned nothing, so the AI stopped. Pick another model for "Fix OMR marks with AI".`,
+                            'Select AI Model…').then(c => { if (c) { void vscode.commands.executeCommand('lilysharp.selectAiModel'); } });
+                    }
+                }
+            }
+        });
+        if (answered.length > 0) {
+            const verified = answered.filter(r => r.gate?.verify !== undefined);
+            log(`Fix OMR marks: ${answered.length} bars · ${answered.filter(r => r.proposal?.bar).length} proposals · ${scanSaid(run)}`
+                + ` · verify ${run.verifier ? `${verified.filter(r => r.gate!.verify).length} ✓ ${verified.filter(r => !r.gate!.verify).length} ✗` : 'off'}`
+                + ` · ${answered.reduce((s, r) => s + r.seconds, 0).toFixed(0)} s`);
+        }
+    } finally {
+        run.working = false;
+    }
+    // Rows asked while the last answer was being drawn.
+    if (run.queue.length > 0 && !run.closed) {
+        void pump(deps, run);
+    }
+}
 let saidRefused = false;
 
 /** The crop of the scan around a bar, as a PNG for the model (design §3.1 ④); undefined when the
@@ -606,7 +775,7 @@ function scanOf(run: FixRun, target: FixTarget): { data: Uint8Array; mime: strin
     return { data: crop.png, mime: 'image/png', width: crop.width, height: crop.height };
 }
 
-function outcomeOf(row: Omit<FixRow, 'seconds'>): string {
+function outcomeOf(row: Answer): string {
     if (!row.proposal) {
         return `no answer (${row.noAnswer ?? 'the reply was not the JSON asked for'})`;
     }
@@ -620,17 +789,18 @@ function outcomeOf(row: Omit<FixRow, 'seconds'>): string {
         + (row.proposal.reason ? ` — ${row.proposal.reason}` : '');
 }
 
-/** One bar: the prompt → the model → the gates, once more with the compiler's words on a fail. */
+/** One bar: the prompt → the model → the gates, once more with the compiler's words on a fail.
+ *  `attempt`: the person's edit of the bar so far, shown to the model as theirs. */
 async function fixOne(
     client: LanguageClient, chat: ChatClient, run: FixRun, system: string, head: string, baseline: readonly Diag[],
-    target: FixTarget, image: { data: Uint8Array; mime: string } | undefined, token: vscode.CancellationToken, index: number,
-): Promise<Omit<FixRow, 'seconds'>> {
+    target: FixTarget, image: { data: Uint8Array; mime: string } | undefined, token: vscode.CancellationToken, attempt?: string,
+): Promise<Answer> {
     const neighbours: BarNeighbours = neighboursOf(run.text, target, run.side);
     const messages: ChatMessage[] = [
         { role: 'system', content: system },
         {
             role: 'user',
-            content: taskPromptOf({ head, target, neighbours, diagnostics: diagnosticsOn(baseline, target), image: !!image }),
+            content: taskPromptOf({ head, target, neighbours, diagnostics: diagnosticsOn(baseline, target), image: !!image, attempt }),
             ...(image ? { images: [image] } : {}),
         },
     ];
@@ -643,12 +813,12 @@ async function fixOne(
         } catch (err: any) {
             const why = `the model failed: ${err?.message ?? err}`;
             log(`  ${labelOf(target)}: ${why}`);
-            return { index, target, proposal: null, noAnswer: why, state: 'pending' };
+            return { proposal: null, noAnswer: why };
         }
         if (raw.trim() === '') {
             // Nothing at all is not a malformed answer: asking again gets nothing again. A model
             // that cannot hold a plain conversation (the owner's copilotcli, 2026-10-23) does this.
-            return { index, target, proposal: null, noAnswer: `${chat.label} returned nothing`, state: 'pending' };
+            return { proposal: null, noAnswer: `${chat.label} returned nothing` };
         }
         const proposal = parseProposal(raw, target.written);
         if (!proposal) {
@@ -660,10 +830,10 @@ async function fixOne(
                 messages.push({ role: 'user', content: 'Answer with the one JSON object only: {"bar": …, "reason": …, "confidence": …}.' });
                 continue;
             }
-            return { index, target, proposal: null, noAnswer: `not the JSON asked for: "${head}"`, state: 'pending' };
+            return { proposal: null, noAnswer: `not the JSON asked for: "${head}"` };
         }
         if (!proposal.bar) {
-            return { index, target, proposal, state: 'pending' };
+            return { proposal };
         }
         const spliced = spliceBar(run.text, target, proposal.bar);
         const check = await client.sendRequest<CheckCandidateResponse>('lilysharp/checkCandidate', { Text: spliced });
@@ -673,7 +843,7 @@ async function fixOne(
             gate = withVerify(gate, await verifyProposal(run, target, spliced, token));
         }
         if (gate.compile && gate.length && gate.verify !== false) {
-            return { index, target, proposal, gate, after: await render(spliced), state: 'pending' };
+            return { proposal, gate, after: await render(spliced) };
         }
         last = { proposal, gate, spliced };
         if (attempt < MAX_REPAIRS) {
@@ -687,28 +857,9 @@ async function fixOne(
     // silently dropped.
     const { proposal, gate, spliced } = last!;
     if (gate.compile && gate.length) {
-        return { index, target, proposal, gate, after: await render(spliced), state: 'pending' };
+        return { proposal, gate, after: await render(spliced) };
     }
-    return { index, target, proposal, gate, state: 'pending' };
-}
-
-// ---------------------------------------------------------------------------------------------
-// The soft lock (as the AI transform's)
-// ---------------------------------------------------------------------------------------------
-
-function softLock(editor: vscode.TextEditor, targets: readonly FixTarget[]): void {
-    clearLock();
-    lock = vscode.window.createTextEditorDecorationType({
-        backgroundColor: new vscode.ThemeColor('editor.wordHighlightBackground'),
-        overviewRulerColor: new vscode.ThemeColor('editorInfo.foreground'),
-        overviewRulerLane: vscode.OverviewRulerLane.Full,
-    });
-    editor.setDecorations(lock, targets.map(t => new vscode.Range(editor.document.positionAt(t.start), editor.document.positionAt(t.end))));
-}
-
-function clearLock(): void {
-    lock?.dispose();
-    lock = undefined;
+    return { proposal, gate };
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -730,7 +881,11 @@ function showPanel(deps: OmrAiFixDeps, run: FixRun): void {
         panel = vscode.window.createWebviewPanel('lilysharpOmrFixes', 'Lily# — OMR fixes',
             { viewColumn: column, preserveFocus: true },
             { enableScripts: true, retainContextWhenHidden: true, localResourceRoots: roots });
-        panel.onDidDispose(() => { panel = undefined; shownRun = undefined; clearBarMark(); });
+        panel.onDidDispose(() => {
+            // The AI stops with the panel: nothing is left to show its answers.
+            if (shownRun) { stopQueue(shownRun); }
+            panel = undefined; shownRun = undefined; clearBarMark();
+        });
         panel.webview.onDidReceiveMessage((m: PanelMessage) => void onPanelMessage(deps, m));
     } else {
         panel.webview.options = { ...panel.webview.options, localResourceRoots: roots };
@@ -771,6 +926,20 @@ async function onPanelMessage(deps: OmrAiFixDeps, m: PanelMessage): Promise<void
             return;
         case 'edit':
             if (row && row.state !== 'applied' && typeof m.text === 'string') { await editRow(run, row, m.text, m.seq ?? 0); }
+            return;
+        case 'ready':
+            // The page has its script: what the AI is doing now may have been posted before it
+            // could hear (a new panel asks at once), so the rows it is about are sent again.
+            for (const r of run.rows) {
+                if (r.ai) { postRow(run, r); }
+            }
+            return;
+        case 'ask':
+            // The row's Ask AI (owner's request 2026-10-24): queued, answered in the background.
+            if (row && row.state !== 'applied') { askAi(deps, run, [row]); }
+            return;
+        case 'unask':
+            if (row) { cancelAsk(run, row); }
             return;
         case 'accept': {
             const chosen = run.rows.filter(r => r.state !== 'applied' && (m.indices ?? []).includes(r.index));
@@ -870,14 +1039,38 @@ async function editRow(run: FixRun, row: FixRow, raw: string, seq: number): Prom
     }
 }
 
-/** Sends one row's parts to the page, to replace in place (the text field keeps its focus). */
-function postRow(run: FixRun, row: FixRow, seq: number): void {
+/** Sends one row's parts to the page, to replace in place (the text field keeps its focus).
+ *  `seq`: the edit it answers (an answer to an older one is dropped there); `check`: the AI's
+ *  answer checks the row's box. The panel's head goes along (its counts, its third column). */
+function postRow(run: FixRun, row: FixRow, seq = row.editSeq ?? 0, check = false): void {
     if (!panel || shownRun !== run) {
         return;
     }
     const p = rowParts(run, row);
     void panel.webview.postMessage({ type: 'row', index: row.index, seq, gates: p.gates, reason: p.reason, proposal: p.proposal,
-        now: p.nowText, after: p.afterText, del: p.del, take: p.takeWord, plain: barOf(row) ?? resolvedLine(row.target.written) });
+        now: p.nowText, after: p.afterText, del: p.del, take: p.takeWord, plain: barOf(row) ?? resolvedLine(row.target.written),
+        secs: secondsOf(run, row), check, ...headerOf(run) });
+}
+
+/** The head row's time: what the model took, once it has answered. */
+function secondsOf(run: FixRun, row: FixRow): string {
+    return row.asked ? ` · ${row.seconds.toFixed(1)} s` : '';
+}
+
+/** The panel's head: the line under its title, and its third column's name — Proposal once the
+ *  AI has answered a row, Edit while every bar is the person's (owner's choice 2026-10-24). */
+function headerOf(run: FixRun): { cap: string; third: string } {
+    const n = run.rows.length;
+    const proposals = run.rows.filter(hasProposal).length;
+    const waiting = run.rows.filter(r => r.ai).length;
+    const asked = run.rows.some(r => r.asked || r.ai);
+    return {
+        cap: `${n} ${n === 1 ? 'bar' : 'bars'}`
+            + (asked ? ` · ${proposals} with a proposal` : '')
+            + (waiting ? ` · ${waiting} waiting for the AI` : '')
+            + ' · edit a bar (click a note or its text) or ask the AI — nothing is written until Accept',
+        third: asked ? 'Proposal' : 'Edit',
+    };
 }
 
 /** The light blue of the bar the panel is on, in the editor (owner's request 2026-10-23). */
@@ -1057,6 +1250,8 @@ function rowParts(run: FixRun, r: FixRow): RowParts {
             : `<div class="none">${gate ? 'not rendered' : 'checking…'}</div>`;
     } else if (barOf(r) === undefined && base) {
         proposal = scoreCell(`after-${r.index}`, base, t.start, t.start + resolvedLine(t.written).length, true, add);
+    } else if (r.ai && !hasProposal(r)) {
+        proposal = `<div class="none">${r.ai === 'asking' ? 'asking the AI…' : 'waiting for the AI…'} — or click the text below to edit it yourself</div>`;
     } else if (!r.proposal) {
         proposal = `<div class="none">no answer — Take removes the @todo</div>`;
     } else if (!r.proposal.bar) {
@@ -1069,31 +1264,37 @@ function rowParts(run: FixRun, r: FixRow): RowParts {
         proposal = `<div class="none">${r.gate && !(r.gate.compile && r.gate.length) ? 'did not pass — Take removes the @todo' : 'not rendered'}</div>`;
     }
     const failed = r.gate && !(r.gate.compile && r.gate.length);
-    const revert = run.manual || !r.proposal?.bar
-        ? `<button class="link revert" data-i="${r.index}" title="Back to the bar as it stands">undo my edit</button>`
-        : `<button class="link revert" data-i="${r.index}" title="Back to the model's answer">use the model's</button>`;
+    // An edit goes back to the AI's bar when it has one — the answer that came while the person
+    // was editing waits there (owner's request 2026-10-24) — else to the bar as it stands.
+    const revert = hasProposal(r)
+        ? `<button class="link revert" data-i="${r.index}" title="${esc(`The AI's bar: ${r.proposal!.bar!}`)}">use the AI's</button>`
+        : `<button class="link revert" data-i="${r.index}" title="Back to the bar as it stands">undo my edit</button>`;
+    // The AI's state, and the way to ask it: queued or being asked (with a cancel), or a button.
+    const can = r.state !== 'applied';
+    const aiNow = r.ai === 'asking' ? ` <span class="dim">— asking the AI…</span> <button class="link unask" data-i="${r.index}">cancel</button>`
+        : r.ai === 'queued' ? ` <span class="dim">— waiting for the AI…</span> <button class="link unask" data-i="${r.index}">cancel</button>`
+        : can ? ` <button class="link ask" data-i="${r.index}" title="Ask the AI to rewrite this bar from the scan — with your note and your edit, if any">${r.asked ? 'ask the AI again' : 'Ask AI'}</button>`
+        : '';
+    const sure = r.proposal?.confidence === null || r.proposal?.confidence === undefined || edited ? ''
+        : ` <span class="dim">· confidence ${r.proposal.confidence.toFixed(2)}</span>`;
     const reason = edited
         ? esc(gate && gate.problems.length ? `Your edit: ${gate.problems.join(' / ')}` : gate ? 'Your edit.' : 'Your edit — checking…') + ` ${revert}`
-        : run.manual ? esc('Click a note or the text under the picture to edit this bar.')
+        : !r.asked ? esc(r.ai ? '' : 'Click a note or the text under the picture to edit this bar.')
         : esc(!r.proposal ? `No answer: ${r.noAnswer ?? 'the reply was not the JSON asked for'}.`
             : r.proposal.unchanged ? `The model reads the bar as right${r.proposal.reason.replace(/^unchanged( — )?/, '') ? `: ${r.proposal.reason.replace(/^unchanged( — )?/, '')}` : '.'}`
             : !r.proposal.bar ? (failed ? `No proposal passed: ${r.gate!.problems.join(' / ') || r.proposal.reason}` : r.proposal.reason || 'The model gave no reason.')
             : r.gate?.verify === false ? `${r.proposal.reason ? `${r.proposal.reason} — ` : ''}${r.gate.problems.filter(p => p.startsWith('the scan says')).join(' / ')}`
             : r.proposal.reason || '');
-    const hint = !edited && !run.manual && barOf(r) === undefined && base
+    const hint = !edited && r.asked && !r.ai && barOf(r) === undefined && base
         ? ' <span class="dim">— click a note or the text to edit the bar yourself</span>' : '';
     return {
-        gates: gatesHtml(gate), reason: reason + hint, proposal, nowText: piecesHtml(diff.before), afterText: piecesHtml(diff.after), del,
+        gates: gatesHtml(gate), reason: reason + sure + hint + aiNow, proposal, nowText: piecesHtml(diff.before), afterText: piecesHtml(diff.after), del,
         takeWord: barOf(r) === undefined && resolvedLine(t.written) !== t.written ? 'Take (remove @todo)' : 'Take',
     };
 }
 
-function panelHtml(deps: OmrAiFixDeps, webview: vscode.Webview, run: FixRun): string {
-    const nonce = nonceOf();
-    const fontUri = webview.asWebviewUri(vscode.Uri.joinPath(deps.extensionUri, 'media', 'fonts', 'emmentaler-20.woff2'));
-    const braceUri = webview.asWebviewUri(vscode.Uri.joinPath(deps.extensionUri, 'media', 'fonts', 'emmentaler-brace.woff2'));
-    const before = run.before.Svg ? symbolOf(run.before.Svg) : undefined;
-
+/** The page images the rows crop, as the webview reaches them, by page number. */
+function pageUrisOf(webview: vscode.Webview, run: FixRun): Map<number, { uri: string; width: number; height: number }> {
     const pageUris = new Map<number, { uri: string; width: number; height: number }>();
     for (const p of run.side?.pages ?? []) {
         const shown = shownImage(p);
@@ -1101,67 +1302,87 @@ function panelHtml(deps: OmrAiFixDeps, webview: vscode.Webview, run: FixRun): st
             pageUris.set(p.page, { uri: webview.asWebviewUri(vscode.Uri.file(shown)).toString(), width: p.width, height: p.height });
         }
     }
+    return pageUris;
+}
 
-    const rows = run.rows.map(r => {
-        const t = r.target;
-        const parts = rowParts(run, r);
-        const page = t.crop ? pageUris.get(t.crop.page) : undefined;
-        const crop = t.crop && page ? cropRect(t.crop.box, page) : undefined;
-        const scan = crop && page
-            ? `<svg class="pic" viewBox="${crop.x} ${crop.y} ${crop.width} ${crop.height}" preserveAspectRatio="xMidYMid meet">`
-              + `<image href="${page.uri}" width="${page.width}" height="${page.height}"/></svg>`
-            : `<div class="none">no scan</div>`;
-        const now = before
-            ? scoreCell('before', before, t.start, t.end, false, { kind: 'del', ranges: parts.del ? parts.del.split(',').map(s => s.split(':').map(Number) as [number, number]) : [] })
-            : `<div class="none">not rendered</div>`;
-        const sure = r.proposal?.confidence === null || r.proposal?.confidence === undefined ? '' : ` · confidence ${r.proposal.confidence.toFixed(2)}`;
-        const can = r.state !== 'applied';
-        const on = can && !!r.checked;
-        const buttons = r.state === 'skipped' ? `<span class="memo bad">· not written last time: the line had changed</span>` : '';
-        const box = can
-            ? `<label class="take" title="Write this bar when you press Accept — without a bar of its own (the model's or your edit), its @todo is removed and the notes stay">`
-              + `<input type="checkbox" class="take" data-i="${r.index}" ${on ? 'checked' : ''}> <span class="take-word" data-i="${r.index}">${parts.takeWord}</span></label>`
-            : `<label class="take dim" title="${r.state === 'applied' ? 'Written' : 'No proposal to take'}"><input type="checkbox" disabled> ${r.state === 'applied' ? 'Written' : 'Take'}</label>`;
-        // Taken but still marked (owner's request 2026-10-24): the bar is written with a @todo at
-        // the same note — the reader's key kept — and the words typed here as its memo. A bar that
-        // carries no mark (one opened by Edit Bars Beside the Scan) gets one instead: "add", at its
-        // first note (withTodoMark with no mark to follow).
-        const marked = resolvedLine(t.written) !== t.written;
-        const keepBox = can
-            ? `<label class="take keep" title="${marked
-                ? 'Write the bar with a @todo still on it, at the same note — for a bar that is better but not right yet'
-                : 'Write the bar with a @todo on its first note — to come back to it'}">`
-              + `<input type="checkbox" class="keep" data-i="${r.index}" ${on && r.keepTodo ? 'checked' : ''}> ${marked ? 'keep' : 'add'} @todo</label>`
-              + `<input type="text" class="note" data-i="${r.index}" value="${esc(r.todoMemo ?? '')}" placeholder="${marked ? 'what is still wrong' : 'what to check'} (optional)" ${on && r.keepTodo ? '' : 'hidden'}>`
-            : '';
-        // Three rows a bar: a head across the whole width — the box, the bar, the reader's memo,
-        // the line, the time, the way to the editor — then the model's reason and the gates,
-        // across the whole width too, and under them the three pictures. A column for either
-        // was a fraction of the width and wrapped its text into a dozen short lines (owner's
-        // reports 2026-10-23). The pictures go the reader's, the scan, the proposal: the scan in
-        // the middle sits beside both, and the proposal is the one a person compares it with
-        // (owner, 2026-10-24: scan first put the proposal two pictures away from it).
-        const cls = `row ${r.state}${on ? ' taken' : ''}`;
-        return `<tr class="${cls} head" data-i="${r.index}">
+/** The "before" picture as a symbol, made once a run (every row's Now draws it). */
+const beforeSymbols = new WeakMap<SvgResponse, ReturnType<typeof symbolOf>>();
+function beforeOf(run: FixRun): ReturnType<typeof symbolOf> {
+    if (!beforeSymbols.has(run.before)) {
+        beforeSymbols.set(run.before, run.before.Svg ? symbolOf(run.before.Svg) : undefined);
+    }
+    return beforeSymbols.get(run.before);
+}
+
+/** One bar's three rows of the table — drawn with the page, and added to it later (addRows). */
+function rowHtml(run: FixRun, r: FixRow, pageUris: ReadonlyMap<number, { uri: string; width: number; height: number }>, hasBefore: boolean): string {
+    const before = hasBefore ? beforeOf(run) : undefined;
+    const t = r.target;
+    const parts = rowParts(run, r);
+    const page = t.crop ? pageUris.get(t.crop.page) : undefined;
+    const crop = t.crop && page ? cropRect(t.crop.box, page) : undefined;
+    const scan = crop && page
+        ? `<svg class="pic" viewBox="${crop.x} ${crop.y} ${crop.width} ${crop.height}" preserveAspectRatio="xMidYMid meet">`
+          + `<image href="${page.uri}" width="${page.width}" height="${page.height}"/></svg>`
+        : `<div class="none">no scan</div>`;
+    const now = before
+        ? scoreCell('before', before, t.start, t.end, false, { kind: 'del', ranges: parts.del ? parts.del.split(',').map(s => s.split(':').map(Number) as [number, number]) : [] })
+        : `<div class="none">not rendered</div>`;
+    const can = r.state !== 'applied';
+    const on = can && !!r.checked;
+    const buttons = r.state === 'skipped' ? `<span class="memo bad">· not written last time: the line had changed</span>` : '';
+    const box = can
+        ? `<label class="take" title="Write this bar when you press Accept — without a bar of its own (the model's or your edit), its @todo is removed and the notes stay">`
+          + `<input type="checkbox" class="take" data-i="${r.index}" ${on ? 'checked' : ''}> <span class="take-word" data-i="${r.index}">${parts.takeWord}</span></label>`
+        : `<label class="take dim" title="${r.state === 'applied' ? 'Written' : 'No proposal to take'}"><input type="checkbox" disabled> ${r.state === 'applied' ? 'Written' : 'Take'}</label>`;
+    // Taken but still marked (owner's request 2026-10-24): the bar is written with a @todo at
+    // the same note — the reader's key kept — and the words typed here as its memo. A bar that
+    // carries no mark (one opened by Edit Bars Beside the Scan) gets one instead: "add", at its
+    // first note (withTodoMark with no mark to follow).
+    const marked = resolvedLine(t.written) !== t.written;
+    const keepBox = can
+        ? `<label class="take keep" title="${marked
+            ? 'Write the bar with a @todo still on it, at the same note — for a bar that is better but not right yet'
+            : 'Write the bar with a @todo on its first note — to come back to it'}">`
+          + `<input type="checkbox" class="keep" data-i="${r.index}" ${on && r.keepTodo ? 'checked' : ''}> ${marked ? 'keep' : 'add'} @todo</label>`
+          + `<input type="text" class="note" data-i="${r.index}" value="${esc(r.todoMemo ?? '')}" placeholder="${marked ? 'what is still wrong' : 'what to check'} (optional)" ${on && r.keepTodo ? '' : 'hidden'}>`
+        : '';
+    // Three rows a bar: a head across the whole width — the box, the bar, the reader's memo,
+    // the line, the time, the way to the editor — then the model's reason and the gates,
+    // across the whole width too, and under them the three pictures. A column for either
+    // was a fraction of the width and wrapped its text into a dozen short lines (owner's
+    // reports 2026-10-23). The pictures go the reader's, the scan, the proposal: the scan in
+    // the middle sits beside both, and the proposal is the one a person compares it with
+    // (owner, 2026-10-24: scan first put the proposal two pictures away from it).
+    const cls = `row ${r.state}${on ? ' taken' : ''}`;
+    return `<tr class="${cls} head" data-i="${r.index}">
   <td colspan="3" class="who">${box}${keepBox} <span class="label">${esc(labelOf(t))}</span>`
-            + (t.memos.length ? ` <span class="memo">${esc(t.memos.join('; '))}</span>` : '')
-            + ` <span class="memo dim">· line ${t.line + 1}${t.confidence === undefined ? '' : ` · reader ${t.confidence.toFixed(2)}`}${run.manual ? '' : ` · ${r.seconds.toFixed(1)} s`}</span></td>
+        + (t.memos.length ? ` <span class="memo">${esc(t.memos.join('; '))}</span>` : '')
+        + ` <span class="memo dim">· line ${t.line + 1}${t.confidence === undefined ? '' : ` · reader ${t.confidence.toFixed(2)}`}<span class="secs" data-i="${r.index}">${secondsOf(run, r)}</span></span></td>
 </tr>
 <tr class="${cls} reason" data-i="${r.index}">
   <td colspan="3" class="why"><span class="gates" data-i="${r.index}">${parts.gates}</span> <span class="reason-text" data-i="${r.index}">${parts.reason}</span>`
-            + `${sure ? ` <span class="dim">${sure.replace(/^ · /, '· ')}</span>` : ''}${buttons ? ` ${buttons}` : ''}</td>
+        + `${buttons ? ` ${buttons}` : ''}</td>
 </tr>
 <tr class="${cls} body" data-i="${r.index}">
   <td class="cell">${now}<pre class="src now" data-i="${r.index}">${parts.nowText}</pre></td>
   <td class="cell">${scan}</td>
   <td class="cell"><div class="after-pic" data-i="${r.index}">${parts.proposal}</div>`
-            // The bar to write, editable (owner's request 2026-10-24): a click opens it; the
-            // picture and the gates follow the typing.
-            + (can ? `<pre class="src after editable" data-i="${r.index}" title="Click to edit the bar — the picture and the gates follow">${parts.afterText}</pre>`
-                + `<textarea class="edit" data-i="${r.index}" data-base="${t.start}" data-indent="${t.start - (run.text.lastIndexOf('\n', t.start - 1) + 1)}" spellcheck="false" hidden>${esc(barOf(r) ?? resolvedLine(t.written))}</textarea>`
-                : `<pre class="src after" data-i="${r.index}">${parts.afterText}</pre>`) + `</td>
+        // The bar to write, editable (owner's request 2026-10-24): a click opens it; the
+        // picture and the gates follow the typing.
+        + (can ? `<pre class="src after editable" data-i="${r.index}" title="Click to edit the bar — the picture and the gates follow">${parts.afterText}</pre>`
+            + `<textarea class="edit" data-i="${r.index}" data-base="${t.start}" data-indent="${t.start - (run.text.lastIndexOf('\n', t.start - 1) + 1)}" spellcheck="false" hidden>${esc(barOf(r) ?? resolvedLine(t.written))}</textarea>`
+            : `<pre class="src after" data-i="${r.index}">${parts.afterText}</pre>`) + `</td>
 </tr>`;
-    }).join('\n');
+}
+
+function panelHtml(deps: OmrAiFixDeps, webview: vscode.Webview, run: FixRun): string {
+    const nonce = nonceOf();
+    const fontUri = webview.asWebviewUri(vscode.Uri.joinPath(deps.extensionUri, 'media', 'fonts', 'emmentaler-20.woff2'));
+    const braceUri = webview.asWebviewUri(vscode.Uri.joinPath(deps.extensionUri, 'media', 'fonts', 'emmentaler-brace.woff2'));
+    const before = beforeOf(run);
+    const pageUris = pageUrisOf(webview, run);
+    const rows = run.rows.map(r => rowHtml(run, r, pageUris, !!before)).join('\n');
 
     const takeable = run.rows.filter(r => r.state !== 'applied').length;
     const checked = run.rows.filter(r => r.state !== 'applied' && r.checked).length;
@@ -1241,16 +1462,14 @@ button.link { background:none; border:none; padding:0; margin-left:8px; color: v
 ${before ? `<svg class="store" aria-hidden="true"><symbol id="before" viewBox="${esc(before.viewBox)}">${before.inner}</symbol></svg>` : ''}
 <div class="header">
   <div><div class="title">${run.manual ? 'Bars beside the scan' : 'OMR fixes'} — ${esc(name)}</div>
-  <div class="cap">${run.rows.length} ${run.rows.length === 1 ? 'bar' : 'bars'} · `
-        + (run.manual ? 'edit a bar (click a note or its text) — it is checked to take; nothing is written until Accept'
-            : `${run.rows.filter(hasProposal).length} with a proposal · check the ones to take — nothing is written until Accept`) + `</div></div>
+  <div class="cap" id="cap">${esc(headerOf(run).cap)}</div></div>
   <div class="spacer"></div>
   <label class="take all" title="Check or uncheck every bar there is something to take"><input type="checkbox" id="all" ${takeable ? '' : 'disabled'} ${takeable && checked === takeable ? 'checked' : ''}> All</label>
-  <span class="memo"><span id="count">${checked}</span> of ${takeable} checked</span>
+  <span class="memo"><span id="count">${checked}</span> of <span id="total">${takeable}</span> checked</span>
 </div>
 <div class="main">
 <table>
-<thead><tr>${run.manual ? '<th>Now</th><th>Scan</th><th>Edit</th>' : '<th>Now (OMR)</th><th>Scan</th><th>Proposal</th>'}</tr></thead>
+<thead><tr><th>${run.manual ? 'Now' : 'Now (OMR)'}</th><th>Scan</th><th id="third">${headerOf(run).third}</th></tr></thead>
 <tbody>
 ${rows}
 </tbody>
@@ -1290,7 +1509,9 @@ ${rows}
     const n = boxes().filter(b => b.checked).length;
     all.checked = n > 0 && n === boxes().length;
     all.indeterminate = n > 0 && n < boxes().length;
+    all.disabled = boxes().length === 0;
     document.getElementById('count').textContent = String(n);
+    document.getElementById('total').textContent = String(boxes().length);
     document.getElementById('acceptN').textContent = String(n);
     document.getElementById('accept').disabled = n === 0;
   }
@@ -1543,7 +1764,12 @@ ${rows}
       seqs[i] = (seqs[i] || 0) + 1;
       sent[i] = undefined;
       vscode.postMessage({ action: 'edit', index: Number(i), text: '', seq: seqs[i] });
+      return;
     }
+    // The row's Ask AI, and the cancel of a row waiting for it or being asked (owner's request
+    // 2026-10-24): the answer comes back to this row alone, the others stay in the person's hands.
+    const ask = e.target.closest && e.target.closest('button.ask, button.unask');
+    if (ask) vscode.postMessage({ action: ask.classList.contains('ask') ? 'ask' : 'unask', index: Number(ask.dataset.i) });
   });
   document.addEventListener('input', e => {
     if (!(e.target.matches && e.target.matches('textarea.edit'))) return;
@@ -1563,13 +1789,40 @@ ${rows}
   document.addEventListener('focusout', e => {
     if (e.target.matches && e.target.matches('textarea.edit') && !e.target.hidden) closeEdit(e.target.dataset.i);
   });
+  // The head: the line under the title, the third column's name (Edit until the AI answers).
+  function header(m) {
+    if (typeof m.cap === 'string') document.getElementById('cap').textContent = m.cap;
+    if (typeof m.third === 'string') document.getElementById('third').textContent = m.third;
+  }
   window.addEventListener('message', e => {
     const m = e.data;
-    if (!m || m.type !== 'row' || m.seq < (seqs[m.index] || 0)) return;
+    if (!m) return;
+    // Bars added to the panel (a second Edit Bars Beside the Scan, or Fix OMR Marks with AI on the
+    // same file): their rows go below, the rows there keep what is being done in them.
+    if (m.type === 'rows') {
+      const body = document.querySelector('tbody');
+      const at = body.children.length;
+      body.insertAdjacentHTML('beforeend', m.html);
+      for (const tr of Array.from(body.children).slice(at)) for (const svg of tr.querySelectorAll('svg.score')) setUp(svg);
+      recount();
+      header(m);
+      return;
+    }
+    if (m.type === 'reveal') {
+      const tr = document.querySelector('tr.row.head[data-i="' + m.index + '"]');
+      if (tr) tr.scrollIntoView({ block: 'start', behavior: 'smooth' });
+      return;
+    }
+    if (m.type !== 'row' || m.seq < (seqs[m.index] || 0)) return;
     const i = m.index;
+    header(m);
     q('span.gates', i).innerHTML = m.gates;
     q('span.reason-text', i).innerHTML = m.reason;
     q('span.take-word', i).textContent = m.take;
+    const secs = q('span.secs', i);
+    if (secs) secs.textContent = m.secs || '';
+    // The AI's answer checks the row as the gates allow (not over the person's own edit).
+    if (m.check) { const b = boxes().find(x => x.dataset.i === String(i)); if (b && !b.checked) { setBox(b, true); recount(); } }
     const holder = q('div.after-pic', i);
     holder.innerHTML = m.proposal;
     for (const svg of holder.querySelectorAll('svg.score')) setUp(svg);
@@ -1589,6 +1842,8 @@ ${rows}
       paint('before', RED, m.del);
     }
   });
+  // Everything above listens now: the extension sends again what the AI is doing.
+  vscode.postMessage({ action: 'ready' });
 </script>
 </body>
 </html>`;

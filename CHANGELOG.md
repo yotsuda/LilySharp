@@ -25,7 +25,9 @@ workflow attaches that section to the GitHub Release verbatim.
   The bar to write can be edited in the panel, its picture and gates following the typing (a
   row with no proposal too); **Lily#: Edit Bars Beside the Scan** opens the selected bars in the
   same panel without the AI (*Now*, *Scan*, *Edit*). Both are in the preview's and the scan view's
-  context menu, on the bar right-clicked.
+  context menu, on the bar right-clicked. The AI now answers a row at a time in the background
+  (*Ask AI* on each row, *cancel*; the panel opens at once and fills in; a row edited meanwhile
+  keeps the edit), and a second command on the same file adds its bars to the open panel.
   A bar can be taken and stay marked (`keep @todo`: a `@todo` at the note nearest the old mark,
   its key kept, the typed words as its memo); the pictures go *Now (OMR)*, *Scan*, *Proposal*;
   and the model is told the page decides — the meter is a check, the reader's note and the

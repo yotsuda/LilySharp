@@ -326,6 +326,9 @@ export interface TaskInput {
     readonly diagnostics: readonly string[];
     /** The message carries the scan of the bar (M2): the prompt says what the picture is. */
     readonly image?: boolean;
+    /** The person's edit of the bar so far, when they ask the AI from a row they are editing
+     *  (owner's request 2026-10-24). */
+    readonly attempt?: string;
 }
 
 export function taskPromptOf(input: TaskInput): string {
@@ -368,6 +371,14 @@ export function taskPromptOf(input: TaskInput): string {
         parts.push('What a PERSON who compared this line with the page wrote about it (in any language). Trust it: the');
         parts.push('line as written is wrong in that way. Find that place on the page and fix it; do not answer "unchanged":');
         for (const n of notes) { parts.push(`  - ${n}`); }
+    }
+    if (input.attempt) {
+        parts.push('');
+        parts.push('A PERSON comparing the line with the page has started to rewrite it as below. It may be unfinished or');
+        parts.push('partly wrong; keep what it gets right, and check the rest against the page:');
+        parts.push('<attempt>');
+        parts.push(oneLine(stripTodoMarks(input.attempt)));
+        parts.push('</attempt>');
     }
     const reader = target.memos.filter(m => !notes.includes(m));
     if (reader.length > 0) {

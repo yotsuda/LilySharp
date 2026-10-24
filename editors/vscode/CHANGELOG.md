@@ -38,6 +38,14 @@ All notable changes to the Lily# VS Code extension are documented here.
   *Accept* writes the edited bars as one edit. In the editor's menu of a `.lys` with a scan. On
   a bar with no mark the check box beside *Take* reads `add @todo` (the mark goes on its first
   note), on one with a mark `keep @todo`.
+- **The AI answers a row at a time in the background.** Each row has *Ask AI*; while it waits
+  ("waiting for the AI… / asking the AI…", with *cancel*) the other rows can be edited and
+  checked, and the answer replaces that row alone. A row edited meanwhile keeps the edit (*use
+  the AI's* brings the answer in); asked from a row being edited, the AI gets the edit as the
+  person's attempt and the words beside `keep/add @todo` as their note. *Fix OMR Marks with AI…*
+  opens the panel at once, its rows waiting, and fills it as the answers come (no notification,
+  no lock on the editor's lines). A second command on the same file adds its bars to the open
+  panel instead of replacing it; closing the panel stops the AI.
 - **Both commands are in the preview's and the scan view's context menu**, on the bar
   right-clicked: *Fix OMR Marks with AI…* sends that bar alone (a bar with no `@todo` offers *Edit
   Bars Beside the Scan* instead), *Edit Bars Beside the Scan* opens it.
