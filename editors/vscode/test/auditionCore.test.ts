@@ -138,6 +138,7 @@ describe('the typing audition: a changed sound plays once', () => {
         assert.equal(mayChangeAnInstrument([{ text: '', rangeLength: 1 }], line), true);
         assert.equal(mayChangeAnInstrument([{ text: 'electric guitar (clean)', rangeLength: 5 }], line), true);
         assert.equal(mayChangeAnInstrument([{ text: '5', rangeLength: 0 }], 'part b { tuning bass5 }'), true);
+        assert.equal(mayChangeAnInstrument([{ text: 'e', rangeLength: 0 }], 'part f { instrument flute }'), true);
         assert.equal(mayChangeAnInstrument([{ text: 'a', rangeLength: 0 }], 'part vl { clef alto }'), false);
         assert.equal(mayChangeAnInstrument([{ text: 'x'.repeat(INSTRUMENT_CHANGE_MAX + 1), rangeLength: 0 }], line), false);
         assert.equal(mayChangeAnInstrument([{ text: 'a', rangeLength: 0 }, { text: 'a', rangeLength: 0 }], line), false);

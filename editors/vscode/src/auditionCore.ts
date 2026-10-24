@@ -194,13 +194,13 @@ export function mayChangeAnInstrument(changes: readonly ChangeLike[], lineText: 
     if (changes.length !== 1) { return false; }
     const c = changes[0];
     if (c.text.length > INSTRUMENT_CHANGE_MAX || c.rangeLength > INSTRUMENT_CHANGE_MAX) { return false; }
-    return /\b(midiInstrument|tuning)\b/.test(lineText);
+    return /\b(midiInstrument|instrument|tuning)\b/.test(lineText);
 }
 
-/** The kinds the server names a `midiInstrument` and a `tuning` target
- * (NoteStepper.TargetKind.Instrument / Tuning). They sound when they CHANGE, not when the caret
- * lands on them. */
-export const SOUNDS_WHEN_CHANGED: ReadonlySet<string> = new Set(['instrument', 'tuning']);
+/** The kinds the server names a `midiInstrument`, a `tuning` and an `instrument` preset target
+ * (NoteStepper.TargetKind.Instrument / Tuning / InstrumentPreset). They sound when they CHANGE,
+ * not when the caret lands on them. */
+export const SOUNDS_WHEN_CHANGED: ReadonlySet<string> = new Set(['instrument', 'tuning', 'instrumentpreset']);
 
 /**
  * The trailing-edge debounce both automatic auditions use: each `poke` restarts the

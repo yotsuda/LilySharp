@@ -6,6 +6,13 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ### Ctrl+Shift+Up / Down pick a font and a MIDI instrument
 
+- **On a part's `instrument` preset they step the presets**, and the new one sounds (typed or
+  completed too).
+- **On a value word right after its keyword they step its values**, in the order `Ctrl+Space`
+  lists them: `transposition`, `pedal`, `pitch` (a file's, a part's, a score's), every layout word
+  (`barNumbers`, with `every N`'s number, `accidentals`, `sectionLabels`, `markTempo`, the chord
+  words …), a `paper` `size`, `chords … as` / `tab … as`, a fonts entry's `as serif` / `sans`.
+
 - **On an entry of a `fonts { }` block, `Ctrl+Shift+Down` / `Ctrl+Shift+Up` write the next /
   previous font for its key** (down / up the list as `Ctrl+Space` shows it), so the fonts can be
   tried one press at a time: on `music` the music

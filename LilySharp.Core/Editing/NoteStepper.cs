@@ -109,7 +109,7 @@ public static partial class NoteStepper
         Tempo,
         /// <summary>A <c>key</c> — the semitone pair walks the circle of fifths (NoteStepper.Key.cs).</summary>
         Key,
-        /// <summary>A <c>clef</c> — the semitone pair walks bass, tenor, alto, treble (NoteStepper.Clef.cs).</summary>
+        /// <summary>A <c>clef</c> — the clefs one at a time, a group on the octave pair (NoteStepper.Clef.cs).</summary>
         Clef,
         /// <summary>A dynamic — <c>@p</c> steps to <c>@mp</c>, <c>@decresc</c> to <c>@cresc</c> (NoteStepper.Values.cs).</summary>
         Dynamic,
@@ -152,6 +152,15 @@ public static partial class NoteStepper
         /// <summary>An entry of a <c>fonts { }</c> block — either pair walks the fonts of its key
         /// (NoteStepper.Font.cs).</summary>
         Font,
+        /// <summary>A value word right after its keyword — <c>pedal text</c>, <c>accidentals modern</c>,
+        /// <c>tab gt as numbers</c> … (NoteStepper.Words.cs).</summary>
+        KeywordValue,
+        /// <summary>The number of a layout's <c>barNumbers every N</c> (NoteStepper.Words.cs).</summary>
+        BarNumberEvery,
+        /// <summary>A <c>paper { size … }</c> page name (NoteStepper.Words.cs).</summary>
+        PaperSize,
+        /// <summary>A part's <c>instrument</c> preset — it sounds the new one (NoteStepper.Words.cs).</summary>
+        InstrumentPreset,
     }
 
     /// <summary>The kinds whose step changes a setting, not a sound — the audition skips them.</summary>
@@ -160,7 +169,8 @@ public static partial class NoteStepper
             or TargetKind.Articulation or TargetKind.Time or TargetKind.HeaderValue or TargetKind.OctaveMode
             or TargetKind.Font or TargetKind.FontSize or TargetKind.Percent or TargetKind.StaffGroup
             or TargetKind.StaffOrTab or TargetKind.ScorePart or TargetKind.StaffLines
-            or TargetKind.StaffSelector;
+            or TargetKind.StaffSelector or TargetKind.KeywordValue or TargetKind.BarNumberEvery
+            or TargetKind.PaperSize;
 
     /// <summary>A written thing the caret is on: its kind and its node (a
     /// <see cref="NoteSyntax"/>, a <see cref="PitchSyntax"/> or <see cref="ScaleDegreeSyntax"/>
@@ -325,7 +335,8 @@ public static partial class NoteStepper
             if (t.Kind is TargetKind.Dynamic or TargetKind.Articulation or TargetKind.Time or TargetKind.HeaderValue
                 or TargetKind.Font or TargetKind.Instrument or TargetKind.Tuning or TargetKind.Percent
                 or TargetKind.StaffGroup or TargetKind.StaffOrTab or TargetKind.FontSize or TargetKind.ScorePart
-                or TargetKind.StaffLines or TargetKind.StaffSelector)
+                or TargetKind.StaffLines or TargetKind.StaffSelector or TargetKind.KeywordValue
+                or TargetKind.BarNumberEvery or TargetKind.PaperSize or TargetKind.InstrumentPreset)
             {
                 var (valueEdit, valueSaid) = t.Kind switch
                 {
@@ -341,6 +352,16 @@ public static partial class NoteStepper
                     TargetKind.StaffSelector => StaffSelectorAt(tree, t.Node.Span.Start) is { } sel
                         ? StaffSelectorEdit(sel.Row, sel.Word, sel.Value, sel.OnValue, dir)
                         : (null, "as: write a selector (as lines 1)"),
+                    TargetKind.KeywordValue => KeywordValueAt(tree, t.Node.Span.Start) is { } kv
+                        ? KeywordValueEdit(tree, kv.Keyword, kv.Value, dir)
+                        : (null, "write a value"),
+                    TargetKind.BarNumberEvery => CountEdit((SyntaxTokenNode)t.Node, dir, "barNumbers every"),
+                    TargetKind.PaperSize => PaperSizeAt(tree, t.Node.Span.Start) is { } page
+                        ? PaperSizeEdit(page.First, page.Last, page.Name, dir)
+                        : (null, "size: write a page (size a4)"),
+                    TargetKind.InstrumentPreset => InstrumentPresetAt(tree, t.Node.Span.Start) is { } preset
+                        ? InstrumentPresetEdit(preset.First, preset.Last, preset.Preset, dir)
+                        : (null, "instrument: write a preset (instrument flute)"),
                     TargetKind.FontSize => FontSizeAt(tree, t.Node.Span.Start) is { } size
                         ? FontSizeEdit(size.Word, size.Operand, dir, semitone)
                         : (null, "size: write its number first (lyrics size 2.2)"),
@@ -507,6 +528,14 @@ public static partial class NoteStepper
             return new Target(TargetKind.StaffLines, staffLines);
         if (StaffSelectorAt(tree, offset) is { } selector)
             return new Target(TargetKind.StaffSelector, selector.OnValue && selector.Value != null ? selector.Value : selector.Word);
+        if (BarNumberEveryAt(tree, offset) is { } every)
+            return new Target(TargetKind.BarNumberEvery, every);
+        if (PaperSizeAt(tree, offset) is { } pageSize)
+            return new Target(TargetKind.PaperSize, pageSize.First);
+        if (InstrumentPresetAt(tree, offset) is { } preset)
+            return new Target(TargetKind.InstrumentPreset, preset.Property);
+        if (KeywordValueAt(tree, offset) is { } keywordValue)
+            return new Target(TargetKind.KeywordValue, keywordValue.Value);
         if (ScorePartNameAt(tree, offset) is { } scorePart)
             return new Target(TargetKind.ScorePart, scorePart);
         // A mark with nothing of its own to step — a dynamic on no ladder (@sfz), an articulation
@@ -695,6 +724,7 @@ public static partial class NoteStepper
                 TargetKind.Chord => node is ChordSyntax or ArpeggioSyntax,
                 TargetKind.Instrument => node is PropertyAssignmentSyntax { NameToken.Text: "midiInstrument" },
                 TargetKind.Tuning => node is PropertyAssignmentSyntax { NameToken.Text: "tuning" },
+                TargetKind.InstrumentPreset => node is PropertyAssignmentSyntax { NameToken.Text: "instrument" },
                 _ => node is MusicMarkSyntax { Name: "chord" } or ChordEntrySyntax
                     or ChordSyntax { IsShapeChord: true },
             };
@@ -1181,6 +1211,8 @@ public static partial class NoteStepper
             return InstrumentVoice((PropertyAssignmentSyntax)target.Node);
         if (target.Kind == TargetKind.Tuning)
             return TuningVoice((PropertyAssignmentSyntax)target.Node);
+        if (target.Kind == TargetKind.InstrumentPreset)
+            return PresetVoice((PropertyAssignmentSyntax)target.Node);
         var index = SoundIndex.Of(sounding);
         switch (target.Kind)
         {

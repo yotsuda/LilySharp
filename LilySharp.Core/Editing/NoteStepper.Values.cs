@@ -326,6 +326,13 @@ public static partial class NoteStepper
         if (InstrumentNameToken(property) is not { } token
             || Midi.GeneralMidi.ProgramOf(StringLiteral.Value(token.Text)) is not int program)
             return Voice.Silent;
+        return SampleVoice(program);
+    }
+
+    /// <summary>One note in <paramref name="program"/>, where its family sounds like itself — what a
+    /// <c>midiInstrument</c> and an <c>instrument</c> preset sound when they change.</summary>
+    private static Voice SampleVoice(int program)
+    {
         int pitch = program switch
         {
             >= 32 and <= 39 or 43 or 58 or 70 => 43,   // bass, contrabass, tuba, bassoon

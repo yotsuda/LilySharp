@@ -32,7 +32,9 @@ workflow attaches that section to the GitHub Release verbatim.
   one-staff kinds; `combinedStaff` only for two parts; PageUp / PageDown jump between the two
   families, `grandStaff` ⇄ `condensedStaff`), on a
   `staff` / `tab` row the one to the other, and on the part a row names (`staff melody`) the
-  file's next or previous part; on a staff row's `as lines N` the line count, on its `as`
+  file's next or previous part; on a part's `instrument` the preset (and it sounds); on a value
+  word right after its keyword its values (`transposition`, `pedal`, `pitch`, the layout words,
+  `paper` `size`, `chords … as`, `tab … as`, a fonts `as`); on a staff row's `as lines N` the line count, on its `as`
   selector word the selector (`lines` / `removeEmpty` / `pitch`), on a `removeEmpty` / `pitch`
   value the value.
 - **Lily#: Fix OMR Marks with AI…** rewrites the bars an OMR reader marked as doubtful (`@todo`),

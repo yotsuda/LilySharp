@@ -1118,6 +1118,132 @@ public class StepRequestTests
         Assert.DoesNotContain("staffGroup", inside.Message ?? "");
     }
 
+    // ---------------------------------------------------------------- value words (owner's request 2026-10-24)
+
+    private static string Header(string property) => $"part m {{ {property} }}\nsection A {{ m {{ c'4 d' e' f' }} }}\nform {{ A }}\nscore {{ staff m }}\n";
+
+    /// <summary>A value word walks its keyword's list as the completion lists it, Down down it.</summary>
+    private static void WalksTheList(Func<string, string> book, System.Collections.Generic.IReadOnlyCollection<string> values,
+        Func<string, string>? marked = null)
+    {
+        var list = values.ToList();
+        marked ??= v => "‸" + v;
+        for (int i = 0; i + 1 < list.Count; i++)
+        {
+            Assert.Equal(book(list[i + 1]), Step(book(marked(list[i])), -1, semitone: true).After);
+            Assert.Equal(book(list[i]), Step(book(marked(list[i + 1])), +1).After);
+        }
+        var (first, same) = Step(book(marked(list[0])), +1, semitone: true);
+        Assert.False(first.Fallback, first.Error);
+        Assert.Equal(book(list[0]), same);
+        Assert.Contains("first", first.Message);
+    }
+
+    [Fact]
+    public void APartHeadersValueWords_WalkTheirLists()
+    {
+        var V = typeof(LilySharp.Core.Semantics.LanguageVocabulary);
+        WalksTheList(v => Header("transposition " + v), LilySharp.Core.Semantics.LanguageVocabulary.TranspositionMarkers);
+        WalksTheList(v => Header("pedal " + v), LilySharp.Core.Semantics.LanguageVocabulary.PedalStyles);
+        WalksTheList(v => Header("pitch " + v), LilySharp.Core.Semantics.LanguageVocabulary.PitchModes);
+    }
+
+    [Fact]
+    public void AScoresPitchWalksThePagesModes_AndTheFilesTheNotesModes()
+    {
+        WalksTheList(v => $"part m {{ }}\nsection A {{ m {{ c'4 }} }}\nform {{ A }}\nscore full pitch {v} {{ staff m }}\n",
+            LilySharp.Core.Semantics.LanguageVocabulary.PagePitchModes);
+        WalksTheList(v => $"pitch {v}\npart m {{ }}\nsection A {{ m {{ c'4 }} }}\n",
+            LilySharp.Core.Semantics.LanguageVocabulary.PitchModes);
+    }
+
+    [Fact]
+    public void ALayoutsValueWords_WalkTheirLists()
+    {
+        string L(string entry) => $"layout {{ {entry} }}\npart m {{ }}\nsection A {{ m {{ c'4 }} }}\n";
+        var vocab = new (string Key, System.Collections.Generic.IReadOnlyCollection<string> Words)[]
+        {
+            ("markTempo", LilySharp.Core.Semantics.LanguageVocabulary.MarkArrangements),
+            ("accidentals", LilySharp.Core.Semantics.LanguageVocabulary.AccidentalStyleWords),
+            ("sectionLabels", LilySharp.Core.Semantics.LanguageVocabulary.SectionLabelStyles),
+            ("partCombineText", LilySharp.Core.Semantics.LanguageVocabulary.PartCombineTextWords),
+            ("chordQualities", LilySharp.Core.Semantics.LanguageVocabulary.ChordQualityStyleWords),
+            ("minorChords", LilySharp.Core.Semantics.LanguageVocabulary.MinorChordWords),
+            ("chordNames", LilySharp.Core.Semantics.LanguageVocabulary.ChordNameWords),
+            ("chordList", LilySharp.Core.Semantics.LanguageVocabulary.ChordListWords),
+            ("compressRests", LilySharp.Core.Semantics.LanguageVocabulary.CompressRestsWords),
+        };
+        foreach (var (key, words) in vocab)
+            WalksTheList(v => L($"{key} {v}"), words);
+    }
+
+    [Fact]
+    public void BarNumbers_StepTheirPolicy_AndEverysNumber()
+    {
+        string L(string entry) => $"layout {{ {entry} }}\npart m {{ }}\nsection A {{ m {{ c'4 }} }}\n";
+        var words = LilySharp.Core.Semantics.LanguageVocabulary.BarNumberPolicies.ToList();
+        int every = words.IndexOf("every");
+        Assert.True(every > 0, string.Join(", ", words));
+        // Arriving at `every` writes a number; leaving it takes the number away.
+        Assert.Equal(L("barNumbers every 4"), Step(L("barNumbers ‸" + words[every - 1]), -1, semitone: true).After);
+        Assert.Equal(L("barNumbers " + words[every - 1]), Step(L("barNumbers ‸every 4"), +1, semitone: true).After);
+        // The number steps by one, from 1.
+        Assert.Equal(L("barNumbers every 5"), Step(L("barNumbers every ‸4"), +1, semitone: true).After);
+        var (fewest, same) = Step(L("barNumbers every 1‸"), -1, semitone: true);
+        Assert.Equal(L("barNumbers every 1"), same);
+        Assert.Contains("fewest", fewest.Message);
+    }
+
+    [Fact]
+    public void AScoreRowsAsWords_AndAFontsFamily_Step()
+    {
+        Assert.Equal(Score("tab rh as full"), Step(Score("tab rh as ‸numbers"), -1, semitone: true).After);
+        Assert.Equal(Score("tab rh as numbers"), Step(Score("tab rh as full‸"), +1).After);
+        const string Chords = "part m {{ }}\nchords c {{ C1 }}\nsection A {{ m {{ c'1 }} }}\nform {{ A }}\nscore {{ staff m chords c as {0} }}\n";
+        Assert.Equal(string.Format(Chords, "names"), Step(string.Format(Chords, "‸roman"), -1, semitone: true).After);
+        const string Fonts = "fonts {{\n  chord as {0}\n}}\npart m {{ }}\nsection A {{ m {{ c'4 }} }}\n";
+        Assert.Equal(string.Format(Fonts, "sans"), Step(string.Format(Fonts, "‸serif"), -1, semitone: true).After);
+    }
+
+    [Fact]
+    public void APapersSize_WalksThePages()
+    {
+        var sizes = LilySharp.Core.Semantics.LanguageVocabulary.PaperSizeNames.ToList();
+        int a4 = sizes.FindIndex(s => s == "a4");
+        Assert.True(a4 >= 0 && a4 + 1 < sizes.Count, string.Join(", ", sizes));
+        string P(string size) => $"paper {{ size {size} }}\npart m {{ }}\nsection A {{ m {{ c'4 }} }}\n";
+        // `a4` lexes as a pitch and a duration; the two are one name.
+        Assert.Equal(P(sizes[a4 + 1]), Step(P("a‸4"), -1, semitone: true).After);
+        Assert.Equal(P("a4"), Step(P(sizes[a4 + 1] + "‸"), +1).After);
+    }
+
+    [Fact]
+    public void AnInstrumentPreset_WalksThePresets_AndSounds()
+    {
+        var presets = LilySharp.Core.Semantics.LanguageVocabulary.InstrumentPresets.ToList();
+        Assert.True(presets.Count > 2);
+        var (down, after) = Step(Header("instrument ‸" + presets[0]), -1, semitone: true);
+        Assert.False(down.Fallback, down.Error);
+        Assert.Equal(Header("instrument " + presets[1]), after);
+        Assert.Contains($"2 of {presets.Count}", down.Message);
+        Assert.Single(down.Pitches);
+        Assert.Equal(LilySharp.Core.Svg.Model.InstrumentDefaults.GetMidiProgram(presets[1]), down.Program);
+        // A hyphenated preset is one word; a display name after it stays.
+        int sax = presets.FindIndex(p => p.Contains('-'));
+        Assert.True(sax > 0);
+        Assert.Equal(Header($"instrument {presets[sax - 1]} \"Sax\""),
+            Step(Header($"instrument ‸{presets[sax]} \"Sax\""), +1, semitone: true).After);
+        // Typing it sounds it too: the audition answers on it.
+        string text = Header("instrument " + presets[1]);
+        var answer = Open(text).AuditionAt(new AuditionAtParams
+        {
+            TextDocument = new TextDocumentIdentifier { Uri = DocUri },
+            Offset = text.IndexOf(presets[1], StringComparison.Ordinal) + 1,
+        });
+        Assert.Equal("instrumentpreset", answer.Kind);
+        Assert.Single(answer.Pitches);
+    }
+
     // ---------------------------------------------------------------- tuning
 
     private static string Tuning(string word) => $"part b {{ tuning {word} }}\nsection A {{ b {{ c4 d e f }} }}\n";
