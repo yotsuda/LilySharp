@@ -4,6 +4,13 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+### Ctrl+I on an empty line works on the whole score
+
+- **With nothing selected and the caret on an empty line, Ctrl+I transforms the whole file** —
+  the input box says so (*transform the whole score with AI*), and the working label stands on
+  the caret's line. It used to stop with "select some notation". On a line of music it still
+  takes that line, and a selection still takes the selection.
+
 ### Ctrl+I shows that it is working
 
 - **The AI transform says what it is doing, beside the selection** — as soon as the instruction

@@ -136,14 +136,22 @@ async function runAiTransform(deps: AiTransformDeps): Promise<void> {
     const doc = editor.document;
 
     // A range is required — an empty selection uses the current line so Ctrl+I on a
-    // single line "just works".
+    // single line "just works". On an EMPTY line with nothing selected, the whole score is the
+    // range (owner's request 2026-10-24: "sometimes I want the AI to look at the whole score");
+    // it used to be refused there. The working label then stands on the caret's line, in view.
     let sel: vscode.Range = editor.selection;
+    let whole = false;
     if (sel.isEmpty) {
         sel = doc.lineAt(editor.selection.active.line).range;
+        if (doc.getText(sel).trim().length === 0) {
+            whole = true;
+            sel = new vscode.Range(doc.positionAt(0), doc.positionAt(doc.getText().length));
+        }
     }
+    const labelAt = whole ? doc.lineAt(editor.selection.active.line).range : sel;
     const selectedText = doc.getText(sel);
     if (selectedText.trim().length === 0) {
-        vscode.window.showErrorMessage('Lily#: select some notation to transform (or place the cursor on a non-empty line).');
+        vscode.window.showErrorMessage('Lily#: the file is empty — write some notation first.');
         return;
     }
 
@@ -159,8 +167,10 @@ async function runAiTransform(deps: AiTransformDeps): Promise<void> {
     };
 
     const instruction = await vscode.window.showInputBox({
-        title: 'Lily# — transform selection with AI',
-        prompt: 'Describe the change (natural language)',
+        title: whole ? 'Lily# — transform the whole score with AI' : 'Lily# — transform selection with AI',
+        prompt: whole
+            ? 'Nothing is selected, so the AI works on the whole file. Describe the change (natural language)'
+            : 'Describe the change (natural language)',
         placeHolder: nextPlaceholder(),
         ignoreFocusOut: true,
     });
@@ -170,8 +180,9 @@ async function runAiTransform(deps: AiTransformDeps): Promise<void> {
 
     // Soft-lock the range while we work (§7): non-blocking, purely visual — at once, with the
     // working label, so the screen answers the instruction before the model does.
-    applySoftLock(editor, sel);
-    showWorking(editor, sel, 'taking the instruction…');
+    // The whole score is not shaded: the label alone says so, where the caret is.
+    applySoftLock(editor, whole ? undefined : sel);
+    showWorking(editor, labelAt, whole ? 'taking the instruction (the whole score)…' : 'taking the instruction…');
 
     // Resolve the model: the user's Copilot models (vscode.lm) or a BYO key.
     const chat = await resolveChatClient(false);
@@ -197,7 +208,7 @@ async function runAiTransform(deps: AiTransformDeps): Promise<void> {
                 const both = {
                     report(value: { message?: string }) {
                         progress.report(value);
-                        if (value.message) { showWorking(editor, sel, value.message); }
+                        if (value.message) { showWorking(editor, labelAt, value.message); }
                     },
                 };
                 both.report({ message: `asking ${chat.label}…` });
@@ -953,7 +964,8 @@ async function applyCandidate(deps: AiTransformDeps, snapshot: Snapshot, candida
 // Soft lock decoration (§7)
 // ======================================================================
 
-function applySoftLock(editor: vscode.TextEditor, range: vscode.Range): void {
+/** Shades the range being transformed (none for the whole score) and readies the working label. */
+function applySoftLock(editor: vscode.TextEditor, range: vscode.Range | undefined): void {
     clearSoftLock();
     softLockDecoration = vscode.window.createTextEditorDecorationType({
         backgroundColor: new vscode.ThemeColor('editor.wordHighlightBackground'),
@@ -961,7 +973,7 @@ function applySoftLock(editor: vscode.TextEditor, range: vscode.Range): void {
         overviewRulerColor: new vscode.ThemeColor('editorInfo.foreground'),
         overviewRulerLane: vscode.OverviewRulerLane.Full,
     });
-    editor.setDecorations(softLockDecoration, [range]);
+    editor.setDecorations(softLockDecoration, range ? [range] : []);
     workingDecoration = vscode.window.createTextEditorDecorationType({
         after: { color: new vscode.ThemeColor('editorCodeLens.foreground'), fontStyle: 'italic', margin: '0 0 0 2em' },
     });
