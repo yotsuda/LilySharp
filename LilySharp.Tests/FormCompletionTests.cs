@@ -143,7 +143,7 @@ public class FormCompletionTests
             .OrderBy(i => i.SortText, System.StringComparer.Ordinal)
             .Select(i => i.Label!).ToArray();
         Assert.Equal(
-            new[] { "Intro", "Verse", "~Intro", "~Verse", "||", "|:", ":|", ":|:", ":|*3", "|.", "!",
+            new[] { "Intro", "Verse", "~Intro", "~Verse", "||", "|:", ":|", ":|*3", ":|:", "|.", "!",
                     "[1. ]", "[2. ]", "[3. ]", "[1-2. ]", "segno" },
             sorted.Take(16).ToArray());
         Assert.True(System.Array.IndexOf(sorted, "break") > System.Array.IndexOf(sorted, "ds al coda"));

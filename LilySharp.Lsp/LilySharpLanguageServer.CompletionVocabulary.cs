@@ -146,8 +146,9 @@ public sealed partial class LilySharpLanguageServer
         items.Add(Item("||", "Double barline", CompletionItemKind.Operator, "2a"));
         items.Add(Item("|:", "Repeat start — |: … :|", CompletionItemKind.Operator, "2b"));
         items.Add(Item(":|", "Repeat end (:|*3 to play three times)", CompletionItemKind.Operator, "2c"));
-        items.Add(Item(":|:", "Repeat end and the next repeat's start, back to back", CompletionItemKind.Operator, "2d"));
-        items.Add(Snippet(":|*3", ":|*${1:3}", "Repeat end played N times", "2e"));
+        // The counted close right after the plain one (owner's request 2026-10-24).
+        items.Add(Snippet(":|*3", ":|*${1:3}", "Repeat end played N times", "2d"));
+        items.Add(Item(":|:", "Repeat end and the next repeat's start, back to back", CompletionItemKind.Operator, "2e"));
         items.Add(Item("|.", "Final barline", CompletionItemKind.Operator, "2f"));
         items.Add(Item("!", "Dotted barline", CompletionItemKind.Operator, "2g"));
         items.Add(Snippet("[1. ]", "[1. $0]", "1st ending (volta bracket)", "3a"));
