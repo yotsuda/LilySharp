@@ -521,6 +521,9 @@ export interface DiffPiece {
     readonly start: number;
     /** Where the spaces before it start (its start when it is glued to the piece before). */
     readonly lead: number;
+    /** A changed piece told character by character against the one it replaces (`a16` → `a,16`:
+     *  only the `,` is new) — how the text prints it; the pictures still paint the whole note. */
+    readonly parts?: readonly { readonly text: string; readonly kind: 'same' | 'del' | 'add' }[];
 }
 
 /**
@@ -673,7 +676,73 @@ export function wordDiff(written: string, proposal: string): { before: DiffPiece
     }
     while (i < n) { before.push({ ...a[i++], kind: 'del' }); }
     while (j < m) { after.push({ ...b[j++], kind: 'add' }); }
+    return refined(before, after);
+}
+
+/**
+ * The changed pieces told character by character (owner's report 2026-10-24: `a16` → `a,16`
+ * struck the whole `a16` and greened the whole `a,16`; only the `,` is new). Between the same
+ * two kept pieces, as many removed as added pieces are paired in order, and a pair that shares
+ * at least half of the longer one gets `parts`. Marks (`@…`) are printed shortened, so stay whole.
+ */
+function refined(before: DiffPiece[], after: DiffPiece[]): { before: DiffPiece[]; after: DiffPiece[] } {
+    const runs = (pieces: DiffPiece[]): number[][] => {
+        const out: number[][] = [[]];
+        pieces.forEach((p, k) => p.kind === 'same' ? out.push([]) : out[out.length - 1].push(k));
+        return out;
+    };
+    const dels = runs(before), adds = runs(after);
+    for (let r = 0; r < dels.length && r < adds.length; r++) {
+        if (dels[r].length !== adds[r].length) {
+            continue;
+        }
+        dels[r].forEach((di, k) => {
+            const ai = adds[r][k];
+            const x = before[di].text, y = after[ai].text;
+            if (x.startsWith('@') || y.startsWith('@')) {
+                return;
+            }
+            const split = charDiff(x, y);
+            if (split.common * 2 >= Math.max(x.length, y.length)) {
+                before[di] = { ...before[di], parts: split.x };
+                after[ai] = { ...after[ai], parts: split.y };
+            }
+        });
+    }
     return { before, after };
+}
+
+/** Two pieces character by character: the longest common run kept, the rest removed / added. */
+function charDiff(x: string, y: string): {
+    common: number;
+    x: { text: string; kind: 'same' | 'del' }[];
+    y: { text: string; kind: 'same' | 'add' }[];
+} {
+    const n = x.length, m = y.length;
+    const lcs: number[][] = Array.from({ length: n + 1 }, () => new Array<number>(m + 1).fill(0));
+    for (let i = n - 1; i >= 0; i--) {
+        for (let j = m - 1; j >= 0; j--) {
+            lcs[i][j] = x[i] === y[j] ? lcs[i + 1][j + 1] + 1 : Math.max(lcs[i + 1][j], lcs[i][j + 1]);
+        }
+    }
+    const xs: { text: string; kind: 'same' | 'del' }[] = [], ys: { text: string; kind: 'same' | 'add' }[] = [];
+    const put = <K extends string>(list: { text: string; kind: K }[], c: string, kind: K): void => {
+        const last = list[list.length - 1];
+        if (last && last.kind === kind) { last.text += c; } else { list.push({ text: c, kind }); }
+    };
+    let i = 0, j = 0;
+    while (i < n && j < m) {
+        if (x[i] === y[j]) {
+            put(xs, x[i++], 'same'); put(ys, y[j++], 'same');
+        } else if (lcs[i + 1][j] >= lcs[i][j + 1]) {
+            put(xs, x[i++], 'del');
+        } else {
+            put(ys, y[j++], 'add');
+        }
+    }
+    while (i < n) { put(xs, x[i++], 'del'); }
+    while (j < m) { put(ys, y[j++], 'add'); }
+    return { common: lcs[0][0], x: xs, y: ys };
 }
 
 /** The file with the target's line replaced by `bar`. */

@@ -498,6 +498,25 @@ describe('reading the answer', () => {
         assert.equal(same.before.every(p => p.kind === 'same') && same.after.every(p => p.kind === 'same'), true);
     });
 
+    it('tells a changed note character by character, for the text', () => {
+        // The owner's report: a16 → a,16 marks only the ",", nothing struck in a16.
+        const parts = (ps: readonly { parts?: readonly { text: string; kind: string }[] }[]) =>
+            ps.filter(p => p.parts).map(p => p.parts!.map(x => x.kind === 'same' ? x.text : `[${x.kind === 'del' ? '-' : '+'}${x.text}]`).join(''));
+        const oct = wordDiff('a2. b8. a16 |', 'a2. b8. a,16 |');
+        assert.deepEqual(parts(oct.before), ['a16']);
+        assert.deepEqual(parts(oct.after), ['a[+,]16']);
+        // The pictures still paint the whole note.
+        assert.deepEqual(rangesOf(oct.after, 'add', 0), [[7, 12]]);
+        assert.deepEqual(parts(wordDiff('a,4@p( fis4) |', 'a,4@p( f4) |').before), ['f[-is]4']);
+        // Paired in order when as many go as come; too different a pair, or a mark, stays whole.
+        const two = wordDiff('c4 d8 e8 |', 'c4 d,8 e8. |');
+        assert.deepEqual(parts(two.after), ['d[+,]8', 'e8[+.]']);
+        assert.deepEqual(parts(two.before), ['d8', 'e8']);
+        assert.deepEqual(parts(wordDiff('c4 e8 |', 'c4 e16 |').after), []);
+        assert.deepEqual(parts(wordDiff('c4 r8 |', 'c4 gis16 |').after), []);
+        assert.deepEqual(parts(wordDiff('c4@p |', 'c4@pp |').after), []);
+    });
+
     it('places the pieces in the document, to paint the drawn notes', () => {
         // A drawn note's data-pos is where the spaces before it start: each range reaches back to them.
         const d = wordDiff('f,2 f,4@todo(b2-p2 "x") |', 'f,2 f,4. |');

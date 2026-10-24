@@ -1248,11 +1248,13 @@ function esc(s: string): string {
     return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
-/** A line of the word diff as HTML: removed pieces in <del>, added ones in <ins>. */
+/** A line of the word diff as HTML: removed pieces in <del>, added ones in <ins> — a piece told
+ *  character by character (its `parts`) only the characters that changed. */
 function piecesHtml(pieces: readonly DiffPiece[]): string {
+    const tag = (kind: DiffPiece['kind'], text: string): string =>
+        kind === 'del' ? `<del>${text}</del>` : kind === 'add' ? `<ins>${text}</ins>` : text;
     return pieces.map((p, i) => {
-        const text = esc(shortTodos(p.text));
-        const body = p.kind === 'del' ? `<del>${text}</del>` : p.kind === 'add' ? `<ins>${text}</ins>` : text;
+        const body = p.parts ? p.parts.map(x => tag(x.kind, esc(x.text))).join('') : tag(p.kind, esc(shortTodos(p.text)));
         return (p.space && i > 0 ? ' ' : '') + body;
     }).join('');
 }
