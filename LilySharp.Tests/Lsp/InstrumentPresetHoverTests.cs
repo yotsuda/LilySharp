@@ -68,6 +68,18 @@ public class InstrumentPresetHoverTests
     }
 
     [Fact]
+    public void TheLines_StandInTheOwnersOrder()
+    {
+        // Owner's request 2026-10-24, as the completion's and the status line's: what every preset
+        // has first (clef, MIDI sound, octave), what few have last (tuning, transposition).
+        var heads = HoverAt(Book("instrument bass"), "bass")!.Split('\n')
+            .Where(l => l.StartsWith("- ", StringComparison.Ordinal))
+            .Select(l => l[3..].Split(' ')[0].TrimEnd('`'))
+            .ToArray();
+        Assert.Equal(["clef", "midiInstrument", "octave", "tuning", "transposition"], heads);
+    }
+
+    [Fact]
     public void TheWordInstrument_HoversTheSame()
         => Assert.Equal(HoverAt(Book("instrument bass"), "bass"), HoverAt(Book("instrument bass"), "instrument"));
 

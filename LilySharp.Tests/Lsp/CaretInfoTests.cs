@@ -89,8 +89,9 @@ public class CaretInfoTests
 
     [Fact]
     public void AnInstrumentPreset_SaysItsDefaults_WithoutThePrintedName()
-        => Assert.Equal("instrument bass: clef bass · octave 3 · transposition 8vb (written C3 sounds C2) · tuning bass"
-            + " · midiInstrument \"electric bass (finger)\"", InfoAt(Part("instrument ba‸ss")));
+        // The owner's order (2026-10-24), the completion's and the hover's too.
+        => Assert.Equal("instrument bass: clef bass · midiInstrument \"electric bass (finger)\" · octave 3 · tuning bass"
+            + " · transposition 8vb (written C3 sounds C2)", InfoAt(Part("instrument ba‸ss")));
 
     [Fact]
     public void AStaffGroup_SaysHowItEngraves()

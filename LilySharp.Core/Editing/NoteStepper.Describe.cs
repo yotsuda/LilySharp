@@ -315,13 +315,15 @@ public static partial class NoteStepper
     {
         if (FactsOf(name) is not { } f)
             return null;
-        var parts = new System.Collections.Generic.List<string> { $"clef {f.Clef}", $"octave {f.Octave}" };
-        if (f.Shift != 0)
-            parts.Add($"{f.ShiftWords} ({f.BareC})");
-        if (f.Tuning != null)
-            parts.Add($"tuning {f.Tuning}");
+        // The owner's order, as PresetDefaultLines (2026-10-24): what every preset has first.
+        var parts = new System.Collections.Generic.List<string> { $"clef {f.Clef}" };
         if (f.Sound != null)
             parts.Add($"midiInstrument \"{f.Sound}\"");
+        parts.Add($"octave {f.Octave}");
+        if (f.Tuning != null)
+            parts.Add($"tuning {f.Tuning}");
+        if (f.Shift != 0)
+            parts.Add($"{f.ShiftWords} ({f.BareC})");
         return string.Join(" · ", parts);
     }
 

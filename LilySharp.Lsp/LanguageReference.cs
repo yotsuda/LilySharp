@@ -245,10 +245,21 @@ internal static class LanguageReference
         // The name in the bold too (owner's request 2026-10-24): **Instrument preset violin** — and
         // not as code, whose padding VS Code draws widened the one space before it (same day).
         sb.Append($"**Instrument preset {preset}** — the defaults it sets; a property of the part replaces each:\n\n");
+        // The owner's order (2026-10-24), the completion's and the status line's too: what every
+        // preset has first — clef, MIDI sound, octave — then what few have — tuning, transposition.
         sb.Append(Line($"`clef {LilySharp.Core.Svg.Model.InstrumentDefaults.ClefWord(clef)}`", Own("clef"))).Append('\n');
+        if (LilySharp.Core.Svg.Model.InstrumentDefaults.GetMidiProgram(preset) is int program)
+            sb.Append(Line($"`midiInstrument \"{LilySharp.Core.Midi.GeneralMidi.InstrumentNames[program]}\"`",
+                own.TryGetValue("midiInstrument", out var mi) ? $"midiInstrument \"{mi}\"" : null)).Append('\n');
         // `octave absolute` / `relative` choose a mode, not the register: only a number replaces it.
         sb.Append(Line($"`octave {octave}` — a bare `c` is written C{octave}",
             own.TryGetValue("octave", out var o) && int.TryParse(o, out _) ? Own("octave") : null)).Append('\n');
+        if (LilySharp.Core.Svg.Model.InstrumentDefaults.GetTuning(preset) is { } tuningWord)
+        {
+            var strings = LilySharp.Core.Tablature.Tunings.GetTuning(LilySharp.Core.Tablature.Tunings.Parse(tuningWord));
+            sb.Append(Line($"`tuning {tuningWord}` — {string.Join(" ", strings.Select(s => PitchName(s, flats: false)))}"
+                + " (the strings a tab frets on)", Own("tuning"))).Append('\n');
+        }
         // Every line starts with a code span: VS Code pads one on its left, so a line that started
         // with plain words stood out of the column (the owner's report, 2026-10-24). A shift no
         // ottava marker writes (the clarinet's −2) names the property alone.
@@ -259,16 +270,7 @@ internal static class LanguageReference
         sb.Append(Line(shift == 0
             ? "`transposition` — none, sounds as written"
             : $"{marker} — sounds {Math.Abs(shift)} semitones {(shift < 0 ? "lower" : "higher")}: "
-              + $"written C{octave} sounds {PitchName(written + shift, flats: true)}", Own("transposition"))).Append('\n');
-        if (LilySharp.Core.Svg.Model.InstrumentDefaults.GetTuning(preset) is { } tuningWord)
-        {
-            var strings = LilySharp.Core.Tablature.Tunings.GetTuning(LilySharp.Core.Tablature.Tunings.Parse(tuningWord));
-            sb.Append(Line($"`tuning {tuningWord}` — {string.Join(" ", strings.Select(s => PitchName(s, flats: false)))}"
-                + " (the strings a tab frets on)", Own("tuning"))).Append('\n');
-        }
-        if (LilySharp.Core.Svg.Model.InstrumentDefaults.GetMidiProgram(preset) is int program)
-            sb.Append(Line($"`midiInstrument \"{LilySharp.Core.Midi.GeneralMidi.InstrumentNames[program]}\"`",
-                own.TryGetValue("midiInstrument", out var mi) ? $"midiInstrument \"{mi}\"" : null));
+              + $"written C{octave} sounds {PitchName(written + shift, flats: true)}", Own("transposition")));
         return sb.ToString().TrimEnd();
     }
 
