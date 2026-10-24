@@ -1005,7 +1005,7 @@ function panelHtml(deps: OmrAiFixDeps, webview: vscode.Webview, run: FixRun): st
             // The bar to write, editable (owner's request 2026-10-24): a click opens it; the
             // picture and the gates follow the typing.
             + (can ? `<pre class="src after editable" data-i="${r.index}" title="Click to edit the bar — the picture and the gates follow">${parts.afterText}</pre>`
-                + `<textarea class="edit" data-i="${r.index}" spellcheck="false" hidden>${esc(barOf(r) ?? resolvedLine(t.written))}</textarea>`
+                + `<textarea class="edit" data-i="${r.index}" data-base="${t.start}" data-indent="${t.start - (run.text.lastIndexOf('\n', t.start - 1) + 1)}" spellcheck="false" hidden>${esc(barOf(r) ?? resolvedLine(t.written))}</textarea>`
                 : `<pre class="src after" data-i="${r.index}">${parts.afterText}</pre>`) + `</td>
 </tr>`;
     }).join('\n');
@@ -1216,7 +1216,7 @@ ${rows}
     for (const el of root.querySelectorAll('[data-pos], [data-alt]')) {
       const tag = el.tagName.toLowerCase();
       if (el.classList.contains('nh-hit') || (tag === 'rect' && !el.getAttribute('stroke') && el.getAttribute('fill'))) continue;
-      const pos = [parseInt(el.getAttribute('data-pos'), 10), ...String(el.getAttribute('data-alt') || '').split(/\s+/).map(Number)];
+      const pos = [parseInt(el.getAttribute('data-pos'), 10), ...String(el.getAttribute('data-alt') || '').split(/\\s+/).map(Number)];
       if (!pos.some(n => !isNaN(n) && hit(n))) continue;
       // The colour it had, kept once, so an edit can take a row's paint off again (color null).
       if (!el.hasAttribute('data-was')) el.setAttribute('data-was', (el.getAttribute('fill') || '') + '|' + (el.getAttribute('stroke') || ''));
@@ -1254,6 +1254,46 @@ ${rows}
     vscode.postMessage({ action: 'edit', index: Number(i), text: ta.value, seq: seqs[i] });
   }
   function fit(ta) { ta.style.height = 'auto'; ta.style.height = (ta.scrollHeight + 2) + 'px'; }
+  // While the field is open the proposal's picture drops its green and lights, in blue, the notes
+  // the caret is on or the selection covers (owner's request 2026-10-24) — the field's offsets
+  // are the drawn notes' source offsets from where the bar starts (data-base). A note's data-pos
+  // is its node's full-span start, so the lit range reaches back over the spaces before it, and
+  // for the first piece over the line's indentation (as rangesOf does).
+  const BLUE = '#0078d7';
+  const afterSvg = i => { const h = q('div.after-pic', i); return h && h.querySelector('svg.score'); };
+  function lightSelection(i) {
+    const ta = q('textarea.edit', i), svg = afterSvg(i);
+    if (!ta || !svg) return;
+    const id = svg.dataset.sym;
+    if (svg.dataset.lit) paint(id, null, svg.dataset.lit);
+    svg.dataset.lit = '';
+    if (ta.hidden) return;
+    const v = ta.value;
+    let s = ta.selectionStart, e = ta.selectionEnd;
+    if (s === e) {
+      // A caret: the piece it is in or touches.
+      while (s > 0 && !/\\s/.test(v[s - 1])) s--;
+      while (e < v.length && !/\\s/.test(v[e])) e++;
+    }
+    if (s === e) return;
+    let b = s;
+    while (b > 0 && /\\s/.test(v[b - 1])) b--;
+    const base = +ta.dataset.base;
+    const lit = (base + b - (b === 0 ? +ta.dataset.indent : 0)) + ':' + (base + e);
+    svg.dataset.lit = lit;
+    paint(id, BLUE, lit);
+  }
+  function editLook(i, editing) {
+    const svg = afterSvg(i);
+    if (!svg) return;
+    if (editing) {
+      if (svg.dataset.paint) paint(svg.dataset.sym, null, svg.dataset.ranges);
+      lightSelection(i);
+    } else {
+      lightSelection(i);   // the field is hidden by now: this takes the blue off
+      if (svg.dataset.paint) paint(svg.dataset.sym, GREEN, svg.dataset.ranges);
+    }
+  }
   function openEdit(i) {
     const ta = q('textarea.edit', i);
     if (!ta) return;
@@ -1263,12 +1303,24 @@ ${rows}
     if (sent[i] === undefined) sent[i] = ta.value;
     fit(ta);
     ta.focus();
+    editLook(i, true);
   }
   function closeEdit(i) {
     sendEdit(i);
     q('textarea.edit', i).hidden = true;
     q('pre.src.after', i).hidden = false;
+    editLook(i, false);
   }
+  // The caret moves by keys, the mouse and typing; each lights its notes again.
+  for (const type of ['keyup', 'mouseup', 'select', 'focus']) {
+    document.addEventListener(type, e => {
+      if (e.target.matches && e.target.matches('textarea.edit') && !e.target.hidden) lightSelection(e.target.dataset.i);
+    }, true);
+  }
+  document.addEventListener('selectionchange', () => {
+    const a = document.activeElement;
+    if (a && a.matches && a.matches('textarea.edit') && !a.hidden) lightSelection(a.dataset.i);
+  });
   document.addEventListener('click', e => {
     const pre = e.target.closest && e.target.closest('pre.src.editable');
     if (pre) { openEdit(pre.dataset.i); return; }
@@ -1308,6 +1360,9 @@ ${rows}
     const holder = q('div.after-pic', i);
     holder.innerHTML = m.proposal;
     for (const svg of holder.querySelectorAll('svg.score')) setUp(svg);
+    // A picture that comes while the field is open shows the caret's notes, not the green.
+    const open = q('textarea.edit', i);
+    if (open && !open.hidden) editLook(i, true);
     q('pre.src.now', i).innerHTML = m.now;
     q('pre.src.after', i).innerHTML = m.after;
     const ta = q('textarea.edit', i);
