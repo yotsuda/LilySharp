@@ -56,6 +56,7 @@ public static partial class NoteStepper
             TargetKind.MusicCount when target.Node is SyntaxTokenNode { Parent: BarlineSyntax or FormRepeatBlockSyntax } count =>
                 $":|*{count.Text} closes the repeat - it plays {count.Text} times",
             TargetKind.PaperSize => PaperSizeAt(tree, offset) is { } size ? PaperSays(size.Name) : null,
+            TargetKind.FormSection => FormSectionSays(tree, (SyntaxTokenNode)target.Node),
             _ => null,
         };
     }
@@ -319,6 +320,46 @@ public static partial class NoteStepper
             return $":|*{count.Text} closes the repeat - it plays {count.Text} times";
         return BarlineSays(bar.Text, InForm(bar));
     }
+
+    /// <summary>A section a <c>form</c> names (owner's request 2026-10-24): its length, as the page
+    /// lays it out (<see cref="SectionSummary.Bars"/>), and which of the times this form names it
+    /// this one is. Null for a name no section declares.</summary>
+    private static string? FormSectionSays(SyntaxTree tree, SyntaxTokenNode name)
+    {
+        var root = tree.GetRoot();
+        if (SectionOverview.Build(root).FirstOrDefault(s => s.Name == name.Text) is not { } section)
+            return null;
+        string length = section.Bars switch
+        {
+            0 => "no music written",
+            1 => "1 bar",
+            int n => $"{n} bars",
+        };
+        // The references to it in the same form, in order.
+        FormDeclarationSyntax? FormOf(SyntaxNode node)
+        {
+            for (var p = node.Parent; p != null; p = p.Parent)
+                if (p is FormDeclarationSyntax f)
+                    return f;
+            return null;
+        }
+        var form = FormOf(name);
+        var same = SectionReferenceFinder.AllSectionNameTokens(root)
+            .Where(t => t.Text == name.Text && form != null && FormOf(t)?.Span == form.Span)
+            .OrderBy(t => t.Span.Start)
+            .ToList();
+        int index = same.FindIndex(t => t.Span.Start == name.Span.Start);
+        string times = same.Count <= 1 || index < 0
+            ? "named once in this form"
+            : $"the {Ordinal(index + 1)} of {same.Count} times this form names it";
+        return $"section {name.Text}: {length} · {times}";
+    }
+
+    private static string Ordinal(int n) => (n % 100) switch
+    {
+        11 or 12 or 13 => $"{n}th",
+        _ => (n % 10) switch { 1 => $"{n}st", 2 => $"{n}nd", 3 => $"{n}rd", _ => $"{n}th" },
+    };
 
     /// <summary>A page name: its size, in millimetres and inches.</summary>
     private static string? PaperSays(string name)

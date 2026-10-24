@@ -9,6 +9,8 @@ All notable changes to the Lily# VS Code extension are documented here.
 - **On a note or a chord: the part, the bar the page prints, the beat and the pitches** —
   `bar 12 · beat 2 + 1/2 · D4`; on a transposing part what it sounds too (`D4 sounds C4` on a
   clarinet, `E2 sounds E1` on a bass).
+- **On a section a `form` names: its length and which time this is** — `section A: 8 bars ·
+  the 2nd of 3 times this form names it`.
 
 ### Two slips against an instrument preset are warned
 

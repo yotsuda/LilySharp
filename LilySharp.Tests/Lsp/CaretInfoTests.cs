@@ -148,6 +148,16 @@ public class CaretInfoTests
     }
 
     [Fact]
+    public void AFormsSection_SaysItsLength_AndWhichTimeThisIs()
+    {
+        // Owner's request 2026-10-24.
+        string book = "part m { clef treble }\nsection A { m { c1 | d1 } }\nsection B { m { e1 } }\nform { A B A }\n";
+        Assert.Equal("section A: 2 bars · the 1st of 2 times this form names it", InfoAt(book.Replace("{ A B", "{ ‸A B")));
+        Assert.Equal("section A: 2 bars · the 2nd of 2 times this form names it", InfoAt(book.Replace("B A }", "B A‸ }")));
+        Assert.Equal("section B: 1 bar · named once in this form", InfoAt(book.Replace("A B A", "A B‸ A")));
+    }
+
+    [Fact]
     public void ARest_HasNoLine()
         => Assert.Null(InfoAt(Part("clef treble", "r‸4 d e f")));
 }
