@@ -233,7 +233,7 @@ public class ShapeChordItemTests
             MidiPitches(Book("instrument ukulele", "chord(C 0003)1 |")));
         Assert.Equal("G4 C4 E4 C5", Names(Notes("C 0003", TuningType.Ukulele)));
         Assert.Equal(new[] { 38, 45, 50, 57, 62, 66 },
-            MidiPitches(Book("tuning guitardropd", "chord(D 000232)1 |")));
+            MidiPitches(Book("tuning guitarDropD", "chord(D 000232)1 |")));
         // A six-string shape on the ukulele part: no shape for its four strings — a spacer.
         Assert.Contains(Diagnostics(Book("instrument ukulele", "chord(C x32010)1 |")),
             d => d.Code == DiagnosticCodes.ShapeChordNoShape && d.Message.Contains("'ukulele' (4 strings)"));

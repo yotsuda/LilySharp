@@ -126,7 +126,7 @@ public class PartPropertyCompletionTests
         Assert.True(labels.IndexOf("bass") < labels.IndexOf("bass4"));
         Assert.True(labels.IndexOf("bass6") < labels.IndexOf("violin"));
         Assert.Equal("E1 A1 D2 G2", items.Single(i => i.Label == "bass").Detail);
-        Assert.Equal("E1 A1 D2 G2 - the same strings as bass", items.Single(i => i.Label == "doublebass").Detail);
+        Assert.Equal("E1 A1 D2 G2 - the same strings as bass", items.Single(i => i.Label == "doubleBass").Detail);
         // Picking `tuning` from the property list re-opens the popup on them.
         var tuning = LilySharpLanguageServer.GetPartPropertyCompletions().Items.Single(i => i.Label == "tuning");
         Assert.Equal("tuning $0", tuning.InsertText);

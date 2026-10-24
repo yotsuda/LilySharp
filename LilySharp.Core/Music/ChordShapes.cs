@@ -821,7 +821,7 @@ public static class ChordShapes
 
     internal static string TwoOfOneLength(string shape, string? symbol)
         => $"two shapes of {StringCount(shape)} strings - name the tuning each is for: "
-           + $"{symbol ?? "F"}(guitar ... guitardropd ...). '{shape}' is not used.";
+           + $"{symbol ?? "F"}(guitar ... guitarDropD ...). '{shape}' is not used.";
 
     internal static string TuningTwice(string tuning)
         => $"'{tuning}' is given two shapes - write one per tuning. The second is not used.";

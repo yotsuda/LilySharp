@@ -87,9 +87,12 @@ public static class Tunings
     /// places to add twenty-five tunings to, with nothing to notice if one was missed.
     /// <para>
     /// The spelling rule: LilyPond's symbol without its <c>-tuning</c> suffix, with
-    /// <c>&lt;n&gt;-string</c> written as the digit and the hyphens dropped — so
+    /// <c>&lt;n&gt;-string</c> written as the digit and the words camelCased — so
     /// <c>bass-five-string-tuning</c> is <c>bass5</c> (which is what it already was) and
-    /// <c>guitar-drop-d-tuning</c> is <c>guitardropd</c>. Every word is LilyPond's: the two
+    /// <c>guitar-drop-d-tuning</c> is <c>guitarDropD</c>. Until 2026-10-24 the hyphens were
+    /// only dropped (<c>banjoopend</c>); the owner camelCased them like every other name of
+    /// several words, with no word for the old spellings (they are unknown tunings now).
+    /// Every word is LilyPond's: the two
     /// Lily#-own second spellings, <c>standard</c> (= <c>guitar</c>) and <c>uke</c>
     /// (= <c>ukulele</c>), were retired on 2026-09-15 before 0.7.0 shipped (owner decision —
     /// one spelling per tuning; the only doubles left are LilyPond's own).
@@ -99,34 +102,34 @@ public static class Tunings
     {
         ["guitar"] = TuningType.Guitar,
         ["guitar7"] = TuningType.Guitar7,
-        ["guitardropd"] = TuningType.GuitarDropD,
-        ["guitardropc"] = TuningType.GuitarDropC,
-        ["guitaropeng"] = TuningType.GuitarOpenG,
-        ["guitaropend"] = TuningType.GuitarOpenD,
-        ["guitardadgad"] = TuningType.GuitarDadgad,
-        ["guitarlute"] = TuningType.GuitarLute,
-        ["guitarasus4"] = TuningType.GuitarAsus4,
+        ["guitarDropD"] = TuningType.GuitarDropD,
+        ["guitarDropC"] = TuningType.GuitarDropC,
+        ["guitarOpenG"] = TuningType.GuitarOpenG,
+        ["guitarOpenD"] = TuningType.GuitarOpenD,
+        ["guitarDadgad"] = TuningType.GuitarDadgad,
+        ["guitarLute"] = TuningType.GuitarLute,
+        ["guitarAsus4"] = TuningType.GuitarAsus4,
         ["bass"] = TuningType.Bass,
         ["bass4"] = TuningType.Bass,                    // LP's bass-four-string-tuning
-        ["doublebass"] = TuningType.Bass,               // LP's double-bass-tuning
-        ["bassdropd"] = TuningType.BassDropD,
+        ["doubleBass"] = TuningType.Bass,               // LP's double-bass-tuning
+        ["bassDropD"] = TuningType.BassDropD,
         ["bass5"] = TuningType.Bass5,
         ["bass6"] = TuningType.Bass6,
         ["violin"] = TuningType.Violin,
         ["mandolin"] = TuningType.Violin,               // LP's mandolin-tuning, same strings
         ["viola"] = TuningType.Viola,
         ["cello"] = TuningType.Cello,
-        ["banjoopeng"] = TuningType.BanjoOpenG,
-        ["banjoc"] = TuningType.BanjoC,
-        ["banjomodal"] = TuningType.BanjoModal,
-        ["banjoopend"] = TuningType.BanjoOpenD,
-        ["banjoopendm"] = TuningType.BanjoOpenDm,
-        ["banjodoublec"] = TuningType.BanjoDoubleC,
-        ["banjodoubled"] = TuningType.BanjoDoubleD,
+        ["banjoOpenG"] = TuningType.BanjoOpenG,
+        ["banjoC"] = TuningType.BanjoC,
+        ["banjoModal"] = TuningType.BanjoModal,
+        ["banjoOpenD"] = TuningType.BanjoOpenD,
+        ["banjoOpenDm"] = TuningType.BanjoOpenDm,
+        ["banjoDoubleC"] = TuningType.BanjoDoubleC,
+        ["banjoDoubleD"] = TuningType.BanjoDoubleD,
         ["ukulele"] = TuningType.Ukulele,
-        ["ukuleled"] = TuningType.UkuleleD,
-        ["tenorukulele"] = TuningType.TenorUkulele,
-        ["baritoneukulele"] = TuningType.BaritoneUkulele,
+        ["ukuleleD"] = TuningType.UkuleleD,
+        ["tenorUkulele"] = TuningType.TenorUkulele,
+        ["baritoneUkulele"] = TuningType.BaritoneUkulele,
     };
 
     /// <summary>Every tuning word the language takes, sorted. The ONE home of the list —

@@ -4,6 +4,12 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+### Tuning words are camelCase
+
+- **`banjoOpenD`, `guitarDropD`, `tenorUkulele`, …** — the 19 tuning words of several words are
+  camelCase now, in completion, highlighting and Ctrl+Shift+Up / Down; the old `banjoopend`
+  spellings are unknown (breaking).
+
 ### A dashed bar line in a score of two or more staves
 
 - **`!` is drawn when the score has two or more staves** — it vanished from every staff before

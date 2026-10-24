@@ -44,15 +44,15 @@ public class TuningTableMatchesLilyPondTests
     // Lily# word            tuning                         LilyPond's chord          its strings as MIDI
     [InlineData("guitar", TuningType.Guitar, "guitar-tuning <e, a, d g b e'>", new[] { 40, 45, 50, 55, 59, 64 })]
     [InlineData("guitar7", TuningType.Guitar7, "guitar-seven-string-tuning <b,, e, a, d g b e'>", new[] { 35, 40, 45, 50, 55, 59, 64 })]
-    [InlineData("guitardropd", TuningType.GuitarDropD, "guitar-drop-d-tuning <d, a, d g b e'>", new[] { 38, 45, 50, 55, 59, 64 })]
-    [InlineData("guitardropc", TuningType.GuitarDropC, "guitar-drop-c-tuning <c, g, c f a d'>", new[] { 36, 43, 48, 53, 57, 62 })]
-    [InlineData("guitaropeng", TuningType.GuitarOpenG, "guitar-open-g-tuning <d, g, d g b d'>", new[] { 38, 43, 50, 55, 59, 62 })]
-    [InlineData("guitaropend", TuningType.GuitarOpenD, "guitar-open-d-tuning <d, a, d fis a d'>", new[] { 38, 45, 50, 54, 57, 62 })]
-    [InlineData("guitardadgad", TuningType.GuitarDadgad, "guitar-dadgad-tuning <d, a, d g a d'>", new[] { 38, 45, 50, 55, 57, 62 })]
-    [InlineData("guitarlute", TuningType.GuitarLute, "guitar-lute-tuning <e, a, d fis b e'>", new[] { 40, 45, 50, 54, 59, 64 })]
-    [InlineData("guitarasus4", TuningType.GuitarAsus4, "guitar-asus4-tuning <e, a, d e a e'>", new[] { 40, 45, 50, 52, 57, 64 })]
+    [InlineData("guitarDropD", TuningType.GuitarDropD, "guitar-drop-d-tuning <d, a, d g b e'>", new[] { 38, 45, 50, 55, 59, 64 })]
+    [InlineData("guitarDropC", TuningType.GuitarDropC, "guitar-drop-c-tuning <c, g, c f a d'>", new[] { 36, 43, 48, 53, 57, 62 })]
+    [InlineData("guitarOpenG", TuningType.GuitarOpenG, "guitar-open-g-tuning <d, g, d g b d'>", new[] { 38, 43, 50, 55, 59, 62 })]
+    [InlineData("guitarOpenD", TuningType.GuitarOpenD, "guitar-open-d-tuning <d, a, d fis a d'>", new[] { 38, 45, 50, 54, 57, 62 })]
+    [InlineData("guitarDadgad", TuningType.GuitarDadgad, "guitar-dadgad-tuning <d, a, d g a d'>", new[] { 38, 45, 50, 55, 57, 62 })]
+    [InlineData("guitarLute", TuningType.GuitarLute, "guitar-lute-tuning <e, a, d fis b e'>", new[] { 40, 45, 50, 54, 59, 64 })]
+    [InlineData("guitarAsus4", TuningType.GuitarAsus4, "guitar-asus4-tuning <e, a, d e a e'>", new[] { 40, 45, 50, 52, 57, 64 })]
     [InlineData("bass", TuningType.Bass, "bass-tuning <e,, a,, d, g,>", new[] { 28, 33, 38, 43 })]
-    [InlineData("bassdropd", TuningType.BassDropD, "bass-drop-d-tuning <d,, a,, d, g,>", new[] { 26, 33, 38, 43 })]
+    [InlineData("bassDropD", TuningType.BassDropD, "bass-drop-d-tuning <d,, a,, d, g,>", new[] { 26, 33, 38, 43 })]
     [InlineData("bass5", TuningType.Bass5, "bass-five-string-tuning <b,,, e,, a,, d, g,>", new[] { 23, 28, 33, 38, 43 })]
     [InlineData("bass6", TuningType.Bass6, "bass-six-string-tuning <b,,, e,, a,, d, g, c>", new[] { 23, 28, 33, 38, 43, 48 })]
     [InlineData("violin", TuningType.Violin, "violin-tuning <g d' a' e''>", new[] { 55, 62, 69, 76 })]
@@ -61,18 +61,18 @@ public class TuningTableMatchesLilyPondTests
     // ⚠️ Every banjo is re-entrant — the 5th string is a high drone — so these arrays start
     // at their HIGHEST pitch and must not be "fixed" into ascending order. LilyPond writes
     // them the same way, highest string NUMBER first.
-    [InlineData("banjoopeng", TuningType.BanjoOpenG, "banjo-open-g-tuning <g' d g b d'>", new[] { 67, 50, 55, 59, 62 })]
-    [InlineData("banjoc", TuningType.BanjoC, "banjo-c-tuning <g' c g b d'>", new[] { 67, 48, 55, 59, 62 })]
-    [InlineData("banjomodal", TuningType.BanjoModal, "banjo-modal-tuning <g' d g c' d'>", new[] { 67, 50, 55, 60, 62 })]
-    [InlineData("banjoopend", TuningType.BanjoOpenD, "banjo-open-d-tuning <a' d fis a d'>", new[] { 69, 50, 54, 57, 62 })]
-    [InlineData("banjoopendm", TuningType.BanjoOpenDm, "banjo-open-dm-tuning <a' d f a d'>", new[] { 69, 50, 53, 57, 62 })]
-    [InlineData("banjodoublec", TuningType.BanjoDoubleC, "banjo-double-c-tuning <g' c g c' d'>", new[] { 67, 48, 55, 60, 62 })]
-    [InlineData("banjodoubled", TuningType.BanjoDoubleD, "banjo-double-d-tuning <a' d g d' e'>", new[] { 69, 50, 55, 62, 64 })]
+    [InlineData("banjoOpenG", TuningType.BanjoOpenG, "banjo-open-g-tuning <g' d g b d'>", new[] { 67, 50, 55, 59, 62 })]
+    [InlineData("banjoC", TuningType.BanjoC, "banjo-c-tuning <g' c g b d'>", new[] { 67, 48, 55, 59, 62 })]
+    [InlineData("banjoModal", TuningType.BanjoModal, "banjo-modal-tuning <g' d g c' d'>", new[] { 67, 50, 55, 60, 62 })]
+    [InlineData("banjoOpenD", TuningType.BanjoOpenD, "banjo-open-d-tuning <a' d fis a d'>", new[] { 69, 50, 54, 57, 62 })]
+    [InlineData("banjoOpenDm", TuningType.BanjoOpenDm, "banjo-open-dm-tuning <a' d f a d'>", new[] { 69, 50, 53, 57, 62 })]
+    [InlineData("banjoDoubleC", TuningType.BanjoDoubleC, "banjo-double-c-tuning <g' c g c' d'>", new[] { 67, 48, 55, 60, 62 })]
+    [InlineData("banjoDoubleD", TuningType.BanjoDoubleD, "banjo-double-d-tuning <a' d g d' e'>", new[] { 69, 50, 55, 62, 64 })]
     // ⚠️ Re-entrant too, and LilyPond writes it that way: the g is ABOVE the c.
     [InlineData("ukulele", TuningType.Ukulele, "ukulele-tuning <g' c' e' a'>", new[] { 67, 60, 64, 69 })]
-    [InlineData("ukuleled", TuningType.UkuleleD, "ukulele-d-tuning <a' d' fis' b'>", new[] { 69, 62, 66, 71 })]
-    [InlineData("tenorukulele", TuningType.TenorUkulele, "tenor-ukulele-tuning <g c' e' a'>", new[] { 55, 60, 64, 69 })]
-    [InlineData("baritoneukulele", TuningType.BaritoneUkulele, "baritone-ukulele-tuning <d g b e'>", new[] { 50, 55, 59, 64 })]
+    [InlineData("ukuleleD", TuningType.UkuleleD, "ukulele-d-tuning <a' d' fis' b'>", new[] { 69, 62, 66, 71 })]
+    [InlineData("tenorUkulele", TuningType.TenorUkulele, "tenor-ukulele-tuning <g c' e' a'>", new[] { 55, 60, 64, 69 })]
+    [InlineData("baritoneUkulele", TuningType.BaritoneUkulele, "baritone-ukulele-tuning <d g b e'>", new[] { 50, 55, 59, 64 })]
     public void EveryTuningCarriesLilyPondsStrings(
         string word, TuningType type, string lilyPond, int[] strings)
     {
@@ -131,7 +131,7 @@ public class TuningTableMatchesLilyPondTests
     // The words that name a tuning some other word already names — all LilyPond's, and
     // duplicates in LilyPond too. Lily#'s own `standard` and `uke` were retired 2026-09-15.
     [InlineData("bass4", TuningType.Bass)]              // LP's bass-four-string-tuning ≡ bass-tuning
-    [InlineData("doublebass", TuningType.Bass)]          // LP's double-bass-tuning ≡ bass-tuning
+    [InlineData("doubleBass", TuningType.Bass)]          // LP's double-bass-tuning ≡ bass-tuning
     [InlineData("mandolin", TuningType.Violin)]          // LP's mandolin-tuning ≡ violin-tuning
     public void TheSecondSpellingsReachTheSameTuning(string word, TuningType type)
         => Assert.Equal(type, Tunings.Parse(word));
@@ -146,13 +146,13 @@ public class TuningTableMatchesLilyPondTests
         Assert.Equal(
             new[]
             {
-                "banjoc", "banjodoublec", "banjodoubled", "banjomodal",
-                "banjoopend", "banjoopendm", "banjoopeng", "baritoneukulele",
+                "banjoC", "banjoDoubleC", "banjoDoubleD", "banjoModal",
+                "banjoOpenD", "banjoOpenDm", "banjoOpenG", "baritoneUkulele",
                 "bass", "bass4", "bass5", "bass6",
-                "bassdropd", "cello", "doublebass", "guitar", "guitar7", "guitarasus4",
-                "guitardadgad", "guitardropc", "guitardropd", "guitarlute", "guitaropend",
-                "guitaropeng", "mandolin", "tenorukulele", "ukulele",
-                "ukuleled", "viola", "violin",
+                "bassDropD", "cello", "doubleBass", "guitar", "guitar7", "guitarAsus4",
+                "guitarDadgad", "guitarDropC", "guitarDropD", "guitarLute", "guitarOpenD",
+                "guitarOpenG", "mandolin", "tenorUkulele", "ukulele",
+                "ukuleleD", "viola", "violin",
             },
             LanguageVocabulary.TuningNames.OrderBy(n => n, System.StringComparer.Ordinal).ToArray());
     }

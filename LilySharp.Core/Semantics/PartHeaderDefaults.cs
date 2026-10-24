@@ -195,7 +195,7 @@ public sealed class PartHeaderDefaults
                     transText = (prop.GetChild(2) as SyntaxTokenNode)?.Text;
                     break;
                 case "tuning":
-                    tuningText = Joined().ToLowerInvariant();
+                    tuningText = Joined();   // as written: the words are camelCase (`banjoOpenD`)
                     break;
                 case "instrument":
                     // Token by token, as SplitInstrument reads them: joined into one string,

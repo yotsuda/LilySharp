@@ -15,6 +15,11 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Language
 
+- **The tuning words of several words are camelCase**, like every other name of several words:
+  `guitarDropD`, `guitarOpenG`, `guitarDadgad`, `bassDropD`, `doubleBass`, `banjoOpenD`,
+  `banjoDoubleC`, `ukuleleD`, `tenorUkulele`, `baritoneUkulele` and the rest (19 in all; one-word
+  ones such as `guitar`, `bass5` and `ukulele` are unchanged). The old all-lowercase spellings
+  (`banjoopend`) are unknown tunings now — **breaking**, with no migration message.
 - **A second `as` in a staff or ossia row is LYS0042**, one error on that word
   (`staff melody as pitch transposed as lines 1`: one `as` takes every selector, so write
   `as pitch transposed lines 1`); the selectors after it still read, where the row used to give

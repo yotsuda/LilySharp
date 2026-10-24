@@ -1096,7 +1096,7 @@ public class VocabularyPerturbationTests
     /// ⚠️ The pitches span two octaves and START LOW on purpose: a tuning only shows itself in
     /// the FRET numbers, and two tunings that differ on one string alone are told apart only
     /// by a note that lands on that string. The lowest note here is <c>e,</c> — 40, the
-    /// guitar's open sixth string and the only string <c>guitardropd</c> retunes.
+    /// guitar's open sixth string and the only string <c>guitarDropD</c> retunes.
     /// ⚠️ MEASURED, not reasoned (2026-09-13): the first shape of this book started at
     /// <c>e</c> and its frets came out <c>2 0 1 0 3 8 3 5</c> for BOTH tunings — nothing
     /// reached string six, so drop-D read as a dead word. The notes are where they are
@@ -1118,7 +1118,7 @@ public class VocabularyPerturbationTests
     /// <remarks>
     /// ⚠️⚠️ THE CONTROL MUST NOT BE CHOSEN BY THE THING UNDER TEST. This branch first read
     /// <c>Tunings.Parse(word) == TuningType.Guitar</c> — so poisoning <c>Parse</c> to answer
-    /// "guitar" for <c>guitardropd</c> moved that word into the INERT branch and the theory
+    /// "guitar" for <c>guitarDropD</c> moved that word into the INERT branch and the theory
     /// stayed green (measured 2026-09-13, the poison this tripwire failed the first time).
     /// A tripwire whose two sides are picked by the code it watches cannot fire.
     /// </remarks>
@@ -1155,7 +1155,7 @@ public class VocabularyPerturbationTests
     /// <remarks>
     /// ⚠️ A NEW LINE HERE IS A CLAIM ABOUT LILYPOND — check ly/string-tunings-init.ly before
     /// adding one. The two below are the whole set and both are in that file:
-    /// <c>bass</c>/<c>bass4</c>/<c>doublebass</c> and <c>violin</c>/<c>mandolin</c>, which
+    /// <c>bass</c>/<c>bass4</c>/<c>doubleBass</c> and <c>violin</c>/<c>mandolin</c>, which
     /// LilyPond defines with identical chords a few lines apart. Lily#'s own second spellings
     /// <c>guitar</c>/<c>standard</c> and <c>ukulele</c>/<c>uke</c> stood here too until they
     /// were retired on 2026-09-15.
@@ -1171,7 +1171,7 @@ public class VocabularyPerturbationTests
             .ToArray();
 
         Assert.Equal(
-            new[] { "bass=bass4=doublebass", "mandolin=violin" },
+            new[] { "bass=bass4=doubleBass", "mandolin=violin" },
             doubles);
 
         // And the tunings themselves — one member per distinct set of strings, so two members

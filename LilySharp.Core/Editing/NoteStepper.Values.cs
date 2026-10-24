@@ -762,7 +762,7 @@ public static partial class NoteStepper
     }
 
     /// <summary>The tuning words the step walks: one spelling a tuning (the shortest of
-    /// LilyPond's doubles — <c>bass</c>, not <c>bass4</c> or <c>doublebass</c>; <c>violin</c>, not
+    /// LilyPond's doubles — <c>bass</c>, not <c>bass4</c> or <c>doubleBass</c>; <c>violin</c>, not
     /// <c>mandolin</c>), in the order of <see cref="TuningType"/>, which groups the families.</summary>
     private static readonly string[] TuningWalk =
     [

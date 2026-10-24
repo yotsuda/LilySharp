@@ -219,7 +219,7 @@ public static class InstrumentDefaults
         // five-string in open G: LilyPond has no plain banjo tuning, and open G is the one
         // MuseScore's banjo carries.
         "mandolin" => "mandolin",
-        "banjo" => "banjoopeng",
+        "banjo" => "banjoOpenG",
         _ => null,
     };
 

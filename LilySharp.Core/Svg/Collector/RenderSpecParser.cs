@@ -897,8 +897,10 @@ public static class RenderSpecParser
 
         // Explicit tuning override → the part's `tuning` property → the tuning
         // implied by the part's `instrument` preset → else guitar.
-        string? tuningName = tuningToken?.Text.ToLowerInvariant()
-            ?? GetPartProperty(tab, voiceName, "tuning")?.ToLowerInvariant()
+        // The words as written: they are camelCase (`banjoOpenD`), and a differently-cased one
+        // is SymbolCaseValidator's error, not a tuning to fold onto one.
+        string? tuningName = tuningToken?.Text
+            ?? GetPartProperty(tab, voiceName, "tuning")
             ?? InstrumentDefaults.GetTuning(GetInstrument(tab, voiceName)?.Preset);
         // "guitar"/unknown/none all come back as the guitar — Tablature.Tunings
         // is the one reader of these words.

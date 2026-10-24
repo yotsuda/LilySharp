@@ -1081,20 +1081,22 @@ PartClefName   = ClefName
                | 'treble^8' | 'bass_8'
                | 'soprano' | 'mezzosoprano' | 'baritone' | 'percussion' ;
 
-TuningName     = 'guitar' | 'guitar7' | 'guitardropd' | 'guitardropc'
-               | 'guitaropeng' | 'guitaropend' | 'guitardadgad' | 'guitarlute'
-               | 'guitarasus4'
-               | 'bass' | 'bass4' | 'bassdropd' | 'bass5' | 'bass6'
-               | 'violin' | 'viola' | 'cello' | 'doublebass' | 'mandolin'
-               | 'banjoopeng' | 'banjoc' | 'banjomodal' | 'banjoopend'
-               | 'banjoopendm' | 'banjodoublec' | 'banjodoubled'
-               | 'ukulele' | 'ukuleled' | 'tenorukulele' | 'baritoneukulele' ;
+TuningName     = 'guitar' | 'guitar7' | 'guitarDropD' | 'guitarDropC'
+               | 'guitarOpenG' | 'guitarOpenD' | 'guitarDadgad' | 'guitarLute'
+               | 'guitarAsus4'
+               | 'bass' | 'bass4' | 'bassDropD' | 'bass5' | 'bass6'
+               | 'violin' | 'viola' | 'cello' | 'doubleBass' | 'mandolin'
+               | 'banjoOpenG' | 'banjoC' | 'banjoModal' | 'banjoOpenD'
+               | 'banjoOpenDm' | 'banjoDoubleC' | 'banjoDoubleD'
+               | 'ukulele' | 'ukuleleD' | 'tenorUkulele' | 'baritoneUkulele' ;
                    (* LilyPond's whole ly/string-tunings-init.ly (2026-09-13): its symbol
                       without the `-tuning` suffix, with `<n>-string` written as the digit
-                      and the hyphens dropped — so `bass-five-string-tuning` is `bass5` and
-                      `guitar-drop-d-tuning` is `guitardropd`. Lily#'s own second spellings
+                      and the words camelCased — so `bass-five-string-tuning` is `bass5` and
+                      `guitar-drop-d-tuning` is `guitarDropD` (until 2026-10-24 the hyphens
+                      were only dropped, `banjoopend`; those spellings are unknown now, owner
+                      decision, no migration). Lily#'s own second spellings
                       `standard` and `uke` were retired before 0.7.0 shipped; `bass4`,
-                      `doublebass` and `mandolin` are LilyPond's own second spellings of
+                      `doubleBass` and `mandolin` are LilyPond's own second spellings of
                       tunings it also lists as `bass` and `violin`. Tablature.Tunings holds
                       the strings and is the one reader of these words. *)
 

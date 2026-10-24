@@ -2106,7 +2106,7 @@ LilyPond's own distance from the staff to the digit. Neither key reaches MIDI or
 a `<harmony>` carries the chord as data, and asks for the words.
 
 **`chordDiagrams`** — the tuning the score's **chord diagrams** draw on: a tuning word — the
-words a tab's `tuning` takes (`guitar`, `ukulele`, `mandolin`, `guitardropd`, `bass`, …) — or
+words a tab's `tuning` takes (`guitar`, `ukulele`, `mandolin`, `guitarDropD`, `bass`, …) — or
 `none`. A diagram draws only where a chord WRITES its shape (`G(320003)`, `@chord(G 320003)`,
 `@chord(x32010)`; *Chord Diagrams*); this key says which of the written shapes applies. Unset,
 each diagram takes the instrument of its part (the part an `@chord`'s note is in, the staff a
@@ -2494,7 +2494,7 @@ the ukulele's; a shape the diagram's tuning cannot take is simply not used. The 
 a shape one character per string when every fret is 9 or less, else with a `-` only around
 the two-digit frets (and between two lone single digits: `10-9-9`). When a file uses two
 tunings of one string count, a tuning word binds the next shape by name:
-`F(guitar 133211 guitardropd 333211)` (the words of `chordDiagrams`) — it applies only where
+`F(guitar 133211 guitarDropD 333211)` (the words of `chordDiagrams`) — it applies only where
 that tuning is the diagram's. `@chord` takes the same words after its symbol:
 `@chord(F guitar 133211 ukulele 2010)`. A written shape is checked against its chord symbol
 (below, LYS1039).

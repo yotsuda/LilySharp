@@ -327,7 +327,7 @@
                 },
                 {
                     "comment": "chordDiagrams takes none, a tuning word — the tuning vocabulary a tab's `tuning` takes (Tablature.Tunings.Names) — capo (then its fret) or all; a tuning word may be followed by `capo N` (ChordDiagramsKey.CapoWord) and by all (ChordDiagramsKey.AllWord). The lookbehinds keep `none all` / `all all` (refused by the compiler) from colouring the second word.",
-                    "match": "\\b(chordDiagrams)\\s+(none|banjoc|banjodoublec|banjodoubled|banjomodal|banjoopend|banjoopendm|banjoopeng|baritoneukulele|bass|bass4|bass5|bass6|bassdropd|capo|cello|doublebass|guitar|guitar7|guitarasus4|guitardadgad|guitardropc|guitardropd|guitarlute|guitaropend|guitaropeng|mandolin|tenorukulele|ukulele|ukuleled|viola|violin|all)(?:(?<!none)(?<!all)(?<!capo)\\s+(capo)\\s+(\\d+))?(?:(?<!none)(?<!all)\\s+(all))?\\b",
+                    "match": "\\b(chordDiagrams)\\s+(none|banjoC|banjoDoubleC|banjoDoubleD|banjoModal|banjoOpenD|banjoOpenDm|banjoOpenG|baritoneUkulele|bass|bass4|bass5|bass6|bassDropD|capo|cello|doubleBass|guitar|guitar7|guitarAsus4|guitarDadgad|guitarDropC|guitarDropD|guitarLute|guitarOpenD|guitarOpenG|mandolin|tenorUkulele|ukulele|ukuleleD|viola|violin|all)(?:(?<!none)(?<!all)(?<!capo)\\s+(capo)\\s+(\\d+))?(?:(?<!none)(?<!all)\\s+(all))?\\b",
                     "captures": {
                         "1": { "name": "keyword.other.layout-key.lilysharp" },
                         "2": { "name": "support.constant.layout-value.lilysharp" },
@@ -423,7 +423,7 @@
             "patterns": [
                 {
                     "name": "support.constant.tuning.lilysharp",
-                    "match": "(?<![^\\s{}])(baritoneukulele|banjodoublec|banjodoubled|guitardadgad|tenorukulele|banjoopendm|guitarasus4|guitardropc|guitardropd|guitaropend|guitaropeng|banjomodal|banjoopend|banjoopeng|doublebass|guitarlute|bassdropd|mandolin|ukuleled|guitar7|ukulele|banjoc|guitar|violin|bass4|bass5|bass6|viola|cello|bass)(?![^\\s{}])"
+                    "match": "(?<![^\\s{}])(baritoneUkulele|banjoDoubleC|banjoDoubleD|guitarDadgad|tenorUkulele|banjoOpenDm|guitarAsus4|guitarDropC|guitarDropD|guitarOpenD|guitarOpenG|banjoModal|banjoOpenD|banjoOpenG|doubleBass|guitarLute|bassDropD|mandolin|ukuleleD|guitar7|ukulele|banjoC|guitar|violin|bass4|bass5|bass6|viola|cello|bass)(?![^\\s{}])"
                 },
                 {
                     "name": "constant.numeric.lilysharp",
@@ -464,7 +464,7 @@
                     }
                 },
                 {
-                    "match": "\\b(tuning)\\s+(baritoneukulele|banjodoublec|banjodoubled|guitardadgad|tenorukulele|banjoopendm|guitarasus4|guitardropc|guitardropd|guitaropend|guitaropeng|banjomodal|banjoopend|banjoopeng|doublebass|guitarlute|bassdropd|mandolin|ukuleled|guitar7|ukulele|banjoc|guitar|violin|bass4|bass5|bass6|viola|cello|bass)\\b",
+                    "match": "\\b(tuning)\\s+(baritoneUkulele|banjoDoubleC|banjoDoubleD|guitarDadgad|tenorUkulele|banjoOpenDm|guitarAsus4|guitarDropC|guitarDropD|guitarOpenD|guitarOpenG|banjoModal|banjoOpenD|banjoOpenG|doubleBass|guitarLute|bassDropD|mandolin|ukuleleD|guitar7|ukulele|banjoC|guitar|violin|bass4|bass5|bass6|viola|cello|bass)\\b",
                     "captures": {
                         "1": { "name": "keyword.other.lilysharp" },
                         "2": { "name": "support.constant.tuning.lilysharp" }
@@ -541,7 +541,7 @@
             "comment": "`score { tab guitar melody }`. The ONE position a tuning name reaches outside a part body (measured 2026-08-19: every tuning word is accepted after `tab`, and `staff`/`ossia` take clef names, not tunings). Without this the vocabulary would be coloured in the header and plain in the score — the same half-coloured shape the user reported for `fonts { }`. ⚠️ The list is LilyPond's whole string-tunings-init.ly since 2026-09-13 — thirty-two words — and EditorColouringTests holds it to LanguageVocabulary.TuningNames in both directions, so do not edit one without the other.",
             "patterns": [
                 {
-                    "match": "\\b(tab)\\s+(baritoneukulele|banjodoublec|banjodoubled|guitardadgad|tenorukulele|banjoopendm|guitarasus4|guitardropc|guitardropd|guitaropend|guitaropeng|banjomodal|banjoopend|banjoopeng|doublebass|guitarlute|bassdropd|mandolin|ukuleled|guitar7|ukulele|banjoc|guitar|violin|bass4|bass5|bass6|viola|cello|bass)\\b",
+                    "match": "\\b(tab)\\s+(baritoneUkulele|banjoDoubleC|banjoDoubleD|guitarDadgad|tenorUkulele|banjoOpenDm|guitarAsus4|guitarDropC|guitarDropD|guitarOpenD|guitarOpenG|banjoModal|banjoOpenD|banjoOpenG|doubleBass|guitarLute|bassDropD|mandolin|ukuleleD|guitar7|ukulele|banjoC|guitar|violin|bass4|bass5|bass6|viola|cello|bass)\\b",
                     "captures": {
                         "1": { "name": "keyword.control.lilysharp" },
                         "2": { "name": "support.constant.tuning.lilysharp" }

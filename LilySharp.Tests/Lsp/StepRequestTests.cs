@@ -1409,24 +1409,24 @@ public class StepRequestTests
         // Down goes down the list (the owner's decision, the reverse of the first day's).
         var (down, after) = Step(Tuning("‸bass"), -1, semitone: true);
         Assert.False(down.Fallback, down.Error);
-        Assert.Equal(Tuning("bassdropd"), after);
+        Assert.Equal(Tuning("bassDropD"), after);
         Assert.Contains("D1 A1 D2 G2", down.Message);
         Assert.Equal([26, 33, 38, 43], down.Pitches);
         Assert.Equal(33, down.Program);
-        Assert.True(down.Strum);   // the strings one after another, lowest first
-        Assert.Equal(Tuning("guitarasus4"), Step(Tuning("bass‸"), +1, semitone: true).After);
+        Assert.True(down.Strum);   // the strings one after another, string after string
+        Assert.Equal(Tuning("guitarAsus4"), Step(Tuning("bass‸"), +1, semitone: true).After);
         // A double steps from its tuning's place.
-        Assert.Equal(Tuning("bassdropd"), Step(Tuning("‸bass4"), -1, semitone: true).After);
+        Assert.Equal(Tuning("bassDropD"), Step(Tuning("‸bass4"), -1, semitone: true).After);
 
         // The octave pair: a family at a time; Up inside one goes to its first.
         Assert.Equal(Tuning("violin"), Step(Tuning("ba‸ss"), -1).After);
-        Assert.Equal(Tuning("bass"), Step(Tuning("bass‸dropd"), +1).After);
+        Assert.Equal(Tuning("bass"), Step(Tuning("bass‸DropD"), +1).After);
         Assert.Equal(Tuning("guitar"), Step(Tuning("‸bass"), +1).After);
         var (first, same) = Step(Tuning("‸guitar"), +1);
         Assert.Equal(Tuning("guitar"), same);
         Assert.Contains("first", first.Message);
-        var (last, stays) = Step(Tuning("‸tenorukulele"), -1);
-        Assert.Equal(Tuning("tenorukulele"), stays);
+        var (last, stays) = Step(Tuning("‸tenorUkulele"), -1);
+        Assert.Equal(Tuning("tenorUkulele"), stays);
         Assert.Contains("last", last.Message);
     }
 
@@ -1435,11 +1435,11 @@ public class StepRequestTests
     {
         // Owner's report 2026-10-24: a re-entrant ukulele's 4th string (G4) is higher than its 3rd
         // (C4) and is struck first — G4 C4 E4 A4, not C4 E4 G4 A4.
-        var (ukulele, _) = Step(Tuning("‸ukuleled"), +1, semitone: true);
+        var (ukulele, _) = Step(Tuning("‸ukuleleD"), +1, semitone: true);
         Assert.True(ukulele.Strum);
         Assert.Equal([67, 60, 64, 69], ukulele.Pitches);
         // The 5-string banjo's 5th string is its high drone, struck first too.
-        Assert.Equal([67, 50, 55, 59, 62], Step(Tuning("‸banjoc"), +1, semitone: true).Response.Pitches);
+        Assert.Equal([67, 50, 55, 59, 62], Step(Tuning("‸banjoC"), +1, semitone: true).Response.Pitches);
         // On a guitar string order and pitch order agree.
         Assert.Equal([40, 45, 50, 55, 59, 64], Step(Tuning("‸guitar7"), +1, semitone: true).Response.Pitches);
         // Typed or completed: the audition answers in the same order.

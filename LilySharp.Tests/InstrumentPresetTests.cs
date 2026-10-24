@@ -116,7 +116,7 @@ public sealed class InstrumentPresetTests
     [InlineData("cello", "cello")]
     [InlineData("contrabass", "bass")]
     [InlineData("mandolin", "mandolin")]
-    [InlineData("banjo", "banjoopeng")]
+    [InlineData("banjo", "banjoOpenG")]
     [InlineData("flute", null)]
     [InlineData(null, null)]
     public void GetTuning_MapsFrettedInstruments(string? instrument, string? expected)

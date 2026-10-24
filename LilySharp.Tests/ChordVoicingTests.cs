@@ -269,11 +269,11 @@ public class ChordVoicingTests
     [Fact]
     public void AChordWithOnlyStretchShapes_FallsBackToTheFirstStretchShape()
     {
-        var openG = Tunings.GetTuning(Tunings.Parse("guitaropeng"));
+        var openG = Tunings.GetTuning(Tunings.Parse("guitarOpenG"));
         var f11 = Chord("F11");
         Assert.Empty(ChordVoicings.For(openG, f11, includeStretch: false).Bases);
         Assert.Equal("333047", ChordVoicings.Spell(ChordVoicings.Fallback(openG, f11)!.Value));
-        var chosen = ChordShapes.Default(Tunings.Parse("guitaropeng"), f11);
+        var chosen = ChordShapes.Default(Tunings.Parse("guitarOpenG"), f11);
         Assert.Equal("333047", chosen!.Spelled);
         Assert.Equal(ShapeSource.FirstOfOrder, chosen.Source);
     }

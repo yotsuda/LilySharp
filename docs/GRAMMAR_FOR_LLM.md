@@ -1158,7 +1158,7 @@ layout {
   set Lily# spells these chords exactly as LilyPond prints them. `maj7` is NOT switchable:
   LilyPond draws it as a raised triangle, which Lily#'s one-line chord name has no home for.
 - Neither chord key reaches MIDI or MusicXML — a `<harmony>` carries the chord as data.
-- `chordDiagrams ukulele` (or `guitar`, `mandolin`, `guitardropd`, … — the words a tab's
+- `chordDiagrams ukulele` (or `guitar`, `mandolin`, `guitarDropD`, … — the words a tab's
   `tuning` takes) is the tuning the score's chord diagrams draw on. A diagram draws only where
   a chord writes its shape; this picks which written shape applies. Unset, a diagram takes the
   part's fretted instrument (an `@chord`'s part, the staff a row stands above), else the

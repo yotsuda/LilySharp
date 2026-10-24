@@ -498,7 +498,7 @@ internal static class LayoutPlanReader
             capoWord = ChordDiagramsKey.CapoWord;
         string key = ChordDiagramsKey.Key;
         string takes = $"'{key}' takes {none} or a tuning name (guitar, ukulele, mandolin, "
-            + $"guitardropd, ... - the words a tab's 'tuning' takes), optionally followed by '{capoWord} N' "
+            + $"guitarDropD, ... - the words a tab's 'tuning' takes), optionally followed by '{capoWord} N' "
             + $"(the fret the capo is on) and by '{all}' (every chord name draws a diagram), or "
             + $"'{capoWord} N' / '{all}' alone; then, optionally, a shape "
             + "table in braces ('{ Cm7 x35343  G }': the chords that draw a diagram, with the shape each draws)";

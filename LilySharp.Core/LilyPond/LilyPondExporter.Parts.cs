@@ -477,7 +477,7 @@ public sealed partial class LilyPondExporter
     /// </remarks>
     private static Syntax.TuningType TabTuningType(PartDeclarationSyntax? part)
         => Tablature.Tunings.Parse(
-            (part != null ? PartProperty(part, "tuning")?.ToLowerInvariant() : null)
+            (part != null ? PartProperty(part, "tuning") : null)
             ?? InstrumentDefaults.GetTuning(InstrumentPresetOf(part)));
 
     // The LilyPond predefined tuning name for that tuning — read from the same table that

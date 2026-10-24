@@ -901,7 +901,7 @@ public class EditorColouringTests
         string tunings = entry.Single(r => r.GetProperty("name").GetString() == "support.constant.tuning.lilysharp")
             .GetProperty("match").GetString()!;
         Assert.Equal(SymbolCaseValidator.TuningValueVocabulary.OrderBy(w => w, StringComparer.Ordinal),
-            Regex.Match(tunings, @"\(([a-z0-9|]+)\)").Groups[1].Value.Split('|').OrderBy(w => w, StringComparer.Ordinal));
+            Regex.Match(tunings, @"\(([A-Za-z0-9|]+)\)").Groups[1].Value.Split('|').OrderBy(w => w, StringComparer.Ordinal));
         string shape = entry.Single(r => r.GetProperty("name").GetString() == "constant.numeric.lilysharp")
             .GetProperty("match").GetString()!;
         foreach (string s in new[] { "x35343", "133211", "2010", "x-10-12-12-11-10", "o2210x" })
