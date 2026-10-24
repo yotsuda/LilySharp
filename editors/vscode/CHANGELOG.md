@@ -7,16 +7,17 @@ All notable changes to the Lily# VS Code extension are documented here.
 ### Ctrl+I on an empty line works on the whole score
 
 - **With nothing selected and the caret on an empty line, Ctrl+I transforms the whole file** —
-  the input box says so (*transform the whole score with AI*), and the working label stands on
-  the caret's line. It used to stop with "select some notation". On a line of music it still
-  takes that line, and a selection still takes the selection.
+  the input box says so (*transform the whole score with AI*), and so does the progress
+  notification. It used to stop with "select some notation". On a line of music it still takes
+  that line, and a selection still takes the selection.
 
 ### Ctrl+I shows that it is working
 
-- **The AI transform says what it is doing, beside the selection** — as soon as the instruction
-  is entered the selection is shaded and its last line reads *⏳ Lily# AI — generating…*, then
-  validating, rendering, and *the candidate is in the panel*. Until now only a small status-bar
-  spinner said anything, so it was not clear the instruction had been taken.
+- **A notification follows the AI transform's steps** — *asking copilot/…*, *generating…*,
+  *validating candidate…*, *rendering candidate…*, with a Cancel button — and closes when the
+  candidate panel opens. Until now only a small status-bar spinner said anything, so it was not
+  clear the instruction had been taken. The range is no longer shaded while the AI works: its
+  change need not stay inside it.
 
 ### The status bar says where a note stands
 

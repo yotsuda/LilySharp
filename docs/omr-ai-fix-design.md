@@ -44,7 +44,7 @@ OMR（`LilySharp-Omr`）が読んだ `.lys` の怪しい小節を、**ユーザ�
   「1 小節 2〜4 秒」）。1 回の上限は設定 `lilysharp.ai.omrFixBatch`（既定 25）。超えた分は「続ける？」で次の回。
 - 進捗通知（`withProgress`・キャンセル可・「12 / 25 bars, 3 proposals」）。小節ごとに所要時間と結果を出力チャネル
   「Lily# AI」に 1 行。
-- 走っている間、対象の小節に AI 変換と同じ soft-lock の飾り。編集されたら中断（version guard）。
+- 走っている間、対象の小節に soft-lock の飾り（AI 変換のものは 2026-10-25 に通知に置き換わった。こちらは対象の小節が決まっているので残す）。編集されたら中断（version guard）。
 
 ### 2.3 確認パネル（`Lily# — Bar fixes`）
 

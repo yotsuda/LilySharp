@@ -56,7 +56,12 @@ The controller lives in `editors/vscode/src/aiTransform.ts` (registered from
   span), so pre-existing errors elsewhere don't block it. Up to 2 repair rounds.
 - **PreviewRenderer** — `renderText` → a dedicated "Lily# — AI candidate" webview
   with Accept / Iterate / Reject (Enter / Esc), reusing the Emmentaler font assets.
-- Soft-lock decoration marks the range while the model is thinking (§7).
+- While the model works, a notification names the step (asking the model, generating,
+  repairing, validating, rendering) with a Cancel button; it closes before the candidate
+  panel opens, so nothing stands over the review. (Until 2026-10-25 a soft-lock decoration
+  shaded the range and a status-bar spinner was the only progress — unnoticed after Ctrl+I.
+  The shading was dropped: the model's change need not stay in the range. Owner's decisions.)
+- With nothing selected on an empty line, the whole file is the range (2026-10-24).
 
 `Ctrl+I` (`cmd+i` on macOS) when a `.lys` editor has focus; also on the editor
 context menu and command palette. Requires VS Code ≥ 1.90 (the `vscode.lm` API).
@@ -102,7 +107,8 @@ Opt-in and **off by default** (it calls the model as you type): enable
   Both the transform and the ghost completion use this resolver; iteration and
   self-repair are provider-agnostic.
 - **Iteration & soft-lock** were delivered in M1 (the Iterate button continues the
-  conversation; a decoration marks the range while the model thinks).
+  conversation; a decoration marked the range while the model thought — replaced by a
+  progress notification on 2026-10-25, see above).
 - **Quality log (no telemetry).** Each transform logs its outcome — model label,
   self-repair rounds, accepted / rejected / iterated / failed — to the "Lily#
   Extension" output channel only. Nothing leaves the machine.

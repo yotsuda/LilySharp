@@ -104,8 +104,6 @@ let candidatePanel: vscode.WebviewPanel | undefined;
 // The resolver for the review round currently awaiting a decision. The panel's
 // message pump (registered once, at creation) routes Accept/Iterate/Reject here.
 let pendingDecision: ((d: Decision) => void) | undefined;
-let softLockDecoration: vscode.TextEditorDecorationType | undefined;
-let workingDecoration: vscode.TextEditorDecorationType | undefined;
 
 /** Registers the `lilysharp.aiTransform` command. */
 export function registerAiTransform(context: vscode.ExtensionContext, deps: AiTransformDeps): void {
@@ -115,7 +113,6 @@ export function registerAiTransform(context: vscode.ExtensionContext, deps: AiTr
     context.subscriptions.push({
         dispose: () => {
             candidatePanel?.dispose();
-            softLockDecoration?.dispose();
         }
     });
 }
@@ -138,7 +135,7 @@ async function runAiTransform(deps: AiTransformDeps): Promise<void> {
     // A range is required — an empty selection uses the current line so Ctrl+I on a
     // single line "just works". On an EMPTY line with nothing selected, the whole score is the
     // range (owner's request 2026-10-24: "sometimes I want the AI to look at the whole score");
-    // it used to be refused there. The working label then stands on the caret's line, in view.
+    // it used to be refused there.
     let sel: vscode.Range = editor.selection;
     let whole = false;
     if (sel.isEmpty) {
@@ -148,7 +145,6 @@ async function runAiTransform(deps: AiTransformDeps): Promise<void> {
             sel = new vscode.Range(doc.positionAt(0), doc.positionAt(doc.getText().length));
         }
     }
-    const labelAt = whole ? doc.lineAt(editor.selection.active.line).range : sel;
     const selectedText = doc.getText(sel);
     if (selectedText.trim().length === 0) {
         vscode.window.showErrorMessage('Lily#: the file is empty — write some notation first.');
@@ -178,53 +174,39 @@ async function runAiTransform(deps: AiTransformDeps): Promise<void> {
         return; // cancelled
     }
 
-    // Soft-lock the range while we work (§7): non-blocking, purely visual — at once, with the
-    // working label, so the screen answers the instruction before the model does.
-    // The whole score is not shaded: the label alone says so, where the caret is.
-    applySoftLock(editor, whole ? undefined : sel);
-    showWorking(editor, labelAt, whole ? 'taking the instruction (the whole score)…' : 'taking the instruction…');
-
     // Resolve the model: the user's Copilot models (vscode.lm) or a BYO key.
     const chat = await resolveChatClient(false);
     if (!chat) {
-        clearSoftLock();
         return;
     }
 
     try {
-        // Progress lives in the status bar (Window), NOT a Notification toast:
-        // drive() awaits the user's decision on the candidate panel from inside
-        // this scope, so a Notification would leave a "rendering candidate… /
-        // Cancel" toast hanging over the review the whole time. The status-bar
-        // spinner is unobtrusive and needs no competing Cancel button — the
-        // candidate panel's Reject/Esc is the cancel affordance.
-        await vscode.window.withProgress(
-            { location: vscode.ProgressLocation.Window, title: 'Lily#: AI transform', cancellable: false },
-            // Use the token withProgress hands us — `vscode.CancellationToken` is a TYPE,
-            // not a runtime object, so `vscode.CancellationToken.None` throws
-            // "Cannot read properties of undefined (reading 'None')".
-            async (progress, token) => {
-                // Each step goes to the status bar and to the label beside the selection.
-                const both = {
-                    report(value: { message?: string }) {
-                        progress.report(value);
-                        if (value.message) { showWorking(editor, labelAt, value.message); }
-                    },
-                };
-                both.report({ message: `asking ${chat.label}…` });
-                await drive(deps, client, chat, snapshot, instruction, both, token);
-            }
-        );
+        await drive(deps, client, chat, snapshot, instruction, whole);
     } catch (err: any) {
         vscode.window.showErrorMessage(`Lily#: AI transform failed: ${err?.message ?? err}`);
-    } finally {
-        clearSoftLock();
     }
 }
 
 /**
+ * Runs `task` under a notification that names the step it is on, with a Cancel button
+ * (owner's decision 2026-10-25): after Ctrl+I the screen has to answer at once, and a
+ * notification is VS Code's own way to say "working". It is closed before the candidate
+ * panel opens — a notification left over the review was why this used to be a status-bar
+ * spinner only, which went unnoticed (owner's report 2026-10-24). An in-editor label and a
+ * shaded range came between and were dropped: the AI's change need not stay in the range.
+ */
+function working<T>(title: string,
+    task: (progress: vscode.Progress<{ message?: string }>, token: vscode.CancellationToken) => Promise<T>): Thenable<T> {
+    // Use the token withProgress hands us — `vscode.CancellationToken` is a TYPE, not a runtime
+    // object, so `vscode.CancellationToken.None` throws "Cannot read properties of undefined".
+    return vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title, cancellable: true }, task);
+}
+
+/**
  * Runs the state machine to completion for one transaction. `instruction` is the
- * initial ask; iteration continues the same conversation with refinements.
+ * initial ask; iteration continues the same conversation with refinements. The work before each
+ * candidate runs under a notification (<see cref="working"/>), closed while the candidate is
+ * reviewed; its Cancel ends the transaction.
  */
 async function drive(
     deps: AiTransformDeps,
@@ -232,29 +214,37 @@ async function drive(
     chat: ChatClient,
     snapshot: Snapshot,
     instruction: string,
-    progress: vscode.Progress<{ message?: string }>,
-    token: vscode.CancellationToken,
+    whole: boolean,
 ): Promise<void> {
-    const grammar = await loadGrammar(deps);
-    // Quality log (§M5) — local only, no telemetry.
-    deps.log(`AI transform: "${instruction}" via ${chat.label}`);
+    const title = whole ? 'Lily#: AI transform — the whole score' : 'Lily#: AI transform';
+    const prepared = await working(title, async (progress, token) => {
+        progress.report({ message: `asking ${chat.label}…` });
+        const grammar = await loadGrammar(deps);
+        // Quality log (§M5) — local only, no telemetry.
+        deps.log(`AI transform: "${instruction}" via ${chat.label}`);
 
-    // Resolved facts of the selection (§5): un-blindfold the model. Best-effort.
-    progress.report({ message: 'reading resolved facts…' });
-    const facts = await getFacts(client, snapshot, token);
-    // The @todo marks in the selection and an OMR reader's readings of them (B6).
-    const marks = await getMarks(client, snapshot);
+        // Resolved facts of the selection (§5): un-blindfold the model. Best-effort.
+        progress.report({ message: 'reading resolved facts…' });
+        const facts = await getFacts(client, snapshot, token);
+        // The @todo marks in the selection and an OMR reader's readings of them (B6).
+        const marks = await getMarks(client, snapshot);
 
-    // The compiler's verdict on the untouched document: shown to the model up front (what is
-    // wrong NOW is often exactly what the instruction is about — "fix the bar lengths"), and
-    // the baseline a candidate is judged against, so only what it makes WORSE counts (a
-    // pre-existing problem elsewhere isn't the model's fault).
-    const baseline = await checkText(client, snapshot.origFullText);
+        // The compiler's verdict on the untouched document: shown to the model up front (what is
+        // wrong NOW is often exactly what the instruction is about — "fix the bar lengths"), and
+        // the baseline a candidate is judged against, so only what it makes WORSE counts (a
+        // pre-existing problem elsewhere isn't the model's fault).
+        const baseline = await checkText(client, snapshot.origFullText);
+
+        // Render the untouched score once for the before/after comparison (§M5).
+        const renderBefore = await client.sendRequest<SvgResponse>('lilysharp/renderText', { Text: snapshot.origFullText });
+        return token.isCancellationRequested ? null : { grammar, facts, marks, baseline, renderBefore };
+    });
+    if (!prepared) {
+        return;
+    }
+    const { grammar, facts, marks, baseline, renderBefore } = prepared;
     const baselineErrors = count(baseline, 'error');
     const baselineWarnings = baseline.filter(d => d.Severity === 'warning' && !MACHINE_WARNING.test(d.Message)).length;
-
-    // Render the untouched score once for the before/after comparison (§M5).
-    const renderBefore = await client.sendRequest<SvgResponse>('lilysharp/renderText', { Text: snapshot.origFullText });
 
     // Conversation seed.
     const messages: ChatMessage[] = [
@@ -264,158 +254,167 @@ async function drive(
 
     let iterate = true;
     while (iterate) {
-        if (token.isCancellationRequested) return;
+        // One round — generate, validate, render — under its notification; null when cancelled or
+        // failed (a failure has said so itself).
+        const round = await working(title, async (progress, token) => {
+            if (token.isCancellationRequested) return null;
 
-        // ----- Generate + validate-and-self-repair (§4 AwaitingModel → Validating → Repairing) -----
-        let candidate: CandidateEdit | null = null;
-        let repairs = 0;
-        // A candidate that compiles but adds WARNINGS (a bar that no longer fills its meter
-        // is a warning in Lily#, not an error) is repaired like a broken one; if the repairs
-        // run out, the best such candidate is still shown, with its warnings named, rather
-        // than nothing — it is valid Lily#, and the user can see on the score whether it is
-        // what they asked for.
-        let warned: { edit: CandidateEdit; warnings: CandidateDiagnostic[] } | null = null;
-        let unchanged = false;
-        let octaveAsked: string | null = null;
-        let octaveNote: ResolvedPitchFact[] | null = null;
-        for (let attempt = 0; attempt <= MAX_REPAIR_ATTEMPTS; attempt++) {
-            if (token.isCancellationRequested) return;
-            progress.report({ message: attempt === 0 ? 'generating…' : `repairing (${attempt}/${MAX_REPAIR_ATTEMPTS})…` });
+            // ----- Generate + validate-and-self-repair (§4 AwaitingModel → Validating → Repairing) -----
+            let candidate: CandidateEdit | null = null;
+            let repairs = 0;
+            // A candidate that compiles but adds WARNINGS (a bar that no longer fills its meter
+            // is a warning in Lily#, not an error) is repaired like a broken one; if the repairs
+            // run out, the best such candidate is still shown, with its warnings named, rather
+            // than nothing — it is valid Lily#, and the user can see on the score whether it is
+            // what they asked for.
+            let warned: { edit: CandidateEdit; warnings: CandidateDiagnostic[] } | null = null;
+            let unchanged = false;
+            let octaveAsked: string | null = null;
+            let octaveNote: ResolvedPitchFact[] | null = null;
+            for (let attempt = 0; attempt <= MAX_REPAIR_ATTEMPTS; attempt++) {
+                if (token.isCancellationRequested) return null;
+                progress.report({ message: attempt === 0 ? 'generating…' : `repairing (${attempt}/${MAX_REPAIR_ATTEMPTS})…` });
 
-            const raw = await chat.send(messages, token);
-            const edit = toCandidateEdit(snapshot, raw);
-            if (edit === null) {
-                messages.push({ role: 'assistant', content: raw });
-                messages.push({ role: 'user', content:
-                    'Your reply was empty. Return the replacement for the selection, or the whole file in '
-                    + '<file>…</file> — no commentary, no code fences.' });
-                continue;
-            }
-            // A reply that changes nothing is not a transform. The owner accepted one such
-            // candidate, the section exactly as it was, because nothing said it was
-            // unchanged (2026-09-26) — the model had been asked for a new part it could not
-            // write inside the selection.
-            if (edit.text === edit.snap.origSelectedText) {
-                unchanged = true;
-                messages.push({ role: 'assistant', content: raw });
-                messages.push({ role: 'user', content:
-                    'That reply is identical to the file as it stands — it changes nothing. Carry out the '
-                    + 'instruction. If it needs changes outside the selection (a new part, a score row, a new '
-                    + 'declaration), return the WHOLE file in <file>…</file>.' });
-                continue;
-            }
-            unchanged = false;
-
-            progress.report({ message: 'validating candidate…' });
-            const reconstructed = spliceCandidate(edit.snap, edit.text);
-            const check = await client.sendRequest<CheckCandidateResponse>('lilysharp/checkCandidate', { Text: reconstructed });
-            const badness = candidateBadness(check, edit.snap, edit.text, baselineErrors);
-            const newWarnings = badness.length === 0
-                ? addedWarnings(check, edit.snap, edit.text, baselineWarnings)
-                : [];
-
-            if (badness.length === 0 && newWarnings.length === 0) {
-                // It compiles cleanly — now check where its notes actually LAND. An octave
-                // slip is valid Lily# and draws no diagnostic, so it is the compiler's
-                // resolved pitches, not its diagnostics, that show one. Asked once per
-                // candidate: returning the same candidate again is the model confirming the
-                // register is what the instruction wants ("two octaves lower").
-                const lo = edit.snap.startOffset;
-                const outliers = edit.text === octaveAsked
-                    ? []
-                    : octaveOutliers(facts, await pitchesOf(client, reconstructed, lo, lo + edit.text.length));
-                if (outliers.length > 0 && attempt < MAX_REPAIR_ATTEMPTS) {
-                    octaveAsked = edit.text;
-                    repairs = attempt + 1;
-                    const range = facts.map(f => f.Resolved);
+                const raw = await chat.send(messages, token);
+                const edit = toCandidateEdit(snapshot, raw);
+                if (edit === null) {
                     messages.push({ role: 'assistant', content: raw });
                     messages.push({ role: 'user', content:
-                        `That candidate compiles, but check its octaves. The notes you replaced were `
-                        + `${range.join(' ')}; the compiler resolves these of yours more than an octave outside `
-                        + `that register:\n${outliers.map(p => `  - ${p.Written} -> ${p.Resolved}`).join('\n')}\n`
-                        + 'Remember relative octaves: each note lands nearest the one before it, and the first note of a '
-                        + 'line is placed from whatever precedes it. Fix the octave marks, or, if this register is really '
-                        + 'what the instruction asks for, return the same candidate again unchanged.' });
-                    deps.log(`AI transform: octave check — ${outliers.map(p => `${p.Written}->${p.Resolved}`).join(' ')}`);
+                        'Your reply was empty. Return the replacement for the selection, or the whole file in '
+                        + '<file>…</file> — no commentary, no code fences.' });
                     continue;
                 }
-                candidate = edit; // valid — never showed a broken candidate
-                if (outliers.length > 0) {
-                    octaveNote = outliers;
+                // A reply that changes nothing is not a transform. The owner accepted one such
+                // candidate, the section exactly as it was, because nothing said it was
+                // unchanged (2026-09-26) — the model had been asked for a new part it could not
+                // write inside the selection.
+                if (edit.text === edit.snap.origSelectedText) {
+                    unchanged = true;
+                    messages.push({ role: 'assistant', content: raw });
+                    messages.push({ role: 'user', content:
+                        'That reply is identical to the file as it stands — it changes nothing. Carry out the '
+                        + 'instruction. If it needs changes outside the selection (a new part, a score row, a new '
+                        + 'declaration), return the WHOLE file in <file>…</file>.' });
+                    continue;
                 }
-                warned = null;
-                break;
-            }
-            repairs = attempt + 1;
+                unchanged = false;
 
-            // Self-repair: feed the diagnostics back and try again.
-            const sameForm = edit.whole
-                ? 'Return the corrected WHOLE file in <file>…</file>'
-                : 'Return a corrected replacement for the selection (or the whole file in <file>…</file>)';
-            messages.push({ role: 'assistant', content: raw });
-            if (badness.length > 0) {
-                messages.push({ role: 'user', content:
-                    `That candidate does not compile. The Lily# compiler reported:\n${formatDiags(badness)}\n` +
-                    `${sameForm} — same output rules.` });
-            } else {
-                if (!warned || newWarnings.length < warned.warnings.length) {
-                    warned = { edit, warnings: newWarnings };
+                progress.report({ message: 'validating candidate…' });
+                const reconstructed = spliceCandidate(edit.snap, edit.text);
+                const check = await client.sendRequest<CheckCandidateResponse>('lilysharp/checkCandidate', { Text: reconstructed });
+                const badness = candidateBadness(check, edit.snap, edit.text, baselineErrors);
+                const newWarnings = badness.length === 0
+                    ? addedWarnings(check, edit.snap, edit.text, baselineWarnings)
+                    : [];
+
+                if (badness.length === 0 && newWarnings.length === 0) {
+                    // It compiles cleanly — now check where its notes actually LAND. An octave
+                    // slip is valid Lily# and draws no diagnostic, so it is the compiler's
+                    // resolved pitches, not its diagnostics, that show one. Asked once per
+                    // candidate: returning the same candidate again is the model confirming the
+                    // register is what the instruction wants ("two octaves lower").
+                    const lo = edit.snap.startOffset;
+                    const outliers = edit.text === octaveAsked
+                        ? []
+                        : octaveOutliers(facts, await pitchesOf(client, reconstructed, lo, lo + edit.text.length));
+                    if (outliers.length > 0 && attempt < MAX_REPAIR_ATTEMPTS) {
+                        octaveAsked = edit.text;
+                        repairs = attempt + 1;
+                        const range = facts.map(f => f.Resolved);
+                        messages.push({ role: 'assistant', content: raw });
+                        messages.push({ role: 'user', content:
+                            `That candidate compiles, but check its octaves. The notes you replaced were `
+                            + `${range.join(' ')}; the compiler resolves these of yours more than an octave outside `
+                            + `that register:\n${outliers.map(p => `  - ${p.Written} -> ${p.Resolved}`).join('\n')}\n`
+                            + 'Remember relative octaves: each note lands nearest the one before it, and the first note of a '
+                            + 'line is placed from whatever precedes it. Fix the octave marks, or, if this register is really '
+                            + 'what the instruction asks for, return the same candidate again unchanged.' });
+                        deps.log(`AI transform: octave check — ${outliers.map(p => `${p.Written}->${p.Resolved}`).join(' ')}`);
+                        continue;
+                    }
+                    candidate = edit; // valid — never showed a broken candidate
+                    if (outliers.length > 0) {
+                        octaveNote = outliers;
+                    }
+                    warned = null;
+                    break;
                 }
-                messages.push({ role: 'user', content:
-                    `That candidate compiles, but it adds warnings the file did not have:\n${formatDiags(newWarnings)}\n` +
-                    `${sameForm} that adds no warnings — same output rules.` });
-            }
-        }
+                repairs = attempt + 1;
 
-        let caption = instruction;
-        if (candidate === null && warned) {
-            candidate = warned.edit;
-            caption = `${instruction} — ⚠ ${warned.warnings.length} new warning(s): `
-                + warned.warnings.map(w => w.Message).join(' / ');
-            deps.log(`AI transform: shown with ${warned.warnings.length} new warning(s) after ${MAX_REPAIR_ATTEMPTS} repairs: `
-                + warned.warnings.map(w => w.Message).join(' | '));
-        }
-
-        if (candidate === null) {
-            // §4 Failed: exhausted repairs — abort WITHOUT showing broken notation.
-            if (unchanged) {
-                deps.log(`AI transform: the model returned the file unchanged after ${MAX_REPAIR_ATTEMPTS} retries — nothing applied.`);
-                vscode.window.showWarningMessage(
-                    'Lily#: the AI returned the music unchanged, even when asked again. Nothing was changed — try wording the request differently.');
-            } else {
-                deps.log(`AI transform: FAILED validation after ${MAX_REPAIR_ATTEMPTS} repairs — nothing applied.`);
-                vscode.window.showWarningMessage(
-                    'Lily#: the AI could not produce a valid transform after several tries. Nothing was changed.');
+                // Self-repair: feed the diagnostics back and try again.
+                const sameForm = edit.whole
+                    ? 'Return the corrected WHOLE file in <file>…</file>'
+                    : 'Return a corrected replacement for the selection (or the whole file in <file>…</file>)';
+                messages.push({ role: 'assistant', content: raw });
+                if (badness.length > 0) {
+                    messages.push({ role: 'user', content:
+                        `That candidate does not compile. The Lily# compiler reported:\n${formatDiags(badness)}\n` +
+                        `${sameForm} — same output rules.` });
+                } else {
+                    if (!warned || newWarnings.length < warned.warnings.length) {
+                        warned = { edit, warnings: newWarnings };
+                    }
+                    messages.push({ role: 'user', content:
+                        `That candidate compiles, but it adds warnings the file did not have:\n${formatDiags(newWarnings)}\n` +
+                        `${sameForm} that adds no warnings — same output rules.` });
+                }
             }
+
+            let caption = instruction;
+            if (candidate === null && warned) {
+                candidate = warned.edit;
+                caption = `${instruction} — ⚠ ${warned.warnings.length} new warning(s): `
+                    + warned.warnings.map(w => w.Message).join(' / ');
+                deps.log(`AI transform: shown with ${warned.warnings.length} new warning(s) after ${MAX_REPAIR_ATTEMPTS} repairs: `
+                    + warned.warnings.map(w => w.Message).join(' | '));
+            }
+
+            if (candidate === null) {
+                // §4 Failed: exhausted repairs — abort WITHOUT showing broken notation.
+                if (unchanged) {
+                    deps.log(`AI transform: the model returned the file unchanged after ${MAX_REPAIR_ATTEMPTS} retries — nothing applied.`);
+                    vscode.window.showWarningMessage(
+                        'Lily#: the AI returned the music unchanged, even when asked again. Nothing was changed — try wording the request differently.');
+                } else {
+                    deps.log(`AI transform: FAILED validation after ${MAX_REPAIR_ATTEMPTS} repairs — nothing applied.`);
+                    vscode.window.showWarningMessage(
+                        'Lily#: the AI could not produce a valid transform after several tries. Nothing was changed.');
+                }
+                return null;
+            }
+            if (octaveNote) {
+                caption = `${caption} — ⚠ check the octave: ${octaveNote.map(p => `${p.Written} → ${p.Resolved}`).join(', ')}`;
+            }
+            if (repairs > 0 && caption === instruction) {
+                deps.log(`AI transform: candidate valid after ${repairs} self-repair round(s).`);
+            }
+            if (candidate.whole) {
+                deps.log(`AI transform: the model rewrote the file (changed ${candidate.snap.startOffset}..${candidate.snap.endOffset} of the original).`);
+            }
+
+            // ----- Render the candidate score and decide on it (§3 [7]) -----
+            progress.report({ message: 'rendering candidate…' });
+            const reconstructed = spliceCandidate(candidate.snap, candidate.text);
+            const renderAfter = await client.sendRequest<SvgResponse>('lilysharp/renderText', { Text: reconstructed });
+            // Source-offset spans of the change so the panel can highlight WHERE it
+            // landed: in the "after" score the candidate occupies [start, start+len);
+            // in the "before" score the replaced text occupied [start, end). For a whole-file
+            // reply these are the span the diff found, not the user's selection.
+            // The SVG carries data-pos (source offsets) for editor↔preview sync, so
+            // the webview lights up the notes whose data-pos falls in these spans.
+            const changed: ChangedSpans = {
+                afterLo: candidate.snap.startOffset,
+                afterHi: candidate.snap.startOffset + candidate.text.length,
+                beforeLo: candidate.snap.startOffset,
+                beforeHi: candidate.snap.endOffset,
+            };
+            return token.isCancellationRequested ? null : { candidate, caption, renderAfter, changed };
+        });
+        if (!round) {
             return;
         }
-        if (octaveNote) {
-            caption = `${caption} — ⚠ check the octave: ${octaveNote.map(p => `${p.Written} → ${p.Resolved}`).join(', ')}`;
-        }
-        if (repairs > 0 && caption === instruction) {
-            deps.log(`AI transform: candidate valid after ${repairs} self-repair round(s).`);
-        }
-        if (candidate.whole) {
-            deps.log(`AI transform: the model rewrote the file (changed ${candidate.snap.startOffset}..${candidate.snap.endOffset} of the original).`);
-        }
-
-        // ----- Render the candidate score and decide on it (§3 [7]) -----
-        progress.report({ message: 'rendering candidate…' });
-        const reconstructed = spliceCandidate(candidate.snap, candidate.text);
-        const renderAfter = await client.sendRequest<SvgResponse>('lilysharp/renderText', { Text: reconstructed });
-        // Source-offset spans of the change so the panel can highlight WHERE it
-        // landed: in the "after" score the candidate occupies [start, start+len);
-        // in the "before" score the replaced text occupied [start, end). For a whole-file
-        // reply these are the span the diff found, not the user's selection.
-        // The SVG carries data-pos (source offsets) for editor↔preview sync, so
-        // the webview lights up the notes whose data-pos falls in these spans.
-        const changed: ChangedSpans = {
-            afterLo: candidate.snap.startOffset,
-            afterHi: candidate.snap.startOffset + candidate.text.length,
-            beforeLo: candidate.snap.startOffset,
-            beforeHi: candidate.snap.endOffset,
-        };
-        progress.report({ message: 'the candidate is in the panel — accept, refine or reject it' });
+        // The notification has closed: the review is the user's, with nothing over it.
+        const { candidate, caption, renderAfter, changed } = round;
         const decision = await reviewOnScore(deps, renderBefore, renderAfter, caption, candidate.text, changed);
 
         if (decision === 'reject') {
@@ -957,57 +956,6 @@ async function applyCandidate(deps: AiTransformDeps, snapshot: Snapshot, candida
         candidatePanel?.dispose();
     } else {
         vscode.window.showErrorMessage('Lily#: the edit could not be applied.');
-    }
-}
-
-// ======================================================================
-// Soft lock decoration (§7)
-// ======================================================================
-
-/** Shades the range being transformed (none for the whole score) and readies the working label. */
-function applySoftLock(editor: vscode.TextEditor, range: vscode.Range | undefined): void {
-    clearSoftLock();
-    softLockDecoration = vscode.window.createTextEditorDecorationType({
-        backgroundColor: new vscode.ThemeColor('editor.wordHighlightBackground'),
-        isWholeLine: false,
-        overviewRulerColor: new vscode.ThemeColor('editorInfo.foreground'),
-        overviewRulerLane: vscode.OverviewRulerLane.Full,
-    });
-    editor.setDecorations(softLockDecoration, range ? [range] : []);
-    workingDecoration = vscode.window.createTextEditorDecorationType({
-        after: { color: new vscode.ThemeColor('editorCodeLens.foreground'), fontStyle: 'italic', margin: '0 0 0 2em' },
-    });
-}
-
-/**
- * The working label at the end of the selection (owner's report 2026-10-24: after Ctrl+I nothing
- * on the screen changed, so it was not clear the instruction had been taken): what the transform
- * is doing now, the step the status-bar progress names, where the eye already is. Gone with the
- * soft lock.
- */
-function showWorking(editor: vscode.TextEditor, range: vscode.Range, message: string): void {
-    if (!workingDecoration) { return; }
-    // A selection ending at the start of a line (whole lines selected) ends on the line before.
-    let end = range.end;
-    if (end.character === 0 && end.line > range.start.line) {
-        end = editor.document.lineAt(end.line - 1).range.end;
-    } else {
-        end = editor.document.lineAt(end.line).range.end;
-    }
-    editor.setDecorations(workingDecoration, [{
-        range: new vscode.Range(end, end),
-        renderOptions: { after: { contentText: `⏳ Lily# AI — ${message}` } },
-    }]);
-}
-
-function clearSoftLock(): void {
-    if (softLockDecoration) {
-        softLockDecoration.dispose();
-        softLockDecoration = undefined;
-    }
-    if (workingDecoration) {
-        workingDecoration.dispose();
-        workingDecoration = undefined;
     }
 }
 
