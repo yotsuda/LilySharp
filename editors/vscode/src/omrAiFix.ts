@@ -1473,9 +1473,9 @@ function rowHtml(run: FixRun, r: FixRow, pageUris: ReadonlyMap<number, { uri: st
   <td colspan="3" class="why"><span class="gates" data-i="${r.index}">${parts.gates}</span> <span class="reason-text" data-i="${r.index}">${parts.reason}</span></td>
 </tr>
 <tr class="${cls} body" data-i="${r.index}">
-  <td class="cell">${now}<pre class="src now" data-i="${r.index}">${parts.nowText}</pre></td>
-  <td class="cell">${scan}</td>
-  <td class="cell"><div class="draft-of" data-i="${r.index}">${esc(parts.source)}</div><div class="after-pic" data-i="${r.index}">${parts.proposal}</div>`
+  <td class="cell"><div class="over"></div>${now}<pre class="src now" data-i="${r.index}">${parts.nowText}</pre></td>
+  <td class="cell"><div class="over"></div>${scan}</td>
+  <td class="cell"><div class="over draft-of" data-i="${r.index}">${esc(parts.source)}</div><div class="after-pic" data-i="${r.index}">${parts.proposal}</div>`
         // The bar to write, editable (owner's request 2026-10-24): a click opens it; the
         // picture and the gates follow the typing.
         + (can ? `<pre class="src after editable" data-i="${r.index}" title="Click to edit the bar — the picture and the gates follow">${parts.afterText}</pre>`
@@ -1548,7 +1548,9 @@ tr.body td { padding-top: 2px; }
 .memo { font-size:12px; opacity:.85; }
 .dim { opacity:.6; }
 .cell { width:33%; }
-.draft-of { font-size:11px; opacity:.7; margin:0 0 2px; }
+/* The line over each picture, the same height in all three cells so the pictures line up
+   (owner, 2026-10-24); only the Draft's says something — where it came from. */
+.over { font-size:11px; line-height:14px; height:14px; margin:0 0 2px; opacity:.7; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .pic { display:block; width:100%; height:120px; background:#fff; border:1px solid var(--vscode-panel-border); }
 .none { height:120px; display:flex; align-items:center; justify-content:center; opacity:.6; border:1px dashed var(--vscode-panel-border); }
 .src { margin:4px 0 0; font-family: var(--vscode-editor-font-family, monospace); font-size:11px; white-space:pre-wrap; opacity:.9; }
