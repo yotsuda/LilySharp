@@ -213,17 +213,19 @@ public static partial class NoteStepper
     /// whole-file conversion into that mode (Convert Octaves to Absolute / Relative,
     /// <see cref="OctaveModeConverter"/>), which re-marks every note to keep its pitch.
     /// </summary>
-    /// <remarks><see cref="Strum"/>: sound the pitches one after another, lowest first, rather than
-    /// together — a tuning's open strings (owner's request 2026-10-24).</remarks>
+    /// <remarks><see cref="Strum"/>: sound the pitches one after another in the order given, rather
+    /// than together — a tuning's open strings, string after string (owner's request 2026-10-24).
+    /// <see cref="Apart"/>, with it: each string stops as the next one sounds, so they never ring as
+    /// a chord — a bass's (owner's request, same day: a low chord is muddy and hard to hear).</remarks>
     public sealed record StepResult(
         bool Fallback, ImmutableArray<Edit> Edits, string? Message,
         ImmutableArray<int> Pitches, int Timbre, int Program = -1, OctaveMode? ConvertOctaves = null,
-        bool Strum = false);
+        bool Strum = false, bool Apart = false);
 
     /// <summary>What the caret is on and what it sounds (MIDI, lowest first), with the timbre,
     /// the program and the strum as <see cref="StepResult"/> carries them.</summary>
     public sealed record Audition(Target Target, ImmutableArray<int> Pitches, int Timbre, int Program = -1,
-        bool Strum = false);
+        bool Strum = false, bool Apart = false);
 
     /// <summary>The most pitches one audition sounds (a selection of a whole passage would
     /// otherwise strike every note of it at once).</summary>
@@ -243,8 +245,10 @@ public static partial class NoteStepper
     private static readonly int GuitarProgram = Svg.Model.InstrumentDefaults.GetMidiProgram("guitar") ?? NoProgram;
 
     /// <summary>What a target sounds: pitches (MIDI, lowest first), timbre family and program, and
-    /// whether they are struck one after another (<see cref="StepResult.Strum"/>).</summary>
-    private readonly record struct Voice(ImmutableArray<int> Pitches, int Timbre, int Program, bool Strum = false)
+    /// whether they are struck one after another (<see cref="StepResult.Strum"/>), each stopping as
+    /// the next sounds (<see cref="StepResult.Apart"/>).</summary>
+    private readonly record struct Voice(ImmutableArray<int> Pitches, int Timbre, int Program, bool Strum = false,
+        bool Apart = false)
     {
         public static readonly Voice Silent = new([], 0, NoProgram);
     }
@@ -471,7 +475,7 @@ public static partial class NoteStepper
         var pitches = new SortedSet<int>();
         int timbre = -1;
         int program = NoProgram;
-        bool strum = false;
+        bool strum = false, apart = false;
         // A strum keeps its voice's own order — string after string — not the pitches sorted:
         // a re-entrant ukulele strikes its high 4th string first (owner's report 2026-10-24).
         ImmutableArray<int> strummed = [];
@@ -491,7 +495,7 @@ public static partial class NoteStepper
                     pitches.Add(pitch);
                 if (timbre < 0 && voice.Pitches.Length > 0)
                 {
-                    (timbre, program, strum) = (voice.Timbre, voice.Program, voice.Strum);
+                    (timbre, program, strum, apart) = (voice.Timbre, voice.Program, voice.Strum, voice.Apart);
                     if (strum)
                         strummed = voice.Pitches;
                 }
@@ -504,7 +508,7 @@ public static partial class NoteStepper
 
         return new StepResult(false, [.. edits], message,
             strum ? [.. strummed.Take(MaxAuditionPitches)] : [.. pitches.Take(MaxAuditionPitches)],
-            Math.Max(timbre, 0), program, convert, strum);
+            Math.Max(timbre, 0), program, convert, strum, strum && apart);
     }
 
     // ------------------------------------------------------------------ the audition
@@ -535,7 +539,7 @@ public static partial class NoteStepper
         if (ChordOfMember(target) is { } chord)
             target = new Target(TargetKind.Chord, chord);
         var voice = Sound(target, sounding ?? tree, includeStretch);
-        return voice.Pitches.IsEmpty ? null : new Audition(target, voice.Pitches, voice.Timbre, voice.Program, voice.Strum);
+        return voice.Pitches.IsEmpty ? null : new Audition(target, voice.Pitches, voice.Timbre, voice.Program, voice.Strum, voice.Apart);
     }
 
     /// <summary>The <c>&lt;…&gt;</c> a member target belongs to — what it SOUNDS as (owner's

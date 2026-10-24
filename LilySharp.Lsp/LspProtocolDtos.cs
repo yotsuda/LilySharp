@@ -712,9 +712,12 @@ public class StepResponse
     /// to Absolute / Relative command instead of applying edits (there are none), so every note
     /// keeps its pitch. Null otherwise.</summary>
     public string? ConvertOctaves { get; set; }
-    /// <summary>Strike the pitches one after another, lowest first, instead of together — a
+    /// <summary>Strike the pitches one after another in the order given, instead of together — a
     /// tuning's open strings (owner's request 2026-10-24, <c>NoteStepper.StepResult.Strum</c>).</summary>
     public bool Strum { get; set; }
+    /// <summary>With <see cref="Strum"/>: each pitch stops as the next is struck, never ringing as a
+    /// chord — a bass's strings (<c>NoteStepper.StepResult.Apart</c>).</summary>
+    public bool Apart { get; set; }
 }
 
 /// <summary>Parameters for lilysharp/auditionAt: the caret as a 0-based character offset.</summary>
@@ -742,6 +745,8 @@ public class AuditionAtResponse
     public int Program { get; set; } = -1;
     /// <summary>One after another, as <see cref="StepResponse.Strum"/>.</summary>
     public bool Strum { get; set; }
+    /// <summary>Each stopping as the next sounds, as <see cref="StepResponse.Apart"/>.</summary>
+    public bool Apart { get; set; }
     public int Version { get; set; }
 }
 

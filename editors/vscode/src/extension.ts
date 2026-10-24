@@ -1391,7 +1391,15 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
                 const pitches: number[] = message.pitches ?? [];
                 if (message.gapMs > 0 && pitches.length > 1) {
                     for (const t of midiStrumTimers) { clearTimeout(t); }
-                    midiStrumTimers = pitches.slice(1).map((p, i) => setTimeout(() => void strike([p]), (i + 1) * message.gapMs));
+                    // Apart (a bass's strings): the string before stops as each one sounds, on the
+                    // channel the page releases (the audition's, the drums' for the drum family).
+                    const channel = message.timbre === 9 ? 9 : 15;
+                    midiStrumTimers = pitches.slice(1).map((p, i) => setTimeout(() => {
+                        if (message.apart) {
+                            void midiOutRequest('lilysharp/midiOut/release', { channel, pitches: [pitches[i]] });
+                        }
+                        void strike([p]);
+                    }, (i + 1) * message.gapMs));
                     await strike([pitches[0]]);
                 } else {
                     await strike(pitches);
@@ -4943,8 +4951,11 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         // (a strum, playPitches), on the AUDIO clock — or, for the MIDI output, on the extension
         // host's — never on this page's timers: a hidden preview fires those about once a second,
         // and the strings after the first came out together as a chord (owner's report 2026-10-24).
-        function holdNotes(pitches, timbre, program, gapMs, strumS) {
+        // apart (with a strum): each string stops as the next one sounds, so they never ring as a
+        // chord — a bass's (owner's request 2026-10-24: a low chord is muddy).
+        function holdNotes(pitches, timbre, program, gapMs, strumS, apart) {
             const strum = strumS > 0 ? strumS : 0;
+            const separate = strum > 0 && !!apart;
             const key = pitches.slice().sort((a, b) => a - b).join(',') + '/' + timbre + '/' + program;
             // Fresh press (or a different note) re-attacks; a fast repeat of the SAME
             // note leaves the tone ringing and only re-arms the watchdog.
@@ -4958,12 +4969,12 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                     heldChannel = timbre === 9 ? 9 : 15;
                     heldPitches = pitches.slice();
                     vscode.postMessage({ type: 'midiStrike', port: midiOutput, pitches: heldPitches, timbre: timbre, program: program,
-                        gapMs: Math.round(strum * 1000) });
+                        gapMs: Math.round(strum * 1000), apart: separate });
                 } else {
                     const ctx = audio();
                     const sf = soundFontSynth();
                     if (sf && sf.ready) {
-                        heldChannel = sf.strike(pitches, timbre, program, 100, strum);
+                        heldChannel = sf.strike(pitches, timbre, program, 100, strum, separate);
                         heldPitches = pitches.slice();
                     } else {
                         const master = oscillatorOutput(ctx, 0.22);
@@ -4979,6 +4990,12 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                             g.gain.value = 0;
                             g.gain.setValueAtTime(0, t0);
                             g.gain.linearRampToValueAtTime(0.9, t0 + 0.02);
+                            if (separate && i + 1 < pitches.length) {
+                                // Apart: fades as the next string sounds.
+                                const next = t0 + strum;
+                                g.gain.setTargetAtTime(0.0001, next, 0.03);
+                                osc.stop(next + 0.3);
+                            }
                             osc.connect(g); g.connect(master);
                             osc.start(t0);
                             heldOscs.push({ osc, g });
@@ -5033,11 +5050,12 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         // tuning's open strings string after string (owner's request 2026-10-24), each joining the
         // ones already ringing (holdNotes times them). Not sorted: a re-entrant ukulele's high 4th
         // string comes first.
-        function playPitches(pitches, timbre, program, durationMs, strumMs) {
+        // apart: each string stops as the next sounds (a bass's — holdNotes).
+        function playPitches(pitches, timbre, program, durationMs, strumMs, apart) {
             if (!pitches || pitches.length === 0) { return; }
             stopHeldNote();
             const prog = typeof program === 'number' ? program : -1;
-            holdNotes(pitches, timbre || 0, prog, 1e9, pitches.length > 1 ? (strumMs || 0) / 1000 : 0);
+            holdNotes(pitches, timbre || 0, prog, 1e9, pitches.length > 1 ? (strumMs || 0) / 1000 : 0, !!apart);
             if (heldWatchdog) { clearTimeout(heldWatchdog); }
             heldWatchdog = setTimeout(stopHeldNote, durationMs || 450);
         }
@@ -5321,7 +5339,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                     break;
                 }
                 case 'playPitches':
-                    playPitches(message.pitches, message.timbre, message.program, message.durationMs, message.strumMs || 0);
+                    playPitches(message.pitches, message.timbre, message.program, message.durationMs, message.strumMs || 0, !!message.apart);
                     break;
                 case 'setSoundFont':
                     setSoundFont(message.uri);

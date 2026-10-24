@@ -568,8 +568,7 @@ public static partial class NoteStepper
             || Svg.Model.InstrumentDefaults.GetMidiProgram(written.Name.ToLowerInvariant()) is not int program)
             return Voice.Silent;
         if (Svg.Model.InstrumentDefaults.GetTuning(written.Name.ToLowerInvariant()) is { } tuning)
-            return new Voice([.. Tablature.Tunings.GetTuning(Tablature.Tunings.Parse(tuning))],
-                Midi.GeneralMidi.PreviewTimbreFamily(program), program, Strum: true);
+            return OpenStringsVoice(Tablature.Tunings.Parse(tuning), program);
         return SampleVoice(program);
     }
 }

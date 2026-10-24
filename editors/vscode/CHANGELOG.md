@@ -10,6 +10,8 @@ All notable changes to the Lily# VS Code extension are documented here.
   completed or typed `tuning` sounded one string, then the rest at once as a chord: each string
   was a timer in the preview page, and a hidden page fires its timers about once a second. The
   strings are timed on the audio clock now (and, through a MIDI output, by the extension).
+- **A bass's strings sound one at a time** — `tuning bass…` and `instrument bass…` strike each
+  string as the one before stops, 200 ms apart, instead of building a low, muddy chord.
 
 ### The status bar says what the setting under the caret does
 

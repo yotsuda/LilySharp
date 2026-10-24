@@ -20,9 +20,9 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import {
     AuditionMemory, Debouncer, EDIT_SELECTION_WINDOW_MS, CHORD_MS, NOTE_MS, OCTAVE_DOWN_KEY, OCTAVE_UP_KEY,
-    STEP_DOWN_KEY, STEP_UP_KEY, STRUM_MS,
+    STEP_DOWN_KEY, STEP_UP_KEY, STRUM_APART_MS, STRUM_MS,
     INSTRUMENT_CHANGE_MAX, auditionDurationMs, caretMoveMaySound, mayChangeATypedPitch, mayChangeAnInstrument,
-    reselectAfterStep, stepFallbackCommand,
+    reselectAfterStep, stepFallbackCommand, strumGapMs,
 } from '../src/auditionCore';
 
 describe('a stepped selection stays selected (owner\'s request 2026-10-24)', () => {
@@ -138,6 +138,15 @@ describe('the typing audition: a changed sound plays once', () => {
         assert.equal(auditionDurationMs(4, true), 3 * STRUM_MS + CHORD_MS);
         assert.equal(auditionDurationMs(4, false), CHORD_MS);
         assert.equal(auditionDurationMs(1, true), NOTE_MS);
+    });
+
+    it('strikes a bass\'s strings apart, wider and each a note\'s length (owner\'s request 2026-10-24)', () => {
+        assert.equal(strumGapMs(true, true), STRUM_APART_MS);
+        assert.equal(strumGapMs(true, false), STRUM_MS);
+        assert.equal(strumGapMs(false, true), 0);
+        assert.ok(STRUM_APART_MS > STRUM_MS);
+        // Only the last string still rings at the end: a note's length after it, not a chord's.
+        assert.equal(auditionDurationMs(4, true, true), 3 * STRUM_APART_MS + NOTE_MS);
     });
 
     it('sounds a midiInstrument changed to another program at the same pitch (owner\'s request 2026-10-24)', () => {

@@ -854,7 +854,7 @@ public static partial class NoteStepper
             TuningType.Cello => "cello",
             _ => TuningFamily(type) switch
             {
-                1 => "electric bass (finger)",
+                BassFamily => "electric bass (finger)",
                 3 => "banjo",
                 _ => "acoustic guitar (nylon)",
             },
@@ -864,9 +864,19 @@ public static partial class NoteStepper
         // (owner's request 2026-10-24) — NOT sorted by pitch: a re-entrant ukulele's 4th string is
         // its high G, struck before the 3rd string's C (owner's report, same day). On a guitar the
         // two orders agree.
-        return new Voice([.. Tablature.Tunings.GetTuning(type)],
-            Midi.GeneralMidi.PreviewTimbreFamily(program), program, Strum: true);
+        return OpenStringsVoice(type, program);
     }
+
+    /// <summary>A tuning's open strings struck string after string in <paramref name="program"/> —
+    /// the <c>tuning</c>'s sound and a stringed <c>instrument</c> preset's. A bass's strings sound
+    /// APART, each stopping as the next is struck (owner's request 2026-10-24: a low chord is
+    /// muddy and hard to hear); the others ring on together.</summary>
+    private static Voice OpenStringsVoice(TuningType type, int program)
+        => new([.. Tablature.Tunings.GetTuning(type)], Midi.GeneralMidi.PreviewTimbreFamily(program), program,
+            Strum: true, Apart: TuningFamily(type) == BassFamily);
+
+    /// <summary>The basses' place in <see cref="TuningFamily"/>.</summary>
+    private const int BassFamily = 1;
 
     /// <summary>The net octave of the <c>'</c> / <c>,</c> marks written at <paramref name="at"/>.</summary>
     private static int Marks(string text, int at)

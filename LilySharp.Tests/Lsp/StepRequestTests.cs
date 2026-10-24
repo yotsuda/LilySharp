@@ -1250,6 +1250,16 @@ public class StepRequestTests
     {
         // Owner's request 2026-10-24: like `tuning`, string after string from the highest-numbered,
         // in the preset's own sound — a ukulele's high 4th-string G first.
+        AuditionAtResponse Answer(string header)
+        {
+            string text = Header(header);
+            int word = header.IndexOf(' ') + 1;
+            return Open(text).AuditionAt(new AuditionAtParams
+            {
+                TextDocument = new TextDocumentIdentifier { Uri = DocUri },
+                Offset = text.IndexOf(header, StringComparison.Ordinal) + word + 1,
+            });
+        }
         string Sounded(string preset)
         {
             string text = Header("instrument " + preset);
@@ -1269,6 +1279,17 @@ public class StepRequestTests
         // No strings: the one note, struck once.
         Assert.EndsWith("strum=False", Sounded("flute"));
         Assert.DoesNotContain(",", Sounded("flute"));
+
+        // A bass's strings sound apart, each stopping as the next sounds (owner's request
+        // 2026-10-24: a low chord is muddy); the others ring on together.
+        Assert.True(Answer("instrument bass").Apart);
+        Assert.True(Answer("instrument bass5").Apart);
+        Assert.True(Answer("tuning bassDropD").Apart);
+        Assert.True(Answer("tuning doubleBass").Apart);
+        Assert.False(Answer("instrument ukulele").Apart);
+        Assert.False(Answer("tuning guitar").Apart);
+        Assert.False(Answer("tuning cello").Apart);
+        Assert.True(Step(Header("instrument ‸bass6"), +1, semitone: true).Response.Apart);   // stepped onto bass5
 
         // A step onto one strums it too.
         var presets = LilySharp.Core.Semantics.LanguageVocabulary.InstrumentPresets.ToList();

@@ -30,9 +30,9 @@
 import * as vscode from 'vscode';
 import type { LanguageClient } from 'vscode-languageclient/node';
 import {
-    AuditionMemory, CARET_DEBOUNCE_MS, Debouncer, SOUNDS_WHEN_CHANGED, STRUM_MS, TYPING_SETTLE_MS,
+    AuditionMemory, CARET_DEBOUNCE_MS, Debouncer, SOUNDS_WHEN_CHANGED, TYPING_SETTLE_MS,
     auditionDurationMs, caretMoveMaySound, mayChangeATypedPitch, mayChangeAnInstrument, reselectAfterStep,
-    stepFallbackCommand,
+    stepFallbackCommand, strumGapMs,
 } from './auditionCore';
 
 export interface StepAuditionDeps {
@@ -57,8 +57,10 @@ interface StepResponse {
     /** "absolute" / "relative": the step was on an `octave absolute` / `octave relative`,
      *  and the editor runs Convert Octaves to Absolute / Relative instead of applying edits. */
     ConvertOctaves?: 'absolute' | 'relative' | null;
-    /** Strike the pitches one after another, lowest first (a tuning's open strings). */
+    /** Strike the pitches one after another in the order given (a tuning's open strings). */
     Strum?: boolean;
+    /** With Strum: each stops as the next sounds, never a chord (a bass's strings). */
+    Apart?: boolean;
 }
 
 interface AuditionAtResponse {
@@ -69,6 +71,7 @@ interface AuditionAtResponse {
     Program?: number;
     Version: number;
     Strum?: boolean;
+    Apart?: boolean;
 }
 
 /** lilysharp.audition.enabled: gates the three automatic auditions and the step's. */
@@ -92,13 +95,15 @@ export function registerStepAudition(context: vscode.ExtensionContext, deps: Ste
     const lastEdit = new Map<string, number>();
 
     /** Sends pitches to the document's preview synth; silent without a preview. */
-    const play = (uri: string, pitches: readonly number[], timbre: number, program?: number, strum?: boolean) => {
+    const play = (uri: string, pitches: readonly number[], timbre: number, program?: number, strum?: boolean,
+        apart?: boolean) => {
         const panel = deps.getPreview(uri);
         if (!panel || pitches.length === 0) { return; }
         void panel.webview.postMessage({
             type: 'playPitches', pitches, timbre, program: program ?? -1,
-            durationMs: auditionDurationMs(pitches.length, strum),
-            strumMs: strum ? STRUM_MS : 0,
+            durationMs: auditionDurationMs(pitches.length, strum, apart),
+            strumMs: strumGapMs(strum, apart),
+            apart: !!(strum && apart),
         });
     };
 
@@ -194,7 +199,7 @@ export function registerStepAudition(context: vscode.ExtensionContext, deps: Ste
         }
         if (auditionEnabled() && response.Pitches.length > 0) {
             const uri = doc.uri.toString();
-            play(uri, response.Pitches, response.Timbre, response.Program, response.Strum);
+            play(uri, response.Pitches, response.Timbre, response.Program, response.Strum, response.Apart);
             // The caret now rests on what just sounded: remember it, so the caret
             // audition does not repeat it. The key is asked for, not guessed.
             const here = await askAt(editor);
@@ -237,7 +242,7 @@ export function registerStepAudition(context: vscode.ExtensionContext, deps: Ste
                 const answer = await askAt(editor);
                 if (!answer || !(SOUNDS_WHEN_CHANGED.has(answer.Kind ?? '') ? instrument : pitch)) { return; }
                 if (memory.typed(uri, { key: answer.Key, pitches: answer.Pitches, program: answer.Program })) {
-                    play(uri, answer.Pitches, answer.Timbre, answer.Program, answer.Strum);
+                    play(uri, answer.Pitches, answer.Timbre, answer.Program, answer.Strum, answer.Apart);
                 }
             });
         }),

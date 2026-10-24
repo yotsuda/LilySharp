@@ -260,21 +260,27 @@ export class PreviewSynth {
      *  drum notes alone) strikes the drum channel. Returns the channel struck.
      *  `strumS` > 0: one after another in the order given, that many seconds apart, on the
      *  AUDIO clock — the page's timers, which a hidden preview fires about once a second, sent
-     *  the strings after the first out together as a chord (owner's report 2026-10-24). */
-    strike(pitches: readonly number[], timbre: number, program: number, velocity = 100, strumS = 0): number {
+     *  the strings after the first out together as a chord (owner's report 2026-10-24).
+     *  `apart` (with a strum): each string stops as the next sounds — a bass's, whose low
+     *  chord is muddy (owner's request, same day). */
+    strike(pitches: readonly number[], timbre: number, program: number, velocity = 100, strumS = 0,
+           apart = false): number {
         if (!this.synth) { return -1; }
         const drums = timbre === 9;
         const c = drums ? DRUM_CHANNEL : AUDITION_CHANNEL;
         if (!drums) { this.synth.programChange(c, programOf(program, timbre)); }
         const now = this.ctx.currentTime;
-        pitches.forEach((p, i) => {
-            const key = Math.max(0, Math.min(127, Math.round(p)));
+        const keys = pitches.map(p => Math.max(0, Math.min(127, Math.round(p))));
+        keys.forEach((key, i) => {
             if (i === 0 || strumS <= 0) {
                 this.synth!.noteOn(c, key, velocity);
                 this.onsets.delete(key);
             } else {
-                this.synth!.noteOn(c, key, velocity, { time: now + i * strumS });
-                this.onsets.set(key, now + i * strumS);
+                const at = now + i * strumS;
+                // Apart: the string before goes off just as this one comes on.
+                if (apart && keys[i - 1] !== key) { this.synth!.noteOff(c, keys[i - 1], { time: at }); }
+                this.synth!.noteOn(c, key, velocity, { time: at });
+                this.onsets.set(key, at);
             }
         });
         return c;

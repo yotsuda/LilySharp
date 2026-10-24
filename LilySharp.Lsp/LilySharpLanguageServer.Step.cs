@@ -61,6 +61,7 @@ public sealed partial class LilySharpLanguageServer
                 Version = doc.Version,
                 ConvertOctaves = result.ConvertOctaves?.ToString().ToLowerInvariant(),
                 Strum = result.Strum,
+                Apart = result.Apart,
             };
         }
         catch (Exception ex)
@@ -104,6 +105,7 @@ public sealed partial class LilySharpLanguageServer
                 Timbre = audition.Timbre,
                 Program = audition.Program,
                 Strum = audition.Strum,
+                Apart = audition.Apart,
                 Version = doc.Version,
             };
         }
