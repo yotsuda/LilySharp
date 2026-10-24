@@ -30,6 +30,7 @@ import { registerAiComplete } from './aiComplete';
 import { pickAiModel } from './modelClient';
 import { registerSmartTyping } from './smartTyping';
 import { registerStepAudition } from './stepAudition';
+import { registerCaretInfo } from './caretInfo';
 import { registerExportBatch } from './exportBatch';
 import { importFromImage } from './omrImport';
 import { registerOmrContexts } from './omrReader';
@@ -871,6 +872,10 @@ export function activate(context: vscode.ExtensionContext) {
         getPreview: (uri: string) => previewPanels.get(uri),
         log: (msg: string) => outputChannel.appendLine(msg),
     });
+
+    // The caret's status line (owner's request 2026-10-24): what the setting under the caret
+    // does, in the status bar rather than a hover that covers the text.
+    registerCaretInfo(context, { getClient: () => client, isReady: () => clientReady });
 
     // Watch for document changes
     context.subscriptions.push(

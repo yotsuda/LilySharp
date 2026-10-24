@@ -4,6 +4,15 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+### The status bar says what the setting under the caret does
+
+- **Rest the caret on a setting and the status bar explains it in one line** — `clef bass:
+  middle line D3 · a clef moves no note`, `key d minor: 1 flat (B♭) · the relative major is F`,
+  `octave 3: a bare c is written C3`, `transposition 8vb: … written C4 sounds C3`, `tuning
+  ukulele: 4 G4 · 3 C4 · 2 E4 · 1 A4 - re-entrant`, a `midiInstrument`'s GM number and family,
+  an `instrument` preset's defaults, a staff group, a bar line (`:|*3` plays 3 times), a page
+  size. In the status bar, not a hover, so nothing covers the text.
+
 ### Hovering an instrument preset lists what it sets
 
 - **`instrument bass` hovers as its defaults** — `clef bass`, `octave 3` (a bare `c` is written

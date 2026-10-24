@@ -112,4 +112,26 @@ public sealed partial class LilySharpLanguageServer
             return new AuditionAtResponse { Version = doc.Version };
         }
     }
+
+    [JsonRpcMethod("lilysharp/caretInfo", UseSingleObjectParameterDeserialization = true)]
+    public Task<CaretInfoResponse> CaretInfoAsync(AuditionAtParams @params, CancellationToken token)
+        => OffDispatch(() => CaretInfo(@params), token);
+
+    /// <summary>The status line of the setting under the caret (<see cref="NoteStepper.Describe"/>,
+    /// owner's request 2026-10-24: in the status bar, where a hover would cover the text); a null
+    /// Text when it is on nothing that has one.</summary>
+    public CaretInfoResponse CaretInfo(AuditionAtParams @params)
+    {
+        var doc = _documentManager.GetDocument(@params.TextDocument.Uri);
+        if (doc == null)
+            return new CaretInfoResponse();
+        try
+        {
+            return new CaretInfoResponse { Text = NoteStepper.Describe(doc.Text, doc.Tree, @params.Offset), Version = doc.Version };
+        }
+        catch (Exception)
+        {
+            return new CaretInfoResponse { Version = doc.Version };
+        }
+    }
 }

@@ -744,3 +744,11 @@ public class AuditionAtResponse
     public bool Strum { get; set; }
     public int Version { get; set; }
 }
+
+/// <summary>Response for lilysharp/caretInfo (its parameters are <see cref="AuditionAtParams"/>'):
+/// the one-line status of the setting under the caret, or a null <see cref="Text"/>.</summary>
+public class CaretInfoResponse
+{
+    public string? Text { get; set; }
+    public int Version { get; set; }
+}

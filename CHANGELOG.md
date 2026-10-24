@@ -27,6 +27,10 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Editor
 
+- **The status bar says what the setting under the caret does** (`lilysharp/caretInfo`,
+  `NoteStepper.Describe`): a clef, a key, an `octave`, a `transposition`, a `tuning`, a
+  `midiInstrument`, an `instrument` preset, a staff group, a bar line, a page size — one line
+  each, where a hover would cover the text being edited.
 - **Hovering a part's `instrument` preset lists the defaults it sets**: clef, octave, transposition
   (the written and the sounding pitch, so `octave` and `transposition` cannot be read as one
   shift), tuning and MIDI sound, the line a property of the part replaces struck through. The name

@@ -445,24 +445,28 @@ public static partial class NoteStepper
         if (at < 0 || to < 0 || to >= walk.Count)
             return (null, $"{bar.Text}: already the {(to < 0 ? "first" : "last")} ({string.Join(" ", walk)})");
         string next = walk[to];
-        string said = next switch
-        {
-            // In a form a plain `|` only divides the sections: no bar line is drawn there.
-            "|" when inForm => "|: a plain divider - a form draws no bar line here",
-            "|" => "|: the single bar line",
-            "||" => "||: the double bar line",
-            "|." => "|.: the final bar line",
-            "!" => "!: the dotted bar line",
-            "|:" => "|: opens a repeat - close it with :| in the form",
-            ":|" => ":| closes the repeat (alone, it repeats from the top)",
-            _ => ":|: closes the repeat before it and opens the next - close that with :|",
-        };
+        string said = BarlineSays(next, inForm);
         // A `:|*N` leaving the repeat's close takes its count with it: no other sign takes one.
         int end = bar.Span.End;
         if (bar.Text == ":|" && NextToken(bar) is { Text: "*" } star && NextToken(star) is { Kind: SyntaxKind.IntegerLiteral } count)
             end = count.Span.End;
         return (new Edit(bar.Span.Start, end, next), said);
     }
+
+    /// <summary>What a bar line of <see cref="FormBarlineWalk"/> is, in a line — the step's message
+    /// and the caret's status line (<see cref="Describe"/>) read this one wording.</summary>
+    private static string BarlineSays(string bar, bool inForm) => bar switch
+    {
+        // In a form a plain `|` only divides the sections: no bar line is drawn there.
+        "|" when inForm => "|: a plain divider - a form draws no bar line here",
+        "|" => "|: the single bar line",
+        "||" => "||: the double bar line",
+        "|." => "|.: the final bar line",
+        "!" => "!: the dotted bar line",
+        "|:" => "|: opens a repeat - close it with :| in the form",
+        ":|" => ":| closes the repeat (alone, it repeats from the top)",
+        _ => ":|: closes the repeat before it and opens the next - close that with :|",
+    };
 
     // ------------------------------------------------------------------ paper size
 

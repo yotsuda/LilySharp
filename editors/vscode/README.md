@@ -24,6 +24,7 @@ same number. See the [changelog](https://github.com/yotsuda/LilySharp/blob/maste
 | **Diagnostics** | Real-time error and warning display |
 | **Code Completion** | Auto-complete for keywords, pitches, durations, dynamics |
 | **Hover Information** | Documentation on hover for syntax elements |
+| **Caret status line** | With the caret on a setting, the status bar says what it does — a clef's middle line (and that it moves no note), a key's sharps or flats and relative key, an `octave` (the written register), a `transposition` (written C4 sounds C3), a `tuning`'s strings by number (a re-entrant one named), a `midiInstrument`'s GM number and family, an `instrument` preset's defaults, a staff group, a bar line (`:|*3` plays 3 times), a page size — in the status bar rather than a hover, so the text stays in view |
 | **Document Outline** | Navigate score structure in the outline view |
 | **Go to Definition** | Jump to variable declarations (F12) |
 | **Find References** | Find all uses of a variable (Shift+F12) |
