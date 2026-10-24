@@ -393,12 +393,13 @@ public static partial class NoteStepper
     /// not here: they change the playing order, a different thing from a bar line's look.</summary>
     private static readonly string[] BarlineWalk = ["|", "||", "|.", "!"];
 
-    /// <summary>The bar lines the keys walk in a <c>form</c>: the same, then the repeat's opening
-    /// <c>|:</c> and the back-to-back <c>:|:</c> (owner's requests 2026-10-24). A <c>|:</c> is
-    /// closed by a <c>:|</c> the writer adds, and until then the form says so; a <c>:|:</c> closes
-    /// the repeat before it (or repeats from the top) and opens the next. A music body takes no
-    /// repeat sign (LYS1034), so the music's walk stops at <c>!</c>.</summary>
-    private static readonly string[] FormBarlineWalk = [.. BarlineWalk, "|:", ":|:"];
+    /// <summary>The bar lines the keys walk in a <c>form</c> (owner's requests 2026-10-24): the plain
+    /// divider, then the signs a form writes most — the repeat's <c>|:</c>, <c>:|</c> and
+    /// <c>:|:</c>, the final <c>|.</c> — then the double and the dotted, the order the form's
+    /// completion lists them in. A <c>|:</c> wants a <c>:|</c> after it (the form says so until it
+    /// is written); a <c>:|</c> alone repeats from the top. A music body takes no repeat sign
+    /// (LYS1034), so the music walks <see cref="BarlineWalk"/>.</summary>
+    public static IReadOnlyList<string> FormBarlineWalk { get; } = ["|", "|:", ":|", ":|:", "|.", "||", "!"];
 
     /// <summary>A bar line of <see cref="BarlineWalk"/> the caret is on, or null — in the music, or
     /// in a <c>form</c>, where the engraved ones are bar-line nodes and the plain <c>|</c> is a bare
@@ -406,7 +407,7 @@ public static partial class NoteStepper
     private static SyntaxTokenNode? BarlineAt(SyntaxTree tree, int offset)
     {
         // A bar line node in a form walks the form's list (a `:|:` there is one).
-        static bool On(SyntaxTokenNode t, int at) => Array.IndexOf(InForm(t) ? FormBarlineWalk : BarlineWalk, t.Text) >= 0
+        static bool On(SyntaxTokenNode t, int at) => (InForm(t) ? FormBarlineWalk : BarlineWalk).Contains(t.Text)
             && t.Span.Start <= at && at <= t.Span.End;
         foreach (var bar in tree.GetNodes<BarlineSyntax>())
             if (bar.GetChild(0) is SyntaxTokenNode token && On(token, offset))
@@ -416,8 +417,9 @@ public static partial class NoteStepper
             if (form is not (FormDeclarationSyntax or FormRepeatBlockSyntax))
                 continue;
             for (int i = 0; i < form.SlotCount; i++)
-                if (form.GetChild(i) is SyntaxTokenNode { Kind: SyntaxKind.Bar or SyntaxKind.RepeatStartBar or SyntaxKind.RepeatBothBar } divider
-                    && Array.IndexOf(FormBarlineWalk, divider.Text) >= 0
+                if (form.GetChild(i) is SyntaxTokenNode { Kind: SyntaxKind.Bar or SyntaxKind.RepeatStartBar
+                        or SyntaxKind.RepeatBothBar or SyntaxKind.RepeatEndBar } divider
+                    && FormBarlineWalk.Contains(divider.Text)
                     && divider.Span.Start <= offset && offset <= divider.Span.End)
                     return divider;
         }
@@ -439,20 +441,28 @@ public static partial class NoteStepper
     private static (Edit? Edit, string Message) BarlineEdit(SyntaxTokenNode bar, int dir)
     {
         bool inForm = InForm(bar);
-        string[] walk = inForm ? FormBarlineWalk : BarlineWalk;
-        int at = Array.IndexOf(walk, bar.Text), to = at - dir;
-        string[] names = ["single", "double", "final", "dotted"];
-        if (at < 0 || to < 0 || to >= walk.Length)
+        var walk = inForm ? FormBarlineWalk : BarlineWalk;
+        int at = walk.ToList().IndexOf(bar.Text), to = at - dir;
+        if (at < 0 || to < 0 || to >= walk.Count)
             return (null, $"{bar.Text}: already the {(to < 0 ? "first" : "last")} ({string.Join(" ", walk)})");
-        string said = walk[to] switch
+        string next = walk[to];
+        string said = next switch
         {
             // In a form a plain `|` only divides the sections: no bar line is drawn there.
             "|" when inForm => "|: a plain divider - a form draws no bar line here",
+            "|" => "|: the single bar line",
+            "||" => "||: the double bar line",
+            "|." => "|.: the final bar line",
+            "!" => "!: the dotted bar line",
             "|:" => "|: opens a repeat - close it with :| in the form",
-            ":|:" => ":|: closes the repeat before it and opens the next - close that with :|",
-            _ => $"{walk[to]}: the {names[to]} bar line",
+            ":|" => ":| closes the repeat (alone, it repeats from the top)",
+            _ => ":|: closes the repeat before it and opens the next - close that with :|",
         };
-        return (new Edit(bar.Span.Start, bar.Span.End, walk[to]), said);
+        // A `:|*N` leaving the repeat's close takes its count with it: no other sign takes one.
+        int end = bar.Span.End;
+        if (bar.Text == ":|" && NextToken(bar) is { Text: "*" } star && NextToken(star) is { Kind: SyntaxKind.IntegerLiteral } count)
+            end = count.Span.End;
+        return (new Edit(bar.Span.Start, end, next), said);
     }
 
     // ------------------------------------------------------------------ paper size

@@ -1359,43 +1359,40 @@ public class StepRequestTests
     }
 
     [Fact]
-    public void AFormsBarLines_WalkTheSameLooks_ThePlainDividerToo()
+    public void AFormsBarLines_WalkTheFormsSigns_TheUsualFirst()
     {
-        // Owner's request 2026-10-24: the bar lines in form { } too — the engraved ones and the
-        // plain divider `|`, which draws nothing there and says so.
+        // Owner's requests 2026-10-24: in form { } the plain divider, then the signs a form writes
+        // most — |: :| :|: |. — then || and !, the order the form's completion lists them in.
+        var walk = LilySharp.Core.Editing.NoteStepper.FormBarlineWalk;
+        Assert.Equal(new[] { "|", "|:", ":|", ":|:", "|.", "||", "!" }, walk);
         const string Book = "part m {{ }}\nsection A {{ m {{ c'1 }} }}\nsection B {{ m {{ d'1 }} }}\nform {{ A {0} B }}\n";
         string S(string bar) => string.Format(Book, bar);
-        Assert.Equal(S("||"), Step(S("‸|"), -1, semitone: true).After);
-        Assert.Equal(S("|."), Step(S("||‸"), -1).After);
-        Assert.Equal(S("!"), Step(S("‸|."), -1, semitone: true).After);
-        var (plain, after) = Step(S("‸||"), +1, semitone: true);
-        Assert.Equal(S("|"), after);
-        Assert.Contains("divider", plain.Message);
-        // Inside a form's repeat too.
-        const string Repeat = "part m {{ }}\nsection A {{ m {{ c'1 }} }}\nsection B {{ m {{ d'1 }} }}\nform {{ |: A {0} B :| }}\n";
-        Assert.Equal(string.Format(Repeat, "||"), Step(string.Format(Repeat, "‸|"), -1, semitone: true).After);
+        for (int i = 0; i + 1 < walk.Count; i++)
+        {
+            Assert.Equal(S(walk[i + 1]), Step(S("‸" + walk[i]), -1, semitone: true).After);
+            Assert.Equal(S(walk[i]), Step(S(walk[i + 1] + "‸"), +1, semitone: true).After);
+        }
+        var (last, same) = Step(S("‸!"), -1, semitone: true);
+        Assert.Equal(S("!"), same);
+        Assert.Contains("last", last.Message);
+        // What each says: the divider draws nothing, an opening wants its close.
+        Assert.Contains("divider", Step(S("‸|:"), +1, semitone: true).Response.Message);
+        Assert.Contains("close it with :|", Step(S("‸|"), -1, semitone: true).Response.Message);
+        // The form's completion lists the engraved bar lines in the same order.
+        var listed = LilySharpLanguageServer.GetFormCompletions("form { ").Items
+            .Where(i => walk.Contains(i.Label)).OrderBy(i => i.SortText, StringComparer.Ordinal).Select(i => i.Label).ToList();
+        Assert.Equal(walk.Where(w => w != "|"), listed);
     }
 
     [Fact]
-    public void AFormsBarLines_GoOnToTheRepeatsOpening()
+    public void AFormsBarLines_InsideARepeat_AndARepeatCount()
     {
-        // Owner's request 2026-10-24: in a form the walk goes on past `!` to `|:`, and back.
-        const string Book = "part m {{ }}\nsection A {{ m {{ c'1 }} }}\nsection B {{ m {{ d'1 }} }}\nform {{ A {0} B :| }}\n";
-        string S(string bar) => string.Format(Book, bar);
-        var (open, after) = Step(S("‸!"), -1, semitone: true);
-        Assert.Equal(S("|:"), after);
-        Assert.Contains("close it with :|", open.Message);
-        Assert.Equal(S("!"), Step(S("|:‸"), +1, semitone: true).After);
-        // …and on to `:|:`, both as a bar line of the form and inside a repeat (owner's request).
-        var (both, then) = Step(S("‸|:"), -1, semitone: true);
-        Assert.Equal(S(":|:"), then);
-        Assert.Contains("opens the next", both.Message);
-        Assert.Equal(S("|:"), Step(S(":|:‸"), +1, semitone: true).After);
-        var (last, same) = Step(S("‸:|:"), -1, semitone: true);
-        Assert.Equal(S(":|:"), same);
-        Assert.Contains("last", last.Message);
         const string Inside = "part m {{ }}\nsection A {{ m {{ c'1 }} }}\nsection B {{ m {{ d'1 }} }}\nform {{ |: A {0} B :| }}\n";
-        Assert.Equal(string.Format(Inside, "|:"), Step(string.Format(Inside, "‸:|:"), +1, semitone: true).After);
+        Assert.Equal(string.Format(Inside, "|:"), Step(string.Format(Inside, "‸|"), -1, semitone: true).After);
+        Assert.Equal(string.Format(Inside, ":|"), Step(string.Format(Inside, "‸:|:"), +1, semitone: true).After);
+        // A `:|*3` leaving the repeat's close takes its count with it.
+        const string Count = "part m {{ }}\nsection A {{ m {{ c'1 }} }}\nsection B {{ m {{ d'1 }} }}\nform {{ A {0} B }}\n";
+        Assert.Equal(string.Format(Count, ":|:"), Step(string.Format(Count, "‸:|*3"), -1, semitone: true).After);
         // The music's walk stops at `!`: a music body takes no repeat sign.
         var (music, kept) = Step(Plain("c'1 ‸! d'1"), -1, semitone: true);
         Assert.Equal(Plain("c'1 ! d'1"), kept);

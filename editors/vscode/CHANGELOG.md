@@ -17,8 +17,8 @@ All notable changes to the Lily# VS Code extension are documented here.
   name selected its quality** (`C` → `Cm` → `C7` …, root and bass kept). The selection stays on the
   new text; a caret keeps stepping the pitch and the diagram's shape as before.
 - **On a bar line they switch its look**: `|` → `||` → `|.` → `!` (the repeat bar lines left alone),
-  in the music and in a `form { }` (where a plain `|` is a divider that draws nothing, and the walk
-  goes on to `|:`, a repeat's opening, to be closed with `:|`, and to `:|:`).
+  in the music; in a `form { }` the form's signs, the usual first — `|` (a plain divider there)
+  `|:` `:|` `:|:` `|.` `||` `!` — the order the form's completion now lists them in (`|.` before `||`).
 - **On a number in the music they step it**: a `tuplet`'s ratio through the usual ones (`3/2` →
   `4/3` → `5/4` …), a `repeat tremolo N` and a rest's `R1*N` by one, a `partial`'s length through
   the note values (Up longer).

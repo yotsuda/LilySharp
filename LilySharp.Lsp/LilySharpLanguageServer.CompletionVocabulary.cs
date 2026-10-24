@@ -154,9 +154,11 @@ public sealed partial class LilySharpLanguageServer
         items.AddRange(NavigationMarkItems("4"));
 
         // The engraved barlines a form may write between sections (a plain `|` is an inert
-        // divider and is not offered), then the system-break directives, then custom text.
-        items.Add(Item("||", "Double barline", CompletionItemKind.Operator, "5a"));
-        items.Add(Item("|.", "Final barline", CompletionItemKind.Operator, "5b"));
+        // divider and is not offered), the final first — the step keys walk the same order
+        // (NoteStepper.FormBarlineWalk, owner's request 2026-10-24: |: :| :|: |. are the
+        // form's usual signs) — then the system-break directives, then custom text.
+        items.Add(Item("|.", "Final barline", CompletionItemKind.Operator, "5a"));
+        items.Add(Item("||", "Double barline", CompletionItemKind.Operator, "5b"));
         items.Add(Item("!", "Dotted barline", CompletionItemKind.Operator, "5c"));
         items.Add(Item("break", "Force a system break here", CompletionItemKind.Keyword, "6a"));
         items.Add(Item("noBreak", "Forbid a system break here", CompletionItemKind.Keyword, "6b"));
