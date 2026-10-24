@@ -330,36 +330,39 @@ public static partial class NoteStepper
     /// which shows them one under another (owner's request 2026-10-24: not joined by dots) — or
     /// null for a name that is no preset. Each line starts with the property that would say it alone.
     /// </summary>
+    /// <remarks>
+    /// ⚠️ THE ORDER IS THE OWNER'S (same day): what every preset has first — clef, MIDI sound,
+    /// octave — then what few have — tuning, transposition — so stepping through the candidates
+    /// keeps each property on the same line, where it is easy to compare.
+    /// </remarks>
     public static System.Collections.Generic.IReadOnlyList<string>? PresetDefaultLines(string name)
     {
         if (FactsOf(name) is not { } f)
             return null;
-        var lines = new System.Collections.Generic.List<string>
-        {
-            $"clef {f.Clef}",
-            $"octave {f.Octave} — a bare c is written C{f.Octave}",
-        };
-        if (f.Shift != 0)
-            lines.Add($"{f.ShiftWords} — {f.BareC}");
+        var lines = new System.Collections.Generic.List<string> { $"clef {f.Clef}" };
+        if (f.Sound != null)
+            lines.Add($"midiInstrument \"{f.Sound}\"");
+        lines.Add($"octave {f.Octave} — a bare c is written C{f.Octave}");
         if (f.Tuning != null)
             lines.Add($"tuning {f.Tuning} — " + string.Join(" ",
                 Tablature.Tunings.GetTuning(Tablature.Tunings.Parse(f.Tuning)).Select(SpellMidi)));
-        if (f.Sound != null)
-            lines.Add($"midiInstrument \"{f.Sound}\"");
+        if (f.Shift != 0)
+            lines.Add($"{f.ShiftWords} — {f.BareC}");
         return lines;
     }
 
-    /// <summary>A preset's defaults, short — <c>clef bass · 8vb · tuning bass</c> — for the
-    /// completion's detail beside the name (its documentation has them in full), or null.</summary>
+    /// <summary>A preset's defaults, short — <c>clef bass · tuning bass · 8vb</c> — for the
+    /// completion's detail beside the name (its documentation has them in full, in the same
+    /// order), or null.</summary>
     public static string? PresetSummary(string name)
     {
         if (FactsOf(name) is not { } f)
             return null;
         var parts = new System.Collections.Generic.List<string> { $"clef {f.Clef}" };
-        if (f.Shift != 0)
-            parts.Add(f.Marker ?? $"{f.Shift:+0;-0} semitones");
         if (f.Tuning != null)
             parts.Add($"tuning {f.Tuning}");
+        if (f.Shift != 0)
+            parts.Add(f.Marker ?? $"{f.Shift:+0;-0} semitones");
         return string.Join(" · ", parts);
     }
 
