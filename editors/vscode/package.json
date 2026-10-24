@@ -391,6 +391,12 @@
         "title": "Transform Selection with AI…"
       },
       {
+        "command": "lilysharp.previewAiTransform",
+        "category": "Lily#",
+        "icon": "$(sparkle)",
+        "title": "Transform Selection with AI…"
+      },
+      {
         "command": "lilysharp.omrFixWithAi",
         "category": "Lily#",
         "icon": "$(sparkle)",
@@ -566,6 +572,10 @@
           "command": "lilysharp.chooseMidiOutput"
         },
         {
+          "command": "lilysharp.previewAiTransform",
+          "when": "false"
+        },
+        {
           "command": "lilysharp.openPreview",
           "when": "resourceLangId == lilysharp"
         },
@@ -714,6 +724,11 @@
         }
       ],
       "webview/context": [
+        {
+          "command": "lilysharp.previewAiTransform",
+          "when": "webviewId == 'lilysharpPreview' && lysAi",
+          "group": "0_ai@1"
+        },
         {
           "command": "lilysharp.omrFixWithAi",
           "when": "(webviewId == 'lilysharpPreview' || webviewId == 'lilysharpScan') && lysOnBar",

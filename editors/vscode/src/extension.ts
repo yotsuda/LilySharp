@@ -830,6 +830,16 @@ export function activate(context: vscode.ExtensionContext) {
             return undefined;
         },
     });
+    // Ctrl+I's door in the preview's right-click menu (owner's request 2026-10-24): the score
+    // selection, else the note or the bar right-clicked, made the editor's selection, then the
+    // same transform (aiTransformFromScore).
+    context.subscriptions.push(vscode.commands.registerCommand('lilysharp.previewAiTransform', async (m?: { lysAiFrom?: number; lysAiTo?: number }) => {
+        const shown = [...previewPanels.entries()].find(([, p]) => p.active);
+        if (!shown || !m || !Number.isInteger(m.lysAiFrom) || m.lysAiFrom! < 0) {
+            return;
+        }
+        await aiTransformFromScore(shown[0], m.lysAiFrom!, m.lysAiTo ?? m.lysAiFrom!);
+    }));
     context.subscriptions.push(vscode.commands.registerCommand('lilysharp.selectAiModel', () => pickAiModel()));
 
     // The Explorer's batch export: right-click one or more .lys → the format
@@ -1458,6 +1468,9 @@ async function updatePreviewContent(
     if (ready) {
         await Promise.race([ready.promise, new Promise<void>(r => setTimeout(r, 3000))]);
     }
+    // Whether the right-click menu offers the OMR doors (owner, 2026-10-24: not for a file
+    // the reader did not write) — asked again with each render, as an import adds the file.
+    void panel.webview.postMessage({ type: 'scanState', hasScan: hasScan(document.uri) });
 
     // Wait for client to be ready if not already
     if (!clientReady) {
@@ -5174,6 +5187,9 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                     invalidateSourcePositions();
                     collectPages();
                     break;
+                case 'scanState':
+                    docHasScan = !!message.hasScan;
+                    break;
                 case 'updateContent': {
                     updateRenderSelect(message.renders, message.selectedRender);
                     const hasPreview = !!svgContainer.querySelector('svg');
@@ -5457,6 +5473,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         // data-vscode-context off the element chain in its own contextmenu
         // listener, so this one runs in the CAPTURE phase to get there first.
         let ctxNotePos = -1;
+        let docHasScan = false;   // the file has an OMR side file (scanState, with each render)
         document.addEventListener('contextmenu', (e) => {
             const t = e.target;
             ctxNotePos = (t && t.hasAttribute && t.hasAttribute('data-pos'))
@@ -5474,11 +5491,40 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                     if (!isNaN(s)) { ctxBarAt = s; break; }
                 }
             }
+            // What the menu's Transform with AI (owner's request 2026-10-24: Ctrl+I's door on the
+            // score) works on: the score selection when there is one, else the note under the
+            // pointer, else the notes of the bar under it — first and last note's data-pos.
+            let ctxAiFrom = -1, ctxAiTo = -1, ctxBarSpan = null;
+            for (const r of document.querySelectorAll('rect.bar-staff')) {
+                const b = r.getBoundingClientRect();
+                if (e.clientX >= b.left && e.clientX <= b.right && e.clientY >= b.top && e.clientY <= b.bottom) {
+                    const span = (r.getAttribute('data-span') || '').split(' ').map(Number);
+                    if (span.length === 2 && !isNaN(span[0]) && !isNaN(span[1])) { ctxBarSpan = span; break; }
+                }
+            }
+            if (aiRangeLo >= 0) {
+                ctxAiFrom = aiRangeLo; ctxAiTo = aiRangeHi;
+            } else if (ctxNotePos >= 0) {
+                ctxAiFrom = ctxAiTo = ctxNotePos;
+            } else if (ctxBarSpan) {
+                for (const n of document.querySelectorAll('[data-pos]')) {
+                    const p = parseInt(n.getAttribute('data-pos'), 10);
+                    if (p >= ctxBarSpan[0] && p < ctxBarSpan[1]) {
+                        if (ctxAiFrom < 0 || p < ctxAiFrom) ctxAiFrom = p;
+                        if (p > ctxAiTo) ctxAiTo = p;
+                    }
+                }
+            }
             if (ctxBarAt < 0) ctxBarAt = ctxNotePos;
             document.body.dataset.vscodeContext = JSON.stringify({
                 preventDefaultContextMenuItems: true,
-                lysOnBar: ctxBarAt >= 0,
+                // The OMR doors only for a file with a scan (owner, 2026-10-24); the scan
+                // state comes with each render (scanState).
+                lysOnBar: docHasScan && ctxBarAt >= 0,
                 lysAt: ctxBarAt,
+                lysAi: ctxAiFrom >= 0,
+                lysAiFrom: ctxAiFrom,
+                lysAiTo: ctxAiTo,
                 lysNote: ctxNotePos >= 0,
                 // The Stop button's enabled state is the playback flag that also
                 // covers the optimistic window between Play and the first events.

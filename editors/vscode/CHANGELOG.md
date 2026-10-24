@@ -61,7 +61,11 @@ All notable changes to the Lily# VS Code extension are documented here.
   panel instead of replacing it; closing the panel stops the AI.
 - **Both commands are in the preview's and the scan view's context menu**, on the bar
   right-clicked: *Fix OMR Marks with AI…* sends that bar alone (a bar with no `@todo` offers *Edit
-  Bars Beside the Scan* instead), *Edit Bars Beside the Scan* opens it.
+  Bars Beside the Scan* instead), *Edit Bars Beside the Scan* opens it. In the preview (and the
+  editor) they are offered only for a `.lys` with a scan beside it (`x.omr.json`).
+- **Transform Selection with AI… in the preview's context menu** — Ctrl+I's transform from the
+  score: on the notes selected on the score (shift-click), else on the note right-clicked, else
+  on the notes of the bar right-clicked.
 - **A bar can be accepted and stay marked**: `keep @todo` beside *Accept* writes the bar with a
   `@todo` still on it, at the note nearest the old mark (the reader's key kept), and the words
   typed beside it as its memo — for a proposal that is better but not right yet. The pictures
