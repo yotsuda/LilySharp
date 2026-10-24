@@ -76,11 +76,17 @@ public class InstrumentPresetHoverTests
     {
         string? hover = HoverAt(Book("instrument bass clef treble octave 2 midiInstrument \"fretless bass\""), "bass");
         Assert.NotNull(hover);
-        Assert.Contains("- ~~`clef bass`~~ — this part writes `clef treble`", hover);
-        Assert.Contains("- ~~`octave 3` — a bare `c` is written C3~~ — this part writes `octave 2`", hover);
-        Assert.Contains("- ~~`midiInstrument \"electric bass (finger)\"`~~ — this part writes `midiInstrument \"fretless bass\"`", hover);
+        Assert.Contains("- ~~`clef bass`~~ — overridden: the part sets `clef treble` itself", hover);
+        Assert.Contains("- ~~`octave 3` — a bare `c` is written C3~~ — overridden: the part sets `octave 2` itself", hover);
+        Assert.Contains("- ~~`midiInstrument \"electric bass (finger)\"`~~ — overridden: the part sets `midiInstrument \"fretless bass\"` itself", hover);
         Assert.Contains("- `tuning bass`", hover);   // not written: still the preset's
     }
+
+    [Fact]
+    public void AnExplicitTuning_SaysItOverridesThePresets()
+        // Owner's request 2026-10-24: say that the written tuning overrode the preset's.
+        => Assert.Contains("- ~~`tuning bass` — E1 A1 D2 G2 (the strings a tab frets on)~~ — overridden: the part sets `tuning bass5` itself",
+            HoverAt(Book("instrument bass tuning bass5"), "bass"));
 
     [Fact]
     public void AnOctaveMode_DoesNotReplaceTheRegister()

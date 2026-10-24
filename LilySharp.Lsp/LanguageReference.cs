@@ -234,8 +234,10 @@ internal static class LanguageReference
             if (p.ValueText is { } v)
                 own[p.NameToken.Text] = v;
         string? Own(string key) => own.TryGetValue(key, out var w) ? $"{key} {w}" : null;
+        // The struck line says the preset's default lost to the part's own setting (owner's request
+        // 2026-10-24: "this part writes" did not say that it was overridden).
         static string Line(string text, string? replacedBy)
-            => replacedBy != null ? $"- ~~{text}~~ — this part writes `{replacedBy}`" : $"- {text}";
+            => replacedBy != null ? $"- ~~{text}~~ — overridden: the part sets `{replacedBy}` itself" : $"- {text}";
 
         var (clef, octave) = LilySharp.Core.Svg.Model.InstrumentDefaults.GetDefaults(preset);
         int shift = LilySharp.Core.Svg.Model.InstrumentDefaults.GetTransposition(preset);
