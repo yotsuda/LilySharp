@@ -8,6 +8,12 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Engraving
 
+- **A mark at a line's start clears the key signature.** A section label (or any mark above the
+  staff) over a key whose accidentals stand above the top line — A major's G♯ reaches 1.9 over
+  it — touched them: the line-start key was in the systems' skylines but not in the staff's own
+  profile, which the marks stand on. It is now, as the clef and the meter beside it already
+  were, and the label stands where LilyPond 2.26.0 puts it (the box's bottom 2.38 over the top
+  line).
 - **A dashed bar line (`!`) is drawn in a score of two or more staves.** The staves' bar lines
   are folded into one per boundary, and the dashed one had no rank — it tied with "no bar line",
   which won, so it vanished from every staff (one staff never folds, and drew it). It now ranks

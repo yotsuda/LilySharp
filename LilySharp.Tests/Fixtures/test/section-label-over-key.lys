@@ -1,0 +1,18 @@
+key a major
+
+section Intro {
+  p1 { a'1 }
+}
+
+form { Intro }
+
+score {
+  staff p1
+}
+
+// ---------------------------------------------------------------------------
+// The owner's report (2026-10-25, LilySharp-Lab corpora/ベースタブLy/key-section.lys): the
+// boxed "Intro" touched the key's third sharp, the G♯ that stands 1.9 above the top line.
+// The line-start key was seeded only into the system's edge skylines, not into the staff's
+// own profile the marks stand on. LilyPond 2.26.0 lifts the box clear: its bottom 2.38 over
+// the top line, and so does this snapshot. (A note at the file end, so no offset moves.)

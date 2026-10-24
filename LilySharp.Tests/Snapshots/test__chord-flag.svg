@@ -1,32 +1,32 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="239.8" viewBox="0 0 119.50 23.98" font-family="TeX Gyre Schola, serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="250.1" viewBox="0 0 119.50 25.01" font-family="TeX Gyre Schola, serif">
 <style>
   @font-face { font-family: 'Emmentaler'; src: local('Emmentaler'); }
   .music { font-family: 'Emmentaler', serif; }
 </style>
-  <rect x="0" y="0" width="119.50" height="23.98" fill="#FFFFFF"/>
+  <rect x="0" y="0" width="119.50" height="25.01" fill="#FFFFFF"/>
   <g transform="translate(8.54,0.00) scale(1.0000,1.0000)">
-  <line x1="8.59" y1="10.28" x2="23.05" y2="10.28" stroke="#000000" stroke-width="0.100"/>
-  <line x1="8.59" y1="11.28" x2="23.05" y2="11.28" stroke="#000000" stroke-width="0.100"/>
-  <line x1="8.59" y1="12.28" x2="23.05" y2="12.28" stroke="#000000" stroke-width="0.100"/>
-  <line x1="8.59" y1="13.28" x2="23.05" y2="13.28" stroke="#000000" stroke-width="0.100"/>
-  <line x1="8.59" y1="14.28" x2="23.05" y2="14.28" stroke="#000000" stroke-width="0.100"/>
-  <text class="music" x="9.34" y="13.28" font-size="4.00"></text>
-  <text class="music" x="12.72" y="10.28" font-size="4.00" data-pos="988"></text>
-  <text class="music" x="14.97" y="12.28" font-size="4.00"></text>
-  <text class="music" x="19.29" y="10.28" font-size="4.00" data-pos="1058"></text>
-  <text class="music" x="20.34" y="10.28" font-size="4.00" data-pos="1058"></text>
-  <line x1="21.58" y1="10.13" x2="21.58" y2="7.28" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="21.64" y="7.32" font-size="4.00"></text>
-  <line x1="20.01" y1="15.28" x2="21.97" y2="15.28" stroke="#000000" stroke-width="0.200"/>
-  <text class="music" x="18.09" y="12.28" font-size="4.00" data-pos="1067"></text>
-  <text class="music" x="19.19" y="13.28" font-size="4.00" data-pos="1072"></text>
-  <text class="music" x="20.34" y="12.28" font-size="4.00" data-pos="1067"></text>
-  <text class="music" x="20.34" y="13.28" font-size="4.00" data-pos="1072"></text>
-  <text class="music" x="20.34" y="15.28" font-size="4.00" data-pos="1077"></text>
-  <line x1="20.40" y1="12.43" x2="20.40" y2="18.28" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="20.47" y="18.24" font-size="4.00"></text>
-  <rect x="22.91" y="10.28" width="0.19" height="4.00" data-pos="1059"/>
+  <line x1="8.59" y1="11.31" x2="23.05" y2="11.31" stroke="#000000" stroke-width="0.100"/>
+  <line x1="8.59" y1="12.31" x2="23.05" y2="12.31" stroke="#000000" stroke-width="0.100"/>
+  <line x1="8.59" y1="13.31" x2="23.05" y2="13.31" stroke="#000000" stroke-width="0.100"/>
+  <line x1="8.59" y1="14.31" x2="23.05" y2="14.31" stroke="#000000" stroke-width="0.100"/>
+  <line x1="8.59" y1="15.31" x2="23.05" y2="15.31" stroke="#000000" stroke-width="0.100"/>
+  <text class="music" x="9.34" y="14.31" font-size="4.00"></text>
+  <text class="music" x="12.72" y="11.31" font-size="4.00" data-pos="988"></text>
+  <text class="music" x="14.97" y="13.31" font-size="4.00"></text>
+  <text class="music" x="19.29" y="11.31" font-size="4.00" data-pos="1058"></text>
+  <text class="music" x="20.34" y="11.31" font-size="4.00" data-pos="1058"></text>
+  <line x1="21.58" y1="11.16" x2="21.58" y2="8.31" stroke="#000000" stroke-width="0.130"/>
+  <text class="music" x="21.64" y="8.35" font-size="4.00"></text>
+  <line x1="20.01" y1="16.31" x2="21.97" y2="16.31" stroke="#000000" stroke-width="0.200"/>
+  <text class="music" x="18.09" y="13.31" font-size="4.00" data-pos="1067"></text>
+  <text class="music" x="19.19" y="14.31" font-size="4.00" data-pos="1072"></text>
+  <text class="music" x="20.34" y="13.31" font-size="4.00" data-pos="1067"></text>
+  <text class="music" x="20.34" y="14.31" font-size="4.00" data-pos="1072"></text>
+  <text class="music" x="20.34" y="16.31" font-size="4.00" data-pos="1077"></text>
+  <line x1="20.40" y1="13.46" x2="20.40" y2="19.31" stroke="#000000" stroke-width="0.130"/>
+  <text class="music" x="20.47" y="19.27" font-size="4.00"></text>
+  <rect x="22.91" y="11.31" width="0.19" height="4.00" data-pos="1059"/>
   <rect x="13.82" y="6.69" width="2.75" height="2.74" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="997"/>
   <text x="15.20" y="9.08" font-size="2.77" text-anchor="middle" data-pos="997">A</text>
   </g>

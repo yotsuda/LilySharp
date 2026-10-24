@@ -601,6 +601,11 @@ public class SvgSnapshotTests
         yield return new object[] { "test/trill-spanner" };
         yield return new object[] { "test/section-empty-placeholder" };
         yield return new object[] { "test/key-opening-override" };
+        // A section label at the head of an A major piece clears the key's G♯, which reaches
+        // 1.9 above the top line: the line-start key is in the staff's own profile, where the
+        // marks stand (owner's report 2026-10-25; LilyPond 2.26.0: the box's bottom 2.38 over
+        // the top line, as here).
+        yield return new object[] { "test/section-label-over-key" };
         yield return new object[] { "test/key-per-staff" };
         yield return new object[] { "test/lv-meterchange" };
         yield return new object[] { "test/courtesy-accidentals" };

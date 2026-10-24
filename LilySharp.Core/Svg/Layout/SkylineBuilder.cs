@@ -1832,6 +1832,15 @@ internal sealed class SkylineBuilder
         // inside-staff skylines carry every inside-staff grob, and a Clef is one, so it is
         // in the vertical skyline Align_interface walks exactly as a notehead is.
         SeedClef(staff, staffMiddleUp, systemLeft, size, upSkyline, downSkyline);
+        // ...and the key signature after it, whose sharps and flats stand out of the staff — an
+        // inside-staff grob like the clef (SeedLineStartKey's LILYPOND-REF). ⚠️ IT WAS SEEDED
+        // ONLY INTO THE SYSTEM'S EDGE SKYLINES (the systems' spacing), so the marks, which stand
+        // on this staff's own profile, never saw it: a section label at the head of the piece
+        // stood at the staff's line beside an A major's G♯, which reaches 1.9 above the top line,
+        // and touched it (owner's report 2026-10-25, LilySharp-Lab corpora/ベースタブLy/key-section;
+        // LilyPond 2.26.0 lifts the box clear, its bottom 2.38 over the top line).
+        if (_score is { } keyScore)
+            SeedLineStartKey(keyScore, staff, measureLayouts, staffMiddleUp, systemLeft, upSkyline, downSkyline);
         // ...and the meter beside it, where a face's digits stand out of the staff (SeedMeter).
         SeedLineStartMeter(staff, measureLayouts, staffMiddleUp, systemLeft, size, upSkyline, downSkyline);
         SeedLineEndMeter(staff, measureLayouts, staffMiddleUp, systemLeft, upSkyline, downSkyline);
