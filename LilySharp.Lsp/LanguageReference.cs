@@ -245,13 +245,16 @@ internal static class LanguageReference
         // `octave absolute` / `relative` choose a mode, not the register: only a number replaces it.
         sb.Append(Line($"`octave {octave}` — a bare `c` is written C{octave}",
             own.TryGetValue("octave", out var o) && int.TryParse(o, out _) ? Own("octave") : null)).Append('\n');
+        // Every line starts with a code span: VS Code pads one on its left, so a line that started
+        // with plain words stood out of the column (the owner's report, 2026-10-24). A shift no
+        // ottava marker writes (the clarinet's −2) names the property alone.
         string marker = LilySharp.Core.Svg.Model.InstrumentDefaults.TranspositionMarkers
             .FirstOrDefault(m => LilySharp.Core.Svg.Model.InstrumentDefaults.ParseTranspositionSemitones(m) == shift) is { } m2
-            ? $" (`transposition {m2}`)" : "";
+            ? $"`transposition {m2}`" : "`transposition`";
         int written = 12 * (octave + 1);   // that bare c, as MIDI
         sb.Append(Line(shift == 0
-            ? "sounds as written"
-            : $"sounds {Math.Abs(shift)} semitones {(shift < 0 ? "lower" : "higher")}{marker}: "
+            ? "`transposition` — none, sounds as written"
+            : $"{marker} — sounds {Math.Abs(shift)} semitones {(shift < 0 ? "lower" : "higher")}: "
               + $"written C{octave} sounds {PitchName(written + shift, flats: true)}", Own("transposition"))).Append('\n');
         if (LilySharp.Core.Svg.Model.InstrumentDefaults.GetTuning(preset) is { } tuningWord)
         {

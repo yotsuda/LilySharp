@@ -59,7 +59,9 @@ public class InstrumentPresetHoverTests
         Assert.Contains("**Instrument preset** `bass`", hover);
         Assert.Contains("- `clef bass`", hover);
         Assert.Contains("- `octave 3` — a bare `c` is written C3", hover);
-        Assert.Contains("- sounds 12 semitones lower (`transposition 8vb`): written C3 sounds C2", hover);
+        Assert.Contains("- `transposition 8vb` — sounds 12 semitones lower: written C3 sounds C2", hover);
+        // Every line starts with a code span, which VS Code pads: a plain start stood out of the column.
+        Assert.All(hover.Split('\n').Where(l => l.StartsWith("- ")), l => Assert.Matches(@"^- (~~)?`", l));
         Assert.Contains("- `tuning bass` — E1 A1 D2 G2", hover);
         Assert.Contains("- `midiInstrument \"electric bass (finger)\"`", hover);
         Assert.DoesNotContain("Bass", hover.Replace("bass", ""));   // not the printed name
@@ -88,7 +90,7 @@ public class InstrumentPresetHoverTests
     public void AChromaticTransposer_NamesTheSoundingPitch()
     {
         string? hover = HoverAt(Book("instrument clarinet"), "clarinet");
-        Assert.Contains("- sounds 2 semitones lower: written C4 sounds B♭3", hover);
+        Assert.Contains("- `transposition` — sounds 2 semitones lower: written C4 sounds B♭3", hover);
         Assert.DoesNotContain("tuning", hover);   // no strings to fret
     }
 
@@ -97,7 +99,7 @@ public class InstrumentPresetHoverTests
     {
         string? hover = HoverAt(Book("instrument piano-left"), "piano");
         Assert.Contains("**Instrument preset** `piano-left`", hover);
-        Assert.Contains("- sounds as written", hover);
+        Assert.Contains("- `transposition` — none, sounds as written", hover);
     }
 
     [Fact]
