@@ -138,12 +138,18 @@ public sealed partial class LilySharpLanguageServer
             items.Add(Item("~" + sections[i], "Silent section (renders, no rehearsal label)",
                 CompletionItemKind.Reference, $"1{i:D3}"));
 
-        // The repeat block: |: … :| with its endings between the bars, and the count on
-        // the closing bar (:|*N, default 2). Form-only since LYS1034.
-        items.Add(Item("|:", "Repeat start — |: … :|", CompletionItemKind.Operator, "2a"));
-        items.Add(Item(":|", "Repeat end (:|*3 to play three times)", CompletionItemKind.Operator, "2b"));
-        items.Add(Item(":|:", "Repeat end and the next repeat's start, back to back", CompletionItemKind.Operator, "2c"));
-        items.Add(Snippet(":|*3", ":|*${1:3}", "Repeat end played N times", "2d"));
+        // The bar signs, in the order the step keys walk them (NoteStepper.FormBarlineWalk, the
+        // owner's order 2026-10-24): the double, the repeat block — |: … :| with its endings
+        // between the bars and the count on the closing bar (:|*N, default 2; form-only since
+        // LYS1034) — then the final and the dotted. (A plain `|` is an inert divider and is not
+        // offered.)
+        items.Add(Item("||", "Double barline", CompletionItemKind.Operator, "2a"));
+        items.Add(Item("|:", "Repeat start — |: … :|", CompletionItemKind.Operator, "2b"));
+        items.Add(Item(":|", "Repeat end (:|*3 to play three times)", CompletionItemKind.Operator, "2c"));
+        items.Add(Item(":|:", "Repeat end and the next repeat's start, back to back", CompletionItemKind.Operator, "2d"));
+        items.Add(Snippet(":|*3", ":|*${1:3}", "Repeat end played N times", "2e"));
+        items.Add(Item("|.", "Final barline", CompletionItemKind.Operator, "2f"));
+        items.Add(Item("!", "Dotted barline", CompletionItemKind.Operator, "2g"));
         items.Add(Snippet("[1. ]", "[1. $0]", "1st ending (volta bracket)", "3a"));
         items.Add(Snippet("[2. ]", "[2. $0]", "2nd ending (volta bracket)", "3b"));
         items.Add(Snippet("[3. ]", "[3. $0]", "3rd ending (volta bracket)", "3c"));
@@ -153,13 +159,7 @@ public sealed partial class LilySharpLanguageServer
         // read from the compiler's list (the music popup offers the same ten).
         items.AddRange(NavigationMarkItems("4"));
 
-        // The engraved barlines a form may write between sections (a plain `|` is an inert
-        // divider and is not offered), the final first — the step keys walk the same order
-        // (NoteStepper.FormBarlineWalk, owner's request 2026-10-24: |: :| :|: |. are the
-        // form's usual signs) — then the system-break directives, then custom text.
-        items.Add(Item("|.", "Final barline", CompletionItemKind.Operator, "5a"));
-        items.Add(Item("||", "Double barline", CompletionItemKind.Operator, "5b"));
-        items.Add(Item("!", "Dotted barline", CompletionItemKind.Operator, "5c"));
+        // The system-break directives, then custom text.
         items.Add(Item("break", "Force a system break here", CompletionItemKind.Keyword, "6a"));
         items.Add(Item("noBreak", "Forbid a system break here", CompletionItemKind.Keyword, "6b"));
         items.Add(Item("pageBreak", "Force a page break here (and the system break with it)", CompletionItemKind.Keyword, "6c"));

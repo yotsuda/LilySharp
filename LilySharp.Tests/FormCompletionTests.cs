@@ -132,9 +132,9 @@ public class FormCompletionTests
 
     /// <summary>
     /// The list reads in the order a writer reaches for it — sections, silent sections,
-    /// the repeat block, endings, navigation, barlines, breaks, text — by sortText, which
-    /// the editor honours; without one VS Code sorted by label and the repeat bars sat
-    /// under the section names.
+    /// the bar signs (in the step keys' order, owner's decision 2026-10-24: || |: :| :|: |. !),
+    /// endings, navigation, breaks, text — by sortText, which the editor honours; without
+    /// one VS Code sorted by label and the repeat bars sat under the section names.
     /// </summary>
     [Fact]
     public void StructureCompletions_SortInGroups()
@@ -143,11 +143,10 @@ public class FormCompletionTests
             .OrderBy(i => i.SortText, System.StringComparer.Ordinal)
             .Select(i => i.Label!).ToArray();
         Assert.Equal(
-            new[] { "Intro", "Verse", "~Intro", "~Verse", "|:", ":|", ":|:", ":|*3",
+            new[] { "Intro", "Verse", "~Intro", "~Verse", "||", "|:", ":|", ":|:", ":|*3", "|.", "!",
                     "[1. ]", "[2. ]", "[3. ]", "[1-2. ]", "segno" },
-            sorted.Take(13).ToArray());
-        Assert.True(System.Array.IndexOf(sorted, "||") > System.Array.IndexOf(sorted, "ds al coda"));
-        Assert.True(System.Array.IndexOf(sorted, "break") > System.Array.IndexOf(sorted, "!"));
+            sorted.Take(16).ToArray());
+        Assert.True(System.Array.IndexOf(sorted, "break") > System.Array.IndexOf(sorted, "ds al coda"));
         Assert.Equal("_\"\"", sorted[^1]);
     }
 

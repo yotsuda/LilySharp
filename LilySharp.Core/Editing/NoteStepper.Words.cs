@@ -393,13 +393,12 @@ public static partial class NoteStepper
     /// not here: they change the playing order, a different thing from a bar line's look.</summary>
     private static readonly string[] BarlineWalk = ["|", "||", "|.", "!"];
 
-    /// <summary>The bar lines the keys walk in a <c>form</c> (owner's requests 2026-10-24): the plain
-    /// divider, then the signs a form writes most — the repeat's <c>|:</c>, <c>:|</c> and
-    /// <c>:|:</c>, the final <c>|.</c> — then the double and the dotted, the order the form's
-    /// completion lists them in. A <c>|:</c> wants a <c>:|</c> after it (the form says so until it
-    /// is written); a <c>:|</c> alone repeats from the top. A music body takes no repeat sign
-    /// (LYS1034), so the music walks <see cref="BarlineWalk"/>.</summary>
-    public static IReadOnlyList<string> FormBarlineWalk { get; } = ["|", "|:", ":|", ":|:", "|.", "||", "!"];
+    /// <summary>The bar lines the keys walk in a <c>form</c>, in the owner's order (2026-10-24): the
+    /// plain divider, the double, the repeat's <c>|:</c>, <c>:|</c> and <c>:|:</c>, the final, the
+    /// dotted — the order the form's completion lists them in. A <c>|:</c> wants a <c>:|</c> after
+    /// it (the form says so until it is written); a <c>:|</c> alone repeats from the top. A music
+    /// body takes no repeat sign (LYS1034), so the music walks <see cref="BarlineWalk"/>.</summary>
+    public static IReadOnlyList<string> FormBarlineWalk { get; } = ["|", "||", "|:", ":|", ":|:", "|.", "!"];
 
     /// <summary>A bar line of <see cref="BarlineWalk"/> the caret is on, or null — in the music, or
     /// in a <c>form</c>, where the engraved ones are bar-line nodes and the plain <c>|</c> is a bare
