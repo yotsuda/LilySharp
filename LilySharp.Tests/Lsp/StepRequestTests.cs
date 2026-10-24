@@ -871,8 +871,10 @@ public class StepRequestTests
         Assert.Equal(Instrument("\"celesta\""), Step(Instrument("\"bright ‸acoustic\""), -1).After);
         Assert.Equal(Instrument("\"acoustic grand\""), Step(Instrument("\"celesta\"‸"), +1).After);
         Assert.Equal(Instrument("\"celesta\""), Step(Instrument("\"music box\"‸"), +1).After);
+        // A bass's sound strikes its open strings, apart (AStringedMidiInstrument_StrumsItsOpenStrings).
         var (bass, _) = Step(Instrument("\"fretless ‸bass\""), -1, semitone: true);
-        Assert.Equal([43], bass.Pitches);
+        Assert.Equal([28, 33, 38, 43], bass.Pitches);
+        Assert.True(bass.Apart);
         Assert.Equal(36, bass.Program);
 
         // The ends stay; a name off the list steps from them.
@@ -893,7 +895,8 @@ public class StepRequestTests
             Offset = text.IndexOf("viola", StringComparison.Ordinal) + 5,
         });
         Assert.Equal("instrument", answer.Kind);
-        Assert.Equal([60], answer.Pitches);
+        Assert.Equal([48, 55, 62, 69], answer.Pitches);   // a viola's open strings, strummed
+        Assert.True(answer.Strum);
         Assert.Equal(41, answer.Program);
         string partial = Instrument("\"viol\"");
         var none = Open(partial).AuditionAt(new AuditionAtParams
@@ -1300,6 +1303,34 @@ public class StepRequestTests
         var (step, _) = Step(Header("instrument ‸" + presets[uke - 1]), -1, semitone: true);
         Assert.Equal([67, 60, 64, 69], step.Pitches);
         Assert.True(step.Strum);
+    }
+
+    [Fact]
+    public void AStringedMidiInstrument_StrumsItsOpenStrings()
+    {
+        // Owner's request 2026-10-24: a midiInstrument with strings sounds them as a tuning does.
+        AuditionAtResponse Answer(string name)
+        {
+            string text = Header($"midiInstrument \"{name}\"");
+            return Open(text).AuditionAt(new AuditionAtParams
+            {
+                TextDocument = new TextDocumentIdentifier { Uri = DocUri },
+                Offset = text.IndexOf(name, StringComparison.Ordinal) + 1,
+            });
+        }
+        var steel = Answer("acoustic guitar (steel)");
+        Assert.Equal([40, 45, 50, 55, 59, 64], steel.Pitches);
+        Assert.True(steel.Strum);
+        Assert.False(steel.Apart);
+        Assert.Equal(25, steel.Program);
+        var slap = Answer("slap bass 1");
+        Assert.Equal([28, 33, 38, 43], slap.Pitches);
+        Assert.True(slap.Strum && slap.Apart);
+        Assert.Equal([36, 43, 50, 57], Answer("cello").Pitches);
+        Assert.Equal([67, 50, 55, 59, 62], Answer("banjo").Pitches);
+        // No strings: one note.
+        Assert.Single(Answer("synth bass 1").Pitches);
+        Assert.False(Answer("flute").Strum);
     }
 
     [Fact]

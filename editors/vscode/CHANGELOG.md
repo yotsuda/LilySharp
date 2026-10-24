@@ -4,6 +4,12 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+### A stringed midiInstrument strums
+
+- **`midiInstrument "acoustic guitar (steel)"`, `"slap bass 1"`, `"cello"`, `"banjo"` …** sound
+  their open strings as a `tuning` does (a bass's one at a time) when stepped, typed or
+  completed; an instrument without strings keeps its one note.
+
 ### A repeat's count steps
 
 - **On the `3` of `:|*3`, Ctrl+Shift+Up / Down play the repeat once more or once fewer**, down

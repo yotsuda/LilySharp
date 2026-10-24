@@ -317,17 +317,34 @@ public static partial class NoteStepper
 
     /// <summary>
     /// What a <c>midiInstrument</c> sounds (owner's request 2026-10-24: hear the instrument when it
-    /// changes, by the keys or by typing): one note in its program, silent for a name that is not
-    /// one of the 128. Lily#'s choice of the note: C4; G2 for the bass instruments, C3 for the low
-    /// ones, C5 for the high ones — where each one sounds like itself.
+    /// changes, by the keys or by typing), silent for a name that is not one of the 128: a stringed
+    /// instrument's open strings, struck as a <c>tuning</c>'s (<see cref="StringsOfProgram"/>, owner's
+    /// request, same day), else one note in its program (<see cref="SampleVoice"/>).
     /// </summary>
     private static Voice InstrumentVoice(PropertyAssignmentSyntax property)
     {
         if (InstrumentNameToken(property) is not { } token
             || Midi.GeneralMidi.ProgramOf(StringLiteral.Value(token.Text)) is not int program)
             return Voice.Silent;
-        return SampleVoice(program);
+        return StringsOfProgram(program) is { } strings ? OpenStringsVoice(strings, program) : SampleVoice(program);
     }
+
+    /// <summary>
+    /// The tuning a General MIDI program's instrument is strung in, or null for one without strings
+    /// to strike (Lily#'s table): the eight guitars the guitar's, the six plucked basses and the
+    /// contrabass the bass's (struck apart), the violin, viola and cello their own, the banjo open G
+    /// as the <c>banjo</c> preset. The synth basses have no strings.
+    /// </summary>
+    private static TuningType? StringsOfProgram(int program) => program switch
+    {
+        >= 24 and <= 31 => TuningType.Guitar,
+        >= 32 and <= 37 or 43 => TuningType.Bass,
+        40 => TuningType.Violin,
+        41 => TuningType.Viola,
+        42 => TuningType.Cello,
+        105 => TuningType.BanjoOpenG,
+        _ => null,
+    };
 
     /// <summary>One note in <paramref name="program"/>, where its family sounds like itself — what a
     /// <c>midiInstrument</c> and an <c>instrument</c> preset sound when they change.</summary>

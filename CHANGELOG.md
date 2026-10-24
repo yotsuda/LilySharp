@@ -27,6 +27,8 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Editor
 
+- **A stringed `midiInstrument` strums its open strings** when it sounds (the guitars, the
+  plucked basses — apart — the violin, viola, cello, contrabass and banjo); others one note.
 - **The step keys on a repeat's count** (the `3` of `:|*3`) play it once more or once fewer, from 2.
 - **The status bar says what the setting under the caret does** (`lilysharp/caretInfo`,
   `NoteStepper.Describe`): a clef, a key, an `octave`, a `transposition`, a `tuning`, a
