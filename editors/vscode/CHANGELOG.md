@@ -41,8 +41,9 @@ All notable changes to the Lily# VS Code extension are documented here.
   (compile, length, and the scan's verify when the reader can) are run on your line. *use the
   model's* puts the answer back. A row with no proposal shows the bar as it stands, to be written
   by hand the same way; a click on a note of the picture puts the caret on that note's text.
-  Under the pictures a note changed a little is compared character by character: `a16` →
-  `a,16` greens the `,` alone and strikes nothing in `a16` (the pictures still colour the whole note).
+  Under the pictures a note that keeps its name is compared character by character: `a16` →
+  `a,16` greens the `,` alone and strikes nothing in `a16`, `b4` → `b'8` strikes the `4` and
+  greens the `'8` (the pictures still colour the whole note).
 - **Lily#: Edit Bars Beside the Scan** opens the bars on the selected lines (the caret's line
   when nothing is selected, up to 30) in the same panel without the AI: **Now**, **Scan** and
   **Draft**, the last the bar to click and edit, its picture and gates following the typing;
