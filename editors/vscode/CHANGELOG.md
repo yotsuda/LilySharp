@@ -4,6 +4,13 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+### Ctrl+I shows that it is working
+
+- **The AI transform says what it is doing, beside the selection** — as soon as the instruction
+  is entered the selection is shaded and its last line reads *⏳ Lily# AI — generating…*, then
+  validating, rendering, and *the candidate is in the panel*. Until now only a small status-bar
+  spinner said anything, so it was not clear the instruction had been taken.
+
 ### The status bar says where a note stands
 
 - **On a note or a chord: the part, the bar the page prints, the beat and the pitches** —

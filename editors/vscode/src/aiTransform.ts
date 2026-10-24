@@ -105,6 +105,7 @@ let candidatePanel: vscode.WebviewPanel | undefined;
 // message pump (registered once, at creation) routes Accept/Iterate/Reject here.
 let pendingDecision: ((d: Decision) => void) | undefined;
 let softLockDecoration: vscode.TextEditorDecorationType | undefined;
+let workingDecoration: vscode.TextEditorDecorationType | undefined;
 
 /** Registers the `lilysharp.aiTransform` command. */
 export function registerAiTransform(context: vscode.ExtensionContext, deps: AiTransformDeps): void {
@@ -167,14 +168,17 @@ async function runAiTransform(deps: AiTransformDeps): Promise<void> {
         return; // cancelled
     }
 
+    // Soft-lock the range while we work (§7): non-blocking, purely visual — at once, with the
+    // working label, so the screen answers the instruction before the model does.
+    applySoftLock(editor, sel);
+    showWorking(editor, sel, 'taking the instruction…');
+
     // Resolve the model: the user's Copilot models (vscode.lm) or a BYO key.
     const chat = await resolveChatClient(false);
     if (!chat) {
+        clearSoftLock();
         return;
     }
-
-    // Soft-lock the range while we work (§7): non-blocking, purely visual.
-    applySoftLock(editor, sel);
 
     try {
         // Progress lives in the status bar (Window), NOT a Notification toast:
@@ -189,7 +193,15 @@ async function runAiTransform(deps: AiTransformDeps): Promise<void> {
             // not a runtime object, so `vscode.CancellationToken.None` throws
             // "Cannot read properties of undefined (reading 'None')".
             async (progress, token) => {
-                await drive(deps, client, chat, snapshot, instruction, progress, token);
+                // Each step goes to the status bar and to the label beside the selection.
+                const both = {
+                    report(value: { message?: string }) {
+                        progress.report(value);
+                        if (value.message) { showWorking(editor, sel, value.message); }
+                    },
+                };
+                both.report({ message: `asking ${chat.label}…` });
+                await drive(deps, client, chat, snapshot, instruction, both, token);
             }
         );
     } catch (err: any) {
@@ -392,6 +404,7 @@ async function drive(
             beforeLo: candidate.snap.startOffset,
             beforeHi: candidate.snap.endOffset,
         };
+        progress.report({ message: 'the candidate is in the panel — accept, refine or reject it' });
         const decision = await reviewOnScore(deps, renderBefore, renderAfter, caption, candidate.text, changed);
 
         if (decision === 'reject') {
@@ -949,12 +962,40 @@ function applySoftLock(editor: vscode.TextEditor, range: vscode.Range): void {
         overviewRulerLane: vscode.OverviewRulerLane.Full,
     });
     editor.setDecorations(softLockDecoration, [range]);
+    workingDecoration = vscode.window.createTextEditorDecorationType({
+        after: { color: new vscode.ThemeColor('editorCodeLens.foreground'), fontStyle: 'italic', margin: '0 0 0 2em' },
+    });
+}
+
+/**
+ * The working label at the end of the selection (owner's report 2026-10-24: after Ctrl+I nothing
+ * on the screen changed, so it was not clear the instruction had been taken): what the transform
+ * is doing now, the step the status-bar progress names, where the eye already is. Gone with the
+ * soft lock.
+ */
+function showWorking(editor: vscode.TextEditor, range: vscode.Range, message: string): void {
+    if (!workingDecoration) { return; }
+    // A selection ending at the start of a line (whole lines selected) ends on the line before.
+    let end = range.end;
+    if (end.character === 0 && end.line > range.start.line) {
+        end = editor.document.lineAt(end.line - 1).range.end;
+    } else {
+        end = editor.document.lineAt(end.line).range.end;
+    }
+    editor.setDecorations(workingDecoration, [{
+        range: new vscode.Range(end, end),
+        renderOptions: { after: { contentText: `⏳ Lily# AI — ${message}` } },
+    }]);
 }
 
 function clearSoftLock(): void {
     if (softLockDecoration) {
         softLockDecoration.dispose();
         softLockDecoration = undefined;
+    }
+    if (workingDecoration) {
+        workingDecoration.dispose();
+        workingDecoration = undefined;
     }
 }
 
