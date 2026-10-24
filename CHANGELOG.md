@@ -39,6 +39,11 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Editor
 
+- **A score named like a block keyword completes as a score**: in `score chords { … }` a
+  `lyrics words ▮` row offers `sings`, then the parts, where it offered chord names (the
+  name was read as a `chords` track's).
+- **Part lists include a bare `part NAME`** (and one with a display name): `sings`, `staff`,
+  the section cells and the other part lists read only `part NAME {` before.
 - **The status bar says where the note under the caret stands**: its part, the bar the page
   prints, the beat (`2 + 1/2` between beats; a pickup's from where its bar would start) and its
   written pitches, with what they sound on a transposing part (`D4 sounds C4`) —

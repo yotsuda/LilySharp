@@ -2597,20 +2597,16 @@ public sealed partial class LilySharpLanguageServer
     {
         var items = new System.Collections.Generic.List<CompletionItem>();
         var seen = new System.Collections.Generic.HashSet<string>(StringComparer.Ordinal);
-        foreach (var keyword in new[] { "part", "voice" })
-            foreach (Match m in DeclaredNameRegex().Matches(text))
-            {
-                if (m.Groups[1].Value != keyword) continue;
-                var name = m.Groups[2].Value;
-                if (seen.Add(name))
-                    items.Add(new CompletionItem
-                    {
-                        Label = name,
-                        Kind = CompletionItemKind.Reference,
-                        Detail = detail,
-                        SortText = seen.Count.ToString("D2"),
-                    });
-            }
+        var names = DeclaredPartNamesOf(text).Concat(DeclaredNamesOf(text, "voice"));
+        foreach (var name in names)
+            if (seen.Add(name))
+                items.Add(new CompletionItem
+                {
+                    Label = name,
+                    Kind = CompletionItemKind.Reference,
+                    Detail = detail,
+                    SortText = seen.Count.ToString("D2"),
+                });
         return new CompletionList { Items = items.ToArray() };
     }
 
@@ -2935,11 +2931,7 @@ public sealed partial class LilySharpLanguageServer
         // the part cells — `section A { partial 4  key g major  m { … } }`), and until
         // 2026-09-02 this list offered only the cells, so the one place a pickup CAN be
         // written had no `partial` row while the music list, where it cannot, did.
-        var parts = new System.Collections.Generic.List<string>();
-        var seen = new System.Collections.Generic.HashSet<string>(StringComparer.Ordinal);
-        foreach (Match m in DeclaredNameRegex().Matches(text))
-            if (m.Groups[1].Value == "part" && seen.Add(m.Groups[2].Value))
-                parts.Add(m.Groups[2].Value);
+        var parts = DeclaredPartNamesOf(text);
 
         bool freshLine = LineIsBlankBefore(text, WordStartBefore(text, offset));
         string Body(string head) => freshLine ? head + " {\n\t$0\n}" : "\n\t" + head + " {\n\t\t$0\n\t}";
@@ -5087,11 +5079,46 @@ public sealed partial class LilySharpLanguageServer
     /// names.</summary>
     internal static IReadOnlyList<string> DeclaredNamesOf(string text, string keyword)
     {
+        if (keyword == "part")
+            return DeclaredPartNamesOf(text);
         var names = new System.Collections.Generic.List<string>();
         var seen = new System.Collections.Generic.HashSet<string>(StringComparer.Ordinal);
         foreach (Match m in DeclaredNameRegex().Matches(text))
             if (m.Groups[1].Value == keyword && seen.Add(m.Groups[2].Value))
                 names.Add(m.Groups[2].Value);
+        return names;
+    }
+
+    /// <summary>The parts the document declares, in order, deduplicated — <c>part NAME { … }</c>,
+    /// <c>part NAME "Display" { … }</c> and the bare <c>part NAME</c> alike. The
+    /// <c>KEYWORD name {</c> scan saw only the first: a bare <c>part comp</c> was missing from
+    /// the <c>sings</c> list and every other part list (the owner's report, 2026-10-25). Read at
+    /// the top level only, so a lyric line that starts with the word "part" is not one.</summary>
+    internal static IReadOnlyList<string> DeclaredPartNamesOf(string text)
+    {
+        static bool IsWordChar(char c) => char.IsLetterOrDigit(c) || c == '_';
+        var names = new System.Collections.Generic.List<string>();
+        var seen = new System.Collections.Generic.HashSet<string>(StringComparer.Ordinal);
+        var code = CodeMask(text, text.Length);
+        int depth = 0;
+        for (int i = 0; i < text.Length; i++)
+        {
+            if (!code[i]) continue;
+            char c = text[i];
+            if (c == '{') { depth++; continue; }
+            if (c == '}') { if (depth > 0) depth--; continue; }
+            if (depth != 0 || c != 'p' || (i > 0 && IsWordChar(text[i - 1]))
+                || string.CompareOrdinal(text, i, "part", 0, 4) != 0
+                || i + 4 >= text.Length || !char.IsWhiteSpace(text[i + 4]))
+                continue;
+            int j = i + 4;
+            while (j < text.Length && char.IsWhiteSpace(text[j])) j++;
+            int start = j;
+            while (j < text.Length && IsWordChar(text[j])) j++;
+            if (j > start && seen.Add(text[start..j]))
+                names.Add(text[start..j]);
+            i = j - 1;
+        }
         return names;
     }
 

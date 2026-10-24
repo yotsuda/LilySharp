@@ -87,6 +87,80 @@ public class SingsCompletionTests
     public void AScoreRowAfterItsName_OffersTheBindingKeyword(string text)
         => Assert.Equal(LilySharpLanguageServer.CompletionContext.AfterLyricsRowAttachName, Ctx(text));
 
+    /// <summary>The owner's report (2026-10-25, public-domain-scores sakura-sakura.lys):
+    /// `lyrics words ▮` as the last row of a NAMED score, under a one-line staff row and with
+    /// the closing brace already typed, offered no `sings`.</summary>
+    [Theory]
+    [InlineData("score chords {\n  subtitle \"さくらさくら — chords & lyrics\"\n  chords harmony\n  staff comp as lines 1\n  lyrics words ", "\n}\n")]
+    [InlineData("score chords {\n  staff comp as lines 1\n  lyrics words ", "\n}\n")]
+    [InlineData("score {\n  staff m\n  lyrics words ", "\n}\n")]
+    [InlineData("score { lyrics words ", " }")]
+    public void ARowInARealScoreAfterItsName_OffersTheBindingKeyword(string head, string tail)
+        => Assert.Equal(LilySharpLanguageServer.CompletionContext.AfterLyricsRowAttachName,
+            LilySharpLanguageServer.GetCompletionContext(head + tail, head.Length));
+
+    /// <summary>A score NAMED like a block keyword (`score chords {`) is still a score: its
+    /// body offers the score's rows, and its `sings` the binding targets.</summary>
+    [Theory]
+    [InlineData("score chords {\n  ", "ScoreBlock")]
+    [InlineData("score lyrics {\n  ", "ScoreBlock")]
+    [InlineData("score tab {\n  ", "ScoreBlock")]
+    [InlineData("score chords {\n  lyrics words sings ", "AfterSingsTarget")]
+    public void AScoreNamedLikeABlockKeyword_IsAScore(string head, string expected)
+        => Assert.Equal(System.Enum.Parse<LilySharpLanguageServer.CompletionContext>(expected),
+            LilySharpLanguageServer.GetCompletionContext(head + "\n}\n", head.Length));
+
+    /// <summary>The same report end to end, through the server's completion handler on the
+    /// whole file: `sings` after the row's name, then the parts after `sings `.</summary>
+    [Fact]
+    public void TheReportedFile_OffersSingsThenTheParts()
+    {
+        const string head = """
+            title "Sakura Sakura"
+            part guitar { instrument guitar }
+            part comp
+            section Song {
+              guitar { a'4 a b2 | }
+              lyrics words sings guitar { さ く ら | }
+              chords harmony { Am | }
+              comp { /4 4 4 4 | }
+            }
+            form { ~Song }
+            score {
+              staff guitar
+              tab guitar
+            }
+            score chords {
+              subtitle "さくらさくら — chords & lyrics"
+              chords harmony
+              staff comp as lines 1
+              lyrics words
+            """;
+        const string tail = "\n}\n";
+
+        Assert.Contains("sings", LabelsAt(head + " " + tail, head.Length + 1));
+        string afterSings = head + " sings ";
+        var parts = LabelsAt(afterSings + tail, afterSings.Length);
+        Assert.Contains("guitar", parts);
+        Assert.Contains("comp", parts);
+    }
+
+    private static string[] LabelsAt(string text, int offset)
+    {
+        var server = new LilySharpLanguageServer(System.IO.Stream.Null, System.IO.Stream.Null);
+        var uri = new System.Uri("file:///sakura-sakura.lys");
+        server.DidOpen(new LilySharp.Lsp.Protocol.DidOpenTextDocumentParams
+        {
+            TextDocument = new LilySharp.Lsp.Protocol.TextDocumentItem { Uri = uri, Text = text, LanguageId = "lilysharp", Version = 1 },
+        });
+        var (line, character) = LilySharpLanguageServer.GetLineAndCharacter(text, offset);
+        return [.. (server.Completion(new LilySharp.Lsp.Protocol.CompletionParams
+        {
+            TextDocument = new LilySharp.Lsp.Protocol.TextDocumentIdentifier { Uri = uri },
+            Position = new LilySharp.Lsp.Protocol.Position(line, character),
+        })?.Items ?? []).Select(i => i.Label!)];
+    }
+
     [Fact]
     public void AGroupRowAfterItsName_OffersTheBindingKeyword()
         => Assert.Equal(LilySharpLanguageServer.CompletionContext.AfterGroupLyricsRowAttachName,

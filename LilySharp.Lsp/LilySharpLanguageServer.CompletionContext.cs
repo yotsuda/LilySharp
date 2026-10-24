@@ -156,13 +156,9 @@ public sealed partial class LilySharpLanguageServer
     internal static bool IsInsideTopLevelSectionBody(string text, int offset)
         => IsInsideTopLevelSectionBody(new BlockContextScan(text, offset).Stack);
 
-    /// <summary>True when the document declares at least one <c>part NAME { … }</c>.</summary>
+    /// <summary>True when the document declares at least one part, with a body or bare.</summary>
     private static bool HasDeclaredParts(string text)
-    {
-        foreach (Match m in DeclaredNameRegex().Matches(text))
-            if (m.Groups[1].Value == "part") return true;
-        return false;
-    }
+        => DeclaredPartNamesOf(text).Count > 0;
 
     /// <summary>
     /// When the caret ends a <c>tempo</c> run that has its bpm and no feel word yet —
@@ -357,6 +353,11 @@ public sealed partial class LilySharpLanguageServer
         // bare-part-name group (2026-10-13) — read as if the clef were not there.
         if (IsBarePartNameGroup(prefix) && name is "treble" or "bass" or "alto" or "tenor" or "treble_8")
             return new BlockFrame("", prefix);
+        // `score chords {`: the word is the score's NAME, never a block keyword — read the
+        // frame as the score's, or a score named `chords` is taken for a chord track and its
+        // rows complete chord names (the owner's report, 2026-10-25).
+        if (prefix == "score")
+            return new BlockFrame("", "score");
         return new BlockFrame(prefix, name);
     }
 
@@ -1807,10 +1808,11 @@ public sealed partial class LilySharpLanguageServer
             return true;
         // Blocks that take NO name before their brace: if w1 is one of these,
         // this brace opens that block, not a score.
-        if (w1 is "section" or "part" or "phrase" or "form" or "chords"
-            or "lyrics" or "voice" or "tuplet" or "grace" or "acciaccatura"
-            or "appoggiatura" or "afterGrace" or "repeat" or "ossia" or "tab")
-            return false;
+        // ...unless the keyword is the score's NAME: `score chords {` names a score
+        // `chords` (the owner's report, 2026-10-25: its rows were read as a definition's,
+        // so `lyrics words ▮` offered no `sings` in the score).
+        if (IsNamelessBlockKeyword(w1))
+            return PreviousWord(text, j) == "score";
         // Otherwise w1 was a bare name or a quoted one (w1 == ""; LYS0038, which the parser
         // still reads as the name): walk back over the rest of the header looking for `score`.
         //
@@ -1847,13 +1849,26 @@ public sealed partial class LilySharpLanguageServer
                 return false;
             if (w == "score" || IsStaffGroupKeyword(w))
                 return true;
-            if (w is "section" or "part" or "phrase" or "form" or "chords"
-                or "lyrics" or "voice" or "tuplet" or "grace" or "acciaccatura"
-                or "appoggiatura" or "afterGrace" or "repeat" or "ossia" or "tab")
-                return false;
+            if (IsNamelessBlockKeyword(w))
+                return PreviousWord(text, j) == "score";
             // else a name — keep walking back
         }
         return false;
+    }
+
+    private static bool IsNamelessBlockKeyword(string word)
+        => word is "section" or "part" or "phrase" or "form" or "chords"
+            or "lyrics" or "voice" or "tuplet" or "grace" or "acciaccatura"
+            or "appoggiatura" or "afterGrace" or "repeat" or "ossia" or "tab";
+
+    /// <summary>The word ending at or before <paramref name="j"/>, past whitespace; empty at
+    /// punctuation or the text's start.</summary>
+    private static string PreviousWord(string text, int j)
+    {
+        while (j >= 0 && char.IsWhiteSpace(text[j])) j--;
+        int end = j + 1;
+        while (j >= 0 && (char.IsLetterOrDigit(text[j]) || text[j] == '_')) j--;
+        return text[(j + 1)..end];
     }
 
     /// <summary>
