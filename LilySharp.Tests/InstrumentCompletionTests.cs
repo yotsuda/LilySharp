@@ -121,15 +121,13 @@ public class InstrumentCompletionTests
     [Fact]
     public void InstrumentCompletions_SayWhatEachPresetSets()
     {
-        // Owner's request 2026-10-24: tell the presets apart before picking one — each item's
-        // detail is the line the status bar says on the preset.
-        // Short beside the name; in full, one line each (owner's request, same day: not joined by
-        // dots), in the details pane.
+        // Owner's request 2026-10-24: tell the presets apart before picking one — one line each
+        // (same day: not joined by dots), in the details pane, and no detail above them (on trial,
+        // same day: the pane set it off with a blank line).
         // The order is the owner's: what every preset has first (clef, MIDI sound, octave), what few
         // have last (tuning, transposition), so each stays on its line from candidate to candidate.
         var items = LilySharpLanguageServer.GetInstrumentCompletions().Items.ToDictionary(i => i.Label!);
-        Assert.Equal("clef bass · tuning bass · 8vb", items["bass"].Detail);
-        Assert.Equal("clef treble · -2 semitones", items["clarinet"].Detail);
+        Assert.All(items.Values, i => Assert.Null(i.Detail));
         Assert.Equal(string.Join("\n",
             "- clef bass",
             "- midiInstrument \"electric bass (finger)\"",
@@ -141,6 +139,6 @@ public class InstrumentCompletionTests
             "- midiInstrument \"clarinet\"",
             "- octave 4 — a bare c is written C4",
             "- sounds 2 semitones lower — written C4 sounds B♭3"), Assert.IsType<MarkupContent>(items["clarinet"].Documentation).Value);
-        Assert.All(items.Values, i => Assert.StartsWith("clef ", i.Detail));
+        Assert.All(items.Values, i => Assert.StartsWith("- clef ", Assert.IsType<MarkupContent>(i.Documentation).Value));
     }
 }
