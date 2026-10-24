@@ -810,6 +810,17 @@ export function activate(context: vscode.ExtensionContext) {
         getClient: () => client,
         isReady: () => clientReady,
         log: (msg: string) => outputChannel.appendLine(msg),
+        // A candidate's Play (owner's request 2026-10-25) sounds through the document's preview.
+        playOnPreview: (uri: vscode.Uri, notes: unknown[]) => {
+            const panel = previewPanels.get(uri.toString());
+            if (!panel) { return false; }
+            void panel.webview.postMessage({ type: 'playNotes', notes });
+            return true;
+        },
+        stopOnPreview: (uri: vscode.Uri) => {
+            void previewPanels.get(uri.toString())?.webview.postMessage({ type: 'ctxStop' });
+        },
+        renderNameOf: (uri: vscode.Uri) => selectedRenders.get(uri.toString()) || undefined,
     };
     registerAiTransform(context, aiDeps);
     // Second mode: validated ghost-text "next measure" completion (opt-in).
@@ -5340,6 +5351,13 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 }
                 case 'playPitches':
                     playPitches(message.pitches, message.timbre, message.program, message.durationMs, message.strumMs || 0, !!message.apart);
+                    break;
+                // Another text's notes — an AI candidate under review (owner's request
+                // 2026-10-25) — played as the Play button plays this score's, from the top. They
+                // are not this page's: the cached note list is left alone, and they carry no
+                // source positions, so nothing here lights up.
+                case 'playNotes':
+                    startPlayback(message.notes, 0);
                     break;
                 case 'setSoundFont':
                     setSoundFont(message.uri);

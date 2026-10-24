@@ -122,4 +122,23 @@ public class PlaybackRequestTests
         Assert.Equal(4, pb.Notes!.Count(n => n.C == 9));
         Assert.All(pb.Notes!.Where(n => n.C == 9), n => Assert.Equal(9, n.I));
     }
+
+    [Fact]
+    public void AText_PlaysAsTheDocumentWould_AndAChangedOneAsChanged()
+    {
+        // lilysharp/playbackText (owner's request 2026-10-25): an AI candidate is heard before it
+        // is accepted — the same notes the document's own Play gives for the same text, and the
+        // candidate's for the candidate.
+        var server = new LilySharpLanguageServer(Stream.Null, Stream.Null);
+        var asIs = server.GetPlaybackText(new PlaybackTextParams { Text = Doc, RenderName = "p2" });
+        var opened = Playback("p2");
+        Assert.Equal(opened.Notes!.Select(n => (n.T, n.P)), asIs.Notes!.Select(n => (n.T, n.P)));
+
+        var changed = server.GetPlaybackText(new PlaybackTextParams { Text = Doc.Replace("e f g a | b2 b", "g a b c | d2 d") });
+        Assert.Null(changed.Error);
+        var opening = changed.Notes!.Where(n => n.T == 0).Select(n => (int)n.P).ToArray();
+        Assert.Contains(55, opening);          // p2 now opens on g (G3, the nearest to its anchor)
+        Assert.DoesNotContain(64, opening);    // not on the e it opened on
+        Assert.Equal("Score has errors", server.GetPlaybackText(new PlaybackTextParams { Text = "section A { p1 { c4 d" }).Error);
+    }
 }

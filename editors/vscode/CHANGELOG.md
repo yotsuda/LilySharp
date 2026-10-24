@@ -4,6 +4,13 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+### Hear an AI candidate before accepting it
+
+- **▶ Play in the candidate panel** (or Space) plays the pane shown — the candidate (After) or
+  the music as it stands (Before) — through the file's preview, with its sound font or MIDI
+  output; ■ Stop stops it, and Accept, Iterate or Reject do too. With no preview open the panel
+  says to open one.
+
 ### Ctrl+I on an empty line works on the whole score
 
 - **With nothing selected and the caret on an empty line, Ctrl+I transforms the whole file** —

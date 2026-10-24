@@ -52,7 +52,21 @@ export interface AiTransformDeps {
     /** True once the client has started and is ready to serve requests. */
     isReady: () => boolean;
     log: (msg: string) => void;
+    /** Plays a note list (lilysharp/playback's) on the open preview of `uri` — its synth, its
+     *  sound font, its MIDI output; false when no preview of it is open. */
+    playOnPreview?: (uri: vscode.Uri, notes: unknown[]) => boolean;
+    /** Stops what the preview of `uri` is playing. */
+    stopOnPreview?: (uri: vscode.Uri) => void;
+    /** The score the preview of `uri` shows (its picker), or undefined for the first. */
+    renderNameOf?: (uri: vscode.Uri) => string | undefined;
 }
+
+/** What a candidate's Play sounds (owner's request 2026-10-25: hear it before accepting): the
+ *  document, the text as it stands, and the text with the candidate in. */
+interface Audible { uri: vscode.Uri; before: string; after: string }
+
+// The round under review — what its panel's Play plays.
+let audible: Audible | undefined;
 
 // ---- Server DTO mirrors (see LspProtocolDtos.cs) ----
 interface CandidateDiagnostic {
@@ -415,7 +429,11 @@ async function drive(
         }
         // The notification has closed: the review is the user's, with nothing over it.
         const { candidate, caption, renderAfter, changed } = round;
-        const decision = await reviewOnScore(deps, renderBefore, renderAfter, caption, candidate.text, changed);
+        const decision = await reviewOnScore(deps, renderBefore, renderAfter, caption, candidate.text, changed, {
+            uri: snapshot.uri,
+            before: snapshot.origFullText,
+            after: spliceCandidate(candidate.snap, candidate.text),
+        });
 
         if (decision === 'reject') {
             deps.log('AI transform: rejected on the score.');
@@ -719,8 +737,10 @@ async function reviewOnScore(
     caption: string,
     candidate: string,
     changed: ChangedSpans,
+    play: Audible,
 ): Promise<Decision> {
     const panel = ensureCandidatePanel(deps);
+    audible = play;
     const fontUri = panel.webview.asWebviewUri(
         vscode.Uri.joinPath(deps.extensionUri, 'media', 'fonts', 'emmentaler-20.woff2'));
     const braceFontUri = panel.webview.asWebviewUri(
@@ -759,11 +779,17 @@ function ensureCandidatePanel(deps: AiTransformDeps): vscode.WebviewPanel {
     const settle = (d: Decision) => {
         const resolve = pendingDecision;
         pendingDecision = undefined;
+        // A decision ends a candidate's Play: the music changes, or the panel goes.
+        if (audible) { deps.stopOnPreview?.(audible.uri); }
         resolve?.(d);
     };
     panel.webview.onDidReceiveMessage((m: any) => {
         if (m && (m.action === 'accept' || m.action === 'iterate' || m.action === 'reject')) {
             settle(m.action);
+        } else if (m?.action === 'play') {
+            void playCandidate(deps, panel, m.which === 'before' ? 'before' : 'after');
+        } else if (m?.action === 'stop' && audible) {
+            deps.stopOnPreview?.(audible.uri);
         }
     });
     // Closing the panel counts as reject for whatever round is awaiting a decision.
@@ -773,6 +799,39 @@ function ensureCandidatePanel(deps: AiTransformDeps): vscode.WebviewPanel {
     });
     candidatePanel = panel;
     return panel;
+}
+
+/**
+ * Plays the round's candidate (or, from the Before pane, the text as it stands) on the document's
+ * preview (owner's request 2026-10-25: hear it before accepting). The preview is the player — its
+ * synth, its sound font, its MIDI output — so what plays is what the score will sound like; the
+ * notes carry no source positions, so the preview lights none of its own (they are another
+ * text's). Without an open preview the panel says how to get one.
+ */
+async function playCandidate(deps: AiTransformDeps, panel: vscode.WebviewPanel, which: 'before' | 'after'): Promise<void> {
+    const play = audible;
+    const client = deps.getClient();
+    if (!play || !client) { return; }
+    const say = (text: string | null) => void panel.webview.postMessage({ type: 'playState', text });
+    try {
+        const pb = await client.sendRequest<{ Notes?: { S?: number }[] | null; Error?: string | null }>('lilysharp/playbackText', {
+            Text: which === 'after' ? play.after : play.before,
+            Uri: play.uri.toString(),
+            RenderName: deps.renderNameOf?.(play.uri) ?? null,
+        });
+        if (pb.Error || !pb.Notes) {
+            say(`Cannot play: ${pb.Error ?? 'no notes'}`);
+            return;
+        }
+        const notes = pb.Notes.map(n => ({ ...n, S: -1 }));
+        if (!deps.playOnPreview?.(play.uri, notes)) {
+            say('Open the preview of this file to hear it (the preview is the player).');
+            return;
+        }
+        say(which === 'after' ? 'Playing the candidate in the preview…' : 'Playing the original in the preview…');
+    } catch (e) {
+        say(`Cannot play: ${String(e)}`);
+    }
 }
 
 function getCandidateHtml(
@@ -824,6 +883,7 @@ button { padding:6px 14px; font-size:13px; border:1px solid var(--vscode-button-
 button.primary { background: var(--vscode-button-background); color: var(--vscode-button-foreground); }
 button:hover { opacity:0.9; }
 .spacer { flex:1; }
+.playstate { align-self:center; font-size:12px; opacity:0.8; }
 </style>
 </head>
 <body>
@@ -846,6 +906,9 @@ button:hover { opacity:0.9; }
 <div class="footer">
   <button class="primary" id="accept">Accept (Enter)</button>
   <button id="iterate">Iterate…</button>
+  <button id="play" title="Play the pane shown — After or Before — in the preview (Space)">▶ Play</button>
+  <button id="stop">■ Stop</button>
+  <span id="playState" class="playstate"></span>
   <div class="spacer"></div>
   <button id="reject">Reject (Esc)</button>
 </div>
@@ -896,10 +959,19 @@ button:hover { opacity:0.9; }
   document.getElementById('accept').addEventListener('click', () => send('accept'));
   document.getElementById('iterate').addEventListener('click', () => send('iterate'));
   document.getElementById('reject').addEventListener('click', () => send('reject'));
+  // Play sounds the pane shown, After or Before, in the preview (owner's request 2026-10-25).
+  const play = () => vscode.postMessage({ action: 'play', which: paneAfter.classList.contains('show') ? 'after' : 'before' });
+  document.getElementById('play').addEventListener('click', play);
+  document.getElementById('stop').addEventListener('click', () => send('stop'));
+  const playState = document.getElementById('playState');
+  window.addEventListener('message', (e) => {
+    if (e.data && e.data.type === 'playState') { playState.textContent = e.data.text || ''; }
+  });
   window.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') { e.preventDefault(); send('accept'); }
     else if (e.key === 'Escape') { e.preventDefault(); send('reject'); }
     else if (e.key === 'Tab') { e.preventDefault(); show(!paneAfter.classList.contains('show')); }
+    else if (e.key === ' ') { e.preventDefault(); play(); }
   });
 </script>
 </body>

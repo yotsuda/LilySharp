@@ -884,6 +884,32 @@ public sealed partial class LilySharpLanguageServer
         if (doc == null)
             return new PlaybackResponse { Error = "Document not found" };
         var (tree, _) = ExpandUsings(doc, @params.TextDocument.Uri);
+        return PlaybackOf(tree, @params.RenderName);
+    }
+
+    /// <summary>
+    /// The note events of an arbitrary source — an AI candidate not applied yet, or the text it
+    /// would replace (owner's request 2026-10-25: hear a candidate before accepting it). The
+    /// <c>using</c>s resolve beside <see cref="PlaybackTextParams.Uri"/>, the document's own
+    /// file. Read-only; nothing is opened.
+    /// </summary>
+    [JsonRpcMethod("lilysharp/playbackText", UseSingleObjectParameterDeserialization = true)]
+    public Task<PlaybackResponse> GetPlaybackTextAsync(PlaybackTextParams @params, CancellationToken token)
+        => OffDispatch(() => GetPlaybackText(@params), token);
+
+    public PlaybackResponse GetPlaybackText(PlaybackTextParams @params)
+    {
+        string text = @params.Text ?? "";
+        string basePath = @params.Uri is { IsFile: true } uri ? uri.LocalPath : string.Empty;
+        var tree = ExpandUsings(text, SyntaxTree.Parse(text), basePath,
+            p => System.IO.File.Exists(p) ? System.IO.File.ReadAllText(p) : null).Tree;
+        return PlaybackOf(tree, @params.RenderName);
+    }
+
+    /// <summary>The note events a tree plays, in seconds — what <c>lilysharp/playback</c> and
+    /// <c>lilysharp/playbackText</c> answer.</summary>
+    private static PlaybackResponse PlaybackOf(SyntaxTree tree, string? renderName)
+    {
         if (tree.HasErrors)
             return new PlaybackResponse { Error = "Score has errors" };
         try
@@ -891,7 +917,7 @@ public sealed partial class LilySharpLanguageServer
             // The score the preview DRAWS (the same choice the svg request makes), so its
             // Play sounds that score's parts and form — `score p2 { staff p2 }`
             // used to play p1 as well.
-            var score = RenderSpecParser.Choose(RenderSpecParser.FindAll(tree), @params.RenderName);
+            var score = RenderSpecParser.Choose(RenderSpecParser.FindAll(tree), renderName);
             var midi = new LilySharp.Core.Midi.MidiExporter { Form = score?.Form, Score = score }.Export(tree);
             int tpq = midi.TicksPerQuarterNote;
 

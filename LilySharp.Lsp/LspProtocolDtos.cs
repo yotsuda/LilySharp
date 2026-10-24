@@ -264,6 +264,16 @@ public class PlaybackParams
     public string? RenderName { get; set; }
 }
 
+/// <summary>Parameters for lilysharp/playbackText: a source to play that is no open document
+/// (an AI candidate), the document it belongs to (its <c>using</c>s resolve beside it), and the
+/// score, as <see cref="PlaybackParams.RenderName"/>.</summary>
+public class PlaybackTextParams
+{
+    public string? Text { get; set; }
+    public System.Uri? Uri { get; set; }
+    public string? RenderName { get; set; }
+}
+
 /// <summary>One playable note, in SECONDS (tempo map already applied).</summary>
 public class PlaybackNote
 {
