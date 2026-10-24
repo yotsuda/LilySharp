@@ -4,6 +4,12 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+### The status bar says where a note stands
+
+- **On a note or a chord: the part, the bar the page prints, the beat and the pitches** —
+  `bar 12 · beat 2 + 1/2 · D4`; on a transposing part what it sounds too (`D4 sounds C4` on a
+  clarinet, `E2 sounds E1` on a bass).
+
 ### Two slips against an instrument preset are warned
 
 - **`instrument bass octave 2`** (LYS1050): the octave is the written register, and the preset

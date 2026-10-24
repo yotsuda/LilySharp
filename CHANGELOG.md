@@ -33,6 +33,10 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Editor
 
+- **The status bar says where the note under the caret stands**: its part, the bar the page
+  prints, the beat (`2 + 1/2` between beats; a pickup's from where its bar would start) and its
+  written pitches, with what they sound on a transposing part (`D4 sounds C4`) —
+  `NoteStepper.DescribeNote` over `NotePlaces`, cached per document version.
 - **The `instrument` completion shows each preset's defaults** (clef, octave, transposition,
   tuning, MIDI sound) as its detail, the line the status bar says on it.
 - **A stringed `midiInstrument` strums its open strings** when it sounds (the guitars, the

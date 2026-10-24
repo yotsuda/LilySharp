@@ -114,6 +114,40 @@ public class CaretInfoTests
         => Assert.Equal("size a4: 210 × 297 mm (8.3 × 11.7 in)", InfoAt("paper { size a‸4 }\n" + Part("clef treble")));
 
     [Fact]
-    public void ANote_HasNoLine()
-        => Assert.Null(InfoAt(Part("clef treble", "c‸4 d e f")));
+    public void ANote_SaysItsBarBeatAndPitch()
+    {
+        // Owner's request 2026-10-24: where a note stands and what it is.
+        // (Relative octaves from the part's C4: a bare letter is the nearest.)
+        string book = "part m { clef treble }\nsection A { m { c4 d e f | g4 a8 b c2 } }\n";
+        Assert.Equal("bar 1 · beat 1 · C4", InfoAt(book.Replace("c4 d", "c‸4 d")));
+        Assert.Equal("bar 1 · beat 3 · E4", InfoAt(book.Replace(" e ", " e‸ ")));
+        Assert.Equal("bar 2 · beat 2 + 1/2 · B4", InfoAt(book.Replace(" b ", " b‸ ")));
+        // With a score of two parts, the part is named too.
+        string two = "part m { clef treble }\npart n { clef treble }\nsection A { m { c4 d e f } n { e4 f g a } }\n"
+            + "score { staff m staff n }\n";
+        Assert.Equal("n · bar 1 · beat 2 · F4", InfoAt(two.Replace("e4 f", "e4 f‸")));
+    }
+
+    [Fact]
+    public void ANoteOfATransposingPart_SaysWhatItSounds()
+    {
+        string clarinet = "part cl { instrument clarinet }\nsection A { cl { d4 e f g } }\n";
+        Assert.Equal("bar 1 · beat 1 · D4 sounds C4", InfoAt(clarinet.Replace("d4", "d‸4")));
+        string bass = "part b { instrument bass }\nsection A { b { e,4 a d g } }\nscore { staff b }\n";
+        Assert.Equal("b · bar 1 · beat 1 · E2 sounds E1", InfoAt(bass.Replace("e,4", "e‸,4")));
+    }
+
+    [Fact]
+    public void AChord_SaysEveryPitch_AndAPickupItsPlaceInTheBar()
+    {
+        string chord = "part m { clef treble }\nsection A { m { <c e g>2 r } }\n";
+        Assert.Equal("bar 1 · beat 1 · C4 E4 G4", InfoAt(chord.Replace("<c", "<‸c")));
+        Assert.Equal("bar 1 · beat 1 · C4 E4 G4", InfoAt(chord.Replace("g>2", "g>‸2")));
+        string pickup = "part m { clef treble }\nsection A { m { partial 4 g4 | c1 } }\n";
+        Assert.Equal("bar 0 · beat 4 · G3", InfoAt(pickup.Replace("g4 |", "g‸4 |")));
+    }
+
+    [Fact]
+    public void ARest_HasNoLine()
+        => Assert.Null(InfoAt(Part("clef treble", "r‸4 d e f")));
 }

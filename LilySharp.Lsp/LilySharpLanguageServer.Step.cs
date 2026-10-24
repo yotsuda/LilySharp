@@ -129,11 +129,37 @@ public sealed partial class LilySharpLanguageServer
             return new CaretInfoResponse();
         try
         {
-            return new CaretInfoResponse { Text = NoteStepper.Describe(doc.Text, doc.Tree, @params.Offset), Version = doc.Version };
+            string? text = NoteStepper.Describe(doc.Text, doc.Tree, @params.Offset);
+            // A note, chord or member: its bar, beat and pitches, written and sounding — the
+            // sound off the tree the preview plays (owner's request 2026-10-24).
+            if (text == null)
+            {
+                var (sounding, _) = ExpandUsings(doc, @params.TextDocument.Uri);
+                var heard = NoteStepper.AuditionAt(doc.Text, doc.Tree, @params.Offset, sounding)?.Pitches ?? [];
+                text = NoteStepper.DescribeNote(doc.Text, doc.Tree, @params.Offset,
+                    NotePlacesOf(@params.TextDocument.Uri, doc), heard);
+            }
+            return new CaretInfoResponse { Text = text, Version = doc.Version };
         }
         catch (Exception)
         {
             return new CaretInfoResponse { Version = doc.Version };
         }
+    }
+
+    // The last document's note places, by version: the caret asks on every move, and a collect
+    // per move would be the preview's whole cost again (the PlacesOf cache's reason).
+    private readonly object _notePlacesLock = new();
+    private (Uri Uri, int Version, NotePlaces Places)? _notePlaces;
+
+    private NotePlaces NotePlacesOf(Uri uri, Document doc)
+    {
+        lock (_notePlacesLock)
+            if (_notePlaces is { } cached && cached.Uri == uri && cached.Version == doc.Version)
+                return cached.Places;
+        var places = NotePlaces.Of(doc.Tree);
+        lock (_notePlacesLock)
+            _notePlaces = (uri, doc.Version, places);
+        return places;
     }
 }

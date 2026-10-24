@@ -15,6 +15,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 using System;
+using System.Collections.Immutable;
 using System.Globalization;
 using System.Linq;
 using LilySharp.Core.Syntax;
@@ -57,6 +58,92 @@ public static partial class NoteStepper
             TargetKind.PaperSize => PaperSizeAt(tree, offset) is { } size ? PaperSays(size.Name) : null,
             _ => null,
         };
+    }
+
+    /// <summary>
+    /// The status line of the note, chord member or chord under the caret (owner's request
+    /// 2026-10-24): the part, the bar the page prints, the beat it starts on (in the meter's beat
+    /// unit, a part of one written <c>+ 1/2</c>), and its written pitches, with what they sound
+    /// where that differs (a transposing part: <c>D4 sounds C4</c>). <paramref name="sounding"/> is
+    /// what it plays (<see cref="AuditionAt"/>'s pitches, lowest first); null when the caret is on
+    /// no note or the score draws none there.
+    /// </summary>
+    public static string? DescribeNote(string text, SyntaxTree tree, int offset, NotePlaces places,
+        ImmutableArray<int> sounding)
+    {
+        if (TargetAt(text, tree, offset) is not { } target)
+            return null;
+        SyntaxNode? thing = target.Kind switch
+        {
+            TargetKind.Note => target.Node,
+            TargetKind.Chord => target.Node,
+            TargetKind.Member => target.Node.Parent,
+            _ => null,
+        };
+        if (thing == null || places.At(thing.Position, thing.Span.End) is not { } place)
+            return null;
+        var pitches = thing switch
+        {
+            NoteSyntax note => [note.Pitch],
+            _ => thing.ChildNodes().OfType<PitchSyntax>().ToList(),
+        };
+        var written = pitches.Select(p => places.WrittenAt(p.Position, p.Span.End)).OfType<string>().ToList();
+        if (written.Count == 0)
+            return null;
+
+        var parts = new System.Collections.Generic.List<string>();
+        // A book with no score block draws its first part as the voice "default"
+        // (MeasureCollector's name for it): one part, nothing to tell apart.
+        if (place.Part is not ("default" or SyntaxFacts.UnnamedPartName))
+            parts.Add(place.Part);
+        parts.Add($"bar {place.Measure}");
+        parts.Add($"beat {Beat(place)}");
+        string pitchText = string.Join(" ", written.Select(Pretty));
+        var writtenMidi = written.Select(MidiOf).Order().ToList();
+        if (sounding.Length == writtenMidi.Count && !sounding.Order().SequenceEqual(writtenMidi))
+        {
+            int shift = sounding.Order().First() - writtenMidi[0];
+            // An octave shift keeps the letters; another shift is spelled the way its key reads.
+            string soundText = shift % 12 == 0
+                ? string.Join(" ", written.Select(w => Pretty(w[..^OctaveDigits(w)] + (int.Parse(w[^OctaveDigits(w)..], CultureInfo.InvariantCulture) + shift / 12))))
+                : string.Join(" ", sounding.Order().Select(p => shift < 0 ? SpellFlat(p) : Pretty(SpellMidi(p))));
+            pitchText += $" sounds {soundText}";
+        }
+        parts.Add(pitchText);
+        return string.Join(" · ", parts);
+    }
+
+    /// <summary>The beat a place starts on, counted from 1 in its meter's beat unit: <c>3</c>,
+    /// or <c>2 + 1/2</c> between beats.</summary>
+    private static string Beat(NotePlace place)
+    {
+        var inBeats = place.Onset * new Semantics.Fraction(place.Meter.BeatType, 1);
+        int whole = inBeats.Numerator / inBeats.Denominator;
+        var rest = inBeats - new Semantics.Fraction(whole, 1);
+        return rest.Numerator == 0 ? $"{whole + 1}" : $"{whole + 1} + {rest.Numerator}/{rest.Denominator}";
+    }
+
+    /// <summary>A trace pitch (<c>D#4</c>, <c>Bb3</c>) with the accidental's sign (<c>D♯4</c>).</summary>
+    private static string Pretty(string pitch)
+        => pitch[..1] + pitch[1..].Replace("bb", "𝄫").Replace("#", "♯").Replace("x", "𝄪").Replace("b", "♭");
+
+    /// <summary>How many characters of a trace pitch are its octave (<c>-1</c> is two).</summary>
+    private static int OctaveDigits(string pitch)
+    {
+        int n = 0;
+        while (n < pitch.Length - 1 && (char.IsDigit(pitch[^(n + 1)]) || pitch[^(n + 1)] == '-'))
+            n++;
+        return n;
+    }
+
+    /// <summary>A trace pitch's MIDI number (<c>C4</c> = 60).</summary>
+    private static int MidiOf(string pitch)
+    {
+        int octave = int.Parse(pitch[^OctaveDigits(pitch)..], CultureInfo.InvariantCulture);
+        string accidental = pitch[1..^OctaveDigits(pitch)];
+        int alter = accidental switch { "#" => 1, "x" => 2, "b" => -1, "bb" => -2, _ => 0 };
+        int step = new[] { 0, 2, 4, 5, 7, 9, 11 }["CDEFGAB".IndexOf(pitch[0])];
+        return 12 * (octave + 1) + step + alter;
     }
 
     /// <summary>A clef: its middle line, and that it moves no note — the register is the part's
