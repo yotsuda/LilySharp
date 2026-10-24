@@ -6,6 +6,8 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ### Ctrl+Shift+Up / Down pick a font and a MIDI instrument
 
+- **On a section a `form` names, and the part a lyrics track `sings`, they switch to the file's
+  next / previous one**, in the order declared.
 - **On a number in the music they step it**: a `tuplet`'s ratio through the usual ones (`3/2` →
   `4/3` → `5/4` …), a `repeat tremolo N` and a rest's `R1*N` by one, a `partial`'s length through
   the note values (Up longer).

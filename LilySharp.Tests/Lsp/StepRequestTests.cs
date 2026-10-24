@@ -1282,6 +1282,33 @@ public class StepRequestTests
         Assert.Contains("longest", longest.Message);
     }
 
+    [Fact]
+    public void AFormsSection_WalksTheDeclaredSections()
+    {
+        // Owner's request 2026-10-24: the sections in the order written, Down down the list.
+        const string Book = "part m {{ }}\nsection A {{ m {{ c'1 }} }}\nsection B {{ m {{ d'1 }} }}\nsection C {{ m {{ e'1 }} }}\nform {{ {0} }}\n";
+        string S(string form) => string.Format(Book, form);
+        var (down, after) = Step(S("A ‸A"), -1, semitone: true);
+        Assert.False(down.Fallback, down.Error);
+        Assert.Equal(S("A B"), after);
+        Assert.Contains("section 2 of 3", down.Message);
+        Assert.Equal(S("A C"), Step(S("A ‸B"), -1).After);
+        // The silent spelling keeps its ~.
+        Assert.Equal(S("~A"), Step(S("~‸B"), +1, semitone: true).After);
+        var (first, same) = Step(S("‸A"), +1, semitone: true);
+        Assert.Equal(S("A"), same);
+        Assert.Contains("first", first.Message);
+    }
+
+    [Fact]
+    public void ALyricsTracksSings_WalksThePartsThenTheVoices()
+    {
+        const string Book = "part sop {{ }}\npart alt {{ }}\nlyrics v sings {0} {{ la la }}\nsection A {{ sop {{ c''1 }} alt {{ a'1 }} }}\nform {{ A }}\nscore {{ staff sop lyrics v }}\n";
+        string S(string target) => string.Format(Book, target);
+        Assert.Equal(S("alt"), Step(S("‸sop"), -1, semitone: true).After);
+        Assert.Equal(S("sop"), Step(S("alt‸"), +1).After);
+    }
+
     // ---------------------------------------------------------------- tuning
 
     private static string Tuning(string word) => $"part b {{ tuning {word} }}\nsection A {{ b {{ c4 d e f }} }}\n";

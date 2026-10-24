@@ -235,6 +235,60 @@ public static partial class NoteStepper
         return (new Edit(value.Span.Start, value.Span.End, NoteValues[to].ToString()), $"partial {NoteValues[to]}");
     }
 
+    // ------------------------------------------------------------------ names
+
+    /// <summary>A name that refers to a declaration the caret is on — a section in a <c>form</c>
+    /// (<c>A</c>, <c>~A</c>), the part or voice a lyrics track <c>sings</c> — or null.</summary>
+    private static (TargetKind Kind, SyntaxTokenNode Name)? NameReferenceAt(SyntaxTree tree, int offset)
+    {
+        var root = tree.GetRoot();
+        foreach (var node in root.DescendantNodesOfKinds(SectionSymbols.ReferencingKinds))
+            if (SectionSymbols.ReferencedName(node) is { Text.Length: > 0 } name && name.Span.Start <= offset && offset <= name.Span.End)
+                return (TargetKind.FormSection, name);
+        foreach (var node in root.DescendantNodesOfKinds(PartReferenceFinder.SingsKinds))
+            if (PartReferenceFinder.SingsTargetToken(node) is { Text.Length: > 0 } name && name.Span.Start <= offset && offset <= name.Span.End)
+                return (TargetKind.SingsTarget, name);
+        return null;
+    }
+
+    /// <summary>The names a reference walks: the sections the file declares, in the order written;
+    /// or, for a <c>sings</c>, the parts in that order and then the named voices.</summary>
+    private static List<string> NamesFor(SyntaxTree tree, TargetKind kind)
+    {
+        var root = tree.GetRoot();
+        if (kind == TargetKind.FormSection)
+        {
+            var sections = new List<string>();
+            foreach (var node in root.DescendantNodesOfKinds(SectionSymbols.DeclaringKinds))
+                if (SectionSymbols.DeclaredName(node) is { Text.Length: > 0 } name && !sections.Contains(name.Text))
+                    sections.Add(name.Text);
+            return sections;
+        }
+        var names = DeclaredPartsInOrder(tree);
+        var voices = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var node in root.DescendantNodesOfKinds(PartReferenceFinder.VoiceIntroducingKinds))
+            PartReferenceFinder.CollectVoiceNames(node, voices);
+        names.AddRange(voices.Where(v => !names.Contains(v)).OrderBy(v => v, StringComparer.Ordinal));
+        return names;
+    }
+
+    /// <summary>One step of a name reference (owner's request 2026-10-24): the next (Down) or
+    /// previous (Up) of <see cref="NamesFor"/>, stopping at either end; a name the file does not
+    /// declare steps from the ends. Only the name changes (a <c>~</c> stays).</summary>
+    private static (Edit? Edit, string Message) NameReferenceEdit(SyntaxTree tree, TargetKind kind, SyntaxTokenNode name, int dir)
+    {
+        var names = NamesFor(tree, kind);
+        string what = kind == TargetKind.FormSection ? "section" : "part";
+        if (names.Count == 0)
+            return (null, $"{name.Text}: the file declares no {what} to switch to");
+        int at = names.IndexOf(name.Text);
+        int to = at < 0 ? (dir < 0 ? 0 : names.Count - 1) : at - dir;
+        string list = names.Count <= 8 ? $" ({string.Join(", ", names)})" : "";
+        if (to < 0 || to >= names.Count)
+            return (null, $"{name.Text}: already the {(to < 0 ? "first" : "last")} {what}{list}");
+        return (new Edit(name.Span.Start, name.Span.End, names[to]), $"{names[to]}: {what} {to + 1} of {names.Count}{list}");
+    }
+
     // ------------------------------------------------------------------ paper size
 
     /// <summary>The page name of a <c>paper { size … }</c> the caret is on — the glued run of
