@@ -262,6 +262,9 @@ describe('what the model is shown', () => {
         assert.equal(withTodoMark('c4@todo.down d e f |', 'c4 d e f |', 'x'), 'c4@todo("x").down d e f |');
         assert.equal(withTodoMark('s1@todo |', 's1 |', ''), 's1@todo |', 'a spacer when there is nothing else');
         assert.equal(withTodoMark('c1@todo |', 'break |', ''), undefined);
+        // A bar with no mark ("add @todo", Edit Bars Beside the Scan): its first note, no key.
+        assert.equal(withTodoMark('break s4 c4 d2 |', 'break s4 c4 d2 |', 'check the d'), 'break s4 c4@todo("check the d") d2 |');
+        assert.equal(withTodoMark('<a, c e>8 r8 |', '<a, c e>8 r8 |', ''), '<a, c e>8@todo r8 |');
     });
 
     // Owner, 2026-10-24 (Chopin Op. 28/4, bar 4): took a proposal, saw it was still two notes short,

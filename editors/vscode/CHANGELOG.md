@@ -35,7 +35,9 @@ All notable changes to the Lily# VS Code extension are documented here.
 - **Lily#: Edit Bars Beside the Scan** opens the bars on the selected lines (the caret's line
   when nothing is selected, up to 30) in the same panel without the AI: **Now**, **Scan** and
   **Edit**, the last the bar to click and edit, its picture and gates following the typing;
-  *Accept* writes the edited bars as one edit. In the editor's menu of a `.lys` with a scan.
+  *Accept* writes the edited bars as one edit. In the editor's menu of a `.lys` with a scan. On
+  a bar with no mark the check box beside *Take* reads `add @todo` (the mark goes on its first
+  note), on one with a mark `keep @todo`.
 - **A bar can be taken and stay marked**: `keep @todo` beside *Take* writes the bar with a
   `@todo` still on it, at the note nearest the old mark (the reader's key kept), and the words
   typed beside it as its memo — for a proposal that is better but not right yet. The pictures

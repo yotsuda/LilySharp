@@ -1069,11 +1069,16 @@ function panelHtml(deps: OmrAiFixDeps, webview: vscode.Webview, run: FixRun): st
               + `<input type="checkbox" class="take" data-i="${r.index}" ${on ? 'checked' : ''}> <span class="take-word" data-i="${r.index}">${parts.takeWord}</span></label>`
             : `<label class="take dim" title="${r.state === 'applied' ? 'Written' : 'No proposal to take'}"><input type="checkbox" disabled> ${r.state === 'applied' ? 'Written' : 'Take'}</label>`;
         // Taken but still marked (owner's request 2026-10-24): the bar is written with a @todo at
-        // the same note — the reader's key kept — and the words typed here as its memo.
+        // the same note — the reader's key kept — and the words typed here as its memo. A bar that
+        // carries no mark (one opened by Edit Bars Beside the Scan) gets one instead: "add", at its
+        // first note (withTodoMark with no mark to follow).
+        const marked = resolvedLine(t.written) !== t.written;
         const keepBox = can
-            ? `<label class="take keep" title="Write the bar with a @todo still on it, at the same note — for a bar that is better but not right yet">`
-              + `<input type="checkbox" class="keep" data-i="${r.index}" ${on && r.keepTodo ? 'checked' : ''}> keep @todo</label>`
-              + `<input type="text" class="note" data-i="${r.index}" value="${esc(r.todoMemo ?? '')}" placeholder="what is still wrong (optional)" ${on && r.keepTodo ? '' : 'hidden'}>`
+            ? `<label class="take keep" title="${marked
+                ? 'Write the bar with a @todo still on it, at the same note — for a bar that is better but not right yet'
+                : 'Write the bar with a @todo on its first note — to come back to it'}">`
+              + `<input type="checkbox" class="keep" data-i="${r.index}" ${on && r.keepTodo ? 'checked' : ''}> ${marked ? 'keep' : 'add'} @todo</label>`
+              + `<input type="text" class="note" data-i="${r.index}" value="${esc(r.todoMemo ?? '')}" placeholder="${marked ? 'what is still wrong' : 'what to check'} (optional)" ${on && r.keepTodo ? '' : 'hidden'}>`
             : '';
         // Three rows a bar: a head across the whole width — the box, the bar, the reader's memo,
         // the line, the time, the way to the editor — then the model's reason and the gates,
@@ -1213,7 +1218,7 @@ ${rows}
     vscode.postMessage({ action: 'check', index: Number(box.dataset.i), on });
     if (!on) setKeep(box.dataset.i, false);
   }
-  // "keep @todo": taken with a @todo still on the bar, its memo in the field beside it. Checking
+  // "keep @todo" ("add @todo" on a bar with no mark): taken with a @todo on the bar, its memo in the field beside it. Checking
   // it takes the bar; a bar not taken keeps nothing.
   const keepOf = i => document.querySelector('input.keep[data-i="' + i + '"]');
   const noteOf = i => document.querySelector('input.note[data-i="' + i + '"]');
