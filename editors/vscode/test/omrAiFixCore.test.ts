@@ -508,12 +508,17 @@ describe('reading the answer', () => {
         // The pictures still paint the whole note.
         assert.deepEqual(rangesOf(oct.after, 'add', 0), [[7, 12]]);
         assert.deepEqual(parts(wordDiff('a,4@p( fis4) |', 'a,4@p( f4) |').before), ['f[-is]4']);
-        // Paired in order when as many go as come; too different a pair, or a mark, stays whole.
+        // The same note name: b4 → b'8 is "4" out, "'8" in (the owner's second report).
+        const dur = wordDiff('a2. b4 |', 'a2. b\'8 |');
+        assert.deepEqual(parts(dur.before), ['b[-4]']);
+        assert.deepEqual(parts(dur.after), ['b[+\'8]']);
+        assert.deepEqual([parts(wordDiff('c4 e8 |', 'c4 e16 |').before), parts(wordDiff('c4 e8 |', 'c4 e16 |').after)], [['e[-8]'], ['e[+16]']]);
+        // Paired in order when as many go as come; another note name, or a mark, stays whole.
         const two = wordDiff('c4 d8 e8 |', 'c4 d,8 e8. |');
         assert.deepEqual(parts(two.after), ['d[+,]8', 'e8[+.]']);
         assert.deepEqual(parts(two.before), ['d8', 'e8']);
-        assert.deepEqual(parts(wordDiff('c4 e8 |', 'c4 e16 |').after), []);
         assert.deepEqual(parts(wordDiff('c4 r8 |', 'c4 gis16 |').after), []);
+        assert.deepEqual(parts(wordDiff('c4 a8 |', 'c4 g8 |').after), []);
         assert.deepEqual(parts(wordDiff('c4@p |', 'c4@pp |').after), []);
     });
 

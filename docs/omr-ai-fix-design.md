@@ -53,7 +53,7 @@ AI 変換の candidate panel を**一覧**にしたもの。1 行＝1 小節:
 | 列 | 中身 |
 |---|---|
 | 今（OMR） | その小節の描画（`renderText` で前後 1 小節ごと） |
-| 元画像 | `x.omr.json` の `box` で切り抜いた画像（scan view と同じ座標＝読み込んだままの画素）。**真ん中**＝今と提案の両方の隣（第975・オーナー「元画像と提案を見比べたい」・元画像が左端だと提案が 2 枚先だった） |
+| 元画像 | `x.omr.json` の `box` で切り抜いた画像（scan view と同じ座標＝読み込んだままの画素）。**真ん中**＝今と提案の両方の隣（第975・オーナー「元画像と提案を見比べたい」・元画像が左端だと提案が 2 枚頭だった） |
 | 提案 | 候補の描画（同じ範囲） |
 | 行ごとに Accept／Discard | 第975（オーナー「人が見て問題ないと判断したらエントリごとに Accept／Cancel したい・下は Accept All／Discard All に・Take は残すべきか」→ Take は廃止＝行の Accept が「これでよい」を言うので、まとめ書きのためのチェックの役が無くなる）。行の **Accept**＝その場で書く（行ごとに Ctrl+Z 1 つ）・行はパネルから消える／**Discard**＝書かずに消す（AI 中なら取り消し）／**Accept All (N)**＝準備のできた行（`isReady`＝人の編集で compile・length ✓、または AI の案で `acceptableByAll`＝かつての既定チェック。印を消すだけの行・AI 待ちの行は入れない）を 1 回の編集で／**Discard All**＝閉じる。最後の行が消えたら自動で閉じる。準備のできた行の Accept は primary。**行ごとの基準テキスト（`RunBase`）**: 行のオフセット・絵・門・AI への問いは「その行を開いたときの文書」に対して＝パネルの Accept が文書を変えても残りの行は自分の基準のまま正しい（書くときは今の文書で行の文字を探す `anchorOf`）。パネルの Accept が作った版（`run.written`）なら後のコマンドも同じパネル＝足す行は今の文書を新しい基準に（Now の symbol は `before-<基準 id>`・ページへは足すときに一緒に送る）。隔離した VS Code で通し確認（1 行 Accept・Discard・Accept 後の追加＝新しい基準・AI の案と自分の編集を Accept All・最後の Discard で閉じる・Ctrl+Z 2 回で全部戻る） |
 | AI は行ごと・裏で | 第975（オーナー「Edit の行でも AI に提案させるのは妥当か・待つ間に他の行を編集できるか」→「(a)(b) 両方」）。行に **Ask AI**／待ち・問い中は **cancel**。run ごとの queue を 1 小節ずつ（`pump`・`ProgressLocation.Window`）、答えはその行だけを `postRow` で差し替える（全体の描き直しはしない＝入力中の欄が消えない）。待つ間に人が編集した行は編集が残り、理由の行に「use the AI's」。聞いた時点の編集を `attempt`（「人の途中の書き直し」）、`keep/add @todo` の欄の言葉を人の note として渡す（`promptTargetOf`）。Fix OMR は QuickPick の後すぐパネル（行は「waiting」で生まれる＝新しいページが message を聞く前でも正しく描く・ページの `ready` で AI 中の行を送り直す）→ 答えの順に埋まる。通知の進捗・エディターの lock・バッチごとの「続ける？」は廃止（`ai.omrFixBatch` を超える数だけ最初に All／The first N を聞く）。**同じファイル・同じ版のパネルが開いていれば行を足す**（`runFor`／`addRows`・同じ行は足さずにスクロール）。別のファイル・書き換わった後は、チェック・編集・問い中があれば「Open a New Panel?」。パネルを閉じると `stopQueue`。3 列目の見出しは一度でも AI に聞いたら Proposal、それまでは Edit。隔離した VS Code＋遅い偽の模型（3 秒）で通し確認済み（Lab `sessions/p975/e2e/`） |
@@ -62,7 +62,7 @@ AI 変換の candidate panel を**一覧**にしたもの。1 行＝1 小節:
 | 提案を直す | 提案の下の文字をクリック→入力欄（第975・オーナー「その場で編集できて画像も変わると使いやすい」）。0.4 秒の間で拡張へ送り、`editRow` が門 1・2（`checkCandidate`＋`gateOf`）と描画（`renderText`）→その行の部品だけをページへ返す（`postRow`＝入力欄の focus を保つ）。照合のある reader なら続けて門 3（前の照合は取り消す）。古い答えは `seq` で捨てる。Now の赤は 1 つの symbol なので、元の色を `data-was` に覚えて剥がしてから塗り直す。モデルの答え（無ければ元の行）と同じ文字は「編集なし」。打てば Take が入る。入力欄が開いている間は提案の絵の緑を剥がし、カーソル（選択）の音符を青で光らせる（オーナー同日。入力欄の位置＋`data-base`＝描いた音符の source offset・前の空白と行頭の字下げまで遡る＝`rangesOf` と同じ）。和音（実測＝言語サーバーの interactive SVG は各符頭が `data-pos`＝自分の文字・`data-alt`＝和音の `<`）: 構成音の上＝その符頭だけ（`data-alt` を見ない）／`<`・`>`・`>` の後ろ（音価・`@…`）＝和音全部（`<` の alt＋`>` から後ろ）（オーナー同日・`caretLight`）。提案の絵の音符をクリック＝入力欄を開いてその `data-pos`−`data-base` にカーソル（`editAt`・同日）。そのため行ごとの絵は `<symbol>`＋`<use>` ではなく `<g>` で直に描く（`<use>` の中のクリックは `<use>` に届くだけ）。共有の Now は symbol のまま。⚠️ ページの script は TS の template literal の中＝正規表現の `\s` は `\\s` と書く（`\s` は `s` になる＝`data-alt` の split が第973 から効いていなかったのを同時に直した） |
 | 印を残す | **keep @todo**（第975・オーナー「改善はするが完全ではない提案を受け入れて、同じ場所に新しい todo を」）: 入れると Take も入り、入力欄の言葉を memo に、**元の印に最も近い音符**（spacer より音符・`itemEndsOf`）へ `@todo(<元のキー> "<言葉>")` を付けて書く（`withTodoMark`）。キーを残すので scan 側の場所は変わらない。**印の無い小節（Edit Bars Beside the Scan）では語が `add @todo`**（オーナー同日「keep は語がおかしい」）＝最初の音符（spacer より音符）にキー無しで付ける。印のある小節は `keep @todo`・既定は外れていて Take だけなら印を消す |
 | 名前を 1 つに | 第975（オーナー「2 つの機能は統合されたからヘッダと列名も同じに」→ 提案のまま）: パネルは **`Lily# — Bar fixes`**（頭は `Bar fixes — <ファイル名>`）、列は **Now · Scan · Draft** をどちらのコマンドでも。Draft＝Accept が書くもの（AI の提案・人の編集・AI の提案を人が直したもの）＝AI に聞いても列名は変わらない。出どころは各行の Draft の絵の上の小さな字（`rowParts` の `source`: *AI proposal*／*AI proposal, edited*（編集を始めた時に提案があった＝`editedFromAi`）／*your edit*／*asking the AI…*／*waiting for the AI…*／*no AI proposal — the bar as it stands*／*the bar as it stands*）。`headerOf` の `third` は無くした |
-| 字の差分 | 第975（オーナー「Now `a2. b8. a16` → Draft `a2. b8. a,16` で Now の a16 に取り消し線、Draft の a,16 全部が緑。`,` だけ緑に」）: `wordDiff` の後で、同じ 2 つの共通の piece の間に消える piece と入る piece が同じ数あれば順に組み、長い方の半分以上の字が共通なら字ごとの LCS で `parts` を付ける（`refined`／`charDiff`）。絵の下の文字（`piecesHtml`）は `parts` の変わった字だけを del／ins に。**絵の塗り（`rangesOf`）は piece 単位のまま**＝音符は丸ごと赤／緑（音符の一部だけを塗ることはできない）。`@…` の印は短く表示するので字では割らない |
+| 字の差分 | 第975（オーナー「Now `a2. b8. a16` → Draft `a2. b8. a,16` で Now の a16 に取り消し線、Draft の a,16 全部が緑。`,` だけ緑に」）: `wordDiff` の後で、同じ 2 つの共通の piece の間に消える piece と入る piece が同じ数あれば順に組み、いい方の半分以上の字が共通なら字ごとの LCS で `parts` を付ける（`refined`／`charDiff`）。絵の下の文字（`piecesHtml`）は `parts` の変わった字だけを del／ins に。**絵の塗り（`rangesOf`）は piece 単位のまま**＝音符は丸ごと赤／緑（音符の一部だけを塗ることはできない）。`@…` の印は短く表示するので字では割らない |
 | 理由 | モデルの一言（「`r2` を `r2.` に: 付点が見える・拍が埋まる」） |
 | 門 | compile ✓・拍 ✓・verify ✓／—（照合できないとき） |
 | 操作 | Accept／Reject（行）・Accept all（門が全部 ✓ の行だけ）・Open in editor |
@@ -90,7 +90,7 @@ AI 変換の candidate panel を**一覧**にしたもの。1 行＝1 小節:
    間違っているか」の手がかりで、答えではない。きっかけ: memo「the upper voice is a double-dotted half note short」の
    `voice { s4 s16 s64 e,8@todo s2 s32 } { <a, c e>8 … }` に、模型は同じ 2 声のまま `s32.` を足して返した（通る・拍も合う）。
    正しくは単一の声で `<fis, c e,>8` が和音。だから: 小節は `@todo(…)` を剥がして見せ（音の位置に置かれた reader の推測が
-   「残すもの」に読まれる）、memo は「測った症状・原因の推測は外れうる」と書いて渡す／`s`・付点・長い音で数を合わせる
+   「残すもの」に読まれる）、memo は「測った症状・原因の推測は外れうる」と書いて渡す／`s`・付点・いい音で数を合わせる
    ことを禁じる／画像の見る声部の数を文字から引き継がない（`voice {}{}` を 1 声へ畳んでよい）／「最小限の変更」は画像
    ありでは言わない（画像が要るだけ書き直す）／直しの依頼も「エラーを黙らせず、ページを読み直す」。画像なしでは
    「1 通りに決まるときだけ・複数なら null」。
@@ -100,13 +100,13 @@ AI 変換の candidate panel を**一覧**にしたもの。1 行＝1 小節:
    キー付きの印は人の言葉**（`FixTarget.notes`）＝「ページと見比べた人が書いた・信じよ・unchanged と答えるな」と別の段で
    渡す（memo は .lys の文字そのまま＝画像から読ませるのではない）。加えて system に「和音ごとに符頭を数え、線か間かと
    臨時記号を読む・2 度で横にずれた符頭と加線上の符頭が落ちやすい・全部合ったときだけ unchanged」。**切り抜きは
-   長辺 1000 px 未満なら整数倍（≤3）に拡大して送る**（`MIN_CROP_SIDE`・最近傍＝ページに無いものは足さない。300 dpi の
+   い辺 1000 px 未満なら整数倍（≤3）に拡大して送る**（`MIN_CROP_SIDE`・最近傍＝ページに無いものは足さない。300 dpi の
    1 小節は約 590×270・符頭 20 px）。この小節の正解は第 4 拍が `<f, gis, d>8 <f, gis, d>8`（2 度の F を reader が落とした）。
 
 ### 3.2 門（見せる前・AI 変換の validate-and-self-repair と同じ）
 
 1. **compile**: `checkCandidate` で、置き換えた全文が**新しい**エラーを増やさない（他所の既存エラーは数えない）。
-2. **拍**: その小節に LYS2001／2002（短い・長い小節）が無い＝`checkCandidate` の診断の位置で見る。
+2. **拍**: その小節に LYS2001／2002（短い・いい小節）が無い＝`checkCandidate` の診断の位置で見る。
 3. **照合**（任意・あれば）: `omr verify` をその `.lys` 候補で走らせ、対象の小節の食い違いが消えるか。OMR 側に小節を絞る
    引数（`--bars 12`）があると数秒で済む（§7）。無ければこの門は「—」。
 4. 落ちたら 1 回だけ、診断の文を添えて直させる（`MAX_REPAIR_ATTEMPTS` と同じ上限）。それでも落ちたら「no proposal」。
@@ -162,8 +162,8 @@ M1 は OMR 側の作業を待たない（`kind: "bar"` の todo と memo は今�
 
 **M2 の実装（第973・2026-10-23）**: ⑴ **画像**＝`omrAiFixCore.decodeImage`／`cropRgba`／`encodePng`／`scanCropPng`（pure JS の
 `jpeg-js`・`pngjs`＝拡張に依存を 2 つ足した・esbuild が束ねる）。頁は 1 回の実行で 1 度だけ decode（`FixRun.pages`）・切り抜きは
-`cropRect`（余白 30%）を整数に丸め、長辺 1,568 px を超えるぶんは整数倍で間引く（nearest＝細い符尾を消さない）・PNG で
-`ChatMessage.images` に載せ、プロンプトの先頭に「絵が正本・文字は reader の読み」の段を足す（`TaskInput.image`）。
+`cropRect`（余白 30%）を整数に丸め、い辺 1,568 px を超えるぶんは整数倍で間引く（nearest＝細い符尾を消さない）・PNG で
+`ChatMessage.images` に載せ、プロンプトの頭頭に「絵が正本・文字は reader の読み」の段を足す（`TaskInput.image`）。
 ⑵ **engine の床は上げない**＝`modelClient.lmClient` が `vscode.LanguageModelDataPart.image` の有無を実行時に見る（無い VS Code は文字だけ＝M1 の形）。
 **受けない模型**＝画像つきの `sendRequest` が投げたら文字だけで送り直し、以後その client は文字だけ（`refused`）・`ChatClient.sentImages()` で
 呼び手が知り、出力チャネルに 1 回だけ「この模型は画像を受けない」。⑶ **設定 `lilysharp.ai.omrFixImages`**（既定 on）＝門の A/B
@@ -178,7 +178,7 @@ uri と印の offset）を出し、拡張はその行の対象だけを QuickPic
 通った提案の全文を temp の `.lys` に書き、`omr verify <x.lys> --candidate <tmp> --bars <N> --no-write --progress json`（`omrCore.verifyArguments` の
 `VerifyOptions`）を回し、`bar` イベント（`omrCore.parseEvent`）を `omrAiFixCore.verifyVerdict` で読む＝**その小節の自パートと `part: null`（符幹・連符）の
 行が、`differs: false` か `confidence ≥ 0.8`（`VERIFY_SURE`＝OMR の助言: タイ・スラー・scan にだけある点は 0.6〜0.9 で `differs: true` になる）なら ✓**。
-小節番号は **reader の数え方**＝`readerBarOf`（`measures[].line` → `measure`・`part`。印刷の番号は長すぎる小節の後でずれる）。読み手の有無は
+小節番号は **reader の数え方**＝`readerBarOf`（`measures[].line` → `measure`・`part`。印刷の番号はいすぎる小節の後でずれる）。読み手の有無は
 `omr --version --json` の `features: ["verify-bars"]`（`canVerifyBars`・path ごとに 1 回）、無ければ「verify —」のまま。設定 **`lilysharp.ai.omrFixVerify`**（既定 on・
 1 小節 2〜3 秒＝lysc が全文を描く）。✗ のときは `the scan says: <memo>` で 1 回直させ、それでも ✗ なら**提案は出すが `verify ✗`・Accept all の対象外**
 （照合には偽陽性があるので「no proposal」にはしない＝design §3.2 ④ からの変更）。⑵ **`readings`**＝`omrScanCore.markFactsOf` が `todos[].readings[]`
@@ -201,7 +201,7 @@ bar 3 は `nothing to say`・verdict ✗／✓・side file は不変・1.1 秒�
 **依頼済（2026-10-23・第973）: `..\LilySharp-Omr\docs\repro\lilysharp-proposal-2026-10-23-ai-fix.md`** → **同日 3 件とも入った**（返事 `lilysharp-reply-2026-10-23-ai-fix.md`・OMR 0.3.0 のまま・`features: ["verify-bars"]`・`--candidate` は `--no-write` を含む・`readings` は `source: "length"` の todo だけ＝`verify` の印の小節には付かない（採用率を見てから）・`pages[].image` は side file の配下なら相対）。Lily# 側の受け口は上の「M3 の実装」。 **第973 夜**: Scan Import **0.3.1**（`features: ["verify-bars"]`）がこの PC にだけ入った（返事 `lilysharp-reply-2026-10-23-ai-fix-release.md`・Marketplace は未）。入った `bin\omr.exe` で門 3 の素振りは ✓。古い reader に更新を勧める案内は、0.3.1 が Marketplace に出てから入れる（OMR の依頼）。
 
 1. `omr verify <x.lys> --candidate <tmp.lys> --bars N[,M…] --no-write --progress json`: 提案を差し込んだ temp の本文を、小節を絞って、side file を書かずに照合し、小節ごとに `{"event":"bar","measure","part","differs","confidence","memo"}` を返す（門 3 を数秒に）。有無は `--version --json` の `features: ["verify-bars"]`。
-2. 長さの todo（`source: length|verify`）に **`readings[]`**（S33 段 1 の `Fixes.Cand` の `why`・`was`・`now`・`evidence`・`fills`・`x`・`y`）＝1 事象の別の読み。`candidates` は音符の todo のまま。
+2. いさの todo（`source: length|verify`）に **`readings[]`**（S33 段 1 の `Fixes.Cand` の `why`・`was`・`now`・`evidence`・`fills`・`x`・`y`）＝1 事象の別の読み。`candidates` は音符の todo のまま。
 3. `x.omr.json` の `pages[].image`（`annotated`・`source` も）を side file のフォルダーからの相対パスに（今は絶対パス・Lily# は両方読める）。
 
 ## 8. 開いている判断（オーナー）

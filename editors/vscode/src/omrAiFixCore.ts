@@ -682,8 +682,8 @@ export function wordDiff(written: string, proposal: string): { before: DiffPiece
 /**
  * The changed pieces told character by character (owner's report 2026-10-24: `a16` → `a,16`
  * struck the whole `a16` and greened the whole `a,16`; only the `,` is new). Between the same
- * two kept pieces, as many removed as added pieces are paired in order, and a pair that shares
- * at least half of the longer one gets `parts`. Marks (`@…`) are printed shortened, so stay whole.
+ * two kept pieces, as many removed as added pieces are paired in order, and a pair that starts
+ * with the same character gets `parts`. Marks (`@…`) are printed shortened, so stay whole.
  */
 function refined(before: DiffPiece[], after: DiffPiece[]): { before: DiffPiece[]; after: DiffPiece[] } {
     const runs = (pieces: DiffPiece[]): number[][] => {
@@ -702,8 +702,11 @@ function refined(before: DiffPiece[], after: DiffPiece[]): { before: DiffPiece[]
             if (x.startsWith('@') || y.startsWith('@')) {
                 return;
             }
-            const split = charDiff(x, y);
-            if (split.common * 2 >= Math.max(x.length, y.length)) {
+            // The same note name (or rest, or bar line) changed in its octave, accidental,
+            // duration or dots (owner, 2026-10-24: `b4` → `b'8` is "4" out, "'8" in); another
+            // note name is another note, whole.
+            if (x[0] === y[0]) {
+                const split = charDiff(x, y);
                 before[di] = { ...before[di], parts: split.x };
                 after[ai] = { ...after[ai], parts: split.y };
             }
