@@ -394,17 +394,19 @@ public static partial class NoteStepper
     private static readonly string[] BarlineWalk = ["|", "||", "|.", "!"];
 
     /// <summary>The bar lines the keys walk in a <c>form</c>: the same, then the repeat's opening
-    /// <c>|:</c> (owner's request 2026-10-24) — the one repeat sign written where a bar line
-    /// stands; it is closed by a <c>:|</c> the writer adds, and until then the form says so.
-    /// A music body takes no repeat sign (LYS1034), so the music's walk stops at <c>!</c>.</summary>
-    private static readonly string[] FormBarlineWalk = [.. BarlineWalk, "|:"];
+    /// <c>|:</c> and the back-to-back <c>:|:</c> (owner's requests 2026-10-24). A <c>|:</c> is
+    /// closed by a <c>:|</c> the writer adds, and until then the form says so; a <c>:|:</c> closes
+    /// the repeat before it (or repeats from the top) and opens the next. A music body takes no
+    /// repeat sign (LYS1034), so the music's walk stops at <c>!</c>.</summary>
+    private static readonly string[] FormBarlineWalk = [.. BarlineWalk, "|:", ":|:"];
 
     /// <summary>A bar line of <see cref="BarlineWalk"/> the caret is on, or null — in the music, or
     /// in a <c>form</c>, where the engraved ones are bar-line nodes and the plain <c>|</c> is a bare
     /// divider token of the form itself (owner's request 2026-10-24: the form's too).</summary>
     private static SyntaxTokenNode? BarlineAt(SyntaxTree tree, int offset)
     {
-        static bool On(SyntaxTokenNode t, int at) => Array.IndexOf(BarlineWalk, t.Text) >= 0
+        // A bar line node in a form walks the form's list (a `:|:` there is one).
+        static bool On(SyntaxTokenNode t, int at) => Array.IndexOf(InForm(t) ? FormBarlineWalk : BarlineWalk, t.Text) >= 0
             && t.Span.Start <= at && at <= t.Span.End;
         foreach (var bar in tree.GetNodes<BarlineSyntax>())
             if (bar.GetChild(0) is SyntaxTokenNode token && On(token, offset))
@@ -414,7 +416,7 @@ public static partial class NoteStepper
             if (form is not (FormDeclarationSyntax or FormRepeatBlockSyntax))
                 continue;
             for (int i = 0; i < form.SlotCount; i++)
-                if (form.GetChild(i) is SyntaxTokenNode { Kind: SyntaxKind.Bar or SyntaxKind.RepeatStartBar } divider
+                if (form.GetChild(i) is SyntaxTokenNode { Kind: SyntaxKind.Bar or SyntaxKind.RepeatStartBar or SyntaxKind.RepeatBothBar } divider
                     && Array.IndexOf(FormBarlineWalk, divider.Text) >= 0
                     && divider.Span.Start <= offset && offset <= divider.Span.End)
                     return divider;
@@ -447,6 +449,7 @@ public static partial class NoteStepper
             // In a form a plain `|` only divides the sections: no bar line is drawn there.
             "|" when inForm => "|: a plain divider - a form draws no bar line here",
             "|:" => "|: opens a repeat - close it with :| in the form",
+            ":|:" => ":|: closes the repeat before it and opens the next - close that with :|",
             _ => $"{walk[to]}: the {names[to]} bar line",
         };
         return (new Edit(bar.Span.Start, bar.Span.End, walk[to]), said);

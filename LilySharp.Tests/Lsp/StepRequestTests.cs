@@ -1386,9 +1386,16 @@ public class StepRequestTests
         Assert.Equal(S("|:"), after);
         Assert.Contains("close it with :|", open.Message);
         Assert.Equal(S("!"), Step(S("|:‸"), +1, semitone: true).After);
-        var (last, same) = Step(S("‸|:"), -1, semitone: true);
-        Assert.Equal(S("|:"), same);
+        // …and on to `:|:`, both as a bar line of the form and inside a repeat (owner's request).
+        var (both, then) = Step(S("‸|:"), -1, semitone: true);
+        Assert.Equal(S(":|:"), then);
+        Assert.Contains("opens the next", both.Message);
+        Assert.Equal(S("|:"), Step(S(":|:‸"), +1, semitone: true).After);
+        var (last, same) = Step(S("‸:|:"), -1, semitone: true);
+        Assert.Equal(S(":|:"), same);
         Assert.Contains("last", last.Message);
+        const string Inside = "part m {{ }}\nsection A {{ m {{ c'1 }} }}\nsection B {{ m {{ d'1 }} }}\nform {{ |: A {0} B :| }}\n";
+        Assert.Equal(string.Format(Inside, "|:"), Step(string.Format(Inside, "‸:|:"), +1, semitone: true).After);
         // The music's walk stops at `!`: a music body takes no repeat sign.
         var (music, kept) = Step(Plain("c'1 ‸! d'1"), -1, semitone: true);
         Assert.Equal(Plain("c'1 ! d'1"), kept);
