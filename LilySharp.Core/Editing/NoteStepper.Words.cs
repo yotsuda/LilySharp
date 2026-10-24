@@ -16,6 +16,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using LilySharp.Core.Semantics;
 using LilySharp.Core.Syntax;
@@ -569,6 +570,20 @@ public static partial class NoteStepper
             return Voice.Silent;
         if (Svg.Model.InstrumentDefaults.GetTuning(written.Name.ToLowerInvariant()) is { } tuning)
             return OpenStringsVoice(Tablature.Tunings.Parse(tuning), program);
+        if (PresetChords.TryGetValue(written.Name.ToLowerInvariant(), out var chord))
+            return new Voice(chord, Midi.GeneralMidi.PreviewTimbreFamily(program), program);
         return SampleVoice(program);
     }
+
+    /// <summary>
+    /// The presets that sound a chord, struck together (owner's request 2026-10-24: a piano hand's
+    /// one note was a little lonely — "Cmaj7 or so"). Lily#'s choice of the voicings: the right
+    /// hand close around middle C (C4 E4 G4 B4), the left hand open and low (C2 G2 B2 E3), since a
+    /// close chord down there is muddy.
+    /// </summary>
+    private static readonly Dictionary<string, ImmutableArray<int>> PresetChords = new(StringComparer.Ordinal)
+    {
+        ["piano-right"] = [60, 64, 67, 71],
+        ["piano-left"] = [36, 43, 47, 52],
+    };
 }

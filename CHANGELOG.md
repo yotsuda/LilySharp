@@ -57,7 +57,7 @@ workflow attaches that section to the GitHub Release verbatim.
   part; on a bar line its look (`|` `||` `|.` `!`), in the music, and in a `form` its own signs
   (`|` `||` `|:` `:|` `:|:` `|.` `!`, the form's completion now in that order); with a note's length selected the length, with a chord name selected its quality; on a `tuplet`'s ratio, a `repeat tremolo N`, an `R1*N` and a
   `partial` their numbers; on a part's `instrument` the preset (and it sounds — a preset with strings strums them as a
-  `tuning` does); on a value
+  `tuning` does, a piano hand sounds a Cmaj7); on a value
   word right after its keyword its values (`transposition`, `pedal`, `pitch`, the layout words,
   `paper` `size`, `chords … as`, `tab … as`, a fonts `as`); on a staff row's `as lines N` the line count, on its `as`
   selector word the selector (`lines` / `removeEmpty` / `pitch`), on a `removeEmpty` / `pitch`

@@ -1276,6 +1276,9 @@ public class StepRequestTests
         Assert.Equal("40,45,50,55,59,64 strum=True", Sounded("guitar"));
         Assert.Equal("55,62,69,76 strum=True", Sounded("violin"));
         Assert.Equal("67,50,55,59,62 strum=True", Sounded("banjo"));
+        // A piano hand: a Cmaj7 struck together (owner's request 2026-10-24), open in the left.
+        Assert.Equal("60,64,67,71 strum=False", Sounded("piano-right"));
+        Assert.Equal("36,43,47,52 strum=False", Sounded("piano-left"));
         // No strings: the one note, struck once.
         Assert.EndsWith("strum=False", Sounded("flute"));
         Assert.DoesNotContain(",", Sounded("flute"));
