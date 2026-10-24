@@ -31,7 +31,8 @@ import * as vscode from 'vscode';
 import type { LanguageClient } from 'vscode-languageclient/node';
 import {
     AuditionMemory, CARET_DEBOUNCE_MS, Debouncer, SOUNDS_WHEN_CHANGED, STRUM_MS, TYPING_SETTLE_MS,
-    auditionDurationMs, caretMoveMaySound, mayChangeATypedPitch, mayChangeAnInstrument, stepFallbackCommand,
+    auditionDurationMs, caretMoveMaySound, mayChangeATypedPitch, mayChangeAnInstrument, reselectAfterStep,
+    stepFallbackCommand,
 } from './auditionCore';
 
 export interface StepAuditionDeps {
@@ -172,6 +173,10 @@ export function registerStepAudition(context: vscode.ExtensionContext, deps: Ste
             return;
         }
         if (response.Edits.length > 0) {
+            // A selection the step replaced exactly — a length or a chord name it stepped (owner's
+            // request 2026-10-24) — is selected again on the new text, so the next press steps it
+            // again (reselectAfterStep).
+            const before = editor.selections.map(s => ({ Start: doc.offsetAt(s.start), End: doc.offsetAt(s.end) }));
             // ONE undo step for every cursor's edit.
             const applied = await editor.edit(b => {
                 for (const e of response.Edits) {
@@ -179,6 +184,10 @@ export function registerStepAudition(context: vscode.ExtensionContext, deps: Ste
                 }
             }, { undoStopBefore: true, undoStopAfter: true });
             if (!applied) { return; }
+            const again = reselectAfterStep(before, response.Edits);
+            if (again) {
+                editor.selections = again.map(r => new vscode.Selection(doc.positionAt(r.Start), doc.positionAt(r.End)));
+            }
         }
         if (response.Message) {
             vscode.window.setStatusBarMessage(`Lily#: ${response.Message}`, 4000);

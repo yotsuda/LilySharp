@@ -172,6 +172,10 @@ public static partial class NoteStepper
         FormSection,
         /// <summary>The part or voice a lyrics track <c>sings</c> (NoteStepper.Words.cs).</summary>
         SingsTarget,
+        /// <summary>A note's, a rest's or a chord's length, SELECTED (NoteStepper.Words.cs).</summary>
+        Duration,
+        /// <summary>A chord symbol's quality, the symbol SELECTED (NoteStepper.Words.cs).</summary>
+        ChordQuality,
     }
 
     /// <summary>The kinds whose step changes a setting, not a sound — the audition skips them.</summary>
@@ -182,7 +186,7 @@ public static partial class NoteStepper
             or TargetKind.StaffOrTab or TargetKind.ScorePart or TargetKind.StaffLines
             or TargetKind.StaffSelector or TargetKind.KeywordValue or TargetKind.BarNumberEvery
             or TargetKind.PaperSize or TargetKind.TupletRatio or TargetKind.MusicCount or TargetKind.PartialLength
-            or TargetKind.FormSection or TargetKind.SingsTarget;
+            or TargetKind.FormSection or TargetKind.SingsTarget or TargetKind.Duration or TargetKind.ChordQuality;
 
     /// <summary>A written thing the caret is on: its kind and its node (a
     /// <see cref="NoteSyntax"/>, a <see cref="PitchSyntax"/> or <see cref="ScaleDegreeSyntax"/>
@@ -263,6 +267,8 @@ public static partial class NoteStepper
     {
         int dir = direction >= 0 ? 1 : -1;
         var targets = new List<Target>();
+        // A selected chord symbol's span, by its node (TargetKind.ChordQuality).
+        var selectedSymbols = new Dictionary<int, (int Start, int End)>();
         var seen = new HashSet<(TargetKind, int)>();
         void Add(Target t)
         {
@@ -277,6 +283,19 @@ public static partial class NoteStepper
             {
                 if (TargetAt(text, tree, start) is { } t)
                     Add(t);
+                continue;
+            }
+            // A selection on a length alone, or on a chord symbol, steps that (owner's request
+            // 2026-10-24) — a caret there keeps stepping the pitch and the shape.
+            if (SelectedDuration(tree, start, end) is { } duration)
+            {
+                Add(new Target(TargetKind.Duration, duration));
+                continue;
+            }
+            if (SelectedChordSymbol(text, tree, start, end) is { } chordSymbol)
+            {
+                selectedSymbols[chordSymbol.Node.SourceStart] = (chordSymbol.Start, chordSymbol.End);
+                Add(new Target(TargetKind.ChordQuality, chordSymbol.Node));
                 continue;
             }
             int before = targets.Count;
@@ -350,7 +369,7 @@ public static partial class NoteStepper
                 or TargetKind.StaffLines or TargetKind.StaffSelector or TargetKind.KeywordValue
                 or TargetKind.BarNumberEvery or TargetKind.PaperSize or TargetKind.InstrumentPreset
                 or TargetKind.TupletRatio or TargetKind.MusicCount or TargetKind.PartialLength
-                or TargetKind.FormSection or TargetKind.SingsTarget)
+                or TargetKind.FormSection or TargetKind.SingsTarget or TargetKind.Duration or TargetKind.ChordQuality)
             {
                 var (valueEdit, valueSaid) = t.Kind switch
                 {
@@ -376,6 +395,10 @@ public static partial class NoteStepper
                     TargetKind.PartialLength => PartialLengthEdit(t.Node, dir),
                     TargetKind.FormSection or TargetKind.SingsTarget =>
                         NameReferenceEdit(tree, t.Kind, (SyntaxTokenNode)t.Node, dir),
+                    TargetKind.Duration => DurationEdit(t.Node, dir),
+                    TargetKind.ChordQuality => selectedSymbols.TryGetValue(t.Node.SourceStart, out var symbol)
+                        ? ChordQualityEdit(text, symbol.Start, symbol.End, dir)
+                        : (null, "select a chord name (Cm7)"),
                     TargetKind.PaperSize => PaperSizeAt(tree, t.Node.Span.Start) is { } page
                         ? PaperSizeEdit(page.First, page.Last, page.Name, dir)
                         : (null, "size: write a page (size a4)"),

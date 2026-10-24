@@ -179,6 +179,33 @@ export function mayChangeATypedPitch(changes: readonly ChangeLike[]): boolean {
     return /[A-Za-z',]/.test(c.text);
 }
 
+/** An offset range in a document, `[Start, End)`. */
+export interface OffsetRange { readonly Start: number; readonly End: number }
+
+/** One replacement a step made, against the text before it. */
+export interface OffsetEdit extends OffsetRange { readonly NewText: string }
+
+/**
+ * The selections to put back after a step, or undefined to leave VS Code's own: when every
+ * selection was non-empty and exactly the range of one of the step's edits — a selected length
+ * or chord name the step replaced (owner's request 2026-10-24) — each is the replacement's new
+ * text, in the text after ALL the edits (an earlier edit shifts it by its length change), so the
+ * next press steps it again.
+ */
+export function reselectAfterStep(selections: readonly OffsetRange[], edits: readonly OffsetEdit[]): OffsetRange[] | undefined {
+    if (selections.length === 0 || selections.some(s => s.Start === s.End)) { return undefined; }
+    const sorted = [...edits].sort((a, b) => a.Start - b.Start);
+    const result: OffsetRange[] = [];
+    for (const s of selections) {
+        const own = sorted.find(e => e.Start === s.Start && e.End === s.End);
+        if (!own) { return undefined; }
+        const shift = sorted.filter(e => e.End <= s.Start && e !== own)
+            .reduce((sum, e) => sum + e.NewText.length - (e.End - e.Start), 0);
+        result.push({ Start: s.Start + shift, End: s.Start + shift + own.NewText.length });
+    }
+    return result;
+}
+
 /** The longest change that may still be a rename of a `midiInstrument` or a `tuning`: a
  * completion writes the whole name ("electric guitar (clean)") in one change. */
 export const INSTRUMENT_CHANGE_MAX = 64;

@@ -1309,6 +1309,38 @@ public class StepRequestTests
         Assert.Equal(S("sop"), Step(S("alt‸"), +1).After);
     }
 
+    [Fact]
+    public void ASelectedLength_Steps_ACaretStillStepsThePitch()
+    {
+        // Owner's request 2026-10-24: the length steps when it alone is selected.
+        Assert.Equal(Plain("c'2 d'4"), Step(Plain("c'«4» d'4"), +1, semitone: true).After);
+        Assert.Equal(Plain("c'8 d'4"), Step(Plain("c'«4» d'4"), -1).After);
+        Assert.Equal(Plain("c'8. d'16"), Step(Plain("c'«4». d'16"), -1, semitone: true).After);
+        Assert.Equal(Plain("r2 d'4"), Step(Plain("r«4» d'4"), +1, semitone: true).After);
+        Assert.Equal(Plain("<c' e'>8"), Step(Plain("<c' e'>«4»"), -1, semitone: true).After);
+        var (longest, same) = Step(Plain("c'«1»"), +1, semitone: true);
+        Assert.Equal(Plain("c'1"), same);
+        Assert.Contains("longest", longest.Message);
+        // A caret on the length is the note's, as before: the pitch moves.
+        Assert.NotEqual(Plain("c'2 d'4"), Step(Plain("c'4‸ d'4"), +1, semitone: true).After);
+    }
+
+    [Fact]
+    public void ASelectedChordName_StepsItsQuality_ACaretStillStepsTheShape()
+    {
+        const string Book = "part gt {{ }}\nchords c {{ section A {{ {0} | }} }}\nsection A {{ gt {{ c'1 | }} }}\nform {{ A }}\nscore {{ chords c staff gt }}\n";
+        string S(string entry) => string.Format(Book, entry);
+        Assert.Equal(S("Cm"), Step(S("«C»"), -1, semitone: true).After);
+        Assert.Equal(S("C7"), Step(S("«Cm»"), -1).After);
+        Assert.Equal(S("C"), Step(S("«Cm»"), +1, semitone: true).After);
+        // The root and a bass stay.
+        Assert.Equal(S("Fm/A"), Step(S("«F/A»"), -1, semitone: true).After);
+        // A caret on the entry still steps its diagram's shape (it writes one).
+        Assert.Contains("{ C(", Step(S("C‸"), +1, semitone: true).After);
+        // On an @chord in the music too.
+        Assert.Equal(Guitar("c'1@chord(C7)"), Step(Guitar("c'1@chord(«Cm»)"), -1, semitone: true).After);
+    }
+
     // ---------------------------------------------------------------- tuning
 
     private static string Tuning(string word) => $"part b {{ tuning {word} }}\nsection A {{ b {{ c4 d e f }} }}\n";

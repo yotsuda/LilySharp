@@ -22,8 +22,23 @@ import {
     AuditionMemory, Debouncer, EDIT_SELECTION_WINDOW_MS, CHORD_MS, NOTE_MS, OCTAVE_DOWN_KEY, OCTAVE_UP_KEY,
     STEP_DOWN_KEY, STEP_UP_KEY, STRUM_MS,
     INSTRUMENT_CHANGE_MAX, auditionDurationMs, caretMoveMaySound, mayChangeATypedPitch, mayChangeAnInstrument,
-    stepFallbackCommand,
+    reselectAfterStep, stepFallbackCommand,
 } from '../src/auditionCore';
+
+describe('a stepped selection stays selected (owner\'s request 2026-10-24)', () => {
+    it('selects the new text of each replaced selection, shifted by the edits before it', () => {
+        // `c'16 d'16` with both lengths selected, each stepped to `8`.
+        const again = reselectAfterStep(
+            [{ Start: 2, End: 4 }, { Start: 7, End: 9 }],
+            [{ Start: 2, End: 4, NewText: '8' }, { Start: 7, End: 9, NewText: '8' }]);
+        assert.deepEqual(again, [{ Start: 2, End: 3 }, { Start: 6, End: 7 }]);
+    });
+
+    it('leaves a caret, or a selection the step did not replace exactly, to VS Code', () => {
+        assert.equal(reselectAfterStep([{ Start: 3, End: 3 }], [{ Start: 3, End: 4, NewText: '2' }]), undefined);
+        assert.equal(reselectAfterStep([{ Start: 0, End: 9 }], [{ Start: 2, End: 4, NewText: '8' }]), undefined);
+    });
+});
 
 const DOC = 'file:///a.lys';
 

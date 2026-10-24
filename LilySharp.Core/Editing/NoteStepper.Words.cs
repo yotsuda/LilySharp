@@ -289,6 +289,103 @@ public static partial class NoteStepper
         return (new Edit(name.Span.Start, name.Span.End, names[to]), $"{names[to]}: {what} {to + 1} of {names.Count}{list}");
     }
 
+    // ------------------------------------------------------------------ selections: a duration, a chord's quality
+
+    /// <summary>
+    /// The duration a selection covers exactly — the digits of a note's, a rest's or a chord's
+    /// length (<c>c'4</c> with the <c>4</c> selected) — or null. Owner's request 2026-10-24: a
+    /// caret on a note steps its pitch, as it always has, so the length steps only when it alone
+    /// is selected.
+    /// </summary>
+    private static SyntaxNode? SelectedDuration(SyntaxTree tree, int start, int end)
+    {
+        foreach (var node in tree.GetNodes<SyntaxNode>())
+        {
+            var duration = node switch
+            {
+                NoteSyntax note => note.Duration,
+                RestSyntax rest => rest.Duration,
+                ChordSyntax { IsShapeChord: false } chord => chord.Duration,
+                _ => null,
+            };
+            if (duration?.GetChild(0) is SyntaxTokenNode { Kind: SyntaxKind.IntegerLiteral } value
+                && start <= value.Span.Start && value.Span.End <= end
+                && duration.Span.Start <= start && end <= duration.Span.End)
+                return duration;
+        }
+        return null;
+    }
+
+    /// <summary>One step of a selected duration: a longer note (Up) or a shorter one (Down) of
+    /// <see cref="NoteValues"/>, the dots kept.</summary>
+    private static (Edit? Edit, string Message) DurationEdit(SyntaxNode duration, int dir)
+    {
+        if (duration.GetChild(0) is not SyntaxTokenNode value || !int.TryParse(value.Text, out int n))
+            return (null, "write a note value (c'4)");
+        int at = Array.IndexOf(NoteValues, n);
+        int to = at < 0 ? -1 : at - dir;
+        if (to < 0 || to >= NoteValues.Length)
+            return (null, $"{n}: already the {(dir > 0 ? "longest" : "shortest")} ({string.Join(" ", NoteValues)})");
+        return (new Edit(value.Span.Start, value.Span.End, NoteValues[to].ToString()), $"a {NoteValues[to]} note");
+    }
+
+    /// <summary>The qualities the keys walk, in a chart's everyday order (Lily#'s list); a
+    /// candidate the chord grammar refuses is passed by.</summary>
+    private static readonly string[] ChordQualities =
+        ["", "m", "7", "maj7", "m7", "6", "m6", "9", "m9", "sus2", "sus4", "7sus4", "dim", "dim7", "m7b5", "aug"];
+
+    /// <summary>A chord symbol a selection covers — a chords-row entry's, or an <c>@chord(…)</c>'s
+    /// first word — written as one glued run with no alteration list and no shape: its span, or
+    /// null.</summary>
+    private static (SyntaxNode Node, int Start, int End)? SelectedChordSymbol(string text, SyntaxTree tree, int start, int end)
+    {
+        foreach (var entry in tree.GetNodes<ChordEntrySyntax>())
+        {
+            if (entry.ShapesOpenParen != null || entry.SymbolText.Contains('('))
+                continue;
+            int s = -1, e = -1;
+            for (int i = 0; i < entry.SlotCount; i++)
+                if (entry.GetChild(i) is SyntaxTokenNode { Text.Length: > 0 } t)
+                {
+                    if (s < 0) s = t.Span.Start;
+                    e = t.Span.End;
+                }
+            if (s >= 0 && start <= s && e <= end && end - start <= e - s + 1
+                && text.Substring(s, e - s) == entry.SymbolText)
+                return (entry, s, e);
+        }
+        foreach (var mark in tree.GetNodes<MusicMarkSyntax>())
+        {
+            if (mark.Name != "chord" || ChordAnnotation.WordSpans(mark) is not { Count: > 0 } spans)
+                continue;
+            var (s, e) = (spans[0].Start, spans[0].End);
+            string word = text.Substring(s, e - s);
+            if (!word.Contains('(') && start <= s && e <= end && end - start <= e - s + 1
+                && Music.ChordStructure.TryParseChordEntry(word, out _))
+                return (mark, s, e);
+        }
+        return null;
+    }
+
+    /// <summary>One step of a selected chord symbol's quality (owner's request 2026-10-24): the next
+    /// (Down) or previous (Up) of <see cref="ChordQualities"/> that the chord grammar reads, the root
+    /// and a <c>/bass</c> kept; a quality off the list steps from the ends.</summary>
+    private static (Edit? Edit, string Message) ChordQualityEdit(string text, int start, int end, int dir)
+    {
+        string symbol = text.Substring(start, end - start);
+        var m = System.Text.RegularExpressions.Regex.Match(symbol, @"^([A-G](?:is|es|s|#|b)?)([^/]*)(/.*)?$");
+        if (!m.Success)
+            return (null, $"{symbol}: not a chord name the step reads");
+        string root = m.Groups[1].Value, quality = m.Groups[2].Value, bass = m.Groups[3].Value;
+        var readable = ChordQualities.Where(q => Music.ChordStructure.TryParseChordEntry(root + q + bass, out _)).ToList();
+        int at = readable.IndexOf(quality);
+        int to = at < 0 ? (dir < 0 ? 0 : readable.Count - 1) : at - dir;
+        if (to < 0 || to >= readable.Count)
+            return (null, $"{symbol}: already the {(to < 0 ? "first" : "last")} ({string.Join(" ", readable.Select(q => root + q))})");
+        string next = root + readable[to] + bass;
+        return (new Edit(start, end, next), $"{next}");
+    }
+
     // ------------------------------------------------------------------ paper size
 
     /// <summary>The page name of a <c>paper { size … }</c> the caret is on — the glued run of
