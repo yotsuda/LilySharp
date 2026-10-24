@@ -393,14 +393,34 @@ public static partial class NoteStepper
     /// not here: they change the playing order, a different thing from a bar line's look.</summary>
     private static readonly string[] BarlineWalk = ["|", "||", "|.", "!"];
 
-    /// <summary>A bar line of <see cref="BarlineWalk"/> the caret is on, or null.</summary>
+    /// <summary>A bar line of <see cref="BarlineWalk"/> the caret is on, or null — in the music, or
+    /// in a <c>form</c>, where the engraved ones are bar-line nodes and the plain <c>|</c> is a bare
+    /// divider token of the form itself (owner's request 2026-10-24: the form's too).</summary>
     private static SyntaxTokenNode? BarlineAt(SyntaxTree tree, int offset)
     {
+        static bool On(SyntaxTokenNode t, int at) => Array.IndexOf(BarlineWalk, t.Text) >= 0
+            && t.Span.Start <= at && at <= t.Span.End;
         foreach (var bar in tree.GetNodes<BarlineSyntax>())
-            if (bar.GetChild(0) is SyntaxTokenNode token && Array.IndexOf(BarlineWalk, token.Text) >= 0
-                && token.Span.Start <= offset && offset <= token.Span.End)
+            if (bar.GetChild(0) is SyntaxTokenNode token && On(token, offset))
                 return token;
+        foreach (var form in tree.GetNodes<SyntaxNode>())
+        {
+            if (form is not (FormDeclarationSyntax or FormRepeatBlockSyntax))
+                continue;
+            for (int i = 0; i < form.SlotCount; i++)
+                if (form.GetChild(i) is SyntaxTokenNode { Kind: SyntaxKind.Bar } divider && On(divider, offset))
+                    return divider;
+        }
         return null;
+    }
+
+    /// <summary>Whether a bar-line token stands in a form, where a plain <c>|</c> divides and draws nothing.</summary>
+    private static bool InForm(SyntaxNode node)
+    {
+        for (SyntaxNode? n = node; n != null; n = n.Parent)
+            if (n is FormDeclarationSyntax)
+                return true;
+        return false;
     }
 
     /// <summary>One step of a bar line (owner's request 2026-10-24): the next (Down) or previous (Up)
@@ -412,7 +432,10 @@ public static partial class NoteStepper
         string[] names = ["single", "double", "final", "dotted"];
         if (to < 0 || to >= BarlineWalk.Length)
             return (null, $"{bar.Text}: already the {(to < 0 ? "first" : "last")} ({string.Join(" ", BarlineWalk)})");
-        return (new Edit(bar.Span.Start, bar.Span.End, BarlineWalk[to]), $"{BarlineWalk[to]}: the {names[to]} bar line");
+        // In a form a plain `|` only divides the sections: no bar line is drawn there.
+        string said = to == 0 && InForm(bar) ? "|: a plain divider - a form draws no bar line here"
+            : $"{BarlineWalk[to]}: the {names[to]} bar line";
+        return (new Edit(bar.Span.Start, bar.Span.End, BarlineWalk[to]), said);
     }
 
     // ------------------------------------------------------------------ paper size

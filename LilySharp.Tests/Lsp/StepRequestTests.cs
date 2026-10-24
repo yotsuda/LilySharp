@@ -1358,6 +1358,25 @@ public class StepRequestTests
         Assert.DoesNotContain("||", Step(Plain("c'1‸| d'1"), -1, semitone: true).After);
     }
 
+    [Fact]
+    public void AFormsBarLines_WalkTheSameLooks_ThePlainDividerToo()
+    {
+        // Owner's request 2026-10-24: the bar lines in form { } too — the engraved ones and the
+        // plain divider `|`, which draws nothing there and says so.
+        const string Book = "part m {{ }}\nsection A {{ m {{ c'1 }} }}\nsection B {{ m {{ d'1 }} }}\nform {{ A {0} B }}\n";
+        string S(string bar) => string.Format(Book, bar);
+        Assert.Equal(S("||"), Step(S("‸|"), -1, semitone: true).After);
+        Assert.Equal(S("|."), Step(S("||‸"), -1).After);
+        Assert.Equal(S("!"), Step(S("‸|."), -1, semitone: true).After);
+        var (plain, after) = Step(S("‸||"), +1, semitone: true);
+        Assert.Equal(S("|"), after);
+        Assert.Contains("divider", plain.Message);
+        // Inside a form's repeat too; the repeat signs themselves are left alone.
+        const string Repeat = "part m {{ }}\nsection A {{ m {{ c'1 }} }}\nsection B {{ m {{ d'1 }} }}\nform {{ |: A {0} B :| }}\n";
+        Assert.Equal(string.Format(Repeat, "||"), Step(string.Format(Repeat, "‸|"), -1, semitone: true).After);
+        Assert.True(Step(string.Format(Repeat, "|").Replace("|: A", "|:‸ A"), -1, semitone: true).Response.Fallback);
+    }
+
     // ---------------------------------------------------------------- tuning
 
     private static string Tuning(string word) => $"part b {{ tuning {word} }}\nsection A {{ b {{ c4 d e f }} }}\n";
