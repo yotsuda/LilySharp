@@ -353,21 +353,6 @@ public static partial class NoteStepper
         return lines;
     }
 
-    /// <summary>A preset's defaults, short — <c>clef bass · tuning bass · 8vb</c> — for the
-    /// completion's detail beside the name (its documentation has them in full, in the same
-    /// order), or null.</summary>
-    public static string? PresetSummary(string name)
-    {
-        if (FactsOf(name) is not { } f)
-            return null;
-        var parts = new System.Collections.Generic.List<string> { $"clef {f.Clef}" };
-        if (f.Tuning != null)
-            parts.Add($"tuning {f.Tuning}");
-        if (f.Shift != 0)
-            parts.Add(f.Marker ?? $"{f.Shift:+0;-0} semitones");
-        return string.Join(" · ", parts);
-    }
-
     /// <summary>A MIDI pitch spelled with flats, as a transposing instrument's key is (B♭3).</summary>
     private static string SpellFlat(int midi)
         => new[] { "C", "D♭", "D", "E♭", "E", "F", "G♭", "G", "A♭", "A", "B♭", "B" }[midi % 12] + (midi / 12 - 1);

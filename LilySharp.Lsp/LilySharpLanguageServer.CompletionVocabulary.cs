@@ -3503,11 +3503,12 @@ public sealed partial class LilySharpLanguageServer
             {
                 Label = name,
                 Kind = CompletionItemKind.EnumMember,
-                // What the preset sets (owner's request 2026-10-24: tell the presets apart before
-                // picking one), one line each in the details pane. ⚠️ NO DETAIL, on trial (owner's
-                // request, same day): the pane put the detail (a short summary,
-                // NoteStepper.PresetSummary) above the lines with a blank line between. As
-                // labelDetails the summary stood right after the label, where the row cut it off.
+                // The instrument's name as the page prints it ("Alto Saxophone"), and what the preset
+                // sets one line each in the details pane (owner's requests 2026-10-24: tell the
+                // presets apart before picking one). ⚠️ The detail is the NAME alone (owner's
+                // decision, same day): a summary of the defaults there was repeated by the pane above
+                // the lines; as labelDetails it stood right after the label, where the row cut it off.
+                Detail = InstrumentDefaults.PrintedName(name),
                 Documentation = LilySharp.Core.Editing.NoteStepper.PresetDefaultLines(name) is { } lines
                     ? new MarkupContent
                     {

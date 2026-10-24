@@ -122,12 +122,15 @@ public class InstrumentCompletionTests
     public void InstrumentCompletions_SayWhatEachPresetSets()
     {
         // Owner's request 2026-10-24: tell the presets apart before picking one — one line each
-        // (same day: not joined by dots), in the details pane, and no detail above them (on trial,
-        // same day: the pane set it off with a blank line).
+        // (same day: not joined by dots), in the details pane, and the instrument's name alone as
+        // the detail (same day).
         // The order is the owner's: what every preset has first (clef, MIDI sound, octave), what few
         // have last (tuning, transposition), so each stays on its line from candidate to candidate.
         var items = LilySharpLanguageServer.GetInstrumentCompletions().Items.ToDictionary(i => i.Label!);
-        Assert.All(items.Values, i => Assert.Null(i.Detail));
+        Assert.Equal("Bass", items["bass"].Detail);
+        Assert.Equal("Alto Saxophone", items["alto-sax"].Detail);
+        Assert.Equal("Clarinet in A", items["clarinet-a"].Detail);
+        Assert.All(items.Values, i => Assert.False(string.IsNullOrEmpty(i.Detail), i.Label));
         Assert.Equal(string.Join("\n",
             "- clef bass",
             "- midiInstrument \"electric bass (finger)\"",
