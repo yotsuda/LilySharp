@@ -3504,13 +3504,11 @@ public sealed partial class LilySharpLanguageServer
                 Label = name,
                 Kind = CompletionItemKind.EnumMember,
                 // What the preset sets (owner's request 2026-10-24: tell the presets apart before
-                // picking one): short beside the name, and one line each in the details pane. The
-                // short one is a label detail, not the detail, which the pane would repeat above
-                // the lines with a blank line between (owner's report, same day).
-                LabelDetails = new CompletionItemLabelDetails
-                {
-                    Description = LilySharp.Core.Editing.NoteStepper.PresetSummary(name),
-                },
+                // picking one): short beside the name, and one line each in the details pane.
+                // ⚠️ The pane repeats the detail above the lines with a blank line between; moving
+                // the summary to labelDetails avoided that but put it right after the label, where
+                // the row cut it off — the owner preferred this (same day).
+                Detail = LilySharp.Core.Editing.NoteStepper.PresetSummary(name),
                 Documentation = LilySharp.Core.Editing.NoteStepper.PresetDefaultLines(name) is { } lines
                     ? new MarkupContent
                     {

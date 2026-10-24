@@ -472,18 +472,6 @@ public class CompletionList
     public CompletionItem[] Items { get; set; } = [];
 }
 
-/// <summary>LSP 3.17 <c>CompletionItemLabelDetails</c>: <see cref="Detail"/> right after the label
-/// (a signature), <see cref="Description"/> after that, less prominent (a qualifier).</summary>
-[JsonObject(ItemNullValueHandling = NullValueHandling.Ignore)]
-public class CompletionItemLabelDetails
-{
-    [JsonProperty("detail")]
-    public string? Detail { get; set; }
-
-    [JsonProperty("description")]
-    public string? Description { get; set; }
-}
-
 [JsonObject(ItemNullValueHandling = NullValueHandling.Ignore)]
 public class CompletionItem
 {
@@ -495,13 +483,6 @@ public class CompletionItem
 
     [JsonProperty("detail")]
     public string? Detail { get; set; }
-
-    /// <summary>LSP 3.17's label details: shown on the item's row, after its label, and NOT at
-    /// the head of the details pane as <see cref="Detail"/> is — so an item whose
-    /// <see cref="Documentation"/> already says it in full is not said twice, with a blank line
-    /// between (owner's report 2026-10-24).</summary>
-    [JsonProperty("labelDetails")]
-    public CompletionItemLabelDetails? LabelDetails { get; set; }
 
     /// <summary>A plain string or a <see cref="MarkupContent"/>, per the spec.</summary>
     [JsonProperty("documentation")]

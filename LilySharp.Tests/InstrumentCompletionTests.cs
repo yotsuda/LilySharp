@@ -125,12 +125,9 @@ public class InstrumentCompletionTests
         // detail is the line the status bar says on the preset.
         // Short beside the name; in full, one line each (owner's request, same day: not joined by
         // dots), in the details pane.
-        // The short one is a LABEL detail: the pane does not repeat it above the lines (owner's
-        // report, same day: a blank line and the summary twice).
         var items = LilySharpLanguageServer.GetInstrumentCompletions().Items.ToDictionary(i => i.Label!);
-        Assert.Equal("clef bass · 8vb · tuning bass", items["bass"].LabelDetails?.Description);
-        Assert.Equal("clef treble · -2 semitones", items["clarinet"].LabelDetails?.Description);
-        Assert.All(items.Values, i => Assert.Null(i.Detail));
+        Assert.Equal("clef bass · 8vb · tuning bass", items["bass"].Detail);
+        Assert.Equal("clef treble · -2 semitones", items["clarinet"].Detail);
         Assert.Equal(string.Join("\n",
             "- clef bass",
             "- octave 3 — a bare c is written C3",
@@ -142,6 +139,6 @@ public class InstrumentCompletionTests
             "- octave 4 — a bare c is written C4",
             "- sounds 2 semitones lower — written C4 sounds B♭3",
             "- midiInstrument \"clarinet\""), Assert.IsType<MarkupContent>(items["clarinet"].Documentation).Value);
-        Assert.All(items.Values, i => Assert.StartsWith("clef ", i.LabelDetails?.Description));
+        Assert.All(items.Values, i => Assert.StartsWith("clef ", i.Detail));
     }
 }
