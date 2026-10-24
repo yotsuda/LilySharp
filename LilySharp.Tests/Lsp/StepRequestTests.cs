@@ -488,7 +488,9 @@ public class StepRequestTests
         Assert.True(response.Fallback);
         Assert.Empty(response.Edits);
         Assert.Equal(Plain("c'4 r4 d'2 |"), after);
-        Assert.True(Step(Plain("c'4 r4 d'2 |‸"), -1).Response.Fallback);
+        // (A bar line steps its look since 2026-10-24 — ABarLine_WalksItsLooks; the space between
+        // two notes is still nothing.)
+        Assert.True(Step(Plain("c'4  ‸ r4 d'2 |"), -1).Response.Fallback);
     }
 
     // ---------------------------------------------------------------- semitones (2026-10-15)
@@ -1339,6 +1341,21 @@ public class StepRequestTests
         Assert.Contains("{ C(", Step(S("C‸"), +1, semitone: true).After);
         // On an @chord in the music too.
         Assert.Equal(Guitar("c'1@chord(C7)"), Step(Guitar("c'1@chord(«Cm»)"), -1, semitone: true).After);
+    }
+
+    [Fact]
+    public void ABarLine_WalksItsLooks_ANoteTouchingItKeepsTheKeys()
+    {
+        // Owner's request 2026-10-24: | || |. ! — Down down the completion's list.
+        Assert.Equal(Plain("c'1 || d'1"), Step(Plain("c'1 ‸| d'1"), -1, semitone: true).After);
+        Assert.Equal(Plain("c'1 |. d'1"), Step(Plain("c'1 ||‸ d'1"), -1).After);
+        Assert.Equal(Plain("c'1 ! d'1"), Step(Plain("c'1 ‸|. d'1"), -1, semitone: true).After);
+        Assert.Equal(Plain("c'1 | d'1"), Step(Plain("c'1 ‸|| d'1"), +1, semitone: true).After);
+        var (last, same) = Step(Plain("c'1 ‸! d'1"), -1, semitone: true);
+        Assert.Equal(Plain("c'1 ! d'1"), same);
+        Assert.Contains("last", last.Message);
+        // A caret between a note and a bar line it touches steps the note.
+        Assert.DoesNotContain("||", Step(Plain("c'1‸| d'1"), -1, semitone: true).After);
     }
 
     // ---------------------------------------------------------------- tuning

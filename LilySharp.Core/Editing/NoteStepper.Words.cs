@@ -386,6 +386,35 @@ public static partial class NoteStepper
         return (new Edit(start, end, next), $"{next}");
     }
 
+    // ------------------------------------------------------------------ bar lines
+
+    /// <summary>The bar lines the keys walk (GRAMMAR.md: Barline), in the completion's order: the
+    /// single, the double, the final, the dotted. The repeat bar lines (<c>|:</c>, <c>:|</c> …) are
+    /// not here: they change the playing order, a different thing from a bar line's look.</summary>
+    private static readonly string[] BarlineWalk = ["|", "||", "|.", "!"];
+
+    /// <summary>A bar line of <see cref="BarlineWalk"/> the caret is on, or null.</summary>
+    private static SyntaxTokenNode? BarlineAt(SyntaxTree tree, int offset)
+    {
+        foreach (var bar in tree.GetNodes<BarlineSyntax>())
+            if (bar.GetChild(0) is SyntaxTokenNode token && Array.IndexOf(BarlineWalk, token.Text) >= 0
+                && token.Span.Start <= offset && offset <= token.Span.End)
+                return token;
+        return null;
+    }
+
+    /// <summary>One step of a bar line (owner's request 2026-10-24): the next (Down) or previous (Up)
+    /// of <see cref="BarlineWalk"/>, stopping at either end. Every one of them ends the bar
+    /// (Semantics.WrittenBar), so only the look changes.</summary>
+    private static (Edit? Edit, string Message) BarlineEdit(SyntaxTokenNode bar, int dir)
+    {
+        int at = Array.IndexOf(BarlineWalk, bar.Text), to = at - dir;
+        string[] names = ["single", "double", "final", "dotted"];
+        if (to < 0 || to >= BarlineWalk.Length)
+            return (null, $"{bar.Text}: already the {(to < 0 ? "first" : "last")} ({string.Join(" ", BarlineWalk)})");
+        return (new Edit(bar.Span.Start, bar.Span.End, BarlineWalk[to]), $"{BarlineWalk[to]}: the {names[to]} bar line");
+    }
+
     // ------------------------------------------------------------------ paper size
 
     /// <summary>The page name of a <c>paper { size … }</c> the caret is on — the glued run of

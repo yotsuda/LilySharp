@@ -176,6 +176,8 @@ public static partial class NoteStepper
         Duration,
         /// <summary>A chord symbol's quality, the symbol SELECTED (NoteStepper.Words.cs).</summary>
         ChordQuality,
+        /// <summary>A bar line's look — <c>|</c>, <c>||</c>, <c>|.</c>, <c>!</c> (NoteStepper.Words.cs).</summary>
+        Barline,
     }
 
     /// <summary>The kinds whose step changes a setting, not a sound — the audition skips them.</summary>
@@ -186,7 +188,8 @@ public static partial class NoteStepper
             or TargetKind.StaffOrTab or TargetKind.ScorePart or TargetKind.StaffLines
             or TargetKind.StaffSelector or TargetKind.KeywordValue or TargetKind.BarNumberEvery
             or TargetKind.PaperSize or TargetKind.TupletRatio or TargetKind.MusicCount or TargetKind.PartialLength
-            or TargetKind.FormSection or TargetKind.SingsTarget or TargetKind.Duration or TargetKind.ChordQuality;
+            or TargetKind.FormSection or TargetKind.SingsTarget or TargetKind.Duration or TargetKind.ChordQuality
+            or TargetKind.Barline;
 
     /// <summary>A written thing the caret is on: its kind and its node (a
     /// <see cref="NoteSyntax"/>, a <see cref="PitchSyntax"/> or <see cref="ScaleDegreeSyntax"/>
@@ -369,7 +372,8 @@ public static partial class NoteStepper
                 or TargetKind.StaffLines or TargetKind.StaffSelector or TargetKind.KeywordValue
                 or TargetKind.BarNumberEvery or TargetKind.PaperSize or TargetKind.InstrumentPreset
                 or TargetKind.TupletRatio or TargetKind.MusicCount or TargetKind.PartialLength
-                or TargetKind.FormSection or TargetKind.SingsTarget or TargetKind.Duration or TargetKind.ChordQuality)
+                or TargetKind.FormSection or TargetKind.SingsTarget or TargetKind.Duration or TargetKind.ChordQuality
+                or TargetKind.Barline)
             {
                 var (valueEdit, valueSaid) = t.Kind switch
                 {
@@ -396,6 +400,7 @@ public static partial class NoteStepper
                     TargetKind.FormSection or TargetKind.SingsTarget =>
                         NameReferenceEdit(tree, t.Kind, (SyntaxTokenNode)t.Node, dir),
                     TargetKind.Duration => DurationEdit(t.Node, dir),
+                    TargetKind.Barline => BarlineEdit((SyntaxTokenNode)t.Node, dir),
                     TargetKind.ChordQuality => selectedSymbols.TryGetValue(t.Node.SourceStart, out var symbol)
                         ? ChordQualityEdit(text, symbol.Start, symbol.End, dir)
                         : (null, "select a chord name (Cm7)"),
@@ -645,6 +650,9 @@ public static partial class NoteStepper
             if (CloseBracket(node) is { } close && offset <= ChordHeadEnd(text, node, close))
                 return new Target(TargetKind.Chord, node);
         }
+        // A bar line, last: a caret touching a note and a bar line (`c4|d4`) is the note's.
+        if (BarlineAt(tree, offset) is { } bar)
+            return new Target(TargetKind.Barline, bar);
         return null;
     }
 

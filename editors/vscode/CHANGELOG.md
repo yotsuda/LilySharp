@@ -11,6 +11,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 - **With a note's length selected they step the length** (Up longer, dots kept), and **with a chord
   name selected its quality** (`C` → `Cm` → `C7` …, root and bass kept). The selection stays on the
   new text; a caret keeps stepping the pitch and the diagram's shape as before.
+- **On a bar line they switch its look**: `|` → `||` → `|.` → `!` (the repeat bar lines left alone).
 - **On a number in the music they step it**: a `tuplet`'s ratio through the usual ones (`3/2` →
   `4/3` → `5/4` …), a `repeat tremolo N` and a rest's `R1*N` by one, a `partial`'s length through
   the note values (Up longer).
