@@ -59,6 +59,8 @@ public static partial class NoteStepper
             TargetKind.InstrumentPreset => PresetSays((PropertyAssignmentSyntax)target.Node),
             TargetKind.StaffGroup => StaffGroupSays(target.Node),
             TargetKind.Barline => BarSays((SyntaxTokenNode)target.Node),
+            TargetKind.MusicCount when target.Node is SyntaxTokenNode { Parent: BarlineSyntax or FormRepeatBlockSyntax } count =>
+                $":|*{count.Text} closes the repeat - it plays {count.Text} times",
             TargetKind.PaperSize => PaperSizeAt(tree, offset) is { } size ? PaperSays(size.Name) : null,
             _ => null,
         };

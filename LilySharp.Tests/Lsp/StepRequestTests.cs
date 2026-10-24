@@ -1303,6 +1303,26 @@ public class StepRequestTests
     }
 
     [Fact]
+    public void ARepeatsCount_StepsHowOftenItPlays()
+    {
+        // Owner's request 2026-10-24: the 3 of `:|*3` steps, from 2 (what `:|` alone plays).
+        string Form(string bar) => "part m { }\nsection A { m { c'4 } }\nform { |: A " + bar + " }\n";
+        var (up, after) = Step(Form(":|*‸3"), +1, semitone: true);
+        Assert.False(up.Fallback, up.Error);
+        Assert.Equal(Form(":|*4"), after);
+        Assert.Equal(":|*4: plays it 4 times", up.Message);
+        Assert.Equal(Form(":|*2"), Step(Form(":|*3‸"), -1, semitone: true).After);
+        var (fewest, stays) = Step(Form(":|*‸2"), -1, semitone: true);
+        Assert.Equal(Form(":|*2"), stays);
+        Assert.Contains("already the fewest", fewest.Message);
+        // The bar line itself still steps its look.
+        Assert.Equal(Form(":|:"), Step(Form("‸:|*3"), -1, semitone: true).After);
+        // A :|*N with no |: (it repeats from the top) is a bar line of its own: the same.
+        string Alone(string bar) => "part m { }\nsection A { m { c'4 } }\nform { A " + bar + " }\n";
+        Assert.Equal(Alone(":|*5"), Step(Alone(":|*‸4"), +1, semitone: true).After);
+    }
+
+    [Fact]
     public void ATupletsRatio_WalksTheUsualRatios()
     {
         Assert.Equal(Plain("tuplet 4/3 { c'8 d' e' }"), Step(Plain("tuplet ‸3/2 { c'8 d' e' }"), +1, semitone: true).After);

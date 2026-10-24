@@ -164,15 +164,39 @@ public static partial class NoteStepper
         return null;
     }
 
-    /// <summary>One step of <c>barNumbers every N</c>: a bar more (Up) or fewer (Down), from 1.</summary>
-    private static (Edit? Edit, string Message) CountEdit(SyntaxTokenNode number, int dir, string what, int max = 999)
+    /// <summary>One step of <c>barNumbers every N</c>: a bar more (Up) or fewer (Down), from
+    /// <paramref name="min"/>.</summary>
+    private static (Edit? Edit, string Message) CountEdit(SyntaxTokenNode number, int dir, string what, int max = 999,
+        int min = 1)
     {
         if (!int.TryParse(number.Text, out int n))
             return (null, $"{what}: write a whole number");
         int next = n + dir;
-        if (next < 1 || next > max)
-            return (null, $"{what} {n}: already the {(dir > 0 ? "most" : "fewest")} (1 to {max})");
+        if (next < min || next > max)
+            return (null, $"{what} {n}: already the {(dir > 0 ? "most" : "fewest")} ({min} to {max})");
         return (new Edit(number.Span.Start, number.Span.End, next.ToString()), $"{what} {next}");
+    }
+
+    /// <summary>The fewest times a <c>:|*N</c> plays: a repeat plays at least twice, which is what
+    /// a <c>:|</c> without a count already says.</summary>
+    private const int FewestRepeatPlays = 2;
+
+    /// <summary>The count of a form repeat block's <c>:|*N</c> (the token after its <c>*</c>), or null.</summary>
+    private static SyntaxTokenNode? BlockRepeatCount(FormRepeatBlockSyntax block)
+    {
+        for (int i = 0; i + 1 < block.SlotCount; i++)
+            if (block.GetChild(i) is SyntaxTokenNode { Kind: SyntaxKind.Asterisk }
+                && block.GetChild(i + 1) is SyntaxTokenNode { Kind: SyntaxKind.IntegerLiteral, Text.Length: > 0 } count)
+                return count;
+        return null;
+    }
+
+    /// <summary>One step of a <c>:|*N</c>'s count (owner's request 2026-10-24): once more (Up) or
+    /// once fewer (Down), from <see cref="FewestRepeatPlays"/>.</summary>
+    private static (Edit? Edit, string Message) RepeatPlaysEdit(SyntaxTokenNode count, int dir)
+    {
+        var (edit, said) = CountEdit(count, dir, ":|*", min: FewestRepeatPlays);
+        return edit is { } e ? (e, $":|*{e.NewText}: plays it {e.NewText} times") : (null, said);
     }
 
     // ------------------------------------------------------------------ numbers in the music
@@ -183,7 +207,8 @@ public static partial class NoteStepper
         [(2, 3), (3, 2), (4, 3), (5, 4), (6, 4), (7, 4), (9, 8)];
 
     /// <summary>A number in the music the caret is on — a tuplet's ratio, a tremolo's count, a
-    /// rest's <c>*N</c>, a <c>partial</c>'s length — as the node that holds it, or null.</summary>
+    /// rest's <c>*N</c>, a repeat's <c>:|*N</c> (owner's request 2026-10-24), a <c>partial</c>'s
+    /// length — as the node that holds it, or null.</summary>
     private static (TargetKind Kind, SyntaxNode Node)? MusicNumberAt(SyntaxTree tree, int offset)
     {
         static bool On(SyntaxNode? n, int at) => n is { } x && x.Span.Start <= at && at <= x.Span.End;
@@ -196,6 +221,12 @@ public static partial class NoteStepper
                     return (TargetKind.MusicCount, repeat.Count);
                 case RestSyntax rest when rest.GetChild(3) is SyntaxTokenNode { Text.Length: > 0 } count && On(count, offset):
                     return (TargetKind.MusicCount, count);
+                case BarlineSyntax { HasExplicitRepeatCount: true } bar
+                    when bar.GetChild(2) is SyntaxTokenNode { Text.Length: > 0 } plays && On(plays, offset):
+                    return (TargetKind.MusicCount, plays);
+                // A form's `|: … :|*N` keeps its `*` and count on the block itself.
+                case FormRepeatBlockSyntax block when BlockRepeatCount(block) is { } plays && On(plays, offset):
+                    return (TargetKind.MusicCount, plays);
                 case PartialDeclarationSyntax pickup when On(pickup.Duration, offset):
                     return (TargetKind.PartialLength, pickup.Duration);
             }

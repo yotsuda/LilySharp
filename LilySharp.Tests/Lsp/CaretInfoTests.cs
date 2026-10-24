@@ -105,6 +105,7 @@ public class CaretInfoTests
     {
         string book = Part("clef treble") + "form { |: A :|*3 }\n";
         Assert.Equal(":|*3 closes the repeat - it plays 3 times", InfoAt(book.Replace(":|*3", ":‸|*3")));
+        Assert.Equal(":|*3 closes the repeat - it plays 3 times", InfoAt(book.Replace(":|*3", ":|*3‸")));
         Assert.StartsWith("|: opens a repeat", InfoAt(book.Replace("|: A", "|‸: A")));
     }
 

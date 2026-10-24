@@ -4,6 +4,11 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+### A repeat's count steps
+
+- **On the `3` of `:|*3`, Ctrl+Shift+Up / Down play the repeat once more or once fewer**, down
+  to 2 (what `:|` alone plays).
+
 ### A tuning's strum keeps its time
 
 - **The open strings sound one after another even with the preview behind another tab** — a

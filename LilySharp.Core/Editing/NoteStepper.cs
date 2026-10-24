@@ -398,8 +398,10 @@ public static partial class NoteStepper
                         : (null, "write a value"),
                     TargetKind.BarNumberEvery => CountEdit((SyntaxTokenNode)t.Node, dir, "barNumbers every"),
                     TargetKind.TupletRatio => TupletRatioEdit((TupletExpressionSyntax)t.Node, dir),
-                    TargetKind.MusicCount => CountEdit((SyntaxTokenNode)t.Node, dir,
-                        t.Node.Parent is RestSyntax ? "bars of rest" : "tremolo strokes"),
+                    TargetKind.MusicCount => t.Node.Parent is BarlineSyntax or FormRepeatBlockSyntax
+                        ? RepeatPlaysEdit((SyntaxTokenNode)t.Node, dir)
+                        : CountEdit((SyntaxTokenNode)t.Node, dir,
+                            t.Node.Parent is RestSyntax ? "bars of rest" : "tremolo strokes"),
                     TargetKind.PartialLength => PartialLengthEdit(t.Node, dir),
                     TargetKind.FormSection or TargetKind.SingsTarget =>
                         NameReferenceEdit(tree, t.Kind, (SyntaxTokenNode)t.Node, dir),

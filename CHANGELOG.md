@@ -27,6 +27,7 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Editor
 
+- **The step keys on a repeat's count** (the `3` of `:|*3`) play it once more or once fewer, from 2.
 - **The status bar says what the setting under the caret does** (`lilysharp/caretInfo`,
   `NoteStepper.Describe`): a clef, a key, an `octave`, a `transposition`, a `tuning`, a
   `midiInstrument`, an `instrument` preset, a staff group, a bar line, a page size — one line
