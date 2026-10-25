@@ -541,6 +541,13 @@ function systemPrompt(grammar: string): string {
         '   insertion. Edits must not overlap. Never write the whole file out.',
         '   Do not reach for `voice { }` just to stay inside the selection when a separate part is asked for.',
         '- Either way: no explanations, no commentary, no Markdown, no code fences, no selection markers.',
+        // Owner's report 2026-10-25: "add chords" came back as @chord on every note.
+        '- "Add chords" / "harmonize with chords" / "コードをつけて" (chord symbols for the music) means a CHORD TRACK,',
+        '  not `@chord(…)` on the notes: a `chords NAME { … }` block in the section, beside the part it accompanies —',
+        '  symbols as they print, no durations, a bar\'s entries dividing it on the beat grid (`C . G7 . |`) — and a',
+        '  `chords NAME` row in the score directly above that part\'s staff, so the symbols align with it. Write it',
+        '  with <edit> blocks. When the file already has a chord track, write into that one. `@chord(…)` on a note is',
+        '  only for what the instruction asks of a particular note (a name or a fretboard diagram there).',
         '- A reply identical to the input is wrong: carry out the instruction.',
         '- Check every octave. Octaves are relative unless the file says `octave absolute`: each note lands nearest',
         '  the note before it, so the first note of a new line or voice decides where the whole line sits. The',

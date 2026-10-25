@@ -40,6 +40,9 @@ All notable changes to the Lily# VS Code extension are documented here.
   part's line at the top and its score row at the bottom) is no longer lit, nor judged for
   errors or octaves as if the AI had written it.
 - With nothing selected the file is sent once, not twice.
+- **"Add chords" adds a chord track**: the AI is told that chord symbols for the music are a
+  `chords NAME { … }` block beside the part, with a `chords NAME` row above its staff (or the
+  file's existing track) — not `@chord(…)` on every note, as it used to answer.
 
 ### Remove All String Numbers
 
