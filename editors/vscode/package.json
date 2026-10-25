@@ -373,25 +373,25 @@
         "command": "lilysharp.previewAiTransform",
         "category": "Lily#",
         "icon": "$(sparkle)",
-        "title": "Ask AI about the Selection…"
+        "title": "Ask AI, the Selection as a Hint…"
       },
       {
         "command": "lilysharp.previewAiTransformNote",
         "category": "Lily#",
         "icon": "$(sparkle)",
-        "title": "Ask AI about This Note…"
+        "title": "Ask AI, This Note as a Hint…"
       },
       {
         "command": "lilysharp.previewAiTransformBar",
         "category": "Lily#",
         "icon": "$(sparkle)",
-        "title": "Ask AI about This Bar…"
+        "title": "Ask AI, This Bar as a Hint…"
       },
       {
         "command": "lilysharp.previewAiTransformScore",
         "category": "Lily#",
         "icon": "$(sparkle)",
-        "title": "Ask AI about the Whole Score…"
+        "title": "Ask AI…"
       },
       {
         "command": "lilysharp.previewSelectBar",

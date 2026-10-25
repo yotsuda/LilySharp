@@ -179,7 +179,7 @@ async function runAiTransform(deps: AiTransformDeps, wholeScore = false, selecte
     // A range is required — an empty selection uses the current line so Ctrl+I on a
     // single line "just works". On an EMPTY line with nothing selected, the whole score is the
     // range (owner's request 2026-10-24: "sometimes I want the AI to look at the whole score");
-    // it used to be refused there. The preview's "Ask AI about the Whole Score…" asks for the
+    // it used to be refused there. The preview's "Ask AI…" off the staves asks for the
     // whole score outright (wholeScore).
     let sel: vscode.Range = editor.selection;
     let whole = false;
