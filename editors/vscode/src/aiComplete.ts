@@ -197,12 +197,19 @@ async function computeSuggestion(
     const chat = await resolveChatClient(true, 'ghost');
     if (!chat) {
         deps.log('Ghost completion: no language model available');
+        ghostStatus('$(circle-slash) Ghost Completion: no AI model available', 5000);
         return undefined;
     }
     // Every outcome is logged: ghost text from Lily# and from another provider (Copilot's
     // own completions) look the same in the editor, and this line is how to tell them apart.
+    // The status bar says it too (owner's request 2026-10-25: switched on, nothing showed and
+    // nothing said why) — asking while the model works, then what came of it.
     const started = Date.now();
-    const outcome = (what: string) => deps.log(`Ghost completion: ${what} (${chat.label}, ${Date.now() - started} ms)`);
+    ghostStatus(`$(loading~spin) Ghost Completion: asking ${chat.label}…`);
+    const outcome = (what: string, said?: string) => {
+        deps.log(`Ghost completion: ${what} (${chat.label}, ${Date.now() - started} ms)`);
+        ghostStatus(said ?? `$(circle-slash) Ghost Completion: ${what}`, 5000);
+    };
 
     const grammar = await loadGrammar(deps);
     const docText = document.getText();
@@ -265,8 +272,17 @@ async function computeSuggestion(
         return undefined;
     }
 
-    outcome(`shown "${insertText.trim()}"`);
+    outcome(`shown "${insertText.trim()}"`, '$(sparkle) Ghost Completion: the next bar is shown — Tab to accept');
     return insertText;
+}
+
+let ghostMessage: vscode.Disposable | undefined;
+
+/** The status bar's word on Ghost Completion: one message at a time, `ms` long (or until the
+ *  next one). */
+function ghostStatus(text: string, ms?: number): void {
+    ghostMessage?.dispose();
+    ghostMessage = ms === undefined ? vscode.window.setStatusBarMessage(text) : vscode.window.setStatusBarMessage(text, ms);
 }
 
 function systemPrompt(grammar: string): string {

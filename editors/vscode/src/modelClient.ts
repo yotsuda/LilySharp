@@ -23,7 +23,11 @@
 // Code, and authentication is Copilot's, so nothing is stored in settings or SecretStorage.
 
 import * as vscode from 'vscode';
-import { pickModel } from './aiTransformCore';
+import { isCoreOnlyRefusal, isCoreTaskModel, pickModel } from './aiTransformCore';
+
+/** The models that refused this session as VS Code's own ("only available to VS Code core"):
+ *  left out of every choice from then on, so the next request takes another. */
+const coreOnly = new Set<string>();
 
 export type ChatRole = 'system' | 'user' | 'assistant';
 /** A picture a user message carries (the scan of a bar, docs/omr-ai-fix-design.md §3.1 ④). */
@@ -90,7 +94,8 @@ async function selectLmModel(use: ModelUse): Promise<vscode.LanguageModelChat | 
     return autoPick(models, use);
 }
 
-/** Every chat model VS Code offers, Copilot's first. */
+/** Every chat model VS Code offers an extension, Copilot's first — not the ones it keeps for
+ *  jobs of its own (aiTransformCore.isCoreTaskModel, and any that refused this session). */
 export async function availableModels(): Promise<vscode.LanguageModelChat[]> {
     if (!vscode.lm || typeof vscode.lm.selectChatModels !== 'function') {
         return [];
@@ -99,7 +104,7 @@ export async function availableModels(): Promise<vscode.LanguageModelChat[]> {
         const copilot = await vscode.lm.selectChatModels({ vendor: 'copilot' });
         const all = await vscode.lm.selectChatModels();
         const rest = all.filter(m => !copilot.some(c => c.id === m.id));
-        return [...copilot, ...rest];
+        return [...copilot, ...rest].filter(m => !isCoreTaskModel(m) && !coreOnly.has(m.id));
     } catch {
         return [];
     }
@@ -243,6 +248,10 @@ function lmClient(model: vscode.LanguageModelChat): ChatClient {
                 last = offered ? withImages : undefined;
                 return text;
             } catch (err) {
+                if (isCoreOnlyRefusal(String((err as Error)?.message ?? err))) {
+                    coreOnly.add(model.id);   // the next request takes another model
+                    throw err;
+                }
                 if (!withImages || token.isCancellationRequested) {
                     throw err;
                 }

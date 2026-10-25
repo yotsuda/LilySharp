@@ -63,6 +63,14 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ### Ghost Completion shows
 
+- **It no longer picks a model VS Code keeps for itself.** Its automatic choice — a small model,
+  known by its name — took `copilot-dictation-cleanup-nano`, VS Code's own dictation clean-up,
+  which refuses every extension ("only available to VS Code core"): every request failed in 5 ms
+  and nothing ever showed. Such models are left out of every choice (and of *Select AI Model…*),
+  and one that refuses so is dropped for the session, the next request taking another.
+- **The status bar says what it is doing**: *asking <model>…* while the model works, then *the
+  next bar is shown — Tab to accept*, or why there is none (cancelled, does not compile, no
+  model, the model's error).
 - **It offers the next bar where bars are written**: after a bar line with only the block's
   closing `}` after the caret (`m { c4 d e f | }`) — it used to ask only at the very end of a
   line, so a part written on one line never got a suggestion — and right after the bar line the

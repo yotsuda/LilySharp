@@ -371,12 +371,27 @@ export interface ModelLike {
  */
 export function pickModel<M extends ModelLike>(models: readonly M[], wantSmall: boolean): M | undefined {
     // (copilotcli has a family now — "auto" — and still answers nothing: never a chat model)
-    const chat = models.filter(m => m.family.trim() !== '' && m.vendor !== 'copilotcli');
+    // Nor a model VS Code keeps for one job of its own: `copilot-dictation-cleanup-nano` is
+    // listed, small by its name — the ghost's automatic pick — and refuses every extension
+    // ("only available to VS Code core"; owner's report 2026-10-25: the ghost never showed).
+    const chat = models.filter(m => m.family.trim() !== '' && m.vendor !== 'copilotcli' && !isCoreTaskModel(m));
     const copilot = chat.filter(m => m.vendor === 'copilot');
     const base = copilot.length > 0 ? copilot : chat.length > 0 ? chat : [...models];
     const small = (m: M) => /mini|nano|lite|haiku|flash|small/i.test(`${m.family} ${m.id}`);
     const pool = base.some(m => small(m) === wantSmall) ? base.filter(m => small(m) === wantSmall) : base;
     return [...pool].sort((a, b) => (b.maxInputTokens ?? 0) - (a.maxInputTokens ?? 0))[0];
+}
+
+/** A model VS Code lists but keeps for a task of its own (dictation clean-up and the like),
+ *  which answers an extension with an error. Known by its name; one that slips through is
+ *  dropped when it refuses (modelClient's refusal list). */
+export function isCoreTaskModel(m: ModelLike): boolean {
+    return /dictation|cleanup/i.test(`${m.id} ${m.family}`);
+}
+
+/** Whether an error says the model is not an extension's to use. */
+export function isCoreOnlyRefusal(message: string): boolean {
+    return /only available to VS Code core/i.test(message);
 }
 
 /** A `@todo` mark inside the selection, as the prompt shows it. */
