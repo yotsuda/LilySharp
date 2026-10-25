@@ -329,17 +329,19 @@ async function drive(
     grammar: string,
     shown: { text: string; complete: boolean },
 ): Promise<void> {
-    const title = whole ? 'Lily#: AI transform — the whole score' : 'Lily#: AI transform';
+    // One notification per round, preparation included (two in a row read as two tasks — owner,
+    // 2026-10-25): the model in its title, the request in its message, which also says what step
+    // it is on.
+    const title = `Lily#: Ask AI${whole ? ' (whole score)' : ''} via ${chat.label}`;
     // What the AI reads and writes, and every candidate is spliced into; `snapshot` stays the
     // document's (its resolved facts, its @todo marks, and the edit Accept applies).
     const work = ai.snap;
-    const prepared = await working(title, async (progress, token) => {
-        progress.report({ message: `asking ${chat.label}…` });
+    const prepare = async (step: (s: string) => void, token: vscode.CancellationToken) => {
         // Quality log (§M5) — local only, no telemetry.
         deps.log(`AI transform: "${instruction}" via ${chat.label}`);
 
         // Resolved facts of the selection (§5): un-blindfold the model. Best-effort.
-        progress.report({ message: 'reading resolved facts…' });
+        step('reading the score');
         const facts = await getFacts(client, snapshot, token);
         // The @todo marks in the selection and an OMR reader's readings of them (B6).
         const marks = await getMarks(client, snapshot);
@@ -354,27 +356,29 @@ async function drive(
 
         // Render the untouched score once for the before/after comparison (§M5).
         const renderBefore = await client.sendRequest<SvgResponse>('lilysharp/renderText', { Text: work.origFullText });
-        return token.isCancellationRequested ? null : { facts, marks, baseline, renderBefore };
-    });
-    if (!prepared) {
-        return;
-    }
-    const { facts, marks, baseline, renderBefore } = prepared;
-    const baselineErrors = count(baseline, 'error');
-    const baselineWarnings = baseline.filter(d => d.Severity === 'warning' && !MACHINE_WARNING.test(d.Message)).length;
-
-    // Conversation seed.
-    const messages: ChatMessage[] = [
-        { role: 'system', content: systemPrompt(grammar) },
-        { role: 'user', content: taskPrompt(work, shown, whole, facts, baseline, instruction, marks, ai.converted) },
-    ];
+        return {
+            facts, renderBefore,
+            baselineErrors: count(baseline, 'error'),
+            baselineWarnings: baseline.filter(d => d.Severity === 'warning' && !MACHINE_WARNING.test(d.Message)).length,
+            // Conversation seed.
+            messages: [
+                { role: 'system', content: systemPrompt(grammar) },
+                { role: 'user', content: taskPrompt(work, shown, whole, facts, baseline, instruction, marks, ai.converted) },
+            ] as ChatMessage[],
+        };
+    };
+    let prepared: Awaited<ReturnType<typeof prepare>> | undefined;
 
     let iterate = true;
     while (iterate) {
-        // One round — generate, validate, render — under its notification; null when cancelled or
-        // failed (a failure has said so itself).
+        // One round — prepare (the first), generate, validate, render — under its notification;
+        // null when cancelled or failed (a failure has said so itself).
         const round = await working(title, async (progress, token) => {
+            const asked = instruction.length > 60 ? `${instruction.slice(0, 59)}…` : instruction;
+            const step = (s: string) => progress.report({ message: `“${asked}” — ${s}…` });
+            prepared ??= await prepare(step, token);
             if (token.isCancellationRequested) return null;
+            const { facts, baselineErrors, baselineWarnings, messages } = prepared;
 
             // ----- Generate + validate-and-self-repair (§4 AwaitingModel → Validating → Repairing) -----
             let candidate: CandidateEdit | null = null;
@@ -390,7 +394,7 @@ async function drive(
             let octaveNote: ResolvedPitchFact[] | null = null;
             for (let attempt = 0; attempt <= MAX_REPAIR_ATTEMPTS; attempt++) {
                 if (token.isCancellationRequested) return null;
-                progress.report({ message: attempt === 0 ? 'generating…' : `repairing (${attempt}/${MAX_REPAIR_ATTEMPTS})…` });
+                step(attempt === 0 ? 'generating' : `repairing (${attempt}/${MAX_REPAIR_ATTEMPTS})`);
 
                 const raw = await chat.send(messages, token);
                 const edit = toCandidateEdit(work, raw);
@@ -430,7 +434,7 @@ async function drive(
                 }
                 unchanged = false;
 
-                progress.report({ message: 'validating candidate…' });
+                step('validating the candidate');
                 const reconstructed = spliceCandidate(edit.snap, edit.text);
                 const check = await client.sendRequest<CheckCandidateResponse>('lilysharp/checkCandidate', { Text: reconstructed });
                 const badness = candidateBadness(check, edit.spans, baselineErrors);
@@ -533,7 +537,7 @@ async function drive(
             }
 
             // ----- Render the candidate score and decide on it (§3 [7]) -----
-            progress.report({ message: 'rendering candidate…' });
+            step('rendering the candidate');
             const reconstructed = spliceCandidate(candidate.snap, candidate.text);
             const renderAfter = await client.sendRequest<SvgResponse>('lilysharp/renderText', { Text: reconstructed });
             // Source-offset spans of the change so the panel can highlight WHERE it landed —
@@ -548,6 +552,7 @@ async function drive(
         }
         // The notification has closed: the review is the user's, with nothing over it.
         const { candidate, caption, renderAfter, changed } = round;
+        const { renderBefore, messages } = prepared!;
         // The review, and Iterate's question about it: a refine closed or left empty goes back
         // to the same candidate on its score, to be decided again (owner's request 2026-10-25 —
         // it used to end the transform, dropping the candidate unapplied).
