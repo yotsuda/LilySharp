@@ -37,7 +37,7 @@ public sealed class TabPlannerLab
         "skip", "skipExtra", "stretch", "slurAcross", "repeatChange", "open", "openHigh",
         "str1", "str2", "str3", "str4", "str5",
         "pos1", "pos2", "pos3", "pos4", "pos5", "pos6", "pos7", "pos8", "pos9", "pos10", "pos11", "pos12",
-        "sameStringStep", "span", "open1", "open2", "open3", "open4", "open5",
+        "sameStringStep", "span", "open1", "open2", "open3", "open4", "open5", "openThenLower", "openThenLowerOpen",
     ];
 
     internal static int I(string name) => Array.IndexOf(Names, name);
@@ -142,6 +142,7 @@ public sealed class TabPlannerLab
                     if (ev.TiedFromPrevious && ds != 0) e += 1e6;
                     if (pe.Midi == ev.Midi && ds != 0) e += repeatChange;
                     if (ds == 0 && x.F > 0 && q.F > 0 && x.F != q.F) e += sameStringStep;
+                    if (q.F == 0 && x.S > q.S) e += w[I("openThenLower")] + (x.F == 0 ? w[I("openThenLowerOpen")] : 0);
                     if (e < best) { best = e; arg = j; }
                 }
                 if (arg < 0) { best = 1e9; arg = 0; }
@@ -234,7 +235,19 @@ public sealed class TabPlannerLab
             Check("slur keeps", "a'4\\3( c) r r |", 0, [(3, 12), (3, 15)]);
             Check("no fall", "a'2\\3 e |", 0, [(3, 12), (4, 12)]);
             Check("fall frees", "a'2\\3@fall e |", 0, [(3, 12), (2, 2)]);
-            Check("a\\4 b low", "a4\\4 b4 |", 0, [(4, 5), (3, 2)]);
+            // As TabStringNumberTests.BarePitch_… reads it: a plain bass-clef part on a bass tab.
+            {
+                var src = "part bl { clef bass }\nsection Main {\n  bl {\n a4\\4 b4 |\n  }\n}\n" +
+                          "form { Main }\nscore x { staff bass bl tab bass bl }\n";
+                var tree = LilySharp.Core.Syntax.SyntaxTree.Parse(src);
+                var spec = LilySharp.Core.Svg.Collector.RenderSpecParser.FindFirst(tree)!;
+                var tab = new LilySharp.Core.Svg.Collector.MeasureCollector().CollectMultiStaff(tree, spec)
+                    .EnumerateStaves().First(s => s.Staff.IsTab).Staff;
+                var notes = tab.PrimaryVoice.Measures.SelectMany(m => m.Items).OfType<LilySharp.Core.Svg.Model.NoteItem>().ToList();
+                if (notes[1].StringNumber != 3) broken.Add("a\\4 b low");
+            }
+            Check("D A: stopped then open", "d4 a r2 |", 0, [(3, 5), (3, 0)]);
+            Check("A E: stopped then open", "a4 e r2 |", 0, [(4, 5), (4, 0)]);
         }
         finally { BassFingeringPlanner.t_weightsForMeasurement = null; }
         return broken;
