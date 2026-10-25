@@ -393,13 +393,41 @@
         "command": "lilysharp.aiTransform",
         "category": "Lily#",
         "icon": "$(sparkle)",
-        "title": "Transform Selection with AI…"
+        "title": "Change Selection with AI…"
       },
       {
         "command": "lilysharp.previewAiTransform",
         "category": "Lily#",
         "icon": "$(sparkle)",
-        "title": "Transform Selection with AI…"
+        "title": "Change Selection with AI…"
+      },
+      {
+        "command": "lilysharp.previewAiTransformNote",
+        "category": "Lily#",
+        "icon": "$(sparkle)",
+        "title": "Change This Note with AI…"
+      },
+      {
+        "command": "lilysharp.previewAiTransformBar",
+        "category": "Lily#",
+        "icon": "$(sparkle)",
+        "title": "Change This Bar with AI…"
+      },
+      {
+        "command": "lilysharp.previewAiTransformScore",
+        "category": "Lily#",
+        "icon": "$(sparkle)",
+        "title": "Change the Whole Score with AI…"
+      },
+      {
+        "command": "lilysharp.previewSelectBar",
+        "category": "Lily#",
+        "title": "Select This Bar"
+      },
+      {
+        "command": "lilysharp.previewClearSelection",
+        "category": "Lily#",
+        "title": "Clear Selection"
       },
       {
         "command": "lilysharp.omrFixWithAi",
@@ -581,6 +609,26 @@
           "when": "false"
         },
         {
+          "command": "lilysharp.previewAiTransformNote",
+          "when": "false"
+        },
+        {
+          "command": "lilysharp.previewAiTransformBar",
+          "when": "false"
+        },
+        {
+          "command": "lilysharp.previewAiTransformScore",
+          "when": "false"
+        },
+        {
+          "command": "lilysharp.previewSelectBar",
+          "when": "false"
+        },
+        {
+          "command": "lilysharp.previewClearSelection",
+          "when": "false"
+        },
+        {
           "command": "lilysharp.openPreview",
           "when": "resourceLangId == lilysharp"
         },
@@ -735,8 +783,33 @@
       "webview/context": [
         {
           "command": "lilysharp.previewAiTransform",
-          "when": "webviewId == 'lilysharpPreview' && lysAi",
+          "when": "webviewId == 'lilysharpPreview' && lysAiKind == 'selection'",
           "group": "0_ai@1"
+        },
+        {
+          "command": "lilysharp.previewAiTransformNote",
+          "when": "webviewId == 'lilysharpPreview' && lysAiKind == 'note'",
+          "group": "0_ai@1"
+        },
+        {
+          "command": "lilysharp.previewAiTransformBar",
+          "when": "webviewId == 'lilysharpPreview' && lysAiKind == 'bar'",
+          "group": "0_ai@1"
+        },
+        {
+          "command": "lilysharp.previewAiTransformScore",
+          "when": "webviewId == 'lilysharpPreview' && lysAiKind == 'score'",
+          "group": "0_ai@1"
+        },
+        {
+          "command": "lilysharp.previewSelectBar",
+          "when": "webviewId == 'lilysharpPreview' && lysOnStaff",
+          "group": "0_select@1"
+        },
+        {
+          "command": "lilysharp.previewClearSelection",
+          "when": "webviewId == 'lilysharpPreview' && lysHasSel",
+          "group": "0_select@2"
         },
         {
           "command": "lilysharp.omrFixWithAi",

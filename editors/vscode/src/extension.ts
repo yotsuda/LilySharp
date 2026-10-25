@@ -846,13 +846,38 @@ export function activate(context: vscode.ExtensionContext) {
     // Ctrl+I's door in the preview's right-click menu (owner's request 2026-10-24): the score
     // selection, else the note or the bar right-clicked, made the editor's selection, then the
     // same transform (aiTransformFromScore).
-    context.subscriptions.push(vscode.commands.registerCommand('lilysharp.previewAiTransform', async (m?: { lysAiFrom?: number; lysAiTo?: number }) => {
+    // One door, four captions (owner's request 2026-10-25: the menu everywhere on the score, saying
+    // what it will change): the selection, the note or the bar right-clicked, or — off the staves
+    // — the whole score, as Ctrl+I on an empty line does in the editor.
+    const previewAi = async (m?: { lysAiKind?: string; lysAiFrom?: number; lysAiTo?: number }) => {
         const shown = [...previewPanels.entries()].find(([, p]) => p.active);
-        if (!shown || !m || !Number.isInteger(m.lysAiFrom) || m.lysAiFrom! < 0) {
+        if (!shown || !m) {
+            return;
+        }
+        if (m.lysAiKind === 'score') {
+            const doc = vscode.workspace.textDocuments.find(d => d.uri.toString() === shown[0]);
+            if (!doc) {
+                vscode.window.showErrorMessage('Lily#: open the .lys file to change it with AI.');
+                return;
+            }
+            await vscode.window.showTextDocument(doc, { preserveFocus: false });
+            await vscode.commands.executeCommand('lilysharp.aiTransform', { whole: true });
+            return;
+        }
+        if (!Number.isInteger(m.lysAiFrom) || m.lysAiFrom! < 0) {
             return;
         }
         await aiTransformFromScore(shown[0], m.lysAiFrom!, m.lysAiTo ?? m.lysAiFrom!);
-    }));
+    };
+    for (const id of ['lilysharp.previewAiTransform', 'lilysharp.previewAiTransformNote',
+        'lilysharp.previewAiTransformBar', 'lilysharp.previewAiTransformScore']) {
+        context.subscriptions.push(vscode.commands.registerCommand(id, previewAi));
+    }
+    // The score's selection from its menu: the bar right-clicked selected (Shift+click or
+    // Shift+drag extends it), and the selection cleared.
+    context.subscriptions.push(
+        vscode.commands.registerCommand('lilysharp.previewSelectBar', () => postToActivePreview('ctxSelectBar')),
+        vscode.commands.registerCommand('lilysharp.previewClearSelection', () => postToActivePreview('ctxClearSelection')));
     context.subscriptions.push(vscode.commands.registerCommand('lilysharp.selectAiModel', () => pickAiModel()));
 
     // The Explorer's batch export: right-click one or more .lys → the format
@@ -3414,7 +3439,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
     </div>
     <div class="zoom-info" id="zoomInfo">100%</div>
     <button id="aiTransformBtn" class="ai-fab" type="button" style="display:none"
-            title="Transform the selected notes with AI (Ctrl+I)">✨ Transform with AI</button>
+            title="Change the selected notes with AI (Ctrl+I). Shift+click or Shift+drag over bars extends the selection; Esc clears it.">✨ Change Selection with AI</button>
     <script nonce="${nonce}">
         const vscode = acquireVsCodeApi();
         // Boot beacon + error relay: the FIRST statements, so the extension's
@@ -4359,6 +4384,31 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         // is found here by its geometry. A click beside a staff (a lyric line, a chord name, the
         // gap to the next staff) takes the nearest staff of the same bar, up to two staff
         // heights away.
+        // A bar's notes as a selection: the first and last data-pos inside its written stretch
+        // (data-span), or its start when it holds none.
+        function barNoteRange(r) {
+            const span = (r.getAttribute('data-span') || '').split(' ').map(Number);
+            const start = parseInt(r.getAttribute('data-start'), 10);
+            let lo = -1, hi = -1;
+            if (span.length === 2 && !isNaN(span[0]) && !isNaN(span[1])) {
+                for (const n of svgContainer.querySelectorAll('[data-pos]')) {
+                    const p = parseInt(n.getAttribute('data-pos'), 10);
+                    if (p >= span[0] && p < span[1]) {
+                        if (lo < 0 || p < lo) lo = p;
+                        if (p > hi) hi = p;
+                    }
+                }
+            }
+            return lo >= 0 ? [lo, hi] : (isNaN(start) ? null : [start, start]);
+        }
+        // Extends the selection from the anchor to a bar: through its last note when the bar
+        // lies after the anchor, from its first when before.
+        function extendSelectionToBar(r) {
+            const range = barNoteRange(r);
+            if (!range) return;
+            if (aiAnchorPos < 0) aiAnchorPos = range[0];
+            aiSetSelection(aiAnchorPos, range[1] >= aiAnchorPos ? range[1] : range[0]);
+        }
         function barStaffAt(clientX, clientY) {
             let best = null, bestDist = Infinity;
             for (const r of svgContainer.querySelectorAll('rect.bar-staff')) {
@@ -5436,6 +5486,18 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                     scale = 1;
                     updateZoom();
                     break;
+                case 'ctxSelectBar':
+                    // The bar the menu was opened on becomes the selection and the anchor
+                    // Shift+click / Shift+drag extend from.
+                    if (ctxBarRange) {
+                        aiAnchorPos = ctxBarRange[0];
+                        aiSetSelection(ctxBarRange[0], ctxBarRange[1]);
+                    }
+                    break;
+                case 'ctxClearSelection':
+                    aiClearSelection();
+                    clearHighlights();
+                    break;
                 case 'playbackData':
                     if (message.error || !message.notes) {
                         setPlayUi(false);
@@ -5535,6 +5597,41 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
 
         installBarHover();
 
+        // Shift+drag across bars selects them (owner's request 2026-10-25). A plain drag still
+        // scrolls the sheet (installDragScroll leaves a shifted press alone); the click a
+        // Shift+drag ends with is swallowed, so it does not extend the selection once more.
+        let shiftDrag = null, shiftDragged = false;
+        svgContainer.addEventListener('pointerdown', (e) => {
+            shiftDragged = false;
+            shiftDrag = null;
+            if (e.pointerType !== 'mouse' || e.button !== 0 || !e.shiftKey) return;
+            const t = e.target;
+            const pos = t && t.hasAttribute && t.hasAttribute('data-pos') ? parseInt(t.getAttribute('data-pos'), 10) : NaN;
+            const bar = barStaffAt(e.clientX, e.clientY);
+            const range = !isNaN(pos) ? [pos, pos] : bar ? barNoteRange(bar) : null;
+            if (!range) return;
+            e.preventDefault();   // no native text selection over the sheet
+            shiftDrag = { bar, range };
+        });
+        svgContainer.addEventListener('pointermove', (e) => {
+            if (!shiftDrag || !(e.buttons & 1)) return;
+            const cur = barStaffAt(e.clientX, e.clientY);
+            if (!cur || cur === shiftDrag.bar) return;
+            const r = barNoteRange(cur);
+            if (!r) return;
+            shiftDragged = true;
+            const forward = r[1] >= shiftDrag.range[0];
+            aiAnchorPos = forward ? shiftDrag.range[0] : shiftDrag.range[1];
+            aiSetSelection(aiAnchorPos, forward ? r[1] : r[0]);
+        });
+        window.addEventListener('pointerup', () => { shiftDrag = null; });
+        document.addEventListener('click', (e) => {
+            if (!shiftDragged) return;
+            shiftDragged = false;
+            e.stopPropagation();
+            e.preventDefault();
+        }, true);
+
         document.addEventListener('click', (e) => {
             const target = e.target;
             if (target && target.hasAttribute && target.hasAttribute('data-pos')) {
@@ -5557,6 +5654,11 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 // (barlines, marks) fall through to the normal click.
                 if (seekToCopy(pos, (copy) => copy === target)) return;
                 vscode.postMessage({ type: 'jumpToPosition', position: pos });
+            } else if (e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey
+                && target && svgContainer.contains(target) && barStaffAt(e.clientX, e.clientY)) {
+                // Shift+click on a bar extends the selection to the whole bar (owner's request
+                // 2026-10-25: several bars selectable on the score, AI or not).
+                extendSelectionToBar(barStaffAt(e.clientX, e.clientY));
             } else if (!e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey
                 && target && svgContainer.contains(target) && barStaffAt(e.clientX, e.clientY)) {
                 // A bar: its first note's place in the editor — or, while playing, the
@@ -5564,8 +5666,8 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 const bar = barStaffAt(e.clientX, e.clientY);
                 const pos = parseInt(bar.getAttribute('data-start'), 10);
                 lastHighlightPos = -1;
-                aiAnchorPos = pos;
                 aiClearSelection();
+                aiAnchorPos = (barNoteRange(bar) || [pos])[0];
                 const box = bar.getBoundingClientRect();
                 const inBar = (copy) => {
                     const b = copy.getBoundingClientRect();
@@ -5592,6 +5694,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         // data-vscode-context off the element chain in its own contextmenu
         // listener, so this one runs in the CAPTURE phase to get there first.
         let ctxNotePos = -1;
+        let ctxBarRange = null;   // the bar right-clicked, as its first and last note (ctxSelectBar)
         let docHasScan = false;   // the file has an OMR side file (scanState, with each render)
         document.addEventListener('contextmenu', (e) => {
             const t = e.target;
@@ -5610,29 +5713,25 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                     if (!isNaN(s)) { ctxBarAt = s; break; }
                 }
             }
-            // What the menu's Transform with AI (owner's request 2026-10-24: Ctrl+I's door on the
-            // score) works on: the score selection when there is one, else the note under the
-            // pointer, else the notes of the bar under it — first and last note's data-pos.
-            let ctxAiFrom = -1, ctxAiTo = -1, ctxBarSpan = null;
+            // What the menu's Change … with AI works on, and says it does (owner's requests
+            // 2026-10-24 and 2026-10-25: Ctrl+I's door on the score, everywhere on it): the score
+            // selection when there is one, else the note under the pointer, else the bar under
+            // it, else — off the staves — the whole score, as Ctrl+I on an empty line does.
+            ctxBarRange = null;
             for (const r of document.querySelectorAll('rect.bar-staff')) {
                 const b = r.getBoundingClientRect();
                 if (e.clientX >= b.left && e.clientX <= b.right && e.clientY >= b.top && e.clientY <= b.bottom) {
-                    const span = (r.getAttribute('data-span') || '').split(' ').map(Number);
-                    if (span.length === 2 && !isNaN(span[0]) && !isNaN(span[1])) { ctxBarSpan = span; break; }
+                    ctxBarRange = barNoteRange(r);
+                    if (ctxBarRange) break;
                 }
             }
+            let ctxAiKind = 'score', ctxAiFrom = -1, ctxAiTo = -1;
             if (aiRangeLo >= 0) {
-                ctxAiFrom = aiRangeLo; ctxAiTo = aiRangeHi;
+                ctxAiKind = 'selection'; ctxAiFrom = aiRangeLo; ctxAiTo = aiRangeHi;
             } else if (ctxNotePos >= 0) {
-                ctxAiFrom = ctxAiTo = ctxNotePos;
-            } else if (ctxBarSpan) {
-                for (const n of document.querySelectorAll('[data-pos]')) {
-                    const p = parseInt(n.getAttribute('data-pos'), 10);
-                    if (p >= ctxBarSpan[0] && p < ctxBarSpan[1]) {
-                        if (ctxAiFrom < 0 || p < ctxAiFrom) ctxAiFrom = p;
-                        if (p > ctxAiTo) ctxAiTo = p;
-                    }
-                }
+                ctxAiKind = 'note'; ctxAiFrom = ctxAiTo = ctxNotePos;
+            } else if (ctxBarRange) {
+                ctxAiKind = 'bar'; ctxAiFrom = ctxBarRange[0]; ctxAiTo = ctxBarRange[1];
             }
             if (ctxBarAt < 0) ctxBarAt = ctxNotePos;
             document.body.dataset.vscodeContext = JSON.stringify({
@@ -5641,9 +5740,11 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 // state comes with each render (scanState).
                 lysOnBar: docHasScan && ctxBarAt >= 0,
                 lysAt: ctxBarAt,
-                lysAi: ctxAiFrom >= 0,
+                lysAiKind: ctxAiKind,
                 lysAiFrom: ctxAiFrom,
                 lysAiTo: ctxAiTo,
+                lysOnStaff: ctxBarRange !== null,
+                lysHasSel: aiRangeLo >= 0,
                 lysNote: ctxNotePos >= 0,
                 // The Stop button's enabled state is the playback flag that also
                 // covers the optimistic window between Play and the first events.

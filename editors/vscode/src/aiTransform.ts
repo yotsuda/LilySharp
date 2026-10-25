@@ -122,7 +122,8 @@ let pendingDecision: ((d: Decision) => void) | undefined;
 /** Registers the `lilysharp.aiTransform` command. */
 export function registerAiTransform(context: vscode.ExtensionContext, deps: AiTransformDeps): void {
     context.subscriptions.push(
-        vscode.commands.registerCommand('lilysharp.aiTransform', () => runAiTransform(deps))
+        vscode.commands.registerCommand('lilysharp.aiTransform', (opts?: { whole?: boolean }) =>
+            runAiTransform(deps, opts?.whole === true))
     );
     context.subscriptions.push({
         dispose: () => {
@@ -132,7 +133,7 @@ export function registerAiTransform(context: vscode.ExtensionContext, deps: AiTr
 }
 
 /** The whole select→prompt→validate→render→apply transaction (§3/§4). */
-async function runAiTransform(deps: AiTransformDeps): Promise<void> {
+async function runAiTransform(deps: AiTransformDeps, wholeScore = false): Promise<void> {
     const editor = vscode.window.activeTextEditor;
     if (!editor || editor.document.languageId !== 'lilysharp') {
         vscode.window.showErrorMessage('Lily#: open a .lys file and select what to transform.');
@@ -149,10 +150,14 @@ async function runAiTransform(deps: AiTransformDeps): Promise<void> {
     // A range is required — an empty selection uses the current line so Ctrl+I on a
     // single line "just works". On an EMPTY line with nothing selected, the whole score is the
     // range (owner's request 2026-10-24: "sometimes I want the AI to look at the whole score");
-    // it used to be refused there.
+    // it used to be refused there. The preview's "Change the Whole Score with AI…" asks for the
+    // whole score outright (wholeScore).
     let sel: vscode.Range = editor.selection;
     let whole = false;
-    if (sel.isEmpty) {
+    if (wholeScore) {
+        whole = true;
+        sel = new vscode.Range(doc.positionAt(0), doc.positionAt(doc.getText().length));
+    } else if (sel.isEmpty) {
         sel = doc.lineAt(editor.selection.active.line).range;
         if (doc.getText(sel).trim().length === 0) {
             whole = true;
