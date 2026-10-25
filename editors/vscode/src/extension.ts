@@ -6246,10 +6246,12 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 if (seekToCopy(pos, inBar)) return;
                 clearHighlights();
                 vscode.postMessage({ type: 'jumpToPosition', position: pos });
-            } else {
+            } else if (target && mainContent.contains(target)) {
                 // Clicked empty space / a non-clickable grob: just drop the
                 // highlight. Don't move the editor cursor (no message sent), and
                 // forget the position so a re-render doesn't bring it back.
+                // Only on the sheet: a header button (▶ plays the selection — owner's report
+                // 2026-10-25) or a panel over the score keeps the selection.
                 lastHighlightPos = -1;
                 aiClearSelection();
                 clearHighlights();

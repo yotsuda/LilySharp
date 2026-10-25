@@ -47,6 +47,8 @@ describe('the preview\'s Range panel', () => {
     // Play of the selected bars and the loop; the length beside them (owner's request 2026-10-25).
     it('plays the selected bars, loops while the loop is on, and shows the length', () => {
         assert.match(html, /pendingSpan = aiRangeLo >= 0 \? \[aiRangeLo, aiRangeHi\] : null;/);
+        // ▶ keeps the selection lit: only a click on the sheet itself clears it.
+        assert.match(html, /\} else if \(target && mainContent\.contains\(target\)\) \{\s*\/\/ Clicked empty space/);
         assert.match(html, /<button id="loopBtn" class="toggle icon" type="button" aria-pressed="false" aria-label="Loop"/);
         assert.match(html, /window\.LysSynth\.playSpan\(playbackNotes, span \? span\[0\] : null, span \? span\[1\] : null, loopOn\);/);
         assert.match(html, /playEndTimer = setTimeout\(playEnded, /);
