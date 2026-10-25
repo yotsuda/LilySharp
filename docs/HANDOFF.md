@@ -131,8 +131,9 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 
 新しい会話（ユーザー「HANDOFF を読んで作業に着手して」）。`-Start p977`（開始 HEAD `b2d8f8d8a`・full **13300 / 0 / 2 / 13302**・第975 を ARCHIVE へ）。作業場所は Lab `sessions/p977/`。
 - **OMR REQUESTS #7 に答えた（`done`）**: M3 の受け口（門 3＝`omr verify --candidate --bars --no-write` の `event: "bar"`・`readings`）は `dd0cbe66a`＝`v0.14.0` に入っている（`git tag --contains`）・床 `OMR_MIN_VERSION` 0.4.0・門 3 は `differs` false か `confidence` ≥ `VERIFY_SURE` 0.8・lysc も 0.14.0 から VSIX に同梱。採用率はオーナーの実測待ちと書いた（commit は OMR のセッション）。
-- コードの変更なし。§1.0 ⒜ の残りは全部ユーザー側（実機確認・採用率・デモ動画 16／17 の画面収録＝SHOTLIST の 1〜17 は全部ユーザーが撮る物で、まだ 1 本も無い）。⚠️ 本体の作業ツリーの `samples/*.lys` 5 本の変更（2026-10-14 の時刻・`octave absolute` を外した書き換え）は Claude のものではない＝触っていない。
-判定（2026-10-26・第977 の終わり）: OMR の open は 0。Claude の手で進む ⒜ は無い＝次はユーザーの指示（§2 の開いている作業か ROADMAP から選ぶ）。
+- §1.0 ⒜ の残りは全部ユーザー側（実機確認・採用率・デモ動画 16／17 の画面収録＝SHOTLIST の 1〜17 は全部ユーザーが撮る物で、まだ 1 本も無い）。⚠️ 本体の作業ツリーの `samples/*.lys` 5 本の変更（2026-10-14 の時刻・`octave absolute` を外した書き換え）は Claude のものではない＝触っていない。
+- **ユーザー「OMR の処理が遅い。もう少し詳細な進捗を」→ 読みの通知を段・頁・毎秒の時計・残りの目安に（`87a894fbd`）**: 実測（`schirmer-1893.pdf` 6 頁・Scan Import 0.4.0・Lab `sessions/p977/omr-timing.txt`＝node の `time-omr.js` が各行に秒を付ける）で、`start` から最初の `page` まで＝`GuessLayout` の全頁の下見が**イベント無しで 11 分**（並走の omr 込み・単独 202 秒）、読みの本体 44 秒・照合 3 秒。`omrCore.ts` の `ReadProgress`（`page` は頁が*済んだ*合図＝表示は次の頁・stage 無しなら start〜最初の page を下見と読む・棒は下見 0〜40／頁 40〜95）と `clockOf`、`omrImport.ts` は 1 秒ごとに刷り直す、`omrVerify.ts` の保存時の照合もステータスバーで秒を数える。**OMR に `{"event":"stage","stage":"layout"|"read"|"verify"|"write","page"?,"of"?}` を依頼**（`..\LilySharp-Omr\docs\repro\lilysharp-requests-2026-10-26-progress.md`・REQUESTS の将来の依頼に 1 行・Lily# は受け口済み＝入れば下見も頁ごとに進む）。同じ文書で**下見の 202 秒のうち 189 秒が五線の無い 3 頁（表紙 28・白紙 142・最後 19 秒）で検出器を間隔 7 通りで回す枝**（`--parts-only` の単独実測＝`omr-layout-timing.txt`）と伝えた（直し方はそちら）。実ログの再生（`replay.js`）で文言を確かめた。npm test 440・check-types 通過・Deploy-Lsp 済（Reload Window で見られる）・MANUAL-CHECKS §5 B21＝未確認・両 CHANGELOG の Unreleased（拡張側は見出しから立てた）。⚠️ pwsh の中で `Process` の `OutputDataReceived` に scriptblock を付けるとコンソールが落ちる（別スレッドから呼ばれる）＝時刻を付ける計器は node で。
+判定（2026-10-26・第977 の終わり）: OMR の open は 0。進捗の残りは OMR の `stage` 待ちとユーザーの実機確認（B21）。Claude の手で進む ⒜ は無い＝次はユーザーの指示。
 
 ## 以下は第976セッションの経緯
 
