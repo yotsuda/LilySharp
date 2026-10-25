@@ -123,6 +123,30 @@ public class PlaybackRequestTests
         Assert.All(pb.Notes!.Where(n => n.C == 9), n => Assert.Equal(9, n.I));
     }
 
+    /// <summary>Every note names its track, and the response names the tracks — what the
+    /// preview's part switches mute by (owner's request 2026-10-25).</summary>
+    [Fact]
+    public void EveryNote_NamesItsPart()
+    {
+        var pb = Playback(Sounds, null);
+        Assert.NotNull(pb.Parts);
+        var byPart = pb.Notes!.GroupBy(n => pb.Parts![n.N]).ToDictionary(g => g.Key, g => g.Count());
+        Assert.Equal(new[] { "kit", "pno", "vn" }, byPart.Keys.OrderBy(k => k, StringComparer.Ordinal));
+        Assert.All(byPart.Values, c => Assert.Equal(4, c));
+        Assert.All(pb.Notes!.Where(n => pb.Parts![n.N] == "kit"), n => Assert.Equal(9, n.C));
+    }
+
+    /// <summary>The metronome's beats: a 4/4 bar of quarters at 120 is four beats half a second
+    /// apart, the first accented.</summary>
+    [Fact]
+    public void TheBeats_AreTheMetersBeats_TheFirstOfEachBarAccented()
+    {
+        var pb = Playback(Sounds, null);
+        Assert.NotNull(pb.Beats);
+        Assert.Equal(new[] { 0.0, 0.5, 1.0, 1.5 }, pb.Beats!.Select(b => Math.Round(b.T, 3)));
+        Assert.Equal(new[] { true, false, false, false }, pb.Beats!.Select(b => b.A));
+    }
+
     [Fact]
     public void AText_PlaysAsTheDocumentWould_AndAChangedOneAsChanged()
     {

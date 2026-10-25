@@ -1418,11 +1418,29 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
                     // Name the score the preview is showing, so Play sounds ITS parts and
                     // form: with `score p2 { staff p2 }` picked, p1 stayed audible
                     // until the server was told which score (user report 2026-09-29).
-                    const pb = await client.sendRequest<{ Notes?: { T: number, D: number, P: number, V: number }[], Error?: string }>(
+                    const pb = await client.sendRequest<{ Notes?: { T: number, D: number, P: number, V: number }[], Error?: string,
+                        Parts?: string[] | null, Beats?: { T: number; A: boolean }[] | null }>(
                         'lilysharp/playback', { textDocument: { uri }, renderName: selectedRenders.get(uri) || null });
-                    panel.webview.postMessage({ type: 'playbackData', notes: pb.Notes ?? null, error: pb.Error ?? null });
+                    // The tracks and the beats ride along for the practice menu's parts and metronome.
+                    panel.webview.postMessage({ type: 'playbackData', notes: pb.Notes ?? null, error: pb.Error ?? null,
+                        parts: pb.Parts ?? null, beats: pb.Beats ?? null });
                 } catch (e) {
                     panel.webview.postMessage({ type: 'playbackData', error: String(e) });
+                }
+                return;
+            }
+            // The practice menu's part switches (owner's request 2026-10-25): the tracks of the
+            // score shown that sound a note, in score order.
+            if (message.type === 'requestParts') {
+                if (!client || !clientReady) { return; }
+                try {
+                    const pb = await client.sendRequest<{ Notes?: { N?: number }[] | null; Parts?: string[] | null }>(
+                        'lilysharp/playback', { textDocument: { uri }, renderName: selectedRenders.get(uri) || null });
+                    const sounding = new Set((pb.Notes ?? []).map(n => n.N));
+                    const parts = (pb.Parts ?? []).filter((_, i) => sounding.has(i));
+                    panel.webview.postMessage({ type: 'partsData', parts });
+                } catch {
+                    panel.webview.postMessage({ type: 'partsData', parts: [] });
                 }
                 return;
             }
@@ -3560,6 +3578,29 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             padding: 6px 8px; font-size: 12px; max-height: 60vh; overflow: auto;
         }
         .range-panel[hidden] { display: none; }
+        /* The practice menu (owner's request 2026-10-25): the button opens it under itself; its
+           rows are the tempo, the metronome and the parts. */
+        .toolbar button.practice {
+            display: inline-flex; align-items: center; gap: 3px; height: 28px; padding: 0 8px;
+            line-height: 1; font-variant-numeric: tabular-nums; font-size: 12px;
+        }
+        .toolbar button.practice svg { display: block; width: 15px; height: 15px; }
+        .toolbar button.practice svg.caret { width: 8px; height: 8px; opacity: 0.7; }
+        .practice-panel .prow { display: flex; align-items: flex-start; gap: 10px; padding: 4px 2px; }
+        .practice-panel .plbl { width: 72px; flex-shrink: 0; opacity: 0.75; font-weight: 600; padding-top: 3px; }
+        .practice-panel button {
+            font: inherit; padding: 2px 8px; border: 1px solid #c8c8c8; background: #fff; color: #333;
+            cursor: pointer; border-radius: 3px;
+        }
+        .practice-panel .seg { display: inline-flex; }
+        .practice-panel .seg button { border-radius: 0; margin-left: -1px; font-variant-numeric: tabular-nums; }
+        .practice-panel .seg button:first-child { border-radius: 3px 0 0 3px; margin-left: 0; }
+        .practice-panel .seg button:last-child { border-radius: 0 3px 3px 0; }
+        .practice-panel button[aria-pressed="true"] {
+            background: #d6e6f8; border-color: #0078d7; color: #0b4a8b; position: relative;
+        }
+        .practice-panel .parts { display: flex; flex-direction: column; gap: 2px; padding-top: 2px; }
+        .practice-panel .parts label { display: flex; align-items: center; gap: 6px; cursor: pointer; white-space: nowrap; }
         .range-panel table { border-collapse: collapse; }
         .range-panel th { text-align: left; font-weight: 600; opacity: 0.75; padding: 2px 8px; }
         .range-panel td { padding: 2px 8px; white-space: nowrap; }
@@ -3598,6 +3639,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         <button id="playBtn" type="button" title="Play">▶</button>
         <button id="stopBtn" type="button" title="Stop" disabled>⏹</button>
         <button id="loopBtn" class="toggle icon" type="button" aria-pressed="false" aria-label="Loop" title="Loop, ignoring the score's repeats"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 8.5V7a2.5 2.5 0 0 1 2.5-2.5h8"/><path d="M10.5 2l2.5 2.5-2.5 2.5"/><path d="M13.5 7.5V9a2.5 2.5 0 0 1-2.5 2.5H3"/><path d="M5.5 14 3 11.5 5.5 9"/></svg></button>
+        <button id="practiceBtn" class="toggle practice" type="button" aria-pressed="false" aria-haspopup="true" aria-expanded="false" aria-label="Practice" title="Tempo, metronome, parts"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 14.5h8L9.6 2H6.4z"/><path d="M8 11.5l3.6-6.5"/><path d="M5.2 10.5h5.6"/></svg><span id="practiceSpeed"></span><svg class="caret" viewBox="0 0 8 8" fill="currentColor" aria-hidden="true"><path d="M1 2.5h6L4 6z"/></svg></button>
         <span id="lengthInfo" class="length" title="Length, as played"></span>
         </span>
         <span class="sep"></span>
@@ -3612,6 +3654,11 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
     </div>
     <div id="errorBanner" class="error-banner" role="alert"></div>
     <div id="rangePanel" class="range-panel" hidden></div>
+    <div id="practicePanel" class="range-panel practice-panel" hidden>
+        <div class="prow"><span class="plbl">Tempo</span><span class="seg" id="tempoSeg"><button type="button" data-speed="0.5">50</button><button type="button" data-speed="0.6">60</button><button type="button" data-speed="0.7">70</button><button type="button" data-speed="0.8">80</button><button type="button" data-speed="0.9">90</button><button type="button" data-speed="1">100%</button></span></div>
+        <div class="prow"><span class="plbl">Metronome</span><button type="button" id="clickBtn" class="toggle" aria-pressed="false">Off</button></div>
+        <div class="prow"><span class="plbl">Parts</span><span id="partsList" class="parts"></span></div>
+    </div>
     <div class="main-content">
         <div class="container">
             <div id="svgContainer">
@@ -5144,6 +5191,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             playEndTimer = null;
             clearInterval(playheadTimer);
             playheadTimer = null;
+            playClock = null;
             if (relaying) {
                 relaying = false;
                 vscode.postMessage({ type: 'candidateSounding', sounding: [] });
@@ -5222,7 +5270,9 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             setPlayUi(true);
             // A loop goes round when the last note ends; a plain playback lets it ring a moment.
             playEndTimer = setTimeout(playEnded, (end - offset + (loopList ? 0 : 0.5)) * 1000);
-            followAlong(notes, offset, () => audioCtx ? audioCtx.currentTime - t0 : 0);
+            playOffset = offset;
+            playClock = () => audioCtx ? audioCtx.currentTime - t0 : 0;
+            followAlong(notes, offset, playClock);
         }
 
         // The server's answer to a midiPlay: started (the wall-clock zero and the end), or
@@ -5239,7 +5289,9 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             midiPlaying = true;
             const t0Ms = message.t0Ms;
             playEndTimer = setTimeout(playEnded, (message.end - pending.offset + (loopList ? 0 : 0.5)) * 1000);
-            followAlong(pending.notes, pending.offset, () => (Date.now() - t0Ms) / 1000);
+            playOffset = pending.offset;
+            playClock = () => (Date.now() - t0Ms) / 1000;
+            followAlong(pending.notes, pending.offset, playClock);
         }
 
         // Follow-along: light the notes SOUNDING now (a quarter stays lit while the other
@@ -5561,6 +5613,94 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             loopList = list;
         }
 
+        // ---- The practice menu (owner's request 2026-10-25): a button that drops down the
+        // controls a practice session wants and the header has no room for — the tempo, the
+        // metronome, the parts on and off. A change while playing goes on from the same place.
+        const practice = { speed: 1, muted: [], click: false };
+        let rawNotes = null, rawParts = null, rawBeats = null;  // the server's last answer, as written
+        let lastSpan;               // what plays: undefined the whole score, null/[lo, hi] a playSpan
+        let lastOnce = false;
+        let playOffset = 0, playClock = null;   // where the playback stands (startPlayback / midiStarted)
+        function practiced(notes) {
+            return window.LysSynth && window.LysSynth.practiceNotes
+                ? window.LysSynth.practiceNotes(notes, rawParts, rawBeats, practice)
+                : notes;
+        }
+        const practiceBtn = document.getElementById('practiceBtn');
+        const practicePanel = document.getElementById('practicePanel');
+        const clickBtn = document.getElementById('clickBtn');
+        function showPractice() {
+            const speedOn = practice.speed !== 1;
+            document.getElementById('practiceSpeed').textContent = speedOn ? Math.round(practice.speed * 100) + '%' : '';
+            // Pressed in while anything differs from the score as written.
+            practiceBtn.setAttribute('aria-pressed', String(speedOn || practice.click || practice.muted.length > 0));
+            for (const b of document.querySelectorAll('#tempoSeg button')) {
+                b.setAttribute('aria-pressed', String(Number(b.dataset.speed) === practice.speed));
+            }
+            clickBtn.setAttribute('aria-pressed', String(practice.click));
+            clickBtn.textContent = practice.click ? 'On' : 'Off';
+        }
+        function practiceChanged(oldSpeed) {
+            showPractice();
+            const playing = !document.getElementById('stopBtn').disabled;
+            if (!playing || relaying || !rawNotes || !playClock) return;
+            const at = (playOffset + playClock()) * oldSpeed / practice.speed;
+            playbackNotes = practiced(rawNotes);
+            if (lastSpan === undefined) { startPlayback(playbackNotes, at); return; }
+            const list = window.LysSynth.playSpan(playbackNotes, lastSpan ? lastSpan[0] : null, lastSpan ? lastSpan[1] : null, lastOnce);
+            loopList = loopOn ? list : null;
+            startPlayback(list, at);
+            loopList = loopOn ? list : null;
+        }
+        function renderParts(names) {
+            const list = document.getElementById('partsList');
+            list.textContent = '';
+            if (!names || names.length === 0) { list.textContent = '—'; return; }
+            // A part muted in another score stays muted: the list is by name.
+            for (const name of names) {
+                const label = document.createElement('label');
+                const box = document.createElement('input');
+                box.type = 'checkbox';
+                box.checked = !practice.muted.includes(name);
+                box.addEventListener('change', () => {
+                    practice.muted = box.checked ? practice.muted.filter(n => n !== name) : practice.muted.concat([name]);
+                    practiceChanged(practice.speed);
+                });
+                label.append(box, document.createTextNode(name));
+                list.appendChild(label);
+            }
+        }
+        function closePractice() {
+            practicePanel.hidden = true;
+            practiceBtn.setAttribute('aria-expanded', 'false');
+        }
+        practiceBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (!practicePanel.hidden) { closePractice(); return; }
+            const b = practiceBtn.getBoundingClientRect();
+            practicePanel.hidden = false;
+            practicePanel.style.top = (document.querySelector('.toolbar').getBoundingClientRect().bottom + 6) + 'px';
+            practicePanel.style.right = 'auto';
+            practicePanel.style.left = Math.max(6, Math.min(b.left, window.innerWidth - practicePanel.offsetWidth - 6)) + 'px';
+            practiceBtn.setAttribute('aria-expanded', 'true');
+            vscode.postMessage({ type: 'requestParts' });
+        });
+        practicePanel.addEventListener('click', (e) => e.stopPropagation());
+        document.addEventListener('click', () => { if (!practicePanel.hidden) closePractice(); });
+        document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !practicePanel.hidden) closePractice(); });
+        for (const b of document.querySelectorAll('#tempoSeg button')) {
+            b.addEventListener('click', () => {
+                const old = practice.speed;
+                practice.speed = Number(b.dataset.speed);
+                if (old !== practice.speed) practiceChanged(old);
+            });
+        }
+        clickBtn.addEventListener('click', () => {
+            practice.click = !practice.click;
+            practiceChanged(practice.speed);
+        });
+        showPractice();
+
         document.getElementById('firstPageBtn').addEventListener('click', () => gotoPage(0));
         document.getElementById('lastPageBtn').addEventListener('click', () => gotoPage(pages.length - 1));
         // change = spinner click, Enter, or blur after typing. A blank or
@@ -5835,6 +5975,14 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 // 2026-10-25) — played as the Play button plays this score's, from the top. They
                 // are not this page's: the cached note list is left alone, and their source
                 // positions (R) are the candidate's, followed for its panel — nothing here lights up.
+                case 'partsData':
+                    renderParts(message.parts);
+                    // Its width is known once filled: keep it inside the window.
+                    if (!practicePanel.hidden) {
+                        const b = practiceBtn.getBoundingClientRect();
+                        practicePanel.style.left = Math.max(6, Math.min(b.left, window.innerWidth - practicePanel.offsetWidth - 6)) + 'px';
+                    }
+                    break;
                 case 'lengthData': {
                     const s = message.seconds;
                     const len = document.getElementById('lengthInfo');
@@ -5915,18 +6063,24 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                     } else if ((pendingSpan || (loopOn && !pendingFromHere)) && window.LysSynth && window.LysSynth.playSpan) {
                         // The selected bars, where they first play — and, looping, the stretch
                         // (or the whole score) as written once, round and round.
-                        playbackNotes = message.notes;
+                        rawNotes = message.notes; rawParts = message.parts || null; rawBeats = message.beats || null;
+                        playbackNotes = practiced(rawNotes);
                         const span = pendingSpan;
                         pendingSpan = null;
                         pendingStartPos = -1;
                         pendingFromHere = false;
+                        lastSpan = span;
+                        lastOnce = loopOn;
                         const list = window.LysSynth.playSpan(playbackNotes, span ? span[0] : null, span ? span[1] : null, loopOn);
                         loopList = loopOn ? list : null;
                         startPlayback(list, 0);
                     } else {
-                        playbackNotes = message.notes;
+                        // The practice menu's tempo, parts and metronome, from the notes as written.
+                        rawNotes = message.notes; rawParts = message.parts || null; rawBeats = message.beats || null;
+                        playbackNotes = practiced(rawNotes);
                         pendingSpan = null;
                         pendingFromHere = false;
+                        lastSpan = undefined;
                         loopList = null;
                         let startAt = 0;
                         if (pendingStartPos >= 0) {

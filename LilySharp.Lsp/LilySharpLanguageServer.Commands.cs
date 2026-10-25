@@ -981,7 +981,7 @@ public sealed partial class LilySharpLanguageServer
             // with (SplitIntoPartTracks gave every part a track and a channel), so the
             // preview's SoundFont synth sounds the same instruments the export does.
             var notes = midi.Tracks
-                .SelectMany(t => t.Notes.Select(n => (Track: t, Note: n)))
+                .SelectMany((t, ti) => t.Notes.Select(n => (Track: t, Note: n, Index: ti)))
                 .OrderBy(x => x.Note.StartTick)
                 .Select(x =>
                 {
@@ -998,10 +998,35 @@ public sealed partial class LilySharpLanguageServer
                         I = n.Timbre,
                         C = n.Channel,
                         G = n.Channel == 9 ? 0 : x.Track.Program ?? 0,
+                        N = x.Index,
                     };
                 })
                 .ToArray();
-            return new PlaybackResponse { Notes = notes };
+
+            // The beats the preview's metronome clicks (owner's request 2026-10-25): one per
+            // beat of the meter in force (its denominator's note), the first of each bar
+            // accented, to the end of the last note. A meter counts its bars from where it is
+            // set, so a pickup that no meter change marks shifts the accents.
+            var meters = midi.Tracks.SelectMany(t => t.TimeSignatures)
+                .GroupBy(m => m.Tick).Select(g => g.Last()).OrderBy(m => m.Tick).ToList();
+            if (meters.Count == 0 || meters[0].Tick > 0)
+                meters.Insert(0, new LilySharp.Core.Midi.TimeSignatureChange(0, 4, 4));
+            int endTick = midi.Tracks.SelectMany(t => t.Notes).Select(n => n.StartTick + n.DurationTicks).DefaultIfEmpty(0).Max();
+            var beats = new List<PlaybackBeat>();
+            for (int i = 0; i < meters.Count; i++)
+            {
+                var m = meters[i];
+                int until = i + 1 < meters.Count ? meters[i + 1].Tick : endTick;
+                int step = Math.Max(1, tpq * 4 / Math.Max(1, m.Denominator));
+                for (int k = 0, tick = m.Tick; tick < until; k++, tick += step)
+                    beats.Add(new PlaybackBeat { T = SecondsAt(tick), A = k % Math.Max(1, m.Numerator) == 0 });
+            }
+            return new PlaybackResponse
+            {
+                Notes = notes,
+                Parts = midi.Tracks.Select(t => t.Name).ToArray(),
+                Beats = beats.ToArray(),
+            };
         }
         catch (Exception ex)
         {

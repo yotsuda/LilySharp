@@ -18,7 +18,7 @@ import { describe, it } from 'node:test';
 import * as assert from 'node:assert/strict';
 import {
     BEND_CENTRE, DRUM_CHANNEL, FAMILY_PROGRAM, Lookahead, PlaybackNote, SoundingCursor,
-    channelOf, channelsOf, endOf, playSpan, programOf, toEvents,
+    channelOf, channelsOf, endOf, playSpan, practiceNotes, programOf, toEvents,
 } from '../src/webview/playbackCore';
 
 const note = (t: number, d: number, p: number, extra: Partial<PlaybackNote> = {}): PlaybackNote =>
@@ -48,8 +48,41 @@ describe('the stretch a Play sounds', () => {
         assert.equal(playSpan(piece, null, null, false).length, piece.length);
     });
 
+    it('drops the metronome clicks of a dropped repeat with it', () => {
+        const clicks = [0, 2, 4, 6, 8, 10].map(t => note(t, 0.1, 76, { S: -1, C: 9 }));
+        const once = playSpan([...piece, ...clicks], null, null, true).filter(n => n.S < 0);
+        assert.deepEqual(once.map(n => n.T), [0, 2, 4, 6]);
+    });
+
     it('plays nothing for a selection with no notes', () => {
         assert.deepEqual(playSpan(piece, 50, 60, false), []);
+    });
+});
+
+// The practice menu: tempo, parts on and off, the metronome (owner's request 2026-10-25).
+describe('the notes the practice menu plays', () => {
+    const parts = ['Tempo', 'sop', 'alt'];
+    const notes = [note(0, 1, 72, { N: 1 }), note(0, 1, 64, { N: 2 }), note(1, 1, 74, { N: 1 })];
+    const beats = [{ T: 0, A: true }, { T: 0.5, A: false }];
+    const as = { speed: 1, muted: [] as string[], click: false };
+
+    it('plays the score as it is with nothing set', () => {
+        assert.deepEqual(practiceNotes(notes, parts, beats, as), notes);
+    });
+
+    it('leaves a muted part out', () => {
+        assert.deepEqual(practiceNotes(notes, parts, beats, { ...as, muted: ['alt'] }).map(n => n.P), [72, 74]);
+    });
+
+    it('stretches every time to the tempo', () => {
+        const slow = practiceNotes(notes, parts, beats, { ...as, speed: 0.5 });
+        assert.deepEqual(slow.map(n => [n.T, n.D]), [[0, 2], [0, 2], [2, 2]]);
+    });
+
+    it('clicks every beat with the metronome on, the bar\'s first louder, lighting nothing', () => {
+        const clicks = practiceNotes(notes, parts, beats, { ...as, click: true, speed: 0.5 }).filter(n => n.C === DRUM_CHANNEL);
+        assert.deepEqual(clicks.map(n => [n.T, n.P, n.S]), [[0, 76, -1], [1, 77, -1]]);
+        assert.ok(clicks[0].V > clicks[1].V);
     });
 });
 

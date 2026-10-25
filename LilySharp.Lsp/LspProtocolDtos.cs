@@ -295,12 +295,29 @@ public class PlaybackNote
     /// <c>midiInstrument</c>, else its preset's default, else 0 (<c>MidiTrack.Program</c>);
     /// 0 on the drum channel, where the program is not read.</summary>
     public int G { get; set; }
+    /// <summary>The note's track: its index in <see cref="PlaybackResponse.Parts"/> — what the
+    /// preview's part switches mute it by (owner's request 2026-10-25).</summary>
+    public int N { get; set; }
+}
+
+/// <summary>One metronome beat: when (seconds) and whether it opens a bar.</summary>
+public class PlaybackBeat
+{
+    public double T { get; set; }
+    /// <summary>The bar's first beat, clicked louder.</summary>
+    public bool A { get; set; }
 }
 
 /// <summary>Response for the lilysharp/playback request.</summary>
 public class PlaybackResponse
 {
     public PlaybackNote[]? Notes { get; set; }
+    /// <summary>The name of each track the notes play on (<see cref="PlaybackNote.N"/>): a part's,
+    /// a chord row's (<c>NAME (chords)</c>), in the export's track order.</summary>
+    public string[]? Parts { get; set; }
+    /// <summary>The beats a metronome clicks, in seconds: one per beat of the meter in force,
+    /// the first of each bar accented.</summary>
+    public PlaybackBeat[]? Beats { get; set; }
     public string? Error { get; set; }
 }
 

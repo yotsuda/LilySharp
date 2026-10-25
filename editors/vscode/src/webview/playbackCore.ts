@@ -27,6 +27,43 @@
 export interface PlaybackNote {
     T: number; D: number; P: number; V: number;
     S: number; O?: number; I?: number; C?: number; G?: number;
+    /** The note's track, an index into the response's Parts. */
+    N?: number;
+}
+
+/** A metronome beat as the server sends it: seconds, and whether it opens a bar. */
+export interface PlaybackBeat { T: number; A: boolean }
+
+/** How the practice menu plays the score: its tempo (1 = as written), the parts silenced
+ *  (by track name), and whether the metronome clicks. */
+export interface Practice { speed: number; muted: readonly string[]; click: boolean }
+
+/** The metronome's sounds, GM drum keys: the high wood block on a bar's first beat, the low
+ *  one on the others. */
+export const CLICK_ACCENT = 76;
+export const CLICK_BEAT = 77;
+
+/**
+ * The notes the preview plays under the practice menu (owner's request 2026-10-25): the muted
+ * parts' notes left out, every time stretched to the tempo (80% plays each second in 1.25),
+ * and, with the metronome on, a wood-block click on every beat. The clicks carry no source
+ * position, so nothing lights for them.
+ */
+export function practiceNotes(notes: readonly PlaybackNote[], parts: readonly string[] | null,
+    beats: readonly PlaybackBeat[] | null, practice: Practice): PlaybackNote[] {
+    const muted = new Set(practice.muted);
+    const k = 1 / (practice.speed > 0 ? practice.speed : 1);
+    const out = notes
+        .filter(n => !(parts && typeof n.N === 'number' && muted.has(parts[n.N])))
+        .map(n => k === 1 ? n : { ...n, T: n.T * k, D: n.D * k });
+    if (practice.click && beats) {
+        for (const b of beats) {
+            out.push({ T: b.T * k, D: 0.08, P: b.A ? CLICK_ACCENT : CLICK_BEAT, V: b.A ? 120 : 95,
+                S: -1, O: 0, I: 9, C: DRUM_CHANNEL, G: 0, N: -1 });
+        }
+        out.sort((a, b) => a.T - b.T);
+    }
+    return out;
 }
 
 export type MidiEvent =
@@ -164,7 +201,10 @@ export function playSpan(notes: readonly PlaybackNote[], lo: number | null, hi: 
         }
         return s;
     };
-    return window.filter(n => first.has(n)).map(n => ({ ...n, T: n.T - t0 - cut(n.T) }));
+    // A note of no printed place (a metronome click) goes with the time it falls in.
+    const inGone = (t: number) => gone.some(([a, b]) => t >= a - 1e-6 && t < b - 1e-6);
+    return window.filter(n => first.has(n) && !(n.S < 0 && inGone(n.T)))
+        .map(n => ({ ...n, T: n.T - t0 - cut(n.T) }));
 }
 
 /** The channels `events` touch — what a stop has to silence. */

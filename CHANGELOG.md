@@ -98,6 +98,9 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Editor
 
+- **`lilysharp/playback` names each note's track and the meter's beats**: `PlaybackNote.N` indexes
+  the new `Parts` (the track names), and `Beats` is one entry per beat of the meter in force, the
+  bar's first marked — for the preview's part switches and metronome.
 - **Each part's range** (`lilysharp/ranges`, `PartRanges`): the lowest and highest note of every
   part of the score shown, spelled as written (`B♭4`, C4 = middle C), with every place each is
   written — read off the notes Play sounds, so transpositions, repeats and phrases count; a

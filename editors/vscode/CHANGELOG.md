@@ -19,6 +19,12 @@ All notable changes to the Lily# VS Code extension are documented here.
   selected bars — or the whole score — round and round. Looping goes through the music as
   written once: the score's repeats inside it are not taken. *Play from Here* in the menu still
   plays from the note, once.
+- **A practice menu drops down from beside the loop** (a metronome and ▾): the **tempo** (50–100%,
+  the button then says *80%*), the **metronome** on and off (a wood block on every beat, the
+  bar's first louder), and the **parts** on and off — a chord row is a part of its own here. The
+  button stays pressed in while anything differs from the score as written, and a change while
+  playing goes on from the same place. The beats are the meter's; a pickup no meter change
+  marks shifts the accents.
 - **The score's length stands beside the loop** (*3:42*): how long it plays, repeats and tempo
   changes included, updated with every edit.
 
