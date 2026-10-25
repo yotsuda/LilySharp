@@ -3562,7 +3562,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         <button id="exportBtn" type="button">Export…</button>
         <span class="sep"></span>
         <button id="aiTransformBtn" class="ai icon" type="button" title="Ask AI (Ctrl+I)">✨</button>
-        <button id="rangeBtn" class="toggle icon" type="button" aria-pressed="false" aria-label="Range" title="Each part's range"><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M2.6 1.5 5 4.5H3.4v8.2H5l-2.4 3-2.4-3h1.6v-8.2H.2z"/><g transform="translate(.2 0)"><ellipse cx="9.4" cy="12.4" rx="2.8" ry="2" transform="rotate(-22 9.4 12.4)"/><rect x="11.35" y="1.5" width="1.05" height="10.8"/><path d="M12.4 1.5c.3 2 1.6 2.8 2.4 3.9.9 1.5 1.1 3.6.3 5.5.1-2.1-.9-3.6-2.7-4.2z"/></g></svg></button>
+        <button id="rangeBtn" class="toggle icon" type="button" aria-pressed="false" aria-label="Range" title="Each part's range"><svg viewBox="0 -.25 16.5 16.5" fill="currentColor" aria-hidden="true"><path d="M2.75 1.5 5.4 4.9H3.55v7.4H5.4l-2.65 3.4-2.65-3.4h1.85V4.9H.1z"/><g transform="translate(.5 0)"><ellipse cx="9.4" cy="12.4" rx="2.8" ry="2" transform="rotate(-22 9.4 12.4)"/><rect x="11.35" y="1.5" width="1.05" height="10.8"/><path d="M12.4 1.5c.3 2 1.6 2.8 2.4 3.9.9 1.5 1.1 3.6.3 5.5.1-2.1-.9-3.6-2.7-4.2z"/></g></svg></button>
         <span class="sep"></span>
         <button id="playBtn" type="button" title="Play">▶</button>
         <button id="stopBtn" type="button" title="Stop" disabled>⏹</button>
