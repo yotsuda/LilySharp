@@ -59,6 +59,14 @@ describe('the preview\'s Range panel', () => {
         assert.match(extension, /if \(message\.type === 'requestLength'\)/);
     });
 
+    // Played on the MIDI output the page sounds nothing, and the browser throttled its timers to
+    // one a second: one eighth note in four lit (owner's report 2026-10-25). The host ticks it.
+    it('keeps the follow-along on the host\'s beat as well as the page\'s own timer', () => {
+        assert.match(extension, /followTicker \?\?= setInterval\(\(\) => void panel\.webview\.postMessage\(\{ type: 'followTick' \}\), 50\);/);
+        assert.match(html, /case 'followTick':\s*if \(followTick\) followTick\(\);/);
+        assert.match(html, /followTick = tick;\s*playheadTimer = setInterval\(tick, 50\);/);
+    });
+
     it('shows a clicked end on the score and in the editor, the next place on the next click', () => {
         assert.match(html, /if \(rangeCur === key\) rangeAt\[key\] = \(\(rangeAt\[key\] \|\| 0\) \+ 1\) % n;/);
         assert.match(html, /const painted = highlightPositions\(\[pos\]\);/);

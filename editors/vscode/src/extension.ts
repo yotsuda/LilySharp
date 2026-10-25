@@ -1310,6 +1310,15 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
     // once a second — the strings after the first came out together as a chord (owner's report
     // 2026-10-24). A release drops the ones not struck yet.
     let midiStrumTimers: ReturnType<typeof setTimeout>[] = [];
+    // The follow-along's beat while the page plays (owner's report 2026-10-25): a page that
+    // sounds nothing itself — the MIDI output plays — has its timers throttled to one a second
+    // by the browser, so the highlight lit one eighth note in four. A message wakes the page
+    // whatever its timers do; this one comes every 50 ms from here, where no one throttles.
+    let followTicker: ReturnType<typeof setInterval> | undefined;
+    const stopFollowTicker = () => {
+        if (followTicker) { clearInterval(followTicker); followTicker = undefined; }
+    };
+    panel.onDidDispose(stopFollowTicker);
     panel.webview.onDidReceiveMessage(
         async message => {
             // The file the panel shows NOW: the follower turns, and an untitled save re-keys.
@@ -1323,8 +1332,10 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
                 // Not logged: every Play and every stop.
                 if (message.playing) {
                     playingPanels.add(panel);
+                    followTicker ??= setInterval(() => void panel.webview.postMessage({ type: 'followTick' }), 50);
                     return;
                 }
+                stopFollowTicker();
                 playingPanels.delete(panel);
                 const target = pendingFollow;
                 pendingFollow = undefined;
@@ -5064,6 +5075,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         let playheadTimer = null;
         let relaying = false;       // the current playback is a candidate's, followed for its panel
         let tickWatch = null;       // the follow-along tick's evenness, for the log (followAlong)
+        let followTick = null;      // the follow-along's tick while it runs (the host's followTick calls it too)
         let sfPlayer = null;       // the SoundFont player of the current playback
         let midiPlaying = false;    // the current playback is the server's, on the MIDI output
         let midiPlayPending = null; // a Play sent to the server, awaiting its start (generation, notes, offset)
@@ -5194,6 +5206,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             playEndTimer = null;
             clearInterval(playheadTimer);
             playheadTimer = null;
+            followTick = null;
             playClock = null;
             if (tickWatch && tickWatch.ticks > 0) {
                 vscode.postMessage({ type: 'webviewPerf', text: 'follow-along: ' + tickWatch.ticks + ' ticks, longest gap '
@@ -5321,8 +5334,11 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             // four — the tick a second apart, as a browser throttles a page it thinks hidden):
             // the longest gap and whether the page said it was hidden, logged when it stops.
             tickWatch = { last: performance.now(), longest: 0, ticks: 0, hidden: document.hidden };
-            playheadTimer = setInterval(() => {
+            // Run by the page's own timer and by the host's followTick, whichever comes: a
+            // throttled timer leaves it to the host's (see the host's followTicker).
+            const tick = () => {
                 const now = performance.now();
+                if (now - tickWatch.last < 25 && tickWatch.ticks > 0) return;
                 tickWatch.longest = Math.max(tickWatch.longest, now - tickWatch.last);
                 tickWatch.last = now;
                 tickWatch.ticks++;
@@ -5347,7 +5363,9 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                              || rect.left < m.left + 30 || rect.right > m.right - 30;
                     if (off) el.scrollIntoView({ block: 'center', inline: 'center', behavior: 'smooth' });
                 }
-            }, 50);
+            };
+            followTick = tick;
+            playheadTimer = setInterval(tick, 50);
         }
 
         // The fallback: oscillator patches, one node pair per note, built up front (fine
@@ -6004,6 +6022,9 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 // 2026-10-25) — played as the Play button plays this score's, from the top. They
                 // are not this page's: the cached note list is left alone, and their source
                 // positions (R) are the candidate's, followed for its panel — nothing here lights up.
+                case 'followTick':
+                    if (followTick) followTick();
+                    break;
                 case 'partsData':
                     renderParts(message.parts);
                     // Its width is known once filled: keep it inside the window.
