@@ -6,10 +6,11 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ### The preview's AI menu says what it will change, everywhere on the score
 
-- **The right-click menu offers the AI wherever you click**, named for what it works on:
-  *Change Selection with AI…* (a score selection), *Change This Note with AI…*, *Change This
-  Bar with AI…*, and off the staves *Change the Whole Score with AI…* — as Ctrl+I on an empty
-  line does in the editor. The editor's command is *Change Selection with AI…* too.
+- **The right-click menu offers the AI wherever you click**, named for where it points the AI:
+  *Ask AI about the Selection…* (a score selection), *Ask AI about This Note…*, *Ask AI about
+  This Bar…*, and off the staves *Ask AI about the Whole Score…* — as Ctrl+I on an empty line
+  does in the editor. "About", not "change": the place is a hint, and the whole score stays open
+  to change. The editor's command (Ctrl+I) is *Ask AI…*.
 - **Several bars can be selected on the score, AI or not**: Shift+click a bar (or a note) extends
   the selection from the last place clicked, Shift+drag across bars selects them, *Select This
   Bar* in the menu starts one, and Esc or *Clear Selection* clears it. A plain drag still scrolls.
