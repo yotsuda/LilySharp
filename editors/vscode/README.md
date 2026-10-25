@@ -100,7 +100,7 @@ preview plays plain oscillator tones instead. The sound is allowed to start only
 clicked or typed in the preview itself (the browser's autoplay rule); the status bar says so
 when a strike comes first.
 
-**Your own instruments.** `"lilysharp.playback.output"` names a MIDI output port of your
+**Your own instruments.** `"lilysharp.playback.midiOutput"` names a MIDI output port of your
 machine (**Lily#: Choose MIDI Output…** lists them), and the Play button, `Alt+P` / `Alt+M` and
 the auditions go there instead of the preview's synth: on Windows the *Microsoft GS Wavetable
 Synth* plays with no setup, and a virtual port — loopMIDI on Windows, an IAC bus on a Mac, the

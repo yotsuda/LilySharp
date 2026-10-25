@@ -661,7 +661,7 @@ export function activate(context: vscode.ExtensionContext) {
                     });
                 }
             }
-            if (e.affectsConfiguration('lilysharp.playback.output')) {
+            if (e.affectsConfiguration('lilysharp.playback.midiOutput')) {
                 // The port's name goes to every preview (each decides where its next sound
                 // goes); the server's playback, if one is on, stops, and the port it held is
                 // closed when the setting is emptied.
@@ -688,7 +688,7 @@ export function activate(context: vscode.ExtensionContext) {
         // request 2026-10-11). The choice is written to the user settings; the open
         // previews pick it up through onDidChangeConfiguration.
         vscode.commands.registerCommand('lilysharp.chooseSoundFont', () => chooseSoundFont(context)),
-        // `lilysharp.playback.output` through a picker of the machine's MIDI output ports
+        // `lilysharp.playback.midiOutput` through a picker of the machine's MIDI output ports
         // (the server lists them); the open previews pick it up through onDidChangeConfiguration.
         vscode.commands.registerCommand('lilysharp.chooseMidiOutput', () => chooseMidiOutput()),
         vscode.commands.registerCommand('lilysharp.openPreview', () => {
@@ -3052,10 +3052,10 @@ async function chooseSoundFont(context: vscode.ExtensionContext): Promise<void> 
 
 // ---- MIDI out (docs/playback-design.md §6) ----
 
-/** `lilysharp.playback.output`: the name of the MIDI output port the sounds go to, or ''
+/** `lilysharp.playback.midiOutput`: the name of the MIDI output port the sounds go to, or ''
  *  for the preview's own synth. */
 function midiOutputSetting(): string {
-    return vscode.workspace.getConfiguration('lilysharp').get<string>('playback.output', '').trim();
+    return vscode.workspace.getConfiguration('lilysharp').get<string>('playback.midiOutput', '').trim();
 }
 
 /** The lilysharp/midiOut requests go one after another: the server dispatches requests
@@ -3087,7 +3087,7 @@ function reportMidiOutError(port: string, error: string): void {
 
 /** The picker behind `Lily#: Choose MIDI Output…` and the setting's link: the preview's
  *  own synth (empties the setting), or one of the machine's MIDI output ports as the server
- *  lists them now. Written to the user settings as `lilysharp.playback.output`. */
+ *  lists them now. Written to the user settings as `lilysharp.playback.midiOutput`. */
 async function chooseMidiOutput(): Promise<void> {
     const current = midiOutputSetting();
     type Pick = vscode.QuickPickItem & { name: string };
@@ -3120,7 +3120,7 @@ async function chooseMidiOutput(): Promise<void> {
         placeHolder: 'Each part keeps its channel and sends its General MIDI program; the drums are on channel 10',
     });
     if (!picked || picked.name === current) { return; }
-    await vscode.workspace.getConfiguration('lilysharp').update('playback.output', picked.name, vscode.ConfigurationTarget.Global);
+    await vscode.workspace.getConfiguration('lilysharp').update('playback.midiOutput', picked.name, vscode.ConfigurationTarget.Global);
     midiOutErrorsTold.delete(picked.name);
     vscode.window.setStatusBarMessage(
         picked.name ? `Lily#: the preview plays through ${picked.name}` : 'Lily#: the preview plays its own synth', 5000);
@@ -3190,7 +3190,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         })();
         // The SoundFont synth's files (docs/playback-design.md): the worklet processor
         // and the sound font ('' = none, the page then plays its oscillator patches); and
-        // the MIDI output port's name ('' = the synth here), lilysharp.playback.output.
+        // the MIDI output port's name ('' = the synth here), lilysharp.playback.midiOutput.
         window.lysSynthConfig = { processor: '${synth.processor}', soundFont: '${synth.soundFont}', midiOutput: ${JSON.stringify(midiOutput)} };
     </script>
     <script nonce="${nonce}" src="${synth.script}"></script>
@@ -4885,7 +4885,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             if (sf) { sf.setSoundFont(uri || ''); }
         }
         // MIDI out (docs/playback-design.md §6): the name of the port the sounds go to —
-        // lilysharp.playback.output — or '' for the synth here. The page still decides WHAT
+        // lilysharp.playback.midiOutput — or '' for the synth here. The page still decides WHAT
         // plays (the note list, the offset, an audition's pitches); the server is the port
         // and answers with the wall-clock time of the playback's zero, which the highlight
         // follows (Date.now() is the same clock). A changed setting stops what plays.

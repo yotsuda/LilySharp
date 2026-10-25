@@ -194,7 +194,7 @@ edocs/HANDOFF.mde §2 R13 ⒝・OMR の提案 B1〜B6（e..\LilySharp-Omr\docs\r
 
 ### 3.5 MIDI 出力（第911・edocs/playback-design.mde §6。Windows は網が実機の GS 音源を開いて鳴らして閉じた＝winmm は通る。**mac／Linux の CoreMIDI／ALSA は未実走**）
 
-- [ ] パレット **Lily#: Choose MIDI Output…** → 「The preview's own synth」の下にこの機械のポート（eMicrosoft GS Wavetable Synthe・eZOOM UAC-2 MIDIe …）が並ぶ（.lys を 1 つも開いていなくてもサーバーが立って並ぶ）。GS を選ぶ → 設定 elilysharp.playback.outpute に名前が入り、ステータスバーに ethe preview plays through …e。設定 UI の説明の「choose a port…」リンクでも同じ picker。
+- [ ] パレット **Lily#: Choose MIDI Output…** → 「The preview's own synth」の下にこの機械のポート（eMicrosoft GS Wavetable Synthe・eZOOM UAC-2 MIDIe …）が並ぶ（.lys を 1 つも開いていなくてもサーバーが立って並ぶ）。GS を選ぶ → 設定 elilysharp.playback.midiOutpute に名前が入り、ステータスバーに ethe preview plays through …e。設定 UI の説明の「choose a port…」リンクでも同じ picker。
 - [ ] ▶ → Windows の GS 音源で鳴り、プレビューの音源は鳴らない。追従の点灯が音に合う（ずれが分からない程度）。⏹ で直ちに止まり、音が残らない。再生中に音符をクリック → そこから鳴る。Alt+M → その小節だけ。▶ を押し直す → 頭から。
 - [ ] epart vn { midiInstrument "violin" }e と epart kit { clef percussion }e の本 → vn はバイオリン・kit はドラム（ch 10）の音。四分音（ecihe）の本 → ベンドで鳴って次の音は戻る。
 - [ ] Alt+P 長押し → 鳴り続けて離すと止まる（GS から・part の楽器）。Ctrl+Shift+↑ の後の音・カレットの着地・打鍵の音も同じ経路。

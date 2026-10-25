@@ -162,7 +162,7 @@ Now:
 
 ### MIDI out
 
-`lilysharp.playback.output` names a MIDI output port of the machine (empty: the preview's own
+`lilysharp.playback.midiOutput` names a MIDI output port of the machine (empty: the preview's own
 synth, §1–§5 unchanged); **Lily#: Choose MIDI Output…** lists what the machine has, and the
 setting's description links to it. Windows then plays through the Microsoft GS Wavetable Synth
 with no setup, and a virtual port — loopMIDI on Windows, an IAC bus on a Mac, the ALSA

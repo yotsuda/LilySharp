@@ -87,6 +87,10 @@ All notable changes to the Lily# VS Code extension are documented here.
   fast one. `lilysharp.ai.model` and `ai.omrFixModel` are gone and no longer read: pick again with
   *Lily#: Select AI Model…*, whose entries are now *Ask AI… (Ctrl+I) and Fix OMR Marks with AI…*
   and *Ghost Completion*.
+- **`lilysharp.playback.output` is now `lilysharp.playback.midiOutput`** ("Playback: Midi Output"):
+  it names a MIDI port, not an audio output. The old key is no longer read — choose the port again
+  with *Lily#: Choose MIDI Output…*. Its and the sound font's *Choose…* links now stand last in
+  their descriptions, just above the box.
 
 ### The preview shows its pages as sheets
 

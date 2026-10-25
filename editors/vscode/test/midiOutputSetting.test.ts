@@ -20,13 +20,13 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as vm from 'node:vm';
 
-// The manifest's side of `lilysharp.playback.output` (docs/playback-design.md §6, MIDI out):
+// The manifest's side of `lilysharp.playback.midiOutput` (docs/playback-design.md §6, MIDI out):
 // the setting, the command that lists the machine's ports for it, and the link from the one
 // to the other — a port's name is not something to type.
 describe('the MIDI output setting', () => {
     const manifest = JSON.parse(fs.readFileSync(path.join(__dirname, '..', '..', 'package.json'), 'utf8'));
     // The settings come in groups (an array of configuration blocks, 2026-10-25).
-    const setting = Object.assign({}, ...manifest.contributes.configuration.map((c: { properties: object }) => c.properties))['lilysharp.playback.output'];
+    const setting = Object.assign({}, ...manifest.contributes.configuration.map((c: { properties: object }) => c.properties))['lilysharp.playback.midiOutput'];
     const commands = manifest.contributes.commands as { command: string; title: string }[];
     const palette = manifest.contributes.menus.commandPalette as { command: string; when?: string }[];
 

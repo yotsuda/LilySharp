@@ -322,7 +322,7 @@
   <h2>MIDI output: a DAW, a VST host, or the computer's own synth</h2>
   <p>A sound font is one recording of the General MIDI instruments. For <b>your own</b>
   instruments — a sampled piano in a DAW, a VST or AU synth, a hardware module — have Lily#
-  send <b>MIDI</b> instead: <code>lilysharp.playback.output</code> names a MIDI output port of
+  send <b>MIDI</b> instead: <code>lilysharp.playback.midiOutput</code> names a MIDI output port of
   your machine, and the <b>▶</b> button, <kbd>Alt+P</kbd> / <kbd>Alt+M</kbd> and the auditions
   all go there. The follow-along highlight runs as before.</p>
   <ol>
@@ -436,7 +436,7 @@
     <tr><td><code>lilysharp.preview.theme</code></td><td><code>auto</code></td><td>the preview's colours: follow VS Code, light or dark</td></tr>
     <tr><td><code>lilysharp.audition.enabled</code></td><td><code>true</code></td><td>sound notes as you edit (<a href="#audition">Audition</a>)</td></tr>
     <tr><td><code>lilysharp.playback.soundFont</code></td><td>the computer's own</td><td>the sound font the preview plays with (<i>Lily#: Choose Sound Font…</i>) — <a href="#soundfonts">which to install, and how</a></td></tr>
-    <tr><td><code>lilysharp.playback.output</code></td><td>the preview's synth</td><td>a MIDI output port to play through instead (<i>Lily#: Choose MIDI Output…</i>) — <a href="#midi-out">a DAW, a VST host, the computer's own synth</a></td></tr>
+    <tr><td><code>lilysharp.playback.midiOutput</code></td><td>the preview's synth</td><td>a MIDI output port to play through instead (<i>Lily#: Choose MIDI Output…</i>) — <a href="#midi-out">a DAW, a VST host, the computer's own synth</a></td></tr>
     <tr><td><code>lilysharp.typingAids.enabled</code></td><td><code>true</code></td><td>the typing aids above (<a href="#typing">Typing aids</a>)</td></tr>
     <tr><td><code>lilysharp.completion.flatSpelling</code></td><td><code>full</code></td><td>how completion spells flats (both spellings compile)</td></tr>
     <tr><td><code>lilysharp.ai.editModel</code> · <code>ai.ghostModel</code></td><td>automatic</td><td>the models the AI features use (<a href="#ai">AI</a>)</td></tr>
