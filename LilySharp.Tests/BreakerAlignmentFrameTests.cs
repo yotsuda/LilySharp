@@ -151,21 +151,6 @@ public sealed class BreakerAlignmentFrameTests
     }
 
     [Fact]
-    public void AmandasStaffAndTabScore_PagesAsLilyPondDoes()
-    {
-        // MEASURED (2.26.0, the twin of audit/tabfingering/amanda.lys' "both" score, Lab
-        // sessions/p851/ws): 7/8/3. Lily# put 8/8/2 while the two frames were missing.
-        var path = System.IO.Path.Combine(CollectResumeTests.FindRepoRoot(), "audit", "tabfingering", "amanda.lys");
-        var tree = LilySharp.Core.Syntax.SyntaxTree.Parse(System.IO.File.ReadAllText(path));
-        var spec = System.Linq.Enumerable.First(LilySharp.Core.Svg.Collector.RenderSpecParser.FindAll(tree),
-            s => s.Name.Contains("both"));
-        var score = LilySharp.Core.Svg.SvgGenerator.CollectScore(tree, spec);
-        var layout = new LayoutEngine(score.Paper).Layout(score);
-        Assert.Equal(new[] { 7, 8, 3 }, System.Linq.Enumerable.ToArray(
-            System.Linq.Enumerable.Select(layout.Pages, p => p.Systems.Length)));
-    }
-
-    [Fact]
     public void TheCountLoopsEstimate_LiftsAMarkAsThePlacedLineDoes()
     {
         // The system-count loop prices candidate lines from per-bar tables

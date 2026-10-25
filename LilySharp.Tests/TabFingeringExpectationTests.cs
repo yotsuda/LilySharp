@@ -32,7 +32,7 @@ namespace LilySharp.Tests;
 /// being designed (2026-09-14) — held against the real books they were asked about.
 /// </summary>
 /// <remarks>
-/// LILYSHARP-OWN. The books are byte copies of the user's corpus in <c>audit/tabfingering/</c>
+/// LILYSHARP-OWN. The book is a byte copy of the user's corpus in <c>audit/tabfingering/</c>
 /// (the corpus itself is edited by its owner and is never a test input). Each case names a
 /// note by where a reader finds it — a section or a rehearsal mark, the bar counted by bar
 /// lines in the source, and the note's place among the pitches of that bar — and checks its
@@ -75,22 +75,9 @@ public sealed class TabFingeringExpectationTests
         new("tab-fret.lys", "section B", 4, 1, "ees", 3, 6, false,
             "a stretch to the 6th is cheaper than moving two frets"),
         new("tab-fret.lys", "section B", 6, 4, "g", 2, 5, false, "the 2nd string's 5th, not the open 1st"),
-        new("arthurs-theme.lys", "section A", 5, 1, "bes", 3, 1, false,
-            "a stretch across a skipped string is hard"),
-        new("arthurs-theme.lys", "section E", 2, 2, "d", 3, 5, false, "no skip from the 2nd to the 4th string"),
-        new("amanda.lys", "section A2", 7, 2, "a", 2, 7, false, "the first a on the 2nd string's 7th"),
-        new("amanda.lys", "section A2", 7, 6, "a", 2, 7, false, "the second a on the 2nd string's 7th"),
-        new("amanda.lys", "section A3", 1, 2, "g", 2, 5, false, "octave shape: index on the root, little finger an octave up"),
-        new("amanda.lys", "section B1", 1, 1, "e", 2, 2, false, "down two frets rather than a stretch"),
-        new("amanda.lys", "section B1", 3, 1, "e", 2, 2, false, "down two frets rather than a stretch"),
-        new("real-gone.lys", "section Intro", 9, 1, "b", 3, 2, false, "the slur keeps the 3rd string"),
-        new("real-gone.lys", "section C", 4, 5, "a", 3, 0, false, "the open 3rd string"),
-        new("real-gone.lys", "section D", 5, 1, "b", 3, 2, false, "the hand is free after a fall"),
-        new("real-gone.lys", "section F", 1, 1, "b", 3, 2, false, "the 3rd string's 2nd after a bar of open strings"),
-        new("sayonara-elegy.lys", "mark C", 3, 4, "f", 4, 1, false, "the 4th string's 1st"),
-        new("sayonara-elegy.lys", "mark D", 7, 1, "aes", 4, 4, false, "down to the 4th string's 4th"),
-        new("automatic.lys", "section A2", 8, 3, "f", 4, 1, false, "e f ges g up the 4th string"),
-        new("nine-to-five-xanadu.lys", "section A", 6, 2, "a", 2, 7, false, "unplayable unless a is on the 2nd string"),
+        // The cases from six commercial songs' books (Arthur's Theme, Amanda, Real Gone, Sayonara
+        // Elegy, Automatic, 9 to 5) went with the books on 2026-10-25: the repository is public and
+        // their bass lines are copyrighted. What they held is still held by BassFingeringGoldenTests.
     ];
 
     public static IEnumerable<object[]> AgreedCases() =>
