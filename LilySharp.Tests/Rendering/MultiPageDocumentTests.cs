@@ -49,6 +49,32 @@ public sealed class MultiPageDocumentTests
     }
 
     [Fact]
+    public void Svg_Interactive_LeavesAGapBetweenPages()
+    {
+        // The preview shows its pages as sheets: a gap of nothing between two pages, the
+        // root grown by it; data-page-top says where each page really starts.
+        using var doc = new SvgDocumentContext(new SvgDocumentOptions { OmitFontFace = true, Interactive = true });
+        for (int p = 0; p < 3; p++)
+        {
+            var gc = doc.BeginPage(80, 67);
+            gc.DrawLine(0, 0, 80, 0, Color.Black, 0.1);
+            doc.EndPage();
+        }
+        doc.Dispose();
+        var svg = doc.ToSvg();
+
+        double gap = SvgDocumentContext.InteractivePageGap;
+        Assert.Contains(FormattableString.Invariant($"viewBox=\"0 0 80.00 {3 * 67 + 2 * gap:F2}\""), svg);
+        Assert.Contains("data-page-top=\"0.00\"", svg);
+        Assert.Contains(FormattableString.Invariant($"data-page-top=\"{67 + gap:F2}\""), svg);
+        Assert.Contains(FormattableString.Invariant($"translate(0, {2 * (67 + gap):F2})"), svg);
+        // One white sheet per page, none under the gaps.
+        Assert.Contains("<rect x=\"0\" y=\"0\" width=\"80.00\" height=\"67.00\" fill=\"#FFFFFF\"/>", svg);
+        Assert.Contains(FormattableString.Invariant($"<rect x=\"0\" y=\"{67 + gap:F2}\" width=\"80.00\" height=\"67.00\" fill=\"#FFFFFF\"/>"), svg);
+        Assert.Contains(FormattableString.Invariant($"<rect x=\"0\" y=\"{2 * (67 + gap):F2}\" width=\"80.00\" height=\"67.00\" fill=\"#FFFFFF\"/>"), svg);
+    }
+
+    [Fact]
     public void Svg_SinglePage_HasNoGroupWrapper()
     {
         using var doc = new SvgDocumentContext(new SvgDocumentOptions { OmitFontFace = true });

@@ -280,6 +280,9 @@ internal sealed class SvgDocumentContext : IDocumentContext
             => string.Create(Length, this, static (span, page) => page.CopyTo(span));
     }
 
+    /// <summary>The gap between two pages of the interactive document, in staff spaces.</summary>
+    internal const double InteractivePageGap = 2.5;
+
     /// <summary>
     /// The document as its pieces, in emission order: the header, one
     /// <see cref="PagePieces"/> per page, the closing tag. THE one spelling of the
@@ -310,15 +313,22 @@ internal sealed class SvgDocumentContext : IDocumentContext
             return (head1.ToString(), pages, "</svg>" + nl);
         }
 
-        double totalHeight = 0, maxWidth = 0;
+        // The interactive document leaves a gap between two pages (owner's request
+        // 2026-10-25: the preview shows its pages as sheets); nothing is drawn in it, so the
+        // viewer's background shows there — each page then gets its own background rectangle
+        // instead of one under the whole document. The export keeps its pages edge to edge.
+        double gap = _options.Interactive ? InteractivePageGap : 0;
+        double totalHeight = gap * (_pages.Count - 1), maxWidth = 0;
+        var sheets = gap > 0 ? new List<(double Top, double Width, double Height)>(_pages.Count) : null;
         foreach (var (_, w, h) in _pages)
         {
+            sheets?.Add((sheets.Count == 0 ? 0 : sheets[^1].Top + sheets[^1].Height + gap, w, h));
             totalHeight += h;
             if (w > maxWidth) maxWidth = w;
         }
 
         var head = new StringBuilder(512);
-        WriteHeader(head, maxWidth, totalHeight);
+        WriteHeader(head, maxWidth, totalHeight, sheets);
 
         double yOffset = 0;
         foreach (var (body, _, h) in _pages)
@@ -331,12 +341,13 @@ internal sealed class SvgDocumentContext : IDocumentContext
                     yOffset, h) + nl,
                 body,
                 "</g>" + nl));
-            yOffset += h;
+            yOffset += h + gap;
         }
         return (head.ToString(), pages, "</svg>" + nl);
     }
 
-    private void WriteHeader(StringBuilder sb, double widthSpaces, double heightSpaces)
+    private void WriteHeader(StringBuilder sb, double widthSpaces, double heightSpaces,
+        IReadOnlyList<(double Top, double Width, double Height)>? sheets = null)
     {
         double widthPx = widthSpaces * _options.PixelsPerSpace;
         double heightPx = heightSpaces * _options.PixelsPerSpace;
@@ -371,7 +382,11 @@ internal sealed class SvgDocumentContext : IDocumentContext
         var music = MusicFonts.Of(Fonts);
         sb.AppendLine($"  .music {{ font-family: '{music.FaceFamily(music.DefaultDesign)}', serif; }}");
         sb.AppendLine("</style>");
-        WritePageBackground(sb, widthSpaces, heightSpaces);
+        if (sheets == null)
+            WritePageBackground(sb, 0, widthSpaces, heightSpaces);
+        else
+            foreach (var (top, w, h) in sheets)
+                WritePageBackground(sb, top, w, h);
     }
 
     /// <summary>
@@ -397,10 +412,13 @@ internal sealed class SvgDocumentContext : IDocumentContext
     /// whose pages have always been opaque.
     /// </para>
     /// </remarks>
-    private static void WritePageBackground(StringBuilder sb, double widthSpaces, double heightSpaces)
+    /// <param name="top">Where the page starts: 0 for the one page under the whole document
+    /// (written <c>y="0"</c>, as it always was), a later sheet's top in the gapped preview.</param>
+    private static void WritePageBackground(StringBuilder sb, double top, double widthSpaces, double heightSpaces)
         => sb.AppendLine(string.Format(CultureInfo.InvariantCulture,
-            "  <rect x=\"0\" y=\"0\" width=\"{0:F2}\" height=\"{1:F2}\" fill=\"{2}\"/>",
-            widthSpaces, heightSpaces, Color.White.ToHex()));
+            "  <rect x=\"0\" y=\"{3}\" width=\"{0:F2}\" height=\"{1:F2}\" fill=\"{2}\"/>",
+            widthSpaces, heightSpaces, Color.White.ToHex(),
+            top == 0 ? "0" : top.ToString("F2", CultureInfo.InvariantCulture)));
 
     private string GetFontFaceRule()
     {

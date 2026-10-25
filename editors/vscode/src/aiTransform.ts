@@ -1036,7 +1036,9 @@ body { margin:0; padding:0; display:flex; flex-direction:column; height:100vh; o
 .toggle { display:flex; gap:4px; }
 .toggle button { padding:3px 10px; font-size:12px; }
 .toggle button.on { background: var(--vscode-button-background); color: var(--vscode-button-foreground); }
-.main { flex:1; overflow:auto; background:white; padding:16px; }
+/* Dark around the sheets and between them (the server leaves a gap between two pages), as in
+   the preview. */
+.main { flex:1; overflow:auto; background:#2b2b2b; padding:16px; }
 .score svg { max-width:100%; height:auto; }
 /* The notes the AI changed — same non-destructive glow the main preview uses
    for editor↔preview sync, so "what changed" reads at a glance. */

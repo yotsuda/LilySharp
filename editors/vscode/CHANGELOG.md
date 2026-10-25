@@ -63,9 +63,11 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ### The preview shows its pages as sheets
 
-- **A dark band marks every page break**, and the margin around the score is dark too, so each
-  page reads as a sheet — dark grey (#2b2b2b) around white pages; under the dark scheme, whose
-  pages are black, mid grey (#3c3c3c).
+- **The pages stand apart**: the server leaves a gap of 2.5 staff spaces between two pages of
+  the preview (each page its own white sheet), and the pane shows dark through it and around the
+  score — dark grey (#2b2b2b) around white pages; under the dark scheme, whose pages are black,
+  mid grey (#3c3c3c). The AI candidate panel shows its pages the same way. Exports (SVG, PNG,
+  PDF) are unchanged.
 
 ### The AI candidate panel shows that a button was pressed
 
