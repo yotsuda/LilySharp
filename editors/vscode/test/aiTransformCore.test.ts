@@ -23,8 +23,40 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import {
     SEL_CLOSE, SEL_OPEN, carryOffset, documentBudget, documentContext, estimateTokens, isProblem, isUnchanged, marksContext, octaveOutliers,
-    pickModel, pitchToMidi, splitNote, startTimeAt, toCandidateEdit,
+    pickModel, pitchToMidi, splitNote, startTimeAt, toCandidateEdit, changedWords,
 } from '../src/aiTransformCore';
+
+// Only the notes the AI really changed are lit (owner's report 2026-10-25: a rewritten stretch lit
+// every note in it, the ones copied through too).
+describe('what the candidate panel lights as changed', () => {
+    const lit = (text: string, spans: { lo: number; hi: number }[], at: (w: string) => number) => {
+        const w = text.match(/\S+/g)!;
+        return w.filter(x => spans.some(s => at(x) >= s.lo && at(x) < s.hi));
+    };
+    it('lights the changed words of a span, not the ones both sides share', () => {
+        const before = 'melody = { c4 d e f | g a b c }';
+        const after = 'melody = { c4 d es f | g a bes c }';
+        const spans = changedWords(before, after, [{ beforeLo: 10, beforeHi: before.length - 1, afterLo: 10, afterHi: after.length - 1 }]);
+        const afterSpans = spans.map(s => ({ lo: s.afterLo, hi: s.afterHi }));
+        const beforeSpans = spans.map(s => ({ lo: s.beforeLo, hi: s.beforeHi }));
+        assert.deepEqual(lit(after, afterSpans, x => after.indexOf(` ${x} `) + 1), ['es', 'bes']);
+        assert.deepEqual(lit(before, beforeSpans, x => before.indexOf(` ${x} `) + 1), ['e', 'b']);
+    });
+    it('reaches back over the spaces before a word, where a drawn note\'s data-pos stands', () => {
+        const before = 'x = {\n  c4 d\n}';
+        const after = 'x = {\n  c4 e\n}';
+        const [s] = changedWords(before, after, [{ beforeLo: 5, beforeHi: 12, afterLo: 5, afterHi: 12 }]);
+        assert.deepEqual([s.afterLo, s.afterHi], [after.indexOf(' e'), after.indexOf('e') + 1]);
+    });
+    it('lights nothing on the side an insertion leaves empty', () => {
+        const before = '{ c d }';
+        const after = '{ c g a d }';
+        const spans = changedWords(before, after, [{ beforeLo: 0, beforeHi: before.length, afterLo: 0, afterHi: after.length }]);
+        assert.equal(spans.length, 1);
+        assert.equal(spans[0].beforeLo, spans[0].beforeHi);
+        assert.equal(after.slice(spans[0].afterLo, spans[0].afterHi), ' g a');
+    });
+});
 
 describe('the automatic model', () => {
     // What the owner's VS Code offered on 2026-10-23: Copilot's chat models, and copilotcli — the

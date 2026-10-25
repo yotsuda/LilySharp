@@ -40,10 +40,12 @@ All notable changes to the Lily# VS Code extension are documented here.
   save, so Accept failed and Play did nothing.
 - **An Accept that writes nothing leaves the candidate decidable**: the panel says why and its
   buttons come back; they stayed greyed out with the transform already over.
-- **What the AI changed is painted orange on the candidate's score**, as the legend says; it
-  wore only a faint orange glow, which left the notes black.
-- **Play lights the notes sounding on the candidate's score**, in blue (the orange is what the AI
-  changed), and keeps the newest in view — After or Before, whichever pane is playing.
+- **What the AI changed is painted green on the candidate's score**, the green of the OMR fix
+  panel — only the notes it really changed: a stretch it rewrote is compared with the original
+  word by word, and the notes it copied through are left black. It used to light every note of
+  the stretch, in a faint orange glow.
+- **Play lights the notes sounding on the candidate's score**, in orange as the preview does, and
+  keeps the newest in view — After or Before, whichever pane is playing.
 
 ### The AI reads the whole file and answers with edits
 

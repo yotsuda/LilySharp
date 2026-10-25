@@ -237,6 +237,83 @@ export function wholeFileEdit<S extends SpanLike>(snapshot: S, full: string): Ca
     return reduceToSpan(snapshot, full, null, '');
 }
 
+/**
+ * The places a candidate changes, word by word: inside each span the AI replaced, the words both
+ * sides share (a longest common subsequence) are left out, so a note copied through unchanged is
+ * not lit as changed (owner's report 2026-10-25: a rewritten stretch lit every note in it). A
+ * side with nothing left is an empty range at the place — lit nowhere. A span too long to compare
+ * stays whole past the words its ends share.
+ */
+export function changedWords(before: string, after: string, spans: readonly ChangedSpan[]): ChangedSpan[] {
+    const out: ChangedSpan[] = [];
+    for (const s of spans) {
+        const a = words(before, s.beforeLo, s.beforeHi);
+        const b = words(after, s.afterLo, s.afterHi);
+        let p = 0;
+        while (p < a.length && p < b.length && a[p].w === b[p].w) p++;
+        let q = 0;
+        while (q < a.length - p && q < b.length - p && a[a.length - 1 - q].w === b[b.length - 1 - q].w) q++;
+        const A = a.slice(p, a.length - q);
+        const B = b.slice(p, b.length - q);
+        // Where an empty side's range stands: at the next word it keeps, else the span's end.
+        const beforeAt = (i: number) => A[i]?.lo ?? a[a.length - q]?.lo ?? s.beforeHi;
+        const afterAt = (j: number) => B[j]?.lo ?? b[b.length - q]?.lo ?? s.afterHi;
+        const run = (i0: number, i1: number, j0: number, j1: number) => {
+            if (i0 === i1 && j0 === j1) return;
+            out.push({
+                beforeLo: i0 < i1 ? A[i0].lo : beforeAt(i0), beforeHi: i0 < i1 ? A[i1 - 1].hi : beforeAt(i0),
+                afterLo: j0 < j1 ? B[j0].lo : afterAt(j0), afterHi: j0 < j1 ? B[j1 - 1].hi : afterAt(j0),
+            });
+        };
+        const n = A.length, m = B.length;
+        if (n * m > 4_000_000) {
+            run(0, n, 0, m);
+            continue;
+        }
+        // lcs[i * (m + 1) + j]: the longest common subsequence of A[i..] and B[j..].
+        const w = m + 1;
+        const lcs = new Uint32Array((n + 1) * w);
+        for (let i = n - 1; i >= 0; i--) {
+            for (let j = m - 1; j >= 0; j--) {
+                lcs[i * w + j] = A[i].w === B[j].w
+                    ? lcs[(i + 1) * w + j + 1] + 1
+                    : Math.max(lcs[(i + 1) * w + j], lcs[i * w + j + 1]);
+            }
+        }
+        let i = 0, j = 0, i0 = 0, j0 = 0;
+        while (i < n || j < m) {
+            if (i < n && j < m && A[i].w === B[j].w && lcs[i * w + j] === lcs[(i + 1) * w + j + 1] + 1) {
+                run(i0, i, j0, j);
+                i0 = ++i;
+                j0 = ++j;
+            } else if (j >= m || (i < n && lcs[(i + 1) * w + j] >= lcs[i * w + j + 1])) {
+                i++;
+            } else {
+                j++;
+            }
+        }
+        run(i0, n, j0, m);
+    }
+    return out;
+}
+
+/**
+ * The words (runs of non-space) of text[lo, hi), each from the spaces before it: a drawn note's
+ * data-pos is its node's FULL-span start — those spaces, and for the first thing on a line its
+ * indentation (as omrAiFixCore.rangesOf has it).
+ */
+function words(text: string, lo: number, hi: number): { w: string; lo: number; hi: number }[] {
+    const out: { w: string; lo: number; hi: number }[] = [];
+    const re = /\S+/g;
+    const part = text.slice(lo, hi);
+    for (let m = re.exec(part); m; m = re.exec(part)) {
+        let lead = lo + m.index;
+        while (lead > 0 && /\s/.test(text[lead - 1])) lead--;
+        out.push({ w: m[0], lo: lead, hi: lo + m.index + m[0].length });
+    }
+    return out;
+}
+
 /** One replacement the server made to a text (lilysharp/aiOctaves), in that text's offsets. */
 export interface TextChange { Start: number; End: number; Text: string; }
 

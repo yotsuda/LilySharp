@@ -39,7 +39,7 @@ import { ChatClient, ChatMessage, resolveChatClient } from './modelClient';
 import {
     CandidateEdit as CoreCandidateEdit, ChangedSpan, MarkInSelection, MarkReadings, SEL_CLOSE, SEL_OPEN, cleanCandidate,
     TextChange, carryOffset, documentBudget, documentContext, estimateTokens, isProblem, marksContext, octaveOutliers, splitNote,
-    startTimeAt, toCandidateEdit, wholeFileEdit,
+    startTimeAt, toCandidateEdit, wholeFileEdit, changedWords,
 } from './aiTransformCore';
 import { markFactsOf, sideFileOf } from './omrScanCore';
 import { textFontFaceCss, textFontsRoot } from './scoreFonts';
@@ -573,7 +573,8 @@ async function drive(
             // each edit's, in the "after" score and in the "before" one. The SVG carries
             // data-pos (source offsets) for editor↔preview sync, so the webview lights up the
             // notes whose data-pos falls in these spans.
-            const changed = candidate.spans;
+            // Word by word, so a note the edit copied through unchanged is not lit.
+            const changed = changedWords(candidate.snap.origFullText, reconstructed, candidate.spans);
             return token.isCancellationRequested ? null : { candidate, caption, renderAfter, changed };
         });
         if (!round) {
@@ -1113,12 +1114,10 @@ body { margin:0; padding:0; display:flex; flex-direction:column; height:100vh; o
    the preview. */
 .main { flex:1; overflow:auto; background:#2b2b2b; padding:16px; }
 .score svg { max-width:100%; height:auto; }
-/* The notes the AI changed — same non-destructive glow the main preview uses
-   for editor↔preview sync, so "what changed" reads at a glance. */
-.chg { filter: drop-shadow(0 0 3.5px #ff6600); }
-/* …and painted orange (owner's report 2026-10-25: the glow alone left them black). */
-.score .chg:not([fill="none"]), .score .chg *:not([fill="none"]) { fill: #ff6600 !important; }
-.score .chg[stroke]:not([stroke="none"]), .score .chg [stroke]:not([stroke="none"]) { stroke: #ff6600 !important; }
+/* The notes the AI changed, painted green — the green the OMR fix panel paints its proposals in
+   (owner's request 2026-10-25; a glow alone left them black). */
+.score .chg:not([fill="none"]), .score .chg *:not([fill="none"]) { fill: #2e9e43 !important; }
+.score .chg[stroke]:not([stroke="none"]), .score .chg [stroke]:not([stroke="none"]) { stroke: #2e9e43 !important; }
 /* A note plays the pane from it when clicked. */
 .score [data-pos] { cursor: pointer; }
 .pane { display:none; }
@@ -1146,15 +1145,15 @@ button:disabled { opacity:0.45; cursor:default; }
 .playstate.busy { opacity:1; font-weight:600; }
 /* The bar Play starts from (a click on a bar selects it), lit as the preview lights a selection. */
 .score rect.bar-staff.selected { fill: rgba(0, 120, 215, 0.22); }
-/* The notes sounding now while Play plays — blue, the orange being the AI's changes. */
-.score .playing:not([fill="none"]), .score .playing *:not([fill="none"]) { fill: #0a84ff !important; }
-.score .playing[stroke]:not([stroke="none"]), .score .playing [stroke]:not([stroke="none"]) { stroke: #0a84ff !important; }
+/* The notes sounding now while Play plays — orange, the preview's own playback color. */
+.score .playing:not([fill="none"]), .score .playing *:not([fill="none"]) { fill: #ff6600 !important; }
+.score .playing[stroke]:not([stroke="none"]), .score .playing [stroke]:not([stroke="none"]) { stroke: #ff6600 !important; }
 </style>
 </head>
 <body>
 <div class="header">
   <div>
-    <div class="cap">AI candidate — decide on the score · <span style="color:#ff6600">■</span> changed</div>
+    <div class="cap">AI candidate — decide on the score · <span style="color:#2e9e43">■</span> changed</div>
     <div class="prompt">${escapeHtml(caption)}</div>
     ${note ? `<div class="note">💬 ${escapeHtml(note)}</div>` : ''}
   </div>
