@@ -33,6 +33,8 @@ All notable changes to the Lily# VS Code extension are documented here.
   (*Lily#: Ask AI via copilot/claude-fable-5.1*), and its message quotes your request (shortened
   past 60 characters) beside the step — reading the score, generating, repairing, validating,
   rendering.
+- **Ask Again's candidate replaces the last one where it stands**: it used to open a new pane
+  beside the candidate panel each round.
 
 ### The AI reads the whole file and answers with edits
 

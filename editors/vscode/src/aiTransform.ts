@@ -921,7 +921,9 @@ async function reviewOnScore(
         fontUri.toString(), braceFontUri.toString(), panel.webview.cspSource, getNonce(),
         renderBefore.Svg, renderAfter.Svg, renderAfter.Error, caption, candidate, changed,
         textFontFaceCss(panel.webview, deps.extensionUri), note);
-    panel.reveal(vscode.ViewColumn.Beside, true);
+    // Where it stands: Beside would be beside the panel itself once Ask Again is clicked in it,
+    // a new column for every round (owner, 2026-10-25). Only a new panel goes Beside.
+    panel.reveal(panel.viewColumn ?? vscode.ViewColumn.Beside, true);
 
     // Hand this round's resolver to the panel's persistent message pump. Iterate
     // reloads the webview (new html) each round; a listener registered here, right
