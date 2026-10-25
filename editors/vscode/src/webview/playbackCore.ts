@@ -213,6 +213,24 @@ export function playSpan(notes: readonly PlaybackNote[], lo: number | null, hi: 
         .map(n => ({ ...n, T: n.T - t0 - cut(n.T) }));
 }
 
+/**
+ * A loop laid out ahead (owner's report 2026-10-25): `list` (from 0) one round after another,
+ * each round as long as the list sounds, until `seconds` are filled — so the player's own clock
+ * times every round. Restarting at a page timer's word went wrong on the MIDI output, where
+ * the browser holds the page's timers to a second and a round lost or gained up to three beats.
+ */
+export function loopNotes(list: readonly PlaybackNote[], seconds: number): PlaybackNote[] {
+    let length = 0;
+    for (const n of list) { length = Math.max(length, n.T + n.D); }
+    if (length <= 0) { return [...list]; }
+    const rounds = Math.max(1, Math.min(500, Math.ceil(seconds / length)));
+    const out: PlaybackNote[] = [];
+    for (let r = 0; r < rounds; r++) {
+        for (const n of list) { out.push(r === 0 ? n : { ...n, T: n.T + r * length }); }
+    }
+    return out;
+}
+
 /** The channels `events` touch — what a stop has to silence. */
 export function channelsOf(events: readonly MidiEvent[]): number[] {
     const set = new Set<number>();

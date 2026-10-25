@@ -18,7 +18,7 @@ import { describe, it } from 'node:test';
 import * as assert from 'node:assert/strict';
 import {
     BEND_CENTRE, DRUM_CHANNEL, FAMILY_PROGRAM, Lookahead, PlaybackNote, SoundingCursor,
-    channelOf, channelsOf, endOf, playSpan, practiceNotes, programOf, toEvents,
+    channelOf, channelsOf, endOf, loopNotes, playSpan, practiceNotes, programOf, toEvents,
 } from '../src/webview/playbackCore';
 
 const note = (t: number, d: number, p: number, extra: Partial<PlaybackNote> = {}): PlaybackNote =>
@@ -52,6 +52,16 @@ describe('the stretch a Play sounds', () => {
         const clicks = [0, 2, 4, 6, 8, 10].map(t => note(t, 0.1, 76, { S: -1, C: 9 }));
         const once = playSpan([...piece, ...clicks], null, null, true).filter(n => n.S < 0);
         assert.deepEqual(once.map(n => n.T), [0, 2, 4, 6]);
+    });
+
+    it('lays a loop\'s rounds out ahead, each as long as the stretch sounds', () => {
+        // Restarted at a page timer, a round on the MIDI output lost or gained up to three
+        // beats (owner's report 2026-10-25): the timer was held to a second.
+        const bar = playSpan(piece, 10, 13, true);            // four quarters, 0..4
+        const rounds = loopNotes(bar, 10);
+        assert.equal(rounds.length, bar.length * 3);
+        assert.deepEqual(rounds.filter(n => n.S === 10).map(n => n.T), [0, 4, 8]);
+        assert.deepEqual(loopNotes([], 10), []);
     });
 
     it('plays nothing for a selection with no notes', () => {

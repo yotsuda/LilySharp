@@ -5640,11 +5640,16 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             if (!loopOn) loopList = null;
             showPractice();
         });
+        // A loop's rounds are laid out ahead, ten minutes of them (loopNotes): the player's
+        // clock times each round, not a page timer the browser may hold to a second.
+        function looped(list) {
+            return window.LysSynth && window.LysSynth.loopNotes ? window.LysSynth.loopNotes(list, 600) : list;
+        }
         // Where a playback that ran to its end goes: round again while looping, else it stops.
         function playEnded() {
             const list = loopOn ? loopList : null;
             if (!list) { stopPlayback(); return; }
-            startPlayback(list, 0);
+            startPlayback(looped(list), 0);
             loopList = list;
         }
 
@@ -5689,7 +5694,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             if (lastSpan === undefined) { startPlayback(playbackNotes, at); return; }
             const list = window.LysSynth.playSpan(playbackNotes, lastSpan ? lastSpan[0] : null, lastSpan ? lastSpan[1] : null, lastOnce);
             loopList = loopOn ? list : null;
-            startPlayback(list, at);
+            startPlayback(loopOn ? looped(list) : list, at);
             loopList = loopOn ? list : null;
         }
         function renderParts(names) {
@@ -6123,7 +6128,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                         lastOnce = loopOn;
                         const list = window.LysSynth.playSpan(playbackNotes, span ? span[0] : null, span ? span[1] : null, loopOn);
                         loopList = loopOn ? list : null;
-                        startPlayback(list, 0);
+                        startPlayback(loopOn ? looped(list) : list, 0);
                     } else {
                         // The practice menu's tempo, parts and metronome, from the notes as written.
                         rawNotes = message.notes; rawParts = message.parts || null; rawBeats = message.beats || null;
