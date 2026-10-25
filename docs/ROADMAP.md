@@ -13,7 +13,9 @@ to *Decided against* with the reason). What is being worked on now, and the next
 
 Lily# already names a chord written in one part from its notes (`<c e g>@chord` → C, inversions
 as slash chords — `ChordAutoNameTests`). Harmony analysis widens that to the sound of **all the
-parts together**, over time.
+parts together**, over time. *Add Chord Track (auto-harmonize)* is another thing — it proposes
+chords for a melody (`LilySharp.Core.Harmony.ChordHarmonizer`), where this reads the chords the
+parts already sound; its chord fitting may still be worth sharing.
 
 **What it shows**
 

@@ -17,7 +17,65 @@ same number. See the [changelog](https://github.com/yotsuda/LilySharp/blob/maste
 
 ## Features
 
-### Editor Features
+### The preview
+
+- **Live, beside the file**: it opens by itself (`lilysharp.preview.openOnOpen`; `Ctrl+K V` by
+  hand), redraws as you type, and follows whichever `.lys` is in front — the lock in its title
+  bar keeps it on one file. Its pages stand apart as sheets of paper.
+- **Score and editor in step**: click a note or a bar to put the caret there; move the caret
+  and its note lights. `Shift+click` a bar or a note, `Shift+drag` across bars, or right-click
+  *Select This Bar* to select bars on the score (`Esc` clears).
+- **The header**: the score to show, Export (PDF, SVG, PNG, MIDI, MusicXML, LilyPond `.ly`,
+  VOCALOID `.vsqx`), ✨ Ask AI, Range, ▶ ⏹, the practice menu, the score's length, the pages.
+  On a narrow pane the header's groups wrap onto the next row.
+- **Range**: each part's lowest (▼) and highest (▲) note, spelled as written, with the bar it
+  stands in — click to find it on the score — and its **tessitura**, where it spends four-fifths
+  of its sounding time, over a small chart of the time on each semitone.
+
+### Playback and practice
+
+- **▶ plays the score**, or with bars selected, **those bars**, every part sounding there. The
+  notes playing light as they sound. Hold `Alt+P` to hear the note under the caret; `Alt+M`
+  plays its bar.
+- **The practice menu** (the metronome beside ⏹): the **tempo** on a slider, 50–150%; the
+  **loop**, round and round the selected bars or the whole score, the score's repeats not
+  taken; the **metronome**, a click on every beat, the bar's first louder; and **each part on
+  or off** — sing yours against the others. A change while playing goes on from the same place.
+
+(The sound — a SoundFont, or your own MIDI instruments — is under [Sound](#sound) below.)
+
+### AI
+
+Uses the language models VS Code offers — GitHub Copilot's, or another provider's.
+
+- **✨ Ask AI… (`Ctrl+I`)**: say what to change ("add a bass line", "make bar 5 a fill") and the
+  AI rewrites the score. A selection — text in the editor, or bars, a bar or a note on the score
+  — is a hint of where to look; the whole score stays open to change. Every answer is compiled
+  and checked first, then shown **before** anything is written: the score as it is and as it
+  would be, what changed in green, the AI's note on what it did, ▶ to hear it, *Ask Again…* to
+  refine it, Accept or Reject.
+- **Ghost Completion** (off by default, `lilysharp.ai.ghostCompletion`): the next bar suggested
+  as you type, after a bar line — compiled first, shown only when valid.
+- *Lily#: Select AI Model…* picks the model for each (`lilysharp.ai.editModel`,
+  `lilysharp.ai.ghostModel`); left empty, a large model edits and a fast one completes.
+
+### Scans (Beta)
+
+With the separate **Scan Import** extension (`yotsuda.lilysharp-omr`, Windows x64),
+*Lily#: Convert Image/PDF to Lily# (.lys)…* reads a scan or a PDF of printed music into a
+`.lys`, marks with `@todo` what it was unsure of, and shows the page beside the score.
+*Fix OMR Marks with AI…* proposes a fix for each marked bar, checked against the scan;
+*Edit Bars Beside the Scan* edits them by hand in the same panel.
+
+### More commands
+
+New Score (from a template you can make your own: *Edit New Score Template*), Import
+MusicXML…, Regroup (by part ⇄ by section), Convert Octaves to Absolute / Relative, Extract
+Phrase from Section, Add Chord Track (auto-harmonize), Guess Section Key…, Respell Notes to
+Key…, Remove All String Numbers. Every command, with examples:
+[the editor commands](https://yotsuda.github.io/LilySharp/commands.html).
+
+### Writing
 
 | Feature | Description |
 |---------|-------------|
@@ -88,7 +146,7 @@ note, not on every arrow-key repeat — and a note as you type it, once its pitc
 octave marks are in. Switch this off with `"lilysharp.audition.enabled": false`; `Alt+P`
 and `Alt+M` keep working either way. Nothing sounds while no preview is open.
 
-### Playback
+### Sound
 
 The preview's synth is a **SoundFont synthesizer** (spessasynth_lib, in an audio worklet):
 each part plays the General MIDI instrument its `midiInstrument` or preset names, as the
@@ -120,13 +178,15 @@ To use other keys, open **Keyboard Shortcuts** (`Ctrl+K Ctrl+S`), search for
 
 ### Semantic Token Colors
 
-The extension provides custom semantic highlighting:
+Lily# Studio colours what it knows the meaning of, in every theme:
 
-- **Pitches** (c, d, e, f, g, a, b): Teal
-- **Articulations** (@staccato, @accent): Yellow
-- **Dynamics** (@p, @f, @ff): Purple
+- **Pitches** (`c`, `d`, `e` …): teal
+- **Articulations** (`@staccato`, `@accent`): yellow
+- **Dynamics** (`@p`, `@f`, `@ff`): purple
+- **Parts**: blue, **sections**: orange, **phrases**: lavender
 
-Colors can be customized in settings.
+Change them with `editor.semanticTokenColorCustomizations` (the token types are `pitch`,
+`articulation`, `dynamic`, `part`, `section` and `phrase`).
 
 ## Requirements
 
@@ -141,7 +201,7 @@ server starts.
 ### From VS Code
 
 Open the Extensions view (`Ctrl+Shift+X` / `Cmd+Shift+X`), search for **Lily#**, and
-install `yotsuda.lilysharp`. Then open any `.lys` file. VS Code picks the package
+install **Lily# Studio** (`yotsuda.lilysharp`). Then open any `.lys` file. VS Code picks the package
 built for your platform; nothing else is needed.
 
 ### From a `.vsix`
@@ -175,8 +235,7 @@ code --install-extension lilysharp-*.vsix
 4. Option B - Install locally:
    ```bash
    # Create VSIX package
-   npm install -g vsce
-   vsce package
+   npx @vscode/vsce package
    
    # Install the generated .vsix file
    code --install-extension lilysharp-*.vsix
@@ -203,7 +262,7 @@ If not set, the extension uses the server bundled with it, else `lilysharp-lsp` 
 5. Press `Ctrl+Shift+O` to jump to a symbol, or open the **Outline** view in the Explorer sidebar for the score structure
 6. Use `F12` to go to variable definition
 7. Use `Shift+Alt+F` to format document
-8. The preview opens beside the file by itself (`lilysharp.preview.openOnOpen`; `Ctrl+K V` opens it by hand) and follows whichever `.lys` is in front — the lock in its title bar keeps it on one file. Then **hold `Alt+P`** to hear the note under the caret, or press `Alt+M` to play the measure the caret is in (the preview panel is the synth — a sound font, see [Playback](#playback)); the preview's ▶ plays the score
+8. The preview opens beside the file by itself (`lilysharp.preview.openOnOpen`; `Ctrl+K V` opens it by hand) and follows whichever `.lys` is in front — the lock in its title bar keeps it on one file. Then **hold `Alt+P`** to hear the note under the caret, or press `Alt+M` to play the measure the caret is in (the preview panel is the synth — a sound font, see [Sound](#sound)); the preview's ▶ plays the score, or the bars selected on it, and the practice menu beside ⏹ slows it, loops it and mutes parts
 9. Press `Ctrl+Shift+Up` / `Ctrl+Shift+Down` on a note to move it to the next note of the key (`Ctrl+Shift+PageUp` / `PageDown`: an octave), or on `@chord(Cm7)` (or a chords-row `Cm7`) to add a chord diagram and try the next shape — see [Stepping and Audition](#stepping-and-audition)
 
 ## Example
@@ -263,13 +322,14 @@ npm run watch
 
 ## License
 
-GPL-3.0-or-later. The extension bundles the Lily# language server, the
-Emmentaler music font (GPL/OFL dual license) and MIT-licensed libraries;
-see [LICENSE](https://github.com/yotsuda/LilySharp/blob/master/LICENSE) and
+GPL-3.0-or-later. The extension bundles the Lily# language server and the `lysc` compiler,
+the Emmentaler music font (GPL/OFL dual license), the Bravura, Petaluma and Leland SMuFL fonts
+(OFL), the TeX Gyre text fonts (GUST Font License), the spessasynth SoundFont synthesizer
+(Apache-2.0) and MIT-licensed libraries; see [LICENSE](https://github.com/yotsuda/LilySharp/blob/master/LICENSE) and
 [THIRD-PARTY-NOTICES](https://github.com/yotsuda/LilySharp/blob/master/THIRD-PARTY-NOTICES.md)
 in the repository.
 
-**Corresponding source.** This extension and the language server it bundles are
+**Corresponding source.** This extension and the language server and compiler it bundles are
 built from <https://github.com/yotsuda/LilySharp>; the complete corresponding
 source for a published version is the tagged commit it was built from.
 
