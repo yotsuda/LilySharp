@@ -1002,9 +1002,12 @@ async function playCandidate(deps: AiTransformDeps, panel: vscode.WebviewPanel, 
         }
         const timed = pb.Notes as { S?: number; T?: number }[];
         const start = from === undefined ? 0 : to === undefined ? startTimeAt(timed, from) : startTimeAt(timed, from, to);
+        // S is the preview's own offsets, so it is -1 here; R carries the candidate text's, which
+        // the preview follows for this panel (showCandidateSounding).
         const notes = pb.Notes
             .filter(n => ((n as { T?: number }).T ?? 0) >= start - 1e-6)
-            .map(n => ({ ...n, T: ((n as { T?: number }).T ?? 0) - start, S: -1 }));
+            .map(n => ({ ...n, T: ((n as { T?: number }).T ?? 0) - start, S: -1, R: n.S ?? -1 }));
+        playingPane = which;
         if (!deps.playOnPreview?.(play.uri, notes)) {
             say('Open the preview of this file to hear it (the preview is the player).');
             return;
@@ -1015,6 +1018,17 @@ async function playCandidate(deps: AiTransformDeps, panel: vscode.WebviewPanel, 
     } catch (e) {
         say(`Cannot play: ${String(e)}`);
     }
+}
+
+/** The pane the candidate panel's Play sounds — its notes' offsets are that text's. */
+let playingPane: 'before' | 'after' = 'after';
+
+/**
+ * The notes of a candidate's Play sounding now, as the preview that plays it follows them (owner's
+ * request 2026-10-25: see where the music is); an empty list ends the playback's light.
+ */
+export function showCandidateSounding(sounding: { pos: number; occ: number }[]): void {
+    void candidatePanel?.webview.postMessage({ type: 'sounding', which: playingPane, sounding });
 }
 
 function getCandidateHtml(
@@ -1083,6 +1097,9 @@ button:disabled { opacity:0.45; cursor:default; }
 .playstate.busy { opacity:1; font-weight:600; }
 /* The bar Play starts from (a click on a bar selects it), lit as the preview lights a selection. */
 .score rect.bar-staff.selected { fill: rgba(0, 120, 215, 0.22); }
+/* The notes sounding now while Play plays — blue, the orange being the AI's changes. */
+.score .playing:not([fill="none"]), .score .playing *:not([fill="none"]) { fill: #0a84ff !important; }
+.score .playing[stroke]:not([stroke="none"]), .score .playing [stroke]:not([stroke="none"]) { stroke: #0a84ff !important; }
 </style>
 </head>
 <body>
@@ -1217,8 +1234,37 @@ button:disabled { opacity:0.45; cursor:default; }
     selectBar(barAt(which() === 'after' ? paneAfter : paneBefore, e.clientX, e.clientY));
   });
   document.getElementById('stop').addEventListener('click', () => send('stop'));
+  // Play lights the notes sounding now (owner's request 2026-10-25), on the pane it plays, as the
+  // preview playing them follows them; the newest stays in view.
+  let lit = [];
+  const byPos = { after: null, before: null };
+  function elementsAt(w, pos) {
+    if (!byPos[w]) {
+      byPos[w] = new Map();
+      (w === 'after' ? paneAfter : paneBefore).querySelectorAll('[data-pos]').forEach(el => {
+        const p = parseInt(el.getAttribute('data-pos'), 10);
+        if (!isNaN(p)) { if (!byPos[w].has(p)) byPos[w].set(p, []); byPos[w].get(p).push(el); }
+      });
+    }
+    return byPos[w].get(pos) || [];
+  }
+  function lightSounding(w, sounding) {
+    lit.forEach(el => el.classList.remove('playing'));
+    lit = [];
+    for (const s of sounding) lit.push(...elementsAt(w, s.pos));
+    lit.forEach(el => el.classList.add('playing'));
+    const el = sounding.length > 0 ? elementsAt(w, sounding[0].pos)[0] : null;
+    if (el) {
+      const r = el.getBoundingClientRect();
+      const m = document.querySelector('.main').getBoundingClientRect();
+      if (r.top < m.top + 30 || r.bottom > m.bottom - 30 || r.left < m.left + 30 || r.right > m.right - 30) {
+        try { el.scrollIntoView({ block: 'center', inline: 'center', behavior: 'smooth' }); } catch (e) {}
+      }
+    }
+  }
   window.addEventListener('message', (e) => {
     if (!e.data) return;
+    if (e.data.type === 'sounding') { lightSounding(e.data.which, e.data.sounding || []); return; }
     // Playback news is not shown over a decision being carried out.
     if (e.data.type === 'playState' && !decided) { say(e.data.text); }
     else if (e.data.type === 'status') { say(e.data.text, true); }

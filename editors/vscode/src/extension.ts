@@ -25,7 +25,7 @@ import {
     ServerOptions,
     TransportKind
 } from 'vscode-languageclient/node';
-import { registerAiTransform } from './aiTransform';
+import { registerAiTransform, showCandidateSounding } from './aiTransform';
 import { registerAiComplete } from './aiComplete';
 import { pickAiModel } from './modelClient';
 import { registerSmartTyping } from './smartTyping';
@@ -1314,6 +1314,11 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
         async message => {
             // The file the panel shows NOW: the follower turns, and an untitled save re-keys.
             const uri = panelKey(panel) ?? openedUri;
+            // The notes of an AI candidate sounding now: lit on the candidate panel's score.
+            if (message.type === 'candidateSounding') {
+                showCandidateSounding(message.sounding);
+                return;
+            }
             if (message.type === 'playState') {
                 // Not logged: every Play and every stop.
                 if (message.playing) {
@@ -4902,7 +4907,8 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         let playingOscs = [];
         let playEndTimer = null;
         let playheadTimer = null;
-        let sfPlayer = null;        // the SoundFont player of the current playback
+        let relaying = false;       // the current playback is a candidate's, followed for its panel
+        let sfPlayer = null;       // the SoundFont player of the current playback
         let midiPlaying = false;    // the current playback is the server's, on the MIDI output
         let midiPlayPending = null; // a Play sent to the server, awaiting its start (generation, notes, offset)
         let playbackNotes = null;   // last received event list — enables click-to-seek
@@ -4924,6 +4930,10 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             playEndTimer = null;
             clearInterval(playheadTimer);
             playheadTimer = null;
+            if (relaying) {
+                relaying = false;
+                vscode.postMessage({ type: 'candidateSounding', sounding: [] });
+            }
             clearHighlights();
             lastHighlightPos = -1;
             // No note is highlighted once playback ends (naturally or via Stop),
@@ -5024,13 +5034,21 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         // (playbackCore.ts) walks the onsets once, so a tick costs what started since.
         // elapsed() is the playback's clock in seconds from the offset: the audio context's
         // for the synth here, the wall clock from the server's zero for the MIDI output.
+        // Another text's notes (an AI candidate, playNotes) carry their own offsets as R: those
+        // are followed for the candidate panel, which lights them on its score — here nothing.
         function followAlong(notes, offset, elapsed) {
             const Cursor = window.LysSynth ? window.LysSynth.SoundingCursor : null;
             if (!Cursor) { return; }
-            const cursor = new Cursor(notes.map(n => ({ t: n.T - offset, d: n.D, s: n.S, o: n.O || 0 })));
+            const relay = notes.some(n => n.R !== undefined);
+            relaying = relay;
+            const cursor = new Cursor(notes.map(n => ({ t: n.T - offset, d: n.D, s: relay ? n.R : n.S, o: n.O || 0 })));
             playheadTimer = setInterval(() => {
                 const r = cursor.at(elapsed());
                 if (!r.changed) return;
+                if (relay) {
+                    vscode.postMessage({ type: 'candidateSounding', sounding: r.sounding.map(x => ({ pos: x.pos, occ: x.occ })) });
+                    return;
+                }
                 clearHighlights();
                 const painted = highlightPositions(r.sounding);
                 if (r.sounding.length > 0) {
@@ -5580,8 +5598,8 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                     break;
                 // Another text's notes — an AI candidate under review (owner's request
                 // 2026-10-25) — played as the Play button plays this score's, from the top. They
-                // are not this page's: the cached note list is left alone, and they carry no
-                // source positions, so nothing here lights up.
+                // are not this page's: the cached note list is left alone, and their source
+                // positions (R) are the candidate's, followed for its panel — nothing here lights up.
                 case 'playNotes':
                     startPlayback(message.notes, 0);
                     break;

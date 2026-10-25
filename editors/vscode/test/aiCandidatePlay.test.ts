@@ -50,4 +50,16 @@ describe('an AI candidate plays before it is accepted', () => {
         assert.match(html, /case 'playNotes':\s*startPlayback\(message\.notes, 0\);/);
         assert.match(extension, /void panel\.webview\.postMessage\(\{ type: 'playNotes', notes \}\);/);
     });
+
+    // The notes sounding light on the panel's score (owner's request 2026-10-25): the preview
+    // follows the candidate's own offsets (R) and reports them; the panel lights that pane's notes.
+    it('lights the notes sounding on the candidate panel, not on the preview', () => {
+        assert.match(transform, /S: -1, R: n\.S \?\? -1 \}\)\);\s*playingPane = which;/);
+        assert.match(extension, /const relay = notes\.some\(n => n\.R !== undefined\);/);
+        assert.match(extension, /if \(relay\) \{\s*vscode\.postMessage\(\{ type: 'candidateSounding'/);
+        // A stop clears the panel's light.
+        assert.match(extension, /if \(relaying\) \{\s*relaying = false;\s*vscode\.postMessage\(\{ type: 'candidateSounding', sounding: \[\] \}\);/);
+        assert.match(extension, /if \(message\.type === 'candidateSounding'\) \{\s*showCandidateSounding\(message\.sounding\);/);
+        assert.match(transform, /if \(e\.data\.type === 'sounding'\) \{ lightSounding\(e\.data\.which, e\.data\.sounding \|\| \[\]\); return; \}/);
+    });
 });
