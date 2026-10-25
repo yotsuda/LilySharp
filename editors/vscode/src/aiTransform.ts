@@ -1127,6 +1127,13 @@ body { margin:0; padding:0; display:flex; flex-direction:column; height:100vh; o
                font-family: var(--vscode-editor-font-family, monospace); font-size:12px; overflow:auto; margin:4px 0 0;
                white-space:pre-wrap; }
 .snippet summary { font-size:12px; opacity:0.8; cursor:pointer; }
+/* The panel's own tooltip, in VS Code's hover look — the browser's title tip is too small to read
+   (owner's report 2026-10-25), as in the preview. */
+.tip { position:fixed; z-index:100; max-width:320px; pointer-events:none; padding:4px 8px; border-radius:3px;
+       font-family: var(--vscode-font-family, system-ui, sans-serif); font-size: var(--vscode-font-size, 13px); line-height:1.4;
+       background: var(--vscode-editorHoverWidget-background, #f3f3f3); color: var(--vscode-editorHoverWidget-foreground, #333);
+       border:1px solid var(--vscode-editorHoverWidget-border, #c8c8c8); box-shadow:0 2px 8px rgba(0,0,0,0.18); }
+.tip[hidden] { display:none; }
 /* Its changes, as the OMR fix panel prints them: green what the AI wrote, struck red what it dropped. */
 .snippet ins { color: var(--vscode-gitDecoration-addedResourceForeground, #3a3); text-decoration: none; background: rgba(46, 160, 67, .18); font-weight: 600; }
 .snippet del { color: var(--vscode-gitDecoration-deletedResourceForeground, #e33); text-decoration: line-through; background: rgba(229, 57, 53, .15); }
@@ -1182,6 +1189,46 @@ button:disabled { opacity:0.45; cursor:default; }
 <script nonce="${nonce}">
   const vscode = acquireVsCodeApi();
   const send = (action) => vscode.postMessage({ action });
+  // The panel's own tooltip (see .tip): a title moves to data-tip when the pointer first comes
+  // over it, so the browser's small one never shows.
+  (() => {
+    const tip = document.createElement('div');
+    tip.className = 'tip';
+    tip.hidden = true;
+    document.body.appendChild(tip);
+    let timer = null, shownFor = null;
+    const tipOf = (el) => {
+      for (let e = el; e && e !== document.body; e = e.parentNode) {
+        if (!e.getAttribute) continue;
+        if (e.hasAttribute('title')) { e.setAttribute('data-tip', e.getAttribute('title')); e.removeAttribute('title'); }
+        if (e.getAttribute('data-tip')) return e;
+      }
+      return null;
+    };
+    const hide = () => { clearTimeout(timer); timer = null; tip.hidden = true; shownFor = null; };
+    document.addEventListener('pointerover', (ev) => {
+      const el = tipOf(ev.target);
+      if (el === shownFor) return;
+      hide();
+      if (!el) return;
+      timer = setTimeout(() => {
+        tip.textContent = el.getAttribute('data-tip');
+        tip.hidden = false;
+        const r = el.getBoundingClientRect();
+        const w = tip.offsetWidth, h = tip.offsetHeight;
+        const x = Math.min(Math.max(4, r.left + r.width / 2 - w / 2), window.innerWidth - w - 4);
+        let y = r.bottom + 6;
+        if (y + h > window.innerHeight - 4) y = Math.max(4, r.top - h - 6);
+        tip.style.left = x + 'px';
+        tip.style.top = y + 'px';
+        shownFor = el;
+      }, 500);
+    });
+    document.addEventListener('pointerdown', hide, true);
+    document.addEventListener('keydown', hide, true);
+    document.addEventListener('scroll', hide, true);
+    window.addEventListener('blur', hide);
+  })();
   const paneAfter = document.getElementById('paneAfter');
   const paneBefore = document.getElementById('paneBefore');
   const tAfter = document.getElementById('tAfter');

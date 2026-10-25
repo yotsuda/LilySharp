@@ -26,7 +26,11 @@ All notable changes to the Lily# VS Code extension are documented here.
 ### The preview's header keeps its buttons whole
 
 - **The preview's tooltips are readable**: its buttons, panels and the tessitura chart show
-  their tips in VS Code's hover font and colours, not the browser's small title tip.
+  their tips in VS Code's hover font and colours, not the browser's small title tip — and so
+  does the AI candidate panel.
+- **A pickup keeps the metronome on the bar lines**: the accents followed the meter from the
+  piece's start, a pickup's beat short — the pickup's beat was accented and every bar's second.
+  They stand on the bar lines now, and so do a loop's rounds.
 - **A narrow preview wraps the header instead of squeezing it**: the buttons keep their size,
   and the header's groups — the score and Export, the AI and Range, the transport, the pages —
   each move to the next row as one. A separator left at a row's edge is not drawn.

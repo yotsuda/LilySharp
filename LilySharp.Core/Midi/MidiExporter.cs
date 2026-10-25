@@ -539,6 +539,7 @@ public sealed class MidiExporter
     {
         _drumOverrides = DrumOverrides.Build(tree.GetRoot());
         var midi = new MidiFile { TicksPerQuarterNote = _ticksPerQuarter };
+        _barTicks = midi.BarTicks;
 
         var conductorTrack = new MidiTrack { Name = "Tempo", Channel = 0 };
         // The default tempo at tick 0; a book's own `tempo` replaces it there (SetTempo:
@@ -2167,9 +2168,13 @@ public sealed class MidiExporter
             AlignBarLine(track, null, -1);
     }
 
+    // The bar lines' ticks of the file being exported (MidiFile.BarTicks).
+    private SortedSet<int>? _barTicks;
+
     /// <summary>A bar line at the current tick: the next bar opens here.</summary>
     private void MarkBarLine(MidiTrack track)
     {
+        _barTicks?.Add(_currentTick);
         _barStart = _currentTick;
         _barNotes = track.Notes.Count;
         _firstBarTicks = null;

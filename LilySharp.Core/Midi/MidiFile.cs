@@ -124,6 +124,14 @@ public class MidiFile
     /// <summary>The tracks contained in this MIDI file.</summary>
     public List<MidiTrack> Tracks { get; } = [];
 
+    /// <summary>
+    /// The ticks the bar lines stand at, as the music plays (every part's, repeats unfolded) —
+    /// where the bars begin, a pickup's end the first of them. Not written to .mid files: the
+    /// preview's metronome accents them and its loop rounds whole bars by them (owner's report
+    /// 2026-10-25: a pickup no meter change marked shifted the accents).
+    /// </summary>
+    public SortedSet<int> BarTicks { get; } = [];
+
     /// <summary>The piece's end: the last tick any track sounds or says anything at.
     /// Every track's end-of-track stands here (<see cref="WriteTo"/>).</summary>
     public int EndTick => Tracks.Count == 0 ? 0 : Tracks.Max(t => t.LastTick);

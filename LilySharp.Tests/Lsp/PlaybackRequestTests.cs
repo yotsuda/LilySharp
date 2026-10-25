@@ -147,6 +147,19 @@ public class PlaybackRequestTests
         Assert.Equal(new[] { true, false, false, false }, pb.Beats!.Select(b => b.A));
     }
 
+    /// <summary>A pickup keeps the accents on the bar lines (owner's report 2026-10-25): the
+    /// meter's grid from tick 0 had accented the pickup's beat and every bar's second.</summary>
+    [Fact]
+    public void APickupsBeat_IsNoBarsFirst_AndTheBarsAfterItAreAccentedOnTheirBarLines()
+    {
+        const string doc = "time 4/4\npart m { }\nsection A {\n  partial 4\n  m { g4 | c'4 d e f | g1 | }\n}\nform { A }\nscore { staff m }\n";
+        var pb = Playback(doc, null);
+        Assert.Null(pb.Error);
+        // At 120: the pickup's beat at 0, the bars at 0.5 and 2.5.
+        Assert.Equal(new[] { 0.0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0 }, pb.Beats!.Select(b => Math.Round(b.T, 3)));
+        Assert.Equal(new[] { 0.5, 2.5 }, pb.Beats!.Where(b => b.A).Select(b => Math.Round(b.T, 3)));
+    }
+
     [Fact]
     public void AText_PlaysAsTheDocumentWould_AndAChangedOneAsChanged()
     {

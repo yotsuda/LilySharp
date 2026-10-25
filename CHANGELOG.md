@@ -100,7 +100,9 @@ workflow attaches that section to the GitHub Release verbatim.
 
 - **`lilysharp/playback` names each note's track and the meter's beats**: `PlaybackNote.N` indexes
   the new `Parts` (the track names), and `Beats` is one entry per beat of the meter in force, the
-  bar's first marked — for the preview's part switches and metronome.
+  bar's first marked — for the preview's part switches and metronome. The bars are where the bar
+  lines stand as the music plays (`MidiFile.BarTicks`, every part's, repeats unfolded), so a
+  pickup's beats count back from its bar line and none is a bar's first.
 - **Each part's range** (`lilysharp/ranges`, `PartRanges`): the lowest and highest note of every
   part of the score shown, spelled as written (`B♭4`, C4 = middle C), with every place each is
   written, the share of the sounding time on each semitone between them and the tessitura (the

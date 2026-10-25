@@ -949,6 +949,50 @@ public sealed partial class LilySharpLanguageServer
         }
     }
 
+    /// <summary>
+    /// The beats the preview's metronome clicks (owner's request 2026-10-25), in ticks: one per
+    /// beat of the meter in force (its denominator's note) in every bar, the bar's first
+    /// accented. The bars are where the bar lines stand as the music plays
+    /// (<see cref="LilySharp.Core.Midi.MidiFile.BarTicks"/>), so a pickup keeps the accents on
+    /// the bar lines (they had followed the meter from tick 0, a pickup's beat short): a first
+    /// bar shorter than the meter is a pickup, its beats counted back from its bar line and none
+    /// accented. Past the last bar line, the meter's bars to the last note's end.
+    /// </summary>
+    internal static List<(int Tick, bool Accent)> MetronomeBeats(LilySharp.Core.Midi.MidiFile midi, int tpq)
+    {
+        var meters = midi.Tracks.SelectMany(t => t.TimeSignatures)
+            .GroupBy(m => m.Tick).Select(g => g.Last()).OrderBy(m => m.Tick).ToList();
+        if (meters.Count == 0 || meters[0].Tick > 0)
+            meters.Insert(0, new LilySharp.Core.Midi.TimeSignatureChange(0, 4, 4));
+        LilySharp.Core.Midi.TimeSignatureChange MeterAt(int tick) => meters.Last(m => m.Tick <= tick);
+        int Step(LilySharp.Core.Midi.TimeSignatureChange m) => Math.Max(1, tpq * 4 / Math.Max(1, m.Denominator));
+        int BarOf(LilySharp.Core.Midi.TimeSignatureChange m) => Step(m) * Math.Max(1, m.Numerator);
+
+        int endTick = midi.Tracks.SelectMany(t => t.Notes).Select(n => n.StartTick + n.DurationTicks).DefaultIfEmpty(0).Max();
+        var bars = midi.BarTicks.Where(t => t > 0 && t < endTick).ToList();
+        var beats = new List<(int, bool)>();
+        int start = 0;
+        if (bars.Count > 0 && bars[0] < BarOf(MeterAt(0)))
+        {
+            // The pickup: its beats end at its bar line, none of them a bar's first.
+            int step = Step(MeterAt(0));
+            for (int tick = bars[0] - step; tick >= 0; tick -= step)
+                beats.Insert(0, (tick, false));
+            start = bars[0];
+            bars.RemoveAt(0);
+        }
+        bars.Insert(0, start);
+        for (int i = 0; i < bars.Count; i++)
+        {
+            var m = MeterAt(bars[i]);
+            bool last = i + 1 == bars.Count;
+            int until = last ? endTick : bars[i + 1];
+            for (int k = 0, tick = bars[i]; tick < until; k++, tick += Step(m))
+                beats.Add((tick, last ? k % Math.Max(1, m.Numerator) == 0 : k == 0));
+        }
+        return beats;
+    }
+
     /// <summary>The note events a tree plays, in seconds — what <c>lilysharp/playback</c> and
     /// <c>lilysharp/playbackText</c> answer.</summary>
     private static PlaybackResponse PlaybackOf(SyntaxTree tree, string? renderName)
@@ -1009,29 +1053,12 @@ public sealed partial class LilySharpLanguageServer
                 })
                 .ToArray();
 
-            // The beats the preview's metronome clicks (owner's request 2026-10-25): one per
-            // beat of the meter in force (its denominator's note), the first of each bar
-            // accented, to the end of the last note. A meter counts its bars from where it is
-            // set, so a pickup that no meter change marks shifts the accents.
-            var meters = midi.Tracks.SelectMany(t => t.TimeSignatures)
-                .GroupBy(m => m.Tick).Select(g => g.Last()).OrderBy(m => m.Tick).ToList();
-            if (meters.Count == 0 || meters[0].Tick > 0)
-                meters.Insert(0, new LilySharp.Core.Midi.TimeSignatureChange(0, 4, 4));
-            int endTick = midi.Tracks.SelectMany(t => t.Notes).Select(n => n.StartTick + n.DurationTicks).DefaultIfEmpty(0).Max();
-            var beats = new List<PlaybackBeat>();
-            for (int i = 0; i < meters.Count; i++)
-            {
-                var m = meters[i];
-                int until = i + 1 < meters.Count ? meters[i + 1].Tick : endTick;
-                int step = Math.Max(1, tpq * 4 / Math.Max(1, m.Denominator));
-                for (int k = 0, tick = m.Tick; tick < until; k++, tick += step)
-                    beats.Add(new PlaybackBeat { T = SecondsAt(tick), A = k % Math.Max(1, m.Numerator) == 0 });
-            }
+            var beats = MetronomeBeats(midi, tpq).Select(b => new PlaybackBeat { T = SecondsAt(b.Tick), A = b.Accent }).ToArray();
             return new PlaybackResponse
             {
                 Notes = notes,
                 Parts = midi.Tracks.Select(t => t.Name).ToArray(),
-                Beats = beats.ToArray(),
+                Beats = beats,
             };
         }
         catch (Exception ex)

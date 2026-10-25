@@ -56,6 +56,13 @@ describe('an AI candidate plays before it is accepted', () => {
 
     // The notes sounding light on the panel's score (owner's request 2026-10-25): the preview
     // follows the candidate's own offsets (R) and reports them; the panel lights that pane's notes.
+    // The browser's title tip was too small to read (owner's report 2026-10-25): the panel shows
+    // its own, in VS Code's hover font, as the preview does.
+    it('shows its own tooltip in VS Code\'s hover look', () => {
+        assert.match(transform, /\.tip \{[^}]*font-size: var\(--vscode-font-size, 13px\)/);
+        assert.match(transform, /e\.setAttribute\('data-tip', e\.getAttribute\('title'\)\); e\.removeAttribute\('title'\);/);
+    });
+
     it('lights the notes sounding on the candidate panel, not on the preview', () => {
         assert.match(transform, /S: -1, R: n\.S \?\? -1 \}\)\);\s*playingPane = which;/);
         assert.match(extension, /const relay = notes\.some\(n => n\.R !== undefined\);/);
