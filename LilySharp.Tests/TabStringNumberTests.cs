@@ -121,6 +121,40 @@ public sealed class TabStringNumberTests
     }
 
     /// <summary>
+    /// An open string followed by an open LOWER string rings on and needs the left hand to mute
+    /// it, so the bass planner avoids the pair; a stopped lower note mutes the higher string by
+    /// itself, and the other way round the right hand does (USER SPECIFIED, 2026-10-25).
+    /// </summary>
+    [Fact]
+    public void AnOpenStringIsNotFollowedByAnOpenLowerOne()
+    {
+        // D then A: the A string's 5th, then the E string's 5th ("I often play it so").
+        Assert.Equal(new (int?, int)[] { (3, 5), (4, 5) }, BassTabFrets("d4 a r2 |")[0]);
+        // A then E: the E string's 5th, then the open E.
+        Assert.Equal(new (int?, int)[] { (4, 5), (4, 0) }, BassTabFrets("a4 e r2 |")[0]);
+        // (The open G then the F stopped on the 2nd string — the finger on the F mutes the G —
+        // is AFlatThenOpenGThenFThenEFlat_KeepsTheEFlatInTheFirstPosition's first bar.)
+    }
+
+    /// <summary>The same on five strings: an open E is not followed by the open low B
+    /// (the owner's La Isla Bonita, bars 23–24: the E on the 5th string's 5th).</summary>
+    [Fact]
+    public void AnOpenEIsNotFollowedByTheOpenLowB()
+    {
+        var src = "octave absolute\npart b {\n  tuning bass5\n  section A {\n    b,,8 e,, r4 r2 | b,,,2 r2 |\n  }\n}\n" +
+                  "form { A }\nscore {\n  tab b\n}\n";
+        var tree = SyntaxTree.Parse(src);
+        var tab = new MeasureCollector().CollectMultiStaff(tree, RenderSpecParser.FindFirst(tree)!)
+            .EnumerateStaves().First(s => s.Staff.IsTab).Staff;
+        int shift = Tunings.SoundingShift(tab.TabSourceClef, tab.Transposition);
+        var notes = tab.PrimaryVoice.Measures.SelectMany(m => m.Items).OfType<NoteItem>()
+            .Select(n => (n.StringNumber, Tunings.CalculateFret(n.Midi + shift, Tunings.GetTuning(TuningType.Bass5), n.StringNumber ?? 0).fret))
+            .ToArray();
+        // B1 on the E string's 7th, the E on the B string's 5th, then the open B.
+        Assert.Equal(new (int?, int)[] { (4, 7), (5, 5), (5, 0) }, notes);
+    }
+
+    /// <summary>
     /// A leap of an octave or more frees the hand (USER APPROVED, 2026-09-14): the note after it
     /// starts as low as it can, as a first note does.
     /// </summary>

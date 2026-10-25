@@ -247,7 +247,7 @@ public sealed class TabPlannerLab
                 var notes = tab.PrimaryVoice.Measures.SelectMany(m => m.Items).OfType<LilySharp.Core.Svg.Model.NoteItem>().ToList();
                 if (notes[1].StringNumber != 3) broken.Add("a\\4 b low");
             }
-            Check("D A: stopped then open", "d4 a r2 |", 0, [(3, 5), (3, 0)]);
+            Check("D A: not two open strings", "d4 a r2 |", 0, [(3, 5), (4, 5)]);
             Check("A E: stopped then open", "a4 e r2 |", 0, [(4, 5), (4, 0)]);
         }
         finally { BassFingeringPlanner.t_weightsForMeasurement = null; }

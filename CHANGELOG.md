@@ -8,6 +8,13 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Engraving
 
+- **The bass planner does not follow an open string with an open lower one** (the owner's
+  muting rule: the higher string rings on and, with no finger down, the left hand must stop to
+  mute it; a stopped lower note mutes it by itself, and upward the right hand does). D then A is
+  the A string's 5th then the E string's 5th; an open E before the low B's open string becomes
+  the B string's 5th (La Isla Bonita bars 23–24, as the owner fingered it). Over the owner's books
+  the pair falls from 250 to 52 (the books themselves: 90), and the strings left to write from
+  6,948 to 6,925. The frozen fingering changes with it, approved by the owner.
 - **A bass tab's strings are chosen by a planner fitted to the owner's fingering, and frozen.**
   The owner fingered 267 bass books by hand in LilyPond; LilyPond's own string for every one of
   their 119,448 tab notes was read back (an unmarked note is always its highest string, the
