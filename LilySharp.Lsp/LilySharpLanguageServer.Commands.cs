@@ -907,6 +907,42 @@ public sealed partial class LilySharpLanguageServer
         return PlaybackOf(tree, @params.RenderName);
     }
 
+    /// <summary>
+    /// The lowest and highest note of each part of the score the preview shows, and where each is
+    /// written (owner's request 2026-10-25: check the parts' ranges; find a singer's top note) —
+    /// read off the notes Play sounds (<see cref="LilySharp.Core.Midi.PartRanges"/>).
+    /// </summary>
+    [JsonRpcMethod("lilysharp/ranges", UseSingleObjectParameterDeserialization = true)]
+    public Task<RangesResponse> GetRangesAsync(RangesParams @params, CancellationToken token)
+        => OffDispatch(() => GetRanges(@params), token);
+
+    public RangesResponse GetRanges(RangesParams @params)
+    {
+        var doc = _documentManager.GetDocument(@params.TextDocument.Uri);
+        if (doc == null)
+            return new RangesResponse { Error = "Document not found" };
+        var (tree, _) = ExpandUsings(doc, @params.TextDocument.Uri);
+        if (tree.HasErrors)
+            return new RangesResponse { Error = "Score has errors" };
+        try
+        {
+            var score = RenderSpecParser.Choose(RenderSpecParser.FindAll(tree), @params.RenderName);
+            var midi = new LilySharp.Core.Midi.MidiExporter { Form = score?.Form, Score = score }.Export(tree);
+            static RangeEnd Dto(LilySharp.Core.Midi.RangeEnd e)
+                => new() { Pitch = e.Pitch, Name = e.Name, Positions = e.Positions.ToArray() };
+            return new RangesResponse
+            {
+                Parts = LilySharp.Core.Midi.PartRanges.Of(midi, doc.Text)
+                    .Select(p => new PartRange { Name = p.Name, Low = Dto(p.Low), High = Dto(p.High) })
+                    .ToArray(),
+            };
+        }
+        catch (Exception ex)
+        {
+            return new RangesResponse { Error = ex.Message };
+        }
+    }
+
     /// <summary>The note events a tree plays, in seconds — what <c>lilysharp/playback</c> and
     /// <c>lilysharp/playbackText</c> answer.</summary>
     private static PlaybackResponse PlaybackOf(SyntaxTree tree, string? renderName)

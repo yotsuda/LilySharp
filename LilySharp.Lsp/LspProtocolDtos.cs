@@ -304,6 +304,42 @@ public class PlaybackResponse
     public string? Error { get; set; }
 }
 
+/// <summary>Parameters for the lilysharp/ranges request: the document and the score shown, as
+/// <see cref="PlaybackParams"/>.</summary>
+public class RangesParams
+{
+    public TextDocumentIdentifier TextDocument { get; set; } = null!;
+    public string? RenderName { get; set; }
+}
+
+/// <summary>One end of a part's range: the pitch, its name, and every place it is written.</summary>
+public class RangeEnd
+{
+    /// <summary>The sounding MIDI pitch (fractional for quarter tones).</summary>
+    public double Pitch { get; set; }
+    /// <summary>The pitch as a musician names it, spelled as written where it can be read
+    /// (<c>B♭4</c>; C4 = middle C).</summary>
+    public string Name { get; set; } = "";
+    /// <summary>The source offsets of the notes at this pitch, in the order they sound, each once.</summary>
+    public int[] Positions { get; set; } = [];
+}
+
+/// <summary>A part's lowest and highest note.</summary>
+public class PartRange
+{
+    public string Name { get; set; } = "";
+    public RangeEnd Low { get; set; } = null!;
+    public RangeEnd High { get; set; } = null!;
+}
+
+/// <summary>Response for the lilysharp/ranges request: each part that sounds pitches, in score
+/// order — not the chord rows, not the drums.</summary>
+public class RangesResponse
+{
+    public PartRange[]? Parts { get; set; }
+    public string? Error { get; set; }
+}
+
 /// <summary>Parameters for the lilysharp/regroup request.</summary>
 public class RegroupParams
 {

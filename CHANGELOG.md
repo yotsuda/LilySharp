@@ -91,6 +91,10 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Editor
 
+- **Each part's range** (`lilysharp/ranges`, `PartRanges`): the lowest and highest note of every
+  part of the score shown, spelled as written (`B♭4`, C4 = middle C), with every place each is
+  written — read off the notes Play sounds, so transpositions, repeats and phrases count; a
+  part's chord row and the drums are left out. The preview's *Range* panel shows it.
 - **Picking a score row's lyrics track goes on to its part**: `lyrics ▮` writes `words sings `
   and opens the part list (unless the row already says `sings`).
 - **Remove All String Numbers** (`lilysharp/removeStringNumbers`, `StringNumberRemover`): every

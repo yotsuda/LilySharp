@@ -4,6 +4,15 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+### Each part's range, in the preview
+
+- **Range in the preview's header** opens a panel over the score: each part's lowest (▼) and
+  highest (▲) note, spelled as written, with the bar it stands in — to check a part's range, and
+  for a singer to find the top note at once. A click shows the note on the score and puts the
+  editor's caret on it; a pitch written in several places says how many (*2/3*) and goes on to
+  the next with each click. It follows the score picked in the header and every edit while open.
+  The pitches are the sounding ones, with C4 for middle C.
+
 ### The preview's AI menu says what it will change, everywhere on the score
 
 - **The right-click menu offers the AI wherever you click**, named for where it points the AI:

@@ -1426,6 +1426,22 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
                 }
                 return;
             }
+            // The Range panel (owner's request 2026-10-25): each part's lowest and highest note
+            // in the score shown, and where each is written.
+            if (message.type === 'requestRanges') {
+                if (!client || !clientReady) {
+                    panel.webview.postMessage({ type: 'rangesData', error: 'language server not running' });
+                    return;
+                }
+                try {
+                    const r = await client.sendRequest<{ Parts?: unknown[] | null; Error?: string | null }>(
+                        'lilysharp/ranges', { textDocument: { uri }, renderName: selectedRenders.get(uri) || null });
+                    panel.webview.postMessage({ type: 'rangesData', parts: r.Parts ?? null, error: r.Error ?? null });
+                } catch (e) {
+                    panel.webview.postMessage({ type: 'rangesData', error: String(e) });
+                }
+                return;
+            }
             // MIDI out (docs/playback-design.md §6): the page decides what plays and the
             // server is the port. A play answers when the playback's zero is on the wall
             // clock, which the page's highlight then follows; a play the server could not
@@ -3491,6 +3507,27 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             color: var(--vscode-button-foreground);
         }
         .toolbar button.ai:hover { background: var(--vscode-button-hoverBackground); }
+        .toolbar button.on { background: var(--vscode-button-secondaryHoverBackground, rgba(128, 128, 128, 0.3)); }
+        /* The Range panel (owner's request 2026-10-25): each part's lowest and highest note over
+           the score, top right under the toolbar; a click on one shows it on the score. */
+        .range-panel {
+            position: fixed; right: 12px; z-index: 20;
+            background: var(--vscode-editorWidget-background, #f3f3f3);
+            color: var(--vscode-editorWidget-foreground, inherit);
+            border: 1px solid var(--vscode-editorWidget-border, #c8c8c8);
+            border-radius: 4px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+            padding: 6px 8px; font-size: 12px; max-height: 60vh; overflow: auto;
+        }
+        .range-panel[hidden] { display: none; }
+        .range-panel table { border-collapse: collapse; }
+        .range-panel th { text-align: left; font-weight: 600; opacity: 0.75; padding: 2px 8px; }
+        .range-panel td { padding: 2px 8px; white-space: nowrap; }
+        .range-panel td.end { cursor: pointer; border-radius: 3px; }
+        .range-panel td.end:hover { background: var(--vscode-list-hoverBackground, rgba(128, 128, 128, 0.2)); }
+        .range-panel td.end.cur { background: var(--vscode-list-activeSelectionBackground, rgba(0, 120, 215, 0.25)); }
+        .range-panel .pitch { font-weight: 600; }
+        .range-panel .where { opacity: 0.7; }
+        .range-panel .note { opacity: 0.7; padding: 4px 8px 0; }
     </style>
 </head>
 <!-- The preview is a rendered score, not an editable text buffer, so VS Code's
@@ -3509,6 +3546,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         <button id="exportBtn" type="button">Export…</button>
         <span class="sep"></span>
         <button id="aiTransformBtn" class="ai" type="button">✨ Ask AI…</button>
+        <button id="rangeBtn" type="button" title="Each part's lowest and highest note — click one to find it on the score">Range</button>
         <span class="sep"></span>
         <button id="playBtn" type="button" title="Play">▶</button>
         <button id="stopBtn" type="button" title="Stop" disabled>⏹</button>
@@ -3521,6 +3559,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         <button id="lastPageBtn" type="button" title="Last page">⏭</button>
     </div>
     <div id="errorBanner" class="error-banner" role="alert"></div>
+    <div id="rangePanel" class="range-panel" hidden></div>
     <div class="main-content">
         <div class="container">
             <div id="svgContainer">
@@ -4915,6 +4954,107 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         let pendingStartPos = -1;   // play-button start point (the highlighted note)
         let lastResolvedPos = -1;   // the note the current highlight actually resolved to
 
+        // ---- The Range panel (owner's request 2026-10-25): each part's lowest and highest note
+        // (lilysharp/ranges — what Play sounds), to check a part's range and find a singer's top
+        // note at once. A click on one shows it on the score and puts the editor's caret on it; a
+        // pitch written in several places goes to the next on each click. Asked again after
+        // every render while open.
+        const rangeBtn = document.getElementById('rangeBtn');
+        const rangePanel = document.getElementById('rangePanel');
+        let rangeParts = null;      // the last answer: [{ Name, Low, High }], each end { Pitch, Name, Positions }
+        let rangeError = null;
+        const rangeAt = {};         // 'part|Low' / 'part|High' -> the index of the place shown
+        let rangeCur = null;        // the key of the end shown last
+        function refreshRanges() {
+            if (!rangePanel.hidden) vscode.postMessage({ type: 'requestRanges' });
+        }
+        rangeBtn.addEventListener('click', () => {
+            rangePanel.hidden = !rangePanel.hidden;
+            rangeBtn.classList.toggle('on', !rangePanel.hidden);
+            if (rangePanel.hidden) return;
+            rangePanel.style.top = (document.querySelector('.toolbar').getBoundingClientRect().bottom + 6) + 'px';
+            if (!rangeParts && !rangeError) rangePanel.textContent = 'Reading the ranges…';
+            refreshRanges();
+        });
+        // The bar a note is drawn in: the bar box over its x nearest it in y (a high note stands
+        // above its staff's box).
+        function barOfPos(pos) {
+            sourcePositions();
+            const el = (posElements.get(pos) || [])[0];
+            if (!el) return null;
+            const b = el.getBoundingClientRect();
+            const cx = (b.left + b.right) / 2, cy = (b.top + b.bottom) / 2;
+            let best = null, bestGap = Infinity;
+            for (const r of svgContainer.querySelectorAll('rect.bar-box[data-bar]')) {
+                const k = r.getBoundingClientRect();
+                if (cx < k.left || cx > k.right) continue;
+                const gap = cy < k.top ? k.top - cy : cy > k.bottom ? cy - k.bottom : 0;
+                if (gap < bestGap) { best = r; bestGap = gap; }
+            }
+            return best ? best.getAttribute('data-bar') : null;
+        }
+        function renderRanges() {
+            rangePanel.textContent = '';
+            if (rangeError) { rangePanel.textContent = 'Range: ' + rangeError; return; }
+            if (!rangeParts) return;
+            if (rangeParts.length === 0) { rangePanel.textContent = 'No pitched notes in this score.'; return; }
+            const table = document.createElement('table');
+            const head = document.createElement('tr');
+            for (const h of ['Part', 'Lowest', 'Highest']) {
+                const th = document.createElement('th');
+                th.textContent = h;
+                head.appendChild(th);
+            }
+            table.appendChild(head);
+            for (const p of rangeParts) {
+                const tr = document.createElement('tr');
+                const name = document.createElement('td');
+                name.textContent = p.Name;
+                tr.appendChild(name);
+                tr.appendChild(rangeCell(p, 'Low'));
+                tr.appendChild(rangeCell(p, 'High'));
+                table.appendChild(tr);
+            }
+            rangePanel.appendChild(table);
+            const note = document.createElement('div');
+            note.className = 'note';
+            note.textContent = 'Sounding pitches · C4 = middle C';
+            rangePanel.appendChild(note);
+        }
+        function rangeCell(p, end) {
+            const e = p[end];
+            const key = p.Name + '|' + end;
+            const n = e.Positions.length;
+            const i = Math.min(rangeAt[key] || 0, Math.max(0, n - 1));
+            const td = document.createElement('td');
+            td.className = 'end' + (key === rangeCur ? ' cur' : '');
+            const pitch = document.createElement('span');
+            pitch.className = 'pitch';
+            pitch.textContent = (end === 'High' ? '▲ ' : '▼ ') + e.Name;
+            const bar = n > 0 ? barOfPos(e.Positions[i]) : null;
+            const where = document.createElement('span');
+            where.className = 'where';
+            where.textContent = (bar ? '  bar ' + bar : '') + (n > 1 ? '  ' + (i + 1) + '/' + n : '');
+            td.append(pitch, where);
+            td.title = n > 1 ? 'Written in ' + n + ' places — click for the next' : 'Show it on the score';
+            td.addEventListener('click', () => showRangeEnd(e, key));
+            return td;
+        }
+        function showRangeEnd(e, key) {
+            const n = e.Positions.length;
+            if (n === 0) return;
+            // The first click shows the place shown last; the next ones go on to the next place.
+            if (rangeCur === key) rangeAt[key] = ((rangeAt[key] || 0) + 1) % n;
+            rangeCur = key;
+            const pos = e.Positions[Math.min(rangeAt[key] || 0, n - 1)];
+            clearHighlights();
+            const painted = highlightPositions([pos]);
+            lastHighlightPos = pos;
+            if (painted[0]) painted[0].scrollIntoView({ block: 'center', inline: 'center', behavior: 'smooth' });
+            vscode.postMessage({ type: 'jumpToPosition', position: pos });
+            renderRanges();
+        }
+
         function setPlayUi(playing) {
             // The host's follower waits for the music to stop before it turns to another file.
             if (playing !== !document.getElementById('stopBtn').disabled) {
@@ -5537,6 +5677,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                         collectPages();
                         applyBarFlags();
                         lightCaretBar();
+                        refreshRanges();
                         // Keep the fit across re-renders (this is also what fits
                         // the FIRST render of a freshly opened preview); otherwise
                         // re-apply the current manual zoom to the fresh SVG.
@@ -5600,6 +5741,11 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 // 2026-10-25) — played as the Play button plays this score's, from the top. They
                 // are not this page's: the cached note list is left alone, and their source
                 // positions (R) are the candidate's, followed for its panel — nothing here lights up.
+                case 'rangesData':
+                    rangeParts = message.parts || null;
+                    rangeError = message.error || null;
+                    renderRanges();
+                    break;
                 case 'playNotes':
                     startPlayback(message.notes, 0);
                     break;
