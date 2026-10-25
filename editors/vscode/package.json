@@ -145,7 +145,7 @@
         "lilysharp.serverPath": {
           "type": "string",
           "default": "",
-          "description": "Path to the Lily# language server executable"
+          "description": "Path to a Lily# language server executable to use instead of the one bundled with the extension. Leave empty (the bundled server) unless you build the server yourself."
         },
         "lilysharp.trace.server": {
           "type": "string",
@@ -261,7 +261,7 @@
         "lilysharp.ai.model": {
           "type": "string",
           "default": "",
-          "markdownDescription": "The language model *Transform Selection with AI* uses: a model id or family from **Lily#: Select AI Model…**. Empty chooses automatically — the largest model on offer, passing over the small ones (mini, nano, lite, …), which write poor Lily#. Ghost Completion has its own: `#lilysharp.ai.ghostModel#`."
+          "markdownDescription": "The language model *Ask AI…* (Ctrl+I) uses: a model id or family from **Lily#: Select AI Model…**. Empty chooses automatically — the largest model on offer, passing over the small ones (mini, nano, lite, …), which write poor Lily#. Ghost Completion has its own: `#lilysharp.ai.ghostModel#`."
         },
         "lilysharp.ai.ghostModel": {
           "type": "string",
@@ -271,7 +271,7 @@
         "lilysharp.ai.omrFixModel": {
           "type": "string",
           "default": "",
-          "markdownDescription": "The language model *Fix OMR Marks with AI…* uses: a model id or family from **Lily#: Select AI Model…**. One request a bar, only when you run the command. Empty chooses automatically — the largest model on offer, as *Transform Selection* does; a faster model shortens a long batch at the cost of some readings."
+          "markdownDescription": "The language model *Fix OMR Marks with AI…* uses: a model id or family from **Lily#: Select AI Model…**. One request a bar, only when you run the command. Empty chooses automatically — the largest model on offer, as *Ask AI…* does; a faster model shortens a long batch at the cost of some readings."
         },
         "lilysharp.ai.omrFixImages": {
           "type": "boolean",
@@ -281,7 +281,7 @@
         "lilysharp.ai.omrFixVerify": {
           "type": "boolean",
           "default": true,
-          "markdownDescription": "Have the OMR reader compare each proposal *Fix OMR Marks with AI…* makes with the scanned page before it is shown (`omr verify --candidate --bars`, a few seconds a bar; needs a reader that reports `verify-bars`). A proposal the scan contradicts is shown with *verify ✗* and left out of *Accept all*. Off: the compile and bar-length gates only."
+          "markdownDescription": "Have the OMR reader compare each proposal *Fix OMR Marks with AI…* makes with the scanned page before it is shown (`omr verify --candidate --bars`, a few seconds a bar; needs a reader that reports `verify-bars`). A proposal the scan contradicts is shown with *verify ✗* and left out of *Accept All*. Off: the compile and bar-length gates only."
         },
         "lilysharp.ai.omrFixBatch": {
           "type": "number",

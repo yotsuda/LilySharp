@@ -61,7 +61,7 @@ export async function resolveChatClient(quiet: boolean, use: ModelUse = 'transfo
 }
 
 /**
- * What the model is for. The two want opposite things: Transform Selection is one deliberate
+ * What the model is for. The two want opposite things: Ask AI is one deliberate
  * request, where a strong model is worth a few seconds; Ghost Completion answers as you type,
  * and VS Code cancels an inline suggestion the moment the caret moves — the automatic pick of
  * the strongest model (claude-fable-5.1) took 1.9–3.2 s a bar and every one was cancelled
@@ -123,7 +123,7 @@ export function autoPick(models: readonly vscode.LanguageModelChat[], use: Model
 
 /**
  * "Lily#: Select AI Model" — first which feature, then the models VS Code offers; the pick is
- * saved to `lilysharp.ai.model` (Transform Selection), `lilysharp.ai.ghostModel` (Ghost
+ * saved to `lilysharp.ai.model` (Ask AI), `lilysharp.ai.ghostModel` (Ghost
  * Completion) or `lilysharp.ai.omrFixModel` (Fix OMR marks).
  */
 export async function pickAiModel(): Promise<void> {
@@ -138,7 +138,7 @@ export async function pickAiModel(): Promise<void> {
     const shown = (use: ModelUse) => cfg.get<string>(SETTING[use], '').trim() || `Automatic (${autoPick(models, use)?.name ?? 'none'})`;
     type UseItem = vscode.QuickPickItem & { use: ModelUse };
     const which = await vscode.window.showQuickPick<UseItem>([
-        { label: 'Transform Selection with AI', description: shown('transform'), detail: 'One request at a time: a strong model is worth waiting for.', use: 'transform' },
+        { label: 'Ask AI (Ctrl+I)', description: shown('transform'), detail: 'One request at a time: a strong model is worth waiting for.', use: 'transform' },
         { label: 'Ghost Completion', description: shown('ghost'), detail: 'Answers as you type: a fast model, or the suggestion is cancelled before it shows.', use: 'ghost' },
         { label: 'Fix OMR marks with AI', description: shown('omrFix'), detail: 'One request a bar, on request only: a strong model reads the notation best; a faster one shortens a long batch.', use: 'omrFix' },
     ], { title: 'Lily# — choose the AI model for…' });
