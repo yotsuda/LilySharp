@@ -137,13 +137,18 @@ public sealed class SharedRendererPdfTests
         var bytes = PdfGenerator.Generate(tree, PdfRenderOptions.Default);
         var stream = DecodeAllContentStreams(bytes);
 
-        // Music font (Emmentaler) selected at FontSize × scale = 4 × 6 = 24 pt.
-        // PdfSharpCore assigns /F0, /F1, … in encounter order; the index depends
-        // on how many text faces (serif regular/bold/italic) are also embedded,
-        // so match on the size selection alone — 24 pt is unique to the music
-        // font (text is 19.2 pt).
-        Assert.True(stream.Contains(" 24 Tf"),
-            "Expected a 24-pt music font selection (Emmentaler).");
+        // Music font (Emmentaler) selected at FontSize × scale = 4 staff spaces (≈ 19.93 pt
+        // at LilyPond's staff space, PdfRenderOptions.DefaultStaffSpacePt; 24 pt until the
+        // scale was 6 — owner's report 2026-10-25). PdfSharpCore assigns /F0, /F1, … in
+        // encounter order; the index depends on how many text faces are also embedded, so
+        // match on the size selection alone, every plausible rounding of it.
+        double scale = PdfRenderOptions.DefaultStaffSpacePt;
+        static List<string> Forms(double pt) => Enumerable.Range(0, 5)
+            .Select(d => " " + Math.Round(pt, d).ToString(System.Globalization.CultureInfo.InvariantCulture) + " Tf")
+            .ToList();
+        var music = Forms(4 * scale);
+        Assert.True(music.Any(stream.Contains),
+            "Expected the music font selection (Emmentaler); tried " + string.Join(", ", music));
 
         // Lyrics use serif at LilyPond's own LyricText em × scale. It was an invented
         // 0.8 × FontSize (= 3.2 ss, 19.2 pt here) until 2026-07-28; the size now comes from
@@ -151,11 +156,8 @@ public sealed class SharedRendererPdfTests
         // The exact decimals PdfSharpCore prints are its business, so every plausible
         // rounding of the one computed size is accepted — the point of the assertion is
         // that the lyric run is NOT at the music font's size.
-        double lyricPt = LilySharp.Core.Svg.EngravingDefaults.LyricTextFontSize * 6;
-        var forms = Enumerable.Range(0, 5)
-            .Select(d => " " + Math.Round(lyricPt, d).ToString(
-                System.Globalization.CultureInfo.InvariantCulture) + " Tf")
-            .ToList();
+        double lyricPt = LilySharp.Core.Svg.EngravingDefaults.LyricTextFontSize * scale;
+        var forms = Forms(lyricPt);
         Assert.True(forms.Any(stream.Contains),
             $"Expected a {lyricPt:F4}-pt serif font selection for lyrics; tried "
             + string.Join(", ", forms));

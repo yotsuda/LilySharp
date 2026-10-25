@@ -140,8 +140,28 @@ public class PdfRendererTests
         var options = PdfRenderOptions.Default;
         Assert.Equal(595.28, options.PageWidthPt);
         Assert.Equal(841.89, options.PageHeightPt);
-        Assert.Equal(6.0, options.StaffSpacePt);
+        Assert.Equal(5.0 * 72.0 / 72.27, options.StaffSpacePt, 12);
         Assert.True(options.EmbedFont);
+    }
+
+    /// <summary>
+    /// The PDF's page is the paper the book is laid out on, at its own size — A4 by default,
+    /// Letter under <c>paper { size letter }</c> — whether the music fills it or not (owner's
+    /// report 2026-10-25: an A4 book came out 753 × 1050 pt, the staff 1.2 times LilyPond's and
+    /// an 18 pt border round it).
+    /// </summary>
+    [Theory]
+    [InlineData("", 595.28, 841.89)]
+    [InlineData("paper { size letter }\n", 612.0, 792.0)]
+    public void PdfGenerator_PageIsThePaper(string paper, double width, double height)
+    {
+        var tree = SyntaxTree.Parse(paper + "part m { clef treble }\nsection A { m { c'4 d' e' f' | } }\nform { ~A }\nscore { staff m }\n");
+        var text = System.Text.Encoding.ASCII.GetString(PdfGenerator.Generate(tree));
+        var box = System.Text.RegularExpressions.Regex.Match(text, @"/MediaBox\s*\[\s*0\s+0\s+([\d.]+)\s+([\d.]+)\s*\]");
+        Assert.True(box.Success, "no MediaBox");
+        var inv = System.Globalization.CultureInfo.InvariantCulture;
+        Assert.Equal(width, double.Parse(box.Groups[1].Value, inv), 0);
+        Assert.Equal(height, double.Parse(box.Groups[2].Value, inv), 0);
     }
 
     [Fact]

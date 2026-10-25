@@ -37,8 +37,17 @@ public sealed class PdfRenderOptions
     /// <summary>Page height in points.</summary>
     public double PageHeightPt { get; init; } = 841.89; // A4
 
-    /// <summary>Staff space size in points. Controls the overall scale.</summary>
-    public double StaffSpacePt { get; init; } = 6.0; // ~1.7mm, standard for engraving
+    /// <summary>Staff space size in PDF points. Controls the overall scale.</summary>
+    /// <remarks>
+    /// LilyPond's 20pt staff: a staff space of 5 TeX points (LayoutOptions.DefaultStaffSpaceMm),
+    /// 5 × 72 / 72.27 PDF points — at which the paper the layout is drawn on comes out its own
+    /// size (owner's report 2026-10-25: an A4 book was 753 × 1050 pt, not 595 × 842). It was
+    /// 6.0, said to be "~1.7mm" — it is 2.1 mm, 1.2 times the staff.
+    /// </remarks>
+    public double StaffSpacePt { get; init; } = DefaultStaffSpacePt;
+
+    /// <summary>LilyPond's default staff space in PDF points (≈ 4.981).</summary>
+    public const double DefaultStaffSpacePt = 5.0 * 72.0 / 72.27;
 
     /// <summary>Whether to embed the music font in the PDF.</summary>
     public bool EmbedFont { get; init; } = true;

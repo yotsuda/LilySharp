@@ -64,7 +64,10 @@ public static class PdfGenerator
         {
             // The paper keeps its size on another staff space (`--set staffSpace=…`).
             PointsPerSpace = options.StaffSpacePt * multiScore.Paper.StaffSpaceScale,
+            // The page is the layout's paper, margins and all, so nothing is added round it:
+            // an A4 book is 595 × 842 pt (owner's report 2026-10-25).
             AutoSizePages = true,
+            AutoSizeMarginPt = 0,
             FontDirectory = options.FontDirectory,
             EditorMarks = options.EditorMarks,
             // The `font` directive travels ON THE SCORE and reaches the document through

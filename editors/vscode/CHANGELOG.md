@@ -68,6 +68,8 @@ All notable changes to the Lily# VS Code extension are documented here.
   score — dark grey (#2b2b2b) around white pages; under the dark scheme, whose pages are black,
   mid grey (#3c3c3c). The AI candidate panel shows its pages the same way. Exports keep their
   pages edge to edge.
+- **Export PDF writes pages of the paper's real size** — A4 is 595 × 842 pt; it was 753 × 1050,
+  the music 1.2 times too large.
 - **A short score shows its whole page**: a score that fits one page used to be cut under its
   music, an A4-wide strip; the preview, Export SVG and Export PDF now show the paper. Export PNG
   still cuts it under the music, for a picture on a web page.

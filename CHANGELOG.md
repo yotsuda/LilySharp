@@ -14,6 +14,11 @@ workflow attaches that section to the GitHub Release verbatim.
   now show the paper, as LilyPond does; the PNG — a picture for a web page — is still cut under
   the music, and `lysc boxes`, read with those PNGs, keeps their page. Nothing moves on the page:
   the SVG snapshots of 247 one-page books change in their height and the page rectangle alone.
+- **A PDF page is the paper's own size**: an A4 book is 595 × 842 pt (Letter, 612 × 792). It
+  was 753 × 1050 pt — the staff drawn at 6 pt a staff space, 1.2 times LilyPond's 4.98 (the
+  option's comment called 6 pt "~1.7 mm"; it is 2.1 mm), and an 18 pt border added round the
+  paper, whose margins the layout already holds. Printed at 100% a page now measures what its
+  `paper { }` says.
 - **The preview's pages stand apart**: the interactive SVG leaves a 2.5-staff-space gap between
   two pages, each page its own white sheet (exports keep their pages edge to edge).
 - **A slur no longer keeps a tab's notes on one string; a tie still does** (the owner's
