@@ -730,6 +730,8 @@ public sealed partial class LilySharpLanguageServer
         AfterMidiInstrument,
         /// <summary><c>tuning |</c> in a part header — the tuning words.</summary>
         AfterTuning,
+        /// <summary><c>transposition |</c> in a part header — the four octave markers.</summary>
+        AfterTransposition,
         AfterRemoveEmpty,
         /// <summary><c>pitch |</c> where it says how notes are TYPED (top level, part header):
         /// written | concert.</summary>
@@ -754,8 +756,11 @@ public sealed partial class LilySharpLanguageServer
         /// <summary><c>form |</c> in a score — the top-level form it plays, which must already
         /// be declared (LYS1018 otherwise).</summary>
         AfterScoreForm,
-        /// <summary><c>transpose |</c> — a pitch is typed there, which no list serves.</summary>
+        /// <summary><c>transpose |</c> — the target pitch: the letters from c up and down, each
+        /// with its interval (owner's request 2026-10-26).</summary>
         AfterTransposePitch,
+        /// <summary><c>shift |</c> — a number of semitones, which no list serves.</summary>
+        AfterShiftAmount,
         /// <summary><c>tab |</c> in a score: the declared parts, and the tunings that may
         /// stand before one (<c>tab bass5 melody</c>).</summary>
         AfterTabRef,
@@ -1059,12 +1064,13 @@ public sealed partial class LilySharpLanguageServer
                 // `revert |`: the same targets, without a value (revert Grob.property).
                 case "revert": return CompletionContext.AfterRevert;
                 // `transpose |` — at the top level, in a part header and on a score header
-                // alike a PITCH follows (`transpose bes,`), which no list can offer; an
-                // empty list keeps the popup from proposing the position's keywords there.
+                // alike a PITCH follows (`transpose bes,`): the targets from c, up and down
+                // (owner's request 2026-10-26; until then an empty list, which only kept the
+                // popup from proposing the position's keywords there).
                 case "transpose": return CompletionContext.AfterTransposePitch;
                 // `shift |` — a number of semitones follows (`shift +1`), which no list can
-                // offer either; the same empty list keeps the keywords away (2026-10-17).
-                case "shift": return CompletionContext.AfterTransposePitch;
+                // offer; an empty list keeps the keywords away (2026-10-17).
+                case "shift": return CompletionContext.AfterShiftAmount;
             }
 
             // `override [once] Grob.property = |` → the values that fit the property
@@ -1200,6 +1206,13 @@ public sealed partial class LilySharpLanguageServer
             && IsInsidePartBlock(scan.Stack)
             && !IsInsideStringLiteral(text, offset))
             return CompletionContext.AfterTuning;
+
+        // `transposition |` in a part header: the octave markers (owner's request 2026-10-26).
+        // Gated like `tuning`.
+        if (prevWord == "transposition"
+            && IsInsidePartBlock(scan.Stack)
+            && !IsInsideStringLiteral(text, offset))
+            return CompletionContext.AfterTransposition;
 
         // (`removeEmpty` left the part header on 2026-09-08 — it is a score selector now,
         // `staff m as removeEmpty V`, served inside the score branch below.)

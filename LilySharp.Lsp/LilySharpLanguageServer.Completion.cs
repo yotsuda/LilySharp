@@ -304,8 +304,10 @@ public sealed partial class LilySharpLanguageServer
             // `form |` in a score: the forms this document declares — the one thing that fits.
             CompletionContext.AfterScoreForm =>
                 GetDeclaredNameCompletions(doc.Text, "form", "Form this score plays"),
-            // `transpose |`: a pitch is typed; nothing to list.
+            // `transpose |`: the target pitches from c, up and down.
             CompletionContext.AfterTransposePitch => GetTransposePitchCompletions(),
+            // `shift |`: a number of semitones is typed; nothing to list.
+            CompletionContext.AfterShiftAmount => GetShiftAmountCompletions(),
             // A lyrics body: the verse headers.
             CompletionContext.LyricsBody => GetLyricVoltaCompletions(),
             CompletionContext.AfterChordsRef => GetDeclaredNameCompletions(doc.Text, "chords", "Chord part"),
@@ -333,6 +335,7 @@ public sealed partial class LilySharpLanguageServer
             CompletionContext.AfterInstrument => GetInstrumentCompletions(doc.Text, offset, position),
             CompletionContext.AfterMidiInstrument => GetMidiInstrumentCompletions(doc.Text, offset, position),
             CompletionContext.AfterTuning => GetTuningCompletions(),
+            CompletionContext.AfterTransposition => GetTranspositionCompletions(),
             CompletionContext.AfterRemoveEmpty => GetRemoveEmptyCompletions(),
             CompletionContext.AfterPitch => GetPitchModeCompletions(),
             CompletionContext.AfterPagePitch => GetPagePitchModeCompletions(),

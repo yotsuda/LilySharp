@@ -180,9 +180,10 @@ public sealed partial class LilySharpLanguageServer
 
     // Prose per property, and whether the editor has a VALUE list to enumerate for it.
     // ⚠️ Values must be true only where a value context actually exists — AfterClef,
-    // AfterInstrument, AfterPitch, AfterMidiInstrument, AfterTuning. It is false for `octave` because the
+    // AfterInstrument, AfterPitch, AfterMidiInstrument, AfterTuning, AfterTransposePitch,
+    // AfterTransposition. It is false for `octave` because the
     // part-header `octave` takes a NUMBER (the AfterOctave context is gated to the top-level directive),
-    // and false for `pedal`/`transposition`, which have no value context at
+    // and false for `pedal`, which has no value context at
     // all. Setting it re-opens suggestions onto whatever list is general to the position,
     // which is worse than not offering to help.
     // ⚠️ Where a description NAMES a vocabulary it is joined from the compiler's list, not
@@ -206,8 +207,8 @@ public sealed partial class LilySharpLanguageServer
             ["octave"] = ("Base octave for this part — a whole number, e.g. `octave 3`. "
                           + "The words absolute and relative belong to the TOP-LEVEL octave "
                           + "directive and a part header refuses them", false),
-            ["transpose"] = ("Transpose target pitch, e.g. `transpose d`, `transpose bes,`", false),
-            ["transposition"] = ($"Sounding-octave marker ({string.Join("/", LanguageVocabulary.TranspositionMarkers)})", false),
+            ["transpose"] = ("Transpose target pitch, e.g. `transpose d`, `transpose bes,`", true),
+            ["transposition"] = ($"Sounding-octave marker ({string.Join("/", LanguageVocabulary.TranspositionMarkers)})", true),
             ["pitch"] = ($"How this part's notes are typed for a transposing instrument ({string.Join("/", LanguageVocabulary.PitchModes)}) — overrides the top-level directive", true),
             ["pedal"] = ($"Piano pedal style ({string.Join("/", LanguageVocabulary.PedalStyles)})", false),
             ["midiInstrument"] = ("General MIDI sound for the .mid and the preview — one of LilyPond's 128 names in quotes, "
@@ -3800,7 +3801,7 @@ public sealed partial class LilySharpLanguageServer
                 // ParseTopLevelTranspose), the multi-file include (ParseUsingDirective /
                 // UsingExpander) and the drum-table overrides (ParseDrummapDeclaration).
                 // `transpose` is a singleton like `octave`; the other two may recur.
-                new CompletionItem { Label = "transpose", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "transpose $0", Detail = "File-default transpose target pitch, e.g. `transpose d` — every part that sets no transpose of its own" },
+                new CompletionItem { Label = "transpose", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "transpose $0", Detail = "File-default transpose target pitch, e.g. `transpose d` — every part that sets no transpose of its own", Command = new Command { Title = "Suggest transpose target", CommandIdentifier = "editor.action.triggerSuggest" } },
                 // `shift N` (Semantics.FileShift, 2026-10-17): the whole piece N semitones, every
                 // part's own transpose included — the karaoke / band-chart move `transpose` is not.
                 new CompletionItem { Label = "shift", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "shift ${1:+1}", Detail = "Move the whole piece N semitones up or down, e.g. `shift +1`, `shift -2` — every part (its own transpose included), the key signatures and the chord rows; Ctrl+Shift+Up/Down step it" },
@@ -5291,6 +5292,7 @@ public sealed partial class LilySharpLanguageServer
                 InsertText = "transpose $0",
                 Detail = "This score's transpose target pitch, composed on each part's own (e.g. `transpose bes`)",
                 SortText = "2",
+                Command = new Command { Title = "Suggest transpose target", CommandIdentifier = "editor.action.triggerSuggest" },
             },
             new CompletionItem
             {
@@ -5305,11 +5307,68 @@ public sealed partial class LilySharpLanguageServer
         ]
     };
 
-    /// <summary>At <c>transpose |</c>: a pitch belongs there, which no list can offer — an
-    /// empty list, so the popup does not propose the position's keywords.</summary>
-    private static readonly CompletionList _transposePitchCompletions = new() { Items = [] };
+    // The targets `transpose` is offered, nearest first and up before down: the interval from c
+    // (PitchTransposer — a bare letter is up within the octave, `,` takes it down), one spelling
+    // per distance, the one a key change is usually written in. Any other pitch may still be typed.
+    private static readonly (string Target, string Interval)[] TransposeTargets =
+    [
+        ("des", "up a minor second"), ("b,", "down a minor second"),
+        ("d", "up a major second"), ("bes,", "down a major second"),
+        ("ees", "up a minor third"), ("a,", "down a minor third"),
+        ("e", "up a major third"), ("aes,", "down a major third"),
+        ("f", "up a perfect fourth"), ("g,", "down a perfect fourth"),
+        ("fis", "up an augmented fourth"), ("ges,", "down an augmented fourth"),
+        ("g", "up a perfect fifth"), ("f,", "down a perfect fifth"),
+        ("aes", "up a minor sixth"), ("e,", "down a minor sixth"),
+        ("a", "up a major sixth"), ("ees,", "down a major sixth"),
+        ("bes", "up a minor seventh"), ("d,", "down a minor seventh"),
+        ("b", "up a major seventh"), ("des,", "down a major seventh"),
+        ("c'", "up an octave"), ("c,", "down an octave"),
+    ];
+
+    /// <summary>At <c>transpose |</c> — the top level, a part header, a score header: the
+    /// targets from c, each with its interval (owner's request 2026-10-26; an empty list until
+    /// then, which only kept the position's keywords away).</summary>
+    private static readonly CompletionList _transposePitchCompletions = new()
+    {
+        Items = TransposeTargets.Select((t, i) => new CompletionItem
+        {
+            Label = t.Target,
+            Kind = CompletionItemKind.EnumMember,
+            Detail = $"{t.Interval} - c becomes {t.Target}",
+            SortText = i.ToString("D2", System.Globalization.CultureInfo.InvariantCulture),
+        }).ToArray(),
+    };
 
     internal static CompletionList GetTransposePitchCompletions() => _transposePitchCompletions;
+
+    /// <summary>At <c>shift |</c>: a number of semitones belongs there, which no list can offer
+    /// — an empty list, so the popup does not propose the position's keywords.</summary>
+    private static readonly CompletionList _shiftAmountCompletions = new() { Items = [] };
+
+    internal static CompletionList GetShiftAmountCompletions() => _shiftAmountCompletions;
+
+    // Prose per marker; the markers themselves come from the compiler.
+    private static readonly System.Collections.Generic.Dictionary<string, string> TranspositionDetails = new()
+    {
+        ["8va"] = "Sounds an octave higher than written - piccolo, glockenspiel",
+        ["8vb"] = "Sounds an octave lower than written - guitar, double bass",
+        ["15ma"] = "Sounds two octaves higher than written",
+        ["15mb"] = "Sounds two octaves lower than written",
+    };
+
+    /// <summary><c>transposition |</c> in a part header (owner's request 2026-10-26): the octave
+    /// markers, read from the compiler (<c>LanguageVocabulary.TranspositionMarkers</c>).</summary>
+    internal static CompletionList GetTranspositionCompletions() => new()
+    {
+        Items = LanguageVocabulary.TranspositionMarkers.Select((name, i) => new CompletionItem
+        {
+            Label = name,
+            Kind = CompletionItemKind.EnumMember,
+            Detail = TranspositionDetails.TryGetValue(name, out var d) ? d : null,
+            SortText = i.ToString(),
+        }).ToArray()
+    };
 
     /// <summary>
     /// Inside a lyrics BODY: the verse headers (ParseLyricVolta — <c>[N. … ]</c>,

@@ -4,6 +4,15 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+### Completion
+
+- **`transpose` and `transposition` open their values**: completing either word leaves the
+  caret after it with the suggestions open. After `transpose` — at the top, in a part, on a
+  score — the target pitches from c, nearest first, up and down, each with its interval
+  (`d` up a major second, `bes,` down a major second, … `c'` and `c,` an octave). After
+  `transposition` in a part, its four markers `8va` `8vb` `15ma` `15mb`, each saying how the
+  part sounds. Any other pitch can still be typed.
+
 ### Reading a scan
 
 - **The progress of a reading says more**: the notification names the step (opening the

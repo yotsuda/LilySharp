@@ -6,6 +6,11 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+### Completion
+
+- `[editor]` **`transpose` and `transposition` open their values once completed**: the target
+  pitches from c, up and down, each with its interval; and the four octave markers.
+
 ### Reading a scan
 
 - `[editor]` **The progress of a scan's reading says more**: the step (finding the staves,

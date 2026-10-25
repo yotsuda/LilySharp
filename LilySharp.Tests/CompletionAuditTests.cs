@@ -103,6 +103,11 @@ public class CompletionAuditTests
     [InlineData("score transpose ", "AfterTransposePitch")]
     [InlineData("transpose ", "AfterTransposePitch")]
     [InlineData("part sax { transpose ", "AfterTransposePitch")]
+    // `shift |` wants a number of semitones: its own (empty) list, not the pitches.
+    [InlineData("shift ", "AfterShiftAmount")]
+    // `transposition |` in a part header: the octave markers.
+    [InlineData("part gtr { transposition ", "AfterTransposition")]
+    [InlineData("part gtr { clef treble_8 transposition ", "AfterTransposition")]
     // `tab` — parts and tunings; after a tuning, the parts (and, the tuning word being a
     // legal part name, the style selector); after the part, the style selector.
     [InlineData("score { tab ", "AfterTabRef")]
@@ -155,6 +160,68 @@ public class CompletionAuditTests
         Assert.DoesNotContain("shift", after);
         Assert.Contains("using", after);
         Assert.Contains("shift", LilySharpLanguageServer.GetTopLevelCompletions("transpose d\n").Items.Select(i => i.Label));
+    }
+
+    // ================= transpose / transposition (owner's request 2026-10-26) =================
+
+    [Fact]
+    public void TransposeTargets_CompileInEveryHome_AndSayTheirInterval()
+    {
+        var items = LilySharpLanguageServer.GetTransposePitchCompletions().Items;
+        Assert.True(items.Length >= 24, "the targets up and down, a semitone to an octave");
+        int[] stepSemitone = [0, 2, 4, 5, 7, 9, 11];
+        int last = 0;
+        foreach (var item in items)
+        {
+            string target = item.Label!;
+            AssertCompiles(Book(top: $"transpose {target}"), $"top-level `transpose {target}`");
+            AssertCompiles(Book(header: $"transpose {target}"), $"a score's `transpose {target}`");
+            AssertCompiles($"part m {{ clef treble transpose {target} }}\nsection A {{ m {{ c4 d e f | }} }}\nform {{ A }}\nscore {{ staff m }}\n",
+                $"a part's `transpose {target}`");
+            // The interval c → target (PitchTransposer: a bare letter is up within the
+            // octave, each mark an octave more) agrees with the help line's direction, and
+            // the list runs nearest first.
+            string letters = target.TrimEnd('\'', ',');
+            Assert.True(PitchTransposer.TryParseTarget(letters, out int step, out int alteration), target);
+            int marks = target.Count(ch => ch == '\'') - target.Count(ch => ch == ',');
+            int semitones = stepSemitone[step] + alteration + 12 * marks;
+            Assert.StartsWith(semitones > 0 ? "up " : "down ", item.Detail);
+            Assert.True(Math.Abs(semitones) >= last, $"{target} is out of order");
+            last = Math.Abs(semitones);
+        }
+        Assert.Equal(items.Length, items.Select(i => i.Label).Distinct().Count());
+    }
+
+    [Fact]
+    public void TranspositionMarkers_AreTheCompilersAndCompile()
+    {
+        var items = LilySharpLanguageServer.GetTranspositionCompletions().Items;
+        Assert.Equal(LanguageVocabulary.TranspositionMarkers, items.Select(i => i.Label));
+        foreach (var item in items)
+        {
+            Assert.False(string.IsNullOrEmpty(item.Detail), item.Label + " has no help line");
+            AssertCompiles($"part m {{ clef treble transposition {item.Label} }}\nsection A {{ m {{ c4 d e f | }} }}\nform {{ A }}\nscore {{ staff m }}\n",
+                $"`transposition {item.Label}`");
+        }
+    }
+
+    [Fact]
+    public void TransposeAndTransposition_OpenTheirValuesOnceCompleted()
+    {
+        // The item writes the word and a space and re-opens the popup on the values above —
+        // in a part header, at the top level and on a score header alike.
+        var part = LilySharpLanguageServer.GetPartPropertyCompletions().Items;
+        var top = LilySharpLanguageServer.GetTopLevelCompletions().Items;
+        foreach (var item in new[]
+        {
+            part.Single(i => i.Label == "transpose"), part.Single(i => i.Label == "transposition"),
+            top.Single(i => i.Label == "transpose"),
+        })
+        {
+            Assert.Equal("editor.action.triggerSuggest", item.Command?.CommandIdentifier);
+            Assert.Equal($"{item.Label} $0", item.InsertText);
+            Assert.Equal(InsertTextFormat.Snippet, item.InsertTextFormat);
+        }
     }
 
     // ================= time / tempo =================
@@ -277,7 +344,10 @@ public class CompletionAuditTests
         AssertCompiles(Book(header: Resolved(items.Single(i => i.Label == "pitch"), "concert")), "a score's pitch");
         // The braces item opens the body where the render items are offered.
         Assert.Equal("editor.action.triggerSuggest", items.Single(i => i.Label == "{ }").Command?.CommandIdentifier);
-        Assert.Empty(LilySharpLanguageServer.GetTransposePitchCompletions().Items);
+        // …and `transpose` opens its targets (TransposeTargets_CompileInEveryHome_…); `shift`
+        // still has nothing to list.
+        Assert.Equal("editor.action.triggerSuggest", items.Single(i => i.Label == "transpose").Command?.CommandIdentifier);
+        Assert.Empty(LilySharpLanguageServer.GetShiftAmountCompletions().Items);
     }
 
     [Fact]
