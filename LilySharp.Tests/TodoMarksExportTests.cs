@@ -56,8 +56,11 @@ public class TodoMarksExportTests
         Assert.Equal(Ring.Matches(preview).Count, Ring.Matches(marked).Count);
         Assert.Contains(">why<", marked);
         // On the room the preview opens for a memo (LayoutOptions.TodoBands), not on the
-        // export's page — the memo would otherwise climb into the title.
-        Assert.Equal(Height.Match(preview).Groups[1].Value, Height.Match(marked).Groups[1].Value);
+        // export's page — the memo would otherwise climb into the title. Both exports are
+        // pictures cut under their music (2026-10-25), so the room shows as the marked one's
+        // greater height; the preview shows the paper.
+        static double H(string svg) => double.Parse(Height.Match(svg).Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture);
+        Assert.True(H(marked) > H(plain), $"marked {H(marked)}, plain {H(plain)}");
         // The static page stays static: no click targets.
         Assert.DoesNotContain("nh-hit", marked);
 

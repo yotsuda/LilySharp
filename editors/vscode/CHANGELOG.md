@@ -71,8 +71,8 @@ All notable changes to the Lily# VS Code extension are documented here.
 - **Export PDF writes pages of the paper's real size** — A4 is 595 × 842 pt; it was 753 × 1050,
   the music 1.2 times too large.
 - **A short score shows its whole page**: a score that fits one page used to be cut under its
-  music, an A4-wide strip; the preview, Export SVG and Export PDF now show the paper. Export PNG
-  still cuts it under the music, for a picture on a web page.
+  music, an A4-wide strip; the preview and Export PDF now show the paper. Export PNG and Export
+  SVG still cut it under the music, for a picture on a web page.
 
 ### The AI candidate panel shows that a button was pressed
 

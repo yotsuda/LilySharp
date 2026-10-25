@@ -8,12 +8,11 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Engraving
 
-- **A score that fits one page keeps the whole paper — except in a PNG.** Lily# used to cut a
-  lone page under its music in every output (LILYSHARP-OWN; LilyPond always engraves onto the
-  paper), so an eight-bar song came out as an A4-wide strip. The SVG, the PDF and the preview
-  now show the paper, as LilyPond does; the PNG — a picture for a web page — is still cut under
-  the music, and `lysc boxes`, read with those PNGs, keeps their page. Nothing moves on the page:
-  the SVG snapshots of 247 one-page books change in their height and the page rectangle alone.
+- **A score that fits one page keeps the whole paper in the PDF and the preview.** Lily# used to
+  cut a lone page under its music in every output (LILYSHARP-OWN; LilyPond always engraves onto
+  the paper), so an eight-bar song printed as an A4-wide strip. The PDF and the preview now show
+  the paper, as LilyPond does; the pictures — PNG and SVG, made for a web page — are still cut
+  under the music, and `lysc boxes`, read with them, keeps their page. Nothing moves on the page.
 - **A PDF page is the paper's own size**: an A4 book is 595 × 842 pt (Letter, 612 × 792). It
   was 753 × 1050 pt — the staff drawn at 6 pt a staff space, 1.2 times LilyPond's 4.98 (the
   option's comment called 6 pt "~1.7 mm"; it is 2.1 mm), and an 18 pt border added round the

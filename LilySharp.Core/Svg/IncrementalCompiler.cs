@@ -517,7 +517,7 @@ public sealed class IncrementalCompiler
         if (SvgGenerator.ChangesClef(score))
         {
             var (twice, laidOut) = SvgGenerator.CollectAndLayout(
-                tree, spec, SvgGenerator.PaperBaseOf(_options.Snippet, _options.Interactive));
+                tree, spec, SvgGenerator.PaperBaseOf(_options.Snippet, _options.Interactive, cropLonePage: !_options.Interactive));
             _springs = null;
             _springsSpare = null;
             _lineBreaks = null;
@@ -1045,7 +1045,7 @@ public sealed class IncrementalCompiler
                         ScoreTranspose = spec?.ScoreTranspose,
                         ScoreConcert = spec?.ScoreConcert,
                         StaffPitch = spec?.StaffPitch,
-                        PaperBase = SvgGenerator.PaperBaseOf(_options.Snippet, _options.Interactive),
+                        PaperBase = SvgGenerator.PaperBaseOf(_options.Snippet, _options.Interactive, cropLonePage: !_options.Interactive),
                         WalkProbe = resumer,
                         BeamMemo = _beamMemo,
                         NestedResume = _nestedResume,
@@ -1117,7 +1117,7 @@ public sealed class IncrementalCompiler
             // The same paper SvgGenerator starts a book from with these options (the
             // preview's memo rows, LayoutOptions.TodoBands), so the session's picture is
             // the full render's.
-            PaperBase = SvgGenerator.PaperBaseOf(_options.Snippet, _options.Interactive),
+            PaperBase = SvgGenerator.PaperBaseOf(_options.Snippet, _options.Interactive, cropLonePage: !_options.Interactive),
             WalkProbe = recorder,
             BeamMemo = _beamMemo,
             NestedResume = _nestedResume,

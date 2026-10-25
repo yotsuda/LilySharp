@@ -61,8 +61,14 @@ public class RenderTextRequestTests
         // data-pos (the source position of every glyph) is part of every SVG the
         // engine writes, export included — it is an annotation, not a click target.
         Assert.DoesNotContain("@font-face", response.Svg);
-        // The page is the same size either way: the hit-rects are overlays, not layout.
-        Assert.Equal(ViewBox(interactive.Svg!), ViewBox(response.Svg!));
+        // The same layout either way — the hit-rects are overlays, not layout — on the
+        // preview's paper and on the picture's, a lone page cut under its music (2026-10-25):
+        // the same width, and the picture's height the music's.
+        var paper = ViewBox(interactive.Svg!).Split(' ');
+        var picture = ViewBox(response.Svg!).Split(' ');
+        Assert.Equal(paper[2], picture[2]);
+        double Num(string s) => double.Parse(s.Trim('"'), System.Globalization.CultureInfo.InvariantCulture);
+        Assert.True(Num(picture[3]) < Num(paper[3]), $"picture {picture[3]}, paper {paper[3]}");
     }
 
     // Two parts, one form, NO score — a fence that has not yet said what to draw.

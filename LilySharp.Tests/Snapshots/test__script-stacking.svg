@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="1690.1" viewBox="0 0 119.50 169.01" font-family="TeX Gyre Schola, serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="317.1" viewBox="0 0 119.50 31.71" font-family="TeX Gyre Schola, serif">
 <style>
   @font-face { font-family: 'Emmentaler'; src: local('Emmentaler'); }
   .music { font-family: 'Emmentaler', serif; }
 </style>
-  <rect x="0" y="0" width="119.50" height="169.01" fill="#FFFFFF"/>
+  <rect x="0" y="0" width="119.50" height="31.71" fill="#FFFFFF"/>
   <text x="59.75" y="12.26" font-size="3.49" font-weight="bold" text-anchor="middle" data-pos="532">Script stacking</text>
   <g transform="translate(8.54,0.00) scale(1.0000,1.0000)">
   <line x1="8.59" y1="20.48" x2="28.92" y2="20.48" stroke="#000000" stroke-width="0.100"/>

@@ -67,8 +67,10 @@ public static class SvgGenerator
 
     /// <summary>The paper a book without a <c>paper { }</c> lays out on, from the
     /// caller's options: the snippet layout for a Markdown fence, else the defaults.</summary>
+    /// <remarks>An exported SVG is a picture, as a PNG is, and a lone page is cut under its
+    /// music (owner's decision 2026-10-25); the preview (Interactive) shows the paper.</remarks>
     private static LayoutOptions PaperBaseOf(SvgRenderOptions options)
-        => PaperBaseOf(options.Snippet, options.Interactive || options.EditorMarks);
+        => PaperBaseOf(options.Snippet, options.Interactive || options.EditorMarks, cropLonePage: !options.Interactive);
 
     /// <summary>The paper a book without a <c>paper { }</c> lays out on: the snippet layout
     /// for a Markdown fence, else the defaults — and, for the interactive preview, with the

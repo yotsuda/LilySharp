@@ -342,10 +342,10 @@ internal sealed record LayoutOptions
 
     /// <summary>
     /// A score that fits one page at rest comes out on a page cut under its last system
-    /// (LayoutEngine.CreatePages' CROP) instead of the whole paper. Only the PNG export asks
-    /// for it — a picture for a web page wants no empty paper under the music — and the boxes
-    /// export drawn over those PNGs (owner's decision 2026-10-25: the preview, the PDF and the
-    /// SVG show the paper, as LilyPond does). A content-driven page (<see cref="PageHeight"/>
+    /// (LayoutEngine.CreatePages' CROP) instead of the whole paper. The pictures ask for it —
+    /// the PNG and the exported SVG: an image for a web page wants no empty paper under the
+    /// music — and the boxes export drawn over them (owner's decisions 2026-10-25: the
+    /// preview and the PDF show the paper, as LilyPond does). A content-driven page (<see cref="PageHeight"/>
     /// = 0, the snippet) is cut to its music whatever this says.
     /// </summary>
     public bool CropLonePage { get; init; } = false;

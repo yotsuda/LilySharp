@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="1690.1" viewBox="0 0 119.50 169.01" font-family="TeX Gyre Schola, serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="401.8" viewBox="0 0 119.50 40.18" font-family="TeX Gyre Schola, serif">
 <style>
   @font-face { font-family: 'Emmentaler'; src: local('Emmentaler'); }
   .music { font-family: 'Emmentaler', serif; }
 </style>
-  <rect x="0" y="0" width="119.50" height="169.01" fill="#FFFFFF"/>
+  <rect x="0" y="0" width="119.50" height="40.18" fill="#FFFFFF"/>
   <text x="59.75" y="12.26" font-size="3.49" font-weight="bold" text-anchor="middle" data-pos="1508">Inter-staff: high bass chord</text>
   <g transform="translate(8.54,0.00) scale(1.0000,1.0000)">
   <text x="5.38" y="19.06" font-size="2.20" text-anchor="end" dominant-baseline="central">Rh</text>
