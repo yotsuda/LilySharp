@@ -3516,7 +3516,13 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         .toolbar button.toggle[aria-pressed="true"]:hover { background: #c8ddf5; }
         /* An icon button (Range: an up-down arrow beside a high and a low note head, owner's
            request 2026-10-25) is as big as the emoji one (✨). */
-        .toolbar button.icon svg { width: 1.15em; height: 1.15em; vertical-align: -0.2em; }
+        /* Both are one height and hold their glyph in the middle (owner's report 2026-10-25: the
+           icon sat off centre). */
+        .toolbar button.icon {
+            display: inline-flex; align-items: center; justify-content: center;
+            height: 28px; width: 42px; padding: 0; line-height: 1;
+        }
+        .toolbar button.icon svg { display: block; width: 15px; height: 15px; }
         /* The Range panel (owner's request 2026-10-25): each part's lowest and highest note over
            the score, top right under the toolbar; a click on one shows it on the score. */
         .range-panel {
@@ -3554,7 +3560,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         </select>
         <button id="exportBtn" type="button">Export…</button>
         <span class="sep"></span>
-        <button id="aiTransformBtn" class="ai" type="button" title="Ask AI (Ctrl+I)">✨</button>
+        <button id="aiTransformBtn" class="ai icon" type="button" title="Ask AI (Ctrl+I)">✨</button>
         <button id="rangeBtn" class="toggle icon" type="button" aria-pressed="false" aria-label="Range" title="Each part's range"><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M3.5 1.5 6 4.5H4.4v7H6l-2.5 3-2.5-3h1.6v-7H1z"/><ellipse cx="11.2" cy="3.6" rx="2.9" ry="2" transform="rotate(-22 11.2 3.6)"/><ellipse cx="11.2" cy="12.4" rx="2.9" ry="2" transform="rotate(-22 11.2 12.4)"/></svg></button>
         <span class="sep"></span>
         <button id="playBtn" type="button" title="Play">▶</button>
