@@ -1477,8 +1477,10 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
                 // the loop is identical whether the selection started in text or score.
                 await aiTransformFromScore(uri, message.startPos, message.endPos, message.selected);
             } else if (message.type === 'aiWholeScore') {
-                // The header's AI button (or Ctrl+I) with nothing selected.
-                await aiTransformWholeScore(uri);
+                // The header's AI button (or Ctrl+I) with nothing selected on the score: the
+                // editor's selection when there is one (owner's report 2026-10-25: notes selected
+                // in the editor were answered with "Nothing is selected"), else the whole score.
+                await aiTransformFromPreviewHeader(uri);
             }
         },
         undefined,
@@ -2652,6 +2654,19 @@ async function importMusicXml(context: vscode.ExtensionContext, sourceUri?: vsco
 }
 
 /** The whole score from the preview: its editor brought forward, then Ctrl+I with `whole`. */
+async function aiTransformFromPreviewHeader(uri: string): Promise<void> {
+    // The editor showing the file keeps its selection while the preview has the focus.
+    const editor = vscode.window.visibleTextEditors.find(e => e.document.uri.toString() === uri && !e.selection.isEmpty);
+    if (!editor) {
+        await aiTransformWholeScore(uri);
+        return;
+    }
+    await vscode.window.showTextDocument(editor.document, { viewColumn: editor.viewColumn, preserveFocus: false });
+    const lines = editor.selection.end.line - editor.selection.start.line + 1;
+    await vscode.commands.executeCommand('lilysharp.aiTransform',
+        { selected: lines === 1 ? 'The text selected in the editor' : `${lines} lines selected in the editor` });
+}
+
 async function aiTransformWholeScore(uri: string): Promise<void> {
     const doc = vscode.workspace.textDocuments.find(d => d.uri.toString() === uri);
     if (!doc) {
@@ -3525,8 +3540,8 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         // points the AI at a place without fencing it in, and every change is shown first.
         function updateAiButton() {
             if (aiRangeLo < 0) {
-                aiTransformBtn.title = 'Ask the AI to change the score (Ctrl+I). Select bars first '
-                    + '(Shift+click or Shift+drag) to point it at a place.';
+                aiTransformBtn.title = 'Ask the AI to change the score (Ctrl+I) — about the text selected in the '
+                    + 'editor, if any, else the whole score. Select bars here (Shift+click or Shift+drag) to point it at a place.';
             } else {
                 aiTransformBtn.title = 'Ask the AI to change the music, pointing it at the selected bars (Ctrl+I). '
                     + 'The selection is where it starts, not a fence: it may change other places when the '
