@@ -893,7 +893,10 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(
         vscode.commands.registerCommand('lilysharp.previewSelectBar', () => postToActivePreview('ctxSelectBar')),
         vscode.commands.registerCommand('lilysharp.previewClearSelection', () => postToActivePreview('ctxClearSelection')));
-    context.subscriptions.push(vscode.commands.registerCommand('lilysharp.selectAiModel', () => pickAiModel()));
+    // The Settings screen's "Choose a model…" links name the feature ('edit' | 'ghost'), so the
+    // list of features is skipped; the palette asks which.
+    context.subscriptions.push(vscode.commands.registerCommand('lilysharp.selectAiModel',
+        (use?: unknown) => pickAiModel(use === 'edit' || use === 'ghost' ? use : undefined)));
 
     // The Explorer's batch export: right-click one or more .lys → the format
     // submenu → a folder → every score of every file, named as `lysc` names

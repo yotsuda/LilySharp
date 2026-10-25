@@ -128,9 +128,9 @@ export function autoPick(models: readonly vscode.LanguageModelChat[], use: Model
 /**
  * "Lily#: Select AI Model" — first which feature, then the models VS Code offers; the pick is
  * saved to `lilysharp.ai.editModel` (Ask AI and Fix OMR Marks) or `lilysharp.ai.ghostModel`
- * (Ghost Completion).
+ * (Ghost Completion). Given `only` (a Settings link's), that feature's list comes at once.
  */
-export async function pickAiModel(): Promise<void> {
+export async function pickAiModel(only?: ModelUse): Promise<void> {
     const models = await availableModels();
     if (!hasChatModel(models)) {
         // Only doors that answer nothing (copilotcli with no Copilot sign-in, owner's report
@@ -141,10 +141,13 @@ export async function pickAiModel(): Promise<void> {
     const cfg = vscode.workspace.getConfiguration('lilysharp');
     const shown = (use: ModelUse) => cfg.get<string>(SETTING[use], '').trim() || `Automatic (${autoPick(models, use)?.name ?? 'none'})`;
     type UseItem = vscode.QuickPickItem & { use: ModelUse };
-    const which = await vscode.window.showQuickPick<UseItem>([
+    const uses: UseItem[] = [
         { label: 'Ask AI… (Ctrl+I) and Fix OMR Marks with AI…', description: shown('edit'), detail: 'Changes the music as you ask: a strong model is worth waiting for.', use: 'edit' },
         { label: 'Ghost Completion', description: shown('ghost'), detail: 'Answers as you type: a fast model, or the suggestion is cancelled before it shows.', use: 'ghost' },
-    ], { title: 'Lily# — choose the AI model for…' });
+    ];
+    const which = only
+        ? uses.find(u => u.use === only)
+        : await vscode.window.showQuickPick<UseItem>(uses, { title: 'Lily# — choose the AI model for…' });
     if (!which) {
         return;
     }
