@@ -15,17 +15,19 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 - **▶ with bars selected on the score plays them**, every part sounding there, from where the
   bars first play.
-- **A loop toggle beside ⏹** (two arrows chasing each other, pressed in while on) plays the
-  selected bars — or the whole score — round and round. Looping goes through the music as
-  written once: the score's repeats inside it are not taken. *Play from Here* in the menu still
-  plays from the note, once.
-- **A practice menu drops down from beside the loop** (a metronome and ▾): the **tempo** (50–100%,
-  the button then says *80%*), the **metronome** on and off (a wood block on every beat, the
-  bar's first louder), and the **parts** on and off — a chord row is a part of its own here. The
-  button stays pressed in while anything differs from the score as written, and a change while
-  playing goes on from the same place. The beats are the meter's; a pickup no meter change
-  marks shifts the accents.
-- **The score's length stands beside the loop** (*3:42*): how long it plays, repeats and tempo
+- **A practice menu drops down from beside ⏹** (a metronome and ▾):
+  - the **tempo** on a slider, 50–150% (the button then says *80%*; *100%* beside it puts it back),
+    set where the slider is let go;
+  - the **loop**: the selected bars — or the whole score — round and round, going through the
+    music as written once (the score's repeats inside it are not taken). *Play from Here* in the
+    menu still plays from the note, once;
+  - the **metronome**: a wood block on every beat, the bar's first louder. The beats are the
+    meter's; a pickup no meter change marks shifts the accents;
+  - the **parts**: one toggle a part, pressed in while it sounds — a chord row is a part of its own.
+
+  The button stays pressed in while anything differs from the score as written, and a change
+  while playing goes on from the same place.
+- **The score's length stands beside it** (*3:42*): how long the score plays, repeats and tempo
   changes included, updated with every edit.
 
 ### Each part's range, in the preview

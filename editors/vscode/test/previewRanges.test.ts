@@ -49,7 +49,9 @@ describe('the preview\'s Range panel', () => {
         assert.match(html, /pendingSpan = aiRangeLo >= 0 \? \[aiRangeLo, aiRangeHi\] : null;/);
         // ▶ keeps the selection lit: only a click on the sheet itself clears it.
         assert.match(html, /\} else if \(target && mainContent\.contains\(target\)\) \{\s*\/\/ Clicked empty space/);
-        assert.match(html, /<button id="loopBtn" class="toggle icon" type="button" aria-pressed="false" aria-label="Loop"/);
+        // The loop is in the practice menu, an On/Off as the metronome's.
+        assert.match(html, /<div id="practicePanel"[\s\S]*<span class="plbl">Loop<\/span><button type="button" id="loopBtn" class="toggle" aria-pressed="false"/);
+        assert.match(html, /<input type="range" id="tempoSlider" min="50" max="150" step="5" value="100"/);
         assert.match(html, /window\.LysSynth\.playSpan\(playbackNotes, span \? span\[0\] : null, span \? span\[1\] : null, loopOn\);/);
         assert.match(html, /playEndTimer = setTimeout\(playEnded, /);
         assert.match(html, /function playEnded\(\) \{\s*const list = loopOn \? loopList : null;/);

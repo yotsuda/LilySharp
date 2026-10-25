@@ -3592,15 +3592,16 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             font: inherit; padding: 2px 8px; border: 1px solid #c8c8c8; background: #fff; color: #333;
             cursor: pointer; border-radius: 3px;
         }
-        .practice-panel .seg { display: inline-flex; }
-        .practice-panel .seg button { border-radius: 0; margin-left: -1px; font-variant-numeric: tabular-nums; }
-        .practice-panel .seg button:first-child { border-radius: 3px 0 0 3px; margin-left: 0; }
-        .practice-panel .seg button:last-child { border-radius: 0 3px 3px 0; }
+        .practice-panel .tempo { display: inline-flex; align-items: center; gap: 8px; }
+        .practice-panel .tempo input[type="range"] { width: 160px; margin: 0; accent-color: #0078d7; }
+        .practice-panel button:disabled { opacity: 0.45; cursor: default; }
+        .practice-panel .tval { width: 3.2em; text-align: right; font-variant-numeric: tabular-nums; }
         .practice-panel button[aria-pressed="true"] {
-            background: #d6e6f8; border-color: #0078d7; color: #0b4a8b; position: relative;
+            background: #d6e6f8; border-color: #0078d7; color: #0b4a8b;
         }
-        .practice-panel .parts { display: flex; flex-direction: column; gap: 2px; padding-top: 2px; }
-        .practice-panel .parts label { display: flex; align-items: center; gap: 6px; cursor: pointer; white-space: nowrap; }
+        /* A part sounds while its button is pressed in; one let out is silent. */
+        .practice-panel .parts { display: flex; flex-wrap: wrap; gap: 4px; max-width: 260px; }
+        .practice-panel .parts button[aria-pressed="false"] { color: #888; text-decoration: line-through; }
         .range-panel table { border-collapse: collapse; }
         .range-panel th { text-align: left; font-weight: 600; opacity: 0.75; padding: 2px 8px; }
         .range-panel td { padding: 2px 8px; white-space: nowrap; }
@@ -3638,8 +3639,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         <span class="group">
         <button id="playBtn" type="button" title="Play">▶</button>
         <button id="stopBtn" type="button" title="Stop" disabled>⏹</button>
-        <button id="loopBtn" class="toggle icon" type="button" aria-pressed="false" aria-label="Loop" title="Loop, ignoring the score's repeats"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 8.5V7a2.5 2.5 0 0 1 2.5-2.5h8"/><path d="M10.5 2l2.5 2.5-2.5 2.5"/><path d="M13.5 7.5V9a2.5 2.5 0 0 1-2.5 2.5H3"/><path d="M5.5 14 3 11.5 5.5 9"/></svg></button>
-        <button id="practiceBtn" class="toggle practice" type="button" aria-pressed="false" aria-haspopup="true" aria-expanded="false" aria-label="Practice" title="Tempo, metronome, parts"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 14.5h8L9.6 2H6.4z"/><path d="M8 11.5l3.6-6.5"/><path d="M5.2 10.5h5.6"/></svg><span id="practiceSpeed"></span><svg class="caret" viewBox="0 0 8 8" fill="currentColor" aria-hidden="true"><path d="M1 2.5h6L4 6z"/></svg></button>
+        <button id="practiceBtn" class="toggle practice" type="button" aria-pressed="false" aria-haspopup="true" aria-expanded="false" aria-label="Practice" title="Tempo, loop, metronome, parts"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 14.5h8L9.6 2H6.4z"/><path d="M8 11.5l3.6-6.5"/><path d="M5.2 10.5h5.6"/></svg><span id="practiceSpeed"></span><svg class="caret" viewBox="0 0 8 8" fill="currentColor" aria-hidden="true"><path d="M1 2.5h6L4 6z"/></svg></button>
         <span id="lengthInfo" class="length" title="Length, as played"></span>
         </span>
         <span class="sep"></span>
@@ -3655,7 +3655,8 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
     <div id="errorBanner" class="error-banner" role="alert"></div>
     <div id="rangePanel" class="range-panel" hidden></div>
     <div id="practicePanel" class="range-panel practice-panel" hidden>
-        <div class="prow"><span class="plbl">Tempo</span><span class="seg" id="tempoSeg"><button type="button" data-speed="0.5">50</button><button type="button" data-speed="0.6">60</button><button type="button" data-speed="0.7">70</button><button type="button" data-speed="0.8">80</button><button type="button" data-speed="0.9">90</button><button type="button" data-speed="1">100%</button></span></div>
+        <div class="prow"><span class="plbl">Tempo</span><span class="tempo"><input type="range" id="tempoSlider" min="50" max="150" step="5" value="100" aria-label="Tempo"><span id="tempoValue" class="tval">100%</span><button type="button" id="tempoReset" title="As written">100%</button></span></div>
+        <div class="prow"><span class="plbl">Loop</span><button type="button" id="loopBtn" class="toggle" aria-pressed="false" title="Play the selected bars, or the whole score, round and round — the score's repeats ignored">Off</button></div>
         <div class="prow"><span class="plbl">Metronome</span><button type="button" id="clickBtn" class="toggle" aria-pressed="false">Off</button></div>
         <div class="prow"><span class="plbl">Parts</span><span id="partsList" class="parts"></span></div>
     </div>
@@ -5601,9 +5602,9 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         const loopBtn = document.getElementById('loopBtn');
         loopBtn.addEventListener('click', () => {
             loopOn = !loopOn;
-            loopBtn.setAttribute('aria-pressed', String(loopOn));
             // Off: what plays ends where it ends. On while playing: from the next Play.
             if (!loopOn) loopList = null;
+            showPractice();
         });
         // Where a playback that ran to its end goes: round again while looping, else it stops.
         function playEnded() {
@@ -5614,8 +5615,9 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         }
 
         // ---- The practice menu (owner's request 2026-10-25): a button that drops down the
-        // controls a practice session wants and the header has no room for — the tempo, the
-        // metronome, the parts on and off. A change while playing goes on from the same place.
+        // controls a practice session wants and the header has no room for — the tempo (a slider,
+        // 50–150%), the loop, the metronome, the parts on and off (a toggle each). A change while
+        // playing goes on from the same place.
         const practice = { speed: 1, muted: [], click: false };
         let rawNotes = null, rawParts = null, rawBeats = null;  // the server's last answer, as written
         let lastSpan;               // what plays: undefined the whole score, null/[lo, hi] a playSpan
@@ -5629,14 +5631,18 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         const practiceBtn = document.getElementById('practiceBtn');
         const practicePanel = document.getElementById('practicePanel');
         const clickBtn = document.getElementById('clickBtn');
+        const tempoSlider = document.getElementById('tempoSlider');
         function showPractice() {
             const speedOn = practice.speed !== 1;
             document.getElementById('practiceSpeed').textContent = speedOn ? Math.round(practice.speed * 100) + '%' : '';
             // Pressed in while anything differs from the score as written.
-            practiceBtn.setAttribute('aria-pressed', String(speedOn || practice.click || practice.muted.length > 0));
-            for (const b of document.querySelectorAll('#tempoSeg button')) {
-                b.setAttribute('aria-pressed', String(Number(b.dataset.speed) === practice.speed));
-            }
+            practiceBtn.setAttribute('aria-pressed', String(speedOn || practice.click || practice.muted.length > 0 || loopOn));
+            // The loop lives here too (owner's request 2026-10-25), an On/Off as the metronome's.
+            loopBtn.setAttribute('aria-pressed', String(loopOn));
+            loopBtn.textContent = loopOn ? 'On' : 'Off';
+            tempoSlider.value = String(Math.round(practice.speed * 100));
+            document.getElementById('tempoValue').textContent = Math.round(practice.speed * 100) + '%';
+            document.getElementById('tempoReset').disabled = !speedOn;
             clickBtn.setAttribute('aria-pressed', String(practice.click));
             clickBtn.textContent = practice.click ? 'On' : 'Off';
         }
@@ -5656,18 +5662,20 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             const list = document.getElementById('partsList');
             list.textContent = '';
             if (!names || names.length === 0) { list.textContent = '—'; return; }
-            // A part muted in another score stays muted: the list is by name.
+            // One toggle a part, pressed in while it sounds (owner's request 2026-10-25). A part
+            // muted in another score stays muted: the list is by name.
             for (const name of names) {
-                const label = document.createElement('label');
-                const box = document.createElement('input');
-                box.type = 'checkbox';
-                box.checked = !practice.muted.includes(name);
-                box.addEventListener('change', () => {
-                    practice.muted = box.checked ? practice.muted.filter(n => n !== name) : practice.muted.concat([name]);
+                const b = document.createElement('button');
+                b.type = 'button';
+                b.textContent = name;
+                b.setAttribute('aria-pressed', String(!practice.muted.includes(name)));
+                b.addEventListener('click', () => {
+                    const on = practice.muted.includes(name);
+                    practice.muted = on ? practice.muted.filter(n => n !== name) : practice.muted.concat([name]);
+                    b.setAttribute('aria-pressed', String(on));
                     practiceChanged(practice.speed);
                 });
-                label.append(box, document.createTextNode(name));
-                list.appendChild(label);
+                list.appendChild(b);
             }
         }
         function closePractice() {
@@ -5688,13 +5696,18 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         practicePanel.addEventListener('click', (e) => e.stopPropagation());
         document.addEventListener('click', () => { if (!practicePanel.hidden) closePractice(); });
         document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !practicePanel.hidden) closePractice(); });
-        for (const b of document.querySelectorAll('#tempoSeg button')) {
-            b.addEventListener('click', () => {
-                const old = practice.speed;
-                practice.speed = Number(b.dataset.speed);
-                if (old !== practice.speed) practiceChanged(old);
-            });
+        // The slider says its value as it moves and sets the tempo where it is let go: a
+        // playback restarts once, not at every step of a drag.
+        function setSpeed(percent) {
+            const old = practice.speed;
+            practice.speed = percent / 100;
+            if (old !== practice.speed) practiceChanged(old);
         }
+        tempoSlider.addEventListener('input', () => {
+            document.getElementById('tempoValue').textContent = tempoSlider.value + '%';
+        });
+        tempoSlider.addEventListener('change', () => setSpeed(Number(tempoSlider.value)));
+        document.getElementById('tempoReset').addEventListener('click', () => setSpeed(100));
         clickBtn.addEventListener('click', () => {
             practice.click = !practice.click;
             practiceChanged(practice.speed);
