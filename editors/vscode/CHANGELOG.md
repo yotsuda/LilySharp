@@ -30,9 +30,9 @@ All notable changes to the Lily# VS Code extension are documented here.
   what it changed and why, a sentence or two, in the language you asked in. It rides in its own
   `<note>` beside the music, so it never reaches the file.
 - **One notification while the AI works**, not two in a row: its title names the model
-  (*Lily#: Ask AI via copilot/claude-fable-5.1*), and its message quotes your request (shortened
-  past 60 characters) beside the step — reading the score, generating, repairing, validating,
-  rendering.
+  (*Lily#: Ask AI via copilot/claude-fable-5.1*), and its message says the step — reading the
+  score, generating, repairing, validating, rendering — then quotes your request (shortened past
+  60 characters).
 - **Ask Again's candidate replaces the last one where it stands**: it used to open a new pane
   beside the candidate panel each round.
 - **An untitled score saved while its candidate is shown keeps it**: Accept writes into the saved

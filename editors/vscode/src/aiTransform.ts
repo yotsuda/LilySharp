@@ -402,7 +402,9 @@ async function drive(
         // null when cancelled or failed (a failure has said so itself).
         const round = await working(title, async (progress, token) => {
             const asked = instruction.length > 60 ? `${instruction.slice(0, 59)}…` : instruction;
-            const step = (s: string) => progress.report({ message: `“${asked}” — ${s}…` });
+            // The step first, the request last: a notification has no line breaks (VS Code makes
+            // them spaces), and a long request wraps after the step instead of burying it.
+            const step = (s: string) => progress.report({ message: `${s}… — “${asked}”` });
             prepared ??= await prepare(step, token);
             if (token.isCancellationRequested) return null;
             const { facts, baselineErrors, baselineWarnings, messages } = prepared;
