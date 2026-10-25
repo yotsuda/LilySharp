@@ -8,6 +8,20 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Engraving
 
+- **A bass tab's strings are chosen by a planner fitted to the owner's fingering, and frozen.**
+  The owner fingered 267 bass books by hand in LilyPond; LilyPond's own string for every one of
+  their 119,448 tab notes was read back (an unmarked note is always its highest string, the
+  lowest fret). The new `BassFingeringPlanner` plays those books with a median of 19 strings left
+  to write per book where the previous planner left 45 and LilyPond 96 (85.7% of the notes as
+  fingered, from 74.1%), and keeps every fingering the owner stated before (the bass cases of
+  `TabFingeringExpectationTests` and `TabStringNumberTests`; the two it had missed now pass).
+  It favours the middle strings and the 2nd–6th positions, stops the D and G rather than playing
+  them open, keeps a repeated note on its string, and after a fall lets the hand go anywhere.
+  **Its output is frozen**: `BassFingeringGoldenTests` holds its every string over 400 generated
+  bass lines, so a reviewed tab cannot change under a user between versions; a change needs the
+  owner's approval and a line here. Guitars and the other fretted instruments keep the general
+  planner. Tests that measure tab layout against LilyPond twins now write their strings, so they
+  measure layout and not fingering.
 - **A mark at a line's start clears the key signature.** A section label (or any mark above the
   staff) over a key whose accidentals stand above the top line — A major's G♯ reaches 1.9 over
   it — touched them: the line-start key was in the systems' skylines but not in the staff's own

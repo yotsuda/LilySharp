@@ -109,7 +109,7 @@ public class TabSpacingWishTests
             part bassline {
               clef bass
               tuning bass
-              section S { e,,4 e,, a,, a,, | g, g, d, d, | }
+              section S { e,,4\4 e,, a,,\3 a,, | g,\1 g, d,\2 d, | }
             }
             form { S }
             score { tab bassline as numbers }

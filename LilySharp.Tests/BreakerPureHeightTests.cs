@@ -135,7 +135,7 @@ public class BreakerPureHeightTests
             part p {
               clef bass
               tuning bass
-              section S { a,,8 r8 r4 r2 | a,,8 r8 r4 r2 | }
+              section S { a,,8\3 r8 r4 r2 | a,,8\3 r8 r4 r2 | }
             }
 
             form { S }

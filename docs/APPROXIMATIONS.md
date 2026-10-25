@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 64 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 64 | 観測者がゼロだと自認しているもの |
-| `OWN` | 273 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **401** | |
+| `OWN` | 274 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **402** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -247,7 +247,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（273 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（274 件）
 
 ### `LilySharp.Core/Editing/KeyRespeller.cs`
 - **`KeyRespeller`** LILYSHARP-OWN: an editor aid. The rule:
@@ -659,6 +659,8 @@
 ### `LilySharp.Core/Syntax/SyntaxNodes.cs`
 - **`ChordSyntax.IsShapeChord`** LILYSHARP-OWN: LilyPond has no such item — the twin writes the notes out as an
 - **`ChordRepetitionSyntax.OctaveOffset`** LILYSHARP-OWN: LilyPond's q repeats the previous chord and cannot be
+### `LilySharp.Core/Tablature/BassFingeringPlanner.cs`
+- **`BassFingeringPlanner`** LILYSHARP-OWN, FITTED TO THE OWNER'S FINGERING (2026-10-25). The owner fingered 267 bass books
 ### `LilySharp.Core/Tablature/TabFingeringPlanner.cs`
 - **`TabFingeringPlanner`** LILYSHARP-OWN, USER APPROVED (2026-09-14). A dynamic programme (Viterbi) over states
 ### `LilySharp.Core/Tablature/Tunings.cs`

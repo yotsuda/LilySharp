@@ -38,7 +38,7 @@ public class TabTupletBracketTests
     private const string HighString = """
         part cb {
           instrument bass
-          section A { tuplet 3/2 { ees8@f ees4 } ees4 r8 bes'\2 bes bes | }
+          section A { tuplet 3/2 { ees8\1@f ees4 } ees4 r8 bes'\2 bes bes | }
         }
         form { A }
         score { tab cb }
@@ -248,7 +248,7 @@ public class TabTupletBracketTests
             .OrderBy(h => h.Item1).ToList();
 
     [Theory]
-    [InlineData(HighString, "ees8@f", "ees4 }", false)]
+    [InlineData(HighString, "ees8\\1@f", "ees4 }", false)]
     [InlineData(LowString, "bes,,8@f", "bes,,4 }", true)]
     [InlineData(StringAgainstPitch, "e,8\\3@f", "e,4\\3 }", true)]
     public void TheBracket_ReachesFromTheFirstStemToTheLast_OnTheStemsSide(

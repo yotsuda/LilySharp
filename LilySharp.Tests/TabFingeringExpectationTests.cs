@@ -66,14 +66,13 @@ public sealed class TabFingeringExpectationTests
     [
         new("tab-fret.lys", "section A", 1, 6, "ees", 2, 1, false,
             "f with the little finger on the 3rd, so the index stays at the 1st"),
-        // Known (both): after a rest the planner starts the bar in the first position — bes on the
-        // 3rd string's 1st, g on the 4th string's 3rd, ees on the 2nd string's 1st — which shifts
-        // and stretches less than the user's fingering around the 4th–6th frets; its pull toward
-        // low position, which keeps first-position music there, decides between the two.
-        new("tab-fret.lys", "section B", 2, 1, "bes", 4, 6, true, "little finger on the 4th string's 6th"),
+        // These two were Known misses of the general planner (its pull toward the first position
+        // decided against them); the bass planner fitted to the owner's books (2026-10-25)
+        // meets them.
+        new("tab-fret.lys", "section B", 2, 1, "bes", 4, 6, false, "little finger on the 4th string's 6th"),
         new("tab-fret.lys", "section B", 2, 4, "g", 4, 3, false, "index on the 4th string's 3rd"),
         new("tab-fret.lys", "section B", 3, 1, "c", 3, 3, false, "index on the 3rd string's 3rd"),
-        new("tab-fret.lys", "section B", 4, 1, "ees", 3, 6, true,
+        new("tab-fret.lys", "section B", 4, 1, "ees", 3, 6, false,
             "a stretch to the 6th is cheaper than moving two frets"),
         new("tab-fret.lys", "section B", 6, 4, "g", 2, 5, false, "the 2nd string's 5th, not the open 1st"),
         new("arthurs-theme.lys", "section A", 5, 1, "bes", 3, 1, false,

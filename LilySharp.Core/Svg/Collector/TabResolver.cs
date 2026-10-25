@@ -453,7 +453,7 @@ internal sealed class TabResolver
                     HandFree: restSince || previousFall || leapt,
                     SlurFromPrevious: previousSlurStart && slurEnd && !leapt,
                     ChordLow: chordLow, ChordHigh: chordHigh,
-                    TiedFromPrevious: tied));
+                    TiedFromPrevious: tied, AfterFall: previousFall));
                 refs.Add((mi, ii));
 
                 previousOnset = onset;
@@ -464,7 +464,11 @@ internal sealed class TabResolver
             }
         }
 
-        var strings = TabFingeringPlanner.Plan(events, tun, handSpan);
+        // A bass plays by the planner fitted to the owner's bass books, frozen (BassFingeringPlanner);
+        // every other fretted instrument by the general one.
+        var strings = Tunings.IsBass(tuning)
+            ? BassFingeringPlanner.Plan(events, tun)
+            : TabFingeringPlanner.Plan(events, tun, handSpan);
         for (int k = 0; k < refs.Count; k++)
         {
             var (mi, ii) = refs[k];

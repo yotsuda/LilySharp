@@ -33,9 +33,11 @@ namespace LilySharp.Core.Tablature;
 /// <param name="ChordHigh">For a chord, its highest stopped fret (0 when none).</param>
 /// <param name="TiedFromPrevious">This event is the held end of a tie from the previous one:
 /// it stays on that string.</param>
+/// <param name="AfterFall">The previous event ends in a fall: the finger slid off the string, so
+/// the hand is not only free but already away (<see cref="HandFree"/> is set too).</param>
 public readonly record struct TabEvent(
     int Midi, int FixedString, double TimeToMove, bool HandFree, bool SlurFromPrevious,
-    int ChordLow = 0, int ChordHigh = 0, bool TiedFromPrevious = false);
+    int ChordLow = 0, int ChordHigh = 0, bool TiedFromPrevious = false, bool AfterFall = false);
 
 /// <summary>
 /// The costs the fingering planner weighs.

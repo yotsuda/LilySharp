@@ -18,8 +18,8 @@
   <line x1="18.20" y1="12.63" x2="18.20" y2="9.28" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="19.90" y="11.78" font-size="4.00" data-pos="218"></text>
   <line x1="19.96" y1="11.93" x2="19.96" y2="15.28" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="23.04" y="10.78" font-size="4.00" data-pos="225"></text>
-  <line x1="23.11" y1="10.93" x2="23.11" y2="14.28" stroke="#000000" stroke-width="0.130"/>
+  <text class="music" x="22.92" y="10.78" font-size="4.00" data-pos="225"></text>
+  <line x1="22.98" y1="10.93" x2="22.98" y2="14.28" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="25.68" y="11.78" font-size="4.00" data-pos="232"></text>
   <line x1="25.75" y1="11.93" x2="25.75" y2="15.28" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="29.57" y="12.78" font-size="4.00" data-pos="241"></text>
@@ -34,27 +34,27 @@
   <rect x="38.99" y="19.03" width="0.19" height="4.50" data-pos="259"/>
   <text x="17.61" y="23.00" font-size="2.80" text-anchor="middle" data-pos="215">3</text>
   <text x="20.55" y="21.52" font-size="2.80" text-anchor="middle" data-pos="218">2</text>
-  <text x="23.69" y="20.00" font-size="2.80" text-anchor="middle" data-pos="225">0</text>
+  <text x="23.57" y="21.50" font-size="2.80" text-anchor="middle" data-pos="225">5</text>
   <text x="26.34" y="21.52" font-size="2.80" text-anchor="middle" data-pos="232">2</text>
   <text x="30.22" y="23.00" font-size="2.80" text-anchor="middle" data-pos="241">3</text>
   <text x="34.10" y="24.50" font-size="2.80" text-anchor="middle" data-pos="249">3</text>
-  <line x1="8.59" y1="19.03" x2="22.91" y2="19.03" stroke="#000000" stroke-width="0.100"/>
-  <line x1="24.48" y1="19.03" x2="39.13" y2="19.03" stroke="#000000" stroke-width="0.100"/>
+  <line x1="8.59" y1="19.03" x2="39.13" y2="19.03" stroke="#000000" stroke-width="0.100"/>
   <line x1="8.59" y1="20.53" x2="19.76" y2="20.53" stroke="#000000" stroke-width="0.100"/>
-  <line x1="21.33" y1="20.53" x2="25.55" y2="20.53" stroke="#000000" stroke-width="0.100"/>
+  <line x1="21.33" y1="20.53" x2="22.78" y2="20.53" stroke="#000000" stroke-width="0.100"/>
+  <line x1="24.35" y1="20.53" x2="25.55" y2="20.53" stroke="#000000" stroke-width="0.100"/>
   <line x1="27.12" y1="20.53" x2="39.13" y2="20.53" stroke="#000000" stroke-width="0.100"/>
   <line x1="8.59" y1="22.03" x2="16.82" y2="22.03" stroke="#000000" stroke-width="0.100"/>
   <line x1="18.39" y1="22.03" x2="29.43" y2="22.03" stroke="#000000" stroke-width="0.100"/>
   <line x1="31.00" y1="22.03" x2="39.13" y2="22.03" stroke="#000000" stroke-width="0.100"/>
   <line x1="8.59" y1="23.53" x2="33.31" y2="23.53" stroke="#000000" stroke-width="0.100"/>
   <line x1="34.89" y1="23.53" x2="39.13" y2="23.53" stroke="#000000" stroke-width="0.100"/>
-  <path d="M 21.70,11.78 C 21.98,11.78 22.54,13.10 22.54,13.78" fill="none" stroke="#000000" stroke-width="0.200" stroke-linecap="round" stroke-linejoin="round" data-pos="219"/>
-  <path d="M 24.84,10.78 C 25.01,10.78 25.34,12.10 25.34,12.78" fill="none" stroke="#000000" stroke-width="0.200" stroke-linecap="round" stroke-linejoin="round" data-pos="226"/>
+  <path d="M 21.70,11.78 C 21.94,11.78 22.42,13.10 22.42,13.78" fill="none" stroke="#000000" stroke-width="0.200" stroke-linecap="round" stroke-linejoin="round" data-pos="219"/>
+  <path d="M 24.72,10.78 C 24.89,10.78 25.22,12.10 25.22,12.78" fill="none" stroke="#000000" stroke-width="0.200" stroke-linecap="round" stroke-linejoin="round" data-pos="226"/>
   <path d="M 27.49,11.78 C 27.66,11.78 27.99,10.46 27.99,9.78" fill="none" stroke="#000000" stroke-width="0.200" stroke-linecap="round" stroke-linejoin="round" data-pos="233"/>
   <path d="M 31.44,12.78 C 31.95,12.78 32.95,14.10 32.95,14.78" fill="none" stroke="#000000" stroke-width="0.200" stroke-linecap="round" stroke-linejoin="round" data-pos="243"/>
   <path d="M 35.25,14.28 C 35.45,14.28 35.84,12.96 35.84,12.28" fill="none" stroke="#000000" stroke-width="0.200" stroke-linecap="round" stroke-linejoin="round" data-pos="251"/>
-  <path d="M 21.83,20.53 C 22.07,20.53 22.54,21.85 22.54,22.53" fill="none" stroke="#000000" stroke-width="0.200" stroke-linecap="round" stroke-linejoin="round" data-pos="219"/>
-  <path d="M 24.98,19.03 C 25.14,19.03 25.48,20.35 25.48,21.03" fill="none" stroke="#000000" stroke-width="0.200" stroke-linecap="round" stroke-linejoin="round" data-pos="226"/>
+  <path d="M 21.83,20.53 C 22.03,20.53 22.42,21.85 22.42,22.53" fill="none" stroke="#000000" stroke-width="0.200" stroke-linecap="round" stroke-linejoin="round" data-pos="219"/>
+  <path d="M 24.85,20.53 C 25.02,20.53 25.35,21.85 25.35,22.53" fill="none" stroke="#000000" stroke-width="0.200" stroke-linecap="round" stroke-linejoin="round" data-pos="226"/>
   <path d="M 27.62,20.53 C 27.79,20.53 28.12,19.21 28.12,18.53" fill="none" stroke="#000000" stroke-width="0.200" stroke-linecap="round" stroke-linejoin="round" data-pos="233"/>
   <path d="M 31.50,22.03 C 31.99,22.03 32.95,23.35 32.95,24.03" fill="none" stroke="#000000" stroke-width="0.200" stroke-linecap="round" stroke-linejoin="round" data-pos="243"/>
   <path d="M 35.39,23.53 C 35.55,23.53 35.89,22.21 35.89,21.53" fill="none" stroke="#000000" stroke-width="0.200" stroke-linecap="round" stroke-linejoin="round" data-pos="251"/>
