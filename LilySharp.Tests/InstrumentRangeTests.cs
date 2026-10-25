@@ -79,6 +79,16 @@ public class InstrumentRangeTests
     }
 
     [Fact]
+    public void TheFiveStringContrabass_ReachesBelowTheFourStringOnesLowE()
+    {
+        // Written C2 sounds C1 (the contrabass sounds an octave below the page): below the four
+        // strings' E1, within the five strings' B0.
+        Assert.Single(RangeWarnings(Book("instrument contrabass", "c,4 e, g, c |")));
+        Assert.Empty(RangeWarnings(Book("instrument contrabass5", "c,4 e, g, c |")));
+        Assert.Equal("Contrabass", InstrumentDefaults.PrintedName("contrabass5"));
+    }
+
+    [Fact]
     public void ANoteAboveTheSoprano_IsWarned()
     {
         var w = Assert.Single(RangeWarnings(Book("instrument soprano", "c''4 d'' c'' b' |")));

@@ -115,6 +115,8 @@ public sealed class InstrumentPresetTests
     [InlineData("viola", "viola")]
     [InlineData("cello", "cello")]
     [InlineData("contrabass", "bass")]
+    // The five-string contrabass (owner's request 2026-10-25) has the five-string bass's strings.
+    [InlineData("contrabass5", "bass5")]
     [InlineData("mandolin", "mandolin")]
     [InlineData("banjo", "banjoOpenG")]
     [InlineData("flute", null)]

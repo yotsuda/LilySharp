@@ -156,7 +156,7 @@ public sealed class PartHeaderDefaults
 
     /// <summary>The words of a string instrument without frets (<see cref="FrettedTuningWord"/>).</summary>
     private static readonly HashSet<string> Unfretted = new(StringComparer.Ordinal)
-        { "violin", "viola", "cello", "contrabass" };
+        { "violin", "viola", "cello", "contrabass", "contrabass5" };
 
     /// <summary>The defaults of a part that declares nothing.</summary>
     public static readonly PartHeaderDefaults Empty = new();

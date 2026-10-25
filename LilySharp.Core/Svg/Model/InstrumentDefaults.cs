@@ -61,7 +61,7 @@ public static class InstrumentDefaults
             "violin" => (ClefType.Treble, 4),
             "viola" => (ClefType.Alto, 3),
             "cello" => (ClefType.Bass, 3),
-            "bass" or "contrabass" or "bass5" or "bass6" => (ClefType.Bass, 3),
+            "bass" or "contrabass" or "contrabass5" or "bass5" or "bass6" => (ClefType.Bass, 3),
 
             // Piano
             "piano-right" => (ClefType.Treble, 4),
@@ -203,7 +203,8 @@ public static class InstrumentDefaults
     public static string? GetTuning(string? instrument) => instrument?.ToLowerInvariant() switch
     {
         "bass" or "contrabass" => "bass",
-        "bass5" => "bass5",
+        // A five-string contrabass is strung as the five-string bass guitar (B0 E1 A1 D2 G2).
+        "bass5" or "contrabass5" => "bass5",
         "bass6" => "bass6",
         "guitar" => "guitar",
         "ukulele" => "ukulele",
@@ -238,7 +239,7 @@ public static class InstrumentDefaults
     /// </remarks>
     public static int GetTransposition(string? instrument) => instrument?.ToLowerInvariant() switch
     {
-        "bass" or "contrabass" or "bass5" or "bass6" => -12,
+        "bass" or "contrabass" or "contrabass5" or "bass5" or "bass6" => -12,
         "piccolo" => 12,
 
         // The CHROMATIC transposers. Written C sounds the named pitch, so the shift is
@@ -283,7 +284,7 @@ public static class InstrumentDefaults
         "violin" => 40,
         "viola" => 41,
         "cello" => 42,
-        "contrabass" => 43,
+        "contrabass" or "contrabass5" => 43,
         "bass" or "bass5" or "bass6" => 33,
         "piano-right" or "piano-left" => 0,
         "guitar" or "ukulele" => 24,
@@ -329,7 +330,7 @@ public static class InstrumentDefaults
         "viola" => "Viola",
         "cello" => "Cello",
         "bass" or "bass5" or "bass6" => "Bass",
-        "contrabass" => "Contrabass",
+        "contrabass" or "contrabass5" => "Contrabass",
         "piano-right" or "piano-left" => "Piano",
         "guitar" => "Guitar",
         "ukulele" => "Ukulele",
@@ -376,6 +377,7 @@ public static class InstrumentDefaults
         "viola" => (48, 88),            // C3 – E6
         "cello" => (36, 84),            // C2 – C6
         "contrabass" => (28, 67),       // E1 – G4
+        "contrabass5" => (23, 67),      // B0 – G4
         "bass" => (28, 67),             // E1 – G4
         "bass5" => (23, 67),            // B0 – G4
         "bass6" => (23, 72),            // B0 – C5
@@ -457,7 +459,7 @@ public static class InstrumentDefaults
     public static readonly IReadOnlyList<string> KnownInstruments = new[]
     {
         // Strings
-        "violin", "viola", "cello", "bass", "contrabass",
+        "violin", "viola", "cello", "bass", "contrabass", "contrabass5",
         // Piano
         "piano-right", "piano-left",
         // Guitar / fretted (incl. the tab-tuning presets from GetTuning). One name per
