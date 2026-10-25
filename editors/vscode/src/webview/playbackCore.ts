@@ -183,7 +183,10 @@ export function playSpan(notes: readonly PlaybackNote[], lo: number | null, hi: 
  */
 export function playSpanWindow(notes: readonly PlaybackNote[], lo: number | null, hi: number | null, once: boolean,
     bars?: readonly number[]): { notes: PlaybackNote[]; length: number } {
-    const key = (n: PlaybackNote) => n.S + ':' + (n.O ?? 0);
+    // A printed note is its place, its copy and its pitch: a chord row's chord sounds its members
+    // from one place (owner's report 2026-10-25: taken for repeats, its second and third were
+    // dropped and every note fell to 0 — the whole piece sounded at once, round after round).
+    const key = (n: PlaybackNote) => n.S + ':' + (n.O ?? 0) + ':' + n.P;
     const sorted = [...notes].sort((a, b) => a.T - b.T);
     // A printed note's first sounding; a later one is a repeat playing it again.
     const first = new Set<PlaybackNote>();
@@ -212,13 +215,29 @@ export function playSpanWindow(notes: readonly PlaybackNote[], lo: number | null
     const window = sorted.filter(n => n.T >= t0 - 1e-6 && n.T < t1 - 1e-6);
     if (!once) { return { notes: window.map(n => ({ ...n, T: n.T - t0 })), length: t1 - t0 }; }
 
-    // The repeats' time: the merged spans the dropped notes sound in.
+    // The repeats' time: the merged spans the dropped notes sound in, less the time a kept note
+    // sounds in — only a stretch nothing kept plays through is closed up, so a note taken for a
+    // repeat by mistake can drop out but never pull the others onto one moment.
+    const merge = (spans: [number, number][]) => {
+        const out: [number, number][] = [];
+        for (const [a, b] of spans.sort((x, y) => x[0] - y[0])) {
+            const last = out[out.length - 1];
+            if (last && a <= last[1] + 1e-6) { last[1] = Math.max(last[1], b); }
+            else { out.push([a, b]); }
+        }
+        return out;
+    };
+    const dropped = merge(window.filter(n => !first.has(n)).map(n => [n.T, n.T + n.D] as [number, number]));
+    const kept = merge(window.filter(n => first.has(n) && n.S >= 0).map(n => [n.T, n.T + n.D] as [number, number]));
     const gone: [number, number][] = [];
-    for (const n of window) {
-        if (first.has(n)) { continue; }
-        const last = gone[gone.length - 1];
-        if (last && n.T <= last[1] + 1e-6) { last[1] = Math.max(last[1], n.T + n.D); }
-        else { gone.push([n.T, n.T + n.D]); }
+    for (const [a, b] of dropped) {
+        let from = a;
+        for (const [ka, kb] of kept) {
+            if (kb <= from + 1e-6 || ka >= b - 1e-6) { continue; }
+            if (ka > from + 1e-6) { gone.push([from, ka]); }
+            from = Math.max(from, kb);
+        }
+        if (from < b - 1e-6) { gone.push([from, b]); }
     }
     const cut = (t: number) => {
         let s = 0;

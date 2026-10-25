@@ -959,6 +959,15 @@ public sealed partial class LilySharpLanguageServer
     /// accented. Past the last bar line, the meter's bars to the last note's end.
     /// </summary>
     internal static List<(int Tick, bool Accent)> MetronomeBeats(LilySharp.Core.Midi.MidiFile midi, int tpq)
+        => MetronomeBeats(midi, tpq, out _);
+
+    /// <summary><see cref="MetronomeBeats(LilySharp.Core.Midi.MidiFile, int)"/>, and where the music's
+    /// last bar ends (<paramref name="barEnd"/>, in ticks): its closing bar line when one stands after
+    /// the last note's start — the beats stop there, a fermata's hold past it unclicked — else the end
+    /// of the meter's bar the last note ends in. A loop's round ends at the bar line its stretch
+    /// ends by (the preview's loop; owner's report 2026-10-25: a guessed bar past a fermata made a
+    /// round a bar too long).</summary>
+    internal static List<(int Tick, bool Accent)> MetronomeBeats(LilySharp.Core.Midi.MidiFile midi, int tpq, out int barEnd)
     {
         var meters = midi.Tracks.SelectMany(t => t.TimeSignatures)
             .GroupBy(m => m.Tick).Select(g => g.Last()).OrderBy(m => m.Tick).ToList();
@@ -969,6 +978,11 @@ public sealed partial class LilySharpLanguageServer
         int BarOf(LilySharp.Core.Midi.TimeSignatureChange m) => Step(m) * Math.Max(1, m.Numerator);
 
         int endTick = midi.Tracks.SelectMany(t => t.Notes).Select(n => n.StartTick + n.DurationTicks).DefaultIfEmpty(0).Max();
+        int lastOnset = midi.Tracks.SelectMany(t => t.Notes).Select(n => n.StartTick).DefaultIfEmpty(0).Max();
+        int closing = midi.BarTicks.Count > 0 ? midi.BarTicks.Max : 0;
+        // The closing bar line, when the music stops at it: the beats end there.
+        if (closing > lastOnset)
+            endTick = closing;
         var bars = midi.BarTicks.Where(t => t > 0 && t < endTick).ToList();
         var beats = new List<(int, bool)>();
         int start = 0;
@@ -989,6 +1003,15 @@ public sealed partial class LilySharpLanguageServer
             int until = last ? endTick : bars[i + 1];
             for (int k = 0, tick = bars[i]; tick < until; k++, tick += Step(m))
                 beats.Add((tick, last ? k % Math.Max(1, m.Numerator) == 0 : k == 0));
+        }
+        if (closing > lastOnset)
+            barEnd = closing;
+        else
+        {
+            // No bar line after the last note: the meter's bars from the last bar line on.
+            var m = MeterAt(bars[^1]);
+            int bar = BarOf(m);
+            barEnd = bars[^1] + Math.Max(1, (endTick - bars[^1] + bar - 1) / bar) * bar;
         }
         return beats;
     }
@@ -1053,12 +1076,13 @@ public sealed partial class LilySharpLanguageServer
                 })
                 .ToArray();
 
-            var beats = MetronomeBeats(midi, tpq).Select(b => new PlaybackBeat { T = SecondsAt(b.Tick), A = b.Accent }).ToArray();
+            var beats = MetronomeBeats(midi, tpq, out int barEnd).Select(b => new PlaybackBeat { T = SecondsAt(b.Tick), A = b.Accent }).ToArray();
             return new PlaybackResponse
             {
                 Notes = notes,
                 Parts = midi.Tracks.Select(t => t.Name).ToArray(),
                 Beats = beats,
+                BarEnd = SecondsAt(barEnd),
             };
         }
         catch (Exception ex)

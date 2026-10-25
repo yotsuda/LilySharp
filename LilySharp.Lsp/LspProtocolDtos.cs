@@ -318,6 +318,9 @@ public class PlaybackResponse
     /// <summary>The beats a metronome clicks, in seconds: one per beat of the meter in force,
     /// the first of each bar accented.</summary>
     public PlaybackBeat[]? Beats { get; set; }
+    /// <summary>Where the music's last bar ends, in seconds: its closing bar line, or the end of the
+    /// meter's bar the last note ends in — the last of the bars a loop rounds to.</summary>
+    public double BarEnd { get; set; }
     public string? Error { get; set; }
 }
 

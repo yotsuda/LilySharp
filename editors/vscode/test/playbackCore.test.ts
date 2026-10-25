@@ -75,6 +75,18 @@ describe('the stretch a Play sounds', () => {
         assert.equal(playSpanWindow(restful, 20, 21, true).length, 1.5);
     });
 
+    it('keeps a chord row\'s chord whole, and never pulls the notes onto one moment', () => {
+        // A chord row sounds its chord's members from one place: taken for a repeat's notes, its
+        // second and third were dropped and every note fell to 0 (owner's report 2026-10-25,
+        // samples/morning-light.lys looped).
+        const chordRow = [0, 4].flatMap(t => [55, 59, 62].map(p => note(t, 4, p, { S: 900 + t })));
+        const tune = [0, 1, 2, 3, 4, 5, 6, 7].map(t => note(t, 1, 67 + t, { S: 10 + t }));
+        const w = playSpanWindow([...chordRow, ...tune], null, null, true, [0, 4, 8]);
+        assert.equal(w.notes.length, chordRow.length + tune.length);
+        assert.deepEqual(w.notes.filter(n => n.S < 900).map(n => n.T), [0, 1, 2, 3, 4, 5, 6, 7]);
+        assert.equal(w.length, 8);
+    });
+
     it('plays nothing for a selection with no notes', () => {
         assert.deepEqual(playSpan(piece, 50, 60, false), []);
     });

@@ -160,6 +160,20 @@ public class PlaybackRequestTests
         Assert.Equal(new[] { 0.5, 2.5 }, pb.Beats!.Where(b => b.A).Select(b => Math.Round(b.T, 3)));
     }
 
+    /// <summary>A last note held past its bar line by a fermata: the beats stop at the closing bar
+    /// line, which is where the music's last bar ends (owner's report 2026-10-25: a loop guessed a
+    /// bar past it and went round a bar late).</summary>
+    [Fact]
+    public void TheClosingBarLine_EndsTheBeats_AndTheLastBar_PastAFermatasHold()
+    {
+        const string doc = "time 4/4\npart m { }\nsection A {\n  m { c'4 d e f | g1@fermata |. }\n}\nform { A }\nscore { staff m }\n";
+        var pb = Playback(doc, null);
+        Assert.Null(pb.Error);
+        Assert.Equal(4.0, Math.Round(pb.BarEnd, 3));
+        Assert.Equal(3.5, Math.Round(pb.Beats!.Max(b => b.T), 3));
+        Assert.Equal(new[] { 0.0, 2.0 }, pb.Beats!.Where(b => b.A).Select(b => Math.Round(b.T, 3)));
+    }
+
     [Fact]
     public void AText_PlaysAsTheDocumentWould_AndAChangedOneAsChanged()
     {

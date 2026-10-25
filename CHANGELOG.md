@@ -119,7 +119,9 @@ score's PDF and preview keeping the whole paper, and a PDF page the paper's own 
   the new `Parts` (the track names), and `Beats` is one entry per beat of the meter in force, the
   bar's first marked — for the preview's part switches and metronome. The bars are where the bar
   lines stand as the music plays (`MidiFile.BarTicks`, every part's, repeats unfolded), so a
-  pickup's beats count back from its bar line and none is a bar's first.
+  pickup's beats count back from its bar line and none is a bar's first. `BarEnd` is where the
+  music's last bar ends — its closing bar line, where the beats stop (a fermata's hold past it is
+  not clicked).
 - **Each part's range** (`lilysharp/ranges`, `PartRanges`): the lowest and highest note of every
   part of the score shown, spelled as written (`B♭4`, C4 = middle C), with every place each is
   written, the share of the sounding time on each semitone between them and the tessitura (the
