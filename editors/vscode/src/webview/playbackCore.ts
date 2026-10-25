@@ -122,8 +122,11 @@ export function toEvents(notes: readonly PlaybackNote[], offset = 0): MidiEvent[
         if (n.T < offset - 0.001) { continue; }
         const c = channelOf(n);
         if (c !== DRUM_CHANNEL && !programs.has(c)) { programs.set(c, programOf(n.G, n.I)); }
-        const t = Math.max(0, n.T - offset);
-        const off = t + Math.max(0.03, n.D);
+        // To the microsecond: a note's end and the next one's start that are one instant can
+        // differ in the last bit (a tempo the practice menu stretched, 2026-10-25), and the off
+        // sorted after the re-strike silenced it — a repeated note went missing.
+        const t = micro(Math.max(0, n.T - offset));
+        const off = micro(t + Math.max(0.03, n.D));
         // The key below the pitch, bent UP by the fraction — the shape the .mid export
         // writes (a key and a positive wheel), not Math.round's coin toss at .5.
         const key = Math.floor(n.P + BEND_EPSILON);
@@ -145,6 +148,9 @@ export function toEvents(notes: readonly PlaybackNote[], offset = 0): MidiEvent[
         .sort((a, b) => a.e.t - b.e.t || KIND_ORDER[a.e.kind] - KIND_ORDER[b.e.kind] || a.i - b.i)
         .map(x => x.e);
 }
+
+/** A time to the microsecond (toEvents). */
+const micro = (t: number) => Math.round(t * 1e6) / 1e6;
 
 /** When the last note from `offset` on ends, in seconds from the piece's start. */
 export function endOf(notes: readonly PlaybackNote[], offset = 0): number {

@@ -6,6 +6,10 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ### Fixed
 
+- **A repeated note no longer goes silent at a practice tempo**: stretched to 120% or 150%, a
+  note's end and the same pitch's next start differed in the last bit, the end was sent after
+  the start, and the second note was cut at once (a C5 eighth after a C5 eighth). Both players —
+  the preview's and the MIDI output — time their events to the microsecond.
 - **The notes playing on the MIDI output light one by one again**: the page sounds nothing
   itself then, and the browser slowed its timers to one a second — in a bar of eighth notes
   one in four lit, and stayed lit. The extension now keeps the highlight's beat from its side,

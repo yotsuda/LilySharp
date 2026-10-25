@@ -73,8 +73,11 @@ public static class MidiOutEvents
         var events = new List<(MidiOutEvent E, int I)>();
         var programs = new Dictionary<int, int>();
         int serial = 0;
+        // Times to the microsecond: a note's end and the next one's start that are one instant
+        // can differ in the last bit (a tempo the practice menu stretched, 2026-10-25), and the
+        // off sorted after the re-strike silenced it — a repeated note went missing.
         void Add(double t, byte status, int d1, int d2)
-            => events.Add((new MidiOutEvent(t, status, (byte)Math.Clamp(d1, 0, 127), (byte)Math.Clamp(d2, 0, 127)), serial++));
+            => events.Add((new MidiOutEvent(Math.Round(t, 6), status, (byte)Math.Clamp(d1, 0, 127), (byte)Math.Clamp(d2, 0, 127)), serial++));
 
         foreach (var n in notes)
         {

@@ -79,6 +79,20 @@ describe('the notes the practice menu plays', () => {
         assert.deepEqual(slow.map(n => [n.T, n.D]), [[0, 2], [0, 2], [2, 2]]);
     });
 
+    it('keeps a repeated note sounding at any tempo: its off before the re-strike', () => {
+        // Two C5 eighths at 162 bpm (a user's file, 2026-10-25): stretched to 150%, the first's
+        // end came a bit after the second's start, and the off silenced the second.
+        const two: PlaybackNote[] = [
+            { T: 4.259255, D: 0.1851850000000006, P: 72, V: 80, S: 371, O: 0, I: 3, C: 0, G: 40, N: 1 },
+            { T: 4.44444, D: 0.1851849999999997, P: 72, V: 80, S: 375, O: 0, I: 3, C: 0, G: 40, N: 1 },
+        ];
+        for (const speed of [0.5, 0.8, 1.2, 1.5]) {
+            const ev = toEvents(practiceNotes(two, parts, null, { ...as, speed }))
+                .filter(e => e.kind === 'on' || e.kind === 'off');
+            assert.deepEqual(ev.map(e => e.kind), ['on', 'off', 'on', 'off'], `at ${speed}`);
+        }
+    });
+
     it('clicks every beat with the metronome on, the bar\'s first louder, lighting nothing', () => {
         const clicks = practiceNotes(notes, parts, beats, { ...as, click: true, speed: 0.5 }).filter(n => n.C === DRUM_CHANNEL);
         assert.deepEqual(clicks.map(n => [n.T, n.P, n.S]), [[0, 76, -1], [1, 77, -1]]);

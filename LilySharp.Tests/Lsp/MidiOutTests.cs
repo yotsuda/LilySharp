@@ -75,6 +75,21 @@ public class MidiOutTests
         Assert.Equal(["off", "on"], events.Where(e => e.Time == 1).Select(Kind));
     }
 
+    /// <summary>A note's end and its re-strike one instant apart in the last bit only — two C5
+    /// eighths of a user's file at 162 bpm, stretched to the practice menu's 150% (2026-10-25):
+    /// the off sorted after the on and silenced the second note.</summary>
+    [Theory]
+    [InlineData(0.5)]
+    [InlineData(0.8)]
+    [InlineData(1.2)]
+    [InlineData(1.5)]
+    public void ANotesOff_ComesBeforeItsReStrike_WhenTheirTimesDifferInTheLastBit(double speed)
+    {
+        double k = 1 / speed;
+        var events = MidiOutEvents.From([Note(4.259255 * k, 0.1851850000000006 * k, 72), Note(4.44444 * k, 0.1851849999999997 * k, 72)], 0);
+        Assert.Equal(["on", "off", "on", "off"], events.Where(e => Kind(e) is "on" or "off").Select(Kind));
+    }
+
     [Fact]
     public void NotesBeforeTheOffset_AreDroppedWhole_AndTheRestTimedFromIt()
     {
