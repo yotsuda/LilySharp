@@ -1132,7 +1132,7 @@ public sealed partial class LilySharpLanguageServer
                 Changes = abs.Changes.Select(c => new TextChangeDto { Start = c.Start, End = c.End, Text = c.Text }).ToArray(),
             };
         }
-        var back = LilySharp.Core.Editing.OctaveModeConverter.FromAbsoluteForAi(text);
+        var back = LilySharp.Core.Editing.OctaveModeConverter.FromAbsoluteForAi(text, @params.Original ?? "");
         return new AiOctavesResponse { NewText = back.NewText, Error = back.Error };
     }
 

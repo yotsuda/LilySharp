@@ -192,7 +192,7 @@ public class OctaveModeConverterTests
     public void ForTheAi_UntouchedComesBackAsItWas()
     {
         var abs = OctaveModeConverter.ToAbsoluteForAi(Song).NewText!;
-        Assert.Equal(Song, OctaveModeConverter.FromAbsoluteForAi(abs).NewText);
+        Assert.Equal(Song, OctaveModeConverter.FromAbsoluteForAi(abs, Song).NewText);
     }
 
     [Fact]
@@ -202,7 +202,7 @@ public class OctaveModeConverterTests
         // would move with it if the marks were kept; back from absolute, they are re-marked.
         var abs = OctaveModeConverter.ToAbsoluteForAi(Song).NewText!;
         var edited = abs.Replace("c4 d e f |", "c4 d e a' |");
-        var back = OctaveModeConverter.FromAbsoluteForAi(edited);
+        var back = OctaveModeConverter.FromAbsoluteForAi(edited, Song);
         Assert.True(back.NewText != null, back.Error);
         Assert.Equal(Pitches(edited), Pitches(back.NewText!));
         Assert.DoesNotContain("octave", back.NewText);
@@ -210,12 +210,36 @@ public class OctaveModeConverterTests
         Assert.EndsWith(Song[Song.IndexOf("section B")..], back.NewText);
     }
 
+    [Theory]
+    // One `octave relative` anywhere at the top level — not only on the first line.
+    [InlineData("title \"t\"\noctave relative\npart m { }")]
+    [InlineData("title \"t\"\npart m { }\noctave   relative   // the writer's spacing and comment")]
+    // Several: the last wins, so an earlier `absolute` is overwritten and the file is relative.
+    [InlineData("octave absolute\ntitle \"t\"\npart m { }\noctave relative")]
+    public void ForTheAi_TopLevelOctaveLines_AnywhereComeBackAsWritten(string head)
+    {
+        var song = Song.Replace("title \"t\"\npart m { }", head);
+        var abs = OctaveModeConverter.ToAbsoluteForAi(song);
+        Assert.True(abs.NewText != null, abs.Error);
+        // Each line stays where it was, saying absolute.
+        Assert.Equal(head.Split("octave").Length - 1, abs.NewText!.Split("octave absolute").Length - 1);
+        Assert.Equal(Pitches(song), Pitches(abs.NewText));
+        Assert.Equal(song, OctaveModeConverter.FromAbsoluteForAi(abs.NewText, song).NewText);
+
+        var edited = abs.NewText.Replace("c4 d e f |", "c4 d e a' |");
+        var back = OctaveModeConverter.FromAbsoluteForAi(edited, song).NewText!;
+        Assert.Equal(Pitches(edited), Pitches(back));
+        Assert.StartsWith(head, back);
+    }
+
     [Fact]
-    public void ForTheAi_AFileStatingItsMode_IsLeftAlone_AndACandidateMustKeepTheLine()
+    public void ForTheAi_AFileAbsoluteAlready_OrSwitchingInItsMusic_IsLeftAlone_AndACandidateMustKeepTheLines()
     {
         Assert.Null(OctaveModeConverter.ToAbsoluteForAi("octave absolute\n" + Song).NewText);
+        Assert.Null(OctaveModeConverter.ToAbsoluteForAi(Song + "octave absolute\n").NewText);   // the last wins
         Assert.Null(OctaveModeConverter.ToAbsoluteForAi(Song.Replace("m { e4", "m { octave absolute e4")).NewText);
         var abs = OctaveModeConverter.ToAbsoluteForAi(Song).NewText!;
-        Assert.Null(OctaveModeConverter.FromAbsoluteForAi(abs.Replace("octave absolute\n", "")).NewText);
+        Assert.Null(OctaveModeConverter.FromAbsoluteForAi(abs.Replace("octave absolute\n", ""), Song).NewText);
+        Assert.Null(OctaveModeConverter.FromAbsoluteForAi(abs + "octave absolute\n", Song).NewText);
     }
 }

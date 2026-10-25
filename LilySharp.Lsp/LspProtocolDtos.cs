@@ -343,6 +343,9 @@ public class AiOctavesParams
 {
     public string Text { get; set; } = "";
     public bool ToAbsolute { get; set; }
+    /// <summary>Back only: the file as it was before the trip, whose <c>octave</c> lines the
+    /// candidate gets back.</summary>
+    public string Original { get; set; } = "";
 }
 
 /// <summary>One replacement of [Start, End) of the text the request was given.</summary>

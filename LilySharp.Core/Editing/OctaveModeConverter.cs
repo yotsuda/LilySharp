@@ -84,19 +84,28 @@ public static class OctaveModeConverter
     public sealed record AiAbsolute(string? NewText, string? Error, IReadOnlyList<TextChange> Changes);
 
     /// <summary>
-    /// The AI transform's first half (owner's request 2026-10-25): a file in relative octaves —
-    /// the default, no <c>octave</c> directive anywhere — rewritten into absolute ones, so the
-    /// model writes each pitch where it sounds instead of computing the relative chain, the
-    /// mistake it makes most. A file that states a mode is left as it is (refused): one already
-    /// absolute needs nothing, and one that switches inside its music would lose the switches on
-    /// the way back.
+    /// The AI transform's first half (owner's request 2026-10-25): a file in relative octaves
+    /// rewritten into absolute ones, so the model writes each pitch where it sounds instead of
+    /// computing the relative chain, the mistake it makes most. Relative is what the file's
+    /// top-level <c>octave</c> lines leave in force — none, or a last one saying
+    /// <c>relative</c> (the last wins, wherever it stands; owner's request the same day: a line
+    /// anywhere at the top level, not only the first). Each of those lines stays where it is,
+    /// saying <c>absolute</c>, and a file with none gets one, so the way back can give every
+    /// line its own word again. Refused: a file already absolute (it needs nothing), and one
+    /// that switches mode inside its music (the switches would not survive the trip).
     /// </summary>
     public static AiAbsolute ToAbsoluteForAi(string source)
     {
         var tree = SyntaxTree.Parse(source);
-        if (!tree.HasErrors && tree.GetRoot().DescendantNodes<OctaveDirectiveSyntax>().Any())
-            return new AiAbsolute(null, "The file states its octave mode — sent as it is.", []);
-        var (result, edits) = ConvertWithEdits(source, OctaveMode.Absolute);
+        if (!tree.HasErrors)
+        {
+            var directives = tree.GetRoot().DescendantNodes<OctaveDirectiveSyntax>().ToList();
+            if (directives.Any(d => d.Parent is not CompilationUnitSyntax))
+                return new AiAbsolute(null, "The file switches octave mode inside its music — sent as it is.", []);
+            if (directives.Count > 0 && directives[^1].IsAbsolute)
+                return new AiAbsolute(null, "The file is in absolute octaves already — sent as it is.", []);
+        }
+        var (result, edits) = ConvertWithEdits(source, OctaveMode.Absolute, keepTopLevel: true);
         return result.NewText == null
             ? new AiAbsolute(null, result.Error, [])
             : new AiAbsolute(result.NewText, null,
@@ -105,30 +114,35 @@ public static class OctaveModeConverter
 
     /// <summary>
     /// The second half: the AI's candidate, in the absolute octaves <see cref="ToAbsoluteForAi"/>
-    /// gave it, back in relative octaves, without the <c>octave</c> line the first half added —
-    /// the file as its writer keeps it. Every note sounds where the candidate put it (the
-    /// conversion verifies that), and a note the AI left alone gets back the marks it had, since
-    /// in relative octaves the marks follow from the pitches. Refused when the candidate no
-    /// longer opens with its one <c>octave absolute</c> line.
+    /// made of <paramref name="original"/>, back in relative octaves, its top-level
+    /// <c>octave</c> lines as the original wrote them — each one's own text again, or, when the
+    /// original had none, the one added taken out. Every note sounds where the candidate put it
+    /// (the conversion verifies that), and a note the AI left alone gets back the marks it had,
+    /// since in relative octaves the marks follow from the pitches. Refused when the candidate
+    /// no longer holds those lines, each saying <c>absolute</c> at the top level.
     /// </summary>
-    public static Result FromAbsoluteForAi(string candidate)
+    public static Result FromAbsoluteForAi(string candidate, string original)
     {
         var tree = SyntaxTree.Parse(candidate);
         if (tree.HasErrors)
             return Fail("The candidate has syntax errors — no changes made.");
+        var own = SyntaxTree.Parse(original).GetRoot().DescendantNodes<OctaveDirectiveSyntax>().ToList();
         var directives = tree.GetRoot().DescendantNodes<OctaveDirectiveSyntax>().ToList();
-        if (directives is not [{ IsAbsolute: true, Parent: CompilationUnitSyntax }])
-            return Fail("The candidate no longer states `octave absolute` once at the top — no changes made.");
-        var back = Convert(candidate, OctaveMode.Relative);
+        if (directives.Count != Math.Max(1, own.Count)
+            || directives.Any(d => !d.IsAbsolute || d.Parent is not CompilationUnitSyntax))
+            return Fail("The candidate no longer holds the file's `octave` lines as they were given to it — no changes made.");
+        var (back, _) = ConvertWithEdits(candidate, OctaveMode.Relative, keepTopLevel: true);
         if (back.NewText == null)
             return back;
-        // Convert keeps the file's directive, naming the new mode; relative is the default.
-        var line = SyntaxTree.Parse(back.NewText).GetRoot().DescendantNodes<OctaveDirectiveSyntax>().FirstOrDefault();
-        return line == null ? back
-            : new Result(Apply(back.NewText, [Removal(back.NewText, line.Span.Start, line.Span.End)]), null, back.ChangedPitches);
+        // Every top-level line now says relative, in place; give each the original's text.
+        var lines = SyntaxTree.Parse(back.NewText).GetRoot().DescendantNodes<OctaveDirectiveSyntax>().ToList();
+        var restore = own.Count == 0
+            ? lines.Select(d => Removal(back.NewText, d.Span.Start, d.Span.End))
+            : lines.Zip(own, (d, o) => new Edit(d.Span.Start, d.Span.End, original[o.Span.Start..o.Span.End]));
+        return new Result(Apply(back.NewText, restore), null, back.ChangedPitches);
     }
 
-    private static (Result Result, List<Edit> Edits) ConvertWithEdits(string source, OctaveMode target)
+    private static (Result Result, List<Edit> Edits) ConvertWithEdits(string source, OctaveMode target, bool keepTopLevel = false)
     {
         var tree = SyntaxTree.Parse(source);
         if (tree.HasErrors)
@@ -161,7 +175,7 @@ public static class OctaveModeConverter
                 return No("A note resolved outside this file's text — no changes made.");
 
         // ⑵ Force the file with only its mode directives changed.
-        var modeEdits = ModeEdits(source, root, target);
+        var modeEdits = ModeEdits(source, root, target, keepTopLevel);
         var candidate = Apply(source, modeEdits);
         var candidateTree = SyntaxTree.Parse(candidate);
         if (candidateTree.HasErrors)
@@ -464,8 +478,11 @@ public static class OctaveModeConverter
     /// <summary>Removes every <c>octave absolute</c> / <c>octave relative</c> and, for
     /// absolute, states it once at the top level — replacing the first top-level directive
     /// when there is one, else just before the first thing that is not the file's header.
+    /// <para><paramref name="keepTopLevel"/> (the AI transform's round trip): EVERY top-level
+    /// directive stays in place naming the new mode, so the lines can be given their own words
+    /// back afterwards.</para>
     /// </summary>
-    private static List<Edit> ModeEdits(string source, CompilationUnitSyntax root, OctaveMode target)
+    private static List<Edit> ModeEdits(string source, CompilationUnitSyntax root, OctaveMode target, bool keepTopLevel = false)
     {
         var edits = new List<Edit>();
         var directives = root.DescendantNodes<OctaveDirectiveSyntax>().ToList();
@@ -473,6 +490,12 @@ public static class OctaveModeConverter
         bool stated = false;
         foreach (var d in directives)
         {
+            if (keepTopLevel && d.Parent is CompilationUnitSyntax)
+            {
+                edits.Add(new Edit(d.Span.Start, d.Span.End, directive));
+                stated = true;
+                continue;
+            }
             // The file's first directive stays and names the new mode, in either direction:
             // the line is the writer's (owner's report 2026-10-17 — Down on `octave absolute`
             // made the line vanish, when relative was written by removing it). The switches

@@ -56,7 +56,7 @@ public sealed class AiOctaveRoundTripMeasureTests
                 reasons[why] = reasons.GetValueOrDefault(why) + 1;
                 continue;
             }
-            var back = OctaveModeConverter.FromAbsoluteForAi(abs.NewText);
+            var back = OctaveModeConverter.FromAbsoluteForAi(abs.NewText, source);
             if (back.NewText == null)
             {
                 lost++;

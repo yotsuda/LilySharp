@@ -242,8 +242,9 @@ interface AiOctavesResponse { NewText: string | null; Changes: TextChange[]; Err
  * each note nearest the one before, every section starting afresh — is the model's most common
  * slip, and in absolute octaves every pitch says where it sounds. The whole conversation, the
  * checks and the candidate panel work on that text; Accept brings the candidate back to
- * relative octaves (fromAbsoluteOctaves). A file that states its mode, or that the server cannot
- * convert exactly, goes as it is.
+ * relative octaves (fromAbsoluteOctaves), each top-level `octave` line as the file wrote it. A
+ * file already absolute, one that switches mode inside its music, and one the server cannot
+ * convert exactly go as they are.
  */
 async function toAbsoluteOctaves(deps: AiTransformDeps, client: LanguageClient, snapshot: Snapshot, whole: boolean): Promise<AiSpace> {
     let resp: AiOctavesResponse;
@@ -266,16 +267,21 @@ async function toAbsoluteOctaves(deps: AiTransformDeps, client: LanguageClient, 
     };
 }
 
+/** How many `octave …` lines a text holds (the server checks where they stand). */
+function octaveLines(text: string): number {
+    return (text.match(/^[ \t]*octave[ \t]+(absolute|relative)\b/gm) ?? []).length;
+}
+
 /**
  * The accepted candidate (the whole file in absolute octaves) back in the file's relative
  * octaves, or undefined when the user declines the fallback: a candidate the server cannot
  * bring back (it plays a note no score reaches, say) is offered in absolute octaves — the whole
  * file then says `octave absolute`.
  */
-async function fromAbsoluteOctaves(deps: AiTransformDeps, client: LanguageClient, full: string): Promise<string | undefined> {
+async function fromAbsoluteOctaves(deps: AiTransformDeps, client: LanguageClient, full: string, original: string): Promise<string | undefined> {
     let resp: AiOctavesResponse | undefined;
     try {
-        resp = await client.sendRequest<AiOctavesResponse>('lilysharp/aiOctaves', { Text: full, ToAbsolute: false });
+        resp = await client.sendRequest<AiOctavesResponse>('lilysharp/aiOctaves', { Text: full, ToAbsolute: false, Original: original });
     } catch (err: any) {
         resp = { NewText: null, Changes: [], Error: String(err?.message ?? err) };
     }
@@ -412,13 +418,14 @@ async function drive(
                         + 'declaration), reply with <edit> blocks.' });
                     continue;
                 }
-                // The way back to relative octaves reads the line; without it every pitch would
-                // be read relative, and land elsewhere.
-                if (ai.converted && !/^octave absolute\b/m.test(spliceCandidate(edit.snap, edit.text))) {
+                // The way back to relative octaves gives each of the file's `octave` lines its own
+                // word again, so they must all still be there; without them every pitch would be
+                // read relative, and land elsewhere.
+                if (ai.converted && octaveLines(spliceCandidate(edit.snap, edit.text)) !== octaveLines(work.origFullText)) {
                     messages.push({ role: 'assistant', content: raw });
                     messages.push({ role: 'user', content:
-                        'Your change removed the file\'s `octave absolute` line. Keep it exactly as it is — '
-                        + 'reply again, same output rules.' });
+                        'Your change added or removed an `octave absolute` line. Keep the file\'s `octave` lines exactly '
+                        + 'as they are — reply again, same output rules.' });
                     continue;
                 }
                 unchanged = false;
@@ -588,7 +595,7 @@ async function drive(
         if (ai.converted) {
             // Back to the file's relative octaves, applied as the span where the file changes:
             // the AI's edits, and the notes after them whose marks follow from new neighbours.
-            const back = await fromAbsoluteOctaves(deps, client, spliceCandidate(candidate.snap, candidate.text));
+            const back = await fromAbsoluteOctaves(deps, client, spliceCandidate(candidate.snap, candidate.text), snapshot.origFullText);
             if (back === undefined) {
                 deps.log('AI transform: not applied (it could not be brought back to relative octaves).');
                 return;
@@ -694,7 +701,7 @@ function taskPrompt(snapshot: Snapshot, shown: { text: string; complete: boolean
         parts.push('The file is shown in ABSOLUTE octaves (`octave absolute` at its top): every pitch says where it '
             + 'sounds — a bare pitch is in the octave of the part\'s anchor (C4 unless the part\'s `octave N` or '
             + 'instrument says otherwise), and each \' / , moves it one octave from there, never from the note '
-            + 'before. Write every pitch you add or change the same way, and keep the `octave absolute` line.');
+            + 'before. Write every pitch you add or change the same way, and keep the file\'s `octave` lines as they are.');
         parts.push('');
     }
     const partial = shown.complete ? '' : ' Parts of it are omitted, marked "…"; leave them alone.';
