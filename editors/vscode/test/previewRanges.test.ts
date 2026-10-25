@@ -44,6 +44,17 @@ describe('the preview\'s Range panel', () => {
         assert.match(html, /case 'rangesData':\s*rangeParts = message\.parts \|\| null;/);
     });
 
+    // Play of the selected bars and the loop; the length beside them (owner's request 2026-10-25).
+    it('plays the selected bars, loops while the loop is on, and shows the length', () => {
+        assert.match(html, /pendingSpan = aiRangeLo >= 0 \? \[aiRangeLo, aiRangeHi\] : null;/);
+        assert.match(html, /<button id="loopBtn" class="toggle icon" type="button" aria-pressed="false" aria-label="Loop"/);
+        assert.match(html, /window\.LysSynth\.playSpan\(playbackNotes, span \? span\[0\] : null, span \? span\[1\] : null, loopOn\);/);
+        assert.match(html, /playEndTimer = setTimeout\(playEnded, /);
+        assert.match(html, /function playEnded\(\) \{\s*const list = loopOn \? loopList : null;/);
+        assert.match(html, /refreshRanges\(\);\s*vscode\.postMessage\(\{ type: 'requestLength' \}\);/);
+        assert.match(extension, /if \(message\.type === 'requestLength'\)/);
+    });
+
     it('shows a clicked end on the score and in the editor, the next place on the next click', () => {
         assert.match(html, /if \(rangeCur === key\) rangeAt\[key\] = \(\(rangeAt\[key\] \|\| 0\) \+ 1\) % n;/);
         assert.match(html, /const painted = highlightPositions\(\[pos\]\);/);

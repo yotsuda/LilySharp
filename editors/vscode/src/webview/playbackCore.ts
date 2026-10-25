@@ -119,6 +119,54 @@ export function endOf(notes: readonly PlaybackNote[], offset = 0): number {
     return end;
 }
 
+/**
+ * The notes a Play of a stretch sounds, from 0 (owner's request 2026-10-25): the stretch the
+ * score selection [lo, hi] covers (source offsets; null for the whole piece) where it FIRST
+ * plays — every part sounding then, not only the selected staff's — and, with `once` (the
+ * header's loop on), without the repeats inside it: a note playing a printed note again (its
+ * S and O already sounded) is dropped and the time it took closed up, so the loop goes round
+ * the music as written, once.
+ */
+export function playSpan(notes: readonly PlaybackNote[], lo: number | null, hi: number | null, once: boolean): PlaybackNote[] {
+    const key = (n: PlaybackNote) => n.S + ':' + (n.O ?? 0);
+    const sorted = [...notes].sort((a, b) => a.T - b.T);
+    // A printed note's first sounding; a later one is a repeat playing it again.
+    const first = new Set<PlaybackNote>();
+    const seen = new Set<string>();
+    for (const n of sorted) {
+        if (n.S < 0 || !seen.has(key(n))) { first.add(n); }
+        if (n.S >= 0) { seen.add(key(n)); }
+    }
+    const inSpan = (n: PlaybackNote) => lo === null || hi === null || (n.S >= lo && n.S <= hi);
+    let t0 = Infinity, t1 = -Infinity;
+    for (const n of sorted) {
+        if (!first.has(n) || !inSpan(n)) { continue; }
+        t0 = Math.min(t0, n.T);
+        t1 = Math.max(t1, n.T + n.D);
+    }
+    if (t0 === Infinity) { return []; }
+    const window = sorted.filter(n => n.T >= t0 - 1e-6 && n.T < t1 - 1e-6);
+    if (!once) { return window.map(n => ({ ...n, T: n.T - t0 })); }
+
+    // The repeats' time: the merged spans the dropped notes sound in.
+    const gone: [number, number][] = [];
+    for (const n of window) {
+        if (first.has(n)) { continue; }
+        const last = gone[gone.length - 1];
+        if (last && n.T <= last[1] + 1e-6) { last[1] = Math.max(last[1], n.T + n.D); }
+        else { gone.push([n.T, n.T + n.D]); }
+    }
+    const cut = (t: number) => {
+        let s = 0;
+        for (const [a, b] of gone) {
+            if (b <= t + 1e-6) { s += b - a; }
+            else if (a < t) { s += t - a; }
+        }
+        return s;
+    };
+    return window.filter(n => first.has(n)).map(n => ({ ...n, T: n.T - t0 - cut(n.T) }));
+}
+
 /** The channels `events` touch — what a stop has to silence. */
 export function channelsOf(events: readonly MidiEvent[]): number[] {
     const set = new Set<number>();

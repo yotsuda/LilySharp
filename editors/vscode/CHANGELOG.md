@@ -4,6 +4,17 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+### Play the bars selected, round and round
+
+- **▶ with bars selected on the score plays them**, every part sounding there, from where the
+  bars first play.
+- **A loop toggle beside ⏹** (two arrows chasing each other, pressed in while on) plays the
+  selected bars — or the whole score — round and round. Looping goes through the music as
+  written once: the score's repeats inside it are not taken. *Play from Here* in the menu still
+  plays from the note, once.
+- **The score's length stands beside the loop** (*3:42*): how long it plays, repeats and tempo
+  changes included, updated with every edit.
+
 ### Each part's range, in the preview
 
 - **Range in the preview's header** — an icon as big as ✨, a double-headed arrow just left of an

@@ -49,7 +49,8 @@ describe('an AI candidate plays before it is accepted', () => {
         const start = extension.indexOf('return `<!DOCTYPE html>') + 'return '.length;
         const end = extension.indexOf('</html>`;', start) + '</html>`'.length;
         const html = new vm.Script(extension.slice(start, end).replace(/\$\{[^}]*\}/g, 'X')).runInNewContext({}) as string;
-        assert.match(html, /case 'playNotes':\s*startPlayback\(message\.notes, 0\);/);
+        // Never round the header's loop: a candidate plays once.
+        assert.match(html, /case 'playNotes':\s*loopList = null;\s*startPlayback\(message\.notes, 0\);/);
         assert.match(extension, /void panel\.webview\.postMessage\(\{ type: 'playNotes', notes \}\);/);
     });
 

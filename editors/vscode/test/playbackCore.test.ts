@@ -18,11 +18,40 @@ import { describe, it } from 'node:test';
 import * as assert from 'node:assert/strict';
 import {
     BEND_CENTRE, DRUM_CHANNEL, FAMILY_PROGRAM, Lookahead, PlaybackNote, SoundingCursor,
-    channelOf, channelsOf, endOf, programOf, toEvents,
+    channelOf, channelsOf, endOf, playSpan, programOf, toEvents,
 } from '../src/webview/playbackCore';
 
 const note = (t: number, d: number, p: number, extra: Partial<PlaybackNote> = {}): PlaybackNote =>
     ({ T: t, D: d, P: p, V: 90, S: 10 * t, O: 0, I: 0, C: 0, G: 0, ...extra });
+
+// Play of a selected stretch, and the loop that ignores repeats (owner's request 2026-10-25).
+describe('the stretch a Play sounds', () => {
+    // A bar A (written at 0..3) played twice — a repeat — then a bar B (10..13), one second a
+    // quarter; a bass holds a whole note under each bar (A's at 100, B's at 110).
+    const melody = (s0: number, t0: number) => [0, 1, 2, 3].map(i => note(t0 + i, 1, 60 + i, { S: s0 + i }));
+    const piece: PlaybackNote[] = [
+        ...melody(0, 0), note(0, 4, 36, { S: 100 }),
+        ...melody(0, 4), note(4, 4, 36, { S: 100 }),
+        ...melody(10, 8), note(8, 4, 41, { S: 110 }),
+    ];
+    const at = (ns: PlaybackNote[]) => ns.map(n => [n.S, n.T]);
+
+    it('plays the selected bar where it first plays, every part with it, from 0', () => {
+        assert.deepEqual(at(playSpan(piece, 10, 13, false)), [[10, 0], [110, 0], [11, 1], [12, 2], [13, 3]]);
+        assert.deepEqual(at(playSpan(piece, 2, 3, false)), [[2, 0], [3, 1]]);
+    });
+
+    it('with the loop on, goes through the music once: a repeat is dropped and its time closed up', () => {
+        const once = playSpan(piece, null, null, true);
+        assert.deepEqual(at(once), [[0, 0], [100, 0], [1, 1], [2, 2], [3, 3], [10, 4], [110, 4], [11, 5], [12, 6], [13, 7]]);
+        // Without it, the whole piece is the piece.
+        assert.equal(playSpan(piece, null, null, false).length, piece.length);
+    });
+
+    it('plays nothing for a selection with no notes', () => {
+        assert.deepEqual(playSpan(piece, 50, 60, false), []);
+    });
+});
 
 describe('the events a note list becomes (docs/playback-design.md §2)', () => {
     it('sets each pitched channel\'s program once, first, and plays drums with none', () => {

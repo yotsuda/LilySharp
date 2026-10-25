@@ -1426,6 +1426,20 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
                 }
                 return;
             }
+            // The header's length (owner's request 2026-10-25): how long the score shown plays,
+            // repeats and tempo changes included — when its last note ends.
+            if (message.type === 'requestLength') {
+                if (!client || !clientReady) { return; }
+                try {
+                    const pb = await client.sendRequest<{ Notes?: { T: number; D: number }[] | null }>(
+                        'lilysharp/playback', { textDocument: { uri }, renderName: selectedRenders.get(uri) || null });
+                    const seconds = (pb.Notes ?? []).reduce((end, n) => Math.max(end, n.T + n.D), 0);
+                    panel.webview.postMessage({ type: 'lengthData', seconds: pb.Notes ? seconds : null });
+                } catch {
+                    panel.webview.postMessage({ type: 'lengthData', seconds: null });
+                }
+                return;
+            }
             // The Range panel (owner's request 2026-10-25): each part's lowest and highest note
             // in the score shown, and where each is written.
             if (message.type === 'requestRanges') {
@@ -3524,6 +3538,11 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             height: 28px; width: 42px; padding: 0; line-height: 1;
         }
         .toolbar button.icon svg { display: block; width: 15px; height: 15px; }
+        /* How long the score plays (owner's request 2026-10-25), beside the transport. */
+        .toolbar .length {
+            font-family: system-ui, sans-serif; font-size: 12px; color: #555;
+            font-variant-numeric: tabular-nums; min-width: 3em;
+        }
         /* The Range panel (owner's request 2026-10-25): each part's lowest and highest note over
            the score, top right under the toolbar; a click on one shows it on the score. */
         .range-panel {
@@ -3566,6 +3585,8 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         <span class="sep"></span>
         <button id="playBtn" type="button" title="Play">▶</button>
         <button id="stopBtn" type="button" title="Stop" disabled>⏹</button>
+        <button id="loopBtn" class="toggle icon" type="button" aria-pressed="false" aria-label="Loop" title="Loop, ignoring the score's repeats"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 8.5V7a2.5 2.5 0 0 1 2.5-2.5h8"/><path d="M10.5 2l2.5 2.5-2.5 2.5"/><path d="M13.5 7.5V9a2.5 2.5 0 0 1-2.5 2.5H3"/><path d="M5.5 14 3 11.5 5.5 9"/></svg></button>
+        <span id="lengthInfo" class="length" title="Length, as played"></span>
         <span class="sep"></span>
         <button id="firstPageBtn" type="button" title="First page">⏮</button>
         <!-- No min/max: the spinner is inverted in script (down = next page), so
@@ -4961,6 +4982,13 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         let midiPlaying = false;    // the current playback is the server's, on the MIDI output
         let midiPlayPending = null; // a Play sent to the server, awaiting its start (generation, notes, offset)
         let playbackNotes = null;   // last received event list — enables click-to-seek
+        // A Play with bars selected plays them (owner's request 2026-10-25): the selection's
+        // source range, kept until the notes come. The header's loop plays the stretch (or the
+        // whole score) round and round, its repeats ignored — loopList is what goes round.
+        let pendingSpan = null;
+        let pendingFromHere = false;    // the menu's Play from Here: from the note, never the loop
+        let loopOn = false;
+        let loopList = null;
         let pendingStartPos = -1;   // play-button start point (the highlighted note)
         let lastResolvedPos = -1;   // the note the current highlight actually resolved to
 
@@ -5156,7 +5184,8 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 end = startOscillators(ctx, notes, offset, t0);
             }
             setPlayUi(true);
-            playEndTimer = setTimeout(stopPlayback, (end - offset + 0.5) * 1000);
+            // A loop goes round when the last note ends; a plain playback lets it ring a moment.
+            playEndTimer = setTimeout(playEnded, (end - offset + (loopList ? 0 : 0.5)) * 1000);
             followAlong(notes, offset, () => audioCtx ? audioCtx.currentTime - t0 : 0);
         }
 
@@ -5173,7 +5202,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             }
             midiPlaying = true;
             const t0Ms = message.t0Ms;
-            playEndTimer = setTimeout(stopPlayback, (message.end - pending.offset + 0.5) * 1000);
+            playEndTimer = setTimeout(playEnded, (message.end - pending.offset + (loopList ? 0 : 0.5)) * 1000);
             followAlong(pending.notes, pending.offset, () => (Date.now() - t0Ms) / 1000);
         }
 
@@ -5474,9 +5503,27 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             // RESOLVED note position - lastHighlightPos may be a raw editor
             // cursor offset that matches no playback event.
             pendingStartPos = lastResolvedPos;
+            pendingSpan = aiRangeLo >= 0 ? [aiRangeLo, aiRangeHi] : null;
             vscode.postMessage({ type: 'requestPlayback' });
         });
-        document.getElementById('stopBtn').addEventListener('click', stopPlayback);
+        document.getElementById('stopBtn').addEventListener('click', () => {
+            loopList = null;
+            stopPlayback();
+        });
+        const loopBtn = document.getElementById('loopBtn');
+        loopBtn.addEventListener('click', () => {
+            loopOn = !loopOn;
+            loopBtn.setAttribute('aria-pressed', String(loopOn));
+            // Off: what plays ends where it ends. On while playing: from the next Play.
+            if (!loopOn) loopList = null;
+        });
+        // Where a playback that ran to its end goes: round again while looping, else it stops.
+        function playEnded() {
+            const list = loopOn ? loopList : null;
+            if (!list) { stopPlayback(); return; }
+            startPlayback(list, 0);
+            loopList = list;
+        }
 
         document.getElementById('firstPageBtn').addEventListener('click', () => gotoPage(0));
         document.getElementById('lastPageBtn').addEventListener('click', () => gotoPage(pages.length - 1));
@@ -5688,6 +5735,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                         applyBarFlags();
                         lightCaretBar();
                         refreshRanges();
+                        vscode.postMessage({ type: 'requestLength' });
                         // Keep the fit across re-renders (this is also what fits
                         // the FIRST render of a freshly opened preview); otherwise
                         // re-apply the current manual zoom to the fresh SVG.
@@ -5751,12 +5799,21 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 // 2026-10-25) — played as the Play button plays this score's, from the top. They
                 // are not this page's: the cached note list is left alone, and their source
                 // positions (R) are the candidate's, followed for its panel — nothing here lights up.
+                case 'lengthData': {
+                    const s = message.seconds;
+                    const len = document.getElementById('lengthInfo');
+                    len.textContent = typeof s === 'number' && s > 0
+                        ? Math.floor(Math.round(s) / 60) + ':' + String(Math.round(s) % 60).padStart(2, '0')
+                        : '';
+                    break;
+                }
                 case 'rangesData':
                     rangeParts = message.parts || null;
                     rangeError = message.error || null;
                     renderRanges();
                     break;
                 case 'playNotes':
+                    loopList = null;
                     startPlayback(message.notes, 0);
                     break;
                 case 'setSoundFont':
@@ -5775,6 +5832,9 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 case 'ctxPlayFromHere':
                     if (ctxNotePos >= 0) {
                         pendingStartPos = ctxNotePos;
+                        // From the note, as asked — not the selection, not round the loop.
+                        pendingSpan = null;
+                        pendingFromHere = true;
                         setPlayUi(true);
                         vscode.postMessage({ type: 'requestPlayback' });
                     }
@@ -5816,8 +5876,22 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                         playbackNotes = message.notes;
                         const a = pendingAudition; pendingAudition = null;
                         runAudition(a);
+                    } else if ((pendingSpan || (loopOn && !pendingFromHere)) && window.LysSynth && window.LysSynth.playSpan) {
+                        // The selected bars, where they first play — and, looping, the stretch
+                        // (or the whole score) as written once, round and round.
+                        playbackNotes = message.notes;
+                        const span = pendingSpan;
+                        pendingSpan = null;
+                        pendingStartPos = -1;
+                        pendingFromHere = false;
+                        const list = window.LysSynth.playSpan(playbackNotes, span ? span[0] : null, span ? span[1] : null, loopOn);
+                        loopList = loopOn ? list : null;
+                        startPlayback(list, 0);
                     } else {
                         playbackNotes = message.notes;
+                        pendingSpan = null;
+                        pendingFromHere = false;
+                        loopList = null;
                         let startAt = 0;
                         if (pendingStartPos >= 0) {
                             let first = Infinity;
