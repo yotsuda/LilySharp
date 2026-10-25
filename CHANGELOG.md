@@ -4,7 +4,24 @@ Notable changes to Lily# are recorded here, newest first. Release notes are take
 from this file: the topmost section is the version being tagged, and the release
 workflow attaches that section to the GitHub Release verbatim.
 
-## Unreleased
+## 0.14.0
+
+### Breaking changes
+
+Two changes can make a file you wrote for 0.13 read differently:
+
+- **A chord in relative mode is read as its first note** (below, *A chord is read as its first
+  note*): its first member is placed as a single note would be, and the next note counts from
+  it. A chord whose first member carries `'` or `,` may now sound an octave away from where it
+  did (`<c' e' g'>` is now the spread C5 E6 G6; the close chord an octave up is `<c' e g>`).
+  Nothing warns — listen to, or look at, the chords that carry marks.
+- **Tuning words of several words are camelCase** (below, *Language*): `guitarDropD`, not
+  `guitardropd`. The old spelling is now `Unknown tuning 'guitardropd'. tuning names are
+  case-sensitive; known: …`, an error that lists the spellings.
+
+What prints differently with no change to the file: a bass tab's strings (a new planner, fitted
+to the owner's fingering), a slurred pair on a tab no longer kept on one string, a one-page
+score's PDF and preview keeping the whole paper, and a PDF page the paper's own size.
 
 ### Engraving
 
@@ -299,8 +316,6 @@ workflow attaches that section to the GitHub Release verbatim.
 
 - The scan page lists what the reader reads and does not yet, as the Marketplace README does,
   and has the places for its two videos; the home page's three ways in.
-
-## 0.14.0
 
 ### `lysc wav` renders a score to sound
 

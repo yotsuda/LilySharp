@@ -2,7 +2,26 @@
 
 All notable changes to the Lily# VS Code extension are documented here.
 
-## Unreleased
+## 0.14.0
+
+### Settings to set again
+
+Three settings were renamed or merged, and their old keys are no longer read — after updating,
+choose again:
+
+- **The AI model** for Ask AI… and Fix OMR Marks with AI… — `lilysharp.ai.model` and
+  `lilysharp.ai.omrFixModel` are now one, `lilysharp.ai.editModel` (*Lily#: Select AI Model…*).
+- **The MIDI output** — `lilysharp.playback.output` is now `lilysharp.playback.midiOutput`
+  (*Lily#: Choose MIDI Output…*).
+
+`lilysharp.preview.highlightTodos` is gone: the preview always shows the `@todo` marks. In files,
+two language changes can read differently — a relative chord is read as its first note, and the
+tuning words of several words are camelCase (`guitarDropD`); the product changelog's *Breaking
+changes* has both.
+
+**Scan Import 0.4.0 or newer** is asked for: Fix OMR Marks with AI checks its proposals with the
+reader's `omr verify --candidate --bars` and reads its `readings`, both new in 0.4.0. An older
+reader is offered its update when a scan is read.
 
 ### Fixed
 
@@ -519,8 +538,6 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 - **A `@todo` on a grace note, chord or rest is ringed and its memo set in the preview**, as a
   full-size note's is (below for `.down`); the Problems view no longer says it is not engraved.
-
-## 0.14.0
 
 ### A space after a percent mark writes its bar line
 

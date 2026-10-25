@@ -30,8 +30,10 @@ export const OMR_PROTOCOLS = { min: 1, max: 1 } as const;
 /** The oldest Scan Import this Lily# is written for. A reader answering a lower `--version` is
  *  offered its update when a scan is read (the Marketplace keeps the extension current on its
  *  own — VS Code's auto-update, not duplicated here; this is only Lily#'s own floor). Raised with
- *  OMR_PROTOCOLS when a release leans on a newer reader (RELEASING.md §2). */
-export const OMR_MIN_VERSION = '0.3.0';
+ *  OMR_PROTOCOLS when a release leans on a newer reader (RELEASING.md §2). 0.4.0 since Lily#
+ *  0.14.0: Fix OMR Marks with AI checks a proposal with `omr verify --candidate --bars` and reads
+ *  the reader's `readings`, both new in Scan Import 0.4.0 (the protocol is unchanged). */
+export const OMR_MIN_VERSION = '0.4.0';
 
 /** The environment variable that points at a reader by hand (development; L1 ①). */
 export const OMR_PATH_VARIABLE = 'LILYSHARP_OMR_PATH';
