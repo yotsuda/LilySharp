@@ -25,6 +25,12 @@ reader is offered its update when a scan is read.
 
 ### Fixed
 
+- **A loop of a score with a chord row plays in time**: the chord row's chord sounds its members
+  from one place, so the loop took its second and third for a repeat's notes, closed up the time
+  they sounded in, and every note of the score fell on one moment, round after round. A note is
+  now its place, its copy and its pitch, and only a stretch nothing kept plays through is closed
+  up. A round also ends at the score's closing bar line, or with a fermata held past it — it had
+  run a guessed bar past the end.
 - **▶ plays the whole bars a selection lights**: a selection made from a note in bar 1 to a
   note in bar 4 lit four bars but played from that note to that one, so a loop of it skipped
   the first bar's beats before the note and the last bar's after it. A round is now whole bars,
