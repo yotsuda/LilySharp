@@ -197,4 +197,29 @@ public class ChordTremoloPairTests
         Assert.Equal("sharp", chord.Notes[0].Accidental);
         Assert.Equal("sharp", chord.Notes[1].Accidental);
     }
+
+    [Theory]
+    [InlineData("repeat tremolo 3 { g''16 b'16~ } <b' g''>4 r8 |")]
+    [InlineData("repeat tremolo 3 { g''16( b'16) } <b' g''>4 r8 |")]
+    public void Pair_WithAMarkerOnItsNotes_StaysAPair(string music)
+    {
+        // OMR REQUESTS #8 (2026-10-24, kinkel10-4 bar 9): the `~` written last in the
+        // body was counted as a third body item, so the pair unfolded into six beamed
+        // sixteenths and the first b' tied to the next pass's g'' (LYS4007). LilyPond
+        // keeps the tremolo, and so must the page: two dotted quarters, the b' tied out.
+        var collector = new MeasureCollector();
+        var score = collector.Collect(SyntaxTree.Parse("octave absolute time 6/8 " + music), null);
+        var items = score.Voice.Measures.SelectMany(m => m.Items).ToList();
+        var pair = items.OfType<NoteItem>().ToList();
+        Assert.Equal(2, pair.Count);
+        Assert.All(pair, n =>
+        {
+            Assert.Equal(2, n.TremoloPairBeams);
+            Assert.Equal(new Fraction(1, 4), n.BaseDuration);
+            Assert.Equal(1, n.Dots);
+        });
+        Assert.Empty(collector.TieTargetWarnings);
+        if (music.Contains('~'))
+            Assert.True(pair[1].HasTieStart);
+    }
 }

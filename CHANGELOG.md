@@ -4,6 +4,16 @@ Notable changes to Lily# are recorded here, newest first. Release notes are take
 from this file: the topmost section is the version being tagged, and the release
 workflow attaches that section to the GitHub Release verbatim.
 
+## Unreleased
+
+### Tremolos
+
+- `[engraving]` **A tie or slur on a two-note tremolo's notes keeps the tremolo**:
+  `repeat tremolo 3 { g''16 b'16~ } <b' g''>4` prints two dotted quarters joined by the
+  tremolo's beams, the b' tied into the chord, as LilyPond does. The `~` was counted as a third
+  note of the body, so the tremolo was written out as six beamed sixteenths, and the first b'
+  was tied to the g'' after it (warning LYS4007). Found by the OMR on a piano piece.
+
 ## 0.14.0
 
 ### Breaking changes

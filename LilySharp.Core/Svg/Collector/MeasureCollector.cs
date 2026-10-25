@@ -5577,10 +5577,19 @@ public sealed partial class MeasureCollector
         // enclosing construct still plays the body once, like a plain block).
         int passCost = Math.Max(1, bodyNodes.Count);
 
-        if (type == "tremolo" && bodyNodes.Count == 2
-            && bodyNodes.All(b => b.Node is NoteSyntax or ChordSyntax or ChordRepetitionSyntax
+        // A tie or slur written last on a body note is the next item of the body, not a
+        // note: `repeat tremolo 3 { g''16 b'16~ }` is still a two-note tremolo whose b' ties
+        // out (OMR REQUESTS #8, 2026-10-24 — counting the `~` unfolded it into six beamed
+        // sixteenths and tied the first b' to the next pass's g''). The walk below still
+        // reads the markers with the note before them.
+        var tremoloNotes = type == "tremolo"
+            ? bodyNodes.Where(b => b.Node is not (TieSyntax or SlurSyntax)).ToList()
+            : bodyNodes;
+
+        if (type == "tremolo" && tremoloNotes.Count == 2
+            && tremoloNotes.All(b => b.Node is NoteSyntax or ChordSyntax or ChordRepetitionSyntax
                 or SlashNoteSyntax or BareDurationSyntax)
-            && TremoloPairShape(count, bodyNodes[0].Node, bodyNodes[1].Node) is { } pairShape)
+            && TremoloPairShape(count, tremoloNotes[0].Node, tremoloNotes[1].Node) is { } pairShape)
         {
             // Two-note (chord) tremolo: both notes are WRITTEN with the
             // pair's total duration, sound half of it each, and are joined
@@ -5591,10 +5600,10 @@ public sealed partial class MeasureCollector
             await ProcessBodyOnce();
             _v.TremoloPairShape = null;
         }
-        else if (type == "tremolo" && bodyNodes.Count == 1
-            && bodyNodes[0].Node is NoteSyntax or ChordSyntax or ChordRepetitionSyntax
+        else if (type == "tremolo" && tremoloNotes.Count == 1
+            && tremoloNotes[0].Node is NoteSyntax or ChordSyntax or ChordRepetitionSyntax
                 or SlashNoteSyntax or BareDurationSyntax
-            && TremoloTotalIsPrintable(count, bodyNodes[0].Node))
+            && TremoloTotalIsPrintable(count, tremoloNotes[0].Node))
         {
             // LILYPOND-REF: lily/chord-tremolo-engraver.cc +
             // lily/stem-tremolo.cc — `\repeat tremolo 8 { c32 }` engraves ONE
