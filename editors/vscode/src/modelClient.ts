@@ -49,7 +49,7 @@ export interface ChatClient {
  * and then, unless `quiet` (ghost completion), offers the way to one (offerModelSetup) before
  * anything runs.
  */
-export async function resolveChatClient(quiet: boolean, use: ModelUse = 'ask'): Promise<ChatClient | undefined> {
+export async function resolveChatClient(quiet: boolean, use: ModelUse = 'edit'): Promise<ChatClient | undefined> {
     const model = hasChatModel(await availableModels()) ? await selectLmModel(use) : undefined;
     if (model) {
         return lmClient(model);
@@ -61,18 +61,17 @@ export async function resolveChatClient(quiet: boolean, use: ModelUse = 'ask'): 
 }
 
 /**
- * What the model is for. The two want opposite things: Ask AI is one deliberate
- * request, where a strong model is worth a few seconds; Ghost Completion answers as you type,
- * and VS Code cancels an inline suggestion the moment the caret moves — the automatic pick of
- * the strongest model (claude-fable-5.1) took 1.9–3.2 s a bar and every one was cancelled
- * before it could show (owner's log, 2026-09-26). So each has its own setting and its own
- * automatic choice. Fixing OMR marks (docs/omr-ai-fix-design.md §4) is a deliberate request too,
- * and one that reads notation, so it wants the strong model as the transform does, under its own
- * setting: a person may well pick a faster model for a batch of twenty-five bars.
+ * What the model is for. The two want opposite things: an edit — Ask AI, and Fix OMR Marks
+ * (docs/omr-ai-fix-design.md §4), which reads notation too — is a deliberate request, where a
+ * strong model is worth a few seconds; Ghost Completion answers as you type, and VS Code cancels
+ * an inline suggestion the moment the caret moves — the automatic pick of the strongest model
+ * (claude-fable-5.1) took 1.9–3.2 s a bar and every one was cancelled before it could show
+ * (owner's log, 2026-09-26). So each has its own setting and its own automatic choice. Fix OMR
+ * Marks had a third of its own until 2026-10-25 (owner's decision: two are enough).
  */
-export type ModelUse = 'ask' | 'ghost' | 'omrFix';
+export type ModelUse = 'edit' | 'ghost';
 
-const SETTING: Record<ModelUse, string> = { ask: 'ai.askModel', ghost: 'ai.ghostModel', omrFix: 'ai.omrFixModel' };
+const SETTING: Record<ModelUse, string> = { edit: 'ai.editModel', ghost: 'ai.ghostModel' };
 
 async function selectLmModel(use: ModelUse): Promise<vscode.LanguageModelChat | undefined> {
     const models = await availableModels();
@@ -115,7 +114,7 @@ export async function availableModels(): Promise<vscode.LanguageModelChat[]> {
  * the other way round: the small ones are the ones that answer before VS Code gives up on
  * the suggestion. Both are guesses from the name; "Lily#: Select AI Model" is the way to be sure.
  */
-export function autoPick(models: readonly vscode.LanguageModelChat[], use: ModelUse = 'ask'): vscode.LanguageModelChat | undefined {
+export function autoPick(models: readonly vscode.LanguageModelChat[], use: ModelUse = 'edit'): vscode.LanguageModelChat | undefined {
     // aiTransformCore.pickModel: Copilot's chat models first, never a door with no family
     // (copilotcli answered every bar with nothing, owner's report 2026-10-23).
     return pickModel(models, use === 'ghost');
@@ -123,8 +122,8 @@ export function autoPick(models: readonly vscode.LanguageModelChat[], use: Model
 
 /**
  * "Lily#: Select AI Model" — first which feature, then the models VS Code offers; the pick is
- * saved to `lilysharp.ai.askModel` (Ask AI), `lilysharp.ai.ghostModel` (Ghost
- * Completion) or `lilysharp.ai.omrFixModel` (Fix OMR marks).
+ * saved to `lilysharp.ai.editModel` (Ask AI and Fix OMR Marks) or `lilysharp.ai.ghostModel`
+ * (Ghost Completion).
  */
 export async function pickAiModel(): Promise<void> {
     const models = await availableModels();
@@ -138,9 +137,8 @@ export async function pickAiModel(): Promise<void> {
     const shown = (use: ModelUse) => cfg.get<string>(SETTING[use], '').trim() || `Automatic (${autoPick(models, use)?.name ?? 'none'})`;
     type UseItem = vscode.QuickPickItem & { use: ModelUse };
     const which = await vscode.window.showQuickPick<UseItem>([
-        { label: 'Ask AI… (Ctrl+I)', description: shown('ask'), detail: 'Changes the music as you ask, one request at a time: a strong model is worth waiting for.', use: 'ask' },
+        { label: 'Ask AI… (Ctrl+I) and Fix OMR Marks with AI…', description: shown('edit'), detail: 'Changes the music as you ask: a strong model is worth waiting for.', use: 'edit' },
         { label: 'Ghost Completion', description: shown('ghost'), detail: 'Answers as you type: a fast model, or the suggestion is cancelled before it shows.', use: 'ghost' },
-        { label: 'Fix OMR marks with AI', description: shown('omrFix'), detail: 'One request a bar, on request only: a strong model reads the notation best; a faster one shortens a long batch.', use: 'omrFix' },
     ], { title: 'Lily# — choose the AI model for…' });
     if (!which) {
         return;

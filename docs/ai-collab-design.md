@@ -102,8 +102,8 @@ Opt-in and **off by default** (it calls the model as you type): enable
 - **Models.** `src/modelClient.ts` abstracts the model behind a `ChatClient` over VS Code's
   language-model API (vscode.lm: Copilot's models, and any other vendor's VS Code offers).
   The direct Anthropic / OpenAI backends with a stored key (`lilysharp.ai.provider`, "Set AI
-  API Key…") are gone. Each feature has its own pick — `lilysharp.ai.askModel` (Ask AI),
-  `ai.ghostModel`, `ai.omrFixModel` — chosen with "Lily#: Select AI Model…", empty meaning an
+  API Key…") are gone. Two picks — `lilysharp.ai.editModel` (Ask AI and Fix OMR Marks) and
+  `ai.ghostModel` (Ghost Completion) — chosen with "Lily#: Select AI Model…", empty meaning an
   automatic choice; iteration and self-repair do not depend on the model.
 - **Iteration & soft-lock** were delivered in M1 (the Iterate button continues the
   conversation; a decoration marked the range while the model thought — replaced by a

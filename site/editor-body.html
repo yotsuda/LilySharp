@@ -439,7 +439,7 @@
     <tr><td><code>lilysharp.playback.output</code></td><td>the preview's synth</td><td>a MIDI output port to play through instead (<i>Lily#: Choose MIDI Output…</i>) — <a href="#midi-out">a DAW, a VST host, the computer's own synth</a></td></tr>
     <tr><td><code>lilysharp.typingAids.enabled</code></td><td><code>true</code></td><td>the typing aids above (<a href="#typing">Typing aids</a>)</td></tr>
     <tr><td><code>lilysharp.completion.flatSpelling</code></td><td><code>full</code></td><td>how completion spells flats (both spellings compile)</td></tr>
-    <tr><td><code>lilysharp.ai.askModel</code> · <code>ai.ghostModel</code> · <code>ai.omrFixModel</code></td><td>automatic</td><td>the models the AI features use (<a href="#ai">AI</a>)</td></tr>
+    <tr><td><code>lilysharp.ai.editModel</code> · <code>ai.ghostModel</code></td><td>automatic</td><td>the models the AI features use (<a href="#ai">AI</a>)</td></tr>
     <tr><td><code>lilysharp.ai.ghostCompletion</code></td><td><code>false</code></td><td>suggest the next measure as ghost text</td></tr>
     <tr><td><code>lilysharp.omr.verifyOnSave</code></td><td><code>false</code></td><td>on saving a score read from a scan, check it against the scan</td></tr>
     <tr><td><code>lilysharp.fontPaths</code></td><td></td><td>more folders to find SMuFL music fonts in, for <code>fonts { music "…" }</code></td></tr>
@@ -493,7 +493,7 @@
   completion slowed every keystroke in a score.</p>
 
   <h3>Choosing the model</h3>
-  <p><i>Lily#: Select AI Model…</i> picks one for good (<code>lilysharp.ai.askModel</code> for Ask AI).
+  <p><i>Lily#: Select AI Model…</i> picks one for good (<code>lilysharp.ai.editModel</code> for Ask AI and Fix OMR Marks).
   Without a choice, Transform takes the largest model on offer and passes over the small ones,
   which write poor Lily#; ghost completion takes a small, fast one.</p>
 

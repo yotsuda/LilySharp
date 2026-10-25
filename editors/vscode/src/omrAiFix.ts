@@ -546,7 +546,7 @@ async function runOmrAiFix(context: vscode.ExtensionContext, deps: OmrAiFixDeps,
         return;
     }
 
-    const chat = await resolveChatClient(false, 'omrFix');
+    const chat = await resolveChatClient(false, 'edit');
     if (!chat) {
         return;
     }
@@ -629,7 +629,7 @@ let extensionContext: vscode.ExtensionContext | undefined;
  *  to the AI; undefined when there is no model (the setup was offered). */
 async function aiOf(deps: OmrAiFixDeps, run: FixRun): Promise<FixRun['ai']> {
     if (!run.ai) {
-        const chat = await resolveChatClient(false, 'omrFix');
+        const chat = await resolveChatClient(false, 'edit');
         if (!chat) {
             return undefined;
         }

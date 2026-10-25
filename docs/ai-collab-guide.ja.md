@@ -110,9 +110,8 @@ Lily# の AI 機能は **VS Code の言語モデル API（`vscode.lm`）**を使
 
 | 設定キー | 既定 | 説明 |
 |---|---|---|
-| `lilysharp.ai.askModel` | `""` | Ask AI…（Ctrl+I）が使うモデル。空＝自動（いちばん大きいモデル）。「Lily#: Select AI Model…」で選ぶ。 |
+| `lilysharp.ai.editModel` | `""` | Ask AI…（Ctrl+I）と「Fix OMR Marks with AI…」が使うモデル。空＝自動（いちばん大きいモデル）。「Lily#: Select AI Model…」で選ぶ。 |
 | `lilysharp.ai.ghostModel` | `""` | ゴースト補完が使うモデル。空＝自動（小さく速いモデル）。 |
-| `lilysharp.ai.omrFixModel` | `""` | 「Fix OMR Marks with AI…」が使うモデル。空＝自動。 |
 | `lilysharp.ai.ghostCompletion` | `false` | 入力中の「次の小節」ゴースト補完のオン/オフ。 |
 
 モデルは VS Code の言語モデル（GitHub Copilot など）から選びます。
