@@ -8,6 +8,11 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Engraving
 
+- **One part on two staves under two clefs places its notes under each staff's own clef.**
+  With `staff melody` and `staff bass melody`, the part's notes were placed once, under the clef
+  the first staff that writes one names, and the other staff drew those places under its own:
+  the treble staff's C5 stood two octaves up. Each staff now moves them by the distance between
+  the two clefs, up to the part's own first clef change.
 - **A score that fits one page keeps the whole paper in the PDF and the preview.** Lily# used to
   cut a lone page under its music in every output (LILYSHARP-OWN; LilyPond always engraves onto
   the paper), so an eight-bar song printed as an A4-wide strip. The PDF and the preview now show
