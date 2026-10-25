@@ -398,7 +398,12 @@ public sealed partial class LilyPondExporter
                         _sb.Append("  ").Append(EmitTempo(t)).Append('\n');
                     break;
                 case KeySignatureSyntax k:
-                    if (EmitKey(k) is { Length: > 0 } key)   // empty in \drummode
+                    // The same rule as the tempo's above, for the key-change event: LilyPond
+                    // keeps the FIRST key of a moment (Key_engraver listens assign-once), so a
+                    // file key under a part header key or a first play that opens on its own key
+                    // is left out — the page shows the later one. EmitKey still runs: it advances
+                    // the running key the music after it reads.
+                    if (EmitKey(k) is { Length: > 0 } key && !_firstPlayRestatesKey && _partHeaderKeyNode == null)
                         _sb.Append("  ").Append(key).Append('\n');
                     break;
                 case TimeSignatureSyntax ts: _sb.Append("  ").Append(EmitTime(ts)).Append('\n'); break;
@@ -412,7 +417,7 @@ public sealed partial class LilyPondExporter
         // (ResetAmbientTonicToHome reads the file-level key).
         if (_partHeaderKeyNode is { } partKey)
         {
-            if (EmitKey(partKey) is { Length: > 0 } key)   // empty in \drummode
+            if (EmitKey(partKey) is { Length: > 0 } key && !_firstPlayRestatesKey)   // empty in \drummode
                 _sb.Append("  ").Append(key).Append('\n');
             _tonic = _homeTonic;
         }

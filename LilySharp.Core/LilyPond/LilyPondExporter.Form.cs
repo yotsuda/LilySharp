@@ -124,12 +124,14 @@ public sealed partial class LilyPondExporter
             _lpPlayIndex = 0;
             _firstPlayRestatesTempo = FirstPlayedSection(formItems) is { } first
                 && _sectionHeaders.Tempos.ContainsKey(first);
+            _firstPlayRestatesKey = OpensWithKey(FirstPlayedSection(formItems), byName);
             AppendFormItems(formItems, byName, result);
         }
         else
         {
             _firstPlayRestatesTempo = inOrder.Count > 0
                 && _sectionHeaders.Tempos.ContainsKey(inOrder[0].Section.SectionName);
+            _firstPlayRestatesKey = inOrder.Count > 0 && OpensWithKey(inOrder[0].Section.SectionName, byName);
             foreach (var entry in inOrder)
             {
                 // No form: sections play in declaration order and each is labelled with
@@ -163,6 +165,32 @@ public sealed partial class LilyPondExporter
     /// <see cref="EmitScoreSettings"/> then leaves the file's out (its remark says why).
     /// </summary>
     private bool _firstPlayRestatesTempo;
+
+    /// <summary>
+    /// True when the first section the part plays opens on a <c>key</c> — in its header, or
+    /// written before its first note — which stands at the same moment as the file's (and the
+    /// part header's). LilyPond keeps the FIRST key event of a moment and discards the rest,
+    /// so the twin printed the file's key where the page prints the section's
+    /// (key-opening-override: D major for A major); <see cref="EmitScoreSettings"/> leaves the
+    /// earlier ones out.
+    /// </summary>
+    private bool _firstPlayRestatesKey;
+
+    private bool OpensWithKey(string? sectionName,
+        Dictionary<string, (SectionDeclarationSyntax Section, SyntaxNode Container)> byName)
+    {
+        if (sectionName == null || !byName.TryGetValue(sectionName, out var entry))
+            return false;
+        if (SectionHeaderMusic(entry.Section).Any(h => h is KeySignatureSyntax))
+            return true;
+        var key = entry.Container.DescendantNodes<KeySignatureSyntax>().FirstOrDefault();
+        if (key == null)
+            return false;
+        var firstNote = entry.Container.DescendantNodes<PitchSyntax>().FirstOrDefault();
+        var firstRest = entry.Container.DescendantNodes<RestSyntax>().FirstOrDefault();
+        int music = System.Math.Min(firstNote?.Span.Start ?? int.MaxValue, firstRest?.Span.Start ?? int.MaxValue);
+        return key.Span.Start < music;
+    }
 
     /// <summary>The name of the first section a form plays, through a repeat's or an
     /// ending's first reference; null for a form that plays none.</summary>

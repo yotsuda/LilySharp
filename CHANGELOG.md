@@ -8,6 +8,11 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Engraving
 
+- **The `.ly` twin opens on one key.** A file key followed by a part header's key, or by the
+  first section's own opening key, was written as two `\key`s at one moment; LilyPond keeps the
+  first and discards the rest, so the twin printed the file's key where the page prints the later
+  one (test/key-opening-override: D major for A major). The earlier ones are left out now, as the
+  file's tempo already was.
 - **The bass planner does not follow an open string with an open lower one** (the owner's
   muting rule: the higher string rings on and, with no finger down, the left hand must stop to
   mute it; a stopped lower note mutes it by itself, and upward the right hand does). D then A is

@@ -1888,10 +1888,16 @@ syllable over one note the same way **without** the line — the usual choice fo
 on a short note, and for Japanese, where each kana is its own syllable:
 
 ```
-lyrics words sings melody {
-  そ ら _ は |     // ら held over the next note, with a short line
-  そ ら ~ は |     // the same, no line
+part melody
+section Main {
+  melody { a'4 b8 a f2 | a4 b8 a f2 | }
+  lyrics words sings melody {
+    そ ら _ は |     // ら held over the next note, with a short line
+    そ ら ~ は |     // the same, no line
+  }
 }
+form { Main }
+score { staff melody  lyrics words }
 ```
 
 ```
