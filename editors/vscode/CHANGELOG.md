@@ -16,14 +16,14 @@ All notable changes to the Lily# VS Code extension are documented here.
 - **▶ with bars selected on the score plays them**, every part sounding there, from where the
   bars first play.
 - **A practice menu drops down from beside ⏹** (a metronome and ▾):
-  - the **tempo** on a slider, 50–150% (the button then says *80%*; *100%* beside it puts it back),
+  - the **tempo** on a slider, 50–150% (the button then says *80%*; *Reset* beside it puts it back),
     set where the slider is let go;
   - the **loop**: the selected bars — or the whole score — round and round, going through the
     music as written once (the score's repeats inside it are not taken). *Play from Here* in the
     menu still plays from the note, once;
   - the **metronome**: a wood block on every beat, the bar's first louder. The beats are the
     meter's; a pickup no meter change marks shifts the accents;
-  - the **parts**: one toggle a part, pressed in while it sounds — a chord row is a part of its own.
+  - the **parts**: one toggle a part, one under another, pressed in while it sounds — a chord row is a part of its own.
 
   The button stays pressed in while anything differs from the score as written, and a change
   while playing goes on from the same place.

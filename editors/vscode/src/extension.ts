@@ -3600,7 +3600,8 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             background: #d6e6f8; border-color: #0078d7; color: #0b4a8b;
         }
         /* A part sounds while its button is pressed in; one let out is silent. */
-        .practice-panel .parts { display: flex; flex-wrap: wrap; gap: 4px; max-width: 260px; }
+        .practice-panel .parts { display: flex; flex-direction: column; align-items: stretch; gap: 4px; }
+        .practice-panel .parts button { text-align: left; }
         .practice-panel .parts button[aria-pressed="false"] { color: #888; text-decoration: line-through; }
         .range-panel table { border-collapse: collapse; }
         .range-panel th { text-align: left; font-weight: 600; opacity: 0.75; padding: 2px 8px; }
@@ -3655,7 +3656,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
     <div id="errorBanner" class="error-banner" role="alert"></div>
     <div id="rangePanel" class="range-panel" hidden></div>
     <div id="practicePanel" class="range-panel practice-panel" hidden>
-        <div class="prow"><span class="plbl">Tempo</span><span class="tempo"><input type="range" id="tempoSlider" min="50" max="150" step="5" value="100" aria-label="Tempo"><span id="tempoValue" class="tval">100%</span><button type="button" id="tempoReset" title="As written">100%</button></span></div>
+        <div class="prow"><span class="plbl">Tempo</span><span class="tempo"><input type="range" id="tempoSlider" min="50" max="150" step="5" value="100" aria-label="Tempo"><span id="tempoValue" class="tval">100%</span><button type="button" id="tempoReset" title="Back to the tempo as written (100%)">Reset</button></span></div>
         <div class="prow"><span class="plbl">Loop</span><button type="button" id="loopBtn" class="toggle" aria-pressed="false" title="Play the selected bars, or the whole score, round and round — the score's repeats ignored">Off</button></div>
         <div class="prow"><span class="plbl">Metronome</span><button type="button" id="clickBtn" class="toggle" aria-pressed="false">Off</button></div>
         <div class="prow"><span class="plbl">Parts</span><span id="partsList" class="parts"></span></div>
