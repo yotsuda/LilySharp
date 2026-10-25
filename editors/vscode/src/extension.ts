@@ -3423,7 +3423,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         </select>
         <button id="exportBtn" type="button">Export…</button>
         <span class="sep"></span>
-        <button id="aiTransformBtn" class="ai" type="button">✨ AI: Whole Score</button>
+        <button id="aiTransformBtn" class="ai" type="button">✨ Ask AI…</button>
         <span class="sep"></span>
         <button id="playBtn" type="button" title="Play">▶</button>
         <button id="stopBtn" type="button" title="Stop" disabled>⏹</button>
@@ -3502,34 +3502,14 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             }
             updateAiButton();
         }
-        // How many bars the selection lights: its boxes counted by the bar (rect.bar-box, one per
-        // bar of a system, carries the number), so a bar of several staves counts once.
-        function selectedBarCount() {
-            const boxes = Array.from(svgContainer.querySelectorAll('rect.bar-box'));
-            const bars = new Set();
-            for (const r of svgContainer.querySelectorAll('rect.bar-staff.selected')) {
-                const b = r.getBoundingClientRect();
-                const cx = (b.left + b.right) / 2, cy = (b.top + b.bottom) / 2;
-                const box = boxes.find(x => {
-                    const c = x.getBoundingClientRect();
-                    return cx >= c.left && cx <= c.right && cy >= c.top && cy <= c.bottom;
-                });
-                bars.add(box ? 'bar' + box.getAttribute('data-bar') + '@' + Math.round(box.getBoundingClientRect().top)
-                             : 'r' + Math.round(b.left) + ':' + Math.round(b.top));
-            }
-            return bars.size;
-        }
-        // The header's AI button names what it hands the AI (owner's requests 2026-10-25): the
-        // whole score, or the bars selected — and that a selection points the AI at a place
-        // without fencing it in: it may change other places, and every change is shown first.
+        // The header's AI button keeps one caption, "✨ Ask AI…" — the lit bars already show what
+        // is selected (owner's request 2026-10-25). Its tooltip says what a selection means: it
+        // points the AI at a place without fencing it in, and every change is shown first.
         function updateAiButton() {
             if (aiRangeLo < 0) {
-                aiTransformBtn.textContent = '✨ AI: Whole Score';
                 aiTransformBtn.title = 'Ask the AI to change the score (Ctrl+I). Select bars first '
                     + '(Shift+click or Shift+drag) to point it at a place.';
             } else {
-                const n = selectedBarCount();
-                aiTransformBtn.textContent = '✨ AI: ' + (n > 0 ? n + (n === 1 ? ' Bar' : ' Bars') : 'Selection');
                 aiTransformBtn.title = 'Ask the AI to change the music, pointing it at the selected bars (Ctrl+I). '
                     + 'The selection is where it starts, not a fence: it may change other places when the '
                     + 'request needs it, and every change is shown for you to accept or not. Esc clears the selection.';
