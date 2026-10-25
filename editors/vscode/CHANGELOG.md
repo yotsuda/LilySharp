@@ -61,6 +61,12 @@ All notable changes to the Lily# VS Code extension are documented here.
   and the four annotations it lacked (`@harmonic`, `@stopped`, `@snapPizz`, `@pluck`), and lost
   the notes about MusicXML and LilyPond export the AI never needs.
 
+### The preview shows its pages as sheets
+
+- **A dark band marks every page break**, and the margin around the score is dark too, so each
+  page reads as a sheet — dark grey (#2b2b2b) around white pages; under the dark scheme, whose
+  pages are black, mid grey (#3c3c3c).
+
 ### The AI candidate panel shows that a button was pressed
 
 - **A button sinks while pressed**, and a decision greys Accept, Ask Again and Reject at once

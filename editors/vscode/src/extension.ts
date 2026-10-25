@@ -3289,6 +3289,24 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         #svgContainer svg {
             display: block;
         }
+        /* The pages as sheets (owner's request 2026-10-25): a dark band between two pages
+           (drawPageBands) and around the sheet — the pane's padding — shown only once a score
+           is (a "Loading" line keeps the plain background it is readable on). */
+        .main-content:has(#svgContainer > svg) {
+            background: #2b2b2b;
+        }
+        #svgContainer svg rect.page-band {
+            fill: #2b2b2b;
+        }
+        /* Dark: the SVG paints its page white and the scheme inverts it (filter below), so the
+           sheet is black — a black band would not show. The bands are mid grey instead, the
+           one in the SVG given inverted (#c3c3c3 comes out #3c3c3c). */
+        :root.theme-dark .main-content:has(#svgContainer > svg) {
+            background: #3c3c3c;
+        }
+        :root.theme-dark #svgContainer svg rect.page-band {
+            fill: #c3c3c3;
+        }
         .zoom-info {
             position: fixed;
             bottom: 10px;
@@ -3623,7 +3641,34 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                     height: parseFloat(g.getAttribute('data-page-height')) || vbH
                 }))
                 : [{ top: 0, height: vbH }];
+            drawPageBands(svg, vb[0] || 0, vbW);
             updatePageInfo();
+        }
+
+        // A dark band across each page boundary, so the sheet reads as pages (owner's request
+        // 2026-10-25). The pages are stacked edge to edge in one SVG, so the band is drawn over
+        // the boundary — half a staff space into each page's margin — in a group of its own at
+        // the root: the page updates touch only the g.page children, and a whole new picture
+        // brings this here again.
+        const PAGE_BAND = 1; // staff spaces
+        function drawPageBands(svg, vbX, vbW) {
+            const old = svg.querySelector(':scope > g.page-bands');
+            if (old) old.remove();
+            if (pages.length < 2) return;
+            const ns = 'http://www.w3.org/2000/svg';
+            const g = document.createElementNS(ns, 'g');
+            g.setAttribute('class', 'page-bands');
+            g.setAttribute('pointer-events', 'none');
+            for (let i = 1; i < pages.length; i++) {
+                const r = document.createElementNS(ns, 'rect');
+                r.setAttribute('class', 'page-band');
+                r.setAttribute('x', String(vbX));
+                r.setAttribute('y', String(pages[i].top - PAGE_BAND / 2));
+                r.setAttribute('width', String(vbW));
+                r.setAttribute('height', String(PAGE_BAND));
+                g.appendChild(r);
+            }
+            svg.appendChild(g);
         }
 
         function currentPageIndex() {
