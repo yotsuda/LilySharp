@@ -4,6 +4,13 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+### The preview's header keeps its buttons whole
+
+- **A narrow preview wraps the header instead of squeezing it**: the buttons keep their size,
+  and the header's groups — the score and Export, the AI and Range, the transport, the pages —
+  each move to the next row as one. A separator left at a row's edge is not drawn.
+- **Export is an icon** (an arrow rising out of a tray), as big as the others.
+
 ### Play the bars selected, round and round
 
 - **▶ with bars selected on the score plays them**, every part sounding there, from where the
