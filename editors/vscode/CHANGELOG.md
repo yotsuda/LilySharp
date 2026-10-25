@@ -26,12 +26,14 @@ All notable changes to the Lily# VS Code extension are documented here.
   Bar* in the menu starts one, and Esc or *Clear Selection* clears it. A plain drag still scrolls.
 - **A score selection lights its bars in pale blue**, not its notes: the editor's text is not
   selected, and lit notes read as if it were.
-- **✨ Ask AI… stands in the preview's header all the time**: with a selection on the score it
-  asks about that, else about the text selected in the editor, else about the whole score; Ctrl+I in the preview does the same. It
-  replaces the purple *Transform with AI* button that floated over the score only while a
-  selection stood. Its tooltip and the input box say what a selection means, in a few words:
-  *3 bars selected — a hint for the AI. What should it change?*, and with nothing selected just
-  *What should the AI change?* The box's title is *Lily# — Ask AI*.
+- **✨ (Ask AI) stands in the preview's header all the time**, the emoji alone: with a selection
+  on the score it asks about that, else about the text selected in the editor, else about the
+  whole score; Ctrl+I in the preview does the same. It replaces the purple *Transform with AI*
+  button that floated over the score only while a selection stood. Its tooltip and the input box
+  say what a selection means, in a few words: the tooltip *Ask AI (Ctrl+I)*, or *Ask AI, the
+  selected bars as a hint* with bars selected; the box *3 bars selected — a hint for the AI.
+  What should it change?*, and with nothing selected just *What should the AI change?* The box's
+  title is *Lily# — Ask AI*.
 
 ### The AI says what it did
 

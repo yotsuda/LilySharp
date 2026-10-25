@@ -3545,7 +3545,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         </select>
         <button id="exportBtn" type="button">Export…</button>
         <span class="sep"></span>
-        <button id="aiTransformBtn" class="ai" type="button">✨ Ask AI…</button>
+        <button id="aiTransformBtn" class="ai" type="button" title="Ask AI (Ctrl+I)">✨</button>
         <button id="rangeBtn" type="button" title="Each part's lowest and highest note — click one to find it on the score">Range</button>
         <span class="sep"></span>
         <button id="playBtn" type="button" title="Play">▶</button>
@@ -3644,18 +3644,12 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             const n = bars.size;
             return n === 0 ? 'The selection' : n === 1 ? '1 bar selected' : n + ' bars selected';
         }
-        // The header's AI button keeps one caption, "✨ Ask AI…" — the lit bars already show what
-        // is selected (owner's request 2026-10-25). Its tooltip says what a selection means: it
-        // points the AI at a place without fencing it in, and every change is shown first.
+        // The header's AI button is its emoji alone, "✨" (owner's request 2026-10-25); its tooltip
+        // names it in a few words, and with bars selected says they are a hint for the AI.
         function updateAiButton() {
-            if (aiRangeLo < 0) {
-                aiTransformBtn.title = 'Ask the AI to change the score (Ctrl+I) — about the text selected in the '
-                    + 'editor, if any, else the whole score. Select bars here (Shift+click or Shift+drag) to point it at a place.';
-            } else {
-                aiTransformBtn.title = 'Ask the AI to change the music, pointing it at the selected bars (Ctrl+I). '
-                    + 'The selection is where it starts, not a fence: it may change other places when the '
-                    + 'request needs it, and every change is shown for you to accept or not. Esc clears the selection.';
-            }
+            aiTransformBtn.title = aiRangeLo < 0
+                ? 'Ask AI (Ctrl+I)'
+                : 'Ask AI, the selected bars as a hint (Ctrl+I)';
         }
         function aiSubmitSelection() {
             if (aiRangeLo < 0) {
