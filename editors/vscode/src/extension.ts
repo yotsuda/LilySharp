@@ -731,6 +731,7 @@ export function activate(context: vscode.ExtensionContext) {
                 typeof uri === 'string' ? uri : undefined, typeof section === 'string' ? section : undefined)),
         vscode.commands.registerCommand('lilysharp.convertOctavesToAbsolute', () => convertOctaves(true)),
         vscode.commands.registerCommand('lilysharp.convertOctavesToRelative', () => convertOctaves(false)),
+        vscode.commands.registerCommand('lilysharp.removeStringNumbers', () => removeStringNumbers()),
         vscode.commands.registerCommand('lilysharp.extractPhrase', () => {
             outputChannel.appendLine('extractPhrase command triggered');
             extractPhrase();
@@ -2104,6 +2105,51 @@ async function convertOctaves(absolute: boolean) {
         }
     } catch (err) {
         vscode.window.showErrorMessage(`Lily#: octave conversion failed: ${err}`);
+    }
+}
+
+interface RemoveStringNumbersResponse {
+    NewText: string | null;
+    Removed: number;
+    Error: string | null;
+}
+
+/**
+ * Removes every written string number (`\1` … `\9`) from the active .lys document, so the tab
+ * chooses every string itself. Applied as one edit, so one undo puts them all back.
+ */
+async function removeStringNumbers() {
+    const editor = vscode.window.activeTextEditor;
+    if (!editor || editor.document.languageId !== 'lilysharp') {
+        vscode.window.showErrorMessage('Lily#: open a .lys file to remove its string numbers.');
+        return;
+    }
+    if (!client) {
+        vscode.window.showErrorMessage('Lily#: language server not ready.');
+        return;
+    }
+
+    const doc = editor.document;
+    try {
+        const response = await client.sendRequest<RemoveStringNumbersResponse>('lilysharp/removeStringNumbers', {
+            textDocument: { uri: doc.uri.toString() }
+        });
+        if (response.NewText == null) {
+            vscode.window.showErrorMessage(`Lily#: ${response.Error}`);
+            return;
+        }
+        if (response.Removed === 0) {
+            vscode.window.showInformationMessage('Lily#: this file writes no string numbers.');
+            return;
+        }
+        const fullRange = new vscode.Range(doc.positionAt(0), doc.positionAt(doc.getText().length));
+        const edit = new vscode.WorkspaceEdit();
+        edit.replace(doc.uri, fullRange, response.NewText);
+        await vscode.workspace.applyEdit(edit);
+        vscode.window.showInformationMessage(
+            `Lily#: removed ${response.Removed} string number(s); the tab now chooses every string.`);
+    } catch (err) {
+        vscode.window.showErrorMessage(`Lily#: removing string numbers failed: ${err}`);
     }
 }
 

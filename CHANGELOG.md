@@ -53,6 +53,9 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Editor
 
+- **Remove All String Numbers** (`lilysharp/removeStringNumbers`, `StringNumberRemover`): every
+  written `\N` goes — found by the parser, so one in a string or a comment stays — and a mark
+  that stood apart (`a' \2 b`) takes its space with it.
 - **A score named like a block keyword completes as a score**: in `score chords { … }` a
   `lyrics words ▮` row offers `sings`, then the parts, where it offered chord names (the
   name was read as a `chords` track's).

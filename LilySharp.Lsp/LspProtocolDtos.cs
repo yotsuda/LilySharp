@@ -337,6 +337,21 @@ public class ConvertOctavesResponse
     public string? Error { get; set; }
 }
 
+/// <summary>Parameters for lilysharp/removeStringNumbers: the document.</summary>
+public class RemoveStringNumbersParams
+{
+    public TextDocumentIdentifier TextDocument { get; set; } = null!;
+}
+
+/// <summary>Response for lilysharp/removeStringNumbers: the text without its string numbers
+/// and how many went, or why the file was left alone.</summary>
+public class RemoveStringNumbersResponse
+{
+    public string? NewText { get; set; }
+    public int Removed { get; set; }
+    public string? Error { get; set; }
+}
+
 /// <summary>Parameters for lilysharp/splitSections: the document, and optionally the section
 /// to split (null: the first one some part subdivides) and the part to follow (null: the only
 /// candidate, or the first of several that agree — otherwise the response asks).</summary>

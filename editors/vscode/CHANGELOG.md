@@ -4,6 +4,12 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+### Remove All String Numbers
+
+- **Lily#: Remove All String Numbers** (right-click menu and the command palette) removes every
+  `\1` … `\9` from the file, so the tab chooses every string itself — for a book brought over
+  from LilyPond, which needed most of them written. One undo puts them all back.
+
 ### Hear an AI candidate before accepting it
 
 - **▶ Play in the candidate panel** (or Space) plays the pane shown — the candidate (After) or

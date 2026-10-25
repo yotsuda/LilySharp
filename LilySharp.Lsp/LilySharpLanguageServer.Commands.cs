@@ -1111,6 +1111,21 @@ public sealed partial class LilySharpLanguageServer
             : new ConvertOctavesResponse { Success = false, Error = result.Error };
     }
 
+    [JsonRpcMethod("lilysharp/removeStringNumbers", UseSingleObjectParameterDeserialization = true)]
+    public Task<RemoveStringNumbersResponse> RemoveStringNumbersAsync(RemoveStringNumbersParams @params, CancellationToken token)
+        => OffDispatch(() => RemoveStringNumbers(@params), token);
+
+    /// <summary>The whole document without its written string numbers
+    /// (<see cref="LilySharp.Core.Editing.StringNumberRemover"/>).</summary>
+    public RemoveStringNumbersResponse RemoveStringNumbers(RemoveStringNumbersParams @params)
+    {
+        var doc = _documentManager.GetDocument(@params.TextDocument.Uri);
+        if (doc == null)
+            return new RemoveStringNumbersResponse { Error = "Document not found" };
+        var result = LilySharp.Core.Editing.StringNumberRemover.Remove(doc.Text);
+        return new RemoveStringNumbersResponse { NewText = result.NewText, Removed = result.Removed };
+    }
+
     [JsonRpcMethod("lilysharp/splitSections", UseSingleObjectParameterDeserialization = true)]
     public Task<SplitSectionsResponse> SplitSectionsAsync(SplitSectionsParams @params, CancellationToken token)
         => OffDispatch(() => SplitSections(@params), token);

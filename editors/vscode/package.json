@@ -342,6 +342,11 @@
         "title": "Convert Octaves to Relative"
       },
       {
+        "command": "lilysharp.removeStringNumbers",
+        "category": "Lily#",
+        "title": "Remove All String Numbers"
+      },
+      {
         "command": "lilysharp.extractPhrase",
         "category": "Lily#",
         "title": "Extract Phrase from Section"
@@ -600,6 +605,10 @@
           "when": "resourceLangId == lilysharp"
         },
         {
+          "command": "lilysharp.removeStringNumbers",
+          "when": "resourceLangId == lilysharp"
+        },
+        {
           "command": "lilysharp.extractPhrase",
           "when": "resourceLangId == lilysharp"
         },
@@ -820,6 +829,11 @@
         },
         {
           "command": "lilysharp.convertOctavesToRelative",
+          "when": "resourceLangId == lilysharp",
+          "group": "1_modification@2"
+        },
+        {
+          "command": "lilysharp.removeStringNumbers",
           "when": "resourceLangId == lilysharp",
           "group": "1_modification@2"
         },
