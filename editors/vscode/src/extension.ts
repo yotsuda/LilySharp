@@ -3507,7 +3507,13 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             color: var(--vscode-button-foreground);
         }
         .toolbar button.ai:hover { background: var(--vscode-button-hoverBackground); }
-        .toolbar button.on { background: var(--vscode-button-secondaryHoverBackground, rgba(128, 128, 128, 0.3)); }
+        /* A toggle that is on looks pressed in (owner's request 2026-10-25: Range read as a plain
+           button): sunk, blue-edged, tinted. */
+        .toolbar button.toggle[aria-pressed="true"] {
+            background: #d6e6f8; border-color: #0078d7; color: #0b4a8b;
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.3);
+        }
+        .toolbar button.toggle[aria-pressed="true"]:hover { background: #c8ddf5; }
         /* The Range panel (owner's request 2026-10-25): each part's lowest and highest note over
            the score, top right under the toolbar; a click on one shows it on the score. */
         .range-panel {
@@ -3546,7 +3552,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         <button id="exportBtn" type="button">Export…</button>
         <span class="sep"></span>
         <button id="aiTransformBtn" class="ai" type="button" title="Ask AI (Ctrl+I)">✨</button>
-        <button id="rangeBtn" type="button" title="Each part's lowest and highest note — click one to find it on the score">Range</button>
+        <button id="rangeBtn" class="toggle" type="button" aria-pressed="false" title="Each part's range">↕ Range</button>
         <span class="sep"></span>
         <button id="playBtn" type="button" title="Play">▶</button>
         <button id="stopBtn" type="button" title="Stop" disabled>⏹</button>
@@ -4964,7 +4970,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         }
         rangeBtn.addEventListener('click', () => {
             rangePanel.hidden = !rangePanel.hidden;
-            rangeBtn.classList.toggle('on', !rangePanel.hidden);
+            rangeBtn.setAttribute('aria-pressed', String(!rangePanel.hidden));
             if (rangePanel.hidden) return;
             rangePanel.style.top = (document.querySelector('.toolbar').getBoundingClientRect().bottom + 6) + 'px';
             if (!rangeParts && !rangeError) rangePanel.textContent = 'Reading the ranges…';
