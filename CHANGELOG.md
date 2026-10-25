@@ -60,6 +60,8 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Editor
 
+- **Picking a score row's lyrics track goes on to its part**: `lyrics ▮` writes `words sings `
+  and opens the part list (unless the row already says `sings`).
 - **Remove All String Numbers** (`lilysharp/removeStringNumbers`, `StringNumberRemover`): every
   written `\N` goes — found by the parser, so one in a string or a comment stays — and a mark
   that stood apart (`a' \2 b`) takes its space with it.

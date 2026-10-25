@@ -2331,6 +2331,30 @@ public sealed partial class LilySharpLanguageServer
         return new CompletionList { Items = items.ToArray() };
     }
 
+    /// <summary>
+    /// The lyrics tracks a score's <c>lyrics ▮</c> row offers, each writing <c>NAME sings </c>
+    /// and opening the part list next (the owner's request, 2026-10-25: picking the track should
+    /// go straight on to the part it sings). A row that already says <c>sings</c> after the
+    /// caret takes the name alone.
+    /// </summary>
+    internal static CompletionList GetLyricsRowNameCompletions(string text, int offset)
+    {
+        int at = System.Math.Min(offset, text.Length);
+        while (at < text.Length && (char.IsLetterOrDigit(text[at]) || text[at] == '_')) at++;
+        var rest = text.AsSpan(at).TrimStart(" \t");
+        bool singsFollows = rest.StartsWith("sings", StringComparison.Ordinal)
+            && (rest.Length == 5 || !char.IsLetterOrDigit(rest[5]));
+        var list = GetDeclaredNameCompletions(text, "lyrics", "Lyrics part");
+        if (singsFollows) return list;
+        foreach (var item in list.Items)
+        {
+            item.InsertTextFormat = InsertTextFormat.Snippet;
+            item.InsertText = item.Label + " sings $0";
+            item.Command = PartPickerCommand();
+        }
+        return list;
+    }
+
     /// <summary>The <c>sings</c> keyword item a lyrics ROW offers after its track
     /// name — THIS ROW's melody binding (<c>lyrics verse sings melody</c>), which
     /// overrides the definition's default for this placement so one verse can

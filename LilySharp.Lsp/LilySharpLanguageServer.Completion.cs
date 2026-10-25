@@ -309,7 +309,7 @@ public sealed partial class LilySharpLanguageServer
             // A lyrics body: the verse headers.
             CompletionContext.LyricsBody => GetLyricVoltaCompletions(),
             CompletionContext.AfterChordsRef => GetDeclaredNameCompletions(doc.Text, "chords", "Chord part"),
-            CompletionContext.AfterLyricsRef => GetDeclaredNameCompletions(doc.Text, "lyrics", "Lyrics part"),
+            CompletionContext.AfterLyricsRef => GetLyricsRowNameCompletions(doc.Text, offset),
             CompletionContext.AfterLyricsName => GetVoiceBindingNameCompletions(doc.Text),
             CompletionContext.AfterLyricsTrackName => GetLyricsTrackNameCompletions(),
             CompletionContext.AfterSingsTarget => GetVoiceBindingNameCompletions(doc.Text,

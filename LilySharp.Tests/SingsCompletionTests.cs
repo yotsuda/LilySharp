@@ -145,6 +145,22 @@ public class SingsCompletionTests
         Assert.Contains("comp", parts);
     }
 
+    /// <summary>Picking the track on a score's lyrics row writes `sings ` after it and opens the
+    /// part list (the owner's request, 2026-10-25) — unless the row already says `sings`.</summary>
+    [Fact]
+    public void PickingTheRowsTrack_GoesOnToTheBinding()
+    {
+        const string head = "part guitar\nlyrics words { section A { la | } }\nsection A { guitar { c4 | } }\nform { A }\nscore {\n  staff guitar\n  lyrics ";
+        var item = Assert.Single(LilySharpLanguageServer.GetLyricsRowNameCompletions(head + "\n}\n", head.Length).Items);
+        Assert.Equal("words sings $0", item.InsertText);
+        Assert.Equal("editor.action.triggerSuggest", item.Command?.CommandIdentifier);
+
+        string bound = head + "wo sings guitar\n}\n";
+        var plain = Assert.Single(LilySharpLanguageServer.GetLyricsRowNameCompletions(bound, head.Length + 2).Items);
+        Assert.Null(plain.Command);
+        Assert.NotEqual("words sings $0", plain.InsertText);
+    }
+
     private static string[] LabelsAt(string text, int offset)
     {
         var server = new LilySharpLanguageServer(System.IO.Stream.Null, System.IO.Stream.Null);
