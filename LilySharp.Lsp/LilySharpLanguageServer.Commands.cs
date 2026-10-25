@@ -933,7 +933,13 @@ public sealed partial class LilySharpLanguageServer
             return new RangesResponse
             {
                 Parts = LilySharp.Core.Midi.PartRanges.Of(midi, doc.Text)
-                    .Select(p => new PartRange { Name = p.Name, Low = Dto(p.Low), High = Dto(p.High) })
+                    .Select(p => new PartRange
+                    {
+                        Name = p.Name, Low = Dto(p.Low), High = Dto(p.High),
+                        Weights = p.Weights.ToArray(), TessituraLow = p.TessituraLow, TessituraHigh = p.TessituraHigh,
+                        Tessitura = LilySharp.Core.Midi.PartRanges.SpelledFromPitch(p.TessituraLow) + "–"
+                            + LilySharp.Core.Midi.PartRanges.SpelledFromPitch(p.TessituraHigh),
+                    })
                     .ToArray(),
             };
         }

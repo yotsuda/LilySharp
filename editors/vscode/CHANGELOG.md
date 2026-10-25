@@ -51,6 +51,10 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ### Each part's range, in the preview
 
+- **The Range panel shows each part's tessitura** — where it spends four-fifths of its sounding
+  time (*G4–E5*), what tires a singer more than the top note — over a small chart of the time on
+  each semitone from the lowest note to the highest: the tessitura's bars full and underlined,
+  the rest faint, each column naming its note and share on hover.
 - **Range in the preview's header** — an icon as big as ✨, a double-headed arrow just left of an
   eighth note; a toggle that stays pressed in while on — opens a panel over the score: each part's lowest (▼) and
   highest (▲) note, spelled as written, with the bar it stands in — to check a part's range, and

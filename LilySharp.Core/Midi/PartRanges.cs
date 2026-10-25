@@ -24,8 +24,14 @@ namespace LilySharp.Core.Midi;
 /// <param name="Positions">The source offsets of the notes at this pitch, in the order they sound, each once.</param>
 public sealed record RangeEnd(double Pitch, string Name, IReadOnlyList<int> Positions);
 
-/// <summary>A part's lowest and highest note.</summary>
-public sealed record PartRange(string Name, RangeEnd Low, RangeEnd High);
+/// <summary>A part's lowest and highest note, and how its sounding time spreads between them.</summary>
+/// <param name="Weights">The share of the part's sounding time on each semitone, from the lowest
+/// note's (rounded down) to the highest's, summing to 1.</param>
+/// <param name="TessituraLow">With <paramref name="TessituraHigh"/>, the tessitura: the semitones
+/// between the 10th and the 90th percentile of the sounding time — where the part spends
+/// four-fifths of it (owner's request 2026-10-25: a singer's load is there, not at the top note).</param>
+public sealed record PartRange(string Name, RangeEnd Low, RangeEnd High,
+    IReadOnlyList<double> Weights, int TessituraLow, int TessituraHigh);
 
 /// <summary>
 /// The lowest and highest note of each part — to check a part's range, and for a singer to find
@@ -53,9 +59,30 @@ public static class PartRanges
                 continue;
             static double Sounding(MidiNote n) => n.Pitch + 0.5 * n.QuarterBend;
             double low = notes.Min(Sounding), high = notes.Max(Sounding);
-            parts.Add(new PartRange(track.Name, End(notes, low, source), End(notes, high, source)));
+            var (weights, tLow, tHigh) = Spread(notes, (int)Math.Floor(low), (int)Math.Floor(high));
+            parts.Add(new PartRange(track.Name, End(notes, low, source), End(notes, high, source), weights, tLow, tHigh));
         }
         return parts;
+    }
+
+    /// <summary>The share of the sounding time (ticks, so a tempo change does not weigh) on each
+    /// semitone from <paramref name="low"/> to <paramref name="high"/>, and the tessitura's
+    /// semitones: the 10th and 90th percentiles of that time.</summary>
+    private static (double[] Weights, int Low, int High) Spread(List<MidiNote> notes, int low, int high)
+    {
+        var ticks = new double[high - low + 1];
+        foreach (var n in notes)
+            ticks[(int)Math.Floor(n.Pitch + 0.5 * n.QuarterBend) - low] += Math.Max(1, n.DurationTicks);
+        double total = ticks.Sum();
+        var weights = ticks.Select(t => t / total).ToArray();
+        int Percentile(double p)
+        {
+            double sum = 0;
+            for (int i = 0; i < weights.Length; i++)
+                if ((sum += weights[i]) >= p - 1e-9) return low + i;
+            return high;
+        }
+        return (weights, Percentile(0.1), Percentile(0.9));
     }
 
     private static RangeEnd End(List<MidiNote> notes, double pitch, string? source)
@@ -133,5 +160,5 @@ public static class PartRanges
     private static readonly string[] PitchClassNames = ["C", "C♯", "D", "E♭", "E", "F", "F♯", "G", "A♭", "A", "B♭", "B"];
 
     /// <summary>A pitch named without its written spelling: the common one of each pitch class.</summary>
-    internal static string SpelledFromPitch(int midi) => PitchClassNames[((midi % 12) + 12) % 12] + (midi / 12 - 1);
+    public static string SpelledFromPitch(int midi) => PitchClassNames[((midi % 12) + 12) % 12] + (midi / 12 - 1);
 }

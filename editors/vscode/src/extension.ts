@@ -3625,6 +3625,11 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         .range-panel .pitch { font-weight: 600; }
         .range-panel .where { opacity: 0.7; }
         .range-panel .note { opacity: 0.7; padding: 4px 8px 0; }
+        .range-panel td.tess { vertical-align: top; }
+        .range-panel .tess-chart { display: block; margin-top: 2px; }
+        .range-panel .tess-bar { fill: var(--vscode-charts-blue, #1a73c8); opacity: 0.35; }
+        .range-panel .tess-bar.in { opacity: 1; }
+        .range-panel .tess-line { fill: var(--vscode-charts-blue, #1a73c8); }
     </style>
 </head>
 <!-- The preview is a rendered score, not an editable text buffer, so VS Code's
@@ -5151,7 +5156,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             if (rangeParts.length === 0) { rangePanel.textContent = 'No pitched notes in this score.'; return; }
             const table = document.createElement('table');
             const head = document.createElement('tr');
-            for (const h of ['Part', 'Lowest', 'Highest']) {
+            for (const h of ['Part', 'Lowest', 'Highest', 'Tessitura']) {
                 const th = document.createElement('th');
                 th.textContent = h;
                 head.appendChild(th);
@@ -5164,13 +5169,67 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 tr.appendChild(name);
                 tr.appendChild(rangeCell(p, 'Low'));
                 tr.appendChild(rangeCell(p, 'High'));
+                tr.appendChild(tessituraCell(p));
                 table.appendChild(tr);
             }
             rangePanel.appendChild(table);
             const note = document.createElement('div');
             note.className = 'note';
-            note.textContent = 'Sounding pitches · C4 = middle C';
+            note.textContent = 'Sounding pitches · C4 = middle C · tessitura: where four-fifths of the time is';
             rangePanel.appendChild(note);
+        }
+        // The tessitura (owner's request 2026-10-25): where the part spends four-fifths of its
+        // sounding time, named, over a small chart of that time on each semitone from its lowest
+        // note to its highest — one hue, the tessitura's bars full and underlined, the rest
+        // faint. Each column says its note and share on hover.
+        const PITCH_NAMES = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
+        const pitchName = (m) => PITCH_NAMES[((m % 12) + 12) % 12] + (Math.floor(m / 12) - 1);
+        function tessituraCell(p) {
+            const td = document.createElement('td');
+            td.className = 'tess';
+            const w = p.Weights || [];
+            const label = document.createElement('div');
+            label.textContent = p.Tessitura || '';
+            td.appendChild(label);
+            if (w.length === 0) return td;
+            const ns = 'http://www.w3.org/2000/svg';
+            const bar = Math.max(2, Math.min(5, Math.floor(180 / w.length) - 2)), gap = w.length > 40 ? 1 : 2, h = 22;
+            const max = Math.max(...w);
+            const low = Math.floor(p.Low.Pitch);
+            const svg = document.createElementNS(ns, 'svg');
+            svg.setAttribute('width', String(w.length * (bar + gap)));
+            svg.setAttribute('height', String(h + 4));
+            svg.setAttribute('class', 'tess-chart');
+            w.forEach((v, i) => {
+                const m = low + i, x = i * (bar + gap);
+                const inside = m >= p.TessituraLow && m <= p.TessituraHigh;
+                const bh = v > 0 ? Math.max(2, Math.round((v / max) * h)) : 0;
+                if (bh > 0) {
+                    const r = document.createElementNS(ns, 'rect');
+                    r.setAttribute('x', String(x)); r.setAttribute('y', String(h - bh));
+                    r.setAttribute('width', String(bar)); r.setAttribute('height', String(bh));
+                    r.setAttribute('rx', '1');
+                    r.setAttribute('class', inside ? 'tess-bar in' : 'tess-bar');
+                    svg.appendChild(r);
+                }
+                // The column's hover target: its whole height, wider than the bar.
+                const hit = document.createElementNS(ns, 'rect');
+                hit.setAttribute('x', String(x - gap / 2)); hit.setAttribute('y', '0');
+                hit.setAttribute('width', String(bar + gap)); hit.setAttribute('height', String(h + 4));
+                hit.setAttribute('fill', 'transparent');
+                const t = document.createElementNS(ns, 'title');
+                t.textContent = pitchName(m) + ': ' + Math.round(v * 100) + '% of the time';
+                hit.appendChild(t);
+                svg.appendChild(hit);
+            });
+            const a = (p.TessituraLow - low) * (bar + gap), b = (p.TessituraHigh - low) * (bar + gap) + bar;
+            const line = document.createElementNS(ns, 'rect');
+            line.setAttribute('x', String(a)); line.setAttribute('y', String(h + 2));
+            line.setAttribute('width', String(Math.max(bar, b - a))); line.setAttribute('height', '2');
+            line.setAttribute('class', 'tess-line');
+            svg.appendChild(line);
+            td.appendChild(svg);
+            return td;
         }
         function rangeCell(p, end) {
             const e = p[end];

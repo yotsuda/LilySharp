@@ -72,6 +72,14 @@ describe('the preview\'s Range panel', () => {
         assert.match(html, /followTick = tick;\s*playheadTimer = setInterval\(tick, 50\);/);
     });
 
+    // The tessitura (owner's request 2026-10-25): named, over a chart of the time on each semitone.
+    it('shows each part\'s tessitura over a chart of where its time is', () => {
+        assert.match(html, /for \(const h of \['Part', 'Lowest', 'Highest', 'Tessitura'\]\)/);
+        assert.match(html, /tr\.appendChild\(tessituraCell\(p\)\);/);
+        assert.match(html, /const inside = m >= p\.TessituraLow && m <= p\.TessituraHigh;/);
+        assert.match(html, /t\.textContent = pitchName\(m\) \+ ': ' \+ Math\.round\(v \* 100\) \+ '% of the time';/);
+    });
+
     it('shows a clicked end on the score and in the editor, the next place on the next click', () => {
         assert.match(html, /if \(rangeCur === key\) rangeAt\[key\] = \(\(rangeAt\[key\] \|\| 0\) \+ 1\) % n;/);
         assert.match(html, /const painted = highlightPositions\(\[pos\]\);/);

@@ -347,6 +347,15 @@ public class PartRange
     public string Name { get; set; } = "";
     public RangeEnd Low { get; set; } = null!;
     public RangeEnd High { get; set; } = null!;
+    /// <summary>The share of the part's sounding time on each semitone, from <see cref="Low"/>'s
+    /// (rounded down) to <see cref="High"/>'s, summing to 1 — the Range panel's chart.</summary>
+    public double[] Weights { get; set; } = [];
+    /// <summary>The tessitura's lowest and highest semitones (MIDI): the 10th and the 90th
+    /// percentile of the sounding time.</summary>
+    public int TessituraLow { get; set; }
+    public int TessituraHigh { get; set; }
+    /// <summary>The tessitura, named (<c>E4–D5</c>).</summary>
+    public string Tessitura { get; set; } = "";
 }
 
 /// <summary>Response for the lilysharp/ranges request: each part that sounds pitches, in score

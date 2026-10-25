@@ -52,6 +52,21 @@ public class PartRangesTests
         Assert.Equal((60.0, 79.0), (sop.Low.Pitch, sop.High.Pitch));
     }
 
+    /// <summary>The tessitura (owner's request 2026-10-25): where the part spends four-fifths of
+    /// its sounding time — a lone low and a lone high note fall outside it.</summary>
+    [Fact]
+    public void TheTessitura_IsWhereTheTimeIs_NotWhereTheEndsAre()
+    {
+        const string src = "octave absolute\ntime 4/4\npart p { clef treble }\n"
+            + "section A { p { c8 e e e e e e e | e8 e e e e e e c' | } }\nform { A }";
+        var p = PartRanges.Of(new MidiExporter().Export(SyntaxTree.Parse(src)), src).Single();
+        Assert.Equal(("C4", "C5"), (p.Low.Name, p.High.Name));
+        Assert.Equal((64, 64), (p.TessituraLow, p.TessituraHigh));
+        Assert.Equal(13, p.Weights.Count);                       // C4 .. C5, one a semitone
+        Assert.Equal([0.0625, 0.875, 0.0625], new[] { p.Weights[0], p.Weights[4], p.Weights[12] });
+        Assert.Equal(1.0, p.Weights.Sum(), 9);
+    }
+
     [Fact]
     public void FindsEveryPlaceTheTopNoteIsWritten_InTheOrderItSounds()
     {
