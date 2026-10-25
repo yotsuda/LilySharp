@@ -42,6 +42,7 @@ let lastKey = '';
 let lastText: string | undefined;
 let inflightKey = '';
 let inflightPromise: Promise<string | undefined> | undefined;
+let inflightToken: vscode.CancellationToken | undefined;
 
 export function registerAiComplete(context: vscode.ExtensionContext, deps: AiTransformDeps): void {
     const provider: vscode.InlineCompletionItemProvider = {
@@ -81,13 +82,17 @@ export function registerAiComplete(context: vscode.ExtensionContext, deps: AiTra
             if (key === lastKey) {
                 return lastText ? [makeItem(lastText, position)] : undefined;
             }
-            // Coalesce concurrent requests for the same state.
-            if (key === inflightKey && inflightPromise) {
+            // Coalesce concurrent requests for the same state — but not onto one VS Code has
+            // cancelled: asking again replaces the request it asked before, and a request
+            // waiting on the cancelled one's answer got nothing, silently (owner's report
+            // 2026-10-25: after an automatic bar line, which asks again, it never showed).
+            if (key === inflightKey && inflightPromise && !inflightToken?.isCancellationRequested) {
                 const t = await inflightPromise;
                 return t ? [makeItem(t, position)] : undefined;
             }
 
             inflightKey = key;
+            inflightToken = token;
             deps.log(`Ghost completion: asked at ${position.line + 1}:${position.character + 1}`);
             inflightPromise = computeSuggestion(deps, client, document, position, offset, token);
             const text = await inflightPromise;
@@ -190,6 +195,7 @@ async function computeSuggestion(
     // Debounce: let the user keep typing before we spend a model call.
     await delay(DEBOUNCE_MS);
     if (token.isCancellationRequested) {
+        deps.log('Ghost completion: superseded before the model was asked');
         return undefined;
     }
 
@@ -241,6 +247,13 @@ async function computeSuggestion(
     measure = measure.replace(/^\|\s*/, '');
     if (measure.length === 0) {
         outcome('the model returned nothing usable');
+        return undefined;
+    }
+    // Music, not words. A comment compiles, so the check below lets it through: the model has
+    // written `// Next measure |` and echoed the file's opening comment as the next bar
+    // (owner's log, 2026-10-25). A bar holds no comment or quoted text, and a note, rest or chord.
+    if (/\/\/|\/\*|"/.test(measure) || !/(^|[\s<(~])([a-g](is|es|s)*|[rRs])[',]*\d*\.*(?=[\s>)|~@\[\]]|$)/.test(measure)) {
+        outcome(`refused "${measure}" (not a bar of music)`);
         return undefined;
     }
     if (!measure.endsWith('|')) {

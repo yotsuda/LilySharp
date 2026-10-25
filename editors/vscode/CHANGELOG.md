@@ -68,6 +68,11 @@ All notable changes to the Lily# VS Code extension are documented here.
   which refuses every extension ("only available to VS Code core"): every request failed in 5 ms
   and nothing ever showed. Such models are left out of every choice (and of *Select AI Model…*),
   and one that refuses so is dropped for the session, the next request taking another.
+- **It keeps showing after an automatic bar line.** Asking again there replaced VS Code's first
+  request, and the second waited on the cancelled first's answer — nothing, unlogged; it now asks
+  afresh. A cancelled request is logged too.
+- **A "bar" that is words is refused**: a comment compiles, so `// Next measure |` and the file's
+  opening comment had been offered as the next bar.
 - **The status bar says what it is doing**: *asking <model>…* while the model works, then *the
   next bar is shown — Tab to accept*, or why there is none (cancelled, does not compile, no
   model, the model's error).
