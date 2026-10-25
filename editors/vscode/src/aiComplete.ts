@@ -54,11 +54,14 @@ export function registerAiComplete(context: vscode.ExtensionContext, deps: AiTra
                 return undefined;
             }
 
-            // Heuristic trigger: the cursor is at the end of the line and the text
-            // before it closes a measure (ends with a barline). That's exactly the
-            // "what comes next" moment; anywhere else would be noise.
+            // Heuristic trigger: the cursor is at the end of what is written on the line —
+            // nothing after it but the braces that close the block (`m { c4 d e f | }`,
+            // the way a one-line part is written; it had to be the line's very end, so a
+            // block closed on the same line never asked, owner's report 2026-10-25) — and
+            // the text before it closes a measure (ends with a barline). That's exactly
+            // the "what comes next" moment; anywhere else would be noise.
             const line = document.lineAt(position.line);
-            if (position.character !== line.text.length) {
+            if (!/^[\s}]*$/.test(line.text.substring(position.character))) {
                 return undefined;
             }
             const prefix = line.text.substring(0, position.character);

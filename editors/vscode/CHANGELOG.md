@@ -61,6 +61,13 @@ All notable changes to the Lily# VS Code extension are documented here.
   and the four annotations it lacked (`@harmonic`, `@stopped`, `@snapPizz`, `@pluck`), and lost
   the notes about MusicXML and LilyPond export the AI never needs.
 
+### Ghost Completion shows
+
+- **It offers the next bar where bars are written**: after a bar line with only the block's
+  closing `}` after the caret (`m { c4 d e f | }`) — it used to ask only at the very end of a
+  line, so a part written on one line never got a suggestion — and right after the bar line the
+  typing aids write for you, which VS Code did not ask about by itself.
+
 ### A shorter Settings screen, and your own New Score template
 
 - **The settings come in five groups** — Preview, Playback, Editing, AI, Scans and Fonts — and

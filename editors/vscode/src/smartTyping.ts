@@ -206,7 +206,13 @@ export function registerSmartTyping(
                     const plan = autoBarlinePlan(text, offset);
                     if (plan) {
                         // Its own undo step: Ctrl+Z takes the bar line back and leaves the space.
-                        applyFixWithCaret(editor, text, plan.edits, plan.caret!, true);
+                        // A bar line just written is where Ghost Completion offers the next bar;
+                        // an edit of the extension's own asks VS Code for no suggestion, so ask
+                        // (owner's report 2026-10-25: switched on, it never showed).
+                        const ghost = plan.edits.some(e => e.ins === '| ')
+                            && vscode.workspace.getConfiguration('lilysharp').get<boolean>('ai.ghostCompletion', false);
+                        applyFixWithCaret(editor, text, plan.edits, plan.caret!, true, 0,
+                            ghost ? () => { void vscode.commands.executeCommand('editor.action.inlineSuggest.trigger'); } : undefined);
                         // Only a written bar line absorbs a '|' typed after it; after a voice's
                         // `} { ` or `} ` the next key is the music's.
                         if (plan.edits.some(e => e.ins === '| ')) {
