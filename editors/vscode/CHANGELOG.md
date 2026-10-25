@@ -24,6 +24,12 @@ All notable changes to the Lily# VS Code extension are documented here.
   selected* without one, and says it is a hint of where to look while the whole score stays open
   to change — every change is shown before it is applied.
 
+### The AI says what it did
+
+- **A candidate comes with a word from the AI** — 💬 under your request in the candidate panel:
+  what it changed and why, a sentence or two, in the language you asked in. It rides in its own
+  `<note>` beside the music, so it never reaches the file.
+
 ### The AI reads the whole file and answers with edits
 
 - **The file goes to the AI whole, up to the model's input limit** (less the grammar and a

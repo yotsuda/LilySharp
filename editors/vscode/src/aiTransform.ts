@@ -38,7 +38,7 @@ import type { LanguageClient } from 'vscode-languageclient/node';
 import { ChatClient, ChatMessage, resolveChatClient } from './modelClient';
 import {
     CandidateEdit as CoreCandidateEdit, ChangedSpan, MarkInSelection, MarkReadings, SEL_CLOSE, SEL_OPEN, cleanCandidate,
-    TextChange, carryOffset, documentBudget, documentContext, estimateTokens, isProblem, marksContext, octaveOutliers,
+    TextChange, carryOffset, documentBudget, documentContext, estimateTokens, isProblem, marksContext, octaveOutliers, splitNote,
     startTimeAt, toCandidateEdit, wholeFileEdit,
 } from './aiTransformCore';
 import { markFactsOf, sideFileOf } from './omrScanCore';
@@ -558,7 +558,7 @@ async function drive(
                 uri: snapshot.uri,
                 before: work.origFullText,
                 after: spliceCandidate(candidate.snap, candidate.text),
-            });
+            }, splitNote(candidate.reply).note);
             if (decision !== 'iterate') {
                 break;
             }
@@ -645,7 +645,10 @@ function systemPrompt(grammar: string): string {
         '   unique. To insert, copy a line next to the place into <old> and repeat it in <new> with the',
         '   insertion. Edits must not overlap. Never write the whole file out.',
         '   Do not reach for `voice { }` just to stay inside the selection when a separate part is asked for.',
-        '- Either way: no explanations, no commentary, no Markdown, no code fences, no selection markers.',
+        '- Either way, start with ONE short note to the musician between <note> and </note>: what you did',
+        '  and why, at most two sentences, warm and plain, in the language the instruction is written in',
+        '  (Japanese for a Japanese instruction). Apart from the note: no explanations, no commentary, no',
+        '  Markdown, no code fences, no selection markers.',
         // Owner's report 2026-10-25: "add chords" came back as @chord on every note. The answers
         // to everyday requests live in the grammar's "Common requests" section.
         '- An everyday request ("add chords", "add lyrics", "add a bass line", "add tab", "repeat this",',
@@ -900,6 +903,7 @@ async function reviewOnScore(
     candidate: string,
     changed: ChangedSpan[],
     play: Audible,
+    note: string | null = null,
 ): Promise<Decision> {
     const panel = ensureCandidatePanel(deps);
     audible = play;
@@ -911,7 +915,7 @@ async function reviewOnScore(
     panel.webview.html = getCandidateHtml(
         fontUri.toString(), braceFontUri.toString(), panel.webview.cspSource, getNonce(),
         renderBefore.Svg, renderAfter.Svg, renderAfter.Error, caption, candidate, changed,
-        textFontFaceCss(panel.webview, deps.extensionUri));
+        textFontFaceCss(panel.webview, deps.extensionUri), note);
     panel.reveal(vscode.ViewColumn.Beside, true);
 
     // Hand this round's resolver to the panel's persistent message pump. Iterate
@@ -1009,7 +1013,7 @@ async function playCandidate(deps: AiTransformDeps, panel: vscode.WebviewPanel, 
 function getCandidateHtml(
     fontUri: string, braceFontUri: string, cspSource: string, nonce: string,
     svgBefore: string | null, svgAfter: string | null, error: string | null,
-    caption: string, candidate: string, changed: ChangedSpan[], textFontCss: string,
+    caption: string, candidate: string, changed: ChangedSpan[], textFontCss: string, note: string | null = null,
 ): string {
     const afterBody = svgAfter
         ? `<div class="score">${svgAfter}</div>`
@@ -1032,6 +1036,8 @@ body { margin:0; padding:0; display:flex; flex-direction:column; height:100vh; o
           display:flex; align-items:center; gap:12px; }
 .header .cap { font-size:12px; opacity:0.8; }
 .header .prompt { font-size:13px; font-weight:600; }
+/* The AI's word on what it did (<note>, owner's request 2026-10-25). */
+.header .note { font-size:12.5px; margin-top:3px; opacity:0.9; }
 .header .spacer { flex:1; }
 .toggle { display:flex; gap:4px; }
 .toggle button { padding:3px 10px; font-size:12px; }
@@ -1077,6 +1083,7 @@ button:disabled { opacity:0.45; cursor:default; }
   <div>
     <div class="cap">AI candidate — decide on the score · <span style="color:#ff6600">■</span> changed</div>
     <div class="prompt">${escapeHtml(caption)}</div>
+    ${note ? `<div class="note">💬 ${escapeHtml(note)}</div>` : ''}
   </div>
   <div class="spacer"></div>
   <div class="toggle">

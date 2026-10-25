@@ -92,17 +92,19 @@ function withoutMarkers(text: string): string {
  * and a file sent in part came back without the parts the model never saw (2026-10-25).
  * Anything else is the replacement for the selection. null when there is nothing in it.
  */
-export function toCandidateEdit<S extends SpanLike>(snapshot: S, raw: string): CandidateEdit<S> | ReplyProblem | null {
+export function toCandidateEdit<S extends SpanLike>(snapshot: S, reply: string): CandidateEdit<S> | ReplyProblem | null {
+    // The note is the musician's, not the file's (splitNote); `reply` stays whole for the history.
+    const raw = splitNote(reply).rest;
     const orig = snapshot.origFullText;
     const edits = readEdits(raw);
     if (edits.length > 0) {
         const applied = applyEdits(orig, edits);
         if (typeof applied === 'string') {
-            return { problem: applied, reply: raw };
+            return { problem: applied, reply };
         }
         return applied.spans.length === 0
-            ? { snap: snapshot, text: snapshot.origSelectedText, spans: [], reply: raw, whole: true }
-            : reduceToSpan(snapshot, applied.text, applied.spans, raw);
+            ? { snap: snapshot, text: snapshot.origSelectedText, spans: [], reply, whole: true }
+            : reduceToSpan(snapshot, applied.text, applied.spans, reply);
     }
     const file = raw.match(/<file>[ \t]*\r?\n?([\s\S]*?)\r?\n?[ \t]*<\/file>/);
     if (!file) {
@@ -112,7 +114,7 @@ export function toCandidateEdit<S extends SpanLike>(snapshot: S, raw: string): C
         }
         const lo = snapshot.startOffset;
         const spans = [{ beforeLo: lo, beforeHi: snapshot.endOffset, afterLo: lo, afterHi: lo + text.length }];
-        return { snap: snapshot, text, spans, reply: raw, whole: false };
+        return { snap: snapshot, text, spans, reply, whole: false };
     }
     let full = sameNewlines(withoutMarkers(cleanCandidate(file[1])), orig);
     if (full.trim().length === 0) {
@@ -123,7 +125,20 @@ export function toCandidateEdit<S extends SpanLike>(snapshot: S, raw: string): C
     if (orig.endsWith('\n') && !full.endsWith('\n')) {
         full += eol;
     }
-    return reduceToSpan(snapshot, full, null, raw);
+    return reduceToSpan(snapshot, full, null, reply);
+}
+
+/**
+ * The musician's note a reply may carry, `<note>…</note>` (owner's request 2026-10-25: a word
+ * from the AI about what it did), and the reply without it — what the edit is read from.
+ */
+export function splitNote(raw: string): { note: string | null; rest: string } {
+    const m = raw.match(/<note>([\s\S]*?)<\/note>/);
+    if (!m) {
+        return { note: null, rest: raw };
+    }
+    const note = m[1].trim();
+    return { note: note.length > 0 ? note : null, rest: raw.slice(0, m.index) + raw.slice(m.index! + m[0].length) };
 }
 
 /** One `<edit>` of a reply, as written. */

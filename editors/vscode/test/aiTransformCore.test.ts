@@ -23,7 +23,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import {
     SEL_CLOSE, SEL_OPEN, carryOffset, documentBudget, documentContext, estimateTokens, isProblem, isUnchanged, marksContext, octaveOutliers,
-    pickModel, pitchToMidi, startTimeAt, toCandidateEdit,
+    pickModel, pitchToMidi, splitNote, startTimeAt, toCandidateEdit,
 } from '../src/aiTransformCore';
 
 describe('the automatic model', () => {
@@ -131,6 +131,22 @@ describe('a whole-file reply', () => {
     it('that is the file as it was is unchanged', () => {
         const edit = toCandidateEdit(snapshotOf(FILE, SEL), `<file>\n${FILE}</file>`);
         assert.ok(edit && !isProblem(edit) && isUnchanged(edit));
+    });
+});
+
+describe('the note a reply carries', () => {
+    it('is the musician\'s, and the edit is read without it', () => {
+        const reply = '<note>3度上に重ねました。</note>\ne4 f g a |';
+        assert.deepEqual(splitNote(reply), { note: '3度上に重ねました。', rest: '\ne4 f g a |' });
+        const edit = toCandidateEdit(snapshotOf(FILE, SEL), reply);
+        assert.ok(edit && !isProblem(edit));
+        assert.equal(edit.text, 'e4 f g a |');
+        assert.equal(edit.reply, reply);   // the history keeps it whole
+    });
+
+    it('is absent from a reply without one, and a note alone is no candidate', () => {
+        assert.deepEqual(splitNote('e4 |'), { note: null, rest: 'e4 |' });
+        assert.equal(toCandidateEdit(snapshotOf(FILE, SEL), '<note>sorry</note>'), null);
     });
 });
 
