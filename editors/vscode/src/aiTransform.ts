@@ -227,21 +227,17 @@ async function runAiTransform(deps: AiTransformDeps, wholeScore = false, selecte
     }
 
     // A selection points the AI at a place but does not fence it in (owner's requests
-    // 2026-10-25): the box leads with what was selected, as "Nothing is selected" leads the
-    // whole-score one, then says the whole score stays open to change and nothing lands unseen —
-    // or, for a file too long for the model, what part of it the AI reads.
-    const scope = shown.complete
-        ? 'the whole score is open to change'
-        : 'the file is too long for this model to read whole: the AI reads its head and the bars around the selection';
+    // 2026-10-25): the box names it as a hint; with none it just asks — short, as a box's
+    // prompt is read at a glance (owner, 2026-10-25). A file too long for the model says what
+    // the AI reads of it.
+    const partly = shown.complete ? '' : whole
+        ? ' The file is too long for this model: the AI reads its beginning.'
+        : ' The file is too long for this model: the AI reads its beginning and the bars around it.';
     const instruction = await vscode.window.showInputBox({
-        title: whole ? 'Lily# — transform the whole score with AI' : 'Lily# — transform selection with AI',
+        title: 'Lily# — Ask AI',
         prompt: whole
-            ? (shown.complete
-                ? 'Nothing is selected, so the AI works on the whole file. Describe the change (natural language)'
-                : 'Nothing is selected, but the file is too long for this model to read whole: the AI reads its '
-                  + 'beginning. Describe the change (natural language)')
-            : `${what} — a hint of where to look, but ${scope}; `
-              + 'every change is shown before it is applied. Describe the change (natural language)',
+            ? `What should the AI change?${partly}`
+            : `${what} — a hint for the AI. What should it change?${partly}`,
         placeHolder: nextPlaceholder(),
         ignoreFocusOut: true,
     });
