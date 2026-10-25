@@ -86,7 +86,7 @@ $byExtension = 'The extension is the authority: where this page and the extensio
 $pages = @(
     @{ Out = 'start.html'; Body = 'start-body.html'; Section = 'start.html'
        Title = 'Lily# — get started'
-       Desc = 'Install the Lily# extension for VS Code, write a first score and hear it — in a few minutes.'
+       Desc = 'Install Lily# Studio, the Lily# extension for VS Code, write a first score and hear it — in a few minutes.'
        Sub = 'Get started — install, a first score, and where next'
        Authority = $byExtension },
     @{ Out = 'chords.html'; Body = 'chords-body.html'; Section = 'grammar.html'
@@ -95,9 +95,9 @@ $pages = @(
        Sub = 'Reference — chords and chord diagrams, step by step'
        Authority = $byParser },
     @{ Out = 'editor.html'; Body = 'editor-body.html'; Section = 'editor.html'
-       Title = 'Lily# — the editor and AI'
-       Desc = 'The Lily# VS Code extension: live preview, typing aids, stepping, audition, commands, settings and the AI features.'
-       Sub = 'The VS Code extension, and what it does with AI'
+       Title = 'Lily# Studio — the editor and AI'
+       Desc = 'Lily# Studio, the Lily# extension for VS Code: live preview, typing aids, stepping, audition, practice playback, commands, settings and the AI features.'
+       Sub = 'Lily# Studio — the VS Code extension, and what it does with AI'
        Authority = $byExtension },
     @{ Out = 'commands.html'; Body = 'commands-body.html'; Section = 'editor.html'
        Title = 'Lily# — editor commands'

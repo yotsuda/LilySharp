@@ -21,7 +21,7 @@ $template = @'
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Lily# — sheet music from plain text</title>
-<meta name="description" content="Lily#: publication-quality sheet music from plain text, engraved by a port of LilyPond's layout engine, with a VS Code extension that previews as you type.">
+<meta name="description" content="Lily#: publication-quality sheet music from plain text, engraved by a port of LilyPond's layout engine, with Lily# Studio, a VS Code extension that previews as you type.">
 {{HEAD_META}}
 <style>
   /* No viewport units anywhere: every size is fixed or a share of its own
@@ -455,7 +455,7 @@ if ($clips -contains 'hero-vscode.mp4') {
 }
 
 $html = $template.
-    Replace('{{HEAD_META}}',    (Get-HeadMeta 'Lily# — sheet music from plain text' "Publication-quality sheet music from plain text, engraved by a port of LilyPond's layout engine, with a VS Code extension that previews as you type." 'index.html').TrimEnd()).
+    Replace('{{HEAD_META}}',    (Get-HeadMeta 'Lily# — sheet music from plain text' "Publication-quality sheet music from plain text, engraved by a port of LilyPond's layout engine, with Lily# Studio, a VS Code extension that previews as you type." 'index.html').TrimEnd()).
     Replace('{{HERO_SHOT}}',    $heroShot).
     Replace('{{ODE_LYS}}',      (LysOf 'ode-to-joy')).
     Replace('{{SUN_LYS}}',      (LysOf 'rising-sun')).

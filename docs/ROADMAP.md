@@ -64,10 +64,6 @@ four-part (SATB) writing — church choirs and choral arranging.
 
 Step input from a MIDI keyboard. Deferred until there is a keyboard to try it with.
 
-### The name "Lily# Studio" (deferred by the owner 2026-10-25)
-
-Worth considering; to be decided later. "Lilt" was considered and not wanted.
-
 ---
 
 ## Decided against

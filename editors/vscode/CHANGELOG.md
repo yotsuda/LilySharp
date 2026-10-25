@@ -4,6 +4,13 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## 0.14.0
 
+### The extension is Lily# Studio
+
+The extension is now called **Lily# Studio** — the editor for Lily#, as MuseScore Studio is
+MuseScore's. Only the name it goes by changes: it is the same extension (`yotsuda.lilysharp`,
+updated in place), the language is still Lily#, the commands still begin *Lily#:*, and the
+settings keep their `lilysharp.*` keys.
+
 ### Settings to set again
 
 Three settings were renamed or merged, and their old keys are no longer read — after updating,

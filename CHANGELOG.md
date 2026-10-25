@@ -23,6 +23,12 @@ What prints differently with no change to the file: a bass tab's strings (a new 
 to the owner's fingering), a slurred pair on a tab no longer kept on one string, a one-page
 score's PDF and preview keeping the whole paper, and a PDF page the paper's own size.
 
+### The VS Code extension is Lily# Studio
+
+The editor is now called **Lily# Studio**; the language, its compiler `lysc` and the commands'
+*Lily#:* prefix keep their names, and the Marketplace identifier (`yotsuda.lilysharp`) and the
+settings' keys are unchanged, so it updates in place.
+
 ### Engraving
 
 - **One part on two staves under two clefs places its notes under each staff's own clef.**

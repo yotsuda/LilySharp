@@ -1,6 +1,7 @@
-# Lily# VS Code Extension
+# Lily# Studio
 
-Write sheet music as plain text and watch it engrave beside you. A `.lys` file gets a
+**Lily# Studio** is the editor for **Lily#**, a music notation language: write sheet music as
+plain text and watch it engrave beside you. A `.lys` file gets a
 live score preview that plays back, and the editor gets completion, diagnostics,
 formatting and navigation over it — the compiler and its language server are bundled, so
 there is nothing else to install.
