@@ -16,6 +16,10 @@ All notable changes to the Lily# VS Code extension are documented here.
   the music as it stands (Before) — through the file's preview, with its sound font or MIDI
   output; ■ Stop stops it, and Accept, Iterate or Reject do too. With no preview open the panel
   says to open one.
+- **A click on a note plays from it**, in either pane (a click on a rest or a mark, from the
+  note before it).
+- **Iterate's question, closed or left empty, goes back to the candidate** to be decided again;
+  it used to end the transform and drop the candidate unapplied.
 
 ### Ctrl+I on an empty line works on the whole score
 

@@ -222,3 +222,21 @@ export function marksContext(marks: readonly MarkInSelection[], readings: Readon
         'music around it requires — write the item without its @todo; keep the @todo of every mark you leave.',
     ].join('\n');
 }
+
+/**
+ * When a candidate played from the source offset `pos` starts (a click on a note of the AI
+ * candidate's score — owner's request 2026-10-25): the first time a note written AT it sounds,
+ * else the first time the nearest note written before it sounds (a click on a rest, a clef or a
+ * mark), else 0. A phrase played several times is heard from its first play.
+ */
+export function startTimeAt(notes: { S?: number; T?: number }[], pos: number): number {
+    let exact: number | undefined;
+    let before: { s: number; t: number } | undefined;
+    for (const n of notes) {
+        const s = n.S ?? -1, t = n.T ?? 0;
+        if (s < 0) { continue; }
+        if (s === pos) { exact = exact === undefined ? t : Math.min(exact, t); }
+        else if (s < pos && (!before || s > before.s || (s === before.s && t < before.t))) { before = { s, t }; }
+    }
+    return exact ?? before?.t ?? 0;
+}

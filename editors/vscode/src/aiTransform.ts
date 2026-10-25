@@ -38,7 +38,7 @@ import type { LanguageClient } from 'vscode-languageclient/node';
 import { ChatClient, ChatMessage, resolveChatClient } from './modelClient';
 import {
     CandidateEdit as CoreCandidateEdit, MarkInSelection, MarkReadings, SEL_CLOSE, SEL_OPEN, cleanCandidate, marksContext,
-    octaveOutliers, toCandidateEdit,
+    octaveOutliers, startTimeAt, toCandidateEdit,
 } from './aiTransformCore';
 import { markFactsOf, sideFileOf } from './omrScanCore';
 import { textFontFaceCss, textFontsRoot } from './scoreFonts';
@@ -429,26 +429,37 @@ async function drive(
         }
         // The notification has closed: the review is the user's, with nothing over it.
         const { candidate, caption, renderAfter, changed } = round;
-        const decision = await reviewOnScore(deps, renderBefore, renderAfter, caption, candidate.text, changed, {
-            uri: snapshot.uri,
-            before: snapshot.origFullText,
-            after: spliceCandidate(candidate.snap, candidate.text),
-        });
+        // The review, and Iterate's question about it: a refine closed or left empty goes back
+        // to the same candidate on its score, to be decided again (owner's request 2026-10-25 —
+        // it used to end the transform, dropping the candidate unapplied).
+        let decision: Decision;
+        let refine: string | undefined;
+        for (;;) {
+            decision = await reviewOnScore(deps, renderBefore, renderAfter, caption, candidate.text, changed, {
+                uri: snapshot.uri,
+                before: snapshot.origFullText,
+                after: spliceCandidate(candidate.snap, candidate.text),
+            });
+            if (decision !== 'iterate') {
+                break;
+            }
+            refine = await vscode.window.showInputBox({
+                title: 'Lily# — refine the transform',
+                prompt: 'What should change about this candidate? (Esc returns to it)',
+                placeHolder: 'e.g. keep the rhythm but a third lower / less busy',
+                ignoreFocusOut: true,
+            });
+            if (refine !== undefined && refine.trim().length > 0) {
+                break;
+            }
+            deps.log('AI transform: refine cancelled — back to the candidate.');
+        }
 
         if (decision === 'reject') {
             deps.log('AI transform: rejected on the score.');
             return;
         }
-        if (decision === 'iterate') {
-            const refine = await vscode.window.showInputBox({
-                title: 'Lily# — refine the transform',
-                prompt: 'What should change about this candidate?',
-                placeHolder: 'e.g. keep the rhythm but a third lower / less busy',
-                ignoreFocusOut: true,
-            });
-            if (refine === undefined || refine.trim().length === 0) {
-                return; // treat cancelled refine as done
-            }
+        if (decision === 'iterate' && refine !== undefined) {
             deps.log(`AI transform: iterate — "${refine}"`);
             messages.push({ role: 'assistant', content: candidate.reply });
             messages.push({ role: 'user', content:
@@ -787,7 +798,8 @@ function ensureCandidatePanel(deps: AiTransformDeps): vscode.WebviewPanel {
         if (m && (m.action === 'accept' || m.action === 'iterate' || m.action === 'reject')) {
             settle(m.action);
         } else if (m?.action === 'play') {
-            void playCandidate(deps, panel, m.which === 'before' ? 'before' : 'after');
+            void playCandidate(deps, panel, m.which === 'before' ? 'before' : 'after',
+                typeof m.from === 'number' ? m.from : undefined);
         } else if (m?.action === 'stop' && audible) {
             deps.stopOnPreview?.(audible.uri);
         }
@@ -806,9 +818,12 @@ function ensureCandidatePanel(deps: AiTransformDeps): vscode.WebviewPanel {
  * preview (owner's request 2026-10-25: hear it before accepting). The preview is the player — its
  * synth, its sound font, its MIDI output — so what plays is what the score will sound like; the
  * notes carry no source positions, so the preview lights none of its own (they are another
- * text's). Without an open preview the panel says how to get one.
+ * text's). Without an open preview the panel says how to get one. A click on a note plays from
+ * it (`from`, the note's source offset in that text — the svg's data-pos and the playback's S
+ * count in the same text; owner's request 2026-10-25).
  */
-async function playCandidate(deps: AiTransformDeps, panel: vscode.WebviewPanel, which: 'before' | 'after'): Promise<void> {
+async function playCandidate(deps: AiTransformDeps, panel: vscode.WebviewPanel, which: 'before' | 'after',
+    from?: number): Promise<void> {
     const play = audible;
     const client = deps.getClient();
     if (!play || !client) { return; }
@@ -823,7 +838,10 @@ async function playCandidate(deps: AiTransformDeps, panel: vscode.WebviewPanel, 
             say(`Cannot play: ${pb.Error ?? 'no notes'}`);
             return;
         }
-        const notes = pb.Notes.map(n => ({ ...n, S: -1 }));
+        const start = from === undefined ? 0 : startTimeAt(pb.Notes as { S?: number; T?: number }[], from);
+        const notes = pb.Notes
+            .filter(n => ((n as { T?: number }).T ?? 0) >= start - 1e-6)
+            .map(n => ({ ...n, T: ((n as { T?: number }).T ?? 0) - start, S: -1 }));
         if (!deps.playOnPreview?.(play.uri, notes)) {
             say('Open the preview of this file to hear it (the preview is the player).');
             return;
@@ -869,6 +887,8 @@ body { margin:0; padding:0; display:flex; flex-direction:column; height:100vh; o
 /* The notes the AI changed — same non-destructive glow the main preview uses
    for editor↔preview sync, so "what changed" reads at a glance. */
 .chg { filter: drop-shadow(0 0 3.5px #ff6600); }
+/* A note plays the pane from it when clicked. */
+.score [data-pos] { cursor: pointer; }
 .pane { display:none; }
 .pane.show { display:block; }
 .snippet { margin:10px 16px 0; }
@@ -962,6 +982,14 @@ button:hover { opacity:0.9; }
   // Play sounds the pane shown, After or Before, in the preview (owner's request 2026-10-25).
   const play = () => vscode.postMessage({ action: 'play', which: paneAfter.classList.contains('show') ? 'after' : 'before' });
   document.getElementById('play').addEventListener('click', play);
+  // A click on a note (anything the score ties to the source) plays the pane from there.
+  document.querySelector('.main').addEventListener('click', (e) => {
+    const el = e.target && e.target.closest ? e.target.closest('[data-pos]') : null;
+    if (!el) { return; }
+    const from = parseInt(el.getAttribute('data-pos'), 10);
+    if (isNaN(from)) { return; }
+    vscode.postMessage({ action: 'play', which: paneAfter.classList.contains('show') ? 'after' : 'before', from });
+  });
   document.getElementById('stop').addEventListener('click', () => send('stop'));
   const playState = document.getElementById('playState');
   window.addEventListener('message', (e) => {

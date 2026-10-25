@@ -22,7 +22,7 @@ import * as assert from 'node:assert/strict';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import {
-    SEL_CLOSE, SEL_OPEN, isUnchanged, marksContext, octaveOutliers, pickModel, pitchToMidi, toCandidateEdit,
+    SEL_CLOSE, SEL_OPEN, isUnchanged, marksContext, octaveOutliers, pickModel, pitchToMidi, startTimeAt, toCandidateEdit,
 } from '../src/aiTransformCore';
 
 describe('the automatic model', () => {
@@ -172,5 +172,22 @@ describe('the marks left to check (B6)', () => {
         assert.match(text, /line 12: fis'8@todo\(o1203 "F# or F\?"\) — memo: F# or F\?; reader's confidence 0\.62; readings: fis'8 \(F#\), f'8/);
         assert.match(text, /line 14: c4@todo$/m);
         assert.match(text, /keep the @todo of every mark you leave/);
+    });
+});
+
+describe('startTimeAt — playing an AI candidate from a clicked note', () => {
+    const notes = [
+        { S: 10, T: 0 }, { S: 14, T: 0.5 }, { S: 18, T: 1 },
+        { S: 10, T: 2 }, { S: 14, T: 2.5 },   // the phrase played again
+        { S: -1, T: 3 },                       // a note with no source
+    ];
+    it('starts at the clicked note, at its first play', () => {
+        assert.equal(startTimeAt(notes, 14), 0.5);
+    });
+    it('starts at the nearest note before a click on something else', () => {
+        assert.equal(startTimeAt(notes, 16), 0.5);
+    });
+    it('starts at the top before any note', () => {
+        assert.equal(startTimeAt(notes, 3), 0);
     });
 });
