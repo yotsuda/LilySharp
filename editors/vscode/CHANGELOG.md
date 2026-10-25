@@ -6,7 +6,8 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ### Each part's range, in the preview
 
-- **↕ Range in the preview's header**, a toggle that stays pressed in while on, opens a panel over the score: each part's lowest (▼) and
+- **Range in the preview's header** — an icon as big as ✨, an up-down arrow beside a high and a
+  low note head; a toggle that stays pressed in while on — opens a panel over the score: each part's lowest (▼) and
   highest (▲) note, spelled as written, with the bar it stands in — to check a part's range, and
   for a singer to find the top note at once. A click shows the note on the score and puts the
   editor's caret on it; a pitch written in several places says how many (*2/3*) and goes on to

@@ -29,7 +29,7 @@ describe('the preview\'s Range panel', () => {
     const html = new vm.Script(extension.slice(start, end).replace(/\$\{[^}]*\}/g, '0')).runInNewContext({}) as string;
 
     it('has a Range button and its panel, and the page script parses', () => {
-        assert.match(html, /<button id="rangeBtn" class="toggle" type="button" aria-pressed="false"[^>]*>↕ Range<\/button>/);
+        assert.match(html, /<button id="rangeBtn" class="toggle icon" type="button" aria-pressed="false" aria-label="Range"[^>]*><svg [^>]*>/);
         assert.match(html, /rangeBtn\.setAttribute\('aria-pressed', String\(!rangePanel\.hidden\)\);/);
         assert.match(html, /<div id="rangePanel" class="range-panel" hidden><\/div>/);
         for (const m of html.matchAll(/<script[^>]*>([\s\S]*?)<\/script>/g)) {
