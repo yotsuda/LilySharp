@@ -5063,6 +5063,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         let playEndTimer = null;
         let playheadTimer = null;
         let relaying = false;       // the current playback is a candidate's, followed for its panel
+        let tickWatch = null;       // the follow-along tick's evenness, for the log (followAlong)
         let sfPlayer = null;       // the SoundFont player of the current playback
         let midiPlaying = false;    // the current playback is the server's, on the MIDI output
         let midiPlayPending = null; // a Play sent to the server, awaiting its start (generation, notes, offset)
@@ -5194,6 +5195,11 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             clearInterval(playheadTimer);
             playheadTimer = null;
             playClock = null;
+            if (tickWatch && tickWatch.ticks > 0) {
+                vscode.postMessage({ type: 'webviewPerf', text: 'follow-along: ' + tickWatch.ticks + ' ticks, longest gap '
+                    + Math.round(tickWatch.longest) + ' ms' + (tickWatch.hidden ? ', page hidden' : '') });
+            }
+            tickWatch = null;
             if (relaying) {
                 relaying = false;
                 vscode.postMessage({ type: 'candidateSounding', sounding: [] });
@@ -5311,7 +5317,16 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             const relay = notes.some(n => n.R !== undefined);
             relaying = relay;
             const cursor = new Cursor(notes.map(n => ({ t: n.T - offset, d: n.D, s: relay ? n.R : n.S, o: n.O || 0 })));
+            // How evenly the 50 ms tick came (owner's report 2026-10-25: one eighth note lit in
+            // four — the tick a second apart, as a browser throttles a page it thinks hidden):
+            // the longest gap and whether the page said it was hidden, logged when it stops.
+            tickWatch = { last: performance.now(), longest: 0, ticks: 0, hidden: document.hidden };
             playheadTimer = setInterval(() => {
+                const now = performance.now();
+                tickWatch.longest = Math.max(tickWatch.longest, now - tickWatch.last);
+                tickWatch.last = now;
+                tickWatch.ticks++;
+                tickWatch.hidden = tickWatch.hidden || document.hidden;
                 const r = cursor.at(elapsed());
                 if (!r.changed) return;
                 if (relay) {
