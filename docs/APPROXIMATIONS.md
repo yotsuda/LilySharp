@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 64 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 64 | 観測者がゼロだと自認しているもの |
-| `OWN` | 274 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **402** | |
+| `OWN` | 275 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **403** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -247,7 +247,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（274 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（275 件）
 
 ### `LilySharp.Core/Editing/KeyRespeller.cs`
 - **`KeyRespeller`** LILYSHARP-OWN: an editor aid. The rule:
@@ -648,6 +648,7 @@
 ### `LilySharp.Core/Svg/Model/InstrumentDefaults.cs`
 - **`InstrumentDefaults.GetMidiProgram`** LILYSHARP-OWN: LilyPond has no instrument presets, so which of its 128 sounds a preset
 - **`InstrumentDefaults.PrintedName`** LILYSHARP-OWN (owner's decision 2026-10-11): until then the preset WORD itself was the
+- **`InstrumentDefaults.SoundingRange`** LILYSHARP-OWN: the ranges an orchestration text gives for professional players (the
 ### `LilySharp.Core/Svg/Model/Measure.cs`
 - **`Measure.IsTrailingClefColumn`** ⚠️ LILYSHARP-OWN: THE FLAGGED ZERO-WIDTH MEASURE IS A TRANSLATION DEVICE. LilyPond
 ### `LilySharp.Core/Svg/Model/MusicMarkItem.cs`

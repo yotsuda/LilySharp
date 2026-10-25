@@ -358,6 +358,55 @@ public static class InstrumentDefaults
     };
 
     /// <summary>
+    /// The preset's SOUNDING range as MIDI pitches (C4 = 60), lowest and highest, or null for a
+    /// name that is not a preset. A note outside it is warned (LYS1052, owner's request
+    /// 2026-10-25).
+    /// </summary>
+    /// <remarks>
+    /// LILYSHARP-OWN: the ranges an orchestration text gives for professional players (the
+    /// written ranges of the transposing instruments moved to what they sound), wide rather than
+    /// comfortable — the warning is for a note the instrument does not have, not one that is
+    /// hard. The strings and frets are the open strings to the usual top: a guitar's 24th fret,
+    /// a bass's 24th on its top string. The voices are a trained singer's. ⚠️ Keep this in step
+    /// with <see cref="KnownInstruments"/> — InstrumentPresetTests holds the two lists to each other.
+    /// </remarks>
+    public static (int Low, int High)? SoundingRange(string? preset) => preset?.ToLowerInvariant() switch
+    {
+        "violin" => (55, 105),          // G3 – A7
+        "viola" => (48, 88),            // C3 – E6
+        "cello" => (36, 84),            // C2 – C6
+        "contrabass" => (28, 67),       // E1 – G4
+        "bass" => (28, 67),             // E1 – G4
+        "bass5" => (23, 67),            // B0 – G4
+        "bass6" => (23, 72),            // B0 – C5
+        "piano-right" or "piano-left" => (21, 108),   // A0 – C8
+        "guitar" => (40, 88),           // E2 – E6
+        "ukulele" => (60, 84),          // C4 – C6 (re-entrant g')
+        "mandolin" => (55, 95),         // G3 – B6
+        "banjo" => (50, 86),            // D3 – D6
+        "flute" => (60, 98),            // C4 – D7
+        "piccolo" => (74, 108),         // D5 – C8
+        "oboe" => (58, 93),             // B♭3 – A6
+        "clarinet" => (50, 94),         // D3 – B♭6 (written E3 – C7)
+        "clarinet-a" => (49, 93),       // C♯3 – A6 (written E3 – C7)
+        "bassoon" => (34, 76),          // B♭1 – E5
+        "soprano-sax" => (56, 88),      // A♭3 – E6 (written B♭3 – F♯6)
+        "alto-sax" => (49, 80),         // D♭3 – A♭5 (written B♭3 – F6)
+        "tenor-sax" => (44, 76),        // A♭2 – E5 (written B♭3 – F♯6)
+        "baritone-sax" => (36, 68),     // C2 – A♭4 (written A3 – F6)
+        "trumpet" => (52, 82),          // E3 – B♭5 (written F♯3 – C6)
+        "trumpet-c" => (54, 84),        // F♯3 – C6
+        "horn" => (35, 77),             // B1 – F5 (written F♯2 – C6)
+        "trombone" => (40, 77),         // E2 – F5
+        "tuba" => (26, 65),             // D1 – F4
+        "soprano" => (60, 84),          // C4 – C6
+        "alto" => (53, 77),             // F3 – F5
+        "tenor" => (48, 72),            // C3 – C5
+        "voice-bass" => (40, 64),       // E2 – E4
+        _ => null,
+    };
+
+    /// <summary>
     /// Maps a <c>transposition</c> property value (an ottava marker — <c>8va</c>,
     /// <c>8vb</c>, <c>15ma</c>, <c>15mb</c>) to its signed semitone shift, or null if
     /// the text is not a recognized marker. <c>vb</c>/<c>mb</c> = down (sounds lower),

@@ -76,6 +76,11 @@ workflow attaches that section to the GitHub Release verbatim.
 - **An `octave` that lowers a transposing preset twice is warned (LYS1050)**: `instrument bass
   octave 2` writes a bare `c` as C2, and the preset plays it an octave lower still, C1. The
   warning names both pitches and the preset's own octave.
+- **A note the part's `instrument` cannot sound is warned (LYS1052)**: a flute's B3, a soprano's
+  D6 — by the pitch it SOUNDS, so a B♭ clarinet's written E3 (D3, its lowest note) passes and its
+  written D3 does not. Every preset has a range (`InstrumentDefaults.SoundingRange`, a
+  professional player's); read off the notes the MIDI export plays, and only for a book that
+  names a preset.
 - **A `tuning` of another instrument than the part's preset is warned (LYS1051)**: `instrument
   ukulele tuning guitar` frets on the guitar's strings. An override within the family
   (`instrument guitar tuning guitarDropD`) is not warned.

@@ -792,6 +792,13 @@ public static class DiagnosticCodes
     /// <remarks>Owner's request 2026-10-24. The families are <see cref="Tablature.Tunings.Family"/>'s.</remarks>
     public const string TuningOfAnotherInstrument = "LYS1051";
 
+    /// <summary>Warning: a note the part's <c>instrument</c> preset cannot sound — its SOUNDING
+    /// pitch below or above the instrument's range (<see cref="Svg.Model.InstrumentDefaults.SoundingRange"/>).
+    /// Reported at the note, once per note, naming the pitch and the range.</summary>
+    /// <remarks>Owner's request 2026-10-25: "instrument に指定した楽器で弾けない音高の音符に警告を出して".
+    /// Read off the notes the MIDI export plays, so transpositions, repeats and phrases count.</remarks>
+    public const string NoteOutsideInstrumentRange = "LYS1052";
+
     /// <summary>Syntax error: a phrase reference needs a <c>$</c> — write <c>$name</c>.</summary>
     public const string BareReferenceRequiresDollar = "LYS1012";
 

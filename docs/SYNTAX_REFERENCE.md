@@ -1483,6 +1483,11 @@ C1 — the octave is the WRITTEN register, LYS1050), and a `tuning` of another i
 strings (`instrument ukulele tuning guitar`, LYS1051; `instrument guitar tuning guitarDropD` is
 an ordinary override and is not warned).
 
+A note the preset's instrument cannot sound is warned too (LYS1052): its SOUNDING pitch below
+or above the instrument's range — a flute's B3, a soprano's D6. The pitch is what plays, so a
+transposing instrument is judged by its sound (a B♭ clarinet's written E3 sounds D3, its lowest
+note). The ranges are a professional player's, wide rather than comfortable.
+
 ### One part, no names
 
 A piece with one part may leave the part, its chords and its lyrics unnamed — the score
