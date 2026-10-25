@@ -486,6 +486,9 @@ public sealed class TabStringNumberTests
         // a\4 = fret 5 on the E string. The b after it is the A string's 2nd: the hand sits at
         // the 2nd fret with the little finger stretched to the a, rather than up at the 4th-5th
         // for the E string's 7th — the same reach, lower on the neck.
+        // The owner (2026-10-25): "which of the two depends on the fingering around it, but with
+        // nothing around it the A string's 2nd is the more common" — so this is the answer for
+        // the two notes alone, not a rule the planner must keep in context.
         var notes = TabNotes("a4\\4 b4 |");
         Assert.Equal(3, notes[1].StringNumber);
     }
