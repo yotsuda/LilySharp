@@ -35,6 +35,8 @@ All notable changes to the Lily# VS Code extension are documented here.
   rendering.
 - **Ask Again's candidate replaces the last one where it stands**: it used to open a new pane
   beside the candidate panel each round.
+- **What the AI changed is painted orange on the candidate's score**, as the legend says; it
+  wore only a faint orange glow, which left the notes black.
 - **Play lights the notes sounding on the candidate's score**, in blue (the orange is what the AI
   changed), and keeps the newest in view — After or Before, whichever pane is playing.
 

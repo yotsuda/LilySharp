@@ -1070,6 +1070,9 @@ body { margin:0; padding:0; display:flex; flex-direction:column; height:100vh; o
 /* The notes the AI changed — same non-destructive glow the main preview uses
    for editor↔preview sync, so "what changed" reads at a glance. */
 .chg { filter: drop-shadow(0 0 3.5px #ff6600); }
+/* …and painted orange (owner's report 2026-10-25: the glow alone left them black). */
+.score .chg:not([fill="none"]), .score .chg *:not([fill="none"]) { fill: #ff6600 !important; }
+.score .chg[stroke]:not([stroke="none"]), .score .chg [stroke]:not([stroke="none"]) { stroke: #ff6600 !important; }
 /* A note plays the pane from it when clicked. */
 .score [data-pos] { cursor: pointer; }
 .pane { display:none; }
