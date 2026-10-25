@@ -6,6 +6,10 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ### Fixed
 
+- **A loop goes round on the beat**: on the MIDI output a round lost its last three beats, or the
+  next one its first three — each round was restarted at a page timer the browser held to a
+  second. The rounds are now laid out ahead, ten minutes of them, and the player's own clock
+  times every one.
 - **A repeated note no longer goes silent at a practice tempo**: stretched to 120% or 150%, a
   note's end and the same pitch's next start differed in the last bit, the end was sent after
   the start, and the second note was cut at once (a C5 eighth after a C5 eighth). Both players —
