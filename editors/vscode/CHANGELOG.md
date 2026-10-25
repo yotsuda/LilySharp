@@ -61,6 +61,17 @@ All notable changes to the Lily# VS Code extension are documented here.
   and the four annotations it lacked (`@harmonic`, `@stopped`, `@snapPizz`, `@pluck`), and lost
   the notes about MusicXML and LilyPond export the AI never needs.
 
+### The AI candidate panel shows that a button was pressed
+
+- **A button sinks while pressed**, and a decision greys Accept, Ask Again and Reject at once
+  while the footer says what is happening: *Writing it into the file…*, *Type what to change in
+  the box at the top of the window…* then *Asking the AI again: "…"*, or why nothing was written.
+  Play says *Starting playback…* before the preview answers, Stop says *Stopped.*
+- **Iterate… is now Ask Again…** — tell the AI what to change about this candidate and it answers
+  with a new one; its box is titled *ask the AI again*.
+- **Reject closes the panel** (the status bar says the file is unchanged); it used to leave the
+  candidate standing, as if nothing had been clicked.
+
 ### Fix OMR marks: every row's Accept in the primary colour
 
 - **Each row's Accept is drawn as Accept All is**, in the button colour, whether or not the row is

@@ -563,8 +563,8 @@ async function drive(
                 break;
             }
             refine = await vscode.window.showInputBox({
-                title: 'Lily# — refine the transform',
-                prompt: 'What should change about this candidate? (Esc returns to it)',
+                title: 'Lily# — ask the AI again',
+                prompt: 'What should the AI change about this candidate? It answers with a new one. (Esc returns to this candidate)',
                 placeHolder: 'e.g. keep the rhythm but a third lower / less busy',
                 ignoreFocusOut: true,
             });
@@ -576,10 +576,14 @@ async function drive(
 
         if (decision === 'reject') {
             deps.log('AI transform: rejected on the score.');
+            // Reject closes the panel, so the click is seen to have done something.
+            candidatePanel?.dispose();
+            vscode.window.setStatusBarMessage('Lily#: AI candidate rejected — the file is unchanged.', 4000);
             return;
         }
         if (decision === 'iterate' && refine !== undefined) {
             deps.log(`AI transform: iterate — "${refine}"`);
+            panelStatus(`Asking the AI again: “${refine}”…`);
             messages.push({ role: 'assistant', content: candidate.reply });
             // The file has not changed: a revision is answered against it as it stands, as the
             // previous candidate was.
@@ -598,6 +602,7 @@ async function drive(
             const back = await fromAbsoluteOctaves(deps, client, spliceCandidate(candidate.snap, candidate.text), snapshot.origFullText);
             if (back === undefined) {
                 deps.log('AI transform: not applied (it could not be brought back to relative octaves).');
+                panelStatus('Not written — it could not be brought back to the file\'s relative octaves.');
                 return;
             }
             const edit = wholeFileEdit(snapshot, back);
@@ -1048,8 +1053,14 @@ button { padding:6px 14px; font-size:13px; border:1px solid var(--vscode-button-
          background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); }
 button.primary { background: var(--vscode-button-background); color: var(--vscode-button-foreground); }
 button:hover { opacity:0.9; }
+/* A press shows (owner's report 2026-10-25: a click left no trace): the button sinks while held,
+   and a decision greys the decision buttons while the panel says what is happening. */
+button:active:not(:disabled) { transform: translateY(1px); filter: brightness(0.8); }
+button:focus-visible { outline: 1px solid var(--vscode-focusBorder); outline-offset: 2px; }
+button:disabled { opacity:0.45; cursor:default; }
 .spacer { flex:1; }
 .playstate { align-self:center; font-size:12px; opacity:0.8; }
+.playstate.busy { opacity:1; font-weight:600; }
 </style>
 </head>
 <body>
@@ -1070,13 +1081,13 @@ button:hover { opacity:0.9; }
 </div>
 <div class="snippet"><details><summary>Replacement text</summary><pre>${escapeHtml(candidate)}</pre></details></div>
 <div class="footer">
-  <button class="primary" id="accept">Accept (Enter)</button>
-  <button id="iterate">Iterate…</button>
+  <button class="primary" id="accept" title="Write this candidate into the file (Ctrl+Z in the editor undoes it)">Accept (Enter)</button>
+  <button id="iterate" title="Tell the AI what to change about this candidate — it answers with a new one, shown here">Ask Again…</button>
   <button id="play" title="Play the pane shown — After or Before — in the preview (Space)">▶ Play</button>
   <button id="stop">■ Stop</button>
   <span id="playState" class="playstate"></span>
   <div class="spacer"></div>
-  <button id="reject">Reject (Esc)</button>
+  <button id="reject" title="Drop this candidate and close the panel — the file stays as it is">Reject (Esc)</button>
 </div>
 <script nonce="${nonce}">
   const vscode = acquireVsCodeApi();
@@ -1124,11 +1135,32 @@ button:hover { opacity:0.9; }
   tBefore.addEventListener('click', () => show(false));
   // Default pane is "After": center its first changed note once laid out.
   scrollToChange(true);
-  document.getElementById('accept').addEventListener('click', () => send('accept'));
-  document.getElementById('iterate').addEventListener('click', () => send('iterate'));
-  document.getElementById('reject').addEventListener('click', () => send('reject'));
+  // A decision says at once that it was taken (owner's report 2026-10-25: a click left no trace):
+  // the decision buttons grey out and the footer names what happens next. A new candidate, or
+  // Ask Again closed unanswered, reloads the panel and brings them back.
+  const playState = document.getElementById('playState');
+  const say = (text, busy) => { playState.textContent = text || ''; playState.classList.toggle('busy', !!busy); };
+  let decided = false;
+  const SAY = {
+    accept: 'Writing it into the file…',
+    iterate: 'Type what to change in the box at the top of the window (Esc comes back here)…',
+    reject: 'Rejected — the file stays as it is.',
+  };
+  const decide = (action) => {
+    if (decided) return;
+    decided = true;
+    for (const id of ['accept', 'iterate', 'reject']) document.getElementById(id).disabled = true;
+    say(SAY[action], true);
+    send(action);
+  };
+  document.getElementById('accept').addEventListener('click', () => decide('accept'));
+  document.getElementById('iterate').addEventListener('click', () => decide('iterate'));
+  document.getElementById('reject').addEventListener('click', () => decide('reject'));
   // Play sounds the pane shown, After or Before, in the preview (owner's request 2026-10-25).
-  const play = () => vscode.postMessage({ action: 'play', which: paneAfter.classList.contains('show') ? 'after' : 'before' });
+  const play = () => {
+    say('Starting playback…');
+    vscode.postMessage({ action: 'play', which: paneAfter.classList.contains('show') ? 'after' : 'before' });
+  };
   document.getElementById('play').addEventListener('click', play);
   // A click on a note (anything the score ties to the source) plays the pane from there.
   document.querySelector('.main').addEventListener('click', (e) => {
@@ -1138,14 +1170,16 @@ button:hover { opacity:0.9; }
     if (isNaN(from)) { return; }
     vscode.postMessage({ action: 'play', which: paneAfter.classList.contains('show') ? 'after' : 'before', from });
   });
-  document.getElementById('stop').addEventListener('click', () => send('stop'));
-  const playState = document.getElementById('playState');
+  document.getElementById('stop').addEventListener('click', () => { send('stop'); if (!decided) say('Stopped.'); });
   window.addEventListener('message', (e) => {
-    if (e.data && e.data.type === 'playState') { playState.textContent = e.data.text || ''; }
+    if (!e.data) return;
+    // Playback news is not shown over a decision being carried out.
+    if (e.data.type === 'playState' && !decided) { say(e.data.text); }
+    else if (e.data.type === 'status') { say(e.data.text, true); }
   });
   window.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') { e.preventDefault(); send('accept'); }
-    else if (e.key === 'Escape') { e.preventDefault(); send('reject'); }
+    if (e.key === 'Enter') { e.preventDefault(); decide('accept'); }
+    else if (e.key === 'Escape') { e.preventDefault(); decide('reject'); }
     else if (e.key === 'Tab') { e.preventDefault(); show(!paneAfter.classList.contains('show')); }
     else if (e.key === ' ') { e.preventDefault(); play(); }
   });
@@ -1162,6 +1196,7 @@ async function applyCandidate(deps: AiTransformDeps, snapshot: Snapshot, candida
     const doc = vscode.workspace.textDocuments.find(d => d.uri.toString() === snapshot.uri.toString());
     if (!doc) {
         vscode.window.showErrorMessage('Lily#: the document was closed; nothing was applied.');
+        panelStatus('Not written — the document was closed.');
         return;
     }
 
@@ -1187,6 +1222,7 @@ async function applyCandidate(deps: AiTransformDeps, snapshot: Snapshot, candida
                     'Lily#: the document changed since this transform was generated, and the selected text moved. Apply at the original position anyway?',
                     { modal: true }, 'Apply anyway');
                 if (choice !== 'Apply anyway') {
+                    panelStatus('Not written — the file changed meanwhile.');
                     return;
                 }
                 const clampStart = Math.min(snapshot.startOffset, current.length);
@@ -1204,7 +1240,13 @@ async function applyCandidate(deps: AiTransformDeps, snapshot: Snapshot, candida
         candidatePanel?.dispose();
     } else {
         vscode.window.showErrorMessage('Lily#: the edit could not be applied.');
+        panelStatus('Not written — the edit could not be applied.');
     }
+}
+
+/** What the candidate panel's footer says about a decision being carried out (or that failed). */
+function panelStatus(text: string): void {
+    void candidatePanel?.webview.postMessage({ type: 'status', text });
 }
 
 // ======================================================================
