@@ -1493,6 +1493,8 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
                 const r = await midiOutRequest<{ Started?: boolean; StartedAtMs?: number; EndSeconds?: number; Error?: string | null }>(
                     'lilysharp/midiOut/play', { port: message.port, notes: message.notes, offset: message.offset });
                 if (r.Error) { reportMidiOutError(message.port, r.Error); }
+                outputChannel.appendLine(`MIDI out: ${(message.notes ?? []).length} notes from ${Number(message.offset ?? 0).toFixed(3)} s`
+                    + `, to ${Number(r.EndSeconds ?? 0).toFixed(3)} s`);
                 panel.webview.postMessage({
                     type: 'midiStarted', ok: !!r.Started, t0Ms: r.StartedAtMs ?? 0, end: r.EndSeconds ?? 0, error: r.Error ?? null,
                 });
@@ -5643,7 +5645,15 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         // A loop's rounds are laid out ahead, ten minutes of them (loopNotes): the player's
         // clock times each round, not a page timer the browser may hold to a second.
         function looped(list) {
-            return window.LysSynth && window.LysSynth.loopNotes ? window.LysSynth.loopNotes(list, 600) : list;
+            if (!window.LysSynth || !window.LysSynth.loopNotes) {
+                vscode.postMessage({ type: 'webviewPerf', text: 'loop: the synth script is an old build (no loopNotes) - reload the window' });
+                return list;
+            }
+            const rounds = window.LysSynth.loopNotes(list, 600);
+            const length = list.reduce((e, n) => Math.max(e, n.T + n.D), 0);
+            vscode.postMessage({ type: 'webviewPerf', text: 'loop: ' + (list.length ? rounds.length / list.length : 0)
+                + ' rounds of ' + length.toFixed(3) + ' s, ' + rounds.length + ' notes' });
+            return rounds;
         }
         // Where a playback that ran to its end goes: round again while looping, else it stops.
         function playEnded() {
