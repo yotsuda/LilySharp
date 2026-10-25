@@ -183,9 +183,12 @@ async function runAiTransform(deps: AiTransformDeps, wholeScore = false): Promis
 
     const instruction = await vscode.window.showInputBox({
         title: whole ? 'Lily# — transform the whole score with AI' : 'Lily# — transform selection with AI',
+        // A selection points the AI at a place but does not fence it in (owner's request
+        // 2026-10-25): say so, and that nothing lands unseen.
         prompt: whole
             ? 'Nothing is selected, so the AI works on the whole file. Describe the change (natural language)'
-            : 'Describe the change (natural language)',
+            : 'Describe the change. The selection tells the AI where to look; it may still change other '
+              + 'places when the request needs it — every change is shown before it is applied.',
         placeHolder: nextPlaceholder(),
         ignoreFocusOut: true,
     });

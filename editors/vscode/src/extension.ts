@@ -855,13 +855,7 @@ export function activate(context: vscode.ExtensionContext) {
             return;
         }
         if (m.lysAiKind === 'score') {
-            const doc = vscode.workspace.textDocuments.find(d => d.uri.toString() === shown[0]);
-            if (!doc) {
-                vscode.window.showErrorMessage('Lily#: open the .lys file to change it with AI.');
-                return;
-            }
-            await vscode.window.showTextDocument(doc, { preserveFocus: false });
-            await vscode.commands.executeCommand('lilysharp.aiTransform', { whole: true });
+            await aiTransformWholeScore(shown[0]);
             return;
         }
         if (!Number.isInteger(m.lysAiFrom) || m.lysAiFrom! < 0) {
@@ -1482,6 +1476,9 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
                 // becomes the editor selection, then the same AI transform runs — so
                 // the loop is identical whether the selection started in text or score.
                 await aiTransformFromScore(uri, message.startPos, message.endPos);
+            } else if (message.type === 'aiWholeScore') {
+                // The header's AI button (or Ctrl+I) with nothing selected.
+                await aiTransformWholeScore(uri);
             }
         },
         undefined,
@@ -2654,6 +2651,17 @@ async function importMusicXml(context: vscode.ExtensionContext, sourceUri?: vsco
     }
 }
 
+/** The whole score from the preview: its editor brought forward, then Ctrl+I with `whole`. */
+async function aiTransformWholeScore(uri: string): Promise<void> {
+    const doc = vscode.workspace.textDocuments.find(d => d.uri.toString() === uri);
+    if (!doc) {
+        vscode.window.showErrorMessage('Lily#: open the .lys file to change it with AI.');
+        return;
+    }
+    await vscode.window.showTextDocument(doc, { preserveFocus: false });
+    await vscode.commands.executeCommand('lilysharp.aiTransform', { whole: true });
+}
+
 /**
  * M3 bridge: a note range selected on the score preview (start/end are the
  * `data-pos` source offsets of the first and last selected notes) is turned into a
@@ -3390,23 +3398,14 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         }
         /* M3: floating "transform with AI" action, shown while a score note range
            is selected. */
-        .ai-fab {
-            position: fixed;
-            top: 52px;
-            right: 18px;
-            z-index: 20;
-            padding: 7px 14px;
-            font-family: system-ui, sans-serif;
-            font-size: 13px;
+        /* The header's AI door (owner's request 2026-10-25: always there; it names what it hands
+           the AI — the whole score, or the bars selected). */
+        .toolbar button.ai {
             font-weight: 600;
-            border: none;
-            border-radius: 6px;
-            background: #6f42c1;
-            color: #fff;
-            cursor: pointer;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+            background: var(--vscode-button-background);
+            color: var(--vscode-button-foreground);
         }
-        .ai-fab:hover { background: #7e4fd0; }
+        .toolbar button.ai:hover { background: var(--vscode-button-hoverBackground); }
     </style>
 </head>
 <!-- The preview is a rendered score, not an editable text buffer, so VS Code's
@@ -3423,6 +3422,8 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             <option value="">(Default)</option>
         </select>
         <button id="exportBtn" type="button">Export…</button>
+        <span class="sep"></span>
+        <button id="aiTransformBtn" class="ai" type="button">✨ AI: Whole Score</button>
         <span class="sep"></span>
         <button id="playBtn" type="button" title="Play">▶</button>
         <button id="stopBtn" type="button" title="Stop" disabled>⏹</button>
@@ -3443,8 +3444,6 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         </div>
     </div>
     <div class="zoom-info" id="zoomInfo">100%</div>
-    <button id="aiTransformBtn" class="ai-fab" type="button" style="display:none"
-            title="Change the selected notes with AI (Ctrl+I). Shift+click or Shift+drag over bars extends the selection; Esc clears it.">✨ Change Selection with AI</button>
     <script nonce="${nonce}">
         const vscode = acquireVsCodeApi();
         // Boot beacon + error relay: the FIRST statements, so the extension's
@@ -3479,13 +3478,11 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         let aiRangeLo = -1, aiRangeHi = -1;   // current score selection (source offsets)
         function aiClearSelection() {
             aiAnchorPos = -1; aiRangeLo = -1; aiRangeHi = -1;
-            aiTransformBtn.style.display = 'none';
             lightSelectedBars();
         }
         function aiSetSelection(a, b) {
             aiRangeLo = Math.min(a, b);
             aiRangeHi = Math.max(a, b);
-            aiTransformBtn.style.display = 'block';
             // The selection lights its BARS, not its notes (owner's request 2026-10-25): the
             // editor's text is not selected, so lit notes would read as a selection there.
             clearHighlights();
@@ -3497,14 +3494,52 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         // when there is no selection. Re-run after a render replaces the boxes.
         function lightSelectedBars() {
             for (const r of svgContainer.querySelectorAll('rect.bar-staff.selected')) r.classList.remove('selected');
-            if (aiRangeLo < 0) return;
-            for (const r of svgContainer.querySelectorAll('rect.bar-staff[data-span]')) {
-                const span = r.getAttribute('data-span').split(' ').map(Number);
-                if (span.length === 2 && span[0] <= aiRangeHi && span[1] > aiRangeLo) r.classList.add('selected');
+            if (aiRangeLo >= 0) {
+                for (const r of svgContainer.querySelectorAll('rect.bar-staff[data-span]')) {
+                    const span = r.getAttribute('data-span').split(' ').map(Number);
+                    if (span.length === 2 && span[0] <= aiRangeHi && span[1] > aiRangeLo) r.classList.add('selected');
+                }
+            }
+            updateAiButton();
+        }
+        // How many bars the selection lights: its boxes counted by the bar (rect.bar-box, one per
+        // bar of a system, carries the number), so a bar of several staves counts once.
+        function selectedBarCount() {
+            const boxes = Array.from(svgContainer.querySelectorAll('rect.bar-box'));
+            const bars = new Set();
+            for (const r of svgContainer.querySelectorAll('rect.bar-staff.selected')) {
+                const b = r.getBoundingClientRect();
+                const cx = (b.left + b.right) / 2, cy = (b.top + b.bottom) / 2;
+                const box = boxes.find(x => {
+                    const c = x.getBoundingClientRect();
+                    return cx >= c.left && cx <= c.right && cy >= c.top && cy <= c.bottom;
+                });
+                bars.add(box ? 'bar' + box.getAttribute('data-bar') + '@' + Math.round(box.getBoundingClientRect().top)
+                             : 'r' + Math.round(b.left) + ':' + Math.round(b.top));
+            }
+            return bars.size;
+        }
+        // The header's AI button names what it hands the AI (owner's requests 2026-10-25): the
+        // whole score, or the bars selected — and that a selection points the AI at a place
+        // without fencing it in: it may change other places, and every change is shown first.
+        function updateAiButton() {
+            if (aiRangeLo < 0) {
+                aiTransformBtn.textContent = '✨ AI: Whole Score';
+                aiTransformBtn.title = 'Ask the AI to change the score (Ctrl+I). Select bars first '
+                    + '(Shift+click or Shift+drag) to point it at a place.';
+            } else {
+                const n = selectedBarCount();
+                aiTransformBtn.textContent = '✨ AI: ' + (n > 0 ? n + (n === 1 ? ' Bar' : ' Bars') : 'Selection');
+                aiTransformBtn.title = 'Ask the AI to change the music, pointing it at the selected bars (Ctrl+I). '
+                    + 'The selection is where it starts, not a fence: it may change other places when the '
+                    + 'request needs it, and every change is shown for you to accept or not. Esc clears the selection.';
             }
         }
         function aiSubmitSelection() {
-            if (aiRangeLo < 0) return;
+            if (aiRangeLo < 0) {
+                vscode.postMessage({ type: 'aiWholeScore' });
+                return;
+            }
             vscode.postMessage({ type: 'aiTransformFromScore', startPos: aiRangeLo, endPos: aiRangeHi });
         }
         aiTransformBtn.addEventListener('click', aiSubmitSelection);
@@ -5667,7 +5702,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 // selection is dropped.
                 aiAnchorPos = pos;
                 aiRangeLo = -1; aiRangeHi = -1;
-                aiTransformBtn.style.display = 'none';
+                lightSelectedBars();
                 // During playback a click on a played note SEEKS there instead
                 // of jumping the editor (listening mode). Non-note grobs
                 // (barlines, marks) fall through to the normal click.
@@ -5771,10 +5806,11 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             });
         }, true);
 
-        // M3 keyboard: Ctrl/Cmd+I submits the score selection; Escape clears it.
+        // M3 keyboard: Ctrl/Cmd+I asks the AI, as the header button does — about the score
+        // selection, or the whole score when nothing is selected; Escape clears the selection.
         window.addEventListener('keydown', (e) => {
             if ((e.ctrlKey || e.metaKey) && (e.key === 'i' || e.key === 'I')) {
-                if (aiRangeLo >= 0) { e.preventDefault(); aiSubmitSelection(); }
+                e.preventDefault(); aiSubmitSelection();
             } else if (e.key === 'Escape') {
                 if (aiRangeLo >= 0) { aiClearSelection(); clearHighlights(); }
             }
