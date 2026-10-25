@@ -950,7 +950,7 @@ function ensureCandidatePanel(deps: AiTransformDeps): vscode.WebviewPanel {
             settle(m.action);
         } else if (m?.action === 'play') {
             void playCandidate(deps, panel, m.which === 'before' ? 'before' : 'after',
-                typeof m.from === 'number' ? m.from : undefined);
+                typeof m.from === 'number' ? m.from : undefined, typeof m.to === 'number' ? m.to : undefined);
         } else if (m?.action === 'stop' && audible) {
             deps.stopOnPreview?.(audible.uri);
         }
@@ -974,7 +974,7 @@ function ensureCandidatePanel(deps: AiTransformDeps): vscode.WebviewPanel {
  * count in the same text; owner's request 2026-10-25).
  */
 async function playCandidate(deps: AiTransformDeps, panel: vscode.WebviewPanel, which: 'before' | 'after',
-    from?: number): Promise<void> {
+    from?: number, to?: number): Promise<void> {
     const play = audible;
     const client = deps.getClient();
     if (!play || !client) { return; }
@@ -989,7 +989,8 @@ async function playCandidate(deps: AiTransformDeps, panel: vscode.WebviewPanel, 
             say(`Cannot play: ${pb.Error ?? 'no notes'}`);
             return;
         }
-        const start = from === undefined ? 0 : startTimeAt(pb.Notes as { S?: number; T?: number }[], from);
+        const timed = pb.Notes as { S?: number; T?: number }[];
+        const start = from === undefined ? 0 : to === undefined ? startTimeAt(timed, from) : startTimeAt(timed, from, to);
         const notes = pb.Notes
             .filter(n => ((n as { T?: number }).T ?? 0) >= start - 1e-6)
             .map(n => ({ ...n, T: ((n as { T?: number }).T ?? 0) - start, S: -1 }));
@@ -997,7 +998,9 @@ async function playCandidate(deps: AiTransformDeps, panel: vscode.WebviewPanel, 
             say('Open the preview of this file to hear it (the preview is the player).');
             return;
         }
-        say(which === 'after' ? 'Playing the candidate in the preview…' : 'Playing the original in the preview…');
+        // Playing says nothing (owner's request 2026-10-25: the words moved the buttons); only
+        // what keeps it from playing is said.
+        say(null);
     } catch (e) {
         say(`Cannot play: ${String(e)}`);
     }
@@ -1059,8 +1062,12 @@ button:active:not(:disabled) { transform: translateY(1px); filter: brightness(0.
 button:focus-visible { outline: 1px solid var(--vscode-focusBorder); outline-offset: 2px; }
 button:disabled { opacity:0.45; cursor:default; }
 .spacer { flex:1; }
-.playstate { align-self:center; font-size:12px; opacity:0.8; }
+/* The footer's words fill the room between the buttons and never move them: one line, cut short. */
+.playstate { flex:1; min-width:0; align-self:center; font-size:12px; opacity:0.8;
+             white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .playstate.busy { opacity:1; font-weight:600; }
+/* The bar Play starts from (a click on a bar selects it), lit as the preview lights a selection. */
+.score rect.bar-staff.selected { fill: rgba(0, 120, 215, 0.22); }
 </style>
 </head>
 <body>
@@ -1083,10 +1090,9 @@ button:disabled { opacity:0.45; cursor:default; }
 <div class="footer">
   <button class="primary" id="accept" title="Write this candidate into the file (Ctrl+Z in the editor undoes it)">Accept (Enter)</button>
   <button id="iterate" title="Tell the AI what to change about this candidate — it answers with a new one, shown here">Ask Again…</button>
-  <button id="play" title="Play the pane shown — After or Before — in the preview (Space)">▶ Play</button>
+  <button id="play" title="Play the pane shown — After or Before — in the preview, from the selected bar if one is (Space). Click a bar to select it; click a note to play from it.">▶ Play</button>
   <button id="stop">■ Stop</button>
   <span id="playState" class="playstate"></span>
-  <div class="spacer"></div>
   <button id="reject" title="Drop this candidate and close the panel — the file stays as it is">Reject (Esc)</button>
 </div>
 <script nonce="${nonce}">
@@ -1156,21 +1162,45 @@ button:disabled { opacity:0.45; cursor:default; }
   document.getElementById('accept').addEventListener('click', () => decide('accept'));
   document.getElementById('iterate').addEventListener('click', () => decide('iterate'));
   document.getElementById('reject').addEventListener('click', () => decide('reject'));
-  // Play sounds the pane shown, After or Before, in the preview (owner's request 2026-10-25).
+  // A bar is selected by a click on it — beside its notes, since a note plays at once — and Play
+  // starts there (owner's request 2026-10-25: play from the middle). One bar per pane: the two
+  // panes are two texts. The bar boxes take no pointer events, so the click is placed by their
+  // geometry, as in the preview.
+  const which = () => paneAfter.classList.contains('show') ? 'after' : 'before';
+  const selectedBar = { after: null, before: null };
+  function barAt(pane, x, y) {
+    for (const r of pane.querySelectorAll('rect.bar-staff[data-span]')) {
+      const b = r.getBoundingClientRect();
+      if (x >= b.left && x <= b.right && y >= b.top && y <= b.bottom) return r;
+    }
+    return null;
+  }
+  function selectBar(r) {
+    const w = which();
+    if (selectedBar[w]) selectedBar[w].classList.remove('selected');
+    selectedBar[w] = r;
+    if (r) r.classList.add('selected');
+  }
+  // Play sounds the pane shown, After or Before, in the preview (owner's request 2026-10-25),
+  // from its selected bar if one is.
   const play = () => {
-    say('Starting playback…');
-    vscode.postMessage({ action: 'play', which: paneAfter.classList.contains('show') ? 'after' : 'before' });
+    const r = selectedBar[which()];
+    const span = r ? r.getAttribute('data-span').split(' ').map(Number) : null;
+    vscode.postMessage(span ? { action: 'play', which: which(), from: span[0], to: span[1] } : { action: 'play', which: which() });
   };
   document.getElementById('play').addEventListener('click', play);
-  // A click on a note (anything the score ties to the source) plays the pane from there.
+  // A click on a note (anything the score ties to the source) plays the pane from there; on a
+  // bar, selects it; elsewhere, clears the selection.
   document.querySelector('.main').addEventListener('click', (e) => {
     const el = e.target && e.target.closest ? e.target.closest('[data-pos]') : null;
-    if (!el) { return; }
-    const from = parseInt(el.getAttribute('data-pos'), 10);
-    if (isNaN(from)) { return; }
-    vscode.postMessage({ action: 'play', which: paneAfter.classList.contains('show') ? 'after' : 'before', from });
+    const from = el ? parseInt(el.getAttribute('data-pos'), 10) : NaN;
+    if (!isNaN(from)) {
+      vscode.postMessage({ action: 'play', which: which(), from });
+      return;
+    }
+    selectBar(barAt(which() === 'after' ? paneAfter : paneBefore, e.clientX, e.clientY));
   });
-  document.getElementById('stop').addEventListener('click', () => { send('stop'); if (!decided) say('Stopped.'); });
+  document.getElementById('stop').addEventListener('click', () => send('stop'));
   window.addEventListener('message', (e) => {
     if (!e.data) return;
     // Playback news is not shown over a decision being carried out.

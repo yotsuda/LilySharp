@@ -66,7 +66,11 @@ All notable changes to the Lily# VS Code extension are documented here.
 - **A button sinks while pressed**, and a decision greys Accept, Ask Again and Reject at once
   while the footer says what is happening: *Writing it into the file…*, *Type what to change in
   the box at the top of the window…* then *Asking the AI again: "…"*, or why nothing was written.
-  Play says *Starting playback…* before the preview answers, Stop says *Stopped.*
+  The words take one line between the buttons and never move them; playing says nothing (only
+  what keeps it from playing).
+- **A bar of the candidate's score can be selected** — click it beside its notes; it is lit pale
+  blue — and Play (or Space) starts from it, at its first note. A click on a note still plays
+  from that note, and a click off the bars clears the selection.
 - **Iterate… is now Ask Again…** — tell the AI what to change about this candidate and it answers
   with a new one; its box is titled *ask the AI again*.
 - **Reject closes the panel** (the status bar says the file is unchanged); it used to leave the

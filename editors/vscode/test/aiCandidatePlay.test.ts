@@ -31,7 +31,9 @@ describe('an AI candidate plays before it is accepted', () => {
     it('has Play and Stop in the panel, Play sounding the pane shown', () => {
         assert.match(transform, /<button id="play"[^>]*>▶ Play<\/button>/);
         assert.match(transform, /<button id="stop">■ Stop<\/button>/);
-        assert.match(transform, /action: 'play', which: paneAfter\.classList\.contains\('show'\) \? 'after' : 'before'/);
+        assert.match(transform, /const which = \(\) => paneAfter\.classList\.contains\('show'\) \? 'after' : 'before';/);
+        // From the selected bar, if one is: its written stretch.
+        assert.match(transform, /\{ action: 'play', which: which\(\), from: span\[0\], to: span\[1\] \}/);
     });
 
     it('asks for the notes of the candidate or the original, and plays them on the preview', () => {

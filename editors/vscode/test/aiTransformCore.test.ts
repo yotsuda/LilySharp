@@ -312,6 +312,12 @@ describe('startTimeAt — playing an AI candidate from a clicked note', () => {
     it('starts at the nearest note before a click on something else', () => {
         assert.equal(startTimeAt(notes, 16), 0.5);
     });
+    it('starts a bar at its first sounding note, a rest before it skipped', () => {
+        const bar = [{ S: 10, T: 0 }, { S: 22, T: 1.5 }, { S: 26, T: 2 }, { S: 22, T: 9.5 }];
+        assert.equal(startTimeAt(bar, 20, 30), 1.5);      // the bar [20, 30): its rest at 20 has no note
+        assert.equal(startTimeAt(bar, 30, 40), 2);        // nothing written in it: as from 30 alone (the note before)
+    });
+
     it('starts at the top before any note', () => {
         assert.equal(startTimeAt(notes, 3), 0);
     });

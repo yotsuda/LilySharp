@@ -429,7 +429,22 @@ export function marksContext(marks: readonly MarkInSelection[], readings: Readon
  * else the first time the nearest note written before it sounds (a click on a rest, a clef or a
  * mark), else 0. A phrase played several times is heard from its first play.
  */
-export function startTimeAt(notes: { S?: number; T?: number }[], pos: number): number {
+export function startTimeAt(notes: { S?: number; T?: number }[], pos: number): number;
+/**
+ * …or from a selected BAR, whose written stretch is [pos, end) (owner's request 2026-10-25):
+ * the first time a note written in it sounds — a bar opening on a rest starts on its first
+ * note — else as from `pos` alone.
+ */
+export function startTimeAt(notes: { S?: number; T?: number }[], pos: number, end: number): number;
+export function startTimeAt(notes: { S?: number; T?: number }[], pos: number, end?: number): number {
+    if (end !== undefined) {
+        let first: number | undefined;
+        for (const n of notes) {
+            const s = n.S ?? -1, t = n.T ?? 0;
+            if (s >= pos && s < end && (first === undefined || t < first)) { first = t; }
+        }
+        if (first !== undefined) { return first; }
+    }
     let exact: number | undefined;
     let before: { s: number; t: number } | undefined;
     for (const n of notes) {
