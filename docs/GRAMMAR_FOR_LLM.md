@@ -298,9 +298,6 @@ octave marks. **The displacement accumulates along the chain**: `q' q` sounds th
 chord up an octave twice, `q' q'` climbs by one then two, and a bare duration in the
 run repeats the chord where the last `q` left it (LILYSHARP-OWN — LilyPond's `q`
 takes no marks; user decision 2026-09-03).
-⚠️ `lysc ly` cannot express a displaced `q`: LilyPond expands chord repetitions
-*after* `\transpose` is applied, so the wrapper reaches an empty placeholder
-(measured against 2.26.0). The twin writes a plain `q` and warns.
 
 A rest normally places itself: the middle line, the voiced position inside a
 `voice { } { }` span, and clear of the notes sounding with it. `@rest` on a NOTE
@@ -409,7 +406,9 @@ Value words inside the parentheses are lowercase too (`@notehead(triangle)`,
 - Stem direction: `@stemUp` / `@stemDown` force a note's stem (default is automatic).
   On a beamed note the beam's shared direction wins.
 - Articulations: `@staccato @staccatissimo @accent @tenuto @marcato @fermata @portato`
-- String technique: `@upBow @downBow @flageolet` - always above
+- String technique: `@upBow @downBow @flageolet` (`@harmonic` is the same mark) `@stopped` (+)
+  `@snapPizz` (Bartók pizzicato) - always above
+- Right-hand finger (plucked strings): `c4@pluck(p)` — `p i m a`
 - Ornaments: `@trill @mordent @prall @turn @reverseTurn`
 - Dynamics: `@ppp @pp @p @mp @mf @f @ff @fff` and the accent dynamics `@sfz @sf @fp @rfz @fz` (default below the staff; `.up` / `.down`
   forces the side, e.g. `@f.up`). Subito: `@p.subito` prints an italic "sub." before the p and plays as `@p`;
@@ -423,11 +422,9 @@ Value words inside the parentheses are lowercase too (`@notehead(triangle)`,
 - Chord diagram (guitar fret diagram): `c4@diagram(x32010)` — one character per string, low
   to high: a digit is the fret (`0` or `o` open), `x` muted — frets 10–15 with a `-` on each
   side (`@diagram(xx-10-12-13-11)`); 4–8 strings. Above the note
-  whatever the stem; `@diagram(x32010).down` puts it below. MusicXML nests it as `<frame>`
-  in the `<harmony>` of an `@chord` on the same note. Size: `fonts { diagram step +3 }`.
+  whatever the stem; `@diagram(x32010).down` puts it below. Size: `fonts { diagram step +3 }`.
 - Guitar bend: `c4@bend(half)` (1 semitone), `@bend(full)` (2), `@bend(N)` (N = 1–12
-  semitones) — an arrow labelled in steps. Page only: the `.ly` twin drops it (warning),
-  MusicXML does not carry it.
+  semitones) — an arrow labelled in steps.
 - Tab technique letters: `@hammerOn` (H), `@pullOff` (P), `@tap` (T) — small italic
   letters opposite the stem (`.up`/`.down` force), drawn on a `tab` staff too.
 - Chord names: `c4@chord(C)` , `d4@chord(Dm)` , `e4@chord(Am7)` — the SYMBOL as it
@@ -633,8 +630,17 @@ c2 afterGrace { d16 e } f2 | // AFTER the note before it: the run ends the c (Li
 ## Multi-voice (one staff)
 
 ```
-voice { c'2 d } { e2 f }     // each voice { } is a simultaneous voice
+voice { c'2 d } { e2 f }                 // ONE `voice`, then each simultaneous line in braces
 ```
+
+```
+voice sop { c'2 d } alt { e2 f }         // named lines — a `lyrics sop { … }` track binds to one by name
+```
+
+`voice` opens the span once; the first line's stems go up, the second's down. Writing the
+keyword again (`voice { … } voice { … }`) is an error (LYS0019): that would be two spans one
+after the other, not two lines together. The LilyPond `<< … \\ … >>` form is not Lily#.
+
 ## Drums (`clef percussion`)
 
 ```
@@ -655,7 +661,7 @@ drummap { hh: position 6 notehead x }  // TOP LEVEL, optional: re-table a drum
   agl cab mar wbh wbl tri …`). `tt` (tamtam) is not one.
 - Durations, dots, bare durations, rests, `<bd hh>4` chords, `repeat`, `@` marks work as on
   notes. A drum name is read as a drum note in ANY part, so a phrase cannot be named after
-  one (LYS1030); keep pitches out of a drum part (the LilyPond export drops its drums).
+  one (LYS1030); keep pitches out of a drum part.
 - `drums { LINE LINE … }` — a drum chart: each LINE is a phrase name or `{ … }`, optionally
   led by `up`/`down`; the lines play together (`drums { hats back kick }`). Drawn in two
   voices: hands merged on stems up, feet (`bd bda hhp`) stems down. Lines hold drum notes,
@@ -667,8 +673,7 @@ drummap { hh: position 6 notehead x }  // TOP LEVEL, optional: re-table a drum
   writes their `phrase` declarations into the file; outside the editor, declare them yourself.
 - `drummap { NAME: position N notehead W midi K mark M … }`: position −9…9 (0 = middle
   line), notehead `x cross diamond triangle slash xcircle default`, midi 0…127, mark `open
-  stopped staccato tenuto`. It only changes existing drums; a bad entry warns LYS0024. The
-  LilyPond export ignores it (warning).
+  stopped staccato tenuto`. It only changes existing drums; a bad entry warns LYS0024.
 
 ## Lyrics (a named track that SINGS a part)
 
@@ -890,6 +895,115 @@ c4 d e f |
 A decimal is a VALUE, not a duration: `c4.5` is an error (LYS0021), `c4.` is a dotted
 quarter. Same in a tempo — `tempo 4. = 116` is dotted, `tempo 4.5 = 116` is LYS0022.
 
+## Common requests — which construct answers them
+
+What an everyday request asks for, in the construct Lily# has for it. Each example is a whole
+file; the lines a request adds are marked `// added`. Octaves are relative unless the file
+says `octave absolute`, and ⚠️ **every section starts its chain afresh from the part's
+anchor** (C4 unless `octave N` / an instrument says otherwise) — write the first note of each
+section's music with the marks that put it where it belongs.
+
+**"Add chords" / "harmonize with chords"** — a CHORD TRACK, not `@chord(…)` on the notes: a
+`chords NAME { … }` block in each section beside the part (symbols as they print, no
+durations; a bar's entries split it on the beat grid), and a `chords NAME` row directly above
+that part's staff, which aligns the symbols with it. If the file already has a chord track,
+write into it. `@chord(…)` on a note is only for a name or a fretboard diagram asked of that
+note.
+
+```
+key c major
+part melody { clef treble }
+section A {
+  melody { c4 d e f | g2 g | a4 f c' a | g1 | }
+  chords harmony { C | C G7 | F | C | }    // added
+}
+form { ~A }
+score {
+  chords harmony                           // added, directly above its staff
+  staff melody
+}
+```
+
+**"Add lyrics"** — a `lyrics NAME sings PART { … }` track in each section beside the part,
+one syllable a note (`-` joins a word's syllables; a slur holds one syllable over its notes),
+and a `lyrics NAME` row directly below the part's staff. See *Lyrics*.
+
+**"Add a bass line" / "add a part for …"** — three places: the `part` declaration, its music
+in EVERY section (as many bars as the other parts there), and a `staff` row in each score
+that should show it. A piano accompaniment is two parts in a `grandStaff { … }`.
+
+```
+part melody { clef treble }
+part bass { clef bass octave 3 }           // added (octave 3: a bare c is C3)
+section A {
+  melody { c4 d e f | g2 g | }
+  bass { c2 g | c2 e | }                   // added
+}
+section B {
+  melody { a'4 f c' a | g1 | }             // a' = A4: the section starts its chain afresh
+  bass { f,2 a | c1 | }                    // added
+}
+form { ~A ~B }
+score {
+  staff melody
+  staff bass                               // added
+}
+```
+
+**"Add a second voice" / "harmony on the same staff"** — `voice { … } { … }` inside the
+part's music, every line covering the same bars. A line for ANOTHER instrument is a new part
+(above), not a voice.
+
+```
+part melody { clef treble }
+section A {
+  melody {
+    voice { e'4 f g a | g1 | }             // the melody, stems up
+          { c4 d e f | e1 | }              // added: the lower line, stems down
+  }
+}
+form { ~A }
+score { staff melody }
+```
+
+**"Add tab" / "guitar tab"** — the part names a fretted `instrument` (`guitar`, `bass`,
+`ukulele`, …) and the score gets a `tab NAME` row under its staff. The tab chooses strings and
+frets itself: write a string number (`\4`) only where a particular string is asked for.
+
+```
+part guitar { instrument guitar }          // added: instrument guitar
+section A {
+  guitar { e4 g a b | d2 b | a4\4 b c d | e1 | }
+}
+form { ~A }
+score {
+  staff guitar
+  tab guitar                               // added
+}
+```
+
+**"Repeat this" / "first and second endings"** — the FORM, not copied music: `|: … :|`
+around the sections that repeat, `[1. …]` / `[2. …]` for the endings, each ending its own
+section.
+
+```
+part melody { clef treble }
+section A { melody { c4 d e f | g2 g | } }
+section E1 { melody { a'4 g f e | d1 | } }
+section E2 { melody { b'4 a g f | c1 | } }
+form { |: A [1. E1] :| [2. E2] }
+score { staff melody }
+```
+
+**"Transpose up/down …"** — rewrite the notes, the `key` lines and the chord symbols. The part
+property `transpose` is NOT this: it says how a transposing instrument (B♭ clarinet, …) is
+printed. The first note of each section may need new octave marks.
+
+**"Make it triplets"** — `tuplet 3/2 { c8 d e }` (three in the time of two), keeping each bar's
+length. **"Add dynamics / articulations"** — marks glued to the note: `c4@p`, `c4@cresc … g@f`,
+`c4@staccato`, `c4@accent`. **"Change the meter / tempo"** — at the top (`time 3/4`,
+`tempo 96`), or at the start of a bar, in a section header or in the music, from there on.
+
 ## Rules and gotchas
 
 - Each **phrase body** evaluates in a fresh frame (default octave/pitch/duration), so a
@@ -965,9 +1079,8 @@ fonts {
 }
 ```
 
-Attributes: quoted faces · `as serif|sans` · `step ±n` (relative, magstep 2^(n/6), −12..+12;
-the twin writes it as `\override Grob.font-size`) · `size n` (absolute em in staff spaces,
-0.5..20; NOT reproduced by the twin, prefer `step`) · `bold` `italic` `regular` (combine;
+Attributes: quoted faces · `as serif|sans` · `step ±n` (relative, magstep 2^(n/6), −12..+12)
+· `size n` (absolute em in staff spaces, 0.5..20; prefer `step`) · `bold` `italic` `regular` (combine;
 `regular` clears; a written style REPLACES the engraving's, e.g. `text bold` is bold, not
 bold-italic). One entry takes `step` or `size`, not both.
 
@@ -1040,8 +1153,6 @@ score sketch { fonts { music "Petaluma" }  staff melody }   // one score in anot
 - Under a music font, chord symbols use the font's own ♭ ♯ △ ° ø + glyphs, and under
   Petaluma their letters are set in Petaluma Script — unless `chord` (or `chords`, or `sans`)
   names a face, or `chord as serif` / `as sans` says which family to follow.
-- `lysc svg --set music=Bravura song.lys` lays a font over the file's for one render. The
-  LilyPond twin (`lysc ly`) stays in Emmentaler and warns: LilyPond 2.26 reads no SMuFL font.
 
 ## Paper (`paper { … }`)
 
@@ -1123,30 +1234,26 @@ layout {
 
 - `markTempo stacked` is LilyPond's: the boxed label over the tempo, each on its own anchor.
   `markTempo beside` is the chart's one line, "[Chorus] ♩ = 132" — the label's box at the
-  line-start edge, the tempo to its right on the label's baseline. Lily#-own; the `.ly`
-  twin has no spelling for it and warns. A mid-line label and a mid-measure `tempo` are
+  line-start edge, the tempo to its right on the label's baseline. A mid-line label and a mid-measure `tempo` are
   unmoved either way.
 - `barNumbers lines` is LilyPond's default: the first bar of every line after the first.
   `none` prints no numbers (`\remove Bar_number_engraver`). `every N` prints every bar
   whose number is a multiple of N wherever it stands, and ONLY those — a line opening on
   bar 3 under `every 2` opens with no number, as LilyPond's `every-nth-bar-number-visible`
-  prints it. N is a whole number of at least 1. The twin writes the same LilyPond words.
+  prints it. N is a whole number of at least 1.
 - `accidentals default` is the 18th-century style Lily# has always drawn: an alteration
   holds to the bar line, in its own octave. `modern` is Kurt Stone's — cancelled in other
   octaves and in the next measure too, and with no restore-natural. `modernCautionary`
   prints the accidentals `modern` ADDS in parentheses. `forget` remembers nothing (every
   note is read against the key signature). `noReset` never forgets. LilyPond's
   `\accidentalStyle` table, for the styles whose context is the staff; its voice / piano /
-  choral families name a context a score-wide switch cannot, and are not offered. The twin
-  writes `\accidentalStyle modern` at the head of each part's music.
+  choral families name a context a score-wide switch cannot, and are not offered.
 - `sectionLabels boxed` is the frame Lily# has always drawn (Lily#-own: LilyPond's
   SectionLabel grob draws the bare string). `plain` drops the frame and engraves the name
-  alone, which is LilyPond's own picture, and the twin writes `\mark \markup` with no
-  `\box`. `none` engraves no section names at all — the part sheet's answer — and the twin
-  writes no `\mark` either. The form still plays the section; MIDI and MusicXML are
-  untouched.
+  alone, which is LilyPond's own picture. `none` engraves no section names at all — the part
+  sheet's answer. The form still plays the section.
 - `partCombineText true` prints `a2` / `Solo` / `Solo II` on a `combinedStaff` (LilyPond's
-  default); `false` is its `printPartCombineTexts = ##f`, which the twin writes. The merging
+  default); `false` is its `printPartCombineTexts = ##f`. The merging
   itself is unchanged — this is the words, not the combining.
 - `chordQualities symbols` is the default and LilyPond's own picture: the four qualities its
   exception table names print `C°`, `C+`, `Cø`, `C°7`, and a major seventh prints its drawn
@@ -1154,11 +1261,10 @@ layout {
   lead-sheet convention. Every other quality is the same word either way.
 - `minorChords upper` is LilyPond's default: `Am`, `Am7`. `lower` lowercases the root of a
   chord with a MINOR THIRD and drops its `m` — `a`, `a7` — which is LilyPond's
-  `chordNameLowercaseMinor`, written by the twin. The slash BASS keeps its capital
+  `chordNameLowercaseMinor`. The slash BASS keeps its capital
   (`a7/C`), as LilyPond's does, and `Caug` (a major third) never lowercases. With both keys
   set Lily# spells these chords exactly as LilyPond prints them. `maj7` is NOT switchable:
   LilyPond draws it as a raised triangle, which Lily#'s one-line chord name has no home for.
-- Neither chord key reaches MIDI or MusicXML — a `<harmony>` carries the chord as data.
 - `chordDiagrams ukulele` (or `guitar`, `mandolin`, `guitarDropD`, … — the words a tab's
   `tuning` takes) is the tuning the score's chord diagrams draw on. A diagram draws only where
   a chord writes its shape; this picks which written shape applies. Unset, a diagram takes the
@@ -1177,29 +1283,21 @@ layout {
   shape; an entry whose shapes fit no tuning of the score is not used there. `none` takes no
   table. A bad symbol or shape in the table and a chord listed twice (the last wins) are
   warnings, the rest stands; a section nothing declares warns. The shape rules are under
-  Annotations (*Chord diagrams*). The twin writes a `FretBoards` context under a row's
-  `ChordNames` when an entry draws (written or listed; under `all`, for every row); MusicXML
-  nests an `@chord`'s `<frame>` in its `<harmony>`. `capo N` after the tuning word (before
+  Annotations (*Chord diagrams*). `capo N` after the tuning word (before
   `all`; 1–11) puts a capo on fret N: the music still writes the SOUNDING chords (`Eb`), every
   shape is the shape pressed above the capo (`Eb(x32010)` is the C shape, checked against the
   pressed chord), the printed name is the pressed chord's (`C`), spelled in the key N
   semitones below the key at the bar, "Capo N" stands at the score's head, and a
-  `chord(Eb x32010)` item sounds N semitones higher. The twin writes the pressed chords into
-  `\chordmode` and `instrument = "Capo N"`; MusicXML's `<harmony>` stays sounding. After
-  `capo ` the completion ranks the frets 0–7 by their barre chords (fewest first); hover `capo`
-  for the same ranking; there is no `capo auto`.
+  `chord(Eb x32010)` item sounds N semitones higher. There is no `capo auto`.
 - `chordNames shape` (the default) names the pressed chord under a capo, `sounding` the
   sounding chord, `both` both — `E♭m7 (Cm7)`. Without a capo all three print the same name.
-  The twin cannot spell `both` and warns.
 - `chordList true` puts every chord the score names at its head under the title, each once in
   order of first appearance with the diagram it draws (its usual shape when it draws none), in
-  centred rows of even counts; `chordDiagrams none` lists the names alone. The twin writes the
-  rows as `\markup` lines of `\center-column { "NAME" \fret-diagram-terse … }` before the score.
+  centred rows of even counts; `chordDiagrams none` lists the names alone.
 - `voltaBracket all` (default) draws an ending's bracket over every bar; `line` stops it at
   the end of the system it starts in; `N` covers the ending's first N bars (all of it when
   shorter). An ending overrides it with `[1. B C]@voltaBracket(2)`. A cut bracket ends
-  straight. The twin writes `VoltaBracket.musical-length` / kills the later pieces; MusicXML
-  stops the `<ending>` at the Nth bar as `discontinue` (`line` writes the whole ending there).
+  straight.
 - ⚠️ **The keyword is `layout` and it takes a BLOCK.** A bare `markTempo beside` or
   `barNumbers none` at the top level is an error (the words are not directives); write
   `layout { markTempo beside }`. The keys and their words are not reserved (`part markTempo { }`

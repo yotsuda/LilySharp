@@ -40,9 +40,14 @@ All notable changes to the Lily# VS Code extension are documented here.
   part's line at the top and its score row at the bottom) is no longer lit, nor judged for
   errors or octaves as if the AI had written it.
 - With nothing selected the file is sent once, not twice.
-- **"Add chords" adds a chord track**: the AI is told that chord symbols for the music are a
-  `chords NAME { … }` block beside the part, with a `chords NAME` row above its staff (or the
-  file's existing track) — not `@chord(…)` on every note, as it used to answer.
+- **Everyday requests get the construct made for them.** The language description the AI reads
+  (docs/GRAMMAR_FOR_LLM.md) has a new *Common requests* section — add chords (a chord track
+  with its score row, not `@chord(…)` on every note, as it used to answer), add lyrics, add a
+  bass line or a part, a second voice on the staff, guitar tab, repeats and endings, transpose,
+  triplets, dynamics, meter and tempo — each with a whole example the compiler checks clean,
+  and a warning that every section restarts its octave chain. It also gained the named voices
+  and the four annotations it lacked (`@harmonic`, `@stopped`, `@snapPizz`, `@pluck`), and lost
+  the notes about MusicXML and LilyPond export the AI never needs.
 
 ### Remove All String Numbers
 
