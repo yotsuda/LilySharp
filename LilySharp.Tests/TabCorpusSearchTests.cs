@@ -166,7 +166,6 @@ public sealed class TabCorpusSearchTests
         ("Skip", w => w.Skip, (w, v) => w with { Skip = v }),
         ("High", w => w.High, (w, v) => w with { High = v }),
         ("HeightPerFret", w => w.HeightPerFret, (w, v) => w with { HeightPerFret = v }),
-        ("SlurAcross", w => w.SlurAcross, (w, v) => w with { SlurAcross = v }),
         ("OpenPerHandFret", w => w.OpenPerHandFret, (w, v) => w with { OpenPerHandFret = v }),
         ("OpenAboveLowPosition", w => w.OpenAboveLowPosition, (w, v) => w with { OpenAboveLowPosition = v }),
         ("LowerFret", w => w.LowerFret, (w, v) => w with { LowerFret = v }),

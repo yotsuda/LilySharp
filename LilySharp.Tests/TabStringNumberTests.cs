@@ -185,19 +185,20 @@ public sealed class TabStringNumberTests
     }
 
     /// <summary>
-    /// The note a slur ends on stays on the slur's string — a slide or legato (USER SPECIFIED,
-    /// 2026-09-14, Real Gone Intro bars 12–13: <c>e,4\3( | b,,8)</c>).
+    /// A slur does not keep its notes on one string; a tie does (USER SPECIFIED, 2026-10-25,
+    /// reversing 2026-09-14: a sung line's slur is a melisma, not a legato on the instrument —
+    /// さくらさくら's E–C slurred eighths slid 4 frets up one string).
     /// </summary>
     /// <remarks>
     /// A2 pinned to the third string is its 12th fret. C3 after it is the second string's 10th
-    /// under the same hand rather than the third string's 15th, which moves it — unless a slur
-    /// joins them: then the c slides up the third string to its 15th.
+    /// under the same hand, with a slur or without; a tied note stays on its string.
     /// </remarks>
     [Fact]
-    public void TheNoteASlurEndsOnStaysOnTheSlursString()
+    public void ASlurDoesNotKeepTheString_ATieDoes()
     {
         Assert.Equal(new (int?, int)[] { (3, 12), (2, 10) }, BassTabFrets("a'4\\3 c r r |")[0]);
-        Assert.Equal(new (int?, int)[] { (3, 12), (3, 15) }, BassTabFrets("a'4\\3( c) r r |")[0]);
+        Assert.Equal(new (int?, int)[] { (3, 12), (2, 10) }, BassTabFrets("a'4\\3( c) r r |")[0]);
+        Assert.Equal(new (int?, int)[] { (3, 12), (3, 12) }, BassTabFrets("a'4\\3~ a r r |")[0]);
     }
 
     /// <summary>

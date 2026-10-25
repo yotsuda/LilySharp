@@ -44,8 +44,6 @@ public sealed record BassFingeringWeights
     public double SkipPerString { get; init; }
     /// <summary>The little finger stretched one fret past the hand.</summary>
     public double Stretch { get; init; }
-    /// <summary>A slur that ends on another string.</summary>
-    public double SlurAcross { get; init; }
     /// <summary>The same pitch again on another string.</summary>
     public double RepeatAcross { get; init; }
     /// <summary>An open string.</summary>
@@ -197,7 +195,6 @@ public static class BassFingeringPlanner
                     }
                     int ds = System.Math.Abs(x.String - q.String);
                     if (ds > 1) e += w.Skip + w.SkipPerString * (ds - 2);
-                    if (ev.SlurFromPrevious && ds != 0) e += w.SlurAcross;
                     if (ev.TiedFromPrevious && ds != 0) e += 1_000_000;
                     if (pe.Midi == ev.Midi && ds != 0) e += w.RepeatAcross;
                     if (ds == 0 && x.Fret > 0 && q.Fret > 0 && x.Fret != q.Fret) e += w.SameStringStep;
@@ -239,7 +236,6 @@ public static class BassFingeringPlanner
         Skip = 2.825,
         SkipPerString = 4.3,
         Stretch = 0.5,
-        SlurAcross = 16.05,
         RepeatAcross = 23.066,
         Open = 0.1,
         OpenPerHandFret = 0.3,

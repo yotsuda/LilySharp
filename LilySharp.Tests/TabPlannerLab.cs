@@ -138,7 +138,6 @@ public sealed class TabPlannerLab
                     }
                     int ds = Math.Abs(x.S - q.S);
                     if (ds > 1) e += skip + skipExtra * (ds - 2);
-                    if (ev.SlurFromPrevious && ds != 0) e += slurAcross;
                     if (ev.TiedFromPrevious && ds != 0) e += 1e6;
                     if (pe.Midi == ev.Midi && ds != 0) e += repeatChange;
                     if (ds == 0 && x.F > 0 && q.F > 0 && x.F != q.F) e += sameStringStep;
@@ -185,7 +184,7 @@ public sealed class TabPlannerLab
         ShiftBase = w[I("shiftA")], ShiftPerFret = w[I("shiftB")], ShiftCap = w[I("shiftCap")],
         FreeShiftFactor = w[I("freeFactor")], TimeExponent = w[I("timeAlpha")], AfterOpenFactor = w[I("openUnheld")],
         Skip = w[I("skip")], SkipPerString = w[I("skipExtra")], Stretch = w[I("stretch")],
-        SlurAcross = w[I("slurAcross")], RepeatAcross = w[I("repeatChange")], Open = w[I("open")],
+        RepeatAcross = w[I("repeatChange")], Open = w[I("open")],
         OpenPerHandFret = w[I("openHigh")],
         StringCost = Enumerable.Range(0, 5).Select(k => w[I("str1") + k]).ToArray(),
         PositionCost = Enumerable.Range(0, 12).Select(k => w[I("pos1") + k]).ToArray(),

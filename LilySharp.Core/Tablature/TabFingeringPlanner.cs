@@ -28,7 +28,9 @@ namespace LilySharp.Core.Tablature;
 /// notes — the previous event's onset to this one's.</param>
 /// <param name="HandFree">The hand is free before this event: a rest, a fall, or a leap of an
 /// octave or more lies between it and the previous event.</param>
-/// <param name="SlurFromPrevious">A slur joins this event to the previous one.</param>
+/// <param name="SlurFromPrevious">A slur joins this event to the previous one. No planner reads it: a
+/// slur does not keep its notes on one string (owner's decision, 2026-10-25 — a sung line's slur
+/// is a melisma, not a legato on the instrument); a tie does (<see cref="TiedFromPrevious"/>).</param>
 /// <param name="ChordLow">For a chord, its lowest stopped fret (0 when none).</param>
 /// <param name="ChordHigh">For a chord, its highest stopped fret (0 when none).</param>
 /// <param name="TiedFromPrevious">This event is the held end of a tie from the previous one:
@@ -96,9 +98,6 @@ public sealed record TabFingeringWeights
     /// does not go up, go back as low as possible").</summary>
     public double HeightPerFret { get; init; } = 0.1;
 
-    /// <summary>A slur that ends on another string than it started on.</summary>
-    public double SlurAcross { get; init; } = 5.0;
-
     /// <summary>An open string, per fret the index finger sits above the first: an open note
     /// belongs to the first position more than to the fifth.</summary>
     public double OpenPerHandFret { get; init; } = 0.05;
@@ -116,7 +115,7 @@ public sealed record TabFingeringWeights
 /// <summary>
 /// Chooses a string for every event of a tab voice at once: the fingering whose total cost —
 /// hand shifts weighed by how little time they have, stretches, string skips, playing up the
-/// neck, open strings out of reach, slurs across strings — is least over the whole voice.
+/// neck, open strings out of reach — is least over the whole voice.
 /// </summary>
 /// <remarks>
 /// LILYSHARP-OWN, USER APPROVED (2026-09-14). A dynamic programme (Viterbi) over states
@@ -392,7 +391,6 @@ public static class TabFingeringPlanner
             }
 
             bool free = ev.HandFree;
-            bool slur = ev.SlurFromPrevious;
             bool tied = ev.TiedFromPrevious;
             double bestCost = double.MaxValue;
             int bestPrev = -1;
@@ -418,9 +416,6 @@ public static class TabFingeringPlanner
                     && !(apart == 2 && p.Fret > 0 && s.Fret > 0
                          && (s.String < p.String ? s.Fret - p.Fret : p.Fret - s.Fret) == 2))
                     cost += _w.Skip;
-
-                if (slur && s.String != p.String)
-                    cost += _w.SlurAcross;
 
                 // A tie holds one string.
                 if (tied && s.String != p.String)
