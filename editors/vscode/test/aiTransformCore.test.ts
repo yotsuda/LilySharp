@@ -23,7 +23,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import {
     SEL_CLOSE, SEL_OPEN, carryOffset, documentBudget, documentContext, estimateTokens, isProblem, isUnchanged, marksContext, octaveOutliers,
-    pickModel, pitchToMidi, splitNote, startTimeAt, toCandidateEdit, changedWords,
+    pickModel, pitchToMidi, splitNote, startTimeAt, toCandidateEdit, changedWords, diffMarkup,
 } from '../src/aiTransformCore';
 
 // Only the notes the AI really changed are lit (owner's report 2026-10-25: a rewritten stretch lit
@@ -47,6 +47,13 @@ describe('what the candidate panel lights as changed', () => {
         const after = 'x = {\n  c4 e\n}';
         const [s] = changedWords(before, after, [{ beforeLo: 5, beforeHi: 12, afterLo: 5, afterHi: 12 }]);
         assert.deepEqual([s.afterLo, s.afterHi], [after.indexOf(' e'), after.indexOf('e') + 1]);
+    });
+    it('marks the replacement text: dropped words struck, written ones green', () => {
+        const before = 'm = { c4 d e <f a> }';
+        const after = 'm = { c4 d es <f a> g }';
+        const spans = changedWords(before, after, [{ beforeLo: 4, beforeHi: before.length, afterLo: 4, afterHi: after.length }]);
+        assert.equal(diffMarkup(before, after, 4, after.length, spans),
+            '{ c4 d <del>e</del> <ins>es</ins> &lt;f a&gt; <ins>g</ins> }');
     });
     it('lights nothing on the side an insertion leaves empty', () => {
         const before = '{ c d }';

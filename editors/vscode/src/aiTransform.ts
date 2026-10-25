@@ -39,7 +39,7 @@ import { ChatClient, ChatMessage, resolveChatClient } from './modelClient';
 import {
     CandidateEdit as CoreCandidateEdit, ChangedSpan, MarkInSelection, MarkReadings, SEL_CLOSE, SEL_OPEN, cleanCandidate,
     TextChange, carryOffset, documentBudget, documentContext, estimateTokens, isProblem, marksContext, octaveOutliers, splitNote,
-    startTimeAt, toCandidateEdit, wholeFileEdit, changedWords,
+    startTimeAt, toCandidateEdit, wholeFileEdit, changedWords, diffMarkup,
 } from './aiTransformCore';
 import { markFactsOf, sideFileOf } from './omrScanCore';
 import { textFontFaceCss, textFontsRoot } from './scoreFonts';
@@ -595,7 +595,10 @@ async function drive(
         for (;;) {
             decision = again !== undefined
                 ? await decideAgain(again)
-                : await reviewOnScore(deps, renderBefore, renderAfter, caption, candidate.text, changed, {
+                : await reviewOnScore(deps, renderBefore, renderAfter, caption,
+                    diffMarkup(candidate.snap.origFullText, spliceCandidate(candidate.snap, candidate.text),
+                        candidate.snap.startOffset, candidate.snap.startOffset + candidate.text.length, changed),
+                    changed, {
                     uri: snapshot.uri,
                     before: work.origFullText,
                     after: spliceCandidate(candidate.snap, candidate.text),
@@ -951,7 +954,8 @@ async function reviewOnScore(
     renderBefore: SvgResponse,
     renderAfter: SvgResponse,
     caption: string,
-    candidate: string,
+    /** The replacement text as HTML, its changes marked (diffMarkup). */
+    candidateHtml: string,
     changed: ChangedSpan[],
     play: Audible,
     note: string | null = null,
@@ -965,7 +969,7 @@ async function reviewOnScore(
 
     panel.webview.html = getCandidateHtml(
         fontUri.toString(), braceFontUri.toString(), panel.webview.cspSource, getNonce(),
-        renderBefore.Svg, renderAfter.Svg, renderAfter.Error, caption, candidate, changed,
+        renderBefore.Svg, renderAfter.Svg, renderAfter.Error, caption, candidateHtml, changed,
         textFontFaceCss(panel.webview, deps.extensionUri), note);
     // Where it stands: Beside would be beside the panel itself once Ask Again is clicked in it,
     // a new column for every round (owner, 2026-10-25). Only a new panel goes Beside.
@@ -1081,7 +1085,7 @@ export function showCandidateSounding(sounding: { pos: number; occ: number }[]):
 function getCandidateHtml(
     fontUri: string, braceFontUri: string, cspSource: string, nonce: string,
     svgBefore: string | null, svgAfter: string | null, error: string | null,
-    caption: string, candidate: string, changed: ChangedSpan[], textFontCss: string, note: string | null = null,
+    caption: string, candidateHtml: string, changed: ChangedSpan[], textFontCss: string, note: string | null = null,
 ): string {
     const afterBody = svgAfter
         ? `<div class="score">${svgAfter}</div>`
@@ -1127,6 +1131,9 @@ body { margin:0; padding:0; display:flex; flex-direction:column; height:100vh; o
                font-family: var(--vscode-editor-font-family, monospace); font-size:12px; overflow:auto; margin:4px 0 0;
                white-space:pre-wrap; }
 .snippet summary { font-size:12px; opacity:0.8; cursor:pointer; }
+/* Its changes, as the OMR fix panel prints them: green what the AI wrote, struck red what it dropped. */
+.snippet ins { color: var(--vscode-gitDecoration-addedResourceForeground, #3a3); text-decoration: none; background: rgba(46, 160, 67, .18); font-weight: 600; }
+.snippet del { color: var(--vscode-gitDecoration-deletedResourceForeground, #e33); text-decoration: line-through; background: rgba(229, 57, 53, .15); }
 .err { color:#b00; padding:16px; }
 .footer { display:flex; gap:8px; padding:10px 12px; border-top:1px solid var(--vscode-panel-border); flex-shrink:0; }
 button { padding:6px 14px; font-size:13px; border:1px solid var(--vscode-button-border, transparent); border-radius:4px; cursor:pointer;
@@ -1167,7 +1174,7 @@ button:disabled { opacity:0.45; cursor:default; }
   <div id="paneAfter" class="pane show">${afterBody}</div>
   <div id="paneBefore" class="pane">${beforeBody}</div>
 </div>
-<div class="snippet"><details><summary>Replacement text</summary><pre>${escapeHtml(candidate)}</pre></details></div>
+<div class="snippet"><details><summary>Replacement text</summary><pre>${candidateHtml}</pre></details></div>
 <div class="footer">
   <button class="primary" id="accept" title="Write this candidate into the file (Ctrl+Z in the editor undoes it)">Accept (Enter)</button>
   <button id="iterate" title="Tell the AI what to change about this candidate — it answers with a new one, shown here">Ask Again…</button>

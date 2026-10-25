@@ -44,6 +44,8 @@ All notable changes to the Lily# VS Code extension are documented here.
   panel — only the notes it really changed: a stretch it rewrote is compared with the original
   word by word, and the notes it copied through are left black. It used to light every note of
   the stretch, in a faint orange glow.
+- **The candidate's *Replacement text* shows its changes** as the OMR fix panel does: what the AI
+  wrote in green, what it dropped struck through in red.
 - **Play lights the notes sounding on the candidate's score**, in orange as the preview does, and
   keeps the newest in view — After or Before, whichever pane is playing.
 

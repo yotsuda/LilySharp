@@ -298,6 +298,32 @@ export function changedWords(before: string, after: string, spans: readonly Chan
 }
 
 /**
+ * after[lo, hi) — the candidate's replacement text — as HTML with its changes marked, from the
+ * changed runs (changedWords): what it dropped of `before` in <del>, what it wrote in <ins>, as the
+ * OMR fix panel prints its proposals (owner's request 2026-10-25). The spaces a run reaches back
+ * over stay plain.
+ */
+export function diffMarkup(before: string, after: string, lo: number, hi: number, changed: readonly ChangedSpan[]): string {
+    const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    let html = '';
+    let at = lo;
+    for (const s of [...changed].sort((x, y) => x.afterLo - y.afterLo)) {
+        if (s.afterHi < at || s.afterLo > hi) continue;
+        // A run's lead may reach back before the text (its indentation): clamped to it.
+        const from = Math.max(s.afterLo, at);
+        const to = Math.min(s.afterHi, hi);
+        const start = from + /^\s*/.exec(after.slice(from, to))![0].length;
+        html += esc(after.slice(at, start));
+        const gone = before.slice(s.beforeLo, s.beforeHi).trimStart();
+        if (gone.length > 0) html += `<del>${esc(gone)}</del>`;
+        if (gone.length > 0 && start < to) html += ' ';
+        if (start < to) html += `<ins>${esc(after.slice(start, to))}</ins>`;
+        at = Math.max(at, to);
+    }
+    return html + esc(after.slice(at, hi));
+}
+
+/**
  * The words (runs of non-space) of text[lo, hi), each from the spaces before it: a drawn note's
  * data-pos is its node's FULL-span start — those spaces, and for the first thing on a line its
  * indentation (as omrAiFixCore.rangesOf has it).
