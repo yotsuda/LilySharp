@@ -1594,7 +1594,12 @@ public sealed partial class MeasureCollector
         // Per-voice source offset of the `clef` that set that part's clef (0 = none), so
         // each staff's line-start clef can carry its own data-pos.
         var voiceClefPosDict = new Dictionary<string, int>();
-        var voiceOpeningClefDict = new Dictionary<string, ClefType>();
+        // The clef each binding places its notes under (RenderSpec.GetBindingClefs), and each
+        // binding's collected voices: a part shown on two staves is collected for each, under
+        // that staff's clef, and each staff is handed its own collection (getVoices below).
+        var bindingClefs = renderSpec.GetBindingClefs();
+        int bindingIndex = -1;
+        var collectedPerBinding = new Dictionary<string, List<(string Clef, ImmutableArray<Voice> Voices)>>();
         // GetVoiceNames() yields names in the SAME order ToStaffGroups() builds
         // staves, so this counter equals the global staff index (see
         // EnumerateStaves) and tags each staff's dynamics correctly.
@@ -1622,6 +1627,7 @@ public sealed partial class MeasureCollector
         foreach (var (voiceName, withChords, chordDisplay, withLyrics, slotting) in renderSpec.GetVoiceBindings())
         {
             _voiceName = voiceName;
+            bindingIndex++;
             // What the binding before this one placed on the staff. Read here rather than
             // at each assignment site because two branches below `continue` out of the turn.
             if (previousBinding is { } prev && staffVoices.TryGetValue(prev, out var prevVoices))
@@ -1693,7 +1699,9 @@ public sealed partial class MeasureCollector
             SetPartTuning(tree.GetRoot(), voiceName);
             // A clef the staff item wrote (`staff bass melody`) wins over the part's: it is
             // this rendering's clef, the one the page draws (pitches do not depend on it).
-            if (renderSpec.WrittenClefOf(voiceName) is { } writtenClef)
+            // THIS staff's — not the first staff of the part that writes one (2026-10-25).
+            var (decides, staffClef) = bindingIndex < bindingClefs.Count ? bindingClefs[bindingIndex] : (false, null);
+            if ((decides ? staffClef : renderSpec.WrittenClefOf(voiceName)) is { } writtenClef)
                 partClef = InstrumentDefaults.ClefWord(writtenClef);
             // A part without a clef of its own reads the file's top-level one (GRAMMAR §2.1),
             // as the single-staff path does — this used to fall straight to treble.
@@ -1703,9 +1711,6 @@ public sealed partial class MeasureCollector
             // clef's offset, so a multi-staff score's line-start clefs each click through
             // to the `clef` that set them (stamped after ToStaffGroups below).
             voiceClefPosDict[voiceName] = partClefPos;
-            // …and the clef the part's notes are placed under, for a staff that shows the
-            // part under another (PlaceUnderAnotherClef, after ToStaffGroups).
-            voiceOpeningClefDict[voiceName] = ParseClefType(_v.Meta.Clef);
 
             // Set initial octave: explicit > instrument default > 4. The clef is drawing only.
             _v.Octave.CurrentOctave = partOctave ?? InstrumentDefaults.DefaultAnchorOctave;
@@ -1740,7 +1745,11 @@ public sealed partial class MeasureCollector
             }
 
             _openingKeyOverride = null;
+            string collectedUnder = _v.Meta.Clef;
             staffVoices[voiceName] = CollectStaffVoices(voiceName);
+            if (!collectedPerBinding.TryGetValue(voiceName, out var collections))
+                collectedPerBinding[voiceName] = collections = new List<(string, ImmutableArray<Voice>)>();
+            collections.Add((collectedUnder, staffVoices[voiceName]));
 
             // A section that OPENS with its own key (`part b { section A { key a … } }`)
             // gives THIS staff its own opening signature — a sibling staff's different
@@ -2000,12 +2009,30 @@ public sealed partial class MeasureCollector
         // (RenderSpec.ToStaffGroups), under the same two scopes ResolveStaffColumns opens for
         // a part's own voices: the packing reads the engraving style and the music font's
         // head boxes. ToStaffGroups is lazy, so the scopes must outlive the ToImmutableArray.
+        // A part shown on several staves is collected for each, under that staff's clef, but
+        // the passes above finish only staffVoices' entry — the last collection (its voices
+        // share their names with the others, so the barline sync's flat table cannot tell
+        // them apart). A staff whose collection stood under ANOTHER clef takes the finished
+        // measures with its own collection's items in them: its notes' places and its own
+        // clef changes, the bar's barlines, numbering and marks the score's. In binding order,
+        // the order ToStaffGroups asks in. A part shown once takes staffVoices' as it always did.
+        var handedOut = new Dictionary<string, int>();
+        ImmutableArray<Voice> VoicesFor(string name)
+        {
+            var finished = staffVoices.TryGetValue(name, out var v) ? v
+                : ImmutableArray.Create(new Voice(name, ImmutableArray<Measure>.Empty));
+            if (!collectedPerBinding.TryGetValue(name, out var each) || each.Count < 2)
+                return finished;
+            int k = handedOut.TryGetValue(name, out var n) ? n : 0;
+            handedOut[name] = k + 1;
+            if (k >= each.Count - 1 || each[k].Clef == each[^1].Clef)
+                return finished;
+            return WithItemsOf(finished, each[k].Voices);
+        }
         using (EngravingStyle.Use(_v.Meta.Paper.Style))
         using (Layout.MusicFont.Use(Layout.MusicFonts.Of(_v.Meta.Fonts)))
         {
-            staffGroups = renderSpec.ToStaffGroups(name =>
-                staffVoices.TryGetValue(name, out var v) ? v
-                    : ImmutableArray.Create(new Voice(name, ImmutableArray<Measure>.Empty)),
+            staffGroups = renderSpec.ToStaffGroups(VoicesFor,
                 combinedAddressings)
                 .ToImmutableArray();
         }
@@ -2053,26 +2080,6 @@ public sealed partial class MeasureCollector
                         .ToImmutableArray()
                 })
                 .ToImmutableArray();
-
-        // A part shown on two staves under two clefs (`staff melody` and `staff bass melody`):
-        // its notes were placed once, under the clef the first staff that writes one names
-        // (RenderSpec.WrittenClefOf), and the other staff drew those places under its own clef
-        // — the treble staff's notes two octaves up (owner's report 2026-10-25). Each staff
-        // showing the part's own voices under another clef gets them placed under its clef.
-        staffGroups = staffGroups
-            .Select(sg => sg with
-            {
-                Staves = sg.Staves
-                    .Select(st =>
-                        !st.IsTab && st.Voices.Length > 0
-                        && staffVoices.TryGetValue(st.PrimaryVoice.Name, out var own) && own == st.Voices
-                        && voiceOpeningClefDict.TryGetValue(st.PrimaryVoice.Name, out var placedUnder)
-                        && placedUnder != st.Clef
-                            ? st with { Voices = PlaceUnderAnotherClef(st.Voices, placedUnder, st.Clef) }
-                            : st)
-                    .ToImmutableArray()
-            })
-            .ToImmutableArray();
 
         // Size each lyrics text row's band to its tallest verse stack, so a
         // multi-verse row (auto-wrapped, or 1番/2番/3番) reserves room for verse 2+
@@ -3328,50 +3335,27 @@ public sealed partial class MeasureCollector
     }
 
     /// <summary>
-    /// A part's voices placed under <paramref name="staffClef"/> instead of the clef
-    /// <paramref name="placedUnder"/> they were walked under — a staff showing a part another
-    /// staff of the score also shows, under another clef. A position is a diatonic distance from
-    /// the middle line, so the move is the distance between the two clefs' middle-line pitches
-    /// (<see cref="MiddleLinePitch"/>), up to the part's first clef change: from there on the
-    /// part's own clef stands on every staff that shows it.
+    /// <paramref name="finished"/>'s voices and measures — the score's barlines, numbering and
+    /// marks — holding <paramref name="own"/>'s items, measure for measure: a part collected
+    /// again under another staff's clef (CollectMultiStaff's VoicesFor). When the two do not
+    /// have the same voices and measures, <paramref name="finished"/> as it is.
     /// </summary>
-    private static ImmutableArray<Voice> PlaceUnderAnotherClef(ImmutableArray<Voice> voices, ClefType placedUnder, ClefType staffClef)
+    private static ImmutableArray<Voice> WithItemsOf(ImmutableArray<Voice> finished, ImmutableArray<Voice> own)
     {
-        static int Diatonic(ClefType clef) => MiddleLinePitch(clef) is var (step, octave) ? step + octave * 7 : 0;
-        int shift = Diatonic(placedUnder) - Diatonic(staffClef);
-        if (shift == 0)
-            return voices;
-        var changes = ClefEvents(voices[0].Measures);
-        var (m0, at0) = changes.Count > 0 ? (changes[0].Measure, changes[0].Onset) : (int.MaxValue, Fraction.Zero);
-        var rewritten = voices.ToArray();
-        for (int vi = 0; vi < rewritten.Length; vi++)
+        if (finished.Length != own.Length)
+            return finished;
+        for (int vi = 0; vi < finished.Length; vi++)
+            if (finished[vi].Measures.Length != own[vi].Measures.Length)
+                return finished;
+        var voices = new Voice[finished.Length];
+        for (int vi = 0; vi < finished.Length; vi++)
         {
-            var measures = rewritten[vi].Measures.ToArray();
-            for (int m = 0; m < measures.Length && m <= m0; m++)
-            {
-                var items = measures[m].Items.ToArray();
-                var at = Fraction.Zero;
-                for (int i = 0; i < items.Length; i++)
-                {
-                    if (m == m0 && at >= at0)
-                        break;
-                    items[i] = items[i] switch
-                    {
-                        NoteItem n => n with { StaffPosition = n.StaffPosition + shift },
-                        ChordItem c => c with
-                        {
-                            Notes = c.Notes.Select(x => x with { StaffPosition = x.StaffPosition + shift }).ToImmutableArray(),
-                        },
-                        RestItem { StaffPosition: { } p } r => r with { StaffPosition = p + shift },
-                        var other => other,
-                    };
-                    at += items[i].Duration;
-                }
-                measures[m] = measures[m] with { Items = items.ToImmutableArray() };
-            }
-            rewritten[vi] = rewritten[vi] with { Measures = measures.ToImmutableArray() };
+            var measures = finished[vi].Measures.ToBuilder();
+            for (int m = 0; m < measures.Count; m++)
+                measures[m] = measures[m] with { Items = own[vi].Measures[m].Items };
+            voices[vi] = finished[vi] with { Measures = measures.ToImmutable() };
         }
-        return rewritten.ToImmutableArray();
+        return voices.ToImmutableArray();
     }
 
     /// <summary>

@@ -25,12 +25,13 @@ namespace LilySharp.Tests;
 
 /// <summary>
 /// One part on two staves under two clefs — <c>staff melody</c> and <c>staff bass melody</c>:
-/// each staff places the notes under its own clef. The part's notes were placed once, under the
-/// clef the first staff that writes one names, and the other staff drew those places under its
-/// own, so the treble staff's C5 stood two octaves up (owner's report 2026-10-25, stepping the
-/// second staff's clef with Ctrl+Shift+Up).
+/// each staff places the notes under its own clef. The part is collected once per staff, and
+/// each collection took the clef the first staff that writes one names, so the treble staff's
+/// C5 stood two octaves up (owner's report 2026-10-25, stepping the second staff's clef with
+/// Ctrl+Shift+Up), and a `clef` change that is none under the bass clef left the treble staff too.
 /// </summary>
-/// <remarks>Poison: skip MeasureCollector.PlaceUnderAnotherClef ⇒ the first two go red.</remarks>
+/// <remarks>Poison: collect every binding under RenderSpec.WrittenClefOf again ⇒ all but the
+/// octave-clef case go red.</remarks>
 [Trait("Category", "Unit")]
 public sealed class StaffClefPerStaffTests
 {
@@ -65,6 +66,19 @@ public sealed class StaffClefPerStaffTests
     {
         var p = Positions("staff melody  staff treble_8 melody");
         Assert.Equal(p[0], p[1]);
+    }
+
+    [Fact]
+    public void AChangeToTheOtherStaffsClef_IsDrawnWhereItChangesSomething()
+    {
+        // `clef bass` in bar 2 changes nothing on the bass staff and everything on the treble
+        // one: the treble staff draws it, the bass staff does not.
+        var tree = SyntaxTree.Parse("part melody { clef treble }\nsection A { melody { c'4 d e f | clef bass c,4 d e f | } }\n"
+            + "form { ~A }\nscore { staff bass melody  staff melody }\n");
+        var staves = SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree)).EnumerateStaves().ToArray();
+        int Changes(int s) => staves[s].Staff.Voices[0].Measures.SelectMany(m => m.Items).OfType<ClefChangeItem>().Count();
+        Assert.Equal(0, Changes(0));
+        Assert.Equal(1, Changes(1));
     }
 
     [Fact]

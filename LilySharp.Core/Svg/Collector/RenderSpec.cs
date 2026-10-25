@@ -425,6 +425,51 @@ public sealed record RenderSpec(
         return null;
     }
 
+    /// <summary>
+    /// The clef each binding of <see cref="GetVoiceBindings"/> (same order) places its part's
+    /// notes under: a plain staff its own written clef, or — <c>Clef</c> null — the part's own;
+    /// a condensed or combined staff its one clef. <c>Decides</c> false (tab, ossia, rows):
+    /// <see cref="WrittenClefOf"/>, as every binding read before.
+    /// </summary>
+    /// <remarks>
+    /// One part on two staves under two clefs (<c>staff melody</c>, <c>staff bass melody</c>)
+    /// is collected once per staff, and each collection used to take the clef the FIRST staff
+    /// that writes one names: the treble staff's notes were placed under the bass clef, its C5
+    /// drawn two octaves up, and a `clef` change that is no change under the bass clef was
+    /// dropped from the treble staff too (owner's reports 2026-10-25).
+    /// </remarks>
+    public List<(bool Decides, ClefType? Clef)> GetBindingClefs()
+    {
+        var clefs = new List<(bool, ClefType?)>();
+        void Add(RenderItemSpec item)
+        {
+            switch (item)
+            {
+                case SingleStaffSpec single:
+                    clefs.Add((true, single.Staff.WrittenClef));
+                    break;
+                case GrandStaffRenderSpec grand:
+                    foreach (var member in grand.GrandStaff.Members)
+                        Add(member);
+                    break;
+                case CondensedStaffSpec condensed:
+                    foreach (var _ in condensed.PartNames)
+                        clefs.Add((true, condensed.Clef));
+                    break;
+                case CombinedStaffSpec combined:
+                    foreach (var _ in combined.PartNames)
+                        clefs.Add((true, combined.Clef));
+                    break;
+                case TabStaffSpec or OssiaStaffSpec or ChordRowSpec or LyricsRowSpec:
+                    clefs.Add((false, null));
+                    break;
+            }
+        }
+        foreach (var item in OrderedItems())
+            Add(item);
+        return clefs;
+    }
+
     /// <summary>Whether this render contains a grand staff.</summary>
     public bool HasGrandStaff => Items.Any(i => i is GrandStaffRenderSpec);
 
