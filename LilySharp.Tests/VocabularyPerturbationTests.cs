@@ -566,9 +566,12 @@ public class VocabularyPerturbationTests
     /// the first page is justified because it is not the last.
     /// </summary>
     /// <remarks>See <see cref="FilledPageBook"/> for why a one-page fixture can say nothing
-    /// about any of them.</remarks>
+    /// about any of them. ⚠️ <c>bottomMargin</c> joined them on 2026-10-25: a ragged lone page
+    /// used to be cut a bottom margin under its music, and is the whole paper since (the cut is
+    /// the PNG's alone, LayoutOptions.CropLonePage) — on it the margin moves nothing, as in
+    /// LilyPond.</remarks>
     private static readonly string[] PaperKeysThatNeedAJustifiedPage =
-        ["topSystemSpacing", "lastBottomSpacing", "minSystemsPerPage"];
+        ["topSystemSpacing", "lastBottomSpacing", "minSystemsPerPage", "bottomMargin"];
 
     /// <summary>
     /// The keys that want a line which is NOT stretched — asked on <see cref="PaperBook"/> with

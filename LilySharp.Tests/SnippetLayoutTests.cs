@@ -73,7 +73,8 @@ public sealed class SnippetLayoutTests
     public void OneSystem_IsCroppedToItsMusic_PlusTheMargins()
     {
         var (score, snippet) = LayoutOf(TwoBars, LayoutOptions.Snippet);
-        var (_, page) = LayoutOf(TwoBars, LayoutOptions.Default);
+        // On paper the page is cut under the music only for the PNG (CropLonePage, 2026-10-25).
+        var (_, page) = LayoutOf(TwoBars, LayoutOptions.Default with { CropLonePage = true });
 
         Assert.Single(snippet.Pages);
         Assert.Single(snippet.AllSystems);
@@ -87,6 +88,8 @@ public sealed class SnippetLayoutTests
         Assert.Equal(expected, snippet.Width, 9);
         // The height is content-driven in both: the snippet changes nothing vertically.
         Assert.Equal(page.Height, snippet.Height, 9);
+        // The preview, the PDF and the SVG keep the paper.
+        Assert.Equal(LayoutOptions.Default.PageHeight, LayoutOf(TwoBars, LayoutOptions.Default).Layout.Height, 9);
     }
 
     /// <summary>

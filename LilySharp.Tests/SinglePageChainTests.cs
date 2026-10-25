@@ -30,12 +30,12 @@ namespace LilySharp.Tests;
 /// </summary>
 public sealed class SinglePageChainTests
 {
-    private static ScoreLayout LayoutOfFile(string relative)
+    private static ScoreLayout LayoutOfFile(string relative, LayoutOptions? paper = null)
     {
         string path = System.IO.Path.Combine(CollectResumeTests.FindRepoRoot(), relative);
         var tree = SyntaxTree.Parse(System.IO.File.ReadAllText(path));
         var spec = RenderSpecParser.FindFirst(tree);
-        var score = SvgGenerator.CollectScore(tree, spec, LayoutOptions.Default);
+        var score = SvgGenerator.CollectScore(tree, spec, paper ?? LayoutOptions.Default);
         return new LayoutEngine(score.Paper).Layout(score);
     }
 
@@ -69,19 +69,22 @@ public sealed class SinglePageChainTests
     }
 
     /// <summary>
-    /// A lone page the chain had to compress keeps the paper (what the single-page loop handed
-    /// the chain before the fold); one at rest is cut to its music.
+    /// Under the PNG's crop (LayoutOptions.CropLonePage) a lone page the chain had to compress
+    /// keeps the paper (what the single-page loop handed the chain before the fold); one at
+    /// rest is cut to its music. Without it — the preview, the PDF, the SVG (owner's decision
+    /// 2026-10-25) — every lone page is the paper.
     /// </summary>
     [Theory]
     [InlineData("LilySharp.Tests/Fixtures/test/feature-tour.lys", false)]
     [InlineData("LilySharp.Tests/Fixtures/test/lyrics.lys", true)]
-    public void ALonePage_IsCutToItsMusic_OnlyAtRest(string book, bool cut)
+    public void ALonePage_IsCutToItsMusic_OnlyAtRest_AndOnlyForThePng(string book, bool cut)
     {
-        var page = Assert.Single(LayoutOfFile(book).Pages);
+        var page = Assert.Single(LayoutOfFile(book, LayoutOptions.Default with { CropLonePage = true }).Pages);
         Assert.Equal(cut, page.Force >= 0);
         if (cut)
             Assert.True(page.Height < LayoutOptions.Default.PageHeight, $"cut to {page.Height}");
         else
             Assert.Equal(LayoutOptions.Default.PageHeight, page.Height, 9);
+        Assert.Equal(LayoutOptions.Default.PageHeight, Assert.Single(LayoutOfFile(book).Pages).Height, 9);
     }
 }

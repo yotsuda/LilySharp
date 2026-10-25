@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+using LilySharp.Core.Svg.Layout;
 using LilySharp.Tests.LpFidelity;
 using Xunit;
 
@@ -85,8 +86,11 @@ public class LooseLineExtentScopeTests
     [InlineData("@cresc")]  // a hairpin — its 1.5, the branch gated on there being no dynamics
     public void AnUpperStaffAnnotationDoesNotExtendTheRoomBelowTheLastStaff(string mark)
     {
-        var bare = RenderedGeometry.Render(TwoStaffScore(""));
-        var annotated = RenderedGeometry.Render(TwoStaffScore(mark));
+        // On the page cut under its music (the PNG's, CropLonePage since 2026-10-25): the room
+        // under the last staff is then the system's own, not the rest of the paper.
+        var cut = LayoutOptions.Default with { CropLonePage = true };
+        var bare = RenderedGeometry.Render(TwoStaffScore(""), cut);
+        var annotated = RenderedGeometry.Render(TwoStaffScore(mark), cut);
 
         // THE CLAIM: nothing hangs below the LOWER staff in either score, so the page leaves
         // the same room under it. An estimate that charges an upper-staff annotation to the

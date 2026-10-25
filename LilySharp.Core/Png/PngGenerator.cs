@@ -59,7 +59,7 @@ public static class PngGenerator
         // hand-copied subset of SvgGenerator.CollectScore and silently missed
         // its newer behaviours (score transpose, `with chords` attachment) —
         // the PNG of a score could differ from its SVG.
-        var (multiScore, layout) = SvgGenerator.CollectAndLayout(tree, renderSpec, SvgGenerator.PaperBaseOf(false, options.EditorMarks), options.PaperOverrides);
+        var (multiScore, layout) = SvgGenerator.CollectAndLayout(tree, renderSpec, SvgGenerator.PaperBaseOf(false, options.EditorMarks, cropLonePage: true), options.PaperOverrides);
         LayoutWarnings.Report(layout, multiScore.Paper, options.LayoutWarning);
 
         var fontDir = options.FontDirectory ?? FontLocator.Find();
@@ -100,7 +100,7 @@ public static class PngGenerator
     {
         options ??= PngRenderOptions.Default;
 
-        var (multiScore, layout) = SvgGenerator.CollectAndLayout(tree, renderSpec, SvgGenerator.PaperBaseOf(false, options.EditorMarks), options.PaperOverrides);
+        var (multiScore, layout) = SvgGenerator.CollectAndLayout(tree, renderSpec, SvgGenerator.PaperBaseOf(false, options.EditorMarks, cropLonePage: true), options.PaperOverrides);
         LayoutWarnings.Report(layout, multiScore.Paper, options.LayoutWarning);
 
         var fontDir = options.FontDirectory ?? FontLocator.Find();

@@ -321,8 +321,18 @@ public class TodoCalloutTests
         var tree = SyntaxTree.Parse(book);
         string preview = SvgGenerator.Generate(tree, SvgRenderOptions.Preview());
         string export = SvgGenerator.Generate(tree, SvgRenderOptions.Default);
-        static double PageHeight(string svg) => double.Parse(Regex.Match(svg, "viewBox=\"0 0 [0-9.]+ ([0-9.]+)\"").Groups[1].Value);
-        Assert.True(PageHeight(preview) > PageHeight(export) + 4, $"preview page {PageHeight(preview)}, export page {PageHeight(export)}");
+        // Both pages are the paper since 2026-10-25 (the crop is the PNG's alone), so the band
+        // shows as the system standing lower on it: its distance from the page's top, on the
+        // preview's paper (TodoBands) and the export's.
+        static double SystemTop(SyntaxTree t, bool preview)
+        {
+            var (_, layout) = SvgGenerator.CollectAndLayout(t, RenderSpecParser.Choose(RenderSpecParser.FindAll(t), null),
+                SvgGenerator.PaperBaseOf(false, preview));
+            var page = layout.Pages[0];
+            return page.Height - page.Systems[0].Y;
+        }
+        Assert.True(SystemTop(tree, true) > SystemTop(tree, false) + 4,
+            $"preview system at {SystemTop(tree, true)}, export system at {SystemTop(tree, false)}");
         var boxes = MemoBoxes(preview);
         Assert.Equal(6, boxes.Count);
         CheckLeadersOf(preview, 6);
@@ -345,7 +355,7 @@ public class TodoCalloutTests
         var fits = SyntaxTree.Parse("title \"Room above\"\noctave absolute\npart m { clef treble }\nsection A { m { c'4 d'4 e'4 f'4 | e'4@todo(\"memo\") a'4 b'4 c''4 | } }\nform { A }\nscore { staff m }\n");
         string fitsPreview = SvgGenerator.Generate(fits, SvgRenderOptions.Preview());
         Assert.Single(Leaders(fitsPreview));
-        Assert.Equal(PageHeight(SvgGenerator.Generate(fits, SvgRenderOptions.Default)), PageHeight(fitsPreview));
+        Assert.Equal(SystemTop(fits, false), SystemTop(fits, true), 9);
     }
 
     [Theory]

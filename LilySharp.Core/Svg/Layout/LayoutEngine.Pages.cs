@@ -420,7 +420,10 @@ internal sealed partial class LayoutEngine
         // one-page breaking cuts too, but under its last-bottom spacing
         // (lily/one-page-breaking.cc:125-176 One_page_breaking::solve); this cut is the margin's.
         // See the page.height note in LpGeometryProbes (−109.468268, not going to close).
-        if (pages.Length != 1 || !(pages[0].Force >= 0))
+        // On paper it is the PNG export's alone since 2026-10-25 (LayoutOptions.CropLonePage):
+        // the preview, the PDF and the SVG keep the paper, as LilyPond does. A content-driven
+        // page (no paper height) is always cut — its 1e6 height is no paper.
+        if (pages.Length != 1 || !(pages[0].Force >= 0) || (_options.PageHeight > 0 && !_options.CropLonePage))
             return (pages, placed);
         var onPaper = pages[0];
         int last = onPaper.Systems.Length - 1;

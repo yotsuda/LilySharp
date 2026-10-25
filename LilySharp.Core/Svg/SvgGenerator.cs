@@ -74,9 +74,11 @@ public static class SvgGenerator
     /// for a Markdown fence, else the defaults — and, for the interactive preview, with the
     /// memos' rows reserved (<see cref="LayoutOptions.TodoBands"/>). Shared with
     /// <see cref="IncrementalCompiler"/>, whose collects must start from the same paper.</summary>
-    internal static LayoutOptions PaperBaseOf(bool snippet, bool interactive)
+    internal static LayoutOptions PaperBaseOf(bool snippet, bool interactive, bool cropLonePage = false)
     {
         var paper = snippet ? LayoutOptions.Snippet : LayoutOptions.Default;
+        if (cropLonePage)
+            paper = paper with { CropLonePage = true };
         return interactive ? paper with { TodoBands = true } : paper;
     }
 

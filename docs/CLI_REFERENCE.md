@@ -179,6 +179,10 @@ lysc png [options] <input.lys>
 A score of more than one page writes `NAME-page1.png`, `NAME-page2.png`, … (LilyPond's
 own naming), where `NAME` is the score's fixed name.
 
+A score that fits one page is cut a bottom margin under its last system — a picture for a web
+page wants no empty paper under the music. The SVG and the PDF keep the whole paper; `--crop`
+cuts further, to the ink on every side.
+
 **Scale Values:**
 | Scale | DPI | Use Case |
 |-------|-----|----------|

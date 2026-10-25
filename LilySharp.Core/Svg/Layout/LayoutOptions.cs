@@ -341,6 +341,16 @@ internal sealed record LayoutOptions
     public bool CropWidth { get; init; } = false;
 
     /// <summary>
+    /// A score that fits one page at rest comes out on a page cut under its last system
+    /// (LayoutEngine.CreatePages' CROP) instead of the whole paper. Only the PNG export asks
+    /// for it — a picture for a web page wants no empty paper under the music — and the boxes
+    /// export drawn over those PNGs (owner's decision 2026-10-25: the preview, the PDF and the
+    /// SVG show the paper, as LilyPond does). A content-driven page (<see cref="PageHeight"/>
+    /// = 0, the snippet) is cut to its music whatever this says.
+    /// </summary>
+    public bool CropLonePage { get; init; } = false;
+
+    /// <summary>
     /// The layout of a music snippet embedded in a document (a Markdown lys fence): ONE
     /// page whose height is the music's, no automatic page breaks, <c>pageBreak</c> a
     /// forced line break and nothing more, the systems stacked at their springs' natural

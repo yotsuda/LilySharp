@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="302.3" viewBox="0 0 119.50 30.23" font-family="TeX Gyre Schola, serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="1690.1" viewBox="0 0 119.50 169.01" font-family="TeX Gyre Schola, serif">
 <style>
   @font-face { font-family: 'Emmentaler'; src: local('Emmentaler'); }
   @font-face { font-family: 'Emmentaler-14'; src: local('Emmentaler-14'); }
   .music { font-family: 'Emmentaler', serif; }
 </style>
-  <rect x="0" y="0" width="119.50" height="30.23" fill="#FFFFFF"/>
+  <rect x="0" y="0" width="119.50" height="169.01" fill="#FFFFFF"/>
   <g transform="translate(8.54,0.00) scale(1.0000,1.0000)">
   <line x1="8.56" y1="10.23" x2="8.56" y2="23.58" stroke="#000000" stroke-width="0.160"/>
   <line x1="8.59" y1="10.28" x2="24.06" y2="10.28" stroke="#000000" stroke-width="0.100"/>

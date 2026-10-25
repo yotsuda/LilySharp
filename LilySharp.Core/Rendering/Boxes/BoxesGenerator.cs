@@ -51,7 +51,11 @@ public static class BoxesGenerator
         Semantics.PaperOverrides? settings = null, Action<string>? layoutWarning = null,
         string? fontDirectory = null)
     {
-        var (score, layout) = SvgGenerator.CollectAndLayout(tree, renderSpec, settings: settings);
+        // On the PNG's paper — a lone page cut under its music (LayoutOptions.CropLonePage) —
+        // since the boxes are read with those pictures: the symbols stand where the SVG's do
+        // (origin top-left), and the page is the PNG's height.
+        var (score, layout) = SvgGenerator.CollectAndLayout(tree, renderSpec,
+            SvgGenerator.PaperBaseOf(false, false, cropLonePage: true), settings);
         LayoutWarnings.Report(layout, score.Paper, layoutWarning);
         using var doc = new BoxesDocumentContext(fontDirectory ?? FontLocator.Find());
         using (var fallbacks = MusicFallbackLog.Open())

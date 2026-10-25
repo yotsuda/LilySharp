@@ -76,7 +76,8 @@ public class LooseBlockCropTests
         var tree = SyntaxTree.Parse("octave absolute\n" + body);
         Assert.False(tree.HasErrors,
             string.Join(", ", tree.Diagnostics.Select(d => d.Message)));
-        return new LayoutEngine().Layout(
+        // The crop these tests measure is the PNG's alone since 2026-10-25 (CropLonePage).
+        return new LayoutEngine(LayoutOptions.Default with { CropLonePage = true }).Layout(
             SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree)));
     }
 

@@ -76,7 +76,9 @@ public class PreliminaryPassSeedTests
         var tree = SyntaxTree.Parse("octave absolute\n" + body);
         Assert.False(tree.HasErrors,
             string.Join(", ", tree.Diagnostics.Select(d => d.Message)));
-        return new LayoutEngine().Layout(
+        // The page cut under its music (the PNG's, LayoutOptions.CropLonePage): its height is
+        // what these tests read the reservation by.
+        return new LayoutEngine(LayoutOptions.Default with { CropLonePage = true }).Layout(
             SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree)));
     }
 

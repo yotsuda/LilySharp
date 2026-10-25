@@ -8,6 +8,14 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Engraving
 
+- **A score that fits one page keeps the whole paper — except in a PNG.** Lily# used to cut a
+  lone page under its music in every output (LILYSHARP-OWN; LilyPond always engraves onto the
+  paper), so an eight-bar song came out as an A4-wide strip. The SVG, the PDF and the preview
+  now show the paper, as LilyPond does; the PNG — a picture for a web page — is still cut under
+  the music, and `lysc boxes`, read with those PNGs, keeps their page. Nothing moves on the page:
+  the SVG snapshots of 247 one-page books change in their height and the page rectangle alone.
+- **The preview's pages stand apart**: the interactive SVG leaves a 2.5-staff-space gap between
+  two pages, each page its own white sheet (exports keep their pages edge to edge).
 - **A slur no longer keeps a tab's notes on one string; a tie still does** (the owner's
   decision, reversing 2026-09-14): a sung line's slur is a melisma, not a legato on the
   instrument — さくらさくら's slurred E–C eighths had slid four frets up one string. Both
