@@ -99,13 +99,12 @@ Opt-in and **off by default** (it calls the model as you type): enable
   and the candidate, with an After/Before toggle (Tab in the panel). The original is
   rendered once per transaction (`lilysharp/renderText` on the snapshot) and reused
   across iterations.
-- **BYO-key.** `src/modelClient.ts` abstracts the model behind a `ChatClient` with
-  three backends — vscode.lm (Copilot), Anthropic, and OpenAI (direct `fetch`). The
-  provider is chosen by `lilysharp.ai.provider` (`auto` prefers Copilot, else a stored
-  key); the key is entered via the "Lily#: Set AI API Key…" command and kept in
-  SecretStorage (never in settings). `lilysharp.ai.model` overrides the BYO model id.
-  Both the transform and the ghost completion use this resolver; iteration and
-  self-repair are provider-agnostic.
+- **Models.** `src/modelClient.ts` abstracts the model behind a `ChatClient` over VS Code's
+  language-model API (vscode.lm: Copilot's models, and any other vendor's VS Code offers).
+  The direct Anthropic / OpenAI backends with a stored key (`lilysharp.ai.provider`, "Set AI
+  API Key…") are gone. Each feature has its own pick — `lilysharp.ai.askModel` (Ask AI),
+  `ai.ghostModel`, `ai.omrFixModel` — chosen with "Lily#: Select AI Model…", empty meaning an
+  automatic choice; iteration and self-repair do not depend on the model.
 - **Iteration & soft-lock** were delivered in M1 (the Iterate button continues the
   conversation; a decoration marked the range while the model thought — replaced by a
   progress notification on 2026-10-25, see above).

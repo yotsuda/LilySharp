@@ -75,6 +75,9 @@ All notable changes to the Lily# VS Code extension are documented here.
   built-in one the first time — to make it yours (a `paper { size letter }`, your name as the
   composer, the parts you always write); **Lily#: Reset New Score Template** goes back.
 - Descriptions name today's commands: *Ask AI…* (it was *Transform Selection*), *Accept All*.
+- **`lilysharp.ai.model` is now `lilysharp.ai.askModel`**, named for Ask AI as its two neighbours
+  are for theirs; the old key is no longer read — pick the model again with *Lily#: Select AI
+  Model…*, whose first entry is now *Ask AI… (Ctrl+I)*.
 
 ### The preview shows its pages as sheets
 

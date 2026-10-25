@@ -110,11 +110,12 @@ Lily# の AI 機能は **VS Code の言語モデル API（`vscode.lm`）**を使
 
 | 設定キー | 既定 | 説明 |
 |---|---|---|
-| `lilysharp.ai.provider` | `auto` | 使用モデル。`auto`＝Copilot 優先→キー。他に `copilot` / `anthropic` / `openai`。 |
-| `lilysharp.ai.model` | `""` | BYO キー時のモデル ID（例 `claude-sonnet-5`, `gpt-4.1`）。空で既定。Copilot では無視。 |
+| `lilysharp.ai.askModel` | `""` | Ask AI…（Ctrl+I）が使うモデル。空＝自動（いちばん大きいモデル）。「Lily#: Select AI Model…」で選ぶ。 |
+| `lilysharp.ai.ghostModel` | `""` | ゴースト補完が使うモデル。空＝自動（小さく速いモデル）。 |
+| `lilysharp.ai.omrFixModel` | `""` | 「Fix OMR Marks with AI…」が使うモデル。空＝自動。 |
 | `lilysharp.ai.ghostCompletion` | `false` | 入力中の「次の小節」ゴースト補完のオン/オフ。 |
 
-（プレビュー関連 `lilysharp.preview.*` などは従来どおり。）
+モデルは VS Code の言語モデル（GitHub Copilot など）から選びます。
 
 ---
 
@@ -122,9 +123,8 @@ Lily# の AI 機能は **VS Code の言語モデル API（`vscode.lm`）**を使
 
 | コマンド | 内容 | 起動 |
 |---|---|---|
-| `lilysharp.aiTransform` | 選択範囲を AI で変形 | `Ctrl+I` / `Cmd+I`、右クリック、パレット |
-| `lilysharp.setAiKey` | Anthropic/OpenAI の API キーを保存 | パレット「Lily#: Set AI API Key…」 |
-| `lilysharp.clearAiKey` | 保存した API キーを削除 | パレット「Lily#: Clear AI API Keys」 |
+| `lilysharp.aiTransform` | Ask AI…：選択範囲（無ければ曲全体）について AI に頼む | `Ctrl+I` / `Cmd+I`、右クリック、プレビューの ✨ Ask AI…、パレット |
+| `lilysharp.selectAiModel` | 機能ごとに使うモデルを選ぶ | パレット「Lily#: Select AI Model…」 |
 
 ---
 
@@ -141,7 +141,7 @@ Lily# の AI 機能は **VS Code の言語モデル API（`vscode.lm`）**を使
 ## トラブルシューティング
 
 - **「no language model available」と出る**
-  Copilot にサインインしていない／未導入の可能性。Copilot を有効にするか、**「Lily#: Set AI API Key…」** で API キーを設定してください。ダイアログから直接キー設定に進めます。
+  Copilot にサインインしていない／未導入の可能性。表示される **Sign in to Copilot** からサインインするか、**Other ways…** で VS Code の言語モデルの設定を開いてください。
 - **`Ctrl+I` が反応しない**
   `.lys` ファイルにフォーカスがあるか確認（`editorLangId == lilysharp` のときのみ有効）。
 - **ゴースト補完が出ない**
@@ -150,5 +150,5 @@ Lily# の AI 機能は **VS Code の言語モデル API（`vscode.lm`）**を使
   指示が曖昧か、要求が現在の記法で表現しにくい可能性。言い回しを変えるか、範囲を狭めて再試行してください（壊れた案は決して適用されません）。
 - **プレビューに変更が反映されない / 機能が古い**
   拡張にバンドルされた言語サーバが古い可能性。最新の LSP を `editors/vscode/server/` に配置し直してください（`npm run deploy-server` 相当）。
-- **BYO キーでエラーになる**
-  出力チャネル「Lily# Extension」に HTTP ステータス等が出ます。モデル ID（`lilysharp.ai.model`）とキーを確認してください。
+- **選んだモデルの答えが空、または質が低い**
+  「Lily#: Select AI Model…」で別のモデルを選ぶか、Automatic に戻してください。小さなモデル（mini、nano、lite など）は Lily# をうまく書けません。

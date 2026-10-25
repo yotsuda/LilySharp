@@ -222,7 +222,7 @@
         "title": "AI",
         "order": 4,
         "properties": {
-          "lilysharp.ai.model": {
+          "lilysharp.ai.askModel": {
             "type": "string",
             "default": "",
             "markdownDescription": "The language model *Ask AI…* (Ctrl+I) uses: a model id or family from **Lily#: Select AI Model…**. Empty chooses automatically — the largest model on offer, passing over the small ones (mini, nano, lite, …), which write poor Lily#. Ghost Completion has its own: `#lilysharp.ai.ghostModel#`."

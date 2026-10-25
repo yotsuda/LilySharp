@@ -49,7 +49,7 @@ export interface ChatClient {
  * and then, unless `quiet` (ghost completion), offers the way to one (offerModelSetup) before
  * anything runs.
  */
-export async function resolveChatClient(quiet: boolean, use: ModelUse = 'transform'): Promise<ChatClient | undefined> {
+export async function resolveChatClient(quiet: boolean, use: ModelUse = 'ask'): Promise<ChatClient | undefined> {
     const model = hasChatModel(await availableModels()) ? await selectLmModel(use) : undefined;
     if (model) {
         return lmClient(model);
@@ -70,9 +70,9 @@ export async function resolveChatClient(quiet: boolean, use: ModelUse = 'transfo
  * and one that reads notation, so it wants the strong model as the transform does, under its own
  * setting: a person may well pick a faster model for a batch of twenty-five bars.
  */
-export type ModelUse = 'transform' | 'ghost' | 'omrFix';
+export type ModelUse = 'ask' | 'ghost' | 'omrFix';
 
-const SETTING: Record<ModelUse, string> = { transform: 'ai.model', ghost: 'ai.ghostModel', omrFix: 'ai.omrFixModel' };
+const SETTING: Record<ModelUse, string> = { ask: 'ai.askModel', ghost: 'ai.ghostModel', omrFix: 'ai.omrFixModel' };
 
 async function selectLmModel(use: ModelUse): Promise<vscode.LanguageModelChat | undefined> {
     const models = await availableModels();
@@ -115,7 +115,7 @@ export async function availableModels(): Promise<vscode.LanguageModelChat[]> {
  * the other way round: the small ones are the ones that answer before VS Code gives up on
  * the suggestion. Both are guesses from the name; "Lily#: Select AI Model" is the way to be sure.
  */
-export function autoPick(models: readonly vscode.LanguageModelChat[], use: ModelUse = 'transform'): vscode.LanguageModelChat | undefined {
+export function autoPick(models: readonly vscode.LanguageModelChat[], use: ModelUse = 'ask'): vscode.LanguageModelChat | undefined {
     // aiTransformCore.pickModel: Copilot's chat models first, never a door with no family
     // (copilotcli answered every bar with nothing, owner's report 2026-10-23).
     return pickModel(models, use === 'ghost');
@@ -123,7 +123,7 @@ export function autoPick(models: readonly vscode.LanguageModelChat[], use: Model
 
 /**
  * "Lily#: Select AI Model" — first which feature, then the models VS Code offers; the pick is
- * saved to `lilysharp.ai.model` (Ask AI), `lilysharp.ai.ghostModel` (Ghost
+ * saved to `lilysharp.ai.askModel` (Ask AI), `lilysharp.ai.ghostModel` (Ghost
  * Completion) or `lilysharp.ai.omrFixModel` (Fix OMR marks).
  */
 export async function pickAiModel(): Promise<void> {
@@ -138,7 +138,7 @@ export async function pickAiModel(): Promise<void> {
     const shown = (use: ModelUse) => cfg.get<string>(SETTING[use], '').trim() || `Automatic (${autoPick(models, use)?.name ?? 'none'})`;
     type UseItem = vscode.QuickPickItem & { use: ModelUse };
     const which = await vscode.window.showQuickPick<UseItem>([
-        { label: 'Ask AI (Ctrl+I)', description: shown('transform'), detail: 'One request at a time: a strong model is worth waiting for.', use: 'transform' },
+        { label: 'Ask AI… (Ctrl+I)', description: shown('ask'), detail: 'Changes the music as you ask, one request at a time: a strong model is worth waiting for.', use: 'ask' },
         { label: 'Ghost Completion', description: shown('ghost'), detail: 'Answers as you type: a fast model, or the suggestion is cancelled before it shows.', use: 'ghost' },
         { label: 'Fix OMR marks with AI', description: shown('omrFix'), detail: 'One request a bar, on request only: a strong model reads the notation best; a faster one shortens a long batch.', use: 'omrFix' },
     ], { title: 'Lily# — choose the AI model for…' });
