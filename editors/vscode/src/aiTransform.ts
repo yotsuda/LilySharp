@@ -37,8 +37,8 @@ import * as path from 'path';
 import type { LanguageClient } from 'vscode-languageclient/node';
 import { ChatClient, ChatMessage, resolveChatClient } from './modelClient';
 import {
-    CandidateEdit as CoreCandidateEdit, MarkInSelection, MarkReadings, SEL_CLOSE, SEL_OPEN, cleanCandidate, marksContext,
-    octaveOutliers, startTimeAt, toCandidateEdit,
+    CandidateEdit as CoreCandidateEdit, ChangedSpan, MarkInSelection, MarkReadings, SEL_CLOSE, SEL_OPEN, cleanCandidate,
+    documentBudget, documentContext, estimateTokens, isProblem, marksContext, octaveOutliers, startTimeAt, toCandidateEdit,
 } from './aiTransformCore';
 import { markFactsOf, sideFileOf } from './omrScanCore';
 import { textFontFaceCss, textFontsRoot } from './scoreFonts';
@@ -184,14 +184,35 @@ async function runAiTransform(deps: AiTransformDeps, wholeScore = false, selecte
         uri: doc.uri,
     };
 
+    // Resolve the model first (the user's Copilot models via vscode.lm): its input limit decides
+    // whether the file goes to it whole, and the input box says which.
+    const chat = await resolveChatClient(false);
+    if (!chat) {
+        return;
+    }
+    const grammar = await loadGrammar(deps);
+    const budget = documentBudget(chat.maxInputTokens, estimateTokens(systemPrompt(grammar)));
+    const shown = documentContext(snapshot, budget, whole);
+    if (!shown.complete) {
+        deps.log(`AI transform: the file (~${estimateTokens(snapshot.origFullText)} tokens) is over ${chat.label}'s `
+            + `budget (${budget}); it is sent in part.`);
+    }
+
+    // A selection points the AI at a place but does not fence it in (owner's requests
+    // 2026-10-25): the box leads with what was selected, as "Nothing is selected" leads the
+    // whole-score one, then says the whole score stays open to change and nothing lands unseen —
+    // or, for a file too long for the model, what part of it the AI reads.
+    const scope = shown.complete
+        ? 'the whole score is open to change'
+        : 'the file is too long for this model to read whole: the AI reads its head and the bars around the selection';
     const instruction = await vscode.window.showInputBox({
         title: whole ? 'Lily# — transform the whole score with AI' : 'Lily# — transform selection with AI',
-        // A selection points the AI at a place but does not fence it in (owner's requests
-        // 2026-10-25): it leads with what was selected, as "Nothing is selected" leads the
-        // whole-score box, then says the whole score stays open to change and nothing lands unseen.
         prompt: whole
-            ? 'Nothing is selected, so the AI works on the whole file. Describe the change (natural language)'
-            : `${what} — a hint of where to look, but the whole score is open to change; `
+            ? (shown.complete
+                ? 'Nothing is selected, so the AI works on the whole file. Describe the change (natural language)'
+                : 'Nothing is selected, but the file is too long for this model to read whole: the AI reads its '
+                  + 'beginning. Describe the change (natural language)')
+            : `${what} — a hint of where to look, but ${scope}; `
               + 'every change is shown before it is applied. Describe the change (natural language)',
         placeHolder: nextPlaceholder(),
         ignoreFocusOut: true,
@@ -200,14 +221,8 @@ async function runAiTransform(deps: AiTransformDeps, wholeScore = false, selecte
         return; // cancelled
     }
 
-    // Resolve the model: the user's Copilot models (vscode.lm) or a BYO key.
-    const chat = await resolveChatClient(false);
-    if (!chat) {
-        return;
-    }
-
     try {
-        await drive(deps, client, chat, snapshot, instruction, whole);
+        await drive(deps, client, chat, snapshot, instruction, whole, grammar, shown);
     } catch (err: any) {
         vscode.window.showErrorMessage(`Lily#: AI transform failed: ${err?.message ?? err}`);
     }
@@ -241,11 +256,12 @@ async function drive(
     snapshot: Snapshot,
     instruction: string,
     whole: boolean,
+    grammar: string,
+    shown: { text: string; complete: boolean },
 ): Promise<void> {
     const title = whole ? 'Lily#: AI transform — the whole score' : 'Lily#: AI transform';
     const prepared = await working(title, async (progress, token) => {
         progress.report({ message: `asking ${chat.label}…` });
-        const grammar = await loadGrammar(deps);
         // Quality log (§M5) — local only, no telemetry.
         deps.log(`AI transform: "${instruction}" via ${chat.label}`);
 
@@ -263,19 +279,19 @@ async function drive(
 
         // Render the untouched score once for the before/after comparison (§M5).
         const renderBefore = await client.sendRequest<SvgResponse>('lilysharp/renderText', { Text: snapshot.origFullText });
-        return token.isCancellationRequested ? null : { grammar, facts, marks, baseline, renderBefore };
+        return token.isCancellationRequested ? null : { facts, marks, baseline, renderBefore };
     });
     if (!prepared) {
         return;
     }
-    const { grammar, facts, marks, baseline, renderBefore } = prepared;
+    const { facts, marks, baseline, renderBefore } = prepared;
     const baselineErrors = count(baseline, 'error');
     const baselineWarnings = baseline.filter(d => d.Severity === 'warning' && !MACHINE_WARNING.test(d.Message)).length;
 
     // Conversation seed.
     const messages: ChatMessage[] = [
         { role: 'system', content: systemPrompt(grammar) },
-        { role: 'user', content: taskPrompt(snapshot, facts, baseline, instruction, marks) },
+        { role: 'user', content: taskPrompt(snapshot, shown, whole, facts, baseline, instruction, marks) },
     ];
 
     let iterate = true;
@@ -305,9 +321,13 @@ async function drive(
                 const edit = toCandidateEdit(snapshot, raw);
                 if (edit === null) {
                     messages.push({ role: 'assistant', content: raw });
-                    messages.push({ role: 'user', content:
-                        'Your reply was empty. Return the replacement for the selection, or the whole file in '
-                        + '<file>…</file> — no commentary, no code fences.' });
+                    messages.push({ role: 'user', content: `Your reply was empty. ${replyForm(whole)} — no commentary, no code fences.` });
+                    continue;
+                }
+                if (isProblem(edit)) {
+                    deps.log(`AI transform: edits not applied — ${edit.problem}`);
+                    messages.push({ role: 'assistant', content: raw });
+                    messages.push({ role: 'user', content: `${edit.problem}\nReply again, all edits — same output rules.` });
                     continue;
                 }
                 // A reply that changes nothing is not a transform. The owner accepted one such
@@ -320,7 +340,7 @@ async function drive(
                     messages.push({ role: 'user', content:
                         'That reply is identical to the file as it stands — it changes nothing. Carry out the '
                         + 'instruction. If it needs changes outside the selection (a new part, a score row, a new '
-                        + 'declaration), return the WHOLE file in <file>…</file>.' });
+                        + 'declaration), reply with <edit> blocks.' });
                     continue;
                 }
                 unchanged = false;
@@ -328,9 +348,9 @@ async function drive(
                 progress.report({ message: 'validating candidate…' });
                 const reconstructed = spliceCandidate(edit.snap, edit.text);
                 const check = await client.sendRequest<CheckCandidateResponse>('lilysharp/checkCandidate', { Text: reconstructed });
-                const badness = candidateBadness(check, edit.snap, edit.text, baselineErrors);
+                const badness = candidateBadness(check, edit.spans, baselineErrors);
                 const newWarnings = badness.length === 0
-                    ? addedWarnings(check, edit.snap, edit.text, baselineWarnings)
+                    ? addedWarnings(check, edit.spans, baselineWarnings)
                     : [];
 
                 if (badness.length === 0 && newWarnings.length === 0) {
@@ -339,10 +359,14 @@ async function drive(
                     // resolved pitches, not its diagnostics, that show one. Asked once per
                     // candidate: returning the same candidate again is the model confirming the
                     // register is what the instruction wants ("two octaves lower").
-                    const lo = edit.snap.startOffset;
-                    const outliers = edit.text === octaveAsked
-                        ? []
-                        : octaveOutliers(facts, await pitchesOf(client, reconstructed, lo, lo + edit.text.length));
+                    // Only the notes the candidate wrote: between two edits stands music it left alone.
+                    let written: ResolvedPitchFact[] = [];
+                    if (edit.text !== octaveAsked) {
+                        for (const s of edit.spans) {
+                            written = written.concat(await pitchesOf(client, reconstructed, s.afterLo, s.afterHi));
+                        }
+                    }
+                    const outliers = octaveOutliers(facts, written);
                     if (outliers.length > 0 && attempt < MAX_REPAIR_ATTEMPTS) {
                         octaveAsked = edit.text;
                         repairs = attempt + 1;
@@ -368,9 +392,10 @@ async function drive(
                 repairs = attempt + 1;
 
                 // Self-repair: feed the diagnostics back and try again.
+                // Edits are answered against the file as it stands, not on top of the failed ones.
                 const sameForm = edit.whole
-                    ? 'Return the corrected WHOLE file in <file>…</file>'
-                    : 'Return a corrected replacement for the selection (or the whole file in <file>…</file>)';
+                    ? 'Reply again with all the corrected edits, each <old> copied from the file as it stands'
+                    : 'Return a corrected replacement for the selection (or <edit> blocks)';
                 messages.push({ role: 'assistant', content: raw });
                 if (badness.length > 0) {
                     messages.push({ role: 'user', content:
@@ -415,25 +440,19 @@ async function drive(
                 deps.log(`AI transform: candidate valid after ${repairs} self-repair round(s).`);
             }
             if (candidate.whole) {
-                deps.log(`AI transform: the model rewrote the file (changed ${candidate.snap.startOffset}..${candidate.snap.endOffset} of the original).`);
+                deps.log(`AI transform: the model edited the file in ${candidate.spans.length} place(s) `
+                    + `(${candidate.spans.map(s => `${s.beforeLo}..${s.beforeHi}`).join(', ')} of the original).`);
             }
 
             // ----- Render the candidate score and decide on it (§3 [7]) -----
             progress.report({ message: 'rendering candidate…' });
             const reconstructed = spliceCandidate(candidate.snap, candidate.text);
             const renderAfter = await client.sendRequest<SvgResponse>('lilysharp/renderText', { Text: reconstructed });
-            // Source-offset spans of the change so the panel can highlight WHERE it
-            // landed: in the "after" score the candidate occupies [start, start+len);
-            // in the "before" score the replaced text occupied [start, end). For a whole-file
-            // reply these are the span the diff found, not the user's selection.
-            // The SVG carries data-pos (source offsets) for editor↔preview sync, so
-            // the webview lights up the notes whose data-pos falls in these spans.
-            const changed: ChangedSpans = {
-                afterLo: candidate.snap.startOffset,
-                afterHi: candidate.snap.startOffset + candidate.text.length,
-                beforeLo: candidate.snap.startOffset,
-                beforeHi: candidate.snap.endOffset,
-            };
+            // Source-offset spans of the change so the panel can highlight WHERE it landed —
+            // each edit's, in the "after" score and in the "before" one. The SVG carries
+            // data-pos (source offsets) for editor↔preview sync, so the webview lights up the
+            // notes whose data-pos falls in these spans.
+            const changed = candidate.spans;
             return token.isCancellationRequested ? null : { candidate, caption, renderAfter, changed };
         });
         if (!round) {
@@ -474,9 +493,11 @@ async function drive(
         if (decision === 'iterate' && refine !== undefined) {
             deps.log(`AI transform: iterate — "${refine}"`);
             messages.push({ role: 'assistant', content: candidate.reply });
+            // The file has not changed: a revision is answered against it as it stands, as the
+            // previous candidate was.
             messages.push({ role: 'user', content:
-                `Revise the previous candidate: ${refine}\nReturn the replacement for the selection, or the WHOLE `
-                + 'file in <file>…</file> when the change reaches outside it — same output rules.' });
+                `Revise the previous candidate: ${refine}\nThe file is still as it was before that candidate. `
+                + `${replyForm(whole)} — same output rules.` });
             instruction = refine; // caption reflects the latest ask
             continue; // back to generate
         }
@@ -505,8 +526,19 @@ function systemPrompt(grammar: string): string {
         '1. The change stays inside the selection: return ONLY the replacement text for the selected fragment.',
         '   Do not repeat the surrounding score.',
         '2. The change needs edits OUTSIDE the selection — a new part (its `part` line, its block in the',
-        '   section, its row in the score), a new declaration, a score row: return the WHOLE file, changed,',
-        '   between a line <file> and a line </file>. Keep every line you do not need to change exactly as it is.',
+        '   section, its row in the score), a new declaration, a score row — or nothing is selected: reply with',
+        '   one or more edit blocks and nothing else:',
+        '   <edit>',
+        '   <old>',
+        '   text copied EXACTLY from the file (every character, spaces included), found there exactly once',
+        '   </old>',
+        '   <new>',
+        '   what replaces it',
+        '   </new>',
+        '   </edit>',
+        '   Keep each <old> short — the lines that change, plus a neighbouring line when needed to make it',
+        '   unique. To insert, copy a line next to the place into <old> and repeat it in <new> with the',
+        '   insertion. Edits must not overlap. Never write the whole file out.',
         '   Do not reach for `voice { }` just to stay inside the selection when a separate part is asked for.',
         '- Either way: no explanations, no commentary, no Markdown, no code fences, no selection markers.',
         '- A reply identical to the input is wrong: carry out the instruction.',
@@ -518,34 +550,13 @@ function systemPrompt(grammar: string): string {
     ].join('\n');
 }
 
-/** Characters of the document shown around the selection (the whole file when it fits). */
-const DOC_CONTEXT_CHARS = 12000;
-const DOC_HEAD_CHARS = 2500;
 const MAX_DIAGNOSTICS = 20;
 
-/**
- * The file the selection sits in, with the selection marked. The model used to see the
- * selected text alone — no key, no meter, no part, no clef, no bars around it — and so
- * "harmonize a third above" or "make the bar fill its meter" was answered blind. A score is
- * short enough to send whole; a long one is sent as its head (where the key, meter and
- * parts are declared) and a window around the selection.
- */
-function documentContext(snapshot: Snapshot): string {
-    const t = snapshot.origFullText;
-    const marked = t.slice(0, snapshot.startOffset) + SEL_OPEN
-        + t.slice(snapshot.startOffset, snapshot.endOffset) + SEL_CLOSE + t.slice(snapshot.endOffset);
-    if (marked.length <= DOC_CONTEXT_CHARS) {
-        return marked;
-    }
-    const selStart = snapshot.startOffset;
-    const selEnd = snapshot.endOffset + SEL_OPEN.length + SEL_CLOSE.length;
-    const half = Math.max(0, Math.floor((DOC_CONTEXT_CHARS - DOC_HEAD_CHARS - (selEnd - selStart)) / 2));
-    const from = Math.max(DOC_HEAD_CHARS, selStart - half);
-    const to = Math.min(marked.length, selEnd + half);
-    return marked.slice(0, DOC_HEAD_CHARS)
-        + (from > DOC_HEAD_CHARS ? '\n… (lines omitted) …\n' : '')
-        + marked.slice(from, to)
-        + (to < marked.length ? '\n… (rest of the file omitted) …' : '');
+/** What to reply with, for the reminders: with nothing selected, edits only. */
+function replyForm(whole: boolean): string {
+    return whole
+        ? 'Reply with <edit> blocks'
+        : 'Return the replacement for the selection, or <edit> blocks when the change reaches outside it';
 }
 
 /**
@@ -553,13 +564,13 @@ function documentContext(snapshot: Snapshot): string {
  * touching the selection first. The instruction is often about one of them ("fix this bar")
  * and the model could not see any.
  */
-function diagnosticsContext(snapshot: Snapshot, baseline: CandidateDiagnostic[]): string | null {
+function diagnosticsContext(snapshot: Snapshot, baseline: CandidateDiagnostic[], whole: boolean): string | null {
     const shown = baseline.filter(d => d.Severity === 'error' || d.Severity === 'warning');
     if (shown.length === 0) {
         return null;
     }
-    const inSel = (d: CandidateDiagnostic) =>
-        d.Offset < snapshot.endOffset && d.Offset + Math.max(1, d.Length) > snapshot.startOffset;
+    const inSel = (d: CandidateDiagnostic) => !whole
+        && d.Offset < snapshot.endOffset && d.Offset + Math.max(1, d.Length) > snapshot.startOffset;
     const ordered = [...shown.filter(inSel), ...shown.filter(d => !inSel(d))];
     const lines = ordered.slice(0, MAX_DIAGNOSTICS).map(d =>
         `  - line ${d.Line + 1}${inSel(d) ? ' (in the selection)' : ''}: ${d.Severity}`
@@ -570,20 +581,34 @@ function diagnosticsContext(snapshot: Snapshot, baseline: CandidateDiagnostic[])
     return lines.join('\n');
 }
 
-function taskPrompt(snapshot: Snapshot, facts: ResolvedPitchFact[], baseline: CandidateDiagnostic[], instruction: string,
+/**
+ * The model used to see the selected text alone — no key, no meter, no part, no clef, no bars
+ * around it — and so "harmonize a third above" or "make the bar fill its meter" was answered
+ * blind. It is shown the file (`shown`: whole when the model's input holds it), the selection
+ * marked in it; with nothing selected, the file alone, once.
+ */
+function taskPrompt(snapshot: Snapshot, shown: { text: string; complete: boolean }, whole: boolean,
+    facts: ResolvedPitchFact[], baseline: CandidateDiagnostic[], instruction: string,
     marks: string | null = null): string {
     const parts: string[] = [];
-    parts.push(`The file being edited, with the selection marked ${SEL_OPEN} … ${SEL_CLOSE} `
-        + '(read the key, meter, parts and neighbouring bars from it; the markers are not part of the file):');
+    const partial = shown.complete ? '' : ' Parts of it are omitted, marked "…"; leave them alone.';
+    if (whole) {
+        parts.push(`The file being edited — nothing is selected, so the instruction is about the whole score.${partial}`);
+    } else {
+        parts.push(`The file being edited, with the selection marked ${SEL_OPEN} … ${SEL_CLOSE} `
+            + `(read the key, meter, parts and neighbouring bars from it; the markers are not part of the file).${partial}`);
+    }
     parts.push('<document>');
-    parts.push(documentContext(snapshot));
+    parts.push(shown.text);
     parts.push('</document>');
-    parts.push('');
-    parts.push('Selected fragment to transform:');
-    parts.push('<selection>');
-    parts.push(snapshot.origSelectedText);
-    parts.push('</selection>');
-    const diags = diagnosticsContext(snapshot, baseline);
+    if (!whole) {
+        parts.push('');
+        parts.push('Selected fragment to transform:');
+        parts.push('<selection>');
+        parts.push(snapshot.origSelectedText);
+        parts.push('</selection>');
+    }
+    const diags = diagnosticsContext(snapshot, baseline, whole);
     if (diags) {
         parts.push('');
         parts.push('What the Lily# compiler reports about the file as it stands (before your change):');
@@ -602,7 +627,7 @@ function taskPrompt(snapshot: Snapshot, facts: ResolvedPitchFact[], baseline: Ca
     parts.push('');
     parts.push(`Instruction: ${instruction}`);
     parts.push('');
-    parts.push('Return the replacement Lily# for the selection — or, when the change reaches outside it, the WHOLE file in <file>…</file>.');
+    parts.push(`${replyForm(whole)}.`);
     return parts.join('\n');
 }
 
@@ -653,19 +678,22 @@ const MACHINE_WARNING = /is not installed on this system/;
  */
 function addedWarnings(
     check: CheckCandidateResponse,
-    snapshot: Snapshot,
-    candidate: string,
+    spans: ChangedSpan[],
     baselineWarnings: number,
 ): CandidateDiagnostic[] {
     const warnings = check.Diagnostics.filter(d => d.Severity === 'warning' && !MACHINE_WARNING.test(d.Message));
-    const candStart = snapshot.startOffset;
-    const candEnd = snapshot.startOffset + candidate.length;
     if (warnings.length <= baselineWarnings) {
         return [];
     }
-    const inRange = warnings.filter(d => d.Offset >= candStart && d.Offset < candEnd);
+    const inRange = warnings.filter(d => inSpans(spans, d.Offset));
+    const candStart = spans[0]?.afterLo ?? 0;
     const relevant = inRange.length > 0 ? inRange : warnings.filter(d => d.Offset >= candStart);
     return relevant.length > 0 ? relevant : warnings;
+}
+
+/** Whether a candidate-file offset is in one of the places the candidate wrote. */
+function inSpans(spans: ChangedSpan[], offset: number): boolean {
+    return spans.some(s => offset >= s.afterLo && offset < s.afterHi);
 }
 
 /**
@@ -676,14 +704,12 @@ function addedWarnings(
  */
 function candidateBadness(
     check: CheckCandidateResponse,
-    snapshot: Snapshot,
-    candidate: string,
+    spans: ChangedSpan[],
     baselineErrors: number,
 ): CandidateDiagnostic[] {
     const errors = check.Diagnostics.filter(d => d.Severity === 'error');
-    const candStart = snapshot.startOffset;
-    const candEnd = snapshot.startOffset + candidate.length;
-    const inRange = errors.filter(d => d.Offset >= candStart && d.Offset < candEnd);
+    const candStart = spans[0]?.afterLo ?? 0;
+    const inRange = errors.filter(d => inSpans(spans, d.Offset));
     const introducedMore = errors.length > baselineErrors;
     if (inRange.length === 0 && !introducedMore) {
         return [];
@@ -747,11 +773,6 @@ async function getMarks(client: LanguageClient, snapshot: Snapshot): Promise<str
 
 type Decision = 'accept' | 'iterate' | 'reject';
 
-/** Source-offset spans of the change, for highlighting in each pane. */
-interface ChangedSpans {
-    afterLo: number; afterHi: number;
-    beforeLo: number; beforeHi: number;
-}
 
 async function reviewOnScore(
     deps: AiTransformDeps,
@@ -759,7 +780,7 @@ async function reviewOnScore(
     renderAfter: SvgResponse,
     caption: string,
     candidate: string,
-    changed: ChangedSpans,
+    changed: ChangedSpan[],
     play: Audible,
 ): Promise<Decision> {
     const panel = ensureCandidatePanel(deps);
@@ -867,7 +888,7 @@ async function playCandidate(deps: AiTransformDeps, panel: vscode.WebviewPanel, 
 function getCandidateHtml(
     fontUri: string, braceFontUri: string, cspSource: string, nonce: string,
     svgBefore: string | null, svgAfter: string | null, error: string | null,
-    caption: string, candidate: string, changed: ChangedSpans, textFontCss: string,
+    caption: string, candidate: string, changed: ChangedSpan[], textFontCss: string,
 ): string {
     const afterBody = svgAfter
         ? `<div class="score">${svgAfter}</div>`
@@ -957,19 +978,21 @@ button:hover { opacity:0.9; }
   // emits data-pos for editor↔preview sync, so the same offsets the edit used
   // map straight onto SVG elements here.
   const CHANGED = ${JSON.stringify(changed)};
-  function markChanged(pane, lo, hi) {
+  // One span per place the candidate changed ([lo, hi) by side).
+  function markChanged(pane, after) {
     let first = null;
     pane.querySelectorAll('[data-pos]').forEach(el => {
       const pos = parseInt(el.getAttribute('data-pos'), 10);
-      if (!isNaN(pos) && pos >= lo && pos < hi) {
+      if (!isNaN(pos) && CHANGED.some(s => after ? pos >= s.afterLo && pos < s.afterHi
+                                                 : pos >= s.beforeLo && pos < s.beforeHi)) {
         el.classList.add('chg');
         if (first === null) first = el;
       }
     });
     return first;
   }
-  const firstAfter = markChanged(paneAfter, CHANGED.afterLo, CHANGED.afterHi);
-  const firstBefore = markChanged(paneBefore, CHANGED.beforeLo, CHANGED.beforeHi);
+  const firstAfter = markChanged(paneAfter, true);
+  const firstBefore = markChanged(paneBefore, false);
   function scrollToChange(after) {
     const el = after ? firstAfter : firstBefore;
     if (el && el.scrollIntoView) {

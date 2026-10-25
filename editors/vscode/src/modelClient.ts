@@ -33,6 +33,8 @@ export interface ChatMessage { role: ChatRole; content: string; images?: readonl
 export interface ChatClient {
     /** Human-readable label for logs, e.g. "copilot/claude-3.5". */
     readonly label: string;
+    /** The model's input limit in tokens, when it says. */
+    readonly maxInputTokens?: number;
     /** Runs the messages and returns the full response text. */
     send(messages: ChatMessage[], token: vscode.CancellationToken): Promise<string>;
     /** Whether the last `send` carried the images its messages offered: false when this VS Code
@@ -234,6 +236,7 @@ function lmClient(model: vscode.LanguageModelChat): ChatClient {
     };
     return {
         label: model.family ? `${model.vendor}/${model.family}` : `${model.vendor}/${model.id || model.name}`,
+        maxInputTokens: model.maxInputTokens,
         async send(messages, token) {
             const offered = messages.some(m => m.images && m.images.length > 0);
             const withImages = offered && canImage && !refused;

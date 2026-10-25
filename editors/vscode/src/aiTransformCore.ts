@@ -29,20 +29,34 @@ export interface SpanLike {
     origSelectedText: string;
 }
 
+/** One place a candidate changes: [beforeLo, beforeHi) of the original file became
+ *  [afterLo, afterHi) of the candidate file. */
+export interface ChangedSpan { beforeLo: number; beforeHi: number; afterLo: number; afterHi: number; }
+
 /**
  * One candidate, as the edit it makes: `snap` is the span of the ORIGINAL file it replaces
  * (with that span's text as `origSelectedText`), `text` what goes there. A selection-only
- * reply keeps the user's selection as the span; a whole-file reply is reduced to the span
- * where it differs from the file, so validation, the before/after highlight and the apply
- * guard all work on one shape.
+ * reply keeps the user's selection as the span; edits elsewhere (or a whole-file reply) are
+ * reduced to the one span from the first change to the last, so the apply guard works on one
+ * shape. `spans` are the changes themselves — what the panel lights, and what validation and
+ * the octave check look at, so the untouched music between two edits is not judged as changed.
  */
 export interface CandidateEdit<S extends SpanLike> {
     snap: S;
     text: string;
+    spans: ChangedSpan[];
     /** The model's reply as it came, for the conversation history. */
     reply: string;
-    /** The model returned the whole file (a change reaching outside the selection). */
+    /** The model edited the file (edits or a whole file), not only the selection. */
     whole: boolean;
+}
+
+/** A reply that could not be read as an edit — an `<old>` not in the file, or in it twice —
+ *  with what to tell the model. */
+export interface ReplyProblem { problem: string; reply: string; }
+
+export function isProblem<S extends SpanLike>(r: CandidateEdit<S> | ReplyProblem | null): r is ReplyProblem {
+    return r !== null && 'problem' in r;
 }
 
 /** Strips code fences / stray commentary the model may add despite the contract. */
@@ -69,19 +83,37 @@ function withoutMarkers(text: string): string {
 }
 
 /**
- * Reads the model's reply: the whole file inside `<file>…</file>` when the change reaches
- * outside the selection — a new part needs a `part` line, a block in the section and a
- * score row, and a selection-only reply could only answer "harmonize in a new part" with
- * `voice { }` or not at all (owner report, 2026-09-26) — else the replacement for the
- * selection. null when there is nothing in it.
+ * Reads the model's reply. A change reaching outside the selection — a new part needs a `part`
+ * line, a block in the section and a score row, and a selection-only reply could only answer
+ * "harmonize in a new part" with `voice { }` or not at all (owner report, 2026-09-26) — comes
+ * as edits, `<edit><old>…</old><new>…</new></edit>` each, the old text copied from the file
+ * and found there exactly once. They used to come as the whole file in `<file>…</file>`, still
+ * read: slow and costly to write out for a long score, a slip anywhere in the copy was a change,
+ * and a file sent in part came back without the parts the model never saw (2026-10-25).
+ * Anything else is the replacement for the selection. null when there is nothing in it.
  */
-export function toCandidateEdit<S extends SpanLike>(snapshot: S, raw: string): CandidateEdit<S> | null {
+export function toCandidateEdit<S extends SpanLike>(snapshot: S, raw: string): CandidateEdit<S> | ReplyProblem | null {
+    const orig = snapshot.origFullText;
+    const edits = readEdits(raw);
+    if (edits.length > 0) {
+        const applied = applyEdits(orig, edits);
+        if (typeof applied === 'string') {
+            return { problem: applied, reply: raw };
+        }
+        return applied.spans.length === 0
+            ? { snap: snapshot, text: snapshot.origSelectedText, spans: [], reply: raw, whole: true }
+            : reduceToSpan(snapshot, applied.text, applied.spans, raw);
+    }
     const file = raw.match(/<file>[ \t]*\r?\n?([\s\S]*?)\r?\n?[ \t]*<\/file>/);
     if (!file) {
-        const text = sameNewlines(withoutMarkers(cleanCandidate(raw)), snapshot.origFullText);
-        return text.length === 0 ? null : { snap: snapshot, text, reply: raw, whole: false };
+        const text = sameNewlines(withoutMarkers(cleanCandidate(raw)), orig);
+        if (text.length === 0) {
+            return null;
+        }
+        const lo = snapshot.startOffset;
+        const spans = [{ beforeLo: lo, beforeHi: snapshot.endOffset, afterLo: lo, afterHi: lo + text.length }];
+        return { snap: snapshot, text, spans, reply: raw, whole: false };
     }
-    const orig = snapshot.origFullText;
     let full = sameNewlines(withoutMarkers(cleanCandidate(file[1])), orig);
     if (full.trim().length === 0) {
         return null;
@@ -91,6 +123,83 @@ export function toCandidateEdit<S extends SpanLike>(snapshot: S, raw: string): C
     if (orig.endsWith('\n') && !full.endsWith('\n')) {
         full += eol;
     }
+    return reduceToSpan(snapshot, full, null, raw);
+}
+
+/** One `<edit>` of a reply, as written. */
+export interface ReplyEdit { old: string; new: string; }
+
+/** The `<edit><old>…</old><new>…</new></edit>` blocks of a reply, in order. A tag's own line
+ *  break (after `<old>`, before `</old>`) is the layout of the reply, not part of the text. */
+export function readEdits(raw: string): ReplyEdit[] {
+    const inner = (s: string) => s.replace(/^[ \t]*\r?\n/, '').replace(/\r?\n[ \t]*$/, '');
+    const out: ReplyEdit[] = [];
+    for (const m of raw.matchAll(/<edit>\s*<old>([\s\S]*?)<\/old>\s*<new>([\s\S]*?)<\/new>\s*<\/edit>/g)) {
+        out.push({ old: inner(m[1]), new: inner(m[2]) });
+    }
+    return out;
+}
+
+function occurrences(text: string, part: string): number[] {
+    const at: number[] = [];
+    for (let i = text.indexOf(part); i >= 0; i = text.indexOf(part, i + 1)) at.push(i);
+    return at;
+}
+
+/**
+ * Applies a reply's edits to the file: each old text must be in it exactly once (a copy that
+ * differs only by the spaces at its ends is taken too, its new text trimmed alike), and no two
+ * may overlap. Returns the changed file and where it changed, or what to tell the model.
+ */
+export function applyEdits(orig: string, edits: ReplyEdit[]): { text: string; spans: ChangedSpan[] } | string {
+    const found: { lo: number; hi: number; text: string; n: number }[] = [];
+    for (let i = 0; i < edits.length; i++) {
+        let old = sameNewlines(withoutMarkers(edits[i].old), orig);
+        let neu = sameNewlines(withoutMarkers(edits[i].new), orig);
+        if (old.trim().length === 0) {
+            return `Edit ${i + 1} has an empty <old>. Copy the text it replaces — or, to insert, a line next to `
+                + 'the place, repeated in <new> with the insertion.';
+        }
+        let at = occurrences(orig, old);
+        if (at.length === 0 && old.trim() !== old) {
+            old = old.trim();
+            neu = neu.trim();
+            at = occurrences(orig, old);
+        }
+        if (at.length === 0) {
+            return `Edit ${i + 1}: its <old> text is not in the file. Copy it exactly from the file — every `
+                + 'character, spaces included; the selection markers are not part of the file.';
+        }
+        if (at.length > 1) {
+            return `Edit ${i + 1}: its <old> text occurs ${at.length} times in the file. Include enough of the `
+                + 'surrounding text to make it unique.';
+        }
+        if (old !== neu) {
+            found.push({ lo: at[0], hi: at[0] + old.length, text: neu, n: i + 1 });
+        }
+    }
+    found.sort((a, b) => a.lo - b.lo);
+    for (let i = 1; i < found.length; i++) {
+        if (found[i].lo < found[i - 1].hi) {
+            return `Edits ${found[i - 1].n} and ${found[i].n} overlap. Merge them into one edit.`;
+        }
+    }
+    let text = '';
+    let from = 0;
+    const spans: ChangedSpan[] = [];
+    for (const f of found) {
+        text += orig.slice(from, f.lo);
+        spans.push({ beforeLo: f.lo, beforeHi: f.hi, afterLo: text.length, afterHi: text.length + f.text.length });
+        text += f.text;
+        from = f.hi;
+    }
+    return { text: text + orig.slice(from), spans };
+}
+
+/** The changed file as one span of the original — from its first difference to its last —
+ *  with `spans` the places it changed (null: that one span). */
+function reduceToSpan<S extends SpanLike>(snapshot: S, full: string, spans: ChangedSpan[] | null, raw: string): CandidateEdit<S> {
+    const orig = snapshot.origFullText;
     let lo = 0;
     const max = Math.min(orig.length, full.length);
     while (lo < max && orig[lo] === full[lo]) lo++;
@@ -102,7 +211,68 @@ export function toCandidateEdit<S extends SpanLike>(snapshot: S, raw: string): C
         endOffset: orig.length - tail,
         origSelectedText: orig.slice(lo, orig.length - tail),
     };
-    return { snap, text: full.slice(lo, full.length - tail), reply: raw, whole: true };
+    const text = full.slice(lo, full.length - tail);
+    const one = [{ beforeLo: lo, beforeHi: orig.length - tail, afterLo: lo, afterHi: lo + text.length }];
+    return { snap, text, spans: spans ?? one, reply: raw, whole: true };
+}
+
+/** A rough token count, on the safe side: ASCII about three characters a token, anything else
+ *  (lyrics in kana, accented names) one each. */
+export function estimateTokens(text: string): number {
+    let ascii = 0;
+    let other = 0;
+    for (let i = 0; i < text.length; i++) {
+        if (text.charCodeAt(i) < 128) ascii++; else other++;
+    }
+    return Math.ceil(ascii / 3) + other;
+}
+
+/** The input a model is taken to have when it does not say. */
+export const DEFAULT_INPUT_TOKENS = 32_000;
+
+/**
+ * How many tokens of the model's input the file may take: what is left of it — a tenth kept
+ * back — after the system prompt (the grammar, about 25K tokens) and a reserve for the rest of
+ * the conversation (the instruction, the facts, the repair rounds). Never under 4K, the file's
+ * share the fixed 12,000-character window used to give.
+ */
+export function documentBudget(maxInputTokens: number | undefined, systemTokens: number): number {
+    const max = maxInputTokens && maxInputTokens > 0 ? maxInputTokens : DEFAULT_INPUT_TOKENS;
+    return Math.max(4_000, Math.floor(max * 0.9) - systemTokens - 12_000);
+}
+
+/** Characters kept from the file's head when it is sent in part (the key, meter and parts). */
+const DOC_HEAD_CHARS = 2500;
+
+/**
+ * The file as the model is shown it: whole, with the selection marked, when it fits `budget`
+ * tokens (owner's decision 2026-10-25: the AI may change any place, so it sees every place) —
+ * else its head, where the key, meter and parts are declared, and a window around the selection.
+ * `complete` says which, for the input box and the prompt. Without a selection (`whole`) the
+ * file is shown unmarked.
+ */
+export function documentContext(snapshot: SpanLike, budget: number, whole: boolean): { text: string; complete: boolean } {
+    const t = snapshot.origFullText;
+    const marked = whole ? t : t.slice(0, snapshot.startOffset) + SEL_OPEN
+        + t.slice(snapshot.startOffset, snapshot.endOffset) + SEL_CLOSE + t.slice(snapshot.endOffset);
+    if (estimateTokens(marked) <= budget) {
+        return { text: marked, complete: true };
+    }
+    // Characters for the budget, counted as if every one were a token — on the safe side.
+    const chars = Math.max(DOC_HEAD_CHARS * 2, budget);
+    const selStart = whole ? 0 : snapshot.startOffset;
+    const selEnd = whole ? 0 : snapshot.endOffset + SEL_OPEN.length + SEL_CLOSE.length;
+    if (whole || selEnd - selStart > chars - DOC_HEAD_CHARS) {
+        return { text: marked.slice(0, chars) + '\n… (rest of the file omitted) …', complete: false };
+    }
+    const half = Math.floor((chars - DOC_HEAD_CHARS - (selEnd - selStart)) / 2);
+    const from = Math.max(DOC_HEAD_CHARS, selStart - half);
+    const to = Math.min(marked.length, selEnd + half);
+    const text = marked.slice(0, DOC_HEAD_CHARS)
+        + (from > DOC_HEAD_CHARS ? '\n… (lines omitted) …\n' : '')
+        + marked.slice(from, to)
+        + (to < marked.length ? '\n… (rest of the file omitted) …' : '');
+    return { text, complete: false };
 }
 
 /** A resolved pitch as the compiler reports it (`lilysharp/factsForRange`, `pitchesForText`). */

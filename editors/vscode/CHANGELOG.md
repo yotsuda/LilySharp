@@ -24,6 +24,23 @@ All notable changes to the Lily# VS Code extension are documented here.
   selected* without one, and says it is a hint of where to look while the whole score stays open
   to change — every change is shown before it is applied.
 
+### The AI reads the whole file and answers with edits
+
+- **The file goes to the AI whole, up to the model's input limit** (less the grammar and a
+  reserve) — it used to be cut at 12,000 characters, to its head and the bars around the
+  selection. A file too long for the model is still sent in part, and the input box says so:
+  *the AI reads its head and the bars around the selection*.
+- **A change outside the selection comes back as edits** — each an old text copied from the file
+  and what replaces it — not as the whole file written out. Long scores answer faster and
+  cheaper, a slip in copying the untouched music can no longer become a change, and a file sent
+  in part no longer comes back without the parts the model never saw. An edit whose old text is
+  not in the file (or is in it twice) is sent back to the AI to fix, like a candidate that does
+  not compile.
+- **The candidate panel lights each edit's notes alone**; the music between two edits (a new
+  part's line at the top and its score row at the bottom) is no longer lit, nor judged for
+  errors or octaves as if the AI had written it.
+- With nothing selected the file is sent once, not twice.
+
 ### Remove All String Numbers
 
 - **Lily#: Remove All String Numbers** (right-click menu and the command palette) removes every

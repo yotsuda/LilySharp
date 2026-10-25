@@ -22,7 +22,8 @@ import * as assert from 'node:assert/strict';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import {
-    SEL_CLOSE, SEL_OPEN, isUnchanged, marksContext, octaveOutliers, pickModel, pitchToMidi, startTimeAt, toCandidateEdit,
+    SEL_CLOSE, SEL_OPEN, documentBudget, documentContext, estimateTokens, isProblem, isUnchanged, marksContext, octaveOutliers,
+    pickModel, pitchToMidi, startTimeAt, toCandidateEdit,
 } from '../src/aiTransformCore';
 
 describe('the automatic model', () => {
@@ -72,7 +73,7 @@ describe('the core is editor-free', () => {
 describe('a selection-only reply', () => {
     it('replaces the selection, fences and markers removed', () => {
         const edit = toCandidateEdit(snapshotOf(FILE, SEL), '```lilysharp\n' + SEL_OPEN + 'e4 f g a |' + SEL_CLOSE + '\n```');
-        assert.ok(edit);
+        assert.ok(edit && !isProblem(edit));
         assert.equal(edit.whole, false);
         assert.equal(edit.text, 'e4 f g a |');
         assert.equal(edit.snap.startOffset, FILE.indexOf(SEL));
@@ -80,7 +81,7 @@ describe('a selection-only reply', () => {
 
     it('that repeats the selection is unchanged', () => {
         const edit = toCandidateEdit(snapshotOf(FILE, SEL), SEL);
-        assert.ok(edit && isUnchanged(edit));
+        assert.ok(edit && !isProblem(edit) && isUnchanged(edit));
     });
 
     it('that is empty is nothing', () => {
@@ -96,7 +97,7 @@ describe('a whole-file reply', () => {
 
     it('is reduced to the span where it differs', () => {
         const edit = toCandidateEdit(snapshotOf(FILE, SEL), `<file>\n${changed}</file>`);
-        assert.ok(edit);
+        assert.ok(edit && !isProblem(edit));
         assert.equal(edit.whole, true);
         const spliced = FILE.slice(0, edit.snap.startOffset) + edit.text + FILE.slice(edit.snap.endOffset);
         assert.equal(spliced, changed);
@@ -108,7 +109,7 @@ describe('a whole-file reply', () => {
 
     it('keeps the file\'s final newline when the model drops it', () => {
         const edit = toCandidateEdit(snapshotOf(FILE, SEL), `<file>\n${changed.trimEnd()}\n</file>`);
-        assert.ok(edit);
+        assert.ok(edit && !isProblem(edit));
         const spliced = FILE.slice(0, edit.snap.startOffset) + edit.text + FILE.slice(edit.snap.endOffset);
         assert.equal(spliced, changed);
     });
@@ -116,14 +117,107 @@ describe('a whole-file reply', () => {
     it('gives a CRLF file its own line ends back', () => {
         const crlf = FILE.replace(/\n/g, '\r\n');
         const edit = toCandidateEdit(snapshotOf(crlf, SEL), `<file>\n${changed}</file>`);
-        assert.ok(edit);
+        assert.ok(edit && !isProblem(edit));
         const spliced = crlf.slice(0, edit.snap.startOffset) + edit.text + crlf.slice(edit.snap.endOffset);
         assert.equal(spliced, changed.replace(/\n/g, '\r\n'));
     });
 
     it('that is the file as it was is unchanged', () => {
         const edit = toCandidateEdit(snapshotOf(FILE, SEL), `<file>\n${FILE}</file>`);
-        assert.ok(edit && isUnchanged(edit));
+        assert.ok(edit && !isProblem(edit) && isUnchanged(edit));
+    });
+});
+
+describe('a reply of edits', () => {
+    // The owner's case again, as the edits it takes: the new part's block and its score row.
+    const reply = '<edit>\n<old>\n  m { c4 d e f | }\n</old>\n<new>\n  m { c4 d e f | }\n  h { e4 f g a | }\n</new>\n</edit>\n'
+        + '<edit><old>  staff m</old><new>  staff m\n  staff h</new></edit>';
+    const changed = FILE
+        .replace('  m { c4 d e f | }\n', '  m { c4 d e f | }\n  h { e4 f g a | }\n')
+        .replace('  staff m\n', '  staff m\n  staff h\n');
+    const spliced = (text: string, e: { snap: { startOffset: number; endOffset: number }; text: string }) =>
+        text.slice(0, e.snap.startOffset) + e.text + text.slice(e.snap.endOffset);
+
+    it('applies each edit where its old text stands, and lights each place alone', () => {
+        const edit = toCandidateEdit(snapshotOf(FILE, SEL), reply);
+        assert.ok(edit && !isProblem(edit));
+        assert.equal(edit.whole, true);
+        assert.equal(spliced(FILE, edit), changed);
+        assert.equal(edit.spans.length, 2);
+        const [a, b] = edit.spans;
+        assert.equal(FILE.slice(a.beforeLo, a.beforeHi), '  m { c4 d e f | }');
+        assert.equal(changed.slice(b.afterLo, b.afterHi), '  staff m\n  staff h');
+        // The music between the two edits is not among the places changed.
+        assert.ok(a.afterHi < changed.indexOf('score'));
+    });
+
+    it('takes them in any order', () => {
+        const parts = [...reply.matchAll(/<edit>[\s\S]*?<\/edit>/g)].map(m => m[0]);
+        const edit = toCandidateEdit(snapshotOf(FILE, SEL), parts[1] + '\n' + parts[0]);
+        assert.ok(edit && !isProblem(edit));
+        assert.equal(spliced(FILE, edit), changed);
+    });
+
+    it('works on a CRLF file, and takes an old text off only by the spaces at its ends', () => {
+        const crlf = FILE.replace(/\n/g, '\r\n');
+        const edit = toCandidateEdit(snapshotOf(crlf, SEL), reply.replace('<old>  staff m</old>', '<old> staff m </old>'));
+        assert.ok(edit && !isProblem(edit));
+        assert.equal(spliced(crlf, edit), changed.replace(/\n/g, '\r\n'));
+    });
+
+    it('says which edit is not in the file, or in it twice, or overlaps another', () => {
+        const missing = toCandidateEdit(snapshotOf(FILE, SEL), '<edit><old>staff q</old><new>x</new></edit>');
+        assert.ok(isProblem(missing) && /Edit 1: .* not in the file/.test(missing.problem));
+        const twice = toCandidateEdit(snapshotOf(FILE, SEL), '<edit><old>clef treble</old><new>clef bass</new></edit>');
+        assert.ok(isProblem(twice) && /occurs 2 times/.test(twice.problem));
+        const overlap = toCandidateEdit(snapshotOf(FILE, SEL),
+            '<edit><old>c4 d e</old><new>x</new></edit><edit><old>e f |</old><new>y</new></edit>');
+        assert.ok(isProblem(overlap) && /Edits 1 and 2 overlap/.test(overlap.problem));
+        const empty = toCandidateEdit(snapshotOf(FILE, SEL), '<edit><old>\n</old><new>x</new></edit>');
+        assert.ok(isProblem(empty) && /empty <old>/.test(empty.problem));
+    });
+
+    it('that change nothing are unchanged', () => {
+        const edit = toCandidateEdit(snapshotOf(FILE, SEL), '<edit><old>staff m</old><new>staff m</new></edit>');
+        assert.ok(edit && !isProblem(edit) && isUnchanged(edit));
+    });
+});
+
+describe('the file the model is shown', () => {
+    const snap = snapshotOf(FILE, SEL);
+
+    it('is the whole file, the selection marked, when it fits the model', () => {
+        const shown = documentContext(snap, documentBudget(128_000, 25_000), false);
+        assert.equal(shown.complete, true);
+        assert.equal(shown.text, FILE.replace(SEL, SEL_OPEN + SEL + SEL_CLOSE));
+    });
+
+    it('is unmarked with nothing selected', () => {
+        const all = { origFullText: FILE, startOffset: 0, endOffset: FILE.length, origSelectedText: FILE };
+        assert.equal(documentContext(all, 10_000, true).text, FILE);
+    });
+
+    it('is the head and the bars around the selection when it does not', () => {
+        const long = 'part m { clef treble }\n' + 'section A {\n' + '  m { c4 d e f | }\n'.repeat(3000)
+            + '  m { g4 a b c | }\n' + '  m { c4 d e f | }\n'.repeat(3000) + '}\n';
+        const s = snapshotOf(long, 'g4 a b c |');
+        const shown = documentContext(s, 8_000, false);
+        assert.equal(shown.complete, false);
+        assert.ok(shown.text.startsWith('part m { clef treble }'));
+        assert.ok(shown.text.includes(SEL_OPEN + 'g4 a b c |' + SEL_CLOSE));
+        assert.ok(shown.text.includes('… (lines omitted) …') && shown.text.endsWith('… (rest of the file omitted) …'));
+        assert.ok(estimateTokens(shown.text) <= 8_000);
+    });
+
+    it('takes the model\'s input, less the grammar and a reserve; a small or silent model gets the old share', () => {
+        assert.equal(documentBudget(128_000, 25_000), 115_200 - 25_000 - 12_000);
+        assert.equal(documentBudget(undefined, 25_000), 4_000);
+        assert.equal(documentBudget(16_000, 25_000), 4_000);
+    });
+
+    it('counts kana as a token each', () => {
+        assert.equal(estimateTokens('abcdef'), 2);
+        assert.equal(estimateTokens('さくら'), 3);
     });
 });
 
