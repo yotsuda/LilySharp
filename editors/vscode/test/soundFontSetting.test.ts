@@ -24,7 +24,8 @@ import * as path from 'node:path';
 // the settings UI gives a string no browse button (owner's request 2026-10-11).
 describe('the sound font setting', () => {
     const manifest = JSON.parse(fs.readFileSync(path.join(__dirname, '..', '..', 'package.json'), 'utf8'));
-    const setting = manifest.contributes.configuration.properties['lilysharp.playback.soundFont'];
+    // The settings come in groups (an array of configuration blocks, 2026-10-25).
+    const setting = Object.assign({}, ...manifest.contributes.configuration.map((c: { properties: object }) => c.properties))['lilysharp.playback.soundFont'];
     const commands = manifest.contributes.commands as { command: string; title: string }[];
     const palette = manifest.contributes.menus.commandPalette as { command: string; when?: string }[];
 

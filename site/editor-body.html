@@ -187,8 +187,8 @@
     <code>.lys</code> files in the Explorer (every score of every selected file, into one
     folder). Every door writes the same file as <code>lysc</code>.</li>
     <li><b>Red rings</b> mark the <a href="grammar.html#todo"><code>@todo</code></a> notes, with
-    their memos in the staff's margin; an export draws none (<code>lysc svg --todo</code> does).
-    <code>lilysharp.preview.highlightTodos</code> hides them.</li>
+    their memos in the staff's margin. Exporting an SVG, PNG or PDF of a score that has any asks
+    whether to draw them (<code>lysc svg --todo</code> does on the command line).</li>
     <li><b>Its colours</b> follow VS Code's theme, or stay light (the printed page) or dark:
     <code>lilysharp.preview.theme</code>.</li>
   </ul>
@@ -432,23 +432,27 @@
   <h2>Settings</h2>
   <table class="g">
     <tr><th>Setting</th><th>Default</th><th>Does</th></tr>
-    <tr><td><code>lilysharp.audition.enabled</code></td><td><code>true</code></td><td>sound notes as you edit (<a href="#audition">Audition</a>)</td></tr>
-    <tr><td><code>lilysharp.chordShapes.includeStretch</code></td><td><code>false</code></td><td>let chord-shape stepping walk stretch shapes too</td></tr>
     <tr><td><code>lilysharp.preview.openOnOpen</code></td><td><code>true</code></td><td>open the preview beside a <code>.lys</code> file when it is opened (<a href="#preview">The preview</a>)</td></tr>
-    <tr><td><code>lilysharp.preview.highlightTodos</code></td><td><code>true</code></td><td>draw the <code>@todo</code> rings and memos in the preview</td></tr>
+    <tr><td><code>lilysharp.preview.theme</code></td><td><code>auto</code></td><td>the preview's colours: follow VS Code, light or dark</td></tr>
+    <tr><td><code>lilysharp.audition.enabled</code></td><td><code>true</code></td><td>sound notes as you edit (<a href="#audition">Audition</a>)</td></tr>
     <tr><td><code>lilysharp.playback.soundFont</code></td><td>the computer's own</td><td>the sound font the preview plays with (<i>Lily#: Choose Sound Font…</i>) — <a href="#soundfonts">which to install, and how</a></td></tr>
     <tr><td><code>lilysharp.playback.output</code></td><td>the preview's synth</td><td>a MIDI output port to play through instead (<i>Lily#: Choose MIDI Output…</i>) — <a href="#midi-out">a DAW, a VST host, the computer's own synth</a></td></tr>
-    <tr><td><code>lilysharp.fontPaths</code></td><td></td><td>more folders to find SMuFL music fonts in, for <code>fonts { music "…" }</code></td></tr>
     <tr><td><code>lilysharp.typingAids.enabled</code></td><td><code>true</code></td><td>the typing aids above (<a href="#typing">Typing aids</a>)</td></tr>
-    <tr><td><code>lilysharp.omr.verifyOnSave</code></td><td><code>false</code></td><td>on saving a score read from a scan, check it against the scan</td></tr>
-    <tr><td><code>lilysharp.preview.theme</code></td><td><code>auto</code></td><td>the preview's colours: follow VS Code, light or dark</td></tr>
-    <tr><td><code>lilysharp.preview.autoRefresh</code> · <code>refreshDelay</code></td><td><code>true</code> · 100 ms</td><td>redraw on every change, after this pause</td></tr>
     <tr><td><code>lilysharp.completion.flatSpelling</code></td><td><code>full</code></td><td>how completion spells flats (both spellings compile)</td></tr>
-    <tr><td><code>lilysharp.import.relativeOctave</code></td><td><code>false</code></td><td>MusicXML import writes relative octaves instead of absolute</td></tr>
-    <tr><td><code>lilysharp.ai.model</code> · <code>ai.ghostModel</code></td><td>automatic</td><td>the models the AI features use (<a href="#ai">AI</a>)</td></tr>
+    <tr><td><code>lilysharp.ai.model</code> · <code>ai.ghostModel</code> · <code>ai.omrFixModel</code></td><td>automatic</td><td>the models the AI features use (<a href="#ai">AI</a>)</td></tr>
     <tr><td><code>lilysharp.ai.ghostCompletion</code></td><td><code>false</code></td><td>suggest the next measure as ghost text</td></tr>
-    <tr><td><code>lilysharp.serverPath</code> · <code>trace.server</code></td><td></td><td>use another language server; trace its traffic</td></tr>
+    <tr><td><code>lilysharp.omr.verifyOnSave</code></td><td><code>false</code></td><td>on saving a score read from a scan, check it against the scan</td></tr>
+    <tr><td><code>lilysharp.fontPaths</code></td><td></td><td>more folders to find SMuFL music fonts in, for <code>fonts { music "…" }</code></td></tr>
   </table>
+  <p>The score <i>Lily#: New Score</i> starts from is yours to change: <i>Lily#: Edit New Score
+  Template</i> opens it (a copy of the built-in one the first time), and <i>Lily#: Reset New
+  Score Template</i> goes back to the built-in one.</p>
+  <p>A few tuning values are not in the Settings screen but still work written in
+  <code>settings.json</code>: <code>lilysharp.preview.autoRefresh</code> / <code>refreshDelay</code>
+  (<code>true</code> / 100 ms), <code>lilysharp.chordShapes.includeStretch</code>,
+  <code>lilysharp.import.relativeOctave</code>, <code>lilysharp.ai.omrFixImages</code> /
+  <code>omrFixVerify</code> / <code>omrFixBatch</code>, and, for a server you build yourself,
+  <code>lilysharp.serverPath</code> / <code>trace.server</code>.</p>
 </section>
 
 <section id="ai">

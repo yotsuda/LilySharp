@@ -413,7 +413,8 @@ climbs past a chord symbol, a dynamic, a ledgered note or an earlier memo otherw
 on the page's margin, and only at the page's edge may it lie over something; the memos of a
 system are arranged together, the short ones first, so that no leader runs through another
 memo's words and no memo stands across another's leader where any arrangement avoids it. The
-`lilysharp.preview.highlightTodos` setting hides the marks. No export draws them.
+preview always shows them; an export draws them only when asked (`lysc svg|png|pdf --todo`, or
+the editor's Export, which asks when the score has any).
 
 ```
 c'4 fis'8@todo("F# or F natural? the sharp is faint") e'8 g'2 |

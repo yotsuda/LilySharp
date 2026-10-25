@@ -398,10 +398,9 @@ function cancelSvgRequest(uri: string) {
 }
 
 // Constants
-// The preview's refresh debounce when the configuration has no value for it. package.json
-// declares `lilysharp.preview.refreshDelay` with default 100 and minimum 100, and VS Code
-// always answers from that schema, so this is reached by nothing in practice; it says the
-// same number so that the one reader (HANDOFF §2 R13 ⒞) cannot find two defaults. It was 60.
+// The preview's refresh debounce. `lilysharp.preview.refreshDelay` is no longer in the
+// Settings UI (owner's decision 2026-10-25: a tuning value), so this is the delay unless
+// settings.json still names one. It was 60.
 const DEBOUNCE_DELAY_DEFAULT = 100;
 const HIGHLIGHT_DISTANCE_THRESHOLD = 50;
 
@@ -409,6 +408,8 @@ export function activate(context: vscode.ExtensionContext) {
     outputChannel.appendLine('Lily# extension activating...');
 
     const config = vscode.workspace.getConfiguration('lilysharp');
+    // A server built by hand: settings.json only, not in the Settings UI since 2026-10-25
+    // (as `lilysharp.trace.server`, which the language client reads by itself).
     let serverPath = config.get<string>('serverPath');
 
     outputChannel.appendLine(`Config serverPath: "${serverPath}"`);
@@ -644,12 +645,6 @@ export function activate(context: vscode.ExtensionContext) {
     // without reopening (a new panel reads it when its HTML is built).
     context.subscriptions.push(
         vscode.workspace.onDidChangeConfiguration(e => {
-            if (e.affectsConfiguration('lilysharp.preview.highlightTodos')) {
-                const on = getHighlightTodos();
-                for (const panel of previewPanels.values()) {
-                    panel.webview.postMessage({ type: 'setHighlightTodos', on });
-                }
-            }
             if (e.affectsConfiguration('lilysharp.playback.soundFont')) {
                 // Remembered for Choose Sound Font…'s list — set through it or by hand.
                 void rememberSoundFont(context,
@@ -746,7 +741,7 @@ export function activate(context: vscode.ExtensionContext) {
             outputChannel.appendLine('newScore command triggered');
             const doc = await vscode.workspace.openTextDocument({
                 language: 'lilysharp',
-                content: NEW_SCORE_TEMPLATE,
+                content: await newScoreTemplate(context),
             });
             const editor = await vscode.window.showTextDocument(doc);
             // Land on the one word in the template that is a placeholder rather than
@@ -757,6 +752,32 @@ export function activate(context: vscode.ExtensionContext) {
                 editor.selection = new vscode.Selection(title.start, title.end);
                 editor.revealRange(title);
             }
+        }),
+        // The template New Score starts from is the writer's to change (owner's request
+        // 2026-10-25, in place of a paper-size setting): Edit opens the writer's copy — made
+        // from the built-in one the first time — and Reset goes back to the built-in one.
+        vscode.commands.registerCommand('lilysharp.editNewScoreTemplate', async () => {
+            const file = newScoreTemplateUri(context);
+            if (!(await uriExists(file))) {
+                await vscode.workspace.fs.createDirectory(context.globalStorageUri);
+                await vscode.workspace.fs.writeFile(file, Buffer.from(NEW_SCORE_TEMPLATE, 'utf8'));
+            }
+            await vscode.window.showTextDocument(await vscode.workspace.openTextDocument(file));
+            vscode.window.setStatusBarMessage('Lily#: New Score starts from this file once it is saved.', 5000);
+        }),
+        vscode.commands.registerCommand('lilysharp.resetNewScoreTemplate', async () => {
+            const file = newScoreTemplateUri(context);
+            if (!(await uriExists(file))) {
+                vscode.window.showInformationMessage('Lily#: New Score already uses the built-in template.');
+                return;
+            }
+            const reset = 'Reset';
+            if (await vscode.window.showWarningMessage('Lily#: delete your New Score template and use the built-in one?',
+                { modal: true }, reset) !== reset) {
+                return;
+            }
+            await vscode.workspace.fs.delete(file);
+            vscode.window.showInformationMessage('Lily#: New Score uses the built-in template again.');
         }),
         // A score template is a WHOLE FILE — title, parts, form, score — so the two
         // `template-…` completions cannot simply insert at the caret: dropping a complete
@@ -915,6 +936,7 @@ export function activate(context: vscode.ExtensionContext) {
                 const uri = event.document.uri.toString();
                 const panel = previewPanels.get(uri);
                 if (panel) {
+                    // Neither is in the Settings UI since 2026-10-25 (settings.json only).
                     const cfg = vscode.workspace.getConfiguration('lilysharp');
                     const autoRefresh = cfg.get<boolean>('preview.autoRefresh', true);
                     const delay = cfg.get<number>('preview.refreshDelay', DEBOUNCE_DELAY_DEFAULT);
@@ -1500,7 +1522,7 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
     // Set initial HTML structure with font
     outputChannel.appendLine('Setting webview HTML');
     panel.webview.html = getPreviewHtml(fontUri.toString(), braceFontUri.toString(), panel.webview.cspSource, getNonce(), getPreviewTheme(),
-        textFontFaceCss(panel.webview, context.extensionUri), getHighlightTodos(), synthUrls(panel.webview, context.extensionUri),
+        textFontFaceCss(panel.webview, context.extensionUri), synthUrls(panel.webview, context.extensionUri),
         midiOutputSetting());
 
     // Then load content
@@ -1925,11 +1947,28 @@ async function exportPreview(
         return;
     }
 
+    // The preview always shows the @todo marks; a picture asks whether to draw them (owner's
+    // decision 2026-10-25, in place of the preview's setting) — only when the file has any.
+    let todoMarks = false;
+    const text = vscode.workspace.textDocuments.find(d => d.uri.toString() === uri)?.getText() ?? '';
+    if (['png', 'pdf', 'svg'].includes(format) && /@todo\b/.test(text)) {
+        const without = 'Without the @todo marks', withMarks = 'With the @todo marks';
+        const pick = await vscode.window.showQuickPick([
+            { label: without, description: 'the finished page' },
+            { label: withMarks, description: 'red rings and memos, as the preview shows them' },
+        ], { title: 'Lily#: this score has @todo marks', placeHolder: 'Draw them in the export?' });
+        if (!pick) {
+            return;
+        }
+        todoMarks = pick.label === withMarks;
+    }
+
     try {
         const response = await client.sendRequest<ExportResponse>('lilysharp/export', {
             textDocument: { uri },
             format,
             outputPath: target.fsPath,
+            todoMarks,
             renderName: renderName || null
         });
 
@@ -1966,6 +2005,34 @@ async function exportPreview(
  * would drift the first time a line moved above it. A title with nothing between its quotes
  * returns null — selecting a zero-width range would look exactly like nothing happened.
  */
+/** Where the writer's own New Score template is kept (Edit New Score Template). */
+function newScoreTemplateUri(context: vscode.ExtensionContext): vscode.Uri {
+    return vscode.Uri.joinPath(context.globalStorageUri, 'new-score-template.lys');
+}
+
+async function uriExists(uri: vscode.Uri): Promise<boolean> {
+    try {
+        await vscode.workspace.fs.stat(uri);
+        return true;
+    } catch {
+        return false;
+    }
+}
+
+/** What New Score starts from: the writer's template when there is one with anything in it,
+ *  else the built-in one. */
+async function newScoreTemplate(context: vscode.ExtensionContext): Promise<string> {
+    try {
+        const own = Buffer.from(await vscode.workspace.fs.readFile(newScoreTemplateUri(context))).toString('utf8');
+        if (own.trim().length > 0) {
+            return own;
+        }
+    } catch {
+        // none yet: the built-in one
+    }
+    return NEW_SCORE_TEMPLATE;
+}
+
 function newScoreTitleRange(doc: vscode.TextDocument): vscode.Range | null {
     const match = /^title "([^"]*)"/m.exec(doc.getText());
     if (!match || match[1].length === 0) {
@@ -2592,7 +2659,8 @@ async function importMusicXml(context: vscode.ExtensionContext, sourceUri?: vsco
     // The source file's name (URI paths use '/' on every OS), for the result dialogs.
     const sourceName = fileUri.path.split('/').pop() ?? 'the file';
 
-    // Relative-octave output is opt-in via a setting (default: explicit absolute).
+    // Relative-octave output is opt-in via a setting (default: explicit absolute) — not in the
+    // Settings UI since 2026-10-25 (settings.json only; Convert Octaves does it afterwards).
     const relativeOctave = vscode.workspace
         .getConfiguration('lilysharp')
         .get<boolean>('import.relativeOctave', false);
@@ -3090,12 +3158,6 @@ function getPreviewTheme(): 'auto' | 'light' | 'dark' {
     return v === 'light' || v === 'dark' ? v : 'auto';
 }
 
-/** Whether the preview draws the heads and rests marked `@todo` red
- *  (`lilysharp.preview.highlightTodos`; the SVG marks them `data-todo`). */
-function getHighlightTodos(): boolean {
-    return vscode.workspace.getConfiguration('lilysharp').get<boolean>('preview.highlightTodos', true);
-}
-
 /** The URLs of the preview's SoundFont synth, as the webview reaches them (synthUrls). */
 interface SynthUrls { script: string; processor: string; soundFont: string }
 
@@ -3107,7 +3169,6 @@ interface SynthUrls { script: string; processor: string; soundFont: string }
 // font is fetch()ed (connect-src).
 function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string, nonce: string,
                         theme: 'auto' | 'light' | 'dark', textFontCss: string,
-                        highlightTodos: boolean = true,
                         synth: SynthUrls = { script: '', processor: '', soundFont: '' },
                         midiOutput: string = ''): string {
     return `<!DOCTYPE html>
@@ -3126,7 +3187,6 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             const dark = mode === 'dark'
                 || (mode === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
             document.documentElement.classList.toggle('theme-dark', dark);
-            document.documentElement.classList.toggle('todo-plain', ${highlightTodos ? 'false' : 'true'});
         })();
         // The SoundFont synth's files (docs/playback-design.md): the worklet processor
         // and the sound font ('' = none, the page then plays its oscillator patches); and
@@ -3326,20 +3386,10 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
            and a stroke on the element): the caret highlight (highlightPositions) reads a
            shape's attributes to decide whether to recolour its fill or its stroke, and a
            ring styled only from here had no stroke attribute, so the highlight filled it
-           into a disc (owner's report 2026-10-10). No paint here, then. The
-           lilysharp.preview.highlightTodos setting off (todo-plain) hides the ring, the
-           box and the leader; the memo keeps its place (the layout reserved it) and goes
-           plain. Until 2026-10-10 the head itself was filled red (owner: "赤くつぶれる").
+           into a disc (owner's report 2026-10-10). No paint here, then. The preview always
+           shows them (owner's decision 2026-10-25: the setting that hid them is gone).
+           Until 2026-10-10 the head itself was filled red (owner: "赤くつぶれる").
            The dark scheme's invert + hue-rotate(180deg) brings the red back to red. */
-        :root.todo-plain #svgContainer path[data-todo],
-        :root.todo-plain #svgContainer ellipse[data-todo],
-        :root.todo-plain #svgContainer rect[data-todo],
-        :root.todo-plain #svgContainer line[data-todo] {
-            display: none;
-        }
-        :root.todo-plain #svgContainer text[data-todo] {
-            fill: currentColor;
-        }
         /* A staff's bar an OMR reader flagged (the scan view's B4), framed as on the scan: the
            frame applyBarFlags draws round it, two staff spaces taller above and below. */
         #svgContainer rect.flag-frame {
@@ -5392,9 +5442,6 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                     break;
                 case 'hideTodos':
                     hideTodos(message.keys || []);
-                    break;
-                case 'setHighlightTodos':
-                    document.documentElement.classList.toggle('todo-plain', !message.on);
                     break;
                 case 'showBar':
                     showBar(message.bar, message.top === true, typeof message.cut === 'number' ? message.cut : 0);

@@ -790,7 +790,8 @@ public sealed partial class LilySharpLanguageServer
                 // with its declaration — the one the playback request plays, too. The
                 // writing is ScoreExport's, the command line's home (its remarks say why).
                 var chosen = RenderSpecParser.ChooseDeclared(tree, @params.RenderName);
-                var result = LilySharp.Core.Export.ScoreExport.Write(tree, format, @params.OutputPath, chosen);
+                var result = LilySharp.Core.Export.ScoreExport.Write(tree, format, @params.OutputPath, chosen,
+                    new LilySharp.Core.Export.ExportOptions { TodoMarks = @params.TodoMarks });
                 var written = result.Files;
                 // The dialog's path names ONE file; a multi-page PNG writes several, so
                 // report what was actually written so the toast isn't a lie.

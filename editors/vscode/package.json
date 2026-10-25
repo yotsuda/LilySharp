@@ -139,163 +139,132 @@
         "editor.inlineSuggest.enabled": false
       }
     },
-    "configuration": {
-      "title": "Lily#",
-      "properties": {
-        "lilysharp.serverPath": {
-          "type": "string",
-          "default": "",
-          "description": "Path to a Lily# language server executable to use instead of the one bundled with the extension. Leave empty (the bundled server) unless you build the server yourself."
-        },
-        "lilysharp.trace.server": {
-          "type": "string",
-          "enum": [
-            "off",
-            "messages",
-            "verbose"
-          ],
-          "default": "off",
-          "description": "Traces the communication between VS Code and the language server"
-        },
-        "lilysharp.preview.openOnOpen": {
-          "default": true,
-          "markdownDescription": "Open a preview beside a `.lys` file when it is opened (not on a tab switch, nor in a diff). An open preview follows the active `.lys` file whatever this says; lock it from its title bar to keep it on one file.",
-          "type": "boolean"
-        },
-        "lilysharp.preview.autoRefresh": {
-          "default": true,
-          "description": "Automatically refresh preview on document change",
-          "type": "boolean"
-        },
-        "lilysharp.preview.refreshDelay": {
-          "minimum": 100,
-          "maximum": 2000,
-          "default": 100,
-          "description": "Delay in milliseconds before refreshing preview after document change",
-          "type": "number"
-        },
-        "lilysharp.preview.theme": {
-          "type": "string",
-          "enum": [
-            "auto",
-            "light",
-            "dark"
-          ],
-          "enumItemLabels": [
-            "Follow VS Code's color theme",
-            "Light",
-            "Dark"
-          ],
-          "enumDescriptions": [
-            "The preview is light under a light VS Code theme and dark under a dark one (the default).",
-            "Always the printed page: black notes on white, whatever the editor theme.",
-            "Always dark: the page inverted to white notes on a dark ground."
-          ],
-          "default": "auto",
-          "description": "The score preview's color scheme. Takes effect immediately in open previews."
-        },
-        "lilysharp.preview.highlightTodos": {
-          "type": "boolean",
-          "default": true,
-          "markdownDescription": "Draw the notes, chords and rests marked `@todo` in red in the preview. An export draws none unless asked (`lysc svg|png|pdf --todo`). Takes effect immediately in open previews."
-        },
-        "lilysharp.omr.verifyOnSave": {
-          "type": "boolean",
-          "default": false,
-          "markdownDescription": "When a `.lys` read from a scan (its `x.omr.json` beside it) is saved, have the OMR reader engrave it again and compare it with the scanned pages, bar by bar; the scan view and the `@todo` quick fixes then show what still differs. Takes a few seconds; needs a reader that has `omr verify`."
-        },
-        "lilysharp.audition.enabled": {
-          "type": "boolean",
-          "default": true,
-          "description": "Sound notes as you edit: the note the caret lands on, a note as you type it, and what the step keys (Ctrl+Shift+Up / Down, Ctrl+Shift+PageUp / PageDown) step a note or a chord shape to. Plays through the open preview, so nothing sounds while no preview is open. Play Note at Cursor (Alt+P) and Play Current Measure (Alt+M) are not affected."
-        },
-        "lilysharp.playback.soundFont": {
-          "type": "string",
-          "default": "",
-          "scope": "machine-overridable",
-          "markdownDescription": "The sound font the preview plays with (the Play button, Alt+P / Alt+M and the auditions): a path to an `.sf2`, `.sf3` or `.dls` file on this machine — [choose a file…](command:lilysharp.chooseSoundFont) (also the **Lily#: Choose Sound Font…** command). Empty: the General MIDI bank your computer already has — Windows' `gm.dls`, macOS's DLS bank — or, where there is none, simple oscillator tones. For fuller instruments install a free sound font (the editor page of the Lily# site names three, with the steps) and choose it here. Each part plays the instrument its `midiInstrument` or preset names, as the exported MIDI does. Takes effect in open previews."
-        },
-        "lilysharp.playback.output": {
-          "type": "string",
-          "default": "",
-          "scope": "machine-overridable",
-          "markdownDescription": "A MIDI output port of this machine to play through instead of the preview's own synth — the Play button, Alt+P / Alt+M and the auditions all go there — named as [choose a port…](command:lilysharp.chooseMidiOutput) (the **Lily#: Choose MIDI Output…** command) lists it. Empty: the preview's sound font. On Windows *Microsoft GS Wavetable Synth* plays with no setup; a virtual port (loopMIDI on Windows, an IAC bus on a Mac) carries the notes into a DAW or a VST host, where your own instruments are. Each part keeps its channel and sends its General MIDI program (its `midiInstrument` or preset), as the exported MIDI does; the drums are on channel 10. Takes effect on the next sound."
-        },
-        "lilysharp.typingAids.enabled": {
-          "type": "boolean",
-          "default": true,
-          "markdownDescription": "Typing aids in `.lys` music: an octave mark, a duration digit, a dot, a string number (`\\`) or an annotation (`@`) typed anywhere on a note moves into its slot on that note; a digit always leaves a valid duration (`c1` + `2` → `c2`, `c4` + `6` → `c64`; 5, 7, 9 and 0 leave the note unchanged); `<` `>` `(` `)` `[` `]` `~` keep chords, slurs, beams and ties paired and on their notes. Off: every key is typed exactly as pressed. Ctrl+Shift+Up / Ctrl+Shift+Down are not affected."
-        },
-        "lilysharp.chordShapes.includeStretch": {
-          "type": "boolean",
-          "default": false,
-          "description": "Let Ctrl+Shift+Up / Ctrl+Shift+Down on a chord (an @chord(...) or a chords-row entry) also step through stretch shapes: shapes whose fretted frets lie five frets apart (lowest to highest), which are hard to play. Off by default, so the step offers only shapes within four frets. The first shape a step writes is not affected: for a chord LilyPond's table lacks it is a shape without a stretch whenever there is one."
-        },
-        "lilysharp.completion.flatSpelling": {
-          "type": "string",
-          "enum": [
-            "full",
-            "contracted"
-          ],
-          "enumItemLabels": [
-            "ees / aes",
-            "es / as"
-          ],
-          "default": "full",
-          "description": "How flat pitches (E♭, A♭) are spelled in the autocomplete list. Both spellings always compile; this only changes which the completer suggests."
-        },
-        "lilysharp.fontPaths": {
-          "type": "array",
-          "items": {
-            "type": "string"
+    "configuration": [
+      {
+        "title": "Preview",
+        "order": 1,
+        "properties": {
+          "lilysharp.preview.openOnOpen": {
+            "default": true,
+            "markdownDescription": "Open a preview beside a `.lys` file when it is opened (not on a tab switch, nor in a diff). An open preview follows the active `.lys` file whatever this says; lock it from its title bar to keep it on one file.",
+            "type": "boolean"
           },
-          "default": [],
-          "scope": "machine-overridable",
-          "markdownDescription": "Folders to look for SMuFL music fonts in, before the standard SMuFL locations: a font's metadata (`<name>_metadata.json`) and program (`.otf`) directly in a folder or in a subfolder of its name. A score names its font only (`fonts { music \"MyFont\" }`); this says where this machine keeps it. The environment variable `LILYSHARP_FONT_PATH` is read too (by the command line as well)."
-        },
-        "lilysharp.import.relativeOctave": {
-          "type": "boolean",
-          "default": false,
-          "description": "When importing MusicXML, emit compact relative-octave notes (c d e) instead of explicit absolute octaves (c' d' e'). Both render identically."
-        },
-        "lilysharp.ai.model": {
-          "type": "string",
-          "default": "",
-          "markdownDescription": "The language model *Ask AI…* (Ctrl+I) uses: a model id or family from **Lily#: Select AI Model…**. Empty chooses automatically — the largest model on offer, passing over the small ones (mini, nano, lite, …), which write poor Lily#. Ghost Completion has its own: `#lilysharp.ai.ghostModel#`."
-        },
-        "lilysharp.ai.ghostModel": {
-          "type": "string",
-          "default": "",
-          "markdownDescription": "The language model Ghost Completion uses: a model id or family from **Lily#: Select AI Model…**. It answers as you type, and VS Code drops a suggestion the moment the caret moves, so it needs a FAST model — a large one is cancelled before it shows. Empty chooses automatically: a small model (mini, nano, lite, …)."
-        },
-        "lilysharp.ai.omrFixModel": {
-          "type": "string",
-          "default": "",
-          "markdownDescription": "The language model *Fix OMR Marks with AI…* uses: a model id or family from **Lily#: Select AI Model…**. One request a bar, only when you run the command. Empty chooses automatically — the largest model on offer, as *Ask AI…* does; a faster model shortens a long batch at the cost of some readings."
-        },
-        "lilysharp.ai.omrFixImages": {
-          "type": "boolean",
-          "default": true,
-          "markdownDescription": "Show the model the scan of each bar *Fix OMR Marks with AI…* rewrites (the bar's crop of the page the OMR reader read, from `x.omr.json`), not only the text. A model that takes no image is sent the text alone, and the *Lily# AI* output channel says so. Off: text only — to compare, or to save tokens."
-        },
-        "lilysharp.ai.omrFixVerify": {
-          "type": "boolean",
-          "default": true,
-          "markdownDescription": "Have the OMR reader compare each proposal *Fix OMR Marks with AI…* makes with the scanned page before it is shown (`omr verify --candidate --bars`, a few seconds a bar; needs a reader that reports `verify-bars`). A proposal the scan contradicts is shown with *verify ✗* and left out of *Accept All*. Off: the compile and bar-length gates only."
-        },
-        "lilysharp.ai.omrFixBatch": {
-          "type": "number",
-          "default": 25,
-          "minimum": 1,
-          "markdownDescription": "How many bars *Fix OMR Marks with AI…* sends to the model in one go. Past this many it asks before continuing with the next batch."
-        },
-        "lilysharp.ai.ghostCompletion": {
-          "type": "boolean",
-          "default": false,
-          "markdownDescription": "Suggest the next measure as ghost text while you type (just after a barline), using your language model (GitHub Copilot). Each suggestion is compiled first and only shown if it is valid. Off by default because it calls the model as you type.\n\nIt is an inline suggestion, and Lily# turns inline suggestions off in `.lys` files by default (`editor.inlineSuggest.enabled`), because GitHub Copilot's own completion slowed every keystroke there. When you switch this on, Lily# offers to turn inline suggestions on for `.lys` files and to keep Copilot's completions off there (`github.copilot.enable`)."
+          "lilysharp.preview.theme": {
+            "type": "string",
+            "enum": [
+              "auto",
+              "light",
+              "dark"
+            ],
+            "enumItemLabels": [
+              "Follow VS Code's color theme",
+              "Light",
+              "Dark"
+            ],
+            "enumDescriptions": [
+              "The preview is light under a light VS Code theme and dark under a dark one (the default).",
+              "Always the printed page: black notes on white, whatever the editor theme.",
+              "Always dark: the page inverted to white notes on a dark ground."
+            ],
+            "default": "auto",
+            "description": "The score preview's color scheme. Takes effect immediately in open previews."
+          }
+        }
+      },
+      {
+        "title": "Playback",
+        "order": 2,
+        "properties": {
+          "lilysharp.audition.enabled": {
+            "type": "boolean",
+            "default": true,
+            "description": "Sound notes as you edit: the note the caret lands on, a note as you type it, and what the step keys (Ctrl+Shift+Up / Down, Ctrl+Shift+PageUp / PageDown) step a note or a chord shape to. Plays through the open preview, so nothing sounds while no preview is open. Play Note at Cursor (Alt+P) and Play Current Measure (Alt+M) are not affected."
+          },
+          "lilysharp.playback.soundFont": {
+            "type": "string",
+            "default": "",
+            "scope": "machine-overridable",
+            "markdownDescription": "The sound font the preview plays with (the Play button, Alt+P / Alt+M and the auditions): a path to an `.sf2`, `.sf3` or `.dls` file on this machine — [choose a file…](command:lilysharp.chooseSoundFont) (also the **Lily#: Choose Sound Font…** command). Empty: the General MIDI bank your computer already has — Windows' `gm.dls`, macOS's DLS bank — or, where there is none, simple oscillator tones. For fuller instruments install a free sound font (the editor page of the Lily# site names three, with the steps) and choose it here. Each part plays the instrument its `midiInstrument` or preset names, as the exported MIDI does. Takes effect in open previews."
+          },
+          "lilysharp.playback.output": {
+            "type": "string",
+            "default": "",
+            "scope": "machine-overridable",
+            "markdownDescription": "A MIDI output port of this machine to play through instead of the preview's own synth — the Play button, Alt+P / Alt+M and the auditions all go there — named as [choose a port…](command:lilysharp.chooseMidiOutput) (the **Lily#: Choose MIDI Output…** command) lists it. Empty: the preview's sound font. On Windows *Microsoft GS Wavetable Synth* plays with no setup; a virtual port (loopMIDI on Windows, an IAC bus on a Mac) carries the notes into a DAW or a VST host, where your own instruments are. Each part keeps its channel and sends its General MIDI program (its `midiInstrument` or preset), as the exported MIDI does; the drums are on channel 10. Takes effect on the next sound."
+          }
+        }
+      },
+      {
+        "title": "Editing",
+        "order": 3,
+        "properties": {
+          "lilysharp.typingAids.enabled": {
+            "type": "boolean",
+            "default": true,
+            "markdownDescription": "Typing aids in `.lys` music: an octave mark, a duration digit, a dot, a string number (`\\`) or an annotation (`@`) typed anywhere on a note moves into its slot on that note; a digit always leaves a valid duration (`c1` + `2` → `c2`, `c4` + `6` → `c64`; 5, 7, 9 and 0 leave the note unchanged); `<` `>` `(` `)` `[` `]` `~` keep chords, slurs, beams and ties paired and on their notes. Off: every key is typed exactly as pressed. Ctrl+Shift+Up / Ctrl+Shift+Down are not affected."
+          },
+          "lilysharp.completion.flatSpelling": {
+            "type": "string",
+            "enum": [
+              "full",
+              "contracted"
+            ],
+            "enumItemLabels": [
+              "ees / aes",
+              "es / as"
+            ],
+            "default": "full",
+            "description": "How flat pitches (E♭, A♭) are spelled in the autocomplete list. Both spellings always compile; this only changes which the completer suggests."
+          }
+        }
+      },
+      {
+        "title": "AI",
+        "order": 4,
+        "properties": {
+          "lilysharp.ai.model": {
+            "type": "string",
+            "default": "",
+            "markdownDescription": "The language model *Ask AI…* (Ctrl+I) uses: a model id or family from **Lily#: Select AI Model…**. Empty chooses automatically — the largest model on offer, passing over the small ones (mini, nano, lite, …), which write poor Lily#. Ghost Completion has its own: `#lilysharp.ai.ghostModel#`."
+          },
+          "lilysharp.ai.ghostModel": {
+            "type": "string",
+            "default": "",
+            "markdownDescription": "The language model Ghost Completion uses: a model id or family from **Lily#: Select AI Model…**. It answers as you type, and VS Code drops a suggestion the moment the caret moves, so it needs a FAST model — a large one is cancelled before it shows. Empty chooses automatically: a small model (mini, nano, lite, …)."
+          },
+          "lilysharp.ai.omrFixModel": {
+            "type": "string",
+            "default": "",
+            "markdownDescription": "The language model *Fix OMR Marks with AI…* uses: a model id or family from **Lily#: Select AI Model…**. One request a bar, only when you run the command. Empty chooses automatically — the largest model on offer, as *Ask AI…* does; a faster model shortens a long batch at the cost of some readings."
+          },
+          "lilysharp.ai.ghostCompletion": {
+            "type": "boolean",
+            "default": false,
+            "markdownDescription": "Suggest the next measure as ghost text while you type (just after a barline), using your language model (GitHub Copilot). Each suggestion is compiled first and only shown if it is valid. Off by default because it calls the model as you type.\n\nIt is an inline suggestion, and Lily# turns inline suggestions off in `.lys` files by default (`editor.inlineSuggest.enabled`), because GitHub Copilot's own completion slowed every keystroke there. When you switch this on, Lily# offers to turn inline suggestions on for `.lys` files and to keep Copilot's completions off there (`github.copilot.enable`)."
+          }
+        }
+      },
+      {
+        "title": "Scans and Fonts",
+        "order": 5,
+        "properties": {
+          "lilysharp.omr.verifyOnSave": {
+            "type": "boolean",
+            "default": false,
+            "markdownDescription": "When a `.lys` read from a scan (its `x.omr.json` beside it) is saved, have the OMR reader engrave it again and compare it with the scanned pages, bar by bar; the scan view and the `@todo` quick fixes then show what still differs. Takes a few seconds; needs a reader that has `omr verify`."
+          },
+          "lilysharp.fontPaths": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "default": [],
+            "scope": "machine-overridable",
+            "markdownDescription": "Folders to look for SMuFL music fonts in, before the standard SMuFL locations: a font's metadata (`<name>_metadata.json`) and program (`.otf`) directly in a folder or in a subfolder of its name. A score names its font only (`fonts { music \"MyFont\" }`); this says where this machine keeps it. The environment variable `LILYSHARP_FONT_PATH` is read too (by the command line as well)."
+          }
         }
       }
-    },
+    ],
     "commands": [
       {
         "command": "lilysharp.openPreview",
@@ -372,6 +341,16 @@
         "icon": "$(new-file)",
         "title": "New Score",
         "shortTitle": "Lily# Score (.lys)"
+      },
+      {
+        "command": "lilysharp.editNewScoreTemplate",
+        "category": "Lily#",
+        "title": "Edit New Score Template"
+      },
+      {
+        "command": "lilysharp.resetNewScoreTemplate",
+        "category": "Lily#",
+        "title": "Reset New Score Template"
       },
       {
         "command": "lilysharp.importMusicXml",

@@ -183,7 +183,7 @@ code --install-extension lilysharp-*.vsix
 
 ### Configuration
 
-Configure the path to the language server in VS Code settings:
+A server you build yourself is named in `settings.json` (it is not in the Settings screen):
 
 ```json
 {
@@ -191,7 +191,7 @@ Configure the path to the language server in VS Code settings:
 }
 ```
 
-If not set, the extension looks for `lilysharp-lsp` in PATH.
+If not set, the extension uses the server bundled with it, else `lilysharp-lsp` in PATH.
 
 ## Usage
 

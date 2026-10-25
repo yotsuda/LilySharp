@@ -25,7 +25,8 @@ import * as vm from 'node:vm';
 // to the other — a port's name is not something to type.
 describe('the MIDI output setting', () => {
     const manifest = JSON.parse(fs.readFileSync(path.join(__dirname, '..', '..', 'package.json'), 'utf8'));
-    const setting = manifest.contributes.configuration.properties['lilysharp.playback.output'];
+    // The settings come in groups (an array of configuration blocks, 2026-10-25).
+    const setting = Object.assign({}, ...manifest.contributes.configuration.map((c: { properties: object }) => c.properties))['lilysharp.playback.output'];
     const commands = manifest.contributes.commands as { command: string; title: string }[];
     const palette = manifest.contributes.menus.commandPalette as { command: string; when?: string }[];
 

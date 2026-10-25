@@ -61,6 +61,21 @@ All notable changes to the Lily# VS Code extension are documented here.
   and the four annotations it lacked (`@harmonic`, `@stopped`, `@snapPizz`, `@pluck`), and lost
   the notes about MusicXML and LilyPond export the AI never needs.
 
+### A shorter Settings screen, and your own New Score template
+
+- **The settings come in five groups** — Preview, Playback, Editing, AI, Scans and Fonts — and
+  13 instead of 23. Nine tuning values left the Settings screen but still work written in
+  `settings.json`: `preview.autoRefresh` / `refreshDelay`, `chordShapes.includeStretch`,
+  `import.relativeOctave`, `ai.omrFixImages` / `omrFixVerify` / `omrFixBatch`, and `serverPath`
+  / `trace.server` for a server you build yourself.
+- **The preview always shows the `@todo` marks**; `preview.highlightTodos` is gone. Instead,
+  **exporting an SVG, PNG or PDF of a score that has `@todo` marks asks whether to draw them**
+  (as `lysc … --todo` does).
+- **Lily#: Edit New Score Template** opens the template New Score starts from — a copy of the
+  built-in one the first time — to make it yours (a `paper { size letter }`, your name as the
+  composer, the parts you always write); **Lily#: Reset New Score Template** goes back.
+- Descriptions name today's commands: *Ask AI…* (it was *Transform Selection*), *Accept All*.
+
 ### The preview shows its pages as sheets
 
 - **The pages stand apart**: the server leaves a gap of 2.5 staff spaces between two pages of

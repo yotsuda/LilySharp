@@ -233,6 +233,9 @@ public class ExportParams
     /// <summary>The folder every file goes to under <see cref="All"/>; created if
     /// missing.</summary>
     public string? OutputDirectory { get; set; }
+    /// <summary>Draw the <c>@todo</c> marks as the preview shows them, in an SVG, PNG or PDF
+    /// (<c>lysc … --todo</c>; the editor's Export asks when the file has any).</summary>
+    public bool TodoMarks { get; set; }
 }
 
 /// <summary>

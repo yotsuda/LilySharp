@@ -338,7 +338,7 @@ describe('the typingAids.enabled setting (rule 31)', () => {
     const root = path.join(__dirname, '..', '..');
     const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
     it('is declared, on by default', () => {
-        const setting = pkg.contributes.configuration.properties['lilysharp.typingAids.enabled'];
+        const setting = Object.assign({}, ...pkg.contributes.configuration.map((c: { properties: object }) => c.properties))['lilysharp.typingAids.enabled'];
         assert.equal(setting?.type, 'boolean');
         assert.equal(setting?.default, true);
     });

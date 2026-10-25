@@ -550,7 +550,8 @@ async function runOmrAiFix(context: vscode.ExtensionContext, deps: OmrAiFixDeps,
     if (!chat) {
         return;
     }
-    // Many bars: say so once, before any is asked (lilysharp.ai.omrFixBatch). The panel opens at
+    // Many bars: say so once, before any is asked (lilysharp.ai.omrFixBatch — like omrFixImages
+    // and omrFixVerify, settings.json only since 2026-10-25: no one sets them in the UI). The panel opens at
     // once and fills in as the answers come, so the first ones can be reviewed while the rest wait.
     const limit = vscode.workspace.getConfiguration('lilysharp').get<number>('ai.omrFixBatch', 25);
     if (chosen.length > limit) {
