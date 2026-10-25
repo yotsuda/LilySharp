@@ -232,7 +232,7 @@ public sealed class TabPlannerLab
             Check("leap frees", "a'4\\4 a, b r |", 0, [(4, 17), (3, 0), (3, 2)]);
             Check("rests free", "a'4\\4 r r r | r1 | e r r r |", 2, [(3, 7)]);
             Check("slur keeps (no slur)", "a'4\\3 c r r |", 0, [(3, 12), (2, 10)]);
-            Check("slur keeps", "a'4\\3( c) r r |", 0, [(3, 12), (3, 15)]);
+            Check("a slur does not keep the string", "a'4\\3( c) r r |", 0, [(3, 12), (2, 10)]);
             Check("no fall", "a'2\\3 e |", 0, [(3, 12), (4, 12)]);
             Check("fall frees", "a'2\\3@fall e |", 0, [(3, 12), (2, 2)]);
             // As TabStringNumberTests.BarePitch_… reads it: a plain bass-clef part on a bass tab.
@@ -335,7 +335,7 @@ public sealed class TabPlannerLab
             bool moved = false;
             for (int k = 0; k < w.Length; k++)
             {
-                if (Names[k] == "openThenLower") continue;   // the owner ruled it out (2026-10-25)
+                if (Names[k] is "openThenLower" or "slurAcross") continue;   // the owner ruled it out (2026-10-25)
                 double v0 = w[k];
                 var tries = Names[k] == "span" ? new[] { 2.0, 3, 4 }
                     : mult.Select(m => v0 * m).Concat(add.Select(a => v0 + a)).Distinct().Where(v => v != v0
@@ -519,7 +519,7 @@ public sealed class TabPlannerLab
             bool moved = false;
             for (int k = 0; k < w.Length; k++)
             {
-                if (Names[k] == "openThenLower") continue;   // the owner ruled it out (2026-10-25)
+                if (Names[k] is "openThenLower" or "slurAcross") continue;   // the owner ruled it out (2026-10-25)
                 double v0 = w[k];
                 var tries = Names[k] == "span" ? new[] { 2.0, 3, 4 }
                     : mult.Select(m => v0 * m).Concat(add.Select(a => v0 + a)).Distinct().Where(v => v != v0

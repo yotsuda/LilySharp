@@ -11,9 +11,10 @@ workflow attaches that section to the GitHub Release verbatim.
 - **A slur no longer keeps a tab's notes on one string; a tie still does** (the owner's
   decision, reversing 2026-09-14): a sung line's slur is a melisma, not a legato on the
   instrument — さくらさくら's slurred E–C eighths had slid four frets up one string. Both
-  planners; the frozen bass fingering changes with it, approved by the owner (over the owner's
-  books the strings left to write rise from 6,925 to 7,208: they often keep a slurred pair on
-  one string).
+  planners; the frozen bass fingering changes with it, approved by the owner. Dropping it alone
+  raised the strings left to write over the owner's books from 6,925 to 7,208 (they often keep
+  a slurred pair on one string); the bass planner's other costs, refitted without it, bring them
+  back to 6,918.
 - **The `.ly` twin opens on one key.** A file key followed by a part header's key, or by the
   first section's own opening key, was written as two `\key`s at one moment; LilyPond keeps the
   first and discards the rest, so the twin printed the file's key where the page prints the later

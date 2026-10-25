@@ -89,11 +89,11 @@ public sealed record BassFingeringWeights
 /// <para>
 /// MEASURED (2026-10-25, 267 books, 111,068 notes aligned to LilyPond's own strings — read back
 /// note by note with LilySharp-Lab probes/bass-fingering-2026-10-25/probe.ly): the strings a user
-/// would write, first miss first, before the planner plays a book as fingered — 6,925 (median 18
-/// a book) against the general planner's 17,319 and LilyPond's 33,301; 85.9% of the notes as
+/// would write, first miss first, before the planner plays a book as fingered — 6,918 (median 19
+/// a book) against the general planner's 17,689 and LilyPond's 33,301; 84.9% of the notes as
 /// fingered. The costs were searched for that count on half the books and checked on the other
 /// half (3,483 / 3,493 at the first fit), then refitted with the owner's muting rule
-/// (<see cref="BassFingeringWeights.OpenThenLowerOpen"/>, 2026-10-25). Re-measure with the Measure-category tests TabCorpusMeasureTests and
+/// (<see cref="BassFingeringWeights.OpenThenLowerOpen"/>, 2026-10-25) and again without the slur cost the owner dropped (6,918: 3,288 / 3,643 / the A's cost). Re-measure with the Measure-category tests TabCorpusMeasureTests and
 /// TabPlannerLab (LILYSHARP_TABCORPUS, LILYSHARP_TABCORPUS_LP).
 /// </para>
 /// <para>
@@ -228,28 +228,27 @@ public static class BassFingeringPlanner
     public static BassFingeringWeights Default { get; } = new()
     {
         ShiftBase = 0,
-        ShiftPerFret = 1.8,
-        ShiftCap = 5.85,
+        ShiftPerFret = 1.7,
+        ShiftCap = 6.55,
         FreeShiftFactor = 0.875,
-        TimeExponent = 0.5,
-        AfterOpenFactor = 0.45,
-        Skip = 2.825,
-        SkipPerString = 4.3,
+        TimeExponent = 0.8,
+        AfterOpenFactor = 0.85,
+        Skip = 3.125,
+        SkipPerString = 4.5,
         Stretch = 0.5,
         RepeatAcross = 23.066,
-        Open = 0.1,
+        Open = 0,
         OpenPerHandFret = 0.3,
-        // The open E is the open string the owner's books reach for most (96% of their E's), the
-        // A next (60%); the D and G are mostly stopped. (The A's −0.3 was set by hand on
-        // 2026-10-25 so a lone A is the open string, as LilyPond plays it, and kept by the refit.)
-        OpenStringCost = [0.1, 0, -0.3, -0.6, 0],
+        // The open E and D are the open strings the owner's books reach for, the A next; the G
+        // and the low B less. (The A's −0.3 was −0.2 in the fit; set so a lone A is the open
+        // string, as LilyPond plays it — and 14 fewer strings to write over the corpus.)
+        OpenStringCost = [0.25, -0.4, -0.3, -0.4, 0.3],
         // 1st (G), 2nd (D), 3rd (A), 4th (E), 5th (low B): the middle strings are the home ones.
-        StringCost = [0.1, -0.6, -0.5, 0.05625, 0.25],
+        StringCost = [0.1, -0.6, -0.6, 0.15625, 0.475],
         // The hand at the 1st … 12th fret: the 2nd–6th positions are home; above the 7th, dearer.
-        PositionCost = [-0.05, -0.4, 0.1, -0.3, -0.15, -0.1, 0.25, 0.3925, 0.5875, 2.4, 0.9, 3.8125],
-        // The owner's muting rule (2026-10-25), fitted with the rest: an open string then an open
-        // lower one 250 times over the corpus before, 52 after (the owner's own books: 90).
-        OpenThenLowerOpen = 4,
+        PositionCost = [0, -0.3, 0.1, -0.4, -0.15, -0.075, 0.25, 0.3925, 0.6875, 1.1, 1, 6.16875],
+        // The owner's muting rule (2026-10-25), fitted with the rest.
+        OpenThenLowerOpen = 3.3,
         SameStringStep = 0,
         Span = 3,
     };
