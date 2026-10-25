@@ -3624,10 +3624,11 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         .practice-panel button[aria-pressed="true"] {
             background: #d6e6f8; border-color: #0078d7; color: #0b4a8b;
         }
-        /* A part sounds while its button is pressed in; one let out is silent. */
+        /* A part sounds while its button is pressed in; one let out is silent, its name grey (no strike-through:
+           the line sat off the letters' middle in VS Code's font — owner's report 2026-10-25). */
         .practice-panel .parts { display: flex; flex-direction: column; align-items: stretch; gap: 4px; }
         .practice-panel .parts button { text-align: left; }
-        .practice-panel .parts button[aria-pressed="false"] { color: #888; text-decoration: line-through; }
+        .practice-panel .parts button[aria-pressed="false"] { color: #888; }
         .range-panel table { border-collapse: collapse; }
         .range-panel th { text-align: left; font-weight: 600; opacity: 0.75; padding: 2px 8px; }
         .range-panel td { padding: 2px 8px; white-space: nowrap; }

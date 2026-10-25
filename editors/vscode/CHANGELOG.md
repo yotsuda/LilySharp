@@ -44,7 +44,7 @@ All notable changes to the Lily# VS Code extension are documented here.
     menu still plays from the note, once;
   - the **metronome**: a wood block on every beat, the bar's first louder. The beats are the
     meter's; a pickup no meter change marks shifts the accents;
-  - the **parts**: one toggle a part, one under another, pressed in while it sounds — a chord row is a part of its own.
+  - the **parts**: one toggle a part, one under another, pressed in while it sounds and grey while it is silent — a chord row is a part of its own.
 
   The button stays pressed in while anything differs from the score as written, and a change
   while playing goes on from the same place.
