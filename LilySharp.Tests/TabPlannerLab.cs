@@ -191,6 +191,7 @@ public sealed class TabPlannerLab
         PositionCost = Enumerable.Range(0, 12).Select(k => w[I("pos1") + k]).ToArray(),
         SameStringStep = w[I("sameStringStep")], Span = (int)Math.Round(w[I("span")]),
         OpenStringCost = Enumerable.Range(0, 5).Select(k => w[I("open1") + k]).ToArray(),
+        OpenThenLowerOpen = w[I("openThenLowerOpen")],
     };
 
     private static (int? String, int Fret)[][] BassTabFrets(string body)
@@ -225,7 +226,7 @@ public sealed class TabPlannerLab
             void Check(string name, string body, int bar, (int?, int)[] expected)
             {
                 var got = BassTabFrets(body)[bar];
-                if (!got.SequenceEqual(expected)) broken.Add(name);
+                if (!got.SequenceEqual(expected)) broken.Add(name + " → " + string.Join(" ", got.Select(g => $"{g.Item1}/{g.Item2}")));
             }
             Check("aes g g f f ees", "aes'4 g8 g f f ees4 | bes c8 c d f ees4 |", 0, [(1, 1), (1, 0), (1, 0), (2, 3), (2, 3), (2, 1)]);
             Check("bes c c d f ees", "aes'4 g8 g f f ees4 | bes c8 c d f ees4 |", 1, [(3, 1), (3, 3), (3, 3), (2, 0), (2, 3), (2, 1)]);
@@ -251,6 +252,36 @@ public sealed class TabPlannerLab
         }
         finally { BassFingeringPlanner.t_weightsForMeasurement = null; }
         return broken;
+    }
+
+    /// <summary>How often a plan plays an open string and then an open LOWER string, over the corpus:
+    /// the frozen planner's, the lab's and the owner's own.</summary>
+    [Fact]
+    public void OpenThenLowerOpenCount()
+    {
+        var start = Environment.GetEnvironmentVariable("LILYSHARP_TABCORPUS_LAB_OTLO");
+        if (string.IsNullOrEmpty(start)) return;
+        var w = Load(start);
+        int core = 0, lab = 0, owner = 0;
+        foreach (var b in TabCorpusSearchTests.Books())
+        {
+            int n = b.Tuning.Length;
+            int Count(int[] s)
+            {
+                int c = 0;
+                for (int i = 1; i < s.Length; i++)
+                {
+                    if (s[i] == 0 || s[i - 1] == 0 || b.Events[i].HandFree) continue;
+                    bool o0 = b.Events[i - 1].Midi == b.Tuning[n - s[i - 1]], o1 = b.Events[i].Midi == b.Tuning[n - s[i]];
+                    if (o0 && o1 && s[i] > s[i - 1]) c++;
+                }
+                return c;
+            }
+            core += Count(BassFingeringPlanner.Plan(b.Events, b.Tuning));
+            lab += Count(Plan(b.Events, b.Tuning, w));
+            owner += Count(b.Expected);
+        }
+        File.WriteAllText(TabCorpusSearchTests.Report("lab-otlo"), $"open then open lower string — frozen planner {core}, lab {lab}, owner {owner}");
     }
 
     [Fact]
@@ -305,6 +336,7 @@ public sealed class TabPlannerLab
             bool moved = false;
             for (int k = 0; k < w.Length; k++)
             {
+                if (Names[k] == "openThenLower") continue;   // the owner ruled it out (2026-10-25)
                 double v0 = w[k];
                 var tries = Names[k] == "span" ? new[] { 2.0, 3, 4 }
                     : mult.Select(m => v0 * m).Concat(add.Select(a => v0 + a)).Distinct().Where(v => v != v0
@@ -488,6 +520,7 @@ public sealed class TabPlannerLab
             bool moved = false;
             for (int k = 0; k < w.Length; k++)
             {
+                if (Names[k] == "openThenLower") continue;   // the owner ruled it out (2026-10-25)
                 double v0 = w[k];
                 var tries = Names[k] == "span" ? new[] { 2.0, 3, 4 }
                     : mult.Select(m => v0 * m).Concat(add.Select(a => v0 + a)).Distinct().Where(v => v != v0

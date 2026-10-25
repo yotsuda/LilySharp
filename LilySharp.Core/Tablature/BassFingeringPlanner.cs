@@ -61,6 +61,14 @@ public sealed record BassFingeringWeights
     /// <summary>The hand at each position, the first first (index 0 = the 1st fret; the last
     /// entry also serves every position above it).</summary>
     public IReadOnlyList<double> PositionCost { get; init; } = [];
+    /// <summary>An open string followed by an open LOWER string: the higher one rings on, and
+    /// with no finger down the left hand has to stop to mute it. Not charged when the lower note
+    /// is stopped — the finger stopping it lies across the higher string and mutes it — nor the
+    /// other way round, where the right hand's finger comes to rest on the lower string (USER
+    /// SPECIFIED, 2026-10-25: "D A: the 3rd string's 5th then the open 3rd, not the open 2nd then
+    /// the open 3rd; A D: the open 3rd then the open 2nd is fine; the open G then the 2nd
+    /// string's 3rd is fine").</summary>
+    public double OpenThenLowerOpen { get; init; }
     /// <summary>Two stopped notes in a row on one string at different frets.</summary>
     public double SameStringStep { get; init; }
     /// <summary>The frets the hand covers past the index finger before it stretches.</summary>
@@ -192,6 +200,7 @@ public static class BassFingeringPlanner
                     if (ev.TiedFromPrevious && ds != 0) e += 1_000_000;
                     if (pe.Midi == ev.Midi && ds != 0) e += w.RepeatAcross;
                     if (ds == 0 && x.Fret > 0 && q.Fret > 0 && x.Fret != q.Fret) e += w.SameStringStep;
+                    if (q.Fret == 0 && x.Fret == 0 && x.String > q.String) e += w.OpenThenLowerOpen;
                     if (e < best) { best = e; arg = j; }
                 }
                 if (arg < 0) { best = 1e9; arg = prevStart; }
