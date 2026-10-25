@@ -698,7 +698,8 @@ included, so `| きら | ひかる |` is one bar longer than `きら | ひかる
 **Melismas are LilyPond's**: a SLUR or a TIE holds its first syllable over every note it
 covers by itself (`c4( d e) f` with `la lu` puts `lu` on f — do NOT add markers for the
 slurred notes). `__` only draws the extender line and takes NO note; `_` takes ONE note
-with no syllable (a melisma without a slur: `c4 d e f` with `la _ lu li`).
+with no syllable (a melisma without a slur: `c4 d e f` with `la _ lu li`) and draws the
+extender line under it; a standalone `~` takes one note the same way with NO line.
 
 ```
 part melody

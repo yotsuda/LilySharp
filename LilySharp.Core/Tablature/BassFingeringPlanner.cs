@@ -90,7 +90,7 @@ public sealed record BassFingeringWeights
 /// it needs the owner's approval and a line in the changelog.
 /// <para>
 /// MEASURED (2026-10-25, 267 books, 111,068 notes aligned to LilyPond's own strings — read back
-/// note by note with LilySharp-Lab runs/2026-10-25-bass-fingering/probe.ly): the strings a user
+/// note by note with LilySharp-Lab probes/bass-fingering-2026-10-25/probe.ly): the strings a user
 /// would write, first miss first, before the planner plays a book as fingered — 6,925 (median 18
 /// a book) against the general planner's 17,319 and LilyPond's 33,301; 85.9% of the notes as
 /// fingered. The costs were searched for that count on half the books and checked on the other

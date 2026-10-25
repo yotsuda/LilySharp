@@ -1882,7 +1882,17 @@ longer than `きら | ひかる`, its first bar carrying no syllables. That lead
 the syllable on the slur's first note is sung over every note up to the one that closes
 it (and a tied note takes no syllable), so the next syllable lands after the slur.
 `__` draws the extender line and takes **no** note; `_` takes one note without a
-syllable, holding the previous one over it.
+syllable, holding the previous one over it — and draws the extender line under it, as
+LilyPond's `__ _` does (LilyPond's lone `_` draws none). A standalone `~` holds the previous
+syllable over one note the same way **without** the line — the usual choice for a melisma
+on a short note, and for Japanese, where each kana is its own syllable:
+
+```
+lyrics words sings melody {
+  そ ら _ は |     // ら held over the next note, with a short line
+  そ ら ~ は |     // the same, no line
+}
+```
 
 ```
 part melody
