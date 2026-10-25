@@ -4,6 +4,13 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+### Fixed
+
+- **The notes playing on the MIDI output light one by one again**: the page sounds nothing
+  itself then, and the browser slowed its timers to one a second — in a bar of eighth notes
+  one in four lit, and stayed lit. The extension now keeps the highlight's beat from its side,
+  every 50 ms, while the preview plays.
+
 ### The preview's header keeps its buttons whole
 
 - **A narrow preview wraps the header instead of squeezing it**: the buttons keep their size,
