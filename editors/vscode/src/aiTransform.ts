@@ -122,8 +122,9 @@ let pendingDecision: ((d: Decision) => void) | undefined;
 /** Registers the `lilysharp.aiTransform` command. */
 export function registerAiTransform(context: vscode.ExtensionContext, deps: AiTransformDeps): void {
     context.subscriptions.push(
-        vscode.commands.registerCommand('lilysharp.aiTransform', (opts?: { whole?: boolean }) =>
-            runAiTransform(deps, opts?.whole === true))
+        // `selected` names what the preview handed over ("3 bars selected"), for the input box.
+        vscode.commands.registerCommand('lilysharp.aiTransform', (opts?: { whole?: boolean; selected?: string }) =>
+            runAiTransform(deps, opts?.whole === true, opts?.selected))
     );
     context.subscriptions.push({
         dispose: () => {
@@ -133,7 +134,7 @@ export function registerAiTransform(context: vscode.ExtensionContext, deps: AiTr
 }
 
 /** The whole select→prompt→validate→render→apply transaction (§3/§4). */
-async function runAiTransform(deps: AiTransformDeps, wholeScore = false): Promise<void> {
+async function runAiTransform(deps: AiTransformDeps, wholeScore = false, selected?: string): Promise<void> {
     const editor = vscode.window.activeTextEditor;
     if (!editor || editor.document.languageId !== 'lilysharp') {
         vscode.window.showErrorMessage('Lily#: open a .lys file and select what to transform.');
@@ -154,10 +155,12 @@ async function runAiTransform(deps: AiTransformDeps, wholeScore = false): Promis
     // whole score outright (wholeScore).
     let sel: vscode.Range = editor.selection;
     let whole = false;
+    let what = selected ?? 'The selected text';
     if (wholeScore) {
         whole = true;
         sel = new vscode.Range(doc.positionAt(0), doc.positionAt(doc.getText().length));
     } else if (sel.isEmpty) {
+        what = "The caret's line";
         sel = doc.lineAt(editor.selection.active.line).range;
         if (doc.getText(sel).trim().length === 0) {
             whole = true;
@@ -183,12 +186,13 @@ async function runAiTransform(deps: AiTransformDeps, wholeScore = false): Promis
 
     const instruction = await vscode.window.showInputBox({
         title: whole ? 'Lily# — transform the whole score with AI' : 'Lily# — transform selection with AI',
-        // A selection points the AI at a place but does not fence it in (owner's request
-        // 2026-10-25): say so, and that nothing lands unseen.
+        // A selection points the AI at a place but does not fence it in (owner's requests
+        // 2026-10-25): it leads with what was selected, as "Nothing is selected" leads the
+        // whole-score box, then says the whole score stays open to change and nothing lands unseen.
         prompt: whole
             ? 'Nothing is selected, so the AI works on the whole file. Describe the change (natural language)'
-            : 'Describe the change. The selection tells the AI where to look; it may still change other '
-              + 'places when the request needs it — every change is shown before it is applied.',
+            : `${what} — a hint of where to look, but the whole score is open to change; `
+              + 'every change is shown before it is applied. Describe the change (natural language)',
         placeHolder: nextPlaceholder(),
         ignoreFocusOut: true,
     });

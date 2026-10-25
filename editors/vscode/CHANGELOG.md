@@ -18,9 +18,10 @@ All notable changes to the Lily# VS Code extension are documented here.
 - **✨ Ask AI… stands in the preview's header all the time**: with a selection it asks about
   the selection, without one about the whole score; Ctrl+I in the preview does the same. It
   replaces the purple *Transform with AI* button that floated over the score only while a
-  selection stood. Its tooltip and the input box say what a selection means: it tells the AI
-  where to look, not a fence — the AI may change other places when the request needs it, and
-  every change is shown before it is applied.
+  selection stood. Its tooltip and the input box say what a selection means: the box leads
+  with what is selected (*3 bars selected*, *1 note selected*), as it leads with *Nothing is
+  selected* without one, and says it is a hint of where to look while the whole score stays open
+  to change — every change is shown before it is applied.
 
 ### Remove All String Numbers
 

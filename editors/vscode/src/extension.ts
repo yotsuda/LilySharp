@@ -849,7 +849,7 @@ export function activate(context: vscode.ExtensionContext) {
     // One door, four captions (owner's request 2026-10-25: the menu everywhere on the score, saying
     // what it will change): the selection, the note or the bar right-clicked, or — off the staves
     // — the whole score, as Ctrl+I on an empty line does in the editor.
-    const previewAi = async (m?: { lysAiKind?: string; lysAiFrom?: number; lysAiTo?: number }) => {
+    const previewAi = async (m?: { lysAiKind?: string; lysAiFrom?: number; lysAiTo?: number; lysAiSelected?: string }) => {
         const shown = [...previewPanels.entries()].find(([, p]) => p.active);
         if (!shown || !m) {
             return;
@@ -861,7 +861,7 @@ export function activate(context: vscode.ExtensionContext) {
         if (!Number.isInteger(m.lysAiFrom) || m.lysAiFrom! < 0) {
             return;
         }
-        await aiTransformFromScore(shown[0], m.lysAiFrom!, m.lysAiTo ?? m.lysAiFrom!);
+        await aiTransformFromScore(shown[0], m.lysAiFrom!, m.lysAiTo ?? m.lysAiFrom!, m.lysAiSelected);
     };
     for (const id of ['lilysharp.previewAiTransform', 'lilysharp.previewAiTransformNote',
         'lilysharp.previewAiTransformBar', 'lilysharp.previewAiTransformScore']) {
@@ -1475,7 +1475,7 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
                 // M3: a note range selected ON THE SCORE maps to a text range, which
                 // becomes the editor selection, then the same AI transform runs — so
                 // the loop is identical whether the selection started in text or score.
-                await aiTransformFromScore(uri, message.startPos, message.endPos);
+                await aiTransformFromScore(uri, message.startPos, message.endPos, message.selected);
             } else if (message.type === 'aiWholeScore') {
                 // The header's AI button (or Ctrl+I) with nothing selected.
                 await aiTransformWholeScore(uri);
@@ -2669,7 +2669,7 @@ async function aiTransformWholeScore(uri: string): Promise<void> {
  * against it — so a score-origin selection drives the exact same transform loop as a
  * text selection (§6).
  */
-async function aiTransformFromScore(uri: string, startPos: number, endPos: number): Promise<void> {
+async function aiTransformFromScore(uri: string, startPos: number, endPos: number, selected?: string): Promise<void> {
     const doc = vscode.workspace.textDocuments.find(d => d.uri.toString() === uri);
     if (!doc) {
         vscode.window.showErrorMessage('Lily#: open the .lys file to transform its notes.');
@@ -2697,7 +2697,7 @@ async function aiTransformFromScore(uri: string, startPos: number, endPos: numbe
     const editor = await vscode.window.showTextDocument(doc, { preserveFocus: false });
     editor.selection = new vscode.Selection(range.start, range.end);
     editor.revealRange(range, vscode.TextEditorRevealType.InCenter);
-    await vscode.commands.executeCommand('lilysharp.aiTransform');
+    await vscode.commands.executeCommand('lilysharp.aiTransform', { selected });
 }
 
 /**
@@ -3502,6 +3502,24 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             }
             updateAiButton();
         }
+        // What the selection is, for the head of the AI's input box (owner's request 2026-10-25:
+        // "N bars selected", as "Nothing is selected" heads it without one). Bars are counted by
+        // their box (rect.bar-box, one per bar of a system), so a bar of several staves counts once.
+        function selectedLabel() {
+            const boxes = Array.from(svgContainer.querySelectorAll('rect.bar-box'));
+            const bars = new Set();
+            for (const r of svgContainer.querySelectorAll('rect.bar-staff.selected')) {
+                const b = r.getBoundingClientRect();
+                const cx = (b.left + b.right) / 2, cy = (b.top + b.bottom) / 2;
+                const box = boxes.find(x => {
+                    const c = x.getBoundingClientRect();
+                    return cx >= c.left && cx <= c.right && cy >= c.top && cy <= c.bottom;
+                });
+                bars.add(box ? box : r);
+            }
+            const n = bars.size;
+            return n === 0 ? 'The selection' : n === 1 ? '1 bar selected' : n + ' bars selected';
+        }
         // The header's AI button keeps one caption, "✨ Ask AI…" — the lit bars already show what
         // is selected (owner's request 2026-10-25). Its tooltip says what a selection means: it
         // points the AI at a place without fencing it in, and every change is shown first.
@@ -3520,7 +3538,8 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 vscode.postMessage({ type: 'aiWholeScore' });
                 return;
             }
-            vscode.postMessage({ type: 'aiTransformFromScore', startPos: aiRangeLo, endPos: aiRangeHi });
+            vscode.postMessage({ type: 'aiTransformFromScore', startPos: aiRangeLo, endPos: aiRangeHi,
+                selected: selectedLabel() });
         }
         aiTransformBtn.addEventListener('click', aiSubmitSelection);
 
@@ -5759,13 +5778,16 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                     if (ctxBarRange) break;
                 }
             }
-            let ctxAiKind = 'score', ctxAiFrom = -1, ctxAiTo = -1;
+            let ctxAiKind = 'score', ctxAiFrom = -1, ctxAiTo = -1, ctxAiSelected = '';
             if (aiRangeLo >= 0) {
                 ctxAiKind = 'selection'; ctxAiFrom = aiRangeLo; ctxAiTo = aiRangeHi;
+                ctxAiSelected = selectedLabel();
             } else if (ctxNotePos >= 0) {
                 ctxAiKind = 'note'; ctxAiFrom = ctxAiTo = ctxNotePos;
+                ctxAiSelected = '1 note selected';
             } else if (ctxBarRange) {
                 ctxAiKind = 'bar'; ctxAiFrom = ctxBarRange[0]; ctxAiTo = ctxBarRange[1];
+                ctxAiSelected = '1 bar selected';
             }
             if (ctxBarAt < 0) ctxBarAt = ctxNotePos;
             document.body.dataset.vscodeContext = JSON.stringify({
@@ -5777,6 +5799,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 lysAiKind: ctxAiKind,
                 lysAiFrom: ctxAiFrom,
                 lysAiTo: ctxAiTo,
+                lysAiSelected: ctxAiSelected,
                 lysOnStaff: ctxBarRange !== null,
                 lysHasSel: aiRangeLo >= 0,
                 lysNote: ctxNotePos >= 0,
