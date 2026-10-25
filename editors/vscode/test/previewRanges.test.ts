@@ -46,13 +46,18 @@ describe('the preview\'s Range panel', () => {
 
     // Play of the selected bars and the loop; the length beside them (owner's request 2026-10-25).
     it('plays the selected bars, loops while the loop is on, and shows the length', () => {
-        assert.match(html, /pendingSpan = aiRangeLo >= 0 \? \[aiRangeLo, aiRangeHi\] : null;/);
+        // The whole bars the selection lights, not the notes at its ends.
+        assert.match(html, /pendingSpan = aiRangeLo >= 0 \? selectedBarsSpan\(\) : null;/);
+        assert.match(html, /function selectedBarsSpan\(\) \{[\s\S]*?rect\.bar-staff\.selected\[data-span\]/);
         // ▶ keeps the selection lit: only a click on the sheet itself clears it.
         assert.match(html, /\} else if \(target && mainContent\.contains\(target\)\) \{\s*\/\/ Clicked empty space/);
         // The loop is in the practice menu, an On/Off as the metronome's.
         assert.match(html, /<div id="practicePanel"[\s\S]*<span class="plbl">Loop<\/span><button type="button" id="loopBtn" class="toggle" aria-pressed="false"/);
         assert.match(html, /<input type="range" id="tempoSlider" min="50" max="150" step="5" value="100"/);
-        assert.match(html, /window\.LysSynth\.playSpan\(playbackNotes, span \? span\[0\] : null, span \? span\[1\] : null, loopOn\);/);
+        assert.match(html, /const list = spanOf\(playbackNotes, span, loopOn\);/);
+        // A loop's rounds laid out ahead, each whole bars long.
+        assert.match(html, /window\.LysSynth\.loopNotes\(list, 600, loopRound\)/);
+        assert.match(html, /startPlayback\(loopOn \? looped\(list\) : list, 0\);/);
         assert.match(html, /playEndTimer = setTimeout\(playEnded, /);
         assert.match(html, /function playEnded\(\) \{\s*const list = loopOn \? loopList : null;/);
         assert.match(html, /refreshRanges\(\);\s*vscode\.postMessage\(\{ type: 'requestLength' \}\);/);

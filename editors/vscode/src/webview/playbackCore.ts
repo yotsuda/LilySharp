@@ -171,6 +171,18 @@ export function endOf(notes: readonly PlaybackNote[], offset = 0): number {
  * the music as written, once.
  */
 export function playSpan(notes: readonly PlaybackNote[], lo: number | null, hi: number | null, once: boolean): PlaybackNote[] {
+    return playSpanWindow(notes, lo, hi, once).notes;
+}
+
+/**
+ * {@link playSpan}, and how long the stretch lasts — what a loop's round is. With `bars` (the
+ * times the bars begin, ascending) the stretch runs from the start of the bar its first note
+ * is in to the start of the bar after its last note's end, so a round is whole bars, a rest at
+ * either end included (owner's report 2026-10-25); without, from its first note to the end of
+ * its last.
+ */
+export function playSpanWindow(notes: readonly PlaybackNote[], lo: number | null, hi: number | null, once: boolean,
+    bars?: readonly number[]): { notes: PlaybackNote[]; length: number } {
     const key = (n: PlaybackNote) => n.S + ':' + (n.O ?? 0);
     const sorted = [...notes].sort((a, b) => a.T - b.T);
     // A printed note's first sounding; a later one is a repeat playing it again.
@@ -187,9 +199,18 @@ export function playSpan(notes: readonly PlaybackNote[], lo: number | null, hi: 
         t0 = Math.min(t0, n.T);
         t1 = Math.max(t1, n.T + n.D);
     }
-    if (t0 === Infinity) { return []; }
+    if (t0 === Infinity) { return { notes: [], length: 0 }; }
+    if (bars && bars.length > 0) {
+        let start = -Infinity, end = Infinity;
+        for (const b of bars) {
+            if (b <= t0 + 1e-6) { start = b; }
+            if (b >= t1 - 1e-6 && end === Infinity) { end = b; }
+        }
+        if (start > -Infinity) { t0 = start; }
+        if (end < Infinity) { t1 = end; }
+    }
     const window = sorted.filter(n => n.T >= t0 - 1e-6 && n.T < t1 - 1e-6);
-    if (!once) { return window.map(n => ({ ...n, T: n.T - t0 })); }
+    if (!once) { return { notes: window.map(n => ({ ...n, T: n.T - t0 })), length: t1 - t0 }; }
 
     // The repeats' time: the merged spans the dropped notes sound in.
     const gone: [number, number][] = [];
@@ -209,8 +230,11 @@ export function playSpan(notes: readonly PlaybackNote[], lo: number | null, hi: 
     };
     // A note of no printed place (a metronome click) goes with the time it falls in.
     const inGone = (t: number) => gone.some(([a, b]) => t >= a - 1e-6 && t < b - 1e-6);
-    return window.filter(n => first.has(n) && !(n.S < 0 && inGone(n.T)))
-        .map(n => ({ ...n, T: n.T - t0 - cut(n.T) }));
+    return {
+        notes: window.filter(n => first.has(n) && !(n.S < 0 && inGone(n.T)))
+            .map(n => ({ ...n, T: n.T - t0 - cut(n.T) })),
+        length: t1 - t0 - cut(t1),
+    };
 }
 
 /**
@@ -219,9 +243,10 @@ export function playSpan(notes: readonly PlaybackNote[], lo: number | null, hi: 
  * times every round. Restarting at a page timer's word went wrong on the MIDI output, where
  * the browser holds the page's timers to a second and a round lost or gained up to three beats.
  */
-export function loopNotes(list: readonly PlaybackNote[], seconds: number): PlaybackNote[] {
-    let length = 0;
-    for (const n of list) { length = Math.max(length, n.T + n.D); }
+export function loopNotes(list: readonly PlaybackNote[], seconds: number, round?: number): PlaybackNote[] {
+    // The round: as given (whole bars, playSpanWindow), else as long as the list sounds.
+    let length = round ?? 0;
+    if (!(length > 0)) { for (const n of list) { length = Math.max(length, n.T + n.D); } }
     if (length <= 0) { return [...list]; }
     const rounds = Math.max(1, Math.min(500, Math.ceil(seconds / length)));
     const out: PlaybackNote[] = [];

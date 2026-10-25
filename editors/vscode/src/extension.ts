@@ -4670,6 +4670,19 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         // heights away.
         // A bar's notes as a selection: the first and last data-pos inside its written stretch
         // (data-span), or its start when it holds none.
+        // What ▶ plays of a score selection: the WHOLE bars it lights (owner's report
+        // 2026-10-25: a selection made from a note in bar 1 to a note in bar 4 lit four bars and
+        // played from that note to that one — three beats short at either end of the loop).
+        function selectedBarsSpan() {
+            let lo = Infinity, hi = -Infinity;
+            for (const r of svgContainer.querySelectorAll('rect.bar-staff.selected[data-span]')) {
+                const span = r.getAttribute('data-span').split(' ').map(Number);
+                if (span.length !== 2 || isNaN(span[0]) || isNaN(span[1])) continue;
+                lo = Math.min(lo, span[0]);
+                hi = Math.max(hi, span[1] - 1);
+            }
+            return lo <= hi ? [lo, hi] : [aiRangeLo, aiRangeHi];
+        }
         function barNoteRange(r) {
             const span = (r.getAttribute('data-span') || '').split(' ').map(Number);
             const start = parseInt(r.getAttribute('data-start'), 10);
@@ -5628,7 +5641,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             // RESOLVED note position - lastHighlightPos may be a raw editor
             // cursor offset that matches no playback event.
             pendingStartPos = lastResolvedPos;
-            pendingSpan = aiRangeLo >= 0 ? [aiRangeLo, aiRangeHi] : null;
+            pendingSpan = aiRangeLo >= 0 ? selectedBarsSpan() : null;
             vscode.postMessage({ type: 'requestPlayback' });
         });
         document.getElementById('stopBtn').addEventListener('click', () => {
@@ -5649,11 +5662,24 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 vscode.postMessage({ type: 'webviewPerf', text: 'loop: the synth script is an old build (no loopNotes) - reload the window' });
                 return list;
             }
-            const rounds = window.LysSynth.loopNotes(list, 600);
-            const length = list.reduce((e, n) => Math.max(e, n.T + n.D), 0);
+            const rounds = window.LysSynth.loopNotes(list, 600, loopRound);
             vscode.postMessage({ type: 'webviewPerf', text: 'loop: ' + (list.length ? rounds.length / list.length : 0)
-                + ' rounds of ' + length.toFixed(3) + ' s, ' + rounds.length + ' notes' });
+                + ' rounds of ' + (loopRound || 0).toFixed(3) + ' s, ' + rounds.length + ' notes' });
             return rounds;
+        }
+        // The stretch ▶ plays, from its bar's start to the next bar's (playSpanWindow), and how
+        // long it lasts — the loop's round. The bars are the metronome's accented beats, in the
+        // practice menu's tempo.
+        let loopRound = 0;
+        function spanOf(notes, span, once) {
+            const bars = rawBeats ? rawBeats.filter(b => b.A).map(b => b.T / practice.speed) : undefined;
+            // The beats stop with the last note: the bar after the last one begins a bar later.
+            if (bars && bars.length >= 2) bars.push(2 * bars[bars.length - 1] - bars[bars.length - 2]);
+            const w = window.LysSynth.playSpanWindow
+                ? window.LysSynth.playSpanWindow(notes, span ? span[0] : null, span ? span[1] : null, once, bars)
+                : { notes: window.LysSynth.playSpan(notes, span ? span[0] : null, span ? span[1] : null, once), length: 0 };
+            loopRound = w.length;
+            return w.notes;
         }
         // Where a playback that ran to its end goes: round again while looping, else it stops.
         function playEnded() {
@@ -5702,7 +5728,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             const at = (playOffset + playClock()) * oldSpeed / practice.speed;
             playbackNotes = practiced(rawNotes);
             if (lastSpan === undefined) { startPlayback(playbackNotes, at); return; }
-            const list = window.LysSynth.playSpan(playbackNotes, lastSpan ? lastSpan[0] : null, lastSpan ? lastSpan[1] : null, lastOnce);
+            const list = spanOf(playbackNotes, lastSpan, lastOnce);
             loopList = loopOn ? list : null;
             startPlayback(loopOn ? looped(list) : list, at);
             loopList = loopOn ? list : null;
@@ -6136,7 +6162,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                         pendingFromHere = false;
                         lastSpan = span;
                         lastOnce = loopOn;
-                        const list = window.LysSynth.playSpan(playbackNotes, span ? span[0] : null, span ? span[1] : null, loopOn);
+                        const list = spanOf(playbackNotes, span, loopOn);
                         loopList = loopOn ? list : null;
                         startPlayback(loopOn ? looped(list) : list, 0);
                     } else {

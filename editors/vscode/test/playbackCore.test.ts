@@ -18,7 +18,7 @@ import { describe, it } from 'node:test';
 import * as assert from 'node:assert/strict';
 import {
     BEND_CENTRE, DRUM_CHANNEL, FAMILY_PROGRAM, Lookahead, PlaybackNote, SoundingCursor,
-    channelOf, channelsOf, endOf, loopNotes, playSpan, practiceNotes, programOf, toEvents,
+    channelOf, channelsOf, endOf, loopNotes, playSpan, playSpanWindow, practiceNotes, programOf, toEvents,
 } from '../src/webview/playbackCore';
 
 const note = (t: number, d: number, p: number, extra: Partial<PlaybackNote> = {}): PlaybackNote =>
@@ -62,6 +62,17 @@ describe('the stretch a Play sounds', () => {
         assert.equal(rounds.length, bar.length * 3);
         assert.deepEqual(rounds.filter(n => n.S === 10).map(n => n.T), [0, 4, 8]);
         assert.deepEqual(loopNotes([], 10), []);
+    });
+
+    it('makes a round whole bars, a rest at either end included', () => {
+        // A bar (4 s, bars at 0, 4, 8) whose notes sound only on its beats 2 and 3: the round is
+        // the bar, from its start, not the notes' second and a half.
+        const restful = [note(5, 1, 60, { S: 20 }), note(6, 0.5, 62, { S: 21 })];
+        const w = playSpanWindow(restful, 20, 21, true, [0, 4, 8]);
+        assert.equal(w.length, 4);
+        assert.deepEqual(w.notes.map(n => n.T), [1, 2]);
+        // Without the bars, from the first note to the last one's end, as before.
+        assert.equal(playSpanWindow(restful, 20, 21, true).length, 1.5);
     });
 
     it('plays nothing for a selection with no notes', () => {
