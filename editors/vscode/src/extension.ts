@@ -3251,6 +3251,11 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         #svgContainer rect.bar-staff.caret {
             fill: rgba(0, 120, 215, 0.14);
         }
+        /* The bars a score selection covers (owner's request 2026-10-25: the bars lit, not the
+           notes — the editor's text is not selected, so lit notes would read as if it were). */
+        #svgContainer rect.bar-staff.selected {
+            fill: rgba(0, 120, 215, 0.22);
+        }
         .container {
             max-width: 100%;
         }
@@ -3475,15 +3480,28 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         function aiClearSelection() {
             aiAnchorPos = -1; aiRangeLo = -1; aiRangeHi = -1;
             aiTransformBtn.style.display = 'none';
+            lightSelectedBars();
         }
         function aiSetSelection(a, b) {
             aiRangeLo = Math.min(a, b);
             aiRangeHi = Math.max(a, b);
             aiTransformBtn.style.display = 'block';
-            // Light the selection (inclusive of the end note's own data-pos).
-            highlightRange([[aiRangeLo, aiRangeHi + 1]]);
-            lastHighlightRanges = [[aiRangeLo, aiRangeHi + 1]];
+            // The selection lights its BARS, not its notes (owner's request 2026-10-25): the
+            // editor's text is not selected, so lit notes would read as a selection there.
+            clearHighlights();
+            lastHighlightRanges = null;
             lastHighlightPos = -1;
+            lightSelectedBars();
+        }
+        // Every bar whose written stretch (data-span) meets the selection [lo, hi] is lit; none
+        // when there is no selection. Re-run after a render replaces the boxes.
+        function lightSelectedBars() {
+            for (const r of svgContainer.querySelectorAll('rect.bar-staff.selected')) r.classList.remove('selected');
+            if (aiRangeLo < 0) return;
+            for (const r of svgContainer.querySelectorAll('rect.bar-staff[data-span]')) {
+                const span = r.getAttribute('data-span').split(' ').map(Number);
+                if (span.length === 2 && span[0] <= aiRangeHi && span[1] > aiRangeLo) r.classList.add('selected');
+            }
         }
         function aiSubmitSelection() {
             if (aiRangeLo < 0) return;
@@ -5410,6 +5428,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                         } else if (lastHighlightPos >= 0) {
                             highlightNearestElement(lastHighlightPos, lastHighlightTokenStart);
                         }
+                        lightSelectedBars();
                         const settled = performance.now();
                         const chars = message.pages ? pagesChars(message.pages) : message.svg.length;
                         vscode.postMessage({ type: 'webviewPerf', text: 'update: ' + applied

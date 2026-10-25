@@ -13,6 +13,8 @@ All notable changes to the Lily# VS Code extension are documented here.
 - **Several bars can be selected on the score, AI or not**: Shift+click a bar (or a note) extends
   the selection from the last place clicked, Shift+drag across bars selects them, *Select This
   Bar* in the menu starts one, and Esc or *Clear Selection* clears it. A plain drag still scrolls.
+- **A score selection lights its bars in pale blue**, not its notes: the editor's text is not
+  selected, and lit notes read as if it were.
 
 ### Remove All String Numbers
 
