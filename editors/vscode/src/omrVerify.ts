@@ -25,7 +25,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { execFile } from 'child_process';
 import {
-    OmrVersion, canVerify, exitMeaning, launchOf, parseVersion, runOmr, verifyArguments,
+    OmrVersion, canVerify, clockOf, exitMeaning, launchOf, parseVersion, runOmr, verifyArguments,
 } from './omrCore';
 import { findOmr } from './omrReader';
 import { sideFileOf } from './omrScanCore';
@@ -73,7 +73,12 @@ export function registerVerifyOnSave(context: vscode.ExtensionContext, deps: Omr
         const abort = new AbortController();
         running.set(key, abort);
         const name = path.basename(doc.uri.fsPath);
-        const status = vscode.window.setStatusBarMessage(`$(sync~spin) Lily#: checking ${name} against the scan…`);
+        // (the time so far, told again every second)
+        const started = Date.now();
+        const checking = () => vscode.window.setStatusBarMessage(
+            `$(sync~spin) Lily#: checking ${name} against the scan… ${clockOf(Date.now() - started)}`);
+        let status = checking();
+        const tick = setInterval(() => { const next = checking(); status.dispose(); status = next; }, 1000);
         try {
             const result = await runOmr(launch, verifyArguments(doc.uri.fsPath, deps.lysc()), () => { },
                 line => deps.output.appendLine(line), abort.signal);
@@ -89,6 +94,7 @@ export function registerVerifyOnSave(context: vscode.ExtensionContext, deps: Omr
         } catch (err) {
             deps.output.appendLine(`OMR: verify could not start: ${err}`);
         } finally {
+            clearInterval(tick);
             status.dispose();
             if (running.get(key) === abort) {
                 running.delete(key);

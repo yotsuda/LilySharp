@@ -6,6 +6,13 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+### Reading a scan
+
+- `[editor]` **The progress of a scan's reading says more**: the step (finding the staves,
+  reading page N of M, checking the reading against the pages, writing the score), the time so
+  far, told again every second, and about how long the step has left once the pages have a
+  pace. The check on save shows its time in the status bar.
+
 ### Tremolos
 
 - `[engraving]` **A tie or slur on a two-note tremolo's notes keeps the tremolo**:

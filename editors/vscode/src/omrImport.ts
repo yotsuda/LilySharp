@@ -25,7 +25,7 @@ import * as path from 'path';
 import { execFile } from 'child_process';
 import {
     OMR_INPUT_EXTENSIONS, OMR_MIN_VERSION, OMR_PROTOCOLS, canVerify, exitMeaning, launchOf, parseVersion,
-    progressText, readArguments, readerIsOld, runOmr, speaksProtocol,
+    ReadProgress, readArguments, readerIsOld, runOmr, speaksProtocol,
 } from './omrCore';
 import { findOmr, noteOmrBeta, offerOmrExtension, offerOmrUpdate } from './omrReader';
 
@@ -120,17 +120,21 @@ export async function importFromImage(
     }, async (progress, token) => {
         const abort = new AbortController();
         token.onCancellationRequested(() => abort.abort());
+        // (the step, the page and the time so far, told again every second: a step can run for
+        // minutes with no event — the staves looked for on every page before the reading proper)
+        const where = new ReadProgress(Date.now(), canVerify(v));
         let shown = 0;
+        const show = () => {
+            const at = where.percent();
+            progress.report({ message: where.text(Date.now()), increment: Math.max(0, at - shown) });
+            shown = Math.max(shown, at);
+        };
+        show();
+        const tick = setInterval(show, 1000);
         try {
             return await runOmr(launch, args, e => {
-                const text = progressText(e);
-                if (e.event === 'page') {
-                    const at = Math.round(100 * (e.page - 1) / Math.max(1, e.of));
-                    progress.report({ message: text, increment: at - shown });
-                    shown = at;
-                } else if (text) {
-                    progress.report({ message: text });
-                }
+                where.on(e, Date.now());
+                show();
                 if (e.event === 'warning') {
                     deps.output.appendLine(`OMR: ${e.message}`);
                 }
@@ -138,6 +142,8 @@ export async function importFromImage(
         } catch (err) {
             vscode.window.showErrorMessage(`Lily#: the OMR reader could not start: ${err}`);
             return undefined;
+        } finally {
+            clearInterval(tick);
         }
     });
     if (!result) {

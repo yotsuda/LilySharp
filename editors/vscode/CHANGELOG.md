@@ -2,6 +2,17 @@
 
 All notable changes to the Lily# VS Code extension are documented here.
 
+## Unreleased
+
+### Reading a scan
+
+- **The progress of a reading says more**: the notification names the step (opening the
+  pages, finding the staves, reading page N of M, checking the reading against the pages,
+  writing the score), the time so far — told again every second, so a long step is seen to be
+  running — and, once the pages have a pace, about how long the step has left. The check on
+  save shows its time in the status bar too. A reader that names its steps page by page (asked
+  of the OMR) is followed page by page through the staves as well.
+
 ## 0.14.0
 
 ### The extension is Lily# Studio

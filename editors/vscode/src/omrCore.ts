@@ -209,6 +209,11 @@ export type OmrEvent =
     | { event: 'start'; pages: number }
     | { event: 'page'; page: number; of: number }
     | { event: 'warning'; message: string }
+    /** A step of the reading begun (asked of LilySharp-Omr 2026-10-26): `layout` a page's staves
+     *  looked for before the reading proper, `read` the reading proper, `verify` the reading drawn
+     *  again and held against the pages, `write` the files written. A reader without them still
+     *  reads: the steps are then told from `start`, `page` and the end (ReadProgress). */
+    | { event: 'stage'; stage: string; page?: number; of?: number }
     /** One part-bar of `verify --bars` (the reply of 2026-10-23): `differs` when the comparison
      *  marks anything there — a tie or a slur too, so `confidence` (the todo's, 1 for no mark)
      *  says how much; `part` null for the bar's stems and tuplets as a whole. */
@@ -229,6 +234,10 @@ export function parseEvent(line: string): OmrEvent | undefined {
             case 'start': return Number.isInteger(e.pages) ? e : undefined;
             case 'page': return Number.isInteger(e.page) && Number.isInteger(e.of) ? e : undefined;
             case 'warning': return typeof e.message === 'string' ? e : undefined;
+            case 'stage': return typeof e.stage === 'string'
+                && (e.page === undefined || Number.isInteger(e.page)) && (e.of === undefined || Number.isInteger(e.of))
+                ? { event: 'stage', stage: e.stage, ...(e.page !== undefined ? { page: e.page } : {}), ...(e.of !== undefined ? { of: e.of } : {}) }
+                : undefined;
             case 'bar': return Number.isInteger(e.measure) && typeof e.differs === 'boolean'
                 ? {
                     event: 'bar', measure: e.measure, part: typeof e.part === 'string' ? e.part : null, differs: e.differs,
@@ -257,12 +266,105 @@ export function exitMeaning(code: number | null): 'ok' | 'partial' | 'input' | '
     }
 }
 
-/** The notification's text for a progress event, or undefined to leave it as it is. */
-export function progressText(e: OmrEvent): string | undefined {
-    switch (e.event) {
-        case 'start': return e.pages === 1 ? 'reading 1 page…' : `reading ${e.pages} pages…`;
-        case 'page': return `page ${e.page} of ${e.of}…`;
-        default: return undefined;
+/** Elapsed time as m:ss (h:mm:ss from an hour). */
+export function clockOf(ms: number): string {
+    const s = Math.max(0, Math.floor(ms / 1000));
+    const two = (n: number) => String(n).padStart(2, '0');
+    return s >= 3600 ? `${Math.floor(s / 3600)}:${two(Math.floor(s / 60) % 60)}:${two(s % 60)}` : `${Math.floor(s / 60)}:${two(s % 60)}`;
+}
+
+type ReadStep = 'open' | 'layout' | 'read' | 'verify' | 'write';
+
+/**
+ * Where a reading is, from its events, for the progress notification: the step, the page, the
+ * time so far, and — from the pace of the pages done — about how long the step has left.
+ * A `page` event comes when that page is read, so the page being read is the next one; with no
+ * `stage` events (a reader before 2026-10-26) the time from `start` to the first page is the
+ * staves looked for on every page, and after the last page the check and the files.
+ */
+export class ReadProgress {
+    private step: ReadStep = 'open';
+    private pages = 0;
+    private done = 0;                       // pages through the current step (layout or read)
+    private stepFrom?: number;              // when the current step began, when known
+    private firstAt?: number;               // when its first page was done
+    private lastAt?: number;                // when its last page was done
+
+    constructor(private readonly started: number, private readonly verifies: boolean) { }
+
+    on(e: OmrEvent, now: number): void {
+        switch (e.event) {
+            case 'start':
+                this.pages = e.pages;
+                this.enter('layout', now);
+                break;
+            case 'stage':
+                if (e.of !== undefined) { this.pages = e.of; }
+                if (e.stage === 'layout' || e.stage === 'read' || e.stage === 'verify' || e.stage === 'write') {
+                    if (e.stage !== this.step) { this.enter(e.stage, now); }
+                    // (a layout page begun: the ones before it are done)
+                    if (e.stage === 'layout' && e.page !== undefined && e.page - 1 > this.done) { this.pageDone(e.page - 1, now); }
+                }
+                break;
+            case 'page':
+                this.pages = e.of;
+                if (this.step !== 'read') { this.enter('read', undefined); }
+                this.pageDone(e.page, now);
+                if (e.page >= e.of) { this.enter(this.verifies ? 'verify' : 'write', now); }
+                break;
+        }
+    }
+
+    private enter(step: ReadStep, now: number | undefined): void {
+        this.step = step;
+        this.done = 0;
+        this.stepFrom = now;
+        this.firstAt = this.lastAt = undefined;
+    }
+
+    private pageDone(page: number, now: number): void {
+        this.done = page;
+        this.firstAt ??= now;
+        this.lastAt = now;
+    }
+
+    /** About how long the step's pages have left, or undefined while there is no pace yet. */
+    private left(now: number): number | undefined {
+        if (this.lastAt === undefined || this.pages <= this.done) {
+            return undefined;
+        }
+        // (the pace: from the step's start, or between its pages when its start is not known)
+        const each = this.stepFrom !== undefined ? (this.lastAt - this.stepFrom) / this.done
+            : this.done >= 2 ? (this.lastAt - this.firstAt!) / (this.done - 1) : undefined;
+        return each === undefined ? undefined : Math.max(0, (this.pages - this.done) * each - (now - this.lastAt));
+    }
+
+    text(now: number): string {
+        const of = this.pages === 1 ? '1 page' : `${this.pages} pages`;
+        const at = Math.min(this.done + 1, this.pages);
+        const what = (() => {
+            switch (this.step) {
+                case 'open': return 'opening the pages…';
+                case 'layout': return this.done > 0 ? `finding the staves: page ${at} of ${this.pages}…` : `finding the staves on ${of}…`;
+                case 'read': return `reading page ${at} of ${this.pages}…`;
+                case 'verify': return 'checking the reading against the pages…';
+                case 'write': return 'writing the score…';
+            }
+        })();
+        const left = this.step === 'layout' || this.step === 'read' ? this.left(now) : undefined;
+        return `${what} ${clockOf(now - this.started)}${left !== undefined ? ` (about ${clockOf(left + 999)} to go for the ${this.step === 'layout' ? 'staves' : 'pages'})` : ''}`;
+    }
+
+    /** How far along, 0 to 100: the staves to 40, the pages to 95, then the check and the files. */
+    percent(): number {
+        const part = this.pages > 0 ? this.done / this.pages : 0;
+        switch (this.step) {
+            case 'open': return 0;
+            case 'layout': return Math.round(40 * part);
+            case 'read': return 40 + Math.round(55 * part);
+            case 'verify': return 95;
+            case 'write': return 98;
+        }
     }
 }
 

@@ -24,7 +24,7 @@ import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import {
-    OMR_EXTENSION_ID, OMR_INPUT_EXTENSIONS, OMR_MIN_VERSION, OMR_PATH_VARIABLE, exitMeaning, launchOf, locateOmr, omrRid,
+    OMR_EXTENSION_ID, OMR_INPUT_EXTENSIONS, OMR_MIN_VERSION, OMR_PATH_VARIABLE, ReadProgress, clockOf, exitMeaning, launchOf, locateOmr, omrRid,
     parseEvent, parseVersion, canVerify, canVerifyBars, readArguments, readerIsOld, readerOfExports, runOmr, speaksProtocol, verifyArguments,
 } from '../src/omrCore';
 
@@ -132,6 +132,58 @@ describe('what the reader is asked and answers (§3.2)', () => {
         assert.equal(parseEvent('{"event":"page","page":"2"}'), undefined);
         assert.equal(parseEvent('{"event":"done"}'), undefined);
         assert.equal(parseEvent('{broken'), undefined);
+    });
+
+    it('reads a stage, and drops one that is malformed', () => {
+        assert.deepEqual(parseEvent('{"event":"stage","stage":"layout","page":2,"of":6}'), { event: 'stage', stage: 'layout', page: 2, of: 6 });
+        assert.deepEqual(parseEvent('{"event":"stage","stage":"verify"}'), { event: 'stage', stage: 'verify' });
+        assert.equal(parseEvent('{"event":"stage","stage":"layout","page":"2"}'), undefined);
+        assert.equal(parseEvent('{"event":"stage"}'), undefined);
+    });
+
+    it('tells the time as m:ss, and h:mm:ss from an hour', () => {
+        assert.deepEqual([0, 999, 61000, 754000, 3600000 + 62000, -5].map(clockOf), ['0:00', '0:00', '1:01', '12:34', '1:01:02', '0:00']);
+    });
+
+    it('tells the steps of a reader with no stages from start, page and the end', () => {
+        // (the times of a 6-page PDF read on 2026-10-26: the staves of every page looked for from
+        // 6 s to 702 s with no event, then the pages, each one's event when it is read)
+        const p = new ReadProgress(0, true);
+        assert.equal(p.text(3000), 'opening the pages… 0:03');
+        p.on({ event: 'start', pages: 6 }, 6000);
+        assert.equal(p.text(400000), 'finding the staves on 6 pages… 6:40');
+        assert.equal(p.percent(), 0);
+        p.on({ event: 'page', page: 1, of: 6 }, 703000);
+        assert.equal(p.text(703500), 'reading page 2 of 6… 11:43');          // no pace from one page
+        assert.equal(p.percent(), 40 + Math.round(55 / 6));
+        p.on({ event: 'page', page: 2, of: 6 }, 705000);
+        p.on({ event: 'page', page: 3, of: 6 }, 723000);
+        // (10 s a page between the first and the third: 3 pages left, 2 s of the next gone)
+        assert.equal(p.text(725000), 'reading page 4 of 6… 12:05 (about 0:28 to go for the pages)');
+        p.on({ event: 'page', page: 6, of: 6 }, 746000);
+        assert.equal(p.text(747000), 'checking the reading against the pages… 12:27');
+        assert.equal(p.percent(), 95);
+        const unchecked = new ReadProgress(0, false);
+        unchecked.on({ event: 'page', page: 1, of: 1 }, 1000);
+        assert.equal(unchecked.text(2000), 'writing the score… 0:02');
+    });
+
+    it('tells the staves page by page when the reader says its stages', () => {
+        const p = new ReadProgress(0, true);
+        p.on({ event: 'start', pages: 4 }, 1000);
+        p.on({ event: 'stage', stage: 'layout', page: 1, of: 4 }, 1000);
+        assert.equal(p.text(5000), 'finding the staves on 4 pages… 0:05');
+        p.on({ event: 'stage', stage: 'layout', page: 2, of: 4 }, 21000);
+        // (20 s for page 1 from the step's start: 3 left, 4 s of the next gone)
+        assert.equal(p.text(25000), 'finding the staves: page 2 of 4… 0:25 (about 0:56 to go for the staves)');
+        assert.equal(p.percent(), 10);
+        p.on({ event: 'stage', stage: 'read' }, 81000);
+        p.on({ event: 'page', page: 1, of: 4 }, 86000);
+        assert.equal(p.text(86000), 'reading page 2 of 4… 1:26 (about 0:15 to go for the pages)');
+        p.on({ event: 'stage', stage: 'verify' }, 101000);
+        p.on({ event: 'stage', stage: 'write' }, 104000);
+        assert.equal(p.text(104000), 'writing the score… 1:44');
+        assert.equal(p.percent(), 98);
     });
 
     it('names the exit codes', () => {
