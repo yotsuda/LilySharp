@@ -127,6 +127,15 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第976セッション（2026-10-26・YT-DELL2）
+
+新しい会話（ユーザー「HANDOFF を読んで作業に着手して」）。`-Start p976`（開始 HEAD `ee3c10377`・full **13298 / 0 / 2 / 13300**・第974 を ARCHIVE へ）。作業場所は Lab `sessions/p976/`。
+- **OMR REQUESTS #8 を閉じた（`c35d7e136`）**: `repeat tremolo 3 { g''16 b'16~ } <b' g''>4` の `~` が本体の 3 つ目の項目に数えられ（本体の最後に書いた印は次の項目＝`FoldMarker` の型）、2 音のトレモロの判定（`bodyNodes.Count == 2`）を外れて 16 分 6 つに展開・最初の b' が次の回の g'' へタイ（LYS4007）。`ProcessRepeatExpression` が `TieSyntax`／`SlurSyntax` を除いた音符だけで形を決める（1 音のトレモロも同じ）。網 `ChordTremoloPairTests.Pair_WithAMarkerOnItsNotes_StaysAPair`（`~` と `( )` の 2 例・毒で 2 赤）。全木の svg（`sessions/p976/svg`・1014 冊 1241 枚・base は HEAD の bin を `exe-base` へ）＝動いた 0・陽性対照は再現譜（base は LYS4007 と別の svg）。MusicXML と MIDI はもとから本体を展開して鳴らす＝不変。CHANGELOG に `## Unreleased` を立てて 1 項。REQUESTS の行は `fixed` に書き換えた（commit は OMR のセッション）。
+- `-End p976 -DiffBase ee3c10377`＝full **13300 / 0 / 2 / 13302**・門 7 つ OK・Core '+' 15 行 → この docs commit。本体 `c35d7e136`。未 push 3＋1（push はユーザー）。
+判定（2026-10-26・第976 の終わり）: OMR の open は #7（確認だけ＝Lily# の M3 の受け口の版を教える＝0.14.0 に入っている）を残して 0。次は §1.0 の ⒜（ユーザーの実機確認待ちが大半）。
+
+## 以下は第975セッションの経緯
+
 ### 1.1 第975セッション（2026-10-24・YT-DELL2）
 
 第974 と同じ会話の続き（ユーザー「A」＝lysc は Lily# の VSIX に同梱）。`-Start p975`（第973 を ARCHIVE へ）。作業場所は Lab `sessions/p975/`。
@@ -136,16 +145,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - `-End p975 -DiffBase fb3940883`＝1 回目は `HandoffArchiveContinuityTests` 3 本赤（974 の前に区切りの `## 以下は第974セッションの経緯` を置き忘れた）→ 置いて 2 回目 full **13132 / 0 / 2 / 13134**・門 7 つ OK・Core 差分 0 → この docs commit。本体 `044429c2a`。未 push 46＋1（push はユーザー）。
 - **追記: オーナーが本物の模型で試した＝質が低い・`@todo` に引きずられる**（2 声の `s` に `s32.` を足して拍を合わせた・正しくは単一の声で `<fis, c e,>8` が和音）→ **プロンプトを組み直した**（`bc703098f`・design §3.1 ⑹）: 判断の順位＝①画像 ②拍子（検算）・reader の文字／memo／コンパイラーは「どこ」の手がかり・`s`／付点で数を合わせない・`voice{}{}` を 1 声に畳んでよい・小節は `@todo` を剥がして見せる・画像ありで「最小限」を言わない・直しの依頼は「ページを読み直す」。npm test 371。Deploy-Lsp 済＝**オーナーの再試行待ち**。続けてオーナーの要望 2 つ: 絵の並びを「今（OMR）・元画像・提案」に（`9791318f1`）／**keep @todo**＝提案を採りつつ印を残し、元の印に最も近い音符へ `@todo(<キー> "<打った言葉>")`（`223b4f71f`・`withTodoMark`／`itemEndsOf`・MANUAL-CHECKS §5 B12＝未確認）。npm test 373。さらに Chopin Op. 28/4 の小節 4（2 度の F を reader が声部に分け、AI が落とし、人の memo を reader の推測として渡したので `unchanged`）→ 人の言葉を `FixTarget.notes` で分ける・和音ごとに符頭を数えさせる・小さい切り抜きを整数倍に拡大（`559461fa7`・design §3.1 ⑺・npm test 375）。OMR へ依頼 `..\LilySharp-Omr\docs\repro\lilysharp-requests-2026-10-24-seconds-in-chords.md`（2 度の和音が `voice{}{}` に分かれる 5 小節・truth と対照）。**提案をパネルでその場で編集**（`caa4556a3`・絵と門が追従・MANUAL-CHECKS §5 B13＝未確認・ページの script は headless Chrome の stub で通した＝Lab `sessions/p975/harness-*.html`）。編集中は緑を消してカーソルの音符を青に（`2b322269b`・ついでに `data-alt` の split が template literal で `/s+/` になっていたのを直した）→ 和音は構成音の上＝その 1 音・`<`／`>`／後ろ＝全部（`259f36509`・言語サーバーの本物の SVG で headless 確認＝Lab `harness3.js`・`render.js`）。提案の絵の音符クリック→その文字で編集（`2af4c549e`）。提案の無い行にも今の小節を描いて編集可・**Lily#: Edit Bars Beside the Scan**＝AI なしで選んだ小節を同じパネルで（列 Now · Scan · Edit・`d408d59c3`・MANUAL-CHECKS §5 B14＝未確認・npm test 376）。印の無い小節は `add @todo`（`9c08f4897`）。2 つともプレビューと scan の小節の右クリックに（`b46b1db43`・B15＝未確認・⚠️ VS Code が webview のメニューのコマンドに `data-vscode-context` を引数で渡す前提＝実機で要確認）。パネルは scan の列に（`e69c31f6f`）。**AI は行ごと・裏で**（Ask AI・cancel・待つ間に他の行を編集可・答えはその行だけ差し替え・編集した行は編集が残る・Fix OMR はすぐパネルを開いて埋める・lock とバッチ確認は廃止）＋**2 回目のコマンドは行を足す**（`c1b339ae6`・design §2.3「AI は行ごと・裏で」・B16＝未確認）＝隔離した VS Code＋3 秒の偽の模型で通し確認済み（Lab `sessions/p975/e2e/`）。npm test 377。**行ごとの Accept／Discard・下は Accept All (N)／Discard All・Take 廃止**（`644a4ea37`・行ごとの基準テキスト `RunBase`＝パネルの Accept の後も行は正しく、足す行は新しい基準・B17＝未確認・隔離 VS Code で通し確認済み）。**名前を 1 つに**＝パネルは `Lily# — Bar fixes`・列は Now · Scan · Draft（どちらのコマンドでも）・Draft の絵の上に出どころ（AI proposal／AI proposal, edited／your edit／waiting…／the bar as it stands）・Cancel All→Discard All（`88c8e8d3b`）・design §2.3「名前を 1 つに」・B18＝未確認・Lab harness7 で確認。**字の差分**＝少し変わった音符は絵の下の文字を字ごとに（`a16`→`a,16` は `,` だけ緑・design §2.3「字の差分」・絵の塗りは音符丸ごとのまま・B19＝未確認・npm test 378）。
 判定（2026-10-24・第975 の終わり）: lysc の同梱は済んだ＝AI 修正の残りは**ユーザー側だけ**（Copilot にサインインして MANUAL-CHECKS §5 B9〜B11・採用率を OMR へ）。次の版を出せば利用者の照合も走る。
-
-## 以下は第974セッションの経緯
-
-### 1.1 第974セッション（2026-10-24・YT-DELL2）
-
-第973 と同じ会話の続き（ユーザー「続けて」）。`-Start p974`（開始 HEAD `b35ecba21`・未 push 43・第972 を ARCHIVE へ・full 13132 / 0 / 2 / 13134）。作業場所は Lab `sessions/p974/`。
-- **OMR の AI 修正を実機の VS Code で通しで確かめた（模型なし・コード以外の手を使わず）**: 隔離した VS Code（CLAUDE-OPERATIONS §3 の型＝`Code.exe` と**今の `Code.exe` の版フォルダ**を複製し `win32MutexName` を変える。⚠️ 更新待ちの機械では版フォルダが 3 つあり、`code` コマンドの指す 1.143 ではなく、`Code.exe` と同じ 1.142 の版フォルダ（`resources\app\package.json` の version で見分ける）が正解だった）＋**偽の模型の拡張**（`vscode.lm.registerLanguageModelChatProvider`＝1.142 で正式・`answers.json` で行ごとに答える・`requests.log` に画像の有無）＋ CDP の小道具（Lab `sessions/p974/e2e/`・`cdp.js` は keys／type／click／shot／webview＝パネルの iframe を要素で探す）。題材はオーナーの Largo を **Scan Import 0.3.1** で読み直したもの（頁は相対パス・`--verify` で読んだので印は全部 verify＝`readings` は無い）の p2 の 4 小節。**通った**: QuickPick（選択範囲の 4 小節・見積もり）・画像が PNG で模型に届く・門 1／2／3（照合は ♮ を描く誤った提案を ✗ にした）・直しの依頼・unchanged／no proposal／did not pass の行・Take と All（－）・薄い青・行のクリックでエディターへ（カーソルのみ・行を青）・プレビューが `clef bass` の前のカーソルで小節を光らせる・Accept が 2 行だけ書いて閉じる・**Ctrl+Z 1 回で 2 行とも戻る**。**直した 2 つ**（`baf78bd7c`）: 語の差分が音符に付いた `(` `)` `~` を音符ごと赤緑にした（`piecesOf` が分ける・網に例）／頭の「N with a proposal」が全行を数えていた。
-- **見つけた穴（判断はオーナー）: 利用者の機械では照合に使う lysc が見つからない**＝Marketplace の Lily# の VSIX にも Scan Import の `bin` にも lysc が無く、`omr` は「`--lysc`・隣・PATH」でしか探さない → 取り込みの `--verify`・verifyOnSave・AI 修正の門 3 が**黙って照合なし**（e2e は PATH に開発用 lysc を足して門 3 を確かめた）。候補 A＝Lily# の VSIX の `server` に同梱（推奨・版が揃う）／B＝Scan Import に同梱／C＝言語サーバーに lysc の役。OMR へのお知らせ `..\LilySharp-Omr\docs\repro\lilysharp-notice-2026-10-24-lysc.md`（commit は OMR のセッション）。
-- `-End p974 -DiffBase b35ecba21`＝1 回目は full 13131 / **1** / 2（`HistoryCitationTests.DeadCitationsDoNotGrow`＝この記録に書いた VS Code の版フォルダ名が SHA の形で死んだ引用 948／947 → 言い換えた）→ 2 回目 full **13132 / 0 / 2 / 13134**（`end2.log`・門 7 つ OK・Core 差分 0）→ この docs commit。本体 `baf78bd7c`。未 push 44＋1（push はユーザー）。
-判定（2026-10-24・第974 の終わり）: AI 修正のパネルは隔離した実機で通った＝**残るのはユーザー側の 2 つ**（Copilot にサインインして本物の模型の答えの質を見る／lysc の配布をどうするか＝A 推奨）。lysc の判断が A なら、次は出荷の手順（`publish-marketplace.ps1`・`release.yml` の VSIX に lysc を足す）＝(a) この会話で `-Start p975` から。
 
 ## 2. 開いている作業
 

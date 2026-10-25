@@ -160,6 +160,16 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第974セッションの経緯
+
+### 1.1 第974セッション（2026-10-24・YT-DELL2）
+
+第973 と同じ会話の続き（ユーザー「続けて」）。`-Start p974`（開始 HEAD `b35ecba21`・未 push 43・第972 を ARCHIVE へ・full 13132 / 0 / 2 / 13134）。作業場所は Lab `sessions/p974/`。
+- **OMR の AI 修正を実機の VS Code で通しで確かめた（模型なし・コード以外の手を使わず）**: 隔離した VS Code（CLAUDE-OPERATIONS §3 の型＝`Code.exe` と**今の `Code.exe` の版フォルダ**を複製し `win32MutexName` を変える。⚠️ 更新待ちの機械では版フォルダが 3 つあり、`code` コマンドの指す 1.143 ではなく、`Code.exe` と同じ 1.142 の版フォルダ（`resources\app\package.json` の version で見分ける）が正解だった）＋**偽の模型の拡張**（`vscode.lm.registerLanguageModelChatProvider`＝1.142 で正式・`answers.json` で行ごとに答える・`requests.log` に画像の有無）＋ CDP の小道具（Lab `sessions/p974/e2e/`・`cdp.js` は keys／type／click／shot／webview＝パネルの iframe を要素で探す）。題材はオーナーの Largo を **Scan Import 0.3.1** で読み直したもの（頁は相対パス・`--verify` で読んだので印は全部 verify＝`readings` は無い）の p2 の 4 小節。**通った**: QuickPick（選択範囲の 4 小節・見積もり）・画像が PNG で模型に届く・門 1／2／3（照合は ♮ を描く誤った提案を ✗ にした）・直しの依頼・unchanged／no proposal／did not pass の行・Take と All（－）・薄い青・行のクリックでエディターへ（カーソルのみ・行を青）・プレビューが `clef bass` の前のカーソルで小節を光らせる・Accept が 2 行だけ書いて閉じる・**Ctrl+Z 1 回で 2 行とも戻る**。**直した 2 つ**（`baf78bd7c`）: 語の差分が音符に付いた `(` `)` `~` を音符ごと赤緑にした（`piecesOf` が分ける・網に例）／頭の「N with a proposal」が全行を数えていた。
+- **見つけた穴（判断はオーナー）: 利用者の機械では照合に使う lysc が見つからない**＝Marketplace の Lily# の VSIX にも Scan Import の `bin` にも lysc が無く、`omr` は「`--lysc`・隣・PATH」でしか探さない → 取り込みの `--verify`・verifyOnSave・AI 修正の門 3 が**黙って照合なし**（e2e は PATH に開発用 lysc を足して門 3 を確かめた）。候補 A＝Lily# の VSIX の `server` に同梱（推奨・版が揃う）／B＝Scan Import に同梱／C＝言語サーバーに lysc の役。OMR へのお知らせ `..\LilySharp-Omr\docs\repro\lilysharp-notice-2026-10-24-lysc.md`（commit は OMR のセッション）。
+- `-End p974 -DiffBase b35ecba21`＝1 回目は full 13131 / **1** / 2（`HistoryCitationTests.DeadCitationsDoNotGrow`＝この記録に書いた VS Code の版フォルダ名が SHA の形で死んだ引用 948／947 → 言い換えた）→ 2 回目 full **13132 / 0 / 2 / 13134**（`end2.log`・門 7 つ OK・Core 差分 0）→ この docs commit。本体 `baf78bd7c`。未 push 44＋1（push はユーザー）。
+判定（2026-10-24・第974 の終わり）: AI 修正のパネルは隔離した実機で通った＝**残るのはユーザー側の 2 つ**（Copilot にサインインして本物の模型の答えの質を見る／lysc の配布をどうするか＝A 推奨）。lysc の判断が A なら、次は出荷の手順（`publish-marketplace.ps1`・`release.yml` の VSIX に lysc を足す）＝(a) この会話で `-Start p975` から。
+
 ## 以下は第973セッションの経緯
 
 ### 1.1 第973セッション（2026-10-23・YT-DELL2）
