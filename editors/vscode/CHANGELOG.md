@@ -61,6 +61,11 @@ All notable changes to the Lily# VS Code extension are documented here.
   and the four annotations it lacked (`@harmonic`, `@stopped`, `@snapPizz`, `@pluck`), and lost
   the notes about MusicXML and LilyPond export the AI never needs.
 
+### Fix OMR marks: every row's Accept in the primary colour
+
+- **Each row's Accept is drawn as Accept All is**, in the button colour, whether or not the row is
+  ready; it used to take that colour only on a ready row.
+
 ### Remove All String Numbers
 
 - **Lily#: Remove All String Numbers** (right-click menu and the command palette) removes every

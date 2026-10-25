@@ -1438,9 +1438,10 @@ function rowHtml(run: FixRun, r: FixRow, pageUris: ReadonlyMap<number, { uri: st
     const can = isLive(r);
     // Each row is done with on its own (owner's request 2026-10-24, in place of a check box a
     // row and one Accept for the checked): Accept writes this bar now (its own Ctrl+Z) and the
-    // row leaves; Discard drops the row, writing nothing. A ready row's Accept is the primary one.
+    // row leaves; Discard drops the row, writing nothing. Accept is always the primary button, in
+    // Accept All's colour (owner's request 2026-10-25); it used to be only on a ready row.
     const box = can
-        ? `<button class="row-accept${parts.accept.ready ? ' primary' : ''}" data-i="${r.index}" ${parts.accept.can ? '' : 'disabled'}`
+        ? `<button class="row-accept primary" data-i="${r.index}" ${parts.accept.can ? '' : 'disabled'}`
           + ` title="Write this bar into the .lys now (Ctrl+Z undoes it) — without a bar of its own (the AI's or your edit), its @todo is removed and the notes stay">${parts.accept.word}</button>`
           + `<button class="row-discard" data-i="${r.index}" title="Take this bar off the panel, writing nothing">Discard</button>`
         : '';
@@ -1909,9 +1910,9 @@ ${rows}
     q('span.reason-text', i).innerHTML = m.reason;
     const secs = q('span.secs', i);
     if (secs) secs.textContent = m.secs || '';
-    // The row's Accept: its word, whether it writes anything, primary when the row is ready.
+    // The row's Accept: its word, and whether it writes anything.
     const ab = q('button.row-accept', i);
-    if (ab && m.accept) { ab.textContent = m.accept.word; ab.disabled = !m.accept.can; ab.classList.toggle('primary', !!m.accept.ready); }
+    if (ab && m.accept) { ab.textContent = m.accept.word; ab.disabled = !m.accept.can; }
     const from = q('div.draft-of', i);
     if (from && typeof m.source === 'string') from.textContent = m.source;
     const holder = q('div.after-pic', i);
