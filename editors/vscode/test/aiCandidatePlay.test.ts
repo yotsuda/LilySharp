@@ -40,7 +40,9 @@ describe('an AI candidate plays before it is accepted', () => {
         assert.match(transform, /sendRequest<[^>]*>\('lilysharp\/playbackText', \{\s*Text: which === 'after' \? play\.after : play\.before,/);
         assert.match(transform, /deps\.playOnPreview\?\.\(play\.uri, notes\)/);
         // A decision stops it.
-        assert.match(transform, /if \(audible\) \{ deps\.stopOnPreview\?\.\(audible\.uri\); \}\s*resolve\?\.\(d\);/);
+        assert.match(transform, /if \(audible\) \{ deps\.stopOnPreview\?\.\(currentUri\(audible\.uri\)\); \}\s*resolve\?\.\(d\);/);
+        // An untitled score saved under review: the preview it plays on went with it.
+        assert.match(transform, /const play = \{ \.\.\.audible, uri: currentUri\(audible\.uri\) \};/);
     });
 
     it('lets the preview page play another text\'s notes from the top, as its Play does', () => {

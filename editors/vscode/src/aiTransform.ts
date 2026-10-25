@@ -132,6 +132,33 @@ export function registerAiTransform(context: vscode.ExtensionContext, deps: AiTr
             candidatePanel?.dispose();
         }
     });
+    // Saving an untitled score while its candidate is under review closes the untitled document
+    // and opens the file (owner's report 2026-10-25: Accept then found no document). They are
+    // paired by recency, as the preview pairs them — content cannot, a format-on-save rewrites it.
+    let closedUntitled: { uri: string; at: number } | undefined;
+    const adopt = (doc: vscode.TextDocument | undefined) => {
+        if (!doc || doc.uri.scheme !== 'file' || !closedUntitled || Date.now() - closedUntitled.at > 4000) { return; }
+        movedUris.set(closedUntitled.uri, doc.uri);
+        closedUntitled = undefined;
+    };
+    context.subscriptions.push(
+        vscode.workspace.onDidCloseTextDocument(d => {
+            if (d.uri.scheme === 'untitled') { closedUntitled = { uri: d.uri.toString(), at: Date.now() }; }
+        }),
+        vscode.window.onDidChangeActiveTextEditor(e => adopt(e?.document)),
+        vscode.workspace.onDidSaveTextDocument(adopt),
+    );
+}
+
+/** Where each saved untitled document went (registerAiTransform). */
+const movedUris = new Map<string, vscode.Uri>();
+
+/** The document a snapshot's URI names now: itself, or the file an untitled one was saved as. */
+function currentUri(uri: vscode.Uri): vscode.Uri {
+    for (let moved = movedUris.get(uri.toString()); moved; moved = movedUris.get(uri.toString())) {
+        uri = moved;
+    }
+    return uri;
 }
 
 /** The whole select→prompt→validate→render→apply transaction (§3/§4). */
@@ -556,14 +583,30 @@ async function drive(
         // The review, and Iterate's question about it: a refine closed or left empty goes back
         // to the same candidate on its score, to be decided again (owner's request 2026-10-25 —
         // it used to end the transform, dropping the candidate unapplied).
+        // An Accept that wrote nothing goes back to the candidate too, its buttons armed again
+        // and the reason in the footer (owner's report 2026-10-25: they stayed greyed out).
         let decision: Decision;
         let refine: string | undefined;
+        // Set while the panel still shows this candidate: what its footer says as it waits again.
+        let again: string | undefined;
         for (;;) {
-            decision = await reviewOnScore(deps, renderBefore, renderAfter, caption, candidate.text, changed, {
-                uri: snapshot.uri,
-                before: work.origFullText,
-                after: spliceCandidate(candidate.snap, candidate.text),
-            }, splitNote(candidate.reply).note);
+            decision = again !== undefined
+                ? await decideAgain(again)
+                : await reviewOnScore(deps, renderBefore, renderAfter, caption, candidate.text, changed, {
+                    uri: snapshot.uri,
+                    before: work.origFullText,
+                    after: spliceCandidate(candidate.snap, candidate.text),
+                }, splitNote(candidate.reply).note);
+            again = undefined;
+            if (decision === 'accept') {
+                // ----- Accept: apply with the version/range guard (§7) -----
+                deps.log('AI transform: accepted.');
+                again = await accept(candidate);
+                if (again === undefined) {
+                    return;
+                }
+                continue;
+            }
             if (decision !== 'iterate') {
                 break;
             }
@@ -577,6 +620,7 @@ async function drive(
                 break;
             }
             deps.log('AI transform: refine cancelled — back to the candidate.');
+            again = '';
         }
 
         if (decision === 'reject') {
@@ -598,24 +642,23 @@ async function drive(
             instruction = refine; // caption reflects the latest ask
             continue; // back to generate
         }
+        iterate = false;
+    }
 
-        // ----- Accept: apply with the version/range guard (§7) -----
-        deps.log('AI transform: accepted.');
+    /** Writes the candidate into the file; undefined when written, else why not. */
+    async function accept(candidate: CandidateEdit): Promise<string | undefined> {
         if (ai.converted) {
             // Back to the file's relative octaves, applied as the span where the file changes:
             // the AI's edits, and the notes after them whose marks follow from new neighbours.
             const back = await fromAbsoluteOctaves(deps, client, spliceCandidate(candidate.snap, candidate.text), snapshot.origFullText);
             if (back === undefined) {
                 deps.log('AI transform: not applied (it could not be brought back to relative octaves).');
-                panelStatus('Not written — it could not be brought back to the file\'s relative octaves.');
-                return;
+                return 'Not written — it could not be brought back to the file\'s relative octaves.';
             }
             const edit = wholeFileEdit(snapshot, back);
-            await applyCandidate(deps, edit.snap, edit.text);
-        } else {
-            await applyCandidate(deps, candidate.snap, candidate.text);
+            return applyCandidate(deps, edit.snap, edit.text);
         }
-        iterate = false;
+        return applyCandidate(deps, candidate.snap, candidate.text);
     }
 }
 
@@ -953,7 +996,7 @@ function ensureCandidatePanel(deps: AiTransformDeps): vscode.WebviewPanel {
         const resolve = pendingDecision;
         pendingDecision = undefined;
         // A decision ends a candidate's Play: the music changes, or the panel goes.
-        if (audible) { deps.stopOnPreview?.(audible.uri); }
+        if (audible) { deps.stopOnPreview?.(currentUri(audible.uri)); }
         resolve?.(d);
     };
     panel.webview.onDidReceiveMessage((m: any) => {
@@ -963,7 +1006,7 @@ function ensureCandidatePanel(deps: AiTransformDeps): vscode.WebviewPanel {
             void playCandidate(deps, panel, m.which === 'before' ? 'before' : 'after',
                 typeof m.from === 'number' ? m.from : undefined, typeof m.to === 'number' ? m.to : undefined);
         } else if (m?.action === 'stop' && audible) {
-            deps.stopOnPreview?.(audible.uri);
+            deps.stopOnPreview?.(currentUri(audible.uri));
         }
     });
     // Closing the panel counts as reject for whatever round is awaiting a decision.
@@ -986,9 +1029,10 @@ function ensureCandidatePanel(deps: AiTransformDeps): vscode.WebviewPanel {
  */
 async function playCandidate(deps: AiTransformDeps, panel: vscode.WebviewPanel, which: 'before' | 'after',
     from?: number, to?: number): Promise<void> {
-    const play = audible;
     const client = deps.getClient();
-    if (!play || !client) { return; }
+    if (!audible || !client) { return; }
+    // An untitled score saved since: its preview went with it to the file.
+    const play = { ...audible, uri: currentUri(audible.uri) };
     const say = (text: string | null) => void panel.webview.postMessage({ type: 'playState', text });
     try {
         const pb = await client.sendRequest<{ Notes?: { S?: number }[] | null; Error?: string | null }>('lilysharp/playbackText', {
@@ -1271,6 +1315,11 @@ button:disabled { opacity:0.45; cursor:default; }
     // Playback news is not shown over a decision being carried out.
     if (e.data.type === 'playState' && !decided) { say(e.data.text); }
     else if (e.data.type === 'status') { say(e.data.text, true); }
+    else if (e.data.type === 'undecided') {
+      decided = false;
+      for (const id of ['accept', 'iterate', 'reject']) document.getElementById(id).disabled = false;
+      say(e.data.text, !!e.data.text);
+    }
   });
   window.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') { e.preventDefault(); decide('accept'); }
@@ -1287,16 +1336,18 @@ button:disabled { opacity:0.45; cursor:default; }
 // Apply (EditApplier, §7 version/range guard)
 // ======================================================================
 
-async function applyCandidate(deps: AiTransformDeps, snapshot: Snapshot, candidate: string): Promise<void> {
-    const doc = vscode.workspace.textDocuments.find(d => d.uri.toString() === snapshot.uri.toString());
+/** Undefined when written, else what the panel says about why not. */
+async function applyCandidate(deps: AiTransformDeps, snapshot: Snapshot, candidate: string): Promise<string | undefined> {
+    const uri = currentUri(snapshot.uri);
+    const doc = vscode.workspace.textDocuments.find(d => d.uri.toString() === uri.toString());
     if (!doc) {
         vscode.window.showErrorMessage('Lily#: the document was closed; nothing was applied.');
-        panelStatus('Not written — the document was closed.');
-        return;
+        return 'Not written — the document was closed.';
     }
 
     let range: vscode.Range;
-    if (doc.version === snapshot.version) {
+    // A saved untitled score is another document, its versions counted anew.
+    if (doc.uri.toString() === snapshot.uri.toString() && doc.version === snapshot.version) {
         // Untouched since snapshot — the recorded offsets are exact.
         range = new vscode.Range(doc.positionAt(snapshot.startOffset), doc.positionAt(snapshot.endOffset));
     } else {
@@ -1317,8 +1368,7 @@ async function applyCandidate(deps: AiTransformDeps, snapshot: Snapshot, candida
                     'Lily#: the document changed since this transform was generated, and the selected text moved. Apply at the original position anyway?',
                     { modal: true }, 'Apply anyway');
                 if (choice !== 'Apply anyway') {
-                    panelStatus('Not written — the file changed meanwhile.');
-                    return;
+                    return 'Not written — the file changed meanwhile.';
                 }
                 const clampStart = Math.min(snapshot.startOffset, current.length);
                 const clampEnd = Math.min(snapshot.endOffset, current.length);
@@ -1328,15 +1378,29 @@ async function applyCandidate(deps: AiTransformDeps, snapshot: Snapshot, candida
     }
 
     const edit = new vscode.WorkspaceEdit();
-    edit.replace(snapshot.uri, range, candidate);
+    edit.replace(uri, range, candidate);
     const ok = await vscode.workspace.applyEdit(edit);
     if (ok) {
         vscode.window.showInformationMessage('Lily#: applied AI transform (Ctrl+Z to undo).');
         candidatePanel?.dispose();
-    } else {
-        vscode.window.showErrorMessage('Lily#: the edit could not be applied.');
-        panelStatus('Not written — the edit could not be applied.');
+        return undefined;
     }
+    vscode.window.showErrorMessage('Lily#: the edit could not be applied.');
+    return 'Not written — the edit could not be applied.';
+}
+
+/**
+ * Waits for another decision on the candidate the panel shows, its buttons armed again and
+ * `text` in its footer — after an Accept that wrote nothing, or Ask Again left unanswered.
+ */
+function decideAgain(text: string): Promise<Decision> {
+    if (!candidatePanel) {
+        return Promise.resolve('reject');
+    }
+    void candidatePanel.webview.postMessage({ type: 'undecided', text });
+    return new Promise<Decision>(resolve => {
+        pendingDecision = resolve;
+    });
 }
 
 /** What the candidate panel's footer says about a decision being carried out (or that failed). */

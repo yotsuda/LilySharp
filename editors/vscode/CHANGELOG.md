@@ -35,6 +35,11 @@ All notable changes to the Lily# VS Code extension are documented here.
   rendering.
 - **Ask Again's candidate replaces the last one where it stands**: it used to open a new pane
   beside the candidate panel each round.
+- **An untitled score saved while its candidate is shown keeps it**: Accept writes into the saved
+  file and Play plays on its preview — both looked for the untitled document, gone with the
+  save, so Accept failed and Play did nothing.
+- **An Accept that writes nothing leaves the candidate decidable**: the panel says why and its
+  buttons come back; they stayed greyed out with the transform already over.
 - **What the AI changed is painted orange on the candidate's score**, as the legend says; it
   wore only a faint orange glow, which left the notes black.
 - **Play lights the notes sounding on the candidate's score**, in blue (the orange is what the AI
