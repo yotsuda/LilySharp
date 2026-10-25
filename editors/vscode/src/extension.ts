@@ -3591,6 +3591,18 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             padding: 6px 8px; font-size: 12px; max-height: 60vh; overflow: auto;
         }
         .range-panel[hidden] { display: none; }
+        /* The page's tooltip, in VS Code's hover look (the browser's title tip is too small). */
+        .tip {
+            position: fixed; z-index: 100; max-width: 320px; pointer-events: none;
+            padding: 4px 8px; border-radius: 3px;
+            font-family: var(--vscode-font-family, system-ui, sans-serif);
+            font-size: var(--vscode-font-size, 13px); line-height: 1.4;
+            background: var(--vscode-editorHoverWidget-background, #f3f3f3);
+            color: var(--vscode-editorHoverWidget-foreground, #333);
+            border: 1px solid var(--vscode-editorHoverWidget-border, #c8c8c8);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+        }
+        .tip[hidden] { display: none; }
         /* The practice menu (owner's request 2026-10-25): the button opens it under itself; its
            rows are the tempo, the metronome and the parts. */
         .toolbar button.practice {
@@ -4992,6 +5004,56 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             };
             if (window.ResizeObserver) new ResizeObserver(tidy).observe(bar);
             tidy();
+        })();
+        // The page's own tooltip (owner's report 2026-10-25: the browser's, which a title
+        // shows, was too small to read and no CSS reaches it): the same words, in VS Code's
+        // hover font and colours. A title — an attribute, or an SVG <title> child (the
+        // tessitura chart's) — moves to data-tip when the pointer first comes over it, so the
+        // browser's never shows; one set again later (updateAiButton) moves again.
+        (() => {
+            const tip = document.createElement('div');
+            tip.className = 'tip';
+            tip.hidden = true;
+            document.body.appendChild(tip);
+            let timer = null, shownFor = null;
+            const tipOf = (el) => {
+                for (let e = el; e && e !== document.body; e = e.parentNode) {
+                    if (!e.getAttribute) continue;
+                    if (e.hasAttribute('title')) {
+                        e.setAttribute('data-tip', e.getAttribute('title'));
+                        e.removeAttribute('title');
+                    }
+                    // Not the score's own: a drawing's <title> names the drawing, not a control.
+                    const t = !svgContainer.contains(e) && e.querySelector && e.querySelector(':scope > title');
+                    if (t) { e.setAttribute('data-tip', t.textContent); t.remove(); }
+                    if (e.hasAttribute('data-tip') && e.getAttribute('data-tip')) return e;
+                }
+                return null;
+            };
+            const hide = () => { clearTimeout(timer); timer = null; tip.hidden = true; shownFor = null; };
+            document.addEventListener('pointerover', (ev) => {
+                const el = tipOf(ev.target);
+                if (el === shownFor) return;
+                hide();
+                if (!el) return;
+                timer = setTimeout(() => {
+                    tip.textContent = el.getAttribute('data-tip');
+                    tip.hidden = false;
+                    const r = el.getBoundingClientRect();
+                    const w = tip.offsetWidth, h = tip.offsetHeight;
+                    let x = Math.min(Math.max(4, r.left + r.width / 2 - w / 2), window.innerWidth - w - 4);
+                    let y = r.bottom + 6;
+                    if (y + h > window.innerHeight - 4) y = Math.max(4, r.top - h - 6);
+                    tip.style.left = x + 'px';
+                    tip.style.top = y + 'px';
+                    shownFor = el;
+                }, 500);
+            });
+            document.addEventListener('pointerdown', hide, true);
+            document.addEventListener('keydown', hide, true);
+            document.addEventListener('scroll', hide, true);
+            window.addEventListener('blur', hide);
+            document.documentElement.addEventListener('pointerleave', hide);
         })();
         const exportBtn = document.getElementById('exportBtn');
         exportBtn.addEventListener('click', () => {

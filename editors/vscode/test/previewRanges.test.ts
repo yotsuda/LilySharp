@@ -80,6 +80,14 @@ describe('the preview\'s Range panel', () => {
         assert.match(html, /t\.textContent = pitchName\(m\) \+ ': ' \+ Math\.round\(v \* 100\) \+ '% of the time';/);
     });
 
+    // The browser's title tip was too small to read (owner's report 2026-10-25): the page shows
+    // its own, in VS Code's hover font, from the same titles.
+    it('shows its own tooltip in VS Code\'s hover look, from the titles', () => {
+        assert.match(html, /\.tip \{[\s\S]*?font-size: var\(--vscode-font-size, 13px\)/);
+        assert.match(html, /e\.setAttribute\('data-tip', e\.getAttribute\('title'\)\);\s*e\.removeAttribute\('title'\);/);
+        assert.match(html, /const t = !svgContainer\.contains\(e\) && e\.querySelector && e\.querySelector\(':scope > title'\);/);
+    });
+
     it('shows a clicked end on the score and in the editor, the next place on the next click', () => {
         assert.match(html, /if \(rangeCur === key\) rangeAt\[key\] = \(\(rangeAt\[key\] \|\| 0\) \+ 1\) % n;/);
         assert.match(html, /const painted = highlightPositions\(\[pos\]\);/);
