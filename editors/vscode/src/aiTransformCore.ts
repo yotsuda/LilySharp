@@ -216,6 +216,36 @@ function reduceToSpan<S extends SpanLike>(snapshot: S, full: string, spans: Chan
     return { snap, text, spans: spans ?? one, reply: raw, whole: true };
 }
 
+/** The whole file `full` as the edit it makes to the snapshot's file: the one span where they
+ *  differ (the AI's candidate brought back to relative octaves, say). */
+export function wholeFileEdit<S extends SpanLike>(snapshot: S, full: string): CandidateEdit<S> {
+    return reduceToSpan(snapshot, full, null, '');
+}
+
+/** One replacement the server made to a text (lilysharp/aiOctaves), in that text's offsets. */
+export interface TextChange { Start: number; End: number; Text: string; }
+
+/**
+ * Where offset `o` of a text lands once `changes` (in order, not overlapping) are made to it: a
+ * change wholly before it — an insertion AT it too — moves it by its growth; one around it puts
+ * it at the same distance into the new text, clamped to it. Carries the user's selection into
+ * the file rewritten in absolute octaves, whose changes are marks inside notes and one inserted
+ * `octave absolute` line.
+ */
+export function carryOffset(changes: readonly TextChange[], o: number): number {
+    let delta = 0;
+    for (const c of changes) {
+        if (c.End <= o) {
+            delta += c.Text.length - (c.End - c.Start);
+        } else if (c.Start < o) {
+            return c.Start + delta + Math.min(o - c.Start, c.Text.length);
+        } else {
+            break;
+        }
+    }
+    return o + delta;
+}
+
 /** A rough token count, on the safe side: ASCII about three characters a token, anything else
  *  (lyrics in kana, accented names) one each. */
 export function estimateTokens(text: string): number {

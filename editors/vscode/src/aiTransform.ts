@@ -38,7 +38,8 @@ import type { LanguageClient } from 'vscode-languageclient/node';
 import { ChatClient, ChatMessage, resolveChatClient } from './modelClient';
 import {
     CandidateEdit as CoreCandidateEdit, ChangedSpan, MarkInSelection, MarkReadings, SEL_CLOSE, SEL_OPEN, cleanCandidate,
-    documentBudget, documentContext, estimateTokens, isProblem, marksContext, octaveOutliers, startTimeAt, toCandidateEdit,
+    TextChange, carryOffset, documentBudget, documentContext, estimateTokens, isProblem, marksContext, octaveOutliers,
+    startTimeAt, toCandidateEdit, wholeFileEdit,
 } from './aiTransformCore';
 import { markFactsOf, sideFileOf } from './omrScanCore';
 import { textFontFaceCss, textFontsRoot } from './scoreFonts';
@@ -222,10 +223,72 @@ async function runAiTransform(deps: AiTransformDeps, wholeScore = false, selecte
     }
 
     try {
-        await drive(deps, client, chat, snapshot, instruction, whole, grammar, shown);
+        const ai = await toAbsoluteOctaves(deps, client, snapshot, whole);
+        await drive(deps, client, chat, snapshot, ai, instruction, whole, grammar,
+            ai.converted ? documentContext(ai.snap, budget, whole) : shown);
     } catch (err: any) {
         vscode.window.showErrorMessage(`Lily#: AI transform failed: ${err?.message ?? err}`);
     }
+}
+
+/** The file as the AI works on it: `snap` is the snapshot carried into absolute octaves when
+ *  `converted`, else the snapshot itself. */
+interface AiSpace { snap: Snapshot; converted: boolean }
+
+interface AiOctavesResponse { NewText: string | null; Changes: TextChange[]; Error: string | null }
+
+/**
+ * The file in absolute octaves for the AI (owner's request 2026-10-25): the relative chain —
+ * each note nearest the one before, every section starting afresh — is the model's most common
+ * slip, and in absolute octaves every pitch says where it sounds. The whole conversation, the
+ * checks and the candidate panel work on that text; Accept brings the candidate back to
+ * relative octaves (fromAbsoluteOctaves). A file that states its mode, or that the server cannot
+ * convert exactly, goes as it is.
+ */
+async function toAbsoluteOctaves(deps: AiTransformDeps, client: LanguageClient, snapshot: Snapshot, whole: boolean): Promise<AiSpace> {
+    let resp: AiOctavesResponse;
+    try {
+        resp = await client.sendRequest<AiOctavesResponse>('lilysharp/aiOctaves', { Text: snapshot.origFullText, ToAbsolute: true });
+    } catch {
+        return { snap: snapshot, converted: false }; // an older server: as before
+    }
+    if (resp.NewText == null) {
+        deps.log(`AI transform: sent in the file's own octaves — ${resp.Error}`);
+        return { snap: snapshot, converted: false };
+    }
+    const text = resp.NewText;
+    const start = whole ? 0 : carryOffset(resp.Changes, snapshot.startOffset);
+    const end = whole ? text.length : carryOffset(resp.Changes, snapshot.endOffset);
+    deps.log(`AI transform: sent in absolute octaves (${resp.Changes.length} change(s)).`);
+    return {
+        snap: { ...snapshot, origFullText: text, startOffset: start, endOffset: end, origSelectedText: text.slice(start, end) },
+        converted: true,
+    };
+}
+
+/**
+ * The accepted candidate (the whole file in absolute octaves) back in the file's relative
+ * octaves, or undefined when the user declines the fallback: a candidate the server cannot
+ * bring back (it plays a note no score reaches, say) is offered in absolute octaves — the whole
+ * file then says `octave absolute`.
+ */
+async function fromAbsoluteOctaves(deps: AiTransformDeps, client: LanguageClient, full: string): Promise<string | undefined> {
+    let resp: AiOctavesResponse | undefined;
+    try {
+        resp = await client.sendRequest<AiOctavesResponse>('lilysharp/aiOctaves', { Text: full, ToAbsolute: false });
+    } catch (err: any) {
+        resp = { NewText: null, Changes: [], Error: String(err?.message ?? err) };
+    }
+    if (resp.NewText != null) {
+        return resp.NewText;
+    }
+    deps.log(`AI transform: the candidate could not be brought back to relative octaves — ${resp.Error}`);
+    const absolute = 'Apply in Absolute Octaves';
+    const pick = await vscode.window.showWarningMessage(
+        `Lily#: the AI worked in absolute octaves, and its change could not be brought back to the file's relative `
+        + `octaves (${resp.Error}). Apply it with the whole file in absolute octaves?`,
+        { modal: true }, absolute);
+    return pick === absolute ? full : undefined;
 }
 
 /**
@@ -254,12 +317,16 @@ async function drive(
     client: LanguageClient,
     chat: ChatClient,
     snapshot: Snapshot,
+    ai: AiSpace,
     instruction: string,
     whole: boolean,
     grammar: string,
     shown: { text: string; complete: boolean },
 ): Promise<void> {
     const title = whole ? 'Lily#: AI transform — the whole score' : 'Lily#: AI transform';
+    // What the AI reads and writes, and every candidate is spliced into; `snapshot` stays the
+    // document's (its resolved facts, its @todo marks, and the edit Accept applies).
+    const work = ai.snap;
     const prepared = await working(title, async (progress, token) => {
         progress.report({ message: `asking ${chat.label}…` });
         // Quality log (§M5) — local only, no telemetry.
@@ -275,10 +342,12 @@ async function drive(
         // wrong NOW is often exactly what the instruction is about — "fix the bar lengths"), and
         // the baseline a candidate is judged against, so only what it makes WORSE counts (a
         // pre-existing problem elsewhere isn't the model's fault).
-        const baseline = await checkText(client, snapshot.origFullText);
+        // Both on the text the AI works on — in absolute octaves when it was converted: the
+        // candidate is compared with it, line for line.
+        const baseline = await checkText(client, work.origFullText);
 
         // Render the untouched score once for the before/after comparison (§M5).
-        const renderBefore = await client.sendRequest<SvgResponse>('lilysharp/renderText', { Text: snapshot.origFullText });
+        const renderBefore = await client.sendRequest<SvgResponse>('lilysharp/renderText', { Text: work.origFullText });
         return token.isCancellationRequested ? null : { facts, marks, baseline, renderBefore };
     });
     if (!prepared) {
@@ -291,7 +360,7 @@ async function drive(
     // Conversation seed.
     const messages: ChatMessage[] = [
         { role: 'system', content: systemPrompt(grammar) },
-        { role: 'user', content: taskPrompt(snapshot, shown, whole, facts, baseline, instruction, marks) },
+        { role: 'user', content: taskPrompt(work, shown, whole, facts, baseline, instruction, marks, ai.converted) },
     ];
 
     let iterate = true;
@@ -318,7 +387,7 @@ async function drive(
                 progress.report({ message: attempt === 0 ? 'generating…' : `repairing (${attempt}/${MAX_REPAIR_ATTEMPTS})…` });
 
                 const raw = await chat.send(messages, token);
-                const edit = toCandidateEdit(snapshot, raw);
+                const edit = toCandidateEdit(work, raw);
                 if (edit === null) {
                     messages.push({ role: 'assistant', content: raw });
                     messages.push({ role: 'user', content: `Your reply was empty. ${replyForm(whole)} — no commentary, no code fences.` });
@@ -341,6 +410,15 @@ async function drive(
                         'That reply is identical to the file as it stands — it changes nothing. Carry out the '
                         + 'instruction. If it needs changes outside the selection (a new part, a score row, a new '
                         + 'declaration), reply with <edit> blocks.' });
+                    continue;
+                }
+                // The way back to relative octaves reads the line; without it every pitch would
+                // be read relative, and land elsewhere.
+                if (ai.converted && !/^octave absolute\b/m.test(spliceCandidate(edit.snap, edit.text))) {
+                    messages.push({ role: 'assistant', content: raw });
+                    messages.push({ role: 'user', content:
+                        'Your change removed the file\'s `octave absolute` line. Keep it exactly as it is — '
+                        + 'reply again, same output rules.' });
                     continue;
                 }
                 unchanged = false;
@@ -376,8 +454,11 @@ async function drive(
                             `That candidate compiles, but check its octaves. The notes you replaced were `
                             + `${range.join(' ')}; the compiler resolves these of yours more than an octave outside `
                             + `that register:\n${outliers.map(p => `  - ${p.Written} -> ${p.Resolved}`).join('\n')}\n`
-                            + 'Remember relative octaves: each note lands nearest the one before it, and the first note of a '
-                            + 'line is placed from whatever precedes it. Fix the octave marks, or, if this register is really '
+                            + (ai.converted
+                                ? 'The octaves are absolute: each \' / , counts from the part\'s anchor, not from the note before. '
+                                : 'Remember relative octaves: each note lands nearest the one before it, and the first note of a '
+                                  + 'line is placed from whatever precedes it. ')
+                            + 'Fix the octave marks, or, if this register is really '
                             + 'what the instruction asks for, return the same candidate again unchanged.' });
                         deps.log(`AI transform: octave check — ${outliers.map(p => `${p.Written}->${p.Resolved}`).join(' ')}`);
                         continue;
@@ -468,7 +549,7 @@ async function drive(
         for (;;) {
             decision = await reviewOnScore(deps, renderBefore, renderAfter, caption, candidate.text, changed, {
                 uri: snapshot.uri,
-                before: snapshot.origFullText,
+                before: work.origFullText,
                 after: spliceCandidate(candidate.snap, candidate.text),
             });
             if (decision !== 'iterate') {
@@ -504,7 +585,19 @@ async function drive(
 
         // ----- Accept: apply with the version/range guard (§7) -----
         deps.log('AI transform: accepted.');
-        await applyCandidate(deps, candidate.snap, candidate.text);
+        if (ai.converted) {
+            // Back to the file's relative octaves, applied as the span where the file changes:
+            // the AI's edits, and the notes after them whose marks follow from new neighbours.
+            const back = await fromAbsoluteOctaves(deps, client, spliceCandidate(candidate.snap, candidate.text));
+            if (back === undefined) {
+                deps.log('AI transform: not applied (it could not be brought back to relative octaves).');
+                return;
+            }
+            const edit = wholeFileEdit(snapshot, back);
+            await applyCandidate(deps, edit.snap, edit.text);
+        } else {
+            await applyCandidate(deps, candidate.snap, candidate.text);
+        }
         iterate = false;
     }
 }
@@ -594,8 +687,16 @@ function diagnosticsContext(snapshot: Snapshot, baseline: CandidateDiagnostic[],
  */
 function taskPrompt(snapshot: Snapshot, shown: { text: string; complete: boolean }, whole: boolean,
     facts: ResolvedPitchFact[], baseline: CandidateDiagnostic[], instruction: string,
-    marks: string | null = null): string {
+    marks: string | null = null, absolute = false): string {
     const parts: string[] = [];
+    if (absolute) {
+        // toAbsoluteOctaves: the user's file is relative; it was converted for the model.
+        parts.push('The file is shown in ABSOLUTE octaves (`octave absolute` at its top): every pitch says where it '
+            + 'sounds — a bare pitch is in the octave of the part\'s anchor (C4 unless the part\'s `octave N` or '
+            + 'instrument says otherwise), and each \' / , moves it one octave from there, never from the note '
+            + 'before. Write every pitch you add or change the same way, and keep the `octave absolute` line.');
+        parts.push('');
+    }
     const partial = shown.complete ? '' : ' Parts of it are omitted, marked "…"; leave them alone.';
     if (whole) {
         parts.push(`The file being edited — nothing is selected, so the instruction is about the whole score.${partial}`);

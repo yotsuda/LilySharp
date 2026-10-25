@@ -40,6 +40,15 @@ All notable changes to the Lily# VS Code extension are documented here.
   part's line at the top and its score row at the bottom) is no longer lit, nor judged for
   errors or octaves as if the AI had written it.
 - With nothing selected the file is sent once, not twice.
+- **The AI works in absolute octaves.** A file in relative octaves (no `octave` line) is sent
+  converted to `octave absolute`, where every pitch says where it sounds — the relative chain,
+  each note nearest the one before and every section starting afresh, was the AI's most common
+  slip. The candidate panel shows and plays that text; Accept brings the change back to the
+  file's relative octaves, and the notes after an edit are re-marked so they still sound where
+  they did. Measured on 516 books: 129 convert; 123 come back byte-identical when nothing is
+  changed, 6 with an equivalent spelling (`<f aes c>,` as `<f, aes c>`). A file that states its
+  octave mode, or that cannot be converted exactly, is sent as it is; a candidate that cannot be
+  brought back is offered in absolute octaves or not at all.
 - **Everyday requests get the construct made for them.** The language description the AI reads
   (docs/GRAMMAR_FOR_LLM.md) has a new *Common requests* section — add chords (a chord track
   with its score row, not `@chord(…)` on every note, as it used to answer), add lyrics, add a

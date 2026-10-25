@@ -74,14 +74,68 @@ public static class OctaveModeConverter
     public sealed record Result(string? NewText, string? Error, int ChangedPitches);
 
     /// <summary>Rewrites <paramref name="source"/> into <paramref name="target"/> mode.</summary>
-    public static Result Convert(string source, OctaveMode target)
+    public static Result Convert(string source, OctaveMode target) => ConvertWithEdits(source, target).Result;
+
+    /// <summary>One replacement of [Start, End) of the text it was made against.</summary>
+    public sealed record TextChange(int Start, int End, string Text);
+
+    /// <summary>The file in absolute octaves for the AI transform, and the changes that made it
+    /// (in the source's offsets, in order) so a selection can be carried over — or why not.</summary>
+    public sealed record AiAbsolute(string? NewText, string? Error, IReadOnlyList<TextChange> Changes);
+
+    /// <summary>
+    /// The AI transform's first half (owner's request 2026-10-25): a file in relative octaves —
+    /// the default, no <c>octave</c> directive anywhere — rewritten into absolute ones, so the
+    /// model writes each pitch where it sounds instead of computing the relative chain, the
+    /// mistake it makes most. A file that states a mode is left as it is (refused): one already
+    /// absolute needs nothing, and one that switches inside its music would lose the switches on
+    /// the way back.
+    /// </summary>
+    public static AiAbsolute ToAbsoluteForAi(string source)
+    {
+        var tree = SyntaxTree.Parse(source);
+        if (!tree.HasErrors && tree.GetRoot().DescendantNodes<OctaveDirectiveSyntax>().Any())
+            return new AiAbsolute(null, "The file states its octave mode — sent as it is.", []);
+        var (result, edits) = ConvertWithEdits(source, OctaveMode.Absolute);
+        return result.NewText == null
+            ? new AiAbsolute(null, result.Error, [])
+            : new AiAbsolute(result.NewText, null,
+                edits.OrderBy(e => e.Start).ThenBy(e => e.End).Select(e => new TextChange(e.Start, e.End, e.Text)).ToList());
+    }
+
+    /// <summary>
+    /// The second half: the AI's candidate, in the absolute octaves <see cref="ToAbsoluteForAi"/>
+    /// gave it, back in relative octaves, without the <c>octave</c> line the first half added —
+    /// the file as its writer keeps it. Every note sounds where the candidate put it (the
+    /// conversion verifies that), and a note the AI left alone gets back the marks it had, since
+    /// in relative octaves the marks follow from the pitches. Refused when the candidate no
+    /// longer opens with its one <c>octave absolute</c> line.
+    /// </summary>
+    public static Result FromAbsoluteForAi(string candidate)
+    {
+        var tree = SyntaxTree.Parse(candidate);
+        if (tree.HasErrors)
+            return Fail("The candidate has syntax errors — no changes made.");
+        var directives = tree.GetRoot().DescendantNodes<OctaveDirectiveSyntax>().ToList();
+        if (directives is not [{ IsAbsolute: true, Parent: CompilationUnitSyntax }])
+            return Fail("The candidate no longer states `octave absolute` once at the top — no changes made.");
+        var back = Convert(candidate, OctaveMode.Relative);
+        if (back.NewText == null)
+            return back;
+        // Convert keeps the file's directive, naming the new mode; relative is the default.
+        var line = SyntaxTree.Parse(back.NewText).GetRoot().DescendantNodes<OctaveDirectiveSyntax>().FirstOrDefault();
+        return line == null ? back
+            : new Result(Apply(back.NewText, [Removal(back.NewText, line.Span.Start, line.Span.End)]), null, back.ChangedPitches);
+    }
+
+    private static (Result Result, List<Edit> Edits) ConvertWithEdits(string source, OctaveMode target)
     {
         var tree = SyntaxTree.Parse(source);
         if (tree.HasErrors)
-            return Fail("Fix the syntax errors before converting octaves — no changes made.");
+            return No("Fix the syntax errors before converting octaves — no changes made.");
         var root = tree.GetRoot();
         if (root.DescendantNodes<UsingDirectiveSyntax>().Any())
-            return Fail("This file includes another with 'using', whose notes are not in this "
+            return No("This file includes another with 'using', whose notes are not in this "
                 + "file — no changes made.");
 
         var pitches = WrittenPitches(root);
@@ -95,26 +149,26 @@ public static class OctaveModeConverter
                 list.Add(octave);
                 return octave;
             }))
-            return Fail("The file could not be compiled — no changes made.");
+            return No("The file could not be compiled — no changes made.");
 
         foreach (var (pos, _) in pitches)
             if (!recorded.ContainsKey(pos))
-                return Fail($"The note at {LineCol(source, pos)}{Where(root, pos)} is never played by "
+                return No($"The note at {LineCol(source, pos)}{Where(root, pos)} is never played by "
                     + "any score, so nothing says what octave it means. Play it (add it to the form "
                     + "or a score) or remove it, then convert again — no changes made.");
         foreach (var pos in recorded.Keys)
             if (!pitches.ContainsKey(pos))
-                return Fail("A note resolved outside this file's text — no changes made.");
+                return No("A note resolved outside this file's text — no changes made.");
 
         // ⑵ Force the file with only its mode directives changed.
         var modeEdits = ModeEdits(source, root, target);
         var candidate = Apply(source, modeEdits);
         var candidateTree = SyntaxTree.Parse(candidate);
         if (candidateTree.HasErrors)
-            return Fail("Changing the octave directives broke the file — no changes made.");
+            return No("Changing the octave directives broke the file — no changes made.");
         var toOriginal = PositionMap(WrittenPitches(candidateTree.GetRoot()), pitches);
         if (toOriginal == null)
-            return Fail("Changing the octave directives moved the notes — no changes made.");
+            return No("Changing the octave directives moved the notes — no changes made.");
 
         var newMarks = new Dictionary<int, int>();
         var plays = new Dictionary<int, int>();
@@ -141,13 +195,13 @@ public static class OctaveModeConverter
                 newMarks[orig] = marks;
                 return wanted[k];
             }))
-            return Fail("The file could not be compiled in the other mode — no changes made.");
+            return No("The file could not be compiled in the other mode — no changes made.");
         if (conflict is { } c)
-            return Fail($"The note at {LineCol(source, c)} is played in places that would need "
+            return No($"The note at {LineCol(source, c)} is played in places that would need "
                 + "different octave marks in the other mode — no changes made.");
         if (lost || plays.Count != recorded.Count
             || plays.Any(p => p.Value != recorded[p.Key].Count))
-            return Fail("The other mode plays the notes in a different order — no changes made.");
+            return No("The other mode plays the notes in a different order — no changes made.");
 
         // The rewrite: the mode directives, and every pitch whose marks change.
         var edits = new List<Edit>(modeEdits);
@@ -164,10 +218,10 @@ public static class OctaveModeConverter
         // ⑶ Verify.
         var resultTree = SyntaxTree.Parse(result);
         if (resultTree.HasErrors)
-            return Fail("The rewritten file would not parse — no changes made.");
+            return No("The rewritten file would not parse — no changes made.");
         var resultToOriginal = PositionMap(WrittenPitches(resultTree.GetRoot()), pitches);
         if (resultToOriginal == null)
-            return Fail("The rewritten file lost track of its notes — no changes made.");
+            return No("The rewritten file lost track of its notes — no changes made.");
         var again = new Dictionary<int, List<int>>();
         if (!Walk(resultTree, (pos, octave) =>
             {
@@ -179,13 +233,13 @@ public static class OctaveModeConverter
                 }
                 return octave;
             }))
-            return Fail("The rewritten file could not be compiled — no changes made.");
+            return No("The rewritten file could not be compiled — no changes made.");
         foreach (var (pos, wanted) in recorded)
             if (!again.TryGetValue(pos, out var got) || !got.SequenceEqual(wanted))
-                return Fail($"The rewritten file would move the note at {LineCol(source, pos)} — "
+                return No($"The rewritten file would move the note at {LineCol(source, pos)} — "
                     + "no changes made.");
 
-        return new Result(result, null, changed);
+        return (new Result(result, null, changed), edits);
     }
 
     /// <summary>
@@ -300,6 +354,7 @@ public static class OctaveModeConverter
     }
 
     private static Result Fail(string error) => new(null, error, 0);
+    private static (Result, List<Edit>) No(string error) => (Fail(error), []);
 
     /// <summary>" (section B2 of part bass)" — the declarations around the pitch at
     /// <paramref name="pos"/>, so an unplayed note's refusal says which block is unplayed.</summary>

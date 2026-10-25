@@ -22,7 +22,7 @@ import * as assert from 'node:assert/strict';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import {
-    SEL_CLOSE, SEL_OPEN, documentBudget, documentContext, estimateTokens, isProblem, isUnchanged, marksContext, octaveOutliers,
+    SEL_CLOSE, SEL_OPEN, carryOffset, documentBudget, documentContext, estimateTokens, isProblem, isUnchanged, marksContext, octaveOutliers,
     pickModel, pitchToMidi, startTimeAt, toCandidateEdit,
 } from '../src/aiTransformCore';
 
@@ -180,6 +180,37 @@ describe('a reply of edits', () => {
     it('that change nothing are unchanged', () => {
         const edit = toCandidateEdit(snapshotOf(FILE, SEL), '<edit><old>staff m</old><new>staff m</new></edit>');
         assert.ok(edit && !isProblem(edit) && isUnchanged(edit));
+    });
+});
+
+describe('a selection carried into absolute octaves', () => {
+    // `c4 d e f | g a b c | c' b, a g |` → `c4 d e f | g a b c' | c'' b a g |`, with the line on top.
+    const src = 'part m { }\nsection A {\n  m { c4 d e f | g a b c | c\' b, a g | }\n}\n';
+    const dst = 'octave absolute\npart m { }\nsection A {\n  m { c4 d e f | g a b c\' | c\'\' b a g | }\n}\n';
+    const at = (s: string, i: number) => src.indexOf(s) + i;
+    const changes = [
+        { Start: 0, End: 0, Text: 'octave absolute\n' },
+        { Start: at('c |', 1), End: at('c |', 1), Text: '\'' },
+        { Start: at('c\' b', 1), End: at('c\' b', 2), Text: '\'\'' },
+        { Start: at('b, a', 1), End: at('b, a', 2), Text: '' },
+    ];
+
+    it('the changes rebuild the converted text', () => {
+        let out = '';
+        let from = 0;
+        for (const c of changes) { out += src.slice(from, c.Start) + c.Text; from = c.End; }
+        assert.equal(out + src.slice(from), dst);
+    });
+
+    it('keeps a selection on the same notes', () => {
+        const sel = 'g a b c | c\' b, a g |';
+        const lo = carryOffset(changes, src.indexOf(sel));
+        const hi = carryOffset(changes, src.indexOf(sel) + sel.length);
+        assert.equal(dst.slice(lo, hi), 'g a b c\' | c\'\' b a g |');
+    });
+
+    it('puts an offset at the file\'s head after the inserted line', () => {
+        assert.equal(carryOffset(changes, 0), 'octave absolute\n'.length);
     });
 });
 

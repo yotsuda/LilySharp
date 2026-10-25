@@ -1111,6 +1111,31 @@ public sealed partial class LilySharpLanguageServer
             : new ConvertOctavesResponse { Success = false, Error = result.Error };
     }
 
+    [JsonRpcMethod("lilysharp/aiOctaves", UseSingleObjectParameterDeserialization = true)]
+    public Task<AiOctavesResponse> AiOctavesAsync(AiOctavesParams @params, CancellationToken token)
+        => OffDispatch(() => AiOctaves(@params), token);
+
+    /// <summary>The AI transform's octave round trip
+    /// (<see cref="LilySharp.Core.Editing.OctaveModeConverter.ToAbsoluteForAi"/> and
+    /// <see cref="LilySharp.Core.Editing.OctaveModeConverter.FromAbsoluteForAi"/>): a text, not
+    /// the document — the candidate is never in the editor.</summary>
+    public AiOctavesResponse AiOctaves(AiOctavesParams @params)
+    {
+        var text = @params.Text ?? "";
+        if (@params.ToAbsolute)
+        {
+            var abs = LilySharp.Core.Editing.OctaveModeConverter.ToAbsoluteForAi(text);
+            return new AiOctavesResponse
+            {
+                NewText = abs.NewText,
+                Error = abs.Error,
+                Changes = abs.Changes.Select(c => new TextChangeDto { Start = c.Start, End = c.End, Text = c.Text }).ToArray(),
+            };
+        }
+        var back = LilySharp.Core.Editing.OctaveModeConverter.FromAbsoluteForAi(text);
+        return new AiOctavesResponse { NewText = back.NewText, Error = back.Error };
+    }
+
     [JsonRpcMethod("lilysharp/removeStringNumbers", UseSingleObjectParameterDeserialization = true)]
     public Task<RemoveStringNumbersResponse> RemoveStringNumbersAsync(RemoveStringNumbersParams @params, CancellationToken token)
         => OffDispatch(() => RemoveStringNumbers(@params), token);

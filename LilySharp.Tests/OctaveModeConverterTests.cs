@@ -164,4 +164,58 @@ public class OctaveModeConverterTests
         Assert.Null(result.NewText);
         Assert.NotNull(result.Error);
     }
+
+    // ---- the AI transform's round trip (owner's request 2026-10-25) ----
+
+    private const string Song = "title \"t\"\npart m { }\nsection A {\n  m { c4 d e f | g a b c | c' b, a g | }\n}\n"
+        + "section B {\n  m { e4 g c' e | d1 | }\n}\nform { ~A ~B }\nscore { staff m }\n";
+
+    [Fact]
+    public void ForTheAi_ARelativeFile_GoesAbsolute_WithTheChangesThatMadeIt()
+    {
+        var abs = OctaveModeConverter.ToAbsoluteForAi(Song);
+        Assert.True(abs.NewText != null, abs.Error);
+        Assert.Equal(Convert(Song, OctaveMode.Absolute), abs.NewText);
+        // The changes, applied to the source in order, are the new text — what lets a selection
+        // be carried over.
+        var rebuilt = "";
+        int at = 0;
+        foreach (var c in abs.Changes)
+        {
+            rebuilt += Song[at..c.Start] + c.Text;
+            at = c.End;
+        }
+        Assert.Equal(abs.NewText, rebuilt + Song[at..]);
+    }
+
+    [Fact]
+    public void ForTheAi_UntouchedComesBackAsItWas()
+    {
+        var abs = OctaveModeConverter.ToAbsoluteForAi(Song).NewText!;
+        Assert.Equal(Song, OctaveModeConverter.FromAbsoluteForAi(abs).NewText);
+    }
+
+    [Fact]
+    public void ForTheAi_AChangedNote_LeavesTheNotesAfterItWhereTheySounded()
+    {
+        // The AI raises bar 1's f to a': in relative octaves every later note of the section
+        // would move with it if the marks were kept; back from absolute, they are re-marked.
+        var abs = OctaveModeConverter.ToAbsoluteForAi(Song).NewText!;
+        var edited = abs.Replace("c4 d e f |", "c4 d e a' |");
+        var back = OctaveModeConverter.FromAbsoluteForAi(edited);
+        Assert.True(back.NewText != null, back.Error);
+        Assert.Equal(Pitches(edited), Pitches(back.NewText!));
+        Assert.DoesNotContain("octave", back.NewText);
+        // Section B is untouched text.
+        Assert.EndsWith(Song[Song.IndexOf("section B")..], back.NewText);
+    }
+
+    [Fact]
+    public void ForTheAi_AFileStatingItsMode_IsLeftAlone_AndACandidateMustKeepTheLine()
+    {
+        Assert.Null(OctaveModeConverter.ToAbsoluteForAi("octave absolute\n" + Song).NewText);
+        Assert.Null(OctaveModeConverter.ToAbsoluteForAi(Song.Replace("m { e4", "m { octave absolute e4")).NewText);
+        var abs = OctaveModeConverter.ToAbsoluteForAi(Song).NewText!;
+        Assert.Null(OctaveModeConverter.FromAbsoluteForAi(abs.Replace("octave absolute\n", "")).NewText);
+    }
 }

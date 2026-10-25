@@ -337,6 +337,31 @@ public class ConvertOctavesResponse
     public string? Error { get; set; }
 }
 
+/// <summary>Parameters for lilysharp/aiOctaves: a text, and which way — into absolute octaves
+/// for the AI, or the AI's candidate back.</summary>
+public class AiOctavesParams
+{
+    public string Text { get; set; } = "";
+    public bool ToAbsolute { get; set; }
+}
+
+/// <summary>One replacement of [Start, End) of the text the request was given.</summary>
+public class TextChangeDto
+{
+    public int Start { get; set; }
+    public int End { get; set; }
+    public string Text { get; set; } = "";
+}
+
+/// <summary>Response for lilysharp/aiOctaves: the rewritten text (with, into absolute, the
+/// changes that made it), or why the text was left as it is.</summary>
+public class AiOctavesResponse
+{
+    public string? NewText { get; set; }
+    public TextChangeDto[] Changes { get; set; } = System.Array.Empty<TextChangeDto>();
+    public string? Error { get; set; }
+}
+
 /// <summary>Parameters for lilysharp/removeStringNumbers: the document.</summary>
 public class RemoveStringNumbersParams
 {
