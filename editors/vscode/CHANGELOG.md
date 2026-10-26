@@ -6,6 +6,10 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ### Ask AI
 
+- **Ask Again revises the candidate.** The AI's answer to Ask Again was applied to the file as
+  it was before the candidate, so a change to what the candidate added — chords for the piece it
+  had just written — quoted text the file did not have, and failed. Now it answers against the
+  file as its candidate left it, and Accept writes the candidate and the revision as one change.
 - **Compose with AI…** (command palette, right-click in a `.lys` editor) writes a new piece into a
   new score from a description — say the instruments, the length and the character. The AI is
   shown how a piece for players is written (an `instrument` for every part, a `staffGroup` for

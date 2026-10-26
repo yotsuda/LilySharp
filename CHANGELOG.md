@@ -8,6 +8,8 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Ask AI
 
+- `[editor]` **Ask Again revises the candidate shown** (it was answered against the file as it was
+  before the candidate, so changing what the candidate added failed).
 - `[editor]` **Compose with AI…**: a new piece in a new score from a description, written with
   instruments, an ensemble's bracket, contrasting sections and textures, and checked as music once
   it compiles (no instrument, a piano's brace for an ensemble, one note value, one rhythm for

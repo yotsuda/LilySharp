@@ -39,7 +39,7 @@ import { ChatClient, ChatMessage, resolveChatClient } from './modelClient';
 import {
     CandidateEdit as CoreCandidateEdit, ChangedSpan, MarkInSelection, MarkReadings, SEL_CLOSE, SEL_OPEN, cleanCandidate,
     TextChange, carryOffset, documentBudget, documentContext, estimateTokens, isProblem, marksContext, octaveOutliers, splitNote,
-    startTimeAt, toCandidateEdit, wholeFileEdit, changedWords, wholeTextMarkup,
+    startTimeAt, toCandidateEdit, wholeFileEdit, carrySelection, changedWords, wholeTextMarkup,
 } from './aiTransformCore';
 import { markFactsOf, sideFileOf } from './omrScanCore';
 import { textFontFaceCss, textFontsRoot } from './scoreFonts';
@@ -454,6 +454,11 @@ async function drive(
     // restarted during Ask Again and the panel was left with every button greyed out).
     let shownRound: ReviewRound | undefined;
     let askedFrom = 0;
+    // The text the AI is answering against: the file, and once it is asked again, the candidate
+    // it revises (owner's report 2026-10-27: "add guitar chords" to a composed piece failed three
+    // times — its edits quoted the piece, and were looked for in the file it had not been written to).
+    let base: Snapshot = work;
+    let baseAsked: Snapshot = work;
     let iterate = true;
     while (iterate) {
         // One round — prepare (the first), generate, validate, render — under its notification;
@@ -498,19 +503,28 @@ async function drive(
                     step(attempt === 0 ? 'generating' : `repairing (${attempt}/${MAX_REPAIR_ATTEMPTS})`);
 
                     const raw = await chat.send(messages, token);
-                    const edit = toCandidateEdit(work, raw);
-                    if (edit === null) {
+                    // Read against the text the AI was last shown as the file: the file itself, or —
+                    // asked again — its candidate (see `base`).
+                    const parsed = toCandidateEdit(base, raw);
+                    if (parsed === null) {
                         turnedDown(attempt, `the reply was empty (${raw.length} characters)`);
                         messages.push({ role: 'assistant', content: raw });
                         messages.push({ role: 'user', content: `Your reply was empty. ${replyForm(whole)} — no commentary, no code fences.` });
                         continue;
                     }
-                    if (isProblem(edit)) {
-                        turnedDown(attempt, `its edits could not be applied: ${edit.problem}`);
+                    if (isProblem(parsed)) {
+                        turnedDown(attempt, `its edits could not be applied: ${parsed.problem}`);
                         messages.push({ role: 'assistant', content: raw });
-                        messages.push({ role: 'user', content: `${edit.problem}\nReply again, all edits — same output rules.` });
+                        messages.push({ role: 'user', content: `${parsed.problem}\nReply again, all edits — same output rules.` });
                         continue;
                     }
+                    // What it makes of the candidate, as one change to the file: Accept writes the
+                    // revision and the candidate it revised together.
+                    const edit: CandidateEdit = base === work
+                        ? parsed
+                        : parsed.text === parsed.snap.origSelectedText
+                            ? { ...parsed, snap: work, text: work.origSelectedText }
+                            : { ...wholeFileEdit(work, spliceCandidate(parsed.snap, parsed.text)), reply: parsed.reply };
                     // A reply that changes nothing is not a transform. The owner accepted one such
                     // candidate, the section exactly as it was, because nothing said it was
                     // unchanged (2026-09-26) — the model had been asked for a new part it could not
@@ -704,6 +718,7 @@ async function drive(
             }
             // Back to the candidate shown, the conversation as it was before the ask.
             prepared!.messages.length = askedFrom;
+            base = baseAsked;
             round = shownRound;
             again = failure !== undefined
                 ? `Asking again failed (${failure}) — this candidate is as it was.`
@@ -799,11 +814,15 @@ async function drive(
             deps.log(`AI transform: iterate — "${refine}"`);
             panelStatus(`Asking the AI again: “${refine}”…`);
             askedFrom = messages.length;
+            baseAsked = base;
             messages.push({ role: 'assistant', content: candidate.reply });
-            // The file has not changed: a revision is answered against it as it stands, as the
-            // previous candidate was.
+            // A revision is of the candidate: the AI answers against the file as its candidate left
+            // it — its <old> quotes what it wrote as readily as what it kept — and Accept writes the
+            // whole of it, the candidate and the revision as one change.
+            base = revisionBase(work, candidate);
             messages.push({ role: 'user', content:
-                `Revise the previous candidate: ${refine}\nThe file is still as it was before that candidate. `
+                `Revise your previous candidate: ${refine}\nThe file now reads as your candidate left it — copy each <old> `
+                + 'from that (your new text where you changed something, the file\'s text where you did not). '
                 + `${replyForm(whole)} — same output rules.` });
             instruction = refine; // caption reflects the latest ask
             continue; // back to generate
@@ -988,6 +1007,18 @@ async function compositionFindings(client: LanguageClient, text: string): Promis
     } catch {
         return [];
     }
+}
+
+/**
+ * The file as `candidate` left it, as the snapshot a revision of it is read against: its text,
+ * and the selection where it now stands — moved by the candidate's changes before it, and
+ * widened to a change it falls inside — so a reply that replaces the selection replaces the same
+ * music.
+ */
+function revisionBase(work: Snapshot, candidate: CandidateEdit): Snapshot {
+    const full = spliceCandidate(candidate.snap, candidate.text);
+    const { start: startOffset, end: endOffset } = carrySelection(candidate.spans, work.startOffset, work.endOffset);
+    return { ...work, origFullText: full, startOffset, endOffset, origSelectedText: full.slice(startOffset, endOffset) };
 }
 
 /** Rebuilds the full document text with the candidate spliced into the snapshot range. */

@@ -40,8 +40,8 @@ describe('the AI candidate panel is never left without a decision to make', () =
         assert.match(transform, /try \{\s*round = await working\(title,/);
         assert.match(transform, /\} catch \(err: any\) \{\s*if \(!shownRound \|\| !candidatePanel\) \{\s*throw err;\s*\}/);
         // The conversation as it was before the ask, the candidate decided again.
-        assert.match(transform, /prepared!\.messages\.length = askedFrom;\s*round = shownRound;/);
-        assert.match(transform, /askedFrom = messages\.length;\s*messages\.push\(\{ role: 'assistant', content: candidate\.reply \}\);/);
+        assert.match(transform, /prepared!\.messages\.length = askedFrom;\s*base = baseAsked;\s*round = shownRound;/);
+        assert.match(transform, /askedFrom = messages\.length;\s*baseAsked = base;\s*messages\.push\(\{ role: 'assistant', content: candidate\.reply \}\);/);
         // A message waiting means decideAgain, which re-arms the buttons ('undecided').
         assert.match(transform, /decision = again !== undefined\s*\? await decideAgain\(again\)/);
         assert.match(transform, /postMessage\(\{ type: 'undecided', text \}\)/);

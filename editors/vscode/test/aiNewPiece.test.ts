@@ -18,7 +18,7 @@ import { describe, it } from 'node:test';
 import * as assert from 'node:assert/strict';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { isProblem, toCandidateEdit } from '../src/aiTransformCore';
+import { carrySelection, isProblem, toCandidateEdit } from '../src/aiTransformCore';
 
 // Owner's report 2026-10-26: "discard the score and compose a new string quartet" failed three
 // times — the model answered with <edit> blocks quoting the old score, and copied none of it
@@ -68,5 +68,33 @@ describe('a new piece in place of the score', () => {
         assert.match(transform, /const said = composeAsked \?\? instruction;/);
         const pkg = fs.readFileSync(path.join(__dirname, '..', '..', 'package.json'), 'utf8');
         assert.match(pkg, /"command": "lilysharp\.composeWithAi",\s*"category": "Lily#",\s*"icon": "\$\(sparkle\)",\s*"title": "Compose with AI…"/);
+    });
+});
+
+// Owner's report 2026-10-27: "add guitar chords" asked again of a composed piece failed three
+// times — the AI's edits quoted the piece it had written, and were looked for in the file before
+// it. Asked again, the AI answers against the file as its candidate left it.
+describe('a revision is of the candidate', () => {
+    const transform = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'aiTransform.ts'), 'utf8');
+
+    it('reads the reply against the candidate, and writes it as one change to the file', () => {
+        assert.match(transform, /const parsed = toCandidateEdit\(base, raw\);/);
+        assert.match(transform, /base = revisionBase\(work, candidate\);/);
+        assert.match(transform, /\{ \.\.\.wholeFileEdit\(work, spliceCandidate\(parsed\.snap, parsed\.text\)\), reply: parsed\.reply \}/);
+        assert.match(transform, /The file now reads as your candidate left it — copy each <old> /);
+        // An ask that brings nothing goes back to the candidate, and so does the text read against.
+        assert.match(transform, /prepared!\.messages\.length = askedFrom;\s*base = baseAsked;/);
+    });
+
+    it('carries the selection into the candidate\'s text', () => {
+        // "abcdefghij": "cd" (2..4) became "CCCDDD" (2..8); the selection "fg" (5..7) moves by 4.
+        const spans = [{ beforeLo: 2, beforeHi: 4, afterLo: 2, afterHi: 8 }];
+        assert.deepEqual(carrySelection(spans, 5, 7), { start: 9, end: 11 });
+        // A selection before the change stays; one ending where it starts does not take it in.
+        assert.deepEqual(carrySelection(spans, 0, 2), { start: 0, end: 2 });
+        // One inside the change widens to the whole of it.
+        assert.deepEqual(carrySelection(spans, 3, 6), { start: 2, end: 10 });
+        // An insertion at the selection's end is taken in.
+        assert.deepEqual(carrySelection([{ beforeLo: 4, beforeHi: 4, afterLo: 4, afterHi: 7 }], 1, 4), { start: 1, end: 7 });
     });
 });

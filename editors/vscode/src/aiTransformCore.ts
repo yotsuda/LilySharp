@@ -237,6 +237,32 @@ function reduceToSpan<S extends SpanLike>(snapshot: S, full: string, spans: Chan
 
 /** The whole file `full` as the edit it makes to the snapshot's file: the one span where they
  *  differ (the AI's candidate brought back to relative octaves, say). */
+/**
+ * A selection `start`..`end` of a text carried into that text with `spans` changed (each span
+ * `beforeLo..beforeHi` of the old text became `afterLo..afterHi` of the new): an end before a
+ * change stays, one after it moves with it, and one inside it goes to the change's edge — the
+ * selection widens to the whole of a change it touches the inside of.
+ */
+export function carrySelection(spans: readonly ChangedSpan[], start: number, end: number): { start: number; end: number } {
+    const sorted = [...spans].sort((a, b) => a.beforeLo - b.beforeLo);
+    const carry = (offset: number, isEnd: boolean) => {
+        let delta = 0;
+        for (const s of sorted) {
+            if (offset < s.beforeLo || (offset === s.beforeLo && (!isEnd || s.beforeHi > s.beforeLo))) {
+                break;
+            }
+            if (offset >= s.beforeHi) {
+                delta = s.afterHi - s.beforeHi;
+                continue;
+            }
+            return isEnd ? s.afterHi : s.afterLo;
+        }
+        return offset + delta;
+    };
+    const s = carry(start, false);
+    return { start: s, end: Math.max(s, carry(end, true)) };
+}
+
 export function wholeFileEdit<S extends SpanLike>(snapshot: S, full: string): CandidateEdit<S> {
     return reduceToSpan(snapshot, full, null, '');
 }
