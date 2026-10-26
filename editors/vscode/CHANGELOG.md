@@ -4,6 +4,11 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+### The preview
+
+- **Play from Here on a bar too**: right-clicking a bar (between its notes, or a rest) offers
+  *Play from Here* as right-clicking a note does, and plays from the bar's first note.
+
 ### The scan view
 
 - **The head stays whole when the scan is zoomed and scrolled**: it is fixed across the top of

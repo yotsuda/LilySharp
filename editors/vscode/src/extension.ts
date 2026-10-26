@@ -3649,10 +3649,10 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
      default webview context menu (Copy / Cut / Paste) has nothing to act on:
      Cut and Paste can never apply, and Copy only ever picked up stray SVG text.
      preventDefaultContextMenuItems drops those built-in entries, leaving only
-     what this extension contributes under menus/webview/context. lysNote and
+     what this extension contributes under menus/webview/context. lysPlayFrom and
      lysPlaying are the when-clause keys those items gate on; the contextmenu
      handler below refreshes them for each click. -->
-<body data-vscode-context='{"preventDefaultContextMenuItems": true, "lysNote": false, "lysPlaying": false}'>
+<body data-vscode-context='{"preventDefaultContextMenuItems": true, "lysPlayFrom": false, "lysPlaying": false}'>
     <div class="toolbar">
         <!-- Each group wraps as one when the preview is narrow (owner's request 2026-10-25). -->
         <span class="group">
@@ -6227,8 +6227,8 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 // the right-clicked note resolves to an onset the same way a
                 // highlighted note does.
                 case 'ctxPlayFromHere':
-                    if (ctxNotePos >= 0) {
-                        pendingStartPos = ctxNotePos;
+                    if (ctxPlayPos >= 0) {
+                        pendingStartPos = ctxPlayPos;
                         // From the note, as asked — not the selection, not round the loop.
                         pendingSpan = null;
                         pendingFromHere = true;
@@ -6478,6 +6478,10 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         // listener, so this one runs in the CAPTURE phase to get there first.
         let ctxNotePos = -1;
         let ctxBarRange = null;   // the bar right-clicked, as its first and last note (ctxSelectBar)
+        // Where the menu's Play from Here starts: the note right-clicked, else the first note of
+        // the bar right-clicked (owner's request 2026-10-26: the menu on a bar too) — a rest
+        // there starts at the next sounding note, as the Play path resolves any start.
+        let ctxPlayPos = -1;
         let docHasScan = false;   // the file has an OMR side file (scanState, with each render)
         document.addEventListener('contextmenu', (e) => {
             const t = e.target;
@@ -6520,6 +6524,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 ctxAiSelected = '1 bar selected';
             }
             if (ctxBarAt < 0) ctxBarAt = ctxNotePos;
+            ctxPlayPos = ctxNotePos >= 0 ? ctxNotePos : ctxBarRange ? ctxBarRange[0] : -1;
             document.body.dataset.vscodeContext = JSON.stringify({
                 preventDefaultContextMenuItems: true,
                 // The OMR doors only for a file with a scan (owner, 2026-10-24); the scan
@@ -6532,7 +6537,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 lysAiSelected: ctxAiSelected,
                 lysOnStaff: ctxBarRange !== null,
                 lysHasSel: aiRangeLo >= 0,
-                lysNote: ctxNotePos >= 0,
+                lysPlayFrom: ctxPlayPos >= 0,
                 // The Stop button's enabled state is the playback flag that also
                 // covers the optimistic window between Play and the first events.
                 lysPlaying: !document.getElementById('stopBtn').disabled

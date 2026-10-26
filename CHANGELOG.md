@@ -6,6 +6,10 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+### The preview
+
+- `[editor]` **The preview's Play from Here is on a bar's right-click too**, playing from its first note.
+
 ### The scan view
 
 - `[editor]` **The scan view's head stays whole when the pages are zoomed and scrolled
