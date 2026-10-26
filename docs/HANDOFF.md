@@ -134,6 +134,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - ⚠️ **見つけた製品の穴（未着手・ユーザーに報告）**: chords の行の読めない和音（`C7b9`・`C-5`・`Cxyz`）を `lysc check` が何も言わない（`@chord(C7b9)` は「names nothing and is ignored」の警告・`ChordStructure.TryParseChordEntry` は拒む）。計器 Lab `sessions/p979/row-*.lys`。
 - **ユーザー「続けて」→ 上の穴をどうするか訊いた → 「警告を出す（推奨）」→ LYS1053（`57d35ab3a`）**: `ChordRowSymbolValidator`＝`TryParseChordEntry` が拒みローマ数字でもない `ChordEntrySyntax` に「印刷はそのまま・根音だけ鳴る」と直し方（パーサの拒否理由／変化音の規則＋`7-9` の候補／知らない種類）。印刷と再生は不変。根音が A–G でない項目はもともとパーサのエラー。網 `ChordRowSymbolTests` 8 本・毒（登録を外す）で 3 赤。リポジトリ＋コーパス 1014 冊で新しい警告 0 件。GRAMMAR・SYNTAX_REFERENCE・CHANGELOG・site chords に 1 文。⚠️ 毒の `dotnet test` は `LilySharp.Cli\bin\Debug` の Core.dll も毒入りにする＝戻した後は Cli を作り直してから lysc を使う（陽性対照で気づいた）。
 - 続き（「続けて」）: `docs/ai-collab-guide.ja.md`（利用者向けの日本語の手引き）が旧 Transform Selection・浮かぶ ✨ ボタンのまま＋自己矛盾（冒頭「自分の API キー」／後半「無い」、「AI 設定は 1 つ」の上に 3 行の表）→ Ask AI に書き直し（入口・ヒント・edits と絶対オクターブ・候補パネル・小節選択・モデル設定・Fix OMR）。SHOTLIST 9 を Ask AI に。設計の文書（ai-collab-design.md 等）は経緯として触らない。
+- **ユーザー「新規作成の lesson テンプレートを監査・最初の段階で Ctrl+Space と Ctrl+Shift+Up/PgUp を紹介」（`9c9095953`）**: 監査＝テンプレート 1 行目に Ctrl+Space が無い（「pick lesson-01」の手段が無い）・2 行目は step keys の名だけ／レッスン 1 は Ctrl+Space は冒頭にあるが step keys の初出は STEP 4（強弱の上）・PageUp/PageDown はレッスン 2 まで出ない。→ テンプレート 2 行を書き直し（Ctrl+Space とレッスンの始め方・各キーの効き目・20 行の上限内）、レッスン 1 の冒頭に 3 つのキーの表、STEP 3（最初の音）で両方を試す（G major で e→fis→e・PageUp で e'＝後ろも続く）、印のメモ「STEP 3: Ctrl+Shift+Up, PgUp」（png で収まりを確認）。網＝LessonTests 2 本＋NewScoreTemplateTests 1 本。site の Learn に Stepping へのリンク。Deploy-Lsp 済。
 判定（2026-10-26・第979 の終わり）: 次はユーザーの指示。
 
 ## 以下は第978セッションの経緯
