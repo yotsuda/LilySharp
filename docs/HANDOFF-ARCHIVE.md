@@ -160,6 +160,15 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第992セッションの経緯
+
+### 1.1 第992セッション（2026-10-27・YT-DELL2）
+
+第991 と同じ会話の続き。`-Start p992`（開始 HEAD `ab3cdbfff`・full **13350 / 0 / 2 / 13352**・第990 を ARCHIVE へ）。作業場所は Lab `sessions/p992/`。
+- **ユーザー「エレキギターとドラムの曲を頼んだらギターとドラムだけ。この編成ではエレキベースが必須、キーボードも良い。テンポは途中で変えない」＋「ギターとベースならドラムが必須＝一般的なルールに」＋「ジャズのリードシートの書き方も。一線譜で、それっぽいコード進行で」**: 文法の「Compose a piece」に**バンド**（どれか 1 つが名指しされたらリズム隊全部＝ドラム（`clef percussion`）・エレキベース（`instrument bass`＋`midiInstrument "electric bass (finger)"`）・ギターかキーボード、テンポは 1 つ、曲の形は intro/verse/chorus…、括弧なし）と**ジャズのリードシート**（旋律 1 段＋上に chords の行、セブンス・ii–V–I・副次 ii–V・♭9・バックドア・ターンアラウンド、`tempo "Medium Swing" 4 = 152 swing`、8 小節単位）。「テンポも対比」は演奏会の音楽だけ、に絞った。見本 2 つ（Lab `sessions/p992/band-example.lys`＝Night Drive、`jazz-example.lys`＝Blue Window、lysc で検査・png で確認。⚠️ バンドの `instrument bass` は記譜より 1 オクターブ下で鳴る＝最初 B0 まで落ちて lysc が音域外を警告）。Core `CompositionChecks` にバンドの点検（ドラム・ベース・和音楽器の欠け、テンポが 2 つ以上）、ドラム（`clef percussion`）は instrument 不要、バンドのベースは音価の単調さの点検から外す（8 分の刻みは語法）。Compose の頼みの言葉も「その種類の音楽の手引きどおりに」。網 `CompositionChecksTests` 10 本。site・両 CHANGELOG・MANUAL-CHECKS C8。Deploy-Lsp 済。
+- ⚠️ **見つけた描画の欠陥（未着手）**: `tempo "Medium Swing" 4 = 152 swing` のスウィングの式（8 分 2 つ＝3 連の 4 分＋8 分）の 3 連の括弧が**題名に重なる**（Blue Window の png）。計器 Lab `sessions/p992/jazz-example.lys`。
+判定（2026-10-27・第992 の終わり）: 次はユーザーの指示（C8・スウィングの式と題の重なり）。
+
 ## 以下は第991セッションの経緯
 
 ### 1.1 第991セッション（2026-10-27・YT-DELL2）

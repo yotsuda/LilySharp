@@ -6,6 +6,11 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+### Editing
+
+- `[editor]` **A minor key's step keys walk its key signature** (the natural minor: A minor
+  walks the notes of C major); the leading tone is no longer a stop of its own.
+
 ### Ask AI
 
 - `[editor]` **Ask Again revises the candidate shown** (it was answered against the file as it was

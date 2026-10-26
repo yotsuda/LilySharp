@@ -534,20 +534,24 @@ public class StepRequestTests
         Assert.Equal(Plain("f'4"), Semi("e'‸4", +1, Plain));
     }
 
-    /// <summary>A minor key walks its signature and its leading tone (owner's decision
-    /// 2026-10-16: D minor c, cis, d); a church mode its own signature (D dorian: b natural).</summary>
+    /// <summary>A minor key walks its signature — its natural minor, A minor the notes of C
+    /// major (owner's decision 2026-10-27, reversing 2026-10-16's leading tone walked besides) —
+    /// and a church mode its own (D dorian: b natural). A note off the key, the leading tone
+    /// written, steps to the nearest note of the key either way.</summary>
     [Fact]
-    public void AScaleStep_InAMinorKey_WalksTheSignature_AndTheLeadingTone()
+    public void AScaleStep_InAMinorKey_WalksItsSignature_TheNaturalMinor()
     {
-        Assert.Equal(Plain("key d minor cis'4"), Semi("key d minor c'‸4", +1, Plain));
-        Assert.Equal(Plain("key d minor d'4"), Semi("key d minor cis'‸4", +1, Plain));
-        Assert.Equal(Plain("key d minor cis'4"), Semi("key d minor d'‸4", -1, Plain));
-        Assert.Equal(Plain("key d minor c'4"), Semi("key d minor cis'‸4", -1, Plain));
+        Assert.Equal(Plain("key d minor d'4"), Semi("key d minor c'‸4", +1, Plain));
+        Assert.Equal(Plain("key d minor c'4"), Semi("key d minor d'‸4", -1, Plain));
         Assert.Equal(Plain("key d minor bes'4"), Semi("key d minor a'‸4", +1, Plain));
-        Assert.Equal(Plain("key a minor gis'4"), Semi("key a minor g'‸4", +1, Plain));
-        Assert.Equal(Plain("key f minor e'4"), Semi("key f minor ees'‸4", +1, Plain));
+        Assert.Equal(Plain("key a minor a'4"), Semi("key a minor g'‸4", +1, Plain));
+        Assert.Equal(Plain("key a minor g'4"), Semi("key a minor a'‸4", -1, Plain));
+        Assert.Equal(Plain("key f minor f'4"), Semi("key f minor ees'‸4", +1, Plain));
         Assert.Equal(Plain("key a aeolian a'4"), Semi("key a aeolian g'‸4", +1, Plain));
         Assert.Equal(Plain("key d dorian b'4"), Semi("key d dorian a'‸4", +1, Plain));
+        // The leading tone written by hand is off the signature: it steps on to the key's notes.
+        Assert.Equal(Plain("key a minor a'4"), Semi("key a minor gis'‸4", +1, Plain));
+        Assert.Equal(Plain("key a minor g'4"), Semi("key a minor gis'‸4", -1, Plain));
     }
 
     /// <summary>The key is the part declaration's, then the file's, when the music writes none.</summary>

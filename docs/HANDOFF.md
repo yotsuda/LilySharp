@@ -127,20 +127,19 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第994セッション（2026-10-27・YT-DELL2）
+
+第993 と同じ会話の続き。`-Start p994`（開始 HEAD `24cfe7bc3`・full **13356 / 0 / 2 / 13358**・第992 を ARCHIVE へ）。
+- **ユーザー「Ctrl+Shift+Up のスケールが major 以外でおかしい。a minor は c major と同じスケールであるべき。教会旋法も同じ。補完の和音名もおかしい」**: 調べた＝Core の歩き方は全旋法・全置き場所（冒頭・節・パートの塊・パート宣言・by-part）で調号どおり、補完の和音（`CurrentKey`→`DiatonicChords.ForKey`）も旋法どおり（計器を書き間違えて一度「壊れている」と見えた＝`$"..."` の中の `{{` は `{`）。違いは**短調だけ導音 gis を余分に止まる**（2026-10-16 の決定）だけ＝再現できたのはそれだけと報告。→ ユーザー「a minor で g は gis になるべき？」「どちらが便利？」「ポップスの短調も gis が多い？」→ 答え（自然短音階が基本・gis は終止前の属和音と導音・回数は g が圧倒的）→ **ユーザー「a minor で gis は出ないようにして」**＝`KeyInForce` から導音を外した（**2026-10-16 の決定を覆す**）。網 `StepRequestTests` の短調の 1 本を書き直し（書かれた gis は調の外の音＝上は a、下は g）。site・両 CHANGELOG。⚠️ 教会旋法と和音名の「おかしい」は再現できず＝例が来たら見る。Deploy-Lsp 済。
+判定（2026-10-27・第994 の終わり）: 次はユーザーの指示（教会旋法・和音名の例が来れば）。
+
+## 以下は第993セッションの経緯
+
 ### 1.1 第993セッション（2026-10-27・YT-DELL2）
 
 第992 と同じ会話の続き。`-Start p993`（開始 HEAD `0212da7e7`・full **13356 / 0 / 2 / 13358**・第991 を ARCHIVE へ）。
 - **ユーザー「リードシートという指定がない場合は一線譜を使ってはいけない、というルールはどう？」** → 賛成し、広げて提案（1 段で正しいのはリードシート・旋律だけ・単旋律楽器 1 つの独奏。「ジャズの曲」はコンボ）→ **ユーザー「良い」**。文法の「Compose a piece」に「One staff only when it is asked for」と「Jazz は（リードシートと言われなければ）コンボ＝ピアノかギター・ベース（`acoustic bass`）・ドラム（ride と hi-hat）＋旋律楽器」。Compose の点検に、パートが 1 つで頼みに `lead sheet／リードシート／メロディだけ／旋律だけ／solo／ソロ／独奏／無伴奏／unaccompanied` が無ければ差し戻す（`asksForOneStaff`・`partCount`＝拡張側、頼みの言葉が要るので）。網 `aiNewPiece.test` 2 本（npm 469）。site・拡張 CHANGELOG・MANUAL-CHECKS C8。Deploy-Lsp 済。
 判定（2026-10-27・第993 の終わり）: 次はユーザーの指示（C8・スウィングの式と題の重なり）。
-
-## 以下は第992セッションの経緯
-
-### 1.1 第992セッション（2026-10-27・YT-DELL2）
-
-第991 と同じ会話の続き。`-Start p992`（開始 HEAD `ab3cdbfff`・full **13350 / 0 / 2 / 13352**・第990 を ARCHIVE へ）。作業場所は Lab `sessions/p992/`。
-- **ユーザー「エレキギターとドラムの曲を頼んだらギターとドラムだけ。この編成ではエレキベースが必須、キーボードも良い。テンポは途中で変えない」＋「ギターとベースならドラムが必須＝一般的なルールに」＋「ジャズのリードシートの書き方も。一線譜で、それっぽいコード進行で」**: 文法の「Compose a piece」に**バンド**（どれか 1 つが名指しされたらリズム隊全部＝ドラム（`clef percussion`）・エレキベース（`instrument bass`＋`midiInstrument "electric bass (finger)"`）・ギターかキーボード、テンポは 1 つ、曲の形は intro/verse/chorus…、括弧なし）と**ジャズのリードシート**（旋律 1 段＋上に chords の行、セブンス・ii–V–I・副次 ii–V・♭9・バックドア・ターンアラウンド、`tempo "Medium Swing" 4 = 152 swing`、8 小節単位）。「テンポも対比」は演奏会の音楽だけ、に絞った。見本 2 つ（Lab `sessions/p992/band-example.lys`＝Night Drive、`jazz-example.lys`＝Blue Window、lysc で検査・png で確認。⚠️ バンドの `instrument bass` は記譜より 1 オクターブ下で鳴る＝最初 B0 まで落ちて lysc が音域外を警告）。Core `CompositionChecks` にバンドの点検（ドラム・ベース・和音楽器の欠け、テンポが 2 つ以上）、ドラム（`clef percussion`）は instrument 不要、バンドのベースは音価の単調さの点検から外す（8 分の刻みは語法）。Compose の頼みの言葉も「その種類の音楽の手引きどおりに」。網 `CompositionChecksTests` 10 本。site・両 CHANGELOG・MANUAL-CHECKS C8。Deploy-Lsp 済。
-- ⚠️ **見つけた描画の欠陥（未着手）**: `tempo "Medium Swing" 4 = 152 swing` のスウィングの式（8 分 2 つ＝3 連の 4 分＋8 分）の 3 連の括弧が**題名に重なる**（Blue Window の png）。計器 Lab `sessions/p992/jazz-example.lys`。
-判定（2026-10-27・第992 の終わり）: 次はユーザーの指示（C8・スウィングの式と題の重なり）。
 
 ## 2. 開いている作業
 

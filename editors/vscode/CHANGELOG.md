@@ -4,6 +4,13 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+### Editing
+
+- **In a minor key, Ctrl+Shift+Up / Down walk the key signature** — its natural minor: in A minor
+  the notes of C major, `g` → `a`. The leading tone was a stop of its own (`g` → `gis` →
+  `a`), a press more at every step past it, though `g` is the far commoner note in minor-key
+  music; a `gis` is written. A church mode walks its own signature, as before.
+
 ### Ask AI
 
 - **Ask Again revises the candidate.** The AI's answer to Ask Again was applied to the file as

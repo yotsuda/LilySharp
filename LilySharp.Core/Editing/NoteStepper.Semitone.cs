@@ -32,9 +32,11 @@ namespace LilySharp.Core.Editing;
 /// </summary>
 /// <remarks>
 /// <para>
-/// THE SCALE is the signature's, and in a <c>minor</c> key its leading tone besides (owner's
-/// decision 2026-10-16, "短調は導音も通るように": A minor walks g, gis, a; the raised sixth is
-/// not added). A church mode walks its own signature, a <c>key custom …</c> the steps it writes. Each tone is spelled as
+/// THE SCALE is the signature's: a <c>minor</c> key walks its natural minor — A minor the
+/// notes of C major (owner's decision 2026-10-27, reversing the leading tone walked besides from
+/// 2026-10-16: g is far commoner than gis in minor-key music, pop and classical alike, and a stop
+/// off the signature cost a press at every step past it; gis is written). A church mode walks its
+/// own signature, a <c>key custom …</c> the steps it writes. Each tone is spelled as
 /// the signature spells it — in F major a steps up to <c>bes</c>, in G major e up to
 /// <c>fis</c>. A note off the scale steps to the nearest tone of it in the direction asked
 /// (<c>cis</c> in C major: Up <c>d</c>, Down <c>c</c>).
@@ -272,11 +274,10 @@ public static partial class NoteStepper
 
     /// <summary>The tones the step walks at <paramref name="node"/> (the type's remarks), each a
     /// step (C to B) and its alteration: the signature's seven — a custom key's as written, the
-    /// others' from their sharps — and in a <c>minor</c> key its leading tone too.</summary>
+    /// others' from their sharps (a <c>minor</c> key's natural minor).</summary>
     private static List<(int Step, int Alter)> KeyInForce(SyntaxNode node)
     {
         var alterations = new int[7];
-        int? leadingStep = null;
         var key = WrittenKeyAt(node);
         if (key is { IsCustom: true })
         {
@@ -288,20 +289,12 @@ public static partial class NoteStepper
         {
             string mode = key.GetChild(3) is SyntaxTokenNode m && m.Text.Length > 0 ? m.Text.ToLowerInvariant() : "major";
             if (KeySpelling.SharpsFor(tonic.PitchName, mode) is int sharps)
-            {
                 for (int s = 0; s < 7; s++)
                     alterations[s] = KeySpelling.Alteration(s, sharps);
-                // Owner's decision 2026-10-16: a minor key's raised seventh is walked too, on the
-                // seventh's own letter (D minor: c, cis, d).
-                if (mode == "minor")
-                    leadingStep = (KeySpelling.StepOf(tonic.BaseName) + 6) % 7;
-            }
         }
         var tones = new List<(int, int)>();
         for (int s = 0; s < 7; s++)
             tones.Add((s, alterations[s]));
-        if (leadingStep is int l)
-            tones.Add((l, alterations[l] + 1));
         return tones;
     }
 
