@@ -133,6 +133,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **0.14.0 の言語の追加をサイトへ（`e1c687551`）**: manual に「装飾音は普通の音符」（タイ・記号・`@chord`・spans）と「preset の 3 つの警告」（LYS1052・1050・1051）、chords に印刷どおりの和音の綴り（`CΔ7`・`Cø7`・`C°7`・`C-7`・`B♭7`）と括弧の変化音、トップの「覚える規則」に括弧、lysc の一覧に `lysc wav`。例は全部 lysc に通した。site 再ビルド通過。
 - ⚠️ **見つけた製品の穴（未着手・ユーザーに報告）**: chords の行の読めない和音（`C7b9`・`C-5`・`Cxyz`）を `lysc check` が何も言わない（`@chord(C7b9)` は「names nothing and is ignored」の警告・`ChordStructure.TryParseChordEntry` は拒む）。計器 Lab `sessions/p979/row-*.lys`。
 - **ユーザー「続けて」→ 上の穴をどうするか訊いた → 「警告を出す（推奨）」→ LYS1053（`57d35ab3a`）**: `ChordRowSymbolValidator`＝`TryParseChordEntry` が拒みローマ数字でもない `ChordEntrySyntax` に「印刷はそのまま・根音だけ鳴る」と直し方（パーサの拒否理由／変化音の規則＋`7-9` の候補／知らない種類）。印刷と再生は不変。根音が A–G でない項目はもともとパーサのエラー。網 `ChordRowSymbolTests` 8 本・毒（登録を外す）で 3 赤。リポジトリ＋コーパス 1014 冊で新しい警告 0 件。GRAMMAR・SYNTAX_REFERENCE・CHANGELOG・site chords に 1 文。⚠️ 毒の `dotnet test` は `LilySharp.Cli\bin\Debug` の Core.dll も毒入りにする＝戻した後は Cli を作り直してから lysc を使う（陽性対照で気づいた）。
+- 続き（「続けて」）: `docs/ai-collab-guide.ja.md`（利用者向けの日本語の手引き）が旧 Transform Selection・浮かぶ ✨ ボタンのまま＋自己矛盾（冒頭「自分の API キー」／後半「無い」、「AI 設定は 1 つ」の上に 3 行の表）→ Ask AI に書き直し（入口・ヒント・edits と絶対オクターブ・候補パネル・小節選択・モデル設定・Fix OMR）。SHOTLIST 9 を Ask AI に。設計の文書（ai-collab-design.md 等）は経緯として触らない。
 判定（2026-10-26・第979 の終わり）: 次はユーザーの指示。
 
 ## 以下は第978セッションの経緯
