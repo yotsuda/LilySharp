@@ -121,6 +121,18 @@ describe('an AI candidate plays before it is accepted', () => {
         assert.equal(words(mine), words(preview));
         assert.match(transform, /installDragScroll\(main, document\);/);
         assert.match(transform, /\.main \{ cursor: grab; \}/);
+        // A drag selected the glyphs it crossed — a purple box on every note (owner's report
+        // 2026-10-26): the sheets are not selectable, the replacement text still is.
+        assert.match(transform, /\.main \{ user-select: none; -webkit-user-select: none; \}/);
+        assert.doesNotMatch(transform, /\.snippet[^{]*\{[^}]*user-select/);
+    });
+
+    // The replacement text opened pushed the buttons out of the panel and could not be read to
+    // its end (owner's reports 2026-10-26): it keeps its height and scrolls inside.
+    it('keeps the buttons in the panel when the replacement text is opened, and scrolls the text', () => {
+        assert.match(transform, /\.snippet \{ margin:10px 16px 0; flex-shrink:0; \}/);
+        assert.match(transform, /\.snippet pre \{[^}]*overflow:auto;[^}]*max-height:35vh; \}/);
+        assert.match(transform, /\.footer \{[^}]*flex-shrink:0; \}/);
     });
 
     it('lights the notes sounding on the candidate panel, not on the preview', () => {

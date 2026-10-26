@@ -12,7 +12,12 @@ All notable changes to the Lily# VS Code extension are documented here.
 - **Ctrl+wheel zooms** both sides alike about the point under the pointer, from a quarter to
   four times the fit the panel opens at.
 - **Drag the sheets to scroll them**, as in the preview: a click on a note still plays from it
-  and a click on a bar still selects it.
+  and a click on a bar still selects it. A drag no longer selects the notes it crosses (the
+  boxes it left over them).
+- **The replacement text, opened, keeps the buttons in view**: it takes at most about a third
+  of the panel and scrolls inside — its own scroll bar and the mouse wheel reach its last line;
+  the sheets above give up the room. A long one used to push Accept, Ask Again… and the rest
+  below the panel, and could not be read to its end.
 
 ### Completion
 

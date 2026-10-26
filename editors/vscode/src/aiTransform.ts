@@ -1116,6 +1116,10 @@ body { margin:0; padding:0; display:flex; flex-direction:column; height:100vh; o
 /* The sheets are dragged to scroll, as the preview's (installDragScroll): an open hand over them,
    a closed one while they move (owner's request 2026-10-26). */
 .main { cursor: grab; }
+/* The sheets are not selectable text, as in the preview: a drag over them selected the SVG
+   <text> glyphs it crossed, which Chromium paints as a purple box over every note (owner's
+   report 2026-10-26). The replacement text below stays selectable. */
+.main { user-select: none; -webkit-user-select: none; }
 .main.dragging, .main.dragging [data-pos] { cursor: grabbing; }
 .score svg { max-width:100%; height:auto; }
 /* The notes the AI changed, painted green — the green the OMR fix panel paints its proposals in
@@ -1126,10 +1130,14 @@ body { margin:0; padding:0; display:flex; flex-direction:column; height:100vh; o
 .score [data-pos] { cursor: pointer; }
 .pane { display:none; }
 .pane.show { display:block; }
-.snippet { margin:10px 16px 0; }
+/* The replacement text opened never pushes the buttons below out of the panel (owner's report
+   2026-10-26): it keeps its own height, at most about a third of the panel, and scrolls inside;
+   the sheets above give up the room. */
+.snippet { margin:10px 16px 0; flex-shrink:0; }
 .snippet pre { background: var(--vscode-textCodeBlock-background); padding:8px; border-radius:4px;
                font-family: var(--vscode-editor-font-family, monospace); font-size:12px; overflow:auto; margin:4px 0 0;
-               white-space:pre-wrap; }
+               white-space:pre-wrap; max-height:35vh; }
+.main { min-height:80px; }
 .snippet summary { font-size:12px; opacity:0.8; cursor:pointer; }
 /* The panel's own tooltip, in VS Code's hover look — the browser's title tip is too small to read
    (owner's report 2026-10-25), as in the preview. */
