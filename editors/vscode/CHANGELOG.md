@@ -11,6 +11,11 @@ All notable changes to the Lily# VS Code extension are documented here.
   Accept, Ask Again and Reject greyed out. Now an Ask Again that fails, finds no valid candidate
   or is cancelled returns to the candidate shown, its buttons armed and the reason under them;
   an Accept that could not reach the server says nothing was written, and Accept tries again.
+- **A new piece in place of the score can be asked for.** "Discard the score and compose a
+  string quartet" failed: the model was allowed only edits quoting the old score, and copied
+  none exactly. A request that replaces the score is now answered with the whole new file. When
+  no valid candidate comes, the message says why the last try was turned down (each one is in
+  the log, Show Log).
 
 ### Chords
 

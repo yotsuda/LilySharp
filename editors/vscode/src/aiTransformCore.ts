@@ -182,8 +182,12 @@ export function applyEdits(orig: string, edits: ReplyEdit[]): { text: string; sp
             at = occurrences(orig, old);
         }
         if (at.length === 0) {
+            // A new piece in place of the score is the whole new file, not edits quoting the old
+            // one (owner's report 2026-10-26: "discard the score and compose a quartet" failed
+            // three times on <old> texts the model could not copy).
             return `Edit ${i + 1}: its <old> text is not in the file. Copy it exactly from the file — every `
-                + 'character, spaces included; the selection markers are not part of the file.';
+                + 'character, spaces included; the selection markers are not part of the file. If the request '
+                + 'replaces the score with a new one, reply with the whole new file between <file> and </file> instead.';
         }
         if (at.length > 1) {
             return `Edit ${i + 1}: its <old> text occurs ${at.length} times in the file. Include enough of the `

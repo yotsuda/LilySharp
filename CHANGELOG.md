@@ -11,6 +11,9 @@ workflow attaches that section to the GitHub Release verbatim.
 - `[editor]` **The AI candidate's Accept / Ask Again / Reject come back after a failure** (the
   language server restarting mid-request left them greyed out): the panel returns to the
   candidate shown, the reason under its buttons.
+- `[editor]` **Ask AI can write a new piece in place of the score** (the whole new file, not
+  edits quoting the old one, which failed), and a failed request says why its last try was
+  turned down.
 
 ### Chords
 

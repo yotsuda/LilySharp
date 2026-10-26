@@ -845,6 +845,7 @@ export function activate(context: vscode.ExtensionContext) {
             void previewPanels.get(uri.toString())?.webview.postMessage({ type: 'ctxStop' });
         },
         renderNameOf: (uri: vscode.Uri) => selectedRenders.get(uri.toString()) || undefined,
+        showLog: () => outputChannel.show(true),
     };
     registerAiTransform(context, aiDeps);
     // Second mode: validated ghost-text "next measure" completion (opt-in).

@@ -60,6 +60,8 @@ export interface AiTransformDeps {
     stopOnPreview?: (uri: vscode.Uri) => void;
     /** The score the preview of `uri` shows (its picker), or undefined for the first. */
     renderNameOf?: (uri: vscode.Uri) => string | undefined;
+    /** Shows the extension's log (the Output panel's Lily# Extension). */
+    showLog?: () => void;
 }
 
 /** What a candidate's Play sounds (owner's request 2026-10-25: hear it before accepting): the
@@ -424,6 +426,13 @@ async function drive(
                 let unchanged = false;
                 let octaveAsked: string | null = null;
                 let octaveNote: ResolvedPitchFact[] | null = null;
+                // Why the last attempt was turned down, logged with each (owner's report 2026-10-26:
+                // "could not produce a valid transform" said nothing of why, and the log neither).
+                let lastReason = '';
+                const turnedDown = (attempt: number, reason: string) => {
+                    lastReason = reason;
+                    deps.log(`AI transform: attempt ${attempt + 1}/${MAX_REPAIR_ATTEMPTS + 1} turned down — ${reason}`);
+                };
                 for (let attempt = 0; attempt <= MAX_REPAIR_ATTEMPTS; attempt++) {
                     if (token.isCancellationRequested) return null;
                     step(attempt === 0 ? 'generating' : `repairing (${attempt}/${MAX_REPAIR_ATTEMPTS})`);
@@ -431,12 +440,13 @@ async function drive(
                     const raw = await chat.send(messages, token);
                     const edit = toCandidateEdit(work, raw);
                     if (edit === null) {
+                        turnedDown(attempt, `the reply was empty (${raw.length} characters)`);
                         messages.push({ role: 'assistant', content: raw });
                         messages.push({ role: 'user', content: `Your reply was empty. ${replyForm(whole)} — no commentary, no code fences.` });
                         continue;
                     }
                     if (isProblem(edit)) {
-                        deps.log(`AI transform: edits not applied — ${edit.problem}`);
+                        turnedDown(attempt, `its edits could not be applied: ${edit.problem}`);
                         messages.push({ role: 'assistant', content: raw });
                         messages.push({ role: 'user', content: `${edit.problem}\nReply again, all edits — same output rules.` });
                         continue;
@@ -446,6 +456,7 @@ async function drive(
                     // unchanged (2026-09-26) — the model had been asked for a new part it could not
                     // write inside the selection.
                     if (edit.text === edit.snap.origSelectedText) {
+                        turnedDown(attempt, 'it changed nothing');
                         unchanged = true;
                         messages.push({ role: 'assistant', content: raw });
                         messages.push({ role: 'user', content:
@@ -458,6 +469,7 @@ async function drive(
                     // word again, so they must all still be there; without them every pitch would be
                     // read relative, and land elsewhere.
                     if (ai.converted && octaveLines(spliceCandidate(edit.snap, edit.text)) !== octaveLines(work.origFullText)) {
+                        turnedDown(attempt, 'it added or removed an `octave` line');
                         messages.push({ role: 'assistant', content: raw });
                         messages.push({ role: 'user', content:
                             'Your change added or removed an `octave absolute` line. Keep the file\'s `octave` lines exactly '
@@ -521,6 +533,9 @@ async function drive(
                         ? 'Reply again with all the corrected edits, each <old> copied from the file as it stands'
                         : 'Return a corrected replacement for the selection (or <edit> blocks)';
                     messages.push({ role: 'assistant', content: raw });
+                    turnedDown(attempt, badness.length > 0
+                        ? `it does not compile (${badness.length} error(s), a ${raw.length}-character reply): ${formatDiags(badness.slice(0, 3)).replace(/\s*\n\s*/g, ' / ')}`
+                        : `it adds ${newWarnings.length} warning(s): ${formatDiags(newWarnings.slice(0, 3)).replace(/\s*\n\s*/g, ' / ')}`);
                     if (badness.length > 0) {
                         messages.push({ role: 'user', content:
                             `That candidate does not compile. The Lily# compiler reported:\n${formatDiags(badness)}\n` +
@@ -552,8 +567,13 @@ async function drive(
                             'Lily#: the AI returned the music unchanged, even when asked again. Nothing was changed — try wording the request differently.');
                     } else {
                         deps.log(`AI transform: FAILED validation after ${MAX_REPAIR_ATTEMPTS} repairs — nothing applied.`);
-                        vscode.window.showWarningMessage(
-                            'Lily#: the AI could not produce a valid transform after several tries. Nothing was changed.');
+                        // The last try's reason with it, and the log a click away.
+                        const showLog = 'Show Log';
+                        const why = lastReason.length > 240 ? `${lastReason.slice(0, 239)}…` : lastReason;
+                        void vscode.window.showWarningMessage(
+                            `Lily#: the AI could not produce a valid transform in ${MAX_REPAIR_ATTEMPTS + 1} tries. Nothing was changed.`
+                            + (why ? ` The last try: ${why}` : ''), showLog)
+                            .then(c => { if (c === showLog) { deps.showLog?.(); } });
                     }
                     return null;
                 }
@@ -710,7 +730,7 @@ function systemPrompt(grammar: string): string {
         grammar,
         '</lilysharp-grammar>',
         '',
-        'OUTPUT CONTRACT (strict — the result is applied to the file mechanically). Reply in ONE of two forms:',
+        'OUTPUT CONTRACT (strict — the result is applied to the file mechanically). Reply in ONE of three forms:',
         '1. The change stays inside the selection: return ONLY the replacement text for the selected fragment.',
         '   Do not repeat the surrounding score.',
         '2. The change needs edits OUTSIDE the selection — a new part (its `part` line, its block in the',
@@ -726,8 +746,14 @@ function systemPrompt(grammar: string): string {
         '   </edit>',
         '   Keep each <old> short — the lines that change, plus a neighbouring line when needed to make it',
         '   unique. To insert, copy a line next to the place into <old> and repeat it in <new> with the',
-        '   insertion. Edits must not overlap. Never write the whole file out.',
+        '   insertion. Edits must not overlap. Never write the whole file out for a change that keeps most of it.',
         '   Do not reach for `voice { }` just to stay inside the selection when a separate part is asked for.',
+        // Owner's report 2026-10-26: "discard the score and compose a string quartet" came back as
+        // edits whose <old> quoted the old score inexactly, three times, and nothing was written.
+        '3. The request discards the score, or replaces nearly all of it (a new piece, "start over", "compose',
+        '   … from scratch"): reply with the whole new file between <file> and </file> — every line of it,',
+        '   header, parts, sections, form and score included, and the file\'s `octave` lines kept as they are.',
+        '   Nothing of the old file survives that you do not write out.',
         '- Either way, start with ONE short note to the musician between <note> and </note>: what you did',
         '  and why, at most two sentences, warm and plain, in the language the instruction is written in',
         '  (Japanese for a Japanese instruction). Apart from the note: no explanations, no commentary, no',
@@ -751,7 +777,7 @@ const MAX_DIAGNOSTICS = 20;
 /** What to reply with, for the reminders: with nothing selected, edits only. */
 function replyForm(whole: boolean): string {
     return whole
-        ? 'Reply with <edit> blocks'
+        ? 'Reply with <edit> blocks (or, when the score is replaced by a new one, the whole new file in <file>…</file>)'
         : 'Return the replacement for the selection, or <edit> blocks when the change reaches outside it';
 }
 
