@@ -70,7 +70,8 @@ public static class CompositionChecks
         var parts = root.DescendantNodes<PartDeclarationSyntax>().GroupBy(p => p.Name.Text).Select(g => g.First()).ToList();
         if (parts.Count >= 2)
         {
-            var bare = parts.Where(p => !braced.Contains(p.Name.Text) && !p.Properties.Any(prop =>
+            // A drum part is written with `clef percussion` and plays the kit: it needs no instrument.
+            var bare = parts.Where(p => !braced.Contains(p.Name.Text) && !RoleOf(p).Drums && !p.Properties.Any(prop =>
                 prop.NameToken.Text is "instrument" or "midiInstrument")).Select(p => p.Name.Text).ToList();
             if (bare.Count > 0)
                 findings.Add($"No instrument for {string.Join(", ", bare)}: a part without `instrument` sounds as a piano "
@@ -86,6 +87,24 @@ public static class CompositionChecks
         {
             return findings;
         }
+
+        // A band — a rhythm section's instrument in it — has the whole rhythm section, at one tempo
+        // (owner's rules 2026-10-27: "a song with electric guitar and drums" came back with no bass;
+        // guitar and bass ask for drums as well; a band does not change tempo in the middle).
+        var roles = parts.Select(p => RoleOf(p)).ToList();
+        bool band = roles.Any(r => r.Drums || r.Electric) || (roles.Any(r => r.Bass) && roles.Any(r => r.Chords));
+        if (band && parts.Count >= 2)
+        {
+            if (!roles.Any(r => r.Drums))
+                findings.Add("A band piece has drums: add a drum part (`clef percussion`) that plays a groove under the whole song, with fills at the section ends.");
+            if (!roles.Any(r => r.Bass))
+                findings.Add("A band piece has an electric bass: add a part with `instrument bass` and `midiInstrument \"electric bass (finger)\"` that locks with the kick drum.");
+            if (!roles.Any(r => r.Chords))
+                findings.Add("A band piece has a guitar or keyboards for the chords: add one (`instrument guitar` with an electric `midiInstrument`, or keyboards).");
+            int tempos = midi.Tracks.SelectMany(t => t.TempoChanges).Select(t => t.MicrosecondsPerBeat).Distinct().Count();
+            if (tempos > 1)
+                findings.Add("A band piece keeps one tempo from start to end: write one `tempo` at the top and none in the sections.");
+        }
         int tpq = midi.TicksPerQuarterNote;
         // Each part's onsets (a chord one onset) with its duration.
         var byPart = midi.Tracks.SelectMany(t => t.Notes.Select(n => (Part: n.Part ?? t.Name, n.StartTick, n.DurationTicks, n.Channel)))
@@ -93,10 +112,13 @@ public static class CompositionChecks
             .GroupBy(n => n.Part)
             .ToDictionary(g => g.Key, g => g.GroupBy(n => n.StartTick).Select(c => (Start: c.Key, Length: c.Max(n => n.DurationTicks))).OrderBy(o => o.Start).ToList());
 
-        // A part of one note value.
+        // A part of one note value — not a band's bass, whose driving eighths are the idiom.
+        var bandBasses = band
+            ? parts.Where(p => RoleOf(p).Bass).Select(p => p.Name.Text).ToHashSet(System.StringComparer.Ordinal)
+            : [];
         foreach (var (part, onsets) in byPart)
         {
-            if (onsets.Count < 16)
+            if (onsets.Count < 16 || bandBasses.Contains(part))
                 continue;
             // A note's value as it reads: the distance to the next onset (a staccato quarter sounds
             // shorter than it is written), the last note its own length.
@@ -128,6 +150,25 @@ public static class CompositionChecks
                     + "while the others accompany (broken chords, repeated notes, a moving bass), and pass the roles between them.");
         }
         return findings;
+    }
+
+    /// <summary>What a part is in a band: drums, a bass, a chord instrument (guitar, keyboards), and
+    /// whether its sound is electric (an electric guitar or bass, an organ, a synth).</summary>
+    private readonly record struct Role(bool Drums, bool Bass, bool Chords, bool Electric);
+
+    private static Role RoleOf(PartDeclarationSyntax part)
+    {
+        string Prop(string name) => string.Join(" ", part.Properties
+            .Where(p => p.NameToken.Text.Equals(name, System.StringComparison.OrdinalIgnoreCase))
+            .SelectMany(p => Enumerable.Range(2, System.Math.Max(0, p.SlotCount - 2)).Select(p.GetChild))
+            .OfType<SyntaxTokenNode>().Select(t => t.Text.Trim('"'))).ToLowerInvariant();
+        string instrument = Prop("instrument"), sound = Prop("midiInstrument"), clef = Prop("clef");
+        bool drums = clef.Contains("percussion") || sound.Contains("drum");
+        bool bass = instrument is "bass" or "bass5" or "bass6" || (sound.Contains("bass") && !sound.Contains("contrabass"));
+        bool chords = instrument.StartsWith("guitar") || instrument.StartsWith("piano")
+            || System.Text.RegularExpressions.Regex.IsMatch(sound, "guitar|piano|organ|clavi|synth|pad");
+        bool electric = System.Text.RegularExpressions.Regex.IsMatch(sound, "electric|overdriven|distortion|organ|synth");
+        return new Role(drums, bass && !drums, chords && !drums, electric);
     }
 
     /// <summary>The file's top-level <c>title "…"</c>, or null when it writes none (or an empty one).</summary>

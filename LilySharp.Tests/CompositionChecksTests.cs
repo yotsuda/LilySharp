@@ -96,4 +96,73 @@ public class CompositionChecksTests
         Assert.True(CompositionChecks.IsPlaceholderTitle("Untitled"));
         Assert.False(CompositionChecks.IsPlaceholderTitle("Song of the Sea"));
     }
+
+    // Owner's rules 2026-10-27: a band has its whole rhythm section — drums, electric bass, a
+    // guitar or keyboards — whichever members were asked for, and one tempo throughout.
+    private static string Band(string parts, string sections, string score, string tempo = "tempo 112")
+        => $"title \"Riff\"\n{tempo}\ntime 4/4\noctave absolute\n{parts}\nsection A {{\n{sections}\n}}\nform {{ A }}\nscore {{ {score} }}\n";
+
+    private const string Guitar = "part gtr { instrument guitar midiInstrument \"overdriven guitar\" }";
+    private const string Bass = "part bass { instrument bass midiInstrument \"electric bass (finger)\" }";
+    private const string Drums = "part kit { clef percussion }";
+    private const string GuitarMusic = "  gtr { <e, b,>8 r <e, b,> r <e, b,>4 <c g> | <g, d>8 r <g, d> r <d a>2 | }";
+    private const string BassMusic = "  bass { e8 e e e c c c c | g,8 g, g, g, d d d d | }";
+    private const string DrumMusic = "  kit { voice { hh8 hh hh hh hh hh hh hh | hh8 hh hh hh hh hh hh hh | } { bd4 sn bd sn | bd4 sn bd sn | } }";
+
+    [Fact]
+    public void GuitarAndDrums_AreToldTheBassIsMissing()
+    {
+        var findings = CompositionChecks.Of(Band(Guitar + "\n" + Drums, GuitarMusic + "\n" + DrumMusic, "staff gtr  staff kit"));
+        Assert.Contains(findings, f => f.StartsWith("A band piece has an electric bass"));
+        Assert.DoesNotContain(findings, f => f.StartsWith("A band piece has drums"));
+    }
+
+    [Fact]
+    public void GuitarAndBass_AreToldTheDrumsAreMissing()
+    {
+        var findings = CompositionChecks.Of(Band(Guitar + "\n" + Bass, GuitarMusic + "\n" + BassMusic, "staff gtr  staff bass"));
+        Assert.Contains(findings, f => f.StartsWith("A band piece has drums"));
+        Assert.DoesNotContain(findings, f => f.StartsWith("A band piece has an electric bass"));
+    }
+
+    [Fact]
+    public void ABandThatChangesTempo_IsToldToKeepOne()
+    {
+        string sections = GuitarMusic + "\n" + BassMusic + "\n" + DrumMusic + "\n  tempo 90";
+        var full = Band(Guitar + "\n" + Bass + "\n" + Drums, GuitarMusic + "\n" + BassMusic + "\n" + DrumMusic,
+            "staff gtr  staff bass  staff kit").Replace("form { A }", "section B {\n  tempo 80\n" + GuitarMusic + "\n" + BassMusic + "\n" + DrumMusic + "\n}\nform { A B }");
+        Assert.Contains(CompositionChecks.Of(full), f => f.StartsWith("A band piece keeps one tempo"));
+        Assert.DoesNotContain(CompositionChecks.Of(Band(Guitar + "\n" + Bass + "\n" + Drums,
+            GuitarMusic + "\n" + BassMusic + "\n" + DrumMusic, "staff gtr  staff bass  staff kit")), f => f.StartsWith("A band"));
+    }
+
+    [Fact]
+    public void TheGrammarsBandExample_IsWhole()
+    {
+        var grammar = File.ReadAllText(Path.Combine(CollectResumeTests.FindRepoRoot(), "docs", "GRAMMAR_FOR_LLM.md"));
+        int at = grammar.IndexOf("title \"Night Drive\"", System.StringComparison.Ordinal);
+        Assert.True(at > 0);
+        Assert.Empty(CompositionChecks.Of(grammar[at..grammar.IndexOf("```", at, System.StringComparison.Ordinal)]));
+    }
+
+    [Fact]
+    public void AStringQuartet_IsNoBand()
+    {
+        // Two tempi and no drums: concert music, where a change of tempo is a plan.
+        var grammar = File.ReadAllText(Path.Combine(CollectResumeTests.FindRepoRoot(), "docs", "GRAMMAR_FOR_LLM.md"));
+        int at = grammar.IndexOf("title \"Little Quartet\"", System.StringComparison.Ordinal);
+        Assert.DoesNotContain(CompositionChecks.Of(grammar[at..grammar.IndexOf("```", at, System.StringComparison.Ordinal)]), f => f.StartsWith("A band"));
+    }
+
+    [Fact]
+    public void TheGrammarsJazzLeadSheet_IsWhole()
+    {
+        // Owner's request 2026-10-27: a jazz lead sheet — one staff, a chords row, jazz changes.
+        var grammar = File.ReadAllText(Path.Combine(CollectResumeTests.FindRepoRoot(), "docs", "GRAMMAR_FOR_LLM.md"));
+        int at = grammar.IndexOf("title \"Blue Window\"", System.StringComparison.Ordinal);
+        Assert.True(at > 0);
+        string sheet = grammar[at..grammar.IndexOf("```", at, System.StringComparison.Ordinal)];
+        Assert.Empty(CompositionChecks.Of(sheet));
+        Assert.Contains("chords changes", sheet);
+    }
 }

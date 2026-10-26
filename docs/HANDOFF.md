@@ -127,21 +127,20 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第992セッション（2026-10-27・YT-DELL2）
+
+第991 と同じ会話の続き。`-Start p992`（開始 HEAD `ab3cdbfff`・full **13350 / 0 / 2 / 13352**・第990 を ARCHIVE へ）。作業場所は Lab `sessions/p992/`。
+- **ユーザー「エレキギターとドラムの曲を頼んだらギターとドラムだけ。この編成ではエレキベースが必須、キーボードも良い。テンポは途中で変えない」＋「ギターとベースならドラムが必須＝一般的なルールに」＋「ジャズのリードシートの書き方も。一線譜で、それっぽいコード進行で」**: 文法の「Compose a piece」に**バンド**（どれか 1 つが名指しされたらリズム隊全部＝ドラム（`clef percussion`）・エレキベース（`instrument bass`＋`midiInstrument "electric bass (finger)"`）・ギターかキーボード、テンポは 1 つ、曲の形は intro/verse/chorus…、括弧なし）と**ジャズのリードシート**（旋律 1 段＋上に chords の行、セブンス・ii–V–I・副次 ii–V・♭9・バックドア・ターンアラウンド、`tempo "Medium Swing" 4 = 152 swing`、8 小節単位）。「テンポも対比」は演奏会の音楽だけ、に絞った。見本 2 つ（Lab `sessions/p992/band-example.lys`＝Night Drive、`jazz-example.lys`＝Blue Window、lysc で検査・png で確認。⚠️ バンドの `instrument bass` は記譜より 1 オクターブ下で鳴る＝最初 B0 まで落ちて lysc が音域外を警告）。Core `CompositionChecks` にバンドの点検（ドラム・ベース・和音楽器の欠け、テンポが 2 つ以上）、ドラム（`clef percussion`）は instrument 不要、バンドのベースは音価の単調さの点検から外す（8 分の刻みは語法）。Compose の頼みの言葉も「その種類の音楽の手引きどおりに」。網 `CompositionChecksTests` 10 本。site・両 CHANGELOG・MANUAL-CHECKS C8。Deploy-Lsp 済。
+- ⚠️ **見つけた描画の欠陥（未着手）**: `tempo "Medium Swing" 4 = 152 swing` のスウィングの式（8 分 2 つ＝3 連の 4 分＋8 分）の 3 連の括弧が**題名に重なる**（Blue Window の png）。計器 Lab `sessions/p992/jazz-example.lys`。
+判定（2026-10-27・第992 の終わり）: 次はユーザーの指示（C8・スウィングの式と題の重なり）。
+
+## 以下は第991セッションの経緯
+
 ### 1.1 第991セッション（2026-10-27・YT-DELL2）
 
 第990 と同じ会話の続き。`-Start p991`（開始 HEAD `01f6706f1`・full **13349 / 0 / 2 / 13351**・第989 を ARCHIVE へ）。
 - **ユーザー「AI が作曲した曲には必ず適切な title を付けて」**: 3 段で保証＝①頼みの言葉に「曲と気分に合う固有の題を、頼みの言葉の言語で」・文法の「Compose a piece」にも ②音楽の点検（Core `CompositionChecks`）に題なし／置き題（New Piece・Untitled・無題…＝`IsPlaceholderTitle`）を足した（1 回差し戻し）③それでも題なしなら、曲を見せて題だけを頼む短い要求（`titleFor`→`cleanTitle`→`withTitle`）で書き入れてから開く。始まりの文から `title "New Piece"` を外した（置き題をそのまま残されないよう）。網 `CompositionChecksTests` 4 本・`aiNewPiece.test`（npm 467）。site・拡張 CHANGELOG・MANUAL-CHECKS C8。Deploy-Lsp 済。
 判定（2026-10-27・第991 の終わり）: 次はユーザーの指示（C8）。
-
-## 以下は第990セッションの経緯
-
-### 1.1 第990セッション（2026-10-27・YT-DELL2）
-
-第989 と同じ会話の続き。`-Start p990`（開始 HEAD `20c342c6a`・full **13349 / 0 / 2 / 13351**・第988 を ARCHIVE へ）。
-- **ユーザー「プレビューのヘッダに AI への長い指示文が出て冗長。元のファイルは必ず空だから、AI から返ったファイルを自動でエディタで開く方が良い。待つ間に `title "New Piece"` だけのファイルが開くのは無い方が良い」**: Compose は候補パネルを出さず、曲が来たら新しい無題のエディタで開く。待つ間は文書を開かない（始まりはメモリの中・URI は `untitled:Composed.lys`＝factsForRange／todos は失敗を呑む）。作曲は絶対オクターブへの変換をしない（戻す先の書き方が無い）。通知の文言は頼みの言葉（`composeAsked`）。
-- **ユーザー「AI のコメントは見たい。どう表示すべきか検討して。コメントに埋める／ダイアログも楽しいかも」**: 比べて**ファイル先頭のコメント**を勧めて実装（曲と一緒に残る＝序文・保存しても消えない・編集も削除も自由。通知はすぐ消えて長いと切れる、ダイアログは楽しいが閉じれば消えて作業を止める）。`// Composed with AI (モデル), 日付` `// Asked: 頼み` `// The AI: 一言`（音楽の点検の残りがあれば `// Still to improve: …`）。網 `aiNewPiece.test` 更新（npm 463）。site・拡張 CHANGELOG・MANUAL-CHECKS C8。Deploy-Lsp 済。
-- **ユーザー「作曲した曲に Ask Again でギターのコードを付けてと頼んだら Edit 1: its <old> text is not in the file で失敗」**: 原因＝Ask Again の返事を候補を当てる前のファイル（作曲では `title` だけの始まり）に当てていた＝AI は自分の書いた曲から `<old>` を写す。⚠️ 作曲に限らず、候補が足したものを直す Ask Again は全部この形で失敗し得た。→ Ask Again は**候補を当てた後のファイル**（`revisionBase`＝選択は `carrySelection` で候補の中へ運ぶ）に対して読み、結果を元のファイルへの 1 つの変更（`wholeFileEdit`）にする。取り直しの言葉も「ファイルは候補が残した形」。失敗して前の候補に戻る時は `base` も戻す。網 2 本（npm 465）。両 CHANGELOG。
-判定（2026-10-27・第990 の終わり）: 次はユーザーの指示（C8）。
 
 ## 2. 開いている作業
 

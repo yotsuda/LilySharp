@@ -210,9 +210,11 @@ async function runCompose(deps: AiTransformDeps): Promise<void> {
         const ai: AiSpace = { snap: snapshot, converted: false };
         await drive(deps, client, chat, snapshot, ai,
             `Compose a new piece: ${description.trim()}\nThe file is an empty start: reply with the whole new piece `
-            + 'between <file> and </file> (reply form 3), as the grammar\'s "Compose a piece" recipe says — an '
-            + 'instrument for every part, a staffGroup for an ensemble, contrasting sections, melody and '
-            + 'accompaniment, varied rhythm, articulations and dynamics. Give the piece a title of its own that '
+            + 'between <file> and </file> (reply form 3), as the grammar\'s "Compose a piece" recipe says for '
+            + 'its kind of music — concert music (an instrument for every part, a staffGroup for an ensemble, '
+            + 'contrasting sections), a band (the whole rhythm section — drums, electric bass, guitar or '
+            + 'keyboards — at one tempo) or a jazz lead sheet (one melody staff under a chords row) — with '
+            + 'melody and accompaniment, varied rhythm, articulations and dynamics. Give the piece a title of its own that '
             + 'fits its music and its mood, on a `title "…"` line at the top, in the language of the request.',
             true, grammar, documentContext(ai.snap, budget, true), true, description.trim());
     } catch (err: any) {

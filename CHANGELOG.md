@@ -14,7 +14,9 @@ workflow attaches that section to the GitHub Release verbatim.
   instruments, an ensemble's bracket, contrasting sections and textures, and checked as music once
   it compiles (no instrument, a piano's brace for an ensemble, one note value, one rhythm for
   every part) — what is found goes back to the AI for a revision. `[language]` the AI grammar's
-  *Common requests* gains *Compose a piece*, with a string quartet as its example.
+  *Common requests* gains *Compose a piece*, with a string quartet, a band and a jazz lead sheet as
+  its examples; a band piece is checked for drums, an electric bass and a chord instrument, and for
+  one tempo.
 - `[editor]` **The AI candidate's Accept / Ask Again / Reject come back after a failure** (the
   language server restarting mid-request left them greyed out): the panel returns to the
   candidate shown, the reason under its buttons.
