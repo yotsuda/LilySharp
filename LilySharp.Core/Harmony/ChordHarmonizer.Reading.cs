@@ -36,7 +36,8 @@ public static partial class ChordHarmonizer
     /// (<see cref="RenderSpecParser.ChooseDeclared"/>); only its parts are read, so a score made
     /// for it chooses what the chords are read from. The track is written where the old command
     /// wrote it (a by-part file: one top-level track; by section: a block in each section) and
-    /// placed in that score above its top staff, twice: names, then degrees (<c>as roman</c>).
+    /// placed in that score above its top staff, a row of its own (the names; `as roman` written
+    /// after it shows the degrees — owner's decision 2026-10-26: one row, not both).
     /// Null when nothing sounds.
     /// </summary>
     public static (string Text, string? Info)? AddReadChordTracks(string source, string? scoreName, bool melodyOnly)
@@ -121,7 +122,7 @@ public static partial class ChordHarmonizer
         if (declared == null)
             said.Add("Place `chords " + name + "` in a score to show it.");
         else if (RowAt(declared.Value.Declaration) is int at)
-            inserts.Add((at, "chords " + name + "  chords " + name + " as roman  "));
+            inserts.Add((at, RowText(source, at, name, nl)));
 
         var text = new StringBuilder(source);
         foreach (var (at, insert) in inserts.OrderByDescending(i => i.At))
@@ -162,8 +163,19 @@ public static partial class ChordHarmonizer
         return name;
     }
 
-    // Where the track's rows go in the score that was read: before its top staff (the names,
-    // then the degrees, above it). Null for a score with no staff.
+    // The row placed before the top staff: on a line of its own, indented as the staff is, when
+    // the staff begins its line (owner's request 2026-10-26); beside it in a one-line score.
+    private static string RowText(string source, int at, string name, string nl)
+    {
+        string indent = IndentOf(source, at);
+        int lineStart = source.LastIndexOf('\n', System.Math.Max(0, at - 1)) + 1;
+        return lineStart + indent.Length == at
+            ? "chords " + name + nl + indent
+            : "chords " + name + "  ";
+    }
+
+    // Where the track's row goes in the score that was read: before its top staff. Null for a
+    // score with no staff.
     private static int? RowAt(RenderDeclarationSyntax declaration)
         => declaration.ChildNodes().FirstOrDefault(n =>
             n is StaffRenderSyntax or TabRenderSyntax

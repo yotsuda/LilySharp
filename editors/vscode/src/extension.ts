@@ -2467,7 +2467,7 @@ interface AddChordTrackResponse {
  * Adds a chords track read from the score the preview shows (owner's decisions 2026-10-26,
  * docs/harmony-analysis-design.md): the chords its parts play — a melody alone harmonized —
  * or, picked instead, chords for its top staff's melody alone. The server writes the track
- * and places it in that score above its top staff, as names and as degrees. The result is
+ * and places it in that score above its top staff, a row of its own. The result is
  * a starting point to edit (Ctrl+Z takes it back).
  */
 async function addChordTrack() {

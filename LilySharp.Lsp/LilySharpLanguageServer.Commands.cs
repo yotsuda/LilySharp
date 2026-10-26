@@ -133,7 +133,7 @@ public sealed partial class LilySharpLanguageServer
     /// chords track (<see cref="LilySharp.Core.Harmony.ChordHarmonizer.AddReadChordTracks"/>):
     /// read from that score's parts beat by beat — or harmonized from its top staff's melody
     /// alone (<see cref="AddChordTrackParams.MelodyOnly"/>) — written beside the music as the
-    /// file is laid out, and placed in that score above its top staff, as names and as degrees.
+    /// file is laid out, and placed in that score above its top staff, a row of its own.
     /// Powers the "Lily#: Add Chord Track" editor command (owner's decisions 2026-10-26).
     /// </summary>
     [JsonRpcMethod("lilysharp/addChordTrack", UseSingleObjectParameterDeserialization = true)]

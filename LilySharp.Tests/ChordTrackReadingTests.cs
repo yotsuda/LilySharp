@@ -24,7 +24,7 @@ namespace LilySharp.Tests;
 /// <summary>
 /// Add Chord Track on the harmony reading (owner's decisions 2026-10-26,
 /// docs/harmony-analysis-design.md): the chords the chosen score's parts play, written as the
-/// file is laid out and placed in that score above its top staff, as names and as degrees.
+/// file is laid out and placed in that score above its top staff, a row of its own.
 /// </summary>
 [Trait("Category", "Unit")]
 public class ChordTrackReadingTests
@@ -62,7 +62,9 @@ public class ChordTrackReadingTests
     {
         string text = Added(Piano);
         Assert.Contains("chords harmony { C | Dm | G7 | C | }", text);
-        Assert.Contains("chords harmony  chords harmony as roman  grandStaff {", text);
+        // A row of its own over the staff, indented as it is (owner's request 2026-10-26).
+        Assert.Contains("score {\n  chords harmony\n  grandStaff {", text.Replace("\r\n", "\n"));
+        Assert.DoesNotContain("as roman", text);
         // The other score is not touched.
         Assert.Contains("score tune {\n  staff rh\n}", text.Replace("\r\n", "\n"));
     }
@@ -74,9 +76,9 @@ public class ChordTrackReadingTests
         // from the key's chords (the A alone an F), not the left hand's Dm.
         string text = Added(Piano, "tune");
         Assert.Contains("chords harmony { C | F | G7 | C | }", text);
-        Assert.Contains("chords harmony  chords harmony as roman  staff rh", text);
+        Assert.Contains("score tune {\n  chords harmony\n  staff rh", text.Replace("\r\n", "\n"));
         Assert.Contains("grandStaff { staff rh  staff lh }", text);
-        Assert.DoesNotContain("chords harmony  chords harmony as roman  grandStaff", text);
+        Assert.DoesNotContain("chords harmony\n  grandStaff", text.Replace("\r\n", "\n"));
     }
 
     [Fact]
@@ -153,7 +155,7 @@ public class ChordTrackReadingTests
         string twice = Added(once, "tune");
         Assert.Contains("chords harmony { C | Dm | G7 | C | }", twice);
         Assert.Contains("chords harmony2 { C | F | G7 | C | }", twice);
-        Assert.Contains("chords harmony2  chords harmony2 as roman  staff rh", twice);
+        Assert.Contains("chords harmony2\n  staff rh", twice.Replace("\r\n", "\n"));
     }
 
     [Fact]
@@ -165,6 +167,13 @@ public class ChordTrackReadingTests
         // A by-part file's track spans lines of its own.
         const string byPart = "time 4/4\noctave absolute\npart lh {\n  clef bass\n  section A { <c e g>1 | }\n}\nform { A }\nscore { staff lh }\n";
         Assert.DoesNotMatch("(?<!\r)\n", Added(byPart.Replace("\n", "\r\n")));
+    }
+
+    [Fact]
+    public void InAOneLineScore_TheRowStandsBesideTheStaff()
+    {
+        const string source = "time 4/4\noctave absolute\npart lh { clef bass }\nsection A { lh { <c e g>1 | } }\nform { A }\nscore { staff lh }\n";
+        Assert.Contains("score { chords harmony  staff lh }", Added(source));
     }
 
     [Fact]
