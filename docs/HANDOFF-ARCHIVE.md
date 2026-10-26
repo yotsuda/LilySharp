@@ -160,6 +160,18 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第989セッションの経緯
+
+### 1.1 第989セッション（2026-10-27・YT-DELL2）
+
+第988 と同じ会話の続き。`-Start p989`（開始 HEAD `8d7959979`・full **13346 / 0 / 2 / 13348**・第987 を ARCHIVE へ）。作業場所は Lab `sessions/p989/`。
+- **ユーザー「作曲には成功するが良い曲が出ない（`劇的弦楽四重奏.lys`＝音色なし・単調）。もっと良い曲を作らせる工夫は？」**: 診断＝その曲は instrument なし（全部ピアノ）・4 段を grandStaff・全音符と音階・全パート同じリズム。原因＝1 回の返事で全曲（出力の予算で簡素に）・システムプロンプトが「断片の変換係」・作曲の手引きが文法に無い・コンパイルが通れば採用。工夫を 3 つ提示（A 手引きと見本／B 音楽の点検／C 計画→節ごと）→ **ユーザー「A・B。Ctrl+I のほかに独立した『AI に作曲してもらう』メニューがあると良いかも」**→ 賛成（作曲は「今の楽譜を直す」ではない・新しい score に書く・C も載せやすい）して 3 つ実装:
+  - **A**: `GRAMMAR_FOR_LLM.md` の Common requests に「Compose a piece」（instrument・staffGroup・計画・テクスチャ・リズムと奏法）と**弦楽四重奏の見本**（Lab `sessions/p989/quartet-example.lys`・lysc で検査と png で確認）。⚠️ **`instrument` は素の音の高さを決める**＝violin は `c`＝C4、viola／cello は C3（見本を書いて 1 度ずつ外した）。手引きに明記。
+  - **B**: Core `Editing.CompositionChecks.Of`（grandStaff に 3 段以上／2 パート以上で instrument なし（2 段の grandStaff は除く＝ピアノ）／16 音以上で 1 つの音価が 8 割＝次の音までの距離で読む（スタッカートは短く鳴る）／3 パート以上・4 小節以上で 6 割の小節が同じリズム）。言語サーバー `lilysharp/compositionCheck`。新しい曲（作曲・`<file>` の返事）でコンパイルが通った後に 1 回だけ差し戻し、直しが来なければ最初の曲を所見つきで出す。新しい曲ではオクターブの点検をしない（古い音域と比べる意味が無い）。ユーザーの曲で 3 つ全部を指摘（同じリズム 47 小節中 40）。網 `CompositionChecksTests` 3 本。
+  - **Compose with AI…**（`lilysharp.composeWithAi`・パレット／.lys の右クリック）: 説明を訊き、新しい無題の score を開いて `drive(..., compose: true)`。
+  npm 463（`aiNewPiece.test` 5 本）。site editor・commands、両 CHANGELOG、MANUAL-CHECKS C8。Deploy-Lsp 済。
+判定（2026-10-27・第989 の終わり）: 次はユーザーの指示（C8＝作曲を試す。良くなければ C＝計画→節ごと）。
+
 ## 以下は第988セッションの経緯
 
 ### 1.1 第988セッション（2026-10-26・YT-DELL2）

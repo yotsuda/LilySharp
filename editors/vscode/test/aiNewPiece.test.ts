@@ -18,7 +18,7 @@ import { describe, it } from 'node:test';
 import * as assert from 'node:assert/strict';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { carrySelection, isProblem, toCandidateEdit } from '../src/aiTransformCore';
+import { carrySelection, cleanTitle, isPlaceholderTitle, isProblem, titleOf, toCandidateEdit, withTitle } from '../src/aiTransformCore';
 
 // Owner's report 2026-10-26: "discard the score and compose a new string quartet" failed three
 // times — the model answered with <edit> blocks quoting the old score, and copied none of it
@@ -61,7 +61,7 @@ describe('a new piece in place of the score', () => {
         // the piece opens in an editor of its own when it comes — no review panel, nothing to compare.
         assert.match(transform, /uri: vscode\.Uri\.parse\('untitled:Composed\.lys'\),/);
         assert.doesNotMatch(transform.slice(transform.indexOf('async function runCompose'), transform.indexOf('async function runAiTransform')), /openTextDocument/);
-        assert.match(transform, /if \(compose\) \{[\s\S]{0,1500}?openTextDocument\(\{ language: 'lilysharp', content: `\$\{preface\}\$\{eol\}\$\{eol\}\$\{text\}` \}\);\s*await vscode\.window\.showTextDocument\(piece\);/);
+        assert.match(transform, /if \(compose\) \{[\s\S]{0,3000}?openTextDocument\(\{ language: 'lilysharp', content: `\$\{preface\}\$\{eol\}\$\{eol\}\$\{text\}` \}\);\s*await vscode\.window\.showTextDocument\(piece\);/);
         // The request and the AI's note head the piece as comments (owner's request 2026-10-27).
         assert.match(transform, /line\(`Asked: \$\{composeAsked \?\? instruction\}`\),\s*\.\.\.\(note \? \[line\(`The AI: \$\{note\}`\)\] : \[\]\),/);
         // What the notification says is the musician's request, not the instruction to the AI.
@@ -96,5 +96,28 @@ describe('a revision is of the candidate', () => {
         assert.deepEqual(carrySelection(spans, 3, 6), { start: 2, end: 10 });
         // An insertion at the selection's end is taken in.
         assert.deepEqual(carrySelection([{ beforeLo: 4, beforeHi: 4, afterLo: 4, afterHi: 7 }], 1, 4), { start: 1, end: 7 });
+    });
+});
+
+// Owner's request 2026-10-27: a piece the AI composes always has a title that fits it.
+describe('a composed piece has a title', () => {
+    const transform = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'aiTransform.ts'), 'utf8');
+
+    it('is asked for, never seeded with a placeholder, and asked for alone when it does not come', () => {
+        assert.match(transform, /Give the piece a title of its own that '\s*\+ 'fits its music and its mood/);
+        assert.doesNotMatch(transform, /const start = 'title "New Piece"/);
+        assert.match(transform, /if \(!had \|\| isPlaceholderTitle\(had\)\) \{\s*const title = await titleFor\(chat, text, composeAsked \?\? instruction\);/);
+    });
+
+    it('reads, cleans and writes a title', () => {
+        assert.equal(titleOf('// note\ntitle "黄昏のワルツ"\ntime 3/4\n'), '黄昏のワルツ');
+        assert.equal(titleOf('time 3/4\n'), null);
+        assert.ok(isPlaceholderTitle('New Piece'));
+        assert.equal(cleanTitle('Title: "Autumn Elegy"\n'), 'Autumn Elegy');
+        assert.equal(cleanTitle('「黄昏のワルツ」'), '黄昏のワルツ');
+        assert.equal(cleanTitle('Untitled'), null);
+        assert.equal(withTitle('title "New Piece"\ntime 3/4\n', 'Autumn Elegy'), 'title "Autumn Elegy"\ntime 3/4\n');
+        // No title line: after the leading comments.
+        assert.equal(withTitle('// a\ntime 3/4\n', 'Autumn Elegy'), '// a\ntitle "Autumn Elegy"\ntime 3/4\n');
     });
 });

@@ -72,6 +72,7 @@ public class CompositionChecksTests
     public void APianosTwoHands_NeedNoInstrument()
     {
         const string piano = """
+            title "Minuet"
             time 4/4
             part rh { clef treble }
             part lh { clef bass }
@@ -80,5 +81,19 @@ public class CompositionChecksTests
             score { grandStaff { staff rh  staff lh } }
             """;
         Assert.Empty(CompositionChecks.Of(piano));
+    }
+
+    [Fact]
+    public void APieceWithNoTitleOrAPlaceholder_IsToldToTitleIt()
+    {
+        // Owner's request 2026-10-27: a composed piece always has a fitting title.
+        Assert.Contains(CompositionChecks.Of(Flat), f => f.StartsWith("The piece has no title"));
+        string placeholder = "title \"New Piece\"\n" + Flat;
+        Assert.Contains(CompositionChecks.Of(placeholder), f => f.StartsWith("\"New Piece\" is a placeholder"));
+        Assert.DoesNotContain(CompositionChecks.Of("title \"Autumn Elegy\"\n" + Flat), f => f.Contains("title"));
+        Assert.Equal("黄昏のワルツ", CompositionChecks.TitleOf("// a comment\ntitle \"黄昏のワルツ\"\ntime 3/4\n"));
+        Assert.Null(CompositionChecks.TitleOf("title \"\"\n"));
+        Assert.True(CompositionChecks.IsPlaceholderTitle("Untitled"));
+        Assert.False(CompositionChecks.IsPlaceholderTitle("Song of the Sea"));
     }
 }

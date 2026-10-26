@@ -237,6 +237,44 @@ function reduceToSpan<S extends SpanLike>(snapshot: S, full: string, spans: Chan
 
 /** The whole file `full` as the edit it makes to the snapshot's file: the one span where they
  *  differ (the AI's candidate brought back to relative octaves, say). */
+/** A file's top-level `title "…"`, or null when it writes none (or an empty one). The server's
+ *  reading is CompositionChecks.TitleOf; this one is the editor's, for a composed piece. */
+export function titleOf(text: string): string | null {
+    const m = text.match(/^[ \t]*title[ \t]+"((?:[^"\\]|\\.)*)"/m);
+    return m && m[1].trim().length > 0 ? m[1].trim() : null;
+}
+
+/** A title that names no piece: a template's or a tool's placeholder (as CompositionChecks). */
+export function isPlaceholderTitle(title: string): boolean {
+    return /^(new piece|new score|untitled|title|piece|my piece|song|composition|無題|新しい曲|タイトル)$/i.test(title.trim());
+}
+
+/** A model's answer to "a title for this piece" as a title: one line, no quotes or label around it. */
+export function cleanTitle(reply: string): string | null {
+    let t = (reply.split(/\r?\n/).find(l => l.trim().length > 0) ?? '').trim();
+    t = t.replace(/^(title|タイトル)\s*[:：]\s*/i, '').replace(/^["'「『“]+|["'」』”]+$/g, '').trim();
+    t = t.replace(/"/g, '”');
+    return t.length > 0 && t.length <= 80 && !isPlaceholderTitle(t) ? t : null;
+}
+
+/** `text` with `title` as its title: the title line it has replaced, or a new one at the top
+ *  (after leading comment lines). */
+export function withTitle(text: string, title: string): string {
+    const line = `title "${title}"`;
+    const existing = /^[ \t]*title[ \t]+"(?:[^"\\]|\\.)*"[^\r\n]*/m;
+    if (existing.test(text)) {
+        return text.replace(existing, line);
+    }
+    const eol = text.includes('\r\n') ? '\r\n' : '\n';
+    const lines = text.split(/\r?\n/);
+    let at = 0;
+    while (at < lines.length && /^\s*\/\//.test(lines[at])) {
+        at++;
+    }
+    lines.splice(at, 0, line);
+    return lines.join(eol);
+}
+
 /**
  * A selection `start`..`end` of a text carried into that text with `spans` changed (each span
  * `beforeLo..beforeHi` of the old text became `afterLo..afterHi` of the new): an end before a

@@ -18,7 +18,8 @@ All notable changes to the Lily# VS Code extension are documented here.
   checked as music: parts with no instrument (they play a piano), an ensemble braced as a piano,
   a part of one note value, every part in the same rhythm. What is found goes back to the AI for
   one revision of the whole piece. The same check follows a whole new file asked for with Ctrl+I.
-  Nothing opens while the AI works; the piece opens in an editor of its own, headed by comments
+  A composed piece always has a title of its own that fits it (asked for, checked, and asked
+  for alone if it still does not come). Nothing opens while the AI works; the piece opens in an editor of its own, headed by comments
   that keep what was asked and what the AI says about the piece.
 - **The candidate's buttons come back after a failure.** When the language server restarted while
   a candidate was being asked about again, or while Accept wrote it, the panel was left with

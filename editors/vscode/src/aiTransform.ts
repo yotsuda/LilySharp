@@ -39,7 +39,8 @@ import { ChatClient, ChatMessage, resolveChatClient } from './modelClient';
 import {
     CandidateEdit as CoreCandidateEdit, ChangedSpan, MarkInSelection, MarkReadings, SEL_CLOSE, SEL_OPEN, cleanCandidate,
     TextChange, carryOffset, documentBudget, documentContext, estimateTokens, isProblem, marksContext, octaveOutliers, splitNote,
-    startTimeAt, toCandidateEdit, wholeFileEdit, carrySelection, changedWords, wholeTextMarkup,
+    startTimeAt, toCandidateEdit, wholeFileEdit, carrySelection, changedWords, wholeTextMarkup, titleOf, isPlaceholderTitle,
+    cleanTitle, withTitle,
 } from './aiTransformCore';
 import { markFactsOf, sideFileOf } from './omrScanCore';
 import { textFontFaceCss, textFontsRoot } from './scoreFonts';
@@ -191,7 +192,9 @@ async function runCompose(deps: AiTransformDeps): Promise<void> {
     }
     // The AI starts from an empty score held in memory; no document opens until the piece comes
     // (owner's request 2026-10-27: a file holding only a title opened while it was waited for).
-    const start = 'title "New Piece"\n';
+    // No title in it: a placeholder title is one the AI may keep, and a composed piece is to have
+    // a title of its own (owner's request, the same day).
+    const start = '// A new piece: its title, its parts and its music are yet to be written.\n';
     const snapshot = {
         version: 0,
         startOffset: 0,
@@ -209,7 +212,8 @@ async function runCompose(deps: AiTransformDeps): Promise<void> {
             `Compose a new piece: ${description.trim()}\nThe file is an empty start: reply with the whole new piece `
             + 'between <file> and </file> (reply form 3), as the grammar\'s "Compose a piece" recipe says — an '
             + 'instrument for every part, a staffGroup for an ensemble, contrasting sections, melody and '
-            + 'accompaniment, varied rhythm, articulations and dynamics.',
+            + 'accompaniment, varied rhythm, articulations and dynamics. Give the piece a title of its own that '
+            + 'fits its music and its mood, on a `title "…"` line at the top, in the language of the request.',
             true, grammar, documentContext(ai.snap, budget, true), true, description.trim());
     } catch (err: any) {
         vscode.window.showErrorMessage(`Lily#: compose with AI failed: ${err?.message ?? err}`);
@@ -734,7 +738,18 @@ async function drive(
             // went in seconds (owner, the same day: "I want to see the AI's comment").
             const note = splitNote(candidate.reply).note;
             const flatNote = caption.startsWith(instruction) ? caption.slice(instruction.length).replace(/^ — /, '') : '';
-            const text = spliceCandidate(candidate.snap, candidate.text);
+            let text = spliceCandidate(candidate.snap, candidate.text);
+            // A composed piece always has a title that fits it (owner's request 2026-10-27): asked
+            // for in the request and by the music check; if it still comes without one, the AI is
+            // asked for the title alone, and it is written in.
+            const had = titleOf(text);
+            if (!had || isPlaceholderTitle(had)) {
+                const title = await titleFor(chat, text, composeAsked ?? instruction);
+                if (title) {
+                    text = withTitle(text, title);
+                    deps.log(`AI transform: the piece came untitled — titled "${title}".`);
+                }
+            }
             const eol = text.includes('\r\n') ? '\r\n' : '\n';
             const line = (s: string) => `// ${s.replace(/\s*\r?\n\s*/g, ' ')}`;
             const preface = [
@@ -997,6 +1012,21 @@ function taskPrompt(snapshot: Snapshot, shown: { text: string; complete: boolean
 
 /** A candidate as the edit it makes (aiTransformCore.ts), against this module's snapshot. */
 type CandidateEdit = CoreCandidateEdit<Snapshot>;
+
+/** A title for a piece that came without one: one short request to the model that wrote it,
+ *  the piece and the musician's words shown; null when it gives none usable. */
+async function titleFor(chat: ChatClient, piece: string, asked: string): Promise<string | null> {
+    try {
+        const reply = await chat.send([{ role: 'user', content:
+            `Here is a piece of music written in Lily# for this request: "${asked}".\n`
+            + 'Reply with ONLY a title for it — a few words that fit its music and its mood, in the language of the '
+            + 'request. No quotes, no label, no commentary.\n\n' + piece.slice(0, 8000) }],
+            new vscode.CancellationTokenSource().token);
+        return cleanTitle(reply);
+    } catch {
+        return null;
+    }
+}
 
 /** What a new piece's notation leaves flat (lilysharp/compositionCheck), one sentence each;
  *  none from a server that does not know the request. */

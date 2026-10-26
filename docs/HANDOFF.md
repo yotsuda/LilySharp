@@ -127,6 +127,14 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第991セッション（2026-10-27・YT-DELL2）
+
+第990 と同じ会話の続き。`-Start p991`（開始 HEAD `01f6706f1`・full **13349 / 0 / 2 / 13351**・第989 を ARCHIVE へ）。
+- **ユーザー「AI が作曲した曲には必ず適切な title を付けて」**: 3 段で保証＝①頼みの言葉に「曲と気分に合う固有の題を、頼みの言葉の言語で」・文法の「Compose a piece」にも ②音楽の点検（Core `CompositionChecks`）に題なし／置き題（New Piece・Untitled・無題…＝`IsPlaceholderTitle`）を足した（1 回差し戻し）③それでも題なしなら、曲を見せて題だけを頼む短い要求（`titleFor`→`cleanTitle`→`withTitle`）で書き入れてから開く。始まりの文から `title "New Piece"` を外した（置き題をそのまま残されないよう）。網 `CompositionChecksTests` 4 本・`aiNewPiece.test`（npm 467）。site・拡張 CHANGELOG・MANUAL-CHECKS C8。Deploy-Lsp 済。
+判定（2026-10-27・第991 の終わり）: 次はユーザーの指示（C8）。
+
+## 以下は第990セッションの経緯
+
 ### 1.1 第990セッション（2026-10-27・YT-DELL2）
 
 第989 と同じ会話の続き。`-Start p990`（開始 HEAD `20c342c6a`・full **13349 / 0 / 2 / 13351**・第988 を ARCHIVE へ）。
@@ -134,18 +142,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **ユーザー「AI のコメントは見たい。どう表示すべきか検討して。コメントに埋める／ダイアログも楽しいかも」**: 比べて**ファイル先頭のコメント**を勧めて実装（曲と一緒に残る＝序文・保存しても消えない・編集も削除も自由。通知はすぐ消えて長いと切れる、ダイアログは楽しいが閉じれば消えて作業を止める）。`// Composed with AI (モデル), 日付` `// Asked: 頼み` `// The AI: 一言`（音楽の点検の残りがあれば `// Still to improve: …`）。網 `aiNewPiece.test` 更新（npm 463）。site・拡張 CHANGELOG・MANUAL-CHECKS C8。Deploy-Lsp 済。
 - **ユーザー「作曲した曲に Ask Again でギターのコードを付けてと頼んだら Edit 1: its <old> text is not in the file で失敗」**: 原因＝Ask Again の返事を候補を当てる前のファイル（作曲では `title` だけの始まり）に当てていた＝AI は自分の書いた曲から `<old>` を写す。⚠️ 作曲に限らず、候補が足したものを直す Ask Again は全部この形で失敗し得た。→ Ask Again は**候補を当てた後のファイル**（`revisionBase`＝選択は `carrySelection` で候補の中へ運ぶ）に対して読み、結果を元のファイルへの 1 つの変更（`wholeFileEdit`）にする。取り直しの言葉も「ファイルは候補が残した形」。失敗して前の候補に戻る時は `base` も戻す。網 2 本（npm 465）。両 CHANGELOG。
 判定（2026-10-27・第990 の終わり）: 次はユーザーの指示（C8）。
-
-## 以下は第989セッションの経緯
-
-### 1.1 第989セッション（2026-10-27・YT-DELL2）
-
-第988 と同じ会話の続き。`-Start p989`（開始 HEAD `8d7959979`・full **13346 / 0 / 2 / 13348**・第987 を ARCHIVE へ）。作業場所は Lab `sessions/p989/`。
-- **ユーザー「作曲には成功するが良い曲が出ない（`劇的弦楽四重奏.lys`＝音色なし・単調）。もっと良い曲を作らせる工夫は？」**: 診断＝その曲は instrument なし（全部ピアノ）・4 段を grandStaff・全音符と音階・全パート同じリズム。原因＝1 回の返事で全曲（出力の予算で簡素に）・システムプロンプトが「断片の変換係」・作曲の手引きが文法に無い・コンパイルが通れば採用。工夫を 3 つ提示（A 手引きと見本／B 音楽の点検／C 計画→節ごと）→ **ユーザー「A・B。Ctrl+I のほかに独立した『AI に作曲してもらう』メニューがあると良いかも」**→ 賛成（作曲は「今の楽譜を直す」ではない・新しい score に書く・C も載せやすい）して 3 つ実装:
-  - **A**: `GRAMMAR_FOR_LLM.md` の Common requests に「Compose a piece」（instrument・staffGroup・計画・テクスチャ・リズムと奏法）と**弦楽四重奏の見本**（Lab `sessions/p989/quartet-example.lys`・lysc で検査と png で確認）。⚠️ **`instrument` は素の音の高さを決める**＝violin は `c`＝C4、viola／cello は C3（見本を書いて 1 度ずつ外した）。手引きに明記。
-  - **B**: Core `Editing.CompositionChecks.Of`（grandStaff に 3 段以上／2 パート以上で instrument なし（2 段の grandStaff は除く＝ピアノ）／16 音以上で 1 つの音価が 8 割＝次の音までの距離で読む（スタッカートは短く鳴る）／3 パート以上・4 小節以上で 6 割の小節が同じリズム）。言語サーバー `lilysharp/compositionCheck`。新しい曲（作曲・`<file>` の返事）でコンパイルが通った後に 1 回だけ差し戻し、直しが来なければ最初の曲を所見つきで出す。新しい曲ではオクターブの点検をしない（古い音域と比べる意味が無い）。ユーザーの曲で 3 つ全部を指摘（同じリズム 47 小節中 40）。網 `CompositionChecksTests` 3 本。
-  - **Compose with AI…**（`lilysharp.composeWithAi`・パレット／.lys の右クリック）: 説明を訊き、新しい無題の score を開いて `drive(..., compose: true)`。
-  npm 463（`aiNewPiece.test` 5 本）。site editor・commands、両 CHANGELOG、MANUAL-CHECKS C8。Deploy-Lsp 済。
-判定（2026-10-27・第989 の終わり）: 次はユーザーの指示（C8＝作曲を試す。良くなければ C＝計画→節ごと）。
 
 ## 2. 開いている作業
 

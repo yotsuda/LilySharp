@@ -42,6 +42,12 @@ public static class CompositionChecks
         var findings = new List<string>();
         var declared = RenderSpecParser.ChooseDeclared(tree, null);
 
+        // A piece has a title of its own (owner's request 2026-10-27).
+        if (TitleOf(source) is not { } title)
+            findings.Add("The piece has no title: give it a title of its own that fits its music, a `title \"…\"` line at the top.");
+        else if (IsPlaceholderTitle(title))
+            findings.Add($"\"{title}\" is a placeholder, not a title: give the piece a title of its own that fits its music.");
+
         // An ensemble braced as one piano.
         var braced = new HashSet<string>(System.StringComparer.Ordinal);
         if (declared is { } d)
@@ -123,6 +129,20 @@ public static class CompositionChecks
         }
         return findings;
     }
+
+    /// <summary>The file's top-level <c>title "…"</c>, or null when it writes none (or an empty one).</summary>
+    public static string? TitleOf(string source)
+    {
+        var m = System.Text.RegularExpressions.Regex.Match(source, @"^[ \t]*title[ \t]+""((?:[^""\\]|\\.)*)""",
+            System.Text.RegularExpressions.RegexOptions.Multiline);
+        return m.Success && m.Groups[1].Value.Trim().Length > 0 ? m.Groups[1].Value.Trim() : null;
+    }
+
+    /// <summary>A title that names no piece: a template's or a tool's placeholder.</summary>
+    public static bool IsPlaceholderTitle(string title)
+        => System.Text.RegularExpressions.Regex.IsMatch(title.Trim(),
+            @"^(new piece|new score|untitled|title|piece|my piece|song|composition|無題|新しい曲|タイトル)$",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
 
     // A duration's name, for the sentence ("whole", "quarter", …), else its quarters.
     private static string Value(int ticks, int tpq)

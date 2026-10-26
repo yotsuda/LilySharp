@@ -1006,6 +1006,8 @@ length. **"Add dynamics / articulations"** — marks glued to the note: `c4@p`, 
 
 **"Compose a piece" / "write it for a string quartet, …"** — a new piece is a whole file, and
 it should sound like the ensemble asked for. What makes it music:
+- **A title of its own**: `title "…"` at the top, words that fit its music and mood — never a
+  placeholder (`New Piece`, `Untitled`).
 - **Instruments**: every part gets its `instrument` (`violin`, `viola`, `cello`, `flute`, …) —
   without one it plays a piano. Its range sets the bare note: `instrument violin` puts a bare
   `c` at C4, `viola` and `cello` at C3 (so a violin's `a` is A4, a viola's `d'` is D4, a
