@@ -131,7 +131,8 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 
 第977 と同じ会話の続き（§1 の残りが 2,400 字＝`-Start p978`・開始 HEAD `8d1ee9f29`・full **13311 / 0 / 2 / 13313**・第976 を ARCHIVE へ）。作業場所は Lab `sessions/p978/`（AI パネルの計器は `p977/aipanel` のまま）。
 - **ユーザー「AI の Replacement text は差分だけ＝全文の方が分かりやすい・開いたら最初の diff へ・キャプションも直して」（`78f018d3b`）**: `wholeTextMarkup`（`aiTransformCore.ts`・`diffMarkup` をファイル全体に）を `reviewOnScore` へ・見出しは **Text after Accept**（title に緑／赤の意味）・`jumpToFirstChange`（details の toggle で pre の scrollTop を最初の ins／del が中央に・pre は position:relative）。npm test 447。headless Edge で 200 行の 150 行目の変更が 263px の欄の 125px に開く。MANUAL-CHECKS の 2 か所の名前を直した。⚠️ `aiTransformCore.ts` とその test は Edit の後に作業ツリーが LF になっていた＝CRLF に戻した。
-判定（2026-10-26・第978 の終わり）: 次はユーザーの指示。AI パネルの実機確認は MANUAL-CHECKS §3.6 C2。
+- **ユーザー「OMR のスキャン画像をズーム・スクロールするとヘッダが崩れる」（`049c294a8`・`omrScan.ts`）**: `.note` は sticky＝縦だけ固定・横スクロールで頁と一緒に左へ流れ、右に頁が透けた → `position: fixed`（top/left/right 0）＋ `fitHead`（body の padding-top＝頭の高さ＋8・ResizeObserver で折り返しに追従）。頁の始まり（63px）は前後で同じ＝`topEdge` 等は不変。計器 Lab `sessions/p978/scan/shot.js`（view の `<style>` と `fitHead` をソースから取り本物の scan を 200%・600/1500 スクロール）: 頭 −600..255→0..855／幅 420 で頭 92px・頁 100px。npm test 448・C3＝未確認。
+判定（2026-10-26・第978 の終わり）: 次はユーザーの指示。実機確認は MANUAL-CHECKS §3.6 C2・C3。
 
 ## 以下は第977セッションの経緯
 
