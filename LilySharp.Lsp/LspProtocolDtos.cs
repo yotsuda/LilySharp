@@ -184,6 +184,14 @@ public class RenderInfo
     public string Filename { get; set; } = "";
 }
 
+/// <summary>Parameters for lilysharp/addChordTrack: the document, the score the preview shows
+/// (<see cref="SvgParams.RenderName"/> — its parts are what the chords are read from), and
+/// whether to harmonize its top staff's melody alone instead.</summary>
+public class AddChordTrackParams : SvgParams
+{
+    public bool MelodyOnly { get; set; }
+}
+
 /// <summary>Result of lilysharp/addChordTrack: the edits that add the chords part
 /// (empty/absent when <see cref="Error"/> explains why none were produced).</summary>
 public class AddChordTrackResponse

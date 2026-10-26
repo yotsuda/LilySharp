@@ -318,7 +318,7 @@
       {
         "command": "lilysharp.addChordTrack",
         "category": "Lily#",
-        "title": "Add Chord Track (auto-harmonize)"
+        "title": "Add Chord Track…"
       },
       {
         "command": "lilysharp.guessSectionKey",

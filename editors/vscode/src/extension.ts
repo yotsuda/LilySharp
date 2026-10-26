@@ -2464,9 +2464,11 @@ interface AddChordTrackResponse {
 }
 
 /**
- * Auto-harmonizes the active melody: asks the server for a diatonic chords part
- * and applies the returned edits (inserts a `chords harmony { }` block and wires
- * it to the melody staff). The result is a starting point to edit.
+ * Adds a chords track read from the score the preview shows (owner's decisions 2026-10-26,
+ * docs/harmony-analysis-design.md): the chords its parts play — a melody alone harmonized —
+ * or, picked instead, chords for its top staff's melody alone. The server writes the track
+ * and places it in that score above its top staff, as names and as degrees. The result is
+ * a starting point to edit (Ctrl+Z takes it back).
  */
 async function addChordTrack() {
     const editor = vscode.window.activeTextEditor;
@@ -2480,9 +2482,20 @@ async function addChordTrack() {
     }
 
     const doc = editor.document;
+    const renderName = selectedRenders.get(doc.uri.toString()) || null;
+    const scoreLabel = renderName ? `score ${renderName}` : 'the score the preview shows';
+    const pick = await vscode.window.showQuickPick([
+        { label: 'Read the chords the parts play', description: scoreLabel, melodyOnly: false,
+          detail: 'Where only the melody sounds, chords are chosen for it.' },
+        { label: 'Harmonize the melody only', description: 'its top staff', melodyOnly: true,
+          detail: 'New chords for the melody, the accompaniment not read.' },
+    ], { placeHolder: 'Add Chord Track' });
+    if (!pick) {
+        return;
+    }
     try {
         const response = await client.sendRequest<AddChordTrackResponse>('lilysharp/addChordTrack', {
-            textDocument: { uri: doc.uri.toString() }
+            textDocument: { uri: doc.uri.toString() }, renderName, melodyOnly: pick.melodyOnly
         });
         if (response.Edits && response.Edits.length > 0) {
             const edit = new vscode.WorkspaceEdit();
@@ -2494,7 +2507,7 @@ async function addChordTrack() {
             await vscode.workspace.applyEdit(edit);
             const note = response.Info ? ` ${response.Info}` : '';
             vscode.window.showInformationMessage(
-                `Lily#: added a diatonic chord track — a starting point, edit as needed.${note}`);
+                `Lily#: added a chord track — a starting point, edit as needed.${note}`);
         } else {
             vscode.window.showErrorMessage(`Lily#: ${response.Error ?? 'could not add a chord track.'}`);
         }

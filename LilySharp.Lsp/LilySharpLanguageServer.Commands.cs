@@ -129,17 +129,18 @@ public sealed partial class LilySharpLanguageServer
     }
 
     /// <summary>
-    /// Auto-harmonizes each section's melody and returns the edits that add a diatonic
-    /// chords part: a <c>chords harmony { … }</c> block after every section's melody
-    /// part-block (each aligned to its own section, independent of the structure
-    /// block), and a <c>chords harmony</c> row placed directly above the melody's
-    /// staff in the score. Powers the "Lily#: Add Chord Track" editor command.
+    /// Reads the chords the preview's score plays and returns the edits that add them as a
+    /// chords track (<see cref="LilySharp.Core.Harmony.ChordHarmonizer.AddReadChordTracks"/>):
+    /// read from that score's parts beat by beat — or harmonized from its top staff's melody
+    /// alone (<see cref="AddChordTrackParams.MelodyOnly"/>) — written beside the music as the
+    /// file is laid out, and placed in that score above its top staff, as names and as degrees.
+    /// Powers the "Lily#: Add Chord Track" editor command (owner's decisions 2026-10-26).
     /// </summary>
     [JsonRpcMethod("lilysharp/addChordTrack", UseSingleObjectParameterDeserialization = true)]
-    public Task<AddChordTrackResponse> AddChordTrackAsync(SvgParams @params, CancellationToken token)
+    public Task<AddChordTrackResponse> AddChordTrackAsync(AddChordTrackParams @params, CancellationToken token)
         => OffDispatch(() => AddChordTrack(@params), token);
 
-    public AddChordTrackResponse AddChordTrack(SvgParams @params)
+    public AddChordTrackResponse AddChordTrack(AddChordTrackParams @params)
     {
         var doc = _documentManager.GetDocument(@params.TextDocument.Uri);
         if (doc == null)
@@ -148,12 +149,16 @@ public sealed partial class LilySharpLanguageServer
         if (SyntaxTree.Parse(doc.Text).HasErrors)
             return new AddChordTrackResponse { Error = "Fix the errors in the score first." };
 
-        var result = LilySharp.Core.Harmony.ChordHarmonizer.AddChordTracks(doc.Text);
+        var result = LilySharp.Core.Harmony.ChordHarmonizer.AddReadChordTracks(doc.Text, @params.RenderName, @params.MelodyOnly);
         if (result == null)
-            return new AddChordTrackResponse { Error = "No section melody found to harmonize." };
+            return new AddChordTrackResponse
+            {
+                Error = @params.MelodyOnly
+                    ? "The score's top staff plays no notes to harmonize."
+                    : "Nothing in the score shown sounds a note to read chords from.",
+            };
 
-        // One full-document replace: adding a chords part can convert the layout
-        // (by-part -> by-section), which reshapes the whole file.
+        // One full-document replace: the track and the score's rows are inserted at once.
         var (endLine, endCol) = GetLineAndColumn(doc.Text, doc.Text.Length);
         return new AddChordTrackResponse
         {

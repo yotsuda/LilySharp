@@ -43,6 +43,37 @@ public sealed record ChordReading(int StartTick, int EndTick, int Root, ChordQua
 }
 
 /// <summary>
+/// The chords a melody alone is harmonized from — where one note sounds at a time there is no
+/// chord to hear, so one is chosen, as the first harmonizer did: the key's triads (its V a
+/// dominant seventh in a major key), the common ones preferred, one a bar at most.
+/// <see cref="Everywhere"/> harmonizes every stretch so, the parts' chords unread (the
+/// "from the melody only" choice).
+/// </summary>
+public sealed record MelodyChords(IReadOnlyList<(int Root, ChordQuality Quality, double Preference)> Chords,
+    bool Everywhere = false)
+{
+    /// <summary>The key's seven triads, for a tonic letter and its signature's sharps.</summary>
+    public static MelodyChords OfKey(char tonic, int sharps, bool everywhere = false)
+    {
+        var chords = new List<(int, ChordQuality, double)>();
+        foreach (var ch in DiatonicChords.ForKey(tonic, sharps))
+        {
+            var quality = ch.Quality switch
+            {
+                "m" => ChordQuality.Minor,
+                "dim" => ChordQuality.Diminished,
+                "aug" => ChordQuality.Augmented,
+                _ => ch.Degree == 4 ? ChordQuality.Dominant7 : ChordQuality.Major,
+            };
+            // I, then IV and V, then vi, ii, iii, vii.
+            double preference = ch.Degree switch { 0 => 6, 3 => 5, 4 => 5, 5 => 4, 1 => 3, 2 => 2, _ => 1 } / 6.0;
+            chords.Add((ch.PitchClasses[0], quality, preference));
+        }
+        return new MelodyChords(chords, everywhere);
+    }
+}
+
+/// <summary>
 /// Reads the chords the notes sound (owner's decisions 2026-10-26, docs/harmony-analysis-design.md):
 /// beat by beat, each pitch class weighed by how long it sounds and where it starts (a note struck
 /// on the beat counts fully, one struck inside it — a passing or neighbour tone — less), then the
@@ -92,10 +123,13 @@ public static class HarmonyReader
     /// The chords <paramref name="notes"/> sound, over <paramref name="beats"/> (ticks, each
     /// beat to the next, the last to <paramref name="endTick"/>), adjacent readings of one chord
     /// joined. <paramref name="changeCost"/> is what a change must gain, as a share of a beat's
-    /// usual weight: higher reads fewer, longer chords.
+    /// usual weight: higher reads fewer, longer chords. With <paramref name="melody"/>, a stretch
+    /// where one note sounds at a time (or every stretch, <see cref="MelodyChords.Everywhere"/>)
+    /// takes one of its chords, starting at a bar line.
     /// </summary>
     public static IReadOnlyList<ChordReading> Read(IReadOnlyList<SoundingNote> notes,
-        IReadOnlyList<(int Tick, bool Accent)> beats, int endTick, double changeCost = 0.6)
+        IReadOnlyList<(int Tick, bool Accent)> beats, int endTick, double changeCost = 0.6,
+        MelodyChords? melody = null)
     {
         int count = beats.Count;
         if (count == 0)
@@ -158,21 +192,55 @@ public static class HarmonyReader
             place[i] = k == 0 ? 1.0 : length % 2 == 0 && k == length / 2 ? 1.5 : 2.5;
         }
 
+        // A melody's chord lasts a bar at least, so a stretch reaches over the longest bar.
+        int maxBeats = MaxBeats;
+        for (int i = 0, bar = 0; i <= count; i++)
+            if (i == count || beats[i].Accent)
+            {
+                maxBeats = Math.Max(maxBeats, i - bar);
+                bar = i;
+            }
+
+        // How well each beat fits each chord, on its own: a stretch's fit is its beats' summed,
+        // so a chord must fit the beats one by one — the C and the G of a bar pooled are not a
+        // Cmaj7, since neither beat sounds one.
+        var fits = new double[count, Candidates.Length];
+        var matches = new double[count, Candidates.Length];
+        for (int i = 0; i < count; i++)
+            for (int c = 0; c < Candidates.Length; c++)
+                (fits[i, c], matches[i, c]) = BeatFit(weight, i, total[i], Candidates[c]);
+
         // best[j]: the best reading of beats [0, j); from[j] where its last stretch starts.
         var best = new double[count + 1];
         var from = new int[count + 1];
         var chosen = new (int Root, ChordQuality Quality, double Fit)[count + 1];
+        var fitted = new double[Candidates.Length];
+        var matched = new double[Candidates.Length];
         for (int j = 1; j <= count; j++)
         {
             best[j] = double.NegativeInfinity;
             var pooled = new double[12];
             double sum = 0;
-            for (int i = j - 1; i >= 0 && j - i <= MaxBeats; i--)
+            bool alone = true;
+            Array.Clear(fitted);
+            Array.Clear(matched);
+            for (int i = j - 1; i >= 0 && j - i <= maxBeats; i--)
             {
                 for (int pc = 0; pc < 12; pc++)
                     pooled[pc] += weight[i, pc];
+                for (int c = 0; c < Candidates.Length; c++)
+                {
+                    fitted[c] += fits[i, c];
+                    matched[c] += matches[i, c];
+                }
                 sum += total[i];
-                var (root, quality, score, fit) = BestChord(pooled, sum, lowest[i]);
+                alone &= mono[i];
+                bool lone = melody != null && (melody.Everywhere || alone);
+                if (lone && i > 0 && !beats[i].Accent)
+                    continue;   // a melody's chord changes at a bar line
+                var (root, quality, score, fit) = lone
+                    ? MelodyChord(pooled, sum, melody!)
+                    : BestChord(fitted, matched, sum, lowest[i]);
                 double value = best[i] + score - cost * place[i];
                 if (value > best[j])
                 {
@@ -210,9 +278,10 @@ public static class HarmonyReader
             if (i >= j)
                 return;
             int bass = root < 0 ? -1 : ((lowest[i] % 12) + 12) % 12;
-            if (root >= 0 && lowest[i] == int.MaxValue)
-                bass = root;
             bool alone = Enumerable.Range(i, j - i).All(k => mono[k]);
+            // A melody's chord is chosen, not heard: no bass sounds it.
+            if (root >= 0 && (lowest[i] == int.MaxValue || melody != null && (melody.Everywhere || alone)))
+                bass = root;
             readings.Add(new ChordReading(spans[i].Start, spans[j - 1].End, root, quality, bass, fit, alone));
         }
         foreach (var (i, j, root, quality, fit) in stretches)
@@ -246,47 +315,90 @@ public static class HarmonyReader
         return joined;
     }
 
-    /// <summary>The chord that fits a stretch's pooled weight best: its root (-1 where nothing
-    /// sounds), quality, score (in weight) and fit (the share of the weight on its tones).</summary>
-    private static (int Root, ChordQuality Quality, double Score, double Fit) BestChord(double[] pooled, double sum, int lowest)
+    /// <summary>A chord read: its root, quality, prior and tones (semitones above the root, and
+    /// whether each is a fifth — a fifth left out is common).</summary>
+    private readonly record struct Candidate(int Root, ChordQuality Quality, double Prior, (int Semitone, bool Fifth)[] Tones);
+
+    private static readonly Candidate[] Candidates =
+    [
+        .. Qualities.SelectMany(q => Enumerable.Range(0, 12).Select(root => new Candidate(root, q.Quality, q.Prior,
+            [.. ChordQualityRegistry.GetTones(q.Quality).Select(t => (t.Semitone, t.DiatonicStep == 4 && t.Semitone == 7))]))),
+    ];
+
+    /// <summary>One beat's fit to a chord (in weight) and the weight on its tones: the weight on
+    /// them, less the weight off them and a share of the beat for each tone that does not sound
+    /// (a missing fifth a third as much).</summary>
+    private static (double Fit, double Matched) BeatFit(double[,] weight, int beat, double total, Candidate chord)
+    {
+        if (total <= 0)
+            return (0, 0);
+        double matched = 0, missing = 0;
+        foreach (var (semitone, fifth) in chord.Tones)
+        {
+            double w = weight[beat, (chord.Root + semitone) % 12];
+            matched += w;
+            if (w < 0.05 * total)
+                missing += fifth ? 0.3 : 1.0;
+        }
+        return (matched - 0.7 * (total - matched) - 0.25 * total * missing / chord.Tones.Length, matched);
+    }
+
+    /// <summary>The chord that fits a stretch best, from its beats' summed fits: its root (-1
+    /// where nothing sounds), quality, score (in weight) and fit (the share of the weight on its
+    /// tones). The lowest note at the stretch's start is the root more often than not.</summary>
+    private static (int Root, ChordQuality Quality, double Score, double Fit) BestChord(
+        double[] fitted, double[] matched, double sum, int lowest)
     {
         if (sum <= 0)
             return (-1, ChordQuality.Major, 0, 1);
         int bassPc = lowest == int.MaxValue ? -1 : ((lowest % 12) + 12) % 12;
         (int, ChordQuality, double, double) best = (-1, ChordQuality.Major, double.NegativeInfinity, 0);
-        foreach (var (quality, prior) in Qualities)
+        for (int c = 0; c < Candidates.Length; c++)
         {
-            var tones = ChordQualityRegistry.GetTones(quality);
-            for (int root = 0; root < 12; root++)
-            {
-                double matched = 0, missing = 0;
-                foreach (var tone in tones)
-                {
-                    double w = pooled[(root + tone.Semitone) % 12];
-                    matched += w;
-                    // A missing fifth is common; a missing root, third or seventh is not.
-                    if (w < 0.05 * sum)
-                        missing += tone.DiatonicStep == 4 && tone.Semitone == 7 ? 0.3 : 1.0;
-                }
-                double score = matched - 0.7 * (sum - matched)
-                    - 0.25 * sum * missing / tones.Count
-                    + prior * sum
-                    + (bassPc == root ? 0.35 * sum : 0);
-                if (score > best.Item3)
-                    best = (root, quality, score, matched / sum);
-            }
+            var chord = Candidates[c];
+            double score = fitted[c] + chord.Prior * sum + (bassPc == chord.Root ? 0.35 * sum : 0);
+            if (score > best.Item3)
+                best = (chord.Root, chord.Quality, score, matched[c] / sum);
+        }
+        return best;
+    }
+
+    /// <summary>The chord of <paramref name="melody"/> a melody's stretch fits best: the weight
+    /// on its tones, less half the weight off them (a melody passes through tones no chord
+    /// holds), the common chords ahead when two fit alike. No tone counts as missing — a
+    /// melody does not sound its chord.</summary>
+    private static (int Root, ChordQuality Quality, double Score, double Fit) MelodyChord(
+        double[] pooled, double sum, MelodyChords melody)
+    {
+        if (sum <= 0)
+            return (-1, ChordQuality.Major, 0, 1);
+        (int, ChordQuality, double, double) best = (-1, ChordQuality.Major, double.NegativeInfinity, 0);
+        foreach (var (root, quality, preference) in melody.Chords)
+        {
+            double matched = 0;
+            // The triad's tones: the V7's seventh no more a reason to choose it than for the first harmonizer.
+            foreach (var tone in ChordQualityRegistry.GetTones(quality).Take(3))
+                matched += pooled[(root + tone.Semitone) % 12];
+            double score = matched - 0.5 * (sum - matched) + 0.05 * preference * sum;
+            if (score > best.Item3)
+                best = (root, quality, score, matched / sum);
         }
         return best;
     }
 
     private static bool Overlapping(List<SoundingNote> notes)
     {
+        // A legato line's notes overlap a little as they play (a slur's hold): two notes sound
+        // together when they overlap by a quarter of the shorter one.
         for (int a = 0; a < notes.Count; a++)
             for (int b = a + 1; b < notes.Count; b++)
-                if (notes[a].StartTick < notes[b].StartTick + notes[b].DurationTicks
-                    && notes[b].StartTick < notes[a].StartTick + notes[a].DurationTicks
-                    && notes[a].Pitch != notes[b].Pitch)
+            {
+                var (x, y) = (notes[a], notes[b]);
+                int overlap = Math.Min(x.StartTick + x.DurationTicks, y.StartTick + y.DurationTicks)
+                    - Math.Max(x.StartTick, y.StartTick);
+                if (x.Pitch != y.Pitch && overlap * 4 > Math.Min(x.DurationTicks, y.DurationTicks))
                     return true;
+            }
         return false;
     }
 
