@@ -127,20 +127,20 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第993セッション（2026-10-27・YT-DELL2）
+
+第992 と同じ会話の続き。`-Start p993`（開始 HEAD `0212da7e7`・full **13356 / 0 / 2 / 13358**・第991 を ARCHIVE へ）。
+- **ユーザー「リードシートという指定がない場合は一線譜を使ってはいけない、というルールはどう？」** → 賛成し、広げて提案（1 段で正しいのはリードシート・旋律だけ・単旋律楽器 1 つの独奏。「ジャズの曲」はコンボ）→ **ユーザー「良い」**。文法の「Compose a piece」に「One staff only when it is asked for」と「Jazz は（リードシートと言われなければ）コンボ＝ピアノかギター・ベース（`acoustic bass`）・ドラム（ride と hi-hat）＋旋律楽器」。Compose の点検に、パートが 1 つで頼みに `lead sheet／リードシート／メロディだけ／旋律だけ／solo／ソロ／独奏／無伴奏／unaccompanied` が無ければ差し戻す（`asksForOneStaff`・`partCount`＝拡張側、頼みの言葉が要るので）。網 `aiNewPiece.test` 2 本（npm 469）。site・拡張 CHANGELOG・MANUAL-CHECKS C8。Deploy-Lsp 済。
+判定（2026-10-27・第993 の終わり）: 次はユーザーの指示（C8・スウィングの式と題の重なり）。
+
+## 以下は第992セッションの経緯
+
 ### 1.1 第992セッション（2026-10-27・YT-DELL2）
 
 第991 と同じ会話の続き。`-Start p992`（開始 HEAD `ab3cdbfff`・full **13350 / 0 / 2 / 13352**・第990 を ARCHIVE へ）。作業場所は Lab `sessions/p992/`。
 - **ユーザー「エレキギターとドラムの曲を頼んだらギターとドラムだけ。この編成ではエレキベースが必須、キーボードも良い。テンポは途中で変えない」＋「ギターとベースならドラムが必須＝一般的なルールに」＋「ジャズのリードシートの書き方も。一線譜で、それっぽいコード進行で」**: 文法の「Compose a piece」に**バンド**（どれか 1 つが名指しされたらリズム隊全部＝ドラム（`clef percussion`）・エレキベース（`instrument bass`＋`midiInstrument "electric bass (finger)"`）・ギターかキーボード、テンポは 1 つ、曲の形は intro/verse/chorus…、括弧なし）と**ジャズのリードシート**（旋律 1 段＋上に chords の行、セブンス・ii–V–I・副次 ii–V・♭9・バックドア・ターンアラウンド、`tempo "Medium Swing" 4 = 152 swing`、8 小節単位）。「テンポも対比」は演奏会の音楽だけ、に絞った。見本 2 つ（Lab `sessions/p992/band-example.lys`＝Night Drive、`jazz-example.lys`＝Blue Window、lysc で検査・png で確認。⚠️ バンドの `instrument bass` は記譜より 1 オクターブ下で鳴る＝最初 B0 まで落ちて lysc が音域外を警告）。Core `CompositionChecks` にバンドの点検（ドラム・ベース・和音楽器の欠け、テンポが 2 つ以上）、ドラム（`clef percussion`）は instrument 不要、バンドのベースは音価の単調さの点検から外す（8 分の刻みは語法）。Compose の頼みの言葉も「その種類の音楽の手引きどおりに」。網 `CompositionChecksTests` 10 本。site・両 CHANGELOG・MANUAL-CHECKS C8。Deploy-Lsp 済。
 - ⚠️ **見つけた描画の欠陥（未着手）**: `tempo "Medium Swing" 4 = 152 swing` のスウィングの式（8 分 2 つ＝3 連の 4 分＋8 分）の 3 連の括弧が**題名に重なる**（Blue Window の png）。計器 Lab `sessions/p992/jazz-example.lys`。
 判定（2026-10-27・第992 の終わり）: 次はユーザーの指示（C8・スウィングの式と題の重なり）。
-
-## 以下は第991セッションの経緯
-
-### 1.1 第991セッション（2026-10-27・YT-DELL2）
-
-第990 と同じ会話の続き。`-Start p991`（開始 HEAD `01f6706f1`・full **13349 / 0 / 2 / 13351**・第989 を ARCHIVE へ）。
-- **ユーザー「AI が作曲した曲には必ず適切な title を付けて」**: 3 段で保証＝①頼みの言葉に「曲と気分に合う固有の題を、頼みの言葉の言語で」・文法の「Compose a piece」にも ②音楽の点検（Core `CompositionChecks`）に題なし／置き題（New Piece・Untitled・無題…＝`IsPlaceholderTitle`）を足した（1 回差し戻し）③それでも題なしなら、曲を見せて題だけを頼む短い要求（`titleFor`→`cleanTitle`→`withTitle`）で書き入れてから開く。始まりの文から `title "New Piece"` を外した（置き題をそのまま残されないよう）。網 `CompositionChecksTests` 4 本・`aiNewPiece.test`（npm 467）。site・拡張 CHANGELOG・MANUAL-CHECKS C8。Deploy-Lsp 済。
-判定（2026-10-27・第991 の終わり）: 次はユーザーの指示（C8）。
 
 ## 2. 開いている作業
 

@@ -160,6 +160,14 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第991セッションの経緯
+
+### 1.1 第991セッション（2026-10-27・YT-DELL2）
+
+第990 と同じ会話の続き。`-Start p991`（開始 HEAD `01f6706f1`・full **13349 / 0 / 2 / 13351**・第989 を ARCHIVE へ）。
+- **ユーザー「AI が作曲した曲には必ず適切な title を付けて」**: 3 段で保証＝①頼みの言葉に「曲と気分に合う固有の題を、頼みの言葉の言語で」・文法の「Compose a piece」にも ②音楽の点検（Core `CompositionChecks`）に題なし／置き題（New Piece・Untitled・無題…＝`IsPlaceholderTitle`）を足した（1 回差し戻し）③それでも題なしなら、曲を見せて題だけを頼む短い要求（`titleFor`→`cleanTitle`→`withTitle`）で書き入れてから開く。始まりの文から `title "New Piece"` を外した（置き題をそのまま残されないよう）。網 `CompositionChecksTests` 4 本・`aiNewPiece.test`（npm 467）。site・拡張 CHANGELOG・MANUAL-CHECKS C8。Deploy-Lsp 済。
+判定（2026-10-27・第991 の終わり）: 次はユーザーの指示（C8）。
+
 ## 以下は第990セッションの経緯
 
 ### 1.1 第990セッション（2026-10-27・YT-DELL2）

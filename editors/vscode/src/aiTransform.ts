@@ -40,7 +40,7 @@ import {
     CandidateEdit as CoreCandidateEdit, ChangedSpan, MarkInSelection, MarkReadings, SEL_CLOSE, SEL_OPEN, cleanCandidate,
     TextChange, carryOffset, documentBudget, documentContext, estimateTokens, isProblem, marksContext, octaveOutliers, splitNote,
     startTimeAt, toCandidateEdit, wholeFileEdit, carrySelection, changedWords, wholeTextMarkup, titleOf, isPlaceholderTitle,
-    cleanTitle, withTitle,
+    cleanTitle, withTitle, asksForOneStaff, partCount,
 } from './aiTransformCore';
 import { markFactsOf, sideFileOf } from './omrScanCore';
 import { textFontFaceCss, textFontsRoot } from './scoreFonts';
@@ -213,8 +213,9 @@ async function runCompose(deps: AiTransformDeps): Promise<void> {
             + 'between <file> and </file> (reply form 3), as the grammar\'s "Compose a piece" recipe says for '
             + 'its kind of music — concert music (an instrument for every part, a staffGroup for an ensemble, '
             + 'contrasting sections), a band (the whole rhythm section — drums, electric bass, guitar or '
-            + 'keyboards — at one tempo) or a jazz lead sheet (one melody staff under a chords row) — with '
-            + 'melody and accompaniment, varied rhythm, articulations and dynamics. Give the piece a title of its own that '
+            + 'keyboards — at one tempo), jazz (a combo; a lead sheet — one melody staff under a chords row — '
+            + 'only when a lead sheet is asked for) — with melody and accompaniment, varied rhythm, '
+            + 'articulations and dynamics. One staff only for a lead sheet, a melody alone or a solo. Give the piece a title of its own that '
             + 'fits its music and its mood, on a `title "…"` line at the top, in the language of the request.',
             true, grammar, documentContext(ai.snap, budget, true), true, description.trim());
     } catch (err: any) {
@@ -607,6 +608,13 @@ async function drive(
                         // and whole notes). What it finds goes back for a revision of the whole piece.
                         if (newPiece && !musicAsked && attempt < MAX_REPAIR_ATTEMPTS) {
                             const music = await compositionFindings(client, reconstructed);
+                            // One staff only when it was asked for (owner's rule 2026-10-27): a lead
+                            // sheet, a melody alone, a solo — anything else has its accompaniment.
+                            if (compose && partCount(reconstructed) < 2 && !asksForOneStaff(composeAsked ?? instruction)) {
+                                music.unshift('The piece is one staff, and no lead sheet, melody alone or solo was asked for: '
+                                    + 'give it its accompaniment — the parts its kind of music has (a jazz piece is a combo: '
+                                    + 'piano or guitar, bass and drums under the melody instrument).');
+                            }
                             if (music.length > 0) {
                                 musicAsked = true;
                                 flat = { edit, music };

@@ -237,6 +237,20 @@ function reduceToSpan<S extends SpanLike>(snapshot: S, full: string, spans: Chan
 
 /** The whole file `full` as the edit it makes to the snapshot's file: the one span where they
  *  differ (the AI's candidate brought back to relative octaves, say). */
+/**
+ * Whether a request to compose asks for ONE staff: a lead sheet, a melody alone, or a solo for one
+ * instrument (owner's rule 2026-10-27: no single staff unless it is asked for — anything else has
+ * its accompaniment).
+ */
+export function asksForOneStaff(request: string): boolean {
+    return /lead[\s-]*sheet|リードシート|melody (alone|only)|just (a|the) melody|only (a|the) melody|メロディ(だけ|のみ)|旋律(だけ|のみ)|\bsolo\b|ソロ|独奏|無伴奏|unaccompanied/i.test(request);
+}
+
+/** How many parts a file declares (`part NAME …`). */
+export function partCount(text: string): number {
+    return new Set([...text.matchAll(/^[ \t]*part[ \t]+([A-Za-z_][\w-]*)/gm)].map(m => m[1])).size;
+}
+
 /** A file's top-level `title "…"`, or null when it writes none (or an empty one). The server's
  *  reading is CompositionChecks.TitleOf; this one is the editor's, for a composed piece. */
 export function titleOf(text: string): string | null {

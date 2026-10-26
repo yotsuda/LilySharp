@@ -1027,7 +1027,14 @@ it should sound like the ensemble asked for. What makes it music:
   has a bass too; "guitar and bass" has drums too; keyboards are welcome. **One tempo** from start
   to end — a single `tempo` at the top, none in the sections. The form is the song's: intro,
   verse, chorus, bridge, outro; separate staves, no bracket. The second example below is a band.
-- **A jazz lead sheet** ("a jazz standard", "a lead sheet", "a tune to jam on"): ONE staff — the
+- **One staff only when it is asked for**: a lead sheet, a melody alone ("a melody for these
+  words"), or a solo for one instrument that plays one line ("a flute solo", "unaccompanied
+  cello"). Anything else has its accompaniment — its own parts, on staves of their own.
+- **Jazz** not asked for as a lead sheet is a **combo**: a rhythm section — piano or guitar for the
+  chords, a bass (`instrument bass` with `midiInstrument "acoustic bass"`), drums swinging on the
+  ride cymbal (`cymr`) and hi-hat — under a melody instrument (`instrument tenor-sax`, `trumpet`,
+  `alto-sax`, …), with the harmony and the feel of the lead sheet below, at one tempo.
+- **A jazz lead sheet** (asked for as "a lead sheet", "a tune to jam on"): ONE staff — the
   melody, no instrument needed (a lead sheet is concert pitch) — with a `chords NAME` row
   directly above it, and nothing else. The harmony is jazz's: seventh chords throughout
   (`Fmaj7 Gm7 C7 Am7-5`), ii–V–I in the key and ii–Vs into other chords (`Am7 D7` → `Gm7`), a

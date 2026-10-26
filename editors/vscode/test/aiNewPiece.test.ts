@@ -18,7 +18,7 @@ import { describe, it } from 'node:test';
 import * as assert from 'node:assert/strict';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { carrySelection, cleanTitle, isPlaceholderTitle, isProblem, titleOf, toCandidateEdit, withTitle } from '../src/aiTransformCore';
+import { asksForOneStaff, carrySelection, cleanTitle, isPlaceholderTitle, isProblem, partCount, titleOf, toCandidateEdit, withTitle } from '../src/aiTransformCore';
 
 // Owner's report 2026-10-26: "discard the score and compose a new string quartet" failed three
 // times — the model answered with <edit> blocks quoting the old score, and copied none of it
@@ -119,5 +119,26 @@ describe('a composed piece has a title', () => {
         assert.equal(withTitle('title "New Piece"\ntime 3/4\n', 'Autumn Elegy'), 'title "Autumn Elegy"\ntime 3/4\n');
         // No title line: after the leading comments.
         assert.equal(withTitle('// a\ntime 3/4\n', 'Autumn Elegy'), '// a\ntitle "Autumn Elegy"\ntime 3/4\n');
+    });
+});
+
+// Owner's rule 2026-10-27: one staff only when it is asked for — a lead sheet, a melody alone, a
+// solo; anything else (a jazz piece too: a combo) has its accompaniment.
+describe('one staff only when asked for', () => {
+    const transform = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'aiTransform.ts'), 'utf8');
+
+    it('knows the requests that ask for one staff', () => {
+        for (const yes of ['ジャズのリードシートを書いて', 'a jazz lead sheet in F', 'この歌詞にメロディだけ付けて', 'フルート独奏の曲', 'an unaccompanied cello piece', 'a guitar solo']) {
+            assert.ok(asksForOneStaff(yes), yes);
+        }
+        for (const no of ['ジャズの曲を書いて', 'a dramatic string quartet', 'エレキギターとドラムの曲']) {
+            assert.ok(!asksForOneStaff(no), no);
+        }
+    });
+
+    it('counts the parts, and sends a composed piece of one back unless one staff was asked for', () => {
+        assert.equal(partCount('part lead { clef treble }\nsection A { lead { c1 | } }\n'), 1);
+        assert.equal(partCount('part rh { clef treble }\npart lh { clef bass }\n'), 2);
+        assert.match(transform, /if \(compose && partCount\(reconstructed\) < 2 && !asksForOneStaff\(composeAsked \?\? instruction\)\) \{\s*music\.unshift\(/);
     });
 });

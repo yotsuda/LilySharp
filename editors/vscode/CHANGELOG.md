@@ -19,8 +19,9 @@ All notable changes to the Lily# VS Code extension are documented here.
   a part of one note value, every part in the same rhythm. What is found goes back to the AI for
   one revision of the whole piece. The same check follows a whole new file asked for with Ctrl+I.
   A band piece always has its whole rhythm section — drums, an electric bass, a guitar or
-  keyboards, whichever were named ("guitar and drums" brings a bass) — and keeps one tempo; a jazz
-  lead sheet is one melody staff under a chords row with jazz changes and a swing feel.
+  keyboards, whichever were named ("guitar and drums" brings a bass) — and keeps one tempo. One
+  staff only when it is asked for (a lead sheet, a melody alone, a solo): a jazz piece is a combo,
+  and a jazz lead sheet, asked for, is one melody staff under a chords row with jazz changes.
   A composed piece always has a title of its own that fits it (asked for, checked, and asked
   for alone if it still does not come). Nothing opens while the AI works; the piece opens in an editor of its own, headed by comments
   that keep what was asked and what the AI says about the piece.
