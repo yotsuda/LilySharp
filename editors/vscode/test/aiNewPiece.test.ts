@@ -57,7 +57,15 @@ describe('a new piece in place of the score', () => {
 
     it('Compose with AI is a command of its own, writing into a new score', () => {
         assert.match(transform, /registerCommand\('lilysharp\.composeWithAi', \(\) => runCompose\(deps\)\)/);
-        assert.match(transform, /openTextDocument\(\{ language: 'lilysharp', content: 'title "New Piece"\\n' \}\)/);
+        // No document while the AI works (owner's request 2026-10-27): the start is in memory, and
+        // the piece opens in an editor of its own when it comes — no review panel, nothing to compare.
+        assert.match(transform, /uri: vscode\.Uri\.parse\('untitled:Composed\.lys'\),/);
+        assert.doesNotMatch(transform.slice(transform.indexOf('async function runCompose'), transform.indexOf('async function runAiTransform')), /openTextDocument/);
+        assert.match(transform, /if \(compose\) \{[\s\S]{0,1500}?openTextDocument\(\{ language: 'lilysharp', content: `\$\{preface\}\$\{eol\}\$\{eol\}\$\{text\}` \}\);\s*await vscode\.window\.showTextDocument\(piece\);/);
+        // The request and the AI's note head the piece as comments (owner's request 2026-10-27).
+        assert.match(transform, /line\(`Asked: \$\{composeAsked \?\? instruction\}`\),\s*\.\.\.\(note \? \[line\(`The AI: \$\{note\}`\)\] : \[\]\),/);
+        // What the notification says is the musician's request, not the instruction to the AI.
+        assert.match(transform, /const said = composeAsked \?\? instruction;/);
         const pkg = fs.readFileSync(path.join(__dirname, '..', '..', 'package.json'), 'utf8');
         assert.match(pkg, /"command": "lilysharp\.composeWithAi",\s*"category": "Lily#",\s*"icon": "\$\(sparkle\)",\s*"title": "Compose with AI…"/);
     });

@@ -127,6 +127,15 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第990セッション（2026-10-27・YT-DELL2）
+
+第989 と同じ会話の続き。`-Start p990`（開始 HEAD `20c342c6a`・full **13349 / 0 / 2 / 13351**・第988 を ARCHIVE へ）。
+- **ユーザー「プレビューのヘッダに AI への長い指示文が出て冗長。元のファイルは必ず空だから、AI から返ったファイルを自動でエディタで開く方が良い。待つ間に `title "New Piece"` だけのファイルが開くのは無い方が良い」**: Compose は候補パネルを出さず、曲が来たら新しい無題のエディタで開く。待つ間は文書を開かない（始まりはメモリの中・URI は `untitled:Composed.lys`＝factsForRange／todos は失敗を呑む）。作曲は絶対オクターブへの変換をしない（戻す先の書き方が無い）。通知の文言は頼みの言葉（`composeAsked`）。
+- **ユーザー「AI のコメントは見たい。どう表示すべきか検討して。コメントに埋める／ダイアログも楽しいかも」**: 比べて**ファイル先頭のコメント**を勧めて実装（曲と一緒に残る＝序文・保存しても消えない・編集も削除も自由。通知はすぐ消えて長いと切れる、ダイアログは楽しいが閉じれば消えて作業を止める）。`// Composed with AI (モデル), 日付` `// Asked: 頼み` `// The AI: 一言`（音楽の点検の残りがあれば `// Still to improve: …`）。網 `aiNewPiece.test` 更新（npm 463）。site・拡張 CHANGELOG・MANUAL-CHECKS C8。Deploy-Lsp 済。
+判定（2026-10-27・第990 の終わり）: 次はユーザーの指示（C8）。
+
+## 以下は第989セッションの経緯
+
 ### 1.1 第989セッション（2026-10-27・YT-DELL2）
 
 第988 と同じ会話の続き。`-Start p989`（開始 HEAD `8d7959979`・full **13346 / 0 / 2 / 13348**・第987 を ARCHIVE へ）。作業場所は Lab `sessions/p989/`。
@@ -136,14 +145,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
   - **Compose with AI…**（`lilysharp.composeWithAi`・パレット／.lys の右クリック）: 説明を訊き、新しい無題の score を開いて `drive(..., compose: true)`。
   npm 463（`aiNewPiece.test` 5 本）。site editor・commands、両 CHANGELOG、MANUAL-CHECKS C8。Deploy-Lsp 済。
 判定（2026-10-27・第989 の終わり）: 次はユーザーの指示（C8＝作曲を試す。良くなければ C＝計画→節ごと）。
-
-## 以下は第988セッションの経緯
-
-### 1.1 第988セッション（2026-10-26・YT-DELL2）
-
-第987 と同じ会話の続き。`-Start p988`（開始 HEAD `a186c6487`・full **13346 / 0 / 2 / 13348**・第986 を ARCHIVE へ）。
-- **ユーザー「`the AI could not produce a valid transform after several tries` が出て有効な結果が返らなかった」**: ログ（Reload 後の窓の Lily# Extension.log）＝依頼「今の楽譜はすべて捨てて、新しく弦楽器の 4 重奏を作曲して」・3 回とも「Edit 1: its <old> text is not in the file」。原因＝出力の約束が「選択の中」か `<edit>` だけ（第970 頃に `<file>` を案内から外した）＝曲を丸ごと書き換えるのに古い楽譜を `<old>` に正確に写させていた。→ 約束に 3 つ目「楽譜を捨てる／ほぼ全部を書き換える依頼は `<file>…</file>` に新しいファイル全体（`octave` 行はそのまま）」、`<old>` が無い時の直しの言葉にも `<file>` を案内、取り直しの言葉（replyForm）も。**失敗の理由が分からなかった**のも直した＝各回の却下の理由をログに（`attempt N/3 turned down — …`）、最後の通知に最後の理由と Show Log。⚠️ Copilot Chat のログの `copilotLanguageModelWrapper` 行のモデル名（gpt-6-luna）は Lily# が頼んだモデル（claude-fable-5.1）と一致しない＝モデルの手がかりにならない。網 `aiNewPiece.test` 3 本（npm 461）。Deploy-Lsp 済。
-判定（2026-10-26・第988 の終わり）: 次はユーザーの指示（実機の C6・C7、作曲の頼みのやり直し）。
 
 ## 2. 開いている作業
 

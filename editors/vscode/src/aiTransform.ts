@@ -189,27 +189,28 @@ async function runCompose(deps: AiTransformDeps): Promise<void> {
     if (!chat) {
         return;
     }
-    // A new score to write it into: the one open stays as it is.
-    const doc = await vscode.workspace.openTextDocument({ language: 'lilysharp', content: 'title "New Piece"\n' });
-    await vscode.window.showTextDocument(doc);
+    // The AI starts from an empty score held in memory; no document opens until the piece comes
+    // (owner's request 2026-10-27: a file holding only a title opened while it was waited for).
+    const start = 'title "New Piece"\n';
     const snapshot = {
-        version: doc.version,
+        version: 0,
         startOffset: 0,
-        endOffset: doc.getText().length,
-        origFullText: doc.getText(),
-        origSelectedText: doc.getText(),
-        uri: doc.uri,
+        endOffset: start.length,
+        origFullText: start,
+        origSelectedText: start,
+        uri: vscode.Uri.parse('untitled:Composed.lys'),
     };
     const grammar = await loadGrammar(deps);
     const budget = documentBudget(chat.maxInputTokens, estimateTokens(systemPrompt(grammar)));
     try {
-        const ai = await toAbsoluteOctaves(deps, client, snapshot, true);
+        // In the octaves the AI writes it: a new piece has no octave mode of its own to go back to.
+        const ai: AiSpace = { snap: snapshot, converted: false };
         await drive(deps, client, chat, snapshot, ai,
             `Compose a new piece: ${description.trim()}\nThe file is an empty start: reply with the whole new piece `
             + 'between <file> and </file> (reply form 3), as the grammar\'s "Compose a piece" recipe says — an '
             + 'instrument for every part, a staffGroup for an ensemble, contrasting sections, melody and '
             + 'accompaniment, varied rhythm, articulations and dynamics.',
-            true, grammar, documentContext(ai.snap, budget, true), true);
+            true, grammar, documentContext(ai.snap, budget, true), true, description.trim());
     } catch (err: any) {
         vscode.window.showErrorMessage(`Lily#: compose with AI failed: ${err?.message ?? err}`);
     }
@@ -404,6 +405,8 @@ async function drive(
     grammar: string,
     shown: { text: string; complete: boolean },
     compose = false,
+    /** Compose's own words for the piece: what its notification says, not the instruction to the AI. */
+    composeAsked?: string,
 ): Promise<void> {
     // One notification per round, preparation included (two in a row read as two tasks — owner,
     // 2026-10-25): the model in its title, the request in its message, which also says what step
@@ -459,7 +462,8 @@ async function drive(
         let round: ReviewRound | null;
         try {
             round = await working(title, async (progress, token) => {
-                const asked = instruction.length > 60 ? `${instruction.slice(0, 59)}…` : instruction;
+                const said = composeAsked ?? instruction;
+                const asked = said.length > 60 ? `${said.slice(0, 59)}…` : said;
                 // The step first, the request last: a notification has no line breaks (VS Code makes
                 // them spaces), and a long request wraps after the step instead of burying it.
                 const step = (s: string) => progress.report({ message: `${s}… — “${asked}”` });
@@ -708,6 +712,29 @@ async function drive(
         shownRound = round;
         // The notification has closed: the review is the user's, with nothing over it.
         const { candidate, caption, renderAfter, changed } = round;
+        if (compose) {
+            // A composed piece replaces nothing, so there is nothing to set it beside: it opens in
+            // an editor of its own (owner's request 2026-10-27). What was asked and what the AI says
+            // of it head the file as comments — a preface kept with the piece, where a notification
+            // went in seconds (owner, the same day: "I want to see the AI's comment").
+            const note = splitNote(candidate.reply).note;
+            const flatNote = caption.startsWith(instruction) ? caption.slice(instruction.length).replace(/^ — /, '') : '';
+            const text = spliceCandidate(candidate.snap, candidate.text);
+            const eol = text.includes('\r\n') ? '\r\n' : '\n';
+            const line = (s: string) => `// ${s.replace(/\s*\r?\n\s*/g, ' ')}`;
+            const preface = [
+                line(`Composed with AI (${chat.label}), ${new Date().toISOString().slice(0, 10)}`),
+                line(`Asked: ${composeAsked ?? instruction}`),
+                ...(note ? [line(`The AI: ${note}`)] : []),
+                ...(flatNote ? [line(`Still to improve: ${flatNote}`)] : []),
+            ].join(eol);
+            const piece = await vscode.workspace.openTextDocument({ language: 'lilysharp', content: `${preface}${eol}${eol}${text}` });
+            await vscode.window.showTextDocument(piece);
+            deps.log('AI transform: composed — opened in a new editor.');
+            void vscode.window.showInformationMessage(
+                'Lily#: the AI composed a new score — its note is at the top. Save it to keep it; Ctrl+I asks for changes.');
+            return;
+        }
         const { renderBefore, messages } = prepared!;
         // The review, and Iterate's question about it: a refine closed or left empty goes back
         // to the same candidate on its score, to be decided again (owner's request 2026-10-25 —

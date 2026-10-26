@@ -160,6 +160,14 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第988セッションの経緯
+
+### 1.1 第988セッション（2026-10-26・YT-DELL2）
+
+第987 と同じ会話の続き。`-Start p988`（開始 HEAD `a186c6487`・full **13346 / 0 / 2 / 13348**・第986 を ARCHIVE へ）。
+- **ユーザー「`the AI could not produce a valid transform after several tries` が出て有効な結果が返らなかった」**: ログ（Reload 後の窓の Lily# Extension.log）＝依頼「今の楽譜はすべて捨てて、新しく弦楽器の 4 重奏を作曲して」・3 回とも「Edit 1: its <old> text is not in the file」。原因＝出力の約束が「選択の中」か `<edit>` だけ（第970 頃に `<file>` を案内から外した）＝曲を丸ごと書き換えるのに古い楽譜を `<old>` に正確に写させていた。→ 約束に 3 つ目「楽譜を捨てる／ほぼ全部を書き換える依頼は `<file>…</file>` に新しいファイル全体（`octave` 行はそのまま）」、`<old>` が無い時の直しの言葉にも `<file>` を案内、取り直しの言葉（replyForm）も。**失敗の理由が分からなかった**のも直した＝各回の却下の理由をログに（`attempt N/3 turned down — …`）、最後の通知に最後の理由と Show Log。⚠️ Copilot Chat のログの `copilotLanguageModelWrapper` 行のモデル名（gpt-6-luna）は Lily# が頼んだモデル（claude-fable-5.1）と一致しない＝モデルの手がかりにならない。網 `aiNewPiece.test` 3 本（npm 461）。Deploy-Lsp 済。
+判定（2026-10-26・第988 の終わり）: 次はユーザーの指示（実機の C6・C7、作曲の頼みのやり直し）。
+
 ## 以下は第987セッションの経緯
 
 ### 1.1 第987セッション（2026-10-26・YT-DELL2）
