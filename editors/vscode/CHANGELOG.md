@@ -4,6 +4,18 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+### Chords
+
+- **Add Chord Track… reads the chords the parts play.** It reads the score the preview shows —
+  only that score's parts, so a score made for it chooses what is read — and asks how: *Read the
+  chords the parts play* (the notes sounding together, beat by beat: sevenths, diminished and
+  suspended chords, a slash chord from the lowest note; a chord changes on a beat only where that
+  fits clearly better, at a bar line most easily; where a melody sounds alone, a chord is chosen
+  for it from the key's) or *Harmonize the melody only* (one of the key's chords a bar for the top
+  staff). The track is placed above that score's top staff twice, names and degrees (`as roman`).
+  A second reading is a track of its own (`harmony2`). Until now the command wrote one diatonic
+  triad a bar from the melody alone.
+
 ### Practice
 
 - **A count-in** in the practice menu: one bar of clicks before the music comes in, the first

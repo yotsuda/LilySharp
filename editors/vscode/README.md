@@ -71,7 +71,7 @@ With the separate **Scan Import** extension (`yotsuda.lilysharp-omr`, Windows x6
 
 New Score (from a template you can make your own: *Edit New Score Template*), Import
 MusicXML…, Regroup (by part ⇄ by section), Convert Octaves to Absolute / Relative, Extract
-Phrase from Section, Add Chord Track (auto-harmonize), Guess Section Key…, Respell Notes to
+Phrase from Section, Add Chord Track…, Guess Section Key…, Respell Notes to
 Key…, Remove All String Numbers. Every command, with examples:
 [the editor commands](https://yotsuda.github.io/LilySharp/commands.html).
 

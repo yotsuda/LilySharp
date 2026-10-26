@@ -127,22 +127,21 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第982セッション（2026-10-26・YT-DELL2）
+
+第981 と同じ会話の続き（ユーザー「新しいセッション＝会話を終えること？」→ いいえ＝便は作業の区切り、と答えた → 「続けて」）。`-Start p982`（開始 HEAD `835a2866e`・full **13330 / 0 / 2 / 13332**・第980 を ARCHIVE へ）。作業場所は Lab `sessions/p982/`。
+- **和声の分析 段 2＝Add Chord Track… を読み取りに載せ替え（`4faea3b47`）**: `ChordHarmonizer.AddReadChordTracks(source, scoreName, melodyOnly)`＝プレビューの score（`RenderName`）のパートだけを節ごとに鳴らして読む（原文の写しに `form zzHarmonyReading { 節 }`＝書き出しは木の中の form しか鳴らさない）・1 声だけの所は調の三和音から小節ごと（`MelodyChords`）・2 択の QuickPick（*Read the chords the parts play*／*Harmonize the melody only*＝いちばん上の譜表だけ）・小節を要るだけの等分で書く（`| Am Dm |`・3/4 `| C G . |`）・行は選んだ score の最初の譜表の前に名前と度数の 2 行・2 回目は `harmony2`・改行は文書に合わせる。**読み取りを拍ごとの点の和に直した**（区間でまとめると 3/4 の C＋G が Cmaj7 になった）＝一致率は全拍 根音 55.5→59.0%、2 声以上は 78.5% のまま。網 `ChordTrackReadingTests` 9 本。samples で lysc の診断は増えない。Deploy-Lsp 済。MANUAL-CHECKS C6（未確認）。
+- **段 3＝文書**: site commands（節を書き直し）・editor の表・拡張 README・両 CHANGELOG・ROADMAP から外す（出荷）・設計に「段 2・3 の結果」。`lysc harmonize` は旧来のまま（site にそう書いた）。
+判定（2026-10-26・第982 の終わり）: 和声の分析は 3 段とも済み。次はユーザーの指示（実機の C6）。
+
+## 以下は第981セッションの経緯
+
 ### 1.1 第981セッション（2026-10-26・YT-DELL2）
 
 第980 と同じ会話の続き（ユーザー「続けて」＝和声の分析の段 1）。`-Start p981`（開始 HEAD `7cdd4f93a`・full **13322 / 0 / 2 / 13324**・第979 を ARCHIVE へ）。作業場所は Lab `sessions/p981/`。
 - **和声の分析 段 1＝Core の読み取り＋一致率**: `LilySharp.Core.Harmony.HarmonyReader`（`NotesOf`＝打楽器と chords の行を除いた鳴る音・`Read`＝拍ごとに 12 根音 × `ChordQualityRegistry` の型で点を付け、変わり目に罰の動的計画法で区切る・最低音で転回形・小節まるごとの無音は和音なし・1 声だけの区間に `Monophonic`）。拍はメトロノームと同じ＝言語サーバーの `MetronomeBeats` を **Core の `LilySharp.Core.Midi.MetronomeBeats.Of` へ移した**（言語サーバーは呼ぶだけ）。網 `HarmonyReaderTests` 8 本。
 - **一致率**（譜と chords の行の両方がある 32 冊・834 拍）: 2 声以上の拍（209）で**根音 78.5%・種類まで 75.6%**／全拍は根音 55.5%（1 声の拍＝段 2 の「メロディから考える」側）。⚠️ 正解の集合が小さい（和音記号付き MusicXML は手元に 0）＝係数はこれ以上合わせない。最低音＝根音の加点を 0.2→0.35 にした（`C E G`＋旋律の `A` を `Am7/C` と読まないため。全拍の根音は 63.4→55.5% に下がる＝ベース 1 本の本で根音を最低音に寄せすぎない側が当たっていた・2 声以上はほぼ同じ）。結果と係数は `docs/harmony-analysis-design.md`「段 1 の結果」、計器は Lab `sessions/p981/ZzP981HarmonyAgreement.cs.txt`。
 判定（2026-10-26・第981 の終わり）: 次は段 2（Add Chord Track を新しい読み取りに載せ替え・選んでいる score のパートだけ・「メロディだけから」の選択肢）。
-
-## 以下は第980セッションの経緯
-
-### 1.1 第980セッション（2026-10-26・YT-DELL2）
-
-第979 と同じ会話の続き（ユーザー「続けて」＝残りのレッスンの監査）。`-Start p980`（開始 HEAD `d277f3b1a`・full 緑・第978 を ARCHIVE へ）。作業場所は Lab `sessions/p980/`。
-- **レッスン 2〜12 の監査＝直す所なし**: 手順・課題の文言は今の文法・補完・キーと一致（2 の `g2` の PageDown→G3 で次の `e'` が E4、4 の `transpose bes,`／`g mixolydian`、8 の Ctrl+Shift+Up で図、10 の `fillTriplet`、11 の `pitch transposed`、12 の Petaluma）。末尾の「type `lesson` … pick」は lys の `quickSuggestions` が on なので打つだけで候補が出る＝そのまま。lysc で 12 本＝警告は課題の 2 つだけ（2 の短い小節・3 の 5/8）。`LessonTests` が各課題を 1 本ずつ見ている。
-- **ユーザー「続けて」→ ROADMAP から選んでもらう→「カウントイン（推奨）」→ 実装（`f4d61d1dd`）**: `playbackCore.countIn`（再生開始位置の次の小節線から 1 小節＝その拍子・頭は強い木の音・音楽はその小節線がカウントの終わりに来るよう移す＝弱起は最後の拍の上・小節の途中は「1、2」で 3 拍目から）・練習メニューに Count-in の On/Off・▶／Play from Here／選んだ小節／ループの 1 周目だけ（テンポ変更・2 周目以降・シークは無し）・`startPlayback` の 5 番目の引数でずれ（`countInFix`）を運び、再生中のテンポ変更で位置を保つ・`playSpanWindow` に `start`。網 `playbackCore.test` 5 本＋`previewRanges.test` の配線。npm test 455。ROADMAP から外し、site・README・両 CHANGELOG・MANUAL-CHECKS C5（未確認）。Deploy-Lsp 済。
-- **ユーザー「和音の分析を実装前に説明して」→ 計画を説明 → 決定**: ①Add Chord Track に**統合**（ユーザー「機能が被る・統合した方が分かりやすい」＝読む／メロディから考えるを 1 つに・「メロディだけから」は選択肢）②和音名と度数の両方 ③拍まで・変わり目に罰の自動区切り ④重ね表示は作らない ⑤**読むのはプレビューで選んでいる score のパートだけ**（ユーザー「見るべきパートを変えてコードを追加できる」・chords 行もその score に載せる）。設計 `docs/harmony-analysis-design.md`（段 1＝Core の読み取り＋譜と chords 行の両方がある本で一致率／段 2＝Add Chord Track の載せ替え／段 3＝文書）。ROADMAP に決定を追記。
-判定（2026-10-26・第980 の終わり）: 次は和声の分析の段 1（Core の読み取り＋一致率の計測）＝`docs/harmony-analysis-design.md`。新しい便（-Start p981）で着手。
 
 ## 2. 開いている作業
 

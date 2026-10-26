@@ -6,6 +6,14 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+### Chords
+
+- `[editor]` **Add Chord Track reads the chords the parts play**: the notes of the score the preview
+  shows, beat by beat — sevenths, diminished and suspended chords, slash chords — changing where
+  that fits clearly better; a melody alone harmonized from the key's chords, and on request the
+  melody only. The track goes above that score's top staff as names and as degrees. It wrote one
+  diatonic triad a bar from the melody, the accompaniment unread.
+
 ### Practice
 
 - `[editor]` **A count-in in the preview's practice menu**: one bar of clicks before the music,

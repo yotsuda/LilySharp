@@ -210,17 +210,35 @@ section A { melody { c'4 d' e' f' | g'1 | } }   phrase theme { c'4 d' e' f' | g'
 </section>
 
 <section id="chord-track">
-  <h2>Add Chord Track (auto-harmonize)</h2>
-  <p>Writes a first harmonization of the melody as a <code>chords harmony</code> row, placed
-  directly above the melody's staff. It picks <b>one chord per bar</b> from the key's seven
-  diatonic triads — the one whose notes cover most of the bar's melody, longer notes and the
-  downbeat counting more — and prefers the common chords (I, IV, V) when it is close. In a
-  major key the V is written as a V7. A bar of rests keeps the chord before it.</p>
+  <h2>Add Chord Track…</h2>
+  <p>Reads the chords the music plays and writes them as a chords track. It reads <b>the score
+  the preview shows</b> — only the parts that score has — so a score made for it chooses what the
+  chords are read from: <code>score harmony { staff rh  staff lh }</code> reads the piano and not
+  the voice. Pick that score in the preview's <b>Score</b> menu first.</p>
+  <p>It asks which way to read:</p>
+  <ul>
+    <li><b>Read the chords the parts play</b> — the notes sounding together, beat by beat: the
+    chord they fit (sevenths, diminished and suspended chords, slash chords from the lowest
+    note), a note struck inside a beat counting less than one on it. A chord may change on any
+    beat, but only where that fits clearly better — at a bar line most easily, the middle of a
+    bar next — so a passing note or a walking bass does not make a chord of its own. Where only a
+    melody sounds, a chord is chosen for it from the key's chords, one a bar.</li>
+    <li><b>Harmonize the melody only</b> — new chords for the score's top staff, its
+    accompaniment not read: one a bar from the key's seven triads (the V a V7 in a major key),
+    the common ones (I, IV, V) first.</li>
+  </ul>
+  <p>The track is placed in that score above its top staff <b>twice</b> — the chord names, and
+  the degrees under them (<code>chords harmony  chords harmony as roman  staff rh</code>); delete
+  the row you do not want. A bar is written in as few slots as its changes need:
+  <code>| Am Dm |</code> for a change at the middle, <code>| C G . |</code> in 3/4. A bar where
+  nothing sounds is <code>r</code> (N.C.).</p>
   <p>The file keeps its layout: a file grouped by section gets a chords block in each section;
-  one grouped by part gets one top-level track with a section per section. It is a <b>starting
-  point to edit</b> — the chords are plain text in the file. The key it harmonizes in is the
-  file's <code>key</code>; set the right one first (<a href="#guess-key">Guess Section Key</a>
-  helps). The command line: <code>lysc harmonize song.lys</code>.</p>
+  one grouped by part gets one top-level track with a section per section. A second reading — of
+  another score, or of the melody alone — is a track of its own (<code>harmony2</code>), so the two
+  can be compared. It is a <b>starting point to edit</b>, and Ctrl+Z takes it back. The degrees
+  are against the file's <code>key</code>; set the right one first
+  (<a href="#guess-key">Guess Section Key</a> helps). The command line
+  <code>lysc harmonize song.lys</code> harmonizes the melody, one diatonic chord a bar.</p>
 </section>
 
 <section id="guess-key">
