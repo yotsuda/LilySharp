@@ -58,7 +58,7 @@ public class ChordTrackReadingTests
     }
 
     [Fact]
-    public void ThePartsChords_AreRead_AndPlacedAboveTheScoresTopStaff_AsNamesAndDegrees()
+    public void ThePartsChords_AreRead_AndPlacedAboveTheScoresTopStaff_ARowOfItsOwn()
     {
         string text = Added(Piano);
         Assert.Contains("chords harmony { C | Dm | G7 | C | }", text);
@@ -75,7 +75,7 @@ public class ChordTrackReadingTests
         // Score `tune` shows the right hand alone: e g | a | b d | c — chosen for the melody
         // from the key's chords (the A alone an F), not the left hand's Dm.
         string text = Added(Piano, "tune");
-        Assert.Contains("chords harmony { C | F | G7 | C | }", text);
+        Assert.Contains("chords harmony { C | F | G | C | }", text);
         Assert.Contains("score tune {\n  chords harmony\n  staff rh", text.Replace("\r\n", "\n"));
         Assert.Contains("grandStaff { staff rh  staff lh }", text);
         Assert.DoesNotContain("chords harmony\n  grandStaff", text.Replace("\r\n", "\n"));
@@ -96,8 +96,8 @@ public class ChordTrackReadingTests
             form { A }
             score { staff rh  staff lh }
             """;
-        Assert.DoesNotContain("chords harmony { G7 | }", Added(source));
-        Assert.Contains("chords harmony { G7 | }", Added(source, melodyOnly: true));
+        Assert.DoesNotContain("chords harmony { G | }", Added(source));
+        Assert.Contains("chords harmony { G | }", Added(source, melodyOnly: true));
     }
 
     [Fact]
@@ -114,7 +114,7 @@ public class ChordTrackReadingTests
             form { A }
             score { staff p1 }
             """;
-        Assert.Contains("chords harmony { Dm | G7 | Bb | A | Fm | }", Added(source));
+        Assert.Contains("chords harmony { Dm | G | Bb | A | Fm | }", Added(source));
     }
 
     [Fact]
@@ -131,6 +131,42 @@ public class ChordTrackReadingTests
             score { staff p1 }
             """;
         Assert.Contains("chords harmony { C | C | }", Added(source));
+    }
+
+    [Fact]
+    public void ALineAlone_GetsTheKeysSeventhChords_WhereTheSeventhSounds()
+    {
+        // Owner's report 2026-10-26: the V was always a V7 and no other seventh was written. Now
+        // a seventh is written where it sounds — the ii with its C, the V with its F — and not
+        // where it does not; the iii where E G B are played.
+        const string source = """
+            time 4/4
+            key c major
+            octave absolute
+            part p1 { clef bass }
+            section A { p1 { d,4 f, a, c | g,, b,, d, f, | g,, b,, d, b,, | e,4 g, b, g, | c,4 e, g, b, | } }
+            form { A }
+            score { staff p1 }
+            """;
+        Assert.Contains("chords harmony { Dm7 | G7 | G | Em | Cmaj7 | }", Added(source));
+    }
+
+    [Fact]
+    public void ABassLinesPassingAndApproachNotes_AreNotSevenths()
+    {
+        // Rose Garden bars 44-45: c e g a is C (the A passing over a C bass, not Am7/C), and the
+        // B of c g a b stepping into the next bar's C is its approach, not a Cmaj7's seventh —
+        // also where the section ends and the C is not there to see.
+        const string source = """
+            time 4/4
+            key c major
+            octave absolute
+            part p1 { clef bass }
+            section A { p1 { c,4 e, g, a, | c,4 g, a, b, | c1 | c,4 g, a, b, | } }
+            form { A }
+            score { staff p1 }
+            """;
+        Assert.Contains("chords harmony { C | C | C | C | }", Added(source));
     }
 
     [Fact]
@@ -187,7 +223,7 @@ public class ChordTrackReadingTests
         string once = Added(Piano);
         string twice = Added(once, "tune");
         Assert.Contains("chords harmony { C | Dm | G7 | C | }", twice);
-        Assert.Contains("chords harmony2 { C | F | G7 | C | }", twice);
+        Assert.Contains("chords harmony2 { C | F | G | C | }", twice);
         Assert.Contains("chords harmony2\n  staff rh", twice.Replace("\r\n", "\n"));
     }
 

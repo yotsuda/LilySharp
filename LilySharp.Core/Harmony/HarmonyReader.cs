@@ -44,9 +44,11 @@ public sealed record ChordReading(int StartTick, int EndTick, int Root, ChordQua
 
 /// <summary>
 /// The chords a melody alone is harmonized from — where one note sounds at a time there is no
-/// chord to hear, so one is chosen, one a bar at most: the key's triads (its V a dominant
-/// seventh in a major key), the common ones preferred, and any other major or minor triad where
-/// the notes spell it.
+/// chord to hear, so one is chosen, one a bar at most: the key's triads and seventh chords, the
+/// common ones preferred, and any other major or minor triad or dominant seventh where the notes
+/// spell it. A seventh chord is chosen only where its seventh sounds (owner's report 2026-10-26:
+/// the V was always a V7 and no other seventh was written — a ii with its seventh played was a
+/// plain ii).
 /// <see cref="Everywhere"/> harmonizes every stretch so, the parts' chords unread (the
 /// "from the melody only" choice).
 /// </summary>
@@ -57,31 +59,45 @@ public sealed record MelodyChords(IReadOnlyList<(int Root, ChordQuality Quality,
     /// (the preferences weigh 0.05 each), so it is taken only where the notes spell it.</summary>
     private const double OutOfKey = -3;
 
-    /// <summary>The key's seven triads, for a tonic letter and its signature's sharps, then every
-    /// other major and minor triad behind them.</summary>
+    /// <summary>The key's seven triads and seven seventh chords, for a tonic letter and its
+    /// signature's sharps, then every other major and minor triad and dominant seventh behind them.</summary>
     public static MelodyChords OfKey(char tonic, int sharps, bool everywhere = false)
     {
         var chords = new List<(int, ChordQuality, double)>();
         foreach (var ch in DiatonicChords.ForKey(tonic, sharps))
         {
-            var quality = ch.Quality switch
+            // I, then IV and V, then vi, ii, iii, vii.
+            double preference = ch.Degree switch { 0 => 6, 3 => 5, 4 => 5, 5 => 4, 1 => 3, 2 => 2, _ => 1 } / 6.0;
+            ChordQuality? triad = ch.Quality switch
             {
+                "" => ChordQuality.Major,
                 "m" => ChordQuality.Minor,
                 "dim" => ChordQuality.Diminished,
                 "aug" => ChordQuality.Augmented,
-                _ => ch.Degree == 4 ? ChordQuality.Dominant7 : ChordQuality.Major,
+                _ => null,
             };
-            // I, then IV and V, then vi, ii, iii, vii.
-            double preference = ch.Degree switch { 0 => 6, 3 => 5, 4 => 5, 5 => 4, 1 => 3, 2 => 2, _ => 1 } / 6.0;
-            chords.Add((ch.PitchClasses[0], quality, preference));
+            ChordQuality? seventh = ch.SeventhQuality switch
+            {
+                "maj7" => ChordQuality.Major7,
+                "7" => ChordQuality.Dominant7,
+                "m7" => ChordQuality.Minor7,
+                "m7-5" => ChordQuality.HalfDiminished7,
+                "dim7" => ChordQuality.Diminished7,
+                _ => null,
+            };
+            if (triad is { } t)
+                chords.Add((ch.PitchClasses[0], t, preference));
+            if (seventh is { } s)
+                chords.Add((ch.PitchClasses[0], s, preference));
         }
         // A line that spells a chord outside the key gets it (owner's report 2026-10-26: a bass
         // walking B♭ D F under C major was given Dm, A C♯ E was given Am) — every major and minor
-        // triad, the key's chords ahead of them when the notes fit both alike.
+        // triad and dominant seventh (a secondary dominant), the key's chords ahead of them when
+        // the notes fit both alike.
         var inKey = chords.Select(c => (c.Item1, c.Item2)).ToHashSet();
-        foreach (var quality in new[] { ChordQuality.Major, ChordQuality.Minor })
+        foreach (var quality in new[] { ChordQuality.Major, ChordQuality.Minor, ChordQuality.Dominant7 })
             for (int root = 0; root < 12; root++)
-                if (!inKey.Contains((root, quality)) && !(quality == ChordQuality.Major && inKey.Contains((root, ChordQuality.Dominant7))))
+                if (!inKey.Contains((root, quality)))
                     chords.Add((root, quality, OutOfKey));
         return new MelodyChords(chords, everywhere);
     }
@@ -161,6 +177,7 @@ public static class HarmonyReader
         var lowest = new int[count];
         var mono = new bool[count];
         var sorted = notes.OrderBy(n => n.StartTick).ToList();
+        var approaches = Approaches(sorted, beats);
         for (int i = 0; i < count; i++)
         {
             var (s, e) = spans[i];
@@ -177,8 +194,9 @@ public static class HarmonyReader
                 double overlap = Math.Min(ne, e) - Math.Max(n.StartTick, s);
                 if (overlap <= 0)
                     continue;
-                // Struck inside the beat: a passing or neighbour tone, more often than not.
-                double strike = n.StartTick > s ? 0.6 : 1.0;
+                // Struck inside the beat: a passing or neighbour tone, more often than not; so is one
+                // that steps into the next bar line.
+                double strike = n.StartTick > s || approaches.Contains(n) ? 0.6 : 1.0;
                 double w = overlap / length * strike * (beats[i].Accent ? 1.2 : 1.0);
                 weight[i, ((n.Pitch % 12) + 12) % 12] += w;
                 total[i] += w;
@@ -395,16 +413,53 @@ public static class HarmonyReader
         (int, ChordQuality, double, double) best = (-1, ChordQuality.Major, double.NegativeInfinity, 0);
         foreach (var (root, quality, preference) in melody.Chords)
         {
+            var tones = ChordQualityRegistry.GetTones(quality);
             double matched = 0;
-            // The triad's tones: the V7's seventh no more a reason to choose it than for the first harmonizer.
-            foreach (var tone in ChordQualityRegistry.GetTones(quality).Take(3))
+            foreach (var tone in tones)
                 matched += pooled[(root + tone.Semitone) % 12];
-            double score = matched - 0.5 * (sum - matched) + 0.05 * preference * sum
+            // A seventh chord where its seventh sounds — a fifth of the stretch at least, more than
+            // a passing note — with two more of its tones (E G alone are a C, not an Am7 whose A
+            // never sounds), and behind the triad by a tenth of the weight, so that four tones over two bars
+            // (E G | A) are not one seventh chord where a chord a bar fits as well.
+            bool seventh = tones.Count > 3;
+            if (seventh && (pooled[(root + tones[3].Semitone) % 12] < 0.2 * sum
+                || tones.Count(t => pooled[(root + t.Semitone) % 12] >= 0.1 * sum) < 3))
+                continue;
+            // A bass's seventh chord stands on its root: C E G A over a C bass is a C, not Am7/C.
+            if (seventh && bassPc >= 0 && root != bassPc)
+                continue;
+            double score = matched - 0.5 * (sum - matched) + 0.05 * preference * sum - (seventh ? 0.1 * sum : 0)
                 + (root == bassPc ? 0.2 * sum : 0);
             if (score > best.Item3)
                 best = (root, quality, score, matched / sum);
         }
         return best;
+    }
+
+    /// <summary>The notes that step into a bar line — a beat long at most, ending on it, the next
+    /// note starting there a tone or a semitone away: the approach of a walking bass or a melody
+    /// (`c g a b | c`: the B is not the Cmaj7's seventh — owner's report 2026-10-26). At the end
+    /// of what is read (a section read alone) the next note is not there: a last note reached by
+    /// a step, ending on the last bar line, is taken to lead on.</summary>
+    private static HashSet<SoundingNote> Approaches(List<SoundingNote> sorted, IReadOnlyList<(int Tick, bool Accent)> beats)
+    {
+        var bars = beats.Where(b => b.Accent).Select(b => b.Tick).ToHashSet();
+        int beat = beats.Count > 1 ? beats[1].Tick - beats[0].Tick : int.MaxValue;
+        var starts = sorted.ToLookup(n => n.StartTick);
+        var ends = sorted.ToLookup(n => n.StartTick + n.DurationTicks);
+        int last = sorted.Count == 0 ? 0 : sorted.Max(n => n.StartTick + n.DurationTicks);
+        var approaches = new HashSet<SoundingNote>();
+        foreach (var n in sorted)
+        {
+            int end = n.StartTick + n.DurationTicks;
+            if (n.DurationTicks > beat)
+                continue;
+            if (bars.Contains(end) && starts[end].Any(m => Math.Abs(m.Pitch - n.Pitch) is 1 or 2))
+                approaches.Add(n);
+            else if (end == last && !starts[end].Any() && ends[n.StartTick].Any(m => Math.Abs(m.Pitch - n.Pitch) is 1 or 2))
+                approaches.Add(n);
+        }
+        return approaches;
     }
 
     private static bool Overlapping(List<SoundingNote> notes)
