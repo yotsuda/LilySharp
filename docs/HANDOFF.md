@@ -127,6 +127,15 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第979セッション（2026-10-26・YT-DELL2）
+
+第978 と同じ会話の続き（ユーザー「続けて」＝サイトの手入れの続き）。`-Start p979`（開始 HEAD `f1c8c865e`・full **13311 / 0 / 2 / 13313**・第977 を ARCHIVE へ）。作業場所は Lab `sessions/p979/`。
+- **0.14.0 の言語の追加をサイトへ（`e1c687551`）**: manual に「装飾音は普通の音符」（タイ・記号・`@chord`・spans）と「preset の 3 つの警告」（LYS1052・1050・1051）、chords に印刷どおりの和音の綴り（`CΔ7`・`Cø7`・`C°7`・`C-7`・`B♭7`）と括弧の変化音、トップの「覚える規則」に括弧、lysc の一覧に `lysc wav`。例は全部 lysc に通した。site 再ビルド通過。
+- ⚠️ **見つけた製品の穴（未着手・ユーザーに報告）**: chords の行の読めない和音（`C7b9`・`C-5`・`Cxyz`）を `lysc check` が何も言わない（`@chord(C7b9)` は「names nothing and is ignored」の警告・`ChordStructure.TryParseChordEntry` は拒む）。計器 Lab `sessions/p979/row-*.lys`。
+判定（2026-10-26・第979 の終わり）: 次はユーザーの指示（上の穴を直すか）。
+
+## 以下は第978セッションの経緯
+
 ### 1.1 第978セッション（2026-10-26・YT-DELL2）
 
 第977 と同じ会話の続き（§1 の残りが 2,400 字＝`-Start p978`・開始 HEAD `8d1ee9f29`・full **13311 / 0 / 2 / 13313**・第976 を ARCHIVE へ）。作業場所は Lab `sessions/p978/`（AI パネルの計器は `p977/aipanel` のまま）。
@@ -136,20 +145,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **ユーザー「gh pages をお手入れ・製品名に Studio・最近の機能を説明」（`site` の commit）**: 拡張を指す所を Lily# Studio に（ナビの Editor→Lily# Studio・インストール手順・トップの tagline と pillar・Get started・About・commands の題・言語名は Lily# のまま）。editor に「Playback and practice」「Each part's range」「The status bar」を新設、プレビュー・補完・Commands・Settings を今に、AI の節は Ask AI（選択はヒント・ファイル全体・edits・候補パネルの緑／💬／▶／Ask Again／Text after Accept）。commands にプレビューの AI と選択・小節の Play from Here・Remove All String Numbers・テンプレート。scan に「Fix the marks — with AI, or by hand」と読みの通知。根拠は拡張 README・CHANGELOG 0.14.0／Unreleased。`build-site.ps1` 通過（74 ファイル）・headless Edge で 3 頁を目視。⚠️ build-examples は `site/examples/*.lys` を CRLF で書く（中身は不変・`.gitattributes` は eol=lf）＝`git checkout -- site/examples` で戻した。⚠️ Unreleased の機能（小節の Play from Here・transpose の補完・進捗の段・Text after Accept 等）も書いた＝push すると Pages は次の release より先に出る。
 - 続き（ユーザー「続けて」）: リファレンスの小節線の段落が LP の旧モデル（「`|` は何も閉じない・拍子が満たした小節を確認するだけ」）のままだった → 第904 の「小節線が小節」（LYS2002／LYS2017／`R1*N`・`%N`・`% % %`）に書き直し（lysc で 4 例を確認）。chords の `guitardropd` ×2 → `guitarDropD`（小文字は今エラー）。site 再ビルド通過。
 判定（2026-10-26・第978 の終わり）: 次はユーザーの指示。実機確認は MANUAL-CHECKS §3.6 C2〜C4（C4 は Reload Window を 2 回）。
-
-## 以下は第977セッションの経緯
-
-### 1.1 第977セッション（2026-10-26・YT-DELL2）
-
-新しい会話（ユーザー「HANDOFF を読んで作業に着手して」）。`-Start p977`（開始 HEAD `b2d8f8d8a`・full **13300 / 0 / 2 / 13302**・第975 を ARCHIVE へ）。作業場所は Lab `sessions/p977/`。
-- **OMR REQUESTS #7 に答えた（`done`）**: M3 の受け口（門 3＝`omr verify --candidate --bars --no-write` の `event: "bar"`・`readings`）は `dd0cbe66a`＝`v0.14.0` に入っている（`git tag --contains`）・床 `OMR_MIN_VERSION` 0.4.0・門 3 は `differs` false か `confidence` ≥ `VERIFY_SURE` 0.8・lysc も 0.14.0 から VSIX に同梱。採用率はオーナーの実測待ちと書いた（commit は OMR のセッション）。
-- §1.0 ⒜ の残りは全部ユーザー側（実機確認・採用率・デモ動画 16／17 の画面収録＝SHOTLIST の 1〜17 は全部ユーザーが撮る物で、まだ 1 本も無い）。⚠️ 本体の作業ツリーの `samples/*.lys` 5 本の変更（2026-10-14 の時刻・`octave absolute` を外した書き換え）は Claude のものではない＝触っていない。
-- **ユーザー「OMR の処理が遅い。もう少し詳細な進捗を」→ 読みの通知を段・頁・毎秒の時計・残りの目安に（`87a894fbd`）**: 実測（`schirmer-1893.pdf` 6 頁・Scan Import 0.4.0・Lab `sessions/p977/omr-timing.txt`＝node の `time-omr.js` が各行に秒を付ける）で、`start` から最初の `page` まで＝`GuessLayout` の全頁の下見が**イベント無しで 11 分**（並走の omr 込み・単独 202 秒）、読みの本体 44 秒・照合 3 秒。`omrCore.ts` の `ReadProgress`（`page` は頁が*済んだ*合図＝表示は次の頁・stage 無しなら start〜最初の page を下見と読む・棒は下見 0〜40／頁 40〜95）と `clockOf`、`omrImport.ts` は 1 秒ごとに刷り直す、`omrVerify.ts` の保存時の照合もステータスバーで秒を数える。**OMR に `{"event":"stage","stage":"layout"|"read"|"verify"|"write","page"?,"of"?}` を依頼**（`..\LilySharp-Omr\docs\repro\lilysharp-requests-2026-10-26-progress.md`・REQUESTS の将来の依頼に 1 行・Lily# は受け口済み＝入れば下見も頁ごとに進む）。同じ文書で**下見の 202 秒のうち 189 秒が五線の無い 3 頁（表紙 28・白紙 142・最後 19 秒）で検出器を間隔 7 通りで回す枝**（`--parts-only` の単独実測＝`omr-layout-timing.txt`）と伝えた（直し方はそちら）。実ログの再生（`replay.js`）で文言を確かめた。npm test 440・check-types 通過・Deploy-Lsp 済（Reload Window で見られる）・MANUAL-CHECKS §5 B21＝未確認・両 CHANGELOG の Unreleased（拡張側は見出しから立てた）。⚠️ pwsh の中で `Process` の `OutputDataReceived` に scriptblock を付けるとコンソールが落ちる（別スレッドから呼ばれる）＝時刻を付ける計器は node で。
-- **ユーザー「transpose と transposition を補完したら、続けて次の語の補完窓を」（`1f9c7df1a`）**: `transpose`（トップ・part・score の 3 か所）は `transpose $0`＋`editor.action.triggerSuggest`、`AfterTransposePitch` は空の一覧をやめて c からの目標音 24 個（近い順・上→下・`des`〜`c'`／`b,`〜`c,`・Detail に音程）。`transposition` は新しい `AfterTransposition`（part の中・`tuning` と同じ門）で `LanguageVocabulary.TranspositionMarkers` の 4 つ。**`shift` は同じ空の文脈を共有していた**＝新しい `AfterShiftAmount`（空）に分けた。網＝`CompletionAuditTests` 3 本（全目標を 3 か所でコンパイル・音程の向きと順を `PitchTransposer.TryParseTarget` で検算・Command）＋`Lsp/TransposeCompletionTests`（要求の経路）。既存の `Assert.Empty(GetTransposePitchCompletions())` はこの依頼が変える挙動＝書き換えた。毒（transposition の Values を false）で 1 赤。MANUAL-CHECKS §3.6 C1＝未確認・Deploy-Lsp 済。
-- **ユーザー「AI 候補の After／Before で表示が 1 頁目の先頭に戻る・Ctrl+wheel のズーム・ドラッグでスクロール」（`dcbe9538f`・`aiTransform.ts` の `getCandidateHtml`）**: `show()` が毎回 `scrollToChange` で最初の変更へ飛んでいた（その面に変更が無ければ先頭）＝切り替えはスクロールの値をそのまま持ち越す（両面は同じ頁・同じ倍率）。`nextZoom`（×1.1／段・0.25〜4・1 付近は 1 へ）・`sizeSheets`（倍率 1 は従来の CSS のまま・それ以外は幅合わせ×倍率の px・隠れた面も）・`zoomAbout`（ポインタの下の点を保つ）。ドラッグはプレビューの `installDragScroll` の写し＝`aiCandidatePlay.test.ts` が 2 つの字面の一致を見る。headless Edge の計器 Lab `sessions/p977/aipanel/build.js`（ページは `getCandidateHtml` の本体をソースから取って組む・44 頁の `perf-slurdot1k`）: HEAD は Before で 21952→0・新は保つ・拡大後も保つ・ドラッグ後のクリックは鳴らない。npm test 444・MANUAL-CHECKS §3.6 C2＝未確認・Deploy-Lsp 済。
-- 続き（`d76ca586b`）: ドラッグで字形が選択され紫の四角＝`.main` に `user-select: none`（プレビューの body と同じ）・Replacement text を開くとボタンが押し出され最後まで読めない＝`.snippet` flex-shrink 0・pre に max-height 35vh。CDP の実入力（`aipanel/dragsel.js`）で 選択 2224→0 字・200 行で footer 下端 2580→671/671・ホイールで 200 行目まで。npm test 445・C2 に追記。
-- **OMR が `stage` と白紙頁の下見を直した**（`..\LilySharp-Omr\docs\repro\lilysharp-reply-2026-10-26-progress.md`・まだ 0.4.0 のまま未出荷）: `OmrProto` の Release ビルド（`features` `stages`）で同じ 6 頁を `time-omr.js` で回し `replay.js` で再生＝下見 6 頁が頁ごとに進み全体 67 秒。Lily# 側の変更なし。REQUESTS に確認の 1 行。
-判定（2026-10-26・第977 の終わり）: OMR の open は 0。進捗の残りは OMR の次の版の出荷（`stages` 入り）とユーザーの実機確認（B21）。Claude の手で進む ⒜ は無い＝次はユーザーの指示。
 
 ## 2. 開いている作業
 

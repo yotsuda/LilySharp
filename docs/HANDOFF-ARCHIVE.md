@@ -160,6 +160,20 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第977セッションの経緯
+
+### 1.1 第977セッション（2026-10-26・YT-DELL2）
+
+新しい会話（ユーザー「HANDOFF を読んで作業に着手して」）。`-Start p977`（開始 HEAD `b2d8f8d8a`・full **13300 / 0 / 2 / 13302**・第975 を ARCHIVE へ）。作業場所は Lab `sessions/p977/`。
+- **OMR REQUESTS #7 に答えた（`done`）**: M3 の受け口（門 3＝`omr verify --candidate --bars --no-write` の `event: "bar"`・`readings`）は `dd0cbe66a`＝`v0.14.0` に入っている（`git tag --contains`）・床 `OMR_MIN_VERSION` 0.4.0・門 3 は `differs` false か `confidence` ≥ `VERIFY_SURE` 0.8・lysc も 0.14.0 から VSIX に同梱。採用率はオーナーの実測待ちと書いた（commit は OMR のセッション）。
+- §1.0 ⒜ の残りは全部ユーザー側（実機確認・採用率・デモ動画 16／17 の画面収録＝SHOTLIST の 1〜17 は全部ユーザーが撮る物で、まだ 1 本も無い）。⚠️ 本体の作業ツリーの `samples/*.lys` 5 本の変更（2026-10-14 の時刻・`octave absolute` を外した書き換え）は Claude のものではない＝触っていない。
+- **ユーザー「OMR の処理が遅い。もう少し詳細な進捗を」→ 読みの通知を段・頁・毎秒の時計・残りの目安に（`87a894fbd`）**: 実測（`schirmer-1893.pdf` 6 頁・Scan Import 0.4.0・Lab `sessions/p977/omr-timing.txt`＝node の `time-omr.js` が各行に秒を付ける）で、`start` から最初の `page` まで＝`GuessLayout` の全頁の下見が**イベント無しで 11 分**（並走の omr 込み・単独 202 秒）、読みの本体 44 秒・照合 3 秒。`omrCore.ts` の `ReadProgress`（`page` は頁が*済んだ*合図＝表示は次の頁・stage 無しなら start〜最初の page を下見と読む・棒は下見 0〜40／頁 40〜95）と `clockOf`、`omrImport.ts` は 1 秒ごとに刷り直す、`omrVerify.ts` の保存時の照合もステータスバーで秒を数える。**OMR に `{"event":"stage","stage":"layout"|"read"|"verify"|"write","page"?,"of"?}` を依頼**（`..\LilySharp-Omr\docs\repro\lilysharp-requests-2026-10-26-progress.md`・REQUESTS の将来の依頼に 1 行・Lily# は受け口済み＝入れば下見も頁ごとに進む）。同じ文書で**下見の 202 秒のうち 189 秒が五線の無い 3 頁（表紙 28・白紙 142・最後 19 秒）で検出器を間隔 7 通りで回す枝**（`--parts-only` の単独実測＝`omr-layout-timing.txt`）と伝えた（直し方はそちら）。実ログの再生（`replay.js`）で文言を確かめた。npm test 440・check-types 通過・Deploy-Lsp 済（Reload Window で見られる）・MANUAL-CHECKS §5 B21＝未確認・両 CHANGELOG の Unreleased（拡張側は見出しから立てた）。⚠️ pwsh の中で `Process` の `OutputDataReceived` に scriptblock を付けるとコンソールが落ちる（別スレッドから呼ばれる）＝時刻を付ける計器は node で。
+- **ユーザー「transpose と transposition を補完したら、続けて次の語の補完窓を」（`1f9c7df1a`）**: `transpose`（トップ・part・score の 3 か所）は `transpose $0`＋`editor.action.triggerSuggest`、`AfterTransposePitch` は空の一覧をやめて c からの目標音 24 個（近い順・上→下・`des`〜`c'`／`b,`〜`c,`・Detail に音程）。`transposition` は新しい `AfterTransposition`（part の中・`tuning` と同じ門）で `LanguageVocabulary.TranspositionMarkers` の 4 つ。**`shift` は同じ空の文脈を共有していた**＝新しい `AfterShiftAmount`（空）に分けた。網＝`CompletionAuditTests` 3 本（全目標を 3 か所でコンパイル・音程の向きと順を `PitchTransposer.TryParseTarget` で検算・Command）＋`Lsp/TransposeCompletionTests`（要求の経路）。既存の `Assert.Empty(GetTransposePitchCompletions())` はこの依頼が変える挙動＝書き換えた。毒（transposition の Values を false）で 1 赤。MANUAL-CHECKS §3.6 C1＝未確認・Deploy-Lsp 済。
+- **ユーザー「AI 候補の After／Before で表示が 1 頁目の先頭に戻る・Ctrl+wheel のズーム・ドラッグでスクロール」（`dcbe9538f`・`aiTransform.ts` の `getCandidateHtml`）**: `show()` が毎回 `scrollToChange` で最初の変更へ飛んでいた（その面に変更が無ければ先頭）＝切り替えはスクロールの値をそのまま持ち越す（両面は同じ頁・同じ倍率）。`nextZoom`（×1.1／段・0.25〜4・1 付近は 1 へ）・`sizeSheets`（倍率 1 は従来の CSS のまま・それ以外は幅合わせ×倍率の px・隠れた面も）・`zoomAbout`（ポインタの下の点を保つ）。ドラッグはプレビューの `installDragScroll` の写し＝`aiCandidatePlay.test.ts` が 2 つの字面の一致を見る。headless Edge の計器 Lab `sessions/p977/aipanel/build.js`（ページは `getCandidateHtml` の本体をソースから取って組む・44 頁の `perf-slurdot1k`）: HEAD は Before で 21952→0・新は保つ・拡大後も保つ・ドラッグ後のクリックは鳴らない。npm test 444・MANUAL-CHECKS §3.6 C2＝未確認・Deploy-Lsp 済。
+- 続き（`d76ca586b`）: ドラッグで字形が選択され紫の四角＝`.main` に `user-select: none`（プレビューの body と同じ）・Replacement text を開くとボタンが押し出され最後まで読めない＝`.snippet` flex-shrink 0・pre に max-height 35vh。CDP の実入力（`aipanel/dragsel.js`）で 選択 2224→0 字・200 行で footer 下端 2580→671/671・ホイールで 200 行目まで。npm test 445・C2 に追記。
+- **OMR が `stage` と白紙頁の下見を直した**（`..\LilySharp-Omr\docs\repro\lilysharp-reply-2026-10-26-progress.md`・まだ 0.4.0 のまま未出荷）: `OmrProto` の Release ビルド（`features` `stages`）で同じ 6 頁を `time-omr.js` で回し `replay.js` で再生＝下見 6 頁が頁ごとに進み全体 67 秒。Lily# 側の変更なし。REQUESTS に確認の 1 行。
+判定（2026-10-26・第977 の終わり）: OMR の open は 0。進捗の残りは OMR の次の版の出荷（`stages` 入り）とユーザーの実機確認（B21）。Claude の手で進む ⒜ は無い＝次はユーザーの指示。
+
 ## 以下は第976セッションの経緯
 
 ### 1.1 第976セッション（2026-10-26・YT-DELL2）
