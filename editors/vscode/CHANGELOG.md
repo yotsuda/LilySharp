@@ -4,6 +4,14 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+### Practice
+
+- **A count-in** in the practice menu: one bar of clicks before the music comes in, the first
+  louder, in the meter of the bar where it starts. A pickup sounds over the count's last beats,
+  and Play from Here inside a bar comes in on that beat — "1, 2", and in on 3 — as a player
+  counts in. Every Play counts in — the whole score, the bars selected, the loop's first round —
+  while a tempo change, the loop's next round and a click to seek go on at once.
+
 ### Getting started
 
 - **A new score and lesson 1 introduce the keys from the first line**: the New Score template

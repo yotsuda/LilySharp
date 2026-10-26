@@ -47,11 +47,6 @@ parts already sound; its chord fitting may still be worth sharing.
 **To decide before starting**: where it shows (the preview overlay above, or straight into the
 file), and what it shows (chord names, Roman numerals, or both).
 
-### Count-in (proposed 2026-10-25)
-
-One bar of metronome clicks before the music starts. The practice menu's metronome and the bar
-lines it accents (`MidiFile.BarTicks`) are already there.
-
 ### Page-turn check (proposed 2026-10-25)
 
 Whether each page ends where the player can turn — on a rest, or a held note — and a mark where

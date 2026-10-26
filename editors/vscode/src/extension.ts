@@ -3692,6 +3692,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         <div class="prow"><span class="plbl">Tempo</span><span class="tempo"><input type="range" id="tempoSlider" min="50" max="150" step="5" value="100" aria-label="Tempo"><span id="tempoValue" class="tval">100%</span><button type="button" id="tempoReset" title="Back to the tempo as written (100%)">Reset</button></span></div>
         <div class="prow"><span class="plbl">Loop</span><button type="button" id="loopBtn" class="toggle" aria-pressed="false" title="Play the selected bars, or the whole score, round and round — the score's repeats ignored">Off</button></div>
         <div class="prow"><span class="plbl">Metronome</span><button type="button" id="clickBtn" class="toggle" aria-pressed="false">Off</button></div>
+        <div class="prow"><span class="plbl">Count-in</span><button type="button" id="countInBtn" class="toggle" aria-pressed="false" title="One bar of clicks before the music starts">Off</button></div>
         <div class="prow"><span class="plbl">Parts</span><span id="partsList" class="parts"></span></div>
     </div>
     <div class="main-content">
@@ -5386,9 +5387,10 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         // plays the oscillator patches only if it does not come. The generation makes a
         // Stop or another Play in the meantime cancel the wait.
         let playGeneration = 0;
-        function startPlayback(notes, offset, plainTones, here) {
+        function startPlayback(notes, offset, plainTones, here, countFix) {
             offset = offset || 0;
             stopPlayback();
+            countInFix = countFix || 0;
             if (!notes || notes.length === 0) { return; }
             // Seek = re-schedule from the offset; notes already past it are
             // dropped (mid-note tails too — re-striking half a note reads
@@ -5414,7 +5416,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 sf.whenReady(8000).then(ok => {
                     if (gen !== playGeneration) { return; }
                     if (!ok) { flashInfo('The sound font is not ready: plain tones this time'); }
-                    startPlayback(notes, offset, !ok);
+                    startPlayback(notes, offset, !ok, here, countFix);
                 });
                 return;
             }
@@ -5803,8 +5805,19 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 ? window.LysSynth.playSpanWindow(notes, span ? span[0] : null, span ? span[1] : null, once, bars)
                 : { notes: window.LysSynth.playSpan(notes, span ? span[0] : null, span ? span[1] : null, once), length: 0 };
             loopRound = w.length;
+            spanStart = w.start || 0;
             return w.notes;
         }
+        let spanStart = 0;          // where the stretch spanOf cut starts in the score's time (the count-in's bar)
+        // A count-in before what the user starts (practice.countIn): one bar of clicks, the music
+        // moved after it (LysSynth.countIn). Null when off or there is no bar to count. Only a Play
+        // counts in — a tempo change, the loop's next round and a seek go on at once.
+        function counted(notes, start, origin) {
+            if (!practice.countIn || !rawBeats || !window.LysSynth || !window.LysSynth.countIn) return null;
+            return window.LysSynth.countIn(notes, start, origin,
+                rawBeats.map(b => ({ T: b.T / practice.speed, A: b.A })));
+        }
+        let countInFix = 0;         // the played list's clock minus the score's, while a count-in plays
         // Where a playback that ran to its end goes: round again while looping, else it stops.
         function playEnded() {
             const list = loopOn ? loopList : null;
@@ -5817,7 +5830,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         // controls a practice session wants and the header has no room for — the tempo (a slider,
         // 50–150%), the loop, the metronome, the parts on and off (a toggle each). A change while
         // playing goes on from the same place.
-        const practice = { speed: 1, muted: [], click: false };
+        const practice = { speed: 1, muted: [], click: false, countIn: false };
         let rawNotes = null, rawParts = null, rawBeats = null, rawBarEnd = null;  // the server's last answer, as written
         let lastSpan;               // what plays: undefined the whole score, null/[lo, hi] a playSpan
         let lastOnce = false;
@@ -5830,12 +5843,13 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         const practiceBtn = document.getElementById('practiceBtn');
         const practicePanel = document.getElementById('practicePanel');
         const clickBtn = document.getElementById('clickBtn');
+        const countInBtn = document.getElementById('countInBtn');
         const tempoSlider = document.getElementById('tempoSlider');
         function showPractice() {
             const speedOn = practice.speed !== 1;
             document.getElementById('practiceSpeed').textContent = speedOn ? Math.round(practice.speed * 100) + '%' : '';
             // Pressed in while anything differs from the score as written.
-            practiceBtn.setAttribute('aria-pressed', String(speedOn || practice.click || practice.muted.length > 0 || loopOn));
+            practiceBtn.setAttribute('aria-pressed', String(speedOn || practice.click || practice.countIn || practice.muted.length > 0 || loopOn));
             // The loop lives here too (owner's request 2026-10-25), an On/Off as the metronome's.
             loopBtn.setAttribute('aria-pressed', String(loopOn));
             loopBtn.textContent = loopOn ? 'On' : 'Off';
@@ -5844,12 +5858,14 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             document.getElementById('tempoReset').disabled = !speedOn;
             clickBtn.setAttribute('aria-pressed', String(practice.click));
             clickBtn.textContent = practice.click ? 'On' : 'Off';
+            countInBtn.setAttribute('aria-pressed', String(practice.countIn));
+            countInBtn.textContent = practice.countIn ? 'On' : 'Off';
         }
         function practiceChanged(oldSpeed) {
             showPractice();
             const playing = !document.getElementById('stopBtn').disabled;
             if (!playing || relaying || !rawNotes || !playClock) return;
-            const at = (playOffset + playClock()) * oldSpeed / practice.speed;
+            const at = Math.max(0, playOffset + playClock() - countInFix) * oldSpeed / practice.speed;
             playbackNotes = practiced(rawNotes);
             if (lastSpan === undefined) { startPlayback(playbackNotes, at); return; }
             const list = spanOf(playbackNotes, lastSpan, lastOnce);
@@ -5910,6 +5926,11 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         clickBtn.addEventListener('click', () => {
             practice.click = !practice.click;
             practiceChanged(practice.speed);
+        });
+        // The count-in (owner's choice 2026-10-26): from the next Play on, nothing restarts.
+        countInBtn.addEventListener('click', () => {
+            practice.countIn = !practice.countIn;
+            showPractice();
         });
         showPractice();
 
@@ -6288,7 +6309,10 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                         lastOnce = loopOn;
                         const list = spanOf(playbackNotes, span, loopOn);
                         loopList = loopOn ? list : null;
-                        startPlayback(loopOn ? looped(list) : list, 0);
+                        const toPlay = loopOn ? looped(list) : list;
+                        const c = counted(toPlay, 0, spanStart);
+                        if (c) startPlayback(c.notes, 0, false, false, c.lead);
+                        else startPlayback(toPlay, 0);
                     } else {
                         // The practice menu's tempo, parts and metronome, from the notes as written.
                         rawNotes = message.notes; rawParts = message.parts || null; rawBeats = message.beats || null; rawBarEnd = message.barEnd || null;
@@ -6317,7 +6341,9 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                             if (first !== Infinity) startAt = first;
                         }
                         pendingStartPos = -1;
-                        startPlayback(playbackNotes, startAt);
+                        const c = counted(playbackNotes, startAt, 0);
+                        if (c) startPlayback(c.notes, 0, false, false, c.lead - startAt);
+                        else startPlayback(playbackNotes, startAt);
                     }
                     break;
                 case 'highlightPosition':

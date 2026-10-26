@@ -39,8 +39,8 @@ same number. See the [changelog](https://github.com/yotsuda/LilySharp/blob/maste
   plays its bar.
 - **The practice menu** (the metronome beside ⏹): the **tempo** on a slider, 50–150%; the
   **loop**, round and round the selected bars or the whole score, the score's repeats not
-  taken; the **metronome**, a click on every beat, the bar's first louder; and **each part on
-  or off** — sing yours against the others. A change while playing goes on from the same place.
+  taken; the **metronome**, a click on every beat, the bar's first louder; the **count-in**, one
+  bar of clicks before the music comes in; and **each part on or off** — sing yours against the others. A change while playing goes on from the same place.
 
 (The sound — a SoundFont, or your own MIDI instruments — is under [Sound](#sound) below.)
 

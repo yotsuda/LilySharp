@@ -182,7 +182,7 @@ export function playSpan(notes: readonly PlaybackNote[], lo: number | null, hi: 
  * its last.
  */
 export function playSpanWindow(notes: readonly PlaybackNote[], lo: number | null, hi: number | null, once: boolean,
-    bars?: readonly number[]): { notes: PlaybackNote[]; length: number } {
+    bars?: readonly number[]): { notes: PlaybackNote[]; length: number; start: number } {
     // A printed note is its place, its copy and its pitch: a chord row's chord sounds its members
     // from one place (owner's report 2026-10-25: taken for repeats, its second and third were
     // dropped and every note fell to 0 — the whole piece sounded at once, round after round).
@@ -202,7 +202,7 @@ export function playSpanWindow(notes: readonly PlaybackNote[], lo: number | null
         t0 = Math.min(t0, n.T);
         t1 = Math.max(t1, n.T + n.D);
     }
-    if (t0 === Infinity) { return { notes: [], length: 0 }; }
+    if (t0 === Infinity) { return { notes: [], length: 0, start: 0 }; }
     if (bars && bars.length > 0) {
         let start = -Infinity, end = Infinity;
         for (const b of bars) {
@@ -213,7 +213,7 @@ export function playSpanWindow(notes: readonly PlaybackNote[], lo: number | null
         if (end < Infinity) { t1 = end; }
     }
     const window = sorted.filter(n => n.T >= t0 - 1e-6 && n.T < t1 - 1e-6);
-    if (!once) { return { notes: window.map(n => ({ ...n, T: n.T - t0 })), length: t1 - t0 }; }
+    if (!once) { return { notes: window.map(n => ({ ...n, T: n.T - t0 })), length: t1 - t0, start: t0 }; }
 
     // The repeats' time: the merged spans the dropped notes sound in, less the time a kept note
     // sounds in — only a stretch nothing kept plays through is closed up, so a note taken for a
@@ -253,7 +253,43 @@ export function playSpanWindow(notes: readonly PlaybackNote[], lo: number | null
         notes: window.filter(n => first.has(n) && !(n.S < 0 && inGone(n.T)))
             .map(n => ({ ...n, T: n.T - t0 - cut(n.T) })),
         length: t1 - t0 - cut(t1),
+        start: t0,
     };
+}
+
+/**
+ * A count-in (owner's choice 2026-10-26, ROADMAP "Count-in"): one bar of the metronome's clicks
+ * before `notes` play from `start` — the list's own seconds; `origin` is where the list's 0
+ * stands in the score's time, and `beats` the score's beats in that time (the practice tempo
+ * applied). The bar counted is the one from the first bar line at or after the start (else the
+ * last bar), and the music is moved so that bar line falls where the count ends: a pickup sounds
+ * over the count's last beats, and a start inside a bar comes in on its own beat — "1, 2", and
+ * in on 3 — as a player counts in. `lead` is where the start now stands; null when there is no
+ * bar to count (fewer than two bar lines).
+ */
+export function countIn(notes: readonly PlaybackNote[], start: number, origin: number,
+    beats: readonly PlaybackBeat[]): { notes: PlaybackNote[]; lead: number } | null {
+    const lines = beats.filter(b => b.A).map(b => b.T);
+    if (lines.length < 2) { return null; }
+    const from = origin + start;
+    const at = lines.findIndex(t => t >= from - 1e-6);
+    // The bar counted, and the bar line the music's start is measured to.
+    let barStart: number, barEnd: number, line: number;
+    if (at >= 0 && at + 1 < lines.length) { barStart = lines[at]; barEnd = lines[at + 1]; line = lines[at]; }
+    else if (at >= 1) { barStart = lines[at - 1]; barEnd = lines[at]; line = lines[at]; }
+    else {
+        // after the last bar line: the last whole bar, and the line its length past the last
+        barStart = lines[lines.length - 2]; barEnd = lines[lines.length - 1];
+        line = barEnd + (barEnd - barStart);
+    }
+    const length = barEnd - barStart;
+    const lead = Math.max(0, length - (line - from));
+    const clicks: PlaybackNote[] = beats
+        .filter(b => b.T >= barStart - 1e-6 && b.T < barEnd - 1e-6)
+        .map(b => ({ T: b.T - barStart, D: 0.08, P: b.A ? CLICK_ACCENT : CLICK_BEAT, V: b.A ? 120 : 95,
+            S: -1, O: 0, I: 9, C: DRUM_CHANNEL, G: 0, N: -1 }));
+    const music = notes.filter(n => n.T >= start - 0.001).map(n => ({ ...n, T: n.T - start + lead }));
+    return { notes: [...clicks, ...music].sort((a, b) => a.T - b.T), lead };
 }
 
 /**

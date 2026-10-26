@@ -18,11 +18,63 @@ import { describe, it } from 'node:test';
 import * as assert from 'node:assert/strict';
 import {
     BEND_CENTRE, DRUM_CHANNEL, FAMILY_PROGRAM, Lookahead, PlaybackNote, SoundingCursor,
-    channelOf, channelsOf, endOf, loopNotes, playSpan, playSpanWindow, practiceNotes, programOf, toEvents,
+    CLICK_ACCENT, CLICK_BEAT, channelOf, channelsOf, countIn, endOf, loopNotes, playSpan, playSpanWindow, practiceNotes,
+    programOf, toEvents,
 } from '../src/webview/playbackCore';
 
 const note = (t: number, d: number, p: number, extra: Partial<PlaybackNote> = {}): PlaybackNote =>
     ({ T: t, D: d, P: p, V: 90, S: 10 * t, O: 0, I: 0, C: 0, G: 0, ...extra });
+
+// A count-in (owner's choice 2026-10-26): one bar of clicks, the music moved after it so the
+// bar line falls where the count ends — as a player counts in.
+describe('the count-in', () => {
+    // 4/4 at one second a beat: bar lines at 0, 4, 8, 12.
+    const beats = Array.from({ length: 12 }, (_, i) => ({ T: i, A: i % 4 === 0 }));
+    const tune = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map(t => note(t, 1, 60 + t, { S: 100 + t }));
+    const clicksOf = (ns: PlaybackNote[]) => ns.filter(n => n.S < 0).map(n => [n.T, n.P]);
+    const firstNote = (ns: PlaybackNote[]) => ns.filter(n => n.S >= 0)[0];
+
+    it('counts one bar of the meter, its first beat accented, and starts the music after it', () => {
+        const c = countIn(tune, 0, 0, beats)!;
+        assert.deepEqual(clicksOf(c.notes), [[0, CLICK_ACCENT], [1, CLICK_BEAT], [2, CLICK_BEAT], [3, CLICK_BEAT]]);
+        assert.equal(c.lead, 4);
+        assert.deepEqual([firstNote(c.notes).S, firstNote(c.notes).T], [100, 4]);
+        assert.equal(c.notes.filter(n => n.S >= 0).length, tune.length);
+    });
+
+    it('from inside a bar, counts "1, 2" and comes in on 3', () => {
+        // Play from Here on the note at beat 3 of bar 2 (t = 6): the music enters at 2, under
+        // the count's third click.
+        const c = countIn(tune, 6, 0, beats)!;
+        assert.equal(c.lead, 2);
+        assert.deepEqual([firstNote(c.notes).S, firstNote(c.notes).T], [106, 2]);
+        assert.equal(clicksOf(c.notes).length, 4);
+        assert.ok(c.notes.every(n => n.S < 0 || n.S >= 106), 'nothing before the start plays');
+    });
+
+    it('sounds a pickup over the count\'s last beat', () => {
+        // A one-beat pickup: the first bar line is at 1.
+        const pickup = Array.from({ length: 9 }, (_, i) => ({ T: i, A: i % 4 === 1 }));
+        const c = countIn(tune.slice(0, 9), 0, 0, pickup)!;
+        assert.equal(c.lead, 3);
+        assert.deepEqual(clicksOf(c.notes).map(x => x[0]), [0, 1, 2, 3]);
+        assert.equal(clicksOf(c.notes)[0][1], CLICK_ACCENT);
+    });
+
+    it('counts a stretch from where it stands in the score, in its own meter', () => {
+        // Selected bars that start at 8 (the list's 0): a 3/4 bar there is counted in three.
+        const mixed = [...beats.slice(0, 8), { T: 8, A: true }, { T: 9, A: false }, { T: 10, A: false }, { T: 11, A: true }];
+        const stretch = tune.slice(8).map(n => ({ ...n, T: n.T - 8 }));
+        const c = countIn(stretch, 0, 8, mixed)!;
+        assert.equal(c.lead, 3);
+        assert.deepEqual(clicksOf(c.notes).map(x => x[0]), [0, 1, 2]);
+    });
+
+    it('does nothing where there is no bar to count', () => {
+        assert.equal(countIn(tune, 0, 0, [{ T: 0, A: true }]), null);
+        assert.equal(countIn(tune, 0, 0, []), null);
+    });
+});
 
 // Play of a selected stretch, and the loop that ignores repeats (owner's request 2026-10-25).
 describe('the stretch a Play sounds', () => {

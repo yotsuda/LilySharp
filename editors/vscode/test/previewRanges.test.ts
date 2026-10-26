@@ -57,7 +57,15 @@ describe('the preview\'s Range panel', () => {
         assert.match(html, /const list = spanOf\(playbackNotes, span, loopOn\);/);
         // A loop's rounds laid out ahead, each whole bars long.
         assert.match(html, /window\.LysSynth\.loopNotes\(list, 600, loopRound\)/);
-        assert.match(html, /startPlayback\(loopOn \? looped\(list\) : list, 0\);/);
+        assert.match(html, /const toPlay = loopOn \? looped\(list\) : list;\s*const c = counted\(toPlay, 0, spanStart\);/);
+        assert.match(html, /else startPlayback\(toPlay, 0\);/);
+        // The practice menu's count-in (owner's choice 2026-10-26): a toggle beside the metronome,
+        // and a Play of the whole score or from a note counts in too; a tempo change, the loop's
+        // next round and a seek do not.
+        assert.match(html, /<span class="plbl">Count-in<\/span><button type="button" id="countInBtn" class="toggle" aria-pressed="false"/);
+        assert.match(html, /const c = counted\(playbackNotes, startAt, 0\);\s*if \(c\) startPlayback\(c\.notes, 0, false, false, c\.lead - startAt\);/);
+        assert.match(html, /function playEnded\(\) \{[\s\S]{0,200}?startPlayback\(looped\(list\), 0\);/);
+        assert.match(html, /const at = Math\.max\(0, playOffset \+ playClock\(\) - countInFix\)/);
         assert.match(html, /playEndTimer = setTimeout\(playEnded, /);
         assert.match(html, /function playEnded\(\) \{\s*const list = loopOn \? loopList : null;/);
         assert.match(html, /refreshRanges\(\);\s*vscode\.postMessage\(\{ type: 'requestLength' \}\);/);

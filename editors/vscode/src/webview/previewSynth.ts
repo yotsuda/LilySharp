@@ -28,7 +28,7 @@
 import { WorkletSynthesizer } from 'spessasynth_lib';
 import {
     BEND_CENTRE, DRUM_CHANNEL, Lookahead, MidiEvent, PlaybackNote, SoundingCursor,
-    channelsOf, endOf, loopNotes, playSpan, playSpanWindow, practiceNotes, programOf, toEvents,
+    channelsOf, countIn, endOf, loopNotes, playSpan, playSpanWindow, practiceNotes, programOf, toEvents,
 } from './playbackCore';
 
 export type SynthState = 'loading' | 'ready' | 'failed' | 'none';
@@ -316,6 +316,7 @@ const api = {
     practiceNotes,
     loopNotes,
     playSpanWindow,
+    countIn,
 };
 
 declare global {

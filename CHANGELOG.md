@@ -6,6 +6,11 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+### Practice
+
+- `[editor]` **A count-in in the preview's practice menu**: one bar of clicks before the music,
+  in the meter where it starts (a pickup over the count's last beats).
+
 ### Getting started
 
 - `[editor]` **The New Score template and lesson 1 introduce Ctrl+Space and both pairs of step
