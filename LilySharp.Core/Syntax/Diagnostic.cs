@@ -799,6 +799,14 @@ public static class DiagnosticCodes
     /// Read off the notes the MIDI export plays, so transpositions, repeats and phrases count.</remarks>
     public const string NoteOutsideInstrumentRange = "LYS1052";
 
+    /// <summary>Warning: a <c>chords</c> row entry that is no chord Lily# reads — <c>C7b9</c>,
+    /// <c>C-5</c>, a misspelled quality. The row still prints it as written and plays only its
+    /// root (a root that is no A–G is the parser's error); the message names the spelling's fix, as the
+    /// same symbol in an <c>@chord</c> does (LYS1008).</summary>
+    /// <remarks>Owner's decision 2026-10-26: the row had said nothing, so a slip in a chart's
+    /// spelling sounded as a bare root with no word of it.</remarks>
+    public const string ChordSymbolNotRead = "LYS1053";
+
     /// <summary>Syntax error: a phrase reference needs a <c>$</c> — write <c>$name</c>.</summary>
     public const string BareReferenceRequiresDollar = "LYS1012";
 

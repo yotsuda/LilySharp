@@ -97,6 +97,7 @@ public static class SemanticValidation
         new CondensedStaffChangeValidator(),// a later part's differing key/time/clef on a condensed staff (the first part's stands)
         new ChordRowGridValidator(),        // a chord-row bar off the beat grid / a bar-head '.'
         new ChordDisplayModeValidator(),    // `chords X as WORD` where WORD is not a display
+        new ChordRowSymbolValidator(),      // a chords-row entry that is no chord Lily# reads (C7b9) — printed, its root played
         new ChordDiagramValidator(),        // a chords-row shape that cannot be used (wrong length, unknown tuning, …)
         new ShapeChordValidator(),          // a chord(…) item: its words, no usable shape (a spacer), the shape vs the symbol
         new TabRenderVocabularyValidator(), // `tab [TUNING] X as WORD` — the same clause's other half

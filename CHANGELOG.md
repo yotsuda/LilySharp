@@ -6,6 +6,14 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+### Chord rows
+
+- `[language]` **A chords-row entry that is no chord is warned (LYS1053)**: `C7b9`, `C-5` or a
+  misspelled quality printed as written and played its root alone, with nothing said, where the
+  same symbol in an `@chord` was warned. The row still prints and plays it so; the warning says
+  so and names the fix (`C7(b9)` or `C7-9`, `C(b5)`). None of the 1,014 books of the repository
+  and the corpus has one.
+
 ### The preview
 
 - `[editor]` **The preview's Play from Here is on a bar's right-click too**, playing from its first note.

@@ -2293,6 +2293,10 @@ has a seventh (`C7(9)` = C9, `Cmaj7(9)` = Cmaj9) and an added tone otherwise (`C
 `C6(9)` = C69). A `b`/`#` glued after a letter or digit inside the quality stays refused
 (`C7b9`, `Cm7b5`): write `C7(b9)` or `C7-9`.
 
+A symbol that is no chord — refused, or a quality Lily# does not know — is warned wherever it
+is written, with the fix: in an `@chord` it names nothing and is ignored (LYS1008); in a
+`chords` row it prints as written and plays only its root (LYS1053).
+
 A slash bass that is a chord tone is an inversion — the tone sounds once, below (`C/E` plays
 E3 G3 C4 in the MIDI and the hover) — and one outside the chord is an added note under the
 whole chord (`C/D`). The `.ly` twin writes LilyPond's `/` and `/+` accordingly; MusicXML

@@ -1421,7 +1421,10 @@ SpelledQuality = (* THE PRINTED SPELLINGS (owner's decisions 2026-10-23, HANDOFF
                     is ONE WORD of the symbol, in a chords row (C7(b9, #11)/E, then the shapes in
                     a SECOND group: C7(b9)(x32310)) and in '@chord(…)' / 'chord(…)' alike; a
                     row tells the list from a shape group by its words (a shape is x/o/digits
-                    four or more long or dashed, a tuning a name). *)
+                    four or more long or dashed, a tuning a name). A symbol that is no chord is
+                    warned with its fix: an '@chord' names nothing (LYS1008); a chords row prints
+                    it as written and plays its root alone (LYS1053, owner's decision 2026-10-26 —
+                    the row had said nothing). *)
                  (* RegisteredQuality: m min dim aug + 7 maj7 maj m7 min7 mmaj7 dim7
                     m7-5 6 m6 9 maj9 m9 sus2 sus4 sus 7sus4 7-5 7+5 7-9 7+9 7+11
                     add9 11 13 m11 m13 maj13 (and min6 min9 min11 min13). *)
