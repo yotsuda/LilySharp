@@ -145,7 +145,7 @@ score { staff m }
 3. `Ctrl+Shift+Down` で `x35343` まで戻し、もう 1 回: 形が消え、ダイアグラムも消える。
 4. 任意: `F7` にマウスを乗せる — *Ctrl+Shift+↑ adds a chord diagram (guitar: …)*。
 
-### 9. `ai-transform` — Transform Selection with AI
+### 9. `ai-transform` — Ask AI（旧 Transform Selection with AI。ファイル名はそのまま）
 VS Code で GitHub Copilot（または別のモデル提供元）にサインインしている必要がある。
 ```
 part m { clef treble }
@@ -154,7 +154,7 @@ form { ~A }
 score { staff m }
 ```
 1. 1〜2 小節目を選択。`Ctrl+I`、*add a harmony line a third below* と打って Enter。
-2. 元の楽譜の横に彫られた候補が出るのを待つ。After/Before を 1 回切り替える。
+2. 元の楽譜の横に彫られた候補が出るのを待つ（変えた音符が緑、依頼の下に 💬 の一言）。After/Before を 1 回切り替える。
 3. Accept — ファイルが変わる。`Ctrl+Z` 1 回で戻る（任意）。
 待ち時間が長ければ切る。
 
