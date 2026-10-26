@@ -160,6 +160,15 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第976セッションの経緯
+
+### 1.1 第976セッション（2026-10-26・YT-DELL2）
+
+新しい会話（ユーザー「HANDOFF を読んで作業に着手して」）。`-Start p976`（開始 HEAD `ee3c10377`・full **13298 / 0 / 2 / 13300**・第974 を ARCHIVE へ）。作業場所は Lab `sessions/p976/`。
+- **OMR REQUESTS #8 を閉じた（`c35d7e136`）**: `repeat tremolo 3 { g''16 b'16~ } <b' g''>4` の `~` が本体の 3 つ目の項目に数えられ（本体の最後に書いた印は次の項目＝`FoldMarker` の型）、2 音のトレモロの判定（`bodyNodes.Count == 2`）を外れて 16 分 6 つに展開・最初の b' が次の回の g'' へタイ（LYS4007）。`ProcessRepeatExpression` が `TieSyntax`／`SlurSyntax` を除いた音符だけで形を決める（1 音のトレモロも同じ）。網 `ChordTremoloPairTests.Pair_WithAMarkerOnItsNotes_StaysAPair`（`~` と `( )` の 2 例・毒で 2 赤）。全木の svg（`sessions/p976/svg`・1014 冊 1241 枚・base は HEAD の bin を `exe-base` へ）＝動いた 0・陽性対照は再現譜（base は LYS4007 と別の svg）。MusicXML と MIDI はもとから本体を展開して鳴らす＝不変。CHANGELOG に `## Unreleased` を立てて 1 項。REQUESTS の行は `fixed` に書き換えた（commit は OMR のセッション）。
+- `-End p976 -DiffBase ee3c10377`＝full **13300 / 0 / 2 / 13302**・門 7 つ OK・Core '+' 15 行 → この docs commit。本体 `c35d7e136`。未 push 3＋1（push はユーザー）。
+判定（2026-10-26・第976 の終わり）: OMR の open は #7（確認だけ＝Lily# の M3 の受け口の版を教える＝0.14.0 に入っている）を残して 0。次は §1.0 の ⒜（ユーザーの実機確認待ちが大半）。
+
 ## 以下は第975セッションの経緯
 
 ### 1.1 第975セッション（2026-10-24・YT-DELL2）

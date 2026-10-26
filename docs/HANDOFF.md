@@ -127,6 +127,14 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第978セッション（2026-10-26・YT-DELL2）
+
+第977 と同じ会話の続き（§1 の残りが 2,400 字＝`-Start p978`・開始 HEAD `8d1ee9f29`・full **13311 / 0 / 2 / 13313**・第976 を ARCHIVE へ）。作業場所は Lab `sessions/p978/`（AI パネルの計器は `p977/aipanel` のまま）。
+- **ユーザー「AI の Replacement text は差分だけ＝全文の方が分かりやすい・開いたら最初の diff へ・キャプションも直して」（`78f018d3b`）**: `wholeTextMarkup`（`aiTransformCore.ts`・`diffMarkup` をファイル全体に）を `reviewOnScore` へ・見出しは **Text after Accept**（title に緑／赤の意味）・`jumpToFirstChange`（details の toggle で pre の scrollTop を最初の ins／del が中央に・pre は position:relative）。npm test 447。headless Edge で 200 行の 150 行目の変更が 263px の欄の 125px に開く。MANUAL-CHECKS の 2 か所の名前を直した。⚠️ `aiTransformCore.ts` とその test は Edit の後に作業ツリーが LF になっていた＝CRLF に戻した。
+判定（2026-10-26・第978 の終わり）: 次はユーザーの指示。AI パネルの実機確認は MANUAL-CHECKS §3.6 C2。
+
+## 以下は第977セッションの経緯
+
 ### 1.1 第977セッション（2026-10-26・YT-DELL2）
 
 新しい会話（ユーザー「HANDOFF を読んで作業に着手して」）。`-Start p977`（開始 HEAD `b2d8f8d8a`・full **13300 / 0 / 2 / 13302**・第975 を ARCHIVE へ）。作業場所は Lab `sessions/p977/`。
@@ -138,15 +146,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - 続き（`d76ca586b`）: ドラッグで字形が選択され紫の四角＝`.main` に `user-select: none`（プレビューの body と同じ）・Replacement text を開くとボタンが押し出され最後まで読めない＝`.snippet` flex-shrink 0・pre に max-height 35vh。CDP の実入力（`aipanel/dragsel.js`）で 選択 2224→0 字・200 行で footer 下端 2580→671/671・ホイールで 200 行目まで。npm test 445・C2 に追記。
 - **OMR が `stage` と白紙頁の下見を直した**（`..\LilySharp-Omr\docs\repro\lilysharp-reply-2026-10-26-progress.md`・まだ 0.4.0 のまま未出荷）: `OmrProto` の Release ビルド（`features` `stages`）で同じ 6 頁を `time-omr.js` で回し `replay.js` で再生＝下見 6 頁が頁ごとに進み全体 67 秒。Lily# 側の変更なし。REQUESTS に確認の 1 行。
 判定（2026-10-26・第977 の終わり）: OMR の open は 0。進捗の残りは OMR の次の版の出荷（`stages` 入り）とユーザーの実機確認（B21）。Claude の手で進む ⒜ は無い＝次はユーザーの指示。
-
-## 以下は第976セッションの経緯
-
-### 1.1 第976セッション（2026-10-26・YT-DELL2）
-
-新しい会話（ユーザー「HANDOFF を読んで作業に着手して」）。`-Start p976`（開始 HEAD `ee3c10377`・full **13298 / 0 / 2 / 13300**・第974 を ARCHIVE へ）。作業場所は Lab `sessions/p976/`。
-- **OMR REQUESTS #8 を閉じた（`c35d7e136`）**: `repeat tremolo 3 { g''16 b'16~ } <b' g''>4` の `~` が本体の 3 つ目の項目に数えられ（本体の最後に書いた印は次の項目＝`FoldMarker` の型）、2 音のトレモロの判定（`bodyNodes.Count == 2`）を外れて 16 分 6 つに展開・最初の b' が次の回の g'' へタイ（LYS4007）。`ProcessRepeatExpression` が `TieSyntax`／`SlurSyntax` を除いた音符だけで形を決める（1 音のトレモロも同じ）。網 `ChordTremoloPairTests.Pair_WithAMarkerOnItsNotes_StaysAPair`（`~` と `( )` の 2 例・毒で 2 赤）。全木の svg（`sessions/p976/svg`・1014 冊 1241 枚・base は HEAD の bin を `exe-base` へ）＝動いた 0・陽性対照は再現譜（base は LYS4007 と別の svg）。MusicXML と MIDI はもとから本体を展開して鳴らす＝不変。CHANGELOG に `## Unreleased` を立てて 1 項。REQUESTS の行は `fixed` に書き換えた（commit は OMR のセッション）。
-- `-End p976 -DiffBase ee3c10377`＝full **13300 / 0 / 2 / 13302**・門 7 つ OK・Core '+' 15 行 → この docs commit。本体 `c35d7e136`。未 push 3＋1（push はユーザー）。
-判定（2026-10-26・第976 の終わり）: OMR の open は #7（確認だけ＝Lily# の M3 の受け口の版を教える＝0.14.0 に入っている）を残して 0。次は §1.0 の ⒜（ユーザーの実機確認待ちが大半）。
 
 ## 2. 開いている作業
 
