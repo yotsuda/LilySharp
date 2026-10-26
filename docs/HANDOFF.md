@@ -127,6 +127,15 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第981セッション（2026-10-26・YT-DELL2）
+
+第980 と同じ会話の続き（ユーザー「続けて」＝和声の分析の段 1）。`-Start p981`（開始 HEAD `7cdd4f93a`・full **13322 / 0 / 2 / 13324**・第979 を ARCHIVE へ）。作業場所は Lab `sessions/p981/`。
+- **和声の分析 段 1＝Core の読み取り＋一致率**: `LilySharp.Core.Harmony.HarmonyReader`（`NotesOf`＝打楽器と chords の行を除いた鳴る音・`Read`＝拍ごとに 12 根音 × `ChordQualityRegistry` の型で点を付け、変わり目に罰の動的計画法で区切る・最低音で転回形・小節まるごとの無音は和音なし・1 声だけの区間に `Monophonic`）。拍はメトロノームと同じ＝言語サーバーの `MetronomeBeats` を **Core の `LilySharp.Core.Midi.MetronomeBeats.Of` へ移した**（言語サーバーは呼ぶだけ）。網 `HarmonyReaderTests` 8 本。
+- **一致率**（譜と chords の行の両方がある 32 冊・834 拍）: 2 声以上の拍（209）で**根音 78.5%・種類まで 75.6%**／全拍は根音 55.5%（1 声の拍＝段 2 の「メロディから考える」側）。⚠️ 正解の集合が小さい（和音記号付き MusicXML は手元に 0）＝係数はこれ以上合わせない。最低音＝根音の加点を 0.2→0.35 にした（`C E G`＋旋律の `A` を `Am7/C` と読まないため。全拍の根音は 63.4→55.5% に下がる＝ベース 1 本の本で根音を最低音に寄せすぎない側が当たっていた・2 声以上はほぼ同じ）。結果と係数は `docs/harmony-analysis-design.md`「段 1 の結果」、計器は Lab `sessions/p981/ZzP981HarmonyAgreement.cs.txt`。
+判定（2026-10-26・第981 の終わり）: 次は段 2（Add Chord Track を新しい読み取りに載せ替え・選んでいる score のパートだけ・「メロディだけから」の選択肢）。
+
+## 以下は第980セッションの経緯
+
 ### 1.1 第980セッション（2026-10-26・YT-DELL2）
 
 第979 と同じ会話の続き（ユーザー「続けて」＝残りのレッスンの監査）。`-Start p980`（開始 HEAD `d277f3b1a`・full 緑・第978 を ARCHIVE へ）。作業場所は Lab `sessions/p980/`。
@@ -134,18 +143,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **ユーザー「続けて」→ ROADMAP から選んでもらう→「カウントイン（推奨）」→ 実装（`f4d61d1dd`）**: `playbackCore.countIn`（再生開始位置の次の小節線から 1 小節＝その拍子・頭は強い木の音・音楽はその小節線がカウントの終わりに来るよう移す＝弱起は最後の拍の上・小節の途中は「1、2」で 3 拍目から）・練習メニューに Count-in の On/Off・▶／Play from Here／選んだ小節／ループの 1 周目だけ（テンポ変更・2 周目以降・シークは無し）・`startPlayback` の 5 番目の引数でずれ（`countInFix`）を運び、再生中のテンポ変更で位置を保つ・`playSpanWindow` に `start`。網 `playbackCore.test` 5 本＋`previewRanges.test` の配線。npm test 455。ROADMAP から外し、site・README・両 CHANGELOG・MANUAL-CHECKS C5（未確認）。Deploy-Lsp 済。
 - **ユーザー「和音の分析を実装前に説明して」→ 計画を説明 → 決定**: ①Add Chord Track に**統合**（ユーザー「機能が被る・統合した方が分かりやすい」＝読む／メロディから考えるを 1 つに・「メロディだけから」は選択肢）②和音名と度数の両方 ③拍まで・変わり目に罰の自動区切り ④重ね表示は作らない ⑤**読むのはプレビューで選んでいる score のパートだけ**（ユーザー「見るべきパートを変えてコードを追加できる」・chords 行もその score に載せる）。設計 `docs/harmony-analysis-design.md`（段 1＝Core の読み取り＋譜と chords 行の両方がある本で一致率／段 2＝Add Chord Track の載せ替え／段 3＝文書）。ROADMAP に決定を追記。
 判定（2026-10-26・第980 の終わり）: 次は和声の分析の段 1（Core の読み取り＋一致率の計測）＝`docs/harmony-analysis-design.md`。新しい便（-Start p981）で着手。
-
-## 以下は第979セッションの経緯
-
-### 1.1 第979セッション（2026-10-26・YT-DELL2）
-
-第978 と同じ会話の続き（ユーザー「続けて」＝サイトの手入れの続き）。`-Start p979`（開始 HEAD `f1c8c865e`・full **13311 / 0 / 2 / 13313**・第977 を ARCHIVE へ）。作業場所は Lab `sessions/p979/`。
-- **0.14.0 の言語の追加をサイトへ（`e1c687551`）**: manual に「装飾音は普通の音符」（タイ・記号・`@chord`・spans）と「preset の 3 つの警告」（LYS1052・1050・1051）、chords に印刷どおりの和音の綴り（`CΔ7`・`Cø7`・`C°7`・`C-7`・`B♭7`）と括弧の変化音、トップの「覚える規則」に括弧、lysc の一覧に `lysc wav`。例は全部 lysc に通した。site 再ビルド通過。
-- ⚠️ **見つけた製品の穴（未着手・ユーザーに報告）**: chords の行の読めない和音（`C7b9`・`C-5`・`Cxyz`）を `lysc check` が何も言わない（`@chord(C7b9)` は「names nothing and is ignored」の警告・`ChordStructure.TryParseChordEntry` は拒む）。計器 Lab `sessions/p979/row-*.lys`。
-- **ユーザー「続けて」→ 上の穴をどうするか訊いた → 「警告を出す（推奨）」→ LYS1053（`57d35ab3a`）**: `ChordRowSymbolValidator`＝`TryParseChordEntry` が拒みローマ数字でもない `ChordEntrySyntax` に「印刷はそのまま・根音だけ鳴る」と直し方（パーサの拒否理由／変化音の規則＋`7-9` の候補／知らない種類）。印刷と再生は不変。根音が A–G でない項目はもともとパーサのエラー。網 `ChordRowSymbolTests` 8 本・毒（登録を外す）で 3 赤。リポジトリ＋コーパス 1014 冊で新しい警告 0 件。GRAMMAR・SYNTAX_REFERENCE・CHANGELOG・site chords に 1 文。⚠️ 毒の `dotnet test` は `LilySharp.Cli\bin\Debug` の Core.dll も毒入りにする＝戻した後は Cli を作り直してから lysc を使う（陽性対照で気づいた）。
-- 続き（「続けて」）: `docs/ai-collab-guide.ja.md`（利用者向けの日本語の手引き）が旧 Transform Selection・浮かぶ ✨ ボタンのまま＋自己矛盾（冒頭「自分の API キー」／後半「無い」、「AI 設定は 1 つ」の上に 3 行の表）→ Ask AI に書き直し（入口・ヒント・edits と絶対オクターブ・候補パネル・小節選択・モデル設定・Fix OMR）。SHOTLIST 9 を Ask AI に。設計の文書（ai-collab-design.md 等）は経緯として触らない。
-- **ユーザー「新規作成の lesson テンプレートを監査・最初の段階で Ctrl+Space と Ctrl+Shift+Up/PgUp を紹介」（`9c9095953`）**: 監査＝テンプレート 1 行目に Ctrl+Space が無い（「pick lesson-01」の手段が無い）・2 行目は step keys の名だけ／レッスン 1 は Ctrl+Space は冒頭にあるが step keys の初出は STEP 4（強弱の上）・PageUp/PageDown はレッスン 2 まで出ない。→ テンプレート 2 行を書き直し（Ctrl+Space とレッスンの始め方・各キーの効き目・20 行の上限内）、レッスン 1 の冒頭に 3 つのキーの表、STEP 3（最初の音）で両方を試す（G major で e→fis→e・PageUp で e'＝後ろも続く）、印のメモ「STEP 3: Ctrl+Shift+Up, PgUp」（png で収まりを確認）。網＝LessonTests 2 本＋NewScoreTemplateTests 1 本。site の Learn に Stepping へのリンク。Deploy-Lsp 済。
-判定（2026-10-26・第979 の終わり）: 次はユーザーの指示。
 
 ## 2. 開いている作業
 
