@@ -404,6 +404,12 @@ repeat tremolo 8 { c16 e } |      // N x the pair: 8 x two 16ths fills a 4/4 bar
   the editor a space after a mark types the <code>| </code>). <code>repeat</code> is only for
   <code>tremolo</code>. Neither is how a repeat sign is written; see
   <a href="#forms">Forms</a>.</p>
+  <p><b>A grace note is a note like the others.</b> It ties into its main note
+  (<code>grace { g'16~ } g'4</code>), takes the marks a note takes — a staccato or an accent,
+  a fingering, a dynamic, a chord symbol (<code>grace { d''8@chord(D) } e''4</code>), figured
+  bass, a chord diagram, a <code>@todo</code> — drawn at the grace notes' size where LilyPond
+  draws them small, and a slur, hairpin, pedal, trill line, ottava or glissando can start or
+  end on one.</p>
   <h3>Cue notes</h3>
   <p>A cue is a <b>region</b>, not an annotation, so there is no <code>@cue</code>:</p>
 <pre>c4 cue { e4 f } g4 |            // small notes, a voice of their own
@@ -667,6 +673,17 @@ part v1 { clef treble instrument "1st Violin" } // label only — no preset beha
   (“Clarinet” is the B♭ one); the others name their key (“Clarinet in A”). A label you
   write yourself — <code>instrument bass "Bass"</code>, <code>part bs "Bass"</code>,
   <code>staff bs "Bass"</code> — prints wherever the staff stands.</p>
+  <p><b>A preset also checks the part</b>, with a warning that names the fix:</p>
+  <ul>
+    <li>a note the instrument cannot sound, by the pitch it sounds — a flute's B3, below the
+    flute's C4 (LYS1052); a B♭ clarinet's written E3 sounds D3, its lowest note, and passes;</li>
+    <li>an <code>octave</code> that lowers a transposing preset twice —
+    <code>instrument bass octave 2</code> writes a bare <code>c</code> as C2, which the bass
+    plays an octave lower still, C1 (LYS1050): the octave is the written register;</li>
+    <li>a <code>tuning</code> of another instrument's strings —
+    <code>instrument ukulele tuning guitar</code> (LYS1051); a tuning of the same family
+    (<code>instrument guitar tuning guitarDropD</code>) is fine.</li>
+  </ul>
 
   <h3 id="transposing">Transposing instruments</h3>
   <p><b>Write what the player reads, and the preset makes it sound right.</b> Naming a

@@ -642,6 +642,7 @@ lysc svg --todo lesson.lys        // with the @todo rings and memos
 lysc svg --set music=Bravura song.lys   // another music font, over the file's
 lysc check --todo-as-error song.lys     // fail while a @todo is left (--no-todo: say nothing)
 lysc pdf | png | midi | xml | ly | vsqx song.lys
+lysc wav --soundfont GeneralUser.sf2 song.lys   // the MIDI, played through an .sf2, as song.wav
 lysc import score.musicxml  // MusicXML to .lys
 lysc octave --absolute song.lys   // rewrite into absolute (or --relative) octaves
 lysc harmonize song.lys     // suggest a diatonic chord track for the melody

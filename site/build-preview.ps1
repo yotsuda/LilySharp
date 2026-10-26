@@ -271,8 +271,10 @@ $template = @'
     <div class="paper"><img src="sketch-in-c.svg" alt="Jazz chord chart"></div>
     <p class="note"><b>You type the symbol, not an entry language.</b>
     <code>Cmaj7</code>, not LilyPond's <code>c:maj7</code>; <code>Bb7/D</code>, not
-    <code>bes:7/d</code>. One rule to know: an altered tension takes <code>+</code> or
-    <code>-</code> — <code>F#m7-5</code>, <code>B7-9</code>, <code>A7+5</code> — because
+    <code>bes:7/d</code>, and a chart's own spellings (<code>CΔ7</code>, <code>Bø7</code>) read
+    too. One rule to know: an altered tension takes <code>+</code> or
+    <code>-</code> — <code>F#m7-5</code>, <code>B7-9</code>, <code>A7+5</code> — or goes in
+    parentheses (<code>C7(b9, #11)</code>), because
     <code>#</code> and <code>b</code> belong to the root, which is what keeps
     <code>Bb9</code> unambiguous.
     <b>Only the hits that matter get written.</b> A bar with nothing to say is just
