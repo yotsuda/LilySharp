@@ -6,6 +6,12 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+### Ask AI
+
+- `[editor]` **The AI candidate's Accept / Ask Again / Reject come back after a failure** (the
+  language server restarting mid-request left them greyed out): the panel returns to the
+  candidate shown, the reason under its buttons.
+
 ### Chords
 
 - `[editor]` **Add Chord Track reads the chords the parts play**: the notes of the score the

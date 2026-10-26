@@ -4,6 +4,14 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+### Ask AI
+
+- **The candidate's buttons come back after a failure.** When the language server restarted while
+  a candidate was being asked about again, or while Accept wrote it, the panel was left with
+  Accept, Ask Again and Reject greyed out. Now an Ask Again that fails, finds no valid candidate
+  or is cancelled returns to the candidate shown, its buttons armed and the reason under them;
+  an Accept that could not reach the server says nothing was written, and Accept tries again.
+
 ### Chords
 
 - **Add Chord Track… reads the chords the parts play.** It reads the score the preview shows —

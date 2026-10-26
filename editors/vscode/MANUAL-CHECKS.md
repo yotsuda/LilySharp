@@ -225,6 +225,7 @@ edocs/HANDOFF.mde §2 R13 ⒝・OMR の提案 B1〜B6（e..\LilySharp-Omr\docs\r
 - [ ] **C4**（第978・小節の Play from Here・⚠️ package.json が変わった＝Reload Window を 2 回）: プレビューで小節の音符の無い所（音符の間・休符の横）を右クリック → **Play from Here** が出る → その小節の頭から鳴る（頭が休符なら次に鳴る音から）。音符の上では従来どおりその音符から。楽譜の外（余白・題名）では出ない。再生中の右クリックの Stop Playback も従来どおり。
 - [ ] **C5**（第980・カウントイン）: プレビューの練習メニュー（⏹ の横のメトロノーム）→ **Count-in** を On（練習ボタンが押し込まれる）→ ▶ → 木の音が 1 小節（頭が強い）鳴ってから曲が始まる。弱起の曲では最後のカウントの上で弱起が鳴る。小節の途中の音符で Play from Here → 「1、2」と鳴ってその拍から入る。小節を選んで ▶・ループ On でも 1 周目の前だけカウント。再生中にテンポを動かしても数え直さず、同じ所から続く。MIDI 出力でも同じ。Off で従来どおり。
 - [ ] **C6**（第982・Add Chord Track…・⚠️ package.json が変わった＝Reload Window を 2 回）: ピアノの曲（例 samples/nocturne.lys）を開き、プレビューの Score メニューで score を選ぶ → コマンドパレット **Lily#: Add Chord Track…** → メニューは 1 つだけ（題にその score 名・Plain／Standard／Rich の順・初回は Standard、次からは前回の選択にカーソル・第986）→ 選んだ score のいちばん上の譜表の上に `chords harmony` が譜表の前の独立した行で入り、拍の変わり目に和音が並ぶ。メロディの譜表だけの score を選んで もう一度 → `harmony2` が別にでき、その score にだけ載る（メロディから付けた和音）。Rose Garden-3 なら Standard で `Dm | G7 | C`、Rich で `Dm7 | G7 | C`、Plain で `Dm | G | C`。Ctrl+Z で 1 回で戻る。
+- [ ] **C7**（第987・AI 候補のボタンが戻る）: Ctrl+I で AI に頼み、候補パネルが出たら Ask Again で別の頼みを送り、AI が考えている間に言語サーバーを止める（タスクマネージャで lilysharp-lsp の dotnet を終了＝VS Code が自動で立て直す）→ パネルは前の候補に戻り、足元に「Asking again failed (…) — this candidate is as it was.」、3 つのボタンが押せる。Accept → 書き込まれる。同じく Accept を押した瞬間にサーバーを止める → 「Not written (…) — Accept to try again.」が出てボタンが戻り、もう一度 Accept で書ける。
 
 ## 4. §2 R13 ⒝ — 差分頁の配信（実機未確認・第404）
 

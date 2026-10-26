@@ -302,12 +302,10 @@ function octaveLines(text: string): number {
  * file then says `octave absolute`.
  */
 async function fromAbsoluteOctaves(deps: AiTransformDeps, client: LanguageClient, full: string, original: string): Promise<string | undefined> {
-    let resp: AiOctavesResponse | undefined;
-    try {
-        resp = await client.sendRequest<AiOctavesResponse>('lilysharp/aiOctaves', { Text: full, ToAbsolute: false, Original: original });
-    } catch (err: any) {
-        resp = { NewText: null, Changes: [], Error: String(err?.message ?? err) };
-    }
+    // A request that fails — the server restarting — throws to Accept, which says nothing was
+    // written and waits to be pressed again; the absolute-octaves fallback below is for a
+    // candidate the server read and could not bring back.
+    const resp = await client.sendRequest<AiOctavesResponse>('lilysharp/aiOctaves', { Text: full, ToAbsolute: false, Original: original });
     if (resp.NewText != null) {
         return resp.NewText;
     }
@@ -392,190 +390,218 @@ async function drive(
     };
     let prepared: Awaited<ReturnType<typeof prepare>> | undefined;
 
+    // The candidate the panel shows, and where the conversation stood before it was asked about
+    // again: a round that brings no new candidate — it failed, found none valid, or was cancelled
+    // — goes back to it, its buttons armed again (owner's report 2026-10-26: the language server
+    // restarted during Ask Again and the panel was left with every button greyed out).
+    let shownRound: ReviewRound | undefined;
+    let askedFrom = 0;
     let iterate = true;
     while (iterate) {
         // One round — prepare (the first), generate, validate, render — under its notification;
         // null when cancelled or failed (a failure has said so itself).
-        const round = await working(title, async (progress, token) => {
-            const asked = instruction.length > 60 ? `${instruction.slice(0, 59)}…` : instruction;
-            // The step first, the request last: a notification has no line breaks (VS Code makes
-            // them spaces), and a long request wraps after the step instead of burying it.
-            const step = (s: string) => progress.report({ message: `${s}… — “${asked}”` });
-            prepared ??= await prepare(step, token);
-            if (token.isCancellationRequested) return null;
-            const { facts, baselineErrors, baselineWarnings, messages } = prepared;
-
-            // ----- Generate + validate-and-self-repair (§4 AwaitingModel → Validating → Repairing) -----
-            let candidate: CandidateEdit | null = null;
-            let repairs = 0;
-            // A candidate that compiles but adds WARNINGS (a bar that no longer fills its meter
-            // is a warning in Lily#, not an error) is repaired like a broken one; if the repairs
-            // run out, the best such candidate is still shown, with its warnings named, rather
-            // than nothing — it is valid Lily#, and the user can see on the score whether it is
-            // what they asked for.
-            let warned: { edit: CandidateEdit; warnings: CandidateDiagnostic[] } | null = null;
-            let unchanged = false;
-            let octaveAsked: string | null = null;
-            let octaveNote: ResolvedPitchFact[] | null = null;
-            for (let attempt = 0; attempt <= MAX_REPAIR_ATTEMPTS; attempt++) {
+        let failure: string | undefined;
+        let round: ReviewRound | null;
+        try {
+            round = await working(title, async (progress, token) => {
+                const asked = instruction.length > 60 ? `${instruction.slice(0, 59)}…` : instruction;
+                // The step first, the request last: a notification has no line breaks (VS Code makes
+                // them spaces), and a long request wraps after the step instead of burying it.
+                const step = (s: string) => progress.report({ message: `${s}… — “${asked}”` });
+                prepared ??= await prepare(step, token);
                 if (token.isCancellationRequested) return null;
-                step(attempt === 0 ? 'generating' : `repairing (${attempt}/${MAX_REPAIR_ATTEMPTS})`);
+                const { facts, baselineErrors, baselineWarnings, messages } = prepared;
 
-                const raw = await chat.send(messages, token);
-                const edit = toCandidateEdit(work, raw);
-                if (edit === null) {
-                    messages.push({ role: 'assistant', content: raw });
-                    messages.push({ role: 'user', content: `Your reply was empty. ${replyForm(whole)} — no commentary, no code fences.` });
-                    continue;
-                }
-                if (isProblem(edit)) {
-                    deps.log(`AI transform: edits not applied — ${edit.problem}`);
-                    messages.push({ role: 'assistant', content: raw });
-                    messages.push({ role: 'user', content: `${edit.problem}\nReply again, all edits — same output rules.` });
-                    continue;
-                }
-                // A reply that changes nothing is not a transform. The owner accepted one such
-                // candidate, the section exactly as it was, because nothing said it was
-                // unchanged (2026-09-26) — the model had been asked for a new part it could not
-                // write inside the selection.
-                if (edit.text === edit.snap.origSelectedText) {
-                    unchanged = true;
-                    messages.push({ role: 'assistant', content: raw });
-                    messages.push({ role: 'user', content:
-                        'That reply is identical to the file as it stands — it changes nothing. Carry out the '
-                        + 'instruction. If it needs changes outside the selection (a new part, a score row, a new '
-                        + 'declaration), reply with <edit> blocks.' });
-                    continue;
-                }
-                // The way back to relative octaves gives each of the file's `octave` lines its own
-                // word again, so they must all still be there; without them every pitch would be
-                // read relative, and land elsewhere.
-                if (ai.converted && octaveLines(spliceCandidate(edit.snap, edit.text)) !== octaveLines(work.origFullText)) {
-                    messages.push({ role: 'assistant', content: raw });
-                    messages.push({ role: 'user', content:
-                        'Your change added or removed an `octave absolute` line. Keep the file\'s `octave` lines exactly '
-                        + 'as they are — reply again, same output rules.' });
-                    continue;
-                }
-                unchanged = false;
+                // ----- Generate + validate-and-self-repair (§4 AwaitingModel → Validating → Repairing) -----
+                let candidate: CandidateEdit | null = null;
+                let repairs = 0;
+                // A candidate that compiles but adds WARNINGS (a bar that no longer fills its meter
+                // is a warning in Lily#, not an error) is repaired like a broken one; if the repairs
+                // run out, the best such candidate is still shown, with its warnings named, rather
+                // than nothing — it is valid Lily#, and the user can see on the score whether it is
+                // what they asked for.
+                let warned: { edit: CandidateEdit; warnings: CandidateDiagnostic[] } | null = null;
+                let unchanged = false;
+                let octaveAsked: string | null = null;
+                let octaveNote: ResolvedPitchFact[] | null = null;
+                for (let attempt = 0; attempt <= MAX_REPAIR_ATTEMPTS; attempt++) {
+                    if (token.isCancellationRequested) return null;
+                    step(attempt === 0 ? 'generating' : `repairing (${attempt}/${MAX_REPAIR_ATTEMPTS})`);
 
-                step('validating the candidate');
-                const reconstructed = spliceCandidate(edit.snap, edit.text);
-                const check = await client.sendRequest<CheckCandidateResponse>('lilysharp/checkCandidate', { Text: reconstructed });
-                const badness = candidateBadness(check, edit.spans, baselineErrors);
-                const newWarnings = badness.length === 0
-                    ? addedWarnings(check, edit.spans, baselineWarnings)
-                    : [];
-
-                if (badness.length === 0 && newWarnings.length === 0) {
-                    // It compiles cleanly — now check where its notes actually LAND. An octave
-                    // slip is valid Lily# and draws no diagnostic, so it is the compiler's
-                    // resolved pitches, not its diagnostics, that show one. Asked once per
-                    // candidate: returning the same candidate again is the model confirming the
-                    // register is what the instruction wants ("two octaves lower").
-                    // Only the notes the candidate wrote: between two edits stands music it left alone.
-                    let written: ResolvedPitchFact[] = [];
-                    if (edit.text !== octaveAsked) {
-                        for (const s of edit.spans) {
-                            written = written.concat(await pitchesOf(client, reconstructed, s.afterLo, s.afterHi));
-                        }
-                    }
-                    const outliers = octaveOutliers(facts, written);
-                    if (outliers.length > 0 && attempt < MAX_REPAIR_ATTEMPTS) {
-                        octaveAsked = edit.text;
-                        repairs = attempt + 1;
-                        const range = facts.map(f => f.Resolved);
+                    const raw = await chat.send(messages, token);
+                    const edit = toCandidateEdit(work, raw);
+                    if (edit === null) {
                         messages.push({ role: 'assistant', content: raw });
-                        messages.push({ role: 'user', content:
-                            `That candidate compiles, but check its octaves. The notes you replaced were `
-                            + `${range.join(' ')}; the compiler resolves these of yours more than an octave outside `
-                            + `that register:\n${outliers.map(p => `  - ${p.Written} -> ${p.Resolved}`).join('\n')}\n`
-                            + (ai.converted
-                                ? 'The octaves are absolute: each \' / , counts from the part\'s anchor, not from the note before. '
-                                : 'Remember relative octaves: each note lands nearest the one before it, and the first note of a '
-                                  + 'line is placed from whatever precedes it. ')
-                            + 'Fix the octave marks, or, if this register is really '
-                            + 'what the instruction asks for, return the same candidate again unchanged.' });
-                        deps.log(`AI transform: octave check — ${outliers.map(p => `${p.Written}->${p.Resolved}`).join(' ')}`);
+                        messages.push({ role: 'user', content: `Your reply was empty. ${replyForm(whole)} — no commentary, no code fences.` });
                         continue;
                     }
-                    candidate = edit; // valid — never showed a broken candidate
-                    if (outliers.length > 0) {
-                        octaveNote = outliers;
+                    if (isProblem(edit)) {
+                        deps.log(`AI transform: edits not applied — ${edit.problem}`);
+                        messages.push({ role: 'assistant', content: raw });
+                        messages.push({ role: 'user', content: `${edit.problem}\nReply again, all edits — same output rules.` });
+                        continue;
                     }
-                    warned = null;
-                    break;
-                }
-                repairs = attempt + 1;
-
-                // Self-repair: feed the diagnostics back and try again.
-                // Edits are answered against the file as it stands, not on top of the failed ones.
-                const sameForm = edit.whole
-                    ? 'Reply again with all the corrected edits, each <old> copied from the file as it stands'
-                    : 'Return a corrected replacement for the selection (or <edit> blocks)';
-                messages.push({ role: 'assistant', content: raw });
-                if (badness.length > 0) {
-                    messages.push({ role: 'user', content:
-                        `That candidate does not compile. The Lily# compiler reported:\n${formatDiags(badness)}\n` +
-                        `${sameForm} — same output rules.` });
-                } else {
-                    if (!warned || newWarnings.length < warned.warnings.length) {
-                        warned = { edit, warnings: newWarnings };
+                    // A reply that changes nothing is not a transform. The owner accepted one such
+                    // candidate, the section exactly as it was, because nothing said it was
+                    // unchanged (2026-09-26) — the model had been asked for a new part it could not
+                    // write inside the selection.
+                    if (edit.text === edit.snap.origSelectedText) {
+                        unchanged = true;
+                        messages.push({ role: 'assistant', content: raw });
+                        messages.push({ role: 'user', content:
+                            'That reply is identical to the file as it stands — it changes nothing. Carry out the '
+                            + 'instruction. If it needs changes outside the selection (a new part, a score row, a new '
+                            + 'declaration), reply with <edit> blocks.' });
+                        continue;
                     }
-                    messages.push({ role: 'user', content:
-                        `That candidate compiles, but it adds warnings the file did not have:\n${formatDiags(newWarnings)}\n` +
-                        `${sameForm} that adds no warnings — same output rules.` });
+                    // The way back to relative octaves gives each of the file's `octave` lines its own
+                    // word again, so they must all still be there; without them every pitch would be
+                    // read relative, and land elsewhere.
+                    if (ai.converted && octaveLines(spliceCandidate(edit.snap, edit.text)) !== octaveLines(work.origFullText)) {
+                        messages.push({ role: 'assistant', content: raw });
+                        messages.push({ role: 'user', content:
+                            'Your change added or removed an `octave absolute` line. Keep the file\'s `octave` lines exactly '
+                            + 'as they are — reply again, same output rules.' });
+                        continue;
+                    }
+                    unchanged = false;
+
+                    step('validating the candidate');
+                    const reconstructed = spliceCandidate(edit.snap, edit.text);
+                    const check = await client.sendRequest<CheckCandidateResponse>('lilysharp/checkCandidate', { Text: reconstructed });
+                    const badness = candidateBadness(check, edit.spans, baselineErrors);
+                    const newWarnings = badness.length === 0
+                        ? addedWarnings(check, edit.spans, baselineWarnings)
+                        : [];
+
+                    if (badness.length === 0 && newWarnings.length === 0) {
+                        // It compiles cleanly — now check where its notes actually LAND. An octave
+                        // slip is valid Lily# and draws no diagnostic, so it is the compiler's
+                        // resolved pitches, not its diagnostics, that show one. Asked once per
+                        // candidate: returning the same candidate again is the model confirming the
+                        // register is what the instruction wants ("two octaves lower").
+                        // Only the notes the candidate wrote: between two edits stands music it left alone.
+                        let written: ResolvedPitchFact[] = [];
+                        if (edit.text !== octaveAsked) {
+                            for (const s of edit.spans) {
+                                written = written.concat(await pitchesOf(client, reconstructed, s.afterLo, s.afterHi));
+                            }
+                        }
+                        const outliers = octaveOutliers(facts, written);
+                        if (outliers.length > 0 && attempt < MAX_REPAIR_ATTEMPTS) {
+                            octaveAsked = edit.text;
+                            repairs = attempt + 1;
+                            const range = facts.map(f => f.Resolved);
+                            messages.push({ role: 'assistant', content: raw });
+                            messages.push({ role: 'user', content:
+                                `That candidate compiles, but check its octaves. The notes you replaced were `
+                                + `${range.join(' ')}; the compiler resolves these of yours more than an octave outside `
+                                + `that register:\n${outliers.map(p => `  - ${p.Written} -> ${p.Resolved}`).join('\n')}\n`
+                                + (ai.converted
+                                    ? 'The octaves are absolute: each \' / , counts from the part\'s anchor, not from the note before. '
+                                    : 'Remember relative octaves: each note lands nearest the one before it, and the first note of a '
+                                      + 'line is placed from whatever precedes it. ')
+                                + 'Fix the octave marks, or, if this register is really '
+                                + 'what the instruction asks for, return the same candidate again unchanged.' });
+                            deps.log(`AI transform: octave check — ${outliers.map(p => `${p.Written}->${p.Resolved}`).join(' ')}`);
+                            continue;
+                        }
+                        candidate = edit; // valid — never showed a broken candidate
+                        if (outliers.length > 0) {
+                            octaveNote = outliers;
+                        }
+                        warned = null;
+                        break;
+                    }
+                    repairs = attempt + 1;
+
+                    // Self-repair: feed the diagnostics back and try again.
+                    // Edits are answered against the file as it stands, not on top of the failed ones.
+                    const sameForm = edit.whole
+                        ? 'Reply again with all the corrected edits, each <old> copied from the file as it stands'
+                        : 'Return a corrected replacement for the selection (or <edit> blocks)';
+                    messages.push({ role: 'assistant', content: raw });
+                    if (badness.length > 0) {
+                        messages.push({ role: 'user', content:
+                            `That candidate does not compile. The Lily# compiler reported:\n${formatDiags(badness)}\n` +
+                            `${sameForm} — same output rules.` });
+                    } else {
+                        if (!warned || newWarnings.length < warned.warnings.length) {
+                            warned = { edit, warnings: newWarnings };
+                        }
+                        messages.push({ role: 'user', content:
+                            `That candidate compiles, but it adds warnings the file did not have:\n${formatDiags(newWarnings)}\n` +
+                            `${sameForm} that adds no warnings — same output rules.` });
+                    }
                 }
-            }
 
-            let caption = instruction;
-            if (candidate === null && warned) {
-                candidate = warned.edit;
-                caption = `${instruction} — ⚠ ${warned.warnings.length} new warning(s): `
-                    + warned.warnings.map(w => w.Message).join(' / ');
-                deps.log(`AI transform: shown with ${warned.warnings.length} new warning(s) after ${MAX_REPAIR_ATTEMPTS} repairs: `
-                    + warned.warnings.map(w => w.Message).join(' | '));
-            }
-
-            if (candidate === null) {
-                // §4 Failed: exhausted repairs — abort WITHOUT showing broken notation.
-                if (unchanged) {
-                    deps.log(`AI transform: the model returned the file unchanged after ${MAX_REPAIR_ATTEMPTS} retries — nothing applied.`);
-                    vscode.window.showWarningMessage(
-                        'Lily#: the AI returned the music unchanged, even when asked again. Nothing was changed — try wording the request differently.');
-                } else {
-                    deps.log(`AI transform: FAILED validation after ${MAX_REPAIR_ATTEMPTS} repairs — nothing applied.`);
-                    vscode.window.showWarningMessage(
-                        'Lily#: the AI could not produce a valid transform after several tries. Nothing was changed.');
+                let caption = instruction;
+                if (candidate === null && warned) {
+                    candidate = warned.edit;
+                    caption = `${instruction} — ⚠ ${warned.warnings.length} new warning(s): `
+                        + warned.warnings.map(w => w.Message).join(' / ');
+                    deps.log(`AI transform: shown with ${warned.warnings.length} new warning(s) after ${MAX_REPAIR_ATTEMPTS} repairs: `
+                        + warned.warnings.map(w => w.Message).join(' | '));
                 }
-                return null;
-            }
-            if (octaveNote) {
-                caption = `${caption} — ⚠ check the octave: ${octaveNote.map(p => `${p.Written} → ${p.Resolved}`).join(', ')}`;
-            }
-            if (repairs > 0 && caption === instruction) {
-                deps.log(`AI transform: candidate valid after ${repairs} self-repair round(s).`);
-            }
-            if (candidate.whole) {
-                deps.log(`AI transform: the model edited the file in ${candidate.spans.length} place(s) `
-                    + `(${candidate.spans.map(s => `${s.beforeLo}..${s.beforeHi}`).join(', ')} of the original).`);
-            }
 
-            // ----- Render the candidate score and decide on it (§3 [7]) -----
-            step('rendering the candidate');
-            const reconstructed = spliceCandidate(candidate.snap, candidate.text);
-            const renderAfter = await client.sendRequest<SvgResponse>('lilysharp/renderText', { Text: reconstructed });
-            // Source-offset spans of the change so the panel can highlight WHERE it landed —
-            // each edit's, in the "after" score and in the "before" one. The SVG carries
-            // data-pos (source offsets) for editor↔preview sync, so the webview lights up the
-            // notes whose data-pos falls in these spans.
-            // Word by word, so a note the edit copied through unchanged is not lit.
-            const changed = changedWords(candidate.snap.origFullText, reconstructed, candidate.spans);
-            return token.isCancellationRequested ? null : { candidate, caption, renderAfter, changed };
-        });
-        if (!round) {
-            return;
+                if (candidate === null) {
+                    // §4 Failed: exhausted repairs — abort WITHOUT showing broken notation.
+                    if (unchanged) {
+                        deps.log(`AI transform: the model returned the file unchanged after ${MAX_REPAIR_ATTEMPTS} retries — nothing applied.`);
+                        vscode.window.showWarningMessage(
+                            'Lily#: the AI returned the music unchanged, even when asked again. Nothing was changed — try wording the request differently.');
+                    } else {
+                        deps.log(`AI transform: FAILED validation after ${MAX_REPAIR_ATTEMPTS} repairs — nothing applied.`);
+                        vscode.window.showWarningMessage(
+                            'Lily#: the AI could not produce a valid transform after several tries. Nothing was changed.');
+                    }
+                    return null;
+                }
+                if (octaveNote) {
+                    caption = `${caption} — ⚠ check the octave: ${octaveNote.map(p => `${p.Written} → ${p.Resolved}`).join(', ')}`;
+                }
+                if (repairs > 0 && caption === instruction) {
+                    deps.log(`AI transform: candidate valid after ${repairs} self-repair round(s).`);
+                }
+                if (candidate.whole) {
+                    deps.log(`AI transform: the model edited the file in ${candidate.spans.length} place(s) `
+                        + `(${candidate.spans.map(s => `${s.beforeLo}..${s.beforeHi}`).join(', ')} of the original).`);
+                }
+
+                // ----- Render the candidate score and decide on it (§3 [7]) -----
+                step('rendering the candidate');
+                const reconstructed = spliceCandidate(candidate.snap, candidate.text);
+                const renderAfter = await client.sendRequest<SvgResponse>('lilysharp/renderText', { Text: reconstructed });
+                // Source-offset spans of the change so the panel can highlight WHERE it landed —
+                // each edit's, in the "after" score and in the "before" one. The SVG carries
+                // data-pos (source offsets) for editor↔preview sync, so the webview lights up the
+                // notes whose data-pos falls in these spans.
+                // Word by word, so a note the edit copied through unchanged is not lit.
+                const changed = changedWords(candidate.snap.origFullText, reconstructed, candidate.spans);
+                return token.isCancellationRequested ? null : { candidate, caption, renderAfter, changed };
+            });
+        } catch (err: any) {
+            if (!shownRound || !candidatePanel) {
+                throw err;
+            }
+            failure = String(err?.message ?? err);
+            deps.log(`AI transform: asking again failed — ${failure}`);
+            round = null;
         }
+        // Set while the panel still shows this candidate: what its footer says as it waits again.
+        let again: string | undefined;
+        if (!round) {
+            if (!shownRound || !candidatePanel) {
+                return;
+            }
+            // Back to the candidate shown, the conversation as it was before the ask.
+            prepared!.messages.length = askedFrom;
+            round = shownRound;
+            again = failure !== undefined
+                ? `Asking again failed (${failure}) — this candidate is as it was.`
+                : 'No new candidate — this one is as it was.';
+        }
+        shownRound = round;
         // The notification has closed: the review is the user's, with nothing over it.
         const { candidate, caption, renderAfter, changed } = round;
         const { renderBefore, messages } = prepared!;
@@ -586,8 +612,6 @@ async function drive(
         // and the reason in the footer (owner's report 2026-10-25: they stayed greyed out).
         let decision: Decision;
         let refine: string | undefined;
-        // Set while the panel still shows this candidate: what its footer says as it waits again.
-        let again: string | undefined;
         for (;;) {
             decision = again !== undefined
                 ? await decideAgain(again)
@@ -604,7 +628,14 @@ async function drive(
             if (decision === 'accept') {
                 // ----- Accept: apply with the version/range guard (§7) -----
                 deps.log('AI transform: accepted.');
-                again = await accept(candidate);
+                try {
+                    again = await accept(candidate);
+                } catch (err: any) {
+                    // The language server gone mid-write (it restarts on its own): nothing was
+                    // written, and Accept tries again.
+                    deps.log(`AI transform: accept failed — ${err?.message ?? err}`);
+                    again = `Not written (${err?.message ?? err}) — Accept to try again.`;
+                }
                 if (again === undefined) {
                     return;
                 }
@@ -636,6 +667,7 @@ async function drive(
         if (decision === 'iterate' && refine !== undefined) {
             deps.log(`AI transform: iterate — "${refine}"`);
             panelStatus(`Asking the AI again: “${refine}”…`);
+            askedFrom = messages.length;
             messages.push({ role: 'assistant', content: candidate.reply });
             // The file has not changed: a revision is answered against it as it stands, as the
             // previous candidate was.
@@ -944,6 +976,9 @@ async function getMarks(client: LanguageClient, snapshot: Snapshot): Promise<str
 // ======================================================================
 
 type Decision = 'accept' | 'iterate' | 'reject';
+
+/** A candidate as the panel reviews it: the edit, its caption, its score and where it changed. */
+interface ReviewRound { candidate: CandidateEdit; caption: string; renderAfter: SvgResponse; changed: ChangedSpan[] }
 
 
 async function reviewOnScore(
