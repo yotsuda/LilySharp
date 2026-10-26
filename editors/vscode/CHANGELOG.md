@@ -4,6 +4,16 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+### The AI candidate panel
+
+- **After and Before keep the view**: switching between them leaves the sheets where they
+  are, at the same place on the same page. It used to jump to the first change, or to the top
+  of the first page when the side shown had none.
+- **Ctrl+wheel zooms** both sides alike about the point under the pointer, from a quarter to
+  four times the fit the panel opens at.
+- **Drag the sheets to scroll them**, as in the preview: a click on a note still plays from it
+  and a click on a bar still selects it.
+
 ### Completion
 
 - **`transpose` and `transposition` open their values**: completing either word leaves the

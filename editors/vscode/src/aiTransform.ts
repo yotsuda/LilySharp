@@ -1113,6 +1113,10 @@ body { margin:0; padding:0; display:flex; flex-direction:column; height:100vh; o
 /* Dark around the sheets and between them (the server leaves a gap between two pages), as in
    the preview. */
 .main { flex:1; overflow:auto; background:#2b2b2b; padding:16px; }
+/* The sheets are dragged to scroll, as the preview's (installDragScroll): an open hand over them,
+   a closed one while they move (owner's request 2026-10-26). */
+.main { cursor: grab; }
+.main.dragging, .main.dragging [data-pos] { cursor: grabbing; }
 .score svg { max-width:100%; height:auto; }
 /* The notes the AI changed, painted green — the green the OMR fix panel paints its proposals in
    (owner's request 2026-10-25; a glow alone left them black). */
@@ -1261,17 +1265,106 @@ button:disabled { opacity:0.45; cursor:default; }
     }
   }
 
+  // After and Before trade places under the same view (owner's request 2026-10-26: the switch
+  // went back to the top of the first page whenever the shown side had no change to centre on):
+  // the two are the same pages at the same zoom, so the scroll offsets carry over as they are.
+  const main = document.querySelector('.main');
   function show(after) {
+    const left = main.scrollLeft, top = main.scrollTop;
     paneAfter.classList.toggle('show', after);
     paneBefore.classList.toggle('show', !after);
     tAfter.classList.toggle('on', after);
     tBefore.classList.toggle('on', !after);
-    scrollToChange(after);
+    main.scrollLeft = left;
+    main.scrollTop = top;
   }
   tAfter.addEventListener('click', () => show(true));
   tBefore.addEventListener('click', () => show(false));
   // Default pane is "After": center its first changed note once laid out.
   scrollToChange(true);
+
+  // Ctrl+wheel zooms both panes alike about the point under the pointer (owner's request
+  // 2026-10-26). 1 is the fit the panel opens at — each sheet its own width, no wider than the
+  // panel — and a zoom sizes every sheet from that fit, the hidden pane's too.
+  let zoom = 1;
+  function nextZoom(z, deltaY) {
+    const n = Math.min(4, Math.max(0.25, deltaY > 0 ? z / 1.1 : z * 1.1));
+    return Math.abs(n - 1) < 0.02 ? 1 : n;
+  }
+  function sizeSheets() {
+    const room = main.clientWidth - 32;   // (.main's padding)
+    document.querySelectorAll('.score svg').forEach(svg => {
+      if (zoom === 1) { svg.style.width = ''; svg.style.maxWidth = ''; return; }
+      const natural = svg.width && svg.width.baseVal ? svg.width.baseVal.value : room;
+      svg.style.maxWidth = 'none';
+      svg.style.width = (Math.min(natural, room) * zoom) + 'px';
+    });
+  }
+  // The point at (cx, cy) in the scroller's box stays there across resize().
+  function zoomAbout(scroller, resize, cx, cy) {
+    const fx = (scroller.scrollLeft + cx) / scroller.scrollWidth;
+    const fy = (scroller.scrollTop + cy) / scroller.scrollHeight;
+    resize();
+    scroller.scrollLeft = fx * scroller.scrollWidth - cx;
+    scroller.scrollTop = fy * scroller.scrollHeight - cy;
+  }
+  main.addEventListener('wheel', (e) => {
+    if (!e.ctrlKey) return;
+    e.preventDefault();
+    const next = nextZoom(zoom, e.deltaY);
+    if (next === zoom) return;
+    const r = main.getBoundingClientRect();
+    zoomAbout(main, () => { zoom = next; sizeSheets(); }, e.clientX - r.left, e.clientY - r.top);
+  }, { passive: false });
+  window.addEventListener('resize', () => { if (zoom !== 1) sizeSheets(); });
+
+  // Drag the sheets to scroll them — the preview's installDragScroll, word for word
+  // (webviewScript.test.ts holds the two together): a press becomes a drag only past the slop,
+  // so a click on a note still plays and a click on a bar still selects it.
+  function installDragScroll(scroller, doc) {
+    const SLOP = 4;
+    let press = null;
+    let dragged = false;
+    scroller.addEventListener('pointerdown', (e) => {
+      // Every click starts with a press, so a flag a drag left behind (its click
+      // never came) cannot swallow the next real click.
+      dragged = false;
+      press = null;
+      if (e.pointerType !== 'mouse' || e.button !== 0
+        || e.shiftKey || e.ctrlKey || e.metaKey || e.altKey) return;
+      const r = scroller.getBoundingClientRect();
+      if (e.clientX - r.left >= scroller.clientLeft + scroller.clientWidth
+        || e.clientY - r.top >= scroller.clientTop + scroller.clientHeight) return;
+      if (e.target && e.target.closest && e.target.closest('button, input, select, textarea, a')) return;
+      press = { id: e.pointerId, x: e.clientX, y: e.clientY, left: scroller.scrollLeft, top: scroller.scrollTop };
+    });
+    scroller.addEventListener('pointermove', (e) => {
+      if (press === null || e.pointerId !== press.id) return;
+      const dx = e.clientX - press.x, dy = e.clientY - press.y;
+      if (!dragged) {
+        if (Math.abs(dx) < SLOP && Math.abs(dy) < SLOP) return;
+        dragged = true;
+        scroller.setPointerCapture(e.pointerId);
+        scroller.classList.add('dragging');
+      }
+      scroller.scrollLeft = press.left - dx;
+      scroller.scrollTop = press.top - dy;
+    });
+    const release = (e) => {
+      if (press === null || e.pointerId !== press.id) return;
+      press = null;
+      scroller.classList.remove('dragging');
+    };
+    scroller.addEventListener('pointerup', release);
+    scroller.addEventListener('pointercancel', (e) => { release(e); dragged = false; });
+    doc.addEventListener('click', (e) => {
+      if (!dragged) return;
+      dragged = false;
+      e.stopImmediatePropagation();
+      e.preventDefault();
+    }, true);
+  }
+  installDragScroll(main, document);
   // A decision says at once that it was taken (owner's report 2026-10-25: a click left no trace):
   // the decision buttons grey out and the footer names what happens next. A new candidate, or
   // Ask Again closed unanswered, reloads the panel and brings them back.

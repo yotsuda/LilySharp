@@ -6,6 +6,11 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+### The AI candidate panel
+
+- `[editor]` **The AI candidate panel keeps its view when After and Before are switched, zooms
+  with Ctrl+wheel and scrolls when the sheets are dragged.**
+
 ### Completion
 
 - `[editor]` **`transpose` and `transposition` open their values once completed**: the target

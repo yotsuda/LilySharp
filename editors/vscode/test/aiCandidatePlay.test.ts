@@ -63,6 +63,66 @@ describe('an AI candidate plays before it is accepted', () => {
         assert.match(transform, /e\.setAttribute\('data-tip', e\.getAttribute\('title'\)\); e\.removeAttribute\('title'\);/);
     });
 
+    // The page script's functions, taken out of the source by their braces (none of them holds a
+    // `${`), and run on plain objects.
+    const fn = (source: string, head: string, context: Record<string, unknown> = {}) => {
+        const at = source.indexOf(head);
+        assert.ok(at >= 0, `${head} is not in the page script`);
+        let depth = 0, close = -1;
+        for (let i = source.indexOf('{', at); i < source.length; i++) {
+            if (source[i] === '{') depth++;
+            else if (source[i] === '}' && --depth === 0) { close = i + 1; break; }
+        }
+        return { text: source.slice(at, close), run: new vm.Script('(' + source.slice(at, close) + ')').runInNewContext({ Math, ...context }) };
+    };
+
+    // Owner's request 2026-10-26: After / Before keep the view, Ctrl+wheel zooms, a drag scrolls.
+    it('keeps the view when After and Before trade places', () => {
+        const classes = () => ({ toggle: () => { main.scrollTop = 0; main.scrollLeft = 0; } });   // (as a browser may on a swap)
+        const main = { scrollLeft: 120, scrollTop: 2400 };
+        const show = fn(transform, 'function show(after)', {
+            main, paneAfter: { classList: classes() }, paneBefore: { classList: classes() },
+            tAfter: { classList: classes() }, tBefore: { classList: classes() },
+        }).run as (after: boolean) => void;
+        show(false);
+        assert.deepEqual([main.scrollLeft, main.scrollTop], [120, 2400]);
+        show(true);
+        assert.deepEqual([main.scrollLeft, main.scrollTop], [120, 2400]);
+        // …and the switch no longer jumps to the first change.
+        assert.doesNotMatch(fn(transform, 'function show(after)').text, /scrollToChange/);
+    });
+
+    it('zooms by a tenth a notch, from a quarter to four times, back to the fit at 1', () => {
+        const next = fn(transform, 'function nextZoom(').run as (z: number, deltaY: number) => number;
+        assert.equal(next(1, -100), 1.1);
+        assert.ok(Math.abs(next(1, 100) - 1 / 1.1) < 1e-9);
+        assert.equal(next(4, -100), 4);
+        assert.equal(next(0.25, 100), 0.25);
+        assert.equal(next(1.1, 100), 1);
+        assert.equal(next(1 / 1.1, -100), 1);
+    });
+
+    it('zooms about the point under the pointer', () => {
+        const zoomAbout = fn(transform, 'function zoomAbout(').run as
+            (s: unknown, resize: () => void, cx: number, cy: number) => void;
+        const s = { scrollLeft: 100, scrollTop: 300, scrollWidth: 1000, scrollHeight: 4000 };
+        // The point 200, 100 into the box is 300, 400 into the sheets; at twice the size, 600, 800.
+        zoomAbout(s, () => { s.scrollWidth = 2000; s.scrollHeight = 8000; }, 200, 100);
+        assert.deepEqual([s.scrollLeft + 200, s.scrollTop + 100], [600, 800]);
+        // The wheel zooms only with Ctrl, and takes the browser's own zoom away then.
+        assert.match(transform, /main\.addEventListener\('wheel', \(e\) => \{\s*if \(!e\.ctrlKey\) return;\s*e\.preventDefault\(\);/);
+        assert.match(transform, /\}, \{ passive: false \}\);\s*window\.addEventListener\('resize'/);
+    });
+
+    it('scrolls when the sheets are dragged, with the preview\'s own code', () => {
+        const words = (t: string) => t.split('\n').map(l => l.trim()).filter(l => l !== '' && !l.startsWith('//')).join('\n');
+        const mine = fn(transform, 'function installDragScroll(').text;
+        const preview = fn(extension, 'function installDragScroll(').text;
+        assert.equal(words(mine), words(preview));
+        assert.match(transform, /installDragScroll\(main, document\);/);
+        assert.match(transform, /\.main \{ cursor: grab; \}/);
+    });
+
     it('lights the notes sounding on the candidate panel, not on the preview', () => {
         assert.match(transform, /S: -1, R: n\.S \?\? -1 \}\)\);\s*playingPane = which;/);
         assert.match(extension, /const relay = notes\.some\(n => n\.R !== undefined\);/);
