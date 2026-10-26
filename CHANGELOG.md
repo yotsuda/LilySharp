@@ -10,7 +10,8 @@ workflow attaches that section to the GitHub Release verbatim.
 
 - `[editor]` **The AI candidate panel keeps its view when After and Before are switched, zooms
   with Ctrl+wheel and scrolls when the sheets are dragged** (without selecting the notes it
-  crosses); the replacement text opened keeps the buttons in view and scrolls inside.
+  crosses); under them, **Text after Accept** shows the whole file with the changes marked,
+  opens at the first change, keeps the buttons in view and scrolls inside.
 
 ### Completion
 

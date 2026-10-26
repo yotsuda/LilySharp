@@ -14,7 +14,10 @@ All notable changes to the Lily# VS Code extension are documented here.
 - **Drag the sheets to scroll them**, as in the preview: a click on a note still plays from it
   and a click on a bar still selects it. A drag no longer selects the notes it crosses (the
   boxes it left over them).
-- **The replacement text, opened, keeps the buttons in view**: it takes at most about a third
+- **Text after Accept** (it was *Replacement text*) is the whole file as Accept leaves it, not
+  the replaced stretch alone: the changes are green in it (what was dropped struck red), so the
+  text around them places them, and it opens at the first change, in the middle of its box.
+- **The text under the sheets, opened, keeps the buttons in view**: it takes at most about a third
   of the panel and scrolls inside — its own scroll bar and the mouse wheel reach its last line;
   the sheets above give up the room. A long one used to push Accept, Ask Again… and the rest
   below the panel, and could not be read to its end.

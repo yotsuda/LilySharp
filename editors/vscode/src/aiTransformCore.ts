@@ -323,6 +323,12 @@ export function diffMarkup(before: string, after: string, lo: number, hi: number
     return html + esc(after.slice(at, hi));
 }
 
+/** The candidate's whole text — the file as Accept would leave it — with its changes marked
+ *  (diffMarkup over all of it; owner's request 2026-10-26). */
+export function wholeTextMarkup(before: string, after: string, changed: readonly ChangedSpan[]): string {
+    return diffMarkup(before, after, 0, after.length, changed);
+}
+
 /**
  * The words (runs of non-space) of text[lo, hi), each from the spaces before it: a drawn note's
  * data-pos is its node's FULL-span start — those spaces, and for the first thing on a line its

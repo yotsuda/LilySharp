@@ -39,7 +39,7 @@ import { ChatClient, ChatMessage, resolveChatClient } from './modelClient';
 import {
     CandidateEdit as CoreCandidateEdit, ChangedSpan, MarkInSelection, MarkReadings, SEL_CLOSE, SEL_OPEN, cleanCandidate,
     TextChange, carryOffset, documentBudget, documentContext, estimateTokens, isProblem, marksContext, octaveOutliers, splitNote,
-    startTimeAt, toCandidateEdit, wholeFileEdit, changedWords, diffMarkup,
+    startTimeAt, toCandidateEdit, wholeFileEdit, changedWords, wholeTextMarkup,
 } from './aiTransformCore';
 import { markFactsOf, sideFileOf } from './omrScanCore';
 import { textFontFaceCss, textFontsRoot } from './scoreFonts';
@@ -591,9 +591,10 @@ async function drive(
         for (;;) {
             decision = again !== undefined
                 ? await decideAgain(again)
+                // The whole text, its changes marked — the green finds them in it (owner's request
+                // 2026-10-26: the replacement alone was harder to place); the panel opens it at the first.
                 : await reviewOnScore(deps, renderBefore, renderAfter, caption,
-                    diffMarkup(candidate.snap.origFullText, spliceCandidate(candidate.snap, candidate.text),
-                        candidate.snap.startOffset, candidate.snap.startOffset + candidate.text.length, changed),
+                    wholeTextMarkup(candidate.snap.origFullText, spliceCandidate(candidate.snap, candidate.text), changed),
                     changed, {
                     uri: snapshot.uri,
                     before: work.origFullText,
@@ -950,7 +951,7 @@ async function reviewOnScore(
     renderBefore: SvgResponse,
     renderAfter: SvgResponse,
     caption: string,
-    /** The replacement text as HTML, its changes marked (diffMarkup). */
+    /** The candidate's whole text as HTML, its changes marked (wholeTextMarkup). */
     candidateHtml: string,
     changed: ChangedSpan[],
     play: Audible,
@@ -1118,7 +1119,7 @@ body { margin:0; padding:0; display:flex; flex-direction:column; height:100vh; o
 .main { cursor: grab; }
 /* The sheets are not selectable text, as in the preview: a drag over them selected the SVG
    <text> glyphs it crossed, which Chromium paints as a purple box over every note (owner's
-   report 2026-10-26). The replacement text below stays selectable. */
+   report 2026-10-26). The text after Accept below stays selectable. */
 .main { user-select: none; -webkit-user-select: none; }
 .main.dragging, .main.dragging [data-pos] { cursor: grabbing; }
 .score svg { max-width:100%; height:auto; }
@@ -1130,13 +1131,13 @@ body { margin:0; padding:0; display:flex; flex-direction:column; height:100vh; o
 .score [data-pos] { cursor: pointer; }
 .pane { display:none; }
 .pane.show { display:block; }
-/* The replacement text opened never pushes the buttons below out of the panel (owner's report
+/* The text after Accept, opened, never pushes the buttons below out of the panel (owner's report
    2026-10-26): it keeps its own height, at most about a third of the panel, and scrolls inside;
    the sheets above give up the room. */
 .snippet { margin:10px 16px 0; flex-shrink:0; }
 .snippet pre { background: var(--vscode-textCodeBlock-background); padding:8px; border-radius:4px;
                font-family: var(--vscode-editor-font-family, monospace); font-size:12px; overflow:auto; margin:4px 0 0;
-               white-space:pre-wrap; max-height:35vh; }
+               white-space:pre-wrap; max-height:35vh; position:relative; }
 .main { min-height:80px; }
 .snippet summary { font-size:12px; opacity:0.8; cursor:pointer; }
 /* The panel's own tooltip, in VS Code's hover look — the browser's title tip is too small to read
@@ -1189,7 +1190,7 @@ button:disabled { opacity:0.45; cursor:default; }
   <div id="paneAfter" class="pane show">${afterBody}</div>
   <div id="paneBefore" class="pane">${beforeBody}</div>
 </div>
-<div class="snippet"><details><summary>Replacement text</summary><pre>${candidateHtml}</pre></details></div>
+<div class="snippet"><details><summary title="The whole file as Accept leaves it; what the AI changed is green, what it dropped struck red">Text after Accept</summary><pre>${candidateHtml}</pre></details></div>
 <div class="footer">
   <button class="primary" id="accept" title="Write this candidate into the file (Ctrl+Z in the editor undoes it)">Accept (Enter)</button>
   <button id="iterate" title="Tell the AI what to change about this candidate — it answers with a new one, shown here">Ask Again…</button>
@@ -1373,6 +1374,17 @@ button:disabled { opacity:0.45; cursor:default; }
     }, true);
   }
   installDragScroll(main, document);
+
+  // The text after Accept is the whole file now; opened, it shows its first change in the middle
+  // of its box (owner's request 2026-10-26). Only the box scrolls (the pre is the offset parent
+  // of its marks), not the panel around it.
+  function jumpToFirstChange(pre) {
+    const first = pre.querySelector('ins, del');
+    if (!first) return;
+    pre.scrollTop = Math.max(0, first.offsetTop - (pre.clientHeight - first.offsetHeight) / 2);
+  }
+  const details = document.querySelector('.snippet details');
+  details.addEventListener('toggle', () => { if (details.open) jumpToFirstChange(details.querySelector('pre')); });
   // A decision says at once that it was taken (owner's report 2026-10-25: a click left no trace):
   // the decision buttons grey out and the footer names what happens next. A new candidate, or
   // Ask Again closed unanswered, reloads the panel and brings them back.

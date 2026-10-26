@@ -23,7 +23,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import {
     SEL_CLOSE, SEL_OPEN, carryOffset, documentBudget, documentContext, estimateTokens, isProblem, isUnchanged, marksContext, octaveOutliers,
-    pickModel, pitchToMidi, splitNote, startTimeAt, toCandidateEdit, changedWords, diffMarkup,
+    pickModel, pitchToMidi, splitNote, startTimeAt, toCandidateEdit, changedWords, diffMarkup, wholeTextMarkup,
 } from '../src/aiTransformCore';
 
 // Only the notes the AI really changed are lit (owner's report 2026-10-25: a rewritten stretch lit
@@ -54,6 +54,15 @@ describe('what the candidate panel lights as changed', () => {
         const spans = changedWords(before, after, [{ beforeLo: 4, beforeHi: before.length, afterLo: 4, afterHi: after.length }]);
         assert.equal(diffMarkup(before, after, 4, after.length, spans),
             '{ c4 d <del>e</del> <ins>es</ins> &lt;f a&gt; <ins>g</ins> }');
+    });
+    it('shows the whole text, not the replacement alone, its changes marked where they are', () => {
+        // (owner's request 2026-10-26) The text around the selection is there, unmarked.
+        const before = 'title "x"\npart m { clef treble }\nsection A { m { c4 d e f | } }\nform { A }\n';
+        const after = before.replace('c4 d e f', 'c4 d es f');
+        const lo = before.indexOf('{ c4'), hi = before.indexOf(' }\nform');
+        const spans = changedWords(before, after, [{ beforeLo: lo, beforeHi: hi, afterLo: lo, afterHi: hi + 1 }]);
+        assert.equal(wholeTextMarkup(before, after, spans),
+            'title &quot;x&quot;\npart m { clef treble }\nsection A { m { c4 d <del>e</del> <ins>es</ins> f | } }\nform { A }\n');
     });
     it('lights nothing on the side an insertion leaves empty', () => {
         const before = '{ c d }';

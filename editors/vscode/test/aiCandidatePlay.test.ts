@@ -131,8 +131,29 @@ describe('an AI candidate plays before it is accepted', () => {
     // its end (owner's reports 2026-10-26): it keeps its height and scrolls inside.
     it('keeps the buttons in the panel when the replacement text is opened, and scrolls the text', () => {
         assert.match(transform, /\.snippet \{ margin:10px 16px 0; flex-shrink:0; \}/);
-        assert.match(transform, /\.snippet pre \{[^}]*overflow:auto;[^}]*max-height:35vh; \}/);
+        assert.match(transform, /\.snippet pre \{[^}]*overflow:auto;[^}]*max-height:35vh;[^}]*\}/);
         assert.match(transform, /\.footer \{[^}]*flex-shrink:0; \}/);
+    });
+
+    // The whole text is shown now; opened, its box scrolls to the first change (owner's request
+    // 2026-10-26) — the box alone, its marks measured from it (position: relative).
+    it('opens the replacement text at its first change', () => {
+        const jump = fn(transform, 'function jumpToFirstChange(').run as (pre: unknown) => void;
+        const pre = { scrollTop: 0, clientHeight: 200, querySelector: () => ({ offsetTop: 1500, offsetHeight: 16 }) };
+        jump(pre);
+        assert.equal(pre.scrollTop, 1500 - (200 - 16) / 2);
+        const top = { scrollTop: 0, clientHeight: 200, querySelector: () => ({ offsetTop: 30, offsetHeight: 16 }) };
+        jump(top);
+        assert.equal(top.scrollTop, 0);
+        const none = { scrollTop: 7, clientHeight: 200, querySelector: () => null };
+        jump(none);
+        assert.equal(none.scrollTop, 7);
+        assert.match(transform, /\.snippet pre \{[^}]*position:relative; \}/);
+        assert.match(transform, /details\.addEventListener\('toggle', \(\) => \{ if \(details\.open\) jumpToFirstChange\(details\.querySelector\('pre'\)\); \}\);/);
+        assert.match(transform, /wholeTextMarkup\(candidate\.snap\.origFullText, spliceCandidate\(candidate\.snap, candidate\.text\), changed\)/);
+        // …and it is named for what it is: the file as Accept leaves it.
+        assert.match(transform, /<summary title="[^"]+">Text after Accept<\/summary>/);
+        assert.doesNotMatch(transform, /<summary>Replacement text<\/summary>/);
     });
 
     it('lights the notes sounding on the candidate panel, not on the preview', () => {
