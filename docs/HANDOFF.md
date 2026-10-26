@@ -127,6 +127,14 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第980セッション（2026-10-26・YT-DELL2）
+
+第979 と同じ会話の続き（ユーザー「続けて」＝残りのレッスンの監査）。`-Start p980`（開始 HEAD `d277f3b1a`・full 緑・第978 を ARCHIVE へ）。作業場所は Lab `sessions/p980/`。
+- **レッスン 2〜12 の監査＝直す所なし**: 手順・課題の文言は今の文法・補完・キーと一致（2 の `g2` の PageDown→G3 で次の `e'` が E4、4 の `transpose bes,`／`g mixolydian`、8 の Ctrl+Shift+Up で図、10 の `fillTriplet`、11 の `pitch transposed`、12 の Petaluma）。末尾の「type `lesson` … pick」は lys の `quickSuggestions` が on なので打つだけで候補が出る＝そのまま。lysc で 12 本＝警告は課題の 2 つだけ（2 の短い小節・3 の 5/8）。`LessonTests` が各課題を 1 本ずつ見ている。
+判定（2026-10-26・第980 の終わり）: 次はユーザーの指示。
+
+## 以下は第979セッションの経緯
+
 ### 1.1 第979セッション（2026-10-26・YT-DELL2）
 
 第978 と同じ会話の続き（ユーザー「続けて」＝サイトの手入れの続き）。`-Start p979`（開始 HEAD `f1c8c865e`・full **13311 / 0 / 2 / 13313**・第977 を ARCHIVE へ）。作業場所は Lab `sessions/p979/`。
@@ -136,18 +144,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - 続き（「続けて」）: `docs/ai-collab-guide.ja.md`（利用者向けの日本語の手引き）が旧 Transform Selection・浮かぶ ✨ ボタンのまま＋自己矛盾（冒頭「自分の API キー」／後半「無い」、「AI 設定は 1 つ」の上に 3 行の表）→ Ask AI に書き直し（入口・ヒント・edits と絶対オクターブ・候補パネル・小節選択・モデル設定・Fix OMR）。SHOTLIST 9 を Ask AI に。設計の文書（ai-collab-design.md 等）は経緯として触らない。
 - **ユーザー「新規作成の lesson テンプレートを監査・最初の段階で Ctrl+Space と Ctrl+Shift+Up/PgUp を紹介」（`9c9095953`）**: 監査＝テンプレート 1 行目に Ctrl+Space が無い（「pick lesson-01」の手段が無い）・2 行目は step keys の名だけ／レッスン 1 は Ctrl+Space は冒頭にあるが step keys の初出は STEP 4（強弱の上）・PageUp/PageDown はレッスン 2 まで出ない。→ テンプレート 2 行を書き直し（Ctrl+Space とレッスンの始め方・各キーの効き目・20 行の上限内）、レッスン 1 の冒頭に 3 つのキーの表、STEP 3（最初の音）で両方を試す（G major で e→fis→e・PageUp で e'＝後ろも続く）、印のメモ「STEP 3: Ctrl+Shift+Up, PgUp」（png で収まりを確認）。網＝LessonTests 2 本＋NewScoreTemplateTests 1 本。site の Learn に Stepping へのリンク。Deploy-Lsp 済。
 判定（2026-10-26・第979 の終わり）: 次はユーザーの指示。
-
-## 以下は第978セッションの経緯
-
-### 1.1 第978セッション（2026-10-26・YT-DELL2）
-
-第977 と同じ会話の続き（§1 の残りが 2,400 字＝`-Start p978`・開始 HEAD `8d1ee9f29`・full **13311 / 0 / 2 / 13313**・第976 を ARCHIVE へ）。作業場所は Lab `sessions/p978/`（AI パネルの計器は `p977/aipanel` のまま）。
-- **ユーザー「AI の Replacement text は差分だけ＝全文の方が分かりやすい・開いたら最初の diff へ・キャプションも直して」（`78f018d3b`）**: `wholeTextMarkup`（`aiTransformCore.ts`・`diffMarkup` をファイル全体に）を `reviewOnScore` へ・見出しは **Text after Accept**（title に緑／赤の意味）・`jumpToFirstChange`（details の toggle で pre の scrollTop を最初の ins／del が中央に・pre は position:relative）。npm test 447。headless Edge で 200 行の 150 行目の変更が 263px の欄の 125px に開く。MANUAL-CHECKS の 2 か所の名前を直した。⚠️ `aiTransformCore.ts` とその test は Edit の後に作業ツリーが LF になっていた＝CRLF に戻した。
-- **ユーザー「OMR のスキャン画像をズーム・スクロールするとヘッダが崩れる」（`049c294a8`・`omrScan.ts`）**: `.note` は sticky＝縦だけ固定・横スクロールで頁と一緒に左へ流れ、右に頁が透けた → `position: fixed`（top/left/right 0）＋ `fitHead`（body の padding-top＝頭の高さ＋8・ResizeObserver で折り返しに追従）。頁の始まり（63px）は前後で同じ＝`topEdge` 等は不変。計器 Lab `sessions/p978/scan/shot.js`（view の `<style>` と `fitHead` をソースから取り本物の scan を 200%・600/1500 スクロール）: 頭 −600..255→0..855／幅 420 で頭 92px・頁 100px。npm test 448・C3＝未確認。
-- **ユーザー「プレビューの Play from Here を小節の右クリックにも」（`58f67e550`）**: contextmenu の捕獲で `ctxPlayPos`＝音符の data-pos、無ければ `ctxBarRange[0]`（小節の最初の音符・`barNoteRange`）・when の鍵 `lysNote` → `lysPlayFrom`（package.json・body の初期値）・`ctxPlayFromHere` は ctxPlayPos から（休符なら Play の経路が次に鳴る音へ）。網＝`webviewScript.test.ts` 2 本（manifest と page の鍵の一致・`lysNote` が残っていない）。npm test 450・C4＝未確認。
-- **ユーザー「gh pages をお手入れ・製品名に Studio・最近の機能を説明」（`site` の commit）**: 拡張を指す所を Lily# Studio に（ナビの Editor→Lily# Studio・インストール手順・トップの tagline と pillar・Get started・About・commands の題・言語名は Lily# のまま）。editor に「Playback and practice」「Each part's range」「The status bar」を新設、プレビュー・補完・Commands・Settings を今に、AI の節は Ask AI（選択はヒント・ファイル全体・edits・候補パネルの緑／💬／▶／Ask Again／Text after Accept）。commands にプレビューの AI と選択・小節の Play from Here・Remove All String Numbers・テンプレート。scan に「Fix the marks — with AI, or by hand」と読みの通知。根拠は拡張 README・CHANGELOG 0.14.0／Unreleased。`build-site.ps1` 通過（74 ファイル）・headless Edge で 3 頁を目視。⚠️ build-examples は `site/examples/*.lys` を CRLF で書く（中身は不変・`.gitattributes` は eol=lf）＝`git checkout -- site/examples` で戻した。⚠️ Unreleased の機能（小節の Play from Here・transpose の補完・進捗の段・Text after Accept 等）も書いた＝push すると Pages は次の release より先に出る。
-- 続き（ユーザー「続けて」）: リファレンスの小節線の段落が LP の旧モデル（「`|` は何も閉じない・拍子が満たした小節を確認するだけ」）のままだった → 第904 の「小節線が小節」（LYS2002／LYS2017／`R1*N`・`%N`・`% % %`）に書き直し（lysc で 4 例を確認）。chords の `guitardropd` ×2 → `guitarDropD`（小文字は今エラー）。site 再ビルド通過。
-判定（2026-10-26・第978 の終わり）: 次はユーザーの指示。実機確認は MANUAL-CHECKS §3.6 C2〜C4（C4 は Reload Window を 2 回）。
 
 ## 2. 開いている作業
 

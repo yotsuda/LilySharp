@@ -160,6 +160,18 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第978セッションの経緯
+
+### 1.1 第978セッション（2026-10-26・YT-DELL2）
+
+第977 と同じ会話の続き（§1 の残りが 2,400 字＝`-Start p978`・開始 HEAD `8d1ee9f29`・full **13311 / 0 / 2 / 13313**・第976 を ARCHIVE へ）。作業場所は Lab `sessions/p978/`（AI パネルの計器は `p977/aipanel` のまま）。
+- **ユーザー「AI の Replacement text は差分だけ＝全文の方が分かりやすい・開いたら最初の diff へ・キャプションも直して」（`78f018d3b`）**: `wholeTextMarkup`（`aiTransformCore.ts`・`diffMarkup` をファイル全体に）を `reviewOnScore` へ・見出しは **Text after Accept**（title に緑／赤の意味）・`jumpToFirstChange`（details の toggle で pre の scrollTop を最初の ins／del が中央に・pre は position:relative）。npm test 447。headless Edge で 200 行の 150 行目の変更が 263px の欄の 125px に開く。MANUAL-CHECKS の 2 か所の名前を直した。⚠️ `aiTransformCore.ts` とその test は Edit の後に作業ツリーが LF になっていた＝CRLF に戻した。
+- **ユーザー「OMR のスキャン画像をズーム・スクロールするとヘッダが崩れる」（`049c294a8`・`omrScan.ts`）**: `.note` は sticky＝縦だけ固定・横スクロールで頁と一緒に左へ流れ、右に頁が透けた → `position: fixed`（top/left/right 0）＋ `fitHead`（body の padding-top＝頭の高さ＋8・ResizeObserver で折り返しに追従）。頁の始まり（63px）は前後で同じ＝`topEdge` 等は不変。計器 Lab `sessions/p978/scan/shot.js`（view の `<style>` と `fitHead` をソースから取り本物の scan を 200%・600/1500 スクロール）: 頭 −600..255→0..855／幅 420 で頭 92px・頁 100px。npm test 448・C3＝未確認。
+- **ユーザー「プレビューの Play from Here を小節の右クリックにも」（`58f67e550`）**: contextmenu の捕獲で `ctxPlayPos`＝音符の data-pos、無ければ `ctxBarRange[0]`（小節の最初の音符・`barNoteRange`）・when の鍵 `lysNote` → `lysPlayFrom`（package.json・body の初期値）・`ctxPlayFromHere` は ctxPlayPos から（休符なら Play の経路が次に鳴る音へ）。網＝`webviewScript.test.ts` 2 本（manifest と page の鍵の一致・`lysNote` が残っていない）。npm test 450・C4＝未確認。
+- **ユーザー「gh pages をお手入れ・製品名に Studio・最近の機能を説明」（`site` の commit）**: 拡張を指す所を Lily# Studio に（ナビの Editor→Lily# Studio・インストール手順・トップの tagline と pillar・Get started・About・commands の題・言語名は Lily# のまま）。editor に「Playback and practice」「Each part's range」「The status bar」を新設、プレビュー・補完・Commands・Settings を今に、AI の節は Ask AI（選択はヒント・ファイル全体・edits・候補パネルの緑／💬／▶／Ask Again／Text after Accept）。commands にプレビューの AI と選択・小節の Play from Here・Remove All String Numbers・テンプレート。scan に「Fix the marks — with AI, or by hand」と読みの通知。根拠は拡張 README・CHANGELOG 0.14.0／Unreleased。`build-site.ps1` 通過（74 ファイル）・headless Edge で 3 頁を目視。⚠️ build-examples は `site/examples/*.lys` を CRLF で書く（中身は不変・`.gitattributes` は eol=lf）＝`git checkout -- site/examples` で戻した。⚠️ Unreleased の機能（小節の Play from Here・transpose の補完・進捗の段・Text after Accept 等）も書いた＝push すると Pages は次の release より先に出る。
+- 続き（ユーザー「続けて」）: リファレンスの小節線の段落が LP の旧モデル（「`|` は何も閉じない・拍子が満たした小節を確認するだけ」）のままだった → 第904 の「小節線が小節」（LYS2002／LYS2017／`R1*N`・`%N`・`% % %`）に書き直し（lysc で 4 例を確認）。chords の `guitardropd` ×2 → `guitarDropD`（小文字は今エラー）。site 再ビルド通過。
+判定（2026-10-26・第978 の終わり）: 次はユーザーの指示。実機確認は MANUAL-CHECKS §3.6 C2〜C4（C4 は Reload Window を 2 回）。
+
 ## 以下は第977セッションの経緯
 
 ### 1.1 第977セッション（2026-10-26・YT-DELL2）
