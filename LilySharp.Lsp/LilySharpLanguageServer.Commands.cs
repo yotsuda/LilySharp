@@ -131,9 +131,9 @@ public sealed partial class LilySharpLanguageServer
     /// <summary>
     /// Reads the chords the preview's score plays and returns the edits that add them as a
     /// chords track (<see cref="LilySharp.Core.Harmony.ChordHarmonizer.AddReadChordTracks"/>):
-    /// read from that score's parts beat by beat — or harmonized from its top staff's melody
-    /// alone (<see cref="AddChordTrackParams.MelodyOnly"/>) — written beside the music as the
-    /// file is laid out, and placed in that score above its top staff, a row of its own.
+    /// read from that score's parts beat by beat, a melody alone harmonized as rich as
+    /// <see cref="AddChordTrackParams.Richness"/> asks — written beside the music as the file is
+    /// laid out, and placed in that score above its top staff, a row of its own.
     /// Powers the "Lily#: Add Chord Track" editor command (owner's decisions 2026-10-26).
     /// </summary>
     [JsonRpcMethod("lilysharp/addChordTrack", UseSingleObjectParameterDeserialization = true)]
@@ -155,14 +155,9 @@ public sealed partial class LilySharpLanguageServer
             "rich" => LilySharp.Core.Harmony.ChordRichness.Rich,
             _ => LilySharp.Core.Harmony.ChordRichness.Standard,
         };
-        var result = LilySharp.Core.Harmony.ChordHarmonizer.AddReadChordTracks(doc.Text, @params.RenderName, @params.MelodyOnly, richness);
+        var result = LilySharp.Core.Harmony.ChordHarmonizer.AddReadChordTracks(doc.Text, @params.RenderName, melodyOnly: false, richness);
         if (result == null)
-            return new AddChordTrackResponse
-            {
-                Error = @params.MelodyOnly
-                    ? "The score's top staff plays no notes to harmonize."
-                    : "Nothing in the score shown sounds a note to read chords from.",
-            };
+            return new AddChordTrackResponse { Error = "Nothing in the score shown sounds a note to read chords from." };
 
         // One full-document replace: the track and the score's rows are inserted at once.
         var (endLine, endCol) = GetLineAndColumn(doc.Text, doc.Text.Length);

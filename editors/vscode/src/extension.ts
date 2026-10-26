@@ -2465,10 +2465,12 @@ interface AddChordTrackResponse {
 
 /**
  * Adds a chords track read from the score the preview shows (owner's decisions 2026-10-26,
- * docs/harmony-analysis-design.md): the chords its parts play — a melody alone harmonized —
- * or, picked instead, chords for its top staff's melody alone. The server writes the track
- * and places it in that score above its top staff, a row of its own. The result is
- * a starting point to edit (Ctrl+Z takes it back).
+ * docs/harmony-analysis-design.md): the chords its parts play, a melody alone harmonized. One
+ * pick, how rich the chosen chords are: what is read is the score's choice — a score of the
+ * melody's staff alone harmonizes the melody (owner 2026-10-26: one menu, not a second asking
+ * "the parts or the melody only"). The server writes the track and places it in that score
+ * above its top staff, a row of its own. The result is a starting point to edit (Ctrl+Z takes
+ * it back).
  */
 async function addChordTrack(context: vscode.ExtensionContext) {
     const editor = vscode.window.activeTextEditor;
@@ -2484,15 +2486,6 @@ async function addChordTrack(context: vscode.ExtensionContext) {
     const doc = editor.document;
     const renderName = selectedRenders.get(doc.uri.toString()) || null;
     const scoreLabel = renderName ? `score ${renderName}` : 'the score the preview shows';
-    const pick = await vscode.window.showQuickPick([
-        { label: 'Read the chords the parts play', description: scoreLabel, melodyOnly: false,
-          detail: 'Where only the melody sounds, chords are chosen for it.' },
-        { label: 'Harmonize the melody only', description: 'its top staff', melodyOnly: true,
-          detail: 'New chords for the melody, the accompaniment not read.' },
-    ], { placeHolder: 'Add Chord Track' });
-    if (!pick) {
-        return;
-    }
     // How rich the chords chosen for a melody are (owner's request 2026-10-26: the variant's
     // size, not a random seed), plainest first (owner's request 2026-10-26); the one picked
     // last is where the selection starts.
@@ -2507,7 +2500,8 @@ async function addChordTrack(context: vscode.ExtensionContext) {
         const quickPick = vscode.window.createQuickPick<typeof richnesses[number]>();
         quickPick.items = richnesses;
         quickPick.activeItems = richnesses.filter(r => r.richness === last);
-        quickPick.placeholder = 'How rich are the chords chosen for a melody? (chords the parts play are written as played)';
+        quickPick.title = `Add Chord Track — reads ${scoreLabel}`;
+        quickPick.placeholder = 'How rich are the chords chosen where a melody sounds alone? (chords the parts play are written as played)';
         let chosen: typeof richnesses[number] | undefined;
         quickPick.onDidAccept(() => { chosen = quickPick.selectedItems[0]; quickPick.hide(); });
         quickPick.onDidHide(() => { quickPick.dispose(); resolve(chosen); });
@@ -2519,7 +2513,7 @@ async function addChordTrack(context: vscode.ExtensionContext) {
     await context.globalState.update('lilysharp.chordTrack.richness', rich.richness);
     try {
         const response = await client.sendRequest<AddChordTrackResponse>('lilysharp/addChordTrack', {
-            textDocument: { uri: doc.uri.toString() }, renderName, melodyOnly: pick.melodyOnly, richness: rich.richness
+            textDocument: { uri: doc.uri.toString() }, renderName, richness: rich.richness
         });
         if (response.Edits && response.Edits.length > 0) {
             const edit = new vscode.WorkspaceEdit();

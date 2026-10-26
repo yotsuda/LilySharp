@@ -7,19 +7,19 @@ All notable changes to the Lily# VS Code extension are documented here.
 ### Chords
 
 - **Add Chord Track… reads the chords the parts play.** It reads the score the preview shows —
-  only that score's parts, so a score made for it chooses what is read — and asks how: *Read the
-  chords the parts play* (the notes sounding together, beat by beat: sevenths, diminished and
-  suspended chords, a slash chord from the lowest note; a chord changes on a beat only where that
-  fits clearly better, at a bar line most easily; where a melody sounds alone, a chord is chosen
-  for it, the key's first — a line that spells B♭ under C major gets B♭, a seventh chord (IIm7,
-  IIIm7, V7 …) where its seventh is played, and a bass line's downbeat is taken as the root) or *Harmonize the melody only* (one chord a bar for the top
-  staff). The track is placed above that score's top staff, a row of its own (`as roman` after it shows
-  the degrees).
-  A second reading is a track of its own (`harmony2`). Until now the command wrote one diatonic
-  triad a bar from the melody alone. Chords chosen for a line are chosen with their neighbours
-  (a root falling a fifth preferred: a D alone before a G7 is the ii), and a second pick sets how
-  rich they are — *Plain* (triads only), *Standard* (the V resolving written V7, as A7 → Dm a
-  secondary dominant) or *Rich* (the ii of a ii–V a minor seventh too); the last pick is selected.
+  only that score's parts, so a score made for it chooses what is read (a score of the melody's
+  staff alone harmonizes the melody). The notes sounding together are read beat by beat:
+  sevenths, diminished and suspended chords, a slash chord from the lowest note; a chord changes
+  on a beat only where that fits clearly better, at a bar line most easily. Where a line sounds
+  alone, a chord is chosen for it, one a bar: the key's first, one outside it where the notes
+  spell it (B♭ D F under C major is B♭), a seventh chord (IIm7, IIIm7, V7 …) where its seventh
+  is played, a bass line's downbeat as the root — and chosen with its neighbours, a root falling
+  a fifth preferred (a D alone before a G7 is the ii). One pick sets how rich the chosen chords
+  are: *Plain* (triads only), *Standard* (the V resolving written V7, A7 → Dm a secondary
+  dominant too) or *Rich* (the ii of a ii–V a minor seventh as well); the last pick is selected.
+  The track is placed above that score's top staff, a row of its own (`as roman` after it shows
+  the degrees); a second reading is a track of its own (`harmony2`). Until now the command wrote
+  one diatonic triad a bar from the melody alone.
 
 ### Practice
 

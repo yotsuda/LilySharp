@@ -185,11 +185,10 @@ public class RenderInfo
 }
 
 /// <summary>Parameters for lilysharp/addChordTrack: the document, the score the preview shows
-/// (<see cref="SvgParams.RenderName"/> — its parts are what the chords are read from), and
-/// whether to harmonize its top staff's melody alone instead.</summary>
+/// (<see cref="SvgParams.RenderName"/> — its parts are what the chords are read from: a score
+/// of the melody's staff alone harmonizes the melody), and how rich the chosen chords are.</summary>
 public class AddChordTrackParams : SvgParams
 {
-    public bool MelodyOnly { get; set; }
     /// <summary>How rich the chords chosen for a melody are: "plain", "standard" (the default) or "rich".</summary>
     public string? Richness { get; set; }
 }

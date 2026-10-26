@@ -214,27 +214,22 @@ section A { melody { c'4 d' e' f' | g'1 | } }   phrase theme { c'4 d' e' f' | g'
   <p>Reads the chords the music plays and writes them as a chords track. It reads <b>the score
   the preview shows</b> — only the parts that score has — so a score made for it chooses what the
   chords are read from: <code>score harmony { staff rh  staff lh }</code> reads the piano and not
-  the voice. Pick that score in the preview's <b>Score</b> menu first.</p>
-  <p>It asks which way to read:</p>
-  <ul>
-    <li><b>Read the chords the parts play</b> — the notes sounding together, beat by beat: the
-    chord they fit (sevenths, diminished and suspended chords, slash chords from the lowest
-    note), a note struck inside a beat counting less than one on it. A chord may change on any
-    beat, but only where that fits clearly better — at a bar line most easily, the middle of a
-    bar next — so a passing note or a walking bass does not make a chord of its own. Where only a
-    melody sounds, a chord is chosen for it, one a bar: the key's chords first, and one outside
-    the key where the notes spell it (B♭ D F under C major is B♭). A seventh chord — IIm7,
-    IIIm7, V7, Imaj7 … — where its seventh is played (D F A C is Dm7; G B D is G). A low line is
-    read as a bass line: its note on the bar's first beat is the root, and a note that steps into
-    the next bar (the B of C G A B | C) leads there rather than making a seventh.</li>
-    <li><b>Harmonize the melody only</b> — new chords for the score's top staff, its
-    accompaniment not read: one a bar the same way, the key's chords first (the common ones — I,
-    IV, V — ahead when two fit alike).</li>
-  </ul>
+  the voice, and <code>score tune { staff melody }</code> harmonizes the melody alone, the
+  accompaniment unread. Pick that score in the preview's <b>Score</b> menu first.</p>
+  <p>It reads the notes sounding together, beat by beat: the chord they fit (sevenths,
+  diminished and suspended chords, slash chords from the lowest note), a note struck inside a
+  beat counting less than one on it. A chord may change on any beat, but only where that fits
+  clearly better — at a bar line most easily, the middle of a bar next — so a passing note or a
+  walking bass does not make a chord of its own.</p>
+  <p>Where only a melody sounds, a chord is chosen for it, one a bar: the key's chords first,
+  and one outside the key where the notes spell it (B♭ D F under C major is B♭); a seventh
+  chord — IIm7, IIIm7, V7, Imaj7 … — where its seventh is played (D F A C is Dm7; G B D is G). A
+  low line is read as a bass line: its note on the bar's first beat is the root, and a note that
+  steps into the next bar (the B of C G A B | C) leads there rather than making a seventh.</p>
   <p>Chords chosen for a line are chosen with their neighbours: a move whose root falls a fifth
   (V → I, ii → V, vi → ii) is preferred, so a bar its notes leave open — a D alone before a G7 —
   takes the chord that leads on (Dm). Chords heard in the parts lean on this only in a close call.
-  A second pick sets how rich the chosen chords are (the one picked last is selected):</p>
+  The one pick is how rich the chosen chords are (the one picked last is selected):</p>
   <ul>
     <li><b>Plain</b> — triads only.</li>
     <li><b>Standard</b> (the first time) — sevenths where they are played, and the V resolving a
@@ -249,7 +244,7 @@ section A { melody { c'4 d' e' f' | g'1 | } }   phrase theme { c'4 d' e' f' | g'
   nothing sounds is <code>r</code> (N.C.).</p>
   <p>The file keeps its layout: a file grouped by section gets a chords block in each section;
   one grouped by part gets one top-level track with a section per section. A second reading — of
-  another score, or of the melody alone — is a track of its own (<code>harmony2</code>), so the two
+  another score, or at another richness — is a track of its own (<code>harmony2</code>), so the two
   can be compared. It is a <b>starting point to edit</b>, and Ctrl+Z takes it back. The degrees
   are against the file's <code>key</code>; set the right one first
   (<a href="#guess-key">Guess Section Key</a> helps). The command line
