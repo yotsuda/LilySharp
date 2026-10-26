@@ -11,6 +11,12 @@ to *Decided against* with the reason). What is being worked on now, and the next
 
 ### Harmony analysis (proposed 2026-10-25)
 
+**Decided 2026-10-26 (owner)**: folded into *Add Chord Track*, not a feature of its own — one
+command that reads the chords the parts sound, or harmonizes a melody where one line sounds
+(and on request). It writes a chords row (names and Roman numerals both, `as roman`), changing
+on any beat where the fit is worth it; no preview overlay. Design: `docs/harmony-analysis-design.md`.
+The proposal below is kept as it was written.
+
 Lily# already names a chord written in one part from its notes (`<c e g>@chord` → C, inversions
 as slash chords — `ChordAutoNameTests`). Harmony analysis widens that to the sound of **all the
 parts together**, over time. *Add Chord Track (auto-harmonize)* is another thing — it proposes
