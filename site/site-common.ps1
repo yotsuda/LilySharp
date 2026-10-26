@@ -10,14 +10,15 @@
 $SiteUrl = 'https://yotsuda.github.io/LilySharp/'
 
 # The links along the top of EVERY page, the home page included (owner's decision 2026-10-12:
-# Home · Get started · Learn · Reference · Editor · About). A page that is not one of these
-# marks the one it belongs under (a lesson under Learn, a reference page under Reference).
+# Home · Get started · Learn · Reference · Editor · About; the editor's link is named for the
+# product, Lily# Studio, since 2026-10-26). A page that is not one of these marks the one it
+# belongs under (a lesson under Learn, a reference page under Reference).
 $SiteNav = @(
     @{ Out = 'index.html';   Nav = 'Home' },
     @{ Out = 'start.html';   Nav = 'Get started' },
     @{ Out = 'learn.html';   Nav = 'Learn' },
     @{ Out = 'grammar.html'; Nav = 'Reference' },
-    @{ Out = 'editor.html';  Nav = 'Editor' },
+    @{ Out = 'editor.html';  Nav = 'Lily# Studio' },
     @{ Out = 'about.html';   Nav = 'About' }
 )
 
@@ -38,11 +39,12 @@ $InstallSteps = @'
       it is simply the window you write music in. On its website, click the download button for
       your computer — Windows, Mac or Linux — open the file that downloads, and accept the
       installer's suggestions.</span></li>
-    <li><b>Add Lily# to it</b>
-      <span>Start VS Code. On its left edge, click the <b>Extensions</b> icon — four small squares,
-      one coming loose — or press <kbd>Ctrl+Shift+X</kbd> (<kbd>Cmd+Shift+X</kbd> on a Mac). Type
-      <b>Lily#</b> in the search box at the top, and click <b>Install</b> next to <i>Lily#</i>
-      by <i>yotsuda</i>. Everything it needs comes with it, the music fonts included; there is
+    <li><b>Add Lily# Studio to it</b>
+      <span>Lily# Studio is the editor for Lily#, an extension of VS Code. Start VS Code. On its
+      left edge, click the <b>Extensions</b> icon — four small squares, one coming loose — or
+      press <kbd>Ctrl+Shift+X</kbd> (<kbd>Cmd+Shift+X</kbd> on a Mac). Type <b>Lily#</b> in the
+      search box at the top, and click <b>Install</b> next to <i>Lily# Studio</i> by
+      <i>yotsuda</i>. Everything it needs comes with it, the music fonts included; there is
       nothing else to download.</span></li>
     <li><b>Start a score</b>
       <span>In the menu, choose <b>File → New File…</b> and pick <b>Lily# Score (.lys)</b>. A

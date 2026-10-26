@@ -7,19 +7,25 @@
     <li><a href="#typing">Typing aids you might not notice</a></li>
     <li><a href="#preview">The preview</a></li>
   </ol>
-  <p class="grp">Editing</p>
+  <p class="grp">Listening</p>
   <ol>
-    <li><a href="#step">Stepping: Ctrl+Shift+Up/Down, PageUp/PageDown</a></li>
+    <li><a href="#practice">Playback and practice</a></li>
+    <li><a href="#range">Each part's range</a></li>
     <li><a href="#audition">Audition</a></li>
     <li><a href="#soundfonts">Sound fonts</a></li>
     <li><a href="#midi-out">MIDI output: your own instruments</a></li>
+  </ol>
+  <p class="grp">Editing</p>
+  <ol>
+    <li><a href="#step">Stepping: Ctrl+Shift+Up/Down, PageUp/PageDown</a></li>
     <li><a href="#language">Completion, hover, fixes</a></li>
+    <li><a href="#status">The status bar</a></li>
     <li><a href="#commands">Commands</a></li>
     <li><a href="#settings">Settings</a></li>
   </ol>
   <p class="grp">AI</p>
   <ol>
-    <li><a href="#ai">AI in the editor</a></li>
+    <li><a href="#ai">Ask AI and the AI features</a></li>
     <li><a href="#llm">Other assistants and agents</a></li>
   </ol>
   <p class="grp">Outside the editor</p>
@@ -33,7 +39,9 @@
 
 <section id="install">
   <h2>Install and open</h2>
-  <p>Installing takes one search in VS Code's Extensions view — <a href="start.html#install">Get
+  <p><b>Lily# Studio</b> is the editor for Lily#: an extension of Visual Studio Code that
+  brings the compiler, a live score preview that plays, and the AI features. Installing it
+  takes one search in VS Code's Extensions view — <a href="start.html#install">Get
   started</a> walks through it, and through a first score. Open any <code>.lys</code> file and
   the language server starts, with the score beside it. The keys to know:</p>
   <table class="g">
@@ -45,7 +53,7 @@
     <tr><td><kbd>Alt+M</kbd></td><td>play the measure the caret is in</td></tr>
     <tr><td><kbd>Ctrl+Shift+Up</kbd> / <kbd>Down</kbd></td><td>step a note to the next note of the key, a chord shape, a tempo by 1, a key a fifth, a clef, a dynamic, a <code>time</code>, an <code>octave</code> or a <code>transpose</code> — <a href="#step">below</a></td></tr>
     <tr><td><kbd>Ctrl+Shift+PageUp</kbd> / <kbd>PageDown</kbd></td><td>step a note an octave mark, a chord shape, or a tempo by 10; switch a key to its parallel / relative key, a treble or bass clef an octave, a dynamic a level, a <code>time</code> to the next common meter, an <code>octave</code> by 1 or a <code>transpose</code> an octave</td></tr>
-    <tr><td><kbd>Ctrl+I</kbd></td><td>transform the selection with AI — <a href="#ai">below</a></td></tr>
+    <tr><td><kbd>Ctrl+I</kbd></td><td><i>Ask AI…</i>: say what to change, a selection as a hint of where — <a href="#ai">below</a></td></tr>
   </table>
   <p class="note">On macOS read <kbd>Cmd</kbd> for <kbd>Ctrl</kbd> in the first two and the
   last; the stepping keys are <kbd>Ctrl+Shift+Up/Down</kbd> and <kbd>Ctrl+Shift+PageUp/PageDown</kbd>
@@ -170,13 +178,24 @@
     locked preview forward brings its file's tab forward too, and a <code>.lys</code> opened while the preview has the focus opens among the scores, not over the preview.</li>
     <li><b>Source and score are linked both ways.</b> The note under the caret is highlighted
     in the score, and a selection highlights every note in it. Click a note, a tie, a slur, a
-    clef or a key signature in the preview to jump to the text that wrote it.</li>
-    <li><b>It plays.</b> The <b>▶</b> and <b>⏹</b> buttons at the top play and stop, from the
-    highlighted note if there is one; the picker beside them chooses which <code>score</code>
-    the preview shows. Right-click for <i>Play from Here</i>, <i>Stop Playback</i>, <i>Fit
-    Width</i> and <i>Reset Zoom</i>. Playback highlights each note as it sounds, with each
-    part's own General MIDI sound, and plays the score the preview shows — that score's parts,
-    under its form.</li>
+    clef or a key signature in the preview to jump to the text that wrote it, or a bar beside
+    its notes to put the caret in that bar.</li>
+    <li><b>Bars can be selected on the score.</b> <kbd>Shift</kbd>+click a bar or a note to
+    extend the selection from the last place clicked, <kbd>Shift</kbd>+drag across bars, or
+    right-click <i>Select This Bar</i>; the bars are lit pale blue, and <kbd>Esc</kbd> or
+    <i>Clear Selection</i> clears them. ▶ then plays them and the AI takes them as its hint. A
+    plain drag scrolls the sheet, and <kbd>Ctrl</kbd>+wheel zooms it.</li>
+    <li><b>The header</b> holds, from the left: the picker for which <code>score</code> the
+    preview shows, Export, ✨ <a href="#ai">Ask AI</a>, <a href="#range">Range</a>, ▶ and ⏹,
+    the <a href="#practice">practice menu</a>, how long the score plays (<i>3:42</i>), and the
+    pages. On a narrow pane its groups wrap onto the next row rather than squeeze.</li>
+    <li><b>It plays.</b> ▶ plays the score the preview shows — that score's parts, under its
+    form — or the bars selected on it, each note lit as it sounds, with each part's own General
+    MIDI sound. Right-click a note or a bar for <i>Play from Here</i> (from that note, or from
+    the bar's first), and anywhere for <i>Stop Playback</i>, <i>Fit Width</i> and <i>Reset
+    Zoom</i>. More in <a href="#practice">Playback and practice</a>.</li>
+    <li><b>Its pages stand apart</b> as sheets of paper, and an exported PDF has pages of the
+    paper's real size.</li>
     <li><b>Its sound</b> is a SoundFont synthesizer. Out of the box it plays the General MIDI
     bank your computer already has; for fuller instruments, install a free sound font —
     <a href="#soundfonts">Sound fonts</a>, below. A browser lets sound start only once you have
@@ -202,59 +221,38 @@
   </figure>
 </section>
 
-<section id="step">
-  <h2>Stepping: <kbd>Ctrl+Shift+Up</kbd> / <kbd>Down</kbd>, <kbd>Ctrl+Shift+PageUp</kbd> / <kbd>PageDown</kbd></h2>
-  <p>Two pairs of keys that step what the caret is on, one notch at a time:
-  <kbd>Ctrl+Shift+Up</kbd> / <kbd>Down</kbd> to the next note of the key, <kbd>Ctrl+Shift+PageUp</kbd> /
-  <kbd>PageDown</kbd> by an octave.</p>
+<section id="practice">
+  <h2>Playback and practice</h2>
+  <p><b>▶ plays the score</b>, or, with bars selected on the score, <b>those bars</b> — every
+  part sounding there, from where the bars first play, the notes lit as they sound. Hold
+  <kbd>Alt+P</kbd> to hear the note under the caret; <kbd>Alt+M</kbd> plays its bar. Beside ⏹
+  stands how long the whole score plays, repeats and tempo changes included, kept up to date
+  as you edit.</p>
+  <p>The <b>practice menu</b> drops down from the metronome button beside ⏹:</p>
   <table class="g">
-    <tr><th>On</th><th>Up / Down</th></tr>
-    <tr><td>a <b>note</b>, <kbd>Ctrl+Shift+Up</kbd> / <kbd>Down</kbd></td><td>moves it to the
-    next note of the key in force, spelled as the signature spells it: <code>key c major</code>
-    walks the white keys, <code>key f major</code> steps <code>a</code> → <code>bes</code> →
-    <code>c</code>. A minor key walks its signature and its leading tone too (<code>key a minor</code>:
-    <code>g</code> → <code>gis</code> → <code>a</code>). A note off the key steps
-    to the nearest note of the key that way (<code>cis</code> in C major: Up <code>d</code>, Down
-    <code>c</code>). The note keeps its pitch —
-    where the new letter would land in another octave, the marks are corrected (<code>b'</code> →
-    <code>c''</code>). A chord member moves alone.</td></tr>
-    <tr><td>a <b>chord</b> as a whole (its <code>&gt;</code> or its duration), <kbd>Ctrl+Shift+Up</kbd> / <kbd>Down</kbd></td><td>inverts it: Up raises the lowest note an octave (<code>&lt;c' e' g'&gt;</code> → <code>&lt;c'' e' g'&gt;</code>), Down lowers the highest; the other notes keep their pitches. <kbd>Ctrl+Shift+PageUp</kbd> / <kbd>PageDown</kbd> there move the whole chord (<code>&lt;c' e' g'&gt;'</code>).</td></tr>
-    <tr><td>a <b>note</b>, <kbd>Ctrl+Shift+PageUp</kbd> / <kbd>PageDown</kbd></td><td>adds one <code>'</code> (Up) or <code>,</code> (Down) — or takes away one of the other mark. Inside <code>&lt; &gt;</code> or <code>&lt;&lt; &gt;&gt;</code> only the member under the caret moves; on the chord's <code>&gt;</code> or its duration, the whole chord moves. With a selection, every note in it steps. It is a plain mark edit, so in relative mode the notes after it follow.</td></tr>
-    <tr><td>a <b>chord name</b> — <code>@chord(Cm7)</code> or a row's <code>Cm7</code></td><td>Up on a name with no shape writes its usual shape and the diagram appears (<code>@chord(Cm7)</code> → <code>@chord(Cm7 x35343)</code>, <code>G</code> → <code>G(320003)</code>); further Ups and Downs walk the other playable shapes, frets 10–15 included; Down back at the usual shape removes it. The status bar says where you are: <code>Cm7: shape 4 of 33 (x3x546)</code>.</td></tr>
-    <tr><td>a <b><code>chord(…)</code></b> item</td><td>steps its shape the same way on the part's own instrument (from <code>chord(C)</code>, Up writes the usual shape); Down stops at the usual shape, since the item needs one.</td></tr>
-    <tr><td>a <b><code>tempo</code></b></td><td>changes the metronome number: <kbd>Ctrl+Shift+Up</kbd> / <kbd>Down</kbd> by 1, <kbd>Ctrl+Shift+PageUp</kbd> / <kbd>PageDown</kbd> by 10 (<code>tempo "Allegro" 4 = 120</code> → <code>130</code>). Never the beat unit or a <code>swing 16</code>; it stops at 1.</td></tr>
-    <tr><td>a <b><code>key</code></b>, <kbd>Ctrl+Shift+Up</kbd> / <kbd>Down</kbd></td><td>moves it a fifth round the circle — one sharp more, or one flat more: <code>key c major</code> → <code>key g major</code>, Down → <code>key f major</code>. The mode stays (<code>a minor</code> → <code>e minor</code>); it stops at seven sharps or flats. Only the signature changes, not the notes.</td></tr>
-    <tr><td>a <b><code>key</code></b>, <kbd>Ctrl+Shift+PageUp</kbd> / <kbd>PageDown</kbd></td><td>PageUp: the <b>parallel</b> key — same tonic, other mode (<code>c major</code> ⇄ <code>c minor</code>). PageDown: the <b>relative</b> key — same signature, other mode (<code>c major</code> ⇄ <code>a minor</code>). Major and minor only.</td></tr>
-    <tr><td>a <b><code>clef</code></b></td><td><kbd>Ctrl+Shift+Up</kbd> / <kbd>Down</kbd>: the clef for higher / lower notes — <code>bass</code> → <code>tenor</code> → <code>alto</code> → <code>treble</code>, stopping at either end — a part header's <code>clef bass</code> or a <code>clef</code> inside music. <kbd>Ctrl+Shift+PageUp</kbd> / <kbd>PageDown</kbd>: an octave — <code>treble_8</code> ⇄ <code>treble</code> ⇄ <code>treble^8</code>, <code>bass_8</code> ⇄ <code>bass</code>. Only the clef changes, not the notes.</td></tr>
-    <tr><td>a <b>dynamic</b> (the caret after its <code>@</code>)</td><td>either pair steps it a level: <code>pp</code> → <code>p</code> → <code>mp</code> → <code>mf</code> → <code>f</code> → <code>ff</code>. On <code>@cresc</code> / <code>@decresc</code>, Up writes <code>@cresc</code> and Down <code>@decresc</code>.</td></tr>
-    <tr><td>an <b>articulation</b> (the caret after its <code>@</code>)</td><td>either pair steps it along its group, Up towards the up-bow, the hammer-on, the longer, the stronger, the one above, stopping at either end: <code>@downBow</code> → <code>@upBow</code>, <code>@pullOff</code> → <code>@hammerOn</code>, <code>@staccatissimo</code> → <code>@staccato</code> → <code>@portato</code> → <code>@tenuto</code>, <code>@accent</code> → <code>@marcato</code>, <code>@shortFermata</code> → <code>@fermata</code> → <code>@longFermata</code>, <code>@mordent</code> → <code>@prall</code>, <code>@reverseTurn</code> → <code>@turn</code>, <code>@trill</code> → <code>@pralltriller</code>, <code>@heel</code> → <code>@toe</code>, <code>@scoop</code> → <code>@plop</code>, <code>@fall</code> → <code>@doit</code>, <code>@breath</code> → <code>@caesura</code>, <code>@stemDown</code> → <code>@stemUp</code>; Down goes back. A <code>.up</code> / <code>.down</code> stays. A mark in no group (<code>@tap</code>), a dynamic on no ladder (<code>@sfz</code>) and a bare <code>@chord</code> on a chord step the note, member or chord they are written on instead — <code>&lt;c' e' g'&gt;@chord</code> inverts it.</td></tr>
-    <tr><td>a <b><code>time</code></b></td><td><kbd>Ctrl+Shift+Up</kbd> / <kbd>Down</kbd>: the beats by 1 (<code>3/4</code> → <code>4/4</code>). <kbd>Ctrl+Shift+PageUp</kbd> / <kbd>PageDown</kbd>: the common meters by the length of the bar — <code>3/8</code> <code>2/4</code> <code>6/8</code> <code>3/4</code> <code>2/2</code> <code>4/4</code> <code>9/8</code> <code>12/8</code>.</td></tr>
-    <tr><td>a part's <b><code>octave N</code></b></td><td>either pair steps N by 1 (0 to 8); every bare note of the part moves with it.</td></tr>
-    <tr><td>an <b><code>octave absolute</code></b> / <b><code>octave relative</code></b> — the file's or one inside music</td><td>Up runs <i>Convert Octaves to Absolute</i>, Down <i>Convert Octaves to Relative</i> (either pair): the whole file is rewritten into that mode, every note keeping its pitch, and the file's <code>octave</code> line stays, naming the new mode. To change the word alone, type it.</td></tr>
-    <tr><td>a <b><code>transpose</code></b></td><td><kbd>Ctrl+Shift+Up</kbd> / <kbd>Down</kbd>: the target a semitone, spelled so the transposed key has the fewest sharps or flats (<code>transpose d</code> → <code>ees</code>); the status bar says how far. <kbd>Ctrl+Shift+PageUp</kbd> / <kbd>PageDown</kbd>: an octave mark (<code>d</code> → <code>d'</code>).</td></tr>
-    <tr><td>the file's <b><code>shift</code></b></td><td>either pair steps it a semitone (<code>shift +1</code> → <code>shift +2</code>, −11 to +11) and the status bar names the key the piece lands in (<code>shift +1: key c major -> des major</code>). A top-level <code>shift N</code> moves the whole piece — every part, its own <code>transpose</code> included, the key signatures and the chord rows.</td></tr>
-    <tr><td>anything else</td><td><kbd>Ctrl+Shift+Up</kbd> / <kbd>Down</kbd>: nothing on Windows and macOS; on Linux, VS Code's own <i>Add Cursor Above / Below</i>. <kbd>Ctrl+Shift+PageUp</kbd> / <kbd>PageDown</kbd>: VS Code's own <i>Move Editor Left / Right in Group</i> (nothing on macOS)</td></tr>
+    <tr><th>In the menu</th><th>Does</th></tr>
+    <tr><td><b>Tempo</b></td><td>a slider from 50% to 150% of the written tempo; the button then reads <i>80%</i>, and <i>Reset</i> puts it back</td></tr>
+    <tr><td><b>Loop</b></td><td>plays the selected bars — or the whole score — round and round, through the music as written once (the score's own repeats inside it are not taken)</td></tr>
+    <tr><td><b>Metronome</b></td><td>a wood block on every beat of the meter, the first of the bar louder; a pickup keeps the accents on the bar lines</td></tr>
+    <tr><td><b>Parts</b></td><td>a toggle for each part — a chord row is one too — to silence it: sing or play yours against the others</td></tr>
   </table>
-  <p>All cursors step in one undo step. The shapes walked are the playable ones — at least
-  three strings, chord tones only, the root lowest, within four frets and four fingers;
-  <b>stretch shapes</b> (fretted frets five apart) are left out unless
-  <code>"lilysharp.chordShapes.includeStretch": true</code>. Hover a chord to see what it
-  draws, or what Up would write. In a score whose layout says <code>chordDiagrams all</code> a
-  name already draws its usual shape, so there Up writes the <i>next</i> one. What a diagram
-  is and which instrument it is drawn for: <a href="chords.html">Chords and chord
-  diagrams</a>.</p>
-  <p class="note">To use other keys, open <i>Keyboard Shortcuts</i> (<kbd>Ctrl+K</kbd>
-  <kbd>Ctrl+S</kbd>) and bind <code>lilysharp.stepSemitoneUp</code> / <code>lilysharp.stepSemitoneDown</code>
-  (a note of the key) or <code>lilysharp.stepUp</code> / <code>lilysharp.stepDown</code> (octave).</p>
-  <!-- VIDEO editor-step-octave: WITH SOUND. Source `c4 e g <c e g>4 |`, preview open. Caret on
-       the first c: Ctrl+Shift+PageUp twice, PageDown once (each result sounds). Caret on the e
-       inside the chord: PageUp — only that member moves. Caret after the chord's >: PageUp — the
-       whole chord moves. ~15 s. -->
-  <figure class="demo-video" data-pending>
-    <video src="videos/editor-step-octave.mp4" controls playsinline preload="none"></video>
-    <figcaption>Ctrl+Shift+PageUp/PageDown on a note, on one member of a chord, and on the whole
-    chord — each result sounds.</figcaption>
-  </figure>
+  <p>The button stays pressed in while anything differs from the score as written, and a
+  change made while it plays goes on from the same place. <i>Play from Here</i> on the
+  right-click menu plays once from the note or bar, loop or not.</p>
+</section>
+
+<section id="range">
+  <h2>Each part's range</h2>
+  <p><b>Range</b> in the preview's header (a double-headed arrow beside a note) opens a panel
+  over the score with each part's <b>lowest (▼) and highest (▲) note</b>, spelled as written,
+  with the bar it stands in. Click one to see it on the score, with the editor's caret on it; a
+  pitch written in several places says how many (<i>2/3</i>) and goes on to the next with each
+  click.</p>
+  <p>Under them is the part's <b>tessitura</b> — where it spends four-fifths of its sounding
+  time (<i>G4–E5</i>), which tires a singer more than the top note does — over a small chart of
+  the time spent on each semitone from the lowest note to the highest. The panel follows the
+  score picked in the header and every edit while it is open. The pitches are the sounding
+  ones, with C4 for middle C.</p>
 </section>
 
 <section id="audition">
@@ -286,7 +284,7 @@
     and dated. On Linux there is none, and the preview plays simple tones until you choose a
     font.</li>
     <li><b>For fuller sound</b>, download a free General MIDI sound font and choose it. Lily#
-    does not bundle one, so the extension stays small and you pick the sound you like.</li>
+    does not bundle one, so Lily# Studio stays small and you pick the sound you like.</li>
   </ul>
   <table class="g">
     <tr><th>Sound font</th><th>Size</th><th>Licence</th><th>Character</th></tr>
@@ -349,6 +347,61 @@
   been tried on Windows so far.</p>
 </section>
 
+<section id="step">
+  <h2>Stepping: <kbd>Ctrl+Shift+Up</kbd> / <kbd>Down</kbd>, <kbd>Ctrl+Shift+PageUp</kbd> / <kbd>PageDown</kbd></h2>
+  <p>Two pairs of keys that step what the caret is on, one notch at a time:
+  <kbd>Ctrl+Shift+Up</kbd> / <kbd>Down</kbd> to the next note of the key, <kbd>Ctrl+Shift+PageUp</kbd> /
+  <kbd>PageDown</kbd> by an octave.</p>
+  <table class="g">
+    <tr><th>On</th><th>Up / Down</th></tr>
+    <tr><td>a <b>note</b>, <kbd>Ctrl+Shift+Up</kbd> / <kbd>Down</kbd></td><td>moves it to the
+    next note of the key in force, spelled as the signature spells it: <code>key c major</code>
+    walks the white keys, <code>key f major</code> steps <code>a</code> → <code>bes</code> →
+    <code>c</code>. A minor key walks its signature and its leading tone too (<code>key a minor</code>:
+    <code>g</code> → <code>gis</code> → <code>a</code>). A note off the key steps
+    to the nearest note of the key that way (<code>cis</code> in C major: Up <code>d</code>, Down
+    <code>c</code>). The note keeps its pitch —
+    where the new letter would land in another octave, the marks are corrected (<code>b'</code> →
+    <code>c''</code>). A chord member moves alone.</td></tr>
+    <tr><td>a <b>chord</b> as a whole (its <code>&gt;</code> or its duration), <kbd>Ctrl+Shift+Up</kbd> / <kbd>Down</kbd></td><td>inverts it: Up raises the lowest note an octave (<code>&lt;c' e' g'&gt;</code> → <code>&lt;c'' e' g'&gt;</code>), Down lowers the highest; the other notes keep their pitches. <kbd>Ctrl+Shift+PageUp</kbd> / <kbd>PageDown</kbd> there move the whole chord (<code>&lt;c' e' g'&gt;'</code>).</td></tr>
+    <tr><td>a <b>note</b>, <kbd>Ctrl+Shift+PageUp</kbd> / <kbd>PageDown</kbd></td><td>adds one <code>'</code> (Up) or <code>,</code> (Down) — or takes away one of the other mark. Inside <code>&lt; &gt;</code> or <code>&lt;&lt; &gt;&gt;</code> only the member under the caret moves; on the chord's <code>&gt;</code> or its duration, the whole chord moves. With a selection, every note in it steps. It is a plain mark edit, so in relative mode the notes after it follow.</td></tr>
+    <tr><td>a <b>chord name</b> — <code>@chord(Cm7)</code> or a row's <code>Cm7</code></td><td>Up on a name with no shape writes its usual shape and the diagram appears (<code>@chord(Cm7)</code> → <code>@chord(Cm7 x35343)</code>, <code>G</code> → <code>G(320003)</code>); further Ups and Downs walk the other playable shapes, frets 10–15 included; Down back at the usual shape removes it. The status bar says where you are: <code>Cm7: shape 4 of 33 (x3x546)</code>.</td></tr>
+    <tr><td>a <b><code>chord(…)</code></b> item</td><td>steps its shape the same way on the part's own instrument (from <code>chord(C)</code>, Up writes the usual shape); Down stops at the usual shape, since the item needs one.</td></tr>
+    <tr><td>a <b><code>tempo</code></b></td><td>changes the metronome number: <kbd>Ctrl+Shift+Up</kbd> / <kbd>Down</kbd> by 1, <kbd>Ctrl+Shift+PageUp</kbd> / <kbd>PageDown</kbd> by 10 (<code>tempo "Allegro" 4 = 120</code> → <code>130</code>). Never the beat unit or a <code>swing 16</code>; it stops at 1.</td></tr>
+    <tr><td>a <b><code>key</code></b>, <kbd>Ctrl+Shift+Up</kbd> / <kbd>Down</kbd></td><td>moves it a fifth round the circle — one sharp more, or one flat more: <code>key c major</code> → <code>key g major</code>, Down → <code>key f major</code>. The mode stays (<code>a minor</code> → <code>e minor</code>); it stops at seven sharps or flats. Only the signature changes, not the notes.</td></tr>
+    <tr><td>a <b><code>key</code></b>, <kbd>Ctrl+Shift+PageUp</kbd> / <kbd>PageDown</kbd></td><td>PageUp: the <b>parallel</b> key — same tonic, other mode (<code>c major</code> ⇄ <code>c minor</code>). PageDown: the <b>relative</b> key — same signature, other mode (<code>c major</code> ⇄ <code>a minor</code>). Major and minor only.</td></tr>
+    <tr><td>a <b><code>clef</code></b></td><td><kbd>Ctrl+Shift+Up</kbd> / <kbd>Down</kbd>: the clef for higher / lower notes — <code>bass</code> → <code>tenor</code> → <code>alto</code> → <code>treble</code>, stopping at either end — a part header's <code>clef bass</code> or a <code>clef</code> inside music. <kbd>Ctrl+Shift+PageUp</kbd> / <kbd>PageDown</kbd>: an octave — <code>treble_8</code> ⇄ <code>treble</code> ⇄ <code>treble^8</code>, <code>bass_8</code> ⇄ <code>bass</code>. Only the clef changes, not the notes.</td></tr>
+    <tr><td>a <b>dynamic</b> (the caret after its <code>@</code>)</td><td>either pair steps it a level: <code>pp</code> → <code>p</code> → <code>mp</code> → <code>mf</code> → <code>f</code> → <code>ff</code>. On <code>@cresc</code> / <code>@decresc</code>, Up writes <code>@cresc</code> and Down <code>@decresc</code>.</td></tr>
+    <tr><td>an <b>articulation</b> (the caret after its <code>@</code>)</td><td>either pair steps it along its group, Up towards the up-bow, the hammer-on, the longer, the stronger, the one above, stopping at either end: <code>@downBow</code> → <code>@upBow</code>, <code>@pullOff</code> → <code>@hammerOn</code>, <code>@staccatissimo</code> → <code>@staccato</code> → <code>@portato</code> → <code>@tenuto</code>, <code>@accent</code> → <code>@marcato</code>, <code>@shortFermata</code> → <code>@fermata</code> → <code>@longFermata</code>, <code>@mordent</code> → <code>@prall</code>, <code>@reverseTurn</code> → <code>@turn</code>, <code>@trill</code> → <code>@pralltriller</code>, <code>@heel</code> → <code>@toe</code>, <code>@scoop</code> → <code>@plop</code>, <code>@fall</code> → <code>@doit</code>, <code>@breath</code> → <code>@caesura</code>, <code>@stemDown</code> → <code>@stemUp</code>; Down goes back. A <code>.up</code> / <code>.down</code> stays. A mark in no group (<code>@tap</code>), a dynamic on no ladder (<code>@sfz</code>) and a bare <code>@chord</code> on a chord step the note, member or chord they are written on instead — <code>&lt;c' e' g'&gt;@chord</code> inverts it.</td></tr>
+    <tr><td>a <b><code>time</code></b></td><td><kbd>Ctrl+Shift+Up</kbd> / <kbd>Down</kbd>: the beats by 1 (<code>3/4</code> → <code>4/4</code>). <kbd>Ctrl+Shift+PageUp</kbd> / <kbd>PageDown</kbd>: the common meters by the length of the bar — <code>3/8</code> <code>2/4</code> <code>6/8</code> <code>3/4</code> <code>2/2</code> <code>4/4</code> <code>9/8</code> <code>12/8</code>.</td></tr>
+    <tr><td>a part's <b><code>octave N</code></b></td><td>either pair steps N by 1 (0 to 8); every bare note of the part moves with it.</td></tr>
+    <tr><td>an <b><code>octave absolute</code></b> / <b><code>octave relative</code></b> — the file's or one inside music</td><td>Up runs <i>Convert Octaves to Absolute</i>, Down <i>Convert Octaves to Relative</i> (either pair): the whole file is rewritten into that mode, every note keeping its pitch, and the file's <code>octave</code> line stays, naming the new mode. To change the word alone, type it.</td></tr>
+    <tr><td>a <b><code>transpose</code></b></td><td><kbd>Ctrl+Shift+Up</kbd> / <kbd>Down</kbd>: the target a semitone, spelled so the transposed key has the fewest sharps or flats (<code>transpose d</code> → <code>ees</code>); the status bar says how far. <kbd>Ctrl+Shift+PageUp</kbd> / <kbd>PageDown</kbd>: an octave mark (<code>d</code> → <code>d'</code>).</td></tr>
+    <tr><td>the file's <b><code>shift</code></b></td><td>either pair steps it a semitone (<code>shift +1</code> → <code>shift +2</code>, −11 to +11) and the status bar names the key the piece lands in (<code>shift +1: key c major -> des major</code>). A top-level <code>shift N</code> moves the whole piece — every part, its own <code>transpose</code> included, the key signatures and the chord rows.</td></tr>
+    <tr><td>anything else</td><td><kbd>Ctrl+Shift+Up</kbd> / <kbd>Down</kbd>: nothing on Windows and macOS; on Linux, VS Code's own <i>Add Cursor Above / Below</i>. <kbd>Ctrl+Shift+PageUp</kbd> / <kbd>PageDown</kbd>: VS Code's own <i>Move Editor Left / Right in Group</i> (nothing on macOS)</td></tr>
+  </table>
+  <p>All cursors step in one undo step. The shapes walked are the playable ones — at least
+  three strings, chord tones only, the root lowest, within four frets and four fingers;
+  <b>stretch shapes</b> (fretted frets five apart) are left out unless
+  <code>"lilysharp.chordShapes.includeStretch": true</code>. Hover a chord to see what it
+  draws, or what Up would write. In a score whose layout says <code>chordDiagrams all</code> a
+  name already draws its usual shape, so there Up writes the <i>next</i> one. What a diagram
+  is and which instrument it is drawn for: <a href="chords.html">Chords and chord
+  diagrams</a>.</p>
+  <p class="note">To use other keys, open <i>Keyboard Shortcuts</i> (<kbd>Ctrl+K</kbd>
+  <kbd>Ctrl+S</kbd>) and bind <code>lilysharp.stepSemitoneUp</code> / <code>lilysharp.stepSemitoneDown</code>
+  (a note of the key) or <code>lilysharp.stepUp</code> / <code>lilysharp.stepDown</code> (octave).</p>
+  <!-- VIDEO editor-step-octave: WITH SOUND. Source `c4 e g <c e g>4 |`, preview open. Caret on
+       the first c: Ctrl+Shift+PageUp twice, PageDown once (each result sounds). Caret on the e
+       inside the chord: PageUp — only that member moves. Caret after the chord's >: PageUp — the
+       whole chord moves. ~15 s. -->
+  <figure class="demo-video" data-pending>
+    <video src="videos/editor-step-octave.mp4" controls playsinline preload="none"></video>
+    <figcaption>Ctrl+Shift+PageUp/PageDown on a note, on one member of a chord, and on the whole
+    chord — each result sounds.</figcaption>
+  </figure>
+</section>
+
 <section id="language">
   <h2>Completion, hover, fixes</h2>
   <ul>
@@ -368,9 +421,14 @@
     — and shows a chord's diagram, or how to add one. Over a phrase's name it shows the
     phrase's length, how often the file plays it and its source; a drum phrase adds its beat as
     a grid, one row per drum.</li>
-    <li><b>Value words complete too</b>: <code>instrument</code>, <code>clef</code> and
-    <code>key</code> offer their words, and <code>midiInstrument "</code> lists the 128 General
-    MIDI sounds.</li>
+    <li><b>Value words complete too</b>, and completing the keyword opens them at once:
+    <code>instrument</code> (each preset with the clef, octave and tuning it sets),
+    <code>clef</code>, <code>key</code>, <code>tuning</code> (each with its open strings),
+    <code>transpose</code> (the targets from c, up and down, each with its interval —
+    <code>d</code> up a major second, <code>bes,</code> down one), <code>transposition</code>
+    (<code>8va</code> <code>8vb</code> <code>15ma</code> <code>15mb</code>), and
+    <code>midiInstrument "</code> the 128 General MIDI sounds. Hovering a preset lists what it
+    sets.</li>
     <li><b>Diagnostics</b> as you type, worded to be acted on, and <b>quick fixes</b> where there
     is one obvious repair: a section written at different lengths gets <i>Add bar lines</i>
     (pad the shorter parts) and, when one part has cut it into sections, <i>Split Sections to
@@ -392,17 +450,32 @@
   </figure>
 </section>
 
+<section id="status">
+  <h2>The status bar</h2>
+  <p>Rest the caret on something and the status bar says what it is, in one line that stays in
+  view while you type — no hover to wait for:</p>
+  <table class="g">
+    <tr><th>The caret on</th><th>The status bar says</th></tr>
+    <tr><td>a note or a chord</td><td>the part, the bar the page prints, the beat and the pitches — <code>bar 12 · beat 2 + 1/2 · D4</code>; on a transposing part what they sound too (<code>D4 sounds C4</code> on a clarinet)</td></tr>
+    <tr><td>a <code>time</code> or a <code>tempo</code></td><td>what it means — <code>time 6/8: 2 beats of a dotted quarter</code>, how long a beat lasts (a tempo marking with no number is only printed)</td></tr>
+    <tr><td>a dynamic or an articulation</td><td>its meaning, and for a dynamic the MIDI velocity it plays at — <code>@staccato: short, detached</code></td></tr>
+    <tr><td>a setting</td><td>what it does — a clef's middle line, a key's sharps or flats and relative key, an <code>octave</code>, a <code>transposition</code> (written C4 sounds C3), a <code>tuning</code>'s strings, a <code>midiInstrument</code>'s number and family, an <code>instrument</code> preset's defaults, a page size</td></tr>
+    <tr><td>a bar line or a section a <code>form</code> names</td><td>how often it plays — <code>:|*3</code> plays 3 times; <code>section A: 8 bars · the 2nd of 3 times this form names it</code></td></tr>
+  </table>
+</section>
+
 <section id="commands">
   <h2>Commands</h2>
   <p>In the command palette under <i>Lily#:</i>, and most of them on the editor's right-click
   menu. Every command that rewrites the file checks the result before it offers it, and
   applies as one undo step. Each one is described, with examples, on
-  <a href="commands.html">Editor commands</a>.</p>
+  <a href="commands.html">Lily# Studio commands</a>.</p>
   <table class="g">
     <tr><th>Command</th><th>Does</th></tr>
-    <tr><td>New Score</td><td>opens a new <code>.lys</code> from a template, with the title selected</td></tr>
+    <tr><td>New Score · Edit New Score Template · Reset New Score Template</td><td>opens a new <code>.lys</code> from a template, with the title selected — a template you can make your own (your paper size, your name as the composer, the parts you always write)</td></tr>
     <tr><td>Import MusicXML…</td><td>turns a <code>.xml</code> / <code>.musicxml</code> / <code>.mxl</code> into a Lily# file — a faithful starting point, with a report of what was approximated</td></tr>
     <tr><td>Convert Image/PDF to Lily# (.lys)… · Show Original Scan</td><td>reads printed music from a scan or PDF with the <a href="scan.html">Scan Import</a> extension (Windows, Beta), the doubtful places marked <code>@todo</code>, and shows the page beside the score to check against</td></tr>
+    <tr><td>Fix OMR Marks with AI… · Edit Bars Beside the Scan</td><td>the marked bars of a score read from a scan, fixed by the AI against the scan's picture of each bar — or by hand, in the same panel: <a href="scan.html#fix">Scan Import</a></td></tr>
     <tr><td>Regroup (by part ⇄ by section)</td><td>rewrites the file between <code>part bass { section A { … } }</code> and <code>section A { bass { … } }</code></td></tr>
     <tr><td>Split Sections to Match a Part</td><td>when one part has cut a section into several (<code>A</code> of 16 bars + <code>B</code> of 121) and the others still write it whole, cuts the others — and the section's chord rows and lyrics — at the same bars, and makes every form play <code>A B</code> where it played <code>A</code>. If parts subdivide it differently it asks which to follow; one confirmation shows the plan. It is checked first — every cut part must sound and count exactly as before — and a slur, tie or hairpin across a cut is carried into the new section. A beam, a pedal or another span across a cut, or a cut mid-bar, is reported instead and nothing changes. Files grouped by part.</td></tr>
     <tr><td>Convert Octaves to Absolute / to Relative</td><td>rewrites the whole file into the other octave mode, every note at the pitch it sounds, checked note by note</td></tr>
@@ -410,12 +483,13 @@
     <tr><td>Add Chord Track (auto-harmonize)</td><td>adds a <code>chords</code> row that harmonizes the melody with the key's chords, and places it above the staff — a starting point to edit</td></tr>
     <tr><td>Guess Section Key…</td><td>reads the notes of the section at the cursor (or every section the selection touches) and offers its likely keys, best first; the one you pick is written as the key the section starts in, then the notes spelled against it are offered for respelling</td></tr>
     <tr><td>Respell Notes to Key…</td><td>respells the section's notes to the key it starts in (<code>fis</code> → <code>ges</code> in G♭ major, or one spelling where <code>fis</code> and <code>ges</code> are mixed); you choose which respellings to apply, and every note keeps its pitch</td></tr>
+    <tr><td>Remove All String Numbers</td><td>removes every <code>\1</code> … <code>\9</code> from the file, so the tab chooses each string itself — for a book brought over from LilyPond, which needed most of them written</td></tr>
     <tr><td>Play Note at Cursor · Play Current Measure</td><td><kbd>Alt+P</kbd> (hold) · <kbd>Alt+M</kbd></td></tr>
     <tr><td>Step Up · Step Down in the Key</td><td><kbd>Ctrl+Shift+Up</kbd> · <kbd>Ctrl+Shift+Down</kbd> — <a href="#step">above</a></td></tr>
     <tr><td>Step Up · Step Down an Octave</td><td><kbd>Ctrl+Shift+PageUp</kbd> · <kbd>Ctrl+Shift+PageDown</kbd> — <a href="#step">above</a></td></tr>
     <tr><td>Open Preview · Open Preview to Side</td><td><kbd>Ctrl+Shift+V</kbd> · <kbd>Ctrl+K</kbd> <kbd>V</kbd></td></tr>
     <tr><td>Export as PDF / SVG / PNG / LilyPond / MusicXML / MIDI / VOCALOID</td><td>writes the file's scores</td></tr>
-    <tr><td>Transform Selection with AI… · Select AI Model…</td><td><a href="#ai">below</a></td></tr>
+    <tr><td>Ask AI… · Select AI Model…</td><td><kbd>Ctrl+I</kbd> — <a href="#ai">below</a></td></tr>
   </table>
   <!-- VIDEO editor-split-sections: a file grouped by part — vn1 has `section A` (2 bars) and
        `section B` (2 bars), vn2 still writes all 4 bars in `section A`, form { A }. Hover
@@ -430,6 +504,8 @@
 
 <section id="settings">
   <h2>Settings</h2>
+  <p>In VS Code's Settings under <i>Lily# Studio</i>, in five groups — Preview, Playback,
+  Editing, AI, and Scans and Fonts:</p>
   <table class="g">
     <tr><th>Setting</th><th>Default</th><th>Does</th></tr>
     <tr><td><code>lilysharp.preview.openOnOpen</code></td><td><code>true</code></td><td>open the preview beside a <code>.lys</code> file when it is opened (<a href="#preview">The preview</a>)</td></tr>
@@ -456,33 +532,56 @@
 </section>
 
 <section id="ai">
-  <h2>AI in the editor</h2>
+  <h2>Ask AI and the AI features</h2>
   <p>The AI features use the language models VS Code offers — GitHub Copilot's, or those of
-  another extension that provides models. Lily# keeps no key or account of its own and has no
-  telemetry; what happened is logged to an output channel on your machine.</p>
+  another extension that provides models. Lily# Studio keeps no key or account of its own and
+  has no telemetry; what happened is logged to an output channel on your machine.</p>
 
-  <h3>Transform Selection with AI — <kbd>Ctrl+I</kbd></h3>
-  <p>Select a few bars — in the text, or by clicking and shift-clicking notes in the preview —
-  press <kbd>Ctrl+I</kbd> (<kbd>Cmd+I</kbd>) and ask in words: <i>“harmonize this in
-  thirds”</i>, <i>“transpose up a fourth”</i>, <i>“add a crescendo”</i>.</p>
+  <h3>Ask AI — <kbd>Ctrl+I</kbd></h3>
+  <p>Say what to change, in words and in any language: <i>“add a bass line”</i>, <i>“make bar
+  5 a fill”</i>, <i>“harmonize the melody in thirds”</i>, <i>“transpose up a fourth”</i>. Press
+  <kbd>Ctrl+I</kbd> (<kbd>Cmd+I</kbd>) in the editor or the preview, click ✨ in the preview's
+  header, or right-click the score: the menu names what it will take as its hint — <i>Ask AI,
+  This Note as a Hint…</i>, <i>This Bar…</i>, <i>the Selection…</i>, or plain <i>Ask AI…</i> off
+  the staves.</p>
   <ul>
-    <li><b>The model is given what the compiler knows</b>: the Lily# grammar, the file around
-    the selection, and the file's current errors and warnings.</li>
-    <li><b>Every candidate is compiled before you see it.</b> One that does not compile, adds
+    <li><b>A selection is a hint of where to look, not a fence.</b> Text selected in the
+    editor, or bars, a bar or a note on the score, says where; the whole score stays open to
+    change, so a harmony line can bring its new part and its score row with it. With nothing
+    selected, the request is about the whole score.</li>
+    <li><b>The model reads the whole file</b> — up to its input limit — with the Lily# grammar
+    and the file's errors and warnings, and answers with edits: each a passage of the file and
+    what replaces it. It works in absolute octaves, where every pitch says where it sounds; a
+    file in relative octaves gets the change back in its own octaves on Accept.</li>
+    <li><b>Every answer is compiled before you see it.</b> One that does not compile, adds
     warnings, or puts notes more than an octave away from the ones they replace is sent back
-    with the reason, for up to two repairs.</li>
-    <li><b>You judge the music, not a diff.</b> The candidate is engraved beside the original,
-    with an After/Before toggle. It may change the file around the selection when it has to (a
-    harmony line needs a new part and a score row).</li>
-    <li><b>Nothing changes until you accept</b>, and one <kbd>Ctrl+Z</kbd> undoes it.</li>
+    with the reason, for up to two repairs. A notification says the step — reading the score,
+    generating, repairing, rendering — and names the model.</li>
+    <li><b>You judge the music.</b> The candidate panel engraves the score as it would be
+    (<b>After</b>) and as it is (<b>Before</b>); switching keeps your place on the page.
+    <b>What the AI changed is green</b> — only the notes it really changed — and
+    <b>💬</b> under your request is its own word on what it did and why. <b>▶</b> (or Space)
+    plays the side shown, or from a note you click; <kbd>Ctrl</kbd>+wheel zooms and a drag
+    scrolls, as in the preview. <b>Text after Accept</b> opens the whole file as Accept would
+    leave it, the changes marked — what is written in green, what goes struck in red — at the
+    first change.</li>
+    <li><b>Ask Again…</b> tells the AI what to change about the candidate, and its answer takes
+    the candidate's place. <b>Nothing changes until you Accept</b> (<kbd>Enter</kbd>), and one
+    <kbd>Ctrl+Z</kbd> undoes it; <b>Reject</b> (<kbd>Esc</kbd>) leaves the file as it is.</li>
   </ul>
   <!-- VIDEO ai: select two bars of a melody, Ctrl+I, type "add a harmony a third below", wait:
-       the engraved candidate appears with After/Before; toggle it, Accept, then Ctrl+Z. Needs a
-       GitHub Copilot sign-in. ~20 s, no sound. -->
+       the engraved candidate appears with the changes in green and the AI's note; toggle
+       After/Before, Accept, then Ctrl+Z. Needs a GitHub Copilot sign-in. ~20 s, no sound. -->
   <figure class="demo-video" data-pending>
     <video src="videos/ai-transform.mp4" muted loop playsinline autoplay preload="none"></video>
-    <figcaption>Transform Selection with AI: the answer arrives compiled and engraved.</figcaption>
+    <figcaption>Ask AI: the answer arrives compiled and engraved, what changed in green.</figcaption>
   </figure>
+
+  <h3>Fix the marks of a scan</h3>
+  <p>For a score read from a scan, <i>Fix OMR Marks with AI…</i> proposes a fix for each bar
+  the reader marked, with the scan's picture of the bar shown to the model and each proposal
+  checked against the page before you see it; <i>Edit Bars Beside the Scan</i> opens the same
+  panel to fix bars by hand — <a href="scan.html#fix">Scan Import</a>.</p>
 
   <h3>Ghost completion</h3>
   <p><code>lilysharp.ai.ghostCompletion</code> (off by default) suggests the next measure as
@@ -493,12 +592,13 @@
   completion slowed every keystroke in a score.</p>
 
   <h3>Choosing the model</h3>
-  <p><i>Lily#: Select AI Model…</i> picks one for good (<code>lilysharp.ai.editModel</code> for Ask AI and Fix OMR Marks).
-  Without a choice, Transform takes the largest model on offer and passes over the small ones,
-  which write poor Lily#; ghost completion takes a small, fast one.</p>
+  <p><i>Lily#: Select AI Model…</i> picks one for good: <code>lilysharp.ai.editModel</code> for
+  Ask AI and Fix OMR Marks, <code>lilysharp.ai.ghostModel</code> for ghost completion. Without a
+  choice, Ask AI takes the largest model on offer and passes over the small ones, which write
+  poor Lily#; ghost completion takes a small, fast one.</p>
 
   <h3>Copilot Chat knows the grammar</h3>
-  <p>The extension gives Copilot the Lily# grammar as an instructions file for
+  <p>Lily# Studio gives Copilot the Lily# grammar as an instructions file for
   <code>.lys</code> files, so Copilot Chat, agent mode and inline chat answer in Lily# instead
   of guessing LilyPond. (Copilot's as-you-type suggestions do not read instructions files —
   that is Copilot's rule.)</p>
@@ -506,11 +606,11 @@
 
 <section id="llm">
   <h2>Other assistants and agents</h2>
-  <p>The grammar the extension gives its models is a plain file in the repository,
+  <p>The grammar Lily# Studio gives its models is a plain file in the repository,
   <a href="https://github.com/yotsuda/LilySharp/blob/master/docs/GRAMMAR_FOR_LLM.md"><code>docs/GRAMMAR_FOR_LLM.md</code></a>:
   the whole language, its gotchas and its reserved words, written for a model to read. Give it
   to any assistant that writes <code>.lys</code>, and let the compiler close the loop the way
-  the extension does — <code>lysc check song.lys</code> prints every error and warning with its
+  Lily# Studio does — <code>lysc check song.lys</code> prints every error and warning with its
   line and column, and exits non-zero on an error. For generated music,
   <code>octave absolute</code> keeps a wrong octave from cascading
   (<a href="grammar.html#pitch">Pitches and octaves</a>).</p>

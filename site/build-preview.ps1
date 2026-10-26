@@ -171,7 +171,7 @@ $template = @'
 <header><div class="wrap">
   <h1 class="brand">Lily#</h1>
   <p class="tagline">Publication-quality sheet music from plain text — engraved by a
-  LilyPond port, edited in an IDE that keeps up with your keystrokes.</p>
+  LilyPond port, edited in Lily# Studio, an editor that keeps up with your keystrokes.</p>
   <ul class="entries">
     <li><a href="start.html">Get started &rarr;</a></li>
     <li><a href="learn.html">Learn it lesson by lesson &rarr;</a></li>
@@ -206,18 +206,20 @@ $template = @'
       absolute so a mistake never cascades.</p></div>
     <div class="pillar"><span class="n">03</span><h3>Preview that keeps up</h3>
       <p>A keystroke reparses incrementally and reuses the systems it did not disturb, so
-      the score redraws in milliseconds.</p></div>
+      the score redraws in milliseconds. It plays too: the bars you select, round and round,
+      slower or faster, with a metronome and the parts you choose — and it shows each part's
+      range. <a href="editor.html#practice">Practice playback &rarr;</a></p></div>
     <div class="pillar"><span class="n">04</span><h3>AI that compiles first</h3>
-      <p>Ask in words, and every candidate is compiled and repaired before you see it.
-      A candidate that adds errors is never shown. It uses the models VS Code offers you,
-      such as GitHub Copilot's.</p></div>
-    <div class="pillar"><span class="n">05</span><h3>An editor that knows the grammar</h3>
+      <p>Ask in words, and every candidate is compiled and repaired before you see it,
+      engraved with what changed in green. A candidate that adds errors is never shown. It uses
+      the models VS Code offers you, such as GitHub Copilot's.</p></div>
+    <div class="pillar"><span class="n">05</span><h3>Lily# Studio knows the grammar</h3>
       <p>Completion offers what can actually come next — after <code>lyrics&nbsp;NAME</code>
       it proposes <code>sings</code>, then the part names that exist in your file. Rename a
       part and every reference to it moves with it. Hover a chord and it names itself — symbol,
       degree and pitches. An octave mark or a duration typed anywhere on a note lands in its
       slot, <code>Ctrl+Shift+Up/Down</code> steps to the next note of the key (PageUp/PageDown an octave) or a chord shape — and on a tempo, key, clef, dynamic, articulation, time, octave, transpose or shift changes it, no typing — and the note you
-      land on sounds. <a href="editor.html">Everything the editor does &rarr;</a></p></div>
+      land on sounds. <a href="editor.html">Everything Lily# Studio does &rarr;</a></p></div>
     <div class="pillar"><span class="n">06</span><h3>One source, every score</h3>
       <p>A file can carry more than one <code>score</code> and more than one
       <code>form</code>. The full score, the separate parts, a staff-less chord grid and a
@@ -334,26 +336,29 @@ $template = @'
 <section><div class="wrap">
   <p class="eyebrow">03 — AI</p>
   <h2>It compiles the answer before showing it to you</h2>
-  <p class="lede">Select a few bars, press <code>Ctrl+I</code> (<code>Cmd+I</code> on macOS),
-  and ask in words —
-  <i>"harmonise this in thirds"</i>, <i>"transpose up a fourth"</i>,
-  <i>"add a crescendo"</i>. What comes back is not a text diff to squint at: it is a
-  rendered score, and it has already been compiled.</p>
+  <p class="lede">Press <code>Ctrl+I</code> (<code>Cmd+I</code> on macOS) or ✨ in the
+  preview, and ask in words —
+  <i>"add a bass line"</i>, <i>"harmonise this in thirds"</i>, <i>"transpose up a fourth"</i>.
+  What comes back is not a text diff to squint at: it is a rendered score, what changed in
+  green, and it has already been compiled.</p>
   <div class="box"><pre class="mermaid">{{AI_FLOW}}</pre></div>
   <div class="cols2" style="margin-top:26px">
     <ul class="plain">
       <li><b>Broken candidates never reach you.</b> Each one is compiled in-process; its own
       diagnostics go back to the model for up to two repair rounds.</li>
       <li><b>You judge on the notation.</b> The candidate renders beside the original with an
-      After/Before toggle.</li>
+      After/Before toggle, the notes the AI changed in green and its own word on what it did;
+      ▶ plays it before you decide.</li>
       <li><b>Nothing is touched until you accept.</b> One <code>WorkspaceEdit</code>, and one
       <code>Ctrl+Z</code> undoes it.</li>
     </ul>
     <ul class="plain">
       <li><b>The model always has the grammar.</b> <code>docs/GRAMMAR_FOR_LLM.md</code> is copied
-      into the extension at build time, so the canon ships with it and cannot drift.</li>
-      <li><b>Pick bars on the score.</b> Shift-click a range in the preview and transform it —
-      the same loop, whether the selection began in text or on the page.</li>
+      into Lily# Studio at build time, so the canon ships with it and cannot drift. It reads
+      the whole file, and answers with edits.</li>
+      <li><b>Point at the bars.</b> Select them in the text or on the score (Shift-click), or
+      right-click a note or a bar: the place is a hint of where to look, and the whole score
+      stays open to change — a new part brings its score row with it.</li>
       <li><b>Your model, no telemetry.</b> It runs on the language models VS Code offers you —
       GitHub Copilot's, or another provider's — and outcomes go to an output channel on your
       machine. <a href="editor.html#ai">More on the AI features &rarr;</a></li>
@@ -404,14 +409,14 @@ score {
 
 $aiFlow = Esc @'
 flowchart LR
-    sel["bars you selected"] --> ask["your prompt"]
+    sel["the score, and where you point"] --> ask["your request"]
     ask --> model["language model"]
     model --> chk{"compiles?"}
     chk -- "no" --> repair["feed the diagnostics back<br/>up to 2 rounds"]
     repair --> model
-    chk -- "yes" --> draw["render the candidate score"]
+    chk -- "yes" --> draw["render the candidate score<br/>what changed in green"]
     draw --> you{"accept?"}
-    you -- "iterate" --> model
+    you -- "ask again" --> model
     you -- "yes" --> apply["one WorkspaceEdit<br/>one Ctrl+Z undoes it"]
 '@
 

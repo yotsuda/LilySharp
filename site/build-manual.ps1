@@ -79,7 +79,7 @@ $extra = @'
 # Every page carries the same links along the top, so a reader can get from any page to any
 # other; the page being read is marked rather than linked.
 $byParser = 'The parser is the authority: where this page and the compiler disagree, the compiler is right and this page is a bug.'
-$byExtension = 'The extension is the authority: where this page and the extension disagree, the extension is right and this page is a bug.'
+$byExtension = 'Lily# Studio is the authority: where this page and Lily# Studio disagree, Lily# Studio is right and this page is a bug.'
 
 # The pages written from a *-body.html of their own. Section: the link along the top they
 # stand under (site-common.ps1's $SiteNav).
@@ -96,19 +96,19 @@ $pages = @(
        Authority = $byParser },
     @{ Out = 'editor.html'; Body = 'editor-body.html'; Section = 'editor.html'
        Title = 'Lily# Studio — the editor and AI'
-       Desc = 'Lily# Studio, the Lily# extension for VS Code: live preview, typing aids, stepping, audition, practice playback, commands, settings and the AI features.'
+       Desc = 'Lily# Studio, the Lily# extension for VS Code: live preview, typing aids, stepping, audition, practice playback, the range of each part, commands, settings and Ask AI.'
        Sub = 'Lily# Studio — the VS Code extension, and what it does with AI'
        Authority = $byExtension },
     @{ Out = 'commands.html'; Body = 'commands-body.html'; Section = 'editor.html'
-       Title = 'Lily# — editor commands'
-       Desc = 'Every Lily# command in VS Code — the right-click menus and the command palette: what each does, with examples.'
-       Sub = 'Editor commands — what each one does'
+       Title = 'Lily# Studio — commands'
+       Desc = 'Every Lily# Studio command in VS Code — the right-click menus and the command palette: what each does, with examples.'
+       Sub = 'Lily# Studio commands — what each one does'
        Authority = $byExtension },
     @{ Out = 'scan.html'; Body = 'scan-body.html'; Section = 'editor.html'
        Title = 'Lily# — Scan Import (Beta)'
-       Desc = 'Lily# Scan Import reads a scan or PDF of printed music into editable Lily# text, marks what it was unsure of, and opens the page beside the score to check against.'
+       Desc = 'Lily# Scan Import reads a scan or PDF of printed music into editable Lily# text, marks what it was unsure of, opens the page beside the score to check against, and has the AI propose fixes for the marked bars.'
        Sub = 'Scan Import — printed music read from a scan or PDF (Beta)'
-       Authority = 'The two extensions are the authority: where this page and Lily# or Scan Import disagree, the extension is right and this page is a bug.' },
+       Authority = 'The two extensions are the authority: where this page and Lily# Studio or Scan Import disagree, the extension is right and this page is a bug.' },
     @{ Out = 'about.html'; Body = 'about-body.html'; Section = 'about.html'
        Title = 'Lily# — about'
        Desc = 'What Lily# owes LilyPond, its licence and fonts, how it is put together, and why the preview keeps up.'
@@ -556,7 +556,7 @@ in VS Code, open an empty <code>.lys</code> file, type <code>lesson</code> and p
 <kbd>Ctrl+Space</kbd> — the list shows all $($lessons.Count), and picking one puts it in the
 file. The preview opens beside it and redraws as you follow the steps. These pages show each
 lesson as it opens, what it asks you to do, and where the manual says more.</p>
-<p class="note">Not installed yet? <a href="start.html#install">Install the extension</a> — one
+<p class="note">Not installed yet? <a href="start.html#install">Install Lily# Studio</a> — one
 search in VS Code's Extensions view, nothing else to install.</p>
 <!-- VIDEO learn-lesson: SHOTLIST 12. An empty .lys: type lesson, Ctrl+Space, pick lesson-02-notes.
      The lesson replaces the file and the preview opens with red rings; do what the first ring

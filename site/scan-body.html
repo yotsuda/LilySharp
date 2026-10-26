@@ -7,6 +7,7 @@
     <li><a href="#install">Install it</a></li>
     <li><a href="#read">Read a scan</a></li>
     <li><a href="#check">Check what it read</a></li>
+    <li><a href="#fix">Fix the marks — with AI, or by hand</a></li>
     <li><a href="#reads">What it reads, and not yet</a></li>
     <li><a href="#terms">Privacy and terms</a></li>
   </ol>
@@ -32,7 +33,8 @@
   <p>It is a <b>separate extension</b> by the same author, <i>Lily# Scan Import (Beta)</i>, that
   carries the reader; the commands that run it are Lily#'s, and it shows nothing without Lily#.
   It is in beta and free while it is: later versions may be offered for a fee. It runs on
-  Windows (x64) only, and needs Lily# Studio (the Lily# extension) at 0.13.0 or later.</p>
+  Windows (x64) only, and needs Lily# Studio, the editor for Lily#; fixing the marks with AI
+  needs Lily# Studio 0.14.0 and Scan Import 0.4.0 or later.</p>
 </section>
 
 <section id="install">
@@ -63,8 +65,10 @@
       (.lys)…</i>, or run it from the palette and choose the files. For a piece scanned page by
       page, pick its pages in order; a PDF brings its pages with it.</span></li>
     <li><b>Wait for the reader</b>
-      <span>It runs on your computer, page by page; a progress notice shows at the bottom right
-      until it is done.</span></li>
+      <span>It runs on your computer, page by page. A notice at the bottom right says what it is
+      doing — finding the staves, reading page 3 of 6, checking the reading against the pages —
+      with the time so far, counted every second, and about how long the step has left once
+      the pages have a pace. <i>Cancel</i> stops it.</span></li>
     <li><b>The score opens</b>
       <span>The <code>.lys</code> is written beside the image and opens with the preview. Two
       files land beside it: <code>NAME.omr.json</code>, where each bar is on the page, and
@@ -113,15 +117,50 @@
   corrected score again and compare it with the scan, bar by bar: the marks that still differ
   stay, the rest go. It is off by default.</p>
   <p>The commands themselves, one by one, are on
-  <a href="commands.html#import-image">Editor commands</a>; the setting is in the
+  <a href="commands.html#import-image">Lily# Studio commands</a>; the setting is in the
   <a href="editor.html#settings">settings table</a>.</p>
-  <!-- videos/scan-transform.mp4 (SHOTLIST 17): the score just read, a few bars selected, Ctrl+I,
-       "transpose up a fourth", the candidate engraved beside the original, Accept. No sound. -->
+  <!-- videos/scan-transform.mp4 (SHOTLIST 17): the score just read, a few bars selected, Ctrl+I
+       (Ask AI), "transpose up a fourth", the candidate engraved beside the original, Accept. No sound. -->
   <figure class="demo-video" data-pending>
     <video src="videos/scan-transform.mp4" muted loop playsinline autoplay preload="metadata"></video>
     <figcaption>Once it is text, it is music you can ask about: the bars read from the page,
-    transposed by the editor's AI and engraved again before you accept.</figcaption>
+    transposed by Ask AI and engraved again before you accept.</figcaption>
   </figure>
+</section>
+
+<section id="fix">
+  <h2>Fix the marks — with AI, or by hand</h2>
+  <p><b>Fix OMR Marks with AI…</b> has the AI rewrite the bars the reader marked, one request a
+  bar, only when you run it. Run it from the palette or the editor's menu, with <b>Fix N marks
+  with AI…</b> in the scan view's head (N being the marks its slider shows), on one bar from a
+  mark's lightbulb (<i>Fix this bar with AI…</i>), or by right-clicking a bar in the preview or
+  the scan. A list lets you pick the bars, the least sure first.</p>
+  <ul>
+    <li><b>The model sees the page.</b> Each request carries the scan's picture of the bar,
+    beside its text and the reader's note; the page decides, and the meter is only a check.</li>
+    <li><b>Each proposal passes three gates before it counts as ready</b>: it compiles with no
+    new error, it fills its bar, and the reader compares it with the scan (<i>verify</i>). A
+    proposal the scan contradicts is shown with <i>verify ✗</i> and its reason.</li>
+    <li><b>You review them in the <i>Bar fixes</i> panel</b>, one row a bar: <b>Now</b> (the
+    bar as it is), <b>Scan</b> (the page) and <b>Draft</b> (the proposal) side by side, the
+    notes that change coloured alike in the pictures and the text under them compared piece by
+    piece. The AI answers row by row in the background, and the other rows can be read and
+    decided meanwhile.</li>
+    <li><b>Accept</b> writes a row into the <code>.lys</code> at once (its own
+    <kbd>Ctrl+Z</kbd>), <b>Discard</b> drops it; <b>Accept All (N)</b> writes the ready rows as
+    one edit. <b>keep @todo</b> beside Accept writes the bar and keeps it marked, with the words
+    you type as its memo — for a proposal that is better but not right yet.</li>
+    <li><b>A draft can be edited where it stands</b>: click its text and type, and its picture
+    and gates follow; <i>Ask AI</i> on a row you have edited gives the AI your attempt.</li>
+  </ul>
+  <p><b>Edit Bars Beside the Scan</b> opens the same panel without the AI, for the bars on the
+  selected lines (or the caret's): each bar beside its scan, to put right by hand with the same
+  pictures and gates — on a bar with no mark, <i>add @todo</i> marks it as you accept.</p>
+  <p class="note">The model is the one <i>Lily#: Select AI Model…</i> names for Ask AI
+  (<code>lilysharp.ai.editModel</code>). The picture and the verify gate can be switched off in
+  <code>settings.json</code> (<code>lilysharp.ai.omrFixImages</code>,
+  <code>omrFixVerify</code>); more than 25 bars at once (<code>omrFixBatch</code>) asks
+  first.</p>
 </section>
 
 <section id="reads">

@@ -18,6 +18,7 @@
     <li><a href="#split">Split Sections to Match a Part</a></li>
     <li><a href="#octaves">Convert Octaves</a></li>
     <li><a href="#extract-phrase">Extract Phrase from Section</a></li>
+    <li><a href="#string-numbers">Remove All String Numbers</a></li>
   </ol>
   <p class="grp">Harmony and key</p>
   <ol>
@@ -30,7 +31,7 @@
     <li><a href="#play">Play, step and sound</a></li>
     <li><a href="#preview-menu">The preview's menu</a></li>
     <li><a href="#export">Export</a></li>
-    <li><a href="#ai">With AI</a></li>
+    <li><a href="#ai">Ask AI, and fixing a scan's marks</a></li>
   </ol>
 </nav>
 
@@ -44,12 +45,12 @@
   subject is: on a file in the Explorer, or in the preview.</p>
   <table class="g">
     <tr><th>Where</th><th>What is there</th></tr>
-    <tr><td>Right-click in a <code>.lys</code> editor</td><td>Transform Selection with AI… · Regroup · Split Sections to Match a Part · Convert Octaves to Absolute / to Relative · Extract Phrase from Section · Add Chord Track · Guess Section Key… · Respell Notes to Key…</td></tr>
+    <tr><td>Right-click in a <code>.lys</code> editor</td><td>Ask AI… · Regroup · Split Sections to Match a Part · Convert Octaves to Absolute / to Relative · Remove All String Numbers · Extract Phrase from Section · Add Chord Track · Guess Section Key… · Respell Notes to Key… — and, in a score read from a scan, Fix OMR Marks with AI… · Edit Bars Beside the Scan</td></tr>
     <tr><td>Right-click a file in the Explorer</td><td>on a <code>.lys</code>: the <i>Lily#: Export</i> submenu · on a <code>.xml</code> / <code>.musicxml</code> / <code>.mxl</code>: Import MusicXML… · on a scan or PDF: Convert Image/PDF to Lily# (.lys)… (when the reader is installed)</td></tr>
-    <tr><td>Right-click in the preview</td><td>Play from Here · Stop Playback · Fit Width · Reset Zoom (100%)</td></tr>
+    <tr><td>Right-click in the preview</td><td>Ask AI… with the note, bar or selection under the pointer as its hint · Select This Bar · Clear Selection · Play from Here (on a note or a bar) · Stop Playback · Fit Width · Reset Zoom (100%) — and, in a score read from a scan, Fix OMR Marks with AI… · Edit Bars Beside the Scan on the bar</td></tr>
     <tr><td>The editor's title bar</td><td>Open Preview to Side · the lock that keeps the preview on one file</td></tr>
     <tr><td><i>File → New File…</i></td><td>Lily# Score (.lys)</td></tr>
-    <tr><td>Keys</td><td><kbd>Ctrl+Shift+V</kbd> preview · <kbd>Ctrl+K</kbd> <kbd>V</kbd> preview to the side · <kbd>Alt+P</kbd> play note · <kbd>Alt+M</kbd> play measure · <kbd>Ctrl+Shift+Up/Down</kbd> step to the next note of the key (or a tempo, key, clef, dynamic, time…) · <kbd>Ctrl+Shift+PageUp/PageDown</kbd> step an octave · <kbd>Ctrl+I</kbd> transform with AI</td></tr>
+    <tr><td>Keys</td><td><kbd>Ctrl+Shift+V</kbd> preview · <kbd>Ctrl+K</kbd> <kbd>V</kbd> preview to the side · <kbd>Alt+P</kbd> play note · <kbd>Alt+M</kbd> play measure · <kbd>Ctrl+Shift+Up/Down</kbd> step to the next note of the key (or a tempo, key, clef, dynamic, time…) · <kbd>Ctrl+Shift+PageUp/PageDown</kbd> step an octave · <kbd>Ctrl+I</kbd> Ask AI…</td></tr>
   </table>
   <p class="note">To give a command a key of your own, open <i>Keyboard Shortcuts</i>
   (<kbd>Ctrl+K</kbd> <kbd>Ctrl+S</kbd>) and search for <code>lilysharp.</code>.</p>
@@ -77,6 +78,10 @@
   score — with the title selected so you can type over it, and the preview beside it. It is
   also <i>File → New File… → Lily# Score (.lys)</i>. In the new file, type <code>lesson</code>
   and <kbd>Ctrl+Space</kbd> for the <a href="learn.html">lessons</a>.</p>
+  <p>The template is yours to change: <b>Edit New Score Template</b> opens it — a copy of the
+  built-in one the first time — to give it your paper size (<code>paper { size letter }</code>),
+  your name as the composer, the parts you always write; every New Score starts from it after
+  that. <b>Reset New Score Template</b> goes back to the built-in one.</p>
 </section>
 
 <section id="import-musicxml">
@@ -195,6 +200,15 @@ section A { melody { c'4 d' e' f' | g'1 | } }   phrase theme { c'4 d' e' f' | g'
   </figure>
 </section>
 
+<section id="string-numbers">
+  <h2>Remove All String Numbers</h2>
+  <p>Removes every string number — <code>\1</code> … <code>\9</code> after a note — from the
+  file, so the tab chooses each note's string itself. It is for a book brought over from
+  LilyPond, which needed most of them written; Lily#'s tab picks playable strings on its own,
+  and a string number is then kept for the few notes you want on a particular string. One
+  <kbd>Ctrl+Z</kbd> puts them all back.</p>
+</section>
+
 <section id="chord-track">
   <h2>Add Chord Track (auto-harmonize)</h2>
   <p>Writes a first harmonization of the melody as a <code>chords harmony</code> row, placed
@@ -291,7 +305,9 @@ ges'4 aes' bes' ces'' | des''4 ees'' f'' ges'' | ges'1 |</pre>
   </table>
   <p>The sound comes from the preview, so with no preview open the first <kbd>Alt+P</kbd> opens
   one; press again to play. As you edit, the notes you land on and type sound too —
-  <a href="editor.html#audition">Audition</a>.</p>
+  <a href="editor.html#audition">Audition</a>. The preview's ▶ plays the score or the bars
+  selected on it, and its practice menu slows it, loops it, adds a metronome and silences
+  parts — <a href="editor.html#practice">Playback and practice</a>.</p>
 </section>
 
 <section id="preview-menu">
@@ -301,11 +317,14 @@ ges'4 aes' bes' ces'' | des''4 ees'' f'' ges'' | ges'1 |</pre>
     <tr><td>Open Preview — <kbd>Ctrl+Shift+V</kbd></td><td>shows the score in place of the source</td></tr>
     <tr><td>Open Preview to Side — <kbd>Ctrl+K</kbd> <kbd>V</kbd></td><td>shows it beside the source (it opens there by itself when a <code>.lys</code> is opened)</td></tr>
     <tr><td>Lock Preview to This File · Unlock</td><td>the lock in the preview's title bar: a locked preview stays on its file instead of following the one in front</td></tr>
-    <tr><td>Play from Here · Stop Playback</td><td>right-click on a note in the preview</td></tr>
+    <tr><td>Play from Here · Stop Playback</td><td>right-click on a note (from it) or a bar (from its first note) in the preview</td></tr>
+    <tr><td>Select This Bar · Clear Selection</td><td>right-click on a bar: starts a selection on the score, which <kbd>Shift</kbd>+click and <kbd>Shift</kbd>+drag extend; ▶ plays it and Ask AI takes it as its hint</td></tr>
+    <tr><td>Ask AI…</td><td>right-click anywhere on the score: the selection, the note or the bar under the pointer is the hint, named in the menu (<i>Ask AI, This Bar as a Hint…</i>)</td></tr>
     <tr><td>Fit Width · Reset Zoom (100%)</td><td>right-click anywhere in the preview</td></tr>
   </table>
   <p>Everything else the preview does — the link between notes and source, the score picker,
-  the colours — is in <a href="editor.html#preview">The preview</a>.</p>
+  the practice menu, Range, the colours — is in <a href="editor.html#preview">The preview</a>
+  and <a href="editor.html#practice">Playback and practice</a>.</p>
 </section>
 
 <section id="export">
@@ -319,11 +338,15 @@ ges'4 aes' bes' ces'' | des''4 ees'' f'' ges'' | ges'1 |</pre>
 </section>
 
 <section id="ai">
-  <h2>With AI</h2>
-  <p><i>Transform Selection with AI…</i> (<kbd>Ctrl+I</kbd>, also on the right-click menu)
-  rewrites the selected bars as you ask in words, and shows the answer engraved beside the
-  original before anything changes. <i>Select AI Model…</i> chooses the model. Both are
-  described in <a href="editor.html#ai">AI in the editor</a>.</p>
+  <h2>Ask AI, and fixing a scan's marks</h2>
+  <p><i>Ask AI…</i> (<kbd>Ctrl+I</kbd>, ✨ in the preview, and both right-click menus) changes
+  the score as you ask in words — a selection is a hint of where to look — and shows the
+  answer engraved beside the score as it is, what changed in green, before anything is
+  written. <i>Select AI Model…</i> chooses the model. Both are described in
+  <a href="editor.html#ai">Ask AI and the AI features</a>.</p>
+  <p>For a score read from a scan, <i>Fix OMR Marks with AI…</i> proposes a fix for each marked
+  bar, checked against the scan, and <i>Edit Bars Beside the Scan</i> opens the bars beside the
+  scan to fix by hand — <a href="scan.html#fix">Scan Import</a>.</p>
 </section>
 
 </article>
