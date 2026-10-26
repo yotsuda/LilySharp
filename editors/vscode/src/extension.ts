@@ -334,16 +334,18 @@ function migratePreviewKey(oldUri: string, newUri: string) {
 //
 // The worked examples did not go away — they are the `template-…` completions
 // (Ctrl+Space at the top level), which replace the file rather than joining it.
-// That is what the first comment line below points at. The second points at the step
-// keys (owner's request 2026-10-16: a writer who finds typing hard changes a note, the
-// tempo, the key or the clef with them), and replaced the preview's Ctrl+K V. They are
-// the only lines here that are not score.
+// The first comment line below names Ctrl+Space, the key that lists them and everything
+// else, and how to start lesson 1 with it; the second the step keys and what each pair
+// does (owner's requests 2026-10-16 — a writer who finds typing hard changes a note, the
+// tempo, the key or the clef with them; it replaced the preview's Ctrl+K V — and
+// 2026-10-26: the very first stage introduces Ctrl+Space and the step keys, as lesson 1's
+// head does). They are the only lines here that are not score.
 //
 // ⚠️ Two spaces, no tabs: 545 of the 548 tracked .lys files that indent at all use
 // two spaces and not one uses a tab (measured 2026-08-23). The formatter cannot
 // settle this — it takes the indent from the client's formatting options.
-const NEW_SCORE_TEMPLATE = `// New to Lily#? Type "lesson" on a new line and pick lesson-01.
-// Put the caret on a note, the tempo, the key or the clef and press Ctrl+Shift+Up/Down or Ctrl+Shift+PageUp/PageDown.
+const NEW_SCORE_TEMPLATE = `// New to Lily#? Ctrl+Space lists what you can write. On a new line type "lesson", Ctrl+Space, pick lesson-01.
+// On a note: Ctrl+Shift+Up/Down = the next note of the key, Ctrl+Shift+PageUp/PageDown = an octave (on a tempo, key or clef too).
 title "Untitled"
 
 tempo 100

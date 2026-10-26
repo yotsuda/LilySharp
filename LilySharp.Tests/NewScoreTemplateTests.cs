@@ -112,6 +112,18 @@ public class NewScoreTemplateTests
     }
 
     [Fact]
+    public void TheNewFileTemplate_IntroducesCtrlSpaceAndBothPairsOfStepKeys()
+    {
+        // Owner's request 2026-10-26: the first thing a new file says is how to ask what can
+        // come next (Ctrl+Space, which also starts lesson 1) and the step keys, both pairs.
+        var comments = string.Join("\n", NewScoreTemplate().Split('\n').Where(l => l.StartsWith("//")));
+        Assert.Contains("Ctrl+Space", comments);
+        Assert.Contains("lesson-01", comments);
+        Assert.Contains("Ctrl+Shift+Up/Down", comments);
+        Assert.Contains("Ctrl+Shift+PageUp/PageDown", comments);
+    }
+
+    [Fact]
     public void TheNewFileTemplate_OffersExactlyOneSelectableTitlePlaceholder()
     {
         // The command selects the word inside `title "…"` so the first keystroke names the

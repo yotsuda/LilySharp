@@ -494,7 +494,39 @@ public class LessonTests
             LilySharp.Core.Svg.Model.InstrumentDefaults.GetDefaults("cello").Clef);
     }
 
-    private const string Step3Mark = "@todo(\"STEP 3: delete this @todo\")";
+    private const string Step3Mark = "@todo(\"STEP 3: Ctrl+Shift+Up, PgUp\")";
+
+    [Fact]
+    public void Lesson1_TheHead_IntroducesCtrlSpaceAndBothPairsOfStepKeys()
+    {
+        // Owner's request 2026-10-26: the first stage introduces Ctrl+Space and the step keys
+        // — both pairs — before any step asks for them.
+        string head = Lesson1[..Lesson1.IndexOf("STEP 1", System.StringComparison.Ordinal)];
+        Assert.Contains("Ctrl+Space", head);
+        Assert.Contains("Ctrl+Shift+Up / Down", head);
+        Assert.Contains("Ctrl+Shift+PageUp / PageDown", head);
+    }
+
+    [Fact]
+    public void Lesson1_Step3_TheStepKeysOnTheFirstNote_DoWhatTheCommentSays()
+    {
+        // After step 1's `key g major`: Up moves the ringed e to fis, Down brings it back, and
+        // PageUp writes e' (the notes after it follow, in relative octaves).
+        Assert.Contains("(`fis` in G major)", Lesson1);
+        string inG = Lesson1.Insert(EmptyLineAfter(Lesson1, "STEP 1"), "key g major");
+        int note = inG.IndexOf("e4" + Step3Mark, System.StringComparison.Ordinal);
+        Assert.True(note >= 0, "the ringed first note is no longer e4");
+        string StepAt(string t, int c, int dir, bool inKey)
+        {
+            var step = LilySharp.Core.Editing.NoteStepper.Step(t, SyntaxTree.Parse(t), [(c, c)], dir, semitone: inKey);
+            Assert.False(step.Fallback);
+            return LilySharp.Core.Editing.NoteStepper.Apply(t, step.Edits);
+        }
+        string up = StepAt(inG, note + 1, +1, inKey: true);
+        Assert.StartsWith("fis4" + Step3Mark, up[note..]);
+        Assert.StartsWith("e4" + Step3Mark, StepAt(up, note + 1, -1, inKey: true)[note..]);
+        Assert.StartsWith("e'4" + Step3Mark, StepAt(inG, note + 1, +1, inKey: false)[note..]);
+    }
 
     [Fact]
     public void Lesson1_Step3_DeletingTheFirstRing_LeavesOneMarkFewer_AndTheTuneAsItWas()

@@ -4,6 +4,15 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+### Getting started
+
+- **A new score and lesson 1 introduce the keys from the first line**: the New Score template
+  says Ctrl+Space lists what you can write (and starts lesson 1), and what each pair of step
+  keys does — Ctrl+Shift+Up/Down the next note of the key, Ctrl+Shift+PageUp/PageDown an octave.
+  Lesson 1's head lists the three, and its step 3 has you try both pairs on the first note
+  before anything else asks for them; the step keys used to come first in step 4, on a
+  dynamic, and PageUp/PageDown not until lesson 2.
+
 ### The preview
 
 - **Play from Here on a bar too**: right-clicking a bar (between its notes, or a rest) offers

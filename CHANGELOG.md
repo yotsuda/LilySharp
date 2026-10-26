@@ -6,6 +6,11 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+### Getting started
+
+- `[editor]` **The New Score template and lesson 1 introduce Ctrl+Space and both pairs of step
+  keys from the start**; lesson 1's step 3 tries them on the first note.
+
 ### Chord rows
 
 - `[language]` **A chords-row entry that is no chord is warned (LYS1053)**: `C7b9`, `C-5` or a

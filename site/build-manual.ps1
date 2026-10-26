@@ -391,7 +391,7 @@ $countWordTitle = $countWord.Substring(0, 1).ToUpperInvariant() + $countWord.Sub
 # Where the manual says more, per lesson: page#section. The link text is the section's own
 # heading, read from its body file, so a renamed or removed section fails the build here.
 $moreOf = @{
-    'lesson-01-completion' = 'editor.html#language', 'grammar.html#glance', 'grammar.html#parts'
+    'lesson-01-completion' = 'editor.html#language', 'editor.html#step', 'grammar.html#glance', 'grammar.html#parts'
     'lesson-02-notes'      = 'grammar.html#pitch', 'grammar.html#duration', 'editor.html#step'
     'lesson-03-rhythm'     = 'grammar.html#duration', 'grammar.html#meter', 'grammar.html#connect'
     'lesson-04-keys'       = 'grammar.html#key', 'grammar.html#pitch', 'grammar.html#scores'
