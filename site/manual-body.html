@@ -428,9 +428,23 @@ c4 cue bass { e4 f } g4 |       // drawn in another instrument's clef; the staff
   <code>{ | c1 }</code> is an empty bar then <code>c1</code>. An empty bar fills itself with
   a full-measure spacer, on the page and in playback, so it is never diagnosed — which is
   what lets a rhythm staff say nothing for pages at a time.</p>
-  <p>Typed barlines close nothing: <code>||</code> and <code>|.</code> decorate the bar
-  behind them, and a <code>|</code> landing where the meter just auto-filled a bar merely
-  confirms it. That is why a trailing <code>c1 |</code> is one bar, not two.</p>
+  <p><b>The bar lines are the bars.</b> Each of <code>|</code>, <code>||</code>,
+  <code>|.</code> and <code>!</code> ends the bar it closes, and nothing else does — unlike
+  LilyPond, where <code>|</code> is only a check and the meter draws the bars. So a trailing
+  <code>c1 |</code> is one bar, and:</p>
+  <ul>
+    <li><b>A bar with too much in it is still one bar</b>: what starts past its end is neither
+    drawn nor played, and a warning says so (LYS2002). <code>c4 d e f g |</code> in 4/4 is a
+    bar of four quarters.</li>
+    <li><b>Two bars or more with no bar line inside is a bar line left out</b> — an error
+    (LYS2017). Until you write it, the music is drawn and played in bars of the meter with
+    every note kept.</li>
+    <li><b>Only where no bar line can be written</b>, inside an <code>R1*N</code> or a
+    <code>%N</code>, do the bars close where the beats fill; and between two percent marks in a
+    row the bar line may be left out (<code>| % % % |</code> is <code>| % | % | % |</code>).</li>
+  </ul>
+  <p>Every part starts again together at each bar line, so a short bar is filled with silence
+  in the playback.</p>
   <p class="note"><b>The repeat barlines <code>|:</code> <code>:|</code> <code>:|:</code> are
   not music items.</b> Writing one among the notes is refused, with a message naming the
   form to write instead.</p>

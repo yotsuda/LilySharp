@@ -63,7 +63,7 @@
   <p>A shape is routed by its <b>string count</b>, so one chord can carry a shape for each
   instrument that might draw it — <code>F(133211 2010)</code> is the guitar's six strings
   and the ukulele's four. When two tunings have the same count, a tuning word names which
-  shape is whose: <code>F(guitar 133211 guitardropd 333211)</code>.</p>
+  shape is whose: <code>F(guitar 133211 guitarDropD 333211)</code>.</p>
   <p>A shape that <b>no score of the file can draw</b> warns too (LYS1038): <code>G(xx543)</code> is a
   five-string shape, and in a file whose scores draw guitar diagrams it would draw nothing, so
   the warning names the strings the scores draw. The same holds for a shape named for a tuning
@@ -124,7 +124,7 @@
   <ol>
     <li><b>The score's layout:</b> <code>layout { chordDiagrams ukulele }</code> — any word
     a tab's <code>tuning</code> takes (<code>guitar</code>, <code>ukulele</code>,
-    <code>mandolin</code>, <code>guitardropd</code>, <code>bass</code>, …).
+    <code>mandolin</code>, <code>guitarDropD</code>, <code>bass</code>, …).
     <code>chordDiagrams none</code> draws no diagram at all, written shapes included.</li>
     <li><b>Else the part's instrument</b>, when it is fretted: for an <code>@chord</code>, the
     part whose note carries it; for a row, the staff the row stands directly above.</li>
