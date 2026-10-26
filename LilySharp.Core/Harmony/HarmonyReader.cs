@@ -44,15 +44,21 @@ public sealed record ChordReading(int StartTick, int EndTick, int Root, ChordQua
 
 /// <summary>
 /// The chords a melody alone is harmonized from — where one note sounds at a time there is no
-/// chord to hear, so one is chosen, as the first harmonizer did: the key's triads (its V a
-/// dominant seventh in a major key), the common ones preferred, one a bar at most.
+/// chord to hear, so one is chosen, one a bar at most: the key's triads (its V a dominant
+/// seventh in a major key), the common ones preferred, and any other major or minor triad where
+/// the notes spell it.
 /// <see cref="Everywhere"/> harmonizes every stretch so, the parts' chords unread (the
 /// "from the melody only" choice).
 /// </summary>
 public sealed record MelodyChords(IReadOnlyList<(int Root, ChordQuality Quality, double Preference)> Chords,
     bool Everywhere = false)
 {
-    /// <summary>The key's seven triads, for a tonic letter and its signature's sharps.</summary>
+    /// <summary>The preference of a chord outside the key: behind the key's by 0.15 of the weight
+    /// (the preferences weigh 0.05 each), so it is taken only where the notes spell it.</summary>
+    private const double OutOfKey = -3;
+
+    /// <summary>The key's seven triads, for a tonic letter and its signature's sharps, then every
+    /// other major and minor triad behind them.</summary>
     public static MelodyChords OfKey(char tonic, int sharps, bool everywhere = false)
     {
         var chords = new List<(int, ChordQuality, double)>();
@@ -69,6 +75,14 @@ public sealed record MelodyChords(IReadOnlyList<(int Root, ChordQuality Quality,
             double preference = ch.Degree switch { 0 => 6, 3 => 5, 4 => 5, 5 => 4, 1 => 3, 2 => 2, _ => 1 } / 6.0;
             chords.Add((ch.PitchClasses[0], quality, preference));
         }
+        // A line that spells a chord outside the key gets it (owner's report 2026-10-26: a bass
+        // walking B♭ D F under C major was given Dm, A C♯ E was given Am) — every major and minor
+        // triad, the key's chords ahead of them when the notes fit both alike.
+        var inKey = chords.Select(c => (c.Item1, c.Item2)).ToHashSet();
+        foreach (var quality in new[] { ChordQuality.Major, ChordQuality.Minor })
+            for (int root = 0; root < 12; root++)
+                if (!inKey.Contains((root, quality)) && !(quality == ChordQuality.Major && inKey.Contains((root, ChordQuality.Dominant7))))
+                    chords.Add((root, quality, OutOfKey));
         return new MelodyChords(chords, everywhere);
     }
 }
@@ -95,6 +109,9 @@ public static class HarmonyReader
         (ChordQuality.Diminished7, -0.2), (ChordQuality.Augmented, -0.2),
         (ChordQuality.Sus4, -0.2), (ChordQuality.Dominant7Sus4, -0.25),
     ];
+
+    /// <summary>A line alone starting below this pitch (G3) is a bass line.</summary>
+    private const int LowestMelody = 55;
 
     /// <summary>The longest stretch one chord is read over, in beats (two bars of 4/4).</summary>
     private const int MaxBeats = 8;
@@ -239,7 +256,7 @@ public static class HarmonyReader
                 if (lone && i > 0 && !beats[i].Accent)
                     continue;   // a melody's chord changes at a bar line
                 var (root, quality, score, fit) = lone
-                    ? MelodyChord(pooled, sum, melody!)
+                    ? MelodyChord(pooled, sum, melody!, lowest[i])
                     : BestChord(fitted, matched, sum, lowest[i]);
                 double value = best[i] + score - cost * place[i];
                 if (value > best[j])
@@ -366,10 +383,13 @@ public static class HarmonyReader
     /// <summary>The chord of <paramref name="melody"/> a melody's stretch fits best: the weight
     /// on its tones, less half the weight off them (a melody passes through tones no chord
     /// holds), the common chords ahead when two fit alike. No tone counts as missing — a
-    /// melody does not sound its chord.</summary>
+    /// melody does not sound its chord. A low line is a bass line, and a bass plays the root on
+    /// the bar's first beat more often than not: under G3 there, that note is the root's
+    /// (owner's report 2026-10-26: a bass's `c e g a | c e a g f e` read Am).</summary>
     private static (int Root, ChordQuality Quality, double Score, double Fit) MelodyChord(
-        double[] pooled, double sum, MelodyChords melody)
+        double[] pooled, double sum, MelodyChords melody, int lowest)
     {
+        int bassPc = lowest < LowestMelody ? ((lowest % 12) + 12) % 12 : -1;
         if (sum <= 0)
             return (-1, ChordQuality.Major, 0, 1);
         (int, ChordQuality, double, double) best = (-1, ChordQuality.Major, double.NegativeInfinity, 0);
@@ -379,7 +399,8 @@ public static class HarmonyReader
             // The triad's tones: the V7's seventh no more a reason to choose it than for the first harmonizer.
             foreach (var tone in ChordQualityRegistry.GetTones(quality).Take(3))
                 matched += pooled[(root + tone.Semitone) % 12];
-            double score = matched - 0.5 * (sum - matched) + 0.05 * preference * sum;
+            double score = matched - 0.5 * (sum - matched) + 0.05 * preference * sum
+                + (root == bassPc ? 0.2 * sum : 0);
             if (score > best.Item3)
                 best = (root, quality, score, matched / sum);
         }

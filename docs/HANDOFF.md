@@ -131,6 +131,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 
 第982 と同じ会話の続き。`-Start p983`（開始 HEAD `296e944b8`・full **13339 / 0 / 2 / 13341**・第981 を ARCHIVE へ）。
 - **ユーザー「実行したら `chords harmony  chords harmony as roman  staff p1 "Part 1"` になった。改行を入れて。as roman の行は不要に思う、意図は？」** → 意図＝第980 の「和音名と度数の両方（推奨）」の決定（chords の行は 1 本で片方しか出せない＝2 行置いていた）と答え、**1 行だけに**: score の中の `chords harmony` は譜表の前の独立した行（譜表と同じ字下げ・文書の改行）、1 行の score（`score { staff lh }`）では横に。度数は利用者が `as roman` を書けば出る。網 `ChordTrackReadingTests` 10 本（1 行の score を足した）。site commands・editor、両 CHANGELOG、設計、MANUAL-CHECKS C6 を直した。Deploy-Lsp 済。
+- **ユーザー「Rose Garden-3.lys に harmony を足したら L79 Dm・L80 Am がおかしい＝C major 以外の音が入っているのにダイアトニック」**: 原因＝1 声の所は調の 7 和音からしか選ばなかった。→ 調の外の長・短三和音も候補に（調の和音より重みの 0.15 後ろ）・低い 1 声（小節の頭が G3 未満）は頭の音を根音に +0.2。その本で L79 Bb・L80 A・L83 Fm、K の `c e g a c` が Am→C、`g4 r2.` が C→G7。網 `ChordTrackReadingTests` 12 本。site・両 CHANGELOG・設計を直した。
 判定（2026-10-26・第983 の終わり）: 次はユーザーの指示（実機の C6）。
 
 ## 以下は第982セッションの経緯

@@ -101,6 +101,39 @@ public class ChordTrackReadingTests
     }
 
     [Fact]
+    public void ALineThatSpellsAChordOutsideTheKey_GetsThatChord()
+    {
+        // Owner's report 2026-10-26 (Rose Garden, bars 79-80 and 83): a bass walking B♭ D F,
+        // A C♯ E and F A♭ C under C major was given Dm, Am and F, the key's nearest chords.
+        const string source = """
+            time 4/4
+            key c major
+            octave absolute
+            part p1 { clef bass }
+            section A { p1 { d4 f a f | g, b, d b, | bes, d f d | a, des e des | f, aes, c aes, | } }
+            form { A }
+            score { staff p1 }
+            """;
+        Assert.Contains("chords harmony { Dm | G7 | Bb | A | Fm | }", Added(source));
+    }
+
+    [Fact]
+    public void ABassLineAlone_TakesItsDownbeatAsTheRoot()
+    {
+        // The same report's bar 157: c e g a c is C under a bass, not the Am the A tipped it to.
+        const string source = """
+            time 4/4
+            key c major
+            octave absolute
+            part p1 { clef bass }
+            section A { p1 { c,4 e, g,16 a, g,8 a, c | c,4 e, a,8 g, f, e, | } }
+            form { A }
+            score { staff p1 }
+            """;
+        Assert.Contains("chords harmony { C | C | }", Added(source));
+    }
+
+    [Fact]
     public void AChangeAtTheMiddleOfABar_IsTwoSlots_AOneBeatChordIsHeldThrough()
     {
         const string source = """

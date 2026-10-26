@@ -30,7 +30,7 @@ public static partial class ChordHarmonizer
     /// <summary>
     /// Adds a chords track read from the music of one score (owner's decisions 2026-10-26,
     /// docs/harmony-analysis-design.md): the chords the score's parts sound together, beat by
-    /// beat (<see cref="HarmonyReader"/>), a melody alone harmonized from the key's chords — or,
+    /// beat (<see cref="HarmonyReader"/>), a line alone given the chord it spells (<see cref="MelodyChords"/>) — or,
     /// with <paramref name="melodyOnly"/>, every bar harmonized from the score's top staff alone.
     /// <paramref name="scoreName"/> picks the score as the preview does
     /// (<see cref="RenderSpecParser.ChooseDeclared"/>); only its parts are read, so a score made

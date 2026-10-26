@@ -11,7 +11,8 @@ All notable changes to the Lily# VS Code extension are documented here.
   chords the parts play* (the notes sounding together, beat by beat: sevenths, diminished and
   suspended chords, a slash chord from the lowest note; a chord changes on a beat only where that
   fits clearly better, at a bar line most easily; where a melody sounds alone, a chord is chosen
-  for it from the key's) or *Harmonize the melody only* (one of the key's chords a bar for the top
+  for it, the key's first — a line that spells B♭ under C major gets B♭, and a bass line's
+  downbeat is taken as the root) or *Harmonize the melody only* (one chord a bar for the top
   staff). The track is placed above that score's top staff, a row of its own (`as roman` after it shows
   the degrees).
   A second reading is a track of its own (`harmony2`). Until now the command wrote one diatonic
