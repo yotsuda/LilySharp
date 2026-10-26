@@ -131,7 +131,8 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 
 第979 と同じ会話の続き（ユーザー「続けて」＝残りのレッスンの監査）。`-Start p980`（開始 HEAD `d277f3b1a`・full 緑・第978 を ARCHIVE へ）。作業場所は Lab `sessions/p980/`。
 - **レッスン 2〜12 の監査＝直す所なし**: 手順・課題の文言は今の文法・補完・キーと一致（2 の `g2` の PageDown→G3 で次の `e'` が E4、4 の `transpose bes,`／`g mixolydian`、8 の Ctrl+Shift+Up で図、10 の `fillTriplet`、11 の `pitch transposed`、12 の Petaluma）。末尾の「type `lesson` … pick」は lys の `quickSuggestions` が on なので打つだけで候補が出る＝そのまま。lysc で 12 本＝警告は課題の 2 つだけ（2 の短い小節・3 の 5/8）。`LessonTests` が各課題を 1 本ずつ見ている。
-判定（2026-10-26・第980 の終わり）: 次はユーザーの指示。
+- **ユーザー「続けて」→ ROADMAP から選んでもらう→「カウントイン（推奨）」→ 実装（`f4d61d1dd`）**: `playbackCore.countIn`（再生開始位置の次の小節線から 1 小節＝その拍子・頭は強い木の音・音楽はその小節線がカウントの終わりに来るよう移す＝弱起は最後の拍の上・小節の途中は「1、2」で 3 拍目から）・練習メニューに Count-in の On/Off・▶／Play from Here／選んだ小節／ループの 1 周目だけ（テンポ変更・2 周目以降・シークは無し）・`startPlayback` の 5 番目の引数でずれ（`countInFix`）を運び、再生中のテンポ変更で位置を保つ・`playSpanWindow` に `start`。網 `playbackCore.test` 5 本＋`previewRanges.test` の配線。npm test 455。ROADMAP から外し、site・README・両 CHANGELOG・MANUAL-CHECKS C5（未確認）。Deploy-Lsp 済。
+判定（2026-10-26・第980 の終わり）: 次はユーザーの指示。ROADMAP の残り＝和声の分析・譜めくりの点検・声部の進行の点検（MIDI 鍵盤は保留）。
 
 ## 以下は第979セッションの経緯
 
