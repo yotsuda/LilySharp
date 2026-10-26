@@ -69,6 +69,22 @@ describe('the scan page script', () => {
         assert.doesNotMatch(body, /\$\{|\\/);
         assert.doesNotThrow(() => new vm.Script(body));
     });
+
+    // A sticky head stayed put only up and down: a page zoomed wider than the pane carried it
+    // off to the left when scrolled sideways (owner's report 2026-10-26). It is fixed, and the
+    // pages start under it — the body's top padding follows its height as it wraps.
+    it('keeps its head fixed over the pages, and the pages under it', () => {
+        const src = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'omrScan.ts'), 'utf8');
+        assert.match(src, /\.note \{ position: fixed; top: 0; left: 0; right: 0;/);
+        assert.doesNotMatch(src, /\.note \{[^}]*sticky/);
+        const at = src.indexOf('function fitHead(');
+        const fitHead = new vm.Script('(' + src.slice(at, src.indexOf('\n  }', at) + 4) + ')').runInNewContext({}) as
+            (head: unknown, body: unknown) => void;
+        const body = { style: { paddingTop: '' } };
+        fitHead({ offsetHeight: 92 }, body);
+        assert.equal(body.style.paddingTop, '100px');
+        assert.match(src, /new ResizeObserver\(\(\) => fitHead\(document\.querySelector\('\.note'\), document\.body\)\)\.observe\(document\.querySelector\('\.note'\)\);/);
+    });
 });
 
 // What the scan tints, as the preview tints a bar's staff: the reader's staff (LilySharp-Omr

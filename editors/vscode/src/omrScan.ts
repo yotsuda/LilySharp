@@ -455,8 +455,13 @@ function render(view: ScanView): void {
   body { margin: 0; padding: 0 8px 8px; background: var(--vscode-editor-background); color: var(--vscode-foreground);
          font-family: var(--vscode-font-family); font-size: var(--vscode-font-size); }
   /* The head — what was read, the link checkbox, the slider — stays put while the pages scroll
-     under it (owner's request 2026-10-17); the script measures its bottom as the view's top edge. */
-  .note { position: sticky; top: 0; z-index: 1; margin: 0 -8px 8px; padding: 8px;
+     under it (owner's request 2026-10-17); the script measures its bottom as the view's top edge.
+     Fixed, not sticky: a sticky head stayed put only up and down, and a page zoomed wider than
+     the pane carried it off to the left when scrolled sideways, the pages showing through beside
+     it (owner's report 2026-10-26). The body keeps the head's height free above the pages
+     (fitHead in the script; this padding until it runs). */
+  body { padding-top: 48px; }
+  .note { position: fixed; top: 0; left: 0; right: 0; z-index: 1; margin: 0; padding: 8px;
           background: var(--vscode-editor-background); }
   .note > span.text { opacity: .8; }
   /* The pages are dragged to scroll, as the preview's sheet is (installDragScroll below): an
@@ -506,6 +511,13 @@ ${pages || '<p>The side file lists no page.</p>'}
 <div class="zoom-info" id="zoomInfo">100%</div>
 <script nonce="${nonce}">
   const vscode = acquireVsCodeApi();
+  // The pages start under the fixed head: the body's top padding is the head's height and the
+  // gap under it, kept so as the head wraps onto more lines or fewer (a narrower pane).
+  function fitHead(head, body) {
+    body.style.paddingTop = (head.offsetHeight + 8) + 'px';
+  }
+  fitHead(document.querySelector('.note'), document.body);
+  new ResizeObserver(() => fitHead(document.querySelector('.note'), document.body)).observe(document.querySelector('.note'));
   const link = document.getElementById('link');
   const state = vscode.getState() || {};
   if (state.linked === false) link.checked = false;
@@ -670,7 +682,7 @@ ${pages || '<p>The side file lists no page.</p>'}
   // B4: the bar at the top of the view goes to the preview as the scan scrolls; a scroll
   // the preview asked for (showBar) is not reported back.
   let quietUntil = 0, reportTimer = null;
-  // The sticky head covers the top of the window: what counts as "the top" starts under it.
+  // The fixed head covers the top of the window: what counts as "the top" starts under it.
   const note = document.querySelector('.note');
   const topEdge = () => note.getBoundingClientRect().bottom;
   // The bar at the top edge, and how much of it is cut off above the edge (0: its top is at the

@@ -4,6 +4,12 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+### The scan view
+
+- **The head stays whole when the scan is zoomed and scrolled**: it is fixed across the top of
+  the view, the pages starting under it. Zoomed wider than the pane and scrolled sideways, the
+  head used to slide off to the left with the pages, which showed through beside it.
+
 ### The AI candidate panel
 
 - **After and Before keep the view**: switching between them leaves the sheets where they

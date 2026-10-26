@@ -221,6 +221,7 @@ edocs/HANDOFF.mde §2 R13 ⒝・OMR の提案 B1〜B6（e..\LilySharp-Omr\docs\r
 - [ ] **ツールチップ**（ユーザー報告 2026-10-25「小さくて読みづらい」）: プレビューのボタン・Range の棒・候補パネルのボタンにマウスを載せる → 0.5 秒後に VS Code のホバーと同じ大きさの字で説明が出る（ブラウザの小さい黄色い札は出ない）。楽譜の上では出ない。
 - [ ] **C1**（第977・補完の続き）: part の中で `transpose` を補完（Tab／Enter）→ `transpose ` の後ろで補完窓が開き、`des`（up a minor second）・`b,`（down a minor second）・`d`・`bes,` … `c'`・`c,` が近い順に並ぶ。選ぶと書かれ、譜が移る。トップレベルの `transpose` と `score x transpose` も同じ。part の中で `transposition` を補完 → `8va` `8vb` `15ma` `15mb` が開く。`shift ` の後ろでは何も出ない（従来どおり）。
 - [ ] **C2**（第977・AI 候補のパネル）: 数頁ある楽譜で Transform Selection with AI → 候補のパネルで 2 頁目あたりまでスクロール → **Before**／**After**（と Tab）を押しても表示はそのまま（1 頁目の先頭に戻らない）。Ctrl+ホイールで拡大・縮小（ポインタの下の小節が動かない・Before に切り替えても同じ倍率）、戻すと開いたときの幅に。楽譜をドラッグするとスクロール（手のカーソル）、離しても音は鳴らない。ドラッグせずに音符をクリック → そこから鳴る・小節の空いた所をクリック → その小節が選ばれる。 ドラッグの後、音符に紫（選択色）の四角が残らない。**Text after Accept**（旧 Replacement text）を開く → ファイルの全文（選んだ範囲の外も）・最初の変更が欄の中央に来る（長い候補で）→ Accept／Ask Again…／Play／Stop／Reject は画面内のまま、テキストは欄の中で右にスクロールバー・ホイールで最後の行まで読める（楽譜は動かない）。
+- [ ] **C3**（第978・scan のヘッダ）: Show Original Scan の scan を Ctrl+ホイールで 200% 以上にして横・縦にスクロール（ドラッグでも）→ 頭のバー（ファイル名・Scroll with the preview・Marks below・Fix N marks with AI…）は左端から右端まで崩れずに上に残り、右に楽譜が透けない。ペインを狭めて頭が折り返しても 1 頁目の上端が頭に隠れない。プレビューとの連動（Scroll with the preview）と Fit Width／Reset Zoom は従来どおり。
 
 ## 4. §2 R13 ⒝ — 差分頁の配信（実機未確認・第404）
 

@@ -6,6 +6,11 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+### The scan view
+
+- `[editor]` **The scan view's head stays whole when the pages are zoomed and scrolled
+  sideways** (it slid off to the left with them).
+
 ### The AI candidate panel
 
 - `[editor]` **The AI candidate panel keeps its view when After and Before are switched, zooms
