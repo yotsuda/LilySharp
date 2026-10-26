@@ -11,7 +11,7 @@ workflow attaches that section to the GitHub Release verbatim.
 - `[editor]` **Add Chord Track reads the chords the parts play**: the notes of the score the preview
   shows, beat by beat — sevenths, diminished and suspended chords, slash chords — changing where
   that fits clearly better; a line alone given the chord it spells — the key's first, a seventh where its seventh is
-  played — and on request the
+  played, chosen with the chords around it (V → I, ii → V), plain, standard or rich — and on request the
   melody only. The track goes above that score's top staff, a row of its own. It wrote one
   diatonic triad a bar from the melody, the accompaniment unread.
 

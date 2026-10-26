@@ -38,9 +38,10 @@ public static partial class ChordHarmonizer
     /// wrote it (a by-part file: one top-level track; by section: a block in each section) and
     /// placed in that score above its top staff, a row of its own (the names; `as roman` written
     /// after it shows the degrees — owner's decision 2026-10-26: one row, not both).
-    /// Null when nothing sounds.
+    /// <paramref name="richness"/> is how rich the chords chosen for a melody are. Null when nothing sounds.
     /// </summary>
-    public static (string Text, string? Info)? AddReadChordTracks(string source, string? scoreName, bool melodyOnly)
+    public static (string Text, string? Info)? AddReadChordTracks(string source, string? scoreName, bool melodyOnly,
+        ChordRichness richness = ChordRichness.Standard)
     {
         var tree = SyntaxTree.Parse(source);
         var root = tree.GetRoot();
@@ -70,7 +71,7 @@ public static partial class ChordHarmonizer
             }
             var (tonic, sharps) = SectionKey(tree, sectionName) ?? (homeTonic, homeSharps);
             var readings = HarmonyReader.Read(notes, beats, end,
-                melody: MelodyChords.OfKey(tonic, sharps, everywhere: melodyOnly));
+                melody: MelodyChords.OfKey(tonic, sharps, everywhere: melodyOnly, richness));
             bars[sectionName] = BarsOf(readings, beats, sharps);
             order.Add(sectionName);
         }

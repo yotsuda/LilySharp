@@ -735,7 +735,7 @@ export function activate(context: vscode.ExtensionContext) {
         }),
         vscode.commands.registerCommand('lilysharp.addChordTrack', () => {
             outputChannel.appendLine('addChordTrack command triggered');
-            addChordTrack();
+            addChordTrack(context);
         }),
         vscode.commands.registerCommand('lilysharp.guessSectionKey', () => guessSectionKey()),
         vscode.commands.registerCommand('lilysharp.respellNotesToKey', () => respellNotesToKey()),
@@ -2470,7 +2470,7 @@ interface AddChordTrackResponse {
  * and places it in that score above its top staff, a row of its own. The result is
  * a starting point to edit (Ctrl+Z takes it back).
  */
-async function addChordTrack() {
+async function addChordTrack(context: vscode.ExtensionContext) {
     const editor = vscode.window.activeTextEditor;
     if (!editor || editor.document.languageId !== 'lilysharp') {
         vscode.window.showErrorMessage('Lily#: open a .lys file to add a chord track.');
@@ -2493,9 +2493,25 @@ async function addChordTrack() {
     if (!pick) {
         return;
     }
+    // How rich the chords chosen for a melody are (owner's request 2026-10-26: the variant's
+    // size, not a random seed): the last one picked first.
+    const richnesses = [
+        { label: 'Standard', richness: 'standard',
+          detail: 'Sevenths where they are played; a chord resolving a fifth down as its V7 (G → C as G7 → C).' },
+        { label: 'Plain', richness: 'plain', detail: 'Triads only.' },
+        { label: 'Rich', richness: 'rich', detail: 'Standard, and the ii of a ii–V as IIm7 (Dm → G7 as Dm7 → G7).' },
+    ];
+    const last = context.globalState.get<string>('lilysharp.chordTrack.richness');
+    richnesses.sort((a, b) => (b.richness === last ? 1 : 0) - (a.richness === last ? 1 : 0));
+    const rich = await vscode.window.showQuickPick(richnesses,
+        { placeHolder: 'How rich are the chords chosen for a melody? (chords the parts play are written as played)' });
+    if (!rich) {
+        return;
+    }
+    await context.globalState.update('lilysharp.chordTrack.richness', rich.richness);
     try {
         const response = await client.sendRequest<AddChordTrackResponse>('lilysharp/addChordTrack', {
-            textDocument: { uri: doc.uri.toString() }, renderName, melodyOnly: pick.melodyOnly
+            textDocument: { uri: doc.uri.toString() }, renderName, melodyOnly: pick.melodyOnly, richness: rich.richness
         });
         if (response.Edits && response.Edits.length > 0) {
             const edit = new vscode.WorkspaceEdit();

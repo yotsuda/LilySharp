@@ -75,7 +75,7 @@ public class ChordTrackReadingTests
         // Score `tune` shows the right hand alone: e g | a | b d | c — chosen for the melody
         // from the key's chords (the A alone an F), not the left hand's Dm.
         string text = Added(Piano, "tune");
-        Assert.Contains("chords harmony { C | F | G | C | }", text);
+        Assert.Contains("chords harmony { C | F | G7 | C | }", text);
         Assert.Contains("score tune {\n  chords harmony\n  staff rh", text.Replace("\r\n", "\n"));
         Assert.Contains("grandStaff { staff rh  staff lh }", text);
         Assert.DoesNotContain("chords harmony\n  grandStaff", text.Replace("\r\n", "\n"));
@@ -96,8 +96,9 @@ public class ChordTrackReadingTests
             form { A }
             score { staff rh  staff lh }
             """;
-        Assert.DoesNotContain("chords harmony { G | }", Added(source));
-        Assert.Contains("chords harmony { G | }", Added(source, melodyOnly: true));
+        Assert.DoesNotContain("chords harmony { G7 | }", Added(source));
+        // The V alone, ending: the half cadence home, a G7.
+        Assert.Contains("chords harmony { G7 | }", Added(source, melodyOnly: true));
     }
 
     [Fact]
@@ -170,8 +171,46 @@ public class ChordTrackReadingTests
     }
 
     [Fact]
-    public void AChangeAtTheMiddleOfABar_IsTwoSlots_AOneBeatChordIsHeldThrough()
+    public void TheRichness_ChoosesHowTheChordsChosenForALineAreWritten()
     {
+        // Owner's question 2026-10-26: a seventh only passing in the line may still be the chord's
+        // — the V resolving (G7 → C; at the end, the half cadence home), and the ii of a ii–V
+        // when the chords are to be rich.
+        const string source = """
+            time 4/4
+            key c major
+            octave absolute
+            part p1 { clef bass }
+            section A { p1 { d,4 f, a, f, | g,, b,, d, b,, | c,4 e, g, e, | a,,4 cis, e, cis, | d,4 f, a, f, | g,,1 | } }
+            form { A }
+            score { staff p1 }
+            """;
+        Assert.Contains("chords harmony { Dm | G | C | A | Dm | G | }",
+            ChordHarmonizer.AddReadChordTracks(source, null, false, ChordRichness.Plain)!.Value.Text);
+        Assert.Contains("chords harmony { Dm | G7 | C | A7 | Dm | G7 | }", Added(source));
+        Assert.Contains("chords harmony { Dm7 | G7 | C | A7 | Dm7 | G7 | }",
+            ChordHarmonizer.AddReadChordTracks(source, null, false, ChordRichness.Rich)!.Value.Text);
+    }
+
+    [Fact]
+    public void ABarItsNotesLeaveOpen_TakesTheChordTheProgressionLeadsTo()
+    {
+        // Owner's request 2026-10-26: the progression around a bar, not its notes alone. A D
+        // alone could be a G (the commoner chord) — before a G7 it is the ii, the root falling a fifth.
+        const string source = """
+            time 4/4
+            key c major
+            octave absolute
+            part p1 { clef bass }
+            section A { p1 { c,4 e, g, e, | d,1 | g,,4 b,, d, f, | c,1 | } }
+            form { A }
+            score { staff p1 }
+            """;
+        Assert.Contains("chords harmony { C | Dm | G7 | C | }", Added(source));
+    }
+
+    [Fact]
+    public void AChangeAtTheMiddleOfABar_IsTwoSlots_AOneBeatChordIsHeldThrough()    {
         const string source = """
             time 4/4
             octave absolute
@@ -223,7 +262,7 @@ public class ChordTrackReadingTests
         string once = Added(Piano);
         string twice = Added(once, "tune");
         Assert.Contains("chords harmony { C | Dm | G7 | C | }", twice);
-        Assert.Contains("chords harmony2 { C | F | G | C | }", twice);
+        Assert.Contains("chords harmony2 { C | F | G7 | C | }", twice);
         Assert.Contains("chords harmony2\n  staff rh", twice.Replace("\r\n", "\n"));
     }
 

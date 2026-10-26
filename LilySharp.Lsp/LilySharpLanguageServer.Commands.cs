@@ -149,7 +149,13 @@ public sealed partial class LilySharpLanguageServer
         if (SyntaxTree.Parse(doc.Text).HasErrors)
             return new AddChordTrackResponse { Error = "Fix the errors in the score first." };
 
-        var result = LilySharp.Core.Harmony.ChordHarmonizer.AddReadChordTracks(doc.Text, @params.RenderName, @params.MelodyOnly);
+        var richness = @params.Richness?.ToLowerInvariant() switch
+        {
+            "plain" => LilySharp.Core.Harmony.ChordRichness.Plain,
+            "rich" => LilySharp.Core.Harmony.ChordRichness.Rich,
+            _ => LilySharp.Core.Harmony.ChordRichness.Standard,
+        };
+        var result = LilySharp.Core.Harmony.ChordHarmonizer.AddReadChordTracks(doc.Text, @params.RenderName, @params.MelodyOnly, richness);
         if (result == null)
             return new AddChordTrackResponse
             {

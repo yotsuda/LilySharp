@@ -43,6 +43,15 @@ public sealed record ChordReading(int StartTick, int EndTick, int Root, ChordQua
 }
 
 /// <summary>
+/// How rich the chords chosen for a melody are (owner's request 2026-10-26: "how big the
+/// variant is"): <see cref="Plain"/> triads only; <see cref="Standard"/> a seventh where it is
+/// played, and a major chord resolving a fifth down written as its dominant seventh (G → C as
+/// G7 → C, A → Dm as A7 → Dm); <see cref="Rich"/> also a minor chord moving a fifth down as a
+/// minor seventh (Dm → G7 as Dm7 → G7: the ii–V). Chords heard in the parts are read as played.
+/// </summary>
+public enum ChordRichness { Plain, Standard, Rich }
+
+/// <summary>
 /// The chords a melody alone is harmonized from — where one note sounds at a time there is no
 /// chord to hear, so one is chosen, one a bar at most: the key's triads and seventh chords, the
 /// common ones preferred, and any other major or minor triad or dominant seventh where the notes
@@ -55,16 +64,25 @@ public sealed record ChordReading(int StartTick, int EndTick, int Root, ChordQua
 public sealed record MelodyChords(IReadOnlyList<(int Root, ChordQuality Quality, double Preference)> Chords,
     bool Everywhere = false)
 {
+    /// <summary>The key's tonic (a pitch class), which starts and ends a piece more often than
+    /// not; -1 when unknown.</summary>
+    public int Tonic { get; init; } = -1;
+
+    /// <summary>How rich the chords chosen are (<see cref="ChordRichness"/>).</summary>
+    public ChordRichness Richness { get; init; } = ChordRichness.Standard;
+
     /// <summary>The preference of a chord outside the key: behind the key's by 0.15 of the weight
     /// (the preferences weigh 0.05 each), so it is taken only where the notes spell it.</summary>
     private const double OutOfKey = -3;
 
     /// <summary>The key's seven triads and seven seventh chords, for a tonic letter and its
     /// signature's sharps, then every other major and minor triad and dominant seventh behind them.</summary>
-    public static MelodyChords OfKey(char tonic, int sharps, bool everywhere = false)
+    public static MelodyChords OfKey(char tonic, int sharps, bool everywhere = false,
+        ChordRichness richness = ChordRichness.Standard)
     {
         var chords = new List<(int, ChordQuality, double)>();
-        foreach (var ch in DiatonicChords.ForKey(tonic, sharps))
+        var key = DiatonicChords.ForKey(tonic, sharps);
+        foreach (var ch in key)
         {
             // I, then IV and V, then vi, ii, iii, vii.
             double preference = ch.Degree switch { 0 => 6, 3 => 5, 4 => 5, 5 => 4, 1 => 3, 2 => 2, _ => 1 } / 6.0;
@@ -87,7 +105,7 @@ public sealed record MelodyChords(IReadOnlyList<(int Root, ChordQuality Quality,
             };
             if (triad is { } t)
                 chords.Add((ch.PitchClasses[0], t, preference));
-            if (seventh is { } s)
+            if (seventh is { } s && richness != ChordRichness.Plain)
                 chords.Add((ch.PitchClasses[0], s, preference));
         }
         // A line that spells a chord outside the key gets it (owner's report 2026-10-26: a bass
@@ -95,11 +113,14 @@ public sealed record MelodyChords(IReadOnlyList<(int Root, ChordQuality Quality,
         // triad and dominant seventh (a secondary dominant), the key's chords ahead of them when
         // the notes fit both alike.
         var inKey = chords.Select(c => (c.Item1, c.Item2)).ToHashSet();
-        foreach (var quality in new[] { ChordQuality.Major, ChordQuality.Minor, ChordQuality.Dominant7 })
+        var outside = richness == ChordRichness.Plain
+            ? new[] { ChordQuality.Major, ChordQuality.Minor }
+            : new[] { ChordQuality.Major, ChordQuality.Minor, ChordQuality.Dominant7 };
+        foreach (var quality in outside)
             for (int root = 0; root < 12; root++)
                 if (!inKey.Contains((root, quality)))
                     chords.Add((root, quality, OutOfKey));
-        return new MelodyChords(chords, everywhere);
+        return new MelodyChords(chords, everywhere) { Tonic = key[0].PitchClasses[0], Richness = richness };
     }
 }
 
@@ -245,15 +266,18 @@ public static class HarmonyReader
             for (int c = 0; c < Candidates.Length; c++)
                 (fits[i, c], matches[i, c]) = BeatFit(weight, i, total[i], Candidates[c]);
 
-        // best[j]: the best reading of beats [0, j); from[j] where its last stretch starts.
-        var best = new double[count + 1];
-        var from = new int[count + 1];
-        var chosen = new (int Root, ChordQuality Quality, double Fit)[count + 1];
+        // states[j]: the best readings of beats [0, j), one per chord the last stretch ends on (the
+        // few best kept) — so the move from each chord to the next is scored with the fit, and a
+        // bar the notes leave open takes the chord its neighbours lead to (owner's request
+        // 2026-10-26: "the progression around a bar, not its notes alone").
+        var states = new List<State>[count + 1];
+        states[0] = [new State(0, NoChord, ChordQuality.Major, 1, -1, -1, false)];
+        int tonic = melody?.Tonic ?? -1;
         var fitted = new double[Candidates.Length];
         var matched = new double[Candidates.Length];
         for (int j = 1; j <= count; j++)
         {
-            best[j] = double.NegativeInfinity;
+            var reached = new Dictionary<(int, ChordQuality), State>();
             var pooled = new double[12];
             double sum = 0;
             bool alone = true;
@@ -273,22 +297,37 @@ public static class HarmonyReader
                 bool lone = melody != null && (melody.Everywhere || alone);
                 if (lone && i > 0 && !beats[i].Accent)
                     continue;   // a melody's chord changes at a bar line
-                var (root, quality, score, fit) = lone
-                    ? MelodyChord(pooled, sum, melody!, lowest[i])
-                    : BestChord(fitted, matched, sum, lowest[i]);
-                double value = best[i] + score - cost * place[i];
-                if (value > best[j])
-                {
-                    best[j] = value;
-                    from[j] = i;
-                    chosen[j] = (root, quality, fit);
-                }
+                if (states[i].Count == 0)
+                    continue;
+                var options = lone
+                    ? MelodyOptions(pooled, sum, melody!, lowest[i])
+                    : Chords(fitted, matched, sum, lowest[i]);
+                foreach (var (root, quality, score, fit) in options)
+                    for (int s = 0; s < states[i].Count; s++)
+                    {
+                        var prev = states[i][s];
+                        // A melody's chords are chosen, and the progression chooses among them;
+                        // chords heard are read, the progression only tipping a close call.
+                        double value = prev.Value + score - cost * place[i]
+                            + typical * (lone ? 1.0 : 0.3) * Progression(prev.Root, prev.Quality, root, quality, tonic, start: i == 0, end: j == count);
+                        if (!reached.TryGetValue((root, quality), out var had) || value > had.Value)
+                            reached[(root, quality)] = new State(value, root, quality, fit, i, s, lone);
+                    }
             }
+            states[j] = [.. reached.Values.OrderByDescending(v => v.Value).Take(KeptStates)];
         }
 
         var stretches = new List<(int I, int J, int Root, ChordQuality Quality, double Fit)>();
-        for (int j = count; j > 0; j = from[j])
-            stretches.Add((from[j], j, chosen[j].Root, chosen[j].Quality, chosen[j].Fit));
+        if (states[count].Count > 0)
+        {
+            int at = 0;
+            for (int j = count; j > 0;)
+            {
+                var st = states[j][at];
+                stretches.Add((st.From, j, st.Root, st.Quality, st.Fit));
+                (j, at) = (st.From, st.FromState);
+            }
+        }
         stretches.Reverse();
 
         // A rest the chord holds through is part of it; a whole bar where nothing sounds is no
@@ -347,7 +386,48 @@ public static class HarmonyReader
             else
                 joined.Add(r);
         }
-        return joined;
+        return melody == null ? joined : Coloured(joined, melody);
+    }
+
+    /// <summary>
+    /// The chosen chords (a melody's) written as rich as <see cref="MelodyChords.Richness"/> asks,
+    /// now that the chord after each is known: a dominant (the key's V, or a major chord outside
+    /// the key) whose root falls a fifth to the next a dominant seventh (it resolves — its seventh
+    /// is the tone that leads, played or not), and,
+    /// rich, a minor one so a minor seventh; plain, every seventh a triad. A chord heard in the
+    /// parts is left as it is played.
+    /// </summary>
+    private static List<ChordReading> Coloured(List<ChordReading> readings, MelodyChords melody)
+    {
+        var coloured = new List<ChordReading>(readings.Count);
+        for (int k = 0; k < readings.Count; k++)
+        {
+            var r = readings[k];
+            if (r.Root >= 0 && (melody.Everywhere || r.Monophonic))
+            {
+                // After the last chord read (a section read alone) the music goes on: home, more
+                // often than not — a V ending a section is the half cadence back to I.
+                int nextRoot = k + 1 < readings.Count ? readings[k + 1].Root : melody.Tonic;
+                bool resolves = nextRoot >= 0 && ((nextRoot - r.Root) % 12 + 12) % 12 == 5;
+                // A dominant: the key's V, or a major chord the key does not hold (A → Dm in C, a
+                // secondary dominant). The I and IV falling a fifth (C → F, F → B♭) stay triads.
+                bool dominant = melody.Tonic < 0 || r.Root == (melody.Tonic + 7) % 12
+                    || !melody.Chords.Any(c => c.Root == r.Root && c.Quality == ChordQuality.Major && c.Preference >= 0);
+                var quality = (melody.Richness, r.Quality) switch
+                {
+                    (ChordRichness.Plain, ChordQuality.Dominant7) => ChordQuality.Major,
+                    (ChordRichness.Plain, ChordQuality.Major7) => ChordQuality.Major,
+                    (ChordRichness.Plain, ChordQuality.Minor7) => ChordQuality.Minor,
+                    (ChordRichness.Plain, ChordQuality.HalfDiminished7) => ChordQuality.Diminished,
+                    (not ChordRichness.Plain, ChordQuality.Major) when resolves && dominant => ChordQuality.Dominant7,
+                    (ChordRichness.Rich, ChordQuality.Minor) when resolves => ChordQuality.Minor7,
+                    _ => r.Quality,
+                };
+                r = r with { Quality = quality };
+            }
+            coloured.Add(r);
+        }
+        return coloured;
     }
 
     /// <summary>A chord read: its root, quality, prior and tones (semitones above the root, and
@@ -378,24 +458,65 @@ public static class HarmonyReader
         return (matched - 0.7 * (total - matched) - 0.25 * total * missing / chord.Tones.Length, matched);
     }
 
-    /// <summary>The chord that fits a stretch best, from its beats' summed fits: its root (-1
-    /// where nothing sounds), quality, score (in weight) and fit (the share of the weight on its
-    /// tones). The lowest note at the stretch's start is the root more often than not.</summary>
-    private static (int Root, ChordQuality Quality, double Score, double Fit) BestChord(
+    /// <summary>A reading of the beats up to a point: its value, the chord its last stretch is
+    /// read as, where that stretch starts and the reading before it.</summary>
+    private readonly record struct State(double Value, int Root, ChordQuality Quality, double Fit,
+        int From, int FromState, bool Lone);
+
+    /// <summary>The root of the reading before the first chord.</summary>
+    private const int NoChord = -2;
+
+    /// <summary>The readings kept at each point, and the chords offered for each stretch.</summary>
+    private const int KeptStates = 8, Offered = 4;
+
+    /// <summary>
+    /// How well a chord follows another, in a beat's usual weight: the root falling a fifth best
+    /// (V→I, ii→V, vi→ii — the more from a major chord, a dominant resolving), a step up or a third
+    /// next, a fifth up a little; a semitone or a tritone behind. The key's tonic, when it is known,
+    /// starts and ends a piece more often than not.
+    /// </summary>
+    private static double Progression(int prevRoot, ChordQuality prevQuality, int root, ChordQuality quality,
+        int tonic, bool start, bool end)
+    {
+        if (root < 0)
+            return 0;
+        double value = end && root == tonic ? 0.3 : 0;
+        if (prevRoot == NoChord)
+            return value + (start && root == tonic ? 0.2 : 0);
+        if (prevRoot < 0)
+            return value;
+        bool prevMajor = prevQuality is ChordQuality.Major or ChordQuality.Dominant7;
+        int motion = ((root - prevRoot) % 12 + 12) % 12;
+        return value + motion switch
+        {
+            5 => prevMajor ? 0.6 : 0.4,
+            2 => 0.15,
+            3 or 4 or 8 or 9 => 0.1,
+            7 => 0.05,
+            10 => 0.05,
+            1 or 11 => -0.1,
+            6 => -0.3,
+            _ => 0,
+        };
+    }
+
+    /// <summary>The chords that fit a stretch best, from its beats' summed fits: each with its root
+    /// (-1 where nothing sounds), quality, score (in weight) and fit (the share of the weight on
+    /// its tones). The lowest note at the stretch's start is the root more often than not.</summary>
+    private static List<(int Root, ChordQuality Quality, double Score, double Fit)> Chords(
         double[] fitted, double[] matched, double sum, int lowest)
     {
         if (sum <= 0)
-            return (-1, ChordQuality.Major, 0, 1);
+            return [(-1, ChordQuality.Major, 0, 1)];
         int bassPc = lowest == int.MaxValue ? -1 : ((lowest % 12) + 12) % 12;
-        (int, ChordQuality, double, double) best = (-1, ChordQuality.Major, double.NegativeInfinity, 0);
+        var options = new List<(int, ChordQuality, double, double)>(Candidates.Length);
         for (int c = 0; c < Candidates.Length; c++)
         {
             var chord = Candidates[c];
             double score = fitted[c] + chord.Prior * sum + (bassPc == chord.Root ? 0.35 * sum : 0);
-            if (score > best.Item3)
-                best = (chord.Root, chord.Quality, score, matched[c] / sum);
+            options.Add((chord.Root, chord.Quality, score, matched[c] / sum));
         }
-        return best;
+        return [.. options.OrderByDescending(o => o.Item3).Take(Offered)];
     }
 
     /// <summary>The chord of <paramref name="melody"/> a melody's stretch fits best: the weight
@@ -404,13 +525,13 @@ public static class HarmonyReader
     /// melody does not sound its chord. A low line is a bass line, and a bass plays the root on
     /// the bar's first beat more often than not: under G3 there, that note is the root's
     /// (owner's report 2026-10-26: a bass's `c e g a | c e a g f e` read Am).</summary>
-    private static (int Root, ChordQuality Quality, double Score, double Fit) MelodyChord(
+    private static List<(int Root, ChordQuality Quality, double Score, double Fit)> MelodyOptions(
         double[] pooled, double sum, MelodyChords melody, int lowest)
     {
         int bassPc = lowest < LowestMelody ? ((lowest % 12) + 12) % 12 : -1;
         if (sum <= 0)
-            return (-1, ChordQuality.Major, 0, 1);
-        (int, ChordQuality, double, double) best = (-1, ChordQuality.Major, double.NegativeInfinity, 0);
+            return [(-1, ChordQuality.Major, 0, 1)];
+        var options = new List<(int, ChordQuality, double, double)>();
         foreach (var (root, quality, preference) in melody.Chords)
         {
             var tones = ChordQualityRegistry.GetTones(quality);
@@ -430,10 +551,9 @@ public static class HarmonyReader
                 continue;
             double score = matched - 0.5 * (sum - matched) + 0.05 * preference * sum - (seventh ? 0.1 * sum : 0)
                 + (root == bassPc ? 0.2 * sum : 0);
-            if (score > best.Item3)
-                best = (root, quality, score, matched / sum);
+            options.Add((root, quality, score, matched / sum));
         }
-        return best;
+        return [.. options.OrderByDescending(o => o.Item3).Take(Offered)];
     }
 
     /// <summary>The notes that step into a bar line — a beat long at most, ending on it, the next

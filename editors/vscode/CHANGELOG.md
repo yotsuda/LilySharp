@@ -16,7 +16,10 @@ All notable changes to the Lily# VS Code extension are documented here.
   staff). The track is placed above that score's top staff, a row of its own (`as roman` after it shows
   the degrees).
   A second reading is a track of its own (`harmony2`). Until now the command wrote one diatonic
-  triad a bar from the melody alone.
+  triad a bar from the melody alone. Chords chosen for a line are chosen with their neighbours
+  (a root falling a fifth preferred: a D alone before a G7 is the ii), and a second pick sets how
+  rich they are — *Standard* (the V resolving written V7, as A7 → Dm a secondary dominant),
+  *Plain* (triads only) or *Rich* (the ii of a ii–V a minor seventh too); the last pick comes first.
 
 ### Practice
 

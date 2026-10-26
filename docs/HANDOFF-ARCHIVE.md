@@ -160,6 +160,15 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第982セッションの経緯
+
+### 1.1 第982セッション（2026-10-26・YT-DELL2）
+
+第981 と同じ会話の続き（ユーザー「新しいセッション＝会話を終えること？」→ いいえ＝便は作業の区切り、と答えた → 「続けて」）。`-Start p982`（開始 HEAD `835a2866e`・full **13330 / 0 / 2 / 13332**・第980 を ARCHIVE へ）。作業場所は Lab `sessions/p982/`。
+- **和声の分析 段 2＝Add Chord Track… を読み取りに載せ替え（`4faea3b47`）**: `ChordHarmonizer.AddReadChordTracks(source, scoreName, melodyOnly)`＝プレビューの score（`RenderName`）のパートだけを節ごとに鳴らして読む（原文の写しに `form zzHarmonyReading { 節 }`＝書き出しは木の中の form しか鳴らさない）・1 声だけの所は調の三和音から小節ごと（`MelodyChords`）・2 択の QuickPick（*Read the chords the parts play*／*Harmonize the melody only*＝いちばん上の譜表だけ）・小節を要るだけの等分で書く（`| Am Dm |`・3/4 `| C G . |`）・行は選んだ score の最初の譜表の前に名前と度数の 2 行・2 回目は `harmony2`・改行は文書に合わせる。**読み取りを拍ごとの点の和に直した**（区間でまとめると 3/4 の C＋G が Cmaj7 になった）＝一致率は全拍 根音 55.5→59.0%、2 声以上は 78.5% のまま。網 `ChordTrackReadingTests` 9 本。samples で lysc の診断は増えない。Deploy-Lsp 済。MANUAL-CHECKS C6（未確認）。
+- **段 3＝文書**: site commands（節を書き直し）・editor の表・拡張 README・両 CHANGELOG・ROADMAP から外す（出荷）・設計に「段 2・3 の結果」。`lysc harmonize` は旧来のまま（site にそう書いた）。
+判定（2026-10-26・第982 の終わり）: 和声の分析は 3 段とも済み。次はユーザーの指示（実機の C6）。
+
 ## 以下は第981セッションの経緯
 
 ### 1.1 第981セッション（2026-10-26・YT-DELL2）

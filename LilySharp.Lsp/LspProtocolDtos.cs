@@ -190,6 +190,8 @@ public class RenderInfo
 public class AddChordTrackParams : SvgParams
 {
     public bool MelodyOnly { get; set; }
+    /// <summary>How rich the chords chosen for a melody are: "plain", "standard" (the default) or "rich".</summary>
+    public string? Richness { get; set; }
 }
 
 /// <summary>Result of lilysharp/addChordTrack: the edits that add the chords part
