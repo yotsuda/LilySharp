@@ -18,8 +18,8 @@ All notable changes to the Lily# VS Code extension are documented here.
   A second reading is a track of its own (`harmony2`). Until now the command wrote one diatonic
   triad a bar from the melody alone. Chords chosen for a line are chosen with their neighbours
   (a root falling a fifth preferred: a D alone before a G7 is the ii), and a second pick sets how
-  rich they are — *Standard* (the V resolving written V7, as A7 → Dm a secondary dominant),
-  *Plain* (triads only) or *Rich* (the ii of a ii–V a minor seventh too); the last pick comes first.
+  rich they are — *Plain* (triads only), *Standard* (the V resolving written V7, as A7 → Dm a
+  secondary dominant) or *Rich* (the ii of a ii–V a minor seventh too); the last pick is selected.
 
 ### Practice
 

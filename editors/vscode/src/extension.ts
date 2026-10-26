@@ -2494,17 +2494,25 @@ async function addChordTrack(context: vscode.ExtensionContext) {
         return;
     }
     // How rich the chords chosen for a melody are (owner's request 2026-10-26: the variant's
-    // size, not a random seed): the last one picked first.
+    // size, not a random seed), plainest first (owner's request 2026-10-26); the one picked
+    // last is where the selection starts.
     const richnesses = [
+        { label: 'Plain', richness: 'plain', detail: 'Triads only.' },
         { label: 'Standard', richness: 'standard',
           detail: 'Sevenths where they are played; a chord resolving a fifth down as its V7 (G → C as G7 → C).' },
-        { label: 'Plain', richness: 'plain', detail: 'Triads only.' },
         { label: 'Rich', richness: 'rich', detail: 'Standard, and the ii of a ii–V as IIm7 (Dm → G7 as Dm7 → G7).' },
     ];
-    const last = context.globalState.get<string>('lilysharp.chordTrack.richness');
-    richnesses.sort((a, b) => (b.richness === last ? 1 : 0) - (a.richness === last ? 1 : 0));
-    const rich = await vscode.window.showQuickPick(richnesses,
-        { placeHolder: 'How rich are the chords chosen for a melody? (chords the parts play are written as played)' });
+    const last = context.globalState.get<string>('lilysharp.chordTrack.richness') ?? 'standard';
+    const rich = await new Promise<typeof richnesses[number] | undefined>(resolve => {
+        const quickPick = vscode.window.createQuickPick<typeof richnesses[number]>();
+        quickPick.items = richnesses;
+        quickPick.activeItems = richnesses.filter(r => r.richness === last);
+        quickPick.placeholder = 'How rich are the chords chosen for a melody? (chords the parts play are written as played)';
+        let chosen: typeof richnesses[number] | undefined;
+        quickPick.onDidAccept(() => { chosen = quickPick.selectedItems[0]; quickPick.hide(); });
+        quickPick.onDidHide(() => { quickPick.dispose(); resolve(chosen); });
+        quickPick.show();
+    });
     if (!rich) {
         return;
     }
