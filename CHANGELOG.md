@@ -8,6 +8,11 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Ask AI
 
+- `[editor]` **Compose with AI…**: a new piece in a new score from a description, written with
+  instruments, an ensemble's bracket, contrasting sections and textures, and checked as music once
+  it compiles (no instrument, a piano's brace for an ensemble, one note value, one rhythm for
+  every part) — what is found goes back to the AI for a revision. `[language]` the AI grammar's
+  *Common requests* gains *Compose a piece*, with a string quartet as its example.
 - `[editor]` **The AI candidate's Accept / Ask Again / Reject come back after a failure** (the
   language server restarting mid-request left them greyed out): the panel returns to the
   candidate shown, the reason under its buttons.

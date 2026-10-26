@@ -6,6 +6,14 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ### Ask AI
 
+- **Compose with AI…** (command palette, right-click in a `.lys` editor) writes a new piece into a
+  new score from a description — say the instruments, the length and the character. The AI is
+  shown how a piece for players is written (an `instrument` for every part, a `staffGroup` for
+  an ensemble, contrasting sections, melody against accompaniment, varied rhythm, articulations
+  and dynamics, with a short string quartet as the example), and once it compiles, the piece is
+  checked as music: parts with no instrument (they play a piano), an ensemble braced as a piano,
+  a part of one note value, every part in the same rhythm. What is found goes back to the AI for
+  one revision of the whole piece. The same check follows a whole new file asked for with Ctrl+I.
 - **The candidate's buttons come back after a failure.** When the language server restarted while
   a candidate was being asked about again, or while Accept wrote it, the panel was left with
   Accept, Ask Again and Reject greyed out. Now an Ask Again that fails, finds no valid candidate

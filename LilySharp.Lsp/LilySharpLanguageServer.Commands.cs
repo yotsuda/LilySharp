@@ -1360,6 +1360,19 @@ public sealed partial class LilySharpLanguageServer
     public Task<CheckCandidateResponse> CheckCandidateAsync(CheckCandidateParams @params, CancellationToken token)
         => OffDispatch(() => CheckCandidate(@params), token);
 
+    /// <summary>
+    /// What a new piece's notation leaves flat — parts with no instrument, an ensemble braced as
+    /// a piano, a part of one note value, every part in the same rhythm
+    /// (<see cref="LilySharp.Core.Editing.CompositionChecks"/>) — for the AI that composed it to
+    /// revise once (owner's report 2026-10-26). Read-only, like <c>checkCandidate</c>.
+    /// </summary>
+    [JsonRpcMethod("lilysharp/compositionCheck", UseSingleObjectParameterDeserialization = true)]
+    public Task<CompositionCheckResponse> CompositionCheckAsync(CheckCandidateParams @params, CancellationToken token)
+        => OffDispatch(() => new CompositionCheckResponse
+        {
+            Findings = [.. LilySharp.Core.Editing.CompositionChecks.Of(@params.Text ?? "")],
+        }, token);
+
     public CheckCandidateResponse CheckCandidate(CheckCandidateParams @params)
     {
         var text = @params.Text ?? "";

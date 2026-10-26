@@ -1004,6 +1004,58 @@ length. **"Add dynamics / articulations"** — marks glued to the note: `c4@p`, 
 `c4@staccato`, `c4@accent`. **"Change the meter / tempo"** — at the top (`time 3/4`,
 `tempo 96`), or at the start of a bar, in a section header or in the music, from there on.
 
+**"Compose a piece" / "write it for a string quartet, …"** — a new piece is a whole file, and
+it should sound like the ensemble asked for. What makes it music:
+- **Instruments**: every part gets its `instrument` (`violin`, `viola`, `cello`, `flute`, …) —
+  without one it plays a piano. Its range sets the bare note: `instrument violin` puts a bare
+  `c` at C4, `viola` and `cello` at C3 (so a violin's `a` is A4, a viola's `d'` is D4, a
+  cello's `d` is D3). Name the parts (`part vn1 "Violin I" "Vn. I"`).
+- **Layout**: an ensemble is a `staffGroup { … }` (a bracket); `grandStaff` is one instrument
+  on two staves (piano, harp) — never four players.
+- **A plan**: sections that contrast — in key (`key f major` at a section's head), tempo
+  (`tempo "Allegro" 4 = 132`), character and texture — and a theme that returns, changed.
+- **Texture**: one voice carries the melody while the others accompany — broken chords,
+  repeated eighths, a moving bass — and the roles pass between the parts. Not every part in the
+  same rhythm; not whole notes everywhere.
+- **Rhythm and articulation**: long and short notes mixed, rests that let a line breathe,
+  slurs over a phrase, `@staccato`, `@accent`, and dynamics with hairpins
+  (`@p … @cresc … @f`) that shape each section.
+
+```
+title "Little Quartet"
+time 4/4
+key d minor
+octave absolute
+
+part vn1 "Violin I" "Vn. I" { instrument violin }
+part vn2 "Violin II" "Vn. II" { instrument violin }
+part va "Viola" "Va." { instrument viola }
+part vc "Cello" "Vc." { instrument cello }
+
+section A {
+  tempo "Andante" 4 = 72
+  vn1 { a2@p( d'4 e' | f'4. e'8 d'4 a) | bes2( a4 g | a1) | }
+  vn2 { r8 f@p a f r a d' a | r8 f a f r a d' a | r8 g bes g r bes d' bes | r8 e g cis' e'4 cis' | }
+  va { d'2@p f' | d'2 f' | d'2 g' | e'1 | }
+  vc { d1@p | d1 | g,1 | a,1 | }
+}
+
+section B {
+  key f major
+  tempo "Allegro" 4 = 132
+  vn1 { c'8@f@staccato c' f' c' a4@accent g | f8@staccato a c' f' e'4@accent c' | d'8@cresc e' f' g' a'4 g' | f'2@ff r2 | }
+  vn2 { a8@f@staccato a c' a f4 e | c8@staccato f a c' g4 e | f8@cresc g a bes c'4 bes | a2@ff r2 | }
+  va { f'4@f@staccato r c'@staccato r | a4@staccato r c'@staccato r | bes4@cresc d' f' e' | f'2@ff r2 | }
+  vc { f,4@f@staccato c@staccato f,@staccato c@staccato | f,4@staccato c@staccato c,@staccato c@staccato | bes,4@cresc bes, c c | f,2@ff r2 | }
+}
+
+form { A B }
+
+score {
+  staffGroup { staff vn1  staff vn2  staff va  staff vc }
+}
+```
+
 ## Rules and gotchas
 
 - Each **phrase body** evaluates in a fresh frame (default octave/pitch/duration), so a

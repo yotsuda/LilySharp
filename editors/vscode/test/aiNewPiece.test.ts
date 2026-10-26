@@ -44,4 +44,21 @@ describe('a new piece in place of the score', () => {
         assert.match(transform, /deps\.log\(`AI transform: attempt \$\{attempt \+ 1\}\/\$\{MAX_REPAIR_ATTEMPTS \+ 1\} turned down — \$\{reason\}`\)/);
         assert.match(transform, /could not produce a valid transform in \$\{MAX_REPAIR_ATTEMPTS \+ 1\} tries\. Nothing was changed\.`\s*\+ \(why \? ` The last try: \$\{why\}` : ''\), showLog\)/);
     });
+
+    it('a new piece is checked as music once, and what is found goes back for a revision', () => {
+        assert.match(transform, /const newPiece = compose \|\| \/<file>\/\.test\(raw\);/);
+        assert.match(transform, /if \(newPiece && !musicAsked && attempt < MAX_REPAIR_ATTEMPTS\) \{\s*const music = await compositionFindings\(client, reconstructed\);/);
+        assert.match(transform, /sendRequest<\{ Findings: string\[\] \}>\('lilysharp\/compositionCheck', \{ Text: text \}\)/);
+        // The octave check measures against the old notes: not for a new piece.
+        assert.match(transform, /if \(edit\.text !== octaveAsked && !newPiece\) \{/);
+        // A revision that does not come leaves the piece as first written, with what was found.
+        assert.match(transform, /if \(candidate === null && flat\) \{\s*candidate = flat\.edit;/);
+    });
+
+    it('Compose with AI is a command of its own, writing into a new score', () => {
+        assert.match(transform, /registerCommand\('lilysharp\.composeWithAi', \(\) => runCompose\(deps\)\)/);
+        assert.match(transform, /openTextDocument\(\{ language: 'lilysharp', content: 'title "New Piece"\\n' \}\)/);
+        const pkg = fs.readFileSync(path.join(__dirname, '..', '..', 'package.json'), 'utf8');
+        assert.match(pkg, /"command": "lilysharp\.composeWithAi",\s*"category": "Lily#",\s*"icon": "\$\(sparkle\)",\s*"title": "Compose with AI…"/);
+    });
 });

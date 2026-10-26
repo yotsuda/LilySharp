@@ -653,6 +653,14 @@ public class CheckCandidateResponse
     public CandidateDiagnostic[] Diagnostics { get; set; } = System.Array.Empty<CandidateDiagnostic>();
 }
 
+/// <summary>Response for lilysharp/compositionCheck (parameters: <see cref="CheckCandidateParams"/>):
+/// what a new piece's notation leaves flat, one sentence each
+/// (<see cref="LilySharp.Core.Editing.CompositionChecks"/>).</summary>
+public class CompositionCheckResponse
+{
+    public string[] Findings { get; set; } = System.Array.Empty<string>();
+}
+
 /// <summary>Parameters for lilysharp/renderText: render an arbitrary candidate
 /// source string to preview SVG without touching the open document (the "decide on
 /// the score" preview of §3/§7 — an offscreen compile of the candidate).</summary>

@@ -127,7 +127,8 @@ export function registerAiTransform(context: vscode.ExtensionContext, deps: AiTr
     context.subscriptions.push(
         // `selected` names what the preview handed over ("3 bars selected"), for the input box.
         vscode.commands.registerCommand('lilysharp.aiTransform', (opts?: { whole?: boolean; selected?: string }) =>
-            runAiTransform(deps, opts?.whole === true, opts?.selected))
+            runAiTransform(deps, opts?.whole === true, opts?.selected)),
+        vscode.commands.registerCommand('lilysharp.composeWithAi', () => runCompose(deps)),
     );
     context.subscriptions.push({
         dispose: () => {
@@ -161,6 +162,57 @@ function currentUri(uri: vscode.Uri): vscode.Uri {
         uri = moved;
     }
     return uri;
+}
+
+/**
+ * "Lily#: Compose with AI…" (owner's request 2026-10-26: composing as a menu of its own, not a
+ * Ctrl+I that discards the score): asks what to compose, opens a new score, and has the AI write
+ * it whole — the grammar's "Compose a piece" recipe, the musical check after it compiles, the
+ * candidate reviewed and accepted as any other.
+ */
+async function runCompose(deps: AiTransformDeps): Promise<void> {
+    const client = deps.getClient();
+    if (!client || !deps.isReady()) {
+        vscode.window.showErrorMessage('Lily#: language server not ready.');
+        return;
+    }
+    const description = await vscode.window.showInputBox({
+        title: 'Lily# — Compose with AI',
+        prompt: 'What should the AI compose? Say the instruments, the length and the character.',
+        placeHolder: 'e.g. a dramatic string quartet in D minor, about 3 minutes, slow – fast – slow',
+        ignoreFocusOut: true,
+    });
+    if (description === undefined || description.trim().length === 0) {
+        return;
+    }
+    const chat = await resolveChatClient(false);
+    if (!chat) {
+        return;
+    }
+    // A new score to write it into: the one open stays as it is.
+    const doc = await vscode.workspace.openTextDocument({ language: 'lilysharp', content: 'title "New Piece"\n' });
+    await vscode.window.showTextDocument(doc);
+    const snapshot = {
+        version: doc.version,
+        startOffset: 0,
+        endOffset: doc.getText().length,
+        origFullText: doc.getText(),
+        origSelectedText: doc.getText(),
+        uri: doc.uri,
+    };
+    const grammar = await loadGrammar(deps);
+    const budget = documentBudget(chat.maxInputTokens, estimateTokens(systemPrompt(grammar)));
+    try {
+        const ai = await toAbsoluteOctaves(deps, client, snapshot, true);
+        await drive(deps, client, chat, snapshot, ai,
+            `Compose a new piece: ${description.trim()}\nThe file is an empty start: reply with the whole new piece `
+            + 'between <file> and </file> (reply form 3), as the grammar\'s "Compose a piece" recipe says — an '
+            + 'instrument for every part, a staffGroup for an ensemble, contrasting sections, melody and '
+            + 'accompaniment, varied rhythm, articulations and dynamics.',
+            true, grammar, documentContext(ai.snap, budget, true), true);
+    } catch (err: any) {
+        vscode.window.showErrorMessage(`Lily#: compose with AI failed: ${err?.message ?? err}`);
+    }
 }
 
 /** The whole select→prompt→validate→render→apply transaction (§3/§4). */
@@ -351,11 +403,12 @@ async function drive(
     whole: boolean,
     grammar: string,
     shown: { text: string; complete: boolean },
+    compose = false,
 ): Promise<void> {
     // One notification per round, preparation included (two in a row read as two tasks — owner,
     // 2026-10-25): the model in its title, the request in its message, which also says what step
     // it is on.
-    const title = `Lily#: Ask AI${whole ? ' (whole score)' : ''} via ${chat.label}`;
+    const title = compose ? `Lily#: Compose with AI via ${chat.label}` : `Lily#: Ask AI${whole ? ' (whole score)' : ''} via ${chat.label}`;
     // What the AI reads and writes, and every candidate is spliced into; `snapshot` stays the
     // document's (its resolved facts, its @todo marks, and the edit Accept applies).
     const work = ai.snap;
@@ -426,6 +479,9 @@ async function drive(
                 let unchanged = false;
                 let octaveAsked: string | null = null;
                 let octaveNote: ResolvedPitchFact[] | null = null;
+                let musicAsked = false;
+                // A valid piece the music check sent back: shown if no better one comes.
+                let flat: { edit: CandidateEdit; music: string[] } | null = null;
                 // Why the last attempt was turned down, logged with each (owner's report 2026-10-26:
                 // "could not produce a valid transform" said nothing of why, and the log neither).
                 let lastReason = '';
@@ -493,8 +549,11 @@ async function drive(
                         // candidate: returning the same candidate again is the model confirming the
                         // register is what the instruction wants ("two octaves lower").
                         // Only the notes the candidate wrote: between two edits stands music it left alone.
+                        // A new piece (composed, or the whole file written anew) has no register of
+                        // the old notes to keep.
+                        const newPiece = compose || /<file>/.test(raw);
                         let written: ResolvedPitchFact[] = [];
-                        if (edit.text !== octaveAsked) {
+                        if (edit.text !== octaveAsked && !newPiece) {
                             for (const s of edit.spans) {
                                 written = written.concat(await pitchesOf(client, reconstructed, s.afterLo, s.afterHi));
                             }
@@ -517,6 +576,26 @@ async function drive(
                                 + 'what the instruction asks for, return the same candidate again unchanged.' });
                             deps.log(`AI transform: octave check — ${outliers.map(p => `${p.Written}->${p.Resolved}`).join(' ')}`);
                             continue;
+                        }
+                        // A new piece is checked as music, once: parts with no instrument, an
+                        // ensemble braced as a piano, one note value throughout, every part in one
+                        // rhythm (owner's report 2026-10-26: a "dramatic quartet" of piano staves
+                        // and whole notes). What it finds goes back for a revision of the whole piece.
+                        if (newPiece && !musicAsked && attempt < MAX_REPAIR_ATTEMPTS) {
+                            const music = await compositionFindings(client, reconstructed);
+                            if (music.length > 0) {
+                                musicAsked = true;
+                                flat = { edit, music };
+                                repairs = attempt + 1;
+                                turnedDown(attempt, `it compiles, but as music: ${music.join(' / ')}`);
+                                messages.push({ role: 'assistant', content: raw });
+                                messages.push({ role: 'user', content:
+                                    `That piece compiles, but it falls short as music for its players:\n`
+                                    + `${music.map(m => `- ${m}`).join('\n')}\n`
+                                    + 'Revise the whole piece with these in mind — keep what works, make it sound like the '
+                                    + 'ensemble asked for. Reply with the whole new file between <file> and </file>, same output rules.' });
+                                continue;
+                            }
                         }
                         candidate = edit; // valid — never showed a broken candidate
                         if (outliers.length > 0) {
@@ -551,6 +630,11 @@ async function drive(
                 }
 
                 let caption = instruction;
+                if (candidate === null && flat) {
+                    candidate = flat.edit;
+                    caption = `${instruction} — ⚠ ${flat.music.join(' / ')}`;
+                    deps.log('AI transform: the revision did not come; shown as first written, with what the music check found.');
+                }
                 if (candidate === null && warned) {
                     candidate = warned.edit;
                     caption = `${instruction} — ⚠ ${warned.warnings.length} new warning(s): `
@@ -867,6 +951,17 @@ function taskPrompt(snapshot: Snapshot, shown: { text: string; complete: boolean
 
 /** A candidate as the edit it makes (aiTransformCore.ts), against this module's snapshot. */
 type CandidateEdit = CoreCandidateEdit<Snapshot>;
+
+/** What a new piece's notation leaves flat (lilysharp/compositionCheck), one sentence each;
+ *  none from a server that does not know the request. */
+async function compositionFindings(client: LanguageClient, text: string): Promise<string[]> {
+    try {
+        const resp = await client.sendRequest<{ Findings: string[] }>('lilysharp/compositionCheck', { Text: text });
+        return resp?.Findings ?? [];
+    } catch {
+        return [];
+    }
+}
 
 /** Rebuilds the full document text with the candidate spliced into the snapshot range. */
 function spliceCandidate(snapshot: Snapshot, candidate: string): string {
