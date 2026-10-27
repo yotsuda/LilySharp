@@ -6,6 +6,12 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+### Scan import
+
+- `[editor]` **Fix OMR Marks with AI handles a missed barline**: a bar box spanning two bars is
+  measured against its neighbours and named to the AI, which writes the line's music as the bars
+  the picture shows.
+
 ### Editing
 
 - `[editor]` **A minor key's step keys walk its key signature** (the natural minor: A minor

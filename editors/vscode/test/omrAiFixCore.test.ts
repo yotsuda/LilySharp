@@ -25,7 +25,7 @@ import {
     Diag, FixableTodo, Rgba, acceptableByAll, anchorOf, averageOf, barBoxFor, batchesOf, checkedByDefault, cropRect, cropRgba,
     decodeImage, diagnosticsOn, encodePng, estimateOf, fixTargets, gateOf, headOf, labelOf, neighboursOf, parseProposal,
     rangesOf, readerBarOf, repairPromptOf, resolvedLine, scanCropPng, shortTodos, spliceBar, stripTodoMarks, systemPromptOf, targetsInLines, taskPromptOf,
-    itemEndsOf, withTodoMark, lineTargets,
+    itemEndsOf, withTodoMark, lineTargets, widthAmongNeighbours,
     verifyVerdict, withSample, withVerify, wordDiff,
 } from '../src/omrAiFixCore';
 import * as jpeg from 'jpeg-js';
@@ -638,5 +638,41 @@ describe('the crop, the estimate, the batches, the apply', () => {
         assert.equal(barBoxFor(boxes, 25, 50), 1);
         assert.equal(barBoxFor(boxes, 50, 60), 1);
         assert.equal(barBoxFor(boxes, 90, 99), -1);
+    });
+});
+
+// Owner's report 2026-10-27 (tabi bar 32): the reader missed a barline, and its box for the bar
+// spanned two (422 px among bars of 211–353); the crop showed both and the line held both bars'
+// music. The prompt matches the text to the page, and says so when the box is that wide.
+describe('a bar box that spans more than one bar', () => {
+    const tabi = parseSideFile(JSON.stringify({
+        version: 1, omr: 'OmrProto', lys: 'tabi.lys', pages: [{ page: 1, image: 'tabi.jpg', width: 1681, height: 1740 }],
+        measures: [
+            { measure: 30, part: 'p1', line: 43, page: 1, box: [68, 984, 421, 1087] },
+            { measure: 31, part: 'p1', line: 44, page: 1, box: [420, 984, 631, 1086] },
+            { measure: 32, part: 'p1', line: 45, page: 1, box: [629, 984, 1051, 1087] },
+            { measure: 33, part: 'p1', line: 46, page: 1, box: [1050, 985, 1268, 1087] },
+            { measure: 34, part: 'p1', line: 47, page: 1, box: [1267, 985, 1478, 1088] },
+            { measure: 29, part: 'p1', line: 42, page: 1, box: [1393, 736, 1627, 839] },
+        ],
+        todos: [],
+    }), path.resolve('tabi.omr.json'))!;
+
+    it('is measured against the bars beside it on its system', () => {
+        assert.equal(widthAmongNeighbours(1, [629, 984, 1051, 1087], tabi), 2);
+        // An ordinary bar, and the first, wider one (its clef and key), are no such thing.
+        assert.equal(widthAmongNeighbours(1, [1050, 985, 1268, 1087], tabi), undefined);
+        assert.equal(widthAmongNeighbours(1, [68, 984, 421, 1087], tabi), undefined);
+    });
+
+    it('is told to the AI, and the prompt matches the text to the page either way', () => {
+        const text = Array.from({ length: 50 }, (_, i) => i === 44 ? '    gis,4. fis,8 cis8 dis8 <gis, cis eis>16 fis16 eis4~ eis8 cis8 dis8 |' : '').join('\n');
+        const [bar] = lineTargets(text, [44], tabi);
+        assert.equal(bar.crop?.wideBy, 2);
+        const task = taskPromptOf({ head: '', target: bar, neighbours: { others: [] }, diagnostics: [], image: true });
+        assert.match(task, /The picture is cut from the reader's box for the bar, and that box can be wrong/);
+        assert.match(task, /If the text is ONE of them, correct that bar\s+alone\. If the text holds the music of SEVERAL/);
+        assert.match(task, /this bar's box is about 2 times as wide as the bars beside it/);
+        assert.match(systemPromptOf(''), /several bars, each closed by its own "\|", when the line holds bars the reader merged/);
     });
 });

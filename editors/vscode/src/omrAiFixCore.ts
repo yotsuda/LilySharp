@@ -56,8 +56,10 @@ export interface FixTarget {
     /** The reader's confidence in the line: the least sure of its marks; undefined when a mark
      *  gives none (an older reader, or a mark written by hand) — the least sure of all. */
     readonly confidence?: number;
-    /** Where the bar is on the scan: the mark's box, else its bar's. */
-    readonly crop?: { readonly page: number; readonly box: Box };
+    /** Where the bar is on the scan: the mark's box, else its bar's — and, when the box is much
+     *  wider than the bars beside it on its system, about how many bars it spans (`wideBy`: the
+     *  reader may have missed a barline, owner's report 2026-10-27). */
+    readonly crop?: { readonly page: number; readonly box: Box; readonly wideBy?: number };
     /** The readings the reader offers for the marks (its `candidates`), in its order. */
     readonly candidates: readonly { readonly label?: string; readonly text: string }[];
     /** The reader's other readings of one event of the bar (its `readings`, M3), in its order. */
@@ -125,6 +127,37 @@ function cropOf(keys: readonly string[], line: number, side?: ScanSideFile): Fix
     if (!side) {
         return undefined;
     }
+    const crop = boxOf(keys, line, side);
+    if (!crop) {
+        return undefined;
+    }
+    const wideBy = widthAmongNeighbours(crop.page, crop.box, side);
+    return wideBy ? { ...crop, wideBy } : crop;
+}
+
+/**
+ * About how many bars wide a box is, beside the other bars of its system on the page (the same
+ * page, the same height on it): its width over theirs (the median), rounded, when it is 1.7 times
+ * theirs or more — a bar the reader merged with its neighbour, the barline between missed (owner's
+ * report 2026-10-27: tabi bar 32, 422 px among bars of 211–218, two bars' music on one line).
+ * Undefined when it is not, or there is nothing to compare.
+ */
+export function widthAmongNeighbours(page: number, box: Box, side: ScanSideFile): number | undefined {
+    const height = box[3] - box[1];
+    const widths = side.measures
+        .filter(m => m.page === page && Math.abs(m.box[1] - box[1]) < height / 2
+            && !(m.box[0] === box[0] && m.box[2] === box[2]))
+        .map(m => m.box[2] - m.box[0])
+        .sort((a, b) => a - b);
+    if (widths.length < 2) {
+        return undefined;
+    }
+    const typical = widths[Math.floor(widths.length / 2)];
+    const ratio = (box[2] - box[0]) / typical;
+    return ratio >= 1.7 ? Math.round(ratio) : undefined;
+}
+
+function boxOf(keys: readonly string[], line: number, side: ScanSideFile): { page: number; box: Box } | undefined {
     const marks = keys.map(k => side.todos.find(s => s.key === k)).filter((t): t is NonNullable<typeof t> => !!t);
     const barMark = marks.find(t => t.kind !== 'note');
     if (barMark) {
@@ -306,7 +339,8 @@ export function systemPromptOf(grammar: string): string {
         '',
         'OUTPUT CONTRACT (strict — the answer is read by a program). Reply with ONE JSON object and nothing else:',
         '  {"bar": "<the whole line, rewritten>", "reason": "<one sentence>", "confidence": <0 to 1>}',
-        '- "bar" is the complete replacement for the marked line: one line of Lily#, ending with its bar line "|".',
+        '- "bar" is the complete replacement for the marked line: one line of Lily#, ending with its bar line "|" —',
+        '  several bars, each closed by its own "|", when the line holds bars the reader merged (a missed barline).',
         '  Keep the words at the start of the line that are not music (break, pageBreak, key …, time …, a tempo) as',
         '  they are. Never write @todo in it.',
         '- When you cannot tell what the bar should be, answer {"bar": null, "reason": "<why>", "confidence": 0}.',
@@ -340,6 +374,17 @@ export function taskPromptOf(input: TaskInput): string {
         parts.push('the text below is only what the reader made of it. Read the notes, rests, dots, ties, beams and');
         parts.push('tuplets from the picture, and count the beats. Read how many voices the bar has from the picture');
         parts.push('too (stems up and down at once, rests set above or below the notes) — not from the reader\'s text.');
+        // The picture is cut from the reader's box, and the box can be wrong (owner's report
+        // 2026-10-27: a box two bars wide, the barline between them missed): the text is matched
+        // to the page, never the page cut to fit the text.
+        parts.push('The picture is cut from the reader\'s box for the bar, and that box can be wrong: it may show more than');
+        parts.push('one bar. Compare the text with every bar in the picture. If the text is ONE of them, correct that bar');
+        parts.push('alone. If the text holds the music of SEVERAL — a barline the reader missed, so the line runs a whole');
+        parts.push('bar or more too long — write each as a bar of its own on the one line, every bar closed by its bar line.');
+        if (input.target.crop?.wideBy) {
+            parts.push(`Lily#'s measure of the page: this bar's box is about ${input.target.crop.wideBy} times as wide as the bars beside it`);
+            parts.push('on its system — it probably holds that many bars, the barline between them missed by the reader.');
+        }
         parts.push('');
     }
     parts.push('The declarations of the file (its meter, key, parts and octave mode):');

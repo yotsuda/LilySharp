@@ -137,7 +137,11 @@
   the scan. A list lets you pick the bars, the least sure first.</p>
   <ul>
     <li><b>The model sees the page.</b> Each request carries the scan's picture of the bar,
-    beside its text and the reader's note; the page decides, and the meter is only a check.</li>
+    beside its text and the reader's note; the page decides, and the meter is only a check.
+    The picture is cut from the reader's box for the bar, which can hold two bars when the reader
+    missed a barline: the AI matches the text to the bars it shows — one of them, or all of them
+    written as separate bars on the line — and is told when the box is twice as wide as its
+    neighbours.</li>
     <li><b>Each proposal passes three gates before it counts as ready</b>: it compiles with no
     new error, it fills its bar, and the reader compares it with the scan (<i>verify</i>). A
     proposal the scan contradicts is shown with <i>verify ✗</i> and its reason.</li>

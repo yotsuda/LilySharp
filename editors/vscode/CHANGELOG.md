@@ -4,6 +4,14 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+### Scan import
+
+- **A bar the reader merged with its neighbour is fixed as two bars.** When the reader misses a
+  barline, its box for the bar spans both and the line holds both bars' music; the bar's picture
+  then shows two bars. Fix OMR Marks with AI now matches the text to the bars in the picture —
+  one of them, or each as a bar of its own on the line — and is told when the box is about twice
+  as wide as the bars beside it on the system.
+
 ### Editing
 
 - **In a minor key, Ctrl+Shift+Up / Down walk the key signature** — its natural minor: in A minor
