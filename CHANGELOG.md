@@ -12,7 +12,8 @@ workflow attaches that section to the GitHub Release verbatim.
   an empty bar (a spacer of its bar — the source draws no rest there), and the staff's only or first
   voice a bar rest `R`, which lasts its bar in any meter: in 6/8 the `r1` was four beats in a bar of
   three, and every such bar overflowed (homr.musicxml: 24 overflowing bars and a misaligned pair of
-  parts gone).
+  parts gone). A further voice that stops short of its bar (notes for half the bar, no `<forward>`
+  after them) is filled out with spacers to the measure's longest voice: `<cis b,>4. s4.`.
 
 ### Chords
 

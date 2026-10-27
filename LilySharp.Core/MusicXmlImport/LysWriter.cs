@@ -18,6 +18,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using LilySharp.Core.Music;
+using LilySharp.Core.Semantics;
 
 namespace LilySharp.Core.MusicXmlImport;
 
@@ -693,6 +694,84 @@ internal static class LysWriter
 
     // ---- music emission ---------------------------------------------------
 
+    /// <summary>
+    /// The spacers that fill a voice's items out to the longest voice of the measure — the bar's
+    /// length as the source has it (a pickup's too), whatever the meter says — or "" when they
+    /// reach it, or when a length cannot be told (a whole-measure rest, a remainder no plain
+    /// note value spells).
+    /// </summary>
+    internal static string SpacersToFill(ImportMeasure measure, List<ImportItem> items)
+    {
+        if (LengthOf(items) is not { } own)
+            return "";
+        var longest = Fraction.Zero;
+        foreach (var other in measure.VoiceItems.Values)
+        {
+            if (LengthOf(other) is not { } length)
+                return "";
+            if (length > longest)
+                longest = length;
+        }
+        var rest = longest - own;
+        var values = new List<int>();
+        for (int value = 1; value <= 128 && rest > Fraction.Zero; value *= 2)
+        {
+            var one = new Fraction(1, value);
+            while (rest >= one)
+            {
+                values.Add(value);
+                rest -= one;
+            }
+        }
+        if (rest != Fraction.Zero)
+            return "";
+        // A value and its half are one dotted value: s4 s8 → s4.
+        var spacers = new List<string>();
+        for (int k = 0; k < values.Count; k++)
+        {
+            bool dot = k + 1 < values.Count && values[k + 1] == values[k] * 2;
+            spacers.Add("s" + values[k] + (dot ? "." : ""));
+            if (dot)
+                k++;
+        }
+        return string.Join(" ", spacers);
+    }
+
+    /// <summary>How long a voice's items of one measure last; null for a whole-measure rest,
+    /// whose length is its bar's.</summary>
+    private static Fraction? LengthOf(List<ImportItem> items)
+    {
+        var total = Fraction.Zero;
+        var tuplets = new Stack<Fraction>();
+        var scale = new Fraction(1);
+        foreach (var item in items)
+        {
+            if (item is not ImportNote note)
+                continue;
+            if (note.IsMeasureRest)
+                return null;
+            if (note.TupletStart is { } t && !note.ChordWithPrev)
+            {
+                tuplets.Push(scale);
+                scale *= new Fraction(t.Normal, t.Actual);
+            }
+            if (!note.ChordWithPrev)
+            {
+                var value = new Fraction(1, note.NoteValue);
+                var dotted = value;
+                for (int d = 0; d < note.Dots; d++)
+                {
+                    value *= new Fraction(1, 2);
+                    dotted += value;
+                }
+                total += dotted * scale;
+            }
+            if (note.TupletStop && tuplets.Count > 0)
+                scale = tuplets.Pop();
+        }
+        return total;
+    }
+
     private static readonly List<ImportItem> EmptyItems = new();
 
     /// <summary>How many bars a line of the written music holds at most. A bar line other than
@@ -756,6 +835,11 @@ internal static class LysWriter
             if (directives != null)
                 sb.Append(i == start ? directives.Opening[i] : directives.Changes[i]);
             sb.Append(items.Count > 0 ? WriteMeasureItems(items, report, rel, bars) : lead ? "R" : "");
+            // A further voice that stops short of its bar is filled out with spacers (owner's
+            // request 2026-10-27, homr.musicxml: a second voice with notes for half a bar and no
+            // <forward> after them): what the source leaves blank stays blank, and the bar adds up.
+            if (!lead && bars == 1 && items.Count > 0 && SpacersToFill(part.Measures[i], items) is { Length: > 0 } fill)
+                sb.Append(' ').Append(fill);
             // The folded bars close at the LAST one's bar line.
             var last = part.Measures[i + bars - 1];
             i += bars;

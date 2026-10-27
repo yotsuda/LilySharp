@@ -77,6 +77,19 @@ public class MusicXmlEmptyVoiceBarImportTests
         Assert.Empty(LengthReports(lys));
     }
 
+    // Owner's request 2026-10-27: a further voice that stops short of its bar is filled out with
+    // spacers (homr: `<cis b,>4.` alone in a bar of 6/8, no <forward> after it).
+    [Fact]
+    public void ASecondVoiceThatStopsShort_IsFilledOutWithSpacers()
+    {
+        string lys = Import(
+            Measure(1, Note("E", 5, 6, "half", 1) + "<backup><duration>6</duration></backup>"
+                + "<note><pitch><step>C</step><octave>5</octave></pitch><duration>3</duration><type>quarter</type><dot/><voice>2</voice></note>",
+                attributes: true));
+        Assert.Matches(@"\{ c'4\. s4\.", lys);
+        Assert.Empty(LengthReports(lys));
+    }
+
     [Fact]
     public void TheOnlyVoiceSilentInABar_WritesABarRest_ThatLastsItsBar()
     {

@@ -160,6 +160,15 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1008セッションの経緯
+
+### 1.1 第1008セッション（2026-10-27・YT-DELL2）
+
+第1007 と同じ会話の続き。`-Start p1008`（開始 HEAD `368146a41`・full **13377 / 0 / 2 / 13379**・第1006 を ARCHIVE へ）。作業場所は Lab `sessions/p1008/`。
+- **ユーザー「Ask AI で AI に渡すテキストはいま選択中のテキストに。the bar as it stands を選択していたらそのテキストを」**: `pump` の `shown`＝編集なら `{person}`・AI の案が Draft なら `{ai}`・元なら無し → `fixOne(…, shown)` → `taskPromptOf` の `attemptBy: 'ai'` は「as an EARLIER ANSWER of yours proposed it」。
+- **途中で「the bar as it stands は長いから as is に。as is / your edit / AI proposal と 3 つ並べる方が便利？」「as is は妥当？より良いラベルを」→ 4 案（original・as is・unchanged・as read）から **original** を選ばれた**。`FixRow.original`（AI の案があっても元を見せる）・`hasProposal`＝`aiHas && !original`・`setEditAside`・ページのボタン `button.pick[data-show]` → `show` の処理（original／ai は編集を預けて切り替え・edit は預けた編集を `editRow` で戻す）。行にあるものだけ並べる（original は常に・your edit は編集中か預けたとき・AI proposal は案があるとき）、1 つだけなら今までどおりの文。`restore` と `revert` のボタンは消した。網 `omrAiFixPage.test` 1 本を書き直し・`omrAiFixCore.test` 2 行（npm 489）。site scan・両 CHANGELOG・MANUAL-CHECKS C21。
+判定（2026-10-27・第1008 の終わり）: 次はユーザーの指示（C9〜C21）。
+
 ## 以下は第1007セッションの経緯
 
 ### 1.1 第1007セッション（2026-10-27・YT-DELL2）
