@@ -462,8 +462,8 @@ public static class OctaveModeConverter
         // drawings are paired in document order.
         if (legacyTrace != null && drawnOnly.Count > 0)
         {
-            var map = PositionMap(WrittenPitches(SyntaxTree.Parse(result.NewText).GetRoot()), WrittenPitches(tree.GetRoot()));
-            var after = TraceOf(SyntaxTree.Parse(result.NewText));
+            var map = PositionMap(WrittenPitches(SyntaxTree.Parse(result.NewText!).GetRoot()), WrittenPitches(tree.GetRoot()));
+            var after = TraceOf(SyntaxTree.Parse(result.NewText!));
             if (map == null)
                 return Fail("The re-marked file lost track of its notes — no changes made.");
             var back = map.ToDictionary(kv => kv.Value, kv => kv.Key);
@@ -572,7 +572,9 @@ public static class OctaveModeConverter
     {
         var trace = new Dictionary<int, List<string>>();
         var specs = RenderSpecParser.FindAll(tree);
-        IEnumerable<RenderSpec?> passes = specs.Count == 0 ? [null] : specs;
+        IEnumerable<RenderSpec?> passes = specs;
+        if (specs.Count == 0)
+            passes = [null];
         foreach (var spec in passes)
         {
             var collector = new MeasureCollector
