@@ -85,7 +85,7 @@ describe('the Edit Bars Beside the Scan page', () => {
         assert.match(src, /row\.barFix = await barFixOf\(run\.client, spliceBar\(run\.base\.text, target, plain\), target\.start, plain\.length\);/);
         assert.match(src, /\/bar lines\? looks\? to be missing\/\.test\(d\.Message\)/);
         assert.match(src, /'lilysharp\/missingBarLines', \{ Text: text, Start: start, End: start \+ length \}/);
-        assert.match(src, /reason: lost \+ reason \+ restore \+ sure \+ hint \+ barLine \+ aiNow/);
+        assert.match(src, /reason: lost \+ reason \+ sure \+ hint \+ barLine \+ aiNow/);
     });
 });
 
@@ -114,8 +114,11 @@ describe('the doors to the bars of the marks', () => {
         assert.match(fix, /if \(row\.edited !== undefined\) \{\s*row\.stashed = \{ text: row\.edited, fromAi: !!row\.editedFromAi \};/);
         assert.match(fix, /row\.edited = text;\s*row\.stashed = undefined;/);
         assert.match(fix, /case 'restore':[\s\S]{0,400}await editRow\(run, row, kept\.text, m\.seq \?\? 0, kept\.fromAi\);/);
-        assert.match(fix, /const restore = !edited && r\.stashed && isLive\(r\)/);
-        assert.match(fix, /reason: lost \+ reason \+ restore \+ sure/);
+        // The two labels over the Draft (owner's request 2026-10-27), no links in the reason.
+        assert.match(fix, /const source = edited && can\s*\? `\$\{on\('your edit'\)\} \/ \$\{pick\(hasProposal\(r\) \? 'AI proposal' : 'the bar as it stands', 'revert',/);
+        assert.match(fix, /: r\.stashed && can\s*\? `\$\{pick\('your edit', 'restore', `Show your edit: \$\{r\.stashed\.text\}`\)\} \/ \$\{on\(plain\)\}`/);
+        assert.match(fix, /from\.innerHTML = m\.source;/);
+        assert.doesNotMatch(fix, /undo my edit<|use the AI's<|back to my edit</);
         assert.match(fix, /vscode\.postMessage\(\{ action: 'restore', index: Number\(i\), seq: seqs\[i\] \}\);/);
     });
 

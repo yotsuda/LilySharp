@@ -47,8 +47,13 @@ All notable changes to the Lily# VS Code extension are documented here.
   as the scan view already followed them while it was open (it now also keeps them over a save
   and a reopened file).
 - **Switch between the AI's proposal and your edit.** An answer that came while you were editing
-  a row could be seen only by throwing your edit away (*use the AI's*). Now your edit is kept aside,
-  and *back to my edit* brings it back, checked and drawn again; a new edit drops the one kept.
+  a row could be seen only by throwing your edit away. Now two labels over the draft's picture,
+  *your edit* and *AI proposal*, switch between them — the one shown in bold, the other a click
+  away, kept and checked and drawn again when it comes back (with no proposal: *your edit* and *the
+  bar as it stands*). The links *undo my edit* and *use the AI's* are gone; a new edit drops the one kept.
+- **Ask AI on a row you have edited starts from your edit.** The model gets your edit as the line to
+  rewrite (the reader's text only for reference) and the compiler's words on your edit; its answer
+  takes the draft, and *your edit* brings yours back.
 - **Select Chord in the preview.** Right-click a note of a chord: *Select Chord* puts the caret
   just after the chord's `>` — where its octave marks and decorations are written. A caret there,
   on its `<`, or in what is written right after the `>` (duration, `@` marks) now lights the whole

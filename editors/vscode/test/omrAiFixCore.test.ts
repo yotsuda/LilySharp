@@ -333,10 +333,23 @@ describe('what the model is shown', () => {
     });
 
     // Owner, 2026-10-24: Ask AI on a row the person is editing.
-    it('shows the person\'s edit so far as their attempt, and only when there is one', () => {
-        const task = taskPromptOf({ head: '', target: bar2, neighbours: { others: [] }, diagnostics: [], image: true, attempt: 'g8@todo  fis8 f2 r4 |' });
-        assert.match(task, /A PERSON comparing the line with the page has started to rewrite it[\s\S]*<attempt>\ng8 fis8 f2 r4 \|\n<\/attempt>/);
-        assert.doesNotMatch(taskPromptOf({ head: '', target: bar2, neighbours: { others: [] }, diagnostics: [] }), /<attempt>/);
+    // Owner's request 2026-10-27: the edit is the line the AI starts from, not the scan's text.
+    it('gives the person\'s edit as the line to rewrite, the reader\'s text as a reference, only when there is one', () => {
+        const task = taskPromptOf({ head: '', target: bar2, neighbours: { others: [] }, diagnostics: ['error: x'], image: true, attempt: 'g8@todo  fis8 f2 r4 |' });
+        assert.match(task, /as a PERSON comparing it with the page has EDITED it\.\nStart from this line, not from the reader's[\s\S]*<bar>\ng8 fis8 f2 r4 \|\n<\/bar>/);
+        assert.match(task, /The line as the reader first wrote it, before the person's edit \(for reference only\):\n<reader>\n/);
+        assert.match(task, /What the Lily# compiler reports on the person's edit/);
+        const plain = taskPromptOf({ head: '', target: bar2, neighbours: { others: [] }, diagnostics: [] });
+        assert.doesNotMatch(plain, /<reader>|EDITED/);
+        assert.match(plain, /The marked line to rewrite \([^\n]*\), as the reader wrote it:\n<bar>/);
+    });
+
+    it('takes the answer built on the person\'s edit into the Draft, the edit kept for "back to my edit"', () => {
+        const fix = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'omrAiFix.ts'), 'utf8');
+        assert.match(fix, /const askedFrom = row\.edited;[\s\S]{0,300}cts\.token, askedFrom\);/);
+        assert.match(fix, /if \(askedFrom !== undefined && row\.edited === askedFrom && hasProposal\(row\)\) \{\s*row\.stashed = \{ text: askedFrom, fromAi: !!row\.editedFromAi \};/);
+        assert.match(fix, /const proposal = parseProposal\(raw, edit \?\? target\.written\);/);
+        assert.match(fix, /\{ Text: spliceBar\(base\.text, target, edit\) \}\)\)\.Diagnostics \?\? \[\], \{ \.\.\.target, end: target\.start \+ edit\.length \}\);/);
     });
 
     it('asks a failed proposal to read the page again, not to patch the count', () => {

@@ -742,8 +742,9 @@ async function pump(deps: OmrAiFixDeps, run: FixRun): Promise<void> {
                 run.current = { row, cts };
                 const started = Date.now();
                 const image = run.images ? scanOf(run, row.target) : undefined;
+                const askedFrom = row.edited;
                 const answer = await fixOne(run.client, ai.chat, run, row.base, ai.system, ai.head, promptTargetOf(row), image,
-                    cts.token, row.edited);
+                    cts.token, askedFrom);
                 const cancelled = cts.token.isCancellationRequested;
                 run.current = undefined;
                 cts.dispose();
@@ -754,6 +755,13 @@ async function pump(deps: OmrAiFixDeps, run: FixRun): Promise<void> {
                 }
                 const seconds = (Date.now() - started) / 1000;
                 Object.assign(row, { proposal: answer.proposal, gate: answer.gate, after: answer.after, noAnswer: answer.noAnswer, seconds, asked: true });
+                // Asked from the person's edit, the answer is built on it: it takes the Draft, the
+                // edit kept aside for "back to my edit" (owner's request 2026-10-27). An edit
+                // typed while the AI was asked stands, as before.
+                if (askedFrom !== undefined && row.edited === askedFrom && hasProposal(row)) {
+                    row.stashed = { text: askedFrom, fromAi: !!row.editedFromAi };
+                    row.edited = row.editGate = row.editAfter = row.editedFromAi = undefined;
+                }
                 if (!hasProposal(row) && !row.baseAfter) {
                     row.baseAfter = await baseAfterOf(run, row.base, row.target);
                 }
@@ -858,11 +866,17 @@ async function fixOne(
 ): Promise<Answer> {
     const baseline = base.baseline;
     const neighbours: BarNeighbours = neighboursOf(base.text, target, run.side);
+    // Asked from the person's edit, the compiler's words are on the edit, the line the model
+    // starts from (owner's request 2026-10-27).
+    const edit = attempt;
+    const diagnostics = edit === undefined ? diagnosticsOn(baseline, target)
+        : diagnosticsOn((await client.sendRequest<CheckCandidateResponse>('lilysharp/checkCandidate',
+            { Text: spliceBar(base.text, target, edit) })).Diagnostics ?? [], { ...target, end: target.start + edit.length });
     const messages: ChatMessage[] = [
         { role: 'system', content: system },
         {
             role: 'user',
-            content: taskPromptOf({ head, target, neighbours, diagnostics: diagnosticsOn(baseline, target), image: !!image, attempt }),
+            content: taskPromptOf({ head, target, neighbours, diagnostics, image: !!image, attempt }),
             ...(image ? { images: [image] } : {}),
         },
     ];
@@ -882,7 +896,8 @@ async function fixOne(
             // that cannot hold a plain conversation (the owner's copilotcli, 2026-10-23) does this.
             return { proposal: null, noAnswer: `${chat.label} returned nothing` };
         }
-        const proposal = parseProposal(raw, target.written);
+        // "Unchanged" is the line the model was given: the person's edit when it started from one.
+        const proposal = parseProposal(raw, edit ?? target.written);
         if (!proposal) {
             const head = raw.trim().replace(/\s+/g, ' ').slice(0, 160);
             log(`  ${labelOf(target)}: not the JSON asked for: ${head}${raw.trim().length > 160 ? '…' : ''}`);
@@ -1451,15 +1466,6 @@ function rowParts(run: FixRun, r: FixRow): RowParts {
         proposal = `<div class="none">${r.gate && !(r.gate.compile && r.gate.length) ? 'did not pass — Accept removes the @todo' : 'not rendered'}</div>`;
     }
     const failed = r.gate && !(r.gate.compile && r.gate.length);
-    // An edit goes back to the AI's bar when it has one — the answer that came while the person
-    // was editing waits there (owner's request 2026-10-24) — else to the bar as it stands.
-    // Either keeps the edit aside, for "back to my edit" (owner's request 2026-10-27: a toggle).
-    const revert = hasProposal(r)
-        ? `<button class="link revert" data-i="${r.index}" title="${esc(`The AI's bar: ${r.proposal!.bar!} — your edit is kept, to come back to`)}">use the AI's</button>`
-        : `<button class="link revert" data-i="${r.index}" title="Back to the bar as it stands — your edit is kept, to come back to">undo my edit</button>`;
-    const restore = !edited && r.stashed && isLive(r)
-        ? ` <button class="link restore" data-i="${r.index}" title="${esc(`Your edit: ${r.stashed.text}`)}">back to my edit</button>`
-        : '';
     // The AI's state, and the way to ask it: queued or being asked (with a cancel), or a button.
     const can = isLive(r);
     // A turning ring and a pulsing word while the AI is asked (owner's request 2026-10-27: the
@@ -1471,7 +1477,7 @@ function rowParts(run: FixRun, r: FixRow): RowParts {
     const sure = r.proposal?.confidence === null || r.proposal?.confidence === undefined || edited ? ''
         : ` <span class="dim">· confidence ${r.proposal.confidence.toFixed(2)}</span>`;
     const reason = edited
-        ? esc(gate && gate.problems.length ? `Your edit: ${gate.problems.join(' / ')}` : gate ? 'Your edit.' : 'Your edit — checking…') + ` ${revert}`
+        ? esc(gate && gate.problems.length ? `Your edit: ${gate.problems.join(' / ')}` : gate ? 'Your edit.' : 'Your edit — checking…')
         : !r.asked ? esc(r.ai ? '' : 'Click a note or the text under the picture to edit this bar.')
         : esc(!r.proposal ? `No answer: ${r.noAnswer ?? 'the reply was not the JSON asked for'}.`
             : r.proposal.unchanged ? `The model reads the bar as right${r.proposal.reason.replace(/^unchanged( — )?/, '') ? `: ${r.proposal.reason.replace(/^unchanged( — )?/, '')}` : '.'}`
@@ -1490,15 +1496,24 @@ function rowParts(run: FixRun, r: FixRow): RowParts {
     // with keep/add @todo — writes the mark; a bar with none of these has nothing to write.
     const marked = resolvedLine(t.written) !== t.written;
     const own = barOf(r) !== undefined;
-    // Where the Draft came from, over its picture.
-    const source = edited ? (r.editedFromAi ? 'AI proposal, edited' : 'your edit')
-        : r.ai === 'asking' ? 'asking the AI…'
-        : r.ai ? 'waiting for the AI…'
-        : hasProposal(r) ? 'AI proposal'
-        : r.asked ? 'no AI proposal — the bar as it stands'
-        : 'the bar as it stands';
+    // Where the Draft came from, over its picture — and, when there are two to choose from, the way
+    // between them (owner's request 2026-10-27: two labels over the picture in place of the links
+    // "undo my edit" / "use the AI's" / "back to my edit"): the person's edit and the AI's proposal
+    // (with no proposal, the bar as it stands), the one shown marked, the other a click away. The
+    // edit left is set aside, never lost (stashed); an answer that comes while it is shown waits.
+    const plain = r.ai === 'asking' ? 'asking the AI…' : r.ai ? 'waiting for the AI…'
+        : hasProposal(r) ? 'AI proposal' : r.asked ? 'no AI proposal — the bar as it stands' : 'the bar as it stands';
+    const on = (word: string) => `<span class="pick on">${esc(word)}</span>`;
+    const pick = (word: string, action: string, title: string) =>
+        `<button class="link pick ${action}" data-i="${r.index}" title="${esc(title)}">${esc(word)}</button>`;
+    const source = edited && can
+        ? `${on('your edit')} / ${pick(hasProposal(r) ? 'AI proposal' : 'the bar as it stands', 'revert',
+            hasProposal(r) ? `Show the AI's bar: ${r.proposal!.bar!} — your edit is kept` : 'Show the bar as it stands — your edit is kept')}`
+        : r.stashed && can
+            ? `${pick('your edit', 'restore', `Show your edit: ${r.stashed.text}`)} / ${on(plain)}`
+            : esc(edited ? 'your edit' : plain);
     return {
-        gates: gatesHtml(gate), reason: lost + reason + restore + sure + hint + barLine + aiNow, proposal, source, nowText: piecesHtml(diff.before), afterText: piecesHtml(diff.after), del,
+        gates: gatesHtml(gate), reason: lost + reason + sure + hint + barLine + aiNow, proposal, source, nowText: piecesHtml(diff.before), afterText: piecesHtml(diff.after), del,
         accept: { word: !own && marked && !r.keepTodo ? 'Accept (remove @todo)' : 'Accept', can: own || marked || !!r.keepTodo, ready: isReady(r) },
     };
 }
@@ -1585,7 +1600,7 @@ function rowHtml(run: FixRun, r: FixRow, pageUris: ReadonlyMap<number, { uri: st
 <tr class="${cls} body" data-i="${r.index}">
   <td class="cell"><div class="over"></div>${now}<pre class="src now" data-i="${r.index}">${parts.nowText}</pre></td>
   <td class="cell"><div class="over"></div>${scan}</td>
-  <td class="cell"><div class="over draft-of" data-i="${r.index}">${esc(parts.source)}</div><div class="after-pic" data-i="${r.index}">${parts.proposal}</div>`
+  <td class="cell"><div class="over draft-of" data-i="${r.index}">${parts.source}</div><div class="after-pic" data-i="${r.index}">${parts.proposal}</div>`
         // The bar to write, editable (owner's request 2026-10-24): a click opens it; the
         // picture and the gates follow the typing.
         + (can ? `<pre class="src after editable" data-i="${r.index}" title="Click to edit the bar — the picture and the gates follow">${parts.afterText}</pre>`
@@ -1693,6 +1708,9 @@ button { padding:4px 10px; font-size:12px; border:1px solid var(--vscode-button-
 button.primary, button.on { background: var(--vscode-button-background); color: var(--vscode-button-foreground); }
 button:disabled { opacity:.4; cursor:default; }
 button.link { background:none; border:none; padding:0; margin-left:8px; color: var(--vscode-textLink-foreground); font-size:12px; }
+/* The Draft's two sources over its picture: the one shown, and the other a click away. */
+.over button.link.pick { margin-left:0; font-size:11px; line-height:14px; cursor:pointer; }
+.over .pick.on { font-weight:600; }
 .footer { display:flex; gap:8px; padding:10px 12px; border-top:1px solid var(--vscode-panel-border); flex-shrink:0; align-items:center; }
 .store { position:absolute; width:0; height:0; overflow:hidden; }
 </style>
@@ -2267,7 +2285,7 @@ ${rows}
     const ab = q('button.row-accept', i);
     if (ab && m.accept) { ab.textContent = m.accept.word; ab.disabled = !m.accept.can; }
     const from = q('div.draft-of', i);
-    if (from && typeof m.source === 'string') from.textContent = m.source;
+    if (from && typeof m.source === 'string') from.innerHTML = m.source;
     const holder = q('div.after-pic', i);
     holder.innerHTML = m.proposal;
     for (const svg of holder.querySelectorAll('svg.score')) setUp(svg);

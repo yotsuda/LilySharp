@@ -434,10 +434,25 @@ export function taskPromptOf(input: TaskInput): string {
     // where the notes are, and a model reads it as part of the bar to keep or patch around
     // (owner, 2026-10-24: a note marked "the upper voice is … short" came back padded with s32.).
     // The notes go below, labelled as what they are.
-    parts.push(`The marked line to rewrite (${labelOf(target)}), as the reader wrote it:`);
-    parts.push('<bar>');
-    parts.push(oneLine(stripTodoMarks(target.written)));
-    parts.push('</bar>');
+    // Asked from a row the person has edited, the edit is the line to work on and the reader's text
+    // only a reference (owner's request 2026-10-27: the AI started over from the scan's text).
+    if (input.attempt) {
+        parts.push(`The line to rewrite (${labelOf(target)}), as a PERSON comparing it with the page has EDITED it.`);
+        parts.push('Start from this line, not from the reader\'s: keep what the person wrote unless the page shows otherwise —');
+        parts.push('it may be unfinished or partly wrong, so check every event of it against the page:');
+        parts.push('<bar>');
+        parts.push(oneLine(stripTodoMarks(input.attempt)));
+        parts.push('</bar>');
+        parts.push('The line as the reader first wrote it, before the person\'s edit (for reference only):');
+        parts.push('<reader>');
+        parts.push(oneLine(stripTodoMarks(target.written)));
+        parts.push('</reader>');
+    } else {
+        parts.push(`The marked line to rewrite (${labelOf(target)}), as the reader wrote it:`);
+        parts.push('<bar>');
+        parts.push(oneLine(stripTodoMarks(target.written)));
+        parts.push('</bar>');
+    }
     // A person's words are not the reader's guess: they looked at the page — often after an
     // earlier answer that was still wrong — and say what is left (owner, 2026-10-24: "beat 4 is
     // two notes short" was passed as the reader's doubt, and the model answered "unchanged").
@@ -448,18 +463,12 @@ export function taskPromptOf(input: TaskInput): string {
         parts.push('line as written is wrong in that way. Find that place on the page and fix it; do not answer "unchanged":');
         for (const n of notes) { parts.push(`  - ${n}`); }
     }
-    if (input.attempt) {
-        parts.push('');
-        parts.push('A PERSON comparing the line with the page has started to rewrite it as below. It may be unfinished or');
-        parts.push('partly wrong; keep what it gets right, and check the rest against the page:');
-        parts.push('<attempt>');
-        parts.push(oneLine(stripTodoMarks(input.attempt)));
-        parts.push('</attempt>');
-    }
     const reader = target.memos.filter(m => !notes.includes(m));
     if (reader.length > 0) {
         parts.push('');
-        parts.push('What the reader noted about it — the symptom it measured; its guess at the cause may be wrong:');
+        parts.push(input.attempt
+            ? 'What the reader noted about its own reading, before the person\'s edit — the symptom it measured; its guess at the cause may be wrong:'
+            : 'What the reader noted about it — the symptom it measured; its guess at the cause may be wrong:');
         for (const m of reader) { parts.push(`  - ${m}`); }
         parts.push(TICKS_NOTE);
     }
@@ -484,7 +493,9 @@ export function taskPromptOf(input: TaskInput): string {
     }
     if (diagnostics.length > 0) {
         parts.push('');
-        parts.push('What the Lily# compiler reports on this line as it stands (a clue to where, not to what):');
+        parts.push(input.attempt
+            ? 'What the Lily# compiler reports on the person\'s edit (a clue to where, not to what):'
+            : 'What the Lily# compiler reports on this line as it stands (a clue to where, not to what):');
         for (const d of diagnostics) { parts.push(`  - ${d}`); }
     }
     parts.push('');
