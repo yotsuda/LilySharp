@@ -34,7 +34,7 @@ public class HairpinStopTests
 {
     private const string Book = """
         part m
-        section A { m { c'4@p@cresc d e f@!cresc | g1 | a4@decresc g f e | d1@!dim | c4@cresc d e f | g1@f | } }
+        section A { m { c''4@p@cresc d e f@!cresc | g1 | a4@decresc g f e | d1@!dim | c4@cresc d e f | g1@f | } }
         form { ~A }
         score { staff m }
         """;

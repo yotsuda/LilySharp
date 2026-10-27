@@ -45,7 +45,7 @@ public class GraceNoteMidiTests
         var notes = ExportNotes("""
             octave absolute
             part m { clef treble }
-            section A { m { grace { <c' e'>16 } d'4 | } }
+            section A { m { grace { <c'' e''>16 } d''4 | } }
             form { A }
             score { staff m }
             """);
@@ -104,7 +104,7 @@ public class GraceNoteMidiTests
         var notes = ExportNotes("""
             octave absolute
             part m { clef treble }
-            section A { m { grace { d'16 e' } f'4 | } }
+            section A { m { grace { d''16 e'' } f''4 | } }
             form { A }
             score { staff m }
             """).OrderBy(n => n.StartTick).ToList();
@@ -118,14 +118,14 @@ public class GraceNoteMidiTests
         var notes = ExportNotes("""
             octave absolute
             part m { clef treble }
-            section A { m { grace { c'16 } d'4 | } }
+            section A { m { grace { c''16 } d''4 | } }
             form { A }
             score { staff m }
             """).OrderBy(n => n.StartTick).ToList();
         int quarter = ExportNotes("""
             octave absolute
             part m { clef treble }
-            section A { m { d'4 } }
+            section A { m { d''4 } }
             form { A }
             score { staff m }
             """).First().DurationTicks;
@@ -372,7 +372,7 @@ public class GraceNoteMidiTests
             key c major
             part m { clef treble }
             phrase Lick { c'16 d' e' }
-            section A { m { key g major %BODY% c'1 | } }
+            section A { m { key g major %BODY% c''1 | } }
             form { A }
             score { staff m }
             """;
@@ -394,7 +394,7 @@ public class GraceNoteMidiTests
             octave absolute
             part m { clef treble }
             phrase G { d'16 e' }
-            section A { m { grace { %REF% } c'1 | } }
+            section A { m { grace { %REF% } c''1 | } }
             form { A }
             score { staff m }
             """;

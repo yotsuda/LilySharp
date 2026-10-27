@@ -36,7 +36,7 @@ public class RenderSpecToStaffGroupsTests
     {
         var tree = SyntaxTree.Parse("""
             part m { clef treble }
-            section A { m { c'4 d' e' f' | } }
+            section A { m { c''4 d' e' f' | } }
             form { A }
             score { tab m }
             """);

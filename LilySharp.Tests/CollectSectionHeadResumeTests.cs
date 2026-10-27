@@ -36,10 +36,10 @@ public sealed class CollectSectionHeadResumeTests
     private const string Book = """
         key ees major
         part melody { clef treble }
-        section A { melody { c4 d e f | c4 d e f | } }
-        section B { melody { key ees major c4 d e f | c4 d e f | } }
-        section C { melody { key ees major c4 d e f | } }
-        section D { melody { time 3/4 c4 d e | c4 d e | } }
+        section A { melody { c'4 d e f | c4 d e f | } }
+        section B { melody { key ees major c'4 d e f | c4 d e f | } }
+        section C { melody { key ees major c'4 d e f | } }
+        section D { melody { time 3/4 c'4 d e | c4 d e | } }
         form { A B C D }
         score { staff melody }
         """;

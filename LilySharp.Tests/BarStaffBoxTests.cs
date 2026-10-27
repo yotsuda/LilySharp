@@ -40,13 +40,13 @@ public class BarStaffBoxTests
         part lh { clef bass }
         section A {
           partial 4
-          rh { g'4 | c''1 | d''2 e'' | }
-          lh { r4 | c1 | d1 | }
+          rh { g''4 | c'''1 | d'''2 e''' | }
+          lh { r4 | c'1 | d'1 | }
         }
         section B {
-          rh { f''1 | }
+          rh { f'''1 | }
           lh {
-            f,2 g, | }
+            f2 g | }
         }
         form { A B }
         score { staff rh staff lh }

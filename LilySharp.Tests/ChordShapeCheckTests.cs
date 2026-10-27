@@ -152,7 +152,7 @@ public class ChordShapeCheckTests
             layout { chordDiagrams guitar all }
             octave absolute
             part gt { clef treble }
-            section A { gt { c'1 | } chords prog { D#m | } }
+            section A { gt { c''1 | } chords prog { D#m | } }
             form { A }
             score { chords prog  staff gt }
             """;
@@ -377,7 +377,7 @@ public class ChordShapeCheckTests
         string two = """
             octave absolute
             part gt { clef treble }
-            section A { gt { c'1@chord(C x02210) | } }
+            section A { gt { c''1@chord(C x02210) | } }
             form { A }
             score a { staff gt }
             score b { staff gt }

@@ -47,7 +47,7 @@ public class ChordRowMidiTests
         var midi = Export("""
             time 4/4
             part melody
-            section A { melody { c'4 d' e' f' | g'1 | } chords harmony { C . G7 . | Dm/F | } }
+            section A { melody { c''4 d' e' f' | g'1 | } chords harmony { C . G7 . | Dm/F | } }
             form { A }
             score { chords harmony  staff melody }
             """);
@@ -70,7 +70,7 @@ public class ChordRowMidiTests
         var midi = Export("""
             time 4/4
             part melody
-            section A { melody { c'4 d' e' f' | } chords harmony { C | } }
+            section A { melody { c''4 d' e' f' | } chords harmony { C | } }
             form { A }
             score { staff melody }
             """);
@@ -84,7 +84,7 @@ public class ChordRowMidiTests
         var midi = Export("""
             time 4/4
             part melody
-            section A { melody { c'1 | } }
+            section A { melody { c''1 | } }
             section B { melody { g'1 | } }
             chords harmony { section A { C | } section B { G | } }
             form { A B A }
@@ -123,7 +123,7 @@ public class ChordRowMidiTests
             time 4/4
             part melody
             section Intro { chords harmony { C | F | } }
-            section A { melody { c'1 | } }
+            section A { melody { c''1 | } }
             form { Intro A }
             score { chords harmony  staff melody }
             """);

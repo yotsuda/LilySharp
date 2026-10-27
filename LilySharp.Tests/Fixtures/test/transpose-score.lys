@@ -13,7 +13,7 @@ part upper { clef treble }
 part lower { clef bass octave 3 }
 
 section Main {
-  upper { c'4 d e f }
+  upper { c''4 d e f }
   lower { c4 d e f }
 }
 

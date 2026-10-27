@@ -47,9 +47,9 @@ public class RepeatTieChordTests
             part v { }
             section Main {
               v {
-                <d@repeatTie g>1 |
-                <d@repeatTie.up g@repeatTie.down>1 |
-                <d g>@repeatTie |
+                <d'@repeatTie g'>1 |
+                <d'@repeatTie.up g'@repeatTie.down>1 |
+                <d' g'>@repeatTie |
               }
             }
             form { ~Main }

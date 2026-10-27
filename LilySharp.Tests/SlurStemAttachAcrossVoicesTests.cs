@@ -43,7 +43,7 @@ public sealed class SlurStemAttachAcrossVoicesTests
     {
         var tree = SyntaxTree.Parse("""
             part melody {
-              section A { voice { g''2( g8) eis fis g } { e8 d e e e fis r4 } }
+              section A { voice { g''2( g8) eis fis g } { e'8 d e e e fis r4 } }
             }
             form { A }
             score { staff melody }

@@ -5,6 +5,6 @@
 octave absolute
 time 4/4
 part melody { clef treble }
-section A { melody { c4 c' c'' c, | e g e' g, | } }
+section A { melody { c'4 c'' c''' c | e' g' e'' g | } }
 form { ~A }
 score { staff melody }

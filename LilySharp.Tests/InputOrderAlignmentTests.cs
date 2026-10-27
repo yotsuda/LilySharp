@@ -43,8 +43,8 @@ public class InputOrderAlignmentTests
             lyrics wa { section Main { blah | } }
             lyrics wb { section Main { blah | } }
             section Main {
-              one { <b c'>2 s2 | }
-              two { <c' b>2 s2 | }
+              one { <b' c''>2 s2 | }
+              two { <c'' b'>2 s2 | }
             }
             form { ~Main }
             score { staff ~one  lyrics wa staff ~two  lyrics wb }

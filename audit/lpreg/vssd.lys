@@ -13,13 +13,13 @@ part melody
 
 section Main {
   melody {
-    voice { b1 b1 b1 | b1 b1 b1 | b1 b1 b1 | b1 b1 b1 | } { g,,1 g,,1( g,,1) | g,,1 g,,1( g,,1) | g,,1 g,,1( g,,1) | g,,1 g,,1( g,,1) | }
+    voice { b'1 b'1 b'1 | b'1 b'1 b'1 | b'1 b'1 b'1 | b'1 b'1 b'1 | } { g,1 g,1( g,1) | g,1 g,1( g,1) | g,1 g,1( g,1) | g,1 g,1( g,1) | }
     break
-    voice { b1 b1 b1 | b1 b1 b1 | b1 b1 b1 | b1 b1 b1 | } { g,,1 g,,1( g,,1) | g,,1 g,,1( g,,1) | g,,1 g,,1( g,,1) | g,,1 g,,1( g,,1) | }
+    voice { b'1 b'1 b'1 | b'1 b'1 b'1 | b'1 b'1 b'1 | b'1 b'1 b'1 | } { g,1 g,1( g,1) | g,1 g,1( g,1) | g,1 g,1( g,1) | g,1 g,1( g,1) | }
     break
-    voice { b1 b1 b1 | b1 b1 b1 | b1 b1 b1 | b1 b1 b1 | } { g,,1 g,,1( g,,1) | g,,1 g,,1( g,,1) | g,,1 g,,1( g,,1) | g,,1 g,,1( g,,1) | }
+    voice { b'1 b'1 b'1 | b'1 b'1 b'1 | b'1 b'1 b'1 | b'1 b'1 b'1 | } { g,1 g,1( g,1) | g,1 g,1( g,1) | g,1 g,1( g,1) | g,1 g,1( g,1) | }
     break
-    voice { b1 b1 b1 | b1 b1 b1 | b1 b1 b1 | b1 b1 b1 | } { g,,1 g,,1( g,,1) | g,,1 g,,1( g,,1) | g,,1 g,,1( g,,1) | g,,1 g,,1( g,,1) | }
+    voice { b'1 b'1 b'1 | b'1 b'1 b'1 | b'1 b'1 b'1 | b'1 b'1 b'1 | } { g,1 g,1( g,1) | g,1 g,1( g,1) | g,1 g,1( g,1) | g,1 g,1( g,1) | }
   }
 }
 

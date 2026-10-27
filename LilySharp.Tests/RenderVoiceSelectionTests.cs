@@ -33,8 +33,8 @@ public class RenderVoiceSelectionTests
     private const string TwoRenderSource = """
         part melody
         part harmony
-        phrase pa { c4 d e f | }
-        phrase pb { <c e g>1 | }
+        phrase pa { c'4 d e f | }
+        phrase pb { <c' e g>1 | }
         section Main {
           melody { pa }
           harmony { pb }

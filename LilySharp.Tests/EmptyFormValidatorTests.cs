@@ -32,7 +32,7 @@ namespace LilySharp.Tests;
 public class EmptyFormValidatorTests
 {
     private const string Preamble =
-        "part m { clef treble }\nsection A { m { c4 d e f | } }\nsection B { m { g4 a b c | } }\n";
+        "part m { clef treble }\nsection A { m { c'4 d e f | } }\nsection B { m { g4 a b c | } }\n";
 
     private static Diagnostic[] Validate(string src)
         => SemanticValidation.Run(SyntaxTree.Parse(src))

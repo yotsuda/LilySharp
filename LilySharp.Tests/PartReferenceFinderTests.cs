@@ -39,8 +39,8 @@ public class PartReferenceFinderTests
             part rh { clef treble }
             part lh { clef bass }
             section A {
-              rh { c4 d e f | }
-              lh { c2 g | }
+              rh { c'4 d e f | }
+              lh { c'2 g | }
             }
             form { A }
             score s {
@@ -59,7 +59,7 @@ public class PartReferenceFinderTests
     {
         var src = """
             part lh { clef bass }
-            section A { lh { c2 } }
+            section A { lh { c'2 } }
             score s { staff bass lh }
             """;
         var root = Root(src);
@@ -96,7 +96,7 @@ public class PartReferenceFinderTests
     {
         var src = """
             part bass { clef bass }
-            section A { bass { c2 } }
+            section A { bass { c'2 } }
             score s { staff bass }
             """;
         var root = Root(src);
@@ -118,7 +118,7 @@ public class PartReferenceFinderTests
     {
         var src = """
             part bass { clef bass }
-            section A { bass { c2 } }
+            section A { bass { c'2 } }
             score s { staff bass as lines 1 }
             """;
         var root = Root(src);
@@ -134,7 +134,7 @@ public class PartReferenceFinderTests
         var src = """
             part m { clef treble }
             chords ch { C }
-            section A { m { c4 } }
+            section A { m { c'4 } }
             score s { staff m with chords ch }
             """;
         var root = Root(src);
@@ -150,7 +150,7 @@ public class PartReferenceFinderTests
     public void TildeAndDisplayNameAreSkipped()
     {
         var root = Root("""
-            section A { flute { c4 } }
+            section A { flute { c'4 } }
             score s { staff ~flute "Flöte" }
             """);
 
@@ -167,7 +167,7 @@ public class PartReferenceFinderTests
     {
         var ossia = Root("""
             section A {
-              melody { c4 d e f | }
+              melody { c'4 d e f | }
               ossia_melody { r1 | }
             }
             form { A }
@@ -195,7 +195,7 @@ public class PartReferenceFinderTests
     {
         var src = """
             part m { clef treble }
-            section A { m { c4 } }
+            section A { m { c'4 } }
             score s { staff m  tab m as numbers }
             """;
         var root = Root(src);
@@ -219,7 +219,7 @@ public class PartReferenceFinderTests
         var src = """
             part m { clef treble }
             chords h { C }
-            section A { m { c4 } }
+            section A { m { c'4 } }
             score s { tab m as numbers with chords h as both }
             """;
         var root = Root(src);
@@ -330,7 +330,7 @@ public class PartReferenceFinderTests
         var root = Root("""
             part fl1 { clef treble }
             part fl2 { clef treble }
-            section A { fl1 { c4 } fl2 { e4 } }
+            section A { fl1 { c'4 } fl2 { e'4 } }
             score s { condensedStaff { fl1 fl2 }  combinedStaff { fl1 fl2 } }
             """);
 
@@ -365,7 +365,7 @@ public class PartReferenceFinderTests
     private const string AttachSheet = """
         part m { clef treble }
         section Main {
-          m { c4 d e f | }
+          m { c'4 d e f | }
           chords prog { C | }
           lyrics words sings m { la la la la | }
         }
@@ -422,7 +422,7 @@ public class PartReferenceFinderTests
     {
         var refs = PartReferenceFinder.Tracks(Root("""
             part m { clef treble }
-            section Main { m { c4 } }
+            section Main { m { c'4 } }
             form { Main }
             score x { staff m  chords }
             """)).References;
@@ -434,7 +434,7 @@ public class PartReferenceFinderTests
     [Fact]
     public void CaretOnDeclarationResolvesToTheName()
     {
-        var src = "part rh { clef treble }\nsection A { rh { c4 } }\nscore s { staff rh }";
+        var src = "part rh { clef treble }\nsection A { rh { c'4 } }\nscore s { staff rh }";
         var root = Root(src);
         int caret = src.IndexOf("rh") + 1; // inside `part rh`'s name
         var tok = PartReferenceFinder.PartNameTokenAt(root, caret);

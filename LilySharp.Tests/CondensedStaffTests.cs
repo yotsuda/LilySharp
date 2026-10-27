@@ -39,8 +39,8 @@ public class CondensedStaffTests
         part fl1 { clef treble }
         part fl2 { clef treble }
         section A {
-          fl1 { c'4 d' e' f' | g'2 g' | }
-          fl2 { e4 f g a | b2 b | }
+          fl1 { c''4 d' e' f' | g'2 g | }
+          fl2 { e'4 f g a | b2 b | }
         }
         form { ~A }
         """ + "\nscore { " + render + " }\n";
@@ -50,7 +50,7 @@ public class CondensedStaffTests
     private static readonly string TwoVoiceControl = Defaults + """
         part fl { clef treble }
         section A {
-          fl { voice { c'4 d' e' f' | g'2 g' | } { e4 f g a | b2 b | } }
+          fl { voice { c''4 d' e' f' | g'2 g | } { e'4 f g a | b2 b | } }
         }
         form { ~A }
         score { staff fl }
@@ -274,9 +274,9 @@ public class CondensedStaffTests
             part hn2 { clef treble }
             part hn3 { clef treble }
             section A {
-              hn1 { c'4 d' e' f' | }
-              hn2 { e4 f g a | }
-              hn3 { c4 c c c | }
+              hn1 { c''4 d' e' f' | }
+              hn2 { e'4 f g a | }
+              hn3 { c'4 c c c | }
             }
             form { ~A }
             score { condensedStaff { hn1 hn2 hn3 } }
@@ -297,9 +297,9 @@ public class CondensedStaffTests
             part fl2 { clef treble }
             part bass { clef bass }
             section A {
-              fl1 { c'4 d' e' f' | }
-              fl2 { e4 f g a | }
-              bass { c2 g | }
+              fl1 { c''4 d' e' f' | }
+              fl2 { e'4 f g a | }
+              bass { c'2 g | }
             }
             form { ~A }
             score { condensedStaff { fl1 fl2 }  staff bass }

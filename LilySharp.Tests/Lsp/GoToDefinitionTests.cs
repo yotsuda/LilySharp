@@ -131,7 +131,7 @@ public class GoToDefinitionTests
     // A score that names a lyrics block (via `with lyrics`) and a chord part (via a
     // `chords` row) — the score-attachment reference namespaces.
     private const string WithSource =
-        "part melody { section A { c4 d e f } }\n" +
+        "part melody { section A { c'4 d e f } }\n" +
         "lyrics verse { section A { la la la la } }\n" +   // lyrics block `verse`
         "chords harmony { section A { c1 } }\n" +          // chord part `harmony`
         "form { A }\n" +

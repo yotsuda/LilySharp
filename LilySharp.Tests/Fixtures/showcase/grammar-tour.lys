@@ -53,7 +53,7 @@ phrase p_basics {
 
 // 2 臨時記号：is=♯ es=♭ / 注意・編集臨時記号
 phrase p_accidentals {
-  fis4 g a bes |                    // F♯ … B♭
+  fis'4 g a bes |                    // F♯ … B♭
   c4 cis d ees |                    // C C♯ D E♭
   a4@courtesy bes c@editorial r |   // 注意臨時記号 / 編集臨時記号
 }
@@ -97,7 +97,7 @@ phrase p_ornaments {
 // 8 拡張：多小節休符 / 運指 / ハーフタイ / 和音タイ
 phrase p_mmr {
   R1*4 |                            // 4 小節フル休符
-  c4 d e f |
+  c'4 d e f |
 }
 phrase p_fingering {
   g4@finger(1) a@finger(2) b@finger(3) c@finger(4) |          // 単音の運指
@@ -120,18 +120,18 @@ phrase p_chordTies {
 //    「1 パートにだけ書いた繰り返し」。form の繰り返しはスコア全体を繰り返すので、
 //    その綴り自体が存在しない。
 phrase p_repeatBody { g'4 a g f | }
-phrase p_repeatEnd1 { e2 d | }
-phrase p_repeatEnd2 { e2 c | }
+phrase p_repeatEnd1 { e'2 d | }
+phrase p_repeatEnd2 { e'2 c | }
 phrase p_repeatN    { g'8 a g f g a g f | }
-phrase p_bass1      { g2 c | }
+phrase p_bass1      { g,2 c | }
 
 // 10 多声部：1 段に上声部(符尾上) / 下声部(符尾下)
 phrase p_voices {
-  voice { b'2 a | g2 a | } { d2 e | d2 c | } 
+  voice { b'2 a | g2 a | } { d'2 e | d2 c | } 
 }
 
 // 伴奏（バス声部）— 各セクションで使い回す
-phrase p_bass { g2 c | g4 a b c | g2~ g4 r | d2 g | }
+phrase p_bass { g,2 c | g4 a b c | g2~ g4 r | d2 g | }
 
 // --- 構造（section → form → score）-------------------------------------------
 // ⚠️ 旧名 structure / render は削除済み。実測：どちらも error になる（この本自身は

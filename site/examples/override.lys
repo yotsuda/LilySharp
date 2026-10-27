@@ -5,7 +5,7 @@ part melody { clef treble }
 section A {
   melody {
     override NoteHead.color = red
-    c4 d e f |
+    c'4 d e f |
     revert NoteHead.color
     once override Stem.transparent = true
     g4 a b c |

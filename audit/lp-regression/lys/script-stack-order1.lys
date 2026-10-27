@@ -13,7 +13,7 @@ part melody
 
 section A {
   melody {
-    e'4(@accent@finger(0)@downBow c4@staccato) d@tenuto@downBow d,@staccato@finger(0)@accent |
+    e''4(@accent@finger(0)@downBow c4@staccato) d@tenuto@downBow d,@staccato@finger(0)@accent |
     r4 a@staccato@tenuto@upBow f''@staccato@tenuto@finger(3)@upBow e'@flageolet@fermata@upBow |
     e,@tenuto@finger(0)@downBow@text("div.").up |
   }

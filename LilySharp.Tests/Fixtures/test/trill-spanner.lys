@@ -12,13 +12,13 @@ part melody {
 }
 
 // Simple trill spanner across two notes
-phrase m1 { c'4@startTrillSpan d e f@stopTrillSpan | g4 a b c' | }
+phrase m1 { c''4@startTrillSpan d e f@stopTrillSpan | g4 a b c' | }
 
 // Trill spanner spanning a full measure
-phrase m2 { c'4@startTrillSpan d e f | g4 a b c'@stopTrillSpan | }
+phrase m2 { c''4@startTrillSpan d e f | g4 a b c'@stopTrillSpan | }
 
 // Multiple trill spanners
-phrase m3 { c'4@startTrillSpan d@stopTrillSpan e4@startTrillSpan f@stopTrillSpan | g4 a b c' | }
+phrase m3 { c''4@startTrillSpan d@stopTrillSpan e4@startTrillSpan f@stopTrillSpan | g4 a b c' | }
 
 section A { melody { m1 } }
 section B { melody { m2 } }

@@ -8,7 +8,7 @@ part vln { clef treble }
 part vla { clef alto octave 3 }
 
 section Main {
-  vln { c'4 b a b | c'1 | }
+  vln { c''4 b a b | c'1 | }
   vla { f4 g a g | f1 | }
 }
 

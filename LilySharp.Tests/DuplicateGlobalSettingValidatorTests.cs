@@ -32,7 +32,7 @@ public class DuplicateGlobalSettingValidatorTests
         => SemanticValidation.Run(SyntaxTree.Parse(src))
             .Count(d => d.Code == DiagnosticCodes.DuplicateGlobalSetting);
 
-    private const string Tail = "part m { section A { c4 d e f | } }\nform { A }\nscore { staff m }";
+    private const string Tail = "part m { section A { c'4 d e f | } }\nform { A }\nscore { staff m }";
 
     [Fact]
     public void RepeatedTopLevelTempo_WarnsOnEachButTheLast()
@@ -53,7 +53,7 @@ public class DuplicateGlobalSettingValidatorTests
     [Fact]
     public void SingleGlobalPlusMidSectionChange_DoesNotWarn()
         // One top-level tempo + a mid-section tempo change is a legitimate change, not a duplicate.
-        => Assert.Equal(0, WarnCount("tempo 100\npart m { section A { c4 d | tempo 140 e f | } }\nform { A }\nscore { staff m }"));
+        => Assert.Equal(0, WarnCount("tempo 100\npart m { section A { c'4 d | tempo 140 e f | } }\nform { A }\nscore { staff m }"));
 
     [Fact]
     public void DistinctGlobals_DoNotWarn()
@@ -65,15 +65,15 @@ public class DuplicateGlobalSettingValidatorTests
         // (no key of its own) still inherits the global `key c major`, so it is NOT
         // overwritten. (Regression: the part key used to group with the global.)
         => Assert.Equal(0, WarnCount(
-            "key c major\npart melody { key bes major section A { c1 } }\n"
-            + "part melody2 { section A { e1 } }\n"
+            "key c major\npart melody { key bes major section A { c'1 } }\n"
+            + "part melody2 { section A { e'1 } }\n"
             + "form { A }\nscore { staff melody staff melody2 }"));
 
     [Fact]
     public void TwoPartsEachWithOwnHeaderKey_DoNotWarn()
         => Assert.Equal(0, WarnCount(
-            "part melody { key bes major section A { c1 } }\n"
-            + "part melody2 { key d major section A { e1 } }\n"
+            "part melody { key bes major section A { c'1 } }\n"
+            + "part melody2 { key d major section A { e'1 } }\n"
             + "form { A }\nscore { staff melody staff melody2 }"));
 
     [Fact]
@@ -88,8 +88,8 @@ public class DuplicateGlobalSettingValidatorTests
         // header key is a fully VALID piece — no parse diagnostics, no semantic
         // errors, and no overwrite warning of any kind.
         var tree = SyntaxTree.Parse(
-            "key c major\npart melody { key bes major section A { c1 } }\n"
-            + "part melody2 { section A { e1 } }\n"
+            "key c major\npart melody { key bes major section A { c'1 } }\n"
+            + "part melody2 { section A { e'1 } }\n"
             + "form { A }\nscore { staff melody staff melody2 }");
         Assert.Empty(tree.Diagnostics);
         var semantic = SemanticValidation.Run(tree);

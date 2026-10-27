@@ -95,7 +95,7 @@ public sealed class CueBeamSpacingTests
             octave absolute
             time 4/4
             part m {
-              section A { cue { g8 a b c' d' e' f' g' } | }
+              section A { cue { g'8 a' b' c'' d'' e'' f'' g'' } | }
             }
             form { A }
             score { staff m }

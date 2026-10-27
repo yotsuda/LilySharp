@@ -66,7 +66,7 @@ public class MarkerRunLookaheadTests
     {
         var validator = new SlurPairingValidator();
         validator.Validate(SyntaxTree.Parse(
-            "part m { section A { c8[( c)] d[ d d d d d] } } form { A } score { staff m }"));
+            "part m { section A { c'8[( c)] d[ d d d d d] } } form { A } score { staff m }"));
         Assert.DoesNotContain(
             validator.Diagnostics, d => d.Code == DiagnosticCodes.UnpairedSlur);
     }
@@ -115,7 +115,7 @@ public class MarkerRunLookaheadTests
     {
         var validator = new SlurPairingValidator();
         validator.Validate(SyntaxTree.Parse(
-            "part m { section A { c4( d)( e) f } } form { A } score { staff m }"));
+            "part m { section A { c'4( d)( e) f } } form { A } score { staff m }"));
         Assert.DoesNotContain(
             validator.Diagnostics, d => d.Code == DiagnosticCodes.UnpairedSlur);
     }
@@ -130,7 +130,7 @@ public class MarkerRunLookaheadTests
     {
         var validator = new SlurPairingValidator();
         validator.Validate(SyntaxTree.Parse(
-            "part m { section A { c4() d e f } } form { A } score { staff m }"));
+            "part m { section A { c'4() d e f } } form { A } score { staff m }"));
         Assert.Equal(2, validator.Diagnostics.Count(d => d.Code == DiagnosticCodes.UnpairedSlur));
     }
 

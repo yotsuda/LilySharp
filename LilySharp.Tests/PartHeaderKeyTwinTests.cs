@@ -41,14 +41,14 @@ public sealed class PartHeaderKeyTwinTests
         time 4/4
         part m {
           key bes major
-          section A { c'4 d e f | }
+          section A { c''4 d e f | }
           section B { key d major g4 a b c | }
-          section C { c4 d e f | }
+          section C { c'4 d e f | }
         }
         part n {
-          section A { c'4 d e f | }
+          section A { c''4 d e f | }
           section B { key d major g4 a b c | }
-          section C { c4 d e f | }
+          section C { c'4 d e f | }
         }
         form { A B C }
         score { staff m  staff n }

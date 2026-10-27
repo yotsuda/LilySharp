@@ -35,7 +35,7 @@ public class SectionOrientedTests
     {
         var source = """
             section Intro {
-                guitar { c4 d e f }
+                guitar { c'4 d e f }
             }
             """;
         var tree = SyntaxTree.Parse(source);
@@ -62,7 +62,7 @@ public class SectionOrientedTests
             section Intro {
                 key c major
                 tempo 120
-                guitar { c4 d e f }
+                guitar { c'4 d e f }
             }
             """;
         var tree = SyntaxTree.Parse(source);
@@ -73,7 +73,7 @@ public class SectionOrientedTests
     public void ParseFormDeclaration()
     {
         var source = """
-            section A { guitar { c4 } }
+            section A { guitar { c'4 } }
             form {
                 A
             }
@@ -86,8 +86,8 @@ public class SectionOrientedTests
     public void ParseStructureWithNavigationMarks()
     {
         var source = """
-            section A { guitar { c4 } }
-            section B { guitar { d4 } }
+            section A { guitar { c'4 } }
+            section B { guitar { d'4 } }
             form {
                 A
                 segno
@@ -104,7 +104,7 @@ public class SectionOrientedTests
     public void ParseRenderDeclaration()
     {
         var source = """
-            section A { guitar { c4 } }
+            section A { guitar { c'4 } }
             form { A }
             score output {
                 staff guitar
@@ -118,7 +118,7 @@ public class SectionOrientedTests
     public void ParseRenderWithTabAndStaff()
     {
         var source = """
-            section A { guitar { c4 d e f } }
+            section A { guitar { c'4 d e f } }
             form { A }
             score guitar {
                 staff guitar
@@ -146,7 +146,7 @@ public class SectionOrientedTests
     public void ParseRenderMidi()
     {
         var source = """
-            section A { guitar { c4 } }
+            section A { guitar { c'4 } }
             form { A }
             score song {
                 guitar

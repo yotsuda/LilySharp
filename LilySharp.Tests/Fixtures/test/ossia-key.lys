@@ -13,10 +13,10 @@ key d major
 
 section Main {
     melody {
-        d4 e fis g | a4 b cis' d' |
+        d'4 e' fis' g' | a'4 b' cis'' d'' |
     }
     ossia_melody {
-        d'4 e' fis' g' | r1 |
+        d''4 e'' fis'' g'' | r1 |
     }
 }
 

@@ -60,8 +60,8 @@ public class LyricAnchorPerSystemTests
         key c major
         part melody {
           clef treble
-          section A { c4 c g' g | a a g2 | break}
-          section B { c4 c g' g | a a g2 | }
+          section A { c'4 c g' g | a a g2 | break}
+          section B { c'4 c g' g | a a g2 | }
         }
         chords prog { section A { C | Am | } }
         lyrics verse {

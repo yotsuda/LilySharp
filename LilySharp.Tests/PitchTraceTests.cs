@@ -51,7 +51,7 @@ public sealed class PitchTraceTests
         part lh { clef bass octave 3 }
 
         section Main {
-          rh { c'1 | }
+          rh { c''1 | }
           lh { c4 d e f | }
         }
 
@@ -74,7 +74,7 @@ public sealed class PitchTraceTests
 
         section Main {
           lh { c4 d e f | }
-          rh { c'1 | }
+          rh { c''1 | }
         }
 
         form { ~Main }
@@ -177,8 +177,8 @@ public sealed class PitchTraceTests
         part basso { clef bass }
 
         section Main {
-          sopr  { c'1 | }
-          basso { c4 d e f | }
+          sopr  { c''1 | }
+          basso { c'4 d e f | }
         }
 
         form { ~Main }
@@ -198,8 +198,8 @@ public sealed class PitchTraceTests
         part basso { clef bass }
 
         section Main {
-          sopr  { c'1 | }
-          basso { c4 d e f | }
+          sopr  { c''1 | }
+          basso { c'4 d e f | }
         }
 
         form { ~Main }
@@ -255,7 +255,7 @@ public sealed class PitchTraceTests
             part gtr { clef treble }
 
             section Main {
-              gtr { c4 d e f | }
+              gtr { c'4 d e f | }
             }
 
             form { ~Main }

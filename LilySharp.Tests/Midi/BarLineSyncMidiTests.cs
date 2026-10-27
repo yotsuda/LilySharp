@@ -146,9 +146,9 @@ public class BarLineSyncMidiTests
         // does not draw it, and the next bar sounds on the bar line.
         var notes = Notes("""
             time 4/4
-            phrase riff { c'4 d e f g }
+            phrase riff { c''4 d e f g }
             part m { clef treble }
-            section A { m { riff | c1 | } }
+            section A { m { riff | c'1 | } }
             form { A }
             score { staff m }
             """, "m");
@@ -179,7 +179,7 @@ public class BarLineSyncMidiTests
         var src = """
             time 4/4
             part bass { clef bass }
-            section A { bass { c1 | c4 a, | break } }
+            section A { bass { c'1 | c4 a, | break } }
             section B { bass { bes,4 c | f1 } }
             form { A B }
             score { staff bass }

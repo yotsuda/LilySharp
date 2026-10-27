@@ -9,13 +9,13 @@ part v { }
 
 section Head {
   v {
-    c1 |
+    c'1 |
   }
 }
 
 section Main {
   v {
-    grace { f8 } b1
+    grace { f'8 } b'1
   }
 }
 

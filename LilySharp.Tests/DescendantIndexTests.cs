@@ -172,7 +172,7 @@ public sealed class DescendantIndexTests
     {
         // A subtree question is not indexed (nothing keeps it); it must still answer.
         var tree = SyntaxTree.Parse(
-            "part v { clef treble }\nsection A { v { c4 d e f | } }\nsection B { v { g4 a b c' | } }\nscore { staff v }\n");
+            "part v { clef treble }\nsection A { v { c'4 d e f | } }\nsection B { v { g4 a b c' | } }\nscore { staff v }\n");
         var root = tree.GetRoot();
         var sections = root.DescendantNodes<SectionDeclarationSyntax>().ToList();
         Assert.Equal(2, sections.Count);

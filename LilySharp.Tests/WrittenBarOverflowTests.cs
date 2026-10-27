@@ -124,11 +124,11 @@ public class WrittenBarOverflowTests
     {
         // `c1 time 3/4 c2.` — the bar line before the `time` is missing.
         var diags = SemanticValidation.Run(SyntaxTree.Parse(
-            "part m { section A { c'1 time 3/4 c2. | } } form { A } score { staff m }"));
+            "part m { section A { c''1 time 3/4 c2. | } } form { A } score { staff m }"));
         var d = Assert.Single(diags, x => x.Code == DiagnosticCodes.MissingBarLine);
         Assert.Equal(DiagnosticSeverity.Error, d.Severity);
         Assert.DoesNotContain(SemanticValidation.Run(SyntaxTree.Parse(
-                "part m { section A { c'1 | time 3/4 c2. | } } form { A } score { staff m }")),
+                "part m { section A { c''1 | time 3/4 c2. | } } form { A } score { staff m }")),
             x => x.Code is DiagnosticCodes.MissingBarLine or DiagnosticCodes.MeasureOverflow);
     }
 
@@ -138,7 +138,7 @@ public class WrittenBarOverflowTests
         // `cue { f'1( | gis'1) } |` is two bars, as the page draws it — the validator read the
         // cue as one item of 2/1 and called its bar line missing.
         Assert.DoesNotContain(SemanticValidation.Run(SyntaxTree.Parse(
-                "part m { section A { c'1 | cue { f'1( | gis'1) } | } } form { A } score { staff m }")),
+                "part m { section A { c''1 | cue { f'1( | gis'1) } | } } form { A } score { staff m }")),
             x => x.Code is DiagnosticCodes.MissingBarLine or DiagnosticCodes.MeasureOverflow);
     }
 
@@ -233,7 +233,7 @@ public class WrittenBarOverflowTests
         Assert.Equal(4, bars.Length);
         Assert.All(bars, b => Assert.Equal(1, Sounding(b)));
         Assert.Contains(SemanticValidation.Run(SyntaxTree.Parse(
-                "part m { section A { c'1 d e f } } form { A } score { staff m }")),
+                "part m { section A { c''1 d e f } } form { A } score { staff m }")),
             d => d.Code == DiagnosticCodes.MissingBarLine);
     }
 

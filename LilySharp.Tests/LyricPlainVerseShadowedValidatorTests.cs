@@ -41,7 +41,7 @@ public class LyricPlainVerseShadowedValidatorTests
         time 4/4
         key c major
         part melody { clef treble
-          section A { c'4 d' e' f' | }
+          section A { c''4 d' e' f' | }
         }
         """;
 
@@ -86,7 +86,7 @@ public class LyricPlainVerseShadowedValidatorTests
         time 4/4
         key c major
         part melody { clef treble
-          section A { c'4 d' e' f' | }
+          section A { c''4 d' e' f' | }
         }
         part harmony { clef treble
           section A { a4 b c' d' | }

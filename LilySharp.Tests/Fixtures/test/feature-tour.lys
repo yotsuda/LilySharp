@@ -36,7 +36,7 @@ phrase basics {
 // ---- 2. アクシデンタル ------------------------------------------------------
 // シャープ (is), フラット (es), ナチュラル (自動), 編集臨時記号 (@editorial)
 phrase accidentals {
-  fis4 g a bes |           // F# G A Bb
+  fis'4 g a bes |           // F# G A Bb
   c4 cis d ees |       // C C# D Eb
   a4@courtesy bes c@editorial r |   // 注意 / 編集臨時記号
 }
@@ -78,7 +78,7 @@ phrase tuplets {
 // 組み合わせ)、11+ は H-bar に measure count 表示。
 phrase mmr {
   R1*4 |                    // 4小節フル休符 (church rest = long rest)
-  c4 d e f |            // 復帰
+  c'4 d e f |            // 復帰
 }
 
 // ---- 8. 運指 (L-2: 単音 + L-2 ext: 和音内ピッチごと) -----------------------
@@ -126,7 +126,7 @@ phrase crossLine {
 
 // ---- 14. ベース声部 ---------------------------------------------------------
 phrase bassLine {
-  g2 d |
+  g,2 d |
   g4 a b c |
   g2~ g4 r |
   d2 g |

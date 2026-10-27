@@ -56,7 +56,7 @@ public class SenzaMisuraTests
         part melody { clef treble }
         section Main {
           melody {
-            c'4 d e f |
+            c''4 d e f |
             time none g8 a b c d c b a g4 f e2 |
             d4 e f g a g f e | break
             time 4/4 c1 |
@@ -136,7 +136,7 @@ public class SenzaMisuraTests
         const string metered = """
             time 4/4
             part melody { clef treble }
-            section Main { melody { c'4 d e f | g8 a b c d c b a | g4 f e2 | } }
+            section Main { melody { c''4 d e f | g8 a b c d c b a | g4 f e2 | } }
             form { Main }
             score { staff melody }
             """;
@@ -181,8 +181,8 @@ public class SenzaMisuraTests
         const string source = """
             time 4/4
             part melody { clef treble }
-            section A { time none  melody { c'4 d e f g | a b c' | } }
-            section B { melody { c'4 d e f | g a b c' | } }
+            section A { time none  melody { c''4 d e f g | a b c' | } }
+            section B { melody { c''4 d e f | g a b c' | } }
             form { A B }
             score { staff melody }
             """;
@@ -285,10 +285,10 @@ public class SenzaMisuraTests
         const string source = """
             time none
             part free { clef treble }
-            section Free { free { c'1 c'2 | } }
+            section Free { free { c''1 c'2 | } }
             time 4/4
             part strict { clef treble }
-            section Strict { strict { c'4 d e f | c'4 d e | } }
+            section Strict { strict { c''4 d e f | c'4 d e | } }
             form { Free Strict }
             score { staff free  staff strict }
             """;
@@ -333,7 +333,7 @@ public class SenzaMisuraTests
         const string source = """
             time none
             part melody { clef treble }
-            section Main { melody { c'4 d | | e'4 f' | } }
+            section Main { melody { c''4 d | | e'4 f' | } }
             form { Main }
             score { staff melody }
             """;
@@ -352,7 +352,7 @@ public class SenzaMisuraTests
     private const string MidBarEighths = """
         time 4/4
         part melody { clef treble }
-        section Main { melody { c'8 d time none e8 f g a b c d e f4 g | time 4/4 c1 | } }
+        section Main { melody { c''8 d time none e8 f g a b c d e f4 g | time 4/4 c1 | } }
         form { Main }
         score { staff melody }
         """;
@@ -360,7 +360,7 @@ public class SenzaMisuraTests
     private const string MidBarQuarters = """
         time 4/4
         part melody { clef treble }
-        section Main { melody { c'4 d time none e8 f g a b c d e f4 g | time 4/4 c1 | } }
+        section Main { melody { c''4 d time none e8 f g a b c d e f4 g | time 4/4 c1 | } }
         form { Main }
         score { staff melody }
         """;
@@ -394,7 +394,7 @@ public class SenzaMisuraTests
         const string source = """
             time 4/4
             part melody { clef treble }
-            section Main { melody { c'8 d time none e8 f g4 | a8 b c d e4 | time 4/4 c1 | } }
+            section Main { melody { c''8 d time none e8 f g4 | a8 b c d e4 | time 4/4 c1 | } }
             form { Main }
             score { staff melody }
             """;
@@ -413,7 +413,7 @@ public class SenzaMisuraTests
         const string control = """
             time 4/4
             part melody { clef treble }
-            section Main { melody { c'4 d time none e8 f g4 | a8 b c d e4 | time 4/4 c1 | } }
+            section Main { melody { c''4 d time none e8 f g4 | a8 b c d e4 | time 4/4 c1 | } }
             form { Main }
             score { staff melody }
             """;
@@ -437,7 +437,7 @@ public class SenzaMisuraTests
         const string threeFour = """
             time 4/4
             part melody { clef treble }
-            section Main { melody { c'8 d time none e8 f g a b c d e f4 g | time 3/4 c2. | d2. | } }
+            section Main { melody { c''8 d time none e8 f g a b c d e f4 g | time 3/4 c2. | d2. | } }
             form { Main }
             score { staff melody }
             """;
@@ -483,7 +483,7 @@ public class SenzaMisuraTests
         const string metered = """
             time 4/4
             part melody { clef treble }
-            section Main { melody { c'4 d e f | partial 4 c'4 | d'4 e' f' g' | } }
+            section Main { melody { c''4 d e f | partial 4 c'4 | d'4 e' f' g | } }
             form { Main }
             score { staff melody }
             """;

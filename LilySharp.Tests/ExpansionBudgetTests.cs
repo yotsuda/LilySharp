@@ -119,7 +119,7 @@ public class ExpansionBudgetTests
     {
         var collector = new MeasureCollector();
         collector.Collect(SyntaxTree.Parse(
-            "part m { }\nsection A { m { c4 d e f | % | % | % | R1*3 } }\n"
+            "part m { }\nsection A { m { c'4 d e f | % | % | % | R1*3 } }\n"
             + "form { ~A }\nscore { staff m }"), "m");
         Assert.Null(collector.ExpansionBudgetExceededAt);
     }
@@ -168,7 +168,7 @@ public class ExpansionBudgetTests
     public void Validator_SaysNothingOnANormalBook()
     {
         var diags = SemanticValidation.Run(SyntaxTree.Parse(
-            "part m { }\nsection A { m { c4 d e f | % | % | % } }\n"
+            "part m { }\nsection A { m { c'4 d e f | % | % | % } }\n"
             + "form { ~A }\nscore { staff m }"));
         Assert.DoesNotContain(diags, d => d.Code == DiagnosticCodes.ExpansionBudgetExceeded);
     }

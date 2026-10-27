@@ -40,7 +40,7 @@ public class DuplicateTrackSectionValidatorTests
         time 4/4
         key c major
         part melody { clef treble
-          section A { c'4 d' e' f' | }
+          section A { c''4 d' e' f' | }
           section B { g'4 a' b' c'' | }
         }
         """;

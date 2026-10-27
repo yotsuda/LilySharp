@@ -99,7 +99,7 @@ public sealed class InstrumentPresetTests
     {
         // Unchanged baseline: a tab with no tuning hint is a guitar.
         var tuning = TabTuningOf(
-            "part gtr { }\nsection A { gtr { c4 | } }\nform { A }\nscore { tab gtr }\n");
+            "part gtr { }\nsection A { gtr { c'4 | } }\nform { A }\nscore { tab gtr }\n");
         Assert.Equal(TuningType.Guitar, tuning);
     }
 

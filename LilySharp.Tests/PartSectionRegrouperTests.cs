@@ -34,7 +34,7 @@ public class PartSectionRegrouperTests
     private const string GroupedBySection = """
         part low { clef bass }
         part high { clef treble }
-        section A { low { c4 d } high { e'4 f' } }
+        section A { low { c'4 d } high { e''4 f' } }
         section B { low { g,4 a, } high { b'4 c'' } }
         form { A B }
         score x { staff low  staff high }
@@ -57,7 +57,7 @@ public class PartSectionRegrouperTests
     [Theory]
     [InlineData("""
         part m { clef treble
-          section A { clef bass c'4 c c c | }
+          section A { clef bass c''4 c c c | }
         }
         form { ~A }
         score { staff m }
@@ -65,8 +65,8 @@ public class PartSectionRegrouperTests
     [InlineData("""
         part low { clef bass }
         part high { clef treble }
-        section A { low { c4 d } high { e'4 f' } }
-        section A2 { key g major  low { c4 d } high { e'4 f' } }
+        section A { low { c'4 d } high { e''4 f' } }
+        section A2 { key g major  low { c'4 d } high { e''4 f' } }
         form { A A2 }
         score { staff low  staff high }
         """)]
@@ -102,10 +102,10 @@ public class PartSectionRegrouperTests
 
         // By-part shape: each part owns its inner sections, music preserved.
         Assert.Contains("part low {", pm);
-        Assert.Contains("section A { c4 d }", pm);
+        Assert.Contains("section A { c'4 d }", pm);
         Assert.Contains("section B { g,4 a, }", pm);
         Assert.Contains("part high {", pm);
-        Assert.Contains("section A { e'4 f' }", pm);
+        Assert.Contains("section A { e''4 f' }", pm);
         // Attributes and every other top-level item survive verbatim.
         Assert.Contains("clef bass", pm);
         Assert.Contains("form { A B }", pm);
@@ -181,7 +181,7 @@ public class PartSectionRegrouperTests
         // (`chords name { section .. }`) and back — no data loss.
         var sm = """
             part melody { clef treble }
-            section A { melody { c4 c g' g | } chords harmony { C | F | } }
+            section A { melody { c'4 c g' g | } chords harmony { C | F | } }
             section B { melody { g'4 g f f | } chords harmony { C | } }
             form { A B }
             score s { chords harmony  staff melody }
@@ -210,7 +210,7 @@ public class PartSectionRegrouperTests
         // A lyrics block transposes to a by-part lyric track and back — no loss.
         var sm = """
             part melody { clef treble }
-            section A { melody { c4 c g' g | } lyrics w { Twin- kle twin- kle | } }
+            section A { melody { c'4 c g' g | } lyrics w { Twin- kle twin- kle | } }
             section B { melody { g'4 g f f | } lyrics w { how I won- der | } }
             form { A B }
             score s { staff melody  lyrics w }
@@ -239,7 +239,7 @@ public class PartSectionRegrouperTests
         // mechanism — must survive BOTH directions with each track's words intact.
         var sm = """
             part melody { clef treble }
-            section A { melody { c4 d e f | } lyrics en { do re mi fa | } lyrics ja { ど れ み ふぁ | } }
+            section A { melody { c'4 d e f | } lyrics en { do re mi fa | } lyrics ja { ど れ み ふぁ | } }
             form { A }
             score { staff melody lyrics en lyrics ja }
             """;
@@ -274,7 +274,7 @@ public class PartSectionRegrouperTests
     public void Convert_Unknown_ReturnsNull()
     {
         // No part blocks / inner sections — nothing to transpose.
-        Assert.Null(PartSectionRegrouper.Convert("title \"x\"\nsection A { c4 d e f }\n"));
+        Assert.Null(PartSectionRegrouper.Convert("title \"x\"\nsection A { c'4 d e f }\n"));
     }
 
     [Fact]
@@ -288,14 +288,14 @@ public class PartSectionRegrouperTests
 
     [Theory]
     // by-section: the same part twice in section A
-    [InlineData("part fl { }\npart ob { }\nsection A { fl { c1 | } ob { c1 | } }\nsection A { ob { d1 | } }\nform { A }\n", "part 'ob' in section A")]
+    [InlineData("part fl { }\npart ob { }\nsection A { fl { c'1 | } ob { c'1 | } }\nsection A { ob { d'1 | } }\nform { A }\n", "part 'ob' in section A")]
     // by-part: one part writing section A twice
-    [InlineData("part fl { section A { c1 | } section A { d1 | } }\nform { A }\n", "part 'fl' in section A")]
+    [InlineData("part fl { section A { c'1 | } section A { d'1 | } }\nform { A }\n", "part 'fl' in section A")]
     // by-section chord rows and lyrics
-    [InlineData("part fl { }\npart ob { }\nsection A { fl { c1 | } chords harm { C | } }\nsection A { ob { c1 | } chords harm { D | } }\nform { A }\n", "chords 'harm' in section A")]
-    [InlineData("part fl { }\npart ob { }\nsection A { fl { c1 | } lyrics words { la } }\nsection A { ob { c1 | } lyrics words { lu } }\nform { A }\n", "lyrics 'words' in section A")]
+    [InlineData("part fl { }\npart ob { }\nsection A { fl { c'1 | } chords harm { C | } }\nsection A { ob { c'1 | } chords harm { D | } }\nform { A }\n", "chords 'harm' in section A")]
+    [InlineData("part fl { }\npart ob { }\nsection A { fl { c'1 | } lyrics words { la } }\nsection A { ob { c'1 | } lyrics words { lu } }\nform { A }\n", "lyrics 'words' in section A")]
     // differing directives of one section
-    [InlineData("part fl { }\npart ob { }\nsection A { key g major  fl { c1 | } }\nsection A { key d major  ob { c1 | } }\nform { A }\n", "the directives of section A")]
+    [InlineData("part fl { }\npart ob { }\nsection A { key g major  fl { c'1 | } }\nsection A { key d major  ob { c'1 | } }\nform { A }\n", "the directives of section A")]
     public void Convert_ACellWrittenTwice_IsRefused_NotSilentlyDropped(string src, string expected)
     {
         // The other layout has room for one text per cell: converting kept the later and
@@ -308,7 +308,7 @@ public class PartSectionRegrouperTests
     public void Convert_ASectionSpreadOverDeclarations_Merges()
     {
         // Legal — a section is open — and nothing collides: one declaration comes back.
-        var src = "part fl { }\npart ob { }\nsection A { key g major  fl { c1 | } }\nsection A { key g major  ob { d1 | } }\nform { A }\n";
+        var src = "part fl { }\npart ob { }\nsection A { key g major  fl { c'1 | } }\nsection A { key g major  ob { d'1 | } }\nform { A }\n";
         var pm = PartSectionRegrouper.Convert(src, out var collision);
         Assert.Null(collision);
         Assert.NotNull(pm);
@@ -322,7 +322,7 @@ public class PartSectionRegrouperTests
     [Fact]
     public void Convert_CellEndingInLineComment_DoesNotSwallowBrace()
     {
-        var src = "part low { clef bass }\nsection A { low { c4 d e f // melody\n} }\nform { A }\n";
+        var src = "part low { clef bass }\nsection A { low { c'4 d e f // melody\n} }\nform { A }\n";
         var converted = PartSectionRegrouper.Convert(src);
         Assert.NotNull(converted);
         // The // comment must not comment out the regenerated closing brace.
@@ -335,7 +335,7 @@ public class PartSectionRegrouperTests
     [Fact]
     public void Convert_MultiLineCell_ClosesUnderItsOwnOpeningLine_BothWays()
     {
-        var src = "part ob { clef treble }\nsection B {\n  ob { c4 d e f |\n    g1 |\n  }\n}\nform { B }\n";
+        var src = "part ob { clef treble }\nsection B {\n  ob { c'4 d e f |\n    g1 |\n  }\n}\nform { B }\n";
         var byPart = PartSectionRegrouper.Convert(src);
         Assert.NotNull(byPart);
         Assert.Contains("  section B { c4 d e f |\n    g1 |\n  }\n}\n", byPart!.ReplaceLineEndings("\n"));
@@ -348,7 +348,7 @@ public class PartSectionRegrouperTests
     [Fact]
     public void Convert_KeepsCommentAboveFirstStructuralBlock()
     {
-        var src = "// verse arrangement\npart low { clef bass }\nsection A { low { c4 d } }\nform { A }\n";
+        var src = "// verse arrangement\npart low { clef bass }\nsection A { low { c'4 d } }\nform { A }\n";
         var converted = PartSectionRegrouper.Convert(src);
         Assert.NotNull(converted);
         Assert.Contains("// verse arrangement", converted);
@@ -360,8 +360,8 @@ public class PartSectionRegrouperTests
     private const string GroupedBySectionWithKey = """
         section A {
           key g major
-          melody { c4 c g' g }
-          bass { c2 e }
+          melody { c'4 c g' g }
+          bass { c'2 e }
         }
         form { A }
         score { staff melody  staff bass }
@@ -383,7 +383,7 @@ public class PartSectionRegrouperTests
         Assert.Contains("section A { key g major }", pm);
         // …and the part cells no longer carry it.
         Assert.Contains("part melody {", pm);
-        Assert.Contains("section A { c4 c g' g }", pm);
+        Assert.Contains("section A { c'4 c g' g }", pm);
         // The header leads the layout — it comes BEFORE the parts that use it.
         Assert.True(pm!.IndexOf("section A { key g major }", System.StringComparison.Ordinal)
             < pm.IndexOf("part melody", System.StringComparison.Ordinal));
@@ -394,8 +394,8 @@ public class PartSectionRegrouperTests
     public void Convert_GroupedByPartStandaloneHeader_ToGroupedBySection_FoldsTheKeyIn()
     {
         var src = """
-            part melody { section A { c4 c g' g } }
-            part bass { section A { c2 e } }
+            part melody { section A { c'4 c g' g } }
+            part bass { section A { c'2 e } }
             section A { key g major }
             form { A }
             score { staff melody  staff bass }
@@ -429,7 +429,7 @@ public class PartSectionRegrouperTests
     /// </summary>
     [Theory]
     [InlineData(GroupedBySection)]
-    [InlineData("part p { clef treble  section A { c'4 d e f | } }\nform { ~A }\nscore { staff p }")]
+    [InlineData("part p { clef treble  section A { c''4 d e f | } }\nform { ~A }\nscore { staff p }")]
     public void TheCommentsAtTheEndOfTheFile_SurviveRegroup_BothWays(string book)
     {
         const string tail = "\n\n// TRY: change a note.\n//\n// NEXT — pick lesson-02.\n";
@@ -486,9 +486,9 @@ public class PartSectionRegrouperTests
         section A {
           // the cello leads
           low { c4 d e f | }   // softly
-          high { e'1 | }
+          high { e''1 | }
         }
-        section B { /* tutti */ low { g,1 | } high { b'1 | } }
+        section B { /* tutti */ low { g,,1 | } high { b'1 | } }
         form { A B }
         score { staff low  staff high }
         """)]

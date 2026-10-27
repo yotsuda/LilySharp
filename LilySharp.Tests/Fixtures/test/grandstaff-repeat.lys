@@ -34,8 +34,8 @@ part lh {
 // LilyPondExporterTests.TheNotDeclaredWarning_NeverNamesAPhraseTheBookDeclares counts —
 // re-cutting the music inline dropped that floor to 57.
 phrase rhHead { g'4 a g f | }
-phrase rhEnd1 { e2 d | }
-phrase rhEnd2 { e2 c | }
+phrase rhEnd1 { e'2 d | }
+phrase rhEnd2 { e'2 c | }
 phrase lhBass { c2 g | }
 
 section Main {

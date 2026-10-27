@@ -4,7 +4,7 @@ key g major
 
 part melody {
   clef treble
-  section A { c4@rit c@!rit g' g | a a g2 | f4 f e e | d d c2 | break}
+  section A { c'4@rit c@!rit g' g | a a g2 | f4 f e e | d d c2 | break}
   section B { g'4 g f f | e e d2 | break}
 }
 

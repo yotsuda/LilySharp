@@ -12,7 +12,7 @@ part v { clef treble }
 
 section Main {
   v {
-    voice { fis2.@notehead(diamond) } { e2. }
+    voice { fis'2.@notehead(diamond) } { e'2. }
     r4
   }
 }

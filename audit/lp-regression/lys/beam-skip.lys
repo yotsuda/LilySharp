@@ -13,7 +13,7 @@ part m { clef treble }
 
 section Main {
   m {
-    voice { c4 c8 c8 }
+    voice { c'4 c'8 c'8 }
           { s8[ s8] s8[ s8] }
   }
 }

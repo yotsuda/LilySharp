@@ -438,7 +438,7 @@ public class RehearsalMarkTests
             title "one part on two staves"
             part melody {
               clef bass
-              section A { c4@mark("A") d e f |: g1 | [1. a1@mark("B") ] :| [2. b1 ] }
+              section A { c'4@mark("A") d e f |: g1 | [1. a1@mark("B") ] :| [2. b1 ] }
             }
             form { ~A }
             score {

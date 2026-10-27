@@ -25,7 +25,7 @@ part melody
 
 section Main {
   melody {
-    c4 d e f |
+    c'4 d e f |
     key g major R1*5 |
     g4 a b c |
   }

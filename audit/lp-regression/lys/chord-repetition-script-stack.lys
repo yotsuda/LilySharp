@@ -13,7 +13,7 @@ part v { clef treble }
 
 section Main {
   v {
-    <c e g>2@staccato q@text("q").down@staccato |
+    <c' e g>2@staccato q@text("q").down@staccato |
   }
 }
 

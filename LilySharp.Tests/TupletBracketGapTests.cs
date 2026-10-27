@@ -50,7 +50,7 @@ public sealed class TupletBracketGapTests
         const string book = """
             octave absolute
             part m {
-              section A { tuplet 3/2 { c'4 e' g' } r2 | }
+              section A { tuplet 3/2 { c''4 e'' g'' } r2 | }
             }
             form { A }
             score { staff m }

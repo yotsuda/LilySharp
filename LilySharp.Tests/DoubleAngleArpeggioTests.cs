@@ -416,7 +416,7 @@ public class DoubleAngleArpeggioTests
     public void MusicXmlExport_StacksMembersAboveTheRoot()
     {
         // Exported MusicXML places g in octave 4 (a fifth ABOVE c), matching the render.
-        var xml = ExportMusicXml("<< c g >>");
+        var xml = ExportMusicXml("<< c' g >>");
         Assert.Matches(@"<step>C</step>\s*<octave>4</octave>", xml);
         Assert.Matches(@"<step>G</step>\s*<octave>4</octave>", xml);
     }
@@ -425,7 +425,7 @@ public class DoubleAngleArpeggioTests
     public void MusicXmlExport_ResolvesDegreeMembers()
     {
         // `<< c 3 5 >>` exports c, e, g (the resolved degrees).
-        var xml = ExportMusicXml("<< c 3 5 >>");
+        var xml = ExportMusicXml("<< c' 3 5 >>");
         Assert.Matches(@"<step>C</step>\s*<octave>4</octave>", xml);
         Assert.Matches(@"<step>E</step>\s*<octave>4</octave>", xml);
         Assert.Matches(@"<step>G</step>\s*<octave>4</octave>", xml);

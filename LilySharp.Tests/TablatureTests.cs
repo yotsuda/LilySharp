@@ -126,7 +126,7 @@ public class TablatureTests
         var source = """
             section Main {
                 guitar {
-                    e,4 a, d g |
+                    e4 a, d g |
                 }
             }
 
@@ -202,7 +202,7 @@ public class TablatureTests
 
             section Main {
               guitar {
-                e,4 a, d g | b4 e' a b |
+                e4 a, d g | b4 e' a b |
               }
             }
 

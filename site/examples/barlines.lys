@@ -3,7 +3,7 @@
 time 4/4
 part melody { clef treble }
 section A {
-  melody { c1 | | d1 || e1 ! f1 |. }
+  melody { c'1 | | d1 || e1 ! f1 |. }
 }
 form { ~A }
 score { staff melody }

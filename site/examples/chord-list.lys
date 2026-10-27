@@ -5,7 +5,7 @@ title "Chord list"
 time 4/4
 part melody { clef treble }
 section A {
-  melody { e'2 c2 | f2 d2 | g2 b,2 | c1 | }
+  melody { e''2 c2 | f2 d2 | g2 b,2 | c1 | }
   chords prog { C | F(xx3211) | G | C | }
 }
 form { ~A }

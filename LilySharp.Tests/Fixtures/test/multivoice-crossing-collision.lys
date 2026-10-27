@@ -18,8 +18,8 @@ title "Crossing-voice note collision"
 part mel { clef treble }
 section S {
   mel {
-    voice { c'8 c' c' c' c' c' c' c' | }
-    { a'4 a' a' a' | }
+    voice { c''8 c'' c'' c'' c'' c'' c'' c'' | }
+    { a''4 a'' a'' a'' | }
   }
 }
 form { S }

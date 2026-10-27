@@ -26,17 +26,17 @@ part melody
 phrase graceLeadingRest {
   // A rest at the FRONT of the run: LilyPond beams nothing at all here, because the
   // beam covers the leading run of HEAD columns and there is none.
-  grace { r16 d16 } c4 c2. |
+  grace { r16 d'16 } c4 c2. |
 }
 
 phrase graceInnerRest {
   // A rest INSIDE the run: the leading two heads carry the beam, the rest breaks it, and
   // the head after it takes a flag (scratch/p308/lp2/measurements.md).
-  grace { d16 e16 r16 f16 } c4 c2. |
+  grace { d'16 e16 r16 f16 } c4 c2. |
 }
 
 phrase graceDottedRest {
-  grace { r8. d16 } c4 c2. |
+  grace { r8. d'16 } c4 c2. |
 }
 
 section Main {

@@ -113,7 +113,7 @@ public class OctaveTests
         var source = @"
 part bassline { clef bass }
 section A {
-    bassline { c4 d e f | }
+    bassline { c'4 d e f | }
 }
 form { A }
 score test {
@@ -138,7 +138,7 @@ score test {
     [InlineData("score { grandStaff { staff treble other  staff bass melody } }")]
     public void AClefWrittenOnTheStaffItem_IsTheStaffsClef_AndMovesNoPitch(string score)
     {
-        var source = "section A {\n  melody { c1 }\n  other { c1 }\n}\nform { A }\n" + score + "\n";
+        var source = "section A {\n  melody { c'1 }\n  other { c'1 }\n}\nform { A }\n" + score + "\n";
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
 
@@ -164,7 +164,7 @@ score test {
     public void ATopLevelClef_IsTheClefOfAPartThatNamesNone(string score)
     {
         var source = "clef bass\npart melody\npart other\npart own { clef treble }\n"
-                     + "section A {\n  melody { c1 }\n  other { c1 }\n  own { c1 }\n}\nform { A }\n"
+                     + "section A {\n  melody { c'1 }\n  other { c'1 }\n  own { c'1 }\n}\nform { A }\n"
                      + score + "\n";
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
@@ -185,7 +185,7 @@ score test {
     public void APartsOwnClef_WinsOverTheTopLevelOne()
     {
         var source = "clef bass\npart melody\npart own { clef treble }\n"
-                     + "section A {\n  melody { c1 }\n  own { c1 }\n}\nform { A }\n"
+                     + "section A {\n  melody { c'1 }\n  own { c'1 }\n}\nform { A }\n"
                      + "score { staff melody  staff own }\n";
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
@@ -345,7 +345,7 @@ score test {
         var source = @"
 part fl { instrument flute }
 section A {
-    fl { c4 d e f | }
+    fl { c''4 d e f | }
 }
 form { A }
 score test {
@@ -387,10 +387,10 @@ score test {
         // After section A ends high, section B should reset to initial octave
         var source = @"
 section A {
-    melody { c4 d e f | g a b c' | }
+    melody { c'4 d e f | g a b c' | }
 }
 section B {
-    melody { c4 d e f | }
+    melody { c'4 d e f | }
 }
 form { A B }
 score test {
@@ -502,13 +502,13 @@ score test {
     [Fact]
     public void OctaveAbsolute_InAPartDeclaration_NamesWhereTheModeGoes()
     {
-        var inPart = SyntaxTree.Parse("part bs { clef bass octave absolute }\nsection A { bs { c4 d e f | } }\nform { A }\nscore { staff bs }");
+        var inPart = SyntaxTree.Parse("part bs { clef bass octave absolute }\nsection A { bs { c'4 d e f | } }\nform { A }\nscore { staff bs }");
         var error = Assert.Single(LilySharp.Core.Semantics.SemanticValidation.Run(inPart),
             d => d.Severity == DiagnosticSeverity.Error);
         Assert.Contains("is a mode, not a part property", error.Message);
         Assert.Contains("octave absolute c4", error.Message);
 
-        var inMusic = SyntaxTree.Parse("part bs { clef bass }\nsection A { bs { octave absolute c4 d e f | } }\nform { A }\nscore { staff bs }");
+        var inMusic = SyntaxTree.Parse("part bs { clef bass }\nsection A { bs { octave absolute c'4 d' e' f' | } }\nform { A }\nscore { staff bs }");
         Assert.DoesNotContain(LilySharp.Core.Semantics.SemanticValidation.Run(inMusic).Concat(inMusic.Diagnostics),
             d => d.Severity == DiagnosticSeverity.Error);
     }

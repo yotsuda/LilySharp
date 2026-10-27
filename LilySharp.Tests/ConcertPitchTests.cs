@@ -244,7 +244,7 @@ public sealed class ConcertPitchTests
         // The control part is untouched by the file's convention.
         var ctl = doc.Parts.Single(p => p.Name == "ctl");
         var ctlFirst = ctl.Measures.SelectMany(m => m.Notes).First(n => n.Step != null);
-        Assert.Equal("C5", ctlFirst.Step + ctlFirst.Octave!.Value.ToString());
+        Assert.Equal("C4", ctlFirst.Step + ctlFirst.Octave!.Value.ToString());
         Assert.Equal(0, ctl.Measures[0].Attributes?.KeyFifths ?? 0);
     }
 

@@ -68,7 +68,7 @@ public class IncrementalReuseSoundnessTests
         time 4/4
         key c major
         part melody { clef treble }
-        phrase mel { c4 d e f | g4 a b c | d4 e f g | a4 b c d | }
+        phrase mel { c'4 d e f | g4 a b c | d4 e f g | a4 b c d | }
         section Main { melody { mel } }
         form { Main }
         score x { staff melody }
@@ -81,7 +81,7 @@ public class IncrementalReuseSoundnessTests
         time 4/4
         key c major
         part melody { clef treble }
-        phrase mel { c8 d e f g a b c | g4 a b c | }
+        phrase mel { c'8 d e f g a b c | g4 a b c | }
         section Main { melody { mel } }
         form { Main }
         score x { staff melody }
@@ -92,7 +92,7 @@ public class IncrementalReuseSoundnessTests
         key c major
         part melody
         section Main {
-          melody { c4 d e f | g4 a b c | }
+          melody { c'4 d e f | g4 a b c | }
           lyrics { Twin- kle lit- tle | star how I you | }
         }
         form { Main }
@@ -104,7 +104,7 @@ public class IncrementalReuseSoundnessTests
         key c major
         part rh "Violin" { clef treble }
         part lh "Cello" { clef bass }
-        section Main { rh { c4 d e f | g4 a b c | } lh { c4 d e f | g4 a b c | } }
+        section Main { rh { c'4 d e f | g4 a b c | } lh { c'4 d e f | g4 a b c | } }
         form { Main }
         score x { grandStaff { staff rh staff lh } }
         """;
@@ -122,7 +122,7 @@ public class IncrementalReuseSoundnessTests
         key c major
         part melody
         section Main {
-          melody { voice { c'2 d | e2 f | } { a2 g | b2 a | } }
+          melody { voice { c''2 d | e2 f | } { a2 g | b2 a | } }
         }
         form { Main }
         score x { staff melody }
@@ -250,7 +250,7 @@ public class IncrementalReuseSoundnessTests
         time 4/4
         key c major
         part melody
-        phrase mel { voice { c'2 d | e2 f | } { a2 g | b2 a | } }
+        phrase mel { voice { c''2 d | e2 f | } { a2 g | b2 a | } }
         section Main { melody { mel } }
         form { Main }
         score x { staff melody }
@@ -298,7 +298,7 @@ public class IncrementalReuseSoundnessTests
         time 4/4
         key c major
         part melody
-        phrase mel { override Stem.length = 10 c4 d e f | revert Stem.length g4 a b c | }
+        phrase mel { override Stem.length = 10 c'4 d e f | revert Stem.length g4 a b c | }
         section Main { melody { mel } }
         form { Main }
         score x { staff melody }

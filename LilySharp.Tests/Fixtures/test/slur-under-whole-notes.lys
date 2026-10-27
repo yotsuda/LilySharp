@@ -23,10 +23,10 @@ part rh { clef treble }
 part lh { clef bass }
 section S {
   rh {
-    g,1( g,1) | b1 b1 |
+    g1( g1) | b'1 b'1 |
   }
   lh {
-    d,1 d,1 | f1( f1) |
+    d1 d1 | f'1( f'1) |
   }
 }
 form { S }

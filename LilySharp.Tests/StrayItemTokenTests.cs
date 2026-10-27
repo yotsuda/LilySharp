@@ -50,7 +50,7 @@ public class StrayItemTokenTests
     // identical so a width comparison against the control means what it says.
     private const string Control =
         "part melody\n"
-        + "section A { melody { c4 d e f | } }\n"
+        + "section A { melody { c'4 d e f | } }\n"
         + "form { A }\n"
         + "score p { staff melody }\n";
 
@@ -240,11 +240,11 @@ public class StrayItemTokenTests
     // LYS0025: a token a part header cannot place. Measured (第183): fourteen.
     [InlineData("part melody { bass }\nsection A { melody { c4 d e f | } }\n")]
     // LYS0009: a LilyPond backslash. Measured: one.
-    [InlineData("part melody\nsection A { melody { \\foo c4 d e f | } }\n")]
+    [InlineData("part melody\nsection A { melody { \\foo c'4 d e f | } }\n")]
     // …and the two that were ALREADY right, as the controls that say the family is one
     // family: a bare dot (LYS0023) and a stray string number (LYS0027).
     [InlineData("part melody\nsection A { melody { c4 . d e f | } }\n")]
-    [InlineData("part melody\nsection A { melody { \\2 c4 d e f | } }\n")]
+    [InlineData("part melody\nsection A { melody { \\2 c'4 d e f | } }\n")]
     public void AReportedTokenIsKeptToo(string src)
     {
         var tree = SyntaxTree.Parse(src);

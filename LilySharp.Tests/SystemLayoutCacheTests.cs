@@ -175,7 +175,7 @@ public class SystemLayoutCacheTests
             time 4/4
             key c major
             part melody { clef treble }
-            section Main { melody { c8[ d8] e8[ f8] g8[ a8] b8[ c'8] | c8[ d8] e8[ f8] g8[ a8] b8[ c'8] | } }
+            section Main { melody { c'8[ d8] e8[ f8] g8[ a8] b8[ c'8] | c8[ d8] e8[ f8] g8[ a8] b8[ c'8] | } }
             form { Main }
             score x { staff melody }
             """;
@@ -391,7 +391,7 @@ public class SystemLayoutCacheTests
         part melody
         section Main {
           melody {
-            c4 d e f | g4 a b c |
+            c'4 d e f | g4 a b c |
             break
             c4 d e f | g4 a b c |
             break
@@ -418,15 +418,15 @@ public class SystemLayoutCacheTests
             part melody
             section Main {
               melody {
-                c4 d e f | g4 a b c |
+                c'4 d' e' f' | g'4 a' b' c' |
                 break
-                e4 f g a | b4 c d e |
+                e'4 f' g' a' | b'4 c' d' e' |
                 break
-                e4 f g a | b4 c d e :|:
+                e'4 f' g' a' | b'4 c' d' e' :|:
                 break
-                e4 f g a | b4 c d e |
+                e'4 f' g' a' | b'4 c' d' e' |
                 break
-                c4 d e f | g4 a b c |
+                c'4 d' e' f' | g'4 a' b' c' |
               }
             }
             form { Main }

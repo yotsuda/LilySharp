@@ -42,8 +42,8 @@ public class LaissezVibrerChordTests
             part v { }
             section Main {
               v {
-                <d@laissezVibrer g>1 |
-                <d@laissezVibrer.up g@laissezVibrer.down>1 |
+                <d'@laissezVibrer g'>1 |
+                <d'@laissezVibrer.up g'@laissezVibrer.down>1 |
               }
             }
             form { ~Main }

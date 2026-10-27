@@ -77,12 +77,12 @@ public class ExportTimingAndMemoryTests
             part up { clef treble }
             part lo { clef bass }
             section A {
-              up { c'4 d' e' grace { f'16 } | }
-              lo { c4 d e f | }
+              up { c''4 d'' e'' grace { f''16 } | }
+              lo { c'4 d' e' f' | }
             }
             section B {
-              up { g'1 | }
-              lo { g1 | }
+              up { g''1 | }
+              lo { g'1 | }
             }
             form { A B }
             score { staff up  staff lo }
@@ -105,7 +105,7 @@ public class ExportTimingAndMemoryTests
             octave absolute
             part m { clef treble }
             section A {
-              m { c'4 d' e' f' | r4 g'4~ g'4 a'4 | }
+              m { c''4 d'' e'' f'' | r4 g''4~ g''4 a''4 | }
               lyrics { la la la la | mor -- ning }
             }
             form { A }
@@ -155,9 +155,9 @@ public class ExportTimingAndMemoryTests
         // the reference must NOT be forced (it inherits the body's last on both sides).
         string ly = new LilyPondExporter().Export(SyntaxTree.Parse("""
             octave absolute
-            phrase G { d' e' }
+            phrase G { d'' e'' }
             part m { clef treble }
-            section A { m { c'8 G f' g' | } }
+            section A { m { c''8 G f'' g'' | } }
             form { A }
             score { staff m }
             """));

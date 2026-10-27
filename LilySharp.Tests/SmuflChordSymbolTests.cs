@@ -38,7 +38,7 @@ public class SmuflChordSymbolTests
 {
     private const string Book =
         "part m { clef treble }\n" +
-        "section A { m { c'2@chord(Bb) d'2@chord(Ebmaj7) | e'2@chord(C#dim) f'2@chord(Caug) | } }\n" +
+        "section A { m { c''2@chord(Bb) d'2@chord(Ebmaj7) | e'2@chord(C#dim) f'2@chord(Caug) | } }\n" +
         "form { A }\n" +
         "score { staff m }\n";
 
@@ -102,7 +102,7 @@ public class SmuflChordSymbolTests
     public void APetalumaTextScript_IsWrittenInPetalumaScript_UnlessTheScoreNamesItsFace()
     {
         static string TextSvg(string fonts) => LiveRender.SvgFromRenderSpec(fonts + "\n"
-            + "part m { clef treble }\nsection A { m { c'2@text(\"here\") d'2 | } }\nform { A }\nscore { staff m }\n");
+            + "part m { clef treble }\nsection A { m { c''2@text(\"here\") d'2 | } }\nform { A }\nscore { staff m }\n");
         const string here = "<text[^>]*font-family=\"Petaluma Script[^>]*>here</text>";
         Assert.Matches(here, TextSvg("fonts { music \"Petaluma\" }"));
         Assert.DoesNotMatch(here, TextSvg("fonts { music \"Petaluma\" text \"TeX Gyre Heros\" }"));
@@ -115,7 +115,7 @@ public class SmuflChordSymbolTests
     public void APetalumaTempoAndNavigation_AreWrittenInPetalumaScript_UnlessTheScoreNamesTheirFace()
     {
         static string NavSvg(string fonts) => LiveRender.SvgFromRenderSpec(fonts + "\n"
-            + "tempo \"Allegro\"\npart m { clef treble }\nsection A { m { c'1 | } }\nsection B { m { d'1 | } }\n"
+            + "tempo \"Allegro\"\npart m { clef treble }\nsection A { m { c''1 | } }\nsection B { m { d''1 | } }\n"
             + "form { segno A fine B ds al fine }\nscore { staff m }\n");
         static bool InCompanion(string svg, string text) => System.Text.RegularExpressions.Regex.IsMatch(
             svg, $"<text[^>]*font-family=\"Petaluma Script[^>]*>{text}</text>");
@@ -157,7 +157,7 @@ public class SmuflChordSymbolTests
     }
 
     private static string DynamicsSvg(string fonts) => LiveRender.SvgFromRenderSpec(fonts + "\n"
-        + "part m { clef treble }\nsection A { m { c'2@mf d'2@sfz | } }\nform { A }\nscore { staff m }\n");
+        + "part m { clef treble }\nsection A { m { c''2@mf d'2@sfz | } }\nform { A }\nscore { staff m }\n");
 
     /// <summary>
     /// A SMuFL score's dynamic levels are the music font's own dynamic glyphs (owner,

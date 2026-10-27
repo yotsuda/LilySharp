@@ -34,7 +34,7 @@ public class ChordRowSymbolTests
     {
         string source = "key c major\npart m { clef treble }\n"
             + $"chords prog {{ section A {{ {row} }} }}\n"
-            + "section A { m { c'1 | c'1 | c'1 | c'1 | } }\nform { A }\nscore {\n  chords prog\n  staff m\n}\n";
+            + "section A { m { c''1 | c'1 | c'1 | c'1 | } }\nform { A }\nscore {\n  chords prog\n  staff m\n}\n";
         var tree = SyntaxTree.Parse(source);
         return [.. SemanticValidation.Run(tree).Where(d => d.Code == DiagnosticCodes.ChordSymbolNotRead)];
     }

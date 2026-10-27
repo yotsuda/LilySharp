@@ -44,8 +44,8 @@ public class MusicXmlExportShapeTests
             part pno { clef treble }
             section A {
               pno {
-                voice { c'4 d' e' f' | g'1 | }
-                { c4 c c c | c1 | }
+                voice { c''4 d' e' f' | g'1 | }
+                { c'4 c c c | c1 | }
               }
             }
             form { A }
@@ -71,9 +71,9 @@ public class MusicXmlExportShapeTests
             part pno { clef treble }
             section A {
               pno {
-                voice { c'4 d' e' f' | }
-                { c4 d e f | }
-                { e4 f g a | }
+                voice { c''4 d' e' f' | }
+                { c'4 d e f | }
+                { e'4 f g a | }
               }
             }
             form { A }
@@ -92,7 +92,7 @@ public class MusicXmlExportShapeTests
         // part exported empty; now they emit under the enclosing part's name and clef.
         var doc = Export("""
             part m { clef bass
-              section A { c d e f | }
+              section A { c' d e f | }
             }
             form { A }
             score { staff m }
@@ -111,7 +111,7 @@ public class MusicXmlExportShapeTests
         // Two sections of the same part flow into one continuous part.
         var doc = Export("""
             part m { clef treble
-              section A { c d e f | }
+              section A { c' d e f | }
               section B { g a b c' | }
             }
             form { A B }
@@ -129,7 +129,7 @@ public class MusicXmlExportShapeTests
             octave absolute
             time 4/4
             part m { clef treble }
-            section A { m { <c' e' g'>2~ <c' e' g'>2 | } }
+            section A { m { <c'' e'' g''>2~ <c'' e'' g''>2 | } }
             form { A }
             score { staff m }
             """);
@@ -157,7 +157,7 @@ public class MusicXmlExportShapeTests
             octave absolute
             time 4/4
             part m { clef treble }
-            section A { m { /4 /4 /8~ /8 /4 | /2 /2~ | 4 /2 | /4 /4 /4 /8~ | /8 /2. | c'2~ /2 | } }
+            section A { m { /4 /4 /8~ /8 /4 | /2 /2~ | 4 /2 | /4 /4 /4 /8~ | /8 /2. | c''2~ /2 | } }
             form { A }
             score { staff m }
             """);
@@ -185,8 +185,8 @@ public class MusicXmlExportShapeTests
         var doc = Export("""
             octave absolute
             part m { clef treble }
-            section A { m { c'4 d' e' f' | } }
-            section B { m { g'4 a' b' c'' | } }
+            section A { m { c''4 d'' e'' f'' | } }
+            section B { m { g''4 a'' b'' c''' | } }
             form { A B A }
             score { staff m }
             """);
@@ -203,8 +203,8 @@ public class MusicXmlExportShapeTests
         var doc = Export("""
             octave absolute
             part m { clef treble }
-            section A { m { c'4 d' e' f' | } }
-            section B { m { g'4 a' b' c'' | d''4 c'' b' a' | } }
+            section A { m { c''4 d'' e'' f'' | } }
+            section B { m { g''4 a'' b'' c''' | d'''4 c''' b'' a'' | } }
             form { A |: B :| }
             score { staff m }
             """);
@@ -224,7 +224,7 @@ public class MusicXmlExportShapeTests
         var doc = Export("""
             octave absolute
             part m { clef treble }
-            section A { m { c'4@figuredBass(#6) d' e' f' | } }
+            section A { m { c''4@figuredBass(#6) d'' e'' f'' | } }
             form { A }
             score { staff m }
             """);
@@ -242,7 +242,7 @@ public class MusicXmlExportShapeTests
             octave absolute
             time 4/4
             part m { clef treble }
-            section A { m { tuplet 3/2 { c'8 d' e' } r4 c'2 | } }
+            section A { m { tuplet 3/2 { c''8 d'' e'' } r4 c''2 | } }
             form { A }
             score { staff m }
             """);
@@ -262,7 +262,7 @@ public class MusicXmlExportShapeTests
             octave absolute
             time 4/4
             part m { clef treble }
-            section A { m { |: c'4 d' e' f' | g' a' b' c'' :| } }
+            section A { m { |: c''4 d'' e'' f'' | g'' a'' b'' c''' :| } }
             form { A }
             score { staff m }
             """);
@@ -280,9 +280,9 @@ public class MusicXmlExportShapeTests
             octave absolute
             time 4/4
             part m { clef treble }
-            section A { m { c'4 d' e' f' | } }
-            section D { m { g'4 a' b' c'' | } }
-            section O { m { e'4 f' g' a' | } }
+            section A { m { c''4 d'' e'' f'' | } }
+            section D { m { g''4 a'' b'' c''' | } }
+            section O { m { e''4 f'' g'' a'' | } }
             form { |: A [1. D] :| [2. O] }
             score { staff m }
             """);
@@ -312,9 +312,9 @@ public class MusicXmlExportShapeTests
             octave absolute
             time 4/4
             part m { clef treble }
-            section A { m { c'4 d' e' f' | } }
-            section B { m { g'4 a' b' c'' | } }
-            section C { m { e'4 f' g' a' | } }
+            section A { m { c''4 d'' e'' f'' | } }
+            section B { m { g''4 a'' b'' c''' | } }
+            section C { m { e''4 f'' g'' a'' | } }
             form { A segno B ds al fine C fine }
             score { staff m }
             """);
@@ -359,8 +359,8 @@ public class MusicXmlExportShapeTests
             octave absolute
             time 4/4
             part m { clef treble }
-            section A { m { c'4 d' e' f' | } }
-            section B { m { g'4 a' b' c'' | } }
+            section A { m { c''4 d'' e'' f'' | } }
+            section B { m { g''4 a'' b'' c''' | } }
             form { A _"rit." B fine }
             score { staff m }
             """);
@@ -409,7 +409,7 @@ public class MusicXmlExportShapeTests
         var doc = Export("""
             octave absolute
             part m { clef treble }
-            section A { m { c'1 | R1*3@p@fermata | s2 d'2 | r1 | } }
+            section A { m { c''1 | R1*3@p@fermata | s2 d''2 | r1 | } }
             form { A }
             score { staff m }
             """);
@@ -450,7 +450,7 @@ public class MusicXmlExportShapeTests
         // the % by importers, full bars for strict ones).
         var doc = Export("""
             part m { clef treble }
-            section A { m { c'4 d' e' f' | % } }
+            section A { m { c''4 d' e' f' | % } }
             form { A }
             score { staff m }
             """);
@@ -482,8 +482,8 @@ public class MusicXmlExportShapeTests
             octave absolute
             part pno { clef treble }
             section A { pno {
-              |: c'4@sustain@chord(Dm7) d'@cresc e' f'@!sustain | g'1@f :|
-              a'4@ottava b' a'@!ottava g' | c'1@chord(G7/B) |
+              |: c''4@sustain@chord(Dm7) d''@cresc e'' f''@!sustain | g''1@f :|
+              a''4@ottava b'' a''@!ottava g'' | c''1@chord(G7/B) |
             } }
             form { A }
             score { staff pno }
@@ -515,7 +515,7 @@ public class MusicXmlExportShapeTests
             octave absolute
             part pno { clef treble }
             section A { pno {
-              c'4 d'@cresc e' f'@f | c'4@unaCorda d' e' f'@treCorde | c'4@quindicesima d' e' f'@!ottava | c'1@p |
+              c''4 d''@cresc e'' f''@f | c''4@unaCorda d'' e'' f''@treCorde | c''4@quindicesima d'' e'' f''@!ottava | c''1@p |
             } }
             form { A }
             score { staff pno }
@@ -558,7 +558,7 @@ public class MusicXmlExportShapeTests
             octave absolute
             part pno { clef treble }
             section A { pno {
-              c'4@text("dolce") d' e'@text("sub.").up f' | R1*2@text("tacet") | g'1@mark("C") |
+              c''4@text("dolce") d'' e''@text("sub.").up f'' | R1*2@text("tacet") | g''1@mark("C") |
             } }
             form { A }
             score { staff pno }
@@ -592,7 +592,7 @@ public class MusicXmlExportShapeTests
         var doc = Export("""
             part v { clef treble }
             section A {
-              v { c'4 d' | }
+              v { c''4 d' | }
               lyrics { glo ri~a | }
             }
             form { A }
@@ -772,7 +772,7 @@ public class MusicXmlExportShapeTests
     public void ATupletInAGraceBody_ExportsItsNotesAndItsRatio()
     {
         var doc = Export("octave absolute\npart m { clef treble }\n"
-                         + "section A { m {\ngrace { tuplet 3/2 { d'16 e' f' } } c'4 c'2. |\n} }\n"
+                         + "section A { m {\ngrace { tuplet 3/2 { d''16 e' f' } } c'4 c'2. |\n} }\n"
                          + "form { A }\nscore { staff m }\n");
 
         var graces = doc.Descendants("note").Where(n => n.Element("grace") != null).ToArray();
@@ -807,7 +807,7 @@ public class MusicXmlExportShapeTests
     public void ATupletInAGraceBody_DoesNotLeakItsRatioIntoTheMainStream()
     {
         var doc = Export("octave absolute\npart m { clef treble }\n"
-                         + "section A { m {\ngrace { tuplet 3/2 { d'16 e' f' } } c'4 c'2. |\n} }\n"
+                         + "section A { m {\ngrace { tuplet 3/2 { d''16 e' f' } } c'4 c'2. |\n} }\n"
                          + "form { A }\nscore { staff m }\n");
 
         var plain = doc.Descendants("note").Where(n => n.Element("grace") == null).ToArray();
@@ -833,7 +833,7 @@ public class MusicXmlExportShapeTests
     public void ATupletInAGraceBody_ClaimsNoBracketThePageDoesNotDraw()
     {
         var doc = Export("octave absolute\npart m { clef treble }\n"
-                         + "section A { m {\ngrace { tuplet 3/2 { d'16 e' f' } } c'4 c'2. |\n} }\n"
+                         + "section A { m {\ngrace { tuplet 3/2 { d''16 e' f' } } c'4 c'2. |\n} }\n"
                          + "form { A }\nscore { staff m }\n");
 
         var graces = doc.Descendants("note").Where(n => n.Element("grace") != null).ToArray();
@@ -848,7 +848,7 @@ public class MusicXmlExportShapeTests
     public void AGraceBodyWithoutATuplet_CarriesNoTimeModification()
     {
         var doc = Export("octave absolute\npart m { clef treble }\n"
-                         + "section A { m {\ngrace { d'16 e' f' } c'4 c'2. |\n} }\n"
+                         + "section A { m {\ngrace { d''16 e' f' } c'4 c'2. |\n} }\n"
                          + "form { A }\nscore { staff m }\n");
 
         var graces = doc.Descendants("note").Where(n => n.Element("grace") != null).ToArray();

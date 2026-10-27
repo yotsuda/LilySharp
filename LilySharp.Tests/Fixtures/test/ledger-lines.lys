@@ -11,19 +11,19 @@ part melody
 
 phrase highNotes {
   // Above staff (C6 range)
-  c''4 d e f |
+  c'''4 d e f |
   g4 a b c' |
 }
 
 phrase lowNotes {
   // Below staff (ledger lines below)
-  c,4 d e f |
+  c4 d e f |
   g4 a b c' |
 }
 
 phrase extreme {
   // Wide range passage
-  c,2 c''2 |
+  c2 c''2 |
   c4 d e f |
 }
 

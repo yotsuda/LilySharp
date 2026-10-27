@@ -38,9 +38,9 @@ public class CompressRestsTests
     // A: c'1 R R  |  B (label): R R R@p R  |  C (label): R R@mark R c'1
     private const string Music =
         "part m { clef treble }\n"
-        + "section A { m { c'1 | R1 | R1 | } }\n"
+        + "section A { m { c''1 | R1 | R1 | } }\n"
         + "section B { m { R1 | R1 | R1@p | R1 | } }\n"
-        + "section C { m { R1 | R1@mark(\"Q\") | R1 | c'1 | } }\n"
+        + "section C { m { R1 | R1@mark(\"Q\") | R1 | c''1 | } }\n"
         + "form { A B C }\nscore { staff m }";
 
     private static (int Start, int Count)[] Runs(string source)
@@ -74,7 +74,7 @@ public class CompressRestsTests
     public void AnotherStaffPlaying_KeepsTheBarsApart()
     {
         string source = "layout { compressRests true }\npart a { clef treble }\npart b { clef bass }\n"
-            + "section A { a { R1 | R1 | R1 | } b { R1 | c1 | R1 | } }\nform { A }\nscore { staff a staff b }";
+            + "section A { a { R1 | R1 | R1 | } b { R1 | c'1 | R1 | } }\nform { A }\nscore { staff a staff b }";
         Assert.Equal(new[] { (0, 1), (2, 1) }, Runs(source));
     }
 
@@ -85,11 +85,11 @@ public class CompressRestsTests
     // engraves no run under a chord symbol, inline or a chords row.
     [Theory]
     [InlineData("part a { clef treble }\npart b { clef bass }\n"
-        + "section A { a { R1 | R1 | R1 | c'1 | } b { R1 | R1 | c1 | c1 | } }\nform { A }\nscore { staff a staff b }",
+        + "section A { a { R1 | R1 | R1 | c''1 | } b { R1 | R1 | c'1 | c1 | } }\nform { A }\nscore { staff a staff b }",
         "0:2")]
-    [InlineData("part m { clef treble }\nsection A { m { R1 | R1@chord(F) | R1 | c'1 | } }\nform { A }\nscore { staff m }",
+    [InlineData("part m { clef treble }\nsection A { m { R1 | R1@chord(F) | R1 | c''1 | } }\nform { A }\nscore { staff m }",
         "0:1 1:1 2:1")]
-    [InlineData("part m { clef treble }\nsection A { chords ch { C | F | G | C | } m { R1 | R1 | R1 | c'1 | } }\n"
+    [InlineData("part m { clef treble }\nsection A { chords ch { C | F | G | C | } m { R1 | R1 | R1 | c''1 | } }\n"
         + "form { A }\nscore { chords ch staff m }",
         "")]   // the chords row is a staff that never rests: no run at all, each bar its own rest
     public void WhereTheTwinMergesAPartAlone_ThePagesStillAgree(string music, string runs)

@@ -4,7 +4,7 @@ part melody
 
 section A {
   melody {
-    voice { r4 c'4 } { s2 } r2 |
+    voice { r4 c''4 } { s2 } r2 |
   }
 }
 

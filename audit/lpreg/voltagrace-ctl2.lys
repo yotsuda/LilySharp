@@ -6,7 +6,7 @@ part v { }
 
 section Main {
   v {
-    grace { f8 } b1
+    grace { f'8 } b'1
   }
 }
 

@@ -34,7 +34,7 @@ public class SystemStartDelimiterLengthTests
         part a { clef treble }
         part b { clef treble }
         part c { clef bass }
-        section A { a { c''1 | } b { e'1 | } c { c1 | } }
+        section A { a { c'''1 | } b { e''1 | } c { c'1 | } }
         form { A }
         score { staffGroup { staff a staff b staff c } }
         """;

@@ -6,8 +6,8 @@ key c major
 part sop { clef treble }
 part alt { clef treble }
 section A {
-  sop { c'4 c b a | g1 | }
-  alt { e4 e g f | e1 | }
+  sop { c''4 c b a | g1 | }
+  alt { e'4 e g f | e1 | }
   lyrics verse { Sing- ing a song | now | }
 }
 form { ~A }

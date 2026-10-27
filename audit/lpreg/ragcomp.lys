@@ -5,7 +5,7 @@ time 4/4
 part v { }
 
 section Main {
-  v { a, b, c d | a, b, c d | a, b, c d | a, b, c d | a, b, c d | a, b, c d | a, b, c d | a, b, c d | a, b, c d | }
+  v { a b c' d' | a b c' d' | a b c' d' | a b c' d' | a b c' d' | a b c' d' | a b c' d' | a b c' d' | a b c' d' | }
 }
 
 form { ~Main }

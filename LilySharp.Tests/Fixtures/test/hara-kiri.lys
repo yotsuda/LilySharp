@@ -17,7 +17,7 @@ part lh { clef bass octave 3 }
 
 section Main {
   rh {
-    c4 d e f | g4 a b c |
+    c'4 d e f | g4 a b c |
     break
     c,4 d e f | g4 a b c |
     break

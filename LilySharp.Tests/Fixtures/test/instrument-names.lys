@@ -23,11 +23,11 @@ part cello "Cello" {
 }
 
 phrase vln1Line {
-  c'4 d e f | g4 a b c' |
+  c''4 d e f | g4 a b c' |
 }
 
 phrase vln2Line {
-  e4 f g a | b4 c' d e |
+  e'4 f g a | b4 c' d e |
 }
 
 phrase vlaLine {

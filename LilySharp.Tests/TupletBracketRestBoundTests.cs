@@ -177,8 +177,8 @@ public class TupletBracketRestBoundTests
         part rh { clef treble }
         part lh { clef bass }
         section S {
-          rh { tuplet 3/2 { c''4 c'' c'' } c''2 | }
-          lh { c8 d e f g a b c' | }
+          rh { tuplet 3/2 { c'''4 c''' c''' } c'''2 | }
+          lh { c'8 d' e' f' g' a' b' c'' | }
         }
         form { S }
         score { grandStaff { staff rh staff lh } }
@@ -282,7 +282,7 @@ public class TupletBracketRestBoundTests
     private const string BeamOpensOnTheBoundingRest = """
         octave absolute
         part melody {
-          section A { tuplet 3/2 { r8[ c c] } c4 c4 r4 | }
+          section A { tuplet 3/2 { r8[ c' c'] } c'4 c'4 r4 | }
         }
         form { A }
         score { staff melody }

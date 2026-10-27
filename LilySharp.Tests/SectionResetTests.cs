@@ -45,8 +45,8 @@ public sealed class SectionResetTests
         var measures = Collect("""
             time 4/4
             part m {
-              section A { c1 | time 3/4 c4 d e | }
-              section B { c4 d e f | }
+              section A { c'1 | time 3/4 c4 d e | }
+              section B { c'4 d e f | }
             }
             form { A B }
             score { staff m }
@@ -71,8 +71,8 @@ public sealed class SectionResetTests
         var measures = Collect("""
             time 4/4
             part m {
-              section A { time 3/4 c4 d e | time 4/4 c1 | }
-              section B { c4 d e f | }
+              section A { time 3/4 c'4 d e | time 4/4 c1 | }
+              section B { c'4 d e f | }
             }
             form { A B }
             score { staff m }
@@ -91,8 +91,8 @@ public sealed class SectionResetTests
         // key (C major) and redraws the cancellation.
         var measures = Collect("""
             part m {
-              section A { key g major c1 | }
-              section B { c1 | }
+              section A { key g major c'1 | }
+              section B { c'1 | }
             }
             form { A B }
             score { staff m }
@@ -114,7 +114,7 @@ public sealed class SectionResetTests
         var measures = Collect("""
             key g major
             part m {
-              section A { key e minor e1 | }
+              section A { key e minor e'1 | }
               section B { g1 | }
             }
             form { A B }
@@ -135,8 +135,8 @@ public sealed class SectionResetTests
         var measures = Collect("""
             part m {
               clef bass
-              section A { clef treble c1 | }
-              section B { c1 | }
+              section A { clef treble c'1 | }
+              section B { c'1 | }
             }
             form { A B }
             score { staff m }
@@ -157,8 +157,8 @@ public sealed class SectionResetTests
             key g major
             part m {
               clef bass
-              section A { c1 | }
-              section B { c1 | }
+              section A { c'1 | }
+              section B { c'1 | }
             }
             form { A B }
             score { staff m }
@@ -254,8 +254,8 @@ public sealed class SectionResetTests
     {
         var measures = CollectParsed("""
             part m { clef bass }
-            section A { m { clef treble c1 | } }
-            section B { m { clef treble c1 | } }
+            section A { m { clef treble c'1 | } }
+            section B { m { clef treble c'1 | } }
             form { A B }
             score { staff m }
             """);
@@ -331,9 +331,9 @@ public sealed class SectionResetTests
     }
 
     [Theory]
-    [InlineData("section A { c1 | time 3/4 key d major clef bass c2. | }")]  // written time, key, clef
-    [InlineData("section A { key g major time 6/8 c2. | }\n  section B { time 4/4 key d major c1 | }")]
-    [InlineData("section A { key g major time 6/8 c2. | }\n  section B { time 4/4 c1 | }")]  // the reset's own order
+    [InlineData("section A { c'1 | time 3/4 key d major clef bass c2. | }")]  // written time, key, clef
+    [InlineData("section A { key g major time 6/8 c'2. | }\n  section B { time 4/4 key d major c1 | }")]
+    [InlineData("section A { key g major time 6/8 c'2. | }\n  section B { time 4/4 c1 | }")]  // the reset's own order
     public void ChangesAtOneMoment_StandInBreakAlignOrder(string sections)
     {
         // LilyPond's break-align-orders draws clef, then key, then time whatever order they

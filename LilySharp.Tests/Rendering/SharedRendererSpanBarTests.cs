@@ -75,7 +75,7 @@ public sealed class SharedRendererSpanBarTests
     {
         var single = Render("""
             time 4/4
-            section S { line { c'4 d e f | } }
+            section S { line { c''4 d e f | } }
             form { S }
             score s { staff line }
             """);

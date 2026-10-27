@@ -37,7 +37,7 @@ public class SwingTempoTests
         var src =
             body + "\n" +
             "part m { clef treble }\n" +
-            "section A { m { c'4 d' e' f' | } }\n" +
+            "section A { m { c''4 d' e' f' | } }\n" +
             "form { A }\n" +
             "score s { staff m }\n";
         var tree = SyntaxTree.Parse(src);
@@ -89,10 +89,10 @@ public class SwingTempoTests
     /// at the opening, at a section's start and mid-music.
     /// </summary>
     [Theory]
-    [InlineData("tempo swing", "", "section A { m { c'4 d' e' f' | } }")]
-    [InlineData("", "", "section A { m { c'4 d' e' f' | } }\nsection B { tempo swing\n m { c'4 d' e' f' | } }")]
-    [InlineData("", "", "section A { m { c'4 d' tempo swing e' f' | } }")]
-    [InlineData("tempo \"Medium\" shuffle", "Medium", "section A { m { c'4 d' e' f' | } }")]
+    [InlineData("tempo swing", "", "section A { m { c''4 d' e' f' | } }")]
+    [InlineData("", "", "section A { m { c''4 d' e' f' | } }\nsection B { tempo swing\n m { c''4 d' e' f' | } }")]
+    [InlineData("", "", "section A { m { c''4 d' tempo swing e' f' | } }")]
+    [InlineData("tempo \"Medium\" shuffle", "Medium", "section A { m { c''4 d' e' f' | } }")]
     public void TheEquationWithNoCount_IsAMarkOfItsOwn(string header, string marking, string sections)
     {
         var src = header + "\npart m { clef treble }\n" + sections + "\n"

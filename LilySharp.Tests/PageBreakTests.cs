@@ -92,9 +92,9 @@ public sealed class PageBreakTests
             time 4/4
             key c major
             part m { clef treble
-              section A { c'4 d' e' f' | }
+              section A { c''4 d' e' f' | }
               section B { g'4 a' b' c'' | }
-              section C { c'4 d' e' f' | }
+              section C { c''4 d' e' f' | }
             }
             form { A pageBreak B noPageBreak C }
             score { staff m }
@@ -233,7 +233,7 @@ public sealed class PageBreakTests
             time 4/4
             key c major
             part m { clef treble
-              section A { c'4 d' e' f' | pageBreak g'4 a' b' c'' | noPageBreak c''4 b' a' g' | }
+              section A { c''4 d' e' f' | pageBreak g'4 a b' c'' | noPageBreak c''4 b' a' g' | }
             }
             form { A }
             score { staff m }
@@ -249,7 +249,7 @@ public sealed class PageBreakTests
         Assert.Contains("pageBreak", music);
         Assert.Contains("noPageBreak", music);
 
-        const string doc = "part m { section A { c4 d e f | } }\nform { A }";
+        const string doc = "part m { section A { c'4 d e f | } }\nform { A }";
         var form = LilySharpLanguageServer.GetFormCompletions(doc).Items.Select(i => i.Label).ToList();
         Assert.Contains("pageBreak", form);
         Assert.Contains("noPageBreak", form);
@@ -258,7 +258,7 @@ public sealed class PageBreakTests
     [Fact]
     public void TheLilyPondSpelling_IsPointedAtTheLilySharpOne()
     {
-        var tree = SyntaxTree.Parse("part m { section A { c4 d e f | \\pageBreak g4 a b c | } }\nform { A }\nscore { staff m }");
+        var tree = SyntaxTree.Parse("part m { section A { c'4 d e f | \\pageBreak g4 a b c | } }\nform { A }\nscore { staff m }");
         // The general "no leading backslash" hint, naming the bare word — the same hint
         // `\tempo` gets, because the spelling IS LilyPond's minus the backslash.
         Assert.Contains(tree.Diagnostics, d => d.Message.Contains("write 'pageBreak"));

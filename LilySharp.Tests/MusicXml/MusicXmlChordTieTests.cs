@@ -66,10 +66,10 @@ public class MusicXmlChordTieTests
     [Fact]
     public void EqualChords_TieEveryMember_AndTheControlTiesNone()
     {
-        var control = Notes("<c' e'>2 <c' e'>2 |");
+        var control = Notes("<c'' e''>2 <c'' e''>2 |");
         Assert.All(control, n => Assert.False(Has(n, "start") || Has(n, "stop")));
 
-        var notes = Notes("<c' e'>2 ~ <c' e'>2 |");
+        var notes = Notes("<c'' e''>2 ~ <c'' e''>2 |");
         Assert.Equal(4, notes.Count);
         Assert.Equal(new[] { "C5", "E5", "C5", "E5" }, notes.Select(Pitch));
         Assert.All(notes.Take(2), n => Assert.True(Has(n, "start")));
@@ -81,7 +81,7 @@ public class MusicXmlChordTieTests
     [Fact]
     public void PartlyMatchingChords_TieOnlyTheSharedNoteheads_AtBothEnds()
     {
-        var notes = Notes("<g b d>2~ <g b e>2 |");
+        var notes = Notes("<g' b' d'>2~ <g' b' e'>2 |");
         Assert.Equal(6, notes.Count);
         var first = notes.Take(3).ToList();
         var second = notes.Skip(3).ToList();

@@ -75,8 +75,8 @@ public class DeclaredNameTokenTests
     private const string GroupedByPart = """
         part melody {
           clef treble
-          section A { c'4 d e f | g2 g | }
-          section B { c'4 d e f | g2 g | }
+          section A { c''4 d e f | g2 g | }
+          section B { c''4 d e f | g2 g | }
         }
 
         phrase turn { c'8 d c b }
@@ -118,7 +118,7 @@ public class DeclaredNameTokenTests
     [InlineData("score { staff other  melody }")]
     public void EverySpellingOfAScoresPartReference_IsColoured(string render)
     {
-        var source = $"part melody {{ section A {{ c'4 }} }}\n"
+        var source = $"part melody {{ section A {{ c''4 }} }}\n"
                    + $"part other {{ section A {{ e'4 }} }}\nform {{ A }}\n{render}\n";
 
         Assert.Contains("melody", Coloured(source, Part));
@@ -129,7 +129,7 @@ public class DeclaredNameTokenTests
     /// wrong. Everything blue is a name that resolves; everything plain is one the
     /// diagnostics are about to underline.</summary>
     private const string EveryTrack = """
-        part melody { section A { c'4 d e f } }
+        part melody { section A { c''4 d e f } }
         lyrics verse sings melody { section A { la la la la } }
         chords prog { section A { C | } }
         form { A }
@@ -172,9 +172,9 @@ public class DeclaredNameTokenTests
     // before it was written down: `p` is RESERVED (it is the dynamic mark, so no part may
     // be called that), and `voice` opens the span ONCE — the other voices are further
     // blocks, `voice hi { … } lo { … }`, not a second keyword.
-    [InlineData("part melody { section A { c'4 c c c } }", "melody", true)]
-    [InlineData("part melody { section A { voice hi { c'4 c c c } lo { e4 e e e } } }", "hi", true)]
-    [InlineData("part melody { section A { c'4 c c c } }", "nobody", false)]
+    [InlineData("part melody { section A { c''4 c c c } }", "melody", true)]
+    [InlineData("part melody { section A { voice hi { c''4 c c c } lo { e'4 e e e } } }", "hi", true)]
+    [InlineData("part melody { section A { c''4 c c c } }", "nobody", false)]
     public void ASingsTarget_IsColouredExactlyWhenItResolves(string part, string target, bool coloured)
     {
         var book = $"{part}\nlyrics v sings {target} {{ section A {{ la la la la }} }}\n"
@@ -189,7 +189,7 @@ public class DeclaredNameTokenTests
         // The same rule as a form's section, for the same reason — LYS1007 is about to
         // underline it.
         const string source = """
-            part melody { section A { c'4 } }
+            part melody { section A { c''4 } }
             form { A }
             score { staff melody  staff nope }
             """;
@@ -204,7 +204,7 @@ public class DeclaredNameTokenTests
         // staff may render `melody` with no `part melody { … }` header anywhere. It is a
         // declaration, so it resolves the score's reference — and is coloured itself.
         const string source = """
-            section A { melody { c'4 } }
+            section A { melody { c''4 } }
             form { A }
             score { staff melody }
             """;
@@ -234,7 +234,7 @@ public class DeclaredNameTokenTests
         // regex would paint it; the server knows there is no such section, and LYS1005 is
         // about to underline it.
         const string source = """
-            part melody { section A { c'4 } }
+            part melody { section A { c''4 } }
             form { A Nope }
             score { staff melody }
             """;
@@ -250,7 +250,7 @@ public class DeclaredNameTokenTests
         // validator learned it — so both halves are pinned here, and both go through the one
         // predicate in SectionSymbols.
         const string resolves = """
-            part melody { section A { c'4 } }
+            part melody { section A { c''4 } }
             form { ~A }
             score { staff melody }
             """;
@@ -272,8 +272,8 @@ public class DeclaredNameTokenTests
         // must never come out plain. Checked over one book holding every spelling at once,
         // so a future spelling that reaches only one of the two shows up here.
         const string source = """
-            part melody { section A { c'4 } }
-            section B { melody { c'4 } }
+            part melody { section A { c''4 } }
+            section B { melody { c''4 } }
             form { A B ~A Nope ~AlsoNope }
             score { staff melody  staff noSuchPart }
             """;

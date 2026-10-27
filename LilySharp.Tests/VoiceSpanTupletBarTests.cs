@@ -90,8 +90,8 @@ public sealed class VoiceSpanTupletBarTests
 
         section Piece {
           p1 {
-            voice { r8. r16 fis,8 gis,8 fis,2 gis,4 } { gis,,8. fis,,16 gis,,16 fis,,16 b,,8 ais,,16 b,,16 ais,,8 gis,,8 ais,,8 r4 } |
-            voice { ais,8 r16 c16 b,4 ais,16 dis,16 eis,16 eis,16 fis,8 ais,16 gisis,16 cis4 } { tuplet 3/2 { ais,,8 b,,8 cis,8 } b,,2 cis,2 } |
+            voice { r8. r16 fis8 gis8 fis2 gis4 } { gis,8. fis,16 gis,16 fis,16 b,8 ais,16 b,16 ais,8 gis,8 ais,8 r4 } |
+            voice { ais8 r16 c'16 b4 ais16 dis16 eis16 eis16 fis8 ais16 gisis16 cis'4 } { tuplet 3/2 { ais,8 b,8 cis8 } b,2 cis2 } |
           }
         }
 

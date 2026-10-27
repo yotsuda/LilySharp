@@ -16,16 +16,16 @@ time 4/4
 part v { }
 
 // 鎖 1: 本体は A7、3 つの括弧はどれも D7。
-section Body1 { v { r2 a'''4 r4 | } }
-section D1 { v { r2 d'''4 r4 | } }
-section D2 { v { r2 d'''4 r4 | } }
-section D3 { v { r2 d'''4 r4 | } }
+section Body1 { v { r2 a''''4 r4 | } }
+section D1 { v { r2 d''''4 r4 | } }
+section D2 { v { r2 d''''4 r4 | } }
+section D3 { v { r2 d''''4 r4 | } }
 
 // 鎖 2: 本体も括弧も A7 ——鎖 1 より 2.0 高いところに座るのが主張。
-section Body2 { v { r2 a'''4 r4 | } }
-section A1 { v { r2 a'''4 r4 | } }
-section A2 { v { r2 a'''4 r4 | } }
-section A3 { v { r2 a'''4 r4 | } }
+section Body2 { v { r2 a''''4 r4 | } }
+section A1 { v { r2 a''''4 r4 | } }
+section A2 { v { r2 a''''4 r4 | } }
+section A3 { v { r2 a''''4 r4 | } }
 
 form {
   |: ~Body1 [1. ~D1] :| [2. ~D2] :| [3. ~D3]

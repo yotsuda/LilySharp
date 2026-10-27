@@ -17,7 +17,7 @@ part melody {
 
 section Main {
   melody {
-    c'4 d e f |
+    c''4 d e f |
     time none g8 a b c d c b a g4 f e2 |
     d4 e f g a g f e | break
     time 4/4 c1 |

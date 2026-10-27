@@ -34,9 +34,9 @@ public sealed class FormVoltaTests
 {
     private const string Head =
         "part m { clef treble }\n" +
-        "section A { m { c4 c c c | } }\n" +
-        "section D { m { d4 d d d | } }\n" +
-        "section O { m { e4 e e e | } }\n";
+        "section A { m { c'4 c c c | } }\n" +
+        "section D { m { d'4 d d d | } }\n" +
+        "section O { m { e'4 e e e | } }\n";
 
     private const string Tail = "\nscore { staff m }\n";
 

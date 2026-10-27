@@ -29,7 +29,7 @@ part melody
 
 section Main {
   melody {
-    c1 | d1 | e1 | f1 | g1 | f1 | e1 | d1 |
+    c'1 | d1 | e1 | f1 | g1 | f1 | e1 | d1 |
     c1 | d1 | e1 | f1 | g1 | f1 | e1 | d1 |
     c1 | d1 | e1 | f1 | g1 | f1 | e1 | d1 |
     c1 | d1 | e1 | f1 | g1 | f1 | e1 | d1 |

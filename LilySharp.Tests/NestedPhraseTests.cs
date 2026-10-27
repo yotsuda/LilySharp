@@ -49,7 +49,7 @@ public class NestedPhraseTests
         // phrase x { y }: x's only content is the nested reference y; the collector
         // must expand it (it dropped it before, leaving an empty staff).
         const string src = """
-            phrase y { c d e f }
+            phrase y { c' d e f }
             phrase x { y }
             part m { section A { x } }
             form { A }
@@ -64,7 +64,7 @@ public class NestedPhraseTests
         // The two consumers used to disagree (MIDI expanded nesting, SVG did not).
         // (Phrase names avoid the pitch letters a-g, which are notes, not names.)
         const string src = """
-            phrase inner { c d e f }
+            phrase inner { c' d e f }
             phrase outer { inner inner }
             part m { section A { outer } }
             form { A }
@@ -114,8 +114,8 @@ public class NestedPhraseTests
         // The runtime guards must break the recursion; a cycle renders its acyclic
         // prefix rather than throwing.
         const string src = """
-            phrase x { c4 y }
-            phrase y { d4 x }
+            phrase x { c'4 y }
+            phrase y { d'4 x }
             part m { section A { x } }
             form { A }
             score { staff m }

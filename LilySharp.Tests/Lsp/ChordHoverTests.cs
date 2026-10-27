@@ -105,7 +105,7 @@ public class ChordHoverTests
     [Fact]
     public void TheDegree_ReadsTheKeyInForce() =>
         Assert.Equal("`D (V)` \u00A0D4 \u00A0F♯4 \u00A0A4", HoverAt("<d fis a>", doc:
-            "key g major\n\npart melody {\n  section A { <d fis a>4 r2. | }\n}\n\nform { A }\n\nscore {\n  staff melody\n}\n"));
+            "key g major\n\npart melody {\n  section A { <d' fis a>4 r2. | }\n}\n\nform { A }\n\nscore {\n  staff melody\n}\n"));
 
     [Fact]
     public void AnInversion_ShowsTheWrittenBassAsTheSlash_AndListsLowestFirst() =>

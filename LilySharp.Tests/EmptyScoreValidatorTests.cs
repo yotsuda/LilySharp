@@ -30,7 +30,7 @@ namespace LilySharp.Tests;
 public class EmptyScoreValidatorTests
 {
     private const string Preamble =
-        "part melody { clef treble }\nsection A { melody { c4 d e f | } }\nform { A }\n";
+        "part melody { clef treble }\nsection A { melody { c'4 d e f | } }\nform { A }\n";
 
     private static Diagnostic[] Validate(string src)
         => SemanticValidation.Run(SyntaxTree.Parse(src))
@@ -54,7 +54,7 @@ public class EmptyScoreValidatorTests
     [Fact]
     public void TheErrorMarksTheScoresOwnBraces()
     {
-        const string src = "part m { clef treble }\nsection A { m { c4 } }\n"
+        const string src = "part m { clef treble }\nsection A { m { c'4 } }\n"
             + "form { A }\nscore {\n}\n";
         var d = Assert.Single(SemanticValidation.Run(SyntaxTree.Parse(src))
             .Where(x => x.Code == DiagnosticCodes.EmptyScore));
@@ -74,7 +74,7 @@ public class EmptyScoreValidatorTests
     public void ScoreWithAGrandStaff_IsClean()
         => Assert.Empty(Validate(
             "part rh { clef treble }\npart lh { clef bass }\n"
-            + "section A { rh { c4 d e f | } lh { c4 d e f | } }\nform { A }\n"
+            + "section A { rh { c'4 d e f | } lh { c'4 d e f | } }\nform { A }\n"
             + "score { grandStaff { staff rh staff lh } }\n"));
 
     /// <summary>A score body carrying ONLY the per-score transpose is still empty —

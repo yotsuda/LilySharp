@@ -56,8 +56,8 @@ public class LilyPondExporterGraceSyncTests
     {
         string ly = Twin(Header + """
             section A {
-              top { c'4 d' e' f' | g'1 | }
-              bot { grace { e16 f } g4 a b c' | grace { d'16 e' } f'2 g'2 | }
+              top { c''4 d' e' f' | g'1 | }
+              bot { grace { e'16 f } g4 a b c' | grace { d'16 e' } f'2 g2 | }
             }
             form { A }
 
@@ -75,8 +75,8 @@ public class LilyPondExporterGraceSyncTests
     {
         string ly = Twin(Header + """
             section A {
-              top { grace { d'16 } c'1 | }
-              bot { grace { e16 f g } g1 | }
+              top { grace { d''16 } c'1 | }
+              bot { grace { e'16 f g } g1 | }
             }
             form { A }
 
@@ -91,8 +91,8 @@ public class LilyPondExporterGraceSyncTests
     {
         string ly = Twin(Header + """
             section A {
-              top { c'2 d'2 | }
-              bot { grace { e16 } g1 | }
+              top { c''2 d'2 | }
+              bot { grace { e'16 } g1 | }
             }
             form { A A }
 
@@ -107,10 +107,10 @@ public class LilyPondExporterGraceSyncTests
     public void APhraseUsedTwice_OwesTheSkipOnlyWhereTheOtherStaffHasAGrace()
     {
         string ly = Twin(Header + """
-            phrase riff { c'2 d'2 | }
+            phrase riff { c''2 d'2 | }
             section A {
               top { riff riff }
-              bot { c1 | grace { e16 } g1 | }
+              bot { c'1 | grace { e16 } g1 | }
             }
             form { A }
 
@@ -126,8 +126,8 @@ public class LilyPondExporterGraceSyncTests
     {
         string ly = Twin(Header + """
             section A {
-              top { voice { grace { a'16 } g'2 e'2 } { c'1 } | }
-              bot { c1 | }
+              top { voice { grace { a'16 } g'2 e'2 } { c''1 } | }
+              bot { c'1 | }
             }
             form { A }
 
@@ -202,8 +202,8 @@ public class LilyPondExporterGraceSyncTests
     {
         string ly = Twin(Header + """
             section A {
-              top { c'1 | }
-              bot { c1 | }
+              top { c''1 | }
+              bot { c'1 | }
             }
             form { A }
 

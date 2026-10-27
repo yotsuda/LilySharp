@@ -83,8 +83,8 @@ public class RowBarLengthTests
             time 4/4
             key c major
             part m { clef treble }
-            section A { m { c'1 | } chords prog { C | } }
-            section B { time 3/4  m { d'2. | } chords prog { D | } }
+            section A { m { c''1 | } chords prog { C | } }
+            section B { time 3/4  m { d''2. | } chords prog { D | } }
             form { A B }
             score { chords prog  staff m }
             """);
@@ -101,7 +101,7 @@ public class RowBarLengthTests
             part m { clef treble }
             section A {
               partial 4
-              m { c'4 | d'4 e' f' g' | }
+              m { c''4 | d'4 e' f' g' | }
               lyrics words { one | two three four five | }
             }
             form { A }

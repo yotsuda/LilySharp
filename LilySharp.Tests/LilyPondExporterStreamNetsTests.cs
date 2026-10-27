@@ -67,7 +67,7 @@ public class LilyPondExporterStreamNetsTests
         var ly = Export("""
             time 4/4
             part melody { clef treble }
-            section A { melody { c'4 r d' e' | r2 f' | } lyrics words sings melody { a b c | d | } }
+            section A { melody { c''4 r d' e' | r2 f' | } lyrics words sings melody { a b c | d | } }
             form { A }
             score { staff melody lyrics words }
             """);
@@ -85,7 +85,7 @@ public class LilyPondExporterStreamNetsTests
             time 4/4
             key c major
             part melody { clef treble }
-            section Main { melody { c'4 d break e f | g1 | } }
+            section Main { melody { c''4 d break e f | g1 | } }
             lyrics words { section Main { a b c d | e | } }
             form { Main }
             score { staff melody  lyrics words }

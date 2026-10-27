@@ -46,7 +46,7 @@ public sealed class DeadNoteGlyphTests
 {
     private const string Book =
         "part bl { clef bass octave 3 tuning bass }\n"
-        + "section A { bl { c4 e@dead g e@dead | c2@dead c@dead | } }\n"
+        + "section A { bl { c'4 e@dead g e@dead | c2@dead c@dead | } }\n"
         + "form { ~A }\nscore { staff bl  tab bl }\n";
 
     private static string Svg(string book)

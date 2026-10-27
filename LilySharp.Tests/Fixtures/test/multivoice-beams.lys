@@ -12,8 +12,8 @@ title "Multi-voice beams"
 part mel { clef treble }
 section S {
   mel {
-    voice { c''4 c'' c'' c'' | c''4 c'' c'' c'' | }
-    { e'8 f' g' a' b' a' g' f' | e'16 f' g' a' b'16 a' g' f' g'8. f'16 e'8 f' | }
+    voice { c'''4 c''' c''' c''' | c'''4 c''' c''' c''' | }
+    { e''8 f'' g'' a'' b'' a'' g'' f'' | e''16 f'' g'' a'' b''16 a'' g'' f'' g''8. f''16 e''8 f'' | }
   }
 }
 form { S }

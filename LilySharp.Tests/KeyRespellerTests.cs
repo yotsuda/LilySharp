@@ -80,7 +80,7 @@ public class KeyRespellerTests
     {
         var text = Respell(Doc("fis'1 |", "fis'1 |"), "ges major");
         Assert.Contains("section A { melody { ges'1 | } }", text);
-        Assert.Contains("section B { melody { fis'1 | } }", text);
+        Assert.Contains("section B { melody { fis''1 | } }", text);
     }
 
     [Fact]

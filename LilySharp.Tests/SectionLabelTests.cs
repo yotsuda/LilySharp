@@ -38,7 +38,7 @@ public class SectionLabelTests
 
     private const string ReuseSource = """
         part melody
-        phrase pa { c4 d e f | }
+        phrase pa { c'4 d e f | }
         section First { melody { pa } }
         section Second { melody { pa } }
         form { First Second First "First (reprise)" }
@@ -70,7 +70,7 @@ public class SectionLabelTests
     {
         var labels = SectionLabels("""
             part メロディ
-            phrase 動機 { c4 d e f | }
+            phrase 動機 { c'4 d e f | }
             section イントロ { メロディ { 動機 } }
             form { イントロ イントロ "イントロ(再現)" }
             score x { staff メロディ }
@@ -87,7 +87,7 @@ public class SectionLabelTests
         // whole section). A keeps its label; B's slot is present but null.
         var labels = SectionLabels("""
             part melody
-            section A { melody { c4 d e f | } }
+            section A { melody { c'4 d e f | } }
             section B { melody { g4 a b c | } }
             form { A ~B }
             score x { staff melody }
@@ -104,7 +104,7 @@ public class SectionLabelTests
         // or hash-bucket order would fail this — only source order passes.
         var labels = SectionLabels("""
             part melody
-            section Zebra { melody { c4 d e f | } }
+            section Zebra { melody { c'4 d e f | } }
             section Alpha { melody { g4 a b c | } }
             score x { staff melody }
             """);
@@ -117,7 +117,7 @@ public class SectionLabelTests
     {
         var tree = SyntaxTree.Parse("""
             part メロディ
-            phrase 動機 { c4 d e f | }
+            phrase 動機 { c'4 d e f | }
             section イントロ { メロディ { 動機 } }
             form { イントロ }
             score x { staff メロディ }
@@ -146,7 +146,7 @@ public class SectionLabelTests
     {
         // A deliberately named, referenced section shows its label even alone.
         Assert.Equal(1, SectionLabelMarkCount("""
-            section Main { melody { c4 d e f | g1 } }
+            section Main { melody { c'4 d e f | g1 } }
             form { Main }
             score x { staff melody }
             """));
@@ -157,7 +157,7 @@ public class SectionLabelTests
     {
         // `form { A A }` shows a box at each pass, marking where the repeat lands.
         Assert.Equal(2, SectionLabelMarkCount("""
-            section A { melody { c4 d e f | } }
+            section A { melody { c'4 d e f | } }
             form { A A }
             score x { staff melody }
             """));
@@ -167,7 +167,7 @@ public class SectionLabelTests
     public void TwoDistinctSections_KeepBothBoxes()
     {
         Assert.Equal(2, SectionLabelMarkCount("""
-            section Intro { melody { c4 d e f | } }
+            section Intro { melody { c'4 d e f | } }
             section Verse { melody { g4 f e d | } }
             form { Intro Verse }
             score x { staff melody }
@@ -180,7 +180,7 @@ public class SectionLabelTests
         // `A "A2"` is an explicit user label; alongside a plain `A` that is two
         // distinct labels, so the boxes stay (the user asked to tell them apart).
         Assert.Equal(2, SectionLabelMarkCount("""
-            section A { melody { c4 d e f | } }
+            section A { melody { c'4 d e f | } }
             form { A A "A2" }
             score x { staff melody }
             """));

@@ -284,7 +284,7 @@ public class FontBlockCompletionTests
         part m { clef treble }
 
         section A {
-          m { c4 d e f | g2 g | }
+          m { c'4 d e f | g2 g | }
           lyrics w sings m { la la la la | la la | }
           chords prog { C | G | }
         }

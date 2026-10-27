@@ -9,8 +9,8 @@ part rh { clef treble }
 part lh { clef bass }
 
 section Main {
-  rh { a4 a a a | }
-  lh { a,,4 a,, a,, a,, | }
+  rh { a'4 a' a' a' | }
+  lh { a,4 a, a, a, | }
   chords prog { F | }
 }
 

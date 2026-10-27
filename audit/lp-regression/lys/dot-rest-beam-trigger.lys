@@ -10,7 +10,7 @@ part melody
 
 section A {
   melody {
-    voice { c'16[ b a r b g] } { r8. r } |
+    voice { c''16[ b a r b g] } { r8. r } |
   }
 }
 

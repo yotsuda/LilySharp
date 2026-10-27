@@ -9,8 +9,8 @@ time 4/4
 key c major
 
 part mel
-phrase pa { c''4 d'' e'' f'' }
-phrase pb { g''4 a'' b'' c''' }
+phrase pa { c'''4 d''' e''' f''' }
+phrase pb { g'''4 a''' b''' c'''' }
 section A { mel { pa } }
 section B { mel { pb } }
 

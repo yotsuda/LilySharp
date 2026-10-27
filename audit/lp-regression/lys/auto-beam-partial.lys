@@ -8,7 +8,7 @@ part m { clef treble }
 
 section Main {
   partial 2
-  m { a8 a a a | }
+  m { a'8 a' a' a' | }
 }
 
 form { ~Main }

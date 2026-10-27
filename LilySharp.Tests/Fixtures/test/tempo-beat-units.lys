@@ -9,19 +9,19 @@ part m { clef treble }
 
 section A {
   m { tempo Grave 1 = 40
-      c1 | }
+      c'1 | }
 }
 section B {
   m { tempo Andante 2 = 60
-      c2 d | }
+      c'2 d | }
 }
 section C {
   m { tempo Lively 4. = 80
-      c4. d8 e4 f | }
+      c'4. d8 e4 f | }
 }
 section D {
   m { tempo Presto 8 = 240
-      c8 d e f g f e d | }
+      c'8 d e f g f e d | }
 }
 
 form { A B C D }

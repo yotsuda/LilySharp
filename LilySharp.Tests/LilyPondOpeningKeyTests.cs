@@ -40,15 +40,15 @@ public class LilyPondOpeningKeyTests
     [Fact]
     public void APartHeadersKey_IsTheOnlyKey()
         => Assert.Equal(["\\key bes \\major"],
-            Keys("key d major\npart melody { key bes major }\nsection A { melody { c1 } }\nform { A }\nscore { staff melody }\n"));
+            Keys("key d major\npart melody { key bes major }\nsection A { melody { c'1 } }\nform { A }\nscore { staff melody }\n"));
 
     [Fact]
     public void ASectionHeadersKey_IsTheOnlyKey()
         => Assert.Equal(["\\key e \\minor"],
-            Keys("key d major\npart melody\nsection A { key e minor  melody { c1 } }\nform { A }\nscore { staff melody }\n"));
+            Keys("key d major\npart melody\nsection A { key e minor  melody { c'1 } }\nform { A }\nscore { staff melody }\n"));
 
     [Fact]
     public void AKeyAfterTheFirstNote_LeavesTheFilesKey()
         => Assert.Equal(["\\key d \\major", "\\key a \\major"],
-            Keys("key d major\npart melody {\n  section A { c1 | key a major c1 }\n}\nform { A }\nscore { staff melody }\n"));
+            Keys("key d major\npart melody {\n  section A { c'1 | key a major c1 }\n}\nform { A }\nscore { staff melody }\n"));
 }

@@ -4,7 +4,7 @@ time 4/4
 key f major
 part melody { clef treble }
 section A {
-  melody { f4 g a bes | c2 a4 f4 | g4 a bes a | f1 | }
+  melody { f'4 g a bes | c2 a4 f4 | g4 a bes a | f1 | }
   lyrics words sings melody {
     Sing- ing all the | day ~ long, |
     ev- ery word a | song |

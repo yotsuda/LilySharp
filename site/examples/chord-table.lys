@@ -3,7 +3,7 @@
 layout { chordDiagrams guitar { C  F xx3211  section Chorus { F 133211  G } } }
 time 4/4
 part melody { clef treble }
-section Verse  { melody { e'2 c2 | f2 d2 | }  chords prog { C | F G | } }
-section Chorus { melody { e'2 c2 | f2 d2 | }  chords prog { C | F G | } }
+section Verse  { melody { e''2 c2 | f2 d2 | }  chords prog { C | F G | } }
+section Chorus { melody { e''2 c2 | f2 d2 | }  chords prog { C | F G | } }
 form { ~Verse ~Chorus }
 score { chords prog  staff melody }

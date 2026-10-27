@@ -96,7 +96,7 @@ public class CaretInfoTests
     [Fact]
     public void AStaffGroup_SaysHowItEngraves()
     {
-        string book = "part a { clef treble }\npart b { clef bass }\nsection A { a { c4 } b { c4 } }\n";
+        string book = "part a { clef treble }\npart b { clef bass }\nsection A { a { c'4 } b { c'4 } }\n";
         Assert.StartsWith("grandStaff: a brace", InfoAt(book + "score { grand‸Staff { staff a staff b } }\n"));
         Assert.StartsWith("combinedStaff: exactly 2 parts", InfoAt(book + "score { combined‸Staff { a b } }\n"));
     }
@@ -119,12 +119,12 @@ public class CaretInfoTests
     {
         // Owner's request 2026-10-24: where a note stands and what it is.
         // (Relative octaves from the part's C4: a bare letter is the nearest.)
-        string book = "part m { clef treble }\nsection A { m { c4 d e f | g4 a8 b c2 } }\n";
+        string book = "part m { clef treble }\nsection A { m { c'4 d e f | g4 a8 b c2 } }\n";
         Assert.Equal("bar 1 · beat 1 · C4", InfoAt(book.Replace("c4 d", "c‸4 d")));
         Assert.Equal("bar 1 · beat 3 · E4", InfoAt(book.Replace(" e ", " e‸ ")));
         Assert.Equal("bar 2 · beat 2 + 1/2 · B4", InfoAt(book.Replace(" b ", " b‸ ")));
         // With a score of two parts, the part is named too.
-        string two = "part m { clef treble }\npart n { clef treble }\nsection A { m { c4 d e f } n { e4 f g a } }\n"
+        string two = "part m { clef treble }\npart n { clef treble }\nsection A { m { c'4 d e f } n { e'4 f g a } }\n"
             + "score { staff m staff n }\n";
         Assert.Equal("n · bar 1 · beat 2 · F4", InfoAt(two.Replace("e4 f", "e4 f‸")));
     }
@@ -132,7 +132,7 @@ public class CaretInfoTests
     [Fact]
     public void ANoteOfATransposingPart_SaysWhatItSounds()
     {
-        string clarinet = "part cl { instrument clarinet }\nsection A { cl { d4 e f g } }\n";
+        string clarinet = "part cl { instrument clarinet }\nsection A { cl { d'4 e f g } }\n";
         Assert.Equal("bar 1 · beat 1 · D4 sounds C4", InfoAt(clarinet.Replace("d4", "d‸4")));
         string bass = "part b { instrument bass }\nsection A { b { e,4 a d g } }\nscore { staff b }\n";
         Assert.Equal("b · bar 1 · beat 1 · E2 sounds E1", InfoAt(bass.Replace("e,4", "e‸,4")));
@@ -141,7 +141,7 @@ public class CaretInfoTests
     [Fact]
     public void AChord_SaysEveryPitch_AndAPickupItsPlaceInTheBar()
     {
-        string chord = "part m { clef treble }\nsection A { m { <c e g>2 r } }\n";
+        string chord = "part m { clef treble }\nsection A { m { <c' e g>2 r } }\n";
         Assert.Equal("bar 1 · beat 1 · C4 E4 G4", InfoAt(chord.Replace("<c", "<‸c")));
         Assert.Equal("bar 1 · beat 1 · C4 E4 G4", InfoAt(chord.Replace("g>2", "g>‸2")));
         string pickup = "part m { clef treble }\nsection A { m { partial 4 g4 | c1 } }\n";
@@ -152,7 +152,7 @@ public class CaretInfoTests
     public void AFormsSection_SaysItsLength_AndWhichTimeThisIs()
     {
         // Owner's request 2026-10-24.
-        string book = "part m { clef treble }\nsection A { m { c1 | d1 } }\nsection B { m { e1 } }\nform { A B A }\n";
+        string book = "part m { clef treble }\nsection A { m { c'1 | d1 } }\nsection B { m { e'1 } }\nform { A B A }\n";
         Assert.Equal("section A: 2 bars · the 1st of 2 times this form names it", InfoAt(book.Replace("{ A B", "{ ‸A B")));
         Assert.Equal("section A: 2 bars · the 2nd of 2 times this form names it", InfoAt(book.Replace("B A }", "B A‸ }")));
         Assert.Equal("section B: 1 bar · named once in this form", InfoAt(book.Replace("A B A", "A B‸ A")));

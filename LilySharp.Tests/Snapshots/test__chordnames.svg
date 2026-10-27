@@ -18,33 +18,33 @@
   <line x1="39.75" y1="20.88" x2="41.70" y2="20.88" stroke="#000000" stroke-width="0.200"/>
   <text class="music" x="17.12" y="26.88" font-size="4.00" data-pos="878"></text>
   <line x1="18.36" y1="26.73" x2="18.36" y2="23.38" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="20.12" y="26.38" font-size="4.00" data-pos="881"></text>
+  <text class="music" x="20.12" y="26.38" font-size="4.00" data-pos="882"></text>
   <line x1="21.36" y1="26.23" x2="21.36" y2="22.88" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="23.13" y="25.88" font-size="4.00" data-pos="883"></text>
+  <text class="music" x="23.13" y="25.88" font-size="4.00" data-pos="884"></text>
   <line x1="24.36" y1="25.73" x2="24.36" y2="22.38" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="26.13" y="25.38" font-size="4.00" data-pos="885"></text>
+  <text class="music" x="26.13" y="25.38" font-size="4.00" data-pos="886"></text>
   <line x1="27.37" y1="25.23" x2="27.37" y2="21.88" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="30.46" y="24.88" font-size="4.00" data-pos="889"></text>
+  <text class="music" x="30.46" y="24.88" font-size="4.00" data-pos="890"></text>
   <line x1="31.70" y1="24.73" x2="31.70" y2="21.38" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="33.46" y="24.38" font-size="4.00" data-pos="891"></text>
+  <text class="music" x="33.46" y="24.38" font-size="4.00" data-pos="892"></text>
   <line x1="34.70" y1="24.23" x2="34.70" y2="20.88" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="36.48" y="23.88" font-size="4.00" data-pos="893"></text>
+  <text class="music" x="36.48" y="23.88" font-size="4.00" data-pos="894"></text>
   <line x1="36.54" y1="24.03" x2="36.54" y2="27.22" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="38.92" y="20.38" font-size="4.00" data-pos="906"></text>
-  <text class="music" x="38.35" y="22.38" font-size="4.00" data-pos="898"></text>
-  <text class="music" x="37.26" y="21.38" font-size="4.00" data-pos="902"></text>
-  <text class="music" x="40.07" y="23.38" font-size="4.00" data-pos="896"></text>
-  <text class="music" x="40.07" y="22.38" font-size="4.00" data-pos="898"></text>
-  <text class="music" x="40.07" y="21.38" font-size="4.00" data-pos="902"></text>
-  <text class="music" x="40.07" y="20.38" font-size="4.00" data-pos="906"></text>
+  <text class="music" x="38.92" y="20.38" font-size="4.00" data-pos="907"></text>
+  <text class="music" x="38.35" y="22.38" font-size="4.00" data-pos="899"></text>
+  <text class="music" x="37.26" y="21.38" font-size="4.00" data-pos="903"></text>
+  <text class="music" x="40.07" y="23.38" font-size="4.00" data-pos="897"></text>
+  <text class="music" x="40.07" y="22.38" font-size="4.00" data-pos="899"></text>
+  <text class="music" x="40.07" y="21.38" font-size="4.00" data-pos="903"></text>
+  <text class="music" x="40.07" y="20.38" font-size="4.00" data-pos="907"></text>
   <line x1="40.14" y1="20.53" x2="40.14" y2="26.88" stroke="#000000" stroke-width="0.130"/>
-  <rect x="29.37" y="21.88" width="0.19" height="4.00" data-pos="887"/>
-  <rect x="42.83" y="21.88" width="0.19" height="4.00" data-pos="911"/>
-  <text x="17.12" y="17.98" font-size="2.62" font-family="TeX Gyre Heros, sans-serif" data-pos="937">C</text>
-  <text x="23.13" y="17.98" font-size="2.62" font-family="TeX Gyre Heros, sans-serif" data-pos="939">Am</text>
-  <text x="30.46" y="17.98" font-size="2.62" font-family="TeX Gyre Heros, sans-serif" data-pos="944">F</text>
-  <text x="36.48" y="17.98" font-size="2.62" font-family="TeX Gyre Heros, sans-serif" data-pos="946">G</text>
-  <text x="38.53" y="16.79" font-size="1.85" font-family="TeX Gyre Heros, sans-serif" data-pos="946">ø</text>
+  <rect x="29.37" y="21.88" width="0.19" height="4.00" data-pos="888"/>
+  <rect x="42.83" y="21.88" width="0.19" height="4.00" data-pos="912"/>
+  <text x="17.12" y="17.98" font-size="2.62" font-family="TeX Gyre Heros, sans-serif" data-pos="938">C</text>
+  <text x="23.13" y="17.98" font-size="2.62" font-family="TeX Gyre Heros, sans-serif" data-pos="940">Am</text>
+  <text x="30.46" y="17.98" font-size="2.62" font-family="TeX Gyre Heros, sans-serif" data-pos="945">F</text>
+  <text x="36.48" y="17.98" font-size="2.62" font-family="TeX Gyre Heros, sans-serif" data-pos="947">G</text>
+  <text x="38.53" y="16.79" font-size="1.85" font-family="TeX Gyre Heros, sans-serif" data-pos="947">ø</text>
   <rect x="11.90" y="12.82" width="7.32" height="2.75" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="840"/>
   <text x="15.57" y="15.17" font-size="2.77" text-anchor="middle" data-pos="840">Main</text>
   </g>

@@ -59,7 +59,7 @@ public sealed class PartHeaderDefaults
     /// <summary>
     /// The RELATIVE-frame anchor: <c>octave N</c> &gt; preset &gt; 4. The clef is not consulted.
     /// </summary>
-    public int AnchorOctave { get; private init; } = 4;
+    public int AnchorOctave { get; private init; } = Svg.Model.InstrumentDefaults.DefaultAnchorOctave;
 
     /// <summary>
     /// The ABSOLUTE-mode base, which is a different rule: only <c>octave N</c> moves it.
@@ -70,7 +70,7 @@ public sealed class PartHeaderDefaults
     /// giving the relative anchor its clef step promptly dragged <c>octave absolute</c>
     /// parts down with it.
     /// </remarks>
-    public int AbsoluteBaseOctave { get; private init; } = 4;
+    public int AbsoluteBaseOctave { get; private init; } = Svg.Model.InstrumentDefaults.DefaultAnchorOctave;
 
     /// <summary>
     /// The octave the CLEF itself carries, in semitones (<c>treble_8</c> → −12).

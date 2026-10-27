@@ -71,7 +71,7 @@ public sealed class HalfTieEveryStaffTests
         octave absolute
         part up { clef treble }
         section A {
-          up { voice { a2@laissezVibrer a2 } { e'2@laissezVibrer g'2@repeatTie } | c''1 | }
+          up { voice { a'2@laissezVibrer a'2 } { e''2@laissezVibrer g''2@repeatTie } | c'''1 | }
         }
         form { A }
         score { staff up }
@@ -115,7 +115,7 @@ public sealed class HalfTieEveryStaffTests
         octave absolute
         part up { clef treble }
         section A {
-          up { voice { a2@laissezVibrer@stemDown a2 } { e'2@laissezVibrer@stemUp g'2@repeatTie@stemUp } | c''1 | }
+          up { voice { a'2@laissezVibrer@stemDown a'2 } { e''2@laissezVibrer@stemUp g''2@repeatTie@stemUp } | c'''1 | }
         }
         form { A }
         score { staff up }
@@ -130,8 +130,8 @@ public sealed class HalfTieEveryStaffTests
         part vone { clef treble }
         part vtwo { clef treble }
         section A {
-          vone { a4 a4 a2@laissezVibrer | a1 | }
-          vtwo { c''2@laissezVibrer c''2@repeatTie | c''1 | }
+          vone { a'4 a'4 a'2@laissezVibrer | a'1 | }
+          vtwo { c'''2@laissezVibrer c'''2@repeatTie | c'''1 | }
         }
         form { A }
         score { combinedStaff { vone vtwo } }
@@ -270,7 +270,7 @@ public sealed class HalfTieEveryStaffTests
         var doc = new MusicXmlExporter().Export(SyntaxTree.Parse("""
             octave absolute
             part up { clef treble }
-            section A { up { <c' e' g'>2@laissezVibrer <d'@repeatTie f'>2 | } }
+            section A { up { <c'' e'' g''>2@laissezVibrer <d''@repeatTie f''>2 | } }
             form { A }
             score { staff up }
             """));

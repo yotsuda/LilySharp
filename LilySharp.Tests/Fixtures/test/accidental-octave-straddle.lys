@@ -21,7 +21,7 @@ title "Accidental octave straddle"
 octave absolute
 part m { clef treble }
 section Main {
-  m { <eis eis' cis cis'>1 | }
+  m { <eis' eis'' cis' cis''>1 | }
 }
 form { Main }
 score { staff m }

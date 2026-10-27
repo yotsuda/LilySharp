@@ -138,7 +138,7 @@ public class ParserTests
         // DiagnosticCodes records both). The letters read as any word does:
         // here a bare per-score display name (`staff m with` = a staff labelled
         // "with") and an English lyric syllable. Nothing fires.
-        var src = "part m { section A { c1 } }\n"
+        var src = "part m { section A { c'1 } }\n"
             + "lyrics w sings m { section A { with | } }\n"
             + "form f { A }\nscore f { form f\n  staff m with\n  lyrics w\n}";
         var tree = SyntaxTree.Parse(src);
@@ -150,7 +150,7 @@ public class ParserTests
     {
         // The named form is the supported spelling; it must not trip the missing-name
         // diagnostic.
-        var src = "part m { section A { c1 } }\nlyrics verse { section A { la } }\n"
+        var src = "part m { section A { c'1 } }\nlyrics verse { section A { la } }\n"
             + "form f { A }\nscore f { form f\n  staff m  lyrics verse\n}";
         var tree = SyntaxTree.Parse(src);
         Assert.DoesNotContain(tree.Diagnostics, d => d.Severity == DiagnosticSeverity.Error);
@@ -194,7 +194,7 @@ public class ParserTests
     {
         // The `name "…"` part property was retired in favor of `part X "…"`.
         var diags = SemanticValidation.Run(
-            SyntaxTree.Parse("part melody { name \"X\" section A { c1 } }"));
+            SyntaxTree.Parse("part melody { name \"X\" section A { c'1 } }"));
         Assert.Contains(diags, d => d.Message.Contains("Unknown part property 'name'"));
     }
 
@@ -299,7 +299,7 @@ public class ParserTests
         // A VALID lyrics block whose final measure omits the trailing '|' before
         // '}' must round-trip exactly: the synthetic barline is zero-width, so it
         // emits no '|' and shifts no following node's position.
-        var source = "section M { m { c4 | } lyrics { hello world } }";
+        var source = "section M { m { c'4 | } lyrics { hello world } }";
         var tree = SyntaxTree.Parse(source);
         Assert.Equal(source, tree.ToFullString());
     }
@@ -444,7 +444,7 @@ key g major
         // `Major` is a wrong-case (unknown) mode. It must give a clean "unknown mode"
         // error and be consumed — NOT leak into the music as a bare-reference error.
         var tree = SyntaxTree.Parse("key c Major\npart vln { clef treble }\n" +
-            "section A { vln { c4 d e f } }\nform { A }\nscore s { staff vln }");
+            "section A { vln { c'4 d e f } }\nform { A }\nscore s { staff vln }");
         Assert.Contains(tree.Diagnostics, d => d.Code == DiagnosticCodes.UnknownSymbolCase);
         Assert.DoesNotContain(tree.Diagnostics, d => d.Code == DiagnosticCodes.BareReferenceRequiresDollar);
     }
@@ -950,7 +950,7 @@ theme");
         // Inside a PART BLOCK, where a bare identifier is a phrase reference (directly in a
         // section it would be a part-block name, which is a different question).
         var tree = SyntaxTree.Parse(
-            "phrase tail { g2 }\npart m { }\nsection A { m { voice { c2 } { e2 } tail } }");
+            "phrase tail { g2 }\npart m { }\nsection A { m { voice { c'2 } { e'2 } tail } }");
         Assert.False(tree.HasErrors, string.Join("; ", tree.Diagnostics.Select(d => d.Message)));
         var parallel = tree.GetRoot().DescendantNodes()
             .OfType<ParallelExpressionSyntax>().Single();
@@ -1073,7 +1073,7 @@ theme");
     {
         var tree = SyntaxTree.Parse(@"section Main {
     melody {
-        voice { c2 d } { e2 f }
+        voice { c'2 d } { e'2 f }
     }
 }");
         Assert.False(tree.HasErrors);
@@ -1398,7 +1398,7 @@ theme");
     {
         var source = @"
 section A {
-    melody { c4 d e | }
+    melody { c'4 d e | }
 }
 form {
     |: A :|
@@ -1423,8 +1423,8 @@ form {
     public void ParseVoltaWithRange()
     {
         var source = @"
-section A { melody { c4 | } }
-section B { melody { d4 | } }
+section A { melody { c'4 | } }
+section B { melody { d'4 | } }
 form {
     |: A [1-3. B] :|*4
 }
@@ -1438,8 +1438,8 @@ form {
     public void ParseVoltaWithList()
     {
         var source = @"
-section A { melody { c4 | } }
-section B { melody { d4 | } }
+section A { melody { c'4 | } }
+section B { melody { d'4 | } }
 form {
     |: A [1,3. B] :|*4
 }
@@ -1486,7 +1486,7 @@ form {
         var source = @"
 section A {
     melody {
-        c4:8 d4:16 e4:32 |
+        c'4:8 d4:16 e4:32 |
     }
 }
 form { A }
@@ -1512,7 +1512,7 @@ form { A }
         var source = @"
 section A {
     melody {
-        c4:64 d4:128 |
+        c'4:64 d4:128 |
     }
 }
 form { A }
@@ -1533,7 +1533,7 @@ form { A }
         var source = @"
 section A {
     melody {
-        <c e g>4:16 |
+        <c' e g>4:16 |
     }
 }
 form { A }
@@ -1552,7 +1552,7 @@ form { A }
     {
         var source = @"
 section Verse {
-    melody { c4 d4 e4 f4 | g2 g2 | }
+    melody { c'4 d4 e4 f4 | g2 g2 | }
     lyrics w { き ら き ら | ひ か | }
 }
 form { Verse }
@@ -1567,7 +1567,7 @@ form { Verse }
     {
         var source = @"
 section Verse {
-    melody { c4 d4 e4 f4 | g2 g2 | }
+    melody { c'4 d4 e4 f4 | g2 g2 | }
     lyrics w { twi- nkle twi- nkle | li- tle | }
 }
 form { Verse }
@@ -1581,7 +1581,7 @@ form { Verse }
     {
         var source = @"
 section Verse {
-    melody { c4 d4 e4 f4 | g2 g2 | }
+    melody { c'4 d4 e4 f4 | g2 g2 | }
     lyrics w { Glo~ ~ ri- a | in ex- | }
 }
 form { Verse }
@@ -1595,7 +1595,7 @@ form { Verse }
     {
         var source = @"
 section Verse {
-    melody { c4 d4 e4 f4 | g2 g2 | }
+    melody { c'4 d4 e4 f4 | g2 g2 | }
     lyrics w { き ら き ら | ひ か | }
     lyrics w2 { ま ば た き | し て | }
 }
@@ -1623,7 +1623,7 @@ form { Verse }
     {
         var source = @"time 4/4
 part melody
-phrase intro { c4 d e f | }
+phrase intro { c'4 d e f | }
 section Main {
   melody { intro }
 }
@@ -1641,7 +1641,7 @@ form { Main }
         // `intro` phrase — no `$` sigil, no error.
         var source = @"time 4/4
 part melody
-phrase intro { c4 d e f | }
+phrase intro { c'4 d e f | }
 section Main {
   melody { intro }
 }
@@ -1704,7 +1704,7 @@ form { Main }
     {
         var tree = SyntaxTree.Parse(
             "part upper { clef treble }\npart lower { clef bass }\n" +
-            "section Main { upper { c'1 } lower { c1 } }\nform { Main }\n" +
+            "section Main { upper { c''1 } lower { c'1 } }\nform { Main }\n" +
             "score x { grandStaff { staff upper staff lower } }");
         Assert.DoesNotContain(tree.Diagnostics, d => d.Code == DiagnosticCodes.ClefNameAsStaff);
     }
@@ -1713,7 +1713,7 @@ form { Main }
     public void ClefNameAsStaff_ClefDeclaration_DoesNotWarn()
     {
         // `clef treble` (with the clef keyword) is the real clef form — never flagged.
-        var tree = SyntaxTree.Parse("part p { clef treble }\nsection M { p { c1 } }\nform { M }");
+        var tree = SyntaxTree.Parse("part p { clef treble }\nsection M { p { c'1 } }\nform { M }");
         Assert.DoesNotContain(tree.Diagnostics, d => d.Code == DiagnosticCodes.ClefNameAsStaff);
     }
 

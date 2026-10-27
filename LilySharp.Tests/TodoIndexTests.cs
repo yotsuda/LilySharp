@@ -46,8 +46,8 @@ public class TodoIndexTests
         part x { }
         section A {
           partial 4
-          rh { g'4 | c''1@todo(r1 "high C?") | d''1 | e''1 | }
-          lh { r4 | c1 | d1 | e1@todo(l3) | }
+          rh { g''4 | c'''1@todo(r1 "high C?") | d'''1 | e'''1 | }
+          lh { r4 | c'1 | d'1 | e'1@todo(l3) | }
           x { c'4@todo | c'1 | c'1 | c'1 | }
         }
         form { A }

@@ -8,10 +8,10 @@ part v { }
 
 section Main {
   v {
-    tuplet 3/2 { r4 c,,4 c'4 } | tuplet 3/2 { r4 c'4 c'4 } |
-    tuplet 3/2 { r4 c'4 r4 } | tuplet 3/2 { r4 r4 r4 } |
-    tuplet 3/2 { r4 c'4 e'4 } | tuplet 3/2 { c'4 r4 e'4 } |
-    tuplet 3/2 { r4 c'4 g4 } | tuplet 3/2 { c'4 r4 g4 } |
+    tuplet 3/2 { r4 c,4 c''4 } | tuplet 3/2 { r4 c''4 c''4 } |
+    tuplet 3/2 { r4 c''4 r4 } | tuplet 3/2 { r4 r4 r4 } |
+    tuplet 3/2 { r4 c''4 e''4 } | tuplet 3/2 { c''4 r4 e''4 } |
+    tuplet 3/2 { r4 c''4 g'4 } | tuplet 3/2 { c''4 r4 g'4 } |
   }
 }
 

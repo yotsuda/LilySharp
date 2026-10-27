@@ -46,7 +46,7 @@ public class LineEdgePricingTests
         octave absolute
         part m { clef bass }
         section S {
-          m { c4 d e f | c4 d e f | time 2/4 c4 d | time 4/4 c4 d e f | c4 d e f | }
+          m { c'4 d' e' f' | c'4 d' e' f' | time 2/4 c'4 d' | time 4/4 c'4 d' e' f' | c'4 d' e' f' | }
         }
         form { S }
         score x { staff m }

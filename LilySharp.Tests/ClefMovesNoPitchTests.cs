@@ -118,15 +118,15 @@ public class ClefMovesNoPitchTests
     {
         const string withClef = """
             part m { }
-            section A { m { e4 f g a | clef bass b c d e | } }
-            section B { m { c4 d e f | } }
+            section A { m { e'4 f g a | clef bass b c d e | } }
+            section B { m { c'4 d e f | } }
             form { ~A ~B }
             score { staff m }
             """;
         const string noClef = """
             part m { }
-            section A { m { e4 f g a | b c d e | } }
-            section B { m { c4 d e f | } }
+            section A { m { e'4 f g a | b c d e | } }
+            section B { m { c'4 d e f | } }
             form { ~A ~B }
             score { staff m }
             """;

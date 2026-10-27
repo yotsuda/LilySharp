@@ -10,9 +10,9 @@ part vtwo { }
 
 section Main {
   vone {
-    f4@stemUp f@stemUp f@stemUp f@stemUp |
+    f'4@stemUp f'@stemUp f'@stemUp f'@stemUp |
     key b major
-    e'8@stemUp e'@stemUp e'4@stemUp e'2@stemUp |
+    e''8@stemUp e''@stemUp e''4@stemUp e''2@stemUp |
   }
   vtwo { R1 || R1 | }
 }

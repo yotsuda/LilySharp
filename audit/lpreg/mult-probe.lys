@@ -8,9 +8,9 @@ part v { clef treble }
 section Main {
   v {
     voice {
-      c1 | d1 | e1 | f1 |
+      c'1 | d'1 | e'1 | f'1 |
     } {
-      s1*3 | c1 |
+      s1*3 | c'1 |
     }
   }
 }

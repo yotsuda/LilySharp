@@ -46,7 +46,7 @@ public class PartialPickupValidationTests
         // `section A { partial 2 }` declares the section pickup; the by-part cell's
         // half-note first bar IS that pickup — so no short-bar / incomplete warning.
         // (Regression: the header's `partial` was misread as inline music and dropped.)
-        var d = Diags("section A { partial 2 }\npart melody { section A { c2 | a1 } }" + Tail);
+        var d = Diags("section A { partial 2 }\npart melody { section A { c'2 | a1 } }" + Tail);
         Assert.DoesNotContain(d, x => x.Code == DiagnosticCodes.PickupWithoutPartial);
         Assert.DoesNotContain(d, x => x.Code == DiagnosticCodes.MeasureIncomplete);
     }
@@ -60,8 +60,8 @@ public class PartialPickupValidationTests
     /// LilySharp-Lab corpora/ベースタブLy/partial.lys.)
     /// </summary>
     [Theory]
-    [InlineData("section A { partial 2 }\npart melody { section A { c'4 d e f | g2 g | } }")]
-    [InlineData("part melody { clef treble }\nsection A { partial 2  melody { c'4 d e f | g2 g | } }")]
+    [InlineData("section A { partial 2 }\npart melody { section A { c''4 d e f | g2 g | } }")]
+    [InlineData("part melody { clef treble }\nsection A { partial 2  melody { c''4 d e f | g2 g | } }")]
     public void SectionHeaderPartial_AFullFirstBar_IsAnOverfullPickup(string body)
     {
         var d = Diags(body + Tail);
@@ -72,7 +72,7 @@ public class PartialPickupValidationTests
     [Fact]
     public void SectionHeaderPartial_AShortFirstBar_IsAnUnderfullPickup()
     {
-        var d = Diags("section A { partial 2 }\npart melody { section A { c4 | a1 | } }" + Tail);
+        var d = Diags("section A { partial 2 }\npart melody { section A { c'4 | a1 | } }" + Tail);
         Assert.Contains(d, x => x.Code == DiagnosticCodes.MeasureIncomplete
                                 && x.Message.Contains("less than the declared partial 1/2"));
     }
@@ -83,7 +83,7 @@ public class PartialPickupValidationTests
         // voice 2 of a span opened in the pickup bar is the same rendered bar, so the same
         // pickup (fixtures test/chord-flag.lys and the corpus's blogger2.lys): a first cut of
         // the section-scoped pickup reached only voice 1 and called voice 2's eighth short.
-        var d = Diags("section A { partial 8 }\npart melody { section A { voice { f'8 } { <bes' ges c>8 } } }" + Tail);
+        var d = Diags("section A { partial 8 }\npart melody { section A { voice { f''8 } { <bes' ges c>8 } } }" + Tail);
         Assert.DoesNotContain(d, x => x.Code == DiagnosticCodes.MeasureIncomplete);
     }
 
@@ -92,7 +92,7 @@ public class PartialPickupValidationTests
     {
         // B's short first bar is B's own affair (a bare-pickup nudge at most), never a
         // mismatch against A's pickup.
-        var d = Diags("section A { partial 2 }\npart melody { section A { c2 | a1 | } section B { c4 d e | f1 | } }"
+        var d = Diags("section A { partial 2 }\npart melody { section A { c'2 | a1 | } section B { c'4 d e | f1 | } }"
                       + "\nform { A B }\nscore { staff melody }");
         Assert.DoesNotContain(d, x => x.Message.Contains("declared partial"));
     }
@@ -103,7 +103,7 @@ public class PartialPickupValidationTests
         // A short first bar with no declared pickup nudges toward the section header —
         // NOT "top level", "in the voice" or a part's music, which may not hold an opening
         // pickup (LYS1024; the part's first bar since 2026-09-15).
-        var msg = Diags("part melody\nsection A { melody { c2 | a1 } }" + Tail)
+        var msg = Diags("part melody\nsection A { melody { c'2 | a1 } }" + Tail)
             .Single(x => x.Code == DiagnosticCodes.PickupWithoutPartial).Message;
         Assert.Contains("section header", msg);
         Assert.DoesNotContain("top level", msg);

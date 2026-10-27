@@ -48,10 +48,10 @@ public class BareDurationsGreenWalkTests
         part other { clef treble }
         phrase lick { d'8 8 e' 8 | 8 8 }
         section A {
-          bass { c'4 4 8 | 4 r4 4 | <c' e g>4 4 q 4 q' 4 q' q 4 | a'4@rest 4 | <c' e>4 <>4 4 | }
-          other { e'4 4 | <d f a>8 q q' 8 | 4 8 | }
+          bass { c''4 4 8 | 4 r4 4 | <c' e g>4 4 q 4 q' 4 q' q 4 | a'4@rest 4 | <c' e>4 <>4 4 | }
+          other { e''4 4 | <d f a>8 q q' 8 | 4 8 | }
         }
-        section B { bass { f'4 4 | 8 | } other { g'4 4 | } }
+        section B { bass { f''4 4 | 8 | } other { g'4 4 | } }
         section C { bass { 4 g'4 | } other { <a c'>4 q 4 | } }
         score { staff bass staff other }
         """;

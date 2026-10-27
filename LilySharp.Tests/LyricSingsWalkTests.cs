@@ -48,9 +48,9 @@ public sealed class LyricSingsWalkTests
         part alt { clef treble }
         part low { clef bass }
         section A {
-          melody { voice hi { c'4 d' e' f' | } lo { c4 d e f | } }
+          melody { voice hi { c''4 d' e' f' | } lo { c'4 d e f | } }
           alt { g4 a b c' | }
-          low { c,4 d, e, f, | }
+          low { c4 d, e, f, | }
         }
         lyrics verse sings melody { section A { la la la la | } }
         lyrics inner sings hi { section A { ka ka ka ka | } }

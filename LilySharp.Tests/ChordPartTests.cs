@@ -43,7 +43,7 @@ public class ChordPartTests
         var source = @"
 time 4/4
 section Main {
-  melody { c'4 d e f | g a b c'' | }
+  melody { c''4 d e f | g a b c'' | }
   chords riff { C | G7 C | }
 }
 form { Main }
@@ -126,7 +126,7 @@ score x { chords riff }
         var source = @"
 time 4/4
 section Main {
-  melody { c'4 d e f | }
+  melody { c''4 d e f | }
   chords riff { Gm7 C Am Dm | }
 }
 form { Main }

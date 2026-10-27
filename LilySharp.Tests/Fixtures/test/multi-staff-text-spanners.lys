@@ -8,8 +8,8 @@ title "Multi-staff text spanners"
 part top { clef treble }
 part low { clef bass }
 section S {
-  top { c'4@rit c'4 c'4 c'4 | c'4@!rit c'4@accel c'4 c'4@!accel | }
-  low { c4@rit c4 c4 c4 | c4@!rit c4@accel c4 c4@!accel | }
+  top { c''4@rit c''4 c''4 c''4 | c''4@!rit c''4@accel c''4 c''4@!accel | }
+  low { c'4@rit c'4 c'4 c'4 | c'4@!rit c'4@accel c'4 c'4@!accel | }
 }
 form { S }
 score { staff top staff low }

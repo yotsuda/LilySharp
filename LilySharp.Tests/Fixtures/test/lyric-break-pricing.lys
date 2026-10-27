@@ -9,7 +9,7 @@ time 4/4
 part melody
 section Main {
   melody {
-    c1 | c1 | c1 | c1 | c1 | c1 | c1 | c1 |
+    c'1 | c1 | c1 | c1 | c1 | c1 | c1 | c1 |
   }
   lyrics words sings melody {
     supercalifragi |

@@ -10,8 +10,8 @@ part vone { clef treble }
 part vtwo { clef treble }
 
 section A {
-  vone { c4( d~ d f) | }
-  vtwo { c4( d~ d f) | }
+  vone { c'4( d'~ d' f') | }
+  vtwo { c'4( d'~ d' f') | }
 }
 
 form { ~A }

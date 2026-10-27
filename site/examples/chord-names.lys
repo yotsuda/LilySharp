@@ -3,7 +3,7 @@
 time 4/4
 part melody { clef treble }
 section A {
-  melody { e'4 d c d | e e e2 | d4 d e d | c1@chord(C) | }
+  melody { e''4 d c d | e e e2 | d4 d e d | c1@chord(C) | }
   chords prog { C | Am | Dm7 G7 | | }
 }
 form { ~A }

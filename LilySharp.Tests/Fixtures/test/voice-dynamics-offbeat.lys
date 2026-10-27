@@ -16,7 +16,7 @@ key c major
 part rh { clef treble }
 
 section Main {
-  rh { voice { c''8 d'' e'' f'' g'' a'' b'' c''' | } { c2 e2@f@staccato | } }
+  rh { voice { c'''8 d''' e''' f''' g''' a''' b''' c'''' | } { c'2 e'2@f@staccato | } }
 }
 
 form { Main }

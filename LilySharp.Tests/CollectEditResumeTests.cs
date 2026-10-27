@@ -338,7 +338,7 @@ public class CollectEditResumeTests
 
 part vb {
   clef bass
-  section S { c4 b a g | }
+  section S { c'4 b a g | }
   section T { g4 a b c | c4 b a g | }
 }
 part va {
@@ -397,12 +397,12 @@ form { S T }
 
 part bl {
   clef bass
-  section A { c4 d e f | g4 a b c | }
-  section B { c4 d e f | g4 a b c | }
+  section A { c'4 d e f | g4 a b c | }
+  section B { c'4 d e f | g4 a b c | }
 }
 form { A B }
 ";
-        var newText = oldText.Replace("section B { c4 d e f | g4 a b c | }", "section B { c4 d e f | g8 g a4 b c | }");
+        var newText = oldText.Replace("section B { c'4 d e f | g4 a b c | }", "section B { c'4 d e f | g8 g a4 b c | }");
         Assert.NotEqual(oldText, newText);
         var (resumer, _) = ResumeAndCompare(oldText, newText);
         Assert.Contains(resumer.ResumePlans.Values, p => p.Consumed && p.Checkpoint is { MeasureCount: >= 2 });
@@ -421,9 +421,9 @@ form { A B }
 
 part bl {
   clef bass
-  section A { c4 d e f | }
+  section A { c'4 d e f | }
   section B { g4 a b c | }
-  section C { e4 f g a | a4 g f e | }
+  section C { e'4 f g a | a4 g f e | }
 }
 form { A |: B :| C }
 ";
@@ -450,7 +450,7 @@ score x { staff bl }
 
 part bl {
   clef bass
-  section A { c4 d e f | g4 a b c | d4 e f g | a4 b c d | }
+  section A { c'4 d' e' f' | g'4 a' b' c' | d'4 e' f' g' | a'4 b' c' d' | }
 }
 form { A }
 ";
@@ -529,7 +529,7 @@ score x { staff bl }
 
 part bl {
   clef bass
-  section A { voice { e2 f | g2 a | } { 2 e | f2 g | } c4 d e f | g4 a b c | }
+  section A { voice { e'2 f' | g'2 a' | } { 2 e' | f'2 g' | } c'4 d' e' f' | g'4 a' b' c' | }
 }
 form { A }
 ";
@@ -558,9 +558,9 @@ form { A }
 
 part bl {
   clef bass
-  section A { c4 d e f | }
+  section A { c'4 d e f | }
   section B { g4 a b c | }
-  section C { e4 f g a | a4 g f e | }
+  section C { e'4 f g a | a4 g f e | }
 }
 form { A |: B :| C }
 ";
@@ -617,7 +617,7 @@ score canon { staff va staff vb }
 
 section S {
   va { r4 r r r | r4 r r r | r4 r r r | }
-  vb { c4 b a g | }
+  vb { c'4 b a g | }
 }
 ";
         const string removed = "r4 r r r | ";
@@ -1082,7 +1082,7 @@ section S {
         const string source = """
             part melody {
               section A { g'2 g | | | | d1 | c |  }
-              section B { c2 c | }
+              section B { c'2 c | }
             }
             chords prog {
               section A { Dm7 | G7 | | |   }
@@ -1150,8 +1150,8 @@ section S {
             part sop { clef treble }
             part alt { clef treble }
             section M {
-              sop { c'1 }
-              alt { c'1 }
+              sop { c''1 }
+              alt { c''1 }
             }
             form { M }
             score { staff sop  staff alt }
@@ -1171,9 +1171,9 @@ section S {
         const string source = """
             octave absolute
             part melody { clef treble }
-            phrase intro { c'4 d' e' f' | g'4 a' b' c'' | }
-            phrase theme { e'4 d' c' d' | e'2 e' | }
-            phrase finale { c'4 c' c' c' | c'1 | }
+            phrase intro { c''4 d'' e'' f'' | g''4 a'' b'' c''' | }
+            phrase theme { e''4 d'' c'' d'' | e''2 e'' | }
+            phrase finale { c''4 c'' c'' c'' | c''1 | }
             section Main {
               melody { intro theme finale }
             }
@@ -1240,8 +1240,8 @@ section S {
         octave absolute
         part melody {
           clef treble
-          section A { c'4 d' e' f' | g'1 | }
-          section B { e'4 d' c' d' | e'1 | }
+          section A { c''4 d'' e'' f'' | g''1 | }
+          section B { e''4 d'' c'' d'' | e''1 | }
         }
         section A { key g major }
         section B { key d major }
@@ -1254,13 +1254,13 @@ section S {
         octave absolute
         part melody {
           clef treble
-          section A { c'4 d' e' f' | g'1 | }
-          section B { e'4 d' c' d' | e'1 | }
+          section A { c''4 d'' e'' f'' | g''1 | }
+          section B { e''4 d'' c'' d'' | e''1 | }
         }
         part bass {
           clef bass
-          section A { key g major c4 d e f | g1 | }
-          section B { e4 d c d | e1 | }
+          section A { key g major c'4 d' e' f' | g'1 | }
+          section B { e'4 d' c' d' | e'1 | }
         }
         form { A B A B }
         score { staff melody  staff bass }
@@ -1334,13 +1334,13 @@ section S {
         const string source = """
             octave absolute
             part m { clef treble }
-            phrase pa { c'4 d' e' f' | }
-            phrase pb { g'4 a' b' c'' | }
+            phrase pa { c''4 d'' e'' f'' | }
+            phrase pb { g''4 a'' b'' c''' | }
             section A {
               m { pa pb pa pb }
             }
             section B {
-              m { e'4 e' e' e' | e'4 e' e' e' | e'4 e' e' e' | }
+              m { e''4 e'' e'' e'' | e''4 e'' e'' e'' | e''4 e'' e'' e'' | }
             }
             form { B A }
             score { staff m }
@@ -1561,9 +1561,9 @@ section S {
 time 4/4
 part m { clef treble }
 part n { clef bass }
-section A { m { c4 d e f | g4 a b c' | d'4 e' f' g' | }  n { c4 d e f | g4 a b c' | d'4 e' f' g' | } }
-section B { m { e4 f g a | b4 c' d' e' | }  n { e4 f g a | b4 c' d' e' | } }
-section C { m { c'4 b a g | }  n { c'4 b a g | } }
+section A { m { c'4 d' e' f' | g'4 a' b' c'' | d''4 e'' f'' g'' | }  n { c'4 d' e' f' | g'4 a' b' c'' | d''4 e'' f'' g'' | } }
+section B { m { e'4 f' g' a' | b'4 c'' d'' e'' | }  n { e'4 f' g' a' | b'4 c'' d'' e'' | } }
+section C { m { c''4 b' a' g' | }  n { c''4 b' a' g' | } }
 form { A ~B ~C }
 score { staff m staff n }
 ";
@@ -1590,7 +1590,7 @@ score { staff m staff n }
         const string oldText = @"octave absolute
 time 4/4
 part m { clef treble }
-section A { m { c1 | |: d1 :| e1 | } }
+section A { m { c'1 | |: d'1 :| e'1 | } }
 form { A }
 score { staff m }
 ";
@@ -1617,7 +1617,7 @@ score { staff m }
         // boundary measure legitimately owns.
         const string oldText = @"octave absolute
 part m { clef treble }
-section A { m { time 4/4 c4 time none d4 e4 | f4 g4 | a4 b4 | time 4/4 c'1 | } }
+section A { m { time 4/4 c'4 time none d'4 e'4 | f'4 g'4 | a'4 b'4 | time 4/4 c''1 | } }
 form { A }
 score { staff m }
 ";

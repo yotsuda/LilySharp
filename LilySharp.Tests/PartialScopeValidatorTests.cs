@@ -87,7 +87,7 @@ public class PartialScopeValidatorTests
     {
         // The census shape of the tab corpus: `| partial 2. r2. |` closes a three-beat bar
         // mid-piece, and the meter resumes after it. No diagnostic, and the page has the bar.
-        const string src = "time 4/4\nsection A { melody { c'4 d' e' f' | partial 2. r2. | g'4 a' b' c'' | } }\n"
+        const string src = "time 4/4\nsection A { melody { c''4 d' e' f' | partial 2. r2. | g'4 a b' c'' | } }\n"
             + "form { A }\nscore { staff melody }";
         Assert.Empty(SemanticValidation.Run(SyntaxTree.Parse(src)).Where(d => d.Severity == DiagnosticSeverity.Error));
         Assert.DoesNotContain(SemanticValidation.Run(SyntaxTree.Parse(src)),
@@ -113,7 +113,7 @@ public class PartialScopeValidatorTests
     [Fact]
     public void TopLevelPartial_InStructuredFile_Errors()
         => Assert.Equal(1, ErrCount(
-            "partial 4\nsection A { melody { c4 d e f | } }\nform { A }\nscore { staff melody }"));
+            "partial 4\nsection A { melody { c'4 d e f | } }\nform { A }\nscore { staff melody }"));
 
     // --- Exempt: bare music has no sections ---
 

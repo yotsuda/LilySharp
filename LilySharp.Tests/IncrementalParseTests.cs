@@ -33,9 +33,9 @@ public class IncrementalParseTests
         title "Incremental"
         time 4/4
 
-        phrase intro { c4 d e f | g2 g | }
+        phrase intro { c'4 d e f | g2 g | }
 
-        phrase theme { e4 d c d | e1 | }
+        phrase theme { e'4 d c d | e1 | }
 
         section Main { melody { intro theme } }
 

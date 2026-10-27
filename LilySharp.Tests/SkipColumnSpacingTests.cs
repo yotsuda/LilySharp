@@ -45,7 +45,7 @@ public class SkipColumnSpacingTests
         part bassline {
           clef bass
           section A {
-            c4 d e f | c4 s2. | c4 d e f | c8 s8 c8 s8 c4 s4 | c4 d e f |
+            c'4 d' e' f' | c'4 s2. | c'4 d' e' f' | c'8 s8 c'8 s8 c'4 s4 | c'4 d' e' f' |
           }
         }
         form { A }
@@ -59,8 +59,8 @@ public class SkipColumnSpacingTests
         part bassline {
           clef bass
           section A {
-            voice { c4 d e f | c2 s2 | c4 d e f | }
-            { s4 s s s | s4 e4 s2 | s4 s s s | }
+            voice { c'4 d' e' f' | c'2 s2 | c'4 d' e' f' | }
+            { s4 s s s | s4 e'4 s2 | s4 s s s | }
           }
         }
         form { A }
@@ -74,7 +74,7 @@ public class SkipColumnSpacingTests
         part bassline {
           clef bass
           section A {
-            c4 d e f | s4 c4 d e | c4 d e f | s2 c4 d | c4 d e f |
+            c'4 d' e' f' | s4 c'4 d' e' | c'4 d' e' f' | s2 c'4 d' | c'4 d' e' f' |
           }
         }
         form { A }
@@ -116,9 +116,9 @@ public class SkipColumnSpacingTests
         time 4/4
         key c major
         part melody { clef treble }
-        section A { melody { c'4 d e f | } }
-        section B { time none  melody { c1 | d1 | e4 f | } }
-        section C { melody { c1 | d1 | c4 d e f | } }
+        section A { melody { c''4 d e f | } }
+        section B { time none  melody { c'1 | d1 | e4 f | } }
+        section C { melody { c'1 | d1 | c4 d e f | } }
         form { A B C }
         score { staff melody }
         """;

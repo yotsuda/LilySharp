@@ -12,12 +12,12 @@ lyrics wb { section Main { bla -- bla -- | bla -- bla -- | bla -- bla -- | bla -
 
 section Main {
   one {
-    appoggiatura { f8 } g2 g2( | break
-    appoggiatura { f8 } g2) appoggiatura { f8 } g2 | break
-    appoggiatura { f8 } g2 g2 | break
-    g2 g2 |
+    appoggiatura { f'8 } g'2 g'2( | break
+    appoggiatura { f'8 } g'2) appoggiatura { f'8 } g'2 | break
+    appoggiatura { f'8 } g'2 g'2 | break
+    g'2 g'2 |
   }
-  two { g2 g2 | g2 g2 | g2 g2 | g2 g2 | }
+  two { g'2 g'2 | g'2 g'2 | g'2 g'2 | g'2 g'2 | }
 }
 
 form { ~Main }

@@ -46,7 +46,7 @@ public class AccidentalSpacingPaddingTests
             key des major
             time 4/4
             part bassline { clef bass }
-            section S { bassline { ges,8 ges,,16 ges,,16 r des,16 des, fis, f,8 c,( a,4\2) | } }
+            section S { bassline { ges8 ges,16 ges,16 r des16 des fis f8 c( a4\2) | } }
             form { S }
             score { staff bassline }
             """);

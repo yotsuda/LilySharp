@@ -242,7 +242,7 @@ public class RomanChordCompletionTests
         var tree = SyntaxTree.Parse("""
             time 4/4
             key c major
-            part m { clef treble section A { c4@chord(V7) d e f | } }
+            part m { clef treble section A { c'4@chord(V7) d e f | } }
             form { A }
             score { staff m }
             """);

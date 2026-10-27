@@ -30,7 +30,7 @@ namespace LilySharp.Tests.Lsp;
 /// </summary>
 public class ScoreNameQuickFixTests
 {
-    private const string Head = "part melody { section A { c'4 d' e' f' } }\nform { A }\n";
+    private const string Head = "part melody { section A { c''4 d' e' f' } }\nform { A }\n";
 
     private static CodeAction? FixAt(string text, string caretAt)
     {

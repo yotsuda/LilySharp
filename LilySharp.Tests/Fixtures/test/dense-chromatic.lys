@@ -7,7 +7,7 @@ key c major
 part m { clef treble }
 section Main {
   m {
-    cis16 d dis e f fis g gis a ais b c |
+    cis'16 d dis e f fis g gis a ais b c |
     <cis e gis>8 <d f aes> <ees ges bes> <e g b> r2 |
   }
 }

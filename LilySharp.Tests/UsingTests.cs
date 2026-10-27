@@ -140,7 +140,7 @@ public sealed class UsingTests
     /// </summary>
     [Theory]
     [InlineData("time 4/4\n\npart m { clef treble }\n\nsection A {\n  using \"n.lys\"\n  m { c4 d e f | }\n}\n")]
-    [InlineData("time 4/4\n\nusing \"n.lys\"\n\npart m { clef treble }\n\nsection A {\n  m { c4 d e f | }\n}\n")]
+    [InlineData("time 4/4\n\nusing \"n.lys\"\n\npart m { clef treble }\n\nsection A {\n  m { c'4 d e f | }\n}\n")]
     public void AMisplacedUsing_DoesNotSlideTheNodesAfterIt(string source)
     {
         var root = SyntaxTree.Parse(source).GetRoot();
@@ -308,7 +308,7 @@ public sealed class UsingTests
         // Two files both supply (section A x part p) — a duplicated cell across files.
         var expanded = Expand("using \"a.lys\"\nusing \"b.lys\"\nform { A }\n", new()
         {
-            ["a.lys"] = "part vln { clef treble section A { c4 d e f | } }",
+            ["a.lys"] = "part vln { clef treble section A { c'4 d e f | } }",
             ["b.lys"] = "part vln { clef treble section A { g4 a b c | } }",
         });
 
@@ -322,8 +322,8 @@ public sealed class UsingTests
     {
         var expanded = Expand("using \"rh.lys\"\nusing \"lh.lys\"\nform { A }\n", new()
         {
-            ["rh.lys"] = "part rh { clef treble section A { c'4 d' e' f' | } }",
-            ["lh.lys"] = "part lh { clef bass    section A { c4 g, c, g, | } }",
+            ["rh.lys"] = "part rh { clef treble section A { c''4 d' e' f' | } }",
+            ["lh.lys"] = "part lh { clef bass    section A { c'4 g, c, g, | } }",
         });
 
         var tree = SyntaxTree.Parse(expanded);

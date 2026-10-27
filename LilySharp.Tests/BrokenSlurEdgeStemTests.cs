@@ -43,7 +43,7 @@ public sealed class BrokenSlurEdgeStemTests
         var tree = SyntaxTree.Parse("""
             octave absolute
             part m {
-              section A { c2( e | break g2 c'') | }
+              section A { c'2( e' | break g'2 c''') | }
             }
             form { A }
             score { staff m }
@@ -80,7 +80,7 @@ public sealed class BrokenSlurEdgeStemTests
         var tree = SyntaxTree.Parse("""
             octave absolute
             part m {
-              section A { c2 e( | break c''2) r2 | }
+              section A { c'2 e'( | break c'''2) r2 | }
             }
             form { A }
             score { staff m }

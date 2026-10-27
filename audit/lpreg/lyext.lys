@@ -9,7 +9,7 @@ part v { }
 lyrics w { section Main { Ah __ | | | } }
 
 section Main {
-  v { g1( | c) | d | }
+  v { g'1( | c') | d' | }
 }
 
 form { ~Main }

@@ -9,7 +9,7 @@ part v { clef treble }
 
 section Main {
   v {
-    <c'@staccato>4
+    <c''@staccato>4
     <c@accent>4
     <c@staccato e@staccato g@staccato b@staccato>4
     <c@marcato.up>4 |

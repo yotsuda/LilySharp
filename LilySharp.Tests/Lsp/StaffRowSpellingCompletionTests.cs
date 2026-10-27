@@ -44,11 +44,11 @@ namespace LilySharp.Tests.Lsp;
 public class StaffRowSpellingCompletionTests
 {
     /// <summary>One part, named so that no clef or tuning word collides with it.</summary>
-    private const string OnePart = "part melody { section A { c'4 d' e' f' | } }\nform { A }\n";
+    private const string OnePart = "part melody { section A { c''4 d' e' f' | } }\nform { A }\n";
 
     /// <summary>…and a book whose SECOND part is named after a clef (and a tuning) word.</summary>
     private const string PartNamedBass =
-        "part melody { section A { c'4 d' e' f' | } }\npart bass { section A { c4 d e f | } }\nform { A }\n";
+        "part melody { section A { c''4 d' e' f' | } }\npart bass { section A { c'4 d e f | } }\nform { A }\n";
 
     private static string[] LabelsAt(string doc, string row)
     {
@@ -231,7 +231,7 @@ public class StaffRowSpellingCompletionTests
     {
         // Control on the other rows: `ConsumeAsSelector` takes exactly ONE word, so there is
         // no chain to offer — the score's continuations are the whole answer.
-        string doc = "part m { section A { c'4 } }\nchords prog { section A { C } }\nform { A }\n";
+        string doc = "part m { section A { c''4 } }\nchords prog { section A { C } }\nform { A }\n";
         var labels = LabelsAt(doc, row);
         Assert.Contains("staff", labels);
         Assert.DoesNotContain("numbers", labels);
@@ -245,7 +245,7 @@ public class StaffRowSpellingCompletionTests
         // The row reader has to END the staff row at a word the grammar cannot attach:
         // `staff m  n` is a staff row AND a MIDI-only part row, so the caret after `n` is
         // not inside the staff row and must not be offered its selectors.
-        var labels = LabelsAt(OnePart + "part n { section A { c4 } }\n", "score { staff m  n ▮ }");
+        var labels = LabelsAt(OnePart + "part n { section A { c'4 } }\n", "score { staff m  n ▮ }");
         Assert.DoesNotContain("as lines", labels);
         Assert.Contains("staff", labels);
     }

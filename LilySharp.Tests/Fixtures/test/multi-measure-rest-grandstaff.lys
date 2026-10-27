@@ -18,10 +18,10 @@ part lh { clef bass octave 3 }
 section Main {
   melody {
     R1*4 |
-    c4 d e f |
+    c'4 d e f |
   }
   lh {
-    g2 d | g4 a b c | g2~ g4 r | d2 g | c4 d e f |
+    g,2 d | g4 a b c | g2~ g4 r | d2 g | c4 d e f |
   }
 }
 

@@ -13,8 +13,8 @@ part v { clef treble }
 
 section Main {
   v {
-    <c' e'>4 <c' e'>4 <c' e'>4@glissando d'4 | break
-    <c' e'>4 <c' e'>4 <c' e'>4@glissando d'4 |
+    <c'' e''>4 <c'' e''>4 <c'' e''>4@glissando d''4 | break
+    <c'' e''>4 <c'' e''>4 <c'' e''>4@glissando d''4 |
   }
 }
 

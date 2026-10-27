@@ -134,8 +134,8 @@ public class SpanPairingValidatorTests
     public void AnUnterminatedMarkInARepeatedSection_IsReportedOnce()
     {
         var source = "octave absolute part m { clef treble } "
-                     + "section A { m { c'4@rit c' c' c' | } } "
-                     + "section B { m { d'4 d' d' d' | } } "
+                     + "section A { m { c''4@rit c' c' c' | } } "
+                     + "section B { m { d''4 d' d' d' | } } "
                      + "form { A B A } score { staff m }";
         var validator = new SpanPairingValidator();
         validator.Validate(SyntaxTree.Parse(source));

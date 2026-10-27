@@ -47,7 +47,7 @@ public sealed class PhraseAutoTransposeTests
         // Ambient key equals home (C) → exact no-op, the phrase plays as written.
         var pos = Positions("""
             key c major
-            phrase Lick { c d e c }
+            phrase Lick { c' d e c }
             part m {
               section A { Lick }
             }
@@ -66,7 +66,7 @@ public sealed class PhraseAutoTransposeTests
         // to B. (Lick' would nudge it up an octave — see the octave-mark step.)
         var pos = Positions("""
             key c major
-            phrase Lick { c d e c }
+            phrase Lick { c' d e c }
             part m {
               section A { Lick }
               section B { key g major Lick }
@@ -84,7 +84,7 @@ public sealed class PhraseAutoTransposeTests
         // seventh up: C4 D4 E4 C4 becomes Bb3 C4 D4 Bb3.
         var pos = Positions("""
             key c major
-            phrase Lick { c d e c }
+            phrase Lick { c' d e c }
             part m {
               section A { key bes major Lick }
             }
@@ -103,9 +103,9 @@ public sealed class PhraseAutoTransposeTests
         // would land it on G3 = -9 instead).
         var pos = Positions("""
             key c major
-            phrase Lick { c d e c }
+            phrase Lick { c' d e c }
             part m {
-              section A { key g major Lick | c }
+              section A { key g major Lick | c' }
             }
             form { A }
             score { staff m }

@@ -48,8 +48,8 @@ public sealed class CombinedStaffBeamedTieTests
             part vone { clef treble }
             part vtwo { clef treble }
             section A {
-              vone { a8[ a] a8[ a] | a8[ a] a8[ a] | }
-              vtwo { f8[ f~] f8[ f] | f8[ f] f8[ f] | }
+              vone { a'8[ a'] a'8[ a'] | a'8[ a'] a'8[ a'] | }
+              vtwo { f'8[ f'~] f'8[ f'] | f'8[ f'] f'8[ f'] | }
             }
             form { ~A }
             score { combinedStaff { vone vtwo } }

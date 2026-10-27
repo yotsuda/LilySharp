@@ -8,65 +8,65 @@ part m { clef treble }
 
 section Main {
   m {
-    c'8 c' c' c' |
-    c'16 c' c' c' c' c' c' c' |
-    c'32 c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' |
+    c''8 c'' c'' c'' |
+    c''16 c'' c'' c'' c'' c'' c'' c'' |
+    c''32 c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' |
     time 1/4
-    c'8 c' |
-    c'16 c' c' c' |
-    c'32 c' c' c' c' c' c' c' |
+    c''8 c'' |
+    c''16 c'' c'' c'' |
+    c''32 c'' c'' c'' c'' c'' c'' c'' |
     time 1/8
-    c'8 |
-    c'16 c' |
-    c'32 c' c' c' |
+    c''8 |
+    c''16 c'' |
+    c''32 c'' c'' c'' |
     time 2/2
-    c'8 c' c' c' c' c' c' c' |
-    c'16 c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' |
-    c'32 c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' |
+    c''8 c'' c'' c'' c'' c'' c'' c'' |
+    c''16 c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' |
+    c''32 c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' |
     time 2/4
-    c'8 c' c' c' |
-    c'16 c' c' c' c' c' c' c' |
-    c'32 c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' |
+    c''8 c'' c'' c'' |
+    c''16 c'' c'' c'' c'' c'' c'' c'' |
+    c''32 c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' |
     time 2/8
-    c'8 c' |
-    c'16 c' c' c' |
-    c'32 c' c' c' c' c' c' c' |
+    c''8 c'' |
+    c''16 c'' c'' c'' |
+    c''32 c'' c'' c'' c'' c'' c'' c'' |
     time 3/2
-    c'8 c' c' c' c' c' c' c' c' c' c' c' |
-    c'16 c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' |
-    c'32 c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' |
+    c''8 c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' |
+    c''16 c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' |
+    c''32 c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' |
     time 3/4
-    c'8 c' c' c' c' c' |
-    c'16 c' c' c' c' c' c' c' c' c' c' c' |
-    c'32 c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' |
+    c''8 c'' c'' c'' c'' c'' |
+    c''16 c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' |
+    c''32 c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' |
     time 3/8
-    c'8 c' c' |
-    c'16 c' c' c' c' c' |
-    c'32 c' c' c' c' c' c' c' c' c' c' c' |
+    c''8 c'' c'' |
+    c''16 c'' c'' c'' c'' c'' |
+    c''32 c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' |
     time 4/4
-    c'8 c' c' c' c' c' c' c' |
-    c'16 c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' |
-    c'32 c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' |
+    c''8 c'' c'' c'' c'' c'' c'' c'' |
+    c''16 c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' |
+    c''32 c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' |
     time 4/8
-    c'8 c' c' c' |
-    c'16 c' c' c' c' c' c' c' |
-    c'32 c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' |
+    c''8 c'' c'' c'' |
+    c''16 c'' c'' c'' c'' c'' c'' c'' |
+    c''32 c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' |
     time 4/16
-    c'8 c' |
-    c'16 c' c' c' |
-    c'32 c' c' c' c' c' c' c' |
+    c''8 c'' |
+    c''16 c'' c'' c'' |
+    c''32 c'' c'' c'' c'' c'' c'' c'' |
     time 6/8
-    c'8 c' c' c' c' c' |
-    c'16 c' c' c' c' c' c' c' c' c' c' c' |
-    c'32 c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' |
+    c''8 c'' c'' c'' c'' c'' |
+    c''16 c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' |
+    c''32 c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' |
     time 9/8
-    c'8 c' c' c' c' c' c' c' c' |
-    c'16 c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' |
-    c'32 c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' |
+    c''8 c'' c'' c'' c'' c'' c'' c'' c'' |
+    c''16 c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' |
+    c''32 c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' |
     time 12/8
-    c'8 c' c' c' c' c' c' c' c' c' c' c' |
-    c'16 c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' |
-    c'32 c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' |
+    c''8 c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' |
+    c''16 c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' |
+    c''32 c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' c'' |
   }
 }
 

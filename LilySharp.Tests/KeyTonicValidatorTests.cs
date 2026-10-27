@@ -127,7 +127,7 @@ public class KeyTonicValidatorTests
         octave absolute
         time 4/4
         part v { clef treble key ef major }
-        section S { v { c4 d e f | } }
+        section S { v { c'4 d' e' f' | } }
         form { ~S }
         score { staff v }
         """)]
@@ -135,7 +135,7 @@ public class KeyTonicValidatorTests
         octave absolute
         time 4/4
         part v { clef treble }
-        section S { v { c4 d key ef major e f | } }
+        section S { v { c'4 d' key ef major e' f' | } }
         form { ~S }
         score { staff v }
         """)]

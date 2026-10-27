@@ -1543,7 +1543,7 @@ public sealed partial class LilyPondExporter
     /// value: see that field's remarks for why shifting the base instead would cancel.
     /// </para>
     /// </remarks>
-    private int _absoluteBaseOctave = 4;
+    private int _absoluteBaseOctave = Svg.Model.InstrumentDefaults.DefaultAnchorOctave;
 
     /// <summary>
     /// ABSOLUTE mode's half of a marked section reference (<c>~B'</c>): the octaves to add

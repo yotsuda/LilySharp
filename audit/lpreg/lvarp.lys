@@ -7,8 +7,8 @@ part v { }
 
 section Main {
   v {
-    <e>4@laissezVibrer <f, f>4@arpeggio <e>4@laissezVibrer <g, f>4@arpeggio |
-    <e>4@laissezVibrer <a, f>4@arpeggio <e>4@laissezVibrer <b, f>4@arpeggio |
+    <e'>4@laissezVibrer <f f'>4@arpeggio <e'>4@laissezVibrer <g f'>4@arpeggio |
+    <e'>4@laissezVibrer <a f'>4@arpeggio <e'>4@laissezVibrer <b f'>4@arpeggio |
   }
 }
 

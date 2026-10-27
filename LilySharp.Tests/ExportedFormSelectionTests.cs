@@ -52,7 +52,7 @@ public class ExportedFormSelectionTests
     // it looks like.
     private const string TwoMovements = """
         part m { clef treble }
-        section First  { m { c4 c c c | } }
+        section First  { m { c'4 c c c | } }
         section Second { m { g2 g | g1 | } }
         form   { First }
         form encore { Second }
@@ -128,7 +128,7 @@ public class ExportedFormSelectionTests
     {
         var tree = SyntaxTree.Parse("""
             part b { clef bass tuning bass }
-            section A { b { e,4 a, d g | } }
+            section A { b { e4 a, d g | } }
             form { A }
             score { staff b }
             score tab { tab b }
@@ -170,7 +170,7 @@ public class ExportedFormSelectionTests
     {
         var tree = SyntaxTree.Parse("""
             part m { clef treble }
-            section Only { m { e4 | } }
+            section Only { m { e'4 | } }
             form finale { Only }
             score finale { form finale staff m }
             """);

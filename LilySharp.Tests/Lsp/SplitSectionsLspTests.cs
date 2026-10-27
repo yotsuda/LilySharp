@@ -62,7 +62,7 @@ public class SplitSectionsLspTests
           section B { a1 | }
         }
         part vn2 {
-          section A { d'1 | e1 | }
+          section A { d''1 | e1 | }
         }
         form { A }
         score { staff vn1 staff vn2 }
@@ -85,7 +85,7 @@ public class SplitSectionsLspTests
         });
         Assert.True(response.Success, response.Error);
         Assert.StartsWith("Follow vn1: A 1 + B 1 bars.\nSplit A in vn2 after bar 1 → A, B.", response.Plan);
-        Assert.Contains("section A { d'1 | }", response.NewText);
+        Assert.Contains("section A { d''1 | }", response.NewText);
         Assert.Contains("form { A B }", response.NewText);
     }
 
@@ -94,19 +94,19 @@ public class SplitSectionsLspTests
     {
         const string text = """
             part fl {
-              section A { c'1 | }
+              section A { c''1 | }
               section B { d1 | e1 | }
             }
             part ob {
-              section A { c'1 | }
+              section A { c''1 | }
               section B { d1 | e1 | }
             }
             part cl {
-              section A { c'1 | d1 | }
+              section A { c''1 | d1 | }
               section X { e1 | }
             }
             part hn {
-              section A { c'1 | d1 | e1 | }
+              section A { c''1 | d1 | e1 | }
             }
             form { A }
             score { staff fl staff ob staff cl staff hn }
@@ -127,7 +127,7 @@ public class SplitSectionsLspTests
             Reference = "cl",
         });
         Assert.True(followed.Success, followed.Error);
-        Assert.Contains("section A { c'1 | d1 | }\n  section X { e1 | }", followed.NewText!.ReplaceLineEndings("\n"));
+        Assert.Contains("section A { c''1 | d1 | }\n  section X { e1 | }", followed.NewText!.ReplaceLineEndings("\n"));
     }
 
     [Fact]
@@ -139,7 +139,7 @@ public class SplitSectionsLspTests
               section B { a1 | }
             }
             part vn2 {
-              section A { d'2 d4 d8[ d8 | d8] d8 d4 d2 | }
+              section A { d''2 d4 d8[ d8 | d8] d8 d4 d2 | }
             }
             form { A }
             score { staff vn1 staff vn2 }

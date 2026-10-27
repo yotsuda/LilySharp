@@ -70,7 +70,7 @@ public class ManualBeamTests
         var source = @"
 section A {
     melody {
-        c8[ d e f] g a b c' |
+        c'8[ d e f] g a b c' |
     }
 }
 

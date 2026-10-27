@@ -17,7 +17,7 @@ part v { }
 lyrics w sings v { section Main { c d e effffffffffff __ | e d c | } }
 
 section Main {
-  v { c4 d e f~ | break f4 e d c | }
+  v { c'4 d' e' f'~ | break f'4 e' d' c' | }
 }
 
 form { ~Main }

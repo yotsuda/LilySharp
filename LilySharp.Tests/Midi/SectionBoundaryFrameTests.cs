@@ -77,7 +77,7 @@ public class SectionBoundaryFrameTests
         // nearest c above it, and must stay there.
         var notes = ExportNotes("""
             part m { clef treble }
-            section A { m { c4 d e f | g2 g | c4 d e f | } }
+            section A { m { c'4 d e f | g2 g | c4 d e f | } }
             form { A }
             score { staff m }
             """);
@@ -92,8 +92,8 @@ public class SectionBoundaryFrameTests
         // as the bar the other parts are playing.
         var notes = ExportNotes("""
             part m { clef treble }
-            section A { m { c2 d | } }
-            section B { m { c d e f | } }
+            section A { m { c'2 d | } }
+            section B { m { c' d e f | } }
             form { A B }
             score { staff m }
             """);
@@ -108,7 +108,7 @@ public class SectionBoundaryFrameTests
         // The control for the pair above.
         var notes = ExportNotes("""
             part m { clef treble }
-            section A { m { c2 d | e f | } }
+            section A { m { c'2 d | e f | } }
             form { A }
             score { staff m }
             """);

@@ -1,7 +1,7 @@
 octave absolute
 time 4/4
 part m {
-  section A { c'4@laissezVibrer r d'@laissezVibrer r | <c e g>2@laissezVibrer r | e4@repeatTie f g2@repeatTie | g'2@laissezVibrer a@laissezVibrer | }
+  section A { c''4@laissezVibrer r d''@laissezVibrer r | <c' e' g'>2@laissezVibrer r | e'4@repeatTie f' g'2@repeatTie | g''2@laissezVibrer a'@laissezVibrer | }
 }
 form { A }
 score { staff m }

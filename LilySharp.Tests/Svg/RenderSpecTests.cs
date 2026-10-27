@@ -81,8 +81,8 @@ public class RenderSpecTests
         part vln
         part vla
         section A {
-          vln { c''1 }
-          vla { c'1 }
+          vln { c'''1 }
+          vla { c''1 }
         }
         form { ~A }
         score { staff vln staff vla }
@@ -161,7 +161,7 @@ public class RenderSpecTests
         var tree = SyntaxTree.Parse("""
             octave absolute
             part bass { clef bass }
-            section A { bass { c1 } }
+            section A { bass { c'1 } }
             form { A }
             score { staff bass }
             """);
@@ -206,7 +206,7 @@ public class RenderSpecTests
             title "Test"
             time 4/4
 
-            phrase melody { c'4 d' e' f' | }
+            phrase melody { c''4 d' e' f' | }
 
             section Main {
               melody { melody }
@@ -233,7 +233,7 @@ public class RenderSpecTests
     public void ResolveOutputStem_TheUnnamedIsTheStem_EveryOtherScoreAppendsItsName()
     {
         var tree = SyntaxTree.Parse("""
-            part m { section A { c4 d e f | } }
+            part m { section A { c'4 d e f | } }
             form { A }
             form other { A A }
             score { staff m }
@@ -256,7 +256,7 @@ public class RenderSpecTests
             title "Test"
             time 4/4
 
-            phrase melody { c'4 d' e' f' | }
+            phrase melody { c''4 d' e' f' | }
 
             section Main {
               guitar { melody }
@@ -292,7 +292,7 @@ public class RenderSpecTests
         // (bass), while the quoted label overrides the displayed instrument name.
         var tree = SyntaxTree.Parse(
             "part vc { instrument cello \"Cello I\" }\n" +
-            "section A { vc { c4 d e f } }\nform { A }\nscore s { staff vc }");
+            "section A { vc { c'4 d e f } }\nform { A }\nscore s { staff vc }");
         Assert.False(tree.HasErrors, string.Join(", ", tree.Diagnostics));
 
         var staff = (RenderSpecParser.FindFirst(tree)!.Items[0] as SingleStaffSpec)!.Staff;
@@ -357,7 +357,7 @@ public class RenderSpecTests
             title "Test"
             time 4/4
 
-            phrase dummy { c'4 | }
+            phrase dummy { c''4 | }
 
             section Main {
               singer { dummy }
@@ -396,8 +396,8 @@ public class RenderSpecTests
             title "Test"
             time 4/4
 
-            phrase rh { c''4 | }
-            phrase lh { c4 | }
+            phrase rh { c'''4 | }
+            phrase lh { c'4 | }
 
             section Main {
               melody { rh }
@@ -435,8 +435,8 @@ public class RenderSpecTests
             title "Test"
             time 4/4
 
-            phrase rh { c''4 | }
-            phrase lh { c4 | }
+            phrase rh { c'''4 | }
+            phrase lh { c'4 | }
 
             section Main {
               melody { rh }

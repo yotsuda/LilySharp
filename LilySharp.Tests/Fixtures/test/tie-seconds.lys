@@ -12,7 +12,7 @@ key c major
 
 part melody {
   clef treble
-  section Main { <c d>2 ~ <c d>2 | <d e>2 ~ <d e>2 | }
+  section Main { <c' d>2 ~ <c d>2 | <d e>2 ~ <d e>2 | }
 }
 
 form { Main }

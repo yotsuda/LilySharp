@@ -166,7 +166,7 @@ public class PlaybackRequestTests
     [Fact]
     public void TheClosingBarLine_EndsTheBeats_AndTheLastBar_PastAFermatasHold()
     {
-        const string doc = "time 4/4\npart m { }\nsection A {\n  m { c'4 d e f | g1@fermata |. }\n}\nform { A }\nscore { staff m }\n";
+        const string doc = "time 4/4\npart m { }\nsection A {\n  m { c''4 d e f | g1@fermata |. }\n}\nform { A }\nscore { staff m }\n";
         var pb = Playback(doc, null);
         Assert.Null(pb.Error);
         Assert.Equal(4.0, Math.Round(pb.BarEnd, 3));

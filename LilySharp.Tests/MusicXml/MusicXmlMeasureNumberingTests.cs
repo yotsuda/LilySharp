@@ -42,7 +42,7 @@ public class MusicXmlMeasureNumberingTests
             octave absolute
             time 4/4
             part m
-            section A { m { voice { c'2 d' | e'2 f' | } { e'2 f' | g'2 a' | }  g'1 | } }
+            section A { m { voice { c''2 d'' | e''2 f'' | } { e''2 f'' | g''2 a'' | }  g''1 | } }
             form { A }
             score { staff m }
             """);
@@ -66,8 +66,8 @@ public class MusicXmlMeasureNumberingTests
             octave absolute
             time 4/4
             part m { clef treble }
-            section A { m { c'1 | c'2 | } }
-            section B { m { d'2 | e'1 | } }
+            section A { m { c''1 | c''2 | } }
+            section B { m { d''2 | e''1 | } }
             form { A B }
             score { staff m }
             """);
@@ -84,8 +84,8 @@ public class MusicXmlMeasureNumberingTests
             octave absolute
             time 4/4
             part m { clef treble }
-            section A { m { c'1 | c'2 | } }
-            section B { m { d'4 | e'1 | } }
+            section A { m { c''1 | c''2 | } }
+            section B { m { d''4 | e''1 | } }
             form { A B }
             score { staff m }
             """);
@@ -105,8 +105,8 @@ public class MusicXmlMeasureNumberingTests
             octave absolute
             time 4/4
             part m { clef treble }
-            section A { m { c'1 | c'2 | } }
-            section B { partial 2  m { d'2 | e'1 | } }
+            section A { m { c''1 | c''2 | } }
+            section B { partial 2  m { d''2 | e''1 | } }
             form { A B }
             score { staff m }
             """);
@@ -123,8 +123,8 @@ public class MusicXmlMeasureNumberingTests
             octave absolute
             time 4/4
             part m { clef treble }
-            section A { m { c'1 | c'1 | } }
-            section B { partial 2  m { d'2 | e'1 | } }
+            section A { m { c''1 | c''1 | } }
+            section B { partial 2  m { d''2 | e''1 | } }
             form { A B }
             score { staff m }
             """);
@@ -141,8 +141,8 @@ public class MusicXmlMeasureNumberingTests
             octave absolute
             time 4/4
             part m { clef treble }
-            section A { m { c'1 | time 2/4 g'2 | } }
-            section B { partial 2  m { d'2 | e'1 | } }
+            section A { m { c''1 | time 2/4 g''2 | } }
+            section B { partial 2  m { d''2 | e''1 | } }
             form { A B }
             score { staff m }
             """);
@@ -160,9 +160,9 @@ public class MusicXmlMeasureNumberingTests
             octave absolute
             time 4/4
             part m { clef treble }
-            section A { m { c'1 | c'2 | } }
-            section B { m { d'2 | e'1 | } }
-            section C { m { f'2 | g'1 | } }
+            section A { m { c''1 | c''2 | } }
+            section B { m { d''2 | e''1 | } }
+            section C { m { f''2 | g''1 | } }
             form { |: A [1. B] :| [2. C] }
             score { staff m }
             """);
@@ -178,7 +178,7 @@ public class MusicXmlMeasureNumberingTests
             octave absolute
             time 4/4
             part m
-            section A { m { voice { c'2 d' } { e'2 f' } | g'1 | } }
+            section A { m { voice { c''2 d'' } { e''2 f'' } | g''1 | } }
             form { A }
             score { staff m }
             """);

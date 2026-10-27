@@ -37,8 +37,8 @@ public class ScorePartsMidiTests
     // scratch/parts.lys: two parts, two scores on one form — the whole file, and p2 alone.
     private const string TwoScores = """
         section A {
-          p1 { c'4 d e f | g2 g | }
-          p2 { e f g a | b2 b }
+          p1 { c''4 d e f | g2 g | }
+          p2 { e' f g a | b2 b }
         }
 
         form { A }
@@ -103,8 +103,8 @@ public class ScorePartsMidiTests
     {
         var midi = Export("""
             section A {
-              p1 { c'4 d e f | }
-              p2 { e f g a | }
+              p1 { c''4 d e f | }
+              p2 { e' f g a | }
             }
             form { A }
             """);
@@ -117,8 +117,8 @@ public class ScorePartsMidiTests
         // GRAMMAR §7: a bare part name is played and never engraved (a click track).
         var midi = Export("""
             section A {
-              p1 { c'4 d e f | }
-              click { c4 c c c | }
+              p1 { c''4 d e f | }
+              click { c'4 c c c | }
             }
             form { A }
             score {
@@ -135,7 +135,7 @@ public class ScorePartsMidiTests
         // The page pads p2's staff with A's bar; the .mid keeps the same grid — p2's first
         // note is at bar 2, not at tick 0.
         var midi = Export("""
-            section A { p1 { c'4 d e f | } }
+            section A { p1 { c''4 d e f | } }
             section B { p2 { g'1 | } }
             form { A B }
             score { staff p1  staff p2 }
@@ -151,7 +151,7 @@ public class ScorePartsMidiTests
     {
         const string sung = """
             section A {
-              p1 { c'4 d e f | }
+              p1 { c''4 d e f | }
               lyrics words { la la la la | }
             }
             section B { p2 { g'1 | } }
@@ -191,8 +191,8 @@ public class ScorePartsMidiTests
         var midi = Export("""
             time 4/4
             section A {
-              p1 { c'4 d e f | }
-              p2 { e f g a | }
+              p1 { c''4 d e f | }
+              p2 { e' f g a | }
               chords harmony { C | }
             }
             form { A }

@@ -56,7 +56,7 @@ public sealed class SharedRendererBeamTests
             time 4/4
 
             section Demo {
-                line { | c'8[ d e f] g[ a b c''] | }
+                line { | c''8[ d e f] g[ a b c''] | }
             }
 
             form { Demo }
@@ -87,8 +87,8 @@ public sealed class SharedRendererBeamTests
             time 4/4
 
             section M {
-                top { | c'8[ d e f] g[ a b c''] | }
-                bot { | <c e g>2 <d f a>2 | }
+                top { | c''8[ d e f] g[ a b c''] | }
+                bot { | <c' e g>2 <d f a>2 | }
             }
 
             form { M }

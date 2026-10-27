@@ -46,7 +46,7 @@ public sealed class MusicXmlPhraseAutoTransposeTests
         // (The key sits inside the m { } block so the voice walk sees it.)
         var pitches = Pitches("""
             key c major
-            phrase Lick { c d e c }
+            phrase Lick { c' d e c }
             section A { m { Lick } }
             section B { m { key g major Lick } }
             form { A B }
@@ -65,7 +65,7 @@ public sealed class MusicXmlPhraseAutoTransposeTests
         // Ambient equals home → exact no-op, phrase exported as written.
         var pitches = Pitches("""
             key c major
-            phrase Lick { c d e c }
+            phrase Lick { c' d e c }
             section A { m { Lick } }
             form { A }
             score { staff m }
@@ -89,9 +89,9 @@ public sealed class MusicXmlPhraseAutoTransposeTests
         """;
 
     [Theory]
-    [InlineData("Lick", 4)]
-    [InlineData("Lick'", 5)]
-    [InlineData("Lick,", 3)]
+    [InlineData("Lick", 3)]
+    [InlineData("Lick'", 4)]
+    [InlineData("Lick,", 2)]
     public void AnAbsoluteReferencesMarks_MoveTheExportedOctave(string reference, int octave)
     {
         var pitches = Pitches(Book(reference, absolute: true));

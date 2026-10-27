@@ -165,7 +165,7 @@ public class ForeignTupletBracketTests
             key c major
             part melody { clef treble }
             section Main { melody {
-              c16 tuplet 3/2 { d16. e32 f16 } g16 |
+              c'16 tuplet 3/2 { d16. e32 f16 } g16 |
             } }
             form { Main }
             score x { staff melody }

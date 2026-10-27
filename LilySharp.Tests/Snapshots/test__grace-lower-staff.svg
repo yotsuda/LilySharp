@@ -20,15 +20,15 @@
   <text class="music" x="13.54" y="19.05" font-size="4.00" data-pos="318"></text>
   <text class="music" x="19.08" y="18.55" font-size="4.00" data-pos="416"></text>
   <line x1="19.15" y1="18.70" x2="19.15" y2="22.05" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="22.09" y="18.05" font-size="4.00" data-pos="420"></text>
+  <text class="music" x="22.09" y="18.05" font-size="4.00" data-pos="421"></text>
   <line x1="22.15" y1="18.20" x2="22.15" y2="21.55" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="25.09" y="17.55" font-size="4.00" data-pos="422"></text>
+  <text class="music" x="25.09" y="17.55" font-size="4.00" data-pos="423"></text>
   <line x1="25.15" y1="17.70" x2="25.15" y2="21.05" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="28.09" y="17.05" font-size="4.00" data-pos="424"></text>
+  <text class="music" x="28.09" y="17.05" font-size="4.00" data-pos="425"></text>
   <line x1="28.16" y1="17.20" x2="28.16" y2="20.55" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="34.03" y="16.55" font-size="4.00" data-pos="428"></text>
-  <rect x="30.33" y="17.05" width="0.19" height="4.00" data-pos="426"/>
-  <rect x="42.44" y="17.05" width="0.19" height="4.00" data-pos="431"/>
+  <text class="music" x="34.03" y="16.55" font-size="4.00" data-pos="429"></text>
+  <rect x="30.33" y="17.05" width="0.19" height="4.00" data-pos="427"/>
+  <rect x="42.44" y="17.05" width="0.19" height="4.00" data-pos="432"/>
   <line x1="8.59" y1="26.43" x2="42.58" y2="26.43" stroke="#000000" stroke-width="0.100"/>
   <line x1="8.59" y1="27.43" x2="42.58" y2="27.43" stroke="#000000" stroke-width="0.100"/>
   <line x1="8.59" y1="28.43" x2="42.58" y2="28.43" stroke="#000000" stroke-width="0.100"/>
@@ -45,32 +45,32 @@
   <line x1="37.96" y1="25.43" x2="40.03" y2="25.43" stroke="#000000" stroke-width="0.200"/>
   <line x1="37.96" y1="24.43" x2="40.03" y2="24.43" stroke="#000000" stroke-width="0.200"/>
   <line x1="37.96" y1="23.43" x2="40.03" y2="23.43" stroke="#000000" stroke-width="0.200"/>
-  <text class="music" style="font-family: 'Emmentaler-14', 'Emmentaler', serif" x="16.24" y="27.93" font-size="2.83" data-pos="451"></text>
-  <text class="music" style="font-family: 'Emmentaler-14', 'Emmentaler', serif" x="17.66" y="27.43" font-size="2.83" data-pos="455"></text>
-  <text class="music" x="19.08" y="26.93" font-size="4.00" data-pos="459"></text>
+  <text class="music" style="font-family: 'Emmentaler-14', 'Emmentaler', serif" x="16.24" y="27.93" font-size="2.83" data-pos="452"></text>
+  <text class="music" style="font-family: 'Emmentaler-14', 'Emmentaler', serif" x="17.66" y="27.43" font-size="2.83" data-pos="456"></text>
+  <text class="music" x="19.08" y="26.93" font-size="4.00" data-pos="460"></text>
   <line x1="19.15" y1="27.08" x2="19.15" y2="30.43" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="22.09" y="26.43" font-size="4.00" data-pos="462"></text>
+  <text class="music" x="22.09" y="26.43" font-size="4.00" data-pos="463"></text>
   <line x1="22.15" y1="26.58" x2="22.15" y2="29.93" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="25.09" y="25.93" font-size="4.00" data-pos="464"></text>
+  <text class="music" x="25.09" y="25.93" font-size="4.00" data-pos="465"></text>
   <line x1="25.15" y1="26.08" x2="25.15" y2="29.43" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="28.09" y="25.43" font-size="4.00" data-pos="466"></text>
+  <text class="music" x="28.09" y="25.43" font-size="4.00" data-pos="467"></text>
   <line x1="28.16" y1="25.58" x2="28.16" y2="28.93" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" style="font-family: 'Emmentaler-14', 'Emmentaler', serif" x="31.20" y="24.93" font-size="2.83" data-pos="478"></text>
-  <text class="music" style="font-family: 'Emmentaler-14', 'Emmentaler', serif" x="32.62" y="24.43" font-size="2.83" data-pos="482"></text>
-  <text class="music" x="34.03" y="23.93" font-size="4.00" data-pos="486"></text>
+  <text class="music" style="font-family: 'Emmentaler-14', 'Emmentaler', serif" x="31.20" y="24.93" font-size="2.83" data-pos="479"></text>
+  <text class="music" style="font-family: 'Emmentaler-14', 'Emmentaler', serif" x="32.62" y="24.43" font-size="2.83" data-pos="483"></text>
+  <text class="music" x="34.03" y="23.93" font-size="4.00" data-pos="487"></text>
   <line x1="34.10" y1="23.93" x2="34.10" y2="28.43" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="38.31" y="23.43" font-size="4.00" data-pos="489"></text>
+  <text class="music" x="38.31" y="23.43" font-size="4.00" data-pos="490"></text>
   <line x1="38.37" y1="23.43" x2="38.37" y2="28.43" stroke="#000000" stroke-width="0.130"/>
-  <rect x="30.33" y="26.43" width="0.19" height="4.00" data-pos="468"/>
-  <rect x="42.44" y="26.43" width="0.19" height="4.00" data-pos="492"/>
-  <line x1="17.09" y1="27.93" x2="17.09" y2="25.56" stroke="#000000" stroke-width="0.130" data-pos="443"/>
-  <line x1="18.51" y1="27.43" x2="18.51" y2="25.30" stroke="#000000" stroke-width="0.130" data-pos="443"/>
-  <polygon points="17.03,25.38 18.58,25.10 18.58,25.48 17.03,25.77" data-pos="443"/>
-  <polygon points="17.03,26.03 18.58,25.75 18.58,26.13 17.03,26.42" data-pos="443"/>
-  <line x1="32.05" y1="24.93" x2="32.05" y2="22.56" stroke="#000000" stroke-width="0.130" data-pos="470"/>
-  <line x1="33.47" y1="24.43" x2="33.47" y2="22.30" stroke="#000000" stroke-width="0.130" data-pos="470"/>
-  <polygon points="31.99,22.38 33.53,22.10 33.53,22.48 31.99,22.77" data-pos="470"/>
-  <polygon points="31.99,23.03 33.53,22.75 33.53,23.13 31.99,23.42" data-pos="470"/>
+  <rect x="30.33" y="26.43" width="0.19" height="4.00" data-pos="469"/>
+  <rect x="42.44" y="26.43" width="0.19" height="4.00" data-pos="493"/>
+  <line x1="17.09" y1="27.93" x2="17.09" y2="25.56" stroke="#000000" stroke-width="0.130" data-pos="444"/>
+  <line x1="18.51" y1="27.43" x2="18.51" y2="25.30" stroke="#000000" stroke-width="0.130" data-pos="444"/>
+  <polygon points="17.03,25.38 18.58,25.10 18.58,25.48 17.03,25.77" data-pos="444"/>
+  <polygon points="17.03,26.03 18.58,25.75 18.58,26.13 17.03,26.42" data-pos="444"/>
+  <line x1="32.05" y1="24.93" x2="32.05" y2="22.56" stroke="#000000" stroke-width="0.130" data-pos="471"/>
+  <line x1="33.47" y1="24.43" x2="33.47" y2="22.30" stroke="#000000" stroke-width="0.130" data-pos="471"/>
+  <polygon points="31.99,22.38 33.53,22.10 33.53,22.48 31.99,22.77" data-pos="471"/>
+  <polygon points="31.99,23.03 33.53,22.75 33.53,23.13 31.99,23.42" data-pos="471"/>
   <rect x="12.02" y="13.45" width="7.32" height="2.75" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="393"/>
   <text x="15.69" y="15.81" font-size="2.77" text-anchor="middle" data-pos="393">Main</text>
   </g>

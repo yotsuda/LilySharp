@@ -112,7 +112,7 @@ public class ChordNoteSourcePositionTests
     [Fact]
     public void APlayingChord_LightsEveryHead()
     {
-        const string source = "part m { clef bass }\nsection A { m { <c e g>1. s4 | } }\n"
+        const string source = "part m { clef bass }\nsection A { m { <c' e g>1. s4 | } }\n"
             + "form { ~A }\nscore { staff m }\n";
         var tree = SyntaxTree.Parse(source);
         string svg = LilySharp.Core.Svg.SvgGenerator.Generate(tree,

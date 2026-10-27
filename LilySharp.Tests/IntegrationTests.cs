@@ -49,7 +49,7 @@ public class IntegrationTests
         var source = @"
 section A {
     melody {
-        c4 d e f |
+        c'4 d e f |
         g a b c' |
     }
 }
@@ -85,7 +85,7 @@ part melody {
 
 section A {
     melody {
-        c4 d e f |
+        c'4 d e f |
     }
 }
 
@@ -120,17 +120,17 @@ key d major
 part melody
 
 phrase intro {
-  d4@p e fis g |
+  d'4@p e fis g |
   a4@cresc b cis d@f |
 }
 
 phrase bridge {
-  d4@mf e@p@rit fis g |
+  d'4@mf e@p@rit fis g |
   a2.@!rit r4 |
 }
 
 phrase finale {
-  d4@accel e fis g |
+  d'4@accel e fis g |
   a4@!accel b cis d@fermata |
 }
 
@@ -322,7 +322,7 @@ score grid { chords prog }
     {
         // Hand-written rather than MusicSource.Wrap: the subject is a document with NO
         // score block, and the wrapper always emits one.
-        var source = "part melody\nsection A { melody { c4 d e f | g a b c' | } }\nform { ~A }\n";
+        var source = "part melody\nsection A { melody { c'4 d e f | g a b c' | } }\nform { ~A }\n";
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors);
 
@@ -434,8 +434,8 @@ score third { staff treble rh }
 key C major
 time 4/4
 section Main {
-    melody { c'4 d e f | g1 | }
-    alt { e'4 f g a | b1 | }
+    melody { c''4 d e f | g1 | }
+    alt { e''4 f g a | b1 | }
 }
 form { Main }
 score ossiaTest {
@@ -467,8 +467,8 @@ score ossiaTest {
 key C major
 time 4/4
 section Main {
-    melody { c'4 d e f | g1 | }
-    bassAlt { c,4 d e f | g1 | }
+    melody { c''4 d e f | g1 | }
+    bassAlt { c4 d e f | g1 | }
 }
 form { Main }
 score ossiaClef {
@@ -492,8 +492,8 @@ score ossiaClef {
 key C major
 time 4/4
 section Main {
-    melody { c'4 d e f | g1 | }
-    alt { e'4 f g a | b1 | }
+    melody { c''4 d e f | g1 | }
+    alt { e''4 f g a | b1 | }
 }
 form { Main }
 score ossiaBarline {

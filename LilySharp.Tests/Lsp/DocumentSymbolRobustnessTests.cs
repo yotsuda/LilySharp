@@ -80,7 +80,7 @@ public class DocumentSymbolRobustnessTests
     {
         var symbols = Symbols("""
             title "T"
-            part melody { section A { c'4 d' e' } }
+            part melody { section A { c''4 d' e' } }
             form { A }
             score { staff melody }
             """);

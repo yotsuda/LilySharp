@@ -97,7 +97,7 @@ public sealed class TabStaffStencilTests
     private const string Music =
         "part m {\n"
         + "  clef treble\n"
-        + "  section A { c4@rit c@!rit g'@f a@text(\"dolce\") | b4@cresc c'' d'' e''@f | }\n"
+        + "  section A { c'4@rit c@!rit g'@f a@text(\"dolce\") | b4@cresc c'' d'' e'@f | }\n"
         + "}\n"
         + "form { A }\n";
 
@@ -201,10 +201,10 @@ public sealed class TabStaffStencilTests
     public void ABlankedSpannerAddsNoRoomBetweenTheStavesItIsBlankOn()
     {
         const string bare =
-            "part m {\n  clef treble\n  section A { c4 c g' a | }\n}\n"
+            "part m {\n  clef treble\n  section A { c'4 c g' a | }\n}\n"
             + "form { A }\nscore { staff m  tab m as numbers }";
         const string spanned =
-            "part m {\n  clef treble\n  section A { c4@rit c@!rit g' a | }\n}\n"
+            "part m {\n  clef treble\n  section A { c'4@rit c@!rit g' a | }\n}\n"
             + "form { A }\nscore { staff m  tab m as numbers }";
 
         // The gap between the notation staff's bottom line and the tab's top line — the
@@ -329,7 +329,7 @@ public sealed class TabStaffStencilTests
     {
         const string book =
             "octave absolute\npart m { clef treble }\n"
-            + "section A { m { c4@tap e@hammerOn g@pullOff b@pluck(p) | } }\n"
+            + "section A { m { c'4@tap e@hammerOn g@pullOff b@pluck(p) | } }\n"
             + "form { ~A }\nscore { staff m  tab m as numbers }";
 
         var page = RenderFirstPage(book);
@@ -360,7 +360,7 @@ public sealed class TabStaffStencilTests
     public void AFullTabKeepsTheMarkupItHasToCarry()
     {
         const string music =
-            "part m {\n  clef treble\n  section A { c4@f c g'@text(\"dolce\") a | }\n}\n"
+            "part m {\n  clef treble\n  section A { c'4@f c g'@text(\"dolce\") a | }\n}\n"
             + "form { A }\n";
 
         // Explicitly full, and standing alone — where `tab m` alone would ALSO be full by
@@ -396,7 +396,7 @@ public sealed class TabStaffStencilTests
     {
         // c4 in treble sits a ledger line BELOW the staff, directly over the chord line.
         const string book =
-            "part m {\n  clef treble\n  section A { c4 d e f | g a b2 | }\n}\n"
+            "part m {\n  clef treble\n  section A { c'4 d e f | g a b2 | }\n}\n"
             + "chords prog { section A { Dmaj7 | Em7 } }\n"
             + "form { A }\n"
             + "score { staff m  chords prog as names  tab m as full }";

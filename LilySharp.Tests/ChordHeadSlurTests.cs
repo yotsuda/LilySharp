@@ -43,7 +43,7 @@ public sealed class ChordHeadSlurTests
         time 4/4
         part m {
           section A {
-            <c e( g>4 <d f) a> <c( e g>4 <d f a)> |
+            <c' e'( g'>4 <d' f') a'> <c'( e' g'>4 <d' f' a')> |
           }
         }
         form { A }

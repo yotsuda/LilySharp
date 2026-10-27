@@ -10,7 +10,7 @@ part melody
 
 section A {
   melody {
-    r2. c''4@accent~ | c@accent r2. |
+    r2. c'''4@accent~ | c@accent r2. |
     r2. c4@accent | c@accent r2. |
     r2. c4@accent~ | c r2. |
     r2. c4~ | c4@accent r2. |

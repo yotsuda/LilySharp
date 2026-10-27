@@ -36,12 +36,12 @@ public class ChordRepetitionsGreenWalkTests
     private const string EveryArm = """
         part bass { clef bass }
         part other { clef treble }
-        phrase lick { <d' f'>8 q q' q | }
+        phrase lick { <d'' f'>8 q q' q | }
         section A {
-          bass { <c e g>4 q q' q | <>4 q <e g>4 q | }
-          other { q4 <d f a>8 q q' 8 | }
+          bass { <c' e g>4 q q' q | <>4 q <e g>4 q | }
+          other { q4 <d' f a>8 q q' 8 | }
         }
-        section B { bass { q4 <f a>4 q q, | } other { lick | } }
+        section B { bass { q4 <f' a>4 q q, | } other { lick | } }
         score { staff bass staff other }
         """;
 

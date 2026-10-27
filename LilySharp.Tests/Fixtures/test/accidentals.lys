@@ -11,23 +11,23 @@ part melody
 
 phrase sharps {
   // Sharps ascending (C4 range)
-  c4 cis d dis |
+  c'4 cis d dis |
 }
 
 phrase flats {
   // Flats descending
-  e4 ees d des |
+  e'4 ees d des |
 }
 
 phrase consecutive {
   // Repeated accidentals
-  fis4 gis ais bis |
+  fis'4 gis ais bis |
   dis4 dis dis dis |
 }
 
 phrase chordAccidentals {
   // Accidentals in chords
-  <cis e gis>1 |
+  <cis' e gis>1 |
   <fis gis>2 <ais bis>2 |
 }
 

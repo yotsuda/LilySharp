@@ -53,9 +53,9 @@ public class VoltaBracketSkylineTests
         // times.
         var source = "octave absolute\ntime 4/4\npart v { }\n" +
             "section Body1 { v { r2 a'''4 r4 | } }\n" +
-            "section D1 { v { r2 d'''4 r4 | } }\n" +
-            "section D2 { v { r2 d'''4 r4 | } }\n" +
-            "section D3 { v { r2 d'''4 r4 | } }\n" +
+            "section D1 { v { r2 d''''4 r4 | } }\n" +
+            "section D2 { v { r2 d''''4 r4 | } }\n" +
+            "section D3 { v { r2 d''''4 r4 | } }\n" +
             "section Body2 { v { r2 a'''4 r4 | } }\n" +
             "section A1 { v { r2 a'''4 r4 | } }\n" +
             "section A2 { v { r2 a'''4 r4 | } }\n" +

@@ -59,7 +59,7 @@ public class MeasureContextChainTests
         key c major
         part melody { clef treble }
         phrase mel {
-          c4 d e f |
+          c'4 d e f |
           key g major c4 d e f |
           clef bass c4 d e f |
           time 3/4 c4 d e |
@@ -112,7 +112,7 @@ public class MeasureContextChainTests
             time 4/4
             key c major
             part melody { clef treble }
-            phrase mel { c4 d e f | g4 a b c | d4 e f g | }
+            phrase mel { c'4 d e f | g4 a b c | d4 e f g | }
             section Main { melody { mel } }
             form { Main }
             score x { staff melody }
@@ -140,7 +140,7 @@ public class MeasureContextChainTests
             time 4/4
             key c major
             part melody
-            section Main { melody { c4 d e f | clef bass g,4 a, b, c | } }
+            section Main { melody { c'4 d e f | clef bass g,4 a, b, c | } }
             form { Main }
             score x { staff melody }
             """;

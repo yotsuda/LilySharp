@@ -52,14 +52,14 @@ public class TransposedMidiPitchTests
         var transposed = FirstNote("""
             octave absolute
             part m { clef treble transpose g }
-            section A { m { f'4 | } }
+            section A { m { f''4 | } }
             form { A }
             score { staff m }
             """);
         var control = FirstNote("""
             octave absolute
             part m { clef treble }
-            section A { m { c''4 | } }
+            section A { m { c'''4 | } }
             form { A }
             score { staff m }
             """);

@@ -55,7 +55,7 @@ public class SlurTupletFewLineStaffTests
             octave absolute
             time 4/4
             part p { }
-            section A { p { b8( d' f' a') g( e c a,) | } }
+            section A { p { b'8( d'' f'' a'') g'( e' c' a) | } }
             form { A }
             score { staff p as lines 1 }
             """);
@@ -70,7 +70,7 @@ public class SlurTupletFewLineStaffTests
             octave absolute
             time 4/4
             part p { }
-            section A { p { tuplet 3/2 { g4 e c } r2 | } }
+            section A { p { tuplet 3/2 { g'4 e' c' } r2 | } }
             form { A }
             score { staff p as lines 1 }
             """);

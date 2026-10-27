@@ -62,7 +62,7 @@ public sealed class TabScriptStemClearanceTests
     /// staff that has none. The book states the style it is about.
     private const string Book =
         "time 4/4\nkey c major\n"
-        + "part m { instrument bass section A { a4@fermata a4 a4 a4 | } }\n"
+        + "part m { instrument bass section A { a,4@fermata a4 a4 a4 | } }\n"
         + "form { A }\nscore { staff m  tab m as full }";
 
     private static RecordingDrawingContext RenderFirstPage(string source)

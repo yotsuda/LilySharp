@@ -25,8 +25,8 @@ octave absolute
 part bl { clef bass tuning bass }
 section A {
   bl {
-    a,,8\4 d,\3 g,\2 c\1 c\1 g,\2 d,\3 a,,\4 |
-    a,,8\4 a,,\4 a,,\4 a,,\4 c\1 c\1 c\1 c\1 |
+    a,8\4 d\3 g\2 c'\1 c'\1 g\2 d\3 a,\4 |
+    a,8\4 a,\4 a,\4 a,\4 c'\1 c'\1 c'\1 c'\1 |
   }
 }
 form { A }

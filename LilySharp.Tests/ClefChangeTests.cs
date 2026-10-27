@@ -41,7 +41,7 @@ public class ClefChangeTests
     {
         var source = @"
 part melody { clef treble }
-phrase m { c'4 d clef bass c,4 d | }
+phrase m { c''4 d clef bass c,4 d | }
 section A { melody { m } }
 form { A }
 score test { staff melody }
@@ -82,7 +82,7 @@ score test { staff melody }
         // (the parser used to reject it everywhere but headers).
         var source = @"
 part melody { clef treble }
-phrase m { c'4 d clef treble_8 c4 d | }
+phrase m { c''4 d clef treble_8 c4 d | }
 section A { melody { m } }
 form { A }
 score x { staff melody }
@@ -127,7 +127,7 @@ score x { staff gtr }
         // (DrawClefChange path), not just the header clef.
         var source = @"
 part melody { clef treble }
-phrase m { c'4 d clef treble_8 c4 d | }
+phrase m { c''4 d clef treble_8 c4 d | }
 section A { melody { m } }
 form { A }
 score x { staff melody }
@@ -153,7 +153,7 @@ score x { staff melody }
     {
         var source = @"
 part melody { clef treble }
-phrase m { c'4 d e f | clef bass c,4 d e f | clef treble c'4 d e f | }
+phrase m { c''4 d e f | clef bass c,4 d e f | clef treble c'4 d e f | }
 section A { melody { m } }
 form { A }
 score test { staff melody }
@@ -236,7 +236,7 @@ score test { staff melody }
     {
         var source = @"
 part melody { clef treble }
-phrase m { c'4 d e f | g4 a clef bass c,4 d | }
+phrase m { c''4 d e f | g4 a clef bass c,4 d | }
 section A { melody { m } }
 form { A }
 score test { staff melody }

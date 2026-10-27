@@ -44,7 +44,7 @@ public sealed class SharedRendererKeySignatureTests
             key d major
             time 4/4
 
-            section S { line { | d'4 e g a | } }
+            section S { line { | d''4 e g a | } }
 
             form { S }
             score o { staff line }
@@ -77,7 +77,7 @@ public sealed class SharedRendererKeySignatureTests
         var (score, layout) = BuildLayout("""
             octave absolute
             part low
-            section A { low { clef bass c2 g,2 | c,1 | } }
+            section A { low { clef bass c'2 g2 | c1 | } }
             form { A }
             score o { staff low }
             """);
@@ -97,7 +97,7 @@ public sealed class SharedRendererKeySignatureTests
             time 4/4
             part hi { clef treble }
             part lo
-            section A { hi { c''1 } lo { clef bass c2 g,2 } }
+            section A { hi { c'''1 } lo { clef bass c'2 g2 } }
             form { A }
             score o { grandStaff { staff hi  staff lo } }
             """);

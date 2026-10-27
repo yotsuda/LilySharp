@@ -132,11 +132,11 @@ public class InstrumentTranspositionMidiTests
     /// whatever the clef (OctaveContext), and the relative anchor must not leak into it.
     /// </remarks>
     [Theory]
-    [InlineData("part x { clef bass section A { c1 | } }", 60)]         // the clef moves no pitch
-    [InlineData("part x { clef treble section A { c1 | } }", 60)]
-    [InlineData("part x { clef alto section A { c1 | } }", 60)]
+    [InlineData("part x { clef bass section A { c'1 | } }", 60)]         // the clef moves no pitch
+    [InlineData("part x { clef treble section A { c'1 | } }", 60)]
+    [InlineData("part x { clef alto section A { c'1 | } }", 60)]
     [InlineData("part x { clef bass octave 3 section A { c1 | } }", 48)] // ← positive control
-    [InlineData("octave absolute part x { clef bass section A { c1 | } }", 60)]
+    [InlineData("octave absolute part x { clef bass section A { c'1 | } }", 60)]
     public void PartOctaveAnchor_IgnoresTheClef(string source, int expected)
         => Assert.Equal(expected, FirstPitch(source));
 
@@ -151,7 +151,7 @@ public class InstrumentTranspositionMidiTests
     public void Piccolo_SoundsOctaveAboveWritten()
     {
         // The piccolo is written an octave below sounding: written C5 sounds C6 (84).
-        Assert.Equal(84, FirstPitch("part x { instrument piccolo section A { c1 | } }"));
+        Assert.Equal(84, FirstPitch("part x { instrument piccolo section A { c''1 | } }"));
     }
 
     [Fact]
@@ -160,20 +160,20 @@ public class InstrumentTranspositionMidiTests
         // The explicit `transposition` property is the same knob the preset sets. The clef
         // moves no pitch (user decision 2026-09-15), so written C4 (60) sounds C3 (48).
         Assert.Equal(48, FirstPitch(
-            "part x { clef bass transposition 8vb section A { c1 | } }"));
+            "part x { clef bass transposition 8vb section A { c'1 | } }"));
     }
 
     [Fact]
     public void ExplicitTransposition8va_ShiftsPlaybackUpAnOctave()
     {
         Assert.Equal(72, FirstPitch(
-            "part x { transposition 8va section A { c1 | } }"));
+            "part x { transposition 8va section A { c'1 | } }"));
     }
 
     [Fact]
     public void NonTransposingPart_PlaysWrittenPitch()
     {
         // A plain part (no instrument, clef, or transposition) is untouched: C4 = 60.
-        Assert.Equal(60, FirstPitch("part x { section A { c1 | } }"));
+        Assert.Equal(60, FirstPitch("part x { section A { c'1 | } }"));
     }
 }

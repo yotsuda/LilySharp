@@ -34,7 +34,7 @@ public class ItemReuseTests
     private const string Book = """
         octave absolute
         part bl { clef bass tuning bass }
-        section A { bl { c4 d e f | g4 a b c' | } }
+        section A { bl { c'4 d' e' f' | g'4 a' b' c'' | } }
         form { A }
         score x { staff bl tab bl }
         """;

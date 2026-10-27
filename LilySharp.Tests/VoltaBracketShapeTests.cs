@@ -43,13 +43,13 @@ public sealed class VoltaBracketShapeTests
         octave absolute
         time 4/4
         part m { clef treble }
-        section A { m { c'1 | } }
-        section B { m { d'1 | d'1 | } }
-        section C { m { e'1 | e'1 | } }
-        section D { m { f'1 | f'1 | } }
-        section E { m { g'1 | g'1 | } }
-        section F { m { a'1 | a'1 | break a'1 | a'1 | } }
-        section G { m { b'1 | time 3/4 b'2. | b'2. | } }
+        section A { m { c''1 | } }
+        section B { m { d''1 | d''1 | } }
+        section C { m { e''1 | e''1 | } }
+        section D { m { f''1 | f''1 | } }
+        section E { m { g''1 | g''1 | } }
+        section F { m { a''1 | a''1 | break a''1 | a''1 | } }
+        section G { m { b''1 | time 3/4 b''2. | b''2. | } }
 
         """;
 

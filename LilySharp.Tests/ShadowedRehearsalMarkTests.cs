@@ -47,8 +47,8 @@ public sealed class ShadowedRehearsalMarkTests
 {
     private const string Book =
         "part m { clef treble }\n"
-        + "section Solo { m { c'1@mark(\"Solo\") | d'1 | } }\n"
-        + "section B { m { e'1@mark(\"B\") | f'1 | } }\n"
+        + "section Solo { m { c''1@mark(\"Solo\") | d'1 | } }\n"
+        + "section B { m { e''1@mark(\"B\") | f'1 | } }\n"
         + "form { Solo ~B }\n"
         + "score { staff m }\n";
 

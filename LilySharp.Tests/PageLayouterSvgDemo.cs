@@ -41,7 +41,7 @@ public class PageLayouterSvgDemo
         part melody
 
         phrase theme1 {
-          c'4 d e f | g2 f | e4 d c d | e1 |
+          c''4 d e f | g2 f | e4 d c d | e1 |
         }
 
         phrase theme2 {
@@ -49,7 +49,7 @@ public class PageLayouterSvgDemo
         }
 
         phrase theme3 {
-          e'4 d c b, | a,2 b, | c4 d e d | c1 |
+          e''4 d c b, | a,2 b, | c4 d e d | c1 |
         }
 
         section Intro { melody { theme1 } }

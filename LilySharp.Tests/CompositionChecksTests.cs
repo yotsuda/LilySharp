@@ -38,10 +38,10 @@ public class CompositionChecksTests
         part viola { clef alto }
         part cello { clef bass }
         section A {
-          violin1 { c''1 | g'1 | a'1 | e'1 | f'1 | g'1 | d'1 | e'1 | c''1 | g'1 | a'1 | e'1 | f'1 | g'1 | d'1 | c'1 | }
-          violin2 { e'1 | d'1 | f'1 | c'1 | d'1 | e'1 | b1 | c'1 | e'1 | d'1 | f'1 | c'1 | d'1 | e'1 | b1 | e'1 | }
-          viola { g1 | g1 | a1 | g1 | a1 | b1 | g1 | g1 | g1 | g1 | a1 | g1 | a1 | b1 | g1 | g1 | }
-          cello { c1 | g,1 | f,1 | c1 | d1 | c1 | g,1 | c1 | a,1 | g,1 | f,1 | c1 | d1 | c1 | g,1 | c1 | }
+          violin1 { c'''1 | g''1 | a''1 | e''1 | f''1 | g''1 | d''1 | e''1 | c'''1 | g''1 | a''1 | e''1 | f''1 | g''1 | d''1 | c''1 | }
+          violin2 { e''1 | d''1 | f''1 | c''1 | d''1 | e''1 | b'1 | c''1 | e''1 | d''1 | f''1 | c''1 | d''1 | e''1 | b'1 | e''1 | }
+          viola { g'1 | g'1 | a'1 | g'1 | a'1 | b'1 | g'1 | g'1 | g'1 | g'1 | a'1 | g'1 | a'1 | b'1 | g'1 | g'1 | }
+          cello { c'1 | g1 | f1 | c'1 | d'1 | c'1 | g1 | c'1 | a1 | g1 | f1 | c'1 | d'1 | c'1 | g1 | c'1 | }
         }
         form { A }
         score { grandStaff { staff violin1  staff violin2  staff viola  staff cello } }
@@ -98,7 +98,7 @@ public class CompositionChecksTests
             time 4/4
             part rh { clef treble }
             part lh { clef bass }
-            section A { rh { c'4 d' e' f' | } lh { c2 g | } }
+            section A { rh { c''4 d' e' f' | } lh { c'2 g | } }
             form { A }
             score { grandStaff { staff rh  staff lh } }
             """;

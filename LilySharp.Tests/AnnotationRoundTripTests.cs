@@ -104,8 +104,8 @@ public class AnnotationRoundTripTests
     /// passes just as well when NOTHING maps correctly.
     /// </summary>
     [Theory]
-    [InlineData("part v\nsection A { lyrics L { la -- la -- } v { c4 d e f | } }\n")]
-    [InlineData("part v\nsection A { lyrics L { la--la-- } v { c4 d e f | } }\n")] // control
+    [InlineData("part v\nsection A { lyrics L { la -- la -- } v { c'4 d e f | } }\n")]
+    [InlineData("part v\nsection A { lyrics L { la--la-- } v { c'4 d e f | } }\n")] // control
     public void TheNoteAfterALyricsBlock_StandsWhereItSaysItStands(string source)
     {
         var root = SyntaxTree.Parse(source).GetRoot();

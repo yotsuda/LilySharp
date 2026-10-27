@@ -49,18 +49,18 @@ public class ConductorTrackTests
         part e { clef bass }
         section A { time 9/8 }
         section A {
-          a { c'4. d' e' | time 4/4 f'1 | }
-          b { e'4. f' g' | time 4/4 a'1 | }
+          a { c''4. d' e' | time 4/4 f'1 | }
+          b { e''4. f' g' | time 4/4 a'1 | }
           c { g4. a b | time 4/4 c'1 | }
-          d { c4. d e | time 4/4 f1 | }
-          e { c,4. d, e, | time 4/4 f,1 | }
+          d { c'4. d e | time 4/4 f1 | }
+          e { c4. d, e, | time 4/4 f,1 | }
         }
         section B {
           a { g'1 | g'1 | }
-          b { e'1 | e'1 | }
-          c { c'1 | c'1 | }
-          d { c1 | c1 | }
-          e { c,1 | r1 | }
+          b { e''1 | e'1 | }
+          c { c''1 | c'1 | }
+          d { c'1 | c1 | }
+          e { c1 | r1 | }
         }
         form { A B }
         score { staff a staff b staff c staff d staff e }
@@ -95,7 +95,7 @@ public class ConductorTrackTests
             tempo 4 = 100
             time 4/4
             part m { clef treble }
-            section A { m { c'4 d' e' f' | tempo 4 = 100 g'1 | tempo 4 = 120 c'1 | } }
+            section A { m { c''4 d' e' f' | tempo 4 = 100 g'1 | tempo 4 = 120 c1 | } }
             form { A }
             score { staff m }
             """).Tracks[0];

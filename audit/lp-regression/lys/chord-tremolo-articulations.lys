@@ -14,7 +14,7 @@ part v { clef treble }
 
 section Main {
   v {
-    repeat tremolo 4 { d16@f e@staccato }
+    repeat tremolo 4 { d'16@f e@staccato }
     repeat tremolo 4 { d16@accent e } |
     repeat tremolo 4 { d16 e@f }
     repeat tremolo 8 { d32 e } |

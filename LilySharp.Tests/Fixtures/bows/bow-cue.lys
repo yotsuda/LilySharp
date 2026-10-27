@@ -1,7 +1,7 @@
 octave absolute
 time 4/4
 part m {
-  section A { c4 cue { e4( f) } g4 | cue { e2~ e2 } | c4( d) cue { a4( g) } | cue { c'8( d' e' f') } g2 | }
+  section A { c'4 cue { e'4( f') } g'4 | cue { e'2~ e'2 } | c'4( d') cue { a'4( g') } | cue { c''8( d'' e'' f'') } g'2 | }
 }
 form { A }
 score {

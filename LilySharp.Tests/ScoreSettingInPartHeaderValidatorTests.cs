@@ -38,28 +38,28 @@ public class ScoreSettingInPartHeaderValidatorTests
     [Fact]
     public void PartHeaderTempo_Errors()
         => Assert.Equal(1, ErrCount(
-            "part melody { tempo 120  clef treble  section A { c1 } }\nform { A }\nscore { staff melody }"));
+            "part melody { tempo 120  clef treble  section A { c'1 } }\nform { A }\nscore { staff melody }"));
 
     [Fact]
     public void PartHeaderTime_Errors()
         => Assert.Equal(1, ErrCount(
-            "part melody { time 3/4  clef treble  section A { c2. } }\nform { A }\nscore { staff melody }"));
+            "part melody { time 3/4  clef treble  section A { c'2. } }\nform { A }\nscore { staff melody }"));
 
     [Fact]
     public void BothInOnePartHeader_ErrorEach()
         => Assert.Equal(2, ErrCount(
-            "part melody { tempo 120  time 3/4  section A { c2. } }\nform { A }\nscore { staff melody }"));
+            "part melody { tempo 120  time 3/4  section A { c'2. } }\nform { A }\nscore { staff melody }"));
 
     [Fact]
     public void GlobalTempoAndTime_Ok()
         => Assert.Equal(0, ErrCount(
-            "time 4/4\ntempo 100\npart melody { clef treble  section A { c1 } }\nform { A }\nscore { staff melody }"));
+            "time 4/4\ntempo 100\npart melody { clef treble  section A { c'1 } }\nform { A }\nscore { staff melody }"));
 
     [Fact]
     public void SectionHeaderTempo_Ok()
         // A tempo change stated in a top-level section header applies to every part — allowed.
         => Assert.Equal(0, ErrCount(
-            "tempo 100\npart melody { section A { c1 } section B { d1 } }\nsection B { tempo 132 }\n"
+            "tempo 100\npart melody { section A { c'1 } section B { d'1 } }\nsection B { tempo 132 }\n"
             + "form { A B }\nscore { staff melody }"));
 
     [Fact]
@@ -67,7 +67,7 @@ public class ScoreSettingInPartHeaderValidatorTests
         // A tempo written INSIDE the music (a part's inner section) is a mid-piece change, not a
         // header attribute — not flagged.
         => Assert.Equal(0, ErrCount(
-            "tempo 100\npart melody { section A { c2 tempo 132 c2 } }\nform { A }\nscore { staff melody }"));
+            "tempo 100\npart melody { section A { c'2 tempo 132 c2 } }\nform { A }\nscore { staff melody }"));
 
     [Fact]
     public void PartPropertyCompletion_DoesNotOfferTempoOrTime()

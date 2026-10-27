@@ -48,7 +48,7 @@ public class SpacingIncrementTests
     private const string Music = """
         octave absolute
         part m { clef treble
-          section A { c'4 d'8 e' f'2 | g'16 a' b' c'' d''4 e''2 | s1 | c'1 | }
+          section A { c''4 d''8 e'' f''2 | g''16 a'' b'' c''' d'''4 e'''2 | s1 | c''1 | }
         }
         form { A }
         score { staff m }
@@ -103,7 +103,7 @@ public class SpacingIncrementTests
             paper { raggedRight  spacingIncrement 3 }
             octave absolute
             part m { clef treble
-              section A { c'8 d' e' f' g' a' b' c'' | d''8 c'' b' a' g' f' e' d' | c'8 d' e' f' g'32 a' b' c'' d''8 e'' f'' | e''8 d'' c'' b' a' g' f' e' | }
+              section A { c''8 d'' e'' f'' g'' a'' b'' c''' | d'''8 c''' b'' a'' g'' f'' e'' d'' | c''8 d'' e'' f'' g''32 a'' b'' c''' d'''8 e''' f''' | e'''8 d''' c''' b'' a'' g'' f'' e'' | }
             }
             form { A }
             score { staff m }

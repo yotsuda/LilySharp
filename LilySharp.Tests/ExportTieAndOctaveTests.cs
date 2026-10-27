@@ -85,7 +85,7 @@ public sealed class ExportTieAndOctaveTests
     {
         // c then g: nearest g is a fourth BELOW (LilyPond relative rule), so g is
         // octave 3, not 4. Pre-fix MusicXML used additive offset and put g at 4.
-        var tree = SyntaxTree.Parse("{ c g }");
+        var tree = SyntaxTree.Parse("{ c' g }");
 
         var xml = new MusicXmlExporter().Export(tree);
         var notes = xml.Parts[0].Measures[0].Notes;
@@ -105,7 +105,7 @@ public sealed class ExportTieAndOctaveTests
     private const string AbsoluteSource = @"
 octave absolute
 part melody { clef treble }
-section A { melody { cis'4 c'' c' e' } }
+section A { melody { cis''4 c''' c'' e'' } }
 form { A }
 score t { staff melody }
 ";

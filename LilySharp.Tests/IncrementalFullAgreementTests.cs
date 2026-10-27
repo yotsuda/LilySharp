@@ -54,7 +54,7 @@ public class IncrementalFullAgreementTests
         const string book = """
             octave absolute
             part melody { clef treble }
-            section Main { melody { c'4@finger(0) d' e' f' | } }
+            section Main { melody { c''4@finger(0) d'' e'' f'' | } }
             form { Main }
             score x { staff melody }
             """;

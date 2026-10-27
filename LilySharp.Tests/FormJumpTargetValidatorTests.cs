@@ -33,9 +33,9 @@ public sealed class FormJumpTargetValidatorTests
     private const string Head =
         "part m { clef treble }\n" +
         "section I { m { a4 a a a | } }\n" +
-        "section A { m { c4 c c c | } }\n" +
-        "section B { m { d4 d d d | } }\n" +
-        "section C { m { e4 e e e | } }\n";
+        "section A { m { c'4 c c c | } }\n" +
+        "section B { m { d'4 d d d | } }\n" +
+        "section C { m { e'4 e e e | } }\n";
 
     private static string Source(string form) => Head + "form { " + form + " }\nscore { staff m }\n";
 

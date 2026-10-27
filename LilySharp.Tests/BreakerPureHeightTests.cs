@@ -135,7 +135,7 @@ public class BreakerPureHeightTests
             part p {
               clef bass
               tuning bass
-              section S { a,,8\3 r8 r4 r2 | a,,8\3 r8 r4 r2 | }
+              section S { a,8\3 r8 r4 r2 | a,8\3 r8 r4 r2 | }
             }
 
             form { S }
@@ -171,9 +171,9 @@ public class BreakerPureHeightTests
 
             part p {
               clef bass
-              section A { e,1 | }
-              section E { e,1 | e,1 | break e,1 | e,1 | break e,1 | e,1 | break }
-              section F { e,1 | e,1 | }
+              section A { e1 | }
+              section E { e1 | e1 | break e1 | e1 | break e1 | e1 | break }
+              section F { e1 | e1 | }
             }
 
             form { |: A [1. E] :| [2. F] }
@@ -219,7 +219,7 @@ public class BreakerPureHeightTests
             part p {
               clef bass
               section S {
-                e,4 e, e, e, | e,1 | break e,4 e, e, e, | e,1 |
+                e4 e e e | e1 | break e4 e e e | e1 |
               }
             }
 
@@ -267,7 +267,7 @@ public class BreakerPureHeightTests
               clef bass
               tuning bass
               section S {
-                fis,,8 cis, e, fis, e, cis, b,, cis, | fis,,8 cis, e, fis, e, cis, b,, cis, |
+                fis,8 cis e fis e cis b, cis | fis,8 cis e fis e cis b, cis |
               }
             }
 

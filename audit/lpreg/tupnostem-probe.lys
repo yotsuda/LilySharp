@@ -7,7 +7,7 @@ time 4/4
 part v { }
 
 section Main {
-  v { tuplet 3/2 { f8 g8 a8 } r4 r2 | }
+  v { tuplet 3/2 { f'8 g'8 a'8 } r4 r2 | }
 }
 
 form { ~Main }

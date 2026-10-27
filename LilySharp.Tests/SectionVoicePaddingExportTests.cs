@@ -39,7 +39,7 @@ public class SectionVoicePaddingExportTests
     private const string ChordRowLonger = """
         part melody {
           section A { g2 g | }
-          section B { c2 c | }
+          section B { c'2 c | }
         }
         chords prog {
           section A { Dm7 | G7 }
@@ -53,11 +53,11 @@ public class SectionVoicePaddingExportTests
     private const string PartLonger = """
         part melody { clef treble
           section A { g'2 g' | }
-          section B { c''2 c'' | }
+          section B { c'''2 c'' | }
         }
         part bass { clef bass
-          section A { c2 e | g2 g | }
-          section B { c2 c | }
+          section A { c'2 e | g2 g | }
+          section B { c'2 c | }
         }
         form { A | B | }
         score { staff melody  staff bass }
@@ -177,9 +177,9 @@ public class SectionVoicePaddingExportTests
         // (scratch/p363/compare-leg3-ly.txt, 2026-09-10). The semantic count is the played
         // length, so a voice that IS four bars is not "short" of a four-bar section-mate.
         const string text = """
-            phrase two { c1 | c1 | }
-            part upper { section Rest { R1*4 | } section Unf { c1 | c1 | c1 | c1 | } section Phr { two two } }
-            part lower { section Rest { c1 | c1 | c1 | c1 | } section Unf { c1 | c1 | c1 | c1 | } section Phr { c1 | c1 | c1 | c1 | } }
+            phrase two { c'1 | c1 | }
+            part upper { section Rest { R1*4 | } section Unf { c'1 | c1 | c1 | c1 | } section Phr { two two } }
+            part lower { section Rest { c'1 | c1 | c1 | c1 | } section Unf { c'1 | c1 | c1 | c1 | } section Phr { c'1 | c1 | c1 | c1 | } }
             form { Rest Unf Phr }
             score { staff upper  staff lower }
             """;
@@ -315,7 +315,7 @@ public class SectionVoicePaddingExportTests
     {
         var ly = Twin("""
             part melody { section A { g2 g } }
-            part bass { section A { c2 e | g2 g | } }
+            part bass { section A { c'2 e | g2 g | } }
             form { A | }
             score { staff melody  staff bass }
             """);
@@ -326,7 +326,7 @@ public class SectionVoicePaddingExportTests
     public void Twin_PadsAShortChordRow_WithSilentChordBars()
     {
         var ly = Twin("""
-            part melody { section A { g2 g | g2 g | g2 g | } section B { c1 | } }
+            part melody { section A { g2 g | g2 g | g2 g | } section B { c'1 | } }
             chords prog { section A { Dm7 | } section B { Cmaj7 | } }
             form { A | B | }
             score { chords prog  staff melody }
@@ -340,13 +340,13 @@ public class SectionVoicePaddingExportTests
     private const string NoBlockForB = """
         octave absolute
         part melody { clef treble
-          section A { g'2 g' | a'1 | }
-          section B { c''2 c'' | d''1 | }
-          section C { e''2 e'' | }
+          section A { g''2 g'' | a''1 | }
+          section B { c'''2 c''' | d'''1 | }
+          section C { e'''2 e''' | }
         }
         part bass { clef bass
-          section A { c2 e | g1 | }
-          section C { g2 g | }
+          section A { c'2 e' | g'1 | }
+          section C { g'2 g' | }
         }
         chords prog {
           section A { C | G | }
@@ -380,9 +380,9 @@ public class SectionVoicePaddingExportTests
             octave absolute
             part melody { clef treble }
             part bass { clef bass }
-            section A { melody { g'2 g' | } bass { c2 e | } chords prog { C | } }
-            section B { time 3/4  partial 4  melody { c''4 | d''2. | } }
-            section C { melody { e''2 e'' | } bass { g2 g | } chords prog { G | } }
+            section A { melody { g''2 g'' | } bass { c'2 e' | } chords prog { C | } }
+            section B { time 3/4  partial 4  melody { c'''4 | d'''2. | } }
+            section C { melody { e'''2 e''' | } bass { g'2 g' | } chords prog { G | } }
             form { A B C }
             score { chords prog  staff melody  staff bass }
             """);
@@ -410,7 +410,7 @@ public class SectionVoicePaddingExportTests
             time 4/4
             part melody
             part X
-            section A { partial 2  melody { c'4 d' | e'2 f' | g'2 g' | }  X { | | | } }
+            section A { partial 2  melody { c''4 d' | e'2 f' | g'2 g | }  X { | | | } }
             form { A A }
             score { staff melody }
             """);
@@ -506,9 +506,9 @@ public class SectionVoicePaddingExportTests
         var doc = Xml("""
             octave absolute
             part melody { clef treble }
-            section A { melody { c'1 | } chords prog { C | } }
+            section A { melody { c''1 | } chords prog { C | } }
             section B { chords prog { F | G | } }
-            section C { melody { e'1 | } chords prog { C | } }
+            section C { melody { e''1 | } chords prog { C | } }
             form { A B C }
             score { chords prog  staff melody }
             """);
@@ -530,9 +530,9 @@ public class SectionVoicePaddingExportTests
             octave absolute
             part melody { clef treble }
             part bass { clef bass }
-            section A { melody { g'2 g' | } bass { c2 e | } chords prog { C | } }
-            section B { time 3/4  partial 4  melody { c''4 | d''2. | } }
-            section C { melody { e''2 e'' | } bass { g2 g | } chords prog { G | } }
+            section A { melody { g''2 g'' | } bass { c'2 e' | } chords prog { C | } }
+            section B { time 3/4  partial 4  melody { c'''4 | d'''2. | } }
+            section C { melody { e'''2 e''' | } bass { g'2 g' | } chords prog { G | } }
             form { A B C }
             score { chords prog  staff melody  staff bass }
             """);
@@ -564,9 +564,9 @@ public class SectionVoicePaddingExportTests
             octave absolute
             part melody { clef treble }
             part bass { clef bass }
-            section A { melody { g'2 g' | } bass { c2 e | } chords prog { C | } }
-            section B { time 3/4  partial 4  melody { c''4 | d''2. | } bass { c4 | d2. | } }
-            section C { melody { e''2 e'' | } bass { g2 g | } chords prog { G | } }
+            section A { melody { g''2 g'' | } bass { c'2 e' | } chords prog { C | } }
+            section B { time 3/4  partial 4  melody { c'''4 | d'''2. | } bass { c'4 | d'2. | } }
+            section C { melody { e'''2 e''' | } bass { g'2 g' | } chords prog { G | } }
             form { A B C }
             score { chords prog  staff melody  staff bass }
             """);

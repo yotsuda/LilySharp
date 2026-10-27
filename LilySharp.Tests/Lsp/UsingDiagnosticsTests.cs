@@ -55,7 +55,7 @@ public sealed class UsingDiagnosticsTests
         part melody { clef treble }
 
         section A {
-          melody { c4 d e f | }
+          melody { c'4 d e f | }
         }
         """;
 

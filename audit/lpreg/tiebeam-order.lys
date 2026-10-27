@@ -7,8 +7,8 @@ part pa { clef treble }
 part pb { clef treble }
 
 section A {
-  pa { f8[ f]~ f8[ f] | }
-  pb { f8[ f~] f8[ f] | }
+  pa { f'8[ f']~ f'8[ f'] | }
+  pb { f'8[ f'~] f'8[ f'] | }
 }
 
 form { ~A }

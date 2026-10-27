@@ -9,12 +9,12 @@ part m { clef treble }
 
 section Main {
   m {
-    c8[ c] a'[ a'] a[ a] c'[ c'] |
-    d8[ d] g'[ g'] g[ g] d'[ d'] |
+    c'8[ c'] a''[ a''] a'[ a'] c''[ c''] |
+    d'8[ d'] g''[ g''] g'[ g'] d''[ d''] |
     break
-    c16[ c] a'[ a'] a[ a] c'[ c']
-    c32[ c] a'[ a'] f[ f] e'[ e']
-    c64[ c] a'[ a'] f[ f] e'[ e'] |
+    c'16[ c'] a''[ a''] a'[ a'] c''[ c'']
+    c'32[ c'] a''[ a''] f'[ f'] e''[ e'']
+    c'64[ c'] a''[ a''] f'[ f'] e''[ e''] |
   }
 }
 

@@ -26,7 +26,7 @@ key c major
 part melody
 
 phrase test {
-  c4 d e f |
+  c'4 d e f |
   cue { aes4 r r r } |
   voice { cue { aes4 r r r } } { g4 r r r } |
   voice { g4 r r r } { cue { aes4 r r r } } |

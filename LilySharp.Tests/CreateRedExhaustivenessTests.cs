@@ -43,7 +43,7 @@ public class CreateRedExhaustivenessTests
     {
         var tree = SyntaxTree.Parse(
             "part melody { clef treble }\n" +
-            "section Main { melody { c4 d e f | } }\n" +
+            "section Main { melody { c'4 d e f | } }\n" +
             "form { Main }\n" +
             "score audio { melody }\n");
 

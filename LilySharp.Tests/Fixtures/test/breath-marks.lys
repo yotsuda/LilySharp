@@ -8,7 +8,7 @@ part m { clef treble }
 section Main {
   m {
     time 4/4
-    c4@breath d e f | g a@caesura b c |
+    c'4@breath d e f | g a@caesura b c |
   }
 }
 form { Main }

@@ -204,7 +204,7 @@ public class SymbolCaseValidatorTests
     public void LinesSelector_ComposesWithDisplayNamesRowsAndOssia()
     {
         var tree = SyntaxTree.Parse(
-            "part vln { }\nsection A { vln { c4 d e f } }\nform { A }\n"
+            "part vln { }\nsection A { vln { c'4 d e f } }\nform { A }\n"
             + "score s { staff vln \"Violin I\" as lines 1 }");
         Assert.DoesNotContain(tree.Diagnostics, d => d.Severity == DiagnosticSeverity.Error);
         var staff = RenderSpecParser.FindFirst(tree)!
@@ -213,7 +213,7 @@ public class SymbolCaseValidatorTests
         Assert.Equal("Violin I", staff.InstrumentName);
 
         tree = SyntaxTree.Parse(
-            "part vln { }\npart alt { }\nsection A { vln { c4 d e f } alt { e4 f g a } }\n"
+            "part vln { }\npart alt { }\nsection A { vln { c'4 d e f } alt { e'4 f g a } }\n"
             + "form { A }\nscore s { ossia alt as lines 1\n  staff vln }");
         Assert.DoesNotContain(tree.Diagnostics, d => d.Severity == DiagnosticSeverity.Error);
         var ossia = RenderSpecParser.FindFirst(tree)!.Items.OfType<OssiaStaffSpec>().Single();
@@ -273,7 +273,7 @@ public class SymbolCaseValidatorTests
         // …and the position where those words ARE the language: a section's own directive.
         const string inSection = """
             part vln { clef treble }
-            section A { octave absolute  vln { c4 d e f } }
+            section A { octave absolute  vln { c'4 d' e' f' } }
             form { A }
             score { staff vln }
             """;
@@ -308,7 +308,7 @@ public class SymbolCaseValidatorTests
         // not declare, which is a second diagnostic and would hide the count this asserts.
         const string book = """
             part vln { transposition 8VB }
-            section A { vln { c4 d e f } }
+            section A { vln { c'4 d e f } }
             form { A }
             score { staff vln }
             """;

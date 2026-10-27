@@ -36,8 +36,8 @@ public class ChordTrackReadingTests
         part rh { clef treble }
         part lh { clef bass }
         section A {
-          rh { e'2 g' | a'1 | b'2 d'' | c''1 | }
-          lh { <c e g>1 | <d f a>1 | <g, b, d f>1 | <c e g>1 | }
+          rh { e''2 g'' | a''1 | b''2 d''' | c'''1 | }
+          lh { <c' e' g'>1 | <d' f' a'>1 | <g b d' f'>1 | <c' e' g'>1 | }
         }
         form { A }
         score {
@@ -90,8 +90,8 @@ public class ChordTrackReadingTests
             part rh { clef treble }
             part lh { clef bass }
             section A {
-              rh { g'4 b' d'' b' | }
-              lh { <c e g>1 | }
+              rh { g''4 b'' d''' b'' | }
+              lh { <c' e' g'>1 | }
             }
             form { A }
             score { staff rh  staff lh }
@@ -111,7 +111,7 @@ public class ChordTrackReadingTests
             key c major
             octave absolute
             part p1 { clef bass }
-            section A { p1 { d4 f a f | g, b, d b, | bes, d f d | a, des e des | f, aes, c aes, | } }
+            section A { p1 { d'4 f' a' f' | g b d' b | bes d' f' d' | a des' e' des' | f aes c' aes | } }
             form { A }
             score { staff p1 }
             """;
@@ -127,7 +127,7 @@ public class ChordTrackReadingTests
             key c major
             octave absolute
             part p1 { clef bass }
-            section A { p1 { c,4 e, g,16 a, g,8 a, c | c,4 e, a,8 g, f, e, | } }
+            section A { p1 { c4 e g16 a g8 a c' | c4 e a8 g f e | } }
             form { A }
             score { staff p1 }
             """;
@@ -145,7 +145,7 @@ public class ChordTrackReadingTests
             key c major
             octave absolute
             part p1 { clef bass }
-            section A { p1 { d,4 f, a, c | g,, b,, d, f, | g,, b,, d, b,, | e,4 g, b, g, | c,4 e, g, b, | } }
+            section A { p1 { d4 f a c' | g, b, d f | g, b, d b, | e4 g b g | c4 e g b | } }
             form { A }
             score { staff p1 }
             """;
@@ -163,7 +163,7 @@ public class ChordTrackReadingTests
             key c major
             octave absolute
             part p1 { clef bass }
-            section A { p1 { c,4 e, g, a, | c,4 g, a, b, | c1 | c,4 g, a, b, | } }
+            section A { p1 { c4 e g a | c4 g a b | c'1 | c4 g a b | } }
             form { A }
             score { staff p1 }
             """;
@@ -181,7 +181,7 @@ public class ChordTrackReadingTests
             key c major
             octave absolute
             part p1 { clef bass }
-            section A { p1 { d,4 f, a, f, | g,, b,, d, b,, | c,4 e, g, e, | a,,4 cis, e, cis, | d,4 f, a, f, | g,,1 | } }
+            section A { p1 { d4 f a f | g, b, d b, | c4 e g e | a,4 cis e cis | d4 f a f | g,1 | } }
             form { A }
             score { staff p1 }
             """;
@@ -202,7 +202,7 @@ public class ChordTrackReadingTests
             key c major
             octave absolute
             part p1 { clef bass }
-            section A { p1 { c,4 e, g, e, | d,1 | g,,4 b,, d, f, | c,1 | } }
+            section A { p1 { c4 e g e | d1 | g,4 b, d f | c1 | } }
             form { A }
             score { staff p1 }
             """;
@@ -217,7 +217,7 @@ public class ChordTrackReadingTests
             part lh { clef bass }
             // A G on the last beat alone is not worth a change there (the change costs most off the
             // bar line and its middle: chords not read finer than they help).
-            section A { lh { <a, c e>2 <d f a>2 | <c e g>2. <g, b, d>4 | } }
+            section A { lh { <a c' e'>2 <d' f' a'>2 | <c' e' g'>2. <g b d'>4 | } }
             form { A }
             score { staff lh }
             """;
@@ -231,7 +231,7 @@ public class ChordTrackReadingTests
             time 3/4
             octave absolute
             part lh { clef bass }
-            section A { lh { <c e g>4 <g, b, d>2 | <c e g>2. | } }
+            section A { lh { <c' e' g'>4 <g b d'>2 | <c' e' g'>2. | } }
             form { A }
             score { staff lh }
             """;
@@ -246,8 +246,8 @@ public class ChordTrackReadingTests
             octave absolute
             part lh {
               clef bass
-              section A { <c e g>1 | }
-              section B { <f a c'>1 | }
+              section A { <c' e' g'>1 | }
+              section B { <f' a' c''>1 | }
             }
             form { A B }
             score { staff lh }
@@ -273,14 +273,14 @@ public class ChordTrackReadingTests
         Assert.DoesNotContain("\r", Added(lf));
         Assert.DoesNotMatch("(?<!\r)\n", Added(crlf));
         // A by-part file's track spans lines of its own.
-        const string byPart = "time 4/4\noctave absolute\npart lh {\n  clef bass\n  section A { <c e g>1 | }\n}\nform { A }\nscore { staff lh }\n";
+        const string byPart = "time 4/4\noctave absolute\npart lh {\n  clef bass\n  section A { <c' e' g'>1 | }\n}\nform { A }\nscore { staff lh }\n";
         Assert.DoesNotMatch("(?<!\r)\n", Added(byPart.Replace("\n", "\r\n")));
     }
 
     [Fact]
     public void InAOneLineScore_TheRowStandsBesideTheStaff()
     {
-        const string source = "time 4/4\noctave absolute\npart lh { clef bass }\nsection A { lh { <c e g>1 | } }\nform { A }\nscore { staff lh }\n";
+        const string source = "time 4/4\noctave absolute\npart lh { clef bass }\nsection A { lh { <c' e' g'>1 | } }\nform { A }\nscore { staff lh }\n";
         Assert.Contains("score { chords harmony  staff lh }", Added(source));
     }
 

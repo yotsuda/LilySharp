@@ -12,7 +12,7 @@ part melody
 
 section Main {
   melody {
-    c'4 e g e |
+    c''4 e g e |
     R1*12 |
     c'4 e g e |
   }

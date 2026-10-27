@@ -124,8 +124,8 @@ public class OmrFeedbackRegressionTests
             part rh { clef treble }
             section Piece {
               rh {
-                voice { c''8 d''8 e''8 f''8 g''8 a''8 b''8 a''8 } { c'2 c'2 } |
-                time 12/8 voice { c''8 d''8 e''8 f''8 g''8 a''8 b''8 a''8 g''8 f''8 e''8 d''8 } { c'4. c'4. c'4. c'4. } |
+                voice { c'''8 d'''8 e'''8 f'''8 g'''8 a'''8 b'''8 a'''8 } { c''2 c''2 } |
+                time 12/8 voice { c'''8 d'''8 e'''8 f'''8 g'''8 a'''8 b'''8 a'''8 g'''8 f'''8 e'''8 d'''8 } { c''4. c''4. c''4. c''4. } |
               }
             }
             form { ~Piece }

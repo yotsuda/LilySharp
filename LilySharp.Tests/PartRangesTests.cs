@@ -58,7 +58,7 @@ public class PartRangesTests
     public void TheTessitura_IsWhereTheTimeIs_NotWhereTheEndsAre()
     {
         const string src = "octave absolute\ntime 4/4\npart p { clef treble }\n"
-            + "section A { p { c8 e e e e e e e | e8 e e e e e e c' | } }\nform { A }";
+            + "section A { p { c'8 e e e e e e e | e8 e e e e e e c' | } }\nform { A }";
         var p = PartRanges.Of(new MidiExporter().Export(SyntaxTree.Parse(src)), src).Single();
         Assert.Equal(("C4", "C5"), (p.Low.Name, p.High.Name));
         Assert.Equal((64, 64), (p.TessituraLow, p.TessituraHigh));
@@ -83,7 +83,7 @@ public class PartRangesTests
         Assert.Equal(("F3", "E4"), (alt.Low.Name, alt.High.Name));
         Assert.StartsWith("<c e>", Source[alt.High.Positions[0]..].TrimStart());
 
-        const string flat = "octave absolute\ntime 4/4\npart p { clef treble }\nsection A { p { c4 bes ces' bes | } }\nform { A }";
+        const string flat = "octave absolute\ntime 4/4\npart p { clef treble }\nsection A { p { c'4 bes' ces'' bes' | } }\nform { A }";
         var p = PartRanges.Of(new MidiExporter().Export(SyntaxTree.Parse(flat)), flat).Single();
         Assert.Equal(("C4", "C♭5"), (p.Low.Name, p.High.Name));
     }

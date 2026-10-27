@@ -30,7 +30,7 @@ part melody {
   // and pick `mf` from the list. Then, with the caret on `mf`, press Ctrl+Shift+Up: it
   // becomes `f`. Ctrl+Shift+Down twice: `mp`. The same keys move a note, the key, the clef.
   section A {
-    e4@todo("STEP 3: Ctrl+Shift+Up, PgUp") d c d | e@todo("STEP 4") e e2 |
+    e'4@todo("STEP 3: Ctrl+Shift+Up, PgUp") d c d | e@todo("STEP 4") e e2 |
     d4 d d2 | e4 g g2 |
     e4 d c d | e e e e | d d e d | c1 |
     // STEP 5 — Delete `r1@todo("STEP 5")`, press Ctrl+Space there, pick `Cmaj7`.

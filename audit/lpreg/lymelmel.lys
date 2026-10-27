@@ -12,7 +12,7 @@ part v { }
 lyrics w sings v { section Main { ha ha looong __ ho | } }
 
 section Main {
-  v { c4 c c16( d e f) g4 | }
+  v { c'4 c' c'16( d' e' f') g'4 | }
 }
 
 form { ~Main }

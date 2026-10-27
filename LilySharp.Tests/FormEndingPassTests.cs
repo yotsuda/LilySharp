@@ -187,10 +187,10 @@ public sealed class FormEndingPassTests
     {
         const string src = """
             part vn {
-              section A { c''1 | c1~ || }
-              section B { c''1 || }
-              section C { c''1 | c1~ || }
-              section D { c''1 | }
+              section A { c'''1 | c1~ || }
+              section B { c'''1 || }
+              section C { c'''1 | c1~ || }
+              section D { c'''1 | }
             }
             form { |: A [1,3. B] :| [2. C] D }
             score { staff vn }
@@ -248,9 +248,9 @@ public sealed class FormEndingPassTests
         time 4/4
         key c major
         part m { clef bass }
-        section A { m { c4 d e f | g4 a | } }
+        section A { m { c'4 d e f | g4 a | } }
         section E1 { m { b4 c' | d'4 e' f' g' | } }
-        section E2 { m { c'4 d' | e'1 | f'4 | } }
+        section E2 { m { c''4 d' | e'1 | f'4 | } }
         section D { m { g'4 a' b' | c''1 | } }
         """;
 

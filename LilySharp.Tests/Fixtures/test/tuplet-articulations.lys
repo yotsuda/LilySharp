@@ -10,8 +10,8 @@ part m { clef treble }
 
 section A {
   m {
-    tuplet 3/2 { c'8@staccato e' g' } tuplet 3/2 { c''@accent g' e' }
-    tuplet 3/2 { d'@tenuto f' a' } tuplet 3/2 { b'@marcato g' d' }
+    tuplet 3/2 { c''8@staccato e'' g'' } tuplet 3/2 { c'''@accent g'' e'' }
+    tuplet 3/2 { d''@tenuto f'' a'' } tuplet 3/2 { b''@marcato g'' d'' }
   }
 }
 

@@ -10,23 +10,23 @@ part melody
 
 phrase beamsWithRests {
   // Beams broken by rests
-  c8 r e r g r b r |
+  c'8 r e r g r b r |
   c8 d e f r4 r |
 }
 
 phrase eighthBeams {
   // Continuous 8th beams
-  c8 d e f g f e d |
+  c'8 d e f g f e d |
 }
 
 phrase sixteenthBeams {
   // 16th note beams
-  c16 d e f g f e d c d e f g f e d |
+  c'16 d e f g f e d c d e f g f e d |
 }
 
 phrase mixedBeams {
   // Mixed durations in beams
-  c8 d16 e f8 g16 a g8 f16 e d4 |
+  c'8 d16 e f8 g16 a g8 f16 e d4 |
 }
 
 section Main {

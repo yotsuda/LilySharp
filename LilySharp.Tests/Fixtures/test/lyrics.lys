@@ -10,7 +10,7 @@ part melody
 
 section Main {
   melody {
-    c4 d e f |
+    c'4 d e f |
     g2 g |
     a4 a a a |
     g1 |

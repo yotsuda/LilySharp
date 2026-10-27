@@ -23,33 +23,33 @@
   <line x1="54.04" y1="16.88" x2="56.99" y2="16.88" stroke="#000000" stroke-width="0.200"/>
   <text class="music" x="17.12" y="16.88" font-size="4.00" data-pos="276"></text>
   <line x1="18.36" y1="16.73" x2="18.36" y2="13.38" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="20.12" y="16.38" font-size="4.00" data-pos="279"></text>
+  <text class="music" x="20.12" y="16.38" font-size="4.00" data-pos="280"></text>
   <line x1="21.36" y1="16.23" x2="21.36" y2="12.88" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="23.13" y="15.88" font-size="4.00" data-pos="281"></text>
+  <text class="music" x="23.13" y="15.88" font-size="4.00" data-pos="282"></text>
   <line x1="24.36" y1="15.73" x2="24.36" y2="12.38" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="26.13" y="15.38" font-size="4.00" data-pos="283"></text>
+  <text class="music" x="26.13" y="15.38" font-size="4.00" data-pos="284"></text>
   <line x1="27.37" y1="15.23" x2="27.37" y2="11.88" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="30.46" y="14.88" font-size="4.00" data-pos="287"></text>
+  <text class="music" x="30.46" y="14.88" font-size="4.00" data-pos="288"></text>
   <line x1="31.77" y1="14.88" x2="31.77" y2="11.38" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="34.73" y="14.88" font-size="4.00" data-pos="290"></text>
+  <text class="music" x="34.73" y="14.88" font-size="4.00" data-pos="291"></text>
   <line x1="36.04" y1="14.88" x2="36.04" y2="11.38" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="40.29" y="16.88" font-size="4.00" data-pos="319"></text>
+  <text class="music" x="40.29" y="16.88" font-size="4.00" data-pos="320"></text>
   <line x1="41.53" y1="16.73" x2="41.53" y2="13.38" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="43.30" y="17.38" font-size="4.00" data-pos="322"></text>
+  <text class="music" x="43.30" y="17.38" font-size="4.00" data-pos="324"></text>
   <line x1="44.53" y1="17.23" x2="44.53" y2="13.88" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="46.30" y="17.88" font-size="4.00" data-pos="324"></text>
+  <text class="music" x="46.30" y="17.88" font-size="4.00" data-pos="326"></text>
   <line x1="47.54" y1="17.73" x2="47.54" y2="13.88" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="49.30" y="18.38" font-size="4.00" data-pos="326"></text>
+  <text class="music" x="49.30" y="18.38" font-size="4.00" data-pos="328"></text>
   <line x1="50.54" y1="18.23" x2="50.54" y2="13.88" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="54.54" y="16.88" font-size="4.00" data-pos="330"></text>
-  <rect x="29.37" y="11.88" width="0.19" height="4.00" data-pos="285"/>
-  <rect x="39.20" y="11.88" width="0.19" height="4.00" data-pos="292"/>
-  <rect x="52.45" y="11.88" width="0.19" height="4.00" data-pos="328"/>
-  <rect x="60.60" y="11.88" width="0.19" height="4.00" data-pos="333"/>
+  <text class="music" x="54.54" y="16.88" font-size="4.00" data-pos="332"></text>
+  <rect x="29.37" y="11.88" width="0.19" height="4.00" data-pos="286"/>
+  <rect x="39.20" y="11.88" width="0.19" height="4.00" data-pos="293"/>
+  <rect x="52.45" y="11.88" width="0.19" height="4.00" data-pos="330"/>
+  <rect x="60.60" y="11.88" width="0.19" height="4.00" data-pos="335"/>
   <rect x="11.90" y="8.29" width="2.75" height="2.74" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="255"/>
   <text x="13.28" y="10.68" font-size="2.77" text-anchor="middle" data-pos="255">A</text>
-  <rect x="38.06" y="6.69" width="2.48" height="2.71" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="298"/>
-  <text x="39.34" y="9.04" font-size="2.77" text-anchor="middle" data-pos="298">B</text>
-  <text x="30.46" y="10.89" font-size="2.20" font-style="italic" data-pos="349">poco a poco dim.</text>
+  <rect x="38.06" y="6.69" width="2.48" height="2.71" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="299"/>
+  <text x="39.34" y="9.04" font-size="2.77" text-anchor="middle" data-pos="299">B</text>
+  <text x="30.46" y="10.89" font-size="2.20" font-style="italic" data-pos="351">poco a poco dim.</text>
   </g>
 </svg>

@@ -38,10 +38,10 @@ public class BreathingSignColumnTests
         part m { clef treble }
         section A {
           m {
-            c'4@breath d'4 e'4 f'4 |
-            c'8@breath d'8 e'8@breath f'8 g'4 a'4 |
-            c'4@caesura d'4 e'4 f'4 |
-            c'4@breath dis'4 e'4@breath ges'4 |
+            c''4@breath d''4 e''4 f''4 |
+            c''8@breath d''8 e''8@breath f''8 g''4 a''4 |
+            c''4@caesura d''4 e''4 f''4 |
+            c''4@breath dis''4 e''4@breath ges''4 |
           }
         }
         form { A }

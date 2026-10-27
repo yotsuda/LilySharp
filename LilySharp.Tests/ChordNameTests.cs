@@ -608,8 +608,8 @@ score {{ chords prog  staff m }}
     public void ChordOnATabStaff_StandsOverItsOwnTopLine_NotTheStaffAbove()
     {
         var tree = SyntaxTree.Parse(
-            "part melody { section A { c1\\3@chord(Cmaj7) } }\n"
-            + "part back { section A { e1\\3@chord(Dm7) } }\n"
+            "part melody { section A { c'1\\3@chord(Cmaj7) } }\n"
+            + "part back { section A { e'1\\3@chord(Dm7) } }\n"
             + "form { A }\n"
             + "score { staff back  tab melody }\n");
         Assert.False(tree.HasErrors, string.Join(", ", tree.Diagnostics.Select(d => d.Message)));

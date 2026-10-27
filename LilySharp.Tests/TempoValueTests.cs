@@ -109,7 +109,7 @@ public class TempoValueTests
         var src =
             body + "\n" +
             "part m { clef treble }\n" +
-            "section A { m { c'4 d' e' f' | } }\n" +
+            "section A { m { c''4 d' e' f' | } }\n" +
             "form { A }\n" +
             "score s { staff m }\n";
         var tree = SyntaxTree.Parse(src);

@@ -110,7 +110,7 @@ public class EngravingStyleTests
     private const string Book = """
         octave absolute
         part m { clef treble
-          section A { c'8 d' e' f' g'4 a'' | b16 c' d' e' f'8 g' a'2 | c'''4 b'' a'' g'' | e2 c''2 | }
+          section A { c''8 d'' e'' f'' g''4 a''' | b'16 c'' d'' e'' f''8 g'' a''2 | c''''4 b''' a''' g''' | e'2 c'''2 | }
         }
         form { A }
         score { staff m }
@@ -198,7 +198,7 @@ public class EngravingStyleTests
     private const string Beamed = """
         octave absolute
         part m { clef treble
-          section A { c'8 d' e' f' g' a' b' c'' | b16 c' d' e' f' g' a' b' e''8 d'' c'' b' | a'8 g' f' e' d''16 e'' f'' g'' a''8 g'' | }
+          section A { c''8 d'' e'' f'' g'' a'' b'' c''' | b'16 c'' d'' e'' f'' g'' a'' b'' e'''8 d''' c''' b'' | a''8 g'' f'' e'' d'''16 e''' f''' g''' a'''8 g''' | }
         }
         form { A }
         score { staff m }
@@ -285,7 +285,7 @@ public class EngravingStyleTests
     private const string DottedAndSharp = """
         octave absolute
         part m { clef treble
-          section A { c'4. d'8 e'4.. f'16 | r4. g'8 <c' e' g'>4. r8 | fis'4 bes' <cis'' e'' gis''>2 | aes'2. b'4 | }
+          section A { c''4. d''8 e''4.. f''16 | r4. g''8 <c'' e'' g''>4. r8 | fis''4 bes'' <cis''' e''' gis'''>2 | aes''2. b''4 | }
         }
         form { A }
         score { staff m }
@@ -336,7 +336,7 @@ public class EngravingStyleTests
         paper { raggedRight }
         octave absolute
         part m { clef treble
-          section A { c'1 | d'2. g''4 | <c' d' f'>4 <f'' g''>8 a'' e'4. f'8 | b4~ b8 c''( d'' e'') a4 | }
+          section A { c''1 | d''2. g'''4 | <c'' d'' f''>4 <f''' g'''>8 a''' e''4. f''8 | b'4~ b'8 c'''( d''' e''') a'4 | }
         }
         form { A }
         score { staff m }
@@ -407,7 +407,7 @@ public class EngravingStyleTests
             paper { raggedRight }
             octave absolute
             part m { clef treble
-              section A { <e' g'>4~ <e' g'>8 a'8@staccato b'4@accent c''8( b' | a'4)@p g'4@f tuplet 3/2 { f'8 e' d' } c'4@fermata | voice { e'4 f' g' a' } { e'4 e' g'8 f' e'4 } | <f' g'>2.. r8 | }
+              section A { <e'' g''>4~ <e'' g''>8 a''8@staccato b''4@accent c'''8( b'' | a''4)@p g''4@f tuplet 3/2 { f''8 e'' d'' } c''4@fermata | voice { e''4 f'' g'' a'' } { e''4 e'' g''8 f'' e''4 } | <f'' g''>2.. r8 | }
             }
             form { A }
             score { staff m }
@@ -431,7 +431,7 @@ public class EngravingStyleTests
         const string book = """
             octave absolute
             part m { clef treble
-              section A { grace { d''16 } c''4 fis'8. g'16 cue { a'4 } r4 | }
+              section A { grace { d'''16 } c'''4 fis''8. g''16 cue { a''4 } r4 | }
             }
             form { A }
             score { staff m }
@@ -497,7 +497,7 @@ public class EngravingStyleTests
         const string music = """
             octave absolute
             part m { clef treble
-              section A { c'8 d' e' f' g'4 a'' | b16 c' d' e' f'8 g' a'2 | }
+              section A { c''8 d'' e'' f'' g''4 a''' | b'16 c'' d'' e'' f''8 g'' a''2 | }
             }
             form { A }
             """;
@@ -521,7 +521,7 @@ public class EngravingStyleTests
     public void TheTwin_SpellsTheStyleInLilyPond()
     {
         string Twin(string layout) => new Core.LilyPond.LilyPondExporter().Export(SyntaxTree.Parse(
-            layout + "part m { }\nsection A { m { c'1 | } }\nform { A }\nscore { staff m }\n"));
+            layout + "part m { }\nsection A { m { c''1 | } }\nform { A }\nscore { staff m }\n"));
         string styled = Twin("layout { lineThickness 0.15  StaffLine.thickness 1.2  LedgerLine.thickness 2 0.1  "
             + "LedgerLine.lengthFraction 0.4  Stem.thickness 2 Stem.lengthFraction 1.2  Beam.thickness 0.6  Beam.damping 3  Dots.padding 0.7  Accidental.rightPadding 0.4  NoteHead.scale 1.1  BarLine.thinThickness 3  BarLine.thickThickness 7 }\n");
         foreach (string line in new[]

@@ -83,9 +83,9 @@ public class LedgerHeadSpacingTests
     [Fact]
     public void FlaggedEighthsBelowTheStaff_AreHeldApartLikeLilyPonds()
         => AssertBars(Header
-            + "section A { melody { c'4 d e f | } }\n"
+            + "section A { melody { c''4 d e f | } }\n"
             + "section B { time none  melody { g8 a b c d c b a | g4 f e2 | } }\n"
-            + "section C { melody { c1 | } }\n"
+            + "section C { melody { c'1 | } }\n"
             + "form { A B C }\nscore { staff melody }\n",
             20.357, 41.986, 53.499, 64.199);
 
@@ -98,23 +98,23 @@ public class LedgerHeadSpacingTests
     [Fact]
     public void FlaggedEighthsInMeteredBars_AreExact()
         => AssertBars(Header
-            + "section Main { melody { c'4. b8 a4. g8 | f4. e8 d4. c8 | c4. d8 e4. f8 | g4. a8 b4. c'8 | g,4. a8 b4. c8 | d4. e8 f4. g8 | } }\n"
+            + "section Main { melody { c''4. b8 a4. g8 | f4. e8 d4. c8 | c4. d8 e4. f8 | g4. a8 b4. c'8 | g,4. a8 b4. c8 | d4. e8 f4. g8 | } }\n"
             + "form { Main }\nscore { staff melody }\n",
             22.469, 37.506, 52.543, 67.767, 82.741, 97.812);
 
     [Fact]
     public void TheSameFigureInsideTheStaff_IsUnchanged()
         => AssertBars(Header
-            + "section A { melody { c'4 d e f | } }\n"
+            + "section A { melody { c''4 d e f | } }\n"
             + "section B { time none  melody { g'8 a b c d c b a | g4 f e2 | } }\n"
-            + "section C { melody { c1 | } }\n"
+            + "section C { melody { c'1 | } }\n"
             + "form { A B C }\nscore { staff melody }\n",
             20.357, 39.67, 51.272, 61.972);
 
     [Fact]
     public void BeamedEighthsOnLedgerLines_AreUnchanged()
         => AssertBars(Header
-            + "section Main { melody { c8 b a g f e d c | c8 d e f g a b c | f'8 e d c b a g f | f8 g a b c d e f | } }\n"
+            + "section Main { melody { c'8 b a g f e d c | c8 d e f g a b c | f'8 e d c b a g f | f8 g a b c d e f | } }\n"
             + "form { Main }\nscore { staff melody }\n",
             28.761, 50.064, 71.624, 92.515);
 }

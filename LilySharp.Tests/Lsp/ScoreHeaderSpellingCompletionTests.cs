@@ -41,8 +41,8 @@ namespace LilySharp.Tests.Lsp;
 public class ScoreHeaderSpellingCompletionTests
 {
     private const string Parts = """
-        part melody { section A { c'4 d' e' f' | } }
-        part bass { section A { c4 d e f | } }
+        part melody { section A { c''4 d' e' f' | } }
+        part bass { section A { c'4 d e f | } }
         form { A }
 
         """;

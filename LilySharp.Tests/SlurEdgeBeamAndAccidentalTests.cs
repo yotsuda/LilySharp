@@ -45,7 +45,7 @@ public sealed class SlurEdgeBeamAndAccidentalTests
         time 4/4
         part bassline {
           clef bass
-          section A { b,,4 b,,8 b,,( dis,) dis, dis, dis, | }
+          section A { b,4 b,8 b,( dis) dis dis dis | }
         }
         form { ~A }
         score { staff bassline }
@@ -91,7 +91,7 @@ public sealed class SlurEdgeBeamAndAccidentalTests
             time 4/4
             part bassline {
               clef bass
-              section A { b,,4 r8 b,,8 b,,2( | break e,4) r8 e, e,4 r8 e, | }
+              section A { b,4 r8 b,8 b,2( | break e4) r8 e e4 r8 e | }
             }
             form { ~A }
             score { staff bassline }
@@ -116,7 +116,7 @@ public sealed class SlurEdgeBeamAndAccidentalTests
         var tree = SyntaxTree.Parse("""
             octave absolute
             part m {
-              section A { voice { c''8( b' a' g' f'4 e') } { e8( f g a b4 c') } }
+              section A { voice { c'''8( b'' a'' g'' f''4 e'') } { e'8( f' g' a' b'4 c'') } }
             }
             form { A }
             score { staff m }

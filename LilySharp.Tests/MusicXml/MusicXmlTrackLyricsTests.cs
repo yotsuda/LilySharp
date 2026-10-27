@@ -33,7 +33,7 @@ public class MusicXmlTrackLyricsTests
 {
     private const string Music =
         "octave absolute\ntime 4/4\npart vo { clef treble }\npart gt { clef treble }\n"
-        + "section A {\n vo { c'4 d' e' f' | g'2 a' | }\n gt { c1 | c1 | }\n}\n"
+        + "section A {\n vo { c''4 d' e' f' | g'2 a | }\n gt { c'1 | c1 | }\n}\n"
         + "lyrics words sings vo { So if you lis- | ten now | }\nform { A }\n";
 
     private static XDocument Export(string score)

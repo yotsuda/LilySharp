@@ -15,8 +15,8 @@ part melody
 
 section A {
   melody {
-    c,8( d a, d c, d a, d) |
-    c,8( des as, des c, des as, des) |
+    c8( d' a d' c d' a d') |
+    c8( des' as des' c des' as des') |
   }
 }
 

@@ -45,7 +45,7 @@ public class ArticulationPlacementTests
     {
         var score = Collect(
             "part m { clef treble }\n" +
-            "section S { m { c'4@staccato.up d'4@staccato.down } }\n" +
+            "section S { m { c''4@staccato.up d'4@staccato.down } }\n" +
             "form { S }\n" +
             "score o { staff m }\n");
 

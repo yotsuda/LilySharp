@@ -51,8 +51,8 @@ public class StyledHeadStemAttachmentTests
 
         section Main {
           v {
-            voice { f8@notehead(triangle) f4:32@notehead(triangle) e8@notehead(triangle) f8@notehead(triangle) s4 s8 }
-                  { f8@notehead(triangle) f4@notehead(triangle) e8@notehead(triangle) f8@notehead(triangle) s4 s8 } |
+            voice { f'8@notehead(triangle) f'4:32@notehead(triangle) e'8@notehead(triangle) f'8@notehead(triangle) s4 s8 }
+                  { f'8@notehead(triangle) f'4@notehead(triangle) e'8@notehead(triangle) f'8@notehead(triangle) s4 s8 } |
           }
         }
 

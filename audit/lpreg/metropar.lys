@@ -8,9 +8,9 @@ part v { }
 section Main {
   v {
     tempo 4 = 60
-    c'1 |
+    c''1 |
     tempo "" 4 = 80
-    c'1 |
+    c''1 |
   }
 }
 

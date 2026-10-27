@@ -52,7 +52,7 @@ public sealed class FormRepeatBarlineTests
         new MeasureCollector().Collect(SyntaxTree.Parse(src), "m").Voice.Measures.ToArray();
 
     private const string TwoSections =
-        "part m { clef treble section A { c1 } section B { d1 } }\n";
+        "part m { clef treble section A { c'1 } section B { d'1 } }\n";
 
     /// <summary>A form-level <c>:|</c> is engraved, on the bar it follows.</summary>
     [Fact]
@@ -193,7 +193,7 @@ public sealed class FormRepeatBarlineTests
     public void ADividerBetweenEndings_IsTheRepeatsOwn_NotARewind()
     {
         const string src =
-            "part m { clef treble section A { c1 } section B { d1 } section C { e1 } section D { f1 } }\n"
+            "part m { clef treble section A { c'1 } section B { d'1 } section C { e'1 } section D { f'1 } }\n"
             + "form { |: A [1. B] :| [2. C] :| [3. D] }\nscore { staff m }";
         var exporter = new LilyPondExporter();
         var ly = exporter.Export(SyntaxTree.Parse(src));
@@ -216,7 +216,7 @@ public sealed class FormRepeatBarlineTests
     public void ABackToBackDivider_SplitsTheChordTrackTheSameWay()
     {
         const string src =
-            "part m { clef treble section A { c1 } section B { d1 } }\n"
+            "part m { clef treble section A { c'1 } section B { d'1 } }\n"
             + "chords h { section A { C } section B { G } }\n"
             + "form { A :|: B :| }\nscore { staff m chords h }";
         var ly = new LilyPondExporter().Export(SyntaxTree.Parse(src));
@@ -277,7 +277,7 @@ public sealed class FormRepeatBarlineTests
     public void ItRewindsToTheStartOfThePiece_NotToTheLastSection()
     {
         const string three =
-            "part m { clef treble section A { c1 } section B { d1 } section C { e1 } }\n";
+            "part m { clef treble section A { c'1 } section B { d'1 } section C { e'1 } }\n";
         Assert.Equal(new[] { 60, 62, 64 },
             Pitches(three + "form { A B C }\nscore { staff m }"));
         Assert.Equal(new[] { 60, 62, 64, 60, 62, 64 },
@@ -293,7 +293,7 @@ public sealed class FormRepeatBarlineTests
     {
         Assert.Equal(new[] { 60, 62, 60, 62, 64 },
             Pitches(
-                "part m { clef treble section A { c1 } section B { d1 } section C { e1 } }\n"
+                "part m { clef treble section A { c'1 } section B { d'1 } section C { e'1 } }\n"
                 + "form { A B :| C }\nscore { staff m }"));
     }
 
@@ -315,7 +315,7 @@ public sealed class FormRepeatBarlineTests
         Assert.Equal(new[] { 60, 60, 62, 62 }, Pitches(Src("form { A :|: B :| }")));
         // A second divider closes the block and opens the next — it rewinds nothing.
         Assert.Equal(new[] { 60, 60, 62, 62, 64, 64 }, Pitches(
-            "part m { clef treble section A { c1 } section B { d1 } section C { e1 } }\n"
+            "part m { clef treble section A { c'1 } section B { d'1 } section C { e'1 } }\n"
             + "form { A :|: B :|: C :| }\nscore { staff m }"));
         // The closing bar's count is the block's.
         Assert.Equal(new[] { 60, 60, 62, 62, 62 }, Pitches(Src("form { A :|: B :|*3 }")));
@@ -343,7 +343,7 @@ public sealed class FormRepeatBarlineTests
     public void ABackToBackDivider_InsideABlock_SplitsItIntoRuns_InMidi()
     {
         const string three =
-            "part m { clef treble section A { c1 } section B { d1 } section C { e1 } section D { f1 } }\n";
+            "part m { clef treble section A { c'1 } section B { d'1 } section C { e'1 } section D { f'1 } }\n";
         Assert.Equal(new[] { 60, 60, 62, 62 },
             Pitches(three + "form { |: A :|: B :| }\nscore { staff m }"));
         Assert.Equal(new[] { 60, 60, 60, 62, 62, 62 },
@@ -359,7 +359,7 @@ public sealed class FormRepeatBarlineTests
     public void TheReader_YieldsARewindAndABlock_ForAFormLevelDivider()
     {
         var form = SyntaxTree.Parse(
-                "part m { clef treble section A { c1 } section B { d1 } section C { e1 } section D { f1 } }\n"
+                "part m { clef treble section A { c'1 } section B { d'1 } section C { e'1 } section D { f'1 } }\n"
                 + "form { A :|: B [1. C] :| [2. D] }\nscore { staff m }")
             .GetRoot().DescendantNodes().OfType<FormDeclarationSyntax>().Single();
         var items = FormWalk.Read(form);
@@ -387,7 +387,7 @@ public sealed class FormRepeatBarlineTests
     public void ADividerRunsEndings_AreEndingsToEveryReader()
     {
         const string src =
-            "part m { clef treble section A { c1 } section B { d1 } section C { e1 } section D { f1 } }\n"
+            "part m { clef treble section A { c'1 } section B { d'1 } section C { e'1 } section D { f'1 } }\n"
             + "form { A :|: B [1. C] :| [2. D] }\nscore { staff m }";
         Assert.Equal(new[] { 60, 60, 62, 64, 62, 65 }, Pitches(src));
         var tree = SyntaxTree.Parse(src);
@@ -409,7 +409,7 @@ public sealed class FormRepeatBarlineTests
         // spellings agree on the last bar's line. Poison (RULES §5.4): call EndAlternative with
         // `last: true` at every divider-run ending and the divider spelling's D fills the bar.
         const string half =
-            "part m { clef treble section A { c1 } section B { d1 } section C { e2 } section D { f2 } }\n";
+            "part m { clef treble section A { c'1 } section B { d'1 } section C { e'2 } section D { f'2 } }\n";
         var block = Measures(half + "form { A |: B [1. C] :| [2. D] }\nscore { staff m }");
         var divider = Measures(half + "form { A :|: B [1. C] :| [2. D] }\nscore { staff m }");
         Assert.Equal(block.Length, divider.Length);
@@ -429,7 +429,7 @@ public sealed class FormRepeatBarlineTests
         // before it, not what was PLAYED before it, so the first rewind is not replayed a
         // second time. Written-order is the reading that terminates.
         var pitches = Pitches(
-            "part m { clef treble section A { c1 } section B { d1 } section C { e1 } }\n"
+            "part m { clef treble section A { c'1 } section B { d'1 } section C { e'1 } }\n"
             + "form { A B :| C :| }\nscore { staff m }");
         Assert.Equal(new[] { 60, 62, /*rewind*/ 60, 62, /**/ 64, /*rewind*/ 60, 62, 64 }, pitches);
     }

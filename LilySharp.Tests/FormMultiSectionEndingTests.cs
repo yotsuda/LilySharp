@@ -47,11 +47,11 @@ public sealed class FormMultiSectionEndingTests
         octave absolute
         time 4/4
         part m { clef treble }
-        section A { m { c'1 | } }
-        section B { m { d'1 | } }
-        section C { m { e'1 | } }
-        section D { m { f'1 | } }
-        section E { m { g'1 | } }
+        section A { m { c''1 | } }
+        section B { m { d''1 | } }
+        section C { m { e''1 | } }
+        section D { m { f''1 | } }
+        section E { m { g''1 | } }
 
         """;
 
@@ -151,9 +151,9 @@ public sealed class FormMultiSectionEndingTests
     {
         const string src = """
             part vn {
-              section B { c''1 | }
-              section C { c''2 d''( || }
-              section D { e''2) f'' || }
+              section B { c'''1 | }
+              section C { c'''2 d''( || }
+              section D { e'''2) f'' || }
               section E { g''1 | }
             }
             form { |: B [1. C D] :| [2. E] }
@@ -172,9 +172,9 @@ public sealed class FormMultiSectionEndingTests
     {
         const string src = """
             part vn {
-              section B { c''1 | }
-              section C { e''1~ || }
-              section D { e''1 | }
+              section B { c'''1 | }
+              section C { e'''1~ || }
+              section D { e'''1 | }
               section E { g''1 | }
             }
             form { |: B [1. C D] :| [2. E] }

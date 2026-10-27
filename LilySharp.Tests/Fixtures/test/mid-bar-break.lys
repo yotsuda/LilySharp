@@ -24,7 +24,7 @@ part bass {
 }
 
 section Main {
-  melody { c'4 d break e f | g1 | a1 | b1 | }
+  melody { c''4 d break e f | g1 | a1 | b1 | }
   bass { c2 c2 | | c1 | c1 | }
 }
 

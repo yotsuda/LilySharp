@@ -7,7 +7,7 @@ time 4/4
 part v { }
 
 section Main {
-  v { voice { tuplet 3/2 { c'8( b c' } a2.) | } { s1 | } }
+  v { voice { tuplet 3/2 { c''8( b' c'' } a'2.) | } { s1 | } }
 }
 
 form { ~Main }

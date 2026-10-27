@@ -49,11 +49,11 @@ public class NestedGroupDepthTests
         part pd { clef bass }
         part pe { clef treble }
         section A {
-          pa { c''1 | c''1 | }
-          pb { e'1 | e'1 | }
+          pa { c'''1 | c''1 | }
+          pb { e''1 | e'1 | }
           pc { g'1 | g'1 | }
-          pd { c1 | c1 | }
-          pe { c''1 | c''1 | }
+          pd { c'1 | c1 | }
+          pe { c'''1 | c''1 | }
         }
         form { ~A }
         """;

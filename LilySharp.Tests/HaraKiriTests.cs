@@ -549,7 +549,7 @@ public class HaraKiriTests
 
     /// <summary>A one-part book whose score item is <paramref name="staffItem"/>.</summary>
     private static string Book(string staffItem) =>
-        "part m { }" + NL + "section A { m { c'1 } }" + NL
+        "part m { }" + NL + "section A { m { c''1 } }" + NL
         + "form { A }" + NL + "score { " + staffItem + " }" + NL;
 
     private static string NL => Environment.NewLine;
@@ -599,7 +599,7 @@ public class HaraKiriTests
     [InlineData("ossia m as removeEmpty all")]
     public void EverySpellingTheLanguageMeans_Compiles(string staffItem)
     {
-        string src = "part m { }" + NL + "part n { }" + NL + "section A { m { c'1 } n { c1 } }" + NL
+        string src = "part m { }" + NL + "part n { }" + NL + "section A { m { c''1 } n { c'1 } }" + NL
             + "form { A }" + NL + "score { staff n " + staffItem + " }" + NL;
         var tree = SyntaxTree.Parse(src);
         Assert.DoesNotContain(tree.Diagnostics.Concat(SemanticValidation.Run(tree)),
@@ -612,7 +612,7 @@ public class HaraKiriTests
     public void RemoveEmptyInAPartHeader_IsAnUnknownProperty()
     {
         var tree = SyntaxTree.Parse("part m { clef treble removeEmpty true }" + NL
-            + "section A { m { c'1 } }" + NL + "form { A }" + NL + "score { staff m }" + NL);
+            + "section A { m { c''1 } }" + NL + "form { A }" + NL + "score { staff m }" + NL);
         Assert.Contains(SemanticValidation.Run(tree),
             d => d.Code == DiagnosticCodes.UnknownSymbolCase && d.Message.Contains("Unknown part property 'removeEmpty'"));
         Assert.DoesNotContain("removeEmpty", SymbolCaseValidator.PropertyNameVocabulary);

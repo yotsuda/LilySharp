@@ -12,21 +12,21 @@ part melody
 
 phrase slurAcrossBreak {
   // A slur that begins before the break and ends after it.
-  c4( d e f | g4 a b c |
+  c'4( d e f | g4 a b c |
   break
   d4 c b a) | g4 f e d |
 }
 
 phrase tieAcrossBreak {
   // A tie crossing the line break.
-  c2 e2~ |
+  c'2 e2~ |
   break
   e4 f g a |
 }
 
 phrase hairpinAcrossBreak {
   // Hairpin that grows across the break.
-  c4@p d@cresc e f |
+  c'4@p d@cresc e f |
   break
   g4 a b c@f |
 }

@@ -705,7 +705,7 @@ public class GraceBodyValidatorTests
     {
         string source =
             "part m { clef treble }\n"
-            + "section A { m { grace { d'8@mark(\"P\") } c'1 | e'1 | } }\n"
+            + "section A { m { grace { d''8@mark(\"P\") } c'1 | e'1 | } }\n"
             + "form { ~A }\nscore { staff m tab m }\n";
         string svg = Regex.Replace(
             LiveRender.SvgFromRenderSpec(source), "data-pos=\"\\d+\"", "data-pos=\"#\"");

@@ -13,7 +13,7 @@ part melody { clef treble transpose d }
 
 section Main {
   melody {
-    c'4 d e f | g4 a b c' | cis'4 d' r2 |
+    c''4 d e f | g4 a b c' | cis'4 d' r2 |
   }
 }
 

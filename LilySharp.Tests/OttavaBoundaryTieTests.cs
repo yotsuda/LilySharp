@@ -43,7 +43,7 @@ public sealed class OttavaBoundaryTieTests
         var tree = SyntaxTree.Parse("""
             octave absolute
             part m {
-              section A { c''4@ottava~ c'' d''~ d''@!ottava | }
+              section A { c'''4@ottava~ c''' d'''~ d'''@!ottava | }
             }
             form { A }
             score { staff m }
@@ -74,7 +74,7 @@ public sealed class OttavaBoundaryTieTests
         var tree = SyntaxTree.Parse("""
             octave absolute
             part m {
-              section A { c''4@ottava~ c'' d''~ d''@!ottava | }
+              section A { c'''4@ottava~ c''' d'''~ d'''@!ottava | }
             }
             form { A }
             score { staff m }

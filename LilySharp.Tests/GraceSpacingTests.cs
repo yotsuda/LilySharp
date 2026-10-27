@@ -61,7 +61,7 @@ public class GraceSpacingTests
             time 4/4
             part up
             section Main {
-              up { c'4 c' c' c' | grace { d'16 } c'4 c' c' c' | }
+              up { c''4 c'' c'' c'' | grace { d''16 } c''4 c'' c'' c'' | }
             }
             form { ~Main }
             score x { staff ~up }
@@ -102,7 +102,7 @@ public class GraceSpacingTests
             time 4/4
             part up
             section Main {
-              up { c'1 | grace { d'16 } c'1 | }
+              up { c''1 | grace { d''16 } c''1 | }
             }
             form { ~Main }
             score x { staff ~up }

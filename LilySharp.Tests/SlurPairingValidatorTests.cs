@@ -88,7 +88,7 @@ public class SlurPairingValidatorTests
         // A rest carries no cue flag; read as "outside every cue" it would make one cue
         // region two and report a crossing that is not there.
         Assert.Empty(SemanticValidation.Run(SyntaxTree.Parse(
-                "part m { section A { c'4 cue { e4( r4 g4) } r4 | } } form { A } score { staff m }"))
+                "part m { section A { c''4 cue { e4( r4 g4) } r4 | } } form { A } score { staff m }"))
             .Where(d => d.Code == DiagnosticCodes.SpanCrossesCueBoundary));
 
     [Theory]
@@ -136,7 +136,7 @@ public class SlurPairingValidatorTests
         // diagnostics both surface it.
         Assert.Contains(
             SemanticValidation.Run(SyntaxTree.Parse(
-                "part m { section A { c4( d e f } } form { A } score { staff m }")),
+                "part m { section A { c'4( d e f } } form { A } score { staff m }")),
             d => d.Code == DiagnosticCodes.UnpairedSlur);
 
     /// <summary>
@@ -161,7 +161,7 @@ public class SlurPairingValidatorTests
     public void ASecondOpen_TheFirstSlurIsTheOneDrawn()
     {
         var score = new LilySharp.Core.Svg.Collector.MeasureCollector().Collect(SyntaxTree.Parse(
-            "part m { clef treble }\nsection A { m { c'4( d e f( | g1) | } }\nform { A }\nscore { staff m }"));
+            "part m { clef treble }\nsection A { m { c''4( d e f( | g1) | } }\nform { A }\nscore { staff m }"));
         var slur = Assert.Single(new LilySharp.Core.Svg.Collector.SlurDetector().DetectSlurs(score));
         Assert.Equal((0, 0, 1, 0), (slur.StartMeasureIndex, slur.StartItemIndex, slur.EndMeasureIndex, slur.EndItemIndex));
     }

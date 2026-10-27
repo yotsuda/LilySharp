@@ -44,8 +44,8 @@ public class MusicXmlSectionCutTests
         part m { clef treble }
         section S {
           m {
-            c'2.@mark("A") | d'2. | time 4/4 e'1@mark("B") | f'1 |
-            g'1@mark("C") | a'1 | b'1 | c''1 | d''1 | e''1 |
+            c''2.@mark("A") | d''2. | time 4/4 e''1@mark("B") | f''1 |
+            g''1@mark("C") | a''1 | b''1 | c'''1 | d'''1 | e'''1 |
           }
         }
         form { ~S }
@@ -115,7 +115,7 @@ public class MusicXmlSectionCutTests
         string lys = Import("""
             octave absolute
             part m { clef treble }
-            section S { m { c'1 | d'1 || e'1 | f'1 | g'1 | a'1 | b'1 |. } }
+            section S { m { c''1 | d''1 || e''1 | f''1 | g''1 | a''1 | b''1 |. } }
             form { ~S }
             score { staff m }
             """);
@@ -142,8 +142,8 @@ public class MusicXmlSectionCutTests
             part m { clef treble }
             section S {
               m {
-                c'4@mark("A") d'4 e'4 | time 4/4 f'1 | g1@mark("B") | time 3/4 c'2. |
-                c'2.@mark("C") | d'2.@mark("D") | e'2. |
+                c''4@mark("A") d''4 e''4 | time 4/4 f''1 | g'1@mark("B") | time 3/4 c''2. |
+                c''2.@mark("C") | d''2.@mark("D") | e''2. |
               }
             }
             form { ~S }
@@ -177,8 +177,8 @@ public class MusicXmlSectionCutTests
             part m { clef treble }
             section S {
               m {
-                c'2.@mark("A") | time 4/4 c'1@mark("B") | time 3/4 c'2. | time 4/4 c'1@mark("C") |
-                time 3/4 c'2. | c'2.@mark("D") | c'2. |
+                c''2.@mark("A") | time 4/4 c''1@mark("B") | time 3/4 c''2. | time 4/4 c''1@mark("C") |
+                time 3/4 c''2. | c''2.@mark("D") | c''2. |
               }
             }
             form { ~S }
@@ -203,7 +203,7 @@ public class MusicXmlSectionCutTests
             octave absolute
             part m { clef treble }
             section S {
-              m { c'2@mark("A")@cresc c'2 | c'2 c'2 | d'2@mark("B") d'2 | d'2 d'2 | c'2@mark("C")@p c'2 | c'2 c'2 | }
+              m { c''2@mark("A")@cresc c''2 | c''2 c''2 | d''2@mark("B") d''2 | d''2 d''2 | c''2@mark("C")@p c''2 | c''2 c''2 | }
             }
             form { ~S }
             score { staff m }
@@ -223,7 +223,7 @@ public class MusicXmlSectionCutTests
         string lys = Import("""
             octave absolute
             part m { clef treble }
-            section S { m { c'1 | d'1@mark("12") | e'1@mark("verse") | f'1 | } }
+            section S { m { c''1 | d''1@mark("12") | e''1@mark("verse") | f''1 | } }
             form { ~S }
             score { staff m }
             """);
@@ -261,15 +261,15 @@ public class MusicXmlSectionCutTests
             time 4/4
             key g major
             part m { clef treble }
-            section S { m { g'1 | a'1 | key! g major b'1 | c''1 | time! 4/4 d''1 | clef! treble e''1 | } }
+            section S { m { g''1 | a''1 | key! g major b''1 | c'''1 | time! 4/4 d'''1 | clef! treble e'''1 | } }
             form { ~S }
             score { staff m }
             """;
         string lys = Import(source);
         Assert.Matches(@"form \{\s*~A ~A2 ~A3 ~A4\s*\}", lys);
-        Assert.StartsWith("key! g major b'1", SectionBody(lys, "A2").Trim().Split('\n')[1].Trim());
-        Assert.Contains("time! 4/4 d''1", SectionBody(lys, "A3"));
-        Assert.Contains("clef! treble e''1", SectionBody(lys, "A4"));
+        Assert.StartsWith("key! g major b''1", SectionBody(lys, "A2").Trim().Split('\n')[1].Trim());
+        Assert.Contains("time! 4/4 d'''1", SectionBody(lys, "A3"));
+        Assert.Contains("clef! treble e'''1", SectionBody(lys, "A4"));
         Assert.Equal(Drawn(source), Drawn(lys));
         Assert.Equal(3, Drawn(lys).Length);
     }
@@ -283,13 +283,13 @@ public class MusicXmlSectionCutTests
             octave absolute
             key d major
             part m { clef treble }
-            section S { m { d'1@mark("A") | e'1 | fis'1@mark("B") | key! d major g'1 | a'1 | } }
+            section S { m { d''1@mark("A") | e''1 | fis''1@mark("B") | key! d major g''1 | a''1 | } }
             form { ~S }
             score { staff m }
             """;
         string lys = Import(source);
         Assert.Matches(@"form \{\s*~A ~B ~B2\s*\}", lys);
-        Assert.Contains("key! d major g'1", SectionBody(lys, "B2"));
+        Assert.Contains("key! d major g''1", SectionBody(lys, "B2"));
         Assert.Equal(Drawn(source), Drawn(lys));
     }
 
@@ -306,7 +306,7 @@ public class MusicXmlSectionCutTests
             octave absolute
             key g major
             part m { clef treble }
-            section S { m { g'1 | a'1 | key! g major clef! treble b'1 | c''1 | } }
+            section S { m { g''1 | a''1 | key! g major clef! treble b''1 | c'''1 | } }
             form { ~S }
             score { staff m }
             """)).ToXml();

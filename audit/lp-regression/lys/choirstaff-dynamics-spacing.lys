@@ -12,8 +12,8 @@ part top { clef treble }
 part bot { clef treble }
 
 section Main {
-  top { c,4@p c,4@p c,4@p c,4@ppppp | }
-  bot { c,4 c,4 c,4 c,4 | }
+  top { c4@p c4@p c4@p c4@ppppp | }
+  bot { c4 c4 c4 c4 | }
 }
 
 form { ~Main }

@@ -37,7 +37,7 @@ public class SectionReferenceFinderTests
     {
         var root = Root("""
             part m {
-              section A { c4 d e f | }
+              section A { c'4 d e f | }
               section B { g4 a b c | }
             }
             form { A B A }
@@ -55,7 +55,7 @@ public class SectionReferenceFinderTests
     {
         var root = Root("""
             part m {
-              section A { c4 d e f | }
+              section A { c'4 d e f | }
               section B { g4 a b c | }
             }
             form { A |: B :| [1. ~A] [2. B] }
@@ -72,7 +72,7 @@ public class SectionReferenceFinderTests
     public void DisplayLabelStringIsNotRenamed()
     {
         var src = """
-            part m { section A { c4 } }
+            part m { section A { c'4 } }
             form { A "A (reprise)" }
             score s { staff m }
             """;
@@ -88,7 +88,7 @@ public class SectionReferenceFinderTests
     [Fact]
     public void CaretOnReferenceResolvesToTheName()
     {
-        var src = "part m { section Intro { c4 } }\nform { Intro }\nscore s { staff m }";
+        var src = "part m { section Intro { c'4 } }\nform { Intro }\nscore s { staff m }";
         var root = Root(src);
         // Caret on the reference inside form { Intro }.
         int caret = src.LastIndexOf("Intro") + 2;

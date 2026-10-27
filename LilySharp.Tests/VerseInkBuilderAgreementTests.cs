@@ -175,7 +175,7 @@ public class VerseInkBuilderAgreementTests
         AssertNoteBoundAgrees(@"
 time 4/4
 section Main {
-  melody { c'4 d e f | g a b c'' | }
+  melody { c''4 d e f | g a b c'' | }
   lyrics melody { Aa bb cc dd | ee ff gg hh | Pp qq rr ss | tt uu vv ww | }
 }
 form { Main }
@@ -187,8 +187,8 @@ score x { staff melody  lyrics melody }
     public void NoteBoundUpperStaff_BothBuildersAgree()
     {
         AssertNoteBoundAgrees(
-            "part melody { section A { c4 d e f } }\n" +
-            "part back { section A { e4 f g a } }\n" +
+            "part melody { section A { c'4 d e f } }\n" +
+            "part back { section A { e'4 f g a } }\n" +
             "lyrics ly sings melody { section A { la le li lo } }\n" +
             "form { A }\n" +
             "score {\n  staff melody  lyrics ly\n  staff back\n}\n");
@@ -214,8 +214,8 @@ score x { staff melody  lyrics melody }
     public void IndependentRow_BothBuildersAgree()
     {
         var (score, layout) = Render(
-            "part melody { section A { c4 d e f } }\n" +
-            "part back { section A { e4 f g a } }\n" +
+            "part melody { section A { c'4 d e f } }\n" +
+            "part back { section A { e'4 f g a } }\n" +
             "lyrics ly sings melody { section A { la le li lo la le li lo } }\n" +
             "form { A A }\n" +
             "score {\n  staff melody\n  staff back\n  lyrics ly\n}\n");

@@ -56,7 +56,7 @@ public class VoiceWalkCoroutineTests
 
     private const string TwoVoiceBook = """
         part m { clef treble }
-        section A { m { voice { c'4 d' e' f' | g'2 g' | } { c4 d e f | g2 g | } } }
+        section A { m { voice { c''4 d' e' f' | g'2 g | } { c'4 d e f | g2 g | } } }
         form { ~A }
         score { staff m }
         """;
@@ -86,7 +86,7 @@ public class VoiceWalkCoroutineTests
         time 4/4
         key c major
         part m { clef treble }
-        section A { m { voice { f'4 g' a' b' | f'4 g' a' b' | } { d4 key d major e fis g | d4 e fis g | } } }
+        section A { m { voice { f''4 g'' a'' b'' | f''4 g'' a'' b'' | } { d'4 key d major e' fis' g' | d'4 e' fis' g' | } } }
         form { ~A }
         score { staff m }
         """;
@@ -123,7 +123,7 @@ public class VoiceWalkCoroutineTests
         time 4/4
         key c major
         part m { clef treble }
-        section A { m { voice { f'4 f' g' a' | f'4 g' a' b' | } { d4 key d major e fis g | d4 e fis g | } } }
+        section A { m { voice { f''4 f'' g'' a'' | f''4 g'' a'' b'' | } { d'4 key d major e' fis' g' | d'4 e' fis' g' | } } }
         form { ~A }
         score { staff m }
         """;
@@ -153,7 +153,7 @@ public class VoiceWalkCoroutineTests
             time 4/4
             key c major
             part m { clef treble }
-            section A { m { f'4 key d major f' g' a' | f'4 g' a' b' | } }
+            section A { m { f''4 key d major f'' g'' a'' | f''4 g'' a'' b'' | } }
             form { ~A }
             score { staff m }
             """;

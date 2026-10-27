@@ -56,7 +56,7 @@ public class ColumnOpticalCorrectionTests
             part bassline {
               clef bass
               tuning bass
-              section S { a,,4\4 a,,\4 a,,\4 a,,\4 | d4\3 a,,\4 a,,\4 a,,\4 | g,4\1 a,,\4 a,,\4 a,,\4 | a,,4\4 a,,\4 a,,\4 a,,\4 | }
+              section S { a,4\4 a,\4 a,\4 a,\4 | d'4\3 a,\4 a,\4 a,\4 | g4\1 a,\4 a,\4 a,\4 | a,4\4 a,\4 a,\4 a,\4 | }
             }
             form { S }
             score { staff bassline  tab bassline }
@@ -90,9 +90,9 @@ public class ColumnOpticalCorrectionTests
             time 4/4
             part up { }
             part lo { clef bass }
-            section A { up { c4 c c c | break } lo { g,,4 g,, g,, g,, | break } }
-            section B { up { c4 c c c | break } lo { e,4 g,, g,, g,, | break } }
-            section C { up { c4 c c c | } lo { g,,4 g,, g,, g,, | } }
+            section A { up { c'4 c' c' c' | break } lo { g,4 g, g, g, | break } }
+            section B { up { c'4 c' c' c' | break } lo { e4 g, g, g, | break } }
+            section C { up { c'4 c' c' c' | } lo { g,4 g, g, g, | } }
             form { A |: B :| |: C :| }
             score { staff up  staff lo }
             """);

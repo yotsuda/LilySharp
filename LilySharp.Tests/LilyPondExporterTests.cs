@@ -66,9 +66,9 @@ public class LilyPondExporterTests
         part fl2 { clef treble }
         part fl3 { clef treble }
         section A {
-          fl1 { c4 d e f | }
-          fl2 { e4 f g a | }
-          fl3 { g4 a b c' | }
+          fl1 { c'4 d' e' f' | }
+          fl2 { e'4 f' g' a' | }
+          fl3 { g'4 a' b' c'' | }
         }
         form { ~A }
         """ + "\nscore { " + render + " }\n";
@@ -366,7 +366,7 @@ public class LilyPondExporterTests
     {
         var ly = Export("""
             part low { instrument cello section S { c d e } }
-            part high { clef bass section T { c d e } }
+            part high { clef bass section T { c' d e } }
             form { ~S ~T }
             score { staff low staff high }
             """);
@@ -899,7 +899,7 @@ public class LilyPondExporterTests
             key g major
             section A { partial 8 }
             part melody {
-              section A { voice { f'8 } { <bes' ges c>8 } }
+              section A { voice { f''8 } { <bes' ges c>8 } }
             }
             form { A }
             score { staff melody }
@@ -1067,7 +1067,7 @@ public class LilyPondExporterTests
     public void InstrumentName_ReachesTheTwin_WithTheIndentItIsPrintedIn()
     {
         var named = Export("""
-            part vln { instrument violin section S { c d e } }
+            part vln { instrument violin section S { c' d e } }
             part vla { instrument viola  section S { c d e } }
             form { ~S }
             score { staff vln staff vla }
@@ -1084,7 +1084,7 @@ public class LilyPondExporterTests
 
         // ⚠️ AND THE SUPPRESSION REACHES IT TOO, or `staff ~x` would be a twin-only label.
         var bare = Export("""
-            part vln { section S { c d e } }
+            part vln { section S { c' d e } }
             form { ~S }
             score { staff ~vln }
             """);
@@ -1195,7 +1195,7 @@ public class LilyPondExporterTests
     {
         var ly = Export("""
             part bs { instrument bass section S { c d e } }
-            part fl { instrument flute section T { c d e } }
+            part fl { instrument flute section T { c'' d e } }
             form { ~S ~T }
             score { staff bs staff fl }
             """);
@@ -1264,7 +1264,7 @@ public class LilyPondExporterTests
     public void TabTwin_DefaultsToGuitar_NotBass()
     {
         var ly = Export("""
-            part gt { section S { c'4 d' e' f' } }
+            part gt { section S { c''4 d' e' f' } }
             form { ~S }
             score { staff gt  tab gt }
             """);
@@ -1393,7 +1393,7 @@ public class LilyPondExporterTests
     {
         var ly = Export("""
             part gt {
-              section S { <c e g>2 <a c g>2 | <c a f>2 <c e g>2 | }
+              section S { <c' e g>2 <a c g>2 | <c a f>2 <c e g>2 | }
             }
             form { ~S }
             score { staff gt }
@@ -1483,7 +1483,7 @@ public class LilyPondExporterTests
         var ly = Export("""
             octave absolute
             part m { clef treble }
-            section Main { m { c'8 d' e' f' } }
+            section Main { m { c''8 d'' e'' f'' } }
             form { Main }
             score { staff m }
             """);
@@ -1504,8 +1504,8 @@ public class LilyPondExporterTests
             part up { clef treble }
             part down { clef bass }
             section Main {
-              up { c''4 d'' }
-              down { c,4 d, }
+              up { c'''4 d''' }
+              down { c4 d }
             }
             form { Main }
             score { staff up
@@ -1529,8 +1529,8 @@ public class LilyPondExporterTests
         var ly = Export("""
             octave absolute
             part m { clef treble }
-            section B { m { g'4 } }
-            section A { m { c'4 } }
+            section B { m { g''4 } }
+            section A { m { c''4 } }
             form { A B }
             score { staff m }
             """);
@@ -2090,7 +2090,7 @@ public class LilyPondExporterTests
             octave absolute
             key c major
             part m { clef treble }
-            section S { m { <1 3 5>4 <1 3 5>'4 } }
+            section S { m { <1' 3' 5'>4 <1' 3' 5'>'4 } }
             form { S }
             score { staff m }
             """);
@@ -2108,8 +2108,8 @@ public class LilyPondExporterTests
         exporter.Export(SyntaxTree.Parse("""
             key c major
             part m { clef treble }
-            phrase P { c4 d }
-            section S { m { P <1 3 5>4 } }
+            phrase P { c'4 d }
+            section S { m { P <1' 3' 5'>4 } }
             form { S }
             score { staff m }
             """));
@@ -2143,7 +2143,7 @@ public class LilyPondExporterTests
             octave absolute
             time 6/8
             part m { clef treble }
-            section S { m { c'4. d' | } }
+            section S { m { c''4. d'' | } }
             form { S }
             score { staff m }
             """;
@@ -2163,7 +2163,7 @@ public class LilyPondExporterTests
             octave absolute
             time 4/4
             part m { clef treble }
-            section S { m { c'8 d' e' f' | } }
+            section S { m { c''8 d'' e'' f'' | } }
             form { S }
             score { staff m }
             """);
@@ -2194,7 +2194,7 @@ public class LilyPondExporterTests
         var ly = Export("""
             octave absolute
             part m { clef treble }
-            section S { m { c''4@f.up d''@p.down e'' f''@mf | } }
+            section S { m { c'''4@f.up d'''@p.down e''' f'''@mf | } }
             form { S }
             score { staff m }
             """);
@@ -2213,7 +2213,7 @@ public class LilyPondExporterTests
         var ly = Export("""
             octave absolute
             part bass { clef bass tuning bass }
-            section S { bass { e,,4 a,, d, g, | } }
+            section S { bass { e,4 a, d g | } }
             form { S }
             score { staff bass  tab bass as full }
             """);
@@ -2233,7 +2233,7 @@ public class LilyPondExporterTests
         var ly = Export("""
             octave absolute
             part m { clef treble }
-            section S { chords ch { C | Am | } m { c'1 | time 7/8 a4 a a4. | } }
+            section S { chords ch { C | Am | } m { c''1 | time 7/8 a'4 a' a'4. | } }
             form { S }
             score { chords ch  staff m }
             """);
@@ -2288,7 +2288,7 @@ public class LilyPondExporterTests
             key f major
             part kit { clef percussion }
             part m { clef treble }
-            section S { kit { hh8 hh bd4 sn4 r | key bes major hh8 hh bd4 sn4 r | } m { c'4 d' e' f' | key bes major bes4 a g f | } }
+            section S { kit { hh8 hh bd4 sn4 r | key bes major hh8 hh bd4 sn4 r | } m { c''4 d' e' f' | key bes major bes4 a g f | } }
             form { ~S }
             score { staff m  staff kit }
             """);
@@ -2411,7 +2411,7 @@ public class LilyPondExporterTests
     // DIFFERENT PIECE — which is the one failure a snapshot can never catch.
 
     private static string FormScore(string form, string sections = """
-        section A { m { c'4 d' e' f' | } }
+        section A { m { c''4 d' e' f' | } }
         section B { m { g'4 a' b' c'' | } }
         """) => $$"""
         octave absolute
@@ -2525,9 +2525,9 @@ public class LilyPondExporterTests
     public void ANavigationMarkBesideASectionLabel_IsNotASecondRehearsalMark()
     {
         string ly = Export(FormScore("segno A fine B to coda coda C ds al coda", """
-            section A { m { c'4 d' e' f' | } }
+            section A { m { c''4 d' e' f' | } }
             section B { m { g'4 a' b' c'' | } }
-            section C { m { e'4 d' c' d' | } }
+            section C { m { e''4 d' c' d' | } }
             """));
         foreach (string line in ly.Split('\n'))
             Assert.True(Occurrences(line, "\\mark ") <= 1, "two \\mark at one moment: " + line);
@@ -2579,7 +2579,7 @@ public class LilyPondExporterTests
         string ly = Export("""
             time 4/4
             part melody { clef treble }
-            section A { c'4 d e f | }
+            section A { c''4 d e f | }
             section B { g'4 f e d | }
             form { A B }
             score { staff melody }
@@ -2601,7 +2601,7 @@ public class LilyPondExporterTests
         string ly = Export("""
             time 4/4
             part melody { clef treble }
-            section A { c'4 d e f | g'4 f e d | }
+            section A { c''4 d e f | g'4 f e d | }
             form { A }
             score { staff melody }
             """);
@@ -2657,8 +2657,8 @@ public class LilyPondExporterTests
             time 4/4
             key c major
             part m { clef treble }
-            section A { m { c1 | } }
-            section B { time 3/4 m { c2. | } }
+            section A { m { c'1 | } }
+            section B { time 3/4 m { c'2. | } }
             chords prog { section A { C | } section B { Dm | } }
             form { A B }
             score { chords prog  staff m }
@@ -2680,8 +2680,8 @@ public class LilyPondExporterTests
             time 4/4
             key c major
             part m { clef treble }
-            section A { m { c1 | } }
-            section B { time 3/4 m { c2. | c2. | } }
+            section A { m { c'1 | } }
+            section B { time 3/4 m { c'2. | c2. | } }
             chords prog { section A { C | } section B { Dm | } }
             form { A B }
             score { chords prog  staff m }
@@ -2706,8 +2706,8 @@ public class LilyPondExporterTests
             time 4/4
             key c major
             part m { clef treble }
-            section A { tempo "Rubato" 4 = 80 m { c1 | } }
-            section B { m { c1 | } }
+            section A { tempo "Rubato" 4 = 80 m { c'1 | } }
+            section B { m { c'1 | } }
             form { A B }
             score { staff m }
             """);
@@ -2724,8 +2724,8 @@ public class LilyPondExporterTests
             time 4/4
             key c major
             part m { clef treble }
-            section A { m { c1 | } }
-            section B { tempo "Slower" 4 = 72 m { c1 | } }
+            section A { m { c'1 | } }
+            section B { tempo "Slower" 4 = 72 m { c'1 | } }
             form { A B }
             score { staff m }
             """);
@@ -2785,7 +2785,7 @@ public class LilyPondExporterTests
     {
         var (ly, _) = ExportWithWarnings(ChordBook("C | G |",
             form: "form { A |: ~B :| }",
-            moreSections: "section B { m { c1 | } chords prog { Am | } }"));
+            moreSections: "section B { m { c'1 | } chords prog { Am | } }"));
         // One \repeat in the music, one in the chord track, and B's bar inside the latter.
         Assert.Equal(2, Occurrences(ly, "\\repeat volta 2 {"));
         int chords = ly.IndexOf("progChords = \\chordmode {");
@@ -2824,7 +2824,7 @@ public class LilyPondExporterTests
             part m { clef treble }
             section A {
               partial 4
-              m { d'4 | g'1 | }
+              m { d''4 | g'1 | }
               chords prog { D | G | }
             }
             form { A }
@@ -3039,7 +3039,7 @@ public class LilyPondExporterTests
             time none
             part melody { clef treble }
             section A {
-              melody { c'4 d' e' | f'2 g' | }
+              melody { c''4 d'' e'' | f''2 g'' | }
               lyrics words sings melody { a b c | d e | }
             }
             form { A }
@@ -3094,8 +3094,8 @@ public class LilyPondExporterTests
             part sax { }
             part vocal { }
             section Chorus {
-              sax   { c4 d e f | g2 g | }
-              vocal { g8 g a4 a8 a a4 | g2 f | }
+              sax   { c'4 d e f | g2 g | }
+              vocal { g'8 g a4 a8 a a4 | g2 f | }
               lyrics en sings vocal { Sing it loud and clear now | ev- ery | }
             }
             form { Chorus }
@@ -3228,8 +3228,8 @@ public class LilyPondExporterTests
             time 4/4
             key c major
             part m { clef treble }
-            section A { m { c'1 | } }
-            section B { m { d' e' f' g' | } }
+            section A { m { c''1 | } }
+            section B { m { d'' e'' f'' g'' | } }
             form { A B }
             score { staff m }
             """);
@@ -3240,8 +3240,8 @@ public class LilyPondExporterTests
             time 4/4
             key c major
             part m { clef treble }
-            section A { m { c'4 c' c' c' | } }
-            section B { m { d' e' f' g' | } }
+            section A { m { c''4 c'' c'' c'' | } }
+            section B { m { d'' e'' f'' g'' | } }
             form { A B }
             score { staff m }
             """);

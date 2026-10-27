@@ -26,12 +26,12 @@ part lower { clef bass }
 
 section Main {
   upper {
-    voice { d'4 d' e' d' | b4 a  b2@fermata | }
-    { b4  g  g  fis | g  fis g2 }
+    voice { d''4 d'' e'' d'' | b'4 a'  b'2@fermata | }
+    { b'4  g'  g'  fis' | g'  fis' g'2 }
   }
   lower {
-    voice { g,4  b,  c   a,  | d   d   d2 | }
-    { g,,4 g,, c,  d,  | g,, d,  g,,2 }
+    voice { g4  b  c'   a  | d'   d'   d'2 | }
+    { g,4 g, c  d  | g, d  g,2 }
   }
   lyrics words sings upper { Praise God from whom | all bless- ings | }
 }

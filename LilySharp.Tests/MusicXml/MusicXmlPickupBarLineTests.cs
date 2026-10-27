@@ -95,7 +95,7 @@ public class MusicXmlPickupBarLineTests
         var doc = Export("""
             octave absolute
             time 4/4
-            section A { partial 2  melody { c'4 | d'4 e' f' g' | a'1 | } }
+            section A { partial 2  melody { c''4 | d''4 e'' f'' g'' | a''1 | } }
             form { A }
             score { staff melody }
             """);

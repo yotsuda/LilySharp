@@ -753,7 +753,7 @@ public sealed class MidiExporter
                 _currentTimbre = PartTimbre(part.Name.Text);
                 _currentPart = part.Name.Text;
                 ProcessChildren(part, track, conductorTrack);
-                (_partOctaveAnchor, _partAbsoluteBase) = (4, 4);
+                (_partOctaveAnchor, _partAbsoluteBase) = (LilySharp.Core.Svg.Model.InstrumentDefaults.DefaultAnchorOctave, LilySharp.Core.Svg.Model.InstrumentDefaults.DefaultAnchorOctave);
                 _currentTimbre = 0;
                 _currentPart = null;
                 break;
@@ -1106,7 +1106,7 @@ public sealed class MidiExporter
         body();
         _partPitchLanes[partName] = (_currentNoteName, _currentOctave, _defaultDuration);
         _partVelocity[partName] = _velocity;
-        (_partOctaveAnchor, _partAbsoluteBase) = (4, 4);
+        (_partOctaveAnchor, _partAbsoluteBase) = (LilySharp.Core.Svg.Model.InstrumentDefaults.DefaultAnchorOctave, LilySharp.Core.Svg.Model.InstrumentDefaults.DefaultAnchorOctave);
         _currentTimbre = 0;
         _currentTransposeSemitones = 0;
         _currentPart = outerPart;
@@ -1303,7 +1303,7 @@ public sealed class MidiExporter
                 _currentTick += PaddingTicks(sectionPart);
                 tickLanes[pname] = _currentTick;
                 sectionEnd = Math.Max(sectionEnd, _currentTick);
-                (_partOctaveAnchor, _partAbsoluteBase) = (4, 4);
+                (_partOctaveAnchor, _partAbsoluteBase) = (LilySharp.Core.Svg.Model.InstrumentDefaults.DefaultAnchorOctave, LilySharp.Core.Svg.Model.InstrumentDefaults.DefaultAnchorOctave);
             }
             else if (child is ChordPartBlockSyntax)
             {

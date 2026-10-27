@@ -51,11 +51,11 @@ public sealed class TrailingGapSpliceTests
     // tab-chord.lys's shape: two by-part cells of one whole note each, a tab staff.
     private const string GroupedByPartChords = """
         part melody {
-          section A { c1\3@chord(Cmaj7) }
+          section A { c'1\3@chord(Cmaj7) }
         }
 
         part back {
-          section A { e1\3@chord(Dm7) }
+          section A { e'1\3@chord(Dm7) }
         }
 
         form { A }

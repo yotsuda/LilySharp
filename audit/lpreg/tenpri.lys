@@ -7,7 +7,7 @@ part melody
 
 section A {
   melody {
-    c4@tenuto@accent c@accent@tenuto c@staccato@tenuto c@tenuto@staccato
+    c'4@tenuto@accent c@accent@tenuto c@staccato@tenuto c@tenuto@staccato
   }
 }
 

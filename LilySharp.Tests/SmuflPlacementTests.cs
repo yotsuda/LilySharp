@@ -193,7 +193,7 @@ public class SmuflPlacementTests
         var tree = SyntaxTree.Parse(
             $"fonts {{ music \"{font}\" }}\ntime 3/4\n" +
             "part m { clef treble }\n" +
-            "section A { m { c'4 d' e' | } }\nsection B { time 12/8  m { c'1. | } }\n" +
+            "section A { m { c''4 d' e' | } }\nsection B { time 12/8  m { c''1. | } }\n" +
             "score { staff m }\n");
         var symbols = BoxesGenerator.GenerateDocument(tree, RenderSpecParser.FindFirst(tree))
             .Pages.SelectMany(p => p.Symbols).ToList();
@@ -224,7 +224,7 @@ public class SmuflPlacementTests
         var tree = SyntaxTree.Parse(
             $"fonts {{ music \"{font}\" }}\n" +
             "part m { clef treble }\n" +
-            "section A { m { c'1 | } }\nsection B { m { d'1 | } }\n" +
+            "section A { m { c''1 | } }\nsection B { m { d''1 | } }\n" +
             "form { segno A to coda B ds al coda coda B }\n" +
             "score { staff m }\n");
         var symbols = BoxesGenerator.GenerateDocument(tree, RenderSpecParser.FindFirst(tree))
@@ -247,7 +247,7 @@ public class SmuflPlacementTests
         var tree = SyntaxTree.Parse(
             $"fonts {{ music \"{font}\" }}\n" +
             "part m { clef treble pedal text }\n" +
-            "section A { m { c'4@sustain d' e' f'@!sustain | } }\n" +
+            "section A { m { c''4@sustain d' e' f'@!sustain | } }\n" +
             "form { A }\n" +
             "score { staff m }\n");
         var pedal = BoxesGenerator.GenerateDocument(tree, RenderSpecParser.FindFirst(tree))
@@ -267,7 +267,7 @@ public class SmuflPlacementTests
         // version, overlapped by two staff spaces. Centre = max(1, half the row's height).
         var tree = SyntaxTree.Parse(
             $"fonts {{ music \"{font}\" }}\ntime 3/4\npart m {{ clef treble }}\n" +
-            "section A { m { c'2. | } }\nform { A }\nscore { staff m }\n");
+            "section A { m { c''2. | } }\nform { A }\nscore { staff m }\n");
         var symbols = BoxesGenerator.GenerateDocument(tree, RenderSpecParser.FindFirst(tree))
             .Pages.SelectMany(p => p.Symbols).ToList();
         double top = symbols.Where(s => s.Kind == "staffLine").Min(s => s.Box[1]);

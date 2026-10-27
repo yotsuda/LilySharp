@@ -41,7 +41,7 @@ public class LyricBandMemoTests
         part v { }
         lyrics w { section Main { ma me mi mo | ma me mi mo | ma me mi mo | ma me mi mo | ma me mi mo | ma me mi mo | ma me mi mo | ma me mi mo | ma me mi mo | ma me mi mo | ma me mi mo | ma me mi mo | } }
         section Main {
-          v { c4 d e f | c4 d e f | c4 d e f | c4 d e f | c4 d e f | c4 d e f | c4 d e f | c4 d e f | c4 d e f | c4 d e f | c4 d e f | c4 d e f | }
+          v { c'4 d e f | c4 d e f | c4 d e f | c4 d e f | c4 d e f | c4 d e f | c4 d e f | c4 d e f | c4 d e f | c4 d e f | c4 d e f | c4 d e f | }
         }
         form { ~Main }
         score { staff ~v  lyrics w }

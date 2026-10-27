@@ -15,8 +15,8 @@ part m { clef treble }
 section Main {
   partial 4.
   m {
-    c8 c c |
-    c8 c c c16 c c c c c |
+    c'8 c' c' |
+    c'8 c' c' c'16 c' c' c' c' c' |
   }
 }
 

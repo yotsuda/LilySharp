@@ -200,7 +200,7 @@ public class LpGeometryLedgerTests
             part melody { clef treble }
 
             section Main {
-              melody { c2 a | f2 g | c1 | }
+              melody { c'2 a' | f'2 g' | c'1 | }
               chords prog { C Am | F G7 | C | }
             }
 
@@ -257,7 +257,7 @@ public class LpGeometryLedgerTests
             part melody { clef treble }
 
             section A {
-              melody { c'4 c' g' g' | a' a' g'2 | }
+              melody { c''4 c'' g'' g'' | a'' a'' g''2 | }
               chords prog { Em7 | A7 }
             }
 
@@ -339,7 +339,7 @@ public class LpGeometryLedgerTests
             part upper { clef treble }
 
             section Main {
-              upper { a,1@staccato.down@f | }
+              upper { a1@staccato.down@f | }
             }
 
             form { ~Main }

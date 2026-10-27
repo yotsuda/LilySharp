@@ -59,7 +59,7 @@ public class LayoutReportTests
     {
         var report = Report(
             "part melody\n" +
-            "section Main { melody { c4 d e f | g4 a b c' | c'4 b a g | f4 e d c | } }\n" +
+            "section Main { melody { c'4 d e f | g4 a b c' | c'4 b a g | f4 e d c | } }\n" +
             "form { Main }\n" +
             "score one { staff melody }\n");
 
@@ -90,7 +90,7 @@ public class LayoutReportTests
     {
         var src =
             "part rh { clef treble }\n" +
-            "section A { rh { c'4 d' e' f' | } }\n" +
+            "section A { rh { c''4 d' e' f' | } }\n" +
             "form { A }\n" +
             "score first { staff rh }\n" +
             "score second { staff rh }\n";
@@ -137,7 +137,7 @@ public class LayoutReportTests
     {
         var report = Report(
             "part melody\n" +
-            "section Main { melody { c4 d e f | g4 a b c' | } }\n" +
+            "section Main { melody { c'4 d e f | g4 a b c' | } }\n" +
             "form { Main }\n" +
             "score one { staff melody }\n");
 
@@ -150,7 +150,7 @@ public class LayoutReportTests
         var report = Report(
             "part rh { clef treble }\n" +
             "part lh { clef bass }\n" +
-            "section A { rh { c'4 d' e' f' | } lh { c2 g, | } }\n" +
+            "section A { rh { c''4 d' e' f' | } lh { c'2 g, | } }\n" +
             "form { A }\n" +
             "score gs { grandStaff { staff rh staff lh } }\n");
 

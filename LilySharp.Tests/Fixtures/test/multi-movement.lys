@@ -20,19 +20,19 @@ part lh { clef bass octave 3 }
 
 // Movement I: Allegro
 section Allegro {
-  rh { c'4 e g e | f a g e | d f e c | d2 g | c,4 e g c | b4 g e c | d2 g2 | c1 | }
+  rh { c''4 e g e | f a g e | d f e c | d2 g | c,4 e g c | b4 g e c | d2 g2 | c1 | }
   lh { c2 e | f a | g c | g g | c, e | g c | g g | c1 | }
 }
 
 // Movement II: Andante
 section Andante {
-  rh { e'4 d c d | e e e2 | d4 d d2 | e4 g g2 | e4 d c d | e e e2 | d4 d e d | c1 | }
+  rh { e''4 d c d | e e e2 | d4 d d2 | e4 g g2 | e4 d c d | e e e2 | d4 d e d | c1 | }
   lh { c'2 g | c g | g g | c g | c g | c g | g g | c1 | }
 }
 
 // Movement III: Rondo
 section Rondo {
-  rh { c'8 d' e f g4 g | a8 g f e d4 d | e,8 d c d e4 g | c2 r2 | }
+  rh { c''8 d' e f g4 g | a8 g f e d4 d | e,8 d c d e4 g | c2 r2 | }
   lh { c2 e | f d | c e | c r | }
 }
 

@@ -10,13 +10,13 @@ key d major
 part kb { clef treble }
 
 section Body {
-  kb { voice { d'4@mordent e fis | g2 fis4 | e4 d@turn cis | d2. |
+  kb { voice { d''4@mordent e fis | g2 fis4 | e4 d@turn cis | d2. |
                fis4 g a | b2 a4 | g4 fis e | fis2. | }
-             { fis4 g a | b2 a4 | g4 fis e | fis2. |
+             { fis'4 g a | b2 a4 | g4 fis e | fis2. |
                a4 b cis | d2 cis4 | b4 a g | a2. | } }
 }
-section First  { kb { voice { a'2.@trill | } { cis'2. | } } }
-section Second { kb { voice { d'2.@fermata | } { fis2. | } } }
+section First  { kb { voice { a'2.@trill | } { cis''2. | } } }
+section Second { kb { voice { d''2.@fermata | } { fis'2. | } } }
 
 form { |: ~Body [1. ~First] :| [2. ~Second] }
 

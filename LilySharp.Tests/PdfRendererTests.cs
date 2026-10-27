@@ -155,7 +155,7 @@ public class PdfRendererTests
     [InlineData("paper { size letter }\n", 612.0, 792.0)]
     public void PdfGenerator_PageIsThePaper(string paper, double width, double height)
     {
-        var tree = SyntaxTree.Parse(paper + "part m { clef treble }\nsection A { m { c'4 d' e' f' | } }\nform { ~A }\nscore { staff m }\n");
+        var tree = SyntaxTree.Parse(paper + "part m { clef treble }\nsection A { m { c''4 d' e' f' | } }\nform { ~A }\nscore { staff m }\n");
         var text = System.Text.Encoding.ASCII.GetString(PdfGenerator.Generate(tree));
         var box = System.Text.RegularExpressions.Regex.Match(text, @"/MediaBox\s*\[\s*0\s+0\s+([\d.]+)\s+([\d.]+)\s*\]");
         Assert.True(box.Success, "no MediaBox");

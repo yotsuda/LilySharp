@@ -22,8 +22,8 @@ phrase groove { drums { hats back kick } }
 phrase fill   { drums { { hh4 hh r2 | } { r2 tuplet 3/2 { sn8 sn sn tomh tomml tomfh } | } kick } }
 
 section A {
-  lead { e4 g a g | c2 a | g4 e d c | d1 | }
-  bass { c4 c g c | a a e a | f f a f | g g b g | }
+  lead { e'4 g a g | c2 a | g4 e d c | d1 | }
+  bass { c,4 c g c | a a e a | f f a f | g g b g | }
   kit { groove groove groove fill }
 }
 

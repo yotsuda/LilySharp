@@ -103,7 +103,7 @@ public sealed class MeasureBuilderLookAheadTests
         // the keystroke that deletes a `| break` is drawn as the full render draws it, through
         // the suffix splice at a boundary the look-ahead no longer rewrites.
         var options = new SvgRenderOptions { EmbedFont = false };
-        string src = "part m { clef treble section A { c4 d e f | break g a b c | d e f g | a b c d | e f g a | } }\n"
+        string src = "part m { clef treble section A { c'4 d e f | break g a b c | d e f g | a b c d | e f g a | } }\n"
             + "form { A }\nscore { staff m }";
         var session = new IncrementalCompiler(SyntaxTree.Parse(src), options);
         session.RenderIncrementalPages(SyntaxTree.Parse(src), default);

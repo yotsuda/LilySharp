@@ -52,7 +52,7 @@ public sealed class ExportRequestTests : IDisposable
         time 4/4
         key c major
         part melody { clef treble }
-        phrase mel { c4 d e f | g4 a b c | }
+        phrase mel { c'4 d e f | g4 a b c | }
         section Main { melody { mel } }
         form { Main }
         form sub { Main Main }
@@ -66,7 +66,7 @@ public sealed class ExportRequestTests : IDisposable
         time 4/4
         key c major
         part melody { clef treble }
-        section Main { melody { c4 d e f | g1 | } }
+        section Main { melody { c'4 d e f | g1 | } }
         form { Main }
         """;
 

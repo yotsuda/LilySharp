@@ -9,8 +9,8 @@ title "Multi-voice chord tie"
 part mel { clef treble }
 section S {
   mel {
-    voice { c''4 d'' e'' f'' | g''1 }
-    { <e' g'>4~ <e' g'> e' g' | c'1 }
+    voice { c'''4 d''' e''' f''' | g'''1 }
+    { <e'' g''>4~ <e'' g''> e'' g'' | c''1 }
   }
 }
 form { S }

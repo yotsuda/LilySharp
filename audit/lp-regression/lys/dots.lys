@@ -16,7 +16,7 @@ part melody
 
 section A {
   melody {
-    d'4. g,, |
+    d''4. g,, |
     <b c d e>''4.@stemDown <f g a b>4.@stemDown |
     <f a c>4.@stemDown <e a c>4.@stemDown |
     voice {

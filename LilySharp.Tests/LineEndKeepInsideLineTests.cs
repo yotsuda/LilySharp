@@ -53,7 +53,7 @@ public class LineEndKeepInsideLineTests
         key c major
         part melody { clef treble }
         section Main {
-          melody { c'4 d e f | g2 a4 g | f4 e d c | g1 | }
+          melody { c''4 d e f | g2 a4 g | f4 e d c | g1 | }
           lyrics words sings melody { A- ma- zing grace | how~ sweet | the sound that | saved~ | }
           lyrics words sings melody { Twas grace that taught | my~ heart | to fear and | grace~ | }
         }
@@ -67,7 +67,7 @@ public class LineEndKeepInsideLineTests
         key c major
         part melody { clef treble }
         section Main {
-          melody { c'4 d e f | g2 a4 g | f4 e d c | g1 | }
+          melody { c''4 d e f | g2 a4 g | f4 e d c | g1 | }
         }
         form { Main }
         score { staff melody }

@@ -27,8 +27,8 @@ part v { }
 
 section A {
   v {
-    g8. r16 f8. r16 r2 |
-    g16. r32 f16. r32 r2 r4 |
+    g'8. r16 f'8. r16 r2 |
+    g'16. r32 f'16. r32 r2 r4 |
   }
 }
 

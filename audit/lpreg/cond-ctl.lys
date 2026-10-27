@@ -7,7 +7,7 @@ part fl { clef treble }
 
 section A {
   fl {
-    voice { c'4 d' e' f' | g'2 g' | } { e4 f g a | b2 b | }
+    voice { c''4 d'' e'' f'' | g''2 g'' | } { e'4 f' g' a' | b'2 b' | }
   }
 }
 

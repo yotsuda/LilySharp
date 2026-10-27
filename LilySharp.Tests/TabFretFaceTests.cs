@@ -50,7 +50,7 @@ public class TabFretFaceTests
     private const string Bass = """
         octave absolute
         part bs { clef bass tuning bass }
-        section A { bs { e,,4\4 a,,\3 d,\2 g,\1 | } }
+        section A { bs { e,4\4 a,\3 d\2 g\1 | } }
         form { ~A }
         score { tab bs }
         """;

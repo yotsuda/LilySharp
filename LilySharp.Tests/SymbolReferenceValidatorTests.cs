@@ -45,7 +45,7 @@ public class SymbolReferenceValidatorTests
         // `_ "shown"` is a reference to a section named `_` with a display label, and stays
         // one (measured 2026-08-17: `section _` is legal); the custom text is the GLUED
         // `_"shown"`. Owner's decision 2026-09-08: keep the glue, and say so in LYS1005.
-        var tree = SyntaxTree.Parse("part m { }\nsection A { m { c4 d e f | } }\nform { A _ \"shown\" }\nscore { staff m }");
+        var tree = SyntaxTree.Parse("part m { }\nsection A { m { c'4 d e f | } }\nform { A _ \"shown\" }\nscore { staff m }");
         var validator = new SymbolReferenceValidator();
         validator.Validate(tree);
 
@@ -57,7 +57,7 @@ public class SymbolReferenceValidatorTests
     [Fact]
     public void Validate_GluedCustomText_IsNotASectionReference()
     {
-        var tree = SyntaxTree.Parse("part m { }\nsection A { m { c4 d e f | } }\nform { A _\"shown\" }\nscore { staff m }");
+        var tree = SyntaxTree.Parse("part m { }\nsection A { m { c'4 d e f | } }\nform { A _\"shown\" }\nscore { staff m }");
         var validator = new SymbolReferenceValidator();
         validator.Validate(tree);
         Assert.DoesNotContain(validator.Diagnostics, x => x.Code == DiagnosticCodes.UndefinedSection);
@@ -66,7 +66,7 @@ public class SymbolReferenceValidatorTests
     [Fact]
     public void Validate_AnyOtherUndefinedSection_CarriesNoUnderscoreHint()
     {
-        var tree = SyntaxTree.Parse("part m { }\nsection A { m { c4 d e f | } }\nform { A Nope }\nscore { staff m }");
+        var tree = SyntaxTree.Parse("part m { }\nsection A { m { c'4 d e f | } }\nform { A Nope }\nscore { staff m }");
         var validator = new SymbolReferenceValidator();
         validator.Validate(tree);
         var d = Assert.Single(validator.Diagnostics, x => x.Code == DiagnosticCodes.UndefinedSection);
@@ -107,7 +107,7 @@ intro
     public void Validate_UndefinedSectionInStructure_ReportsError()
     {
         var source = @"
-section Intro { c4 d e f | }
+section Intro { c'4 d e f | }
 form {
     Intro
     NonExistent
@@ -137,7 +137,7 @@ form {
     public void Validate_UndefinedSilentSectionInStructure_ReportsError()
     {
         var source = @"
-section Intro { c4 d e f | }
+section Intro { c'4 d e f | }
 form {
     Intro
     ~NonExistent
@@ -156,7 +156,7 @@ form {
     public void Validate_DefinedSilentSectionInStructure_NoError()
     {
         var source = @"
-section Intro { c4 d e f | }
+section Intro { c'4 d e f | }
 form {
     ~Intro
 }
@@ -171,7 +171,7 @@ form {
     public void Validate_DefinedSectionInStructure_NoError()
     {
         var source = @"
-section Intro { c4 d e f | }
+section Intro { c'4 d e f | }
 section Verse { g4 a b c | }
 form {
     Intro
@@ -216,7 +216,7 @@ undefined2
     public void Validate_StaffNamesUndefinedPart_ReportsError()
     {
         // `staff melody2` names no part — a section-body block nor a header defines it.
-        var diags = Refs("section A { melody { c d e f } }\n"
+        var diags = Refs("section A { melody { c' d e f } }\n"
                        + "form { A }\nscore { staff melody\n staff melody2 }");
         var undef = diags.Where(d => d.Code == DiagnosticCodes.UndefinedPart).ToList();
         Assert.Single(undef);
@@ -249,7 +249,7 @@ undefined2
     [InlineData("staff bass as lines 1", "bass")]
     public void Validate_StaffNamesClefWordAsPart_ReportsUndefinedPart(string item, string name)
     {
-        var undef = Refs("part bassline { clef bass section A { c d e f } }\n"
+        var undef = Refs("part bassline { clef bass section A { c' d e f } }\n"
                        + "form { A }\nscore { " + item + " }")
             .Where(d => d.Code == DiagnosticCodes.UndefinedPart).ToList();
         Assert.Single(undef);
@@ -258,26 +258,26 @@ undefined2
 
     [Theory]
     // A section-body part block DEFINES the part.
-    [InlineData("section A { melody { c d e f } }\nform { A }\nscore { staff melody }")]
+    [InlineData("section A { melody { c' d e f } }\nform { A }\nscore { staff melody }")]
     // A part may BE named for a clef, and then `staff bass` resolves — the committed
     // fixture test/rhythm-slashes.lys writes exactly this. Before the slot fix no
     // reference was collected here at all, so this passed for the wrong reason.
-    [InlineData("part bass { clef bass section A { c d e f } }\nform { A }\nscore { staff bass }")]
-    [InlineData("part bass { clef bass section A { c d e f } }\nform { A }\n"
+    [InlineData("part bass { clef bass section A { c' d e f } }\nform { A }\nscore { staff bass }")]
+    [InlineData("part bass { clef bass section A { c' d e f } }\nform { A }\n"
               + "score { staff bass as lines 1 }")]
     // …as does a part header.
-    [InlineData("part melody { clef treble section A { c d e f } }\nform { A }\nscore { staff melody }")]
+    [InlineData("part melody { clef treble section A { c' d e f } }\nform { A }\nscore { staff melody }")]
     // A clef modifier before the part name is not the part.
-    [InlineData("section A { melody { c d e f } }\nform { A }\nscore { staff bass melody }")]
+    [InlineData("section A { melody { c' d e f } }\nform { A }\nscore { staff bass melody }")]
     // `tab NAME as numbers | full` — the tab STYLE selector is not a part reference.
     // This reported LYS1007 "Undefined part: 'numbers'" on a valid score, so the
     // committed fixture test/tab-as-numbers.lys would not render through the CLI (the
     // snapshot path never runs this validator, which is why the suite stayed green).
-    [InlineData("section A { melody { c d e f } }\nform { A }\nscore { tab melody as numbers }")]
-    [InlineData("section A { melody { c d e f } }\nform { A }\nscore { tab melody as full }")]
+    [InlineData("section A { melody { c' d e f } }\nform { A }\nscore { tab melody as numbers }")]
+    [InlineData("section A { melody { c' d e f } }\nform { A }\nscore { tab melody as full }")]
     // Tuning override + style selector, and a chord row (with its own display
     // selector) above the tab - the band spelling of the old `with chords` clause.
-    [InlineData("section A { melody { c d e f } }\nchords h { C }\nform { A }\n"
+    [InlineData("section A { melody { c' d e f } }\nchords h { C }\nform { A }\n"
               + "score { chords h as both  tab bass melody as numbers }")]
     public void Validate_StaffNamesDefinedPart_NoUndefinedPartError(string source)
         => Assert.DoesNotContain(Refs(source), d => d.Code == DiagnosticCodes.UndefinedPart);
@@ -308,7 +308,7 @@ undefined2
     [InlineData("combinedStaff { voice melody }")]
     public void Validate_ReservedWordInTheNameSlot_DoesNotAlsoReportTheEmptyName(string item)
     {
-        string source = "section A { melody { c d e f } }\nform { A }\n"
+        string source = "section A { melody { c' d e f } }\nform { A }\n"
                       + "score { staff melody\n " + item + " }";
         Assert.DoesNotContain(Refs(source), d =>
             d.Code == DiagnosticCodes.UndefinedPart && d.Message.Contains("''"));
@@ -320,7 +320,7 @@ undefined2
     [Fact]
     public void Validate_GrandStaffUndefinedInnerPart_ReportsError()
     {
-        var diags = Refs("section A { rh { c1 } }\n"
+        var diags = Refs("section A { rh { c'1 } }\n"
                        + "form { A }\nscore { grandStaff { staff rh staff lh } }");
         Assert.Contains(diags, d => d.Code == DiagnosticCodes.UndefinedPart && d.Message.Contains("lh"));
     }

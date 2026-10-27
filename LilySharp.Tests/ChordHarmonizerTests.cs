@@ -94,8 +94,8 @@ public class ChordHarmonizerTests
             time 4/4
             key c major
             part melody { clef treble }
-            section A { melody { c'4 e' g' c'' | } }
-            section B { melody { g'4 b' d'' g'' | } }
+            section A { melody { c''4 e'' g'' c''' | } }
+            section B { melody { g''4 b'' d''' g''' | } }
             form { A B }
             score { staff melody }
             """);
@@ -118,8 +118,8 @@ public class ChordHarmonizerTests
             time 4/4
             key c major
             part melody { clef treble
-              section A { c'4 e' g' c'' | }
-              section B { g'4 b' d'' g'' | }
+              section A { c''4 e'' g'' c''' | }
+              section B { g''4 b'' d''' g''' | }
             }
             form { A B }
             score { staff melody }
@@ -152,7 +152,7 @@ public class ChordHarmonizerTests
             time 4/4
             key c major
             part melody { clef treble }
-            section A { melody { c'4 e' g' c'' | } }
+            section A { melody { c''4 e'' g'' c''' | } }
             form { A }
             score { staff melody }
             """);
@@ -172,7 +172,7 @@ public class ChordHarmonizerTests
             time 4/4
             key c major
             part melody { clef treble }
-            section A { melody { c'4 e' g' c'' | } }
+            section A { melody { c''4 e'' g'' c''' | } }
             form { A }
             score { staff melody }
             """);

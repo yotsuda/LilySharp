@@ -69,7 +69,7 @@ public sealed class PreviewCollectSharingTests
         part melody { clef treble }
         part bass { clef bass octave 3 }
         section A {
-          melody { c'4( d' e' f' | g'4 ~ a' b' c'' | }
+          melody { c''4( d'' e'' f'' | g''4 ~ a'' b'' c''' | }
           bass { c4 d e f | g a b c' | }
         }
         section B {

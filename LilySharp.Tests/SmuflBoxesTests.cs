@@ -32,7 +32,7 @@ public class SmuflBoxesTests
 {
     private const string Book =
         "part m { clef bass }\n" +
-        "section A { m { c4@figuredBass(6) d4 e2 } }\n" +
+        "section A { m { c'4@figuredBass(6) d4 e2 } }\n" +
         "form { A }\n" +
         "score { staff m }\n";
 

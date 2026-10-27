@@ -62,7 +62,7 @@ public class BeamDetectionInputMemoTests
         key c major
         part melody { clef treble }
         section Main { melody {
-          c16 tuplet 3/2 { d16. e32 f16 } g16 |
+          c'16 tuplet 3/2 { d16. e32 f16 } g16 |
           c8 d e f g a b c' |
         } }
         form { Main }

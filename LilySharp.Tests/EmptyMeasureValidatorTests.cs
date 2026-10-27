@@ -126,7 +126,7 @@ public class EmptyMeasureValidatorTests
         // `phrase x { … | }` closes its own last bar; `x | x` then adds a separator.
         // The phrase's trailing `|` and that separator must NOT read as a `| |` empty
         // pair — a reference is ONE item, its boundary re-arms like a section start.
-        var src = "phrase x { c d e f | } part melody { section A { x | x } } "
+        var src = "phrase x { c' d e f | } part melody { section A { x | x } } "
                 + "form { A } score { staff melody }";
         Assert.Equal(0, PlaceholderCountIn(src));
     }
@@ -136,7 +136,7 @@ public class EmptyMeasureValidatorTests
     {
         // `x | | x` — an EXPLICIT `| |` pair after the phrase is still an empty bar
         // (the boundary re-arm absorbs ONE barline, not a written pair).
-        var src = "phrase x { c d e f | } part melody { section A { x | | x } } "
+        var src = "phrase x { c' d e f | } part melody { section A { x | | x } } "
                 + "form { A } score { staff melody }";
         Assert.Equal(1, PlaceholderCountIn(src));
     }
@@ -145,7 +145,7 @@ public class EmptyMeasureValidatorTests
     public void EmptyMeasureInsidePhraseBody_IsPreserved()
     {
         // A `| |` pair WITHIN the phrase body is a real empty measure and still warns.
-        var src = "phrase x { c d e f | | g a b c' } part melody { section A { x } } "
+        var src = "phrase x { c' d e f | | g a b c' } part melody { section A { x } } "
                 + "form { A } score { staff melody }";
         Assert.Equal(1, PlaceholderCountIn(src));
     }
@@ -157,7 +157,7 @@ public class EmptyMeasureValidatorTests
         // section opened, then two of music. The trailing `|` still closes nothing — it
         // confirms the auto-fill — which is what keeps the 497 tracked books that end a
         // block `… c1 |` at their written length.
-        var src = "part m { section A { | c1 | c1 | } } form { A } score { staff m }";
+        var src = "part m { section A { | c'1 | c1 | } } form { A } score { staff m }";
         var score = new LilySharp.Core.Svg.Collector.MeasureCollector()
             .Collect(SyntaxTree.Parse(src), "m");
         Assert.Equal(3, score.Voice.Measures.Length);
@@ -170,7 +170,7 @@ public class EmptyMeasureValidatorTests
     {
         // The render agrees with the validator: `phrase x { c d e f | }` used as
         // `x | x` is two content bars, with no empty placeholder between them.
-        var src = "phrase x { c d e f | } part melody { section A { x | x } } "
+        var src = "phrase x { c' d e f | } part melody { section A { x | x } } "
                 + "form { A } score { staff melody }";
         var score = new LilySharp.Core.Svg.Collector.MeasureCollector()
             .Collect(SyntaxTree.Parse(src), "melody");
@@ -244,7 +244,7 @@ public class EmptyMeasureValidatorTests
     // SECOND CASE IS THE POINT OF THE WHOLE SESSION: one written `|` IS a bar now, so a
     // section spelled `{ | }` is a real empty measure and the page is not blank.
     [Theory]
-    [InlineData("part m { section A { c1 } } form { A } score { staff m }")]
+    [InlineData("part m { section A { c'1 } } form { A } score { staff m }")]
     [InlineData("part m { section A { | } } form { A } score { staff m }")]
     [InlineData("chords p { C | F | } form { } score { chords p }")]
     // ⚠️ A LYRICS-ONLY SCORE IS A REAL PAGE — the measure grid draws on the top text row.
@@ -439,7 +439,7 @@ public class EmptyMeasureValidatorTests
         // The gap is OUTSIDE the repeat: the `|:` still opens the bar it precedes, so the
         // empty measure is not the one that gets played twice.
         var src = "octave absolute time 4/4 part m { } "
-                + "section A { m { c'1 | |: c'4 d e f :| } } "
+                + "section A { m { c''1 | |: c'4 d e f :| } } "
                 + "form { ~A } score { staff m }";
         var score = new LilySharp.Core.Svg.Collector.MeasureCollector()
             .Collect(SyntaxTree.Parse(src), "m");
@@ -457,7 +457,7 @@ public class EmptyMeasureValidatorTests
         // The marker survives the fill: a consumer that wants to know the author wrote a
         // gap (rather than a bar of rests) still can. What changes is that the bar now
         // MEASURES like the bar it stands for.
-        var src = "octave absolute\ntime 4/4\npart m { }\nsection A { m { c'1 | | e'1 } }\n"
+        var src = "octave absolute\ntime 4/4\npart m { }\nsection A { m { c''1 | | e''1 } }\n"
                 + "form { ~A }\nscore { staff m }";
         var score = new LilySharp.Core.Svg.Collector.MeasureCollector()
             .Collect(SyntaxTree.Parse(src), "m");

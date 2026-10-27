@@ -123,7 +123,7 @@ public class BareSectionPartTests
         string lys = """
             time 4/4
             part bl { clef bass }
-            section A { c'4 d e f | }
+            section A { c''4 d e f | }
             form { A }
             """;
 
@@ -141,7 +141,7 @@ public class BareSectionPartTests
             time 4/4
             part bl { clef bass }
             part tr { clef treble }
-            section A { c'4 d e f | }
+            section A { c''4 d e f | }
             form { A }
             score { staff bl  staff tr }
             """;
@@ -168,9 +168,9 @@ public class BareSectionPartTests
     /// transposition whatever the part it is drawn on says.
     /// </summary>
     [Theory]
-    [InlineData("clef bass octave 3", "C4")]           // the part's own `octave` register
-    [InlineData("clef treble", "C5")]                  // …and the control that is not it
-    [InlineData("clef bass octave 3 tuning bass", "C4")]        // written pitch: the shift is <transpose>
+    [InlineData("clef bass octave 2", "C3")]           // the part's own `octave` register
+    [InlineData("clef treble", "C4")]                  // …and the control that is not it
+    [InlineData("clef bass octave 2 tuning bass", "C3")]        // written pitch: the shift is <transpose>
     public void TheMusicXmlAttributesABareSectionTheSameWay(string header, string firstPitch)
     {
         static (string Pitch, string Part) Read(string lys)

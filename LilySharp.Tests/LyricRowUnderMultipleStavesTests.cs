@@ -70,14 +70,14 @@ public class LyricRowUnderMultipleStavesTests
         "key c major\n" +
         "part melody {\n" +
         "  clef treble\n" +
-        "  section A { c4 c g' g | a a g2 | f4 f e e | d d c2 | }\n" +
+        "  section A { c'4 c g' g | a a g2 | f4 f e e | d d c2 | }\n" +
         "  section B { g'4 g f f | e e d2 | }\n" +
         "}\n" +
         // Whole notes that hang BELOW their own staff: the ink the row has to clear is
         // under the bottom line, not on it, which is what makes the clearance measurable.
         "part lower {\n" +
-        "  section A { c1 | b1 | a1 | d | }\n" +
-        "  section B { c1 | d | }\n" +
+        "  section A { c'1 | b1 | a1 | d | }\n" +
+        "  section B { c'1 | d | }\n" +
         "}\n" +
         "lyrics verse sings melody {\n" +
         "  section A { Twin- kle twin- kle | lit- tle star | How I won- der | what you are | }\n" +
@@ -136,7 +136,7 @@ public class LyricRowUnderMultipleStavesTests
     // milder one alone would let a partial repair look complete.
     private static readonly string SourceHighLowerStaff =
         Source.Replace(
-            "  section A { c1 | b1 | a1 | d | }\n  section B { c1 | d | }\n",
+            "  section A { c'1 | b1 | a1 | d | }\n  section B { c1 | d | }\n",
             "  section A { c''1 | b'1 | a'1 | d'' | }\n  section B { c''1 | d'' | }\n");
 
     [Fact]

@@ -53,7 +53,7 @@ public class PitchedRestOutputsTests
         octave absolute
         time 4/4
         part v { clef treble }
-        section S { v { a'4@rest c'4 r4 g'4@rest | } }
+        section S { v { a''4@rest c''4 r4 g''4@rest | } }
         form { ~S }
         score { staff v }
         """;
@@ -63,7 +63,7 @@ public class PitchedRestOutputsTests
         octave absolute
         time 4/4
         part v { clef treble }
-        section S { v { r4 c'4 r4 r4 | } }
+        section S { v { r4 c''4 r4 r4 | } }
         form { ~S }
         score { staff v }
         """;
@@ -131,7 +131,7 @@ public class PitchedRestOutputsTests
             octave absolute
             time 4/4
             part v { clef treble }
-            section S { v { tuplet 3/2 { c'4 c4@rest c'4 } c'2 | } }
+            section S { v { tuplet 3/2 { c''4 c'4@rest c''4 } c''2 | } }
             form { ~S }
             score { staff v }
             """;

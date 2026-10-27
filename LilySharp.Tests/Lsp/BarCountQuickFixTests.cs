@@ -83,8 +83,8 @@ public class BarCountQuickFixTests
     public void ManyShortLayers_AreAllPaddedByOneAction()
     {
         const string text = """
-            part flute { section A { c1 | c1 | c1 | } }
-            part oboe { section A { c1 | c1 | } }
+            part flute { section A { c'1 | c1 | c1 | } }
+            part oboe { section A { c'1 | c1 | } }
             chords harmony { section A { C | F | } }
             form { A }
             score { chords harmony  staff flute  staff oboe }
@@ -110,8 +110,8 @@ public class BarCountQuickFixTests
     public void TheWarningsLayers_ReachTheEditorAsRelatedInformation()
     {
         const string text = """
-            part flute { section A { c1 | c1 | c1 | } }
-            part oboe { section A { c1 | c1 | } }
+            part flute { section A { c'1 | c1 | c1 | } }
+            part oboe { section A { c'1 | c1 | } }
             form { A }
             score { staff flute  staff oboe }
             """;
@@ -133,7 +133,7 @@ public class BarCountQuickFixTests
         const string text = """
             part melody {
               section A { g2 g | }
-              section B { c2 c | }
+              section B { c'2 c | }
             }
             chords prog {
               section A { Dm7 | G7 }

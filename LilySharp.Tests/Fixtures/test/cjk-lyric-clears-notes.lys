@@ -5,7 +5,7 @@
 title "CJK lyric clears low notes"
 time 4/4
 key c major
-part m { clef treble section A { c4 c d e | } }
+part m { clef treble section A { c'4 c d e | } }
 lyrics words sings m { section A { き ら き ら | } }
 form { A }
 score { staff m  lyrics words }

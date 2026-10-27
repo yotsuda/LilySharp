@@ -64,8 +64,8 @@ public sealed class FormVoltaWithoutRepeatTests
 {
     private const string Head =
         "part m { clef treble }\n" +
-        "section A { m { c4 c c c | } }\n" +
-        "section B { m { d4 d d d | } }\n";
+        "section A { m { c'4 c c c | } }\n" +
+        "section B { m { d'4 d d d | } }\n";
 
     private const string Tail = "\nscore { staff m }\n";
 

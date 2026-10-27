@@ -279,7 +279,7 @@ public class MidBarBreakTests
         string book = """
             time 4/4
             part melody { clef treble }
-            section A { melody { c'4 d break e f | g1 | } }
+            section A { melody { c''4 d break e f | g1 | } }
             section B { melody { a2 pageBreak b2 | c'1 | } }
             form { A A B }
             score { staff melody }

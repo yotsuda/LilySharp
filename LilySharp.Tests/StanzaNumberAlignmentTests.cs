@@ -49,7 +49,7 @@ public sealed class StanzaNumberAlignmentTests
         key c major
         part melody { clef treble }
         section Main {
-          melody { c'4 d e f | g2 a4 g | }
+          melody { c''4 d e f | g2 a4 g | }
           lyrics words sings melody { A- ma- zing grace | how~ sweet | }
           lyrics words sings melody { Twas grace that taught | my~ heart | }
         }

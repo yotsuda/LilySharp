@@ -41,10 +41,10 @@ public sealed class FormJumpMidiTests
     private const string Head =
         "part m { clef treble }\n" +
         "section I { m { a4 a a a | } }\n" +
-        "section A { m { c4 c c c | } }\n" +
-        "section B { m { d4 d d d | } }\n" +
-        "section C { m { e4 e e e | } }\n" +
-        "section D { m { f4 f f f | } }\n";
+        "section A { m { c'4 c c c | } }\n" +
+        "section B { m { d'4 d d d | } }\n" +
+        "section C { m { e'4 e e e | } }\n" +
+        "section D { m { f'4 f f f | } }\n";
 
     private const string Tail = "\nscore { staff m }\n";
 
@@ -112,7 +112,7 @@ public sealed class FormJumpMidiTests
     [Fact]
     public void ADalSegno_RestoresTheStateThePieceHadAtTheSegno()
     {
-        var source = "section A { m { c4@f c c c | } } section B { m { d4 d d d | } } section C { m { e4@p e e e | } }"
+        var source = "section A { m { c'4@f c c c | } } section B { m { d'4 d d d | } } section C { m { e'4@p e e e | } }"
             + " form { A segno B fine C ds al fine }";
         var notes = new MidiExporter().Export(SyntaxTree.Parse(source)).Tracks[1].Notes.OrderBy(n => n.StartTick).ToList();
         Assert.Equal(16, notes.Count);
@@ -125,7 +125,7 @@ public sealed class FormJumpMidiTests
     public void EveryPart_FollowsTheRoute()
     {
         var source = "part m { clef treble } part n { clef bass }"
-            + " section A { m { c4 c c c | } n { c4 c c c | } } section B { m { d4 d d d | } n { d4 d d d | } }"
+            + " section A { m { c'4 c c c | } n { c'4 c c c | } } section B { m { d'4 d d d | } n { d'4 d d d | } }"
             + " form { A fine B dc al fine } score { staff m staff n }";
         var midi = new MidiExporter().Export(SyntaxTree.Parse(source));
         foreach (var part in new[] { "m", "n" })

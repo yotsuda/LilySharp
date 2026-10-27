@@ -103,8 +103,8 @@ public class LayoutGeometryRuleTests
             key c major
             time 4/4
             section Main {
-                melody { c'4 d e f | }
-                ossia_melody { c'4 e g e | }
+                melody { c''4 d e f | }
+                ossia_melody { c''4 e g e | }
             }
             form { Main }
             score x {

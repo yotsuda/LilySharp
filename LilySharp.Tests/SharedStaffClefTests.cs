@@ -38,7 +38,7 @@ public class SharedStaffClefTests
 {
     private static string Book(string scoreItems) =>
         "octave absolute\npart vla \"Viola\" { instrument viola }\npart vc \"Cello\" { instrument cello }\n"
-        + "section A { vla { c'4 d' e' f' | } vc { c4 d e f | } }\n"
+        + "section A { vla { c''4 d' e' f' | } vc { c'4 d e f | } }\n"
         + "form { A }\nscore { " + scoreItems + " }";
 
     private static List<int> Positions(string scoreItems, int staff = 0)
@@ -109,7 +109,7 @@ public class SharedStaffClefTests
     public void APartNamedLikeAClef_InsideTheBraces_IsStillAPart()
     {
         var tree = SyntaxTree.Parse(
-            "part bass { clef bass }\npart vc { clef bass }\nsection A { bass { c1 | } vc { e1 | } }\n"
+            "part bass { clef bass }\npart vc { clef bass }\nsection A { bass { c'1 | } vc { e'1 | } }\n"
             + "form { A }\nscore { condensedStaff { bass vc } }");
         var node = tree.GetRoot().DescendantNodes<CondensedStaffRenderSyntax>().Single();
         Assert.Null(node.ClefToken);

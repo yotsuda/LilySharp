@@ -32,7 +32,7 @@ namespace LilySharp.Tests;
 public class NoteheadHitTargetTests
 {
     private const string Doc = """
-        part m { clef treble section A { c'4 d' } }
+        part m { clef treble section A { c''4 d' } }
         form { A }
         score s { staff m }
         """;
@@ -80,7 +80,7 @@ public class NoteheadHitTargetTests
         // Every drawn barline gets a widened transparent hit rect (the ink alone is
         // ~0.2 ss — too thin to click) carrying a source offset.
         var svg = SvgGenerator.Generate(SyntaxTree.Parse("""
-            part m { clef treble section A { c'1 | d'1 } }
+            part m { clef treble section A { c''1 | d'1 } }
             form { A }
             score s { staff m }
             """), SvgRenderOptions.Preview());
@@ -92,7 +92,7 @@ public class NoteheadHitTargetTests
     {
         // A click jumps the editor to the hit rect's data-pos; it must be the '|'
         // character's offset, not the whitespace in front of it.
-        const string src = "part m { clef treble section A { c'1 | d'1 } }\n"
+        const string src = "part m { clef treble section A { c''1 | d'1 } }\n"
                          + "form { A }\nscore s { staff m }";
         int barPos = src.IndexOf('|', src.IndexOf("c'1")); // the mid-measure '|'
         var svg = SvgGenerator.Generate(SyntaxTree.Parse(src), SvgRenderOptions.Preview());
@@ -168,7 +168,7 @@ public class NoteheadHitTargetTests
         // Bar_engraver::pre_process_music) — placed at moment 0 this
         // book would have no drawn start barline for the assertion to be about.
         const string src = "phrase x { |: c1 :| }\n"
-                         + "part m { clef treble section A { d1 x } }\n"
+                         + "part m { clef treble section A { d'1 x } }\n"
                          + "form { A }\nscore s { staff m }";
         int repeatStart = src.IndexOf("|:");
         var svg = SvgGenerator.Generate(SyntaxTree.Parse(src), SvgRenderOptions.Preview());
@@ -191,7 +191,7 @@ public class NoteheadHitTargetTests
         // onto the loose accidental glyph box. It is emitted pointer-events="none"
         // (keeps data-pos), so only the notehead's nh-hit rect owns the click.
         var svg = SvgGenerator.Generate(SyntaxTree.Parse(
-            "part m { clef treble section A { cis'4 } }\nform { A }\nscore s { staff m }"),
+            "part m { clef treble section A { cis''4 } }\nform { A }\nscore s { staff m }"),
             SvgRenderOptions.Preview());
 
         // The accidental is a non-clickable music glyph that still carries data-pos.

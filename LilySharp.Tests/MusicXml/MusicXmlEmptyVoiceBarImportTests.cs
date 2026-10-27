@@ -73,7 +73,7 @@ public class MusicXmlEmptyVoiceBarImportTests
             Measure(1, Note("E", 5, 6, "half", 1) + "<backup><duration>6</duration></backup>" + Note("C", 5, 6, "half", 2), attributes: true)
             + Measure(2, Note("D", 5, 6, "half", 1)));
         Assert.DoesNotContain("r1", lys);
-        Assert.Matches(@"voice \{ e'2\. \| d'2\. \| \}\s*\{ c'2\. \|\s*\| \}", lys);
+        Assert.Matches(@"voice \{ e''2\. \| d''2\. \| \}\s*\{ c''2\. \|\s*\| \}", lys);
         Assert.Empty(LengthReports(lys));
     }
 
@@ -86,7 +86,7 @@ public class MusicXmlEmptyVoiceBarImportTests
             Measure(1, Note("E", 5, 6, "half", 1) + "<backup><duration>6</duration></backup>"
                 + "<note><pitch><step>C</step><octave>5</octave></pitch><duration>3</duration><type>quarter</type><dot/><voice>2</voice></note>",
                 attributes: true));
-        Assert.Matches(@"\{ c'4\. s4\.", lys);
+        Assert.Matches(@"\{ c''4\. s4\.", lys);
         Assert.Empty(LengthReports(lys));
     }
 
@@ -98,7 +98,7 @@ public class MusicXmlEmptyVoiceBarImportTests
             + Measure(2, "")
             + Measure(3, Note("D", 5, 6, "half", 1)));
         Assert.DoesNotContain("r1", lys);
-        Assert.Matches(@"e'2\. \| R \| d'2\.", lys);
+        Assert.Matches(@"e''2\. \| R \| d''2\.", lys);
         Assert.Empty(LengthReports(lys));
     }
 }

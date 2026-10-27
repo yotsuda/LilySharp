@@ -44,7 +44,7 @@ public class AnonymousBlockTests
     private const string OnePart = """
         part {
           clef treble
-          section A { c'4 d e f | g2 g | }
+          section A { c''4 d e f | g2 g | }
         }
         chords { section A { C | G } }
         lyrics { section A { Twin- kle twin- kle | lit- tle | } }
@@ -82,7 +82,7 @@ public class AnonymousBlockTests
     [Fact]
     public void WithNoPartAtAll_ABareStaffRendersTheSectionsMusic()
     {
-        string source = "section A { c'4 d e f | g2 g | }\nlyrics { section A { a b c d | e f | } }\n"
+        string source = "section A { c''4 d e f | g2 g | }\nlyrics { section A { a b c d | e f | } }\n"
             + "score { staff  lyrics }\n";
         Assert.Empty(Errors(source));
         string svg = Svg(source);
@@ -92,7 +92,7 @@ public class AnonymousBlockTests
     [Fact]
     public void TheUnnamedLyrics_SingTheOnlyNamedPart()
     {
-        string source = "part melody { clef treble  section A { c'4 d e f | } }\n"
+        string source = "part melody { clef treble  section A { c''4 d e f | } }\n"
             + "lyrics { section A { la la la la | } }\nscore { staff melody  lyrics }\n";
         Assert.Empty(Errors(source));
         var staff = Assert.Single(RenderSpecParser.FindFirst(SyntaxTree.Parse(source))!.Items.OfType<SingleStaffSpec>()).Staff;
@@ -101,7 +101,7 @@ public class AnonymousBlockTests
 
     [Fact]
     public void AnUnnamedPart_MustBeTheOnlyPart()
-        => Assert.Contains(Errors("part { clef treble }\npart bass { clef bass }\nsection A { c'1 | }\nscore { staff  staff bass }\n"),
+        => Assert.Contains(Errors("part { clef treble }\npart bass { clef bass }\nsection A { c''1 | }\nscore { staff  staff bass }\n"),
             d => d.Code == DiagnosticCodes.UndefinedPart && d.Message.Contains("only part"));
 
     [Fact]
@@ -111,7 +111,7 @@ public class AnonymousBlockTests
 
     [Fact]
     public void ABareChordsRow_WithNoUnnamedTrack_IsUndefined()
-        => Assert.Contains(Errors("part melody { clef treble  section A { c'1 | } }\nchords prog { section A { C } }\n"
+        => Assert.Contains(Errors("part melody { clef treble  section A { c''1 | } }\nchords prog { section A { C } }\n"
             + "score { chords  staff melody }\n"),
             d => d.Code == DiagnosticCodes.UndefinedPart && d.Message.Contains("'chords'"));
 

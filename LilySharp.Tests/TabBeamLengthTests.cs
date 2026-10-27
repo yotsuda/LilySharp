@@ -51,11 +51,11 @@ public sealed class TabBeamLengthTests
           clef bass
           tuning bass
           section A {
-            fis,,8\4 fis,,16\4 fis,,\4 fis,,8\4 fis,,\4 fis,,8\4 fis,,16\4 fis,,\4 fis,,8\4 fis,,\4 |
-            d,8\3 d,16\3 d,\3 d,8\3 d,\3 d,8\3 d,16\3 d,\3 d,8\3 d,\3 |
-            e,8\2 e,16\2 e,\2 e,8\2 e,\2 e,8\2 e,16\2 e,\2 e,8\2 e,\2 |
-            a,8\1 a,16\1 a,\1 a,8\1 a,\1 a,8\1 a,16\1 a,\1 a,8\1 a,\1 |
-            e,,8\4 fis,,\4 a,,\3 b,,\3 e,,8\4 fis,,\4 a,,\3 b,,\3 |
+            fis,8\4 fis,16\4 fis,\4 fis,8\4 fis,\4 fis,8\4 fis,16\4 fis,\4 fis,8\4 fis,\4 |
+            d8\3 d16\3 d\3 d8\3 d\3 d8\3 d16\3 d\3 d8\3 d\3 |
+            e8\2 e16\2 e\2 e8\2 e\2 e8\2 e16\2 e\2 e8\2 e\2 |
+            a8\1 a16\1 a\1 a8\1 a\1 a8\1 a16\1 a\1 a8\1 a\1 |
+            e,8\4 fis,\4 a,\3 b,\3 e,8\4 fis,\4 a,\3 b,\3 |
           }
         }
         form { A }

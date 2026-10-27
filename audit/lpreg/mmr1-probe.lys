@@ -8,7 +8,7 @@ time 4/4
 part vone { clef treble }
 
 section A {
-  vone { R1 | g1 | }
+  vone { R1 | g'1 | }
 }
 
 form { ~A }

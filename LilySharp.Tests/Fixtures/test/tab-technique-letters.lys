@@ -11,9 +11,9 @@ time 4/4
 part gtr { clef treble }
 section S {
   gtr {
-    c4@tap e@tap g@tap b@hammerOn |
-    c'4@tap e'@pullOff g'@tap b'@hammerOn |
-    e4@pluck(p) a@pluck(i) b@pluck(m) e'@pluck(a) |
+    c'4@tap e'@tap g'@tap b'@hammerOn |
+    c''4@tap e''@pullOff g''@tap b''@hammerOn |
+    e'4@pluck(p) a'@pluck(i) b'@pluck(m) e''@pluck(a) |
   }
 }
 form { ~S }

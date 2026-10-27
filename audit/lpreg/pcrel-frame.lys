@@ -9,8 +9,8 @@ part vone { clef treble }
 part vtwo { clef treble }
 
 section A {
-  vone { octave relative e'2 f | }
-  vtwo { octave relative c'2 d | }
+  vone { octave relative e''2 f | }
+  vtwo { octave relative c''2 d | }
 }
 
 form { ~A }

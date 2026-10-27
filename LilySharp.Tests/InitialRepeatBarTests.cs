@@ -95,9 +95,9 @@ public sealed class InitialRepeatBarTests
         AssertKeptAtTheStartAndLater(Collect("""
             time 4/4
             part m { clef treble }
-            section A { m { c'1 } }
-            section B { m { d'1 } }
-            section C { m { e'1 } }
+            section A { m { c''1 } }
+            section B { m { d''1 } }
+            section C { m { e''1 } }
             form { |: A :| B |: C :| }
             score { staff m }
             """));
@@ -109,7 +109,7 @@ public sealed class InitialRepeatBarTests
     {
         AssertKeptAtTheStartAndLater(Collect("""
             time 4/4
-            part m { clef treble section A { |: c'1 :| d'1 |: e'1 :| } }
+            part m { clef treble section A { |: c''1 :| d'1 |: e'1 :| } }
             form { A }
             score { staff m }
             """));
@@ -123,9 +123,9 @@ public sealed class InitialRepeatBarTests
             time 4/4
             part rh { clef treble }
             part lh { clef bass }
-            section A { rh { c'1 } lh { c1 } }
-            section B { rh { d'1 } lh { d1 } }
-            section C { rh { e'1 } lh { e1 } }
+            section A { rh { c''1 } lh { c'1 } }
+            section B { rh { d''1 } lh { d'1 } }
+            section C { rh { e''1 } lh { e'1 } }
             form { |: A :| B |: C :| }
             score { grandStaff { staff rh  staff lh } }
             """));
@@ -139,9 +139,9 @@ public sealed class InitialRepeatBarTests
             time 4/4
             part m { clef treble }
             chords prog { section A { C } section B { G } section C { A } }
-            section A { m { c'1 } }
-            section B { m { d'1 } }
-            section C { m { e'1 } }
+            section A { m { c''1 } }
+            section B { m { d''1 } }
+            section C { m { e''1 } }
             form { |: A :| B |: C :| }
             score { chords prog  staff m }
             """));
@@ -155,9 +155,9 @@ public sealed class InitialRepeatBarTests
             time 4/4
             part m { clef treble }
             lyrics words { section A { la } section B { la } section C { la } }
-            section A { m { c'1 } }
-            section B { m { d'1 } }
-            section C { m { e'1 } }
+            section A { m { c''1 } }
+            section B { m { d''1 } }
+            section C { m { e''1 } }
             form { |: A :| B |: C :| }
             score { staff m  lyrics words }
             """));
@@ -187,7 +187,7 @@ public sealed class InitialRepeatBarTests
     {
         var score = Collect("""
             time 4/4
-            part m { clef treble section A { c'1 |: d'1 :| } }
+            part m { clef treble section A { c''1 |: d'1 :| } }
             form { A }
             score { staff m }
             """);
@@ -209,7 +209,7 @@ public sealed class InitialRepeatBarTests
         string ly = new LilyPondExporter().Export(SyntaxTree.Parse("""
             time 4/4
             part m { clef treble }
-            section A { m { c'1 } }
+            section A { m { c''1 } }
             form { |: A :| }
             score { staff m }
             """));

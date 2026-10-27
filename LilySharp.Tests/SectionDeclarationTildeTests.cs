@@ -163,8 +163,8 @@ public sealed class SectionDeclarationTildeTests
         const string book = """
             time 4/4
             part m
-            section A { m { c'4 c c c | } }
-            section B { m { d'4 d d d | } }
+            section A { m { c''4 c c c | } }
+            section B { m { d''4 d d d | } }
             score { staff m }
             """;
         Assert.Equal(new[] { "A", "B" }, PageLabels(book));

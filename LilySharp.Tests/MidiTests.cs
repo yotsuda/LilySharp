@@ -132,7 +132,7 @@ public class MidiTests
 
         var pitches = Pitches("""
             key c major
-            phrase Lick { c d e c }
+            phrase Lick { c' d e c }
             part m {
               section A { Lick }
               section B { key g major Lick }
@@ -156,7 +156,7 @@ public class MidiTests
 
         var pitches = Pitches("""
             key c major
-            phrase Lick { c d e c }
+            phrase Lick { c' d e c }
             section A { melody { Lick } }
             section B {
               key g major
@@ -180,7 +180,7 @@ public class MidiTests
 
         var pitches = Pitches("""
             key c major
-            phrase Lick { c d e c }
+            phrase Lick { c' d e c }
             part melody { section A { Lick } }
             section A { key g major }
             form { A }
@@ -206,7 +206,7 @@ public class MidiTests
 
         var pitches = Pitches("""
             key c major
-            phrase Lick { c d e c }
+            phrase Lick { c' d e c }
             part melody { section A { Lick } }
             section A { key g major  override NoteHead.color = red }
             form { A }
@@ -224,7 +224,7 @@ public class MidiTests
         // playback speeds up there — matching the metronome mark the SVG prints.
         var midi = new MidiExporter().Export(SyntaxTree.Parse("""
             tempo 100
-            part melody { section A { c4 d e f } section B { g4 a g f } }
+            part melody { section A { c'4 d e f } section B { g4 a g f } }
             section B { tempo 140 }
             form { A B }
             score { staff melody }
@@ -241,7 +241,7 @@ public class MidiTests
         // conductor time-signature change at the section start, not only on the staff.
         var midi = new MidiExporter().Export(SyntaxTree.Parse("""
             time 4/4
-            part melody { section A { c4 d e f } section B { g4 a g } }
+            part melody { section A { c'4 d e f } section B { g4 a g } }
             section B { time 3/4 }
             form { A B }
             score { staff melody }
@@ -261,9 +261,9 @@ public class MidiTests
 
         var pitches = Pitches("""
             key c major
-            phrase Lick { c d e c }
+            phrase Lick { c' d e c }
             part m {
-              section A { key g major Lick | c }
+              section A { key g major Lick | c' }
             }
             form { A }
             score { staff m }
@@ -542,7 +542,7 @@ public class MidiTests
     [Fact]
     public void AFromTheBeginningRepeat_ReopensEachPartAtItsOpeningVelocity()
     {
-        var source = "section A { rh { c'4 d'@p e' f' | } } section B { rh { c'4@f d' e' f' | } } form { A B :| }";
+        var source = "section A { rh { c''4 d'@p e' f' | } } section B { rh { c''4@f d' e' f' | } } form { A B :| }";
         var midi = new MidiExporter().Export(SyntaxTree.Parse(source));
 
         var notes = midi.Tracks.Single(t => t.Name == "rh").Notes.OrderBy(n => n.StartTick).Select(n => n.Velocity).ToArray();
@@ -560,8 +560,8 @@ public class MidiTests
         var source = @"
             time 4/4
             part melody
-            section A { melody { c'4@p d' e' f' | g'1 | } chords harmony { C . G7 . | Dm/F | } }
-            section B { melody { c'4 d' e' f' | } chords harmony { C | } }
+            section A { melody { c''4@p d' e' f' | g'1 | } chords harmony { C . G7 . | Dm/F | } }
+            section B { melody { c''4 d' e' f' | } chords harmony { C | } }
             form { A B }
             score { chords harmony  staff melody }";
         var midi = new MidiExporter().Export(SyntaxTree.Parse(source));
@@ -654,7 +654,7 @@ public class MidiTests
     {
         var source = @"
 part clar { clef treble transpose d }
-section Main { clar { c4 d e } }
+section Main { clar { c'4 d e } }
 form { Main }
 score x { staff clar }";
         var tree = SyntaxTree.Parse(source);
@@ -673,7 +673,7 @@ score x { staff clar }";
     {
         var source = @"
 part lower { clef bass transpose c, }
-section Main { lower { c4 d e } }
+section Main { lower { c'4 d e } }
 form { Main }
 score x { staff lower }";
         var tree = SyntaxTree.Parse(source);
@@ -695,7 +695,7 @@ score x { staff lower }";
 tempo 120
 time 4/4
 part m { clef treble }
-section Main { m { c4 d e f | tempo 160 g a b c } }
+section Main { m { c'4 d e f | tempo 160 g a b c } }
 form { Main }
 score x { staff m }";
         var tree = SyntaxTree.Parse(source);

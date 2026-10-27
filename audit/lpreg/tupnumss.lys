@@ -10,7 +10,7 @@ part v { }
 section Main {
   v {
     r1 | break
-    tuplet 3/2 { e8(@accent e8 e8) } r4 r2 |
+    tuplet 3/2 { e'8(@accent e'8 e'8) } r4 r2 |
   }
 }
 

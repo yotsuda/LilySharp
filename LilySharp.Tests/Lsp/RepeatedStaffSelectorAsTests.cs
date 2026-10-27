@@ -31,7 +31,7 @@ namespace LilySharp.Tests.Lsp;
 [Trait("Category", "Unit")]
 public class RepeatedStaffSelectorAsTests
 {
-    private const string Head = "part melody { instrument alto-sax }\nsection A { melody { c'4 d' e' f' | } }\nform { A }\n";
+    private const string Head = "part melody { instrument alto-sax }\nsection A { melody { c''4 d' e' f' | } }\nform { A }\n";
 
     [Theory]
     [InlineData("staff melody as pitch transposed as lines 1")]

@@ -32,7 +32,7 @@ public sealed class SharedRendererPngTests
             time 4/4
 
             section Demo {
-                line { | c'4 d e f | g2 e | c1 | }
+                line { | c''4 d e f | g2 e | c1 | }
             }
 
             form { Demo }
@@ -62,8 +62,8 @@ public sealed class SharedRendererPngTests
             time 4/4
 
             section Main {
-                melody { | c'4 d e f | g2 e | c1 | }
-                ossia_melody { | c'4 e g e | a2 f | e1 | }
+                melody { | c''4 d e f | g2 e | c1 | }
+                ossia_melody { | c''4 e g e | a2 f | e1 | }
             }
 
             form { Main }

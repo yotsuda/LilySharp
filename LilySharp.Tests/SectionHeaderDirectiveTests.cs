@@ -87,7 +87,7 @@ public class SectionHeaderDirectiveTests
     {
         var score = Collect("""
             time 4/4
-            section A { time 3/4  melody { c4 d e | } }
+            section A { time 3/4  melody { c'4 d e | } }
             form { A }
             score { staff melody }
             """);
@@ -127,7 +127,7 @@ public class SectionHeaderDirectiveTests
         // On a NON-first section, so it does not coincide with the score's initial tempo.
         var score = Collect("""
             tempo 100
-            section A { melody { c4 d e f | } }
+            section A { melody { c'4 d e f | } }
             section B { tempo 140  melody { g4 a b c' | } }
             form { A B }
             score { staff melody }
@@ -143,8 +143,8 @@ public class SectionHeaderDirectiveTests
         // marks. Regression: the grand staff printed "140" twice, overlapping.
         var tree = SyntaxTree.Parse("""
             tempo 100
-            part rh { section A { c'4 d' e' f' } section B { g'4 a' g' f' } }
-            part lh { clef bass  section A { c4 e g e } section B { c4 g, c g, } }
+            part rh { section A { c''4 d' e' f' } section B { g'4 a' g' f' } }
+            part lh { clef bass  section A { c'4 e g e } section B { c'4 g, c g, } }
             section A { }
             section B { tempo 140 }
             form { A B }
@@ -162,7 +162,7 @@ public class SectionHeaderDirectiveTests
         // mark (replacing the score's `tempo 100`) instead of being hidden behind it.
         var score = Collect("""
             tempo 100
-            section A { tempo 140  melody { c4 d e f | } }
+            section A { tempo 140  melody { c'4 d e f | } }
             section B { melody { g4 a b c' | } }
             form { A B }
             score { staff melody }
@@ -177,7 +177,7 @@ public class SectionHeaderDirectiveTests
     {
         var score = Collect("""
             time 4/4
-            part melody { section A { c4 d e | } }
+            part melody { section A { c'4 d e | } }
             section A { time 3/4 }
             form { A }
             score { staff melody }
@@ -190,7 +190,7 @@ public class SectionHeaderDirectiveTests
     {
         var score = Collect("""
             tempo 100
-            part melody { section A { c4 d e f | } section B { g4 a b c' | } }
+            part melody { section A { c'4 d e f | } section B { g4 a b c' | } }
             section B { tempo 140 }
             form { A B }
             score { staff melody }
@@ -238,8 +238,8 @@ public class SectionHeaderDirectiveTests
     /// (2026-09-26).
     /// </remarks>
     [Theory]
-    [InlineData("section A { time 3/4  rh { c'2. | }  lh { c2. | } }")]
-    [InlineData("section A { rh { time 3/4 c'2. | }  lh { time 3/4 c2. | } }")]
+    [InlineData("section A { time 3/4  rh { c''2. | }  lh { c'2. | } }")]
+    [InlineData("section A { rh { time 3/4 c''2. | }  lh { time 3/4 c'2. | } }")]
     public void OnAGrandStaff_EveryStaffOpensInTheSectionMeter_AndReverts(string sectionA)
     {
         var tree = SyntaxTree.Parse($$"""
@@ -269,8 +269,8 @@ public class SectionHeaderDirectiveTests
         // Section A is 3/4; B states nothing, so it reverts to 4/4.
         var score = Collect("""
             time 4/4
-            section A { time 3/4  melody { c4 d e | } }
-            section B { melody { c4 d e f | } }
+            section A { time 3/4  melody { c'4 d e | } }
+            section B { melody { c'4 d e f | } }
             form { A B }
             score { staff melody }
             """);

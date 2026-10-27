@@ -141,7 +141,7 @@ public sealed class TabStringNumberTests
     [Fact]
     public void AnOpenEIsNotFollowedByTheOpenLowB()
     {
-        var src = "octave absolute\npart b {\n  tuning bass5\n  section A {\n    b,,8 e,, r4 r2 | b,,,2 r2 |\n  }\n}\n" +
+        var src = "octave absolute\npart b {\n  tuning bass5\n  section A {\n    b,8 e, r4 r2 | b,,2 r2 |\n  }\n}\n" +
                   "form { A }\nscore {\n  tab b\n}\n";
         var tree = SyntaxTree.Parse(src);
         var tab = new MeasureCollector().CollectMultiStaff(tree, RenderSpecParser.FindFirst(tree)!)

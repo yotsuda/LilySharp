@@ -184,11 +184,11 @@ public sealed class SystemCountPageScoreTests
         part bl {
           clef bass
           section Intro {
-            fis,,2 fis,,8 fis,, r cis, | ais,,2 ais,,8 ais,, r ais,, | gis,,4 r8 dis,8 cis, cis, r cis, | fis,,2 r8 fis,, cis,16 c, cis,8 |
+            fis,2 fis,8 fis, r cis | ais,2 ais,8 ais, r ais, | gis,4 r8 dis8 cis cis r cis | fis,2 r8 fis, cis16 c cis8 |
           }
           section A {
-            fis,2 fis,8 fis, r fis, | ais,2 ais,8 ais, r ais, | cis,4. cis,8 cis,4. cis,8 | ais,4 r8 ais, dis,2 | break
-            gis,4. dis,8 gis, gis, r dis, | gis,2 gis,8 gis, r cis, | fis,2 fis,8 fis, r cis, | fis,,4 r8 fis,, eis,,4 eis, |
+            fis2 fis8 fis r fis | ais2 ais8 ais r ais | cis4. cis8 cis4. cis8 | ais4 r8 ais dis2 | break
+            gis4. dis8 gis gis r dis | gis2 gis8 gis r cis | fis2 fis8 fis r cis | fis,4 r8 fis, eis,4 eis |
           }
         }
         form { Intro A }

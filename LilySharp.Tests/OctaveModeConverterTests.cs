@@ -59,10 +59,10 @@ public class OctaveModeConverterTests
     [Fact]
     public void ARelativeMelody_GoesAbsolute_AndComesBackStatingRelative()
     {
-        var relative = "part m { }\nsection A {\n  m { c4 d e f | g a b c | c' b, a g | }\n}" + Score;
+        var relative = "part m { }\nsection A {\n  m { c'4 d e f | g a b c | c' b, a g | }\n}" + Score;
         var absolute = Convert(relative, OctaveMode.Absolute);
         Assert.Equal(
-            "octave absolute\npart m { }\nsection A {\n  m { c4 d e f | g a b c' | c'' b a g | }\n}" + Score,
+            "octave absolute\npart m { }\nsection A {\n  m { c'4 d' e' f' | g' a' b' c'' | c''' b' a' g' | }\n}" + Score,
             absolute);
         // The file's directive stays and names the mode (owner's report 2026-10-17: the line
         // used to vanish, relative being written by removing it); a file that never wrote one
@@ -90,16 +90,16 @@ public class OctaveModeConverterTests
     [Fact]
     public void AnAbsoluteFile_GoesRelative_KeepingItsLine()
     {
-        var absolute = "octave absolute\npart m { }\nsection A {\n  m { c'4 d' e' f' | }\n}" + Score;
+        var absolute = "octave absolute\npart m { }\nsection A {\n  m { c''4 d'' e'' f'' | }\n}" + Score;
         var relative = Convert(absolute, OctaveMode.Relative);
-        Assert.Equal("octave relative\npart m { }\nsection A {\n  m { c'4 d e f | }\n}" + Score, relative);
+        Assert.Equal("octave relative\npart m { }\nsection A {\n  m { c''4 d e f | }\n}" + Score, relative);
         Assert.Equal(absolute, Convert(relative, OctaveMode.Absolute));
     }
 
     [Fact]
     public void AFileAlreadyAbsolute_KeepsItsDirectiveInPlace()
     {
-        var src = "octave absolute\npart m { }\nsection A {\n  m { c'4 e' g' c'' | }\n}" + Score;
+        var src = "octave absolute\npart m { }\nsection A {\n  m { c''4 e'' g'' c''' | }\n}" + Score;
         Assert.Equal(src, Convert(src, OctaveMode.Absolute));
     }
 
@@ -109,7 +109,7 @@ public class OctaveModeConverterTests
     [Fact]
     public void AChordsGroupMark_IsFoldedIntoItsMembers_InAbsolute()
     {
-        var src = "part m { }\nsection A {\n  m { <c e g>'2 c | << c e g >>,4 c <c' 3 5> e | }\n}" + Score;
+        var src = "part m { }\nsection A {\n  m { <c' e g>'2 c | << c e g >>,4 c <c' 3 5> e | }\n}" + Score;
         var absolute = Convert(src, OctaveMode.Absolute);
         // <c e g>' is C5 E5 G5 and leaves the frame at C5; << c e g >>, then reads C5 and
         // drops a whole octave — C4 E4 G4 — which absolute spells bare. <c' 3 5> is read as
@@ -139,7 +139,7 @@ public class OctaveModeConverterTests
     [Fact]
     public void AnInstrumentPresetsAnchor_IsWrittenIntoTheMarks()
     {
-        var src = "part m { instrument bass5 \"bass\" }\nsection A {\n  m { g4 a b c | }\n}" + Score;
+        var src = "part m { instrument bass5 \"bass\" }\nsection A {\n  m { g,4 a b c | }\n}" + Score;
         var absolute = Convert(src, OctaveMode.Absolute);
         Assert.Contains("m { g,4 a, b, c | }", absolute);
         Assert.Equal("octave relative\n" + src, Convert(absolute, OctaveMode.Relative));
@@ -148,7 +148,7 @@ public class OctaveModeConverterTests
     [Fact]
     public void ANoteNoScorePlays_IsRefused_NamingItsSection()
     {
-        var src = "part m { }\nsection A {\n  m { c4 d e f | }\n}\nsection B {\n  m { g4 a b c | }\n}" + Score;
+        var src = "part m { }\nsection A {\n  m { c'4 d e f | }\n}\nsection B {\n  m { g4 a b c | }\n}" + Score;
         var result = OctaveModeConverter.Convert(src, OctaveMode.Absolute);
         Assert.Null(result.NewText);
         Assert.Contains("line 6, column 7", result.Error);
@@ -157,7 +157,7 @@ public class OctaveModeConverterTests
 
     [Theory]
     [InlineData("part m { }\nsection A {\n  m { c4 d e f | \n}" + Score)]
-    [InlineData("using \"other.lys\"\npart m { }\nsection A {\n  m { c4 d e f | }\n}" + Score)]
+    [InlineData("using \"other.lys\"\npart m { }\nsection A {\n  m { c'4 d e f | }\n}" + Score)]
     public void AFileItCannotCheck_IsLeftAlone(string src)
     {
         var result = OctaveModeConverter.Convert(src, OctaveMode.Absolute);
@@ -167,8 +167,8 @@ public class OctaveModeConverterTests
 
     // ---- the AI transform's round trip (owner's request 2026-10-25) ----
 
-    private const string Song = "title \"t\"\npart m { }\nsection A {\n  m { c4 d e f | g a b c | c' b, a g | }\n}\n"
-        + "section B {\n  m { e4 g c' e | d1 | }\n}\nform { ~A ~B }\nscore { staff m }\n";
+    private const string Song = "title \"t\"\npart m { }\nsection A {\n  m { c'4 d e f | g a b c | c' b, a g | }\n}\n"
+        + "section B {\n  m { e'4 g c' e | d1 | }\n}\nform { ~A ~B }\nscore { staff m }\n";
 
     [Fact]
     public void ForTheAi_ARelativeFile_GoesAbsolute_WithTheChangesThatMadeIt()

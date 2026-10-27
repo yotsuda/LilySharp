@@ -151,7 +151,7 @@ public class BeamSolveMemoTests
             key c major
             part melody { clef treble }
             section Main { melody {
-              c'8 d' e' f' g' a' b' c'' | c''8 b' a' g' f' e' d' c' |
+              c''8 d' e' f' g' a b' c'' | c''8 b' a' g' f' e' d' c' |
             } }
             form { Main }
             score x { staff melody }

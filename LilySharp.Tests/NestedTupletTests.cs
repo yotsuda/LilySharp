@@ -51,7 +51,7 @@ public class NestedTupletTests
         var source = @"
 time 4/4
 part m { clef treble }
-section A { m { tuplet 3/2 { c'8( d'~ e') } r4 c'2 | } }
+section A { m { tuplet 3/2 { c''8( d'~ e') } r4 c'2 | } }
 form { A }
 score { staff m }
 ";

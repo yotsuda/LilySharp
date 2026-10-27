@@ -5,7 +5,7 @@ part melody { clef treble }
 
 section Main {
   melody {
-    c4 d e f | g4 a b c | c1 |
+    c'4 d e f | g4 a b c | c1 |
     // A script above a protruding note: the F symbol must clear the
     // staccatissimo dagger over A5 (scripts join the chord-line skyline).
     a'4@staccatissimo g f e |

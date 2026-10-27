@@ -47,7 +47,7 @@ public sealed class FewLineStaffTests
 
     private static string Book(int lines) =>
         "time 4/4\npart rh { clef percussion }\npart m { clef treble }\n"
-        + "section A { rh { c1 | c1 | } m { c'''1 | c1 | } }\n"
+        + "section A { rh { c'1 | c1 | } m { c''''1 | c1 | } }\n"
         + $"score {{ staff rh as lines {lines}  staff m }}\n";
 
     [Theory]
@@ -112,7 +112,7 @@ public sealed class FewLineStaffTests
     {
         // scm/output-lib.scm staff-symbol::calc-widened-extent: under two spaces long, the
         // lines' extent widens by a space each way; scm/bar-line.scm takes half a line off.
-        var symbols = Symbols("time 4/4\npart rh { clef percussion }\nsection A { rh { c1 | c1 | } }\n"
+        var symbols = Symbols("time 4/4\npart rh { clef percussion }\nsection A { rh { c'1 | c1 | } }\n"
             + $"score {{ staff rh as lines {lines} }}\n");
         double middle = LineCentres(symbols)[0] + topPosition * 0.5;   // device y grows DOWN
         var bar = symbols.First(s => s.Kind == "barLine");

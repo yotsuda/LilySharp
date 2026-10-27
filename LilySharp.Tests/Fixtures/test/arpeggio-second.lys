@@ -12,7 +12,7 @@ key c major
 part melody
 
 phrase test {
-  <c d>4@arpeggio <e f>4@arpeggio <g a>4@arpeggio <b c>4@arpeggio |
+  <c' d>4@arpeggio <e f>4@arpeggio <g a>4@arpeggio <b c>4@arpeggio |
 }
 
 section Main {

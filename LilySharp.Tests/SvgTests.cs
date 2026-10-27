@@ -181,7 +181,7 @@ public class SvgTests
     {
         var source = @"
 section A {
-    melody { c4 d4 e4 f4 | }
+    melody { c'4 d4 e4 f4 | }
 }
 form {
     |: A :|

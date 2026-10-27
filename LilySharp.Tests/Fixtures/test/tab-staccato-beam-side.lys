@@ -6,6 +6,6 @@
 title "tab staccato on beamed group"
 time 4/4
 key c major
-part m { instrument bass section A { g8@staccato g g'\2@staccato g\2 | } }
+part m { instrument bass section A { g,8@staccato g g'\2@staccato g\2 | } }
 form { A }
 score { tab m }

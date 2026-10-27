@@ -36,10 +36,10 @@ public sealed class SharedRendererPdfTests
 
             section Main {
                 melody {
-                    | c'4 d e f | g2 e | c1 |
+                    | c''4 d e f | g2 e | c1 |
                 }
                 ossia_melody {
-                    | c'4 e g e | a2 f | e1 |
+                    | c''4 e g e | a2 f | e1 |
                 }
             }
 
@@ -73,7 +73,7 @@ public sealed class SharedRendererPdfTests
 
             section Demo {
                 line {
-                    | cis'4 d~ d8( e fis g) | a2 bes |
+                    | cis''4 d~ d8( e fis g) | a2 bes |
                 }
             }
 

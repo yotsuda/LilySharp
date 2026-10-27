@@ -122,7 +122,7 @@ public class EmptyBarExportTests
     {
         string source =
             $"octave absolute\ntime 4/4\nphrase mel {{ {body} }}\npart m {{ }}\n"
-            + "section A { m { mel | e'1 | } }\nform { ~A }\nscore { staff m }";
+            + "section A { m { mel | e''1 | } }\nform { ~A }\nscore { staff m }";
         Assert.Equal(0, Spacers(Twin(source)));
     }
 
@@ -148,7 +148,7 @@ public class EmptyBarExportTests
     {
         string source =
             "octave absolute\ntime 4/4\npart m { }\n"
-            + "section A { m { c'4 d' e' f' | } }\nsection B { m { g'1 | } }\n"
+            + "section A { m { c''4 d' e' f' | } }\nsection B { m { g'1 | } }\n"
             + "section C { m { a'1 | } }\nsection D { m { b'1 | } }\n"
             + $"form {{ {form} }}\nscore {{ staff m }}";
         string twin = Twin(source);

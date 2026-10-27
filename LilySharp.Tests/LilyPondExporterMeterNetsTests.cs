@@ -46,8 +46,8 @@ public class LilyPondExporterMeterNetsTests
             octave absolute
             time 3+2/8
             part m { clef treble }
-            section A { m { c'8 d' e' f' g' | time 4/4 a'1 | } }
-            section B { m { b'8 a' g' f' e' | } }
+            section A { m { c''8 d'' e'' f'' g'' | time 4/4 a''1 | } }
+            section B { m { b''8 a'' g'' f'' e'' | } }
             form { A B }
             score { staff m }
             """);
@@ -67,7 +67,7 @@ public class LilyPondExporterMeterNetsTests
             octave absolute
             time 3+2/8
             part m { clef treble }
-            section A { m { time 3+2/8 c'8 d' e' f' g' | } }
+            section A { m { time 3+2/8 c''8 d'' e'' f'' g'' | } }
             form { A }
             score { staff m }
             """);
@@ -85,8 +85,8 @@ public class LilyPondExporterMeterNetsTests
             octave absolute
             time 3+2/8
             part m { clef treble }
-            section A { m { c'8 d' e' f' g' | time 4/4 a'1 | } }
-            section B { m { time 3+2/8 b'8 a' g' f' e' | } }
+            section A { m { c''8 d'' e'' f'' g'' | time 4/4 a''1 | } }
+            section B { m { time 3+2/8 b''8 a'' g'' f'' e'' | } }
             form { A B }
             score { staff m }
             """);
@@ -108,10 +108,10 @@ public class LilyPondExporterMeterNetsTests
         var ly = Export("""
             octave absolute
             time 4/4
-            phrase ph { time 3/4 c'4 d' e' | }
+            phrase ph { time 3/4 c''4 d'' e'' | }
             part m { clef treble }
-            section A { m { ph f'4 g' a' | } }
-            section B { m { c''1 | } }
+            section A { m { ph f''4 g'' a'' | } }
+            section B { m { c'''1 | } }
             form { A B }
             score { staff m }
             """);
@@ -129,10 +129,10 @@ public class LilyPondExporterMeterNetsTests
             octave absolute
             time 4/4
             key c major
-            phrase ph { key g major fis'4 g' a' b' | }
+            phrase ph { key g major fis''4 g'' a'' b'' | }
             part m { clef treble }
-            section A { m { ph fis'4 g' a' b' | } }
-            section B { m { c''1 | } }
+            section A { m { ph fis''4 g'' a'' b'' | } }
+            section B { m { c'''1 | } }
             form { A B }
             score { staff m }
             """);

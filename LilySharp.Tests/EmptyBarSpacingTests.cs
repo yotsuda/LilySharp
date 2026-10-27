@@ -46,7 +46,7 @@ public class EmptyBarSpacingTests
         part bassline {
           clef bass
           section A {
-            c4 d e f | s1 | s1 | s1 | d4 e f g |
+            c'4 d' e' f' | s1 | s1 | s1 | d'4 e' f' g' |
           }
         }
         form { A }
@@ -60,7 +60,7 @@ public class EmptyBarSpacingTests
         part bassline {
           clef bass
           section A {
-            c8 d e f g a b c' | s1 | s1 | s1 | d4 e f g |
+            c'8 d' e' f' g' a' b' c'' | s1 | s1 | s1 | d'4 e' f' g' |
           }
         }
         form { A }
@@ -209,7 +209,7 @@ public class EmptyBarSpacingTests
             octave absolute
             part bassline {
               clef bass
-              section A { c4 d e f | g,4 a, b, c | % | d4 e f g | }
+              section A { c'4 d' e' f' | g4 a b c' | % | d'4 e' f' g' | }
             }
             form { A }
             score { staff bassline }
@@ -227,7 +227,7 @@ public class EmptyBarSpacingTests
         part bl {
           clef bass
           section A {
-            a,,8 a,, a,, a,, c c c c | d,4 d, d, d, | g,2 g, | %3 |
+            a,8 a, a, a, c' c' c' c' | d4 d d d | g2 g | %3 |
             r1 |
           }
         }
@@ -305,7 +305,7 @@ public class EmptyBarSpacingTests
             part bassline {
               clef bass
               section A {
-                c4 d e f | g,4 a, b, c | d4 e f g | %2 | %2 | a4 b c d |
+                c'4 d' e' f' | g4 a b c' | d'4 e' f' g' | %2 | %2 | a'4 b' c' d' |
               }
             }
             form { A }
@@ -367,7 +367,7 @@ public class EmptyBarSpacingTests
             octave absolute
             part melody { clef treble }
             section Main {
-              melody { c4 d e f | s1 | c4 d e f | }
+              melody { c'4 d' e' f' | s1 | c'4 d' e' f' | }
               chords prog { C | F | C | }
             }
             form { Main }

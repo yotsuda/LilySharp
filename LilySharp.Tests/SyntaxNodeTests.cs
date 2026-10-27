@@ -145,7 +145,7 @@ public class SyntaxNodeTests
     public void ComplexStructure_NavigatesCorrectly()
     {
         var tree = SyntaxTree.Parse(@"section Main {
-    melody { c d e f }
+    melody { c' d e f }
 }");
         var root = tree.GetRoot();
 

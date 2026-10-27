@@ -45,7 +45,7 @@ public class LyricVerseTests
         var score = Collect(@"
 time 4/4
 section Main {
-  melody { c'4 d e f | g a b c'' | }
+  melody { c''4 d e f | g a b c'' | }
   lyrics melody { Aa bb cc dd | ee ff gg hh | Pp qq rr ss | tt uu vv ww | }
 }
 form { Main }
@@ -97,7 +97,7 @@ score x { lyrics verse }
         var score = Collect(@"
 time 4/4
 section Main {
-  melody { c'4 d e f | g a b c'' | }
+  melody { c''4 d e f | g a b c'' | }
   lyrics verse { Aa bb cc dd | ee ff gg hh | Pp qq rr ss | tt uu vv ww | }
 }
 form { Main }
@@ -122,11 +122,11 @@ score x { staff melody  lyrics verse }
         var score = Collect(@"
 time 4/4
 section A {
-  melody { c'4 d e f | g a b c'' | }
+  melody { c''4 d e f | g a b c'' | }
   lyrics verse { Aa bb cc dd | ee ff gg hh | Pp qq rr ss | tt uu vv ww | }
 }
 section B {
-  melody { c'4 d e f | g a b c'' | }
+  melody { c''4 d e f | g a b c'' | }
   lyrics verse { Xx yy zz w1 | mm nn oo pp | }
 }
 form { A B }
@@ -170,7 +170,7 @@ score x { lyrics verse }
         // lyrics and an independent lyrics row (no literal trailing dash on either).
         var noteBound = Collect(@"
 time 4/4
-section Main { melody { c'4 d e f | } lyrics melody { Mu- sic is here | } }
+section Main { melody { c''4 d e f | } lyrics melody { Mu- sic is here | } }
 form { Main }
 score x { staff melody  lyrics melody }
 ");
@@ -197,7 +197,7 @@ score x { lyrics verse }
         var score = Collect(@"
 time 4/4
 section Main {
-  melody { c'4 d e f | g a b c'' | }
+  melody { c''4 d e f | g a b c'' | }
   lyrics verse { Aa bb cc dd | ee ff gg hh | Pp qq rr ss | tt uu vv ww | }
 }
 form { Main }
@@ -218,7 +218,7 @@ score x { staff melody  lyrics verse }
         var score = Collect(@"
 time 4/4
 section Main {
-  melody { c'4 d' e' f' | g'4 a' b' c'' | c'4 d' e' f' | }
+  melody { c''4 d' e' f' | g'4 a b' c'' | c'4 d' e' f' | }
   lyrics melody { | Twin- kle twin- kle | lit- tle star | }
 }
 form { Main }
@@ -247,7 +247,7 @@ score x { staff melody  lyrics melody }
         var fenced = Collect(@"
 time 4/4
 section Main {
-  melody { c'4 d' e' f' | g'4 a' b' c'' | c'4 d' e' f' | }
+  melody { c''4 d' e' f' | g'4 a b' c'' | c'4 d' e' f' | }
   lyrics melody { | Twin- kle twin- kle | lit- tle star | }
 }
 form { Main }
@@ -261,7 +261,7 @@ score x { staff melody  lyrics melody }
         var plain = Collect(@"
 time 4/4
 section Main {
-  melody { c'4 d' e' f' | g'4 a' b' c'' | c'4 d' e' f' | }
+  melody { c''4 d' e' f' | g'4 a b' c'' | c'4 d' e' f' | }
   lyrics melody { Twin- kle twin- kle | lit- tle star | }
 }
 form { Main }
@@ -280,7 +280,7 @@ score x { staff melody  lyrics melody }
         var score = Collect(@"
 time 4/4
 section Main {
-  melody { c'4 d e f | g a b c'' | }
+  melody { c''4 d e f | g a b c'' | }
   lyrics melody { Aa bb cc dd | | }
 }
 form { Main }

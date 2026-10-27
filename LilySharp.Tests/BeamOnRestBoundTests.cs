@@ -51,14 +51,14 @@ public class BeamOnRestBoundTests
 {
     private const string OpensOnRest = """
         octave absolute
-        part m { section A { r8[ c' c' c'] | } }
+        part m { section A { r8[ c'' c'' c''] | } }
         form { A }
         score { staff m }
         """;
 
     private const string ClosesOnRest = """
         octave absolute
-        part m { section A { c'8[ c' c' r8] | } }
+        part m { section A { c''8[ c'' c'' r8] | } }
         form { A }
         score { staff m }
         """;
@@ -68,7 +68,7 @@ public class BeamOnRestBoundTests
     // readings below are the rest's doing and not the spacing's.
     private const string NoRest = """
         octave absolute
-        part m { section A { c'8[ c' c' c'] | } }
+        part m { section A { c''8[ c'' c'' c''] | } }
         form { A }
         score { staff m }
         """;

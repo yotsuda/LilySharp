@@ -78,8 +78,8 @@ score t {{ staff {{ melody }} }}
         // section B starts back in the file-default relative mode.
         var src = @"
 part melody { clef treble }
-section A { melody { octave absolute  c' c'' | } }
-section B { melody { c' c'' | } }
+section A { melody { octave absolute  c'' c''' | } }
+section B { melody { c'' c''' | } }
 form { A B }
 score t { staff melody }
 ";

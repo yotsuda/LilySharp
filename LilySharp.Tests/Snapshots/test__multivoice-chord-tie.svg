@@ -30,28 +30,28 @@
   <line x1="30.75" y1="14.82" x2="33.69" y2="14.82" stroke="#000000" stroke-width="0.200"/>
   <text class="music" x="17.12" y="16.82" font-size="4.00" data-pos="571"></text>
   <line x1="18.36" y1="16.67" x2="18.36" y2="14.32" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="20.12" y="16.32" font-size="4.00" data-pos="576"></text>
+  <text class="music" x="20.12" y="16.32" font-size="4.00" data-pos="577"></text>
   <line x1="21.36" y1="16.17" x2="21.36" y2="13.82" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="23.13" y="15.82" font-size="4.00" data-pos="580"></text>
+  <text class="music" x="23.13" y="15.82" font-size="4.00" data-pos="582"></text>
   <line x1="24.36" y1="15.67" x2="24.36" y2="13.32" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="26.25" y="15.32" font-size="4.00" data-pos="584"></text>
+  <text class="music" x="26.25" y="15.32" font-size="4.00" data-pos="587"></text>
   <line x1="27.49" y1="15.17" x2="27.49" y2="12.82" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="31.24" y="14.82" font-size="4.00" data-pos="590"></text>
-  <text class="music" x="17.12" y="19.32" font-size="4.00" data-pos="604"></text>
-  <text class="music" x="17.12" y="18.32" font-size="4.00" data-pos="607"></text>
+  <text class="music" x="31.24" y="14.82" font-size="4.00" data-pos="594"></text>
+  <text class="music" x="17.12" y="19.32" font-size="4.00" data-pos="609"></text>
+  <text class="music" x="17.12" y="18.32" font-size="4.00" data-pos="613"></text>
   <line x1="17.19" y1="18.47" x2="17.19" y2="22.82" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="20.12" y="19.32" font-size="4.00" data-pos="614"></text>
-  <text class="music" x="20.12" y="18.32" font-size="4.00" data-pos="617"></text>
+  <text class="music" x="20.12" y="19.32" font-size="4.00" data-pos="621"></text>
+  <text class="music" x="20.12" y="18.32" font-size="4.00" data-pos="625"></text>
   <line x1="20.19" y1="18.47" x2="20.19" y2="22.82" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="23.13" y="19.32" font-size="4.00" data-pos="621"></text>
+  <text class="music" x="23.13" y="19.32" font-size="4.00" data-pos="630"></text>
   <line x1="23.19" y1="19.47" x2="23.19" y2="22.82" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="26.25" y="18.32" font-size="4.00" data-pos="624"></text>
+  <text class="music" x="26.25" y="18.32" font-size="4.00" data-pos="634"></text>
   <line x1="26.32" y1="18.47" x2="26.32" y2="21.82" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="31.24" y="20.32" font-size="4.00" data-pos="629"></text>
-  <rect x="29.15" y="18.82" width="0.19" height="4.00" data-pos="588"/>
-  <rect x="37.30" y="18.82" width="0.19" height="4.00" data-pos="591"/>
-  <path d="M 17.97,20.04 C 18.43,20.46 19.34,20.46 19.79,20.04 C 19.34,20.58 18.43,20.58 17.97,20.04 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round" data-pos="611"/>
-  <path d="M 18.63,19.04 C 18.94,19.33 19.47,19.33 19.79,19.04 C 19.47,19.45 18.94,19.45 18.63,19.04 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round" data-pos="611"/>
+  <text class="music" x="31.24" y="20.32" font-size="4.00" data-pos="640"></text>
+  <rect x="29.15" y="18.82" width="0.19" height="4.00" data-pos="592"/>
+  <rect x="37.30" y="18.82" width="0.19" height="4.00" data-pos="595"/>
+  <path d="M 17.97,20.04 C 18.43,20.46 19.34,20.46 19.79,20.04 C 19.34,20.58 18.43,20.58 17.97,20.04 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round" data-pos="618"/>
+  <path d="M 18.63,19.04 C 18.94,19.33 19.47,19.33 19.79,19.04 C 19.47,19.45 18.94,19.45 18.63,19.04 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round" data-pos="618"/>
   <rect x="11.90" y="15.18" width="2.20" height="2.79" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="539"/>
   <text x="12.98" y="17.57" font-size="2.77" text-anchor="middle" data-pos="539">S</text>
   </g>

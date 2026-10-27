@@ -13,7 +13,7 @@
 time 2/4
 part mel {
   clef treble
-  section A { c4 d | e f | }
+  section A { c'4 d | e f | }
   section E1 { g4 a | b c' | }
   section E2 { a4 g | f e | d c | }
 }

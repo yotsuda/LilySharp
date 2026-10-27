@@ -65,8 +65,8 @@ public class MidiExportShapeTests
         // the whole score with zero playable notes.
         var notes = ExportNotes("""
             octave absolute
-            part melody { clef treble section A { c'4 d' e' f' | } }
-            part bass { clef bass section A { c4 d e f | } }
+            part melody { clef treble section A { c''4 d'' e'' f'' | } }
+            part bass { clef bass section A { c'4 d' e' f' | } }
             chords harmony { section A { C | } }
             form { A }
             score { staff melody with chords harmony
@@ -89,7 +89,7 @@ public class MidiExportShapeTests
         var notes = ExportNotes("""
             octave absolute
             part m { clef treble }
-            section A { m { cih'4 c' deh' d' | } }
+            section A { m { cih''4 c'' deh'' d'' | } }
             form { A }
             score { staff m }
             """);

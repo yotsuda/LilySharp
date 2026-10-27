@@ -8,7 +8,7 @@ part v { }
 
 section Main {
   v {
-    b1
+    b'1
   }
 }
 

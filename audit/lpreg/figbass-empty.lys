@@ -10,9 +10,9 @@ part melody
 
 section A {
   melody {
-    <g,, e, g, c>2@figuredBass(_ 6 4) <g,, d, f, b,>2@figuredBass(7 5 3) |
-    <c, f, g, c>2@figuredBass(5 4)~ <c, e, g, c>2@figuredBass(_ 3) |
-    <c,, a,, e, d>2@figuredBass(9 _ 6) <c,, g,, es, c>2@figuredBass(8 _ 5) |
+    <g, e g c'>2@figuredBass(_ 6 4) <g, d f b>2@figuredBass(7 5 3) |
+    <c f g c'>2@figuredBass(5 4)~ <c e g c'>2@figuredBass(_ 3) |
+    <c, a, e d'>2@figuredBass(9 _ 6) <c, g, es c'>2@figuredBass(8 _ 5) |
   }
 }
 

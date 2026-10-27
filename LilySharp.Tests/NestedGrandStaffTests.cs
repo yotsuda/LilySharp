@@ -52,10 +52,10 @@ public class NestedGrandStaffTests
         part pl { clef bass }
         part vc { clef bass }
         section A {
-          vln { c''1 | c''1 | }
-          pr { e'1 | e'1 | }
-          pl { c1 | c1 | }
-          vc { c1 | c1 | }
+          vln { c'''1 | c''1 | }
+          pr { e''1 | e'1 | }
+          pl { c'1 | c1 | }
+          vc { c'1 | c1 | }
           lyrics words sings pl { la la | }
         }
         form { ~A }

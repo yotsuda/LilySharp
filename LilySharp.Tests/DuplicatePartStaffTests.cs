@@ -54,7 +54,7 @@ public class DuplicatePartStaffTests
 {
     private const string Music =
         "  clef treble\n" +
-        "  section A { c4 c g' g | a a g2 | f4 f e e | d d c2 | }\n" +
+        "  section A { c'4 c g' g | a a g2 | f4 f e e | d d c2 | }\n" +
         "  section B { g'4 g f f | break e e d2 | }\n";
 
     private static string Source(string parts, params string[] staves) =>

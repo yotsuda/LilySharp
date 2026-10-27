@@ -41,8 +41,8 @@ public sealed class PolyphonyBowDirectionTests
             part melody
             section A {
               melody {
-                g,2~ g,4 a, | b,4( c d e) |
-                voice { b'2( a') | } { d'2( e') | }
+                g2~ g4 a | b4( c' d' e') |
+                voice { b''2( a'') | } { d''2( e'') | }
               }
             }
             form { ~A }

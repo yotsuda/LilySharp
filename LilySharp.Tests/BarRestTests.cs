@@ -133,8 +133,8 @@ public class BarRestTests
             part up { clef treble }
             part low { clef bass }
             section A {
-              up { R | R*2 | c'4 d' e' f' g' | }
-              low { c4 d e f g | c4 d e f g | c4 d e f g | c4 d e f g | }
+              up { R | R*2 | c''4 d'' e'' f'' g'' | }
+              low { c'4 d' e' f' g' | c'4 d' e' f' g' | c'4 d' e' f' g' | c'4 d' e' f' g' | }
             }
             form { ~A }
             score { staff up  staff low }
@@ -224,8 +224,8 @@ public class BarRestTests
             part up { clef treble }
             part low { clef bass }
             section A {
-              up { R4*10 | c'4 d' e' f' g' | }
-              low { c4 d e f g | c4 d e f g | c4 d e f g | }
+              up { R4*10 | c''4 d'' e'' f'' g'' | }
+              low { c'4 d' e' f' g' | c'4 d' e' f' g' | c'4 d' e' f' g' | }
             }
             form { ~A }
             score { staff up  staff low }

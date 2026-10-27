@@ -26,13 +26,13 @@ time 4/4
 part m { clef treble }
 
 section A {
-  m { c4 d e f | g4 a b c' | }
+  m { c'4 d e f | g4 a b c' | }
 }
 section B {
-  m { c'4 b a g | f4 e d c | }
+  m { c''4 b a g | f4 e d c | }
 }
 section C {
-  m { e4 d c d | e1 | }
+  m { e'4 d c d | e1 | }
 }
 
 form { A || B || C |. }

@@ -983,7 +983,7 @@ public class EditorColouringTests
         // ⑴ The reason `invalid` is banned: ONE word, two positions, opposite answers.
         Assert.False(SyntaxTree.Parse(
                 "fonts { volta \"TeX Gyre Schola\" }\npart m { clef treble }\n"
-                + "section A { m { c'4 } }\nform { A }\nscore { staff m }").HasErrors,
+                + "section A { m { c''4 } }\nform { A }\nscore { staff m }").HasErrors,
             "a fonts block binds the volta role — this is the live spelling of the word");
         Assert.Contains(
             SyntaxTree.Parse("part m { clef treble }\nsection A { m { repeat volta 2 { c'4 } } }")
@@ -994,7 +994,7 @@ public class EditorColouringTests
         //    where a dynamic would stand — since 2026-10-03 it is a PHRASE REFERENCE (a
         //    stray item before that), so painting it as a dynamic would advertise a meaning
         //    the word does not have — while the '@' form a dynamic IS written in is coloured.
-        var bareP = SyntaxTree.Parse("part m { clef treble }\nsection A { m { c'4 p d'4 } }");
+        var bareP = SyntaxTree.Parse("part m { clef treble }\nsection A { m { c''4 p d'4 } }");
         Assert.False(bareP.HasErrors, "a bare level mark parses — as a reference, not a dynamic");
         Assert.Contains(LilySharp.Core.Semantics.SemanticValidation.Run(bareP),
             d => d.Code == DiagnosticCodes.UndefinedVariable && d.Message.Contains("'p'"));
@@ -1073,14 +1073,14 @@ public class EditorColouringTests
         //    (measured 2026-08-19, both directions). That is why the eleven are coloured inside a
         //    begin/end and not by a rule that fires anywhere — and it is the defect GRAMMAR.md's
         //    `ClefName` carries, one production standing in two positions.
-        Assert.False(SyntaxTree.Parse("part m { clef percussion }\nsection A { m { c'1 } }\nform { A }\nscore { staff m }").HasErrors);
+        Assert.False(SyntaxTree.Parse("part m { clef percussion }\nsection A { m { c''1 } }\nform { A }\nscore { staff m }").HasErrors);
         Assert.True(SyntaxTree.Parse("part m { clef treble }\nsection A { m { c'2 clef percussion d'2 } }\nform { A }\nscore { staff m }").HasErrors,
             "mid-music `clef` takes the five of ClefName — if this stops being true the two "
             + "vocabularies have merged and a context is no longer the honest device");
 
         //    Third: a tuning name really has a second position, which is the whole reason
         //    #tab-tuning exists. Colour it in the header only and the report simply moves.
-        Assert.False(SyntaxTree.Parse("part m { clef treble }\nsection A { m { c'1 } }\nform { A }\nscore { tab guitar m }").HasErrors);
+        Assert.False(SyntaxTree.Parse("part m { clef treble }\nsection A { m { c''1 } }\nform { A }\nscore { tab guitar m }").HasErrors);
 
     }
 }

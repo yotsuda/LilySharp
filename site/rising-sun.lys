@@ -8,7 +8,7 @@ time 6/8  key a minor
 
 part gt { instrument guitar }
 
-phrase Amchord { a8 e' a c\2 a e | }
+phrase Amchord { a,8 e' a c\2 a e | }
 phrase Cchord  { c8 e g c g e | }
 phrase Dchord  { d8 a' d fis d a | }
 phrase Fchord  { f,8 c' f a f c | }
@@ -16,7 +16,7 @@ phrase E7chord { e,8 b' e gis d' gis, | }
 
 section Verse {
   chords prog { Am | C | D | F | Am | C | E7 | E7 | }
-  gt { a8@p e' a c\2 a e | Cchord Dchord Fchord Amchord Cchord E7chord E7chord | }
+  gt { a,8@p e' a c\2 a e | Cchord Dchord Fchord Amchord Cchord E7chord E7chord | }
 }
 
 section Close {

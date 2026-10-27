@@ -256,7 +256,7 @@ public class ChordRowInlineAlignmentTests
             "layout { chordDiagrams guitar all }\n"
           + "octave absolute\n"
           + "part m { clef treble }\n"
-          + "section A { m { c'1@chord(Cm7) | c'1@chord(F) | } chords prog { Cm7 | F | } }\n"
+          + "section A { m { c''1@chord(Cm7) | c'1@chord(F) | } chords prog { Cm7 | F | } }\n"
           + "form { A }\n"
           + "score { chords prog  staff m }\n");
         Assert.False(tree.HasErrors,

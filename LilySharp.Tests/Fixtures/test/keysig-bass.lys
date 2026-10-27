@@ -17,7 +17,7 @@ phrase fMajorBass {
 
 // G major in bass clef (1 sharp: F#)
 phrase gMajorBass {
-  g,4 a b c | d4 e fis g, |
+  g,,4 a b c | d4 e fis g, |
 }
 
 section FMajor {

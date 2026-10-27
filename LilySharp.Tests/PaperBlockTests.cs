@@ -319,7 +319,7 @@ public class PaperBlockTests
         // one-word page, and a score's override block can restate the size.
         var tree = SyntaxTree.Parse(
             "paper concert { size b4 }\n"
-            + "section Main { melody { c'4 d e f | } }\nform { Main }\n"
+            + "section Main { melody { c''4 d e f | } }\nform { Main }\n"
             + "score { paper concert { size jisb5 }  staff melody }\n");
         var render = tree.GetRoot().DescendantNodes()
             .OfType<RenderDeclarationSyntax>().First();
@@ -535,7 +535,7 @@ public class PaperBlockTests
     // A small book with real music, so the page has systems to lay out.
     private const string Book = """
         section Main {
-          melody { c'4 d e f | g a b c' | }
+          melody { c''4 d e f | g a b c' | }
         }
         form { Main }
         score { staff melody }

@@ -11,21 +11,21 @@ part melody
 
 phrase ties {
   // Basic tie
-  c4~ c4 d2 |
+  c'4~ c4 d2 |
   // Tie across barline
   d2 e2~ | e4 f g a |
 }
 
 phrase slurs {
   // Basic slur
-  c4( d e f) |
+  c'4( d e f) |
   // Descending slur
   g4( f e d) | c2 r2 |
 }
 
 phrase tieDirection {
   // Low note (stem up) - tie curves down
-  c4~ c4 r2 |
+  c'4~ c4 r2 |
   // High note (stem down) - tie curves up
   // ⚠️ THE `|.` IS LOAD-BEARING and must stay written. This fixture is the Lily# side of
   // the ledger pair `compressed.line-start.time-to-first-note` (probe score TSJ), whose

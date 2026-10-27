@@ -73,7 +73,7 @@ public sealed class StaffClefPerStaffTests
     {
         // `clef bass` in bar 2 changes nothing on the bass staff and everything on the treble
         // one: the treble staff draws it, the bass staff does not.
-        var tree = SyntaxTree.Parse("part melody { clef treble }\nsection A { melody { c'4 d e f | clef bass c,4 d e f | } }\n"
+        var tree = SyntaxTree.Parse("part melody { clef treble }\nsection A { melody { c''4 d e f | clef bass c,4 d e f | } }\n"
             + "form { ~A }\nscore { staff bass melody  staff melody }\n");
         var staves = SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree)).EnumerateStaves().ToArray();
         int Changes(int s) => staves[s].Staff.Voices[0].Measures.SelectMany(m => m.Items).OfType<ClefChangeItem>().Count();

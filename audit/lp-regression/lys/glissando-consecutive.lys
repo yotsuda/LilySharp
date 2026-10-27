@@ -10,7 +10,7 @@ part v { clef treble }
 
 section Main {
   v {
-    c1@glissando | d1@glissando | e1 |
+    c'1@glissando | d'1@glissando | e'1 |
   }
 }
 

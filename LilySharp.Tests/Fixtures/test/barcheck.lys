@@ -11,18 +11,18 @@ part melody
 
 phrase correct {
   // Correct: exactly 4 beats
-  c4 d e f |
+  c'4 d e f |
   g4 a b c' |
 }
 
 phrase tooShort {
   // Warning: only 3 beats
-  c4 d e |
+  c'4 d e |
 }
 
 phrase tooLong {
   // Warning: 5 beats
-  c4 d e f g |
+  c'4 d e f g |
 }
 
 section Main {

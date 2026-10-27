@@ -66,10 +66,10 @@ public class LilyPondStandaloneSectionHeaderTests
     private const string HeaderBefore =
         "time 4/4\n"
         + "section A { key g major }\n"
-        + "part m { clef treble\n  section A { c'4 c c c | }\n}\n";
+        + "part m { clef treble\n  section A { c''4 c c c | }\n}\n";
     private const string HeaderAfter =
         "time 4/4\n"
-        + "part m { clef treble\n  section A { c'4 c c c | }\n}\n"
+        + "part m { clef treble\n  section A { c''4 c c c | }\n}\n"
         + "section A { key g major }\n";
 
     // The same pair written by-section — the header still stands outside the part, so
@@ -78,11 +78,11 @@ public class LilyPondStandaloneSectionHeaderTests
         "time 4/4\n"
         + "section A { key g major }\n"
         + "part m { clef treble }\n"
-        + "section A { m { c'4 c c c | } }\n";
+        + "section A { m { c''4 c c c | } }\n";
     private const string GroupedBySectionAfter =
         "time 4/4\n"
         + "part m { clef treble }\n"
-        + "section A { m { c'4 c c c | } }\n"
+        + "section A { m { c''4 c c c | } }\n"
         + "section A { key g major }\n";
 
     [Theory]
@@ -114,7 +114,7 @@ public class LilyPondStandaloneSectionHeaderTests
         // — no cell around it — is the third spelling the exporter was taught to read; a
         // predicate that turned headers away by turning away every section without a cell
         // would silently empty every book written this way (35 of the fixtures then).
-        var ly = Export("time 4/4\npart m { clef treble }\nsection A { c'4 c c c | }\n" + Tail);
+        var ly = Export("time 4/4\npart m { clef treble }\nsection A { c''4 c c c | }\n" + Tail);
         Assert.Contains("c'4 c c c |", ly);
     }
 
@@ -133,7 +133,7 @@ public class LilyPondStandaloneSectionHeaderTests
         // `\key g \major \key g \major \key c \major` — the same directive twice and then a
         // THIRD key that silently won.
         const string book =
-            "time 4/4\npart m { clef treble\n  section B { f'4 f f f | }\n}\n"
+            "time 4/4\npart m { clef treble\n  section B { f''4 f f f | }\n}\n"
             + "section A { key g major }\n"
             + "form { ~A ~B }\nscore { staff m }\n";
 

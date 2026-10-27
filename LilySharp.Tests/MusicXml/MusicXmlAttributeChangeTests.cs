@@ -69,7 +69,7 @@ public class MusicXmlAttributeChangeTests
             .Select(p => p.Element("step")!.Value + p.Element("octave")!.Value).ToArray();
 
     private const string ThreeKeys = """
-        phrase Lick { c d e c }
+        phrase Lick { c' d e c }
         part m { clef treble }
         section A { key d major
           m { Lick } }
@@ -107,7 +107,7 @@ public class MusicXmlAttributeChangeTests
         // would have called the whole family correct.
         string outside = """
             key c major
-            phrase Lick { c d e c }
+            phrase Lick { c' d e c }
             section A { key g major
               m { Lick } }
             form { A }
@@ -115,7 +115,7 @@ public class MusicXmlAttributeChangeTests
             """;
         string inside = """
             key c major
-            phrase Lick { c d e c }
+            phrase Lick { c' d e c }
             section A { m { key g major Lick } }
             form { A }
             score { staff m }
@@ -133,9 +133,9 @@ public class MusicXmlAttributeChangeTests
         var doc = Export("""
             key c major
             part m { clef treble }
-            section A { m { c4 d e f | } }
+            section A { m { c'4 d e f | } }
             section B { key g major
-              m { c4 d e f | } }
+              m { c'4 d e f | } }
             form { A B }
             score { staff m }
             """);
@@ -171,7 +171,7 @@ public class MusicXmlAttributeChangeTests
             key d major
             time 3/4
             part m { clef treble }
-            section A { m { c'4 d' e' | f'4 g' a' | b'4 c'' d'' | } }
+            section A { m { c''4 d' e' | f'4 g' a | b'4 c'' d'' | } }
             form { A }
             score { staff m }
             """);

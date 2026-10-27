@@ -8,7 +8,7 @@ octave absolute
 
 part m { }
 section A {
-  m { gis'8@stemUp a,@stemUp bes'@stemUp a,@stemUp bes'@stemUp a,@stemUp bes'@stemUp a,@stemUp | }
+  m { gis''8@stemUp a@stemUp bes''@stemUp a@stemUp bes''@stemUp a@stemUp bes''@stemUp a@stemUp | }
 }
 form { A }
 score { staff m }

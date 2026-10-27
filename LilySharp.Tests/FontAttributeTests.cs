@@ -81,22 +81,22 @@ public class FontAttributeTests
         part melody "Vln." { pedal text }
         section A {
           chords prog { D | }
-          melody { c'4@mf d@sostenuto@finger(3) e f@!sostenuto | }
+          melody { c''4@mf d@sostenuto@finger(3) e f@!sostenuto | }
           lyrics words { lyr la la la | }
         }
         section B {
           chords prog { D | }
-          melody { tuplet 5/4 { c'16 d e f g } d4 e f | break }
+          melody { tuplet 5/4 { c''16 d e f g } d4 e f | break }
           lyrics words { la la la la | }
         }
         section C {
           chords prog { D | }
-          melody { c''4@ottava d@figuredBass(6) e f@!ottava | }
+          melody { c'''4@ottava d@figuredBass(6) e f@!ottava | }
           lyrics words { la la la la | }
         }
         section Z {
           chords prog { D | D | }
-          melody { fine c'4 d e f | g4@mark("Q") a b c' | }
+          melody { fine c''4 d e f | g4@mark("Q") a b c' | }
           lyrics words { la la la la | la la la la | }
         }
         form { |: A [1. B] :| [2. C] Z _"rit." }
@@ -115,8 +115,8 @@ public class FontAttributeTests
         part fl { clef treble }
         part ob { clef treble }
         section A {
-          fl { c'4 d e f | g4 a b c' | }
-          ob { c'4 d e f | e4 f g a | }
+          fl { c''4 d e f | g4 a b c' | }
+          ob { c''4 d e f | e4 f g a | }
         }
         form { A }
         score { combinedStaff { fl ob } }
@@ -142,7 +142,7 @@ public class FontAttributeTests
     private const string MeterBook = """
         time 3+2/8
         section A {
-          melody { c'8 d e f g | }
+          melody { c''8 d e f g | }
         }
         form { A }
         score { staff melody }
@@ -153,7 +153,7 @@ public class FontAttributeTests
     private const string StanzaBook = """
         time 4/4
         section A {
-          melody { c'4 d e f | }
+          melody { c''4 d e f | }
           lyrics words { la la la la | }
           lyrics words { lo lo lo lo | }
           lyrics words { lu lu lu lu | }
@@ -550,7 +550,7 @@ public class FontAttributeTests
             return xs.Max();
         }
         const string wideLyrics = """
-            section A { melody { c'4 d e f | } lyrics words { supercalifragilistic la la la | } }
+            section A { melody { c''4 d e f | } lyrics words { supercalifragilistic la la la | } }
             form { A }
             score { staff melody  lyrics words }
             """;
@@ -670,7 +670,7 @@ public class FontAttributeTests
     /// <summary>The chord book this pair is measured on, minus its fonts line.</summary>
     private const string Book0Body =
         "part m { clef treble }\n"
-        + "section A { m { c4 d e f | } chords prog { Am7 | } }\n"
+        + "section A { m { c'4 d e f | } chords prog { Am7 | } }\n"
         + "form { ~A }\n"
         + "score { chords prog  staff m }\n";
 

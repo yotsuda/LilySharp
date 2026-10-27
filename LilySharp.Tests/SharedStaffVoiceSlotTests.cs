@@ -373,8 +373,8 @@ public class SharedStaffVoiceSlotTests
             part rh { clef treble }
             part lh { clef treble }
             section Main {
-              rh { c''8 d'' e'' f'' g'' a'' b'' c''' | }
-              lh { r4 r4 c'4@f e'4 | }
+              rh { c'''8 d''' e''' f''' g''' a''' b''' c'''' | }
+              lh { r4 r4 c''4@f e''4 | }
             }
             form { Main }
             score x { combinedStaff { rh lh } }
@@ -492,8 +492,8 @@ public class SharedStaffVoiceSlotTests
             part rh { clef treble }
             part lh { clef treble }
             section Main {
-              rh { c''8 d'' e'' f'' g'' a'' b'' c''' | }
-              lh { c'4 e'4@f g'4@staccato tuplet 3/2 { c''8 d'' e'' } | }
+              rh { c'''8 d''' e''' f''' g''' a''' b''' c'''' | }
+              lh { c''4 e''4@f g''4@staccato tuplet 3/2 { c'''8 d''' e''' } | }
             }
             form { Main }
             score x { combinedStaff { rh lh } }
@@ -547,8 +547,8 @@ public class SharedStaffVoiceSlotTests
             part fl1 { clef treble }
             part fl2 { clef treble }
             section A {
-              fl1 { c''4 grace { d''16 } e''4 f''2 | }
-              fl2 { e'4 grace { f'16 } g'4 a'2 | }
+              fl1 { c'''4 grace { d'''16 } e'''4 f'''2 | }
+              fl2 { e''4 grace { f''16 } g''4 a''2 | }
             }
             form { A }
             score x { condensedStaff { fl1 fl2 } }

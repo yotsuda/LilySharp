@@ -48,8 +48,8 @@ public class CrossVoiceColumnSpacingTests
         part mel { clef treble }
         section S {
           mel {
-            voice { b8 b s2. | b8 b s2. | b8 b s2. | }
-            { s16 d''16 d'' d'' s2. | s16 d''4 s8. s2 | s1 | }
+            voice { b'8 b' s2. | b'8 b' s2. | b'8 b' s2. | }
+            { s16 d'''16 d''' d''' s2. | s16 d'''4 s8. s2 | s1 | }
           }
         }
         form { S }
@@ -63,8 +63,8 @@ public class CrossVoiceColumnSpacingTests
         part mel { clef treble }
         section S {
           mel {
-            voice { c'4 s4 c'2 | }
-            { s4 c'4 s2 | }
+            voice { c''4 s4 c''2 | }
+            { s4 c''4 s2 | }
           }
         }
         form { S }
@@ -203,7 +203,7 @@ public class CrossVoiceColumnSpacingTests
         key c major
         part melody
         section Main {
-          melody { voice { e2 f | g2 a | } { d2 e | f2 g | } }
+          melody { voice { e'2 f | g2 a | } { d'2 e | f2 g | } }
         }
         form { ~Main }
         score collision { staff melody }
@@ -218,8 +218,8 @@ public class CrossVoiceColumnSpacingTests
         part melody
         section Main {
           melody {
-            voice { a1 tuplet 3/2 { d'''1 d'''1 d'''1 } | a1 tuplet 3/2 { d'''1 d'''1 d'''1 } | }
-            { b1 b1 b1 | b1 b1 b1 | }
+            voice { a'1 tuplet 3/2 { d''''1 d''''1 d''''1 } | a'1 tuplet 3/2 { d''''1 d''''1 d''''1 } | }
+            { b'1 b'1 b'1 | b'1 b'1 b'1 | }
           }
         }
         form { ~Main }

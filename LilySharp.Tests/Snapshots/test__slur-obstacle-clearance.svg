@@ -27,14 +27,14 @@
   <line x1="25.55" y1="18.85" x2="27.51" y2="18.85" stroke="#000000" stroke-width="0.200"/>
   <text class="music" x="17.12" y="18.85" font-size="4.00" data-pos="412"></text>
   <line x1="17.19" y1="19.00" x2="17.19" y2="22.85" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="20.37" y="16.85" font-size="4.00" data-pos="418"></text>
+  <text class="music" x="20.37" y="16.85" font-size="4.00" data-pos="419"></text>
   <line x1="20.44" y1="17.00" x2="20.44" y2="22.85" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="23.13" y="17.85" font-size="4.00" data-pos="423"></text>
+  <text class="music" x="23.13" y="17.85" font-size="4.00" data-pos="425"></text>
   <line x1="23.19" y1="18.00" x2="23.19" y2="22.85" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="25.88" y="18.85" font-size="4.00" data-pos="428"></text>
+  <text class="music" x="25.88" y="18.85" font-size="4.00" data-pos="431"></text>
   <line x1="25.94" y1="19.00" x2="25.94" y2="22.85" stroke="#000000" stroke-width="0.130"/>
-  <rect x="28.74" y="20.85" width="0.19" height="4.00" data-pos="434"/>
-  <path d="M 17.77,16.81 C 19.43,15.42 24.87,15.42 26.53,16.81 C 24.87,15.54 19.43,15.54 17.77,16.81 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round" data-pos="416"/>
+  <rect x="28.74" y="20.85" width="0.19" height="4.00" data-pos="438"/>
+  <path d="M 17.77,16.81 C 19.43,15.42 24.87,15.42 26.53,16.81 C 24.87,15.54 19.43,15.54 17.77,16.81 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round" data-pos="417"/>
   <rect x="11.90" y="12.82" width="7.32" height="2.75" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="391"/>
   <text x="15.57" y="15.17" font-size="2.77" text-anchor="middle" data-pos="391">Main</text>
   </g>

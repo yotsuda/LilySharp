@@ -11,7 +11,7 @@ part rh { clef treble }
 part lh { clef bass }
 
 section Main {
-  rh { e''2@glissando a,,,2@cross@glissando | b'8 }
+  rh { e'''2@glissando a,,2@cross@glissando | b''8 }
   lh { s1 | s8 }
 }
 

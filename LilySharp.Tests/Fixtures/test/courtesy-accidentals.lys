@@ -18,22 +18,22 @@ part melody
 phrase noAutoCourtesy {
   // cis in measure 1, then c natural in measure 2 — LP shows NO courtesy
   // natural (the accidental is forgotten at the barline).
-  c'4 cis d e | c4 d e f |
+  c''4 cis d e | c4 d e f |
 }
 
 phrase explicitCourtesy {
   // Explicit @courtesy annotation forces parenthesized accidental
-  c'4@courtesy d e f |
+  c''4@courtesy d e f |
 }
 
 phrase noCourtesy {
   // No courtesy needed: same accidental context
-  c'4 d e f | g4 a b c' |
+  c''4 d e f | g4 a b c' |
 }
 
 phrase noAutoFlatCourtesy {
   // bes in measure 1, then b natural in measure 2 — LP shows NO courtesy.
-  c'4 d bes a | b4 c' d e |
+  c''4 d bes a | b4 c' d e |
 }
 
 section Main {

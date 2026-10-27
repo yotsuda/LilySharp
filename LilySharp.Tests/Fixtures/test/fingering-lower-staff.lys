@@ -11,7 +11,7 @@ part top { clef treble }
 part bot { clef bass octave 3 }
 
 section Main {
-  top { c'4 d e f | g1 | }
+  top { c''4 d e f | g1 | }
   bot { c4@finger(1) d@finger(2) e@finger(3) f@finger(5) | g1@finger(1) | }
 }
 

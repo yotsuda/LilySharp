@@ -8,7 +8,7 @@ part melody
 
 section A {
   melody {
-    r16. cis' |
+    r16. cis'' |
   }
 }
 

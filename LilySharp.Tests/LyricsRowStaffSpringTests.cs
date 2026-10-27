@@ -68,7 +68,7 @@ public class LyricsRowStaffSpringTests
         key c major
         part melody {
           clef treble
-          section A { c4 c g' g | a a g2 | break}
+          section A { c'4 c g' g | a a g2 | break}
           section B { g'4 g f f | e e d2 | break}
         }
         lyrics verse {
@@ -229,7 +229,7 @@ public class LyricsRowStaffSpringTests
         var blocks = string.Join("\n", Enumerable.Range(1, verses)
             .Select(v => $"lyrics v{v} {{ section A {{ Twin- kle twin- kle | lit- tle star | }} }}"));
         return "key c major\n"
-            + "part melody { clef treble\n  section A { c4 c g' g | a a g2 | }\n}\n"
+            + "part melody { clef treble\n  section A { c'4 c g' g | a a g2 | }\n}\n"
             + blocks + "\nform { A }\n"
             + "score {\n  staff melody\n" + tracks + "\n  staff melody\n}\n";
     }

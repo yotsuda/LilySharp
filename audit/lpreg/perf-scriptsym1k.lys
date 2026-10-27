@@ -3,7 +3,7 @@ part melody
 
 section A {
   melody {
-    c''4@accent@staccato c4@accent@staccato c4@accent@staccato c4@accent@staccato |
+    c'''4@accent@staccato c4@accent@staccato c4@accent@staccato c4@accent@staccato |
     c4@accent@staccato c4@accent@staccato c4@accent@staccato c4@accent@staccato |
     c4@accent@staccato c4@accent@staccato c4@accent@staccato c4@accent@staccato |
     c4@accent@staccato c4@accent@staccato c4@accent@staccato c4@accent@staccato |
