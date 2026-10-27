@@ -3180,7 +3180,7 @@ public sealed partial class LilySharpLanguageServer
     {
         var modes = new (string Label, string Detail)[]
         {
-            ("absolute", "Absolute octaves: bare c = C4; ' / , are absolute offsets per note"),
+            ("absolute", "Absolute octaves, LilyPond's: bare c = C3, c' = middle C; ' / , are absolute offsets per note"),
             ("relative", "Relative octaves (default): each note nearest the previous"),
         };
         return new CompletionList

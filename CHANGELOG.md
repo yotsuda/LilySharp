@@ -6,6 +6,33 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+### Octaves — BREAKING
+
+- `[language]` **Lily#'s octaves are LilyPond's, in every part and for every instrument** (owner's
+  decision 2026-10-28). Breaking: a file written before this sounds and draws an octave off where its
+  marks relied on the old rules.
+  - `octave absolute`: a bare `c` is C3 and `c'` middle C, as in `\fixed c`; it was C4.
+  - Relative: a section's or phrase's fresh frame starts at F3, as a pitchless `\relative` does; it
+    started at C4.
+  - No `instrument` preset moves an octave (`instrument bass` used to anchor at 3, `flute` at 5), so
+    writing `instrument bass` into a scanned part no longer moves its notes. `part X { octave N }`
+    still moves a part's base, explicitly.
+  - An octave clef (`treble_8`, a guitar) is written at sounding pitch, as in LilyPond: the clef's 8
+    draws it an octave up, and the twin writes no `\transpose`.
+  - Under `pitch concert`, an octave-only transposer (bass, piccolo, guitar) is typed as it sounds.
+- The repository's scores, lessons, site examples and tests are re-marked to sound and draw as before:
+  every pitch is moved by what the legacy build played (`OctaveModeConverter.MigrateFromLegacy`).
+  `samples/` is not touched.
+- `[midi]` `[musicxml]` **The note after a phrase reference is read from the phrase's anchor in the
+  F3 frame** (the page already did this). For a body opening on g, a or b, the MIDI and MusicXML read
+  it from C, an octave below the page.
+- `[import]` MusicXML import writes LilyPond's octaves: C4 is `c'` in `octave absolute`.
+- `[cli]` `lysc octave --absolute` help: a bare `c` is C3.
+- `[ai]` A piece composed with AI is written under `pitch concert` and opened without it: an
+  octave-only transposer is re-marked to its written octave, and a chromatic transposer keeps a
+  part-level `pitch concert`. The prompt states LilyPond's octaves and asks for no `octave N` crutch.
+  A leftover `octave N` is dropped on open.
+
 ### Preview
 
 - **An instrument name wider than the paper's margin stays on the paper.** LilyPond lets a name too

@@ -160,6 +160,25 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1026セッションの経緯
+
+### 1.1 第1026セッション（2026-10-27・YT-DELL2）
+
+第1025 と同じ会話の続き。`-Start p1026`（開始 HEAD `bf6156976`・第1024 を ARCHIVE へ）。作業場所は Lab `sessions/p1026/`（`exchange.log`）。
+- **ユーザー「うまく作曲できただろうか」（`Untitled-1.lys`・かわいいポップス）→ 講評**: 第1024 の記録で送り先が **`name "Auto", vendor copilot, id auto, family claude-fable-5.1`**＝自動選択が Copilot の **Auto**（要求ごとに Copilot がモデルを選ぶ窓口・入力上限 93 万で一番大きい）を選んでいた＝「OpenAI」「Auto」の作曲者の正体。曲は 40 小節・7 の和音・主和音で終止と骨組みは良いが、keys の旋律は plan「D4–A5・ファイル上も同音域」なのに `d'`（= D5）＝LilyPond の癖が警告でも残る・ギター `<b d fis a>` は B が上・ドラムは全小節同じ。
+- **ユーザー「1（Auto を避ける）直して」**: `pickModel` が `isAutoModel`（id `auto`）を候補から外す（それしか無ければ使う）・`ChatClient.label` は Auto なら `copilot/auto`・`modelName` を渡さない・Select AI Model の説明も「auto — Copilot picks the model」。網 npm +1（511）・tsc 0。両 CHANGELOG・MANUAL-CHECKS C38。
+- **ユーザーの問い（未決）**: 「2（LilyPond の癖）は AI が LilyPond の文法に捉われているから？ preset に octave を含めないのが一番効くのでは」→「`octave absolute` のときはパートの octave を無視しては」＝報告で答えた（本便では実装しない）。
+判定（2026-10-27・第1026 の終わり）: 次はユーザーの判断（absolute の基準をどうするか）。
+
+## 以下は第1025セッションの経緯
+
+### 1.1 第1025セッション（2026-10-27・YT-DELL2）
+
+第1024 と同じ会話の続き。`-Start p1025`（開始 HEAD `b594a7466`・full **13392 / 0 / 2 / 13394**・第1023 を ARCHIVE へ）。作業場所は Lab `sessions/p1025/`（`Untitled-2.lys`・png）。
+- **ユーザー「作曲してもらった楽譜（`Untitled-2.lys`・バンド 4 段）。五線左端のパート名が見切れているのを直して」**: png で 1 段目 "Electric Guitar" の頭・2 段目以降 "E. Bass" の頭が紙の左端で切れていた。字下げは LilyPond の 15mm 固定（`EffectiveIndent` は意図して名前から作らない・第586 の決定）、名前は `InstrumentNameRightEdge`（LP の calc-x-offset）で字下げより広いと区切りの左へ溢れる＝LP も同じく余白へ・紙の外へ出す。**LILYSHARP-OWN の直し**: `EffectiveIndent(options, score)`／`EffectiveShortIndent` が、最も広い長い（短い）名前の左端が紙の端から 1 ss（`NameEdgeGutter`）手前で止まる字下げ（`NameFitIndent`＝名前幅＋区切りの届き＋0.3＋1−MarginLeft）まで広げる。区切りの届きは `MultiStaffLayouter.SystemStartReach`（bar・bracket・brace を PlacedDelimiters と同じ鎖で・brace の高さは 4n+7(n−1) で多めに見積もる）。LayoutEngine と SystemBreaker の両方が同じ値（字下げは一つの家）。`indent 0` は今まで通り（1 段目の名前を描かない）。LP の中に収まる名前は字下げ不変＝網 `InstrumentNameOnPaperTests`（広げる／不変の 2 本・SVG の名前の左端を紙の座標で測る）。`InstrumentNamePadding` を internal に。`audit/magic_constants.csv`・`docs/APPROXIMATIONS.md` を再生成（新しい OWN 3・Yellow 2）。両 CHANGELOG・MANUAL-CHECKS C37。
+- ⚠️ LP の双子と 1 段目の字下げが変わるのは「LP では名前が紙の外に出る本」だけ（双子の掃きでは段割れが違いうる）。
+判定（2026-10-27・第1025 の終わり）: 次はユーザーの指示（C9〜C37）。
+
 ## 以下は第1024セッションの経緯
 
 ### 1.1 第1024セッション（2026-10-27・YT-DELL2）

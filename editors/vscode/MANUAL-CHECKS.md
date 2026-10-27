@@ -257,6 +257,13 @@ edocs/HANDOFF.mde §2 R13 ⒝・OMR の提案 B1〜B6（e..\LilySharp-Omr\docs\r
 - [ ] **C36**（第1024・作曲者の名前）: Compose with AI で「ロックバラードを書いて。composer を埋めて。」→ `composer` がモデルの名前（例 "Claude Fable 5.1"）・*Lily# AI Exchange* の system 行に `name "…", vendor …, id …, family …, version …`。「composer」と言わなければ composer 行は勝手に増えない（今まで通り）。
 - [ ] **C37**（第1025・名前の見切れ）: `Untitled-2.lys`（バンド 4 段・"Electric Guitar" "E. Bass"）をプレビュー／PDF → 1 段目の Electric Guitar・2 段目以降の E. Bass の頭が紙の左端で切れない。名前の短い曲（Piano・Violin）の 1 段目の字下げは今まで通り。
 - [ ] **C38**（第1026・Auto を選ばない）: モデルを選んでいない状態で Compose with AI → 通知が `via copilot/<具体的なモデル>`（auto でない）・*Lily# AI Exchange* の system 行の id が auto でない。「Lily#: Select AI Model」で Auto を選べば `copilot/auto` と出て、作曲者に名前を書かない。
+- [ ] **C39**（第1028・LilyPond のオクターブ・破壊的変更）:
+  - (1) Lessons の 1〜12 を順に開く → どれも前と同じ高さで鳴り、同じ位置に描かれる。
+  - (2) `octave absolute` の新しいファイルに `c'4` → 中央の C（ト音記号の下第 1 線）。
+  - (3) OMR で読んだ楽譜のパートに `instrument bass` を書き足す → 音符が動かない。
+  - (4) Compose with AI で「トランペットとベースのブルース」→ 開いた楽譜は、トランペットのパートだけに `pitch concert` が付く。ベースはヘ音記号の譜表の中に書かれ、`octave 4` は残らない。
+  - (5) `pitch` の上にキャレット → ステータスバーに written / concert の説明。
+  - (6) site の blues-in-f と rising-sun をプレビューで再生 → 前と同じに鳴る。
 
 ## 4. §2 R13 ⒝ — 差分頁の配信（実機未確認・第404）
 
