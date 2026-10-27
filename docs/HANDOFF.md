@@ -127,19 +127,19 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1019セッション（2026-10-27・YT-DELL2）
+
+第1018 と同じ会話の続き。`-Start p1019`（開始 HEAD `11da0846a`・full **13385 / 1 / 2 / 13388**＝落ちた 1 本は `UsingExpansionCacheTests.AMissingIncludeAppearing_Recomputes_AndTheWarningClears`・第1018 の終わりは緑・本便の full で再び見る・第1017 を ARCHIVE へ）。作業場所は Lab `sessions/p1019/`。
+- **ユーザー「OMR の結果 tabi-13.lys。todo コメントと赤い点線枠が重なる問題を直して」**: 赤枠はプレビューの `applyBarFlags`（bar-staff の上下に 2 線間）、memo は五線の上 gap から積む＝枠の上辺が memo の文字を横切る。最初は辺を memo の手前まで縮めた → **ユーザー「枠線の y は狭めないでほしい」→ 3 案から「枠線を memo の所で切る」を選択**: 枠は `path.flag-frame`（4 辺を `M … H/V` の区間で描く）に変え、memo の文字と下線（`text[data-todo]:not(.music)`・水平の `line[data-todo]`＝leader は除く）の box を ¼ 線間広げ、それが辺を跨ぐ所だけ辺を途切れさせる（座標は `getScreenCTM().inverse()` で bar rect 側へ）。網 `webviewScript.test`（枠の d・5 形）＝npm 500。両 CHANGELOG・MANUAL-CHECKS C31。
+判定（2026-10-27・第1019 の終わり）: 次はユーザーの指示（C9〜C31）。
+
+## 以下は第1018セッションの経緯
+
 ### 1.1 第1018セッション（2026-10-27・YT-DELL2）
 
 第1017 と同じ会話の続き。`-Start p1018`（開始 HEAD `b5ff0be40`・full **13386 / 0 / 2 / 13388**・第1016 を ARCHIVE へ）。作業場所は Lab `sessions/p1018/`。
 - **ユーザー「AI に作曲してもらうとヘッダコメントに『// The AI: 小節の長さを見直し、4/4 に収まる曲全体を示します。』と出る。内部の見直しはユーザーに見えないので違和感。最初の AI のコメントを」**: 前書きの `note` は最後の返事（直しの後）だった → 各ラウンドの最初に読めた返事の note を `firstNote` に取り（`ReviewRound.firstNote`）、作曲の前書きはそれ（最初の返事に言葉が無ければ無し）。候補パネルの 💬 は今まで通り表示中の候補の言葉。網 `aiNewPiece.test` 1 本（npm 499）。両 CHANGELOG・MANUAL-CHECKS C30。
 判定（2026-10-27・第1018 の終わり）: 次はユーザーの指示（C9〜C30）。
-
-## 以下は第1017セッションの経緯
-
-### 1.1 第1017セッション（2026-10-27・YT-DELL2）
-
-第1016 と同じ会話の続き。`-Start p1017`（開始 HEAD `dfd59ab1e`・full **13386 / 0 / 2 / 13388**＝新しい網を入れた作業ツリーで・第1015 を ARCHIVE へ）。作業場所は Lab `sessions/p1017/`。
-- **ユーザー「Lab\corpora\ベースタブLy\tempo-todo.lys の tempo と todo コメントが重なる。最初は重ならないのに Ctrl+S で保存すると todo の y が下がってテンポと重なる」**: 再現＝LSP の `lilysharp/svg`（pageDiff）を同じ文書で 2 回＝メモの y 16.53 → 19.03（`SvgGenerator` を 3 回は不変）。原因＝`SharedRenderer` はメモのあるページでは系（system）を生で描く（`pageFragHost` = null）のに、上乗せの描画（`DrawTies`・`DrawSlurs`・`DrawArticulations`・`DrawPercentRepeats`・`DrawBarNumbers`・`DrawFingerings`・`DrawMusicMarks`＝テンポ）には `fragHost` を渡していた＝2 回目は前の断片を文字で貼り、InkRecorder に載らない＝メモの探索にテンポが無い。→ 7 か所を `pageFragHost` に。網 `TodoMemoTempoTests` 2 本（LSP で未保存 → 2 回目 → 保存の名前、と SvgGenerator 3 回）。途中で試した「引き出し線が ink を横切るかの判定」は原因でなく、他のメモを動かしうるので戻した（引き出し線がテンポの数字をかすめるのは最初の絵から＝別件）。両 CHANGELOG・MANUAL-CHECKS C29。
-判定（2026-10-27・第1017 の終わり）: 次はユーザーの指示（C9〜C29）。
 
 ## 2. 開いている作業
 

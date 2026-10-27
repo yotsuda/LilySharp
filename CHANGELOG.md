@@ -8,6 +8,9 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Preview
 
+- `[editor]` **The red frame round a bar an OMR reader flagged no longer runs through a `@todo` memo.**
+  The frame stands two staff spaces over and under the staff, where a memo is set; the edge that
+  would cross a memo now breaks round it, a quarter space clear, and the frame keeps its size.
 - `[editor]` **A `@todo` memo no longer drops onto a tempo after the next render.** The memo is set
   where nothing else is drawn, by what the page records as it draws; the overlays (tempo and other
   marks, ties, slurs, bar numbers) replayed from the last render wrote their text past that record,

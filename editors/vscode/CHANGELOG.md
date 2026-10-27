@@ -6,6 +6,8 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ### Preview
 
+- **An OMR reader's red frame keeps off the `@todo` memos** — its top (bottom) edge ran through a
+  memo set over (under) the staff; the edge now breaks round the memo's words, and the frame keeps its size.
 - **A `@todo` memo stays clear of the tempo** — it dropped onto the tempo (and other marks over the
   staff) once the preview drew the score a second time, after a save for one.
 

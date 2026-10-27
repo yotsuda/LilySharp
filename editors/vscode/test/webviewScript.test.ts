@@ -335,6 +335,7 @@ describe('the preview frames what the scan boxes', () => {
             : n === 'x' ? String(x) : n === 'y' ? '100' : n === 'width' ? '50' : '20',
         hasAttribute: (n: string) => n === 'data-span' && span !== undefined,
         parentNode: parent, nextSibling: null,
+        getScreenCTM: (): unknown => null,   // not laid out: no memo is looked for
     });
     // Bar 4 of three parts, each written on its own line: rh at 100.., lh at 200.., vc at 300..;
     // and the rh bar printed again (a section played twice), from the same place.
@@ -353,7 +354,7 @@ describe('the preview frames what the scan boxes', () => {
     };
     const applyWith = new vm.Script('(marks => { let flaggedMarks = marks; return ' + html.slice(at, close) + '; })')
         .runInNewContext({ svgContainer, document, Number, parseInt }) as (marks: unknown[]) => () => void;
-    const framed = () => staves.map(s => frames.some(f => f.attrs.x === String(s.x)));
+    const framed = () => staves.map(s => frames.some(f => f.attrs.d.startsWith('M ' + s.x + ' ')));
 
     it('finds the function in the page script', () => {
         assert.ok(at >= 0 && close > at, 'applyBarFlags is not in the page script');
@@ -362,7 +363,7 @@ describe('the preview frames what the scan boxes', () => {
         applyWith([{ at: 205, lines: [[200, 230]] }])();
         assert.deepEqual(framed(), [false, true, false, false]);
         // The frame is the scan's box: the bar's width, two staff spaces (half a staff) above and below.
-        assert.deepEqual([frames[0].attrs.x, frames[0].attrs.y, frames[0].attrs.width, frames[0].attrs.height], ['1', '90', '50', '40']);
+        assert.equal(frames[0].attrs.d, 'M 1 90 H 51 M 51 90 V 130 M 1 130 H 51 M 1 90 V 130');
         assert.equal(frames[0].attrs['pointer-events'], 'none');
         applyWith([{ at: 101, lines: [[100, 120], [200, 230]] }])();      // a length mark: rh and lh are off
         assert.deepEqual(framed(), [true, true, false, true]);             // …and the rh copy too
@@ -376,6 +377,35 @@ describe('the preview frames what the scan boxes', () => {
         assert.deepEqual(framed(), [false, false, true, false]);
         applyWith([])();
         assert.deepEqual(framed(), [false, false, false, false]);
+    });
+    // An @todo memo an edge of the frame would run through (owner's report and decision
+    // 2026-10-27, tabi-13.lys: "枠線の y は狭めないでほしい"): the edge breaks a quarter space clear
+    // of the memo's words, and the frame keeps its size.
+    it('breaks its edges round the memos, and keeps its size', () => {
+        const at2 = html.indexOf('function applyBarFlags(');
+        const identity = { inverse: () => identity };
+        const point = class { constructor(public x: number, public y: number) {} matrixTransform() { return this; } };
+        const bar = { ...staff(200, '200 230', 0), getScreenCTM: () => identity };
+        const box = (left: number, right: number, top: number, bottom: number) => ({ left, right, top, bottom });
+        const run = (memos: unknown[]) => {
+            frames.length = 0;
+            new vm.Script('(marks => { let flaggedMarks = marks; return ' + html.slice(at2, close) + '; })')
+                .runInNewContext({
+                    svgContainer: { querySelectorAll: (sel: string) => sel.includes('flag-frame') ? [...frames] : [bar] },
+                    document, Number, parseInt, Math, DOMPoint: point, memoBoxes: () => memos,
+                })([{ at: 205, lines: [[200, 230]] }])();
+            return frames[0].attrs.d;
+        };
+        const whole = 'M 0 90 H 50 M 50 90 V 130 M 0 130 H 50 M 0 90 V 130';
+        assert.equal(run([]), whole);
+        // Over the staff, out past the bar's right: the top edge and the right one break.
+        assert.equal(run([box(10, 80, 84, 95)]), 'M 0 90 H 8.75 M 50 96.25 V 130 M 0 130 H 50 M 0 90 V 130');
+        // Under it: the bottom edge and the right one.
+        assert.equal(run([box(10, 80, 125, 136)]), 'M 0 90 H 50 M 50 90 V 123.75 M 0 130 H 8.75 M 0 90 V 130');
+        // Within the bar's width: the top edge only, on both sides of the words.
+        assert.equal(run([box(10, 40, 84, 95)]), 'M 0 90 H 8.75 M 41.25 90 H 50 M 50 90 V 130 M 0 130 H 50 M 0 90 V 130');
+        assert.equal(run([box(60, 80, 84, 95)]), whole);     // beside the bar
+        assert.equal(run([box(10, 80, 70, 80)]), whole);     // clear above the frame
     });
 });
 

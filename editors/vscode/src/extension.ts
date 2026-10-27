@@ -3531,7 +3531,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
            The dark scheme's invert + hue-rotate(180deg) brings the red back to red. */
         /* A staff's bar an OMR reader flagged (the scan view's B4), framed as on the scan: the
            frame applyBarFlags draws round it, two staff spaces taller above and below. */
-        #svgContainer rect.flag-frame {
+        #svgContainer path.flag-frame {
             stroke: #e53935;
             stroke-width: 2;
             stroke-dasharray: 4 3;
@@ -6046,15 +6046,37 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         // lightPeerBars) frame every staff's bar whose first note is written on one of them;
         // a mark the scan does not know (no lines) frames the one staff's bar whose written
         // stretch (data-span) holds where it is written (at).
-        // The frame itself is a rect of its own beside the staff's bar (rect.flag-frame), the
+        // The frame itself is a shape of its own beside the staff's bar (path.flag-frame), the
         // bar's X range and two staff spaces taller above and below — the box the reader draws
         // round a part-bar on the scan (LilySharp-Omr Sidecar.AddPage: the staff's top line less
         // two spaces to its bottom line plus two; a staff is four spaces), so the two views
         // frame alike (owner's request 2026-10-17: the roomier frame is the easier to see).
+        // An @todo memo is set over its staff's top line (under the bottom one), inside those two
+        // spaces, so an edge of the frame can run through its words: the edge breaks there, a
+        // quarter space clear of the memo's words and underline, and the frame keeps its size
+        // (owner's report and decision 2026-10-27, tabi-13.lys: "枠線の y は狭めないでほしい").
+        // The memo's leader may cross an edge; it runs down to the ring inside the frame anyway.
         let flaggedMarks = [];
         let barQuietUntil = 0, barReportTimer = null;
+        function memoBoxes() {
+            const boxes = [];
+            for (const e of svgContainer.querySelectorAll('text[data-todo]:not(.music), line[data-todo]')) {
+                if (e.tagName === 'line' && e.getAttribute('y1') !== e.getAttribute('y2')) continue; // a leader
+                const b = e.getBoundingClientRect();
+                if (b.width > 0 || b.height > 0) boxes.push(b);
+            }
+            return boxes;
+        }
         function applyBarFlags() {
-            for (const f of svgContainer.querySelectorAll('rect.flag-frame')) f.remove();
+            for (const f of svgContainer.querySelectorAll('.flag-frame')) f.remove();
+            let memos = null;
+            // What is left of [from, to] once the gaps are taken out.
+            const pieces = (from, to, gaps) => {
+                let left = [[from, to]];
+                for (const [a, b] of gaps)
+                    left = left.flatMap(([p, q]) => b <= p || a >= q ? [[p, q]] : [[p, a], [b, q]].filter(([u, v]) => v > u));
+                return left;
+            };
             for (const r of svgContainer.querySelectorAll('rect.bar-staff')) {
                 const start = parseInt(r.getAttribute('data-start'), 10);
                 const span = r.hasAttribute('data-span') ? r.getAttribute('data-span').split(' ').map(v => parseInt(v, 10)) : null;
@@ -6064,12 +6086,35 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 if (!flagged) continue;
                 const x = Number(r.getAttribute('x')), y = Number(r.getAttribute('y'));
                 const w = Number(r.getAttribute('width')), h = Number(r.getAttribute('height'));
-                const f = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                const top = y - h / 2, bottom = y + 1.5 * h, right = x + w;
+                // Each edge's gaps: where a memo's box, a quarter space wider all round, lies across it.
+                const gaps = { top: [], bottom: [], left: [], right: [] };
+                const ctm = r.getScreenCTM();
+                if (ctm && (memos ??= memoBoxes()).length > 0) {
+                    // The memos in the bar rect's own coordinates (the bar rects are a system's,
+                    // the memos the page's).
+                    const inv = ctm.inverse(), pad = h / 16;
+                    for (const b of memos) {
+                        const p1 = new DOMPoint(b.left, b.top).matrixTransform(inv);
+                        const p2 = new DOMPoint(b.right, b.bottom).matrixTransform(inv);
+                        const mLeft = Math.min(p1.x, p2.x) - pad, mRight = Math.max(p1.x, p2.x) + pad;
+                        const mTop = Math.min(p1.y, p2.y) - pad, mBottom = Math.max(p1.y, p2.y) + pad;
+                        if (mRight <= x || mLeft >= right || mBottom <= top || mTop >= bottom) continue;
+                        if (mTop < top && top < mBottom) gaps.top.push([mLeft, mRight]);
+                        if (mTop < bottom && bottom < mBottom) gaps.bottom.push([mLeft, mRight]);
+                        if (mLeft < x && x < mRight) gaps.left.push([mTop, mBottom]);
+                        if (mLeft < right && right < mRight) gaps.right.push([mTop, mBottom]);
+                    }
+                }
+                const d = [
+                    ...pieces(x, right, gaps.top).map(([a, b]) => 'M ' + a + ' ' + top + ' H ' + b),
+                    ...pieces(top, bottom, gaps.right).map(([a, b]) => 'M ' + right + ' ' + a + ' V ' + b),
+                    ...pieces(x, right, gaps.bottom).map(([a, b]) => 'M ' + a + ' ' + bottom + ' H ' + b),
+                    ...pieces(top, bottom, gaps.left).map(([a, b]) => 'M ' + x + ' ' + a + ' V ' + b),
+                ].join(' ');
+                const f = document.createElementNS('http://www.w3.org/2000/svg', 'path');
                 f.setAttribute('class', 'flag-frame');
-                f.setAttribute('x', x);
-                f.setAttribute('y', y - h / 2);
-                f.setAttribute('width', w);
-                f.setAttribute('height', 2 * h);
+                f.setAttribute('d', d);
                 f.setAttribute('fill', 'none');
                 f.setAttribute('pointer-events', 'none');
                 r.parentNode.insertBefore(f, r.nextSibling);

@@ -160,6 +160,14 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1017セッションの経緯
+
+### 1.1 第1017セッション（2026-10-27・YT-DELL2）
+
+第1016 と同じ会話の続き。`-Start p1017`（開始 HEAD `dfd59ab1e`・full **13386 / 0 / 2 / 13388**＝新しい網を入れた作業ツリーで・第1015 を ARCHIVE へ）。作業場所は Lab `sessions/p1017/`。
+- **ユーザー「Lab\corpora\ベースタブLy\tempo-todo.lys の tempo と todo コメントが重なる。最初は重ならないのに Ctrl+S で保存すると todo の y が下がってテンポと重なる」**: 再現＝LSP の `lilysharp/svg`（pageDiff）を同じ文書で 2 回＝メモの y 16.53 → 19.03（`SvgGenerator` を 3 回は不変）。原因＝`SharedRenderer` はメモのあるページでは系（system）を生で描く（`pageFragHost` = null）のに、上乗せの描画（`DrawTies`・`DrawSlurs`・`DrawArticulations`・`DrawPercentRepeats`・`DrawBarNumbers`・`DrawFingerings`・`DrawMusicMarks`＝テンポ）には `fragHost` を渡していた＝2 回目は前の断片を文字で貼り、InkRecorder に載らない＝メモの探索にテンポが無い。→ 7 か所を `pageFragHost` に。網 `TodoMemoTempoTests` 2 本（LSP で未保存 → 2 回目 → 保存の名前、と SvgGenerator 3 回）。途中で試した「引き出し線が ink を横切るかの判定」は原因でなく、他のメモを動かしうるので戻した（引き出し線がテンポの数字をかすめるのは最初の絵から＝別件）。両 CHANGELOG・MANUAL-CHECKS C29。
+判定（2026-10-27・第1017 の終わり）: 次はユーザーの指示（C9〜C29）。
+
 ## 以下は第1016セッションの経緯
 
 ### 1.1 第1016セッション（2026-10-27・YT-DELL2）

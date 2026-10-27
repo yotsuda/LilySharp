@@ -249,6 +249,7 @@ edocs/HANDOFF.mde §2 R13 ⒝・OMR の提案 B1〜B6（e..\LilySharp-Omr\docs\r
 - [ ] **C28**（第1016・instrument だけの part）: Compose with AI「弦楽四重奏」や Ctrl+I「ベースを足して」→ 新しい part が `{ instrument violin }` のように instrument だけ（clef や octave が並ばない）。
 - [ ] **C29**（第1017・メモとテンポ）: `Lab\corpora\ベースタブLy\tempo-todo.lys` を開く → メモ「here」がテンポ「♩ = 100」の上 → Ctrl+S → 位置が変わらない（テンポに重ならない）。もう一度保存しても同じ。
 - [ ] **C30**（第1018・作曲の前書き）: Compose with AI → 開いた曲の `// The AI:` が曲そのものの説明（「小節の長さを見直し…」のような直しの言葉でない）。出力チャネルで直しが走った（turned down）ときも同じ。
+- [ ] **C31**（第1019・赤枠と memo）: OMR の結果（例 tabi-13.lys）をスキャンと並べて開く → 赤い点線枠の上辺（下辺）が `@todo` の memo の文字・下線を横切らない（memo の所だけ線が途切れる）。枠の大きさは memo の有無に関係なく上下 2 線間のまま。
 
 ## 4. §2 R13 ⒝ — 差分頁の配信（実機未確認・第404）
 
