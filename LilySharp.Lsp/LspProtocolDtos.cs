@@ -406,6 +406,10 @@ public class ConvertOctavesParams
     public string? Text { get; set; }
     /// <summary>True for <c>octave absolute</c>, false for relative.</summary>
     public bool Absolute { get; set; }
+    /// <summary>Take the parts' <c>octave N</c> out first, every note kept where it sounds
+    /// (OctaveModeConverter.WithoutPartOctaves) — a composed piece's bass, written under
+    /// <c>octave 4</c> by the pitches it sounds (owner's request 2026-10-28).</summary>
+    public bool DropPartOctaves { get; set; }
 }
 
 /// <summary>Response for lilysharp/convertOctaves: the rewritten source and how many notes'

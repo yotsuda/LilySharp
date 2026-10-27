@@ -179,6 +179,11 @@ describe('the composer\'s prompt', () => {
     });
     // Owner's review 2026-10-27: the piece was tidy but not "cool" — the character is to be planned
     // as the devices that make it.
+    // Owner's request 2026-10-28: the bass's `octave 4` is the AI's crutch — taken out before the piece opens.
+    it('opens the piece without the parts\' octave lines, every note kept where it sounds', () => {
+        assert.match(transform, /'lilysharp\/convertOctaves', \{ Text: text, Absolute: false, DropPartOctaves: true \}/);
+        assert.match(transform, /if \(!relative\.Success\) \{\s*deps\.log\(`AI transform: the parts' octave lines stay/);
+    });
     it('has the plan name the devices that make the character asked for', () => {
         assert.match(transform, /how the character asked for',\s*'\s*is heard — the devices that make it, named/);
     });

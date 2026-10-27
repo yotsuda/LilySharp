@@ -1184,6 +1184,13 @@ public sealed partial class LilySharpLanguageServer
         if (text == null)
             return new ConvertOctavesResponse { Success = false, Error = "Document not found" };
 
+        if (@params.DropPartOctaves)
+        {
+            var plain = LilySharp.Core.Editing.OctaveModeConverter.WithoutPartOctaves(text);
+            if (plain.NewText == null)
+                return new ConvertOctavesResponse { Success = false, Error = plain.Error };
+            text = plain.NewText;
+        }
         var result = LilySharp.Core.Editing.OctaveModeConverter.Convert(text,
             @params.Absolute ? LilySharp.Core.Editing.OctaveMode.Absolute : LilySharp.Core.Editing.OctaveMode.Relative);
         return result.NewText != null

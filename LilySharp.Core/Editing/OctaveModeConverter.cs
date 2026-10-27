@@ -277,6 +277,37 @@ public static class OctaveModeConverter
     /// same as <c>ces''</c> — its recorded octave plus one.
     /// </para>
     /// </remarks>
+    /// <summary>
+    /// <paramref name="source"/> without its parts' <c>octave N</c>, every note re-marked to sound
+    /// where it did (<see cref="Repin"/>). Unchanged (and no error) when no part writes one.
+    /// </summary>
+    /// <remarks>
+    /// For a piece the AI composed (owner's request 2026-10-28): its bass is written under
+    /// <c>octave 4</c> so the AI can name the pitches it sounds, and the line is the AI's crutch,
+    /// not the musician's — the piece opens without it, every note where the AI put it.
+    /// </remarks>
+    public static Result WithoutPartOctaves(string source)
+    {
+        var tree = SyntaxTree.Parse(source);
+        if (tree.HasErrors)
+            return Fail("The file has syntax errors — no changes made.");
+        var removals = new List<Edit>();
+        foreach (var part in tree.GetRoot().DescendantNodes<PartDeclarationSyntax>())
+            foreach (var prop in part.Properties)
+            {
+                if (prop.NameToken.Text != "octave")
+                    continue;
+                // The property and the spaces before it (`{ instrument bass octave 4 }`).
+                int start = prop.Span.Start;
+                while (start > 0 && source[start - 1] is ' ' or '\t')
+                    start--;
+                removals.Add(new Edit(start, prop.Span.End, ""));
+            }
+        if (removals.Count == 0)
+            return new Result(source, null, 0);
+        return Repin(source, Apply(source, removals));
+    }
+
     internal static Result Repin(string source, string candidate, IReadOnlyDictionary<int, int>? octaveShift = null)
     {
         int Shift(int orig) => octaveShift != null && octaveShift.TryGetValue(orig, out int s) ? s : 0;

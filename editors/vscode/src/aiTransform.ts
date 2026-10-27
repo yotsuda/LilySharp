@@ -814,9 +814,18 @@ async function drive(
             // The AI writes in absolute octaves; the piece opens in relative ones (owner's request
             // 2026-10-27), converted mechanically — the server compiles the result and compares every
             // note before it answers, so it sounds as the AI wrote it. Left as it came if it cannot.
+            // …and without the parts' `octave N` (owner's request 2026-10-28): the bass is written
+            // under `octave 4` so the AI can name the pitches it sounds, and that is the AI's crutch,
+            // not the musician's — taken out, every note re-marked to sound where it did. If that
+            // cannot be done, the piece keeps the line.
+            type Converted = { Success: boolean; NewText: string | null; Error: string | null };
             try {
-                const relative = await client.sendRequest<{ Success: boolean; NewText: string | null; Error: string | null }>(
-                    'lilysharp/convertOctaves', { Text: text, Absolute: false });
+                let relative = await client.sendRequest<Converted>(
+                    'lilysharp/convertOctaves', { Text: text, Absolute: false, DropPartOctaves: true });
+                if (!relative.Success) {
+                    deps.log(`AI transform: the parts' octave lines stay — ${relative.Error}`);
+                    relative = await client.sendRequest<Converted>('lilysharp/convertOctaves', { Text: text, Absolute: false });
+                }
                 if (relative.Success && relative.NewText) {
                     text = relative.NewText;
                 } else {
