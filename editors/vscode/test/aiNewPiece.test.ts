@@ -61,7 +61,7 @@ describe('a new piece in place of the score', () => {
         // the piece opens in an editor of its own when it comes — no review panel, nothing to compare.
         assert.match(transform, /uri: vscode\.Uri\.parse\('untitled:Composed\.lys'\),/);
         assert.doesNotMatch(transform.slice(transform.indexOf('async function runCompose'), transform.indexOf('async function runAiTransform')), /openTextDocument/);
-        assert.match(transform, /if \(compose\) \{[\s\S]{0,3000}?openTextDocument\(\{ language: 'lilysharp', content: `\$\{preface\}\$\{eol\}\$\{eol\}\$\{text\}` \}\);\s*await vscode\.window\.showTextDocument\(piece\);/);
+        assert.match(transform, /if \(compose\) \{[\s\S]{0,4500}?openTextDocument\(\{ language: 'lilysharp', content: `\$\{preface\}\$\{eol\}\$\{eol\}\$\{text\}` \}\);\s*await vscode\.window\.showTextDocument\(piece\);/);
         // The request and the AI's note head the piece as comments (owner's request 2026-10-27).
         assert.match(transform, /line\(`Asked: \$\{composeAsked \?\? instruction\}`\),\s*\.\.\.\(note \? \[line\(`The AI: \$\{note\}`\)\] : \[\]\),/);
         // What the notification says is the musician's request, not the instruction to the AI.
@@ -80,8 +80,8 @@ describe('a composed piece opens in relative octaves', () => {
     const transform = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'aiTransform.ts'), 'utf8');
     it('converts the text before it opens, and keeps it as it came if it cannot', () => {
         const at = (s: string) => transform.indexOf(s);
-        assert.ok(at("'lilysharp/convertOctaves', { Text: text, Absolute: false }") > 0);
-        assert.ok(at("'lilysharp/convertOctaves', { Text: text, Absolute: false }") < at("const piece = await vscode.workspace.openTextDocument({ language: 'lilysharp'"));
+        assert.ok(at("'lilysharp/convertOctaves', { Text: text, Absolute: false, DropPartOctaves: true }") > 0);
+        assert.ok(at("'lilysharp/convertOctaves', { Text: text, Absolute: false, DropPartOctaves: true }") < at("const piece = await vscode.workspace.openTextDocument({ language: 'lilysharp'"));
         assert.match(transform, /if \(relative\.Success && relative\.NewText\) \{\s*text = relative\.NewText;/);
         assert.match(transform, /the piece stays in absolute octaves/);
     });
