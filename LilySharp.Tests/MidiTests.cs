@@ -462,10 +462,10 @@ public class MidiTests
         var notes = midi.Tracks.Skip(1).First().Notes;
         Assert.Equal(3, notes.Count);
 
-        // p = 50, f = 95, ff = 110
-        Assert.Equal(50, notes[0].Velocity);
+        // p = 70, f = 95, ff = 102 (LilyPond's absolute-volume-alist)
+        Assert.Equal(70, notes[0].Velocity);
         Assert.Equal(95, notes[1].Velocity);
-        Assert.Equal(110, notes[2].Velocity);
+        Assert.Equal(102, notes[2].Velocity);
     }
 
     /// <summary>
@@ -489,8 +489,8 @@ public class MidiTests
 
     /// <summary>A chord reads its own dynamic and scripts as a note does.</summary>
     [Theory]
-    [InlineData("<c e>4@p", 50)]
-    [InlineData("<c e>4@accent", 100)]
+    [InlineData("<c e>4@p", 70)]
+    [InlineData("<c e>4@accent", 110)]
     public void AChord_ReadsItsOwnDynamicAndScripts(string source, int velocity)
     {
         var midi = new MidiExporter().Export(SyntaxTree.Parse(source));
@@ -531,8 +531,8 @@ public class MidiTests
         var otherNotes = midi.Tracks.Single(t => t.Name == other).Notes;
         Assert.Equal(8, markedNotes.Count);
         Assert.Equal(8, otherNotes.Count);
-        Assert.All(markedNotes, n => Assert.Equal(50, n.Velocity)); // p, in A and still in B
-        Assert.All(otherNotes, n => Assert.Equal(80, n.Velocity));  // the default, in A and in B
+        Assert.All(markedNotes, n => Assert.Equal(70, n.Velocity)); // p, in A and still in B
+        Assert.All(otherNotes, n => Assert.Equal(90, n.Velocity));  // the default, in A and in B
     }
 
     /// <summary>A one-sided <c>:|</c> in the form replays the piece from its beginning with the
@@ -547,7 +547,7 @@ public class MidiTests
 
         var notes = midi.Tracks.Single(t => t.Name == "rh").Notes.OrderBy(n => n.StartTick).Select(n => n.Velocity).ToArray();
         // A: 80 then p; B: f; A again: 80 then p; B again: f.
-        Assert.Equal(new[] { 80, 50, 50, 50, 95, 95, 95, 95, 80, 50, 50, 50, 95, 95, 95, 95 }, notes);
+        Assert.Equal(new[] { 90, 70, 70, 70, 95, 95, 95, 95, 90, 70, 70, 70, 95, 95, 95, 95 }, notes);
     }
 
     /// <summary>A chord row writes no dynamic, so it accompanies at 70% of the DEFAULT —
@@ -570,8 +570,8 @@ public class MidiTests
         var melody = midi.Tracks.Single(t => t.Name == "melody").Notes;
         Assert.NotEmpty(row);
         Assert.Equal(9, melody.Count);
-        Assert.All(row, n => Assert.Equal(56, n.Velocity));    // 80 * 7 / 10, in A and in B
-        Assert.All(melody, n => Assert.Equal(50, n.Velocity)); // p, in A and still in B
+        Assert.All(row, n => Assert.Equal(63, n.Velocity));    // 90 * 7 / 10, in A and in B
+        Assert.All(melody, n => Assert.Equal(70, n.Velocity)); // p, in A and still in B
     }
 
     [Fact]
@@ -600,8 +600,8 @@ public class MidiTests
         var notes = midi.Tracks.Skip(1).First().Notes;
         Assert.Single(notes);
 
-        // Accent adds 20 to velocity (default 80 -> 100)
-        Assert.Equal(100, notes[0].Velocity);
+        // Accent adds 20 to velocity (default 90 -> 110)
+        Assert.Equal(110, notes[0].Velocity);
     }
 
     [Fact]

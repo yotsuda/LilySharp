@@ -117,7 +117,7 @@ public sealed class FormJumpMidiTests
         var notes = new MidiExporter().Export(SyntaxTree.Parse(source)).Tracks[1].Notes.OrderBy(n => n.StartTick).ToList();
         Assert.Equal(16, notes.Count);
         // A f, B f (the lane carries), C p, B again at f — the segno's state, not C's.
-        Assert.Equal(Enumerable.Repeat(95, 8).Concat(Enumerable.Repeat(50, 4)).Concat(Enumerable.Repeat(95, 4)), notes.Select(n => n.Velocity));
+        Assert.Equal(Enumerable.Repeat(95, 8).Concat(Enumerable.Repeat(70, 4)).Concat(Enumerable.Repeat(95, 4)), notes.Select(n => n.Velocity));
     }
 
     /// <summary>PlayForm walks the form once per part; every part follows the same route.</summary>

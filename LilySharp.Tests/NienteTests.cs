@@ -189,6 +189,6 @@ public class NienteTests
     {
         var notes = new MidiExporter().Export(SyntaxTree.Parse(Book("c'4@niente d' e'@p f' |"))).Tracks
             .SelectMany(t => t.Notes).OrderBy(n => n.StartTick).ToList();
-        Assert.Equal(new[] { 1, 1, 50, 50 }, notes.Select(n => n.Velocity).ToArray());
+        Assert.Equal(new[] { 1, 1, 70, 70 }, notes.Select(n => n.Velocity).ToArray());
     }
 }

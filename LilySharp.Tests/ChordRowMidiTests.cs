@@ -60,7 +60,7 @@ public class ChordRowMidiTests
             (Bar, Bar, 53), (Bar, Bar, 57), (Bar, Bar, 62),
         }, ChordNotes(midi));
         var track = midi.Tracks.Single(t => t.Name == "harmony (chords)");
-        Assert.All(track.Notes, n => Assert.Equal(56, n.Velocity));
+        Assert.All(track.Notes, n => Assert.Equal(63, n.Velocity));
         Assert.NotEqual(midi.Tracks.Single(t => t.Name == "melody").Channel, track.Channel);
     }
 

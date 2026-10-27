@@ -123,8 +123,18 @@ public enum ArticulationType
 }
 
 /// <summary>
-/// Dynamic levels from pianississimo to fortississimo.
+/// Dynamic levels from pianississimo to fortississimo. Each value is the MIDI velocity the level
+/// plays at.
 /// </summary>
+/// <remarks>
+/// LILYPOND-REF: ly/midi-init.ly absolute-volume-alist — LilyPond's volumes as fractions of the
+/// MIDI maximum, times 127 and rounded: ppppp .25 → 32, pppp .34 → 43, ppp .42 → 53, pp .49 → 62,
+/// p .55 → 70, mp .61 → 77, mf .68 → 86, f .75 → 95, ff .80 → 102, fff .85 → 108, ffff .92 → 117,
+/// fffff .95 → 121, sf 1.00 → 127 (owner's decision 2026-10-27: until then the levels ran pp 35 to
+/// ff 110, a DAW's spread, twice LilyPond's — and a SoundFont player, squaring the velocity, made p
+/// to f some 11 dB). The marks LilyPond's table has not (fp, rf, the sforzato family) keep their
+/// places among the levels: fp between mf and f, the sforzati between ff and fff.
+/// </remarks>
 public enum DynamicLevel
 {
     /// <summary>No dynamic marking.</summary>
@@ -136,44 +146,43 @@ public enum DynamicLevel
     /// ramp a hairpin).</summary>
     Niente = 1,
     /// <summary>Five-p pianissississimo, <c>\ppppp</c> (softest).</summary>
-    PPPPP = 6,
+    PPPPP = 32,
     /// <summary>pianississimo, <c>\pppp</c>.</summary>
-    PPPP = 12,
+    PPPP = 43,
     /// <summary>pianississimo, <c>\ppp</c>.</summary>
-    PPP = 20,
+    PPP = 53,
     /// <summary>pianissimo (very soft), <c>\pp</c>.</summary>
-    PP = 35,
+    PP = 62,
     /// <summary>piano (soft), <c>\p</c>.</summary>
-    P = 50,
+    P = 70,
     /// <summary>mezzo-piano (moderately soft), <c>\mp</c>.</summary>
-    MP = 65,
+    MP = 77,
     /// <summary>mezzo-forte (moderately loud), <c>\mf</c>.</summary>
-    MF = 80,
+    MF = 86,
     /// <summary>fp — loud attack then soft; a single MIDI note gets the attack level.</summary>
     FP = 90,
     /// <summary>forte (loud), <c>\f</c>.</summary>
     F = 95,
-    /// <summary>sf — subito forte accent on one note.</summary>
-    SF = 105,
+    /// <summary>sf — subito forte accent on one note; LilyPond's loudest (1.00).</summary>
+    SF = 127,
     /// <summary>fortissimo (very loud), <c>\ff</c>.</summary>
-    FF = 110,
+    FF = 102,
     /// <summary>rf — rinforzando, gentler than the sforzato family.</summary>
-    RF = 111,
-    /// <summary>sfz / rfz / fz — sforzato family, a hair under fff.</summary>
-    SFZ = 112,
+    RF = 103,
+    /// <summary>sfz / rfz / fz — sforzato family, between ff and fff.</summary>
+    SFZ = 104,
     /// <summary>rfz — rinforzando member of the sforzato family.</summary>
-    RFZ = 113,
+    RFZ = 105,
     /// <summary>fz — forzando member of the sforzato family.</summary>
-    FZ = 114,
+    FZ = 106,
     /// <summary>sffz — the heaviest sforzato.</summary>
-    SFFZ = 116,
-    // fff moved off the 127 ceiling to give ffff/fffff their own headroom.
+    SFFZ = 107,
     /// <summary>fortississimo (extremely loud), <c>\fff</c>.</summary>
-    FFF = 120,
+    FFF = 108,
     /// <summary>Four-f fortissississimo, <c>\ffff</c>.</summary>
-    FFFF = 124,
-    /// <summary>Five-f fortissississimo, <c>\fffff</c> (loudest).</summary>
-    FFFFF = 127
+    FFFF = 117,
+    /// <summary>Five-f fortissississimo, <c>\fffff</c> (the loudest level; sf alone is louder, as in LilyPond).</summary>
+    FFFFF = 121
 }
 
 /// <summary>

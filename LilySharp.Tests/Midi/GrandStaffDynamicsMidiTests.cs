@@ -69,7 +69,7 @@ public class GrandStaffDynamicsMidiTests
     public void ABracketsParts_KeepTheirOwnDynamics()
     {
         var src = Book("staffGroup", "c''1@p | d''1@f | e''1@pp |", "c1 | d1 | e1 |");
-        Assert.All(Velocities(src, "lh"), v => Assert.Equal(80, v));
+        Assert.All(Velocities(src, "lh"), v => Assert.Equal(90, v));
     }
 
     [Fact]
