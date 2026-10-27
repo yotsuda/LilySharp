@@ -793,7 +793,7 @@ static int RunOctave(string[] args)
             Without -i or -d the result goes to standard output.
 
             Options:
-              -a, --absolute         Convert to `octave absolute` (bare c = C4)
+              -a, --absolute         Convert to `octave absolute` (bare c = C3, as in LilyPond)
               -r, --relative         Convert to relative octaves (the default mode)
               -i, --in-place         Overwrite the input
               -d, --out-dir <folder> Write <input>.lys into this folder

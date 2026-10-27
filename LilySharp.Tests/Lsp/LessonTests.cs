@@ -512,7 +512,7 @@ public class LessonTests
     {
         // After step 1's `key g major`: Up moves the ringed e to fis, Down brings it back, and
         // PageUp writes e' (the notes after it follow, in relative octaves).
-        Assert.Contains("(`fis` in G major)", Lesson1);
+        Assert.Contains("(`fis'` in G major)", Lesson1);
         string inG = Lesson1.Insert(EmptyLineAfter(Lesson1, "STEP 1"), "key g major");
         // The lesson's first note is written e' since the owner's decision 2026-10-28 (a frame
         // opens on F3), so it sounds E4 as it always did.

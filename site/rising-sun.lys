@@ -22,7 +22,7 @@ section Verse {
 section Close {
   chords prog { Am | C | D | F | Am | E7 | Am | Am | }
   gt { Amchord Cchord Dchord Fchord Amchord
-       e8@rit b' e gis d' gis, | a,8 e' a c\2 a e | a,8 e' a c\2@!rit a e | }
+       e,8@rit b' e gis d' gis, | a,8 e' a c\2 a e | a,8 e' a c\2@!rit a e | }
 }
 
 form { Verse Close }
