@@ -127,19 +127,19 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1014セッション（2026-10-27・YT-DELL2）
+
+第1013 と同じ会話の続き。`-Start p1014`（開始 HEAD `dfeaa54a5`・full **13384 / 0 / 2 / 13386**・第1012 を ARCHIVE へ）。作業場所は Lab `sessions/p1014/`。
+- **ユーザー「Accept を押したら『the document was closed; nothing was applied.』」→「エディタは開いたまま」「.lys は未保存」「作曲した曲に Ctrl+I で追加の修正」「タブは `// Composed with AI (…` 太字・`Untitled-1` 細字」**: 最初に疑った「見えない文書を VS Code が手放す」は違った（それでも file は開き直して反映する処理を足した＝害は無い）。原因＝`movedUris`（保存された untitled → file の対応）が `Untitled-1` の**名前の使い回し**で古いまま残り、新しい `Untitled-1` の Accept が昔のファイルを探しに行った。→ `currentUri` は**開いている自分の名前を先に**取る（たどる途中でも開いているものがあればそれ）・`onDidOpenTextDocument` で untitled が開いたらその名前の対応を消す。網 `aiNewPiece.test` 2 本（npm 495）。両 CHANGELOG・MANUAL-CHECKS C25。⚠️ 実機での再現は未確認（推論による原因）。
+判定（2026-10-27・第1014 の終わり）: 次はユーザーの指示（C9〜C25）。
+
+## 以下は第1013セッションの経緯
+
 ### 1.1 第1013セッション（2026-10-27・YT-DELL2）
 
 第1012 と同じ会話の続き。`-Start p1013`（開始 HEAD `5d4916605`・full **13384 / 0 / 2 / 13386**＝新しい網を入れた作業ツリーで・第1011 を ARCHIVE へ）。作業場所は Lab `sessions/p1013/`。
 - **ユーザー「Ask AI でギターのダイアグラム追加を頼んだら『below the range of the Guitar (E2-E6)』が山のように出て候補ペインのヘッダが埋まった。作曲と Ask AI のシステムプロンプトに各楽器の音域を書き、instrument のある part では範囲外を使わないよう指示を。別に、候補のヘッダは大きさを制限してスクロールバーを」**: `GRAMMAR_FOR_LLM.md`（両方の system に丸ごと入る）に「## Instrument ranges」＝規則の文＋**生成された表**（`InstrumentRangePromptTests`＝`InstrumentDefaults.SoundingRange` から・書いた両端は計算でなく**コンパイラで探す**＝その楽器の part・absolute で両端が警告なし・半音外で 2 件となるオクターブ＝式ではギターが 1 オクターブずれた・`LILYSHARP_UPDATE_DOCS=1` で再生成）。候補ペインの `.header .texts`（max-height 7.5em・overflow-y auto・spacer を外した）。網 C# 2 本・`aiNewPiece.test` 2 本（npm 493）。両 CHANGELOG・MANUAL-CHECKS C24。
 判定（2026-10-27・第1013 の終わり）: 次はユーザーの指示（C9〜C24）。
-
-## 以下は第1012セッションの経緯
-
-### 1.1 第1012セッション（2026-10-27・YT-DELL2）
-
-第1011 と同じ会話の続き。`-Start p1012`（開始 HEAD `604bec460`・full **13382 / 0 / 2 / 13384**＝新しい網を入れた作業ツリーで・第1010 を ARCHIVE へ）。作業場所は Lab `sessions/p1012/`。
-- **ユーザー「Compose with AI の結果に octave absolute がついてくる。自動で relative に。AI ではなく機械的に変換して」**: LSP `lilysharp/convertOctaves` に `Text`（開いた文書の代わり・`TextDocument` は省略可に）・`aiTransform` の compose 枝が題を入れた後、前書きを付けて開く前に `{ Text, Absolute: false }` で変換（`OctaveModeConverter`＝コンパイルして全音を突き合わせる）・変換できなければ absolute のまま開いてログに理由。網 `ConvertOctavesTextTests` 2 本・`aiNewPiece.test` 1 本（npm 491）。両 CHANGELOG・MANUAL-CHECKS C23。
-判定（2026-10-27・第1012 の終わり）: 次はユーザーの指示（C9〜C23）。
 
 ## 2. 開いている作業
 

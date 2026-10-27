@@ -160,6 +160,14 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1012セッションの経緯
+
+### 1.1 第1012セッション（2026-10-27・YT-DELL2）
+
+第1011 と同じ会話の続き。`-Start p1012`（開始 HEAD `604bec460`・full **13382 / 0 / 2 / 13384**＝新しい網を入れた作業ツリーで・第1010 を ARCHIVE へ）。作業場所は Lab `sessions/p1012/`。
+- **ユーザー「Compose with AI の結果に octave absolute がついてくる。自動で relative に。AI ではなく機械的に変換して」**: LSP `lilysharp/convertOctaves` に `Text`（開いた文書の代わり・`TextDocument` は省略可に）・`aiTransform` の compose 枝が題を入れた後、前書きを付けて開く前に `{ Text, Absolute: false }` で変換（`OctaveModeConverter`＝コンパイルして全音を突き合わせる）・変換できなければ absolute のまま開いてログに理由。網 `ConvertOctavesTextTests` 2 本・`aiNewPiece.test` 1 本（npm 491）。両 CHANGELOG・MANUAL-CHECKS C23。
+判定（2026-10-27・第1012 の終わり）: 次はユーザーの指示（C9〜C23）。
+
 ## 以下は第1011セッションの経緯
 
 ### 1.1 第1011セッション（2026-10-27・YT-DELL2）

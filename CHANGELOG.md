@@ -52,6 +52,7 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Ask AI
 
+- `[editor]` **Accept on an unsaved score finds it** (a reused `Untitled-1` had pointed at an old saved file).
 - `[language]` **The grammar for the AI has the instruments' ranges**: a table generated from the
   range LYS1052 warns by (the written ends found by the compiler), with the rule to keep a part with an
   `instrument` inside it. `[editor]` The candidate's head scrolls a long list.

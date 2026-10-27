@@ -149,6 +149,12 @@ export function registerAiTransform(context: vscode.ExtensionContext, deps: AiTr
         vscode.workspace.onDidCloseTextDocument(d => {
             if (d.uri.scheme === 'untitled') { closedUntitled = { uri: d.uri.toString(), at: Date.now() }; }
         }),
+        // VS Code gives an untitled name out again ("Untitled-1"): a new document of a name once
+        // saved is not the old one, and its old move is forgotten (owner's report 2026-10-27: Accept
+        // on an unsaved score said "the document was closed", the name pointing at an old file).
+        vscode.workspace.onDidOpenTextDocument(d => {
+            if (d.uri.scheme === 'untitled') { movedUris.delete(d.uri.toString()); }
+        }),
         vscode.window.onDidChangeActiveTextEditor(e => adopt(e?.document)),
         vscode.workspace.onDidSaveTextDocument(adopt),
     );
@@ -157,10 +163,17 @@ export function registerAiTransform(context: vscode.ExtensionContext, deps: AiTr
 /** Where each saved untitled document went (registerAiTransform). */
 const movedUris = new Map<string, vscode.Uri>();
 
-/** The document a snapshot's URI names now: itself, or the file an untitled one was saved as. */
+/** The document a snapshot's URI names now: itself while it is open (an untitled score not
+ *  saved), else the file an untitled one was saved as. */
 function currentUri(uri: vscode.Uri): vscode.Uri {
+    if (vscode.workspace.textDocuments.some(d => d.uri.toString() === uri.toString())) {
+        return uri;
+    }
     for (let moved = movedUris.get(uri.toString()); moved; moved = movedUris.get(uri.toString())) {
         uri = moved;
+        if (vscode.workspace.textDocuments.some(d => d.uri.toString() === uri.toString())) {
+            return uri;
+        }
     }
     return uri;
 }
@@ -1774,7 +1787,19 @@ button:disabled { opacity:0.45; cursor:default; }
 /** Undefined when written, else what the panel says about why not. */
 async function applyCandidate(deps: AiTransformDeps, snapshot: Snapshot, candidate: string): Promise<string | undefined> {
     const uri = currentUri(snapshot.uri);
-    const doc = vscode.workspace.textDocuments.find(d => d.uri.toString() === uri.toString());
+    // A document no editor shows (asked from the preview, its editor tab closed) is let go by VS
+    // Code after a while — the AI thinks for minutes — though the file is there as it was (owner's
+    // report 2026-10-27: "the document was closed; nothing was applied"). A file is opened again;
+    // the anchoring below finds the text where it was. Only an untitled score, gone with its tab,
+    // cannot be.
+    let doc = vscode.workspace.textDocuments.find(d => d.uri.toString() === uri.toString());
+    if (!doc && uri.scheme !== 'untitled') {
+        try {
+            doc = await vscode.workspace.openTextDocument(uri);
+        } catch {
+            doc = undefined;
+        }
+    }
     if (!doc) {
         vscode.window.showErrorMessage('Lily#: the document was closed; nothing was applied.');
         return 'Not written — the document was closed.';

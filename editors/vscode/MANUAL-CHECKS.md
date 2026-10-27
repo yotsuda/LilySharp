@@ -243,6 +243,7 @@ edocs/HANDOFF.mde §2 R13 ⒝・OMR の提案 B1〜B6（e..\LilySharp-Omr\docs\r
 - [ ] **C22**（第1011・プレビューの右クリックのグループ・⚠️ package.json が変わった＝Reload Window を 2 回）: プレビューで和音の音符を右クリック → 区切り線は 2 本＝「Ask AI… / Select Chord / Select This Bar（/ Clear Selection / Edit Bars Beside the Scan）」「Play from Here（/ Stop Playback）」「Fit Width / Reset Zoom」の 3 群。元画像の右クリックも Edit Bars Beside the Scan と Fit Width・Reset Zoom の 2 群。
 - [ ] **C23**（第1012・作曲は relative で開く）: Compose with AI… → 開いた曲に `octave absolute` が無い（relative）・プレビューで鳴らすと音の高さがおかしくない。出力チャネル「Lily# AI」に「stays in absolute octaves」が出たら、変換できずに absolute のまま開いた（理由つき）。
 - [ ] **C24**（第1013・楽器の音域／候補の見出し）: ギターのパート（`instrument guitar`）のある曲で Ask AI「ギターのコード図を足して」→ 候補に「below the range of the Guitar」がほぼ出ない。警告や AI の言葉が長いとき、候補ペインの見出しは数行で止まり、スクロールバーで全部読める（After／Before のボタンは右に残る）。
+- [ ] **C25**（第1014・未保存の曲に Accept）: 未保存の .lys（Untitled-1）を保存して閉じ、Compose with AI で新しい曲（また Untitled-1）→ 保存せずに Ctrl+I で頼む → Accept → 書き込まれる（「the document was closed」が出ない）。
 
 ## 4. §2 R13 ⒝ — 差分頁の配信（実機未確認・第404）
 

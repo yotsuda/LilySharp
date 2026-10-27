@@ -102,6 +102,21 @@ describe('the instruments\' ranges, and a head that holds a long list', () => {
     });
 });
 
+// Owner's report 2026-10-27: Accept said "the document was closed" — VS Code had let go of a
+// document no editor showed while the AI thought.
+describe('an Accept on a file no editor shows', () => {
+    const transform = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'aiTransform.ts'), 'utf8');
+    // The case of the report: an unsaved composed piece, Ctrl+I on it, Accept — the name
+    // "Untitled-1" had been saved once before, and its old move pointed at a file not open.
+    it('takes an open document by its own name before any move, and forgets a name given out again', () => {
+        assert.match(transform, /function currentUri\(uri: vscode\.Uri\): vscode\.Uri \{\s*if \(vscode\.workspace\.textDocuments\.some\(d => d\.uri\.toString\(\) === uri\.toString\(\)\)\) \{\s*return uri;/);
+        assert.match(transform, /onDidOpenTextDocument\(d => \{\s*if \(d\.uri\.scheme === 'untitled'\) \{ movedUris\.delete\(d\.uri\.toString\(\)\); \}/);
+    });
+    it('opens the file again rather than saying it was closed; an untitled score alone cannot be', () => {
+        assert.match(transform, /if \(!doc && uri\.scheme !== 'untitled'\) \{\s*try \{\s*doc = await vscode\.workspace\.openTextDocument\(uri\);/);
+    });
+});
+
 describe('a revision is of the candidate', () => {
     const transform = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'aiTransform.ts'), 'utf8');
 

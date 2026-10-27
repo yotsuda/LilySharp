@@ -79,6 +79,10 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ### Ask AI
 
+- **Accept on an unsaved score no longer says "the document was closed".** VS Code gives the name
+  `Untitled-1` out again, and a move remembered for an earlier `Untitled-1` that was saved sent the
+  Accept to that old file. An open document is now taken by its own name first, and a name given out
+  again forgets its old move. A file no editor shows is opened again rather than refused.
 - **The AI is told each instrument's range.** Ask AI and Compose with AI carry a table of every
   instrument preset's range — as it sounds, and as written in that part — and the rule to keep every
   note of a part with an `instrument` inside it (asked for guitar diagrams, the AI had written the
