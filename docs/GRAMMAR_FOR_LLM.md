@@ -1122,6 +1122,12 @@ it should sound like the ensemble asked for. What makes it music:
   (`e'8~ | e'4`), chord tones on the strong beats and the colour tones (9ths, 13ths, the ♭9) for
   tension. The head in sections of 8 bars (AABA, ABAC — 32 bars, or a 16-bar or 12-bar blues). The
   sheet is written `score { chords NAME  staff lead }`, the row above its staff.
+- **A piano piece** is written for two hands that fill the keyboard between them: the left
+  hand's figure — broken chords, an octave bass, a root-and-fifth beat, an ostinato — reaching
+  up toward middle C, the right hand's melody round C5 with its harmony under it (thirds, sixths,
+  chords on the strong beats), never an octave of empty keyboard between the hands for long. A
+  left hand may keep one note value throughout: its figure is the rhythm; the melody is where the
+  rhythm varies.
 - **Texture**: one voice carries the melody while the others accompany — broken chords,
   repeated eighths, a moving bass — and the roles pass between the parts. Not every part in the
   same rhythm; not whole notes everywhere.

@@ -160,6 +160,15 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1021セッションの経緯
+
+### 1.1 第1021セッション（2026-10-27・YT-DELL2）
+
+第1020 と同じ会話の続き。`-Start p1021`（開始 HEAD `801187b4f`・full **13388 / 0 / 2 / 13390**・第1019 を ARCHIVE へ）。作業場所は Lab `sessions/p1021/`。
+- **ユーザー「あなた（チャット）に作曲を頼むとそれなりの曲になるのに、VS Code から頼むと全然だめ。同じモデルなのに。Lily# 固有でプロンプトに書くべきことが書けていないのでは」→ 5 案を出し「進めて。VS Code のログもヒントに」＋「手本はない方が良いのでは」**。ログ（`%APPDATA%\Code\logs\…\1-Lily# Extension.log`）は 1 手 1 行だけで、送った文・返事は残っていなかった（最初の案は「左手が 100% 8 分」で差し戻し・後で「終わり方が不自然」と追加依頼）。読んで分かったこと: ⒜ 作曲も編集と同じ system prompt（"You transform fragments…"＋返事の形の規則）／⒝ 考える場がない（note は 2 文・後は楽譜だけ）／⒞ **GRAMMAR の「Compose a piece」の手本 3 曲がどれも 8 小節前後・section ごとに tempo**＝来た曲は 4 小節×2・section ごとに tempo で手本の写し／⒟ 長さ・楽句・終止・和声の指示が無い。直し: ① **`composeSystemPrompt`**（作曲家として・`<plan>`→`<note>`→`<file>`・plan に調・形式と小節数（指定なければ 32〜64・4/8 小節の楽句）・楽句ごとの和声と終止・主題・各パートの役と音域・終わり方・絶対オクターブで各パートの素の `c`（piano-right/violin/楽器なし C4・piano-left/viola/cello C3・flute C5））・`replyForm(whole, compose)`・`taskPrompt(…, compose)`。② **`withoutPlan`／`planOf`**（`splitNote` が先に plan を外す＝前書きにも候補にも出ない・閉じない plan は末尾まで）。③ **手本 3 曲を GRAMMAR から外し `LilySharp.Tests/ComposedPieces.cs` へ**（Fixtures に置くと snapshot の掃きが拾う）・recipe の「A plan」を「形式と長さ・和声が先・主題・家の調と一つのテンポ・終わり・音域」に。④ **`CompositionChecks` に形式**: 16 小節未満・最初と最後の `key` の主音／旋法が違う・最後の打点の最低音が終わりの調の主音でない（chords 行と drums は除く・小節数は `1 + BarTicks(0<b<終わり)`）。⑤ **出力 *Lily# AI Exchange***（`logExchange`／`logReply`・文法は長さに置換・assistant は reply として 1 回）。網 C# `CompositionChecksTests`（手本 3 曲は `Flatness` で形式以外が空・新 2 本）・npm 506（`aiTransformCore` の plan 1・`aiNewPiece` の作曲家 4）・tsc 0。両 CHANGELOG・MANUAL-CHECKS C33。
+- 気づき（未着手）: OMR の AI 修正で `omr verify` が "no lysc found" で走っていない（同じログ・11:51）。
+判定（2026-10-27・第1021 の終わり）: 次はユーザーの指示（C9〜C33）。作曲の質はユーザーの実機と *Lily# AI Exchange* の全文を見てから。
+
 ## 以下は第1020セッションの経緯
 
 ### 1.1 第1020セッション（2026-10-27・YT-DELL2）

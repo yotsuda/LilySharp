@@ -92,6 +92,12 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ### Ask AI
 
+- **A composed piano piece is written for the piano.** A left hand's steady figure (broken chords,
+  a root-and-fifth beat) is no longer sent back as "one note value" — told so, the AI broke good left
+  hands into meaningless dotted notes and rests; hands an octave apart, or a right hand whose middle
+  is over G5, go back instead. The AI plans how the character asked for is heard (for "cool": a
+  driving rhythm, syncopation, octaves and chords on the beat) and is told how two hands fill the
+  keyboard.
 - **A composed piano piece's right hand sounds where it was planned, and its staves are not
   labelled 右手 / 左手.** The AI is warned that Lily#'s octaves are not LilyPond's (in
   `piano-right` middle C is the bare `c`), plans each register as it will write it, and names the

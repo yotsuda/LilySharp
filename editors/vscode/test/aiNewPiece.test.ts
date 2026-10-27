@@ -102,6 +102,11 @@ describe('the instruments\' ranges, and a head that holds a long list', () => {
         assert.match(grammar, /left hand lies mostly between C2 and C4, round C3/);
         assert.match(grammar, /in `instrument piano-left` a bare `c` is C3/);
     });
+    // Owner's review 2026-10-27: an octave of empty keyboard between the hands, a left hand broken up.
+    it('tells it how a piano piece fills the keyboard, and that a left hand may keep one value', () => {
+        assert.match(grammar, /\*\*A piano piece\*\* is written for two hands that fill the keyboard between them/);
+        assert.match(grammar, /A\s+left hand may keep one note value throughout: its figure is the rhythm/);
+    });
     // Owner's request 2026-10-27: a part names its instrument and lets the preset bring its clef and octave.
     it('tells the AI to name the instrument and write no clef or octave beside it, and shows it so', () => {
         assert.match(grammar, /A part of a known instrument names it with `instrument` and writes no `clef` or `octave`\s+beside it\./);
@@ -162,6 +167,11 @@ describe('the composer\'s prompt', () => {
         assert.match(transform, /C3 for `piano-left`, `viola`, `cello`/);
         assert.match(transform, /These are NOT LilyPond\\'s octaves,/);
         assert.match(transform, /AND as you will write/);
+    });
+    // Owner's review 2026-10-27: the piece was tidy but not "cool" — the character is to be planned
+    // as the devices that make it.
+    it('has the plan name the devices that make the character asked for', () => {
+        assert.match(transform, /how the character asked for',\s*'\s*is heard — the devices that make it, named/);
     });
     // Owner's report 2026-10-27: a piano piece labelled its staves 右手 and 左手.
     it('names the parts by the instrument, a solo piano none', () => {

@@ -127,21 +127,20 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1023セッション（2026-10-27・YT-DELL2）
+
+第1022 と同じ会話の続き。`-Start p1023`（開始 HEAD `5ec1e0fc0`・full **13392 / 0 / 2 / 13394**＝本便の網 1 本が既に入っていた・第1021 を ARCHIVE へ）。作業場所は Lab `sessions/p1023/`（`exchange.log`＝今回の *Lily# AI Exchange*）。
+- **ユーザー「少し改善したかな。見てみて」→ 講評（名前・左手音域・LilyPond の癖は直った／右手 D5–E6 は AI の意図的な設計／両手の間が 1 オクターブ空き／右手の旋律がほぼ同じリズム型の単旋律／左手の 4 分の根音 5 度を「99% 4 分」で差し戻し → 無意味な付点と休符）と 4 案 → ユーザー「良い」**: ① `CompositionChecks` の「一つの音価」から**ピアノの左手を除外**（`hands` の判定を前へ移した・band のベースと同じ扱い）。② **両手の隙間**（左手の 90 分位と右手の 10 分位の差が 12 半音超）を所見に・`PercentileOf` を共通に。③ 右手の中央値の上限 A5 → **G5**（79）。④ `composeSystemPrompt` の plan に「頼まれた性格をどう聴かせるか＝手段を名指しで（かっこいい: 推進するリズム・シンコペーションとアクセント・強拍のオクターブと和音・山場への走句）」・GRAMMAR の Compose a piece に「**A piano piece**」（両手で鍵盤を埋める・左手の音型は真ん中の C へ・右手は C5 前後で下に和声・左手は一つの音価でよい）。網 C# +1（`ALeftHandsFigure_IsNotFlat_ButHandsFarApartAre`）・npm 509・tsc 0。両 CHANGELOG・MANUAL-CHECKS C35。
+判定（2026-10-27・第1023 の終わり）: 次はユーザーの指示（C9〜C35）。
+
+## 以下は第1022セッションの経緯
+
 ### 1.1 第1022セッション（2026-10-27・YT-DELL2）
 
 第1021 と同じ会話の続き。`-Start p1022`（開始 HEAD `3f8e3a9ff`・開始時の build は本便の捨て計器 `Zz1022ProbeTests` の using 漏れで EXIT 1＝計器は消した・基準は第1021 の終わり **13390 / 0 / 2 / 13392**・第1020 を ARCHIVE へ）。作業場所は Lab `sessions/p1022/`。
 - **ユーザー「だいぶ良くなった。でもパート名が右手・左手（日本語で一般的でない）・右手の音域が高すぎる」（`Untitled-1.lys`）**: *Lily# AI Exchange*（第1021 の記録・`exchange.log` に写した）で原因が見えた: plan は「右手は裸の c=C4、主に D5〜A5」と正しく書いたのに、本文は `d'`（= D6）`a'`（= A6）＝**LilyPond の絶対オクターブ（`c'` = 真ん中の C）の癖**で 1 オクターブ上（実測 tessitura D5–G6）。左手は piano-left の C3 が LilyPond と一致するので合っていた。名前は大譜表で両手に名前を書くと段ごとに 2 回出る（計器で確認・群に名前の構文は無い）。直し: ① `composeSystemPrompt` に「LilyPond のオクターブではない・piano-right の真ん中の C は素の `c`」と、plan の音域を**書く音名でも**（`d` – `a'`）・名前の規則（独奏ピアノは名前なし・アンサンブルのピアノは上の段に 1 回・右手/L.H./右手/左手 は書かない）。② GRAMMAR の Pitches と Compose a piece の Instruments に同じ 2 つ。③ `CompositionChecks`: 右手の閾値 D6 → **A5**（81）・指摘文に「LilyPond の `c'` ではない」・**手の名前の段**（`HandLabel`）を所見に。網 C# +1・npm +1（507）・tsc 0。両 CHANGELOG・MANUAL-CHECKS C34。
 - 気づき（未着手）: 最初の案は両手とも 8 分の連続で「99% が 8 分」で差し戻された。左手の分散和音は 8 分の連続が普通＝この所見がピアノの左手には厳しすぎるかもしれない（ユーザー判断）。
 判定（2026-10-27・第1022 の終わり）: 次はユーザーの指示（C9〜C34）。
-
-## 以下は第1021セッションの経緯
-
-### 1.1 第1021セッション（2026-10-27・YT-DELL2）
-
-第1020 と同じ会話の続き。`-Start p1021`（開始 HEAD `801187b4f`・full **13388 / 0 / 2 / 13390**・第1019 を ARCHIVE へ）。作業場所は Lab `sessions/p1021/`。
-- **ユーザー「あなた（チャット）に作曲を頼むとそれなりの曲になるのに、VS Code から頼むと全然だめ。同じモデルなのに。Lily# 固有でプロンプトに書くべきことが書けていないのでは」→ 5 案を出し「進めて。VS Code のログもヒントに」＋「手本はない方が良いのでは」**。ログ（`%APPDATA%\Code\logs\…\1-Lily# Extension.log`）は 1 手 1 行だけで、送った文・返事は残っていなかった（最初の案は「左手が 100% 8 分」で差し戻し・後で「終わり方が不自然」と追加依頼）。読んで分かったこと: ⒜ 作曲も編集と同じ system prompt（"You transform fragments…"＋返事の形の規則）／⒝ 考える場がない（note は 2 文・後は楽譜だけ）／⒞ **GRAMMAR の「Compose a piece」の手本 3 曲がどれも 8 小節前後・section ごとに tempo**＝来た曲は 4 小節×2・section ごとに tempo で手本の写し／⒟ 長さ・楽句・終止・和声の指示が無い。直し: ① **`composeSystemPrompt`**（作曲家として・`<plan>`→`<note>`→`<file>`・plan に調・形式と小節数（指定なければ 32〜64・4/8 小節の楽句）・楽句ごとの和声と終止・主題・各パートの役と音域・終わり方・絶対オクターブで各パートの素の `c`（piano-right/violin/楽器なし C4・piano-left/viola/cello C3・flute C5））・`replyForm(whole, compose)`・`taskPrompt(…, compose)`。② **`withoutPlan`／`planOf`**（`splitNote` が先に plan を外す＝前書きにも候補にも出ない・閉じない plan は末尾まで）。③ **手本 3 曲を GRAMMAR から外し `LilySharp.Tests/ComposedPieces.cs` へ**（Fixtures に置くと snapshot の掃きが拾う）・recipe の「A plan」を「形式と長さ・和声が先・主題・家の調と一つのテンポ・終わり・音域」に。④ **`CompositionChecks` に形式**: 16 小節未満・最初と最後の `key` の主音／旋法が違う・最後の打点の最低音が終わりの調の主音でない（chords 行と drums は除く・小節数は `1 + BarTicks(0<b<終わり)`）。⑤ **出力 *Lily# AI Exchange***（`logExchange`／`logReply`・文法は長さに置換・assistant は reply として 1 回）。網 C# `CompositionChecksTests`（手本 3 曲は `Flatness` で形式以外が空・新 2 本）・npm 506（`aiTransformCore` の plan 1・`aiNewPiece` の作曲家 4）・tsc 0。両 CHANGELOG・MANUAL-CHECKS C33。
-- 気づき（未着手）: OMR の AI 修正で `omr verify` が "no lysc found" で走っていない（同じログ・11:51）。
-判定（2026-10-27・第1021 の終わり）: 次はユーザーの指示（C9〜C33）。作曲の質はユーザーの実機と *Lily# AI Exchange* の全文を見てから。
 
 ## 2. 開いている作業
 

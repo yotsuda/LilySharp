@@ -112,23 +112,6 @@ public static class CompositionChecks
             .GroupBy(n => n.Part)
             .ToDictionary(g => g.Key, g => g.GroupBy(n => n.StartTick).Select(c => (Start: c.Key, Length: c.Max(n => n.DurationTicks))).OrderBy(o => o.Start).ToList());
 
-        // A part of one note value — not a band's bass, whose driving eighths are the idiom.
-        var bandBasses = band
-            ? parts.Where(p => RoleOf(p).Bass).Select(p => p.Name.Text).ToHashSet(System.StringComparer.Ordinal)
-            : [];
-        foreach (var (part, onsets) in byPart)
-        {
-            if (onsets.Count < 16 || bandBasses.Contains(part))
-                continue;
-            // A note's value as it reads: the distance to the next onset (a staccato quarter sounds
-            // shorter than it is written), the last note its own length.
-            var values = onsets.Select((o, i) => Value(i + 1 < onsets.Count ? onsets[i + 1].Start - o.Start : o.Length, tpq));
-            var common = values.GroupBy(v => v).OrderByDescending(g => g.Count()).First();
-            if (common.Count() >= onsets.Count * 0.8)
-                findings.Add($"{part}: {common.Count() * 100 / onsets.Count}% of its notes are {common.Key}s — mix long and short notes, "
-                    + "rests, dotted rhythms; give the line a rhythm of its own.");
-        }
-
         // A piano's hand far from where a pianist's hand plays (owner's report 2026-10-27: "かっこいいピアノの
         // 曲" came back with its left hand between E1 and G2 — the AI wrote `e,,` as if a bare `c`
         // were C4, and in `instrument piano-left` it is C3). The middle of the hand's sounding time
@@ -148,6 +131,27 @@ public static class CompositionChecks
                     hands.TryAdd(staves[1], true);
                 }
             }
+
+        // A part of one note value — not a band's bass, whose driving eighths are the idiom, nor a
+        // piano's left hand, whose figure (broken chords, a root-and-fifth beat, an ostinato) keeps one
+        // value by nature (owner's decision 2026-10-27: told so, the AI broke two good left hands into
+        // dotted notes and rests that meant nothing).
+        var bandBasses = band
+            ? parts.Where(p => RoleOf(p).Bass).Select(p => p.Name.Text).ToHashSet(System.StringComparer.Ordinal)
+            : [];
+        foreach (var (part, onsets) in byPart)
+        {
+            if (onsets.Count < 16 || bandBasses.Contains(part) || hands.GetValueOrDefault(part))
+                continue;
+            // A note's value as it reads: the distance to the next onset (a staccato quarter sounds
+            // shorter than it is written), the last note its own length.
+            var values = onsets.Select((o, i) => Value(i + 1 < onsets.Count ? onsets[i + 1].Start - o.Start : o.Length, tpq));
+            var common = values.GroupBy(v => v).OrderByDescending(g => g.Count()).First();
+            if (common.Count() >= onsets.Count * 0.8)
+                findings.Add($"{part}: {common.Count() * 100 / onsets.Count}% of its notes are {common.Key}s — mix long and short notes, "
+                    + "rests, dotted rhythms; give the line a rhythm of its own.");
+        }
+
         // A staff labelled by the hand that plays it (owner's report 2026-10-27: a piano piece printed
         // 右手 and 左手 beside its staves) — a score names the instrument, and a solo piano none.
         var handNamed = parts.Where(p => new[] { p.DisplayName, p.ShortName }.Any(n => n != null && HandLabel.IsMatch(n)))
@@ -160,19 +164,21 @@ public static class CompositionChecks
             .Where(n => n.Channel != 9)
             .GroupBy(n => n.Part)
             .ToDictionary(g => g.Key, g => g.ToList());
+        // The pitch under which a share of the hand's sounding time lies.
+        static int PercentileOf(List<(string Part, int Pitch, int DurationTicks, int Channel)> notes, double p)
+        {
+            var ordered = notes.OrderBy(n => n.Pitch).ToList();
+            double total = ordered.Sum(n => (double)System.Math.Max(1, n.DurationTicks)), sum = 0;
+            foreach (var n in ordered)
+                if ((sum += System.Math.Max(1, n.DurationTicks)) >= p * total - 1e-9)
+                    return n.Pitch;
+            return ordered[^1].Pitch;
+        }
         foreach (var (part, left) in hands)
         {
             if (!sounding.TryGetValue(part, out var notes) || notes.Count < 8)
                 continue;
-            int Percentile(double p)
-            {
-                var ordered = notes.OrderBy(n => n.Pitch).ToList();
-                double total = ordered.Sum(n => (double)System.Math.Max(1, n.DurationTicks)), sum = 0;
-                foreach (var n in ordered)
-                    if ((sum += System.Math.Max(1, n.DurationTicks)) >= p * total - 1e-9)
-                        return n.Pitch;
-                return ordered[^1].Pitch;
-            }
+            int Percentile(double p) => PercentileOf(notes, p);
             int middle = Percentile(0.5);
             // The octaves a preset writes in (a braced hand with no instrument writes from C4, or from its own `octave`).
             bool preset = parts.Any(p => p.Name.Text == part && InstrumentOf(p).Length > 0);
@@ -186,6 +192,19 @@ public static class CompositionChecks
                 findings.Add($"{part}: {mostly} — high above a pianist's right hand, which lies mostly between C4 and C6, round C5: "
                     + "move it down an octave."
                     + (preset ? " In `instrument piano-right` (absolute octaves) a bare `c` is C4 — middle C, not LilyPond's `c'` — so C5 is `c'` and C6 `c''`." : ""));
+        }
+        // The two hands far apart, the middle of the keyboard left empty (owner's report 2026-10-27:
+        // a left hand mostly up to D4 under a right hand mostly from D5 — a thin, hollow sound).
+        var lefts = hands.Where(h => h.Value && sounding.TryGetValue(h.Key, out var n) && n.Count >= 8).Select(h => h.Key).ToList();
+        var rights = hands.Where(h => !h.Value && sounding.TryGetValue(h.Key, out var n) && n.Count >= 8).Select(h => h.Key).ToList();
+        if (lefts.Count == 1 && rights.Count == 1)
+        {
+            int lhTop = PercentileOf(sounding[lefts[0]], 0.9), rhFloor = PercentileOf(sounding[rights[0]], 0.1);
+            if (rhFloor - lhTop > WidestGapBetweenHands)
+                findings.Add($"{rights[0]}, {lefts[0]}: the hands stand far apart — the left hand mostly up to {PartRanges.SpelledFromPitch(lhTop)}, "
+                    + $"the right hand mostly from {PartRanges.SpelledFromPitch(rhFloor)} — and the middle of the keyboard is empty: let the left "
+                    + "hand's figure reach up toward middle C, and give the right hand's melody its harmony under it (thirds, sixths, "
+                    + "chords on the strong beats).");
         }
 
         // The length and the ending (owner's report 2026-10-27: the composed piano piece was 8 bars, two
@@ -242,9 +261,14 @@ public static class CompositionChecks
     }
 
     // The middle of a piano hand's sounding time (MIDI) past which the hand is out of its usual
-    // register: a left hand whose middle is under F2, a right hand whose middle is over A5 (owner's
-    // report 2026-10-27: a right hand between D5 and G6, written by LilyPond's octaves, was "too high").
-    private const int LeftHandLowestMiddle = 41, RightHandHighestMiddle = 81;
+    // register: a left hand whose middle is under F2, a right hand whose middle is over G5 (owner's
+    // reports 2026-10-27: a right hand between D5 and G6, written by LilyPond's octaves, was "too
+    // high"; one planned for D5–E6 still sat high).
+    private const int LeftHandLowestMiddle = 41, RightHandHighestMiddle = 79;
+
+    // Semitones between the top of the left hand's tessitura and the bottom of the right hand's
+    // past which the middle of the keyboard is empty: an octave.
+    private const int WidestGapBetweenHands = 12;
 
     // A label that names a hand, not an instrument.
     private static readonly System.Text.RegularExpressions.Regex HandLabel = new(

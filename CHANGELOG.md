@@ -70,6 +70,10 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Ask AI
 
+- `[editor]` **Composing for the piano.** The composition check leaves a piano's left hand out of the
+  one-note-value finding, adds hands whose tessituras stand more than an octave apart, and lowers the
+  right hand's ceiling to G5; the composer's plan names the devices that make the character asked
+  for, and GRAMMAR_FOR_LLM says how a piano piece's two hands fill the keyboard.
 - `[editor]` **Composing: LilyPond's octaves, and staves named by the hand.** The composer's prompt
   and GRAMMAR_FOR_LLM say that Lily#'s absolute octaves are not LilyPond's (`c'` is not middle C in a
   part anchored at C4) and that a staff is named by its instrument — a solo piano names no part; the

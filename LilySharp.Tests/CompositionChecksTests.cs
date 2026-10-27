@@ -148,6 +148,25 @@ public class CompositionChecksTests
             f => f.Contains("labelled by the hand"));
     }
 
+    // Owner's review 2026-10-27: a left hand of steady root-and-fifth quarters is a piano's figure,
+    // not a flat line (told so, the AI broke it into dotted notes and rests); and that left hand
+    // up to D3 under a right hand from D5 left the middle of the keyboard empty.
+    [Fact]
+    public void ALeftHandsFigure_IsNotFlat_ButHandsFarApartAre()
+    {
+        string Bars(string bar, int n) => string.Concat(Enumerable.Repeat(bar + " | ", n));
+        string apart = Piano(Hands, Bars("d'8 f' a'4 g'8 f' e'4", 8) + Bars("a'4 f' d'2", 8), Bars("d,4 a, d a,", 16));
+        var findings = CompositionChecks.Of(apart);
+        Assert.DoesNotContain(findings, f => f.StartsWith("lh:") && f.Contains("of its notes are"));
+        Assert.Contains(findings, f => f.StartsWith("rh, lh: the hands stand far apart") && f.Contains("up to D3") && f.Contains("from D5"));
+        // The same right hand an octave down, over the same figure: close enough.
+        string close = Piano(Hands, Bars("d8 f a4 g8 f e4", 8) + Bars("a4 f d2", 8), Bars("d,4 a, d a,", 16));
+        Assert.DoesNotContain(CompositionChecks.Of(close), f => f.Contains("far apart") || f.Contains("a pianist's"));
+        // A right hand's line of one value is still flat.
+        Assert.Contains(CompositionChecks.Of(Piano(Hands, Bars("d8 f a f e f g e", 16), Bars("d,2 a,", 16))),
+            f => f.StartsWith("rh: 100% of its notes are eighth notes"));
+    }
+
     [Fact]
     public void ARightHandOverItsRegister_IsToldToMoveDown()
     {
