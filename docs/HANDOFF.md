@@ -127,20 +127,20 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1007セッション（2026-10-27・YT-DELL2）
+
+第1006 と同じ会話の続き。`-Start p1007`（開始 HEAD `1868ab667`・full **13377 / 0 / 2 / 13379**・第1005 を ARCHIVE へ）。作業場所は Lab `sessions/p1007/`。
+- **ユーザー「your edit を選択した状態でも、AI からの返答がきたらそのテキストをエントリのヘッダに表示して」→「AI からの返答であることを明確に。AI: とつけるとか」**: `rowParts` の返事の文を `aiSaid` に括り出し、`<b>AI:</b>` 付きの `aiLine` を、編集中は「Your edit.」の後ろ、そうでなければ単独で。網 `omrAiFixPage.test` 2 行（npm 489）。両 CHANGELOG・MANUAL-CHECKS C20。
+判定（2026-10-27・第1007 の終わり）: 次はユーザーの指示（C9〜C20）。
+
+## 以下は第1006セッションの経緯
+
 ### 1.1 第1006セッション（2026-10-27・YT-DELL2）
 
 第1005 と同じ会話の続き。`-Start p1006`（開始 HEAD `8aeb7564a`・full **13377 / 0 / 2 / 13379**・第1004 を ARCHIVE へ）。作業場所は Lab `sessions/p1006/`。
 - **ユーザー「OMR 結果編集ペインで編集してから Ask AI したら、元のスキャンテキストではなくユーザーの編集をベースに」**: `taskPromptOf` は attempt があれば `<bar>` に編集（「Start from this line, not from the reader's」）・`<reader>` に元の読み（参考）・memo は「before the person's edit」・コンパイラの報告は編集のもの（`fixOne` が `checkCandidate` で編集を検査）・`parseProposal` の「unchanged」は編集と比べる。編集から頼んだ答えは Draft に入り編集は `stashed`（答えの間に打ち直した編集は残す）。
 - **途中で「各エントリの undo my edit を削除。画像の直前の your edit ラベルの代わりに clickable な 2 つのラベル」→「your edit / AI proposal の方がわかりやすい」**: Draft の上（`.over.draft-of`、`innerHTML` に）を「**your edit** / AI proposal」（AI の案が無ければ「the bar as it stands」）＝表示中は太字・もう一方はボタン（既存の `revert`／`restore` の動作）。行の説明の 3 つのリンクは消した。網 `omrAiFixCore.test` 2 本・`omrAiFixPage.test` 直し（npm 489）。site scan・両 CHANGELOG・MANUAL-CHECKS C19。
 判定（2026-10-27・第1006 の終わり）: 次はユーザーの指示（C9〜C19）。
-
-## 以下は第1005セッションの経緯
-
-### 1.1 第1005セッション（2026-10-27・YT-DELL2）
-
-第1004 と同じ会話の続き。`-Start p1005`（開始 HEAD `d94180a13`・full **13377 / 0 / 2 / 13379**・第1003 を ARCHIVE へ）。作業場所は Lab `sessions/p1005/`。
-- **ユーザー「OMR の編集ペインで Ctrl+wheel でズームアウトすると、対象の小節がどれだか分からなくなる。対象の小節が必ず枠内に表示されるようにスクロール範囲を制限して。ズームインしたとき対象の小節に戻れる」**: ページの `homeOf`（絵の最初の viewBox＝切り抜きを初めて動かした時に `data-home` へ・`setUp` で切り直せば消す）と `clampView`（縮小中は切り抜きを丸ごと含む・拡大中は切り抜きの内側に留まる・各軸）をホイールとドラッグに。倍率は切り抜きの幅の 1/10〜6 倍。網 `omrAiFixPage.test` 1 本（`clampView` を `new Function` で実行・npm 488）。site scan・両 CHANGELOG・MANUAL-CHECKS C18。
-判定（2026-10-27・第1005 の終わり）: 次はユーザーの指示（C9〜C18）。
 
 ## 2. 開いている作業
 

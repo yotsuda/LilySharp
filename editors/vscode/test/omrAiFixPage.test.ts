@@ -119,6 +119,9 @@ describe('the doors to the bars of the marks', () => {
         assert.match(fix, /: r\.stashed && can\s*\? `\$\{pick\('your edit', 'restore', `Show your edit: \$\{r\.stashed\.text\}`\)\} \/ \$\{on\(plain\)\}`/);
         assert.match(fix, /from\.innerHTML = m\.source;/);
         assert.doesNotMatch(fix, /undo my edit<|use the AI's<|back to my edit</);
+        // What the AI said, marked "AI:", with the person's edit in the Draft too.
+        assert.match(fix, /const aiLine = aiSaid \? `<span class="ai-said"><b>AI:<\/b> \$\{esc\(aiSaid\)\}<\/span>` : '';/);
+        assert.match(fix, /'Your edit — checking…'\)\s*\+ \(aiLine \? ` \$\{aiLine\}` : ''\)/);
         assert.match(fix, /vscode\.postMessage\(\{ action: 'restore', index: Number\(i\), seq: seqs\[i\] \}\);/);
     });
 

@@ -1476,14 +1476,20 @@ function rowParts(run: FixRun, r: FixRow): RowParts {
         : '';
     const sure = r.proposal?.confidence === null || r.proposal?.confidence === undefined || edited ? ''
         : ` <span class="dim">· confidence ${r.proposal.confidence.toFixed(2)}</span>`;
+    // What the AI said, marked as its own (owner's requests 2026-10-27): shown with the person's
+    // edit too, so an answer that came while the edit is in the Draft is still read.
+    const aiSaid = !r.asked ? ''
+        : !r.proposal ? `No answer: ${r.noAnswer ?? 'the reply was not the JSON asked for'}.`
+        : r.proposal.unchanged ? `The model reads the bar as right${r.proposal.reason.replace(/^unchanged( — )?/, '') ? `: ${r.proposal.reason.replace(/^unchanged( — )?/, '')}` : '.'}`
+        : !r.proposal.bar ? (failed ? `No proposal passed: ${r.gate!.problems.join(' / ') || r.proposal.reason}` : r.proposal.reason || 'The model gave no reason.')
+        : r.gate?.verify === false ? `${r.proposal.reason ? `${r.proposal.reason} — ` : ''}${r.gate.problems.filter(p => p.startsWith('the scan says')).join(' / ')}`
+        : r.proposal.reason || '';
+    const aiLine = aiSaid ? `<span class="ai-said"><b>AI:</b> ${esc(aiSaid)}</span>` : '';
     const reason = edited
         ? esc(gate && gate.problems.length ? `Your edit: ${gate.problems.join(' / ')}` : gate ? 'Your edit.' : 'Your edit — checking…')
+            + (aiLine ? ` ${aiLine}` : '')
         : !r.asked ? esc(r.ai ? '' : 'Click a note or the text under the picture to edit this bar.')
-        : esc(!r.proposal ? `No answer: ${r.noAnswer ?? 'the reply was not the JSON asked for'}.`
-            : r.proposal.unchanged ? `The model reads the bar as right${r.proposal.reason.replace(/^unchanged( — )?/, '') ? `: ${r.proposal.reason.replace(/^unchanged( — )?/, '')}` : '.'}`
-            : !r.proposal.bar ? (failed ? `No proposal passed: ${r.gate!.problems.join(' / ') || r.proposal.reason}` : r.proposal.reason || 'The model gave no reason.')
-            : r.gate?.verify === false ? `${r.proposal.reason ? `${r.proposal.reason} — ` : ''}${r.gate.problems.filter(p => p.startsWith('the scan says')).join(' / ')}`
-            : r.proposal.reason || '');
+        : aiLine;
     // The missing bar line, one click away (owner's request 2026-10-27): a scan's reader that
     // missed a barline leaves two bars on one line, and the compiler knows where it goes.
     const barLine = r.barFix && can

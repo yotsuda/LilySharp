@@ -29,7 +29,8 @@ workflow attaches that section to the GitHub Release verbatim.
 - `[editor]` **The scan view's head button is Edit N Bars Beside the Scan…** (it was Fix N marks with
   AI…), and the preview's and the scan view's right-click no longer offer Fix OMR Marks with AI…; a
   row asking the AI shows a turning ring and a pulsing word; *your edit* / *AI proposal* over the
-  draft switch between the two, and Ask AI on an edited row starts from the edit. `[editor]` the preview's right-click on a chord's note has *Select
+  draft switch between the two, and Ask AI on an edited row starts from the edit; what the AI said
+  shows in the row's head marked "AI:", with your edit in the draft too. `[editor]` the preview's right-click on a chord's note has *Select
   Chord* (the caret past its `>`), and a caret on a chord as a whole lights all of it; the field completes as the editor does (`[lsp]` `lilysharp/completeText`:
   the completion of a text held outside any editor, each item made plain for a field). A bar beside the scan is cropped from
   the line it is written on now (it went by the reader's line numbers, wrong once a line was added
