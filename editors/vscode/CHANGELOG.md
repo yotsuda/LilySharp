@@ -4,6 +4,11 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+### Preview
+
+- **A `@todo` memo stays clear of the tempo** — it dropped onto the tempo (and other marks over the
+  staff) once the preview drew the score a second time, after a save for one.
+
 ### Playback
 
 - **p, mf, f … play closer together, as in LilyPond.** The dynamics take LilyPond's levels (pp 62,

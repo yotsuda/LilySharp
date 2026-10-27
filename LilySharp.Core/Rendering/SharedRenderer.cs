@@ -253,10 +253,15 @@ internal static partial class SharedRenderer
                 var measureToSystemTopYUp = BuildMeasureToSystemTopYUp(page);
                 var measureToSystem = BuildMeasureToSystem(page);
                 var os = new OssiaShrink(ossiaStaves, measureToSystem);
-                DrawTies(layout, measureToSystemTopYUp, os, gc, fragHost, fragments, pageIndex, page);
-                DrawSlurs(layout, measureToSystemTopYUp, os, gc, fragHost, fragments, pageIndex, page);
+                // The overlays too are drawn live on a page with memos (pageFragHost): a replayed
+                // fragment writes text past the ink recorder, so the memos' search saw no tempo,
+                // no mark, no tie there and set a memo over them — on the SECOND render only, the
+                // first having nothing to replay (owner's report 2026-10-27, tempo-todo.lys: "after
+                // Ctrl+S the memo drops onto the tempo").
+                DrawTies(layout, measureToSystemTopYUp, os, gc, pageFragHost, fragments, pageIndex, page);
+                DrawSlurs(layout, measureToSystemTopYUp, os, gc, pageFragHost, fragments, pageIndex, page);
                 DrawDynamics(score.TextMetrics, layout, measureToSystemTopYUp, os, gc);
-                DrawArticulations(score.TextMetrics, layout, measureToSystemTopYUp, os, gc, fragHost, fragments, pageIndex, page);
+                DrawArticulations(score.TextMetrics, layout, measureToSystemTopYUp, os, gc, pageFragHost, fragments, pageIndex, page);
                 DrawLyrics(score.TextMetrics, layout, measureToSystemTopYUp, gc);
                 DrawHairpins(layout, measureToSystemTopYUp, os, gc);
                 DrawOttavaBrackets(score.TextMetrics, layout, measureToSystemTopYUp, os, gc);
@@ -268,12 +273,12 @@ internal static partial class SharedRenderer
                 DrawGraceNotes(score.TextMetrics, layout, measureToSystemTopYUp, os, gc, page.Height);
                 DrawChordNames(score.TextMetrics, layout, measureToSystemTopYUp, gc);
                 DrawFiguredBass(score.TextMetrics, layout, measureToSystemTopYUp, os, gc);
-                DrawPercentRepeats(layout, measureToSystemTopYUp, os, gc, fragHost, fragments, pageIndex, page, score.TextMetrics);
-                DrawBarNumbers(score.TextMetrics, layout, measureToSystemTopYUp, gc, fragHost, fragments, pageIndex, page);
+                DrawPercentRepeats(layout, measureToSystemTopYUp, os, gc, pageFragHost, fragments, pageIndex, page, score.TextMetrics);
+                DrawBarNumbers(score.TextMetrics, layout, measureToSystemTopYUp, gc, pageFragHost, fragments, pageIndex, page);
                 DrawStanzaNumbers(score.TextMetrics, layout, measureToSystemTopYUp, gc);
                 DrawFingerings(score.TextMetrics, fingeringsByPage?[pageIndex], os, gc,
-                    fragHost, fragments, pageIndex, page);
-                DrawMusicMarks(score.TextMetrics, layout, measureToSystemTopYUp, os, gc, fragHost, fragments, pageIndex, page);
+                    pageFragHost, fragments, pageIndex, page);
+                DrawMusicMarks(score.TextMetrics, layout, measureToSystemTopYUp, os, gc, pageFragHost, fragments, pageIndex, page);
                 DrawCustomTexts(score.TextMetrics, layout, measureToSystemTopYUp, os, gc);
                 DrawTextSpanners(score.TextMetrics, layout, measureToSystemTopYUp, os, gc);
                 DrawPedalBrackets(layout, measureToSystemTopYUp, gc);

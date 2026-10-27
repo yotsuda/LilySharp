@@ -127,20 +127,19 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1017セッション（2026-10-27・YT-DELL2）
+
+第1016 と同じ会話の続き。`-Start p1017`（開始 HEAD `dfd59ab1e`・full **13386 / 0 / 2 / 13388**＝新しい網を入れた作業ツリーで・第1015 を ARCHIVE へ）。作業場所は Lab `sessions/p1017/`。
+- **ユーザー「Lab\corpora\ベースタブLy\tempo-todo.lys の tempo と todo コメントが重なる。最初は重ならないのに Ctrl+S で保存すると todo の y が下がってテンポと重なる」**: 再現＝LSP の `lilysharp/svg`（pageDiff）を同じ文書で 2 回＝メモの y 16.53 → 19.03（`SvgGenerator` を 3 回は不変）。原因＝`SharedRenderer` はメモのあるページでは系（system）を生で描く（`pageFragHost` = null）のに、上乗せの描画（`DrawTies`・`DrawSlurs`・`DrawArticulations`・`DrawPercentRepeats`・`DrawBarNumbers`・`DrawFingerings`・`DrawMusicMarks`＝テンポ）には `fragHost` を渡していた＝2 回目は前の断片を文字で貼り、InkRecorder に載らない＝メモの探索にテンポが無い。→ 7 か所を `pageFragHost` に。網 `TodoMemoTempoTests` 2 本（LSP で未保存 → 2 回目 → 保存の名前、と SvgGenerator 3 回）。途中で試した「引き出し線が ink を横切るかの判定」は原因でなく、他のメモを動かしうるので戻した（引き出し線がテンポの数字をかすめるのは最初の絵から＝別件）。両 CHANGELOG・MANUAL-CHECKS C29。
+判定（2026-10-27・第1017 の終わり）: 次はユーザーの指示（C9〜C29）。
+
+## 以下は第1016セッションの経緯
+
 ### 1.1 第1016セッション（2026-10-27・YT-DELL2）
 
 第1015 と同じ会話の続き。`-Start p1016`（開始 HEAD `9f1c0ed83`・full **13384 / 0 / 2 / 13386**・第1014 を ARCHIVE へ）。作業場所は Lab `sessions/p1016/`。
 - **ユーザー「part にはなるべく instrument だけを書いて、clef や octave は書かないように指示を。プリセットの clef や octave を活用した方が簡潔」**: `GRAMMAR_FOR_LLM.md`（Ask AI と作曲の system）の「Rules and gotchas」の先頭に規則（instrument を名指し・clef／octave を並べない・preset が clef／octave／音／音域を持つ・preset の無い part だけ clef／octave・ファイルに在る part は頼まれなければそのまま）。見本も直した＝骨組みの `part leftHand { clef bass octave 3 }` → `{ instrument piano-left }`（`GetDefaults` で同じ bass・3 を確認＝音も見た目も同じ）・右手 `piano-right`・「Add a bass line」の `{ clef bass octave 3 }` → `{ instrument bass }`（見た目同じ・1 オクターブ下で鳴る）。文書の見本は全部コンパイル（DocExamplesParseTests ほか 33 本）。網 `aiNewPiece.test` 1 本（npm 498）。両 CHANGELOG・MANUAL-CHECKS C28。
 判定（2026-10-27・第1016 の終わり）: 次はユーザーの指示（C9〜C28）。
-
-## 以下は第1015セッションの経緯
-
-### 1.1 第1015セッション（2026-10-27・YT-DELL2）
-
-第1014 と同じ会話の続き。`-Start p1015`（開始 HEAD `58c3fea44`・full **13384 / 0 / 2 / 13386**＝作業ツリーで・第1013 を ARCHIVE へ）。作業場所は Lab `sessions/p1015/`。
-- **ユーザー「p・mp・f の音量差が大きすぎる。標準的な設定？」→ 比べて答えた（Lily# は DAW／MuseScore 並み pp35〜ff110・LilyPond `ly/midi-init.ly` は pp62〜ff102＝幅半分・SoundFont はベロシティを 2 乗で効かせる＝p→f 約 11 dB 対 5 dB）→「LP の値に揃えて」**: `DynamicLevel` の値を LP の割合 ×127 に（ppppp 32・pppp 43・ppp 53・pp 62・p 70・mp 77・mf 86・f 95・ff 102・fff 108・ffff 117・fffff 121・sf 127・表に無い fp 90／rf 103・sfz 104・rfz 105・fz 106・sffz 107 は並びを保って置き直し）・`DefaultVelocity` 80→90（LP `dynamic-default-volume` 0.71）。大小比較で使う所は無かった。MIDI の網 14 本の期待値を新しい値に。
-- **ユーザー「Ctrl+I でエレキベースの伴奏 → 候補の見出しに『sounds C1, below the range of the Bass』×13・AI の言葉が一番下に埋もれる。言葉をプロンプトの直後に。なぜ AI は除けなかった？」「エレキベースは 4 弦で最低 E。instrument に沿う音域がシステムプロンプトにあるか確かめて」**: 警告は直しの依頼で返していた（最大 2 回）が、鳴る音だけで書いた字面も直し方も無かった＝`aiTransformCore.rangeFixOf`（LYS1052 に「you wrote `c,8`: write it an octave higher, `c8`」）を `formatDiags(…, reconstructed)` に。配置済みの `out/GRAMMAR_FOR_LLM.md` に音域の節・`bass` E1–G4 `e,`–`g'` が在ることを確かめ、文に「`instrument bass` は書いた音の 1 オクターブ下で鳴る＝最低は `e,`・`c,` は C1」を足した。見出しは caption を「依頼／⚠ 残り」に割って `prompt → note → issues`。網 TS 3 本（npm 497）。両 CHANGELOG・MANUAL-CHECKS C26・C27。
-判定（2026-10-27・第1015 の終わり）: 次はユーザーの指示（C9〜C27）。
 
 ## 2. 開いている作業
 

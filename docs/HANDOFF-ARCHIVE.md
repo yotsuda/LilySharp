@@ -160,6 +160,15 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1015セッションの経緯
+
+### 1.1 第1015セッション（2026-10-27・YT-DELL2）
+
+第1014 と同じ会話の続き。`-Start p1015`（開始 HEAD `58c3fea44`・full **13384 / 0 / 2 / 13386**＝作業ツリーで・第1013 を ARCHIVE へ）。作業場所は Lab `sessions/p1015/`。
+- **ユーザー「p・mp・f の音量差が大きすぎる。標準的な設定？」→ 比べて答えた（Lily# は DAW／MuseScore 並み pp35〜ff110・LilyPond `ly/midi-init.ly` は pp62〜ff102＝幅半分・SoundFont はベロシティを 2 乗で効かせる＝p→f 約 11 dB 対 5 dB）→「LP の値に揃えて」**: `DynamicLevel` の値を LP の割合 ×127 に（ppppp 32・pppp 43・ppp 53・pp 62・p 70・mp 77・mf 86・f 95・ff 102・fff 108・ffff 117・fffff 121・sf 127・表に無い fp 90／rf 103・sfz 104・rfz 105・fz 106・sffz 107 は並びを保って置き直し）・`DefaultVelocity` 80→90（LP `dynamic-default-volume` 0.71）。大小比較で使う所は無かった。MIDI の網 14 本の期待値を新しい値に。
+- **ユーザー「Ctrl+I でエレキベースの伴奏 → 候補の見出しに『sounds C1, below the range of the Bass』×13・AI の言葉が一番下に埋もれる。言葉をプロンプトの直後に。なぜ AI は除けなかった？」「エレキベースは 4 弦で最低 E。instrument に沿う音域がシステムプロンプトにあるか確かめて」**: 警告は直しの依頼で返していた（最大 2 回）が、鳴る音だけで書いた字面も直し方も無かった＝`aiTransformCore.rangeFixOf`（LYS1052 に「you wrote `c,8`: write it an octave higher, `c8`」）を `formatDiags(…, reconstructed)` に。配置済みの `out/GRAMMAR_FOR_LLM.md` に音域の節・`bass` E1–G4 `e,`–`g'` が在ることを確かめ、文に「`instrument bass` は書いた音の 1 オクターブ下で鳴る＝最低は `e,`・`c,` は C1」を足した。見出しは caption を「依頼／⚠ 残り」に割って `prompt → note → issues`。網 TS 3 本（npm 497）。両 CHANGELOG・MANUAL-CHECKS C26・C27。
+判定（2026-10-27・第1015 の終わり）: 次はユーザーの指示（C9〜C27）。
+
 ## 以下は第1014セッションの経緯
 
 ### 1.1 第1014セッション（2026-10-27・YT-DELL2）

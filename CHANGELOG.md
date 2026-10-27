@@ -6,6 +6,14 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+### Preview
+
+- `[editor]` **A `@todo` memo no longer drops onto a tempo after the next render.** The memo is set
+  where nothing else is drawn, by what the page records as it draws; the overlays (tempo and other
+  marks, ties, slurs, bar numbers) replayed from the last render wrote their text past that record,
+  so from the second render on (a save) the memo found the tempo's place empty. On a page with memos
+  they are drawn live now, as the systems already were.
+
 ### Playback
 
 - `[midi]` **The dynamics play at LilyPond's levels** (`ly/midi-init.ly` absolute-volume-alist): pp 62,
