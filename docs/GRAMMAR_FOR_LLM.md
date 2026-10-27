@@ -214,18 +214,24 @@ verbatim `@"C:\music"` / `@"say ""hi"""` (backslash as written, `""` = one quote
 
 - Names: `c d e f g a b`. Sharp `is`, flat `es`: `cis`=C#, `ees`=Eb, `cisis`=C##, `deses`=Dbb. E/A flats also contract: `es`=`ees`, `as`=`aes`, `eses`=`eeses`, `ases`=`aeses`.
 - Octave: `'` up one, `,` down one (repeatable: `''`, `,,`).
-- Default octave is C4. Each bare pitch takes the octave nearest the previous note
-  (an interval of a fourth or less); `'`/`,` shift from there.
+- **Octaves are LilyPond's, in every part and for every instrument**: a bare `c` is C3 and
+  `c'` is middle C (C4), `c''` C5, `c,` C2. An `instrument` never moves them.
+- Relative (the default): each bare pitch takes the octave nearest the previous note (an
+  interval of a fourth or less); `'`/`,` shift from there. The first note of a part, a section
+  or a phrase is read as LilyPond's pitchless `\relative { … }` reads it — as if absolute:
+  `c` = C3, `e'` = E4, `g''` = G5.
 - `octave absolute` (top level, or in a part's music — `m { octave absolute c4 … }` — to the section's end;
   NOT inside `part X { }`, which takes only the base number) switches to ABSOLUTE
-  mode: bare `c` = C4 and `'`/`,` are absolute offsets from that anchor (`c'` = C5,
-  `c,` = C3), independent per note - octave mistakes never cascade. ⚠️ NOT LilyPond's
-  absolute octaves, where `c'` is middle C: here, in a part anchored at C4, middle C is the bare
-  `c` and `c'` is C5. RECOMMENDED
-  when generating scores. The base is the part's anchor, as in relative mode:
-  `part X { octave N }`, else its `instrument`'s octave (`instrument bass` → bare `c` = C3,
-  `flute` → C5), else C4. `part X { octave 2 }` re-anchors it lower (bass parts).
-  Sections restore the file-level mode.
+  mode, LilyPond's: every pitch says where it is — `c` = C3, `c'` = C4 (middle C), `c''` = C5,
+  `c,` = C2 — independent per note, so octave mistakes never cascade. RECOMMENDED when
+  generating scores. `part X { octave N }` moves a part's base (`octave 2`: a bare `c` is C2, for
+  a bass line with fewer commas), in both modes; nothing else does. Sections restore the
+  file-level mode.
+- A part with an octave clef (`treble_8` — the guitar's, a tenor's) is written at the pitch it
+  SOUNDS, as in LilyPond: the guitar's low E string is `e,` (E2), and the clef draws it where
+  a treble staff has E3. A part that sounds an octave from its page WITHOUT the clef saying so
+  (`instrument bass`, the double bass: plain bass clef) is written as the player READS it:
+  the bass's low E string is `e,` (written E2), and it sounds E1.
 - `pitch` says which pitch the notes are in — what SOUNDS, or what the player of a
   transposing `instrument` (clarinet, trumpet, horn, alto-sax, …) READS — and its word says
   which notes: where notes are TYPED (the top level for the file, a part header for that part —
@@ -326,16 +332,15 @@ mark on a later member moves only that member): the anchor is where the first me
 SOUNDS — its letter nearest to the previous note, then its own `'`/`,` (or the key tonic
 for a degrees-only chord); the other members sit at-or-above it, so order is free except
 the first slot (`<c e g>` = `<c g e>`; degrees are fully order-free). The first member's
-mark moves the whole chord and propagates: `<c' e g>` = C5 E5 G5 and the next bare c is
-C5 — the same as `<c e g>'`, a `'`/`,` AFTER the `>` (before the duration). A mark on a
-later member moves THAT note from its stacked spot: `<c e g'>` = C4 E4 G5, `<c' e' g'>` =
-C5 E6 G6 (a spread chord; the close chord an octave up is `<c' e g>`). The note AFTER a
+mark moves the whole chord and propagates: `<c' e g>` = C4 E4 G4 and the next bare c is
+C4 — the same as `<c e g>'`, a `'`/`,` AFTER the `>` (before the duration). A mark on a
+later member moves THAT note from its stacked spot: `<c e g'>` = C3 E3 G4, `<c' e' g'>` =
+C4 E5 G5 (a spread chord; the close chord an octave up is `<c' e g>`). The note AFTER a
 chord is relative to the chord's ANCHOR, exactly as after a single note — a chord is ONE
 item of the relative chain: `g1 <c e g>1 <f a c>1` = G3, C4 E4 G4, F4 A4 C5 (the f reads
 the chord's c, not the g), and `<c, e g> <c, e g>` falls an octave, as `c, c,` does — write
 the mark once. Degree chords hand on the TONIC, not the first degree written. (Until
-2026-10-18 the anchor was the first member's BARE letter and its mark local: `<c' e g>`
-was C5 E4 G4 with the next c at C4 — superseded.)
+2026-10-18 the anchor was the first member's BARE letter and its mark local — superseded.)
 
 A CHORD FROM A SHAPE — `chord(SYMBOL SHAPE)` + a chord's tail (duration, dots, ties, slurs,
 beams, scripts, dynamics): writes the notes a fretted shape sounds (2026-09-28).
@@ -349,8 +354,7 @@ chord(C xx-10-12-13-12)4.~  // frets 10-15 in the dash form
 - The words are `@chord(…)`'s (a symbol + a shape, or a shape alone); the shape is REQUIRED —
   `chord(C)` warns (LYS1040) and is a SPACER of its length.
 - Tuning: the PART's fretted instrument (its tab tuning), else the guitar. The shape gives
-  SOUNDING pitches; the staff writes them as the part writes any sounding pitch (a guitar
-  part, treble_8, an octave up). ABSOLUTE: the frame, `octave absolute` and marks do not move
+  SOUNDING pitches, and a guitar part (treble_8) is written as it sounds. ABSOLUTE: the frame, `octave absolute` and marks do not move
   it; marks after `)` are an error (LYS0035).
 - The note AFTER it is read from its LOWEST sounding note (relative mode).
   A phrase whose body opens with it hands the same note on after its reference.
@@ -367,9 +371,9 @@ degrees-only group anchors on the tonic. NOT LilyPond's `<< >>`
 (parallel voices) — those are `voice { }` in Lily#; a `\\` inside is an error.
 
 ```
-<< c e g >>      // c, then e/g stacked above (E4 G4); after c4 → a triplet of eighths (3:2)
+<< c e g >>      // c, then e/g stacked above (C3 E3 G3); after c4 → a triplet of eighths (3:2)
 << c 3 5 >>      // by degrees: c e g
-<< 8 5 3 1 >>    // degrees-only anchors on the TONIC: C5 G4 E4 C4 — descending, no marks
+<< 8 5 3 1 >>    // degrees-only anchors on the TONIC: C4 G3 E3 C3 — descending, no marks
 << <c e> g >> |  // a chord member, then g
 << c r e >>      // a rest is a gap (an equal share); e still stacks above c
 << c . d >>4     // a SPACED dot = one more share for the member before it: 2:1 → tuplet 3/2 { c4 d8 }
@@ -651,52 +655,52 @@ it is warned (LYS1052: "this note sounds C2, below the range of the Guitar"). In
 EVERY note inside the range below — move a note an octave, or give the line to another part,
 rather than write it out of range; a guitar part's accompaniment, a bass line written for the
 guitar, a melody lifted from the piano, all stay inside. "write" is the range as written in
-absolute octaves in that part (the instrument's own octave — a part's `octave N` moves it; a
-transposing instrument writes what its player reads). Read the "write" column, not the pitch
-names: `instrument bass` (the 4-string electric or double bass, lowest string E) sounds an
-octave under what it writes, so its lowest note is written `e,` (E1) and a written `c,` sounds
-C1 — out of range; a bass line that wants to go lower turns up an octave there.
+absolute octaves (LilyPond's — `c' ` is middle C in every part; a part's `octave N` moves it; a
+transposing instrument writes what its player reads, an octave clef's part what it sounds).
+Read the "write" column, not the pitch names: `instrument bass` (the 4-string electric or
+double bass, lowest string E) sounds an octave under what it writes, so its lowest note is
+written `e,` (E2 on the page, sounding E1) and a written `c,` sounds C1 — out of range; a bass
+line that wants to go lower turns up an octave there.
 
 A range is how far an instrument CAN go, not where its part lies: keep each part where its
 player usually plays. A piano's left hand lies mostly between C2 and C4, round C3 — a left hand
 that lives under C2 is a rumble, not a bass line — and its right hand mostly between C4 and C6.
-The two hands' octaves differ: in `instrument piano-left` a bare `c` is C3 (`c,` C2, `c'` C4),
-in `instrument piano-right` it is C4 (`c'` C5).
+Both hands write LilyPond's octaves: C3 is `c`, middle C `c'`, C5 `c''`.
 
 <!-- BEGIN instrument ranges: generated from InstrumentDefaults.SoundingRange by InstrumentRangePromptTests (LILYSHARP_UPDATE_DOCS=1) -->
 | instrument | sounds | write (absolute octaves) |
 |---|---|---|
-| `violin` | G3–A7 | `g,` – `a'''` |
+| `violin` | G3–A7 | `g` – `a''''` |
 | `viola` | C3–E6 | `c` – `e'''` |
 | `cello` | C2–C6 | `c,` – `c'''` |
 | `bass` | E1–G4 | `e,` – `g''` |
 | `contrabass` | E1–G4 | `e,` – `g''` |
 | `contrabass5` | B0–G4 | `b,,` – `g''` |
-| `piano-right` | A0–C8 | `a,,,,` – `c''''` |
+| `piano-right` | A0–C8 | `a,,,` – `c'''''` |
 | `piano-left` | A0–C8 | `a,,,` – `c'''''` |
 | `guitar` | E2–E6 | `e,` – `e'''` |
 | `bass5` | B0–G4 | `b,,` – `g''` |
 | `bass6` | B0–C5 | `b,,` – `c'''` |
-| `ukulele` | C4–C6 | `c` – `c''` |
-| `mandolin` | G3–B6 | `g,` – `b''` |
+| `ukulele` | C4–C6 | `c'` – `c'''` |
+| `mandolin` | G3–B6 | `g` – `b'''` |
 | `banjo` | D3–D6 | `d` – `d'''` |
-| `flute` | C4–D7 | `c,` – `d''` |
-| `piccolo` | D5–C8 | `d,` – `c''` |
-| `oboe` | B♭3–A6 | `bes,` – `a''` |
-| `clarinet` | D3–B♭6 | `e,` – `c'''` |
-| `clarinet-a` | C♯3–A6 | `e,` – `c'''` |
+| `flute` | C4–D7 | `c'` – `d''''` |
+| `piccolo` | D5–C8 | `d'` – `c''''` |
+| `oboe` | B♭3–A6 | `bes` – `a'''` |
+| `clarinet` | D3–B♭6 | `e` – `c''''` |
+| `clarinet-a` | C♯3–A6 | `e` – `c''''` |
 | `bassoon` | B♭1–E5 | `bes,,` – `e''` |
-| `soprano-sax` | A♭3–E6 | `bes,` – `fis''` |
-| `alto-sax` | C♯3–A♭5 | `bes,` – `f''` |
-| `tenor-sax` | A♭2–E5 | `bes,` – `fis''` |
-| `baritone-sax` | C2–A♭4 | `a,` – `f''` |
-| `trumpet` | E3–B♭5 | `fis,` – `c''` |
-| `trumpet-c` | F♯3–C6 | `fis,` – `c''` |
-| `horn` | B1–F5 | `fis,,` – `c''` |
+| `soprano-sax` | A♭3–E6 | `bes` – `fis'''` |
+| `alto-sax` | C♯3–A♭5 | `bes` – `f'''` |
+| `tenor-sax` | A♭2–E5 | `bes` – `fis'''` |
+| `baritone-sax` | C2–A♭4 | `a` – `f'''` |
+| `trumpet` | E3–B♭5 | `fis` – `c'''` |
+| `trumpet-c` | F♯3–C6 | `fis` – `c'''` |
+| `horn` | B1–F5 | `fis,` – `c'''` |
 | `trombone` | E2–F5 | `e,` – `f''` |
-| `tuba` | D1–F4 | `d,` – `f''` |
-| `soprano` | C4–C6 | `c` – `c''` |
-| `alto` | F3–F5 | `f,` – `f'` |
+| `tuba` | D1–F4 | `d,,` – `f'` |
+| `soprano` | C4–C6 | `c'` – `c'''` |
+| `alto` | F3–F5 | `f` – `f''` |
 | `tenor` | C3–C5 | `c` – `c''` |
 | `voice-bass` | E2–E4 | `e,` – `e'` |
 <!-- END instrument ranges -->
@@ -959,9 +963,9 @@ quarter. Same in a tempo — `tempo 4. = 116` is dotted, `tempo 4.5 = 116` is LY
 
 What an everyday request asks for, in the construct Lily# has for it. Each example is a whole
 file; the lines a request adds are marked `// added`. Octaves are relative unless the file
-says `octave absolute`, and ⚠️ **every section starts its chain afresh from the part's
-anchor** (C4 unless `octave N` / an instrument says otherwise) — write the first note of each
-section's music with the marks that put it where it belongs.
+says `octave absolute`, and ⚠️ **every section starts its chain afresh**: its first note is
+read as if absolute (`c` = C3, `c'` = middle C, unless the part writes `octave N`) — write the
+first note of each section's music with the marks that put it where it belongs.
 
 **"Add chords" / "harmonize with chords"** — a CHORD TRACK, not `@chord(…)` on the notes: a
 `chords NAME { … }` block in each section beside the part (symbols as they print, no
@@ -1069,10 +1073,8 @@ it should sound like the ensemble asked for. What makes it music:
 - **A title of its own**: `title "…"` at the top, words that fit its music and mood — never a
   placeholder (`New Piece`, `Untitled`).
 - **Instruments**: every part gets its `instrument` (`violin`, `viola`, `cello`, `flute`, …) —
-  without one it plays a piano. Its range sets the bare note: `instrument violin` puts a bare
-  `c` at C4, `viola` and `cello` at C3 (so a violin's `a` is A4, a viola's `d'` is D4, a
-  cello's `d` is D3) — not LilyPond's octaves, where `c'` is middle C: a piano's right hand
-  written by LilyPond's habit sounds an octave too high. Name the parts as a score prints them,
+  without one it plays a piano. The octaves are LilyPond's whatever the instrument (`c'` is
+  middle C, so a violin's open A is `a'`, a cello's open C is `c,`). Name the parts as a score prints them,
   by the instrument (`part vn1 "Violin I" "Vn. I"`). A piece for piano alone names no part (its
   two staves need no label); a piano in an ensemble is named once, on its upper part (`part rh
   "Piano" "Pno."`), the lower part unnamed. A staff is never labelled "Right hand", "L.H.", 右手
@@ -1137,14 +1139,13 @@ it should sound like the ensemble asked for. What makes it music:
 
 ## Rules and gotchas
 
-- **A part of a known instrument names it with `instrument` and writes no `clef` or `octave`
-  beside it.** The preset brings both — the cello its bass clef and octave, the viola the alto
-  clef, the guitar its octave-down treble clef, a bass the octave it sounds — and its sound and its
-  range (see *Instrument ranges*); a `clef` or an `octave` written beside it only repeats the
-  preset, or fights it. So `part vc "Cello" { instrument cello }`, not `{ instrument cello clef bass
-  octave 3 }`, and a piano is `instrument piano-right` / `instrument piano-left`. Write `clef` or
-  `octave` only for a part no preset fits (a melody for no instrument in particular, drums' `clef
-  percussion`). Leave the parts already in the file as they are unless asked to change them.
+- **A part of a known instrument names it with `instrument` and writes no `clef`
+  beside it.** The preset brings its clef — the cello its bass clef, the viola the alto clef, the
+  guitar its octave-down treble clef — and its sound and its range (see *Instrument ranges*); it
+  does NOT move the octaves, which are LilyPond's in every part. So `part vc "Cello" { instrument
+  cello }`, not `{ instrument cello clef bass }`, and a piano is `instrument piano-right` /
+  `instrument piano-left`. Write `clef` only for a part no preset fits (a melody for no
+  instrument in particular, drums' `clef percussion`). Leave the parts already in the file as they are unless asked to change them.
 - Each **phrase body** evaluates in a fresh frame (default octave/pitch/duration), so a
   phrase means the same notes at every call. **Section boundaries also reset the frame.**
   A reference is ONE item to the relative chain (the chord rule): the next note is

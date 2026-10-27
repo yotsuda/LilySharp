@@ -36,17 +36,17 @@ namespace LilySharp.Core.Svg.Collector;
 internal sealed class OctaveContext
 {
     // Running state, advanced as each pitch resolves.
-    public int CurrentOctave = 4;
-    public char LastPitchName = 'c';
+    public int CurrentOctave = LilySharp.Core.Svg.Model.InstrumentDefaults.DefaultAnchorOctave;
+    public char LastPitchName = RelativeOctave.FrameStartLetter;
 
     // Reset target for section boundaries (the octave armed for this voice).
-    public int InitialOctave = 4;
+    public int InitialOctave = LilySharp.Core.Svg.Model.InstrumentDefaults.DefaultAnchorOctave;
 
     // Absolute-mode anchor: bare c = C(OctaveBase). The part's anchor, as in relative mode
     // (InstrumentDefaults.AbsoluteBaseOctave): `part X { octave N }`, else the instrument
     // preset's octave (since 2026-10-13), else 4 — so a bass part can be written `octave 2`
     // to avoid piling up `,` commas. The clef is deliberately NOT used here.
-    public int OctaveBase = 4;
+    public int OctaveBase = LilySharp.Core.Svg.Model.InstrumentDefaults.DefaultAnchorOctave;
 
     // Reset target for section boundaries, the absolute-mode twin of InitialOctave: the
     // base this voice was ARMED with, before anything moved it. Every mutation of
@@ -59,7 +59,7 @@ internal sealed class OctaveContext
     // chord anchor's save/restore pair (MeasureCollector.MusicWalk), the walk checkpoint's
     // capture/restore pair (CollectWalkProbe), ResetAll, and ResetForSection below. Add an
     // UNBALANCED seventh and this field stops being the whole answer.
-    public int InitialOctaveBase = 4;
+    public int InitialOctaveBase = LilySharp.Core.Svg.Model.InstrumentDefaults.DefaultAnchorOctave;
 
     // The shift the section REFERENCE that opened the current play wrote (`~B'` = +1), kept
     // for the WHOLE play rather than applied once. A phrase body and a parallel span open a
@@ -135,7 +135,7 @@ internal sealed class OctaveContext
         // reference that opened this play asked for (see SectionOctaveOffset). Zero for every
         // play written without marks, so this is the same line it has always been.
         CurrentOctave = InitialOctave + SectionOctaveOffset;
-        LastPitchName = 'c';
+        LastPitchName = RelativeOctave.FrameStartLetter;
     }
 
     /// <summary>
@@ -155,7 +155,7 @@ internal sealed class OctaveContext
     {
         SectionOctaveOffset = octaveOffset;
         CurrentOctave = InitialOctave + octaveOffset;
-        LastPitchName = 'c';
+        LastPitchName = RelativeOctave.FrameStartLetter;
         OctaveAbsolute = InitialOctaveAbsolute;
         OctaveBase = InitialOctaveBase + octaveOffset;
     }
@@ -168,14 +168,14 @@ internal sealed class OctaveContext
     /// </summary>
     public void ResetAll()
     {
-        CurrentOctave = 4;
-        InitialOctave = 4;
-        OctaveBase = 4;
-        InitialOctaveBase = 4;
+        CurrentOctave = LilySharp.Core.Svg.Model.InstrumentDefaults.DefaultAnchorOctave;
+        InitialOctave = LilySharp.Core.Svg.Model.InstrumentDefaults.DefaultAnchorOctave;
+        OctaveBase = LilySharp.Core.Svg.Model.InstrumentDefaults.DefaultAnchorOctave;
+        InitialOctaveBase = LilySharp.Core.Svg.Model.InstrumentDefaults.DefaultAnchorOctave;
         SectionOctaveOffset = 0;
         OctaveAbsolute = false;
         InitialOctaveAbsolute = false;
-        LastPitchName = 'c';
+        LastPitchName = RelativeOctave.FrameStartLetter;
     }
 
     // --- Part transpose: composes on top of relative-octave resolution ---

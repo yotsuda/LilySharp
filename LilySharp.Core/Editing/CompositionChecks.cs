@@ -180,18 +180,16 @@ public static class CompositionChecks
                 continue;
             int Percentile(double p) => PercentileOf(notes, p);
             int middle = Percentile(0.5);
-            // The octaves a preset writes in (a braced hand with no instrument writes from C4, or from its own `octave`).
-            bool preset = parts.Any(p => p.Name.Text == part && InstrumentOf(p).Length > 0);
             string Name(int m) => PartRanges.SpelledFromPitch(m);
             string mostly = $"most of its time is between {Name(Percentile(0.1))} and {Name(Percentile(0.9))}, its middle {Name(middle)}";
             if (left && middle < LeftHandLowestMiddle)
                 findings.Add($"{part}: {mostly} — far below a pianist's left hand, which lies mostly between C2 and C4, round C3: "
                     + "move it up an octave or two."
-                    + (preset ? " In `instrument piano-left` (absolute octaves) a bare `c` is C3, an octave under piano-right's: C3 is `c`, C2 `c,`, C4 `c'`." : ""));
+                    + " (Absolute octaves are LilyPond's: C3 is `c`, C2 `c,`, middle C `c'`.)");
             else if (!left && middle > RightHandHighestMiddle)
                 findings.Add($"{part}: {mostly} — high above a pianist's right hand, which lies mostly between C4 and C6, round C5: "
                     + "move it down an octave."
-                    + (preset ? " In `instrument piano-right` (absolute octaves) a bare `c` is C4 — middle C, not LilyPond's `c'` — so C5 is `c'` and C6 `c''`." : ""));
+                    + " (Absolute octaves are LilyPond's: middle C is `c'`, C5 `c''`, C6 `c'''`.)");
         }
         // The two hands far apart, the middle of the keyboard left empty (owner's report 2026-10-27:
         // a left hand mostly up to D4 under a right hand mostly from D5 — a thin, hollow sound).

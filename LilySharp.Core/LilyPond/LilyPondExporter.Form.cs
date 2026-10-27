@@ -902,7 +902,7 @@ public sealed partial class LilyPondExporter
         _sectionOctaveOffset = sp.OctaveOffset;
         if (!_octaveAbsolute)
         {
-            _lysStep = 0;
+            _lysStep = RelativeOctave.FrameStartStep;
             _lysOctave = _anchorOctave + _sectionOctaveOffset;
         }
         // ⚠️ THE DURATION REOPENS HERE TOO. A section's first unwritten duration is a

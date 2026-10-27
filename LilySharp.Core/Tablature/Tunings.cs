@@ -197,13 +197,11 @@ public static class Tunings
     /// an octave above, <c>bass_8</c> an octave below. LilyPond pitches are SOUNDING
     /// pitches; Lily# writes display pitches, so the tab and MIDI recover the sounding
     /// octave from this plus the part's <c>transposition</c>.</summary>
-    public static int ClefOctaveShift(Svg.Model.ClefType clef) => clef switch
-    {
-        Svg.Model.ClefType.Treble8Below => -12,
-        Svg.Model.ClefType.Bass8Below => -12,
-        Svg.Model.ClefType.Treble8Above => 12,
-        _ => 0,
-    };
+    /// <remarks>⚠️ 0 FOR EVERY CLEF since 2026-10-28 (owner's decision: Lily#'s octaves are
+    /// LilyPond's): an octave clef's part is written at the pitch it SOUNDS, as in LilyPond, and
+    /// the clef moves only where the notes are drawn (MeasureCollector.MiddleLinePitch). Kept
+    /// for its callers, which read it as "what the clef adds between page and sound".</remarks>
+    public static int ClefOctaveShift(Svg.Model.ClefType clef) => 0;
 
     /// <summary>The total written→sounding shift for a tab staff: the clef octave plus
     /// the part's resolved <c>transposition</c> (which already folds in the bass/preset

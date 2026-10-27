@@ -100,16 +100,19 @@ describe('the instruments\' ranges, and a head that holds a long list', () => {
     it('tells it where a piano\'s hands lie, and that the left hand\'s bare c is C3', () => {
         assert.match(grammar, /A range is how far an instrument CAN go, not where its part lies/);
         assert.match(grammar, /left hand lies mostly between C2 and C4, round C3/);
-        assert.match(grammar, /in `instrument piano-left` a bare `c` is C3/);
+        // Owner's decision 2026-10-28: the octaves are LilyPond's in both hands (no preset moves them).
+        assert.match(grammar, /Both hands write LilyPond's octaves: C3 is `c`, middle C `c'`, C5 `c''`\./);
     });
     // Owner's review 2026-10-27: an octave of empty keyboard between the hands, a left hand broken up.
     it('tells it how a piano piece fills the keyboard, and that a left hand may keep one value', () => {
         assert.match(grammar, /\*\*A piano piece\*\* is written for two hands that fill the keyboard between them/);
         assert.match(grammar, /A\s+left hand may keep one note value throughout: its figure is the rhythm/);
     });
-    // Owner's request 2026-10-27: a part names its instrument and lets the preset bring its clef and octave.
-    it('tells the AI to name the instrument and write no clef or octave beside it, and shows it so', () => {
-        assert.match(grammar, /A part of a known instrument names it with `instrument` and writes no `clef` or `octave`\s+beside it\./);
+    // Owner's request 2026-10-27: a part names its instrument and lets the preset bring its clef
+    // (and, since 2026-10-28, no octave: the octaves are LilyPond's whatever the instrument).
+    it('tells the AI to name the instrument and write no clef beside it, and shows it so', () => {
+        assert.match(grammar, /A part of a known instrument names it with `instrument` and writes no `clef`\s+beside it\.\*\* The preset brings its clef/);
+        assert.match(grammar, /it\s+does NOT move the octaves, which are LilyPond's in every part/);
         assert.match(grammar, /part leftHand  \{ instrument piano-left \}/);
         assert.match(grammar, /part bass \{ instrument bass \}\s+\/\/ added/);
         // No example writes them together (the rule's own counter-example aside).
@@ -163,10 +166,12 @@ describe('the composer\'s prompt', () => {
         assert.match(transform, /unless the request says\s*'\s*\+?\s*'?\s*otherwise a piece runs 32 to 64 bars|otherwise a piece runs 32 to 64 bars/);
         assert.match(transform, /return 'Reply with <plan>…<\/plan>, <note>…<\/note> and the whole piece in <file>…<\/file>';/);
     });
-    it('names each part\'s bare c in absolute octaves, and warns of LilyPond\'s', () => {
-        assert.match(transform, /C3 for `piano-left`, `viola`, `cello`/);
-        assert.match(transform, /These are NOT LilyPond\\'s octaves,/);
+    // Owner's decision 2026-10-28: Lily#'s octaves are LilyPond's — no anchors to name, no habit to warn of.
+    it('tells it the octaves are LilyPond\'s in every part, and has the plan give each register as written', () => {
+        assert.match(transform, /The octaves are LilyPond\\'s, in every part and for every instrument: `c` = C3, `c\\'` = middle C \(C4\)/);
+        assert.doesNotMatch(transform, /NOT LilyPond\\'s octaves/);
         assert.match(transform, /AND as you will write/);
+        assert.match(transform, /is written `d\\'` – `a\\'\\'`/);
     });
     // Owner's review 2026-10-27: the piece was tidy but not "cool" — the character is to be planned
     // as the devices that make it.

@@ -126,7 +126,8 @@ public sealed partial class LilyPondExporter
             // the bottom of this method; the two are kept in step so the pair cannot drift,
             // and the observer sits on the reference pitch (SectionReferenceOctaveTests
             // .APhraseBodyInsideAMarkedSectionMovesWithIt asserts the twin MOVED).
-            buf._lysStep = buf._lyStep = 0;
+            buf._lysStep = RelativeOctave.FrameStartStep;
+            buf._lyStep = 0;
             buf._lysOctave = buf._lyOctave =
                 _anchorOctave + _sectionOctaveOffset + v.OctaveOffset;
             buf.EmitMusicStream(MusicItems(body).ToList(), "");
