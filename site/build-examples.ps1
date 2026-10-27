@@ -15,13 +15,13 @@ $examples = [ordered]@{
 
 'octaves' = @'
 // Relative is the DEFAULT: each bare pitch takes the octave nearest the note before
-// it. `octave absolute` switches that off and anchors a bare c to C4 (or to the part's
-// `octave N`), so a wrong octave never cascades — worth it when a generator is writing,
-// not by hand.
+// it. `octave absolute` switches that off and anchors a bare c to C3, as LilyPond's
+// `\fixed c` does — `c'` is middle C (or to the part's `octave N`) — so a wrong octave
+// never cascades: worth it when a generator is writing, not by hand.
 octave absolute
 time 4/4
 part melody { clef treble }
-section A { melody { c4 c' c'' c, | e g e' g, | } }
+section A { melody { c'4 c'' c''' c | e' g' e'' g | } }
 form { ~A }
 score { staff melody }
 '@
@@ -32,7 +32,7 @@ score { staff melody }
 time 4/4
 part melody { clef treble }
 section A {
-  melody { c8 8 8 8 c4 4 | <c e g>4 q q' q | }
+  melody { c'8 8 8 8 c4 4 | <c e g>4 q q' q | }
 }
 form { ~A }
 score { staff melody }
@@ -46,7 +46,7 @@ key c major
 part melody { clef treble }
 section A {
   melody {
-    c4 r4 s4 g'4 | R1 | c,4 a4@rest d4 r4 |
+    c'4 r4 s4 g'4 | R1 | c,4 a4@rest d4 r4 |
     <c e g>4 <c 3 5>4 <1 3 5>2 | /4 4 8 8 4 |
   }
 }
@@ -61,7 +61,7 @@ time 4/4
 key c major
 part melody { clef treble }
 section A {
-  melody { << c e g >>4 << c 3 5 >>4 << 8 5 3 1 >>2 | << c e g >>2 << c r e >>2 | }
+  melody { << c' e g >>4 << c 3 5 >>4 << 8 5 3 1 >>2 | << c e g >>2 << c r e >>2 | }
 }
 form { ~A }
 score { staff melody }
@@ -73,7 +73,7 @@ score { staff melody }
 time 4/4
 part melody { clef treble }
 section A {
-  melody { c4~ c4 d4( e4) | <c e>4( <d f>4) c8[ d e f] | }
+  melody { c'4~ c4 d4( e4) | <c e>4( <d f>4) c8[ d e f] | }
 }
 form { ~A }
 score { staff melody }
@@ -84,9 +84,9 @@ score { staff melody }
 // and played); A's E ties into ending 1 as an ordinary arc and into ending 2, which is not
 // printed next, as an automatic repeat tie.
 part vn {
-  section I { c''1~ || }
-  section A { c''1 | e1~ || }
-  section B { e''1 | }
+  section I { c'''1~ || }
+  section A { c'''1 | e1~ || }
+  section B { e'''1 | }
 }
 form { I |: A [1. B] :| [2. B] }
 score { staff vn }
@@ -99,7 +99,7 @@ time 4/4
 part melody { clef treble }
 section A {
   melody {
-    c4@staccato d4@accent e4@tenuto f4@marcato |
+    c'4@staccato d4@accent e4@tenuto f4@marcato |
     g4@trill a4@mordent b4@fermata c4@staccato.up |
     c4@p@cresc b4 a4 g4@f | f4@f@decresc e4 d4 c4@p |
   }
@@ -113,10 +113,10 @@ score { staff melody }
 // closed draws nothing at all and says so.
 time 4/4
 part rh { clef treble }
-part lh { clef bass octave 3 }
+part lh { clef bass }
 section A {
   rh {
-    c'4@ottava d e f | g4 a b c@!ottava |
+    c''4@ottava d e f | g4 a b c@!ottava |
     c,4@rit b a g@!rit | c1 |
   }
   lh {
@@ -135,7 +135,7 @@ time 4/4
 part melody { clef treble }
 section A {
   melody {
-    tuplet 3/2 { c8 d e } tuplet 3/2 { f8 g a } c2 |
+    tuplet 3/2 { c'8 d e } tuplet 3/2 { f8 g a } c2 |
     grace { d,16 e } f4 acciaccatura { a16 } b4 appoggiatura { c8 } d4 r4 |
     voice { g2 a2 } { c2 c2 } |
   }
@@ -150,7 +150,7 @@ score { staff melody }
 time 4/4
 part melody { clef treble }
 section A {
-  melody { c1 | | d1 || e1 ! f1 |. }
+  melody { c'1 | | d1 || e1 ! f1 |. }
 }
 form { ~A }
 score { staff melody }
@@ -162,7 +162,7 @@ score { staff melody }
 time 3/4
 key g major
 part melody { clef treble }
-section Body   { melody { d'4 g fis | g2. | } }
+section Body   { melody { d''4 g fis | g2. | } }
 section First  { melody { a''2. | } }
 section Second { melody { g''2.@fermata | } }
 form { |: ~Body [1. ~First] :| [2. ~Second] }
@@ -176,7 +176,7 @@ time 4/4
 key f major
 part melody { clef treble }
 section A {
-  melody { f4 g a bes | c2 a4 f4 | g4 a bes a | f1 | }
+  melody { f'4 g a bes | c2 a4 f4 | g4 a bes a | f1 | }
   lyrics words sings melody {
     Sing- ing all the | day ~ long, |
     ev- ery word a | song |
@@ -195,8 +195,8 @@ key c major
 part sop { clef treble }
 part alt { clef treble }
 section A {
-  sop { c'4 c b a | g1 | }
-  alt { e4 e g f | e1 | }
+  sop { c''4 c b a | g1 | }
+  alt { e'4 e g f | e1 | }
   lyrics verse { Sing- ing a song | now | }
 }
 form { ~A }
@@ -209,10 +209,11 @@ score {
 '@
 
 'instrument' = @'
-// One word sets several things at once: each part's clef, the octave its bare letters
-// anchor to, its tuning (so its frets), what it sounds, and its printed name. Neither
-// part below says `clef`, `octave` or `tuning` — the preset already did, which is why the
-// same letters land at C4 on the guitar and at C3 on the bass.
+// One word sets several things at once: each part's clef, its tuning (so its frets), what
+// it sounds, and its printed name. Neither part below says `clef` or `tuning` — the preset
+// already did. It never moves the octave: a bare c is C3 in every part, as in LilyPond. The
+// guitar's treble_8 clef draws that C3 where a guitarist reads it, and the bass, read on its
+// own staff, sounds an octave below the page.
 time 4/4
 part gt { instrument guitar }
 part bs { instrument bass "Bass" }
@@ -235,7 +236,7 @@ part melody { clef treble }
 section A {
   melody {
     override NoteHead.color = red
-    c4 d e f |
+    c'4 d e f |
     revert NoteHead.color
     once override Stem.transparent = true
     g4 a b c |
@@ -253,7 +254,7 @@ score { staff melody }
 time 4/4
 part melody { clef treble }
 section A {
-  melody { e'4 d c d | e e e2 | d4 d e d | c1@chord(C) | }
+  melody { e''4 d c d | e e e2 | d4 d e d | c1@chord(C) | }
   chords prog { C | Am | Dm7 G7 | | }
 }
 form { ~A }
@@ -267,7 +268,7 @@ score { chords prog  staff melody }
 time 4/4
 part melody { clef treble }
 section A {
-  melody { e'2 c2 | c2 b2 | c'2 g2 | }
+  melody { e''2 c2 | c2 b2 | c'2 g2 | }
   chords prog { C(x32010) Am(x02210) | F(133211) G7(320001) | Cm(8xx88-11) Cm(xx-10-12-13-11) | }
 }
 form { ~A }
@@ -280,7 +281,7 @@ score { chords prog  staff melody }
 time 4/4
 part melody { clef treble }
 section A {
-  melody { e'1@chord(C x32010) | c1@chord(Am7 x02010) | a'1@chord(x02210) | b1@diagram(x24442) | }
+  melody { e''1@chord(C x32010) | c1@chord(Am7 x02010) | a'1@chord(x02210) | b1@diagram(x24442) | }
 }
 form { ~A }
 score { staff melody }
@@ -323,8 +324,8 @@ score { chords prog  staff uke }
 layout { chordDiagrams guitar { C  F xx3211  section Chorus { F 133211  G } } }
 time 4/4
 part melody { clef treble }
-section Verse  { melody { e'2 c2 | f2 d2 | }  chords prog { C | F G | } }
-section Chorus { melody { e'2 c2 | f2 d2 | }  chords prog { C | F G | } }
+section Verse  { melody { e''2 c2 | f2 d2 | }  chords prog { C | F G | } }
+section Chorus { melody { e''2 c2 | f2 d2 | }  chords prog { C | F G | } }
 form { ~Verse ~Chorus }
 score { chords prog  staff melody }
 '@
@@ -354,7 +355,7 @@ title "Chord list"
 time 4/4
 part melody { clef treble }
 section A {
-  melody { e'2 c2 | f2 d2 | g2 b,2 | c1 | }
+  melody { e''2 c2 | f2 d2 | g2 b,2 | c1 | }
   chords prog { C | F(xx3211) | G | C | }
 }
 form { ~A }

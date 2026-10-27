@@ -20,6 +20,7 @@ workflow attaches that section to the GitHub Release verbatim.
   - An octave clef (`treble_8`, a guitar) is written at sounding pitch, as in LilyPond: the clef's 8
     draws it an octave up, and the twin writes no `\transpose`.
   - Under `pitch concert`, an octave-only transposer (bass, piccolo, guitar) is typed as it sounds.
+  - `[lsp]` The `instrument` hover, completion and status line list no octave (every part is at 3).
 - The repository's scores, lessons, site examples and tests are re-marked to sound and draw as before:
   every pitch is moved by what the legacy build played (`OctaveModeConverter.MigrateFromLegacy`).
   `samples/` is not touched.

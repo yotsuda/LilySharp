@@ -85,7 +85,7 @@
   <h2>A file at a glance</h2>
   <p>The smallest complete document is four lines:</p>
 <pre>part melody { clef treble }
-section Main { melody { c4 d e f | g2 g | } }
+section Main { melody { c'4 d e f | g2 g | } }
 form { ~Main }
 score { staff melody }</pre>
   <p>Everything else is optional, and top-level settings come first:</p>
@@ -106,10 +106,10 @@ layout { barNumbers every 4 }  // optional, score-wide display switches — see 
 part rightHand { clef treble }
 part leftHand  { clef bass octave 3 }
 
-phrase motif { c4 d e f | }  // optional reusable music
+phrase motif { c'4 d' e' f' | }  // optional reusable music
 
 section Main {
-  rightHand { motif g2 g | }   // a section binds music to each part by name
+  rightHand { motif g'2 g' | }   // a section binds music to each part by name
   leftHand  { c2 c | g2 g | }
 }
 
@@ -300,7 +300,7 @@ c4@phrasingSlur d( e) f g@!phrasingSlur   // a phrasing slur over a whole phrase
   time and into E the second — so it is checked per form, per part and per play:</p>
 <pre>part vc {
   section C { g4 a b c( || }
-  section D { d4) e f g~ || }
+  section D { d'4) e f g~ || }
   section E { g'1 | }   // the frame resets at E: g' is the tied G
 }
 form { C D E }
@@ -489,7 +489,7 @@ part melody { clef treble }
 section A { melody { g'4 fis e d | c'4 b a2 | } }
 section B {
   key ees major                // this section's key, in every part
-  melody { ees'4 f g aes | bes2 g | }
+  melody { ees''4 f g aes | bes2 g | }
 }
 section C { melody { g'4 f e d | g1 | } }   // back in G: f is F natural, and prints one
 form { A B C }
@@ -519,7 +519,7 @@ score { staff melody }</pre>
 part melody { clef treble }
 section Intro {
   partial 4                      // the section opens on a one-beat pickup
-  melody { d'4 | g2 a4 | b2. | }
+  melody { d''4 | g2 a4 | b2. | }
 }
 section Verse {
   melody { g'4 a b | time 2/4 c2 | time 3/4 b2. | }   // a change from that bar on
@@ -555,12 +555,12 @@ tempo 120 swing                // the swing equation beside the mark (swing 16: 
   next section. Playback and the MIDI export follow the number; the word prints.</p>
 <pre>tempo "Andante" 4 = 76
 part melody { clef treble }
-section A { melody { c'4 d e f | g1 | } }
+section A { melody { c''4 d e f | g1 | } }
 section B {
   tempo "Più mosso" 4 = 96         // from here on: a tempo stays until the next one
   melody { a'4 g f e | d1 | }
 }
-section C { melody { c'4 e g e | c1 | } }   // still 96
+section C { melody { c''4 e g e | c1 | } }   // still 96
 form { A B C }
 score { staff melody }</pre>
 </section>
@@ -598,7 +598,7 @@ score { staff cello }</pre>
   to the next dynamic or hairpin on the staff.</p>
 <pre>part melody { clef treble }
 section A {
-  melody { c'4@p@cresc d e f | g2@f g@decresc | f4 e d c | c1@niente | }
+  melody { c''4@p@cresc d e f | g2@f g@decresc | f4 e d c | c1@niente | }
 }
 form { A }
 score { staff melody }</pre>
@@ -799,8 +799,8 @@ score { staff kit }</pre>
 <section id="phrases">
   <h2>Phrases</h2>
   <p>Named music, declared with <code>phrase</code> and used by its bare name:</p>
-<pre>phrase motif { c4 d e f | }
-section Main { melody { motif g2 g | } }</pre>
+<pre>phrase motif { c'4 d e f | }
+section Main { melody { motif g'2 g | } }</pre>
   <p>Each phrase body evaluates in a <b>fresh frame</b> — default octave, pitch and duration
   are reset — so a phrase means the same notes at every call. A reference is <i>one item</i>
   to the relative chain, exactly like a chord: the next note is relative to the phrase's
@@ -816,16 +816,16 @@ section Main { melody { motif g2 g | } }</pre>
 part violin { clef treble }
 part cello  { clef bass }
 
-phrase turn { e'8 d c d e4 }    // one bar
-phrase answer { turn | g2. }        // two bars: a phrase can play another
+phrase turn { e''8 d c d e4 }    // one bar
+phrase answer { turn | g'2. }        // two bars: a phrase can play another
 
 section A {
-  violin { turn | answer | c'2. | }
-  cello  { c,2. | c2. | g2. | c2. | }
+  violin { turn | answer | c''2. | }
+  cello  { c2. | c2. | g2. | c2. | }
 }
 section B {
   violin { g'2. | g2. | e2. | c2. | }
-  cello  { turn,, | turn,, | g2. | c2. | }   // two octaves down: the same bar, in the cello's range
+  cello  { turn,, | turn,, | g'2. | c2. | }   // two octaves down: the same bar, in the cello's range
 }
 form { A B }
 score { staff violin  staff cello }</pre>
@@ -866,8 +866,8 @@ score { staff violin  staff cello }</pre>
   part its body may be empty — and every play prints it; a form reference's own
   <code>"Label"</code> still wins, and <code>~</code> still hides it:</p>
 <pre>section A2 "A'" { }
-part p1 { section A2 { c d e r } }
-part p2 { section A2 { e f g r } }
+part p1 { section A2 { c' d e r } }
+part p2 { section A2 { e' f g r } }
 form { A2 }                     // prints A'</pre>
   <p>Only a top-level section takes a label: one inside a part or a lyrics / chords track is
   an error, since every part plays the same section.</p>
@@ -893,8 +893,8 @@ form { A2 }                     // prints A'</pre>
   every part. A long score is often easier to write <b>by part</b>, each part holding its own
   sections — the same music, the other way round. A standalone section header then carries
   the section's key, meter or tempo for all parts:</p>
-<pre>part melody { section A { c4 c g' g | } }
-part bass   { section A { c2 e | } }
+<pre>part melody { section A { c'4 c g' g | } }
+part bass   { section A { c'2 e | } }
 section A { key g major }       // applies to every part playing A
 form { A }
 score { staff melody  staff bass }</pre>

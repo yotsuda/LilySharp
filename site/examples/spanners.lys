@@ -2,7 +2,7 @@
 // closed draws nothing at all and says so.
 time 4/4
 part rh { clef treble }
-part lh { clef bass octave 3 }
+part lh { clef bass }
 section A {
   rh {
     c''4@ottava d e f | g4 a b c@!ottava |

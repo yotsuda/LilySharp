@@ -186,7 +186,7 @@ public static partial class NoteStepper
         string octave = name.EndsWith("_8", StringComparison.Ordinal) ? " · it sounds an octave below the page"
             : name.EndsWith("^8", StringComparison.Ordinal) ? " · it sounds an octave above the page" : "";
         return $"clef {name}: middle line {SpellMidi(MiddleLineOf(name))}{octave} · "
-            + "a clef moves no note - octave or instrument sets the register";
+            + "a clef moves no note - octave sets the register";
     }
 
     /// <summary>A key: its sharps or flats, and its relative key.</summary>
@@ -366,7 +366,7 @@ public static partial class NoteStepper
     }
 
     /// <summary>
-    /// What an <c>instrument</c> preset sets, in one line — <c>clef bass · octave 3 · transposition
+    /// What an <c>instrument</c> preset sets, in one line — <c>clef bass · transposition
     /// 8vb (written C3 sounds C2) · tuning bass · midiInstrument "electric bass (finger)"</c> — for
     /// the caret's status line (owner's request 2026-10-24), or null for a name that is no preset.
     /// </summary>
@@ -378,7 +378,6 @@ public static partial class NoteStepper
         var parts = new System.Collections.Generic.List<string> { $"clef {f.Clef}" };
         if (f.Sound != null)
             parts.Add($"midiInstrument \"{f.Sound}\"");
-        parts.Add($"octave {f.Octave}");
         if (f.Tuning != null)
             parts.Add($"tuning {f.Tuning}");
         if (f.Shift != 0)
@@ -392,8 +391,8 @@ public static partial class NoteStepper
     /// null for a name that is no preset. Each line starts with the property that would say it alone.
     /// </summary>
     /// <remarks>
-    /// ⚠️ THE ORDER IS THE OWNER'S (same day): what every preset has first — clef, MIDI sound,
-    /// octave — then what few have — tuning, transposition — so stepping through the candidates
+    /// ⚠️ THE ORDER IS THE OWNER'S (same day): what every preset has first — clef, MIDI sound —
+    /// then what few have — tuning, transposition — so stepping through the candidates
     /// keeps each property on the same line, where it is easy to compare.
     /// </remarks>
     public static System.Collections.Generic.IReadOnlyList<string>? PresetDefaultLines(string name)
@@ -403,7 +402,6 @@ public static partial class NoteStepper
         var lines = new System.Collections.Generic.List<string> { $"clef {f.Clef}" };
         if (f.Sound != null)
             lines.Add($"midiInstrument \"{f.Sound}\"");
-        lines.Add($"octave {f.Octave} — a bare c is written C{f.Octave}");
         if (f.Tuning != null)
             lines.Add($"tuning {f.Tuning} — " + string.Join(" ",
                 Tablature.Tunings.GetTuning(Tablature.Tunings.Parse(f.Tuning)).Select(SpellMidi)));

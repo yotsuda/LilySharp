@@ -246,14 +246,13 @@ internal static class LanguageReference
         // not as code, whose padding VS Code draws widened the one space before it (same day).
         sb.Append($"**Instrument preset {preset}** — the defaults it sets; a property of the part replaces each:\n\n");
         // The owner's order (2026-10-24), the completion's and the status line's too: what every
-        // preset has first — clef, MIDI sound, octave — then what few have — tuning, transposition.
+        // preset has first — clef, MIDI sound — then what few have — tuning, transposition.
         sb.Append(Line($"`clef {LilySharp.Core.Svg.Model.InstrumentDefaults.ClefWord(clef)}`", Own("clef"))).Append('\n');
         if (LilySharp.Core.Svg.Model.InstrumentDefaults.GetMidiProgram(preset) is int program)
             sb.Append(Line($"`midiInstrument \"{LilySharp.Core.Midi.GeneralMidi.InstrumentNames[program]}\"`",
                 own.TryGetValue("midiInstrument", out var mi) ? $"midiInstrument \"{mi}\"" : null)).Append('\n');
-        // `octave absolute` / `relative` choose a mode, not the register: only a number replaces it.
-        sb.Append(Line($"`octave {octave}` — a bare `c` is written C{octave}",
-            own.TryGetValue("octave", out var o) && int.TryParse(o, out _) ? Own("octave") : null)).Append('\n');
+        // No octave line: no preset moves the octave, so a bare c is C3 with or without one
+        // (owner's decision 2026-10-28; the line went the same day, at the owner's request).
         if (LilySharp.Core.Svg.Model.InstrumentDefaults.GetTuning(preset) is { } tuningWord)
         {
             var strings = LilySharp.Core.Tablature.Tunings.GetTuning(LilySharp.Core.Tablature.Tunings.Parse(tuningWord));

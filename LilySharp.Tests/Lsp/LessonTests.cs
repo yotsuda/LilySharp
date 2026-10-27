@@ -494,7 +494,7 @@ public class LessonTests
             LilySharp.Core.Svg.Model.InstrumentDefaults.GetDefaults("cello").Clef);
     }
 
-    private const string Step3Mark = "@todo(\"STEP 3: Ctrl+Shift+Up, PgUp\")";
+    private const string Step3Mark = "@todo(\"STEP 3: Ctrl+Shift+Up, PgDn\")";
 
     [Fact]
     public void Lesson1_TheHead_IntroducesCtrlSpaceAndBothPairsOfStepKeys()
@@ -510,8 +510,9 @@ public class LessonTests
     [Fact]
     public void Lesson1_Step3_TheStepKeysOnTheFirstNote_DoWhatTheCommentSays()
     {
-        // After step 1's `key g major`: Up moves the ringed e to fis, Down brings it back, and
-        // PageUp writes e' (the notes after it follow, in relative octaves).
+        // After step 1's `key g major`: Up moves the ringed e' to fis', Down brings it back, and
+        // PageDown writes e (the notes after it follow, in relative octaves) — the octave the
+        // cello of step 2 plays it in, since an instrument moves no note (owner's decision 2026-10-28).
         Assert.Contains("(`fis'` in G major)", Lesson1);
         string inG = Lesson1.Insert(EmptyLineAfter(Lesson1, "STEP 1"), "key g major");
         // The lesson's first note is written e' since the owner's decision 2026-10-28 (a frame
@@ -527,7 +528,7 @@ public class LessonTests
         string up = StepAt(inG, note + 1, +1, inKey: true);
         Assert.StartsWith("fis'4" + Step3Mark, up[note..]);
         Assert.StartsWith("e'4" + Step3Mark, StepAt(up, note + 1, -1, inKey: true)[note..]);
-        Assert.StartsWith("e''4" + Step3Mark, StepAt(inG, note + 1, +1, inKey: false)[note..]);
+        Assert.StartsWith("e4" + Step3Mark, StepAt(inG, note + 1, -1, inKey: false)[note..]);
     }
 
     [Fact]
@@ -617,7 +618,7 @@ public class LessonTests
         string text = Lesson1;
         text = text.Insert(EmptyLineAfter(text, "STEP 1"), "key g major");
         text = text.Insert(EmptyLineAfter(text, "STEP 2"), "instrument cello");
-        text = text.Replace(Step3Mark, "");
+        text = text.Replace("e'4" + Step3Mark, "e4");   // step 3 ends an octave down, its ring deleted
         int step4 = text.LastIndexOf("e@todo(\"STEP 4\")", System.StringComparison.Ordinal) + 1;
         text = text.Remove(step4, "@todo(\"STEP 4\")".Length).Insert(step4, "@mf");
         int rest = text.LastIndexOf("r1@todo(\"STEP 5\")", System.StringComparison.Ordinal);

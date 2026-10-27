@@ -20,17 +20,20 @@ composer "Traditional"
 
 part melody {
   // STEP 2 — Ctrl+Space on the empty line below. Pick `instrument`, then `cello`.
-  // The bass clef appears by itself. Press ▶.
+  // The bass clef appears by itself, and the tune now sits high above it, on ledger
+  // lines: an instrument changes how the music is shown and played, never which notes
+  // you wrote. Step 3 brings the tune down to where a cello plays it.
 
   // STEP 3 — Put the caret on the first note, the ringed `e'`. Ctrl+Shift+Up: it moves to
   // the next note of the key (`fis'` in G major) and sounds; Ctrl+Shift+Down brings it back.
-  // Ctrl+Shift+PageUp: an octave up (`e''`) — the notes after it follow; PageDown puts it
-  // back. Then delete its `@todo("STEP 3: …")`: its red circle goes away.
+  // Now Ctrl+Shift+PageDown: an octave down (`e`) — the notes after it follow, and the
+  // whole tune moves into the cello's staff. Press ▶. Then delete its `@todo("STEP 3: …")`:
+  // its red circle goes away.
   // STEP 4 — Replace `@todo("STEP 4")` with `@mf`: delete it, type `@` right after the `e`,
   // and pick `mf` from the list. Then, with the caret on `mf`, press Ctrl+Shift+Up: it
   // becomes `f`. Ctrl+Shift+Down twice: `mp`. The same keys move a note, the key, the clef.
   section A {
-    e'4@todo("STEP 3: Ctrl+Shift+Up, PgUp") d c d | e@todo("STEP 4") e e2 |
+    e'4@todo("STEP 3: Ctrl+Shift+Up, PgDn") d c d | e@todo("STEP 4") e e2 |
     d4 d d2 | e4 g g2 |
     e4 d c d | e e e e | d d e d | c1 |
     // STEP 5 — Delete `r1@todo("STEP 5")`, press Ctrl+Space there, pick `Cmaj7`.

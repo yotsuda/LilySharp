@@ -26,7 +26,7 @@ namespace LilySharp.Tests.Lsp;
 
 /// <summary>
 /// A part's <c>instrument</c> preset hovers as the defaults it fills in (owner's request
-/// 2026-10-24): clef, octave, transposition, tuning and MIDI sound, the line a property of the
+/// 2026-10-24): clef, transposition, tuning and MIDI sound, the line a property of the
 /// part replaces struck through — and not the name printed beside the staff.
 /// </summary>
 public class InstrumentPresetHoverTests
@@ -58,7 +58,8 @@ public class InstrumentPresetHoverTests
         Assert.NotNull(hover);
         Assert.StartsWith("**Instrument preset bass** — ", hover);
         Assert.Contains("- `clef bass`", hover);
-        Assert.Contains("- `octave 3` — a bare `c` is written C3", hover);
+        // No octave line: a bare c is C3 with or without a preset (owner's request 2026-10-28).
+        Assert.DoesNotContain("octave", hover);
         Assert.Contains("- `transposition 8vb` — sounds 12 semitones lower: written C3 sounds C2", hover);
         // Every line starts with a code span, which VS Code pads: a plain start stood out of the column.
         Assert.All(hover.Split('\n').Where(l => l.StartsWith("- ")), l => Assert.Matches(@"^- (~~)?`", l));
@@ -71,12 +72,12 @@ public class InstrumentPresetHoverTests
     public void TheLines_StandInTheOwnersOrder()
     {
         // Owner's request 2026-10-24, as the completion's and the status line's: what every preset
-        // has first (clef, MIDI sound, octave), what few have last (tuning, transposition).
+        // has first (clef, MIDI sound), what few have last (tuning, transposition).
         var heads = HoverAt(Book("instrument bass"), "bass")!.Split('\n')
             .Where(l => l.StartsWith("- ", StringComparison.Ordinal))
             .Select(l => l[3..].Split(' ')[0].TrimEnd('`'))
             .ToArray();
-        Assert.Equal(["clef", "midiInstrument", "octave", "tuning", "transposition"], heads);
+        Assert.Equal(["clef", "midiInstrument", "tuning", "transposition"], heads);
     }
 
     [Fact]
@@ -89,7 +90,6 @@ public class InstrumentPresetHoverTests
         string? hover = HoverAt(Book("instrument bass clef treble octave 2 midiInstrument \"fretless bass\""), "bass");
         Assert.NotNull(hover);
         Assert.Contains("- ~~`clef bass`~~ — overridden: the part sets `clef treble` itself", hover);
-        Assert.Contains("- ~~`octave 3` — a bare `c` is written C3~~ — overridden: the part sets `octave 2` itself", hover);
         Assert.Contains("- ~~`midiInstrument \"electric bass (finger)\"`~~ — overridden: the part sets `midiInstrument \"fretless bass\"` itself", hover);
         Assert.Contains("- `tuning bass`", hover);   // not written: still the preset's
     }
@@ -101,8 +101,9 @@ public class InstrumentPresetHoverTests
             HoverAt(Book("instrument bass tuning bass5"), "bass"));
 
     [Fact]
-    public void AnOctaveMode_DoesNotReplaceTheRegister()
-        => Assert.Contains("- `octave 3`", HoverAt(Book("instrument bass octave absolute"), "bass"));
+    public void ThePartsOwnOctave_IsNotAPresetLine()
+        // The preset sets no octave, so the part's `octave 2` (or `octave absolute`) overrides nothing.
+        => Assert.DoesNotContain("`octave", HoverAt(Book("instrument bass octave 2"), "bass"));
 
     [Fact]
     public void AChromaticTransposer_NamesTheSoundingPitch()

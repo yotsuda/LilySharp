@@ -47,7 +47,7 @@ public class CaretInfoTests
     [Fact]
     public void AClef_SaysItsMiddleLine_AndThatItMovesNoNote()
     {
-        Assert.Equal("clef bass: middle line D3 · a clef moves no note - octave or instrument sets the register",
+        Assert.Equal("clef bass: middle line D3 · a clef moves no note - octave sets the register",
             InfoAt(Part("clef ba‸ss")));
         Assert.Contains("it sounds an octave below the page", InfoAt(Part("clef treble_8‸")));
         Assert.Contains("middle line B4", InfoAt(Part("c", "‸clef treble c4 d e f")));
@@ -91,7 +91,7 @@ public class CaretInfoTests
     [Fact]
     public void AnInstrumentPreset_SaysItsDefaults_WithoutThePrintedName()
         // The owner's order (2026-10-24), the completion's and the hover's too.
-        => Assert.Equal("instrument bass: clef bass · midiInstrument \"electric bass (finger)\" · octave 3 · tuning bass"
+        => Assert.Equal("instrument bass: clef bass · midiInstrument \"electric bass (finger)\" · tuning bass"
             + " · transposition 8vb (written C3 sounds C2)", InfoAt(Part("instrument ba‸ss")));
 
     [Fact]

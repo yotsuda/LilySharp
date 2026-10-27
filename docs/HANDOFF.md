@@ -142,12 +142,11 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - 文書は SYNTAX_REFERENCE・GRAMMAR・TUTORIAL（例を `c'4` 始まりに）・CLI_REFERENCE を直した。`lysc octave --help`、補完の `absolute` の説明、レッスン 1 の字も直した。両 CHANGELOG（**BREAKING**）、MANUAL-CHECKS C39。
 - 結果: full **13404 / 0 / 2**、npm **513 / 0**。
 - **残り（ユーザー判断）**:
-  - ⑴ ユーザー自身の旧規則の `.lys` を移すコマンド（旧版を使わず規則の差で書き直す方式）。
-  - ⑵ レッスン 1 は STEP 2 で `instrument cello` を足しても音が動かなくなった。旋律が E4 のまま、ヘ音記号の上に出る。
   - ⑶ ユーザーが戻した `samples/` の 5 冊（amazing-grace・canon-in-d・fur-elise・greensleeves・nocturne）の移行。
   - ⑷ 移調楽器を書いた音で綴り直す変換（「B」・トランペットの part に付く `pitch concert` を外せる）。
   - ⑸ Ctrl+Shift+↑ で `pitch` の written／concert を切り替えたとき、楽譜も書き直す。
-  - ⑹ OMR の `.lys` 出力を新しいオクターブへ（OMR のセッションに伝える）。
+  - ⑹ OMR の `.lys` 出力を新しいオクターブへ＝**伝えた**（`..\LilySharp-Omr\docs\repro\lilysharp-notice-2026-10-28-octaves.md`・返事待ち）。
+- **続き（ユーザー指示）**: ⑴ 旧規則の `.lys` を移すコマンド＝**不要**（ユーザー決定）。⑵ レッスン 1＝「よりよい品質のレッスン」の方針で直した: STEP 2 の cello で譜表がヘ音記号に替わって旋律が上に出て、STEP 3 の Ctrl+Shift+PageDown で旋律がチェロの譜表に入る（png で確認）。`instrument` のホバー・補完・ステータス行から `octave` の行を外した（ユーザー指示: どの楽器でも 3 なので書かない）。site は `<pre>` の例 19 個と `build-examples.ps1` の例を、旧版の音に合わせて直した。`build-site.ps1` が通る。
 - **見つけた不具合（オクターブとは無関係）**: `grace { d'16@caesura e'16 } c'1` が `BeamScoringProblem.MinimumDy` の `Math.Sign(NaN)` で落ちる（`GraceNoteEngraver.QuantGraceBeam` 経由）。`@breath` や D5 なら落ちない（第2 群の報告）。
 判定（2026-10-28・第1028 の終わり）: `octave-base` を master へ merge 済み（push はユーザー）。
 

@@ -124,7 +124,7 @@ public class InstrumentCompletionTests
         // Owner's request 2026-10-24: tell the presets apart before picking one — one line each
         // (same day: not joined by dots), in the details pane, and the instrument's name alone as
         // the detail (same day).
-        // The order is the owner's: what every preset has first (clef, MIDI sound, octave), what few
+        // The order is the owner's: what every preset has first (clef, MIDI sound), what few
         // have last (tuning, transposition), so each stays on its line from candidate to candidate.
         var items = LilySharpLanguageServer.GetInstrumentCompletions().Items.ToDictionary(i => i.Label!);
         Assert.Equal("Bass", items["bass"].Detail);
@@ -134,14 +134,12 @@ public class InstrumentCompletionTests
         Assert.Equal(string.Join("\n",
             "- clef bass",
             "- midiInstrument \"electric bass (finger)\"",
-            "- octave 3 — a bare c is written C3",
             "- tuning bass — E1 A1 D2 G2",
             "- transposition 8vb — written C3 sounds C2"), Assert.IsType<MarkupContent>(items["bass"].Documentation).Value);
         Assert.Equal(string.Join("\n",
             "- clef treble",
             "- midiInstrument \"clarinet\"",
-            // Every preset anchors at 3 (owner's decision 2026-10-28).
-            "- octave 3 — a bare c is written C3",
+            // No octave line: no preset moves the octave (owner's decision 2026-10-28).
             "- sounds 2 semitones lower — written C3 sounds B♭2"),Assert.IsType<MarkupContent>(items["clarinet"].Documentation).Value);
         Assert.All(items.Values, i => Assert.StartsWith("- clef ", Assert.IsType<MarkupContent>(i.Documentation).Value));
     }

@@ -11,6 +11,9 @@ All notable changes to the Lily# VS Code extension are documented here.
   - Writing `instrument bass` (or any preset) no longer moves the notes; `octave N` in a part still does.
   - A guitar or `treble_8` part is written as it sounds.
   - Files written before this change may sound an octave off.
+  - The hover, completion and status line of `instrument` no longer list an octave.
+- **Lesson 1** uses the cello for a new step 3: adding the instrument changes the clef, and
+  Ctrl+Shift+PageDown brings the tune down into the cello's staff.
 - **Compose with AI** writes the piece at concert pitch and opens it in written pitch:
   - a bass is re-marked to its own octave;
   - a trumpet keeps a `pitch concert` of its own.
