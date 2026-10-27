@@ -59,6 +59,8 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Ask AI
 
+- `[language]` **The grammar for the AI: a part names its `instrument` and writes no `clef` or `octave`
+  beside it** — the preset brings both; its own skeleton and the "add a bass line" example now do so.
 - `[editor]` **A note out of its instrument's range is named to the AI as written, with the note to
   write** in the repair (`c,8` → `c8`), and the grammar's ranges say how `instrument bass` writes its
   low E; the candidate's head shows the AI's word right under the request, the warnings after it.

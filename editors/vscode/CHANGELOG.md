@@ -85,6 +85,9 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ### Ask AI
 
+- **The AI writes a part as its instrument alone** — `part vc "Cello" { instrument cello }`, no
+  `clef` or `octave` beside it, since the preset brings both (and the sound and range); `clef` and
+  `octave` only where no preset fits. Parts already in the file are left as they are.
 - **A note out of range is easier for the AI to fix.** The repair names each such note as the AI
   wrote it and the note to write instead (`c,8`: write it an octave higher, `c8`) — it had only the
   sounding pitch ("this note sounds C1"), and an electric bass written in absolute octaves came back

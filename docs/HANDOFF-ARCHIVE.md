@@ -160,6 +160,14 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1014セッションの経緯
+
+### 1.1 第1014セッション（2026-10-27・YT-DELL2）
+
+第1013 と同じ会話の続き。`-Start p1014`（開始 HEAD `dfeaa54a5`・full **13384 / 0 / 2 / 13386**・第1012 を ARCHIVE へ）。作業場所は Lab `sessions/p1014/`。
+- **ユーザー「Accept を押したら『the document was closed; nothing was applied.』」→「エディタは開いたまま」「.lys は未保存」「作曲した曲に Ctrl+I で追加の修正」「タブは `// Composed with AI (…` 太字・`Untitled-1` 細字」**: 最初に疑った「見えない文書を VS Code が手放す」は違った（それでも file は開き直して反映する処理を足した＝害は無い）。原因＝`movedUris`（保存された untitled → file の対応）が `Untitled-1` の**名前の使い回し**で古いまま残り、新しい `Untitled-1` の Accept が昔のファイルを探しに行った。→ `currentUri` は**開いている自分の名前を先に**取る（たどる途中でも開いているものがあればそれ）・`onDidOpenTextDocument` で untitled が開いたらその名前の対応を消す。網 `aiNewPiece.test` 2 本（npm 495）。両 CHANGELOG・MANUAL-CHECKS C25。⚠️ 実機での再現は未確認（推論による原因）。
+判定（2026-10-27・第1014 の終わり）: 次はユーザーの指示（C9〜C25）。
+
 ## 以下は第1013セッションの経緯
 
 ### 1.1 第1013セッション（2026-10-27・YT-DELL2）

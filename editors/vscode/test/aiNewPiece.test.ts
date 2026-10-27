@@ -96,6 +96,14 @@ describe('the instruments\' ranges, and a head that holds a long list', () => {
         assert.match(grammar, /## Instrument ranges[\s\S]*keep\s+EVERY note inside the range/);
         assert.match(grammar, /\| `guitar` \| E2–E6 \| `e,` – `e'''` \|/);
     });
+    // Owner's request 2026-10-27: a part names its instrument and lets the preset bring its clef and octave.
+    it('tells the AI to name the instrument and write no clef or octave beside it, and shows it so', () => {
+        assert.match(grammar, /A part of a known instrument names it with `instrument` and writes no `clef` or `octave`\s+beside it\./);
+        assert.match(grammar, /part leftHand  \{ instrument piano-left \}/);
+        assert.match(grammar, /part bass \{ instrument bass \}\s+\/\/ added/);
+        // No example writes them together (the rule's own counter-example aside).
+        assert.doesNotMatch(grammar.replace(/not `\{ instrument cello clef bass/, ''), /instrument \w[\w-]* (clef|octave) |(clef \w+|octave \d) instrument /);
+    });
     it('holds the candidate\'s head to a few lines, scrolled for the rest', () => {
         assert.match(transform, /\.header \.texts \{ flex:1; min-width:0; max-height:7\.5em; overflow-y:auto;/);
         assert.match(transform, /<div class="header">\s*<div class="texts">/);

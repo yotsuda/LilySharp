@@ -246,6 +246,7 @@ edocs/HANDOFF.mde §2 R13 ⒝・OMR の提案 B1〜B6（e..\LilySharp-Omr\docs\r
 - [ ] **C25**（第1014・未保存の曲に Accept）: 未保存の .lys（Untitled-1）を保存して閉じ、Compose with AI で新しい曲（また Untitled-1）→ 保存せずに Ctrl+I で頼む → Accept → 書き込まれる（「the document was closed」が出ない）。
 - [ ] **C26**（第1015・強弱の幅）: `c4@pp d@p e@mf f@f g@ff` を鳴らす → 段階が聞き分けられ、p と f の差が前より穏やか。強弱の無い曲は前より少し大きい。ホバーで `@p` が「plays at velocity 70 of 127」。
 - [ ] **C27**（第1015・音域の直しと見出し）: エレキベースのある曲で Ctrl+I「ベースの伴奏をつけて」→ 出力チャネル「Lily# AI」の直しの依頼に「you wrote `c,8`: write it an octave higher, `c8`」の形・候補の見出しは「依頼 → 💬 AI の言葉 → ⚠ 残りの警告」の順。
+- [ ] **C28**（第1016・instrument だけの part）: Compose with AI「弦楽四重奏」や Ctrl+I「ベースを足して」→ 新しい part が `{ instrument violin }` のように instrument だけ（clef や octave が並ばない）。
 
 ## 4. §2 R13 ⒝ — 差分頁の配信（実機未確認・第404）
 

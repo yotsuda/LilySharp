@@ -49,8 +49,9 @@ layout {                 // optional; the score-wide display switches (see the l
   accidentals default   // printed accidental. All three shown at their defaults.
 }
 
-part rightHand { clef treble }  // declare each part; clef lives here (it only DRAWS —
-part leftHand  { clef bass octave 3 }  // the register is `octave N` or an instrument preset)
+part rightHand { instrument piano-right }  // declare each part: an instrument preset brings its
+part leftHand  { instrument piano-left }   // clef, octave, sound and range (see "Rules": name the
+                                           // instrument, and no clef or octave beside it)
                                 // a part name is any bare word except the structural
                                 // keywords (voice staff section key time … — see below)
 
@@ -985,7 +986,7 @@ that should show it. A piano accompaniment is two parts in a `grandStaff { … }
 
 ```
 part melody { clef treble }
-part bass { clef bass octave 3 }           // added (octave 3: a bare c is C3)
+part bass { instrument bass }              // added: the bass clef, its octave and its sound come with it
 section A {
   melody { c4 d e f | g2 g | }
   bass { c2 g | c2 e | }                   // added
@@ -1208,6 +1209,14 @@ score {
 
 ## Rules and gotchas
 
+- **A part of a known instrument names it with `instrument` and writes no `clef` or `octave`
+  beside it.** The preset brings both — the cello its bass clef and octave, the viola the alto
+  clef, the guitar its octave-down treble clef, a bass the octave it sounds — and its sound and its
+  range (see *Instrument ranges*); a `clef` or an `octave` written beside it only repeats the
+  preset, or fights it. So `part vc "Cello" { instrument cello }`, not `{ instrument cello clef bass
+  octave 3 }`, and a piano is `instrument piano-right` / `instrument piano-left`. Write `clef` or
+  `octave` only for a part no preset fits (a melody for no instrument in particular, drums' `clef
+  percussion`). Leave the parts already in the file as they are unless asked to change them.
 - Each **phrase body** evaluates in a fresh frame (default octave/pitch/duration), so a
   phrase means the same notes at every call. **Section boundaries also reset the frame.**
   A reference is ONE item to the relative chain (the chord rule): the next note is
