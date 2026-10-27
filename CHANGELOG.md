@@ -70,6 +70,11 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Ask AI
 
+- `[editor]` **Composing: LilyPond's octaves, and staves named by the hand.** The composer's prompt
+  and GRAMMAR_FOR_LLM say that Lily#'s absolute octaves are not LilyPond's (`c'` is not middle C in a
+  part anchored at C4) and that a staff is named by its instrument — a solo piano names no part; the
+  plan gives each register as it will be written. The composition check's right hand now goes back
+  over A5 (it was D6), and a part labelled "Right hand", "L.H.", 右手 or 左手 is a finding.
 - `[editor]` **Compose with AI composes.** Its own system prompt casts the model as a composer, has it
   plan the piece in a `<plan>` block that is read by no one (key, form of 32 to 64 bars in 4- and
   8-bar phrases, chords and cadences, theme, registers, ending) before the `<note>` and the `<file>`,

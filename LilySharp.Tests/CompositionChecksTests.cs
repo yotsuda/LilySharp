@@ -130,6 +130,24 @@ public class CompositionChecksTests
         Assert.Contains(CompositionChecks.Of(bare), f => f.StartsWith("lh:") && f.Contains("far below") && !f.Contains("bare `c`"));
     }
 
+    // Owner's report 2026-10-27: the next piano piece labelled its staves 右手 and 左手, and its right
+    // hand, planned for D5–A5, sounded D5–G6 — written by LilyPond's octaves, where `c'` is middle C.
+    [Fact]
+    public void ARightHandAnOctaveHigh_AndStavesNamedByHand_AreToldSo()
+    {
+        string named = Piano("part rh \"右手\" \"右手\" { instrument piano-right }\npart lh \"左手\" \"左手\" { instrument piano-left }",
+            "d'4 f'8 a'8 d''4 a''4 | f'4 bes'8 d''8 f''2 | a'4. d''8 f''4 a''4 | g'4 bes'8 d''8 g''2 |",
+            "d,2. a,4 | bes,2 f4 d4 | d,2 a,4 f4 | g,4. d8 g4 bes4 |");
+        var findings = CompositionChecks.Of(named);
+        var high = Assert.Single(findings, f => f.StartsWith("rh:"));
+        Assert.Contains("high above a pianist's right hand", high);
+        Assert.Contains("not LilyPond's `c'`", high);
+        Assert.Contains(findings, f => f.StartsWith("rh, lh: a staff is not labelled by the hand that plays it"));
+        // "Piano" names the instrument.
+        Assert.DoesNotContain(CompositionChecks.Of(named.Replace("\"右手\" \"右手\"", "\"Piano\" \"Pno.\"").Replace("\"左手\" \"左手\"", "")),
+            f => f.Contains("labelled by the hand"));
+    }
+
     [Fact]
     public void ARightHandOverItsRegister_IsToldToMoveDown()
     {

@@ -148,6 +148,14 @@ public static class CompositionChecks
                     hands.TryAdd(staves[1], true);
                 }
             }
+        // A staff labelled by the hand that plays it (owner's report 2026-10-27: a piano piece printed
+        // 右手 and 左手 beside its staves) — a score names the instrument, and a solo piano none.
+        var handNamed = parts.Where(p => new[] { p.DisplayName, p.ShortName }.Any(n => n != null && HandLabel.IsMatch(n)))
+            .Select(p => p.Name.Text).ToList();
+        if (handNamed.Count > 0)
+            findings.Add($"{string.Join(", ", handNamed)}: a staff is not labelled by the hand that plays it. A piece for piano alone "
+                + "names no part (`part rh { instrument piano-right }`); a piano in an ensemble is named once, on its upper part "
+                + "(`\"Piano\" \"Pno.\"`).");
         var sounding = midi.Tracks.SelectMany(t => t.Notes.Select(n => (Part: n.Part ?? t.Name, n.Pitch, n.DurationTicks, n.Channel)))
             .Where(n => n.Channel != 9)
             .GroupBy(n => n.Part)
@@ -177,7 +185,7 @@ public static class CompositionChecks
             else if (!left && middle > RightHandHighestMiddle)
                 findings.Add($"{part}: {mostly} — high above a pianist's right hand, which lies mostly between C4 and C6, round C5: "
                     + "move it down an octave."
-                    + (preset ? " In `instrument piano-right` (absolute octaves) a bare `c` is C4: C5 is `c'`, C6 `c''`." : ""));
+                    + (preset ? " In `instrument piano-right` (absolute octaves) a bare `c` is C4 — middle C, not LilyPond's `c'` — so C5 is `c'` and C6 `c''`." : ""));
         }
 
         // The length and the ending (owner's report 2026-10-27: the composed piano piece was 8 bars, two
@@ -234,8 +242,14 @@ public static class CompositionChecks
     }
 
     // The middle of a piano hand's sounding time (MIDI) past which the hand is out of its usual
-    // register: a left hand whose middle is under F2, a right hand whose middle is over D6.
-    private const int LeftHandLowestMiddle = 41, RightHandHighestMiddle = 86;
+    // register: a left hand whose middle is under F2, a right hand whose middle is over A5 (owner's
+    // report 2026-10-27: a right hand between D5 and G6, written by LilyPond's octaves, was "too high").
+    private const int LeftHandLowestMiddle = 41, RightHandHighestMiddle = 81;
+
+    // A label that names a hand, not an instrument.
+    private static readonly System.Text.RegularExpressions.Regex HandLabel = new(
+        @"^\s*((right|left)\s*hand|[RL]\.\s*H\.?|[RL]H|右手|左手|みぎて|ひだりて)\s*$",
+        System.Text.RegularExpressions.RegexOptions.IgnoreCase);
 
     // Under this many bars a piece is a sketch, not a piece (16: two 8-bar phrases).
     private const int ShortestPiece = 16;

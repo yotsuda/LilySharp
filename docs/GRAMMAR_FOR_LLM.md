@@ -219,7 +219,9 @@ verbatim `@"C:\music"` / `@"say ""hi"""` (backslash as written, `""` = one quote
 - `octave absolute` (top level, or in a part's music — `m { octave absolute c4 … }` — to the section's end;
   NOT inside `part X { }`, which takes only the base number) switches to ABSOLUTE
   mode: bare `c` = C4 and `'`/`,` are absolute offsets from that anchor (`c'` = C5,
-  `c,` = C3), independent per note - octave mistakes never cascade. RECOMMENDED
+  `c,` = C3), independent per note - octave mistakes never cascade. ⚠️ NOT LilyPond's
+  absolute octaves, where `c'` is middle C: here, in a part anchored at C4, middle C is the bare
+  `c` and `c'` is C5. RECOMMENDED
   when generating scores. The base is the part's anchor, as in relative mode:
   `part X { octave N }`, else its `instrument`'s octave (`instrument bass` → bare `c` = C3,
   `flute` → C5), else C4. `part X { octave 2 }` re-anchors it lower (bass parts).
@@ -1069,7 +1071,12 @@ it should sound like the ensemble asked for. What makes it music:
 - **Instruments**: every part gets its `instrument` (`violin`, `viola`, `cello`, `flute`, …) —
   without one it plays a piano. Its range sets the bare note: `instrument violin` puts a bare
   `c` at C4, `viola` and `cello` at C3 (so a violin's `a` is A4, a viola's `d'` is D4, a
-  cello's `d` is D3). Name the parts (`part vn1 "Violin I" "Vn. I"`).
+  cello's `d` is D3) — not LilyPond's octaves, where `c'` is middle C: a piano's right hand
+  written by LilyPond's habit sounds an octave too high. Name the parts as a score prints them,
+  by the instrument (`part vn1 "Violin I" "Vn. I"`). A piece for piano alone names no part (its
+  two staves need no label); a piano in an ensemble is named once, on its upper part (`part rh
+  "Piano" "Pno."`), the lower part unnamed. A staff is never labelled "Right hand", "L.H.", 右手
+  or 左手.
 - **Layout**: an ensemble is a `staffGroup { … }` (a bracket); `grandStaff` is one instrument
   on two staves (piano, harp) — never four players.
 - **A form, and the length to carry it**: unless the request says otherwise, a piece runs 32 to

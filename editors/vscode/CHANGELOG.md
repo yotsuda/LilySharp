@@ -92,6 +92,11 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ### Ask AI
 
+- **A composed piano piece's right hand sounds where it was planned, and its staves are not
+  labelled 右手 / 左手.** The AI is warned that Lily#'s octaves are not LilyPond's (in
+  `piano-right` middle C is the bare `c`), plans each register as it will write it, and names the
+  parts by the instrument — a solo piano none. A right hand whose middle is over A5, or a staff
+  named by its hand, goes back to it.
 - **Compose with AI asks the model as a composer.** It is told it writes a whole piece for players,
   plans it first where you do not see it (key, form and length, each phrase's chords and cadence,
   the theme, each part's register, the ending), and writes it in absolute octaves from each part's

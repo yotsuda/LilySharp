@@ -158,8 +158,15 @@ describe('the composer\'s prompt', () => {
         assert.match(transform, /unless the request says\s*'\s*\+?\s*'?\s*otherwise a piece runs 32 to 64 bars|otherwise a piece runs 32 to 64 bars/);
         assert.match(transform, /return 'Reply with <plan>…<\/plan>, <note>…<\/note> and the whole piece in <file>…<\/file>';/);
     });
-    it('names each part\'s bare c in absolute octaves', () => {
+    it('names each part\'s bare c in absolute octaves, and warns of LilyPond\'s', () => {
         assert.match(transform, /C3 for `piano-left`, `viola`, `cello`/);
+        assert.match(transform, /These are NOT LilyPond\\'s octaves,/);
+        assert.match(transform, /AND as you will write/);
+    });
+    // Owner's report 2026-10-27: a piano piece labelled its staves 右手 and 左手.
+    it('names the parts by the instrument, a solo piano none', () => {
+        assert.match(transform, /A piece for piano alone names no part/);
+        assert.match(transform, /Never "Right hand", "L\.H\.", 右手, 左手\./);
     });
     it('logs every message sent and every reply, the grammar left out', () => {
         assert.match(transform, /logged = logExchange\(chat\.label, grammar, messages, logged\);\s*const raw = await chat\.send\(messages, token\);\s*logReply\(raw\);/);

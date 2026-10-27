@@ -160,6 +160,14 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1020セッションの経緯
+
+### 1.1 第1020セッション（2026-10-27・YT-DELL2）
+
+第1019 と同じ会話の続き。`-Start p1020`（開始 HEAD `7f7246f23`・full **13386 / 1 / 2 / 13389**＝落ちた 1 本は本便の捨て計器 `Zz1020ProbeTests` が GPL 頭書きを持たなかった `LicenceHeaderTests`・計器は消した・第1018 を ARCHIVE へ）。作業場所は Lab `sessions/p1020/`。
+- **ユーザー「AI に作曲させたらひどい出来・特に左手のピアノの音域が低すぎて不自然。こういう曲にならないようにしたい」（`Untitled-1.lys`）**: 計ると左手は **E1〜G2（tessitura D1〜E2）**。AI は絶対オクターブで書く（前書きの後で relative に機械変換）＝`instrument piano-left` の素の `c` は **C3**（`InstrumentDefaults` の octave 3・右手は 4）なのに C4 のつもりで `e,,` と書いた形。音域表（A0–C8）は全部通す。直し 2 つ: ① **`CompositionChecks` に手の音域**＝`piano-left`/`piano-right`（または楽器なしの 2 段 grandStaff の上下）の鳴る時間の中央値が左手 F2 未満・右手 D6 超なら所見（10/90 分位と中央値・普段の音域・preset なら素の `c` の高さ）＝作曲の直しラウンドに乗る。`InstrumentOf` は `piano - left` の 3 token を 1 語に戻す（`RoleOf` は StartsWith で気付かなかった）。② **GRAMMAR_FOR_LLM「Instrument ranges」に段落**（音域は届く範囲で、置き場所ではない・左手は C2〜C4・右手は C4〜C6・piano-left の素の `c` は C3）。網 `CompositionChecksTests` +2・`aiNewPiece.test` +1（npm 501）。両 CHANGELOG・MANUAL-CHECKS C32。
+判定（2026-10-27・第1020 の終わり）: 次はユーザーの指示（C9〜C32）。曲の出来そのもの（旋律・和声）は未着手＝ユーザーの次の報告次第。
+
 ## 以下は第1019セッションの経緯
 
 ### 1.1 第1019セッション（2026-10-27・YT-DELL2）
