@@ -160,6 +160,14 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1016セッションの経緯
+
+### 1.1 第1016セッション（2026-10-27・YT-DELL2）
+
+第1015 と同じ会話の続き。`-Start p1016`（開始 HEAD `9f1c0ed83`・full **13384 / 0 / 2 / 13386**・第1014 を ARCHIVE へ）。作業場所は Lab `sessions/p1016/`。
+- **ユーザー「part にはなるべく instrument だけを書いて、clef や octave は書かないように指示を。プリセットの clef や octave を活用した方が簡潔」**: `GRAMMAR_FOR_LLM.md`（Ask AI と作曲の system）の「Rules and gotchas」の先頭に規則（instrument を名指し・clef／octave を並べない・preset が clef／octave／音／音域を持つ・preset の無い part だけ clef／octave・ファイルに在る part は頼まれなければそのまま）。見本も直した＝骨組みの `part leftHand { clef bass octave 3 }` → `{ instrument piano-left }`（`GetDefaults` で同じ bass・3 を確認＝音も見た目も同じ）・右手 `piano-right`・「Add a bass line」の `{ clef bass octave 3 }` → `{ instrument bass }`（見た目同じ・1 オクターブ下で鳴る）。文書の見本は全部コンパイル（DocExamplesParseTests ほか 33 本）。網 `aiNewPiece.test` 1 本（npm 498）。両 CHANGELOG・MANUAL-CHECKS C28。
+判定（2026-10-27・第1016 の終わり）: 次はユーザーの指示（C9〜C28）。
+
 ## 以下は第1015セッションの経緯
 
 ### 1.1 第1015セッション（2026-10-27・YT-DELL2）

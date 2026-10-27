@@ -90,6 +90,8 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ### Ask AI
 
+- **A composed piece's preface quotes what the AI first said of it** — not the word of a repair the
+  person never asked for ("The AI: I reviewed the bar lengths …").
 - **The AI writes a part as its instrument alone** — `part vc "Cello" { instrument cello }`, no
   `clef` or `octave` beside it, since the preset brings both (and the sound and range); `clef` and
   `octave` only where no preset fits. Parts already in the file are left as they are.

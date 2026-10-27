@@ -128,6 +128,15 @@ describe('an Accept on a file no editor shows', () => {
     });
 });
 
+// Owner's request 2026-10-27: the preface quotes what the AI first said, not a repair's word.
+describe('a composed piece\'s preface', () => {
+    const transform = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'aiTransform.ts'), 'utf8');
+    it('quotes the AI\'s first answer, not the word of a repair', () => {
+        assert.match(transform, /if \(parsed !== null && !isProblem\(parsed\) && firstNote === undefined\) \{\s*firstNote = splitNote\(parsed\.reply\)\.note;/);
+        assert.match(transform, /const note = round\.firstNote !== undefined \? round\.firstNote : splitNote\(candidate\.reply\)\.note;/);
+    });
+});
+
 describe('a revision is of the candidate', () => {
     const transform = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'aiTransform.ts'), 'utf8');
 

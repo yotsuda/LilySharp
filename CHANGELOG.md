@@ -67,6 +67,7 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Ask AI
 
+- `[editor]` **A composed piece's preface quotes the AI's first answer**, not a repair's word.
 - `[language]` **The grammar for the AI: a part names its `instrument` and writes no `clef` or `octave`
   beside it** — the preset brings both; its own skeleton and the "add a bass line" example now do so.
 - `[editor]` **A note out of its instrument's range is named to the AI as written, with the note to

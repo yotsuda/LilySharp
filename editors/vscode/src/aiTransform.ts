@@ -498,6 +498,10 @@ async function drive(
 
                 // ----- Generate + validate-and-self-repair (§4 AwaitingModel → Validating → Repairing) -----
                 let candidate: CandidateEdit | null = null;
+                // What the AI first said of its work — a composed piece's preface quotes it, not a
+                // repair's word on what it fixed, which the person never saw asked (owner's request
+                // 2026-10-27: "The AI: I reviewed the bar lengths …" read as if they had).
+                let firstNote: string | null | undefined;
                 let repairs = 0;
                 // A candidate that compiles but adds WARNINGS (a bar that no longer fills its meter
                 // is a warning in Lily#, not an error) is repaired like a broken one; if the repairs
@@ -526,6 +530,9 @@ async function drive(
                     // Read against the text the AI was last shown as the file: the file itself, or —
                     // asked again — its candidate (see `base`).
                     const parsed = toCandidateEdit(base, raw);
+                    if (parsed !== null && !isProblem(parsed) && firstNote === undefined) {
+                        firstNote = splitNote(parsed.reply).note;
+                    }
                     if (parsed === null) {
                         turnedDown(attempt, `the reply was empty (${raw.length} characters)`);
                         messages.push({ role: 'assistant', content: raw });
@@ -727,7 +734,7 @@ async function drive(
                 // notes whose data-pos falls in these spans.
                 // Word by word, so a note the edit copied through unchanged is not lit.
                 const changed = changedWords(candidate.snap.origFullText, reconstructed, candidate.spans);
-                return token.isCancellationRequested ? null : { candidate, caption, renderAfter, changed };
+                return token.isCancellationRequested ? null : { candidate, caption, renderAfter, changed, firstNote };
             });
         } catch (err: any) {
             if (!shownRound || !candidatePanel) {
@@ -759,7 +766,8 @@ async function drive(
             // an editor of its own (owner's request 2026-10-27). What was asked and what the AI says
             // of it head the file as comments — a preface kept with the piece, where a notification
             // went in seconds (owner, the same day: "I want to see the AI's comment").
-            const note = splitNote(candidate.reply).note;
+            // The first answer's word (none, if it said none), not a repair's.
+            const note = round.firstNote !== undefined ? round.firstNote : splitNote(candidate.reply).note;
             const flatNote = caption.startsWith(instruction) ? caption.slice(instruction.length).replace(/^ — /, '') : '';
             let text = spliceCandidate(candidate.snap, candidate.text);
             // A composed piece always has a title that fits it (owner's request 2026-10-27): asked
@@ -1226,7 +1234,8 @@ async function getMarks(client: LanguageClient, snapshot: Snapshot): Promise<str
 type Decision = 'accept' | 'iterate' | 'reject';
 
 /** A candidate as the panel reviews it: the edit, its caption, its score and where it changed. */
-interface ReviewRound { candidate: CandidateEdit; caption: string; renderAfter: SvgResponse; changed: ChangedSpan[] }
+/** `firstNote`: what the AI said of its first answer of the round, before any repair. */
+interface ReviewRound { candidate: CandidateEdit; caption: string; renderAfter: SvgResponse; changed: ChangedSpan[]; firstNote?: string | null }
 
 
 async function reviewOnScore(

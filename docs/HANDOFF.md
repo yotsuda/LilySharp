@@ -127,19 +127,19 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1018セッション（2026-10-27・YT-DELL2）
+
+第1017 と同じ会話の続き。`-Start p1018`（開始 HEAD `b5ff0be40`・full **13386 / 0 / 2 / 13388**・第1016 を ARCHIVE へ）。作業場所は Lab `sessions/p1018/`。
+- **ユーザー「AI に作曲してもらうとヘッダコメントに『// The AI: 小節の長さを見直し、4/4 に収まる曲全体を示します。』と出る。内部の見直しはユーザーに見えないので違和感。最初の AI のコメントを」**: 前書きの `note` は最後の返事（直しの後）だった → 各ラウンドの最初に読めた返事の note を `firstNote` に取り（`ReviewRound.firstNote`）、作曲の前書きはそれ（最初の返事に言葉が無ければ無し）。候補パネルの 💬 は今まで通り表示中の候補の言葉。網 `aiNewPiece.test` 1 本（npm 499）。両 CHANGELOG・MANUAL-CHECKS C30。
+判定（2026-10-27・第1018 の終わり）: 次はユーザーの指示（C9〜C30）。
+
+## 以下は第1017セッションの経緯
+
 ### 1.1 第1017セッション（2026-10-27・YT-DELL2）
 
 第1016 と同じ会話の続き。`-Start p1017`（開始 HEAD `dfd59ab1e`・full **13386 / 0 / 2 / 13388**＝新しい網を入れた作業ツリーで・第1015 を ARCHIVE へ）。作業場所は Lab `sessions/p1017/`。
 - **ユーザー「Lab\corpora\ベースタブLy\tempo-todo.lys の tempo と todo コメントが重なる。最初は重ならないのに Ctrl+S で保存すると todo の y が下がってテンポと重なる」**: 再現＝LSP の `lilysharp/svg`（pageDiff）を同じ文書で 2 回＝メモの y 16.53 → 19.03（`SvgGenerator` を 3 回は不変）。原因＝`SharedRenderer` はメモのあるページでは系（system）を生で描く（`pageFragHost` = null）のに、上乗せの描画（`DrawTies`・`DrawSlurs`・`DrawArticulations`・`DrawPercentRepeats`・`DrawBarNumbers`・`DrawFingerings`・`DrawMusicMarks`＝テンポ）には `fragHost` を渡していた＝2 回目は前の断片を文字で貼り、InkRecorder に載らない＝メモの探索にテンポが無い。→ 7 か所を `pageFragHost` に。網 `TodoMemoTempoTests` 2 本（LSP で未保存 → 2 回目 → 保存の名前、と SvgGenerator 3 回）。途中で試した「引き出し線が ink を横切るかの判定」は原因でなく、他のメモを動かしうるので戻した（引き出し線がテンポの数字をかすめるのは最初の絵から＝別件）。両 CHANGELOG・MANUAL-CHECKS C29。
 判定（2026-10-27・第1017 の終わり）: 次はユーザーの指示（C9〜C29）。
-
-## 以下は第1016セッションの経緯
-
-### 1.1 第1016セッション（2026-10-27・YT-DELL2）
-
-第1015 と同じ会話の続き。`-Start p1016`（開始 HEAD `9f1c0ed83`・full **13384 / 0 / 2 / 13386**・第1014 を ARCHIVE へ）。作業場所は Lab `sessions/p1016/`。
-- **ユーザー「part にはなるべく instrument だけを書いて、clef や octave は書かないように指示を。プリセットの clef や octave を活用した方が簡潔」**: `GRAMMAR_FOR_LLM.md`（Ask AI と作曲の system）の「Rules and gotchas」の先頭に規則（instrument を名指し・clef／octave を並べない・preset が clef／octave／音／音域を持つ・preset の無い part だけ clef／octave・ファイルに在る part は頼まれなければそのまま）。見本も直した＝骨組みの `part leftHand { clef bass octave 3 }` → `{ instrument piano-left }`（`GetDefaults` で同じ bass・3 を確認＝音も見た目も同じ）・右手 `piano-right`・「Add a bass line」の `{ clef bass octave 3 }` → `{ instrument bass }`（見た目同じ・1 オクターブ下で鳴る）。文書の見本は全部コンパイル（DocExamplesParseTests ほか 33 本）。網 `aiNewPiece.test` 1 本（npm 498）。両 CHANGELOG・MANUAL-CHECKS C28。
-判定（2026-10-27・第1016 の終わり）: 次はユーザーの指示（C9〜C28）。
 
 ## 2. 開いている作業
 
