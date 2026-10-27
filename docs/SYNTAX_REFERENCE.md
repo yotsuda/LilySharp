@@ -2297,6 +2297,13 @@ A symbol that is no chord — refused, or a quality Lily# does not know — is w
 is written, with the fix: in an `@chord` it names nothing and is ignored (LYS1008); in a
 `chords` row it prints as written and plays only its root (LYS1053).
 
+An `@chord(…)` on a `<…>` chord names that chord, so a member that is not a tone of the name is
+noted — as information, not a warning: a voicing may hold a tension its name leaves out
+(`<c' f' g'>4@chord(C)`: "F is not a tone of C: the chord's notes spell Csus4", with a quick fix
+that writes `@chord(Csus4)`; LYS1054). Tones the name has and the chord leaves out are not noted
+(a voicing leaves out the fifth, the root), nor the notes of a single note's `@chord` — a melody
+note is as often a passing tone as a chord tone.
+
 A slash bass that is a chord tone is an inversion — the tone sounds once, below (`C/E` plays
 E3 G3 C4 in the MIDI and the hover) — and one outside the chord is an added note under the
 whole chord (`C/D`). The `.ly` twin writes LilyPond's `/` and `/+` accordingly; MusicXML

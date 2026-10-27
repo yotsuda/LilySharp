@@ -374,6 +374,8 @@ public sealed partial class LilySharpLanguageServer
                     actions.Add(restRun);
                 if (MissingBarLineAction(doc, uri, diagnostic) is { } barLines)
                     actions.Add(barLines);
+                if (ChordToneAction(doc, uri, diagnostic) is { } chordName)
+                    actions.Add(chordName);
                 if (diagnostic.Code == DiagnosticCodes.TodoMark && !todoOffered)
                 {
                     todoOffered = true;
@@ -591,6 +593,21 @@ public sealed partial class LilySharpLanguageServer
         var edits = offsets.Select(o => EditOf(doc.Text, o, o, " |")).ToArray();
         return QuickFix(offsets.Count == 1 ? "Write the missing bar line" : $"Write the {offsets.Count} missing bar lines",
             doc, uri, diagnostic, edits);
+    }
+
+    /// <summary>
+    /// The quick fix for a chord member outside the chord symbol written on it
+    /// (<see cref="DiagnosticCodes.ChordToneOutsideSymbol"/>; owner's request 2026-10-27): the
+    /// symbol renamed to the chord the notes spell, as the message proposes.
+    /// </summary>
+    private static CodeAction? ChordToneAction(Document doc, Uri uri, CoreDiagnostic diagnostic)
+    {
+        if (diagnostic.Code != DiagnosticCodes.ChordToneOutsideSymbol
+            || LilySharp.Core.Semantics.ChordTones.ProposedName(diagnostic.Message) is not { } name
+            || LilySharp.Core.Semantics.ChordTones.SymbolSpan(doc.Tree, diagnostic.Span) is not { } symbol)
+            return null;
+        return QuickFix($"Name the chord {name}", doc, uri, diagnostic,
+            [EditOf(doc.Text, symbol.Start, symbol.End, name)]);
     }
 
     /// <summary>

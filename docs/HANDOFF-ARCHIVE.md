@@ -160,6 +160,14 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1001セッションの経緯
+
+### 1.1 第1001セッション（2026-10-27・YT-DELL2）
+
+第1000 と同じ会話の続き。`-Start p1001`（開始 HEAD `51e567d13`・full **13361 / 0 / 2 / 13363**・第999 を ARCHIVE へ）。作業場所は Lab `sessions/p1001/`。
+- **ユーザー「OMR 編集ペインで自動補完を動作させるのは難しいよね？」→ 難しくないと答え（サーバーの補完をテキストで呼ぶ要求＋欄の下の自前の一覧・スニペットは既定値で・Ghost は入らない）→ 「作って」**。LSP `lilysharp/completeText`（`Completion` を `CompletionIn(Document, params)` に割り、使い捨ての `Document` で同じ処理・各項目を `{Insert, Start, End, Caret, Filter, Sort, Again}` に平らにする＝範囲なしの項目は VS Code の既定の単語・`PlainSnippet`＝`${n:既定}`・`${n|a,b|}`・`$n`・エスケープ）。拡張 `completionsOf`（欄の本文を `spliceBar` した全文で問い、欄の外に届く項目は捨てる）・`triggersOf`（サーバーの triggerCharacters）。ページ: 語の文字か trigger で問い（seq で最後だけ）、キャレットの位置は鏡の div、↑↓／Enter・Tab／Escape は捕獲相で欄の Enter・Escape より先、Ctrl+Space、クリックで確定、確定後は打ったのと同じく `sendEdit`。網 `CompleteTextTests` 7 本・`omrAiFixPage.test` 1 本（npm 483）。**実機の代わりにヘッドレス Edge を CDP で動かし本物のページ台本で確認**（scratchpad `suggest/make.js`・`drive.js`＝`@`→候補 4・`st` で 1・Enter で `@staccato`・空白→候補・Escape は一覧だけ・Ctrl+Space・Tab）。site scan・両 CHANGELOG・MANUAL-CHECKS C14。⚠️ Claude in Chrome は未接続だった。
+判定（2026-10-27・第1001 の終わり）: 次はユーザーの指示（C9〜C14）。
+
 ## 以下は第1000セッションの経緯
 
 ### 1.1 第1000セッション（2026-10-27・YT-DELL2）

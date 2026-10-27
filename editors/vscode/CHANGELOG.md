@@ -4,6 +4,13 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+### Chords
+
+- **A chord's name is checked against its notes.** On `<c' f' g'>1@chord(C)` the F gets a blue
+  information squiggle — "F is not a tone of C: the chord's notes spell Csus4" — and the lightbulb
+  offers *Name the chord Csus4*. Information, not a warning: a voicing may hold a tension its name
+  leaves out on purpose. A tone the chord leaves out is not noted, nor a melody note's `@chord`.
+
 ### Scan import
 
 - **A bar the reader merged with its neighbour is fixed as two bars.** When the reader misses a

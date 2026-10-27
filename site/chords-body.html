@@ -268,6 +268,16 @@ score piano { layout piano  chords prog  staff melody } // no diagrams</pre>
   degree in a row are not checked. Nine of LilyPond's predefined shapes would fail this check
   (guitar D♯m <code>xx4341</code>, Faug and Baug among them), so Lily# does not use them as
   usual shapes.</p>
+  <p>A name written on a <code>&lt;…&gt;</code> chord is checked against the chord's own notes the
+  same way, more gently (<b>LYS1054</b>, information — a voicing may hold a tension its name
+  leaves out): a note that is not a tone of the name is noted, with the chord the notes spell and
+  a quick fix that writes it. A tone the chord leaves out is not, and a single note's
+  <code>@chord</code> is not checked at all — a melody note is as often a passing tone.</p>
+<pre>&lt;c' f' g'&gt;1@chord(C) |</pre>
+  <table class="g">
+    <tr><th>Chord</th><th>The compiler notes</th></tr>
+    <tr><td><code>&lt;c' f' g'&gt;1@chord(C)</code></td><td>F is not a tone of C: the chord's notes spell Csus4 — write @chord(Csus4), or keep C if F is meant as a tension.</td></tr>
+  </table>
 </section>
 
 <section id="editor">

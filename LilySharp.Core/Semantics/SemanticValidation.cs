@@ -99,6 +99,7 @@ public static class SemanticValidation
         new ChordDisplayModeValidator(),    // `chords X as WORD` where WORD is not a display
         new ChordRowSymbolValidator(),      // a chords-row entry that is no chord Lily# reads (C7b9) — printed, its root played
         new ChordDiagramValidator(),        // a chords-row shape that cannot be used (wrong length, unknown tuning, …)
+        new ChordToneValidator(),           // a <…> member that is not a tone of the @chord written on it (information)
         new ShapeChordValidator(),          // a chord(…) item: its words, no usable shape (a spacer), the shape vs the symbol
         new TabRenderVocabularyValidator(), // `tab [TUNING] X as WORD` — the same clause's other half
         new RepeatStructureScopeValidator(),// a repeat barline / volta ending written in music

@@ -157,6 +157,12 @@ public sealed class DiagnosticBag
         => Add(new Diagnostic(DiagnosticSeverity.Warning, span, code, message, related));
 
     /// <summary>
+    /// Adds an informational diagnostic to the bag.
+    /// </summary>
+    public void Info(TextSpan span, string code, string message)
+        => Add(Diagnostic.Info(span, code, message));
+
+    /// <summary>
     /// Returns the diagnostics as a read-only list.
     /// </summary>
     public IReadOnlyList<Diagnostic> ToList() => _diagnostics;
@@ -806,6 +812,14 @@ public static class DiagnosticCodes
     /// <remarks>Owner's decision 2026-10-26: the row had said nothing, so a slip in a chart's
     /// spelling sounded as a bare root with no word of it.</remarks>
     public const string ChordSymbolNotRead = "LYS1053";
+
+    /// <summary>Information: a member of a <c>&lt;…&gt;</c> chord is not a tone of the chord
+    /// symbol written on that chord (<c>&lt;c' e' f'&gt;4@chord(C)</c>: F) — naming the chord the
+    /// notes spell, when they spell one (<c>Semantics.ChordToneValidator</c>).</summary>
+    /// <remarks>Owner's decisions 2026-10-27: on a chord's own <c>@chord</c> only (a melody note's
+    /// non-chord tones are the music), extra notes only (a voicing leaves tones out), and
+    /// information, not a warning (a voicing may hold a tension its name leaves out).</remarks>
+    public const string ChordToneOutsideSymbol = "LYS1054";
 
     /// <summary>Syntax error: a phrase reference needs a <c>$</c> — write <c>$name</c>.</summary>
     public const string BareReferenceRequiresDollar = "LYS1012";

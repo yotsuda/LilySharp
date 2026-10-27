@@ -127,19 +127,19 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1003セッション（2026-10-27・YT-DELL2）
+
+第1002 と同じ会話の続き。`-Start p1003`（開始 HEAD `b77ba012f`・full **13377 / 0 / 2 / 13379**＝新しい網を入れた作業ツリーで・第1001 を ARCHIVE へ）。作業場所は Lab `sessions/p1003/`。
+- **ユーザー「`<c' e e>8@chord(C)` のように書いたとき、C の構成音でない音符に警告を出すべき？」** → 提案＝和音そのものの `@chord` だけ（単音の `@chord` は旋律の非和声音が普通）・余分な音だけ（足りない音はボイシングの省略）・LYS1039（コード図）に倣う・強さは情報か警告か → **ユーザー「情報の方がいい」**。Core `ChordToneValidator`（`ChordAnnotation.Of` の Symbol と Structure・`ChordVoicings.TryTones` の allowed・外れた音ごとに `DiagnosticBag.Info`（新設）・`ChordStructure.TryRecognize`（書いた順）＋`ChordShapes.SourceSymbol` で「the chord's notes spell X — write @chord(X)」）・**LYS1054** `ChordToneOutsideSymbol`・公開の `ChordTones`（`ProposedName`・`SymbolSpan`）・LSP の CodeAction「Name the chord X」（symbol の語を置き換え）。網 `ChordToneValidatorTests` 9 本。手持ちの 550 冊（samples・site・docs・Lab corpora）に `<…>@chord(…)` の書き方は 0＝新しい情報は 0。⚠️ `lysc check` の出力はコードを刷らない（数えるならメッセージで）。GRAMMAR・SYNTAX_REFERENCE・site chords・両 CHANGELOG・MANUAL-CHECKS C16。
+判定（2026-10-27・第1003 の終わり）: 次はユーザーの指示（C9〜C16）。
+
+## 以下は第1002セッションの経緯
+
 ### 1.1 第1002セッション（2026-10-27・YT-DELL2）
 
 第1001 と同じ会話の続き。`-Start p1002`（開始 HEAD `e78d3babc`・full **13368 / 0 / 2 / 13370**・第1000 を ARCHIVE へ）。作業場所は Lab `sessions/p1002/`。
 - **ユーザー「lys プレビューで和音の構成音を右クリックしたら『和音を選択する』メニュー。< >| にジャンプするだけで良い」→「それだとだめ、|< > でないと和音全体を選択する動作にならない。でも < >| にカーソルがある場合も和音を選択するようにした方がいいかも」→「< >| でも和音全体が選択されるなら < >| にジャンプした方が便利。装飾やオクターブはこの位置に書く」**。調べると、ステップキー（NoteStepper）はもともと `<`・`>` の直後・音価の上で和音全体（`TargetKind.Chord`）、プレビューの光り方は `|<` でも何も光らなかった（符頭の data-pos は各音）。→ previewCore `chordSpans`（文の `<…>`・`<<`/`>>`・`\<`/`\>`・コメント・文字列を除く・1 行）と `chordAtCaret`（`|<`・`>|`・`>` に続けて書いた音価や `@` の中）。キャレットがそこなら `highlightRange` で和音全体を光らせる。描画ごとに `chordSpans` をページへ → 右クリックの符頭が和音の中なら `lysOnChord`／`lysChordEnd` → `lilysharp.previewSelectChord`＝キャレットを `>` の直後へ。網 `previewCore.test` 3 本（npm 486）。site commands・両 CHANGELOG・MANUAL-CHECKS C15。
 判定（2026-10-27・第1002 の終わり）: 次はユーザーの指示（C9〜C15）。
-
-## 以下は第1001セッションの経緯
-
-### 1.1 第1001セッション（2026-10-27・YT-DELL2）
-
-第1000 と同じ会話の続き。`-Start p1001`（開始 HEAD `51e567d13`・full **13361 / 0 / 2 / 13363**・第999 を ARCHIVE へ）。作業場所は Lab `sessions/p1001/`。
-- **ユーザー「OMR 編集ペインで自動補完を動作させるのは難しいよね？」→ 難しくないと答え（サーバーの補完をテキストで呼ぶ要求＋欄の下の自前の一覧・スニペットは既定値で・Ghost は入らない）→ 「作って」**。LSP `lilysharp/completeText`（`Completion` を `CompletionIn(Document, params)` に割り、使い捨ての `Document` で同じ処理・各項目を `{Insert, Start, End, Caret, Filter, Sort, Again}` に平らにする＝範囲なしの項目は VS Code の既定の単語・`PlainSnippet`＝`${n:既定}`・`${n|a,b|}`・`$n`・エスケープ）。拡張 `completionsOf`（欄の本文を `spliceBar` した全文で問い、欄の外に届く項目は捨てる）・`triggersOf`（サーバーの triggerCharacters）。ページ: 語の文字か trigger で問い（seq で最後だけ）、キャレットの位置は鏡の div、↑↓／Enter・Tab／Escape は捕獲相で欄の Enter・Escape より先、Ctrl+Space、クリックで確定、確定後は打ったのと同じく `sendEdit`。網 `CompleteTextTests` 7 本・`omrAiFixPage.test` 1 本（npm 483）。**実機の代わりにヘッドレス Edge を CDP で動かし本物のページ台本で確認**（scratchpad `suggest/make.js`・`drive.js`＝`@`→候補 4・`st` で 1・Enter で `@staccato`・空白→候補・Escape は一覧だけ・Ctrl+Space・Tab）。site scan・両 CHANGELOG・MANUAL-CHECKS C14。⚠️ Claude in Chrome は未接続だった。
-判定（2026-10-27・第1001 の終わり）: 次はユーザーの指示（C9〜C14）。
 
 ## 2. 開いている作業
 

@@ -6,6 +6,13 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+### Chords
+
+- `[language]` **A chord's name is checked against its notes** (LYS1054, information): a member of a
+  `<…>` chord that is not a tone of the `@chord(…)` written on it is noted, with the chord the notes
+  spell and a quick fix that writes it (`<c' f' g'>1@chord(C)`: "the chord's notes spell Csus4").
+  Tones left out are not noted, nor a single note's `@chord`.
+
 ### Scan import
 
 - `[editor]` **Fix OMR Marks with AI handles a missed barline**: a bar box spanning two bars is
