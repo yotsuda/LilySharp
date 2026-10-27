@@ -52,19 +52,34 @@ public class ConcertPitchRemovalTests
         Assert.Contains("<e, b, e>2", result.NewText);
     }
 
-    // Owner's decision 2026-10-28: a trumpet beside the bass keeps its letters, under its own
-    // `pitch concert`; the file's line goes and the bass is written as its player reads it.
+    // A trumpet beside the bass is RESPELLED to its player's letters, a major second up, and
+    // reads its player's key — the file's C major moved to D (owner's request 2026-10-28, after
+    // the first answer kept its letters under its own `pitch concert`).
     [Fact]
-    public void AChromaticTransposer_KeepsItsLettersUnderItsOwnPitchConcert()
+    public void AChromaticTransposer_IsRespelledForItsPlayer_InItsPlayersKey()
     {
         string text = Band("octave absolute", "e,,1 |", "part tp { instrument trumpet }\n")
-            .Replace("  bass {", "  tp { c'2 d'2 | }\n  bass {").Replace("staff bass }", "staff bass  staff tp }");
+            .Replace("  bass {", "  tp { c'2 bes2 | }\n  bass {").Replace("staff bass }", "staff bass  staff tp }");
         var result = OctaveModeConverter.WithoutConcertPitch(text);
         Assert.NotNull(result.NewText);
-        Assert.DoesNotContain("\npitch concert", result.NewText);
+        Assert.DoesNotContain("pitch concert", result.NewText);
+        Assert.Contains("part tp { instrument trumpet key d major }", result.NewText);
+        Assert.Contains("tp { d'2 c'2 | }", result.NewText);      // bes (B♭3) is written c' (C4)
+        Assert.Contains("bass { e,1", result.NewText);
+        Assert.Equal(Sounds(text), Sounds(result.NewText!));
+    }
+
+    // A key the trumpet shares with the other parts — one in a section's header — cannot move for
+    // the trumpet alone: it keeps its letters, under its own `pitch concert`.
+    [Fact]
+    public void AChromaticTransposerUnderASharedSectionKey_KeepsItsLetters()
+    {
+        string text = Band("octave absolute", "e,,1 |", "part tp { instrument trumpet }\n")
+            .Replace("  bass {", "  key f major\n  tp { c'2 d'2 | }\n  bass {").Replace("staff bass }", "staff bass  staff tp }");
+        var result = OctaveModeConverter.WithoutConcertPitch(text);
+        Assert.NotNull(result.NewText);
         Assert.Contains("part tp { instrument trumpet pitch concert }", result.NewText);
         Assert.Contains("tp { c'2 d'2 | }", result.NewText);
-        Assert.Contains("bass { e,1", result.NewText);
         Assert.Equal(Sounds(text), Sounds(result.NewText!));
     }
 

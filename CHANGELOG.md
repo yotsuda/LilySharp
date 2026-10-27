@@ -25,8 +25,13 @@ workflow attaches that section to the GitHub Release verbatim.
   governs** (the file's line, or a part header's), so the piece sounds and prints as before
   (`OctaveModeConverter.SwitchTypedPitch`):
   - an octave-only transposer moves by its octaves;
-  - a chromatic transposer under the file's line keeps its letters and gets its own `pitch` with
-    the old word; on its own header the switch is refused (no respelling yet);
+  - a chromatic transposer (a B♭ trumpet, an E♭ saxophone) is **respelled** by the interval between its
+    page and its sound, as `\transpose` spells — every note, and every key in its music or header.
+    Turned into its player's letters, a part with no key of its own gets the file's key moved the
+    same way (`part tp { instrument trumpet key g major }` in an F major piece); back at concert
+    pitch, a header key that is now the file's goes;
+  - a part that shares a section's key with the others cannot be respelled alone: it keeps its
+    letters under its own `pitch` (or, switched on its own header, the step is refused);
   - nothing changes when the result would not sound note for note the same.
 - The repository's scores, lessons, site examples and tests are re-marked to sound and draw as before:
   every pitch is moved by what the legacy build played (`OctaveModeConverter.MigrateFromLegacy`).
@@ -37,8 +42,8 @@ workflow attaches that section to the GitHub Release verbatim.
 - `[import]` MusicXML import writes LilyPond's octaves: C4 is `c'` in `octave absolute`.
 - `[cli]` `lysc octave --absolute` help: a bare `c` is C3.
 - `[ai]` A piece composed with AI is written under `pitch concert` and opened without it: an
-  octave-only transposer is re-marked to its written octave, and a chromatic transposer keeps a
-  part-level `pitch concert`. The prompt states LilyPond's octaves and asks for no `octave N` crutch.
+  octave-only transposer is re-marked to its written octave, and a chromatic transposer is respelled
+  in its player's key (keeping a part-level `pitch concert` only under a shared section key). The prompt states LilyPond's octaves and asks for no `octave N` crutch.
   A leftover `octave N` is dropped on open.
 
 ### Preview

@@ -16,13 +16,16 @@ All notable changes to the Lily# VS Code extension are documented here.
   Ctrl+Shift+PageDown brings the tune down into the cello's staff.
 - **Compose with AI** writes the piece at concert pitch and opens it in written pitch:
   - a bass is re-marked to its own octave;
-  - a trumpet keeps a `pitch concert` of its own.
+  - a trumpet or a saxophone is respelled in its player's key (`key g major` for a B♭ trumpet in an
+    F major piece).
 - **Compose with AI picks a specific model.** The automatic choice skips models that only VS Code
   itself may use, and Copilot's "Auto".
 - **The status bar explains `pitch`** when the caret is on it: written versus concert.
 - **Ctrl+Shift+Up / Down on `pitch written` / `pitch concert` rewrites the score**, so it still
-  sounds and prints the same: a bass or a piccolo moves by its octave. A trumpet or a saxophone
-  keeps its letters and gets its own `pitch`, since respelling in another key is not done yet.
+  sounds the same:
+  - a bass or a piccolo moves by its octave;
+  - a trumpet or a saxophone is respelled, in its player's key when typed as it is read.
+  - A part that shares a section's key with the others keeps its letters under its own `pitch`.
 
 ### Preview
 

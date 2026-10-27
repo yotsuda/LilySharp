@@ -261,14 +261,14 @@ edocs/HANDOFF.mde §2 R13 ⒝・OMR の提案 B1〜B6（e..\LilySharp-Omr\docs\r
   - (1) Lessons の 1〜12 を順に開く → どれも前と同じ高さで鳴り、同じ位置に描かれる。
   - (2) `octave absolute` の新しいファイルに `c'4` → 中央の C（ト音記号の下第 1 線）。
   - (3) OMR で読んだ楽譜のパートに `instrument bass` を書き足す → 音符が動かない。
-  - (4) Compose with AI で「トランペットとベースのブルース」→ 開いた楽譜は、トランペットのパートだけに `pitch concert` が付く。ベースはヘ音記号の譜表の中に書かれ、`octave 4` は残らない。
+  - (4) Compose with AI で「トランペットとベースのブルース」→ 開いた楽譜に `pitch concert` は残らない。トランペットは奏者の調（曲が F なら `key g major`）で書かれ、ベースはヘ音記号の譜表の中に書かれ、`octave 4` は残らない。
   - (5) `pitch` の上にキャレット → ステータスバーに written / concert の説明。
   - (6) site の blues-in-f と rising-sun をプレビューで再生 → 前と同じに鳴る。
 - [ ] **C40**（第1029・`pitch` の切り替えで楽譜も書き直す）:
   - (1) 先頭に `pitch written`、ピアノとベース（`instrument bass`）の曲。`written` の上で Ctrl+Shift+Down → `pitch concert` になり、ベースの音だけ 1 オクターブ下の印に書き直される。プレビューの譜面と音は変わらない。ステータスバーは「pitch concert: … notes rewritten, the piece sounds as before」。
   - (2) そのまま Ctrl+Shift+Up → 元のファイルに戻る。Ctrl+Z 1 回でも戻る。
-  - (3) トランペット（`instrument trumpet`）を足して (1) → トランペットのパートに `pitch written` が足され、音は動かない。
-  - (4) トランペットのパート見出しに `pitch written` を書いて、その上で Ctrl+Shift+Down → 何も変わらず、ステータスバーに「respelled … not … yet」。
+  - (3) トランペット（`instrument trumpet key d major`・`d'2 fis'`）を足して (1) → トランペットは長 2 度下の `c'2 e'` に綴り直され、`key d major` は消える。音は動かない。(2) で D 長調の `d'2 fis'` に戻る。
+  - (4) セクション見出しに `key f major` があるとき、トランペットのパート見出しの `pitch concert` で Ctrl+Shift+Up → 何も変わらず、ステータスバーに「… shares the key …」。
 
 ## 4. §2 R13 ⒝ — 差分頁の配信（実機未確認・第404）
 

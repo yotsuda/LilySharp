@@ -313,46 +313,172 @@ public static class OctaveModeConverter
             .FirstOrDefault(p => ConcertPitch.TryReadFileMode(p, out bool concert) && concert);
         if (line == null)
             return new Result(source, null, 0);
-        var shifts = new Dictionary<string, int>(StringComparer.Ordinal);   // part → octaves its notes move
-        // A part that transposes by another interval than octaves (a B♭ trumpet) keeps its letters
-        // and says so in its own header — `pitch concert`, which wins over the file's — so the
-        // line can still go (owner's decision 2026-10-28: a trumpet and a bass in one piece).
-        var keepConcert = new List<Edit>();
-        foreach (var part in root.DescendantNodes<PartDeclarationSyntax>())
-        {
-            if (ConcertPitch.PartMode(part) != null)
-                continue;   // says its own, which the file's line never governed
-            int t = PartHeaderDefaults.Read(part).TranspositionSemitones;
-            if (t % 12 != 0)
-            {
-                int close = part.Span.End - 1;
-                keepConcert.Add(source[close] == '}'
-                    ? new Edit(close, close, (source[close - 1] == ' ' ? "" : " ") + "pitch concert ")
-                    : new Edit(part.Span.End, part.Span.End, " { pitch concert }"));
-                continue;
-            }
-            shifts[part.Name.Text] = -t / 12;
-        }
-        var octaveShift = new Dictionary<int, int>();
-        foreach (var node in root.DescendantNodes<SyntaxNode>())
-            if (node is PitchSyntax or ScaleDegreeSyntax
-                && BlockOf(node) is { } block
-                && shifts.TryGetValue(block.PartName.Text, out int s) && s != 0)
-                octaveShift[node.SourceStart] = s;
-
         // The line, and the line break after it when it stands alone.
         int start = line.Span.Start, end = line.Span.End;
         while (start > 0 && source[start - 1] is ' ' or '\t') start--;
         if (end < source.Length && source[end] == '\r') end++;
         if (end < source.Length && source[end] == '\n') end++;
-        var result = Repin(source, Apply(source, [new Edit(start, end, ""), .. keepConcert]), octaveShift);
+        var edits = new List<Edit> { new(start, end, "") };
+        var octaveShift = new Dictionary<int, int>();
+        var governed = root.DescendantNodes<PartDeclarationSyntax>().Where(p => ConcertPitch.PartMode(p) == null);
+        if (Retype(source, root, governed, toConcert: false, ConcertPitch.Concert, mayKeep: true, edits, octaveShift) is { } error)
+            return Fail(error);
+        var result = Repin(source, Apply(source, edits), octaveShift);
         if (result.NewText == null)
             return result;
-        static string Sounds(string text) => string.Join(" ", new Midi.MidiExporter().Export(SyntaxTree.Parse(text)).Tracks
-            .SelectMany(t => t.Notes).OrderBy(n => n.StartTick).ThenBy(n => n.Pitch).Select(n => $"{n.StartTick}:{n.Pitch}"));
-        return Sounds(result.NewText) == Sounds(source)
+        return SoundSignature(result.NewText) == SoundSignature(source)
             ? result
             : Fail("Without pitch concert the piece would sound otherwise — the file keeps it.");
+    }
+
+    /// <summary>
+    /// The rewrite of <paramref name="parts"/>' music from one typed convention to the other
+    /// (<paramref name="toConcert"/>: written → concert), as name edits into <paramref name="edits"/>
+    /// and octave shifts (original position → octaves) into <paramref name="octaveShift"/> for
+    /// <see cref="Repin"/>: an octave-only transposer moves by its octaves; a chromatic one (a B♭
+    /// trumpet, an E♭ saxophone) is RESPELLED — every note, and every key written in its music or
+    /// its header, transposed by the interval between its page and its sound, as LilyPond's
+    /// <c>\transpose</c> spells (a name shift, never a semitone count). A part whose music cannot be
+    /// respelled (a quarter tone, an alteration past a double one) keeps its letters and gets its
+    /// own <c>pitch <paramref name="oldWord"/></c> when <paramref name="mayKeep"/>, else the rewrite
+    /// fails with the reason (returned).
+    /// </summary>
+    private static string? Retype(string source, SyntaxNode root, IEnumerable<PartDeclarationSyntax> parts, bool toConcert,
+        string oldWord, bool mayKeep, List<Edit> edits, Dictionary<int, int> octaveShift)
+    {
+        bool contracted = root.DescendantNodes<PitchSyntax>().Any(p => p.PitchToken.Text is "es" or "as" or "eses" or "ases");
+        foreach (var part in parts)
+        {
+            int t = PartHeaderDefaults.Read(part).TranspositionSemitones;
+            if (t == 0)
+                continue;
+            // Concert letters sound; written ones are read: a part T semitones off its page writes
+            // its music T lower at concert pitch (a bass: an octave; a B♭ trumpet: a major second).
+            int semitones = toConcert ? t : -t;
+            if (semitones % 12 == 0)
+            {
+                foreach (var node in root.DescendantNodes<SyntaxNode>())
+                    if (node is PitchSyntax or ScaleDegreeSyntax && InPart(node, part))
+                        octaveShift[node.SourceStart] = semitones / 12;
+                continue;
+            }
+            var interval = Semantics.PitchTransposer.IntervalFromSemitones(semitones);
+            var mine = new List<Edit>();
+            var shifts = new Dictionary<int, int>();
+            string? why = null;
+            foreach (var node in root.DescendantNodes<SyntaxNode>())
+            {
+                if (why != null)
+                    break;
+                if (node is PitchSyntax p && p.Parent is NoteSyntax or ChordSyntax or ArpeggioSyntax && InPart(p, part))
+                {
+                    if (Respelled(p, interval, contracted) is not { } to)
+                        why = $"{p.PitchToken.Text} at {LineCol(source, p.SourceStart)} cannot be respelled";
+                    else
+                    {
+                        mine.Add(new Edit(p.PitchToken.Span.Start, p.PitchToken.Span.End, to.Name));
+                        if (to.Octaves != 0)
+                            shifts[p.SourceStart] = to.Octaves;
+                    }
+                }
+                else if (node is KeySignatureSyntax { IsCustom: false } key && key.GetChild(2) is PitchSyntax tonic
+                         && (InPart(key, part) || key.IsInside<PartDeclarationSyntax>() && BlockOwner(key) == part))
+                {
+                    if (Respelled(tonic, interval, contracted) is not { } to)
+                        why = $"key {tonic.PitchToken.Text} cannot be respelled";
+                    else if (toConcert && BlockOwner(key) == part && SameKey(root, to.Name, key))
+                    {
+                        // Back at concert pitch a header's key that is now the file's own says
+                        // nothing (the way back from the key this rewrite gives a respelled part).
+                        int from = key.Span.Start;
+                        while (from > 0 && source[from - 1] == ' ') from--;
+                        mine.Add(new Edit(from, key.Span.End, ""));
+                    }
+                    else
+                        mine.Add(new Edit(tonic.PitchToken.Span.Start, tonic.PitchToken.Span.End, to.Name));
+                }
+            }
+            // Respelled into its player's letters, the part reads its player's key too: a part with
+            // no key of its own gets the file's, moved as its notes are (a B♭ trumpet in F major
+            // reads G major). A key it shares with the other parts — a section's, written outside
+            // every part's music — cannot be moved for this part alone, so the part keeps its letters.
+            bool ownKey = part.DescendantNodes<KeySignatureSyntax>().Any();
+            if (why == null && !toConcert && !ownKey)
+            {
+                var shared = root.DescendantNodes<KeySignatureSyntax>()
+                    .Where(k => k.IsInside<SectionDeclarationSyntax>() && BlockOf(k) == null).ToList();
+                var fileKey = root.ChildNodes().OfType<KeySignatureSyntax>().FirstOrDefault();
+                if (shared.Count > 0)
+                    why = $"it shares the key written at {LineCol(source, shared[0].SourceStart)} with the other parts";
+                else if (fileKey is { IsCustom: true } || fileKey is { } && fileKey.GetChild(2) is not PitchSyntax)
+                    why = "the file's key is not a tonic and a mode";
+                else
+                {
+                    string mode = fileKey?.GetChild(3) is SyntaxTokenNode { Text.Length: > 0 } m ? m.Text : "major";
+                    var tonic = fileKey?.GetChild(2) as PitchSyntax;
+                    var moved = tonic != null ? Respelled(tonic, interval, contracted) : Respelled(0, 0, interval, contracted);
+                    if (moved is not { } k)
+                        why = "the file's key cannot be respelled";
+                    else
+                        mine.Add(HeaderInsertion(source, part, $"key {k.Name} {mode}"));
+                }
+            }
+            if (why == null)
+            {
+                edits.AddRange(mine);
+                foreach (var (at, s) in shifts)
+                    octaveShift[at] = s;
+                continue;
+            }
+            if (!mayKeep)
+                return $"part {part.Name.Text}: {why} — no changes made.";
+            edits.Add(HeaderInsertion(source, part, $"pitch {oldWord}"));
+        }
+        return null;
+
+        static bool InPart(SyntaxNode node, PartDeclarationSyntax part)
+            => BlockOf(node) is { } block && block.PartName.Text == part.Name.Text;
+    }
+
+    /// <summary>Whether <paramref name="key"/> respelled to <paramref name="tonic"/> is the file's own
+    /// key (the first top-level one, C major when none is written).</summary>
+    private static bool SameKey(SyntaxNode root, string tonic, KeySignatureSyntax key)
+    {
+        static string ModeOf(KeySignatureSyntax? k) => k?.GetChild(3) is SyntaxTokenNode { Text.Length: > 0 } m ? m.Text : "major";
+        var fileKey = root.ChildNodes().OfType<KeySignatureSyntax>().FirstOrDefault();
+        string fileTonic = fileKey?.GetChild(2) is PitchSyntax p ? p.PitchToken.Text : "c";
+        return fileKey is not { IsCustom: true } && fileTonic == tonic && ModeOf(fileKey) == ModeOf(key);
+    }
+
+    /// <summary>A property written at the end of a part's header (<c>part tp { instrument trumpet key d major }</c>),
+    /// the braces added when the header has none.</summary>
+    private static Edit HeaderInsertion(string source, PartDeclarationSyntax part, string property)
+    {
+        int close = part.Span.End - 1;
+        return source[close] == '}'
+            ? new Edit(close, close, (source[close - 1] == ' ' ? "" : " ") + property + " ")
+            : new Edit(part.Span.End, part.Span.End, $" {{ {property} }}");
+    }
+
+    /// <summary>A written pitch's name moved by the c→target <paramref name="interval"/>, and the
+    /// octaves the move carries its letter (b → c' is one) — or null for a quarter tone or a
+    /// result past a double alteration.</summary>
+    private static (string Name, int Octaves)? Respelled(PitchSyntax pitch, (int step, int alt, int oct) interval, bool contracted)
+    {
+        int step = Music.KeySpelling.StepOf(pitch.BaseName);
+        return step < 0 || pitch.QuarterOffset != 0 ? null : Respelled(step, pitch.AccidentalOffset, interval, contracted);
+    }
+
+    private static (string Name, int Octaves)? Respelled(int step, int alteration, (int step, int alt, int oct) interval, bool contracted)
+    {
+        var (s, a, o) = Semantics.PitchTransposer.Transpose(step, alteration, 0, interval.step, interval.alt, interval.oct);
+        if (Math.Abs(a) > 2)
+            return null;
+        char letter = "cdefgab"[s];
+        string name = contracted && letter is 'e' or 'a' && a < 0
+            ? (a == -1 ? letter + "s" : letter + "ses")
+            : letter + a switch { 2 => "isis", 1 => "is", -1 => "es", -2 => "eses", _ => "" };
+        return (name, o);
     }
 
     /// <summary>
@@ -389,34 +515,9 @@ public static class OctaveModeConverter
             : ConcertPitch.TryReadFileMode(prop, out _)
                 ? root.DescendantNodes<PartDeclarationSyntax>().Where(p => ConcertPitch.PartMode(p) == null)
                 : [];
-        var shifts = new Dictionary<string, int>(StringComparer.Ordinal);   // part → octaves its notes move
-        foreach (var part in governed)
-        {
-            int t = PartHeaderDefaults.Read(part).TranspositionSemitones;
-            if (t == 0)
-                continue;
-            if (t % 12 != 0)
-            {
-                if (own != null)
-                    return Fail($"part {part.Name.Text} transposes by {Math.Abs(t)} semitones: its letters would have to be "
-                        + "respelled in another key, which the switch does not do yet — no changes made.");
-                int close = part.Span.End - 1;
-                edits.Add(source[close] == '}'
-                    ? new Edit(close, close, (source[close - 1] == ' ' ? "" : " ") + $"pitch {oldWord} ")
-                    : new Edit(part.Span.End, part.Span.End, $" {{ pitch {oldWord} }}"));
-                continue;
-            }
-            // Concert letters sound; written ones are read: a part T semitones off its page writes
-            // T/12 octaves lower at concert pitch (a bass: one octave).
-            shifts[part.Name.Text] = (toConcert ? t : -t) / 12;
-        }
         var octaveShift = new Dictionary<int, int>();
-        foreach (var node in root.DescendantNodes<SyntaxNode>())
-            if (node is PitchSyntax or ScaleDegreeSyntax
-                && BlockOf(node) is { } block
-                && shifts.TryGetValue(block.PartName.Text, out int s) && s != 0)
-                octaveShift[node.SourceStart] = s;
-
+        if (Retype(source, root, governed, toConcert, oldWord, mayKeep: own == null, edits, octaveShift) is { } error)
+            return Fail(error);
         var result = Repin(source, Apply(source, edits), octaveShift);
         if (result.NewText == null)
             return result;

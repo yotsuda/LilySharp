@@ -69,25 +69,54 @@ public class TypedPitchStepTests
         Assert.Equal(Band, written);
     }
 
+    // A B♭ trumpet is respelled a major second: written d' (in its D major) is concert c'. The way
+    // back gives it its player's key again, and the file comes back as it was.
+    private static readonly string Trumpet = Band
+        .Replace("part bs { instrument bass }", "part bs { instrument bass }\npart tp { instrument trumpet key d major }")
+        .Replace("form { A }", "section B { tp { d'2 fis' | e'1 | } }\nform { A B }");
+
     [Fact]
-    public void AChromaticTransposerUnderTheFilesLine_KeepsItsLettersAndSaysItsOwnPitch()
+    public void AChromaticTransposerUnderTheFilesLine_IsRespelledAsItSounds_AndBack()
     {
-        string band = Band.Replace("part bs { instrument bass }", "part bs { instrument bass }\npart tp { instrument trumpet }")
-            .Replace("form { A }", "section B { tp { d'1 | } }\nform { A B }");
+        var (concert, said) = StepAt(Trumpet, "pitch written", -1);
+        Assert.Contains("part tp { instrument trumpet }", concert);     // D major moved to the file's C
+        Assert.Contains("tp { c'2 e' | d'1 | }", concert);
+        Assert.Equal(OctaveModeConverter.SoundSignature(Trumpet), OctaveModeConverter.SoundSignature(concert));
+        Assert.StartsWith("pitch concert: ", said);
+        var (written, _) = StepAt(concert, "pitch concert", +1);
+        Assert.Equal(Trumpet, written);
+    }
+
+    [Fact]
+    public void AnAltoSaxophone_IsRespelledAMajorSixthUp_InA()
+    {
+        const string book = "pitch concert\noctave absolute\ntime 4/4\npart sx { instrument alto-sax }\n"
+            + "section A { sx { c'4 e' g' bes' | } }\nform { A }\nscore { staff sx }\n";
+        var (text, _) = StepAt(book, "pitch concert", +1);
+        Assert.Contains("part sx { instrument alto-sax key a major }", text);
+        Assert.Contains("sx { a'4 cis'' e'' g'' | }", text);
+        Assert.Equal(OctaveModeConverter.SoundSignature(book), OctaveModeConverter.SoundSignature(text));
+    }
+
+    [Fact]
+    public void AChromaticTransposersOwnPitch_RespellsThatPartAlone()
+    {
+        string band = Trumpet.Replace("pitch written\n", "").Replace("key d major }", "key d major pitch written }");
         var (text, _) = StepAt(band, "pitch written", -1);
-        Assert.Contains("part tp { instrument trumpet pitch written }", text);
-        Assert.Contains("tp { d'1 | }", text);
+        Assert.Contains("part tp { instrument trumpet pitch concert }", text);   // C major is the file's own
+        Assert.Contains("tp { c'2 e' | d'1 | }", text);
+        Assert.Contains("bs { c4 e g c' | }", text);                    // not governed by the trumpet's own
         Assert.Equal(OctaveModeConverter.SoundSignature(band), OctaveModeConverter.SoundSignature(text));
     }
 
     [Fact]
-    public void AChromaticTransposersOwnPitch_IsRefused_AndNothingChanges()
+    public void AChromaticTransposersOwnPitch_UnderASharedSectionKey_IsRefused()
     {
-        string band = Band.Replace("part bs { instrument bass }", "part bs { instrument bass }\npart tp { instrument trumpet pitch written }")
-            .Replace("form { A }", "section B { tp { d'1 | } }\nform { A B }");
-        var (text, said) = StepAt(band, "pitch written", -1, nth: 1);
+        string band = Trumpet.Replace("pitch written\n", "").Replace("part tp { instrument trumpet key d major }", "part tp { instrument trumpet pitch concert }")
+            .Replace("section B { tp", "section B { key f major tp");
+        var (text, said) = StepAt(band, "pitch concert", +1);
         Assert.Equal(band, text);
-        Assert.Contains("respelled", said);
+        Assert.Contains("shares the key", said);
     }
 
     [Fact]
