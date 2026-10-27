@@ -711,13 +711,13 @@ internal static class LysWriter
         var voices = part.Measures.SelectMany(m => m.VoiceItems.Keys).Distinct().OrderBy(x => x).ToList();
         if (voices.Count <= 1)
             return WriteVoiceRange(part, voices.Count == 1 ? voices[0] : 1, seg, report, Rel(relative),
-                directives, "\n" + MusicIndent);
+                directives, "\n" + MusicIndent, lead: true);
         // Several voices on one staff → one parallel span. Ascending voice order puts voice 1
         // (the upper part, stems up) first. Each voice is its own relative-octave stream; the
         // staff's changes ride the first one only.
         return VoiceSpan(voices.Select(v =>
             WriteVoiceRange(part, v, seg, report, Rel(relative), v == voices[0] ? directives : null,
-                "\n" + MusicIndent + "  ")));
+                "\n" + MusicIndent + "  ", lead: v == voices[0])));
     }
 
     /// <summary>Wraps several simultaneous streams in one span. <c>voice</c> opens the span
@@ -734,10 +734,17 @@ internal static class LysWriter
     /// Until 2026-10-01 a part's whole piece was written on ONE line — hundreds of bars, which
     /// no editor shows and no reader can find a bar in. A bar rest folded over several bars
     /// (<c>R1*8</c>) counts as one bar of the line.
+    /// <para>
+    /// A bar the voice has nothing in (owner's report 2026-10-27, homr.musicxml: a 6/8 piece's
+    /// second voice, silent in most bars, came in as <c>r1</c> — four beats in a bar of three
+    /// eighths twice): the staff's first voice writes a bar rest <c>R</c>, which lasts its bar in
+    /// any meter; a further voice writes nothing — an empty bar, a spacer of its bar — for the
+    /// source draws no rest there, the other voice holding the bar.
+    /// </para>
     /// </remarks>
     private static string WriteVoiceRange(
         ImportPart part, int voice, VoltaSegment seg, ImportReport report, RelativeOctave? rel,
-        PartDirectives? directives, string newline)
+        PartDirectives? directives, string newline, bool lead)
     {
         var sb = new StringBuilder();
         int start = seg.Start, end = Math.Min(seg.End, part.Measures.Count);
@@ -748,7 +755,7 @@ internal static class LysWriter
             var items = part.Measures[i].VoiceItems.TryGetValue(voice, out var v) ? v : EmptyItems;
             if (directives != null)
                 sb.Append(i == start ? directives.Opening[i] : directives.Changes[i]);
-            sb.Append(WriteMeasureItems(items, report, rel, bars));
+            sb.Append(items.Count > 0 ? WriteMeasureItems(items, report, rel, bars) : lead ? "R" : "");
             // The folded bars close at the LAST one's bar line.
             var last = part.Measures[i + bars - 1];
             i += bars;
@@ -1147,7 +1154,8 @@ internal static class LysWriter
         // A run that reaches the end of the measure closes here.
         CloseCue();
 
-        return tokens.Count == 0 ? "r" + "1" : string.Join(" ", tokens);
+        // Nothing written (every item folded away): a bar rest, which lasts its bar in any meter.
+        return tokens.Count == 0 ? "R" : string.Join(" ", tokens);
     }
 
     // A Lily# absolute-octave pitch token: letter + accidental + octave marks.

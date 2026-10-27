@@ -6,6 +6,14 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+### MusicXML import
+
+- `[import]` **A bar a voice has nothing in no longer becomes `r1`.** A further voice of a staff writes
+  an empty bar (a spacer of its bar — the source draws no rest there), and the staff's only or first
+  voice a bar rest `R`, which lasts its bar in any meter: in 6/8 the `r1` was four beats in a bar of
+  three, and every such bar overflowed (homr.musicxml: 24 overflowing bars and a misaligned pair of
+  parts gone).
+
 ### Chords
 
 - `[language]` **A chord's name is checked against its notes** (LYS1054, information): a member of a

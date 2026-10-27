@@ -127,20 +127,20 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1009セッション（2026-10-27・YT-DELL2）
+
+第1008 と同じ会話の続き。`-Start p1009`（開始 HEAD `5a7cf6c3f`・full **13379 / 0 / 2 / 13381**＝新しい網を入れた作業ツリーで・第1007 を ARCHIVE へ）。作業場所は Lab `sessions/p1009/`。
+- **ユーザー「MusicXML importer で Downloads\homr.musicxml をインポートしたら、6/8 なのに 1 小節の全休が全休符になった（homr.lys）」**: MusicXML の休符は 8 分の 4 つだけ＝`r1` は**インポーターが空の声部の小節を埋めた**もの（`LysWriter.WriteMeasureItems` の `tokens.Count == 0 ? "r1"`）。→ `WriteVoiceRange(…, lead)`: 声部の無い小節は、譜表の唯一／最初の声部なら `R`（どの拍子でもその小節）、それ以外の声部なら何も書かない（空の小節＝その小節の spacer・原本は休符を描かない）。全部畳まれた場合の `"r1"` も `R` に。homr の再インポートで警告 49 → 24（`r1` のあふれ 24 と左右の小節ずれ 1 が消えた・残りは原本のスラーの重なり・声 2 の半端な小節など）。網 `MusicXmlEmptyVoiceBarImportTests` 2 本。CHANGELOG。⚠️ 声 2 の半端な小節（`<cis b,>4.` だけ・`<forward>` 無し）は「拍が足りない」のまま＝埋めるかはユーザー判断。
+判定（2026-10-27・第1009 の終わり）: 次はユーザーの指示（C9〜C21）。
+
+## 以下は第1008セッションの経緯
+
 ### 1.1 第1008セッション（2026-10-27・YT-DELL2）
 
 第1007 と同じ会話の続き。`-Start p1008`（開始 HEAD `368146a41`・full **13377 / 0 / 2 / 13379**・第1006 を ARCHIVE へ）。作業場所は Lab `sessions/p1008/`。
 - **ユーザー「Ask AI で AI に渡すテキストはいま選択中のテキストに。the bar as it stands を選択していたらそのテキストを」**: `pump` の `shown`＝編集なら `{person}`・AI の案が Draft なら `{ai}`・元なら無し → `fixOne(…, shown)` → `taskPromptOf` の `attemptBy: 'ai'` は「as an EARLIER ANSWER of yours proposed it」。
 - **途中で「the bar as it stands は長いから as is に。as is / your edit / AI proposal と 3 つ並べる方が便利？」「as is は妥当？より良いラベルを」→ 4 案（original・as is・unchanged・as read）から **original** を選ばれた**。`FixRow.original`（AI の案があっても元を見せる）・`hasProposal`＝`aiHas && !original`・`setEditAside`・ページのボタン `button.pick[data-show]` → `show` の処理（original／ai は編集を預けて切り替え・edit は預けた編集を `editRow` で戻す）。行にあるものだけ並べる（original は常に・your edit は編集中か預けたとき・AI proposal は案があるとき）、1 つだけなら今までどおりの文。`restore` と `revert` のボタンは消した。網 `omrAiFixPage.test` 1 本を書き直し・`omrAiFixCore.test` 2 行（npm 489）。site scan・両 CHANGELOG・MANUAL-CHECKS C21。
 判定（2026-10-27・第1008 の終わり）: 次はユーザーの指示（C9〜C21）。
-
-## 以下は第1007セッションの経緯
-
-### 1.1 第1007セッション（2026-10-27・YT-DELL2）
-
-第1006 と同じ会話の続き。`-Start p1007`（開始 HEAD `1868ab667`・full **13377 / 0 / 2 / 13379**・第1005 を ARCHIVE へ）。作業場所は Lab `sessions/p1007/`。
-- **ユーザー「your edit を選択した状態でも、AI からの返答がきたらそのテキストをエントリのヘッダに表示して」→「AI からの返答であることを明確に。AI: とつけるとか」**: `rowParts` の返事の文を `aiSaid` に括り出し、`<b>AI:</b>` 付きの `aiLine` を、編集中は「Your edit.」の後ろ、そうでなければ単独で。網 `omrAiFixPage.test` 2 行（npm 489）。両 CHANGELOG・MANUAL-CHECKS C20。
-判定（2026-10-27・第1007 の終わり）: 次はユーザーの指示（C9〜C20）。
 
 ## 2. 開いている作業
 
