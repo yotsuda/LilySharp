@@ -557,6 +557,23 @@ public class GraceBodyValidatorTests
     }
 
     /// <summary>
+    /// A caesura over a LOW beamed grace renders. The sign stands at the top line and the grace's
+    /// ink never reaches its height, so no rod joins them (the skylines' distance is −∞); that −∞
+    /// was summed into the run's gap rod, a compressed line closed the run without end, and the
+    /// beam quanter threw on NaN (`Math.Sign` in BeamScoringProblem.MinimumDy, 2026-10-28).
+    /// A breath was spared only because it ends the beam.
+    /// </summary>
+    [Theory]
+    [InlineData("grace { d'16@caesura e16 } c1 | e1 |")]
+    [InlineData("grace { c'16@caesura d16 e16 } c1 | e1 |")]
+    public void ACaesuraOverALowBeamedGrace_Renders(string music)
+    {
+        string page = Page(music);
+        Assert.Contains("<svg", page);
+        Assert.DoesNotContain("NaN", page);
+    }
+
+    /// <summary>
     /// A STEM DIRECTION on a grace note or chord turns that stem (sessions 933, 935; ledger
     /// stemdir.grace.*, knee.grace.*) — on every stem it turns the run, on some of them it makes
     /// the beam a knee, as in LilyPond. Nothing is reported.

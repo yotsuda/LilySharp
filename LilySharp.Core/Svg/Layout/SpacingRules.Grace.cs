@@ -295,7 +295,11 @@ internal static partial class SpacingRules
                 // strengths summed — where LilyPond closes each part to its own rod; at force
                 // 0 and stretched (the sign's spring is fixed-space: it does not stretch) the
                 // lengths are LilyPond's.
-                rod = breath.IntoRod + Math.Max(breath.OutRod, breath.Out.MinDistance);
+                // A grace whose ink never reaches the sign's height (a caesura at the top line over
+                // a low grace) has no rod into it — the skylines' distance is −∞ — and the gap's
+                // floor there is the spring's own minimum. Summed as −∞ it emptied the whole rod,
+                // so a compressed line could close the run without end and its beam quanted NaN.
+                rod = Math.Max(breath.IntoRod, breath.Into.MinDistance) + Math.Max(breath.OutRod, breath.Out.MinDistance);
                 inverseCompress = breath.Into.InverseCompressStrength + breath.Out.InverseCompressStrength;
             }
             gapLengths[i] = gap;

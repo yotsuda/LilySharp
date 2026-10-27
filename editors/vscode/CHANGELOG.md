@@ -23,6 +23,8 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ### Preview
 
+- **A caesura on a low grace note no longer breaks the preview** — `grace { d'16@caesura e16 } c1`
+  stopped the render with a Not-a-Number error; it draws now, as a breath there always did.
 - **A long instrument name is no longer cut at the paper's left edge** — "Electric Guitar" on the first
   system, "E. Bass" on the next ones: the indent grows just enough to keep it on the paper.
 - **An OMR reader's red frame keeps off the `@todo` memos** — its top (bottom) edge ran through a

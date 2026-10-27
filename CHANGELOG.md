@@ -36,6 +36,11 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Preview
 
+- **A caesura over a low beamed grace no longer stops the render** (`grace { d'16@caesura e16 } c1`:
+  "Function does not accept floating point Not-a-Number values"). The sign stands at the top line,
+  out of the grace's reach, and the missing rod between them was summed as −∞ into the run's
+  rod, so the run could close without end and its beam was quanted on NaN. The gap's floor there
+  is the spring's own minimum now; a breath was spared only because it ends the beam.
 - **An instrument name wider than the paper's margin stays on the paper.** LilyPond lets a name too
   wide for its 15mm indent overflow into the margin, and past the paper's edge when the margin is too
   narrow ("Electric Guitar" first, "E. Bass" on later systems). LILYSHARP-OWN: the indent (and the
