@@ -160,6 +160,14 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第998セッションの経緯
+
+### 1.1 第998セッション（2026-10-27・YT-DELL2）
+
+第997 と同じ会話の続き。`-Start p998`（開始 HEAD `7229d7f86`・full **13361 / 0 / 2 / 13363**・第996 を ARCHIVE へ）。作業場所は Lab `sessions/p998/`。
+- **ユーザー「元画像の Fix OMR のメニューも消して。OMR 編集画面で Ask AI すると返答待ちになるけど、待っているとわかるように（ぐるぐる・テキストの点滅など）」**: webview/context から `omrFixWithAi` を消した（残るのはエディタの右クリック・パレット・電球）・`editBarsBesideScan` が `0_bar@1` に。行が `ai === 'asking'` の間、`aiNow` と Draft の欄（`.none`）に `.spin`（回る輪 0.8 秒）＋`.busy`（文字の点滅 1.4 秒）・`prefers-reduced-motion` では輪をゆっくり・点滅なし。順番待ち（queued）は動かない。網 `omrAiFixPage.test` 1 本足し 1 本直し（npm 479）。site scan・両 CHANGELOG・設計・MANUAL-CHECKS C10 直し／C11。
+判定（2026-10-27・第998 の終わり）: 次はユーザーの指示（C9〜C11）。
+
 ## 以下は第997セッションの経緯
 
 ### 1.1 第997セッション（2026-10-27・YT-DELL2）

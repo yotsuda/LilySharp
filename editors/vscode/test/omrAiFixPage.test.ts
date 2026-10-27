@@ -59,7 +59,7 @@ describe('the Edit Bars Beside the Scan page', () => {
         assert.match(src, /row\.barFix = await barFixOf\(run\.client, spliceBar\(run\.base\.text, target, plain\), target\.start, plain\.length\);/);
         assert.match(src, /\/bar lines\? looks\? to be missing\/\.test\(d\.Message\)/);
         assert.match(src, /'lilysharp\/missingBarLines', \{ Text: text, Start: start, End: start \+ length \}/);
-        assert.match(src, /reason: lost \+ reason \+ sure \+ hint \+ barLine \+ aiNow/);
+        assert.match(src, /reason: lost \+ reason \+ restore \+ sure \+ hint \+ barLine \+ aiNow/);
     });
 });
 
@@ -82,6 +82,15 @@ describe('the doors to the bars of the marks', () => {
         assert.match(scan, /const p = e\.contentChanges\.length > 0 \? pins\.get\(e\.document\.uri\.toString\(\)\) : undefined;\s*if \(p\) \{\s*shiftAnchors\(p\.anchors,/);
         assert.match(scan, /vscode\.workspace\.onDidOpenTextDocument\(doc => \{\s*pins\.delete\(doc\.uri\.toString\(\)\);/);
         assert.match(scan, /const view: ScanView = \{ panel, lys, side, anchors: pinned\.anchors, linked: true \};/);
+    });
+
+    it('toggles between the AI\'s proposal and the person\'s edit, the edit kept aside', () => {
+        assert.match(fix, /if \(row\.edited !== undefined\) \{\s*row\.stashed = \{ text: row\.edited, fromAi: !!row\.editedFromAi \};/);
+        assert.match(fix, /row\.edited = text;\s*row\.stashed = undefined;/);
+        assert.match(fix, /case 'restore':[\s\S]{0,400}await editRow\(run, row, kept\.text, m\.seq \?\? 0, kept\.fromAi\);/);
+        assert.match(fix, /const restore = !edited && r\.stashed && isLive\(r\)/);
+        assert.match(fix, /reason: lost \+ reason \+ restore \+ sure/);
+        assert.match(fix, /vscode\.postMessage\(\{ action: 'restore', index: Number\(i\), seq: seqs\[i\] \}\);/);
     });
 
     it('shows a turning ring and a pulsing word while a row asks the AI', () => {

@@ -143,6 +143,10 @@ interface FixRow {
     /** The edit was begun on the AI's bar (its Draft reads "AI proposal, edited"), not on the bar
      *  as it stands ("your edit"). */
     editedFromAi?: boolean;
+    /** The edit set aside by "use the AI's" (or "undo my edit"), for "back to my edit" to bring
+     *  back — the two are a toggle (owner's request 2026-10-27: an answer that came while the
+     *  person was editing could be seen only by throwing the edit away). A new edit drops it. */
+    stashed?: { readonly text: string; readonly fromAi: boolean };
     editGate?: GateVerdict;
     editAfter?: SvgResponse;
     /** The row's line as it now reads (the bar as it stands, or the edit) with the bar lines the
@@ -988,6 +992,14 @@ async function onPanelMessage(deps: OmrAiFixDeps, m: PanelMessage): Promise<void
         case 'edit':
             if (row && typeof m.text === 'string') { await editRow(run, row, m.text, m.seq ?? 0); }
             return;
+        case 'restore':
+            // "back to my edit": the edit "use the AI's" set aside, gated and drawn again.
+            if (row?.stashed && row.edited === undefined) {
+                const kept = row.stashed;
+                row.stashed = undefined;
+                await editRow(run, row, kept.text, m.seq ?? 0, kept.fromAi);
+            }
+            return;
         case 'acceptRow':
             if (row) {
                 if (row.ai) { cancelAsk(run, row); }
@@ -1102,21 +1114,26 @@ const editVerifies = new Map<number, vscode.CancellationTokenSource>();
  * drawn, the row's parts sent back to the page as each answer comes. Text equal to what the row
  * would write anyway (the model's bar, or the line without its marks) is no edit.
  */
-async function editRow(run: FixRun, row: FixRow, raw: string, seq: number): Promise<void> {
+async function editRow(run: FixRun, row: FixRow, raw: string, seq: number, fromAi?: boolean): Promise<void> {
     row.editSeq = seq;
     editVerifies.get(row.index)?.cancel();
     editVerifies.delete(row.index);
     const text = raw.replace(/\s+/g, ' ').trim();
     const model = hasProposal(row) ? row.proposal!.bar! : resolvedLine(row.target.written).replace(/\s+/g, ' ').trim();
     if (text === '' || text === model) {
+        // Set aside, not lost: "back to my edit" brings it back.
+        if (row.edited !== undefined) {
+            row.stashed = { text: row.edited, fromAi: !!row.editedFromAi };
+        }
         row.edited = row.editGate = row.editAfter = row.editedFromAi = undefined;
         postRow(run, row, seq);
         return;
     }
     if (row.edited === undefined) {
-        row.editedFromAi = hasProposal(row);
+        row.editedFromAi = fromAi ?? hasProposal(row);
     }
     row.edited = text;
+    row.stashed = undefined;
     const spliced = spliceBar(row.base.text, row.target, text);
     const [check, after] = await Promise.all([
         run.client.sendRequest<CheckCandidateResponse>('lilysharp/checkCandidate', { Text: spliced }),
@@ -1394,9 +1411,13 @@ function rowParts(run: FixRun, r: FixRow): RowParts {
     const failed = r.gate && !(r.gate.compile && r.gate.length);
     // An edit goes back to the AI's bar when it has one — the answer that came while the person
     // was editing waits there (owner's request 2026-10-24) — else to the bar as it stands.
+    // Either keeps the edit aside, for "back to my edit" (owner's request 2026-10-27: a toggle).
     const revert = hasProposal(r)
-        ? `<button class="link revert" data-i="${r.index}" title="${esc(`The AI's bar: ${r.proposal!.bar!}`)}">use the AI's</button>`
-        : `<button class="link revert" data-i="${r.index}" title="Back to the bar as it stands">undo my edit</button>`;
+        ? `<button class="link revert" data-i="${r.index}" title="${esc(`The AI's bar: ${r.proposal!.bar!} — your edit is kept, to come back to`)}">use the AI's</button>`
+        : `<button class="link revert" data-i="${r.index}" title="Back to the bar as it stands — your edit is kept, to come back to">undo my edit</button>`;
+    const restore = !edited && r.stashed && isLive(r)
+        ? ` <button class="link restore" data-i="${r.index}" title="${esc(`Your edit: ${r.stashed.text}`)}">back to my edit</button>`
+        : '';
     // The AI's state, and the way to ask it: queued or being asked (with a cancel), or a button.
     const can = isLive(r);
     // A turning ring and a pulsing word while the AI is asked (owner's request 2026-10-27: the
@@ -1435,7 +1456,7 @@ function rowParts(run: FixRun, r: FixRow): RowParts {
         : r.asked ? 'no AI proposal — the bar as it stands'
         : 'the bar as it stands';
     return {
-        gates: gatesHtml(gate), reason: lost + reason + sure + hint + barLine + aiNow, proposal, source, nowText: piecesHtml(diff.before), afterText: piecesHtml(diff.after), del,
+        gates: gatesHtml(gate), reason: lost + reason + restore + sure + hint + barLine + aiNow, proposal, source, nowText: piecesHtml(diff.before), afterText: piecesHtml(diff.after), del,
         accept: { word: !own && marked && !r.keepTodo ? 'Accept (remove @todo)' : 'Accept', can: own || marked || !!r.keepTodo, ready: isReady(r) },
     };
 }
@@ -1960,6 +1981,15 @@ ${rows}
       seqs[i] = (seqs[i] || 0) + 1;
       sent[i] = undefined;
       vscode.postMessage({ action: 'edit', index: Number(i), text: '', seq: seqs[i] });
+      return;
+    }
+    // ...and back: the edit "use the AI's" set aside (a toggle, owner's request 2026-10-27).
+    const rs = e.target.closest && e.target.closest('button.restore');
+    if (rs) {
+      const i = rs.dataset.i;
+      seqs[i] = (seqs[i] || 0) + 1;
+      sent[i] = undefined;
+      vscode.postMessage({ action: 'restore', index: Number(i), seq: seqs[i] });
       return;
     }
     // The row's Ask AI, and the cancel of a row waiting for it or being asked (owner's request
