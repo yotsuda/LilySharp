@@ -35,7 +35,7 @@ namespace LilySharp.Tests;
 [Trait("Category", "Unit")]
 public class ShiftTests
 {
-    private static string Book(string head, string part = "part m { clef treble }", string music = "c4 d e f |")
+    private static string Book(string head, string part = "part m { clef treble }", string music = "c'4 d' e' f' |")
         => "time 4/4\noctave absolute\n" + head + "\n" + part + "\nsection A { m { " + music + " } }\nform { A }\nscore { staff m }\n";
 
     private static SyntaxTree Parsed(string source)
@@ -110,7 +110,7 @@ public class ShiftTests
         Assert.Equal(new[] { "C4", "D4", "E4", "F4" }, Pitches(Book("key c major")));
         Assert.Equal(new[] { "Db4", "Eb4", "F4", "Gb4" }, Pitches(Book("key c major\nshift +1")));
         Assert.Equal(new[] { "B3", "C#4", "D#4", "E4" }, Pitches(Book("key c major\nshift -1")));
-        Assert.Equal(new[] { "F#4", "G#4", "A#4", "B4" }, Pitches(Book("key g major\nshift -1", music: "g4 a b c' |")));
+        Assert.Equal(new[] { "F#4", "G#4", "A#4", "B4" }, Pitches(Book("key g major\nshift -1", music: "g'4 a' b' c'' |")));
         Assert.Equal(new[] { "D4", "E4", "F#4", "G4" }, Pitches(Book("shift +2")));
     }
 

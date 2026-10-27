@@ -170,7 +170,7 @@ public class PartCombineSilenceTests
         // carries no voice direction and sits on the centre line.
         //   bar 1: r4 (part one, 0.0) then f2. "Solo"      -1.5
         //   bar 2: r4 (part two, 0.0) then d2. "Solo II"   -2.5
-        var svg = Svg(Combined("r4 f2. | R1 |", "R1 | r4 d2. |"));
+        var svg = Svg(Combined("r4 f'2. | R1 |", "R1 | r4 d'2. |"));
 
         Assert.Equal([[0], [-1.5], [0], [-2.5]], Columns(svg));
         Assert.Equal(["Solo", "Solo II"], Labels(svg));
@@ -188,7 +188,7 @@ public class PartCombineSilenceTests
         // silent wrong position is the thing the corpus keeps getting caught by.
         // When the solo/shared stream can move to the other slot, this test should FAIL and
         // be replaced by LilyPond's numbers.
-        var columns = Glyphs(Svg(Combined("r4 f2. | r8 f e2. |", "r8 d f2. | r4 e2. |")))
+        var columns = Glyphs(Svg(Combined("r4 f'2. | r8 f' e'2. |", "r8 d' f'2. | r4 e'2. |")))
             .Select(g => g.X)
             .Distinct()
             .OrderBy(x => x)
@@ -208,7 +208,7 @@ public class PartCombineSilenceTests
         //   bar 2: "Solo" on part one's f, then "a2" on part one's e.
         // Lily# asked part one first for the unisono's anchor, found its null-voice note, could
         // not place the text on it, and the bar-2 "Solo" then overwrote the waiting "a2".
-        var svg = Svg(Combined("r4 f2. | r8 f e2. |", "r8 d f2. | r4 e2. |"));
+        var svg = Svg(Combined("r4 f'2. | r8 f' e'2. |", "r8 d' f'2. | r4 e'2. |"));
 
         Assert.Equal(["Solo II", "a2", "Solo", "a2"], Labels(svg));
     }

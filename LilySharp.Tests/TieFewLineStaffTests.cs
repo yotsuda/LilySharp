@@ -69,9 +69,9 @@ public class TieFewLineStaffTests
         """;
 
     [Theory]
-    [InlineData("b4 b4~ b4 b4", "staff comp", 2, 0.2604, 1.2980)]
+    [InlineData("b'4 b'4~ b'4 b'4", "staff comp", 2, 0.2604, 1.2980)]
     [InlineData("/4 /4~ /4 /4", "staff comp", 2, 0.2783, 1.2980)]   // LILYSHARP-OWN lift, see the remarks
-    [InlineData("b4 b4~ b4 b4", "staff comp as lines 1", 0, 0.7500, 2.6022)]
+    [InlineData("b'4 b'4~ b'4 b'4", "staff comp as lines 1", 0, 0.7500, 2.6022)]
     [InlineData("/4 /4~ /4 /4", "staff comp as lines 1", 0, 0.7500, 2.1556)]
     public void ATieIsScoredAgainstItsOwnStaffsLines(string music, string staff, int middleLine, double lift, double span)
     {

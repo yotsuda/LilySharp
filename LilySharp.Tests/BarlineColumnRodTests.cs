@@ -30,7 +30,8 @@ namespace LilySharp.Tests;
 /// column's <c>minimum-distances</c> in a line compressed to its minimum
 /// (scratch/p323/fx/m-*.ly, session 323): a rod is skyline distance + 0.1, and a skyline
 /// distance is ink + the two extra-spacing-widths (0.1 each).
-/// The bar priced here is HANDOFF §2 T7 F12's <c>fis,,2 fis,,8 fis,, r cis,</c>
+/// The bar priced here is HANDOFF §2 T7 F12's <c>fis,,2 fis,,8 fis,, r cis,</c> (written
+/// <c>fis,2 fis,8 fis, r cis</c> below since bare c is C3, owner's decision 2026-10-28)
 /// (scratch/p322/fx/w-h8-bass-fis.lys): LilyPond's bar-to-bar minimum is 9.0432 where
 /// Lily# priced 8.348, and the whole gap was four per-bar terms — the up-stem FLAG before
 /// the bar line (−0.86), the bar line → note rod (−0.10), an eighth rest boxed as a
@@ -86,7 +87,7 @@ public sealed class BarlineColumnRodTests
     {
         // m-base.ly: the flagged eighth → bar line rod is 2.3674 = stem 1.2392 + flag 0.8282
         // + 0.1 + 0.1 + 0.1; its spring minimum is the rod less the spanner padding.
-        var bar = FirstBar(ScoreOf("fis,,2 fis,,8 fis,, r cis,"));
+        var bar = FirstBar(ScoreOf("fis,2 fis,8 fis, r cis"));
         var last = (NoteItem)bar.Items[^1];
         Assert.True(last.StemUp && !last.IsBeamed);
         var (skyMin, rod) = SpacingRules.NoteColumnToBarlineFloorPair(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, last);
@@ -100,7 +101,7 @@ public sealed class BarlineColumnRodTests
         // m-gis.ly: the down flag hangs at the head's LEFT edge and reaches 1.1318 — inside
         // the head's 1.3042 — so the rod is the head-only 1.6042. Positive control for the
         // flag being the term, not the eighth.
-        var bar = FirstBar(ScoreOf("fis,,2 fis,,8 fis,, r gis,"));
+        var bar = FirstBar(ScoreOf("fis,2 fis,8 fis, r gis"));
         var last = (NoteItem)bar.Items[^1];
         Assert.True(!last.StemUp && !last.IsBeamed);
         Assert.Equal(1.6042, SpacingRules.NoteColumnToBarlineFloorPair(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, last).Rod, 4);
@@ -110,7 +111,7 @@ public sealed class BarlineColumnRodTests
     public void QuarterBeforeTheBarLine_IsHeadOnly()
     {
         // m-q.ly: no flag, no dot — 1.3042 + 0.3.
-        var bar = FirstBar(ScoreOf("fis,,2 fis,,8 fis,, cis,4"));
+        var bar = FirstBar(ScoreOf("fis,2 fis,8 fis, cis4"));
         Assert.Equal(1.6042, SpacingRules.NoteColumnToBarlineFloorPair(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, bar.Items[^1]).Rod, 4);
     }
 
@@ -119,7 +120,7 @@ public sealed class BarlineColumnRodTests
     {
         // m-base.ly: rest → note rod 1.300000 = the eighth rest's 1.0 + 0.3; a black-head
         // box priced it 1.6042.
-        var bar = FirstBar(ScoreOf("fis,,2 fis,,8 fis,, r cis,"));
+        var bar = FirstBar(ScoreOf("fis,2 fis,8 fis, r cis"));
         var rest = bar.Items[3];
         Assert.IsType<RestItem>(rest);
         Assert.Equal(1.3, SpacingRules.SeparationRodDistance(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, rest, bar.Items[4], 0), 4);
@@ -131,7 +132,7 @@ public sealed class BarlineColumnRodTests
     {
         // m-base.ly: half → eighth rod 1.6774 = the half head's 1.3774 + 0.3. Between the
         // two heads' CENTRES it read 1.6408 — half of each width, not the left head's whole.
-        var bar = FirstBar(ScoreOf("fis,,2 fis,,8 fis,, r cis,"));
+        var bar = FirstBar(ScoreOf("fis,2 fis,8 fis, r cis"));
         Assert.Equal(1.6774, SpacingRules.SeparationRodDistance(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, bar.Items[0], bar.Items[1], 0), 4);
         Assert.Equal(1.6042, SpacingRules.SeparationRodDistance(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, bar.Items[1], bar.Items[2], 0), 4);
     }
@@ -141,7 +142,7 @@ public sealed class BarlineColumnRodTests
     {
         // m-base.ly: bar line origin → next column 0.49 = 0.19 of ink + 0.3; the spring
         // starts at the ink's right edge.
-        var bar = FirstBar(ScoreOf("fis,,2 fis,,8 fis,, r cis,"));
+        var bar = FirstBar(ScoreOf("fis,2 fis,8 fis, r cis"));
         var spring0 = SpacingRules.BarlineToFirstColumnSpring(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, new[] { bar.Items[0] }, fillsMeasure: false);
         Assert.Equal(0.3, spring0.MinDistance, 9);
         // The ideal and the strengths are Staff_spacing's, untouched by the rod.
@@ -155,7 +156,7 @@ public sealed class BarlineColumnRodTests
         // The whole bar, bar line to bar line: 0.49 + 1.6774 + 1.6042 + 1.6042 + 1.3 + 2.3674
         // = 9.0432 (m-base.ly, every column at its rod). Lily# read 8.348 before the four
         // terms above were closed.
-        var (springs, bar) = TimingSprings("fis,,2 fis,,8 fis,, r cis,");
+        var (springs, bar) = TimingSprings("fis,2 fis,8 fis, r cis");
         double min = springs.Items.Sum(s => s.MinDistance)
                      + SpacingRules.GetBarlineWidth(bar.StartBarline)
                      + SpacingRules.GetBarlineWidth(bar.EndBarline);
@@ -171,12 +172,12 @@ public sealed class BarlineColumnRodTests
         // correction — toward a note and toward the bar line alike. The quarter in the same
         // seat (m-q.ly's bar) keeps its correction, so the zero is the gate and not an
         // absent stem.
-        var flagged = FirstBar(ScoreOf("fis,,2 fis,,8 fis,, r cis,"));
+        var flagged = FirstBar(ScoreOf("fis,2 fis,8 fis, r cis"));
         var cis8 = flagged.Items[^1];
         Assert.Equal(0.0, SpacingRules.CalculateStemCorrectionToBarline(cis8, NoteSpacingParameters.Default), 9);
         Assert.Equal(0.0, SpacingRules.CalculateStemCorrection(cis8, flagged.Items[0], NoteSpacingParameters.Default, LilySharp.Core.Svg.EngravingDefaults.SpacingIncrement), 9);
 
-        var quarter = FirstBar(ScoreOf("fis,,2 fis,,8 fis,, cis,4"));
+        var quarter = FirstBar(ScoreOf("fis,2 fis,8 fis, cis4"));
         Assert.NotEqual(0.0, SpacingRules.CalculateStemCorrectionToBarline(quarter.Items[^1], NoteSpacingParameters.Default));
     }
 
@@ -185,7 +186,7 @@ public sealed class BarlineColumnRodTests
     {
         // w-h8-bass-fis-lp.out: bar 2 spans 15.8432 bar line to bar line. The flag's
         // headroom (skyline 2.2674 + 0.3 = 2.5674 > the duration ideal) is part of it.
-        var (springs, bar) = TimingSprings("fis,,2 fis,,8 fis,, r cis,");
+        var (springs, bar) = TimingSprings("fis,2 fis,8 fis, r cis");
         double ideal = springs.Items.Sum(s => s.IdealDistance)
                        + SpacingRules.GetBarlineWidth(bar.StartBarline)
                        + SpacingRules.GetBarlineWidth(bar.EndBarline);

@@ -186,9 +186,9 @@ public class IncrementalCompilerTests
 
         var edits = new[]
         {
-            ("c4 d e f", "c4 d e g"),   // one note in measure 1
+            ("c'4 d e f", "c'4 d e g"),   // one note in measure 1
             ("d4 e f g", "d4 e f a"),   // one note in measure 3 (a different system's bar)
-            ("c4 d e g", "c4 d e f"),   // revert measure 1
+            ("c'4 d e g", "c'4 d e f"),   // revert measure 1
         };
         foreach (var (find, rep) in edits)
         {
@@ -343,7 +343,7 @@ public class IncrementalCompilerTests
 
         // Adding an articulation collects into a separate list, not the measure
         // items, so the gate is unchanged -> the break DP is skipped.
-        var change = Replace(Base, "c4 d e f", "c4@staccato d e f");
+        var change = Replace(Base, "c'4 d e f", "c'4@staccato d e f");
         var incremental = Norm(session.Edit(change));
 
         Assert.True(session.LastEditSkippedLineBreak);
@@ -359,7 +359,7 @@ public class IncrementalCompilerTests
 
         // Re-rhythming a bar changes its natural width -> the gate changes -> the
         // breaks are recomputed. Output still matches a full recompile.
-        var change = Replace(Base, "c4 d e f", "c2 d4 e4");
+        var change = Replace(Base, "c'4 d e f", "c'2 d4 e4");
         var incremental = Norm(session.Edit(change));
 
         Assert.False(session.LastEditSkippedLineBreak);
@@ -642,7 +642,7 @@ public class IncrementalCompilerTests
         // Adding an articulation keeps the line-break gate (still a skip) but DOES change
         // the measure's content key (the articulation side-table is folded into it), so the
         // whole-layout reuse is correctly declined while the cheaper break-skip still applies.
-        var change = Replace(Base, "c4 d e f", "c4@staccato d e f");
+        var change = Replace(Base, "c'4 d e f", "c'4@staccato d e f");
         var incremental = Norm(session.Edit(change));
 
         Assert.True(session.LastEditSkippedLineBreak);
@@ -836,7 +836,7 @@ public class IncrementalCompilerTests
         // gate-changing (recompute, incl. a structural measure insertion) edits.
         var steps = new (string Find, string Replace, bool ExpectSkip)[]
         {
-            ("c4 d e f", "c4@staccato d e f", true),   // +articulation -> skip
+            ("c'4 d e f", "c'4@staccato d e f", true),   // +articulation -> skip
             ("g4 a b c", "g2 a4 b4", false),           // re-rhythm        -> recompute
             ("d4 e f g", "d4@accent e f g", true),     // +articulation    -> skip
             ("a4 b c d", "a4 b c d | r1", false),      // insert a measure -> recompute
@@ -938,7 +938,7 @@ public class IncrementalCompilerTests
         var session = new IncrementalCompiler(tree, Opt);
         session.Render();
 
-        var change = Replace(src, "e4 f g a | f4 g a b", "e4 f g a | c4 c c c | f4 g a b"); // new measure index 5
+        var change = Replace(src, "e'4 f' g' a' | f'4 g' a' b'", "e'4 f' g' a' | c'4 c' c' c' | f'4 g' a' b'"); // new measure index 5
         var incremental = Norm(session.Edit(change));
 
         Assert.Equal(Full(tree.WithChange(change).Text), incremental);
@@ -1030,7 +1030,7 @@ public class IncrementalCompilerTests
         var session = new IncrementalCompiler(tree, Opt);
         session.Render();
 
-        var change = Replace(src, "e4 f g a | f4 g a b | g4 a b c", "e4 f g a | g4 a b c"); // measure 5 gone
+        var change = Replace(src, "e'4 f' g' a' | f'4 g' a' b' | g'4 a' b' c'", "e'4 f' g' a' | g'4 a' b' c'"); // measure 5 gone
         var incremental = Norm(session.Edit(change));
 
         Assert.Equal(Full(tree.WithChange(change).Text), incremental);
@@ -1444,7 +1444,7 @@ public class IncrementalCompilerTests
 
         var before = session.SpringsForTest![1];
 
-        var change = Replace(src, "c1 ||", "c1 |");
+        var change = Replace(src, "c'1 ||", "c'1 |");
         var incremental = Norm(session.Edit(change));
 
         Assert.Equal(Full(tree.WithChange(change).Text), incremental);
@@ -1598,7 +1598,7 @@ public class IncrementalCompilerTests
         var session = new IncrementalCompiler(tree, Opt);
         session.Render();
 
-        var change = Replace(src, "g4 a a a", "gis4 a a a");   // measure index 1
+        var change = Replace(src, "g'4 a' a' a'", "gis'4 a' a' a'");   // measure index 1
         var incremental = Norm(session.Edit(change));
 
         Assert.Equal(Full(tree.WithChange(change).Text), incremental);
@@ -2082,7 +2082,7 @@ public class IncrementalCompilerTests
         var session = new IncrementalCompiler(tree, Opt);
         Assert.Equal(Full(src), Norm(session.Render()));
 
-        var change = Replace(src, "c'4 d' e' f' |", "c'4 d' e' a' |");
+        var change = Replace(src, "c''4 d'' e'' f'' |", "c''4 d'' e'' a'' |");
         var incremental = Norm(session.Edit(change));
 
         Assert.Equal(Full(tree.WithChange(change).Text), incremental);

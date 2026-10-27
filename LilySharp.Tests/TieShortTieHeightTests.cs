@@ -29,7 +29,7 @@ namespace LilySharp.Tests;
 /// eighth-note ties 0.72–0.85 wide, and Lily# gave every one the height of a 1.0-wide tie.
 /// This is two lines of that book. The numbers are LilyPond 2.26.0's, off its <c>lysc ly</c>
 /// twin through Lab <c>sessions/p647/bows</c> (the tie's control points, cp1.y − cp0.y):
-/// the tie <c>d,~</c> in bar 3 of the second line spans 0.846300 and rises 0.265300 (the
+/// the tie <c>d~</c> (written <c>d,~</c> before bare c became C3) in bar 3 of the second line spans 0.846300 and rises 0.265300 (the
 /// other ties agreed before the fix: longer than 1.0, or broken at a line end).
 /// MEASURED before the fix: the same span, a rise of 0.306800.
 /// LILYPOND-REF: lily/tie-configuration.cc:62-72 get_untransformed_bezier (no floor on the
@@ -46,8 +46,8 @@ public class TieShortTieHeightTests
           clef bass
           tuning bass
           section A {
-            e,8 b,, dis, d,~ d, g, gis, a,~ | a, g, gis, a,~ a, cis, d, dis, | e, b,, e, d,~ d, e, f, fis,~ | fis, fis, g, a,~ a, a,, d, dis, | break
-            e, b,, e, d,~ d, g,, gis,, a,,~ | a,, c, cis, d,~ d, a,, c, d, | e, b,, e, d,~ d, e, f, fis,~ | fis, b,, c, cis,~ cis, cis, d, dis, | break
+            e8 b, dis d~ d g gis a~ | a g gis a~ a cis d dis | e b, e d~ d e f fis~ | fis fis g a~ a a, d dis | break
+            e b, e d~ d g, gis, a,~ | a, c cis d~ d a, c d | e b, e d~ d e f fis~ | fis b, c cis~ cis cis d dis | break
           }
         }
         form { A }
@@ -59,7 +59,7 @@ public class TieShortTieHeightTests
     {
         var g = RenderedGeometry.RenderProduct(Book);
 
-        // The tie LilyPond measures 0.8463 wide (the second line's `d,~` into bar 3); the
+        // The tie LilyPond measures 0.8463 wide (the second line's `d~` into bar 3); the
         // line-end pieces are short too, but a broken piece is not this question.
         int shortTie = Enumerable.Range(0, 12).Single(i => System.Math.Abs(g.BowSpan(i) - 0.8463) < 0.005);
         Assert.Equal(0.2653, g.BowControlLift(shortTie), 3);   // an UP tie

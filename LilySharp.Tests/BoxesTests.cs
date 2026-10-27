@@ -83,7 +83,7 @@ public class BoxesTests
     {
         var page = Pages(Book)[0];
         var head = page.Symbols.First(s => s.Kind == "notehead");
-        Assert.Equal("c'4", Book.Substring(head.Pos, 3));
+        Assert.Equal("c''4", Book.Substring(head.Pos, 4));
         var tie = page.Symbols.Single(s => s.Kind == "tie");
         Assert.Equal('~', Book[tie.Pos]);
         Assert.NotNull(tie.Ends);

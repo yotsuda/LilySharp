@@ -63,8 +63,8 @@ public class OttavaMidBarTests
     {
         var tree = SyntaxTree.Parse(
             "octave absolute\nkey e major\npart m { clef treble }\npart l { clef bass }\n"
-            + "section A {\n  m { e''8@ottava( dis'' cis'' b' a' gis' fis' e'@!ottava) | }\n"
-            + "  l { e,1 | }\n}\nform { A }\nscore { " + staves + " }\n");
+            + "section A {\n  m { e'''8@ottava( dis''' cis''' b'' a'' gis'' fis'' e''@!ottava) | }\n"
+            + "  l { e1 | }\n}\nform { A }\nscore { " + staves + " }\n");
         Assert.False(tree.HasErrors);
         var score = SvgGenerator.CollectScore(tree,
             LilySharp.Core.Svg.Collector.RenderSpecParser.FindAll(tree).First());

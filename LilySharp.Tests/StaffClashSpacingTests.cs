@@ -51,10 +51,10 @@ public class StaffClashSpacingTests
             "part lo { clef treble }\n\n" +
             "section Main {\n" +
             "  up {\n" +
-            "    voice { d4 }\n" +
-            "    { <c a,>4 }\n" +
+            "    voice { d'4 }\n" +
+            "    { <c' a>4 }\n" +
             "  }\n" +
-            "  lo { <a b>4 }\n" +
+            "  lo { <a' b'>4 }\n" +
             "}\n\n" +
             "form { ~Main }\n\n" +
             "score { staff up staff lo }\n");

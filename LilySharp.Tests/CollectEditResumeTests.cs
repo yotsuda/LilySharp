@@ -117,9 +117,9 @@ public class CollectEditResumeTests
         var dir = Path.Combine(CollectResumeTests.FindRepoRoot(), "audit", "lpreg");
         var books = new (string Book, string Find, string Replace, bool ExpectPrefix)[]
         {
-            ("perf-plain1k.lys", "g8", "a8", true),
+            ("perf-plain1k.lys", "g'8", "a'8", true),
             ("perf-fingbeam1k.lys", "e@finger(3)", "f@finger(3)", true),
-            ("perf-v2bow1k.lys", "e4(", "f4(", false),
+            ("perf-v2bow1k.lys", "e'4(", "f'4(", false),
         };
         var failures = new List<string>();
         foreach (var (book, find, replace, expectPrefix) in books)
@@ -182,9 +182,9 @@ public class CollectEditResumeTests
         // The book is tracked — a missing one is a failure, not a skip.
         Assert.True(File.Exists(path), $"perf corpus book missing: {path}");
         var baseText = File.ReadAllText(path);
-        int idx = baseText.IndexOf("e4(", baseText.Length / 2, StringComparison.Ordinal);
+        int idx = baseText.IndexOf("e'4(", baseText.Length / 2, StringComparison.Ordinal);
         Assert.True(idx >= 0, "bench token not found");
-        var edited = baseText.Remove(idx, 3).Insert(idx, "f4(");
+        var edited = baseText.Remove(idx, 4).Insert(idx, "f'4(");
 
         var options = new SvgRenderOptions { EmbedFont = false };
         var compiler = new IncrementalCompiler(SyntaxTree.Parse(baseText), options);
@@ -252,10 +252,10 @@ public class CollectEditResumeTests
         var oldText = File.ReadAllText(path);
         // Mid-voice-0: the primary voice's block occupies the first half of the
         // book, so a token found from 25% sits strictly inside it.
-        int idx = oldText.IndexOf("g'4", (int)(oldText.Length * 0.25), StringComparison.Ordinal);
+        int idx = oldText.IndexOf("g''4", (int)(oldText.Length * 0.25), StringComparison.Ordinal);
         Assert.True(idx >= 0 && idx < oldText.Length / 2,
             $"voice-0 token landed at {idx} — fixture texture changed?");
-        var newText = oldText.Remove(idx, 3).Insert(idx, "a'4");
+        var newText = oldText.Remove(idx, 4).Insert(idx, "a''4");
 
         var failures = new List<string>();
         var (adopted, resumesRun, spliced) = RunOneEdit(
@@ -454,7 +454,7 @@ part bl {
 }
 form { A }
 ";
-        var newText = oldText.Replace("| a4 b c d |", "| 4 b c d |");
+        var newText = oldText.Replace("| a'4 b' c' d' |", "| 4 b' c' d' |");
         Assert.NotEqual(oldText, newText);
         var (resumer, _) = ResumeAndCompare(oldText, newText);
         // Non-vacuous: a prefix was restored — just not past the note the `4` copies.
@@ -472,8 +472,8 @@ form { A }
     public void SuffixSplice_AnEmptyTail_KeepsTheLiveLastBar()
     {
         var src = File.ReadAllText(Path.Combine(FindRepoRootForTests(), "audit", "lp-regression", "lys", "key-signature-space.lys"));
-        Assert.Contains("e'4@stemUp e'2@stemUp", src);
-        ResumeAndCompare(src, src.Replace("e'4@stemUp e'2@stemUp", "e'4@stemUpp e'2@stemUp"));
+        Assert.Contains("e''4@stemUp e''2@stemUp", src);
+        ResumeAndCompare(src, src.Replace("e''4@stemUp e''2@stemUp", "e''4@stemUpp e''2@stemUp"));
     }
 
     /// <summary>
@@ -1156,7 +1156,7 @@ section S {
             form { M }
             score { staff sop  staff alt }
             """;
-        AssertKeystrokeMatchesFull(source, "c'1 }", "c'1 c'1 }");
+        AssertKeystrokeMatchesFull(source, "c''1 }", "c''1 c''1 }");
     }
 
     /// <summary>THE PHRASE-EXPANSION HOLE: a bar line typed at the start of a body written
@@ -1285,9 +1285,9 @@ section S {
     [InlineData(HeadersBelowThePart, "section B { key d major }", "section B { key d major time 3/4 }")]
     [InlineData(HeadersBelowThePart, "section B { key d major }", "section B { key d major tempo 4 = 90 }")]
     [InlineData(HeadersBelowThePart, "section B { key d major }", "section B { }")]
-    [InlineData(TwoPartsWithAKeyedCell, "key g major c4 d e f | g1 | }", "key g major }")]
-    [InlineData(TwoPartsWithAKeyedCell, "key g major c4 d e f | g1 | }", "key g major c4 d e f | g1 | g1 | }")]
-    [InlineData(TwoPartsWithAKeyedCell, "e4 d c d | e1 | }", "e4 d c d | e1 | e1 | }")]
+    [InlineData(TwoPartsWithAKeyedCell, "key g major c'4 d' e' f' | g'1 | }", "key g major }")]
+    [InlineData(TwoPartsWithAKeyedCell, "key g major c'4 d' e' f' | g'1 | }", "key g major c'4 d' e' f' | g'1 | g'1 | }")]
+    [InlineData(TwoPartsWithAKeyedCell, "e'4 d' c' d' | e'1 | }", "e'4 d' c' d' | e'1 | e'1 | }")]
     public void AKeystrokeInAStandaloneHeaderBelowThePart_ReachesTheResumedCollect(string source, string find, string replacement)
         => AssertKeystrokeMatchesFull(source, find, replacement);
 
@@ -1567,9 +1567,9 @@ section C { m { c''4 b' a' g' | }  n { c''4 b' a' g' | } }
 form { A ~B ~C }
 score { staff m staff n }
 ";
-        int at = oldText.IndexOf("f' g' |", StringComparison.Ordinal);
+        int at = oldText.IndexOf("f'' g'' |", StringComparison.Ordinal);
         Assert.True(at > 0);
-        var newText = oldText.Remove(at + 3, 1).Insert(at + 3, "a");
+        var newText = oldText.Remove(at + 4, 1).Insert(at + 4, "a");
 
         var (full, resumed, plan) = ResumeAcross(oldText, newText);
         Assert.True(SplicedMeasures(plan) > 0,
@@ -1594,7 +1594,7 @@ section A { m { c'1 | |: d'1 :| e'1 | } }
 form { A }
 score { staff m }
 ";
-        int at = oldText.IndexOf("d1", StringComparison.Ordinal);
+        int at = oldText.IndexOf("d'1", StringComparison.Ordinal);
         Assert.True(at > 0);
         var newText = oldText.Remove(at, 1).Insert(at, "f");
 
@@ -1621,9 +1621,9 @@ section A { m { time 4/4 c'4 time none d'4 e'4 | f'4 g'4 | a'4 b'4 | time 4/4 c'
 form { A }
 score { staff m }
 ";
-        int at = oldText.IndexOf("c4 time none", StringComparison.Ordinal);
+        int at = oldText.IndexOf("c'4 time none", StringComparison.Ordinal);
         Assert.True(at > 0);
-        var newText = oldText.Remove(at + 1, 1).Insert(at + 1, "8");
+        var newText = oldText.Remove(at + 2, 1).Insert(at + 2, "8");
 
         var (full, resumed, plan) = ResumeAcross(oldText, newText);
         // Premise: the cadenza bars carry the edited reading.

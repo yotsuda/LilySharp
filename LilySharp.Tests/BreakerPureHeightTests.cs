@@ -101,7 +101,7 @@ public class BreakerPureHeightTests
         // MEASURED (2.26.0, Lab sessions/p852/nb): the rest-of-line top is 3.375 over the
         // middle line — the eighths' unbeamed stems — where the drawn beam stands at 3.72.
         var shape = FirstLine(Book(
-            "des,8. des,16 r8 aes,, bes,,4 bes,,8 f,,16 e,, | ees,,8. ees,,16 r8 ees,, aes,,4 r8 aes,,16 c, | des,8. des,16 r8 aes,, des,4 des,16 aes,, f,,8 |"));
+            "des8. des16 r8 aes, bes,4 bes,8 f,16 e, | ees,8. ees,16 r8 ees, aes,4 r8 aes,16 c | des8. des16 r8 aes, des4 des16 aes, f,8 |"));
         Assert.Equal(3.375 - 2.0, shape.RestUp, 6);
     }
 
@@ -115,7 +115,7 @@ public class BreakerPureHeightTests
         //   on a boxed "B" over notes inside the staff): the line's pure top is 3.555 over the top
         //   line = 0.85 + the box's 2.705 (Lab sessions/p854/mark: "B" (−0.352 . 2.353)). Lily#
         //   read 3.505 while the padding stood on the top line.
-        var shape = FirstLine(Book("""e,1 | e,1@mark("B") |"""));
+        var shape = FirstLine(Book("""e1 | e1@mark("B") |"""));
         Assert.Equal(3.555, shape.RestUp, 3);
     }
 
@@ -153,7 +153,7 @@ public class BreakerPureHeightTests
         // The same rule on a five-line staff (MergeFlagInk's pureBox). MEASURED (2.26.0, Lab
         //   sessions/p856/net/n.lys): a down eighth's flag puts the line's rest bottom 1.400
         //   under the bottom line, 0.025 past the stem's end; the outline gave 1.375.
-        var shape = FirstLine(Book("d,8 r8 r4 r2 | d,8 r8 r4 r2 |"));
+        var shape = FirstLine(Book("d8 r8 r4 r2 | d8 r8 r4 r2 |"));
         Assert.Equal(1.400, shape.RestDown, 3);
     }
 
@@ -195,7 +195,7 @@ public class BreakerPureHeightTests
         // MEASURED (2.26.0, Lab sessions/p854/fam1, まちぶせ line 7 `r4 d,@mark("B1")`):
         //   LilyPond's line 6 rest top 0.05, line 7 begin 3.825 / rest 5.075; Lily# priced the
         //   mark as opening line 7 (begin 5.100 / rest 2.545) and over line 6's end (3.555).
-        const string music = """e,1 | e,1 | break r4 e,2.@mark("B") | e,1 |""";
+        const string music = """e1 | e1 | break r4 e2.@mark("B") | e1 |""";
         var first = Line(Book(music), 1);
         var second = Line(Book(music), 2);
         Assert.True(first.RestUp < 1.0, $"line 1 carries line 2's mid-bar mark: rest up {first.RestUp}");
@@ -286,7 +286,7 @@ public class BreakerPureHeightTests
         // MEASURED (2.26.0, Lab sessions/p852/pr/slur): 6.545 over the middle line, the
         // slurred a8's head plus the pure estimate's 0.5; the drawn curve stood 0.48 higher.
         var shape = FirstLine(Book(
-            "d,4. g,16 a, c4. d8~ | d4 r8 f8~ f4. d,8 | g4. a8 a2 | a8( g) f4 e8 a,4 a,,8 |"));
+            "d4. g16 a c'4. d'8~ | d'4 r8 f'8~ f'4. d8 | g'4. a'8 a'2 | a'8( g') f'4 e'8 a4 a,8 |"));
         Assert.Equal(6.545 - 2.0, shape.RestUp, 6);
     }
 
@@ -296,7 +296,7 @@ public class BreakerPureHeightTests
         // MEASURED (2.26.0, Lab sessions/p852/pr/tup2): (−3.333333, 3.0) about the middle
         // line — the stems; the bracket and its number under the down stems are not in the
         // pure heights.
-        var shape = FirstLine(Book("tuplet 3/2 { c,4 d, e, } c,2 | c,1 |"));
+        var shape = FirstLine(Book("tuplet 3/2 { c4 d e } c2 | c1 |"));
         Assert.Equal(3.0 - 2.0, shape.RestUp, 6);
         Assert.Equal(10.0 / 3 - 2.0, shape.RestDown, 6);
     }
@@ -307,8 +307,8 @@ public class BreakerPureHeightTests
         // MEASURED (2.26.0, Lab sessions/p852/mk): a mark at a line's first bar is in the
         // System's begin heights of that bar alone. The line with the mark keeps the rest
         // height of the same line without it.
-        var marked = Line(Book("c4 c c c | break c4@mark(\"A\") c c c | c4 c c c |"), 2);
-        var plain = Line(Book("c4 c c c | break c4 c c c | c4 c c c |"), 2);
+        var marked = Line(Book("c'4 c' c' c' | break c'4@mark(\"A\") c' c' c' | c'4 c' c' c' |"), 2);
+        var plain = Line(Book("c'4 c' c' c' | break c'4 c' c' c' | c'4 c' c' c' |"), 2);
         Assert.True(marked.BeginUp > plain.BeginUp + 1, $"{marked} against {plain}");
         Assert.Equal(plain.RestUp, marked.RestUp, 9);
     }
