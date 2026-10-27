@@ -255,7 +255,7 @@ public class SkipColumnSpacingTests
         var springs = ColumnSprings(OneVoice, 1);
         Assert.True(springs[0].IdealDistance < EngravingDefaults.BarLineToNextNoteSpace + 0.5,
             $"no full-measure-extra-space after a skip-defeated fills_measure: {springs[0].IdealDistance}");
-        var whole = ColumnSprings(OneVoice.Replace("| c4 s2. |", "| c1 |"), 1);
+        var whole = ColumnSprings(OneVoice.Replace("| c'4 s2. |", "| c'1 |"), 1);
         Assert.True(whole[0].IdealDistance > EngravingDefaults.BarLineToNextNoteSpace + 0.9,
             $"a whole note's bar keeps it: {whole[0].IdealDistance}");
     }

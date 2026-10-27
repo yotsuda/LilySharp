@@ -52,7 +52,7 @@ public class LayoutGeometryRuleTests
         // c d e are stem-up, b' (above the middle line) is stem-down: LP flips
         // the slur UP as soon as ANY covered stem points down. Deciding by the
         // START note alone curved this slur down, into b''s stem side.
-        var slurs = new SlurDetector().DetectSlurs(Collect("c4( d e b') |"));
+        var slurs = new SlurDetector().DetectSlurs(Collect("c'4( d e b') |"));
         var slur = Assert.Single(slurs);
         Assert.True(slur.CurveUp);
     }
@@ -62,7 +62,7 @@ public class LayoutGeometryRuleTests
     {
         // Default DOWN with no down-stems — same result as the old
         // opposite-of-start-stem rule; pinned so the flip stays a flip.
-        var slurs = new SlurDetector().DetectSlurs(Collect("c4( d e f) |"));
+        var slurs = new SlurDetector().DetectSlurs(Collect("c'4( d e f) |"));
         var slur = Assert.Single(slurs);
         Assert.False(slur.CurveUp);
     }

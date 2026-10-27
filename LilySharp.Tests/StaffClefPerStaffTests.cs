@@ -36,7 +36,7 @@ namespace LilySharp.Tests;
 public sealed class StaffClefPerStaffTests
 {
     // Positions from the middle line: C5 is 1 on a treble staff (B4), 13 on a bass staff (D3).
-    private static int[][] Positions(string rows, string music = "c'4 d e f |")
+    private static int[][] Positions(string rows, string music = "c''4 d e f |")
     {
         var tree = SyntaxTree.Parse("part melody { clef treble }\nsection A { melody { " + music + " } }\nform { ~A }\nscore { " + rows + " }\n");
         var score = SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree));
@@ -61,11 +61,13 @@ public sealed class StaffClefPerStaffTests
         Assert.Equal(1, p[1][0]);
     }
 
+    /// <summary>An octave clef is written at sounding pitch (owner's decision 2026-10-28, as in
+    /// LilyPond): the same notes stand an octave (7 positions) above where its parent puts them.</summary>
     [Fact]
-    public void AnOctaveClef_PlacesAsItsParentDoes()
+    public void AnOctaveClef_PlacesAnOctaveAboveItsParent()
     {
         var p = Positions("staff melody  staff treble_8 melody");
-        Assert.Equal(p[0], p[1]);
+        Assert.Equal(p[0].Select(x => x + 7), p[1]);
     }
 
     [Fact]
@@ -86,7 +88,7 @@ public sealed class StaffClefPerStaffTests
     {
         // The part changes to the alto clef in bar 2: from there both staves are in it, so
         // its notes stand alike on both; before it each staff has its own clef.
-        var p = Positions("staff melody  staff bass melody", "c'4 d e f | clef alto c4 d e f |");
+        var p = Positions("staff melody  staff bass melody", "c''4 d e f | clef alto c4 d e f |");
         Assert.Equal(1, p[0][0]);
         Assert.Equal(13, p[1][0]);
         Assert.Equal(p[0].Skip(4), p[1].Skip(4));

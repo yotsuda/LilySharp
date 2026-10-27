@@ -53,8 +53,8 @@ public class BeamAcrossChangeTests
     }
 
     [Theory]
-    [InlineData("c major", "c''8 d'' clef bass e8 a c'4 a |", 1.81)]
-    [InlineData("f major", "c''8 d'' key e major e'' a'' c''4 a' |", 2.19)]
+    [InlineData("c major", "c'''8 d''' clef bass e'8 a' c''4 a' |", 1.81)]
+    [InlineData("f major", "c'''8 d''' key e major e''' a''' c'''4 a'' |", 2.19)]
     public void TheBeamRunsAcrossTheChange_AndClearsIt(string key, string music, double lpCentre)
     {
         var (beams, centre) = Beam(key, music);

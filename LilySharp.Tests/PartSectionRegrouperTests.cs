@@ -168,8 +168,8 @@ public class PartSectionRegrouperTests
 
         Assert.Equal(Grouping.BySection, PartSectionRegrouper.Detect(sm2!));
         Assert.Contains("section A {", sm2);
-        Assert.Contains("low { c4 d }", sm2);
-        Assert.Contains("high { e'4 f' }", sm2);
+        Assert.Contains("low { c'4 d }", sm2);
+        Assert.Contains("high { e''4 f' }", sm2);
         Assert.Contains("form { A B }", sm2);
         Assert.False(SyntaxTree.Parse(sm2!).HasErrors);
     }
@@ -315,8 +315,8 @@ public class PartSectionRegrouperTests
         var sm = PartSectionRegrouper.Convert(pm!);
         Assert.NotNull(sm);
         Assert.Single(System.Text.RegularExpressions.Regex.Matches(sm!, @"section A \{"));
-        Assert.Contains("fl { c1 | }", sm);
-        Assert.Contains("ob { d1 | }", sm);
+        Assert.Contains("fl { c'1 | }", sm);
+        Assert.Contains("ob { d'1 | }", sm);
     }
 
     [Fact]
@@ -338,11 +338,11 @@ public class PartSectionRegrouperTests
         var src = "part ob { clef treble }\nsection B {\n  ob { c'4 d e f |\n    g1 |\n  }\n}\nform { B }\n";
         var byPart = PartSectionRegrouper.Convert(src);
         Assert.NotNull(byPart);
-        Assert.Contains("  section B { c4 d e f |\n    g1 |\n  }\n}\n", byPart!.ReplaceLineEndings("\n"));
+        Assert.Contains("  section B { c'4 d e f |\n    g1 |\n  }\n}\n", byPart!.ReplaceLineEndings("\n"));
 
         var bySection = PartSectionRegrouper.Convert(byPart);
         Assert.NotNull(bySection);
-        Assert.Contains("  ob { c4 d e f |\n    g1 |\n  }\n}\n", bySection!.ReplaceLineEndings("\n"));
+        Assert.Contains("  ob { c'4 d e f |\n    g1 |\n  }\n}\n", bySection!.ReplaceLineEndings("\n"));
     }
 
     [Fact]

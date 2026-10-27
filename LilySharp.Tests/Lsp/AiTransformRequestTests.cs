@@ -188,16 +188,16 @@ public class AiTransformRequestTests
         Assert.Null(response.Error);
         Assert.Single(response.Pitches);
         Assert.Equal("g'", response.Pitches[0].Written);
-        Assert.Equal("G5", response.Pitches[0].Resolved);
+        Assert.Equal("G4", response.Pitches[0].Resolved);   // absolute: g' is G4 (owner's decision 2026-10-28)
     }
 
     [Fact]
     public void PitchesForText_ARelativeSlip_ShowsInTheResolvedOctave()
     {
         // The slip the octave check exists for: a harmony line whose first note jumps the
-        // wrong way. Relative mode: c'' is C6, and `e,` after it is a sixth DOWN, E5 — valid
+        // wrong way. Relative mode: c''' is C6, and `e,` after it is a sixth DOWN, E5 — valid
         // Lily#, no diagnostic, and only the resolved octave shows it.
-        string doc = MusicSource.Wrap("c''4 e,4 f g |", "time 4/4\nkey c major");
+        string doc = MusicSource.Wrap("c'''4 e,4 f g |", "time 4/4\nkey c major");
         int e = doc.IndexOf("e,4", StringComparison.Ordinal);
         var response = Server().PitchesForText(new PitchesForTextParams { Text = doc, Start = e, End = doc.Length });
 

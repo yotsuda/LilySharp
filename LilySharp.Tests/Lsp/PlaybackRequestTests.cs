@@ -34,8 +34,8 @@ public class PlaybackRequestTests
     // scratch/parts.lys: p1 and p2 on one form; `main` shows both, "p2" shows p2 alone.
     private const string Doc =
         "section A {\n" +
-        "  p1 { c'4 d e f | g2 g | }\n" +
-        "  p2 { e f g a | b2 b }\n" +
+        "  p1 { c''4 d e f | g2 g | }\n" +
+        "  p2 { e' f g a | b2 b }\n" +
         "}\n\nform { A }\n\n" +
         "score {\n  staff p1\n  staff p2\n}\n\n" +
         "score p2 {\n  staff p2\n}\n";
@@ -46,8 +46,8 @@ public class PlaybackRequestTests
         "part pno\n" +
         "part kit { clef percussion }\n" +
         "section A {\n" +
-        "  vn { c'4 d e f | }\n" +
-        "  pno { e f g a | }\n" +
+        "  vn { c''4 d e f | }\n" +
+        "  pno { e' f g a | }\n" +
         "  kit { bd4 bd sn bd | }\n" +
         "}\n\nform { A }\n\n" +
         "score {\n  staff vn\n  staff pno\n  staff kit\n}\n";
@@ -69,7 +69,7 @@ public class PlaybackRequestTests
         });
     }
 
-    // p1 opens on c' (72) and p2 on e (64): the two parts never share a pitch on the first
+    // p1 opens on c'' (72) and p2 on e' (64): the two parts never share a pitch on the first
     // beat, so the onset-0 pitches say which parts sound.
     private static int[] PitchesAtOnset0(PlaybackResponse pb)
     {
@@ -185,7 +185,7 @@ public class PlaybackRequestTests
         var opened = Playback("p2");
         Assert.Equal(opened.Notes!.Select(n => (n.T, n.P)), asIs.Notes!.Select(n => (n.T, n.P)));
 
-        var changed = server.GetPlaybackText(new PlaybackTextParams { Text = Doc.Replace("e f g a | b2 b", "g a b c | d2 d") });
+        var changed = server.GetPlaybackText(new PlaybackTextParams { Text = Doc.Replace("e' f g a | b2 b", "g a b c | d2 d") });
         Assert.Null(changed.Error);
         var opening = changed.Notes!.Where(n => n.T == 0).Select(n => (int)n.P).ToArray();
         Assert.Contains(55, opening);          // p2 now opens on g (G3, the nearest to its anchor)

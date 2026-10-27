@@ -359,7 +359,7 @@ public sealed class VoiceSpanTupletBarTests
     public void OwnersBook_LilyPondTwin_WritesTheTupletInsideVoice2()
     {
         string ly = new LilySharp.Core.LilyPond.LilyPondExporter().Export(SyntaxTree.Parse(OwnersBook));
-        Assert.Contains(@"\\ { \tuplet 3/2 { ais,,8 b,,8 cis,8 } b,,2 cis,2 } >>", ly);
+        Assert.Contains(@"\\ { \tuplet 3/2 { ais,8 b,8 cis8 } b,2 cis2 } >>", ly);
     }
 
     // ---------- diagnostics: CLI check and the LSP pass ----------
@@ -378,7 +378,7 @@ public sealed class VoiceSpanTupletBarTests
         var server = new LilySharpLanguageServer(Stream.Null, Stream.Null);
         // Opened with voice 2 of bar 2 empty, then the voice typed in one character at a
         // time through incremental changes, the preview rendering after every keystroke.
-        const string typed = "tuplet 3/2 { ais,,8 b,,8 cis,8 } b,,2 cis,2";
+        const string typed = "tuplet 3/2 { ais,8 b,8 cis8 } b,2 cis2";
         int at = OwnersBook.IndexOf(typed, StringComparison.Ordinal);
         string text = OwnersBook.Remove(at, typed.Length);
         server.DidOpen(new DidOpenTextDocumentParams
@@ -421,7 +421,7 @@ public sealed class VoiceSpanTupletBarTests
     [Fact]
     public void TheDraftWithoutTheTuplet_Measures7Over4()
     {
-        string draft = OwnersBook.Replace("tuplet 3/2 { ais,,8 b,,8 cis,8 }", "ais,, b,, cis,", StringComparison.Ordinal);
+        string draft = OwnersBook.Replace("tuplet 3/2 { ais,8 b,8 cis8 }", "ais, b, cis", StringComparison.Ordinal);
         var over = Assert.Single(SemanticValidation.Run(SyntaxTree.Parse(draft)), IsBarLength);
         Assert.Contains("7/4 exceeds time signature 5/4", over.Message);
     }

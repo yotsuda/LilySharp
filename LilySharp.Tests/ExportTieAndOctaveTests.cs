@@ -130,9 +130,9 @@ score t { staff melody }
     public void Chord_MembersStackAboveRoot_OrderIndependent()
     {
         // Lily# diverges from LilyPond: every chord member STACKS above the root
-        // (the first note), so <c g e> and <c e g> both sound C4 E4 G4 — the chord
+        // (the first note), so <c' g e> and <c' e g> both sound C4 E4 G4 — the chord
         // is independent of the order its notes are written. Matches the collector.
-        var midi = new MidiExporter().Export(SyntaxTree.Parse("<c g e>4"));
+        var midi = new MidiExporter().Export(SyntaxTree.Parse("<c' g e>4"));
         var pitches = midi.Tracks[1].Notes.OrderBy(n => n.StartTick).Select(n => n.Pitch).ToList();
         Assert.Equal(new[] { 60, 67, 64 }, pitches); // C4, G4, E4 (g and e stacked above c)
     }
@@ -146,29 +146,29 @@ score t { staff melody }
     [Fact]
     public void Chord_ALaterMembersOctaveMark_ShiftsItFromItsStackedSpot()
     {
-        // The chord is read as its first note, the others stack on where it sounds: <c' e g>
+        // The chord is read as its first note, the others stack on where it sounds: <c'' e g>
         // is the close position C5 E5 G5. A later member's '/, marks shift that ONE note from
-        // its stacked spot, so <c' e' g'> is the spread C5 E6 G6 (session 914; until then the
-        // root's mark was local and <c' e g> was C5 E4 G4).
-        Assert.Equal(new[] { 72, 76, 79 }, MidiPitches("<c' e g>4"));
-        Assert.Equal(new[] { 72, 88, 91 }, MidiPitches("<c' e' g'>4"));
-        Assert.Equal(new[] { 60, 64, 79 }, MidiPitches("<c e g'>4"));
+        // its stacked spot, so <c'' e' g'> is the spread C5 E6 G6 (session 914; until then the
+        // root's mark was local and <c'' e g> was C5 E4 G4).
+        Assert.Equal(new[] { 72, 76, 79 }, MidiPitches("<c'' e g>4"));
+        Assert.Equal(new[] { 72, 88, 91 }, MidiPitches("<c'' e' g'>4"));
+        Assert.Equal(new[] { 60, 64, 79 }, MidiPitches("<c' e g'>4"));
     }
 
     [Fact]
     public void Chord_RootOctaveMark_MovesTheChord_AndPropagates()
     {
-        // The chord's anchor is where the root SOUNDS: after <c' e g> the next bare c is C5,
-        // as after a single c'.
-        Assert.Equal(new[] { 72, 76, 79, 72 }, MidiPitches("<c' e g>4 c4"));
+        // The chord's anchor is where the root SOUNDS: after <c'' e g> the next bare c is C5,
+        // as after a single c''.
+        Assert.Equal(new[] { 72, 76, 79, 72 }, MidiPitches("<c'' e g>4 c4"));
     }
 
     [Fact]
     public void Chord_TrailingOctaveMark_MovesTheAnchor_AndPropagates()
     {
-        // <c e g>' shifts the whole chord AND the next bare note continues in the
+        // <c' e g>' shifts the whole chord AND the next bare note continues in the
         // new register — the anchor itself moved to C5: the same sound and the same
-        // frame as <c' e g>.
-        Assert.Equal(new[] { 72, 76, 79, 72 }, MidiPitches("<c e g>'4 c4"));
+        // frame as <c'' e g>.
+        Assert.Equal(new[] { 72, 76, 79, 72 }, MidiPitches("<c' e g>'4 c4"));
     }
 }

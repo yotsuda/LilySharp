@@ -135,13 +135,14 @@ public class StaffSilhouetteSeedTests
     // hand's second beam of m1, whose stems point up and reach into the gap.
     private static string WedgeBook(bool withWedge, bool lhReachesUp)
     {
-        // `octave absolute` spells C4 as `c` (the twin's \fixed c'): b4 d5 / a4 … / a4 d5 fis5.
+        // `octave absolute` spells C4 as `c'`, as LilyPond does (owner's decision 2026-10-28):
+        // b4 d5 / a4 … / a4 d5 fis5.
         string rh = withWedge
-            ? "<b d'>2( <bes d'>2@decresc) | tuplet 3/2 { a8( b a } fis4 e8 g fis e) | <a d' fis'>1@pp |"
-            : "<b d'>2( <bes d'>2) | tuplet 3/2 { a8( b a } fis4 e8 g fis e) | <a d' fis'>1@pp |";
+            ? "<b' d''>2( <bes' d''>2@decresc) | tuplet 3/2 { a'8( b' a' } fis'4 e'8 g' fis' e') | <a' d'' fis''>1@pp |"
+            : "<b' d''>2( <bes' d''>2) | tuplet 3/2 { a'8( b' a' } fis'4 e'8 g' fis' e') | <a' d'' fis''>1@pp |";
         string lh = lhReachesUp
-            ? "g,8 d g b g,,8 bes,, d, g, | a,,8 d, fis, a, a,, cis, e, g, | d,,8 a, d fis a,2 |"
-            : "g,,8 a,, b,, c, g,,8 a,, b,, c, | a,,8 b,, c, d, a,, b,, c, d, | d,,1 |";
+            ? "g8 d' g' b' g,8 bes, d g | a,8 d fis a a, cis e g | d,8 a d' fis' a2 |"
+            : "g,8 a, b, c g,8 a, b, c | a,8 b, c d a, b, c d | d,1 |";
         return $$"""
             octave absolute
             time 4/4
@@ -195,9 +196,9 @@ public class StaffSilhouetteSeedTests
     // opens that system's gap, the first system's does not.
     private static string PedalledTwoSystemBook()
     {
-        const string rhPlain = "<b d'>2( <bes d'>2) | tuplet 3/2 { a8( b a } fis4 e8 g fis e) | <a d' fis'>1@pp |";
-        const string rhWedge = "<b d'>2( <bes d'>2@decresc) | tuplet 3/2 { a8( b a } fis4 e8 g fis e) | <a d' fis'>1@pp |";
-        const string lh = "g,8@sustain d g b g,,8 bes,, d, g,@!sustain | a,,8 d, fis, a, a,, cis, e, g, | d,,8 a, d fis a,2 |";
+        const string rhPlain = "<b' d''>2( <bes' d''>2) | tuplet 3/2 { a'8( b' a' } fis'4 e'8 g' fis' e') | <a' d'' fis''>1@pp |";
+        const string rhWedge = "<b' d''>2( <bes' d''>2@decresc) | tuplet 3/2 { a'8( b' a' } fis'4 e'8 g' fis' e') | <a' d'' fis''>1@pp |";
+        const string lh = "g8@sustain d' g' b' g,8 bes, d g@!sustain | a,8 d fis a a, cis e g | d,8 a d' fis' a2 |";
         return $$"""
             octave absolute
             time 4/4
