@@ -23,8 +23,27 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import {
     SEL_CLOSE, SEL_OPEN, carryOffset, documentBudget, documentContext, estimateTokens, isProblem, isUnchanged, marksContext, octaveOutliers,
-    pickModel, pitchToMidi, splitNote, startTimeAt, toCandidateEdit, changedWords, diffMarkup, wholeTextMarkup,
+    pickModel, pitchToMidi, splitNote, startTimeAt, toCandidateEdit, changedWords, diffMarkup, wholeTextMarkup, rangeFixOf,
 } from '../src/aiTransformCore';
+
+// Owner's report 2026-10-27: "this note sounds C1, below the range of the Bass" came back through
+// every repair — the repair now names the note as written and the note to write.
+describe('the repair of a note out of its instrument\'s range', () => {
+    const below = { Code: 'LYS1052', Message: 'this note sounds C1, below the range of the Bass (E1-G4, as it sounds)' };
+    const above = { Code: 'LYS1052', Message: 'this note sounds C7, above the range of the Guitar (E2-E6, as it sounds)' };
+    it('names the note as written, and the octave to write it in', () => {
+        const text = 'bass { c,8 g,8 c,4 } ';
+        assert.equal(rangeFixOf({ ...below, Offset: text.indexOf('c,8') }, text), ' — you wrote `c,8`: write it an octave higher, `c8`');
+        assert.equal(rangeFixOf({ ...below, Offset: 0 }, 'fis,,4. d'), ' — you wrote `fis,,4.`: write it an octave higher, `fis,4.`');
+        assert.equal(rangeFixOf({ ...below, Offset: 0 }, 'e4~ e'), " — you wrote `e4`: write it an octave higher, `e'4`");
+        assert.equal(rangeFixOf({ ...above, Offset: 0 }, "c'''8)"), " — you wrote `c'''8`: write it an octave lower, `c''8`");
+        assert.equal(rangeFixOf({ ...above, Offset: 0 }, 'c8'), ' — you wrote `c8`: write it an octave lower, `c,8`');
+    });
+    it('says nothing of another report, or of text that is no note', () => {
+        assert.equal(rangeFixOf({ Code: 'LYS2001', Offset: 0, Message: 'short' }, 'c4'), '');
+        assert.equal(rangeFixOf({ ...below, Offset: 0 }, '<c e>4'), '');
+    });
+});
 
 // Only the notes the AI really changed are lit (owner's report 2026-10-25: a rewritten stretch lit
 // every note in it, the ones copied through too).

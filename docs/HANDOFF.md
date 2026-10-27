@@ -127,19 +127,20 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1015セッション（2026-10-27・YT-DELL2）
+
+第1014 と同じ会話の続き。`-Start p1015`（開始 HEAD `58c3fea44`・full **13384 / 0 / 2 / 13386**＝作業ツリーで・第1013 を ARCHIVE へ）。作業場所は Lab `sessions/p1015/`。
+- **ユーザー「p・mp・f の音量差が大きすぎる。標準的な設定？」→ 比べて答えた（Lily# は DAW／MuseScore 並み pp35〜ff110・LilyPond `ly/midi-init.ly` は pp62〜ff102＝幅半分・SoundFont はベロシティを 2 乗で効かせる＝p→f 約 11 dB 対 5 dB）→「LP の値に揃えて」**: `DynamicLevel` の値を LP の割合 ×127 に（ppppp 32・pppp 43・ppp 53・pp 62・p 70・mp 77・mf 86・f 95・ff 102・fff 108・ffff 117・fffff 121・sf 127・表に無い fp 90／rf 103・sfz 104・rfz 105・fz 106・sffz 107 は並びを保って置き直し）・`DefaultVelocity` 80→90（LP `dynamic-default-volume` 0.71）。大小比較で使う所は無かった。MIDI の網 14 本の期待値を新しい値に。
+- **ユーザー「Ctrl+I でエレキベースの伴奏 → 候補の見出しに『sounds C1, below the range of the Bass』×13・AI の言葉が一番下に埋もれる。言葉をプロンプトの直後に。なぜ AI は除けなかった？」「エレキベースは 4 弦で最低 E。instrument に沿う音域がシステムプロンプトにあるか確かめて」**: 警告は直しの依頼で返していた（最大 2 回）が、鳴る音だけで書いた字面も直し方も無かった＝`aiTransformCore.rangeFixOf`（LYS1052 に「you wrote `c,8`: write it an octave higher, `c8`」）を `formatDiags(…, reconstructed)` に。配置済みの `out/GRAMMAR_FOR_LLM.md` に音域の節・`bass` E1–G4 `e,`–`g'` が在ることを確かめ、文に「`instrument bass` は書いた音の 1 オクターブ下で鳴る＝最低は `e,`・`c,` は C1」を足した。見出しは caption を「依頼／⚠ 残り」に割って `prompt → note → issues`。網 TS 3 本（npm 497）。両 CHANGELOG・MANUAL-CHECKS C26・C27。
+判定（2026-10-27・第1015 の終わり）: 次はユーザーの指示（C9〜C27）。
+
+## 以下は第1014セッションの経緯
+
 ### 1.1 第1014セッション（2026-10-27・YT-DELL2）
 
 第1013 と同じ会話の続き。`-Start p1014`（開始 HEAD `dfeaa54a5`・full **13384 / 0 / 2 / 13386**・第1012 を ARCHIVE へ）。作業場所は Lab `sessions/p1014/`。
 - **ユーザー「Accept を押したら『the document was closed; nothing was applied.』」→「エディタは開いたまま」「.lys は未保存」「作曲した曲に Ctrl+I で追加の修正」「タブは `// Composed with AI (…` 太字・`Untitled-1` 細字」**: 最初に疑った「見えない文書を VS Code が手放す」は違った（それでも file は開き直して反映する処理を足した＝害は無い）。原因＝`movedUris`（保存された untitled → file の対応）が `Untitled-1` の**名前の使い回し**で古いまま残り、新しい `Untitled-1` の Accept が昔のファイルを探しに行った。→ `currentUri` は**開いている自分の名前を先に**取る（たどる途中でも開いているものがあればそれ）・`onDidOpenTextDocument` で untitled が開いたらその名前の対応を消す。網 `aiNewPiece.test` 2 本（npm 495）。両 CHANGELOG・MANUAL-CHECKS C25。⚠️ 実機での再現は未確認（推論による原因）。
 判定（2026-10-27・第1014 の終わり）: 次はユーザーの指示（C9〜C25）。
-
-## 以下は第1013セッションの経緯
-
-### 1.1 第1013セッション（2026-10-27・YT-DELL2）
-
-第1012 と同じ会話の続き。`-Start p1013`（開始 HEAD `5d4916605`・full **13384 / 0 / 2 / 13386**＝新しい網を入れた作業ツリーで・第1011 を ARCHIVE へ）。作業場所は Lab `sessions/p1013/`。
-- **ユーザー「Ask AI でギターのダイアグラム追加を頼んだら『below the range of the Guitar (E2-E6)』が山のように出て候補ペインのヘッダが埋まった。作曲と Ask AI のシステムプロンプトに各楽器の音域を書き、instrument のある part では範囲外を使わないよう指示を。別に、候補のヘッダは大きさを制限してスクロールバーを」**: `GRAMMAR_FOR_LLM.md`（両方の system に丸ごと入る）に「## Instrument ranges」＝規則の文＋**生成された表**（`InstrumentRangePromptTests`＝`InstrumentDefaults.SoundingRange` から・書いた両端は計算でなく**コンパイラで探す**＝その楽器の part・absolute で両端が警告なし・半音外で 2 件となるオクターブ＝式ではギターが 1 オクターブずれた・`LILYSHARP_UPDATE_DOCS=1` で再生成）。候補ペインの `.header .texts`（max-height 7.5em・overflow-y auto・spacer を外した）。網 C# 2 本・`aiNewPiece.test` 2 本（npm 493）。両 CHANGELOG・MANUAL-CHECKS C24。
-判定（2026-10-27・第1013 の終わり）: 次はユーザーの指示（C9〜C24）。
 
 ## 2. 開いている作業
 

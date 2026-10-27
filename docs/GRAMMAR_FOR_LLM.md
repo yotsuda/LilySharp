@@ -649,7 +649,10 @@ EVERY note inside the range below — move a note an octave, or give the line to
 rather than write it out of range; a guitar part's accompaniment, a bass line written for the
 guitar, a melody lifted from the piano, all stay inside. "write" is the range as written in
 absolute octaves in that part (the instrument's own octave — a part's `octave N` moves it; a
-transposing instrument writes what its player reads).
+transposing instrument writes what its player reads). Read the "write" column, not the pitch
+names: `instrument bass` (the 4-string electric or double bass, lowest string E) sounds an
+octave under what it writes, so its lowest note is written `e,` (E1) and a written `c,` sounds
+C1 — out of range; a bass line that wants to go lower turns up an octave there.
 
 <!-- BEGIN instrument ranges: generated from InstrumentDefaults.SoundingRange by InstrumentRangePromptTests (LILYSHARP_UPDATE_DOCS=1) -->
 | instrument | sounds | write (absolute octaves) |

@@ -4,6 +4,12 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+### Playback
+
+- **p, mf, f … play closer together, as in LilyPond.** The dynamics take LilyPond's levels (pp 62,
+  p 70, mf 86, f 95, ff 102); they ran pp 35 to ff 110, and the SoundFont player made p to f some 11 dB
+  (now about 5). A note with no dynamic plays a little louder than before (90, LilyPond's default).
+
 ### Chords
 
 - **A chord's name is checked against its notes.** On `<c' f' g'>1@chord(C)` the F gets a blue
@@ -79,6 +85,11 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ### Ask AI
 
+- **A note out of range is easier for the AI to fix.** The repair names each such note as the AI
+  wrote it and the note to write instead (`c,8`: write it an octave higher, `c8`) — it had only the
+  sounding pitch ("this note sounds C1"), and an electric bass written in absolute octaves came back
+  thirteen times wrong. The grammar's ranges spell out that a bass's lowest note is written `e,`.
+- **The AI's word comes right under the request** in the candidate's head, the warnings after it.
 - **Accept on an unsaved score no longer says "the document was closed".** VS Code gives the name
   `Untitled-1` out again, and a move remembered for an earlier `Untitled-1` that was saved sent the
   Accept to that old file. An open document is now taken by its own name first, and a name given out

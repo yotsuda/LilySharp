@@ -40,7 +40,7 @@ import {
     CandidateEdit as CoreCandidateEdit, ChangedSpan, MarkInSelection, MarkReadings, SEL_CLOSE, SEL_OPEN, cleanCandidate,
     TextChange, carryOffset, documentBudget, documentContext, estimateTokens, isProblem, marksContext, octaveOutliers, splitNote,
     startTimeAt, toCandidateEdit, wholeFileEdit, carrySelection, changedWords, wholeTextMarkup, titleOf, isPlaceholderTitle,
-    cleanTitle, withTitle, asksForOneStaff, partCount,
+    cleanTitle, withTitle, asksForOneStaff, partCount, rangeFixOf,
 } from './aiTransformCore';
 import { markFactsOf, sideFileOf } from './omrScanCore';
 import { textFontFaceCss, textFontsRoot } from './scoreFonts';
@@ -669,7 +669,7 @@ async function drive(
                             warned = { edit, warnings: newWarnings };
                         }
                         messages.push({ role: 'user', content:
-                            `That candidate compiles, but it adds warnings the file did not have:\n${formatDiags(newWarnings)}\n` +
+                            `That candidate compiles, but it adds warnings the file did not have:\n${formatDiags(newWarnings, reconstructed)}\n` +
                             `${sameForm} that adds no warnings — same output rules.` });
                     }
                 }
@@ -1170,9 +1170,11 @@ function candidateBadness(
     return relevant.length > 0 ? relevant : errors;
 }
 
-function formatDiags(diags: CandidateDiagnostic[]): string {
-    return diags.map(d => `  - line ${d.Line + 1}: ${d.Message}`).join('\n');
+function formatDiags(diags: CandidateDiagnostic[], text?: string): string {
+    return diags.map(d => `  - line ${d.Line + 1}: ${d.Message}${text ? rangeFixOf(d, text) : ''}`).join('\n');
 }
+
+
 
 // ======================================================================
 // Resolved facts
@@ -1371,6 +1373,11 @@ function getCandidateHtml(
     const beforeBody = svgBefore
         ? `<div class="score">${svgBefore}</div>`
         : `<div class="err">Could not render the original.</div>`;
+    // The request first, the AI's word right under it, then what is left to fix (owner's request
+    // 2026-10-27: under thirteen warnings the AI's word was lost at the bottom).
+    const split = caption.indexOf(' — ⚠');
+    const asked = split >= 0 ? caption.slice(0, split) : caption;
+    const issues = split >= 0 ? caption.slice(split + ' — '.length) : '';
     return `<!DOCTYPE html>
 <html>
 <head>
@@ -1388,6 +1395,8 @@ body { margin:0; padding:0; display:flex; flex-direction:column; height:100vh; o
 .header .prompt { font-size:13px; font-weight:600; }
 /* The AI's word on what it did (<note>, owner's request 2026-10-25). */
 .header .note { font-size:12.5px; margin-top:3px; opacity:0.9; }
+/* What is left to fix (the warnings the repairs could not clear), under the AI's word. */
+.header .issues { font-size:12px; margin-top:3px; opacity:0.8; }
 .header .spacer { flex:1; }
 /* The head's words — the request, what is left to fix, the AI's note — held to a few lines and
    scrolled for the rest (owner's report 2026-10-27: a long list of the compiler's warnings
@@ -1462,8 +1471,9 @@ button:disabled { opacity:0.45; cursor:default; }
 <div class="header">
   <div class="texts">
     <div class="cap">AI candidate — decide on the score · <span style="color:#2e9e43">■</span> changed</div>
-    <div class="prompt">${escapeHtml(caption)}</div>
+    <div class="prompt">${escapeHtml(asked)}</div>
     ${note ? `<div class="note">💬 ${escapeHtml(note)}</div>` : ''}
+    ${issues ? `<div class="issues">${escapeHtml(issues)}</div>` : ''}
   </div>
   <div class="toggle">
     <button id="tAfter" class="on">After</button>

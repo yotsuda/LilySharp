@@ -99,6 +99,9 @@ describe('the instruments\' ranges, and a head that holds a long list', () => {
     it('holds the candidate\'s head to a few lines, scrolled for the rest', () => {
         assert.match(transform, /\.header \.texts \{ flex:1; min-width:0; max-height:7\.5em; overflow-y:auto;/);
         assert.match(transform, /<div class="header">\s*<div class="texts">/);
+        // The request, the AI's word under it, then what is left (owner's request 2026-10-27).
+        assert.match(transform, /<div class="prompt">\$\{escapeHtml\(asked\)\}<\/div>\s*\$\{note \?[^\n]*\n\s*\$\{issues \? `<div class="issues">/);
+        assert.match(transform, /formatDiags\(newWarnings, reconstructed\)/);
     });
 });
 

@@ -6,6 +6,13 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+### Playback
+
+- `[midi]` **The dynamics play at LilyPond's levels** (`ly/midi-init.ly` absolute-volume-alist): pp 62,
+  p 70, mp 77, mf 86, f 95, ff 102, fff 108 (they were pp 35, p 50, mp 65, mf 80, f 95, ff 110, fff 120
+  — twice LilyPond's spread, which a SoundFont player, squaring the velocity, made some 11 dB from p
+  to f), sf 1.00 → 127; a note with no dynamic plays at LilyPond's default 0.71 → 90 (was 80).
+
 ### MusicXML import
 
 - `[import]` **A bar a voice has nothing in no longer becomes `r1`.** A further voice of a staff writes
@@ -52,6 +59,9 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Ask AI
 
+- `[editor]` **A note out of its instrument's range is named to the AI as written, with the note to
+  write** in the repair (`c,8` → `c8`), and the grammar's ranges say how `instrument bass` writes its
+  low E; the candidate's head shows the AI's word right under the request, the warnings after it.
 - `[editor]` **Accept on an unsaved score finds it** (a reused `Untitled-1` had pointed at an old saved file).
 - `[language]` **The grammar for the AI has the instruments' ranges**: a table generated from the
   range LYS1052 warns by (the written ends found by the compiler), with the rule to keep a part with an

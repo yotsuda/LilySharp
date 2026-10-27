@@ -244,6 +244,8 @@ edocs/HANDOFF.mde §2 R13 ⒝・OMR の提案 B1〜B6（e..\LilySharp-Omr\docs\r
 - [ ] **C23**（第1012・作曲は relative で開く）: Compose with AI… → 開いた曲に `octave absolute` が無い（relative）・プレビューで鳴らすと音の高さがおかしくない。出力チャネル「Lily# AI」に「stays in absolute octaves」が出たら、変換できずに absolute のまま開いた（理由つき）。
 - [ ] **C24**（第1013・楽器の音域／候補の見出し）: ギターのパート（`instrument guitar`）のある曲で Ask AI「ギターのコード図を足して」→ 候補に「below the range of the Guitar」がほぼ出ない。警告や AI の言葉が長いとき、候補ペインの見出しは数行で止まり、スクロールバーで全部読める（After／Before のボタンは右に残る）。
 - [ ] **C25**（第1014・未保存の曲に Accept）: 未保存の .lys（Untitled-1）を保存して閉じ、Compose with AI で新しい曲（また Untitled-1）→ 保存せずに Ctrl+I で頼む → Accept → 書き込まれる（「the document was closed」が出ない）。
+- [ ] **C26**（第1015・強弱の幅）: `c4@pp d@p e@mf f@f g@ff` を鳴らす → 段階が聞き分けられ、p と f の差が前より穏やか。強弱の無い曲は前より少し大きい。ホバーで `@p` が「plays at velocity 70 of 127」。
+- [ ] **C27**（第1015・音域の直しと見出し）: エレキベースのある曲で Ctrl+I「ベースの伴奏をつけて」→ 出力チャネル「Lily# AI」の直しの依頼に「you wrote `c,8`: write it an octave higher, `c8`」の形・候補の見出しは「依頼 → 💬 AI の言葉 → ⚠ 残りの警告」の順。
 
 ## 4. §2 R13 ⒝ — 差分頁の配信（実機未確認・第404）
 

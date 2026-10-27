@@ -160,6 +160,14 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1013セッションの経緯
+
+### 1.1 第1013セッション（2026-10-27・YT-DELL2）
+
+第1012 と同じ会話の続き。`-Start p1013`（開始 HEAD `5d4916605`・full **13384 / 0 / 2 / 13386**＝新しい網を入れた作業ツリーで・第1011 を ARCHIVE へ）。作業場所は Lab `sessions/p1013/`。
+- **ユーザー「Ask AI でギターのダイアグラム追加を頼んだら『below the range of the Guitar (E2-E6)』が山のように出て候補ペインのヘッダが埋まった。作曲と Ask AI のシステムプロンプトに各楽器の音域を書き、instrument のある part では範囲外を使わないよう指示を。別に、候補のヘッダは大きさを制限してスクロールバーを」**: `GRAMMAR_FOR_LLM.md`（両方の system に丸ごと入る）に「## Instrument ranges」＝規則の文＋**生成された表**（`InstrumentRangePromptTests`＝`InstrumentDefaults.SoundingRange` から・書いた両端は計算でなく**コンパイラで探す**＝その楽器の part・absolute で両端が警告なし・半音外で 2 件となるオクターブ＝式ではギターが 1 オクターブずれた・`LILYSHARP_UPDATE_DOCS=1` で再生成）。候補ペインの `.header .texts`（max-height 7.5em・overflow-y auto・spacer を外した）。網 C# 2 本・`aiNewPiece.test` 2 本（npm 493）。両 CHANGELOG・MANUAL-CHECKS C24。
+判定（2026-10-27・第1013 の終わり）: 次はユーザーの指示（C9〜C24）。
+
 ## 以下は第1012セッションの経緯
 
 ### 1.1 第1012セッション（2026-10-27・YT-DELL2）

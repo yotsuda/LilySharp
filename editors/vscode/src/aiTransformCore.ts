@@ -676,3 +676,25 @@ export function startTimeAt(notes: { S?: number; T?: number }[], pos: number, en
     }
     return exact ?? before?.t ?? 0;
 }
+
+/**
+ * For a note outside its instrument's range (LYS1052): the note as the model wrote it, and the
+ * same note an octave nearer the range — " — you wrote `c,8`: write `c8`". Owner's report
+ * 2026-10-27: "this note sounds C1, below the range of the Bass" came back thirteen times through
+ * every repair; the sounding pitch alone does not say which written note it is, nor which way its
+ * marks go in a part with an anchor and a transposition of its own. "" for any other report.
+ */
+export function rangeFixOf(d: { Code: string | null; Offset: number; Message: string }, text: string): string {
+    if (d.Code !== 'LYS1052') {
+        return '';
+    }
+    const m = /^([a-g](?:isis|eses|is|es|s)?)([,']*)(\S*)/.exec(text.slice(d.Offset));
+    if (!m) {
+        return '';
+    }
+    const [, name, marks, rest] = m;
+    const tail = rest.split(/[\s<>|~(){}\[\]]/)[0];
+    const up = /\bbelow the range\b/.test(d.Message);
+    const moved = up ? (marks.includes(',') ? marks.slice(1) : marks + "'") : (marks.includes("'") ? marks.slice(1) : marks + ',');
+    return ` — you wrote \`${name}${marks}${tail}\`: write it an octave ${up ? 'higher' : 'lower'}, \`${name}${moved}${tail}\``;
+}
