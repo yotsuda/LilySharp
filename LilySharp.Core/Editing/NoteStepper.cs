@@ -370,6 +370,17 @@ public static partial class NoteStepper
                 stepped.Add(t);
                 continue;
             }
+            if (t.Kind == TargetKind.KeywordValue && TypedPitchAt(tree, t.Node.Span.Start) is { } typed)
+            {
+                // `pitch written` ⇄ `pitch concert` (the file's or a part's): the notes it governs are
+                // rewritten so the piece sounds as before (owner's request 2026-10-28), as the octave
+                // mode's step converts the file.
+                var (pitchEdits, pitchSaid) = TypedPitchEdits(text, typed.Property, typed.Value, dir);
+                message ??= pitchSaid;
+                edits.AddRange(pitchEdits);
+                stepped.Add(t);
+                continue;
+            }
             if (t.Kind is TargetKind.Dynamic or TargetKind.Articulation or TargetKind.Time or TargetKind.HeaderValue
                 or TargetKind.Font or TargetKind.Instrument or TargetKind.Tuning or TargetKind.Percent
                 or TargetKind.StaffGroup or TargetKind.StaffOrTab or TargetKind.FontSize or TargetKind.ScorePart

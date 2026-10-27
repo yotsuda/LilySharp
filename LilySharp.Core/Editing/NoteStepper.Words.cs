@@ -137,6 +137,41 @@ public static partial class NoteStepper
         return (new Edit(value.Span.Start, end, written), $"{keyword.Text} {written}");
     }
 
+    /// <summary>A TYPED-notes <c>pitch</c> word the caret is on — <c>written</c> / <c>concert</c> at the
+    /// top of the file or in a part header, not a score's — with its property, or null.</summary>
+    private static (PropertyAssignmentSyntax Property, SyntaxTokenNode Value)? TypedPitchAt(SyntaxTree tree, int offset)
+        => KeywordValueAt(tree, offset) is { } kv && kv.Keyword.Text == ConcertPitch.Property
+           && kv.Keyword.Parent is PropertyAssignmentSyntax p && !InScore(p) && ConcertPitch.ReadProperty(p) != null
+            ? (p, kv.Value)
+            : null;
+
+    /// <summary>
+    /// One step of a typed <c>pitch</c> (owner's request 2026-10-28): the other word, and the music
+    /// it governs rewritten so the piece sounds and prints as before
+    /// (<see cref="OctaveModeConverter.SwitchTypedPitch"/>) — as edits per changed line, so the
+    /// caret stays. Refused, with the reason, when the rewrite cannot keep the sound.
+    /// </summary>
+    private static (IReadOnlyList<Edit> Edits, string Message) TypedPitchEdits(string text,
+        PropertyAssignmentSyntax property, SyntaxTokenNode value, int dir)
+    {
+        var values = ConcertPitch.NotesModes;
+        int at = values.ToList().IndexOf(value.Text), to = at - dir;
+        if (to < 0 || to >= values.Count)
+            return ([], $"pitch {value.Text}: already the {(to < 0 ? "first" : "last")} ({string.Join(", ", values)})");
+        string next = values[to];
+        var result = OctaveModeConverter.SwitchTypedPitch(text, property.Span.Start, next == ConcertPitch.Concert);
+        if (result.NewText == null)
+            return ([], $"pitch {value.Text}: {result.Error}");
+        string notes = result.ChangedPitches switch
+        {
+            0 => "no note had to move",
+            1 => "1 note rewritten",
+            int n => $"{n} notes rewritten",
+        };
+        return (OctaveModeConverter.LineEdits(text, result.NewText),
+            $"pitch {next}: {(next == ConcertPitch.Concert ? "notes typed as they sound" : "notes typed as the player reads them")} - {notes}, the piece sounds as before");
+    }
+
     /// <summary>The token after <paramref name="token"/> among its parent's children, or null.</summary>
     private static SyntaxTokenNode? NextToken(SyntaxTokenNode token)
     {

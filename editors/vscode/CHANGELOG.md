@@ -20,6 +20,9 @@ All notable changes to the Lily# VS Code extension are documented here.
 - **Compose with AI picks a specific model.** The automatic choice skips models that only VS Code
   itself may use, and Copilot's "Auto".
 - **The status bar explains `pitch`** when the caret is on it: written versus concert.
+- **Ctrl+Shift+Up / Down on `pitch written` / `pitch concert` rewrites the score**, so it still
+  sounds and prints the same: a bass or a piccolo moves by its octave. A trumpet or a saxophone
+  keeps its letters and gets its own `pitch`, since respelling in another key is not done yet.
 
 ### Preview
 

@@ -144,7 +144,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **残り（ユーザー判断）**:
   - ⑶ ユーザーが戻した `samples/` の 5 冊（amazing-grace・canon-in-d・fur-elise・greensleeves・nocturne）の移行。
   - ⑷ 移調楽器を書いた音で綴り直す変換（「B」・トランペットの part に付く `pitch concert` を外せる）。
-  - ⑸ Ctrl+Shift+↑ で `pitch` の written／concert を切り替えたとき、楽譜も書き直す。
+  - ⑸ Ctrl+Shift+↑ で `pitch` の written／concert を切り替えたとき、楽譜も書き直す＝**入れた（第1029・`OctaveModeConverter.SwitchTypedPitch`・網 `TypedPitchStepTests` 6 本・MANUAL-CHECKS C40）**。半音の移調楽器は ⑷ が来るまで、ファイルの行の下では自分の `pitch` に旧い語を書いて文字を保ち、パート見出しの切り替えは断る。
   - ⑹ OMR の `.lys` 出力を新しいオクターブへ＝**伝えた**（`..\LilySharp-Omr\docs\repro\lilysharp-notice-2026-10-28-octaves.md`・返事待ち）。
 - **続き（ユーザー指示）**: ⑴ 旧規則の `.lys` を移すコマンド＝**不要**（ユーザー決定）。⑵ レッスン 1＝「よりよい品質のレッスン」の方針で直した: STEP 2 の cello で譜表がヘ音記号に替わって旋律が上に出て、STEP 3 の Ctrl+Shift+PageDown で旋律がチェロの譜表に入る（png で確認）。`instrument` のホバー・補完・ステータス行から `octave` の行を外した（ユーザー指示: どの楽器でも 3 なので書かない）。site は `<pre>` の例 19 個と `build-examples.ps1` の例を、旧版の音に合わせて直した。`build-site.ps1` が通る。
 - **見つけた不具合（オクターブとは無関係）**: `grace { d'16@caesura e'16 } c'1` が `BeamScoringProblem.MinimumDy` の `Math.Sign(NaN)` で落ちる（`GraceNoteEngraver.QuantGraceBeam` 経由）。`@breath` や D5 なら落ちない（第2 群の報告）。**直した（2026-10-28・ユーザー指示「クラッシュする不具合を調べて」）**: 低い装飾音と五線の上端の caesura は輪郭が重ならず、間の rod が −∞ になっていた。それを `SpacingRules.GraceColumns` が run の rod に足して −∞ にしたので、詰まった段では run が際限なく縮み、梁の最小二乗が NaN になった。rod の床をばねの最小距離にした（`Math.Max(IntoRod, Into.MinDistance)`）。breath は梁を切るので落ちなかった。網は `GraceBodyValidatorTests.ACaesuraOverALowBeamedGrace_Renders`（直しを外すと 2 本とも赤）。

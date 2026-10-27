@@ -264,6 +264,11 @@ edocs/HANDOFF.mde §2 R13 ⒝・OMR の提案 B1〜B6（e..\LilySharp-Omr\docs\r
   - (4) Compose with AI で「トランペットとベースのブルース」→ 開いた楽譜は、トランペットのパートだけに `pitch concert` が付く。ベースはヘ音記号の譜表の中に書かれ、`octave 4` は残らない。
   - (5) `pitch` の上にキャレット → ステータスバーに written / concert の説明。
   - (6) site の blues-in-f と rising-sun をプレビューで再生 → 前と同じに鳴る。
+- [ ] **C40**（第1029・`pitch` の切り替えで楽譜も書き直す）:
+  - (1) 先頭に `pitch written`、ピアノとベース（`instrument bass`）の曲。`written` の上で Ctrl+Shift+Down → `pitch concert` になり、ベースの音だけ 1 オクターブ下の印に書き直される。プレビューの譜面と音は変わらない。ステータスバーは「pitch concert: … notes rewritten, the piece sounds as before」。
+  - (2) そのまま Ctrl+Shift+Up → 元のファイルに戻る。Ctrl+Z 1 回でも戻る。
+  - (3) トランペット（`instrument trumpet`）を足して (1) → トランペットのパートに `pitch written` が足され、音は動かない。
+  - (4) トランペットのパート見出しに `pitch written` を書いて、その上で Ctrl+Shift+Down → 何も変わらず、ステータスバーに「respelled … not … yet」。
 
 ## 4. §2 R13 ⒝ — 差分頁の配信（実機未確認・第404）
 

@@ -21,6 +21,13 @@ workflow attaches that section to the GitHub Release verbatim.
     draws it an octave up, and the twin writes no `\transpose`.
   - Under `pitch concert`, an octave-only transposer (bass, piccolo, guitar) is typed as it sounds.
   - `[lsp]` The `instrument` hover, completion and status line list no octave (every part is at 3).
+- `[editor]` **The step keys on a typed `pitch written` / `pitch concert` rewrite the music it
+  governs** (the file's line, or a part header's), so the piece sounds and prints as before
+  (`OctaveModeConverter.SwitchTypedPitch`):
+  - an octave-only transposer moves by its octaves;
+  - a chromatic transposer under the file's line keeps its letters and gets its own `pitch` with
+    the old word; on its own header the switch is refused (no respelling yet);
+  - nothing changes when the result would not sound note for note the same.
 - The repository's scores, lessons, site examples and tests are re-marked to sound and draw as before:
   every pitch is moved by what the legacy build played (`OctaveModeConverter.MigrateFromLegacy`).
   `samples/` is not touched.

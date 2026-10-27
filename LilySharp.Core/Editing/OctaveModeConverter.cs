@@ -356,6 +356,121 @@ public static class OctaveModeConverter
     }
 
     /// <summary>
+    /// <paramref name="source"/> with the TYPED-notes <c>pitch</c> at <paramref name="propertyStart"/>
+    /// (the file's line, or a part header's) switched to <paramref name="toConcert"/>, and the music
+    /// it governs rewritten so the piece sounds and prints exactly as before (owner's request
+    /// 2026-10-28: Ctrl+Shift+Up / Down on the word rewrites the score). An octave-only
+    /// transposer's notes move by the octaves it transposes; a non-transposing part stays. A part
+    /// that transposes by another interval (a B♭ trumpet) would have to be respelled, which this
+    /// does not do: under the file's line it keeps its letters and gets its own <c>pitch</c> with
+    /// the old word; on its own header the switch is refused. Fails, changing nothing, when the
+    /// rewritten piece would not sound note for note as the source does.
+    /// </summary>
+    public static Result SwitchTypedPitch(string source, int propertyStart, bool toConcert)
+    {
+        var tree = SyntaxTree.Parse(source);
+        if (tree.HasErrors)
+            return Fail("The file has syntax errors — no changes made.");
+        var root = tree.GetRoot();
+        var prop = root.DescendantNodes<PropertyAssignmentSyntax>()
+            .FirstOrDefault(p => p.Span.Start == propertyStart && ConcertPitch.ReadProperty(p) != null);
+        if (prop == null || ConcertPitch.ReadProperty(prop) is not bool fromConcert)
+            return Fail("No pitch written / pitch concert there — no changes made.");
+        if (fromConcert == toConcert)
+            return new Result(source, null, 0);
+        var valueToken = Enumerable.Range(0, prop.SlotCount).Select(prop.GetChild).OfType<SyntaxTokenNode>()
+            .Last(t => t.Text is ConcertPitch.Written or ConcertPitch.Concert);
+        string oldWord = valueToken.Text, newWord = toConcert ? ConcertPitch.Concert : ConcertPitch.Written;
+        var edits = new List<Edit> { new(valueToken.Span.Start, valueToken.Span.End, newWord) };
+
+        var own = BlockOwner(prop);
+        IEnumerable<PartDeclarationSyntax> governed = own != null
+            ? [own]
+            : ConcertPitch.TryReadFileMode(prop, out _)
+                ? root.DescendantNodes<PartDeclarationSyntax>().Where(p => ConcertPitch.PartMode(p) == null)
+                : [];
+        var shifts = new Dictionary<string, int>(StringComparer.Ordinal);   // part → octaves its notes move
+        foreach (var part in governed)
+        {
+            int t = PartHeaderDefaults.Read(part).TranspositionSemitones;
+            if (t == 0)
+                continue;
+            if (t % 12 != 0)
+            {
+                if (own != null)
+                    return Fail($"part {part.Name.Text} transposes by {Math.Abs(t)} semitones: its letters would have to be "
+                        + "respelled in another key, which the switch does not do yet — no changes made.");
+                int close = part.Span.End - 1;
+                edits.Add(source[close] == '}'
+                    ? new Edit(close, close, (source[close - 1] == ' ' ? "" : " ") + $"pitch {oldWord} ")
+                    : new Edit(part.Span.End, part.Span.End, $" {{ pitch {oldWord} }}"));
+                continue;
+            }
+            // Concert letters sound; written ones are read: a part T semitones off its page writes
+            // T/12 octaves lower at concert pitch (a bass: one octave).
+            shifts[part.Name.Text] = (toConcert ? t : -t) / 12;
+        }
+        var octaveShift = new Dictionary<int, int>();
+        foreach (var node in root.DescendantNodes<SyntaxNode>())
+            if (node is PitchSyntax or ScaleDegreeSyntax
+                && BlockOf(node) is { } block
+                && shifts.TryGetValue(block.PartName.Text, out int s) && s != 0)
+                octaveShift[node.SourceStart] = s;
+
+        var result = Repin(source, Apply(source, edits), octaveShift);
+        if (result.NewText == null)
+            return result;
+        return SoundSignature(result.NewText) == SoundSignature(source)
+            ? result
+            : Fail($"With pitch {newWord} the piece would sound otherwise — no changes made.");
+    }
+
+    /// <summary>The part header a property is written in, or null (a top-level line).</summary>
+    private static PartDeclarationSyntax? BlockOwner(SyntaxNode node)
+    {
+        for (var p = node.Parent; p != null; p = p.Parent)
+            if (p is PartDeclarationSyntax part)
+                return part;
+        return null;
+    }
+
+    /// <summary>
+    /// The edits, against <paramref name="before"/>, that make it <paramref name="after"/> — one per
+    /// line that differs when the two have the same lines (a rewrite that moves marks and words
+    /// within lines), else one edit of the whole text — so an editor applying them keeps the caret
+    /// and the folds of every line nothing touched.
+    /// </summary>
+    public static IReadOnlyList<NoteStepper.Edit> LineEdits(string before, string after)
+    {
+        var a = LineSpans(before);
+        var b = LineSpans(after);
+        if (a.Count != b.Count)
+            return [new NoteStepper.Edit(0, before.Length, after)];
+        var edits = new List<NoteStepper.Edit>();
+        for (int i = 0; i < a.Count; i++)
+        {
+            string la = before.Substring(a[i].Start, a[i].Length), lb = after.Substring(b[i].Start, b[i].Length);
+            if (la != lb)
+                edits.Add(new NoteStepper.Edit(a[i].Start, a[i].Start + a[i].Length, lb));
+        }
+        return edits;
+
+        static List<(int Start, int Length)> LineSpans(string text)
+        {
+            var spans = new List<(int, int)>();
+            int start = 0;
+            for (int i = 0; i <= text.Length; i++)
+                if (i == text.Length || text[i] == '\n')
+                {
+                    int end = i > start && text[i - 1] == '\r' ? i - 1 : i;
+                    spans.Add((start, end - start));
+                    start = i + 1;
+                }
+            return spans;
+        }
+    }
+
+    /// <summary>
     /// The migration to LilyPond's octaves (owner's decision 2026-10-28): <paramref name="source"/>,
     /// written under the old rules, re-marked so it sounds as it did. <paramref name="legacySounds"/>
     /// is what each written pitch (by source position) sounded under the old rules, in time order;
