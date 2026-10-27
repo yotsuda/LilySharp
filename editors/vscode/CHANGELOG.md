@@ -19,6 +19,11 @@ All notable changes to the Lily# VS Code extension are documented here.
   showed the first one alone, so a bar line you added left the second bar out of sight), and its
   pictures zoom with Ctrl+wheel about the pointer and scroll with a drag.
 
+- **The scan view's head opens the marks' bars beside the scan**: its button is *Edit N Bars
+  Beside the Scan…* (it was *Fix N marks with AI…*), for the bars of the marks the slider shows —
+  a row's Ask AI is the AI. The preview's right-click no longer offers Fix OMR Marks with AI…
+  (the scan view's, the editor's menu, the palette and the lightbulb still do).
+
 ### Editing
 
 - **In a minor key, Ctrl+Shift+Up / Down walk the key signature** — its natural minor: in A minor

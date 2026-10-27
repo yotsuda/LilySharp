@@ -309,13 +309,15 @@ export function registerOmrAiFix(context: vscode.ExtensionContext, deps: OmrAiFi
             return bar ? runOmrAiFix(context, deps, bar.uri, bar.at)
                 : runOmrAiFix(context, deps, uri as string | vscode.Uri | undefined, Number.isInteger(at) ? at : undefined);
         }),
-        vscode.commands.registerCommand('lilysharp.editBarsBesideScan', (uri?: string | vscode.Uri | MenuContext) => {
+        // `'marks'` after the file: the scan view's button — the bars of the marks it shows.
+        vscode.commands.registerCommand('lilysharp.editBarsBesideScan', (uri?: string | vscode.Uri | MenuContext, which?: unknown) => {
             const bar = menuBar(deps, uri);
             if (bar === null) {
                 vscode.window.showInformationMessage('Lily#: right-click on a bar to edit it beside the scan.');
                 return;
             }
-            return bar ? runEditBars(context, deps, bar.uri, bar.at) : runEditBars(context, deps, uri as string | vscode.Uri | undefined);
+            return bar ? runEditBars(context, deps, bar.uri, bar.at)
+                : runEditBars(context, deps, uri as string | vscode.Uri | undefined, undefined, which === 'marks');
         }),
         { dispose: () => { panel?.dispose(); clearBarMark(); output?.dispose(); } });
 }
@@ -359,9 +361,12 @@ const MAX_EDIT_BARS = 30;
  * Edit Bars Beside the Scan (owner's request 2026-10-24): the bars on the selected lines — the
  * caret's line when nothing is selected — in the same panel as the AI's proposals, without the
  * AI: Now, the Scan and Edit, the third the bar as it stands, to click and edit, gated and drawn
- * as it is typed; Accept writes the checked bars as one edit.
+ * as it is typed; Accept writes the checked bars as one edit. With `marks`, the bars of the marks
+ * the scan view shows instead (its head's button, owner's request 2026-10-27: it was Fix N Marks
+ * with AI).
  */
-async function runEditBars(context: vscode.ExtensionContext, deps: OmrAiFixDeps, uriArg?: string | vscode.Uri, at?: number): Promise<void> {
+async function runEditBars(context: vscode.ExtensionContext, deps: OmrAiFixDeps, uriArg?: string | vscode.Uri, at?: number,
+    marks = false): Promise<void> {
     const editor = await editorFor(uriArg);
     if (!editor || editor.document.languageId !== 'lilysharp') {
         vscode.window.showErrorMessage('Lily#: open a .lys, put the caret on a bar (or select bars), then run this again.');
@@ -385,7 +390,13 @@ async function runEditBars(context: vscode.ExtensionContext, deps: OmrAiFixDeps,
     // Ask AI on it is told what the reader saw; any other line is a bar with no mark.
     const todos = await client.sendRequest<TodosResponse>('lilysharp/todos', { textDocument: { uri: doc.uri.toString() } });
     const marked = todos.Todos ? fixTargets(text, todos.Todos, side, sideText ? markFactsOf(sideText) : undefined) : [];
-    let targets = lineTargets(text, lines, side).map(t => marked.find(m => m.line === t.line) ?? t);
+    const threshold = deps.scanThreshold(doc.uri.toString()) ?? SCAN_DEFAULT_THRESHOLD;
+    let targets = marks ? marked.filter(t => checkedByDefault(t, threshold))
+        : lineTargets(text, lines, side).map(t => marked.find(m => m.line === t.line) ?? t);
+    if (marks && targets.length === 0) {
+        vscode.window.showInformationMessage(`Lily#: ${path.basename(doc.uri.fsPath)} carries no mark below the slider to edit.`);
+        return;
+    }
     if (targets.length === 0) {
         vscode.window.showInformationMessage('Lily#: no bar on the selected lines (a line with a bar line "|", or one the scan\'s reader wrote).');
         return;

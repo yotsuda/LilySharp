@@ -793,7 +793,7 @@
         },
         {
           "command": "lilysharp.omrFixWithAi",
-          "when": "(webviewId == 'lilysharpPreview' || webviewId == 'lilysharpScan') && lysOnBar",
+          "when": "webviewId == 'lilysharpScan' && lysOnBar",
           "group": "0_bar@1"
         },
         {

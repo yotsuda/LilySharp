@@ -62,3 +62,28 @@ describe('the Edit Bars Beside the Scan page', () => {
         assert.match(src, /reason: lost \+ reason \+ sure \+ hint \+ barLine \+ aiNow/);
     });
 });
+
+// Owner's request 2026-10-27: the preview's context menu has no Fix OMR Marks with AI, and the
+// scan view's head opens the marks' bars beside the scan instead of asking the AI.
+describe('the doors to the bars of the marks', () => {
+    const root = path.join(__dirname, '..', '..');
+    const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
+    const scan = fs.readFileSync(path.join(root, 'src', 'omrScan.ts'), 'utf8');
+    const fix = fs.readFileSync(path.join(root, 'src', 'omrAiFix.ts'), 'utf8');
+
+    it('leaves Fix OMR Marks with AI out of the preview\'s menu, in the scan view\'s', () => {
+        const items = (pkg.contributes.menus['webview/context'] as { command: string; when: string }[])
+            .filter(m => m.command === 'lilysharp.omrFixWithAi');
+        assert.equal(items.length, 1);
+        assert.doesNotMatch(items[0].when, /lilysharpPreview/);
+        assert.match(items[0].when, /lilysharpScan/);
+    });
+
+    it('has the scan view\'s button open the marks\' bars beside the scan', () => {
+        assert.match(scan, /Edit <span id="fixN">0<\/span> <span id="fixBars">Bars<\/span> Beside the Scan…<\/button>/);
+        assert.match(scan, /fix\.addEventListener\('click', \(\) => vscode\.postMessage\(\{ type: 'editBars' \}\)\);/);
+        assert.match(scan, /executeCommand\('lilysharp\.editBarsBesideScan', lys\.toString\(\), 'marks'\)/);
+        assert.doesNotMatch(scan, /marks with AI…/);
+        assert.match(fix, /let targets = marks \? marked\.filter\(t => checkedByDefault\(t, threshold\)\)/);
+    });
+});

@@ -15,6 +15,8 @@ workflow attaches that section to the GitHub Release verbatim.
   bars of its meter writes `|` where each bar ends (not where a note is held across), and Edit Bars
   Beside the Scan offers it on the row. The panel shows every bar a line holds, and its pictures
   zoom with Ctrl+wheel and scroll with a drag. `[lsp]` `lilysharp/missingBarLines`.
+- `[editor]` **The scan view's head button is Edit N Bars Beside the Scan…** (it was Fix N marks with
+  AI…), and the preview's right-click no longer offers Fix OMR Marks with AI….
 
 ### Editing
 

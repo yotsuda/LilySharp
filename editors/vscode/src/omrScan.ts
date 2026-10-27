@@ -64,7 +64,8 @@ interface ScanView {
 const views = new Map<string, ScanView>();
 
 /** The *Marks below* slider of the open scan view of `lys` (a document uri string), or undefined
- *  with no view open — what "Fix OMR marks with AI…" checks by default (omrAiFix.ts). */
+ *  with no view open — the marks whose bars the view's Edit N Bars Beside the Scan opens, and the
+ *  ones Fix OMR Marks with AI checks by default (omrAiFix.ts). */
 export function scanThresholdOf(lys: string): number | undefined {
     return views.get(lys)?.threshold;
 }
@@ -214,10 +215,11 @@ export async function showScan(
                 view.threshold = m.value;
                 hidePreviewTodos(view, deps);
                 void markPreview(view, deps);   // the frames follow the marks they hold
-            } else if (m.type === 'fixWithAi') {
-                // The view's button (docs/omr-ai-fix-design.md §2.1): the command, on this .lys,
-                // which checks the marks below the slider by default (scanThresholdOf).
-                await vscode.commands.executeCommand('lilysharp.omrFixWithAi', lys.toString());
+            } else if (m.type === 'editBars') {
+                // The view's button (docs/omr-ai-fix-design.md §2.1; Fix N Marks with AI until the
+                // owner's request 2026-10-27): the bars of the marks below the slider (scanThresholdOf),
+                // beside the scan — the AI is a row's Ask AI from there.
+                await vscode.commands.executeCommand('lilysharp.editBarsBesideScan', lys.toString(), 'marks');
             }
         } catch (err) {
             deps.output.appendLine(`Scan: ${err}`);
@@ -505,8 +507,8 @@ function render(view: ScanView): void {
         + `<label class="filter" title="Show the marks the reader is less sure of than this (its confidence, 0 to 1)">`
         + `Marks below <input type="range" id="thr" min="0.05" max="1" step="0.05" value="${SCAN_DEFAULT_THRESHOLD}">`
         + `<span id="thrOut"></span></label>`
-        + `<button id="fix" title="Rewrite the bars of the marks shown with the language model; every proposal is reviewed before it is written">`
-        + `Fix <span id="fixN">0</span> marks with AI…</button></p>
+        + `<button id="fix" title="Open the bars of the marks shown beside their scan, to put right by hand or with a row's Ask AI">`
+        + `Edit <span id="fixN">0</span> <span id="fixBars">Bars</span> Beside the Scan…</button></p>
 ${pages || '<p>The side file lists no page.</p>'}
 <div class="zoom-info" id="zoomInfo">100%</div>
 <script nonce="${nonce}">
@@ -534,8 +536,9 @@ ${pages || '<p>The side file lists no page.</p>'}
   // The marks the .lys no longer carries (resolved, sent by the extension) show at no value.
   let resolved = new Set();
   // Counted by key: a mark over several parts is several frames, one mark. The button counts
-  // the shown marks the .lys carries (a quiet one is not in it, so there is no bar to rewrite).
-  const fix = document.getElementById('fix'), fixN = document.getElementById('fixN');
+  // the shown marks the .lys carries (a quiet one is not in it, so there is no bar to edit) — a
+  // bar of a part each.
+  const fix = document.getElementById('fix'), fixN = document.getElementById('fixN'), fixBars = document.getElementById('fixBars');
   function filter() {
     const v = Number(thr.value);
     const shown = new Set(), total = new Set(), fixable = new Set();
@@ -549,9 +552,10 @@ ${pages || '<p>The side file lists no page.</p>'}
     }
     thrOut.textContent = v.toFixed(2) + ' (' + shown.size + ' / ' + total.size + ')';
     fixN.textContent = String(fixable.size);
+    fixBars.textContent = fixable.size === 1 ? 'Bar' : 'Bars';
     fix.disabled = fixable.size === 0;
   }
-  fix.addEventListener('click', () => vscode.postMessage({ type: 'fixWithAi' }));
+  fix.addEventListener('click', () => vscode.postMessage({ type: 'editBars' }));
   thr.addEventListener('input', () => { state.threshold = Number(thr.value); vscode.setState(state); filter(); });
   // The preview of the .lys hides the same marks (the extension turns the value into keys).
   thr.addEventListener('input', () => vscode.postMessage({ type: 'threshold', value: Number(thr.value) }));

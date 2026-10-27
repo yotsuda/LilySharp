@@ -36,7 +36,7 @@ OMR（`LilySharp-Omr`）が読んだ `.lys` の怪しい小節を、**ユーザ�
   各行に小節番号・パート・memo）。**既定でチェック＝scan view のスライダーより下の印**（表示中＝疑わしいもの）。
   選択範囲があればその範囲の印だけ。
 - **scan view のボタン**「Fix N marks with AI」（N＝表示中の印）: 頭のバー（スライダーの隣）。押すと同じ QuickPick が
-  チェック済みで開く。
+  チェック済みで開く。→ **2026-10-27（オーナー）「Edit N Bars Beside the Scan…」に変えた**＝表示中の印の小節を Beside the Scan のパネルで開く（AI は行の Ask AI）。プレビューの右クリックからも Fix OMR Marks with AI を外した（scan の右クリック・エディタのメニュー・パレット・電球には残る）。
 
 ### 2.2 見積もりと実行
 
