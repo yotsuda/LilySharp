@@ -61,11 +61,12 @@ public class TupletBracketDirectionTests
     [Fact]
     public void NineBookTuplets_MatchLpDirections()
     {
-        // The book's music in the bare fragment's relative-from-C4 (the LP
-        // original is \relative c'', so only the FIRST pitched note gains an
-        // apostrophe; every later spelling is the book's own).
+        // The book's music in the bare fragment's relative frame, which opens on
+        // F3 (owner's decision 2026-10-28; the LP original is \relative c'', so
+        // only the FIRST pitched note gains apostrophes; every later spelling is
+        // the book's own).
         var source =
-            "tuplet 3/2 { r4 r4 r4 } tuplet 3/2 { r4 c'4 r4 } | " +
+            "tuplet 3/2 { r4 r4 r4 } tuplet 3/2 { r4 c''4 r4 } | " +
             "tuplet 3/2 { r4 a4 r4 } tuplet 3/2 { c'4 f,,4 r4 } | " +
             "tuplet 3/2 { f,4 c''4 r4 } tuplet 3/2 { a4 a4 c4 } | " +
             "tuplet 3/2 { c4 c4 a4 } tuplet 3/2 { a4 a4 a4 } | " +

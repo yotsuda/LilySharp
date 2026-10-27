@@ -197,7 +197,8 @@ public class PartMeterTests
         Assert.DoesNotContain("s1", silent);
         var shorter = new LilyPondExporter().Export(SyntaxTree.Parse(Short));
         // The voice that writes the bar takes the change too, so its padding is in it.
-        Assert.Contains("\\box \"B\" \\time 3/4 e'2. |\n  s2. |\n  \\time 4/4 \\mark", shorter.Replace("\r\n", "\n"));
+        // E5 under the twin's `\fixed c` (owner's decision 2026-10-28) is e''.
+        Assert.Contains("\\box \"B\" \\time 3/4 e''2. |\n  s2. |\n  \\time 4/4 \\mark", shorter.Replace("\r\n", "\n"));
         Assert.DoesNotContain("s1", shorter);
     }
 

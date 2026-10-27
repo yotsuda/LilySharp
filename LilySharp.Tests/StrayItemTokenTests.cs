@@ -57,7 +57,7 @@ public class StrayItemTokenTests
     private static string WithStray(string container, string token) => container switch
     {
         "section" => Control.Replace("section A { melody", $"section A {{ {token} melody"),
-        "music block" => Control.Replace("{ c4 d e f", $"{{ {token} c4 d e f"),
+        "music block" => Control.Replace("{ c'4 d e f", $"{{ {token} c'4 d e f"),
         "form" => Control.Replace("form { A", $"form {{ {token} A"),
         "score" => Control.Replace("{ staff melody", $"{{ {token} staff melody"),
         "file" => $"{token} " + Control,

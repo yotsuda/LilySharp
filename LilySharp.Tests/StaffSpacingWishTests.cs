@@ -49,9 +49,9 @@ public class StaffSpacingWishTests
             octave absolute
             part bass { clef bass
               tuning bass }
-            section A { bass { aes,1 | aes,1 | } }
-            section E1 { bass { time 2/4 des4 ees | break time 4/4 aes,1 | aes,1 | } }
-            section E2 { bass { time 4/4 ees1 | } }
+            section A { bass { aes1 | aes1 | } }
+            section E1 { bass { time 2/4 des'4 ees' | break time 4/4 aes1 | aes1 | } }
+            section E2 { bass { time 4/4 ees'1 | } }
             form { |: A [1. ~E1] :| [2. ~E2] }
             score {
               {{items}}

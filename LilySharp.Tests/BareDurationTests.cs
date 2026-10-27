@@ -245,7 +245,8 @@ public class BareDurationTests
         // LilyPond 2.20+ reads isolated durations itself, so the twin writes the
         // source's own spelling — never an expansion.
         string ly = new LilyPondExporter().Export(SyntaxTree.Parse("bes8 8 8 4"));
-        Assert.Contains("bes8 8 8 4", ly.Replace("bes,8", "bes8"));
+        // Bb3 under `\relative c` (owner's decision 2026-10-28) is bes'.
+        Assert.Contains("bes'8 8 8 4", ly);
     }
 
     [Fact]

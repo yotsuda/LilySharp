@@ -55,15 +55,15 @@ public class TextScriptPriorityTests
 
     [Theory]
     // A text on one note, a dynamic on the next under it: the p by the staff, the text below.
-    [InlineData("c'4@text(\"dolce\") d'@p e' f' |", "p", 15.9132)]
-    [InlineData("c'4@text(\"dolce\") d'@p e' f' |", "dolce", 18.5744)]
+    [InlineData("c''4@text(\"dolce\") d''@p e'' f'' |", "p", 15.9132)]
+    [InlineData("c''4@text(\"dolce\") d''@p e'' f'' |", "dolce", 18.5744)]
     // The same above the staff.
-    [InlineData("c''4@text(\"dolce\").up d''@f.up e'' f'' |", "f", 10.7011)]
-    [InlineData("c''4@text(\"dolce\").up d''@f.up e'' f'' |", "dolce", 8.3120)]
+    [InlineData("c'''4@text(\"dolce\").up d'''@f.up e''' f''' |", "f", 10.7011)]
+    [InlineData("c'''4@text(\"dolce\").up d'''@f.up e''' f''' |", "dolce", 8.3120)]
     // A hairpin from the next note: the text clears it.
-    [InlineData("c'4@text(\"dolce\") d'@cresc e' f' | g'1@f |", "dolce", 17.7944)]
+    [InlineData("c''4@text(\"dolce\") d''@cresc e'' f'' | g''1@f |", "dolce", 17.7944)]
     // The same note: unchanged, and LilyPond's.
-    [InlineData("c'4@p@cresc@text(\"dolce\") d' e' f' | g'1@f |", "dolce", 18.4936)]
+    [InlineData("c''4@p@cresc@text(\"dolce\") d'' e'' f'' | g''1@f |", "dolce", 18.4936)]
     public void TheText_StandsWhereLilyPondPutsIt(string music, string text, double lilyPond)
     {
         Assert.Equal(lilyPond, Y(music, text), 0.011);

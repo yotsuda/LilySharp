@@ -140,8 +140,9 @@ public class InstrumentCompletionTests
         Assert.Equal(string.Join("\n",
             "- clef treble",
             "- midiInstrument \"clarinet\"",
-            "- octave 4 — a bare c is written C4",
-            "- sounds 2 semitones lower — written C4 sounds B♭3"), Assert.IsType<MarkupContent>(items["clarinet"].Documentation).Value);
+            // Every preset anchors at 3 (owner's decision 2026-10-28).
+            "- octave 3 — a bare c is written C3",
+            "- sounds 2 semitones lower — written C3 sounds B♭2"),Assert.IsType<MarkupContent>(items["clarinet"].Documentation).Value);
         Assert.All(items.Values, i => Assert.StartsWith("- clef ", Assert.IsType<MarkupContent>(i.Documentation).Value));
     }
 }

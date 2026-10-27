@@ -44,8 +44,8 @@ public class PartCombineTupletEndTests
     private const string Defaults = "octave absolute\ntime 4/4\n";
 
     private const string PartOne =
-        "r2 tuplet 3/2 { g8[ g g] } tuplet 3/2 { g[ g g] } | g1 |";
-    private const string PartTwo = "R1 | g1 |";
+        "r2 tuplet 3/2 { g'8[ g' g'] } tuplet 3/2 { g'[ g' g'] } | g'1 |";
+    private const string PartTwo = "R1 | g'1 |";
 
     private static string Book(string score) => Defaults + $$"""
         part vone { clef treble }

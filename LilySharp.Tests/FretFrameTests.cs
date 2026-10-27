@@ -85,8 +85,9 @@ public class FretFrameTests
         string ly = new LilyPondExporter().Export(SyntaxTree.Parse(Book));
         // A member's frame goes after the chord: LilyPond takes no text script on one head.
         // Each carries \textLengthOn's two properties, as the page spaces it.
-        Assert.Contains("<g, d g>2" + TextLength + "^\\markup \\fret-diagram-terse \"3;2;o;o;o;3;\"", ly);
-        Assert.Contains("c2" + TextLength + "_\\markup \\fret-diagram-terse \"x;3;2;o;1;o;\"", ly);
+        // The twin writes `\fixed c` now (owner's decision 2026-10-28): G3 D4 G4 is <g d' g'>.
+        Assert.Contains("<g d' g'>2" + TextLength + "^\\markup \\fret-diagram-terse \"3;2;o;o;o;3;\"", ly);
+        Assert.Contains("c'2" + TextLength + "_\\markup \\fret-diagram-terse \"x;3;2;o;1;o;\"", ly);
     }
 
     // ---- size (owner's decision, session 646: LilyPond's size by default, fonts step scales) ----

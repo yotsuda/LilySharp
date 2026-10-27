@@ -40,7 +40,7 @@ public sealed class MidiSilentSectionTests
         new MidiExporter().Export(SyntaxTree.Parse(source))
             .Tracks[1].Notes.OrderBy(n => n.StartTick).Select(n => n.Pitch).ToArray();
 
-    private const string Book = "part m { section A { c4 d4 } }\nform { ";
+    private const string Book = "part m { section A { c'4 d4 } }\nform { ";
 
     [Fact]
     public void SilentSectionReference_Plays()
@@ -69,7 +69,7 @@ public sealed class MidiSilentSectionTests
     {
         // Two sections, one hidden, so a fix that played the silent one in the wrong
         // place (or twice) would not pass by accident.
-        const string two = "part m { section A { c4 } section B { e4 } }\nform { ";
+        const string two = "part m { section A { c'4 } section B { e'4 } }\nform { ";
         Assert.Equal(new[] { 60, 64, 60 }, Pitches(two + "~A B A }"));
     }
 }

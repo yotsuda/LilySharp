@@ -59,8 +59,10 @@ public class SectionBoundaryFrameTests
         """;
 
     [Theory]
-    [InlineData("treble", 60)]  // anchor octave 4
-    [InlineData("bass octave 3", 48)]    // anchor octave 3 — the book that tells the two rules apart
+    // Every part's default anchor is 3 (owner's decision 2026-10-28); `octave 4` is the
+    // explicit anchor shift that keeps a second, different anchor in the pair.
+    [InlineData("treble octave 4", 60)]  // anchor octave 4
+    [InlineData("bass", 48)]    // the default anchor 3 — the book that tells the two rules apart
     public void ASectionOpensAtThePartsOwnAnchor_NotWhereTheLastOneEnded(string clef, int expected)
     {
         var notes = ExportNotes(Book(clef));

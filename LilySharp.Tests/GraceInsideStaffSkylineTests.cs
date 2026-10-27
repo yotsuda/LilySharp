@@ -41,15 +41,15 @@ public class GraceInsideStaffSkylineTests
 {
     private static string Book(string name, bool withGrace)
     {
-        string grace = withGrace ? "grace { gis'16 } " : "";
+        string grace = withGrace ? "grace { gis''16 } " : "";
         return $$"""
             octave absolute
             time 4/4
             key c major
 
             part melody {
-              section A { c'4@mark("A") d' e' f' | g' a' b' c'' | c''4 b' a' g' | f' e' d' c' | break }
-              section B { {{grace}}a'4@mark("B") b' a' g' | f'4 e' d' c' | }
+              section A { c''4@mark("A") d'' e'' f'' | g'' a'' b'' c''' | c'''4 b'' a'' g'' | f'' e'' d'' c'' | break }
+              section B { {{grace}}a''4@mark("B") b'' a'' g'' | f''4 e'' d'' c'' | }
             }
 
             form { ~A ~B }

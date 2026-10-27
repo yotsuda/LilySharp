@@ -302,8 +302,12 @@ public sealed class SvgPageSetTests
             int mid = src.IndexOf('\n', src.Length / 2);
             if (mid < 0) continue;
             var edits = new List<string> { src.Insert(mid + 1, " ") };
-            int note = src.IndexOf(" c4", src.Length / 2, StringComparison.Ordinal);
-            if (note >= 0) edits.Add(src.Remove(note, 3).Insert(note, " d4"));
+            // The books were re-marked to LilyPond's octaves (owner's decision 2026-10-28), so
+            // most of what was ` c4` is ` c'4` now; either spelling is a pitch to change.
+            int note = src.IndexOf(" c'4", src.Length / 2, StringComparison.Ordinal);
+            if (note >= 0) edits.Add(src.Remove(note, 4).Insert(note, " d'4"));
+            else if ((note = src.IndexOf(" c4", src.Length / 2, StringComparison.Ordinal)) >= 0)
+                edits.Add(src.Remove(note, 3).Insert(note, " d4"));
             foreach (var edited in edits)
             {
                 SvgPageSet before, after;
