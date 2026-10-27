@@ -45,10 +45,10 @@ public class CaretInfoTests
         => $"part b {{ {header} }}\nsection A {{ b {{ {music} }} }}\n";
 
     [Fact]
-    public void AClef_SaysItsMiddleLine_AndThatItMovesNoNote()
+    public void AClef_SaysItsMiddleLine()
     {
-        Assert.Equal("clef bass: middle line D3 · a clef moves no note - octave sets the register",
-            InfoAt(Part("clef ba‸ss")));
+        // Owner's request 2026-10-28: no "a clef moves no note" — nobody expects a clef to move one.
+        Assert.Equal("clef bass: middle line D3", InfoAt(Part("clef ba‸ss")));
         Assert.Contains("it sounds an octave below the page", InfoAt(Part("clef treble_8‸")));
         Assert.Contains("middle line B4", InfoAt(Part("c", "‸clef treble c4 d e f")));
     }

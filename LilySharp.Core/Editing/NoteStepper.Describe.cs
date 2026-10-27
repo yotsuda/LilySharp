@@ -185,8 +185,7 @@ public static partial class NoteStepper
             return "clef percussion: unpitched - the lines are the kit's places, not pitches";
         string octave = name.EndsWith("_8", StringComparison.Ordinal) ? " · it sounds an octave below the page"
             : name.EndsWith("^8", StringComparison.Ordinal) ? " · it sounds an octave above the page" : "";
-        return $"clef {name}: middle line {SpellMidi(MiddleLineOf(name))}{octave} · "
-            + "a clef moves no note - octave sets the register";
+        return $"clef {name}: middle line {SpellMidi(MiddleLineOf(name))}{octave}";
     }
 
     /// <summary>A key: its sharps or flats, and its relative key.</summary>
