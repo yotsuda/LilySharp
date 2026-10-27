@@ -46,7 +46,7 @@ public class VoicedRestSpacingTests
         // LILYPOND-REF: lily/rest-collision.cc:76-84 add_column —
         //   Lily::pure_chain_offset_callback;
         // LILYPOND-REF: scm/output-lib.scm:1273-1278 pure-chain-offset-callback.
-        string svg = Render("octave absolute\n\nvoice { g4 } { r8 aeses,8 } |\n");
+        string svg = Render("octave absolute\n\nvoice { g'4 } { r8 aeses8 } |\n");
         double middle = MiddleLineY(svg);
 
         var rest = Assert.Single(MusicGlyphs(svg, EmmentalerGlyphs.Rest8th));

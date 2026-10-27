@@ -32,16 +32,20 @@ namespace LilySharp.Tests;
 [Trait("Category", "Unit")]
 public sealed class ChordDegreeTests
 {
-    private static ChordItem FirstChord(string body, string key = "c major")
+    // A frame opens on F3 (owner's decision 2026-10-28), so a chord whose anchor
+    // is a tonic c, d, e or f is written in an `octave 4` part to sound as it
+    // always has; letter-rooted chords on c..f carry one more '.
+    private static ChordItem FirstChord(string body, string key = "c major", int? octave = null)
     {
-        var src = $"time 4/4\nkey {key}\npart m {{ clef treble\n  section A {{ {body} }} }}\n"
+        var oct = octave is int o ? $"octave {o} " : "";
+        var src = $"time 4/4\nkey {key}\npart m {{ {oct}clef treble\n  section A {{ {body} }} }}\n"
                 + "form { A }\nscore { staff m }";
         return new MeasureCollector().Collect(SyntaxTree.Parse(src), "m").Voice.Measures
             .SelectMany(m => m.Items).OfType<ChordItem>().First();
     }
 
-    private static int[] Midis(string body, string key = "c major") =>
-        FirstChord(body, key).Notes.Select(n => n.Midi).ToArray();
+    private static int[] Midis(string body, string key = "c major", int? octave = null) =>
+        FirstChord(body, key, octave).Notes.Select(n => n.Midi).ToArray();
 
     [Theory]
     [InlineData("<0 2 4>2")]  // degree 0 is not the leading tone — it is invalid
@@ -57,21 +61,21 @@ public sealed class ChordDegreeTests
     {
         // <d 3 5 7,> in C major = root D4, plus its 3rd (F), 5th (A), 7th (C)
         // with the 7th dropped an octave: C4 D4 F4 A4 (a Dm7 voicing).
-        Assert.Equal(new[] { 62, 65, 69, 60 }, Midis("<d 3 5 7,>2"));
+        Assert.Equal(new[] { 62, 65, 69, 60 }, Midis("<d' 3 5 7,>2"));
     }
 
     [Fact]
     public void Triad_FromDegrees()
     {
         // <c 3 5> = C major triad C E G.
-        Assert.Equal(new[] { 60, 64, 67 }, Midis("<c 3 5>2"));
+        Assert.Equal(new[] { 60, 64, 67 }, Midis("<c' 3 5>2"));
     }
 
     [Fact]
     public void GluedSharp_RaisesTheDegree()
     {
         // <d 3is 5 7> = D F♯ A C (a D7): the 3rd is raised a semitone.
-        Assert.Equal(new[] { 62, 66, 69, 72 }, Midis("<d 3is 5 7>1"));
+        Assert.Equal(new[] { 62, 66, 69, 72 }, Midis("<d' 3is 5 7>1"));
     }
 
     [Fact]
@@ -88,8 +92,8 @@ public sealed class ChordDegreeTests
     {
         // The SAME <d 3 5 7> is Dm7 in C major but D7 in G major — the 3rd (F)
         // takes the key's accidental (F♯ in G), so the chord quality follows the key.
-        Assert.Equal(new[] { 62, 65, 69, 72 }, Midis("<d 3 5 7>1", key: "c major")); // D F  A C
-        Assert.Equal(new[] { 62, 66, 69, 72 }, Midis("<d 3 5 7>1", key: "g major")); // D F♯ A C
+        Assert.Equal(new[] { 62, 65, 69, 72 }, Midis("<d' 3 5 7>1", key: "c major")); // D F  A C
+        Assert.Equal(new[] { 62, 66, 69, 72 }, Midis("<d' 3 5 7>1", key: "g major")); // D F♯ A C
     }
 
     [Fact]
@@ -97,7 +101,7 @@ public sealed class ChordDegreeTests
     {
         // <d 3es> in C major = D + F♭ (letter-preserving): F♭ sounds as E (64) but
         // is SPELLED with a flat, not respelled to a natural E.
-        var chord = FirstChord("<d 3es>2");
+        var chord = FirstChord("<d' 3es>2");
         Assert.Equal(new[] { 62, 64 }, chord.Notes.Select(n => n.Midi).ToArray());
         Assert.NotNull(chord.Notes[1].Accidental); // a flat is drawn on the F
     }
@@ -106,7 +110,7 @@ public sealed class ChordDegreeTests
     public void OmittedRoot_AnchorsOnTheKeyTonic()
     {
         // <1 3 5> with no root pitch = the tonic triad of the key: C E G in C.
-        Assert.Equal(new[] { 60, 64, 67 }, Midis("<1 3 5>2"));
+        Assert.Equal(new[] { 60, 64, 67 }, Midis("<1 3 5>2", octave: 4));
         // The same <1 3 5> follows the key — G B D in G major (tonic resolves
         // relatively to G3, nearest to the opening frame).
         Assert.Equal(new[] { 55, 59, 62 }, Midis("<1 3 5>2", key: "g major"));
@@ -118,7 +122,7 @@ public sealed class ChordDegreeTests
         // Degrees are absolute offsets from the tonic anchor, so ANY order — the
         // first member included — sounds the same pitches: <2 4 6> = <6 2 4>
         // = D F A (the ii triad) in C major.
-        Assert.Equal(new[] { 62, 65, 69 }, Midis("<2 4 6>2"));
+        Assert.Equal(new[] { 62, 65, 69 }, Midis("<2 4 6>2", octave: 4));
         Assert.Equal(
             Midis("<2 4 6>2").OrderBy(p => p).ToArray(),
             Midis("<6 2 4>2").OrderBy(p => p).ToArray());
@@ -129,7 +133,7 @@ public sealed class ChordDegreeTests
     {
         // <3 5> sounds only the 3rd and 5th ABOVE the tonic (the tonic itself is
         // not written, so not sounded): E G in C major.
-        Assert.Equal(new[] { 64, 67 }, Midis("<3 5>2"));
+        Assert.Equal(new[] { 64, 67 }, Midis("<3 5>2", octave: 4));
     }
 
     [Fact]
@@ -183,9 +187,9 @@ public sealed class ChordDegreeTests
         // Every degree measures from the ANCHOR (the first pitch), not from the
         // nearest preceding member: <c 3 g> == <c e 5> == <c e g> = C4 E4 G4.
         int[] Sorted(string body) => Midis(body).OrderBy(p => p).ToArray();
-        Assert.Equal(new[] { 60, 64, 67 }, Sorted("<c 3 g>2"));
-        Assert.Equal(new[] { 60, 64, 67 }, Sorted("<c e 5>2"));
-        Assert.Equal(new[] { 60, 64, 67 }, Sorted("<c e g>2"));
+        Assert.Equal(new[] { 60, 64, 67 }, Sorted("<c' 3 g>2"));
+        Assert.Equal(new[] { 60, 64, 67 }, Sorted("<c' e 5>2"));
+        Assert.Equal(new[] { 60, 64, 67 }, Sorted("<c' e g>2"));
     }
 
     [Fact]
@@ -193,7 +197,7 @@ public sealed class ChordDegreeTests
     {
         // The degree keeps following the key while the letters stay put:
         // <d 3 a> is D F A in C major but D F# A in D major.
-        Assert.Equal(new[] { 62, 65, 69 }, Midis("<d 3 a>2", key: "c major").OrderBy(p => p).ToArray());
-        Assert.Equal(new[] { 62, 66, 69 }, Midis("<d 3 a>2", key: "d major").OrderBy(p => p).ToArray());
+        Assert.Equal(new[] { 62, 65, 69 }, Midis("<d' 3 a>2", key: "c major").OrderBy(p => p).ToArray());
+        Assert.Equal(new[] { 62, 66, 69 }, Midis("<d' 3 a>2", key: "d major").OrderBy(p => p).ToArray());
     }
 }

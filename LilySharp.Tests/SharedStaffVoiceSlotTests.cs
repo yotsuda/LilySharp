@@ -384,7 +384,7 @@ public class SharedStaffVoiceSlotTests
         // It was written on the part's item 2 and it is not there any more…
         Assert.NotEqual(2, dynamic.ItemIndex);
         // …and where it IS is the same note, read through the part standing alone.
-        var lh = PartAlone("r4 r4 c'4@f e'4 |").Voices[0];
+        var lh = PartAlone("r4 r4 c''4@f e''4 |").Voices[0];
         Assert.Equal(
             StaffPositionOf(lh.Measures[0].Items[2]),
             StaffPositionOf(LayoutUtilities.VoiceItemAt(

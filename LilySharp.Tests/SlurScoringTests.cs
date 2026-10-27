@@ -92,7 +92,7 @@ public class SlurScoringTests
         // `|.` as the twin writes `\bar "|."`: without a bar line the unfinished auto beam is
         // dropped at the end of the music and the stems keep their flags (session 658,
         // EndOfMusicAutoBeamTests) — LilyPond's own slur-dot-collision.ly, which has no bar.
-        string svg = Render("e''16.( e,,32) |.");
+        string svg = Render("e'''16.( e,,32) |.");
         double middle = MiddleLineY(svg);
         var c = BowCurve(svg);
 
@@ -144,9 +144,9 @@ public class SlurScoringTests
         //   the variance term, and the stem term over every column.
         string svg = Render(
             "octave absolute\ntime 4/4\n\n" +
-            "c'4( acciaccatura { e'8 } d'4 e'4 f'4) |\n" +
-            "c'4( appoggiatura { e'8 } d'4 e'4 f'4) |\n" +
-            "c'4 appoggiatura { e'8 } d'4 e'4 f'4 |\n");
+            "c''4( acciaccatura { e''8 } d''4 e''4 f''4) |\n" +
+            "c''4( appoggiatura { e''8 } d''4 e''4 f''4) |\n" +
+            "c''4 appoggiatura { e''8 } d''4 e''4 f''4 |\n");
         double middle = MiddleLineY(svg);
         var c = WidestBowCurve(svg);
 
@@ -178,8 +178,8 @@ public class SlurScoringTests
             "part mel { clef treble }\n" +
             "section S {\n" +
             "  mel {\n" +
-            "    voice { c''4 d'' e'' f'' }\n" +
-            "    { e'4 g' g'( e') }\n" +
+            "    voice { c'''4 d''' e''' f''' }\n" +
+            "    { e''4 g'' g''( e'') }\n" +
             "  }\n" +
             "}\n" +
             "form { S }\n" +
@@ -232,7 +232,7 @@ public class SlurScoringTests
         //   bottom is 0, hence the 0.5 pin below).
         string svg = Render(
             "octave absolute\nclef bass\ntime 4/2\n\n" +
-            "c,2( r c,) r | c( r c) r | c( r c,) r | c,( r c) r | r( r r) r |\n");
+            "c2( r c) r | c'( r c') r | c'( r c) r | c( r c') r | r( r r) r |\n");
         double middle = MiddleLineY(svg);
         var bows = AllBowCurves(svg);
 
@@ -288,7 +288,7 @@ public class SlurScoringTests
         // LILYPOND-REF: lily/slur-scoring.cc:738-760 enumerate_attachments.
         string svg = Render(
             "octave absolute\nclef bass\ntime 2/4\n\n" +
-            "c,16( r c) r |\n");
+            "c16( r c') r |\n");
         double middle = MiddleLineY(svg);
         var c = BowCurve(svg);
 
@@ -309,7 +309,7 @@ public class SlurScoringTests
         // (slurrest.ly rows 3-4: -0.5450, where rows 1-2 climb to -1.0450).
         string svg = Render(
             "octave absolute\nclef bass\ntime 4/4\n\n" +
-            "c,4( r c) r |\n");
+            "c4( r c') r |\n");
         double middle = MiddleLineY(svg);
         var c = BowCurve(svg);
 
@@ -332,7 +332,7 @@ public class SlurScoringTests
         // LILYPOND-REF: lily/slur-scoring.cc:290-326 additional_ys.
         // LILYPOND-REF: lily/slur-engraver.cc:80 acknowledge_extra_object —
         //   ADD_ACKNOWLEDGER_FOR (acknowledge_extra_object, tuplet_number).
-        string svg = Render("octave absolute\n\nc'2( tuplet 3/2 { g4 e c) } |\n");
+        string svg = Render("octave absolute\n\nc''2( tuplet 3/2 { g'4 e' c') } |\n");
         double middle = MiddleLineY(svg);
         var c = BowCurve(svg);
 

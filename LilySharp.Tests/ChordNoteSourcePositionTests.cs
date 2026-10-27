@@ -126,7 +126,7 @@ public class ChordNoteSourcePositionTests
         // Every head (the glyph, not its click rect) answers to the chord's offset.
         var heads = System.Text.RegularExpressions.Regex.Matches(svg, "<text class=\"music\"[^>]*>")
             .Select(m => m.Value)
-            .Where(tag => System.Text.RegularExpressions.Regex.IsMatch(tag, $"data-pos=\"({chordAt + 1}|{chordAt + 3}|{chordAt + 5})\""))
+            .Where(tag => System.Text.RegularExpressions.Regex.IsMatch(tag, $"data-pos=\"({chordAt + 1}|{chordAt + 4}|{chordAt + 6})\""))
             .ToList();
         Assert.Equal(3, heads.Count);
         Assert.All(heads, tag => Assert.Contains($"data-alt=\"{chordAt}\"", tag));

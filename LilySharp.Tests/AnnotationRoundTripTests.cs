@@ -112,7 +112,7 @@ public class AnnotationRoundTripTests
         Assert.Equal(source.Length, root.FullWidth);
 
         var note = root.DescendantNodes<NoteSyntax>().First();
-        Assert.Equal(source.IndexOf("c4", StringComparison.Ordinal), note.Position);
+        Assert.Equal(source.IndexOf("c'4", StringComparison.Ordinal), note.Position);
     }
 
     /// <summary>

@@ -49,7 +49,7 @@ public class SemiTieScoringTests
     public void LaissezVibrerTies_AreScoredLikeTies()
     {
         var g = RenderedGeometry.Render(Book(
-            "c'2@laissezVibrer r2 | d'2@laissezVibrer r2 | f'2@laissezVibrer r2 | c'2.@laissezVibrer r4 |"));
+            "c''2@laissezVibrer r2 | d''2@laissezVibrer r2 | f''2@laissezVibrer r2 | c''2.@laissezVibrer r4 |"));
 
         // Clears its head: position 2 + 0.20, attached at the head's CENTRE.
         Assert.Equal(1.200000, g.BowAttachmentAboveStaffMiddle(0), 6);
@@ -70,7 +70,7 @@ public class SemiTieScoringTests
     public void RepeatTies_ReadTheAccidentalsInTheirHostOutline()
     {
         var g = RenderedGeometry.Render(Book(
-            "fis''2@repeatTie r2 | bes'2@repeatTie r2 | <c'' ees''>2@repeatTie r2 |"));
+            "fis'''2@repeatTie r2 | bes''2@repeatTie r2 | <c''' ees'''>2@repeatTie r2 |"));
 
         Assert.Equal(6.000000, g.BowAttachmentAboveStaffMiddle(0), 6);
         Assert.Equal(1.100000, g.BowSpan(0), 6);

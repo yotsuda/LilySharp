@@ -36,13 +36,13 @@ public sealed class MidiRepeatTests
     public void InlineRepeat_PlaysSpanTwice()
     {
         // |: c d :| -> c d c d (played twice).
-        Assert.Equal(new[] { 60, 62, 60, 62 }, Pitches("{ |: c4 d4 :| }"));
+        Assert.Equal(new[] { 60, 62, 60, 62 }, Pitches("{ |: c'4 d4 :| }"));
     }
 
     [Fact]
     public void NoRepeat_PlaysOnce()
     {
-        Assert.Equal(new[] { 60, 62 }, Pitches("{ c4 d4 }"));
+        Assert.Equal(new[] { 60, 62 }, Pitches("{ c'4 d4 }"));
     }
 
     [Fact]
@@ -50,7 +50,7 @@ public sealed class MidiRepeatTests
     {
         // Each pass restarts from the same context: |: c g :| -> c g c g
         // (g resolves to G3 from c both times, not drifting on the 2nd pass).
-        Assert.Equal(new[] { 60, 55, 60, 55 }, Pitches("{ |: c4 g4 :| }"));
+        Assert.Equal(new[] { 60, 55, 60, 55 }, Pitches("{ |: c'4 g4 :| }"));
     }
 
     [Fact]
@@ -59,21 +59,21 @@ public sealed class MidiRepeatTests
         // |: a |: b :| :|  ->  a (b b) a (b b)  = a b b a b b
         // a4=A3(57), b4... use c/d to keep it simple: |: c |: d :| :|
         // outer x2 of [ c, (d x2) ] = c d d c d d
-        Assert.Equal(new[] { 60, 62, 62, 60, 62, 62 }, Pitches("{ |: c4 |: d4 :| :| }"));
+        Assert.Equal(new[] { 60, 62, 62, 60, 62, 62 }, Pitches("{ |: c'4 |: d4 :| :| }"));
     }
 
     [Fact]
     public void ExplicitRepeatCount_PlaysSpanNTimes()
     {
         // |: c d :|*3 -> c d c d c d (played three times).
-        Assert.Equal(new[] { 60, 62, 60, 62, 60, 62 }, Pitches("{ |: c4 d4 :|*3 }"));
+        Assert.Equal(new[] { 60, 62, 60, 62, 60, 62 }, Pitches("{ |: c'4 d4 :|*3 }"));
     }
 
     [Fact]
     public void ExplicitRepeatCount_One_PlaysSpanOnce()
     {
         // |: c d :|*1 -> c d (an explicit single pass).
-        Assert.Equal(new[] { 60, 62 }, Pitches("{ |: c4 d4 :|*1 }"));
+        Assert.Equal(new[] { 60, 62 }, Pitches("{ |: c'4 d4 :|*1 }"));
     }
 
     [Fact]
@@ -81,7 +81,7 @@ public sealed class MidiRepeatTests
     {
         // |: c |: d :|*3 :|*2 -> outer x2 of [ c, (d x3) ] = c d d d  c d d d
         Assert.Equal(new[] { 60, 62, 62, 62, 60, 62, 62, 62 },
-            Pitches("{ |: c4 |: d4 :|*3 :|*2 }"));
+            Pitches("{ |: c'4 |: d4 :|*3 :|*2 }"));
     }
 
     [Fact]
@@ -89,7 +89,7 @@ public sealed class MidiRepeatTests
     {
         // |: c [1. e] :| [2. f]  -> pass1: c e ; pass2: c f.
         // Each pass restarts the octave context from c, so e=E4(64), f=F4(65).
-        Assert.Equal(new[] { 60, 64, 60, 65 }, Pitches("{ |: c4 [1. e4] :| [2. f4] }"));
+        Assert.Equal(new[] { 60, 64, 60, 65 }, Pitches("{ |: c'4 [1. e4] :| [2. f4] }"));
     }
 
     [Fact]
@@ -97,7 +97,7 @@ public sealed class MidiRepeatTests
     {
         // Three endings -> body plays 3 times, i-th ending per pass.
         Assert.Equal(new[] { 60, 62, 60, 64, 60, 65 },
-            Pitches("{ |: c4 [1. d4] :| [2. e4] [3. f4] }"));
+            Pitches("{ |: c'4 [1. d4] :| [2. e4] [3. f4] }"));
     }
 
     [Fact]
@@ -105,7 +105,7 @@ public sealed class MidiRepeatTests
     {
         // [1-2. d] covers passes 1 and 2; [3. e] covers pass 3. Count = 3.
         Assert.Equal(new[] { 60, 62, 60, 62, 60, 64 },
-            Pitches("{ |: c4 [1-2. d4] :| [3. e4] }"));
+            Pitches("{ |: c'4 [1-2. d4] :| [3. e4] }"));
     }
 
     [Fact]
@@ -115,14 +115,14 @@ public sealed class MidiRepeatTests
         // spelling is an error since 2026-09-30 (LYS1042 in a form; the music stream's repeat
         // is LYS1034); this pins what the MIDI still does with it.
         Assert.Equal(new[] { 60, 62, 60, 64, 60, 64 },
-            Pitches("{ |: c4 [1. d4] :|*3 [2. e4] }"));
+            Pitches("{ |: c'4 [1. d4] :|*3 [2. e4] }"));
     }
 
     [Fact]
     public void InlineVoltas_DoNotBreakBeams()
     {
         // '[' before a note is still a beam marker, not a volta: [c d] plays once.
-        Assert.Equal(new[] { 60, 62 }, Pitches("{ [c8 d8] }"));
+        Assert.Equal(new[] { 60, 62 }, Pitches("{ [c'8 d8] }"));
     }
 
     // SourceOrdinal per note = which printed copy the playback highlight lights.
@@ -143,13 +143,13 @@ public sealed class MidiRepeatTests
         const string src =
             "octave absolute\n" +
             "part mel\n" +
-            "phrase pa { c'4 }\n" +
-            "phrase pb { g'4 }\n" +
+            "phrase pa { c''4 }\n" +
+            "phrase pb { g''4 }\n" +
             "section A { mel { pa } }\n" +
             "section B { mel { pb } }\n" +
             "form { A |: B | [1. B \"x\"] :| [2. B \"y\"] | A }\n" +
             "score s { staff mel }\n";
-        Assert.Equal(new[] { 0, 1, 0, 2 }, Ordinals(src, 79)); // section B (g' = 79)
-        Assert.Equal(new[] { 0, 1 }, Ordinals(src, 72));       // intro/outro A (c' = 72)
+        Assert.Equal(new[] { 0, 1, 0, 2 }, Ordinals(src, 79)); // section B (g'' = 79)
+        Assert.Equal(new[] { 0, 1 }, Ordinals(src, 72));       // intro/outro A (c'' = 72)
     }
 }

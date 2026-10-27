@@ -185,9 +185,9 @@ public class PhrasingSlurTests
         double c1x, double c1y, double c2x, double c2y, double endY)
     {
         const string music =
-            "c'4@phrasingSlur( d' e' f')@!phrasingSlur | "
-            + "e'8@phrasingSlur g'( c'' g') e' g' c''( a')@!phrasingSlur | "
-            + "c'8@phrasingSlur d' e'( a'' g'') e' d' c'@!phrasingSlur |";
+            "c''4@phrasingSlur( d'' e'' f'')@!phrasingSlur | "
+            + "e''8@phrasingSlur g''( c''' g'') e'' g'' c'''( a'')@!phrasingSlur | "
+            + "c''8@phrasingSlur d'' e''( a''' g''') e'' d'' c''@!phrasingSlur |";
         string source = Book(music);
         int at = -1;
         for (int i = 0; i <= which; i++)
@@ -222,7 +222,7 @@ public class PhrasingSlurTests
     [Fact]
     public void ADownPhrasingSlur_IsLilyPondsShape()
     {
-        string source = Book("c''4@phrasingSlur.down d'' e'' f''@!phrasingSlur |");
+        string source = Book("c'''4@phrasingSlur.down d''' e''' f'''@!phrasingSlur |");
         int at = source.IndexOf("@phrasingSlur", StringComparison.Ordinal);
         string svg = SvgGenerator.Generate(SyntaxTree.Parse(source),
             new LilySharp.Core.Svg.Renderer.SvgRenderOptions { EmbedFont = false });
@@ -284,13 +284,16 @@ public class PhrasingSlurTests
     [Fact]
     public void TheCurveCitesBothOfItsAnnotations()
     {
-        string source = Book("c'4@phrasingSlur( d' e' f')@!phrasingSlur |");
+        string source = Book("c''4@phrasingSlur( d'' e'' f'')@!phrasingSlur |");
         int open = source.IndexOf("@phrasingSlur", StringComparison.Ordinal);
         int close = source.IndexOf("@!phrasingSlur", StringComparison.Ordinal);
+        // Interactive: the close is cited as the curve's data-alt, which a static export
+        // drops. (The bare-number Contains this replaces was green only because the old
+        // spelling's close offset, 82, happened to be in a coordinate, 24.82.)
         string svg = SvgGenerator.Generate(SyntaxTree.Parse(source),
-            new LilySharp.Core.Svg.Renderer.SvgRenderOptions { EmbedFont = false });
+            new LilySharp.Core.Svg.Renderer.SvgRenderOptions { EmbedFont = false, Interactive = true });
         Assert.Contains($"data-pos=\"{open}\"", svg);
-        Assert.Contains(close.ToString(CultureInfo.InvariantCulture), svg);
+        Assert.Contains($"data-alt=\"{close.ToString(CultureInfo.InvariantCulture)}\"", svg);
     }
 
     /// <summary>

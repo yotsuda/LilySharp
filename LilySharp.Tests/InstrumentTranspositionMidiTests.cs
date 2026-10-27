@@ -111,14 +111,16 @@ public class InstrumentTranspositionMidiTests
     /// that name — so MIDI played the part at C4's anchor with no octave-down shift while the
     /// page anchored it at the preset's octave: an octave apart in relative mode (found
     /// 2026-09-26 when the octave converter's corpus sweep compared MIDI across modes).
-    /// The bare-preset row is the control.
+    /// The bare-preset row is the control. Since the owner's decision 2026-10-28 no preset
+    /// moves the anchor, so the 8vb is what a hidden preset would lose; `g,` is the G2 the
+    /// bass preset's old anchor gave a bare `g`.
     /// </remarks>
     [Theory]
     [InlineData("instrument bass5")]
     [InlineData("instrument bass5 \"bass\"")]
     [InlineData("instrument bass \"Electric Bass\"")]
     public void APresetsDisplayName_DoesNotHideThePreset(string instrument)
-        => Assert.Equal(31, FirstPitch($"part x {{ {instrument} section A {{ g1 | }} }}"));
+        => Assert.Equal(31, FirstPitch($"part x {{ {instrument} section A {{ g,1 | }} }}"));
 
     /// <summary>
     /// A part's bare letters play at the octave they PRINT, and the clef moves neither: the

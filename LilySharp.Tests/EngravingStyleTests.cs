@@ -178,7 +178,7 @@ public class EngravingStyleTests
     [Fact]
     public void TheLedgerLength_IsLilyPonds_AndMovesNothingElse()
     {
-        string book = Book.Replace("e2 c''2 |", "e2 c''2 | a,1 |", StringComparison.Ordinal);
+        string book = Book.Replace("e'2 c'''2 |", "e'2 c'''2 | a1 |", StringComparison.Ordinal);
         string plain = Svg(book);
         string set = Svg(book, "LedgerLine.lengthFraction=0.4");
         void AreLilyPonds(double black, double half, double whole, double[] drawn)
@@ -273,7 +273,7 @@ public class EngravingStyleTests
     })]
     public void TheBeamDamping_IsLilyPonds(string damping, double[] lilyPond)
     {
-        string book = Beamed.Replace("a''8 g'' | }", "a''8 g'' | c'8 g'' d'16 b'' e'8 | }", StringComparison.Ordinal);
+        string book = Beamed.Replace("a'''8 g''' | }", "a'''8 g''' | c''8 g''' d''16 b''' e''8 | }", StringComparison.Ordinal);
         string svg = Svg(book, "Beam.damping=" + damping);
         var drawn = StemLengths(svg, "0.130");
         Assert.Equal(lilyPond.Length, drawn.Length);

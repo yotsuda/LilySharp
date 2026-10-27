@@ -48,7 +48,7 @@ public class ExportTimingAndMemoryTests
         // `c'4 r4 ~ c'4`: the tie has no note before it to extend. The MIDI used to keep the
         // pre-rest c as the onset the tie could reach, and merged the c after the rest into
         // it — ONE note of 960 ticks sounding through the rest (probe tie-over-rest).
-        var notes = Notes(Book("c'4 r4 ~ c'4 d'4 |"));
+        var notes = Notes(Book("c''4 r4 ~ c''4 d''4 |"));
         Assert.Equal(new[] { (72, 0, 480), (72, 960, 480), (74, 1440, 480) },
             notes.Select(n => (n.Pitch, n.StartTick, n.DurationTicks)).ToArray());
     }
@@ -164,6 +164,7 @@ public class ExportTimingAndMemoryTests
         // Absolute mode inlines the body, so the whole bar is one line: the body's first
         // note carries the crotchet, the rest inherit (probe phrase-value: base wrote
         // `c'8 d' e' f' g'`, which LilyPond reads as five quavers).
-        Assert.Contains("c'8 d'4 e' f' g' |", ly);
+        // Under `\fixed c` (owner's decision 2026-10-28) C5 is c''.
+        Assert.Contains("c''8 d''4 e'' f'' g'' |", ly);
     }
 }

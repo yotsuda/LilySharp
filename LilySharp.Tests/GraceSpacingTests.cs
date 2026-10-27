@@ -136,17 +136,17 @@ public class GraceSpacingTests
     /// 2.3151 (the same dot boxed on the g' line, meeting the main head corner to corner), and
     /// g'16. g'16 1.9352 between the two graces. e''8.'s 1.9352 is left out: its gap is the
     /// SPRING, whose floor the grace island still reads as a flat reach (1.9386).
-    /// ⚠️ Those are LilyPond's names. Lily#'s absolute octave is one lower (`c'` is LilyPond's
-    /// c''), so the rows below spell the same pitches an apostrophe shorter.
+    /// Those are LilyPond's names, and since the owner's decision 2026-10-28 Lily#'s absolute
+    /// octave is LilyPond's, so the rows below spell them as LilyPond does.
     /// LILYPOND-REF: lily/separation-item.cc:47-68 Separation_item::set_distance
     /// </remarks>
     [Theory]
-    [InlineData("grace { g8. } c'1", 1.9386)]
-    [InlineData("grace { f8. } c'1", 1.9386)]
-    [InlineData("grace { d'8. } c'1", 2.4559)]
-    [InlineData("grace { d'16. } c'1", 2.4559)]
-    [InlineData("grace { g16. } c'1", 2.3151)]
-    [InlineData("grace { g16. g16 } c'1", 1.9352)]
+    [InlineData("grace { g'8. } c''1", 1.9386)]
+    [InlineData("grace { f'8. } c''1", 1.9386)]
+    [InlineData("grace { d''8. } c''1", 2.4559)]
+    [InlineData("grace { d''16. } c''1", 2.4559)]
+    [InlineData("grace { g'16. } c''1", 2.3151)]
+    [InlineData("grace { g'16. g'16 } c''1", 1.9352)]
     public void ADottedGraceGap_TakesTheRodThroughItsDot(string bar, double lilyPond)
     {
         var src = $$"""

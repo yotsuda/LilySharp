@@ -191,12 +191,12 @@ score test { staff melody }
         // LILYPOND-REF: scm/define-grobs.scm TrillSpanner — (to-barline . #t)
         string svg = Render(
             "octave absolute\n\n" +
-            "f8@text(\"rit\").up( c'8 f' c'' f'') r8 r4 |\n" +
-            "c''2( c'2 |\n" +
-            "g1)~@startTrillSpan |\n" +
-            "g1@stopTrillSpan |\n" +
-            "g1(@f |\n" +
-            "g,1) |\n");
+            "f'8@text(\"rit\").up( c''8 f'' c''' f''') r8 r4 |\n" +
+            "c'''2( c''2 |\n" +
+            "g'1)~@startTrillSpan |\n" +
+            "g'1@stopTrillSpan |\n" +
+            "g'1(@f |\n" +
+            "g1) |\n");
         double middle = MiddleLineY(svg);
 
         var waves = MusicGlyphs(svg, LilySharp.Core.Svg.EmmentalerGlyphs.OrnTrillElement);
