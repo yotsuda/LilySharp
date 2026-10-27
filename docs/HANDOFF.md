@@ -127,19 +127,19 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1012セッション（2026-10-27・YT-DELL2）
+
+第1011 と同じ会話の続き。`-Start p1012`（開始 HEAD `604bec460`・full **13382 / 0 / 2 / 13384**＝新しい網を入れた作業ツリーで・第1010 を ARCHIVE へ）。作業場所は Lab `sessions/p1012/`。
+- **ユーザー「Compose with AI の結果に octave absolute がついてくる。自動で relative に。AI ではなく機械的に変換して」**: LSP `lilysharp/convertOctaves` に `Text`（開いた文書の代わり・`TextDocument` は省略可に）・`aiTransform` の compose 枝が題を入れた後、前書きを付けて開く前に `{ Text, Absolute: false }` で変換（`OctaveModeConverter`＝コンパイルして全音を突き合わせる）・変換できなければ absolute のまま開いてログに理由。網 `ConvertOctavesTextTests` 2 本・`aiNewPiece.test` 1 本（npm 491）。両 CHANGELOG・MANUAL-CHECKS C23。
+判定（2026-10-27・第1012 の終わり）: 次はユーザーの指示（C9〜C23）。
+
+## 以下は第1011セッションの経緯
+
 ### 1.1 第1011セッション（2026-10-27・YT-DELL2）
 
 第1010 と同じ会話の続き。`-Start p1011`（開始 HEAD `21dc92e43`・full **13380 / 0 / 2 / 13382**・第1009 を ARCHIVE へ）。作業場所は Lab `sessions/p1011/`。
 - **ユーザー「lys プレビューのポップアップメニューが必要以上にグループ分けされている。各グループにひとつずつ。適切に分けなおして」**: webview/context の 5 群（`0_ai`・`0_select`・`0_bar`・`1_playback`・`2_zoom`）を 3 群に＝`1_edit@1..5`（Ask AI…・Select Chord・Select This Bar・Clear Selection・Edit Bars Beside the Scan）・`2_playback@1..2`・`3_view@1..2`（scan view の Fit Width／Reset Zoom も）。網 `previewCore.test` 1 本（npm 490）。拡張 CHANGELOG・MANUAL-CHECKS C22。
 判定（2026-10-27・第1011 の終わり）: 次はユーザーの指示（C9〜C22）。
-
-## 以下は第1010セッションの経緯
-
-### 1.1 第1010セッション（2026-10-27・YT-DELL2）
-
-第1009 と同じ会話の続き。`-Start p1010`（開始 HEAD `bc705a4e7`・full **13380 / 0 / 2 / 13382**＝新しい網を入れた作業ツリーで・第1008 を ARCHIVE へ）。作業場所は Lab `sessions/p1010/`。
-- **ユーザー「音符が足りない小節は s で補って埋めて」**（第1009 で残した声 2 の半端な小節）: `LysWriter.SpacersToFill`＝その小節で一番長い声部の長さ（拍子ではなく原本の長さ＝弱起も）まで、2 声目以降の声部を `s` で埋める（値と半分は付点に＝`s4 s8`→`s4.`・全小節休符や付点で書けない残りなら埋めない）。`LengthOf`＝音価・付点・連符（`TupletStart`/`TupletStop`）・和音の構成音は数えない。1 声目は埋めない（弱起や原本の誤りを隠さない）。homr の「拍が足りない」4 → 2（残りは 1 声目＝原本）。網 `MusicXmlEmptyVoiceBarImportTests` 1 本（計 3）。CHANGELOG。
-判定（2026-10-27・第1010 の終わり）: 次はユーザーの指示（C9〜C21）。
 
 ## 2. 開いている作業
 

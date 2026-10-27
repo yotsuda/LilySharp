@@ -399,7 +399,11 @@ public class RegroupResponse
 /// octave mode to rewrite it into.</summary>
 public class ConvertOctavesParams
 {
-    public TextDocumentIdentifier TextDocument { get; set; } = null!;
+    /// <summary>The open document to convert; unused when <see cref="Text"/> is given.</summary>
+    public TextDocumentIdentifier? TextDocument { get; set; }
+    /// <summary>A source held outside any editor, to convert instead of a document (a piece the AI
+    /// composed, before it opens — owner's request 2026-10-27).</summary>
+    public string? Text { get; set; }
     /// <summary>True for <c>octave absolute</c>, false for relative.</summary>
     public bool Absolute { get; set; }
 }

@@ -74,6 +74,19 @@ describe('a new piece in place of the score', () => {
 // Owner's report 2026-10-27: "add guitar chords" asked again of a composed piece failed three
 // times — the AI's edits quoted the piece it had written, and were looked for in the file before
 // it. Asked again, the AI answers against the file as its candidate left it.
+// Owner's request 2026-10-27: a composed piece opens in relative octaves, converted by the
+// server, not by the AI.
+describe('a composed piece opens in relative octaves', () => {
+    const transform = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'aiTransform.ts'), 'utf8');
+    it('converts the text before it opens, and keeps it as it came if it cannot', () => {
+        const at = (s: string) => transform.indexOf(s);
+        assert.ok(at("'lilysharp/convertOctaves', { Text: text, Absolute: false }") > 0);
+        assert.ok(at("'lilysharp/convertOctaves', { Text: text, Absolute: false }") < at("const piece = await vscode.workspace.openTextDocument({ language: 'lilysharp'"));
+        assert.match(transform, /if \(relative\.Success && relative\.NewText\) \{\s*text = relative\.NewText;/);
+        assert.match(transform, /the piece stays in absolute octaves/);
+    });
+});
+
 describe('a revision is of the candidate', () => {
     const transform = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'aiTransform.ts'), 'utf8');
 

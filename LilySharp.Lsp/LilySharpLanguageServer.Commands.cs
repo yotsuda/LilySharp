@@ -1179,11 +1179,12 @@ public sealed partial class LilySharpLanguageServer
     /// compares every note before it answers).</summary>
     public ConvertOctavesResponse ConvertOctaves(ConvertOctavesParams @params)
     {
-        var doc = _documentManager.GetDocument(@params.TextDocument.Uri);
-        if (doc == null)
+        string? text = @params.Text
+            ?? (@params.TextDocument is { } id ? _documentManager.GetDocument(id.Uri)?.Text : null);
+        if (text == null)
             return new ConvertOctavesResponse { Success = false, Error = "Document not found" };
 
-        var result = LilySharp.Core.Editing.OctaveModeConverter.Convert(doc.Text,
+        var result = LilySharp.Core.Editing.OctaveModeConverter.Convert(text,
             @params.Absolute ? LilySharp.Core.Editing.OctaveMode.Absolute : LilySharp.Core.Editing.OctaveMode.Relative);
         return result.NewText != null
             ? new ConvertOctavesResponse { Success = true, NewText = result.NewText, ChangedNotes = result.ChangedPitches }

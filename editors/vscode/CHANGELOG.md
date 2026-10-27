@@ -79,6 +79,9 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ### Ask AI
 
+- **A composed piece opens in relative octaves.** Compose with AI… had the piece in `octave absolute`,
+  as the AI writes it; it is now converted before it opens — by Lily#, not by the AI, the result
+  compiled and every note compared — and left as it came only if it cannot be.
 - **Ask Again revises the candidate.** The AI's answer to Ask Again was applied to the file as
   it was before the candidate, so a change to what the candidate added — chords for the piece it
   had just written — quoted text the file did not have, and failed. Now it answers against the

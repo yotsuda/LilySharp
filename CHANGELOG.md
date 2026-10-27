@@ -52,6 +52,8 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Ask AI
 
+- `[editor]` **A composed piece opens in relative octaves**, converted by the server before it opens.
+  `[lsp]` `lilysharp/convertOctaves` takes a `Text` in place of an open document.
 - `[editor]` **Ask Again revises the candidate shown** (it was answered against the file as it was
   before the candidate, so changing what the candidate added failed).
 - `[editor]` **Compose with AI…**: a new piece in a new score from a description, written with
