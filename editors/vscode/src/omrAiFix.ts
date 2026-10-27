@@ -147,6 +147,10 @@ interface FixRow {
      *  back — the two are a toggle (owner's request 2026-10-27: an answer that came while the
      *  person was editing could be seen only by throwing the edit away). A new edit drops it. */
     stashed?: { readonly text: string; readonly fromAi: boolean };
+    /** The Draft shows the bar as it stands though the AI has a proposal ("original", owner's
+     *  request 2026-10-27: original / your edit / AI proposal over the Draft); Accept then takes
+     *  the marks out alone. */
+    original?: boolean;
     editGate?: GateVerdict;
     editAfter?: SvgResponse;
     /** The row's line as it now reads (the bar as it stands, or the edit) with the bar lines the
@@ -742,9 +746,13 @@ async function pump(deps: OmrAiFixDeps, run: FixRun): Promise<void> {
                 run.current = { row, cts };
                 const started = Date.now();
                 const image = run.images ? scanOf(run, row.target) : undefined;
+                // The model starts from the line the Draft shows (owner's request 2026-10-27): the
+                // person's edit, the AI's proposal, or — the bar as it stands — the reader's line.
                 const askedFrom = row.edited;
+                const shown = askedFrom !== undefined ? { text: askedFrom, by: 'person' as const }
+                    : hasProposal(row) ? { text: row.proposal!.bar!, by: 'ai' as const } : undefined;
                 const answer = await fixOne(run.client, ai.chat, run, row.base, ai.system, ai.head, promptTargetOf(row), image,
-                    cts.token, askedFrom);
+                    cts.token, shown);
                 const cancelled = cts.token.isCancellationRequested;
                 run.current = undefined;
                 cts.dispose();
@@ -754,13 +762,12 @@ async function pump(deps: OmrAiFixDeps, run: FixRun): Promise<void> {
                     continue;
                 }
                 const seconds = (Date.now() - started) / 1000;
-                Object.assign(row, { proposal: answer.proposal, gate: answer.gate, after: answer.after, noAnswer: answer.noAnswer, seconds, asked: true });
+                Object.assign(row, { proposal: answer.proposal, gate: answer.gate, after: answer.after, noAnswer: answer.noAnswer, seconds, asked: true, original: undefined });
                 // Asked from the person's edit, the answer is built on it: it takes the Draft, the
                 // edit kept aside for "back to my edit" (owner's request 2026-10-27). An edit
                 // typed while the AI was asked stands, as before.
                 if (askedFrom !== undefined && row.edited === askedFrom && hasProposal(row)) {
-                    row.stashed = { text: askedFrom, fromAi: !!row.editedFromAi };
-                    row.edited = row.editGate = row.editAfter = row.editedFromAi = undefined;
+                    setEditAside(row);
                 }
                 if (!hasProposal(row) && !row.baseAfter) {
                     row.baseAfter = await baseAfterOf(run, row.base, row.target);
@@ -858,17 +865,17 @@ function outcomeOf(row: Answer): string {
 }
 
 /** One bar: the prompt → the model → the gates, once more with the compiler's words on a fail.
- *  `base`: the text the bar's row was opened on; `attempt`: the person's edit of the bar so far,
- *  shown to the model as theirs. */
+ *  `base`: the text the bar's row was opened on; `shown`: the line the Draft shows when it is not
+ *  the reader's — the person's edit or the AI's proposal — which the model starts from. */
 async function fixOne(
     client: LanguageClient, chat: ChatClient, run: FixRun, base: RunBase, system: string, head: string,
-    target: FixTarget, image: { data: Uint8Array; mime: string } | undefined, token: vscode.CancellationToken, attempt?: string,
+    target: FixTarget, image: { data: Uint8Array; mime: string } | undefined, token: vscode.CancellationToken, shown?: { text: string; by: 'person' | 'ai' },
 ): Promise<Answer> {
     const baseline = base.baseline;
     const neighbours: BarNeighbours = neighboursOf(base.text, target, run.side);
     // Asked from the person's edit, the compiler's words are on the edit, the line the model
     // starts from (owner's request 2026-10-27).
-    const edit = attempt;
+    const edit = shown?.text;
     const diagnostics = edit === undefined ? diagnosticsOn(baseline, target)
         : diagnosticsOn((await client.sendRequest<CheckCandidateResponse>('lilysharp/checkCandidate',
             { Text: spliceBar(base.text, target, edit) })).Diagnostics ?? [], { ...target, end: target.start + edit.length });
@@ -876,7 +883,7 @@ async function fixOne(
         { role: 'system', content: system },
         {
             role: 'user',
-            content: taskPromptOf({ head, target, neighbours, diagnostics, image: !!image, attempt }),
+            content: taskPromptOf({ head, target, neighbours, diagnostics, image: !!image, attempt: edit, attemptBy: shown?.by }),
             ...(image ? { images: [image] } : {}),
         },
     ];
@@ -982,6 +989,8 @@ interface PanelMessage {
     seq?: number;
     indices?: number[];
     keeps?: { index: number; text: string }[];
+    /** show: which of the Draft's labels was clicked. */
+    show?: 'original' | 'edit' | 'ai';
     /** complete: the caret's offset in the field, and the character typed that asks. */
     caret?: number;
     trigger?: string | null;
@@ -1049,11 +1058,19 @@ async function onPanelMessage(deps: OmrAiFixDeps, m: PanelMessage): Promise<void
                 void panel?.webview.postMessage({ type: 'completions', index: row.index, seq: m.seq, caret: m.caret, items });
             }
             return;
-        case 'restore':
-            // "back to my edit": the edit "use the AI's" set aside, gated and drawn again.
-            if (row?.stashed && row.edited === undefined) {
+        case 'show':
+            // The labels over the Draft (owner's request 2026-10-27): original / your edit / AI
+            // proposal — the one clicked comes in, the person's edit set aside, never lost.
+            if (row && (m.show === 'original' || m.show === 'ai')) {
+                editVerifies.get(row.index)?.cancel();
+                row.editSeq = m.seq ?? row.editSeq;
+                setEditAside(row);
+                row.original = m.show === 'original' && aiHas(row) ? true : undefined;
+                postRow(run, row, m.seq ?? 0);
+            } else if (row && m.show === 'edit' && row.stashed && row.edited === undefined) {
                 const kept = row.stashed;
                 row.stashed = undefined;
+                row.original = undefined;
                 await editRow(run, row, kept.text, m.seq ?? 0, kept.fromAi);
             }
             return;
@@ -1142,9 +1159,23 @@ function removeRows(run: FixRun, rows: readonly FixRow[]): void {
 }
 
 /** Whether the row has a bar of the model's to write: one that compiles and fills its meter (a
- *  proposal the scan contradicts, verify ✗, is the person's call and counts). */
+ *  proposal the scan contradicts, verify ✗, is the person's call and counts) — and the Draft shows
+ *  it, not the original (`original`). */
 function hasProposal(r: FixRow): boolean {
+    return aiHas(r) && !r.original;
+}
+
+/** Whether the AI has a bar to offer, shown in the Draft or not. */
+function aiHas(r: FixRow): boolean {
     return !!r.proposal?.bar && !(r.gate && !(r.gate.compile && r.gate.length));
+}
+
+/** Takes the person's edit out of the Draft, kept for "your edit" to bring back. */
+function setEditAside(row: FixRow): void {
+    if (row.edited !== undefined) {
+        row.stashed = { text: row.edited, fromAi: !!row.editedFromAi };
+    }
+    row.edited = row.editGate = row.editAfter = row.editedFromAi = undefined;
 }
 
 /** What taking a row writes over its line: the model's bar, or — for every other row: the model
@@ -1191,6 +1222,7 @@ async function editRow(run: FixRun, row: FixRow, raw: string, seq: number, fromA
     }
     row.edited = text;
     row.stashed = undefined;
+    row.original = undefined;
     const spliced = spliceBar(row.base.text, row.target, text);
     const [check, after] = await Promise.all([
         run.client.sendRequest<CheckCandidateResponse>('lilysharp/checkCandidate', { Text: spliced }),
@@ -1472,7 +1504,7 @@ function rowParts(run: FixRun, r: FixRow): RowParts {
     // wait did not show).
     const aiNow = r.ai === 'asking' ? ` <span class="busy">— <span class="spin"></span>asking the AI…</span> <button class="link unask" data-i="${r.index}">cancel</button>`
         : r.ai === 'queued' ? ` <span class="dim">— waiting for the AI…</span> <button class="link unask" data-i="${r.index}">cancel</button>`
-        : can ? ` <button class="link ask" data-i="${r.index}" title="Ask the AI to rewrite this bar from the scan — with your note and your edit, if any">${r.asked ? 'ask the AI again' : 'Ask AI'}</button>`
+        : can ? ` <button class="link ask" data-i="${r.index}" title="Ask the AI to rewrite this bar from the scan, starting from the line the Draft shows — your edit, the AI proposal or the bar as it stands — with your note, if any">${r.asked ? 'ask the AI again' : 'Ask AI'}</button>`
         : '';
     const sure = r.proposal?.confidence === null || r.proposal?.confidence === undefined || edited ? ''
         : ` <span class="dim">· confidence ${r.proposal.confidence.toFixed(2)}</span>`;
@@ -1502,22 +1534,26 @@ function rowParts(run: FixRun, r: FixRow): RowParts {
     // with keep/add @todo — writes the mark; a bar with none of these has nothing to write.
     const marked = resolvedLine(t.written) !== t.written;
     const own = barOf(r) !== undefined;
-    // Where the Draft came from, over its picture — and, when there are two to choose from, the way
-    // between them (owner's request 2026-10-27: two labels over the picture in place of the links
-    // "undo my edit" / "use the AI's" / "back to my edit"): the person's edit and the AI's proposal
-    // (with no proposal, the bar as it stands), the one shown marked, the other a click away. The
-    // edit left is set aside, never lost (stashed); an answer that comes while it is shown waits.
-    const plain = r.ai === 'asking' ? 'asking the AI…' : r.ai ? 'waiting for the AI…'
-        : hasProposal(r) ? 'AI proposal' : r.asked ? 'no AI proposal — the bar as it stands' : 'the bar as it stands';
-    const on = (word: string) => `<span class="pick on">${esc(word)}</span>`;
-    const pick = (word: string, action: string, title: string) =>
-        `<button class="link pick ${action}" data-i="${r.index}" title="${esc(title)}">${esc(word)}</button>`;
-    const source = edited && can
-        ? `${on('your edit')} / ${pick(hasProposal(r) ? 'AI proposal' : 'the bar as it stands', 'revert',
-            hasProposal(r) ? `Show the AI's bar: ${r.proposal!.bar!} — your edit is kept` : 'Show the bar as it stands — your edit is kept')}`
-        : r.stashed && can
-            ? `${pick('your edit', 'restore', `Show your edit: ${r.stashed.text}`)} / ${on(plain)}`
-            : esc(edited ? 'your edit' : plain);
+    // Where the Draft came from, over its picture — and, when there is more than one to choose
+    // from, the way between them (owner's requests 2026-10-27: labels in place of the links "undo
+    // my edit" / "use the AI's" / "back to my edit", then three of them): original (the bar as it
+    // stands), your edit, AI proposal — each there when the row has it, the one shown in bold, the
+    // others a click away. The edit left is set aside, never lost (stashed).
+    const shownIs = edited ? 'edit' : hasProposal(r) ? 'ai' : 'original';
+    const labels = ([
+        ['original', 'original', 'Show the bar as it stands — Accept then takes out its marks alone'],
+        ['edit', 'your edit', r.stashed ? `Show your edit: ${r.stashed.text}` : ''],
+        ['ai', 'AI proposal', aiHas(r) ? `Show the AI's bar: ${r.proposal!.bar!}` : ''],
+    ] as const).filter(([which]) => which === 'original' || which === shownIs
+        || (which === 'edit' && r.stashed) || (which === 'ai' && aiHas(r)));
+    const busy = r.ai === 'asking' ? ' — asking the AI…' : r.ai ? ' — waiting for the AI…' : '';
+    const source = labels.length > 1 && can
+        ? labels.map(([which, word, title]) => which === shownIs
+            ? `<span class="pick on">${esc(word)}</span>`
+            : `<button class="link pick" data-i="${r.index}" data-show="${which}" title="${esc(title)}">${esc(word)}</button>`).join(' / ')
+            + esc(busy)
+        : esc(edited ? 'your edit' : hasProposal(r) ? 'AI proposal'
+            : busy ? busy.slice(3) : r.asked ? 'no AI proposal — the bar as it stands' : 'the bar as it stands');
     return {
         gates: gatesHtml(gate), reason: lost + reason + sure + hint + barLine + aiNow, proposal, source, nowText: piecesHtml(diff.before), afterText: piecesHtml(diff.after), del,
         accept: { word: !own && marked && !r.keepTodo ? 'Accept (remove @todo)' : 'Accept', can: own || marked || !!r.keepTodo, ready: isReady(r) },
@@ -2070,21 +2106,14 @@ ${rows}
       if (ta) { ta.value = bl.dataset.line; sendEdit(i); }
       return;
     }
-    const rv = e.target.closest && e.target.closest('button.revert');
-    if (rv) {
-      const i = rv.dataset.i;
+    // The Draft's labels (owner's requests 2026-10-27): original / your edit / AI proposal — the
+    // one clicked comes into the Draft; a newer answer to an older edit is dropped by the seq.
+    const pk = e.target.closest && e.target.closest('button.pick');
+    if (pk) {
+      const i = pk.dataset.i;
       seqs[i] = (seqs[i] || 0) + 1;
       sent[i] = undefined;
-      vscode.postMessage({ action: 'edit', index: Number(i), text: '', seq: seqs[i] });
-      return;
-    }
-    // ...and back: the edit "use the AI's" set aside (a toggle, owner's request 2026-10-27).
-    const rs = e.target.closest && e.target.closest('button.restore');
-    if (rs) {
-      const i = rs.dataset.i;
-      seqs[i] = (seqs[i] || 0) + 1;
-      sent[i] = undefined;
-      vscode.postMessage({ action: 'restore', index: Number(i), seq: seqs[i] });
+      vscode.postMessage({ action: 'show', index: Number(i), show: pk.dataset.show, seq: seqs[i] });
       return;
     }
     // The row's Ask AI, and the cancel of a row waiting for it or being asked (owner's request

@@ -127,20 +127,20 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1008セッション（2026-10-27・YT-DELL2）
+
+第1007 と同じ会話の続き。`-Start p1008`（開始 HEAD `368146a41`・full **13377 / 0 / 2 / 13379**・第1006 を ARCHIVE へ）。作業場所は Lab `sessions/p1008/`。
+- **ユーザー「Ask AI で AI に渡すテキストはいま選択中のテキストに。the bar as it stands を選択していたらそのテキストを」**: `pump` の `shown`＝編集なら `{person}`・AI の案が Draft なら `{ai}`・元なら無し → `fixOne(…, shown)` → `taskPromptOf` の `attemptBy: 'ai'` は「as an EARLIER ANSWER of yours proposed it」。
+- **途中で「the bar as it stands は長いから as is に。as is / your edit / AI proposal と 3 つ並べる方が便利？」「as is は妥当？より良いラベルを」→ 4 案（original・as is・unchanged・as read）から **original** を選ばれた**。`FixRow.original`（AI の案があっても元を見せる）・`hasProposal`＝`aiHas && !original`・`setEditAside`・ページのボタン `button.pick[data-show]` → `show` の処理（original／ai は編集を預けて切り替え・edit は預けた編集を `editRow` で戻す）。行にあるものだけ並べる（original は常に・your edit は編集中か預けたとき・AI proposal は案があるとき）、1 つだけなら今までどおりの文。`restore` と `revert` のボタンは消した。網 `omrAiFixPage.test` 1 本を書き直し・`omrAiFixCore.test` 2 行（npm 489）。site scan・両 CHANGELOG・MANUAL-CHECKS C21。
+判定（2026-10-27・第1008 の終わり）: 次はユーザーの指示（C9〜C21）。
+
+## 以下は第1007セッションの経緯
+
 ### 1.1 第1007セッション（2026-10-27・YT-DELL2）
 
 第1006 と同じ会話の続き。`-Start p1007`（開始 HEAD `1868ab667`・full **13377 / 0 / 2 / 13379**・第1005 を ARCHIVE へ）。作業場所は Lab `sessions/p1007/`。
 - **ユーザー「your edit を選択した状態でも、AI からの返答がきたらそのテキストをエントリのヘッダに表示して」→「AI からの返答であることを明確に。AI: とつけるとか」**: `rowParts` の返事の文を `aiSaid` に括り出し、`<b>AI:</b>` 付きの `aiLine` を、編集中は「Your edit.」の後ろ、そうでなければ単独で。網 `omrAiFixPage.test` 2 行（npm 489）。両 CHANGELOG・MANUAL-CHECKS C20。
 判定（2026-10-27・第1007 の終わり）: 次はユーザーの指示（C9〜C20）。
-
-## 以下は第1006セッションの経緯
-
-### 1.1 第1006セッション（2026-10-27・YT-DELL2）
-
-第1005 と同じ会話の続き。`-Start p1006`（開始 HEAD `8aeb7564a`・full **13377 / 0 / 2 / 13379**・第1004 を ARCHIVE へ）。作業場所は Lab `sessions/p1006/`。
-- **ユーザー「OMR 結果編集ペインで編集してから Ask AI したら、元のスキャンテキストではなくユーザーの編集をベースに」**: `taskPromptOf` は attempt があれば `<bar>` に編集（「Start from this line, not from the reader's」）・`<reader>` に元の読み（参考）・memo は「before the person's edit」・コンパイラの報告は編集のもの（`fixOne` が `checkCandidate` で編集を検査）・`parseProposal` の「unchanged」は編集と比べる。編集から頼んだ答えは Draft に入り編集は `stashed`（答えの間に打ち直した編集は残す）。
-- **途中で「各エントリの undo my edit を削除。画像の直前の your edit ラベルの代わりに clickable な 2 つのラベル」→「your edit / AI proposal の方がわかりやすい」**: Draft の上（`.over.draft-of`、`innerHTML` に）を「**your edit** / AI proposal」（AI の案が無ければ「the bar as it stands」）＝表示中は太字・もう一方はボタン（既存の `revert`／`restore` の動作）。行の説明の 3 つのリンクは消した。網 `omrAiFixCore.test` 2 本・`omrAiFixPage.test` 直し（npm 489）。site scan・両 CHANGELOG・MANUAL-CHECKS C19。
-判定（2026-10-27・第1006 の終わり）: 次はユーザーの指示（C9〜C19）。
 
 ## 2. 開いている作業
 

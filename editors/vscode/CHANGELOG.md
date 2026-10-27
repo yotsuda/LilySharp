@@ -46,14 +46,14 @@ All notable changes to the Lily# VS Code extension are documented here.
   through every edit from when the .lys opens — with the scan view open or not — and over a save,
   as the scan view already followed them while it was open (it now also keeps them over a save
   and a reopened file).
-- **Switch between the AI's proposal and your edit.** An answer that came while you were editing
-  a row could be seen only by throwing your edit away. Now two labels over the draft's picture,
-  *your edit* and *AI proposal*, switch between them — the one shown in bold, the other a click
-  away, kept and checked and drawn again when it comes back (with no proposal: *your edit* and *the
-  bar as it stands*). The links *undo my edit* and *use the AI's* are gone; a new edit drops the one kept.
-- **Ask AI on a row you have edited starts from your edit.** The model gets your edit as the line to
-  rewrite (the reader's text only for reference) and the compiler's words on your edit; its answer
-  takes the draft, and *your edit* brings yours back.
+- **Switch the draft between original, your edit and AI proposal.** An answer that came while you
+  were editing a row could be seen only by throwing your edit away. Now labels over the draft's
+  picture — *original* (the bar as it stands), *your edit*, *AI proposal*, those the row has —
+  switch it, the one shown in bold; your edit is kept while another is shown, checked and drawn
+  again when it comes back. The links *undo my edit* and *use the AI's* are gone.
+- **Ask AI starts from the line the draft shows.** Your edit, the AI's proposal (asked again) or the
+  original: the model gets it as the line to rewrite (the reader's text for reference) with the
+  compiler's words on it; its answer takes the draft, and *your edit* brings yours back.
 - **What the AI said is shown with your edit too, marked "AI:"** — an answer that came while your
   edit is in the draft is read in the row's head (it was hidden until you switched).
 - **Select Chord in the preview.** Right-click a note of a chord: *Select Chord* puts the caret

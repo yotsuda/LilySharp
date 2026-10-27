@@ -346,8 +346,13 @@ describe('what the model is shown', () => {
 
     it('takes the answer built on the person\'s edit into the Draft, the edit kept for "back to my edit"', () => {
         const fix = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'omrAiFix.ts'), 'utf8');
-        assert.match(fix, /const askedFrom = row\.edited;[\s\S]{0,300}cts\.token, askedFrom\);/);
-        assert.match(fix, /if \(askedFrom !== undefined && row\.edited === askedFrom && hasProposal\(row\)\) \{\s*row\.stashed = \{ text: askedFrom, fromAi: !!row\.editedFromAi \};/);
+        assert.match(fix, /const askedFrom = row\.edited;\s*const shown = askedFrom !== undefined \? \{ text: askedFrom, by: 'person' as const \}\s*: hasProposal\(row\) \? \{ text: row\.proposal!\.bar!, by: 'ai' as const \} : undefined;[\s\S]{0,300}cts\.token, shown\);/);
+        // The AI's proposal shown is the line sent, as an earlier answer; the bar as it stands sends the reader's.
+        const ai = taskPromptOf({ head: '', target: bar2, neighbours: { others: [] }, diagnostics: [], attempt: 'g8 fis8 f2 r4 |', attemptBy: 'ai' });
+        assert.match(ai, /as an EARLIER ANSWER of yours proposed it[\s\S]*<bar>\ng8 fis8 f2 r4 \|\n<\/bar>[\s\S]*<reader>/);
+        assert.doesNotMatch(ai, /PERSON comparing it with the page has EDITED/);
+        assert.match(fix, /if \(askedFrom !== undefined && row\.edited === askedFrom && hasProposal\(row\)\) \{\s*setEditAside\(row\);/);
+        assert.match(fix, /seconds, asked: true, original: undefined \}\);/);
         assert.match(fix, /const proposal = parseProposal\(raw, edit \?\? target\.written\);/);
         assert.match(fix, /\{ Text: spliceBar\(base\.text, target, edit\) \}\)\)\.Diagnostics \?\? \[\], \{ \.\.\.target, end: target\.start \+ edit\.length \}\);/);
     });

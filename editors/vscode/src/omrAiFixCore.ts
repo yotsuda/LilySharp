@@ -394,6 +394,9 @@ export interface TaskInput {
     /** The person's edit of the bar so far, when they ask the AI from a row they are editing
      *  (owner's request 2026-10-24). */
     readonly attempt?: string;
+    /** Whose the attempt is: the person's edit (the default), or the AI's proposal shown in the
+     *  Draft when Ask AI was pressed (owner's request 2026-10-27: the line shown is the one sent). */
+    readonly attemptBy?: 'person' | 'ai';
 }
 
 export function taskPromptOf(input: TaskInput): string {
@@ -436,7 +439,18 @@ export function taskPromptOf(input: TaskInput): string {
     // The notes go below, labelled as what they are.
     // Asked from a row the person has edited, the edit is the line to work on and the reader's text
     // only a reference (owner's request 2026-10-27: the AI started over from the scan's text).
-    if (input.attempt) {
+    if (input.attempt && input.attemptBy === 'ai') {
+        parts.push(`The line to rewrite (${labelOf(target)}), as an EARLIER ANSWER of yours proposed it — the line the person`);
+        parts.push('was looking at when they asked again. Start from this line, not from the reader\'s: keep what it gets right,');
+        parts.push('and check every event of it against the page, for it may still be wrong:');
+        parts.push('<bar>');
+        parts.push(oneLine(stripTodoMarks(input.attempt)));
+        parts.push('</bar>');
+        parts.push('The line as the reader first wrote it (for reference only):');
+        parts.push('<reader>');
+        parts.push(oneLine(stripTodoMarks(target.written)));
+        parts.push('</reader>');
+    } else if (input.attempt) {
         parts.push(`The line to rewrite (${labelOf(target)}), as a PERSON comparing it with the page has EDITED it.`);
         parts.push('Start from this line, not from the reader\'s: keep what the person wrote unless the page shows otherwise —');
         parts.push('it may be unfinished or partly wrong, so check every event of it against the page:');
@@ -467,7 +481,7 @@ export function taskPromptOf(input: TaskInput): string {
     if (reader.length > 0) {
         parts.push('');
         parts.push(input.attempt
-            ? 'What the reader noted about its own reading, before the person\'s edit — the symptom it measured; its guess at the cause may be wrong:'
+            ? `What the reader noted about its own reading, before ${input.attemptBy === 'ai' ? 'the earlier answer' : 'the person\'s edit'} — the symptom it measured; its guess at the cause may be wrong:`
             : 'What the reader noted about it — the symptom it measured; its guess at the cause may be wrong:');
         for (const m of reader) { parts.push(`  - ${m}`); }
         parts.push(TICKS_NOTE);
@@ -494,7 +508,7 @@ export function taskPromptOf(input: TaskInput): string {
     if (diagnostics.length > 0) {
         parts.push('');
         parts.push(input.attempt
-            ? 'What the Lily# compiler reports on the person\'s edit (a clue to where, not to what):'
+            ? `What the Lily# compiler reports on ${input.attemptBy === 'ai' ? 'that earlier answer' : 'the person\'s edit'} (a clue to where, not to what):`
             : 'What the Lily# compiler reports on this line as it stands (a clue to where, not to what):');
         for (const d of diagnostics) { parts.push(`  - ${d}`); }
     }

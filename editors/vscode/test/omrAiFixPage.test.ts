@@ -110,19 +110,22 @@ describe('the doors to the bars of the marks', () => {
         assert.match(scan, /const view: ScanView = \{ panel, lys, side, anchors: pinned\.anchors, linked: true \};/);
     });
 
-    it('toggles between the AI\'s proposal and the person\'s edit, the edit kept aside', () => {
+    // Owner's requests 2026-10-27: original / your edit / AI proposal over the Draft, the one shown
+    // in bold, the others a click away; the edit set aside, never lost; no links in the reason.
+    it('switches the Draft between original, your edit and AI proposal, the edit kept aside', () => {
         assert.match(fix, /if \(row\.edited !== undefined\) \{\s*row\.stashed = \{ text: row\.edited, fromAi: !!row\.editedFromAi \};/);
-        assert.match(fix, /row\.edited = text;\s*row\.stashed = undefined;/);
-        assert.match(fix, /case 'restore':[\s\S]{0,400}await editRow\(run, row, kept\.text, m\.seq \?\? 0, kept\.fromAi\);/);
-        // The two labels over the Draft (owner's request 2026-10-27), no links in the reason.
-        assert.match(fix, /const source = edited && can\s*\? `\$\{on\('your edit'\)\} \/ \$\{pick\(hasProposal\(r\) \? 'AI proposal' : 'the bar as it stands', 'revert',/);
-        assert.match(fix, /: r\.stashed && can\s*\? `\$\{pick\('your edit', 'restore', `Show your edit: \$\{r\.stashed\.text\}`\)\} \/ \$\{on\(plain\)\}`/);
+        assert.match(fix, /row\.edited = text;\s*row\.stashed = undefined;\s*row\.original = undefined;/);
+        assert.match(fix, /function hasProposal\(r: FixRow\): boolean \{\s*return aiHas\(r\) && !r\.original;/);
+        assert.match(fix, /case 'show':[\s\S]{0,700}setEditAside\(row\);\s*row\.original = m\.show === 'original' && aiHas\(row\) \? true : undefined;/);
+        assert.match(fix, /m\.show === 'edit' && row\.stashed && row\.edited === undefined\) \{[\s\S]{0,200}await editRow\(run, row, kept\.text, m\.seq \?\? 0, kept\.fromAi\);/);
+        assert.match(fix, /\['original', 'original', [^\n]*\],\s*\['edit', 'your edit', [^\n]*\],\s*\['ai', 'AI proposal', [^\n]*\],/);
+        assert.match(fix, /data-show="\$\{which\}"/);
+        assert.match(fix, /vscode\.postMessage\(\{ action: 'show', index: Number\(i\), show: pk\.dataset\.show, seq: seqs\[i\] \}\);/);
         assert.match(fix, /from\.innerHTML = m\.source;/);
-        assert.doesNotMatch(fix, /undo my edit<|use the AI's<|back to my edit</);
+        assert.doesNotMatch(fix, /undo my edit<|use the AI's<|back to my edit<|case 'restore'/);
         // What the AI said, marked "AI:", with the person's edit in the Draft too.
         assert.match(fix, /const aiLine = aiSaid \? `<span class="ai-said"><b>AI:<\/b> \$\{esc\(aiSaid\)\}<\/span>` : '';/);
         assert.match(fix, /'Your edit — checking…'\)\s*\+ \(aiLine \? ` \$\{aiLine\}` : ''\)/);
-        assert.match(fix, /vscode\.postMessage\(\{ action: 'restore', index: Number\(i\), seq: seqs\[i\] \}\);/);
     });
 
     it('shows a turning ring and a pulsing word while a row asks the AI', () => {

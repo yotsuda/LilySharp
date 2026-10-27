@@ -160,6 +160,15 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1006セッションの経緯
+
+### 1.1 第1006セッション（2026-10-27・YT-DELL2）
+
+第1005 と同じ会話の続き。`-Start p1006`（開始 HEAD `8aeb7564a`・full **13377 / 0 / 2 / 13379**・第1004 を ARCHIVE へ）。作業場所は Lab `sessions/p1006/`。
+- **ユーザー「OMR 結果編集ペインで編集してから Ask AI したら、元のスキャンテキストではなくユーザーの編集をベースに」**: `taskPromptOf` は attempt があれば `<bar>` に編集（「Start from this line, not from the reader's」）・`<reader>` に元の読み（参考）・memo は「before the person's edit」・コンパイラの報告は編集のもの（`fixOne` が `checkCandidate` で編集を検査）・`parseProposal` の「unchanged」は編集と比べる。編集から頼んだ答えは Draft に入り編集は `stashed`（答えの間に打ち直した編集は残す）。
+- **途中で「各エントリの undo my edit を削除。画像の直前の your edit ラベルの代わりに clickable な 2 つのラベル」→「your edit / AI proposal の方がわかりやすい」**: Draft の上（`.over.draft-of`、`innerHTML` に）を「**your edit** / AI proposal」（AI の案が無ければ「the bar as it stands」）＝表示中は太字・もう一方はボタン（既存の `revert`／`restore` の動作）。行の説明の 3 つのリンクは消した。網 `omrAiFixCore.test` 2 本・`omrAiFixPage.test` 直し（npm 489）。site scan・両 CHANGELOG・MANUAL-CHECKS C19。
+判定（2026-10-27・第1006 の終わり）: 次はユーザーの指示（C9〜C19）。
+
 ## 以下は第1005セッションの経緯
 
 ### 1.1 第1005セッション（2026-10-27・YT-DELL2）
