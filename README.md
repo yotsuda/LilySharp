@@ -36,7 +36,7 @@ paper { paperWidth 297mm  paperHeight 210mm }
 
 part singer "Voice" { clef treble }
 part rh "Piano" { clef treble }
-part lh { clef bass octave 3 }
+part lh { clef bass }
 
 section Song {
   chords harmony { Eb | Cm7 | Ab Bb7 | Eb | Ab | Fm7 Bb7 | Gm7 C7 | Fm7 Bb7 | Eb | }
