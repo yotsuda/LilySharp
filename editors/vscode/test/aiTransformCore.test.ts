@@ -23,7 +23,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import {
     SEL_CLOSE, SEL_OPEN, carryOffset, documentBudget, documentContext, estimateTokens, isProblem, isUnchanged, marksContext, octaveOutliers,
-    pickModel, pitchToMidi, splitNote, startTimeAt, toCandidateEdit, changedWords, diffMarkup, wholeTextMarkup, rangeFixOf,
+    pickModel, pitchToMidi, splitNote, planOf, withoutPlan, startTimeAt, toCandidateEdit, changedWords, diffMarkup, wholeTextMarkup, rangeFixOf,
 } from '../src/aiTransformCore';
 
 // Owner's report 2026-10-27: "this note sounds C1, below the range of the Bass" came back through
@@ -214,6 +214,19 @@ describe('the note a reply carries', () => {
     it('is absent from a reply without one, and a note alone is no candidate', () => {
         assert.deepEqual(splitNote('e4 |'), { note: null, rest: 'e4 |' });
         assert.equal(toCandidateEdit(snapshotOf(FILE, SEL), '<note>sorry</note>'), null);
+    });
+
+    // A composer's working notes (owner's request 2026-10-27): read by no one, not even when they
+    // quote a <note> or the music, and not lost when the reply is cut off inside them.
+    it('is read past a composer\'s <plan>, which is neither the note nor the edit', () => {
+        const reply = '<plan>Key E minor; A (8) B (8) A\' (8).\n<note>not this</note> e4 f g a |</plan>\n<note>力強い曲にしました。</note>\ne4 f g a |';
+        assert.equal(planOf(reply), 'Key E minor; A (8) B (8) A\' (8).\n<note>not this</note> e4 f g a |');
+        assert.deepEqual(splitNote(reply), { note: '力強い曲にしました。', rest: '\n\ne4 f g a |' });
+        const edit = toCandidateEdit(snapshotOf(FILE, SEL), reply);
+        assert.ok(edit && !isProblem(edit));
+        assert.equal(edit.text, 'e4 f g a |');
+        assert.equal(withoutPlan('<plan>cut off here'), '');
+        assert.equal(planOf('e4 |'), null);
     });
 });
 

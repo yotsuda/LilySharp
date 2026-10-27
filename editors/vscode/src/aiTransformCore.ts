@@ -130,15 +130,29 @@ export function toCandidateEdit<S extends SpanLike>(snapshot: S, reply: string):
 
 /**
  * The musician's note a reply may carry, `<note>…</note>` (owner's request 2026-10-25: a word
- * from the AI about what it did), and the reply without it — what the edit is read from.
+ * from the AI about what it did), and the reply without it — what the edit is read from. A
+ * composer's `<plan>…</plan>` (its working notes before the music, owner's request 2026-10-27)
+ * is neither: it goes first, unread.
  */
 export function splitNote(raw: string): { note: string | null; rest: string } {
+    raw = withoutPlan(raw);
     const m = raw.match(/<note>([\s\S]*?)<\/note>/);
     if (!m) {
         return { note: null, rest: raw };
     }
     const note = m[1].trim();
     return { note: note.length > 0 ? note : null, rest: raw.slice(0, m.index) + raw.slice(m.index! + m[0].length) };
+}
+
+/** The reply without its `<plan>` blocks — an unclosed one (a reply cut off in its plan) to the end. */
+export function withoutPlan(raw: string): string {
+    return raw.replace(/<plan>[\s\S]*?(<\/plan>|$)/g, '');
+}
+
+/** The `<plan>` a reply opens with, trimmed; null when it has none. */
+export function planOf(raw: string): string | null {
+    const m = raw.match(/<plan>([\s\S]*?)(<\/plan>|$)/);
+    return m && m[1].trim().length > 0 ? m[1].trim() : null;
 }
 
 /** One `<edit>` of a reply, as written. */

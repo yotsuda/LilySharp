@@ -70,6 +70,15 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Ask AI
 
+- `[editor]` **Compose with AI composes.** Its own system prompt casts the model as a composer, has it
+  plan the piece in a `<plan>` block that is read by no one (key, form of 32 to 64 bars in 4- and
+  8-bar phrases, chords and cadences, theme, registers, ending) before the `<note>` and the `<file>`,
+  and names each part's bare `c` for absolute octaves. GRAMMAR_FOR_LLM's "Compose a piece" shows no
+  whole piece any more (its three 8-bar pieces were composed after, length and tempo changes
+  included) and says what a piece needs; the composition check adds a piece under 16 bars, one that
+  ends in another key than it began, and one whose last chord is not over its tonic.
+- `[editor]` **The AI's exchanges are logged** (Output → *Lily# AI Exchange*): every message sent and
+  every reply, word for word, the grammar replaced by its length.
 - `[editor]` **A composed piece's piano hands stay in their register.** The composition check finds a
   left hand whose sounding middle is under F2, or a right hand's over D6 (`instrument piano-left` /
   `piano-right`, or two staves braced with no instrument), for the AI to revise; the grammar says where

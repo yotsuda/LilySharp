@@ -92,6 +92,13 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ### Ask AI
 
+- **Compose with AI asks the model as a composer.** It is told it writes a whole piece for players,
+  plans it first where you do not see it (key, form and length, each phrase's chords and cadence,
+  the theme, each part's register, the ending), and writes it in absolute octaves from each part's
+  own `c`. The grammar no longer shows three 8-bar pieces to copy, and a draft shorter than 16 bars,
+  one that does not come back to its home key, or one that stops off its tonic goes back to it.
+- **What the AI is sent and answers is logged word for word** in the Output panel's *Lily# AI
+  Exchange* (the grammar left out), for Ask AI and Compose with AI alike.
 - **A composed piano piece keeps its hands where a pianist's are.** A left hand that lives under F2
   (one came back between E1 and G2), or a right hand over D6, goes back to the AI to move it; and the
   AI is told where the two hands lie, and that the left hand's bare `c` is C3.

@@ -72,6 +72,29 @@ interface Audible { uri: vscode.Uri; before: string; after: string }
 // The round under review — what its panel's Play plays.
 let audible: Audible | undefined;
 
+// What Ask AI and Compose with AI send the model and what it answers, word for word (owner's
+// request 2026-10-27: a poor composed piece could not be traced — the log held one line a step).
+// The grammar is the same in every system prompt and is not written out.
+let exchangeChannel: vscode.OutputChannel | undefined;
+
+/** Writes the messages from `from` on to the exchange log; returns how many are written now. */
+function logExchange(label: string, grammar: string, messages: ChatMessage[], from: number): number {
+    exchangeChannel ??= vscode.window.createOutputChannel('Lily# AI Exchange');
+    const stamp = new Date().toLocaleTimeString();
+    for (const m of messages.slice(from)) {
+        if (m.role === 'assistant') continue; // its reply, logged as it came (logReply)
+        const text = m.content.split(grammar).join(`[the Lily# grammar, docs/GRAMMAR_FOR_LLM.md — ${grammar.length} characters]`);
+        exchangeChannel.appendLine(`===== ${stamp} ${m.role}${m.role === 'system' ? ` (to ${label})` : ''} =====`);
+        exchangeChannel.appendLine(text);
+    }
+    return messages.length;
+}
+
+function logReply(raw: string): void {
+    exchangeChannel?.appendLine(`===== ${new Date().toLocaleTimeString()} reply =====`);
+    exchangeChannel?.appendLine(raw);
+}
+
 // ---- Server DTO mirrors (see LspProtocolDtos.cs) ----
 interface CandidateDiagnostic {
     Line: number; Char: number; Offset: number; Length: number;
@@ -217,15 +240,15 @@ async function runCompose(deps: AiTransformDeps): Promise<void> {
         uri: vscode.Uri.parse('untitled:Composed.lys'),
     };
     const grammar = await loadGrammar(deps);
-    const budget = documentBudget(chat.maxInputTokens, estimateTokens(systemPrompt(grammar)));
+    const budget = documentBudget(chat.maxInputTokens, estimateTokens(composeSystemPrompt(grammar)));
     try {
         // In the octaves the AI writes it: a new piece has no octave mode of its own to go back to.
         const ai: AiSpace = { snap: snapshot, converted: false };
         await drive(deps, client, chat, snapshot, ai,
-            `Compose a new piece: ${description.trim()}\nThe file is an empty start: reply with the whole new piece `
-            + 'between <file> and </file> (reply form 3), as the grammar\'s "Compose a piece" recipe says for '
+            `Compose a new piece: ${description.trim()}\nThe file is an empty start: plan the piece in <plan>, then `
+            + 'write it whole in <file>, as the grammar\'s "Compose a piece" recipe says for '
             + 'its kind of music — concert music (an instrument for every part, a staffGroup for an ensemble, '
-            + 'contrasting sections), a band (the whole rhythm section — drums, electric bass, guitar or '
+            + 'a form whose sections contrast and a theme that returns), a band (the whole rhythm section — drums, electric bass, guitar or '
             + 'keyboards — at one tempo), jazz (a combo; a lead sheet — one melody staff under a chords row — '
             + 'only when a lead sheet is asked for) — with melody and accompaniment, varied rhythm, '
             + 'articulations and dynamics. One staff only for a lead sheet, a melody alone or a solo. Give the piece a title of its own that '
@@ -461,8 +484,8 @@ async function drive(
             baselineWarnings: baseline.filter(d => d.Severity === 'warning' && !MACHINE_WARNING.test(d.Message)).length,
             // Conversation seed.
             messages: [
-                { role: 'system', content: systemPrompt(grammar) },
-                { role: 'user', content: taskPrompt(work, shown, whole, facts, baseline, instruction, marks, ai.converted) },
+                { role: 'system', content: compose ? composeSystemPrompt(grammar) : systemPrompt(grammar) },
+                { role: 'user', content: taskPrompt(work, shown, whole, facts, baseline, instruction, marks, ai.converted, compose) },
             ] as ChatMessage[],
         };
     };
@@ -474,6 +497,8 @@ async function drive(
     // restarted during Ask Again and the panel was left with every button greyed out).
     let shownRound: ReviewRound | undefined;
     let askedFrom = 0;
+    // The messages already written to the exchange log (logExchange).
+    let logged = 0;
     // The text the AI is answering against: the file, and once it is asked again, the candidate
     // it revises (owner's report 2026-10-27: "add guitar chords" to a composed piece failed three
     // times — its edits quoted the piece, and were looked for in the file it had not been written to).
@@ -526,7 +551,9 @@ async function drive(
                     if (token.isCancellationRequested) return null;
                     step(attempt === 0 ? 'generating' : `repairing (${attempt}/${MAX_REPAIR_ATTEMPTS})`);
 
+                    logged = logExchange(chat.label, grammar, messages, logged);
                     const raw = await chat.send(messages, token);
+                    logReply(raw);
                     // Read against the text the AI was last shown as the file: the file itself, or —
                     // asked again — its candidate (see `base`).
                     const parsed = toCandidateEdit(base, raw);
@@ -536,7 +563,7 @@ async function drive(
                     if (parsed === null) {
                         turnedDown(attempt, `the reply was empty (${raw.length} characters)`);
                         messages.push({ role: 'assistant', content: raw });
-                        messages.push({ role: 'user', content: `Your reply was empty. ${replyForm(whole)} — no commentary, no code fences.` });
+                        messages.push({ role: 'user', content: `Your reply was empty. ${replyForm(whole, compose)} — no commentary, no code fences.` });
                         continue;
                     }
                     if (isProblem(parsed)) {
@@ -911,6 +938,52 @@ async function drive(
 // Prompt construction (§5)
 // ======================================================================
 
+/**
+ * The composer's system prompt (owner's report 2026-10-27: the same model asked in a chat writes a
+ * fair piece, asked from VS Code a poor one). The editor's prompt casts it as a transformer of
+ * fragments, under rules for the reply's form; a composer is told it is one, plans the piece where
+ * the musician does not see it (<plan>, unread — a chat's model thinks before it writes; one
+ * called from VS Code may not), and writes it in absolute octaves, its parts' anchors named.
+ * The grammar's sketches show the notation, not a piece's length or form: the "Compose a piece"
+ * recipe once carried three 8-bar pieces, and what came back was 8 bars with a tempo per section.
+ */
+function composeSystemPrompt(grammar: string): string {
+    return [
+        'You are a composer. You write a complete new piece of music for the musician who asks, and you write it',
+        'down in Lily#, a text music-notation language. Lily# is NOT LilyPond; obey the grammar below exactly.',
+        '',
+        '<lilysharp-grammar>',
+        grammar,
+        '</lilysharp-grammar>',
+        '',
+        'Compose it as music for players, as you would write it out for a performer: a form, a harmony, a theme',
+        'and an ending, at the length the music needs. The grammar\'s snippets only show how a thing is written;',
+        'none of them is a model of a piece\'s length, form or style.',
+        '',
+        'REPLY in this order, and nothing else:',
+        '1. <plan> … </plan> — your working notes; the musician never sees them. Settle there, before any note is',
+        '   written: the key, the meter and the tempo; the form, each section with its bars (unless the request says',
+        '   otherwise a piece runs 32 to 64 bars, in phrases of 4 and 8 bars); the chord progression of every phrase,',
+        '   bar by bar, and its cadence; the theme and how it returns; what each part does (melody, bass line, inner',
+        '   parts, accompaniment figure) and its register as sounding pitches (C4 = middle C); where the dynamics',
+        '   rise and fall; and how the piece ends (in its home key, on a held tonic chord).',
+        '2. <note> … </note> — one or two sentences to the musician about the piece, warm and plain, in the language',
+        '   of the request.',
+        '3. <file> … </file> — the whole file, written from the plan.',
+        '',
+        '- Write in ABSOLUTE octaves: `octave absolute` at the top of the file, so every pitch says where it sounds.',
+        '  A bare pitch sits in its part\'s own octave — the octave its instrument gives the bare `c`: C4 for',
+        '  `piano-right`, `violin`, a part with no instrument; C3 for `piano-left`, `viola`, `cello`; C5 for `flute`; see',
+        '  the grammar for the rest — and each \' or , moves it one octave from there, never from the note before.',
+        '  In the plan, name each part\'s bare `c`, and write its notes from it.',
+        '- Before you reply, go through the piece bar by bar: every bar of every part fills the meter, the parts',
+        '  agree on each bar\'s harmony, each part stays in its register, and the last bar is the tonic.',
+        '- If the musician sends you findings about a draft, revise the whole piece with them in mind, in the same',
+        '  three blocks.',
+        '- Never emit LilyPond-only constructs (\\relative, \\new Staff, \\repeat volta, \\version, << \\\\ >>). Annotations use @name, never \\name.',
+    ].join('\n');
+}
+
 function systemPrompt(grammar: string): string {
     return [
         'You transform fragments of a musical score written in Lily#, a text music-notation language.',
@@ -965,7 +1038,10 @@ function systemPrompt(grammar: string): string {
 const MAX_DIAGNOSTICS = 20;
 
 /** What to reply with, for the reminders: with nothing selected, edits only. */
-function replyForm(whole: boolean): string {
+function replyForm(whole: boolean, compose = false): string {
+    if (compose) {
+        return 'Reply with <plan>…</plan>, <note>…</note> and the whole piece in <file>…</file>';
+    }
     return whole
         ? 'Reply with <edit> blocks (or, when the score is replaced by a new one, the whole new file in <file>…</file>)'
         : 'Return the replacement for the selection, or <edit> blocks when the change reaches outside it';
@@ -1001,7 +1077,7 @@ function diagnosticsContext(snapshot: Snapshot, baseline: CandidateDiagnostic[],
  */
 function taskPrompt(snapshot: Snapshot, shown: { text: string; complete: boolean }, whole: boolean,
     facts: ResolvedPitchFact[], baseline: CandidateDiagnostic[], instruction: string,
-    marks: string | null = null, absolute = false): string {
+    marks: string | null = null, absolute = false, compose = false): string {
     const parts: string[] = [];
     if (absolute) {
         // toAbsoluteOctaves: the user's file is relative; it was converted for the model.
@@ -1047,7 +1123,7 @@ function taskPrompt(snapshot: Snapshot, shown: { text: string; complete: boolean
     parts.push('');
     parts.push(`Instruction: ${instruction}`);
     parts.push('');
-    parts.push(`${replyForm(whole)}.`);
+    parts.push(`${replyForm(whole, compose)}.`);
     return parts.join('\n');
 }
 

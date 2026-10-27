@@ -160,6 +160,14 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1019セッションの経緯
+
+### 1.1 第1019セッション（2026-10-27・YT-DELL2）
+
+第1018 と同じ会話の続き。`-Start p1019`（開始 HEAD `11da0846a`・full **13385 / 1 / 2 / 13388**＝落ちた 1 本は `UsingExpansionCacheTests.AMissingIncludeAppearing_Recomputes_AndTheWarningClears`・第1018 の終わりは緑・本便の full で再び見る・第1017 を ARCHIVE へ）。作業場所は Lab `sessions/p1019/`。
+- **ユーザー「OMR の結果 tabi-13.lys。todo コメントと赤い点線枠が重なる問題を直して」**: 赤枠はプレビューの `applyBarFlags`（bar-staff の上下に 2 線間）、memo は五線の上 gap から積む＝枠の上辺が memo の文字を横切る。最初は辺を memo の手前まで縮めた → **ユーザー「枠線の y は狭めないでほしい」→ 3 案から「枠線を memo の所で切る」を選択**: 枠は `path.flag-frame`（4 辺を `M … H/V` の区間で描く）に変え、memo の文字と下線（`text[data-todo]:not(.music)`・水平の `line[data-todo]`＝leader は除く）の box を ¼ 線間広げ、それが辺を跨ぐ所だけ辺を途切れさせる（座標は `getScreenCTM().inverse()` で bar rect 側へ）。網 `webviewScript.test`（枠の d・5 形）＝npm 500。両 CHANGELOG・MANUAL-CHECKS C31。
+判定（2026-10-27・第1019 の終わり）: 次はユーザーの指示（C9〜C31）。
+
 ## 以下は第1018セッションの経緯
 
 ### 1.1 第1018セッション（2026-10-27・YT-DELL2）

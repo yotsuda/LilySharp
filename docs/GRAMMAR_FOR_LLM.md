@@ -1072,9 +1072,22 @@ it should sound like the ensemble asked for. What makes it music:
   cello's `d` is D3). Name the parts (`part vn1 "Violin I" "Vn. I"`).
 - **Layout**: an ensemble is a `staffGroup { … }` (a bracket); `grandStaff` is one instrument
   on two staves (piano, harp) — never four players.
-- **A plan**: sections that contrast — in key (`key f major` at a section's head), character
-  and texture, and in concert music in tempo too (`tempo "Allegro" 4 = 132`) — and a theme that
-  returns, changed.
+- **A form, and the length to carry it**: unless the request says otherwise, a piece runs 32 to
+  64 bars — a song's form, or A–B–A′ — in phrases of 4 and 8 bars, each closing on a cadence: a
+  half cadence (on V) to go on, an authentic one (V–I) to close a section.
+- **Harmony first**: each phrase has its chord progression in the key, and every part is
+  written from it — the bass on the chords' roots and inversions, the inner parts on their
+  tones, the melody's strong beats on chord tones and its passing notes between them.
+- **A theme**: a motif of a bar or two that the piece is made of — stated, repeated, sequenced,
+  varied, and back near the end.
+- **One home key, one tempo**: a section may move to a related key (`key g major` at its head —
+  the relative, the dominant) and the piece comes home to end. The tempo stays unless the
+  character changes with it (a slow middle section, `tempo "Adagio" 4 = 60`), never a new tempo
+  for every section.
+- **The end**: the last phrase closes in the home key — V (or V7) to I, the tonic chord held
+  through the final bar in every part, the bass on the tonic.
+- **Registers**: every part where its player plays (see *Instrument ranges* — a piano's left hand
+  round C3, its right hand round C5).
 - **A band** (rock, pop, funk, metal, … — any request naming an electric guitar, an electric
   bass, drums or band keyboards): the whole rhythm section plays, whichever members were named —
   **drums** (a `clef percussion` part: a groove, fills at the section ends), an **electric
@@ -1084,14 +1097,14 @@ it should sound like the ensemble asked for. What makes it music:
   `instrument piano-right` with `"rock organ"`, `"electric piano 1"` …). "Guitar and drums"
   has a bass too; "guitar and bass" has drums too; keyboards are welcome. **One tempo** from start
   to end — a single `tempo` at the top, none in the sections. The form is the song's: intro,
-  verse, chorus, bridge, outro; separate staves, no bracket. The second example below is a band.
+  verse, chorus, bridge, outro; separate staves, no bracket.
 - **One staff only when it is asked for**: a lead sheet, a melody alone ("a melody for these
   words"), or a solo for one instrument that plays one line ("a flute solo", "unaccompanied
   cello"). Anything else has its accompaniment — its own parts, on staves of their own.
 - **Jazz** not asked for as a lead sheet is a **combo**: a rhythm section — piano or guitar for the
   chords, a bass (`instrument bass` with `midiInstrument "acoustic bass"`), drums swinging on the
   ride cymbal (`cymr`) and hi-hat — under a melody instrument (`instrument tenor-sax`, `trumpet`,
-  `alto-sax`, …), with the harmony and the feel of the lead sheet below, at one tempo.
+  `alto-sax`, …), with the harmony and the feel of a jazz lead sheet (next), at one tempo.
 - **A jazz lead sheet** (asked for as "a lead sheet", "a tune to jam on"): ONE staff — the
   melody, no instrument needed (a lead sheet is concert pitch) — with a `chords NAME` row
   directly above it, and nothing else. The harmony is jazz's: seventh chords throughout
@@ -1101,117 +1114,13 @@ it should sound like the ensemble asked for. What makes it music:
   swing`. The melody: eighth-note lines with rests, anticipations tied over the bar
   (`e'8~ | e'4`), chord tones on the strong beats and the colour tones (9ths, 13ths, the ♭9) for
   tension. The head in sections of 8 bars (AABA, ABAC — 32 bars, or a 16-bar or 12-bar blues). The
-  third example below is a lead sheet.
+  sheet is written `score { chords NAME  staff lead }`, the row above its staff.
 - **Texture**: one voice carries the melody while the others accompany — broken chords,
   repeated eighths, a moving bass — and the roles pass between the parts. Not every part in the
   same rhythm; not whole notes everywhere.
 - **Rhythm and articulation**: long and short notes mixed, rests that let a line breathe,
   slurs over a phrase, `@staccato`, `@accent`, and dynamics with hairpins
   (`@p … @cresc … @f`) that shape each section.
-
-```
-title "Little Quartet"
-time 4/4
-key d minor
-octave absolute
-
-part vn1 "Violin I" "Vn. I" { instrument violin }
-part vn2 "Violin II" "Vn. II" { instrument violin }
-part va "Viola" "Va." { instrument viola }
-part vc "Cello" "Vc." { instrument cello }
-
-section A {
-  tempo "Andante" 4 = 72
-  vn1 { a2@p( d'4 e' | f'4. e'8 d'4 a) | bes2( a4 g | a1) | }
-  vn2 { r8 f@p a f r a d' a | r8 f a f r a d' a | r8 g bes g r bes d' bes | r8 e g cis' e'4 cis' | }
-  va { d'2@p f' | d'2 f' | d'2 g' | e'1 | }
-  vc { d1@p | d1 | g,1 | a,1 | }
-}
-
-section B {
-  key f major
-  tempo "Allegro" 4 = 132
-  vn1 { c'8@f@staccato c' f' c' a4@accent g | f8@staccato a c' f' e'4@accent c' | d'8@cresc e' f' g' a'4 g' | f'2@ff r2 | }
-  vn2 { a8@f@staccato a c' a f4 e | c8@staccato f a c' g4 e | f8@cresc g a bes c'4 bes | a2@ff r2 | }
-  va { f'4@f@staccato r c'@staccato r | a4@staccato r c'@staccato r | bes4@cresc d' f' e' | f'2@ff r2 | }
-  vc { f,4@f@staccato c@staccato f,@staccato c@staccato | f,4@staccato c@staccato c,@staccato c@staccato | bes,4@cresc bes, c c | f,2@ff r2 | }
-}
-
-form { A B }
-
-score {
-  staffGroup { staff vn1  staff vn2  staff va  staff vc }
-}
-```
-
-```
-title "Night Drive"
-tempo 112
-time 4/4
-key e minor
-octave absolute
-
-part gtr "Electric Guitar" "E.Gt." { instrument guitar midiInstrument "overdriven guitar" }
-part keys "Organ" "Org." { instrument piano-right midiInstrument "rock organ" }
-part bass "Electric Bass" "E.Bass" { instrument bass midiInstrument "electric bass (finger)" }
-part kit "Drums" "Dr." { clef percussion }
-
-section Verse {
-  gtr { <e, b,>8@mf r <e, b,> r <e, b,>4 r8 <e, b,> | <c g>8 r <c g> r <c g>4 r8 <c g> | <g, d>8 r <g, d> r <g, d>4 r8 <g, d> | <d a>8 r <d a> r <d a>4 <d a>@accent | }
-  keys { <e g b>1@p | <e g c'>1 | <d g b>1 | <d fis a>1 | }
-  bass { e8@mf e e e e e b, d | c8 c c c c c g, b, | g,8 g, g, g, g, g, d fis | d8 d d d d4 d8 fis | }
-  kit {
-    voice { hh8@mf hh hh hh hh hh hh hh | hh8 hh hh hh hh hh hh hh | hh8 hh hh hh hh hh hh hh | hh8 hh hh hh sn16 sn sn sn tomh8 toml | }
-          { bd4 sn bd8 bd sn4 | bd4 sn bd8 bd sn4 | bd4 sn bd8 bd sn4 | bd4 sn bd r | }
-  }
-}
-
-section Chorus {
-  gtr { <g, d g>4@f@accent <g, d g>8 <g, d g> r <g, d g> <g, d g>4 | <d a d'>4@accent <d a d'>8 <d a d'> r <d a d'> <d a d'>4 | <e, b, e>4@accent <e, b, e>8 <e, b, e> r <e, b, e> <e, b, e>4 | <c g c'>4@accent <c g c'>8 <c g c'> <d a d'>2 | }
-  keys { <g b d'>2@mf <g b d'> | <fis a d'>2 <fis a d'> | <e g b>2 <e g b> | <e g c'>2 <fis a d'> | }
-  bass { g,8@f g, g, g, g, g, g, a, | d8 d d d d d d e | e8 e e e e e e d | c8 c c c d4 d | }
-  kit {
-    voice { cymc8@f hh hh hh hh hh hh hh | hh8 hh hh hh hh hh hh hh | hh8 hh hh hh hh hh hh hh | cymc4 hh8 hh sn8 sn tomh toml | }
-          { bd4 sn bd8 bd sn4 | bd4 sn bd8 bd sn4 | bd4 sn bd8 bd sn4 | bd4 r bd bd | }
-  }
-}
-
-form { Verse Chorus }
-
-score {
-  staff gtr
-  staff keys
-  staff bass
-  staff kit
-}
-```
-
-```
-title "Blue Window"
-tempo "Medium Swing" 4 = 152 swing
-time 4/4
-key f major
-octave absolute
-
-part lead { clef treble }
-
-section A1 {
-  lead { r4 r8 c'8 f' a c' e'~ | e'4 d'8 c' bes4 g8 e | g4. a8 c'4 a8 es' | d'4 bes8 g f4 e8 g~ | g2 r8 a c' e' | des'4 c'8 bes g4 f8 des' | c'4 a8 g fis4 a8 c' | bes2 r4 r8 c' | }
-  chords changes { Fmaj7 | Gm7 C7 | Am7 D7(b9) | Gm7 C7 | Fmaj7 | Bbm7 Eb7 | Am7 D7 | Gm7 C7 | }
-}
-
-section A2 {
-  lead { a4 f8 a c'4 e'8 d'~ | d'4 bes8 g e4 g8 bes | a4. c'8 es'4 d'8 c' | bes4 g8 d' c'4 bes8 g | a2. r8 a | bes4 des'8 f' g'4 des'8 c' | bes4 g8 bes e4 g8 e | f1 | }
-  chords changes { Fmaj7 | Gm7 C7 | Am7 D7(b9) | Gm7 C7 | Fmaj7 | Bbm7 Eb7 | Gm7 C7 | Fmaj7 | }
-}
-
-form { A1 A2 }
-
-score {
-  chords changes
-  staff lead
-}
-```
 
 ## Rules and gotchas
 

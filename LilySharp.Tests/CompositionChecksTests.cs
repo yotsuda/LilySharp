@@ -57,15 +57,37 @@ public class CompositionChecksTests
         Assert.Contains(findings, f => f.Contains("every part moves in the same rhythm"));
     }
 
+    // The findings of a piece's form — its length, its keys, its last chord — which a short sketch
+    // has by being one; the rest are what its notation leaves flat.
+    private static string[] Flatness(string source) => [.. CompositionChecks.Of(source)
+        .Where(f => !f.StartsWith("The piece is ") && !f.StartsWith("The piece begins ") && !f.StartsWith("The piece ends "))];
+
     [Fact]
-    public void TheGrammarsQuartetExample_IsNotFlat()
+    public void TheQuartetSketch_IsNotFlat()
     {
-        // The example the grammar gives for "compose a piece" (GRAMMAR_FOR_LLM.md, Common requests).
-        var grammar = File.ReadAllText(Path.Combine(CollectResumeTests.FindRepoRoot(), "docs", "GRAMMAR_FOR_LLM.md"));
-        int at = grammar.IndexOf("title \"Little Quartet\"", System.StringComparison.Ordinal);
-        Assert.True(at > 0);
-        string example = grammar[at..grammar.IndexOf("```", at, System.StringComparison.Ordinal)];
-        Assert.Empty(CompositionChecks.Of(example));
+        // The grammar's example for "compose a piece" until 2026-10-27 (ComposedPieces).
+        Assert.Empty(Flatness(ComposedPieces.LittleQuartet));
+        // …but a sketch: 8 bars, from D minor to F major.
+        var findings = CompositionChecks.Of(ComposedPieces.LittleQuartet);
+        Assert.Contains(findings, f => f.StartsWith("The piece is 8 bars long"));
+        Assert.Contains(findings, f => f.StartsWith("The piece begins in D minor and ends in F major"));
+    }
+
+    // Owner's report 2026-10-27: the composed piano piece was 8 bars, and its end "unnatural" — E
+    // minor at its start, G major at its end.
+    [Fact]
+    public void APieceThatEndsAwayFromItsTonic_IsToldToCloseOnIt()
+    {
+        string Piece(string keys, string rh, string lh)
+            => $"title \"Close\"\ntime 4/4\noctave absolute\n{keys}\npart rh {{ instrument piano-right }}\npart lh {{ instrument piano-left }}\n"
+             + $"section A {{\n  rh {{ {rh} }}\n  lh {{ {lh} }}\n}}\nform {{ A }}\nscore {{ grandStaff {{ staff rh  staff lh }} }}\n";
+        string Bars(string bar, int n) => string.Concat(Enumerable.Repeat(bar + " | ", n));
+        // 16 bars of C major ending on the tonic: nothing to say of its form.
+        string home = Piece("key c major", Bars("e'4 g' e' c'", 15) + "c'1 |", Bars("c2 g,", 15) + "c1 |");
+        Assert.Empty(CompositionChecks.Of(home).Where(f => f.StartsWith("The piece")));
+        // The same, stopping over its dominant.
+        string open = Piece("key c major", Bars("e'4 g' e' c'", 15) + "d'1 |", Bars("c2 g,", 15) + "g,1 |");
+        Assert.Contains(CompositionChecks.Of(open), f => f.StartsWith("The piece ends over G, not its tonic C"));
     }
 
     [Fact]
@@ -80,7 +102,7 @@ public class CompositionChecksTests
             form { A }
             score { grandStaff { staff rh  staff lh } }
             """;
-        Assert.Empty(CompositionChecks.Of(piano));
+        Assert.Empty(Flatness(piano));
     }
 
     // Owner's report 2026-10-27: "かっこいいピアノの曲" came back with its left hand between E1 and G2
@@ -169,32 +191,35 @@ public class CompositionChecksTests
     }
 
     [Fact]
-    public void TheGrammarsBandExample_IsWhole()
+    public void TheBandSketch_IsWhole()
     {
-        var grammar = File.ReadAllText(Path.Combine(CollectResumeTests.FindRepoRoot(), "docs", "GRAMMAR_FOR_LLM.md"));
-        int at = grammar.IndexOf("title \"Night Drive\"", System.StringComparison.Ordinal);
-        Assert.True(at > 0);
-        Assert.Empty(CompositionChecks.Of(grammar[at..grammar.IndexOf("```", at, System.StringComparison.Ordinal)]));
+        Assert.Empty(Flatness(ComposedPieces.NightDrive));
     }
 
     [Fact]
     public void AStringQuartet_IsNoBand()
     {
         // Two tempi and no drums: concert music, where a change of tempo is a plan.
-        var grammar = File.ReadAllText(Path.Combine(CollectResumeTests.FindRepoRoot(), "docs", "GRAMMAR_FOR_LLM.md"));
-        int at = grammar.IndexOf("title \"Little Quartet\"", System.StringComparison.Ordinal);
-        Assert.DoesNotContain(CompositionChecks.Of(grammar[at..grammar.IndexOf("```", at, System.StringComparison.Ordinal)]), f => f.StartsWith("A band"));
+        Assert.DoesNotContain(CompositionChecks.Of(ComposedPieces.LittleQuartet), f => f.StartsWith("A band"));
     }
 
     [Fact]
-    public void TheGrammarsJazzLeadSheet_IsWhole()
+    public void TheJazzLeadSheet_IsWhole()
     {
-        // Owner's request 2026-10-27: a jazz lead sheet — one staff, a chords row, jazz changes.
+        // Owner's request 2026-10-27: a jazz lead sheet — one staff, a chords row, jazz changes —
+        // 16 bars, home on F.
+        Assert.Empty(CompositionChecks.Of(ComposedPieces.BlueWindow));
+        Assert.Contains("chords changes", ComposedPieces.BlueWindow);
+    }
+
+    // Owner's question 2026-10-27, "a model asked in a chat has no example — is none better?": the
+    // grammar shows no whole piece to compose after, only how each thing is written.
+    [Fact]
+    public void TheGrammar_ShowsNoPieceToComposeAfter()
+    {
         var grammar = File.ReadAllText(Path.Combine(CollectResumeTests.FindRepoRoot(), "docs", "GRAMMAR_FOR_LLM.md"));
-        int at = grammar.IndexOf("title \"Blue Window\"", System.StringComparison.Ordinal);
-        Assert.True(at > 0);
-        string sheet = grammar[at..grammar.IndexOf("```", at, System.StringComparison.Ordinal)];
-        Assert.Empty(CompositionChecks.Of(sheet));
-        Assert.Contains("chords changes", sheet);
+        foreach (var title in new[] { "Little Quartet", "Night Drive", "Blue Window" })
+            Assert.DoesNotContain($"title \"{title}\"", grammar);
+        Assert.Contains("a piece runs 32 to\n  64 bars", grammar.Replace("\r\n", "\n"));
     }
 }

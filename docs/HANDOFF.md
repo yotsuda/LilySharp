@@ -127,19 +127,20 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1021セッション（2026-10-27・YT-DELL2）
+
+第1020 と同じ会話の続き。`-Start p1021`（開始 HEAD `801187b4f`・full **13388 / 0 / 2 / 13390**・第1019 を ARCHIVE へ）。作業場所は Lab `sessions/p1021/`。
+- **ユーザー「あなた（チャット）に作曲を頼むとそれなりの曲になるのに、VS Code から頼むと全然だめ。同じモデルなのに。Lily# 固有でプロンプトに書くべきことが書けていないのでは」→ 5 案を出し「進めて。VS Code のログもヒントに」＋「手本はない方が良いのでは」**。ログ（`%APPDATA%\Code\logs\…\1-Lily# Extension.log`）は 1 手 1 行だけで、送った文・返事は残っていなかった（最初の案は「左手が 100% 8 分」で差し戻し・後で「終わり方が不自然」と追加依頼）。読んで分かったこと: ⒜ 作曲も編集と同じ system prompt（"You transform fragments…"＋返事の形の規則）／⒝ 考える場がない（note は 2 文・後は楽譜だけ）／⒞ **GRAMMAR の「Compose a piece」の手本 3 曲がどれも 8 小節前後・section ごとに tempo**＝来た曲は 4 小節×2・section ごとに tempo で手本の写し／⒟ 長さ・楽句・終止・和声の指示が無い。直し: ① **`composeSystemPrompt`**（作曲家として・`<plan>`→`<note>`→`<file>`・plan に調・形式と小節数（指定なければ 32〜64・4/8 小節の楽句）・楽句ごとの和声と終止・主題・各パートの役と音域・終わり方・絶対オクターブで各パートの素の `c`（piano-right/violin/楽器なし C4・piano-left/viola/cello C3・flute C5））・`replyForm(whole, compose)`・`taskPrompt(…, compose)`。② **`withoutPlan`／`planOf`**（`splitNote` が先に plan を外す＝前書きにも候補にも出ない・閉じない plan は末尾まで）。③ **手本 3 曲を GRAMMAR から外し `LilySharp.Tests/ComposedPieces.cs` へ**（Fixtures に置くと snapshot の掃きが拾う）・recipe の「A plan」を「形式と長さ・和声が先・主題・家の調と一つのテンポ・終わり・音域」に。④ **`CompositionChecks` に形式**: 16 小節未満・最初と最後の `key` の主音／旋法が違う・最後の打点の最低音が終わりの調の主音でない（chords 行と drums は除く・小節数は `1 + BarTicks(0<b<終わり)`）。⑤ **出力 *Lily# AI Exchange***（`logExchange`／`logReply`・文法は長さに置換・assistant は reply として 1 回）。網 C# `CompositionChecksTests`（手本 3 曲は `Flatness` で形式以外が空・新 2 本）・npm 506（`aiTransformCore` の plan 1・`aiNewPiece` の作曲家 4）・tsc 0。両 CHANGELOG・MANUAL-CHECKS C33。
+- 気づき（未着手）: OMR の AI 修正で `omr verify` が "no lysc found" で走っていない（同じログ・11:51）。
+判定（2026-10-27・第1021 の終わり）: 次はユーザーの指示（C9〜C33）。作曲の質はユーザーの実機と *Lily# AI Exchange* の全文を見てから。
+
+## 以下は第1020セッションの経緯
+
 ### 1.1 第1020セッション（2026-10-27・YT-DELL2）
 
 第1019 と同じ会話の続き。`-Start p1020`（開始 HEAD `7f7246f23`・full **13386 / 1 / 2 / 13389**＝落ちた 1 本は本便の捨て計器 `Zz1020ProbeTests` が GPL 頭書きを持たなかった `LicenceHeaderTests`・計器は消した・第1018 を ARCHIVE へ）。作業場所は Lab `sessions/p1020/`。
 - **ユーザー「AI に作曲させたらひどい出来・特に左手のピアノの音域が低すぎて不自然。こういう曲にならないようにしたい」（`Untitled-1.lys`）**: 計ると左手は **E1〜G2（tessitura D1〜E2）**。AI は絶対オクターブで書く（前書きの後で relative に機械変換）＝`instrument piano-left` の素の `c` は **C3**（`InstrumentDefaults` の octave 3・右手は 4）なのに C4 のつもりで `e,,` と書いた形。音域表（A0–C8）は全部通す。直し 2 つ: ① **`CompositionChecks` に手の音域**＝`piano-left`/`piano-right`（または楽器なしの 2 段 grandStaff の上下）の鳴る時間の中央値が左手 F2 未満・右手 D6 超なら所見（10/90 分位と中央値・普段の音域・preset なら素の `c` の高さ）＝作曲の直しラウンドに乗る。`InstrumentOf` は `piano - left` の 3 token を 1 語に戻す（`RoleOf` は StartsWith で気付かなかった）。② **GRAMMAR_FOR_LLM「Instrument ranges」に段落**（音域は届く範囲で、置き場所ではない・左手は C2〜C4・右手は C4〜C6・piano-left の素の `c` は C3）。網 `CompositionChecksTests` +2・`aiNewPiece.test` +1（npm 501）。両 CHANGELOG・MANUAL-CHECKS C32。
 判定（2026-10-27・第1020 の終わり）: 次はユーザーの指示（C9〜C32）。曲の出来そのもの（旋律・和声）は未着手＝ユーザーの次の報告次第。
-
-## 以下は第1019セッションの経緯
-
-### 1.1 第1019セッション（2026-10-27・YT-DELL2）
-
-第1018 と同じ会話の続き。`-Start p1019`（開始 HEAD `11da0846a`・full **13385 / 1 / 2 / 13388**＝落ちた 1 本は `UsingExpansionCacheTests.AMissingIncludeAppearing_Recomputes_AndTheWarningClears`・第1018 の終わりは緑・本便の full で再び見る・第1017 を ARCHIVE へ）。作業場所は Lab `sessions/p1019/`。
-- **ユーザー「OMR の結果 tabi-13.lys。todo コメントと赤い点線枠が重なる問題を直して」**: 赤枠はプレビューの `applyBarFlags`（bar-staff の上下に 2 線間）、memo は五線の上 gap から積む＝枠の上辺が memo の文字を横切る。最初は辺を memo の手前まで縮めた → **ユーザー「枠線の y は狭めないでほしい」→ 3 案から「枠線を memo の所で切る」を選択**: 枠は `path.flag-frame`（4 辺を `M … H/V` の区間で描く）に変え、memo の文字と下線（`text[data-todo]:not(.music)`・水平の `line[data-todo]`＝leader は除く）の box を ¼ 線間広げ、それが辺を跨ぐ所だけ辺を途切れさせる（座標は `getScreenCTM().inverse()` で bar rect 側へ）。網 `webviewScript.test`（枠の d・5 形）＝npm 500。両 CHANGELOG・MANUAL-CHECKS C31。
-判定（2026-10-27・第1019 の終わり）: 次はユーザーの指示（C9〜C31）。
 
 ## 2. 開いている作業
 

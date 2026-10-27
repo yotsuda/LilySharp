@@ -251,6 +251,7 @@ edocs/HANDOFF.mde §2 R13 ⒝・OMR の提案 B1〜B6（e..\LilySharp-Omr\docs\r
 - [ ] **C30**（第1018・作曲の前書き）: Compose with AI → 開いた曲の `// The AI:` が曲そのものの説明（「小節の長さを見直し…」のような直しの言葉でない）。出力チャネルで直しが走った（turned down）ときも同じ。
 - [ ] **C31**（第1019・赤枠と memo）: OMR の結果（例 tabi-13.lys）をスキャンと並べて開く → 赤い点線枠の上辺（下辺）が `@todo` の memo の文字・下線を横切らない（memo の所だけ線が途切れる）。枠の大きさは memo の有無に関係なく上下 2 線間のまま。
 - [ ] **C32**（第1020・ピアノの左手の音域）: Compose with AI で「かっこいいピアノの曲を作って」→ 開いた曲の Range パネルで左手の tessitura が C2〜C4 あたり（E1〜G2 のような低さでない）。出力チャネルで左手が低いと直しが走ったときは "far below a pianist's left hand" の指摘が見える。
+- [ ] **C33**（第1021・作曲家の prompt）: Compose with AI で「かっこいいピアノの曲を作って」→ ① 出力パネル *Lily# AI Exchange* に system（文法は長さだけ）・user・reply が全文で出る・reply は `<plan>` → `<note>` → `<file>` の順 ② 開いた曲が 32 小節前後・最後は主調の主和音で終わる・section ごとにテンポが変わらない ③ 曲の前書き `// The AI:` に `<plan>` の中身が出ない。
 
 ## 4. §2 R13 ⒝ — 差分頁の配信（実機未確認・第404）
 

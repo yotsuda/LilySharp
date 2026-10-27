@@ -143,6 +143,30 @@ describe('a composed piece\'s preface', () => {
     });
 });
 
+// Owner's report 2026-10-27: the same model writes a fair piece asked in a chat, a poor one asked
+// from VS Code. A composer is told it is one, plans before it writes, and is shown no piece to copy;
+// what it is sent and answers is logged word for word.
+describe('the composer\'s prompt', () => {
+    const transform = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'aiTransform.ts'), 'utf8');
+    it('casts the model as a composer, not a transformer of fragments, when it composes', () => {
+        assert.match(transform, /content: compose \? composeSystemPrompt\(grammar\) : systemPrompt\(grammar\)/);
+        assert.match(transform, /'You are a composer\. You write a complete new piece of music/);
+        assert.match(transform, /none of them is a model of a piece\\'s length, form or style/);
+    });
+    it('has it plan the piece where the musician does not see it, then the note, then the file', () => {
+        assert.match(transform, /'1\. <plan> … <\/plan> — your working notes; the musician never sees them\./);
+        assert.match(transform, /unless the request says\s*'\s*\+?\s*'?\s*otherwise a piece runs 32 to 64 bars|otherwise a piece runs 32 to 64 bars/);
+        assert.match(transform, /return 'Reply with <plan>…<\/plan>, <note>…<\/note> and the whole piece in <file>…<\/file>';/);
+    });
+    it('names each part\'s bare c in absolute octaves', () => {
+        assert.match(transform, /C3 for `piano-left`, `viola`, `cello`/);
+    });
+    it('logs every message sent and every reply, the grammar left out', () => {
+        assert.match(transform, /logged = logExchange\(chat\.label, grammar, messages, logged\);\s*const raw = await chat\.send\(messages, token\);\s*logReply\(raw\);/);
+        assert.match(transform, /createOutputChannel\('Lily# AI Exchange'\)/);
+    });
+});
+
 describe('a revision is of the candidate', () => {
     const transform = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'aiTransform.ts'), 'utf8');
 

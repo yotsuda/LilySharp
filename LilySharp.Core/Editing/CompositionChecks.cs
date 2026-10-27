@@ -180,6 +180,36 @@ public static class CompositionChecks
                     + (preset ? " In `instrument piano-right` (absolute octaves) a bare `c` is C4: C5 is `c'`, C6 `c''`." : ""));
         }
 
+        // The length and the ending (owner's report 2026-10-27: the composed piano piece was 8 bars, two
+        // sections of four, and its end "unnatural" — it began in E minor and stopped in G major).
+        var barStarts = midi.BarTicks.ToList();
+        // A chords row's voicings are the player's, not the piece's bass: left out, as above.
+        var pitched = midi.Tracks.SelectMany(t => t.Notes.Where(n => n.Channel != 9
+            && !(n.Part ?? t.Name).EndsWith(" (chords)", System.StringComparison.Ordinal))).ToList();
+        int lastTick = pitched.Count == 0 ? 0 : pitched.Max(n => n.StartTick + n.DurationTicks);
+        // The first bar, and every bar that starts before the music ends.
+        int barCount = 1 + barStarts.Count(b => b > 0 && b < lastTick);
+        if (pitched.Count > 0 && barCount < ShortestPiece)
+            findings.Add($"The piece is {barCount} bars long: unless a short piece was asked for, give it the length its form needs — "
+                + "32 to 64 bars, in phrases of 4 and 8 bars, each closing on a cadence.");
+        var keys = System.Text.RegularExpressions.Regex.Matches(source,
+            @"^[ \t]*key[ \t]+([a-g](?:isis|eses|is|es|s)?)[ \t]+(major|minor)\b", System.Text.RegularExpressions.RegexOptions.Multiline);
+        if (keys.Count > 0 && pitched.Count > 0)
+        {
+            var (home, end) = (keys[0], keys[^1]);
+            int homeTonic = PitchClass(home.Groups[1].Value), endTonic = PitchClass(end.Groups[1].Value);
+            string KeyName(System.Text.RegularExpressions.Match k) => $"{PitchClassName(PitchClass(k.Groups[1].Value))} {k.Groups[2].Value}";
+            if (homeTonic != endTonic || home.Groups[2].Value != end.Groups[2].Value)
+                findings.Add($"The piece begins in {KeyName(home)} and ends in {KeyName(end)}: come back to the home key for the last "
+                    + "section, and close there.");
+            // The lowest note sounding at the last onset: the final chord's bass.
+            int lastOnset = pitched.Max(n => n.StartTick);
+            int bass = pitched.Where(n => n.StartTick <= lastOnset && n.StartTick + n.DurationTicks > lastOnset).Min(n => n.Pitch);
+            if ((bass % 12 + 12) % 12 != endTonic)
+                findings.Add($"The piece ends over {PitchClassName(bass)}, not its tonic {PitchClassName(endTonic)}: close with a cadence "
+                    + $"(V–I) on the tonic chord, held through the last bar, the bass on {PitchClassName(endTonic)}.");
+        }
+
         // Every part in the same rhythm, bar after bar.
         var bars = midi.BarTicks.ToList();
         if (byPart.Count >= 3 && bars.Count >= 4)
@@ -206,6 +236,22 @@ public static class CompositionChecks
     // The middle of a piano hand's sounding time (MIDI) past which the hand is out of its usual
     // register: a left hand whose middle is under F2, a right hand whose middle is over D6.
     private const int LeftHandLowestMiddle = 41, RightHandHighestMiddle = 86;
+
+    // Under this many bars a piece is a sketch, not a piece (16: two 8-bar phrases).
+    private const int ShortestPiece = 16;
+
+    private static readonly string[] PitchClassNames = ["C", "C♯", "D", "E♭", "E", "F", "F♯", "G", "A♭", "A", "B♭", "B"];
+
+    private static string PitchClassName(int pitch) => PitchClassNames[(pitch % 12 + 12) % 12];
+
+    /// <summary>The pitch class of a note name (<c>fis</c>, <c>bes</c>, <c>es</c>), 0 = C.</summary>
+    private static int PitchClass(string name)
+    {
+        int step = name[0] switch { 'c' => 0, 'd' => 2, 'e' => 4, 'f' => 5, 'g' => 7, 'a' => 9, _ => 11 };
+        string suffix = name[1..];
+        int alter = suffix switch { "is" => 1, "isis" => 2, "es" or "s" => -1, "eses" => -2, _ => 0 };
+        return ((step + alter) % 12 + 12) % 12;
+    }
 
     /// <summary>The part's <c>instrument</c>, lower case; empty when it names none. A hyphenated
     /// preset is three tokens (word, minus, word), joined back into one word.</summary>
