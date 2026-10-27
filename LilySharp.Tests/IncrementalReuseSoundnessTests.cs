@@ -372,7 +372,7 @@ public class IncrementalReuseSoundnessTests
         session.Render();
 
         // eligible -> ineligible: add an override.
-        var add = Replace(Plain, "c4 d e f", "override Stem.length = 10 c4 d e f");
+        var add = Replace(Plain, "c'4 d e f", "override Stem.length = 10 c'4 d e f");
         var incAdd = Norm(session.Edit(add));
         Assert.Equal(Full(session.Tree.Text), incAdd);
 
@@ -387,7 +387,7 @@ public class IncrementalReuseSoundnessTests
         key c major
         part melody { clef treble }
         phrase mel {
-          c4 d e f | g4 a b c | d4 e f g | a4 b c d |
+          c'4 d e f | g4 a b c | d4 e f g | a4 b c d |
           c4 d e f | g4 a b c | d4 e f g | a4 b c d |
           c4 d e f | g4 a b c | d4 e f g | a4 b c d |
           c4 d e f | g4 a b c | d4 e f g | a4 b c d |

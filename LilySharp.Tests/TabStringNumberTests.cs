@@ -112,7 +112,7 @@ public sealed class TabStringNumberTests
     [Fact]
     public void AFlatThenOpenGThenFThenEFlat_KeepsTheEFlatInTheFirstPosition()
     {
-        var bars = BassTabFrets("aes'4 g8 g f f ees4 | bes c8 c d f ees4 |");
+        var bars = BassTabFrets("aes4 g8 g f f ees4 | bes c8 c d f ees4 |");
 
         // aes g g f f ees
         Assert.Equal(new (int?, int)[] { (1, 1), (1, 0), (1, 0), (2, 3), (2, 3), (2, 1) }, bars[0]);
@@ -131,7 +131,7 @@ public sealed class TabStringNumberTests
         // D then A: the A string's 5th, then the E string's 5th ("I often play it so").
         Assert.Equal(new (int?, int)[] { (3, 5), (4, 5) }, BassTabFrets("d4 a r2 |")[0]);
         // A then E: the E string's 5th, then the open E.
-        Assert.Equal(new (int?, int)[] { (4, 5), (4, 0) }, BassTabFrets("a4 e r2 |")[0]);
+        Assert.Equal(new (int?, int)[] { (4, 5), (4, 0) }, BassTabFrets("a,4 e r2 |")[0]);
         // (The open G then the F stopped on the 2nd string — the finger on the F mutes the G —
         // is AFlatThenOpenGThenFThenEFlat_KeepsTheEFlatInTheFirstPosition's first bar.)
     }
@@ -165,7 +165,7 @@ public sealed class TabStringNumberTests
     [Fact]
     public void ALeapOfAnOctaveFreesTheHand()
     {
-        var bars = BassTabFrets("a'4\\4 a, b r |");
+        var bars = BassTabFrets("a4\\4 a, b r |");
         Assert.Equal(new (int?, int)[] { (4, 17), (3, 0), (3, 2) }, bars[0]);
     }
 
@@ -181,7 +181,7 @@ public sealed class TabStringNumberTests
     [Fact]
     public void ABarOfRestsFreesTheHand()
     {
-        Assert.Equal(new (int?, int)[] { (3, 7) }, BassTabFrets("a'4\\4 r r r | r1 | e r r r |")[2]);
+        Assert.Equal(new (int?, int)[] { (3, 7) }, BassTabFrets("a4\\4 r r r | r1 | e r r r |")[2]);
     }
 
     /// <summary>
@@ -196,9 +196,9 @@ public sealed class TabStringNumberTests
     [Fact]
     public void ASlurDoesNotKeepTheString_ATieDoes()
     {
-        Assert.Equal(new (int?, int)[] { (3, 12), (2, 10) }, BassTabFrets("a'4\\3 c r r |")[0]);
-        Assert.Equal(new (int?, int)[] { (3, 12), (2, 10) }, BassTabFrets("a'4\\3( c) r r |")[0]);
-        Assert.Equal(new (int?, int)[] { (3, 12), (3, 12) }, BassTabFrets("a'4\\3~ a r r |")[0]);
+        Assert.Equal(new (int?, int)[] { (3, 12), (2, 10) }, BassTabFrets("a4\\3 c r r |")[0]);
+        Assert.Equal(new (int?, int)[] { (3, 12), (2, 10) }, BassTabFrets("a4\\3( c) r r |")[0]);
+        Assert.Equal(new (int?, int)[] { (3, 12), (3, 12) }, BassTabFrets("a4\\3~ a r r |")[0]);
     }
 
     /// <summary>
@@ -213,8 +213,8 @@ public sealed class TabStringNumberTests
     [Fact]
     public void AFallFreesTheHand()
     {
-        Assert.Equal(new (int?, int)[] { (3, 12), (4, 12) }, BassTabFrets("a'2\\3 e |")[0]);
-        Assert.Equal(new (int?, int)[] { (3, 12), (2, 2) }, BassTabFrets("a'2\\3@fall e |")[0]);
+        Assert.Equal(new (int?, int)[] { (3, 12), (4, 12) }, BassTabFrets("a2\\3 e |")[0]);
+        Assert.Equal(new (int?, int)[] { (3, 12), (2, 2) }, BassTabFrets("a2\\3@fall e |")[0]);
     }
 
     /// <summary>
@@ -236,12 +236,13 @@ public sealed class TabStringNumberTests
     /// <remarks>
     /// A2 pinned to the D string is its 7th fret — above <c>Tunings.LowPositionTop</c>. The G is
     /// the D string's 5th under the same hand, and the E2 after it the A string's 7th. Written
-    /// in <c>tab-fret.lys</c>'s octave, where <c>aes'</c> sounds A♭2.
+    /// in <c>tab-fret.lys</c>'s octave, where a frame-opening <c>aes</c> sounds A♭2 (from F3 since
+    /// the owner's decision 2026-10-28; it was <c>aes'</c> from the bass preset's old C3).
     /// </remarks>
     [Fact]
     public void AnOpenString_IsNotUsedAboveLowPosition()
     {
-        var bars = BassTabFrets("a'4\\2 g e r |");
+        var bars = BassTabFrets("a4\\2 g e r |");
         Assert.Equal(new (int?, int)[] { (2, 7), (2, 5), (3, 7) }, bars[0]);
     }
 

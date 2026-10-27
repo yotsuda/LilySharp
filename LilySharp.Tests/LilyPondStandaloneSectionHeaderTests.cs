@@ -97,7 +97,7 @@ public class LilyPondStandaloneSectionHeaderTests
     [InlineData(GroupedBySectionBefore)]
     [InlineData(GroupedBySectionAfter)]
     public void TheSectionsMusicReachesTheTwin(string book)
-        => Assert.Contains("c'4 c c c |", Export(book + Tail));
+        => Assert.Contains("c''4 c c c |", Export(book + Tail));
 
     [Theory]
     [InlineData(HeaderBefore)]
@@ -115,7 +115,7 @@ public class LilyPondStandaloneSectionHeaderTests
         // predicate that turned headers away by turning away every section without a cell
         // would silently empty every book written this way (35 of the fixtures then).
         var ly = Export("time 4/4\npart m { clef treble }\nsection A { c''4 c c c | }\n" + Tail);
-        Assert.Contains("c'4 c c c |", ly);
+        Assert.Contains("c''4 c c c |", ly);
     }
 
     [Fact]
@@ -143,7 +143,7 @@ public class LilyPondStandaloneSectionHeaderTests
             d => d.Code == DiagnosticCodes.SectionPlaysNothing));
 
         var ly = Export(book);
-        Assert.Contains("f'4 f f f |", ly);
+        Assert.Contains("f''4 f f f |", ly);
         Assert.DoesNotContain("\\key g \\major", ly);
     }
 }

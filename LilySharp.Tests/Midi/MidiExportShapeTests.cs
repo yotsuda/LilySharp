@@ -123,7 +123,7 @@ public class MidiExportShapeTests
     private static string PhraseBook(string reference, bool absolute) => $$"""
         {{(absolute ? "octave absolute" : "")}}
         part m { clef treble }
-        phrase Lick { c4 d e f }
+        phrase Lick { {{(absolute ? "c'4 d' e' f'" : "c'4 d e f")}} }
         section A { m { {{reference}} | } }
         form { A }
         score { staff m }

@@ -229,7 +229,7 @@ public class CommonShortestDurationTests
             part sax { }
             part vocal { }
             section Chorus {
-              sax   { c4 d e f | g2 g | a4 g f e | c1 | }
+              sax   { c'4 d e f | g2 g | a4 g f e | c1 | }
               vocal { g8 g a4 a8 a a4 | g2 f | e4 f g2 | c1 | }
               lyrics en sings vocal { a b a b a b | a b | a b a | b | }
             }

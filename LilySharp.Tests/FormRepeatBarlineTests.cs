@@ -102,8 +102,8 @@ public sealed class FormRepeatBarlineTests
         // Both sections are INSIDE the body, in order.
         int open = with.IndexOf("\\repeat volta 2 {", System.StringComparison.Ordinal);
         int close = with.IndexOf("}", with.IndexOf("d1", open, System.StringComparison.Ordinal), System.StringComparison.Ordinal);
-        Assert.True(open < with.IndexOf("c1", System.StringComparison.Ordinal)
-            && with.IndexOf("c1", System.StringComparison.Ordinal) < with.IndexOf("d1", System.StringComparison.Ordinal)
+        Assert.True(open < with.IndexOf("c'1", System.StringComparison.Ordinal)
+            && with.IndexOf("c'1", System.StringComparison.Ordinal) < with.IndexOf("d1", System.StringComparison.Ordinal)
             && with.IndexOf("d1", System.StringComparison.Ordinal) < close, with);
         Assert.DoesNotContain("\\bar \":|.\"", with);
         Assert.Contains("printInitialRepeatBar = ##f", with);
@@ -144,7 +144,7 @@ public sealed class FormRepeatBarlineTests
         Assert.Equal(2, Occurrences(ly, "\\repeat volta 2 {"));
         int first = ly.IndexOf("\\repeat volta 2 {", System.StringComparison.Ordinal);
         int second = ly.IndexOf("\\repeat volta 2 {", first + 1, System.StringComparison.Ordinal);
-        int c1 = ly.IndexOf("c1", System.StringComparison.Ordinal);
+        int c1 = ly.IndexOf("c'1", System.StringComparison.Ordinal);
         int d1 = ly.IndexOf("d1", System.StringComparison.Ordinal);
         Assert.True(first < c1 && c1 < second && second < d1, ly);
         Assert.DoesNotContain("\\bar \":|", ly);

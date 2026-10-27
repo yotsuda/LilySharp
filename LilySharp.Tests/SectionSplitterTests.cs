@@ -53,7 +53,7 @@ public class SectionSplitterTests
           }
           section B {
             time 2/2
-            e4 d c b | a1 |
+            e'4 d c b | a1 |
           }
         }
         part vn2 {
@@ -198,7 +198,7 @@ public class SectionSplitterTests
             Split A in vn2, va and vc after bar 2 → A, B.
             Also split chords prog and lyrics words.
             The form: A → A B.
-            At the cuts: octave marks on 3 note(s); a written duration on 1 note(s); restated time 2/2 (vn2 B), key d major (vn2 B), time 2/2 (va B), time 2/2 (vc B).
+            At the cuts: octave marks on 2 note(s); a written duration on 1 note(s); restated time 2/2 (vn2 B), key d major (vn2 B), time 2/2 (va B), time 2/2 (vc B).
             Checked: vn2, va, vc, chords prog and lyrics words sound and count exactly as before, no error is new, and the length warning on A is gone.
             Heard at other times now that the sections are no longer padded to the longest part (their notes are not changed): vn1.
             """.ReplaceLineEndings("\n"), result.Plan);
@@ -232,7 +232,7 @@ public class SectionSplitterTests
             """;
         var result = Split(src);
         Assert.True(result.NewText != null, result.Error);
-        Assert.Contains("section A { e'4 f g a | time 3/4 b2 b4 | }\n  section B { time 3/4 c'2. | d2. | }", result.NewText);
+        Assert.Contains("section A { e'4 f g a | time 3/4 b2 b4 | }\n  section B { time 3/4 c''2. | d2. | }", result.NewText);
         Assert.Contains("form { A B }", result.NewText);
         AssertSoundsTheSame(src, result.NewText!, "ob");
     }
@@ -596,7 +596,7 @@ public class SectionSplitterTests
         var result = Split(Sequence, "B");
         Assert.True(result.NewText != null, result.Error);
         Assert.Contains("Split A in db after bars 1, 2 → A, B, C.", result.Plan);
-        Assert.Contains("section B { d''1( | }\n  section C { e'1) | }", Lf(result.NewText!));
+        Assert.Contains("section B { d'1( | }\n  section C { e'1) | }", Lf(result.NewText!));
         AssertSoundsTheSame(Sequence, result.NewText!, "db");
         Assert.Empty(LengthWarnings(result.NewText!));
         Assert.DoesNotContain(SemanticValidation.Run(SyntaxTree.Parse(result.NewText!)),
@@ -621,10 +621,10 @@ public class SectionSplitterTests
     public void TheLongPartAlone_IsSplit_WithItsTieAndSlurCarried()
     {
         string now = Lf(Sequence).Replace("section B { f'1 | g1 | }", "section B { f'1 | }\n  section C { g1 | }")
-            .Replace("section A { c''1 | d1( | e1) | }", "section A { c''1~ | c1( | d1) | }");
+            .Replace("section A { c'1 | d1( | e1) | }", "section A { c'1~ | c1( | d1) | }");
         var result = Split(now, "A");
         Assert.True(result.NewText != null, result.Error);
-        Assert.Contains("section A { c''1~ | }\n  section B { c'1( | }\n  section C { d'1) | }", Lf(result.NewText!));
+        Assert.Contains("section A { c'1~ | }\n  section B { c'1( | }\n  section C { d'1) | }", Lf(result.NewText!));
         AssertSoundsTheSame(now, result.NewText!, "db");
         Assert.Equal(result.NewText, Split(now, "B").NewText);
         Assert.DoesNotContain(SemanticValidation.Run(SyntaxTree.Parse(result.NewText!)),
@@ -722,7 +722,7 @@ public class SectionSplitterTests
             """;
         var result = Split(source);
         Assert.True(result.NewText != null, result.Error);
-        Assert.Contains("R | d'8 e'", result.NewText);
+        Assert.Contains("R | d''8 e''", result.NewText);
         AssertSoundsTheSame(source, result.NewText!, "vn2");
         Assert.Empty(SemanticValidation.Run(SyntaxTree.Parse(result.NewText!)));
     }

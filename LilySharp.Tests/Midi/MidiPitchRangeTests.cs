@@ -63,14 +63,14 @@ public class MidiPitchRangeTests
     [Fact]
     public void APitchAboveTheKeyboard_SoundsAtTheEdge_AndIsReported()
     {
-        // c'''''''''  = octave 13 = written key 168. There is no such MIDI key.
-        var (notes, warnings) = Export("c'''''''''4 c4 |");
+        // c''''''''''  = octave 13 = written key 168. There is no such MIDI key.
+        var (notes, warnings) = Export("c''''''''''4 c'4 |");
 
         // It still SOUNDS — pinning is not dropping, and a silent note would be a
         // different defect wearing the same count.
         Assert.Equal(2, notes.Count);
         Assert.Equal(127, notes[0].Pitch);
-        Assert.Equal(60, notes[1].Pitch);  // bare c is C4 in absolute mode
+        Assert.Equal(60, notes[1].Pitch);  // c' is C4 in absolute mode (bare c is C3, owner's decision 2026-10-28)
 
         Assert.Single(warnings);
         Assert.Contains("168", warnings[0]);   // what the source asked for
@@ -89,7 +89,7 @@ public class MidiPitchRangeTests
     [Fact]
     public void EveryOutOfRangeNote_IsReportedOnce_NotJustTheFirst()
     {
-        var (_, warnings) = Export("c'''''''''4 d''''''''' c' e''''''''' |");
+        var (_, warnings) = Export("c''''''''''4 d'''''''''' c'' e'''''''''' |");
         Assert.Equal(3, warnings.Count);
     }
 
@@ -98,7 +98,7 @@ public class MidiPitchRangeTests
     {
         // <c e>,,,, is four octaves down. Written: 168 and 172, so the chord sounds 120
         // and 124 — both inside the keyboard, so nothing is pinned and nothing is said.
-        var (notes, warnings) = Export("<c''''''''' e'''''''''>,,,,1 |");
+        var (notes, warnings) = Export("<c'''''''''' e''''''''''>,,,,1 |");
 
         Assert.Equal(new[] { 120, 124 }, notes.Select(n => n.Pitch));
         Assert.Empty(warnings);

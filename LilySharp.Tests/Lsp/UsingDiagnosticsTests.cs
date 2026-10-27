@@ -107,7 +107,7 @@ public sealed class UsingDiagnosticsTests
         // was no out-of-range diagnostic to filter, so it was asserting about an empty set
         // (RULES §5.0 probe trap 21). The first Assert.Contains is what makes the second
         // one mean something.
-        var overfull = Parts.Replace("c4 d e f |", "c4 d e f g |");
+        var overfull = Parts.Replace("c'4 d e f |", "c'4 d e f g |");
         var files = new Dictionary<string, string> { ["parts.lys"] = overfull };
 
         var (expanded, _) = LilySharpLanguageServer.ExpandUsings(

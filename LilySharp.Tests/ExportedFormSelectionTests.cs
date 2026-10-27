@@ -73,9 +73,9 @@ public class ExportedFormSelectionTests
         var second = new MidiExporter { Form = FormNamed(tree, "encore") }.Export(tree)
             .Tracks.SelectMany(t => t.Notes).Select(n => n.Pitch).ToArray();
 
-        // Four C4s against three G3s: a bare `g` opening a section reads from the part's
-        // anchor (C4) and the NEAREST g is the one below it, which is the language's rule
-        // and not a slip in the fixture.
+        // Four C4s against three G3s: a bare `g` opening a section reads from the frame's
+        // F3 (owner's decision 2026-10-28) and the NEAREST g is the one above it, which is the
+        // language's rule and not a slip in the fixture. The twin, anchored on c, writes g'.
         Assert.Equal(new[] { 60, 60, 60, 60 }, first);
         Assert.Equal(new[] { 55, 55, 55 }, second);
     }
@@ -106,10 +106,10 @@ public class ExportedFormSelectionTests
 
         // The twin spells pitches, so the movements are told apart by what they contain and
         // by what they must NOT: an unfiltered export would carry both.
-        Assert.Contains("c4 c c c", first);
-        Assert.DoesNotContain("g2 g", first);
-        Assert.Contains("g2 g", second);
-        Assert.DoesNotContain("c4 c c c", second);
+        Assert.Contains("c'4 c c c", first);
+        Assert.DoesNotContain("g'2 g", first);
+        Assert.Contains("g'2 g", second);
+        Assert.DoesNotContain("c'4 c c c", second);
     }
 
     /// <summary>
@@ -153,8 +153,8 @@ public class ExportedFormSelectionTests
 
         string twin = new LilyPondExporter { Score = encore.Declaration }.Export(tree);
 
-        Assert.Contains("g2 g", twin);
-        Assert.DoesNotContain("c4 c c c", twin);
+        Assert.Contains("g'2 g", twin);
+        Assert.DoesNotContain("c'4 c c c", twin);
     }
 
     /// <summary>

@@ -47,7 +47,7 @@ public class TupletNumberTests
     public void Tuplet_HasNumberText()
     {
         // \tuplet 3/2 { c8 d e } produces a triplet bracket with number "3".
-        var layout = BuildLayout("tuplet 3/2 { c8 d e } |");
+        var layout = BuildLayout("tuplet 3/2 { c'8 d e } |");
         Assert.NotEmpty(layout.TupletBracketLayouts);
         var bracket = layout.TupletBracketLayouts[0];
         Assert.Equal("3", bracket.NumberText);
@@ -56,7 +56,7 @@ public class TupletNumberTests
     [Fact]
     public void TupletNumberAnchor_AtBracketMidpoint()
     {
-        var layout = BuildLayout("tuplet 3/2 { c8 d e } |");
+        var layout = BuildLayout("tuplet 3/2 { c'8 d e } |");
         var bracket = layout.TupletBracketLayouts[0];
         // NumberX/Y should be midway between the bracket's start and end.
         Assert.Equal((bracket.StartX + bracket.EndX) / 2.0, bracket.NumberX, precision: 4);
@@ -67,7 +67,7 @@ public class TupletNumberTests
     public void TupletNumberY_TracksBracketSlope()
     {
         // Even on a flat bracket the midpoint formula returns the average Y.
-        var layout = BuildLayout("tuplet 3/2 { c8 d e } |");
+        var layout = BuildLayout("tuplet 3/2 { c'8 d e } |");
         var bracket = layout.TupletBracketLayouts[0];
         // For a flat bracket StartYUp == EndYUp ⇒ NumberYUp equals StartYUp.
         if (System.Math.Abs(bracket.StartYUp - bracket.EndYUp) < 1e-9)
@@ -77,7 +77,7 @@ public class TupletNumberTests
     [Fact]
     public void Quintuplet_NumberTextIsFive()
     {
-        var layout = BuildLayout("tuplet 5/4 { c16 d e f g } |");
+        var layout = BuildLayout("tuplet 5/4 { c'16 d e f g } |");
         Assert.NotEmpty(layout.TupletBracketLayouts);
         Assert.Equal("5", layout.TupletBracketLayouts[0].NumberText);
     }
@@ -105,7 +105,7 @@ public class TupletNumberTests
     /// </para>
     /// </remarks>
     [Theory]
-    [InlineData("tuplet 3/2 { c8 d e } |")]   // stems up — number above the beam
+    [InlineData("tuplet 3/2 { c'8 d e } |")]   // stems up — number above the beam
     [InlineData("tuplet 3/2 { b8 c' b } |")]  // stems down — number below the beam
     public void BeamedTupletNumber_CentresOnTheInvisibleBracket(string source)
     {
@@ -134,7 +134,7 @@ public class TupletNumberTests
     [Fact]
     public void DrawnTupletBracket_HugsTheShortenedQuarterStem()
     {
-        var layout = BuildLayout("octave absolute\ntuplet 3/2 { b4 c' b } |");
+        var layout = BuildLayout("octave absolute\ntuplet 3/2 { b'4 c'' b' } |");
         var bracket = Assert.Single(layout.TupletBracketLayouts);
         Assert.True(bracket.ShowBracket);
         Assert.False(bracket.IsStemUp);
@@ -158,7 +158,7 @@ public class TupletNumberTests
     [Fact]
     public void DrawnTupletBracket_OverAPartialBeam_ReadsTheQuantedBeamFace()
     {
-        var layout = BuildLayout("octave absolute\ntuplet 3/2 { c'8[ b] c' } |");
+        var layout = BuildLayout("octave absolute\ntuplet 3/2 { c''8[ b'] c'' } |");
         var bracket = Assert.Single(layout.TupletBracketLayouts);
         Assert.True(bracket.ShowBracket); // the third eighth is flagged, not beamed
         var beam = Assert.Single(layout.BeamLayouts);

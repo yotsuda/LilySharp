@@ -78,8 +78,8 @@ public class PitchedRestOutputsTests
 
         // ⑵ the twin: LilyPond's own spelling of the same thing
         string ly = new LilyPondExporter().Export(tree);
-        Assert.Contains("a'4\\rest", ly);
-        Assert.Contains("g'4\\rest", ly);
+        Assert.Contains("a''4\\rest", ly);
+        Assert.Contains("g''4\\rest", ly);
 
         // ⑶ MusicXML: a <rest>, carrying the written pitch as its DISPLAY position
         var xml = new MusicXmlExporter().Export(tree).Parts[0].Measures[0].Notes;
@@ -140,8 +140,8 @@ public class PitchedRestOutputsTests
         // ⑴ the page: three heads for the three notes, none for the rest
         Assert.Equal(3, RenderedGeometry.Render(book).Noteheads.Count);
 
-        // ⑵ the twin (written in \fixed c', so Lily# `c' is LilyPond `c')
-        Assert.Contains("\\tuplet 3/2 { c'4 c4\\rest c'4 }", new LilyPondExporter().Export(tree));
+        // ⑵ the twin (written in \fixed c, so Lily# `c'' is LilyPond `c'')
+        Assert.Contains("\\tuplet 3/2 { c''4 c'4\\rest c''4 }", new LilyPondExporter().Export(tree));
 
         // ⑶ MusicXML: the tuplet's middle event is a rest displayed at C4
         var xml = new MusicXmlExporter().Export(tree).Parts[0].Measures[0].Notes;
@@ -166,13 +166,13 @@ public class PitchedRestOutputsTests
             octave absolute
             time 4/4
             part v { clef treble transpose d }
-            section S { v { a'4@rest r2. | } }
+            section S { v { a''4@rest r2. | } }
             form { ~S }
             score { staff v }
             """)).Parts[0].Measures[0].Notes;
 
         Assert.True(xml[0].IsRest && xml[0].RestHasDisplayPitch);
-        // `a'` is A5 in absolute mode, and c→d moves it a major second: B5.
+        // `a''` is A5 in absolute mode, and c→d moves it a major second: B5.
         Assert.Equal(("B", 5), (xml[0].Step, xml[0].Octave));
     }
 }

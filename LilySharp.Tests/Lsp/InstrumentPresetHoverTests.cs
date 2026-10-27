@@ -108,7 +108,9 @@ public class InstrumentPresetHoverTests
     public void AChromaticTransposer_NamesTheSoundingPitch()
     {
         string? hover = HoverAt(Book("instrument clarinet"), "clarinet");
-        Assert.Contains("- `transposition` — sounds 2 semitones lower: written C4 sounds B♭3", hover);
+        // No preset moves the anchor any more (owner's decision 2026-10-28): the clarinet's bare c
+        // is C3, as every part's, so the line names written C3.
+        Assert.Contains("- `transposition` — sounds 2 semitones lower: written C3 sounds B♭2", hover);
         Assert.DoesNotContain("tuning", hover);   // no strings to fret
     }
 

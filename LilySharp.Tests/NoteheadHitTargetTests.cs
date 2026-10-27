@@ -94,7 +94,7 @@ public class NoteheadHitTargetTests
         // character's offset, not the whitespace in front of it.
         const string src = "part m { clef treble section A { c''1 | d'1 } }\n"
                          + "form { A }\nscore s { staff m }";
-        int barPos = src.IndexOf('|', src.IndexOf("c'1")); // the mid-measure '|'
+        int barPos = src.IndexOf('|', src.IndexOf("c''1")); // the mid-measure '|'
         var svg = SvgGenerator.Generate(SyntaxTree.Parse(src), SvgRenderOptions.Preview());
         Assert.Contains(barPos, ClickTargets(svg));
     }
