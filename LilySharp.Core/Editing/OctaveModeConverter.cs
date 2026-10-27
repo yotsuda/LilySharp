@@ -291,10 +291,11 @@ public static class OctaveModeConverter
     /// <summary>
     /// <paramref name="source"/> without its top-level <c>pitch concert</c>, each part written as
     /// its player reads it and sounding exactly as before: an octave-only transposer's notes
-    /// (a bass, a piccolo) move the octave it transposes by, the rest stay. Unchanged (no error)
-    /// when the file is not at concert pitch; refused when a part transposes by another interval
-    /// (a B♭ trumpet, an E♭ saxophone — their letters would have to be respelled in the player's
-    /// key, which this does not do) or says its own <c>pitch</c>.
+    /// (a bass, a piccolo) move the octave it transposes by, the rest stay. A part that transposes
+    /// by another interval (a B♭ trumpet, an E♭ saxophone — its letters would have to be
+    /// respelled in the player's key, which this does not do) keeps its letters and gets its own
+    /// <c>pitch concert</c>; a part that already says its own <c>pitch</c> is left alone.
+    /// Unchanged (no error) when the file is not at concert pitch.
     /// </summary>
     /// <remarks>
     /// For a piece the AI composed (owner's request 2026-10-28): it writes every part at the pitch
@@ -313,13 +314,23 @@ public static class OctaveModeConverter
         if (line == null)
             return new Result(source, null, 0);
         var shifts = new Dictionary<string, int>(StringComparer.Ordinal);   // part → octaves its notes move
+        // A part that transposes by another interval than octaves (a B♭ trumpet) keeps its letters
+        // and says so in its own header — `pitch concert`, which wins over the file's — so the
+        // line can still go (owner's decision 2026-10-28: a trumpet and a bass in one piece).
+        var keepConcert = new List<Edit>();
         foreach (var part in root.DescendantNodes<PartDeclarationSyntax>())
         {
             if (ConcertPitch.PartMode(part) != null)
-                return Fail($"Part {part.Name.Text} says its own pitch — the file keeps its pitch concert.");
+                continue;   // says its own, which the file's line never governed
             int t = PartHeaderDefaults.Read(part).TranspositionSemitones;
             if (t % 12 != 0)
-                return Fail($"Part {part.Name.Text} transposes by {t} semitones — the file keeps its pitch concert.");
+            {
+                int close = part.Span.End - 1;
+                keepConcert.Add(source[close] == '}'
+                    ? new Edit(close, close, (source[close - 1] == ' ' ? "" : " ") + "pitch concert ")
+                    : new Edit(part.Span.End, part.Span.End, " { pitch concert }"));
+                continue;
+            }
             shifts[part.Name.Text] = -t / 12;
         }
         var octaveShift = new Dictionary<int, int>();
@@ -334,7 +345,7 @@ public static class OctaveModeConverter
         while (start > 0 && source[start - 1] is ' ' or '\t') start--;
         if (end < source.Length && source[end] == '\r') end++;
         if (end < source.Length && source[end] == '\n') end++;
-        var result = Repin(source, Apply(source, [new Edit(start, end, "")]), octaveShift);
+        var result = Repin(source, Apply(source, [new Edit(start, end, ""), .. keepConcert]), octaveShift);
         if (result.NewText == null)
             return result;
         static string Sounds(string text) => string.Join(" ", new Midi.MidiExporter().Export(SyntaxTree.Parse(text)).Tracks
@@ -343,6 +354,70 @@ public static class OctaveModeConverter
             ? result
             : Fail("Without pitch concert the piece would sound otherwise — the file keeps it.");
     }
+
+    /// <summary>
+    /// The migration to LilyPond's octaves (owner's decision 2026-10-28): <paramref name="source"/>,
+    /// written under the old rules, re-marked so it sounds as it did. <paramref name="legacySounds"/>
+    /// is what each written pitch (by source position) sounded under the old rules, in time order;
+    /// <paramref name="legacySignature"/> the whole old performance (<see cref="SoundSignature"/>).
+    /// Each pitch moves the whole octaves between what it sounds now and what it sounded then,
+    /// through <see cref="Repin"/>; refused when a pitch would move by other than whole octaves,
+    /// by different amounts in different plays, or the result does not sound note for note as
+    /// before.
+    /// </summary>
+    public static Result MigrateFromLegacy(string source, IReadOnlyDictionary<int, IReadOnlyList<int>> legacySounds,
+        string legacySignature)
+    {
+        var tree = SyntaxTree.Parse(source);
+        if (tree.HasErrors)
+            return Fail("The file has syntax errors — no changes made.");
+        var now = new Midi.MidiExporter().Export(tree).Tracks.SelectMany(t => t.Notes)
+            .Where(n => n.SourcePos >= 0).GroupBy(n => n.SourcePos)
+            .ToDictionary(g => g.Key, g => g.OrderBy(n => n.StartTick).Select(n => n.Pitch).ToList());
+        var shift = new Dictionary<int, int>();
+        foreach (var (pos, then) in legacySounds)
+        {
+            if (!now.TryGetValue(pos, out var sounds) || sounds.Count != then.Count)
+                return Fail($"The note at {LineCol(source, pos)} plays a different number of times now — no changes made.");
+            int? octaves = null;
+            for (int i = 0; i < then.Count; i++)
+            {
+                int diff = then[i] - sounds[i];
+                if (diff % 12 != 0 || (octaves is { } o && o != diff / 12))
+                    return Fail($"The note at {LineCol(source, pos)} moved by other than one octave count — no changes made.");
+                octaves = diff / 12;
+            }
+            if (octaves is { } d && d != 0)
+                shift[pos] = d;
+        }
+        // A pitch that sounds no note of its own — a tie's continuation, merged into the note it
+        // continues — moves as the pitch before it does: in the old rules and the new alike it is
+        // that pitch's neighbour, written with the same relation to it.
+        int? last = null;
+        foreach (var pos in WrittenPitches(tree.GetRoot()).Keys)
+        {
+            if (legacySounds.ContainsKey(pos))
+                last = shift.GetValueOrDefault(pos);
+            else if (last is { } l && l != 0)
+                shift[pos] = l;
+        }
+        if (shift.Count == 0)
+            return SoundSignature(source) == legacySignature
+                ? new Result(source, null, 0)
+                : Fail("The file sounds otherwise now, and no pitch says by how much — no changes made.");
+        var result = Repin(source, source, shift);
+        if (result.NewText == null)
+            return result;
+        return SoundSignature(result.NewText) == legacySignature
+            ? result
+            : Fail("The re-marked file does not sound as it did — no changes made.");
+    }
+
+    /// <summary>Every note the file plays, as <c>tick:pitch</c> in time order — the comparison
+    /// <see cref="MigrateFromLegacy"/> makes against the old rules.</summary>
+    public static string SoundSignature(string source)
+        => string.Join(" ", new Midi.MidiExporter().Export(SyntaxTree.Parse(source)).Tracks.SelectMany(t => t.Notes)
+            .OrderBy(n => n.StartTick).ThenBy(n => n.Pitch).Select(n => $"{n.StartTick}:{n.Pitch}"));
 
     // The part block a pitch is written in, or null (a phrase body, a part's own header music).
     private static PartBlockSyntax? BlockOf(SyntaxNode node)

@@ -52,13 +52,20 @@ public class ConcertPitchRemovalTests
         Assert.Contains("<e, b, e>2", result.NewText);
     }
 
+    // Owner's decision 2026-10-28: a trumpet beside the bass keeps its letters, under its own
+    // `pitch concert`; the file's line goes and the bass is written as its player reads it.
     [Fact]
-    public void AChromaticTransposer_KeepsTheLine()
+    public void AChromaticTransposer_KeepsItsLettersUnderItsOwnPitchConcert()
     {
-        string text = Band("octave absolute", "e,,1 |", "part tp { instrument trumpet }\n");
+        string text = Band("octave absolute", "e,,1 |", "part tp { instrument trumpet }\n")
+            .Replace("  bass {", "  tp { c'2 d'2 | }\n  bass {").Replace("staff bass }", "staff bass  staff tp }");
         var result = OctaveModeConverter.WithoutConcertPitch(text);
-        Assert.Null(result.NewText);
-        Assert.Contains("transposes by -2 semitones", result.Error);
+        Assert.NotNull(result.NewText);
+        Assert.DoesNotContain("\npitch concert", result.NewText);
+        Assert.Contains("part tp { instrument trumpet pitch concert }", result.NewText);
+        Assert.Contains("tp { c'2 d'2 | }", result.NewText);
+        Assert.Contains("bass { e,1", result.NewText);
+        Assert.Equal(Sounds(text), Sounds(result.NewText!));
     }
 
     [Fact]

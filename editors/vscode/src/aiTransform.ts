@@ -820,8 +820,8 @@ async function drive(
             // cannot be done, the piece keeps the line.
             // …and without its `pitch concert` (owner's request 2026-10-28): the AI writes every part
             // as it sounds, and the piece opens as a musician writes it, each part as its player
-            // reads it — a bass an octave up. A piece with a B♭ trumpet or an E♭ saxophone keeps
-            // the line (its letters would have to be respelled in the player's key).
+            // reads it — a bass an octave up. A B♭ trumpet or an E♭ saxophone keeps its letters under
+            // a `pitch concert` of its own (they would have to be respelled in the player's key).
             type Converted = { Success: boolean; NewText: string | null; Error: string | null; Notes?: string | null };
             try {
                 let relative = await client.sendRequest<Converted>(
