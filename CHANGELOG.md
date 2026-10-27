@@ -52,6 +52,9 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Ask AI
 
+- `[language]` **The grammar for the AI has the instruments' ranges**: a table generated from the
+  range LYS1052 warns by (the written ends found by the compiler), with the rule to keep a part with an
+  `instrument` inside it. `[editor]` The candidate's head scrolls a long list.
 - `[editor]` **A composed piece opens in relative octaves**, converted by the server before it opens.
   `[lsp]` `lilysharp/convertOctaves` takes a `Text` in place of an open document.
 - `[editor]` **Ask Again revises the candidate shown** (it was answered against the file as it was

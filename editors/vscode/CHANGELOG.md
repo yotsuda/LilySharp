@@ -79,6 +79,12 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ### Ask AI
 
+- **The AI is told each instrument's range.** Ask AI and Compose with AI carry a table of every
+  instrument preset's range — as it sounds, and as written in that part — and the rule to keep every
+  note of a part with an `instrument` inside it (asked for guitar diagrams, the AI had written the
+  guitar down to C2, and the warnings filled the candidate's head).
+- **The candidate's head holds a long list.** Its words — the request, what is left to fix, the AI's
+  note — are held to a few lines and scroll for the rest, the After / Before buttons beside them.
 - **A composed piece opens in relative octaves.** Compose with AI… had the piece in `octave absolute`,
   as the AI writes it; it is now converted before it opens — by Lily#, not by the AI, the result
   compiled and every note compared — and left as it came only if it cannot be.

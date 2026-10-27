@@ -1376,6 +1376,10 @@ body { margin:0; padding:0; display:flex; flex-direction:column; height:100vh; o
 /* The AI's word on what it did (<note>, owner's request 2026-10-25). */
 .header .note { font-size:12.5px; margin-top:3px; opacity:0.9; }
 .header .spacer { flex:1; }
+/* The head's words — the request, what is left to fix, the AI's note — held to a few lines and
+   scrolled for the rest (owner's report 2026-10-27: a long list of the compiler's warnings
+   filled the panel). The buttons stay beside them. */
+.header .texts { flex:1; min-width:0; max-height:7.5em; overflow-y:auto; overflow-wrap:anywhere; padding-right:4px; }
 .toggle { display:flex; gap:4px; }
 .toggle button { padding:3px 10px; font-size:12px; }
 .toggle button.on { background: var(--vscode-button-background); color: var(--vscode-button-foreground); }
@@ -1443,12 +1447,11 @@ button:disabled { opacity:0.45; cursor:default; }
 </head>
 <body>
 <div class="header">
-  <div>
+  <div class="texts">
     <div class="cap">AI candidate — decide on the score · <span style="color:#2e9e43">■</span> changed</div>
     <div class="prompt">${escapeHtml(caption)}</div>
     ${note ? `<div class="note">💬 ${escapeHtml(note)}</div>` : ''}
   </div>
-  <div class="spacer"></div>
   <div class="toggle">
     <button id="tAfter" class="on">After</button>
     <button id="tBefore">Before</button>

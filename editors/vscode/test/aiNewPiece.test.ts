@@ -87,6 +87,21 @@ describe('a composed piece opens in relative octaves', () => {
     });
 });
 
+// Owner's report 2026-10-27: asked for guitar diagrams, the AI wrote under the guitar's range,
+// and the warnings filled the candidate's head.
+describe('the instruments\' ranges, and a head that holds a long list', () => {
+    const transform = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'aiTransform.ts'), 'utf8');
+    const grammar = fs.readFileSync(path.join(__dirname, '..', '..', '..', '..', 'docs', 'GRAMMAR_FOR_LLM.md'), 'utf8');
+    it('tells the AI each instrument\'s range, the guitar\'s among them, in the grammar every request carries', () => {
+        assert.match(grammar, /## Instrument ranges[\s\S]*keep\s+EVERY note inside the range/);
+        assert.match(grammar, /\| `guitar` \| E2–E6 \| `e,` – `e'''` \|/);
+    });
+    it('holds the candidate\'s head to a few lines, scrolled for the rest', () => {
+        assert.match(transform, /\.header \.texts \{ flex:1; min-width:0; max-height:7\.5em; overflow-y:auto;/);
+        assert.match(transform, /<div class="header">\s*<div class="texts">/);
+    });
+});
+
 describe('a revision is of the candidate', () => {
     const transform = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'aiTransform.ts'), 'utf8');
 

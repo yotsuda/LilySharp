@@ -641,6 +641,54 @@ voice sop { c'2 d } alt { e2 f }         // named lines — a `lyrics sop { … 
 keyword again (`voice { … } voice { … }`) is an error (LYS0019): that would be two spans one
 after the other, not two lines together. The LilyPond `<< … \\ … >>` form is not Lily#.
 
+## Instrument ranges
+
+A part with an `instrument` plays only inside that instrument's range, and every note outside
+it is warned (LYS1052: "this note sounds C2, below the range of the Guitar"). In such a part keep
+EVERY note inside the range below — move a note an octave, or give the line to another part,
+rather than write it out of range; a guitar part's accompaniment, a bass line written for the
+guitar, a melody lifted from the piano, all stay inside. "write" is the range as written in
+absolute octaves in that part (the instrument's own octave — a part's `octave N` moves it; a
+transposing instrument writes what its player reads).
+
+<!-- BEGIN instrument ranges: generated from InstrumentDefaults.SoundingRange by InstrumentRangePromptTests (LILYSHARP_UPDATE_DOCS=1) -->
+| instrument | sounds | write (absolute octaves) |
+|---|---|---|
+| `violin` | G3–A7 | `g,` – `a'''` |
+| `viola` | C3–E6 | `c` – `e'''` |
+| `cello` | C2–C6 | `c,` – `c'''` |
+| `bass` | E1–G4 | `e,` – `g''` |
+| `contrabass` | E1–G4 | `e,` – `g''` |
+| `contrabass5` | B0–G4 | `b,,` – `g''` |
+| `piano-right` | A0–C8 | `a,,,,` – `c''''` |
+| `piano-left` | A0–C8 | `a,,,` – `c'''''` |
+| `guitar` | E2–E6 | `e,` – `e'''` |
+| `bass5` | B0–G4 | `b,,` – `g''` |
+| `bass6` | B0–C5 | `b,,` – `c'''` |
+| `ukulele` | C4–C6 | `c` – `c''` |
+| `mandolin` | G3–B6 | `g,` – `b''` |
+| `banjo` | D3–D6 | `d` – `d'''` |
+| `flute` | C4–D7 | `c,` – `d''` |
+| `piccolo` | D5–C8 | `d,` – `c''` |
+| `oboe` | B♭3–A6 | `bes,` – `a''` |
+| `clarinet` | D3–B♭6 | `e,` – `c'''` |
+| `clarinet-a` | C♯3–A6 | `e,` – `c'''` |
+| `bassoon` | B♭1–E5 | `bes,,` – `e''` |
+| `soprano-sax` | A♭3–E6 | `bes,` – `fis''` |
+| `alto-sax` | C♯3–A♭5 | `bes,` – `f''` |
+| `tenor-sax` | A♭2–E5 | `bes,` – `fis''` |
+| `baritone-sax` | C2–A♭4 | `a,` – `f''` |
+| `trumpet` | E3–B♭5 | `fis,` – `c''` |
+| `trumpet-c` | F♯3–C6 | `fis,` – `c''` |
+| `horn` | B1–F5 | `fis,,` – `c''` |
+| `trombone` | E2–F5 | `e,` – `f''` |
+| `tuba` | D1–F4 | `d,` – `f''` |
+| `soprano` | C4–C6 | `c` – `c''` |
+| `alto` | F3–F5 | `f,` – `f'` |
+| `tenor` | C3–C5 | `c` – `c''` |
+| `voice-bass` | E2–E4 | `e,` – `e'` |
+<!-- END instrument ranges -->
+
 ## Drums (`clef percussion`)
 
 ```

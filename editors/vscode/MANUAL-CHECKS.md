@@ -242,6 +242,7 @@ edocs/HANDOFF.mde §2 R13 ⒝・OMR の提案 B1〜B6（e..\LilySharp-Omr\docs\r
 - [ ] **C21**（第1008・3 つのラベル／見えている行を渡す）: AI の案が来た行を編集 → Draft の上が「original / **your edit** / AI proposal」→ original を押すと元の小節（Accept は @todo を外すだけ）・AI proposal で AI の案・your edit で自分の編集に戻る（何度でも）。AI proposal を表示したまま Ask AI → 出力チャネルの依頼に「as an EARLIER ANSWER of yours proposed it」と前の案・original を表示したまま Ask AI → `<bar>` は元の読み（`<reader>` は無い）・your edit なら自分の編集。
 - [ ] **C22**（第1011・プレビューの右クリックのグループ・⚠️ package.json が変わった＝Reload Window を 2 回）: プレビューで和音の音符を右クリック → 区切り線は 2 本＝「Ask AI… / Select Chord / Select This Bar（/ Clear Selection / Edit Bars Beside the Scan）」「Play from Here（/ Stop Playback）」「Fit Width / Reset Zoom」の 3 群。元画像の右クリックも Edit Bars Beside the Scan と Fit Width・Reset Zoom の 2 群。
 - [ ] **C23**（第1012・作曲は relative で開く）: Compose with AI… → 開いた曲に `octave absolute` が無い（relative）・プレビューで鳴らすと音の高さがおかしくない。出力チャネル「Lily# AI」に「stays in absolute octaves」が出たら、変換できずに absolute のまま開いた（理由つき）。
+- [ ] **C24**（第1013・楽器の音域／候補の見出し）: ギターのパート（`instrument guitar`）のある曲で Ask AI「ギターのコード図を足して」→ 候補に「below the range of the Guitar」がほぼ出ない。警告や AI の言葉が長いとき、候補ペインの見出しは数行で止まり、スクロールバーで全部読める（After／Before のボタンは右に残る）。
 
 ## 4. §2 R13 ⒝ — 差分頁の配信（実機未確認・第404）
 

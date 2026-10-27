@@ -160,6 +160,14 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1011セッションの経緯
+
+### 1.1 第1011セッション（2026-10-27・YT-DELL2）
+
+第1010 と同じ会話の続き。`-Start p1011`（開始 HEAD `21dc92e43`・full **13380 / 0 / 2 / 13382**・第1009 を ARCHIVE へ）。作業場所は Lab `sessions/p1011/`。
+- **ユーザー「lys プレビューのポップアップメニューが必要以上にグループ分けされている。各グループにひとつずつ。適切に分けなおして」**: webview/context の 5 群（`0_ai`・`0_select`・`0_bar`・`1_playback`・`2_zoom`）を 3 群に＝`1_edit@1..5`（Ask AI…・Select Chord・Select This Bar・Clear Selection・Edit Bars Beside the Scan）・`2_playback@1..2`・`3_view@1..2`（scan view の Fit Width／Reset Zoom も）。網 `previewCore.test` 1 本（npm 490）。拡張 CHANGELOG・MANUAL-CHECKS C22。
+判定（2026-10-27・第1011 の終わり）: 次はユーザーの指示（C9〜C22）。
+
 ## 以下は第1010セッションの経緯
 
 ### 1.1 第1010セッション（2026-10-27・YT-DELL2）
