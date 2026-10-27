@@ -989,7 +989,11 @@ function composeSystemPrompt(grammar: string, modelName?: string): string {
         // high, went with the anchors themselves.
         '- Write in ABSOLUTE octaves: `octave absolute` at the top of the file, so every pitch says where it sounds.',
         '  The octaves are LilyPond\'s, in every part and for every instrument: `c` = C3, `c\'` = middle C (C4),',
-        '  `c\'\'` = C5, `c,` = C2. A guitar (treble_8) is written as it sounds; a bass as its player reads it.',
+        '  `c\'\'` = C5, `c,` = C2. A guitar (treble_8) is written as it sounds. A bass (`instrument bass`, `contrabass`) is',
+        // A bass line is planned in sounding pitches, and the AI wrote it so — an octave under the
+        // page a bass is written on (owner's trial 2026-10-28); octave 4 lets the sounding names stand.
+        '  written an octave above where it sounds: give its part `octave 4` (`part bass { instrument bass octave 4 }`)',
+        '  and write each note by the pitch it SOUNDS — the low E string is `e,,` (E1), the open A `a,,` (A1).',
         '- Name the parts as a score prints them, by the instrument. A piece for piano alone names no part; a piano',
         '  in an ensemble is named once, on its upper part (`"Piano" "Pno."`). Never "Right hand", "L.H.", 右手, 左手.',
         '- Before you reply, go through the piece bar by bar: every bar of every part fills the meter, the parts',

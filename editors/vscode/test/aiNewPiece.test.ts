@@ -115,8 +115,12 @@ describe('the instruments\' ranges, and a head that holds a long list', () => {
         assert.match(grammar, /it\s+does NOT move the octaves, which are LilyPond's in every part/);
         assert.match(grammar, /part leftHand  \{ instrument piano-left \}/);
         assert.match(grammar, /part bass \{ instrument bass \}\s+\/\/ added/);
-        // No example writes them together (the rule's own counter-example aside).
-        assert.doesNotMatch(grammar.replace(/not `\{ instrument cello clef bass/, ''), /instrument \w[\w-]* (clef|octave) |(clef \w+|octave \d) instrument /);
+        // No example writes a clef beside it (the rule's own counter-example aside); the one octave
+        // written beside a preset is a bass's `octave 4`, which lets it be written as it sounds
+        // (owner's trial 2026-10-28).
+        assert.doesNotMatch(grammar.replace(/not `\{ instrument cello clef bass/, ''), /instrument \w[\w-]* clef |clef \w+ instrument /);
+        assert.doesNotMatch(grammar.replace(/instrument (bass|contrabass) octave 4/g, ''), /instrument \w[\w-]* octave |octave \d instrument /);
+        assert.match(grammar, /give the part `octave 4` \(`part bass \{ instrument bass octave 4 \}`\)/);
     });
     it('holds the candidate\'s head to a few lines, scrolled for the rest', () => {
         assert.match(transform, /\.header \.texts \{ flex:1; min-width:0; max-height:7\.5em; overflow-y:auto;/);

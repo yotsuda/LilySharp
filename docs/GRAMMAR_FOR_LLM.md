@@ -231,7 +231,9 @@ verbatim `@"C:\music"` / `@"say ""hi"""` (backslash as written, `""` = one quote
   SOUNDS, as in LilyPond: the guitar's low E string is `e,` (E2), and the clef draws it where
   a treble staff has E3. A part that sounds an octave from its page WITHOUT the clef saying so
   (`instrument bass`, the double bass: plain bass clef) is written as the player READS it:
-  the bass's low E string is `e,` (written E2), and it sounds E1.
+  the bass's low E string is `e,` (written E2), and it sounds E1. To write a bass line by the
+  pitches it sounds, give the part `octave 4` (`part bass { instrument bass octave 4 }`): the low E
+  string is then `e,,`, as it sounds, and the page shows it an octave up.
 - `pitch` says which pitch the notes are in — what SOUNDS, or what the player of a
   transposing `instrument` (clarinet, trumpet, horn, alto-sax, …) READS — and its word says
   which notes: where notes are TYPED (the top level for the file, a part header for that part —
@@ -1100,7 +1102,7 @@ it should sound like the ensemble asked for. What makes it music:
 - **A band** (rock, pop, funk, metal, … — any request naming an electric guitar, an electric
   bass, drums or band keyboards): the whole rhythm section plays, whichever members were named —
   **drums** (a `clef percussion` part: a groove, fills at the section ends), an **electric
-  bass** (`instrument bass` with `midiInstrument "electric bass (finger)"`, locked to the
+  bass** (`instrument bass octave 4` with `midiInstrument "electric bass (finger)"`, written as it sounds, locked to the
   kick drum) and a **guitar or keyboards** for the chords (`instrument guitar` with
   `midiInstrument "overdriven guitar"` or `"electric guitar (clean)"`; keyboards on
   `instrument piano-right` with `"rock organ"`, `"electric piano 1"` …). "Guitar and drums"
@@ -1111,7 +1113,7 @@ it should sound like the ensemble asked for. What makes it music:
   words"), or a solo for one instrument that plays one line ("a flute solo", "unaccompanied
   cello"). Anything else has its accompaniment — its own parts, on staves of their own.
 - **Jazz** not asked for as a lead sheet is a **combo**: a rhythm section — piano or guitar for the
-  chords, a bass (`instrument bass` with `midiInstrument "acoustic bass"`), drums swinging on the
+  chords, a bass (`instrument bass octave 4` with `midiInstrument "acoustic bass"`), drums swinging on the
   ride cymbal (`cymr`) and hi-hat — under a melody instrument (`instrument tenor-sax`, `trumpet`,
   `alto-sax`, …), with the harmony and the feel of a jazz lead sheet (next), at one tempo.
 - **A jazz lead sheet** (asked for as "a lead sheet", "a tune to jam on"): ONE staff — the
