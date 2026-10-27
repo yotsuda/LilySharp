@@ -127,19 +127,19 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第996セッション（2026-10-27・YT-DELL2）
+
+第995 と同じ会話の続き。`-Start p996`（開始 HEAD `7c6f4f104`・full **13356 / 0 / 2 / 13358**・第994 を ARCHIVE へ）。作業場所は Lab `sessions/p996/`。
+- **ユーザー「tabi の b32 はどう直すのが正しい？ Beside scan で barline を足すと 2 小節目のプレビューが見切れる。OMR を直すべきか、でも絶対に間違えないようには直せないよね」** → 提案＝①Beside scan の行のプレビューに行の小節を全部出す ②「見落とした小節線を書く」クイックフィックス（電球＋パネルのボタン）③OMR へ依頼（長さが拍子の整数倍**かつ** box が隣の約整数倍なら「小節線の見落としかも」と言う）→ **ユーザー「良い。そのように直すなら、beside edit 画面のプレビューも Ctrl+wheel で拡大縮小、マウスドラッグでスクロールできるようにしてほしい」**。①`cropTo` が data-span の重なる `rect.bar-staff` を同じ段（y の差 ≤ h/2）で全部合わせる ②Core `MissingBarLines`（`MeterOf`＝報告文の拍子・`Offsets`＝前の項目から既定の音価を引き継ぎ、拍子の切れ目ちょうどで終わる項目の後ろ・切れ目をまたぐ音／中の小節線なら null・`WrittenIn`）・LSP の CodeAction「Write the missing bar line」・要求 `lilysharp/missingBarLines`・パネルの行に「write the missing bar line」（欄に入れて `sendEdit`＝手で打った編集と同じ門）④パネルの絵（`svg.pic`）に Ctrl+ホイール（viewBox・ポインタ中心）とドラッグ（4 px・pointer capture・後のクリックを捕獲相で止める）。網 `MissingBarLinesTests` 5 本・`omrAiFixPage.test` 5 本（ページの台本を `vm.Script` で構文検査）＝npm 476。③は OMR `docs/repro/lilysharp-requests-2026-10-27-missed-barline.md`＋REQUESTS の Lily# → OMR の行（OMR リポジトリでは commit せず）。site scan・両 CHANGELOG・MANUAL-CHECKS C9。
+判定（2026-10-27・第996 の終わり）: 次はユーザーの指示（C9）。
+
+## 以下は第995セッションの経緯
+
 ### 1.1 第995セッション（2026-10-27・YT-DELL2）
 
 第994 と同じ会話の続き。`-Start p995`（開始 HEAD `5ec488140`・full **13356 / 0 / 2 / 13358**・第993 を ARCHIVE へ）。作業場所は Lab `sessions/p992/`。
 - **ユーザー「Downloads\tabi.png を OCR した tabi.lys の 32 小節目（L45）で Edit Bars Beside the Scan を選ぶと、スキャンが 2 小節分切り抜かれる。なぜ？ 2 小節出ても『編集対象は 1 小節だから画像の中で合う小節を探して照合して』と AI に足すのはどう？」**＋「右隣の小節にも todo があるせい？」: 原因＝**OMR がバーラインを見落として 2 小節を 1 小節に読んだ**（tabi.omr.json の m32 の box 幅 422 px、両隣 211〜218 px／L45 に 2 小節分の音・todo の長さの差 3/4＝6/8 の 1 小節分・切り抜き png で目視＝スラーの下のバーライン）。Lily# は OMR の box を正しく切っている。右隣の todo は無関係（`cropOf` はその行の印の box だけ）。提案は賛成しつつ広げた＝**この件はテキストも 2 小節分**なので「1 小節を探す」だけでは誤る。→ `taskPromptOf`（画像つき）に「切り抜きは読み手の box で、間違い得る・複数小節が写り得る。テキストがその 1 つなら 1 つだけ直す、複数分ならそれぞれを小節にして 1 行に（各小節に ``|``）」、出力の約束に「複数小節可」、**Lily# の測定**＝`widthAmongNeighbours`（同じページ・同じ段の小節の幅の中央値の 1.7 倍以上なら約 N 倍＝`crop.wideBy`）を AI に伝える。網 `omrAiFixCore.test` 2 本（tabi の実数）＝npm 471。site scan・両 CHANGELOG。Deploy-Lsp 済。⚠️ 2 小節に分けると以降の小節番号が side file とずれる（verify の照合は小節番号で行う）＝実機で様子を見る。
 判定（2026-10-27・第995 の終わり）: 次はユーザーの指示（tabi の b32 を Fix with AI で試す）。
-
-## 以下は第994セッションの経緯
-
-### 1.1 第994セッション（2026-10-27・YT-DELL2）
-
-第993 と同じ会話の続き。`-Start p994`（開始 HEAD `24cfe7bc3`・full **13356 / 0 / 2 / 13358**・第992 を ARCHIVE へ）。
-- **ユーザー「Ctrl+Shift+Up のスケールが major 以外でおかしい。a minor は c major と同じスケールであるべき。教会旋法も同じ。補完の和音名もおかしい」**: 調べた＝Core の歩き方は全旋法・全置き場所（冒頭・節・パートの塊・パート宣言・by-part）で調号どおり、補完の和音（`CurrentKey`→`DiatonicChords.ForKey`）も旋法どおり（計器を書き間違えて一度「壊れている」と見えた＝`$"..."` の中の `{{` は `{`）。違いは**短調だけ導音 gis を余分に止まる**（2026-10-16 の決定）だけ＝再現できたのはそれだけと報告。→ ユーザー「a minor で g は gis になるべき？」「どちらが便利？」「ポップスの短調も gis が多い？」→ 答え（自然短音階が基本・gis は終止前の属和音と導音・回数は g が圧倒的）→ **ユーザー「a minor で gis は出ないようにして」**＝`KeyInForce` から導音を外した（**2026-10-16 の決定を覆す**）。網 `StepRequestTests` の短調の 1 本を書き直し（書かれた gis は調の外の音＝上は a、下は g）。site・両 CHANGELOG。⚠️ 教会旋法と和音名の「おかしい」は再現できず＝例が来たら見る。Deploy-Lsp 済。
-判定（2026-10-27・第994 の終わり）: 次はユーザーの指示（教会旋法・和音名の例が来れば）。
 
 ## 2. 開いている作業
 

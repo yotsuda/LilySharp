@@ -11,6 +11,13 @@ All notable changes to the Lily# VS Code extension are documented here.
   then shows two bars. Fix OMR Marks with AI now matches the text to the bars in the picture —
   one of them, or each as a bar of its own on the line — and is told when the box is about twice
   as wide as the bars beside it on the system.
+- **Write the missing bar line.** The lightbulb on such a bar (*a bar line looks to be missing*)
+  writes `|` after each bar of the meter, and Edit Bars Beside the Scan has the same as a button on
+  the row: the line goes into the field and is checked like an edit you typed. Not offered where a
+  note is held across the bar's end.
+- **Edit Bars Beside the Scan shows every bar on the line**, in the scan and in the draft (it
+  showed the first one alone, so a bar line you added left the second bar out of sight), and its
+  pictures zoom with Ctrl+wheel about the pointer and scroll with a drag.
 
 ### Editing
 

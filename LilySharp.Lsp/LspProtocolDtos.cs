@@ -653,6 +653,22 @@ public class CheckCandidateResponse
     public CandidateDiagnostic[] Diagnostics { get; set; } = System.Array.Empty<CandidateDiagnostic>();
 }
 
+/// <summary>Parameters for lilysharp/missingBarLines: a source, and the stretch of it — a line
+/// edited beside the scan — to write its missing bar lines into.</summary>
+public class MissingBarLinesParams
+{
+    public string Text { get; set; } = "";
+    public int Start { get; set; }
+    public int End { get; set; }
+}
+
+/// <summary>Response for lilysharp/missingBarLines: the stretch with its missing bar lines written,
+/// or null when it has none to write.</summary>
+public class MissingBarLinesResponse
+{
+    public string? Line { get; set; }
+}
+
 /// <summary>Response for lilysharp/compositionCheck (parameters: <see cref="CheckCandidateParams"/>):
 /// what a new piece's notation leaves flat, one sentence each
 /// (<see cref="LilySharp.Core.Editing.CompositionChecks"/>).</summary>

@@ -160,6 +160,13 @@
   <p><b>Edit Bars Beside the Scan</b> opens the same panel without the AI, for the bars on the
   selected lines (or the caret's): each bar beside its scan, to put right by hand with the same
   pictures and gates — on a bar with no mark, <i>add @todo</i> marks it as you accept.</p>
+  <p>Every picture in the panel zooms with <kbd>Ctrl</kbd>+wheel about the pointer and scrolls
+  with a drag. A line that holds two bars shows both, in the scan and in the draft.</p>
+  <p><b>A missed barline.</b> When the reader misses a barline, two bars come out as one, and
+  Lily# reports a bar line that looks to be missing (the length is a whole number of bars). The
+  lightbulb's <i>Write the missing bar line</i>, and the row's <i>write the missing bar line</i>
+  in the panel, write <code>|</code> where each bar of the meter ends — unless a note is held
+  across one.</p>
   <p class="note">The model is the one <i>Lily#: Select AI Model…</i> names for Ask AI
   (<code>lilysharp.ai.editModel</code>). The picture and the verify gate can be switched off in
   <code>settings.json</code> (<code>lilysharp.ai.omrFixImages</code>,

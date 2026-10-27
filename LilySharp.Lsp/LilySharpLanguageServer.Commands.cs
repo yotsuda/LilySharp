@@ -1361,6 +1361,19 @@ public sealed partial class LilySharpLanguageServer
         => OffDispatch(() => CheckCandidate(@params), token);
 
     /// <summary>
+    /// A stretch of a source — a line edited beside the scan — with the bar lines its
+    /// missing-bar-line reports name written in (<see cref="LilySharp.Core.Semantics.MissingBarLines.WrittenIn"/>;
+    /// owner's request 2026-10-27), or null when it has none. Read-only.
+    /// </summary>
+    [JsonRpcMethod("lilysharp/missingBarLines", UseSingleObjectParameterDeserialization = true)]
+    public Task<MissingBarLinesResponse> MissingBarLinesAsync(MissingBarLinesParams @params, CancellationToken token)
+        => OffDispatch(() => new MissingBarLinesResponse
+        {
+            Line = @params.Start >= 0 && @params.End <= (@params.Text ?? "").Length && @params.Start < @params.End
+                ? LilySharp.Core.Semantics.MissingBarLines.WrittenIn(@params.Text!, @params.Start, @params.End) : null,
+        }, token);
+
+    /// <summary>
     /// What a new piece's notation leaves flat — parts with no instrument, an ensemble braced as
     /// a piano, a part of one note value, every part in the same rhythm
     /// (<see cref="LilySharp.Core.Editing.CompositionChecks"/>) — for the AI that composed it to

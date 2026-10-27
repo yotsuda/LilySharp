@@ -143,6 +143,10 @@ interface FixRow {
     editedFromAi?: boolean;
     editGate?: GateVerdict;
     editAfter?: SvgResponse;
+    /** The row's line as it now reads (the bar as it stands, or the edit) with the bar lines the
+     *  compiler finds missing written in — what the row's "write the missing bar line" puts in its
+     *  field (owner's request 2026-10-27); undefined when it has none missing. */
+    barFix?: string;
     /** The page's count of edits to this row: an answer to an older one is dropped. */
     editSeq?: number;
     /** The bar as it stands (its marks taken out), drawn where a row has no bar of its own to
@@ -462,6 +466,8 @@ async function addRows(deps: OmrAiFixDeps, run: FixRun, fresh: boolean, targets:
         }
         const row: FixRow = { index: run.rows.length, target, base: run.base, proposal: null, seconds: 0, state: 'pending' };
         await init(row);
+        const plain = resolvedLine(target.written);
+        row.barFix = await barFixOf(run.client, spliceBar(run.base.text, target, plain), target.start, plain.length);
         run.rows.push(row);
         rows.push(row);
         added.push(row);
@@ -1105,6 +1111,11 @@ async function editRow(run: FixRun, row: FixRow, raw: string, seq: number): Prom
     }
     const gate = gateOf(row.base.baseline, check.Diagnostics ?? [], { start: row.target.start, length: text.length });
     row.editGate = gate;
+    row.barFix = (check.Diagnostics ?? []).some(d => /bar lines? looks? to be missing/.test(d.Message))
+        ? await barFixOf(run.client, spliced, row.target.start, text.length) : undefined;
+    if (row.editSeq !== seq) {
+        return;
+    }
     row.editAfter = after;
     postRow(run, row, seq);
     if (gate.compile && gate.length && run.verifier) {
@@ -1117,6 +1128,17 @@ async function editRow(run: FixRun, row: FixRow, raw: string, seq: number): Prom
         editVerifies.delete(row.index);
         row.editGate = withVerify(gate, verdict);
         postRow(run, row, seq);
+    }
+}
+
+/** A line of 	ext (length long from start) with the bar lines the compiler finds missing
+ *  written in (lilysharp/missingBarLines), or undefined when none are — or the server has no such request. */
+async function barFixOf(client: LanguageClient, text: string, start: number, length: number): Promise<string | undefined> {
+    try {
+        const resp = await client.sendRequest<{ Line: string | null }>('lilysharp/missingBarLines', { Text: text, Start: start, End: start + length });
+        return resp?.Line ?? undefined;
+    } catch {
+        return undefined;
     }
 }
 
@@ -1375,6 +1397,11 @@ function rowParts(run: FixRun, r: FixRow): RowParts {
             : !r.proposal.bar ? (failed ? `No proposal passed: ${r.gate!.problems.join(' / ') || r.proposal.reason}` : r.proposal.reason || 'The model gave no reason.')
             : r.gate?.verify === false ? `${r.proposal.reason ? `${r.proposal.reason} — ` : ''}${r.gate.problems.filter(p => p.startsWith('the scan says')).join(' / ')}`
             : r.proposal.reason || '');
+    // The missing bar line, one click away (owner's request 2026-10-27): a scan's reader that
+    // missed a barline leaves two bars on one line, and the compiler knows where it goes.
+    const barLine = r.barFix && can
+        ? ` <button class="link barline" data-i="${r.index}" data-line="${esc(r.barFix)}" title="${esc(`Write: ${r.barFix}`)}">write the missing bar line</button>`
+        : '';
     const hint = !edited && r.asked && !r.ai && barOf(r) === undefined && base
         ? ' <span class="dim">— click a note or the text to edit the bar yourself</span>' : '';
     const lost = r.state === 'skipped' ? '<span class="bad">Not written: the line has changed since the panel opened it.</span> ' : '';
@@ -1390,7 +1417,7 @@ function rowParts(run: FixRun, r: FixRow): RowParts {
         : r.asked ? 'no AI proposal — the bar as it stands'
         : 'the bar as it stands';
     return {
-        gates: gatesHtml(gate), reason: lost + reason + sure + hint + aiNow, proposal, source, nowText: piecesHtml(diff.before), afterText: piecesHtml(diff.after), del,
+        gates: gatesHtml(gate), reason: lost + reason + sure + hint + barLine + aiNow, proposal, source, nowText: piecesHtml(diff.before), afterText: piecesHtml(diff.after), del,
         accept: { word: !own && marked && !r.keepTodo ? 'Accept (remove @todo)' : 'Accept', can: own || marked || !!r.keepTodo, ready: isReady(r) },
     };
 }
@@ -1553,7 +1580,8 @@ tr.body td { padding-top: 2px; }
 /* The line over each picture, the same height in all three cells so the pictures line up
    (owner, 2026-10-24); only the Draft's says something — where it came from. */
 .over { font-size:11px; line-height:14px; height:14px; margin:0 0 2px; opacity:.7; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.pic { display:block; width:100%; height:120px; background:#fff; border:1px solid var(--vscode-panel-border); }
+.pic { display:block; width:100%; height:120px; background:#fff; border:1px solid var(--vscode-panel-border); user-select:none; touch-action:none; }
+.pic.panning { cursor:grabbing; }
 .none { height:120px; display:flex; align-items:center; justify-content:center; opacity:.6; border:1px dashed var(--vscode-panel-border); }
 .src { margin:4px 0 0; font-family: var(--vscode-editor-font-family, monospace); font-size:11px; white-space:pre-wrap; opacity:.9; }
 .src del { color: var(--vscode-gitDecoration-deletedResourceForeground, #e33); text-decoration: line-through; background: rgba(229, 57, 53, .15); }
@@ -1645,18 +1673,28 @@ ${rows}
     }
     return { x, y, w, h };
   }
+  // Every bar the line's span meets is shown, not the first alone (owner's report 2026-10-27: a
+  // bar line written into a line the scan's reader had read as one bar left its second bar out of
+  // the picture) — the bars on the first one's system, side by side.
   function cropTo(holder, boxes, lo, hi) {
-    let box = null;
+    let found = [];
     for (const r of boxes) {
       const span = (r.getAttribute('data-span') || '').split(' ');
       const from = parseInt(span[0], 10), to = parseInt(span[1], 10);
-      if (!isNaN(from) && !isNaN(to) && from < hi && to >= lo) { box = r; break; }
+      if (!isNaN(from) && !isNaN(to) && from < hi && to >= lo) found.push(r);
     }
-    if (!box) {
-      for (const r of boxes) { const s = parseInt(r.getAttribute('data-start'), 10); if (s >= lo && s < hi) { box = r; break; } }
+    if (found.length === 0) {
+      for (const r of boxes) { const s = parseInt(r.getAttribute('data-start'), 10); if (s >= lo && s < hi) { found = [r]; break; } }
     }
-    if (!box) return;
-    const u = userRect(box);
+    if (found.length === 0) return;
+    const first = userRect(found[0]);
+    let x0 = first.x, x1 = first.x + first.w;
+    for (const r of found.slice(1)) {
+      const u = userRect(r);
+      if (Math.abs(u.y - first.y) > first.h * 0.5) continue;
+      x0 = Math.min(x0, u.x); x1 = Math.max(x1, u.x + u.w);
+    }
+    const u = { x: x0, y: first.y, w: x1 - x0, h: first.h };
     holder.setAttribute('viewBox', (u.x - u.h * 0.5) + ' ' + (u.y - u.h) + ' ' + (u.w + u.h) + ' ' + (u.h * 3));
     holder.setAttribute('preserveAspectRatio', 'xMidYMid meet');
   }
@@ -1698,6 +1736,49 @@ ${rows}
     if (svg.dataset.paint) paint(id, svg.dataset.paint === 'del' ? RED : GREEN, svg.dataset.ranges);
   }
   for (const svg of document.querySelectorAll('svg.score')) setUp(svg);
+
+  // Every picture zooms and pans in place (owner's request 2026-10-27): Ctrl+wheel zooms about the
+  // pointer, a drag moves it; a drag is no click, so it opens no bar for editing. The picture's
+  // viewBox is what moves — the crop the page script set is where it starts.
+  const viewOf = svg => svg.getAttribute('viewBox').split(/[\\s,]+/).map(Number);
+  function userAt(svg, clientX, clientY) {
+    const [x, y, w, h] = viewOf(svg);
+    const r = svg.getBoundingClientRect();
+    const s = Math.min(r.width / w, r.height / h);
+    return { s, x: x + (clientX - r.left - (r.width - w * s) / 2) / s, y: y + (clientY - r.top - (r.height - h * s) / 2) / s };
+  }
+  document.addEventListener('wheel', e => {
+    if (!e.ctrlKey) return;
+    const svg = e.target.closest && e.target.closest('svg.pic');
+    if (!svg || !svg.getAttribute('viewBox')) return;
+    e.preventDefault();
+    const [x, y, w, h] = viewOf(svg);
+    const at = userAt(svg, e.clientX, e.clientY);
+    const k = e.deltaY < 0 ? 1 / 1.15 : 1.15;
+    svg.setAttribute('viewBox', [at.x - (at.x - x) * k, at.y - (at.y - y) * k, w * k, h * k].join(' '));
+  }, { passive: false });
+  let drag = null, dragged = false;
+  document.addEventListener('pointerdown', e => {
+    const svg = e.button === 0 && e.target.closest && e.target.closest('svg.pic');
+    if (!svg || !svg.getAttribute('viewBox')) return;
+    drag = { svg, x: e.clientX, y: e.clientY, view: viewOf(svg), s: userAt(svg, e.clientX, e.clientY).s, moved: false };
+  });
+  document.addEventListener('pointermove', e => {
+    if (!drag) return;
+    const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+    if (!drag.moved && Math.abs(dx) + Math.abs(dy) < 4) return;
+    if (!drag.moved) { drag.moved = true; drag.svg.classList.add('panning'); try { drag.svg.setPointerCapture(e.pointerId); } catch (err) {} }
+    const [x, y, w, h] = drag.view;
+    drag.svg.setAttribute('viewBox', [x - dx / drag.s, y - dy / drag.s, w, h].join(' '));
+  });
+  const endDrag = () => {
+    if (drag && drag.moved) { dragged = true; drag.svg.classList.remove('panning'); setTimeout(() => { dragged = false; }, 0); }
+    drag = null;
+  };
+  document.addEventListener('pointerup', endDrag);
+  document.addEventListener('pointercancel', endDrag);
+  // The click that ends a drag is the drag's, not an edit's.
+  document.addEventListener('click', e => { if (dragged) { e.stopPropagation(); e.preventDefault(); dragged = false; } }, true);
 
   // Editing the bar to write (owner's request 2026-10-24): a click on its text opens it; each
   // pause in the typing sends it, and the extension answers with the row's gates, picture, text
@@ -1840,6 +1921,15 @@ ${rows}
     }
     const pre = e.target.closest && e.target.closest('pre.src.editable');
     if (pre) { openEdit(pre.dataset.i); return; }
+    // The missing bar line written in (owner's request 2026-10-27): the line the extension worked
+    // out goes into the field and is sent as the person's edit, as if typed.
+    const bl = e.target.closest && e.target.closest('button.barline');
+    if (bl) {
+      const i = bl.dataset.i;
+      const ta = q('textarea.edit', i);
+      if (ta) { ta.value = bl.dataset.line; sendEdit(i); }
+      return;
+    }
     const rv = e.target.closest && e.target.closest('button.revert');
     if (rv) {
       const i = rv.dataset.i;

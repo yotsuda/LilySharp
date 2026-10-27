@@ -11,6 +11,10 @@ workflow attaches that section to the GitHub Release verbatim.
 - `[editor]` **Fix OMR Marks with AI handles a missed barline**: a bar box spanning two bars is
   measured against its neighbours and named to the AI, which writes the line's music as the bars
   the picture shows.
+- `[editor]` **Write the missing bar line**: a quick fix on a bar whose length is a whole number of
+  bars of its meter writes `|` where each bar ends (not where a note is held across), and Edit Bars
+  Beside the Scan offers it on the row. The panel shows every bar a line holds, and its pictures
+  zoom with Ctrl+wheel and scroll with a drag. `[lsp]` `lilysharp/missingBarLines`.
 
 ### Editing
 

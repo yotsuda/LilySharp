@@ -372,6 +372,8 @@ public sealed partial class LilySharpLanguageServer
                     actions.Add(spelling);
                 if (RestRunFractionAction(doc, uri, diagnostic) is { } restRun)
                     actions.Add(restRun);
+                if (MissingBarLineAction(doc, uri, diagnostic) is { } barLines)
+                    actions.Add(barLines);
                 if (diagnostic.Code == DiagnosticCodes.TodoMark && !todoOffered)
                 {
                     todoOffered = true;
@@ -567,6 +569,28 @@ public sealed partial class LilySharpLanguageServer
             return null;
         string wanted = m.Groups[1].Value;
         return QuickFix($"Write '{wanted}'", doc, uri, diagnostic, EditOf(doc.Text, start, end, wanted));
+    }
+
+    /// <summary>
+    /// The quick fix for a bar that holds whole bars, the bar line(s) between them left out
+    /// (<see cref="DiagnosticCodes.MissingBarLine"/>; owner's request 2026-10-27: an OMR reader
+    /// missed a barline and the page already showed where it went): writes ` |` after each item
+    /// that ends a bar of the meter (<see cref="LilySharp.Core.Semantics.MissingBarLines"/>). The
+    /// meter is the message's ("… is about 2 bars of 6/8"); none when a note is held across a
+    /// bar's end, where a bar line cannot simply be written.
+    /// </summary>
+    private static CodeAction? MissingBarLineAction(Document doc, Uri uri, CoreDiagnostic diagnostic)
+    {
+        if (diagnostic.Code != DiagnosticCodes.MissingBarLine)
+            return null;
+        if (LilySharp.Core.Semantics.MissingBarLines.MeterOf(diagnostic.Message) is not { } bar)
+            return null;
+        var offsets = LilySharp.Core.Semantics.MissingBarLines.Offsets(doc.Tree, diagnostic.Span, bar);
+        if (offsets is not { Count: > 0 })
+            return null;
+        var edits = offsets.Select(o => EditOf(doc.Text, o, o, " |")).ToArray();
+        return QuickFix(offsets.Count == 1 ? "Write the missing bar line" : $"Write the {offsets.Count} missing bar lines",
+            doc, uri, diagnostic, edits);
     }
 
     /// <summary>
