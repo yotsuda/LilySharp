@@ -78,13 +78,16 @@ let audible: Audible | undefined;
 let exchangeChannel: vscode.OutputChannel | undefined;
 
 /** Writes the messages from `from` on to the exchange log; returns how many are written now. */
-function logExchange(label: string, grammar: string, messages: ChatMessage[], from: number): number {
+function logExchange(chat: ChatClient, grammar: string, messages: ChatMessage[], from: number): number {
     exchangeChannel ??= vscode.window.createOutputChannel('Lily# AI Exchange');
     const stamp = new Date().toLocaleTimeString();
     for (const m of messages.slice(from)) {
         if (m.role === 'assistant') continue; // its reply, logged as it came (logReply)
         const text = m.content.split(grammar).join(`[the Lily# grammar, docs/GRAMMAR_FOR_LLM.md — ${grammar.length} characters]`);
-        exchangeChannel.appendLine(`===== ${stamp} ${m.role}${m.role === 'system' ? ` (to ${label})` : ''} =====`);
+        // The model the request goes to, as VS Code lists it (owner's question 2026-10-27: was the
+        // model the notification named the one that answered?). Which model the vendor ran is not
+        // returned to an extension.
+        exchangeChannel.appendLine(`===== ${stamp} ${m.role}${m.role === 'system' ? ` (to ${chat.label}${chat.modelDetail ? `: ${chat.modelDetail}` : ''})` : ''} =====`);
         exchangeChannel.appendLine(text);
     }
     return messages.length;
@@ -240,7 +243,7 @@ async function runCompose(deps: AiTransformDeps): Promise<void> {
         uri: vscode.Uri.parse('untitled:Composed.lys'),
     };
     const grammar = await loadGrammar(deps);
-    const budget = documentBudget(chat.maxInputTokens, estimateTokens(composeSystemPrompt(grammar)));
+    const budget = documentBudget(chat.maxInputTokens, estimateTokens(composeSystemPrompt(grammar, chat.modelName)));
     try {
         // In the octaves the AI writes it: a new piece has no octave mode of its own to go back to.
         const ai: AiSpace = { snap: snapshot, converted: false };
@@ -484,7 +487,7 @@ async function drive(
             baselineWarnings: baseline.filter(d => d.Severity === 'warning' && !MACHINE_WARNING.test(d.Message)).length,
             // Conversation seed.
             messages: [
-                { role: 'system', content: compose ? composeSystemPrompt(grammar) : systemPrompt(grammar) },
+                { role: 'system', content: compose ? composeSystemPrompt(grammar, chat.modelName) : systemPrompt(grammar) },
                 { role: 'user', content: taskPrompt(work, shown, whole, facts, baseline, instruction, marks, ai.converted, compose) },
             ] as ChatMessage[],
         };
@@ -551,7 +554,7 @@ async function drive(
                     if (token.isCancellationRequested) return null;
                     step(attempt === 0 ? 'generating' : `repairing (${attempt}/${MAX_REPAIR_ATTEMPTS})`);
 
-                    logged = logExchange(chat.label, grammar, messages, logged);
+                    logged = logExchange(chat, grammar, messages, logged);
                     const raw = await chat.send(messages, token);
                     logReply(raw);
                     // Read against the text the AI was last shown as the file: the file itself, or —
@@ -947,10 +950,17 @@ async function drive(
  * The grammar's sketches show the notation, not a piece's length or form: the "Compose a piece"
  * recipe once carried three 8-bar pieces, and what came back was 8 bars with a tempo per section.
  */
-function composeSystemPrompt(grammar: string): string {
+function composeSystemPrompt(grammar: string, modelName?: string): string {
     return [
         'You are a composer. You write a complete new piece of music for the musician who asks, and you write it',
         'down in Lily#, a text music-notation language. Lily# is NOT LilyPond; obey the grammar below exactly.',
+        // Who it is (owner's report 2026-10-27: asked to fill in the composer, a model never told its
+        // name wrote "OpenAI"). Nothing more is said of the composer line (owner's decision, same day:
+        // it is not to be filled in unasked).
+        ...(modelName
+            ? [`You are ${modelName}. If the musician asks for the composer to be written, the composer is you: `
+                + `\`composer "${modelName}"\`.`]
+            : []),
         '',
         '<lilysharp-grammar>',
         grammar,

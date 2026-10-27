@@ -154,7 +154,7 @@ describe('a composed piece\'s preface', () => {
 describe('the composer\'s prompt', () => {
     const transform = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'aiTransform.ts'), 'utf8');
     it('casts the model as a composer, not a transformer of fragments, when it composes', () => {
-        assert.match(transform, /content: compose \? composeSystemPrompt\(grammar\) : systemPrompt\(grammar\)/);
+        assert.match(transform, /content: compose \? composeSystemPrompt\(grammar, chat\.modelName\) : systemPrompt\(grammar\)/);
         assert.match(transform, /'You are a composer\. You write a complete new piece of music/);
         assert.match(transform, /none of them is a model of a piece\\'s length, form or style/);
     });
@@ -179,8 +179,18 @@ describe('the composer\'s prompt', () => {
         assert.match(transform, /Never "Right hand", "L\.H\.", 右手, 左手\./);
     });
     it('logs every message sent and every reply, the grammar left out', () => {
-        assert.match(transform, /logged = logExchange\(chat\.label, grammar, messages, logged\);\s*const raw = await chat\.send\(messages, token\);\s*logReply\(raw\);/);
+        assert.match(transform, /logged = logExchange\(chat, grammar, messages, logged\);\s*const raw = await chat\.send\(messages, token\);\s*logReply\(raw\);/);
         assert.match(transform, /createOutputChannel\('Lily# AI Exchange'\)/);
+    });
+    // Owner's report 2026-10-27: asked to fill in the composer, a model never told its name wrote
+    // "OpenAI"; the composer line is still written only when asked (owner's decision).
+    it('tells the composer its own name, and logs the model the request went to', () => {
+        assert.match(transform, /`You are \$\{modelName\}\. If the musician asks for the composer to be written, the composer is you: `/);
+        assert.doesNotMatch(transform, /otherwise write no composer line/);
+        assert.match(transform, /\(to \$\{chat\.label\}\$\{chat\.modelDetail \? `: \$\{chat\.modelDetail\}` : ''\}\)/);
+        const client = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'modelClient.ts'), 'utf8');
+        assert.match(client, /modelName: model\.name \|\| undefined,/);
+        assert.match(client, /modelDetail: `name "\$\{model\.name\}", vendor \$\{model\.vendor\}, id \$\{model\.id\}, family \$\{model\.family\}, version \$\{model\.version\}`/);
     });
 });
 

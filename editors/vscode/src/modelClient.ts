@@ -39,6 +39,12 @@ export interface ChatClient {
     readonly label: string;
     /** The model's input limit in tokens, when it says. */
     readonly maxInputTokens?: number;
+    /** The model's own name as its vendor shows it ("Claude Fable 5.1"), when it has one — what a
+     *  composer told who it is calls itself (owner's report 2026-10-27: asked to fill in the composer,
+     *  a model never told its name wrote "OpenAI"). */
+    readonly modelName?: string;
+    /** The model as the request went to it, for the exchange log: vendor, id, family, version. */
+    readonly modelDetail?: string;
     /** Runs the messages and returns the full response text. */
     send(messages: ChatMessage[], token: vscode.CancellationToken): Promise<string>;
     /** Whether the last `send` carried the images its messages offered: false when this VS Code
@@ -243,6 +249,9 @@ function lmClient(model: vscode.LanguageModelChat): ChatClient {
     return {
         label: model.family ? `${model.vendor}/${model.family}` : `${model.vendor}/${model.id || model.name}`,
         maxInputTokens: model.maxInputTokens,
+        modelName: model.name || undefined,
+        modelDetail: `name "${model.name}", vendor ${model.vendor}, id ${model.id}, family ${model.family}, version ${model.version}`
+            + (model.maxInputTokens ? `, ${model.maxInputTokens} input tokens` : ''),
         async send(messages, token) {
             const offered = messages.some(m => m.images && m.images.length > 0);
             const withImages = offered && canImage && !refused;

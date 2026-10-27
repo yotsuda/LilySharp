@@ -70,6 +70,8 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Ask AI
 
+- `[editor]` **Compose with AI tells the model its own name** (`LanguageModelChat.name`), for a
+  composer line when one is asked for; the exchange log records the model each request went to.
 - `[editor]` **Composing for the piano.** The composition check leaves a piano's left hand out of the
   one-note-value finding, adds hands whose tessituras stand more than an octave apart, and lowers the
   right hand's ceiling to G5; the composer's plan names the devices that make the character asked

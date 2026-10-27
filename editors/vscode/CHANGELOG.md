@@ -92,6 +92,10 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ### Ask AI
 
+- **The composer knows who it is.** Compose with AI tells the model its name as VS Code lists it, so
+  "fill in the composer" writes that name, not a guess ("OpenAI" came back from a model never told);
+  no composer line is added unasked. *Lily# AI Exchange* names the model each request went to
+  (name, vendor, id, family, version).
 - **A composed piano piece is written for the piano.** A left hand's steady figure (broken chords,
   a root-and-fifth beat) is no longer sent back as "one note value" — told so, the AI broke good left
   hands into meaningless dotted notes and rests; hands an octave apart, or a right hand whose middle

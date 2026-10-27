@@ -254,6 +254,7 @@ edocs/HANDOFF.mde §2 R13 ⒝・OMR の提案 B1〜B6（e..\LilySharp-Omr\docs\r
 - [ ] **C33**（第1021・作曲家の prompt）: Compose with AI で「かっこいいピアノの曲を作って」→ ① 出力パネル *Lily# AI Exchange* に system（文法は長さだけ）・user・reply が全文で出る・reply は `<plan>` → `<note>` → `<file>` の順 ② 開いた曲が 32 小節前後・最後は主調の主和音で終わる・section ごとにテンポが変わらない ③ 曲の前書き `// The AI:` に `<plan>` の中身が出ない。
 - [ ] **C34**（第1022・右手の高さと段の名前）: Compose with AI で「かっこいいピアノの曲を作って」→ 段の左に「右手」「左手」が出ない（独奏ピアノは名前なし）・Range パネルで右手の tessitura が C4〜C6 あたり（D5〜G6 のような高さでない）・*Lily# AI Exchange* の `<plan>` に音域が「書く音名」でも書いてある。
 - [ ] **C35**（第1023・ピアノらしさ）: Compose with AI で「かっこいいピアノの曲を作って」→ *Lily# AI Exchange* で左手が「one note value」で差し戻されない・`<plan>` に性格を作る手段（シンコペーション・アクセント・オクターブ等）が書いてある・曲の右手の下に和音や 3 度があり、両手の間が 1 オクターブも空かない。
+- [ ] **C36**（第1024・作曲者の名前）: Compose with AI で「ロックバラードを書いて。composer を埋めて。」→ `composer` がモデルの名前（例 "Claude Fable 5.1"）・*Lily# AI Exchange* の system 行に `name "…", vendor …, id …, family …, version …`。「composer」と言わなければ composer 行は勝手に増えない（今まで通り）。
 
 ## 4. §2 R13 ⒝ — 差分頁の配信（実機未確認・第404）
 
