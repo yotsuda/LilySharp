@@ -83,6 +83,80 @@ export function pagesSummary(pages: SvgPages): string {
  * followed by Ctrl+Shift+Up moved the pitch instead of the fermata (user report 2026-10-17).
  * Never across a line break.
  */
+/**
+ * Every chord `<…>` of `text`, as [its `<`, its `>`] offsets, in order — for the preview's
+ * Select Chord on a member right-clicked (owner's request 2026-10-27). A chord is on one line;
+ * `<<`/`>>` (simultaneous music), `\<`/`\>` (hairpins), and what comments and strings hold
+ * are not chords.
+ */
+export function chordSpans(text: string): [number, number][] {
+    const spans: [number, number][] = [];
+    for (let i = 0; i < text.length; i++) {
+        const c = text[i];
+        if (c === '/' && text[i + 1] === '/') {
+            while (i < text.length && text[i] !== '\n') { i++; }
+        } else if (c === '/' && text[i + 1] === '*') {
+            const end = text.indexOf('*/', i + 2);
+            i = end < 0 ? text.length : end + 1;
+        } else if (c === '"') {
+            i++;
+            while (i < text.length && text[i] !== '"' && text[i] !== '\n') { if (text[i] === '\\') { i++; } i++; }
+        } else if (c === '<' && text[i + 1] === '<') {
+            i++;
+        } else if (c === '<' && text[i - 1] !== '\\') {
+            const close = chordCloseFrom(text, i);
+            if (close >= 0) {
+                spans.push([i, close]);
+                i = close;
+            }
+        }
+    }
+    return spans;
+}
+
+/** The `>` closing the chord whose `<` is at `open`, on its line, or -1. */
+function chordCloseFrom(text: string, open: number): number {
+    for (let j = open + 1; j < text.length; j++) {
+        const c = text[j];
+        if (c === '\n' || c === '<' || c === '{' || c === '}' || c === '|' || c === '"') {
+            return -1;
+        }
+        if (c === '>') {
+            return text[j + 1] === '>' || text[j - 1] === '\\' ? -1 : j;
+        }
+    }
+    return -1;
+}
+
+/**
+ * The chord a caret on `line` at `col` points at AS A WHOLE, as [its `<`, its `>`] columns: on
+ * its `<` (`|<c e g>`), just past its `>` (`<c e g>|`, where its octave marks and decorations are
+ * written), or in what is written glued after the `>` (duration, dots, `@` marks) — as the step
+ * keys take it (NoteStepper: the chord, not a member). Undefined elsewhere — on a member, a space.
+ * The preview lights the whole chord there (owner's request 2026-10-27).
+ */
+export function chordAtCaret(line: string, col: number): [number, number] | undefined {
+    if (line[col] === '<' && line[col + 1] !== '<' && line[col - 1] !== '\\') {
+        const close = chordCloseFrom(line, col);
+        return close >= 0 ? [col, close] : undefined;
+    }
+    // Back over what is glued to the caret's left, to a `>`.
+    let k = col - 1;
+    while (k >= 0 && line[k] !== '>' && line[k] !== ' ' && line[k] !== '\t' && line[k] !== '<') { k--; }
+    if (k < 0 || line[k] !== '>' || line[k - 1] === '>' || line[k - 1] === '\\' || line[k + 1] === '>') {
+        return undefined;
+    }
+    for (let j = k - 1; j >= 0; j--) {
+        if (line[j] === '<') {
+            return line[j - 1] === '<' || line[j - 1] === '\\' || chordCloseFrom(line, j) !== k ? undefined : [j, k];
+        }
+        if (line[j] === '>' || line[j] === '{' || line[j] === '}' || line[j] === '|' || line[j] === '"') {
+            return undefined;
+        }
+    }
+    return undefined;
+}
+
 export function jumpOffsetFor(text: string, pos: number): number {
     let offset = pos;
     while (offset < text.length && (text[offset] === ' ' || text[offset] === '\t')) {

@@ -405,6 +405,11 @@
         "title": "Select This Bar"
       },
       {
+        "command": "lilysharp.previewSelectChord",
+        "category": "Lily#",
+        "title": "Select Chord"
+      },
+      {
         "command": "lilysharp.previewClearSelection",
         "category": "Lily#",
         "title": "Clear Selection"
@@ -605,6 +610,10 @@
           "when": "false"
         },
         {
+          "command": "lilysharp.previewSelectChord",
+          "when": "false"
+        },
+        {
           "command": "lilysharp.previewClearSelection",
           "when": "false"
         },
@@ -780,6 +789,11 @@
           "command": "lilysharp.previewAiTransformScore",
           "when": "webviewId == 'lilysharpPreview' && lysAiKind == 'score'",
           "group": "0_ai@1"
+        },
+        {
+          "command": "lilysharp.previewSelectChord",
+          "when": "webviewId == 'lilysharpPreview' && lysOnChord",
+          "group": "0_select@0"
         },
         {
           "command": "lilysharp.previewSelectBar",

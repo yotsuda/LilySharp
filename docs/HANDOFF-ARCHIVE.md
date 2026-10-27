@@ -160,6 +160,14 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1000セッションの経緯
+
+### 1.1 第1000セッション（2026-10-27・YT-DELL2）
+
+第999 と同じ会話の続き。`-Start p1000`（開始 HEAD `aed67dbf4`・full **13361 / 0 / 2 / 13363**・第998 を ARCHIVE へ）。作業場所は Lab `sessions/p1000/`。
+- **ユーザー「OMR 修正ペインで AI の結果を待つ間に自分で編集すると、届いた proposal を見るには自分の編集を discard するしかない。AI proposal と自分の編集をトグルできるように」**: `FixRow.stashed`＝「use the AI's」（と「undo my edit」）が編集を捨てずに預ける（`editRow` の no-edit 枝で `edited` を `stashed` へ）・新しい編集で落とす。行の説明に「back to my edit」→ ページの `restore`（seq を進める）→ `editRow(…, kept.text, seq, kept.fromAi)` で門と絵を作り直す（「AI proposal, edited」の出所も戻る）。網 `omrAiFixPage.test` 1 本（npm 482）。site scan・両 CHANGELOG・MANUAL-CHECKS C13。
+判定（2026-10-27・第1000 の終わり）: 次はユーザーの指示（C9〜C13）。
+
 ## 以下は第999セッションの経緯
 
 ### 1.1 第999セッション（2026-10-27・YT-DELL2）

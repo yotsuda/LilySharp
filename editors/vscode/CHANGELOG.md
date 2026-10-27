@@ -32,6 +32,10 @@ All notable changes to the Lily# VS Code extension are documented here.
 - **Switch between the AI's proposal and your edit.** An answer that came while you were editing
   a row could be seen only by throwing your edit away (*use the AI's*). Now your edit is kept aside,
   and *back to my edit* brings it back, checked and drawn again; a new edit drops the one kept.
+- **Select Chord in the preview.** Right-click a note of a chord: *Select Chord* puts the caret
+  just after the chord's `>` — where its octave marks and decorations are written. A caret there,
+  on its `<`, or in what is written right after the `>` (duration, `@` marks) now lights the whole
+  chord in the preview (it lit one note, or nothing), as Ctrl+Shift+Up / Down move it whole there.
 - **The field beside the scan completes as the editor does.** Typing a word or a trigger character
   (`@`, `\`, a space) opens the editor's completion under the caret, Ctrl+Space too — worked out on
   the file with the bar as you are typing it, so the key, the meter and the part count. Up and Down

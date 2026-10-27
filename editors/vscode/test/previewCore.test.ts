@@ -16,7 +16,47 @@
 
 import { describe, it } from 'node:test';
 import * as assert from 'node:assert/strict';
-import { svgPostKey, pagesSummary, previewOnEditorShown, sourceGroupToReveal, sourceGroupToOpen, newPreviewColumn, scoreGroupFor, ShownEditor, jumpOffsetFor } from '../src/previewCore';
+import { svgPostKey, pagesSummary, previewOnEditorShown, sourceGroupToReveal, sourceGroupToOpen, newPreviewColumn, scoreGroupFor, ShownEditor, jumpOffsetFor, chordSpans, chordAtCaret } from '../src/previewCore';
+
+// Owner's request 2026-10-27: Select Chord on a member right-clicked puts the caret past the
+// chord's ">", and a caret there (or on its "<", or on what is glued after the ">") lights it whole.
+describe('the chords of a score', () => {
+    it('are each "<…>" on a line, not "<<…>>", a hairpin, a comment or a string', () => {
+        const text = 'c4 <c e g>4 << { a } \\ { b } >> d\\< e\\! // <x y>\n"<no>" /* <z> */ <f a>2.@fermata |';
+        assert.deepEqual(chordSpans(text).map(([a, b]) => text.slice(a, b + 1)), ['<c e g>', '<f a>']);
+    });
+
+    it('are pointed at whole from the "<", past the ">" and in what is glued after it', () => {
+        const line = '    <c e g>4.@fermata d4 <f a>';
+        const whole: [number, number] = [4, 10];
+        assert.deepEqual(chordAtCaret(line, 4), whole);                       // |<c e g>
+        assert.deepEqual(chordAtCaret(line, 11), whole);                      // <c e g>|4.
+        assert.deepEqual(chordAtCaret(line, 13), whole);                      // <c e g>4.|@fermata
+        assert.deepEqual(chordAtCaret(line, 21), whole);                      // …@fermata|
+        assert.deepEqual(chordAtCaret(line, line.length), [25, 29]);          // <f a>| at the end
+        assert.equal(chordAtCaret(line, 5), undefined);                       // <|c — a member
+        assert.equal(chordAtCaret(line, 10), undefined);                      // <c e g|> — a member
+        assert.equal(chordAtCaret(line, 23), undefined);                      // d4
+        assert.equal(chordAtCaret('<< a >>', 7), undefined);
+        assert.equal(chordAtCaret('c\\> d', 3), undefined);
+    });
+
+    it('are wired: the menu on a member, the caret past the ">", the whole chord lit there', () => {
+        const fs = require('node:fs') as typeof import('node:fs');
+        const path = require('node:path') as typeof import('node:path');
+        const root = path.join(__dirname, '..', '..');
+        const ext = fs.readFileSync(path.join(root, 'src', 'extension.ts'), 'utf8');
+        const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
+        assert.match(ext, /const ctxChordEnd = ctxNotePos >= 0 \? chordEndAt\(ctxNotePos\) : -1;/);
+        assert.match(ext, /lysOnChord: ctxChordEnd >= 0,\s*lysChordEnd: ctxChordEnd,/);
+        assert.match(ext, /const position = editor\.document\.positionAt\(m\.lysChordEnd!\);/);
+        assert.match(ext, /const chord = chordAtCaret\(line, col\);\s*if \(chord\) \{/);
+        assert.match(ext, /type: 'chordSpans', spans: chordSpans\(document\.getText\(\)\)/);
+        const item = (pkg.contributes.menus['webview/context'] as { command: string; when: string }[])
+            .find(m => m.command === 'lilysharp.previewSelectChord');
+        assert.equal(item?.when, "webviewId == 'lilysharpPreview' && lysOnChord");
+    });
+});
 
 describe('a score opened into a preview\'s group', () => {
     it('moves to the leftmost group with no preview', () => {

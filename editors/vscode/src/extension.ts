@@ -38,7 +38,7 @@ import { OmrScanDeps, hasScan, previewHoversBar, previewReady, previewShowsBar, 
 import { registerOmrAiFix } from './omrAiFix';
 import { registerVerifyOnSave } from './omrVerify';
 import { markdownItExtensionApi } from './markdownFence';
-import { svgPostKey, pagesSummary, SvgPages, previewOnEditorShown, sourceGroupToReveal, newPreviewColumn, scoreGroupFor, sourceGroupToOpen, SourceTab, jumpOffsetFor } from './previewCore';
+import { svgPostKey, pagesSummary, SvgPages, previewOnEditorShown, sourceGroupToReveal, newPreviewColumn, scoreGroupFor, sourceGroupToOpen, SourceTab, jumpOffsetFor, chordSpans, chordAtCaret } from './previewCore';
 import { textFontFaceCss, textFontsRoot } from './scoreFonts';
 import { SplitSectionsChoice, modalText, splitChoiceItems } from './splitSectionsCore';
 import { cleanHistory, forgetFont, recordFont, samePath, shownFonts } from './soundFontHistoryCore';
@@ -895,7 +895,26 @@ export function activate(context: vscode.ExtensionContext) {
     // Shift+drag extends it), and the selection cleared.
     context.subscriptions.push(
         vscode.commands.registerCommand('lilysharp.previewSelectBar', () => postToActivePreview('ctxSelectBar')),
-        vscode.commands.registerCommand('lilysharp.previewClearSelection', () => postToActivePreview('ctxClearSelection')));
+        vscode.commands.registerCommand('lilysharp.previewClearSelection', () => postToActivePreview('ctxClearSelection')),
+        // Select Chord on a member right-clicked (owner's request 2026-10-27): the caret just past
+        // the chord's ">" — where its octave marks and decorations go, and where the preview
+        // lights it whole (chordAtCaret).
+        vscode.commands.registerCommand('lilysharp.previewSelectChord', async (m?: { lysChordEnd?: number }) => {
+            const shown = [...previewPanels.entries()].find(([, p]) => p.active);
+            if (!shown || !m || !Number.isInteger(m.lysChordEnd) || m.lysChordEnd! < 0) {
+                return;
+            }
+            const [uri, panel] = shown;
+            const editor = vscode.window.visibleTextEditors.find(e => e.document.uri.toString() === uri)
+                ?? await openPreviewSource(panel, uri);
+            if (!editor) {
+                return;
+            }
+            const position = editor.document.positionAt(m.lysChordEnd!);
+            editor.selection = new vscode.Selection(position, position);
+            editor.revealRange(new vscode.Range(position, position), vscode.TextEditorRevealType.InCenterIfOutsideViewport);
+            await vscode.window.showTextDocument(editor.document, editor.viewColumn);
+        }));
     // The Settings screen's "Choose a model…" links name the feature ('edit' | 'ghost'), so the
     // list of features is skipped; the palette asks which.
     context.subscriptions.push(vscode.commands.registerCommand('lilysharp.selectAiModel',
@@ -1093,6 +1112,15 @@ export function activate(context: vscode.ExtensionContext) {
                     // (getText) was being rebuilt for each arrow key on a long score.
                     const line = doc.lineAt(active.line).text;
                     const col = active.character;
+                    // A caret on a chord as a whole — its "<", just past its ">", or what is
+                    // glued after it — lights every head of it (owner's request 2026-10-27), as
+                    // the step keys move it whole there.
+                    const chord = chordAtCaret(line, col);
+                    if (chord) {
+                        const lineStart = offset - col;
+                        panel.webview.postMessage({ type: 'highlightRange', ranges: [[lineStart + chord[0], lineStart + chord[1] + 1]], caret: offset });
+                        return;
+                    }
                     const isWs = (c: string | undefined) =>
                         c === undefined || c === ' ' || c === '\t' || c === '\n' || c === '\r';
                     // The caret's note is the one whose source lies INSIDE the
@@ -1631,6 +1659,8 @@ async function updatePreviewContent(
     // Whether the right-click menu offers the OMR doors (owner, 2026-10-24: not for a file
     // the reader did not write) — asked again with each render, as an import adds the file.
     void panel.webview.postMessage({ type: 'scanState', hasScan: hasScan(document.uri) });
+    // The chords of the text, for Select Chord on a member right-clicked (owner's request 2026-10-27).
+    void panel.webview.postMessage({ type: 'chordSpans', spans: chordSpans(document.getText()) });
 
     // Wait for client to be ready if not already
     if (!clientReady) {
@@ -6137,6 +6167,9 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 case 'scanState':
                     docHasScan = !!message.hasScan;
                     break;
+                case 'chordSpans':
+                    chordSpanList = Array.isArray(message.spans) ? message.spans : [];
+                    break;
                 case 'updateContent': {
                     updateRenderSelect(message.renders, message.selectedRender);
                     const hasPreview = !!svgContainer.querySelector('svg');
@@ -6543,6 +6576,20 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         // there starts at the next sounding note, as the Play path resolves any start.
         let ctxPlayPos = -1;
         let docHasScan = false;   // the file has an OMR side file (scanState, with each render)
+        // The chords of the text, [its "<", its ">"] in order (chordSpans, with each render):
+        // Select Chord on a member right-clicked puts the caret past the ">" (owner's request
+        // 2026-10-27: where a chord's octave marks and decorations are written).
+        let chordSpanList = [];
+        function chordEndAt(pos) {
+            let lo = 0, hi = chordSpanList.length - 1;
+            while (lo <= hi) {
+                const mid = (lo + hi) >> 1, s = chordSpanList[mid];
+                if (pos <= s[0]) hi = mid - 1;
+                else if (pos >= s[1]) lo = mid + 1;
+                else return s[1] + 1;
+            }
+            return -1;
+        }
         document.addEventListener('contextmenu', (e) => {
             const t = e.target;
             ctxNotePos = (t && t.hasAttribute && t.hasAttribute('data-pos'))
@@ -6585,6 +6632,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             }
             if (ctxBarAt < 0) ctxBarAt = ctxNotePos;
             ctxPlayPos = ctxNotePos >= 0 ? ctxNotePos : ctxBarRange ? ctxBarRange[0] : -1;
+            const ctxChordEnd = ctxNotePos >= 0 ? chordEndAt(ctxNotePos) : -1;
             document.body.dataset.vscodeContext = JSON.stringify({
                 preventDefaultContextMenuItems: true,
                 // The OMR doors only for a file with a scan (owner, 2026-10-24); the scan
@@ -6598,6 +6646,8 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 lysOnStaff: ctxBarRange !== null,
                 lysHasSel: aiRangeLo >= 0,
                 lysPlayFrom: ctxPlayPos >= 0,
+                lysOnChord: ctxChordEnd >= 0,
+                lysChordEnd: ctxChordEnd,
                 // The Stop button's enabled state is the playback flag that also
                 // covers the optimistic window between Play and the first events.
                 lysPlaying: !document.getElementById('stopBtn').disabled

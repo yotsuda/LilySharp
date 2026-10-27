@@ -127,19 +127,19 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1002セッション（2026-10-27・YT-DELL2）
+
+第1001 と同じ会話の続き。`-Start p1002`（開始 HEAD `e78d3babc`・full **13368 / 0 / 2 / 13370**・第1000 を ARCHIVE へ）。作業場所は Lab `sessions/p1002/`。
+- **ユーザー「lys プレビューで和音の構成音を右クリックしたら『和音を選択する』メニュー。< >| にジャンプするだけで良い」→「それだとだめ、|< > でないと和音全体を選択する動作にならない。でも < >| にカーソルがある場合も和音を選択するようにした方がいいかも」→「< >| でも和音全体が選択されるなら < >| にジャンプした方が便利。装飾やオクターブはこの位置に書く」**。調べると、ステップキー（NoteStepper）はもともと `<`・`>` の直後・音価の上で和音全体（`TargetKind.Chord`）、プレビューの光り方は `|<` でも何も光らなかった（符頭の data-pos は各音）。→ previewCore `chordSpans`（文の `<…>`・`<<`/`>>`・`\<`/`\>`・コメント・文字列を除く・1 行）と `chordAtCaret`（`|<`・`>|`・`>` に続けて書いた音価や `@` の中）。キャレットがそこなら `highlightRange` で和音全体を光らせる。描画ごとに `chordSpans` をページへ → 右クリックの符頭が和音の中なら `lysOnChord`／`lysChordEnd` → `lilysharp.previewSelectChord`＝キャレットを `>` の直後へ。網 `previewCore.test` 3 本（npm 486）。site commands・両 CHANGELOG・MANUAL-CHECKS C15。
+判定（2026-10-27・第1002 の終わり）: 次はユーザーの指示（C9〜C15）。
+
+## 以下は第1001セッションの経緯
+
 ### 1.1 第1001セッション（2026-10-27・YT-DELL2）
 
 第1000 と同じ会話の続き。`-Start p1001`（開始 HEAD `51e567d13`・full **13361 / 0 / 2 / 13363**・第999 を ARCHIVE へ）。作業場所は Lab `sessions/p1001/`。
 - **ユーザー「OMR 編集ペインで自動補完を動作させるのは難しいよね？」→ 難しくないと答え（サーバーの補完をテキストで呼ぶ要求＋欄の下の自前の一覧・スニペットは既定値で・Ghost は入らない）→ 「作って」**。LSP `lilysharp/completeText`（`Completion` を `CompletionIn(Document, params)` に割り、使い捨ての `Document` で同じ処理・各項目を `{Insert, Start, End, Caret, Filter, Sort, Again}` に平らにする＝範囲なしの項目は VS Code の既定の単語・`PlainSnippet`＝`${n:既定}`・`${n|a,b|}`・`$n`・エスケープ）。拡張 `completionsOf`（欄の本文を `spliceBar` した全文で問い、欄の外に届く項目は捨てる）・`triggersOf`（サーバーの triggerCharacters）。ページ: 語の文字か trigger で問い（seq で最後だけ）、キャレットの位置は鏡の div、↑↓／Enter・Tab／Escape は捕獲相で欄の Enter・Escape より先、Ctrl+Space、クリックで確定、確定後は打ったのと同じく `sendEdit`。網 `CompleteTextTests` 7 本・`omrAiFixPage.test` 1 本（npm 483）。**実機の代わりにヘッドレス Edge を CDP で動かし本物のページ台本で確認**（scratchpad `suggest/make.js`・`drive.js`＝`@`→候補 4・`st` で 1・Enter で `@staccato`・空白→候補・Escape は一覧だけ・Ctrl+Space・Tab）。site scan・両 CHANGELOG・MANUAL-CHECKS C14。⚠️ Claude in Chrome は未接続だった。
 判定（2026-10-27・第1001 の終わり）: 次はユーザーの指示（C9〜C14）。
-
-## 以下は第1000セッションの経緯
-
-### 1.1 第1000セッション（2026-10-27・YT-DELL2）
-
-第999 と同じ会話の続き。`-Start p1000`（開始 HEAD `aed67dbf4`・full **13361 / 0 / 2 / 13363**・第998 を ARCHIVE へ）。作業場所は Lab `sessions/p1000/`。
-- **ユーザー「OMR 修正ペインで AI の結果を待つ間に自分で編集すると、届いた proposal を見るには自分の編集を discard するしかない。AI proposal と自分の編集をトグルできるように」**: `FixRow.stashed`＝「use the AI's」（と「undo my edit」）が編集を捨てずに預ける（`editRow` の no-edit 枝で `edited` を `stashed` へ）・新しい編集で落とす。行の説明に「back to my edit」→ ページの `restore`（seq を進める）→ `editRow(…, kept.text, seq, kept.fromAi)` で門と絵を作り直す（「AI proposal, edited」の出所も戻る）。網 `omrAiFixPage.test` 1 本（npm 482）。site scan・両 CHANGELOG・MANUAL-CHECKS C13。
-判定（2026-10-27・第1000 の終わり）: 次はユーザーの指示（C9〜C13）。
 
 ## 2. 開いている作業
 
