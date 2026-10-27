@@ -166,7 +166,7 @@ public class ArticulationPlacementTests
         // LILYPOND-REF: scm/script.scm marcato (quantize-position . #t);
         //   lily/side-position-interface.cc:409-432 quantize_position.
         string svg = LilySharp.Core.Svg.SvgGenerator.Generate(
-            SyntaxTree.Parse("time 4/4 c'4@marcato.up g4@marcato.up e4@marcato.up c4@marcato.up"),
+            SyntaxTree.Parse("time 4/4 c''4@marcato.up g4@marcato.up e4@marcato.up c4@marcato.up"),
             new LilySharp.Core.Svg.Renderer.SvgRenderOptions { EmbedFont = false });
         double middle = MiddleLineY(svg);
         var marcatos = MusicGlyphs(svg)
@@ -231,7 +231,7 @@ public class ArticulationPlacementTests
         // LILYPOND-REF: lily/script-column.cc:160-186 order_grobs — the walk;
         //   lily/new-fingering-engraver.cc:314-340 position_scripts — the fingering.
         string svg = LilySharp.Core.Svg.SvgGenerator.Generate(
-            SyntaxTree.Parse("time 4/4 f'4@staccato@tenuto@finger(3)@upBow" +
+            SyntaxTree.Parse("time 4/4 f''4@staccato@tenuto@finger(3)@upBow" +
                 " e'@flageolet@fermata@upBow e,@tenuto@finger(0)@downBow r4 |"),
             new LilySharp.Core.Svg.Renderer.SvgRenderOptions { EmbedFont = false });
         double middle = MiddleLineY(svg);
@@ -307,7 +307,7 @@ public class ArticulationPlacementTests
         var g = LpFidelity.RenderedGeometry.Render(
             "part melody\n" +
             "section A {\n  melody {\n" +
-            "    r2. c''4@accent~ | c@accent r2. |\n" +
+            "    r2. c'''4@accent~ | c@accent r2. |\n" +
             "    r2. <g@tenuto c@accent>4@tenuto~ | <g@tenuto c>4@accent~ <g c@tenuto@portato>4@accent r2 |\n" +
             "  }\n}\n" +
             "form { ~A }\n" +
@@ -366,9 +366,9 @@ public class ArticulationPlacementTests
         // because pitches are RELATIVE: a second `c''` is two octaves up, and a tie between
         // two pitches is not drawn. Measured: 5.42 tied, 5.17 untied (the Scripts_AvoidTies
         // book above reads the same lift).
-        double tied = AccentYUp("r2. c''4@accent~ | c4 r2. | e1 | e1 |");
-        double next = AccentYUp("r2. c''4@accent | c4 r2. | e1~ | e1 |");
-        double untied = AccentYUp("r2. c''4@accent | c4 r2. | e1 | e1 |");
+        double tied = AccentYUp("r2. c'''4@accent~ | c4 r2. | e1 | e1 |");
+        double next = AccentYUp("r2. c'''4@accent | c4 r2. | e1~ | e1 |");
+        double untied = AccentYUp("r2. c'''4@accent | c4 r2. | e1 | e1 |");
 
         Assert.True(tied > untied + 0.1, $"the tie must lift its accent: {tied} vs {untied}");
         Assert.Equal(untied, next, precision: 9);
@@ -391,8 +391,8 @@ public class ArticulationPlacementTests
     [Fact]
     public void ALentTieList_CarriesNoTieIntoTheNextBook()
     {
-        double high = AccentYUp("r2. c'''4@accent~ | c4 r2. |");
-        double low = AccentYUp("r2. c''4@accent~ | c4 r2. |");
+        double high = AccentYUp("r2. c''''4@accent~ | c4 r2. |");
+        double low = AccentYUp("r2. c'''4@accent~ | c4 r2. |");
 
         Assert.True(high > low + 1, $"the high tie must stand over the low one: {high} vs {low}");
         Assert.Equal(5.43, low, 2); // tie START lift (LP 5.43; 5.42 until session 953's bow skyline)
@@ -424,8 +424,8 @@ public class ArticulationPlacementTests
             return layout.ArticulationLayouts.OrderBy(a => a.ItemIndex).Select(a => a.YUp).ToArray();
         }
 
-        var slurred = AccentHeights("c'4@accent( d) c@accent( d) |");
-        var plain = AccentHeights("c'4@accent d c@accent d |");
+        var slurred = AccentHeights("c''4@accent( d) c@accent( d) |");
+        var plain = AccentHeights("c''4@accent d c@accent d |");
 
         Assert.Equal(2, slurred.Length);
         Assert.Equal(2, plain.Length);
@@ -490,7 +490,7 @@ public class ArticulationPlacementTests
         // LILYPOND-REF: lily/slur.cc:364-387 auxiliary_acknowledge_extra_object
         // LILYPOND-REF: scm/script.scm avoid-slur declarations
         string svg = LilySharp.Core.Svg.SvgGenerator.Generate(
-            SyntaxTree.Parse("time 4/4 e'4(@accent@finger(0)@downBow c4@staccato)" +
+            SyntaxTree.Parse("time 4/4 e''4(@accent@finger(0)@downBow c4@staccato)" +
                 " d@tenuto@downBow d,@staccato@finger(0)@accent |"),
             new LilySharp.Core.Svg.Renderer.SvgRenderOptions { EmbedFont = false });
         double middle = MiddleLineY(svg);

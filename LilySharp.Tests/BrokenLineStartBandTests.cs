@@ -40,8 +40,8 @@ public class BrokenLineStartBandTests
           clef bass
           tuning bass5
           section A {
-            c4 c c c | c1 | c1 | {{lineOneEnd}} | break
-            {{lineTwoStart}} c c c | c1 | c1 | c1 |
+            c'4 c' c' c' | c'1 | c'1 | {{lineOneEnd}} | break
+            {{lineTwoStart}} c' c' c' | c'1 | c'1 | c'1 |
           }
         }
         form { A }
@@ -63,8 +63,8 @@ public class BrokenLineStartBandTests
     }
 
     [Theory]
-    [InlineData("c1", "ees,,4", new[] { 39.74, 60.59, 81.44, 102.28 })]                 // the key reprinted
-    [InlineData("time 2/4 c2", "time 4/4 ees,,4", new[] { 41.80, 61.96, 82.12, 102.28 })] // a meter change
+    [InlineData("c'1", "ees,4", new[] { 39.74, 60.59, 81.44, 102.28 })]                 // the key reprinted
+    [InlineData("time 2/4 c'2", "time 4/4 ees,4", new[] { 41.80, 61.96, 82.12, 102.28 })] // a meter change
     public void TheSecondLine_IsLaidOutAsLilyPondsIs(string lineOneEnd, string lineTwoStart, double[] lilyPond)
     {
         var bars = SecondLineBars(LiveRender.SvgFromRenderSpec(Book(lineOneEnd, lineTwoStart)));

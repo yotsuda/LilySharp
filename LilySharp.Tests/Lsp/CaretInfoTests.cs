@@ -66,7 +66,8 @@ public class CaretInfoTests
     {
         Assert.Equal("octave 3: a bare c is written C3 - the page's register (transposition moves only the sound)",
             InfoAt(Part("octave 3‸")));
-        Assert.StartsWith("octave absolute: a bare letter is in the part's octave", InfoAt("octave abso‸lute\n" + Part("clef treble")));
+        // Absolute octaves are LilyPond's (owner's decision 2026-10-28).
+        Assert.StartsWith("octave absolute: as LilyPond's - a bare c is C3", InfoAt("octave abso‸lute\n" + Part("clef treble")));
     }
 
     [Fact]
@@ -118,22 +119,22 @@ public class CaretInfoTests
     public void ANote_SaysItsBarBeatAndPitch()
     {
         // Owner's request 2026-10-24: where a note stands and what it is.
-        // (Relative octaves from the part's C4: a bare letter is the nearest.)
+        // (Relative octaves from the part's F3: a bare letter is the nearest.)
         string book = "part m { clef treble }\nsection A { m { c'4 d e f | g4 a8 b c2 } }\n";
-        Assert.Equal("bar 1 · beat 1 · C4", InfoAt(book.Replace("c4 d", "c‸4 d")));
+        Assert.Equal("bar 1 · beat 1 · C4", InfoAt(book.Replace("c'4 d", "c‸'4 d")));
         Assert.Equal("bar 1 · beat 3 · E4", InfoAt(book.Replace(" e ", " e‸ ")));
         Assert.Equal("bar 2 · beat 2 + 1/2 · B4", InfoAt(book.Replace(" b ", " b‸ ")));
         // With a score of two parts, the part is named too.
         string two = "part m { clef treble }\npart n { clef treble }\nsection A { m { c'4 d e f } n { e'4 f g a } }\n"
             + "score { staff m staff n }\n";
-        Assert.Equal("n · bar 1 · beat 2 · F4", InfoAt(two.Replace("e4 f", "e4 f‸")));
+        Assert.Equal("n · bar 1 · beat 2 · F4", InfoAt(two.Replace("e'4 f", "e'4 f‸")));
     }
 
     [Fact]
     public void ANoteOfATransposingPart_SaysWhatItSounds()
     {
         string clarinet = "part cl { instrument clarinet }\nsection A { cl { d'4 e f g } }\n";
-        Assert.Equal("bar 1 · beat 1 · D4 sounds C4", InfoAt(clarinet.Replace("d4", "d‸4")));
+        Assert.Equal("bar 1 · beat 1 · D4 sounds C4", InfoAt(clarinet.Replace("d'4", "d‸'4")));
         string bass = "part b { instrument bass }\nsection A { b { e,4 a d g } }\nscore { staff b }\n";
         Assert.Equal("b · bar 1 · beat 1 · E2 sounds E1", InfoAt(bass.Replace("e,4", "e‸,4")));
     }

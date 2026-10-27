@@ -123,7 +123,7 @@ public class ChordTieTests
         //   up.end   − down.end   = 40.244 − 39.083 = 1.161
         // LILYPOND-REF: lily/tie-formatting-problem.cc:243-258 set_column_chord_outline
         // LILYPOND-REF: lily/tie-formatting-problem.cc:583-609 generate_configuration
-        var (_, layout) = BuildLayout("<f f>'4~ <f f> |");
+        var (_, layout) = BuildLayout("<f f>''4~ <f f> |");
         var down = Assert.Single(layout.TieLayouts, t => !t.CurveUp);
         var up = Assert.Single(layout.TieLayouts, t => t.CurveUp);
         Assert.Equal(0.387, up.StartX - down.StartX, 2);
@@ -136,7 +136,7 @@ public class ChordTieTests
         // E4 unison pair, stems up — the mirror of the stem-down case. LilyPond:
         //   up.start − down.start = 65.001 − 63.840 = 1.161
         //   up.end   − down.end   = 66.829 − 66.442 = 0.387
-        var (_, layout) = BuildLayout("<e e>4~ <e e> |");
+        var (_, layout) = BuildLayout("<e e>'4~ <e e> |");
         var down = Assert.Single(layout.TieLayouts, t => !t.CurveUp);
         var up = Assert.Single(layout.TieLayouts, t => t.CurveUp);
         Assert.Equal(1.161, up.StartX - down.StartX, 2);

@@ -131,7 +131,7 @@ public sealed class PreviewCollectSharingTests
 
         // The document moves on (the tie now lands on its own pitch): the preview's collect
         // is of the OLD tree, so the pass declines it and collects the new text itself...
-        var edited = Book.Replace("g'4 ~ a'", "g'4 ~ g'", StringComparison.Ordinal);
+        var edited = Book.Replace("g''4 ~ a''", "g''4 ~ g''", StringComparison.Ordinal);
         server.DidChange(new DidChangeTextDocumentParams
         {
             TextDocument = new VersionedTextDocumentIdentifier { Uri = uri, Version = 2 },

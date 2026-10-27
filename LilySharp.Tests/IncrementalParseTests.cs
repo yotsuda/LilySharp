@@ -99,7 +99,7 @@ public class IncrementalParseTests
 
     [Theory]
     // Edit inside the second phrase (replace e4 → a8).
-    [InlineData("e4 d c d", "a8 d c d")]
+    [InlineData("e'4 d c d", "a'8 d c d")]
     // Insert text (grow).
     [InlineData("g2 g", "g2 g a4 b")]
     // Delete text (shrink).
@@ -111,7 +111,7 @@ public class IncrementalParseTests
     // Introduce a parse error.
     [InlineData("time 4/4", "time 4/")]
     // Edit that changes how a token lexes at the boundary.
-    [InlineData("c4 d e f", "c44 d e f")]
+    [InlineData("c'4 d e f", "c'44 d e f")]
     // Typing the '.' and then the digit of a decimal: the number BEFORE the edit
     // has to be re-lexed, because ScanNumber decides where it ends by looking two
     // characters past it. That is the widest lookahead in the lexer and exactly what
@@ -119,7 +119,7 @@ public class IncrementalParseTests
     // reuses a stale `1` and the trees diverge.
     [InlineData("e1 |", "e1. |")]
     [InlineData("e1 |", "e1.5 |")]
-    [InlineData("c4 d e f", "c4.5 d e f")]
+    [InlineData("c'4 d e f", "c'4.5 d e f")]
     public void WithChange_MatchesFullParse(string find, string replace)
     {
         var old = SyntaxTree.Parse(Source);
@@ -155,11 +155,11 @@ public class IncrementalParseTests
         // The old tree contains an error in 'intro'; editing 'theme' must
         // re-parse the erroneous item too (reuse is refused for items with
         // diagnostics) and reproduce its diagnostics exactly.
-        var broken = Source.Replace("c4 d e f | g2 g |", "c4 d e f | g2 |");
+        var broken = Source.Replace("c'4 d e f | g2 g |", "c'4 d e f | g2 |");
         var old = SyntaxTree.Parse(broken);
 
-        int start = broken.IndexOf("e4 d c d", StringComparison.Ordinal);
-        var incremental = Edit(old, start, "e4".Length, "b8", out var full);
+        int start = broken.IndexOf("e'4 d c d", StringComparison.Ordinal);
+        var incremental = Edit(old, start, "e'4".Length, "b'8", out var full);
         AssertTreesEquivalent(full, incremental);
     }
 
@@ -201,12 +201,12 @@ public class IncrementalParseTests
     public void WithChanges_MultipleEdits_MatchesFullParse()
     {
         var old = SyntaxTree.Parse(Source);
-        int p1 = Source.IndexOf("c4 d e f", StringComparison.Ordinal);
-        int p2 = Source.IndexOf("e4 d c d", StringComparison.Ordinal);
+        int p1 = Source.IndexOf("c'4 d e f", StringComparison.Ordinal);
+        int p2 = Source.IndexOf("e'4 d c d", StringComparison.Ordinal);
 
         var incremental = old.WithChanges(
-            new TextChange(new TextSpan(p1, 2), "a8"),
-            new TextChange(new TextSpan(p2, 2), "b2"));
+            new TextChange(new TextSpan(p1, 3), "a'8"),
+            new TextChange(new TextSpan(p2, 3), "b'2"));
         var full = SyntaxTree.Parse(incremental.Text);
         AssertTreesEquivalent(full, incremental);
     }
@@ -271,8 +271,8 @@ public class IncrementalParseTests
     public void WithChange_ReusesGreensOutsideTheEdit()
     {
         var old = SyntaxTree.Parse(Source);
-        int start = Source.IndexOf("e4 d c d", StringComparison.Ordinal);
-        var incremental = old.WithChange(new TextChange(new TextSpan(start, 2), "a8"));
+        int start = Source.IndexOf("e'4 d c d", StringComparison.Ordinal);
+        var incremental = old.WithChange(new TextChange(new TextSpan(start, 3), "a'8"));
 
         // Collect top-level member greens of both roots.
         static List<GreenNode> Members(SyntaxTree t)

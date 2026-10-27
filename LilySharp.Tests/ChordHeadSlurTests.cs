@@ -76,7 +76,7 @@ public sealed class ChordHeadSlurTests
     [Fact]
     public void AMarkAfterTheBracket_StaysOnTheChord()
     {
-        var slurs = new SlurDetector().DetectSlurs(Collect(Book.Replace("<d f a)>", "<d f a>)")));
+        var slurs = new SlurDetector().DetectSlurs(Collect(Book.Replace("<d' f' a')>", "<d' f' a'>)")));
         Assert.True(slurs[1].StartOnHead);
         Assert.False(slurs[1].EndOnHead);
     }
@@ -110,7 +110,7 @@ public sealed class ChordHeadSlurTests
     public void TheTwin_WritesTheMarkOnTheMember()
     {
         var ly = new LilyPondExporter().Export(SyntaxTree.Parse(Book));
-        Assert.Contains("<c e( g>4 <d f) a> <c( e g>4 <d f a)>", ly);
+        Assert.Contains("<c' e'( g'>4 <d' f') a'> <c'( e' g'>4 <d' f' a')>", ly);
     }
 
     /// <summary>The MusicXML slur start sits on the member's own note (the E), not on the
@@ -134,7 +134,7 @@ public sealed class ChordHeadSlurTests
     [Fact]
     public void AMarkWithNoPitchBeforeIt_IsReported()
     {
-        var tree = SyntaxTree.Parse(Book.Replace("<c e( g>4", "<( c e g>4"));
+        var tree = SyntaxTree.Parse(Book.Replace("<c' e'( g'>4", "<( c' e' g'>4"));
         Assert.Contains(tree.Diagnostics, d => d.Message.Contains("goes after the pitch"));
     }
 }

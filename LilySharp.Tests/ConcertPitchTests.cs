@@ -40,16 +40,16 @@ namespace LilySharp.Tests;
 [Trait("Category", "Unit")]
 public sealed class ConcertPitchTests
 {
-    // ⚠️ `octave 4` on purpose, as InstrumentTranspositionMidiTests: a preset moves the
-    // anchor (both modes, since 2026-10-13), and that would mix a second variable into a
-    // table about the transposition. The explicit octave pins the written note at C5.
+    // ⚠️ `octave 4` on purpose, as InstrumentTranspositionMidiTests: the explicit octave pins
+    // the written note at C5 in both parts, whatever the preset (since the owner's decision
+    // 2026-10-28 no preset moves an octave, and a bare `c` is C3 without one).
     private static string Book(string top, string header, string scoreOpts = "") => $$"""
         time 4/4
         key c major
         octave absolute
         {{top}}
         part x { {{header}} octave 4 }
-        part ctl
+        part ctl { octave 4 }
         section A { x { c'1 | } ctl { c'1 | } }
         form { A }
         score{{scoreOpts}} { staff x staff ctl }
@@ -113,10 +113,10 @@ public sealed class ConcertPitchTests
 
     /// <summary>
     /// A concert-pitch file, one preset per row: each chromatic transposer prints its
-    /// written pitch in its written key, and the octave-only ones (bass, piccolo, an explicit
-    /// <c>transposition 8vb</c>) keep their notation — a concert score does not un-transpose
-    /// an octave (PartHeaderDefaults.ConcertShiftSemitones). The controls are the presets
-    /// that never transposed.
+    /// written pitch in its written key, and so do the octave-only ones (bass, piccolo, an
+    /// explicit <c>transposition 8vb</c>): since the owner's decision 2026-10-28 they are typed
+    /// as they sound too, so the bass prints an octave above its letters and the piccolo one
+    /// below. The controls are the presets that never transposed.
     /// </summary>
     [Theory]
     [InlineData("instrument clarinet", "D5", 2)]        // in B♭: up a major 2nd, D major
@@ -129,9 +129,9 @@ public sealed class ConcertPitchTests
     [InlineData("instrument trumpet-c", "C5", 0)]       // control: the C trumpet
     [InlineData("instrument flute", "C5", 0)]           // control
     [InlineData("", "C5", 0)]                           // control: no instrument at all
-    [InlineData("instrument bass", "C5", 0)]            // octave-only: notation kept
-    [InlineData("instrument piccolo", "C5", 0)]         // octave-only
-    [InlineData("transposition 8vb", "C5", 0)]          // octave-only, spelled by hand
+    [InlineData("instrument bass", "C6", 0)]            // octave-only: written an octave up
+    [InlineData("instrument piccolo", "C4", 0)]         // octave-only: written an octave down
+    [InlineData("transposition 8vb", "C6", 0)]          // octave-only, spelled by hand
     public void AConcertPitchFile_PrintsEachInstrumentInItsWrittenKey(
         string header, string expectedPitch, int expectedSharps)
     {
@@ -187,7 +187,7 @@ public sealed class ConcertPitchTests
     [InlineData("pitch concert", "instrument tenor-sax", 72)]  // prints D6, sounds C5
     [InlineData("pitch concert", "instrument flute", 72)]      // control: no shift either way
     [InlineData("pitch concert", "", 72)]                      // control
-    [InlineData("pitch concert", "instrument bass", 60)]       // octave-only: prints C5, sounds C4 as ever
+    [InlineData("pitch concert", "instrument bass", 72)]       // octave-only: typed as it sounds (owner's decision 2026-10-28), prints C6
     [InlineData("", "instrument alto-sax", 63)]                // written pitch: prints C5, sounds E♭4
     public void AConcertPitchFile_SoundsTheLetterThatWasWritten(string top, string header, int expected)
         => Assert.Equal(expected, FirstMidiPitch(top, header));
@@ -244,7 +244,7 @@ public sealed class ConcertPitchTests
         // The control part is untouched by the file's convention.
         var ctl = doc.Parts.Single(p => p.Name == "ctl");
         var ctlFirst = ctl.Measures.SelectMany(m => m.Notes).First(n => n.Step != null);
-        Assert.Equal("C4", ctlFirst.Step + ctlFirst.Octave!.Value.ToString());
+        Assert.Equal("C5", ctlFirst.Step + ctlFirst.Octave!.Value.ToString());
         Assert.Equal(0, ctl.Measures[0].Attributes?.KeyFifths ?? 0);
     }
 
@@ -380,7 +380,7 @@ public sealed class ConcertPitchTests
     [InlineData("pitch concert", "instrument alto-sax pitch concert", "A5", 3)]  // both agree
     [InlineData("", "pitch concert", "C5", 0)]                                   // no instrument: a no-op
     [InlineData("", "instrument flute pitch concert", "C5", 0)]                  // a non-transposer: a no-op
-    [InlineData("", "instrument bass pitch concert", "C5", 0)]                   // octave-only: a no-op
+    [InlineData("", "instrument bass pitch concert", "C6", 0)]                   // octave-only: typed as it sounds (owner's decision 2026-10-28)
     public void APartsOwnPitch_WinsOverTheFiles(
         string top, string header, string expectedPitch, int expectedSharps,
         string? overridePitch = null, int? overrideSharps = null)

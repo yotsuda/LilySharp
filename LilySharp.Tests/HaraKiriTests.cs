@@ -360,7 +360,8 @@ public class HaraKiriTests
     /// ideal), and audit/lp-geometry <c>page.compressed.staff-staff-inside</c> records that
     /// LilyPond reads the same 8.651797 there — so the undeclared side of this pair is
     /// independently known to be RIGHT, not merely different.
-    /// <para>⚠️ Lily# <c>c</c> is LilyPond <c>c'</c> (HANDOFF 5.5).</para>
+    /// <para>⚠️ Absolute octaves are LilyPond's since the owner's decision 2026-10-28: <c>c'</c>
+    /// is middle C (the books were re-marked an apostrophe up to keep JSK's music).</para>
     /// </remarks>
     private static string PlainHaraKiriScore(bool declareRemoveEmpty, bool wideInk = false)
     {
@@ -371,9 +372,9 @@ public class HaraKiriTests
         // be blind to, and it is a different one from the compressed page below: this one
         // binds at force 0, on any paper.
         string rh = string.Concat(Enumerable.Repeat(
-            wideInk ? "c,,4 d,, e,, f,, | " : "c4 d e f | ", 120)).Trim();
+            wideInk ? "c,4 d, e, f, | " : "c'4 d' e' f' | ", 120)).Trim();
         string lh = string.Concat(Enumerable.Repeat(
-            wideInk ? "c''4 d'' e'' f'' | " : "c,4 d, e, f, | ", 120)).Trim();
+            wideInk ? "c'''4 d''' e''' f''' | " : "c4 d e f | ", 120)).Trim();
         return $$"""
             octave absolute
             time 4/4

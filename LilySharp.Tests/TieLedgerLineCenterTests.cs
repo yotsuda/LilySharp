@@ -43,7 +43,7 @@ namespace LilySharp.Tests;
 [Trait("Category", "Unit")]
 public class TieLedgerLineCenterTests
 {
-    private const string Bar = "g,,8 g,,16 g,, r8 g,,8~ g,, a, a,16 a, a, a, |";
+    private const string Bar = "g,8 g,16 g, r8 g,8~ g, a a16 a a a |";
 
     private static string Book() => $$"""
         time 4/4

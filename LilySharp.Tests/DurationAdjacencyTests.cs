@@ -213,7 +213,7 @@ public class DurationAdjacencyTests
         // Best-effort recovery: <c e g2> stays a three-note chord — the old
         // behavior silently ADDED a degree-2 note (a D) to it.
         var chord = new MeasureCollector()
-            .Collect(SyntaxTree.Parse("{ <c e g2> }")).Voice.Measures
+            .Collect(SyntaxTree.Parse("{ <c' e g2> }")).Voice.Measures
             .SelectMany(m => m.Items).OfType<ChordItem>().First();
         Assert.Equal(new[] { 60, 64, 67 }, chord.Notes.Select(n => n.Midi).ToArray());
     }

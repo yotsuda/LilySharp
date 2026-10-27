@@ -49,7 +49,7 @@ public class FormCompletionTests
     {
         // Inside a section's music block the completions route to music (note)
         // names, not the form body's section/navigation list.
-        int offset = Doc.IndexOf("c4 d");
+        int offset = Doc.IndexOf("c'4 d");
         Assert.NotEqual(LilySharpLanguageServer.CompletionContext.FormBlock,
             LilySharpLanguageServer.GetCompletionContext(Doc, offset));
     }

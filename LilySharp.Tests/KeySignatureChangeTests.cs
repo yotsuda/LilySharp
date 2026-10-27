@@ -137,7 +137,7 @@ public class KeySignatureChangeTests
                 time 4/4
                 key c major
                 part m
-                section A { m { f4 f f f | {{key}}{{pitch}}8 {{pitch}} {{pitch}}4 {{pitch}}2 | } }
+                section A { m { f'4 f' f' f' | {{key}}{{pitch}}8 {{pitch}} {{pitch}}4 {{pitch}}2 | } }
                 form { ~A }
                 score x { staff m }
                 """;
@@ -148,9 +148,9 @@ public class KeySignatureChangeTests
             return bar.GetXForTiming(Fraction.Zero);
         }
 
-        // e' (E5) stems down, e (E4) stems up.
-        Assert.Equal(FirstColumnX("e", withKey: true), FirstColumnX("e'", withKey: true), 6);
-        double down = FirstColumnX("e'", withKey: false), up = FirstColumnX("e", withKey: false);
+        // e'' (E5) stems down, e' (E4) stems up.
+        Assert.Equal(FirstColumnX("e'", withKey: true), FirstColumnX("e''", withKey: true), 6);
+        double down = FirstColumnX("e''", withKey: false), up = FirstColumnX("e'", withKey: false);
         Assert.True(down > up + 0.1, $"control: after a bare bar line the down stem keeps its correction ({down} vs {up})");
     }
 
