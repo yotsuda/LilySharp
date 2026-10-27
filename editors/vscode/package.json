@@ -773,72 +773,72 @@
         {
           "command": "lilysharp.previewAiTransform",
           "when": "webviewId == 'lilysharpPreview' && lysAiKind == 'selection'",
-          "group": "0_ai@1"
+          "group": "1_edit@1"
         },
         {
           "command": "lilysharp.previewAiTransformNote",
           "when": "webviewId == 'lilysharpPreview' && lysAiKind == 'note'",
-          "group": "0_ai@1"
+          "group": "1_edit@1"
         },
         {
           "command": "lilysharp.previewAiTransformBar",
           "when": "webviewId == 'lilysharpPreview' && lysAiKind == 'bar'",
-          "group": "0_ai@1"
+          "group": "1_edit@1"
         },
         {
           "command": "lilysharp.previewAiTransformScore",
           "when": "webviewId == 'lilysharpPreview' && lysAiKind == 'score'",
-          "group": "0_ai@1"
+          "group": "1_edit@1"
         },
         {
           "command": "lilysharp.previewSelectChord",
           "when": "webviewId == 'lilysharpPreview' && lysOnChord",
-          "group": "0_select@0"
+          "group": "1_edit@2"
         },
         {
           "command": "lilysharp.previewSelectBar",
           "when": "webviewId == 'lilysharpPreview' && lysOnStaff",
-          "group": "0_select@1"
+          "group": "1_edit@3"
         },
         {
           "command": "lilysharp.previewClearSelection",
           "when": "webviewId == 'lilysharpPreview' && lysHasSel",
-          "group": "0_select@2"
+          "group": "1_edit@4"
         },
         {
           "command": "lilysharp.editBarsBesideScan",
           "when": "(webviewId == 'lilysharpPreview' || webviewId == 'lilysharpScan') && lysOnBar",
-          "group": "0_bar@1"
+          "group": "1_edit@5"
         },
         {
           "command": "lilysharp.previewPlayFromHere",
           "when": "webviewId == 'lilysharpPreview' && lysPlayFrom",
-          "group": "1_playback@1"
+          "group": "2_playback@1"
         },
         {
           "command": "lilysharp.previewStop",
           "when": "webviewId == 'lilysharpPreview' && lysPlaying",
-          "group": "1_playback@2"
+          "group": "2_playback@2"
         },
         {
           "command": "lilysharp.previewFitWidth",
           "when": "webviewId == 'lilysharpPreview'",
-          "group": "2_zoom@1"
+          "group": "3_view@1"
         },
         {
           "command": "lilysharp.previewResetZoom",
           "when": "webviewId == 'lilysharpPreview'",
-          "group": "2_zoom@2"
+          "group": "3_view@2"
         },
         {
           "command": "lilysharp.scanFitWidth",
           "when": "webviewId == 'lilysharpScan'",
-          "group": "2_zoom@1"
+          "group": "3_view@1"
         },
         {
           "command": "lilysharp.scanResetZoom",
           "when": "webviewId == 'lilysharpScan'",
-          "group": "2_zoom@2"
+          "group": "3_view@2"
         }
       ],
       "explorer/context": [

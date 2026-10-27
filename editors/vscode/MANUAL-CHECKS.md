@@ -240,6 +240,7 @@ edocs/HANDOFF.mde §2 R13 ⒝・OMR の提案 B1〜B6（e..\LilySharp-Omr\docs\r
 - [ ] **C19**（第1006・編集から頼む／2 つのラベル）: Beside the Scan の行で下のテキストを編集 → Draft の絵の上が **your edit**（太字）/ **AI proposal**（AI の案があるとき・無ければ **the bar as it stands**）→ 行の説明に undo my edit・use the AI's・back to my edit のリンクは無い。編集したまま Ask AI → 出力チャネル「Lily# AI」の依頼で `<bar>` が自分の編集・`<reader>` が元の読み → 答えが来ると Draft が AI の案（AI proposal が太字）、your edit を押すと自分の編集に戻る・もう一度 AI proposal で AI の案。AI が「unchanged」と答えたら自分の編集のまま。
 - [ ] **C20**（第1007・AI の返事は「AI:」）: AI の返事が来た行で、行の見出しに **AI:** で始まる返事の文。your edit を選んで（または返事を待つ間に編集して）も「Your edit. **AI:** …」と返事が見える。
 - [ ] **C21**（第1008・3 つのラベル／見えている行を渡す）: AI の案が来た行を編集 → Draft の上が「original / **your edit** / AI proposal」→ original を押すと元の小節（Accept は @todo を外すだけ）・AI proposal で AI の案・your edit で自分の編集に戻る（何度でも）。AI proposal を表示したまま Ask AI → 出力チャネルの依頼に「as an EARLIER ANSWER of yours proposed it」と前の案・original を表示したまま Ask AI → `<bar>` は元の読み（`<reader>` は無い）・your edit なら自分の編集。
+- [ ] **C22**（第1011・プレビューの右クリックのグループ・⚠️ package.json が変わった＝Reload Window を 2 回）: プレビューで和音の音符を右クリック → 区切り線は 2 本＝「Ask AI… / Select Chord / Select This Bar（/ Clear Selection / Edit Bars Beside the Scan）」「Play from Here（/ Stop Playback）」「Fit Width / Reset Zoom」の 3 群。元画像の右クリックも Edit Bars Beside the Scan と Fit Width・Reset Zoom の 2 群。
 
 ## 4. §2 R13 ⒝ — 差分頁の配信（実機未確認・第404）
 

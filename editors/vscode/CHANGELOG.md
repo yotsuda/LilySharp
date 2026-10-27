@@ -56,6 +56,9 @@ All notable changes to the Lily# VS Code extension are documented here.
   compiler's words on it; its answer takes the draft, and *your edit* brings yours back.
 - **What the AI said is shown with your edit too, marked "AI:"** — an answer that came while your
   edit is in the draft is read in the row's head (it was hidden until you switched).
+- **The preview's right-click menu is in three groups**: what changes the music (Ask AI…, Select
+  Chord, Select This Bar, Clear Selection, Edit Bars Beside the Scan), playback, and the view — it
+  was five, most of them holding one item.
 - **Select Chord in the preview.** Right-click a note of a chord: *Select Chord* puts the caret
   just after the chord's `>` — where its octave marks and decorations are written. A caret there,
   on its `<`, or in what is written right after the `>` (duration, `@` marks) now lights the whole

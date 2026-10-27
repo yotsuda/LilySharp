@@ -56,6 +56,23 @@ describe('the chords of a score', () => {
             .find(m => m.command === 'lilysharp.previewSelectChord');
         assert.equal(item?.when, "webviewId == 'lilysharpPreview' && lysOnChord");
     });
+
+    // Owner's report 2026-10-27: the menu's groups held one item each. Three groups: what changes
+    // the music (the AI, the selection, the scan), playback, the view.
+    it('groups the preview\'s menu as editing, playback and view', () => {
+        const fs = require('node:fs') as typeof import('node:fs');
+        const path = require('node:path') as typeof import('node:path');
+        const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, '..', '..', 'package.json'), 'utf8'));
+        const menu = pkg.contributes.menus['webview/context'] as { command: string; group: string }[];
+        const groups = [...new Set(menu.map(m => m.group.split('@')[0]))].sort();
+        assert.deepEqual(groups, ['1_edit', '2_playback', '3_view']);
+        const of = (c: string) => menu.find(m => m.command === c)?.group;
+        assert.equal(of('lilysharp.previewAiTransformNote'), '1_edit@1');
+        assert.equal(of('lilysharp.previewSelectChord'), '1_edit@2');
+        assert.equal(of('lilysharp.editBarsBesideScan'), '1_edit@5');
+        assert.equal(of('lilysharp.previewPlayFromHere'), '2_playback@1');
+        assert.equal(of('lilysharp.previewFitWidth'), '3_view@1');
+    });
 });
 
 describe('a score opened into a preview\'s group', () => {
