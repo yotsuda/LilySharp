@@ -568,7 +568,7 @@ public static class OctaveModeConverter
     }
 
     // Every written pitch the page draws, by position: its display pitch in each play, every score.
-    private static Dictionary<int, List<string>> TraceOf(SyntaxTree tree)
+    internal static Dictionary<int, List<string>> TraceOf(SyntaxTree tree)
     {
         var trace = new Dictionary<int, List<string>>();
         var specs = RenderSpecParser.FindAll(tree);

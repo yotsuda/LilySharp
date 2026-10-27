@@ -20,8 +20,8 @@ part vone { clef treble }
 part vtwo { clef treble }
 
 section A {
-  vone { e2 f | octave relative e2 f | }
-  vtwo { c2 d | octave relative c2 d | }
+  vone { e'2 f' | octave relative e2 f | }
+  vtwo { c'2 d | octave relative c2 d | }
 }
 
 form { ~A }

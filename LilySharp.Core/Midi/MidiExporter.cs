@@ -1034,7 +1034,7 @@ public sealed class MidiExporter
                     else if (anchorStep is { } astep)
                     {
                         int oct = RelativeOctave.Resolve(
-                            0, _partOctaveAnchor + varRef.OctaveOffset, astep, 0);
+                            RelativeOctave.FrameStartStep, _partOctaveAnchor + varRef.OctaveOffset, astep, 0);
                         _currentNoteName = astep;
                         _currentOctave = oct;
                     }
@@ -3375,7 +3375,7 @@ public sealed class MidiExporter
                     {
                         _currentNoteName = astep;
                         _currentOctave = RelativeOctave.Resolve(
-                            0, _partOctaveAnchor + offset, astep, 0);
+                            RelativeOctave.FrameStartStep, _partOctaveAnchor + offset, astep, 0);
                     }
                     break;
                 }

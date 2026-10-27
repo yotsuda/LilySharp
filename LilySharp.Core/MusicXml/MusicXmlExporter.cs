@@ -2937,7 +2937,7 @@ public sealed class MusicXmlExporter
                     else if (anchorStep is { } astep)
                     {
                         int oct = RelativeOctave.Resolve(
-                            0, _partAnchorOctave + _sectionOctaveOffset + varRef.OctaveOffset,
+                            RelativeOctave.FrameStartStep, _partAnchorOctave + _sectionOctaveOffset + varRef.OctaveOffset,
                             astep, 0);
                         _currentStep = astep;
                         _currentOctave = oct;
@@ -4894,7 +4894,7 @@ public sealed class MusicXmlExporter
                     {
                         _currentStep = astep;
                         _currentOctave = RelativeOctave.Resolve(
-                            0, _partAnchorOctave + offset, astep, 0);
+                            RelativeOctave.FrameStartStep, _partAnchorOctave + offset, astep, 0);
                     }
                     break;
                 }

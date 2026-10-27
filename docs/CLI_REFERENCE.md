@@ -483,7 +483,7 @@ file with no `score`) — nothing says what octave such a note means.
 **Options:**
 | Option | Description |
 |--------|-------------|
-| `-a, --absolute` | Convert to `octave absolute` (bare `c` = C4, or the part's `octave N`) |
+| `-a, --absolute` | Convert to `octave absolute` (bare `c` = C3, as in LilyPond, or the part's `octave N`) |
 | `-r, --relative` | Convert to relative octaves (the default mode) |
 | `-i, --in-place` | Overwrite the input |
 | `-d, --out-dir <folder>` | Write `song.lys` into this folder |

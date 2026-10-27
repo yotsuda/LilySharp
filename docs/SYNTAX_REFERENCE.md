@@ -63,22 +63,23 @@ d4@parenthesize  // The head in parentheses (with its accidental and dots) — a
 | `,` | One octave down |
 | `,,` | Two octaves down |
 
-Default starting octave is C4 (middle C). Each pitch takes the octave
+Octaves are LilyPond's, in every part and for every instrument (owner's decision 2026-10-28):
+`c` is C3, `c'` is middle C (C4), `c''` C5, `c,` C2. A fresh frame starts at F3, as LilyPond's
+pitchless `\relative { … }` does, so a section's first note reads as if absolute. Each pitch takes the octave
 closest to the previous note (an interval of a fourth or less); `'` and `,`
-shift octaves on top of that.
+shift octaves on top of that. An `instrument` preset never moves octaves; `part X { octave N }` does.
 
 > **Octave mode — relative (default) vs absolute.** By default Lily# resolves
 > octaves *relative* to the previous note (the "nearest octave" rule above). It is
 > compact, but a wide leap can leave the line an octave from where you meant it,
 > and a repeated figure like `c c g g` can walk steadily downward. To write
-> **fixed** octaves instead — bare `c` always means the part's anchor (C4 unless the part
-> says `octave N` or its `instrument` preset has another octave: `instrument bass` is C3),
-> and `'` / `,` are absolute per-note offsets — put **`octave absolute`** at the top of your
-> file (return to the default with `octave relative`):
+> **fixed** octaves instead — bare `c` always means C3, as in LilyPond's `\fixed c` (unless the
+> part says `octave N`), and `'` / `,` are absolute per-note offsets — put **`octave absolute`**
+> at the top of your file (return to the default with `octave relative`):
 >
 > ```
 > octave absolute
-> c' d' e' c'       // always C5 D5 E5 C5 — no drift, whatever the leaps
+> c'' d'' e'' c''   // always C5 D5 E5 C5 — no drift, whatever the leaps
 > ```
 >
 > A finished file can be switched either way without moving a note: the editor commands
@@ -86,8 +87,8 @@ shift octaves on top of that.
 > `lysc octave --absolute|--relative`, rewrite the directives and every note's marks.
 
 ```
-c d e f g a b c   // C4 D4 E4 F4 G4 A4 B4 C5 — bare c after b is already C5
-c' c,             // C6 C5 — marks shift from the nearest octave
+c d e f g a b c   // C3 D3 E3 F3 G3 A3 B3 C4 — bare c after b is already C4
+c' c,             // C5 C4 — marks shift from the nearest octave
 ```
 
 Each **phrase body** evaluates in a fresh frame — the default octave, pitch
@@ -257,19 +258,19 @@ Notes enclosed in angle brackets share a duration (written after the `>`):
   (`<c e g>` = `<c g e>`); only the first slot does (`<g c e>` anchors on g).
   Degrees are fully order-independent (`<2 4 6>` = `<6 2 4>`).
 - A `'` / `,` on the **first member** moves the whole chord and the frame with it —
-  `<c' e g>` = C5 E5 G5, next bare `c` = C5 — the same as a mark **after the `>`**
+  `<c' e g>` = C4 E4 G4, next bare `c` = C4 — the same as a mark **after the `>`**
   (before the duration): `<c e g>'4`. A `'` / `,` on a **later member** moves *that one
-  note* from its stacked spot: `<c g,>` = C4 G3; `<c' e' g'>` = C5 E6 G6, a spread chord
+  note* from its stacked spot: `<c g,>` = C3 G2; `<c' e' g'>` = C4 E5 G5, a spread chord
   — the close chord an octave up is `<c' e g>`.
 - A degree chord hands on the **tonic**, not the first degree written: the degrees are
   stacked upward from the tonic, so `<1 3 5> <5 7 2> <1 3 5>` returns to the same I.
 
 ```
-<c e g>4       // C4 E4 G4
-<c g,>4        // C4 G3 — a later member's ',' drops that one note
-<c' e g>4      // C5 E5 G5 — the first member's mark moves the chord; next bare c = C5
-<c e g>'4      // C5 E5 G5 — the same, written after the >
-<c' e' g'>4    // C5 E6 G6 — each later mark counts from its stacked spot: a spread chord
+<c e g>4       // C3 E3 G3
+<c g,>4        // C3 G2 — a later member's ',' drops that one note
+<c' e g>4      // C4 E4 G4 — the first member's mark moves the chord; next bare c = C4
+<c e g>'4      // C4 E4 G4 — the same, written after the >
+<c' e' g'>4    // C4 E5 G5 — each later mark counts from its stacked spot: a spread chord
 ```
 
 ### Arpeggios (`<< … >>`)
@@ -281,11 +282,11 @@ note after the group reads the group's anchor (not its last member), and a mark 
 moves the group and its anchor:
 
 ```
-<< c e g >>         // c, then e and g stacked above it (E4, G4) — an ascending arpeggio
+<< c e g >>         // c, then e and g stacked above it (E3, G3) — an ascending arpeggio
 << c g >>           // g is a fifth ABOVE c, exactly like the chord <c g>
 << c g e >>         // same pitches as << c e g >>, only the play order differs
 << c 3 5 >>         // by degrees: c e g
-<< 8 5 3 1 >>       // degrees-only anchors on the TONIC: C5 G4 E4 C4 — descending, no marks
+<< 8 5 3 1 >>       // degrees-only anchors on the TONIC: C4 G3 E3 C3 — descending, no marks
 << c e g >>'        // the whole group an octave up; the next bare note follows it there
 ```
 
@@ -1471,13 +1472,13 @@ part rightHand {
 
 part leftHand {
   clef bass
-  octave 3        // a clef only draws; octave N (or an instrument preset) sets the register
+  octave 2        // a clef only draws; octave N sets the register (default 3: a bare c is C3)
 }
 ```
 
-An `instrument` preset sets the clef, the octave, the transposition, the tuning and the MIDI
+An `instrument` preset sets the clef, the transposition, the tuning and the MIDI
 sound at once; a property the part writes itself replaces the preset's. Two of those are warned,
-since they are most often slips: an `octave` below the preset's where the preset already sounds
+since they are most often slips: an `octave` below the default 3 where the preset already sounds
 an octave or more below the page (`instrument bass octave 2` writes a bare `c` as C2 and plays
 C1 — the octave is the WRITTEN register, LYS1050), and a `tuning` of another instrument's
 strings (`instrument ukulele tuning guitar`, LYS1051; `instrument guitar tuning guitarDropD` is
@@ -2692,9 +2693,8 @@ chord(x32010)2@chord             // no symbol: the shape alone gives the notes; 
   so does a shape no string count of the part's tuning takes.
 - **The tuning** is the PART's: its fretted instrument (its `tuning`, else its `instrument`
   preset's — the tuning its tab frets on), else the standard guitar. The shape gives SOUNDING
-  pitches, and the staff writes them the way the part writes any sounding pitch: a guitar part
-  (`treble_8`) writes x32013 an octave up, as C4 E4 G4 C5 G5, and plays C3 E3 G3 C4 G4; a part
-  with no instrument writes them where they sound. The ukulele's re-entrant G string sounds where
+  pitches, and every part writes them where they sound: a guitar part (`treble_8`, whose clef
+  draws them an octave up, as LilyPond's does) writes and plays x32013 as C3 E3 G3 C4 G4. The ukulele's re-entrant G string sounds where
   it is (`chord(C 0003)` = G4 C4 E4 C5).
 - **Absolute.** Octave marks, the relative frame and `octave absolute` do not move the item;
   marks after its `)` are an error (LYS0035) and ignored — write a shape higher on the neck.
