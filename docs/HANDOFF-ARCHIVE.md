@@ -160,6 +160,14 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第999セッションの経緯
+
+### 1.1 第999セッション（2026-10-27・YT-DELL2）
+
+第998 と同じ会話の続き。`-Start p999`（開始 HEAD `b76a44b97`・full **13361 / 0 / 2 / 13363**・第997 を ARCHIVE へ）。作業場所は Lab `sessions/p999/`。⚠️ この回の `-Start` は cmd 経由で 2 度、出力の途中で exit -1（原因不明・1 度目は counts の後、2 度目は `== git` の直後）→ `Start-Process -RedirectStandardInput <空のファイル> -Wait` で完走（`-Wait` は残った dotnet のビルドサーバーまで待つので、ログが最後まで出たら止めてよい）。
+- **ユーザー「write the missing bar line して Accept した後に同じ小節を Edit beside the scan すると、元画像はやはり 2 小節。直しようがない？」** → 行が 2 小節を持つ（` |` は行の中）ので OMR の box どおりで正しい・1 小節ずつには紙の小節線の位置が要る（OMR への依頼 2）と説明。あわせて**見つけた不具合**＝Beside the Scan と Fix with AI の切り抜きは side file の**書いた時の行番号**（`m.line === line + 1`）で引く＝上で行を足す・消すと 1 行ずれた小節の絵 → **ユーザー「直して」**。`omrScan.ts` に文書ごとの pins（開いた時から全編集で `shiftAnchors`・scan view の anchors と同じ配列・保存で globalState に `{hash, stamp, anchors}`＝同じ本文で開き直せば使う・side file が書き直されたらディスクの本文で pin し直し）、`scanSideOf`＝`relinedSide`（Core: anchors から読み手の行 → 今の行、消えた行の小節は行なし、`todos[].lines` も）、`omrAiFix` の `sideOf` が `deps.scanSide`。網 `omrScanCore.test` 1 本・`omrAiFixPage.test` 1 本（npm 481）。両 CHANGELOG・MANUAL-CHECKS C12。⚠️ この版より前に保存した編集は記録が無い＝読み手の行のまま。
+判定（2026-10-27・第999 の終わり）: 次はユーザーの指示（C9〜C12）。
+
 ## 以下は第998セッションの経緯
 
 ### 1.1 第998セッション（2026-10-27・YT-DELL2）

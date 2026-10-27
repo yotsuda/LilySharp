@@ -232,6 +232,7 @@ edocs/HANDOFF.mde §2 R13 ⒝・OMR の提案 B1〜B6（e..\LilySharp-Omr\docs\r
 - [ ] **C11**（第998・AI の返答待ち）: Edit Bars Beside the Scan の行で Ask AI → 返答が来るまで、行の説明の後ろと Draft の欄に回る輪と点滅する「asking the AI…」が出続ける → 答えが来ると消える。cancel でも消える。順番待ちの行は「waiting for the AI…」（動かない）。
 - [ ] **C12**（第999・行がずれても正しい小節を切り抜く）: OMR の .lys を開き（元画像は開かない）、30 小節目あたりより上に空行を 2 行足す → 下の小節で Edit Bars Beside the Scan → Scan の絵がその行の小節（前は 2 小節前の絵）。上の行を 1 行消しても同じ。保存して VS Code を閉じ、開き直してから同じことをしても正しい。元画像を開いてクリック・キャレットの連動も、足した行の下で合う。
 - [ ] **C13**（第1000・AI と自分の編集のトグル）: Beside the Scan の行で Ask AI → 待っている間に下のテキストを編集（Draft は「your edit」）→ AI の答えが来る → 行の説明に「Your edit. **use the AI's**」→ 押すと Draft が AI の案（「AI proposal」）・説明の後ろに **back to my edit** → 押すと自分の編集が戻る（絵と門も）→ もう一度 use the AI's → AI の案、と何度でも行き来できる。AI の案を表示中に打ち直すと新しい編集になり、back to my edit は消える。AI に頼んでいない行でも undo my edit ⇄ back to my edit。
+- [ ] **C14**（第1001・欄の補完）: Beside the Scan の行の下のテキストをクリックして開き、音符の後ろで `@` → キャレットの下に候補（エディタと同じ並び）→ `st` と打つと絞られる → ↑↓ で選び Enter（または Tab）→ `@staccato` が入り、欄は閉じない・絵と門がついてくる。Escape は一覧だけ閉じる（もう一度 Escape で欄が元に戻る）。Ctrl+Space で開く（VS Code に取られて開かなければ報告）。候補をクリックしても入る。一覧が無いときの Enter は今までどおり欄を閉じる。調の中の和音名など、ファイルの文脈が要る候補も出る。
 
 ## 4. §2 R13 ⒝ — 差分頁の配信（実機未確認・第404）
 

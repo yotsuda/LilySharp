@@ -669,6 +669,43 @@ public class MissingBarLinesResponse
     public string? Line { get; set; }
 }
 
+/// <summary>Parameters for lilysharp/completeText: a source held outside any editor (a line edited
+/// beside the scan, spliced into its file), the caret's offset in it, and the character typed that
+/// asks, if one did (as an LSP completion's trigger character).</summary>
+public class CompleteTextParams
+{
+    public string Text { get; set; } = "";
+    public int Offset { get; set; }
+    public string? Trigger { get; set; }
+}
+
+/// <summary>Response for lilysharp/completeText: the completion's items, each made plain for a
+/// text field — the text it puts in and the offsets it replaces in <see cref="CompleteTextParams.Text"/>.</summary>
+public class CompleteTextResponse
+{
+    public List<CompleteTextItem> Items { get; set; } = [];
+}
+
+/// <summary>One item of lilysharp/completeText.</summary>
+public class CompleteTextItem
+{
+    public string Label { get; set; } = "";
+    public string? Detail { get; set; }
+    public int? Kind { get; set; }
+    /// <summary>What the field's filter and order go by (the item's filterText / sortText, else its label).</summary>
+    public string Filter { get; set; } = "";
+    public string Sort { get; set; } = "";
+    /// <summary>The text put in — a snippet's placeholders written as their defaults.</summary>
+    public string Insert { get; set; } = "";
+    /// <summary>The offsets in the source the text replaces, [Start, End).</summary>
+    public int Start { get; set; }
+    public int End { get; set; }
+    /// <summary>Where the caret goes in <see cref="Insert"/>: the snippet's first stop, else its end.</summary>
+    public int Caret { get; set; }
+    /// <summary>The item asks for the completion again once it is in (it ends where a choice follows).</summary>
+    public bool Again { get; set; }
+}
+
 /// <summary>Response for lilysharp/compositionCheck (parameters: <see cref="CheckCandidateParams"/>):
 /// what a new piece's notation leaves flat, one sentence each
 /// (<see cref="LilySharp.Core.Editing.CompositionChecks"/>).</summary>

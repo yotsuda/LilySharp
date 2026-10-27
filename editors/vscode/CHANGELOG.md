@@ -32,6 +32,10 @@ All notable changes to the Lily# VS Code extension are documented here.
 - **Switch between the AI's proposal and your edit.** An answer that came while you were editing
   a row could be seen only by throwing your edit away (*use the AI's*). Now your edit is kept aside,
   and *back to my edit* brings it back, checked and drawn again; a new edit drops the one kept.
+- **The field beside the scan completes as the editor does.** Typing a word or a trigger character
+  (`@`, `\`, a space) opens the editor's completion under the caret, Ctrl+Space too — worked out on
+  the file with the bar as you are typing it, so the key, the meter and the part count. Up and Down
+  choose, Enter or Tab put it in, Escape closes the list. A snippet goes in with its defaults.
 - **A row asking the AI shows it**: a turning ring and a pulsing *asking the AI…* beside the row's
   note and in its Draft, until the answer comes.
 

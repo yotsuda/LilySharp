@@ -91,9 +91,126 @@ public sealed partial class LilySharpLanguageServer
     public CompletionList? Completion(CompletionParams @params)
     {
         var doc = _documentManager.GetDocument(@params.TextDocument.Uri);
-        if (doc == null)
-            return null;
+        return doc == null ? null : CompletionIn(doc, @params);
+    }
 
+    /// <summary>
+    /// The completion of a text the client holds outside any editor — a line edited beside the
+    /// scan, spliced into its file (owner's request 2026-10-27: completion in that field) — at an
+    /// offset, each item made plain for a text field: the text it puts in (a snippet's
+    /// placeholders as their defaults), the offsets it replaces, where the caret goes. Read-only.
+    /// </summary>
+    [JsonRpcMethod("lilysharp/completeText", UseSingleObjectParameterDeserialization = true)]
+    public Task<CompleteTextResponse> CompleteTextAsync(CompleteTextParams @params, CancellationToken token)
+        => OffDispatch(() => CompleteText(@params), token);
+
+    internal CompleteTextResponse CompleteText(CompleteTextParams @params)
+    {
+        var text = @params.Text ?? "";
+        int offset = Math.Clamp(@params.Offset, 0, text.Length);
+        var doc = new Document(new Uri("untitled:lilysharp-complete-text"), text, SyntaxTree.Parse(text), 0);
+        var starts = LineStartsOf(text);
+        int line = Array.BinarySearch(starts, offset);
+        if (line < 0)
+            line = ~line - 1;
+        var list = CompletionIn(doc, new CompletionParams
+        {
+            TextDocument = new TextDocumentIdentifier { Uri = doc.Uri },
+            Position = new Position { Line = line, Character = offset - starts[line] },
+            Context = @params.Trigger is { Length: > 0 } t
+                ? new LilySharp.Lsp.Protocol.CompletionContext { TriggerKind = CompletionTriggerKindTriggerCharacter, TriggerCharacter = t }
+                : new LilySharp.Lsp.Protocol.CompletionContext { TriggerKind = 1 },
+        });
+        // The word before the caret, as VS Code takes it when an item names no range (its default
+        // word: a run of anything but punctuation and space).
+        int word = offset;
+        while (word > 0 && !"`~!@#$%^&*()-=+[{]}\\|;:'\",.<>/? \t\r\n".Contains(text[word - 1]))
+            word--;
+        var response = new CompleteTextResponse();
+        foreach (var item in list?.Items ?? [])
+        {
+            int start = word, end = offset;
+            string raw = item.InsertText ?? item.Label;
+            if (item.TextEdit is { } edit)
+            {
+                start = DocumentManager.GetOffset(text, edit.Range.Start);
+                end = DocumentManager.GetOffset(text, edit.Range.End);
+                raw = edit.NewText;
+            }
+            var (insert, caret) = item.InsertTextFormat == InsertTextFormat.Snippet ? PlainSnippet(raw) : (raw, raw.Length);
+            response.Items.Add(new CompleteTextItem
+            {
+                Label = item.Label, Detail = item.Detail, Kind = (int?)item.Kind,
+                Filter = item.FilterText ?? item.Label, Sort = item.SortText ?? item.Label,
+                Insert = insert, Start = start, End = end, Caret = caret,
+                Again = item.Command?.CommandIdentifier == "editor.action.triggerSuggest",
+            });
+        }
+        return response;
+    }
+
+    /// <summary>A snippet as plain text — each placeholder its default (a choice its first), each
+    /// tab stop nothing — and where its first stop is (else <c>$0</c>, else its end).</summary>
+    internal static (string Text, int Caret) PlainSnippet(string snippet)
+    {
+        var sb = new StringBuilder();
+        var stops = new SortedDictionary<int, int>();
+        void Stop(int n) { if (!stops.ContainsKey(n)) stops[n] = sb.Length; }
+        void Walk(string s)
+        {
+            for (int i = 0; i < s.Length; i++)
+            {
+                char c = s[i];
+                if (c == '\\' && i + 1 < s.Length && s[i + 1] is '$' or '}' or '\\' or ',' or '|')
+                {
+                    sb.Append(s[++i]);
+                }
+                else if (c == '$' && i + 1 < s.Length && char.IsDigit(s[i + 1]))
+                {
+                    int j = i + 1;
+                    while (j < s.Length && char.IsDigit(s[j])) j++;
+                    Stop(int.Parse(s[(i + 1)..j]));
+                    i = j - 1;
+                }
+                else if (c == '$' && i + 1 < s.Length && s[i + 1] == '{')
+                {
+                    // ${n}, ${n:default}, ${n|a,b|} or a ${VARIABLE…}: to its matching brace.
+                    int depth = 0, j = i + 1;
+                    for (; j < s.Length; j++)
+                    {
+                        if (s[j] == '\\') { j++; continue; }
+                        if (s[j] == '{') depth++;
+                        else if (s[j] == '}' && --depth == 0) break;
+                    }
+                    string body = s[(i + 2)..Math.Min(j, s.Length)];
+                    int k = 0;
+                    while (k < body.Length && char.IsDigit(body[k])) k++;
+                    if (k > 0)
+                        Stop(int.Parse(body[..k]));
+                    if (k < body.Length && body[k] == ':')
+                        Walk(body[(k + 1)..]);
+                    else if (k < body.Length && body[k] == '|')
+                        sb.Append(body[(k + 1)..].TrimEnd('|').Split(',')[0]);
+                    else if (k == 0 && body.IndexOf(':') is var colon and >= 0)
+                        Walk(body[(colon + 1)..]);
+                    i = j;
+                }
+                else
+                {
+                    sb.Append(c);
+                }
+            }
+        }
+        Walk(snippet);
+        int caret = stops.Where(p => p.Key > 0).Select(p => (int?)p.Value).FirstOrDefault()
+            ?? (stops.TryGetValue(0, out int zero) ? zero : sb.Length);
+        return (sb.ToString(), caret);
+    }
+
+    /// <summary>The completion of <paramref name="doc"/> at the request's position — an open
+    /// document's, or a text the client holds outside any editor (<c>lilysharp/completeText</c>).</summary>
+    private CompletionList? CompletionIn(Document doc, CompletionParams @params)
+    {
         var position = @params.Position;
         var offset = GetOffset(doc.Text, position.Line, position.Character);
 

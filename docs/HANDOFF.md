@@ -127,19 +127,19 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1001セッション（2026-10-27・YT-DELL2）
+
+第1000 と同じ会話の続き。`-Start p1001`（開始 HEAD `51e567d13`・full **13361 / 0 / 2 / 13363**・第999 を ARCHIVE へ）。作業場所は Lab `sessions/p1001/`。
+- **ユーザー「OMR 編集ペインで自動補完を動作させるのは難しいよね？」→ 難しくないと答え（サーバーの補完をテキストで呼ぶ要求＋欄の下の自前の一覧・スニペットは既定値で・Ghost は入らない）→ 「作って」**。LSP `lilysharp/completeText`（`Completion` を `CompletionIn(Document, params)` に割り、使い捨ての `Document` で同じ処理・各項目を `{Insert, Start, End, Caret, Filter, Sort, Again}` に平らにする＝範囲なしの項目は VS Code の既定の単語・`PlainSnippet`＝`${n:既定}`・`${n|a,b|}`・`$n`・エスケープ）。拡張 `completionsOf`（欄の本文を `spliceBar` した全文で問い、欄の外に届く項目は捨てる）・`triggersOf`（サーバーの triggerCharacters）。ページ: 語の文字か trigger で問い（seq で最後だけ）、キャレットの位置は鏡の div、↑↓／Enter・Tab／Escape は捕獲相で欄の Enter・Escape より先、Ctrl+Space、クリックで確定、確定後は打ったのと同じく `sendEdit`。網 `CompleteTextTests` 7 本・`omrAiFixPage.test` 1 本（npm 483）。**実機の代わりにヘッドレス Edge を CDP で動かし本物のページ台本で確認**（scratchpad `suggest/make.js`・`drive.js`＝`@`→候補 4・`st` で 1・Enter で `@staccato`・空白→候補・Escape は一覧だけ・Ctrl+Space・Tab）。site scan・両 CHANGELOG・MANUAL-CHECKS C14。⚠️ Claude in Chrome は未接続だった。
+判定（2026-10-27・第1001 の終わり）: 次はユーザーの指示（C9〜C14）。
+
+## 以下は第1000セッションの経緯
+
 ### 1.1 第1000セッション（2026-10-27・YT-DELL2）
 
 第999 と同じ会話の続き。`-Start p1000`（開始 HEAD `aed67dbf4`・full **13361 / 0 / 2 / 13363**・第998 を ARCHIVE へ）。作業場所は Lab `sessions/p1000/`。
 - **ユーザー「OMR 修正ペインで AI の結果を待つ間に自分で編集すると、届いた proposal を見るには自分の編集を discard するしかない。AI proposal と自分の編集をトグルできるように」**: `FixRow.stashed`＝「use the AI's」（と「undo my edit」）が編集を捨てずに預ける（`editRow` の no-edit 枝で `edited` を `stashed` へ）・新しい編集で落とす。行の説明に「back to my edit」→ ページの `restore`（seq を進める）→ `editRow(…, kept.text, seq, kept.fromAi)` で門と絵を作り直す（「AI proposal, edited」の出所も戻る）。網 `omrAiFixPage.test` 1 本（npm 482）。site scan・両 CHANGELOG・MANUAL-CHECKS C13。
 判定（2026-10-27・第1000 の終わり）: 次はユーザーの指示（C9〜C13）。
-
-## 以下は第999セッションの経緯
-
-### 1.1 第999セッション（2026-10-27・YT-DELL2）
-
-第998 と同じ会話の続き。`-Start p999`（開始 HEAD `b76a44b97`・full **13361 / 0 / 2 / 13363**・第997 を ARCHIVE へ）。作業場所は Lab `sessions/p999/`。⚠️ この回の `-Start` は cmd 経由で 2 度、出力の途中で exit -1（原因不明・1 度目は counts の後、2 度目は `== git` の直後）→ `Start-Process -RedirectStandardInput <空のファイル> -Wait` で完走（`-Wait` は残った dotnet のビルドサーバーまで待つので、ログが最後まで出たら止めてよい）。
-- **ユーザー「write the missing bar line して Accept した後に同じ小節を Edit beside the scan すると、元画像はやはり 2 小節。直しようがない？」** → 行が 2 小節を持つ（` |` は行の中）ので OMR の box どおりで正しい・1 小節ずつには紙の小節線の位置が要る（OMR への依頼 2）と説明。あわせて**見つけた不具合**＝Beside the Scan と Fix with AI の切り抜きは side file の**書いた時の行番号**（`m.line === line + 1`）で引く＝上で行を足す・消すと 1 行ずれた小節の絵 → **ユーザー「直して」**。`omrScan.ts` に文書ごとの pins（開いた時から全編集で `shiftAnchors`・scan view の anchors と同じ配列・保存で globalState に `{hash, stamp, anchors}`＝同じ本文で開き直せば使う・side file が書き直されたらディスクの本文で pin し直し）、`scanSideOf`＝`relinedSide`（Core: anchors から読み手の行 → 今の行、消えた行の小節は行なし、`todos[].lines` も）、`omrAiFix` の `sideOf` が `deps.scanSide`。網 `omrScanCore.test` 1 本・`omrAiFixPage.test` 1 本（npm 481）。両 CHANGELOG・MANUAL-CHECKS C12。⚠️ この版より前に保存した編集は記録が無い＝読み手の行のまま。
-判定（2026-10-27・第999 の終わり）: 次はユーザーの指示（C9〜C12）。
 
 ## 2. 開いている作業
 

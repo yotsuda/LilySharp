@@ -50,6 +50,17 @@ describe('the Edit Bars Beside the Scan page', () => {
         assert.match(script, /document\.addEventListener\('click', e => \{ if \(dragged\) \{ e\.stopPropagation\(\); e\.preventDefault\(\); dragged = false; \} \}, true\);/);
     });
 
+    it('completes in the field as the editor does: asked of the server, shown under the caret, its keys ahead of the field\'s', () => {
+        assert.match(script, /vscode\.postMessage\(\{ action: 'complete', index: Number\(i\), text: ta\.value, caret: ta\.selectionStart, trigger: trigger \|\| null, seq: compSeq \}\);/);
+        assert.match(script, /if \(ch && Array\.isArray\(TRIGGERS\) && TRIGGERS\.includes\(ch\)\) askSuggest\(i, ch\);/);
+        assert.match(script, /if \(e\.ctrlKey && \(e\.key === ' ' \|\| e\.code === 'Space'\)\)/);
+        assert.match(script, /\} else if \(e\.key === 'Enter' \|\| e\.key === 'Tab'\) \{\s*acceptSuggest\(comp\.shown\[comp\.sel\]\);/);
+        assert.match(script, /e\.preventDefault\(\);\s*e\.stopPropagation\(\);\s*\}, true\);/);
+        assert.match(script, /if \(m\.seq === compSeq\) \{ comp = \{ i: String\(m\.index\), caret: m\.caret, items: m\.items \|\| \[\], sel: 0 \}; showSuggest\(\); \}/);
+        assert.match(src, /'lilysharp\/completeText',\s*\{ Text: spliceBar\(row\.base\.text, row\.target, field\), Offset: start \+ caret, Trigger: trigger \?\? null \}/);
+        assert.match(src, /\.filter\(it => it\.Start >= start && it\.End <= start \+ field\.length && it\.Start <= start \+ caret\)/);
+    });
+
     it('writes the missing bar line into the field and sends it as the edit', () => {
         assert.match(script, /const bl = e\.target\.closest && e\.target\.closest\('button\.barline'\);/);
         assert.match(script, /if \(ta\) \{ ta\.value = bl\.dataset\.line; sendEdit\(i\); \}/);

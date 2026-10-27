@@ -967,6 +967,42 @@ interface PanelMessage {
     seq?: number;
     indices?: number[];
     keeps?: { index: number; text: string }[];
+    /** complete: the caret's offset in the field, and the character typed that asks. */
+    caret?: number;
+    trigger?: string | null;
+}
+
+/** An item of lilysharp/completeText (LilySharp.Lsp CompleteTextItem). */
+interface CompleteTextItem {
+    Label: string; Detail?: string | null; Kind?: number | null; Filter: string; Sort: string;
+    Insert: string; Start: number; End: number; Caret: number; Again: boolean;
+}
+
+/**
+ * Completion in a row's field (owner's request 2026-10-27): the server's, on the field's text
+ * spliced into the file at the row's line — the key, the meter and the part around it as the
+ * editor would have them — with each item's offsets made the field's. Items that reach outside
+ * the field are left out; none when the server cannot answer.
+ */
+async function completionsOf(run: FixRun, row: FixRow, field: string, caret: number, trigger?: string) {
+    const start = row.target.start;
+    try {
+        const resp = await run.client.sendRequest<{ Items?: CompleteTextItem[] }>('lilysharp/completeText',
+            { Text: spliceBar(row.base.text, row.target, field), Offset: start + caret, Trigger: trigger ?? null });
+        return (resp?.Items ?? [])
+            .filter(it => it.Start >= start && it.End <= start + field.length && it.Start <= start + caret)
+            .map(it => ({
+                label: it.Label, detail: it.Detail ?? '', filter: it.Filter, sort: it.Sort,
+                insert: it.Insert, start: it.Start - start, end: it.End - start, caret: it.Caret, again: it.Again,
+            }));
+    } catch {
+        return [];
+    }
+}
+
+/** The characters the server's completion is asked on (its trigger characters). */
+function triggersOf(run: FixRun): string[] {
+    return run.client.initializeResult?.capabilities.completionProvider?.triggerCharacters ?? [];
 }
 
 async function onPanelMessage(deps: OmrAiFixDeps, m: PanelMessage): Promise<void> {
@@ -991,6 +1027,12 @@ async function onPanelMessage(deps: OmrAiFixDeps, m: PanelMessage): Promise<void
             return;
         case 'edit':
             if (row && typeof m.text === 'string') { await editRow(run, row, m.text, m.seq ?? 0); }
+            return;
+        case 'complete':
+            if (row && typeof m.text === 'string' && Number.isInteger(m.caret)) {
+                const items = await completionsOf(run, row, m.text, m.caret!, typeof m.trigger === 'string' ? m.trigger : undefined);
+                void panel?.webview.postMessage({ type: 'completions', index: row.index, seq: m.seq, caret: m.caret, items });
+            }
             return;
         case 'restore':
             // "back to my edit": the edit "use the AI's" set aside, gated and drawn again.
@@ -1604,6 +1646,17 @@ textarea.edit { display:block; width:100%; box-sizing:border-box; margin:4px 0 0
                 background: var(--vscode-input-background); color: var(--vscode-input-foreground);
                 border:1px solid var(--vscode-focusBorder, #0078d7); }
 textarea.edit[hidden] { display:none; }
+/* The field's completion, under the caret, in the editor's suggest widget's colours. */
+.suggest { position:fixed; z-index:20; max-height:14em; overflow-y:auto; min-width:12em; max-width:40em;
+           background: var(--vscode-editorSuggestWidget-background, var(--vscode-editorWidget-background));
+           color: var(--vscode-editorSuggestWidget-foreground, inherit);
+           border:1px solid var(--vscode-editorSuggestWidget-border, var(--vscode-panel-border));
+           font-family: var(--vscode-editor-font-family, monospace); font-size:12px; box-shadow:0 2px 8px rgba(0,0,0,.36); }
+.suggest[hidden] { display:none; }
+.suggest .item { display:flex; gap:1em; padding:1px 6px; white-space:nowrap; cursor:pointer; }
+.suggest .item.sel { background: var(--vscode-editorSuggestWidget-selectedBackground, var(--vscode-list-activeSelectionBackground));
+                     color: var(--vscode-editorSuggestWidget-selectedForeground, var(--vscode-list-activeSelectionForeground, inherit)); }
+.suggest .detail { margin-left:auto; opacity:.65; overflow:hidden; text-overflow:ellipsis; }
 input.note { font-size:12px; width:22em; margin-right:8px; padding:1px 4px; vertical-align:middle;
              background: var(--vscode-input-background); color: var(--vscode-input-foreground);
              border:1px solid var(--vscode-input-border, var(--vscode-panel-border)); }
@@ -1663,6 +1716,7 @@ ${rows}
   <div class="spacer"></div>
   <button id="cancel" title="Discard every remaining row and close the panel — bars already accepted stay written">Discard All</button>
 </div>
+<div class="suggest" id="suggest" hidden></div>
 <script nonce="${nonce}">
   const vscode = acquireVsCodeApi();
   const noteOf = i => document.querySelector('input.note[data-i="' + i + '"]');
@@ -2013,6 +2067,138 @@ ${rows}
   document.addEventListener('focusout', e => {
     if (e.target.matches && e.target.matches('textarea.edit') && !e.target.hidden) closeEdit(e.target.dataset.i);
   });
+
+  // Completion in the field (owner's request 2026-10-27): the editor's, asked of the server on
+  // the line spliced into its file (lilysharp/completeText), shown under the caret. Typing a word
+  // or one of the server's trigger characters opens it, Ctrl+Space too; Up and Down choose, Enter
+  // or Tab put the item in, Escape closes it (and only it: the field stays open).
+  const TRIGGERS = ${JSON.stringify(triggersOf(run))};
+  // A word's characters, as VS Code's default word takes them: anything but these.
+  const SEP = '~!@#$%^&*()-=+[{]}|;:",.<>/? ' + String.fromCharCode(9, 10, 13, 39, 92, 96);
+  const suggest = document.getElementById('suggest');
+  let comp = null, compSeq = 0;
+  function closeSuggest() { comp = null; suggest.hidden = true; suggest.textContent = ''; }
+  function askSuggest(i, trigger) {
+    const ta = q('textarea.edit', i);
+    if (!ta || ta.hidden) return;
+    compSeq++;
+    vscode.postMessage({ action: 'complete', index: Number(i), text: ta.value, caret: ta.selectionStart, trigger: trigger || null, seq: compSeq });
+  }
+  // Where the caret is on the screen: a copy of the field's text up to it, laid out alike.
+  function caretXY(ta) {
+    const cs = getComputedStyle(ta), div = document.createElement('div');
+    for (const p of ['boxSizing', 'width', 'fontFamily', 'fontSize', 'fontWeight', 'letterSpacing', 'lineHeight',
+      'paddingTop', 'paddingRight', 'paddingBottom', 'paddingLeft', 'borderTopWidth', 'borderRightWidth', 'borderBottomWidth', 'borderLeftWidth', 'tabSize']) div.style[p] = cs[p];
+    div.style.position = 'absolute'; div.style.visibility = 'hidden'; div.style.whiteSpace = 'pre-wrap';
+    div.style.overflowWrap = 'break-word'; div.style.borderStyle = 'solid'; div.style.top = '0'; div.style.left = '-9999px';
+    div.textContent = ta.value.slice(0, ta.selectionStart);
+    const mark = document.createElement('span');
+    mark.textContent = String.fromCharCode(8203);
+    div.appendChild(mark);
+    document.body.appendChild(div);
+    const r = ta.getBoundingClientRect();
+    const xy = { x: r.left + parseFloat(cs.borderLeftWidth) + mark.offsetLeft - ta.scrollLeft,
+                 y: r.top + parseFloat(cs.borderTopWidth) + mark.offsetTop + mark.offsetHeight - ta.scrollTop };
+    div.remove();
+    return xy;
+  }
+  // An item for the word typed before the caret: its filter starts with it (first), or holds its
+  // letters in order.
+  function rankOf(filter, prefix) {
+    if (!prefix) return 0;
+    const f = filter.toLowerCase(), p = prefix.toLowerCase();
+    if (f.startsWith(p)) return 0;
+    let k = 0;
+    for (const ch of f) { if (ch === p[k]) k++; if (k === p.length) return 1; }
+    return -1;
+  }
+  function showSuggest() {
+    const ta = comp && q('textarea.edit', comp.i);
+    if (!ta || ta.hidden || document.activeElement !== ta) { closeSuggest(); return; }
+    const caret = ta.selectionStart;
+    comp.shown = comp.items
+      .map(it => ({ it, rank: caret < it.start ? -1 : rankOf(it.filter, ta.value.slice(it.start, caret)) }))
+      .filter(x => x.rank >= 0)
+      .sort((a, b) => a.rank - b.rank || (a.it.sort < b.it.sort ? -1 : a.it.sort > b.it.sort ? 1 : 0))
+      .slice(0, 200).map(x => x.it);
+    suggest.textContent = '';
+    if (comp.shown.length === 0) { suggest.hidden = true; return; }
+    comp.sel = Math.min(comp.sel || 0, comp.shown.length - 1);
+    comp.shown.forEach((it, k) => {
+      const row = document.createElement('div');
+      row.className = 'item' + (k === comp.sel ? ' sel' : '');
+      row.dataset.k = String(k);
+      const label = document.createElement('span');
+      label.textContent = it.label;
+      row.appendChild(label);
+      if (it.detail) {
+        const d = document.createElement('span');
+        d.className = 'detail';
+        d.textContent = it.detail;
+        row.appendChild(d);
+      }
+      suggest.appendChild(row);
+    });
+    suggest.hidden = false;
+    const xy = caretXY(ta), h = suggest.offsetHeight;
+    suggest.style.left = Math.max(0, Math.min(xy.x, innerWidth - suggest.offsetWidth - 4)) + 'px';
+    suggest.style.top = (xy.y + h + 2 > innerHeight && xy.y - h - 20 > 0 ? xy.y - h - 20 : xy.y + 2) + 'px';
+  }
+  function paintSel() {
+    suggest.querySelectorAll('.item').forEach(el => el.classList.toggle('sel', Number(el.dataset.k) === comp.sel));
+    const el = suggest.querySelector('.item.sel');
+    if (el) el.scrollIntoView({ block: 'nearest' });
+  }
+  // The item in: what it replaces from its start to the caret — and on past it as far as it
+  // reached when asked — with the caret at its first stop; then as if typed.
+  function acceptSuggest(it) {
+    const i = comp.i, ta = q('textarea.edit', i);
+    const caret = ta.selectionStart, end = Math.max(caret, it.end + (caret - comp.caret));
+    ta.value = ta.value.slice(0, it.start) + it.insert + ta.value.slice(end);
+    const at = it.start + it.caret;
+    ta.setSelectionRange(at, at);
+    closeSuggest();
+    fit(ta);
+    clearTimeout(timers[i]);
+    timers[i] = setTimeout(() => sendEdit(i), 400);
+    if (it.again) askSuggest(i);
+  }
+  document.addEventListener('input', e => {
+    if (!(e.target.matches && e.target.matches('textarea.edit'))) return;
+    const i = e.target.dataset.i;
+    const ch = e.inputType === 'insertText' && e.data ? e.data.slice(-1) : null;
+    if (ch && Array.isArray(TRIGGERS) && TRIGGERS.includes(ch)) askSuggest(i, ch);
+    else if (ch && !SEP.includes(ch)) { if (comp && comp.i === i) showSuggest(); else askSuggest(i); }
+    else if (comp && comp.i === i && e.inputType.startsWith('delete')) showSuggest();
+    else closeSuggest();
+  });
+  // Ahead of the field's own keys (Enter closes it, Escape puts it back): while the list shows,
+  // its keys are the list's.
+  document.addEventListener('keydown', e => {
+    if (!(e.target.matches && e.target.matches('textarea.edit'))) return;
+    if (e.ctrlKey && (e.key === ' ' || e.code === 'Space')) { e.preventDefault(); e.stopPropagation(); askSuggest(e.target.dataset.i); return; }
+    if (!comp || suggest.hidden || !comp.shown || comp.shown.length === 0) return;
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      comp.sel = (comp.sel + (e.key === 'ArrowDown' ? 1 : -1) + comp.shown.length) % comp.shown.length;
+      paintSel();
+    } else if (e.key === 'Enter' || e.key === 'Tab') {
+      acceptSuggest(comp.shown[comp.sel]);
+    } else if (e.key === 'Escape') {
+      closeSuggest();
+    } else {
+      if (['ArrowLeft', 'ArrowRight', 'Home', 'End', 'PageUp', 'PageDown'].includes(e.key)) closeSuggest();
+      return;
+    }
+    e.preventDefault();
+    e.stopPropagation();
+  }, true);
+  document.addEventListener('focusout', e => { if (e.target.matches && e.target.matches('textarea.edit')) closeSuggest(); });
+  // A click on an item puts it in; the field keeps its focus.
+  suggest.addEventListener('mousedown', e => {
+    e.preventDefault();
+    const el = e.target.closest('.item');
+    if (el && comp) acceptSuggest(comp.shown[Number(el.dataset.k)]);
+  });
   // The head: the line under the title, and the count Accept All writes.
   function header(m) {
     if (typeof m.cap === 'string') document.getElementById('cap').textContent = m.cap;
@@ -2024,6 +2210,11 @@ ${rows}
   window.addEventListener('message', e => {
     const m = e.data;
     if (!m) return;
+    // The field's completion, for the last asking alone.
+    if (m.type === 'completions') {
+      if (m.seq === compSeq) { comp = { i: String(m.index), caret: m.caret, items: m.items || [], sel: 0 }; showSuggest(); }
+      return;
+    }
     // Bars added to the panel (a second Edit Bars Beside the Scan, or Fix OMR Marks with AI on the
     // same file): their rows go below, the rows there keep what is being done in them.
     if (m.type === 'rows') {

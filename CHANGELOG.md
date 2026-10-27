@@ -18,7 +18,8 @@ workflow attaches that section to the GitHub Release verbatim.
 - `[editor]` **The scan view's head button is Edit N Bars Beside the Scan…** (it was Fix N marks with
   AI…), and the preview's and the scan view's right-click no longer offer Fix OMR Marks with AI…; a
   row asking the AI shows a turning ring and a pulsing word; *use the AI's* keeps your edit aside for
-  *back to my edit*, a toggle. A bar beside the scan is cropped from
+  *back to my edit*, a toggle; the field completes as the editor does (`[lsp]` `lilysharp/completeText`:
+  the completion of a text held outside any editor, each item made plain for a field). A bar beside the scan is cropped from
   the line it is written on now (it went by the reader's line numbers, wrong once a line was added
   or deleted above it).
 
