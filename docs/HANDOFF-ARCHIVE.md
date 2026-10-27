@@ -160,6 +160,14 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第996セッションの経緯
+
+### 1.1 第996セッション（2026-10-27・YT-DELL2）
+
+第995 と同じ会話の続き。`-Start p996`（開始 HEAD `7c6f4f104`・full **13356 / 0 / 2 / 13358**・第994 を ARCHIVE へ）。作業場所は Lab `sessions/p996/`。
+- **ユーザー「tabi の b32 はどう直すのが正しい？ Beside scan で barline を足すと 2 小節目のプレビューが見切れる。OMR を直すべきか、でも絶対に間違えないようには直せないよね」** → 提案＝①Beside scan の行のプレビューに行の小節を全部出す ②「見落とした小節線を書く」クイックフィックス（電球＋パネルのボタン）③OMR へ依頼（長さが拍子の整数倍**かつ** box が隣の約整数倍なら「小節線の見落としかも」と言う）→ **ユーザー「良い。そのように直すなら、beside edit 画面のプレビューも Ctrl+wheel で拡大縮小、マウスドラッグでスクロールできるようにしてほしい」**。①`cropTo` が data-span の重なる `rect.bar-staff` を同じ段（y の差 ≤ h/2）で全部合わせる ②Core `MissingBarLines`（`MeterOf`＝報告文の拍子・`Offsets`＝前の項目から既定の音価を引き継ぎ、拍子の切れ目ちょうどで終わる項目の後ろ・切れ目をまたぐ音／中の小節線なら null・`WrittenIn`）・LSP の CodeAction「Write the missing bar line」・要求 `lilysharp/missingBarLines`・パネルの行に「write the missing bar line」（欄に入れて `sendEdit`＝手で打った編集と同じ門）④パネルの絵（`svg.pic`）に Ctrl+ホイール（viewBox・ポインタ中心）とドラッグ（4 px・pointer capture・後のクリックを捕獲相で止める）。網 `MissingBarLinesTests` 5 本・`omrAiFixPage.test` 5 本（ページの台本を `vm.Script` で構文検査）＝npm 476。③は OMR `docs/repro/lilysharp-requests-2026-10-27-missed-barline.md`＋REQUESTS の Lily# → OMR の行（OMR リポジトリでは commit せず）。site scan・両 CHANGELOG・MANUAL-CHECKS C9。
+判定（2026-10-27・第996 の終わり）: 次はユーザーの指示（C9）。
+
 ## 以下は第995セッションの経緯
 
 ### 1.1 第995セッション（2026-10-27・YT-DELL2）

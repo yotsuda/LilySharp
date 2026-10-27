@@ -299,7 +299,8 @@ export function registerOmrAiFix(context: vscode.ExtensionContext, deps: OmrAiFi
     extensionContext = context;
     context.subscriptions.push(
         // A fourth door for both (owner's request 2026-10-24): the preview's and the scan view's
-        // context menu, on the bar right-clicked.
+        // context menu, on the bar right-clicked — Edit Bars Beside the Scan's alone since the
+        // owner's request 2026-10-27 (the AI is a row's Ask AI there).
         vscode.commands.registerCommand('lilysharp.omrFixWithAi', (uri?: string | vscode.Uri | MenuContext, at?: number) => {
             const bar = menuBar(deps, uri);
             if (bar === null) {
@@ -1374,7 +1375,7 @@ function rowParts(run: FixRun, r: FixRow): RowParts {
     } else if (barOf(r) === undefined && base) {
         proposal = scoreCell(`after-${r.index}`, base, t.start, t.start + resolvedLine(t.written).length, true, add);
     } else if (r.ai && !hasProposal(r)) {
-        proposal = `<div class="none">${r.ai === 'asking' ? 'asking the AI…' : 'waiting for the AI…'} — or click the text below to edit it yourself</div>`;
+        proposal = `<div class="none">${r.ai === 'asking' ? `<span class="busy"><span class="spin"></span>asking the AI…</span>` : 'waiting for the AI…'} — or click the text below to edit it yourself</div>`;
     } else if (!r.proposal) {
         proposal = `<div class="none">no answer — Accept removes the @todo</div>`;
     } else if (!r.proposal.bar) {
@@ -1394,7 +1395,9 @@ function rowParts(run: FixRun, r: FixRow): RowParts {
         : `<button class="link revert" data-i="${r.index}" title="Back to the bar as it stands">undo my edit</button>`;
     // The AI's state, and the way to ask it: queued or being asked (with a cancel), or a button.
     const can = isLive(r);
-    const aiNow = r.ai === 'asking' ? ` <span class="dim">— asking the AI…</span> <button class="link unask" data-i="${r.index}">cancel</button>`
+    // A turning ring and a pulsing word while the AI is asked (owner's request 2026-10-27: the
+    // wait did not show).
+    const aiNow = r.ai === 'asking' ? ` <span class="busy">— <span class="spin"></span>asking the AI…</span> <button class="link unask" data-i="${r.index}">cancel</button>`
         : r.ai === 'queued' ? ` <span class="dim">— waiting for the AI…</span> <button class="link unask" data-i="${r.index}">cancel</button>`
         : can ? ` <button class="link ask" data-i="${r.index}" title="Ask the AI to rewrite this bar from the scan — with your note and your edit, if any">${r.asked ? 'ask the AI again' : 'Ask AI'}</button>`
         : '';
@@ -1587,6 +1590,12 @@ tr.body td { padding-top: 2px; }
 .label { font-weight:600; margin-right:6px; }
 .memo { font-size:12px; opacity:.85; }
 .dim { opacity:.6; }
+.spin { display:inline-block; width:.8em; height:.8em; margin-right:.35em; vertical-align:-.1em; border:2px solid currentColor;
+        border-right-color:transparent; border-radius:50%; animation:spin .8s linear infinite; }
+.busy { animation:busy 1.4s ease-in-out infinite; }
+@keyframes spin { to { transform:rotate(360deg); } }
+@keyframes busy { 0%, 100% { opacity:1; } 50% { opacity:.4; } }
+@media (prefers-reduced-motion: reduce) { .spin { animation-duration:2.4s; } .busy { animation:none; } }
 .cell { width:33%; }
 /* The line over each picture, the same height in all three cells so the pictures line up
    (owner, 2026-10-24); only the Draft's says something — where it came from. */

@@ -792,14 +792,9 @@
           "group": "0_select@2"
         },
         {
-          "command": "lilysharp.omrFixWithAi",
-          "when": "webviewId == 'lilysharpScan' && lysOnBar",
-          "group": "0_bar@1"
-        },
-        {
           "command": "lilysharp.editBarsBesideScan",
           "when": "(webviewId == 'lilysharpPreview' || webviewId == 'lilysharpScan') && lysOnBar",
-          "group": "0_bar@2"
+          "group": "0_bar@1"
         },
         {
           "command": "lilysharp.previewPlayFromHere",

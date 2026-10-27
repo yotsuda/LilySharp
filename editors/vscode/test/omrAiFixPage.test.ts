@@ -71,12 +71,16 @@ describe('the doors to the bars of the marks', () => {
     const scan = fs.readFileSync(path.join(root, 'src', 'omrScan.ts'), 'utf8');
     const fix = fs.readFileSync(path.join(root, 'src', 'omrAiFix.ts'), 'utf8');
 
-    it('leaves Fix OMR Marks with AI out of the preview\'s menu, in the scan view\'s', () => {
-        const items = (pkg.contributes.menus['webview/context'] as { command: string; when: string }[])
-            .filter(m => m.command === 'lilysharp.omrFixWithAi');
-        assert.equal(items.length, 1);
-        assert.doesNotMatch(items[0].when, /lilysharpPreview/);
-        assert.match(items[0].when, /lilysharpScan/);
+    it('leaves Fix OMR Marks with AI out of the preview\'s and the scan view\'s menus', () => {
+        const items = pkg.contributes.menus['webview/context'] as { command: string; when: string }[];
+        assert.equal(items.filter(m => m.command === 'lilysharp.omrFixWithAi').length, 0);
+        assert.equal(items.filter(m => m.command === 'lilysharp.editBarsBesideScan').length, 1);
+    });
+
+    it('shows a turning ring and a pulsing word while a row asks the AI', () => {
+        assert.match(fix, /const aiNow = r\.ai === 'asking' \? ` <span class="busy">— <span class="spin"><\/span>asking the AI…<\/span>/);
+        assert.match(fix, /\.spin \{[^}]*animation:spin \.8s linear infinite; \}/);
+        assert.match(fix, /@keyframes busy \{ 0%, 100% \{ opacity:1; \} 50% \{ opacity:\.4; \} \}/);
     });
 
     it('has the scan view\'s button open the marks\' bars beside the scan', () => {

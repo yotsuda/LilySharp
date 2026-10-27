@@ -21,8 +21,10 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 - **The scan view's head opens the marks' bars beside the scan**: its button is *Edit N Bars
   Beside the Scan…* (it was *Fix N marks with AI…*), for the bars of the marks the slider shows —
-  a row's Ask AI is the AI. The preview's right-click no longer offers Fix OMR Marks with AI…
-  (the scan view's, the editor's menu, the palette and the lightbulb still do).
+  a row's Ask AI is the AI. The preview's and the scan view's right-click no longer offer Fix OMR
+  Marks with AI… (the editor's menu, the palette and the lightbulb still do).
+- **A row asking the AI shows it**: a turning ring and a pulsing *asking the AI…* beside the row's
+  note and in its Draft, until the answer comes.
 
 ### Editing
 

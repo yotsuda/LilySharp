@@ -127,19 +127,19 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第998セッション（2026-10-27・YT-DELL2）
+
+第997 と同じ会話の続き。`-Start p998`（開始 HEAD `7229d7f86`・full **13361 / 0 / 2 / 13363**・第996 を ARCHIVE へ）。作業場所は Lab `sessions/p998/`。
+- **ユーザー「元画像の Fix OMR のメニューも消して。OMR 編集画面で Ask AI すると返答待ちになるけど、待っているとわかるように（ぐるぐる・テキストの点滅など）」**: webview/context から `omrFixWithAi` を消した（残るのはエディタの右クリック・パレット・電球）・`editBarsBesideScan` が `0_bar@1` に。行が `ai === 'asking'` の間、`aiNow` と Draft の欄（`.none`）に `.spin`（回る輪 0.8 秒）＋`.busy`（文字の点滅 1.4 秒）・`prefers-reduced-motion` では輪をゆっくり・点滅なし。順番待ち（queued）は動かない。網 `omrAiFixPage.test` 1 本足し 1 本直し（npm 479）。site scan・両 CHANGELOG・設計・MANUAL-CHECKS C10 直し／C11。
+判定（2026-10-27・第998 の終わり）: 次はユーザーの指示（C9〜C11）。
+
+## 以下は第997セッションの経緯
+
 ### 1.1 第997セッション（2026-10-27・YT-DELL2）
 
 第996 と同じ会話の続き。`-Start p997`（開始 HEAD `46a35129a`・full **13361 / 0 / 2 / 13363**・第995 を ARCHIVE へ）。作業場所は Lab `sessions/p997/`。
 - **ユーザー「OMR の lys プレビューの右クリックの Fix OMR marks with AI は削除して。元画像の頭の Fix 3 marks with AI... も Edit 3 Bars Beside the Scan... のボタンに」**: package.json の webview/context の `omrFixWithAi` を `lilysharpScan` だけに（scan の右クリック・エディタの右クリック・パレット・電球は残した）。scan の頭のボタン＝「Edit N Bars Beside the Scan…」（1 なら Bar）→ メッセージ `editBars` → `lilysharp.editBarsBesideScan(lys, 'marks')` → `runEditBars(…, marks)` がスライダー未満の印の小節（`fixTargets` を `checkedByDefault`）を開く。N は今までどおり表示中で `.lys` に在る印の数（パートごとの小節 1 つ＝行 1 つ）。網 `omrAiFixPage.test` に 2 本（npm 478）。site scan／commands・両 CHANGELOG・設計 §2.1・MANUAL-CHECKS C10。
 判定（2026-10-27・第997 の終わり）: 次はユーザーの指示（C9・C10）。
-
-## 以下は第996セッションの経緯
-
-### 1.1 第996セッション（2026-10-27・YT-DELL2）
-
-第995 と同じ会話の続き。`-Start p996`（開始 HEAD `7c6f4f104`・full **13356 / 0 / 2 / 13358**・第994 を ARCHIVE へ）。作業場所は Lab `sessions/p996/`。
-- **ユーザー「tabi の b32 はどう直すのが正しい？ Beside scan で barline を足すと 2 小節目のプレビューが見切れる。OMR を直すべきか、でも絶対に間違えないようには直せないよね」** → 提案＝①Beside scan の行のプレビューに行の小節を全部出す ②「見落とした小節線を書く」クイックフィックス（電球＋パネルのボタン）③OMR へ依頼（長さが拍子の整数倍**かつ** box が隣の約整数倍なら「小節線の見落としかも」と言う）→ **ユーザー「良い。そのように直すなら、beside edit 画面のプレビューも Ctrl+wheel で拡大縮小、マウスドラッグでスクロールできるようにしてほしい」**。①`cropTo` が data-span の重なる `rect.bar-staff` を同じ段（y の差 ≤ h/2）で全部合わせる ②Core `MissingBarLines`（`MeterOf`＝報告文の拍子・`Offsets`＝前の項目から既定の音価を引き継ぎ、拍子の切れ目ちょうどで終わる項目の後ろ・切れ目をまたぐ音／中の小節線なら null・`WrittenIn`）・LSP の CodeAction「Write the missing bar line」・要求 `lilysharp/missingBarLines`・パネルの行に「write the missing bar line」（欄に入れて `sendEdit`＝手で打った編集と同じ門）④パネルの絵（`svg.pic`）に Ctrl+ホイール（viewBox・ポインタ中心）とドラッグ（4 px・pointer capture・後のクリックを捕獲相で止める）。網 `MissingBarLinesTests` 5 本・`omrAiFixPage.test` 5 本（ページの台本を `vm.Script` で構文検査）＝npm 476。③は OMR `docs/repro/lilysharp-requests-2026-10-27-missed-barline.md`＋REQUESTS の Lily# → OMR の行（OMR リポジトリでは commit せず）。site scan・両 CHANGELOG・MANUAL-CHECKS C9。
-判定（2026-10-27・第996 の終わり）: 次はユーザーの指示（C9）。
 
 ## 2. 開いている作業
 
