@@ -83,6 +83,38 @@ public class CompositionChecksTests
         Assert.Empty(CompositionChecks.Of(piano));
     }
 
+    // Owner's report 2026-10-27: "かっこいいピアノの曲" came back with its left hand between E1 and G2
+    // (the AI wrote `e,,` as if a bare `c` were C4; in `instrument piano-left` it is C3).
+    private static string Piano(string declarations, string rh, string lh)
+        => $"title \"Steel\"\ntime 4/4\noctave absolute\n{declarations}\nsection A {{\n  rh {{ {rh} }}\n  lh {{ {lh} }}\n}}\nform {{ A }}\nscore {{ grandStaff {{ staff rh  staff lh }} }}\n";
+
+    private const string Hands = "part rh { instrument piano-right }\npart lh { instrument piano-left }";
+    private const string RightHand = "e'8 b e' g' a'4 g'8 e' | d'8 fis' a' fis' b'4 a'8 fis' | c'8 e' g' b' d''4 c''8 b' | a'4 g'8 fis' e'4 d'8 b |";
+
+    [Fact]
+    public void ALeftHandUnderItsRegister_IsToldToMoveUp()
+    {
+        // The owner's left hand, as it sounded: E1 B1 E2 B1 | C1 G1 C2 | A1 E2 | B1 F♯2 E1.
+        string low = Piano(Hands, RightHand, "e,,4 r8 b,,8 e,4 b,,4 | c,,4. g,,8 c,2 | a,,2 e,4 r4 | b,,4. fis,8 e,,2 |");
+        var finding = Assert.Single(CompositionChecks.Of(low), f => f.StartsWith("lh:"));
+        Assert.Contains("far below a pianist's left hand", finding);
+        Assert.Contains("a bare `c` is C3", finding);
+        // The same hand two octaves up (round C3) is where a left hand plays.
+        string usual = Piano(Hands, RightHand, "e4 r8 b8 e'4 b4 | c4. g8 c'2 | a2 e'4 r4 | b4. fis'8 e2 |");
+        Assert.DoesNotContain(CompositionChecks.Of(usual), f => f.Contains("a pianist's"));
+        // Two hands braced with no instrument are a piano's too: the lower staff is the left hand
+        // (no instrument, so a bare `c` is C4: the same sounds, a comma more).
+        string bare = Piano("part rh { clef treble }\npart lh { clef bass }", RightHand, "e,,,4 r8 b,,,8 e,,4 b,,,4 | c,,,4. g,,,8 c,,2 | a,,,2 e,,4 r4 | b,,,4. fis,,8 e,,,2 |");
+        Assert.Contains(CompositionChecks.Of(bare), f => f.StartsWith("lh:") && f.Contains("far below") && !f.Contains("bare `c`"));
+    }
+
+    [Fact]
+    public void ARightHandOverItsRegister_IsToldToMoveDown()
+    {
+        string high = Piano(Hands, "e'''8 b'' e''' g''' a'''4 g'''8 e''' | d'''8 fis''' a''' fis''' b'''4 a'''8 fis''' |", "e2 b, | c2 g, |");
+        Assert.Contains(CompositionChecks.Of(high), f => f.StartsWith("rh:") && f.Contains("high above a pianist's right hand"));
+    }
+
     [Fact]
     public void APieceWithNoTitleOrAPlaceholder_IsToldToTitleIt()
     {

@@ -96,6 +96,12 @@ describe('the instruments\' ranges, and a head that holds a long list', () => {
         assert.match(grammar, /## Instrument ranges[\s\S]*keep\s+EVERY note inside the range/);
         assert.match(grammar, /\| `guitar` \| E2–E6 \| `e,` – `e'''` \|/);
     });
+    // Owner's report 2026-10-27: a composed piano piece's left hand lived between E1 and G2.
+    it('tells it where a piano\'s hands lie, and that the left hand\'s bare c is C3', () => {
+        assert.match(grammar, /A range is how far an instrument CAN go, not where its part lies/);
+        assert.match(grammar, /left hand lies mostly between C2 and C4, round C3/);
+        assert.match(grammar, /in `instrument piano-left` a bare `c` is C3/);
+    });
     // Owner's request 2026-10-27: a part names its instrument and lets the preset bring its clef and octave.
     it('tells the AI to name the instrument and write no clef or octave beside it, and shows it so', () => {
         assert.match(grammar, /A part of a known instrument names it with `instrument` and writes no `clef` or `octave`\s+beside it\./);

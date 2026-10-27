@@ -129,6 +129,57 @@ public static class CompositionChecks
                     + "rests, dotted rhythms; give the line a rhythm of its own.");
         }
 
+        // A piano's hand far from where a pianist's hand plays (owner's report 2026-10-27: "かっこいいピアノの
+        // 曲" came back with its left hand between E1 and G2 — the AI wrote `e,,` as if a bare `c`
+        // were C4, and in `instrument piano-left` it is C3). The middle of the hand's sounding time
+        // is weighed against the hand's usual register; the range check (LYS1052) passes all of it.
+        var hands = new Dictionary<string, bool>(System.StringComparer.Ordinal);   // part → left hand
+        foreach (var p in parts)
+            if (InstrumentOf(p) is "piano-left" or "piano-right")
+                hands[p.Name.Text] = InstrumentOf(p) == "piano-left";
+        if (declared is { } piano)
+            foreach (var grand in piano.Declaration.DescendantNodes<GrandStaffRenderSyntax>())
+            {
+                var staves = grand.DescendantNodes<StaffRenderSyntax>().Select(s => s.PartToken?.Text).OfType<string>().ToList();
+                if (grand.GrandStaffKeyword.Text == "grandStaff" && staves.Count == 2
+                    && staves.All(s => parts.Any(p => p.Name.Text == s && InstrumentOf(p).Length == 0)))
+                {
+                    hands.TryAdd(staves[0], false);
+                    hands.TryAdd(staves[1], true);
+                }
+            }
+        var sounding = midi.Tracks.SelectMany(t => t.Notes.Select(n => (Part: n.Part ?? t.Name, n.Pitch, n.DurationTicks, n.Channel)))
+            .Where(n => n.Channel != 9)
+            .GroupBy(n => n.Part)
+            .ToDictionary(g => g.Key, g => g.ToList());
+        foreach (var (part, left) in hands)
+        {
+            if (!sounding.TryGetValue(part, out var notes) || notes.Count < 8)
+                continue;
+            int Percentile(double p)
+            {
+                var ordered = notes.OrderBy(n => n.Pitch).ToList();
+                double total = ordered.Sum(n => (double)System.Math.Max(1, n.DurationTicks)), sum = 0;
+                foreach (var n in ordered)
+                    if ((sum += System.Math.Max(1, n.DurationTicks)) >= p * total - 1e-9)
+                        return n.Pitch;
+                return ordered[^1].Pitch;
+            }
+            int middle = Percentile(0.5);
+            // The octaves a preset writes in (a braced hand with no instrument writes from C4, or from its own `octave`).
+            bool preset = parts.Any(p => p.Name.Text == part && InstrumentOf(p).Length > 0);
+            string Name(int m) => PartRanges.SpelledFromPitch(m);
+            string mostly = $"most of its time is between {Name(Percentile(0.1))} and {Name(Percentile(0.9))}, its middle {Name(middle)}";
+            if (left && middle < LeftHandLowestMiddle)
+                findings.Add($"{part}: {mostly} — far below a pianist's left hand, which lies mostly between C2 and C4, round C3: "
+                    + "move it up an octave or two."
+                    + (preset ? " In `instrument piano-left` (absolute octaves) a bare `c` is C3, an octave under piano-right's: C3 is `c`, C2 `c,`, C4 `c'`." : ""));
+            else if (!left && middle > RightHandHighestMiddle)
+                findings.Add($"{part}: {mostly} — high above a pianist's right hand, which lies mostly between C4 and C6, round C5: "
+                    + "move it down an octave."
+                    + (preset ? " In `instrument piano-right` (absolute octaves) a bare `c` is C4: C5 is `c'`, C6 `c''`." : ""));
+        }
+
         // Every part in the same rhythm, bar after bar.
         var bars = midi.BarTicks.ToList();
         if (byPart.Count >= 3 && bars.Count >= 4)
@@ -152,16 +203,27 @@ public static class CompositionChecks
         return findings;
     }
 
+    // The middle of a piano hand's sounding time (MIDI) past which the hand is out of its usual
+    // register: a left hand whose middle is under F2, a right hand whose middle is over D6.
+    private const int LeftHandLowestMiddle = 41, RightHandHighestMiddle = 86;
+
+    /// <summary>The part's <c>instrument</c>, lower case; empty when it names none. A hyphenated
+    /// preset is three tokens (word, minus, word), joined back into one word.</summary>
+    private static string InstrumentOf(PartDeclarationSyntax part)
+        => System.Text.RegularExpressions.Regex.Replace(PropOf(part, "instrument"), @"\s*-\s*", "-");
+
+    private static string PropOf(PartDeclarationSyntax part, string name) => string.Join(" ", part.Properties
+        .Where(p => p.NameToken.Text.Equals(name, System.StringComparison.OrdinalIgnoreCase))
+        .SelectMany(p => Enumerable.Range(2, System.Math.Max(0, p.SlotCount - 2)).Select(p.GetChild))
+        .OfType<SyntaxTokenNode>().Select(t => t.Text.Trim('"'))).ToLowerInvariant();
+
     /// <summary>What a part is in a band: drums, a bass, a chord instrument (guitar, keyboards), and
     /// whether its sound is electric (an electric guitar or bass, an organ, a synth).</summary>
     private readonly record struct Role(bool Drums, bool Bass, bool Chords, bool Electric);
 
     private static Role RoleOf(PartDeclarationSyntax part)
     {
-        string Prop(string name) => string.Join(" ", part.Properties
-            .Where(p => p.NameToken.Text.Equals(name, System.StringComparison.OrdinalIgnoreCase))
-            .SelectMany(p => Enumerable.Range(2, System.Math.Max(0, p.SlotCount - 2)).Select(p.GetChild))
-            .OfType<SyntaxTokenNode>().Select(t => t.Text.Trim('"'))).ToLowerInvariant();
+        string Prop(string name) => PropOf(part, name);
         string instrument = Prop("instrument"), sound = Prop("midiInstrument"), clef = Prop("clef");
         bool drums = clef.Contains("percussion") || sound.Contains("drum");
         bool bass = instrument is "bass" or "bass5" or "bass6" || (sound.Contains("bass") && !sound.Contains("contrabass"));

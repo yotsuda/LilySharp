@@ -92,6 +92,9 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ### Ask AI
 
+- **A composed piano piece keeps its hands where a pianist's are.** A left hand that lives under F2
+  (one came back between E1 and G2), or a right hand over D6, goes back to the AI to move it; and the
+  AI is told where the two hands lie, and that the left hand's bare `c` is C3.
 - **A composed piece's preface quotes what the AI first said of it** — not the word of a repair the
   person never asked for ("The AI: I reviewed the bar lengths …").
 - **The AI writes a part as its instrument alone** — `part vc "Cello" { instrument cello }`, no

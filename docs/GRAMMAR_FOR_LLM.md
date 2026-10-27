@@ -655,6 +655,12 @@ names: `instrument bass` (the 4-string electric or double bass, lowest string E)
 octave under what it writes, so its lowest note is written `e,` (E1) and a written `c,` sounds
 C1 — out of range; a bass line that wants to go lower turns up an octave there.
 
+A range is how far an instrument CAN go, not where its part lies: keep each part where its
+player usually plays. A piano's left hand lies mostly between C2 and C4, round C3 — a left hand
+that lives under C2 is a rumble, not a bass line — and its right hand mostly between C4 and C6.
+The two hands' octaves differ: in `instrument piano-left` a bare `c` is C3 (`c,` C2, `c'` C4),
+in `instrument piano-right` it is C4 (`c'` C5).
+
 <!-- BEGIN instrument ranges: generated from InstrumentDefaults.SoundingRange by InstrumentRangePromptTests (LILYSHARP_UPDATE_DOCS=1) -->
 | instrument | sounds | write (absolute octaves) |
 |---|---|---|

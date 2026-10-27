@@ -70,6 +70,10 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Ask AI
 
+- `[editor]` **A composed piece's piano hands stay in their register.** The composition check finds a
+  left hand whose sounding middle is under F2, or a right hand's over D6 (`instrument piano-left` /
+  `piano-right`, or two staves braced with no instrument), for the AI to revise; the grammar says where
+  the hands lie and that `piano-left` writes a bare `c` as C3, `piano-right` as C4.
 - `[editor]` **A composed piece's preface quotes the AI's first answer**, not a repair's word.
 - `[language]` **The grammar for the AI: a part names its `instrument` and writes no `clef` or `octave`
   beside it** — the preset brings both; its own skeleton and the "add a bass line" example now do so.
