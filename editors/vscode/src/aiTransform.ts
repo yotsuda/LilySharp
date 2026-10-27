@@ -818,10 +818,17 @@ async function drive(
             // under `octave 4` so the AI can name the pitches it sounds, and that is the AI's crutch,
             // not the musician's — taken out, every note re-marked to sound where it did. If that
             // cannot be done, the piece keeps the line.
-            type Converted = { Success: boolean; NewText: string | null; Error: string | null };
+            // …and without its `pitch concert` (owner's request 2026-10-28): the AI writes every part
+            // as it sounds, and the piece opens as a musician writes it, each part as its player
+            // reads it — a bass an octave up. A piece with a B♭ trumpet or an E♭ saxophone keeps
+            // the line (its letters would have to be respelled in the player's key).
+            type Converted = { Success: boolean; NewText: string | null; Error: string | null; Notes?: string | null };
             try {
                 let relative = await client.sendRequest<Converted>(
-                    'lilysharp/convertOctaves', { Text: text, Absolute: false, DropPartOctaves: true });
+                    'lilysharp/convertOctaves', { Text: text, Absolute: false, DropPartOctaves: true, DropConcertPitch: true });
+                if (relative.Notes) {
+                    deps.log(`AI transform: ${relative.Notes}`);
+                }
                 if (!relative.Success) {
                     deps.log(`AI transform: the parts' octave lines stay — ${relative.Error}`);
                     relative = await client.sendRequest<Converted>('lilysharp/convertOctaves', { Text: text, Absolute: false });
@@ -998,11 +1005,14 @@ function composeSystemPrompt(grammar: string, modelName?: string): string {
         // high, went with the anchors themselves.
         '- Write in ABSOLUTE octaves: `octave absolute` at the top of the file, so every pitch says where it sounds.',
         '  The octaves are LilyPond\'s, in every part and for every instrument: `c` = C3, `c\'` = middle C (C4),',
-        '  `c\'\'` = C5, `c,` = C2. A guitar (treble_8) is written as it sounds. A bass (`instrument bass`, `contrabass`) is',
-        // A bass line is planned in sounding pitches, and the AI wrote it so — an octave under the
-        // page a bass is written on (owner's trial 2026-10-28); octave 4 lets the sounding names stand.
-        '  written an octave above where it sounds: give its part `octave 4` (`part bass { instrument bass octave 4 }`)',
-        '  and write each note by the pitch it SOUNDS — the low E string is `e,,` (E1), the open A `a,,` (A1).',
+        '  `c\'\'` = C5, `c,` = C2.',
+        // A part is planned in the pitches it sounds, and the AI wrote it so — a bass an octave
+        // under its page, a trumpet a tone (owner's trials 2026-10-28). Under `pitch concert` every
+        // letter IS the sounding pitch, transposing instruments included; Lily# prints each as its
+        // player reads it.
+        '- Write at CONCERT pitch: `pitch concert` at the top of the file too, and every part by the pitch it',
+        '  SOUNDS, whatever the instrument — a bass\'s low E string is `e,,` (E1), a guitar\'s `e,` (E2), a B♭ trumpet\'s',
+        '  middle C `c\'`. Lily# prints each part where its player reads it.',
         '- Name the parts as a score prints them, by the instrument. A piece for piano alone names no part; a piano',
         '  in an ensemble is named once, on its upper part (`"Piano" "Pno."`). Never "Right hand", "L.H.", 右手, 左手.',
         '- Before you reply, go through the piece bar by bar: every bar of every part fills the meter, the parts',

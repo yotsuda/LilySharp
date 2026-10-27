@@ -231,9 +231,9 @@ verbatim `@"C:\music"` / `@"say ""hi"""` (backslash as written, `""` = one quote
   SOUNDS, as in LilyPond: the guitar's low E string is `e,` (E2), and the clef draws it where
   a treble staff has E3. A part that sounds an octave from its page WITHOUT the clef saying so
   (`instrument bass`, the double bass: plain bass clef) is written as the player READS it:
-  the bass's low E string is `e,` (written E2), and it sounds E1. To write a bass line by the
-  pitches it sounds, give the part `octave 4` (`part bass { instrument bass octave 4 }`): the low E
-  string is then `e,,`, as it sounds, and the page shows it an octave up.
+  the bass's low E string is `e,` (written E2), and it sounds E1 — unless the file is written
+  at concert pitch (`pitch concert`, below): then every letter is what sounds, the bass's low E
+  is `e,,`, and the page still shows it an octave up.
 - `pitch` says which pitch the notes are in — what SOUNDS, or what the player of a
   transposing `instrument` (clarinet, trumpet, horn, alto-sax, …) READS — and its word says
   which notes: where notes are TYPED (the top level for the file, a part header for that part —
@@ -244,8 +244,10 @@ verbatim `@"C:\music"` / `@"say ""hi"""` (backslash as written, `""` = one quote
   prints in its typed convention, so nothing moves. Under a top-level `pitch concert` the plain
   `score { … }` is the sounding (conductor's) score, and a player's part is
   `score trumpet pitch transposed { staff tp }` — an alto-sax `c'` prints there as `a'` in
-  A major when the piece is in C, and still plays C. Octave-only instruments (bass, piccolo)
-  keep their notation either way; without a transposing `instrument` the word changes nothing.
+  A major when the piece is in C, and still plays C. Octave-only instruments (bass, piccolo) are
+  typed as they SOUND under `pitch concert` too (a bass's low E `e,,`, E1) and keep their printed
+  octave on every page; without a transposing `instrument` the word changes nothing. A composed
+  piece is best written at concert pitch: every part by the pitch it sounds.
 - A chords row is SOUNDING pitch (it belongs to no instrument; the MIDI plays it so). A row
   standing directly above a staff that prints a transposing part for its player names the
   chords that player reads: over `score trumpet pitch transposed { chords prog  staff tp }`
@@ -1102,7 +1104,7 @@ it should sound like the ensemble asked for. What makes it music:
 - **A band** (rock, pop, funk, metal, … — any request naming an electric guitar, an electric
   bass, drums or band keyboards): the whole rhythm section plays, whichever members were named —
   **drums** (a `clef percussion` part: a groove, fills at the section ends), an **electric
-  bass** (`instrument bass octave 4` with `midiInstrument "electric bass (finger)"`, written as it sounds, locked to the
+  bass** (`instrument bass` with `midiInstrument "electric bass (finger)"`, locked to the
   kick drum) and a **guitar or keyboards** for the chords (`instrument guitar` with
   `midiInstrument "overdriven guitar"` or `"electric guitar (clean)"`; keyboards on
   `instrument piano-right` with `"rock organ"`, `"electric piano 1"` …). "Guitar and drums"
@@ -1113,7 +1115,7 @@ it should sound like the ensemble asked for. What makes it music:
   words"), or a solo for one instrument that plays one line ("a flute solo", "unaccompanied
   cello"). Anything else has its accompaniment — its own parts, on staves of their own.
 - **Jazz** not asked for as a lead sheet is a **combo**: a rhythm section — piano or guitar for the
-  chords, a bass (`instrument bass octave 4` with `midiInstrument "acoustic bass"`), drums swinging on the
+  chords, a bass (`instrument bass` with `midiInstrument "acoustic bass"`), drums swinging on the
   ride cymbal (`cymr`) and hi-hat — under a melody instrument (`instrument tenor-sax`, `trumpet`,
   `alto-sax`, …), with the harmony and the feel of a jazz lead sheet (next), at one tempo.
 - **A jazz lead sheet** (asked for as "a lead sheet", "a tune to jam on"): ONE staff — the

@@ -18,6 +18,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using LilySharp.Core.Semantics;
 using LilySharp.Core.Svg;
 using LilySharp.Core.Svg.Collector;
 using LilySharp.Core.Syntax;
@@ -257,27 +258,6 @@ public static class OctaveModeConverter
     }
 
     /// <summary>
-    /// The same pitch-preserving machinery, lent to a rewrite that is NOT a mode change:
-    /// <paramref name="candidate"/> is <paramref name="source"/> with text moved around its
-    /// pitches (no pitch added or removed, the order kept), and every pitch the original
-    /// played is re-marked so it resolves to the octave it did — steps ⑵ and ⑶ above, with
-    /// the candidate standing in for the mode-changed file.
-    /// </summary>
-    /// <remarks>
-    /// Written for <see cref="SectionSplitter"/> (2026-09-28): cutting a section in two opens
-    /// the second half in a FRESH frame, so its first pitch needs the marks that put it back
-    /// where the running frame had it. A pitch the original never played (the reference
-    /// part's later sections under a form that did not list them yet) has nothing recorded
-    /// and is left as written; one the original played is played exactly as often, or the
-    /// rewrite is refused.
-    /// <para>
-    /// <paramref name="octaveShift"/> (original position → octaves) is for a rewrite that
-    /// RESPELLS a pitch across the B/C letter boundary (<see cref="KeyRespeller"/>): the
-    /// octave the walk reports is the LETTER's, so <c>b'</c> respelled <c>ces</c> sounds the
-    /// same as <c>ces''</c> — its recorded octave plus one.
-    /// </para>
-    /// </remarks>
-    /// <summary>
     /// <paramref name="source"/> without its parts' <c>octave N</c>, every note re-marked to sound
     /// where it did (<see cref="Repin"/>). Unchanged (and no error) when no part writes one.
     /// </summary>
@@ -308,6 +288,92 @@ public static class OctaveModeConverter
         return Repin(source, Apply(source, removals));
     }
 
+    /// <summary>
+    /// <paramref name="source"/> without its top-level <c>pitch concert</c>, each part written as
+    /// its player reads it and sounding exactly as before: an octave-only transposer's notes
+    /// (a bass, a piccolo) move the octave it transposes by, the rest stay. Unchanged (no error)
+    /// when the file is not at concert pitch; refused when a part transposes by another interval
+    /// (a B♭ trumpet, an E♭ saxophone — their letters would have to be respelled in the player's
+    /// key, which this does not do) or says its own <c>pitch</c>.
+    /// </summary>
+    /// <remarks>
+    /// For a piece the AI composed (owner's request 2026-10-28): it writes every part at the pitch
+    /// it sounds under <c>pitch concert</c>, and the piece opens as a musician writes it. Besides
+    /// <see cref="Repin"/>'s own check (each written pitch where it was asked to be), the result
+    /// is played: the sounding notes must be the source's, note for note.
+    /// </remarks>
+    public static Result WithoutConcertPitch(string source)
+    {
+        var tree = SyntaxTree.Parse(source);
+        if (tree.HasErrors)
+            return Fail("The file has syntax errors — no changes made.");
+        var root = tree.GetRoot();
+        var line = root.DescendantNodes<PropertyAssignmentSyntax>()
+            .FirstOrDefault(p => ConcertPitch.TryReadFileMode(p, out bool concert) && concert);
+        if (line == null)
+            return new Result(source, null, 0);
+        var shifts = new Dictionary<string, int>(StringComparer.Ordinal);   // part → octaves its notes move
+        foreach (var part in root.DescendantNodes<PartDeclarationSyntax>())
+        {
+            if (ConcertPitch.PartMode(part) != null)
+                return Fail($"Part {part.Name.Text} says its own pitch — the file keeps its pitch concert.");
+            int t = PartHeaderDefaults.Read(part).TranspositionSemitones;
+            if (t % 12 != 0)
+                return Fail($"Part {part.Name.Text} transposes by {t} semitones — the file keeps its pitch concert.");
+            shifts[part.Name.Text] = -t / 12;
+        }
+        var octaveShift = new Dictionary<int, int>();
+        foreach (var node in root.DescendantNodes<SyntaxNode>())
+            if (node is PitchSyntax or ScaleDegreeSyntax
+                && BlockOf(node) is { } block
+                && shifts.TryGetValue(block.PartName.Text, out int s) && s != 0)
+                octaveShift[node.SourceStart] = s;
+
+        // The line, and the line break after it when it stands alone.
+        int start = line.Span.Start, end = line.Span.End;
+        while (start > 0 && source[start - 1] is ' ' or '\t') start--;
+        if (end < source.Length && source[end] == '\r') end++;
+        if (end < source.Length && source[end] == '\n') end++;
+        var result = Repin(source, Apply(source, [new Edit(start, end, "")]), octaveShift);
+        if (result.NewText == null)
+            return result;
+        static string Sounds(string text) => string.Join(" ", new Midi.MidiExporter().Export(SyntaxTree.Parse(text)).Tracks
+            .SelectMany(t => t.Notes).OrderBy(n => n.StartTick).ThenBy(n => n.Pitch).Select(n => $"{n.StartTick}:{n.Pitch}"));
+        return Sounds(result.NewText) == Sounds(source)
+            ? result
+            : Fail("Without pitch concert the piece would sound otherwise — the file keeps it.");
+    }
+
+    // The part block a pitch is written in, or null (a phrase body, a part's own header music).
+    private static PartBlockSyntax? BlockOf(SyntaxNode node)
+    {
+        for (var p = node.Parent; p != null; p = p.Parent)
+            if (p is PartBlockSyntax block)
+                return block;
+        return null;
+    }
+
+    /// <summary>
+    /// The same pitch-preserving machinery, lent to a rewrite that is NOT a mode change:
+    /// <paramref name="candidate"/> is <paramref name="source"/> with text moved around its
+    /// pitches (no pitch added or removed, the order kept), and every pitch the original
+    /// played is re-marked so it resolves to the octave it did — steps ⑵ and ⑶ above, with
+    /// the candidate standing in for the mode-changed file.
+    /// </summary>
+    /// <remarks>
+    /// Written for <see cref="SectionSplitter"/> (2026-09-28): cutting a section in two opens
+    /// the second half in a FRESH frame, so its first pitch needs the marks that put it back
+    /// where the running frame had it. A pitch the original never played (the reference
+    /// part's later sections under a form that did not list them yet) has nothing recorded
+    /// and is left as written; one the original played is played exactly as often, or the
+    /// rewrite is refused.
+    /// <para>
+    /// <paramref name="octaveShift"/> (original position → octaves) is for a rewrite that
+    /// RESPELLS a pitch across the B/C letter boundary (<see cref="KeyRespeller"/>): the
+    /// octave the walk reports is the LETTER's, so <c>b'</c> respelled <c>ces</c> sounds the
+    /// same as <c>ces''</c> — its recorded octave plus one.
+    /// </para>
+    /// </remarks>
     internal static Result Repin(string source, string candidate, IReadOnlyDictionary<int, int>? octaveShift = null)
     {
         int Shift(int orig) => octaveShift != null && octaveShift.TryGetValue(orig, out int s) ? s : 0;

@@ -110,6 +110,9 @@ public sealed class PartHeaderDefaults
     /// bass at its octave, so a concert-pitch book copies it note for note; shifting would
     /// make every bass line an octave of ledger lines. <see cref="ConcertPitch"/> is the
     /// reader.
+    /// <para>⚠️ The PAGE still follows it; the LETTERS no longer do (2026-10-28, owner's
+    /// decision): under <c>pitch concert</c> a bass is typed as it sounds and printed at its
+    /// octave (ConcertPitch.InputShift takes the whole transposition).</para>
     /// </remarks>
     public int ConcertShiftSemitones => TranspositionSemitones % 12 == 0 ? 0 : TranspositionSemitones;
 

@@ -98,7 +98,7 @@ public static class CompositionChecks
             if (!roles.Any(r => r.Drums))
                 findings.Add("A band piece has drums: add a drum part (`clef percussion`) that plays a groove under the whole song, with fills at the section ends.");
             if (!roles.Any(r => r.Bass))
-                findings.Add("A band piece has an electric bass: add a part with `instrument bass octave 4` and `midiInstrument \"electric bass (finger)\"`, written as it sounds, that locks with the kick drum.");
+                findings.Add("A band piece has an electric bass: add a part with `instrument bass` and `midiInstrument \"electric bass (finger)\"` that locks with the kick drum.");
             if (!roles.Any(r => r.Chords))
                 findings.Add("A band piece has a guitar or keyboards for the chords: add one (`instrument guitar` with an electric `midiInstrument`, or keyboards).");
             int tempos = midi.Tracks.SelectMany(t => t.TempoChanges).Select(t => t.MicrosecondsPerBeat).Distinct().Count();

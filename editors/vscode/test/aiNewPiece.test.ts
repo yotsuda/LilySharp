@@ -80,8 +80,8 @@ describe('a composed piece opens in relative octaves', () => {
     const transform = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'aiTransform.ts'), 'utf8');
     it('converts the text before it opens, and keeps it as it came if it cannot', () => {
         const at = (s: string) => transform.indexOf(s);
-        assert.ok(at("'lilysharp/convertOctaves', { Text: text, Absolute: false, DropPartOctaves: true }") > 0);
-        assert.ok(at("'lilysharp/convertOctaves', { Text: text, Absolute: false, DropPartOctaves: true }") < at("const piece = await vscode.workspace.openTextDocument({ language: 'lilysharp'"));
+        assert.ok(at("'lilysharp/convertOctaves', { Text: text, Absolute: false, DropPartOctaves: true, DropConcertPitch: true }") > 0);
+        assert.ok(at("'lilysharp/convertOctaves', { Text: text, Absolute: false, DropPartOctaves: true, DropConcertPitch: true }") < at("const piece = await vscode.workspace.openTextDocument({ language: 'lilysharp'"));
         assert.match(transform, /if \(relative\.Success && relative\.NewText\) \{\s*text = relative\.NewText;/);
         assert.match(transform, /the piece stays in absolute octaves/);
     });
@@ -115,12 +115,10 @@ describe('the instruments\' ranges, and a head that holds a long list', () => {
         assert.match(grammar, /it\s+does NOT move the octaves, which are LilyPond's in every part/);
         assert.match(grammar, /part leftHand  \{ instrument piano-left \}/);
         assert.match(grammar, /part bass \{ instrument bass \}\s+\/\/ added/);
-        // No example writes a clef beside it (the rule's own counter-example aside); the one octave
-        // written beside a preset is a bass's `octave 4`, which lets it be written as it sounds
-        // (owner's trial 2026-10-28).
-        assert.doesNotMatch(grammar.replace(/not `\{ instrument cello clef bass/, ''), /instrument \w[\w-]* clef |clef \w+ instrument /);
-        assert.doesNotMatch(grammar.replace(/instrument (bass|contrabass) octave 4/g, ''), /instrument \w[\w-]* octave |octave \d instrument /);
-        assert.match(grammar, /give the part `octave 4` \(`part bass \{ instrument bass octave 4 \}`\)/);
+        // No example writes them together (the rule's own counter-example aside).
+        assert.doesNotMatch(grammar.replace(/not `\{ instrument cello clef bass/, ''), /instrument \w[\w-]* (clef|octave) |(clef \w+|octave \d) instrument /);
+        // A bass is written by the pitch it sounds under `pitch concert` (owner's decision 2026-10-28).
+        assert.match(grammar, /Octave-only instruments \(bass, piccolo\) are\s+typed as they SOUND under `pitch concert` too/);
     });
     it('holds the candidate\'s head to a few lines, scrolled for the rest', () => {
         assert.match(transform, /\.header \.texts \{ flex:1; min-width:0; max-height:7\.5em; overflow-y:auto;/);
@@ -171,6 +169,12 @@ describe('the composer\'s prompt', () => {
         assert.match(transform, /return 'Reply with <plan>…<\/plan>, <note>…<\/note> and the whole piece in <file>…<\/file>';/);
     });
     // Owner's decision 2026-10-28: Lily#'s octaves are LilyPond's — no anchors to name, no habit to warn of.
+    // Owner's decision 2026-10-28: a composed piece is written at concert pitch, every part as it sounds.
+    it('has it write at concert pitch, a bass and a trumpet by the pitches they sound', () => {
+        assert.match(transform, /'- Write at CONCERT pitch: `pitch concert` at the top of the file too, and every part by the pitch it',/);
+        assert.match(transform, /a bass\\'s low E string is `e,,` \(E1\)/);
+        assert.doesNotMatch(transform, /give its part `octave 4`/);
+    });
     it('tells it the octaves are LilyPond\'s in every part, and has the plan give each register as written', () => {
         assert.match(transform, /The octaves are LilyPond\\'s, in every part and for every instrument: `c` = C3, `c\\'` = middle C \(C4\)/);
         assert.doesNotMatch(transform, /NOT LilyPond\\'s octaves/);
@@ -181,7 +185,7 @@ describe('the composer\'s prompt', () => {
     // as the devices that make it.
     // Owner's request 2026-10-28: the bass's `octave 4` is the AI's crutch — taken out before the piece opens.
     it('opens the piece without the parts\' octave lines, every note kept where it sounds', () => {
-        assert.match(transform, /'lilysharp\/convertOctaves', \{ Text: text, Absolute: false, DropPartOctaves: true \}/);
+        assert.match(transform, /'lilysharp\/convertOctaves', \{ Text: text, Absolute: false, DropPartOctaves: true, DropConcertPitch: true \}/);
         assert.match(transform, /if \(!relative\.Success\) \{\s*deps\.log\(`AI transform: the parts' octave lines stay/);
     });
     it('has the plan name the devices that make the character asked for', () => {

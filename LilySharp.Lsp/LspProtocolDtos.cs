@@ -410,6 +410,11 @@ public class ConvertOctavesParams
     /// (OctaveModeConverter.WithoutPartOctaves) — a composed piece's bass, written under
     /// <c>octave 4</c> by the pitches it sounds (owner's request 2026-10-28).</summary>
     public bool DropPartOctaves { get; set; }
+    /// <summary>Take the top-level <c>pitch concert</c> out first, each part written as its player
+    /// reads it and sounding as before (OctaveModeConverter.WithoutConcertPitch) — a composed piece
+    /// is written at concert pitch (owner's request 2026-10-28). Best effort: a file it cannot be
+    /// done for (a B♭ trumpet in it) keeps the line, and <c>Notes</c> on the response says why.</summary>
+    public bool DropConcertPitch { get; set; }
 }
 
 /// <summary>Response for lilysharp/convertOctaves: the rewritten source and how many notes'
@@ -420,6 +425,8 @@ public class ConvertOctavesResponse
     public string? NewText { get; set; }
     public int ChangedNotes { get; set; }
     public string? Error { get; set; }
+    /// <summary>What a best-effort step left as it was, and why (DropConcertPitch).</summary>
+    public string? Notes { get; set; }
 }
 
 /// <summary>Parameters for lilysharp/aiOctaves: a text, and which way — into absolute octaves
