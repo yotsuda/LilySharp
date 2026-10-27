@@ -159,22 +159,22 @@ public class NameCaseSensitivityTests
     /// leave the page, the LilyPond twin, MusicXML and MIDI exactly as the bare notes are.
     /// </summary>
     [Theory]
-    [InlineData("c'4@staccato d' e' f' | c'4 d' e' f' |", "c'4@STACCATO d' e' f' | c'4 d' e' f' |")]
-    [InlineData("c'4@fermata d' e' f' | c'4 d' e' f' |", "c'4@Fermata d' e' f' | c'4 d' e' f' |")]
-    [InlineData("c'4@laissezVibrer d' e' f' | c'4 d' e' f' |", "c'4@laissezvibrer d' e' f' | c'4 d' e' f' |")]
-    [InlineData("c'4@stemUp d' e' f' | c'4 d' e' f' |", "c'4@stemup d' e' f' | c'4 d' e' f' |")]
-    [InlineData("c'4@hammerOn d' e' f' | c'4 d' e' f' |", "c'4@hammeron d' e' f' | c'4 d' e' f' |")]
-    [InlineData("c'4@glissando d' e' f' | c'4 d' e' f' |", "c'4@Glissando d' e' f' | c'4 d' e' f' |")]
-    [InlineData("c'4@startTrillSpan d' e'@stopTrillSpan f' | c'4 d' e' f' |", "c'4@starttrillspan d' e'@stoptrillspan f' | c'4 d' e' f' |")]
-    [InlineData("c'4@unaCorda d' e'@!unaCorda f' | c'4 d' e' f' |", "c'4@unacorda d' e'@!unacorda f' | c'4 d' e' f' |")]
-    [InlineData("c'4@phrasingSlur d' e'@!phrasingSlur f' | c'4 d' e' f' |", "c'4@phrasingslur d' e'@!phrasingslur f' | c'4 d' e' f' |")]
-    [InlineData("c'4 d' e' f' | c'4@mark(\"Z\") d' e' f' |", "c'4 d' e' f' | c'4@Mark(\"Z\") d' e' f' |")]
-    [InlineData("c'4@text(\"dolce\") d' e' f' | c'4 d' e' f' |", "c'4@Text(\"dolce\") d' e' f' | c'4 d' e' f' |")]
-    [InlineData("c'4@notehead(x) d' e' f' | c'4 d' e' f' |", "c'4@NoteHead(x) d' e' f' | c'4 d' e' f' |")]
-    [InlineData("c'4@figuredBass(6) d' e' f' | c'4 d' e' f' |", "c'4@FiguredBass(6) d' e' f' | c'4 d' e' f' |")]
+    [InlineData("c''4@staccato d'' e'' f'' | c''4 d'' e'' f'' |", "c''4@STACCATO d'' e'' f'' | c''4 d'' e'' f'' |")]
+    [InlineData("c''4@fermata d'' e'' f'' | c''4 d'' e'' f'' |", "c''4@Fermata d'' e'' f'' | c''4 d'' e'' f'' |")]
+    [InlineData("c''4@laissezVibrer d'' e'' f'' | c''4 d'' e'' f'' |", "c''4@laissezvibrer d'' e'' f'' | c''4 d'' e'' f'' |")]
+    [InlineData("c''4@stemUp d'' e'' f'' | c''4 d'' e'' f'' |", "c''4@stemup d'' e'' f'' | c''4 d'' e'' f'' |")]
+    [InlineData("c''4@hammerOn d'' e'' f'' | c''4 d'' e'' f'' |", "c''4@hammeron d'' e'' f'' | c''4 d'' e'' f'' |")]
+    [InlineData("c''4@glissando d'' e'' f'' | c''4 d'' e'' f'' |", "c''4@Glissando d'' e'' f'' | c''4 d'' e'' f'' |")]
+    [InlineData("c''4@startTrillSpan d'' e''@stopTrillSpan f'' | c''4 d'' e'' f'' |", "c''4@starttrillspan d'' e''@stoptrillspan f'' | c''4 d'' e'' f'' |")]
+    [InlineData("c''4@unaCorda d'' e''@!unaCorda f'' | c''4 d'' e'' f'' |", "c''4@unacorda d'' e''@!unacorda f'' | c''4 d'' e'' f'' |")]
+    [InlineData("c''4@phrasingSlur d'' e''@!phrasingSlur f'' | c''4 d'' e'' f'' |", "c''4@phrasingslur d'' e''@!phrasingslur f'' | c''4 d'' e'' f'' |")]
+    [InlineData("c''4 d'' e'' f'' | c''4@mark(\"Z\") d'' e'' f'' |", "c''4 d'' e'' f'' | c''4@Mark(\"Z\") d'' e'' f'' |")]
+    [InlineData("c''4@text(\"dolce\") d'' e'' f'' | c''4 d'' e'' f'' |", "c''4@Text(\"dolce\") d'' e'' f'' | c''4 d'' e'' f'' |")]
+    [InlineData("c''4@notehead(x) d'' e'' f'' | c''4 d'' e'' f'' |", "c''4@NoteHead(x) d'' e'' f'' | c''4 d'' e'' f'' |")]
+    [InlineData("c''4@figuredBass(6) d'' e'' f'' | c''4 d'' e'' f'' |", "c''4@FiguredBass(6) d'' e'' f'' | c''4 d'' e'' f'' |")]
     public void AWrongCaseAnnotation_DrawsAndExportsNothing(string canonical, string wrongCase)
     {
-        const string plain = "c'4 d' e' f' | c'4 d' e' f' |";
+        const string plain = "c''4 d'' e'' f'' | c''4 d'' e'' f'' |";
 
         Assert.NotEqual(Svg(plain), Svg(canonical));
         Assert.Equal(Svg(plain), Svg(wrongCase));
@@ -186,12 +186,12 @@ public class NameCaseSensitivityTests
     [Fact]
     public void AWrongCaseStaccato_IsNotInTheTwinsEither()
     {
-        Assert.Contains("\\staccato", Ly("c'4@staccato d' e' f' |"));
-        Assert.DoesNotContain("\\staccato", Ly("c'4@STACCATO d' e' f' |"));
-        Assert.Contains("<staccato", Xml("c'4@staccato d' e' f' |"));
-        Assert.DoesNotContain("<staccato", Xml("c'4@STACCATO d' e' f' |"));
+        Assert.Contains("\\staccato", Ly("c''4@staccato d'' e'' f'' |"));
+        Assert.DoesNotContain("\\staccato", Ly("c''4@STACCATO d'' e'' f'' |"));
+        Assert.Contains("<staccato", Xml("c''4@staccato d'' e'' f'' |"));
+        Assert.DoesNotContain("<staccato", Xml("c''4@STACCATO d'' e'' f'' |"));
         // MIDI shortens a staccato note, so the plain-vs-wrong-case equality above can see it.
-        Assert.NotEqual(Midi("c'4 d' e' f' |"), Midi("c'4@staccato d' e' f' |"));
+        Assert.NotEqual(Midi("c''4 d'' e'' f'' |"), Midi("c''4@staccato d'' e'' f'' |"));
     }
 
     // ================================================================================

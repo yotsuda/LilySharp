@@ -58,7 +58,7 @@ public sealed class ChordNameStaffPaddingTests
         score { staff m }
         """);
 
-    private const string BareLine = "c4@chord(C) d e@chord(Am) f | c@chord(F) d e@chord(G7) f |";
+    private const string BareLine = "c'4@chord(C) d e@chord(Am) f | c@chord(F) d e@chord(G7) f |";
 
     private static double D(string s) => double.Parse(s, CultureInfo.InvariantCulture);
 
@@ -109,7 +109,7 @@ public sealed class ChordNameStaffPaddingTests
         // baseline) by exactly the ink difference. A flat padding over the top line would
         // place both alike.
         var g = Render(BareLine);
-        var c = Render("c4@chord(F) d e@chord(F) f | c@chord(F) d e@chord(F) f |");
+        var c = Render("c'4@chord(F) d e@chord(F) f | c@chord(F) d e@chord(F) f |");
         var gRoots = RootRuns(g);
         var cRoots = RootRuns(c);
         double gDeepest = DeepestInkBottom(gRoots);
@@ -128,7 +128,7 @@ public sealed class ChordNameStaffPaddingTests
         // The a'' (one ledger line up) stands under the G7; the line, rigid, rides the
         // staff's skyline there — never lower than that head's top plus the padding.
         var bare = Render(BareLine);
-        var high = Render("c4@chord(C) d e@chord(Am) f | c@chord(F) d a''@chord(G7) c |");
+        var high = Render("c'4@chord(C) d e@chord(Am) f | c@chord(F) d a''@chord(G7) c |");
         double bareUp = TopLineY(bare) - RootRuns(bare).Y;
         double highUp = TopLineY(high) - RootRuns(high).Y;
         // The head's centre is 1.0 above the top line; its ink top half a head higher.

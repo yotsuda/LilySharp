@@ -120,10 +120,11 @@ public class BeamContinuationTests
     /// </para>
     /// </remarks>
     [Theory]
-    [InlineData("<d f>8 <c' g'> r4 r2 |", false)]   // ties all the way down → neutral = DOWN
-    [InlineData("<d f>8 <e g> r4 r2 |", true)]      // both chords below the line → UP
-    [InlineData("<c' g'>8 <d' a'> r4 r2 |", false)] // both above → DOWN
-    [InlineData("<d f>8 <e g> <f a> <c' g'> |", true)] // 3 votes up, 1 down → UP outright
+    // LilyPond's absolute octaves (bare c = C3, owner's decision 2026-10-28), as measured.
+    [InlineData("<d' f'>8 <c'' g''> r4 r2 |", false)]   // ties all the way down → neutral = DOWN
+    [InlineData("<d' f'>8 <e' g'> r4 r2 |", true)]      // both chords below the line → UP
+    [InlineData("<c'' g''>8 <d'' a''> r4 r2 |", false)] // both above → DOWN
+    [InlineData("<d' f'>8 <e' g'> <f' a'> <c'' g''> |", true)] // 3 votes up, 1 down → UP outright
     public void BeamDirection_TiedVote_IsDecidedByHowFarEachSideReaches(
         string body, bool expectUp)
     {

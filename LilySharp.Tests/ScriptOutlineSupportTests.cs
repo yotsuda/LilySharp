@@ -37,16 +37,16 @@ public sealed class ScriptOutlineSupportTests
     /// across the whole width). Until session 695 Lily# read mordent −0.173, turn −0.033 and
     /// trill −0.039 / −0.049 low.</summary>
     [Theory]
-    [InlineData("c''4@mordent", 5.4130)]
-    [InlineData("g'4@mordent", 3.9130)]
-    [InlineData("c''4@turn", 5.2730)]
-    [InlineData("g'4@turn", 3.7730)]
-    [InlineData("c''4@trill", 4.7890)]
-    [InlineData("g'4@trill", 3.2890)]
-    [InlineData("c''4@staccatissimo", 4.7970)]
-    [InlineData("g'4@staccatissimo", 3.2970)]
-    [InlineData("c''4@fermata", 5.0810)]
-    [InlineData("g'4@accent", 3.6650)]
+    [InlineData("c'''4@mordent", 5.4130)]
+    [InlineData("g''4@mordent", 3.9130)]
+    [InlineData("c'''4@turn", 5.2730)]
+    [InlineData("g''4@turn", 3.7730)]
+    [InlineData("c'''4@trill", 4.7890)]
+    [InlineData("g''4@trill", 3.2890)]
+    [InlineData("c'''4@staccatissimo", 4.7970)]
+    [InlineData("g''4@staccatissimo", 3.2970)]
+    [InlineData("c'''4@fermata", 5.0810)]
+    [InlineData("g''4@accent", 3.6650)]
     public void AScript_ClearsItsSupportsByItsOutline(string note, double originUp)
     {
         string src = $$"""
@@ -71,15 +71,15 @@ public sealed class ScriptOutlineSupportTests
     /// further, as on_line allows ledgers. An odd position (b''', 9.5) stays. Until session 696
     /// the notation staff's copy counted only the five lines (±4) and left 8.5 at 9.0.</summary>
     [Theory]
-    [InlineData("a'''4@staccato.down", 8.5)]
-    [InlineData("c''''4@staccato.down", 9.5)]
-    [InlineData("b'''4@staccato.down", 9.5)]
+    [InlineData("a''''4@staccato.down", 8.5)]
+    [InlineData("c'''''4@staccato.down", 9.5)]
+    [InlineData("b''''4@staccato.down", 9.5)]
     public void AQuantizedScriptBetweenItsHeadAndTheStaff_LeavesALedgerPosition(string note, double originUp)
     {
         string src = $$"""
             octave absolute
             part m {
-              section A { voice { {{note}} r4 r2 } { c'1 } | }
+              section A { voice { {{note}} r4 r2 } { c''1 } | }
             }
             form { A }
             score { staff m }

@@ -65,8 +65,9 @@ public class ChordTieMidiTests
     [Fact]
     public void TiedChord_SustainsEveryMember_InsteadOfAttackingTwice()
     {
-        var tied = ExportNotes("<c' e'>2 ~ <c' e'>2 |");
-        var untied = ExportNotes("<c' e'>2 <c' e'>2 |");
+        // C5 E5 in LilyPond's absolute octaves (owner's decision 2026-10-28).
+        var tied = ExportNotes("<c'' e''>2 ~ <c'' e''>2 |");
+        var untied = ExportNotes("<c'' e''>2 <c'' e''>2 |");
 
         // The control fixes what "not merged" looks like: four attacks, two per chord.
         Assert.Equal(4, untied.Count);
@@ -93,8 +94,9 @@ public class ChordTieMidiTests
     public void TiedChord_WithOneMemberChanged_SustainsOnlyTheSharedPitches()
     {
         // test/feature-tour's own prose: `<g b d>2~ <g b e>` ties g and b only.
-        var tied = ExportNotes("<g b d>2~ <g b e>2 |");
-        var untied = ExportNotes("<g b d>2 <g b e>2 |");
+        // G4 B4 D4 in LilyPond's absolute octaves (owner's decision 2026-10-28).
+        var tied = ExportNotes("<g' b' d'>2~ <g' b' e'>2 |");
+        var untied = ExportNotes("<g' b' d'>2 <g' b' e'>2 |");
 
         Assert.Equal(6, untied.Count);
         int half = untied[0].DurationTicks;

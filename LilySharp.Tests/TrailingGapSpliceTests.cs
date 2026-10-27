@@ -85,8 +85,8 @@ public sealed class TrailingGapSpliceTests
         """;
 
     [Theory]
-    [InlineData(GroupedByPartChords, @"c1\3@chord(Cmaj7) }", @"c1\3@chord(Cmaj7) c1\3@chord(Cmaj7) }")]
-    [InlineData(GroupedByPartChords, @"e1\3@chord(Dm7) }", @"e1\3@chord(Dm7) e1\3@chord(Dm7) }")]
+    [InlineData(GroupedByPartChords, @"c'1\3@chord(Cmaj7) }", @"c'1\3@chord(Cmaj7) c1\3@chord(Cmaj7) }")]
+    [InlineData(GroupedByPartChords, @"e'1\3@chord(Dm7) }", @"e'1\3@chord(Dm7) e1\3@chord(Dm7) }")]
     [InlineData(GroupedByPartSlurEnd, @"b,,2.\4)", @"b,,2.\4) b,,2.\4)")]
     public void ANoteTypedAfterAGroupedByPartCellsLastItem_IsDeclinedByTheContentWindowGate(
         string source, string find, string replacement)

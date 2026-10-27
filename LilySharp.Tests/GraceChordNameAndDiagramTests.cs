@@ -160,11 +160,11 @@ public class GraceChordNameAndDiagramTests
     [Fact]
     public void TheTwin_WritesTheGraceSymbolAsAGraceInTheChordStream()
     {
-        var (ly, warnings) = Export(Book("c4@chord(C) grace { d8@chord(D) } e4@chord(E) c2@chord(C) |"));
+        var (ly, warnings) = Export(Book("c'4@chord(C) grace { d'8@chord(D) } e'4@chord(E) c'2@chord(C) |"));
         Assert.Empty(warnings);
         Assert.Matches(@"mInlineChords = \\chordmode \{\s*c4 \\grace \{ d8 \} e4 c2 \|", ly);
         // …and the staff's grace stays bare: the symbol is the ChordNames context's.
-        Assert.Matches(@"\\fixed c' \{\s*\\time 4/4\s*c4 \\grace \{ d8 \} e4 c2 \|", ly);
+        Assert.Matches(@"\\fixed c \{\s*\\time 4/4\s*c'4 \\grace \{ d'8 \} e'4 c'2 \|", ly);
         Assert.DoesNotContain("@chord", ly);
     }
 

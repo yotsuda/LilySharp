@@ -68,7 +68,7 @@ public class PhraseExtractorTests
     public void MeasureSelection_SnapsToBarlines_AndFixesTheOctave()
     {
         // Measure 2 (`g a b c'`) sits high because the RELATIVE chain climbed
-        // there; a fresh phrase frame would drop its g near C4. The extractor
+        // there; a fresh phrase frame (F3 since 2026-10-28) would drop its g low. The extractor
         // corrects the body's first pitch by measurement — and the first pitch
         // AFTER the reference too: the reference hands off its ANCHOR (bare g),
         // not the inline chunk's last note, so measure 3's d needs its own marks
@@ -79,7 +79,7 @@ public class PhraseExtractorTests
         var newText = ExtractOk(src, selStart, selStart + 1, "climb");
         Assert.Contains("phrase climb { g''4 a b c' |}", newText);
         // Measure 1 stays put; measure 3 keeps its sound via the tail knob.
-        Assert.Contains("c'4 d e f |", newText);
+        Assert.Contains("c''4 d e f |", newText);
         Assert.Contains("d''''4 e f g", newText);
     }
 
@@ -92,7 +92,8 @@ public class PhraseExtractorTests
                 + "form { A }\nscore { staff m }";
         int selStart = src.IndexOf("e f");
         var newText = ExtractOk(src, selStart, selStart + 1, "mid");
-        Assert.Contains("e2 f", newText);
+        // E4 from a phrase frame opening on F3 (owner's decision 2026-10-28) is e'.
+        Assert.Contains("phrase mid { e'2 f |}", newText);
     }
 
     [Fact]
@@ -134,7 +135,7 @@ public class PhraseExtractorTests
     public void UnusableName_IsRefused(string name)
     {
         var src = "part m { section A { c'4 d } }\nform { A }\nscore { staff m }";
-        var result = PhraseExtractor.Extract(src, src.IndexOf("c4"), src.IndexOf("c4"), name);
+        var result = PhraseExtractor.Extract(src, src.IndexOf("c'4"), src.IndexOf("c'4"), name);
         Assert.Null(result.NewText);
     }
 
@@ -142,7 +143,7 @@ public class PhraseExtractorTests
     public void TakenName_IsRefused()
     {
         var src = "part m { section A { c'4 d } }\nform { A }\nscore { staff m }";
-        var result = PhraseExtractor.Extract(src, src.IndexOf("c4"), src.IndexOf("c4"), "m");
+        var result = PhraseExtractor.Extract(src, src.IndexOf("c'4"), src.IndexOf("c'4"), "m");
         Assert.Null(result.NewText);
         Assert.Contains("already declared", result.Error);
     }

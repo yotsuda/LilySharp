@@ -78,11 +78,12 @@ public class BareSectionPartTests
     [Fact]
     public void ABareSectionOpensInItsPartsRegister()
     {
-        Assert.Equal(Play(Blocked("clef bass octave 3")), Play(Bare("clef bass octave 3")));
-        // …and that register is the low one: with `octave 3` the part anchors an octave
-        // below the default, so `c'` is C4 (60) where a treble part gives C5 (72).
-        Assert.Equal(60, Play(Bare("clef bass octave 3"))[0]);
-        Assert.Equal(72, Play(Bare("clef treble"))[0]);
+        Assert.Equal(Play(Blocked("clef bass octave 2")), Play(Bare("clef bass octave 2")));
+        // …and that register is the low one: with `octave 2` the part anchors an octave
+        // below the default (3 since the owner's decision 2026-10-28), so `c'` is C3 (48)
+        // where a treble part gives C4 (60).
+        Assert.Equal(48, Play(Bare("clef bass octave 2"))[0]);
+        Assert.Equal(60, Play(Bare("clef treble"))[0]);
     }
 
     /// <summary>

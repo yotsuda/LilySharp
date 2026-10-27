@@ -24,8 +24,7 @@ namespace LilySharp.Tests;
 
 /// <summary>
 /// In <c>octave absolute</c>, a bare <c>c</c> is written at the part's anchor — its <c>octave N</c>,
-/// else its instrument preset's octave, else C4 (one chain with the relative mode since 2026-10-13,
-/// grammar feedback B1) — and what the part SOUNDS differs from that by exactly its
+/// else C3, LilyPond's, in every part (owner's decision 2026-10-28: no preset moves it) — and what the part SOUNDS differs from that by exactly its
 /// written→sounding shift and nothing else. The page and the MIDI read the SAME base.
 /// </summary>
 /// <remarks>
@@ -97,13 +96,14 @@ public sealed class AbsoluteModeAnchorTests
     // A part that names only a clef: no transposition anywhere, so it sounds what it draws.
     [InlineData("clef treble", TrebleMiddleLine, 0)]
     [InlineData("clef bass", BassMiddleLine, 0)]
-    // Presets whose ANCHOR octave is not 4: since 2026-10-13 they move the absolute base too
-    // (one chain for both modes, grammar feedback B1) — `c` is written at the preset's octave.
+    // Presets whose old anchor octave was not 4: since the owner's decision 2026-10-28 no preset
+    // moves any octave — `c` is written at C3 in every part, whatever its instrument.
     [InlineData("instrument bass", BassMiddleLine, -12)]
     [InlineData("instrument tuba", BassMiddleLine, 0)]
     [InlineData("instrument flute", TrebleMiddleLine, 0)]
-    // The row that was right all along: the octave rides the treble_8 clef, not the preset.
-    [InlineData("instrument guitar", TrebleMiddleLine, -12)]
+    // treble_8 is written at sounding pitch (owner's decision 2026-10-28): its middle line is B3,
+    // and the guitar sounds what it draws.
+    [InlineData("instrument guitar", TrebleMiddleLine - 12, 0)]
     public void AbsoluteC_IsWrittenAtThePartsAnchor_AndSoundsItsOwnShiftBelow(
         string partProperties, int middleLinePitch, int expectedShift)
     {
@@ -116,10 +116,11 @@ public sealed class AbsoluteModeAnchorTests
         Assert.Equal(staffPosition, System.Math.Round(staffPosition), 6);
         int written = PitchAt(middleLinePitch, (int)System.Math.Round(staffPosition));
 
-        // The part's anchor: the preset's octave, else C4 (InstrumentDefaults.AbsoluteBaseOctave).
+        // The part's anchor: C3 in every part, preset or not (owner's decision 2026-10-28).
         int anchor = partProperties.StartsWith("instrument ", System.StringComparison.Ordinal)
             ? LilySharp.Core.Svg.Model.InstrumentDefaults.AbsoluteBaseOctave(null, partProperties["instrument ".Length..])
-            : 4;
+            : LilySharp.Core.Svg.Model.InstrumentDefaults.DefaultAnchorOctave;
+        Assert.Equal(3, anchor);
         Assert.True(written == (anchor + 1) * 12,
             $"`c` in octave absolute must be WRITTEN at the part's anchor C{anchor} ({(anchor + 1) * 12}), but "
             + $"part {{ {partProperties} }} drew staff position {staffPosition:F1} = MIDI {written}.");

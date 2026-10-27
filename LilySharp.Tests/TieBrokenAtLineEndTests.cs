@@ -42,6 +42,8 @@ namespace LilySharp.Tests;
 [Trait("Category", "Unit")]
 public class TieBrokenAtLineEndTests
 {
+    // The books here are written in LilyPond's absolute octaves (bare c = C3, owner's decision
+    // 2026-10-28): the music LilyPond was measured on.
     private const string Book = """
         octave absolute
         key aes major
@@ -49,8 +51,8 @@ public class TieBrokenAtLineEndTests
         part bassline {
           clef bass
           section Tacet {
-            aes,,4 r2. | r1 | r | r | r | r | r | r | r | r | r | r2.. aes,,8~ | break
-            aes,,4 r2. |
+            aes,4 r2. | r1 | r | r | r | r | r | r | r | r | r | r2.. aes,8~ | break
+            aes,4 r2. |
           }
         }
         form { Tacet }
@@ -89,7 +91,7 @@ public class TieBrokenAtLineEndTests
               clef bass
               tuning bass5
               section A {
-                cis,8 cis cis, cis cis, gis,, b,, cis,~ | break cis, cis cis, cis cis, e,4 dis,8 |
+                cis8 cis' cis cis' cis gis, b, cis~ | break cis cis' cis cis' cis e4 dis8 |
               }
             }
             form { A }

@@ -583,7 +583,7 @@ public class StepRequestTests
         Assert.Equal(Rel("f4 c'4"), Semi("f4 b‸4", +1, Rel));
         Assert.Equal(Rel("f4 b4"), Semi("f4 c'‸4", -1, Rel));
         Assert.Equal(Rel("a4 c4"), Semi("a4 b‸4", +1, Rel));
-        Assert.Equal([74], Step(Plain("c'‸4"), +1, semitone: true).Response.Pitches);
+        Assert.Equal([62], Step(Plain("c'‸4"), +1, semitone: true).Response.Pitches);
     }
 
     [Fact]
@@ -1788,11 +1788,11 @@ public class StepRequestTests
     [Fact]
     public void ASteppedNote_SoundsItsNewPitch()
     {
-        Assert.Equal([84], Step(Plain("c'‸4 d'4"), +1).Response.Pitches);          // c'' = C6 (Lily#'s absolute c is C4)
+        Assert.Equal([72], Step(Plain("c'‸4 d'4"), +1).Response.Pitches);          // c'' = C5 (Lily#'s absolute c is C3, owner's decision 2026-10-28)
         // A stepped member sounds its WHOLE chord with the member moved (owner's decision
         // 2026-10-10: `<…>` is one sound; it used to strike the moved member alone).
-        Assert.Equal([72, 79, 88], Step(Plain("<c' e'‸ g'>4"), +1).Response.Pitches); // c' g' e'' = C5 G5 E6
-        Assert.Equal([48], Step(Plain("c‸4 d'4"), -1).Response.Pitches);           // c = C4, c, = C3
+        Assert.Equal([60, 67, 76], Step(Plain("<c' e'‸ g'>4"), +1).Response.Pitches); // c' g' e'' = C4 G4 E5
+        Assert.Equal([36], Step(Plain("c‸4 d'4"), -1).Response.Pitches);           // c = C3, c, = C2
     }
 
     private static AuditionAtResponse AuditionAt(string marked)
@@ -1846,8 +1846,8 @@ public class StepRequestTests
     /// the tie's target sounds where the struck note does (owner's report 2026-10-11: it rang
     /// an octave high, and wrong on a transposing instrument).</summary>
     [Theory]
-    [InlineData("guitar", 62)]      // d' written = 74; the guitar's octave below
-    [InlineData("clarinet", 72)]    // the B♭ clarinet: two semitones below
+    [InlineData("guitar", 62)]      // d' = D4: treble_8 is written at sounding pitch (owner's decision 2026-10-28)
+    [InlineData("clarinet", 60)]    // d' = D4; the B♭ clarinet: two semitones below
     public void ATiedNote_SoundsWhereThePartsStruckNotesDo(string preset, int sounding)
     {
         string Book(string music) => $$"""
@@ -1873,18 +1873,18 @@ public class StepRequestTests
 
         var note = AuditionAt(Plain("c'4 d'‸4"));
         Assert.Equal("note", note.Kind);
-        Assert.Equal([74], note.Pitches);
+        Assert.Equal([62], note.Pitches);
 
         // The caret on a MEMBER of `<…>` sounds the whole chord, under the chord's own key —
         // so arrowing across the members strikes it once (owner's decision 2026-10-10; it
         // used to sound the member alone, as "member").
         var member = AuditionAt(Plain("<c' ‸e' g'>4"));
         Assert.Equal("chord", member.Kind);
-        Assert.Equal([72, 76, 79], member.Pitches);
+        Assert.Equal([60, 64, 67], member.Pitches);
 
         var chord = AuditionAt(Plain("<c' e' g'>‸4"));
         Assert.Equal("chord", chord.Kind);
-        Assert.Equal([72, 76, 79], chord.Pitches);
+        Assert.Equal([60, 64, 67], chord.Pitches);
         Assert.Equal(chord.Key, member.Key);
 
         Assert.Equal(-1, AuditionAt(Plain("c'4 r‸4")).Key);

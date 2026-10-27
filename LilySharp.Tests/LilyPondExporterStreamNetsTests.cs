@@ -55,7 +55,8 @@ public class LilyPondExporterStreamNetsTests
             form { A }
             score { staff melody }
             """);
-        Assert.Contains("\\tuplet 3/2 { g'8 a b } \\tuplet 3/2 { c d e } d2 |", ly);
+        // The twin's frame is `\relative c` since the owner's decision 2026-10-28: G4 is g''.
+        Assert.Contains("\\tuplet 3/2 { g''8 a b } \\tuplet 3/2 { c d e } d2 |", ly);
     }
 
     /// <summary>A lyrics stream read off the page fills the time before its first syllable
