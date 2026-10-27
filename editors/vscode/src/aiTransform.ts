@@ -814,9 +814,25 @@ async function drive(
             // The AI writes in absolute octaves; the piece opens in relative ones (owner's request
             // 2026-10-27), converted mechanically — the server compiles the result and compares every
             // note before it answers, so it sounds as the AI wrote it. Left as it came if it cannot.
+            // …and without the parts' `octave N` (owner's request 2026-10-28): the bass is written
+            // under `octave 4` so the AI can name the pitches it sounds, and that is the AI's crutch,
+            // not the musician's — taken out, every note re-marked to sound where it did. If that
+            // cannot be done, the piece keeps the line.
+            // …and without its `pitch concert` (owner's request 2026-10-28): the AI writes every part
+            // as it sounds, and the piece opens as a musician writes it, each part as its player
+            // reads it — a bass an octave up. A B♭ trumpet or an E♭ saxophone keeps its letters under
+            // a `pitch concert` of its own (they would have to be respelled in the player's key).
+            type Converted = { Success: boolean; NewText: string | null; Error: string | null; Notes?: string | null };
             try {
-                const relative = await client.sendRequest<{ Success: boolean; NewText: string | null; Error: string | null }>(
-                    'lilysharp/convertOctaves', { Text: text, Absolute: false });
+                let relative = await client.sendRequest<Converted>(
+                    'lilysharp/convertOctaves', { Text: text, Absolute: false, DropPartOctaves: true, DropConcertPitch: true });
+                if (relative.Notes) {
+                    deps.log(`AI transform: ${relative.Notes}`);
+                }
+                if (!relative.Success) {
+                    deps.log(`AI transform: the parts' octave lines stay — ${relative.Error}`);
+                    relative = await client.sendRequest<Converted>('lilysharp/convertOctaves', { Text: text, Absolute: false });
+                }
                 if (relative.Success && relative.NewText) {
                     text = relative.NewText;
                 } else {
@@ -976,7 +992,7 @@ function composeSystemPrompt(grammar: string, modelName?: string): string {
         '   otherwise a piece runs 32 to 64 bars, in phrases of 4 and 8 bars); the chord progression of every phrase,',
         '   bar by bar, and its cadence; the theme and how it returns; what each part does (melody, bass line, inner',
         '   parts, accompaniment figure) and its register, as sounding pitches (C4 = middle C) AND as you will write',
-        '   them in this file (a right hand round C5, D4–A5, is written `d` – `a\'`); how the character asked for',
+        '   them in this file (a right hand round C5, D4–A5, is written `d\'` – `a\'\'`); how the character asked for',
         '   is heard — the devices that make it, named (for "cool", "かっこいい": a driving rhythm, syncopation and',
         '   accents, octaves and chords on the strong beats, a run into the climax); where the dynamics rise and',
         '   fall; and how the piece ends (in its home key, on a held tonic chord).',
@@ -984,14 +1000,19 @@ function composeSystemPrompt(grammar: string, modelName?: string): string {
         '   of the request.',
         '3. <file> … </file> — the whole file, written from the plan.',
         '',
+        // Lily#'s octaves are LilyPond's since 2026-10-28 (owner's decision): the per-instrument
+        // anchors this listed, and the warning that a LilyPond habit wrote right hands an octave
+        // high, went with the anchors themselves.
         '- Write in ABSOLUTE octaves: `octave absolute` at the top of the file, so every pitch says where it sounds.',
-        '  A bare pitch sits in its part\'s own octave — the octave its instrument gives the bare `c`: C4 for',
-        '  `piano-right`, `violin`, a part with no instrument; C3 for `piano-left`, `viola`, `cello`; C5 for `flute`; see',
-        '  the grammar for the rest — and each \' or , moves it one octave from there, never from the note before.',
-        '  In the plan, name each part\'s bare `c`, and write its notes from it. These are NOT LilyPond\'s octaves,',
-        '  where `c\'` is middle C: in `piano-right` middle C is the bare `c`, `c\'` is C5 and `c\'\'` C6 — a right',
-        '  hand written by LilyPond\'s habit sounds an octave too high (owner\'s report: one planned for D5–A5 came',
-        '  out D5–G6).',
+        '  The octaves are LilyPond\'s, in every part and for every instrument: `c` = C3, `c\'` = middle C (C4),',
+        '  `c\'\'` = C5, `c,` = C2.',
+        // A part is planned in the pitches it sounds, and the AI wrote it so — a bass an octave
+        // under its page, a trumpet a tone (owner's trials 2026-10-28). Under `pitch concert` every
+        // letter IS the sounding pitch, transposing instruments included; Lily# prints each as its
+        // player reads it.
+        '- Write at CONCERT pitch: `pitch concert` at the top of the file too, and every part by the pitch it',
+        '  SOUNDS, whatever the instrument — a bass\'s low E string is `e,,` (E1), a guitar\'s `e,` (E2), a B♭ trumpet\'s',
+        '  middle C `c\'`. Lily# prints each part where its player reads it.',
         '- Name the parts as a score prints them, by the instrument. A piece for piano alone names no part; a piano',
         '  in an ensemble is named once, on its upper part (`"Piano" "Pno."`). Never "Right hand", "L.H.", 右手, 左手.',
         '- Before you reply, go through the piece bar by bar: every bar of every part fills the meter, the parts',
@@ -1100,8 +1121,7 @@ function taskPrompt(snapshot: Snapshot, shown: { text: string; complete: boolean
     if (absolute) {
         // toAbsoluteOctaves: the user's file is relative; it was converted for the model.
         parts.push('The file is shown in ABSOLUTE octaves (`octave absolute` at its top): every pitch says where it '
-            + 'sounds — a bare pitch is in the octave of the part\'s anchor (C4 unless the part\'s `octave N` or '
-            + 'instrument says otherwise), and each \' / , moves it one octave from there, never from the note '
+            + 'sounds — LilyPond\'s octaves: a bare `c` is C3 and `c\'` middle C (unless the part writes `octave N`), and each \' / , moves it one octave from there, never from the note '
             + 'before. Write every pitch you add or change the same way, and keep the file\'s `octave` lines as they are.');
         parts.push('');
     }

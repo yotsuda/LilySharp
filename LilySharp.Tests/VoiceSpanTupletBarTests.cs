@@ -90,8 +90,8 @@ public sealed class VoiceSpanTupletBarTests
 
         section Piece {
           p1 {
-            voice { r8. r16 fis,8 gis,8 fis,2 gis,4 } { gis,,8. fis,,16 gis,,16 fis,,16 b,,8 ais,,16 b,,16 ais,,8 gis,,8 ais,,8 r4 } |
-            voice { ais,8 r16 c16 b,4 ais,16 dis,16 eis,16 eis,16 fis,8 ais,16 gisis,16 cis4 } { tuplet 3/2 { ais,,8 b,,8 cis,8 } b,,2 cis,2 } |
+            voice { r8. r16 fis8 gis8 fis2 gis4 } { gis,8. fis,16 gis,16 fis,16 b,8 ais,16 b,16 ais,8 gis,8 ais,8 r4 } |
+            voice { ais8 r16 c'16 b4 ais16 dis16 eis16 eis16 fis8 ais16 gisis16 cis'4 } { tuplet 3/2 { ais,8 b,8 cis8 } b,2 cis2 } |
           }
         }
 
@@ -359,7 +359,7 @@ public sealed class VoiceSpanTupletBarTests
     public void OwnersBook_LilyPondTwin_WritesTheTupletInsideVoice2()
     {
         string ly = new LilySharp.Core.LilyPond.LilyPondExporter().Export(SyntaxTree.Parse(OwnersBook));
-        Assert.Contains(@"\\ { \tuplet 3/2 { ais,,8 b,,8 cis,8 } b,,2 cis,2 } >>", ly);
+        Assert.Contains(@"\\ { \tuplet 3/2 { ais,8 b,8 cis8 } b,2 cis2 } >>", ly);
     }
 
     // ---------- diagnostics: CLI check and the LSP pass ----------
@@ -378,7 +378,7 @@ public sealed class VoiceSpanTupletBarTests
         var server = new LilySharpLanguageServer(Stream.Null, Stream.Null);
         // Opened with voice 2 of bar 2 empty, then the voice typed in one character at a
         // time through incremental changes, the preview rendering after every keystroke.
-        const string typed = "tuplet 3/2 { ais,,8 b,,8 cis,8 } b,,2 cis,2";
+        const string typed = "tuplet 3/2 { ais,8 b,8 cis8 } b,2 cis2";
         int at = OwnersBook.IndexOf(typed, StringComparison.Ordinal);
         string text = OwnersBook.Remove(at, typed.Length);
         server.DidOpen(new DidOpenTextDocumentParams
@@ -421,7 +421,7 @@ public sealed class VoiceSpanTupletBarTests
     [Fact]
     public void TheDraftWithoutTheTuplet_Measures7Over4()
     {
-        string draft = OwnersBook.Replace("tuplet 3/2 { ais,,8 b,,8 cis,8 }", "ais,, b,, cis,", StringComparison.Ordinal);
+        string draft = OwnersBook.Replace("tuplet 3/2 { ais,8 b,8 cis8 }", "ais, b, cis", StringComparison.Ordinal);
         var over = Assert.Single(SemanticValidation.Run(SyntaxTree.Parse(draft)), IsBarLength);
         Assert.Contains("7/4 exceeds time signature 5/4", over.Message);
     }

@@ -76,11 +76,11 @@ public class FormNavigationTests
     /// </remarks>
     [Theory]
     [InlineData("part rh { clef treble }\npart lh { clef bass }\n"
-        + "section A { rh { c'4 d' e' f' | } lh { c4 d e f | } }\n"
+        + "section A { rh { c''4 d' e' f' | } lh { c'4 d e f | } }\n"
         + "section B { rh { g'4 a' b' c'' | } lh { g4 a b c' | } }\n"
         + "form { A fine B dc al fine _\"rit.\" }\nscore { staff rh staff lh }\n")]
     [InlineData("part rh { clef treble }\n"
-        + "section A { rh { c'4 d' e' f' | } }\nsection B { rh { g'4 a' b' c'' | } }\n"
+        + "section A { rh { c''4 d' e' f' | } }\nsection B { rh { g'4 a' b' c'' | } }\n"
         + "form { A fine B dc al fine _\"rit.\" }\nscore { staff rh }\n")]
     public void AFormsMarksAndTexts_AreCollectedOncePerScore_HoweverManyParts(string source)
     {
@@ -266,8 +266,8 @@ public class FormNavigationTests
     private static string CodaOpeningALineWithRepeat => """
         part melody {
           clef treble
-          section A { c1 | c1 | c1 | c1 | break }
-          section E { c1 | c1 }
+          section A { c'1 | c1 | c1 | c1 | break }
+          section E { c'1 | c1 }
         }
 
         form { A coda |: E :| }

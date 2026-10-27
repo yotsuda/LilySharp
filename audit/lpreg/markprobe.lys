@@ -4,7 +4,7 @@ time 4/4
 part v { }
 
 section Main {
-  v { c1@mark("A") | c1 @mark("B") | }
+  v { c'1@mark("A") | c'1 @mark("B") | }
 }
 
 form { ~Main }

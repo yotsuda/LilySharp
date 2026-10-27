@@ -10,7 +10,7 @@ part gtr { }
 part bass { clef bass octave 3 }
 
 section Main {
-  comp { /4 4 8 8 4 | /8 8 8 8 /2 | /4 4 c'8 d' /4 | /1 | }
+  comp { /4 4 8 8 4 | /8 8 8 8 /2 | /4 4 c''8 d' /4 | /1 | }
   gtr  { /4 4 4 4 | /2 2 | /4. 8 /2 | /1 | }
   bass { c8 8 8 8 8 8 8 8 | f8 8 8 8 g8 8 8 8 | c8 8 8 8 g,8 8 8 8 | c1 | }
 }

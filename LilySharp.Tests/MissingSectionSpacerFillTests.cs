@@ -50,12 +50,12 @@ public class MissingSectionSpacerFillTests
         time 4/4
         part melody {
           clef treble
-          section A { c4 d e f | }
+          section A { c'4 d e f | }
         }
         part bass {
           clef bass
-          section A { c2 g, | }
-          section B { c4 c c c | g2 g2 | }
+          section A { c'2 g, | }
+          section B { c'4 c c c | g2 g2 | }
         }
         form { A B A }
         score s {
@@ -105,13 +105,13 @@ public class MissingSectionSpacerFillTests
             time 4/4
             part melody {
               clef treble
-              section A { c4 d e f | }
+              section A { c'4 d e f | }
               section B { g1 }
             }
             part bass {
               clef bass
-              section A { c2 g, | }
-              section B { c4 c c c | g2 g2 | }
+              section A { c'2 g, | }
+              section B { c'4 c c c | g2 g2 | }
             }
             form { A B A }
             score s {
@@ -141,11 +141,11 @@ public class MissingSectionSpacerFillTests
             part melody { clef treble }
             part bass { clef bass }
             section A {
-              melody { c4 d e f | }
-              bass { c2 g, | }
+              melody { c'4 d e f | }
+              bass { c'2 g, | }
             }
             section B {
-              bass { c4 c c c | g2 g2 | }
+              bass { c'4 c c c | g2 g2 | }
             }
             form { A B A }
             score s {
@@ -171,11 +171,11 @@ public class MissingSectionSpacerFillTests
         var score = Collect("""
             time 4/4
             part melody { clef treble
-              section A { c4 d e f | }
+              section A { c'4 d e f | }
               section B { g4 g g g | }
             }
             part bass { clef bass
-              section A { c2 g, | }
+              section A { c'2 g, | }
               section B { g2 g2 | }
             }
             form { A B A }
@@ -242,14 +242,14 @@ public class MissingSectionSpacerFillTests
             time 4/4
             part melody {
               clef treble
-              section A { c'1 | }
-              section C { c'1 | }
+              section A { c''1 | }
+              section C { c''1 | }
             }
             part bass {
               clef bass
-              section A { c1 | }
-              section B { g4 | g2. | g2. | }
-              section C { c1 | }
+              section A { c'1 | }
+              section B { g'4 | g'2. | g'2. | }
+              section C { c'1 | }
             }
             section B { time 3/4  partial 4 }
             form { A B C }

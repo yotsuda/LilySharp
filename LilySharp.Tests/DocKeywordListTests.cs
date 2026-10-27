@@ -315,7 +315,7 @@ public class DocKeywordListTests
         // names has nothing to engrave — the item is real, and the production has to say so.
         Assert.False(
             SyntaxTree.Parse(
-                "part m { clef treble }\nsection A { m { c4 } }\nform { A }\n"
+                "part m { clef treble }\nsection A { m { c'4 } }\nform { A }\n"
                 + "score { staff m\n  m }").HasErrors,
             "a bare part name beside a staff is a score item and must parse");
 

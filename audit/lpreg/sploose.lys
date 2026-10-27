@@ -8,8 +8,8 @@ octave absolute
 part rh { clef treble }
 part lh { clef bass }
 section S {
-  rh { tuplet 3/2 { g4 a2 } | }
-  lh { fis,,8 cis, clef treble g8 fis, | }
+  rh { tuplet 3/2 { g'4 a'2 } | }
+  lh { fis,8 cis clef treble g'8 fis | }
 }
 form { S }
 score spacingLoosePolyphony { grandStaff { staff rh staff lh } }

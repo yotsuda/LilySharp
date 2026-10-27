@@ -11,7 +11,7 @@ key c major
 
 part m { clef treble }
 
-section A { m { aes'8@fermata bes' ces'' des'' } }
+section A { m { aes''8@fermata bes'' ces''' des''' } }
 
 form { A }
 

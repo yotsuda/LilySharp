@@ -17,7 +17,7 @@ part melody
 
 section Main {
   melody {
-    c4 d e f |
+    c'4 d e f |
     r1 |
     c4 d e f |
     R1*1 |

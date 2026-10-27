@@ -148,11 +148,11 @@ public class PartNameVocabularyTests
     {
         // `p { … }` is part p's cell; a bare `p` in a single-part section is the stray item
         // it always was (LYS0030 — no cell, no reference), not a cell with a missing brace.
-        var cell = SyntaxTree.Parse("part p { clef treble }\nsection A { p { c4 } }");
+        var cell = SyntaxTree.Parse("part p { clef treble }\nsection A { p { c'4 } }");
         Assert.DoesNotContain(cell.Diagnostics, d => d.Severity == DiagnosticSeverity.Error);
         Assert.Single(cell.GetRoot().DescendantNodes<PartBlockSyntax>());
 
-        var bare = SyntaxTree.Parse("section A { c4 p d4 }");
+        var bare = SyntaxTree.Parse("section A { c'4 p d4 }");
         Assert.Empty(bare.GetRoot().DescendantNodes<PartBlockSyntax>());
     }
 
@@ -161,7 +161,7 @@ public class PartNameVocabularyTests
     {
         // The kept body `{ staff c }` holds a pitch letter, which is a legal part name now;
         // it must not come back as a member and be reported undefined on top of LYS6004.
-        string src = "section A { m { c4 } }\nform { A }\n"
+        string src = "section A { m { c'4 } }\nform { A }\n"
             + "score { condensedStaff { m grandStaff { staff c } } }";
         var render = SyntaxTree.Parse(src).GetRoot().DescendantNodes<CondensedStaffRenderSyntax>().Single();
         Assert.Equal(["m"], render.PartNames);

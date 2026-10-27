@@ -10,9 +10,9 @@ key c major
 part melody
 
 // Define reusable phrases
-phrase motifA { c4 d e f | }
+phrase motifA { c'4 d e f | }
 phrase motifB { g4 a b c' | }
-phrase motifC { c4 e g c' | }
+phrase motifC { c'4 e g c' | }
 
 // Reference phrases with name in sections
 section First {

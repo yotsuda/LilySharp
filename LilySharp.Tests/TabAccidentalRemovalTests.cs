@@ -61,8 +61,8 @@ public class TabAccidentalRemovalTests
         part pn { clef treble }
 
         section Main {
-          gt { key fis major  c,4 d, e, f, | g,2 e, }
-          pn { c4 d e f | g2 e }
+          gt { key fis major  c4 d e f | g2 e }
+          pn { c'4 d' e' f' | g'2 e' }
         }
 
         form { Main }

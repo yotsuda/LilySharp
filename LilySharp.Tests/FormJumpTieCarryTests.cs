@@ -72,9 +72,9 @@ public sealed class FormJumpTieCarryTests
     /// played next.</summary>
     private const string DalSegno = """
         part vn {
-          section I { c''1 | }
-          section A { c''1 | c1~ || }
-          section B { c''1 | c1~ || }
+          section I { c'''1 | }
+          section A { c'''1 | c1~ || }
+          section B { c'''1 | c1~ || }
         }
         form { I segno A fine B ds al fine }
         score { staff vn }
@@ -116,9 +116,9 @@ public sealed class FormJumpTieCarryTests
     {
         const string src = """
             part vn {
-              section I { c''1 | }
-              section A { e''1 | c1~ || }
-              section B { c''1 | c1~ || }
+              section I { c'''1 | }
+              section A { e'''1 | c1~ || }
+              section B { c'''1 | c1~ || }
             }
             form { I segno A fine B ds al fine }
             score { staff vn }
@@ -182,9 +182,9 @@ public sealed class FormJumpTieCarryTests
             time 4/4
             key c major
             part m { clef bass }
-            section A { m { c4 d e f | g4 a | } }
+            section A { m { c'4 d e f | g4 a | } }
             section B { m { b4 c' | d'4 e' f' g' | } }
-            section C { m { c'4 d' | e'1 | } }
+            section C { m { c''4 d' | e'1 | } }
             score { staff m }
             """;
         static string[] BarCodes(string book)

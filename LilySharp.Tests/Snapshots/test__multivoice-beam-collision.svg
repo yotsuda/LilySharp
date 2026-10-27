@@ -15,16 +15,16 @@
   <text class="music" x="9.34" y="19.45" font-size="4.00" data-pos="1075"></text>
   <text class="music" x="13.42" y="18.45" font-size="4.00"></text>
   <text class="music" x="17.79" y="17.95" font-size="4.00" data-pos="1116"></text>
-  <text class="music" x="20.29" y="17.95" font-size="4.00" data-pos="1120"></text>
-  <text class="music" x="22.80" y="17.95" font-size="4.00" data-pos="1123"></text>
-  <text class="music" x="25.30" y="17.95" font-size="4.00" data-pos="1126"></text>
-  <text class="music" x="27.80" y="17.95" font-size="4.00" data-pos="1129"></text>
-  <text class="music" x="30.31" y="17.95" font-size="4.00" data-pos="1132"></text>
-  <text class="music" x="32.81" y="17.95" font-size="4.00" data-pos="1135"></text>
-  <text class="music" x="35.32" y="17.95" font-size="4.00" data-pos="1138"></text>
+  <text class="music" x="20.29" y="17.95" font-size="4.00" data-pos="1121"></text>
+  <text class="music" x="22.80" y="17.95" font-size="4.00" data-pos="1125"></text>
+  <text class="music" x="25.30" y="17.95" font-size="4.00" data-pos="1129"></text>
+  <text class="music" x="27.80" y="17.95" font-size="4.00" data-pos="1133"></text>
+  <text class="music" x="30.31" y="17.95" font-size="4.00" data-pos="1137"></text>
+  <text class="music" x="32.81" y="17.95" font-size="4.00" data-pos="1141"></text>
+  <text class="music" x="35.32" y="17.95" font-size="4.00" data-pos="1145"></text>
   <line x1="16.63" y1="15.45" x2="19.57" y2="15.45" stroke="#000000" stroke-width="0.200"/>
-  <text class="music" x="17.12" y="15.45" font-size="4.00" data-pos="1151"></text>
-  <rect x="37.92" y="16.45" width="0.19" height="4.00" data-pos="1141"/>
+  <text class="music" x="17.12" y="15.45" font-size="4.00" data-pos="1159"></text>
+  <rect x="37.92" y="16.45" width="0.19" height="4.00" data-pos="1149"/>
   <polygon points="18.96,14.02 26.60,14.02 26.60,14.50 18.96,14.50"/>
   <line x1="19.03" y1="17.80" x2="19.03" y2="14.26" stroke="#000000" stroke-width="0.130"/>
   <line x1="21.53" y1="17.80" x2="21.53" y2="14.26" stroke="#000000" stroke-width="0.130"/>

@@ -5,7 +5,7 @@ time 4/4
 part v { clef treble }
 
 section Main {
-  v { acciaccatura { c16~ } c1 | }
+  v { acciaccatura { c'16~ } c'1 | }
 }
 
 form { ~Main }

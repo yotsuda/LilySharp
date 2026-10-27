@@ -56,8 +56,8 @@ public class CombinedStaffTests
         part fl1 { clef treble }
         part fl2 { clef treble }
         section A {
-          fl1 { c4 d e f | g2 g | R1 | c4 e g e | }
-          fl2 { c4 d e f | R1 | g,2 g, | g,4 g, g, g, | }
+          fl1 { c'4 d' e' f' | g'2 g' | R1 | c'4 e' g' e' | }
+          fl2 { c'4 d' e' f' | R1 | g2 g | g4 g g g | }
         }
         form { ~A }
         """ + "\nscore { " + render + " }\n";
@@ -210,9 +210,9 @@ public class CombinedStaffTests
             part fl2 { clef treble }
             part fl3 { clef treble }
             section A {
-              fl1 { c4 d e f | }
-              fl2 { c4 d e f | }
-              fl3 { c4 d e f | }
+              fl1 { c'4 d e f | }
+              fl2 { c'4 d e f | }
+              fl3 { c'4 d e f | }
             }
             form { ~A }
             score { combinedStaff { fl1 fl2 fl3 } }
@@ -264,8 +264,8 @@ public class CombinedStaffTests
             part pa { clef treble }
             part pb { clef treble }
             section A {
-              pa { e'4@f g' a'2@accent | g'1@fermata | }
-              pb { c'4@f e' f'2@staccato | e'1@fermata | }
+              pa { e''4@f g' a'2@accent | g'1@fermata | }
+              pb { c''4@f e' f'2@staccato | e'1@fermata | }
             }
             form { ~A }
             score { combinedStaff { pa pb } }
@@ -297,7 +297,7 @@ public class CombinedStaffTests
             part x { clef treble octave 5 }
             section A {
               partial 2
-              melody { c'4 d | e2 f | time 2/4 g2 }
+              melody { c''4 d | e2 f | time 2/4 g2 }
               x { c4 f | g2 a | time 2/4 b2 | }
             }
             form { A A }

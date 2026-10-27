@@ -10,17 +10,17 @@ part melody
 
 phrase triplets {
   // 3/2 triplet (3 notes in space of 2) + fill
-  tuplet 3/2 { c4 d e } f4 g4 |
+  tuplet 3/2 { c'4 d e } f4 g4 |
 }
 
 phrase tripletsHigh {
   // High register triplets
-  tuplet 3/2 { c'4 d e } f4 g |
+  tuplet 3/2 { c''4 d e } f4 g |
 }
 
 phrase mixedTuplets {
   // Triplet + regular notes
-  tuplet 3/2 { c4 d e } f4 g4 |
+  tuplet 3/2 { c'4 d e } f4 g4 |
   tuplet 3/2 { a4 g f } e4 d4 |
 }
 

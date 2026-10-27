@@ -36,8 +36,8 @@ part v { }
 
 section A {
   v {
-    cue { g8. r16 f8. r16 } r2 |
-    cue { g16. r32 f16. r32 } r2 r4 |
+    cue { g'8. r16 f'8. r16 } r2 |
+    cue { g'16. r32 f'16. r32 } r2 r4 |
   }
 }
 

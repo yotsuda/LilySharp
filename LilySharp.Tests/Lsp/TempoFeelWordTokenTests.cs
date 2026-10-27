@@ -104,7 +104,7 @@ public class TempoFeelWordTokenTests
         // ★ The claim that makes a bare alternation wrong, measured rather than recalled: the
         // word is the writer's everywhere else, and here it names the part AND the section body.
         string book = "part swing { clef treble }" + Newline
-                    + "section A { swing { c'1 } }" + Newline
+                    + "section A { swing { c''1 } }" + Newline
                     + "form { A }" + Newline
                     + "score { staff swing }" + Newline;
         Assert.False(SyntaxTree.Parse(book).HasErrors);
@@ -141,7 +141,7 @@ public class TempoFeelWordTokenTests
     private static string Book(string directive) =>
         "part m { clef treble }" + Newline
         + directive + Newline
-        + "section A { m { c'1 } }" + Newline
+        + "section A { m { c''1 } }" + Newline
         + "form { A }" + Newline
         + "score { staff m }" + Newline;
 }

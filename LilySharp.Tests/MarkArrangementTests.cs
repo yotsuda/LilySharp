@@ -244,7 +244,7 @@ public class MarkArrangementTests
         key d major
         time 4/4
         part bl { clef bass }
-        section Intro { bl { d4 tempo 90 e f g | a1 | } }
+        section Intro { bl { d'4 tempo 90 e' f' g' | a'1 | } }
         form { Intro }
         score { staff bl }
         """;

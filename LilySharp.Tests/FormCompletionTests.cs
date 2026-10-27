@@ -29,7 +29,7 @@ public class FormCompletionTests
 {
     private const string Doc = """
         part m {
-          section Intro { c4 d e f | }
+          section Intro { c'4 d e f | }
           section Verse { g4 a b c | }
         }
         form { Intro segno Verse to coda }
@@ -49,7 +49,7 @@ public class FormCompletionTests
     {
         // Inside a section's music block the completions route to music (note)
         // names, not the form body's section/navigation list.
-        int offset = Doc.IndexOf("c4 d");
+        int offset = Doc.IndexOf("c'4 d");
         Assert.NotEqual(LilySharpLanguageServer.CompletionContext.FormBlock,
             LilySharpLanguageServer.GetCompletionContext(Doc, offset));
     }
@@ -176,7 +176,7 @@ public class FormCompletionTests
     [InlineData("form {\n  |: Intro [1. Verse ] :| ")]
     public void InAFormBody_TheRepeatBarIsOffered(string tail)
     {
-        string doc = "part m {\n  section Intro { c4 d e f | }\n  section Verse { g4 a b c | }\n}\n" + tail;
+        string doc = "part m {\n  section Intro { c'4 d e f | }\n  section Verse { g4 a b c | }\n}\n" + tail;
         var labels = CompletionAt(doc, doc.Length).Select(i => i.Label).ToArray();
         Assert.Contains("|:", labels);
         Assert.Contains(":|", labels);

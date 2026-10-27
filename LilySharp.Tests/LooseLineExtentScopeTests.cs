@@ -69,8 +69,8 @@ public class LooseLineExtentScopeTests
         part down { clef bass }
 
         section Main {
-          up { c'4{{mark}} d' e' f' | g'1 | }
-          down { c4 d e f | g1 | }
+          up { c''4{{mark}} d'' e'' f'' | g''1 | }
+          down { c'4 d' e' f' | g'1 | }
         }
 
         form { ~Main }
@@ -123,13 +123,13 @@ public class LooseLineExtentScopeTests
     // BuildLooseChainEnds does not run on a score with no lyrics at all.
     private static string LeadingRowScore(string firstVoice)
     {
-        string bar = $"voice {{ {firstVoice} }} {{ b4 b b b }} |";
+        string bar = $"voice {{ {firstVoice} }} {{ b'4 b' b' b' }} |";
         return
             "octave absolute\n" +
             "part m { clef treble }\npart n { clef bass }\n" +
             "chords prog { C | G | C | G | }\n" +
             $"section Main {{\n  m {{ {bar} {bar} break {bar} {bar} }}\n" +
-            "  n { b4 b b b | b4 b b b | b4 b b b | b4 b b b | }\n" +
+            "  n { b'4 b' b' b' | b'4 b' b' b' | b'4 b' b' b' | b'4 b' b' b' | }\n" +
             "  lyrics w { la le li lo la le li lo la le li lo la le li lo }\n}\n" +
             "form { Main }\n" +
             "score leadingRowClosing { chords prog staff m staff n  lyrics w }\n";
@@ -186,7 +186,7 @@ public class LooseLineExtentScopeTests
     {
         var moved = LeadingRowClearance("r4 r r r");
         var spacer = LeadingRowClearance("s4 s s s");
-        var highNotes = LeadingRowClearance("g''4 g'' g'' g''");
+        var highNotes = LeadingRowClearance("g'''4 g''' g''' g'''");
 
         Assert.Equal(2, moved.Systems);   // the break took; there IS a next system to open
         Assert.True(moved.RestShift >= 5.0,
@@ -232,9 +232,9 @@ public class LooseLineExtentScopeTests
     public void ARowOpeningTheNextSystem_ClearsATupletBracketOverTheStaffThatClosesItsChain()
     {
         var spacer = LeadingRowClearance("s4 s s s");
-        var highNotes = LeadingRowClearance("g''4 g'' g'' g''");
-        var with = LeadingRowClearance("tuplet 3/2 { g''4 g'' g'' } g''2");
-        var without = LeadingRowClearance("g''4 g'' g''2");
+        var highNotes = LeadingRowClearance("g'''4 g''' g''' g'''");
+        var with = LeadingRowClearance("tuplet 3/2 { g'''4 g''' g''' } g'''2");
+        var without = LeadingRowClearance("g'''4 g''' g'''2");
 
         Assert.Equal(2, with.Systems);   // the break took; there IS a next system to open
 

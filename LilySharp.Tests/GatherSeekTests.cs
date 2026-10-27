@@ -118,7 +118,7 @@ public class GatherSeekTests
     [Fact]
     public void ADriftedPath_IsDeclined_NotFollowed()
     {
-        var tree = SyntaxTree.Parse("part v { clef treble }\nsection A {\n  v {\n    c4 d | e f |\n  }\n}\n");
+        var tree = SyntaxTree.Parse("part v { clef treble }\nsection A {\n  v {\n    c'4 d | e f |\n  }\n}\n");
         var block = tree.GetRoot().DescendantNodes<PartBlockSyntax>().Single();
         var rule = MeasureCollector.MusicSiteRule(includeParallel: true);
         var sites = MeasureCollector.MusicSitesLazy(block, includeParallel: true).ToList();

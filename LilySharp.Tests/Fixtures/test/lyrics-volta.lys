@@ -6,8 +6,8 @@ octave absolute
 time 4/4
 key c major
 part melody { clef treble
-  section A { c'4 d' e' d' | c'4 e' g'2 | }
-  section B { g'4 g' g' g' | }
+  section A { c''4 d'' e'' d'' | c''4 e'' g''2 | }
+  section B { g''4 g'' g'' g'' | }
 }
 lyrics words sings melody {
   section A {

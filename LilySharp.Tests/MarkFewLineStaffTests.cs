@@ -62,8 +62,8 @@ public class MarkFewLineStaffTests
         time 4/4
         tempo 4 = 120
         part p { }
-        section A { p { c'4 d' e' f' | g4 a b c' | } }
-        section B { p { c'4 d' e' f' | g4 a b c' | } }
+        section A { p { c''4 d'' e'' f'' | g'4 a' b' c'' | } }
+        section B { p { c''4 d'' e'' f'' | g'4 a' b' c'' | } }
         form { A B }
         score { staff p as lines {{lines}} }
         """);

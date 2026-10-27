@@ -85,7 +85,7 @@ public class LilyPondExporterFiguredBassTests
             octave absolute
             time 4/4
             part bass { clef bass }
-            phrase cadence { c4@chord(C)@figuredBass(5 3) g,@chord(G7)@figuredBass(7) c2@chord(C) | }
+            phrase cadence { c'4@chord(C)@figuredBass(5 3) g@chord(G7)@figuredBass(7) c'2@chord(C) | }
             section A { bass { cadence } }
             form { ~A }
             score { staff bass }

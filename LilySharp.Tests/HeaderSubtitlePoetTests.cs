@@ -45,7 +45,7 @@ public sealed class HeaderSubtitlePoetTests
         composer "Cmp"
         poet "Pht"
         part m { clef treble }
-        section A { m { c'4 d e f | } }
+        section A { m { c''4 d e f | } }
         form { ~A }
         score { staff m }
         """;

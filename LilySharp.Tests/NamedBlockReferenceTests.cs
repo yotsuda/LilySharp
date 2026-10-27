@@ -48,7 +48,7 @@ public class NamedBlockReferenceTests
     // and keeps the file's unnamed defaults.
     private const string Music = """
         section Main {
-          melody { c'4 d e f | g a b c' | }
+          melody { c''4 d e f | g a b c' | }
         }
         form { Main }
         """;

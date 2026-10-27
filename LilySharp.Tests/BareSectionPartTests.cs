@@ -78,11 +78,12 @@ public class BareSectionPartTests
     [Fact]
     public void ABareSectionOpensInItsPartsRegister()
     {
-        Assert.Equal(Play(Blocked("clef bass octave 3")), Play(Bare("clef bass octave 3")));
-        // …and that register is the low one: with `octave 3` the part anchors an octave
-        // below the default, so `c'` is C4 (60) where a treble part gives C5 (72).
-        Assert.Equal(60, Play(Bare("clef bass octave 3"))[0]);
-        Assert.Equal(72, Play(Bare("clef treble"))[0]);
+        Assert.Equal(Play(Blocked("clef bass octave 2")), Play(Bare("clef bass octave 2")));
+        // …and that register is the low one: with `octave 2` the part anchors an octave
+        // below the default (3 since the owner's decision 2026-10-28), so `c'` is C3 (48)
+        // where a treble part gives C4 (60).
+        Assert.Equal(48, Play(Bare("clef bass octave 2"))[0]);
+        Assert.Equal(60, Play(Bare("clef treble"))[0]);
     }
 
     /// <summary>
@@ -123,7 +124,7 @@ public class BareSectionPartTests
         string lys = """
             time 4/4
             part bl { clef bass }
-            section A { c'4 d e f | }
+            section A { c''4 d e f | }
             form { A }
             """;
 
@@ -141,7 +142,7 @@ public class BareSectionPartTests
             time 4/4
             part bl { clef bass }
             part tr { clef treble }
-            section A { c'4 d e f | }
+            section A { c''4 d e f | }
             form { A }
             score { staff bl  staff tr }
             """;
@@ -168,9 +169,9 @@ public class BareSectionPartTests
     /// transposition whatever the part it is drawn on says.
     /// </summary>
     [Theory]
-    [InlineData("clef bass octave 3", "C4")]           // the part's own `octave` register
-    [InlineData("clef treble", "C5")]                  // …and the control that is not it
-    [InlineData("clef bass octave 3 tuning bass", "C4")]        // written pitch: the shift is <transpose>
+    [InlineData("clef bass octave 2", "C3")]           // the part's own `octave` register
+    [InlineData("clef treble", "C4")]                  // …and the control that is not it
+    [InlineData("clef bass octave 2 tuning bass", "C3")]        // written pitch: the shift is <transpose>
     public void TheMusicXmlAttributesABareSectionTheSameWay(string header, string firstPitch)
     {
         static (string Pitch, string Part) Read(string lys)

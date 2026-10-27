@@ -33,7 +33,7 @@ public class PartOptionColonTests
     [Fact]
     public void SectionPartOption_BareForm_ParsesWithoutColonError()
     {
-        var tree = SyntaxTree.Parse("section Main { melody transpose d { c4 e } }\n");
+        var tree = SyntaxTree.Parse("section Main { melody transpose d { c'4 e } }\n");
 
         Assert.DoesNotContain(tree.Diagnostics, d => d.Code == DiagnosticCodes.ExpectedToken);
         // The bare option is captured as a property assignment (transpose d).

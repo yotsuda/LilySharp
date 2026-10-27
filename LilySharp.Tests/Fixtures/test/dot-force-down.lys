@@ -17,8 +17,8 @@ time 2/4
 part m { clef treble }
 section Main {
   m {
-    voice { c'4 c'4 }
-    { b4. b8 }
+    voice { c''4 c''4 }
+    { b'4. b'8 }
   }
 }
 form { Main }

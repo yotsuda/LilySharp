@@ -11,12 +11,12 @@ part melody
 
 // Section A ends in high register
 phrase highPhrase {
-  c4 d e f | g4 a b c' |
+  c'4 d e f | g4 a b c' |
 }
 
 // Section B should start fresh at C4 (octave reset)
 phrase lowPhrase {
-  c4 d e f | g2. r4 |
+  c'4 d e f | g2. r4 |
 }
 
 // Deliberately end high, then verify next section resets

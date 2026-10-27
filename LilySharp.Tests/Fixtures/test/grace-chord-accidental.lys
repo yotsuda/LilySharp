@@ -9,7 +9,7 @@ key c major
 part m { clef treble }
 
 section A {
-  m { g'4 acciaccatura { cis'8 } <e' ges' bes'>4 r2 }
+  m { g''4 acciaccatura { cis''8 } <e'' ges'' bes''>4 r2 }
 }
 
 form { A }

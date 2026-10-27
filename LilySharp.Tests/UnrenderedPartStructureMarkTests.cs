@@ -295,8 +295,8 @@ public class UnrenderedPartStructureMarkTests
             time 4/4
             part sax { }
             part piano { clef treble  section Z { c1 } section A { |: c4 d e f | g a b c :| } }
-            section Z { sax { c1 } }
-            section A { sax { c4 d e f | g4 f e d | } }
+            section Z { sax { c'1 } }
+            section A { sax { c'4 d e f | g4 f e d | } }
             form { Z A }
             score { staff sax }
             """;
@@ -314,12 +314,12 @@ public class UnrenderedPartStructureMarkTests
             part sax { }
             part piano { clef treble }
             section Z {
-              sax { c1 }
-              piano { c1 }
+              sax { c'1 }
+              piano { c'1 }
             }
             section A {
-              sax { c4 d e f | g4 f e d | }
-              piano { |: c4 d e f | g a b c :| }
+              sax { c'4 d e f | g4 f e d | }
+              piano { |: c'4 d e f | g a b c :| }
             }
             form { Z A }
             score { staff sax }
@@ -337,7 +337,7 @@ public class UnrenderedPartStructureMarkTests
             time 4/4
             part sax { }
             part piano { clef treble  section A { segno c4 d e f | g a b c } }
-            section A { sax { c4 d e f | g4 f e d | } }
+            section A { sax { c'4 d e f | g4 f e d | } }
             form { A }
             score { staff sax }
             """;
@@ -353,8 +353,8 @@ public class UnrenderedPartStructureMarkTests
             time 4/4
             part sax { }
             part piano { clef treble  section Z { c1 } section A { |: c4 d e f | g a b c :| } }
-            section Z { sax { voice { c1 } { c,1 } } }
-            section A { sax { voice { c4 d e f | g4 f e d | } { c,4 d e f | g,4 f e d | } } }
+            section Z { sax { voice { c'1 } { c1 } } }
+            section A { sax { voice { c'4 d e f | g4 f e d | } { c4 d e f | g,4 f e d | } } }
             form { Z A }
             score { staff sax }
             """;

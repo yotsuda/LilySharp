@@ -13,7 +13,7 @@ part ten { clef tenor octave 3 }
 part bas { clef bass octave 3 }
 
 section M {
-  sop { c'1 }
+  sop { c''1 }
   alt { c'1 }
   ten { c'1 }
   bas { c'1 }

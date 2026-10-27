@@ -80,7 +80,7 @@ public class PaperOverridesTests
             paper { spacingIncrement 1.2  raggedRight }
             octave absolute
             part m { }
-            section A { m { c'4 d' e' f' | g'1 | } }
+            section A { m { c''4 d'' e'' f'' | g''1 | } }
             form { A }
             score { staff m }
             """;
@@ -143,7 +143,7 @@ public class PaperOverridesTests
         const string book = """
             paper { shortestDurationSpace 3  systemsPerPage 4  measuresPerSystem 2  staffSpace 1.5mm  leftMargin 30mm }
             part m { }
-            section A { m { c'1 | } }
+            section A { m { c''1 | } }
             form { A }
             score { staff m }
             """;
@@ -174,7 +174,7 @@ public class PaperOverridesTests
         var tree = SyntaxTree.Parse("""
             paper small { staffSpace 1.4mm  systemsPerPage 6 }
             part m { }
-            section A { m { c'1 | } }
+            section A { m { c''1 | } }
             form { A }
             score { paper small { staffSpace 1.6mm }  staff m }
             """);
@@ -200,7 +200,7 @@ public class PaperOverridesTests
             paper { raggedRight }
             octave absolute
             part m { clef treble
-              section A { c'4 d'8 e' f'2 | g'16 a' b' c'' d''4 e''2 | s1 | c'1 | }
+              section A { c''4 d''8 e'' f''2 | g''16 a'' b'' c''' d'''4 e'''2 | s1 | c''1 | }
             }
             form { A }
             score { staff m }
@@ -345,7 +345,7 @@ public class PaperOverridesTests
 
     private const string OneBar = """
         part m { }
-        section A { m { c'1 | } }
+        section A { m { c''1 | } }
         form { A }
         score { staff m }
         """;

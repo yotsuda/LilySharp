@@ -49,7 +49,7 @@ public class LayoutBlockTests
     private static readonly SvgRenderOptions Opt = new() { EmbedFont = false };
 
     private const string Body =
-        "part m { clef treble }\nsection A { m { c4 d e f | } }\nform { A }\nscore { staff m }\n";
+        "part m { clef treble }\nsection A { m { c'4 d e f | } }\nform { A }\nscore { staff m }\n";
 
     private static LayoutPlan Read(string block, out LayoutPlanReader.Problem[] problems)
     {
@@ -320,7 +320,7 @@ public class LayoutBlockTests
     public void TheNameLayer_MirrorsThePaperOne()
     {
         static string Doc(string top, string item) =>
-            top + "part m { clef treble }\nsection A { m { c4 d e f | } }\nform { A }\n"
+            top + "part m { clef treble }\nsection A { m { c'4 d e f | } }\nform { A }\n"
             + "score { " + item + " staff m }\n";
 
         // A bare block inside a score overrides the file's default for that score (2026-10-09).
@@ -352,7 +352,7 @@ public class LayoutBlockTests
     /// <summary>Eight whole-note bars, a forced break every two: four systems of two bars.</summary>
     private static string EightBars(string top) =>
         top + "part m { clef treble }\n"
-        + "section A { m { c1 | c1 | break c1 | c1 | break c1 | c1 | break c1 | c1 | } }\n"
+        + "section A { m { c'1 | c1 | break c1 | c1 | break c1 | c1 | break c1 | c1 | } }\n"
         + "form { A }\nscore { staff m }\n";
 
     private static ScoreLayout Lay(string source)
@@ -412,7 +412,7 @@ public class LayoutBlockTests
     public void EveryN_SkipsTheBarsACompressedRestSwallows()
     {
         string book = "layout { barNumbers every 1 }\npart m { clef treble }\n"
-            + "section A { m { c1 | R1*2 | d1 | R*3 | e1 | } }\nform { A }\nscore { staff m }\n";
+            + "section A { m { c'1 | R1*2 | d1 | R*3 | e1 | } }\nform { A }\nscore { staff m }\n";
         var layout = Lay(book);
         Assert.Equal(new[] { "1", "2", "4", "5", "8" }, layout.BarNumberLayouts.Select(b => b.Text));
         // …and the numbers that stand are each at their own column.
@@ -430,7 +430,7 @@ public class LayoutBlockTests
         // DEFAULT function, first-bar-number-invisible-…, which every-nth replaces). The
         // literal port prints the 0; suppressing it would be a Lily#-own rule.
         string book = "part m { clef treble }\n"
-            + "section A { partial 4  m { c4 | c1 | c1 | c1 | } }\n"
+            + "section A { partial 4  m { c'4 | c1 | c1 | c1 | } }\n"
             + "form { A }\nscore { staff m }\n";
         var layout = Lay("layout { barNumbers every 2 }\n" + book);
         var numbered = layout.BarNumberLayouts.Select(b => (b.MeasureIndex, b.Text)).ToArray();
@@ -462,7 +462,7 @@ public class LayoutBlockTests
     /// <summary>A two-section book whose form names both, so both print a label.</summary>
     private const string TwoSections =
         "part m { clef treble }\n"
-        + "section A { m { c1 | } }\nsection B { m { c1 | } }\n"
+        + "section A { m { c'1 | } }\nsection B { m { c'1 | } }\n"
         + "form { A B }\nscore { staff m }\n";
 
     private static string MaskDataPos(string svg)
@@ -598,7 +598,7 @@ public class LayoutBlockTests
     /// ("Solo").</summary>
     private const string Combined =
         "part one { clef treble }\npart two { clef treble }\n"
-        + "section A { one { c'1 | d'1 | } two { c'1 | r1 | } }\n"
+        + "section A { one { c''1 | d'1 | } two { c''1 | r1 | } }\n"
         + "form { A }\nscore { combinedStaff { one two } }\n";
 
     private static string[] CombineWords(string top)
@@ -846,7 +846,7 @@ public class LayoutBlockTests
     {
         const string TwoRows =
             "time 4/4\nkey c major\npart m { clef treble }\n"
-            + "section A { m { c4 d e f | } chords prog { Cdim | } }\n"
+            + "section A { m { c'4 d e f | } chords prog { Cdim | } }\n"
             + "form { ~A }\n"
             + "score { chords prog as roman  chords prog as names  staff m }\n";
 
@@ -886,7 +886,7 @@ public class LayoutBlockTests
     {
         const string Inline =
             "time 4/4\npart m { clef treble }\n"
-            + "section A { m { c4@chord(Cdim) d e f | } chords prog { Cdim | } }\n"
+            + "section A { m { c'4@chord(Cdim) d e f | } chords prog { Cdim | } }\n"
             + "form { ~A }\nscore { chords prog  staff m with chords prog }\n";
 
         static string[] Texts(string source)

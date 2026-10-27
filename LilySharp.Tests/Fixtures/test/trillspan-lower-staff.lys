@@ -10,7 +10,7 @@ part top { clef treble }
 part bot { clef bass octave 3 }
 
 section Main {
-  top { c'4 d e f | g1 | }
+  top { c''4 d e f | g1 | }
   bot { c4@startTrillSpan d e f@stopTrillSpan | g1 | }
 }
 

@@ -62,7 +62,7 @@ export interface ChatClient {
 export async function resolveChatClient(quiet: boolean, use: ModelUse = 'edit'): Promise<ChatClient | undefined> {
     const model = hasChatModel(await availableModels()) ? await selectLmModel(use) : undefined;
     if (model) {
-        return lmClient(model);
+        return lmClient(model, use, pickedByName(model, use));
     }
     if (!quiet) {
         void offerModelSetup();
@@ -98,6 +98,12 @@ async function selectLmModel(use: ModelUse): Promise<vscode.LanguageModelChat | 
         }
     }
     return autoPick(models, use);
+}
+
+/** Whether `model` is the one the user picked by name for `use` ("Lily#: Select AI Model"). */
+function pickedByName(model: vscode.LanguageModelChat, use: ModelUse): boolean {
+    const wanted = vscode.workspace.getConfiguration('lilysharp').get<string>(SETTING[use], '').trim();
+    return wanted !== '' && (model.id === wanted || model.family === wanted);
 }
 
 /** Every chat model VS Code offers an extension, Copilot's first — not the ones it keeps for
@@ -218,7 +224,7 @@ export function hasChatModel(models: readonly vscode.LanguageModelChat[]): boole
     return models.some(m => m.vendor !== 'copilotcli' && m.family.trim() !== '');
 }
 
-function lmClient(model: vscode.LanguageModelChat): ChatClient {
+function lmClient(model: vscode.LanguageModelChat, use: ModelUse, byName: boolean): ChatClient {
     // Image parts came to the API after the extension's floor (engines.vscode ^1.90): looked
     // for at run time, so an older VS Code sends the text alone. A model that takes no image
     // answers the request with an error; the request then goes again as text, and the client
@@ -246,16 +252,22 @@ function lmClient(model: vscode.LanguageModelChat): ChatClient {
         }
         return text;
     };
+    // The client follows its model, which changes when an automatic pick turns out to be VS Code's
+    // own: read through getters, so the label and the name always say the model a request goes to.
     return {
         // "Auto" says so: its family names a model it may not send the request to (owner's report
         // 2026-10-27 — "via copilot/claude-fable-5.1" was Copilot's Auto, and it said nothing of who
         // answered, so it is told no name to sign a composer line with).
-        label: isAutoModel(model) ? `${model.vendor}/auto`
-            : model.family ? `${model.vendor}/${model.family}` : `${model.vendor}/${model.id || model.name}`,
-        maxInputTokens: model.maxInputTokens,
-        modelName: isAutoModel(model) ? undefined : model.name || undefined,
-        modelDetail: `name "${model.name}", vendor ${model.vendor}, id ${model.id}, family ${model.family}, version ${model.version}`
-            + (model.maxInputTokens ? `, ${model.maxInputTokens} input tokens` : ''),
+        get label() {
+            return isAutoModel(model) ? `${model.vendor}/auto`
+                : model.family ? `${model.vendor}/${model.family}` : `${model.vendor}/${model.id || model.name}`;
+        },
+        get maxInputTokens() { return model.maxInputTokens; },
+        get modelName() { return isAutoModel(model) ? undefined : model.name || undefined; },
+        get modelDetail() {
+            return `name "${model.name}", vendor ${model.vendor}, id ${model.id}, family ${model.family}, version ${model.version}`
+                + (model.maxInputTokens ? `, ${model.maxInputTokens} input tokens` : '');
+        },
         async send(messages, token) {
             const offered = messages.some(m => m.images && m.images.length > 0);
             const withImages = offered && canImage && !refused;
@@ -265,8 +277,17 @@ function lmClient(model: vscode.LanguageModelChat): ChatClient {
                 return text;
             } catch (err) {
                 if (isCoreOnlyRefusal(String((err as Error)?.message ?? err))) {
-                    coreOnly.add(model.id);   // the next request takes another model
-                    throw err;
+                    coreOnly.add(model.id);   // no later choice takes it
+                    // An automatic pick that VS Code keeps for itself is passed over at once, and the
+                    // request goes to the next one (owner's report 2026-10-28: "compose with AI failed:
+                    // Model gpt-5.6-luna is only available to VS Code core" — the request just failed).
+                    // A model picked by name is the user's to change; that one fails as before.
+                    const next = byName || token.isCancellationRequested ? undefined : await selectLmModel(use);
+                    if (!next || next.id === model.id) {
+                        throw err;
+                    }
+                    model = next;
+                    return await this.send(messages, token);
                 }
                 if (!withImages || token.isCancellationRequested) {
                     throw err;

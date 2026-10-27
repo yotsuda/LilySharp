@@ -39,7 +39,7 @@ public class IncrementalCompilerTests
         time 4/4
         key c major
         part melody { clef treble }
-        phrase mel { c4 d e f | g4 a b c | d4 e f g | a4 b c d | }
+        phrase mel { c'4 d e f | g4 a b c | d4 e f g | a4 b c d | }
         section Main { melody { mel } }
         form { Main }
         score x { staff melody }
@@ -186,9 +186,9 @@ public class IncrementalCompilerTests
 
         var edits = new[]
         {
-            ("c4 d e f", "c4 d e g"),   // one note in measure 1
+            ("c'4 d e f", "c'4 d e g"),   // one note in measure 1
             ("d4 e f g", "d4 e f a"),   // one note in measure 3 (a different system's bar)
-            ("c4 d e g", "c4 d e f"),   // revert measure 1
+            ("c'4 d e g", "c'4 d e f"),   // revert measure 1
         };
         foreach (var (find, rep) in edits)
         {
@@ -223,8 +223,8 @@ public class IncrementalCompilerTests
             part sop { clef treble }
             part bas { clef bass }
             section A {
-              sop { c'4 d' e' f' | g'4 a' b' c'' | c'4 d' e' f' | g'4 a' b' c'' | }
-              bas { c4 d e f | g4 a b c' | c4 d e f | g4 a b c' | }
+              sop { c''4 d' e' f' | g'4 a b' c'' | c'4 d' e' f' | g'4 a' b' c'' | }
+              bas { c'4 d e f | g4 a b c' | c4 d e f | g4 a b c' | }
             }
             form { A }
             score x {
@@ -293,10 +293,10 @@ public class IncrementalCompilerTests
             part ten { clef treble }
             part bas { clef bass }
             section A {
-              sop { c'4 d' e' f' | g'4 a' b' c'' | }
-              alt { c'4 d' e' f' | g'4 a' b' c'' | }
-              ten { c'4 d' e' f' | g'4 a' b' c'' | }
-              bas { c4 d e f | g4 a b c' | }
+              sop { c''4 d' e' f' | g'4 a b' c'' | }
+              alt { c''4 d' e' f' | g'4 a b' c'' | }
+              ten { c''4 d' e' f' | g'4 a b' c'' | }
+              bas { c'4 d e f | g4 a b c' | }
               lyrics verse { la le li lo | la le li lo | }
             }
             form { A }
@@ -343,7 +343,7 @@ public class IncrementalCompilerTests
 
         // Adding an articulation collects into a separate list, not the measure
         // items, so the gate is unchanged -> the break DP is skipped.
-        var change = Replace(Base, "c4 d e f", "c4@staccato d e f");
+        var change = Replace(Base, "c'4 d e f", "c'4@staccato d e f");
         var incremental = Norm(session.Edit(change));
 
         Assert.True(session.LastEditSkippedLineBreak);
@@ -359,7 +359,7 @@ public class IncrementalCompilerTests
 
         // Re-rhythming a bar changes its natural width -> the gate changes -> the
         // breaks are recomputed. Output still matches a full recompile.
-        var change = Replace(Base, "c4 d e f", "c2 d4 e4");
+        var change = Replace(Base, "c'4 d e f", "c'2 d4 e4");
         var incremental = Norm(session.Edit(change));
 
         Assert.False(session.LastEditSkippedLineBreak);
@@ -407,7 +407,7 @@ public class IncrementalCompilerTests
             time 4/4
             key c major
             part lh { clef bass }
-            section Main { lh { <c e>2@sustain <c g> | <f a>2@!sustain@sustain <d f> | } }
+            section Main { lh { <c' e>2@sustain <c g> | <f a>2@!sustain@sustain <d f> | } }
             form { Main }
             score x { staff lh }
             """;
@@ -434,7 +434,7 @@ public class IncrementalCompilerTests
             time 4/4
             key c major
             part melody { clef treble }
-            section Main { melody { c4 d e f | g4 a b c | } }
+            section Main { melody { c'4 d e f | g4 a b c | } }
             form { Main }
             score x { staff melody }
             """;
@@ -461,7 +461,7 @@ public class IncrementalCompilerTests
             key c major
             part rh "Violin" { clef treble }
             part lh "Cello" { clef bass }
-            section Main { rh { c4 d e f | g4 a b c | } lh { c4 d e f | g4 a b c | } }
+            section Main { rh { c'4 d e f | g4 a b c | } lh { c'4 d e f | g4 a b c | } }
             form { Main }
             score x { grandStaff { staff rh staff lh } }
             """;
@@ -488,7 +488,7 @@ public class IncrementalCompilerTests
             key c major
             part melody
             section Main {
-              melody { c4 d e f | g4 a b c | }
+              melody { c'4 d e f | g4 a b c | }
               lyrics { Twin- kle lit- tle | star how I you |
               }
             }
@@ -571,7 +571,7 @@ public class IncrementalCompilerTests
             key c major
             part melody
             section Main {
-              melody { c8 d e f g a b c | d8 e f g a b c d | }
+              melody { c'8 d e f g a b c | d8 e f g a b c d | }
             }
             form { Main }
             score x { staff melody }
@@ -598,7 +598,7 @@ public class IncrementalCompilerTests
             key c major
             part melody
             section Main {
-              melody { c4@p d@cresc e f@f | g4@f a@decresc b c@p | }
+              melody { c'4@p d@cresc e f@f | g4@f a@decresc b c@p | }
             }
             form { Main }
             score x { staff melody }
@@ -642,7 +642,7 @@ public class IncrementalCompilerTests
         // Adding an articulation keeps the line-break gate (still a skip) but DOES change
         // the measure's content key (the articulation side-table is folded into it), so the
         // whole-layout reuse is correctly declined while the cheaper break-skip still applies.
-        var change = Replace(Base, "c4 d e f", "c4@staccato d e f");
+        var change = Replace(Base, "c'4 d e f", "c'4@staccato d e f");
         var incremental = Norm(session.Edit(change));
 
         Assert.True(session.LastEditSkippedLineBreak);
@@ -836,7 +836,7 @@ public class IncrementalCompilerTests
         // gate-changing (recompute, incl. a structural measure insertion) edits.
         var steps = new (string Find, string Replace, bool ExpectSkip)[]
         {
-            ("c4 d e f", "c4@staccato d e f", true),   // +articulation -> skip
+            ("c'4 d e f", "c'4@staccato d e f", true),   // +articulation -> skip
             ("g4 a b c", "g2 a4 b4", false),           // re-rhythm        -> recompute
             ("d4 e f g", "d4@accent e f g", true),     // +articulation    -> skip
             ("a4 b c d", "a4 b c d | r1", false),      // insert a measure -> recompute
@@ -890,7 +890,7 @@ public class IncrementalCompilerTests
             time 4/4
             key c major
             part melody { clef treble }
-            phrase mel { c4 d e f | g4 a b c | d4 e f g | a4 b c d | e4 f g a | f4 g a b | g4 a b c | a4 g f e | }
+            phrase mel { c'4 d e f | g4 a b c | d4 e f g | a4 b c d | e4 f g a | f4 g a b | g4 a b c | a4 g f e | }
             section Main { melody { mel } }
             form { Main }
             score x { staff melody }
@@ -929,7 +929,7 @@ public class IncrementalCompilerTests
             time 4/4
             key c major
             part melody { clef treble }
-            phrase mel { c4 d e f | g4 a b c | d4 e f g | a4 b c d | e4 f g a | f4 g a b | g4 a b c | a4 g f e | }
+            phrase mel { c'4 d' e' f' | g'4 a' b' c' | d'4 e' f' g' | a'4 b' c' d' | e'4 f' g' a' | f'4 g' a' b' | g'4 a' b' c' | a'4 g' f' e' | }
             section Main { melody { mel } }
             form { Main }
             score x { staff melody }
@@ -938,7 +938,7 @@ public class IncrementalCompilerTests
         var session = new IncrementalCompiler(tree, Opt);
         session.Render();
 
-        var change = Replace(src, "e4 f g a | f4 g a b", "e4 f g a | c4 c c c | f4 g a b"); // new measure index 5
+        var change = Replace(src, "e'4 f' g' a' | f'4 g' a' b'", "e'4 f' g' a' | c'4 c' c' c' | f'4 g' a' b'"); // new measure index 5
         var incremental = Norm(session.Edit(change));
 
         Assert.Equal(Full(tree.WithChange(change).Text), incremental);
@@ -992,9 +992,9 @@ public class IncrementalCompilerTests
         const string src = """
             time 4/4
             part melody { clef treble }
-            phrase dMajor { d4 e fis g | a4 b cis' d | }
+            phrase dMajor { d'4 e fis g | a4 b cis' d | }
             phrase gMajor { g4 a b c' | d4 e fis g | }
-            phrase fMajor { f4 g a bes | c4 d e f | }
+            phrase fMajor { f'4 g a bes | c4 d e f | }
             section DMajor { key d major  melody { dMajor } }
             section GMajor { key g major  melody { gMajor } }
             section FMajor { key f major  melody { fMajor } }
@@ -1021,7 +1021,7 @@ public class IncrementalCompilerTests
             time 4/4
             key c major
             part melody { clef treble }
-            phrase mel { c4 d e f | g4 a b c | d4 e f g | a4 b c d | e4 f g a | f4 g a b | g4 a b c | a4 g f e | }
+            phrase mel { c'4 d' e' f' | g'4 a' b' c' | d'4 e' f' g' | a'4 b' c' d' | e'4 f' g' a' | f'4 g' a' b' | g'4 a' b' c' | a'4 g' f' e' | }
             section Main { melody { mel } }
             form { Main }
             score x { staff melody }
@@ -1030,7 +1030,7 @@ public class IncrementalCompilerTests
         var session = new IncrementalCompiler(tree, Opt);
         session.Render();
 
-        var change = Replace(src, "e4 f g a | f4 g a b | g4 a b c", "e4 f g a | g4 a b c"); // measure 5 gone
+        var change = Replace(src, "e'4 f' g' a' | f'4 g' a' b' | g'4 a' b' c'", "e'4 f' g' a' | g'4 a' b' c'"); // measure 5 gone
         var incremental = Norm(session.Edit(change));
 
         Assert.Equal(Full(tree.WithChange(change).Text), incremental);
@@ -1434,7 +1434,7 @@ public class IncrementalCompilerTests
             time 4/4
             key c major
             part melody { clef treble }
-            section Main { melody { c1 || R1*2 | c4 d e f | c4 d e f | } }
+            section Main { melody { c'1 || R1*2 | c4 d e f | c4 d e f | } }
             form { Main }
             score x { staff melody }
             """;
@@ -1444,7 +1444,7 @@ public class IncrementalCompilerTests
 
         var before = session.SpringsForTest![1];
 
-        var change = Replace(src, "c1 ||", "c1 |");
+        var change = Replace(src, "c'1 ||", "c'1 |");
         var incremental = Norm(session.Edit(change));
 
         Assert.Equal(Full(tree.WithChange(change).Text), incremental);
@@ -1503,7 +1503,7 @@ public class IncrementalCompilerTests
             time 4/4
             key c major
             part melody { clef treble }
-            section Main { melody { c2 d2 | R1*2 | c1 | e2 f2 | } }
+            section Main { melody { c'2 d2 | R1*2 | c1 | e2 f2 | } }
             form { Main }
             score x { staff melody }
             """;
@@ -1538,8 +1538,8 @@ public class IncrementalCompilerTests
             part sop { clef treble }
             part bas { clef bass }
             section A {
-              sop { c'4 d' e' f' | g'4 a' b' c'' | c'4 d' e' f' | g'4 a' b' c'' | }
-              bas { c4 d e f | g4 a b c' | c4 d e f | g4 a b c' | }
+              sop { c''4 d' e' f' | g'4 a b' c'' | c'4 d' e' f' | g'4 a' b' c'' | }
+              bas { c'4 d e f | g4 a b c' | c4 d e f | g4 a b c' | }
             }
             form { A }
             score x {
@@ -1580,7 +1580,7 @@ public class IncrementalCompilerTests
             key c major
 
             part melody {
-              section A { a4 a a a | g4 a a a | f4 a a a | e4 a a a | }
+              section A { a'4 a' a' a' | g'4 a' a' a' | f'4 a' a' a' | e'4 a' a' a' | }
             }
 
             lyrics w sings melody {
@@ -1598,7 +1598,7 @@ public class IncrementalCompilerTests
         var session = new IncrementalCompiler(tree, Opt);
         session.Render();
 
-        var change = Replace(src, "g4 a a a", "gis4 a a a");   // measure index 1
+        var change = Replace(src, "g'4 a' a' a'", "gis'4 a' a' a'");   // measure index 1
         var incremental = Norm(session.Edit(change));
 
         Assert.Equal(Full(tree.WithChange(change).Text), incremental);
@@ -1629,7 +1629,7 @@ public class IncrementalCompilerTests
         key c major
         part melody { clef treble }
         section Main { melody {
-          c8 d e f g f e d |
+          c'8 d e f g f e d |
           d8 e f g a g f e |
           e8 f g a b a g f |
           f8 g a b c b a g |
@@ -1675,7 +1675,7 @@ public class IncrementalCompilerTests
             key c major
             part melody { clef treble }
             section Main { melody {
-              c8 d e f g f e d |
+              c'8 d e f g f e d |
               time 6/8 e8 f g a g f |
               f8 g a b a g |
               g8 a b c b a |
@@ -1710,7 +1710,7 @@ public class IncrementalCompilerTests
             key c major
             part melody { clef treble }
             section Main { melody {
-              c8 d e f g f e d |
+              c'8 d e f g f e d |
               d8[ e f g a g f e |
               e8] f g a b a g f |
               f8 g a b c b a g |
@@ -1756,7 +1756,7 @@ public class IncrementalCompilerTests
             key c major
             part melody { clef treble }
             section Main { melody {
-              c4 d e f |
+              c'4 d e f |
               c4 d e f |
               g8[ a b c d c b a |
               b8] a g f e f g a |
@@ -1787,7 +1787,7 @@ public class IncrementalCompilerTests
             key c major
             part melody { clef treble }
             section Main { melody {
-              c4 d e f |
+              c'4 d e f |
               c4 d e f |
               g8[ a b c d c b a |
               b8 a g f e f g a |
@@ -1817,7 +1817,7 @@ public class IncrementalCompilerTests
             key c major
             part melody { clef treble }
             section Main { melody {
-              c8 d e f g f e d |
+              c'8 d e f g f e d |
               c8 d e f g f e d |
               c8 d e f g f e d |
               c8 d e f g f e d |
@@ -1986,7 +1986,7 @@ public class IncrementalCompilerTests
             key c major
             part melody { clef treble }
             section Main { melody {
-              c4 d e f | g4 a b c' |
+              c'4 d e f | g4 a b c' |
               break
               time 3/4
               c4 d e | f4 g a |
@@ -2021,7 +2021,7 @@ public class IncrementalCompilerTests
             key c major
             part melody { clef treble }
             section Main { melody {
-              c4 d e f | d4 e f g | g4 a b c' |
+              c'4 d e f | d4 e f g | g4 a b c' |
               break
               e4 f g a | c4 d e f | d4 e f g |
               break
@@ -2063,16 +2063,16 @@ public class IncrementalCompilerTests
             part bass { clef bass }
             section Main {
               melody {
-                c'2~ c'2 | d'4 e' f' g'~ |
+                c''2~ c''2 | d''4 e'' f'' g''~ |
                 break
-                g'1 | e'2~ e'2 |
+                g''1 | e''2~ e''2 |
                 break
-                c'4 d' e' f' | g'1 |
+                c''4 d'' e'' f'' | g''1 |
               }
               bass {
-                c2~ c2 | g,1~ |
-                g,1 | c2~ c2 |
-                c1 | g,1 |
+                c'2~ c'2 | g1~ |
+                g1 | c'2~ c'2 |
+                c'1 | g1 |
               }
             }
             form { Main }
@@ -2082,7 +2082,7 @@ public class IncrementalCompilerTests
         var session = new IncrementalCompiler(tree, Opt);
         Assert.Equal(Full(src), Norm(session.Render()));
 
-        var change = Replace(src, "c'4 d' e' f' |", "c'4 d' e' a' |");
+        var change = Replace(src, "c''4 d'' e'' f'' |", "c''4 d'' e'' a'' |");
         var incremental = Norm(session.Edit(change));
 
         Assert.Equal(Full(tree.WithChange(change).Text), incremental);
@@ -2101,7 +2101,7 @@ public class IncrementalCompilerTests
             key c major
             part melody { clef treble }
             section Main { melody {
-              |: c4 d e f | d4 e f g | g4 a b c' |
+              |: c'4 d e f | d4 e f g | g4 a b c' |
               break
               e4 f g a | c4 d e f | d4 e f g :|
               break
@@ -2816,8 +2816,8 @@ public class IncrementalCompilerTests
         key c major
         part melody { clef treble }
         part alto { clef treble }
-        phrase mel { c4 d e f | g4 a b c | d4 e f g | a4 b c d | }
-        phrase alt { e4 f g a | b4 c d e | f4 g a b | c4 d e f | }
+        phrase mel { c'4 d e f | g4 a b c | d4 e f g | a4 b c d | }
+        phrase alt { e'4 f g a | b4 c d e | f4 g a b | c4 d e f | }
         section Main { melody { mel } alto { alt } }
         form { Main }
         form sub { Main }

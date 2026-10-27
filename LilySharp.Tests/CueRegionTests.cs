@@ -84,7 +84,7 @@ public class CueRegionTests
     [Fact]
     public void RegionCountsTowardsTheBar()
     {
-        var tree = SyntaxTree.Parse("time 4/4\npart m\nsection A { m { c'4 d' cue { e'4 f' } | } }\nform { A }\nscore x { staff m }");
+        var tree = SyntaxTree.Parse("time 4/4\npart m\nsection A { m { c''4 d' cue { e'4 f' } | } }\nform { A }\nscore x { staff m }");
         var diags = SemanticValidation.Run(tree);
         Assert.DoesNotContain(diags, d => d.Code == DiagnosticCodes.PickupWithoutPartial);
     }

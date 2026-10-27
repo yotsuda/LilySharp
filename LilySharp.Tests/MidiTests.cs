@@ -34,7 +34,7 @@ public class MidiTests
 
         Assert.Equal(2, midi.Tracks.Count); // conductor + main
         Assert.Single(midi.Tracks[1].Notes);
-        Assert.Equal(60, midi.Tracks[1].Notes[0].Pitch); // C4 = MIDI 60
+        Assert.Equal(48, midi.Tracks[1].Notes[0].Pitch); // C3 = MIDI 48: a frame opens on F3 (owner's decision 2026-10-28)
     }
 
     [Fact]
@@ -46,10 +46,10 @@ public class MidiTests
         var midi = exporter.Export(tree);
 
         Assert.Equal(8, midi.Tracks[1].Notes.Count);
-        // Default starts at C4 = MIDI 60
-        Assert.Equal(60, midi.Tracks[1].Notes[0].Pitch); // c = C4
-        Assert.Equal(62, midi.Tracks[1].Notes[1].Pitch); // d = D4
-        Assert.Equal(64, midi.Tracks[1].Notes[2].Pitch); // e = E4
+        // The frame opens on F3, LilyPond's pitchless \relative (owner's decision 2026-10-28)
+        Assert.Equal(48, midi.Tracks[1].Notes[0].Pitch); // c = C3
+        Assert.Equal(50, midi.Tracks[1].Notes[1].Pitch); // d = D3
+        Assert.Equal(52, midi.Tracks[1].Notes[2].Pitch); // e = E3
     }
 
     [Fact]
@@ -65,7 +65,7 @@ public class MidiTests
 
         Assert.Equal(4, notes.Count); // both voices, not just voice 1's two notes
         // Voice 2 restarts the relative-octave frame from before the block.
-        Assert.Equal(new[] { 60, 62, 64, 65 }, notes.Select(n => n.Pitch).OrderBy(p => p).ToArray());
+        Assert.Equal(new[] { 48, 50, 52, 53 }, notes.Select(n => n.Pitch).OrderBy(p => p).ToArray()); // from F3 (owner's decision 2026-10-28)
         // The two voices are simultaneous: beats 1 and 2 each carry two notes.
         Assert.Equal(new[] { 0, 0, 480, 480 }, notes.Select(n => n.StartTick).OrderBy(t => t).ToArray());
     }
@@ -80,9 +80,10 @@ public class MidiTests
         var plain = new MidiExporter().Export(SyntaxTree.Parse("phrase intro { c4 }\n{ intro }"));
         var down = new MidiExporter().Export(SyntaxTree.Parse("phrase intro { c4 }\n{ intro, }"));
 
-        Assert.Equal(60, plain.Tracks[1].Notes.Single().Pitch); // C4
-        Assert.Equal(72, up.Tracks[1].Notes.Single().Pitch);    // C5
-        Assert.Equal(48, down.Tracks[1].Notes.Single().Pitch);  // C3
+        // A fresh frame opens on F3 (owner's decision 2026-10-28), so the bare c is C3.
+        Assert.Equal(48, plain.Tracks[1].Notes.Single().Pitch); // C3
+        Assert.Equal(60, up.Tracks[1].Notes.Single().Pitch);    // C4
+        Assert.Equal(36, down.Tracks[1].Notes.Single().Pitch);  // C2
     }
 
     [Fact]
@@ -94,11 +95,12 @@ public class MidiTests
         static int[] P(string src) => new MidiExporter().Export(SyntaxTree.Parse(src))
             .Tracks[1].Notes.Select(n => n.Pitch).ToArray();
 
-        // The body climbs to G4, but the following c resolves against the
-        // anchor c (C4) — not nearest the last note (which would give C5).
-        Assert.Equal(60, P("phrase M { c d e f g }\n{ M c }").Last());
-        // Reference marks shift the anchor with the phrase: M, anchors at C3.
-        Assert.Equal(48, P("phrase M { c d e f g }\n{ M, c }").Last());
+        // The body climbs to G3, but the following c resolves against the
+        // anchor c (C3, the frame opening on F3 since the owner's decision 2026-10-28) —
+        // not nearest the last note (which would give C4).
+        Assert.Equal(48, P("phrase M { c d e f g }\n{ M c }").Last());
+        // Reference marks shift the anchor with the phrase: M, anchors at C2.
+        Assert.Equal(36, P("phrase M { c d e f g }\n{ M, c }").Last());
         // Editing the TAIL of a phrase body never moves what follows.
         Assert.Equal(
             P("phrase M { c d e }\n{ M f }").Last(),
@@ -132,7 +134,7 @@ public class MidiTests
 
         var pitches = Pitches("""
             key c major
-            phrase Lick { c d e c }
+            phrase Lick { c' d e c }
             part m {
               section A { Lick }
               section B { key g major Lick }
@@ -156,7 +158,7 @@ public class MidiTests
 
         var pitches = Pitches("""
             key c major
-            phrase Lick { c d e c }
+            phrase Lick { c' d e c }
             section A { melody { Lick } }
             section B {
               key g major
@@ -180,7 +182,7 @@ public class MidiTests
 
         var pitches = Pitches("""
             key c major
-            phrase Lick { c d e c }
+            phrase Lick { c' d e c }
             part melody { section A { Lick } }
             section A { key g major }
             form { A }
@@ -206,7 +208,7 @@ public class MidiTests
 
         var pitches = Pitches("""
             key c major
-            phrase Lick { c d e c }
+            phrase Lick { c' d e c }
             part melody { section A { Lick } }
             section A { key g major  override NoteHead.color = red }
             form { A }
@@ -224,7 +226,7 @@ public class MidiTests
         // playback speeds up there — matching the metronome mark the SVG prints.
         var midi = new MidiExporter().Export(SyntaxTree.Parse("""
             tempo 100
-            part melody { section A { c4 d e f } section B { g4 a g f } }
+            part melody { section A { c'4 d e f } section B { g4 a g f } }
             section B { tempo 140 }
             form { A B }
             score { staff melody }
@@ -241,7 +243,7 @@ public class MidiTests
         // conductor time-signature change at the section start, not only on the staff.
         var midi = new MidiExporter().Export(SyntaxTree.Parse("""
             time 4/4
-            part melody { section A { c4 d e f } section B { g4 a g } }
+            part melody { section A { c'4 d e f } section B { g4 a g } }
             section B { time 3/4 }
             form { A B }
             score { staff melody }
@@ -261,9 +263,9 @@ public class MidiTests
 
         var pitches = Pitches("""
             key c major
-            phrase Lick { c d e c }
+            phrase Lick { c' d e c }
             part m {
-              section A { key g major Lick | c }
+              section A { key g major Lick | c' }
             }
             form { A }
             score { staff m }
@@ -274,13 +276,13 @@ public class MidiTests
     [Fact]
     public void ChordDegrees_SoundStackedOnTheRootInKey()
     {
-        // <d 3 5 7,> = D4 + its 3rd/5th/7th in the key, the 7th an octave down:
-        // C4 D4 F4 A4 → 62 65 69 60 (order = root then degrees).
+        // <d 3 5 7,> = D3 (from F3, owner's decision 2026-10-28) + its 3rd/5th/7th in the
+        // key, the 7th an octave down: C3 D3 F3 A3 → 50 53 57 48 (order = root then degrees).
         static int[] Pitches(string src) =>
             new MidiExporter().Export(SyntaxTree.Parse(src)).Tracks[1].Notes
                 .Select(n => n.Pitch).ToArray();
 
-        Assert.Equal(new[] { 62, 65, 69, 60 }, Pitches("key c major\n<d 3 5 7,>2"));
+        Assert.Equal(new[] { 50, 53, 57, 48 }, Pitches("key c major\n<d 3 5 7,>2"));
     }
 
     [Fact]
@@ -291,8 +293,9 @@ public class MidiTests
             new MidiExporter().Export(SyntaxTree.Parse(src)).Tracks[1].Notes
                 .Select(n => n.Pitch).ToArray();
 
-        Assert.Equal(new[] { 62, 65, 69, 72 }, Pitches("key c major\n<d 3 5 7>1"));
-        Assert.Equal(new[] { 62, 66, 69, 72 }, Pitches("key g major\n<d 3 5 7>1"));
+        // D3 from the F3 frame (owner's decision 2026-10-28).
+        Assert.Equal(new[] { 50, 53, 57, 60 }, Pitches("key c major\n<d 3 5 7>1"));
+        Assert.Equal(new[] { 50, 54, 57, 60 }, Pitches("key g major\n<d 3 5 7>1"));
     }
 
     [Fact]
@@ -301,7 +304,7 @@ public class MidiTests
         // <1 3 5> with no root = the key's tonic triad: C E G in C major.
         var pitches = new MidiExporter().Export(SyntaxTree.Parse("key c major\n<1 3 5>2"))
             .Tracks[1].Notes.Select(n => n.Pitch).ToArray();
-        Assert.Equal(new[] { 60, 64, 67 }, pitches);
+        Assert.Equal(new[] { 48, 52, 55 }, pitches);   // C3 E3 G3: the tonic from F3 (owner's decision 2026-10-28)
     }
 
     [Fact]
@@ -355,9 +358,9 @@ public class MidiTests
         var midi = exporter.Export(tree);
 
         Assert.Equal(3, midi.Tracks[1].Notes.Count);
-        Assert.Equal(60, midi.Tracks[1].Notes[0].Pitch);  // C
-        Assert.Equal(61, midi.Tracks[1].Notes[1].Pitch);  // C#
-        Assert.Equal(61, midi.Tracks[1].Notes[2].Pitch);  // Db
+        Assert.Equal(48, midi.Tracks[1].Notes[0].Pitch);  // C3 (from F3, owner's decision 2026-10-28)
+        Assert.Equal(49, midi.Tracks[1].Notes[1].Pitch);  // C#
+        Assert.Equal(49, midi.Tracks[1].Notes[2].Pitch);  // Db
     }
 
     [Fact]
@@ -542,7 +545,7 @@ public class MidiTests
     [Fact]
     public void AFromTheBeginningRepeat_ReopensEachPartAtItsOpeningVelocity()
     {
-        var source = "section A { rh { c'4 d'@p e' f' | } } section B { rh { c'4@f d' e' f' | } } form { A B :| }";
+        var source = "section A { rh { c''4 d'@p e' f' | } } section B { rh { c''4@f d' e' f' | } } form { A B :| }";
         var midi = new MidiExporter().Export(SyntaxTree.Parse(source));
 
         var notes = midi.Tracks.Single(t => t.Name == "rh").Notes.OrderBy(n => n.StartTick).Select(n => n.Velocity).ToArray();
@@ -560,8 +563,8 @@ public class MidiTests
         var source = @"
             time 4/4
             part melody
-            section A { melody { c'4@p d' e' f' | g'1 | } chords harmony { C . G7 . | Dm/F | } }
-            section B { melody { c'4 d' e' f' | } chords harmony { C | } }
+            section A { melody { c''4@p d' e' f' | g'1 | } chords harmony { C . G7 . | Dm/F | } }
+            section B { melody { c''4 d' e' f' | } chords harmony { C | } }
             form { A B }
             score { chords harmony  staff melody }";
         var midi = new MidiExporter().Export(SyntaxTree.Parse(source));
@@ -654,7 +657,7 @@ public class MidiTests
     {
         var source = @"
 part clar { clef treble transpose d }
-section Main { clar { c4 d e } }
+section Main { clar { c'4 d e } }
 form { Main }
 score x { staff clar }";
         var tree = SyntaxTree.Parse(source);
@@ -673,7 +676,7 @@ score x { staff clar }";
     {
         var source = @"
 part lower { clef bass transpose c, }
-section Main { lower { c4 d e } }
+section Main { lower { c'4 d e } }
 form { Main }
 score x { staff lower }";
         var tree = SyntaxTree.Parse(source);
@@ -695,7 +698,7 @@ score x { staff lower }";
 tempo 120
 time 4/4
 part m { clef treble }
-section Main { m { c4 d e f | tempo 160 g a b c } }
+section Main { m { c'4 d e f | tempo 160 g a b c } }
 form { Main }
 score x { staff m }";
         var tree = SyntaxTree.Parse(source);

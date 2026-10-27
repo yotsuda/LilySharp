@@ -57,7 +57,7 @@ public class KeySignatureChangeTests
             time 4/4
             key g major
             part melody { clef treble }
-            phrase mel { c'4 d' e' f' | g'4 a' key d major b' c'' | d''4 c'' b' a' | }
+            phrase mel { c''4 d' e' f' | g'4 a key d major b' c'' | d''4 c'' b' a' | }
             section Main { melody { mel } }
             form { Main }
             score x { staff melody }
@@ -137,7 +137,7 @@ public class KeySignatureChangeTests
                 time 4/4
                 key c major
                 part m
-                section A { m { f4 f f f | {{key}}{{pitch}}8 {{pitch}} {{pitch}}4 {{pitch}}2 | } }
+                section A { m { f'4 f' f' f' | {{key}}{{pitch}}8 {{pitch}} {{pitch}}4 {{pitch}}2 | } }
                 form { ~A }
                 score x { staff m }
                 """;
@@ -148,9 +148,9 @@ public class KeySignatureChangeTests
             return bar.GetXForTiming(Fraction.Zero);
         }
 
-        // e' (E5) stems down, e (E4) stems up.
-        Assert.Equal(FirstColumnX("e", withKey: true), FirstColumnX("e'", withKey: true), 6);
-        double down = FirstColumnX("e'", withKey: false), up = FirstColumnX("e", withKey: false);
+        // e'' (E5) stems down, e' (E4) stems up.
+        Assert.Equal(FirstColumnX("e'", withKey: true), FirstColumnX("e''", withKey: true), 6);
+        double down = FirstColumnX("e''", withKey: false), up = FirstColumnX("e'", withKey: false);
         Assert.True(down > up + 0.1, $"control: after a bare bar line the down stem keeps its correction ({down} vs {up})");
     }
 
@@ -229,7 +229,7 @@ public class KeySignatureChangeTests
     {
         var source = @"
 part melody { clef treble }
-phrase m { c'4 d e f | key d major fis4 g a b | }
+phrase m { c''4 d e f | key d major fis4 g a b | }
 section A { melody { m } }
 form { A }
 score test { staff melody }
@@ -261,7 +261,7 @@ score test { staff melody }
     {
         var source = @"
 part melody { clef treble }
-phrase m { c'4 d e f | key d major fis4 g a b | key bes major bes4 a g f | }
+phrase m { c''4 d e f | key d major fis4 g a b | key bes major bes4 a g f | }
 section A { melody { m } }
 form { A }
 score test { staff melody }
@@ -308,7 +308,7 @@ score test { staff melody }
     {
         var source = @"
 part melody { clef treble }
-phrase m { c'4 d e f | key d major fis4 g a b | }
+phrase m { c''4 d e f | key d major fis4 g a b | }
 section A { melody { m } }
 form { A }
 score test { staff melody }
@@ -330,7 +330,7 @@ score test { staff melody }
         var source = @"
 part melody { clef treble }
 key d major
-phrase m { fis4 g a b | key f major c'4 bes a g | }
+phrase m { fis'4 g a b | key f major c'4 bes a g | }
 section A { melody { m } }
 form { A }
 score test { staff melody }
@@ -355,7 +355,7 @@ score test { staff melody }
         var source = @"
 part melody { clef treble }
 key d major
-phrase m { fis4 g a b | key c major c'4 d e f | }
+phrase m { fis'4 g a b | key c major c'4 d e f | }
 section A { melody { m } }
 form { A }
 score test { staff melody }
@@ -377,7 +377,7 @@ score test { staff melody }
         var source = @"
 part melody { clef treble }
 key d major
-phrase m { fis4 g a b | key g major c'4 d e fis | }
+phrase m { fis'4 g a b | key g major c'4 d e fis | }
 section A { melody { m } }
 form { A }
 score test { staff melody }

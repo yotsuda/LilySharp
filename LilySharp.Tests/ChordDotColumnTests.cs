@@ -79,7 +79,8 @@ public class ChordDotColumnTests
     public void AChordsDotClearsTheFlagOnlyWhenTheFlagIsOnItsRow()
     {
         var g = RenderedGeometry.Render(Book(
-            "<g b>8. r16 <f a>8. r16 r2 | <g b>16. r32 <f a>16. r32 r2 r4 |", "CFD"));
+            // LilyPond's absolute octaves (owner's decision 2026-10-28): G4 B4 and F4 A4, as measured.
+            "<g' b'>8. r16 <f' a'>8. r16 r2 | <g' b'>16. r32 <f' a'>16. r32 r2 r4 |", "CFD"));
 
         // Both heads of a third share one column X, and so does the chord's one dot column;
         // Distinct therefore reduces each to one reading per chord.

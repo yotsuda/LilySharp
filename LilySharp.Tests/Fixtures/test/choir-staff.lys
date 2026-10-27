@@ -10,7 +10,7 @@ part sop { clef treble }
 part alt { clef treble }
 
 section Main {
-  sop { c'4 b a b | c'1 | }
+  sop { c''4 b a b | c'1 | }
   alt { g4 a g f | g1 | }
 }
 

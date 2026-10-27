@@ -110,9 +110,9 @@ public class LilyPondExporterSectionPlayTests
         key d major
         part melody {
           clef treble
-          section A { c4 c g' g | }
+          section A { c'4 c g' g | }
           section B { key a major g'4 g f f | }
-          section C { e4 e d d | }
+          section C { e'4 e d d | }
         }
         form { |: A [1. B] :| [2. C] }
         score { staff melody }
@@ -170,9 +170,9 @@ public class LilyPondExporterSectionPlayTests
         const string book = """
             time 4/4
             part m { clef treble }
-            section A { m { c4 d e f | time 3/4 key ees major c2. | } }
-            section B { m { time 3/4 key ees major c2. | } }
-            section C { m { time 2/4 c2 | } }
+            section A { m { c'4 d e f | time 3/4 key ees major c2. | } }
+            section B { m { time 3/4 key ees major c'2. | } }
+            section C { m { time 2/4 c'2 | } }
             form { A B C }
             score { staff m }
             """;
@@ -229,8 +229,8 @@ public class LilyPondExporterSectionPlayTests
         const string book = """
             time 4/4
             part m { clef treble }
-            section A { m { c4 d e f | time 3/4 key ees major c2. | } }
-            section B { m { time! 3/4 key! ees major c2. | } }
+            section A { m { c'4 d e f | time 3/4 key ees major c2. | } }
+            section B { m { time! 3/4 key! ees major c'2. | } }
             form { A B }
             score { staff m }
             """;

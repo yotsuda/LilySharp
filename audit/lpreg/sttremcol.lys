@@ -11,8 +11,8 @@ part v { clef treble }
 
 section Main {
   v {
-    voice { b4 f2. }
-    { grace { a,8 } <b, g>1:32 }
+    voice { b'4 f'2. }
+    { grace { a8 } <b g'>1:32 }
   }
 }
 

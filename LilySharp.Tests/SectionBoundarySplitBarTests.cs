@@ -66,9 +66,9 @@ public class SectionBoundarySplitBarTests
         // A ends on the half bar; both endings open with the other half; the repeat sign
         // stands mid-bar. Disco Inferno's shape.
         string book = Head + """
-            section A { m { c4 d e f | g4 a | } }
+            section A { m { c'4 d e f | g4 a | } }
             section E1 { m { b4 c' | d'4 e' f' g' | } }
-            section E2 { m { c'4 d' | e'1 | } }
+            section E2 { m { c''4 d' | e'1 | } }
             form { |: A [1. E1] :| [2. E2] }
             score { staff m }
             """;
@@ -82,9 +82,9 @@ public class SectionBoundarySplitBarTests
         // is a short bar again (LYS2001) and E2's first bar a bare pickup (LYS2006); E1
         // still completes A, but A's exemption asks EVERY successor.
         string book = Head + """
-            section A { m { c4 d e f | g4 a | } }
+            section A { m { c'4 d e f | g4 a | } }
             section E1 { m { b4 c' | d'4 e' f' g' | } }
-            section E2 { m { c'4 d' e' | f'1 | } }
+            section E2 { m { c''4 d' e' | f'1 | } }
             form { |: A [1. E1] :| [2. E2] }
             score { staff m }
             """;
@@ -110,7 +110,7 @@ public class SectionBoundarySplitBarTests
         const string book = """
             time 4/4
             section Body_1 { partial 2 }
-            part m { clef bass  section Body_1 { r8 }  section Intro { c8 r d | e4 f g a | } }
+            part m { clef bass  section Body_1 { r8 }  section Intro { c'8 r d | e4 f g a | } }
             form { ~Body_1 ~Intro }
             score { staff m }
             """;
@@ -126,7 +126,7 @@ public class SectionBoundarySplitBarTests
         const string book = """
             time 4/4
             section Body_1 { partial 2 }
-            part m { clef bass  section Body_1 { r8 }  section Intro { c8 d | e4 f g a | } }
+            part m { clef bass  section Body_1 { r8 }  section Intro { c'8 d | e4 f g a | } }
             form { ~Body_1 ~Intro }
             score { staff m }
             """;
@@ -139,7 +139,7 @@ public class SectionBoundarySplitBarTests
     public void APlainSequence_SplitsABarTheSameWay_AndTheSectionAloneStillWarns()
     {
         const string sections = """
-            section A { m { c4 d e f | g4 a | } }
+            section A { m { c'4 d e f | g4 a | } }
             section B { m { b4 c' | d'1 | } }
             """;
         Assert.Empty(BarCodes(Diagnose(Head + sections + "form { A B }\nscore { staff m }\n")));
@@ -160,9 +160,9 @@ public class SectionBoundarySplitBarTests
             time 4/4
             part m {
               clef bass
-              section A { c4 d e f | g4 a | break }
+              section A { c'4 d e f | g4 a | break }
               section E1 { b4 c' | d'4 e' f' g' | break }
-              section E2 { c'4 d' | e'1 | }
+              section E2 { c''4 d' | e'1 | }
             }
             form { |: A [1. ~E1] :| [2. ~E2] }
             score { staff m }
@@ -186,9 +186,9 @@ public class SectionBoundarySplitBarTests
             time 4/4
             part m {
               clef bass
-              section A { c4 d e f | g4 a | break }
+              section A { c'4 d e f | g4 a | break }
               section E1 { b4 c' | d'4 e' f' g' | break }
-              section E2 { c'4 d' | e'1 | }
+              section E2 { c''4 d' | e'1 | }
             }
             form { |: A [1. ~E1] :| [2. ~E2] }
             score { staff m }
@@ -225,7 +225,7 @@ public class SectionBoundarySplitBarTests
         Assert.Contains("system 3: bars 4-5     (2 bars)", report);
 
         // Positive control: an ending that does not complete the bar is its own bar.
-        string plain = book.Replace("section E2 { c'4 d' | e'1 | }", "section E2 { c'4 d' e' | f'1 | }");
+        string plain = book.Replace("section E2 { c''4 d' | e'1 | }", "section E2 { c''4 d' e' | f'1 | }");
         var control = SvgGenerator.CollectScore(SyntaxTree.Parse(plain), RenderSpecParser.FindFirst(SyntaxTree.Parse(plain)))
             .PrimaryContentStaff.PrimaryVoice.Measures;
         Assert.True(control[2].ContinuesBar);
@@ -256,8 +256,8 @@ public class SectionBoundarySplitBarTests
             part m { clef treble }
             """;
         var split = Measures(head + """
-            section A { m { c'1 | c'2 | } }
-            section B { partial 2  m { d'2 | e'1 | } }
+            section A { m { c''1 | c'2 | } }
+            section B { partial 2  m { d''2 | e'1 | } }
             form { A B }
             score { staff m }
             """);
@@ -266,8 +266,8 @@ public class SectionBoundarySplitBarTests
         Assert.Equal(new[] { 1, 2, 2, 3 }, BarNumberEngraver.NumberMeasures(split, 0));
 
         var afterFull = Measures(head + """
-            section A { m { c'1 | c'1 | } }
-            section B { partial 2  m { d'2 | e'1 | } }
+            section A { m { c''1 | c'1 | } }
+            section B { partial 2  m { d''2 | e'1 | } }
             form { A B }
             score { staff m }
             """);
@@ -278,8 +278,8 @@ public class SectionBoundarySplitBarTests
         // A bar full under its own meter leaves nothing open, whatever the next section
         // reopens in: 2/4 `g'2` before a 4/4 section whose pickup is a half bar.
         var ownMeter = Measures(head + """
-            section A { m { c'1 | time 2/4 g'2 | } }
-            section B { partial 2  m { d'2 | e'1 | } }
+            section A { m { c''1 | time 2/4 g'2 | } }
+            section B { partial 2  m { d''2 | e'1 | } }
             form { A B }
             score { staff m }
             """);
@@ -294,7 +294,7 @@ public class SectionBoundarySplitBarTests
             time 4/4
             part m {
               clef bass
-              section A { c4 d e f | g4 a | }
+              section A { c'4 d e f | g4 a | }
               section B { b4 c' | d'1 | }
             }
             form { A ~B }
@@ -310,8 +310,8 @@ public class SectionBoundarySplitBarTests
         // first bar in B completes nothing and stays a pickup nudge.
         string book = Head + """
             part low { clef bass }
-            section A { m { c4 d e f | g4 a | } }
-            section B { m { b4 c' | d'1 | }  low { c4 d | e1 | } }
+            section A { m { c'4 d e f | g4 a | } }
+            section B { m { b4 c' | d'1 | }  low { c'4 d | e1 | } }
             form { A B }
             score { staff m staff low }
             """;

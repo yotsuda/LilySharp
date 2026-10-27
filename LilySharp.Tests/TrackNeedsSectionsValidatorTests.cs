@@ -56,7 +56,7 @@ public class TrackNeedsSectionsValidatorTests
         time 4/4
         key c major
         part melody { clef treble
-          section A { c'4 d' e' f' | }
+          section A { c''4 d' e' f' | }
           section B { g'4 a' b' c'' | }
         }
         """;
@@ -92,7 +92,7 @@ public class TrackNeedsSectionsValidatorTests
             time 4/4
             key c major
             part melody { clef treble }
-            section A { melody { c'4 d' e' f' | } lyrics { Do re mi fa | } }
+            section A { melody { c''4 d' e' f' | } lyrics { Do re mi fa | } }
             form { A }
             score { staff melody }
             """));

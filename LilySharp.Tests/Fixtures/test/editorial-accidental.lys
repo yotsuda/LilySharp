@@ -11,7 +11,7 @@ key c major
 part melody
 
 phrase ficta {
-  c4@editorial fis@editorial bes@editorial c |
+  c'4@editorial fis@editorial bes@editorial c |
   d4@courtesy e g2 |
 }
 

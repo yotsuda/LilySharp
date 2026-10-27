@@ -47,7 +47,7 @@ public sealed class BackToBackRepeatTests
     {
         // `x` = one bar `|: c1 :|`; `x x` places two, so x1's `:|` meets x2's `|:`.
         var m = Measures("phrase x { |: c1 :| }\n"
-                       + "part m { clef treble section A { d1 x x } }\n"
+                       + "part m { clef treble section A { d'1 x x } }\n"
                        + "form { A }\nscore { staff m }");
         Assert.Equal(3, m.Length);
         Assert.Equal(BarlineType.RepeatBoth, m[1].EndBarline); // :| + |: -> :|:
@@ -72,7 +72,7 @@ public sealed class BackToBackRepeatTests
     public void AnOrdinaryRepeatIsUntouched()
     {
         // A lone `|: … :|` with no adjacent repeat keeps its plain end/start.
-        var m = Measures("part m { clef treble section A { d1 |: c1 :| e1 } }\n"
+        var m = Measures("part m { clef treble section A { d'1 |: c1 :| e1 } }\n"
                        + "form { A }\nscore { staff m }");
         Assert.Equal(BarlineType.RepeatStart, m[1].StartBarline);
         Assert.Equal(BarlineType.RepeatEnd, m[1].EndBarline);

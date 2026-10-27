@@ -36,7 +36,7 @@ public class DoubleDynamicTests
     private const string Book = """
         octave absolute
         part m { clef treble }
-        section A { m { c'4@f@sfz d' e'@p@cresc f' | g'1@ff | } }
+        section A { m { c''4@f@sfz d'' e''@p@cresc f'' | g''1@ff | } }
         form { A }
         score { staff m }
         """;

@@ -47,11 +47,11 @@ public class MusicXmlSectionHeaderTests
     [Fact]
     public void HeaderPartial_GroupedBySection_WritesTheSameMeasuresAsTheInlineSpelling()
     {
-        var inline = Export("octave absolute  time 4/4  partial 8  f'8 | g'4 a' b' c'' |");
+        var inline = Export("octave absolute  time 4/4  partial 8  f''8 | g''4 a'' b'' c''' |");
         var header = Export("""
             octave absolute
             time 4/4
-            section A { partial 8  melody { f'8 | g'4 a' b' c'' | } }
+            section A { partial 8  melody { f''8 | g''4 a'' b'' c''' | } }
             form { ~A }
             score { staff melody }
             """);
@@ -74,8 +74,8 @@ public class MusicXmlSectionHeaderTests
         var doc = Export("""
             key g major
             section A { partial 8 }
-            part melody { section A { f'8 | g'4 a' b' c'' | } }
-            part bass { clef bass  section A { d8 | g,4 a, b, c | } }
+            part melody { section A { f''8 | g'4 a' b' c' | } }
+            part bass { clef bass  section A { d'8 | g,4 a, b, c | } }
             form { A }
             score { staff melody  staff bass }
             """);
@@ -104,7 +104,7 @@ public class MusicXmlSectionHeaderTests
             key c major
             time 4/4
             section A { key d major  time 3/4 }
-            part melody { section A { d'4 e' fis' | g'2. | } }
+            part melody { section A { d''4 e' fis' | g'2. | } }
             form { A }
             score { staff melody }
             """);
@@ -126,7 +126,7 @@ public class MusicXmlSectionHeaderTests
         const string book = """
             octave absolute
             section A { tempo 110 }
-            part melody { section A { c'4 d' e' f' | }  section B { g'1 | } }
+            part melody { section A { c''4 d'' e'' f'' | }  section B { g''1 | } }
             form { B A }
             score { staff melody }
             """;

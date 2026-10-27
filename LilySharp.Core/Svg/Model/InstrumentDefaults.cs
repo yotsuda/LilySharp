@@ -53,7 +53,14 @@ public static class InstrumentDefaults
     /// </summary>
     /// <param name="instrument">The instrument name.</param>
     /// <returns>A tuple of (clef, octave) defaults.</returns>
+    /// <remarks>⚠️ THE OCTAVE IS EVERY PRESET'S <see cref="DefaultAnchorOctave"/> since
+    /// 2026-10-28 (owner's decision: a preset does not move the notes, AnchorOctave). The octaves
+    /// the table below still writes were the presets' anchors until then — the written register
+    /// each instrument is read from — and are kept as the record of it; none is returned.</remarks>
     public static (ClefType Clef, int Octave) GetDefaults(string instrument)
+        => (PresetTable(instrument).Clef, DefaultAnchorOctave);
+
+    private static (ClefType Clef, int Octave) PresetTable(string instrument)
     {
         return instrument.ToLowerInvariant() switch
         {
@@ -114,7 +121,12 @@ public static class InstrumentDefaults
     /// and an <c>instrument</c> preset move a part's register. LilyPond's <c>\relative</c>
     /// never looks at a clef either, so the twin writes the source's own marks.
     /// </remarks>
-    public const int DefaultAnchorOctave = 4;
+    /// <para>
+    /// ⚠️ 3, LilyPond's, since 2026-10-28 (owner's decision): a bare <c>c</c> is C3 and
+    /// <c>c'</c> middle C in every part, as in LilyPond — it was middle C's own octave, 4, and
+    /// a model that knows LilyPond wrote every right hand an octave high.
+    /// </para>
+    public const int DefaultAnchorOctave = 3;
 
     /// <summary>
     /// The octave a part's bare letters are anchored to in RELATIVE mode: an explicit
@@ -129,14 +141,14 @@ public static class InstrumentDefaults
     /// ⚠️ The clef is not a step of this chain (see <see cref="DefaultAnchorOctave"/>).
     /// ABSOLUTE mode reads the same chain (<see cref="AbsoluteBaseOctave"/>, 2026-10-13).
     /// </remarks>
+    /// <para>
+    /// ⚠️ THE PRESET NO LONGER MOVES IT (owner's decision 2026-10-28): an `instrument` written
+    /// into a scanned score moved every note it held. A preset brings its clef, sound and
+    /// range; the octave a bare letter means is LilyPond's in every part, and only `octave N`
+    /// moves it. <paramref name="instrumentPreset"/> is kept for the callers and read no more.
+    /// </para>
     public static int AnchorOctave(int? explicitOctave, string? instrumentPreset)
-    {
-        if (explicitOctave is { } o)
-            return o;
-        if (!string.IsNullOrEmpty(instrumentPreset))
-            return GetDefaults(instrumentPreset!).Octave;
-        return DefaultAnchorOctave;
-    }
+        => explicitOctave ?? DefaultAnchorOctave;
 
     /// <summary>
     /// The octave a bare letter means in ABSOLUTE mode: an explicit <c>octave N</c>, else the

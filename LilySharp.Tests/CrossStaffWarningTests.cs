@@ -40,7 +40,7 @@ public class CrossStaffWarningTests
         var found = Warnings("""
             octave absolute
             part m { clef treble }
-            section A { m { b4@cross b8 b b4 d'8 f' | } }
+            section A { m { b'4@cross b'8 b' b'4 d''8 f'' | } }
             form { A }
             score { staff m }
             """);
@@ -78,7 +78,7 @@ public class CrossStaffWarningTests
             octave absolute
             part m { clef treble }
             part x { clef treble }
-            phrase p { c'4@cross d' e' f' | }
+            phrase p { c''4@cross d'' e'' f'' | }
             section A { m { p } x { c'4@cross d' e' f' | } }
             form { A }
             score { staff m }
@@ -95,7 +95,7 @@ public class CrossStaffWarningTests
             part lead { clef treble }
             section A {
               chords prog { C | }
-              lead { b4@cross b8 b b4 d'8 f' | }
+              lead { b'4@cross b'8 b' b'4 d''8 f'' | }
             }
             form { A }
             score {

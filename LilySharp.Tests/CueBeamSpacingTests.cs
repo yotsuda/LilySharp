@@ -71,7 +71,7 @@ public sealed class CueBeamSpacingTests
     [Fact]
     public void ACueBeam_IsTheCueVoicesBeam()
     {
-        var page = Render("cue { g8 a b c' d' e' f' g' } |");
+        var page = Render("cue { g'8 a' b' c'' d'' e'' f'' g'' } |");
         double middle = Assert.Single(TwinBeamSweep.StavesOf(page)).Middle;
         var beams = page.Quads.OrderBy(q => q.X0).ToArray();
         Assert.Equal(2, beams.Length);
@@ -95,7 +95,7 @@ public sealed class CueBeamSpacingTests
             octave absolute
             time 4/4
             part m {
-              section A { cue { g8 a b c' d' e' f' g' } | }
+              section A { cue { g'8 a' b' c'' d'' e'' f'' g'' } | }
             }
             form { A }
             score { staff m }
@@ -121,10 +121,10 @@ public sealed class CueBeamSpacingTests
     public void CueColumns_SpaceAsLilyPondSpacesThem()
     {
         var page = Render("""
-            cue { g8 a b c' d' e' f' g' } |
-            cue { e4 fis4 bes4 c'4 } |
-            cue { g16 a b c' d' e' f' g' a'8 b' c''4 } |
-            cue { <c e g>4 <d fis a>4 e'2 } |
+            cue { g'8 a' b' c'' d'' e'' f'' g'' } |
+            cue { e'4 fis'4 bes'4 c''4 } |
+            cue { g'16 a' b' c'' d'' e'' f'' g'' a''8 b'' c'''4 } |
+            cue { <c' e' g'>4 <d' fis' a'>4 e''2 } |
             """);
         var x = Columns(page);
         double[] lp =
@@ -148,8 +148,8 @@ public sealed class CueBeamSpacingTests
     public void ACueAccidentalAfterABarLine_IsTheCueAccidental()
     {
         var page = Render("""
-            cue { g8 a b c' d' e' f' g' } |
-            cue { fis4 a4 g4 a4 } |
+            cue { g'8 a' b' c'' d'' e'' f'' g'' } |
+            cue { fis'4 a'4 g'4 a'4 } |
             """);
         var x = Columns(page);
         Assert.Equal(12, x.Length);

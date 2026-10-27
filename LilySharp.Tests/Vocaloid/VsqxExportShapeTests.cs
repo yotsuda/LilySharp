@@ -49,7 +49,7 @@ public class VsqxExportShapeTests
         // Relative-default c d e f g stays near middle C -> C4..G4 (MIDI 60..67).
         var root = Export("""
             part m { clef treble }
-            section A { m { c4 d e f | g1 } }
+            section A { m { c'4 d e f | g1 } }
             form { A }
             score { staff m }
             """);
@@ -70,7 +70,7 @@ public class VsqxExportShapeTests
         var root = Export("""
             part m { clef treble }
             section A {
-              m { c4 d e f | }
+              m { c'4 d e f | }
               lyrics { la le li lo | }
             }
             form { A }
@@ -87,7 +87,7 @@ public class VsqxExportShapeTests
     {
         var root = Export("""
             part m { clef treble }
-            section A { m { c4 d e f | } }
+            section A { m { c'4 d e f | } }
             form { A }
             score { staff m }
             """);

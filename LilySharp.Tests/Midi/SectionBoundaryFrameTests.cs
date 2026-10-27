@@ -59,8 +59,10 @@ public class SectionBoundaryFrameTests
         """;
 
     [Theory]
-    [InlineData("treble", 60)]  // anchor octave 4
-    [InlineData("bass octave 3", 48)]    // anchor octave 3 — the book that tells the two rules apart
+    // Every part's default anchor is 3 (owner's decision 2026-10-28); `octave 4` is the
+    // explicit anchor shift that keeps a second, different anchor in the pair.
+    [InlineData("treble octave 4", 60)]  // anchor octave 4
+    [InlineData("bass", 48)]    // the default anchor 3 — the book that tells the two rules apart
     public void ASectionOpensAtThePartsOwnAnchor_NotWhereTheLastOneEnded(string clef, int expected)
     {
         var notes = ExportNotes(Book(clef));
@@ -77,7 +79,7 @@ public class SectionBoundaryFrameTests
         // nearest c above it, and must stay there.
         var notes = ExportNotes("""
             part m { clef treble }
-            section A { m { c4 d e f | g2 g | c4 d e f | } }
+            section A { m { c'4 d e f | g2 g | c4 d e f | } }
             form { A }
             score { staff m }
             """);
@@ -92,8 +94,8 @@ public class SectionBoundaryFrameTests
         // as the bar the other parts are playing.
         var notes = ExportNotes("""
             part m { clef treble }
-            section A { m { c2 d | } }
-            section B { m { c d e f | } }
+            section A { m { c'2 d | } }
+            section B { m { c' d e f | } }
             form { A B }
             score { staff m }
             """);
@@ -108,7 +110,7 @@ public class SectionBoundaryFrameTests
         // The control for the pair above.
         var notes = ExportNotes("""
             part m { clef treble }
-            section A { m { c2 d | e f | } }
+            section A { m { c'2 d | e f | } }
             form { A }
             score { staff m }
             """);

@@ -41,7 +41,7 @@ public class LedgerLineRodTests
         paper { raggedRight }
         octave absolute
         part m { clef treble
-          section A { c'8 d' e' f' g' a' b' c'' | d''8 c'' b' a' g' f' e' d' | c'8 d' e' f' g'32 a' b' c'' d''8 e'' f'' | e''8 d'' c'' b' a' g' f' e' | }
+          section A { c''8 d'' e'' f'' g'' a'' b'' c''' | d'''8 c''' b'' a'' g'' f'' e'' d'' | c''8 d'' e'' f'' g''32 a'' b'' c''' d'''8 e''' f''' | e'''8 d''' c''' b'' a'' g'' f'' e'' | }
         }
         form { A }
         score { staff m }

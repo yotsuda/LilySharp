@@ -126,7 +126,8 @@ public sealed partial class LilyPondExporter
             // the bottom of this method; the two are kept in step so the pair cannot drift,
             // and the observer sits on the reference pitch (SectionReferenceOctaveTests
             // .APhraseBodyInsideAMarkedSectionMovesWithIt asserts the twin MOVED).
-            buf._lysStep = buf._lyStep = 0;
+            buf._lysStep = RelativeOctave.FrameStartStep;
+            buf._lyStep = 0;
             buf._lysOctave = buf._lyOctave =
                 _anchorOctave + _sectionOctaveOffset + v.OctaveOffset;
             buf.EmitMusicStream(MusicItems(body).ToList(), "");
@@ -1542,7 +1543,7 @@ public sealed partial class LilyPondExporter
     /// value: see that field's remarks for why shifting the base instead would cancel.
     /// </para>
     /// </remarks>
-    private int _absoluteBaseOctave = 4;
+    private int _absoluteBaseOctave = Svg.Model.InstrumentDefaults.DefaultAnchorOctave;
 
     /// <summary>
     /// ABSOLUTE mode's half of a marked section reference (<c>~B'</c>): the octaves to add

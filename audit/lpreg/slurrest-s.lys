@@ -11,7 +11,7 @@ part melody
 
 section A {
   melody {
-    c,16( r c,) r c( r c) r | c( r c,) r c,( r c) r | r( r r) r r4 |
+    c16( r c) r c'( r c') r | c'( r c) r c( r c') r | r( r r) r r4 |
   }
 }
 

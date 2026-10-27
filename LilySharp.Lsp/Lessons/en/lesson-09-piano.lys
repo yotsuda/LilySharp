@@ -13,17 +13,17 @@ part rh { clef treble }
 part lh { clef bass  octave 3 }    // octave 3: start near the C below middle C
 
 phrase opening {
-  d'4 g,8 a b c | d4 g, g | e'4 c8 d e fis | g4 g, g |
+  d''4 g,8 a b c | d4 g, g | e'4 c8 d e fis | g4 g, g |
   c4 d8 c b a | b4 c8 b a g |
 }
 
 section A {
   rh {
-    opening fis4 g8 a b g | a2. |
-    opening a'4 b8 a g fis | g2. |.
+    opening fis'4 g8 a b g | a2. |
+    opening a''4 b8 a g fis | g2. |.
   }
   lh {
-    g'2 a4 | b2. | c2. | b2. | a2. | g2. | d'4 b g | d2. |
+    g2 a4 | b2. | c2. | b2. | a2. | g2. | d'4 b g | d2. |
     g2 a4 | b2. | c2. | b2. | a2. | g2. | d2. | g,2.@todo("make it <g b d>,2.") |.
   }
 }

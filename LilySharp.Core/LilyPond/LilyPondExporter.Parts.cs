@@ -396,7 +396,10 @@ public sealed partial class LilyPondExporter
         // (MeasureCollector.cs sets LastPitchName = 'c' and re-arms the ambient tonic per
         // voice). The wrapper this method just wrote IS the frame: `\relative c'` starts
         // both sides on c at the anchor octave.
-        _lysStep = _lyStep = 0;
+        // Lily#'s frame opens at f, as LilyPond's pitchless \relative does (RelativeOctave
+        // .FrameStartStep); the twin's own frame is the c its wrapper writes.
+        _lysStep = RelativeOctave.FrameStartStep;
+        _lyStep = 0;
         _lysOctave = _lyOctave = _anchorOctave;
         _frameTracked = true;
         // The running key starts at LilyPond's C major; EmitScoreSettings then writes the file's

@@ -33,7 +33,7 @@ public class ChordPartSectionsTests
         time 4/4
         key c major
         part melody { clef treble }
-        section A { melody { c4 c g' g | a a g2 | } chords harmony { C | F | } }
+        section A { melody { c'4 c g' g | a a g2 | } chords harmony { C | F | } }
         section B { melody { g'4 g f f | } chords harmony { C | } }
         form { A B }
         score s { chords harmony  staff melody }
@@ -43,7 +43,7 @@ public class ChordPartSectionsTests
         time 4/4
         key c major
         part melody { clef treble
-          section A { c4 c g' g | a a g2 | }
+          section A { c'4 c g' g | a a g2 | }
           section B { g'4 g f f | }
         }
         chords harmony {
@@ -86,7 +86,7 @@ public class ChordPartSectionsTests
             time 4/4
             key c major
             part melody { clef treble
-              section A { c4 c g' g | a a g2 | }
+              section A { c'4 c g' g | a a g2 | }
               section B { g'4 g f f | }
             }
             chords harmony { section A { C | F | } section B { G7 | } }
@@ -112,7 +112,7 @@ public class ChordPartSectionsTests
         var tree = SyntaxTree.Parse("""
             part melody {
               section A { g2 g | }
-              section B { c2 c | }
+              section B { c'2 c | }
             }
             chords prog {
               section A { Dm7 | G7 }
@@ -138,7 +138,7 @@ public class ChordPartSectionsTests
         // The by-section spelling of the same book collects the same row.
         var tree = SyntaxTree.Parse("""
             section A { melody { g2 g | } chords prog { Dm7 | G7 } }
-            section B { melody { c2 c | } chords prog { Cmaj7 | } }
+            section B { melody { c'2 c | } chords prog { Cmaj7 | } }
             form { A | B | }
             score { chords prog  staff melody }
             """);

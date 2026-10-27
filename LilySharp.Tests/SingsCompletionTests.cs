@@ -71,7 +71,7 @@ public class SingsCompletionTests
     public void SingsTargets_AreTheDeclaredPartsAndNamedVoices()
     {
         var labels = LilySharpLanguageServer.GetVoiceBindingNameCompletions(
-                "part vocal { }\npart bass { }\nsection A { vocal { voice sop { c4 } } }",
+                "part vocal { }\npart bass { }\nsection A { vocal { voice sop { c'4 } } }",
                 "detail")
             .Items.Select(i => i.Label).ToArray();
         Assert.Contains("vocal", labels);

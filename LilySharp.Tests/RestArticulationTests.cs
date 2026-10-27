@@ -57,7 +57,7 @@ public class RestArticulationTests
         // 'coda' in a section's music collects the Coda sign.
         var tree = SyntaxTree.Parse("""
             time 4/4
-            part m { clef treble section A { c2 r2 coda | d1 | } }
+            part m { clef treble section A { c'2 r2 coda | d1 | } }
             form { A }
             score { staff m }
             """);

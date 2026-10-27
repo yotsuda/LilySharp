@@ -62,8 +62,8 @@ public class IncrementalLyricLinePassTests
         key c major
         part melody {
           clef treble
-          section A { c4 d e f | g a b c' | break}
-          section B { c'4 b a g | f e d c | }
+          section A { c'4 d e f | g a b c' | break}
+          section B { c''4 b a g | f e d c | }
         }
         lyrics verse {
           section A { one two three four | five six sev- en | }
@@ -83,8 +83,8 @@ public class IncrementalLyricLinePassTests
         key c major
         part melody {
           clef treble
-          section A { c4 d e f | g a b c' | break}
-          section B { c'4 b a g | f e d c | }
+          section A { c'4 d e f | g a b c' | break}
+          section B { c''4 b a g | f e d c | }
         }
         lyrics verse {
           section A { one two three four | five six sev- en | }

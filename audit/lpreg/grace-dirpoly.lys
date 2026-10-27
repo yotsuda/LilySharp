@@ -10,7 +10,7 @@ part v { clef treble }
 
 section Main {
   v {
-    voice { c''4 grace { d''8 } c''4 }
+    voice { c'''4 grace { d'''8 } c'''4 }
     { s2 }
   }
 }

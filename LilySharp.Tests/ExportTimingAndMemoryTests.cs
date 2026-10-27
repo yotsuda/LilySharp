@@ -48,7 +48,7 @@ public class ExportTimingAndMemoryTests
         // `c'4 r4 ~ c'4`: the tie has no note before it to extend. The MIDI used to keep the
         // pre-rest c as the onset the tie could reach, and merged the c after the rest into
         // it — ONE note of 960 ticks sounding through the rest (probe tie-over-rest).
-        var notes = Notes(Book("c'4 r4 ~ c'4 d'4 |"));
+        var notes = Notes(Book("c''4 r4 ~ c''4 d''4 |"));
         Assert.Equal(new[] { (72, 0, 480), (72, 960, 480), (74, 1440, 480) },
             notes.Select(n => (n.Pitch, n.StartTick, n.DurationTicks)).ToArray());
     }
@@ -77,12 +77,12 @@ public class ExportTimingAndMemoryTests
             part up { clef treble }
             part lo { clef bass }
             section A {
-              up { c'4 d' e' grace { f'16 } | }
-              lo { c4 d e f | }
+              up { c''4 d'' e'' grace { f''16 } | }
+              lo { c'4 d' e' f' | }
             }
             section B {
-              up { g'1 | }
-              lo { g1 | }
+              up { g''1 | }
+              lo { g'1 | }
             }
             form { A B }
             score { staff up  staff lo }
@@ -105,7 +105,7 @@ public class ExportTimingAndMemoryTests
             octave absolute
             part m { clef treble }
             section A {
-              m { c'4 d' e' f' | r4 g'4~ g'4 a'4 | }
+              m { c''4 d'' e'' f'' | r4 g''4~ g''4 a''4 | }
               lyrics { la la la la | mor -- ning }
             }
             form { A }
@@ -155,15 +155,16 @@ public class ExportTimingAndMemoryTests
         // the reference must NOT be forced (it inherits the body's last on both sides).
         string ly = new LilyPondExporter().Export(SyntaxTree.Parse("""
             octave absolute
-            phrase G { d' e' }
+            phrase G { d'' e'' }
             part m { clef treble }
-            section A { m { c'8 G f' g' | } }
+            section A { m { c''8 G f'' g'' | } }
             form { A }
             score { staff m }
             """));
         // Absolute mode inlines the body, so the whole bar is one line: the body's first
         // note carries the crotchet, the rest inherit (probe phrase-value: base wrote
         // `c'8 d' e' f' g'`, which LilyPond reads as five quavers).
-        Assert.Contains("c'8 d'4 e' f' g' |", ly);
+        // Under `\fixed c` (owner's decision 2026-10-28) C5 is c''.
+        Assert.Contains("c''8 d''4 e'' f'' g'' |", ly);
     }
 }

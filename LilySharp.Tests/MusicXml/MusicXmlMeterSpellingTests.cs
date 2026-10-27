@@ -42,7 +42,7 @@ public class MusicXmlMeterSpellingTests
             octave absolute
             time 3+2/8
             part m { clef treble }
-            section A { m { c'8 d' e' f' g' | } }
+            section A { m { c''8 d'' e'' f'' g'' | } }
             form { A }
             score { staff m }
             """);
@@ -59,7 +59,7 @@ public class MusicXmlMeterSpellingTests
             octave absolute
             time 4/4
             part m { clef treble }
-            section A { m { c'4 d' e' f' | time none g'4 a' b' | time 4/4 c''1 | } }
+            section A { m { c''4 d'' e'' f'' | time none g''4 a'' b'' | time 4/4 c'''1 | } }
             form { A }
             score { staff m }
             """);

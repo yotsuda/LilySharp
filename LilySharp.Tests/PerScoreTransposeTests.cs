@@ -36,7 +36,7 @@ public sealed class PerScoreTransposeTests
     }
 
     private const string Concert =
-        "part vln { clef treble section A { c4 d e f | } }\nform { A }\nscore { staff vln }\n";
+        "part vln { clef treble section A { c'4 d e f | } }\nform { A }\nscore { staff vln }\n";
 
     [Fact]
     public void Parses_ScoreTranspose_WithAndWithoutName()
@@ -44,7 +44,7 @@ public sealed class PerScoreTransposeTests
         foreach (var head in new[] { "score transpose d {", "score Bb transpose d {" })
         {
             var tree = SyntaxTree.Parse(
-                "part vln { clef treble section A { c4 } }\nform { A }\n" + head + " staff vln }\n");
+                "part vln { clef treble section A { c'4 } }\nform { A }\n" + head + " staff vln }\n");
             Assert.False(tree.HasErrors, head + " => " + string.Join("\n", tree.Diagnostics));
         }
     }
@@ -53,7 +53,7 @@ public sealed class PerScoreTransposeTests
     public void RenderSpec_CarriesScoreTranspose()
     {
         var tree = SyntaxTree.Parse(
-            "part vln { clef treble section A { c4 } }\nform { A }\nscore Bb transpose d { staff vln }\n");
+            "part vln { clef treble section A { c'4 } }\nform { A }\nscore Bb transpose d { staff vln }\n");
         var spec = RenderSpecParser.FindFirst(tree)!;
         Assert.Equal((1, 0, 0), spec.ScoreTranspose); // d = diatonic step 1, no accidental, same octave
     }
@@ -79,7 +79,7 @@ public sealed class PerScoreTransposeTests
         // Part already transposes up a major second (c->d); the score adds another
         // (d->e), so the written c sounds as e — composed once more, not ignored.
         const string src =
-            "part vln { clef treble transpose d section A { c4 | } }\nform { A }\nscore { staff vln }\n";
+            "part vln { clef treble transpose d section A { c'4 | } }\nform { A }\nscore { staff vln }\n";
         Assert.Equal("D4", Trace(src)[0]);                          // part transpose only
         Assert.Equal("E4", Trace(src, scoreTranspose: (1, 0, 0))[0]); // + score transpose
     }

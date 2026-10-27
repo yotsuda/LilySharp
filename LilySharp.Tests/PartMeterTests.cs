@@ -44,9 +44,9 @@ public class PartMeterTests
         time 4/4
         part top { clef treble }
         part bot { clef bass }
-        section A { top { c'1 | } bot { c1 | } }
-        section B { bot { time 3/4 g2. | a2. | } }
-        section C { top { e'1 | } bot { c1 | } }
+        section A { top { c''1 | } bot { c'1 | } }
+        section B { bot { time 3/4 g'2. | a'2. | } }
+        section C { top { e''1 | } bot { c'1 | } }
         form { A B C }
         score { staff top staff bot }
         """;
@@ -57,9 +57,9 @@ public class PartMeterTests
         time 4/4
         part top { clef treble }
         part bot { clef bass }
-        section A { top { c'1 | } bot { c1 | } }
-        section B { top { e'2. | f'2. | } bot { time 3/4 g2. | a2. | } }
-        section C { top { g'1 | } bot { c1 | } }
+        section A { top { c''1 | } bot { c'1 | } }
+        section B { top { e''2. | f''2. | } bot { time 3/4 g'2. | a'2. | } }
+        section C { top { g''1 | } bot { c'1 | } }
         form { A B C }
         score { staff top staff bot }
         """;
@@ -70,9 +70,9 @@ public class PartMeterTests
         time 4/4
         part top { clef treble }
         part bot { clef bass }
-        section A { top { c'1 | } bot { c1 | } }
-        section B { top { e'2. | } bot { time 3/4 g2. | a2. | } }
-        section C { top { g'1 | } bot { c1 | } }
+        section A { top { c''1 | } bot { c'1 | } }
+        section B { top { e''2. | } bot { time 3/4 g'2. | a'2. | } }
+        section C { top { g''1 | } bot { c'1 | } }
         form { A B C }
         score { staff top staff bot }
         """;
@@ -143,7 +143,7 @@ public class PartMeterTests
             octave absolute
             part top { clef treble }
             part bot { clef bass }
-            section A { top { time 2/4 c'2 | } bot { time 3/4 c2. | } }
+            section A { top { time 2/4 c''2 | } bot { time 3/4 c'2. | } }
             form { A }
             score { staff top staff bot }
             """);
@@ -157,7 +157,7 @@ public class PartMeterTests
         var root = SyntaxTree.Parse("""
             part top { clef treble }
             part bot { clef bass }
-            section A { top { c'1 | time 3/4 c'2. | } bot { c1 | time 3/4 c2. | } }
+            section A { top { c''1 | time 3/4 c'2. | } bot { c'1 | time 3/4 c2. | } }
             form { A }
             score { staff top staff bot }
             """).GetRoot();
@@ -197,7 +197,8 @@ public class PartMeterTests
         Assert.DoesNotContain("s1", silent);
         var shorter = new LilyPondExporter().Export(SyntaxTree.Parse(Short));
         // The voice that writes the bar takes the change too, so its padding is in it.
-        Assert.Contains("\\box \"B\" \\time 3/4 e'2. |\n  s2. |\n  \\time 4/4 \\mark", shorter.Replace("\r\n", "\n"));
+        // E5 under the twin's `\fixed c` (owner's decision 2026-10-28) is e''.
+        Assert.Contains("\\box \"B\" \\time 3/4 e''2. |\n  s2. |\n  \\time 4/4 \\mark", shorter.Replace("\r\n", "\n"));
         Assert.DoesNotContain("s1", shorter);
     }
 
@@ -209,9 +210,9 @@ public class PartMeterTests
             time 4/4
             part bot { clef bass }
             chords prog { section A { C | } section C { G | } }
-            section A { bot { c1 | } }
-            section B { bot { time 3/4 g2. | a2. | } }
-            section C { bot { c1 | } }
+            section A { bot { c'1 | } }
+            section B { bot { time 3/4 g'2. | a'2. | } }
+            section C { bot { c'1 | } }
             form { A B C }
             score { chords prog staff bot }
             """));

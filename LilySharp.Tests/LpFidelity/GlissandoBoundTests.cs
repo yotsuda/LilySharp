@@ -47,11 +47,11 @@ public class GlissandoBoundTests
 
         section Main {
           v {
-            a1@glissando | cis'1@glissando | as1 |
-            <f, a,>1@glissando | <f' a'>1@glissando |
-            <fis, a,>1@glissando | <fis' a'>1@glissando |
-            <fis, ais,>1@glissando | <fis' ais'>1@glissando |
-            <f, ais,>1@glissando | <f' ais'>1 |
+            a'1@glissando | cis''1@glissando | as'1 |
+            <f a>1@glissando | <f'' a''>1@glissando |
+            <fis a>1@glissando | <fis'' a''>1@glissando |
+            <fis ais>1@glissando | <fis'' ais''>1@glissando |
+            <f ais>1@glissando | <f'' ais''>1 |
           }
         }
 

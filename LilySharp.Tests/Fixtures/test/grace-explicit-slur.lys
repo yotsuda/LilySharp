@@ -12,7 +12,7 @@ time 4/4
 part mel {
   clef treble
   section A {
-    c4 grace { g16( } a8) c4 d | c4 appoggiatura { g16 } a8 c4 d | c4 grace { f16( g16 } a8) c4 d |
+    c'4 grace { g16( } a8) c4 d | c4 appoggiatura { g16 } a8 c4 d | c4 grace { f16( g16 } a8) c4 d |
   }
 }
 form { A }

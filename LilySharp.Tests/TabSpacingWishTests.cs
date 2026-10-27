@@ -38,7 +38,7 @@ namespace LilySharp.Tests;
 public class TabSpacingWishTests
 {
     private const string Bar = """
-        e,,8. b,,16 e,16 b,, e,,8 r16 b,, e, b,, e,,4 |
+        e,8. b,16 e16 b, e,8 r16 b, e b, e,4 |
         """;
 
     private static double[] Ideals(string score)
@@ -109,7 +109,7 @@ public class TabSpacingWishTests
             part bassline {
               clef bass
               tuning bass
-              section S { e,,4\4 e,, a,,\3 a,, | g,\1 g, d,\2 d, | }
+              section S { e,4\4 e, a,\3 a, | g\1 g d\2 d | }
             }
             form { S }
             score { tab bassline as numbers }
@@ -146,7 +146,7 @@ public class TabSpacingWishTests
             part bassline {
               clef bass
               tuning bass
-              section S { <e,,\4 c\3>4 e,,\4 e,,\4 e,,\4 | <c\2 g,\1>4 e,,\4 e,,\4 e,,\4 | }
+              section S { <e,\4 c'\3>4 e,\4 e,\4 e,\4 | <c'\2 g\1>4 e,\4 e,\4 e,\4 | }
             }
             form { S }
             score { {{staves}} }
@@ -174,7 +174,7 @@ public class TabSpacingWishTests
             part bassline {
               clef bass
               tuning bass
-              section S { <e,, d,>4 <e,, d,> <e,, d,> <e,, d,> | e,,4 e,, e,, e,, | }
+              section S { <e, d>4 <e, d> <e, d> <e, d> | e,4 e, e, e, | }
             }
             form { S }
             score { tab bassline as numbers }

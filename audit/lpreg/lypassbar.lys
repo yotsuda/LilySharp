@@ -8,7 +8,7 @@ part v { }
 lyrics w { section Main { foo bar | foooooooo bar | } }
 
 section Main {
-  v { c''2 c | c c | }
+  v { c'''2 c' | c' c' | }
 }
 
 form { ~Main }

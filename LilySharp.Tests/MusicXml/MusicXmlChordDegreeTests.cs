@@ -43,7 +43,7 @@ public sealed class MusicXmlChordDegreeTests
         // <d 3 5 7,> in C major → D4 F4 A4 C4 (the 7th an octave down).
         Assert.Equal(
             new[] { ("D", 4), ("F", 4), ("A", 4), ("C", 4) },
-            Pitches("key c major\n<d 3 5 7,>2"));
+            Pitches("key c major\n<d' 3 5 7,>2"));
     }
 
     [Fact]
@@ -53,7 +53,7 @@ public sealed class MusicXmlChordDegreeTests
         // being the chord onset (no <chord/> on it).
         var xml = new MusicXmlExporter().Export(SyntaxTree.Parse("key c major\n<1 3 5>2")).ToXml();
         Assert.Equal(
-            new[] { ("C", 4), ("E", 4), ("G", 4) },
+            new[] { ("C", 3), ("E", 3), ("G", 3) }, // a fresh frame's c: C3, below its F3
             xml.Descendants("pitch")
                .Select(p => (p.Element("step")!.Value, int.Parse(p.Element("octave")!.Value)))
                .ToArray());

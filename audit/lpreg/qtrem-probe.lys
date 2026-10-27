@@ -6,10 +6,10 @@ part v { }
 
 section Main {
   v {
-    <c e g>1 |
-    repeat tremolo 4 { <c e g>16 }
+    <c' e' g'>1 |
+    repeat tremolo 4 { <c' e' g'>16 }
     repeat tremolo 4 { q16 }
-    repeat tremolo 4 { c16 <c e g>16 } |
+    repeat tremolo 4 { c'16 <c' e' g'>16 } |
   }
 }
 

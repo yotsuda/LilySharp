@@ -13,12 +13,12 @@ part m { clef treble }
 
 section Main {
   m {
-    f'2@breath <g' bis'>2 |
-    g'2@breath <e' g'>2 |
-    f'2@breath <g' bes'>2 |
-    g'2@breath <ees' g'>2 |
-    f'2@breath <g' bis'>2 |
-    g'2@breath <e' g'>2 |
+    f''2@breath <g'' bis''>2 |
+    g''2@breath <e'' g''>2 |
+    f''2@breath <g'' bes''>2 |
+    g''2@breath <ees'' g''>2 |
+    f''2@breath <g'' bis''>2 |
+    g''2@breath <e'' g''>2 |
   }
 }
 

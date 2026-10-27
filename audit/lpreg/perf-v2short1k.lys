@@ -11,106 +11,106 @@ part m { clef treble }
 
 section Main {
   m {
-    g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' |
-    voice { d'2 f'2 | a'2 f'2 | d'2 f'2 | a'2 d'2 | } { d2 a2 | f2 a2 | d2 a2 | f2 d2 | }
-    g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' |
-    voice { d'2 f'2 | a'2 f'2 | d'2 f'2 | a'2 d'2 | } { d2 a2 | f2 a2 | d2 a2 | f2 d2 | }
-    g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' |
-    voice { d'2 f'2 | a'2 f'2 | d'2 f'2 | a'2 d'2 | } { d2 a2 | f2 a2 | d2 a2 | f2 d2 | }
-    g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' |
-    voice { d'2 f'2 | a'2 f'2 | d'2 f'2 | a'2 d'2 | } { d2 a2 | f2 a2 | d2 a2 | f2 d2 | }
-    g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' |
-    voice { d'2 f'2 | a'2 f'2 | d'2 f'2 | a'2 d'2 | } { d2 a2 | f2 a2 | d2 a2 | f2 d2 | }
-    g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' |
-    voice { d'2 f'2 | a'2 f'2 | d'2 f'2 | a'2 d'2 | } { d2 a2 | f2 a2 | d2 a2 | f2 d2 | }
-    g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' |
-    voice { d'2 f'2 | a'2 f'2 | d'2 f'2 | a'2 d'2 | } { d2 a2 | f2 a2 | d2 a2 | f2 d2 | }
-    g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' |
-    voice { d'2 f'2 | a'2 f'2 | d'2 f'2 | a'2 d'2 | } { d2 a2 | f2 a2 | d2 a2 | f2 d2 | }
-    g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' |
-    voice { d'2 f'2 | a'2 f'2 | d'2 f'2 | a'2 d'2 | } { d2 a2 | f2 a2 | d2 a2 | f2 d2 | }
-    g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' |
-    voice { d'2 f'2 | a'2 f'2 | d'2 f'2 | a'2 d'2 | } { d2 a2 | f2 a2 | d2 a2 | f2 d2 | }
-    g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' |
-    voice { d'2 f'2 | a'2 f'2 | d'2 f'2 | a'2 d'2 | } { d2 a2 | f2 a2 | d2 a2 | f2 d2 | }
-    g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' |
-    voice { d'2 f'2 | a'2 f'2 | d'2 f'2 | a'2 d'2 | } { d2 a2 | f2 a2 | d2 a2 | f2 d2 | }
-    g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' |
-    voice { d'2 f'2 | a'2 f'2 | d'2 f'2 | a'2 d'2 | } { d2 a2 | f2 a2 | d2 a2 | f2 d2 | }
-    g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' |
-    voice { d'2 f'2 | a'2 f'2 | d'2 f'2 | a'2 d'2 | } { d2 a2 | f2 a2 | d2 a2 | f2 d2 | }
-    g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' |
-    voice { d'2 f'2 | a'2 f'2 | d'2 f'2 | a'2 d'2 | } { d2 a2 | f2 a2 | d2 a2 | f2 d2 | }
-    g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' |
-    voice { d'2 f'2 | a'2 f'2 | d'2 f'2 | a'2 d'2 | } { d2 a2 | f2 a2 | d2 a2 | f2 d2 | }
-    g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' |
-    voice { d'2 f'2 | a'2 f'2 | d'2 f'2 | a'2 d'2 | } { d2 a2 | f2 a2 | d2 a2 | f2 d2 | }
-    g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' |
-    voice { d'2 f'2 | a'2 f'2 | d'2 f'2 | a'2 d'2 | } { d2 a2 | f2 a2 | d2 a2 | f2 d2 | }
-    g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' |
-    voice { d'2 f'2 | a'2 f'2 | d'2 f'2 | a'2 d'2 | } { d2 a2 | f2 a2 | d2 a2 | f2 d2 | }
-    g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' |
-    voice { d'2 f'2 | a'2 f'2 | d'2 f'2 | a'2 d'2 | } { d2 a2 | f2 a2 | d2 a2 | f2 d2 | }
-    g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' |
-    voice { d'2 f'2 | a'2 f'2 | d'2 f'2 | a'2 d'2 | } { d2 a2 | f2 a2 | d2 a2 | f2 d2 | }
-    g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' |
-    voice { d'2 f'2 | a'2 f'2 | d'2 f'2 | a'2 d'2 | } { d2 a2 | f2 a2 | d2 a2 | f2 d2 | }
-    g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' |
-    voice { d'2 f'2 | a'2 f'2 | d'2 f'2 | a'2 d'2 | } { d2 a2 | f2 a2 | d2 a2 | f2 d2 | }
-    g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' |
-    voice { d'2 f'2 | a'2 f'2 | d'2 f'2 | a'2 d'2 | } { d2 a2 | f2 a2 | d2 a2 | f2 d2 | }
-    g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' |
-    voice { d'2 f'2 | a'2 f'2 | d'2 f'2 | a'2 d'2 | } { d2 a2 | f2 a2 | d2 a2 | f2 d2 | }
-    g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' |
-    voice { d'2 f'2 | a'2 f'2 | d'2 f'2 | a'2 d'2 | } { d2 a2 | f2 a2 | d2 a2 | f2 d2 | }
-    g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' |
-    voice { d'2 f'2 | a'2 f'2 | d'2 f'2 | a'2 d'2 | } { d2 a2 | f2 a2 | d2 a2 | f2 d2 | }
-    g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' |
-    voice { d'2 f'2 | a'2 f'2 | d'2 f'2 | a'2 d'2 | } { d2 a2 | f2 a2 | d2 a2 | f2 d2 | }
-    g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' |
-    voice { d'2 f'2 | a'2 f'2 | d'2 f'2 | a'2 d'2 | } { d2 a2 | f2 a2 | d2 a2 | f2 d2 | }
-    g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' |
-    voice { d'2 f'2 | a'2 f'2 | d'2 f'2 | a'2 d'2 | } { d2 a2 | f2 a2 | d2 a2 | f2 d2 | }
-    g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' |
-    voice { d'2 f'2 | a'2 f'2 | d'2 f'2 | a'2 d'2 | } { d2 a2 | f2 a2 | d2 a2 | f2 d2 | }
-    g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' |
-    voice { d'2 f'2 | a'2 f'2 | d'2 f'2 | a'2 d'2 | } { d2 a2 | f2 a2 | d2 a2 | f2 d2 | }
-    g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' |
-    voice { d'2 f'2 | a'2 f'2 | d'2 f'2 | a'2 d'2 | } { d2 a2 | f2 a2 | d2 a2 | f2 d2 | }
-    g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' |
-    voice { d'2 f'2 | a'2 f'2 | d'2 f'2 | a'2 d'2 | } { d2 a2 | f2 a2 | d2 a2 | f2 d2 | }
-    g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' |
-    voice { d'2 f'2 | a'2 f'2 | d'2 f'2 | a'2 d'2 | } { d2 a2 | f2 a2 | d2 a2 | f2 d2 | }
-    g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' |
-    voice { d'2 f'2 | a'2 f'2 | d'2 f'2 | a'2 d'2 | } { d2 a2 | f2 a2 | d2 a2 | f2 d2 | }
-    g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' |
-    voice { d'2 f'2 | a'2 f'2 | d'2 f'2 | a'2 d'2 | } { d2 a2 | f2 a2 | d2 a2 | f2 d2 | }
-    g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' |
-    voice { d'2 f'2 | a'2 f'2 | d'2 f'2 | a'2 d'2 | } { d2 a2 | f2 a2 | d2 a2 | f2 d2 | }
-    g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' |
-    voice { d'2 f'2 | a'2 f'2 | d'2 f'2 | a'2 d'2 | } { d2 a2 | f2 a2 | d2 a2 | f2 d2 | }
-    g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' |
-    voice { d'2 f'2 | a'2 f'2 | d'2 f'2 | a'2 d'2 | } { d2 a2 | f2 a2 | d2 a2 | f2 d2 | }
-    g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' |
-    voice { d'2 f'2 | a'2 f'2 | d'2 f'2 | a'2 d'2 | } { d2 a2 | f2 a2 | d2 a2 | f2 d2 | }
-    g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' |
-    voice { d'2 f'2 | a'2 f'2 | d'2 f'2 | a'2 d'2 | } { d2 a2 | f2 a2 | d2 a2 | f2 d2 | }
-    g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' |
-    voice { d'2 f'2 | a'2 f'2 | d'2 f'2 | a'2 d'2 | } { d2 a2 | f2 a2 | d2 a2 | f2 d2 | }
-    g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' |
-    voice { d'2 f'2 | a'2 f'2 | d'2 f'2 | a'2 d'2 | } { d2 a2 | f2 a2 | d2 a2 | f2 d2 | }
-    g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' |
-    voice { d'2 f'2 | a'2 f'2 | d'2 f'2 | a'2 d'2 | } { d2 a2 | f2 a2 | d2 a2 | f2 d2 | }
-    g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' |
-    voice { d'2 f'2 | a'2 f'2 | d'2 f'2 | a'2 d'2 | } { d2 a2 | f2 a2 | d2 a2 | f2 d2 | }
-    g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' |
-    voice { d'2 f'2 | a'2 f'2 | d'2 f'2 | a'2 d'2 | } { d2 a2 | f2 a2 | d2 a2 | f2 d2 | }
-    g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' |
-    voice { d'2 f'2 | a'2 f'2 | d'2 f'2 | a'2 d'2 | } { d2 a2 | f2 a2 | d2 a2 | f2 d2 | }
-    g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' |
-    voice { d'2 f'2 | a'2 f'2 | d'2 f'2 | a'2 d'2 | } { d2 a2 | f2 a2 | d2 a2 | f2 d2 | }
-    g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' | g4 a b c' |
-    voice { d'2 f'2 | a'2 f'2 | d'2 f'2 | a'2 d'2 | } { d2 a2 | f2 a2 | d2 a2 | f2 d2 | }
+    g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' |
+    voice { d''2 f''2 | a''2 f''2 | d''2 f''2 | a''2 d''2 | } { d'2 a'2 | f'2 a'2 | d'2 a'2 | f'2 d'2 | }
+    g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' |
+    voice { d''2 f''2 | a''2 f''2 | d''2 f''2 | a''2 d''2 | } { d'2 a'2 | f'2 a'2 | d'2 a'2 | f'2 d'2 | }
+    g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' |
+    voice { d''2 f''2 | a''2 f''2 | d''2 f''2 | a''2 d''2 | } { d'2 a'2 | f'2 a'2 | d'2 a'2 | f'2 d'2 | }
+    g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' |
+    voice { d''2 f''2 | a''2 f''2 | d''2 f''2 | a''2 d''2 | } { d'2 a'2 | f'2 a'2 | d'2 a'2 | f'2 d'2 | }
+    g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' |
+    voice { d''2 f''2 | a''2 f''2 | d''2 f''2 | a''2 d''2 | } { d'2 a'2 | f'2 a'2 | d'2 a'2 | f'2 d'2 | }
+    g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' |
+    voice { d''2 f''2 | a''2 f''2 | d''2 f''2 | a''2 d''2 | } { d'2 a'2 | f'2 a'2 | d'2 a'2 | f'2 d'2 | }
+    g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' |
+    voice { d''2 f''2 | a''2 f''2 | d''2 f''2 | a''2 d''2 | } { d'2 a'2 | f'2 a'2 | d'2 a'2 | f'2 d'2 | }
+    g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' |
+    voice { d''2 f''2 | a''2 f''2 | d''2 f''2 | a''2 d''2 | } { d'2 a'2 | f'2 a'2 | d'2 a'2 | f'2 d'2 | }
+    g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' |
+    voice { d''2 f''2 | a''2 f''2 | d''2 f''2 | a''2 d''2 | } { d'2 a'2 | f'2 a'2 | d'2 a'2 | f'2 d'2 | }
+    g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' |
+    voice { d''2 f''2 | a''2 f''2 | d''2 f''2 | a''2 d''2 | } { d'2 a'2 | f'2 a'2 | d'2 a'2 | f'2 d'2 | }
+    g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' |
+    voice { d''2 f''2 | a''2 f''2 | d''2 f''2 | a''2 d''2 | } { d'2 a'2 | f'2 a'2 | d'2 a'2 | f'2 d'2 | }
+    g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' |
+    voice { d''2 f''2 | a''2 f''2 | d''2 f''2 | a''2 d''2 | } { d'2 a'2 | f'2 a'2 | d'2 a'2 | f'2 d'2 | }
+    g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' |
+    voice { d''2 f''2 | a''2 f''2 | d''2 f''2 | a''2 d''2 | } { d'2 a'2 | f'2 a'2 | d'2 a'2 | f'2 d'2 | }
+    g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' |
+    voice { d''2 f''2 | a''2 f''2 | d''2 f''2 | a''2 d''2 | } { d'2 a'2 | f'2 a'2 | d'2 a'2 | f'2 d'2 | }
+    g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' |
+    voice { d''2 f''2 | a''2 f''2 | d''2 f''2 | a''2 d''2 | } { d'2 a'2 | f'2 a'2 | d'2 a'2 | f'2 d'2 | }
+    g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' |
+    voice { d''2 f''2 | a''2 f''2 | d''2 f''2 | a''2 d''2 | } { d'2 a'2 | f'2 a'2 | d'2 a'2 | f'2 d'2 | }
+    g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' |
+    voice { d''2 f''2 | a''2 f''2 | d''2 f''2 | a''2 d''2 | } { d'2 a'2 | f'2 a'2 | d'2 a'2 | f'2 d'2 | }
+    g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' |
+    voice { d''2 f''2 | a''2 f''2 | d''2 f''2 | a''2 d''2 | } { d'2 a'2 | f'2 a'2 | d'2 a'2 | f'2 d'2 | }
+    g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' |
+    voice { d''2 f''2 | a''2 f''2 | d''2 f''2 | a''2 d''2 | } { d'2 a'2 | f'2 a'2 | d'2 a'2 | f'2 d'2 | }
+    g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' |
+    voice { d''2 f''2 | a''2 f''2 | d''2 f''2 | a''2 d''2 | } { d'2 a'2 | f'2 a'2 | d'2 a'2 | f'2 d'2 | }
+    g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' |
+    voice { d''2 f''2 | a''2 f''2 | d''2 f''2 | a''2 d''2 | } { d'2 a'2 | f'2 a'2 | d'2 a'2 | f'2 d'2 | }
+    g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' |
+    voice { d''2 f''2 | a''2 f''2 | d''2 f''2 | a''2 d''2 | } { d'2 a'2 | f'2 a'2 | d'2 a'2 | f'2 d'2 | }
+    g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' |
+    voice { d''2 f''2 | a''2 f''2 | d''2 f''2 | a''2 d''2 | } { d'2 a'2 | f'2 a'2 | d'2 a'2 | f'2 d'2 | }
+    g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' |
+    voice { d''2 f''2 | a''2 f''2 | d''2 f''2 | a''2 d''2 | } { d'2 a'2 | f'2 a'2 | d'2 a'2 | f'2 d'2 | }
+    g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' |
+    voice { d''2 f''2 | a''2 f''2 | d''2 f''2 | a''2 d''2 | } { d'2 a'2 | f'2 a'2 | d'2 a'2 | f'2 d'2 | }
+    g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' |
+    voice { d''2 f''2 | a''2 f''2 | d''2 f''2 | a''2 d''2 | } { d'2 a'2 | f'2 a'2 | d'2 a'2 | f'2 d'2 | }
+    g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' |
+    voice { d''2 f''2 | a''2 f''2 | d''2 f''2 | a''2 d''2 | } { d'2 a'2 | f'2 a'2 | d'2 a'2 | f'2 d'2 | }
+    g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' |
+    voice { d''2 f''2 | a''2 f''2 | d''2 f''2 | a''2 d''2 | } { d'2 a'2 | f'2 a'2 | d'2 a'2 | f'2 d'2 | }
+    g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' |
+    voice { d''2 f''2 | a''2 f''2 | d''2 f''2 | a''2 d''2 | } { d'2 a'2 | f'2 a'2 | d'2 a'2 | f'2 d'2 | }
+    g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' |
+    voice { d''2 f''2 | a''2 f''2 | d''2 f''2 | a''2 d''2 | } { d'2 a'2 | f'2 a'2 | d'2 a'2 | f'2 d'2 | }
+    g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' |
+    voice { d''2 f''2 | a''2 f''2 | d''2 f''2 | a''2 d''2 | } { d'2 a'2 | f'2 a'2 | d'2 a'2 | f'2 d'2 | }
+    g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' |
+    voice { d''2 f''2 | a''2 f''2 | d''2 f''2 | a''2 d''2 | } { d'2 a'2 | f'2 a'2 | d'2 a'2 | f'2 d'2 | }
+    g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' |
+    voice { d''2 f''2 | a''2 f''2 | d''2 f''2 | a''2 d''2 | } { d'2 a'2 | f'2 a'2 | d'2 a'2 | f'2 d'2 | }
+    g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' |
+    voice { d''2 f''2 | a''2 f''2 | d''2 f''2 | a''2 d''2 | } { d'2 a'2 | f'2 a'2 | d'2 a'2 | f'2 d'2 | }
+    g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' |
+    voice { d''2 f''2 | a''2 f''2 | d''2 f''2 | a''2 d''2 | } { d'2 a'2 | f'2 a'2 | d'2 a'2 | f'2 d'2 | }
+    g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' |
+    voice { d''2 f''2 | a''2 f''2 | d''2 f''2 | a''2 d''2 | } { d'2 a'2 | f'2 a'2 | d'2 a'2 | f'2 d'2 | }
+    g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' |
+    voice { d''2 f''2 | a''2 f''2 | d''2 f''2 | a''2 d''2 | } { d'2 a'2 | f'2 a'2 | d'2 a'2 | f'2 d'2 | }
+    g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' |
+    voice { d''2 f''2 | a''2 f''2 | d''2 f''2 | a''2 d''2 | } { d'2 a'2 | f'2 a'2 | d'2 a'2 | f'2 d'2 | }
+    g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' |
+    voice { d''2 f''2 | a''2 f''2 | d''2 f''2 | a''2 d''2 | } { d'2 a'2 | f'2 a'2 | d'2 a'2 | f'2 d'2 | }
+    g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' |
+    voice { d''2 f''2 | a''2 f''2 | d''2 f''2 | a''2 d''2 | } { d'2 a'2 | f'2 a'2 | d'2 a'2 | f'2 d'2 | }
+    g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' |
+    voice { d''2 f''2 | a''2 f''2 | d''2 f''2 | a''2 d''2 | } { d'2 a'2 | f'2 a'2 | d'2 a'2 | f'2 d'2 | }
+    g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' |
+    voice { d''2 f''2 | a''2 f''2 | d''2 f''2 | a''2 d''2 | } { d'2 a'2 | f'2 a'2 | d'2 a'2 | f'2 d'2 | }
+    g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' |
+    voice { d''2 f''2 | a''2 f''2 | d''2 f''2 | a''2 d''2 | } { d'2 a'2 | f'2 a'2 | d'2 a'2 | f'2 d'2 | }
+    g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' |
+    voice { d''2 f''2 | a''2 f''2 | d''2 f''2 | a''2 d''2 | } { d'2 a'2 | f'2 a'2 | d'2 a'2 | f'2 d'2 | }
+    g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' |
+    voice { d''2 f''2 | a''2 f''2 | d''2 f''2 | a''2 d''2 | } { d'2 a'2 | f'2 a'2 | d'2 a'2 | f'2 d'2 | }
+    g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' |
+    voice { d''2 f''2 | a''2 f''2 | d''2 f''2 | a''2 d''2 | } { d'2 a'2 | f'2 a'2 | d'2 a'2 | f'2 d'2 | }
+    g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' |
+    voice { d''2 f''2 | a''2 f''2 | d''2 f''2 | a''2 d''2 | } { d'2 a'2 | f'2 a'2 | d'2 a'2 | f'2 d'2 | }
+    g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' |
+    voice { d''2 f''2 | a''2 f''2 | d''2 f''2 | a''2 d''2 | } { d'2 a'2 | f'2 a'2 | d'2 a'2 | f'2 d'2 | }
+    g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' |
+    voice { d''2 f''2 | a''2 f''2 | d''2 f''2 | a''2 d''2 | } { d'2 a'2 | f'2 a'2 | d'2 a'2 | f'2 d'2 | }
+    g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' | g'4 a' b' c'' |
+    voice { d''2 f''2 | a''2 f''2 | d''2 f''2 | a''2 d''2 | } { d'2 a'2 | f'2 a'2 | d'2 a'2 | f'2 d'2 | }
   }
 }
 

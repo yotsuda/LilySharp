@@ -46,8 +46,8 @@ public class TodoIndexTests
         part x { }
         section A {
           partial 4
-          rh { g'4 | c''1@todo(r1 "high C?") | d''1 | e''1 | }
-          lh { r4 | c1 | d1 | e1@todo(l3) | }
+          rh { g''4 | c'''1@todo(r1 "high C?") | d'''1 | e'''1 | }
+          lh { r4 | c'1 | d'1 | e'1@todo(l3) | }
           x { c'4@todo | c'1 | c'1 | c'1 | }
         }
         form { A }
@@ -69,7 +69,7 @@ public class TodoIndexTests
 
         Assert.StartsWith("@todo(r1", Book[r1.Start..]);
         Assert.Equal("@todo(r1 \"high C?\")", Book[r1.Start..r1.End]);
-        Assert.Equal("c''1@todo(r1 \"high C?\")", Book[r1.HostStart..r1.HostEnd]);
+        Assert.Equal("c'''1@todo(r1 \"high C?\")", Book[r1.HostStart..r1.HostEnd]);
     }
 
     /// <summary>C2: the preview's page carries one invisible box per bar with the number the
@@ -96,10 +96,10 @@ public class TodoIndexTests
     /// <summary>B3: the caret's bar is the item written before it on its line, else the first
     /// after it there; a line that writes no music has none.</summary>
     [Theory]
-    [InlineData("lh { r4 | c1 | d^1", 2, "lh")]          // on the d
-    [InlineData("lh { r4 | c1 |^ d1", 1, "lh")]          // after the c's bar line: still the c
+    [InlineData("lh { r4 | c'1 | d'^1", 2, "lh")]        // on the d
+    [InlineData("lh { r4 | c'1 |^ d'1", 1, "lh")]        // after the c's bar line: still the c
     [InlineData("^  lh { r4", 0, "lh")]                  // the head of the line: its first item
-    [InlineData("d''1 | e''1 | }^", 3, "rh")]            // the end of the line: its last item
+    [InlineData("d'''1 | e'''1 | }^", 3, "rh")]          // the end of the line: its last item
     [InlineData("form ^{", null, null)]
     public void TheCaretsPlace_IsReadOnItsLine(string caretAt, int? measure, string? part)
     {
@@ -139,7 +139,7 @@ public class TodoIndexTests
         var place = server.PlaceAt(new PlaceAtParams
         {
             TextDocument = new TextDocumentIdentifier { Uri = uri },
-            Offset = Book.IndexOf("e1@todo", StringComparison.Ordinal),
+            Offset = Book.IndexOf("e'1@todo", StringComparison.Ordinal),
         });
         Assert.Equal((3, "lh", 7), (place.Measure, place.Part, place.Version));
         Assert.Null(place.Places);
@@ -148,7 +148,7 @@ public class TodoIndexTests
         var many = server.PlaceAt(new PlaceAtParams
         {
             TextDocument = new TextDocumentIdentifier { Uri = uri },
-            Offsets = [Book.IndexOf("d''1", StringComparison.Ordinal), Book.IndexOf("form", StringComparison.Ordinal)],
+            Offsets = [Book.IndexOf("d'''1", StringComparison.Ordinal), Book.IndexOf("form", StringComparison.Ordinal)],
         });
         Assert.Equal(new int?[] { 2, null }, many.Places!.Select(p => p.Measure));
         Assert.Equal(new[] { "rh", null }, many.Places!.Select(p => p.Part));

@@ -4,7 +4,7 @@
 octave absolute
 part m { }
 section A {
-  m { c'1@startTrillSpan | c'1@stopTrillSpan | }
+  m { c''1@startTrillSpan | c''1@stopTrillSpan | }
 }
 form { A }
 score { staff m }

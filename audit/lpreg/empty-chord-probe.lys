@@ -3,7 +3,7 @@ part melody
 
 section A {
   melody {
-    g4 <>@sfz g2 |
+    g'4 <>@sfz g'2 |
   }
 }
 

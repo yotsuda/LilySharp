@@ -73,7 +73,7 @@ public class VoiceSpanOutputsTests
 {
     private const string Book = """
         part melody
-        section Main { melody { c'1 | voice { g'2 a' | } { b,2 c, | } d1 | } }
+        section Main { melody { c''1 | voice { g'2 a' | } { b,2 c, | } d1 | } }
         form { Main }
         score { staff melody }
         """;
@@ -85,7 +85,7 @@ public class VoiceSpanOutputsTests
     /// exporter agreed with the page about it through both defects.</summary>
     private const string Sequential = """
         part melody
-        section Main { melody { c'1 | g'2 a' | b,2 c, | d1 | } }
+        section Main { melody { c''1 | g'2 a' | b,2 c, | d1 | } }
         form { Main }
         score { staff melody }
         """;
@@ -157,7 +157,7 @@ public class VoiceSpanOutputsTests
     /// are quavers under the rule and crotchets under the old fresh-quarter reset.</summary>
     private const string ValueBook = """
         part melody
-        section Main { melody { c'2 d'8 e' f' g' | voice { a'2 b' | } { c'' d'' e'' f'' g''4 a'' | } g'' a'' b'' c''' d''' e''' f''' g''' | } }
+        section Main { melody { c''2 d'8 e' f' g' | voice { a2 b' | } { c' d'' e'' f'' g''4 a'' | } g' a'' b'' c''' d''' e''' f''' g''' | } }
         form { Main }
         score { staff melody }
         """;
@@ -165,7 +165,7 @@ public class VoiceSpanOutputsTests
     /// <summary>The same piece with every value written out — the differential's other side.</summary>
     private const string ValueBookExplicit = """
         part melody
-        section Main { melody { c'2 d'8 e' f' g' | voice { a'2 b' | } { c''8 d'' e'' f'' g''4 a'' | } g''8 a'' b'' c''' d''' e''' f''' g''' | } }
+        section Main { melody { c''2 d'8 e' f' g' | voice { a2 b' | } { c'8 d'' e'' f'' g''4 a'' | } g'8 a'' b'' c''' d''' e''' f''' g''' | } }
         form { Main }
         score { staff melody }
         """;

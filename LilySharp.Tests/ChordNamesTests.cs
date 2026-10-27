@@ -400,7 +400,7 @@ public sealed class ChordNamesTests
         // An extended chord not in the vocabulary still displays (root + raw token)
         // and now resolves a Roman degree from its root, but carries no interval set
         // (unknown tones → no note expansion).
-        var src = "section Main {\n  m { time 4/4 c4 d e f | }\n  chords prog { Cweird9 }\n}\n" +
+        var src = "section Main {\n  m { time 4/4 c'4 d e f | }\n  chords prog { Cweird9 }\n}\n" +
                   "form { Main }\nscore x { chords prog  staff m }\n";
         var score = CollectWithRow(SyntaxTree.Parse(src));
         var chord = Assert.Single(score.ChordNames);

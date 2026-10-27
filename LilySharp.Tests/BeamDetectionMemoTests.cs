@@ -45,7 +45,7 @@ public class BeamDetectionMemoTests
         key c major
         part melody { clef treble }
         section Main { melody {
-          c8 d e f g f e d |
+          c'8 d e f g f e d |
           c16 d e f g8 a b4 c8 d |
           c8[ r8 c8] d8 e4 f4 |
           tuplet 3/2 { g8 a b } tuplet 3/2 { c d e } d2 |

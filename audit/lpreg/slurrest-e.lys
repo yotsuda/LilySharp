@@ -7,7 +7,7 @@ part melody
 
 section A {
   melody {
-    c,8( r c,) r c8( r c) r | c8( r c,) r c,8( r c) r | r( r r) r r2 |
+    c8( r c) r c'8( r c') r | c'8( r c) r c8( r c') r | r( r r) r r2 |
   }
 }
 

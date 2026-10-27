@@ -82,7 +82,7 @@ public class TieTargetValidatorTests
     public void ADanglingTieIsPointedAtTheHangingTieSpelling()
     {
         // The complaint can name what was probably meant, because Lily# already spells it.
-        var source = "part m { section A { c2.~ } } form { A } score { staff m }";
+        var source = "part m { section A { c'2.~ } } form { A } score { staff m }";
         var validator = new TieTargetValidator();
         validator.Validate(SyntaxTree.Parse(source));
         var d = Assert.Single(validator.Diagnostics.Where(x => x.Message.Contains("nothing after it")));
@@ -120,7 +120,7 @@ public class TieTargetValidatorTests
     [Fact]
     public void ATieIntoAPercentRepetitionNamesTheRepeat()
     {
-        var source = "part m { section A { f4 d e f~ | % | f4 g a b | } } form { A } score { staff m }";
+        var source = "part m { section A { f'4 d e f~ | % | f4 g a b | } } form { A } score { staff m }";
         var validator = new TieTargetValidator();
         validator.Validate(SyntaxTree.Parse(source));
         var d = Assert.Single(validator.Diagnostics);
@@ -173,6 +173,6 @@ public class TieTargetValidatorTests
         // LSP's live diagnostics both surface it.
         Assert.Contains(
             SemanticValidation.Run(SyntaxTree.Parse(
-                "part m { section A { c4~ d4 c2 } } form { A } score { staff m }")),
+                "part m { section A { c'4~ d4 c2 } } form { A } score { staff m }")),
             d => d.Code == DiagnosticCodes.TieTargetMismatch);
 }

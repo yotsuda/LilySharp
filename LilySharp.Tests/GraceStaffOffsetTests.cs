@@ -39,8 +39,8 @@ public class GraceStaffOffsetTests
             part up
             part low { clef bass }
             section Main {
-              up { c''4 c'' c'' c'' | c''1 | break c,4 c, c, c, | c,1 | }
-              low { c4 c c c | grace { d16 e } c4 c c c | c4 c c c | grace { d16 e } c4 c c c | }
+              up { c'''4 c''' c''' c''' | c'''1 | break c4 c c c | c1 | }
+              low { c'4 c' c' c' | grace { d'16 e' } c'4 c' c' c' | c'4 c' c' c' | grace { d'16 e' } c'4 c' c' c' | }
             }
             form { ~Main }
             score x { staff ~up  staff ~low }

@@ -44,12 +44,12 @@ public sealed class SectionDeclaredLabelTests
         section A2 "A'" {}
 
         part p1 {
-          section A2 { c'4 d' e' r }
-          section B { c'1 }
+          section A2 { c''4 d' e' r }
+          section B { c''1 }
         }
         part p2 {
-          section A2 { e'4 f' g' r }
-          section B { e'1 }
+          section A2 { e''4 f' g' r }
+          section B { e''1 }
         }
 
         form { A2 B A2 "A''" ~A2 }
@@ -85,8 +85,8 @@ public sealed class SectionDeclaredLabelTests
     public void WithNoForm_TheDeclarationOrderPrintsTheLabelToo()
     {
         const string single = """
-            section A "Verse 1" { c'4 d' e' f' }
-            section B { g'1 }
+            section A "Verse 1" { c''4 d' e' f' }
+            section B { g''1 }
             """;
         Assert.Equal(new[] { "Verse 1", "B" }, Labels(single, null));
     }
@@ -131,7 +131,7 @@ public sealed class SectionDeclaredLabelTests
     [InlineData("section A2 \"A'\" |", "section A2 |")]
     public void TheEditor_ReadsALabelledHeaderAsTheUnlabelledOne(string labelled, string plain)
     {
-        const string head = "part p1 { section A2 { c'4 d' e' r } }\n";
+        const string head = "part p1 { section A2 { c''4 d' e' r } }\n";
         static LilySharpLanguageServer.CompletionContext At(string text)
             => LilySharpLanguageServer.GetCompletionContext(text.Replace("|", ""), text.IndexOf('|'));
 

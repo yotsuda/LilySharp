@@ -42,10 +42,10 @@ public class RepeatTremoloChordRepTests
         part v { }
         section Main {
           v {
-            <c e g>1 |
+            <c' e' g'>1 |
             repeat tremolo 4 { q16 }
             repeat tremolo 4 { q16 }
-            repeat tremolo 4 { c16 q16 } |
+            repeat tremolo 4 { c'16 q16 } |
           }
         }
         form { ~Main }

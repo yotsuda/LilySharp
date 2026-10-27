@@ -3,8 +3,8 @@
 // parsed but silently printed nothing until the collector was connected.
 part melody { clef treble }
 
-section A { melody { c4 d e f | g2 g | } }
-section B { melody { c4 b a g | c1 | } }
+section A { melody { c'4 d e f | g2 g | } }
+section B { melody { c'4 b a g | c1 | } }
 
 form { A _"poco a poco dim." B }
 

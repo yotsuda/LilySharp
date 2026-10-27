@@ -8,8 +8,8 @@ part v { }
 
 section Main {
   v {
-    repeat tremolo 16 { b32 a32 } repeat tremolo 8 { b32 a32 } |
-    repeat tremolo 16 { b32 c'32 } repeat tremolo 8 { b32 c'32 } |
+    repeat tremolo 16 { b'32 a'32 } repeat tremolo 8 { b'32 a'32 } |
+    repeat tremolo 16 { b'32 c''32 } repeat tremolo 8 { b'32 c''32 } |
   }
 }
 

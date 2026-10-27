@@ -23,7 +23,8 @@ namespace LilySharp.Tests;
 /// <summary>
 /// Tests for the <c>octave absolute</c> / <c>octave relative</c> directive.
 /// Relative is the default; absolute makes <c>'</c>/<c>,</c> offsets from a
-/// fixed C4 anchor (bare c = C4), with no carry between notes.
+/// fixed C3 anchor (bare c = C3, as LilyPond's <c>\fixed c</c>; owner's decision
+/// 2026-10-28 — it was C4), with no carry between notes.
 /// </summary>
 [Trait("Category", "Unit")]
 public class OctaveModeTests
@@ -43,12 +44,13 @@ score t {{ staff {{ melody }} }}
 ";
 
     [Fact]
-    public void Absolute_IsStateless_OffsetFromC4()
+    public void Absolute_IsStateless_OffsetFromC3()
     {
-        // octave absolute: bare c = C4, each ' = +1 octave, each , = -1, no carry.
+        // octave absolute: bare c = C3 (owner's decision 2026-10-28), each ' = +1 octave,
+        // each , = -1, no carry.
         var trace = Trace(Wrap("cis'4 c'' c' e' | c d e f |", prefix: "octave absolute\n"));
         Assert.Equal(
-            new[] { "C#5", "C6", "C5", "E5", "C4", "D4", "E4", "F4" },
+            new[] { "C#4", "C5", "C4", "E4", "C3", "D3", "E3", "F3" },
             trace);
     }
 
@@ -58,8 +60,9 @@ score t {{ staff {{ melody }} }}
         // No directive ⇒ relative (unchanged): the same text accumulates octaves
         // (each ' adds to the previous note's octave), so it must NOT match the
         // absolute reading. Guards against the default flipping to absolute.
+        // The frame opens on F3 (owner's decision 2026-10-28), so cis' is C#4.
         var trace = Trace(Wrap("cis'4 c'' c' e' |"));
-        Assert.Equal(new[] { "C#5", "C7", "C8", "E9" }, trace);
+        Assert.Equal(new[] { "C#4", "C6", "C7", "E8" }, trace);
     }
 
     [Fact]
@@ -67,8 +70,9 @@ score t {{ staff {{ melody }} }}
     {
         // relative … then `octave absolute` … then `octave relative` again.
         var trace = Trace(Wrap("c'4 d e octave absolute c' c'' octave relative g a |"));
-        //                      C5  D5 E5            C5  C6              G5 A5
-        Assert.Equal(new[] { "C5", "D5", "E5", "C5", "C6", "G5", "A5" }, trace);
+        //                      C4  D4 E4            C4  C5              G4 A4
+        // (owner's decision 2026-10-28: the frame opens on F3 and absolute c is C3)
+        Assert.Equal(new[] { "C4", "D4", "E4", "C4", "C5", "G4", "A4" }, trace);
     }
 
     [Fact]
@@ -78,8 +82,8 @@ score t {{ staff {{ melody }} }}
         // section B starts back in the file-default relative mode.
         var src = @"
 part melody { clef treble }
-section A { melody { octave absolute  c' c'' | } }
-section B { melody { c' c'' | } }
+section A { melody { octave absolute  c'' c''' | } }
+section B { melody { c'' c'' | } }
 form { A B }
 score t { staff melody }
 ";
@@ -87,8 +91,8 @@ score t { staff melody }
         collector.Collect(SyntaxTree.Parse(src), "melody");
         var trace = collector.PitchTrace.Select(e => e.Pitch).ToArray();
 
-        // A: absolute → C5, C6.  B: relative → c' = C5, then c'' accumulates to
-        // C7 (NOT the absolute C6), proving the mode reverted at the boundary.
+        // A: absolute → C5, C6.  B: relative → c'' = C5 (from F3), then c'' accumulates
+        // to C7 (NOT the absolute C5), proving the mode reverted at the boundary.
         Assert.Equal("C5", trace[0]);
         Assert.Equal("C6", trace[1]);
         Assert.Equal("C5", trace[2]);
@@ -113,9 +117,10 @@ score t {{ staff melody }}
 ";
 
     [Theory]
-    [InlineData("theme",  new[] { "C4", "D4", "E4", "F4" })]
-    [InlineData("theme'", new[] { "C5", "D5", "E5", "F5" })]
-    [InlineData("theme,", new[] { "C3", "D3", "E3", "F3" })]
+    // Absolute bare c is C3 (owner's decision 2026-10-28).
+    [InlineData("theme",  new[] { "C3", "D3", "E3", "F3" })]
+    [InlineData("theme'", new[] { "C4", "D4", "E4", "F4" })]
+    [InlineData("theme,", new[] { "C2", "D2", "E2", "F2" })]
     public void AnAbsolutePhraseReference_TakesItsTrailingMarks(string reference, string[] pitches)
     {
         Assert.Equal(pitches, Trace(PhraseBook(reference, absolute: true)));
@@ -150,10 +155,11 @@ score t {{ staff melody }}
     public void AReferencesMarkDoesNotLeakPastIt_InAbsoluteMode()
     {
         // The shift is scoped to the body: OctaveBase is pushed at the reference and
-        // popped at its end marker, so the bare `c` AFTER the reference is C4 again. Two
-        // references in a row each start from the unshifted anchor rather than compounding.
+        // popped at its end marker, so the bare `c` AFTER the reference is C3 again (the
+        // absolute anchor since the owner's decision 2026-10-28). Two references in a row
+        // each start from the unshifted anchor rather than compounding.
         Assert.Equal(
-            new[] { "C5", "D5", "E5", "F5", "C4", "C3", "D3", "E3", "F3" },
+            new[] { "C4", "D4", "E4", "F4", "C3", "C2", "D2", "E2", "F2" },
             Trace(PhraseBook("theme' c4 theme,", absolute: true)));
     }
 }

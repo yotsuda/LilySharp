@@ -30,7 +30,7 @@ public sealed class SvgGeneratorFallbackTests
 {
     private const string TwoScores =
         "part bl { clef bass tuning bass }\n" +
-        "section A { bl { c4 d e f | } }\n" +
+        "section A { bl { c'4 d e f | } }\n" +
         "form { A }\n" +
         "score { staff bl  tab bl }\n" +
         "score { tab bl }\n";

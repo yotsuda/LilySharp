@@ -297,12 +297,12 @@ public class SkylineStaffSpacingTests
             part lh { clef bass }
 
             section Main {
-              rh { c'4 d' e' f' |
+              rh { c''4 d'' e'' f'' |
                    break
-                   c,,4 d,, e,, f,, | }
-              lh { c,4 d, e, f, |
+                   c,4 d, e, f, | }
+              lh { c4 d e f |
                    break
-                   c''4 d'' e'' f'' | }
+                   c'''4 d''' e''' f''' | }
             }
 
             form { ~Main }
@@ -363,7 +363,7 @@ public class SkylineStaffSpacingTests
             part melody { clef treble }
 
             section Main {
-              melody { g4 a g a | g4 a g a | }
+              melody { g'4 a' g' a' | g'4 a' g' a' | }
               chords prog { C | C | }
             }
 

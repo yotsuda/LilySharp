@@ -1375,15 +1375,23 @@ public sealed partial class MeasureCollector
     /// baritone 4 → f. The octave clefs keep their parent's: Lily#'s pitches are written, not
     /// sounding, and the twin's \transpose moves a slash with the real pitches
     /// (LilyPondExporter.Score.cs, the clef half of AppendTabTranspose).</remarks>
+    // ⚠️ AN OCTAVE CLEF'S MIDDLE LINE IS ITS SOUNDING PITCH (owner's decision 2026-10-28: Lily#'s
+    // octaves are LilyPond's): a `treble_8` part is written as it sounds, the guitar's low string
+    // `e,` = E2, and the clef draws it an octave up, where a treble staff has E3 — as LilyPond's
+    // treble_8 does. Until then the octave clefs drew from the plain clef's line and the written
+    // pitch was the display one, sounded an octave away (Tunings.ClefOctaveShift).
     internal static (int Step, int Octave) MiddleLinePitch(ClefType clef) => clef switch
     {
-        ClefType.Bass or ClefType.Bass8Below => (1, 3),    // d
+        ClefType.Bass8Below => (1, 2),                     // d,
+        ClefType.Treble8Below => (6, 3),                   // b
+        ClefType.Treble8Above => (6, 5),                   // b'
+        ClefType.Bass => (1, 3),                           // d
         ClefType.Alto or ClefType.Percussion => (0, 4),    // c'
         ClefType.Tenor => (5, 3),                          // a
         ClefType.Soprano => (4, 4),                        // g'
         ClefType.MezzoSoprano => (2, 4),                   // e'
         ClefType.Baritone => (3, 3),                       // f
-        _ => (6, 4),                                       // b' — treble, treble_8, treble^8
+        _ => (6, 4),                                       // b' — treble
     };
 
     internal static BarlineType ParseBarlineType(string text) => text switch

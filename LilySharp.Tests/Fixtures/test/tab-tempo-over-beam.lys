@@ -12,7 +12,7 @@ time 4/4
 part bl {
   clef bass
   tuning bass
-  section A { fis,,8\4 cis,\3 e,\3 fis,\3 e,\3 cis,\3 b,,\4 cis,\3 | fis,,8\4 cis,\3 e,\3 fis,\3 e,\3 cis,\3 b,,\4 cis,\3 | }
+  section A { fis,8\4 cis\3 e\3 fis\3 e\3 cis\3 b,\4 cis\3 | fis,8\4 cis\3 e\3 fis\3 e\3 cis\3 b,\4 cis\3 | }
 }
 
 form { A }

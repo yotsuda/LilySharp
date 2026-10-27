@@ -29,7 +29,7 @@ part rh { clef treble }
 part lh { clef bass octave 3 }
 
 section Main {
-  rh { c'1 | c'1 | }
+  rh { c''1 | c'1 | }
   lh { c4 d e f | <c'' e g>1 | }
 }
 

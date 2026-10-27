@@ -47,7 +47,7 @@ public sealed class TransposeScopeTests
         part m { clef treble }
 
         section Main {
-          m { c4 d e f | }
+          m { c'4 d e f | }
         }
 
         form { ~Main }
@@ -61,7 +61,7 @@ public sealed class TransposeScopeTests
         part m { clef treble transpose d }
 
         section Main {
-          m { c4 d e f | }
+          m { c'4 d e f | }
         }
 
         form { ~Main }
@@ -79,7 +79,7 @@ public sealed class TransposeScopeTests
         part m { clef treble }
 
         section Main {
-          m { c4 d e f | }
+          m { c'4 d e f | }
         }
 
         form { ~Main }

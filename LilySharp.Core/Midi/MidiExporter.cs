@@ -34,22 +34,22 @@ public sealed class MidiExporter
     // note stays on the metric grid. Accumulated by ProcessGrace, consumed once
     // by the next timed event (note/chord/rest) via ConsumeGraceSteal.
     private int _pendingGraceSteal;
-    private int _currentOctave = 4;
-    private int _currentNoteName = 0; // c=0, d=1, e=2, f=3, g=4, a=5, b=6
+    private int _currentOctave = LilySharp.Core.Svg.Model.InstrumentDefaults.DefaultAnchorOctave;
+    private int _currentNoteName = RelativeOctave.FrameStartStep; // c=0, d=1, e=2, f=3, g=4, a=5, b=6
     // Octave mode (mirrors MeasureCollector): false = relative (default), true =
     // `octave absolute` ('/, are offsets from a fixed C4 anchor, no carry).
     private bool _octaveAbsolute;
 
     // The part's RELATIVE-frame seed: `octave N` > instrument preset > the clef's own
     // octave, exactly as the page resolves it (InstrumentDefaults.AnchorOctave).
-    private int _partOctaveAnchor = 4;
+    private int _partOctaveAnchor = LilySharp.Core.Svg.Model.InstrumentDefaults.DefaultAnchorOctave;
 
     // …and the part's ABSOLUTE-mode base, which is a DIFFERENT rule and must not be folded
     // into the one above: only an explicit `octave N` moves it (OctaveContext: "the clef
     // default is deliberately NOT used here"). One field served both until 2026-08-02, so
     // giving the relative seed its clef step immediately dragged `octave absolute` parts
     // down with it.
-    private int _partAbsoluteBase = 4;
+    private int _partAbsoluteBase = LilySharp.Core.Svg.Model.InstrumentDefaults.DefaultAnchorOctave;
 
     // Preview-synth timbre family of the part currently playing, resolved
     // from its `instrument` property (or the part name itself).
@@ -753,7 +753,7 @@ public sealed class MidiExporter
                 _currentTimbre = PartTimbre(part.Name.Text);
                 _currentPart = part.Name.Text;
                 ProcessChildren(part, track, conductorTrack);
-                (_partOctaveAnchor, _partAbsoluteBase) = (4, 4);
+                (_partOctaveAnchor, _partAbsoluteBase) = (LilySharp.Core.Svg.Model.InstrumentDefaults.DefaultAnchorOctave, LilySharp.Core.Svg.Model.InstrumentDefaults.DefaultAnchorOctave);
                 _currentTimbre = 0;
                 _currentPart = null;
                 break;
@@ -794,12 +794,12 @@ public sealed class MidiExporter
                 break;
 
             case ClefDeclarationSyntax:
-                // A clef is drawing only: it moves no octave frame (InstrumentDefaults.DefaultAnchorOctave).
+                // A clef is drawing only: it moves no octave frame (LilySharp.Core.Svg.Model.InstrumentDefaults.DefaultAnchorOctave).
                 break;
 
             case CueExpressionSyntax cue:
                 // A cue clef is drawing only: the body plays in the running relative frame
-                // (InstrumentDefaults.DefaultAnchorOctave).
+                // (LilySharp.Core.Svg.Model.InstrumentDefaults.DefaultAnchorOctave).
                 ProcessNode(cue.Body, track, conductorTrack);
                 break;
 
@@ -987,7 +987,7 @@ public sealed class MidiExporter
                     && _phraseBodies.TryGetValue(phName, out var phraseBody)
                     && _activePhrases.Add(phName))
                 {
-                    _currentNoteName = 0;
+                    _currentNoteName = RelativeOctave.FrameStartStep;
                     // Trailing marks on the reference (Chorus' / Chorus,) raise or
                     // lower the movable phrase, matching the SVG collector's frame shift.
                     _currentOctave = _partOctaveAnchor + varRef.OctaveOffset;
@@ -1034,7 +1034,7 @@ public sealed class MidiExporter
                     else if (anchorStep is { } astep)
                     {
                         int oct = RelativeOctave.Resolve(
-                            0, _partOctaveAnchor + varRef.OctaveOffset, astep, 0);
+                            RelativeOctave.FrameStartStep, _partOctaveAnchor + varRef.OctaveOffset, astep, 0);
                         _currentNoteName = astep;
                         _currentOctave = oct;
                     }
@@ -1085,7 +1085,7 @@ public sealed class MidiExporter
         absBase += octaveOffset;
         var pitch = _partPitchLanes.TryGetValue(partName, out var saved)
             ? saved
-            : (NoteName: 0, Octave: anchor, Dur: Fraction.Quarter);
+            : (NoteName: RelativeOctave.FrameStartStep, Octave: anchor, Dur: Fraction.Quarter);
         _currentNoteName = pitch.NoteName;
         _currentOctave = pitch.Octave;
         _defaultDuration = pitch.Dur;
@@ -1106,7 +1106,7 @@ public sealed class MidiExporter
         body();
         _partPitchLanes[partName] = (_currentNoteName, _currentOctave, _defaultDuration);
         _partVelocity[partName] = _velocity;
-        (_partOctaveAnchor, _partAbsoluteBase) = (4, 4);
+        (_partOctaveAnchor, _partAbsoluteBase) = (LilySharp.Core.Svg.Model.InstrumentDefaults.DefaultAnchorOctave, LilySharp.Core.Svg.Model.InstrumentDefaults.DefaultAnchorOctave);
         _currentTimbre = 0;
         _currentTransposeSemitones = 0;
         _currentPart = outerPart;
@@ -1264,7 +1264,7 @@ public sealed class MidiExporter
                 absBase += octaveOffset;
                 var pitch = _partPitchLanes.TryGetValue(pname, out var saved)
                     ? saved
-                    : (NoteName: 0, Octave: anchor, Dur: Fraction.Quarter);
+                    : (NoteName: RelativeOctave.FrameStartStep, Octave: anchor, Dur: Fraction.Quarter);
                 _currentTick = tickLanes.TryGetValue(pname, out int lt) ? lt : sectionStart;
                 _currentNoteName = pitch.NoteName;
                 _currentOctave = pitch.Octave;
@@ -1303,7 +1303,7 @@ public sealed class MidiExporter
                 _currentTick += PaddingTicks(sectionPart);
                 tickLanes[pname] = _currentTick;
                 sectionEnd = Math.Max(sectionEnd, _currentTick);
-                (_partOctaveAnchor, _partAbsoluteBase) = (4, 4);
+                (_partOctaveAnchor, _partAbsoluteBase) = (LilySharp.Core.Svg.Model.InstrumentDefaults.DefaultAnchorOctave, LilySharp.Core.Svg.Model.InstrumentDefaults.DefaultAnchorOctave);
             }
             else if (child is ChordPartBlockSyntax)
             {
@@ -3337,7 +3337,7 @@ public sealed class MidiExporter
                         ? ShapeAnchorOf(reset.AnchorShape) : null;
                     (phraseFrames ??= new()).Push((_currentTransposeSemitones,
                         _partAbsoluteBase, anchor, reset.OctaveOffset, shapeAnchor));
-                    _currentNoteName = 0;
+                    _currentNoteName = RelativeOctave.FrameStartStep;
                     _currentOctave = _partOctaveAnchor + reset.OctaveOffset;
                     _currentTransposeSemitones += PhraseTransposeSemitones();
                     _partAbsoluteBase += reset.OctaveOffset;
@@ -3375,7 +3375,7 @@ public sealed class MidiExporter
                     {
                         _currentNoteName = astep;
                         _currentOctave = RelativeOctave.Resolve(
-                            0, _partOctaveAnchor + offset, astep, 0);
+                            RelativeOctave.FrameStartStep, _partOctaveAnchor + offset, astep, 0);
                     }
                     break;
                 }

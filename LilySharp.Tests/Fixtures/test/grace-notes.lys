@@ -11,7 +11,7 @@ part melody
 
 phrase graceBasic {
   // Basic grace notes before main note
-  grace { d16 e } f4 g2 r4 |
+  grace { d'16 e } f4 g2 r4 |
 }
 
 phrase acciaccaturaTest {
@@ -21,12 +21,12 @@ phrase acciaccaturaTest {
 
 phrase appoggiaturaTest {
   // Appoggiatura (long grace note, no slash)
-  appoggiatura { c8 } d4 e2 r4 |
+  appoggiatura { c'8 } d4 e2 r4 |
 }
 
 phrase graceChord {
   // Grace note before chord
-  grace { e16 } <c e g>4 r2 r4 |
+  grace { e'16 } <c e g>4 r2 r4 |
 }
 
 section Main {

@@ -6,7 +6,7 @@ part v { }
 
 section Main {
   v {
-    repeat tremolo 32 { <c e>32 } |
+    repeat tremolo 32 { <c' e'>32 } |
   }
 }
 

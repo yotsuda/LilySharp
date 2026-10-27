@@ -127,22 +127,46 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
-### 1.1 第1026セッション（2026-10-27・YT-DELL2）
+### 1.1 第1028セッション（2026-10-28・YT-DELL2）
 
-第1025 と同じ会話の続き。`-Start p1026`（開始 HEAD `bf6156976`・第1024 を ARCHIVE へ）。作業場所は Lab `sessions/p1026/`（`exchange.log`）。
-- **ユーザー「うまく作曲できただろうか」（`Untitled-1.lys`・かわいいポップス）→ 講評**: 第1024 の記録で送り先が **`name "Auto", vendor copilot, id auto, family claude-fable-5.1`**＝自動選択が Copilot の **Auto**（要求ごとに Copilot がモデルを選ぶ窓口・入力上限 93 万で一番大きい）を選んでいた＝「OpenAI」「Auto」の作曲者の正体。曲は 40 小節・7 の和音・主和音で終止と骨組みは良いが、keys の旋律は plan「D4–A5・ファイル上も同音域」なのに `d'`（= D5）＝LilyPond の癖が警告でも残る・ギター `<b d fis a>` は B が上・ドラムは全小節同じ。
-- **ユーザー「1（Auto を避ける）直して」**: `pickModel` が `isAutoModel`（id `auto`）を候補から外す（それしか無ければ使う）・`ChatClient.label` は Auto なら `copilot/auto`・`modelName` を渡さない・Select AI Model の説明も「auto — Copilot picks the model」。網 npm +1（511）・tsc 0。両 CHANGELOG・MANUAL-CHECKS C38。
-- **ユーザーの問い（未決）**: 「2（LilyPond の癖）は AI が LilyPond の文法に捉われているから？ preset に octave を含めないのが一番効くのでは」→「`octave absolute` のときはパートの octave を無視しては」＝報告で答えた（本便では実装しない）。
-判定（2026-10-27・第1026 の終わり）: 次はユーザーの判断（absolute の基準をどうするか）。
+第1027 と同じ会話の続き。ブランチ `octave-base`。作業場所は Lab `sessions/p1028/`（`legacy.json`・`literals.json`・`migrate*.txt`・`BRIEF.md`・`zz/`＝使い捨ての移行器 `Zz*.cs`）。
+- **ユーザー「安全に進めて」＝リポジトリの楽譜とテストを LilyPond のオクターブへ移す**:
+  - 旧規則の build（worktree `C:\MyProj\LilySharp-legacy`＝`bd6d62715`）で各楽譜・テストの楽譜断片・LP probe を鳴らした音と描いた音を JSON に落とした。
+  - `OctaveModeConverter.MigrateFromLegacy` が各音を旧版で鳴った高さへ印で戻し、音の署名と描画の軌跡を照合する。採点の歩き（collector）が届かない音（楽譜の無い `part X { section … }`）は `RemarkByPerformance` が演奏に照らして 1 音ずつ直す。
+  - **`samples/` は触らない**（第1027 で Claude が `git checkout -- '*.lys'` でユーザーの未 commit の 5 冊を壊した＝ユーザーが VS Code の timeline で戻す）。
+- **残りの失敗 545 は 4 つの worktree（`ob-fix1`〜`4`）で並行に直して merge した**:
+  - 規則 1: LP の実測と比べるテストは楽譜の方を戻し、数値は変えない。
+  - 規則 2: 出力テキストは、同じ音楽であることを確かめてから期待値を直す。
+  - 規則 3: 旧規則そのもののテストは新しい規則を確かめる形に書き換える。
+- **製品の直し 1 件（第3 群の報告）**: フレーズ参照の後の音は、フレーズの anchor を F3 の枠から読む。MIDI（`MidiExporter` 2 か所）と MusicXML（2 か所）が C から読んでいたので、g・a・b で始まる本体の後の音が 1 オクターブ低かった（譜面は正しかった）。blues-in-f と rising-sun を旧版の音に合わせて直した。
+- 文書は SYNTAX_REFERENCE・GRAMMAR・TUTORIAL（例を `c'4` 始まりに）・CLI_REFERENCE を直した。`lysc octave --help`、補完の `absolute` の説明、レッスン 1 の字も直した。両 CHANGELOG（**BREAKING**）、MANUAL-CHECKS C39。
+- 結果: full **13404 / 0 / 2**、npm **513 / 0**。
+- **残り（ユーザー判断）**:
+  - ⑴ ユーザー自身の旧規則の `.lys` を移すコマンド（旧版を使わず規則の差で書き直す方式）。
+  - ⑵ レッスン 1 は STEP 2 で `instrument cello` を足しても音が動かなくなった。旋律が E4 のまま、ヘ音記号の上に出る。
+  - ⑶ ユーザーが戻した `samples/` の 5 冊（amazing-grace・canon-in-d・fur-elise・greensleeves・nocturne）の移行。
+  - ⑷ 移調楽器を書いた音で綴り直す変換（「B」・トランペットの part に付く `pitch concert` を外せる）。
+  - ⑸ Ctrl+Shift+↑ で `pitch` の written／concert を切り替えたとき、楽譜も書き直す。
+  - ⑹ OMR の `.lys` 出力を新しいオクターブへ（OMR のセッションに伝える）。
+- **見つけた不具合（オクターブとは無関係）**: `grace { d'16@caesura e'16 } c'1` が `BeamScoringProblem.MinimumDy` の `Math.Sign(NaN)` で落ちる（`GraceNoteEngraver.QuantGraceBeam` 経由）。`@breath` や D5 なら落ちない（第2 群の報告）。
+判定（2026-10-28・第1028 の終わり）: `octave-base` を master へ merge 済み（push はユーザー）。
 
-## 以下は第1025セッションの経緯
+## 以下は第1027セッションの経緯
 
-### 1.1 第1025セッション（2026-10-27・YT-DELL2）
+### 1.1 第1027セッション（2026-10-28・YT-DELL2）
 
-第1024 と同じ会話の続き。`-Start p1025`（開始 HEAD `b594a7466`・full **13392 / 0 / 2 / 13394**・第1023 を ARCHIVE へ）。作業場所は Lab `sessions/p1025/`（`Untitled-2.lys`・png）。
-- **ユーザー「作曲してもらった楽譜（`Untitled-2.lys`・バンド 4 段）。五線左端のパート名が見切れているのを直して」**: png で 1 段目 "Electric Guitar" の頭・2 段目以降 "E. Bass" の頭が紙の左端で切れていた。字下げは LilyPond の 15mm 固定（`EffectiveIndent` は意図して名前から作らない・第586 の決定）、名前は `InstrumentNameRightEdge`（LP の calc-x-offset）で字下げより広いと区切りの左へ溢れる＝LP も同じく余白へ・紙の外へ出す。**LILYSHARP-OWN の直し**: `EffectiveIndent(options, score)`／`EffectiveShortIndent` が、最も広い長い（短い）名前の左端が紙の端から 1 ss（`NameEdgeGutter`）手前で止まる字下げ（`NameFitIndent`＝名前幅＋区切りの届き＋0.3＋1−MarginLeft）まで広げる。区切りの届きは `MultiStaffLayouter.SystemStartReach`（bar・bracket・brace を PlacedDelimiters と同じ鎖で・brace の高さは 4n+7(n−1) で多めに見積もる）。LayoutEngine と SystemBreaker の両方が同じ値（字下げは一つの家）。`indent 0` は今まで通り（1 段目の名前を描かない）。LP の中に収まる名前は字下げ不変＝網 `InstrumentNameOnPaperTests`（広げる／不変の 2 本・SVG の名前の左端を紙の座標で測る）。`InstrumentNamePadding` を internal に。`audit/magic_constants.csv`・`docs/APPROXIMATIONS.md` を再生成（新しい OWN 3・Yellow 2）。両 CHANGELOG・MANUAL-CHECKS C37。
-- ⚠️ LP の双子と 1 段目の字下げが変わるのは「LP では名前が紙の外に出る本」だけ（双子の掃きでは段割れが違いうる）。
-判定（2026-10-27・第1025 の終わり）: 次はユーザーの指示（C9〜C37）。
+第1026 と同じ会話の続き。**ユーザー決定（2026-10-28）＝Lily# のオクターブを LilyPond に揃える**（「今ならまだユーザーはほとんどいない」）。
+- 内容は 4 つ。
+  - absolute でも relative でも、どの楽器でも、セクションの始まりの基準は LilyPond と同じ（absolute の裸の `c` = C3、relative の新しい枠は F3）。
+  - preset はオクターブを動かさない（OMR の楽譜に後から `instrument bass` を書いても音符が動かない）。
+  - `octave N` は明示のずらしとして残す。
+  - オクターブ記号付きの音部記号（treble_8）は鳴る高さで書く。
+- 作曲はこう変わった。
+  - AI は `pitch concert` で書き、開くときに外す。オクターブだけの移調楽器は書く高さへ、半音の移調楽器（トランペット）は part に `pitch concert` を残す。
+  - 開くときに `octave N` の杖を落とす。
+  - VS Code core 専用のモデルは避ける。
+- `pitch` の説明をステータスバーに出す（ユーザーはホバーよりステータスバーを選んだ・語 `concert` は今のまま）。
+- 試行の commit は `6fbd44e8b`〜`92f5d8df3`。AI の作曲が良くなったことを確かめてから、リポジトリの書き換え（第1028）に進んだ。
 
 ## 2. 開いている作業
 

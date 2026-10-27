@@ -6,7 +6,7 @@ part melody { clef treble }
 
 section Main {
   melody {
-    c4@text("dolce") d e f |
+    c'4@text("dolce") d e f |
     g4@p@cresc a@text("poco") b c@f |
     d4@text("espress.") c b@text("sub.").up a |
   }

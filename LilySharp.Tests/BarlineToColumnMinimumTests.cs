@@ -40,15 +40,17 @@ public class BarlineToColumnMinimumTests
     /// bar 1 → the first head of bar 2. Until session 693 Lily# priced this pair along X alone and
     /// put every accidental in front: fis, 5.077, ees, 4.897, fis''' 5.077.</summary>
     [Theory]
-    [InlineData("f,4", 3.926973)]          // control: a head on a ledger line, no accidental
-    [InlineData("fis,4", 3.926973)]        // the sharp hangs below the box
-    [InlineData("gis,4", 5.076973)]        // one step higher it reaches in
-    [InlineData("ees,4", 3.926973)]        // a flat below the box
-    [InlineData("aes,4", 4.896973)]        // …and reaching in
-    [InlineData("c'''4", 4.041259)]        // control above the staff
-    [InlineData("fis'''4", 4.041259)]      // the sharp stands over the box
-    [InlineData("<fis, c'>4", 3.926973)]   // a chord's low sharp, its other head in the staff
-    [InlineData("<fis, fis'>4", 5.076973)] // …and a sharp in the staff: that one takes the room
+    // Written in LilyPond's absolute octaves (bare c = C3, owner's decision 2026-10-28), so the
+    // music is the one LilyPond was measured on.
+    [InlineData("f4", 3.926973)]          // control: a head on a ledger line, no accidental
+    [InlineData("fis4", 3.926973)]        // the sharp hangs below the box
+    [InlineData("gis4", 5.076973)]        // one step higher it reaches in
+    [InlineData("ees4", 3.926973)]        // a flat below the box
+    [InlineData("aes4", 4.896973)]        // …and reaching in
+    [InlineData("c''''4", 4.041259)]        // control above the staff
+    [InlineData("fis''''4", 4.041259)]      // the sharp stands over the box
+    [InlineData("<fis c''>4", 3.926973)]   // a chord's low sharp, its other head in the staff
+    [InlineData("<fis fis''>4", 5.076973)] // …and a sharp in the staff: that one takes the room
     public void AnAccidentalClearOfTheBarLinesBox_TakesNoRoomAfterIt(string opening, double gap)
     {
         string src = $$"""
@@ -57,8 +59,8 @@ public class BarlineToColumnMinimumTests
             paper { raggedRight }
             part m {
               section A {
-                c'4 c' c' c'4 |
-                {{opening}} c' c' c' |
+                c''4 c'' c'' c''4 |
+                {{opening}} c'' c'' c'' |
               }
             }
             form { A }
@@ -82,17 +84,18 @@ public class BarlineToColumnMinimumTests
     /// box (3.926973, the <c>f,4</c> control above) where inside the staff it meets it (7.609261).
     /// The gap runs from the last quarter of bar 1 to the chord's leftmost head.</summary>
     [Theory]
-    [InlineData("key d major <ces, des, ees, fes,>4 c' c' c'", 4, 11.709261)]       // below the staff
-    [InlineData("key d major <ces' des' ees' fes'>4 c' c' c'", 4, 11.709261)]       // in it
-    [InlineData("key d major <ces'' des'' ees'' fes''>4 c' c' c'", 4, 11.709261)]   // above it
-    [InlineData("key d major <ces''' des''' ees''' fes'''>4 c' c' c'", 4, 11.709261)] // far above
-    [InlineData("key d major <des, ees,>4 c' c' c'", 2, 10.032588)]
-    [InlineData("time 3/4 <ces, des, ees, fes,>4 c' c'", 4, 10.663996)]
-    [InlineData("time 3/4 <ces' des' ees' fes'>4 c' c'", 4, 10.663996)]
-    [InlineData("key d major e'4 c' c' c'", 1, 8.726973)]                           // control: the ideal holds
-    [InlineData("time 3/4 e'4 c' c'", 1, 7.381709)]
-    [InlineData("<ces, des, ees, fes,>4 c' c' c'", 4, 3.926973)]                    // control: a bare bar line
-    [InlineData("<ces' des' ees' fes'>4 c' c' c'", 4, 7.609261)]
+    // LilyPond's absolute octaves (owner's decision 2026-10-28): the music LilyPond was measured on.
+    [InlineData("key d major <ces des ees fes>4 c'' c'' c''", 4, 11.709261)]       // below the staff
+    [InlineData("key d major <ces'' des'' ees'' fes''>4 c'' c'' c''", 4, 11.709261)]       // in it
+    [InlineData("key d major <ces''' des''' ees''' fes'''>4 c'' c'' c''", 4, 11.709261)]   // above it
+    [InlineData("key d major <ces'''' des'''' ees'''' fes''''>4 c'' c'' c''", 4, 11.709261)] // far above
+    [InlineData("key d major <des ees>4 c'' c'' c''", 2, 10.032588)]
+    [InlineData("time 3/4 <ces des ees fes>4 c'' c''", 4, 10.663996)]
+    [InlineData("time 3/4 <ces'' des'' ees'' fes''>4 c'' c''", 4, 10.663996)]
+    [InlineData("key d major e''4 c'' c'' c''", 1, 8.726973)]                           // control: the ideal holds
+    [InlineData("time 3/4 e''4 c'' c''", 1, 7.381709)]
+    [InlineData("<ces des ees fes>4 c'' c'' c''", 4, 3.926973)]                    // control: a bare bar line
+    [InlineData("<ces'' des'' ees'' fes''>4 c'' c'' c''", 4, 7.609261)]
     public void AKeyOrTimeChangeOpeningTheBar_MeetsTheNoteColumnAtEveryHeight(
         string bar2, int chordHeads, double gap)
     {
@@ -102,7 +105,7 @@ public class BarlineToColumnMinimumTests
             paper { raggedRight }
             part m {
               section A {
-                c'4 c' c' c'4 |
+                c''4 c'' c'' c''4 |
                 {{bar2}} |
               }
             }

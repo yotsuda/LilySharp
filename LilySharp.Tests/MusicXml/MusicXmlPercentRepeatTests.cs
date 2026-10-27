@@ -52,7 +52,7 @@ public class MusicXmlPercentRepeatTests
     [Fact]
     public void AOneBarPercent_StartsOnTheFirstRepetition_AndStopsAfterTheLast()
     {
-        var doc = Export("section A { m { c'1 | % | % | d'1 | } }", "A");
+        var doc = Export("section A { m { c''1 | % | % | d'1 | } }", "A");
         Assert.Equal(new[] { "m2:start(1)", "m4:stop" }, Marks(doc));
         Assert.Equal("1", doc.Descendants("measure-repeat").First().Attribute("slashes")!.Value);
         // The repeated bars keep their notes, for playback and for readers without the sign.
@@ -62,7 +62,7 @@ public class MusicXmlPercentRepeatTests
     [Fact]
     public void ATwoBarPercent_IsOneMeasureRepeatSpanningTwoMeasures()
         => Assert.Equal(new[] { "m3:start(2)", "m5:stop" },
-            Marks(Export("section A { m { c'1 | d'1 | %2 | e'1 | } }", "A")));
+            Marks(Export("section A { m { c''1 | d'1 | %2 | e'1 | } }", "A")));
 
     /// <summary>A run that ends its section stops on the part's next bar — here the next
     /// section's opening bar, which states a new meter: the stop joins those attributes
@@ -71,7 +71,7 @@ public class MusicXmlPercentRepeatTests
     public void ARunEndingItsSection_StopsOnTheNextSectionsFirstBar_BesideItsAttributes()
     {
         var doc = Export(
-            "section A { m { c'1 | d'1 | % } }\nsection B { time 3/4\n m { e'2. | } }", "A B");
+            "section A { m { c''1 | d'1 | % } }\nsection B { time 3/4\n m { e''2. | } }", "A B");
         Assert.Equal(new[] { "m3:start(1)", "m4:stop" }, Marks(doc));
         var m4 = doc.Descendants("measure").Single(m => m.Attribute("number")!.Value == "4");
         Assert.Equal("3", m4.Descendants("beats").Single().Value);

@@ -70,7 +70,7 @@ public class SystemGapStaffFrameTests
         key c major
         part melody {
           clef treble
-          section A { c4 c g' g | a a g2 | f4 f e e | d d c2 | break}
+          section A { c'4 c g' g | a a g2 | f4 f e e | d d c2 | break}
           section B { g'4 g f f | e e d2 | break}
         }
         form { A B A B }

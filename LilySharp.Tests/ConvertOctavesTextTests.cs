@@ -30,7 +30,7 @@ public class ConvertOctavesTextTests
     [Fact]
     public void APieceInAbsoluteOctaves_ComesBackRelative_WithNoDocumentOpen()
     {
-        const string text = "title \"Little Tune\"\noctave absolute\ntime 4/4\npart p1 { clef treble }\nsection A {\n  p1 {\n    c'4 e'4 g'4 c''4 | b'2 g'2 |\n  }\n}\nform { A }\nscore { staff p1 }\n";
+        const string text = "title \"Little Tune\"\noctave absolute\ntime 4/4\npart p1 { clef treble }\nsection A {\n  p1 {\n    c''4 e''4 g''4 c'''4 | b''2 g''2 |\n  }\n}\nform { A }\nscore { staff p1 }\n";
         var server = new LilySharpLanguageServer(Stream.Null, Stream.Null);
         var response = server.ConvertOctaves(new ConvertOctavesParams { Text = text, Absolute = false });
         Assert.True(response.Success, response.Error);

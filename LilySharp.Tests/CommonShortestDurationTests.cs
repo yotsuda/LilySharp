@@ -93,7 +93,7 @@ public class CommonShortestDurationTests
             time 2/4
             key c major
             part melody
-            section Main { melody { c8 d e f | R2*3 | } }
+            section Main { melody { c'8 d e f | R2*3 | } }
             form { Main }
             score x { staff melody }
             """;
@@ -118,7 +118,7 @@ public class CommonShortestDurationTests
         // LILYPOND-REF: lily/spacing-engraver.cc:176-183 Spacing_engraver::add_starter_duration — the multi-measure-interface early return.
         const string book = """
             part melody
-            section Main { melody { r1 | r1 | c16 d e f g a b c' c' b a g f e d c | r1 | } }
+            section Main { melody { r1 | r1 | c'16 d e f g a b c' c' b a g f e d c | r1 | } }
             form { Main }
             score x { staff melody }
             """;
@@ -229,7 +229,7 @@ public class CommonShortestDurationTests
             part sax { }
             part vocal { }
             section Chorus {
-              sax   { c4 d e f | g2 g | a4 g f e | c1 | }
+              sax   { c'4 d e f | g2 g | a4 g f e | c1 | }
               vocal { g8 g a4 a8 a a4 | g2 f | e4 f g2 | c1 | }
               lyrics en sings vocal { a b a b a b | a b | a b a | b | }
             }
@@ -261,7 +261,7 @@ public class CommonShortestDurationTests
             time 4/4
             key c major
             part melody { clef treble }
-            section A { melody { c4 d e f | } }
+            section A { melody { c'4 d e f | } }
             chords prog { section A { C G C G C G C G | } }
             form { A }
             score {

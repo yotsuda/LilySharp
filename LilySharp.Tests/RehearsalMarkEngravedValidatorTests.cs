@@ -82,8 +82,8 @@ public class RehearsalMarkEngravedValidatorTests
     {
         var warning = Assert.Single(Warnings(
             "part m { clef treble }\n"
-            + "section A { m { c'1@mark(\"P\") | d'1 } }\n"
-            + "section B { m { e'1@mark(\"Q\") | f'1 } }\n"
+            + "section A { m { c''1@mark(\"P\") | d'1 } }\n"
+            + "section B { m { e''1@mark(\"Q\") | f'1 } }\n"
             + "form { ~A }\nscore { staff m }\n"));
         Assert.Contains("not printed by this score", warning.Message);
     }
@@ -93,7 +93,7 @@ public class RehearsalMarkEngravedValidatorTests
     public void AMarkInAPartNoScoreRenders_IsReported()
         => Assert.Single(Warnings(
             "part m { clef treble }\npart other { clef treble }\n"
-            + "section A { m { c'1@mark(\"P\") | d'1 } other { e'1@mark(\"Q\") | f'1 } }\n"
+            + "section A { m { c''1@mark(\"P\") | d'1 } other { e''1@mark(\"Q\") | f'1 } }\n"
             + "form { ~A }\nscore { staff m }\n"));
 
     /// <summary>
@@ -138,8 +138,8 @@ public class RehearsalMarkEngravedValidatorTests
     {
         string source =
             "part m { clef treble }\n"
-            + "section A { m { c'1 | d'1 } }\n"
-            + "section B { m { e'1@mark(\"Q\") | f'1 } }\n"
+            + "section A { m { c''1 | d'1 } }\n"
+            + "section B { m { e''1@mark(\"Q\") | f'1 } }\n"
             + "form { ~A }\nscore { staff m }\n";
 
         var warning = Assert.Single(Warnings(source));

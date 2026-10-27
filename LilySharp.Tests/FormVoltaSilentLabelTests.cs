@@ -63,8 +63,8 @@ public class FormVoltaSilentLabelTests
 {
     private const string Head = """
         part melody {
-          section A { c'4 d e f | g2 g | }
-          section B { c'4 d e f | g2 g | }
+          section A { c''4 d e f | g2 g | }
+          section B { c''4 d e f | g2 g | }
         }
         """;
 

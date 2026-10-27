@@ -64,7 +64,7 @@ public class RowsOnlyBarNumberAnchorTests
         time 4/4
         part melody {
           clef treble
-          section A { c4 c g' g | a a g2 | f4 f e e | d d c2 | }
+          section A { c'4 c g' g | a a g2 | f4 f e e | d d c2 | }
           section B { g'4 g f f | e e d2 | }
         }
         chords prog {

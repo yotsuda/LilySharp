@@ -93,8 +93,8 @@ public sealed class FormRepeatUnclosedDiagnosticTests
         => Assert.Empty(Errors("""
             time 4/4
             part m {
-              section B { c'4 c c c | }
-              section A { |: d'4 d d d | }
+              section B { c''4 c c c | }
+              section A { |: d''4 d d d | }
             }
             form { ~B A :| }
             score { staff m }

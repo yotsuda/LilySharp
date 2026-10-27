@@ -48,7 +48,7 @@ public sealed class TabGraceScriptTests
 
     private const string Book = """
         part gtr { tuning guitar }
-        section A { gtr { r4 grace { c16@accent } d4 e@accent f | } }
+        section A { gtr { r4 grace { c'16@accent } d4 e@accent f | } }
         form { A }
         score { tab gtr }
         """;

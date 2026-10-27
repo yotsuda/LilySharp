@@ -58,8 +58,8 @@ public class DotSpacingTests
     /// the change guarded nothing.
     /// </para>
     /// <para>
-    /// ⚠️ Those are LilyPond's names for the pitches. Lily#'s absolute octave is one lower
-    /// (<c>c'</c> is LilyPond's c''), so the twin spells each an apostrophe higher.
+    /// ⚠️ The InlineData letters are bare; the book adds the apostrophe (b' is position 0).
+    /// Since the owner's decision 2026-10-28 Lily#'s absolute octave is LilyPond's.
     /// </para>
     /// LILYPOND-REF: lily/separation-item.cc:163-183 Separation_item::boxes — the box is the
     ///   element's pure Y extent widened by its extra-spacing-height;
@@ -81,8 +81,8 @@ public class DotSpacingTests
             section Main {
               up {
                 voice
-                { d'2. r4 | }
-                { {{lower}}8 {{lower}} {{lower}} {{lower}} {{lower}} {{lower}} {{lower}} {{lower}} | }
+                { d''2. r4 | }
+                { {{lower}}'8 {{lower}}' {{lower}}' {{lower}}' {{lower}}' {{lower}}' {{lower}}' {{lower}}' | }
               }
             }
             form { ~Main }

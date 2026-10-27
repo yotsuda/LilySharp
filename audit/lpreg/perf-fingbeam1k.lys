@@ -6,7 +6,7 @@ part melody
 
 section A {
   melody {
-    <c@finger(1) e@finger(3) g@finger(5)>8 <c@finger(1) e@finger(3) g@finger(5)>8 <c@finger(1) e@finger(3) g@finger(5)>8 <c@finger(1) e@finger(3) g@finger(5)>8 <c@finger(1) e@finger(3) g@finger(5)>8 <c@finger(1) e@finger(3) g@finger(5)>8 <c@finger(1) e@finger(3) g@finger(5)>8 <c@finger(1) e@finger(3) g@finger(5)>8 |
+    <c'@finger(1) e@finger(3) g@finger(5)>8 <c@finger(1) e@finger(3) g@finger(5)>8 <c@finger(1) e@finger(3) g@finger(5)>8 <c@finger(1) e@finger(3) g@finger(5)>8 <c@finger(1) e@finger(3) g@finger(5)>8 <c@finger(1) e@finger(3) g@finger(5)>8 <c@finger(1) e@finger(3) g@finger(5)>8 <c@finger(1) e@finger(3) g@finger(5)>8 |
     <c@finger(1) e@finger(3) g@finger(5)>8 <c@finger(1) e@finger(3) g@finger(5)>8 <c@finger(1) e@finger(3) g@finger(5)>8 <c@finger(1) e@finger(3) g@finger(5)>8 <c@finger(1) e@finger(3) g@finger(5)>8 <c@finger(1) e@finger(3) g@finger(5)>8 <c@finger(1) e@finger(3) g@finger(5)>8 <c@finger(1) e@finger(3) g@finger(5)>8 |
     <c@finger(1) e@finger(3) g@finger(5)>8 <c@finger(1) e@finger(3) g@finger(5)>8 <c@finger(1) e@finger(3) g@finger(5)>8 <c@finger(1) e@finger(3) g@finger(5)>8 <c@finger(1) e@finger(3) g@finger(5)>8 <c@finger(1) e@finger(3) g@finger(5)>8 <c@finger(1) e@finger(3) g@finger(5)>8 <c@finger(1) e@finger(3) g@finger(5)>8 |
     <c@finger(1) e@finger(3) g@finger(5)>8 <c@finger(1) e@finger(3) g@finger(5)>8 <c@finger(1) e@finger(3) g@finger(5)>8 <c@finger(1) e@finger(3) g@finger(5)>8 <c@finger(1) e@finger(3) g@finger(5)>8 <c@finger(1) e@finger(3) g@finger(5)>8 <c@finger(1) e@finger(3) g@finger(5)>8 <c@finger(1) e@finger(3) g@finger(5)>8 |

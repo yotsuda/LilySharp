@@ -57,8 +57,8 @@ public class LyricStaffOrderTests
         // `staff melody  lyrics ly` then `staff back`: the words sit BELOW melody
         // (staff 0) and ABOVE back (staff 1) — the reported bug placed them below back.
         var (lyricYs, staffY) = LayoutOf(
-            "part melody { section A { c4 d e f } }\n" +
-            "part back { section A { e4 f g a } }\n" +
+            "part melody { section A { c'4 d e f } }\n" +
+            "part back { section A { e'4 f g a } }\n" +
             "lyrics ly sings melody { section A { la le li lo } }\n" +
             "form { A }\n" +
             "score {\n  staff melody  lyrics ly\n  staff back\n}\n");
@@ -76,8 +76,8 @@ public class LyricStaffOrderTests
         // height, so it must drop further to stay clear of the staff. This proves the
         // clearance is dynamic (font height), not a fixed padding.
         const string head =
-            "part melody { section A { c4 d e f } }\n" +
-            "part back { section A { e4 f g a } }\n";
+            "part melody { section A { c'4 d e f } }\n" +
+            "part back { section A { e'4 f g a } }\n";
         const string tail =
             "\nform { A }\n" +
             "score {\n  staff melody  lyrics w\n  staff back\n}\n";
@@ -95,8 +95,8 @@ public class LyricStaffOrderTests
         // lower staff where it was); a 2nd verse reserves extra room, dropping the
         // lower staff by about one verse-spacing so verse 2 doesn't collide with it.
         const string head =
-            "part melody { section A { c4 d e f } }\n" +
-            "part back { section A { e4 f g a } }\n" +
+            "part melody { section A { c'4 d e f } }\n" +
+            "part back { section A { e'4 f g a } }\n" +
             "lyrics v1 sings melody { section A { la le li lo } }\n" +
             "lyrics v2 sings melody { section A { do re mi fa } }\n" +
             "form { A }\n";
@@ -134,8 +134,8 @@ public class LyricStaffOrderTests
     public void RoomBetweenStaves_ComesFromTheBlocksInk_NotAConstantPerVerse()
     {
         const string head =
-            "part melody { section A { c4 d e f } }\n" +
-            "part back { section A { e4 f g a } }\n";
+            "part melody { section A { c'4 d e f } }\n" +
+            "part back { section A { e'4 f g a } }\n";
         const string tail =
             "\nform { A }\n" +
             "score {\n  staff melody  lyrics w\n  staff back\n}\n";
@@ -225,7 +225,7 @@ public class LyricStaffOrderTests
     {
         string Src(string sys2) =>
             "part melody {\n"
-            + "  section A { e4 f g f | e4 e e2 | e4 f g f | e2 e2 | }\n"
+            + "  section A { e'4 f g f | e4 e e2 | e4 f g f | e2 e2 | }\n"
             + $"  section B {{ {sys2} }}\n"
             + "}\n"
             + "lyrics w sings melody {\n"
@@ -354,7 +354,7 @@ public class LyricStaffOrderTests
         var (lyricYs, staffY) = LayoutOf(
             "part up { clef treble }\n" +
             "part lo { clef bass }\n" +
-            "section A {\n  up { c'4 d' e' f' }\n  lo { c4 d e f }\n  lyrics w sings up { la le li lo }\n}\n" +
+            "section A {\n  up { c''4 d' e' f' }\n  lo { c'4 d e f }\n  lyrics w sings up { la le li lo }\n}\n" +
             "form { A }\n" +
             "score {\n  grandStaff {\n    staff up  lyrics w\n    staff lo\n  }\n}\n");
 
@@ -418,14 +418,14 @@ public class LyricStaffOrderTests
     public void LyricBaseline_RespondsToADynamicUnderItsOwnStaff()
     {
         const string tail =
-            "part back { section A { e4 f g a } }\n" +
+            "part back { section A { e'4 f g a } }\n" +
             "lyrics w sings melody { section A { la le li lo } }\n" +
             "form { A }\n" +
             "score {\n  staff melody  lyrics w\n  staff back\n}\n";
         var (plainLyrics, plainStaff) = LayoutOf(
-            "part melody { section A { c4 d e f } }\n" + tail);
+            "part melody { section A { c'4 d e f } }\n" + tail);
         var (dynLyrics, dynStaff) = LayoutOf(
-            "part melody { section A { c4@f d e f } }\n" + tail);
+            "part melody { section A { c'4@f d e f } }\n" + tail);
 
         // The room does respond, and has all along — this is the control. If it ever stops
         // responding, the two assertions below agree for the wrong reason.
@@ -508,15 +508,15 @@ public class LyricStaffOrderTests
         // sit above a note that is itself out of the staff, or the staff lines are what binds.
         // The reported book ends on whole notes under a shared verse.
         const string head =
-            "part up { section A { e'1 } }\n";
+            "part up { section A { e''1 } }\n";
         const string tail =
             "lyrics w sings up { section A { la } }\n" +
             "form { A }\n" +
             "score {\n  grandStaff {\n    staff up  lyrics w\n    staff lo\n  }\n}\n";
         var plain = LpFidelity.RenderedGeometry.Render(
-            head + "part lo { section A { c''1 } }\n" + tail);
+            head + "part lo { section A { c'''1 } }\n" + tail);
         var fermata = LpFidelity.RenderedGeometry.Render(
-            head + "part lo { section A { c''1@fermata } }\n" + tail);
+            head + "part lo { section A { c'''1@fermata } }\n" + tail);
 
         // The control: the gap between the two staves must widen for the mark at all. If it
         // stops responding the overlap assertion below can pass for the wrong reason.
@@ -574,9 +574,9 @@ public class LyricStaffOrderTests
             "form { A }\n" +
             "score { staff melody  lyrics w }\n";
         var (plainLyrics, _) = LayoutOf(
-            "part melody { clef treble\n  section A { c4 c g' g } }\n" + tail);
+            "part melody { clef treble\n  section A { c'4 c g' g } }\n" + tail);
         var (markedLyrics, _) = LayoutOf(
-            "part melody { clef treble\n  section A { c4@marcato c g' g } }\n" + tail);
+            "part melody { clef treble\n  section A { c'4@marcato c g' g } }\n" + tail);
 
         Assert.NotEmpty(plainLyrics);
         Assert.NotEmpty(markedLyrics);

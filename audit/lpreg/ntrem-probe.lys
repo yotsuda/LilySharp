@@ -3,7 +3,7 @@
 octave absolute
 part m { }
 section A {
-  m { a,4:32 e'8:32 | }
+  m { a4:32 e''8:32 | }
 }
 form { A }
 score { staff m }

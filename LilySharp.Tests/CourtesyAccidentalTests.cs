@@ -45,7 +45,7 @@ public class CourtesyAccidentalTests
         // Verified vs LilyPond 2.24.4. LILYPOND-REF: lily/accidental-engraver.cc.
         var source = @"
 part melody { clef treble }
-phrase m { cis'4 d e f | c4 d e f | }
+phrase m { cis''4 d e f | c4 d e f | }
 section A { melody { m } }
 form { A }
 score { staff melody }
@@ -94,7 +94,7 @@ score { staff melody }
         // LILYPOND-REF: lily/accidental-engraver.cc — accidentals persist to the barline.
         var source = @"
 part melody { clef treble }
-phrase m { cis'4 c d e | }
+phrase m { cis''4 c d e | }
 section A { melody { m } }
 form { A }
 score { staff melody }
@@ -117,7 +117,7 @@ score { staff melody }
         // accidental persists for the rest of the measure. Verified vs LilyPond.
         var source = @"
 part melody { clef treble }
-phrase m { dis'4 dis dis dis | }
+phrase m { dis''4 dis dis dis | }
 section A { melody { m } }
 form { A }
 score { staff melody }
@@ -141,7 +141,7 @@ score { staff melody }
         // (Octaves accumulate in relative mode: cis'=C#5, c'=C6, c,=C5.)
         var source = @"
 part melody { clef treble }
-phrase m { cis'4 c' c, e | }
+phrase m { cis''4 c' c, e | }
 section A { melody { m } }
 form { A }
 score { staff melody }
@@ -161,7 +161,7 @@ score { staff melody }
         // No alteration in previous measure → no courtesy
         var source = @"
 part melody { clef treble }
-phrase m { c'4 d e f | c4 d e f | }
+phrase m { c''4 d e f | c4 d e f | }
 section A { melody { m } }
 form { A }
 score { staff melody }
@@ -182,7 +182,7 @@ score { staff melody }
         // @courtesy annotation forces parenthesized accidental
         var source = @"
 part melody { clef treble }
-phrase m { c'4@courtesy d e f | }
+phrase m { c''4@courtesy d e f | }
 section A { melody { m } }
 form { A }
 score { staff melody }
@@ -206,7 +206,7 @@ score { staff melody }
         // that exercises the parenthesized rendering.)
         var source = @"
 part melody { clef treble }
-phrase m { cis'4 d e f | c4@courtesy d e f | }
+phrase m { cis''4 d e f | c4@courtesy d e f | }
 section A { melody { m } }
 form { A }
 score { staff melody }
@@ -266,7 +266,7 @@ score { staff melody }
         var source = @"
 part melody { clef treble }
 key g major
-phrase m { fis'4 g a b | f4 g a b | }
+phrase m { fis''4 g a b | f4 g a b | }
 section A { melody { m } }
 form { A }
 score { staff melody }

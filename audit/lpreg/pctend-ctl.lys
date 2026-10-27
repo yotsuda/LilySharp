@@ -7,7 +7,7 @@ time 4/4
 part vone { clef treble }
 
 section A {
-  vone { r2 tuplet 3/2 { g8[ g g] } tuplet 3/2 { g[ g g] } | g1 | }
+  vone { r2 tuplet 3/2 { g'8[ g' g'] } tuplet 3/2 { g'[ g' g'] } | g'1 | }
 }
 
 form { ~A }

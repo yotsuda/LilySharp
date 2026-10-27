@@ -21,11 +21,11 @@ key c major
 part melody
 
 phrase dashedBetweenMeasures {
-  c4 d e f ! g4 a b c' |
+  c'4 d e f ! g4 a b c' |
 }
 
 phrase dashedThenOrdinary {
-  d'4 c b a ! g4 f e d |
+  d''4 c b a ! g4 f e d |
   c4 e g c' |
 }
 

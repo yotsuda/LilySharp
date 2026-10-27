@@ -143,9 +143,9 @@ public class BreakKeywordTests
             time 4/4
             key c major
             part m { clef treble
-              section A { c'4 d' e' f' | }
+              section A { c''4 d' e' f' | }
               section B { g'4 a' b' c'' | }
-              section C { c'4 d' e' f' | }
+              section C { c''4 d' e' f' | }
             }
             form { A B break C }
             score { staff m }
@@ -163,7 +163,7 @@ public class BreakKeywordTests
             time 4/4
             key c major
             part m { clef treble
-              section A { c'4 d' e' f' | }
+              section A { c''4 d' e' f' | }
               section B { g'4 a' b' c'' | }
             }
             form { A noBreak B }

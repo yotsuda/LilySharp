@@ -12,7 +12,7 @@ part rh { clef treble }
 part lh { clef bass octave 3 }
 
 section Main {
-  rh { c'4 d e f | voice { g'2 a } { c2 d }  | e'4 d c b | }
+  rh { c''4 d e f | voice { g'2 a } { c2 d }  | e'4 d c b | }
   lh { c4 d e f | g4 a g f | e4 d c2 | }
 }
 

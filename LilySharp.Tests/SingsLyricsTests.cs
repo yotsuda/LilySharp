@@ -37,8 +37,8 @@ public class SingsLyricsTests
     private const string PartSheet = """
         time 4/4
         section Chorus {
-          sax { c4 d e f | g2 g | }
-          vocal { g8 g a4 a8 a a4 | g2 f | }
+          sax { c'4 d e f | g2 g | }
+          vocal { g'8 g a4 a8 a a4 | g2 f | }
           lyrics ja sings vocal { Sing it loud and clear now | ev- ery | }
         }
         form { Chorus }
@@ -94,21 +94,21 @@ public class SingsLyricsTests
         // surviving refusal is the GROUP case, where no band exists to fall
         // back to.)
         Assert.Contains(Validate("""
-            section A { m { c4 d | } v { e4 f | } lyrics w sings v { la la | } }
+            section A { m { c'4 d | } v { e'4 f | } lyrics w sings v { la la | } }
             form { A }
             score { grandStaff { staff m  lyrics w  staff v } }
             """), d => d.Code == DiagnosticCodes.GroupRowNotBoundToStaffAbove);
 
         // sings target that names nothing.
         Assert.Contains(Validate("""
-            section A { m { c4 d | } lyrics w sings ghost { la la | } }
+            section A { m { c'4 d | } lyrics w sings ghost { la la | } }
             form { A }
             score { staff m }
             """), d => d.Code == DiagnosticCodes.SingsTargetUnknown);
 
         // Two blocks of one track naming different targets.
         Assert.Contains(Validate("""
-            section A { m { c4 d | } v { e4 f | }
+            section A { m { c'4 d | } v { e4 f | }
               lyrics w sings m { la la | }
               lyrics w sings v { lo lo | } }
             form { A }
@@ -123,7 +123,7 @@ public class SingsLyricsTests
         [
             // sings + attach to the singing staff.
             """
-            section A { m { c4 d | } lyrics w sings m { la la | } }
+            section A { m { c'4 d | } lyrics w sings m { la la | } }
             form { A }
             score { staff m  lyrics w }
             """,
@@ -131,13 +131,13 @@ public class SingsLyricsTests
             PartSheet,
             // The voice rule IS a binding: lyrics named after a voice.
             """
-            section A { m { voice sop { c'4 d' | } { e4 f | } } lyrics sop { la la | } }
+            section A { m { voice sop { c''4 d' | } { e'4 f | } } lyrics sop { la la | } }
             form { A }
             score { staff m  lyrics sop }
             """,
             // A track named after the part itself.
             """
-            section A { m { c4 d | } lyrics m { la la | } }
+            section A { m { c'4 d | } lyrics m { la la | } }
             form { A }
             score { staff m  lyrics m }
             """,
@@ -159,7 +159,7 @@ public class SingsLyricsTests
     public void SecondBlockOfATrack_MayOmitOrRepeatTheBinding()
     {
         var src = """
-            section A { m { c4 d | e4 f | }
+            section A { m { c'4 d | e4 f | }
               lyrics w sings m { la la | }
               lyrics w { lo lo | }
               lyrics w sings m { le le | } }
@@ -321,8 +321,8 @@ public class SingsLyricsTests
         var tree = SyntaxTree.Parse("""
             time 4/4
             section Chorus {
-              sax { c4 d e f | g2 g | }
-              vocal { g8 g a4 a8 a a4 | g2 f | }
+              sax { c'4 d e f | g2 g | }
+              vocal { g'8 g a4 a8 a a4 | g2 f | }
               lyrics ja { Sing it loud and clear now | ev- ery | }
             }
             form { Chorus }
@@ -345,7 +345,7 @@ public class SingsLyricsTests
     {
         // Unknown target on the row → LYS7004, same as the definition's.
         Assert.Contains(Validate("""
-            section A { m { c4 d | } lyrics w { la la | } }
+            section A { m { c'4 d | } lyrics w { la la | } }
             form { A }
             score { staff m  lyrics w sings ghost }
             """), d => d.Code == DiagnosticCodes.SingsTargetUnknown);
@@ -354,7 +354,7 @@ public class SingsLyricsTests
         // (user decision, 2026-09-02): the row's `sings` is that placement's own
         // melody. Until then this spelling was LYS7005 — "a track sings ONE part".
         Assert.DoesNotContain(Validate("""
-            section A { m { c4 d | } v { e4 f | } lyrics w sings m { la la | } }
+            section A { m { c'4 d | } v { e'4 f | } lyrics w sings m { la la | } }
             form { A }
             score { staff m  lyrics w sings v }
             """), d => d.Code == DiagnosticCodes.SingsConflict);
@@ -362,7 +362,7 @@ public class SingsLyricsTests
         // Two DEFINITION blocks naming different targets still conflict: the
         // definition states the track's ONE default.
         Assert.Contains(Validate("""
-            section A { m { c4 d | } v { e4 f | }
+            section A { m { c'4 d | } v { e4 f | }
               lyrics w sings m { la la | }
               lyrics w sings v { lo lo | } }
             form { A }
@@ -371,7 +371,7 @@ public class SingsLyricsTests
 
         // A row repeating the definition's target identically is silent.
         Assert.DoesNotContain(Validate("""
-            section A { m { c4 d | } lyrics w sings m { la la | } }
+            section A { m { c'4 d | } lyrics w sings m { la la | } }
             form { A }
             score { staff m  lyrics w sings m }
             """), d => d.Code is DiagnosticCodes.SingsConflict
@@ -390,8 +390,8 @@ public class SingsLyricsTests
         var tree = SyntaxTree.Parse("""
             time 4/4
             section Chorus {
-              sax { c4 d e f | g2 g | }
-              vocal { g8 g a4 a8 a a4 | g2 f | }
+              sax { c'4 d e f | g2 g | }
+              vocal { g'8 g a4 a8 a a4 | g2 f | }
               lyrics ja sings sax { Sing it loud and clear now | ev- ery | }
             }
             form { Chorus }
@@ -415,7 +415,7 @@ public class SingsLyricsTests
         var folded = SyntaxTree.Parse("""
             time 4/4
             section Chorus {
-              sax { c4 d e f | g2 g | }
+              sax { c'4 d e f | g2 g | }
               vocal { g8 g a4 a8 a a4 | g2 f | }
               lyrics ja sings sax { Sing it loud and clear now | ev- ery | }
             }
@@ -433,8 +433,8 @@ public class SingsLyricsTests
         part alt { clef treble }
         part bas { clef bass octave 3 }
         section Chorale {
-          sop { b4 b c' d' | d'4 c' b a | }
-          alt { g4. g8 g4 g | g4 g g fis | }
+          sop { b'4 b' c'' d'' | d''4 c'' b' a' | }
+          alt { g'4. g'8 g'4 g' | g'4 g' g' fis' | }
           bas { g,4 g, c g, | g,8 g, c4 g, d | }
           lyrics verse sings sop { Freu- de, schö- ner | Göt- ter- fun- ken, | }
         }
@@ -503,7 +503,7 @@ public class SingsLyricsTests
         const string groupedBySection = """
             part m { clef treble }
             section A {
-              m { c4 d e f | }
+              m { c'4 d e f | }
               lyrics w sings m { la la la la | }
             }
             form { A }

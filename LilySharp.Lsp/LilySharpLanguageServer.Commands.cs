@@ -1184,11 +1184,27 @@ public sealed partial class LilySharpLanguageServer
         if (text == null)
             return new ConvertOctavesResponse { Success = false, Error = "Document not found" };
 
+        if (@params.DropPartOctaves)
+        {
+            var plain = LilySharp.Core.Editing.OctaveModeConverter.WithoutPartOctaves(text);
+            if (plain.NewText == null)
+                return new ConvertOctavesResponse { Success = false, Error = plain.Error };
+            text = plain.NewText;
+        }
+        string? notes = null;
+        if (@params.DropConcertPitch)
+        {
+            var written = LilySharp.Core.Editing.OctaveModeConverter.WithoutConcertPitch(text);
+            if (written.NewText != null)
+                text = written.NewText;
+            else
+                notes = written.Error;
+        }
         var result = LilySharp.Core.Editing.OctaveModeConverter.Convert(text,
             @params.Absolute ? LilySharp.Core.Editing.OctaveMode.Absolute : LilySharp.Core.Editing.OctaveMode.Relative);
         return result.NewText != null
-            ? new ConvertOctavesResponse { Success = true, NewText = result.NewText, ChangedNotes = result.ChangedPitches }
-            : new ConvertOctavesResponse { Success = false, Error = result.Error };
+            ? new ConvertOctavesResponse { Success = true, NewText = result.NewText, ChangedNotes = result.ChangedPitches, Notes = notes }
+            : new ConvertOctavesResponse { Success = false, Error = result.Error, Notes = notes };
     }
 
     [JsonRpcMethod("lilysharp/aiOctaves", UseSingleObjectParameterDeserialization = true)]

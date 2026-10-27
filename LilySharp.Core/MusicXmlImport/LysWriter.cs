@@ -1261,7 +1261,8 @@ internal static class LysWriter
             -2 => "eses",
             _ => "",
         };
-        int marks = octave - 4; // bare c = octave 4 (middle C) in Lily# absolute
+        // A bare c is C3 in Lily#'s absolute octaves, LilyPond's (owner's decision 2026-10-28).
+        int marks = octave - Svg.Model.InstrumentDefaults.DefaultAnchorOctave;
         string octaveMarks = marks > 0 ? new string('\'', marks)
             : marks < 0 ? new string(',', -marks)
             : "";
@@ -1307,11 +1308,12 @@ internal static class LysWriter
 
     /// <summary>Relative-octave spelling: each note sits in the octave nearest the
     /// previous note (interval ≤ a fourth); <c>'</c>/<c>,</c> shift by octaves. The
-    /// stream starts nearest C4. Used only in relative-output mode; each independent
-    /// music stream gets a fresh instance.</summary>
+    /// stream starts nearest F3, as a fresh Lily# frame does (LilyPond's pitchless
+    /// <c>\relative</c>, Semantics.RelativeOctave.FrameStartStep). Used only in relative-output
+    /// mode; each independent music stream gets a fresh instance.</summary>
     private sealed class RelativeOctave
     {
-        private int _ref = 4 * 7; // C4 as a diatonic number (octave 4, letter C = 0)
+        private int _ref = Svg.Model.InstrumentDefaults.DefaultAnchorOctave * 7 + Semantics.RelativeOctave.FrameStartStep; // F3, diatonic
 
         /// <summary>Spell one note and advance the reference to it.</summary>
         public string Note(int step, int alter, int octave)

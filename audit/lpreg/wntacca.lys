@@ -9,10 +9,10 @@ part v { }
 
 section Main {
   v {
-    repeat tremolo 16 { c32 es32 } |
-    repeat tremolo 16 { a32 cis'32 } |
-    repeat tremolo 16 { a32 gisis32 } |
-    voice { repeat tremolo 16 { a'32 bes'32 } | } { repeat tremolo 16 { f32 des32 } | }
+    repeat tremolo 16 { c'32 es'32 } |
+    repeat tremolo 16 { a'32 cis''32 } |
+    repeat tremolo 16 { a'32 gisis'32 } |
+    voice { repeat tremolo 16 { a''32 bes''32 } | } { repeat tremolo 16 { f'32 des'32 } | }
   }
 }
 

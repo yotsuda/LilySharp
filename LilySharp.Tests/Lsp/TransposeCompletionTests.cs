@@ -51,7 +51,7 @@ public class TransposeCompletionTests
         })?.Items ?? []).Select(i => i.Label!)];
     }
 
-    private const string Rest = "\nsection A { m { c4 d e f | } }\nform { A }\nscore { staff m }\n";
+    private const string Rest = "\nsection A { m { c'4 d e f | } }\nform { A }\nscore { staff m }\n";
 
     [Theory]
     [InlineData("transpose ‸\npart m { clef treble }" + Rest)]

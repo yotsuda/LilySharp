@@ -43,9 +43,9 @@ public sealed class SemiTieSkylineTests
     // The manual's example: the tie from A's last note reaches ending 2 as a repeat tie.
     private const string AutoRepeatTieIntoSecondEnding = """
         part vn {
-          section I { c''1~ || }
-          section A { c''1 | e1~ || }
-          section B { e''1 | }
+          section I { c'''1~ || }
+          section A { c'''1 | e1~ || }
+          section B { e'''1 | }
         }
         form { I |: A [1. B] :| [2. B] }
         score { staff vn }
@@ -55,8 +55,8 @@ public sealed class SemiTieSkylineTests
     private const string WrittenRepeatTieAtLabelledSection = """
         octave absolute
         part vn {
-          section A { c''1 | d''1 || }
-          section B { d''1@repeatTie | e''1 | }
+          section A { c'''1 | d'''1 || }
+          section B { d'''1@repeatTie | e'''1 | }
         }
         form { A B }
         score { staff vn }
@@ -66,9 +66,9 @@ public sealed class SemiTieSkylineTests
     private const string AutoRepeatTieBackToTheRepeatStart = """
         octave absolute
         part vn {
-          section I { c''1 || }
-          section A { e''1 | c''1 | e''1~ || }
-          section B { e''1 | }
+          section I { c'''1 || }
+          section A { e'''1 | c'''1 | e'''1~ || }
+          section B { e'''1 | }
         }
         form { I |: A :| B }
         score { staff vn }

@@ -102,7 +102,7 @@ public class PrefixClickToSourceTests
             "key g major\n"
             + "part melody {\n"
             + "  clef treble\n"
-            + "  section A { c'4 c' g' g' | break key f major clef bass a4 a g2 | break f4 f e e }\n"
+            + "  section A { c''4 c' g' g' | break key f major clef bass a4 a g2 | break f4 f e e }\n"
             + "}\n"
             + "form { A }\n"
             + "score { staff melody }\n";

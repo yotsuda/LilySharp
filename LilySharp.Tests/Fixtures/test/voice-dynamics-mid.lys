@@ -10,7 +10,7 @@ key c major
 part m { clef treble }
 
 section Main {
-  m { c'4 d e f | voice { g'2@f a } { c2@p d }  | e'4 d c2 | }
+  m { c''4 d e f | voice { g'2@f a } { c2@p d }  | e'4 d c2 | }
 }
 
 form { Main }

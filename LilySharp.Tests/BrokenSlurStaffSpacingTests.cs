@@ -47,8 +47,8 @@ public sealed class BrokenSlurStaffSpacingTests
             part up { clef treble }
             part lo { clef treble }
             section A {
-              up { g1 | g1 | g1 | g1 | break g1 | g1 | g1 | g1 | }
-              lo { c''1 | c''1 | c''1 | c''2 c''4( a'' | break c''' d''' e''' f''' | c''1) | c''1 | c''1 | }
+              up { g'1 | g'1 | g'1 | g'1 | break g'1 | g'1 | g'1 | g'1 | }
+              lo { c'''1 | c'''1 | c'''1 | c'''2 c'''4( a''' | break c'''' d'''' e'''' f'''' | c'''1) | c'''1 | c'''1 | }
             }
             form { A }
             score {
@@ -82,8 +82,8 @@ public sealed class BrokenSlurStaffSpacingTests
             part up { clef treble }
             part lo { clef treble }
             section A {
-              up { g1 | g1 | g1 | g1 | break g1 | g1 | g1 | g1 | }
-              lo { c''1 | c''1 | c''1 | f'''1~ | break f'''1 | c''1 | c''1 | c''1 | }
+              up { g'1 | g'1 | g'1 | g'1 | break g'1 | g'1 | g'1 | g'1 | }
+              lo { c'''1 | c'''1 | c'''1 | f''''1~ | break f''''1 | c'''1 | c'''1 | c'''1 | }
             }
             form { A }
             score {

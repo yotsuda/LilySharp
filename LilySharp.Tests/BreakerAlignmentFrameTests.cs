@@ -164,7 +164,7 @@ public sealed class BreakerAlignmentFrameTests
             part p {
               clef bass
               section S {
-                c'4 e' c' e' | c,4@mark("A") c, c, c, | break c,1 | c,1 |
+                c''4 e'' c'' e'' | c4@mark("A") c c c | break c1 | c1 |
               }
             }
 

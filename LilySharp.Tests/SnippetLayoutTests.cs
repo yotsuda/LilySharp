@@ -39,7 +39,7 @@ public sealed class SnippetLayoutTests
         time 4/4
         key c major
         part melody { clef treble }
-        section Main { melody { c4 d e f | g1 | } }
+        section Main { melody { c'4 d e f | g1 | } }
         form { Main }
         score { staff melody }
         """;

@@ -52,10 +52,10 @@ public sealed class PedalTextPageSpacingTests
         score { grandStaff { staff rh  staff lh } }
         """;
 
-    private const string TempoRh = "c'1 | break tempo \"Agitato\" 4 = 112 c'1 |";
-    private const string PlainRh = "c'1 | break c'1 |";
-    private const string PedalLh = "c,8@sustain g, c e c,@sustain g, c e | c1@!sustain |";
-    private const string PlainLh = "c,8 g, c e c, g, c e | c1 |";
+    private const string TempoRh = "c''1 | break tempo \"Agitato\" 4 = 112 c''1 |";
+    private const string PlainRh = "c''1 | break c''1 |";
+    private const string PedalLh = "c8@sustain g c' e' c@sustain g c' e' | c'1@!sustain |";
+    private const string PlainLh = "c8 g c' e' c g c' e' | c'1 |";
 
     /// <summary>The blank between system 1's lowest staff line and system 2's highest.</summary>
     private static double SystemGap(string source)

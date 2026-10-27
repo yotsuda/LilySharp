@@ -72,7 +72,7 @@ public class DynamicPlacementTests
 
         // A dynamic LEVEL placement is fine.
         Assert.False(SyntaxTree.Parse(
-            "part m { clef treble } section S { m { c''4@f.up } }\n" +
+            "part m { clef treble } section S { m { c'''4@f.up } }\n" +
             "form { S } score o { staff m }\n").HasErrors);
     }
 

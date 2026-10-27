@@ -6,7 +6,7 @@ octave absolute
 
 part m { }
 section A {
-  m { c4 d e f | g1 | }
+  m { c'4 d' e' f' | g'1 | }
 }
 form { A }
 score Title1 { staff m }

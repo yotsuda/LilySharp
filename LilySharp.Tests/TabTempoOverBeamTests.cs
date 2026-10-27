@@ -94,7 +94,7 @@ public sealed class TabTempoOverBeamTests
         // stem): under the flag it stands below the tip and above the profile past the glyph.
         var tree = SyntaxTree.Parse(Book.Replace("STAVES", "tab bl as full")
             .Replace("section A { fis,,8\\4 cis,\\3 e,\\3 fis,\\3 e,\\3 cis,\\3 b,,\\4 cis,\\3 | fis,,8\\4 cis,\\3 e,\\3 fis,\\3 e,\\3 cis,\\3 b,,\\4 cis,\\3 | }",
-                     "section A { fis,,8\\4 r8 r2 r4 | }"));
+                     "section A { fis,8\\4 r8 r2 r4 | }"));
         Assert.False(tree.HasErrors, string.Join("; ", tree.Diagnostics));
         var spec = RenderSpecParser.FindFirst(tree);
         var score = SvgGenerator.CollectScore(tree, spec);

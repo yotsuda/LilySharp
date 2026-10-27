@@ -38,8 +38,16 @@ public static partial class NoteStepper
     public static string? Describe(string text, SyntaxTree tree, int offset)
     {
         foreach (var p in tree.GetNodes<PropertyAssignmentSyntax>())
-            if (p.NameToken.Text == "transposition" && p.SourceStart <= offset && offset <= p.Span.End)
+        {
+            if (p.SourceStart > offset || offset > p.Span.End)
+                continue;
+            if (p.NameToken.Text == "transposition")
                 return TranspositionSays(p.ValueText);
+            if (p.NameToken.Text == Semantics.ConcertPitch.Property && PitchTypedSays(p) is { } typed)
+                return typed;
+        }
+        if (PitchPageAt(tree, offset) is { } page)
+            return page;
         // A mark on a note says what it asks for, ahead of the note it stands on (a mark the
         // keys do not step — @sfz, @fermata — is the note's target, TargetAt).
         if (DynamicAt(tree, offset) is { } dynamic && DynamicSays(dynamic) is { } loud)
@@ -224,8 +232,59 @@ public static partial class NoteStepper
     }
 
     private static string OctaveModeSays(bool absolute) => absolute
-        ? "octave absolute: a bare letter is in the part's octave; each ' raises it and each , lowers it"
+        ? "octave absolute: as LilyPond's - a bare c is C3, c' middle C, c'' C5; each ' raises a note an octave and each , lowers it"
         : "octave relative: each note goes to the nearest of the note before; ' and , move it an octave from there";
+
+    /// <summary>The top level's or a part header's <c>pitch</c>: how the notes are TYPED (owner's
+    /// request 2026-10-28: "pitch concert" reads as unclear — the word stays, the status line says
+    /// what it means). Null for a word that is not one of the two.</summary>
+    private static string? PitchTypedSays(PropertyAssignmentSyntax property)
+    {
+        string scope = property.Parent is PartDeclarationSyntax ? "this part's" : "the";
+        return property.ValueText switch
+        {
+            Semantics.ConcertPitch.Concert =>
+                $"pitch concert: {scope} notes are written as they SOUND (concert pitch) - a B♭ trumpet's c' sounds middle C, "
+                + "a bass's e,, sounds E1; each part is still printed as its player reads it",
+            Semantics.ConcertPitch.Written =>
+                $"pitch written: {scope} notes are written as each player READS them (the default) - a B♭ trumpet's c' "
+                + "sounds B♭3, a bass's e, sounds E1",
+            _ => null,
+        };
+    }
+
+    /// <summary>A score header's or a staff's <c>pitch transposed|concert</c> under the caret: how
+    /// that page PRINTS the transposing parts. Null off one.</summary>
+    private static string? PitchPageAt(SyntaxTree tree, int offset)
+    {
+        // Read off the text: the score header holds its words in nodes of their own, the staff
+        // item in its targets, and a score block holds nothing else that says `pitch`.
+        string text = tree.Text;
+        foreach (var score in tree.GetNodes<RenderDeclarationSyntax>())
+        {
+            if (score.SourceStart > offset || offset > score.Span.End)
+                continue;
+            var words = System.Text.RegularExpressions.Regex.Matches(
+                text[score.Span.Start..score.Span.End], @"\bpitch\s+(transposed|concert)\b");
+            foreach (System.Text.RegularExpressions.Match m in words)
+            {
+                int start = score.Span.Start + m.Index;
+                if (offset < start || offset > start + m.Length)
+                    continue;
+                return m.Groups[1].Value switch
+                {
+                    Semantics.ConcertPitch.Concert =>
+                        "pitch concert: this page prints every part as it sounds (a conductor's score) - a B♭ trumpet at "
+                        + "concert pitch; a bass, a piccolo and a guitar keep their octave",
+                    Semantics.ConcertPitch.Transposed =>
+                        "pitch transposed: this page prints each transposing part as its player reads it - a B♭ trumpet "
+                        + "a tone up, in its own key",
+                    _ => null,
+                };
+            }
+        }
+        return null;
+    }
 
     /// <summary>A part's <c>transposition</c>: what sounds against what is written — the page does
     /// not change.</summary>

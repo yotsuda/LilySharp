@@ -32,7 +32,7 @@ public class ChordHoverTests
 {
     private const string Doc =
         "part melody {\n" +
-        "  section A { <d f a>4 <f d a>4 << c e g >>4 q4 | <c des d>4 <d f a>4 q4 << g' e c >>4 | c4 d e f | }\n" +
+        "  section A { <d' f a>4 <f d a>4 << c e g >>4 q4 | <c des d>4 <d f a>4 q4 << g' e c >>4 | c4 d e f | }\n" +
         "}\n\nform { A }\n\nscore {\n  staff melody\n}\n";
 
     private static string? HoverAt(string needle, int skip = 0, int occurrence = 0, string doc = Doc)
@@ -64,7 +64,7 @@ public class ChordHoverTests
 
     [Fact]
     public void AChord_HoversAsItsSymbol() =>
-        Assert.Equal("`Dm (IIm)` \u00A0D4 \u00A0F4 \u00A0A4", HoverAt("<d f a>"));
+        Assert.Equal("`Dm (IIm)` \u00A0D4 \u00A0F4 \u00A0A4", HoverAt("<d' f a>"));
 
     private const string ChordRowDoc =
         "key c major\n" +
@@ -104,8 +104,8 @@ public class ChordHoverTests
 
     [Fact]
     public void TheDegree_ReadsTheKeyInForce() =>
-        Assert.Equal("`D (V)` \u00A0D4 \u00A0F♯4 \u00A0A4", HoverAt("<d fis a>", doc:
-            "key g major\n\npart melody {\n  section A { <d fis a>4 r2. | }\n}\n\nform { A }\n\nscore {\n  staff melody\n}\n"));
+        Assert.Equal("`D (V)` \u00A0D4 \u00A0F♯4 \u00A0A4", HoverAt("<d' fis a>", doc:
+            "key g major\n\npart melody {\n  section A { <d' fis a>4 r2. | }\n}\n\nform { A }\n\nscore {\n  staff melody\n}\n"));
 
     [Fact]
     public void AnInversion_ShowsTheWrittenBassAsTheSlash_AndListsLowestFirst() =>

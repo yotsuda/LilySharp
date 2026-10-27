@@ -11,7 +11,7 @@ key c major
 part melody {
   clef treble
   // Plain triads, then a second-interval chord, all slurred two-at-a-time.
-  section Main { <c e>2 ( <d f>2 ) | <e f>2 ( <g a>2 ) | }
+  section Main { <c' e>2 ( <d f>2 ) | <e f>2 ( <g a>2 ) | }
 }
 
 form { Main }

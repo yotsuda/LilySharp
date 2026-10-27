@@ -13,7 +13,7 @@ key c major
 part melody
 
 phrase test {
-  <cis e gis>4 cue { <cis e gis>4 <des f aes>4 <bes d f>4 } |
+  <cis' e gis>4 cue { <cis e gis>4 <des f aes>4 <bes d f>4 } |
   fis4 cue { ges4 ais4 aes4 } |
 }
 

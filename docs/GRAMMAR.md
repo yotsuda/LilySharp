@@ -92,13 +92,14 @@ Contraction    = 'es' | 'as' | 'eses' | 'ases' ;   (* = ees / aes / eeses / aese
    the frame resets to the part's base at each section boundary and phrase call.
    `octave absolute` (top-level, or in a part's music — at its start or mid-music, to the
    section's end; NOT in a `part` declaration, which sets the base) switches to ABSOLUTE
-   mode: bare c = C4, and '/',' are absolute offsets from that anchor (c' = C5,
-   c, = C3) with NO carry between notes — octave mistakes cannot cascade, which
+   mode: bare c = C3, and '/',' are absolute offsets from that anchor (c' = C4, middle C,
+   c, = C2) with NO carry between notes — octave mistakes cannot cascade, which
    is the recommended mode for AI-generated scores. The base is the part's anchor,
-   the SAME as in relative mode: `part X { octave N }`, else the `instrument`'s octave
-   (`instrument bass` = C3, `flute` = C5 — since 2026-10-13; it used to be C4 whatever the
-   preset), else C4. E.g. a bass part with `octave 2` writes its low notes bare. Section
-   boundaries restore the file-level mode. *)
+   the SAME as in relative mode: `part X { octave N }`, else 3 — LilyPond's octaves, for
+   every instrument (owner's decision 2026-10-28; from 2026-10-13 an `instrument` preset
+   moved it, and before that the default was C4). A fresh relative frame starts at F3, as
+   LilyPond's pitchless \relative does. E.g. a bass part with `octave 2` writes its low notes
+   bare. Section boundaries restore the file-level mode. *)
 
 ### Duration
 
@@ -1156,14 +1157,12 @@ TranspositionMarker = '8va' | '8vb' | '15ma' | '15mb' ;
    printed wherever the staff stands. A quoted string alone is a free-text name with
    no preset (default clef). *)
 
-(* octave: the octave a part's bare letters are anchored to in relative mode
-   (`octave 3` puts a bare `c` at C3). The anchor is `octave N`, else the `instrument`
-   preset's octave (cello and bass 3, tuba 2, flute 5), else 4. THE CLEF IS NOT A STEP
+(* octave: the octave a part's bare letters are anchored to
+   (`octave 2` puts a bare `c` at C2). The anchor is `octave N`, else 3; an `instrument`
+   preset never moves it (owner's decision 2026-10-28). THE CLEF IS NOT A STEP
    (user decision 2026-09-15, reversing 2026-08-17): a clef in a part header, mid-music,
    on a cue or on a score's `staff bass x` only says how the staff is drawn and moves no
-   pitch, as LilyPond's \clef never moves \relative. A bass part without an instrument
-   preset writes `clef bass octave 3` to read bare letters in the bass register. Absolute
-   mode reads the same anchor (since 2026-10-13; it used to read only `octave N`). *)
+   pitch, as LilyPond's \clef never moves \relative. Absolute mode reads the same anchor. *)
 
 (* Hara-kiri (removeEmpty) is NOT a part property: it is the score item's
    'as removeEmpty true|all|false' selector — see StaffRender, §7. *)
@@ -2266,8 +2265,8 @@ ChordNote      = PitchToken , { Annotation } ;
    - MEMBERS place themselves at-or-above the anchor: a letter takes the same-letter
      pitch in the octave at/above it; degree N sits N−1 diatonic steps above it (8/9/13
      carry upward, no special case). A LATER member's own '/, marks shift THAT ONE note
-     from its stacked spot: <c e g'> = C4 E4 G5; <c' e g> = C5 E5 G5 (the first member's
-     mark moved the floor); <c' e' g'> = C5 E6 G6 (each later mark counts from its stacked
+     from its stacked spot: <c e g'> = C3 E3 G4; <c' e g> = C4 E4 G4 (the first member's
+     mark moved the floor); <c' e' g'> = C4 E5 G5 (each later mark counts from its stacked
      spot — the close chord an octave up is <c' e g> or <c e g>'). Letter mode is
      order-independent except the first slot (<c e g> = <c g e>, but <g c e> anchors on
      g); degree mode is FULLY order-independent (<2 4 6> = <6 2 4> = D F A in C major, and
@@ -2340,7 +2339,7 @@ ShapeChord     = 'chord' , '(' , ChordArgument , ')'    (* ChordArgument: 8.4, n
    running duration and acts like a single note. Octaves follow the chord anchor model
    (above): the anchor is where the first pitched member sounds — or the key tonic when
    the group opens with degrees, so a descending figure needs no marks: << 8 5 3 1 >> =
-   C5 G4 E4 C4. A later member's own marks shift that member from its stacked spot; the
+   C4 G3 E3 C3. A later member's own marks shift that member from its stacked spot; the
    root's, and marks after '>>', shift the whole group and propagate. Members may be
    pitches, scale degrees, chords or rests.
    A bare pitch member carries post-events like a note ('<< c@accent e\3 g@finger(1) >>':

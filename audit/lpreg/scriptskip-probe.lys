@@ -5,7 +5,7 @@ part v { }
 
 section Main {
   v {
-    s4@accent@marcato c4 c c |
+    s4@accent@marcato c'4 c c |
   }
 }
 

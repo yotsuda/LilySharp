@@ -46,10 +46,10 @@ public sealed class SymbolKindsTests
     private const string EverySpelling = """
         part melody { clef treble }
         part low { clef bass }
-        phrase riff { c4 d e f | }
+        phrase riff { c'4 d e f | }
         section A { key g major }
         section A { melody { riff } low { g,4 a, b, c | } }
-        section B { melody { e4 f g a | } low { c4 d e f | } }
+        section B { melody { e'4 f g a | } low { c'4 d e f | } }
         chords prog { section A { | G | } section B { | C | } }
         lyrics verse sings melody { section A { la la la la | } section B { la la la la | } }
         form { A ~B }

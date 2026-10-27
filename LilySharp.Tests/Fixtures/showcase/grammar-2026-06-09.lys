@@ -37,13 +37,13 @@ part melody {
 //      forms were removed). Reference a phrase with `name`.
 // -----------------------------------------------------------------------------
 phrase intro {
-  c4 d e f | g2 g |
+  c'4 d e f | g2 g |
 }
 
 // G3 — `tr` used to be a reserved keyword (trill); it is now an ordinary
 //      identifier, so it can name a phrase.
 phrase tr {
-  e4 f g a | b2 b |
+  e'4 f g a | b2 b |
 }
 
 // -----------------------------------------------------------------------------
@@ -55,7 +55,7 @@ section A {
     intro
 
     // G3 — articulations resolve from `@name` text via a registry:
-    c4@staccato d@staccato e@accent f@accent |
+    c'4@staccato d@staccato e@accent f@accent |
     g@tenuto a@tenuto b@marcato c@marcato |
 
     // G3 — ornaments:
@@ -74,17 +74,17 @@ section A {
 // ⚠️ Each body starts a fresh octave frame at the part's anchor, so three of the four
 //    carry the ' the one long music stream used to hand them. The sounding pitches are
 //    the same as before the move (checked with `lysc check --pitches`).
-section Rep     { melody { c4 d e f | } }         // the repeated body
+section Rep     { melody { c'4 d e f | } }         // the repeated body
 section RepEnd1 { melody { g'2 g | } }            // first-time ending
 section RepEnd2 { melody { a'2 a | } }            // second-time ending
-section RepN    { melody { c'8 d e f g f e c | } }// the body of a ':|*3' repeat
+section RepN    { melody { c''8 d e f g f e c | } }// the body of a ':|*3' repeat
 
 section Tail {
   melody {
     // G3 — `repeat tremolo` now parses (the keyword used to be rejected).
     // 16 sixteenths fill the 4/4 bar; the original wrote 4 and filled a quarter
     // of it, which the measure check now says out loud.
-    repeat tremolo 16 { c'16 } |
+    repeat tremolo 16 { c''16 } |
 
     // Reference the phrase whose name is a former keyword:
     tr

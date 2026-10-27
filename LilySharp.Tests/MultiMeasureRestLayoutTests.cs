@@ -57,7 +57,7 @@ public class MultiMeasureRestLayoutTests
         var tree = SyntaxTree.Parse(
             "octave absolute\ntime 4/4\npaper { raggedRight }\n" +
             "part m { clef treble }\n" +
-            "section S { m { c'1 | R1 | c'1 | } }\n" +
+            "section S { m { c''1 | R1 | c'1 | } }\n" +
             "form { S }\n" +
             "score o { staff m }\n");
         Assert.False(tree.HasErrors);
@@ -367,8 +367,8 @@ public class MultiMeasureRestLayoutTests
             part melody
             part lh { clef bass }
             section Main {
-              melody { c4 d e f | R1*4 | g4 a b c | }
-              lh { c2 c | R1*4 | c2 c | }
+              melody { c'4 d e f | R1*4 | g4 a b c | }
+              lh { c'2 c | R1*4 | c2 c | }
             }
             form { Main }
             score x { staff melody staff lh }

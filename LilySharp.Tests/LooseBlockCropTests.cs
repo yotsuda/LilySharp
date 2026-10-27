@@ -161,7 +161,7 @@ public class LooseBlockCropTests
     {
         const int bars = 24;
         const int verses = 5;
-        string music = string.Concat(Enumerable.Repeat("g'4 a' g' a' | ", bars));
+        string music = string.Concat(Enumerable.Repeat("g''4 a'' g'' a'' | ", bars));
         string words = string.Concat(Enumerable.Repeat("Twin- kle twin- kle | ", bars));
         // FIVE VERSES SO THE BLOCK BINDS. With one verse the block hangs 4.369960 under the
         // staff and the pair's own basic-distance 12.000000 wins the max outright, so the

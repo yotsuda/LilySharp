@@ -53,7 +53,7 @@ public class DynamicFewLineStaffTests
         octave absolute
         time 4/4
         part p { }
-        section A { p { b4@f r d'@f r | b4@p r d'@p r | f'4@f r g@f r | } }
+        section A { p { b'4@f r d''@f r | b'4@p r d''@p r | f''4@f r g'@f r | } }
         form { A }
         score { staff p as lines {{lines}} }
         """);

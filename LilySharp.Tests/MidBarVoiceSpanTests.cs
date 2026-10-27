@@ -43,7 +43,7 @@ public sealed class MidBarVoiceSpanTests
         var tree = SyntaxTree.Parse("""
             octave absolute
             part melody {
-              section A { c8( d) e4~ e8 voice { f8 g4 } { a,8 b,4 } }
+              section A { c'8( d') e'4~ e'8 voice { f'8 g'4 } { a8 b4 } }
             }
             form { A }
             score { staff melody }
@@ -70,7 +70,7 @@ public sealed class MidBarVoiceSpanTests
         var tree = SyntaxTree.Parse("""
             octave absolute
             part melody {
-              section A { voice { c8( d) e4 f2 } { s8 a,8 b,4 a,2 } }
+              section A { voice { c'8( d') e'4 f'2 } { s8 a8 b4 a2 } }
             }
             form { A }
             score { staff melody }

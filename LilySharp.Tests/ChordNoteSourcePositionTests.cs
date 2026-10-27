@@ -112,7 +112,7 @@ public class ChordNoteSourcePositionTests
     [Fact]
     public void APlayingChord_LightsEveryHead()
     {
-        const string source = "part m { clef bass }\nsection A { m { <c e g>1. s4 | } }\n"
+        const string source = "part m { clef bass }\nsection A { m { <c' e g>1. s4 | } }\n"
             + "form { ~A }\nscore { staff m }\n";
         var tree = SyntaxTree.Parse(source);
         string svg = LilySharp.Core.Svg.SvgGenerator.Generate(tree,
@@ -126,7 +126,7 @@ public class ChordNoteSourcePositionTests
         // Every head (the glyph, not its click rect) answers to the chord's offset.
         var heads = System.Text.RegularExpressions.Regex.Matches(svg, "<text class=\"music\"[^>]*>")
             .Select(m => m.Value)
-            .Where(tag => System.Text.RegularExpressions.Regex.IsMatch(tag, $"data-pos=\"({chordAt + 1}|{chordAt + 3}|{chordAt + 5})\""))
+            .Where(tag => System.Text.RegularExpressions.Regex.IsMatch(tag, $"data-pos=\"({chordAt + 1}|{chordAt + 4}|{chordAt + 6})\""))
             .ToList();
         Assert.Equal(3, heads.Count);
         Assert.All(heads, tag => Assert.Contains($"data-alt=\"{chordAt}\"", tag));

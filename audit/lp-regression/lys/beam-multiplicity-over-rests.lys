@@ -10,12 +10,12 @@ part m { clef treble }
 
 section Main {
   m {
-    c8[ r16 c32 c32]
-    c32[ r16 c32 c8]
-    c32[ r16 c64 c64~ c16.. c64]
-    c32[ c32 r16 c8] |
-    c16[ r32 c32 r16 c16]
-    c16[ r16 c32 r32 c16]
+    c'8[ r16 c'32 c'32]
+    c'32[ r16 c'32 c'8]
+    c'32[ r16 c'64 c'64~ c'16.. c'64]
+    c'32[ c'32 r16 c'8] |
+    c'16[ r32 c'32 r16 c'16]
+    c'16[ r16 c'32 r32 c'16]
   }
 }
 

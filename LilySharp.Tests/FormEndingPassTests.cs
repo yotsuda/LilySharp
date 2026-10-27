@@ -39,14 +39,14 @@ namespace LilySharp.Tests;
 [Trait("Category", "Unit")]
 public sealed class FormEndingPassTests
 {
-    // One whole note a section, at a pitch that names it: A c' (72), B g' (79), C e'' (88), D a' (81).
+    // One whole note a section, at a pitch that names it: A c'' (72), B g'' (79), C e''' (88), D a'' (81).
     private static string Book(string form) => $$"""
         octave absolute
         part m {
-          section A { c'1 | }
-          section B { g'1 | }
-          section C { e''1 | }
-          section D { a'1 | }
+          section A { c''1 | }
+          section B { g''1 | }
+          section C { e'''1 | }
+          section D { a''1 | }
         }
         form { {{form}} }
         score { staff m }
@@ -143,7 +143,7 @@ public sealed class FormEndingPassTests
     [Fact]
     public void TheFormAndTheInlineSpelling_SoundTheSame()
     {
-        var inline = MidiNotes("{ |: c4 [1,3. d4] :| [2. e4] }").Select(n => n.Pitch).ToArray();
+        var inline = MidiNotes("{ |: c'4 [1,3. d4] :| [2. e4] }").Select(n => n.Pitch).ToArray();
         Assert.Equal(new[] { 60, 62, 60, 64, 60, 62 }, inline);
         Assert.Equal("ABACAB", Played("|: A [1,3. B] :| [2. C]"));
     }
@@ -187,10 +187,10 @@ public sealed class FormEndingPassTests
     {
         const string src = """
             part vn {
-              section A { c''1 | c1~ || }
-              section B { c''1 || }
-              section C { c''1 | c1~ || }
-              section D { c''1 | }
+              section A { c'''1 | c1~ || }
+              section B { c'''1 || }
+              section C { c'''1 | c1~ || }
+              section D { c'''1 | }
             }
             form { |: A [1,3. B] :| [2. C] D }
             score { staff vn }
@@ -248,9 +248,9 @@ public sealed class FormEndingPassTests
         time 4/4
         key c major
         part m { clef bass }
-        section A { m { c4 d e f | g4 a | } }
+        section A { m { c'4 d e f | g4 a | } }
         section E1 { m { b4 c' | d'4 e' f' g' | } }
-        section E2 { m { c'4 d' | e'1 | f'4 | } }
+        section E2 { m { c''4 d' | e'1 | f'4 | } }
         section D { m { g'4 a' b' | c''1 | } }
         """;
 
@@ -382,7 +382,7 @@ public sealed class FormEndingPassTests
         var inline = SyntaxTree.Parse("{ |: c4 [1,3,5. d4] :| [2,4. e4] }");
         Assert.Equal(DiagnosticCodes.TopLevelMusic, Assert.Single(inline.Diagnostics).Code);
         Assert.Equal(new[] { 60, 62, 60, 64, 60, 62, 60, 64, 60, 62 },
-            MidiNotes("{ |: c4 [1,3,5. d4] :| [2,4. e4] }").Select(n => n.Pitch).ToArray());
+            MidiNotes("{ |: c'4 [1,3,5. d4] :| [2,4. e4] }").Select(n => n.Pitch).ToArray());
 
         // A range stays two numbers: a comma after it is the parser's error, as before.
         Assert.Contains(SyntaxTree.Parse(Book("|: A [1-3,5. B] :| [4. C]")).Diagnostics,

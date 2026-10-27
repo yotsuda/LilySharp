@@ -43,7 +43,7 @@ public class ScriptOverOtherVoiceRestTests
         score { staff rh }
         section Piece {
           rh {
-            voice { cis'16 d'16 d'8 r4 } { a16 g16 fis8 a8@portato.up g8@portato.up } |
+            voice { cis''16 d''16 d''8 r4 } { a'16 g'16 fis'8 a'8@portato.up g'8@portato.up } |
           }
         }
         """;
@@ -57,7 +57,7 @@ public class ScriptOverOtherVoiceRestTests
         score { staff rh }
         section Piece {
           rh {
-            voice { cis'16 d'16 d'8 s4 } { a16 g16 fis8 a8@portato.up g8@portato.up } |
+            voice { cis''16 d''16 d''8 s4 } { a'16 g'16 fis'8 a'8@portato.up g'8@portato.up } |
           }
         }
         """;
@@ -154,7 +154,7 @@ public class ScriptOverOtherVoiceRestTests
             score { staff rh }
             section Piece {
               rh {
-                voice { e'16 d'16 e'8 c'8@portato.down d'8@portato.down } { a16 g16 a8 r4 } |
+                voice { e''16 d''16 e''8 c''8@portato.down d''8@portato.down } { a'16 g'16 a'8 r4 } |
               }
             }
             """);

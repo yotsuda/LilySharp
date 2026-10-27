@@ -10,16 +10,16 @@ part v { clef treble }
 
 section Main {
   v {
-    grace { d8 } c4 d e f |
-    grace { d8 } c4 d e f |
-    grace { d8 } c4 d e f |
-    grace { d8 } c4 d e f |
-    grace { d8 } c4 d e f |
-    grace { d8 } c4 d e f |
-    grace { d8 } c4 d e f |
-    grace { d8 } c4 d e f |
-    grace { d8 } c4 d e f |
-    grace { d8 } c4 d e f |
+    grace { d'8 } c'4 d' e' f' |
+    grace { d'8 } c'4 d' e' f' |
+    grace { d'8 } c'4 d' e' f' |
+    grace { d'8 } c'4 d' e' f' |
+    grace { d'8 } c'4 d' e' f' |
+    grace { d'8 } c'4 d' e' f' |
+    grace { d'8 } c'4 d' e' f' |
+    grace { d'8 } c'4 d' e' f' |
+    grace { d'8 } c'4 d' e' f' |
+    grace { d'8 } c'4 d' e' f' |
   }
 }
 

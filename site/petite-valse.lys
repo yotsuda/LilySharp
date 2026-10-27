@@ -11,9 +11,9 @@ part rh { clef treble }
 part lh { clef bass octave 3 }
 
 section A {
-  rh { e'4@p( a g | e2.) | f4( a g | d2.) |
+  rh { e''4@p( a g | e2.) | f4( a g | d2.) |
        e4@cresc( g c | b4 gis b | a2.@f) | a2. | }
-  lh { a4@sustain <c e a> <c e a> | a4 <c e a> <c e a>@!sustain |
+  lh { a,4@sustain <c e a> <c e a> | a4 <c e a> <c e a>@!sustain |
        d4@sustain <f a d> <f a d> | g,4 <b d g> <b d g>@!sustain |
        c4@sustain <e g c> <e g c> | e,4 <gis' b d> <gis b d>@!sustain |
        a,4@sustain <c e a> <c e a> | a2.@!sustain | }
@@ -22,7 +22,7 @@ section B {
   rh { grace { gis''16 } a4@mp( b c | tuplet 3/2 { d8 c b } a4 g) |
        c4@trill@decresc( b a | gis2.@p) | e4( a g | e2.) |
        <c' e>4@arpeggio b( a | a2.@fermata) | }
-  lh { a4@sustain <c e a> <c e a> | d4 <f a d> <f a d>@!sustain |
+  lh { a,4@sustain <c e a> <c e a> | d4 <f a d> <f a d>@!sustain |
        e,4@sustain <gis' b d> <gis b d> | e,2.@!sustain |
        a4@sustain <c e a> <c e a> | a4 <c e a> <c e a>@!sustain |
        e,4@sustain <gis' b d> <gis b d> | <a, e' a' c' e>2.@arpeggio@!sustain | }

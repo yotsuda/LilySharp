@@ -60,10 +60,10 @@ public class ScoreRowSpellingMatrixTests
     /// <summary>A by-part book with everything the rows below reference.</summary>
     private const string Book = """
         part melody { clef treble
-          section A { c'4 d' e' f' | }
+          section A { c''4 d' e' f' | }
         }
         part bass { clef bass
-          section A { c4 d e f | }
+          section A { c'4 d e f | }
         }
         chords prog { section A { C | } }
         lyrics w { section A { Do re mi fa | } }

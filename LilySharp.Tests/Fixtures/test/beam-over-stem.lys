@@ -18,8 +18,8 @@ title "Beam over another voice's stem"
 part mel { clef treble }
 section S {
   mel {
-    voice { b8 b s2. | b8 b s2. | b8 b s2. | }
-    { s16 d''16 d'' d'' s2. | s16 d''4 s8. s2 | s1 | }
+    voice { b'8 b' s2. | b'8 b' s2. | b'8 b' s2. | }
+    { s16 d'''16 d''' d''' s2. | s16 d'''4 s8. s2 | s1 | }
   }
 }
 form { S }

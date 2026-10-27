@@ -48,8 +48,8 @@ public class StackedTrackRowTests
         time 4/4
         key c major
         part m { clef treble
-          section A { c'4 d' e' f' | g' a' b' c'' | }
-          section B { c''4 b' a' g' | }
+          section A { c''4 d'' e'' f'' | g'' a'' b'' c''' | }
+          section B { c'''4 b'' a'' g'' | }
         }
         chords prog {
           section A { C | G7 | }

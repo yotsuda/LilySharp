@@ -16,7 +16,7 @@ part leftHand {
 }
 
 section Main {
-  rightHand { c'2 g' | }
+  rightHand { c''2 g' | }
   leftHand  { c4 tempo 90 e g c | }
 }
 

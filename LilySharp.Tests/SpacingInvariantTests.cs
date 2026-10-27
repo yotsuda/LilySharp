@@ -48,7 +48,7 @@ public class SpacingInvariantTests
 
     private const string OneMeasure = """
         time 4/4
-        section Main { melody { c2 d4 e | } }
+        section Main { melody { c'2 d4 e | } }
         form { Main }
         score x { staff melody }
         """;
@@ -65,8 +65,8 @@ public class SpacingInvariantTests
         part upper { clef treble transpose d }
         part lower { clef bass }
         section Main {
-          upper { c'4 d e f | g2 e | }
-          lower { c4 d e f | g2 e | }
+          upper { c''4 d e f | g2 e | }
+          lower { c'4 d e f | g2 e | }
         }
         form { Main }
         score x { grandStaff { staff upper staff lower } }
@@ -135,9 +135,9 @@ public class SpacingInvariantTests
         key a major
         octave absolute
         part m { clef bass }
-        section S1 { m { a,4 b, cis d | a,4 b, cis d | a,4 b, cis d | a,4 b, cis d | break } }
+        section S1 { m { a4 b cis' d' | a4 b cis' d' | a4 b cis' d' | a4 b cis' d' | break } }
         section S2 { key ees major
-          m { aes,4 bes, c des | aes,4 bes, c des | aes,4 bes, c des | aes,4 bes, c des | } }
+          m { aes4 bes c' des' | aes4 bes c' des' | aes4 bes c' des' | aes4 bes c' des' | } }
         form { S1 S2 }
         score x { staff m }
         """;
@@ -149,9 +149,9 @@ public class SpacingInvariantTests
         key ees major
         octave absolute
         part m { clef bass }
-        section S1 { m { aes,4 bes, c des | aes,4 bes, c des | aes,4 bes, c des | aes,4 bes, c des | break } }
+        section S1 { m { aes4 bes c' des' | aes4 bes c' des' | aes4 bes c' des' | aes4 bes c' des' | break } }
         section S2 {
-          m { aes,4 bes, c des | aes,4 bes, c des | aes,4 bes, c des | aes,4 bes, c des | } }
+          m { aes4 bes c' des' | aes4 bes c' des' | aes4 bes c' des' | aes4 bes c' des' | } }
         form { S1 S2 }
         score x { staff m }
         """;
@@ -219,8 +219,8 @@ public class SpacingInvariantTests
             part upper { clef treble }
             part lower { clef bass }
             section Main {
-              upper { d'4 e fis g | a2 fis | }
-              lower { d4 e fis g | a2 fis | }
+              upper { d''4 e fis g | a2 fis | }
+              lower { d'4 e fis g | a2 fis | }
             }
             form { Main }
             score x { grandStaff { staff upper staff lower } }
@@ -310,7 +310,7 @@ public class SpacingInvariantTests
             time 4/4
             octave absolute
             part melody
-            section Main { melody { c'4 c'32 s32 d'32 s32 e'32 s32 f'32 s32 c'4 c'4 | } }
+            section Main { melody { c''4 c''32 s32 d''32 s32 e''32 s32 f''32 s32 c''4 c''4 | } }
             form { Main }
             score x { staff melody }
             """);
@@ -355,7 +355,7 @@ public class SpacingInvariantTests
             time 4/4
             octave absolute
             part melody
-            section Main { melody { c'2 c'2 | grace { d'16 e' } f'4 g'2 r4 | } }
+            section Main { melody { c''2 c''2 | grace { d''16 e'' } f''4 g''2 r4 | } }
             form { Main }
             score x { staff melody }
             """);
@@ -389,7 +389,7 @@ public class SpacingInvariantTests
             time 4/4
             octave absolute
             part melody
-            section Main { melody { c'4 d' clef bass e4 f4 | } }
+            section Main { melody { c''4 d'' clef bass e'4 f'4 | } }
             form { Main }
             score x { staff melody }
             """);
@@ -660,7 +660,7 @@ public class SpacingInvariantTests
         // measurement and the threshold must not be read as a ported constant.
         var src = """
             time 4/4
-            section Main { melody { R1 | c4 d e f | } }
+            section Main { melody { R1 | c'4 d e f | } }
             form { Main }
             score x { staff melody }
             """;
@@ -688,7 +688,7 @@ public class SpacingInvariantTests
             part lh
             section Main {
               rh { R1 | R1 | }
-              lh { c8 d e f g a b c | R1 | }
+              lh { c'8 d e f g a b c | R1 | }
             }
             form { Main }
             score x { staff rh staff lh }
@@ -722,7 +722,7 @@ public class SpacingInvariantTests
         var (timings, allMeasures, primary, score) = Collect("""
             part melody {
               instrument bass
-              section A { a8 a a a a a a a | a8 a a a a a a a | }
+              section A { a,8 a a a a a a a | a8 a a a a a a a | }
             }
             form { A }
             score x { tab melody }
@@ -782,7 +782,7 @@ public class SpacingInvariantTests
             key c major
 
             part melody {
-              section A { a4 a a a | a4 a a a | }
+              section A { a'4 a' a' a' | a'4 a' a' a' | }
             }
 
             lyrics w sings melody {
@@ -868,7 +868,7 @@ public class SpacingInvariantTests
             time 4/4
             key c major
             part m { clef treble }
-            section A { m { c'1 | key d major grace { d'16 e' } f'4 g'2 r4 | } }
+            section A { m { c''1 | key d major grace { d''16 e'' } f''4 g''2 r4 | } }
             form { A }
             score x { staff m }
             """);
@@ -889,7 +889,7 @@ public class SpacingInvariantTests
     /// voice three under eighths in voice two, the two mechanisms of that fixture.</summary>
     private const string DottedThirdVoice = """
         part melody {
-          section A { voice { g''2( g8) eis fis g } { e8 d e e e fis r4 }  { cis2. r4 } }
+          section A { voice { g''2( g8) eis fis g } { e'8 d e e e fis r4 }  { cis'2. r4 } }
         }
         form { A }
         score x { staff melody }

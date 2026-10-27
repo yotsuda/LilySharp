@@ -87,7 +87,7 @@ public sealed class MeterSkylineTests
     {
         // A six-string tab's strings stand at ±3.75; Petaluma's 4 reaches 3.92 under the centre.
         var (score, layout) = Lay("fonts { music \"Petaluma\" }\ntime 3/4\npart g { clef treble }\n"
-            + "section A { g { e4 e e | } }\nscore { tab g }\n");
+            + "section A { g { e'4 e e | } }\nscore { tab g }\n");
         var (bottom, _) = Ink(score, score.TimeSignature);
         Assert.True(bottom < -3.8, $"the fixture's meter reaches only {bottom:F3}");
         var with = Inside(score, layout, 0, withScore: true);

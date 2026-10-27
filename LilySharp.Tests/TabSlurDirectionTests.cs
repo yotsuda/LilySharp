@@ -72,7 +72,7 @@ public sealed class TabSlurDirectionTests
         part bl { clef bass tuning bass }
 
         section A {
-          bl { g,4\2( c\1 c\1 g,\2) | d,4\3( a,,\4 a,,\4 d,\3) | }
+          bl { g4\2( c'\1 c'\1 g\2) | d4\3( a,\4 a,\4 d\3) | }
         }
 
         form { A }

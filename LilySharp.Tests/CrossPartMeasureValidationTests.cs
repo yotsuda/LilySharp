@@ -46,8 +46,8 @@ public class CrossPartMeasureValidationTests
         var diags = Validate("""
             time 5/4
             section Main {
-              rh { c4 d e f g | c4 d e f g | c4 d e f g | }
-              lh { c2 g2 c4 | c2 g2 c4 | c2 g2 c4 | }
+              rh { c'4 d e f g | c4 d e f g | c4 d e f g | }
+              lh { c'2 g2 c4 | c2 g2 c4 | c2 g2 c4 | }
             }
             form { Main }
             """);
@@ -88,17 +88,17 @@ public class CrossPartMeasureValidationTests
     [Theory]
     [InlineData("""
         part rh { clef treble }
-        section A { time 3/4  rh { c'2. | c'2. | } }
-        section B { rh { c'1 | c'1 | } }
+        section A { time 3/4  rh { c''2. | c'2. | } }
+        section B { rh { c''1 | c'1 | } }
         """)]
     [InlineData("""
         part rh { clef treble }
         part lh { clef bass }
-        section A { time 3/4  rh { c'2. | }  lh { c2. | } }
-        section B { rh { c'1 | }  lh { c1 | } }
+        section A { time 3/4  rh { c''2. | }  lh { c'2. | } }
+        section B { rh { c''1 | }  lh { c'1 | } }
         """)]
     [InlineData("""
-        part rh { clef treble  section A { c'2. | c'2. | }  section B { c'1 | c'1 | } }
+        part rh { clef treble  section A { c''2. | c'2. | }  section B { c''1 | c'1 | } }
         section A { time 3/4 }
         """)]
     public void ASectionHeaderTime_IsThatSectionsMeterOnly(string body)
@@ -109,8 +109,8 @@ public class CrossPartMeasureValidationTests
 
     /// <summary>…and the check still bites on either side of the boundary.</summary>
     [Theory]
-    [InlineData("section A { time 3/4  rh { c'2. | c'1 | } }\nsection B { rh { c'1 | } }", "exceeds")]
-    [InlineData("section A { time 3/4  rh { c'2. | } }\nsection B { rh { c'1 | c'2. | } }", "less than")]
+    [InlineData("section A { time 3/4  rh { c''2. | c'1 | } }\nsection B { rh { c''1 | } }", "exceeds")]
+    [InlineData("section A { time 3/4  rh { c''2. | } }\nsection B { rh { c''1 | c'2. | } }", "less than")]
     public void ASectionHeaderTime_StillFlagsABarThatMissesItsOwnSectionsMeter(string sections, string words)
     {
         var diags = Validate("time 4/4\npart rh { clef treble }\n" + sections + "\nform { A B }\n");
@@ -126,8 +126,8 @@ public class CrossPartMeasureValidationTests
         var diags = Validate("""
             time 5/4
             section Main {
-              rh { c4 d e f g | c4 d e f g | c4 d e f g | }
-              lh { c2 g2 c4 | c2 g2 | c2 g2 c4 | }
+              rh { c'4 d e f g | c4 d e f g | c4 d e f g | }
+              lh { c'2 g2 c4 | c2 g2 | c2 g2 c4 | }
             }
             form { Main }
             """);
@@ -146,8 +146,8 @@ public class CrossPartMeasureValidationTests
         var diags = Validate("""
             time 4/4
             section Main {
-              rh { c4 | c4 d e f | }
-              lh { c2 | c4 d e f | }
+              rh { c'4 | c4 d e f | }
+              lh { c'2 | c4 d e f | }
             }
             form { Main }
             """);
@@ -164,8 +164,8 @@ public class CrossPartMeasureValidationTests
         var diags = Validate("""
             time 4/4
             section Main {
-              rh { c4 | c4 d e f | }
-              lh { e4 | c4 d e f | }
+              rh { c'4 | c4 d e f | }
+              lh { e'4 | c4 d e f | }
             }
             form { Main }
             """);
@@ -179,8 +179,8 @@ public class CrossPartMeasureValidationTests
         // differ (quarter vs half). Expansion must see through $refs.
         var diags = Validate("""
             time 4/4
-            phrase pa { c4 | c4 d e f | }
-            phrase pb { c2 | c4 d e f | }
+            phrase pa { c'4 | c4 d e f | }
+            phrase pb { c'2 | c4 d e f | }
             section Main {
               rh { pa }
               lh { pb }
@@ -198,9 +198,9 @@ public class CrossPartMeasureValidationTests
         var diags = Validate("""
             time 4/4
             section Main {
-              rh { c4 d e f | }
+              rh { c'4 d e f | }
               time 3/4
-              lh { c4 d e | }
+              lh { c'4 d e | }
             }
             form { Main }
             """);
@@ -216,8 +216,8 @@ public class CrossPartMeasureValidationTests
         // shorter part's section.
         var diags = Validate("""
             time 4/4
-            part melody { section A { c4 d e f | g4 a b c' | } }
-            part bass { section A { c2 e2 | } }
+            part melody { section A { c'4 d e f | g4 a b c' | } }
+            part bass { section A { c'2 e2 | } }
             form { A }
             """);
         var m = diags.Where(d => d.Code == DiagnosticCodes.SectionBarCountMismatch).ToList();
@@ -232,8 +232,8 @@ public class CrossPartMeasureValidationTests
         // Equal bar counts across parts — no mismatch warning.
         var diags = Validate("""
             time 4/4
-            part melody { section A { c4 d e f | g4 a b c' | } }
-            part bass { section A { c2 e2 | c2 e2 | } }
+            part melody { section A { c'4 d e f | g4 a b c' | } }
+            part bass { section A { c'2 e2 | c2 e2 | } }
             form { A }
             """);
         Assert.DoesNotContain(diags, d => d.Code == DiagnosticCodes.SectionBarCountMismatch);
@@ -250,7 +250,7 @@ public class CrossPartMeasureValidationTests
         const string source = """
             part melody {
               section A { g2 g | }
-              section B { c2 c | }
+              section B { c'2 c | }
             }
             chords prog {
               section A { Dm7 | G7 }
@@ -279,9 +279,9 @@ public class CrossPartMeasureValidationTests
     public void ManyLayers_OneLongOutlier_IsOneWarningOnTheOutlier_WithEveryLayerRelated()
     {
         const string source = """
-            part flute { section A { c1 | c1 | c1 | } }
-            part oboe { section A { c1 | c1 | } }
-            part horn { section A { c1 | c1 | } }
+            part flute { section A { c'1 | c1 | c1 | } }
+            part oboe { section A { c'1 | c1 | } }
+            part horn { section A { c'1 | c1 | } }
             chords harmony { section A { C | F | } }
             form { A }
             score { chords harmony  staff flute  staff oboe  staff horn }
@@ -306,7 +306,7 @@ public class CrossPartMeasureValidationTests
         var diags = Validate("""
             part melody {
               section A { g2 g | g2 g | }
-              section B { c2 c | }
+              section B { c'2 c | }
             }
             chords prog {
               section A { Dm7 | G7 | }
@@ -347,7 +347,7 @@ public class CrossPartMeasureValidationTests
         // single part block. One part alone used to end the pass before the count check.
         var diags = Validate("""
             section A { melody { g2 g | } chords prog { Dm7 | G7 } }
-            section B { melody { c2 c | } chords prog { Cmaj7 | } }
+            section B { melody { c'2 c | } chords prog { Cmaj7 | } }
             form { A | B | }
             score { chords prog  staff melody }
             """);
@@ -460,7 +460,7 @@ public class CrossPartMeasureValidationTests
         // count check.
         var diags = Validate("""
             time 4/4
-            section Main { rh { c4 d e f | g4 a b c' | } lh { c4 d e f | } }
+            section Main { rh { c'4 d e f | g4 a b c' | } lh { c'4 d e f | } }
             form { Main }
             """);
         Assert.Contains(diags, d => d.Code == DiagnosticCodes.SectionBarCountMismatch);
@@ -474,7 +474,7 @@ public class CrossPartMeasureValidationTests
         var diags = Validate("""
             time 4/4
             section Main {
-              melody { c4 | c4 d e f | g2 a4 | c1 | }
+              melody { c'4 | c4 d e f | g2 a4 | c1 | }
             }
             form { Main }
             """);
@@ -494,7 +494,7 @@ public class CrossPartMeasureValidationTests
         var diags = Validate("""
             section B {
               melody {| | |}
-              melody2 { c1 | c1 | c1 | }
+              melody2 { c'1 | c1 | c1 | }
             }
             form { B }
             """);
@@ -511,7 +511,7 @@ public class CrossPartMeasureValidationTests
         var diags = Validate("""
             section B {
               melody {| |}
-              melody2 { c1 | c1 | c1 | }
+              melody2 { c'1 | c1 | c1 | }
             }
             form { B }
             """);
@@ -530,8 +530,8 @@ public class CrossPartMeasureValidationTests
         // part spanned 2 bars and drew 3.
         var diags = Validate("""
             section B {
-              melody { R1*2 | c1 | }
-              melody2 { c1 | c1 | c1 | }
+              melody { R1*2 | c'1 | }
+              melody2 { c'1 | c1 | c1 | }
             }
             form { B }
             """);
@@ -547,8 +547,8 @@ public class CrossPartMeasureValidationTests
         // "stop counting multi-measure rests" rather than "count all of their bars".
         var diags = Validate("""
             section B {
-              melody { R1*2 | c1 | }
-              melody2 { c1 | c1 | c1 | c1 | }
+              melody { R1*2 | c'1 | }
+              melody2 { c'1 | c1 | c1 | c1 | }
             }
             form { B }
             """);

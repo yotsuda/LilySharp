@@ -289,7 +289,7 @@ public class CompletionAuditTests
     [Fact]
     public void NavigationMarks_AreTheCompilersList_InTheFormPopupAlone()
     {
-        const string doc = "part m { section A { c4 d e f | } }\nform { A }";
+        const string doc = "part m { section A { c'4 d e f | } }\nform { A }";
         var form = LilySharpLanguageServer.GetFormCompletions(doc).Items.Select(i => i.Label).ToHashSet();
         var drums = LilySharpLanguageServer.GetDrumCompletions().Items.Select(i => i.Label).ToHashSet();
         foreach (string mark in LanguageVocabulary.NavigationMarks)

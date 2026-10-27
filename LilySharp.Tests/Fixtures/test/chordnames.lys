@@ -15,7 +15,7 @@ part m { clef treble }
 section Main {
   m {
     time 4/4
-    c4 d e f | g a b <c ees ges bes> |
+    c'4 d e f | g a b <c ees ges bes> |
   }
   chords prog {
     C Am | F Gm7-5 |

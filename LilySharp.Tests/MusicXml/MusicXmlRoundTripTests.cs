@@ -81,12 +81,12 @@ public class MusicXmlRoundTripTests
     [InlineData("instrument bass", "C3", null, -1)]      // the 8vb is the INSTRUMENT's
     [InlineData("instrument guitar", "C3", -1, null)]    // …and here the CLEF's: in the pitch
     [InlineData("clef treble_8", "C3", -1, null)]
-    [InlineData("instrument piccolo", "C5", null, 1)]    // the other direction
+    [InlineData("instrument piccolo", "C3", null, 1)]    // the other direction
     // Both sources at once: the clef's octave in the pitch, the instrument's in transpose.
-    [InlineData("instrument bass clef bass_8", "C2", -1, -1)]
-    [InlineData("clef bass", "C4", null, null)]           // the clef moves no pitch
-    [InlineData("clef bass octave 3", "C3", null, null)]  // …the part's `octave` does
-    [InlineData("clef treble", "C4", null, null)]
+    [InlineData("instrument bass clef bass_8", "C3", -1, -1)]
+    [InlineData("clef bass", "C3", null, null)]           // the clef moves no pitch
+    [InlineData("clef bass octave 4", "C4", null, null)]  // …the part's `octave` does
+    [InlineData("clef treble", "C3", null, null)]
     public void TransposingPart_DeclaresItsShiftOnceAndSurvivesRoundTrip(
         string header, string writtenPitch, int? clefOctaveChange, int? octaveChange)
     {
@@ -267,8 +267,8 @@ public class MusicXmlRoundTripTests
 
             section A {
               melody {
-                e'4@chord(C) e' f' g' | a'4@chord(Am) g' e' d' |
-                f'4@chord(F) a' g' f' | e'4@chord(G7) d' c'2 |
+                e''4@chord(C) e'' f'' g'' | a''4@chord(Am) g'' e'' d'' |
+                f''4@chord(F) a'' g'' f'' | e''4@chord(G7) d'' c''2 |
               }
               lyrics words sings melody { Mu- sic fills the | air to- night so | ev- 'ry- one will | sing a- long | }
             }
@@ -291,7 +291,7 @@ public class MusicXmlRoundTripTests
             key c major
             part melody { clef treble }
             section A {
-              melody { e'4@chord(C) e' f' g' | }
+              melody { e''4@chord(C) e'' f'' g'' | }
               lyrics words sings melody { Mu- sic fills the | }
             }
             form { A }
@@ -314,7 +314,7 @@ public class MusicXmlRoundTripTests
             key c major
             part bass { clef bass }
             section A {
-              bass { c4@figuredBass(6) d4@figuredBass(6 4) e4@figuredBass(7 s) f4@figuredBass(_) | }
+              bass { c'4@figuredBass(6) d'4@figuredBass(6 4) e'4@figuredBass(7 s) f'4@figuredBass(_) | }
             }
             form { A }
             score { staff bass }
@@ -470,8 +470,8 @@ public class MusicXmlRoundTripTests
         var span = Assert.Single(importedTree.GetRoot().DescendantNodes()
             .OfType<ParallelExpressionSyntax>());
         Assert.Equal(2, span.Voices.Count());
-        int v1 = lys.IndexOf("c'4", System.StringComparison.Ordinal); // voice 1 upper
-        int v2 = lys.IndexOf("c2", System.StringComparison.Ordinal);  // voice 2 lower half note
+        int v1 = lys.IndexOf("c''4", System.StringComparison.Ordinal); // voice 1 upper
+        int v2 = lys.IndexOf("c'2", System.StringComparison.Ordinal); // voice 2 lower half note
         Assert.True(v1 >= 0 && v2 >= 0 && v1 < v2, lys);
     }
 
@@ -532,7 +532,7 @@ public class MusicXmlRoundTripTests
             time 4/4
             key c major
             part melody { clef treble }
-            section A { melody { c'4 d' e' f' | g'4 a' b' c'' | } }
+            section A { melody { c''4 d'' e'' f'' | g''4 a'' b'' c''' | } }
             form { |: A :| }
             score { staff melody }
             """);
@@ -682,8 +682,8 @@ public class MusicXmlRoundTripTests
         Assert.Contains("clef treble", lys);
         Assert.Contains("clef bass", lys);
         // RH note in the treble part, LH note in the bass part.
-        Assert.Contains("e'1", lys); // E5 whole, treble
-        Assert.Contains("c,1", lys); // C3 whole, bass
+        Assert.Contains("e''1", lys); // E5 whole, treble
+        Assert.Contains(" c1", lys); // C3 whole, bass
     }
 
     /// <summary>
@@ -701,8 +701,8 @@ public class MusicXmlRoundTripTests
             part rh { clef treble }
             part lh { clef bass }
             section A {
-              rh { c''4@quindicesima d'' e'' f''@!ottava@p | g''1 | g''1 | }
-              lh { c4@f@ottava(bassa) d e f@!ottava | g,1@sustain | c1@!sustain | }
+              rh { c'''4@quindicesima d''' e''' f'''@!ottava@p | g'''1 | g'''1 | }
+              lh { c'4@f@ottava(bassa) d' e' f'@!ottava | g1@sustain | c'1@!sustain | }
             }
             form { ~A }
             score { grandStaff { staff rh "Piano"  staff lh } }
@@ -710,8 +710,8 @@ public class MusicXmlRoundTripTests
         var xml = new MusicXmlExporter().Export(original).ToXml().ToString();
         var (lys, _) = new MusicXmlImporter().Import(xml);
         Assert.False(HasErrors(SyntaxTree.Parse(lys)), lys);
-        Assert.Contains("c''4@quindicesima d''4 e''4 f''4@!ottava@p |", lys);
-        Assert.Contains("c4@f@ottava(bassa) d4 e4 f4@!ottava | g,1@sustain | c1@!sustain |", lys);
+        Assert.Contains("c'''4@quindicesima d'''4 e'''4 f'''4@!ottava@p |", lys);
+        Assert.Contains("c'4@f@ottava(bassa) d'4 e'4 f'4@!ottava | g1@sustain | c'1@!sustain |", lys);
     }
 
     /// <summary>
@@ -729,7 +729,7 @@ public class MusicXmlRoundTripTests
             part rh { clef treble }
             part lh { clef bass }
             part fl { clef treble }
-            section A { rh { c''1 | } lh { c1 | } fl { g''1 | } }
+            section A { rh { c'''1 | } lh { c'1 | } fl { g'''1 | } }
             form { ~A }
             score { grandStaff { staff rh "Piano"  staff lh }  staff fl }
             """);
@@ -757,7 +757,7 @@ public class MusicXmlRoundTripTests
             part rh { clef treble }
             part lh { clef bass }
             part fl { clef treble }
-            section A { rh { c''1 | } lh { c1 | } fl { g''1 | } }
+            section A { rh { c'''1 | } lh { c'1 | } fl { g'''1 | } }
             form { ~A }
             score { grandStaff { staff rh "Right"  staff lh "Left" }  staff fl }
             """);
@@ -790,7 +790,7 @@ public class MusicXmlRoundTripTests
             part sop { clef treble }
             part alt { clef treble }
             part fl { clef treble }
-            section A { rh { c''1 | } lh { c1 | } vn { g'1 | } sop { e''1 | } alt { c''1 | } fl { g''1 | } }
+            section A { rh { c'''1 | } lh { c'1 | } vn { g''1 | } sop { e'''1 | } alt { c'''1 | } fl { g'''1 | } }
             form { ~A }
             score {
               staffGroup { grandStaff { staff rh "Piano"  staff lh }  staff vn "Violin" }
@@ -826,7 +826,7 @@ public class MusicXmlRoundTripTests
             part rh { clef treble }
             part lh { clef bass }
             part vn { clef treble }
-            section A { rh { c''1 | } lh { c1 | } vn { g'1 | } }
+            section A { rh { c'''1 | } lh { c'1 | } vn { g''1 | } }
             form { ~A }
             score { staffGroup { grandStaff { staff rh "Right"  staff lh "Left" }  staff vn "Violin" } }
             """);
@@ -852,7 +852,7 @@ public class MusicXmlRoundTripTests
             time 4/4
             part rh { clef treble }
             part lh { clef bass }
-            section A { rh { c''1 | c''1 | } lh { c1 | clef treble c''1 | } }
+            section A { rh { c'''1 | c'''1 | } lh { c'1 | clef treble c'''1 | } }
             form { ~A }
             score { grandStaff { staff rh "Right"  staff lh "Left" } }
             """);
@@ -918,7 +918,7 @@ public class MusicXmlRoundTripTests
             </score-partwise>
             """);
         Assert.False(HasErrors(SyntaxTree.Parse(lys)), lys);
-        Assert.Contains("c''4@ottava@sostenuto d''4 | e'4@!ottava f'4@!sostenuto |", lys);
+        Assert.Contains("c'''4@ottava@sostenuto d'''4 | e''4@!ottava f''4@!sostenuto |", lys);
     }
 
     private static int CountOccurrences(string haystack, string needle)
@@ -937,7 +937,7 @@ public class MusicXmlRoundTripTests
         const string lys = """
             octave absolute
             part melody { clef treble }
-            section A { melody { c'4 d'@cresc e' f'@f | c'1@p | } }
+            section A { melody { c''4 d''@cresc e'' f''@f | c''1@p | } }
             form { A }
             score { staff melody }
             """;
@@ -973,8 +973,8 @@ public class MusicXmlRoundTripTests
             </score-partwise>
             """);
         Assert.False(HasErrors(SyntaxTree.Parse(lys)), lys);
-        Assert.Contains("c'4@p", lys);
-        Assert.Contains("d'4@f", lys);
+        Assert.Contains("c''4@p", lys);
+        Assert.Contains("d''4@f", lys);
     }
 
     [Fact]
@@ -1055,7 +1055,7 @@ public class MusicXmlRoundTripTests
             """);
         var tree = SyntaxTree.Parse(lys);
         Assert.False(HasErrors(tree), $"{lys}\n---\n{Diagnostics(tree)}");
-        Assert.Contains("c'2:16", lys);          // 2 tremolo beams -> :16
+        Assert.Contains("c''2:16", lys);          // 2 tremolo beams -> :16
         Assert.Contains("@reverseTurn", lys);
     }
 
@@ -1408,7 +1408,7 @@ public class MusicXmlRoundTripTests
             </score-partwise>
             """;
         var (lys, report) = new MusicXmlImporter().Import(xml);
-        Assert.Contains("c'4@text(\"poco rit.\").up d'4@text(\"D.C. al Fine\").up |", lys);
+        Assert.Contains("c''4@text(\"poco rit.\").up d''4@text(\"D.C. al Fine\").up |", lys);
         Assert.Contains(report.Warnings, w => w.Contains("D.C. al Fine") && w.Contains("form"));
     }
 

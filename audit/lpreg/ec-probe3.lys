@@ -3,8 +3,8 @@ part melody
 
 section A {
   melody {
-    c'1 @decresc |
-    c'1@pp |
+    c''1 @decresc |
+    c''1@pp |
   }
 }
 

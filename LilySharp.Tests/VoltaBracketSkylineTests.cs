@@ -52,14 +52,14 @@ public class VoltaBracketSkylineTests
         // 2.0 apart. Measured on the twin's page before and after: y = 8.79 and 6.79 both
         // times.
         var source = "octave absolute\ntime 4/4\npart v { }\n" +
-            "section Body1 { v { r2 a'''4 r4 | } }\n" +
-            "section D1 { v { r2 d'''4 r4 | } }\n" +
-            "section D2 { v { r2 d'''4 r4 | } }\n" +
-            "section D3 { v { r2 d'''4 r4 | } }\n" +
-            "section Body2 { v { r2 a'''4 r4 | } }\n" +
-            "section A1 { v { r2 a'''4 r4 | } }\n" +
-            "section A2 { v { r2 a'''4 r4 | } }\n" +
-            "section A3 { v { r2 a'''4 r4 | } }\n" +
+            "section Body1 { v { r2 a''''4 r4 | } }\n" +
+            "section D1 { v { r2 d''''4 r4 | } }\n" +
+            "section D2 { v { r2 d''''4 r4 | } }\n" +
+            "section D3 { v { r2 d''''4 r4 | } }\n" +
+            "section Body2 { v { r2 a''''4 r4 | } }\n" +
+            "section A1 { v { r2 a''''4 r4 | } }\n" +
+            "section A2 { v { r2 a''''4 r4 | } }\n" +
+            "section A3 { v { r2 a''''4 r4 | } }\n" +
             "form {\n" +
             "  |: ~Body1 [1. ~D1] :| [2. ~D2] :| [3. ~D3]\n" +
             "  |: ~Body2 [1. ~A1] :| [2. ~A2] :| [3. ~A3]\n" +
@@ -72,7 +72,7 @@ public class VoltaBracketSkylineTests
         var voltas = layout.VoltaBracketLayouts.OrderBy(v => v.StartX).ToArray();
         Assert.Equal(6, voltas.Length);
 
-        // Chain 1 (over d''') and chain 2 (over a''', a fifth higher) each share
+        // Chain 1 (over d'''') and chain 2 (over a'''', a fifth higher) each share
         // one Y — and the two Ys differ by the pitch gap 2.0, as LP fits them.
         var chain1 = voltas.Take(3).Select(v => v.YUp).Distinct().ToArray();
         var chain2 = voltas.Skip(3).Select(v => v.YUp).Distinct().ToArray();

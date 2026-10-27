@@ -33,7 +33,7 @@ public class RenderTextRequestTests
         time 4/4
         key c major
         part melody { clef treble }
-        section Main { melody { c4 d e f | g1 | } }
+        section Main { melody { c'4 d e f | g1 | } }
         form { Main }
         score { staff melody }
         """;
@@ -77,7 +77,7 @@ public class RenderTextRequestTests
         key c major
         part melody { clef treble }
         part bass { clef bass }
-        section Main { melody { c4 d e f | } bass { c,1 | } }
+        section Main { melody { c'4 d e f | } bass { c1 | } }
         form tune { Main }
         """;
 

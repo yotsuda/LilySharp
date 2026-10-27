@@ -78,7 +78,7 @@ public sealed class SharedRendererMultiVoiceTests
             key C major
             time 4/4
 
-            section S { line { voice { d'4 d'4 d'4 d'4 } { c'4 c'4 c'4 c'4 } } }
+            section S { line { voice { d''4 d'4 d'4 d'4 } { c''4 c'4 c'4 c'4 } } }
 
             form { S }
             score o { staff line }
@@ -112,8 +112,8 @@ public sealed class SharedRendererMultiVoiceTests
             part rh { clef treble }
             part lh { clef bass }
             section S {
-              rh { voice { dis''1 } { <a'' b''>1 } | }
-              lh { b,16 fis a fis b,16 fis a fis b,16 fis a fis b,16 fis a fis | }
+              rh { voice { dis'''1 } { <a''' b'''>1 } | }
+              lh { b16 fis' a' fis' b16 fis' a' fis' b16 fis' a' fis' b16 fis' a' fis' | }
             }
             form { S }
             score { grandStaff { staff rh  staff lh } }

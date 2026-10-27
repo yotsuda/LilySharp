@@ -55,8 +55,8 @@ public class AdditiveMeterBeamTests
     private const string Grouped = """
         time 7/8 (2+2+3)
         part m
-        section A { m { c8 d e f g a b | c8 d e f g a b | time 7/8 (3+2+2) c8 d e f g a b | time 7/8 c8 d e f g a b | } }
-        section B { m { c8 d e f g a b | } }
+        section A { m { c'8 d e f g a b | c8 d e f g a b | time 7/8 (3+2+2) c8 d e f g a b | time 7/8 c8 d e f g a b | } }
+        section B { m { c'8 d e f g a b | } }
         form { ~A ~B }
         score { staff m }
         """;

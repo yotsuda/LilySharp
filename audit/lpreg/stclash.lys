@@ -13,10 +13,10 @@ part lo { clef treble }
 
 section Main {
   up {
-    voice { d4 }
-    { <c a,>4 }
+    voice { d'4 }
+    { <c' a>4 }
   }
-  lo { <a b>4 }
+  lo { <a' b'>4 }
 }
 
 form { ~Main }

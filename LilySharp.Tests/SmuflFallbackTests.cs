@@ -39,7 +39,7 @@ public class SmuflFallbackTests
 {
     private const string Figures =
         "part m { clef bass }\n" +
-        "section A { m { c4@figuredBass(6 4) d4@figuredBass(5) e2 } }\n" +
+        "section A { m { c'4@figuredBass(6 4) d4@figuredBass(5) e2 } }\n" +
         "form { A }\n" +
         "score { staff m }\n";
 
@@ -129,7 +129,7 @@ public class SmuflFallbackTests
     [Fact]
     public void AScoreThatNeedsNoFallback_IsDrawnAsBefore_AndSaysNothing()
     {
-        const string plain = "part m { clef treble }\nsection A { m { c'4 d' e' f' } }\nform { A }\nscore { staff m }\n";
+        const string plain = "part m { clef treble }\nsection A { m { c''4 d' e' f' } }\nform { A }\nscore { staff m }\n";
         var warnings = new List<string>();
         string svg = SvgGenerator.Generate(SyntaxTree.Parse("fonts { music \"Leland\" }\n" + plain),
             new SvgRenderOptions { EmbedFont = false, LayoutWarning = warnings.Add });

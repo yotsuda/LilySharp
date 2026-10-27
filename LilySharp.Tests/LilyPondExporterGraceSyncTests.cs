@@ -56,8 +56,8 @@ public class LilyPondExporterGraceSyncTests
     {
         string ly = Twin(Header + """
             section A {
-              top { c'4 d' e' f' | g'1 | }
-              bot { grace { e16 f } g4 a b c' | grace { d'16 e' } f'2 g'2 | }
+              top { c''4 d'' e'' f'' | g''1 | }
+              bot { grace { e'16 f' } g'4 a' b' c'' | grace { d''16 e'' } f''2 g''2 | }
             }
             form { A }
 
@@ -65,8 +65,8 @@ public class LilyPondExporterGraceSyncTests
         string top = Body(ly, "top");
         // Two sixteenths of grace on the lower staff at each bar's start: an eighth's skip above,
         // and the note after it writes its own duration (the skip's would carry in LilyPond).
-        Assert.Contains(@"\grace { s8 } c'4", top);
-        Assert.Contains(@"\grace { s8 } g'1", top);
+        Assert.Contains(@"\grace { s8 } c''4", top);
+        Assert.Contains(@"\grace { s8 } g''1", top);
         Assert.DoesNotContain(@"\grace { s", Body(ly, "bot"));
     }
 
@@ -75,14 +75,14 @@ public class LilyPondExporterGraceSyncTests
     {
         string ly = Twin(Header + """
             section A {
-              top { grace { d'16 } c'1 | }
-              bot { grace { e16 f g } g1 | }
+              top { grace { d''16 } c''1 | }
+              bot { grace { e'16 f' g' } g'1 | }
             }
             form { A }
 
             """ + TwoStaves);
         // 3/16 below, 1/16 above: the upper run is preceded by the difference.
-        Assert.Contains(@"\grace { s8 } \grace { d'16 }", Body(ly, "top"));
+        Assert.Contains(@"\grace { s8 } \grace { d''16 }", Body(ly, "top"));
         Assert.DoesNotContain(@"\grace { s", Body(ly, "bot"));
     }
 
@@ -91,13 +91,13 @@ public class LilyPondExporterGraceSyncTests
     {
         string ly = Twin(Header + """
             section A {
-              top { c'2 d'2 | }
-              bot { grace { e16 } g1 | }
+              top { c''2 d''2 | }
+              bot { grace { e'16 } g'1 | }
             }
             form { A A }
 
             """ + TwoStaves);
-        Assert.Equal(2, Regex.Matches(Body(ly, "top"), @"\\grace \{ s16 \} c'2").Count);
+        Assert.Equal(2, Regex.Matches(Body(ly, "top"), @"\\grace \{ s16 \} c''2").Count);
     }
 
     /// <summary>One written bar played twice, owing a skip on its SECOND play only: the skips
@@ -107,15 +107,15 @@ public class LilyPondExporterGraceSyncTests
     public void APhraseUsedTwice_OwesTheSkipOnlyWhereTheOtherStaffHasAGrace()
     {
         string ly = Twin(Header + """
-            phrase riff { c'2 d'2 | }
+            phrase riff { c''2 d''2 | }
             section A {
               top { riff riff }
-              bot { c1 | grace { e16 } g1 | }
+              bot { c'1 | grace { e'16 } g'1 | }
             }
             form { A }
 
             """ + TwoStaves);
-        var plays = Regex.Matches(Body(ly, "top"), @"(\\grace \{ s16 \} )?c'2");
+        var plays = Regex.Matches(Body(ly, "top"), @"(\\grace \{ s16 \} )?c''2");
         Assert.Equal(2, plays.Count);
         Assert.False(plays[0].Groups[1].Success, "the first play owes no skip:\n" + ly);
         Assert.True(plays[1].Groups[1].Success, "the second play owes the skip:\n" + ly);
@@ -126,14 +126,14 @@ public class LilyPondExporterGraceSyncTests
     {
         string ly = Twin(Header + """
             section A {
-              top { voice { grace { a'16 } g'2 e'2 } { c'1 } | }
-              bot { c1 | }
+              top { voice { grace { a''16 } g''2 e''2 } { c''1 } | }
+              bot { c'1 | }
             }
             form { A }
 
             """ + TwoStaves);
-        Assert.Contains(@"\\ { \grace { s16 } c'1 }", Body(ly, "top"));
-        Assert.Contains(@"\grace { s16 } c1", Body(ly, "bot"));
+        Assert.Contains(@"\\ { \grace { s16 } c''1 }", Body(ly, "top"));
+        Assert.Contains(@"\grace { s16 } c'1", Body(ly, "bot"));
     }
 
     // A bar of silence is written as one spacer of its own (`s1 |`), with no event to carry the
@@ -147,12 +147,12 @@ public class LilyPondExporterGraceSyncTests
         string body = bar == "s1" ? "1" : "2.";
         string ly = Twin(Header + $$"""
             section A {
-              top { c'1 | }
-              bot { c1 | }
+              top { c''1 | }
+              bot { c'1 | }
             }
             section B {
               {{header}}
-              bot { grace { e16 f } g{{body}} | grace { e16 } g{{body}} | }
+              bot { grace { e'16 f' } g'{{body}} | grace { e'16 } g'{{body}} | }
             }
             form { A B }
 
@@ -170,7 +170,7 @@ public class LilyPondExporterGraceSyncTests
     {
         string ly = Twin(Header + """
             section B {
-              bot { g1 | grace { e16 } g1 | }
+              bot { g'1 | grace { e'16 } g'1 | }
             }
             form { B B }
 
@@ -181,9 +181,9 @@ public class LilyPondExporterGraceSyncTests
 
     [Theory]
     // The part writes the section, but a bar short: the padding bar.
-    [InlineData("top { c'1 | }", "bot { c1 | grace { e16 } g1 | }")]
+    [InlineData("top { c''1 | }", "bot { c'1 | grace { e'16 } g'1 | }")]
     // The author's own empty bar, `| |`.
-    [InlineData("top { c'1 | | }", "bot { c1 | grace { e16 } g1 | }")]
+    [InlineData("top { c''1 | | }", "bot { c'1 | grace { e'16 } g'1 | }")]
     public void APaddingBarOrAnEmptyBar_OwesTheSkipToo(string top, string bot)
     {
         string ly = Twin(Header + $$"""
@@ -202,8 +202,8 @@ public class LilyPondExporterGraceSyncTests
     {
         string ly = Twin(Header + """
             section A {
-              top { c'1 | }
-              bot { c1 | }
+              top { c''1 | }
+              bot { c'1 | }
             }
             form { A }
 

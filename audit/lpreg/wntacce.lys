@@ -6,10 +6,10 @@ part v { }
 
 section Main {
   v {
-    repeat tremolo 16 { c8 es8 } |
-    repeat tremolo 16 { a8 cis'8 } |
-    repeat tremolo 16 { a8 gisis8 } |
-    voice { repeat tremolo 16 { a'8 bes'8 } | } { repeat tremolo 16 { f8 des8 } | }
+    repeat tremolo 16 { c'8 es'8 } |
+    repeat tremolo 16 { a'8 cis''8 } |
+    repeat tremolo 16 { a'8 gisis'8 } |
+    voice { repeat tremolo 16 { a''8 bes''8 } | } { repeat tremolo 16 { f'8 des'8 } | }
   }
 }
 

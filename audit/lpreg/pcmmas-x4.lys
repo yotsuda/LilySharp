@@ -8,8 +8,8 @@ part pa { clef treble }
 part pb { clef treble }
 
 section A {
-  pa { R1*2 | c1 | }
-  pb { c1 | c1 | c1 | }
+  pa { R1*2 | c'1 | }
+  pb { c'1 | c'1 | c'1 | }
 }
 
 form { ~A }

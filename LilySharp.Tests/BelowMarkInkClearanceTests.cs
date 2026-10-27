@@ -40,9 +40,9 @@ public class BelowMarkInkClearanceTests
         const string book = """
             octave absolute
             part m { clef treble }
-            section A { m { c''4 d'' e'' f'' | } }
-            section B { m { e''4 d'' c'' c4@accent | } }
-            section C { m { g'1 | } }
+            section A { m { c'''4 d''' e''' f''' | } }
+            section B { m { e'''4 d''' c''' c'4@accent | } }
+            section C { m { g''1 | } }
             form { segno A to coda B ds al coda coda C }
             score { staff m }
             """;
@@ -71,9 +71,9 @@ public class BelowMarkInkClearanceTests
         const string book = """
             octave absolute
             part m { clef treble }
-            section A { m { c''4 d'' e'' f'' | } }
-            section B { m { e''4 d'' c'' g'4@ff | } }
-            section C { m { g'1 | } }
+            section A { m { c'''4 d''' e''' f''' | } }
+            section B { m { e'''4 d''' c''' g''4@ff | } }
+            section C { m { g''1 | } }
             form { segno A to coda B ds al coda coda C }
             score { staff m }
             """;

@@ -74,9 +74,9 @@ public class DoubleAngleArpeggioTests
     {
         // `<< c 3 5 >>` = root c + the 3rd + the 5th of C major = c e g. This is the whole
         // point of the rework: `3`/`5` used to be parsed as (invalid) durations.
-        Assert.Equal(new[] { 60, 64, 67 }, MidiPitches("<< c 3 5 >>"));
+        Assert.Equal(new[] { 60, 64, 67 }, MidiPitches("<< c' 3 5 >>"));
         // `<< d 3 5 >>` = d f a (the 3rd/5th above d in C major).
-        Assert.Equal(new[] { 62, 65, 69 }, MidiPitches("<< d 3 5 >>"));
+        Assert.Equal(new[] { 62, 65, 69 }, MidiPitches("<< d' 3 5 >>"));
     }
 
     [Fact]
@@ -96,6 +96,8 @@ public class DoubleAngleArpeggioTests
     }
 
     // ----- octave anchoring (preserved from the pre-rework behavior) -----
+    // A frame opens on F3 since the owner's decision 2026-10-28, so a group opening on c is
+    // written `c'` to stand at C4 as these always did.
 
     [Fact]
     public void OctavesAnchorToTheFirstNote_AndNotesPlayInSequence()
@@ -104,7 +106,7 @@ public class DoubleAngleArpeggioTests
         // the same C4 (the running reference after the group is the FIRST note), instead
         // of drifting up from the previous g.
         Assert.Equal(new[] { 60, 64, 67, 64, 60, 64, 67, 64 },
-            MidiPitches("<< c e g e >> << c e g e >>"));
+            MidiPitches("<< c' e g e >> << c e g e >>"));
     }
 
     [Fact]
@@ -120,7 +122,7 @@ public class DoubleAngleArpeggioTests
     {
         // `<< c g >>` — g is the fifth ABOVE c (G4), exactly like the chord `<c g>`, NOT
         // the nearer G3 below.
-        Assert.Equal(new[] { 60, 67 }, MidiPitches("<< c g >>"));
+        Assert.Equal(new[] { 60, 67 }, MidiPitches("<< c' g >>"));
     }
 
     [Fact]
@@ -139,13 +141,13 @@ public class DoubleAngleArpeggioTests
     {
         // A member's ' shifts that ONE note from its stacked position: g' = G5 above
         // the untouched c e.
-        Assert.Equal(new[] { 60, 64, 79 }, MidiPitches("<< c e g' >>"));
+        Assert.Equal(new[] { 60, 64, 79 }, MidiPitches("<< c' e g' >>"));
         // The root is read as a single note and the others stack on where it sounds:
         // `<< c' e g >>` is the close position C5 E5 G5, and `<< c' e' g' >>` the spread
         // C5 E6 G6 — each later member's ' counts from its own stacked spot (session 914;
         // until then the root's mark was local and the spread form was the close one).
-        Assert.Equal(new[] { 72, 76, 79 }, MidiPitches("<< c' e g >>"));
-        Assert.Equal(new[] { 72, 88, 91 }, MidiPitches("<< c' e' g' >>"));
+        Assert.Equal(new[] { 72, 76, 79 }, MidiPitches("<< c'' e g >>"));
+        Assert.Equal(new[] { 72, 88, 91 }, MidiPitches("<< c'' e' g' >>"));
     }
 
     [Fact]
@@ -153,40 +155,41 @@ public class DoubleAngleArpeggioTests
     {
         // `<< c' e g >>` — the root sounds at C5 and that IS the group's anchor: e and g
         // stack above C5, and the next bare c continues at C5, as after a single c'.
-        Assert.Equal(new[] { 72, 76, 79, 72 }, MidiPitches("<< c' e g >> c"));
+        Assert.Equal(new[] { 72, 76, 79, 72 }, MidiPitches("<< c'' e g >> c"));
     }
 
     [Fact]
     public void TrailingOctaveMark_MovesTheAnchor_AndPropagates()
     {
-        // `<< c e g >>'` — the whole group up an octave AND the next bare note
+        // `<< c' e g >>'` — the whole group up an octave AND the next bare note
         // continues in the new register (the anchor itself moved to C5).
-        Assert.Equal(new[] { 72, 76, 79, 72 }, MidiPitches("<< c e g >>' c"));
+        Assert.Equal(new[] { 72, 76, 79, 72 }, MidiPitches("<< c' e g >>' c"));
     }
 
     [Fact]
     public void DegreeArpeggio_WritesDescendingFiguresWithoutMarks()
     {
         // Degrees self-describe their position above the tonic anchor, so a
-        // descending figure needs no ',' marks: << 8 5 3 1 >> = C5 G4 E4 C4.
-        Assert.Equal(new[] { 72, 67, 64, 60 }, MidiPitches("<< 8 5 3 1 >>"));
+        // descending figure needs no ',' marks: << 8 5 3 1 >> = C4 G3 E3 C3 (the tonic anchor
+        // opens at C3 since the owner's decision 2026-10-28).
+        Assert.Equal(new[] { 60, 55, 52, 48 }, MidiPitches("<< 8 5 3 1 >>"));
     }
 
     [Fact]
     public void TrailingOctaveMark_ShiftsTheWholeGroup()
     {
         // A ' / , AFTER the closing '>>' shifts the WHOLE group, exactly like a chord's
-        // `<c e g>,`. `<< c e g >>` is C4 E4 G4 (60 64 67).
-        Assert.Equal(new[] { 48, 52, 55 }, MidiPitches("<< c e g >>,"));   // down an octave
-        Assert.Equal(new[] { 72, 76, 79 }, MidiPitches("<< c e g >>'"));   // up an octave
-        Assert.Equal(new[] { 36, 40, 43 }, MidiPitches("<< c e g >>,,"));  // down two
+        // `<c e g>,`. `<< c' e g >>` is C4 E4 G4 (60 64 67).
+        Assert.Equal(new[] { 48, 52, 55 }, MidiPitches("<< c' e g >>,"));   // down an octave
+        Assert.Equal(new[] { 72, 76, 79 }, MidiPitches("<< c' e g >>'"));   // up an octave
+        Assert.Equal(new[] { 36, 40, 43 }, MidiPitches("<< c' e g >>,,"));  // down two
     }
 
     [Fact]
     public void TrailingOctaveMark_AppliesToDegreesToo()
     {
         // `<< c 3 5 >>,` = c e g, one octave down.
-        Assert.Equal(new[] { 48, 52, 55 }, MidiPitches("<< c 3 5 >>,"));
+        Assert.Equal(new[] { 48, 52, 55 }, MidiPitches("<< c' 3 5 >>,"));
     }
 
     [Fact]
@@ -354,7 +357,7 @@ public class DoubleAngleArpeggioTests
     public void RestMember_IsAGapAndDoesNotAffectStacking()
     {
         // `<< c r e g >>` — the rest is a gap; e and g still stack above c.
-        var notes = new MidiExporter().Export(Parse("<< c r e g >>")).Tracks[1].Notes;
+        var notes = new MidiExporter().Export(Parse("<< c' r e g >>")).Tracks[1].Notes;
         Assert.Equal(new[] { 60, 64, 67 }, notes.Select(n => n.Pitch).ToArray());
         // Equal shares: c→e spans two members (note + rest), e→g only one.
         Assert.True(notes[1].StartTick - notes[0].StartTick > notes[2].StartTick - notes[1].StartTick);
@@ -365,7 +368,7 @@ public class DoubleAngleArpeggioTests
     {
         // `<< <c e> g >>` — a chord may be a member: its c and e sound together, then g
         // follows in sequence (an arpeggio of a chord + a note).
-        var notes = new MidiExporter().Export(Parse("<< <c e> g >>")).Tracks[1].Notes;
+        var notes = new MidiExporter().Export(Parse("<< <c' e> g >>")).Tracks[1].Notes;
         Assert.Equal(3, notes.Count);
         Assert.Equal(notes[0].StartTick, notes[1].StartTick); // the chord's two notes coincide
         Assert.True(notes[2].StartTick > notes[1].StartTick); // g follows the chord
@@ -416,7 +419,7 @@ public class DoubleAngleArpeggioTests
     public void MusicXmlExport_StacksMembersAboveTheRoot()
     {
         // Exported MusicXML places g in octave 4 (a fifth ABOVE c), matching the render.
-        var xml = ExportMusicXml("<< c g >>");
+        var xml = ExportMusicXml("<< c' g >>");
         Assert.Matches(@"<step>C</step>\s*<octave>4</octave>", xml);
         Assert.Matches(@"<step>G</step>\s*<octave>4</octave>", xml);
     }
@@ -425,7 +428,7 @@ public class DoubleAngleArpeggioTests
     public void MusicXmlExport_ResolvesDegreeMembers()
     {
         // `<< c 3 5 >>` exports c, e, g (the resolved degrees).
-        var xml = ExportMusicXml("<< c 3 5 >>");
+        var xml = ExportMusicXml("<< c' 3 5 >>");
         Assert.Matches(@"<step>C</step>\s*<octave>4</octave>", xml);
         Assert.Matches(@"<step>E</step>\s*<octave>4</octave>", xml);
         Assert.Matches(@"<step>G</step>\s*<octave>4</octave>", xml);

@@ -52,7 +52,7 @@ public class BeamStemFrameTests
 
         part m { clef treble }
 
-        section Main { m { g8 g g g g g g g | } }
+        section Main { m { g'8 g' g' g' g' g' g' g' | } }
 
         form { ~Main }
 
@@ -72,7 +72,7 @@ public class BeamStemFrameTests
 
         part m { clef treble }
 
-        section Main { m { grace { d'16 e' } f'4 g'2 r4 | } }
+        section Main { m { grace { d''16 e'' } f''4 g''2 r4 | } }
 
         form { ~Main }
 

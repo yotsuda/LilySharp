@@ -131,8 +131,8 @@ public class RowsOnlySectionLabelTests
             key c major
 
             part melody {
-              section A { c'4 d' e' f' | g' a' b' c'' | }
-              section B { c'4 d' e' f' | g' a' b' c'' | }
+              section A { c''4 d'' e'' f'' | g'' a'' b'' c''' | }
+              section B { c''4 d'' e'' f'' | g'' a'' b'' c''' | }
             }
             chords harm {
               section A { C | G | }

@@ -20,11 +20,11 @@ part dr { clef percussion }
 part rs { }
 
 section Main {
-  n1 { c'1 | c' | break c' | c' | }
-  n2 { c1 | % | % | % }
-  tb { c,1 | % | % | % }
+  n1 { c''1 | c'' | break c'' | c'' | }
+  n2 { c'1 | % | % | % }
+  tb { c1 | % | % | % }
   dr { hh1 | % | % | % }
-  rs { b1 | % | % | % }
+  rs { b'1 | % | % | % }
 }
 
 form { ~Main }

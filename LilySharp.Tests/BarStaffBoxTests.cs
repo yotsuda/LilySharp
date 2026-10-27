@@ -40,13 +40,13 @@ public class BarStaffBoxTests
         part lh { clef bass }
         section A {
           partial 4
-          rh { g'4 | c''1 | d''2 e'' | }
-          lh { r4 | c1 | d1 | }
+          rh { g''4 | c'''1 | d'''2 e''' | }
+          lh { r4 | c'1 | d'1 | }
         }
         section B {
-          rh { f''1 | }
+          rh { f'''1 | }
           lh {
-            f,2 g, | }
+            f2 g | }
         }
         form { A B }
         score { staff rh staff lh }
@@ -65,9 +65,9 @@ public class BarStaffBoxTests
         // The upper staff stands higher on the page (a smaller device y).
         double top = boxes.Min(b => Num(b, 3));
         string Written(Match b) => Book[int.Parse(b.Groups[1].Value)..].TrimStart().Split(' ', '\n', '\r')[0];
-        Assert.Equal(new[] { "g'4", "c''1", "d''2", "f''1" },
+        Assert.Equal(new[] { "g''4", "c'''1", "d'''2", "f'''1" },
             boxes.Where(b => Num(b, 3) == top).Select(Written));
-        Assert.Equal(new[] { "r4", "c1", "d1", "f,2" },
+        Assert.Equal(new[] { "r4", "c'1", "d'1", "f2" },
             boxes.Where(b => Num(b, 3) != top).Select(Written));
 
         // A staff tall, and as wide as the bar's own box.
@@ -89,7 +89,7 @@ public class BarStaffBoxTests
             .ToList();
         Assert.Equal(8, spans.Count);
         Assert.All(spans, x => Assert.Equal(x.S, x.F));
-        Assert.Equal(new[] { "g'4 |", "r4 |", "c''1 |", "c1 |", "d''2 e'' |", "d1 |", "f''1 |", "f,2 g, |" },
+        Assert.Equal(new[] { "g''4 |", "r4 |", "c'''1 |", "c'1 |", "d'''2 e''' |", "d'1 |", "f'''1 |", "f2 g |" },
             spans.Select(x => Book[x.F..(x.T + 1)]));
     }
 

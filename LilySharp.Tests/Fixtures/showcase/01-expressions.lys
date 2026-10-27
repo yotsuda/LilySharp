@@ -11,26 +11,26 @@ part melody
 
 phrase intro {
   // Rehearsal mark A + dynamics + hairpin (crescendo wedge)
-  d4@mark("A")@p e fis g |
+  d'4@mark("A")@p e fis g |
   a4@cresc b cis d@f |
 }
 
 phrase theme {
   // Hairpin decresc + articulations
-  d4@ff@accent cis@staccato b@staccato a@staccato |
+  d'4@ff@accent cis@staccato b@staccato a@staccato |
   g4@decresc fis e d@pp |
 }
 
 phrase bridge {
   // Rehearsal mark B + rit. text spanner. '@!rit' says where the spanner ENDS —
   // a text spanner has no default length, exactly as in LilyPond.
-  d4@mark("B")@mf e@p@rit fis g |
+  d'4@mark("B")@mf e@p@rit fis g |
   a2.@!rit r4 |
 }
 
 phrase finale {
   // accel text spanner + fermata
-  d4@accel e fis g |
+  d'4@accel e fis g |
   a4@!accel b cis d@fermata |
 }
 

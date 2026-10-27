@@ -66,8 +66,8 @@ public class SectionCarryTests
 
     private const string Linear = """
         part vn {
-          section C { c''4 d e f( | g4@p a b c~ || }
-          section D { c'''4) d@cresc e f@phrasingSlur || }
+          section C { c'''4 d e f( | g4@p a b c~ || }
+          section D { c''''4) d@cresc e f@phrasingSlur || }
           section E { g4@f a b c@!phrasingSlur | }
         }
         form { C D E }
@@ -100,9 +100,9 @@ public class SectionCarryTests
     {
         const string src = """
             part vn {
-              section C { c''4 d e f( || }
+              section C { c'''4 d e f( || }
               section D { g4) a b c || }
-              section E { c4 d e f || }
+              section E { c'4 d e f || }
             }
             form { C D C E D }
             score { staff vn }
@@ -139,11 +139,11 @@ public class SectionCarryTests
     {
         const string src = """
             part vn {
-              section C { c''4 d e f( || }
+              section C { c'''4 d e f( || }
               section E { g4) a b c | }
             }
             part vc {
-              section C { c4 d e f || }
+              section C { c'4 d e f || }
               section D { g4 a b c || }
               section E { g4 a b c | }
             }
@@ -175,8 +175,8 @@ public class SectionCarryTests
     {
         const string src = """
             part vn {
-              section I { c''1~ || }
-              section A { c''1 | d1 || }
+              section I { c'''1~ || }
+              section A { c'''1 | d1 || }
             }
             form { I |: A :| }
             score { staff vn }
@@ -202,7 +202,7 @@ public class SectionCarryTests
     {
         const string src = """
             part vn {
-              section A { c''1 | c1~ || }
+              section A { c'''1 | c1~ || }
             }
             form { |: A :| }
             score { staff vn }
@@ -232,7 +232,7 @@ public class SectionCarryTests
     {
         const string src = """
             part vn {
-              section A { c''1 | e1~ || }
+              section A { c'''1 | e1~ || }
             }
             form { |: A :| }
             score { staff vn }
@@ -251,10 +251,10 @@ public class SectionCarryTests
     {
         const string src = """
             part vn {
-              section A { c''1 | c1~ || }
-              section B { c''1 || }
-              section C { c''1 | c1~ || }
-              section D { c''1 | }
+              section A { c'''1 | c1~ || }
+              section B { c'''1 || }
+              section C { c'''1 | c1~ || }
+              section D { c'''1 | }
             }
             form { |: A [1. B] :| [2. C] D }
             score { staff vn }
@@ -287,8 +287,8 @@ public class SectionCarryTests
     {
         const string src = """
             part vn {
-              section I { c''1( || }
-              section A { d''1) | }
+              section I { c'''1( || }
+              section A { d'''1) | }
             }
             form { I |: A :| }
             score { staff vn }
@@ -305,9 +305,9 @@ public class SectionCarryTests
     {
         const string src = """
             part vn {
-              section A { c''4 d e f( || }
+              section A { c'''4 d e f( || }
               section B { g4) a b c || }
-              section C { c4 d e f | }
+              section C { c'4 d e f | }
             }
             form { |: A [1. B :| [2. C] }
             score { staff vn }
@@ -325,9 +325,9 @@ public class SectionCarryTests
     {
         const string src = """
             part vn {
-              section C { c''4@p d e f@cresc || }
+              section C { c'''4@p d e f@cresc || }
               section D { g4 a b c || }
-              section E { c4@f d e f | }
+              section E { c'4@f d e f | }
             }
             form { C D E }
             score { staff vn }
@@ -358,8 +358,8 @@ public class SectionCarryTests
     {
         const string src = """
             part vn {
-              section C { c''4@rit d e f@ottava | g4@sustain a b@startTrillSpan c || }
-              section D { c''4@!rit d@!ottava e@!sustain f@stopTrillSpan | }
+              section C { c'''4@rit d e f@ottava | g4@sustain a b@startTrillSpan c || }
+              section D { c'''4@!rit d@!ottava e@!sustain f@stopTrillSpan | }
             }
             form { C D }
             score { staff vn }
@@ -386,9 +386,9 @@ public class SectionCarryTests
     {
         const string src = """
             part vn {
-              section C { c''4@rit d e f@ottava || }
+              section C { c'''4@rit d e f@ottava || }
               section D { g4@sustain a b c@startTrillSpan || }
-              section E { c4@!rit d@!ottava e@!sustain f@stopTrillSpan | }
+              section E { c'4@!rit d@!ottava e@!sustain f@stopTrillSpan | }
             }
             form { C D E }
             score { staff vn }
@@ -420,7 +420,7 @@ public class SectionCarryTests
     {
         const string src = """
             part vn {
-              section I { c''4@rit d e f@sustain || }
+              section I { c'''4@rit d e f@sustain || }
               section A { g4@!rit a b c@!sustain | }
             }
             form { I |: A :| }
@@ -447,7 +447,7 @@ public class SectionCarryTests
     {
         const string src = """
             part vn {
-              section C { c''4 d e f || }
+              section C { c'''4 d e f || }
               section D { g4@!rit a b c@!ottava | }
             }
             form { C D }
@@ -473,7 +473,7 @@ public class SectionCarryTests
     {
         const string src = """
             part vn {
-              section C { c''4 d e f( || }
+              section C { c'''4 d e f( || }
               section D { g4) a b c | }
             }
             form { C D }
@@ -499,11 +499,11 @@ public class SectionCarryTests
     {
         const string src = """
             part vn {
-              section C { c''4 d e c~ || }
-              section D { c''4 a b c | }
+              section C { c'''4 d e c~ || }
+              section D { c'''4 a b c | }
             }
             part vc {
-              section C { c4 d e f || }
+              section C { c'4 d e f || }
               section D { g4 a b c | }
             }
             form { C D }
@@ -535,7 +535,7 @@ public class SectionCarryTests
     {
         const string src = """
             part vn {
-              section C { c''4 d e f || }
+              section C { c'''4 d e f || }
               section D { g4( a b c | }
             }
             form { C D }

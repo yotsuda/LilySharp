@@ -245,9 +245,19 @@ public static class ConcertPitch
     /// part's own <c>pitch</c> decides; <paramref name="fileIsConcert"/> is the default for a
     /// part that writes none.
     /// </summary>
+    /// <remarks>
+    /// ⚠️ THE WHOLE TRANSPOSITION, OCTAVE INCLUDED, since 2026-10-28 (owner's decision): under
+    /// <c>pitch concert</c> every letter is what sounds — a bass's low E string is <c>e,,</c>
+    /// (E1), and the page shows it an octave up as it always does — so a model, or a person,
+    /// writes every part by the pitch it sounds. Until then an octave-only transposer (bass,
+    /// piccolo) was typed as printed under <c>pitch concert</c> too (the 2026-09-03 decision:
+    /// a concert score shows the bass at its octave, so it was copied note for note). The
+    /// PAGE side keeps that convention: <see cref="OutputShift"/> moves only the chromatic part,
+    /// so a concert score still prints the bass and the piccolo at their octaves.
+    /// </remarks>
     public static (int step, int alt, int oct)? InputShift(bool fileIsConcert, PartDeclarationSyntax? part)
         => (PartMode(part) ?? fileIsConcert)
-            ? Interval(-PartHeaderDefaults.Read(part).ConcertShiftSemitones)
+            ? Interval(-PartHeaderDefaults.Read(part).TranspositionSemitones)
             : null;
 
     /// <summary>

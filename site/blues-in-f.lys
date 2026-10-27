@@ -12,13 +12,13 @@ part head { clef treble }
 part comp { clef treble }
 part bass { clef bass octave 3 }
 
-phrase riffF   { r4 f8 aes a c r4 | }
+phrase riffF   { r4 f'8 aes a c r4 | }
 phrase riffBb  { r4 bes'8 des d f r4 | }
-phrase riffC   { r4 c'8 ees e g r4 | }
+phrase riffC   { r4 c''8 ees e g r4 | }
 phrase comping { /4 4 4 4 | }
 
 section Chorus {
-  head { riffF | c'4 a8 f~ f2 | riffF r1 |
+  head { riffF | c''4 a8 f~ f2 | riffF r1 |
          riffBb | f''4 d8 bes~ bes2 | riffF | r1 |
          riffC | riffBb | riffF | r1 | }
   comp { comping comping comping comping comping comping comping comping comping comping comping comping }

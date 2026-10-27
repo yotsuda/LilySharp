@@ -3,7 +3,7 @@ part melody
 
 section A {
   melody {
-    f'4@staccato@tenuto@finger(3)@upBow f4@staccato@tenuto@finger(3)@upBow f4@staccato@tenuto@finger(3)@upBow f4@staccato@tenuto@finger(3)@upBow |
+    f''4@staccato@tenuto@finger(3)@upBow f4@staccato@tenuto@finger(3)@upBow f4@staccato@tenuto@finger(3)@upBow f4@staccato@tenuto@finger(3)@upBow |
     f4@staccato@tenuto@finger(3)@upBow f4@staccato@tenuto@finger(3)@upBow f4@staccato@tenuto@finger(3)@upBow f4@staccato@tenuto@finger(3)@upBow |
     f4@staccato@tenuto@finger(3)@upBow f4@staccato@tenuto@finger(3)@upBow f4@staccato@tenuto@finger(3)@upBow f4@staccato@tenuto@finger(3)@upBow |
     f4@staccato@tenuto@finger(3)@upBow f4@staccato@tenuto@finger(3)@upBow f4@staccato@tenuto@finger(3)@upBow f4@staccato@tenuto@finger(3)@upBow |

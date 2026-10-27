@@ -34,7 +34,7 @@ public class BoxesTests
         octave absolute
         time 3/4
         part m { clef treble
-          section A { c'4( d'8 e'~ e' f') | g'4 a'16 b' c'' d'' e''4 | fis'2. | }
+          section A { c''4( d''8 e''~ e'' f'') | g''4 a''16 b'' c''' d''' e'''4 | fis''2. | }
         }
         form { A }
         score { staff m }
@@ -83,7 +83,7 @@ public class BoxesTests
     {
         var page = Pages(Book)[0];
         var head = page.Symbols.First(s => s.Kind == "notehead");
-        Assert.Equal("c'4", Book.Substring(head.Pos, 3));
+        Assert.Equal("c''4", Book.Substring(head.Pos, 4));
         var tie = page.Symbols.Single(s => s.Kind == "tie");
         Assert.Equal('~', Book[tie.Pos]);
         Assert.NotNull(tie.Ends);
@@ -113,7 +113,7 @@ public class BoxesTests
             octave absolute
             part up { clef treble }
             part down { clef bass }
-            section A { up { c''4 d'' e'' f'' | } down { c4 d e f | } }
+            section A { up { c'''4 d''' e''' f''' | } down { c'4 d' e' f' | } }
             form { A }
             score { staff up  staff down }
             """;
@@ -135,7 +135,7 @@ public class BoxesTests
             octave absolute
             part up { clef treble }
             part down { clef bass }
-            section A { up { c''4@p@fermata d''@staccato tuplet 3/2 { e''8 f'' g'' } a''4 | } down { c4@f d@accent@finger(1) e f@mf | } }
+            section A { up { c'''4@p@fermata d'''@staccato tuplet 3/2 { e'''8 f''' g''' } a'''4 | } down { c'4@f d'@accent@finger(1) e' f'@mf | } }
             form { A }
             score { staff up  staff down }
             """;

@@ -233,7 +233,7 @@ public class BareDurationTests
     public void SoundsTheRepeatedPitchInMidi()
     {
         var tree = SyntaxTree.Parse("octave absolute\ntime 4/4\npart v { }\n"
-            + "section Main { v { c'4 4 <e' g'>4 4 | } }\nform { Main }\nscore { staff v }");
+            + "section Main { v { c''4 4 <e' g'>4 4 | } }\nform { Main }\nscore { staff v }");
         var notes = new MidiExporter().Export(tree).Tracks.SelectMany(t => t.Notes).ToList();
         Assert.Equal(6, notes.Count); // 2 single notes + 2 chords of 2
         Assert.Equal(notes[0].Pitch, notes[1].Pitch);
@@ -245,7 +245,8 @@ public class BareDurationTests
         // LilyPond 2.20+ reads isolated durations itself, so the twin writes the
         // source's own spelling — never an expansion.
         string ly = new LilyPondExporter().Export(SyntaxTree.Parse("bes8 8 8 4"));
-        Assert.Contains("bes8 8 8 4", ly.Replace("bes,8", "bes8"));
+        // Bb3 under `\relative c` (owner's decision 2026-10-28) is bes'.
+        Assert.Contains("bes'8 8 8 4", ly);
     }
 
     [Fact]
@@ -255,7 +256,7 @@ public class BareDurationTests
         // starts on a dotted bare duration must spell the slash (or the pitch):
         // `[/4. 8]`. The ambiguity is resolved toward the volta, loudly for the
         // other reading — this pin is the decision's record.
-        var tree = SyntaxTree.Parse("part m\nsection A { m { |: c4 [4. e f ] :| } }\n");
+        var tree = SyntaxTree.Parse("part m\nsection A { m { |: c'4 [4. e f ] :| } }\n");
         Assert.Contains(tree.GetRoot().DescendantNodes(), n => n is InlineVoltaSyntax);
     }
 }

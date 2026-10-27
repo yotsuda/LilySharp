@@ -119,7 +119,7 @@ public class RepeatOutputsTests
             octave absolute
             time 4/4
             part melody
-            section A { melody { g'8 a' b' c'' d'' e'' f'' g'' | % | % } }
+            section A { melody { g''8 a'' b'' c''' d''' e''' f''' g''' | % | % } }
             form { ~A }
             score { staff melody }
             """);

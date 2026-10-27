@@ -7,7 +7,7 @@ time 4/4
 key c major
 
 part melody { clef treble
-  section A { c4@marcato c g' g | a a g2 | }
+  section A { c'4@marcato c g' g | a a g2 | }
 }
 lyrics words sings melody { section A { Twin- kle twin- kle | lit- tle star | } }
 form { A }

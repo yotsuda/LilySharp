@@ -1651,7 +1651,7 @@ public sealed partial class MeasureCollector
             if (slotting == VoiceSlotting.OwnStaff)
                 staffVoiceSlots = 0;
             _v.Cursor.VoiceIndex = staffVoiceSlots;
-            _v.Octave.LastPitchName = 'c';
+            _v.Octave.LastPitchName = RelativeOctave.FrameStartLetter;
             _v.DefaultDuration = Fraction.Quarter;
             _v.DefaultDots = 0;
 

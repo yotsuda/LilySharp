@@ -12,7 +12,7 @@ part v { clef treble }
 
 section Main {
   v {
-    e'4@marcato <e e>@marcato@p <c e e>@marcato@f <a d e>@marcato |
+    e''4@marcato <e e>@marcato@p <c e e>@marcato@f <a d e>@marcato |
     <f f>'( <e e>) <f f>~<f f> |
     f,4@marcato <f f>@marcato@p <f f a>@marcato@f <f g c>@marcato |
     <e e>( <f f>) <e e>~<e e>

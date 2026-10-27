@@ -44,7 +44,7 @@ public class ScoreRowFoldingTests
     private const string BoundBody = """
         time 4/4
         section A {
-          vocal { c'4 d' e' f' | g'2 g' | }
+          vocal { c''4 d' e' f' | g'2 g | }
           lyrics ja sings vocal { la la la la | ho ho | }
           lyrics en sings vocal { na na na na | go go | }
         }
@@ -80,8 +80,8 @@ public class ScoreRowFoldingTests
         var spec = SpecOf("""
             time 4/4
             section A {
-              sax { c4 d e f | }
-              vocal { g8 g a4 a8 a a4 | }
+              sax { c'4 d e f | }
+              vocal { g'8 g a4 a8 a a4 | }
               lyrics ja sings vocal { la la la la la la | }
             }
             form { A }
@@ -99,7 +99,7 @@ public class ScoreRowFoldingTests
         var spec = SpecOf("""
             time 4/4
             section A {
-              melody { c'4 d' e' f' | }
+              melody { c''4 d' e' f' | }
               lyrics words { la la | }
             }
             form { A }
@@ -119,7 +119,7 @@ public class ScoreRowFoldingTests
         var spec = SpecOf("""
             time 4/4
             section A {
-              m { voice sop { c'4 d' e' f' | } alt { e4 f g a | } }
+              m { voice sop { c''4 d' e' f' | } alt { e'4 f g a | } }
               lyrics sop { la la la la | }
             }
             form { A }
@@ -145,7 +145,7 @@ public class ScoreRowFoldingTests
         var spec = SpecOf("""
             time 4/4
             section A {
-              melody { c'4 d' e' f' | }
+              melody { c''4 d' e' f' | }
               chords prog { C | }
             }
             form { A }
@@ -170,8 +170,8 @@ public class ScoreRowFoldingTests
         var spec = SpecOf("""
             time 4/4
             section A {
-              hi { c'4 d' e' f' | }
-              lo { c4 d e f | }
+              hi { c''4 d' e' f' | }
+              lo { c'4 d e f | }
               chords prog { C | }
             }
             form { A }
@@ -189,8 +189,8 @@ public class ScoreRowFoldingTests
         var spec = SpecOf("""
             time 4/4
             section A {
-              rh { c'4 d' e' f' | }
-              lh { c4 d e f | }
+              rh { c''4 d' e' f' | }
+              lh { c'4 d e f | }
               lyrics words sings lh { la la la la | }
             }
             form { A }
@@ -207,8 +207,8 @@ public class ScoreRowFoldingTests
         part sop { clef treble }
         part alt { clef treble }
         section A {
-          sop { c'4 d' e' f' | }
-          alt { e4 f g a | }
+          sop { c''4 d' e' f' | }
+          alt { e'4 f g a | }
           lyrics words sings sop { la la la la | }
         }
         form { A }
@@ -288,7 +288,7 @@ public class ScoreRowFoldingTests
         string source = """
             time 4/4
             section A {
-              melody { c'4 d' e' f' | }
+              melody { c''4 d' e' f' | }
               chords { C | }
             }
             form { A }

@@ -44,7 +44,7 @@ public class TupletBracketFollowsBeamTests
     private const string NoteBound = """
         octave absolute
         part melody {
-          section A { c8[ tuplet 3/2 { e8 d c } a,8] c4 r4 | }
+          section A { c'8[ tuplet 3/2 { e'8 d' c' } a8] c'4 r4 | }
         }
         form { A }
         score { staff melody }
@@ -54,7 +54,7 @@ public class TupletBracketFollowsBeamTests
     private const string RestBound = """
         octave absolute
         part melody {
-          section A { e8[ tuplet 3/2 { r8 d c ] } c8 c4 r4 | }
+          section A { e'8[ tuplet 3/2 { r8 d' c' ] } c'8 c'4 r4 | }
         }
         form { A }
         score { staff melody }

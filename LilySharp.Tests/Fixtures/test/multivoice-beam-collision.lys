@@ -16,8 +16,8 @@ title "Cross-voice beam collision"
 part mel { clef treble }
 section S {
   mel {
-    voice { c'8 c' c' c' c' c' c' c' | }
-    { a'1 | }
+    voice { c''8 c'' c'' c'' c'' c'' c'' c'' | }
+    { a''1 | }
   }
 }
 form { S }

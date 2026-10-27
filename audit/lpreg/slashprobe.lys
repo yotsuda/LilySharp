@@ -4,7 +4,7 @@ time 4/4
 part v { }
 
 section Main {
-  v { c16 d e f c16 d e f g8. c16 g8. c16 | }
+  v { c'16 d' e' f' c'16 d' e' f' g'8. c'16 g'8. c'16 | }
 }
 
 form { ~Main }

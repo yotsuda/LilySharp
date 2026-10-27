@@ -41,7 +41,7 @@ namespace LilySharp.Tests.Lsp;
 [Trait("Category", "Unit")]
 public class TopLevelNameScaffoldTests
 {
-    private const string Piece = "part m { clef treble\n  section A { c'4 d' e' f' | }\n}\n";
+    private const string Piece = "part m { clef treble\n  section A { c''4 d' e' f' | }\n}\n";
 
     private static CompletionItem Item(string doc, string label)
         => LilySharpLanguageServer.GetTopLevelCompletions(doc, doc.Length)

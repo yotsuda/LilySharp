@@ -6,8 +6,8 @@ part n1 { }
 part n2 { }
 
 section Main {
-  n1 { c'1 | c' | break c' | c' | }
-  n2 { c1 | c | r1 | r1 | }
+  n1 { c''1 | c'' | break c'' | c'' | }
+  n2 { c'1 | c' | r1 | r1 | }
 }
 
 form { ~Main }

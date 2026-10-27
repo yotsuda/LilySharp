@@ -12,7 +12,7 @@ part top { clef treble }
 part bot { clef bass octave 3 }
 
 section Main {
-  top { c'4 d e f | g1 | }
+  top { c''4 d e f | g1 | }
   bot { c4@staccato d@accent e@tenuto f@marcato | g4@trill a@mordent b c | }
 }
 

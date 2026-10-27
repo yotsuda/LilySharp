@@ -47,7 +47,7 @@ public class BeamShiftRegionTests
 
             section A {
               melody {
-                e''16.( e,,32) |.
+                e'''16.( e,,32) |.
               }
             }
 
@@ -81,8 +81,8 @@ public class BeamShiftRegionTests
             part vtwo { clef bass }
 
             section Intro {
-              vone { c8 d8 r4 r2 | }
-              vtwo { r8 g'8 r4 r2 | }
+              vone { c'8 d'8 r4 r2 | }
+              vtwo { r8 g''8 r4 r2 | }
             }
 
             form { Intro }

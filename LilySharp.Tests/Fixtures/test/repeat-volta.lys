@@ -9,10 +9,10 @@ key c major
 
 part melody
 
-phrase themeA { c4 d e f | g2. r4 | }
+phrase themeA { c'4 d e f | g2. r4 | }
 phrase themeB { a4 g f e | d2. r4 | }
-phrase ending1 { e4 f g a | g2. r4 | }
-phrase ending2 { c4 d e f | c1 | }
+phrase ending1 { e'4 f g a | g2. r4 | }
+phrase ending2 { c'4 d e f | c1 | }
 
 section A {
   melody { themeA }

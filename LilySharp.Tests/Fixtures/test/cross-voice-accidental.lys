@@ -25,8 +25,8 @@ title "Cross-voice accidental column"
 part mel { clef treble }
 section S {
   mel {
-    voice { aes'4 r | a'4 r | aes'4 r | <ges' aes'>4 r | }
-    { g'4 r | ges'4 r | ges'4 r | }
+    voice { aes''4 r | a''4 r | aes''4 r | <ges'' aes''>4 r | }
+    { g''4 r | ges''4 r | ges''4 r | }
   }
 }
 form { S }

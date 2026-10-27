@@ -40,16 +40,17 @@ public sealed class TabRangeValidatorTests
     [Fact]
     public void BelowLowestString_Warns()
     {
-        // a, sounds A0 — below the bass's lowest open string (E1).
-        var d = Run("a,4\\4 r2. |");
+        // a,, sounds A0 — below the bass's lowest open string (E1). (A relative frame opens on
+        // F3 since the owner's decision 2026-10-28, so the A an octave below needs two commas.)
+        var d = Run("a,,4\\4 r2. |");
         Assert.Contains(d, x => x.Code == DiagnosticCodes.TabOutOfRange);
     }
 
     [Fact]
     public void InRange_NoWarning()
     {
-        // a sounds A1 — open A string, playable.
-        Assert.DoesNotContain(Run("a4\\4 r2. |"), x => x.Code == DiagnosticCodes.TabOutOfRange);
+        // a, sounds A1 — open A string, playable.
+        Assert.DoesNotContain(Run("a,4\\4 r2. |"), x => x.Code == DiagnosticCodes.TabOutOfRange);
     }
 
     [Fact]

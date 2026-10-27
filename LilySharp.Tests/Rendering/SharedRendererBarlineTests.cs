@@ -99,7 +99,7 @@ public sealed class SharedRendererBarlineTests
     // A plain five-line staff: the band is 4.0 and the old constants were already right here.
     [InlineData("""
         time 4/4
-        part m { clef treble section A { c4 d e f | } section B { g4 a b c' | } }
+        part m { clef treble section A { c'4 d e f | } section B { g4 a b c' | } }
         form { A |: B :| }
         score { staff m }
         """, 5)]
@@ -192,7 +192,7 @@ public sealed class SharedRendererBarlineTests
     public void OnATwoLineStaff_TheRepeatDotsStandInTheSpaceBetweenItsLines()
     {
         var svg = SvgGenerator.Generate(SyntaxTree.Parse(
-            "part m { }\nsection A { m { c'1 | } }\nform { |: A :| }\nscore { staff m as lines 2 }\n"),
+            "part m { }\nsection A { m { c''1 | } }\nform { |: A :| }\nscore { staff m as lines 2 }\n"),
             new SvgRenderOptions { EmbedFont = false });
         var lines = System.Text.RegularExpressions.Regex.Matches(svg,
                 "<line x1=\"[0-9.]+\" y1=\"([0-9.]+)\" x2=\"[0-9.]+\" y2=\"([0-9.]+)\"")

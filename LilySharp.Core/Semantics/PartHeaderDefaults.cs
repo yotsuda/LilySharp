@@ -59,7 +59,7 @@ public sealed class PartHeaderDefaults
     /// <summary>
     /// The RELATIVE-frame anchor: <c>octave N</c> &gt; preset &gt; 4. The clef is not consulted.
     /// </summary>
-    public int AnchorOctave { get; private init; } = 4;
+    public int AnchorOctave { get; private init; } = Svg.Model.InstrumentDefaults.DefaultAnchorOctave;
 
     /// <summary>
     /// The ABSOLUTE-mode base, which is a different rule: only <c>octave N</c> moves it.
@@ -70,7 +70,7 @@ public sealed class PartHeaderDefaults
     /// giving the relative anchor its clef step promptly dragged <c>octave absolute</c>
     /// parts down with it.
     /// </remarks>
-    public int AbsoluteBaseOctave { get; private init; } = 4;
+    public int AbsoluteBaseOctave { get; private init; } = Svg.Model.InstrumentDefaults.DefaultAnchorOctave;
 
     /// <summary>
     /// The octave the CLEF itself carries, in semitones (<c>treble_8</c> → −12).
@@ -110,6 +110,9 @@ public sealed class PartHeaderDefaults
     /// bass at its octave, so a concert-pitch book copies it note for note; shifting would
     /// make every bass line an octave of ledger lines. <see cref="ConcertPitch"/> is the
     /// reader.
+    /// <para>⚠️ The PAGE still follows it; the LETTERS no longer do (2026-10-28, owner's
+    /// decision): under <c>pitch concert</c> a bass is typed as it sounds and printed at its
+    /// octave (ConcertPitch.InputShift takes the whole transposition).</para>
     /// </remarks>
     public int ConcertShiftSemitones => TranspositionSemitones % 12 == 0 ? 0 : TranspositionSemitones;
 

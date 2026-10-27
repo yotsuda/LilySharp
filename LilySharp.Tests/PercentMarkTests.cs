@@ -159,8 +159,8 @@ public sealed class PercentMarkTests
         string src = """
             time 4/4
             section Main {
-              rh { c4 c c c | d8 d d d d d d d | % | e1 | f1 | %2 | }
-              lh { c1 | c1 | c1 | c1 | c1 | c1 | c1 | }
+              rh { c'4 c c c | d8 d d d d d d d | % | e1 | f1 | %2 | }
+              lh { c'1 | c1 | c1 | c1 | c1 | c1 | c1 | }
             }
             form { Main }
             """;

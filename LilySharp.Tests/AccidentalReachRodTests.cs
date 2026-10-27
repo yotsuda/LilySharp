@@ -46,7 +46,7 @@ public class AccidentalReachRodTests
             key des major
             time 4/4
             part bassline { clef bass }
-            section S { bassline { f,16 ges,, a,16 c,16 r4 r2 | } }
+            section S { bassline { f16 ges, a16 c16 r4 r2 | } }
             form { S }
             score { staff bassline }
             """);

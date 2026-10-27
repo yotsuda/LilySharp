@@ -9,7 +9,7 @@ time 4/4
 part m { clef treble }
 
 section Main {
-  m { gisis4 gis geses ges | }
+  m { gisis'4 gis' geses' ges' | }
 }
 
 form { ~Main }

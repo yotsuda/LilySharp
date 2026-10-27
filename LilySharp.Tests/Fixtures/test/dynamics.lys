@@ -10,19 +10,19 @@ part melody
 
 phrase basicDynamics {
   // @ prefix dynamics
-  c4@p d@mp e@mf f@f |
+  c'4@p d@mp e@mf f@f |
   g4@ff a@fff b@pp c@ppp |
 }
 
 phrase crescDecres {
   // Crescendo / Decrescendo
-  c4@p d@cresc e f@f |
+  c'4@p d@cresc e f@f |
   g4@f a@decresc b c@p |
 }
 
 phrase withArticulations {
   // Combined dynamics + articulations
-  c4@staccato@p d@accent@f e@tenuto@mf f@fermata |
+  c'4@staccato@p d@accent@f e@tenuto@mf f@fermata |
 }
 
 section Main {

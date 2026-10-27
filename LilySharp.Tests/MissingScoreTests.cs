@@ -43,7 +43,7 @@ public sealed class MissingScoreTests
     {
         var d = Assert.Single(Missing(
             "part melody { clef treble }\npart bass { clef bass }\n"
-            + "section A { melody { c'4 d' e' f' | } bass { c4 d e f | } }\nform { A }\n"));
+            + "section A { melody { c''4 d' e' f' | } bass { c'4 d e f | } }\nform { A }\n"));
         Assert.Equal(LilySharp.Core.Syntax.DiagnosticSeverity.Error, d.Severity);
         Assert.Contains("score { staff melody  staff bass }", d.Message, System.StringComparison.Ordinal);
     }
@@ -51,17 +51,17 @@ public sealed class MissingScoreTests
     [Theory]
     [InlineData("phrase motif { c'4 d' e' f' }\n")]
     [InlineData("part melody { clef treble }\nphrase motif { c'4 d' e' f' }\n")]
-    [InlineData("part melody { clef treble }\nsection A { melody { c'4 d' e' f' | } }\nscore { staff melody }\n")]
+    [InlineData("part melody { clef treble }\nsection A { melody { c''4 d' e' f' | } }\nscore { staff melody }\n")]
     public void ALibraryOrABookWithAScore_IsNotReported(string source)
         => Assert.Empty(Missing(source));
 
     [Theory]
-    [InlineData("section A { c'4 d' e' f' | }\n", "score { staff }")]
-    [InlineData("part { clef bass }\nsection A { c4 d e f | }\n", "score { staff }")]
+    [InlineData("section A { c''4 d' e' f' | }\n", "score { staff }")]
+    [InlineData("part { clef bass }\nsection A { c'4 d e f | }\n", "score { staff }")]
     [InlineData("part melody { clef treble }\nchords prog { section A { C | } }\n"
-        + "lyrics words sings melody { section A { la la la la | } }\nsection A { melody { c'4 d' e' f' | } }\n",
+        + "lyrics words sings melody { section A { la la la la | } }\nsection A { melody { c''4 d' e' f' | } }\n",
         "score { chords prog  staff melody  lyrics words }")]
-    [InlineData("part b { section A { c4 d e f | } }\npart a { section A { c'4 d' e' f' | } }\n",
+    [InlineData("part b { section A { c'4 d e f | } }\npart a { section A { c''4 d' e' f' | } }\n",
         "score { staff b  staff a }")]
     public void TheSkeleton_StacksChordsPartsAndLyrics_InDeclarationOrder(string source, string expected)
         => Assert.Equal(expected, ScoreSkeleton.For(SyntaxTree.Parse(source).GetRoot()));
@@ -70,7 +70,7 @@ public sealed class MissingScoreTests
     public void TheQuickFix_AppendsTheScore_AndTheBookIsClean()
     {
         const string text = "part melody { clef treble }\npart bass { clef bass }\n"
-            + "section A { melody { c'4 d' e' f' | } bass { c4 d e f | } }\nform { A }\n";
+            + "section A { melody { c''4 d' e' f' | } bass { c'4 d e f | } }\nform { A }\n";
         var server = new LilySharpLanguageServer(Stream.Null, Stream.Null);
         var uri = new System.Uri("file:///no-score.lys");
         server.DidOpen(new DidOpenTextDocumentParams

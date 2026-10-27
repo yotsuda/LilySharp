@@ -33,19 +33,19 @@ public sealed class MusicXmlExporter
     // values — 4 truncated a triplet eighth to 1 and a 32nd to 0.
     private const int DivisionsPerQuarter = 24;
 
-    private int _currentOctave = 4;
-    private int _currentStep = 0;     // c=0..b=6, for LilyPond relative-octave resolution (mirrors MidiExporter)
+    private int _currentOctave = LilySharp.Core.Svg.Model.InstrumentDefaults.DefaultAnchorOctave;
+    private int _currentStep = RelativeOctave.FrameStartStep;     // c=0..b=6, for LilyPond relative-octave resolution (mirrors MidiExporter)
     // Octave mode (mirrors MeasureCollector): false = relative (default), true =
     // `octave absolute` ('/, are offsets from a fixed anchor, no carry). The anchor is
     // normally C4 but is set per-member while stacking an arpeggio (`<< … >>`).
     private bool _octaveAbsolute;
-    private int _octaveAnchor = 4;
+    private int _octaveAnchor = LilySharp.Core.Svg.Model.InstrumentDefaults.DefaultAnchorOctave;
 
     // The part's RELATIVE-frame anchor (its clef's or preset's octave), and the instrument's
     // written→sounding shift for <transpose>. Both come from the part header; see
     // ApplyPartHeader. ⚠️ _octaveAnchor above is the ABSOLUTE-mode base and is a DIFFERENT
     // rule — only an explicit `octave N` moves it.
-    private int _partAnchorOctave = 4;
+    private int _partAnchorOctave = LilySharp.Core.Svg.Model.InstrumentDefaults.DefaultAnchorOctave;
     private int _partTransposeSemitones;
     // …and the share of it the document's <transpose> states: the instrument's alone, the
     // header clef's octave being in the pitches (MusicXmlPart.PitchOctaveShift).
@@ -2005,7 +2005,7 @@ public sealed class MusicXmlExporter
         // accumulates (OctaveContext.ResetForSection is the collector's spelling of it).
         _currentOctave = _partAnchorOctave + _sectionOctaveOffset;
         _octaveAnchor += _sectionOctaveOffset;
-        _currentStep = 0;
+        _currentStep = RelativeOctave.FrameStartStep;
         _ambientTonic = _homeTonic; // each voice starts at the score's home key
         // ... and so does its SIGNATURE, before the section states one of its own. Both
         // halves of "a section is self-contained" have to be here: reverting the baseline
@@ -2895,7 +2895,7 @@ public sealed class MusicXmlExporter
                     // _sectionOctaveOffset is 0 for every play written without marks, and the
                     // collector says the same in one line (OctaveContext.ResetToInitial).
                     _currentOctave = _partAnchorOctave + _sectionOctaveOffset + varRef.OctaveOffset;
-                    _currentStep = 0;
+                    _currentStep = RelativeOctave.FrameStartStep;
                     _defaultDuration = Fraction.Quarter;
                     // Auto-transpose the movable phrase from the home key to the
                     // ambient key here (respelled), composed under any part
@@ -2937,7 +2937,7 @@ public sealed class MusicXmlExporter
                     else if (anchorStep is { } astep)
                     {
                         int oct = RelativeOctave.Resolve(
-                            0, _partAnchorOctave + _sectionOctaveOffset + varRef.OctaveOffset,
+                            RelativeOctave.FrameStartStep, _partAnchorOctave + _sectionOctaveOffset + varRef.OctaveOffset,
                             astep, 0);
                         _currentStep = astep;
                         _currentOctave = oct;
@@ -2953,7 +2953,7 @@ public sealed class MusicXmlExporter
 
             case CueExpressionSyntax cue:
                 // A cue clef is drawing only: the body is read in the running relative frame
-                // (InstrumentDefaults.DefaultAnchorOctave).
+                // (LilySharp.Core.Svg.Model.InstrumentDefaults.DefaultAnchorOctave).
                 ProcessNode(cue.Body);
                 break;
 
@@ -3250,7 +3250,7 @@ public sealed class MusicXmlExporter
         var word = clef.ClefName?.Text.ToLower();
         SetClef(word);
         _forcedClef |= clef.IsForced;
-        // A clef is drawing only: it moves no relative frame (InstrumentDefaults.DefaultAnchorOctave).
+        // A clef is drawing only: it moves no relative frame (LilySharp.Core.Svg.Model.InstrumentDefaults.DefaultAnchorOctave).
         // ⚠️ Only the IN-MUSIC clef syncs. A header clef reaches the document through the
         // part's opening attributes, and syncing there would write a change on the bar a
         // second part happens to be starting.
@@ -4860,7 +4860,7 @@ public sealed class MusicXmlExporter
                         anchorStep, reset.OctaveOffset, shapeAnchor));
                     // Section shift included, like the reference arm above.
                     _currentOctave = _partAnchorOctave + _sectionOctaveOffset + reset.OctaveOffset;
-                    _currentStep = 0;
+                    _currentStep = RelativeOctave.FrameStartStep;
                     _currentTranspose =
                         PitchTransposer.Compose(PhraseTransposeTarget(), _currentTranspose);
                     _octaveAnchor += reset.OctaveOffset;
@@ -4894,7 +4894,7 @@ public sealed class MusicXmlExporter
                     {
                         _currentStep = astep;
                         _currentOctave = RelativeOctave.Resolve(
-                            0, _partAnchorOctave + offset, astep, 0);
+                            RelativeOctave.FrameStartStep, _partAnchorOctave + offset, astep, 0);
                     }
                     break;
                 }

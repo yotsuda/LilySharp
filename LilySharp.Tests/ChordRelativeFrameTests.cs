@@ -40,29 +40,32 @@ namespace LilySharp.Tests;
 public sealed class ChordRelativeFrameTests
 {
     [Theory]
+    // ⚠️ A frame opens on F3 since the owner's decision 2026-10-28 (LilyPond's pitchless
+    // \relative), so a first chord on c, d, e or f sits an octave lower than it did from C4;
+    // one on g, a or b does not move.
     // The report, both spellings: the second chord is F4 A4 C5 either way.
     [InlineData("g1 <c e g>1 <f a c>1", new[] { 55, 60, 64, 67, 65, 69, 72 })]
-    [InlineData("f1 <c e g>1 <f a c>1", new[] { 65, 60, 64, 67, 65, 69, 72 })]
+    [InlineData("f'1 <c e g>1 <f a c>1", new[] { 65, 60, 64, 67, 65, 69, 72 })]
     // The chord is its first note: a dropped root is read as `c,` is, so pasting it falls
     // an octave each time, exactly as `c, c, c,` does, and a note between two copies reads
     // the first one's C3.
-    [InlineData("<c, e g>4 <c, e g> <c, e g>", new[] { 48, 52, 55, 36, 40, 43, 24, 28, 31 })]
+    [InlineData("<c, e g>4 <c, e g> <c, e g>", new[] { 36, 40, 43, 24, 28, 31, 12, 16, 19 })]
     [InlineData("a4 <c, e g> b <c, e g>", new[] { 57, 48, 52, 55, 47, 36, 40, 43 })]
     // A root's own mark moves the chord and propagates: <c' e g> = <c e g>'.
-    [InlineData("<c' e g>4 c4", new[] { 72, 76, 79, 72 })]
+    [InlineData("<c' e g>4 c4", new[] { 60, 64, 67, 60 })]
     // The owner's report (session 914): lowering the root lowers the chord — F2 under D2,
     // F1 under C1 — where the bare-letter anchor had put the second f at F3.
     [InlineData("g2 <d, f> g2 <c,, f>", new[] { 55, 38, 41, 43, 24, 29 })]
     // Marks after '>' move the anchor, so they propagate — and climb when pasted.
-    [InlineData("<c e g>'4 c <c e g>'4", new[] { 72, 76, 79, 72, 84, 88, 91 })]
+    [InlineData("<c e g>'4 c <c e g>'4", new[] { 60, 64, 67, 60, 72, 76, 79 })]
     // A run of chords climbs the way `c d g c` does; `<g b d>,` brings it back.
-    [InlineData("<c e g>1 <d f a>1 <g b d>1 <c e g>1", new[] { 60, 64, 67, 62, 65, 69, 67, 71, 74, 72, 76, 79 })]
-    [InlineData("<c e g>1 <d f a>1 <g b d>,1 <c e g>1", new[] { 60, 64, 67, 62, 65, 69, 55, 59, 62, 60, 64, 67 })]
+    [InlineData("<c e g>1 <d f a>1 <g b d>1 <c e g>1", new[] { 48, 52, 55, 50, 53, 57, 55, 59, 62, 60, 64, 67 })]
+    [InlineData("<c e g>1 <d f a>1 <g b d>,1 <c e g>1", new[] { 48, 52, 55, 50, 53, 57, 43, 47, 50, 48, 52, 55 })]
     // Degree chords hand on the TONIC, not the first degree written: I–V–I stays put.
-    [InlineData("<1 3 5>4 <5 7 2> <1 3 5> c", new[] { 60, 64, 67, 67, 71, 62, 60, 64, 67, 60 })]
+    [InlineData("<1 3 5>4 <5 7 2> <1 3 5> c", new[] { 48, 52, 55, 55, 59, 50, 48, 52, 55, 48 })]
     // An arpeggio hands on its anchor too, not its last member; rests only are transparent.
     [InlineData("g4 << c e g >>2 f4", new[] { 55, 60, 64, 67, 65 })]
-    [InlineData("<< c, e g >>2 << c, e g >>2", new[] { 48, 52, 55, 36, 40, 43 })]
+    [InlineData("<< c, e g >>2 << c, e g >>2", new[] { 36, 40, 43, 24, 28, 31 })]
     [InlineData("g4 << r r >>2 a4", new[] { 55, 57 })]
     // A chord as the arpeggio's root: the later members stack on the CHORD's anchor (C4), so
     // g is G4 — under the 2026-09-16 rule the chord handed back the incoming G3 and the g

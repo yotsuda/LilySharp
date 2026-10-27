@@ -71,7 +71,8 @@ public class OutsideStaffFewLineStaffTests
     [InlineData(5, 1, 4.0)]
     public void ATrillSpanner_SidesOffItsOwnStaff(int lines, int index, double lineAboveMiddle)
     {
-        var g = Render(lines, "c'4@startTrillSpan d' e' f'@stopTrillSpan | r1 | g4@startTrillSpan a b c'@stopTrillSpan |");
+        // LilyPond's absolute octaves (owner's decision 2026-10-28): the music LilyPond was measured on.
+        var g = Render(lines, "c''4@startTrillSpan d'' e'' f''@stopTrillSpan | r1 | g'4@startTrillSpan a' b' c''@stopTrillSpan |");
         double line = g.GlyphAboveStaffLine(EmmentalerGlyphs.OrnTrill, index, 0)
             + EngravingDefaults.TrillSpannerTextOffsetDown + TopAboveMiddle(lines);
         Assert.InRange(line, lineAboveMiddle - 0.02, lineAboveMiddle + 0.02);
@@ -82,7 +83,7 @@ public class OutsideStaffFewLineStaffTests
     [InlineData(5, 3.29)]
     public void AnOttavaBracket_SidesOffItsOwnStaff(int lines, double baselineAboveMiddle)
     {
-        var g = Render(lines, "c''4@ottava d'' e'' f''@!ottava |");
+        var g = Render(lines, "c'''4@ottava d''' e''' f'''@!ottava |");
         Assert.InRange(g.TextBaselineAboveStaffLine(TextRole.Ottava, 0, 0) + TopAboveMiddle(lines),
             baselineAboveMiddle - 0.02, baselineAboveMiddle + 0.02);
     }

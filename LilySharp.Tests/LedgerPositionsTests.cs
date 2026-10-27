@@ -91,7 +91,7 @@ public class LedgerPositionsTests
             octave absolute
             time 4/4
             part p { }
-            section A { p { b4 d' f' a' | g e c a, | } }
+            section A { p { b'4 d'' f'' a'' | g' e' c' a | } }
             form { A }
             score { staff p as lines {{lines}} }
             """);
@@ -104,11 +104,11 @@ public class LedgerPositionsTests
     }
 
     /// <summary>A slash has no pitch and carries no ledger — on the two-line staff its middle is
-    /// the pair's gap, where a pitched head (the <c>b</c> here) does carry one (owner's report
+    /// the pair's gap, where a pitched head (the <c>b'</c> here) does carry one (owner's report
     /// 2026-10-12: a ledger was drawn through each slash's centre).</summary>
     [Theory]
     [InlineData(2, "/4 / / / |", 0)]
-    [InlineData(2, "b4 b b b |", 4)]
+    [InlineData(2, "b'4 b' b' b' |", 4)]
     [InlineData(1, "/4 / / / |", 0)]
     [InlineData(5, "/4 / / / |", 0)]
     public void ASlashCarriesNoLedger(int lines, string music, int ledgers)

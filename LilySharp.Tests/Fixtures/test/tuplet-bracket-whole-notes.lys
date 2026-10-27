@@ -29,12 +29,12 @@ part rh { clef treble }
 part lh { clef bass }
 section S {
   rh {
-    voice { b1 b1 | b1 b1 | }
-    { tuplet 3/2 { d,1 d,1 d,1 } | d,1 d,1 | }
+    voice { b'1 b'1 | b'1 b'1 | }
+    { tuplet 3/2 { d1 d1 d1 } | d1 d1 | }
   }
   lh {
-    voice { d,1 d,1 | tuplet 3/2 { a1 a1 a1 } | }
-    { d,,1 d,,1 | d,,1 d,,1 | }
+    voice { d1 d1 | tuplet 3/2 { a'1 a'1 a'1 } | }
+    { d,1 d,1 | d,1 d,1 | }
   }
 }
 form { S }

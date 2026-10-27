@@ -40,7 +40,7 @@ public class MultiPageRenderingTests
         key c major
         part melody { clef treble }
         section Main { melody {
-          c4 d e f | g4 a b c |
+          c'4 d e f | g4 a b c |
           break
           c4 d e f | g2~ g2 |
         } }

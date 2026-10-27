@@ -33,6 +33,24 @@ namespace LilySharp.Core.Semantics;
 /// </remarks>
 public static class RelativeOctave
 {
+    /// <summary>
+    /// The letter a fresh relative frame opens at — a part, a section, a phrase body — at the
+    /// part's anchor octave: f, so the frame's first bare note lands in the anchor's own octave
+    /// (a bare <c>c</c> is C3 with the anchor 3, as in absolute mode), exactly as LilyPond's
+    /// pitchless <c>\relative { … }</c> reads its first note.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: ly/music-functions-init.ly relative — "If pitch is omitted, the first note
+    /// in music is given in absolute pitch": the frame is seeded with f below middle C.
+    /// ⚠️ It was c until 2026-10-28 (owner's decision: Lily#'s octaves are LilyPond's — the
+    /// AI kept writing LilyPond's, and an `instrument` written into a scanned score moved
+    /// every note).
+    /// </remarks>
+    public const int FrameStartStep = 3;
+
+    /// <summary><see cref="FrameStartStep"/> as its letter.</summary>
+    public const char FrameStartLetter = 'f';
+
     /// <summary>The letter of a member's root pitch — a bare pitch's letter, or a chord's
     /// root (first pitch) — the letter a relative frame anchors on. Degrees and rests
     /// return null (they do not anchor the frame).</summary>

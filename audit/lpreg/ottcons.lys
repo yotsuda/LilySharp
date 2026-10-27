@@ -9,7 +9,7 @@ time 4/4
 part v { }
 
 section Main {
-  v { c,1@ottava | c,1@ottava(bassa) | c,1@!ottava | }
+  v { c1@ottava | c1@ottava(bassa) | c1@!ottava | }
 }
 
 form { ~Main }

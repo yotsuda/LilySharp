@@ -127,7 +127,7 @@ public class MidBarBreakTests
     [Fact]
     public void ABreakInsideABar_SplitsTheBarIntoAHeadAndATail()
     {
-        var measures = Melody(Book("c'4 d break e f | g1 | a1 |")).Measures;
+        var measures = Melody(Book("c''4 d break e f | g1 | a1 |")).Measures;
 
         // head | tail | g1 | a1
         Assert.Equal(4, measures.Length);
@@ -152,8 +152,8 @@ public class MidBarBreakTests
     [Fact]
     public void ThePage_EndsTheFirstSystemWithNoBarLine_AndOpensTheNextWithNoNumber()
     {
-        string split = Book("c'4 d break e f | g1 | a1 |");
-        string atBar = Book("c'4 d e f break | g1 | a1 |");
+        string split = Book("c''4 d break e f | g1 | a1 |");
+        string atBar = Book("c''4 d e f break | g1 | a1 |");
 
         var svg = Render(split);
         var rows = BarLineRows(svg);
@@ -196,8 +196,8 @@ public class MidBarBreakTests
             // The first NOTE is the next glyph on that system (no meter is reprinted there).
             return glyphs.Where(g => System.Math.Abs(g.Y - secondClefY) < 4 && g.X > 1).Min(g => g.X);
         }
-        Assert.InRange(FirstNoteX(Render(Book("c'4 d break e f | g1 | a1 |"))), 5.8 - 0.05, 5.8 + 0.05);
-        Assert.InRange(FirstNoteX(Render(Book("c'4 d e f break | g1 | a1 |"))), 5.8 - 0.05, 5.8 + 0.05);
+        Assert.InRange(FirstNoteX(Render(Book("c''4 d break e f | g1 | a1 |"))), 5.8 - 0.05, 5.8 + 0.05);
+        Assert.InRange(FirstNoteX(Render(Book("c''4 d e f break | g1 | a1 |"))), 5.8 - 0.05, 5.8 + 0.05);
     }
 
     [Fact]
@@ -205,16 +205,16 @@ public class MidBarBreakTests
     {
         // The corpus's 198 reader sites are `e2 break |` — a break with a bar line after it.
         // Those split nothing: byte-identical (data-pos aside) to the break after the bar.
-        var before = Melody(Book("c'4 d e f break | g1 |")).Measures;
+        var before = Melody(Book("c''4 d e f break | g1 |")).Measures;
         Assert.Equal(2, before.Length);
         Assert.DoesNotContain(before, m => m.BreaksMidBar || m.ContinuesBar);
         Assert.True(before[0].HasBreakAfter);
         Assert.Equal(
-            MaskDataPos(Render(Book("c'4 d e f break | g1 |"))),
-            MaskDataPos(Render(Book("c'4 d e f | break g1 |"))));
+            MaskDataPos(Render(Book("c''4 d e f break | g1 |"))),
+            MaskDataPos(Render(Book("c''4 d e f | break g1 |"))));
 
         // …and a break in an UNDERFULL bar closed by its bar line right after it.
-        var underfull = Melody(Book("c'2 break | g1 |")).Measures;
+        var underfull = Melody(Book("c''2 break | g1 |")).Measures;
         Assert.Equal(2, underfull.Length);
         Assert.DoesNotContain(underfull, m => m.BreaksMidBar || m.ContinuesBar);
         Assert.True(underfull[0].HasBreakAfter);
@@ -224,8 +224,8 @@ public class MidBarBreakTests
     public void TheSplit_ReachesEveryVoiceRowAndTheEmptyBar_AtTheSameBeat()
     {
         string book = Book(
-            "c'4 d break e f | voice { g4 a break b c } { e4 f g a } | a1 |",
-            bass: "c2 c2 | | c1 |",
+            "c''4 d break e f | voice { g4 a break b c } { e4 f g a } | a1 |",
+            bass: "c'2 c2 | | c1 |",
             rows: "chords prog { section Main { C G | C | F | } }\nlyrics w { section Main { a b c d | e | f | } }",
             scoreExtra: " chords prog lyrics w");
         var score = Collect(book);
@@ -279,7 +279,7 @@ public class MidBarBreakTests
         string book = """
             time 4/4
             part melody { clef treble }
-            section A { melody { c'4 d break e f | g1 | } }
+            section A { melody { c''4 d break e f | g1 | } }
             section B { melody { a2 pageBreak b2 | c'1 | } }
             form { A A B }
             score { staff melody }
@@ -301,12 +301,12 @@ public class MidBarBreakTests
         // A sharp before the break still governs the same pitch after it: the tail's cis
         // prints no accidental. Broken AT the bar line, the new bar's cis prints its sharp.
         // (Relative octaves: `cis4 cis cis cis` is one pitch four times.)
-        var split = Melody(Book("cis'4 cis break cis cis | g1 |")).Measures;
+        var split = Melody(Book("cis''4 cis break cis cis | g1 |")).Measures;
         Assert.True(split[1].ContinuesBar);
         Assert.NotNull(split[0].Items.OfType<NoteItem>().First().Accidental);
         Assert.All(split[1].Items.OfType<NoteItem>(), n => Assert.Null(n.Accidental));
 
-        var atBar = Melody(Book("cis'4 cis cis cis break | cis1 |")).Measures;
+        var atBar = Melody(Book("cis''4 cis cis cis break | cis1 |")).Measures;
         Assert.NotNull(atBar[1].Items.OfType<NoteItem>().First().Accidental);
     }
 
@@ -315,7 +315,7 @@ public class MidBarBreakTests
     [Fact]
     public void ANoteSoundingAcrossTheBreak_RefusesTheSplit_AndTheBreakFallsToTheBarLine()
     {
-        string book = Book("c'4 d break e f | g1 | a1 |", bass: "c1 | c1 | c1 |");
+        string book = Book("c''4 d break e f | g1 | a1 |", bass: "c'1 | c1 | c1 |");
         var score = Collect(book);
         Assert.All(score.AllVoices, v =>
         {
@@ -325,7 +325,7 @@ public class MidBarBreakTests
         // The page is the one a break after the bar line makes — LilyPond splits here
         // (mb2.ly), Lily# declares the divergence (LILYSHARP-OWN at MidBarBreakTable) and says so.
         Assert.Equal(
-            MaskDataPos(Render(Book("c'4 d e f break | g1 | a1 |", bass: "c1 | c1 | c1 |"))),
+            MaskDataPos(Render(Book("c''4 d e f break | g1 | a1 |", bass: "c'1 | c1 | c1 |"))),
             MaskDataPos(Render(book)));
 
         var warning = Assert.Single(SemanticValidation.Run(SyntaxTree.Parse(book)),
@@ -338,9 +338,9 @@ public class MidBarBreakTests
     }
 
     [Theory]
-    [InlineData("c'8 d break e f g4 a | b1 |", "a beam runs across it")]
-    [InlineData("tuplet 3/2 { c'4 d break e } f2 | g1 |", "inside a tuplet")]
-    [InlineData("time none c'4 d break e f | time 4/4 g1 |", "unmetered")]
+    [InlineData("c''8 d break e f g4 a | b1 |", "a beam runs across it")]
+    [InlineData("tuplet 3/2 { c''4 d break e } f2 | g1 |", "inside a tuplet")]
+    [InlineData("time none c''4 d break e f | time 4/4 g1 |", "unmetered")]
     public void ABeamATupletOrAnUnmeteredBar_RefuseTheSplit(string melody, string reason)
     {
         string book = Book(melody);
@@ -355,7 +355,7 @@ public class MidBarBreakTests
     [Fact]
     public void ATupletThatEndsAtTheBreak_IsNoObstacle()
     {
-        var measures = Melody(Book("tuplet 3/2 { c'4 d e } break f2 | g1 |")).Measures;
+        var measures = Melody(Book("tuplet 3/2 { c''4 d e } break f2 | g1 |")).Measures;
         Assert.True(measures[0].BreaksMidBar && measures[1].ContinuesBar);
         Assert.Equal(new Fraction(1, 2), measures[0].TotalDuration);
     }
@@ -363,7 +363,7 @@ public class MidBarBreakTests
     [Fact]
     public void ASecondBreakInTheSameBar_IsRefused_TheFirstSplits()
     {
-        string book = Book("c'4 break d break e f | g1 |");
+        string book = Book("c''4 break d break e f | g1 |");
         var measures = Melody(book).Measures;
         Assert.True(measures[0].BreaksMidBar && measures[1].ContinuesBar);
         Assert.Equal(new Fraction(1, 4), measures[0].TotalDuration);
@@ -379,7 +379,7 @@ public class MidBarBreakTests
     {
         // The written play is music and splits; a covered play is written as spacers with the
         // sign (no notes, no break to replay) and stays one bar.
-        string book = Book("c'4 d break e f | % | g1 |");
+        string book = Book("c''4 d break e f | % | g1 |");
         var measures = Melody(book).Measures;
         Assert.Equal(4, measures.Length); // head | tail | % | g1
         Assert.True(measures[0].BreaksMidBar && measures[1].ContinuesBar);
@@ -392,7 +392,7 @@ public class MidBarBreakTests
     {
         // 4/4 beams eighths 4 + 4; a break at the half bar crosses no beam. LilyPond twin:
         // second-system bar lines 15.603 / 24.455 / 33.307 (mb4.ly — this very book).
-        string book = Book("c'8 d e f break g a b c | c1 | d1 |");
+        string book = Book("c''8 d e f break g a b c | c1 | d1 |");
         var measures = Melody(book).Measures;
         Assert.True(measures[0].BreaksMidBar && measures[1].ContinuesBar);
         Assert.Empty(SemanticValidation.Run(SyntaxTree.Parse(book)).Where(d => d.Code == DiagnosticCodes.MidBarBreakNotSplit));
@@ -407,8 +407,8 @@ public class MidBarBreakTests
     [Fact]
     public void MidiAndMusicXml_DoNotSeeTheSplit_AndTheTwinWritesTheBreakWhereItStands()
     {
-        string split = Book("c'4 d break e f | g1 | a1 |");
-        string plain = Book("c'4 d e f | g1 | a1 |");
+        string split = Book("c''4 d break e f | g1 | a1 |");
+        string plain = Book("c''4 d e f | g1 | a1 |");
 
         var midiSplit = new MidiExporter().Export(SyntaxTree.Parse(split)).Tracks.SelectMany(t => t.Notes)
             .Select(n => (n.Pitch, n.StartTick, n.DurationTicks)).ToList();
@@ -421,15 +421,15 @@ public class MidBarBreakTests
         Assert.Equal(xmlPlain, xmlSplit);
 
         string ly = new LilyPondExporter().Export(SyntaxTree.Parse(split));
-        Assert.Contains("c'4 d \\break", ly);
+        Assert.Contains("c''4 d \\break", ly);   // \relative c { c'' … }: the same C5
         Assert.Contains("e f |", ly);
     }
 
     [Fact]
     public void AnEdit_ThatAddsOrRemovesTheBreak_RendersIdenticalToAFullRecompile_BothWays()
     {
-        string plain = Book("c'4 d e f | g1 | a1 |");
-        string split = Book("c'4 d break e f | g1 | a1 |");
+        string plain = Book("c''4 d e f | g1 | a1 |");
+        string split = Book("c''4 d break e f | g1 | a1 |");
         var compiler = new IncrementalCompiler(SyntaxTree.Parse(plain), Opt);
         compiler.Render();
         foreach (var (text, label) in new[] { (split, "add the break"), (plain, "remove it"), (split, "add it again") })

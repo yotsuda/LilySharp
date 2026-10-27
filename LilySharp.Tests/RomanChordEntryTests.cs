@@ -232,9 +232,9 @@ public class RomanChordEntryTests
         // in a lesson sheet that set out each progression in C, then in F.
         var tree = SyntaxTree.Parse("""
             part m { clef treble }
-            section C1 { chords prog { C F | }  m { c'2 f' | } }
-            section F1 { chords prog { F Bb | }  m { key f major f'2 bes' | } }
-            section C2 { chords prog { C F | }  m { c'2 f' | } }
+            section C1 { chords prog { C F | }  m { c''2 f' | } }
+            section F1 { chords prog { F Bb | }  m { key f major f''2 bes' | } }
+            section C2 { chords prog { C F | }  m { c''2 f' | } }
             form { ~C1 ~F1 ~C2 }
             score { chords prog as roman  staff m }
             """);

@@ -6,9 +6,9 @@ part v { }
 
 section Main {
   v {
-    repeat tremolo 16 { c32 <es es'>32 } |
-    repeat tremolo 16 { a32 <f cis'>32 } |
-    repeat tremolo 16 { a32 <disis ges'>32 } |
+    repeat tremolo 16 { c'32 <es' es''>32 } |
+    repeat tremolo 16 { a'32 <f' cis''>32 } |
+    repeat tremolo 16 { a'32 <disis' ges''>32 } |
   }
 }
 

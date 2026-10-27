@@ -36,7 +36,7 @@ public class SectionOrientedParserTests
     {
         var source = @"
 section Intro {
-    guitar { c4 d e f }
+    guitar { c'4 d e f }
 }";
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors);

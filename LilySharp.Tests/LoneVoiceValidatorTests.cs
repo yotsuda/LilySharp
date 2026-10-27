@@ -42,22 +42,22 @@ public sealed class LoneVoiceValidatorTests
 
     [Fact]
     public void ASingleUnnamedVoice_Warns()
-        => Assert.True(Warns("time 4/4\npart mel {\n  section A { voice { c4 d e f } | }\n}\n"));
+        => Assert.True(Warns("time 4/4\npart mel {\n  section A { voice { c'4 d e f } | }\n}\n"));
 
     [Fact]
     public void TwoVoices_AreThePoint_AndDoNotWarn()
-        => Assert.False(Warns("time 4/4\npart mel {\n  section A { voice { c4 d e f } { e4 f g a } | }\n}\n"));
+        => Assert.False(Warns("time 4/4\npart mel {\n  section A { voice { c'4 d e f } { e'4 f g a } | }\n}\n"));
 
     [Fact]
     public void ASingleNAMEDVoice_DoesNotWarn_ItPublishesATrackForLyrics()
         // `voice sop { … }` is not transparent: the name is what a `lyrics sop { … }`
         // block binds to (MeasureCollector's named-voice map), so the block earns its keep.
-        => Assert.False(Warns("time 4/4\npart mel {\n  section A { voice sop { c4 d e f } | }\n}\n"));
+        => Assert.False(Warns("time 4/4\npart mel {\n  section A { voice sop { c'4 d e f } | }\n}\n"));
 
     [Fact]
     public void TheWarningPointsAtTheVoiceKeyword_NotTheWholeBlock()
     {
-        const string src = "time 4/4\npart mel {\n  section A { voice { c4 d e f } | }\n}\n";
+        const string src = "time 4/4\npart mel {\n  section A { voice { c'4 d e f } | }\n}\n";
         var d = Assert.Single(Diagnose(src));
         Assert.Equal("voice", src.Substring(d.Span.Start, d.Span.Length));
     }

@@ -68,12 +68,12 @@ public class SlashNoteTests
     public void IsSilentInMidi_ButOccupiesItsTime()
     {
         var tree = SyntaxTree.Parse("octave absolute\ntime 4/4\npart v { }\n"
-            + "section Main { v { /4 /4 c'2 | } }\nform { Main }\nscore { staff v }");
+            + "section Main { v { /4 /4 c''2 | } }\nform { Main }\nscore { staff v }");
         var notes = new MidiExporter().Export(tree).Tracks.SelectMany(t => t.Notes).ToList();
         var note = Assert.Single(notes);
         // The two silent quarters pushed the c' to beat 3.
         var control = SyntaxTree.Parse("octave absolute\ntime 4/4\npart v { }\n"
-            + "section Main { v { r4 r4 c'2 | } }\nform { Main }\nscore { staff v }");
+            + "section Main { v { r4 r4 c''2 | } }\nform { Main }\nscore { staff v }");
         var controlNote = Assert.Single(
             new MidiExporter().Export(control).Tracks.SelectMany(t => t.Notes));
         Assert.Equal(controlNote.StartTick, note.StartTick);
@@ -83,11 +83,11 @@ public class SlashNoteTests
     public void TheTwinSpellsItAsImprovisation_OnTheClefsMiddleLine()
     {
         string ly = new LilyPondExporter().Export(SyntaxTree.Parse(
-            "part m\nsection A { m { /4 4 c'4 d | } }\nform { A }\nscore { staff m }"));
-        // Treble middle line is b' (relative from c': one mark up), the run
-        // closes before the first pitched note, and the bare duration rides
-        // inside the run.
-        Assert.Contains("\\improvisationOn b'4 4", ly);
+            "part m\nsection A { m { /4 4 c''4 d | } }\nform { A }\nscore { staff m }"));
+        // Treble middle line is B4: b'' relative from the twin's \relative c (owner's decision
+        // 2026-10-28), the run closes before the first pitched note, and the bare duration
+        // rides inside the run.
+        Assert.Contains("\\improvisationOn b''4 4", ly);
         Assert.Contains("\\improvisationOff c", ly);
     }
 
@@ -108,18 +108,20 @@ public class SlashNoteTests
     /// kept a copy naming bass, alto and tenor, and a percussion (or soprano, mezzo-soprano,
     /// baritone, bass_8) staff's slashes went out as treble's b': six positions above a
     /// percussion staff's line, with ledger lines (Lab sessions/p872/probe/slashdir).
-    /// Absolute mode wraps the twin in \fixed c', so the text is the written pitch itself.
+    /// Absolute mode wraps the twin in \fixed c (owner's decision 2026-10-28: Lily#'s absolute
+    /// octaves are LilyPond's), so the text is the written pitch itself. An octave clef is
+    /// written at sounding pitch, so bass_8's middle line is D2.
     /// LILYPOND-REF: scm/parser-clef.scm supported-clefs + c0-pitch-alist.
     /// </summary>
     [Theory]
-    [InlineData("treble", "b")]
-    [InlineData("bass", "d,")]
-    [InlineData("alto", "c")]
-    [InlineData("tenor", "a,")]
-    [InlineData("soprano", "g")]
-    [InlineData("mezzosoprano", "e")]
-    [InlineData("baritone", "f,")]
-    [InlineData("percussion", "c")]
+    [InlineData("treble", "b'")]
+    [InlineData("bass", "d")]
+    [InlineData("alto", "c'")]
+    [InlineData("tenor", "a")]
+    [InlineData("soprano", "g'")]
+    [InlineData("mezzosoprano", "e'")]
+    [InlineData("baritone", "f")]
+    [InlineData("percussion", "c'")]
     [InlineData("bass_8", "d,")]
     public void TheTwinsSlashSitsOnEveryClefsMiddleLine(string clef, string pitch)
     {

@@ -43,8 +43,8 @@ public class MusicXmlPickupNumberingTests
             octave absolute
             time 4/4
             part m
-            section P { partial 2  m { r8 c'8 d' e' } }
-            section Q { m { f'4 g' a' b' | c''1 | } }
+            section P { partial 2  m { r8 c''8 d'' e'' } }
+            section Q { m { f''4 g'' a'' b'' | c'''1 | } }
             form { P Q }
             score { staff m }
             """);
@@ -60,8 +60,8 @@ public class MusicXmlPickupNumberingTests
             octave absolute
             time 4/4
             part m
-            section A { partial 4  m { c'4 | d'1 | e'1 | } }
-            section B { m { f'1 | g'1 | } }
+            section A { partial 4  m { c''4 | d''1 | e''1 | } }
+            section B { m { f''1 | g''1 | } }
             form { A B }
             score { staff m }
             """);
@@ -76,8 +76,8 @@ public class MusicXmlPickupNumberingTests
             octave absolute
             time 4/4
             part m
-            section A { m { d'1 | e'1 | } }
-            section B { m { f'1 | g'1 | } }
+            section A { m { d''1 | e''1 | } }
+            section B { m { f''1 | g''1 | } }
             form { A B }
             score { staff m }
             """);

@@ -6,7 +6,7 @@ part fl { clef treble }
 
 section A {
   fl {
-    voice { c'4 d' e' f' | g'2 g' | c'4 d' e' f' | } { e4 f g a | b2 b | e4 f g a | }
+    voice { c''4 d'' e'' f'' | g''2 g'' | c''4 d'' e'' f'' | } { e'4 f' g' a' | b'2 b' | e'4 f' g' a' | }
   }
 }
 

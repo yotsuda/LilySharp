@@ -85,7 +85,7 @@ public class ForceMarkParserTests
     {
         var key = (KeySignatureSyntax)ParseOne<KeySignatureSyntax>("key ees major ! c1 |");
         Assert.False(key.IsForced);
-        var tree = SyntaxTree.Parse("part m { clef treble }\nsection A { m { key ees major ! c1 | } }\n");
+        var tree = SyntaxTree.Parse("part m { clef treble }\nsection A { m { key ees major ! c'1 | } }\n");
         Assert.Contains(tree.GetRoot().DescendantNodes().OfType<BarlineSyntax>(),
             b => b.BarToken.Kind == SyntaxKind.DashedBar);
     }

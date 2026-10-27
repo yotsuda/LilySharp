@@ -55,7 +55,8 @@ public class LilyPondExporterStreamNetsTests
             form { A }
             score { staff melody }
             """);
-        Assert.Contains("\\tuplet 3/2 { g'8 a b } \\tuplet 3/2 { c d e } d2 |", ly);
+        // The twin's frame is `\relative c` since the owner's decision 2026-10-28: G4 is g''.
+        Assert.Contains("\\tuplet 3/2 { g''8 a b } \\tuplet 3/2 { c d e } d2 |", ly);
     }
 
     /// <summary>A lyrics stream read off the page fills the time before its first syllable
@@ -67,7 +68,7 @@ public class LilyPondExporterStreamNetsTests
         var ly = Export("""
             time 4/4
             part melody { clef treble }
-            section A { melody { c'4 r d' e' | r2 f' | } lyrics words sings melody { a b c | d | } }
+            section A { melody { c''4 r d' e' | r2 f' | } lyrics words sings melody { a b c | d | } }
             form { A }
             score { staff melody lyrics words }
             """);
@@ -85,7 +86,7 @@ public class LilyPondExporterStreamNetsTests
             time 4/4
             key c major
             part melody { clef treble }
-            section Main { melody { c'4 d break e f | g1 | } }
+            section Main { melody { c''4 d break e f | g1 | } }
             lyrics words { section Main { a b c d | e | } }
             form { Main }
             score { staff melody  lyrics words }

@@ -6,7 +6,7 @@ time 4/4
 part v { clef treble }
 
 section Main {
-  v { c''4 grace { d''8 } c''4 }
+  v { c'''4 grace { d'''8 } c'''4 }
 }
 
 form { ~Main }

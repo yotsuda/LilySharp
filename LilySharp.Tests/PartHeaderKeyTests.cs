@@ -32,7 +32,7 @@ namespace LilySharp.Tests;
 public class PartHeaderKeyTests
 {
     private const string WithKey =
-        "part melody { key bes major section A { c d e f | g a b c } } form { A } score { staff melody }";
+        "part melody { key bes major section A { c' d e f | g a b c } } form { A } score { staff melody }";
 
     [Fact]
     public void PartHeaderKey_RoundTripsExactly()
@@ -57,7 +57,7 @@ public class PartHeaderKeyTests
     {
         // The first note 'c' sits at this absolute offset; its Pitch node must report it
         // (not a value reduced by the key directive's length).
-        int cAbs = WithKey.IndexOf("c d e f", System.StringComparison.Ordinal);
+        int cAbs = WithKey.IndexOf("c' d e f", System.StringComparison.Ordinal);
         var root = SyntaxTree.Parse(WithKey).GetRoot();
         var atC = root.FindNode(cAbs);
         Assert.NotNull(atC);
@@ -73,9 +73,9 @@ public class PartHeaderKeyTests
         // Removing the key must move the first note by EXACTLY the key text's length —
         // proving the key contributes its full width (no silent drop).
         const string noKey =
-            "part melody { section A { c d e f | g a b c } } form { A } score { staff melody }";
-        int withPos = WithKey.IndexOf("c d e f", System.StringComparison.Ordinal);
-        int withoutPos = noKey.IndexOf("c d e f", System.StringComparison.Ordinal);
+            "part melody { section A { c' d e f | g a b c } } form { A } score { staff melody }";
+        int withPos = WithKey.IndexOf("c' d e f", System.StringComparison.Ordinal);
+        int withoutPos = noKey.IndexOf("c' d e f", System.StringComparison.Ordinal);
         int keyLen = "key bes major ".Length;
         Assert.Equal(keyLen, withPos - withoutPos);
 
@@ -87,8 +87,8 @@ public class PartHeaderKeyTests
 
     [Theory]
     // A key with no mode is assumed major, in a part header AND in a music stream.
-    [InlineData("part melody { key bes section A { c d e f } } form { A } score { staff melody }")]
-    [InlineData("part melody { section A { key bes c d e f } } form { A } score { staff melody }")]
+    [InlineData("part melody { key bes section A { c' d e f } } form { A } score { staff melody }")]
+    [InlineData("part melody { section A { key bes c' d e f } } form { A } score { staff melody }")]
     public void KeyWithoutMode_WarnsAndIsNotAnError(string source)
     {
         var tree = SyntaxTree.Parse(source);

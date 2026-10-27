@@ -14,7 +14,7 @@ key c major
 
 part melody { clef treble }
 
-section A { time 3/4 c'4 d e | time 4/4 f4 e d c | d2 e | }
+section A { time 3/4 c''4 d e | time 4/4 f4 e d c | d2 e | }
 section B { g'4 f e d | c1 | }
 
 form { A B A "A2" }

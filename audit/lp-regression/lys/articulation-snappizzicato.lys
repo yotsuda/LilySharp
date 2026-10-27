@@ -6,7 +6,7 @@ octave absolute
 part m { clef treble }
 
 section Main {
-  m { c'4@snapPizz }
+  m { c''4@snapPizz }
 }
 
 form { ~Main }

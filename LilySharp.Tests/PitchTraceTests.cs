@@ -51,7 +51,7 @@ public sealed class PitchTraceTests
         part lh { clef bass octave 3 }
 
         section Main {
-          rh { c'1 | }
+          rh { c''1 | }
           lh { c4 d e f | }
         }
 
@@ -74,7 +74,7 @@ public sealed class PitchTraceTests
 
         section Main {
           lh { c4 d e f | }
-          rh { c'1 | }
+          rh { c''1 | }
         }
 
         form { ~Main }
@@ -177,8 +177,8 @@ public sealed class PitchTraceTests
         part basso { clef bass }
 
         section Main {
-          sopr  { c'1 | }
-          basso { c4 d e f | }
+          sopr  { c''1 | }
+          basso { c'4 d e f | }
         }
 
         form { ~Main }
@@ -198,8 +198,8 @@ public sealed class PitchTraceTests
         part basso { clef bass }
 
         section Main {
-          sopr  { c'1 | }
-          basso { c4 d e f | }
+          sopr  { c''1 | }
+          basso { c'4 d e f | }
         }
 
         form { ~Main }
@@ -255,7 +255,7 @@ public sealed class PitchTraceTests
             part gtr { clef treble }
 
             section Main {
-              gtr { c4 d e f | }
+              gtr { c'4 d e f | }
             }
 
             form { ~Main }
@@ -303,9 +303,9 @@ public sealed class PitchTraceTests
     // (plain), 13.85/12.85/11.85 (with '), 20.85/19.85/18.85 (with ,) against staff lines
     // 12.35…16.35, one staff space apart.
     [Theory]
-    [InlineData("<c e g>2",  new[] { -6, -4, -2 }, new[] { "C4", "E4", "G4" })]
-    [InlineData("<c e g>'2", new[] {  1,  3,  5 }, new[] { "C5", "E5", "G5" })]
-    [InlineData("<c e g>,2", new[] { -13, -11, -9 }, new[] { "C3", "E3", "G3" })]
+    [InlineData("<c' e' g'>2",  new[] { -6, -4, -2 }, new[] { "C4", "E4", "G4" })]
+    [InlineData("<c' e' g'>'2", new[] {  1,  3,  5 }, new[] { "C5", "E5", "G5" })]
+    [InlineData("<c' e' g'>,2", new[] { -13, -11, -9 }, new[] { "C3", "E3", "G3" })]
     public void AnAbsoluteChordsGroupMark_IsReportedWhereItIsDrawn(
         string body, int[] drawn, string[] reported)
     {
@@ -315,8 +315,8 @@ public sealed class PitchTraceTests
     }
 
     [Theory]
-    [InlineData("<< c e g >>'4 r2.", new[] {  1,  3,  5 }, new[] { "C5", "E5", "G5" })]
-    [InlineData("<< c e g >>,4 r2.", new[] { -13, -11, -9 }, new[] { "C3", "E3", "G3" })]
+    [InlineData("<< c' e g >>'4 r2.", new[] {  1,  3,  5 }, new[] { "C5", "E5", "G5" })]
+    [InlineData("<< c' e g >>,4 r2.", new[] { -13, -11, -9 }, new[] { "C3", "E3", "G3" })]
     public void AnAbsoluteArpeggiosGroupMark_IsReportedWhereItIsDrawn(
         string body, int[] drawn, string[] reported)
     {

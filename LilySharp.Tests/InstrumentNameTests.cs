@@ -36,7 +36,7 @@ public class InstrumentNameTests
     {
         var source = @"
 part violin ""Violin""
-phrase m { c4 d e f }
+phrase m { c'4 d e f }
 section A { violin { m } }
 form { A }
 score test { staff violin }
@@ -53,7 +53,7 @@ score test { staff violin }
     {
         var source = @"
 part vln1 ""Violin I""
-phrase m { c4 d e f }
+phrase m { c'4 d e f }
 section A { vln1 { m } }
 form { A }
 score test { staff vln1 }
@@ -70,7 +70,7 @@ score test { staff vln1 }
     {
         var source = @"
 part melody { clef treble }
-phrase m { c4 d e f }
+phrase m { c'4 d e f }
 section A { melody { m } }
 form { A }
 score test { staff melody }
@@ -88,8 +88,8 @@ score test { staff melody }
         var source = @"
 part rh ""Piano"" { clef treble }
 part lh { clef bass }
-phrase rhM { c4 d e f }
-phrase lhM { c,4 d e f }
+phrase rhM { c'4 d e f }
+phrase lhM { c4 d e f }
 section A { rh { rhM } lh { lhM } }
 form { A }
 score test { grandStaff { staff rh staff lh } }
@@ -112,7 +112,7 @@ score test { grandStaff { staff rh staff lh } }
         var source = @"
 part vln ""Violin"" { clef treble }
 part vla ""Viola"" { clef alto }
-phrase m { c4 d e f }
+phrase m { c'4 d e f }
 section A { vln { m } vla { m } }
 form { A }
 score test { staff vln staff vla }
@@ -132,7 +132,7 @@ score test { staff vln staff vla }
         var source = @"
 part vln ""Violin I"" { clef treble }
 part vla ""Viola"" { clef alto }
-phrase m { c4 d e f }
+phrase m { c'4 d e f }
 section A { vln { m } vla { m } }
 form { A }
 score test { staff vln staff vla }
@@ -174,7 +174,7 @@ score test { staff vln staff vla }
     [Fact]
     public void APreset_PrintsItsName_BesideAnotherInstrument_AndNotAlone()
     {
-        const string parts = "part sx { instrument alto-sax section S { c'1 } }\npart vc { instrument cello section S { c1 } }\nform { ~S }\n";
+        const string parts = "part sx { instrument alto-sax section S { c''1 } }\npart vc { instrument cello section S { c1 } }\nform { ~S }\n";
         Assert.Equal(new[] { "Alto Saxophone", "Cello" }, Labels(parts + "score { staff sx staff vc }"));
         // One instrument: no label — as a part name gives none on a score of one staff.
         Assert.Equal(new string?[] { null }, Labels(parts + "score { staff vc }"));
@@ -187,26 +187,26 @@ score test { staff vln staff vla }
     {
         // `instrument trumpet "Tpt."` and `part X "…"` are the writer's words: printed as
         // written, even alone.
-        Assert.Equal(new[] { "Tpt." }, Labels("part t { instrument trumpet \"Tpt.\" section S { c'1 } }\nform { ~S }\nscore { staff t }"));
-        Assert.Equal(new[] { "Lead" }, Labels("part t \"Lead\" { instrument trumpet section S { c'1 } }\nform { ~S }\nscore { staff t }"));
+        Assert.Equal(new[] { "Tpt." }, Labels("part t { instrument trumpet \"Tpt.\" section S { c''1 } }\nform { ~S }\nscore { staff t }"));
+        Assert.Equal(new[] { "Lead" }, Labels("part t \"Lead\" { instrument trumpet section S { c''1 } }\nform { ~S }\nscore { staff t }"));
         // `staff ~t` still says no.
         Assert.Equal(new string?[] { null, "Cello" }, Labels(
-            "part t { instrument trumpet section S { c'1 } }\npart vc { instrument cello section S { c1 } }\nform { ~S }\nscore { staff ~t staff vc }"));
+            "part t { instrument trumpet section S { c''1 } }\npart vc { instrument cello section S { c1 } }\nform { ~S }\nscore { staff ~t staff vc }"));
     }
 
     [Fact]
     public void AGrandStaff_IsOneInstrument_ThatShowsItsSharedNameOnce()
     {
-        const string piano = "part rh { instrument piano-right section S { c'1 } }\npart lh { instrument piano-left section S { c1 } }\n";
+        const string piano = "part rh { instrument piano-right section S { c''1 } }\npart lh { instrument piano-left section S { c1 } }\n";
         // A solo piano: one instrument, no label (it used to print "piano-right" and "piano-left").
         Assert.Equal(new string?[] { null, null }, Labels(piano + "form { ~S }\nscore { grandStaff { staff rh staff lh } }"));
         // Beside a singer: "Piano" once, on the upper staff — the page centres a group's one
         // name across its brace (GrandStaff_InstrumentName_CenteredInSvg).
         Assert.Equal(new string?[] { "Soprano", "Piano", null }, Labels(piano
-            + "part v { instrument soprano section S { c'1 } }\nform { ~S }\nscore { staff v  grandStaff { staff rh staff lh } }"));
+            + "part v { instrument soprano section S { c''1 } }\nform { ~S }\nscore { staff v  grandStaff { staff rh staff lh } }"));
         // A choirStaff is its members: each voice is an instrument and shows its name.
         Assert.Equal(new[] { "Soprano", "Alto" }, Labels(
-            "part s { instrument soprano section S { c'1 } }\npart a { instrument alto section S { c'1 } }\nform { ~S }\nscore { choirStaff { staff s staff a } }"));
+            "part s { instrument soprano section S { c''1 } }\npart a { instrument alto section S { c''1 } }\nform { ~S }\nscore { choirStaff { staff s staff a } }"));
     }
 
     [Fact]

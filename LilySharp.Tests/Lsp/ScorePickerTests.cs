@@ -56,8 +56,8 @@ public sealed class ScorePickerTests
         octave absolute
         time 4/4
         key c major
-        part melody { section A { c'4 d' e' f' } }
-        part bass { section A { c4 d e f } }
+        part melody { section A { c''4 d'' e'' f'' } }
+        part bass { section A { c'4 d' e' f' } }
         form { A }
         score take1 { staff bass }
         score { staff melody }
@@ -162,7 +162,7 @@ public sealed class ScorePickerTests
     public void AFileWithNoUnnamedScore_StartsOnItsFirst()
     {
         var tree = SyntaxTree.Parse("""
-            part melody { section A { c'4 d' e' f' } }
+            part melody { section A { c''4 d' e' f' } }
             form { A }
             score both { staff melody }
             score tab { tab melody }
@@ -180,7 +180,7 @@ public sealed class ScorePickerTests
         // Both would be the (Default) entry and both would write <input>.svg.
         var v = new DuplicateScoreNameValidator();
         v.Validate(SyntaxTree.Parse("""
-            part melody { section A { c'4 d' e' f' } }
+            part melody { section A { c''4 d' e' f' } }
             form { A }
             score { staff melody }
             score { staff melody }
@@ -196,7 +196,7 @@ public sealed class ScorePickerTests
     [InlineData("score tab \"both\" { tab melody }", "delete the quoted \"both\"")]
     public void AQuotedName_IsOneErrorThatNamesTheBareWord(string score, string fix)
     {
-        var tree = SyntaxTree.Parse("part melody { section A { c'4 d' e' f' } }\nform { A }\n" + score + "\n");
+        var tree = SyntaxTree.Parse("part melody { section A { c''4 d' e' f' } }\nform { A }\n" + score + "\n");
 
         var d = Assert.Single(tree.Diagnostics);
         Assert.Equal(DiagnosticCodes.ScoreNameQuoted, d.Code);

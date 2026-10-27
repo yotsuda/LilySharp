@@ -414,7 +414,7 @@ public class VocabularyPerturbationTests
     [Theory]
     [InlineData("instrument violin", "")]
     [InlineData("transpose d", "")]
-    [InlineData("octave 3", "")]
+    [InlineData("octave 4", "")]   // 3 is the default anchor
     // ⚠️ `instrument clarinet`, not `transposition 8vb`: ConcertPitch reads the PRESET's
     // chromatic shift (InstrumentDefaults.GetTransposition, −2 for the B♭ clarinet), and an
     // octave marker is a different channel that leaves it with nothing to negate.
@@ -462,13 +462,13 @@ public class VocabularyPerturbationTests
         title "T"
         composer "C"
         part m { clef treble
-          section A { c'4 d' e' f' | break g'4 a' b' c'' | break d''4 e'' f'' g'' | }
+          section A { c''4 d'' e'' f'' | break g''4 a'' b'' c''' | break d'''4 e''' f''' g''' | }
         }
         part n { clef bass
-          section A { c4 d e f | break g4 a b c' | break d'4 e' f' g' | }
+          section A { c'4 d' e' f' | break g'4 a' b' c'' | break d''4 e'' f'' g'' | }
         }
         part o { clef treble
-          section A { e'4 f' g' a' | break b'4 c'' d'' e'' | break f''4 g'' a'' b'' | }
+          section A { e''4 f'' g'' a'' | break b''4 c''' d''' e''' | break f'''4 g''' a''' b''' | }
         }
         lyrics w sings m { section A { la la la la | la la la la | la la la la | } }
         lyrics v sings n { section A { do do do do | do do do do | do do do do | } }

@@ -11,12 +11,12 @@ time 3/8
 part melody { clef treble }
 section Main {
   melody {
-    c8[ r8 c8 ] |
-    e8[ r8 e8 ] |
-    g8[ r8 g8 ] |
     c'8[ r8 c'8 ] |
+    e'8[ r8 e'8 ] |
     g'8[ r8 g'8 ] |
-    a'8[ r8 a'8 ] |
+    c''8[ r8 c''8 ] |
+    g''8[ r8 g''8 ] |
+    a''8[ r8 a''8 ] |
   }
 }
 form { Main }

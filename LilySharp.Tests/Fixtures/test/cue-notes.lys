@@ -41,13 +41,13 @@ part harmony
 
 // Single notes: normal, then a cue region (each measure: 2 normal + 2 cue)
 phrase cueMelody {
-  c4 d cue { e4 f } |
+  c'4 d cue { e4 f } |
   g4 a cue { b4 c' } |
 }
 
 // Chords: normal, then a cue region; then a cue region in another clef
 phrase cueChords {
-  <c, e' g'>4 <d' f a>4 cue { <e g b>4 <f a c'>4 } |
+  <c e' g'>4 <d' f a>4 cue { <e g b>4 <f a c'>4 } |
   <c e g>2 cue bass { <c,, e g>2 } |
 }
 

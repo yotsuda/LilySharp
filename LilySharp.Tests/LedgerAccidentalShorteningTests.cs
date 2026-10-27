@@ -68,7 +68,7 @@ public sealed class LedgerAccidentalShorteningTests
     {
         // C♯6 (position 8): ledgers at 8 (the head's own, in the sharp's −0.8 … 1 range)
         // and 6 (two positions below, outside it).
-        var l = Ledgers(Svg("cis''4 r r r |"));
+        var l = Ledgers(Svg("cis'''4 r r r |"));
         Assert.Equal(2, l.Length);
         var own = l.OrderBy(x => x.Y).First();      // higher on the page = position 8
         var below = l.OrderBy(x => x.Y).Last();
@@ -81,7 +81,7 @@ public sealed class LedgerAccidentalShorteningTests
     {
         // D♭6 (position 9): ledgers at 8 and 6, both below the head; the flat's range is
         // 0 … 0.8 above it.
-        var l = Ledgers(Svg("des''4 r r r |"));
+        var l = Ledgers(Svg("des'''4 r r r |"));
         Assert.Equal(2, l.Length);
         Assert.All(l, x => Assert.Equal(Full, x.W, 2));
     }
@@ -89,7 +89,7 @@ public sealed class LedgerAccidentalShorteningTests
     [Fact]
     public void TheEdgeIsTheGlyphs_ANaturalAndASharpDiffer()
     {
-        // A♯3 then A♮3 (positions −8; relative to the default c', `ais` is the A below):
+        // A♯3 then A♮3 (positions −8; relative to the opening F3, `ais` is the A above):
         // both shorten their two lines, to different lengths, because a natural's right
         // edge is not a sharp's.
         var l = Ledgers(Svg("ais4 a r r |"));
@@ -105,7 +105,7 @@ public sealed class LedgerAccidentalShorteningTests
         // <c'' dis>: D♯6 (position 9; the dis stacks on the C6 the root sounds at) shortens
         // its line at 8 — but C6 (position 8) shares that line with no accidental, so the line
         // keeps C's full extent (and, the two being a second, spans both shifted heads).
-        var l = Ledgers(Svg("<c'' dis>4 r r r |"));
+        var l = Ledgers(Svg("<c''' dis>4 r r r |"));
         var atEight = l.OrderBy(x => x.Y).First();
         Assert.True(atEight.W >= Full - 0.01, $"the shared line must not be shortened: {atEight.W}");
     }

@@ -56,9 +56,9 @@ public sealed class OneLineStaffClefChangeTests
     public void OnAOneLineStaff_AClefChange_IsDrawnNowhere_AndTakesNoRoom_ButStillPlacesTheNotes()
     {
         // The control has the same stem directions (the stem pattern spaces the notes too):
-        // b' a' down-up, then c'' b' down-down as f e are in the bass clef.
-        string with = Svg(Book("b'4 a' clef bass f e |", "staff m as lines 1"));
-        string without = Svg(Book("b'4 a' c'' b' |", "staff m as lines 1"));
+        // b'' a'' down-up, then c''' b'' down-down as f' e' are in the bass clef.
+        string with = Svg(Book("b''4 a'' clef bass f' e' |", "staff m as lines 1"));
+        string without = Svg(Book("b''4 a'' c''' b'' |", "staff m as lines 1"));
         Assert.Equal(0, Count(with, EmmentalerGlyphs.FClefChange));
         Assert.Equal(0, Count(with, EmmentalerGlyphs.GClef));
         var heads = Heads(with);
@@ -74,7 +74,7 @@ public sealed class OneLineStaffClefChangeTests
     [Fact]
     public void BesideAFiveLineStaff_TheFiveLineStaffKeepsItsChange_AndTheOneLineStaffDrawsNone()
     {
-        string svg = Svg(Book("b'4 a' clef bass f e |", "staff m as lines 1\n  staff n"));
+        string svg = Svg(Book("b''4 a'' clef bass f' e' |", "staff m as lines 1\n  staff n"));
         Assert.Equal(1, Count(svg, EmmentalerGlyphs.FClefChange));   // n's change only
         Assert.Equal(1, Count(svg, EmmentalerGlyphs.GClef));         // n's line-start clef only
         // One column for both staves: the heads of the two staves share their x.

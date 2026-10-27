@@ -8,7 +8,7 @@ part melody
 
 section A {
   melody {
-    voice { g4 } { r8 aeses,8 } |
+    voice { g'4 } { r8 aeses8 } |
   }
 }
 

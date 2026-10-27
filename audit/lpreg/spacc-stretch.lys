@@ -14,18 +14,18 @@ part melody
 
 section A {
   melody {
-    d'16 d' d' d' d' d' cis' d' |
-    dis' dis' dis' dis' d' d' d' d' |
-    d' d' cis' d' dis' dis' dis' dis' |
-    d' d' d' d' d' d' cis' d' |
-    dis' dis' dis' dis' d' d' d' d' |
-    d' d' cis' d' dis' dis' dis' dis' |
-    d' d' d' d' d' d' cis' d' |
-    dis' dis' dis' dis' d' d' d' d' |
-    d' d' cis' d' dis' dis' dis' dis' |
-    d' d' d' d' d' d' cis' d' |
-    dis' dis' dis' dis' d' d' d' d' |
-    d' d' cis' d' dis' dis' dis' dis' |
+    d''16 d'' d'' d'' d'' d'' cis'' d'' |
+    dis'' dis'' dis'' dis'' d'' d'' d'' d'' |
+    d'' d'' cis'' d'' dis'' dis'' dis'' dis'' |
+    d'' d'' d'' d'' d'' d'' cis'' d'' |
+    dis'' dis'' dis'' dis'' d'' d'' d'' d'' |
+    d'' d'' cis'' d'' dis'' dis'' dis'' dis'' |
+    d'' d'' d'' d'' d'' d'' cis'' d'' |
+    dis'' dis'' dis'' dis'' d'' d'' d'' d'' |
+    d'' d'' cis'' d'' dis'' dis'' dis'' dis'' |
+    d'' d'' d'' d'' d'' d'' cis'' d'' |
+    dis'' dis'' dis'' dis'' d'' d'' d'' d'' |
+    d'' d'' cis'' d'' dis'' dis'' dis'' dis'' |
   }
 }
 

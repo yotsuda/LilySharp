@@ -420,7 +420,7 @@ public class PedalTests
         part pf {
           clef bass
           pedal text
-          section A { c1@sustain@sostenuto@unaCorda | c1@!sustain@!sostenuto@treCorde }
+          section A { c'1@sustain@sostenuto@unaCorda | c1@!sustain@!sostenuto@treCorde }
         }
 
         form { A }

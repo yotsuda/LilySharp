@@ -21,9 +21,9 @@ part tune {
   clef treble
 }
 
-section A { tune { c'1 } }
-section B { tune { d'1 } }
-section C { tune { e'1 } }
+section A { tune { c''1 } }
+section B { tune { d''1 } }
+section C { tune { e''1 } }
 
 form { |: A :| B |: C :| }
 

@@ -11,7 +11,7 @@ part melody
 
 section A {
   melody {
-    c4 d
+    c'4 d
     override NoteHead.transparent = true
     override Stem.transparent = true
     e4 f |

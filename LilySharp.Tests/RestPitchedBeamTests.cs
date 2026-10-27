@@ -80,7 +80,7 @@ public class RestPitchedBeamTests
             time 4/4
             part v { }
             section Main {
-              v { a4@rest a8[ a8@rest b8] r4 r8 | }
+              v { a'4@rest a'8[ a'8@rest b'8] r4 r8 | }
             }
             form { ~Main }
             score { staff ~v }
@@ -122,8 +122,8 @@ public class RestPitchedBeamTests
             part v { }
             section Main {
               v {
-                g'8[ r8 g'8] r8 g'8[ a8@rest g'8] r8 |
-                d8[ r8 d8] r8 d8[ a8@rest d8] r8 |
+                g''8[ r8 g''8] r8 g''8[ a'8@rest g''8] r8 |
+                d'8[ r8 d'8] r8 d'8[ a'8@rest d'8] r8 |
               }
             }
             form { ~Main }

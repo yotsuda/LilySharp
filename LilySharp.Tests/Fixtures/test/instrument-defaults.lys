@@ -35,7 +35,7 @@ phrase tenorLine {
 }
 
 phrase trebleLine {
-  c4 d e f | g4 a b c' |
+  c'4 d e f | g4 a b c' |
 }
 
 phrase bassLine {

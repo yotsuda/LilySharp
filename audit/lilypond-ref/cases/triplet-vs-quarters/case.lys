@@ -2,7 +2,7 @@ time 4/4
 part rh { clef treble }
 part lh { clef bass octave 3 }
 phrase top { tuplet 3/2 { g'8 a b } tuplet 3/2 { c d e } d2 | }
-phrase bottom { g4 a b c | }
+phrase bottom { g,4 a b c | }
 section Main {
   rh { top }
   lh { bottom }

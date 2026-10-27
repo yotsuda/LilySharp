@@ -33,7 +33,7 @@ public class LyricPartSectionsTests
         time 4/4
         key c major
         part melody { clef treble }
-        section A { melody { c4 c g' g | a a g2 | } lyrics w { Twin- kle twin- kle | lit- tle star | } }
+        section A { melody { c'4 c g' g | a a g2 | } lyrics w { Twin- kle twin- kle | lit- tle star | } }
         section B { melody { g'4 g f f | e e d2 | } lyrics w { how I won- der | what you are | } }
         form { A B }
         score s { staff melody  lyrics w }
@@ -43,7 +43,7 @@ public class LyricPartSectionsTests
         time 4/4
         key c major
         part melody { clef treble
-          section A { c4 c g' g | a a g2 | }
+          section A { c'4 c g' g | a a g2 | }
           section B { g'4 g f f | e e d2 | }
         }
         lyrics w {
@@ -119,7 +119,7 @@ public class LyricPartSectionsTests
             time 4/4
             key c major
             part melody { clef treble
-              section A { c'4 d' e' f' | }
+              section A { c''4 d' e' f' | }
               section B { g'4 a' b' c'' | }
             }
             lyrics words {
@@ -151,7 +151,7 @@ public class LyricPartSectionsTests
             time 4/4
             key c major
             part melody { clef treble
-              section A { c'4 d' e' f' | g'4 a' g'2 | }
+              section A { c''4 d' e' f' | g'4 a g'2 | }
               section B { g'4 f' e' d' | }
             }
             lyrics w {
@@ -185,7 +185,7 @@ public class LyricPartSectionsTests
             time 4/4
             key c major
             part melody { clef treble
-              section A { c'4 d' e' f' | }
+              section A { c''4 d' e' f' | }
               section B { g'4 a' b' c'' | }
             }
             lyrics w {
@@ -208,7 +208,7 @@ public class LyricPartSectionsTests
         var tree = SyntaxTree.Parse("""
             time 4/4
             key c major
-            part melody { clef treble section A { c'4 d' e' f' | } }
+            part melody { clef treble section A { c''4 d' e' f' | } }
             lyrics w { section A { [1,3. one two three four |] [2. aa bb cc dd |] } }
             form { A "1" A "2" A "3" }
             score { staff melody }
@@ -230,7 +230,7 @@ public class LyricPartSectionsTests
         var tree = SyntaxTree.Parse("""
             time 4/4
             key c major
-            part melody { clef treble section A { c'4 d' e' f' | } }
+            part melody { clef treble section A { c''4 d' e' f' | } }
             lyrics w { section A { [3,1. one two three four |] } }
             form { A "1" A "2" }
             score { staff melody }
@@ -247,7 +247,7 @@ public class LyricPartSectionsTests
             time 4/4
             key c major
             part melody { clef treble
-              section A { c'4 d' e' f' | }
+              section A { c''4 d' e' f' | }
               section B { g'4 a' b' c'' | }
             }
             lyrics w {
@@ -272,7 +272,7 @@ public class LyricPartSectionsTests
             time 4/4
             key c major
             part melody { clef treble
-              section A { c'4 d' e' f' | }
+              section A { c''4 d' e' f' | }
               section B { g'4 f' e' d' | }
             }
             lyrics w { section A { Do re mi fa | } }
@@ -296,7 +296,7 @@ public class LyricPartSectionsTests
             time 4/4
             key c major
             part melody { clef treble
-              section A { c'4 d' e' f' | }
+              section A { c''4 d' e' f' | }
               section B { g'4 a' b' c'' | }
             }
             lyrics words {
@@ -321,7 +321,7 @@ public class LyricPartSectionsTests
             time 4/4
             key c major
             part melody { clef treble
-              section A { c'4 d' e' f' | }
+              section A { c''4 d' e' f' | }
               section B { g'4 a' b' c'' | }
             }
             lyrics words {
@@ -346,7 +346,7 @@ public class LyricPartSectionsTests
         var score = CollectScored("""
             time 4/4
             key c major
-            part melody { clef treble section A { c'4 d' e' f' | } }
+            part melody { clef treble section A { c''4 d' e' f' | } }
             lyrics words { section A { [1. one one one one |] [2. two two two two |] } }
             form { A "1" A "2" }
             score { staff melody  lyrics words }

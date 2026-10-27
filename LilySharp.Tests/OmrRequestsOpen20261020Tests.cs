@@ -47,14 +47,14 @@ public class OmrRequestsOpen20261020Tests
         part lh { clef bass }
         section Piece {
           rh {
-            voice { <bes d' f'>8. g'16 f'8 ees'8 d'16 c'16 r8 } { g8 r16 ges16 g8 g8 c16 d16 ees8 } |
-            voice { f'8. aes'16 g'8 c'4 ees'8 } { d8 d16 c16 d8 d4 r8 } |
-            voice { f'8 bes16 d'16 ees'8 <aes' c''>8. g'16 g'8 } { c8 d8 ees8 aes16 ges16 g16 c16 d8 } |
+            voice { <bes' d'' f''>8. g''16 f''8 ees''8 d''16 c''16 r8 } { g'8 r16 ges'16 g'8 g'8 c'16 d'16 ees'8 } |
+            voice { f''8. aes''16 g''8 c''4 ees''8 } { d'8 d'16 c'16 d'8 d'4 r8 } |
+            voice { f''8 bes'16 d''16 ees''8 <aes'' c'''>8. g''16 g''8 } { c'8 d'8 ees'8 aes'16 ges'16 g'16 c'16 d'8 } |
           }
           lh {
-            g,,8 <f,, aes,,>16 aes,,16 r8 f,8 g8@ottava ees8 |
-            dis4 ees8 d4. |
-            c4. bes,4 r8@!ottava |
+            g,8 <f, aes,>16 aes,16 r8 f8 g'8@ottava ees'8 |
+            dis'4 ees'8 d'4. |
+            c'4. bes4 r8@!ottava |
           }
         }
         form { ~Piece }
@@ -96,9 +96,9 @@ public class OmrRequestsOpen20261020Tests
             part lh { clef bass }
             section Piece {
               lh {
-                bes,,8 ges,,8@ottava(bassa) f,,16@!ottava ees,,16 bes,,8 |
-                tuplet 3/2 { des,,8@ottava(bassa) ces,,8 <f, ges,>8@!ottava } ees,4 |
-                d,,8@ottava(bassa) tuplet 3/2 { ees,,8 d,,8 <ees,, g,, bes,,>8 } f,,8@!ottava |
+                bes,8 ges,8@ottava(bassa) f,16@!ottava ees,16 bes,8 |
+                tuplet 3/2 { des,8@ottava(bassa) ces,8 <f ges>8@!ottava } ees4 |
+                d,8@ottava(bassa) tuplet 3/2 { ees,8 d,8 <ees, g, bes,>8 } f,8@!ottava |
               }
             }
             score { staff lh "Left" }
@@ -140,12 +140,12 @@ public class OmrRequestsOpen20261020Tests
             part lh { clef bass }
             section Piece {
               rh {
-                voice { aes'8. ges'16 fes'16 <fis' ges'>16 <ges' aes'>8 <ces' ees'>8 des'16 des'16 ees'8. f'16 } { r8. ees16 f4 aes16 <f aes ces'>16 ees16 aes16 <f aes ces'>8. ces16 } |
-                voice { r16 ges'16 f'16 f'16 r8 f'8 f'8. <ees' f'>16 f'8. ges'16 } { ges4. f8 aes4 ges16 f16 r8 } |
+                voice { aes''8. ges''16 fes''16 <fis'' ges''>16 <ges'' aes''>8 <ces'' ees''>8 des''16 des''16 ees''8. f''16 } { r8. ees'16 f'4 aes'16 <f' aes' ces''>16 ees'16 aes'16 <f' aes' ces''>8. ces'16 } |
+                voice { r16 ges''16 f''16 f''16 r8 f''8 f''8. <ees'' f''>16 f''8. ges''16 } { ges'4. f'8 aes'4 ges'16 f'16 r8 } |
               }
               lh {
-                tuplet 3/2 { g,8 ges,,8@ottava(bassa) f,,8 } ees,,4. f,,8 bes,,8 ces,8 |
-                bes,,8 <ges,, bes,, des,>16 <f,, aes,,>16 tuplet 3/2 { des,,8 ces,,8 <f, ges,>8@!ottava } ees,4 r8 f,8 |
+                tuplet 3/2 { g8 ges,8@ottava(bassa) f,8 } ees,4. f,8 bes,8 ces8 |
+                bes,8 <ges, bes, des>16 <f, aes,>16 tuplet 3/2 { des,8 ces,8 <f ges>8@!ottava } ees4 r8 f8 |
               }
             }
             form { ~Piece }
@@ -172,7 +172,7 @@ public class OmrRequestsOpen20261020Tests
             part p1 { clef bass }
             section Piece {
               p1 {
-                c,4@ottava(bassa) d,4@text("dolce") e,4 f,4@!ottava | c1 |
+                c4@ottava(bassa) d4@text("dolce") e4 f4@!ottava | c'1 |
               }
             }
             score { staff p1 }
@@ -206,8 +206,8 @@ public class OmrRequestsOpen20261020Tests
             part fl1 { clef treble }
             part fl2 { clef treble }
             section Piece {
-              fl1 { fes'4 ges'4 aes'4 bes'4 | }
-              fl2 { des'4 ees'4 f'4 ges'4 | }
+              fl1 { fes''4 ges''4 aes''4 bes''4 | }
+              fl2 { des''4 ees''4 f''4 ges''4 | }
             }
             form { ~Piece }
             score { condensedStaff { fl1 fl2 } }
@@ -230,10 +230,10 @@ public class OmrRequestsOpen20261020Tests
             part p1 { clef treble }
             section Piece {
               p1 {
-                voice { c''4 bes'4 c''4 c''4 } { g'4 g'4 g'4 b'4 } |
-                voice { c''4 bes'4 c''4 c''4 } { g'4 g'4 g'4 grace { b'16 } a'4 } |
-                voice { c''4 bes'4 c''4 c''4 } { b'4 g'4 g'4 grace { b'16 } a'4 } |
-                voice { c''4 bes'4 grace { b'16 } c''4 c''4 } { g'4 g'4 g'4 g'4 } |
+                voice { c'''4 bes''4 c'''4 c'''4 } { g''4 g''4 g''4 b''4 } |
+                voice { c'''4 bes''4 c'''4 c'''4 } { g''4 g''4 g''4 grace { b''16 } a''4 } |
+                voice { c'''4 bes''4 c'''4 c'''4 } { b''4 g''4 g''4 grace { b''16 } a''4 } |
+                voice { c'''4 bes''4 grace { b''16 } c'''4 c'''4 } { g''4 g''4 g''4 g''4 } |
               }
             }
             form { ~Piece }

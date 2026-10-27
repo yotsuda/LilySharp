@@ -10,7 +10,7 @@ part v { clef treble }
 
 section Main {
   v {
-    c'4@cresc c' c' c' | break c' c' c' c'@f |
+    c''4@cresc c'' c'' c'' | break c'' c'' c'' c''@f |
   }
 }
 

@@ -50,10 +50,10 @@ public class RestAvoidNoteTests
             section Main {
               v {
                 voice
-                { g'8 g' g' r8 r2 | }
-                { r4 c r2 | }
-                { c'4 c' r2 | }
-                { r2 g | }
+                { g''8 g'' g'' r8 r2 | }
+                { r4 c' r2 | }
+                { c''4 c'' r2 | }
+                { r2 g' | }
               }
             }
             form { ~Main }
@@ -132,10 +132,10 @@ public class RestAvoidNoteTests
             section Main {
               v {
                 voice
-                { g'8 g' g' r8 r2 | }
-                { a,4@rest c r2 | }
-                { c'4 c' f'2@rest | }
-                { r2 g | }
+                { g''8 g'' g'' r8 r2 | }
+                { a4@rest c' r2 | }
+                { c''4 c'' f''2@rest | }
+                { r2 g' | }
               }
             }
             form { ~Main }

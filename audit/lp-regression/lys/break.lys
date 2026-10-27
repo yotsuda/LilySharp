@@ -14,12 +14,12 @@ part m { clef treble }
 
 section Main {
   m {
-    c'1 | noBreak
-    c'1 | noBreak
-    c'1 | noBreak
-    c'1 | break
-    c'1 | break
-    c'1
+    c''1 | noBreak
+    c''1 | noBreak
+    c''1 | noBreak
+    c''1 | break
+    c''1 | break
+    c''1
   }
 }
 

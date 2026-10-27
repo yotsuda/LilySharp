@@ -149,10 +149,10 @@ public class BraceLadderTests
     public void GrandStaffBrace_IsItsRungAtNaturalSize()
     {
         string svg = LiveRender.SvgFromRenderSpec(
-            "part sop { section A { c4 d e f } }\n" +
-            "part alt { section A { e4 f g a } }\n" +
+            "part sop { section A { c'4 d e f } }\n" +
+            "part alt { section A { e'4 f g a } }\n" +
             "part ten { section A { g4 a b c } }\n" +
-            "part bas { clef bass section A { c4 d e f } }\n" +
+            "part bas { clef bass section A { c'4 d e f } }\n" +
             "form { A }\n" +
             "score {\n  grandStaff {\n    staff sop\n    staff alt\n" +
             "    staff ten\n    staff bas\n  }\n}\n");

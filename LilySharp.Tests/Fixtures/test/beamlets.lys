@@ -7,7 +7,7 @@ title "Beamlets"
 octave absolute
 part m { clef treble }
 section Main {
-  m { c''8. d''16 e''16 f''8. g''8 a''16 b''16 c'''8 | }
+  m { c'''8. d'''16 e'''16 f'''8. g'''8 a'''16 b'''16 c''''8 | }
 }
 form { Main }
 score { staff m }

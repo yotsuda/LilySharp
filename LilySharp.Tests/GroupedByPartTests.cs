@@ -39,7 +39,7 @@ public sealed class GroupedByPartTests
 
     private const string GroupedByPart = """
         part bl { clef bass tuning bass
-          section Intro { c4 d e f | }
+          section Intro { c'4 d e f | }
           section Verse { g4 a b c | }
         }
         form { Intro Verse }
@@ -48,7 +48,7 @@ public sealed class GroupedByPartTests
 
     private const string GroupedBySection = """
         part bl { clef bass tuning bass }
-        section Intro { bl { c4 d e f | } }
+        section Intro { bl { c'4 d e f | } }
         section Verse { bl { g4 a b c | } }
         form { Intro Verse }
         score x { tab bl }
@@ -80,7 +80,7 @@ public sealed class GroupedByPartTests
     {
         var labels = Labels("""
             part bl { clef bass tuning bass
-              section Intro { c4 d e f | }
+              section Intro { c'4 d e f | }
               section Verse { g4 a b c | }
             }
             score x { tab bl }
@@ -92,8 +92,8 @@ public sealed class GroupedByPartTests
     public void GroupedByPart_TwoParts_GrandStaff_Parses()
     {
         var tree = SyntaxTree.Parse("""
-            part rh { clef treble  section A { c'4 d' e' f' | } }
-            part lh { clef bass     section A { c4 g, c, g, | } }
+            part rh { clef treble  section A { c''4 d' e' f' | } }
+            part lh { clef bass     section A { c'4 g, c, g, | } }
             form { A }
             score x { staff rh  staff lh }
             """);
@@ -105,7 +105,7 @@ public sealed class GroupedByPartTests
     {
         var v = new DuplicateCellValidator();
         v.Validate(SyntaxTree.Parse(
-            "part bl { section A { c4 } section A { d4 } }\nscore { tab bl }\n"));
+            "part bl { section A { c'4 } section A { d'4 } }\nscore { tab bl }\n"));
         Assert.Equal(DiagnosticCodes.DuplicateCell, Assert.Single(v.Diagnostics).Code);
     }
 
@@ -114,7 +114,7 @@ public sealed class GroupedByPartTests
     {
         var v = new DuplicateCellValidator();
         v.Validate(SyntaxTree.Parse(
-            "section A { bl { c4 } bl { d4 } }\nscore { tab bl }\n"));
+            "section A { bl { c'4 } bl { d4 } }\nscore { tab bl }\n"));
         Assert.Equal(DiagnosticCodes.DuplicateCell, Assert.Single(v.Diagnostics).Code);
     }
 
@@ -124,8 +124,8 @@ public sealed class GroupedByPartTests
         // (A, rh) and (A, lh) are different cells — a section gathers many parts.
         var v = new DuplicateCellValidator();
         v.Validate(SyntaxTree.Parse("""
-            part rh { section A { c'4 } }
-            part lh { section A { c4 } }
+            part rh { section A { c''4 } }
+            part lh { section A { c'4 } }
             form { A }
             score x { staff rh  staff lh }
             """));

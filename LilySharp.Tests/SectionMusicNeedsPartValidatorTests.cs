@@ -42,7 +42,7 @@ public class SectionMusicNeedsPartValidatorTests
         // melody carries section A (by-part); the stray top-level `section A { g4 … }`
         // is loose music that belongs to no part.
         => Assert.Equal(1, ErrCount(
-            "part melody { section A { c4 d e f } }\nsection A { g4 a b c }\n"
+            "part melody { section A { c'4 d e f } }\nsection A { g4 a b c }\n"
             + "form { A }\nscore { staff melody }"));
 
     [Fact]
@@ -50,7 +50,7 @@ public class SectionMusicNeedsPartValidatorTests
         // The bend/dead-note shape: one part's setup, its music in a top-level section.
         // Not by-part (the part has no inner section) → the loose music is that part's.
         => Assert.Equal(0, ErrCount(
-            "part bl { clef bass }\nsection A { c4 d e f }\n"
+            "part bl { clef bass }\nsection A { c'4 d e f }\n"
             + "form { A }\nscore { staff bl }"));
 
     [Fact]
@@ -67,7 +67,7 @@ public class SectionMusicNeedsPartValidatorTests
         // By-section: a top-level section legitimately holds the parts' cells.
         => Assert.Equal(0, ErrCount(
             "part melody { clef treble }\npart bass { clef bass }\n"
-            + "section A { melody { c4 d e f } bass { c2 g } }\nform { A }\n"
+            + "section A { melody { c'4 d e f } bass { c'2 g } }\nform { A }\n"
             + "score { grandStaff { staff melody staff bass } }"));
 
     [Fact]
@@ -76,7 +76,7 @@ public class SectionMusicNeedsPartValidatorTests
         // Regression: loose section music in a single-part file used to be dropped (or
         // mis-parsed) and render nothing. It must now reach the lone part's staff as notes.
         var tree = SyntaxTree.Parse(
-            "part bl { clef bass }\nsection A { c4 d e f }\n"
+            "part bl { clef bass }\nsection A { c'4 d e f }\n"
             + "form { A }\nscore { staff bl }");
         Assert.False(tree.HasErrors, string.Join(", ", tree.Diagnostics.Select(d => d.Message)));
         var spec = RenderSpecParser.FindFirst(tree);

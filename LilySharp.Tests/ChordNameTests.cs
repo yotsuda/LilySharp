@@ -454,8 +454,8 @@ score {{ chords prog  staff m }}
             "octave absolute\n" +
             "part hi { clef treble }\npart lo { clef treble }\n" +
             "chords prog { C | }\n" +
-            "section Main {\n  hi { b4 b b b | }\n" +
-            $"  lo {{ voice {{ {firstVoice} }} {{ b4 b b b }} | }}\n}}\n" +
+            "section Main {\n  hi { b'4 b' b' b' | }\n" +
+            $"  lo {{ voice {{ {firstVoice} }} {{ b'4 b' b' b' }} | }}\n}}\n" +
             "form { Main }\n" +
             "score o { staff hi  chords prog  staff lo }\n";
         var tree = SyntaxTree.Parse(src);
@@ -508,7 +508,8 @@ score {{ chords prog  staff m }}
     {
         var moved = LowerStaffChordClearance("r4 r r r");
         var spacer = LowerStaffChordClearance("s4 s s s");
-        var highNotes = LowerStaffChordClearance("g''4 g'' g'' g''");
+        // LilyPond's absolute octaves (owner's decision 2026-10-28): G6, as measured.
+        var highNotes = LowerStaffChordClearance("g'''4 g''' g''' g'''");
 
         Assert.True(moved.RestShift >= 5.0,
             "premise: Rest_collision must push this rest up out of the staff, "
@@ -608,8 +609,8 @@ score {{ chords prog  staff m }}
     public void ChordOnATabStaff_StandsOverItsOwnTopLine_NotTheStaffAbove()
     {
         var tree = SyntaxTree.Parse(
-            "part melody { section A { c1\\3@chord(Cmaj7) } }\n"
-            + "part back { section A { e1\\3@chord(Dm7) } }\n"
+            "part melody { section A { c'1\\3@chord(Cmaj7) } }\n"
+            + "part back { section A { e'1\\3@chord(Dm7) } }\n"
             + "form { A }\n"
             + "score { staff back  tab melody }\n");
         Assert.False(tree.HasErrors, string.Join(", ", tree.Diagnostics.Select(d => d.Message)));

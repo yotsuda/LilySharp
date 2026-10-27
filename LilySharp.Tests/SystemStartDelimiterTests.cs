@@ -240,7 +240,7 @@ public class SystemStartDelimiterTests
             LilySharp.Core.Svg.SvgGenerator.Generate(
                 LilySharp.Core.Syntax.SyntaxTree.Parse(
                     "part rh { clef treble }\npart lh { clef bass }\n"
-                    + "section A { rh { c4 d e f | } lh { c4 d e f | } }\n"
+                    + "section A { rh { c'4 d e f | } lh { c'4 d e f | } }\n"
                     + "form { A }\n"
                     + $"score {{ {keyword} {{ staff rh  staff lh }} }}"),
                 new LilySharp.Core.Svg.Renderer.SvgRenderOptions { EmbedFont = false });

@@ -119,7 +119,7 @@ public class HarmonyReaderTests
         const string source = """
             part lh { clef bass }
             chords prog { section A { F | F | } }
-            section A { lh { <c e g>1 | <g, b d>1 | } }
+            section A { lh { <c' e g>1 | <g, b d>1 | } }
             form { A }
             score {
               chords prog

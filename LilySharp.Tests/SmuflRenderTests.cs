@@ -35,7 +35,7 @@ public class SmuflRenderTests
 {
     private const string Book =
         "part m { clef treble }\n" +
-        "section A { m { c'4 d'8 e'8 fis'2 | g'1 } }\n" +
+        "section A { m { c''4 d'8 e'8 fis'2 | g'1 } }\n" +
         "form { A }\n" +
         "score { staff m }\n";
 

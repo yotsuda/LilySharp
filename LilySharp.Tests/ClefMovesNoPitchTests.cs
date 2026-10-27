@@ -88,10 +88,10 @@ public class ClefMovesNoPitchTests
     {
         // The first bar puts the frame at A5 so the old answer (C3 D3) and this one differ.
         int[] expected = { 72, 74, 76, 77, 79, 81, 72, 74 };
-        AllOutputsAre(expected, Book("clef treble", "c'4 d e f | g4 a  c,4 d |"));
-        AllOutputsAre(expected, Book("clef treble", "c'4 d e f | g4 a  clef bass  c,4 d |"));
+        AllOutputsAre(expected, Book("clef treble", "c''4 d e f | g4 a  c,4 d |"));
+        AllOutputsAre(expected, Book("clef treble", "c''4 d e f | g4 a  clef bass  c,4 d |"));
         // The twin writes the source's own comma: LilyPond's \relative ignores the clef too.
-        string ly = Twin(Book("clef treble", "c'4 d e f | g4 a  clef bass  c,4 d |"));
+        string ly = Twin(Book("clef treble", "c''4 d e f | g4 a  clef bass  c,4 d |"));
         Assert.Contains("\\clef \"bass\" c,4", ly);
         Assert.DoesNotContain("c,,,4", ly);
     }
@@ -110,7 +110,7 @@ public class ClefMovesNoPitchTests
     public void ACueClef_MovesNoPitch()
     {
         AllOutputsAre(Enumerable.Repeat(60, 12).ToArray(),
-            Book("clef treble", "c4 c c c | voice { cue bass { c4 c c c } } { R1 } | c4 c c c |"));
+            Book("clef treble", "c'4 c c c | voice { cue bass { c4 c c c } } { R1 } | c4 c c c |"));
     }
 
     [Fact]
@@ -118,15 +118,15 @@ public class ClefMovesNoPitchTests
     {
         const string withClef = """
             part m { }
-            section A { m { e4 f g a | clef bass b c d e | } }
-            section B { m { c4 d e f | } }
+            section A { m { e'4 f g a | clef bass b c d e | } }
+            section B { m { c'4 d e f | } }
             form { ~A ~B }
             score { staff m }
             """;
         const string noClef = """
             part m { }
-            section A { m { e4 f g a | b c d e | } }
-            section B { m { c4 d e f | } }
+            section A { m { e'4 f g a | b c d e | } }
+            section B { m { c'4 d e f | } }
             form { ~A ~B }
             score { staff m }
             """;
@@ -137,24 +137,28 @@ public class ClefMovesNoPitchTests
     [InlineData("clef bass")]
     [InlineData("clef alto")]
     [InlineData("clef tenor")]
-    public void AHeaderClef_LeavesBareCAtMiddleC(string header)
+    public void AHeaderClef_LeavesBareCWhereItIsWithoutTheClef(string header)
     {
-        AllOutputsAre(new[] { 60, 62, 64, 65 }, Book(header, "c4 d e f |"));
-        Assert.Contains("\\relative c' {", Twin(Book(header, "c4 d e f |")));
+        // A fresh frame opens on F3 whatever the clef (owner's decision 2026-10-28),
+        // so bare c is C3 — the same as with no clef at all.
+        AllOutputsAre(new[] { 48, 50, 52, 53 }, Book(header, "c4 d e f |"));
+        AllOutputsAre(PagePitches(Book("", "c4 d e f |")), Book(header, "c4 d e f |"));
+        Assert.Contains("\\relative c {", Twin(Book(header, "c4 d e f |")));
     }
 
     [Fact]
-    public void AnInstrumentPreset_StillMovesTheRegister_ThePositiveControl()
+    public void AnInstrumentPreset_MovesNoRegister_ButOctaveDoes_ThePositiveControl()
     {
-        // `instrument cello` anchors at octave 3 (and sounds as written).
+        // No preset moves any octave (owner's decision 2026-10-28): `instrument cello`
+        // keeps the default anchor 3, like a part with no preset.
         AllOutputsAre(new[] { 48, 50, 52, 53 }, Book("instrument cello", "c4 d e f |"));
-        // `octave 3` is the other thing that moves it.
-        AllOutputsAre(new[] { 48, 50, 52, 53 }, Book("clef bass octave 3", "c4 d e f |"));
+        // `octave N` is the one thing that moves it.
+        AllOutputsAre(new[] { 60, 62, 64, 65 }, Book("clef bass octave 4", "c4 d e f |"));
     }
 
     [Fact]
     public void AStaffItemClef_MovesNoPitch()
     {
-        AllOutputsAre(new[] { 60, 62, 64, 65 }, Book("", "c4 d e f |", "staff bass m"));
+        AllOutputsAre(new[] { 60, 62, 64, 65 }, Book("", "c'4 d e f |", "staff bass m"));
     }
 }

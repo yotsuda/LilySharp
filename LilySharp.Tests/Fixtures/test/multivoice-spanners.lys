@@ -10,8 +10,8 @@ title "Multi-voice spanners"
 part mel { clef treble }
 section S {
   mel {
-    voice { c''4 d'' e'' f'' | g''4 a'' b'' c''' | }
-    { e'4@glissando g' g'( e') | f'4 f'~ f' f' | }
+    voice { c'''4 d''' e''' f''' | g'''4 a''' b''' c'''' | }
+    { e''4@glissando g'' g''( e'') | f''4 f''~ f'' f'' | }
   }
 }
 form { S }

@@ -198,7 +198,7 @@ public class GraceBodyValidatorTests
     /// </summary>
     [Theory]
     [InlineData("grace { d'8@fall } c'1 | e'1 |", "grace { d'8 } c'1 | e'1 |")]
-    [InlineData("grace { d'16@doit e'16 } c'1 | e'1 |", "grace { d'16 e'16 } c'1 | e'1 |")]
+    [InlineData("grace { d''16@doit e'16 } c'1 | e'1 |", "grace { d''16 e'16 } c'1 | e'1 |")]
     // …and the thumb position, a fingering in LilyPond (session 948, ledger thumb.grace.*).
     [InlineData("grace { d'8@thumb } c'1 | e'1 |", "grace { d'8 } c'1 | e'1 |")]
     // …and Lily#'s own gestures — the scoop, the plop and the guitar bend-up (session 957,
@@ -410,7 +410,7 @@ public class GraceBodyValidatorTests
     [Theory]
     [InlineData("grace { d'8@phrasingSlur } c'1 | e'1@!phrasingSlur |", "grace { d'8 } c'1 | e'1 |")]
     [InlineData("c'1@phrasingSlur | grace { d'8@!phrasingSlur } e'1 |", "c'1 | grace { d'8 } e'1 |")]
-    [InlineData("grace { d'16@phrasingSlur e'16@!phrasingSlur } c'1 | e'1 |", "grace { d'16 e'16 } c'1 | e'1 |")]
+    [InlineData("grace { d''16@phrasingSlur e'16@!phrasingSlur } c'1 | e'1 |", "grace { d''16 e'16 } c'1 | e'1 |")]
     public void APhrasingSlurOnAGrace_IsDrawn_AndNotReported(string written, string control)
     {
         Assert.Empty(Warnings(Book(written)));
@@ -486,7 +486,7 @@ public class GraceBodyValidatorTests
     [Theory]
     [InlineData("grace { d'8@breath } c'1 | e'1 |", "grace { d'8 } c'1 | e'1 |")]
     [InlineData("grace { d'8@caesura } c'1 | e'1 |", "grace { d'8 } c'1 | e'1 |")]
-    [InlineData("grace { d'16 e'16@breath } c'1 | e'1 |", "grace { d'16 e'16 } c'1 | e'1 |")]
+    [InlineData("grace { d''16 e'16@breath } c'1 | e'1 |", "grace { d''16 e'16 } c'1 | e'1 |")]
     [InlineData("grace { <d' f'>8@breath } c'1 | e'1 |", "grace { <d' f'>8 } c'1 | e'1 |")]
     public void ABreathOnTheLastGrace_IsDrawn_AndNotReported(string written, string control)
     {
@@ -518,18 +518,18 @@ public class GraceBodyValidatorTests
     /// Nothing is reported.
     /// </summary>
     [Theory]
-    [InlineData("grace { d'16@breath e'16 } c'1 | e'1 |", "grace { d'16 e'16 } c'1 | e'1 |")]
-    [InlineData("grace { d'16@caesura e'16 } c'1 | e'1 |", "grace { d'16 e'16 } c'1 | e'1 |")]
-    [InlineData("grace { <d' f'>16@breath e'16 } c'1 | e'1 |", "grace { <d' f'>16 e'16 } c'1 | e'1 |")]
-    [InlineData("grace { d'16 e'16@breath f'16 } c'1 | e'1 |", "grace { d'16 e'16 f'16 } c'1 | e'1 |")]
+    [InlineData("grace { d''16@breath e'16 } c'1 | e'1 |", "grace { d''16 e'16 } c'1 | e'1 |")]
+    [InlineData("grace { d''16@caesura e'16 } c'1 | e'1 |", "grace { d''16 e'16 } c'1 | e'1 |")]
+    [InlineData("grace { <d'' f'>16@breath e'16 } c'1 | e'1 |", "grace { <d'' f'>16 e'16 } c'1 | e'1 |")]
+    [InlineData("grace { d''16 e'16@breath f'16 } c'1 | e'1 |", "grace { d''16 e'16 f'16 } c'1 | e'1 |")]
     // …before a grace rest too (session 938, ledger breath.grace.before-rest.*).
-    [InlineData("grace { d'16@breath r16 e'16 } c'1 | e'1 |", "grace { d'16 r16 e'16 } c'1 | e'1 |")]
-    [InlineData("grace { d'16@breath r16 } c'1 | e'1 |", "grace { d'16 r16 } c'1 | e'1 |")]
+    [InlineData("grace { d''16@breath r16 e'16 } c'1 | e'1 |", "grace { d''16 r16 e'16 } c'1 | e'1 |")]
+    [InlineData("grace { d''16@breath r16 } c'1 | e'1 |", "grace { d''16 r16 } c'1 | e'1 |")]
     // …before a grace spacer (session 942, ledger breath.grace.before-spacer.*).
-    [InlineData("grace { d'16@breath s16 e'16 } c'1 | e'1 |", "grace { d'16 s16 e'16 } c'1 | e'1 |")]
+    [InlineData("grace { d''16@breath s16 e'16 } c'1 | e'1 |", "grace { d''16 s16 e'16 } c'1 | e'1 |")]
     // …and in an afterGrace, on its last grace as well (session 939, ledger breath.aftergrace.*).
-    [InlineData("c'1 afterGrace { d'16@breath } | e'1 |", "c'1 afterGrace { d'16 } | e'1 |")]
-    [InlineData("c'1 afterGrace { d'16@breath e'16 } | e'1 |", "c'1 afterGrace { d'16 e'16 } | e'1 |")]
+    [InlineData("c''1 afterGrace { d'16@breath } | e'1 |", "c''1 afterGrace { d'16 } | e'1 |")]
+    [InlineData("c''1 afterGrace { d'16@breath e'16 } | e'1 |", "c''1 afterGrace { d'16 e'16 } | e'1 |")]
     public void ABreathOnAnInnerGrace_IsDrawn_AndNotReported(string written, string control)
     {
         Assert.Empty(Warnings(Book(written)));
@@ -543,9 +543,9 @@ public class GraceBodyValidatorTests
     /// probes/grace-breath.ly GBJ / GBG).
     /// </summary>
     [Theory]
-    [InlineData("grace { d'16 e'16@breath f'16 g'16 } c'1 | e'1 |", 1, 2)]
-    [InlineData("grace { d'16@breath e'16 f'16 } c'1 | e'1 |", 0, 0)]
-    [InlineData("grace { d'16@caesura e'16 } c'1 | e'1 |", 0, 2)]
+    [InlineData("grace { d''16 e'16@breath f'16 g'16 } c'1 | e'1 |", 1, 2)]
+    [InlineData("grace { d''16@breath e'16 f'16 } c'1 | e'1 |", 0, 0)]
+    [InlineData("grace { d''16@caesura e'16 } c'1 | e'1 |", 0, 2)]
     public void ABreathOnAnInnerGrace_RidesItsColumn_AndABreathEndsTheBeam(string music, int column, int beamed)
     {
         var collected = new LilySharp.Core.Svg.Collector.MeasureCollector().Collect(SyntaxTree.Parse(Book(music)));
@@ -562,13 +562,13 @@ public class GraceBodyValidatorTests
     /// the beam a knee, as in LilyPond. Nothing is reported.
     /// </summary>
     [Theory]
-    [InlineData("grace { d'16@stemDown e'16 } c'1 | e'1 |", "grace { d'16 e'16 } c'1 | e'1 |")]
-    [InlineData("grace { d'16 e'16@stemDown f'16@stemDown } c'1 | e'1 |", "grace { d'16 e'16 f'16 } c'1 | e'1 |")]
+    [InlineData("grace { d''16@stemDown e'16 } c'1 | e'1 |", "grace { d''16 e'16 } c'1 | e'1 |")]
+    [InlineData("grace { d''16 e'16@stemDown f'16@stemDown } c'1 | e'1 |", "grace { d''16 e'16 f'16 } c'1 | e'1 |")]
     [InlineData("grace { d'8@stemDown e'4 } c'1 | e'1 |", "grace { d'8 e'4 } c'1 | e'1 |")]
     [InlineData("grace { d'8@stemDown } c'1 | e'1 |", "grace { d'8 } c'1 | e'1 |")]
-    [InlineData("grace { d'16@stemDown e'16@stemDown } c'1 | e'1 |", "grace { d'16 e'16 } c'1 | e'1 |")]
+    [InlineData("grace { d''16@stemDown e'16@stemDown } c'1 | e'1 |", "grace { d''16 e'16 } c'1 | e'1 |")]
     [InlineData("grace { <d' f'>8@stemDown } c'1 | e'1 |", "grace { <d' f'>8 } c'1 | e'1 |")]
-    [InlineData("grace { d'16@stemDown r16 e'16@stemDown } c'1 | e'1 |", "grace { d'16 r16 e'16 } c'1 | e'1 |")]
+    [InlineData("grace { d''16@stemDown r16 e'16@stemDown } c'1 | e'1 |", "grace { d''16 r16 e'16 } c'1 | e'1 |")]
     [InlineData("voice { c''1 } { grace { d'8@stemUp } c'1 } | e'1 |", "voice { c''1 } { grace { d'8 } c'1 } | e'1 |")]
     public void AStemDirectionOnAGraceStem_TurnsIt_AndIsNotReported(string written, string control)
     {
@@ -705,7 +705,7 @@ public class GraceBodyValidatorTests
     {
         string source =
             "part m { clef treble }\n"
-            + "section A { m { grace { d'8@mark(\"P\") } c'1 | e'1 | } }\n"
+            + "section A { m { grace { d''8@mark(\"P\") } c'1 | e'1 | } }\n"
             + "form { ~A }\nscore { staff m tab m }\n";
         string svg = Regex.Replace(
             LiveRender.SvgFromRenderSpec(source), "data-pos=\"\\d+\"", "data-pos=\"#\"");
@@ -727,16 +727,16 @@ public class GraceBodyValidatorTests
             LiveRender.SvgFromRenderSpec(
                 "octave absolute\nkey a major\ntime 3/4\n"
                 + "part bs { clef bass tuning bass }\n"
-                + "section S { bs { " + grace + " b,8\\2 a,\\2 d, | } }\n"
+                + "section S { bs { " + grace + " b8\\2 a\\2 d | } }\n"
                 + "form { ~S }\nscore { tab bs }\n"),
             "data-pos=\"\\d+\"", "data-pos=\"#\"");
 
-        string auto = Tab("grace { a,16 }");
-        string s2 = Tab("grace { a,16\\2 }");
-        string s3 = Tab("grace { a,16\\3 }");
+        string auto = Tab("grace { a16 }");
+        string s2 = Tab("grace { a16\\2 }");
+        string s3 = Tab("grace { a16\\3 }");
 
         Assert.Empty(Warnings("octave absolute\npart bs { clef bass tuning bass }\n"
-            + "section S { bs { grace { a,16\\2 } b,8 | } }\n"
+            + "section S { bs { grace { a16\\2 } b8 | } }\n"
             + "form { ~S }\nscore { tab bs }\n"));
         Assert.NotEqual(auto, s2);
         Assert.NotEqual(auto, s3);
@@ -811,10 +811,11 @@ public class GraceBodyValidatorTests
     [Fact]
     public void AGraceDotClearsTheFlagOnlyWhenTheFlagIsOnItsRow()
     {
-        // Lily#'s absolute `c` is LilyPond's `c'`, so these six are the six measured books.
+        // Lily#'s absolute pitches are LilyPond's own since the owner's decision 2026-10-28 (bare
+        // c is C3), so these six are the six measured books as written.
         var off = GraceDotOffsets(
-            "grace { g8. } c'1 | grace { f8. } c'1 | grace { d'8. } c'1 | "
-            + "grace { e'8. } c'1 | grace { d'16. } c'1 | grace { g16. } c'1 |");
+            "grace { g'8. } c''1 | grace { f'8. } c''1 | grace { d''8. } c''1 | "
+            + "grace { e''8. } c''1 | grace { d''16. } c''1 | grace { g'16. } c''1 |");
         Assert.Equal(6, off.Length);
 
         const double Head = 1.226585;   // head ink right + one grace dot
@@ -828,7 +829,7 @@ public class GraceBodyValidatorTests
 
         // A BEAMED run has no flag at all, so a lifted dot stays at the head's right — the
         // gate the ordinary pass reaches by drawing no stem for a beamed column.
-        AssertOffset(Head, Assert.Single(GraceDotOffsets("grace { g16. g16 } c'1 |")));
+        AssertOffset(Head, Assert.Single(GraceDotOffsets("grace { g'16. g'16 } c''1 |")));
     }
 
     /// <summary>
@@ -841,14 +842,14 @@ public class GraceBodyValidatorTests
     /// spellings of one position, which cannot be folded while the spacing runs before the
     /// drawing. So both are asked the same six books and must agree (docs/RULES.md §7.7, the
     /// difference net); <see cref="AGraceDotClearsTheFlagOnlyWhenTheFlagIsOnItsRow"/> pins the
-    /// drawn one to LilyPond. Positions are the middle-line frame (g is −2, d' is 2).
+    /// drawn one to LilyPond. Positions are the middle-line frame (g' is −2, d'' is 2).
     /// </remarks>
     [Fact]
     public void TheReservedGraceDotIsTheDrawnOne()
     {
         var drawn = GraceDotOffsets(
-            "grace { g8. } c'1 | grace { f8. } c'1 | grace { d'8. } c'1 | "
-            + "grace { e'8. } c'1 | grace { d'16. } c'1 | grace { g16. } c'1 |");
+            "grace { g'8. } c''1 | grace { f'8. } c''1 | grace { d''8. } c''1 | "
+            + "grace { e''8. } c''1 | grace { d''16. } c''1 | grace { g'16. } c''1 |");
         (int Position, int Value)[] books = [(-2, 8), (-3, 8), (2, 8), (3, 8), (2, 16), (-2, 16)];
         Assert.Equal(books.Length, drawn.Length);
         for (int i = 0; i < books.Length; i++)

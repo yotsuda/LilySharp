@@ -62,7 +62,7 @@ public sealed class IncompleteInputTests
     public void ACustomKey_IsNamedInTheOutlineAndTheHover()
     {
         const string doc = "octave absolute\ntime 4/4\nkey custom fis cis\npart melody\n"
-            + "section Main { melody { d4 e fis g | } }\nform { Main }\nscore { staff melody }\n";
+            + "section Main { melody { d'4 e fis g | } }\nform { Main }\nscore { staff melody }\n";
         var server = new LilySharp.Lsp.LilySharpLanguageServer(System.IO.Stream.Null, System.IO.Stream.Null);
         var uri = new System.Uri("file:///custom-key.lys");
         server.DidOpen(new LilySharp.Lsp.Protocol.DidOpenTextDocumentParams

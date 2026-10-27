@@ -140,7 +140,7 @@ public class FontDirectiveTests
         time 4/4
         section Main {
           chords prog { C Am | }
-          melody { c'4 d e f | }
+          melody { c''4 d e f | }
           lyrics words { la la la la | }
         }
         form { Main }
@@ -433,8 +433,8 @@ public class FontDirectiveTests
             fonts { serif "Georgia" }
             part serif { clef treble }
             part header { clef bass }
-            phrase chordName { c'4 d e f | }
-            section A { serif { chordName } header { c1 | } }
+            phrase chordName { c''4 d e f | }
+            section A { serif { chordName } header { c'1 | } }
             score { staff serif  staff header }
             form { A }
             """);

@@ -52,8 +52,8 @@ part melody { clef treble }
 
 section Main {
   melody {
-    <c e g>2 ~ <c e g>2 |
-    <g b d'>2 ~ <g b d'>2 |
+    <c' e' g'>2 ~ <c' e' g'>2 |
+    <g' b' d''>2 ~ <g' b' d''>2 |
   }
 }
 

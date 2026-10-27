@@ -14,7 +14,7 @@ part melody { clef treble }
 
 section Main {
   melody {
-    c' d' e' f' | g' a' b' c'' | c'' g' e' c' | c' c c'' c' |
+    c'' d'' e'' f'' | g'' a'' b'' c''' | c''' g'' e'' c'' | c'' c' c''' c'' |
   }
 }
 

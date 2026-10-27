@@ -154,7 +154,7 @@ public class TodoCalloutTests
     [Fact]
     public void ThePreviewDrawsTheRingsAndTheCallouts_AndTheExportNeither()
     {
-        var tree = SyntaxTree.Parse(Book("c'4@todo(\"why\") d'4 r4@todo <e' g' b'>4@todo(\"both\") |"));
+        var tree = SyntaxTree.Parse(Book("c''4@todo(\"why\") d''4 r4@todo <e'' g'' b''>4@todo(\"both\") |"));
 
         string preview = SvgGenerator.Generate(tree, SvgRenderOptions.Preview());
         // One ring per marked ITEM — the note, the rest, and the chord as a whole — drawn as
@@ -254,9 +254,9 @@ public class TodoCalloutTests
         // Distances are leader lengths in Y — ring (y1) to underline (y2) — both page
         // overlays, so one frame; the notes themselves are drawn in the system's own frame
         // and are not compared.
-        string bare = Book("c''4@todo(\"memo\") d''4 e''4 f''4 |");
-        string rightWalled = Book("c''4@todo(\"memo\") c'''4 d'''4 e'''4 |");
-        string bothWalled = Book("c'''4 c''4@todo(\"memo\") c'''4 d'''4 |");
+        string bare = Book("c'''4@todo(\"memo\") d'''4 e'''4 f'''4 |");
+        string rightWalled = Book("c'''4@todo(\"memo\") c''''4 d''''4 e''''4 |");
+        string bothWalled = Book("c''''4 c'''4@todo(\"memo\") c''''4 d''''4 |");
         var bareLeader = Assert.Single(Leaders(SvgGenerator.Generate(SyntaxTree.Parse(bare), SvgRenderOptions.Preview())));
         var crossed = Assert.Single(Leaders(SvgGenerator.Generate(SyntaxTree.Parse(rightWalled), SvgRenderOptions.Preview())));
         var climbed = Assert.Single(Leaders(SvgGenerator.Generate(SyntaxTree.Parse(bothWalled), SvgRenderOptions.Preview())));

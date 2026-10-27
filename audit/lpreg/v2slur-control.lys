@@ -13,10 +13,10 @@ part m { clef treble }
 
 section Main {
   m {
-    g4 a b c' | d'4 c' b a | g4 a b c' | d'4 c' b a |
-    voice { g'4 a' b' c'' | b'2 a'2 | } { e4 c g, c, | g,2 c,2 | }
-    g4 a b c' | d'4 c' b a | g4 a b c' | d'4 c' b a |
-    g4 a b c' | d'4 c' b a | g4 a b c' | d'4 c' b a |
+    g'4 a' b' c'' | d''4 c'' b' a' | g'4 a' b' c'' | d''4 c'' b' a' |
+    voice { g''4 a'' b'' c''' | b''2 a''2 | } { e'4 c' g c | g2 c2 | }
+    g'4 a' b' c'' | d''4 c'' b' a' | g'4 a' b' c'' | d''4 c'' b' a' |
+    g'4 a' b' c'' | d''4 c'' b' a' | g'4 a' b' c'' | d''4 c'' b' a' |
   }
 }
 

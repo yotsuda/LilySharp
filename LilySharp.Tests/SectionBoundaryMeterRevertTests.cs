@@ -55,8 +55,8 @@ public sealed class SectionBoundaryMeterRevertTests
     private const string Book = """
         time 4/4
         part m {
-          section A { c'4 d e f | time 3/4 key g major g a b | }
-          section B { c'4 d e f | }
+          section A { c''4 d e f | time 3/4 key g major g a b | }
+          section B { c''4 d e f | }
         }
         form { ~A ~B }
         score { staff m }
@@ -129,8 +129,8 @@ public sealed class SectionBoundaryMeterRevertTests
         var tree = SyntaxTree.Parse("""
             time 4/4
             part m {
-              section A { c'4 d e f | time 2/2 g a b c' | }
-              section B { c'4 d e f | }
+              section A { c''4 d e f | time 2/2 g a b c' | }
+              section B { c''4 d e f | }
             }
             form { ~A ~B }
             score { staff m }
@@ -170,7 +170,7 @@ public sealed class SectionBoundaryMeterRevertTests
             section P { partial 2 }
             part m {
               section P { r8 }
-              section Q { c'8 d' e' | f'4 g' a' b' | }
+              section Q { c''8 d' e' | f'4 g' a b' | }
             }
             form { ~P ~Q }
             score { staff m }
@@ -195,8 +195,8 @@ public sealed class SectionBoundaryMeterRevertTests
         var tree = SyntaxTree.Parse("""
             time 4/4
             part m
-            section A { m { c'4 d e f | } }
-            section B { time 3/4 m { c'4 d e | } }
+            section A { m { c''4 d e f | } }
+            section B { time 3/4 m { c''4 d e | } }
             form { ~A ~B }
             score { staff m }
             """);
@@ -227,8 +227,8 @@ public sealed class SectionBoundaryMeterRevertTests
         var groupedByPart = Fifths("""
             time 4/4
             part m {
-              section A { c'4 d e f | key g major g a b c | }
-              section B { c'4 d e f | }
+              section A { c''4 d e f | key g major g a b c | }
+              section B { c''4 d e f | }
             }
             form { ~A ~B }
             score { staff m }
@@ -236,8 +236,8 @@ public sealed class SectionBoundaryMeterRevertTests
         var groupedBySection = Fifths("""
             time 4/4
             part m
-            section A { m { c'4 d e f | key g major g a b c | } }
-            section B { m { c'4 d e f | } }
+            section A { m { c''4 d e f | key g major g a b c | } }
+            section B { m { c''4 d e f | } }
             form { ~A ~B }
             score { staff m }
             """);

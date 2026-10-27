@@ -205,7 +205,7 @@ public class PercentRepeatTests
         var svg = TestPaper.SvgFromRenderSpec("""
             octave absolute
             part mel { }
-            section A { mel { c4 c c c | % } }
+            section A { mel { c'4 c' c' c' | % } }
             form { ~A }
             score { staff mel tab mel }
             """);
@@ -428,7 +428,7 @@ public class PercentRepeatTests
     {
         var svg = TestPaper.SvgFromRenderSpec("""
             part mel { }
-            section A { mel { c1 | d1 | %2 } }
+            section A { mel { c'1 | d1 | %2 } }
             form { ~A }
             score { staff mel }
             """);
@@ -490,7 +490,7 @@ public class PercentRepeatTests
         // glyph, so an unhidden repeat would show up as extra <text class="music"> entries.
         var control = TestPaper.SvgFromRenderSpec("""
             part mel { }
-            section A { mel { c1 | d1 } }
+            section A { mel { c'1 | d1 } }
             form { ~A }
             score { staff mel }
             """);
@@ -511,13 +511,13 @@ public class PercentRepeatTests
     {
         var svg = TestPaper.SvgFromRenderSpec("""
             part mel { }
-            section A { mel { c8 d e f g a b c' | d'8 c' b a g f e d | %2 } }
+            section A { mel { c'8 d e f g a b c' | d'8 c' b a g f e d | %2 } }
             form { ~A }
             score { staff mel }
             """);
         var control = TestPaper.SvgFromRenderSpec("""
             part mel { }
-            section A { mel { c8 d e f g a b c' | d'8 c' b a g f e d | } }
+            section A { mel { c'8 d e f g a b c' | d'8 c' b a g f e d | } }
             form { ~A }
             score { staff mel }
             """);
@@ -721,7 +721,7 @@ public class PercentRepeatTests
         var svg = LiveRender.SvgFromRenderSpec("""
             key d major
             part melody { clef treble }
-            section A { melody { c'4 d e f | c1 | d1 | d1 | d1 | d1 | d1 | d1 | d1 | d1 | d1 | d1 | d1 | d1 | % } }
+            section A { melody { c''4 d e f | c1 | d1 | d1 | d1 | d1 | d1 | d1 | d1 | d1 | d1 | d1 | d1 | d1 | % } }
             form { A }
             score { staff melody }
             """);
@@ -890,7 +890,7 @@ public class PercentRepeatTests
     {
         var layout = LayoutOf("""
             part melody {
-              section A { c4@p@accent( d) e~ e@f | c4@p@accent( d) e~ e@f | c4@p@accent( d) e~ e@f | c4@p@accent( d) e~ e@f | }
+              section A { c'4@p@accent( d) e~ e@f | c4@p@accent( d) e~ e@f | c4@p@accent( d) e~ e@f | c4@p@accent( d) e~ e@f | }
             }
             form { A }
             score { staff melody }
@@ -919,8 +919,8 @@ public class PercentRepeatTests
             part rh { clef treble }
             part lh { clef bass }
             section A {
-              rh { c4@chord(C)@figuredBass(6) d@glissando e f@cross | % | % | g1 | }
-              lh { c2 g | c2 g | c2 g | c1 | }
+              rh { c'4@chord(C)@figuredBass(6) d@glissando e f@cross | % | % | g1 | }
+              lh { c'2 g | c2 g | c2 g | c1 | }
             }
             form { ~A }
             score { grandStaff { staff rh staff lh } }
@@ -950,7 +950,7 @@ public class PercentRepeatTests
     {
         var layout = LayoutOf("""
             part melody {
-              section A { c1( | d1) | %2 | %2 }
+              section A { c'1( | d1) | %2 | %2 }
             }
             form { A }
             score { staff melody }

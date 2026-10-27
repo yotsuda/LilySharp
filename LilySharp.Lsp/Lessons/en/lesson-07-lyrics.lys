@@ -9,7 +9,7 @@ composer "Traditional"
 part melody {
   clef treble
   section A {
-    c4 d e c | c d e c | e f g2 | e4 f g2 |
+    c'4 d e c | c d e c | e f g2 | e4 f g2 |
     g8 a g f e4 c | g'8 a g f e4 c | c g c2 | c4 g c2 |.
   }
 }

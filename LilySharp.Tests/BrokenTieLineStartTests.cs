@@ -107,7 +107,7 @@ public sealed class BrokenTieLineStartTests
             time 4/4
             part m {
               clef treble
-              section A { c'4( d' e' f' | break g'4 a') b' c'' | }
+              section A { c''4( d'' e'' f'' | break g''4 a'') b'' c''' | }
             }
             form { ~A }
             score { staff m }

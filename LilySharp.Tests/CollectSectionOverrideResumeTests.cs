@@ -35,10 +35,10 @@ public sealed class CollectSectionOverrideResumeTests
     private const string Book = """
         part melody
         section A {
-          melody { c4 d e f | override NoteHead.color = "red" c4 d e f | c4 d e f | }
+          melody { c'4 d e f | override NoteHead.color = "red" c4 d e f | c4 d e f | }
         }
         section B {
-          melody { c4 d e f | c4 d e f | }
+          melody { c'4 d e f | c4 d e f | }
         }
         form { A B }
         score { staff melody }

@@ -4,6 +4,20 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+### Octaves — BREAKING
+
+- **Octaves are LilyPond's, for every instrument.**
+  - `c` is C3 and `c'` is middle C, and a section starts on F3, as a pitchless `\relative` does.
+  - Writing `instrument bass` (or any preset) no longer moves the notes; `octave N` in a part still does.
+  - A guitar or `treble_8` part is written as it sounds.
+  - Files written before this change may sound an octave off.
+- **Compose with AI** writes the piece at concert pitch and opens it in written pitch:
+  - a bass is re-marked to its own octave;
+  - a trumpet keeps a `pitch concert` of its own.
+- **Compose with AI picks a specific model.** The automatic choice skips models that only VS Code
+  itself may use, and Copilot's "Auto".
+- **The status bar explains `pitch`** when the caret is on it: written versus concert.
+
 ### Preview
 
 - **A long instrument name is no longer cut at the paper's left edge** — "Electric Guitar" on the first

@@ -36,7 +36,7 @@ public class VoiceDynamicsStackOrderTests
         part top { clef treble }
         part bot { clef alto octave 3 }
         section Main {
-          top { c'4 d e f | voice { g'2@f a } { c2@p d }  | }
+          top { c''4 d e f | voice { g'2@f a } { c2@p d }  | }
           bot { c'4 b a g | f2 e2 | }
         }
         form { Main }

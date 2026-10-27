@@ -49,7 +49,8 @@ namespace LilySharp.Tests;
 [Trait("Category", "Unit")]
 public class LineEdgeLyricReservationTests
 {
-    private const string Music = "c'4 d e f | g a b c' | break d'4 c' b a | g1 |";
+    // A frame opens on F3 since the owner's decision 2026-10-28: c'' is the C5 LilyPond was measured on.
+    private const string Music = "c''4 d e f | g a b c' | break d'4 c' b a | g1 |";
 
     private static string Sung(string words) => $$"""
         paper { raggedRight }

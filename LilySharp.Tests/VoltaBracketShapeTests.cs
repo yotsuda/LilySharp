@@ -43,13 +43,13 @@ public sealed class VoltaBracketShapeTests
         octave absolute
         time 4/4
         part m { clef treble }
-        section A { m { c'1 | } }
-        section B { m { d'1 | d'1 | } }
-        section C { m { e'1 | e'1 | } }
-        section D { m { f'1 | f'1 | } }
-        section E { m { g'1 | g'1 | } }
-        section F { m { a'1 | a'1 | break a'1 | a'1 | } }
-        section G { m { b'1 | time 3/4 b'2. | b'2. | } }
+        section A { m { c''1 | } }
+        section B { m { d''1 | d''1 | } }
+        section C { m { e''1 | e''1 | } }
+        section D { m { f''1 | f''1 | } }
+        section E { m { g''1 | g''1 | } }
+        section F { m { a''1 | a''1 | break a''1 | a''1 | } }
+        section G { m { b''1 | time 3/4 b''2. | b''2. | } }
 
         """;
 
@@ -235,25 +235,25 @@ public sealed class VoltaBracketShapeTests
     /// (the ad-hoc −1 of the port). Until session 692 every end was a bare 0.3 inside the
     /// measure edges.</summary>
     [Theory]
-    [InlineData("", "c1 | c1 |", "c2 c2 | break c1 | c1 |", "e1 |", "",
+    [InlineData("", "c'1 | c'1 |", "c'2 c'2 | break c'1 | c'1 |", "e'1 |", "",
         new[] { 67.980, 102.350, 3.593, 68.303, 69.233, 102.350 })]
     // E2's `time 4/4` restates the meter E1 left: since session 737 it draws nothing, and the
     // twin omits it (MeasureBuilder.SectionHead). LilyPond re-measured on that twin (Lab
     // sessions/p737/volta/nore-p): the restated meter's 0.80 is gone from E1's end and E2's start
     // (it read 68.504 / 69.434 with the \time drawn).
-    [InlineData("", "c1 | c1 |", "time 2/4 c2 | break time 4/4 c1 | c1 |", "time 4/4 e1 |", "",
+    [InlineData("", "c'1 | c'1 |", "time 2/4 c'2 | break time 4/4 c'1 | c'1 |", "time 4/4 e'1 |", "",
         new[] { 75.685, 102.350, 6.813, 69.304, 70.234, 102.350 })]
-    [InlineData("key aes major", "c1 | c1 |", "c2 c2 | break c1 | c1 |", "e1 |", "",
+    [InlineData("key aes major", "c'1 | c'1 |", "c'2 c'2 | break c'1 | c'1 |", "e'1 |", "",
         new[] { 69.712, 102.350, 8.093, 69.918, 70.848, 102.350 })]
-    [InlineData("", "c1 | c1 |", "c1 | c1 | break", "e1 | e1 |", "",
+    [InlineData("", "c'1 | c'1 |", "c'1 | c'1 | break", "e'1 | e'1 |", "",
         new[] { 58.407, 102.350, 3.593, 102.350 })]
-    [InlineData("", "c1 | c1 |", "c1 |", "e1 |", " ~A",
+    [InlineData("", "c'1 | c'1 |", "c'1 |", "e'1 |", " ~A",
         new[] { 33.699, 42.569, 43.499, 51.619 })]
-    [InlineData("", "c1 | c1 |", "c1 | c1 | break", "e1 | e1 |", " ~A",
+    [InlineData("", "c'1 | c'1 |", "c'1 | c'1 | break", "e'1 | e'1 |", " ~A",
         new[] { 58.407, 102.350, 3.593, 52.219 })]
-    [InlineData("key aes major", "c1 | c1 |", "c2 c2 | c2 c2 | break c1 | c1 |", "e1 |", "",
+    [InlineData("key aes major", "c'1 | c'1 |", "c'2 c'2 | c'2 c'2 | break c'1 | c'1 |", "e'1 |", "",
         new[] { 56.362, 102.350, 8.093, 69.918, 70.848, 102.350 })]
-    [InlineData("", "c1 | c1 |", "c2 c2 | c2 c2 | c2 c2 | break c1 |", "e1 |", "",
+    [InlineData("", "c'1 | c'1 |", "c'2 c'2 | c'2 c'2 | c'2 c'2 | break c'1 |", "e'1 |", "",
         new[] { 46.276, 102.350, 4.403, 50.883, 51.813, 102.350 })]
     public void EveryPiece_EndsWhereLilyPondsDoes(string key, string a, string e1, string e2,
         string tail, double[] lilyPond)
@@ -376,7 +376,7 @@ public sealed class VoltaBracketShapeTests
     [Fact]
     public void VoltaBracketOnANote_IsIgnoredWithWhereItBelongs()
     {
-        var tree = SyntaxTree.Parse(Head.Replace("c'1 |", "c'1@voltaBracket(2) |")
+        var tree = SyntaxTree.Parse(Head.Replace("c''1 |", "c''1@voltaBracket(2) |")
             + "form { |: A [1. B] :| [2. C] }\nscore { staff m }\n");
         var d = Assert.Single(SemanticValidation.Run(tree), x => x.Code == DiagnosticCodes.UnknownAnnotation);
         Assert.Equal("'@voltaBracket(2)' is ignored: '@voltaBracket' belongs on a form ending, glued to its ']' "

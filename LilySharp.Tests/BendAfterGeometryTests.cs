@@ -52,7 +52,8 @@ public sealed class BendAfterGeometryTests
     private const double Tolerance = 0.006;   // two decimals in the SVG, either side
 
     // octave 5: c d e f stand in the treble staff's upper half, a and b just under middle C5
-    // — a in the second space (position −1), b on the middle line (0).
+    // — a in the second space (position −1), b on the middle line (0). The frame opens on F5
+    // (owner's decision 2026-10-28), so an opening a or b is written a, or b, to stay there.
     private static string Render(string sectionA) => LiveRender.SvgFromRenderSpec($$"""
         part v { octave 5 }
         section A { {{sectionA}} }
@@ -141,7 +142,7 @@ public sealed class BendAfterGeometryTests
     public void TheDotCounts_WhenItSitsOnTheHeadsRow_NotWhenLifted()
     {
         // a (a space: the dot on the head's row) and b (a line: the dot lifted a row).
-        var svg = Render("a4.@fall b8 b4.@fall c8 |");
+        var svg = Render("a,4.@fall b8 b4.@fall c8 |");
         var bends = Bends(svg);
         Assert.Equal(2, bends.Count);
         var glyphs = Glyphs(svg);
@@ -196,9 +197,9 @@ public sealed class BendAfterGeometryTests
     /// </summary>
     [Theory]
     [InlineData("<c e g>4@fall a |", false)]  // plain: the top g, no shift
-    [InlineData("<a b>4@fall c |", false)]    // up stem: the top b is the reversed head, right of the a
-    [InlineData("<a c>4.@fall d8 |", true)]   // the top c in a space: its dot on its row, read
-    [InlineData("<a b>4.@fall c8 |", false)]  // the top b on a line: its dot lifted, not read
+    [InlineData("<a, b>4@fall c |", false)]    // up stem: the top b is the reversed head, right of the a
+    [InlineData("<a, c>4.@fall d8 |", true)]   // the top c in a space: its dot on its row, read
+    [InlineData("<a, b>4.@fall c8 |", false)]  // the top b on a line: its dot lifted, not read
     public void AChordsGestureLeavesItsTopHead(string music, bool dotCounts)
     {
         var svg = Render(music);
@@ -219,7 +220,7 @@ public sealed class BendAfterGeometryTests
     [Fact]
     public void AGraceChordsGestureHangsAtItsTopHead()
     {
-        var svg = Render("grace { <a d>16@fall } c4 d e f |");
+        var svg = Render("grace { <a, d>16@fall } c4 d e f |");
         var bend = Assert.Single(Bends(svg));
         var top = TopHeadOf(Heads(svg), bend);
         Assert.InRange(bend.Y0, top.Y - Tolerance, top.Y + Tolerance);

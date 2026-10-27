@@ -3,7 +3,7 @@ part melody
 
 section A {
   melody {
-    c''2@accent~ c2@accent~ |
+    c'''2@accent~ c2@accent~ |
     c2@accent~ c2@accent~ |
     c2@accent~ c2@accent~ |
     c2@accent~ c2@accent~ |

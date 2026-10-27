@@ -99,7 +99,7 @@ public class MeasureContentKeyTests
             part melody { clef treble }
             phrase mel {
               r1 |
-              c4 d e f |
+              c'4 d e f |
               c4 d e f |
               r1 |
             }

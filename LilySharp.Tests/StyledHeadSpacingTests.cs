@@ -39,7 +39,7 @@ public class StyledHeadSpacingTests
         part b { clef bass }
         section A {
           g { /4 4 4 4 | /2 2 | /4. 8 /2 | /8 8 8 8 /2 | /1 | }
-          b { c4 d e f | g2 a | c4. d8 e2 | c8 d e f g2 | c1 | }
+          b { c'4 d' e' f' | g'2 a' | c'4. d'8 e'2 | c'8 d' e' f' g'2 | c'1 | }
         }
         form { A }
         score { staff g  staff b }

@@ -10,7 +10,7 @@ part melody
 
 section A {
   melody {
-    c'1 @cresc |
+    c''1 @cresc |
     break
     c1 |
     c1 @decresc |

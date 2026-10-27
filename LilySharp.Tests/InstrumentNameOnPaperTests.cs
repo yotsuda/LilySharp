@@ -68,7 +68,7 @@ public class InstrumentNameOnPaperTests
 
     private static double Width(string name)
     {
-        var tree = SyntaxTree.Parse("time 4/4\npart p { }\nsection A { p { c1 | } }\nform { A }\n");
+        var tree = SyntaxTree.Parse("time 4/4\npart p { }\nsection A { p { c'1 | } }\nform { A }\n");
         var fonts = SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree)).TextMetrics;
         return fonts.Advance(name, LilySharp.Core.Rendering.SharedRenderer.InstrumentNameEm(fonts),
             LilySharp.Core.Rendering.TextRole.Instrument, LilySharp.Core.Rendering.SharedRenderer.InstrumentNameStyle(fonts));

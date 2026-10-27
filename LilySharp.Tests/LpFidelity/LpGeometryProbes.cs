@@ -52,12 +52,12 @@ internal sealed record LpProbe(
 /// </remarks>
 internal static class LpGeometryProbes
 {
-    private static string Preamble(string key) => $"""
+    private static string Preamble(string key) => $$"""
         octave absolute
         time 4/4
-        key {key}
+        key {{key}}
 
-        part melody
+        part melody { octave 4 }
 
 
         """;
@@ -76,7 +76,7 @@ internal static class LpGeometryProbes
         time {{meter}}
         key {{key}}
 
-        part melody
+        part melody { octave 4 }
 
         section Main {
           melody { {{music}} }
@@ -328,7 +328,7 @@ internal static class LpGeometryProbes
         time 4/4
         key c major
 
-        part melody
+        part melody { octave 4 }
 
         section Main {
           melody { {{string.Concat(Enumerable.Repeat("c4 d e f | ", 24)).Trim()}} }
@@ -360,7 +360,7 @@ internal static class LpGeometryProbes
         time 4/4
         key c major
 
-        part melody
+        part melody { octave 4 }
 
         section Main {
           melody { {{string.Concat(Enumerable.Repeat("c4 d e f | ", 150)).Trim()}} }
@@ -400,7 +400,7 @@ internal static class LpGeometryProbes
         time 4/4
         key c major
 
-        part melody
+        part melody { octave 4 }
 
         section Main {
           melody { {{string.Concat(Enumerable.Repeat("a4 a a a | ", 150)).Trim()}} }
@@ -469,7 +469,7 @@ internal static class LpGeometryProbes
         time 4/4
         key c major
 
-        part melody
+        part melody { octave 4 }
 
         section Main {
           melody { {{string.Concat(Enumerable.Repeat("a4 a a a | ", 24)).Trim()}} }
@@ -575,7 +575,7 @@ internal static class LpGeometryProbes
         time 4/4
         key c major
 
-        part melody {
+        part melody { octave 4
           section A { e4 f g f | e4 e e2 | e4 f g f | e2 e2 | }
           section B { {{secondSystem}} }
         }
@@ -619,8 +619,8 @@ internal static class LpGeometryProbes
         key c major
 
         part melody {
-          section A { e'4 f' g' f' | e' e' e'2 | }
-          section B { g'4 g' f' f' | e' e' e'2 | }
+          section A { e''4 f'' g'' f'' | e'' e'' e''2 | }
+          section B { g''4 g'' f'' f'' | e'' e'' e''2 | }
         }
 
         lyrics w sings melody {
@@ -676,7 +676,7 @@ internal static class LpGeometryProbes
         octave absolute
         key c major
 
-        part melody {
+        part melody { octave 4
           clef treble
           section A { c4 c g g | a a g2 | f4 f e e | d d c2 | break }
           section B { g4 g f f | e e d2 | break }
@@ -731,7 +731,7 @@ internal static class LpGeometryProbes
         time 4/4
         key c major
 
-        part melody {
+        part melody { octave 4
           section A { {{notes}} }
         }
 
@@ -781,7 +781,7 @@ internal static class LpGeometryProbes
         key c major
 
         part melody {
-          section A { a2 a | a2 a | }
+          section A { a'2 a' | a'2 a' | }
         }
 
         form { ~A }
@@ -822,7 +822,7 @@ internal static class LpGeometryProbes
         time 4/4
         key c major
 
-        part m { clef treble }
+        part m { octave 4 clef treble }
 
         section A {
           m {
@@ -873,7 +873,7 @@ internal static class LpGeometryProbes
         time 4/4
         key c major
 
-        part m { clef treble }
+        part m { octave 4 clef treble }
 
         section A {
           m {
@@ -911,7 +911,7 @@ internal static class LpGeometryProbes
         time 4/4
         key c major
 
-        part m { clef treble }
+        part m { octave 4 clef treble }
 
         section A {
           m { {{bar}} | }
@@ -950,7 +950,7 @@ internal static class LpGeometryProbes
         time {{meter}}
         key c major
 
-        part m { clef treble }
+        part m { octave 4 clef treble }
 
         section A {
           m {
@@ -1005,7 +1005,7 @@ internal static class LpGeometryProbes
         time 4/4
         key c major
 
-        part melody
+        part melody { octave 4 }
 
         section A {
           melody { {{bars}} }
@@ -1074,7 +1074,7 @@ internal static class LpGeometryProbes
         time 4/4
         key c major
 
-        part melody
+        part melody { octave 4 }
 
         section A {
           melody { {{bar}} }
@@ -1119,8 +1119,8 @@ internal static class LpGeometryProbes
 
         section Main {
           v {
-            <e>4@laissezVibrer <f, f>4@arpeggio <e>4@laissezVibrer <g, f>4@arpeggio |
-            <e>4@laissezVibrer <a, f>4@arpeggio <e>4@laissezVibrer <b, f>4@arpeggio |
+            <e'>4@laissezVibrer <f f'>4@arpeggio <e'>4@laissezVibrer <g f'>4@arpeggio |
+            <e'>4@laissezVibrer <a f'>4@arpeggio <e'>4@laissezVibrer <b f'>4@arpeggio |
           }
         }
 
@@ -1147,7 +1147,7 @@ internal static class LpGeometryProbes
         part m { clef treble }
 
         section A {
-          m { <b' c'' d'' e''>4.@stemDown <f' g' a' b'>4.@stemDown | }
+          m { <b'' c''' d''' e'''>4.@stemDown <f'' g'' a'' b''>4.@stemDown | }
         }
 
         form { ~A }
@@ -1185,7 +1185,7 @@ internal static class LpGeometryProbes
         time 4/4
         key c major
 
-        part melody {
+        part melody { octave 4
           section A { a4( a a) a | }
         }
 
@@ -1249,8 +1249,8 @@ internal static class LpGeometryProbes
         time 4/4
         key c major
 
-        part rh { clef treble }
-        part lh { clef bass }
+        part rh { octave 4 clef treble }
+        part lh { octave 4 clef bass }
 
         section Main {
           rh { {{string.Concat(Enumerable.Repeat("c4 d e f | ", 120)).Trim()}} }
@@ -1371,7 +1371,7 @@ internal static class LpGeometryProbes
         time 4/4
         key c major
 
-        part melody { clef treble }
+        part melody { octave 4 clef treble }
 
         section Main {
           melody { {{string.Concat(Enumerable.Repeat("g'4 a' g' a' | ", 120)).Trim()}} }
@@ -1433,7 +1433,7 @@ internal static class LpGeometryProbes
         time 4/4
         key c major
 
-        part melody { clef treble }
+        part melody { octave 4 clef treble }
 
         section Main {
           melody { {{string.Concat(Enumerable.Repeat("g'4 a' g' a' | ", 120)).Trim()}} }
@@ -1477,7 +1477,7 @@ internal static class LpGeometryProbes
         time 4/4
         key c major
 
-        part melody { clef treble }
+        part melody { octave 4 clef treble }
 
         section Main {
           melody { {{string.Concat(Enumerable.Repeat("g'4 a' g' a' | ", 120)).Trim()}} }
@@ -1535,7 +1535,7 @@ internal static class LpGeometryProbes
         time 4/4
         key c major
 
-        part melody { clef treble{{(pedal.Length > 0 ? " " + pedal : "")}} }
+        part melody { octave 4 clef treble{{(pedal.Length > 0 ? " " + pedal : "")}} }
 
         section Main {
           melody { {{music}} }
@@ -1591,7 +1591,7 @@ internal static class LpGeometryProbes
         part melody { clef bass pedal text }
 
         section Main {
-          melody { c,1@sustain@sostenuto@unaCorda | c,1 | c,1@!sustain@!sostenuto@treCorde | }
+          melody { c1@sustain@sostenuto@unaCorda | c1 | c1@!sustain@!sostenuto@treCorde | }
         }
 
         form { ~Main }
@@ -1620,8 +1620,8 @@ internal static class LpGeometryProbes
         time 4/4
         key c major
 
-        part upper { clef treble }
-        part lower { clef treble_8 tuning guitar }
+        part upper { octave 4 clef treble }
+        part lower { octave 3 clef treble_8 tuning guitar }
 
         section A {
           upper { {{string.Concat(Enumerable.Repeat("g4 a g a | ", 8)).Trim()}} }
@@ -1675,7 +1675,7 @@ internal static class LpGeometryProbes
         time 4/4
         key c major
 
-        part melody { clef treble }
+        part melody { octave 4 clef treble }
 
         section A {
           melody { {{string.Concat(Enumerable.Repeat("g4 a g a | ", bars)).Trim()}} }
@@ -1753,7 +1753,7 @@ internal static class LpGeometryProbes
         time 4/4
         key c major
 
-        part gtr { clef treble_8 tuning guitar }
+        part gtr { octave 3 clef treble_8 tuning guitar }
 
         section Main {
           gtr { {{string.Concat(Enumerable.Repeat("g,4 a, g, a, | ", 24)).Trim()}} }
@@ -1822,7 +1822,7 @@ internal static class LpGeometryProbes
         time 4/4
         key c major
 
-        part melody
+        part melody { octave 4 }
 
         section Main {
           melody { {{string.Concat(Enumerable.Repeat("c4 d e f | ", 8)).Trim()}} }
@@ -1872,7 +1872,7 @@ internal static class LpGeometryProbes
         time 4/4
         key c major
 
-        part melody
+        part melody { octave 4 }
 
         section Main {
           melody { {{string.Concat(Enumerable.Repeat(string.Concat(Enumerable.Repeat("c4 d e f | ", 8)) + "break ", 16)).Trim()}} }
@@ -1935,7 +1935,7 @@ internal static class LpGeometryProbes
         time 4/4
         key c major
 
-        part bassline { clef bass tuning bass5 }
+        part bassline { octave 4 clef bass tuning bass5 }
 
         section Main {
           bassline { {{StaffTabPageBody(lines, marked)}} }
@@ -2023,8 +2023,8 @@ internal static class LpGeometryProbes
         time 4/4
         key c major
 
-        part upper { clef bass }
-        part lower { clef bass }
+        part upper { octave 4 clef bass }
+        part lower { octave 4 clef bass }
 
         section Main {
           upper { {{string.Concat(Enumerable.Repeat(string.Concat(Enumerable.Repeat("g,,4 a,, b,, a,, | ", 8)) + "break ", lines)).Trim()}} }
@@ -2049,7 +2049,7 @@ internal static class LpGeometryProbes
         time 4/4
         key c major
 
-        part melody { clef treble }
+        part melody { octave 4 clef treble }
 
         section Main {
           melody { {{string.Concat(Enumerable.Repeat("g'4 a' g' a' | ", 40)).Trim()}} }
@@ -2145,8 +2145,8 @@ internal static class LpGeometryProbes
             time 4/4
             key c major
 
-            part upper { clef treble }
-            part melody { clef treble }
+            part upper { octave 4 clef treble }
+            part melody { octave 4 clef treble }
 
             section Main {
               upper { {{string.Concat(Enumerable.Repeat("g'4 a' g' a' | ", 120)).Trim()}} }
@@ -2218,8 +2218,8 @@ internal static class LpGeometryProbes
             time 4/4
             key c major
 
-            part upper { clef treble }
-            part melody { clef treble }
+            part upper { octave 4 clef treble }
+            part melody { octave 4 clef treble }
 
             section Main {
               upper { {{string.Concat(Enumerable.Repeat("g'4 a' g' a' | ", 120)).Trim()}} }
@@ -2296,7 +2296,7 @@ internal static class LpGeometryProbes
         time 4/4
         key c major
 
-        part melody { clef treble }
+        part melody { octave 4 clef treble }
 
         section A {
           melody { c'4 c' c' c' | c'4 c' c' c' | }
@@ -2367,7 +2367,7 @@ internal static class LpGeometryProbes
         time 4/4
         key c major
 
-        part melody { clef treble }
+        part melody { octave 4 clef treble }
 
         section A {
           melody { c'4 c' c' c' | c'4 c' c' c' | }
@@ -2467,8 +2467,8 @@ internal static class LpGeometryProbes
         time 4/4
         key c major
 
-        part melody { section A { e2 e2 | e2 e2 | } }
-        part lower  { section A { {{lowerNote}}1 | {{lowerNote}}1 | } }
+        part melody { octave 4 section A { e2 e2 | e2 e2 | } }
+        part lower  { octave 4 section A { {{lowerNote}}1 | {{lowerNote}}1 | } }
 
         lyrics one sings melody { section A { gyp gyp | gyp gyp } }
         lyrics two sings melody { section A { pug pug | pug pug } }
@@ -2525,8 +2525,8 @@ internal static class LpGeometryProbes
             time 4/4
             key c major
 
-            part melody { clef treble }
-            part lower { clef treble }
+            part melody { octave 4 clef treble }
+            part lower { octave 4 clef treble }
 
             section Main {
               melody { {{bars}} }
@@ -2605,8 +2605,8 @@ internal static class LpGeometryProbes
             time 4/4
             key c major
 
-            part melody { clef treble }
-            part lower { clef treble }
+            part melody { octave 4 clef treble }
+            part lower { octave 4 clef treble }
 
             section Main {
               melody { {{melody}} }
@@ -2721,8 +2721,8 @@ internal static class LpGeometryProbes
             time 4/4
             key c major
 
-            part melody { clef treble }
-            part lower { clef treble }
+            part melody { octave 4 clef treble }
+            part lower { octave 4 clef treble }
 
             section Main {
               melody { g4 a g a | c,,4 c,, c,, c,, | g4 a g a | g4 a g a | }
@@ -2780,12 +2780,12 @@ internal static class LpGeometryProbes
             time 4/4
             key c major
 
-            part melody {
+            part melody { octave 4
               clef treble
               section A { g4 a g a | g a g a | g a g a | g a g a | break }
               section B { g4 a g a | g a g a | g a g a | g a g a | }
             }
-            part lower {
+            part lower { octave 4
               clef treble
               section A { g4 a g a | g a g a | g a g a | g a g a | }
               section B { g4 a g a | g a g a | g a g a | g a g a | }
@@ -2963,8 +2963,8 @@ internal static class LpGeometryProbes
             time 4/4
             key c major
 
-            part melody { clef treble }
-            part lower { clef treble }
+            part melody { octave 4 clef treble }
+            part lower { octave 4 clef treble }
 
             section A {
               melody { {{BarsFor("A")}} break }
@@ -3254,8 +3254,8 @@ internal static class LpGeometryProbes
             time 4/4
             key c major
 
-            part melody { clef treble }
-            part lower { clef treble }
+            part melody { octave 4 clef treble }
+            part lower { octave 4 clef treble }
 
             section Main {
               melody { {{bars}} }
@@ -3313,7 +3313,7 @@ internal static class LpGeometryProbes
             time 4/4
             key c major
 
-            part melody { clef treble }
+            part melody { octave 4 clef treble }
 
             section Main {
               melody { {{bars}} }
@@ -3370,7 +3370,7 @@ internal static class LpGeometryProbes
         part melody { clef treble }
 
         section A {
-          melody { c'4 c' g' g' | a' a' g'2 | }
+          melody { c''4 c'' g'' g'' | a'' a'' g''2 | }
           chords prog { Dmaj7 | Em7 }
           lyrics verse { Twin- kle twin- kle | lit- tle star | }
         }
@@ -3405,7 +3405,7 @@ internal static class LpGeometryProbes
         part melody { clef treble }
 
         section A {
-          melody { c'4 c' g' g' | a' a' g'2 | }
+          melody { c''4 c'' g'' g'' | a'' a'' g''2 | }
           chords prog { Dmaj7 | Em7 }
         }
 
@@ -3444,7 +3444,7 @@ internal static class LpGeometryProbes
         part melody { clef treble }
 
         section A {
-          melody { c'4 c' g' g' | a' a' g'2 | }
+          melody { c''4 c'' g'' g'' | a'' a'' g''2 | }
           chords prog { Dmaj7 | Em7 }
           lyrics verse { Twin- kle twin- kle | lit- tle star | }
         }
@@ -3471,7 +3471,7 @@ internal static class LpGeometryProbes
         part melody { clef treble }
 
         section A {
-          melody { c'4 c' g' g' | a' a' g'2 | }
+          melody { c''4 c'' g'' g'' | a'' a'' g''2 | }
           lyrics v1 { Twin- kle twin- kle | lit- tle star | }
         }
 
@@ -3513,7 +3513,7 @@ internal static class LpGeometryProbes
         part melody { clef treble }
 
         section A {
-          melody { c'4 c' g' g' | a' a' g'2 | }
+          melody { c''4 c'' g'' g'' | a'' a'' g''2 | }
           lyrics v1 { Twin- kle twin- kle | lit- tle star | }
           lyrics v2 { How I won- der | what you are | }
         }
@@ -3553,12 +3553,12 @@ internal static class LpGeometryProbes
         part melody { clef treble }
 
         section A {
-          melody { c'4 c' g' g' | a' a' g'2 | }
+          melody { c''4 c'' g'' g'' | a'' a'' g''2 | }
           lyrics v1 { Twin- kle twin- kle | lit- tle star | }
         }
 
         section B {
-          melody { c'4 c' g' g' | a' a' g'2 | }
+          melody { c''4 c'' g'' g'' | a'' a'' g''2 | }
           lyrics v1 { Twin- kle twin- kle | lit- tle star | }
           lyrics v2 { How I won- der | what you are | }
         }
@@ -3599,8 +3599,8 @@ internal static class LpGeometryProbes
         lyrics wb { section Main { blah | | | | } }
 
         section Main {
-          one { <b c'>2 s2 | <b c'>2@f s2 | <b c'>2@text("Text").up s2 | <b c'>2@staccatissimo s2 | }
-          two { <c' b>2 s2 | <c' b>2@f s2 | <c' b>2@text("Text").up s2 | <c' b>2@staccatissimo s2 | }
+          one { <b' c''>2 s2 | <b' c''>2@f s2 | <b' c''>2@text("Text").up s2 | <b' c''>2@staccatissimo s2 | }
+          two { <c'' b'>2 s2 | <c'' b'>2@f s2 | <c'' b'>2@text("Text").up s2 | <c'' b'>2@staccatissimo s2 | }
         }
 
         form { ~Main }
@@ -3647,8 +3647,8 @@ internal static class LpGeometryProbes
         part lower { clef bass }
 
         section Main {
-          upper { d'4 d' e' d' | b4 a b2 | }
-          lower { g,4 b, c a, | d4 d d2 | }
+          upper { d''4 d'' e'' d'' | b'4 a' b'2 | }
+          lower { g4 b c' a | d'4 d' d'2 | }
           lyrics words sings upper { Praise God from whom | all bless- ings | }
         }
 
@@ -3676,8 +3676,8 @@ internal static class LpGeometryProbes
         part lower { clef bass }
 
         section Main {
-          upper { d'4 d' e' d' | b4 a b2 | }
-          lower { g,4 b, c a, | d4 d d2 | }
+          upper { d''4 d'' e'' d'' | b'4 a' b'2 | }
+          lower { g4 b c' a | d'4 d' d'2 | }
           lyrics words sings upper { Praise God from whom | all bless- ings | }
         }
 
@@ -3726,8 +3726,8 @@ internal static class LpGeometryProbes
         octave absolute
         time 4/4
 
-        part rh { clef treble }
-        part lh { clef bass }
+        part rh { octave 4 clef treble }
+        part lh { octave 4 clef bass }
 
         section Main {
           rh { a4 a a a | }
@@ -3796,7 +3796,7 @@ internal static class LpGeometryProbes
         octave absolute
         time 4/4
 
-        part melody { clef treble }
+        part melody { octave 4 clef treble }
 
         section A {
           melody { c,4 c, c, c, | c,4 c, c, c, | break }
@@ -3868,7 +3868,7 @@ internal static class LpGeometryProbes
         time 4/4
         key f major
 
-        part mel { clef treble }
+        part mel { octave 4 clef treble }
 
         section A { mel { c'1 | d'1 } }
         section B { mel { e'1 | g'2 a'4 bes'4{{(chord ? "@chord(Fm)" : "")}} } }
@@ -3907,9 +3907,9 @@ internal static class LpGeometryProbes
 
         part mel { clef treble }
 
-        section A { mel { c1 | d1 } }
-        section B { mel { e1 | g1 } }
-        section C { mel { g1 | a1 } }
+        section A { mel { c'1 | d'1 } }
+        section B { mel { e'1 | g'1 } }
+        section C { mel { g'1 | a'1 } }
 
         form { |: ~A [1. ~B] :| [2. ~C -] }
 
@@ -3989,7 +3989,7 @@ internal static class LpGeometryProbes
         octave absolute
         time 4/4
 
-        part melody { clef treble }
+        part melody { octave 4 clef treble }
 
         section A {
           melody { a''4 a'' a'' a'' | }
@@ -4023,7 +4023,7 @@ internal static class LpGeometryProbes
         octave absolute
         time 4/4
 
-        part melody { clef treble }
+        part melody { octave 4 clef treble }
 
         section A {
           melody { g,4 g, g, g, | g,4 g, g, g, | break }
@@ -4084,7 +4084,7 @@ internal static class LpGeometryProbes
             octave absolute
             time 4/4
 
-            part melody { clef treble }
+            part melody { octave 4 clef treble }
 
             section A {
               melody { g,4 g, g, g, | g,4 g, g, g, | break }
@@ -4139,7 +4139,7 @@ internal static class LpGeometryProbes
             octave absolute
             time 4/4
 
-            part melody { clef treble }
+            part melody { octave 4 clef treble }
 
             section A {
               melody { g,4{{mark}} g, g, g, | g,4 g, g, g, | break }{{chords}}
@@ -4196,7 +4196,7 @@ internal static class LpGeometryProbes
             octave absolute
             time 4/4
 
-            part melody { clef treble }
+            part melody { octave 4 clef treble }
 
             section A { melody { {{bar1}} | {{bar2}} | g4 a g a | g4 a g a | break } }
             section B { melody { g4 a g a | g4 a g a | } }
@@ -4254,7 +4254,7 @@ internal static class LpGeometryProbes
             octave absolute
             time 4/4
 
-            part melody { clef treble }
+            part melody { octave 4 clef treble }
 
             section A {
               melody { c'4{{on}} c' c' c' | c'4 c' c' c'{{off}} | break }
@@ -4303,9 +4303,9 @@ internal static class LpGeometryProbes
             time 4/4
             key c major
 
-            part melody { clef treble }
-            part ossia_mel { clef treble }
-            part lower { clef treble }
+            part melody { octave 4 clef treble }
+            part ossia_mel { octave 4 clef treble }
+            part lower { octave 4 clef treble }
 
             section Main {
               melody { {{bars}} }
@@ -4449,9 +4449,9 @@ internal static class LpGeometryProbes
             time 4/4
             key c major
 
-            part top { clef treble }
-            part inner { clef treble }
-            part melody { clef treble }
+            part top { octave 4 clef treble }
+            part inner { octave 4 clef treble }
+            part melody { octave 4 clef treble }
 
             section Main {
               top { {{upper.Trim()}} }
@@ -4480,8 +4480,8 @@ internal static class LpGeometryProbes
             time 4/4
             key c major
 
-            part upper { clef treble }
-            part melody { clef treble }
+            part upper { octave 4 clef treble }
+            part melody { octave 4 clef treble }
 
             section Main {
               upper { {{upper.Trim()}} }
@@ -4605,8 +4605,8 @@ internal static class LpGeometryProbes
             time 4/4
             key c major
 
-            part rh { clef treble }
-            part lh { clef bass }
+            part rh { octave 4 clef treble }
+            part lh { octave 4 clef bass }
 
             section Main {
               rh { {{upper.Trim()}} }
@@ -4642,8 +4642,8 @@ internal static class LpGeometryProbes
             time 4/4
             key c major
 
-            part upper { clef treble }
-            part melody { clef treble }
+            part upper { octave 4 clef treble }
+            part melody { octave 4 clef treble }
 
             section Main {
               upper { {{upper.Trim()}} }
@@ -4694,7 +4694,7 @@ internal static class LpGeometryProbes
         time 4/4
         key c major
 
-        part melody { clef treble }
+        part melody { octave 4 clef treble }
 
         section Main {
           melody { {{string.Concat(Enumerable.Repeat($"a{octave}4 b{octave} a{octave} b{octave} | ", 48)).Trim()}} }
@@ -4817,7 +4817,7 @@ internal static class LpGeometryProbes
         layout { barNumbers every 1 }
 
         section Main {
-          melody { c'4 d' e' f' | g' a' b' c'' | c''4 b' a' g' | f' e' d' c' | c'4 d' e' f' | }
+          melody { c''4 d'' e'' f'' | g'' a'' b'' c''' | c'''4 b'' a'' g'' | f'' e'' d'' c'' | c''4 d'' e'' f'' | }
           chords harm { C | | | | F | }
         }
 
@@ -4836,12 +4836,12 @@ internal static class LpGeometryProbes
         layout { barNumbers every 1 }
 
         section A {
-          melody { c'4 d' e' f' | g' a' b' c'' | }
+          melody { c''4 d'' e'' f'' | g'' a'' b'' c''' | }
           chords harm { C | G | }
         }
 
         section B {
-          melody { c''4 b' a' g' | f' e' d' c' | }
+          melody { c'''4 b'' a'' g'' | f'' e'' d'' c'' | }
           chords harm { Am | F | }
         }
 
@@ -4860,14 +4860,14 @@ internal static class LpGeometryProbes
         layout { barNumbers every 1 }
 
         section A {
-          melody { c'4 d' e' f' | g' a' b' c'' | }
+          melody { c''4 d'' e'' f'' | g'' a'' b'' c''' | }
           chords harm { C | G | }
         }
 
         section B {
           key f major
           time 3/4
-          melody { c''4 bes' a' | g' f' e' | }
+          melody { c'''4 bes'' a'' | g'' f'' e'' | }
           chords harm { F | C | }
         }
 
@@ -4945,7 +4945,7 @@ internal static class LpGeometryProbes
             time 4/4
             key c major
 
-            part top { clef treble }
+            part top { octave 4 clef treble }
             part bot { clef bass octave 3 }
 
             section Main {
@@ -4970,7 +4970,7 @@ internal static class LpGeometryProbes
             time 4/4
             key c major
 
-            part melody {
+            part melody { octave 4
               section A { c'4@mark("A") d' e' f' | g' a' b' c'' | c''4 b' a' g' | f' e' d' c' | break }
               section B { {{grace}}a'4@mark("B") b' a' g' | f'4 e' d' c' | }
             }
@@ -5003,8 +5003,8 @@ internal static class LpGeometryProbes
 
         part melody { clef treble }
 
-        section A { melody { c4@mark("A") d e f | g a b c' | c'4 b a g | f e d c | break } }
-        section B { melody { c4@mark("B") d e f | g a b c' | c'4 b a g | f e d c | } }
+        section A { melody { c'4@mark("A") d' e' f' | g' a' b' c'' | c''4 b' a' g' | f' e' d' c' | break } }
+        section B { melody { c'4@mark("B") d' e' f' | g' a' b' c'' | c''4 b' a' g' | f' e' d' c' | } }
 
         form { ~A ~B }
 
@@ -5027,7 +5027,7 @@ internal static class LpGeometryProbes
 
         part melody { clef treble }
 
-        section A { melody { c'4@mark("A") d' e' f' | g' a' b' c'' | c''4 b' a' g' | f' e' d' c' | } }
+        section A { melody { c''4@mark("A") d'' e'' f'' | g'' a'' b'' c''' | c'''4 b'' a'' g'' | f'' e'' d'' c'' | } }
 
         form { ~A }
 
@@ -5049,8 +5049,8 @@ internal static class LpGeometryProbes
 
         part melody { clef treble }
 
-        section A { melody { c4 d e f | g a b c' | c'4 b a g | f e d c | break } }
-        section B { melody { c4 d e f | g a b c' | c'4 b a g | f e d c | } }
+        section A { melody { c'4 d' e' f' | g' a' b' c'' | c''4 b' a' g' | f' e' d' c' | break } }
+        section B { melody { c'4 d' e' f' | g' a' b' c'' | c''4 b' a' g' | f' e' d' c' | } }
 
         form { A B }
 
@@ -5077,7 +5077,7 @@ internal static class LpGeometryProbes
 
         part melody { clef treble }
 
-        section A { melody { c'4 d' e' f' | g' a' b' c'' | c''4@mark("B") b' a' g' | f' e' d' c' | } }
+        section A { melody { c''4 d'' e'' f'' | g'' a'' b'' c''' | c'''4@mark("B") b'' a'' g'' | f'' e'' d'' c'' | } }
 
         form { ~A }
 
@@ -5092,8 +5092,8 @@ internal static class LpGeometryProbes
 
         part melody { clef treble }
 
-        section A { melody { c'4 d' e' f' | g' a' b' c'' | } }
-        section B { melody { c''4@mark("B") b' a' g' | f' e' d' c' | } }
+        section A { melody { c''4 d'' e'' f'' | g'' a'' b'' c''' | } }
+        section B { melody { c'''4@mark("B") b'' a'' g'' | f'' e'' d'' c'' | } }
 
         form { ~A |: ~B :| }
 
@@ -5108,8 +5108,8 @@ internal static class LpGeometryProbes
 
         part melody { clef treble }
 
-        section A { melody { c'4 d' e' f' | g' a' b' c'' | } }
-        section B { melody { c''4@mark("B") b' a' g' | f' e' d' c' | } }
+        section A { melody { c''4 d'' e'' f'' | g'' a'' b'' c''' | } }
+        section B { melody { c'''4@mark("B") b'' a'' g'' | f'' e'' d'' c'' | } }
 
         form { |: ~A :| ~B }
 
@@ -5124,8 +5124,8 @@ internal static class LpGeometryProbes
 
         part melody { clef treble }
 
-        section A { melody { c'4 d' e' f' | g' a' b' c'' | } }
-        section B { melody { c''4@mark("B") b' a' g' | f' e' d' c' | } }
+        section A { melody { c''4 d'' e'' f'' | g'' a'' b'' c''' | } }
+        section B { melody { c'''4@mark("B") b'' a'' g'' | f'' e'' d'' c'' | } }
 
         form { |: ~A :| |: ~B :| }
 
@@ -5147,9 +5147,9 @@ internal static class LpGeometryProbes
 
         part melody { clef treble }
 
-        section A { melody { c'4 d' e' f' | g' a' b' c'' | } }
-        section E1 { melody { c''4 b' a' g' | } }
-        section E2 { melody { f'4 e' d' c' | } }
+        section A { melody { c''4 d'' e'' f'' | g'' a'' b'' c''' | } }
+        section E1 { melody { c'''4 b'' a'' g'' | } }
+        section E2 { melody { f''4 e'' d'' c'' | } }
 
         form { |: ~A [1. E1 ] :| [2. E2 ] }
 
@@ -5333,7 +5333,7 @@ internal static class LpGeometryProbes
             time 4/4
             key c major
 
-            part melody { clef treble }
+            part melody { octave 4 clef treble }
 
             section A {
               melody { c'4 d' e' f' | g' a' b' c'' }
@@ -5376,7 +5376,7 @@ internal static class LpGeometryProbes
             time 4/4
             key c major
 
-            part melody { section A { {{bars}} } section B { {{bars}} } }{{chordPart}}
+            part melody { octave 4 section A { {{bars}} } section B { {{bars}} } }{{chordPart}}
 
             form { A B }
 
@@ -5408,7 +5408,7 @@ internal static class LpGeometryProbes
         time 4/4
         key c major
 
-        part melody {
+        part melody { octave 4
           clef treble
           section Main { {{string.Concat(Enumerable.Repeat("c'4 d' e' f' | g' a' b' c'' | c''4 b' a' g' | f' e' d' c' | ", 3)).Trim()}} }
         }
@@ -5474,7 +5474,7 @@ internal static class LpGeometryProbes
         time 4/4
         key c major
 
-        part melody { clef treble }
+        part melody { octave 4 clef treble }
 
         section A {
           melody { c'4 c' c' c' | c'4 c' c' c' | }
@@ -5650,7 +5650,7 @@ internal static class LpGeometryProbes
         time 4/4
         key c major
 
-        part melody { clef treble {{pedal}} }
+        part melody { octave 4 clef treble {{pedal}} }
 
         section A {
           melody { c'4 c' c' c' | {{marks}} c'1 | }
@@ -5683,7 +5683,7 @@ internal static class LpGeometryProbes
         time 4/4
         key c major
 
-        part melody { clef treble }
+        part melody { octave 4 clef treble }
 
         section A {
           melody { c'4 c' c' c' | c'4 c' c' c' {{mark}} | c'4 c' c' c' | c'1 | }
@@ -5749,8 +5749,8 @@ internal static class LpGeometryProbes
         time 4/4
         key c major
 
-        part upper { clef treble }
-        part lower { clef bass }
+        part upper { octave 4 clef treble }
+        part lower { octave 4 clef bass }
 
         section Main {
           upper { {{upperBars}} }
@@ -5790,7 +5790,7 @@ internal static class LpGeometryProbes
         time 4/4
         key c major
 
-        part mel { clef treble }
+        part mel { octave 4 clef treble }
 
         section Main {
           mel { {{bars}} }
@@ -5829,8 +5829,8 @@ internal static class LpGeometryProbes
         part lower { clef treble }
 
         section Main {
-          upper { b4 b b b | b b b b | }
-          lower { c'''4@ottava c''' c''' c''' | c''4@!ottava c'' c'' c'' | }
+          upper { b'4 b' b' b' | b' b' b' b' | }
+          lower { c''''4@ottava c'''' c'''' c'''' | c'''4@!ottava c''' c''' c''' | }
         }
 
         form { ~Main }
@@ -5877,7 +5877,7 @@ internal static class LpGeometryProbes
         time 4/4
         key c major
 
-        part mel { clef treble }
+        part mel { octave 4 clef treble }
 
         section Main {
           mel { {{bars}} }
@@ -5990,7 +5990,7 @@ internal static class LpGeometryProbes
         octave absolute
         time 4/4
 
-        part melody { clef treble }
+        part melody { octave 4 clef treble }
 
         section Main {
           melody { c'4{{rit}} c' c' c' | c'4 c' c' c'{{(rit.Length > 0 ? "@!rit" : "")}} | }
@@ -6019,8 +6019,8 @@ internal static class LpGeometryProbes
         octave absolute
         time 4/4
 
-        part upper { clef treble }
-        part lower { clef treble }
+        part upper { octave 4 clef treble }
+        part lower { octave 4 clef treble }
 
         section Main {
           upper { c'4 c' c' c' | c'4 c' c' c' | }
@@ -6090,7 +6090,7 @@ internal static class LpGeometryProbes
         time 4/4
         key c major
 
-        part mel { clef treble }
+        part mel { octave 4 clef treble }
 
         section Main {
           mel { voice { {{voiceOne}} } { {{voiceTwo}} } }
@@ -6166,8 +6166,8 @@ internal static class LpGeometryProbes
         part lower { clef treble }
 
         section Main {
-          upper { b4 b b b | }
-          lower { voice { c4@startTrillSpan c c c@stopTrillSpan | } { c''4 c'' c'' c'' | } }
+          upper { b'4 b' b' b' | }
+          lower { voice { c'4@startTrillSpan c' c' c'@stopTrillSpan | } { c'''4 c''' c''' c''' | } }
         }
 
         form { ~Main }
@@ -6196,7 +6196,7 @@ internal static class LpGeometryProbes
         part mel { clef treble }
 
         section Main {
-          mel { c'4@fermata@startTrillSpan c' c' c'@stopTrillSpan | c4 c c c | }
+          mel { c''4@fermata@startTrillSpan c'' c'' c''@stopTrillSpan | c'4 c' c' c' | }
         }
 
         form { ~Main }
@@ -6241,7 +6241,7 @@ internal static class LpGeometryProbes
         time 4/4
         key c major
 
-        part mel { clef treble }
+        part mel { octave 4 clef treble }
 
         section Main {
           mel { {{(voiceTwo.Length == 0 ? bars : $"voice {{ {bars} }} {{ {voiceTwo} }}")}} }
@@ -6288,8 +6288,8 @@ internal static class LpGeometryProbes
         part lower { clef bass }
 
         section Main {
-          upper { b4 b b b | }
-          lower { d,4@fermata d, d, d, | }
+          upper { b'4 b' b' b' | }
+          lower { d4@fermata d d d | }
         }
 
         form { ~Main }
@@ -6348,7 +6348,7 @@ internal static class LpGeometryProbes
         time 4/4
         key c major
 
-        part mel { clef treble }
+        part mel { octave 4 clef treble }
 
         section Main {
           mel { c'1@decresc{{first}} | c'1{{second}} | }
@@ -6432,7 +6432,7 @@ internal static class LpGeometryProbes
         part fig { clef bass }
 
         section Main {
-          fig { c,,2@stemDown@figuredBass(5 3) c,,@stemDown@figuredBass(6) | c,,2@stemDown@figuredBass(7) c,,@stemDown@figuredBass(6 4) | }
+          fig { c,2@stemDown@figuredBass(5 3) c,@stemDown@figuredBass(6) | c,2@stemDown@figuredBass(7) c,@stemDown@figuredBass(6 4) | }
         }
 
         form { ~Main }
@@ -6463,7 +6463,7 @@ internal static class LpGeometryProbes
         part fig { clef bass }
 
         section Main {
-          fig { d,2@stemUp@figuredBass(5 3) d,@stemUp@figuredBass(6) | d,2@stemUp@figuredBass(7) d,@stemUp@figuredBass(6 4) | }
+          fig { d2@stemUp@figuredBass(5 3) d@stemUp@figuredBass(6) | d2@stemUp@figuredBass(7) d@stemUp@figuredBass(6 4) | }
         }
 
         form { ~Main }
@@ -6484,8 +6484,8 @@ internal static class LpGeometryProbes
         part comp { clef bass }
 
         section Main {
-          fig { c,,2@stemDown@figuredBass(5 3) c,,@stemDown@figuredBass(6) | c,,2@stemDown@figuredBass(7) c,,@stemDown@figuredBass(6 4) | }
-          comp { c,,2@stemDown c,,@stemDown | c,,2@stemDown c,,@stemDown | }
+          fig { c,2@stemDown@figuredBass(5 3) c,@stemDown@figuredBass(6) | c,2@stemDown@figuredBass(7) c,@stemDown@figuredBass(6 4) | }
+          comp { c,2@stemDown c,@stemDown | c,2@stemDown c,@stemDown | }
         }
 
         form { ~Main }
@@ -6508,8 +6508,8 @@ internal static class LpGeometryProbes
         part fig { clef bass }
 
         section Main {
-          comp { c,,2@stemDown c,,@stemDown | c,,2@stemDown c,,@stemDown | }
-          fig { c,,2@stemDown@figuredBass(5 3) c,,@stemDown@figuredBass(6) | c,,2@stemDown@figuredBass(7) c,,@stemDown@figuredBass(6 4) | }
+          comp { c,2@stemDown c,@stemDown | c,2@stemDown c,@stemDown | }
+          fig { c,2@stemDown@figuredBass(5 3) c,@stemDown@figuredBass(6) | c,2@stemDown@figuredBass(7) c,@stemDown@figuredBass(6 4) | }
         }
 
         form { ~Main }
@@ -6559,7 +6559,7 @@ internal static class LpGeometryProbes
             time 4/4
             key c major
 
-            part fig { clef bass }
+            part fig { octave 4 clef bass }
 
             section Main {
               fig { {{string.Concat(Enumerable.Repeat(bar, 100)).Trim()}} }
@@ -6614,7 +6614,7 @@ internal static class LpGeometryProbes
             time 4/4
             key c major
 
-            part ann { clef bass }
+            part ann { octave 4 clef bass }
 
             section Main {
               ann { {{string.Concat(Enumerable.Repeat(bar, 100)).Trim()}} }
@@ -6685,7 +6685,7 @@ internal static class LpGeometryProbes
         time 4/4
         key c major
 
-        part mel { clef treble }
+        part mel { octave 4 clef treble }
 
         section Main {
           mel { {{bars}} }
@@ -6726,7 +6726,7 @@ internal static class LpGeometryProbes
         time 4/4
         key c major
 
-        part mel { clef treble }
+        part mel { octave 4 clef treble }
 
         section Main {
           mel { {{bars}} }
@@ -6841,8 +6841,8 @@ internal static class LpGeometryProbes
         time 4/4
         key c major
 
-        part upper { clef bass }
-        part lower { clef treble }
+        part upper { octave 4 clef bass }
+        part lower { octave 4 clef treble }
 
         section Main {
           upper { d,1 | d,1 | d,1 | }
@@ -6988,8 +6988,8 @@ internal static class LpGeometryProbes
         time 4/4
         key c major
 
-        part upper { clef treble }
-        part lower { clef bass }
+        part upper { octave 4 clef treble }
+        part lower { octave 4 clef bass }
 
         section Main {
           upper { {{upperBars}} }
@@ -7064,8 +7064,8 @@ internal static class LpGeometryProbes
         time 4/4
         key c major
 
-        part upper { clef treble }
-        part lower { clef bass }
+        part upper { octave 4 clef treble }
+        part lower { octave 4 clef bass }
 
         section Main {
           upper { voice { b1 } { {{upperVoiceTwo}} } | }
@@ -7153,7 +7153,7 @@ internal static class LpGeometryProbes
         time {{time}}
         key c major
 
-        part melody { clef treble }
+        part melody { octave 4 clef treble }
 
         section Main {
           melody { {{music}} }
@@ -7214,7 +7214,7 @@ internal static class LpGeometryProbes
         time 4/4
         key c major
 
-        part melody { clef treble }
+        part melody { octave 4 clef treble }
 
         section Main {
           melody { {{chord}}1 | }
@@ -7265,7 +7265,7 @@ internal static class LpGeometryProbes
         time 4/4
         key c major
 
-        part melody { clef treble }
+        part melody { octave 4 clef treble }
 
         section Main {
           melody { <c@finger(1) e@finger(3) g@finger(5)>8 {{tail}} r4 r2 | }
@@ -7306,7 +7306,7 @@ internal static class LpGeometryProbes
         time 4/4
         key c major
 
-        part melody { clef treble }
+        part melody { octave 4 clef treble }
 
         section Main {
           melody { {{music}} }
@@ -7367,7 +7367,7 @@ internal static class LpGeometryProbes
         time 4/4
         key c major
 
-        part melody { clef treble }
+        part melody { octave 4 clef treble }
 
         section Main {
           melody { g'4@finger({{digit}}) r4 r2 | }
@@ -7429,7 +7429,7 @@ internal static class LpGeometryProbes
         time 4/4
         key c major
 
-        part melody { clef treble }
+        part melody { octave 4 clef treble }
 
         section Main {
           melody { {{chord}}4@p r4 r2 | }
@@ -7478,7 +7478,7 @@ internal static class LpGeometryProbes
         time 4/4
         key c major
 
-        part melody { clef treble }
+        part melody { octave 4 clef treble }
 
         section Main {
           melody { <c e g>4( <c e g>{{second}}) r2 | }
@@ -7563,7 +7563,7 @@ internal static class LpGeometryProbes
         octave absolute
         key c major
 
-        part melody { clef treble }
+        part melody { octave 4 clef treble }
 
         section A { melody { g'4 a' g' a' | } }
 
@@ -7600,7 +7600,7 @@ internal static class LpGeometryProbes
         time 4/4
         key c major
 
-        part melody
+        part melody { octave 4 }
 
         section Main {
           melody { {{string.Concat(Enumerable.Repeat("c4 d e f | ", 40)).Trim()}} }
@@ -7718,7 +7718,7 @@ internal static class LpGeometryProbes
         part melody
 
         section Main {
-          melody { g4 g g g g g g g | }
+          melody { g'4 g' g' g' g' g' g' g' | }
         }
 
         form { Main }
@@ -7779,8 +7779,8 @@ internal static class LpGeometryProbes
         part lh { clef bass }
 
         section Main {
-          rh { d,1 | }
-          lh { d,1 | }
+          rh { d1 | }
+          lh { d1 | }
         }
 
         form { ~Main }
@@ -7827,8 +7827,8 @@ internal static class LpGeometryProbes
         part lh { clef bass }
 
         section Main {
-          rh { voice { b1 } { a,1@f } | }
-          lh { d,1 | }
+          rh { voice { b'1 } { a1@f } | }
+          lh { d1 | }
         }
 
         form { ~Main }
@@ -7862,8 +7862,8 @@ internal static class LpGeometryProbes
         part lh { clef bass }
 
         section Main {
-          rh { b1 | }
-          lh { b1 | }
+          rh { b'1 | }
+          lh { b'1 | }
         }
 
         form { ~Main }
@@ -7915,8 +7915,8 @@ internal static class LpGeometryProbes
         part lh { clef bass }
 
         section Main {
-          rh { voice { b4 b b b } { r4 r r r } | }
-          lh { b4 b b b | }
+          rh { voice { b'4 b' b' b' } { r4 r r r } | }
+          lh { b'4 b' b' b' | }
         }
 
         form { ~Main }
@@ -7950,8 +7950,8 @@ internal static class LpGeometryProbes
         part lh { clef bass }
 
         section Main {
-          rh { voice { b4 b b b } { s4 s s s } | }
-          lh { b4 b b b | }
+          rh { voice { b'4 b' b' b' } { s4 s s s } | }
+          lh { b'4 b' b' b' | }
         }
 
         form { ~Main }
@@ -7994,8 +7994,8 @@ internal static class LpGeometryProbes
         time 4/4
         key c major
 
-        part rh { clef treble }
-        part lh { clef bass }
+        part rh { octave 4 clef treble }
+        part lh { octave 4 clef bass }
 
         section Main {
           rh { voice { b4 b b b } { {{rests}} } | }
@@ -8042,8 +8042,8 @@ internal static class LpGeometryProbes
         time 4/4
         key c major
 
-        part rh { clef treble }
-        part lh { clef bass }
+        part rh { octave 4 clef treble }
+        part lh { octave 4 clef bass }
 
         section Main {
           rh { {{upper}} | }
@@ -8084,8 +8084,8 @@ internal static class LpGeometryProbes
         part lh { clef bass }
 
         section Main {
-          rh { d,4 d, d, d, | }
-          lh { voice { r4 r r r } { d,4 d, d, d, } | }
+          rh { d4 d d d | }
+          lh { voice { r4 r r r } { d4 d d d } | }
         }
 
         form { ~Main }
@@ -8109,8 +8109,8 @@ internal static class LpGeometryProbes
         part lh { clef bass }
 
         section Main {
-          rh { d,4 d, d, d, | }
-          lh { voice { s4 s s s } { d,4 d, d, d, } | }
+          rh { d4 d d d | }
+          lh { voice { s4 s s s } { d4 d d d } | }
         }
 
         form { ~Main }
@@ -8176,8 +8176,8 @@ internal static class LpGeometryProbes
         part lh { clef bass }
 
         section Main {
-          rh { b1 b1 | }
-          lh { voice { tuplet 3/2 { a1 a1 a1 } } { d,1 d,1 } | }
+          rh { b'1 b'1 | }
+          lh { voice { tuplet 3/2 { a'1 a'1 a'1 } } { d1 d1 } | }
         }
 
         form { ~Main }
@@ -8214,8 +8214,8 @@ internal static class LpGeometryProbes
         part lh { clef bass }
 
         section Main {
-          rh { voice { b1 b1 } { tuplet 3/2 { d,1 d,1 d,1 } } | }
-          lh { d,1 d,1 | }
+          rh { voice { b'1 b'1 } { tuplet 3/2 { d1 d1 d1 } } | }
+          lh { d1 d1 | }
         }
 
         form { ~Main }
@@ -8261,8 +8261,8 @@ internal static class LpGeometryProbes
         part lh { clef bass }
 
         section Main {
-          rh { g,1( g,1) | }
-          lh { d,1 d,1 | }
+          rh { g1( g1) | }
+          lh { d1 d1 | }
         }
 
         form { ~Main }
@@ -8300,8 +8300,8 @@ internal static class LpGeometryProbes
         part lh { clef bass }
 
         section Main {
-          rh { b1 b1 | }
-          lh { f1( f1) | }
+          rh { b'1 b'1 | }
+          lh { f'1( f'1) | }
         }
 
         form { ~Main }
@@ -8343,7 +8343,7 @@ internal static class LpGeometryProbes
         time 4/4
         key c major
 
-        part melody { clef bass }
+        part melody { octave 4 clef bass }
 
         section Main {
           melody { {{music}} }
@@ -8511,7 +8511,7 @@ internal static class LpGeometryProbes
         time 4/4
         key c major
 
-        part melody { clef treble }
+        part melody { octave 4 clef treble }
 
         section Main {
           melody { {{music}} }
@@ -8573,7 +8573,7 @@ internal static class LpGeometryProbes
         time 4/4
         key c major
 
-        part melody { clef treble }
+        part melody { octave 4 clef treble }
 
         section Main {
           melody { {{music}} }
@@ -8852,7 +8852,7 @@ internal static class LpGeometryProbes
         octave absolute
         time 4/4
 
-        part m { clef treble }
+        part m { octave 4 clef treble }
 
         section Main {
           m { {{music}} }
@@ -8877,7 +8877,7 @@ internal static class LpGeometryProbes
         octave absolute
         time 4/4
 
-        part m { clef bass }
+        part m { octave 4 clef bass }
 
         section Main {
           m { {{music}} }
@@ -8951,7 +8951,7 @@ internal static class LpGeometryProbes
         time 4/4
         {{key}}
 
-        part m { clef treble }
+        part m { octave 4 clef treble }
 
         section Main {
           m { {{music}} }
@@ -9027,7 +9027,7 @@ internal static class LpGeometryProbes
         part m { clef treble }
 
         section Main {
-          m { d16@stemDown[ e16] g8 a4 | }
+          m { d'16@stemDown[ e'16] g'8 a'4 | }
         }
 
         form { ~Main }
@@ -9176,7 +9176,7 @@ internal static class LpGeometryProbes
         key {{key}}
         time 4/4
 
-        part bassline { clef bass }
+        part bassline { octave 4 clef bass }
 
         section Main {
           bassline { {{music}} }
@@ -9263,8 +9263,8 @@ internal static class LpGeometryProbes
         part lh { clef bass }
 
         section Main {
-          rh { e,1~ e,1 | }
-          lh { d,1 d,1 | }
+          rh { e1~ e1 | }
+          lh { d1 d1 | }
         }
 
         form { ~Main }
@@ -9296,8 +9296,8 @@ internal static class LpGeometryProbes
         part lh { clef bass }
 
         section Main {
-          rh { b1 b1 | }
-          lh { a1~ a1 | }
+          rh { b'1 b'1 | }
+          lh { a'1~ a'1 | }
         }
 
         form { ~Main }
@@ -9356,8 +9356,8 @@ internal static class LpGeometryProbes
         part lh { clef bass }
 
         section Main {
-          rh { voice { b1 } { g,8 g, g, g, g, g, g, g, } | }
-          lh { d,1 | }
+          rh { voice { b'1 } { g8 g g g g g g g } | }
+          lh { d1 | }
         }
 
         form { ~Main }
@@ -9381,7 +9381,7 @@ internal static class LpGeometryProbes
         octave absolute
         time 4/4
 
-        part m { clef treble }
+        part m { octave 4 clef treble }
 
         section Main { m { {{music}} r4 r2 | } }
 
@@ -9409,7 +9409,7 @@ internal static class LpGeometryProbes
         octave absolute
         time 4/4
 
-        part m { clef treble }
+        part m { octave 4 clef treble }
 
         section Main { m { {{music.Replace("@S", script)}} } }
 
@@ -9441,7 +9441,7 @@ internal static class LpGeometryProbes
 
         part m { clef treble }
 
-        section Main { m { e'4 grace { r16 f'16 } g'4 e4 grace { r16 f16 } g4 | c4 grace { r8 } c4 e'4 r16 f'8. | } }
+        section Main { m { e''4 grace { r16 f''16 } g''4 e'4 grace { r16 f'16 } g'4 | c'4 grace { r8 } c'4 e''4 r16 f''8. | } }
 
         form { ~Main }
 
@@ -9460,7 +9460,7 @@ internal static class LpGeometryProbes
 
         part m { clef treble }
 
-        section Main { m { e'4( grace { r16 f'16 } g'4) e'4( grace { r8 } g'4) | } }
+        section Main { m { e''4( grace { r16 f''16 } g''4) e''4( grace { r8 } g''4) | } }
 
         form { ~Main }
 
@@ -9479,7 +9479,7 @@ internal static class LpGeometryProbes
 
         part m { clef treble }
 
-        section Main { m { a4( grace { b16 } c'4) c4( grace { a,16 } b,4) | } }
+        section Main { m { a'4( grace { b'16 } c''4) c'4( grace { a16 } b4) | } }
 
         form { ~Main }
 
@@ -9497,7 +9497,7 @@ internal static class LpGeometryProbes
         octave absolute
         time 4/4
 
-        part m { clef {{clef}} }
+        part m { octave 4 clef {{clef}} }
 
         section Main { m { {{music}} } }
 
@@ -9559,7 +9559,7 @@ internal static class LpGeometryProbes
 
         part m { clef treble }
 
-        section Main { m { c'4 grace { d'16 e'16 } c'4 grace { f'8 } e'4 f'4 | break R1 | } }
+        section Main { m { c''4 grace { d''16 e''16 } c''4 grace { f''8 } e''4 f''4 | break R1 | } }
 
         form { ~Main }
 
@@ -9595,7 +9595,7 @@ internal static class LpGeometryProbes
         octave absolute
         time 5/16
 
-        part m { clef treble }
+        part m { octave 4 clef treble }
 
         section Main { m { {{music}} } }
 
@@ -9648,7 +9648,7 @@ internal static class LpGeometryProbes
 
         part m { clef bass }
 
-        section Main { m { r2 r4 gis,,16 dis,8 fis,16 | } }
+        section Main { m { r2 r4 gis,16 dis8 fis16 | } }
 
         form { ~Main }
 
@@ -9672,7 +9672,7 @@ internal static class LpGeometryProbes
 
         part m { clef bass }
 
-        section Main { m { voice { b,8 g' g, a' } { b,8. a16 g4 } { d,2 } } }
+        section Main { m { voice { b,8 g' g, a' } { b,8. a16 g4 } { d2 } } }
 
         form { ~Main }
 
@@ -9697,7 +9697,7 @@ internal static class LpGeometryProbes
         time 2/4
         key c major
 
-        part m { clef treble }
+        part m { octave 4 clef treble }
 
         section Main { m { {{body}} } }
 
@@ -9753,8 +9753,8 @@ internal static class LpGeometryProbes
 
         section Main {
           m {
-            voice { c'8 c' c' c' c' c' c' c' }
-            { a'1 }
+            voice { c''8 c'' c'' c'' c'' c'' c'' c'' }
+            { a''1 }
           }
         }
 
@@ -9796,8 +9796,8 @@ internal static class LpGeometryProbes
 
         part m { clef treble }
 
-        section A { m { g'8 a' b' c'' d'' e'' fis'' g'' | } }
-        section B { m { voice { b2 a } { d2 e } } }
+        section A { m { g''8 a'' b'' c''' d''' e''' fis''' g''' | } }
+        section B { m { voice { b'2 a' } { d'2 e' } } }
 
         form { ~A ~B }
 
@@ -9812,7 +9812,7 @@ internal static class LpGeometryProbes
 
         part m { clef treble }
 
-        section A { m { g'8 a' b' c'' d'' e'' fis'' g'' | } }
+        section A { m { g''8 a'' b'' c''' d''' e''' fis''' g''' | } }
 
         form { ~A }
 
@@ -9854,7 +9854,7 @@ internal static class LpGeometryProbes
         part m { clef treble }
 
         section Main {
-          m { c8 c'' c c'' r2 | }
+          m { c'8 c''' c' c''' r2 | }
         }
 
         form { ~Main }
@@ -9879,7 +9879,7 @@ internal static class LpGeometryProbes
         part m { clef treble }
 
         section Main {
-          m { c8 c'' c r4 r2 | }
+          m { c'8 c''' c' r4 r2 | }
         }
 
         form { ~Main }
@@ -9903,7 +9903,7 @@ internal static class LpGeometryProbes
         part m { clef treble }
 
         section Main {
-          m { c8 e c e r2 | }
+          m { c'8 e' c' e' r2 | }
         }
 
         form { ~Main }
@@ -9951,7 +9951,7 @@ internal static class LpGeometryProbes
         part m { clef treble }
 
         section Main {
-          m { c8 d16 e f8 g16 a g8 f16 e d4 | }
+          m { c'8 d'16 e' f'8 g'16 a' g'8 f'16 e' d'4 | }
         }
 
         form { ~Main }
@@ -9978,7 +9978,7 @@ internal static class LpGeometryProbes
         part m { clef treble }
 
         section Main {
-          m { a'8[ a'32] r16. r4 r2 | }
+          m { a''8[ a''32] r16. r4 r2 | }
         }
 
         form { ~Main }
@@ -10009,7 +10009,7 @@ internal static class LpGeometryProbes
         part m { clef treble }
 
         section Main {
-          m { a'8[ a'8] r4 r2 | }
+          m { a''8[ a''8] r4 r2 | }
         }
 
         form { ~Main }
@@ -10039,7 +10039,7 @@ internal static class LpGeometryProbes
         part m { clef treble }
 
         section Main {
-          m { c'8[ e'32 g'8] r8 r16. r2 | }
+          m { c''8[ e''32 g''8] r8 r16. r2 | }
         }
 
         form { ~Main }
@@ -10074,7 +10074,7 @@ internal static class LpGeometryProbes
         part m { clef treble }
 
         section Main {
-          m { a8[ c'32 e'8] r8 r16. r2 | }
+          m { a'8[ c''32 e''8] r8 r16. r2 | }
         }
 
         form { ~Main }
@@ -10107,7 +10107,7 @@ internal static class LpGeometryProbes
         part m { clef treble }
 
         section Main {
-          m { grace { d16 e } f4 g2 r4 | }
+          m { grace { d'16 e' } f'4 g'2 r4 | }
         }
 
         form { ~Main }
@@ -10135,7 +10135,7 @@ internal static class LpGeometryProbes
         part m { clef treble }
 
         section Main {
-          m { d16 e r8 g2 r4 | }
+          m { d'16 e' r8 g'2 r4 | }
         }
 
         form { ~Main }
@@ -10163,7 +10163,7 @@ internal static class LpGeometryProbes
         part m { clef treble }
 
         section Main {
-          m { grace { f16 g } a4 g2 r4 | }
+          m { grace { f'16 g' } a'4 g'2 r4 | }
         }
 
         form { ~Main }
@@ -10204,7 +10204,7 @@ internal static class LpGeometryProbes
         part m { clef treble }
 
         section Main {
-          m { grace { c'16 d' } e'4 g2 r4 | }
+          m { grace { c''16 d'' } e''4 g'2 r4 | }
         }
 
         form { ~Main }
@@ -10239,7 +10239,7 @@ internal static class LpGeometryProbes
         part m { clef treble }
 
         section Main {
-          m { grace { a16 b } c'4 g2 r4 | }
+          m { grace { a'16 b' } c''4 g'2 r4 | }
         }
 
         form { ~Main }
@@ -10315,7 +10315,7 @@ internal static class LpGeometryProbes
         part m { clef treble }
 
         section Main {
-          m { grace { d16 e f } g4 g2 r4 | }
+          m { grace { d'16 e' f' } g'4 g'2 r4 | }
         }
 
         form { ~Main }
@@ -10338,7 +10338,7 @@ internal static class LpGeometryProbes
         part m { clef treble }
 
         section Main {
-          m { grace { d16 e f g } a4 g2 r4 | }
+          m { grace { d'16 e' f' g' } a'4 g'2 r4 | }
         }
 
         form { ~Main }
@@ -10361,7 +10361,7 @@ internal static class LpGeometryProbes
         part m { clef treble }
 
         section Main {
-          m { grace { d8 e } f4 g2 r4 | }
+          m { grace { d'8 e' } f'4 g'2 r4 | }
         }
 
         form { ~Main }
@@ -10383,7 +10383,7 @@ internal static class LpGeometryProbes
         part m { clef treble }
 
         section Main {
-          m { grace { d32 e } f4 g2 r4 | }
+          m { grace { d'32 e' } f'4 g'2 r4 | }
         }
 
         form { ~Main }
@@ -10412,7 +10412,7 @@ internal static class LpGeometryProbes
         part m { clef treble }
 
         section Main {
-          m { grace { d16 } f4 g2 r4 | }
+          m { grace { d'16 } f'4 g'2 r4 | }
         }
 
         form { ~Main }
@@ -10438,7 +10438,7 @@ internal static class LpGeometryProbes
         part m { clef treble }
 
         section Main {
-          m { fis4@editorial bes@editorial c@editorial c | }
+          m { fis'4@editorial bes'@editorial c'@editorial c' | }
         }
 
         form { ~Main }
@@ -10462,7 +10462,7 @@ internal static class LpGeometryProbes
         part m { clef treble }
 
         section Main {
-          m { grace { d16 e8 } f4 g2 r4 | }
+          m { grace { d'16 e'8 } f'4 g'2 r4 | }
         }
 
         form { ~Main }
@@ -10485,7 +10485,7 @@ internal static class LpGeometryProbes
         part m { clef treble }
 
         section Main {
-          m { grace { d8 e16 } f4 g2 r4 | }
+          m { grace { d'8 e'16 } f'4 g'2 r4 | }
         }
 
         form { ~Main }
@@ -10514,7 +10514,7 @@ internal static class LpGeometryProbes
         part m { clef treble }
 
         section Main {
-          m { grace { d16 eis } f4 g2 r4 | }
+          m { grace { d'16 eis' } f'4 g'2 r4 | }
         }
 
         form { ~Main }
@@ -10571,7 +10571,7 @@ internal static class LpGeometryProbes
         part m { clef treble }
 
         section Main {
-          m { c'8 dis4 r4 r8 | }
+          m { c''8 dis'4 r4 r8 | }
         }
 
         form { ~Main }
@@ -10600,7 +10600,7 @@ internal static class LpGeometryProbes
         part m { clef treble }
 
         section Main {
-          m { b8 r8 r4 r2 | }
+          m { b'8 r8 r4 r2 | }
         }
 
         form { ~Main }
@@ -10622,7 +10622,7 @@ internal static class LpGeometryProbes
         part m { clef treble }
 
         section Main {
-          m { d8 r8 r4 r2 | }
+          m { d'8 r8 r4 r2 | }
         }
 
         form { ~Main }
@@ -10640,7 +10640,7 @@ internal static class LpGeometryProbes
         part m { clef treble }
 
         section Main {
-          m { c'8 dis'4 r4 r8 | }
+          m { c''8 dis''4 r4 r8 | }
         }
 
         form { ~Main }
@@ -10679,7 +10679,7 @@ internal static class LpGeometryProbes
         part m { clef treble }
 
         section Main {
-          m { <c' e'>8 dis4 r4 r8 | }
+          m { <c'' e''>8 dis'4 r4 r8 | }
         }
 
         form { ~Main }
@@ -10697,7 +10697,7 @@ internal static class LpGeometryProbes
         part m { clef treble }
 
         section Main {
-          m { <c' e'>8 dis'4 r4 r8 | }
+          m { <c'' e''>8 dis''4 r4 r8 | }
         }
 
         form { ~Main }
@@ -10716,7 +10716,7 @@ internal static class LpGeometryProbes
         part m { clef treble }
 
         section Main {
-          m { d8 fis'4 r4 r8 | }
+          m { d'8 fis''4 r4 r8 | }
         }
 
         form { ~Main }
@@ -10757,7 +10757,7 @@ internal static class LpGeometryProbes
         part m { clef treble }
 
         section Main {
-          m { c'4 dis'4 r2 | }
+          m { c''4 dis''4 r2 | }
         }
 
         form { ~Main }
@@ -10777,7 +10777,7 @@ internal static class LpGeometryProbes
         part m { clef treble }
 
         section Main {
-          m { c'4 d'4 r2 | }
+          m { c''4 d''4 r2 | }
         }
 
         form { ~Main }
@@ -10797,7 +10797,7 @@ internal static class LpGeometryProbes
         part m { clef treble }
 
         section Main {
-          m { c'4 deses'4 r2 | }
+          m { c''4 deses''4 r2 | }
         }
 
         form { ~Main }
@@ -10817,7 +10817,7 @@ internal static class LpGeometryProbes
         part m { clef treble }
 
         section Main {
-          m { c'8 deses'4 r4 r8 | }
+          m { c''8 deses''4 r4 r8 | }
         }
 
         form { ~Main }
@@ -10864,7 +10864,7 @@ internal static class LpGeometryProbes
         part m { clef treble }
 
         section Main {
-          m { g4 ceses'4 r2 | }
+          m { g'4 ceses''4 r2 | }
         }
 
         form { ~Main }
@@ -10889,7 +10889,7 @@ internal static class LpGeometryProbes
         part m { clef treble }
 
         section Main {
-          m { g4 aeses4 r2 | }
+          m { g'4 aeses'4 r2 | }
         }
 
         form { ~Main }
@@ -10923,7 +10923,7 @@ internal static class LpGeometryProbes
         part m { clef bass }
 
         section A { m { r2 | } }
-        section B { time 4/4 m { d,2 e, | } }
+        section B { time 4/4 m { d2 e | } }
 
         form { A break B }
 
@@ -10951,7 +10951,7 @@ internal static class LpGeometryProbes
         part m { clef bass }
 
         section A { m { r2 | } }
-        section B { time 4/4 key a major m { d,2 e, | } }
+        section B { time 4/4 key a major m { d2 e | } }
 
         form { A break B }
 
@@ -10983,8 +10983,8 @@ internal static class LpGeometryProbes
 
         part m { clef treble }
 
-        section A { m { c'1 | } }
-        section B { key a major m { c'1 | } }
+        section A { m { c''1 | } }
+        section B { key a major m { c''1 | } }
 
         form { A B }
 
@@ -11027,8 +11027,8 @@ internal static class LpGeometryProbes
 
         part m { clef treble }
 
-        section A { m { c1 | } }
-        section B { key a major m { c1 | } }
+        section A { m { c'1 | } }
+        section B { key a major m { c'1 | } }
 
         form { A break B }
 
@@ -11054,8 +11054,8 @@ internal static class LpGeometryProbes
 
         part m { clef treble }
 
-        section A { m { c1 | } }
-        section B { key c major m { c1 | } }
+        section A { m { c'1 | } }
+        section B { key c major m { c'1 | } }
 
         form { A break B }
 
@@ -11080,8 +11080,8 @@ internal static class LpGeometryProbes
 
         part m { clef treble }
 
-        section A { m { c1 | } }
-        section B { time 3/4 key c major m { c2. | } }
+        section A { m { c'1 | } }
+        section B { time 3/4 key c major m { c'2. | } }
 
         form { A break B }
 
@@ -11105,8 +11105,8 @@ internal static class LpGeometryProbes
 
         part m { clef treble }
 
-        section A { m { c1 | } }
-        section B { time 3/4 key a minor m { c2. | } }
+        section A { m { c'1 | } }
+        section B { time 3/4 key a minor m { c'2. | } }
 
         form { A break B }
 
@@ -11143,7 +11143,7 @@ internal static class LpGeometryProbes
         part m { clef bass }
 
         section A { m { r2 || } }
-        section B { time 3/4 m { d,2. | } }
+        section B { time 3/4 m { d2. | } }
 
         form { A break B }
 
@@ -11170,7 +11170,7 @@ internal static class LpGeometryProbes
         part m { clef treble }
 
         section Main {
-          m { g'4 g' cue { g'4 g' } | }
+          m { g''4 g'' cue { g''4 g'' } | }
         }
 
         form { ~Main }
@@ -11188,7 +11188,7 @@ internal static class LpGeometryProbes
         part m { clef treble }
 
         section Main {
-          m { g'4 g' g'4 g' | }
+          m { g''4 g'' g''4 g'' | }
         }
 
         form { ~Main }
@@ -11229,7 +11229,7 @@ internal static class LpGeometryProbes
         part m { clef treble }
 
         section Main {
-          m { g'4 cue { g'4 g' } cue { g' } | }
+          m { g''4 cue { g''4 g'' } cue { g'' } | }
         }
 
         form { ~Main }
@@ -11247,7 +11247,7 @@ internal static class LpGeometryProbes
         part m { clef treble }
 
         section Main {
-          m { g'4 cue { g'4 g' g' } | }
+          m { g''4 cue { g''4 g'' g'' } | }
         }
 
         form { ~Main }
@@ -11283,7 +11283,7 @@ internal static class LpGeometryProbes
         part m { clef treble }
 
         section Main {
-          m { c'4 cue { fis'4 } r2 | }
+          m { c''4 cue { fis''4 } r2 | }
         }
 
         form { ~Main }
@@ -11315,7 +11315,7 @@ internal static class LpGeometryProbes
         part m { clef treble }
 
         section Main {
-          m { c'2 cue { grace { d'16 } e'2 } | }
+          m { c''2 cue { grace { d''16 } e''2 } | }
         }
 
         form { ~Main }
@@ -11377,7 +11377,7 @@ internal static class LpGeometryProbes
         part m { clef treble }
 
         section Main {
-          m { g'4 g' cue { g'4 g' } | g'1 | }
+          m { g''4 g'' cue { g''4 g'' } | g''1 | }
         }
 
         form { ~Main }
@@ -11405,7 +11405,7 @@ internal static class LpGeometryProbes
         part m { clef treble }
 
         section Main {
-          m { g'4 g' g'4 g' | g'1 | }
+          m { g''4 g'' g''4 g'' | g''1 | }
         }
 
         form { ~Main }
@@ -11441,7 +11441,7 @@ internal static class LpGeometryProbes
         part m { clef treble }
 
         section Main {
-          m { c4 grace { d16 e } f4 g2 | }
+          m { c'4 grace { d'16 e' } f'4 g'2 | }
         }
 
         form { ~Main }
@@ -11479,7 +11479,7 @@ internal static class LpGeometryProbes
         part m { clef treble }
 
         section Main {
-          m { <cis' e' gis'>8 <d' f' aes'> <ees' ges' bes'> <e' g' b'> r2 | }
+          m { <cis'' e'' gis''>8 <d'' f'' aes''> <ees'' ges'' bes''> <e'' g'' b''> r2 | }
         }
 
         form { ~Main }
@@ -11507,7 +11507,7 @@ internal static class LpGeometryProbes
         part m { clef treble }
 
         section Main {
-          m { cis'8 d' ees' e' r2 | }
+          m { cis''8 d'' ees'' e'' r2 | }
         }
 
         form { ~Main }
@@ -11549,7 +11549,7 @@ internal static class LpGeometryProbes
         part m { clef bass }
 
         section Main {
-          m { <a,, c, g,>8 a,, a,, a,, e,, f,, g,, a,, | }
+          m { <a, c g>8 a, a, a, e, f, g, a, | }
         }
 
         form { ~Main }
@@ -11576,7 +11576,7 @@ internal static class LpGeometryProbes
         part m { clef bass }
 
         section Main {
-          m { g,8 a,, a,, a,, e,, f,, g,, a,, | }
+          m { g8 a, a, a, e, f, g, a, | }
         }
 
         form { ~Main }
@@ -11622,7 +11622,7 @@ internal static class LpGeometryProbes
         part bl { clef bass tuning bass }
 
         section Main {
-          bl { a,,8\4 d,\3 g,\2 c\1 c\1 g,\2 d,\3 a,,\4 | a,,8\4 a,,\4 a,,\4 a,,\4 c\1 c\1 c\1 c\1 | }
+          bl { a,8\4 d\3 g\2 c'\1 c'\1 g\2 d\3 a,\4 | a,8\4 a,\4 a,\4 a,\4 c'\1 c'\1 c'\1 c'\1 | }
         }
 
         form { ~Main }
@@ -11640,7 +11640,7 @@ internal static class LpGeometryProbes
         time 4/4
         key c major
 
-        part bl { clef bass tuning bass }
+        part bl { octave 4 clef bass tuning bass }
 
         section Main {
           bl { {{music}} }
@@ -11707,7 +11707,7 @@ internal static class LpGeometryProbes
         part bl { clef bass tuning bass }
 
         section Main {
-          bl { g,4\2( c\1 c\1 g,\2) | d,4\3( a,,\4 a,,\4 d,\3) | }
+          bl { g4\2( c'\1 c'\1 g\2) | d4\3( a,\4 a,\4 d\3) | }
         }
 
         form { ~Main }
@@ -11830,7 +11830,7 @@ internal static class LpGeometryProbes
         part melody
 
         section Main {
-          melody { r4 e8( g <>)@text("sul D").up c8 c c c | }
+          melody { r4 e'8( g <>)@text("sul D").up c8 c c c | }
         }
 
         form { ~Main }
@@ -11876,8 +11876,8 @@ internal static class LpGeometryProbes
 
         section Main {
           m {
-            voice { b8 b s2. }
-            { s16 d''16 d'' d'' s2. }
+            voice { b'8 b' s2. }
+            { s16 d'''16 d''' d''' s2. }
           }
         }
 
@@ -11914,8 +11914,8 @@ internal static class LpGeometryProbes
 
         section Main {
           m {
-            voice { b8 b s2. }
-            { s16 d''4 s8. s2 }
+            voice { b'8 b' s2. }
+            { s16 d'''4 s8. s2 }
           }
         }
 
@@ -11945,7 +11945,7 @@ internal static class LpGeometryProbes
 
         section Main {
           m {
-            voice { b8 b s2. }
+            voice { b'8 b' s2. }
             { s1 }
           }
         }
@@ -11992,7 +11992,7 @@ internal static class LpGeometryProbes
         part m { clef treble }
 
         section Main {
-          m { c8[ c16 c8] r8. r2 | }
+          m { c'8[ c'16 c'8] r8. r2 | }
         }
 
         form { ~Main }
@@ -12019,7 +12019,7 @@ internal static class LpGeometryProbes
         part m { clef treble }
 
         section Main {
-          m { c16[ c8 c16] r4 r2 | }
+          m { c'16[ c'8 c'16] r4 r2 | }
         }
 
         form { ~Main }
@@ -12046,7 +12046,7 @@ internal static class LpGeometryProbes
         part m { clef treble }
 
         section Main {
-          m { c16[ c16 c8] r4 r2 | }
+          m { c'16[ c'16 c'8] r4 r2 | }
         }
 
         form { ~Main }
@@ -12071,7 +12071,7 @@ internal static class LpGeometryProbes
         part m { clef treble }
 
         section Main {
-          m { c8[ c16 c16] r4 r2 | }
+          m { c'8[ c'16 c'16] r4 r2 | }
         }
 
         form { ~Main }
@@ -12099,7 +12099,7 @@ internal static class LpGeometryProbes
         part m { clef treble }
 
         section Main {
-          m { c16[ c8 c8 c16] r8 r2 | }
+          m { c'16[ c'8 c'8 c'16] r8 r2 | }
         }
 
         form { ~Main }
@@ -12125,7 +12125,7 @@ internal static class LpGeometryProbes
         part m { clef treble }
 
         section Main {
-          m { c8[ c32 c8] r8 r16. r2 | }
+          m { c'8[ c'32 c'8] r8 r16. r2 | }
         }
 
         form { ~Main }
@@ -12161,7 +12161,7 @@ internal static class LpGeometryProbes
         time {{beats}}/{{beatType}}
         key c major
 
-        part m { clef treble }
+        part m { octave 4 clef treble }
 
         section Main {
           m { {{string.Join(" ", Enumerable.Repeat("c8", count))}} | }
@@ -12231,7 +12231,7 @@ internal static class LpGeometryProbes
         part m { clef treble }
 
         section Main {
-          m { c16 c c c c c c c c c c c c c c c | }
+          m { c'16 c' c' c' c' c' c' c' c' c' c' c' c' c' c' c' | }
         }
 
         form { ~Main }
@@ -12262,7 +12262,7 @@ internal static class LpGeometryProbes
         part m { clef treble }
 
         section Main {
-          m { c8 c r8 c c c | }
+          m { c'8 c' r8 c' c' c' | }
         }
 
         form { ~Main }
@@ -12293,7 +12293,7 @@ internal static class LpGeometryProbes
         part m { clef treble }
 
         section Main {
-          m { c2 c8 c c r8 | }
+          m { c'2 c'8 c' c' r8 | }
         }
 
         form { ~Main }
@@ -12322,7 +12322,7 @@ internal static class LpGeometryProbes
         part m { clef treble }
 
         section Main {
-          m { tuplet 3/2 { c8 c c } tuplet 3/2 { c8 c c } tuplet 3/2 { c8 c c } | }
+          m { tuplet 3/2 { c'8 c' c' } tuplet 3/2 { c'8 c' c' } tuplet 3/2 { c'8 c' c' } | }
         }
 
         form { ~Main }
@@ -12339,7 +12339,7 @@ internal static class LpGeometryProbes
         part m { clef treble }
 
         section Main {
-          m { tuplet 3/2 { c8 c c } tuplet 3/2 { c8 c c } tuplet 3/2 { c8 c c } tuplet 3/2 { c8 c c } | }
+          m { tuplet 3/2 { c'8 c' c' } tuplet 3/2 { c'8 c' c' } tuplet 3/2 { c'8 c' c' } tuplet 3/2 { c'8 c' c' } | }
         }
 
         form { ~Main }
@@ -12365,7 +12365,7 @@ internal static class LpGeometryProbes
         part m { clef treble }
 
         section Main {
-          m { tuplet 3/2 { c8 c c } c8 c c c | }
+          m { tuplet 3/2 { c'8 c' c' } c'8 c' c' c' | }
         }
 
         form { ~Main }
@@ -12382,7 +12382,7 @@ internal static class LpGeometryProbes
         part m { clef treble }
 
         section Main {
-          m { tuplet 3/2 { c8 c c } tuplet 3/2 { c8 c c } c8 c c c | }
+          m { tuplet 3/2 { c'8 c' c' } tuplet 3/2 { c'8 c' c' } c'8 c' c' c' | }
         }
 
         form { ~Main }
@@ -12419,10 +12419,10 @@ internal static class LpGeometryProbes
 
         section Main {
           m {
-            tuplet 3/2 { c16 c c } tuplet 3/2 { c16 c c }
-            tuplet 3/2 { c16 c c } tuplet 3/2 { c16 c c }
-            tuplet 3/2 { c16 c c } tuplet 3/2 { c16 c c }
-            tuplet 3/2 { c16 c c } tuplet 3/2 { c16 c c } |
+            tuplet 3/2 { c'16 c' c' } tuplet 3/2 { c'16 c' c' }
+            tuplet 3/2 { c'16 c' c' } tuplet 3/2 { c'16 c' c' }
+            tuplet 3/2 { c'16 c' c' } tuplet 3/2 { c'16 c' c' }
+            tuplet 3/2 { c'16 c' c' } tuplet 3/2 { c'16 c' c' } |
           }
         }
 
@@ -12449,7 +12449,7 @@ internal static class LpGeometryProbes
         time {{beats}}/{{beatType}}
         key c major
 
-        part m { clef treble }
+        part m { octave 4 clef treble }
 
         section Main {
           m { c{{noteValue}} {{string.Join(" ", Enumerable.Repeat("c", count - 1))}} | }
@@ -12559,7 +12559,7 @@ internal static class LpGeometryProbes
         part m { clef treble }
 
         section Main {
-          m { c8 tuplet 3/2 { c8 c c } c8 c2 | }
+          m { c'8 tuplet 3/2 { c'8 c' c' } c'8 c'2 | }
         }
 
         form { ~Main }
@@ -12589,7 +12589,7 @@ internal static class LpGeometryProbes
         part m { clef treble }
 
         section Main {
-          m { c4. c8 c c | }
+          m { c'4. c'8 c' c' | }
         }
 
         form { ~Main }
@@ -12624,8 +12624,8 @@ internal static class LpGeometryProbes
         part lh { clef bass }
 
         section Main {
-          rh { b1 | }
-          lh { voice { f8 f f f f f f f } { d,1 } | }
+          rh { b'1 | }
+          lh { voice { f'8 f' f' f' f' f' f' f' } { d1 } | }
         }
 
         form { ~Main }
@@ -12676,7 +12676,7 @@ internal static class LpGeometryProbes
         time 12/4
         key c major
 
-        part melody
+        part melody { octave 4 }
 
         section Main {
           melody {
@@ -12705,7 +12705,7 @@ internal static class LpGeometryProbes
         time 12/4
         key c major
 
-        part melody
+        part melody { octave 4 }
 
         section Main {
           melody {
@@ -12766,7 +12766,7 @@ internal static class LpGeometryProbes
         time 12/4
         key c major
 
-        part melody
+        part melody { octave 4 }
 
         section Main {
           melody {
@@ -12802,7 +12802,7 @@ internal static class LpGeometryProbes
         time 12/4
         key c major
 
-        part melody
+        part melody { octave 4 }
 
         section Main {
           melody {
@@ -12854,7 +12854,7 @@ internal static class LpGeometryProbes
         time 12/4
         key c major
 
-        part melody
+        part melody { octave 4 }
 
         section Main {
           melody {
@@ -12891,7 +12891,7 @@ internal static class LpGeometryProbes
         time 12/4
         key c major
 
-        part melody
+        part melody { octave 4 }
 
         section Main {
           melody {
@@ -12953,13 +12953,13 @@ internal static class LpGeometryProbes
 
         section Main {
           melody {
-            voice { b1 b1 b1 | b1 b1 b1 | b1 b1 b1 | b1 b1 b1 | } { g,,1 g,,1( g,,1) | g,,1 g,,1( g,,1) | g,,1 g,,1( g,,1) | g,,1 g,,1( g,,1) | }
+            voice { b'1 b'1 b'1 | b'1 b'1 b'1 | b'1 b'1 b'1 | b'1 b'1 b'1 | } { g,1 g,1( g,1) | g,1 g,1( g,1) | g,1 g,1( g,1) | g,1 g,1( g,1) | }
             break
-            voice { b1 b1 b1 | b1 b1 b1 | b1 b1 b1 | b1 b1 b1 | } { g,,1 g,,1( g,,1) | g,,1 g,,1( g,,1) | g,,1 g,,1( g,,1) | g,,1 g,,1( g,,1) | }
+            voice { b'1 b'1 b'1 | b'1 b'1 b'1 | b'1 b'1 b'1 | b'1 b'1 b'1 | } { g,1 g,1( g,1) | g,1 g,1( g,1) | g,1 g,1( g,1) | g,1 g,1( g,1) | }
             break
-            voice { b1 b1 b1 | b1 b1 b1 | b1 b1 b1 | b1 b1 b1 | } { g,,1 g,,1( g,,1) | g,,1 g,,1( g,,1) | g,,1 g,,1( g,,1) | g,,1 g,,1( g,,1) | }
+            voice { b'1 b'1 b'1 | b'1 b'1 b'1 | b'1 b'1 b'1 | b'1 b'1 b'1 | } { g,1 g,1( g,1) | g,1 g,1( g,1) | g,1 g,1( g,1) | g,1 g,1( g,1) | }
             break
-            voice { b1 b1 b1 | b1 b1 b1 | b1 b1 b1 | b1 b1 b1 | } { g,,1 g,,1( g,,1) | g,,1 g,,1( g,,1) | g,,1 g,,1( g,,1) | g,,1 g,,1( g,,1) | }
+            voice { b'1 b'1 b'1 | b'1 b'1 b'1 | b'1 b'1 b'1 | b'1 b'1 b'1 | } { g,1 g,1( g,1) | g,1 g,1( g,1) | g,1 g,1( g,1) | g,1 g,1( g,1) | }
           }
         }
 
@@ -12988,13 +12988,13 @@ internal static class LpGeometryProbes
 
         section Main {
           melody {
-            voice { b1 b1 b1 | b1 b1 b1 | b1 b1 b1 | b1 b1 b1 | } { g,,1 g,,1 g,,1 | g,,1 g,,1 g,,1 | g,,1 g,,1 g,,1 | g,,1 g,,1 g,,1 | }
+            voice { b'1 b'1 b'1 | b'1 b'1 b'1 | b'1 b'1 b'1 | b'1 b'1 b'1 | } { g,1 g,1 g,1 | g,1 g,1 g,1 | g,1 g,1 g,1 | g,1 g,1 g,1 | }
             break
-            voice { b1 b1 b1 | b1 b1 b1 | b1 b1 b1 | b1 b1 b1 | } { g,,1 g,,1 g,,1 | g,,1 g,,1 g,,1 | g,,1 g,,1 g,,1 | g,,1 g,,1 g,,1 | }
+            voice { b'1 b'1 b'1 | b'1 b'1 b'1 | b'1 b'1 b'1 | b'1 b'1 b'1 | } { g,1 g,1 g,1 | g,1 g,1 g,1 | g,1 g,1 g,1 | g,1 g,1 g,1 | }
             break
-            voice { b1 b1 b1 | b1 b1 b1 | b1 b1 b1 | b1 b1 b1 | } { g,,1 g,,1 g,,1 | g,,1 g,,1 g,,1 | g,,1 g,,1 g,,1 | g,,1 g,,1 g,,1 | }
+            voice { b'1 b'1 b'1 | b'1 b'1 b'1 | b'1 b'1 b'1 | b'1 b'1 b'1 | } { g,1 g,1 g,1 | g,1 g,1 g,1 | g,1 g,1 g,1 | g,1 g,1 g,1 | }
             break
-            voice { b1 b1 b1 | b1 b1 b1 | b1 b1 b1 | b1 b1 b1 | } { g,,1 g,,1 g,,1 | g,,1 g,,1 g,,1 | g,,1 g,,1 g,,1 | g,,1 g,,1 g,,1 | }
+            voice { b'1 b'1 b'1 | b'1 b'1 b'1 | b'1 b'1 b'1 | b'1 b'1 b'1 | } { g,1 g,1 g,1 | g,1 g,1 g,1 | g,1 g,1 g,1 | g,1 g,1 g,1 | }
           }
         }
 
@@ -13035,13 +13035,13 @@ internal static class LpGeometryProbes
 
         section Main {
           melody {
-            voice { b1 b1 b1 | b1 b1 b1 | b1 b1 b1 | b1 b1 b1 | } { e,,1 e,,1~ e,,1 | e,,1 e,,1~ e,,1 | e,,1 e,,1~ e,,1 | e,,1 e,,1~ e,,1 | }
+            voice { b'1 b'1 b'1 | b'1 b'1 b'1 | b'1 b'1 b'1 | b'1 b'1 b'1 | } { e,1 e,1~ e,1 | e,1 e,1~ e,1 | e,1 e,1~ e,1 | e,1 e,1~ e,1 | }
             break
-            voice { b1 b1 b1 | b1 b1 b1 | b1 b1 b1 | b1 b1 b1 | } { e,,1 e,,1~ e,,1 | e,,1 e,,1~ e,,1 | e,,1 e,,1~ e,,1 | e,,1 e,,1~ e,,1 | }
+            voice { b'1 b'1 b'1 | b'1 b'1 b'1 | b'1 b'1 b'1 | b'1 b'1 b'1 | } { e,1 e,1~ e,1 | e,1 e,1~ e,1 | e,1 e,1~ e,1 | e,1 e,1~ e,1 | }
             break
-            voice { b1 b1 b1 | b1 b1 b1 | b1 b1 b1 | b1 b1 b1 | } { e,,1 e,,1~ e,,1 | e,,1 e,,1~ e,,1 | e,,1 e,,1~ e,,1 | e,,1 e,,1~ e,,1 | }
+            voice { b'1 b'1 b'1 | b'1 b'1 b'1 | b'1 b'1 b'1 | b'1 b'1 b'1 | } { e,1 e,1~ e,1 | e,1 e,1~ e,1 | e,1 e,1~ e,1 | e,1 e,1~ e,1 | }
             break
-            voice { b1 b1 b1 | b1 b1 b1 | b1 b1 b1 | b1 b1 b1 | } { e,,1 e,,1~ e,,1 | e,,1 e,,1~ e,,1 | e,,1 e,,1~ e,,1 | e,,1 e,,1~ e,,1 | }
+            voice { b'1 b'1 b'1 | b'1 b'1 b'1 | b'1 b'1 b'1 | b'1 b'1 b'1 | } { e,1 e,1~ e,1 | e,1 e,1~ e,1 | e,1 e,1~ e,1 | e,1 e,1~ e,1 | }
           }
         }
 
@@ -13069,13 +13069,13 @@ internal static class LpGeometryProbes
 
         section Main {
           melody {
-            voice { b1 b1 b1 | b1 b1 b1 | b1 b1 b1 | b1 b1 b1 | } { e,,1 e,,1 e,,1 | e,,1 e,,1 e,,1 | e,,1 e,,1 e,,1 | e,,1 e,,1 e,,1 | }
+            voice { b'1 b'1 b'1 | b'1 b'1 b'1 | b'1 b'1 b'1 | b'1 b'1 b'1 | } { e,1 e,1 e,1 | e,1 e,1 e,1 | e,1 e,1 e,1 | e,1 e,1 e,1 | }
             break
-            voice { b1 b1 b1 | b1 b1 b1 | b1 b1 b1 | b1 b1 b1 | } { e,,1 e,,1 e,,1 | e,,1 e,,1 e,,1 | e,,1 e,,1 e,,1 | e,,1 e,,1 e,,1 | }
+            voice { b'1 b'1 b'1 | b'1 b'1 b'1 | b'1 b'1 b'1 | b'1 b'1 b'1 | } { e,1 e,1 e,1 | e,1 e,1 e,1 | e,1 e,1 e,1 | e,1 e,1 e,1 | }
             break
-            voice { b1 b1 b1 | b1 b1 b1 | b1 b1 b1 | b1 b1 b1 | } { e,,1 e,,1 e,,1 | e,,1 e,,1 e,,1 | e,,1 e,,1 e,,1 | e,,1 e,,1 e,,1 | }
+            voice { b'1 b'1 b'1 | b'1 b'1 b'1 | b'1 b'1 b'1 | b'1 b'1 b'1 | } { e,1 e,1 e,1 | e,1 e,1 e,1 | e,1 e,1 e,1 | e,1 e,1 e,1 | }
             break
-            voice { b1 b1 b1 | b1 b1 b1 | b1 b1 b1 | b1 b1 b1 | } { e,,1 e,,1 e,,1 | e,,1 e,,1 e,,1 | e,,1 e,,1 e,,1 | e,,1 e,,1 e,,1 | }
+            voice { b'1 b'1 b'1 | b'1 b'1 b'1 | b'1 b'1 b'1 | b'1 b'1 b'1 | } { e,1 e,1 e,1 | e,1 e,1 e,1 | e,1 e,1 e,1 | e,1 e,1 e,1 | }
           }
         }
 
@@ -13133,7 +13133,7 @@ internal static class LpGeometryProbes
         time 12/4
         key c major
 
-        part melody
+        part melody { octave 4 }
 
         section Main {
           melody {
@@ -13173,7 +13173,7 @@ internal static class LpGeometryProbes
         time 12/4
         key c major
 
-        part melody
+        part melody { octave 4 }
 
         section Main {
           melody {
@@ -13217,7 +13217,7 @@ internal static class LpGeometryProbes
         time 4/4
         key c major
 
-        part melody
+        part melody { octave 4 }
 
         section Main {
           melody {
@@ -13248,7 +13248,7 @@ internal static class LpGeometryProbes
         time 4/4
         key c major
 
-        part melody { clef bass }
+        part melody { octave 4 clef bass }
 
         section Main {
           melody {
@@ -13288,7 +13288,7 @@ internal static class LpGeometryProbes
         part melody { clef bass }
 
         section Main {
-          melody { c,1 | c,1 | }
+          melody { c1 | c1 | }
         }
 
         form { Main }
@@ -13317,7 +13317,7 @@ internal static class LpGeometryProbes
         part melody { clef percussion }
 
         section Main {
-          melody { c1 | c1 | }
+          melody { c'1 | c'1 | }
         }
 
         form { Main }
@@ -13358,7 +13358,7 @@ internal static class LpGeometryProbes
         time 12/4
         key c major
 
-        part melody
+        part melody { octave 4 }
 
         section Main {
           melody {
@@ -13393,8 +13393,8 @@ internal static class LpGeometryProbes
         part lower { clef bass }
 
         section Main {
-          upper { c1 | c1 | }
-          lower { c,1 | c,1 | }
+          upper { c'1 | c'1 | }
+          lower { c1 | c1 | }
         }
 
         form { Main }
@@ -13423,7 +13423,7 @@ internal static class LpGeometryProbes
         part melody { clef treble }
 
         section Main {
-          melody { d1 | d1 | }
+          melody { d'1 | d'1 | }
         }
 
         form { Main }
@@ -13495,7 +13495,7 @@ internal static class LpGeometryProbes
         time 4/4
         key c major
         part melody { clef bass }
-        section Main { melody { c1 | r1 | % | % | % | % | % | % | % | % | % | % | % | % | % | % | % | % | % | % | % | % | % | % | % | % | % | % | % | % | % } }
+        section Main { melody { c'1 | r1 | % | % | % | % | % | % | % | % | % | % | % | % | % | % | % | % | % | % | % | % | % | % | % | % | % | % | % | % | % } }
         form { Main }
         score ESB { staff melody }
         """;
@@ -13517,7 +13517,7 @@ internal static class LpGeometryProbes
         key c major
         part m { clef treble }
         section A {
-          m { e'4@chord(C x32010) d' e' f' | }
+          m { e''4@chord(C x32010) d'' e'' f'' | }
         }
         form { A }
         score LSD { staff m }
@@ -13539,7 +13539,7 @@ internal static class LpGeometryProbes
         part b { clef bass
           tuning bass }
         section A {
-          b { r1 | break <e gis>4. <e a>8~ <e a>2 | }
+          b { r1 | break <e' gis'>4. <e' a'>8~ <e' a'>2 | }
         }
         form { A }
         score LST { staff b
@@ -13564,7 +13564,7 @@ internal static class LpGeometryProbes
         key ees major
         part m { clef bass tuning bass5 }
         section A {
-          m { r1 | r1 | %2 | %2 | %2 | %2 | %2 | %2 | %2 | break c,1 | }
+          m { r1 | r1 | %2 | %2 | %2 | %2 | %2 | %2 | %2 | break c1 | }
         }
         form { A }
         score DPK { staff m  tab m }
@@ -13586,7 +13586,7 @@ internal static class LpGeometryProbes
         time 4/4
         part p { }
         section A {
-          p { c'1 | r2. a4@mark("Tacet") | c'1 | c'4 d'4@mark("X") e'4 f'4 | break c'1 | }
+          p { c''1 | r2. a'4@mark("Tacet") | c''1 | c''4 d''4@mark("X") e''4 f''4 | break c''1 | }
         }
         form { A }
         score MKC { staff p }
@@ -13606,7 +13606,7 @@ internal static class LpGeometryProbes
         time 4/4
         part p { }
         section A {
-          p { r1 | r1 | break c'16 d' e' f' g' a' b' c'' c'' b' a' g' f' e' d' c' | c'8 d' e' f' g' a' b' c'' | break r1 | }
+          p { r1 | r1 | break c''16 d'' e'' f'' g'' a'' b'' c''' c''' b'' a'' g'' f'' e'' d'' c'' | c''8 d'' e'' f'' g'' a'' b'' c''' | break r1 | }
         }
         form { A }
         score RBV { staff p }
@@ -13626,7 +13626,7 @@ internal static class LpGeometryProbes
         time 4/4
         key c major
         part m { clef treble }
-        section A { m { c'1 | key d major grace { d'16 e' } f'4 g'2 r4 | } }
+        section A { m { c''1 | key d major grace { d''16 e'' } f''4 g''2 r4 | } }
         form { A }
         score KG1 { staff m }
         """;
@@ -13643,7 +13643,7 @@ internal static class LpGeometryProbes
         time 4/4
         key c major
         part m { clef treble }
-        section A { m { c'1 | key d major grace { dis'16 e' } f'4 g'2 r4 | } }
+        section A { m { c''1 | key d major grace { dis''16 e'' } f''4 g''2 r4 | } }
         form { A }
         score KG10 { staff m }
         """;
@@ -13661,7 +13661,7 @@ internal static class LpGeometryProbes
         time 4/4
         key c major
         part m { clef treble }
-        section A { m { c'1 | break grace { d'16 e' } f'4 g'2 r4 | } }
+        section A { m { c''1 | break grace { d''16 e'' } f''4 g''2 r4 | } }
         form { A }
         score LEG1 { staff m }
         """;
@@ -13679,7 +13679,7 @@ internal static class LpGeometryProbes
         time 4/4
         key c major
         part m { clef treble }
-        section A { m { c'1 | break key d major grace { d'16 e' } f'4 g'2 r4 | } }
+        section A { m { c''1 | break key d major grace { d''16 e'' } f''4 g''2 r4 | } }
         form { A }
         score LEG2 { staff m }
         """;
@@ -13696,7 +13696,7 @@ internal static class LpGeometryProbes
         time 4/4
         key c major
         part m { clef treble }
-        section A { m { c'1 | break time 3/4 grace { d'16 e' } f'4 g'2 | } }
+        section A { m { c''1 | break time 3/4 grace { d''16 e'' } f''4 g''2 | } }
         form { A }
         score LEG3 { staff m }
         """;
@@ -13716,7 +13716,7 @@ internal static class LpGeometryProbes
         octave absolute
         time 4/4
         part m { clef treble }
-        section A { m { e'1 | c'4@diagram(x02010) c' c' c' | } }
+        section A { m { e''1 | c''4@diagram(x02010) c'' c'' c'' | } }
         form { A }
         score DN1 { staff m }
         """;
@@ -13732,7 +13732,7 @@ internal static class LpGeometryProbes
         octave absolute
         time 4/4
         part m { clef treble }
-        section A { m { c'4 c' c' c'@diagram(x02010) | e'1 | } }
+        section A { m { c''4 c'' c'' c''@diagram(x02010) | e''1 | } }
         form { A }
         score DN2 { staff m }
         """;
@@ -13749,7 +13749,7 @@ internal static class LpGeometryProbes
         octave absolute
         time 4/4
         part m { clef treble }
-        section A { m { c'4 c' c' c'@diagram(133211) | e'1 | } }
+        section A { m { c''4 c'' c'' c''@diagram(133211) | e''1 | } }
         form { A }
         score DN3 { staff m }
         """;
@@ -13859,7 +13859,7 @@ internal static class LpGeometryProbes
     /// <c>\new Staff { \set Score.printInitialRepeatBar = ##t \time 4/4 \repeat volta 2 { c'1 c'1 } }</c>.</remarks>
     private static readonly string IRB = Preamble("c major") + """
         section Main {
-          melody { c1 | c1 | }
+          melody { c'1 | c1 | }
         }
 
         form { |: Main :| }
@@ -13981,8 +13981,8 @@ internal static class LpGeometryProbes
         key d major
 
         section Main {
-          melody { d4 e fis g | a b cis' d' | }
-          ossia_melody { d'4 e' fis' g' | r1 | }
+          melody { d'4 e' fis' g' | a' b' cis'' d'' | }
+          ossia_melody { d''4 e'' fis'' g'' | r1 | }
         }
 
         form { Main }
@@ -14002,8 +14002,8 @@ internal static class LpGeometryProbes
         key bes major
 
         section Main {
-          melody { d4 ees f g | a bes c' d' | }
-          ossia_melody { d'4 ees' f' g' | r1 | }
+          melody { d'4 ees' f' g' | a' bes' c'' d'' | }
+          ossia_melody { d''4 ees'' f'' g'' | r1 | }
         }
 
         form { Main }
@@ -14062,7 +14062,7 @@ internal static class LpGeometryProbes
         part melody
 
         section Main {
-          melody { c4 c8 c c4 c8 c | c4 c8 c c4 c8 c | }
+          melody { c'4 c'8 c' c'4 c'8 c' | c'4 c'8 c' c'4 c'8 c' | }
         }
 
         form { Main }
@@ -14106,7 +14106,7 @@ internal static class LpGeometryProbes
         part melody
 
         section Main {
-          melody { c2 c2 | c4 c4 r2 | c4 c4 c4 c4 | }
+          melody { c'2 c'2 | c'4 c'4 r2 | c'4 c'4 c'4 c'4 | }
         }
 
         form { Main }
@@ -14156,10 +14156,10 @@ internal static class LpGeometryProbes
 
         section Main {
           melody {
-            c4 c8 c c4 c8 c | c4 c8 c c4 c8 c | c4 c8 c c4 c8 c | c4 c8 c c4 c8 c |
-            c4 c8 c c4 c8 c | c4 c8 c c4 c8 c | c4 c8 c c4 c8 c | c4 c8 c c4 c8 c |
-            c4 c8 c c4 c8 c | c4 c8 c c4 c8 c | c4 c8 c c4 c8 c | c4 c8 c c4 c8 c |
-            c4 c8 c c4 c8 c | c4 c8 c c4 c8 c | c4 c8 c c4 c8 c | c4 c8 c c4 c8 c |
+            c'4 c'8 c' c'4 c'8 c' | c'4 c'8 c' c'4 c'8 c' | c'4 c'8 c' c'4 c'8 c' | c'4 c'8 c' c'4 c'8 c' |
+            c'4 c'8 c' c'4 c'8 c' | c'4 c'8 c' c'4 c'8 c' | c'4 c'8 c' c'4 c'8 c' | c'4 c'8 c' c'4 c'8 c' |
+            c'4 c'8 c' c'4 c'8 c' | c'4 c'8 c' c'4 c'8 c' | c'4 c'8 c' c'4 c'8 c' | c'4 c'8 c' c'4 c'8 c' |
+            c'4 c'8 c' c'4 c'8 c' | c'4 c'8 c' c'4 c'8 c' | c'4 c'8 c' c'4 c'8 c' | c'4 c'8 c' c'4 c'8 c' |
           }
         }
 
@@ -14190,9 +14190,9 @@ internal static class LpGeometryProbes
 
         section Main {
           melody {
-            a'8 a' a' a' a' a' a' a' |
-            a'8 a' a' a' a'32 a' a' a' a'8 a' a' |
-            a'8 a' a' a' a' a' a' a' |
+            a''8 a'' a'' a'' a'' a'' a'' a'' |
+            a''8 a'' a'' a'' a''32 a'' a'' a'' a''8 a'' a'' |
+            a''8 a'' a'' a'' a'' a'' a'' a'' |
           }
         }
 
@@ -14218,9 +14218,9 @@ internal static class LpGeometryProbes
 
         section Main {
           melody {
-            g'8 g' g' g' g' g' g' g' |
-            g'8 g' g' g' g'32 g' g' g' g'8 g' g' |
-            g'8 g' g' g' g' g' g' g' |
+            g''8 g'' g'' g'' g'' g'' g'' g'' |
+            g''8 g'' g'' g'' g''32 g'' g'' g'' g''8 g'' g'' |
+            g''8 g'' g'' g'' g'' g'' g'' g'' |
           }
         }
 
@@ -14251,8 +14251,8 @@ internal static class LpGeometryProbes
 
         section S {
           mel {
-            voice { tuplet 3/2 { c''4 c'' c'' } c''2 | }
-            { f'8 f' f' f' f' f' f' f' | }
+            voice { tuplet 3/2 { c'''4 c''' c''' } c'''2 | }
+            { f''8 f'' f'' f'' f'' f'' f'' f'' | }
           }
         }
 
@@ -14312,17 +14312,17 @@ internal static class LpGeometryProbes
         // up, which flips the stems of bars 4 and 5 down and cost 0.314107 ss of natural
         // width that was very nearly diagnosed as a Lily# spacing defect.
         phrase ties {
-          c4~ c4 d2 |
+          c'4~ c4 d2 |
           d2 e2~ | e4 f g a |
         }
 
         phrase slurs {
-          c4( d e f) |
+          c'4( d e f) |
           g4( f e d) c2 r2 |
         }
 
         phrase tieDirection {
-          c4~ c4 r2 |
+          c'4~ c4 r2 |
           // ⚠️ THE `|.` IS LOAD-BEARING, for the same reason the twin's `\bar "|."` is
           // (probes/ties-slurs-breaks.ly says so in its own header): the final barline is
           // 0.9 ss of natural width and this score is read COMPRESSED, so a final bar on
@@ -14421,8 +14421,8 @@ internal static class LpGeometryProbes
         time 4/4
         key c major
 
-        part gt { clef treble }
-        part pn { clef treble }
+        part gt { octave 4 clef treble }
+        part pn { octave 4 clef treble }
 
         section Main {
           gt { {{tabKey}}c,4 d, e, f, | g,2 e, }
@@ -14510,7 +14510,7 @@ internal static class LpGeometryProbes
         octave absolute
         time 4/4
 
-        part gt { instrument guitar }
+        part gt { octave 3 instrument guitar }
 
         section Main {
           gt { c4 e g e | c4 e g e | {{change}}c4 e | c4 e | }
@@ -14528,7 +14528,7 @@ internal static class LpGeometryProbes
         octave absolute
         time 4/4
 
-        part gt { instrument guitar }
+        part gt { octave 3 instrument guitar }
 
         section Main {
           gt { c4 e g e | c4 e {{change}}g4 e | c4 e | }
@@ -14599,7 +14599,7 @@ internal static class LpGeometryProbes
         part melody { clef treble }
 
         section Main {
-          melody { c2 a | f2 g | c1 | }
+          melody { c'2 a' | f'2 g' | c'1 | }
           chords prog { C Am | F G7 | C | }
         }
 
@@ -14684,7 +14684,7 @@ internal static class LpGeometryProbes
         part melody { clef treble }
 
         section Main {
-          melody { c2 a | f2 g | c1 | }
+          melody { c'2 a' | f'2 g' | c'1 | }
           lyrics words sings melody { I no | oh no | yes | }
         }
 
@@ -14788,7 +14788,7 @@ internal static class LpGeometryProbes
         part bass {
           clef bass
           section Intro {
-            f,1 |
+            f1 |
           }
         }
 
@@ -14810,7 +14810,7 @@ internal static class LpGeometryProbes
         part bass {
           clef bass
           section Intro {
-            c2 c2 |
+            c'2 c'2 |
           }
         }
 
@@ -14834,7 +14834,7 @@ internal static class LpGeometryProbes
         part bass {
           clef bass
           section Intro {
-            c,2 c,2 |
+            c2 c2 |
           }
         }
 
@@ -14857,7 +14857,7 @@ internal static class LpGeometryProbes
         part bass {
           clef bass
           section Intro {
-            c,8 c, c, c, c, c, c, c, |
+            c8 c c c c c c c |
           }
         }
 
@@ -14885,8 +14885,8 @@ internal static class LpGeometryProbes
         part vtwo { clef bass }
 
         section Intro {
-          vone { c8 d8 r4 r2 | }
-          vtwo { r8 g'8 r4 r2 | }
+          vone { c'8 d'8 r4 r2 | }
+          vtwo { r8 g''8 r4 r2 | }
         }
 
         form { Intro }

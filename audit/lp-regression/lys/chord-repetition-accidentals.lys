@@ -12,7 +12,7 @@ part v { clef treble }
 
 section Main {
   v {
-    <f@courtesy a d f'@courtesy>4 q q q |
+    <f'@courtesy a d f'@courtesy>4 q q q |
   }
 }
 

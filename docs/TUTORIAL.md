@@ -10,7 +10,7 @@ Create a file `hello.lys`:
 part melody
 
 section A {
-  melody { c4 c g' g | a a g2 | f4 f e e | d d c2 | }
+  melody { c'4 c g' g | a a g2 | f4 f e e | d d c2 | }
 }
 
 form { ~A }
@@ -31,8 +31,9 @@ lysc svg hello.lys
 This creates `hello.svg` with a single staff showing the "Twinkle Twinkle Little Star" melody.
 
 **Octaves are relative.** Each note takes the octave nearest the note before it, and `'`
-(up) or `,` (down) shift from there. That is why the first `g` above is written `g'`: the
-nearest G to C4 is the G *below* it, and the mark lifts it to the G above. The next `g`
+(up) or `,` (down) shift from there. A section starts as if absolute, with LilyPond's octaves:
+`c` is C3 and `c'` is middle C (C4), so the tune opens on `c'`. The first `g` is written `g'`:
+the nearest G to C4 is the G *below* it, and the mark lifts it to the G above. The next `g`
 needs no mark — it is already nearest to the one before.
 
 ## Adding Metadata
@@ -49,7 +50,7 @@ key c major
 part melody
 
 section A {
-  melody { c4 c g' g | a a g2 | f4 f e e | d d c2 | }
+  melody { c'4 c g' g | a a g2 | f4 f e e | d d c2 | }
 }
 
 form { ~A }
@@ -71,7 +72,7 @@ g'4 a b c | d e fis g |
 
 ```
 // Chromatic passage
-c4 cis d dis | e f fis g |
+c'4 cis d dis | e f fis g |
 ```
 
 ## Chords
@@ -79,14 +80,14 @@ c4 cis d dis | e f fis g |
 Enclose pitches in angle brackets:
 
 ```
-<c e g>2 <d f a> |     // C major, D minor
+<c' e g>2 <d f a> |    // C major, D minor
 <e g b>2 <f a c>  |    // E minor, F major
 ```
 
 ## Dynamics and Articulations
 
 ```
-c4@p d e f |              // Piano (soft)
+c'4@p d e f |             // Piano (soft)
 g4@cresc a b c |          // Crescendo
 d4@f@staccato e f g |     // Forte with staccato
 ```
@@ -96,13 +97,13 @@ d4@f@staccato e f g |     // Forte with staccato
 Ties connect the same pitch:
 
 ```
-c2 c~ | c4 d e f |    // C held across the barline
+c'2 c~ | c4 d e f |   // C held across the barline
 ```
 
 Slurs phrase different pitches:
 
 ```
-c4( d e f | g2) r2 |   // Slur from C to G
+c'4( d e f | g2) r2 |  // Slur from C to G
 ```
 
 ## Grand Staff (Piano)
@@ -113,10 +114,10 @@ tempo 120
 time 4/4
 
 part rightHand { clef treble }
-part leftHand { clef bass octave 3 }   // a clef only draws; octave 3 puts bare c at C3
+part leftHand { clef bass }   // a clef only draws: a bare c is C3 in every part
 
 section Main {
-  rightHand { e4 d c d | e e e2 | }
+  rightHand { e'4 d c d | e e e2 | }
   leftHand  { c2 g | c g | }
 }
 
@@ -140,7 +141,7 @@ is the same:
 
 ```
 part melody {
-  section A { c4 d e f | g1 | }
+  section A { c'4 d e f | g1 | }
   section B { a4 g f e | d1 | }
 }
 
@@ -159,7 +160,7 @@ The form plays `A` then `B`, and during `A` the melody's `c d e f | g` and the c
 
 ```
 part melody {
-  section A { c4 d e f | g1 | }
+  section A { c'4 d e f | g1 | }
 }
 
 chords harmony {
@@ -187,11 +188,11 @@ Define reusable musical phrases:
 
 ```
 phrase theme {
-  c4 d e f | g2 g |
+  c'4 d e f | g2 g |
 }
 
 phrase variation {
-  c8 c d d e e f f | g4 f e d |
+  c'8 c d d e e f f | g4 f e d |
 }
 
 section Main {
@@ -212,10 +213,10 @@ bars; the repeat count defaults to 2 (or the number of endings), or state it as
 part melody { clef treble }
 
 section Body {
-  melody { c4 d e f | g4 a b c | }
+  melody { c'4 d e f | g4 a b c | }
 }
-section First  { melody { d'2 d | } }   // First time
-section Second { melody { c'2 c | } }   // Second time
+section First  { melody { d''2 d | } }   // First time
+section Second { melody { c''2 c | } }   // Second time
 
 form { |: Body [1. ~First] :| [2. ~Second] }
 
@@ -228,7 +229,7 @@ ending is written the same way: `:| [3. Third]`.
 ## Grace Notes
 
 ```
-acciaccatura { d16 } c4 e g e |   // Quick grace note
+acciaccatura { d'16 } c4 e g e |   // Quick grace note
 appoggiatura { e8 } d4 f a f |    // Longer grace note
 ```
 
@@ -236,12 +237,12 @@ appoggiatura { e8 } d4 f a f |    // Longer grace note
 
 ```
 // Triplets: 3 notes in time of 2
-tuplet 3/2 { c8 d e } f4 g a |
+tuplet 3/2 { c'8 d e } f4 g a |
 ```
 
 ```
 // Quintuplets: 5 in time of 4
-tuplet 5/4 { c16 d e f g } a4 b c |
+tuplet 5/4 { c'16 d e f g } a4 b c |
 ```
 
 ## Lyrics
@@ -257,7 +258,7 @@ so one verse serves every staff of a chorale.
 ```
 part melody
 section Verse {
-  melody { c4 d e f | g2 g | }
+  melody { c'4 d e f | g2 g | }
   lyrics words sings melody {
     Hap- py birth- day |
     to you |

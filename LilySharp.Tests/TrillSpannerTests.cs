@@ -52,7 +52,7 @@ public class TrillSpannerTests
     {
         var source = @"
 part melody { clef treble }
-phrase m { c'4@startTrillSpan d e f@stopTrillSpan | }
+phrase m { c''4@startTrillSpan d e f@stopTrillSpan | }
 section A { melody { m } }
 form { A }
 score test { staff melody }
@@ -82,7 +82,7 @@ score test { staff melody }
     {
         var source = @"
 part melody { clef treble }
-phrase m { c'4@startTrillSpan d e f | g4 a b c'@stopTrillSpan | }
+phrase m { c''4@startTrillSpan d e f | g4 a b c'@stopTrillSpan | }
 section A { melody { m } }
 form { A }
 score test { staff melody }
@@ -102,7 +102,7 @@ score test { staff melody }
     {
         var source = @"
 part melody { clef treble }
-phrase m { c'4@startTrillSpan d@stopTrillSpan e4@startTrillSpan f@stopTrillSpan | }
+phrase m { c''4@startTrillSpan d@stopTrillSpan e4@startTrillSpan f@stopTrillSpan | }
 section A { melody { m } }
 form { A }
 score test { staff melody }
@@ -127,7 +127,7 @@ score test { staff melody }
     {
         var source = @"
 part melody { clef treble }
-phrase m { c'4@startTrillSpan d e f@stopTrillSpan | g4 a b c' | }
+phrase m { c''4@startTrillSpan d e f@stopTrillSpan | g4 a b c' | }
 section A { melody { m } }
 form { A }
 score test { staff melody }
@@ -159,7 +159,7 @@ score test { staff melody }
     {
         var source = @"
 part melody { clef treble }
-phrase m { c'4@trillSpan(start) d e f@trillSpan(stop) | g4 a b c' | }
+phrase m { c''4@trillSpan(start) d e f@trillSpan(stop) | g4 a b c' | }
 section A { melody { m } }
 form { A }
 score test { staff melody }
@@ -191,12 +191,12 @@ score test { staff melody }
         // LILYPOND-REF: scm/define-grobs.scm TrillSpanner — (to-barline . #t)
         string svg = Render(
             "octave absolute\n\n" +
-            "f8@text(\"rit\").up( c'8 f' c'' f'') r8 r4 |\n" +
-            "c''2( c'2 |\n" +
-            "g1)~@startTrillSpan |\n" +
-            "g1@stopTrillSpan |\n" +
-            "g1(@f |\n" +
-            "g,1) |\n");
+            "f'8@text(\"rit\").up( c''8 f'' c''' f''') r8 r4 |\n" +
+            "c'''2( c''2 |\n" +
+            "g'1)~@startTrillSpan |\n" +
+            "g'1@stopTrillSpan |\n" +
+            "g'1(@f |\n" +
+            "g1) |\n");
         double middle = MiddleLineY(svg);
 
         var waves = MusicGlyphs(svg, LilySharp.Core.Svg.EmmentalerGlyphs.OrnTrillElement);
@@ -253,7 +253,7 @@ score test { staff melody }
         //   — finalize sets the open spanner's RIGHT bound to currentCommandColumn.
         var source = @"
 part melody { clef treble }
-phrase m { c'4@startTrillSpan d e f | }
+phrase m { c''4@startTrillSpan d e f | }
 section A { melody { m } }
 form { A }
 score test { staff melody }
@@ -297,8 +297,8 @@ score test { staff melody }
             part p1 { clef treble }
             section Piece {
               p1 {
-                c'4 d'4 e'4 f'4@startTrillSpan | break
-                g'4 a'8 b'8@stopTrillSpan@startTrillSpan c''8 b'8 a'4@stopTrillSpan |
+                c''4 d''4 e''4 f''4@startTrillSpan | break
+                g''4 a''8 b''8@stopTrillSpan@startTrillSpan c'''8 b''8 a''4@stopTrillSpan |
               }
             }
             form { ~Piece }

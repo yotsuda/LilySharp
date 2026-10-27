@@ -113,7 +113,7 @@ public class ChordDisplayCompletionTests
         // accepting the item and pressing nothing else.
         var expanded = System.Text.RegularExpressions.Regex
             .Replace(snippet, @"\$\{\d+:([^}]*)\}", "$1").Replace("$0", "");
-        var book = "part melody { section A { c'4 d e f } }\n" + expanded
+        var book = "part melody { section A { c''4 d e f } }\n" + expanded
                  + "\nform { A }\nscore { staff melody  chords prog }\n";
 
         var tree = LilySharp.Core.Syntax.SyntaxTree.Parse(book);
@@ -138,7 +138,7 @@ public class ChordDisplayCompletionTests
         // Unlike a chord track, a lyrics track DOES take `sings` — the difference the
         // chords test pins from its side — and its target names a part THIS DOCUMENT
         // declares. With one part there is nothing to choose, so the name is written out.
-        const string oneStaff = "part melody { section A { c'4 d e f } }\n";
+        const string oneStaff = "part melody { section A { c''4 d e f } }\n";
         var item = LyricsItem(oneStaff);
         Assert.Contains("sings melody", item.InsertText!);
         Assert.DoesNotContain("${", item.InsertText!.Replace("${1:verse}", "").Replace("${2:A}", ""));
@@ -159,7 +159,7 @@ public class ChordDisplayCompletionTests
         // Nothing to guess between: the target is an empty stop 1 — where the editor puts
         // the caret when it runs the item's command — and the command re-opens the popup,
         // whose context there (AfterSingsTarget) is the declared parts and voices.
-        const string twoStaves = "part melody { section A { c'4 } }\npart alto { section A { a4 } }\n";
+        const string twoStaves = "part melody { section A { c''4 } }\npart alto { section A { a4 } }\n";
         var item = LyricsItem(twoStaves);
 
         Assert.Contains("sings $1 {", item.InsertText!);
@@ -179,7 +179,7 @@ public class ChordDisplayCompletionTests
         // be a position the popup answers with the parts. Built from the item rather than
         // hand-copied: a snippet that stopped leaving the caret right after `sings` (one
         // space away, which a hand copy loses to trailing-whitespace trimming) fails here.
-        const string parts = "part melody { section A { c'4 } }\npart alto { section A { a4 } }\n";
+        const string parts = "part melody { section A { c''4 } }\npart alto { section A { a4 } }\n";
         string resolved = System.Text.RegularExpressions.Regex
             .Replace(LyricsItem(parts).InsertText!, @"\$\{\d+:([^}]*)\}", "$1").Replace("$0", "");
         int stop = resolved.IndexOf("$1", System.StringComparison.Ordinal);
@@ -302,7 +302,7 @@ public class ChordDisplayCompletionTests
         foreach (var label in labels)
         {
             var tree = LilySharp.Core.Syntax.SyntaxTree.Parse(
-                "part m { section A { c4 d e f } }\n"
+                "part m { section A { c'4 d e f } }\n"
                 + "chords h { section A { C | } }\n"
                 + $"form {{ A }}\nscore {{ staff m  chords h as {label} }}\n");
             Assert.DoesNotContain(LilySharp.Core.Semantics.SemanticValidation.Run(tree),

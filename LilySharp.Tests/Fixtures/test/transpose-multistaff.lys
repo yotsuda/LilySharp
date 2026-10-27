@@ -12,7 +12,7 @@ part upper { clef treble transpose d }
 part lower { clef bass octave 3 }
 
 section Main {
-  upper { c'4 d e f | g2 e | }
+  upper { c''4 d e f | g2 e | }
   lower { c4 d e f | g2 e | }
 }
 

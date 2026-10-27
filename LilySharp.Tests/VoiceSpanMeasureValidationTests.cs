@@ -68,7 +68,7 @@ public sealed class VoiceSpanMeasureValidationTests
     {
         // The control: voice 2's second bar holds a whole note where voice 1 made it 3/4. It
         // warns, and on voice 2's own bar — not on the `time` carried in from voice 1.
-        const string source = "time 4/4\npart mel {\n  section A { voice { c''1 | time 3/4 c''2. | } { c'1 | c'1 | } }\n}\n";
+        const string source = "time 4/4\npart mel {\n  section A { voice { c'''1 | time 3/4 c''2. | } { c''1 | c'1 | } }\n}\n";
         var d = Assert.Single(Diagnose(source), x => x.Code == DiagnosticCodes.MeasureOverflow);
         Assert.Equal(source.LastIndexOf("c'1", System.StringComparison.Ordinal), d.Span.Start);
     }
@@ -79,7 +79,7 @@ public sealed class VoiceSpanMeasureValidationTests
         // `voice { c d e f } e f g a` engraves eight quarters in one 4/4 bar — exactly what
         // the bare spelling engraves: two whole bars, a bar line left out (LYS2017). The span
         // must not hide it.
-        var diags = Diagnose("time 4/4\npart mel {\n  section A { voice { c4 d e f } e f g a | }\n}\n");
+        var diags = Diagnose("time 4/4\npart mel {\n  section A { voice { c'4 d e f } e' f g a | }\n}\n");
         Assert.Contains(diags, d => d.Code == DiagnosticCodes.MissingBarLine);
     }
 
@@ -87,7 +87,7 @@ public sealed class VoiceSpanMeasureValidationTests
     public void BareSpellingOfTheSameBar_WarnsTheSameWay()
     {
         // The control: without the braces the bar is the same music and the same warning.
-        var diags = Diagnose("time 4/4\npart mel {\n  section A { c4 d e f e f g a | }\n}\n");
+        var diags = Diagnose("time 4/4\npart mel {\n  section A { c'4 d e f e f g a | }\n}\n");
         Assert.Contains(diags, d => d.Code == DiagnosticCodes.MissingBarLine);
     }
 
@@ -97,7 +97,7 @@ public sealed class VoiceSpanMeasureValidationTests
         // `c2 voice { d2 } { e2 }` is ONE full 4/4 bar (the renderer lays out exactly
         // one). It used to report THREE short "first measures": the enclosing bar (which
         // counted only `c2`), and each voice block validated as its own opening stream.
-        var diags = Diagnose("time 4/4\npart mel {\n  section A { c2 voice { d2 } { e2 } | }\n}\n");
+        var diags = Diagnose("time 4/4\npart mel {\n  section A { c'2 voice { d2 } { e2 } | }\n}\n");
         Assert.False(AnyFullness(diags));
     }
 
@@ -107,7 +107,7 @@ public sealed class VoiceSpanMeasureValidationTests
         // Same shape, but voice 2 is a quarter too short for the half bar left to fill.
         // The lead-in is what makes that visible — without it `e4` reads as a 1/4 opening
         // bar (a pickup nudge), with it as a 3/4 bar that misses a beat.
-        var diags = Diagnose("time 4/4\npart mel {\n  section A { c2 voice { d2 } { e4 } | }\n}\n");
+        var diags = Diagnose("time 4/4\npart mel {\n  section A { c'2 voice { d2 } { e4 } | }\n}\n");
         Assert.Contains(diags, d => d.Code == DiagnosticCodes.MeasureIncomplete);
         Assert.DoesNotContain(diags, d => d.Code == DiagnosticCodes.PickupWithoutPartial);
     }

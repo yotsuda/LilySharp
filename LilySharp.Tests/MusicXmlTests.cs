@@ -244,8 +244,8 @@ c4 d4";
 
         var notes = xml.Parts[0].Measures[0].Notes;
         Assert.Equal(4, notes.Count);
-        // Default starts at C4
-        Assert.Equal(4, notes[0].Octave);
+        // A fresh frame starts at F3, as LilyPond's \relative does: the c below it is C3.
+        Assert.Equal(3, notes[0].Octave);
     }
 
     [Fact]
@@ -372,8 +372,8 @@ c4 d4 e4 f4";
     {
         var source = @"
 section A {
-    melody { c4 d e f | }
-    bass { c2 c | }
+    melody { c'4 d e f | }
+    bass { c'2 c | }
 }";
         var tree = SyntaxTree.Parse(source);
         var exporter = new MusicXmlExporter();
@@ -389,7 +389,7 @@ section A {
     {
         var source = @"
 section A {
-    melody { c4 d e f | g a b c' | }
+    melody { c'4 d e f | g a b c' | }
 }";
         var tree = SyntaxTree.Parse(source);
         var exporter = new MusicXmlExporter();
@@ -464,7 +464,7 @@ c4 d e f";
         var source = @"
 key c major
 part melody { clef treble transpose d }
-section Main { melody { c4 d e } }
+section Main { melody { c'4 d e } }
 form { Main }
 score x { staff melody }";
         var tree = SyntaxTree.Parse(source);
@@ -492,7 +492,7 @@ score x { staff melody }";
 tempo 120
 time 4/4
 part m { clef treble }
-section Main { m { c4 d e f | tempo 160 g a b c } }
+section Main { m { c'4 d e f | tempo 160 g a b c } }
 form { Main }
 score x { staff m }";
         var tree = SyntaxTree.Parse(source);

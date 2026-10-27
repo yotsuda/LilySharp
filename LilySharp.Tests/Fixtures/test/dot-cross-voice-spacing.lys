@@ -15,7 +15,7 @@
 // with the dot removed (cis2 for cis2.) it collapses back to 2.51 even though the
 // shifted head stays, so the push is the dot's skyline, not the head's.
 part melody {
-  section A { voice { g''2( g8) eis fis g } { e8 d e e e fis r4 }  { cis2. r4 } }
+  section A { voice { g''2( g8) eis fis g } { e'8 d e e e fis r4 }  { cis'2. r4 } }
 }
 
 form { A }

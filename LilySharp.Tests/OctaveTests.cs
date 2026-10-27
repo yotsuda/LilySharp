@@ -113,7 +113,7 @@ public class OctaveTests
         var source = @"
 part bassline { clef bass }
 section A {
-    bassline { c4 d e f | }
+    bassline { c'4 d e f | }
 }
 form { A }
 score test {
@@ -138,7 +138,7 @@ score test {
     [InlineData("score { grandStaff { staff treble other  staff bass melody } }")]
     public void AClefWrittenOnTheStaffItem_IsTheStaffsClef_AndMovesNoPitch(string score)
     {
-        var source = "section A {\n  melody { c1 }\n  other { c1 }\n}\nform { A }\n" + score + "\n";
+        var source = "section A {\n  melody { c'1 }\n  other { c'1 }\n}\nform { A }\n" + score + "\n";
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
 
@@ -150,7 +150,9 @@ score test {
 
         string ly = new LilySharp.Core.LilyPond.LilyPondExporter().Export(tree);
         Assert.Contains("\\clef \"bass\" \\melody", ly);
-        Assert.Contains("\\relative c' {", ly);
+        // The twin's anchor is LilyPond's pitchless one (owner's decision 2026-10-28), and
+        // the clef moves it no more than it did `\relative c'`.
+        Assert.Contains("\\relative c {", ly);
     }
 
     // A top-level `clef` is the clef of every part that names none (GRAMMAR §2.1) — on the
@@ -164,7 +166,7 @@ score test {
     public void ATopLevelClef_IsTheClefOfAPartThatNamesNone(string score)
     {
         var source = "clef bass\npart melody\npart other\npart own { clef treble }\n"
-                     + "section A {\n  melody { c1 }\n  other { c1 }\n  own { c1 }\n}\nform { A }\n"
+                     + "section A {\n  melody { c'1 }\n  other { c'1 }\n  own { c'1 }\n}\nform { A }\n"
                      + score + "\n";
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
@@ -185,7 +187,7 @@ score test {
     public void APartsOwnClef_WinsOverTheTopLevelOne()
     {
         var source = "clef bass\npart melody\npart own { clef treble }\n"
-                     + "section A {\n  melody { c1 }\n  own { c1 }\n}\nform { A }\n"
+                     + "section A {\n  melody { c'1 }\n  own { c'1 }\n}\nform { A }\n"
                      + "score { staff melody  staff own }\n";
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
@@ -200,13 +202,13 @@ score test {
     }
 
     [Fact]
-    public void TrebleClef_StartsAtOctave4()
+    public void TrebleClef_StartsAtOctave3()
     {
-        // Default treble clef, initial octave is 4
-        // c4 in treble clef: staffPosition = pitchIndex(c) - pitchIndex(b) + (4-4)*7 = 0 - 6 = -6
+        // Default treble clef: the frame opens on F3 (owner's decision 2026-10-28), so a
+        // bare c is C3: staffPosition = pitchIndex(c) - pitchIndex(b) + (3-4)*7 = -6 - 7 = -13
         var notes = CollectNotes(MusicSource.Wrap("c4 |"));
         Assert.Single(notes);
-        Assert.Equal(-6, notes[0].StaffPosition);
+        Assert.Equal(-13, notes[0].StaffPosition);
     }
 
     [Fact]
@@ -231,11 +233,12 @@ score test {
     }
 
     [Fact]
-    public void InstrumentDefaults_Violin_TrebleOctave4()
+    public void InstrumentDefaults_Violin_TrebleOctave3()
     {
+        // Every preset's octave is the default anchor 3 (owner's decision 2026-10-28).
         var (clef, octave) = InstrumentDefaults.GetDefaults("violin");
         Assert.Equal(ClefType.Treble, clef);
-        Assert.Equal(4, octave);
+        Assert.Equal(3, octave);
     }
 
     [Fact]
@@ -247,35 +250,38 @@ score test {
     }
 
     [Fact]
-    public void InstrumentDefaults_Guitar_Treble8BelowOctave4()
+    public void InstrumentDefaults_Guitar_Treble8BelowOctave3()
     {
         var (clef, octave) = InstrumentDefaults.GetDefaults("guitar");
         Assert.Equal(ClefType.Treble8Below, clef);
-        Assert.Equal(4, octave);
+        Assert.Equal(3, octave);
     }
 
     [Fact]
-    public void InstrumentDefaults_Flute_TrebleOctave5()
+    public void InstrumentDefaults_Flute_MovesNoOctave()
     {
+        // The flute preset anchored octave 5 until the owner's decision 2026-10-28: no
+        // preset moves any octave, so it keeps the default anchor.
         var (clef, octave) = InstrumentDefaults.GetDefaults("flute");
         Assert.Equal(ClefType.Treble, clef);
-        Assert.Equal(5, octave);
+        Assert.Equal(InstrumentDefaults.DefaultAnchorOctave, octave);
     }
 
     [Fact]
-    public void InstrumentDefaults_Tuba_BassOctave2()
+    public void InstrumentDefaults_Tuba_MovesNoOctave()
     {
+        // The tuba preset anchored octave 2 until the owner's decision 2026-10-28.
         var (clef, octave) = InstrumentDefaults.GetDefaults("tuba");
         Assert.Equal(ClefType.Bass, clef);
-        Assert.Equal(2, octave);
+        Assert.Equal(InstrumentDefaults.DefaultAnchorOctave, octave);
     }
 
     [Fact]
-    public void InstrumentDefaults_Unknown_DefaultsTrebleOctave4()
+    public void InstrumentDefaults_Unknown_DefaultsTrebleOctave3()
     {
         var (clef, octave) = InstrumentDefaults.GetDefaults("theremin");
         Assert.Equal(ClefType.Treble, clef);
-        Assert.Equal(4, octave);
+        Assert.Equal(3, octave);
     }
 
     [Fact]
@@ -283,7 +289,7 @@ score test {
     {
         var (clef, octave) = InstrumentDefaults.GetDefaults("VIOLIN");
         Assert.Equal(ClefType.Treble, clef);
-        Assert.Equal(4, octave);
+        Assert.Equal(3, octave);
     }
 
     [Theory]
@@ -292,15 +298,20 @@ score test {
     [InlineData("tenor")]
     [InlineData("treble_8")]
     [InlineData("treble")]
-    public void AClefInThePartHeader_LeavesTheAnchorAtFour(string clef)
+    public void AClefInThePartHeader_LeavesTheAnchorAtThree(string clef)
     {
-        // The relative anchor is `octave N` > instrument preset > 4 — never the clef
-        // (user decision 2026-09-15). The preset row is the positive control.
+        // The relative anchor is `octave N` > 3 — never the clef (user decision
+        // 2026-09-15), and no longer the preset (owner's decision 2026-10-28). The explicit
+        // `octave 4` row is the positive control.
         var part = SyntaxTree.Parse($"part p {{ clef {clef} }}").GetRoot()
             .ChildNodes().OfType<PartDeclarationSyntax>().First();
-        Assert.Equal(4, LilySharp.Core.Semantics.PartHeaderDefaults.Read(part).AnchorOctave);
-        Assert.Equal(4, InstrumentDefaults.AnchorOctave(null, null));
-        Assert.Equal(3, InstrumentDefaults.AnchorOctave(null, "cello"));
+        Assert.Equal(3, LilySharp.Core.Semantics.PartHeaderDefaults.Read(part).AnchorOctave);
+        Assert.Equal(3, InstrumentDefaults.AnchorOctave(null, null));
+        Assert.Equal(3, InstrumentDefaults.AnchorOctave(null, "tuba"));
+        Assert.Equal(4, InstrumentDefaults.AnchorOctave(4, "tuba"));
+        var shifted = SyntaxTree.Parse($"part p {{ clef {clef} octave 4 }}").GetRoot()
+            .ChildNodes().OfType<PartDeclarationSyntax>().First();
+        Assert.Equal(4, LilySharp.Core.Semantics.PartHeaderDefaults.Read(shifted).AnchorOctave);
     }
 
     [Theory]
@@ -345,7 +356,7 @@ score test {
         var source = @"
 part fl { instrument flute }
 section A {
-    fl { c4 d e f | }
+    fl { c''4 d e f | }
 }
 form { A }
 score test {
@@ -387,10 +398,10 @@ score test {
         // After section A ends high, section B should reset to initial octave
         var source = @"
 section A {
-    melody { c4 d e f | g a b c' | }
+    melody { c'4 d e f | g a b c' | }
 }
 section B {
-    melody { c4 d e f | }
+    melody { c'4 d e f | }
 }
 form { A B }
 score test {
@@ -489,11 +500,11 @@ score test {
     }
 
     [Fact]
-    public void InstrumentDefaults_Tenor_Treble8BelowOctave4()
+    public void InstrumentDefaults_Tenor_Treble8BelowOctave3()
     {
         var (clef, octave) = InstrumentDefaults.GetDefaults("tenor");
         Assert.Equal(ClefType.Treble8Below, clef);
-        Assert.Equal(4, octave);
+        Assert.Equal(3, octave);
     }
 
     /// <summary>`octave absolute` inside a PART declaration is not where the mode goes, and the
@@ -502,13 +513,13 @@ score test {
     [Fact]
     public void OctaveAbsolute_InAPartDeclaration_NamesWhereTheModeGoes()
     {
-        var inPart = SyntaxTree.Parse("part bs { clef bass octave absolute }\nsection A { bs { c4 d e f | } }\nform { A }\nscore { staff bs }");
+        var inPart = SyntaxTree.Parse("part bs { clef bass octave absolute }\nsection A { bs { c'4 d e f | } }\nform { A }\nscore { staff bs }");
         var error = Assert.Single(LilySharp.Core.Semantics.SemanticValidation.Run(inPart),
             d => d.Severity == DiagnosticSeverity.Error);
         Assert.Contains("is a mode, not a part property", error.Message);
         Assert.Contains("octave absolute c4", error.Message);
 
-        var inMusic = SyntaxTree.Parse("part bs { clef bass }\nsection A { bs { octave absolute c4 d e f | } }\nform { A }\nscore { staff bs }");
+        var inMusic = SyntaxTree.Parse("part bs { clef bass }\nsection A { bs { octave absolute c'4 d' e' f' | } }\nform { A }\nscore { staff bs }");
         Assert.DoesNotContain(LilySharp.Core.Semantics.SemanticValidation.Run(inMusic).Concat(inMusic.Diagnostics),
             d => d.Severity == DiagnosticSeverity.Error);
     }

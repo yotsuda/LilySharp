@@ -43,7 +43,7 @@ public class LyricExtenderCompletionTests
             part v { }
             lyrics w sings v { section Main { Ah __ | | | } }
             section Main {
-              v { g1( | c) | d | }
+              v { g'1( | c') | d' | }
             }
             form { ~Main }
             score { staff ~v  lyrics w }
@@ -95,7 +95,7 @@ public class LyricExtenderCompletionTests
             part v { }
             lyrics w sings v { section Main { c d e effffffffffff __ | e d c | } }
             section Main {
-              v { c4 d e f~ | break f4 e d c | }
+              v { c'4 d' e' f'~ | break f'4 e' d' c' | }
             }
             form { ~Main }
             score { staff ~v  lyrics w }
@@ -145,7 +145,7 @@ public class LyricExtenderCompletionTests
         var svg = LiveRender.SvgFromRenderSpec("""
             part m { clef treble }
             section S {
-              m { c4 d e f | break g1 | }
+              m { c'4 d e f | break g1 | }
               lyrics w sings m { la _ _ _ | lu | }
             }
             form { ~S }

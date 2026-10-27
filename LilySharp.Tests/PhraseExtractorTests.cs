@@ -51,7 +51,7 @@ public class PhraseExtractorTests
     {
         var src = """
             part melody { clef treble
-              section A { c'4 d e f | g a b c' | }
+              section A { c''4 d e f | g a b c' | }
             }
             form { A }
             score { staff melody }
@@ -68,18 +68,18 @@ public class PhraseExtractorTests
     public void MeasureSelection_SnapsToBarlines_AndFixesTheOctave()
     {
         // Measure 2 (`g a b c'`) sits high because the RELATIVE chain climbed
-        // there; a fresh phrase frame would drop its g near C4. The extractor
+        // there; a fresh phrase frame (F3 since 2026-10-28) would drop its g low. The extractor
         // corrects the body's first pitch by measurement — and the first pitch
         // AFTER the reference too: the reference hands off its ANCHOR (bare g),
         // not the inline chunk's last note, so measure 3's d needs its own marks
         // to stay put.
-        var src = "part m { section A { c'4 d e f | g a b c' | d4 e f g } }\n"
+        var src = "part m { section A { c''4 d e f | g a b c' | d4 e f g } }\n"
                 + "form { A }\nscore { staff m }";
         int selStart = src.IndexOf("g a b");
         var newText = ExtractOk(src, selStart, selStart + 1, "climb");
         Assert.Contains("phrase climb { g''4 a b c' |}", newText);
         // Measure 1 stays put; measure 3 keeps its sound via the tail knob.
-        Assert.Contains("c'4 d e f |", newText);
+        Assert.Contains("c''4 d e f |", newText);
         Assert.Contains("d''''4 e f g", newText);
     }
 
@@ -88,11 +88,12 @@ public class PhraseExtractorTests
     {
         // Measure 2's `e f` inherit the half from `c2`; the phrase's default is
         // a quarter, so the extractor stamps the running duration explicitly.
-        var src = "part m { section A { c2 d | e f | g1 } }\n"
+        var src = "part m { section A { c'2 d | e f | g1 } }\n"
                 + "form { A }\nscore { staff m }";
         int selStart = src.IndexOf("e f");
         var newText = ExtractOk(src, selStart, selStart + 1, "mid");
-        Assert.Contains("e2 f", newText);
+        // E4 from a phrase frame opening on F3 (owner's decision 2026-10-28) is e'.
+        Assert.Contains("phrase mid { e'2 f |}", newText);
     }
 
     [Fact]
@@ -100,7 +101,7 @@ public class PhraseExtractorTests
     {
         var src = """
             section A {
-              melody { c4 d e f | g2 g }
+              melody { c'4 d e f | g2 g }
             }
             form { A }
             score { staff melody }
@@ -118,7 +119,7 @@ public class PhraseExtractorTests
         // the same music — here an octave up. (It used to say "a third up", written
         // the glued-interval spelling; it was removed 2026-08-28, and the octave
         // marks are what a second part reaches for now.)
-        var src = "part m { section A { c'4 d e f } }\nform { A }\nscore { staff m }";
+        var src = "part m { section A { c''4 d e f } }\nform { A }\nscore { staff m }";
         int caret = src.IndexOf("d e");
         var newText = PhraseExtractor.Extract(src, caret, caret, "theme").NewText!;
         var harmonized = newText.Replace(
@@ -133,16 +134,16 @@ public class PhraseExtractorTests
     [InlineData("bd")]     // drum vocabulary
     public void UnusableName_IsRefused(string name)
     {
-        var src = "part m { section A { c4 d } }\nform { A }\nscore { staff m }";
-        var result = PhraseExtractor.Extract(src, src.IndexOf("c4"), src.IndexOf("c4"), name);
+        var src = "part m { section A { c'4 d } }\nform { A }\nscore { staff m }";
+        var result = PhraseExtractor.Extract(src, src.IndexOf("c'4"), src.IndexOf("c'4"), name);
         Assert.Null(result.NewText);
     }
 
     [Fact]
     public void TakenName_IsRefused()
     {
-        var src = "part m { section A { c4 d } }\nform { A }\nscore { staff m }";
-        var result = PhraseExtractor.Extract(src, src.IndexOf("c4"), src.IndexOf("c4"), "m");
+        var src = "part m { section A { c'4 d } }\nform { A }\nscore { staff m }";
+        var result = PhraseExtractor.Extract(src, src.IndexOf("c'4"), src.IndexOf("c'4"), "m");
         Assert.Null(result.NewText);
         Assert.Contains("already declared", result.Error);
     }
@@ -150,7 +151,7 @@ public class PhraseExtractorTests
     [Fact]
     public void CaretOutsideMusic_IsRefused()
     {
-        var src = "part m { section A { c4 d } }\nform { A }\nscore { staff m }";
+        var src = "part m { section A { c'4 d } }\nform { A }\nscore { staff m }";
         var result = PhraseExtractor.Extract(src, src.IndexOf("form"), src.IndexOf("form"), "x");
         Assert.Null(result.NewText);
     }

@@ -584,7 +584,7 @@ public class ChordDiagramTests
         const string book = Guitar + """
             octave absolute
             part gt { clef treble }
-            section A { gt { c'4@chord(Cm x-x-10-12-13-11) c'4@chord(8-10-10-8-8-8) c'4@diagram(x-15-13-12-13-x) c'4@diagram(x-x-10-12-13-11).down | } }
+            section A { gt { c''4@chord(Cm x-x-10-12-13-11) c''4@chord(8-10-10-8-8-8) c''4@diagram(x-15-13-12-13-x) c''4@diagram(x-x-10-12-13-11).down | } }
             form { A }
             score { staff gt }
             """;
@@ -655,7 +655,7 @@ public class ChordDiagramTests
         string With(string layout) => layout + """
             octave absolute
             part gt { clef treble }
-            section A { gt { c'4@chord(Cm7) c'4@chord(Cm7 x3x546) c'4@chord(x32010) c'4@diagram(xx0232) | } }
+            section A { gt { c''4@chord(Cm7) c''4@chord(Cm7 x3x546) c''4@chord(x32010) c''4@diagram(xx0232) | } }
             form { A }
             score { staff gt }
             """;
@@ -677,7 +677,7 @@ public class ChordDiagramTests
         string With(string layout) => layout + """
             octave absolute
             part uk { instrument ukulele }
-            section A { uk { c'1@chord(C x32010 0003) | } }
+            section A { uk { c''1@chord(C x32010 0003) | } }
             form { A }
             score { staff uk }
             """;
@@ -693,7 +693,7 @@ public class ChordDiagramTests
         const string book = Guitar + """
             octave absolute
             part gt { clef treble }
-            section A { gt { <c' e' g'>1@chord | } }
+            section A { gt { <c'' e'' g''>1@chord | } }
             form { A }
             score { staff gt }
             """;
@@ -1133,7 +1133,7 @@ public class ChordDiagramTests
             octave absolute
             part gt { clef treble }
             section A {
-              gt { c'1@chord(F) | }
+              gt { c''1@chord(F) | }
               chords prog { F | }
             }
             form { A }
@@ -1221,7 +1221,7 @@ public class ChordDiagramTests
             octave absolute
             part gt { clef treble }
             section A {
-              gt { c'2@chord(C 0003) c'2@chord(Cm7 x3x546) | }
+              gt { c''2@chord(C 0003) c''2@chord(Cm7 x3x546) | }
               chords prog { F(xx3211) | }
             }
             form { A }
@@ -1251,8 +1251,8 @@ public class ChordDiagramTests
             part gt { clef treble }
             part uk { instrument ukulele }
             section A {
-              gt { c'1@chord(G) | }
-              uk { c'1@chord(C) | }
+              gt { c''1@chord(G) | }
+              uk { c''1@chord(C) | }
               chords prog { G | }
             }
             form { A }
@@ -1275,7 +1275,7 @@ public class ChordDiagramTests
             layout gtr { chordDiagrams guitar }
             octave absolute
             part gt { clef treble }
-            section A { gt { c'2@chord(Cm7 x35343) c'2@chord(Cm7 8xx546) | } }
+            section A { gt { c''2@chord(Cm7 x35343) c''2@chord(Cm7 8xx546) | } }
             form { A }
             score g { layout gtr  staff gt }
             """;
@@ -1302,7 +1302,7 @@ public class ChordDiagramTests
             layout gtr { chordDiagrams guitar }
             octave absolute
             part gt { clef treble }
-            section A { gt { c'2@chord(Cm x-3-5-5-4-3) c'4@chord(Cm 8-x-x-8-8-11) c'4@chord(Cm x-x-10-12-13-11) | } }
+            section A { gt { c''2@chord(Cm x-3-5-5-4-3) c''4@chord(Cm 8-x-x-8-8-11) c''4@chord(Cm x-x-10-12-13-11) | } }
             form { A }
             score g { layout gtr  staff gt }
             """;
@@ -1318,7 +1318,7 @@ public class ChordDiagramTests
             layout { chordDiagrams none }
             octave absolute
             part gt { clef treble }
-            section A { gt { c'1@chord(Cm7 x3x546) | } }
+            section A { gt { c''1@chord(Cm7 x3x546) | } }
             form { A }
             score { staff gt }
             """;
@@ -1378,7 +1378,7 @@ public class ChordDiagramTests
         const string book = """
             layout every { chordDiagrams ukulele all }
             part m { }
-            section A { m { c'1 | } }
+            section A { m { c''1 | } }
             form { A }
             score a { layout every  staff m }
             score b { layout every { chordDiagrams guitar }  staff m }
@@ -1419,7 +1419,7 @@ public class ChordDiagramTests
         string With(string layout) => layout + """
             octave absolute
             part gt { clef treble }
-            section A { gt { c'4@chord(Cm7) c'4@chord(Cm7 x3x546) <c' e' g'>4@chord c'4@chord("N.C.") | } }
+            section A { gt { c''4@chord(Cm7) c''4@chord(Cm7 x3x546) <c'' e'' g''>4@chord c''4@chord("N.C.") | } }
             form { A }
             score { staff gt }
             """;
@@ -1439,7 +1439,7 @@ public class ChordDiagramTests
             octave absolute
             part gt { clef treble }
             section A {
-              gt { c'2@chord(C13) c'2@chord(C13) | c'1 | c'1 | }
+              gt { c''2@chord(C13) c''2@chord(C13) | c''1 | c''1 | }
               chords prog { C13 | C13 | G |  }
             }
             form { A }
@@ -1480,7 +1480,7 @@ public class ChordDiagramTests
         string Book(string layout) => layout + """
             octave absolute
             part gt { clef treble }
-            section A { gt { c'2@chord(Cm7) <c' e' g'>2@chord | } }
+            section A { gt { c''2@chord(Cm7) <c'' e'' g''>2@chord | } }
             form { A }
             score { staff gt }
             """;
@@ -1532,7 +1532,7 @@ public class ChordDiagramTests
             octave absolute
             part gt { clef treble }
             section A {
-              gt { c'1@chord(G) | }
+              gt { c''1@chord(G) | }
               chords prog { G | }
             }
             form { A }
@@ -1726,7 +1726,7 @@ public class ChordDiagramTests
         Assert.Contains("<offset>48</offset>", Measure(xml, 2));
         const string byPart = """
             octave absolute
-            part gt { clef treble  section A { c'1 | c'1 | } }
+            part gt { clef treble  section A { c''1 | c''1 | } }
             chords prog { section A { C | G7 . Am . | } }
             form { A }
             score { chords prog  staff gt }
@@ -1868,7 +1868,7 @@ public class ChordDiagramTests
         string book = Table + """
             octave absolute
             part gt { clef treble }
-            section A { gt { c'4@chord(F) c'4@chord(G) <c' e' g'>4@chord c'4@chord(F 133211) | } }
+            section A { gt { c''4@chord(F) c''4@chord(G) <c'' e'' g''>4@chord c''4@chord(F 133211) | } }
             form { A }
             score { staff gt }
             """;
@@ -1885,8 +1885,8 @@ public class ChordDiagramTests
         const string byPart = layout + """
             octave absolute
             part gt { clef treble }
-            section A { gt { c'1 | c'1 | } }
-            section B { gt { c'1 | c'1 | } }
+            section A { gt { c''1 | c''1 | } }
+            section B { gt { c''1 | c''1 | } }
             chords prog { section A { F | G | }  section B { F | G | } }
             form { A B }
             score { chords prog  staff gt }
@@ -1895,8 +1895,8 @@ public class ChordDiagramTests
         const string marks = layout + """
             octave absolute
             part gt { clef treble }
-            section A { gt { c'1@chord(F) | c'1@chord(G) | } }
-            section B { gt { c'1@chord(F) | c'1@chord(G) | } }
+            section A { gt { c''1@chord(F) | c''1@chord(G) | } }
+            section B { gt { c''1@chord(F) | c''1@chord(G) | } }
             form { A B }
             score { staff gt }
             """;
@@ -1907,8 +1907,8 @@ public class ChordDiagramTests
             layout { chordDiagrams guitar { section B { F 133211 } } }
             octave absolute
             part gt { clef treble }
-            section A { gt { c'1 | }  chords prog { F | } }
-            section B { gt { c'1 | }  chords prog { F | } }
+            section A { gt { c''1 | }  chords prog { F | } }
+            section B { gt { c''1 | }  chords prog { F | } }
             form { A B }
             score { chords prog  staff gt }
             """;
@@ -1940,7 +1940,7 @@ public class ChordDiagramTests
         string book = Table + """
             octave absolute
             part gt { clef treble }
-            section A { gt { c'2@chord(F) c'2@chord(G) | } }
+            section A { gt { c''2@chord(F) c''2@chord(G) | } }
             form { A }
             score { staff gt }
             """;
@@ -1960,7 +1960,7 @@ public class ChordDiagramTests
             octave absolute
             part gt { clef treble }
             section A {
-              gt { c'2@chord(F) c'2@chord(G) | }
+              gt { c''2@chord(F) c''2@chord(G) | }
               chords prog { C . F G | }
             }
             form { A }
@@ -2060,7 +2060,7 @@ public class ChordDiagramTests
         string book = Capo3 + """
             octave absolute
             part gt { clef treble }
-            section A { gt { c'2@chord(Eb) <c' e' g'>2@chord | } }
+            section A { gt { c''2@chord(Eb) <c'' e'' g''>2@chord | } }
             form { A }
             score { staff gt }
             """;
@@ -2075,7 +2075,7 @@ public class ChordDiagramTests
     public void UnderACapo_ABothNameRaisesBothQualities()
     {
         string book = "layout { chordDiagrams guitar capo 3  chordNames both }\n"
-            + "part m { clef treble }\nsection A { m { c4 d e f | } chords prog { Ebm7 | } }\nform { A }\nscore { chords prog  staff m }\n";
+            + "part m { clef treble }\nsection A { m { c'4 d e f | } chords prog { Ebm7 | } }\nform { A }\nscore { chords prog  staff m }\n";
         var score = SvgGenerator.CollectScore(SyntaxTree.Parse(book), RenderSpecParser.FindFirst(SyntaxTree.Parse(book)));
         var item = Assert.Single(score.ChordNames);
         Assert.Equal("E♭m7 (Cm7)", item.ChordText);
@@ -2104,7 +2104,7 @@ public class ChordDiagramTests
         Assert.Equal("'320003' sounds B♭ D F with the capo on fret 3, which is Bb, not Eb (D F are not tones of Eb; "
                      + "it lacks G (the 3rd)) - write Bb(320003), or Eb(x32010) for Eb under the capo, or another shape.",
             Assert.Single(Mismatches(Song(Capo3, "Eb(320003) |", "c'1 |"))).Message);
-        Assert.Empty(Mismatches("layout { chordDiagrams guitar capo 3 { Eb x32010 } }\npart m { }\nsection A { m { c'1 | } }\nform { A }\nscore { staff m }\n"));
+        Assert.Empty(Mismatches("layout { chordDiagrams guitar capo 3 { Eb x32010 } }\npart m { }\nsection A { m { c''1 | } }\nform { A }\nscore { staff m }\n"));
         // A listed chord with no pressed shape on the tuning warns (C13 → A13 on the ukulele).
         Assert.Contains("C13 has no chord diagram on 'ukulele'",
             Assert.Single(Warnings(Song("layout { chordDiagrams ukulele capo 3 { C13 } }\n", "C13 |", "c'1 |"))).Message);
@@ -2147,7 +2147,7 @@ public class ChordDiagramTests
         string book = Capo3All + """
             octave absolute
             part gt { clef treble }
-            section A { gt { c'1@chord(Eb) | } }
+            section A { gt { c''1@chord(Eb) | } }
             form { A }
             score { staff gt }
             """;
@@ -2171,7 +2171,7 @@ public class ChordDiagramTests
             octave absolute
             part gt { clef treble }
             part bs { clef bass }
-            section A { gt { c'1@chord(Eb) | } bs { c1 | } chords prog { Eb | } }
+            section A { gt { c''1@chord(Eb) | } bs { c'1 | } chords prog { Eb | } }
             form { A }
             score { chords prog  staff gt  staff bs }
             """;
@@ -2290,7 +2290,7 @@ public class ChordDiagramTests
         string doc = Capo3All + """
             octave absolute
             part gt { clef treble }
-            section A { gt { c'1@chord(Eb) | } }
+            section A { gt { c''1@chord(Eb) | } }
             form { A }
             score { staff gt }
             """;
@@ -2335,7 +2335,7 @@ public class ChordDiagramTests
             octave absolute
             part gt { clef treble }
             section A {
-              gt { c'2@chord(Dm7) <e' g' b'>2@chord | c'1 | }
+              gt { c''2@chord(Dm7) <e'' g'' b''>2@chord | c''1 | }
               chords prog { C | G |  }
             }
             form { A }
@@ -2406,7 +2406,7 @@ public class ChordDiagramTests
         string doc = """
             octave absolute
             part uk { instrument ukulele }
-            section A { uk { c'2@chord(C 0003) c'2@chord(Cmaj9) | } }
+            section A { uk { c''2@chord(C 0003) c''2@chord(Cmaj9) | } }
             form { A }
             score { staff uk }
             """;
@@ -2445,13 +2445,13 @@ public class ChordDiagramTests
         foreach (var book in new[]
         {
             "layout { chordDiagrams guitar all }\noctave absolute\npart m { clef treble }\n"
-            + "section A { m { c'1 | c'1 | c'1 | c'2 c'2 | } chords prog { C | G | F | C A(x57765) | } }\n"
+            + "section A { m { c''1 | c'1 | c'1 | c'2 c'2 | } chords prog { C | G | F | C A(x57765) | } }\n"
             + "form { A }\nscore { chords prog  staff m }\n",
             "layout { chordDiagrams guitar all }\n"
             + "section A { chords prog { C | G | F | C A(x57765) | C | G | F | C A(x57765) | C | G | F | C A(x57765) | C | G | F | C A(x57765) | } }\n"
             + "form { A }\nscore { chords prog }\n",
             "layout { chordDiagrams guitar all }\noctave absolute\npart m { clef treble }\n"
-            + "section A { m { c'4 d' e' f'@chord(A x57765) | } }\nform { A }\nscore { staff m }\n",
+            + "section A { m { c''4 d' e' f'@chord(A x57765) | } }\nform { A }\nscore { staff m }\n",
         })
         {
             var tree = SyntaxTree.Parse(book);

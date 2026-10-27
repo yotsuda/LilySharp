@@ -48,7 +48,7 @@ public class BeamFewLineStaffTests
         octave absolute
         time 4/4
         part p { }
-        section A { p { b8 b d' d' | f'8 f' a' a' | g8 g e e | c8 c a, a, | } }
+        section A { p { b'8 b' d'' d'' | f''8 f'' a'' a'' | g'8 g' e' e' | c'8 c' a a | } }
         form { A }
         score { staff p as lines {{lines}} }
         """);

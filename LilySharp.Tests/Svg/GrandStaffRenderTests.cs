@@ -77,8 +77,8 @@ public class GrandStaffRenderTests
             title "Test"
             time 4/4
 
-            phrase rh { c''4 | }
-            phrase lh { c4 | }
+            phrase rh { c'''4 | }
+            phrase lh { c'4 | }
 
             section Main {
               melody { rh }

@@ -13,7 +13,7 @@ part m { clef treble }
 
 section Main {
   m {
-    c64[ c] a'[ a'] f[ f] e'[ e'] |
+    c'64[ c'] a''[ a''] f'[ f'] e''[ e''] |
   }
 }
 

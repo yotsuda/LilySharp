@@ -10,12 +10,12 @@ time 3/4  key a minor  octave absolute
 part rh { clef treble }  part lh { clef bass octave 3 }
 
 section A {
-  rh { e'4( a' g' | e'2.) | f'4( a' g' | d'2.) | break }
+  rh { e''4( a'' g'' | e''2.) | f''4( a'' g'' | d''2.) | break }
   lh { a,4@sustain <c e a> <c e a> | a,4 <c e a> <c e a>@!sustain |
        d4@sustain <f a d'> <f a d'> | g,4 <b, d g> <b, d g>@!sustain | }
 }
 section B {
-  rh { c''4@trill( b' a' | gis'2.) | e'4( a' g' | a'2.@fermata) | }
+  rh { c'''4@trill( b'' a'' | gis''2.) | e''4( a'' g'' | a''2.@fermata) | }
   lh { e,4@sustain <gis b d'> <gis b d'> | e,2.@!sustain |
        a,4@sustain <c e a> <c e a> | <a, e a c' e'>2.@!sustain | }
 }

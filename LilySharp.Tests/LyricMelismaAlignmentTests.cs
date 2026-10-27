@@ -41,7 +41,7 @@ public class LyricMelismaAlignmentTests
 {
     private const string Source = @"
 time 4/4
-part v { section A { c4 c c16( d e f) g4 | } }
+part v { section A { c'4 c c16( d e f) g4 | } }
 lyrics w sings v { section A { ha ha looong __ ho | } }
 form { A }
 score { staff v  lyrics w }

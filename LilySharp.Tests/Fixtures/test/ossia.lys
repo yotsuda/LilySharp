@@ -11,12 +11,12 @@ time 4/4
 
 section Main {
     melody {
-        c4 d e fis | g4 a b c | b4 a g fis |
+        c'4 d e fis | g4 a b c | b4 a g fis |
         break
         c4 d e fis | g2 g | c,1 |
     }
     ossia_melody {
-        r1 | c'4 e g e | r1 |
+        r1 | c''4 e g e | r1 |
         r1 | r1 | r1 |
     }
 }

@@ -27,7 +27,7 @@ part melody
 
 section Main {
   melody {
-    c4 d e |
+    c'4 d e |
     R2.*3 |
     f4 g a |
     time 2/4 R2*3 |
