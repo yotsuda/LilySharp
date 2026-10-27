@@ -15,6 +15,9 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Scan import
 
+- `[editor]` **Fix OMR Marks with AI reads a bar point by point**: the prompt says what sounds
+  together, how ties, slurs and beams join, which voice a note is in, how its pitch is read, which
+  symbols a reader confuses, and what the bars around it say.
 - `[editor]` **Fix OMR Marks with AI handles a missed barline**: a bar box spanning two bars is
   measured against its neighbours and named to the AI, which writes the line's music as the bars
   the picture shows.

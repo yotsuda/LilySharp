@@ -127,19 +127,19 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1004セッション（2026-10-27・YT-DELL2）
+
+第1003 と同じ会話の続き。`-Start p1004`（開始 HEAD `94ea89c0f`・full **13377 / 0 / 2 / 13379**・第1002 を ARCHIVE へ）。作業場所は Lab `sessions/p1004/`。
+- **ユーザー「OMR 結果を AI に直させるプロンプトに: 同じタイミングで鳴る音と違うタイミングで鳴る音を意識・beam、タイ、スラーを正しくつなげる・複数声部でどの音符が上下どちらか検討。ほかにもあれば提案して」** → 提案 4 つ（音の高さと臨時記号／読み違えやすい記号／前後の小節／書き足さない）→ **ユーザーが前の 3 つを選んだ**。`omrAiFixCore.systemPromptOf` に「HOW TO READ THE BAR, point by point」6 項（判断の順位の後・手がかりの前）。Lily# の音名が調号に依らないこと（`key g major` の `f'`=77・`fis'`=78）は MIDI で確かめた。網 `omrAiFixCore.test` 1 本（npm 487）。設計 §3.1 ⑻・両 CHANGELOG・MANUAL-CHECKS C17。採用率はオーナーの実機で。
+判定（2026-10-27・第1004 の終わり）: 次はユーザーの指示（C9〜C17）。
+
+## 以下は第1003セッションの経緯
+
 ### 1.1 第1003セッション（2026-10-27・YT-DELL2）
 
 第1002 と同じ会話の続き。`-Start p1003`（開始 HEAD `b77ba012f`・full **13377 / 0 / 2 / 13379**＝新しい網を入れた作業ツリーで・第1001 を ARCHIVE へ）。作業場所は Lab `sessions/p1003/`。
 - **ユーザー「`<c' e e>8@chord(C)` のように書いたとき、C の構成音でない音符に警告を出すべき？」** → 提案＝和音そのものの `@chord` だけ（単音の `@chord` は旋律の非和声音が普通）・余分な音だけ（足りない音はボイシングの省略）・LYS1039（コード図）に倣う・強さは情報か警告か → **ユーザー「情報の方がいい」**。Core `ChordToneValidator`（`ChordAnnotation.Of` の Symbol と Structure・`ChordVoicings.TryTones` の allowed・外れた音ごとに `DiagnosticBag.Info`（新設）・`ChordStructure.TryRecognize`（書いた順）＋`ChordShapes.SourceSymbol` で「the chord's notes spell X — write @chord(X)」）・**LYS1054** `ChordToneOutsideSymbol`・公開の `ChordTones`（`ProposedName`・`SymbolSpan`）・LSP の CodeAction「Name the chord X」（symbol の語を置き換え）。網 `ChordToneValidatorTests` 9 本。手持ちの 550 冊（samples・site・docs・Lab corpora）に `<…>@chord(…)` の書き方は 0＝新しい情報は 0。⚠️ `lysc check` の出力はコードを刷らない（数えるならメッセージで）。GRAMMAR・SYNTAX_REFERENCE・site chords・両 CHANGELOG・MANUAL-CHECKS C16。
 判定（2026-10-27・第1003 の終わり）: 次はユーザーの指示（C9〜C16）。
-
-## 以下は第1002セッションの経緯
-
-### 1.1 第1002セッション（2026-10-27・YT-DELL2）
-
-第1001 と同じ会話の続き。`-Start p1002`（開始 HEAD `e78d3babc`・full **13368 / 0 / 2 / 13370**・第1000 を ARCHIVE へ）。作業場所は Lab `sessions/p1002/`。
-- **ユーザー「lys プレビューで和音の構成音を右クリックしたら『和音を選択する』メニュー。< >| にジャンプするだけで良い」→「それだとだめ、|< > でないと和音全体を選択する動作にならない。でも < >| にカーソルがある場合も和音を選択するようにした方がいいかも」→「< >| でも和音全体が選択されるなら < >| にジャンプした方が便利。装飾やオクターブはこの位置に書く」**。調べると、ステップキー（NoteStepper）はもともと `<`・`>` の直後・音価の上で和音全体（`TargetKind.Chord`）、プレビューの光り方は `|<` でも何も光らなかった（符頭の data-pos は各音）。→ previewCore `chordSpans`（文の `<…>`・`<<`/`>>`・`\<`/`\>`・コメント・文字列を除く・1 行）と `chordAtCaret`（`|<`・`>|`・`>` に続けて書いた音価や `@` の中）。キャレットがそこなら `highlightRange` で和音全体を光らせる。描画ごとに `chordSpans` をページへ → 右クリックの符頭が和音の中なら `lysOnChord`／`lysChordEnd` → `lilysharp.previewSelectChord`＝キャレットを `>` の直後へ。網 `previewCore.test` 3 本（npm 486）。site commands・両 CHANGELOG・MANUAL-CHECKS C15。
-判定（2026-10-27・第1002 の終わり）: 次はユーザーの指示（C9〜C15）。
 
 ## 2. 開いている作業
 

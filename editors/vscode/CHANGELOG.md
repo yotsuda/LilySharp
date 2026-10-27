@@ -13,6 +13,13 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ### Scan import
 
+- **Fix OMR Marks with AI tells the model how to read a bar, point by point**: what sounds together
+  (one stem, one chord) and what one after another, with each voice lined up across the bar; ties,
+  slurs and beams opened and closed where the page has them, into and out of the bar; each note in
+  the voice its stem points to; the pitch from the ledger lines, the clef and the bar's accidentals
+  (a Lily# name is the pitch itself, whatever the key); the tuplet numbers, dots, rests and grace
+  notes a reader confuses; and the bars around it — a tie or a slur coming in, the voices kept, the
+  other parts' rhythm as a check.
 - **A bar the reader merged with its neighbour is fixed as two bars.** When the reader misses a
   barline, its box for the bar spans both and the line holds both bars' music; the bar's picture
   then shows two bars. Fix OMR Marks with AI now matches the text to the bars in the picture —

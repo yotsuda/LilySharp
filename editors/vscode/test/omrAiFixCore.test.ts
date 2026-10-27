@@ -233,6 +233,27 @@ describe('what the model is shown', () => {
         assert.match(system, /Making the compiler's error go away is not the aim/);
     });
 
+    // Owner's request 2026-10-27: how to read a bar — what sounds together, what joins the notes,
+    // which voice a note is in; and, chosen from the proposals, the pitch, the symbols a reader
+    // confuses and the bars around it. Before the clues, after the two things that decide.
+    it('says how to read the bar, point by point', () => {
+        const system = systemPromptOf('GRAMMAR');
+        const at = (s: string) => system.indexOf(s);
+        assert.ok(at('2. The meter.') < at('HOW TO READ THE BAR') && at('HOW TO READ THE BAR') < at('Everything else is a clue'));
+        for (const point of ['- WHEN each event sounds.', '- What JOINS the events.', '- Which VOICE each note is in.',
+            '- The PITCH of each head.', '- The symbols a reader confuses.', '- The bars around it.']) {
+            assert.ok(at(point) > at('HOW TO READ THE BAR'), point);
+        }
+        assert.match(system, /Heads stacked on one stem[^]*one chord <…>/);
+        assert.match(system, /SAME pitch is a tie: ~ after the first/);
+        assert.match(system, /a slur that came in from the bar before closes\s+here with \) alone/);
+        assert.match(system, /stem up: the first line, stem down: the\s+second — even where the voices cross/);
+        assert.match(system, /in G major an F sharp is fis, an F natural f/);
+        assert.match(system, /An accidental\s+holds to the end of the bar/);
+        assert.match(system, /tuplet 3\/2 \{ … \} — a reader often\s+drops it/);
+        assert.match(system, /A tie at the end of the bar before means this bar starts on that pitch/);
+    });
+
     it('shows the bar without its marks, the note as a symptom, and asks for the picture\'s line', () => {
         const marked = { ...bar2, written: 'voice { s4 e,8@todo("the upper voice is short") s2 } { <a, c e>8 } |' };
         const task = taskPromptOf({ head: '', target: marked, neighbours: { others: [] }, diagnostics: [], image: true });
