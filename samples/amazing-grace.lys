@@ -9,17 +9,16 @@ composer "Traditional / J. Newton"
 tempo 84
 time 3/4
 key g major
-octave absolute
 
 part melody { clef treble }
 
 section Verse {
   partial 4
   melody {
-    d4 |
+    d'4 |
     g2 b8 g8 | b2 a4 | g2 e4 | d2 d4 |
-    g2 b8 g8 | b2 a4 | d'2. | d'2 b4 |
-    d'2 b8 d'8 | b2 g4 | d2 e8 g8 | g2 d4 |
+    g2 b8 g8 | b2 a4 | d2. | d2 b4 |
+    d2 b8 d8 | b2 g4 | d2 e8 g8 | g2 d4 |
     g2 b8 g8 | b2 a4 | g2. |
   }
   chords prog {

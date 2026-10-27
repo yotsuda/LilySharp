@@ -6,8 +6,8 @@ part melody
 
 section A {
   melody {
-    c8[ d e f g a] b c' |
-    c'8 b a g f e d c |
+    c'8[ d e f g a] b c |
+    c8 b a g f e d c |
   }
 }
 

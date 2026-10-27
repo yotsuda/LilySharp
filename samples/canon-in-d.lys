@@ -5,21 +5,20 @@
 // Lily# features on display:
 //   phrase / ref     — the 4-bar ground is written ONCE...
 //   repeat unfold    — ...and cycled 13 times with a single statement
-//   octave absolute  — with the bass re-anchored to C3 (part { octave 3 })
+//   octaves          — LilyPond's, relative: each note takes the octave nearest the one before
 //   R1               — whole-measure rests while the ground establishes itself
 title "Canon in D"
 composer "Johann Pachelbel"
 tempo 56
 time 4/4
 key d major
-octave absolute
 
 part violin { clef treble }
-part continuo { clef bass octave 3 }
+part continuo { clef bass }
 
 // The immortal ground: D  A  | Bm  F#m | G  D  | G  A
 phrase ground {
-  d2 a,2 | b,2 fis,2 | g,2 d2 | g,2 a,2 |
+  d2 a2 | b2 fis2 | g2 d'2 | g,2 a2 |
 }
 
 section Canon {
@@ -27,46 +26,46 @@ section Canon {
     // Cycle 1: the ground alone.
     R1 | R1 | R1 | R1 |
     // Cycle 2: the canon enters in half notes.
-    fis'2@p e'2 | d'2 cis'2 | b2 a2 | b2 cis'2 |
+    fis''2@p e2 | d2 cis2 | b2 a2 | b2 cis2 |
     // Cycle 3: quarters, circling each chord.
-    d'4 fis' a' g' | fis' d' fis' e' | d' b d' a | g b a g |
+    d4 fis a g | fis d fis e | d b d a | g b a g |
     // Cycle 4: the famous descending quarters.
-    fis'4 e' d' cis' | b a b cis' | d' cis' b a | g fis g e |
+    fis'4 e d cis | b a b cis | d cis b a | g fis g e |
     // Cycle 5: broken-chord eighths.
-    d'8 fis' a' fis' cis' e' a' e' | b d' fis' d' a cis' fis' cis' |
-    b8 d' g' d' a d' fis' d' | b d' g' d' a cis' e' cis' |
+    d'8 fis a fis cis e a e | b d fis d a cis fis cis |
+    b8 d g d a d fis d | b d g d a cis e cis |
     // Cycle 6: a descending-third sequence in eighths.
-    a'8@mf fis' d' fis' a' e' cis' e' | fis' d' b d' fis' cis' a cis' |
-    g'8 d' b d' fis' d' a d' | g' d' b d' e' cis' a cis' |
+    a'8@mf fis d fis a e cis e | fis d b d fis cis a cis |
+    g'8 d b d fis d a d | g d b d e cis a cis |
     // Cycle 7: sixteenth-note figuration.
-    fis'16 g' a' fis' d' e' fis' d' cis' d' e' cis' a b cis' a |
-    d'16 e' fis' d' b cis' d' b a b cis' a fis g a fis |
-    b16 cis' d' b g a b g fis g a fis d e fis d |
-    b16 cis' d' b g a b g cis' d' e' cis' a b cis' a |
+    fis16 g a fis d e fis d cis d e cis a b cis a |
+    d16 e fis d b cis d b a b cis a fis g a fis |
+    b16 cis d b g a b g fis g a fis d e fis d |
+    b'16 cis d b g a b g cis d e cis a b cis a |
     // Cycle 8: eighth-notes around a high pedal tone.
-    fis'8@mf a' d'' a' e' a' cis'' a' |
-    d'8 fis' b' fis' cis' fis' a' fis' |
-    d'8 g' b' g' d' fis' a' fis' |
-    d'8 g' b' g' cis' e' a' e' |
+    fis'8@mf a d a e a cis a |
+    d,8 fis b fis cis fis a fis |
+    d8 g b g d fis a fis |
+    d8 g b g cis, e a e |
     // Cycle 9: the sixteenth figuration an octave higher.
-    fis''16 g'' a'' fis'' d'' e'' fis'' d'' cis'' d'' e'' cis'' a' b' cis'' a' |
-    d''16 e'' fis'' d'' b' cis'' d'' b' a' b' cis'' a' fis' g' a' fis' |
-    b'16 cis'' d'' b' g' a' b' g' fis' g' a' fis' d' e' fis' d' |
-    b'16 cis'' d'' b' g' a' b' g' cis'' d'' e'' cis'' a' b' cis'' a' |
+    fis'16 g a fis d e fis d cis d e cis a b cis a |
+    d16 e fis d b cis d b a b cis a fis g a fis |
+    b16 cis d b g a b g fis g a fis d e fis d |
+    b'16 cis d b g a b g cis d e cis a b cis a |
     // Cycle 10: sweeping sixteenth arpeggios.
-    d'16@f fis' a' d'' a' fis' d'' a' cis' e' a' cis'' a' e' cis'' a' |
-    b16 d' fis' b' fis' d' b' fis' cis' fis' a' cis'' a' fis' cis'' a' |
-    g16 b d' g' d' b g' d' d' fis' a' d'' a' fis' d'' a' |
-    g16 b d' g' d' b g' d' cis' e' a' cis'' a' e' cis'' a' |
+    d,16@f fis a d a fis d' a cis, e a cis a e cis' a |
+    b,16 d fis b fis d b' fis cis fis a cis a fis cis' a |
+    g,16 b d g d b g' d d fis a d a fis d' a |
+    g,16 b d g d b g' d cis e a cis a e cis' a |
     // Cycle 11: the climax, in solid chords.
-    <fis' a' d''>2@ff <e' a' cis''>2 | <d' fis' b'>2 <cis' fis' a'>2 |
-    <b d' g'>2 <a d' fis'>2 | <b d' g'>2 <cis' e' a'>2 |
+    <fis a d>2@ff <e a cis>2 | <d fis b>2 <cis fis a>2 |
+    <b d g>2 <a d fis>2 | <b d g>2 <cis e a>2 |
     // Cycle 12: winding down in sighing quarters.
-    a'4@mp fis' g' e' | fis' d' e' cis' | d' b d' a | b g cis' e' |
+    a'4@mp fis g e | fis d e cis | d b d a | b g cis e |
     // Cycle 13: the canon melody returns to close.
-    fis'2@p e'2 | d'2 cis'2 | b2 a2 | b2 cis'2 |
+    fis2@p e2 | d2 cis2 | b2 a2 | b2 cis2 |
     // Final cadence.
-    <d' fis' a'>1@fermata |
+    <d fis a>1@fermata |
   }
   continuo {
     ground ground ground ground ground ground ground ground ground ground ground ground ground

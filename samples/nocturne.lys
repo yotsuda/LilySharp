@@ -11,7 +11,7 @@ time 4/4
 key d major
 
 part rh { clef treble }
-part lh { clef bass octave 3 }
+part lh { clef bass }
 
 section Main {
   partial 4
