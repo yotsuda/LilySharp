@@ -8,6 +8,11 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Preview
 
+- **An instrument name wider than the paper's margin stays on the paper.** LilyPond lets a name too
+  wide for its 15mm indent overflow into the margin, and past the paper's edge when the margin is too
+  narrow ("Electric Guitar" first, "E. Bass" on later systems). LILYSHARP-OWN: the indent (and the
+  short indent) grows until the widest long (short) name stops a staff space short of the edge; a
+  name LilyPond keeps on the paper leaves both as LilyPond sets them.
 - `[editor]` **The red frame round a bar an OMR reader flagged no longer runs through a `@todo` memo.**
   The frame stands two staff spaces over and under the staff, where a memo is set; the edge that
   would cross a memo now breaks round it, a quarter space clear, and the frame keeps its size.

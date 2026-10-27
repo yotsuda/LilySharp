@@ -120,9 +120,9 @@ internal sealed class SystemBreaker
         // The indent the layout sets the first system with (LayoutEngine.EffectiveIndent,
         // the one home).
         double firstPrefixWidth = GateFirstPrefixWidth(score, maxClefWidth)
-            + LayoutEngine.EffectiveIndent(_options);
+            + LayoutEngine.EffectiveIndent(_options, score);
         double continuationPrefixWidth =
-            GateContinuationPrefixWidth(score, maxClefWidth) + _options.ShortIndent;
+            GateContinuationPrefixWidth(score, maxClefWidth) + LayoutEngine.EffectiveShortIndent(_options, score);
 
         if (_options.UseOptimalLineBreaking)
         {

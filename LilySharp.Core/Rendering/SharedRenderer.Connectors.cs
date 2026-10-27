@@ -506,7 +506,7 @@ internal static partial class SharedRenderer
     /// cannot claim it: LooksLikeLilyPondSymbol rejects any token whose later hyphen segment
     /// starts with a capital, so the trailing <c>X</c> disqualifies it. Cite a neighbour on
     /// the same lines rather than dropping the range.</summary>
-    private const double InstrumentNamePadding = 0.3;
+    internal const double InstrumentNamePadding = 0.3;
 
     /// <summary>
     /// Where an instrument name's RIGHT edge goes: LilyPond's

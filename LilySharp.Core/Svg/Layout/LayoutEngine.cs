@@ -167,8 +167,8 @@ internal sealed partial class LayoutEngine
         // LILYPOND-REF: ly/paper-defaults-init.ly — indent / short-indent
         // LILYPOND-REF: scm/output-lib.scm — system-start-text::calc-x-offset
         // Calculate indent from instrument names (auto-calculate if not explicitly set)
-        double indent = EffectiveIndent(_options);
-        double shortIndent = _options.ShortIndent;
+        double indent = EffectiveIndent(_options, score);
+        double shortIndent = EffectiveShortIndent(_options, score);
 
         // The line-break DP's WHOLE table, not only its best row: the system count is
         // chosen below by the page's score, which reads the other line counts too. F3

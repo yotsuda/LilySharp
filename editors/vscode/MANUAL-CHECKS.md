@@ -255,6 +255,7 @@ edocs/HANDOFF.mde §2 R13 ⒝・OMR の提案 B1〜B6（e..\LilySharp-Omr\docs\r
 - [ ] **C34**（第1022・右手の高さと段の名前）: Compose with AI で「かっこいいピアノの曲を作って」→ 段の左に「右手」「左手」が出ない（独奏ピアノは名前なし）・Range パネルで右手の tessitura が C4〜C6 あたり（D5〜G6 のような高さでない）・*Lily# AI Exchange* の `<plan>` に音域が「書く音名」でも書いてある。
 - [ ] **C35**（第1023・ピアノらしさ）: Compose with AI で「かっこいいピアノの曲を作って」→ *Lily# AI Exchange* で左手が「one note value」で差し戻されない・`<plan>` に性格を作る手段（シンコペーション・アクセント・オクターブ等）が書いてある・曲の右手の下に和音や 3 度があり、両手の間が 1 オクターブも空かない。
 - [ ] **C36**（第1024・作曲者の名前）: Compose with AI で「ロックバラードを書いて。composer を埋めて。」→ `composer` がモデルの名前（例 "Claude Fable 5.1"）・*Lily# AI Exchange* の system 行に `name "…", vendor …, id …, family …, version …`。「composer」と言わなければ composer 行は勝手に増えない（今まで通り）。
+- [ ] **C37**（第1025・名前の見切れ）: `Untitled-2.lys`（バンド 4 段・"Electric Guitar" "E. Bass"）をプレビュー／PDF → 1 段目の Electric Guitar・2 段目以降の E. Bass の頭が紙の左端で切れない。名前の短い曲（Piano・Violin）の 1 段目の字下げは今まで通り。
 
 ## 4. §2 R13 ⒝ — 差分頁の配信（実機未確認・第404）
 

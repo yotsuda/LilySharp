@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 64 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 64 | 観測者がゼロだと自認しているもの |
-| `OWN` | 275 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **403** | |
+| `OWN` | 278 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **406** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -23,7 +23,7 @@
 |---|---:|
 | `LilySharp.Core/Svg/Layout/MusicMarkEngraver.cs` | 20 |
 | `LilySharp.Core/Svg/Layout/ArticulationEngraver.cs` | 16 |
-| `LilySharp.Core/Svg/Layout/MultiStaffLayouter.cs` | 13 |
+| `LilySharp.Core/Svg/Layout/MultiStaffLayouter.cs` | 14 |
 | `LilySharp.Core/Svg/EngravingDefaults.cs` | 12 |
 | `LilySharp.Core/Svg/Layout/NoteCollision.cs` | 9 |
 | `LilySharp.Core/Svg/Layout/SkylineBuilder.cs` | 9 |
@@ -247,7 +247,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（275 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（278 件）
 
 ### `LilySharp.Core/Editing/KeyRespeller.cs`
 - **`KeyRespeller`** LILYSHARP-OWN: an editor aid. The rule:
@@ -503,6 +503,9 @@
 - **`LayoutEngine.BuildLooseLinesBetween`** ⚠️ ONLY ACROSS A GROUP BOUNDARY, AND THAT CONDITION IS LILYSHARP-OWN. LilyPond has
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.cs`
 - **`LayoutEngine.LayoutSystems`** (LILYSHARP-OWN: LilyPond never emits a system with no live staff at all).
+### `LilySharp.Core/Svg/Layout/LayoutEngine.Finishing.cs`
+- **`LayoutEngine.EffectiveIndent`** score were cut at the edge (owner's report 2026-10-27). LILYSHARP-OWN: the indent grows
+- **`LayoutEngine.NameEdgeGutter`** How far short of the paper's left edge a name stops, in staff spaces. LILYSHARP-OWN.
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.Pages.cs`
 - **`LayoutEngine.CreatePages`** LILYSHARP-OWN, DECLARED: the CROP. LilyPond always engraves onto the paper; a lone Lily#
 - **`LayoutEngine.RowsAboveFirstStaff`** ⚠️ LILYSHARP-OWN: THE FALLBACK. A system with no spaceable staff at all — a chords-only
@@ -539,6 +542,7 @@
 ### `LilySharp.Core/Svg/Layout/MultiStaffLayouter.cs`
 - **`MultiStaffLayouter.TextRowRefpointBelowTop`** ⚠️ LILYSHARP-OWN, AND IT HAS ONE HOME ON PURPOSE. LilyPond has no band: a Lyrics or
 - **`MultiStaffLayouter.TextRowVerseSpacing`** ⚠️ LILYSHARP-OWN, AND IT IS NOW THE LAST FLAT VERSE STEP LEFT. Where the row is an
+- **`MultiStaffLayouter.SystemStartReach`** LILYSHARP-OWN: the brace's height read for the estimate — a five-line staff's 4 spaces, and 7 between staves.
 - **`MultiStaffLayouter.LineStartSpringForLine`** LILYSHARP-OWN: a bar of a sign of three or more bars (Lily#'s own; LilyPond's
 - **`MultiStaffLayouter.LayoutMeasures`** LILYSHARP-OWN, the lead-sheet grid's line-start bar (user request
 - **`MultiStaffLayouter.LeadSheetFloorShare`** wide as its 3/4 bars for one beat). LILYSHARP-OWN like the floor itself: LilyPond has

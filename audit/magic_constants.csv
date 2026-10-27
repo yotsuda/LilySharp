@@ -53,6 +53,8 @@
 "Svg/Layout/MultiStaffLayouter.cs","MultiStaffLayouter.SystemStartBarPadding","0.1","private const double SystemStartBarPadding = -0.1;","LILYPOND-REF: scm/define-grobs.scm:3653-3667 ly:side-position-interface::x-aligned-side","Green"
 "Svg/Layout/MultiStaffLayouter.cs","MultiStaffLayouter.SystemStartBarWidth","1.6","internal static double SystemStartBarWidth => EngravingDefaults.StaffLineThickness * 1.6;","LILYPOND-REF: lily/system-start-delimiter.cc:89-95 System_start_delimiter::simple_bar","Green"
 "Svg/Layout/MultiStaffLayouter.cs","MultiStaffLayouter.SystemStartBracketCentreAgainst","2.0","=> anchorLeft - SystemStartBracketPadding - EngravingDefaults.SystemStartBracketThickness / 2.0;","(file-level) LILYPOND-REF: lily/system.cc","Yellow"
+"Svg/Layout/MultiStaffLayouter.cs","MultiStaffLayouter.SystemStartReach","4.0, 7.0","const double ReachStaffHeight = 4.0, ReachStaffGap = 7.0;","(file-level) LILYPOND-REF: lily/system.cc","Yellow"
+"Svg/Layout/MultiStaffLayouter.cs","MultiStaffLayouter.SystemStartReach","2.0",": SystemStartBracketCentreAgainst(anchor) - EngravingDefaults.SystemStartBracketThickness / 2.0;","(file-level) LILYPOND-REF: lily/system.cc","Yellow"
 "Svg/Layout/MultiStaffLayouter.cs","MultiStaffLayouter.SystemStartBracketPadding","0.8","private const double SystemStartBracketPadding = 0.8;","LILYPOND-REF: scm/define-grobs.scm SystemStartBracket (padding . 0.8)</remarks>","Green"
 "Svg/Layout/MultiStaffLayouter.cs","MultiStaffLayouter.LineStartSpringForLine","0.0",": 0.0;","(file-level) LILYPOND-REF: lily/system.cc","Yellow"
 "Svg/Layout/MultiStaffLayouter.cs","MultiStaffLayouter.LineStartSpringForLine","0.0",": 0.0;","(file-level) LILYPOND-REF: lily/system.cc","Yellow"

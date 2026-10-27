@@ -605,7 +605,48 @@ internal sealed partial class LayoutEngine
     /// decision, session 586: the first system is indented as LilyPond indents it.
     /// </para>
     /// </remarks>
-    internal static double EffectiveIndent(LayoutOptions options) => options.Indent;
+    /// <para>
+    /// ⚠️ EXCEPT WHERE A NAME WOULD LEAVE THE PAPER. LilyPond lets a name too wide for its indent
+    /// overflow into the left margin, and past the paper's edge when the margin is too narrow
+    /// for it: "Electric Guitar" on the first system and "E. Bass" on the next ones of a band
+    /// score were cut at the edge (owner's report 2026-10-27). LILYSHARP-OWN: the indent grows
+    /// until the widest name stops a staff space short of the edge
+    /// (<see cref="NameFitIndent"/>) — a name LilyPond keeps on the paper leaves the indent as
+    /// it was.
+    /// </para>
+    internal static double EffectiveIndent(LayoutOptions options, MultiStaffScore? score = null)
+        => options.Indent <= 0 || score is null
+            ? options.Indent
+            : Math.Max(options.Indent, NameFitIndent(options, score, shortNames: false));
+
+    /// <summary>The later systems' indent — the paper's <see cref="LayoutOptions.ShortIndent"/>,
+    /// grown as <see cref="EffectiveIndent"/> is so a SHORT name stays on the paper.</summary>
+    internal static double EffectiveShortIndent(LayoutOptions options, MultiStaffScore? score = null)
+        => score is null ? options.ShortIndent : Math.Max(options.ShortIndent, NameFitIndent(options, score, shortNames: true));
+
+    // How far short of the paper's left edge a name stops, in staff spaces. LILYSHARP-OWN.
+    private const double NameEdgeGutter = 1.0;
+
+    /// <summary>
+    /// The indent at which the widest long (or short) name, placed as
+    /// <c>SharedRenderer.InstrumentNameRightEdge</c> places one too wide for its indent — its
+    /// right edge a padding short of the leftmost delimiter's ink — stops
+    /// <see cref="NameEdgeGutter"/> short of the paper's edge; 0 when the score names nothing.
+    /// </summary>
+    internal static double NameFitIndent(LayoutOptions options, MultiStaffScore score, bool shortNames)
+    {
+        var fonts = score.TextMetrics;
+        double em = LilySharp.Core.Rendering.SharedRenderer.InstrumentNameEm(fonts);
+        var style = LilySharp.Core.Rendering.SharedRenderer.InstrumentNameStyle(fonts);
+        double widest = 0;
+        foreach (var (_, staff, _) in score.EnumerateStaves())
+            if ((shortNames ? staff.ShortInstrumentName : staff.InstrumentName) is { Length: > 0 } name)
+                widest = Math.Max(widest, fonts.Advance(name, em, TextRole.Instrument, style));
+        if (widest <= 0)
+            return 0;
+        return widest + MultiStaffLayouter.SystemStartReach(score)
+            + LilySharp.Core.Rendering.SharedRenderer.InstrumentNamePadding + NameEdgeGutter - options.MarginLeft;
+    }
 
     internal static string ClefToString(ClefType clef) => clef switch
     {

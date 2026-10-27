@@ -731,6 +731,47 @@ internal sealed class MultiStaffLayouter
         => anchorLeft - SystemStartBracePadding;
 
     /// <summary>
+    /// How far left of the indent the score's system-start delimiters can reach — the bar, and
+    /// each group's bracket or brace standing against the ink around it, as PlacedDelimiters
+    /// stands them — before any system is laid out: for sizing an indent that keeps the
+    /// instrument names on the paper (LayoutEngine.NameFitIndent).
+    /// </summary>
+    /// <remarks>
+    /// An estimate on the generous side: a brace's width steps with its height, which only the
+    /// laid-out staves know, so it is read for a group of <c>n</c> staves 7 staff spaces apart —
+    /// wider than most piano systems set it. Too generous costs a name a little more room;
+    /// too mean would put it back at the paper's edge.
+    /// </remarks>
+    internal static double SystemStartReach(MultiStaffScore score)
+    {
+        // LILYSHARP-OWN: the brace's height read for the estimate — a five-line staff's 4 spaces, and 7 between staves.
+        const double ReachStaffHeight = 4.0, ReachStaffGap = 7.0;
+        double bar = score.TotalStaffCount >= 2 ? SystemStartBarLeftEdge(0) : 0;
+        double leftmost = Math.Min(0, bar);
+        // How many staves stand in each group that holds another.
+        var outerStaves = new Dictionary<OuterStaffGroup, int>();
+        foreach (var g in score.StaffGroups)
+            if (g.Outer is { } outer)
+                foreach (var o in outer.SelfAndOuters())
+                    outerStaves[o] = outerStaves.GetValueOrDefault(o) + g.StaffCount;
+        double InkLeft(StaffGroupType type, double anchor, int staves)
+            => type == StaffGroupType.GrandStaff
+                ? SystemStartBraceRightEdgeAgainst(anchor) - MusicFont.Current.Brace(ReachStaffHeight * staves + ReachStaffGap * Math.Max(0, staves - 1)).Width
+                : SystemStartBracketCentreAgainst(anchor) - EngravingDefaults.SystemStartBracketThickness / 2.0;
+        foreach (var g in score.StaffGroups)
+        {
+            double anchor = bar;
+            if (g.Outer is { } outer)
+                foreach (var o in outer.SelfAndOuters().Reverse())
+                    anchor = InkLeft(o.Type, anchor, outerStaves[o]);
+            if (g.HasDelimiter && g.StaffCount >= 2)
+                anchor = InkLeft(g.Type, anchor, g.StaffCount);
+            leftmost = Math.Min(leftmost, anchor);
+        }
+        return -leftmost;
+    }
+
+    /// <summary>
     /// Every group that holds another group on a system, with the leaves standing in it,
     /// OUTERMOST FIRST — a group is listed before any group inside it, so a reader placing
     /// delimiters against their parents finds each parent already placed.

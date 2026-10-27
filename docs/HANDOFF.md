@@ -127,19 +127,20 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1025セッション（2026-10-27・YT-DELL2）
+
+第1024 と同じ会話の続き。`-Start p1025`（開始 HEAD `b594a7466`・full **13392 / 0 / 2 / 13394**・第1023 を ARCHIVE へ）。作業場所は Lab `sessions/p1025/`（`Untitled-2.lys`・png）。
+- **ユーザー「作曲してもらった楽譜（`Untitled-2.lys`・バンド 4 段）。五線左端のパート名が見切れているのを直して」**: png で 1 段目 "Electric Guitar" の頭・2 段目以降 "E. Bass" の頭が紙の左端で切れていた。字下げは LilyPond の 15mm 固定（`EffectiveIndent` は意図して名前から作らない・第586 の決定）、名前は `InstrumentNameRightEdge`（LP の calc-x-offset）で字下げより広いと区切りの左へ溢れる＝LP も同じく余白へ・紙の外へ出す。**LILYSHARP-OWN の直し**: `EffectiveIndent(options, score)`／`EffectiveShortIndent` が、最も広い長い（短い）名前の左端が紙の端から 1 ss（`NameEdgeGutter`）手前で止まる字下げ（`NameFitIndent`＝名前幅＋区切りの届き＋0.3＋1−MarginLeft）まで広げる。区切りの届きは `MultiStaffLayouter.SystemStartReach`（bar・bracket・brace を PlacedDelimiters と同じ鎖で・brace の高さは 4n+7(n−1) で多めに見積もる）。LayoutEngine と SystemBreaker の両方が同じ値（字下げは一つの家）。`indent 0` は今まで通り（1 段目の名前を描かない）。LP の中に収まる名前は字下げ不変＝網 `InstrumentNameOnPaperTests`（広げる／不変の 2 本・SVG の名前の左端を紙の座標で測る）。`InstrumentNamePadding` を internal に。`audit/magic_constants.csv`・`docs/APPROXIMATIONS.md` を再生成（新しい OWN 3・Yellow 2）。両 CHANGELOG・MANUAL-CHECKS C37。
+- ⚠️ LP の双子と 1 段目の字下げが変わるのは「LP では名前が紙の外に出る本」だけ（双子の掃きでは段割れが違いうる）。
+判定（2026-10-27・第1025 の終わり）: 次はユーザーの指示（C9〜C37）。
+
+## 以下は第1024セッションの経緯
+
 ### 1.1 第1024セッション（2026-10-27・YT-DELL2）
 
 第1023 と同じ会話の続き。`-Start p1024`（開始 HEAD `0f14192d2`・full **13392 / 0 / 2 / 13394**・第1022 を ARCHIVE へ）。作業場所は Lab `sessions/p1024/`（`exchange.log`）。
 - **ユーザー「作曲は Claude Fable かと思ったが違うようだ。『ロックバラードを書いて。composer を埋めて。』でダイアログは copilot/claude-fable-5.1 なのに composer は OpenAI。ダイアログのモデルが正しくない？」**: 調べた答え＝ダイアログの名前は `sendRequest` を受ける同じ `LanguageModelChat` の `vendor/family`＝送り先は正しい。*Lily# AI Exchange* でも `system (to copilot/claude-fable-5.1)`・返事に `composer "OpenAI"`＝**プロンプトがモデルに名前を一度も言っていない**ので推測で埋めた（自己申告は証拠にならない・vscode.lm は応答したモデルを返さない＝Copilot 内の振り替えは拡張から見えない）。3 案のうち 2（composer を常に埋める）は**ユーザー決定「何もしない方が良い」**。直し: ① `ChatClient.modelName`（`model.name`）・`modelDetail`（name/vendor/id/family/version/入力 token）。② `composeSystemPrompt(grammar, modelName)` に「You are {name}. 頼まれたら composer はあなた」（頼まれないときの規則は足さない＝今まで通り）。③ `logExchange(chat, …)` の system 行に modelDetail。網 npm +1（510）・tsc 0。両 CHANGELOG・MANUAL-CHECKS C36。
 判定（2026-10-27・第1024 の終わり）: 次はユーザーの指示（C9〜C36）。
-
-## 以下は第1023セッションの経緯
-
-### 1.1 第1023セッション（2026-10-27・YT-DELL2）
-
-第1022 と同じ会話の続き。`-Start p1023`（開始 HEAD `5ec1e0fc0`・full **13392 / 0 / 2 / 13394**＝本便の網 1 本が既に入っていた・第1021 を ARCHIVE へ）。作業場所は Lab `sessions/p1023/`（`exchange.log`＝今回の *Lily# AI Exchange*）。
-- **ユーザー「少し改善したかな。見てみて」→ 講評（名前・左手音域・LilyPond の癖は直った／右手 D5–E6 は AI の意図的な設計／両手の間が 1 オクターブ空き／右手の旋律がほぼ同じリズム型の単旋律／左手の 4 分の根音 5 度を「99% 4 分」で差し戻し → 無意味な付点と休符）と 4 案 → ユーザー「良い」**: ① `CompositionChecks` の「一つの音価」から**ピアノの左手を除外**（`hands` の判定を前へ移した・band のベースと同じ扱い）。② **両手の隙間**（左手の 90 分位と右手の 10 分位の差が 12 半音超）を所見に・`PercentileOf` を共通に。③ 右手の中央値の上限 A5 → **G5**（79）。④ `composeSystemPrompt` の plan に「頼まれた性格をどう聴かせるか＝手段を名指しで（かっこいい: 推進するリズム・シンコペーションとアクセント・強拍のオクターブと和音・山場への走句）」・GRAMMAR の Compose a piece に「**A piano piece**」（両手で鍵盤を埋める・左手の音型は真ん中の C へ・右手は C5 前後で下に和声・左手は一つの音価でよい）。網 C# +1（`ALeftHandsFigure_IsNotFlat_ButHandsFarApartAre`）・npm 509・tsc 0。両 CHANGELOG・MANUAL-CHECKS C35。
-判定（2026-10-27・第1023 の終わり）: 次はユーザーの指示（C9〜C35）。
 
 ## 2. 開いている作業
 
