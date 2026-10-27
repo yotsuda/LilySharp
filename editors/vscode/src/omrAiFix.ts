@@ -1831,6 +1831,7 @@ ${rows}
     // A row's own symbol is drawn anew by an edit: its boxes are looked up again (a base's "Now"
     // symbol, shared by its rows, never changes).
     if (!boxesOf[id] || id.indexOf('before-') !== 0) boxesOf[id] = Array.from(document.querySelectorAll('#' + id + ' rect.bar-staff'));
+    delete svg.dataset.home;   // cut again: the new crop is where the zoom keeps to
     cropTo(svg, boxesOf[id], +svg.dataset.lo, +svg.dataset.hi);
     if (svg.dataset.paint) paint(id, svg.dataset.paint === 'del' ? RED : GREEN, svg.dataset.ranges);
   }
@@ -1846,15 +1847,31 @@ ${rows}
     const s = Math.min(r.width / w, r.height / h);
     return { s, x: x + (clientX - r.left - (r.width - w * s) / 2) / s, y: y + (clientY - r.top - (r.height - h * s) / 2) / s };
   }
+  // The bar the picture was cut to stays in the frame (owner's request 2026-10-27: zoomed out,
+  // the bar was lost): zoomed out, the view holds it whole; zoomed in, the view stays inside it —
+  // so zooming back in always comes back to it. The crop is the picture's first viewBox, kept on
+  // its first move (data-home); between a tenth and six times its width.
+  function homeOf(svg) {
+    if (!svg.dataset.home) svg.dataset.home = svg.getAttribute('viewBox');
+    return svg.dataset.home.split(/[\\s,]+/).map(Number);
+  }
+  function clampView(svg, x, y, w, h) {
+    const [hx, hy, hw, hh] = homeOf(svg);
+    const fit = (v, size, at, span) => size >= span
+      ? Math.min(at, Math.max(at + span - size, v))
+      : Math.max(at, Math.min(at + span - size, v));
+    return [fit(x, w, hx, hw), fit(y, h, hy, hh), w, h];
+  }
   document.addEventListener('wheel', e => {
     if (!e.ctrlKey) return;
     const svg = e.target.closest && e.target.closest('svg.pic');
     if (!svg || !svg.getAttribute('viewBox')) return;
     e.preventDefault();
+    const [, , hw] = homeOf(svg);
     const [x, y, w, h] = viewOf(svg);
     const at = userAt(svg, e.clientX, e.clientY);
-    const k = e.deltaY < 0 ? 1 / 1.15 : 1.15;
-    svg.setAttribute('viewBox', [at.x - (at.x - x) * k, at.y - (at.y - y) * k, w * k, h * k].join(' '));
+    const k = Math.min(Math.max(e.deltaY < 0 ? 1 / 1.15 : 1.15, hw / 10 / w), hw * 6 / w);
+    svg.setAttribute('viewBox', clampView(svg, at.x - (at.x - x) * k, at.y - (at.y - y) * k, w * k, h * k).join(' '));
   }, { passive: false });
   let drag = null, dragged = false;
   document.addEventListener('pointerdown', e => {
@@ -1868,7 +1885,7 @@ ${rows}
     if (!drag.moved && Math.abs(dx) + Math.abs(dy) < 4) return;
     if (!drag.moved) { drag.moved = true; drag.svg.classList.add('panning'); try { drag.svg.setPointerCapture(e.pointerId); } catch (err) {} }
     const [x, y, w, h] = drag.view;
-    drag.svg.setAttribute('viewBox', [x - dx / drag.s, y - dy / drag.s, w, h].join(' '));
+    drag.svg.setAttribute('viewBox', clampView(drag.svg, x - dx / drag.s, y - dy / drag.s, w, h).join(' '));
   });
   const endDrag = () => {
     if (drag && drag.moved) { dragged = true; drag.svg.classList.remove('panning'); setTimeout(() => { dragged = false; }, 0); }

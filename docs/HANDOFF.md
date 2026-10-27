@@ -127,19 +127,19 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1005セッション（2026-10-27・YT-DELL2）
+
+第1004 と同じ会話の続き。`-Start p1005`（開始 HEAD `d94180a13`・full **13377 / 0 / 2 / 13379**・第1003 を ARCHIVE へ）。作業場所は Lab `sessions/p1005/`。
+- **ユーザー「OMR の編集ペインで Ctrl+wheel でズームアウトすると、対象の小節がどれだか分からなくなる。対象の小節が必ず枠内に表示されるようにスクロール範囲を制限して。ズームインしたとき対象の小節に戻れる」**: ページの `homeOf`（絵の最初の viewBox＝切り抜きを初めて動かした時に `data-home` へ・`setUp` で切り直せば消す）と `clampView`（縮小中は切り抜きを丸ごと含む・拡大中は切り抜きの内側に留まる・各軸）をホイールとドラッグに。倍率は切り抜きの幅の 1/10〜6 倍。網 `omrAiFixPage.test` 1 本（`clampView` を `new Function` で実行・npm 488）。site scan・両 CHANGELOG・MANUAL-CHECKS C18。
+判定（2026-10-27・第1005 の終わり）: 次はユーザーの指示（C9〜C18）。
+
+## 以下は第1004セッションの経緯
+
 ### 1.1 第1004セッション（2026-10-27・YT-DELL2）
 
 第1003 と同じ会話の続き。`-Start p1004`（開始 HEAD `94ea89c0f`・full **13377 / 0 / 2 / 13379**・第1002 を ARCHIVE へ）。作業場所は Lab `sessions/p1004/`。
 - **ユーザー「OMR 結果を AI に直させるプロンプトに: 同じタイミングで鳴る音と違うタイミングで鳴る音を意識・beam、タイ、スラーを正しくつなげる・複数声部でどの音符が上下どちらか検討。ほかにもあれば提案して」** → 提案 4 つ（音の高さと臨時記号／読み違えやすい記号／前後の小節／書き足さない）→ **ユーザーが前の 3 つを選んだ**。`omrAiFixCore.systemPromptOf` に「HOW TO READ THE BAR, point by point」6 項（判断の順位の後・手がかりの前）。Lily# の音名が調号に依らないこと（`key g major` の `f'`=77・`fis'`=78）は MIDI で確かめた。網 `omrAiFixCore.test` 1 本（npm 487）。設計 §3.1 ⑻・両 CHANGELOG・MANUAL-CHECKS C17。採用率はオーナーの実機で。
 判定（2026-10-27・第1004 の終わり）: 次はユーザーの指示（C9〜C17）。
-
-## 以下は第1003セッションの経緯
-
-### 1.1 第1003セッション（2026-10-27・YT-DELL2）
-
-第1002 と同じ会話の続き。`-Start p1003`（開始 HEAD `b77ba012f`・full **13377 / 0 / 2 / 13379**＝新しい網を入れた作業ツリーで・第1001 を ARCHIVE へ）。作業場所は Lab `sessions/p1003/`。
-- **ユーザー「`<c' e e>8@chord(C)` のように書いたとき、C の構成音でない音符に警告を出すべき？」** → 提案＝和音そのものの `@chord` だけ（単音の `@chord` は旋律の非和声音が普通）・余分な音だけ（足りない音はボイシングの省略）・LYS1039（コード図）に倣う・強さは情報か警告か → **ユーザー「情報の方がいい」**。Core `ChordToneValidator`（`ChordAnnotation.Of` の Symbol と Structure・`ChordVoicings.TryTones` の allowed・外れた音ごとに `DiagnosticBag.Info`（新設）・`ChordStructure.TryRecognize`（書いた順）＋`ChordShapes.SourceSymbol` で「the chord's notes spell X — write @chord(X)」）・**LYS1054** `ChordToneOutsideSymbol`・公開の `ChordTones`（`ProposedName`・`SymbolSpan`）・LSP の CodeAction「Name the chord X」（symbol の語を置き換え）。網 `ChordToneValidatorTests` 9 本。手持ちの 550 冊（samples・site・docs・Lab corpora）に `<…>@chord(…)` の書き方は 0＝新しい情報は 0。⚠️ `lysc check` の出力はコードを刷らない（数えるならメッセージで）。GRAMMAR・SYNTAX_REFERENCE・site chords・両 CHANGELOG・MANUAL-CHECKS C16。
-判定（2026-10-27・第1003 の終わり）: 次はユーザーの指示（C9〜C16）。
 
 ## 2. 開いている作業
 

@@ -15,6 +15,7 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Scan import
 
+- `[editor]` **The pictures beside the scan keep their bar in the frame** as they zoom and scroll.
 - `[editor]` **Fix OMR Marks with AI reads a bar point by point**: the prompt says what sounds
   together, how ties, slurs and beams join, which voice a note is in, how its pitch is read, which
   symbols a reader confuses, and what the bars around it say.

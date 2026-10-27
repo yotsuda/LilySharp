@@ -13,6 +13,9 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ### Scan import
 
+- **The pictures beside the scan keep their bar in the frame.** Zoomed out with Ctrl+wheel, the bar
+  stays whole in view (it could be scrolled away and lost); zoomed in, the view stays on the bar, so
+  zooming back in always returns to it. The zoom goes from a tenth to six times the bar's width.
 - **Fix OMR Marks with AI tells the model how to read a bar, point by point**: what sounds together
   (one stem, one chord) and what one after another, with each voice lined up across the bar; ties,
   slurs and beams opened and closed where the page has them, into and out of the bar; each note in

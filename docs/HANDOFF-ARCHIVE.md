@@ -160,6 +160,14 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1003セッションの経緯
+
+### 1.1 第1003セッション（2026-10-27・YT-DELL2）
+
+第1002 と同じ会話の続き。`-Start p1003`（開始 HEAD `b77ba012f`・full **13377 / 0 / 2 / 13379**＝新しい網を入れた作業ツリーで・第1001 を ARCHIVE へ）。作業場所は Lab `sessions/p1003/`。
+- **ユーザー「`<c' e e>8@chord(C)` のように書いたとき、C の構成音でない音符に警告を出すべき？」** → 提案＝和音そのものの `@chord` だけ（単音の `@chord` は旋律の非和声音が普通）・余分な音だけ（足りない音はボイシングの省略）・LYS1039（コード図）に倣う・強さは情報か警告か → **ユーザー「情報の方がいい」**。Core `ChordToneValidator`（`ChordAnnotation.Of` の Symbol と Structure・`ChordVoicings.TryTones` の allowed・外れた音ごとに `DiagnosticBag.Info`（新設）・`ChordStructure.TryRecognize`（書いた順）＋`ChordShapes.SourceSymbol` で「the chord's notes spell X — write @chord(X)」）・**LYS1054** `ChordToneOutsideSymbol`・公開の `ChordTones`（`ProposedName`・`SymbolSpan`）・LSP の CodeAction「Name the chord X」（symbol の語を置き換え）。網 `ChordToneValidatorTests` 9 本。手持ちの 550 冊（samples・site・docs・Lab corpora）に `<…>@chord(…)` の書き方は 0＝新しい情報は 0。⚠️ `lysc check` の出力はコードを刷らない（数えるならメッセージで）。GRAMMAR・SYNTAX_REFERENCE・site chords・両 CHANGELOG・MANUAL-CHECKS C16。
+判定（2026-10-27・第1003 の終わり）: 次はユーザーの指示（C9〜C16）。
+
 ## 以下は第1002セッションの経緯
 
 ### 1.1 第1002セッション（2026-10-27・YT-DELL2）

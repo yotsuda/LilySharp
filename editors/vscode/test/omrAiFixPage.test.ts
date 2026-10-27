@@ -46,7 +46,7 @@ describe('the Edit Bars Beside the Scan page', () => {
 
     it('zooms a picture with Ctrl+wheel about the pointer and pans it with a drag that is no click', () => {
         assert.match(script, /document\.addEventListener\('wheel', e => \{\s*if \(!e\.ctrlKey\) return;\s*const svg = e\.target\.closest && e\.target\.closest\('svg\.pic'\);/);
-        assert.match(script, /drag\.svg\.setAttribute\('viewBox', \[x - dx \/ drag\.s, y - dy \/ drag\.s, w, h\]\.join\(' '\)\);/);
+        assert.match(script, /drag\.svg\.setAttribute\('viewBox', clampView\(drag\.svg, x - dx \/ drag\.s, y - dy \/ drag\.s, w, h\)\.join\(' '\)\);/);
         assert.match(script, /document\.addEventListener\('click', e => \{ if \(dragged\) \{ e\.stopPropagation\(\); e\.preventDefault\(\); dragged = false; \} \}, true\);/);
     });
 
@@ -59,6 +59,21 @@ describe('the Edit Bars Beside the Scan page', () => {
         assert.match(script, /if \(m\.seq === compSeq\) \{ comp = \{ i: String\(m\.index\), caret: m\.caret, items: m\.items \|\| \[\], sel: 0 \}; showSuggest\(\); \}/);
         assert.match(src, /'lilysharp\/completeText',\s*\{ Text: spliceBar\(row\.base\.text, row\.target, field\), Offset: start \+ caret, Trigger: trigger \?\? null \}/);
         assert.match(src, /\.filter\(it => it\.Start >= start && it\.End <= start \+ field\.length && it\.Start <= start \+ caret\)/);
+    });
+
+    // Owner's request 2026-10-27: zoomed out, the bar was lost — the crop stays in the frame.
+    it('keeps the bar it was cut to in the frame, zoomed out or in', () => {
+        const at = script.indexOf('function clampView(');
+        const body = script.slice(script.indexOf('function homeOf('), script.indexOf('document.addEventListener(\'wheel\'', at));
+        // The two functions, run on a picture cut to x 100..300, y 50..150.
+        const run = new Function('svg', 'v', body + '; return clampView(svg, ...v);') as (svg: unknown, v: number[]) => number[];
+        const svg = () => ({ dataset: {} as Record<string, string>, getAttribute: () => '100 50 200 100' });
+        assert.deepEqual(run(svg(), [-500, 80, 400, 200]), [-100, 50, 400, 200]);   // zoomed out: the crop still whole in view
+        assert.deepEqual(run(svg(), [150, 60, 400, 200]), [100, 50, 400, 200]);
+        assert.deepEqual(run(svg(), [260, 140, 50, 25]), [250, 125, 50, 25]);       // zoomed in: the view stays on the crop
+        assert.deepEqual(run(svg(), [0, 0, 50, 25]), [100, 50, 50, 25]);
+        assert.match(script, /hw \/ 10 \/ w\), hw \* 6 \/ w\);/);
+        assert.match(script, /delete svg\.dataset\.home;/);
     });
 
     it('writes the missing bar line into the field and sends it as the edit', () => {
