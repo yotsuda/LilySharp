@@ -23,7 +23,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as vm from 'node:vm';
 import {
-    SCAN_DEFAULT_THRESHOLD, anchorsOf, barOnLine, markFactsOf, pageLabel, parseSideFile, scanBarForPrinted, scanTitle,
+    SCAN_DEFAULT_THRESHOLD, anchorsOf, barOnLine, markFactsOf, pageLabel, parseSideFile, relinedSide, scanBarForPrinted, scanTitle,
     ScanTodo, coverageOf, flaggedMarks, frameBoxesOf, hiddenTodoKeys, resolvedTodoKeys, shiftAnchors, shownAt, shownImage, sideFileOf, barStaff, todoStroke, todoTarget,
     lineAround, lineOfScanBar, scanBarForStart,
 } from '../src/omrScanCore';
@@ -373,6 +373,28 @@ describe('what the caret lights', () => {
         edited = edited.slice(0, s32) + edited.slice(s32 + 4);
         const at2 = edited.indexOf('  l33');
         assert.equal(barOnLine(anchors, at2, at2 + 5)?.box[1], 1046);
+    });
+
+    // Owner's report 2026-10-27: Edit Bars Beside the Scan cropped by the reader's line numbers.
+    it('gives the side file the lines its bars are written on now', () => {
+        const anchors = anchorsOf(side, text);
+        const pinsOf = () => anchors.map(a => ({ index: side.measures.indexOf(a.bar), offset: a.offset }));
+        const linesOf = (s: typeof side) => s.measures.filter(m => m.box).map(m => m.line);
+        assert.deepEqual(linesOf(relinedSide(side, text, pinsOf())), [32, 33]);
+        // Two lines typed at the top: 34 and 35; a mark's lines move with them.
+        let edited = 'a\nb\n' + text;
+        shiftAnchors(anchors, [{ offset: 0, removed: 0, inserted: 4 }]);
+        const moved = relinedSide(side, edited, pinsOf());
+        assert.deepEqual(linesOf(moved), [34, 35]);
+        const withLines = side.todos.findIndex(t => t.lines?.includes(33));
+        if (withLines >= 0) {
+            assert.ok(moved.todos[withLines].lines!.includes(35));
+        }
+        // The rh line deleted: it has no line, and the lh line is 34.
+        const [s32] = lineOf(edited, 32);
+        shiftAnchors(anchors, [{ offset: s32, removed: 'l32\n'.length, inserted: 0 }]);
+        edited = edited.slice(0, s32) + edited.slice(s32 + 4);
+        assert.deepEqual(linesOf(relinedSide(side, edited, pinsOf())), [undefined, 34]);
     });
 
     // The two views light each other's bar under the mouse, matched by the line it is written on.

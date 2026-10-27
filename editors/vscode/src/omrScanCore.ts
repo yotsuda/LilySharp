@@ -475,6 +475,52 @@ export function shiftAnchors(anchors: BarAnchor[], edits: readonly TextEdit[]): 
     }
 }
 
+/**
+ * The side file with its lines (`measures[].line`, `todos[].lines`) where the bars are written
+ * now: `pins` are the bars' anchors carried through the edits since (anchorsOf, shiftAnchors) —
+ * the bar by its index in `measures` — in the anchors' order. A bar whose line was deleted (its
+ * anchor fell onto the next line's start, ahead of that line's own) loses its line, as
+ * barOnLine passes it over. Owner's report 2026-10-27: Edit Bars Beside the Scan cropped by the
+ * reader's line numbers, so a line added above a bar showed the bar before it.
+ */
+export function relinedSide(side: ScanSideFile, text: string, pins: readonly { index: number; offset: number }[]): ScanSideFile {
+    const starts = [0];
+    for (let i = 0; i < text.length; i++) {
+        if (text.charCodeAt(i) === 10) { starts.push(i + 1); }
+    }
+    const lineAt = (offset: number): number => {
+        let lo = 0, hi = starts.length - 1;
+        while (lo < hi) {
+            const mid = (lo + hi + 1) >> 1;
+            if (starts[mid] <= offset) { lo = mid; } else { hi = mid - 1; }
+        }
+        return lo + 1;
+    };
+    // The reader's line → the line it is on now; the last bar on a line wins it.
+    const now = new Map<number, number>();
+    const owner = new Map<number, number>();
+    for (const p of pins) {
+        const old = side.measures[p.index]?.line;
+        if (old === undefined) {
+            continue;
+        }
+        const line = lineAt(p.offset);
+        const before = owner.get(line);
+        if (before !== undefined && before !== old) {
+            now.delete(before);
+        }
+        owner.set(line, old);
+        now.set(old, line);
+    }
+    const pinned = new Set(side.measures.map(m => m.line).filter((l): l is number => l !== undefined));
+    const moved = (l: number): number | undefined => pinned.has(l) ? now.get(l) : l;
+    return {
+        ...side,
+        measures: side.measures.map(m => m.line === undefined ? m : { ...m, line: moved(m.line) }),
+        todos: side.todos.map(t => t.lines ? { ...t, lines: t.lines.map(moved).filter((l): l is number => l !== undefined) } : t),
+    };
+}
+
 /** A bar of the side file (its index in `measures`) and the bar the page prints for its line. */
 export interface PrintedBar { readonly index: number; readonly printed?: number | null }
 

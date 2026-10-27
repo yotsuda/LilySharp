@@ -23,11 +23,12 @@
 // read.
 
 import * as vscode from 'vscode';
+import * as crypto from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
 import type { LanguageClient } from 'vscode-languageclient/node';
 import {
-    BarAnchor, PrintedBar, ScanSideFile, ScanTarget, ServerTodo, anchorsOf, barOnLine, flaggedMarks, frameBoxesOf, hiddenTodoKeys, parseSideFile, resolvedTodoKeys, barStaff,
+    BarAnchor, PrintedBar, ScanSideFile, ScanTarget, ServerTodo, anchorsOf, barOnLine, flaggedMarks, frameBoxesOf, hiddenTodoKeys, parseSideFile, relinedSide, resolvedTodoKeys, barStaff,
     SCAN_DEFAULT_THRESHOLD, pageLabel, scanBarForPrinted, scanTitle, shiftAnchors, shownImage, sideFileOf, todoStroke,
     todoTarget, lineOfScanBar, scanBarForStart,
 } from './omrScanCore';
@@ -81,11 +82,99 @@ export function hasScan(uri: vscode.Uri | undefined): boolean {
     return !!uri && uri.scheme === 'file' && /\.lys$/i.test(uri.fsPath) && fs.existsSync(sideFileOf(uri.fsPath));
 }
 
+/**
+ * Each open .lys with a side file beside it, its bars pinned where they are written now — from
+ * when the document opened, carried through every edit whether a scan view is open or not, and
+ * kept over a save (pinsSaved): the scan view's anchors, and the lines Edit Bars Beside the Scan
+ * crops by (scanSideOf; owner's report 2026-10-27).
+ */
+interface Pins { readonly stamp: number; readonly side: ScanSideFile; readonly anchors: BarAnchor[] }
+const pins = new Map<string, Pins>();
+let pinState: vscode.Memento | undefined;
+
+/** What a save keeps of a document's pins: the text they hold for, the side file's, and each
+ *  anchor as [its bar's index in `measures`, its offset], in the anchors' order. */
+interface SavedPins { readonly hash: string; readonly stamp: number; readonly anchors: readonly [number, number][] }
+const pinKey = (fsPath: string) => `lilysharp.scanPins:${fsPath.toLowerCase()}`;
+const hashOf = (text: string) => crypto.createHash('sha1').update(text).digest('hex');
+
+/** The document's pins: made when first asked (its side file read), and made again when the reader
+ *  writes the side file again — pinned then against the .lys on disk, which it was written against.
+ *  Undefined for a document with no side file. */
+function pinsOf(doc: vscode.TextDocument): Pins | undefined {
+    if (doc.uri.scheme !== 'file' || !/\.lys$/i.test(doc.uri.fsPath)) {
+        return undefined;
+    }
+    const key = doc.uri.toString();
+    const sidePath = sideFileOf(doc.uri.fsPath);
+    let stamp: number;
+    try {
+        stamp = fs.statSync(sidePath).mtimeMs;
+    } catch {
+        pins.delete(key);
+        return undefined;
+    }
+    const had = pins.get(key);
+    if (had && had.stamp === stamp) {
+        return had;
+    }
+    const side = readSide(sidePath);
+    if (!side) {
+        return had;   // a side file being written: the last one stands
+    }
+    let anchors: BarAnchor[] | undefined;
+    const saved = pinState?.get<SavedPins>(pinKey(doc.uri.fsPath));
+    if (saved && saved.stamp === stamp && saved.hash === hashOf(doc.getText())
+        && saved.anchors.every(([i]) => i >= 0 && i < side.measures.length)) {
+        anchors = saved.anchors.map(([i, offset]) => ({ offset, bar: side.measures[i] }));
+    }
+    anchors ??= anchorsOf(side, had && fs.existsSync(doc.uri.fsPath) ? fs.readFileSync(doc.uri.fsPath, 'utf8') : doc.getText());
+    const made: Pins = { stamp, side, anchors };
+    pins.set(key, made);
+    return made;
+}
+
+/** The side file of the .lys `doc`, its lines where its bars are written now (relinedSide) —
+ *  undefined when it has none. For Edit Bars Beside the Scan and Fix OMR Marks with AI. */
+export function scanSideOf(doc: vscode.TextDocument): ScanSideFile | undefined {
+    const p = pinsOf(doc);
+    if (!p) {
+        return undefined;
+    }
+    const index = new Map(p.side.measures.map((m, i) => [m, i] as const));
+    return relinedSide(p.side, doc.getText(), p.anchors.map(a => ({ index: index.get(a.bar) ?? -1, offset: a.offset })));
+}
+
 /** Wires the caret and the side file's changes to every open view. Call once from activate. */
 export function registerScanFollow(context: vscode.ExtensionContext, deps: OmrScanDeps): void {
     let timer: ReturnType<typeof setTimeout> | undefined;
     let marksTimer: ReturnType<typeof setTimeout> | undefined;
+    pinState = context.globalState;
+    for (const doc of vscode.workspace.textDocuments) {
+        pinsOf(doc);
+    }
     context.subscriptions.push(
+        // Pinned as each .lys opens, so an edit made before anything asks is carried too.
+        // A document opened again is the text on disk: pinned afresh (from its save, if any), and
+        // an open view takes the new pins.
+        vscode.workspace.onDidOpenTextDocument(doc => {
+            pins.delete(doc.uri.toString());
+            const p = pinsOf(doc);
+            const view = views.get(doc.uri.toString());
+            if (p && view) {
+                view.side = p.side;
+                view.anchors = p.anchors;
+            }
+        }),
+        vscode.workspace.onDidCloseTextDocument(doc => { pins.delete(doc.uri.toString()); }),
+        vscode.workspace.onDidSaveTextDocument(doc => {
+            const p = pins.get(doc.uri.toString());
+            if (p) {
+                const index = new Map(p.side.measures.map((m, i) => [m, i] as const));
+                const saved: SavedPins = { hash: hashOf(doc.getText()), stamp: p.stamp, anchors: p.anchors.map(a => [index.get(a.bar) ?? -1, a.offset]) };
+                void pinState?.update(pinKey(doc.uri.fsPath), saved);
+            }
+        }),
         vscode.window.onDidChangeTextEditorSelection(e => {
             const view = views.get(e.textEditor.document.uri.toString());
             if (!view) {
@@ -96,14 +185,18 @@ export function registerScanFollow(context: vscode.ExtensionContext, deps: OmrSc
             timer = setTimeout(() => void follow(view, e.textEditor, deps), 120);
         }),
         vscode.workspace.onDidChangeTextDocument(e => {
+            // The pins move with every edit (the view's anchors are the same array).
+            const p = e.contentChanges.length > 0 ? pins.get(e.document.uri.toString()) : undefined;
+            if (p) {
+                shiftAnchors(p.anchors, e.contentChanges.map(c =>
+                    ({ offset: c.rangeOffset, removed: c.rangeLength, inserted: c.text.length })));
+            }
             const view = views.get(e.document.uri.toString());
             if (view) {
                 view.todos = undefined;
                 view.printed = undefined;
                 if (marksTimer) { clearTimeout(marksTimer); }
                 marksTimer = setTimeout(() => void markPreview(view, deps), 400);
-                shiftAnchors(view.anchors, e.contentChanges.map(c =>
-                    ({ offset: c.rangeOffset, removed: c.rangeLength, inserted: c.text.length })));
             }
         }),
         // The view's context menu (menus/webview/context, as the preview's: Fit Width and Reset
@@ -151,20 +244,19 @@ export async function showScan(
         return;
     }
     const sidePath = sideFileOf(lys.fsPath);
-    const side = readSide(sidePath);
-    if (!side) {
+    // The bars are pinned where the document's pins have carried them since it opened (pinsOf).
+    const doc = fs.existsSync(sidePath) ? await vscode.workspace.openTextDocument(lys) : undefined;
+    const pinned = doc && pinsOf(doc);
+    if (!doc || !pinned) {
         vscode.window.showInformationMessage(
             `Lily#: ${path.basename(lys.fsPath)} has no scan beside it (${path.basename(sidePath)}, which an OMR reader writes).`);
         return;
     }
-
-    // The bars are pinned to the text as it is NOW — the reader's, when the view opens on a
-    // score it has just written; a score edited before its view opened pins by moved lines.
-    const doc = await vscode.workspace.openTextDocument(lys);
+    const side = pinned.side;
     const panel = vscode.window.createWebviewPanel('lilysharpScan', scanTitle(side.pages, lys.fsPath),
         { viewColumn: column ?? vscode.ViewColumn.Beside, preserveFocus: true },
         { enableScripts: true, retainContextWhenHidden: true, localResourceRoots: rootsOf(side, sidePath) });
-    const view: ScanView = { panel, lys, side, anchors: anchorsOf(side, doc.getText()), linked: true };
+    const view: ScanView = { panel, lys, side, anchors: pinned.anchors, linked: true };
     views.set(lys.toString(), view);
     render(view);
 
@@ -172,11 +264,12 @@ export async function showScan(
     const watcher = vscode.workspace.createFileSystemWatcher(
         new vscode.RelativePattern(vscode.Uri.file(path.dirname(sidePath)), path.basename(sidePath)));
     const reload = () => {
-        const next = readSide(sidePath);
-        if (next) {
+        // A side file written again is pinned again, against the .lys on disk (pinsOf).
+        const again = pinsOf(doc);
+        if (again && again.side !== view.side) {
+            const next = again.side;
             view.side = next;
-            // A side file written again is written against the .lys on disk.
-            view.anchors = anchorsOf(next, fs.existsSync(lys.fsPath) ? fs.readFileSync(lys.fsPath, 'utf8') : doc.getText());
+            view.anchors = again.anchors;
             view.lastTarget = undefined;
             view.printed = undefined;
             panel.webview.options = { ...panel.webview.options, localResourceRoots: rootsOf(next, sidePath) };

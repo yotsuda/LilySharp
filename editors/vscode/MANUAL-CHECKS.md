@@ -230,6 +230,7 @@ edocs/HANDOFF.mde §2 R13 ⒝・OMR の提案 B1〜B6（e..\LilySharp-Omr\docs\r
 - [ ] **C9**（第996・見落とした小節線）: `Downloads\tabi.lys` の L45（32 小節目＝OMR が小節線を見落として 2 小節が 1 行）→ 電球に **Write the missing bar line** → 選ぶと `dis8` の後ろに ` |` が入り、赤い枠と MissingBarLine の警告が消える（Ctrl+Z で戻す）。戻して L45 を右クリック → **Edit Bars Beside the Scan** → Scan も Now も 2 小節とも見える（前は 1 つ目だけ）・行の説明の後ろに **write the missing bar line** → 押すと欄に ` |` 入りの行が入り、Draft の絵と門が付いてくる → Accept で書かれる。パネルのどの絵も Ctrl+ホイールでポインタの下を中心に拡大・縮小、ドラッグでスクロール（手のカーソル）、ドラッグの後でクリックは起きない（音は鳴らない）。拍の途中で切れる小節（音が切れ目をまたぐ）ではどちらも出ない。
 - [ ] **C10**（第997・⚠️ package.json が変わった＝Reload Window を 2 回）: OMR の .lys のプレビューで小節を右クリック → **Fix OMR Marks with AI…** が無い（Edit Bars Beside the Scan はある）。Show Original Scan の小節を右クリック → こちらも Fix OMR Marks with AI… は無い（第998）。scan の頭のボタンが **Edit N Bars Beside the Scan…**（1 つなら Bar）・スライダーを動かすと N が変わる → 押すと表示中の印の小節が Beside the Scan のパネルに並ぶ（AI は呼ばれない・行の Ask AI で頼める）。印が 0 ならボタンは押せない。
 - [ ] **C11**（第998・AI の返答待ち）: Edit Bars Beside the Scan の行で Ask AI → 返答が来るまで、行の説明の後ろと Draft の欄に回る輪と点滅する「asking the AI…」が出続ける → 答えが来ると消える。cancel でも消える。順番待ちの行は「waiting for the AI…」（動かない）。
+- [ ] **C12**（第999・行がずれても正しい小節を切り抜く）: OMR の .lys を開き（元画像は開かない）、30 小節目あたりより上に空行を 2 行足す → 下の小節で Edit Bars Beside the Scan → Scan の絵がその行の小節（前は 2 小節前の絵）。上の行を 1 行消しても同じ。保存して VS Code を閉じ、開き直してから同じことをしても正しい。元画像を開いてクリック・キャレットの連動も、足した行の下で合う。
 
 ## 4. §2 R13 ⒝ — 差分頁の配信（実機未確認・第404）
 

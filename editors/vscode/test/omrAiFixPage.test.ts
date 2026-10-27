@@ -77,6 +77,13 @@ describe('the doors to the bars of the marks', () => {
         assert.equal(items.filter(m => m.command === 'lilysharp.editBarsBesideScan').length, 1);
     });
 
+    it('crops by the lines the bars are written on now, carried through edits with no scan view open', () => {
+        assert.match(fix, /return \{ side: deps\.scanSide\(doc\) \?\? parseSideFile\(sideText, sidePath\), sideText \};/);
+        assert.match(scan, /const p = e\.contentChanges\.length > 0 \? pins\.get\(e\.document\.uri\.toString\(\)\) : undefined;\s*if \(p\) \{\s*shiftAnchors\(p\.anchors,/);
+        assert.match(scan, /vscode\.workspace\.onDidOpenTextDocument\(doc => \{\s*pins\.delete\(doc\.uri\.toString\(\)\);/);
+        assert.match(scan, /const view: ScanView = \{ panel, lys, side, anchors: pinned\.anchors, linked: true \};/);
+    });
+
     it('shows a turning ring and a pulsing word while a row asks the AI', () => {
         assert.match(fix, /const aiNow = r\.ai === 'asking' \? ` <span class="busy">— <span class="spin"><\/span>asking the AI…<\/span>/);
         assert.match(fix, /\.spin \{[^}]*animation:spin \.8s linear infinite; \}/);

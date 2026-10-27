@@ -34,7 +34,7 @@ import { registerCaretInfo } from './caretInfo';
 import { registerExportBatch } from './exportBatch';
 import { importFromImage } from './omrImport';
 import { registerOmrContexts } from './omrReader';
-import { OmrScanDeps, hasScan, previewHoversBar, previewReady, previewShowsBar, registerScanFollow, scanBarAt, scanColumnOf, scanThresholdOf, showScan } from './omrScan';
+import { OmrScanDeps, hasScan, previewHoversBar, previewReady, previewShowsBar, registerScanFollow, scanBarAt, scanColumnOf, scanSideOf, scanThresholdOf, showScan } from './omrScan';
 import { registerOmrAiFix } from './omrAiFix';
 import { registerVerifyOnSave } from './omrVerify';
 import { markdownItExtensionApi } from './markdownFence';
@@ -855,7 +855,7 @@ export function activate(context: vscode.ExtensionContext) {
     // Its menu door in the preview and the scan view: the bar the right-click was on, the
     // preview's as an offset in the file it shows, the scan view's as a bar of its side file.
     registerOmrAiFix(context, {
-        ...aiDeps, scanThreshold: scanThresholdOf, lysc: bundledLysc, scanColumn: scanColumnOf,
+        ...aiDeps, scanThreshold: scanThresholdOf, lysc: bundledLysc, scanColumn: scanColumnOf, scanSide: scanSideOf,
         barAtMenu: m => {
             if (m.webview === 'lilysharpScan') {
                 return Number.isInteger(m.lysBar) && m.lysBar! >= 0 ? scanBarAt(m.lysBar!) : undefined;

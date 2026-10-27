@@ -53,6 +53,8 @@ export interface OmrAiFixDeps extends AiTransformDeps {
     barAtMenu: (context: MenuContext) => { uri: vscode.Uri; at: number } | undefined;
     /** The column the document's scan view is in, if one is open (omrScan.scanColumnOf). */
     scanColumn: (lys: string) => vscode.ViewColumn | undefined;
+    /** The document's side file, its lines where its bars are written now (omrScan.scanSideOf). */
+    scanSide: (doc: vscode.TextDocument) => ScanSideFile | undefined;
 }
 
 /** What a webview's context menu hands its command: the view's type, and what its page wrote
@@ -343,13 +345,15 @@ async function editorFor(uriArg?: string | vscode.Uri): Promise<vscode.TextEdito
     return vscode.window.showTextDocument(doc, { viewColumn: vscode.ViewColumn.One, preserveFocus: true });
 }
 
-/** The reader's side file beside the document, read and parsed, when there is one. */
-function sideOf(doc: vscode.TextDocument): { side?: ScanSideFile; sideText?: string } {
+/** The reader's side file beside the document, read and parsed, when there is one — its lines
+ *  where its bars are written now (omrScan.scanSideOf: the reader's line numbers go stale as
+ *  lines are added or deleted above a bar; owner's report 2026-10-27). */
+function sideOf(deps: OmrAiFixDeps, doc: vscode.TextDocument): { side?: ScanSideFile; sideText?: string } {
     const sidePath = doc.uri.scheme === 'file' ? sideFileOf(doc.uri.fsPath) : undefined;
     if (sidePath && fs.existsSync(sidePath)) {
         try {
             const sideText = fs.readFileSync(sidePath, 'utf8');
-            return { side: parseSideFile(sideText, sidePath), sideText };
+            return { side: deps.scanSide(doc) ?? parseSideFile(sideText, sidePath), sideText };
         } catch { /* no side file: the memos still are */ }
     }
     return {};
@@ -386,7 +390,7 @@ async function runEditBars(context: vscode.ExtensionContext, deps: OmrAiFixDeps,
         const last = s.end.line > s.start.line && s.end.character === 0 ? s.end.line - 1 : s.end.line;
         for (let l = s.start.line; l <= last; l++) { lines.push(l); }
     }
-    const { side, sideText } = sideOf(doc);
+    const { side, sideText } = sideOf(deps, doc);
     // A line that carries marks is the AI command's target (its memos, keys, crop and readings), so
     // Ask AI on it is told what the reader saw; any other line is a bar with no mark.
     const todos = await client.sendRequest<TodosResponse>('lilysharp/todos', { textDocument: { uri: doc.uri.toString() } });
@@ -527,7 +531,7 @@ async function runOmrAiFix(context: vscode.ExtensionContext, deps: OmrAiFixDeps,
         vscode.window.showErrorMessage(`Lily#: could not list the marks: ${todos.Error}`);
         return;
     }
-    const { side, sideText } = sideOf(doc);
+    const { side, sideText } = sideOf(deps, doc);
     let targets = fixTargets(text, todos.Todos ?? [], side, sideText ? markFactsOf(sideText) : undefined);
     if (targets.length === 0) {
         vscode.window.showInformationMessage(`Lily#: ${path.basename(doc.uri.fsPath)} carries no @todo mark to fix.`);

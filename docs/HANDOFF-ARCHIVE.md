@@ -160,6 +160,14 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第997セッションの経緯
+
+### 1.1 第997セッション（2026-10-27・YT-DELL2）
+
+第996 と同じ会話の続き。`-Start p997`（開始 HEAD `46a35129a`・full **13361 / 0 / 2 / 13363**・第995 を ARCHIVE へ）。作業場所は Lab `sessions/p997/`。
+- **ユーザー「OMR の lys プレビューの右クリックの Fix OMR marks with AI は削除して。元画像の頭の Fix 3 marks with AI... も Edit 3 Bars Beside the Scan... のボタンに」**: package.json の webview/context の `omrFixWithAi` を `lilysharpScan` だけに（scan の右クリック・エディタの右クリック・パレット・電球は残した）。scan の頭のボタン＝「Edit N Bars Beside the Scan…」（1 なら Bar）→ メッセージ `editBars` → `lilysharp.editBarsBesideScan(lys, 'marks')` → `runEditBars(…, marks)` がスライダー未満の印の小節（`fixTargets` を `checkedByDefault`）を開く。N は今までどおり表示中で `.lys` に在る印の数（パートごとの小節 1 つ＝行 1 つ）。網 `omrAiFixPage.test` に 2 本（npm 478）。site scan／commands・両 CHANGELOG・設計 §2.1・MANUAL-CHECKS C10。
+判定（2026-10-27・第997 の終わり）: 次はユーザーの指示（C9・C10）。
+
 ## 以下は第996セッションの経緯
 
 ### 1.1 第996セッション（2026-10-27・YT-DELL2）
