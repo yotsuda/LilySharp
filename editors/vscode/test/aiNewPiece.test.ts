@@ -195,6 +195,10 @@ describe('the composer\'s prompt', () => {
         assert.match(transform, /\(to \$\{chat\.label\}\$\{chat\.modelDetail \? `: \$\{chat\.modelDetail\}` : ''\}\)/);
         const client = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'modelClient.ts'), 'utf8');
         assert.match(client, /modelName: isAutoModel\(model\) \? undefined : model\.name \|\| undefined,/);
+        // An automatic pick VS Code keeps for itself goes to the next model at once (owner's report
+        // 2026-10-28: "Model gpt-5.6-luna is only available to VS Code core" failed the compose).
+        assert.match(client, /const next = byName \|\| token\.isCancellationRequested \? undefined : await selectLmModel\(use\);/);
+        assert.match(client, /model = next;\s*return await this\.send\(messages, token\);/);
         // Copilot's Auto says so, and signs no composer line (owner's report 2026-10-27).
         assert.match(client, /label: isAutoModel\(model\) \? `\$\{model\.vendor\}\/auto`/);
         assert.match(client, /modelDetail: `name "\$\{model\.name\}", vendor \$\{model\.vendor\}, id \$\{model\.id\}, family \$\{model\.family\}, version \$\{model\.version\}`/);
