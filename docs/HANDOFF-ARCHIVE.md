@@ -160,6 +160,14 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1024セッションの経緯
+
+### 1.1 第1024セッション（2026-10-27・YT-DELL2）
+
+第1023 と同じ会話の続き。`-Start p1024`（開始 HEAD `0f14192d2`・full **13392 / 0 / 2 / 13394**・第1022 を ARCHIVE へ）。作業場所は Lab `sessions/p1024/`（`exchange.log`）。
+- **ユーザー「作曲は Claude Fable かと思ったが違うようだ。『ロックバラードを書いて。composer を埋めて。』でダイアログは copilot/claude-fable-5.1 なのに composer は OpenAI。ダイアログのモデルが正しくない？」**: 調べた答え＝ダイアログの名前は `sendRequest` を受ける同じ `LanguageModelChat` の `vendor/family`＝送り先は正しい。*Lily# AI Exchange* でも `system (to copilot/claude-fable-5.1)`・返事に `composer "OpenAI"`＝**プロンプトがモデルに名前を一度も言っていない**ので推測で埋めた（自己申告は証拠にならない・vscode.lm は応答したモデルを返さない＝Copilot 内の振り替えは拡張から見えない）。3 案のうち 2（composer を常に埋める）は**ユーザー決定「何もしない方が良い」**。直し: ① `ChatClient.modelName`（`model.name`）・`modelDetail`（name/vendor/id/family/version/入力 token）。② `composeSystemPrompt(grammar, modelName)` に「You are {name}. 頼まれたら composer はあなた」（頼まれないときの規則は足さない＝今まで通り）。③ `logExchange(chat, …)` の system 行に modelDetail。網 npm +1（510）・tsc 0。両 CHANGELOG・MANUAL-CHECKS C36。
+判定（2026-10-27・第1024 の終わり）: 次はユーザーの指示（C9〜C36）。
+
 ## 以下は第1023セッションの経緯
 
 ### 1.1 第1023セッション（2026-10-27・YT-DELL2）

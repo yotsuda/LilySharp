@@ -23,7 +23,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import {
     SEL_CLOSE, SEL_OPEN, carryOffset, documentBudget, documentContext, estimateTokens, isProblem, isUnchanged, marksContext, octaveOutliers,
-    pickModel, pitchToMidi, splitNote, planOf, withoutPlan, startTimeAt, toCandidateEdit, changedWords, diffMarkup, wholeTextMarkup, rangeFixOf,
+    pickModel, isAutoModel, pitchToMidi, splitNote, planOf, withoutPlan, startTimeAt, toCandidateEdit, changedWords, diffMarkup, wholeTextMarkup, rangeFixOf,
 } from '../src/aiTransformCore';
 
 // Owner's report 2026-10-27: "this note sounds C1, below the range of the Bass" came back through
@@ -113,6 +113,15 @@ describe('the automatic model', () => {
         const auto = { id: 'auto', vendor: 'copilotcli', family: 'auto', maxInputTokens: 1_000_000 };
         assert.equal(pickModel([auto, models[4]], false)?.id, 'local-big');
         assert.equal(pickModel([auto], false)?.id, 'auto');                 // all there is: the caller says why it fails
+    });
+
+    // Owner's report 2026-10-27: Copilot's "Auto" (id auto, family claude-fable-5.1, the largest
+    // input limit) was the automatic model, and the model that answered was Copilot's choice.
+    it('passes over Copilot\'s Auto, whose family names a model it may not send to', () => {
+        const auto = { id: 'auto', vendor: 'copilot', family: 'claude-fable-5.1', maxInputTokens: 935_793 };
+        assert.equal(pickModel([auto, ...models], false)?.id, 'claude-fable-5.1');
+        assert.equal(pickModel([auto], false)?.id, 'auto');                 // all there is
+        assert.ok(isAutoModel(auto) && !isAutoModel(models[2]));
     });
 
     it('passes over a model VS Code keeps for itself, small as its name is (owner\'s report 2026-10-25)', () => {

@@ -189,7 +189,9 @@ describe('the composer\'s prompt', () => {
         assert.doesNotMatch(transform, /otherwise write no composer line/);
         assert.match(transform, /\(to \$\{chat\.label\}\$\{chat\.modelDetail \? `: \$\{chat\.modelDetail\}` : ''\}\)/);
         const client = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'modelClient.ts'), 'utf8');
-        assert.match(client, /modelName: model\.name \|\| undefined,/);
+        assert.match(client, /modelName: isAutoModel\(model\) \? undefined : model\.name \|\| undefined,/);
+        // Copilot's Auto says so, and signs no composer line (owner's report 2026-10-27).
+        assert.match(client, /label: isAutoModel\(model\) \? `\$\{model\.vendor\}\/auto`/);
         assert.match(client, /modelDetail: `name "\$\{model\.name\}", vendor \$\{model\.vendor\}, id \$\{model\.id\}, family \$\{model\.family\}, version \$\{model\.version\}`/);
     });
 });

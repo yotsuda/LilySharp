@@ -256,6 +256,7 @@ edocs/HANDOFF.mde §2 R13 ⒝・OMR の提案 B1〜B6（e..\LilySharp-Omr\docs\r
 - [ ] **C35**（第1023・ピアノらしさ）: Compose with AI で「かっこいいピアノの曲を作って」→ *Lily# AI Exchange* で左手が「one note value」で差し戻されない・`<plan>` に性格を作る手段（シンコペーション・アクセント・オクターブ等）が書いてある・曲の右手の下に和音や 3 度があり、両手の間が 1 オクターブも空かない。
 - [ ] **C36**（第1024・作曲者の名前）: Compose with AI で「ロックバラードを書いて。composer を埋めて。」→ `composer` がモデルの名前（例 "Claude Fable 5.1"）・*Lily# AI Exchange* の system 行に `name "…", vendor …, id …, family …, version …`。「composer」と言わなければ composer 行は勝手に増えない（今まで通り）。
 - [ ] **C37**（第1025・名前の見切れ）: `Untitled-2.lys`（バンド 4 段・"Electric Guitar" "E. Bass"）をプレビュー／PDF → 1 段目の Electric Guitar・2 段目以降の E. Bass の頭が紙の左端で切れない。名前の短い曲（Piano・Violin）の 1 段目の字下げは今まで通り。
+- [ ] **C38**（第1026・Auto を選ばない）: モデルを選んでいない状態で Compose with AI → 通知が `via copilot/<具体的なモデル>`（auto でない）・*Lily# AI Exchange* の system 行の id が auto でない。「Lily#: Select AI Model」で Auto を選べば `copilot/auto` と出て、作曲者に名前を書かない。
 
 ## 4. §2 R13 ⒝ — 差分頁の配信（実機未確認・第404）
 

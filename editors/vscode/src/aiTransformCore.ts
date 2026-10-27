@@ -594,12 +594,21 @@ export function pickModel<M extends ModelLike>(models: readonly M[], wantSmall: 
     // Nor a model VS Code keeps for one job of its own: `copilot-dictation-cleanup-nano` is
     // listed, small by its name — the ghost's automatic pick — and refuses every extension
     // ("only available to VS Code core"; owner's report 2026-10-25: the ghost never showed).
-    const chat = models.filter(m => m.family.trim() !== '' && m.vendor !== 'copilotcli' && !isCoreTaskModel(m));
+    // Nor Copilot's "Auto" (id `auto`), which hands each request to a model of Copilot's choosing
+    // under another model's family name: picked for its input limit, it composed as
+    // "copilot/claude-fable-5.1" and answered as something else (owner's report 2026-10-27 — the
+    // composer it wrote was "OpenAI", then "Auto"). Chosen by name, it is still used.
+    const chat = models.filter(m => m.family.trim() !== '' && m.vendor !== 'copilotcli' && !isCoreTaskModel(m) && !isAutoModel(m));
     const copilot = chat.filter(m => m.vendor === 'copilot');
     const base = copilot.length > 0 ? copilot : chat.length > 0 ? chat : [...models];
     const small = (m: M) => /mini|nano|lite|haiku|flash|small/i.test(`${m.family} ${m.id}`);
     const pool = base.some(m => small(m) === wantSmall) ? base.filter(m => small(m) === wantSmall) : base;
     return [...pool].sort((a, b) => (b.maxInputTokens ?? 0) - (a.maxInputTokens ?? 0))[0];
+}
+
+/** A door that picks the model per request (Copilot's "Auto"): no one model answers through it. */
+export function isAutoModel(m: Pick<ModelLike, 'id'>): boolean {
+    return m.id.trim().toLowerCase() === 'auto';
 }
 
 /** A model VS Code lists but keeps for a task of its own (dictation clean-up and the like),

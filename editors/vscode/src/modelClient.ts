@@ -23,7 +23,7 @@
 // Code, and authentication is Copilot's, so nothing is stored in settings or SecretStorage.
 
 import * as vscode from 'vscode';
-import { isCoreOnlyRefusal, isCoreTaskModel, pickModel } from './aiTransformCore';
+import { isAutoModel, isCoreOnlyRefusal, isCoreTaskModel, pickModel } from './aiTransformCore';
 
 /** The models that refused this session as VS Code's own ("only available to VS Code core"):
  *  left out of every choice from then on, so the next request takes another. */
@@ -173,7 +173,7 @@ export async function pickAiModel(only?: ModelUse): Promise<void> {
         },
         ...models.map(m => ({
             label: m.name,
-            description: `${m.vendor}/${m.family}${m.id === current || m.family === current ? '  (current)' : ''}`,
+            description: `${m.vendor}/${isAutoModel(m) ? 'auto — Copilot picks the model' : m.family}${m.id === current || m.family === current ? '  (current)' : ''}`,
             detail: m.maxInputTokens ? `${Math.round(m.maxInputTokens / 1000)}K input tokens` : undefined,
             value: m.id,
         })),
@@ -247,9 +247,13 @@ function lmClient(model: vscode.LanguageModelChat): ChatClient {
         return text;
     };
     return {
-        label: model.family ? `${model.vendor}/${model.family}` : `${model.vendor}/${model.id || model.name}`,
+        // "Auto" says so: its family names a model it may not send the request to (owner's report
+        // 2026-10-27 — "via copilot/claude-fable-5.1" was Copilot's Auto, and it said nothing of who
+        // answered, so it is told no name to sign a composer line with).
+        label: isAutoModel(model) ? `${model.vendor}/auto`
+            : model.family ? `${model.vendor}/${model.family}` : `${model.vendor}/${model.id || model.name}`,
         maxInputTokens: model.maxInputTokens,
-        modelName: model.name || undefined,
+        modelName: isAutoModel(model) ? undefined : model.name || undefined,
         modelDetail: `name "${model.name}", vendor ${model.vendor}, id ${model.id}, family ${model.family}, version ${model.version}`
             + (model.maxInputTokens ? `, ${model.maxInputTokens} input tokens` : ''),
         async send(messages, token) {

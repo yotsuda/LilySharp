@@ -75,6 +75,8 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Ask AI
 
+- `[editor]` **The automatic AI model passes over Copilot's "Auto"** (id `auto`, which routes each
+  request and reports another model's family); chosen by name it is labelled `copilot/auto`.
 - `[editor]` **Compose with AI tells the model its own name** (`LanguageModelChat.name`), for a
   composer line when one is asked for; the exchange log records the model each request went to.
 - `[editor]` **Composing for the piano.** The composition check leaves a piano's left hand out of the

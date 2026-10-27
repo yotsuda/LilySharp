@@ -94,6 +94,10 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ### Ask AI
 
+- **The automatic model is never Copilot's "Auto".** Auto hands each request to a model of Copilot's
+  choosing under another model's name — it was picked for its input limit, and "via
+  copilot/claude-fable-5.1" answered as something else (the composer it signed was "OpenAI", then
+  "Auto"). Picked by name it is still used, shown as `copilot/auto`, and gives the composer no name.
 - **The composer knows who it is.** Compose with AI tells the model its name as VS Code lists it, so
   "fill in the composer" writes that name, not a guess ("OpenAI" came back from a model never told);
   no composer line is added unasked. *Lily# AI Exchange* names the model each request went to
