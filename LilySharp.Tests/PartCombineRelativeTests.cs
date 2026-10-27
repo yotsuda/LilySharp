@@ -80,8 +80,8 @@ public class PartCombineRelativeTests
         // The claim, in the half of it Lily# has a frame for. LilyPond's staff positions -6/-4
         // and -5/-3 are staff spaces -3.0/-2.0 and -2.5/-1.5 above the centre line, and its two
         // measures start 9.891 apart.
-        var columns = Columns(Svg(Book("e2 f | octave relative e2 f |",
-                                       "c2 d | octave relative c2 d |")));
+        var columns = Columns(Svg(Book("e'2 f' | octave relative e2 f |",
+                                       "c'2 d' | octave relative c2 d |")));
 
         Assert.Equal(4, columns.Count);
         Assert.Equal([-3.0, -2.0], columns[0].Ys);
@@ -107,8 +107,8 @@ public class PartCombineRelativeTests
         // nearer than the fifth up) at -4.0 ss, where absolute `a` is A4 at -0.5 ss.
         // ⚠️ Not every step discriminates, and two spellings were tried before this one: the
         // modes agree for every step of a fourth or less. Probe: pcrel-ctl-probe.lys.
-        var columns = Columns(Svg(Book("e2 f | octave relative c2 c |",
-                                       "c2 d | octave relative a2 a |")));
+        var columns = Columns(Svg(Book("e'2 f' | octave relative c2 c |",
+                                       "c'2 d' | octave relative a2 a |")));
 
         Assert.Equal(-4.0, columns[2].Ys[0]);
         Assert.Equal(-4.0, columns[3].Ys[0]);
@@ -121,8 +121,8 @@ public class PartCombineRelativeTests
         // the combiner merges, so both parts print and neither an "a2" nor a "Solo" appears.
         // LilyPond's dump of the book carries no CombineTextScript record at all. If this ever
         // starts printing a label, the measures above stopped being what the book is about.
-        var svg = Svg(Book("e2 f | octave relative e2 f |",
-                           "c2 d | octave relative c2 d |"));
+        var svg = Svg(Book("e'2 f' | octave relative e2 f |",
+                           "c'2 d' | octave relative c2 d |"));
 
         var labels = Regex.Matches(svg, "<text (?![^>]*class=\"music\")[^>]*>([^<]+)</text>")
             .Select(m => m.Groups[1].Value)

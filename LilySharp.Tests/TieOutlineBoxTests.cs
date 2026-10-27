@@ -73,7 +73,8 @@ namespace LilySharp.Tests;
 [Trait("Category", "Unit")]
 public class TieOutlineBoxTests
 {
-    /// <summary>The one-staff, one-system book every tie width probe here is written in.</summary>
+    /// <summary>The one-staff, one-system book every tie width probe here is written in. Its
+    /// music is in LilyPond's absolute octaves (bare c = C3, owner's decision 2026-10-28).</summary>
     private static string Book(string music, string name) => $$"""
         octave absolute
         time 4/4
@@ -109,7 +110,7 @@ public class TieOutlineBoxTests
     [Fact]
     public void TheDotsAreInTheOutline_AndTheMiddleTieOfADottedTriadLeavesThem()
     {
-        var g = RenderedGeometry.Render(Book("<c e g>4.~ <c e g>8 <c e g>2 |", "TVDOT"));
+        var g = RenderedGeometry.Render(Book("<c' e' g'>4.~ <c' e' g'>8 <c' e' g'>2 |", "TVDOT"));
 
         // Bows are indexed bottom to top within a chord: positions -6, -4, -2.
         Assert.Equal(4.006155, g.BowSpan(0), 6);
@@ -138,7 +139,7 @@ public class TieOutlineBoxTests
     [Fact]
     public void TheAccidentalsAreInTheOutline_AndAnArrivingTieStopsShortOfThem()
     {
-        var g = RenderedGeometry.Render(Book("<c g>2~ <c g aes>2 |", "TVACC"));
+        var g = RenderedGeometry.Render(Book("<c' g'>2~ <c' g' aes'>2 |", "TVACC"));
 
         Assert.Equal(3.875445, g.BowSpan(0), 6);
         Assert.Equal(1.124045, g.BowSpan(1), 6);
@@ -165,7 +166,7 @@ public class TieOutlineBoxTests
     [Fact]
     public void TheUntiedChordMembersAreInTheOutline_AndTheArrivingTieClearsThem()
     {
-        var g = RenderedGeometry.Render(Book("c2~ <b, c>2 |", "TVOTH"));
+        var g = RenderedGeometry.Render(Book("c'2~ <b c'>2 |", "TVOTH"));
 
         Assert.Equal(5.187845, g.BowSpan(0), 6);
         Assert.Equal(-4.500000, g.BowAttachmentAboveStaffMiddle(0), 6);

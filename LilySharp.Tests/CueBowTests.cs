@@ -37,6 +37,8 @@ public sealed class CueBowTests
 {
     private static RecordingDrawingContext Render(string music, string header = "")
     {
+        // The music below is written in LilyPond's absolute octaves (bare c = C3, owner's
+        // decision 2026-10-28), so it is the music LilyPond was measured on.
         var tree = SyntaxTree.Parse($$"""
             octave absolute
             {{header}}
@@ -61,7 +63,7 @@ public sealed class CueBowTests
     [Fact]
     public void ACueSlur_HangsFromTheCueHeads()
     {
-        var page = Render("c4 cue { e4( f) } g4 |");
+        var page = Render("c'4 cue { e'4( f') } g'4 |");
         var slur = Assert.Single(page.Beziers);
         double middle = Assert.Single(TwinBeamSweep.StavesOf(page)).Middle;
         // Start: the cue head's centre 0.4077 + the tilt shift; 0.354 under e's centre (−2.5).
@@ -80,14 +82,14 @@ public sealed class CueBowTests
     public void ACueSlurLeavingACueStem_StandsOnTheCueStem()
     {
         var page = Render("""
-            cue { e4( a4 d'4 c4) } |
-            cue { f'4( e'4 c''4 b'4) } |
-            cue { g8( a b c' d'4 e'4) } |
-            cue { c''8( b' a' g' f'4) r4 } |
-            cue { <c e g>4( <d f a>4) <e' g' b'>4( <d' f' a'>4) } |
-            cue { e4( fis4 bes4 c'4) } |
-            cue { c'16( e' g' c'' e''4) a'4( g'4) } |
-            cue { b4( g'4 d'2) } |
+            cue { e'4( a'4 d''4 c'4) } |
+            cue { f''4( e''4 c'''4 b''4) } |
+            cue { g'8( a' b' c'' d''4 e''4) } |
+            cue { c'''8( b'' a'' g'' f''4) r4 } |
+            cue { <c' e' g'>4( <d' f' a'>4) <e'' g'' b''>4( <d'' f'' a''>4) } |
+            cue { e'4( fis'4 bes'4 c''4) } |
+            cue { c''16( e'' g'' c''' e'''4) a''4( g''4) } |
+            cue { b'4( g''4 d''2) } |
             """, "time 4/4");
         var slur = page.Beziers.OrderBy(b => b.P0.X).First();
         double middle = Assert.Single(TwinBeamSweep.StavesOf(page)).Middle;
@@ -106,14 +108,14 @@ public sealed class CueBowTests
     public void ACueSlurOverACueAccidental_ReadsTheCueAccidental()
     {
         var page = Render("""
-            cue { e2( fis4 g4) } |
-            cue { b2( fis'4 g'4) } |
-            cue { g'2( bes'4 a'4) } |
-            cue { c''2( fis''4 e''4) } |
-            cue { a'2( cis''4 d''4) } |
-            cue { e2( fis2) } |
-            cue { d''2( bes'4 c''4) } |
-            cue { f'1( | gis'1) } |
+            cue { e'2( fis'4 g'4) } |
+            cue { b'2( fis''4 g''4) } |
+            cue { g''2( bes''4 a''4) } |
+            cue { c'''2( fis'''4 e'''4) } |
+            cue { a''2( cis'''4 d'''4) } |
+            cue { e'2( fis'2) } |
+            cue { d'''2( bes''4 c'''4) } |
+            cue { f''1( | gis''1) } |
             """, "time 4/4");
         var slurs = page.Beziers.OrderBy(b => b.P0.X).ToArray();
         Assert.Equal(8, slurs.Length);
@@ -125,7 +127,7 @@ public sealed class CueBowTests
     [Fact]
     public void ACueTie_LeavesTheCueHead()
     {
-        var page = Render("c4 cue { e4~ e4 } g4 |");
+        var page = Render("c'4 cue { e'4~ e'4 } g'4 |");
         var tie = Assert.Single(page.Beziers);
         var heads = HeadXs(page);
         Assert.Equal(0.6077, tie.P0.X - heads[1], 3);

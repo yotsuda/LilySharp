@@ -260,7 +260,8 @@ public class SenzaMisuraTests
         Assert.Contains("f e \\bar \"|\"", ly);
         Assert.Contains("\\cadenzaOff \\time 4/4 c1 |", ly);
         // The metered bars keep the bare bar check.
-        Assert.Contains("c'4 d e f |", ly);
+        // C5 from the twin's `\relative c` (owner's decision 2026-10-28) is c''.
+        Assert.Contains("c''4 d e f |", ly);
     }
 
     [Fact]

@@ -73,7 +73,10 @@ public sealed class InstrumentPresetTests
     public void MandolinAndBanjo_ReadTheClefTheirInstrumentReads(string instrument, ClefType clef)
     {
         Assert.True(InstrumentDefaults.IsKnownInstrument(instrument));
-        Assert.Equal((clef, 4), InstrumentDefaults.GetDefaults(instrument));
+        // The octave is every preset's default anchor, 3: no preset moves any octave
+        // (owner's decision 2026-10-28).
+        Assert.Equal((clef, InstrumentDefaults.DefaultAnchorOctave), InstrumentDefaults.GetDefaults(instrument));
+        Assert.Equal(3, InstrumentDefaults.DefaultAnchorOctave);
         Assert.Equal(0, InstrumentDefaults.GetTransposition(instrument));
     }
 

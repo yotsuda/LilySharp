@@ -41,7 +41,7 @@ public class BeamRestChainTests
         // pushes it one whole space down to +2 — LP renders it at rel −1.0.
         // Larger-wins merging kept the voiced +4 and the push never landed.
         // Pinned against the LP twin (audit\lpreg\dot-rest-beam-trigger.{ly,svg}).
-        string svg = Render("time 12/16\n\nvoice { c'16[ b a r b g] } { r8. r } |\n");
+        string svg = Render("time 12/16\n\nvoice { c''16[ b a r b g] } { r8. r } |\n");
         double middle = MiddleLineY(svg);
 
         var r16 = Assert.Single(MusicGlyphs(svg, EmmentalerGlyphs.Rest16th));

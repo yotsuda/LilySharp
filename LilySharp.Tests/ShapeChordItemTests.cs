@@ -211,12 +211,12 @@ public class ShapeChordItemTests
         Assert.Equal("C3 E3 G3 C4 G4", Names(notes));
         Assert.Equal(new[] { 5, 4, 3, 2, 1 }, notes.Select(n => n.StringNumber));
         Assert.Equal(new[] { 48, 52, 55, 60, 67 }, notes.Select(n => n.SoundingMidi));
-        // A guitar part (treble_8: written an octave up) writes them an octave up, and plays
-        // them where they sound.
+        // A guitar part (treble_8) writes them where they sound, as LilyPond's treble_8 does
+        // (owner's decision 2026-10-28), and plays them there.
         string book = Book("instrument guitar", "chord(C x32013)1 |");
         Assert.Equal(new[] { 48, 52, 55, 60, 67 }, MidiPitches(book));
         var chord = Assert.IsType<ChordItem>(Items(Collected(book))[0]);
-        Assert.Equal(new[] { 60, 64, 67, 72, 79 }, chord.Notes.Select(n => n.Midi).OrderBy(m => m));
+        Assert.Equal(new[] { 48, 52, 55, 60, 67 }, chord.Notes.Select(n => n.Midi).OrderBy(m => m));
         // With no instrument the guitar's strings are written where they sound.
         Assert.Equal(new[] { 48, 52, 55, 60, 67 }, MidiPitches(Book("clef treble", "chord(C x32013)1 |")));
         Assert.Equal(new[] { 48, 52, 55, 60, 67 },
@@ -263,7 +263,8 @@ public class ShapeChordItemTests
     public void TheFrame_AfterTheItem_IsItsLowestNote()
     {
         // g'' puts the frame high up; the item ignores it, and the d after it reads from the
-        // item's lowest note (written C4 on a guitar part) — D4 written, D3 sounding.
+        // item's lowest note (C3: treble_8 is written at sounding pitch since the owner's
+        // decision 2026-10-28) — D3.
         string relative = Book("instrument guitar", "g''1 | chord(C x32013)1 | d1 |");
         int[] played = MidiPitches(relative);
         Assert.Equal(new[] { 48, 52, 55, 60, 67 }, played[1..6]);
@@ -276,10 +277,10 @@ public class ShapeChordItemTests
         string absolute = Book("instrument guitar", "chord(C x32013)1 | d1 |", top: "octave absolute");
         int[] fixedPlayed = MidiPitches(absolute);
         Assert.Equal(new[] { 48, 52, 55, 60, 67 }, fixedPlayed[..5]);
-        Assert.Equal(62 - 12, fixedPlayed[^1]);   // d = D4 written, D3 sounding
+        Assert.Equal(62 - 12, fixedPlayed[^1]);   // d = D3, written and sounding
         // The page and MusicXML read the same frame (MusicXML writes it under the guitar's
         // treble_8 clef, which is the octave it sounds: D3).
-        Assert.Equal("D4", (ResolvedPitches.ForFile(SyntaxTree.Parse(relative)) ?? [])[^1].Pitch);
+        Assert.Equal("D3", (ResolvedPitches.ForFile(SyntaxTree.Parse(relative)) ?? [])[^1].Pitch);
         string xml = new MusicXmlExporter().Export(SyntaxTree.Parse(relative)).ToXml().ToString();
         var last = Regex.Matches(xml, @"<step>(\w)</step>\s*<octave>(\d)</octave>").Last();
         Assert.Equal(("D", "3"), (last.Groups[1].Value, last.Groups[2].Value));
@@ -304,12 +305,12 @@ public class ShapeChordItemTests
             return ((ResolvedPitches.ForFile(tree) ?? [])[^1].Pitch, MidiPitches(book)[^1],
                 xml.Groups[1].Value + xml.Groups[2].Value);
         }
-        // The item's lowest note is written C4 on a guitar part: g reads G3 (sounding G2, 43,
-        // which is what MusicXML writes under the treble_8 clef).
+        // The item's lowest note is C3 on a guitar part (treble_8 is written at sounding pitch,
+        // owner's decision 2026-10-28): g reads G2 (43), which is what MusicXML writes too.
         foreach (string second in new[] { "a'1", "e'1", "f''1", "r1" })
-            Assert.Equal(("G3", 43, "G2"), After(Song(second)));
-        Assert.Equal(("G3", 43, "G2"), After(Song("e'1", "P'")));
-        Assert.Equal(("G3", 43, "G2"), After(Song("e'1", "P,")));
+            Assert.Equal(("G2", 43, "G2"), After(Song(second)));
+        Assert.Equal(("G2", 43, "G2"), After(Song("e'1", "P'")));
+        Assert.Equal(("G2", 43, "G2"), After(Song("e'1", "P,")));
         // A grace body naming such a phrase hands the same note on to the grace after it.
         string grace = Book("instrument guitar", "g''1 | grace { Q g16 } c1 |",
             top: "phrase Q { chord(C x32013)16 e'16 }");
@@ -333,7 +334,7 @@ public class ShapeChordItemTests
         Assert.Equal(5, notes.Count);
         Assert.All(notes, c => Assert.Single(c.Notes));
         Assert.Equal(new int?[] { 5, 4, 3, 2, 1 }, notes.Select(c => c.Notes[0].StringNumber));
-        Assert.Equal(new[] { 48, 52, 55, 60, 67 }, notes.Select(c => c.Notes[0].Midi - 12));
+        Assert.Equal(new[] { 48, 52, 55, 60, 67 }, notes.Select(c => c.Notes[0].Midi));   // written where they sound (2026-10-28)
         string xml = new MusicXmlExporter().Export(SyntaxTree.Parse(alone)).ToXml().ToString();
         Assert.Equal(5, Regex.Matches(xml, @"<actual-notes>5</actual-notes>").Count);
         Assert.Equal(new[] { "5", "4", "3", "2", "1" },
@@ -398,11 +399,11 @@ public class ShapeChordItemTests
         Assert.Equal(new int?[] { 5, 4, 3, 2, 1 },
             staff.Notes.OrderBy(n => n.Midi).Select(n => n.StringNumber));
         var tab = Assert.IsType<ChordItem>(Items(score, tab: true)[0]);
-        // The fret each string shows: the sounding pitch (written less the guitar's octave)
-        // less the open string.
+        // The fret each string shows: the sounding pitch (the written one: treble_8 is written at
+        // sounding pitch since the owner's decision 2026-10-28) less the open string.
         int[] open = LilySharp.Core.Tablature.Tunings.Guitar;
         var frets = tab.Notes.OrderByDescending(n => n.StringNumber)
-            .Select(n => n.Midi - 12 - open[6 - n.StringNumber!.Value]);
+            .Select(n => n.Midi - open[6 - n.StringNumber!.Value]);
         Assert.Equal(new[] { 3, 2, 0, 1, 3 }, frets);
     }
 
@@ -482,9 +483,11 @@ public class ShapeChordItemTests
     {
         string ly = new LilyPondExporter().Export(SyntaxTree.Parse(
             Book("instrument guitar", "g''1 | chord(C x32013)1 | d1 | chord(Cm7 x3x546)1 |")));
-        Assert.Contains(@"<c,,\5 e\4 g\3 c\2 g'\1>1", ly);
+        // The twin is `\relative c` since the owner's decision 2026-10-28, so from the G5 the
+        // chord's C3 is c,,,.
+        Assert.Contains(@"<c,,,\5 e\4 g\3 c\2 g'\1>1", ly);
         Assert.Contains(@"d1 |", ly);
-        Assert.Contains(@"<c\5 c'\3 ees\2 bes'\1>1", ly);   // read from the d, D4 written
+        Assert.Contains(@"<c\5 c'\3 ees\2 bes'\1>1", ly);   // read from the d, D3
         Assert.Contains(@"\omit StringNumber", ly);
         string fixedLy = new LilyPondExporter().Export(SyntaxTree.Parse(
             Book("instrument guitar", "chord(C x32013)1 |", top: "octave absolute")));

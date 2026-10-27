@@ -197,8 +197,9 @@ public sealed class PageBreakTests
     [Fact]
     public void ATieBetweenTwoStaves_IsNotPricedByTheBreaker()
     {
-        string up = string.Join(" ", Enumerable.Repeat("c2~ c2 | break", 8));
-        string lo = string.Join(" ", Enumerable.Repeat("e4 e e e |", 8));
+        // C4 over E4, in LilyPond's absolute octaves (owner's decision 2026-10-28), as measured.
+        string up = string.Join(" ", Enumerable.Repeat("c'2~ c'2 | break", 8));
+        string lo = string.Join(" ", Enumerable.Repeat("e'4 e' e' e' |", 8));
         var layout = LayoutOf($$"""
             octave absolute
             key c major

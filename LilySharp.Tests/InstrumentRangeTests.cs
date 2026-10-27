@@ -55,11 +55,12 @@ public class InstrumentRangeTests
     [Fact]
     public void ANoteBelowTheFlute_IsWarnedAtTheNote_OnceEach()
     {
-        // The flute's bare c is C5 (its preset's octave); c, is C4, its lowest note, and b,, B3.
-        string source = Book("instrument flute", "c,4 b,, b,, c, |");
+        // The flute's bare c is C3, as every part's (owner's decision 2026-10-28: no preset
+        // moves the octave); c' is C4, its lowest note, and b B3.
+        string source = Book("instrument flute", "c'4 b b c' |");
         var warnings = RangeWarnings(source);
         Assert.Equal(2, warnings.Length);
-        Assert.All(warnings, w => Assert.StartsWith("b,,", source[w.Span.Start..]));
+        Assert.All(warnings, w => Assert.StartsWith("b ", source[w.Span.Start..]));
         Assert.Contains("sounds B3, below the range of the Flute (C4-D7", warnings[0].Message);
     }
 
@@ -67,8 +68,8 @@ public class InstrumentRangeTests
     public void ATransposingInstrument_IsJudgedByWhatItSounds()
     {
         // A B♭ clarinet's written E3 sounds D3, its lowest note; its written D3 would sound C3.
-        Assert.Empty(RangeWarnings(Book("instrument clarinet", "e,4 f, g, a, |")));
-        var w = Assert.Single(RangeWarnings(Book("instrument clarinet", "d,4 f, g, a, |")));
+        Assert.Empty(RangeWarnings(Book("instrument clarinet", "e4 f g a |")));
+        var w = Assert.Single(RangeWarnings(Book("instrument clarinet", "d4 f g a |")));
         Assert.Contains("sounds C3, below", w.Message);
     }
 
@@ -91,7 +92,7 @@ public class InstrumentRangeTests
     [Fact]
     public void ANoteAboveTheSoprano_IsWarned()
     {
-        var w = Assert.Single(RangeWarnings(Book("instrument soprano", "c''4 d'' c'' b' |")));
+        var w = Assert.Single(RangeWarnings(Book("instrument soprano", "c'''4 d''' c''' b'' |")));
         Assert.Contains("sounds D6, above the range of the Soprano (C4-C6", w.Message);
     }
 }

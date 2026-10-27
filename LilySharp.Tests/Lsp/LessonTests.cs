@@ -514,8 +514,10 @@ public class LessonTests
         // PageUp writes e' (the notes after it follow, in relative octaves).
         Assert.Contains("(`fis` in G major)", Lesson1);
         string inG = Lesson1.Insert(EmptyLineAfter(Lesson1, "STEP 1"), "key g major");
-        int note = inG.IndexOf("e4" + Step3Mark, System.StringComparison.Ordinal);
-        Assert.True(note >= 0, "the ringed first note is no longer e4");
+        // The lesson's first note is written e' since the owner's decision 2026-10-28 (a frame
+        // opens on F3), so it sounds E4 as it always did.
+        int note = inG.IndexOf("e'4" + Step3Mark, System.StringComparison.Ordinal);
+        Assert.True(note >= 0, "the ringed first note is no longer e'4");
         string StepAt(string t, int c, int dir, bool inKey)
         {
             var step = LilySharp.Core.Editing.NoteStepper.Step(t, SyntaxTree.Parse(t), [(c, c)], dir, semitone: inKey);
@@ -523,9 +525,9 @@ public class LessonTests
             return LilySharp.Core.Editing.NoteStepper.Apply(t, step.Edits);
         }
         string up = StepAt(inG, note + 1, +1, inKey: true);
-        Assert.StartsWith("fis4" + Step3Mark, up[note..]);
-        Assert.StartsWith("e4" + Step3Mark, StepAt(up, note + 1, -1, inKey: true)[note..]);
-        Assert.StartsWith("e'4" + Step3Mark, StepAt(inG, note + 1, +1, inKey: false)[note..]);
+        Assert.StartsWith("fis'4" + Step3Mark, up[note..]);
+        Assert.StartsWith("e'4" + Step3Mark, StepAt(up, note + 1, -1, inKey: true)[note..]);
+        Assert.StartsWith("e''4" + Step3Mark, StepAt(inG, note + 1, +1, inKey: false)[note..]);
     }
 
     [Fact]
@@ -533,7 +535,7 @@ public class LessonTests
     {
         // The writer's first edit is to take a mark away: the ring on the first note goes,
         // and nothing else changes.
-        Assert.StartsWith("e4" + Step3Mark, Lesson1[Lesson1.IndexOf("e4@todo", System.StringComparison.Ordinal)..]);
+        Assert.StartsWith("e'4" + Step3Mark, Lesson1[Lesson1.IndexOf("e'4@todo", System.StringComparison.Ordinal)..]);
         static int Marks(string text)
         {
             var tree = SyntaxTree.Parse(text);

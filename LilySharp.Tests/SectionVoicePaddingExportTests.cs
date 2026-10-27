@@ -298,7 +298,8 @@ public class SectionVoicePaddingExportTests
         var ly = Twin(ChordRowLonger);
         // Melody's A gets its silent second bar, so B's notes stand under B's chord. (The
         // stream breaks its line at a bar line, hence the whitespace-tolerant match.)
-        Assert.Matches(@"g2 g \|\s*s1 \|", ly);
+        // The twin's frame is `\relative c` since the owner's decision 2026-10-28: G3 is g'.
+        Assert.Matches(@"g'2 g \|\s*s1 \|", ly);
         Assert.Contains("d1:m7 |", ly);
     }
 
@@ -306,7 +307,8 @@ public class SectionVoicePaddingExportTests
     public void Twin_PadsTheShortPart_AgainstALongerPart()
     {
         var ly = Twin(PartLonger);
-        Assert.Matches(@"g'2 g' \|\s*s1 \|", ly);
+        // G4 G5 from the twin's `\relative c` (owner's decision 2026-10-28).
+        Assert.Matches(@"g''2 g' \|\s*s1 \|", ly);
         Assert.DoesNotMatch(@"g2 g \|\s*s1", ly); // the long voice is untouched
     }
 
@@ -319,7 +321,7 @@ public class SectionVoicePaddingExportTests
             form { A | }
             score { staff melody  staff bass }
             """);
-        Assert.Matches(@"g2 g \|\s*s1 \|", ly);
+        Assert.Matches(@"g'2 g \|\s*s1 \|", ly);   // G3 from the twin's `\relative c`
     }
 
     [Fact]
@@ -363,11 +365,11 @@ public class SectionVoicePaddingExportTests
     {
         var ly = Twin(NoBlockForB);
         // Bass: A's two bars, then B's two silent bars under B's own mark, then C.
-        Assert.Matches(@"g1 \|\s*\\mark \\markup \\box ""B"" s1 \|\s*s1 \|\s*\\mark \\markup \\box ""C"" g2 g \|", ly);
+        Assert.Matches(@"g'1 \|\s*\\mark \\markup \\box ""B"" s1 \|\s*s1 \|\s*\\mark \\markup \\box ""C"" g'2 g' \|", ly);
         // The chord row: two silent \chordmode bars between A's g1 and C's g1.
         Assert.Matches(@"c1 \|\s*g1 \|\s*s1 \|\s*s1 \|\s*g1 \|", ly);
         // The part that writes every section is untouched: no spacer bar in melody.
-        Assert.Matches(@"d''1 \|\s*\\mark \\markup \\box ""C"" e''2 e'' \|", ly);
+        Assert.Matches(@"d'''1 \|\s*\\mark \\markup \\box ""C"" e'''2 e''' \|", ly);
     }
 
     /// <summary>The section's own header shapes the silence: its <c>time</c> is the bar's
@@ -386,7 +388,8 @@ public class SectionVoicePaddingExportTests
             form { A B C }
             score { chords prog  staff melody  staff bass }
             """);
-        Assert.Matches(@"c2 e \|\s*\\mark \\markup \\box ""B"" \\time 3/4 \\partial 4 s4 \|\s*s2\. \|\s*\\time 4/4 \\mark \\markup \\box ""C"" g2 g \|", ly);
+        // The twin is `\fixed c` since the owner's decision 2026-10-28, so C4 is c'.
+        Assert.Matches(@"c'2 e' \|\s*\\mark \\markup \\box ""B"" \\time 3/4 \\partial 4 s4 \|\s*s2\. \|\s*\\time 4/4 \\mark \\markup \\box ""C"" g'2 g' \|", ly);
         Assert.Matches(@"c1 \|\s*s4 \|\s*s2\. \|\s*g1 \|", ly);
     }
 
