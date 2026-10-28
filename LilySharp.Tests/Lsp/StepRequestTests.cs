@@ -1682,6 +1682,29 @@ public class StepRequestTests
         Assert.Equal("@finger(…): 5 / 4 / 3 / 2 / 1 / 0", top.Message);
     }
 
+    /// <summary>The music keywords step among their kin (owner's request 2026-10-28): the grace
+    /// notes down the completion's order, a break Up to the page's, stopping at the ends.</summary>
+    [Theory]
+    [InlineData("gr‸ace { d'16 } c'4 d'2. |", -1, "acciaccatura { d'16 } c'4 d'2. |")]
+    [InlineData("acciacca‸tura { d'16 } c'4 d'2. |", -1, "appoggiatura { d'16 } c'4 d'2. |")]
+    [InlineData("appoggi‸atura { d'16 } c'4 d'2. |", +1, "acciaccatura { d'16 } c'4 d'2. |")]
+    [InlineData("c'1 | br‸eak d'1 |", +1, "c'1 | pageBreak d'1 |")]
+    [InlineData("c'1 | pageBr‸eak d'1 |", -1, "c'1 | break d'1 |")]
+    [InlineData("c'1 | noBr‸eak d'1 |", +1, "c'1 | noPageBreak d'1 |")]
+    public void AMusicKeyword_StepsAmongItsKin(string from, int dir, string to)
+        => Assert.Equal(Plain(to), Step(Plain(from), dir, semitone: true).After);
+
+    [Fact]
+    public void AMusicKeyword_StopsAtItsEnds()
+    {
+        var (top, same) = Step(Plain("c'1 | pageBr‸eak d'1 |"), +1, semitone: true);
+        Assert.False(top.Fallback);
+        Assert.Equal(Plain("c'1 | pageBreak d'1 |"), same);
+        Assert.Equal("pageBreak / break", top.Message);
+        var (_, grace) = Step(Plain("gr‸ace { d'16 } c'4 d'2. |"), +1, semitone: true);
+        Assert.Equal(Plain("grace { d'16 } c'4 d'2. |"), grace);
+    }
+
     /// <summary>The stepped arguments are the completion's: every value it offers can be stepped
     /// to, so the two cannot drift apart.</summary>
     [Fact]

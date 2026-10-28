@@ -25,6 +25,8 @@ All notable changes to the Lily# VS Code extension are documented here.
   `@harmonic`, `@arpeggio` / `@arpeggio(bracket)`, and the accent dynamics (`@fp` … `@sffz`).
 - **An argument from a list steps**: `@notehead(x)` → `@notehead(cross)` …, `@finger(3)` → `@finger(4)`,
   `@pluck(…)`, `@bend(…)`, `@feather(…)` — the values `Ctrl+Space` offers there.
+- **`grace` / `acciaccatura` / `appoggiatura` step among themselves**, and `break` ⇄ `pageBreak`,
+  `noBreak` ⇄ `noPageBreak`.
 
 ### Checks
 

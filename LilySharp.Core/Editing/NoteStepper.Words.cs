@@ -69,6 +69,45 @@ public static partial class NoteStepper
         return values != null && values.Contains(value, StringComparer.Ordinal) ? [.. values] : null;
     }
 
+    /// <summary>
+    /// The music keywords that step among their kin, each group in Up order (owner's request
+    /// 2026-10-28: related things a key apart, even where the order means little): the three
+    /// grace notes — Down walks them as the completion lists them, <c>grace</c> first —, a
+    /// system's and a page's break (Up the page's), and their refusals. <c>afterGrace</c> is
+    /// written after its note, a different shape, so it stands apart. Each stops at its ends.
+    /// </summary>
+    private static readonly (SyntaxKind Kind, string Word)[][] MusicKeywordGroups =
+    [
+        [(SyntaxKind.AppoggiaturaKeyword, "appoggiatura"), (SyntaxKind.AcciaccaturaKeyword, "acciaccatura"), (SyntaxKind.GraceKeyword, "grace")],
+        [(SyntaxKind.BreakKeyword, "break"), (SyntaxKind.PageBreakKeyword, "pageBreak")],
+        [(SyntaxKind.NoBreakKeyword, "noBreak"), (SyntaxKind.NoPageBreakKeyword, "noPageBreak")],
+    ];
+
+    private static (SyntaxKind Kind, string Word)[]? MusicKeywordGroupOf(SyntaxKind kind)
+        => Array.Find(MusicKeywordGroups, g => g.Any(k => k.Kind == kind));
+
+    /// <summary>A music keyword of <see cref="MusicKeywordGroups"/> the caret is on, or null.</summary>
+    private static SyntaxTokenNode? MusicKeywordAt(SyntaxTree tree, int offset)
+    {
+        foreach (var node in tree.GetNodes<SyntaxNode>())
+            for (int i = 0; i < node.SlotCount; i++)
+                if (node.GetChild(i) is SyntaxTokenNode token && token.Span.Start <= offset && offset <= token.Span.End
+                    && MusicKeywordGroupOf(token.Kind) != null)
+                    return token;
+        return null;
+    }
+
+    /// <summary>One step of a music keyword along its group, and the group, listed from the top.</summary>
+    private static (Edit? Edit, string Message) MusicKeywordEdit(SyntaxTokenNode keyword, int dir)
+    {
+        var group = MusicKeywordGroupOf(keyword.Kind)!;
+        string listed = string.Join(" / ", group.Reverse().Select(k => k.Word));
+        int to = Array.FindIndex(group, k => k.Kind == keyword.Kind) + dir;
+        if (to < 0 || to >= group.Length)
+            return (null, listed);
+        return (new Edit(keyword.Span.Start, keyword.Span.End, group[to].Word), listed);
+    }
+
     /// <summary>A chord row's <c>as</c> words (ChordDisplayModeValidator's), in the completion's order.</summary>
     private static readonly string[] ChordAsWords = ["roman", "names"];
 
