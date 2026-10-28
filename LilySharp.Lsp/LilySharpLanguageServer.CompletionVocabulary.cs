@@ -4727,6 +4727,62 @@ public sealed partial class LilySharpLanguageServer
         return list;
     }
 
+    /// <summary>
+    /// After <c>@!</c>: the names a span end takes — every annotation name
+    /// <see cref="LilySharp.Core.Svg.Model.MusicMarkItem.ParseSpanEndName"/> reads, so the list
+    /// cannot offer what the compiler refuses (owner's report 2026-10-28: nothing completed
+    /// there). The span still open before the caret in its block comes first, selected.
+    /// </summary>
+    internal static CompletionList GetSpanEndCompletions(string text, int offset)
+    {
+        string? open = OpenSpanBefore(text, offset);
+        var items = new List<CompletionItem>();
+        foreach (var item in GetArticulationCompletions().Items)
+        {
+            if (LilySharp.Core.Svg.Model.MusicMarkItem.ParseSpanEndName(item.Label) is null)
+                continue;
+            bool isOpen = item.Label == open;
+            items.Add(new CompletionItem
+            {
+                Label = item.Label,
+                Kind = item.Kind,
+                Detail = isOpen ? $"Ends the @{open} open here" : $"Ends @{item.Label}",
+                FilterText = item.FilterText,
+                SortText = (isOpen ? "0" : "1") + item.SortText,
+                Preselect = isOpen ? true : null,
+            });
+        }
+        return new CompletionList { Items = [.. items] };
+    }
+
+    /// <summary>The name of the span start nearest before <paramref name="offset"/> in its block
+    /// (back to the unmatched '{') that no later <c>@!</c> of its family closed, or null. A
+    /// hairpin is left out: the next dynamic ends it as well as an <c>@!</c>.</summary>
+    internal static string? OpenSpanBefore(string text, int offset)
+    {
+        int start = Math.Min(offset, text.Length);
+        for (int depth = 0; start > 0; start--)
+        {
+            char c = text[start - 1];
+            if (c == '}') depth++;
+            else if (c == '{' && depth-- == 0) break;
+        }
+        var open = new Dictionary<LilySharp.Core.Svg.Model.MusicMarkType, (string Name, int At)>();
+        foreach (System.Text.RegularExpressions.Match m in
+                 System.Text.RegularExpressions.Regex.Matches(text[start..Math.Min(offset, text.Length)], @"@(!?)([A-Za-z0-9]+)"))
+        {
+            if (start + m.Index + m.Length >= offset)
+                continue;                                  // the name being typed at the caret
+            string name = m.Groups[2].Value;
+            if (LilySharp.Core.Svg.Model.MusicMarkItem.ParseSpanEndName(name) is not { } end
+                || end == LilySharp.Core.Svg.Model.MusicMarkType.HairpinStop)
+                continue;
+            if (m.Groups[1].Value == "!") open.Remove(end);
+            else open[end] = (name, m.Index);
+        }
+        return open.Count == 0 ? null : open.Values.MaxBy(v => v.At).Name;
+    }
+
     internal static CompletionList GetArticulationCompletions(bool afterChord = false)
     {
         // Bare '@chord' on a chord auto-derives the symbol from its notes — no '(…)'.

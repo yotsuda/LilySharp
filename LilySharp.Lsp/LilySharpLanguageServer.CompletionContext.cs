@@ -808,6 +808,8 @@ public sealed partial class LilySharpLanguageServer
         AfterMarks,
         AfterRepeat,
         AfterAt,
+        /// <summary><c>@!|</c>, <c>@!ri|</c> — the end of a span: the names <c>@!</c> takes.</summary>
+        AfterAtBang,
         AfterBackslash,
         AfterArticulationPlacement,
         /// <summary><c>@todo("…")|</c>, <c>@todo("…").|</c>, <c>@todo("…").d|</c> — the
@@ -988,6 +990,8 @@ public sealed partial class LilySharpLanguageServer
         {
             if (text[i] == '@')
                 return CompletionContext.AfterAt;
+            if (text[i] == '!' && i > 0 && text[i - 1] == '@')
+                return CompletionContext.AfterAtBang;
             if (text[i] == '\\')
                 return CompletionContext.AfterBackslash;
 
@@ -1002,6 +1006,8 @@ public sealed partial class LilySharpLanguageServer
             {
                 if (text[at] == '@')
                     return CompletionContext.AfterAt;
+                if (text[at] == '!' && at > 0 && text[at - 1] == '@')
+                    return CompletionContext.AfterAtBang;
                 if (text[at] == '\\')
                     return CompletionContext.AfterBackslash;
             }
@@ -2345,9 +2351,9 @@ public sealed partial class LilySharpLanguageServer
     }
 
     /// <summary>
-    /// The annotation name typed so far after the '@' — "ill" for
-    /// <c>c4@ill|</c>, "" right after the trigger. Letters and digits only, so a
-    /// preceding note or duration is not swept in.
+    /// The annotation name typed so far after the '@' (or a span end's '@!') — "ill" for
+    /// <c>c4@ill|</c>, "ri" for <c>c4@!ri|</c>, "" right after the trigger. Letters and digits
+    /// only, so a preceding note or duration is not swept in.
     /// </summary>
     internal static string PartialAnnotationName(string text, int offset)
     {
@@ -2355,7 +2361,9 @@ public sealed partial class LilySharpLanguageServer
         int start = end;
         while (start > 0 && char.IsLetterOrDigit(text[start - 1]))
             start--;
-        return start > 0 && text[start - 1] == '@' ? text[start..end] : "";
+        bool afterAt = start > 0 && (text[start - 1] == '@'
+            || (text[start - 1] == '!' && start > 1 && text[start - 2] == '@'));
+        return afterAt ? text[start..end] : "";
     }
 
 }

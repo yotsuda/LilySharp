@@ -142,6 +142,10 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
   - **ついでに見つけた: オクターブの変更（第1027）の取り残し**＝「preset がオクターブを決める」と書いた文が site（ref-structure の clef の行・editor の補完の説明）、GRAMMAR、GRAMMAR_FOR_LLM、コードの注釈 7 か所に残っていた（`GetDefaults(preset).Octave` は常に 3）。行数を変えずに直した。LYS1050 の規則そのものは正しい。
   - full **13461 / 0 / 2**。
 - **ユーザー報告「VS Code で `@8va` が補完候補に出てこない」**: サーバーは `@8` に `ottava`・`8va`・`8vb` を返していた（使い捨ての網で確認）。犯人は拡張の smart typing＝規則 28（音符に続く印の中でも数字は音符の音価）が `@` の直後にも効き、`c'4@` + `8` を `c'8@` に書き換えていた（`@1` も同じ）。`durationPlan` で「`@`／`@!` の後に数字しか無い位置」の数字は押したとおりにした。網は `smartTypingCore.test.ts` の 28 に 1 本（直す前は赤）。npm **514 / 0**。MANUAL-CHECKS C45。
+- **ユーザー報告「`@!` で始まるキーワードも補完されない」＋指示「書けるのに補完できない語を調べて」**:
+  - `@!` は補完の文脈が無く音名に落ちていた → `AfterAtBang`（名前は `ParseSpanEndName` が読むものだけ・開いている span を先頭に選択・`!` を trigger に足し `@` の後以外は何も返さない）。網 `SpanEndCompletionTests` 6 本。
+  - **総点検**（Lab `sessions/p1030/audit/`・器は `*.txt` に保存）: 35 か所＋その値の位置＝67 か所の一覧の語 1063 個を、VS Code の動き（trigger・incomplete で再要求・既定の語の区切りで絞り込み）で 1 文字ずつ打った＝サーバー側の取りこぼし 0。同じ語を打鍵の模擬器で打った＝**`paper { size a5 }` など 23 個が smart typing に書き換えられていた**（`a` を音符、数字を音価と読む）→ `inSettingsBlock`（paper／layout／fonts／header／midi／markup の中は規則を止める・後ろ向きに 1 回だけ読む）。模擬器は直す前の `@8va` を 4 個拾う＝陽性対照あり。語彙そのもの（コンパイラが受け付ける語が一覧にあるか）は既存の網が見ている。音楽の途中の `clef` が 5 種なのはコンパイラも同じ＝言語の仕様。
+  - npm **517 / 0**。MANUAL-CHECKS C46・C47。
 - **ユーザー指示: OMR の返事 `lilysharp-reply-2026-10-28-missed-barline.md`**（10-27 の依頼への返事・OMR `2464d77`）: OMR は長さが拍子の k 小節分で box が隣の約 k 倍なら memo を「a bar line may be missed here: …」にし、その行の長さの注釈を書かなくなった。**Lily# 側の作業なし**＝「Write the missing bar line」は LYS2017、AI の直しの「箱が隣の何倍か」も Lily# 自身の計測で、memo の文言にも注釈にも頼っていない（grep で確認）。REQUESTS の 10-28 の行の下に受け取りを 1 行書いた（OMR の repo・未 commit＝OMR 側が commit する慣例）。
 
 ## 以下は第1028セッションの経緯

@@ -171,7 +171,7 @@ public sealed partial class LilySharpLanguageServer
                 {
                     // '.' only for the placement qualifier (`@todo("memo").` → up/down);
                     // Completion answers nothing else a '.' triggers.
-                    TriggerCharacters = ["\\", "@", " ", "."],
+                    TriggerCharacters = ["\\", "@", " ", ".", "!"],
                     ResolveProvider = false
                 },
                 HoverProvider = true,

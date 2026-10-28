@@ -362,6 +362,7 @@ export interface TypePlan {
 /** The characters whose keys are intercepted, mapped to what they plan — and
  * '@', which is not intercepted but is decided the same way (rule 27). */
 export function planFor(ch: string, before: string, offset: number): TypePlan | null {
+    if (inSettingsBlock(before, offset)) { return null; }
     if (ch === "'" || ch === ',') { return octaveMarkPlan(before, offset, ch); }
     if (ch === '.') { return dotPlan(before, offset); }
     if (ch === '\\') { return stringNumberPlan(before, offset); }
@@ -375,6 +376,7 @@ export function planFor(ch: string, before: string, offset: number): TypePlan | 
  * text with the keystroke in it: the chord brackets, the slur and beam marks
  * and the tie, each alone or as the pair VS Code auto-closed it into. */
 export function insertionPlan(typed: string, text: string, offset: number): FixPlan | null {
+    if (inSettingsBlock(text, offset)) { return null; }
     switch (typed) {
         case '<': return chordOpenPlan(text, offset);
         case '<>': return chordAutoClosePlan(text, offset);
@@ -2140,6 +2142,28 @@ function voiceSpanOf(text: string, open: number)
  * A block they open is not counted by rule 32 (a '|' does not belong inside it). */
 const NOT_BARS = new Set(['grace', 'afterGrace', 'acciaccatura', 'appoggiatura', 'alternative',
     'repeat', 'tuplet', 'score', 'form', 'paper', 'layout', 'header', 'midi', 'markup']);
+
+/** The words that open a block of settings, which holds no notes at all. */
+const SETTINGS_BLOCKS = new Set(['paper', 'layout', 'fonts', 'header', 'midi', 'markup']);
+
+/** Whether the caret is inside a block of settings (or a block nested in one): no rule
+ * applies there and every key is typed as pressed. The session 1030 audit typed every
+ * completion word where it is offered: `paper { size a5 }` lost its 5 — the `a` read as a
+ * note and the digit as its duration (a3 became a32, a10 a1). */
+export function inSettingsBlock(text: string, offset: number): boolean {
+    // One walk back to the start, each unmatched '{' an enclosing block — never forward
+    // (blockBounds would read to each block's end on every keystroke; walkStart says why
+    // a keystroke must stay cheap).
+    for (let i = offset - 1, depth = 0; i >= 0; i--) {
+        const c = text[i];
+        if (c === '}') { depth++; }
+        else if (c === '{') {
+            if (depth > 0) { depth--; }
+            else if (SETTINGS_BLOCKS.has(wordBefore(text, i).word)) { return true; }
+        }
+    }
+    return false;
+}
 
 /** Whether the block opening at `open` is a run of bars rule 32 may count: one named by
  * an identifier (`section A {`, a part's `rh {`, `part rh {`) that is not a NOT_BARS

@@ -152,6 +152,10 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Editing
 
+- `[editor]` After `@!` completion offers the span ends (`MusicMarkItem.ParseSpanEndName`'s
+  names), the span open before the caret first; `!` is a trigger character there and nowhere else.
+- `[editor]` Smart typing leaves a `paper`, `layout`, `fonts`, `header`, `midi` or `markup` block
+  alone: `paper { size a5 }` lost its 5 to the duration rule.
 - `[editor]` A digit typed right after `@` (or `@!`) begins the annotation's name, so `@8va`,
   `@8vb`, `@15ma` and `@15mb` complete; smart typing used to take it as the note's duration
   (`c'4@` + `8` → `c'8@`).

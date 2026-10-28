@@ -281,6 +281,8 @@ edocs/HANDOFF.mde §2 R13 ⒝・OMR の提案 B1〜B6（e..\LilySharp-Omr\docs\r
   - (1) `octave absolute`・`part melody { instrument guitar }`・`melody { e'4 g' a' b' | c''1 | }`・`score { staff melody  tab bass5 melody }` → 高い 3 音に黄色の波線（LYS5002）と、`melody` に青い情報（LYS5004「… write 'as 8vb'」）。Ctrl+. で `tab bass5 melody as 8vb` になり、波線が消え、5 弦ベースのタブに 12〜17 フレットが並ぶ。五線譜と ▶ の音は変わらない。
   - (2) `as ▮` で Ctrl+Space → `numbers` `full` `8vb` `15mb` `8va` `15ma`。`as 8vb ▮` でもう一度 → 一覧が出る。
   - (3) `as 8vb 8va` に赤い波線。
+- [ ] **C46**（第1030・`@!` の補完）: `c'4@rit d' e'` の後に `@!` と打つ → `!` で一覧が開き、先頭に `rit`（選択済み）、ほかに `ottava` `8va` `sustain` `phrasingSlur` `cresc` など。`@!8` → `ottava` `8va` `8vb`。歌詞や文字列の中の `!` では一覧が開かない。
+- [ ] **C47**（第1030・設定のブロック）: `paper { size a▮ }` で `5` → `a5`（消えない）、`3` → `a3`（`a32` にならない）。`section` の中の `c4` の後の `8` は従来どおり `c8`。
 - [ ] **C45**（第1030・`@` の直後の数字）: `c'4@` の後に `8` → `c'4@8`（音価は 4 のまま）で、補完の一覧に `8va` `8vb`（と `ottava`）。`8va` を選ぶと `c'4@8va`。`@1` → `15ma` `15mb`。`c8@fermata` の後で `4` を打つと従来どおり `c4@fermata`。
 - [ ] **C44**（第1030・WAV の書き出し）:
   - (1) プレビューの音源を `.sf2`（GeneralUser GS など）にしてプレビューの Export → 保存ダイアログの種類に *WAV audio (through a SoundFont 2)*。選ぶと「rendering the WAV through …」の通知の後に「Exported to … (played through ….sf2)」。Open File で鳴る音がプレビューの ▶ と同じ楽器。

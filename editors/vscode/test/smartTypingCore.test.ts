@@ -291,6 +291,24 @@ describe('the digit table (rules 16–18b) over notes, rests, chords and slash n
     }
 });
 
+describe('a settings block holds no notes (paper, layout, fonts, …)', () => {
+    // Session 1030 audit: `paper { size a5 }` lost its 5 — the `a` read as a note and the
+    // digit as its duration (a3 became a32, a10 a1).
+    it('a paper size is typed as pressed', () => {
+        typed('paper { size a‸ }', '5', 'paper { size a5‸ }');
+        typed('paper { size a‸ }', '3', 'paper { size a3‸ }');
+        typed('paper { size b1‸ }', '0', 'paper { size b10‸ }');
+        typed('paper { size c‸ }', '6', 'paper { size c6‸ }');
+    });
+    it('nor do the other keys there rewrite a letter', () => {
+        typed('layout { x { a‸ } }', ',', 'layout { x { a,‸ } }');
+        typed('paper { size a4‸ }', '.', 'paper { size a4.‸ }');
+    });
+    it('music outside the block is unchanged', () => {
+        typed('paper { size a4 }\nsection A { p { c4‸ } }', '8', 'paper { size a4 }\nsection A { p { c8‸ } }');
+    });
+});
+
 describe('slash notes', () => {
     it('take dots, ties and beams like a note', () => {
         typed('‸/4', '.', '‸/4.');

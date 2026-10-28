@@ -225,6 +225,11 @@ public sealed partial class LilySharpLanguageServer
             && context is not (CompletionContext.AfterArticulationPlacement
                                or CompletionContext.AfterValueAnnotationPlacement))
             return null;
+        // '!' likewise opens ONE list: the span ends after `@!` (owner's report 2026-10-28:
+        // nothing completed there). Elsewhere a '!' is text.
+        if (@params.Context is { TriggerKind: CompletionTriggerKindTriggerCharacter, TriggerCharacter: "!" }
+            && context != CompletionContext.AfterAtBang)
+            return null;
 
         // The word being typed at the cursor (chord letters/digits, e.g. "cmaj7"
         // or, after a ':', the quality being completed).
@@ -468,6 +473,8 @@ public sealed partial class LilySharpLanguageServer
                 GetArticulationCompletions(
                     AtFollowsChord(doc.Text, offset) && GroupBeforeAtAutoNames(doc.Text, offset)),
                 PartialAnnotationName(doc.Text, offset)),
+            CompletionContext.AfterAtBang => MatchAnywhere(
+                GetSpanEndCompletions(doc.Text, offset), PartialAnnotationName(doc.Text, offset)),
             CompletionContext.AfterArticulationPlacement => PlacementAndStillMatchingNames(
                 doc.Text, offset, position,
                 AtFollowsChord(doc.Text, offset) && GroupBeforeAtAutoNames(doc.Text, offset)),
