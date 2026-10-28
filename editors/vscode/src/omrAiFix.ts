@@ -1885,6 +1885,11 @@ ${rows}
         if (was[1]) el.setAttribute('stroke', was[1]); else el.removeAttribute('stroke');
       } else if (tag === 'line' || (el.getAttribute('fill') === 'none' && el.getAttribute('stroke'))) el.setAttribute('stroke', color);
       else el.setAttribute('fill', color);
+      // A painted glyph (a head, its accidental) is brought to the front of its group: a stem
+      // drawn after it crossed the coloured head in black (owner's report 2026-10-29). Clicks are
+      // as before: a head's glyph takes none (its transparent box, nh-hit, does — the renderer's
+      // rule), any other glyph its own.
+      if (color !== null && tag === 'text' && el.parentNode) el.parentNode.appendChild(el);
     }
   }
   const RED = '#e53935', GREEN = '#2e9e43';

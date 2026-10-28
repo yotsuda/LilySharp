@@ -38,6 +38,8 @@ All notable changes to the Lily# VS Code extension are documented here.
   the .lys has it, "scan — page N" over the scan; the Draft's ("original / your edit / AI proposal")
   was the only one. The Draft's says **original** when it shows the bar as the file has it — alone as
   among the three (it said "the bar as it stands").
+- **A coloured note head is drawn over its stem**: the red, green and blue heads of Edit Bars Beside
+  the Scan had the black stem across them.
 
 ### Step keys
 

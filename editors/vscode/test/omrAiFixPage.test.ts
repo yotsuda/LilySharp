@@ -44,6 +44,11 @@ describe('the Edit Bars Beside the Scan page', () => {
         assert.doesNotMatch(src, /'the bar as it stands'/);
     });
 
+    // Owner's report 2026-10-29: a black stem crossed the red / green / blue head.
+    it('brings a painted glyph to the front of its group', () => {
+        assert.match(script, /if \(color !== null && tag === 'text' && el\.parentNode\) el\.parentNode\.appendChild\(el\);/);
+    });
+
     it('is a script that parses', () => {
         assert.ok(open > 0 && close > open);
         assert.doesNotThrow(() => new vm.Script(script));
