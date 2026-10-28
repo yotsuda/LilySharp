@@ -661,7 +661,7 @@ internal static class HairpinEngraver
     ///   column's head box is the normal-side one) — the bracket bound's
     ///   (TupletBracketEngraver.BoundEdgeOffset) reading, and no pair measures it.
     /// </remarks>
-    private static (double Left, double Right, bool IsRest)? ColumnExtent(
+    internal static (double Left, double Right, bool IsRest)? ColumnExtent(
         int measure, int item, ImmutableArray<Measure> staffMeasures,
         ImmutableArray<MeasureLayout> measureLayouts)
     {

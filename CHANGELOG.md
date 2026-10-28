@@ -19,6 +19,11 @@ workflow attaches that section to the GitHub Release verbatim.
   nothing and the warning names the new spelling. The LilyPond twin still writes `\startTrillSpan` /
   `\stopTrillSpan`.
 
+### Drawing
+
+- `[render]` **A text spanner's line reaches the note its `@!` stands on**: `@accel … f@!accel` ends over
+  f's head (the column's centre less 0.25), as LilyPond's does; it stopped 0.25 short of f before.
+
 ### Checks
 
 - `[lang]` **`check` — a pragma that turns a check on.** `check voiceLeading s a t b` compares the

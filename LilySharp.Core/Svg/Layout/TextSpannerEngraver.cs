@@ -251,18 +251,29 @@ internal static class TextSpannerEngraver
                     startX = measureLayouts[segment.StartMeasureIndex].X + BoundPadding;
                 }
 
-                // ⚠️ THE RIGHT BOUND'S ARITHMETIC IS NOT PORTED HERE, and the left repair is
-                //   what made that legible: bound-details.right declares NO attach-dir, so
-                //   LilyPond's calc_bound_info takes the bound column's CENTRE
-                //   (linear_combination at CENTER) where this takes its LEFT edge — MEASURED
-                //   in probes/textspanner-left-bound.ly's own dump, rightX 31.309760708228
-                //   against that column's head anchor 30.657660708228, about 0.65 apart. No
-                //   ledger point reads the right end, so closing it starts with a point.
+                // The right bound: bound-details.right declares NO attach-dir, so LilyPond's
+                //   calc_bound_info takes the bound column's CENTRE (linear_combination at
+                //   CENTER) less the padding — the note column's heads and stem
+                //   (HairpinEngraver.ColumnExtent, generic_bound_extent). Until 2026-10-28 this
+                //   took the column's LEFT edge, and the line stopped short of the note its
+                //   @! stands on (owner's report 2026-10-28, accel.lys: "f まで伸ばすと書いたのに、
+                //   手前の e までしか点線が届いていない"; LilyPond's line ends over f's head).
+                // LILYPOND-REF: lily/line-spanner.cc:155-175 Line_spanner::calc_bound_info —
+                //   attach-dir defaults to CENTER; a PaperColumn bound reads generic_bound_extent
+                // LILYPOND-REF: scm/define-grobs.scm:2738 PaperColumn (bound-alignment-interfaces
+                //   . (note-column-interface))
+                // ⚠️ A grace bound keeps its head's LEFT edge (BoundX): no pair measures a span
+                //   ending on a grace.
                 double endX;
                 if (segment.IsLast)
                 {
                     var endMeasure = measureLayouts[segment.EndMeasureIndex];
-                    if (BoundX(endMeasure, spannerVoices, graceNotes, spanner.StaffIndex, spanner.VoiceIndex,
+                    if (RightBoundCentre(measureLayouts, spannerVoices, graceNotes, spanner.StaffIndex,
+                            spanner.VoiceIndex, spanner.EndMeasureIndex, spanner.EndItemIndex) is { } centre)
+                    {
+                        endX = centre - BoundPadding;
+                    }
+                    else if (BoundX(endMeasure, spannerVoices, graceNotes, spanner.StaffIndex, spanner.VoiceIndex,
                             spanner.EndMeasureIndex, spanner.EndItemIndex) is { } endItemX)
                     {
                         endX = endMeasure.X + endItemX - BoundPadding;
@@ -351,6 +362,24 @@ internal static class TextSpannerEngraver
             || itemIndex >= measures[measureIndex].Items.Length)
             return null;
         return LayoutUtilities.GetItemXOffset(measures, measureIndex, itemIndex, ml);
+    }
+
+    /// <summary>The page X of the centre of the note column a span ends on — its heads and stem,
+    /// a rest's box — or null for a grace bound, a missing item, or no voices to read.</summary>
+    private static double? RightBoundCentre(ImmutableArray<MeasureLayout> measureLayouts, ImmutableArray<Voice> voices,
+        ImmutableArray<GraceNoteItem> graceNotes, int staffIndex, int voiceIndex, int measureIndex, int itemIndex)
+    {
+        if (itemIndex < 0 || voices.IsDefaultOrEmpty || voiceIndex >= voices.Length
+            || measureIndex < 0 || measureIndex >= measureLayouts.Length)
+            return null;
+        if (!graceNotes.IsDefaultOrEmpty
+            && ElementCoordinator.GraceColumnAt(voices[voiceIndex], graceNotes, staffIndex, voiceIndex,
+                measureIndex, itemIndex, measureLayouts[measureIndex], SpacingRules.VoiceCollisionShiftsOf(voices)) != null)
+            return null;
+        var measures = LayoutUtilities.ResolveVoiceMeasures(voices, voiceIndex, default);
+        return HairpinEngraver.ColumnExtent(measureIndex, itemIndex, measures, measureLayouts) is { } extent
+            ? (extent.Left + extent.Right) / 2
+            : null;
     }
 
     /// <summary>

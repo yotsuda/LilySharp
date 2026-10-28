@@ -12,10 +12,10 @@
 
 | 区分 | 件数 | 意味 |
 |---|---:|---|
-| `APPROX` | 64 | LP に対応物はあるが、形が違うと自認しているもの |
+| `APPROX` | 63 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 64 | 観測者がゼロだと自認しているもの |
 | `OWN` | 281 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **409** | |
+| **計** | **408** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -34,7 +34,7 @@
 | `LilySharp.Core/Svg/Layout/TabStaffGeometry.cs` | 7 |
 | `LilySharp.Core/Rendering/SharedRenderer.Marks.cs` | 6 |
 
-## APPROX — LP に対応物はあるが、形が違うと自認しているもの（64 件）
+## APPROX — LP に対応物はあるが、形が違うと自認しているもの（63 件）
 
 ### `LilySharp.Core/Music/ChordStructure.cs`
 - **`ChordQualityRegistry.SymbolSuffix`** ⚠️ THE SIZE AND THE RAISE ARE NOT PORTED — Lily# draws a chord name as one baseline
@@ -133,7 +133,6 @@
 - **`TabStaffStencils`** RepeatTie, LaissezVibrerTie, PhrasingSlur) are likewise not ported:
 ### `LilySharp.Core/Svg/Layout/TextSpannerEngraver.cs`
 - **`TextSpannerEngraver.Calculate`** bound-details) and that branch is NOT PORTED HERE. No ledger point reads a
-- **`TextSpannerEngraver.Calculate`** ⚠️ THE RIGHT BOUND'S ARITHMETIC IS NOT PORTED HERE, and the left repair is
 ### `LilySharp.Core/Svg/Layout/TupletBracketEngraver.cs`
 - **`TupletBracketEngraver.Covers`** ⚠️ Disclosed, not ported: LilyPond also requires the last column's stem to share a
 - **`TupletBracketEngraver.CalculateSlope`** inner tuplets' boxes, :646-680 — not ported; no pinned point).

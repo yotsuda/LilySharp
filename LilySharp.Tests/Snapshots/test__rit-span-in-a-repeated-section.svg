@@ -75,8 +75,8 @@
   <rect x="66.18" y="13.47" width="4.13" height="2.74" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="1617"/>
   <text x="68.33" y="15.86" font-size="2.77" text-anchor="middle" data-pos="1617">A2</text>
   <text x="17.37" y="18.12" font-size="2.20" font-style="italic" data-pos="1637">rit.</text>
-  <line x1="20.48" y1="18.12" x2="29.94" y2="18.12" stroke="#000000" stroke-width="0.100" stroke-dasharray="0.60 2.40" data-pos="1637"/>
+  <line x1="20.48" y1="18.12" x2="30.59" y2="18.12" stroke="#000000" stroke-width="0.100" stroke-dasharray="0.60 2.40" data-pos="1637"/>
   <text x="69.62" y="18.12" font-size="2.20" font-style="italic" data-pos="1637">rit.</text>
-  <line x1="72.73" y1="18.12" x2="82.19" y2="18.12" stroke="#000000" stroke-width="0.100" stroke-dasharray="0.60 2.40" data-pos="1637"/>
+  <line x1="72.73" y1="18.12" x2="82.84" y2="18.12" stroke="#000000" stroke-width="0.100" stroke-dasharray="0.60 2.40" data-pos="1637"/>
   </g>
 </svg>

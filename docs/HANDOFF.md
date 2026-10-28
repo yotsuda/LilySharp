@@ -135,6 +135,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **ユーザー「trillSpan はどこかの Ctrl+Shift+Up の仲間に入れられるか」→ 決定「今の順番は尊重する必要がない。それで入れて」**: 群を `pralltriller/trill/trillSpan`（↑＝長い・前は `trill/pralltriller`）。`@trillSpan` へ切り替えると次の音符・和音・休符の印の後に `@!trillSpan` を書く（既に終わりがあれば書かない・次が無ければ書かない）、`@trillSpan` から離れるとその `@!trillSpan` を消す＝`TrillSpanEndEdit`・`SpanNames.After`／`TrillSpanEndOf`。full **13548 / 0 / 2**。
 - **ユーザー指示「`@!accel` も Ctrl+Shift+Down で動くように」**: 終わりの上では始まりを対象にする（`SpanNames.OpenerOf`＝印の族は `StartOf`・松葉は `HairpinEndOf` が自分を指す強弱・トリルは `TrillSpanEndOf` が自分を指す `@trillSpan`）＝始まりの切り替えと既存の終わりの連動で両方が変わる。始まりの無い終わりは今まで通り（キーの元の動き）。full **13555 / 0 / 2**。
 - **ユーザー提案「`@rit` を ↑ で `@accel` にしたとき閉じられていなければ、同じ小節の最後の音符に `@!accel` を」→ 決定「入れて」（全族＋トリルもそろえる）**: `SpanEndEdit`＝新しい綴りが span の始まり（文字の伸び・オッターヴァ・ペダル＝`SpanNames.FamilyOf`、トリル）で、終わりも同じ族の後の始まりも無ければ、`LastOfBarAfter`（その小節の最後の音符・和音・休符の印の後／自分が最後なら次の小節の最後／小節線が無ければ線の最後）に `@!新しい名前`。トリルの「次の音符」はこれにそろえた。full **13565 / 0 / 2**。
+- **ユーザー報告「`@accel` の点線が短すぎる。f まで伸ばすと書いたのに e までしか届いていない」**（`Downloads/accel.lys`・Lab `sessions/p1032/accel/` に LP の双子と測った値）: 右端が列の**左端** −0.25 だった（コードに「未移植」と書いてあった）→ LilyPond の `bound-details.right` は attach-dir 無し＝列（符頭＋符幹＝`HairpinEngraver.ColumnExtent` を internal にして共用）の**中央** −0.25。LP 実測 f の符頭から +0.402 と一致（網 `TextSpannerTests.TheRightEnd_…`）。線が f の上まで来るので高さも LP どおり五線から 4.56 に。スナップショット 5 枚は右端だけ +0.65。装飾音で終わる場合は左端のまま（測った組が無い）。オッターヴァ・トリル・ペダルの右端は見ていない。full **13566 / 0 / 2**。
 - ⚠️ `editors/vscode/MANUAL-CHECKS.md` 30〜41 行あたりはバッククォートが `e` に化けたまま（以前の便の事故）。今回は触っていない＝直すなら元の commit の差分から。
 
 ## 以下は第1031セッションの経緯

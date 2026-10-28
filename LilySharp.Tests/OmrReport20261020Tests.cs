@@ -66,7 +66,9 @@ public class OmrReport20261020Tests
         Assert.InRange(spanner.StartX - e, 0, 1);
         var bar2 = Bar(layout, 1);
         double g = bar2.X + LayoutUtilities.GetItemXOffset(lh, 1, 2, bar2);
-        Assert.InRange(g - layout.TextSpannerLayouts.Max(t => t.EndX), 0, 1);
+        // Its end is over g's own column — the centre less the padding (LilyPond's CENTER bound,
+        // since 2026-10-28; until then 0.25 short of g's head).
+        Assert.InRange(layout.TextSpannerLayouts.Max(t => t.EndX) - g, 0, 1);
     }
 
     // Item 2: the same for the trill line.

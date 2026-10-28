@@ -1,4 +1,4 @@
-﻿// Lily# - Music notation compiler
+// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -608,5 +608,26 @@ public class TextSpannerTests
         Assert.Equal("", result[1].Text);
         // Last: no text
         Assert.Equal("", result[2].Text);
+    }
+
+    /// <summary>
+    /// The right end stands over the column its @! is written on — the column's centre less the
+    /// padding 0.25, LilyPond's CENTER bound (bound-details.right has no attach-dir). Until
+    /// 2026-10-28 it took the column's left edge and stopped short of that note (owner's report,
+    /// accel.lys: "f まで伸ばすと書いたのに、手前の e までしか点線が届いていない"). MEASURED on
+    /// that book, 2.26.0: the line ends 0.402 right of f's head (34.6634 → 35.0655).
+    /// </summary>
+    [Fact]
+    public void TheRightEnd_IsTheEndColumnsCentre_LessThePadding()
+    {
+        const string book = "part melody {\n  section A { c'''4@accel d e f@!accel | e,2 g | }\n}\nform { A }\nscore {\n  staff melody\n}\n";
+        var tree = LilySharp.Core.Syntax.SyntaxTree.Parse(book);
+        var score = LilySharp.Core.Svg.SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree));
+        var layout = new LayoutEngine().Layout(score);
+        var measures = score.StaffGroups[0].Staves[0].PrimaryVoice.Measures;
+        var bar = System.Linq.Enumerable.Single(System.Linq.Enumerable.SelectMany(layout.AllSystems, s => s.Measures), m => m.MeasureIndex == 0);
+        double f = bar.X + LayoutUtilities.GetItemXOffset(measures, 0, 3, bar);
+        var spanner = Assert.Single(layout.TextSpannerLayouts);
+        Assert.Equal(0.402, spanner.EndX - f, 2);
     }
 }
