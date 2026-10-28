@@ -529,6 +529,7 @@ internal sealed partial class Parser
             or SyntaxKind.OverrideKeyword or SyntaxKind.RevertKeyword
             or SyntaxKind.OnceKeyword => false,
         SyntaxKind.Identifier when Peek(1)?.Kind == SyntaxKind.Equals => false,
+        SyntaxKind.Identifier when Current.Text == Semantics.CheckPragma.Keyword => false,
         // A bare clef or dynamic word is a phrase reference INSIDE a music stream
         // (IsBareReferenceKind), and nothing at the file level: it keeps falling to the
         // skip path, where `treble { … }` gets its grand-staff hint (LYS0011) and anything
@@ -586,6 +587,8 @@ internal sealed partial class Parser
 
             // Variable declaration: identifier = { ... } (legacy)
             SyntaxKind.Identifier when Peek(1)?.Kind == SyntaxKind.Equals => ParseNewVariableDeclaration(),
+            // `check voiceLeading s a t b` — a check the file turns on (Semantics.CheckPragma).
+            SyntaxKind.Identifier when Current.Text == Semantics.CheckPragma.Keyword => ParseCheckPragma(),
 
             SyntaxKind.TitleKeyword or SyntaxKind.ComposerKeyword
                 or SyntaxKind.SubtitleKeyword or SyntaxKind.PoetKeyword => ParseMetadataDeclaration(),

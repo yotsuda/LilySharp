@@ -137,6 +137,8 @@ public static class SemanticValidation
         new FontBindingValidator(),         // a fonts { } entry naming no such role, or one twice
         new PaperValidator(),               // a paper { } entry naming no such key, or a bad unit
         new LayoutValidator(),              // a layout { } entry naming no such key, or a bad word
+        new CheckPragmaValidator(),         // a `check` line naming no check, or no such part
+        new VoiceLeadingValidator(),        // under `check voiceLeading`: parallels, crossing, spacing (information)
     };
 
     /// <summary>

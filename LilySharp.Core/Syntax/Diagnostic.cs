@@ -1574,6 +1574,25 @@ public static class DiagnosticCodes
     /// declaring it (which also numbers it as bar 0).</summary>
     public const string PickupWithoutPartial = "LYS2006";
 
+    // Opt-in checks (LYS3xxx): what a `check` line turns on (Semantics.CheckPragma, owner's
+    // decision 2026-10-28). The findings are information: a style's rule, not an error.
+
+    /// <summary>Error: a <c>check</c> line that names no check Lily# has, a part the file does not
+    /// declare, a part twice, or too few parts for its check.</summary>
+    public const string CheckPragma = "LYS3001";
+
+    /// <summary>Information (<c>check voiceLeading</c>): two voices a perfect fifth or an octave
+    /// (or unison) apart that both move to the same perfect interval again — parallel fifths or
+    /// octaves, contrary motion included.</summary>
+    public const string ParallelPerfectIntervals = "LYS3002";
+
+    /// <summary>Information (<c>check voiceLeading</c>): a lower voice above the voice over it.</summary>
+    public const string VoiceCrossing = "LYS3003";
+
+    /// <summary>Information (<c>check voiceLeading</c>): two neighbouring upper voices more than an
+    /// octave apart, or the lowest two more than a twelfth.</summary>
+    public const string VoiceSpacing = "LYS3004";
+
     // Tablature warnings (LYS5xxx)
 
     /// <summary>Tablature warning: a tie conflicts with the assigned string.</summary>

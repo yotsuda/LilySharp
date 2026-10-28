@@ -3861,6 +3861,8 @@ public sealed partial class LilySharpLanguageServer
                 new CompletionItem { Label = "shift", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "shift ${1:+1}", Detail = "Move the whole piece N semitones up or down, e.g. `shift +1`, `shift -2` — every part (its own transpose included), the key signatures and the chord rows; Ctrl+Shift+Up/Down step it" },
                 new CompletionItem { Label = "using", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "using \"$0\"", Detail = "Include another .lys file: its parts, sections and tracks join this file's (top level only)" },
                 new CompletionItem { Label = "drummap", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "drummap {\n\t${1:hh}: position ${2:6} notehead ${3:x}\n}", Detail = "Override the drum table for a kit name: position (staff line), notehead, midi, mark" },
+                // A pragma (Semantics.CheckPragma, 2026-10-28): the checks open after the space.
+                new CompletionItem { Label = LilySharp.Core.Semantics.CheckPragma.Keyword, Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "check $0", Detail = "Turn on a check — e.g. `check voiceLeading s a t b`: parallel fifths and octaves, crossings and spacing between the voices named, highest first", Command = new Command { Title = "Suggest check", CommandIdentifier = "editor.action.triggerSuggest" } },
                 ScoreTemplateItem(
                     "template-twinkle",
                     "template scoretemplate score twinkle new",
@@ -4725,6 +4727,31 @@ public sealed partial class LilySharpLanguageServer
                 item.FilterText = item.Label + " " + extra;
         }
         return list;
+    }
+
+    /// <summary>After <c>check</c>: the checks there are (Semantics.CheckPragma.Rules).</summary>
+    internal static CompletionList GetCheckRuleCompletions() => new()
+    {
+        Items = [.. LilySharp.Core.Semantics.CheckPragma.Rules.Select(r => new CompletionItem
+        {
+            Label = r.Key, Kind = CompletionItemKind.Value, Detail = r.Value,
+            InsertText = r.Key + " ", Command = new Command { Title = "Suggest parts", CommandIdentifier = "editor.action.triggerSuggest" },
+        })],
+    };
+
+    /// <summary>After <c>check voiceLeading</c> and any parts: the declared parts not named on the
+    /// line yet, in the file's order — the voices go highest first.</summary>
+    internal static CompletionList GetCheckPartCompletions(string text, int offset)
+    {
+        int end = Math.Min(offset, text.Length);
+        int lineStart = text.LastIndexOf('\n', Math.Max(0, end - 1)) + 1;
+        string line = text[lineStart..end];
+        var words = line.Split([' ', '\t'], StringSplitOptions.RemoveEmptyEntries).Skip(2).ToList();
+        if (line.Length > 0 && !char.IsWhiteSpace(line[^1]) && words.Count > 0)
+            words.RemoveAt(words.Count - 1);   // the name being typed stays offered
+        var named = words.ToHashSet(StringComparer.Ordinal);
+        var parts = GetDeclaredNameCompletions(text, "part", "Part");
+        return new CompletionList { Items = [.. parts.Items.Where(i => !named.Contains(i.Label))] };
     }
 
     /// <summary>

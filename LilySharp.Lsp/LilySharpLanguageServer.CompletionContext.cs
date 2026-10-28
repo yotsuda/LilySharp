@@ -811,6 +811,10 @@ public sealed partial class LilySharpLanguageServer
         /// <summary><c>@!|</c>, <c>@!ri|</c> — the end of a span: the names <c>@!</c> takes.</summary>
         AfterAtBang,
         AfterBackslash,
+        /// <summary><c>check |</c> at the top level: the checks (Semantics.CheckPragma).</summary>
+        AfterCheck,
+        /// <summary><c>check voiceLeading s |</c>: the parts not named yet.</summary>
+        AfterCheckArguments,
         AfterArticulationPlacement,
         /// <summary><c>@todo("…")|</c>, <c>@todo("…").|</c>, <c>@todo("…").d|</c> — the
         /// placement after a value annotation's argument (<c>@text</c>, <c>@diagram</c>,
@@ -1302,6 +1306,12 @@ public sealed partial class LilySharpLanguageServer
             return InnermostOpenBlock(scan.Stack) == null && OnAScoreHeaderLine(text, offset)
                 ? CompletionContext.AfterPagePitch
                 : CompletionContext.AfterPitch;
+
+        // `check |` / `check voiceLeading s a |` at the top level (Semantics.CheckPragma, 2026-10-28):
+        // the checks, then the parts, highest voice first. The line is read from its start, so a
+        // part name typed after the rule (`check voiceLeading s`) still answers with the parts.
+        if (InnermostOpenBlock(scan.Stack) == null && CheckLineWordsBeforeCaret(text, offset) is int done)
+            return done == 0 ? CompletionContext.AfterCheck : CompletionContext.AfterCheckArguments;
 
         // (`marks` left the top level and the score body on 2026-09-11 — it is a key of
         // `layout { }` now, served inside the layout branch above.)
@@ -2348,6 +2358,21 @@ public sealed partial class LilySharpLanguageServer
         }
         if (rootStep < 0) return true; // nothing to derive from
         return LilySharp.Core.Music.ChordStructure.TryRecognize(rootStep, rootAlter, pcs, out _);
+    }
+
+    /// <summary>On a top-level <c>check</c> line, how many words after <c>check</c> are written
+    /// whole before the caret (0: the rule is being typed) — or null off such a line.</summary>
+    internal static int? CheckLineWordsBeforeCaret(string text, int offset)
+    {
+        int end = Math.Min(offset, text.Length);
+        int lineStart = text.LastIndexOf('\n', Math.Max(0, end - 1)) + 1;
+        var m = System.Text.RegularExpressions.Regex.Match(text[lineStart..end],
+            @"^[ \t]*" + LilySharp.Core.Semantics.CheckPragma.Keyword + @"[ \t]+(?<rest>.*)$");
+        if (!m.Success)
+            return null;
+        string rest = m.Groups["rest"].Value;
+        int words = rest.Split([' ', '\t'], StringSplitOptions.RemoveEmptyEntries).Length;
+        return rest.Length == 0 || char.IsWhiteSpace(rest[^1]) ? words : words - 1;
     }
 
     /// <summary>

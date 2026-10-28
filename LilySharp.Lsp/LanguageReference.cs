@@ -127,6 +127,8 @@ internal static class LanguageReference
             return capo;
         if (InstrumentPresetHover(node) is { } preset)
             return preset;
+        if (CheckPragmaHover(node) is { } check)
+            return check;
         return node switch
         {
             NoteSyntax note => $"**Note**: {note.Pitch.PitchName}\n\nOctave offset: {note.Pitch.OctaveOffset}\n\nDuration: {note.Duration?.Value.ToString() ?? "inherited"}",
@@ -160,6 +162,21 @@ internal static class LanguageReference
             ArticulationSyntax art => $"**Articulation**: @{art.NameToken.Text}",
             _ => null
         };
+    }
+
+    /// <summary>The hover for a top-level <c>check</c> line (Semantics.CheckPragma, 2026-10-28): the
+    /// pragma, and the check its rule names.</summary>
+    private static string? CheckPragmaHover(SyntaxNode node)
+    {
+        var line = node as PropertyAssignmentSyntax ?? node.Parent as PropertyAssignmentSyntax;
+        if (line is not { NameToken.Text: LilySharp.Core.Semantics.CheckPragma.Keyword, Parent: CompilationUnitSyntax })
+            return null;
+        var (rule, _) = LilySharp.Core.Semantics.CheckPragma.Read(line);
+        string what = rule != null && LilySharp.Core.Semantics.CheckPragma.Rules.TryGetValue(rule.Text, out var d)
+            ? $"\n\n`{rule.Text}` — {d}"
+            : $"\n\nChecks: {LilySharp.Core.Semantics.CheckPragma.RuleList}.";
+        return "**Check** — turns a check on for this file. It changes nothing that is drawn, played or exported; "
+            + "what it finds is information (blue)." + what;
     }
 
     /// <summary>

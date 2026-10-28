@@ -188,6 +188,7 @@ TopLevelItem   = MetadataDecl                     (* title, subtitle, composer, 
                | ScoreDecl                        (* output definitions - REQUIRED *)
                | OverrideDecl                     (* engraving overrides *)
                | UsingDecl                        (* multi-file include - top level only *)
+               | CheckDecl                        (* a check the file turns on - a pragma *)
                ;
 
 (* MUSIC IS NOT A TopLevelItem, and is rejected with LYS0020: a note stream, a bare
@@ -214,6 +215,20 @@ UsingDecl      = 'using' , String ;
                  (* 'using "other.lys"': the named file's declarations join this file's
                     before validation (UsingExpander). Top level only — inside a section
                     or a score it is LYS0029. *)
+
+CheckDecl      = 'check' , CheckRule , { PartRef } ;   (* to the end of its line *)
+CheckRule      = 'voiceLeading' ;
+                 (* A PRAGMA (owner's decision 2026-10-28): it turns a check on and changes
+                    nothing that is drawn, played or exported — what the check finds is
+                    information (blue), the way '#pragma warning' turns a warning on in C#.
+                    'check voiceLeading s a t b' compares the parts named, HIGHEST VOICE
+                    FIRST: parallel fifths and octaves (LYS3002), a lower voice above the one
+                    over it (LYS3003), neighbouring upper voices more than an octave apart or
+                    the lowest two more than a twelfth (LYS3004) — by the sounding pitches,
+                    every transposition applied. A rule Lily# does not have, a part the file
+                    does not declare, a part named twice, or fewer than two parts is LYS3001.
+                    Top level only, any number of lines. 'check' is no keyword: a part may
+                    still be named check. docs/voice-leading-design.md. *)
 
 ### 2.3 Global Settings
 

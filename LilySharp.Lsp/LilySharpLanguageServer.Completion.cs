@@ -473,6 +473,8 @@ public sealed partial class LilySharpLanguageServer
                 GetArticulationCompletions(
                     AtFollowsChord(doc.Text, offset) && GroupBeforeAtAutoNames(doc.Text, offset)),
                 PartialAnnotationName(doc.Text, offset)),
+            CompletionContext.AfterCheck => GetCheckRuleCompletions(),
+            CompletionContext.AfterCheckArguments => GetCheckPartCompletions(doc.Text, offset),
             CompletionContext.AfterAtBang => MatchAnywhere(
                 GetSpanEndCompletions(doc.Text, offset), PartialAnnotationName(doc.Text, offset)),
             CompletionContext.AfterArticulationPlacement => PlacementAndStillMatchingNames(

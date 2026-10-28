@@ -2761,6 +2761,36 @@ The `.ly` twin writes each as a text script (`-\markup { \italic "H" }`); MusicX
 c4@hammerOn d@pullOff e@tap f@bend(full) |
 ```
 
+## Checks — `check`
+
+A `check` line turns a check on for the file — a pragma, as `#pragma warning` is in C#. It
+changes nothing that is drawn, played or exported; what the check finds is information (a blue
+squiggle), never an error, because the rules are a style's.
+
+```
+part s { instrument soprano }
+part a { instrument alto }
+part t { instrument tenor }
+part b { instrument voice-bass }
+
+check voiceLeading s a t b      // the voices, highest first
+```
+
+`check voiceLeading` is for four-part (SATB) writing — hymns, chorales, harmony exercises. It
+compares the parts named, by their sounding pitches:
+
+- **Parallel fifths and octaves** (LYS3002): two voices a fifth (or an octave, or a unison)
+  apart that both move to the same interval again — contrary motion included (a fifth to a
+  twelfth). A voice that holds or repeats its note does not count.
+- **Crossed voices** (LYS3003): a lower voice above the one over it.
+- **Spacing** (LYS3004): neighbouring upper voices more than an octave apart, or the lowest two
+  more than a twelfth.
+
+A rest breaks the line. A part that sounds two notes at once is read by its top note (the lowest
+voice by its bottom one). A check Lily# does not have, a part the file does not declare, a part
+named twice or fewer than two parts is an error (LYS3001). Renaming a part renames it on the
+`check` line too.
+
 ## Comments
 
 ```

@@ -6,6 +6,17 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+### Checks
+
+- `[lang]` **`check` — a pragma that turns a check on.** `check voiceLeading s a t b` compares the
+  parts named, highest voice first, for four-part writing: parallel fifths and octaves (LYS3002),
+  crossed voices (LYS3003), voices too far apart (LYS3004) — information, by the sounding
+  pitches. Nothing drawn, played or exported changes. A check Lily# does not have, an undeclared
+  part, a part twice or fewer than two parts is LYS3001. `check` is no keyword (a part may be
+  named so). docs/voice-leading-design.md.
+- `[editor]` Completion offers `check`, the checks after it and the parts not named yet; the
+  line has a hover, and renaming a part renames it there.
+
 ### Octaves — BREAKING
 
 - `[language]` **Lily#'s octaves are LilyPond's, in every part and for every instrument** (owner's

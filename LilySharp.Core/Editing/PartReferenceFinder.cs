@@ -86,6 +86,12 @@ public static class PartReferenceFinder
                 case CombinedStaffRenderSyntax combined:
                     tokens.AddRange(combined.PartNameTokens);
                     break;
+                // `check voiceLeading s a t b` names its voices by part (Semantics.CheckPragma):
+                // a renamed part must be renamed there too, or the line goes red (LYS3001).
+                case PropertyAssignmentSyntax { NameToken.Text: Semantics.CheckPragma.Keyword, Parent: CompilationUnitSyntax } check
+                    when Semantics.CheckPragma.Read(check).Rule?.Text == Semantics.CheckPragma.VoiceLeading:
+                    tokens.AddRange(Semantics.CheckPragma.Read(check).Arguments);
+                    break;
                 // ⚠️ THE ROW FAMILY IS DELIBERATELY ABSENT. `chords NAME` / `lyrics NAME`
                 // name their own tracks, and the language server ALREADY resolves those in
                 // full — declaration and row reference alike

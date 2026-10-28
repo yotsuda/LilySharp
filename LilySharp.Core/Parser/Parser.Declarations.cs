@@ -458,6 +458,48 @@ internal sealed partial class Parser
     }
 
 
+    // `check voiceLeading s a t b` — a check the file turns on (Semantics.CheckPragma, owner's
+    // decision 2026-10-28: a pragma, general, so later checks are written the same way). The
+    // same property-node shape as `pitch`. It reads to the end of its LINE: the rule and the
+    // part names are bare words, and so are the words that open the next top-level item
+    // (`clef`, `octave`), which a newline keeps out. The rule and the parts are judged by
+    // CheckPragmaValidator, so a line being typed (`check voi`) parses without an error.
+    private PropertyAssignmentGreen ParseCheckPragma()
+    {
+        var keyword = Advance(); // check
+        var values = new List<GreenNode?>();
+        SyntaxToken last = keyword;
+        while (Current.Kind != SyntaxKind.EndOfFile
+               && !LineBreakBetween(last, Current)
+               && (Current.Kind == SyntaxKind.Identifier || SyntaxFacts.IsPartNameToken(Current.Kind, Current.Text)))
+        {
+            last = Advance();
+            values.Add(last);
+        }
+        if (values.Count == 0)
+            _diagnostics.Error(new TextSpan(_textPosition - keyword.FullWidth + keyword.LeadingTriviaWidth, keyword.Width),
+                DiagnosticCodes.CheckPragma,
+                $"'check' names the check to turn on: {Semantics.CheckPragma.RuleList} — e.g. 'check voiceLeading s a t b'.");
+        return new PropertyAssignmentGreen(keyword, null, [.. values]);
+    }
+
+    /// <summary>Whether a line ends between two tokens: in the trailing trivia of the first or the
+    /// leading trivia of the second.</summary>
+    private static bool LineBreakBetween(SyntaxToken previous, SyntaxToken next)
+        => HasEndOfLine(previous.TrailingTrivia) || HasEndOfLine(next.LeadingTrivia);
+
+    private static bool HasEndOfLine(GreenNode? trivia)
+    {
+        if (trivia == null)
+            return false;
+        if (trivia.Kind == SyntaxKind.EndOfLineTrivia)
+            return true;
+        for (int i = 0; i < trivia.SlotCount; i++)
+            if (HasEndOfLine(trivia.GetSlot(i)))
+                return true;
+        return false;
+    }
+
     private MetadataDeclarationGreen ParseMetadataDeclaration()
     {
         var keyword = Advance();

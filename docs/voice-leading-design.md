@@ -71,7 +71,11 @@
 
 ## 6. 段取り
 
-1. ⒜ の書き方・連続 5 度／8 度・交差・間隔・§2 の出口。網。
+1. ⒜ の書き方・連続 5 度／8 度・交差・間隔・§2 の出口。網。**済（第1031・2026-10-28）**: 構文
+   `Parser.ParseCheckPragma`（`pitch` と同じ PropertyAssignment・行末まで）・`Semantics/VoiceLeading.cs`
+   （`CheckPragma`・`CheckPragmaValidator` LYS3001・`VoiceLeadingValidator` LYS3002–3004）・補完／ホバー・
+   名前の変更（`PartReferenceFinder`）。網 `VoiceLeadingTests`・`CheckPragmaCompletionTests`。
+   ⒝ ⒞ はまだ: 同時に鳴る音は上声なら一番上、最低声なら一番下で代表させている。
 2. ⒝ ⒞ の書き方。
 3. 超越・隠伏 5 度／8 度。強拍だけを見る選択肢（誤検出の数を見てから）。
 

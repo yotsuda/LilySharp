@@ -113,6 +113,8 @@ public class CompletionTypingAuditTests
         ("chords-body", "#" + At("chords prog { section A { C1 | } }", "chords prog { section A { C1 | ▮ } }"), " "),
         ("chords-for", "#" + At("chords prog {", "chords prog for ▮ {"), " "),
         ("lyrics-sings", "#" + At("score { staff p  staff b }", "score { staff p  lyrics words sings ▮ }"), " "),
+        ("check", "#check ▮\n" + Plain, " "),
+        ("check-parts", "#check voiceLeading ▮\n" + Plain, " "),
     ];
 
     /// <summary>The places whose words take a value or an argument after them: each word, and a
