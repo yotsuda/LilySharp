@@ -78,7 +78,7 @@ public sealed record ExportResult(
 
 /// <summary>
 /// ONE HOME for writing a score to a file in any format — the command line
-/// (<c>lysc svg|pdf|png|midi|xml|ly|vsqx</c>), the preview's Export button and the
+/// (<c>lysc svg|pdf|png|midi|xml|ly|vsqx|wav</c>), the preview's Export button and the
 /// Explorer's batch export all come here with the score they chose, so the three doors
 /// cannot drift apart.
 /// </summary>
@@ -102,6 +102,7 @@ public static class ScoreExport
         {
             ["svg"] = ".svg", ["png"] = ".png", ["pdf"] = ".pdf",
             ["midi"] = ".mid", ["musicxml"] = ".xml", ["vsqx"] = ".vsqx", ["ly"] = ".ly",
+            ["wav"] = ".wav",
         };
 
     /// <summary>The SVG options an export uses: the bundled font embedded as base64 so the
@@ -200,8 +201,8 @@ public static class ScoreExport
             case "wav":
             {
                 // The .mid export's own MIDI, played through the named font (Audio.WavRenderer).
-                // A command-line format only: not in Extensions, since no editor door has a font
-                // to hand it (none is bundled).
+                // No font is bundled, so every door names one: the command line's --soundfont,
+                // the editor's playback font when it is a SoundFont 2, else the .sf2 it asks for.
                 if (string.IsNullOrEmpty(options.SoundFont))
                     throw new ArgumentException("a WAV export needs a SoundFont 2 (.sf2)");
                 if (Audio.WavRenderer.SoundFontProblem(options.SoundFont) is { } problem)

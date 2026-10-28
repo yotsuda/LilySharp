@@ -43,6 +43,11 @@ All notable changes to the Lily# VS Code extension are documented here.
 - **p, mf, f … play closer together, as in LilyPond.** The dynamics take LilyPond's levels (pp 62,
   p 70, mf 86, f 95, ff 102); they ran pp 35 to ff 110, and the SoundFont player made p to f some 11 dB
   (now about 5). A note with no dynamic plays a little louder than before (90, LilyPond's default).
+- **Export as WAV.** The preview's Export, the command palette and the Explorer's *Lily#: Export*
+  submenu write the score as sound: its MIDI played through a SoundFont 2 (`.sf2`), as `lysc wav`
+  does. The preview's sound font is used when it is an `.sf2`; otherwise the export asks for one
+  (an `.sf2` used before, or a file) and leaves the preview's font as it is — the WAV renderer
+  cannot read `.sf3` or the system's `.dls` bank.
 
 ### Chords
 

@@ -165,6 +165,51 @@ public sealed class ExportRequestTests : IDisposable
         Assert.Contains("sub", warning);
     }
 
+    // WAV: the score's MIDI through the SoundFont 2 the editor names (its playback font, or the
+    // one it asked for). `sub` plays Main twice, so its sound is longer — the one-score call
+    // honours the score as MIDI does.
+    [Fact]
+    public void Wav_PlaysTheChosenScore_ThroughTheNamedFont()
+    {
+        var book = Book("two.lys", TwoScores);
+        var font = TinySoundFont.Write(Path.Combine(_dir, "sine.sf2"));
+        var subOnly = Path.Combine(_dir, "sub-only.wav");
+        var mainOnly = Path.Combine(_dir, "main-only.wav");
+
+        var sub = Server().Export(new ExportParams { Path = book, Format = "wav", OutputPath = subOnly, RenderName = "sub", SoundFont = font });
+        var main = Server().Export(new ExportParams { Path = book, Format = "wav", OutputPath = mainOnly, RenderName = "main", SoundFont = font });
+        var all = Server().Export(new ExportParams { Path = book, Format = "wav", All = true, OutputDirectory = Out, SoundFont = font });
+
+        Assert.True(sub.Success, sub.Error);
+        Assert.True(main.Success, main.Error);
+        Assert.True(all.Success, all.Error);
+        Assert.Equal("RIFF", System.Text.Encoding.ASCII.GetString(File.ReadAllBytes(subOnly), 0, 4));
+        Assert.True(new FileInfo(subOnly).Length > new FileInfo(mainOnly).Length, "sub plays Main twice");
+        Assert.Equal(
+            new[] { Path.Combine(Out, "two.wav"), Path.Combine(Out, "two-sub.wav") },
+            all.OutputPaths);
+        Assert.Equal(File.ReadAllBytes(subOnly), File.ReadAllBytes(Path.Combine(Out, "two-sub.wav")));
+    }
+
+    // No font, or one the synth cannot read (a DLS bank, a SoundFont 3 — what the preview's own
+    // synth plays): refused with the reason, before the folder is made.
+    [Fact]
+    public void Wav_WithoutAReadableFont_IsRefused_AndWritesNothing()
+    {
+        var book = Book("two.lys", TwoScores);
+        var sf3 = Path.Combine(_dir, "font.sf3");
+        File.Copy(TinySoundFont.Write(Path.Combine(_dir, "a.sf2")), sf3);
+
+        var none = Server().Export(new ExportParams { Path = book, Format = "wav", All = true, OutputDirectory = Out });
+        var compressed = Server().Export(new ExportParams { Path = book, Format = "wav", All = true, OutputDirectory = Out, SoundFont = sf3 });
+
+        Assert.False(none.Success);
+        Assert.Contains(".sf2", none.Error);
+        Assert.False(compressed.Success);
+        Assert.Contains("SoundFont 3", compressed.Error);
+        Assert.False(Directory.Exists(Out));
+    }
+
     [Fact]
     public void All_NoScoreBlock_WritesOneFile_UnderTheFilesName()
     {

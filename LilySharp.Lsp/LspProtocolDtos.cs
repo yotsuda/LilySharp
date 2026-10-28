@@ -226,7 +226,7 @@ public class ExportParams
     /// (the Explorer's batch export). Read as the CLI reads it, <c>using</c> includes
     /// resolved against its own folder.</summary>
     public string? Path { get; set; }
-    /// <summary>Output format: svg, png, pdf, midi, musicxml, vsqx, or ly.</summary>
+    /// <summary>Output format: svg, png, pdf, midi, musicxml, vsqx, ly, or wav.</summary>
     public string? Format { get; set; }
     /// <summary>Absolute path to write the exported file to (one score). Ignored when
     /// <see cref="All"/> is set.</summary>
@@ -245,6 +245,10 @@ public class ExportParams
     /// <summary>Draw the <c>@todo</c> marks as the preview shows them, in an SVG, PNG or PDF
     /// (<c>lysc … --todo</c>; the editor's Export asks when the file has any).</summary>
     public bool TodoMarks { get; set; }
+    /// <summary>The SoundFont 2 (<c>.sf2</c>) a WAV export plays the score through
+    /// (<c>lysc wav --soundfont</c>). None is bundled, so the editor names one: its playback
+    /// font when that is a SoundFont 2, else the one it asks for.</summary>
+    public string? SoundFont { get; set; }
 }
 
 /// <summary>

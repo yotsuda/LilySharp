@@ -281,6 +281,10 @@ edocs/HANDOFF.mde §2 R13 ⒝・OMR の提案 B1〜B6（e..\LilySharp-Omr\docs\r
   - (1) `octave absolute`・`part melody { instrument guitar }`・`melody { e'4 g' a' b' | c''1 | }`・`score { staff melody  tab bass5 melody }` → 高い 3 音に黄色の波線（LYS5002）と、`melody` に青い情報（LYS5004「… write 'as 8vb'」）。Ctrl+. で `tab bass5 melody as 8vb` になり、波線が消え、5 弦ベースのタブに 12〜17 フレットが並ぶ。五線譜と ▶ の音は変わらない。
   - (2) `as ▮` で Ctrl+Space → `numbers` `full` `8vb` `15mb` `8va` `15ma`。`as 8vb ▮` でもう一度 → 一覧が出る。
   - (3) `as 8vb 8va` に赤い波線。
+- [ ] **C44**（第1030・WAV の書き出し）:
+  - (1) プレビューの音源を `.sf2`（GeneralUser GS など）にしてプレビューの Export → 保存ダイアログの種類に *WAV audio (through a SoundFont 2)*。選ぶと「rendering the WAV through …」の通知の後に「Exported to … (played through ….sf2)」。Open File で鳴る音がプレビューの ▶ と同じ楽器。
+  - (2) 音源を既定（gm.dls）か `.sf3` にして同じ操作 → 「A WAV export plays the score through a SoundFont 2 (.sf2), and the preview's gm.dls is not one」と言って `.sf2` を訊く（初回は確認ダイアログ → ファイル選択、2 回目からは前に使った `.sf2` の一覧）。書き出した後もプレビューの音源の設定は変わらない。
+  - (3) エクスプローラーで `.lys` を 2 つ選び右クリック → *Lily#: Export* に *Export as WAV (through a SoundFont 2)*（MIDI の次）。フォルダを選ぶ前に音源を訊き、全 score の `.wav` が書かれる。
 
 ## 4. §2 R13 ⒝ — 差分頁の配信（実機未確認・第404）
 

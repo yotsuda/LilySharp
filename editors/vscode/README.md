@@ -26,7 +26,7 @@ same number. See the [changelog](https://github.com/yotsuda/LilySharp/blob/maste
   and its note lights. `Shift+click` a bar or a note, `Shift+drag` across bars, or right-click
   *Select This Bar* to select bars on the score (`Esc` clears).
 - **The header**: the score to show, Export (PDF, SVG, PNG, MIDI, MusicXML, LilyPond `.ly`,
-  VOCALOID `.vsqx`), ✨ Ask AI, Range, ▶ ⏹, the practice menu, the score's length, the pages.
+  WAV through a SoundFont 2, VOCALOID `.vsqx`), ✨ Ask AI, Range, ▶ ⏹, the practice menu, the score's length, the pages.
   On a narrow pane the header's groups wrap onto the next row.
 - **Range**: each part's lowest (▼) and highest (▲) note, spelled as written, with the bar it
   stands in — click to find it on the score — and its **tessitura**, where it spends four-fifths

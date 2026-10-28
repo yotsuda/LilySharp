@@ -930,6 +930,7 @@ export function activate(context: vscode.ExtensionContext) {
         log: (msg: string) => outputChannel.appendLine(msg),
         showLog: () => outputChannel.show(true),
         openFolder: (dir: string) => openInDefaultApp(dir),
+        wavSoundFont: () => wavSoundFont(context),
     });
 
     // Smart typing: the brackets it started with (`<` before c4 -> `<c>4`, and a
@@ -1566,7 +1567,7 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
                 return;
             }
             if (message.type === 'export') {
-                await exportPreview(uri, message.renderName);
+                await exportPreview(context, uri, message.renderName);
             } else if (message.type === 'jumpToPosition') {
                 const targetEditor = vscode.window.visibleTextEditors.find(
                     e => e.document.uri.toString() === uri
@@ -1986,6 +1987,7 @@ function revealInFileManager(file: string) {
 // SVG/PNG/PDF draw it; MIDI, MusicXML and the LilyPond source write ITS form (and MIDI
 // its parts), as `lysc <format> --score NAME` does.
 async function exportPreview(
+    context: vscode.ExtensionContext,
     uri: string,
     renderName: string | undefined
 ) {
@@ -2032,6 +2034,7 @@ async function exportPreview(
             'LilyPond source': ['ly'],
             'MusicXML': ['xml', 'musicxml'],
             'MIDI': ['mid', 'midi'],
+            'WAV audio (through a SoundFont 2)': ['wav'],
             'VOCALOID sequence (vocal + lyrics)': ['vsqx'],
         }
     });
@@ -2044,7 +2047,7 @@ async function exportPreview(
     const format = ext === 'mid' || ext === 'midi' ? 'midi'
         : ext === 'xml' || ext === 'musicxml' ? 'musicxml'
         : ext; // png / pdf / svg / ly
-    if (!['png', 'pdf', 'svg', 'midi', 'musicxml', 'vsqx', 'ly'].includes(format)) {
+    if (!['png', 'pdf', 'svg', 'midi', 'musicxml', 'vsqx', 'ly', 'wav'].includes(format)) {
         vscode.window.showErrorMessage(`Lily#: unsupported export type ".${ext}".`);
         return;
     }
@@ -2065,20 +2068,39 @@ async function exportPreview(
         todoMarks = pick.label === withMarks;
     }
 
+    // A WAV is the score's MIDI played through a SoundFont 2, and none is bundled.
+    let soundFont: string | undefined;
+    if (format === 'wav') {
+        soundFont = await wavSoundFont(context);
+        if (!soundFont) {
+            return;
+        }
+    }
+
     try {
-        const response = await client.sendRequest<ExportResponse>('lilysharp/export', {
+        const request = () => client!.sendRequest<ExportResponse>('lilysharp/export', {
             textDocument: { uri },
             format,
             outputPath: target.fsPath,
             todoMarks,
+            soundFont: soundFont ?? null,
             renderName: renderName || null
         });
+        // Rendering the sound takes as long as the synth needs for the whole piece; the
+        // pictures and files are quick enough to need no notice.
+        const response = soundFont
+            ? await vscode.window.withProgress({
+                location: vscode.ProgressLocation.Notification,
+                title: `Lily#: rendering the WAV through ${path.basename(soundFont)}…`,
+            }, request)
+            : await request();
 
         if (response.Success) {
             const openAction = 'Open File';
             const revealAction = 'Reveal in Explorer';
+            const through = soundFont ? ` (played through ${path.basename(soundFont)})` : '';
             const choice = await vscode.window.showInformationMessage(
-                `Exported to ${response.OutputPath}`, openAction, revealAction);
+                `Exported to ${response.OutputPath}${through}`, openAction, revealAction);
             if (choice === openAction) {
                 if (fs.existsSync(target.fsPath)) {
                     openInDefaultApp(target.fsPath);
@@ -3109,6 +3131,57 @@ function soundFontHistory(context: vscode.ExtensionContext): string[] {
 async function rememberSoundFont(context: vscode.ExtensionContext, file: string): Promise<void> {
     if (!file || !fs.existsSync(file)) { return; }
     await context.globalState.update(SOUND_FONT_HISTORY_KEY, recordFont(soundFontHistory(context), file, PATHS_IGNORE_CASE));
+}
+
+/** The SoundFont 2 a WAV export plays the score through (the server's synth reads `.sf2` only):
+ *  the preview's own font when it is one, so the file sounds as the preview does; else the
+ *  writer picks one — an `.sf2` used before (the sound font history) or a file — and it joins
+ *  the history, so the next WAV export offers it first. The preview's setting is left alone.
+ *  Undefined when they cancel. */
+async function wavSoundFont(context: vscode.ExtensionContext): Promise<string | undefined> {
+    const current = vscode.workspace.getConfiguration('lilysharp').get<string>('playback.soundFont', '').trim();
+    const isSf2 = (f: string) => /\.sf2$/i.test(f) && fs.existsSync(f);
+    if (isSf2(current)) {
+        return current;
+    }
+    const def = defaultSoundFont(context.extensionUri);
+    const plays = current && fs.existsSync(current) ? path.basename(current) : def ? path.basename(def.path) : undefined;
+    const why = 'A WAV export plays the score through a SoundFont 2 (.sf2), '
+        + (plays ? `and the preview's ${plays} is not one` : 'and the preview has no sound font');
+    const used = soundFontHistory(context).filter(isSf2);
+    let chosen: string | undefined;
+    if (used.length > 0) {
+        type Pick = vscode.QuickPickItem & { file?: string };
+        const picked = await vscode.window.showQuickPick<Pick>([
+            ...used.map(f => ({ label: path.basename(f), detail: f, file: f })),
+            { label: 'Browse for an .sf2 file…', detail: 'See "Sound fonts" on the Lily# site for three free ones' },
+        ], { title: 'Lily#: the sound font to render the WAV with', placeHolder: why });
+        if (!picked) {
+            return undefined;
+        }
+        chosen = picked.file;
+    }
+    if (!chosen) {
+        if (used.length === 0) {
+            const browse = 'Choose an .sf2 File…';
+            if (await vscode.window.showInformationMessage(`Lily#: ${why}.`, { modal: true,
+                detail: 'The editor page of the Lily# site names three free sound fonts and how to install them.' },
+                browse) !== browse) {
+                return undefined;
+            }
+        }
+        const files = await vscode.window.showOpenDialog({
+            title: 'Choose a SoundFont 2 for the WAV',
+            canSelectMany: false,
+            filters: { 'SoundFont 2': ['sf2'] },
+        });
+        if (!files || files.length === 0) {
+            return undefined;
+        }
+        chosen = files[0].fsPath;
+    }
+    await rememberSoundFont(context, chosen);
+    return chosen;
 }
 
 /** The picker behind `Lily#: Choose Sound Font…` and the setting's link: the default, named

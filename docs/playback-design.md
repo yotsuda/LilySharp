@@ -157,8 +157,13 @@ Now:
   the font (`--soundfont`, or `LILYSHARP_SOUNDFONT`). ⚠️ NOT the preview's font set: MeltySynth
   reads SoundFont 2 only — neither the `.sf3` the recommendations list first nor the OS's DLS
   bank the preview defaults to — so those are refused with that sentence before the synth is
-  asked; GeneralUser GS (`.sf2`) is the recommendation that works for both. No editor door yet
-  (`ScoreExport.Extensions` leaves `wav` out: the Export button has no font to hand it).
+  asked; GeneralUser GS (`.sf2`) is the recommendation that works for both.
+  **The editor's doors since 2026-10-28 (session 1030)**: the preview's Export, the palette and the
+  Explorer's submenu send `wav` with `SoundFont` on `lilysharp/export`. The font is the preview's
+  when it is an `.sf2` (the WAV then sounds as the preview does); otherwise the extension asks
+  (`wavSoundFont`: the `.sf2` files of the sound font history, or a file dialog) and records the
+  answer in the history, leaving `lilysharp.playback.soundFont` alone. The server refuses a
+  missing or unreadable font before it makes a folder or begins a file.
 
 ### MIDI out
 

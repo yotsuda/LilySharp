@@ -731,7 +731,8 @@ public sealed partial class LilySharpLanguageServer
     /// open one by TextDocument so its unsaved edits are what gets written, as the
     /// preview shows them, else by Path from disk — with <c>All</c> writing EVERY score
     /// into OutputDirectory under the CLI's <c>--all</c> names). Every format honours the
-    /// score: SVG/PNG/PDF draw it, and MIDI, MusicXML and the LilyPond twin write ITS form
+    /// score: SVG/PNG/PDF draw it, and MIDI (and the WAV played from it, through the
+    /// <see cref="ExportParams.SoundFont"/> the editor names), MusicXML and the LilyPond twin write ITS form
     /// (the CLI's RunFormOutput — <c>lysc midi --score practice</c> writes `form practice`).
     /// Until 2026-10-03 the one-score export handed the three a null form, which is the
     /// PRIMARY one: the preview's Export button on <c>score practice { tab bass }</c>, whose
@@ -788,6 +789,15 @@ public sealed partial class LilySharpLanguageServer
         if (!LilySharp.Core.Export.ScoreExport.Extensions.TryGetValue(format, out var ext))
             return new ExportResponse { Success = false, Error = $"Unknown format: {format}" };
 
+        // A WAV needs a font it can read; refuse before a folder is made or a file begun.
+        if (format == "wav")
+        {
+            if (string.IsNullOrEmpty(@params.SoundFont))
+                return new ExportResponse { Success = false, Error = "A WAV export needs a SoundFont 2 (.sf2)" };
+            if (LilySharp.Core.Audio.WavRenderer.SoundFontProblem(@params.SoundFont) is { } problem)
+                return new ExportResponse { Success = false, Error = problem };
+        }
+
         try
         {
             if (!@params.All)
@@ -797,7 +807,7 @@ public sealed partial class LilySharpLanguageServer
                 // writing is ScoreExport's, the command line's home (its remarks say why).
                 var chosen = RenderSpecParser.ChooseDeclared(tree, @params.RenderName);
                 var result = LilySharp.Core.Export.ScoreExport.Write(tree, format, @params.OutputPath, chosen,
-                    new LilySharp.Core.Export.ExportOptions { TodoMarks = @params.TodoMarks });
+                    new LilySharp.Core.Export.ExportOptions { TodoMarks = @params.TodoMarks, SoundFont = @params.SoundFont });
                 var written = result.Files;
                 // The dialog's path names ONE file; a multi-page PNG writes several, so
                 // report what was actually written so the toast isn't a lie.
@@ -818,6 +828,7 @@ public sealed partial class LilySharpLanguageServer
                 return new ExportResponse { Success = false, Error = "Exporting every score needs an output directory" };
             var dir = @params.OutputDirectory;
             Directory.CreateDirectory(dir);
+            var options = new LilySharp.Core.Export.ExportOptions { SoundFont = @params.SoundFont };
 
             var outputs = new List<string>();
             var warnings = new List<string>();
@@ -826,7 +837,7 @@ public sealed partial class LilySharpLanguageServer
             {
                 // A file with no `score` block has exactly one thing to write (the CLI's
                 // RunFormOutput says the same), under the file's own name.
-                Add(LilySharp.Core.Export.ScoreExport.Write(tree, format, Path.Combine(dir, stem + ext), null));
+                Add(LilySharp.Core.Export.ScoreExport.Write(tree, format, Path.Combine(dir, stem + ext), null, options));
             }
             else if (format == "vsqx")
             {
@@ -852,7 +863,7 @@ public sealed partial class LilySharpLanguageServer
                             + "already written by an earlier score of this file — skipped");
                         continue;
                     }
-                    Add(LilySharp.Core.Export.ScoreExport.Write(tree, format, target, score));
+                    Add(LilySharp.Core.Export.ScoreExport.Write(tree, format, target, score, options));
                 }
             }
             // The exporters' own warnings (a MIDI note beyond the keyboard, a twin's

@@ -201,7 +201,7 @@
     <a href="#soundfonts">Sound fonts</a>, below. A browser lets sound start only once you have
     clicked or typed in the preview itself — the status bar says so when a note comes first.</li>
     <li><b>It exports.</b> <i>Lily#: Export</i> writes PDF, SVG, PNG, LilyPond
-    (<code>.ly</code>), MusicXML, MIDI or a VOCALOID sequence — from the preview (the score it
+    (<code>.ly</code>), MusicXML, MIDI, WAV or a VOCALOID sequence — from the preview (the score it
     shows, under that score's own form), the command palette, or by right-clicking
     <code>.lys</code> files in the Explorer (every score of every selected file, into one
     folder). Every door writes the same file as <code>lysc</code>.</li>
@@ -296,7 +296,8 @@
   <p class="note">The links are to the fonts' own publishers. More, and their licences, on
   MuseScore's <a href="https://musescore.org/en/handbook/soundfonts-and-sfz-files">sound font
   page</a>; any <code>.sf2</code>, <code>.sf3</code> or <code>.dls</code> General MIDI font
-  works.</p>
+  works. <i>Export as WAV</i> reads <code>.sf2</code> only: GeneralUser GS serves the preview
+  and the WAV alike; with another font chosen, the export asks for an <code>.sf2</code>.</p>
   <h3>Setting one up</h3>
   <ol>
     <li>Download the file (for MuseScore_General, click its name above). Keep it in a folder
@@ -490,7 +491,7 @@
     <tr><td>Step Up · Step Down in the Key</td><td><kbd>Ctrl+Shift+Up</kbd> · <kbd>Ctrl+Shift+Down</kbd> — <a href="#step">above</a></td></tr>
     <tr><td>Step Up · Step Down an Octave</td><td><kbd>Ctrl+Shift+PageUp</kbd> · <kbd>Ctrl+Shift+PageDown</kbd> — <a href="#step">above</a></td></tr>
     <tr><td>Open Preview · Open Preview to Side</td><td><kbd>Ctrl+Shift+V</kbd> · <kbd>Ctrl+K</kbd> <kbd>V</kbd></td></tr>
-    <tr><td>Export as PDF / SVG / PNG / LilyPond / MusicXML / MIDI / VOCALOID</td><td>writes the file's scores</td></tr>
+    <tr><td>Export as PDF / SVG / PNG / LilyPond / MusicXML / MIDI / WAV / VOCALOID</td><td>writes the file's scores</td></tr>
     <tr><td>Ask AI… · Select AI Model…</td><td><kbd>Ctrl+I</kbd> — <a href="#ai">below</a></td></tr>
   </table>
   <!-- VIDEO editor-split-sections: a file grouped by part — vn1 has `section A` (2 bars) and

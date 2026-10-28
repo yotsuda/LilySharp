@@ -73,6 +73,10 @@ workflow attaches that section to the GitHub Release verbatim.
   p 70, mp 77, mf 86, f 95, ff 102, fff 108 (they were pp 35, p 50, mp 65, mf 80, f 95, ff 110, fff 120
   — twice LilyPond's spread, which a SoundFont player, squaring the velocity, made some 11 dB from p
   to f), sf 1.00 → 127; a note with no dynamic plays at LilyPond's default 0.71 → 90 (was 80).
+- `[editor]` **Export as WAV** from the preview, the command palette and the Explorer's submenu —
+  `lysc wav`'s sound, through the preview's sound font when it is a SoundFont 2 (`.sf2`), else
+  through an `.sf2` the export asks for. The language server's `lilysharp/export` takes `wav` with
+  a `SoundFont`, and refuses a missing font, an `.sf3` or a DLS bank before it writes anything.
 
 ### MusicXML import
 

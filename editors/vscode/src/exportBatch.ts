@@ -44,6 +44,9 @@ export interface ExportBatchDeps {
     showLog: () => void;
     /** Opens a folder in the OS file manager (the "Open Folder" button). */
     openFolder: (dir: string) => void;
+    /** The SoundFont 2 a WAV export plays through — the preview's font when it is one, else
+     *  the one the writer picks; undefined when they cancel. */
+    wavSoundFont: () => Promise<string | undefined>;
 }
 
 interface ExportResponse {
@@ -125,6 +128,15 @@ async function exportBatch(
         }
     }
 
+    // A WAV needs a font before anything else is asked: no font, no export.
+    let soundFont: string | undefined;
+    if (format.id === 'wav') {
+        soundFont = await deps.wavSoundFont();
+        if (!soundFont) {
+            return;
+        }
+    }
+
     const folders = await vscode.window.showOpenDialog({
         canSelectFiles: false,
         canSelectFolders: true,
@@ -167,6 +179,7 @@ async function exportBatch(
                 format: format.id,
                 all: true,
                 outputDirectory: dir,
+                soundFont: soundFont ?? null,
             };
             attempted++;
             deps.log(`  ${file}${open ? ' (open editor)' : ''}`);
