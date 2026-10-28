@@ -171,6 +171,8 @@ workflow attaches that section to the GitHub Release verbatim.
   The list right after `@` offers `!` too, which writes it and opens those names.
 - `[editor]` Smart typing leaves a `paper`, `layout`, `fonts`, `header`, `midi` or `markup` block
   alone: `paper { size a5 }` lost its 5 to the duration rule.
+- `[editor]` The `@` list is sorted alphabetically (lower-cased, as VS Code compares), `!` first,
+  instead of by family; the `@!` list keeps the open span first.
 - `[editor]` A digit typed right after `@` (or `@!`) begins the annotation's name, so `@8va`,
   `@8vb`, `@15ma` and `@15mb` complete; smart typing used to take it as the note's duration
   (`c'4@` + `8` → `c'8@`).

@@ -151,6 +151,9 @@ All notable changes to the Lily# VS Code extension are documented here.
   same. The position used to offer the note names.
 - **Nothing in a `paper`, `layout` or `fonts` block is rewritten as you type.** `paper { size a5 }`
   lost its 5 (the `a` was read as a note and the digit as its duration; `a3` became `a32`).
+- **The list after `@` is in alphabetical order** (`!` first), not grouped by family — find
+  `sustain` under s, not after the ornaments and the dynamics. After `@!` the open span still
+  comes first, the rest alphabetical.
 - **A digit right after `@` begins the annotation's name**: `c'4@8` now types `@8`, and `@8va`,
   `@8vb`, `@15ma` and `@15mb` complete. The digit used to change the note's duration (`c'8@`), so
   the printed ottava spellings never reached the completion list.

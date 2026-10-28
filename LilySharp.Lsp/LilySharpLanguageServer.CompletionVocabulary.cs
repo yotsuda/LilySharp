@@ -4743,7 +4743,7 @@ public sealed partial class LilySharpLanguageServer
                 .. list.Items,
                 new CompletionItem
                 {
-                    Label = "!", Kind = CompletionItemKind.Operator, InsertText = "!", SortText = "4!",
+                    Label = "!", Kind = CompletionItemKind.Operator, InsertText = "!", SortText = "!",
                     Detail = "End a span: @!rit, @!ottava, @!sustain, @!phrasingSlur, @!cresc … (the open one first)",
                     Command = new Command { Title = "Suggest span ends", CommandIdentifier = "editor.action.triggerSuggest" },
                 },
@@ -4796,7 +4796,7 @@ public sealed partial class LilySharpLanguageServer
                 Kind = item.Kind,
                 Detail = isOpen ? $"Ends the @{open} open here" : $"Ends @{item.Label}",
                 FilterText = item.FilterText,
-                SortText = (isOpen ? "0" : "1") + item.SortText,
+                SortText = (isOpen ? "0" : "1") + item.Label.ToLowerInvariant(),
                 Preselect = isOpen ? true : null,
             });
         }
@@ -4854,7 +4854,7 @@ public sealed partial class LilySharpLanguageServer
                 },
             };
 
-        return WithSearchTerms(new CompletionList
+        return InAlphabeticalOrder(WithSearchTerms(new CompletionList
         {
             Items =
             [
@@ -5032,7 +5032,19 @@ public sealed partial class LilySharpLanguageServer
                 // chords); on a chord the bare auto-derive form. Built above.
                 chordItem
             ]
-        });
+        }));
+    }
+
+    /// <summary>The annotation names in plain alphabetical order, whatever the families the rows
+    /// above are grouped in (owner's decision 2026-10-28: a writer looks for the name, not for
+    /// which family it belongs to — "ペダルが何番めだとか、どれが装飾音だとかあまり理解せずに
+    /// ほしいものを探す"). VS Code compares the sort texts lower-cased, so `unaCorda` sits by
+    /// `turn` and `upBow`.</summary>
+    private static CompletionList InAlphabeticalOrder(CompletionList list)
+    {
+        foreach (var item in list.Items)
+            item.SortText = item.Label.ToLowerInvariant();
+        return list;
     }
 
     /// <summary>

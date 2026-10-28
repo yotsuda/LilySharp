@@ -108,6 +108,23 @@ public class SpanEndCompletionTests
         Assert.DoesNotContain(ItemsAt("c'4@st▮", null)!, i => i.Label == "!");
     }
 
+    /// <summary>The '@' list is in plain alphabetical order, as VS Code sorts it (the sort texts
+    /// lower-cased), '!' first (owner's decision 2026-10-28: the writer looks for a name, not a
+    /// family); the '@!' list keeps the open span first and the rest alphabetical.</summary>
+    [Fact]
+    public void TheAtList_IsAlphabetical_AndTheSpanEndsAfterTheOpenOne()
+    {
+        static string[] Shown(CompletionItem[] items) => [.. items
+            .OrderBy(i => (i.SortText ?? i.Label).ToLowerInvariant(), System.StringComparer.Ordinal)
+            .Select(i => i.Label)];
+        var at = Shown(ItemsAt("c'4@▮", "@")!);
+        Assert.Equal("!", at[0]);
+        Assert.Equal(at.Skip(1).OrderBy(l => l.ToLowerInvariant(), System.StringComparer.Ordinal), at.Skip(1));
+        var ends = Shown(ItemsAt("c'4@sustain d'4@!▮", "!")!);
+        Assert.Equal("sustain", ends[0]);
+        Assert.Equal(ends.Skip(1).OrderBy(l => l.ToLowerInvariant(), System.StringComparer.Ordinal), ends.Skip(1));
+    }
+
     /// <summary>A '!' that is not after an '@' opens nothing — the trigger is gated as '.' is.</summary>
     [Fact]
     public void ABangElsewhere_AnswersNothing()
