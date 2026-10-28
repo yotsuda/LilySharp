@@ -188,8 +188,17 @@ function Publish-Server([string[]]$Extra) {
     dotnet publish (Join-Path $repoRoot 'LilySharp.Lsp') -c $Configuration -o $repoServer --nologo `
         -r $rid --self-contained false -p:PublishReadyToRun=true @Extra | Out-Host
     if ($LASTEXITCODE -ne 0) { throw "dotnet publish failed ($LASTEXITCODE)" }
+    # lysc beside the server, as the Marketplace build carries it (publish-marketplace.ps1,
+    # release.yml): the OMR reader engraves with it to check a scan against the text, and the
+    # extension hands it the one in server\. Without it every check said "no lysc found" (owner's
+    # log 2026-10-29, Fix OMR Marks with AI: "verify did not run (exit 2)"). ReadyToRun here too,
+    # or the second publish overwrites the server's precompiled Core.dll with a JIT-only one.
+    dotnet publish (Join-Path $repoRoot 'LilySharp.Cli') -c $Configuration -o $repoServer --nologo `
+        -r $rid --self-contained false -p:PublishReadyToRun=true @Extra | Out-Host
+    if ($LASTEXITCODE -ne 0) { throw "dotnet publish (lysc) failed ($LASTEXITCODE)" }
     $dll = Join-Path $repoServer 'lilysharp-lsp.dll'
     if (-not (Test-Path $dll)) { throw "publish produced no lilysharp-lsp.dll in $repoServer" }
+    if (-not (Test-Path (Join-Path $repoServer 'lysc.dll'))) { throw "publish produced no lysc.dll in $repoServer" }
     return [System.Diagnostics.FileVersionInfo]::GetVersionInfo($dll).ProductVersion
 }
 
