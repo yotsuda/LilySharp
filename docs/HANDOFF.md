@@ -127,6 +127,12 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1031セッション（2026-10-28・YT-DELL2）
+
+第1030 と同じ会話の続き（記録の枠が詰まったので便を切った）。開始時 full **13467 / 0 / 2**・build 0 エラー・OMR の REQUESTS に `open` なし。作業場所は Lab `sessions/p1031/`。
+
+## 以下は第1030セッションの経緯
+
 ### 1.1 第1030セッション（2026-10-28・YT-DELL2）
 
 第1028〜1029 と別の会話（`/clear` の後）。master `05c471530`（未 push 7）。作業場所は Lab `sessions/p1030/`。
@@ -147,49 +153,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
   - **総点検**（Lab `sessions/p1030/audit/`・器は `*.txt` に保存）: 35 か所＋その値の位置＝67 か所の一覧の語 1063 個を、VS Code の動き（trigger・incomplete で再要求・既定の語の区切りで絞り込み）で 1 文字ずつ打った＝サーバー側の取りこぼし 0。同じ語を打鍵の模擬器で打った＝**`paper { size a5 }` など 23 個が smart typing に書き換えられていた**（`a` を音符、数字を音価と読む）→ `inSettingsBlock`（paper／layout／fonts／header／midi／markup の中は規則を止める・後ろ向きに 1 回だけ読む）。模擬器は直す前の `@8va` を 4 個拾う＝陽性対照あり。語彙そのもの（コンパイラが受け付ける語が一覧にあるか）は既存の網が見ている。音楽の途中の `clef` が 5 種なのはコンパイラも同じ＝言語の仕様。
   - npm **517 / 0**。MANUAL-CHECKS C46・C47。
 - **ユーザー指示: OMR の返事 `lilysharp-reply-2026-10-28-missed-barline.md`**（10-27 の依頼への返事・OMR `2464d77`）: OMR は長さが拍子の k 小節分で box が隣の約 k 倍なら memo を「a bar line may be missed here: …」にし、その行の長さの注釈を書かなくなった。**Lily# 側の作業なし**＝「Write the missing bar line」は LYS2017、AI の直しの「箱が隣の何倍か」も Lily# 自身の計測で、memo の文言にも注釈にも頼っていない（grep で確認）。REQUESTS の 10-28 の行の下に受け取りを 1 行書いた（OMR の repo・未 commit＝OMR 側が commit する慣例）。
-
-## 以下は第1028セッションの経緯
-
-### 1.1 第1028セッション（2026-10-28・YT-DELL2）
-
-第1027 と同じ会話の続き。ブランチ `octave-base`。作業場所は Lab `sessions/p1028/`（`legacy.json`・`literals.json`・`migrate*.txt`・`BRIEF.md`・`zz/`＝使い捨ての移行器 `Zz*.cs`）。
-- **ユーザー「安全に進めて」＝リポジトリの楽譜とテストを LilyPond のオクターブへ移す**:
-  - 旧規則の build（worktree `C:\MyProj\LilySharp-legacy`＝`bd6d62715`）で各楽譜・テストの楽譜断片・LP probe を鳴らした音と描いた音を JSON に落とした。
-  - `OctaveModeConverter.MigrateFromLegacy` が各音を旧版で鳴った高さへ印で戻し、音の署名と描画の軌跡を照合する。採点の歩き（collector）が届かない音（楽譜の無い `part X { section … }`）は `RemarkByPerformance` が演奏に照らして 1 音ずつ直す。
-  - **`samples/` は触らない**（第1027 で Claude が `git checkout -- '*.lys'` でユーザーの未 commit の 5 冊を壊した＝ユーザーが VS Code の timeline で戻す）。
-- **残りの失敗 545 は 4 つの worktree（`ob-fix1`〜`4`）で並行に直して merge した**:
-  - 規則 1: LP の実測と比べるテストは楽譜の方を戻し、数値は変えない。
-  - 規則 2: 出力テキストは、同じ音楽であることを確かめてから期待値を直す。
-  - 規則 3: 旧規則そのもののテストは新しい規則を確かめる形に書き換える。
-- **製品の直し 1 件（第3 群の報告）**: フレーズ参照の後の音は、フレーズの anchor を F3 の枠から読む。MIDI（`MidiExporter` 2 か所）と MusicXML（2 か所）が C から読んでいたので、g・a・b で始まる本体の後の音が 1 オクターブ低かった（譜面は正しかった）。blues-in-f と rising-sun を旧版の音に合わせて直した。
-- 文書は SYNTAX_REFERENCE・GRAMMAR・TUTORIAL（例を `c'4` 始まりに）・CLI_REFERENCE を直した。`lysc octave --help`、補完の `absolute` の説明、レッスン 1 の字も直した。両 CHANGELOG（**BREAKING**）、MANUAL-CHECKS C39。
-- 結果: full **13404 / 0 / 2**、npm **513 / 0**。
-- **残り（ユーザー判断）**:
-  - ⑶ ユーザーが戻した `samples/` の 5 冊（amazing-grace・canon-in-d・fur-elise・greensleeves・nocturne）の移行＝**閉じた**（ユーザーが新しい規則で書き直していた・Claude は manual-beam-demo と注釈だけ直して commit＝第1029）。
-- **補完の直し（第1029・ユーザー報告）**: 名前の無い `part { }` と、短い名前まで書いた `part flute "Flute" "Fl." { }` の中で Ctrl+Space がパートの属性を出さず音名を出していた（`instrument` を補完できない）。`BlockContextScan` の枠読み（`ReadFrame`）が引用符の名前を 1 つしか飛ばさず、`IsInsidePartBlock` は名前のある形しか読まなかった。両方直した（網 `InstrumentCompletionTests`・MANUAL-CHECKS C41）。`instrument` を選ぶと一覧がすぐ開くのは前からの仕組み（`editor.action.triggerSuggest`）。
-- **コードトラックの `for`（第1029・ユーザー決定 2026-10-28）**: ユーザー指摘「chords の和音が pitch の指定で動くのはおかしい・どのパートのためのコードか指定できないといけない・score の中でも」。それまでは、コード行は実音で、直下の譜表が移調楽器を奏者向けに描くとき奏者の名前に移していた（`ChordNameDrop`）。結び付きはどこにも書かれていなかった。
-  - 定義 `chords tpc for tp { … }` は tp の文字で書く（tp の `pitch` に従う）。同時に、このトラックの既定の読み手。
-  - score の行 `chords prog for tp`（`as` の前後どちらでも）は、その行を tp の奏者の読みで描く。定義の `for` を上書きする。
-  - `for` がどこにも無ければ実音で、書いたとおり描く（`pitch` でも直下の譜表でも動かない）。歌詞の `sings` と同じ二層。
-  - 核は `Semantics.ChordTrackPitch`（`TypedDrop`＝文字→実音、`ReaderDrop`＝実音→読み手の読み、`Sounding`＝ローマ数字は動かさない）。
-  - 読む側: 譜面（`ChordNameCollector.RowTypedDrop`・行ごとの `for` は `ChordRowSpec.For`／`StaffSpec.ChordFor`。同じトラックを 2 回置くと行ごとに別）、MIDI、MusicXML（harmony は読み手のパートへ。無ければ移調しないパートへ）、LilyPond の双子、キー推定、カポの助言。
-  - 検証は LYS7006（パートでない）・LYS7007（定義の食い違い）。`pitch` の切り替えと AI 作曲を開くときに、`for` のトラックを音と一緒に綴り直す（`OctaveModeConverter.RespelledSymbol`）。
-  - 補完は `for` とパート名。`for` の後のパート名は色付けされ、`for P {` の中もコード欄として扱う（Parser の `chordsStage`・LSP の `ReadFrame`）。
-  - 網は `ChordRowTransposeTests`（書き直し・`for` の網を追加）・`TypedPitchStepTests`・`ChordForCompletionTests`。MANUAL-CHECKS C42。
-  - 文書は GRAMMAR（ChordsBlock・ScoreItem）・GRAMMAR_FOR_LLM・SYNTAX_REFERENCE・site の manual。`RowStaffPart` は呼ぶ側が無くなり消した。
-- **タブのオクターブ（第1029・ユーザー決定 2026-10-28）**: 別の楽器のタブは前から `tab bass5 melody` で書けた（ユーザー「staff treble melody と対応するからわかりやすい」）。足したのは、弾くオクターブを `as` の後に書く語 `8vb` `15mb` `8va` `15ma`（`tab bass5 melody as 8vb numbers`・順は自由・各 1 回）。
-  - 検討して捨てた案: `for`（コードの `for PART` と後ろに来る名前の種類が違う）、`as transpose c,`（ベースではほぼ毎回書くことになり冗長、とユーザー）、自動選択（最低弦より低い E♭ が 1 音あるだけで全体を上げてしまう、とユーザー指摘）。
-  - 意味: タブのフレットだけを移す。`TabStaffSpec.Transposition` に足すので、タブの読み手は全部そろう。MIDI・五線譜・パートは不変。
-  - 載らない音は、前からの LYS5002 で知らせて描かない（ユーザー決定 A）。
-  - 調弦を自分で名指すタブで 4 分の 1 以上の音が載らず、1〜2 オクターブ動かせば全部載るときは LYS5004（情報）が語を言い、クイックフィックスで書く（`TabRenderSyntax.OctaveEdit`）。
-  - LilyPond の双子は、タブの行の調弦の上書きを読まずパートの調弦でフレットを打っていた（前からの抜け）。`RenderSpecParser.TabSpecOf` で譜面と同じ答えを使うように直した。
-  - 網は `TabOctaveTests` 12 本、確認項目は MANUAL-CHECKS C43。
-  - ⑷ 移調楽器を書いた音で綴り直す変換（「B」）＝**入れた（第1029・⑸ の項）**。
-  - ⑸ Ctrl+Shift+↑ で `pitch` の written／concert を切り替えたとき、楽譜も書き直す＝**入れた（第1029・`OctaveModeConverter.SwitchTypedPitch`・網 `TypedPitchStepTests` 6 本・MANUAL-CHECKS C40）**。⑷ も同日に入れた＝半音の移調楽器は `\transpose` の綴りで音と調を移し、奏者の文字にするときは調の無いパートにファイルの調を移して書く（F の曲の B♭ トランペットは `key g major`）。セクション見出しの調を共有するパートだけは移せず、自分の `pitch` に旧い語を書いて文字を保つ（パート見出しの切り替えなら断る）。AI 作曲を開くときも同じ（`WithoutConcertPitch`）。網 `TypedPitchStepTests` 8 本・`ConcertPitchRemovalTests`。
-  - ⑹ OMR の `.lys` 出力を新しいオクターブへ＝**閉じた**（OMR の返事 `lilysharp-reply-2026-10-28-octaves.md`・REQUESTS 9＝お知らせのみ・Lily# 側の作業なし: OMR は LilyPond のオクターブで書く（OMR 側のコミットは返事の末尾）・`treble_8` は鳴る高さ・版の床も目印も持たない＝オーナーの方針「後方互換なし、両側を同時に新しくする」）。
-- **続き（ユーザー指示）**: ⑴ 旧規則の `.lys` を移すコマンド＝**不要**（ユーザー決定）。⑵ レッスン 1＝「よりよい品質のレッスン」の方針で直した: STEP 2 の cello で譜表がヘ音記号に替わって旋律が上に出て、STEP 3 の Ctrl+Shift+PageDown で旋律がチェロの譜表に入る（png で確認）。`instrument` のホバー・補完・ステータス行から `octave` の行を外した（ユーザー指示: どの楽器でも 3 なので書かない）。site は `<pre>` の例 19 個と `build-examples.ps1` の例を、旧版の音に合わせて直した。`build-site.ps1` が通る。
-- **見つけた不具合（オクターブとは無関係）**: `grace { d'16@caesura e'16 } c'1` が `BeamScoringProblem.MinimumDy` の `Math.Sign(NaN)` で落ちる（`GraceNoteEngraver.QuantGraceBeam` 経由）。`@breath` や D5 なら落ちない（第2 群の報告）。**直した（2026-10-28・ユーザー指示「クラッシュする不具合を調べて」）**: 低い装飾音と五線の上端の caesura は輪郭が重ならず、間の rod が −∞ になっていた。それを `SpacingRules.GraceColumns` が run の rod に足して −∞ にしたので、詰まった段では run が際限なく縮み、梁の最小二乗が NaN になった。rod の床をばねの最小距離にした（`Math.Max(IntoRod, Into.MinDistance)`）。breath は梁を切るので落ちなかった。網は `GraceBodyValidatorTests.ACaesuraOverALowBeamedGrace_Renders`（直しを外すと 2 本とも赤）。
-判定（2026-10-28・第1028 の終わり）: `octave-base` を master へ merge 済み（push はユーザー）。
 
 ## 2. 開いている作業
 
