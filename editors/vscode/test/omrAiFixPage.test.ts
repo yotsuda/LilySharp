@@ -34,6 +34,13 @@ describe('the Edit Bars Beside the Scan page', () => {
         .replace(/\\\\/g, '\\')
         .replace(/\\`/g, '`');
 
+    // Owner's request 2026-10-28: only the Draft's picture had a caption.
+    it('captions every picture: the file now, the scan with its page, and the Draft\'s source', () => {
+        assert.match(src, /<div class="over" title="The bar as the \.lys has it now, drawn — what Accept replaces">now — in the file<\/div>/);
+        assert.match(src, /\$\{esc\(t\.crop \? `scan — page \$\{t\.crop\.page\}` : 'scan'\)\}<\/div>\$\{scan\}/);
+        assert.match(src, /<div class="over draft-of" data-i="\$\{r\.index\}">\$\{parts\.source\}<\/div>/);
+    });
+
     it('is a script that parses', () => {
         assert.ok(open > 0 && close > open);
         assert.doesNotThrow(() => new vm.Script(script));

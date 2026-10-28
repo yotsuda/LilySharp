@@ -27,6 +27,12 @@ All notable changes to the Lily# VS Code extension are documented here.
   Code keeps for itself** ("Model gpt-5.6-luna is only available to VS Code core"): the request goes
   on to the automatic pick, as it already did when the model was chosen automatically.
 
+### Scan
+
+- **Every picture of Edit Bars Beside the Scan has its caption**: "now — in the file" over the bar as
+  the .lys has it, "scan — page N" over the scan; the Draft's ("original / your edit / AI proposal")
+  was the only one.
+
 ### Step keys
 
 - **Related marks are a Ctrl+Shift+Up / Down away**, even where the order means little: the pedals (`@unaCorda` `@sostenuto` `@sustain`, the `@!`

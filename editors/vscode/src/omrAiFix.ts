@@ -1640,8 +1640,8 @@ function rowHtml(run: FixRun, r: FixRow, pageUris: ReadonlyMap<number, { uri: st
   <td colspan="3" class="why"><span class="gates" data-i="${r.index}">${parts.gates}</span> <span class="reason-text" data-i="${r.index}">${parts.reason}</span></td>
 </tr>
 <tr class="${cls} body" data-i="${r.index}">
-  <td class="cell"><div class="over"></div>${now}<pre class="src now" data-i="${r.index}">${parts.nowText}</pre></td>
-  <td class="cell"><div class="over"></div>${scan}</td>
+  <td class="cell"><div class="over" title="The bar as the .lys has it now, drawn — what Accept replaces">now — in the file</div>${now}<pre class="src now" data-i="${r.index}">${parts.nowText}</pre></td>
+  <td class="cell"><div class="over" title="The scanned page, cut to this bar — drag to move, Ctrl+wheel to zoom">${esc(t.crop ? `scan — page ${t.crop.page}` : 'scan')}</div>${scan}</td>
   <td class="cell"><div class="over draft-of" data-i="${r.index}">${parts.source}</div><div class="after-pic" data-i="${r.index}">${parts.proposal}</div>`
         // The bar to write, editable (owner's request 2026-10-24): a click opens it; the
         // picture and the gates follow the typing.
@@ -1733,7 +1733,8 @@ tr.body td { padding-top: 2px; }
 @media (prefers-reduced-motion: reduce) { .spin { animation-duration:2.4s; } .busy { animation:none; } }
 .cell { width:33%; }
 /* The line over each picture, the same height in all three cells so the pictures line up
-   (owner, 2026-10-24); only the Draft's says something — where it came from. */
+   (owner, 2026-10-24): what each one is — the file now, the scan, and where the Draft came from
+   (owner's request 2026-10-28: the first two said nothing). */
 .over { font-size:11px; line-height:14px; height:14px; margin:0 0 2px; opacity:.7; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .pic { display:block; width:100%; height:120px; background:#fff; border:1px solid var(--vscode-panel-border); user-select:none; touch-action:none; }
 .pic.panning { cursor:grabbing; }
