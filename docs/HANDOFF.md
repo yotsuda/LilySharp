@@ -141,6 +141,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
   - ⚠️ 計器は 1 ページで最初にはみ出した表しか名指さない＝1 枚直すと次が出る。表ごとの印ではなく規則で直した。
   - **ついでに見つけた: オクターブの変更（第1027）の取り残し**＝「preset がオクターブを決める」と書いた文が site（ref-structure の clef の行・editor の補完の説明）、GRAMMAR、GRAMMAR_FOR_LLM、コードの注釈 7 か所に残っていた（`GetDefaults(preset).Octave` は常に 3）。行数を変えずに直した。LYS1050 の規則そのものは正しい。
   - full **13461 / 0 / 2**。
+- **ユーザー指示: OMR の返事 `lilysharp-reply-2026-10-28-missed-barline.md`**（10-27 の依頼への返事・OMR `2464d77`）: OMR は長さが拍子の k 小節分で box が隣の約 k 倍なら memo を「a bar line may be missed here: …」にし、その行の長さの注釈を書かなくなった。**Lily# 側の作業なし**＝「Write the missing bar line」は LYS2017、AI の直しの「箱が隣の何倍か」も Lily# 自身の計測で、memo の文言にも注釈にも頼っていない（grep で確認）。REQUESTS の 10-28 の行の下に受け取りを 1 行書いた（OMR の repo・未 commit＝OMR 側が commit する慣例）。
 
 ## 以下は第1028セッションの経緯
 
