@@ -160,21 +160,6 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
-## 以下は第1032セッションの経緯
-
-### 1.1 第1032セッション（2026-10-28・YT-DELL2）
-
-第1031 と同じ会話の続き（記録の枠が詰まったので便を切った）。開始時 full **13521 / 0 / 2**。作業場所は Lab `sessions/p1032/`。
-- **ユーザー提案「`@startTrillSpan` は `@trillSpan` と `@!trillSpan` にした方が良い」**（`ebc7fdf3f`・後方互換なし）: 始まりは記号 `@trillSpan`（`.up`/`.down` は前のまま）、終わりは終端 `@!trillSpan`。`MusicMarkItem.TrillSpanName`／`IsSpanEndName` が置き場（トリルは印ではなく Collector のトリルの出来事なので `ParseSpanEndName` は読まない）。古い 2 語は LYS1008 で新しい書き方を言う。LilyPond の双子は `\startTrillSpan`／`\stopTrillSpan` のまま（終わりは `SplitAttachments` の後置）。`@!` の補完に出る（開いているものが先）。装飾音・セクションまたぎ・`SectionSplitter` も新しい名前。スナップショット 2 枚は data-pos だけ動いた。**OMR へお願い** `LilySharp-Omr/docs/repro/lilysharp-requests-2026-10-28-trill-span.md`＋REQUESTS に 1 行（OMR 側は未 commit＝OMR が commit する）。
-- **ユーザー要望「並びの順に意味がなくても、関連する記号を簡単に見つけられる方が良い」「notehead のかっこの中なども up/down で」**（`e93c9cb28`・`3a2d5f004`）: 群は**綴り**で引く（`SpellingOf`＝名前＋書いたとおりの引数・空白を落とす）＝`quindicesima(bassa)/ottava(bassa)/ottava/quindicesima`・`unaCorda/sostenuto/sustain`・`editorial/courtesy`・`repeatTie/laissezVibrer`・`flageolet/harmonic`・`arpeggio/arpeggio(bracket)`。`@!` の改名は `RenamedEnd`（新しい綴りの頭の語へ）＝ペダルの族を `SpanNames` が読むようにした（LYS4032 はペダルでは起こり得ない）。強弱のアクセント `fp…sffz` は段で止まる。引数の段 `ArgumentSteps`（notehead・pluck は補完の順に ↓、finger・bend は ↑ で大きく、feather は ↑ で right・端で止まる）＝網が補完の値と突き合わせる。音楽のキーワード `grace/acciaccatura/appoggiatura`・`break/pageBreak`・`noBreak/noPageBreak`（`TargetKind.MusicKeyword`・`afterGrace` は形が違うので外した）。終了時 full **13539 / 0 / 2**。
-- **ユーザー「trillSpan はどこかの Ctrl+Shift+Up の仲間に入れられるか」→ 決定「今の順番は尊重する必要がない。それで入れて」**: 群を `pralltriller/trill/trillSpan`（↑＝長い・前は `trill/pralltriller`）。`@trillSpan` へ切り替えると次の音符・和音・休符の印の後に `@!trillSpan` を書く（既に終わりがあれば書かない・次が無ければ書かない）、`@trillSpan` から離れるとその `@!trillSpan` を消す＝`TrillSpanEndEdit`・`SpanNames.After`／`TrillSpanEndOf`。full **13548 / 0 / 2**。
-- **ユーザー指示「`@!accel` も Ctrl+Shift+Down で動くように」**: 終わりの上では始まりを対象にする（`SpanNames.OpenerOf`＝印の族は `StartOf`・松葉は `HairpinEndOf` が自分を指す強弱・トリルは `TrillSpanEndOf` が自分を指す `@trillSpan`）＝始まりの切り替えと既存の終わりの連動で両方が変わる。始まりの無い終わりは今まで通り（キーの元の動き）。full **13555 / 0 / 2**。
-- **ユーザー提案「`@rit` を ↑ で `@accel` にしたとき閉じられていなければ、同じ小節の最後の音符に `@!accel` を」→ 決定「入れて」（全族＋トリルもそろえる）**: `SpanEndEdit`＝新しい綴りが span の始まり（文字の伸び・オッターヴァ・ペダル＝`SpanNames.FamilyOf`、トリル）で、終わりも同じ族の後の始まりも無ければ、`LastOfBarAfter`（その小節の最後の音符・和音・休符の印の後／自分が最後なら次の小節の最後／小節線が無ければ線の最後）に `@!新しい名前`。トリルの「次の音符」はこれにそろえた。full **13565 / 0 / 2**。
-- **ユーザー報告「`@accel` の点線が短すぎる。f まで伸ばすと書いたのに e までしか届いていない」**（`Downloads/accel.lys`・Lab `sessions/p1032/accel/` に LP の双子と測った値）: 右端が列の**左端** −0.25 だった（コードに「未移植」と書いてあった）→ LilyPond の `bound-details.right` は attach-dir 無し＝列（符頭＋符幹＝`HairpinEngraver.ColumnExtent` を internal にして共用）の**中央** −0.25。LP 実測 f の符頭から +0.402 と一致（網 `TextSpannerTests.TheRightEnd_…`）。線が f の上まで来るので高さも LP どおり五線から 4.56 に。スナップショット 5 枚は右端だけ +0.65。装飾音で終わる場合は左端のまま（測った組が無い）。オッターヴァ・トリル・ペダルの右端は見ていない。full **13566 / 0 / 2**。
-- **ユーザー「rit と rall も見て。! で閉じるものすべて確認して」**: Lab `sessions/p1032/spans/`（18 種 × `c''4@X d'' e'' f''@!X | g''1 |`・LP の双子に grob の X 範囲の dump を足した）で、線の右端−f の符頭の左端を比べた＝**18 種すべて LilyPond と 0.00 で一致**（rit/rall/accel/textSpan +0.45・松葉 3 種 +1.35・ペダル 3 種 +0.05・フレーズスラー +0.62・オッターヴァ 6 種 −0.76〜−1.48・トリル −0.80＝インクの右端）。コードの変更なし。⚠️ オッターヴァとトリルは `@!` の音符の**手前**で終わる（オッターヴァはその音符を移調しない＝双子の `\ottava #0 f`）＝LilyPond どおりだが、文字の伸び（その音符の上まで）と意味が違う。文書にどこで終わるかが書いていない。
-- **ユーザー決定「オッターヴァとトリルの `@!` は線がかかる最後の音符に（その音符を含む）・ペダルは今のまま」**（LilyPond の事情＝記号は時刻に付く・`\ottava` は設定の切り替え、を説明した上で「既存の楽譜への影響は気にしない」）: オッターヴァ＝Collector が `@!` の時刻を「その音符の終わり」・番号を +1 にする（`BranchState.LastAddedItem` の長さ・声部ごと。装飾音の上の終わりは今まで通りその装飾音の前）＝移調・括弧の右端・セクションの判定は既存のまま「次の音符で閉じた」と読む。トリル＝`TrillSpannerItem.EndInclusive`（書いた音符を持つ）→ `TrillSpannerEngraver.AtTheNextNote` が次の項目（装飾音も）か次の小節の頭（小節線まで）に読み替える。LilyPond の双子は `\ottava #0`／`<>\stopTrillSpan` を音符の兄弟（`~` `)` `]`）の後ろに（`_trailingSpanEnds`）、次が装飾音ならその括弧の頭に（LilyPond は装飾音を主の時刻より前に置くため）。MusicXML は stop を音符の終わりの offset に・読み込みは直前の音符へ・大譜表の上段の direction にも `<staff>1`。LP 実測で 8va の小節末の終わりは「最後の符頭の直後」で一致（前の「小節の右端−0.6」の近似は使わなくなった）。テスト・fixture・測定用の楽譜の `@!` を 1 音前へ（絵は同じ）。**OMR へお願い** `lilysharp-requests-2026-10-28-span-end-includes-its-note.md`（OMR 側のフォルダは `src/Omr/` に改名されていた）。full **13569 / 0 / 2**。
-- ⚠️ `editors/vscode/MANUAL-CHECKS.md` 30〜41 行あたりはバッククォートが `e` に化けたまま（以前の便の事故）。今回は触っていない＝直すなら元の commit の差分から。
-
 ## 以下は第1031セッションの経緯
 
 ### 1.1 第1031セッション（2026-10-28・YT-DELL2）

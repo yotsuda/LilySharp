@@ -108,6 +108,48 @@ public static partial class NoteStepper
         return (new Edit(keyword.Span.Start, keyword.Span.End, group[to].Word), listed);
     }
 
+    /// <summary>
+    /// The navigation marks that step among their kin, each group in the completion's order
+    /// (<see cref="SyntaxFacts.NavigationMarkVocabulary"/>), Down the next (owner's request
+    /// 2026-10-28): the two jump targets, the two end-of-pass words, and the six repeat
+    /// instructions. Each stops at its ends.
+    /// </summary>
+    private static readonly string[][] NavigationMarkGroups =
+    [
+        ["segno", "coda"],
+        ["to coda", "fine"],
+        ["dc", "ds", "dc al fine", "dc al coda", "ds al fine", "ds al coda"],
+    ];
+
+    /// <summary>A navigation mark as written, its words one blank apart (<c>dc  al fine</c> is
+    /// <c>dc al fine</c>).</summary>
+    private static string NavigationSpelling(string text, NavigationMarkSyntax mark)
+        => string.Join(' ', text[mark.Span.Start..mark.Span.End]
+            .Split(' ', '\t', '\r', '\n').Where(w => w.Length > 0));
+
+    /// <summary>A navigation mark of <see cref="NavigationMarkGroups"/> the caret is on, or null.</summary>
+    private static NavigationMarkSyntax? NavigationMarkAt(string text, SyntaxTree tree, int offset)
+    {
+        foreach (var mark in tree.GetNodes<NavigationMarkSyntax>())
+            if (mark.Span.Start <= offset && offset <= mark.Span.End
+                && Array.Exists(NavigationMarkGroups, g => g.Contains(NavigationSpelling(text, mark))))
+                return mark;
+        return null;
+    }
+
+    /// <summary>One step of a navigation mark along its group, Down the next in the completion's
+    /// order, and the group.</summary>
+    private static (Edit? Edit, string Message) NavigationMarkEdit(string text, NavigationMarkSyntax mark, int dir)
+    {
+        string now = NavigationSpelling(text, mark);
+        var group = Array.Find(NavigationMarkGroups, g => g.Contains(now))!;
+        string listed = string.Join(" / ", group);
+        int to = Array.IndexOf(group, now) - dir;
+        if (to < 0 || to >= group.Length)
+            return (null, listed);
+        return (new Edit(mark.Span.Start, mark.Span.End, group[to]), listed);
+    }
+
     /// <summary>A chord row's <c>as</c> words (ChordDisplayModeValidator's), in the completion's order.</summary>
     private static readonly string[] ChordAsWords = ["roman", "names"];
 

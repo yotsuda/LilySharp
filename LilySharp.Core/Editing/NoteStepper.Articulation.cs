@@ -116,6 +116,9 @@ public static partial class NoteStepper
         // The words, then the counts AnnotationValues.Bend also takes (1..12 semitones).
         ["bend"] = ["half", "full", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"],
         ["feather"] = ["left", "right"],
+        // The figures in the completion's order (continuo shorthand, most frequent first) — Down
+        // walks it; a figure written otherwise is not stepped.
+        ["figuredBass"] = ["_", "#", "6 s", "2", "4", "9", "5 3", "4 2", "4 3", "6 5", "7", "6 4", "6"],
     };
 
     /// <summary>A name the step may write: one the registry draws, or a plain annotation the
@@ -167,8 +170,15 @@ public static partial class NoteStepper
     private static (string[] Values, int Start, int End)? SteppedArgumentOf(string text, SyntaxNode node)
     {
         if (node is not MusicMarkSyntax { IsSpanEnd: false, HasArgumentList: true } mark
-            || !ArgumentSteps.TryGetValue(mark.Name, out var values))
+            || !ArgumentSteps.TryGetValue(mark.Name, out var values)
+            || ArgumentRange(text, mark) is not var (start, end))
             return null;
+        return (values, start, end);
+    }
+
+    /// <summary>The range of a mark's argument between its parentheses, blanks trimmed, or null.</summary>
+    private static (int Start, int End)? ArgumentRange(string text, MusicMarkSyntax mark)
+    {
         int open = -1, close = -1;
         for (int i = 0; i < mark.SlotCount; i++)
             if (mark.GetChild(i) is SyntaxTokenNode t)
@@ -181,13 +191,44 @@ public static partial class NoteStepper
         int start = open, end = close;
         while (start < end && char.IsWhiteSpace(text[start])) start++;
         while (end > start && char.IsWhiteSpace(text[end - 1])) end--;
-        return (values, start, end);
+        return (start, end);
+    }
+
+    /// <summary>
+    /// A rehearsal mark's label that steps — one letter (<c>@mark("A")</c>) or a whole number
+    /// (<c>@mark("12")</c>) — with its range inside the quotes, or null (owner's request
+    /// 2026-10-28: A → B → C on the keys). Any other label is the writer's own word.
+    /// </summary>
+    private static (string Label, int Start, int End)? RehearsalLabelOf(string text, SyntaxNode node)
+    {
+        if (node is not MusicMarkSyntax { IsSpanEnd: false, HasArgumentList: true, Name: "mark" } mark
+            || ArgumentRange(text, mark) is not var (start, end)
+            || end - start < 3 || text[start] != '"' || text[end - 1] != '"')
+            return null;
+        string label = text[(start + 1)..(end - 1)];
+        return NextRehearsalLabel(label, 0) != null ? (label, start + 1, end - 1) : null;
+    }
+
+    /// <summary>The label <paramref name="dir"/> steps away — A to Z (a to z), or 1 and up — or
+    /// null past an end; <paramref name="dir"/> 0 asks whether the label steps at all.</summary>
+    private static string? NextRehearsalLabel(string label, int dir)
+    {
+        if (label.Length == 1 && label[0] is >= 'A' and <= 'Z' or >= 'a' and <= 'z')
+        {
+            char first = char.IsUpper(label[0]) ? 'A' : 'a', next = (char)(label[0] + dir);
+            return next < first || next > first + 25 ? null : next.ToString();
+        }
+        if (int.TryParse(label, System.Globalization.NumberStyles.None, null, out int n) && n >= 1
+            && label == n.ToString(System.Globalization.CultureInfo.InvariantCulture))
+            return n + dir < 1 ? null : (n + dir).ToString(System.Globalization.CultureInfo.InvariantCulture);
+        return null;
     }
 
     /// <summary>Whether the keys have a step of the mark's own: its spelling is in a group, or its
     /// argument steps.</summary>
     private static bool MarkSteps(string text, SyntaxNode node)
-        => SpellingOf(text, node) is { } s && GroupOf(s.Spelling) != null || SteppedArgumentOf(text, node) != null;
+        => SpellingOf(text, node) is { } s && GroupOf(s.Spelling) != null || SteppedArgumentOf(text, node) != null
+           || RehearsalLabelOf(text, node) != null;
 
     /// <summary>A mark with an argument the caret is on — strictly after its <c>@</c> — whose
     /// spelling or argument steps, or null.</summary>
@@ -278,11 +319,21 @@ public static partial class NoteStepper
             {
                 string head = HeadOf(spelling.Spelling);
                 string values = $"@{head}(…): {string.Join(" / ", argument.Values.Reverse())}";
-                int now = Array.IndexOf(argument.Values, text[argument.Start..argument.End]);
+                string written = string.Join(' ', text[argument.Start..argument.End].Split(' ', '\t', '\r', '\n')
+                    .Where(w => w.Length > 0));
+                int now = Array.IndexOf(argument.Values, written);
                 int next = now + dir;
                 if (now < 0 || next < 0 || next >= argument.Values.Length)
                     return (null, values);
                 return (new Edit(argument.Start, argument.End, argument.Values[next]), values);
+            }
+            // A rehearsal mark's letter or number: Up to the next, Down to the one before.
+            if (RehearsalLabelOf(text, mark) is { } rehearsal)
+            {
+                string? label = NextRehearsalLabel(rehearsal.Label, dir);
+                return label == null
+                    ? (null, $"@mark(\"{rehearsal.Label}\"): already the {(dir > 0 ? "last" : "first")}")
+                    : (new Edit(rehearsal.Start, rehearsal.End, label), $"@mark(\"{label}\")");
             }
             string name = HeadOf(spelling.Spelling);
             return (null, IsSteppable(name)

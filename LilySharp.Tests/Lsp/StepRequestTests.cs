@@ -1772,6 +1772,58 @@ public class StepRequestTests
         Assert.Equal(Plain("grace { d'16 } c'4 d'2. |"), grace);
     }
 
+    /// <summary>A figured bass steps along the figures the completion offers, Down down its list;
+    /// a rehearsal mark's letter or number steps, Up the next (owner's request 2026-10-28).</summary>
+    [Theory]
+    [InlineData("c4@figuredBass(‸6) d2. |", -1, "c4@figuredBass(6 4) d2. |")]
+    [InlineData("c4@figuredBass(6  ‸4) d2. |", +1, "c4@figuredBass(6) d2. |")]
+    [InlineData("c'4@mark(\"‸A\") d'2. |", +1, "c'4@mark(\"B\") d'2. |")]
+    [InlineData("c'4@mark(\"‸C\") d'2. |", -1, "c'4@mark(\"B\") d'2. |")]
+    [InlineData("c'4@mark(\"1‸2\") d'2. |", +1, "c'4@mark(\"13\") d'2. |")]
+    [InlineData("c'4@mark(‸\"b\") d'2. |", +1, "c'4@mark(\"c\") d'2. |")]
+    public void AFigureAndARehearsalMark_Step(string from, int dir, string to)
+        => Assert.Equal(Plain(to), Step(Plain(from), dir, semitone: true).After);
+
+    [Fact]
+    public void ARehearsalMark_StopsAtItsEnds_AndAWordIsTheWriters()
+    {
+        var (first, same) = Step(Plain("c'4@mark(\"‸A\") d'2. |"), -1, semitone: true);
+        Assert.False(first.Fallback);
+        Assert.Equal(Plain("c'4@mark(\"A\") d'2. |"), same);
+        Assert.Equal("@mark(\"A\"): already the first", first.Message);
+        // A word is not a letter: the label is the writer's, and nothing is stepped there.
+        Assert.Equal(Plain("c'4@mark(\"Coda\") d'2. |"), Step(Plain("c'4@mark(\"Co‸da\") d'2. |"), +1, semitone: true).After);
+    }
+
+    private static string Form(string form) => $$"""
+        octave absolute
+        part p { clef treble }
+        section A { p { c'1 | } }
+        section B { p { d'1 | } }
+        form { {{form}} }
+        score { staff p }
+        """;
+
+    /// <summary>A navigation mark steps among its kin in the completion's order, Down the next:
+    /// segno / coda, to coda / fine, and the six repeat instructions (owner's request 2026-10-28).</summary>
+    [Theory]
+    [InlineData("A seg‸no B", -1, "A coda B")]
+    [InlineData("A B to co‸da A", -1, "A B fine A")]
+    [InlineData("A B d‸c", -1, "A B ds")]
+    [InlineData("A B dc al fi‸ne", -1, "A B dc al coda")]
+    [InlineData("A B ds  al co‸da", +1, "A B ds al fine")]
+    public void ANavigationMark_StepsAmongItsKin(string from, int dir, string to)
+        => Assert.Equal(Form(to), Step(Form(from), dir, semitone: true).After);
+
+    [Fact]
+    public void ANavigationMark_StopsAtItsEnds()
+    {
+        var (last, same) = Step(Form("A B ds al co‸da"), -1, semitone: true);
+        Assert.False(last.Fallback);
+        Assert.Equal(Form("A B ds al coda"), same);
+        Assert.Equal("dc / ds / dc al fine / dc al coda / ds al fine / ds al coda", last.Message);
+    }
+
     /// <summary>The stepped arguments are the completion's: every value it offers can be stepped
     /// to, so the two cannot drift apart.</summary>
     [Fact]

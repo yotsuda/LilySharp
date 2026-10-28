@@ -35,6 +35,10 @@ All notable changes to the Lily# VS Code extension are documented here.
 - **A span nothing closes is closed when it steps**: `@rit` with no `@!rit`, stepped to `@accel`, gets
   `@!accel` on the last note of its bar (of the next bar when it stands on that last note) — text
   spans, ottavas, pedals and trill spans.
+- **A figured bass, a rehearsal mark and a navigation mark step**: `@figuredBass(6)` → `@figuredBass(6 4)`
+  … (the figures `Ctrl+Space` offers), `@mark("A")` → `@mark("B")` (a letter or a number, Up the next),
+  and in a form `segno` ⇄ `coda`, `to coda` ⇄ `fine`, `dc` → `ds` → `dc al fine` → `dc al coda` →
+  `ds al fine` → `ds al coda`.
 - **`grace` / `acciaccatura` / `appoggiatura` step among themselves**, and `break` ⇄ `pageBreak`,
   `noBreak` ⇄ `noPageBreak`.
 

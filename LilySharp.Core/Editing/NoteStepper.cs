@@ -185,6 +185,9 @@ public static partial class NoteStepper
         /// <summary>A music keyword among its kin — <c>grace</c> / <c>acciaccatura</c> /
         /// <c>appoggiatura</c>, <c>break</c> / <c>pageBreak</c> (NoteStepper.Words.cs).</summary>
         MusicKeyword,
+        /// <summary>A navigation mark — <c>segno</c>, <c>dc al fine</c> … — in a form or in music
+        /// (NoteStepper.Words.cs).</summary>
+        NavigationMark,
     }
 
     /// <summary>The kinds whose step changes a setting, not a sound — the audition skips them.</summary>
@@ -196,7 +199,7 @@ public static partial class NoteStepper
             or TargetKind.StaffSelector or TargetKind.KeywordValue or TargetKind.BarNumberEvery
             or TargetKind.PaperSize or TargetKind.TupletRatio or TargetKind.MusicCount or TargetKind.PartialLength
             or TargetKind.FormSection or TargetKind.SingsTarget or TargetKind.Duration or TargetKind.ChordQuality
-            or TargetKind.Barline or TargetKind.MusicKeyword;
+            or TargetKind.Barline or TargetKind.MusicKeyword or TargetKind.NavigationMark;
 
     /// <summary>A written thing the caret is on: its kind and its node (a
     /// <see cref="NoteSyntax"/>, a <see cref="PitchSyntax"/> or <see cref="ScaleDegreeSyntax"/>
@@ -399,7 +402,7 @@ public static partial class NoteStepper
                 or TargetKind.BarNumberEvery or TargetKind.PaperSize or TargetKind.InstrumentPreset
                 or TargetKind.TupletRatio or TargetKind.MusicCount or TargetKind.PartialLength
                 or TargetKind.FormSection or TargetKind.SingsTarget or TargetKind.Duration or TargetKind.ChordQuality
-                or TargetKind.Barline or TargetKind.MusicKeyword)
+                or TargetKind.Barline or TargetKind.MusicKeyword or TargetKind.NavigationMark)
             {
                 var (valueEdit, valueSaid) = t.Kind switch
                 {
@@ -416,6 +419,7 @@ public static partial class NoteStepper
                         ? StaffSelectorEdit(sel.Row, sel.Word, sel.Value, sel.OnValue, dir)
                         : (null, "as: write a selector (as lines 1)"),
                     TargetKind.MusicKeyword => MusicKeywordEdit((SyntaxTokenNode)t.Node, dir),
+                    TargetKind.NavigationMark => NavigationMarkEdit(text, (NavigationMarkSyntax)t.Node, dir),
                     TargetKind.KeywordValue => KeywordValueAt(tree, t.Node.Span.Start) is { } kv
                         ? KeywordValueEdit(tree, kv.Keyword, kv.Value, dir)
                         : (null, "write a value"),
@@ -643,6 +647,8 @@ public static partial class NoteStepper
             return new Target(TargetKind.KeywordValue, keywordValue.Value);
         if (MusicKeywordAt(tree, offset) is { } musicKeyword)
             return new Target(TargetKind.MusicKeyword, musicKeyword);
+        if (NavigationMarkAt(text, tree, offset) is { } navigationMark)
+            return new Target(TargetKind.NavigationMark, navigationMark);
         if (ScorePartNameAt(tree, offset) is { } scorePart)
             return new Target(TargetKind.ScorePart, scorePart);
         // A mark with nothing of its own to step — a dynamic on no ladder (@sfz), an articulation
