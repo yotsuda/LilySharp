@@ -161,6 +161,8 @@ interface FixRow {
     /** The folder this row's Report Misread to OMR wrote last: a second report replaces it (owner's
      *  request 2026-10-29: a report is made again because the first was wrong). */
     reported?: string;
+    /** The row's "Draft not fully fixed" box, ticked: the next report says the Draft is right only in part. */
+    reportPartial?: boolean;
     /** The page's count of edits to this row: an answer to an older one is dropped. */
     editSeq?: number;
     /** The bar as it stands (its marks taken out), drawn where a row has no bar of its own to
@@ -1122,6 +1124,7 @@ async function onPanelMessage(deps: OmrAiFixDeps, m: PanelMessage): Promise<void
             if (row) { await showBar(run, row); }
             return;
         case 'report':
+            if (row) { row.reportPartial = !!m.on; }
             if (row && await reportMisread(run, row)) {
                 void panel?.webview.postMessage({ type: 'reported', index: row.index, label: REPORT_AGAIN, title: REPORT_AGAIN_TITLE });
             }
@@ -1170,13 +1173,21 @@ async function reportMisread(run: FixRun, row: FixRow): Promise<boolean> {
     // fixed yet: it goes with what is wrong in words, asked for, not optional.
     const draft = barOf(row);
     const correct = draft !== undefined && draft !== resolvedLine(fileBar) ? draft : null;
+    // "Draft not fully fixed", the row's check box (owner's request 2026-10-29: a fix half done is
+    // worth reporting, marked so — a box, not a sign typed in the note, which would be forgotten):
+    // what is still wrong is then asked for, as for a bar not fixed at all.
+    const partial = correct !== null && !!row.reportPartial;
+    const asked = correct === null || partial;
     const note = await vscode.window.showInputBox({
-        title: correct === null ? `Report Misread to OMR — ${label}, not fixed in the Draft` : `Report Misread to OMR — ${label}: ${correct}`,
+        title: correct === null ? `Report Misread to OMR — ${label}, not fixed in the Draft`
+            : `Report Misread to OMR — ${label}${partial ? ' (Draft not fully fixed)' : ''}: ${correct}`,
         prompt: correct === null
             ? 'The Draft holds no fix, so say what the reader got wrong and what the bar should be — this is all OMR will know of it. (Esc, fix it in the Draft, and report again for a better seed.)'
-            : 'The Draft above is reported as the right bar. What did the reader get wrong? (optional)',
-        placeHolder: 'e.g. the natural on the low chord is missing',
-        ...(correct === null ? { validateInput: (v: string) => v.trim() ? undefined : 'Say what is wrong — the bar is not fixed.' } : {}),
+            : partial
+                ? 'The Draft above is reported as fixed only in part. What is still wrong in it?'
+                : 'The Draft above is reported as the right bar. What did the reader get wrong? (optional)',
+        placeHolder: partial ? 'e.g. the slur is fixed; the top note head may be a step too low' : 'e.g. the natural on the low chord is missing',
+        ...(asked ? { validateInput: (v: string) => v.trim() ? undefined : partial ? 'Say what is still wrong in the Draft.' : 'Say what is wrong — the bar is not fixed.' } : {}),
     });
     if (note === undefined) {
         return false;
@@ -1184,7 +1195,7 @@ async function reportMisread(run: FixRun, row: FixRow): Promise<boolean> {
     const info = t.crop ? run.side?.pages.find(p => p.page === t.crop!.page) : undefined;
     const sidePath = sideFileOf(lys);
     const bar: SeedBar = {
-        lys, line: t.line + 1, bar: fileBar, correct, correctFrom: correct === null ? 'none' : 'draft',
+        lys, line: t.line + 1, bar: fileBar, correct, correctFrom: correct === null ? 'none' : 'draft', partial,
         ...(reader ? { measure: reader.measure, part: reader.part } : {}),
         ...(t.crop ? { crop: { page: t.crop.page, box: [...t.crop.box] } } : {}),
         ...(info ? { pageImage: info.image } : {}),
@@ -1733,6 +1744,8 @@ function rowHtml(run: FixRun, r: FixRow, pageUris: ReadonlyMap<number, { uri: st
     // apart from Accept so that an Accept is never a report.
     const report = can && seedFolder()
         ? `<button class="row-report" data-i="${r.index}" title="${r.reported ? REPORT_AGAIN_TITLE : 'Keep this bar, its scan and the .lys as a seed for OMR\'s training scores — the reader got it wrong'}">${r.reported ? REPORT_AGAIN : 'Report Misread to OMR…'}</button>`
+          + `<label class="take" title="The Draft is fixed only in part: the report says so, and asks what is still wrong">`
+          + `<input type="checkbox" class="report-partial" data-i="${r.index}" ${r.reportPartial ? 'checked' : ''}> Draft not fully fixed</label>`
         : '';
     // Taken but still marked (owner's request 2026-10-24): the bar is written with a @todo at
     // the same note — the reader's key kept — and the words typed here as its memo. A bar that
@@ -1929,7 +1942,8 @@ ${rows}
     }
     else if (b.classList.contains('row-report')) {
       e.stopImmediatePropagation();
-      vscode.postMessage({ action: 'report', index: Number(b.dataset.i) });
+      const partial = document.querySelector('input.report-partial[data-i="' + b.dataset.i + '"]');
+      vscode.postMessage({ action: 'report', index: Number(b.dataset.i), on: !!(partial && partial.checked) });
     }
     else if (b.id === 'acceptAll') vscode.postMessage({ action: 'acceptAll' });
     else if (b.id === 'cancel') vscode.postMessage({ action: 'cancel' });

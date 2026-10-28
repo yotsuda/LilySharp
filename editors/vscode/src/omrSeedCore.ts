@@ -47,6 +47,9 @@ export interface SeedBar {
      *  holds no fix (the note says what is wrong). */
     readonly correct: string | null;
     readonly correctFrom: 'draft' | 'none';
+    /** The Draft is fixed only in part (the row's "Draft not fully fixed" box): the note says what
+     *  is still wrong. */
+    readonly partial?: boolean;
     /** Where it is on the scan, when the side file says. */
     readonly crop?: { readonly page: number; readonly box: readonly number[] };
     /** The page's image and the side file, their paths, when there are. */
@@ -74,6 +77,9 @@ export interface SeedRecord {
     readonly bar: string;
     readonly correct: string | null;
     readonly correctFrom: 'draft' | 'none';
+    /** `correct` is right only in part: the note says what is still wrong. Not for the scan's
+     *  evaluation, where it would count a right reading as wrong. */
+    readonly partial: boolean;
     readonly scan: {
         readonly page: number;
         readonly box: readonly number[];
@@ -138,6 +144,7 @@ export function seedRecordOf(when: Date, bar: SeedBar, note: string,
         bar: bar.bar,
         correct: bar.correct,
         correctFrom: bar.correctFrom,
+        partial: bar.correct !== null && !!bar.partial,
         scan: bar.crop ? {
             page: bar.crop.page,
             box: [...bar.crop.box],

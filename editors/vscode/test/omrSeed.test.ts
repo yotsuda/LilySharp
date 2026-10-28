@@ -38,7 +38,7 @@ describe('Report Misread to OMR', () => {
     });
 
     it('is its own button, never an Accept', () => {
-        assert.match(fix, /case 'report':\s*if \(row && await reportMisread\(run, row\)\)/);
+        assert.match(fix, /case 'report':\s*if \(row\) \{ row\.reportPartial = !!m\.on; \}\s*if \(row && await reportMisread\(run, row\)\)/);
         const accept = fix.slice(fix.indexOf("case 'acceptRow':"), fix.indexOf("case 'report':"));
         assert.ok(!accept.includes('reportMisread'));
         assert.ok(!fix.slice(fix.indexOf('async function applyRows')).slice(0, 4000).includes('reportMisread'));
@@ -60,6 +60,17 @@ describe('Report Misread to OMR', () => {
         assert.ok(!fix.includes('The .lys is right'));
     });
 
+    // Owner's request 2026-10-29: a fix half done is worth reporting, marked by a box, not a sign.
+    it('marks a Draft fixed only in part from the row\'s box, and asks what is still wrong', () => {
+        assert.equal(seedRecordOf(new Date(), bar, 'x', {}).partial, false);
+        assert.equal(seedRecordOf(new Date(), { ...bar, partial: true }, 'x', {}).partial, true);
+        assert.equal(seedRecordOf(new Date(), { ...bar, correct: null, correctFrom: 'none', partial: true }, 'x', {}).partial, false);
+        assert.match(fix, /<input type="checkbox" class="report-partial" data-i="\$\{r\.index\}"/);
+        assert.match(fix, /vscode\.postMessage\(\{ action: 'report', index: Number\(b\.dataset\.i\), on: !!\(partial && partial\.checked\) \}\)/);
+        assert.match(fix, /if \(row\) \{ row\.reportPartial = !!m\.on; \}/);
+        assert.match(fix, /const asked = correct === null \|\| partial;/);
+    });
+
     it('names its folder by when, the score and the bar', () => {
         assert.equal(seedDirName(new Date(2026, 9, 29, 15, 30, 12), bar), '20261029-153012-Largo_op_1-bar12-right');
         assert.equal(seedDirName(new Date(2026, 9, 29, 15, 30, 12), { lys: '/a/b.lys', line: 7, bar: 'c1 |', correct: 'c1 |', correctFrom: 'draft' }),
@@ -79,7 +90,7 @@ describe('Report Misread to OMR', () => {
         const none = seedRecordOf(new Date(), { ...bar, correct: null, correctFrom: 'none' }, 'the natural is missing', {});
         assert.deepEqual([none.correct, none.correctFrom, none.fixedCopy, none.note], [null, 'none', null, 'the natural is missing']);
         assert.match(fix, /correctFrom: correct === null \? 'none' : 'draft'/);
-        assert.match(fix, /correct === null \? \{ validateInput: /);
+        assert.match(fix, /\.\.\.\(asked \? \{ validateInput: /);
     });
 
     it('records the bar, where it is on the scan, and the copies made', () => {
