@@ -17,7 +17,9 @@ it does not.
 ### Voice-leading check (proposed 2026-10-25)
 
 Warnings for parallel fifths and octaves, crossed voices, and voices too far apart, for
-four-part (SATB) writing — church choirs and choral arranging.
+four-part (SATB) writing — church choirs and choral arranging. Designed 2026-10-28
+(`docs/voice-leading-design.md`): a general check pragma, `check voiceLeading s a t b`, turns it on;
+the findings are information, not warnings.
 
 ### MIDI keyboard input (deferred by the owner 2026-10-25)
 
