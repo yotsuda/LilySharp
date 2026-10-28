@@ -29,6 +29,8 @@ All notable changes to the Lily# VS Code extension are documented here.
 - **A model VS Code keeps for itself is no longer offered once it has refused**: "Lily#: Select AI
   Model" and the automatic pick leave it out, across restarts, until VS Code updates (what it keeps
   for itself can change with a release). There is no way to know it before it refuses once.
+- **Select AI Model names every feature its first choice serves**: "Ask AI… (Ctrl+I), Compose with
+  AI… and Fix OMR Marks with AI…" — Compose with AI uses that model too, and was left out.
 
 ### Scan
 
