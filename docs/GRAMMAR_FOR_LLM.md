@@ -1098,6 +1098,11 @@ it should sound like the ensemble asked for. What makes it music:
   tones, the melody's strong beats on chord tones and its passing notes between them.
 - **A theme**: a motif of a bar or two that the piece is made of — stated, repeated, sequenced,
   varied, and back near the end.
+- **A section that returns is named again, not copied**: one that comes back as it was is written
+  once and played twice by the form (`form { A B A Coda }`) — never a second section with the same
+  notes. A return that changes (the tune an octave higher, a new accompaniment, another ending) is a
+  section of its own (`A2`), and the plan says what changes; the bars that do not change are
+  written as they were.
 - **One home key, one tempo**: a section may move to a related key (`key g major` at its head —
   the relative, the dominant) and the piece comes home to end. The tempo stays unless the
   character changes with it (a slow middle section, `tempo "Adagio" 4 = 60`), never a new tempo

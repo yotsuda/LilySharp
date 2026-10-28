@@ -568,6 +568,8 @@ async function drive(
                 // Why the last attempt was turned down, logged with each (owner's report 2026-10-26:
                 // "could not produce a valid transform" said nothing of why, and the log neither).
                 let lastReason = '';
+                // Why the last revision did not come, when it was cut off (a broken connection).
+                let cutOff: string | null = null;
                 const turnedDown = (attempt: number, reason: string) => {
                     lastReason = reason;
                     deps.log(`AI transform: attempt ${attempt + 1}/${MAX_REPAIR_ATTEMPTS + 1} turned down — ${reason}`);
@@ -577,7 +579,21 @@ async function drive(
                     step(attempt === 0 ? 'generating' : `repairing (${attempt}/${MAX_REPAIR_ATTEMPTS})`);
 
                     logged = logExchange(chat, grammar, messages, logged);
-                    const raw = await chat.send(messages, token);
+                    let raw: string;
+                    try {
+                        raw = await chat.send(messages, token);
+                    } catch (err: any) {
+                        // A revision cut off (owner's report 2026-10-29: the connection broke two
+                        // minutes into the third round, and the piece the second had written was lost
+                        // with it): the best candidate so far is shown, saying so. With none, the
+                        // error goes up as before.
+                        if (attempt > 0 && (warned || flat)) {
+                            cutOff = String(err?.message ?? err);
+                            deps.log(`AI transform: the revision was cut off (${cutOff}); the candidate before it is shown.`);
+                            break;
+                        }
+                        throw err;
+                    }
                     logReply(raw);
                     // Read against the text the AI was last shown as the file: the file itself, or —
                     // asked again — its candidate (see `base`).
@@ -745,6 +761,12 @@ async function drive(
                         + warned.warnings.map(w => w.Message).join(' / ');
                     deps.log(`AI transform: shown with ${warned.warnings.length} new warning(s) after ${MAX_REPAIR_ATTEMPTS} repairs: `
                         + warned.warnings.map(w => w.Message).join(' | '));
+                }
+                // Said first, so it is read first: what is shown is the version before a revision
+                // that never came, not the AI's last word.
+                if (candidate !== null && cutOff !== null) {
+                    caption = caption.replace(' — ⚠ ', ' — ⚠ the AI\'s last revision was cut off (the connection broke), '
+                        + 'so this is the version before it: ');
                 }
 
                 if (candidate === null) {
@@ -1013,7 +1035,11 @@ function composeSystemPrompt(grammar: string, modelName?: string): string {
         '1. <plan> … </plan> — your working notes; the musician never sees them. Settle there, before any note is',
         '   written: the key, the meter and the tempo; the form, each section with its bars (unless the request says',
         '   otherwise a piece runs 32 to 64 bars, in phrases of 4 and 8 bars); the chord progression of every phrase,',
-        '   bar by bar, and its cadence; the theme and how it returns; what each part does (melody, bass line, inner',
+        // A return written out again note for note (owner's trial 2026-10-29: an "Aprime" the same as
+        // A) is the form's to say, and a second copy is a second place to miscount the bars.
+        '   bar by bar, and its cadence; the theme and how it returns — a section that comes back as it was is',
+        '   written once and named again in the form (`form { A B A Coda }`), never copied; a return that changes is',
+        '   a section of its own, and the plan says what changes; what each part does (melody, bass line, inner',
         '   parts, accompaniment figure) and its register, as sounding pitches (C4 = middle C) AND as you will write',
         '   them in this file (a right hand round C5, D4–A5, is written `d\'` – `a\'\'`); how the character asked for',
         '   is heard — the devices that make it, named (for "cool", "かっこいい": a driving rhythm, syncopation and',

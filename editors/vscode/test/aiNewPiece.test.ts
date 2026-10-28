@@ -199,6 +199,18 @@ describe('the composer\'s prompt', () => {
         assert.match(transform, /'lilysharp\/convertOctaves', \{ Text: text, Absolute: false, DropPartOctaves: true, DropConcertPitch: true \}/);
         assert.match(transform, /if \(!relative\.Success\) \{\s*deps\.log\(`AI transform: the parts' octave lines stay/);
     });
+    // Owner's trial 2026-10-29: the A′ of an A–B–A′–Coda piece was A again, note for note.
+    it('has a section that returns as it was named again in the form, not copied', () => {
+        assert.match(transform, /a section that comes back as it was is',\s*'\s*written once and named again in the form \(`form \{ A B A Coda \}`\), never copied;/);
+        const grammarDoc = fs.readFileSync(path.join(__dirname, '..', '..', '..', '..', 'docs', 'GRAMMAR_FOR_LLM.md'), 'utf8');
+        assert.match(grammarDoc, /\*\*A section that returns is named again, not copied\*\*/);
+    });
+    // Owner's report 2026-10-29: the connection broke during the third round, and the piece the
+    // second had written went with it.
+    it('shows the candidate before a revision that was cut off, saying so', () => {
+        assert.match(transform, /if \(attempt > 0 && \(warned \|\| flat\)\) \{\s*cutOff = String\(err\?\.message \?\? err\);/);
+        assert.match(transform, /the AI\\'s last revision was cut off \(the connection broke\), '\s*\+ 'so this is the version before it: '/);
+    });
     it('has the plan name the devices that make the character asked for', () => {
         assert.match(transform, /how the character asked for',\s*'\s*is heard — the devices that make it, named/);
     });
@@ -208,7 +220,8 @@ describe('the composer\'s prompt', () => {
         assert.match(transform, /Never "Right hand", "L\.H\.", 右手, 左手\./);
     });
     it('logs every message sent and every reply, the grammar left out', () => {
-        assert.match(transform, /logged = logExchange\(chat, grammar, messages, logged\);\s*const raw = await chat\.send\(messages, token\);\s*logReply\(raw\);/);
+        assert.match(transform, /logged = logExchange\(chat, grammar, messages, logged\);\s*let raw: string;\s*try \{\s*raw = await chat\.send\(messages, token\);/);
+        assert.match(transform, /throw err;\s*\}\s*logReply\(raw\);/);
         assert.match(transform, /createOutputChannel\('Lily# AI Exchange'\)/);
     });
     // Owner's report 2026-10-27: asked to fill in the composer, a model never told its name wrote
