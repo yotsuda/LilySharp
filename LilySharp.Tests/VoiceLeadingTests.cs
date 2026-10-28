@@ -171,6 +171,29 @@ public class VoiceLeadingTests
         Assert.Contains(tokens, t => t.Span.Start > line && t.Span.Start < tree.Text.IndexOf('\n', line));
     }
 
+    // ---- stage 3: overlap and hidden fifths and octaves (§3) ----
+
+    [Fact]
+    public void AVoiceMovingPastItsNeighboursLastNote_Overlaps()
+    {
+        // s E4 → G4; a C4 → F4: above s's E4 just before, below its G4 now — not crossed.
+        string src = Book("e'4 g' g' d' | e'1 |", "c'4 f' c' b | c'1 |", QuietT, QuietB);
+        var overlap = Assert.Single(Found(src, DiagnosticCodes.VoiceOverlap));
+        Assert.Contains("a moves to F4, above s's E4 just before", overlap.Message);
+        Assert.Empty(Found(src, DiagnosticCodes.VoiceCrossing));
+    }
+
+    [Fact]
+    public void OuterVoicesLeapingTheSameWayIntoAnOctave_AreHiddenOctaves()
+    {
+        // s E4 → C5 (a leap), b G2 → C3 (the same way): into two octaves.
+        string leap = Book("e'4 c'' b' c'' | c''1 |", QuietA, QuietT, "g,4 c g, c | c1 |");
+        Assert.Contains(Found(leap, DiagnosticCodes.HiddenPerfectInterval), d => d.Message.StartsWith("hidden octave: s leaps and b"));
+        // The same arrival with the top voice stepping (B3 → C4) is the textbook's allowed case.
+        string step = Book("b4 c' b c' | c'1 |", "g4 g g g | g1 |", "d4 e d e | e1 |", "g,4 c g, c | c1 |");
+        Assert.Empty(Found(step, DiagnosticCodes.HiddenPerfectInterval));
+    }
+
     // ---- stage 2: two voices on a staff (§1 ⒝ ⒞) ----
 
     /// <summary>A hymn on two staves, two voices each: <c>check voiceLeading upper lower</c>.</summary>

@@ -1593,6 +1593,14 @@ public static class DiagnosticCodes
     /// octave apart, or the lowest two more than a twelfth.</summary>
     public const string VoiceSpacing = "LYS3004";
 
+    /// <summary>Information (<c>check voiceLeading</c>): a voice moving past where its neighbour
+    /// just was — the lower above the upper's last note, or the upper below the lower's.</summary>
+    public const string VoiceOverlap = "LYS3005";
+
+    /// <summary>Information (<c>check voiceLeading</c>): the outer voices moving the same way into
+    /// a perfect fifth or octave with a leap in the top voice — hidden (direct) fifths and octaves.</summary>
+    public const string HiddenPerfectInterval = "LYS3006";
+
     // Tablature warnings (LYS5xxx)
 
     /// <summary>Tablature warning: a tie conflicts with the assigned string.</summary>

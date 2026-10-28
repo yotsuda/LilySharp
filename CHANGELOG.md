@@ -10,7 +10,8 @@ workflow attaches that section to the GitHub Release verbatim.
 
 - `[lang]` **`check` — a pragma that turns a check on.** `check voiceLeading s a t b` compares the
   parts named, highest voice first, for four-part writing: parallel fifths and octaves (LYS3002),
-  crossed voices (LYS3003), voices too far apart (LYS3004) — information, by the sounding
+  crossed voices (LYS3003), voices too far apart (LYS3004), overlapping voices (LYS3005) and
+  hidden fifths and octaves in the outer voices (LYS3006) — information, by the sounding
   pitches. Nothing drawn, played or exported changes. A check Lily# does not have, an undeclared
   part, a part twice or fewer than two parts is LYS3001. `check` is no keyword (a part may be
   named so). A part may be several voices — a hymn's two staves with two voices each: the

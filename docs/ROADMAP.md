@@ -12,15 +12,8 @@ to *Decided against* with the reason). What is being worked on now, and the next
 ### Page-turn check (proposed 2026-10-25)
 
 Whether each page ends where the player can turn — on a rest, or a held note — and a mark where
-it does not.
-
-### Voice-leading check (proposed 2026-10-25)
-
-Warnings for parallel fifths and octaves, crossed voices, and voices too far apart, for
-four-part (SATB) writing — church choirs and choral arranging. Designed 2026-10-28
-(`docs/voice-leading-design.md`): a general check pragma, `check voiceLeading s a t b`, turns it on;
-the findings are information, not warnings. Stages 1 and 2 are built (a voice per part, and two voices to a
-staff by `voice { } { }` or chords); overlapping voices and hidden fifths are stage 3.
+it does not. It would be turned on as the voice-leading check is, by the check pragma:
+`check pageTurns` (docs/voice-leading-design.md §7).
 
 ### MIDI keyboard input (deferred by the owner 2026-10-25)
 

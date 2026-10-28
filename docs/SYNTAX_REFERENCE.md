@@ -2785,6 +2785,10 @@ compares the parts named, by their sounding pitches:
 - **Crossed voices** (LYS3003): a lower voice above the one over it.
 - **Spacing** (LYS3004): neighbouring upper voices more than an octave apart, or the lowest two
   more than a twelfth.
+- **Overlapping voices** (LYS3005): a voice moving past where its neighbour just was — the lower
+  above the upper's last note, or the upper below the lower's.
+- **Hidden fifths and octaves** (LYS3006): the outer voices moving the same way into a fifth or an
+  octave while the top voice leaps (a step into it is the allowed case).
 
 A rest breaks the line. A hymn written two voices to a staff is named by its staves:
 

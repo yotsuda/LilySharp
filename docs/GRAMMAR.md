@@ -224,7 +224,9 @@ CheckRule      = 'voiceLeading' ;
                     'check voiceLeading s a t b' compares the parts named, HIGHEST VOICE
                     FIRST: parallel fifths and octaves (LYS3002), a lower voice above the one
                     over it (LYS3003), neighbouring upper voices more than an octave apart or
-                    the lowest two more than a twelfth (LYS3004) — by the sounding pitches,
+                    the lowest two more than a twelfth (LYS3004), a voice past its neighbour's
+                    last note (LYS3005), the outer voices leaping the same way into a fifth or
+                    octave (LYS3006) — by the sounding pitches,
                     every transposition applied. A part may be several voices: its
                     'voice { } { }' branches (first highest), or the notes of its chords from the
                     top when most of its onsets are chords. A rule Lily# does not have, a part the file

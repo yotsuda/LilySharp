@@ -41,7 +41,8 @@ public static class CheckPragma
     /// <summary>Every check, with what it does — the completion's and the hover's text.</summary>
     public static IReadOnlyDictionary<string, string> Rules { get; } = new Dictionary<string, string>(StringComparer.Ordinal)
     {
-        [VoiceLeading] = "Four-part (SATB) writing: parallel fifths and octaves, crossed voices, and voices too far apart, "
+        [VoiceLeading] = "Four-part (SATB) writing: parallel fifths and octaves, crossed and overlapping voices, voices too far apart, "
+            + "and hidden fifths and octaves in the outer voices, "
             + "between the parts named after it, highest first — 'check voiceLeading s a t b'.",
     };
 
@@ -287,7 +288,11 @@ internal sealed class VoiceLeadingValidator : ISemanticValidator
                 now[v] = SoundingAt(voices[v], t);
             Vertical(parts, now, t, text, reported);
             if (before != null)
+            {
                 Parallels(parts, before, now, text, reported);
+                Overlaps(parts, before, now, text, reported);
+                Hidden(parts, before, now, text, reported);
+            }
             before = now;
         }
     }
@@ -356,6 +361,43 @@ internal sealed class VoiceLeadingValidator : ISemanticValidator
                     $"parallel {name}: {parts[i]} and {parts[j]} move from {Interval(from)} ({Spell(a0.Pitch)} over {Spell(b0.Pitch)}) "
                     + $"to {Interval(to)} ({Spell(a1.Pitch)} over {Spell(b1.Pitch)})");
             }
+    }
+
+    /// <summary>LYS3005: a voice moving past where its neighbour just was — the lower above the
+    /// upper's last note, or the upper below the lower's. A crossing is said instead (LYS3003).</summary>
+    private void Overlaps(IReadOnlyList<string> parts, Note?[] before, Note?[] now, string text, HashSet<(string, int)> reported)
+    {
+        for (int v = 0; v + 1 < parts.Count; v++)
+        {
+            if (before[v] is not { } u0 || before[v + 1] is not { } l0 || now[v] is not { } u1 || now[v + 1] is not { } l1)
+                continue;
+            if (l1.Pitch > u1.Pitch)
+                continue;   // crossed: LYS3003 says it
+            if (l1.Pitch != l0.Pitch && l1.Pitch > u0.Pitch)
+                Report(DiagnosticCodes.VoiceOverlap, l1.Pos, text, reported,
+                    $"overlapping voices: {parts[v + 1]} moves to {Spell(l1.Pitch)}, above {parts[v]}'s {Spell(u0.Pitch)} just before");
+            else if (u1.Pitch != u0.Pitch && u1.Pitch < l0.Pitch)
+                Report(DiagnosticCodes.VoiceOverlap, u1.Pos, text, reported,
+                    $"overlapping voices: {parts[v]} moves to {Spell(u1.Pitch)}, below {parts[v + 1]}'s {Spell(l0.Pitch)} just before");
+        }
+    }
+
+    /// <summary>LYS3006: the outer voices moving the same way into a perfect fifth or octave with a
+    /// leap in the top voice — hidden (direct) fifths and octaves. Parallels are LYS3002's.</summary>
+    private void Hidden(IReadOnlyList<string> parts, Note?[] before, Note?[] now, string text, HashSet<(string, int)> reported)
+    {
+        int top = 0, bottom = parts.Count - 1;
+        if (bottom < 1 || before[top] is not { } s0 || before[bottom] is not { } b0 || now[top] is not { } s1 || now[bottom] is not { } b1)
+            return;
+        int up = s1.Pitch - s0.Pitch, down = b1.Pitch - b0.Pitch;
+        if (up == 0 || down == 0 || Math.Sign(up) != Math.Sign(down) || Math.Abs(up) <= 2)
+            return;   // not similar motion, or the top voice steps
+        int from = Math.Abs(s0.Pitch - b0.Pitch) % 12, to = Math.Abs(s1.Pitch - b1.Pitch) % 12;
+        if ((to != 0 && to != 7) || from == to)
+            return;   // not into a perfect interval, or parallel (LYS3002)
+        Report(DiagnosticCodes.HiddenPerfectInterval, s1.Pos, text, reported,
+            $"hidden {(to == 7 ? "fifth" : "octave")}: {parts[top]} leaps and {parts[bottom]} moves the same way into "
+            + $"{(to == 7 ? "a fifth" : "an octave")} ({Spell(s1.Pitch)} over {Spell(b1.Pitch)})");
     }
 
     private void Report(string code, int pos, string text, HashSet<(string, int)> reported, string message)
