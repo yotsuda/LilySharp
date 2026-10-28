@@ -41,7 +41,7 @@ public sealed class MusicXmlExporter
     private bool _octaveAbsolute;
     private int _octaveAnchor = LilySharp.Core.Svg.Model.InstrumentDefaults.DefaultAnchorOctave;
 
-    // The part's RELATIVE-frame anchor (its clef's or preset's octave), and the instrument's
+    // The part's RELATIVE-frame anchor (its `octave N`, else 3 — no clef or preset), and the instrument's
     // written→sounding shift for <transpose>. Both come from the part header; see
     // ApplyPartHeader. ⚠️ _octaveAnchor above is the ABSOLUTE-mode base and is a DIFFERENT
     // rule — only an explicit `octave N` moves it.

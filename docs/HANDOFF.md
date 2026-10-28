@@ -137,6 +137,10 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
   - 網は `ExportRequestTests` に 2 本（score ごとの WAV・音源が無い／`.sf3` は何も書かずに断る）。この機械には実の `.sf2` が無い（開発用の `media/soundfont` は `.sf3`）＝合成の `TinySoundFont` で確かめた。実機は MANUAL-CHECKS C44。
   - 文書: 両 CHANGELOG・拡張 README・site の editor／commands・`playback-design.md`・設定の説明。
 - 終了時 full **13461 / 0 / 2**（合計 13463）・npm **513 / 0**。
+- **ユーザー「続けて」→ サイトのはみ出しの計測（HANDOFF-LEARNING §3 の残り）**: 全 25 ページ × 4 幅を CDP で測った（Lab `sessions/p1030/cdp/measure.mjs`）。375px は 0。広い幅で `table.g` の表 3 枚がはみ出していた（`build-manual.ps1` の 1 列目と `code` の nowrap）→ 長い `<code>` を語ごとに分け、1 列目は `min-width:9em` で折り返しを許した＝全幅で 0。
+  - ⚠️ 計器は 1 ページで最初にはみ出した表しか名指さない＝1 枚直すと次が出る。表ごとの印ではなく規則で直した。
+  - **ついでに見つけた: オクターブの変更（第1027）の取り残し**＝「preset がオクターブを決める」と書いた文が site（ref-structure の clef の行・editor の補完の説明）、GRAMMAR、GRAMMAR_FOR_LLM、コードの注釈 7 か所に残っていた（`GetDefaults(preset).Octave` は常に 3）。行数を変えずに直した。LYS1050 の規則そのものは正しい。
+  - full **13461 / 0 / 2**。
 
 ## 以下は第1028セッションの経緯
 

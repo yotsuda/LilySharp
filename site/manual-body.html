@@ -332,16 +332,16 @@ score { staff vc }</pre>
   <code>@text("dolce")</code>.</p>
   <table class="g">
     <tr><th>Family</th><th>Names</th></tr>
-    <tr><td>Articulations</td><td><code>@staccato @staccatissimo @accent @tenuto @marcato @fermata @portato</code></td></tr>
-    <tr><td>String technique</td><td><code>@upBow @downBow @flageolet</code> — always above</td></tr>
-    <tr><td>Ornaments</td><td><code>@trill @mordent @prall @turn @reverseTurn</code></td></tr>
-    <tr><td>Dynamics</td><td><code>@ppp @pp @p @mp @mf @f @ff @fff</code>, and <code>@sfz @sf @fp @rfz @fz</code></td></tr>
-    <tr><td>Hairpins</td><td><code>@cresc @decresc @dim</code> — placed on the starting note, running to the next dynamic. No <code>.up</code>/<code>.down</code>: a hairpin is always below.</td></tr>
-    <tr><td>Stems</td><td><code>@stemUp @stemDown</code> — on a beamed note the beam's shared direction wins</td></tr>
+    <tr><td>Articulations</td><td><code>@staccato</code> <code>@staccatissimo</code> <code>@accent</code> <code>@tenuto</code> <code>@marcato</code> <code>@fermata</code> <code>@portato</code></td></tr>
+    <tr><td>String technique</td><td><code>@upBow</code> <code>@downBow</code> <code>@flageolet</code> — always above</td></tr>
+    <tr><td>Ornaments</td><td><code>@trill</code> <code>@mordent</code> <code>@prall</code> <code>@turn</code> <code>@reverseTurn</code></td></tr>
+    <tr><td>Dynamics</td><td><code>@ppp</code> <code>@pp</code> <code>@p</code> <code>@mp</code> <code>@mf</code> <code>@f</code> <code>@ff</code> <code>@fff</code>, and <code>@sfz</code> <code>@sf</code> <code>@fp</code> <code>@rfz</code> <code>@fz</code></td></tr>
+    <tr><td>Hairpins</td><td><code>@cresc</code> <code>@decresc</code> <code>@dim</code> — placed on the starting note, running to the next dynamic. No <code>.up</code>/<code>.down</code>: a hairpin is always below.</td></tr>
+    <tr><td>Stems</td><td><code>@stemUp</code> <code>@stemDown</code> — on a beamed note the beam's shared direction wins</td></tr>
     <tr><td>Accidental style</td><td><code>@courtesy</code> (parenthesised), <code>@editorial</code></td></tr>
-    <tr><td>Effects</td><td><code>@arpeggio @glissando @cross @dead @parenthesize @fall @doit @breath @caesura</code> — <code>@parenthesize</code> puts the head in parentheses (a ghost note, <code>sn16@parenthesize</code>); on a chord it draws one pair round the whole chord</td></tr>
+    <tr><td>Effects</td><td><code>@arpeggio</code> <code>@glissando</code> <code>@cross</code> <code>@dead</code> <code>@parenthesize</code> <code>@fall</code> <code>@doit</code> <code>@breath</code> <code>@caesura</code> — <code>@parenthesize</code> puts the head in parentheses (a ghost note, <code>sn16@parenthesize</code>); on a chord it draws one pair round the whole chord</td></tr>
     <tr><td>Half ties</td><td><code>@laissezVibrer</code>, <code>@repeatTie</code></td></tr>
-    <tr><td>With a value</td><td><code>@finger(3) @figuredBass(6 4) @bend(half) @notehead(triangle) @feather(right) @text("dolce") @mark("A") @chord(Dm) @chord(Cm7 x3x546) @diagram(032010) @pluck(i) @ottava(bassa)</code> — an <code>@chord</code> that also writes a shape (<code>@chord(Cm7 x3x546)</code>) draws that chord diagram under its name; a name alone draws none. Shapes, <code>@diagram</code> and which instrument a diagram is drawn for are on <a href="chords.html">Chords and chord diagrams</a></td></tr>
+    <tr><td>With a value</td><td><code>@finger(3)</code> <code>@figuredBass(6 4)</code> <code>@bend(half)</code> <code>@notehead(triangle)</code> <code>@feather(right)</code> <code>@text("dolce")</code> <code>@mark("A")</code> <code>@chord(Dm)</code> <code>@chord(Cm7 x3x546)</code> <code>@diagram(032010)</code> <code>@pluck(i)</code> <code>@ottava(bassa)</code> — an <code>@chord</code> that also writes a shape (<code>@chord(Cm7 x3x546)</code>) draws that chord diagram under its name; a name alone draws none. Shapes, <code>@diagram</code> and which instrument a diagram is drawn for are on <a href="chords.html">Chords and chord diagrams</a></td></tr>
   </table>
 
   <h3>Spanners — the end is required</h3>
@@ -629,7 +629,7 @@ part cl     { instrument clarinet "Clarinet in Bb" }
 part sing   { clef treble transpose d }</pre>
   <table class="g">
     <tr><th>Attribute</th><th>Takes</th></tr>
-    <tr><td><code>clef</code></td><td><code>treble bass alto tenor treble_8 treble^8 bass_8 soprano mezzosoprano baritone percussion</code>. A clef only draws the staff — it never changes which octave a bare letter means; that is <code>octave</code>'s job, or the <code>instrument</code> preset's.</td></tr>
+    <tr><td><code>clef</code></td><td><code>treble</code> <code>bass</code> <code>alto</code> <code>tenor</code> <code>treble_8</code> <code>treble^8</code> <code>bass_8</code> <code>soprano</code> <code>mezzosoprano</code> <code>baritone</code> <code>percussion</code>. A clef only draws the staff — it never changes which octave a bare letter means; that is <code>octave</code>'s job alone (an <code>instrument</code> preset never moves it either).</td></tr>
     <tr><td><code>octave</code></td><td><code>absolute</code>, or a number that re-anchors the base (<code>octave 3</code> for a low part)</td></tr>
     <tr><td><code>key</code></td><td>this part's own key signature (<code>time</code> and <code>tempo</code> are shared by every part, so they are written at the top level or in a section header)</td></tr>
     <tr><td><code>instrument</code></td><td>a preset name, a quoted display label, or both — see below</td></tr>

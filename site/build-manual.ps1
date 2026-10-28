@@ -50,7 +50,11 @@ $extra = @'
   article li { margin:0 0 7px; }
   .ba { font:13px/1.5 "SFMono-Regular",Consolas,monospace; white-space:nowrap; }
   table.g { margin:14px 0 4px; }
-  table.g td:first-child, table.g th:first-child { white-space:nowrap; }
+  /* The first column is a label: kept whole up to 9em, while a phrase there wraps (the editor's
+     tables ran to 1131px in a 1024px window when the whole column was nowrap, 2026-10-28). The
+     code and keys in it stay unbroken either way. */
+  table.g th:first-child { white-space:nowrap; }
+  table.g td:first-child { min-width:9em; }
   table.g code { white-space:nowrap; }
   @media (max-width:700px) { table.g code, table.g td:first-child { white-space:normal; } }
   figure.ex { margin:18px 0 22px; }

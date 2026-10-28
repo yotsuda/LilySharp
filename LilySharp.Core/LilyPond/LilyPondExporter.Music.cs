@@ -205,8 +205,8 @@ public sealed partial class LilyPondExporter
 
     /// <summary>
     /// The octave a part's relative pitches are anchored to, resolved the way the layout
-    /// resolves it (InstrumentDefaults.AnchorOctave: explicit <c>octave N</c> &gt; the
-    /// <c>instrument</c> preset's octave &gt; 4 — the clef is not consulted).
+    /// resolves it (InstrumentDefaults.AnchorOctave: explicit <c>octave N</c>, else 3 — no
+    /// <c>instrument</c> preset moves it since 2026-10-28, and the clef is not consulted).
     /// </summary>
     /// <remarks>
     /// ⚠️ An <c>instrument</c> preset is a BUNDLE — <c>instrument bass</c> means bass clef

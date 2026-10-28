@@ -50,8 +50,8 @@ layout {                 // optional; the score-wide display switches (see the l
 }
 
 part rightHand { instrument piano-right }  // declare each part: an instrument preset brings its
-part leftHand  { instrument piano-left }   // clef, octave, sound and range (see "Rules": name the
-                                           // instrument, and no clef or octave beside it)
+part leftHand  { instrument piano-left }   // clef, sound and range (see "Rules": name the
+                                           // instrument, and no clef beside it)
                                 // a part name is any bare word except the structural
                                 // keywords (voice staff section key time … — see below)
 
@@ -1005,7 +1005,7 @@ that should show it. A piano accompaniment is two parts in a `grandStaff { … }
 
 ```
 part melody { clef treble }
-part bass { instrument bass }              // added: the bass clef, its octave and its sound come with it
+part bass { instrument bass }              // added: the bass clef, its sounding an octave down, and its sound come with it
 section A {
   melody { c4 d e f | g2 g | }
   bass { c2 g | c2 e | }                   // added

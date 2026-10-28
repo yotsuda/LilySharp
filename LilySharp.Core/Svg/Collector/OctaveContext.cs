@@ -43,8 +43,8 @@ internal sealed class OctaveContext
     public int InitialOctave = LilySharp.Core.Svg.Model.InstrumentDefaults.DefaultAnchorOctave;
 
     // Absolute-mode anchor: bare c = C(OctaveBase). The part's anchor, as in relative mode
-    // (InstrumentDefaults.AbsoluteBaseOctave): `part X { octave N }`, else the instrument
-    // preset's octave (since 2026-10-13), else 4 — so a bass part can be written `octave 2`
+    // (InstrumentDefaults.AbsoluteBaseOctave): `part X { octave N }`, else 3 (a preset moved
+    // it from 2026-10-13 to 2026-10-28, no more) — so a bass part can be written `octave 2`
     // to avoid piling up `,` commas. The clef is deliberately NOT used here.
     public int OctaveBase = LilySharp.Core.Svg.Model.InstrumentDefaults.DefaultAnchorOctave;
 

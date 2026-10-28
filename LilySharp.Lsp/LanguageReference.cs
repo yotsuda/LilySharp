@@ -206,8 +206,8 @@ internal static class LanguageReference
 
     /// <summary>
     /// The hover for a part's <c>instrument</c> preset (owner's request 2026-10-24): the defaults
-    /// the preset fills in, one line each as the property that would say it alone — clef, octave,
-    /// transposition, tuning, MIDI sound — with the line a property of the part itself replaces
+    /// the preset fills in, one line each as the property that would say it alone — clef, MIDI
+    /// sound, tuning, transposition (no octave: no preset moves it) — with the line a property of the part itself replaces
     /// struck through. Not the name printed beside the staff (the owner's choice: that one shows
     /// on the page). Null off an <c>instrument</c> property, or for a name that is not a preset.
     /// </summary>

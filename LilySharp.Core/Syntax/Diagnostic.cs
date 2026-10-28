@@ -780,7 +780,7 @@ public static class DiagnosticCodes
     /// repetition is as long as they are.</summary>
     public const string PercentBodyNotWholeBars = "LYS1049";
 
-    /// <summary>Warning: a part's <c>octave N</c> below its <c>instrument</c> preset's own octave,
+    /// <summary>Warning: a part's <c>octave N</c> below the default 3 under an <c>instrument</c> preset,
     /// where the part already sounds an octave or more below the page — <c>instrument bass
     /// octave 2</c>: a bare <c>c</c> is written C2 and sounds C1. The octave is the WRITTEN
     /// register; the preset's transposition moves the sound, so writing the octave down as well

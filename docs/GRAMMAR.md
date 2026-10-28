@@ -1168,7 +1168,7 @@ TranspositionMarker = '8va' | '8vb' | '15ma' | '15mb' ;
    'as removeEmpty true|all|false' selector — see StaffRender, §7. *)
 
 (* transposition: the part's written->sounding shift, BEYOND the octave the part's bare
-   letters start from ('octave N' / the preset — never the clef, above). 'transpose' moves the written pitches; 'transposition' states
+   letters start from ('octave N', else 3 — never the preset or the clef, above). 'transpose' moves the written pitches; 'transposition' states
    that the written pitches sound elsewhere. A chromatic transposer's shift comes from
    its 'instrument' preset (clarinet −2, alto-sax −9, …); a concert-pitch part on a
    page for its player ('score … pitch transposed', §2.3) is PRINTED by that same shift, negated. *)

@@ -130,7 +130,7 @@ public static class InstrumentDefaults
 
     /// <summary>
     /// The octave a part's bare letters are anchored to in RELATIVE mode: an explicit
-    /// <c>octave N</c>, else an <c>instrument</c> preset's own octave, else
+    /// <c>octave N</c>, else (never an <c>instrument</c> preset's octave since 2026-10-28)
     /// <see cref="DefaultAnchorOctave"/>.
     /// </summary>
     /// <param name="explicitOctave">The part's <c>octave N</c>, or null.</param>
@@ -151,8 +151,8 @@ public static class InstrumentDefaults
         => explicitOctave ?? DefaultAnchorOctave;
 
     /// <summary>
-    /// The octave a bare letter means in ABSOLUTE mode: an explicit <c>octave N</c>, else the
-    /// <c>instrument</c> preset's octave, else middle C — the same chain as the relative
+    /// The octave a bare letter means in ABSOLUTE mode: an explicit <c>octave N</c>, else
+    /// <see cref="DefaultAnchorOctave"/> (C3, no preset) — the same chain as the relative
     /// anchor (<see cref="AnchorOctave"/>). The clef is in neither.
     /// </summary>
     /// <remarks>

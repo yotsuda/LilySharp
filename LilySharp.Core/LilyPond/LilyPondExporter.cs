@@ -41,8 +41,8 @@ namespace LilySharp.Core.LilyPond;
 ///     absolute mode is anchored at middle C whatever the clef — OctaveContext's
 ///     "clef default is deliberately NOT used here")
 ///   • relative input (the default) → <c>\relative</c> at THE PART'S OWN anchor, which is
-///     not always <c>c'</c>: an explicit <c>octave N</c> part property, else the
-///     <c>instrument</c> preset's octave, else 4 (InstrumentDefaults.AnchorOctave). The clef
+///     not always <c>c'</c>: an explicit <c>octave N</c> part property, else 3
+///     (InstrumentDefaults.AnchorOctave; no preset moves it since 2026-10-28). The clef
 ///     is NOT a step: a Lily# clef is drawing only, like LilyPond's (user decision
 ///     2026-09-15). ⚠️ This file used to write <c>\relative c'</c> unconditionally, which
 ///     made every part with an octave-3 preset export AN OCTAVE HIGH.
