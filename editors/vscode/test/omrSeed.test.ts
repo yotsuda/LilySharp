@@ -18,7 +18,7 @@ import { describe, it } from 'node:test';
 import * as assert from 'node:assert/strict';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { SEED_FOLDER_SETTING, SeedBar, seedDirName, seedRecordOf } from '../src/omrSeedCore';
+import { SEED_FOLDER_SETTING, SeedBar, fixedCopyName, seedDirName, seedRecordOf, withBar } from '../src/omrSeedCore';
 
 // Report Misread to OMR (owner's request 2026-10-29): the owner's alone, apart from Accept.
 describe('Report Misread to OMR', () => {
@@ -26,6 +26,7 @@ describe('Report Misread to OMR', () => {
     const fix = fs.readFileSync(path.join(root, 'src', 'omrAiFix.ts'), 'utf8');
     const bar: SeedBar = {
         lys: 'C:\\scores\\Largo (op. 1).lys', measure: 12, part: 'right', line: 40, bar: 'c4 d e f |',
+        correct: 'c4 d e fis |', correctFrom: 'draft',
         crop: { page: 2, box: [10, 20, 110, 80] }, pageImage: 'C:\\scores\\largo-2.png', sideFile: 'C:\\scores\\Largo (op. 1).omr.json',
     };
 
@@ -45,7 +46,22 @@ describe('Report Misread to OMR', () => {
 
     it('names its folder by when, the score and the bar', () => {
         assert.equal(seedDirName(new Date(2026, 9, 29, 15, 30, 12), bar), '20261029-153012-Largo_op_1-bar12-right');
-        assert.equal(seedDirName(new Date(2026, 9, 29, 15, 30, 12), { lys: '/a/b.lys', line: 7, bar: 'c1 |' }), '20261029-153012-b-line7');
+        assert.equal(seedDirName(new Date(2026, 9, 29, 15, 30, 12), { lys: '/a/b.lys', line: 7, bar: 'c1 |', correct: 'c1 |', correctFrom: 'file' }),
+            '20261029-153012-b-line7');
+    });
+
+    // Owner's request 2026-10-29: the .lys may be fixed again or deleted after the report.
+    it('takes everything at the report, the right bar with it, and never reads the .lys again', () => {
+        const r = seedRecordOf(new Date(), bar, '', {});
+        assert.equal(r.lysWas, bar.lys);
+        assert.ok(!('lys' in r));
+        assert.deepEqual([r.lysCopy, r.fixedCopy, r.correct, r.correctFrom], ['Largo (op. 1).lys', 'Largo (op. 1).fixed.lys', 'c4 d e fis |', 'draft']);
+        assert.equal(seedRecordOf(new Date(), { ...bar, correctFrom: 'file' }, '', {}).fixedCopy, 'Largo (op. 1).lys');
+        assert.equal(withBar('a\r\n    c4 d e f |\r\nb', 2, 'c4 d e fis |'), 'a\r\n    c4 d e fis |\r\nb');
+        assert.equal(fixedCopyName('/x/largo.lys'), 'largo.fixed.lys');
+        // A bar not fixed yet is not reported: "Not fixed yet" carries no bar.
+        assert.match(fix, /label: 'Not fixed yet', detail: [^\n]*\}/);
+        assert.match(fix, /if \(!right\?\.from\) \{\s*return false;/);
     });
 
     it('records the bar, where it is on the scan, and the copies made', () => {
@@ -58,6 +74,6 @@ describe('Report Misread to OMR', () => {
             page: 2, box: [10, 20, 110, 80], image: 'C:\\scores\\largo-2.png', imageCopy: 'page-2.png', crop: 'bar.png',
             sideFile: 'C:\\scores\\Largo (op. 1).omr.json',
         });
-        assert.equal(seedRecordOf(new Date(), { lys: 'x.lys', line: 1, bar: '' }, '', {}).scan, null);
+        assert.equal(seedRecordOf(new Date(), { lys: 'x.lys', line: 1, bar: '', correct: '', correctFrom: 'file' }, '', {}).scan, null);
     });
 });

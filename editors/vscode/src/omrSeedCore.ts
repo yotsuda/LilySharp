@@ -22,6 +22,11 @@
 // ships). An Accept is never a report: the owner tries the panel's buttons freely, and only a bar
 // reported on purpose becomes a seed. OMR never trains on the scan and the bar themselves — they
 // are seeds for generated scores, and the scan's bar is for its evaluation alone.
+//
+// Everything is taken at the report (owner's request 2026-10-29: the .lys may be fixed again or
+// deleted after it): the .lys, the side file, the page and the crop are copied, and the right bar
+// goes with them — the owner says which one is right, the Draft or the bar in the file; a bar not
+// fixed yet is not reported. The .lys's path is kept only to say where it came from.
 
 /** The setting under `lilysharp` that names the seed folder; not in package.json on purpose. */
 export const SEED_FOLDER_SETTING = 'omr.seedFolder';
@@ -37,6 +42,9 @@ export interface SeedBar {
     readonly line: number;
     /** The bar's line as the .lys has it at the report. */
     readonly bar: string;
+    /** The bar as it should read, and where the owner said it is: the panel's Draft, or the file. */
+    readonly correct: string;
+    readonly correctFrom: 'draft' | 'file';
     /** Where it is on the scan, when the side file says. */
     readonly crop?: { readonly page: number; readonly box: readonly number[] };
     /** The page's image and the side file, their paths, when there are. */
@@ -50,14 +58,20 @@ export interface SeedRecord {
     readonly reported: string;
     /** What the owner said was wrong ('' when nothing was typed). */
     readonly note: string;
-    /** The .lys where it is: read it again when the seed is used, for the bar may be fixed later. */
-    readonly lys: string;
+    /** Where the .lys was, to say where the seed came from — never read again: it may have been
+     *  changed or deleted since. */
+    readonly lysWas: string;
     /** The .lys as it was at the report, copied beside seed.json. */
     readonly lysCopy: string;
+    /** The .lys with the right bar in it: lysCopy itself when the file's bar is the right one. */
+    readonly fixedCopy: string;
     readonly measure: number | null;
     readonly part: string | null;
     readonly line: number;
+    /** The bar's line in lysCopy, and the bar as it should read. */
     readonly bar: string;
+    readonly correct: string;
+    readonly correctFrom: 'draft' | 'file';
     readonly scan: {
         readonly page: number;
         readonly box: readonly number[];
@@ -88,6 +102,23 @@ export function seedDirName(when: Date, bar: SeedBar): string {
     return [stamp, safe(baseName(bar.lys).replace(/\.lys$/i, '')), where, ...(bar.part ? [safe(bar.part)] : [])].join('-');
 }
 
+/** The name of the copy with the Draft in it: "largo.fixed.lys". */
+export function fixedCopyName(lys: string): string {
+    return baseName(lys).replace(/(\.lys)?$/i, '.fixed.lys');
+}
+
+/** The text with its 1-based line's bar replaced, the line's indentation kept. */
+export function withBar(text: string, line: number, bar: string): string {
+    const lines = text.split('\n');
+    const at = line - 1;
+    if (at < 0 || at >= lines.length) {
+        return text;
+    }
+    const cr = lines[at].endsWith('\r') ? '\r' : '';
+    lines[at] = (/^\s*/.exec(lines[at])?.[0] ?? '') + bar + cr;
+    return lines.join('\n');
+}
+
 /** The record, given which copies were written (a copy that could not be made is left out). */
 export function seedRecordOf(when: Date, bar: SeedBar, note: string,
     copies: { readonly image?: boolean; readonly crop?: boolean; readonly sideFile?: boolean }): SeedRecord {
@@ -96,12 +127,15 @@ export function seedRecordOf(when: Date, bar: SeedBar, note: string,
         seed: 1,
         reported: when.toISOString(),
         note: note.trim(),
-        lys: bar.lys,
+        lysWas: bar.lys,
         lysCopy: baseName(bar.lys),
+        fixedCopy: bar.correctFrom === 'file' ? baseName(bar.lys) : fixedCopyName(bar.lys),
         measure: bar.measure ?? null,
         part: bar.part ?? null,
         line: bar.line,
         bar: bar.bar,
+        correct: bar.correct,
+        correctFrom: bar.correctFrom,
         scan: bar.crop ? {
             page: bar.crop.page,
             box: [...bar.crop.box],

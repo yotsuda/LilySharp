@@ -40,7 +40,7 @@ import {
 import { OmrVersion, canVerifyBars, exitMeaning, launchOf, parseVersion, runOmr, verifyArguments } from './omrCore';
 import { findOmr } from './omrReader';
 import { SCAN_DEFAULT_THRESHOLD, ScanSideFile, lineAround, markFactsOf, parseSideFile, shownImage, sideFileOf } from './omrScanCore';
-import { SEED_FOLDER_SETTING, SeedBar, seedDirName, seedRecordOf } from './omrSeedCore';
+import { SEED_FOLDER_SETTING, SeedBar, fixedCopyName, seedDirName, seedRecordOf, withBar } from './omrSeedCore';
 import { textFontFaceCss, textFontsRoot } from './scoreFonts';
 
 export interface OmrAiFixDeps extends AiTransformDeps {
@@ -1139,9 +1139,10 @@ function seedFolder(): string | undefined {
 }
 
 /**
- * Report Misread to OMR (owner's request 2026-10-29, omrSeedCore): asks what was wrong, then
- * copies the .lys as it is now, its side file, the page and the bar's crop into a new folder of
- * the seed folder with seed.json. Never on an Accept. False when nothing was written.
+ * Report Misread to OMR (owner's request 2026-10-29, omrSeedCore): asks which bar is right and
+ * what was wrong, then copies the .lys as it is now (and with the Draft in it), its side file, the
+ * page and the bar's crop into a new folder of the seed folder with seed.json — everything taken
+ * now. Never on an Accept. False when nothing was written.
  */
 async function reportMisread(run: FixRun, row: FixRow): Promise<boolean> {
     const root = seedFolder();
@@ -1151,6 +1152,26 @@ async function reportMisread(run: FixRun, row: FixRow): Promise<boolean> {
     const t = row.target;
     const reader = readerBarOf(t, run.side);
     const label = labelOf(t);
+    const lys = run.uri.fsPath;
+    const doc = vscode.workspace.textDocuments.find(d => d.uri.toString() === run.uri.toString());
+    const text = doc?.getText() ?? (fs.existsSync(lys) ? fs.readFileSync(lys, 'utf8') : run.base.text);
+    const fileBar = text.split('\n')[t.line]?.replace(/\r$/, '').trim() ?? t.written;
+    // The right bar goes with the report, taken now (owner's request 2026-10-29): the .lys may be
+    // fixed again or deleted after it. The owner says which one it is; a bar not fixed yet is not
+    // a seed.
+    type Right = vscode.QuickPickItem & { from?: 'draft' | 'file' };
+    const draft = barOf(row);
+    const items: Right[] = [
+        ...(draft !== undefined && draft !== resolvedLine(fileBar)
+            ? [{ label: 'The Draft is right', detail: draft, from: 'draft' as const }] : []),
+        { label: 'The bar in the file is right — fixed already', detail: resolvedLine(fileBar), from: 'file' },
+        { label: 'Not fixed yet', detail: 'Fix it in the Draft first, then report: a report keeps the right bar with it.' },
+    ];
+    const right = await vscode.window.showQuickPick(items, { title: `Report Misread to OMR — ${label}: which bar is right?` });
+    if (!right?.from) {
+        return false;
+    }
+    const correct = right.from === 'draft' ? draft! : resolvedLine(fileBar);
     const note = await vscode.window.showInputBox({
         title: `Report Misread to OMR — ${label}`,
         prompt: 'What did the reader get wrong? (optional) The bar, its scan and the .lys are kept as a seed for OMR\'s training scores.',
@@ -1159,14 +1180,10 @@ async function reportMisread(run: FixRun, row: FixRow): Promise<boolean> {
     if (note === undefined) {
         return false;
     }
-    const lys = run.uri.fsPath;
-    const doc = vscode.workspace.textDocuments.find(d => d.uri.toString() === run.uri.toString());
-    const text = doc?.getText() ?? (fs.existsSync(lys) ? fs.readFileSync(lys, 'utf8') : run.base.text);
     const info = t.crop ? run.side?.pages.find(p => p.page === t.crop!.page) : undefined;
     const sidePath = sideFileOf(lys);
     const bar: SeedBar = {
-        lys, line: t.line + 1,
-        bar: text.split('\n')[t.line]?.replace(/\r$/, '').trim() ?? t.written,
+        lys, line: t.line + 1, bar: fileBar, correct, correctFrom: right.from,
         ...(reader ? { measure: reader.measure, part: reader.part } : {}),
         ...(t.crop ? { crop: { page: t.crop.page, box: [...t.crop.box] } } : {}),
         ...(info ? { pageImage: info.image } : {}),
@@ -1177,6 +1194,9 @@ async function reportMisread(run: FixRun, row: FixRow): Promise<boolean> {
     try {
         fs.mkdirSync(dir, { recursive: true });
         fs.writeFileSync(path.join(dir, path.basename(lys)), text, 'utf8');
+        if (right.from === 'draft') {
+            fs.writeFileSync(path.join(dir, fixedCopyName(lys)), withBar(text, t.line + 1, correct), 'utf8');
+        }
         const copy = (from: string | undefined, to: string): boolean => {
             try {
                 if (!from || !fs.existsSync(from)) { return false; }
