@@ -106,6 +106,27 @@ public class SpanEndNameTests
         Assert.Equal(underlined, text.Substring(d.Span.Start, d.Span.Length));
     }
 
+    /// <summary>The trill span is opened and closed by one name too, '@trillSpan' … '@!trillSpan'
+    /// (owner's decision 2026-10-28; until then LilyPond's '@startTrillSpan' / '@stopTrillSpan').</summary>
+    [Fact]
+    public void TheTrillSpan_IsTrillSpanAndItsEnd()
+    {
+        var all = SemanticValidation.Run(SyntaxTree.Parse(Book("c''4@trillSpan d'' e'' f''@!trillSpan | g'1 |")));
+        Assert.DoesNotContain(all, d => d.Code == DiagnosticCodes.UnknownAnnotation);
+
+        foreach (string old in new[] { "startTrillSpan", "stopTrillSpan" })
+        {
+            var retired = Assert.Single(SemanticValidation.Run(SyntaxTree.Parse(Book($"c''4@{old} d'' e'' f'' | g'1 |"))),
+                d => d.Code == DiagnosticCodes.UnknownAnnotation);
+            Assert.Contains("'@trillSpan' … '@!trillSpan'", retired.Message);
+        }
+
+        string text = "c''4@trillSpan d'' e''@!";
+        Assert.Equal("trillSpan", LilySharpLanguageServer.OpenSpanBefore(text, text.Length));
+        var ends = LilySharpLanguageServer.GetSpanEndCompletions(text, text.Length).Items;
+        Assert.True(Assert.Single(ends, i => i.Label == "trillSpan").Preselect);
+    }
+
     [Fact]
     public void EachVoiceIsItsOwnLine()
     {

@@ -817,7 +817,7 @@ public class LilyPondExporterTests
     /// ⚠️ FOUR, NOT TEN. The handoff had grouped ten dropped constructs as "post-events
     /// LilyPond spells natively", and that grouping was wrong: only these four are SCRIPTS
     /// that take a direction and so fit this switch's <c>dir + glyph</c> tail. @glissando,
-    /// @startTrillSpan, @stopTrillSpan, @laissezVibrer and @repeatTie are post-events with
+    /// @trillSpan, @!trillSpan, @laissezVibrer and @repeatTie are post-events with
     /// NO direction and must answer in the early name switch the way <c>\arpeggio</c> does —
     /// whose own comment records that confusing the two "made the twins agree falsely".
     /// @breathe and @caesura are not post-events at all; they are standalone music that
@@ -859,8 +859,8 @@ public class LilyPondExporterTests
     public void DirectionlessPostEvents_ReachTheTwinBare()
     {
         Assert.Contains("c,1\\glissando", Export(Score("c,1@glissando")));
-        Assert.Contains("c,1\\startTrillSpan", Export(Score("c,1@startTrillSpan")));
-        Assert.Contains("c,1\\stopTrillSpan", Export(Score("c,1@stopTrillSpan")));
+        Assert.Contains("c,1\\startTrillSpan", Export(Score("c,1@trillSpan")));
+        Assert.Contains("c,1\\stopTrillSpan", Export(Score("c,1@!trillSpan")));
         Assert.Contains("c,1\\laissezVibrer", Export(Score("c,1@laissezVibrer")));
         Assert.Contains("c,1\\repeatTie", Export(Score("c,1@repeatTie")));
 

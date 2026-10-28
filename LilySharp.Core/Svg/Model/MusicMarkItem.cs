@@ -1,4 +1,4 @@
-﻿// Lily# - Music notation compiler
+// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -444,6 +444,17 @@ public sealed record MusicMarkItem
             // tablature's). The name is the grob's, PhrasingSlur.
             ["phrasingSlur"] = MusicMarkType.PhrasingSlurStart,
         };
+
+    /// <summary>The trill spanner's name, <c>@trillSpan</c> … <c>@!trillSpan</c> (owner's
+    /// decision 2026-10-28; until then LilyPond's <c>@startTrillSpan</c> / <c>@stopTrillSpan</c>).
+    /// Not a mark: the collector pairs it as trill events, so <see cref="ParseSpanEndName"/>
+    /// does not read it.</summary>
+    public const string TrillSpanName = "trillSpan";
+
+    /// <summary>True for every name an <c>@!</c> may be written with: the marks'
+    /// (<see cref="ParseSpanEndName"/>) and the trill spanner's.</summary>
+    public static bool IsSpanEndName(string name)
+        => name == TrillSpanName || ParseSpanEndName(name) != null;
 
     /// <summary>
     /// Parses the name of a TERMINATOR annotation — the <c>X</c> of <c>@!X</c> — into the

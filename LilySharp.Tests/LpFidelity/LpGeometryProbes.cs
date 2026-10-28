@@ -5893,11 +5893,11 @@ internal static class LpGeometryProbes
     /// <summary>Quiet-support regime: drawn third-space heads, the staff-in-support
     /// height decides (Lily# <c>c'</c> = LilyPond <c>c''</c>).</summary>
     private static readonly string TRF = SpannerFloorScore("TRF",
-        "c'4@startTrillSpan c' c' c'@stopTrillSpan | c4 c c c |");
+        "c'4@trillSpan c' c' c'@!trillSpan | c4 c c c |");
 
     /// <summary>Support regime: two octaves up, the ledger column decides.</summary>
     private static readonly string TRC = SpannerFloorScore("TRC",
-        "c'''4@startTrillSpan c''' c''' c'''@stopTrillSpan | c''4 c'' c'' c'' |");
+        "c'''4@trillSpan c''' c''' c'''@!trillSpan | c''4 c'' c'' c'' |");
 
     /// <summary>Quiet-support regime for the rit. text spanner. The <c>@!rit</c> stands on
     /// the note the twin's <c>\stopTextSpan</c> stands on (spanner-floors.ly:158), so the
@@ -6105,20 +6105,20 @@ internal static class LpGeometryProbes
 
     /// <summary>The fully shortened forced-up quarter: LP reads the drawn tip 6.5.</summary>
     private static readonly string TLS = TrillStemSupportScore("TLS",
-        "c''4@startTrillSpan c'' c'' c''@stopTrillSpan |", "s1 |");
+        "c''4@trillSpan c'' c'' c''@!trillSpan |", "s1 |");
 
     /// <summary>The forced-up beamed pairs: LP reads the quanted face 6.74.</summary>
     private static readonly string TLB = TrillStemSupportScore("TLB",
-        "c''8[@startTrillSpan c''] c''[ c''] c''[ c''] c''[ c''@stopTrillSpan] |", "s1 |");
+        "c''8[@trillSpan c''] c''[ c''] c''[ c''] c''[ c''@!trillSpan] |", "s1 |");
 
     /// <summary>The whole-note control: no stem ink; the head chain isolator.</summary>
     private static readonly string TLW = TrillStemSupportScore("TLW",
-        "c''1@startTrillSpan | c'1@stopTrillSpan |", "s1 | s1 |");
+        "c''1@trillSpan | c'1@!trillSpan |", "s1 | s1 |");
 
     /// <summary>Round 2 (the X pair): the tall shortened column FIRST, under the tr
     /// glyph — both X hypotheses read 8.000000 here.</summary>
     private static readonly string TXG = TrillStemSupportScore("TXG",
-        "c''4@startTrillSpan c c c@stopTrillSpan |", "s1 |");
+        "c''4@trillSpan c c c@!trillSpan |", "s1 |");
 
     /// <summary>Round 2 (the X pair): the tall column LAST, under the WAVE. LilyPond
     /// measured 4.720721 = the stop column's LEDGER ink top 4.100000 + outside-staff-padding
@@ -6128,7 +6128,7 @@ internal static class LpGeometryProbes
     /// grobs' skylines and found the sum right and all three terms wrong — see the ledger
     /// why.) Lily#'s pre-port scalar max read 8.0, the X-blindness this entry gated.</summary>
     private static readonly string TXW = TrillStemSupportScore("TXW",
-        "c4@startTrillSpan c c c''@stopTrillSpan |", "s1 |");
+        "c4@trillSpan c c c''@!trillSpan |", "s1 |");
 
     /// <summary>
     /// Round 3, the single-staff base of the lower-staff pair: voice one carries the trill
@@ -6144,7 +6144,7 @@ internal static class LpGeometryProbes
     /// therefore immune to a tenth of spacing, unlike TXW's 0.277 of slack.
     /// </summary>
     private static readonly string TXV = TrillStemSupportScore("TXV",
-        "c4@startTrillSpan c c c@stopTrillSpan |", "c''4 c'' c'' c'' |");
+        "c4@trillSpan c c c@!trillSpan |", "c''4 c'' c'' c'' |");
 
     /// <summary>
     /// TXV moved to the LOWER staff of a two-staff system — the trill's face of the guard
@@ -6167,7 +6167,7 @@ internal static class LpGeometryProbes
 
         section Main {
           upper { b'4 b' b' b' | }
-          lower { voice { c'4@startTrillSpan c' c' c'@stopTrillSpan | } { c'''4 c''' c''' c''' | } }
+          lower { voice { c'4@trillSpan c' c' c'@!trillSpan | } { c'''4 c''' c''' c''' | } }
         }
 
         form { ~Main }
@@ -6182,7 +6182,7 @@ internal static class LpGeometryProbes
     /// support is the high member's drawn stem end (the face at ITS X, not the beam
     /// envelope's corner).</summary>
     private static readonly string TSB = TrillStemSupportScore("TSB",
-        "c''8[@startTrillSpan a'] c''[ a'] c''[ a'] c''[ a'@stopTrillSpan] |", "s1 |");
+        "c''8[@trillSpan a'] c''[ a'] c''[ a'] c''[ a'@!trillSpan] |", "s1 |");
 
     /// <summary>Round 2: a fermata on the first note of a trill over natural-down
     /// columns (single voice — voice-1 forcing would flip the fermata below). LilyPond's
@@ -6196,7 +6196,7 @@ internal static class LpGeometryProbes
         part mel { clef treble }
 
         section Main {
-          mel { c''4@fermata@startTrillSpan c'' c'' c''@stopTrillSpan | c'4 c' c' c' | }
+          mel { c''4@fermata@trillSpan c'' c'' c''@!trillSpan | c'4 c' c' c' | }
         }
 
         form { ~Main }
@@ -6387,14 +6387,14 @@ internal static class LpGeometryProbes
     /// worth writing — after these two are each exact.
     /// </para>
     /// <para>
-    /// <c>@startTrillSpan.down</c> is LilyPond's <c>_\startTrillSpan</c>: the writer's forced
+    /// <c>@trillSpan.down</c> is LilyPond's <c>_\startTrillSpan</c>: the writer's forced
     /// direction, which the engraver sets on the grob over the voice default. The suffix was
     /// accepted and silently dropped until 2026-08-09, so a book written before that would
     /// have drawn an UP trill and read like HPC — this pair is why that matters.
     /// </para>
     /// </remarks>
     private static readonly string HPT =
-        HairpinWedgeScore("HPT", "@startTrillSpan.down", "@stopTrillSpan");
+        HairpinWedgeScore("HPT", "@trillSpan.down", "@!trillSpan");
 
     // <summary>
     // The figured-bass arrangements — the mirrors of figured-bass-placement.ly's books
@@ -6704,7 +6704,7 @@ internal static class LpGeometryProbes
 
     /// <summary>Stacking regime: a trill under the mark; the mark must clear it.</summary>
     private static readonly string TMT = TempoScore("TMT",
-        "c'4@startTrillSpan c' c' c'@stopTrillSpan | c4 c c c |");
+        "c'4@trillSpan c' c' c'@!trillSpan | c4 c c c |");
 
     /// <summary>
     /// A METRONOME MARK AT A MID-LINE METER CHANGE, AND AT A LINE'S END — the mirrors of
@@ -9088,12 +9088,12 @@ internal static class LpGeometryProbes
     private static readonly string GOTD = GraceTieBook("c''4@ottava e''4 f'16@!ottava g'8. a'4 |", "GOTD");
     private static readonly string GOTE = GraceTieBook("c4 grace { d''16@ottava } e''4 f''4 g'4@!ottava |", "GOTE");
     // A trill spanner starting or stopping on a grace note (audit/lp-geometry/probes/grace-trill.ly).
-    private static readonly string GTSA = GraceTieBook("c4 grace { d16@startTrillSpan } e4 f4 g4@stopTrillSpan |", "GTSA");
-    private static readonly string GTSB = GraceTieBook("c4 d16@startTrillSpan e8. f4 g4@stopTrillSpan |", "GTSB");
-    private static readonly string GTSC = GraceTieBook("c4@startTrillSpan e4 grace { f16@stopTrillSpan } g4 a4 |", "GTSC");
-    private static readonly string GTSD = GraceTieBook("c4 grace { a'16@startTrillSpan } e4 f4 g4@stopTrillSpan |", "GTSD");
-    private static readonly string GTSE = GraceTieBook("c4 a'16@startTrillSpan e8. f4 g4@stopTrillSpan |", "GTSE");
-    private static readonly string GTSF = GraceTieBook("c4@startTrillSpan e4 grace { a'16@stopTrillSpan } g4 a4 |", "GTSF");
+    private static readonly string GTSA = GraceTieBook("c4 grace { d16@trillSpan } e4 f4 g4@!trillSpan |", "GTSA");
+    private static readonly string GTSB = GraceTieBook("c4 d16@trillSpan e8. f4 g4@!trillSpan |", "GTSB");
+    private static readonly string GTSC = GraceTieBook("c4@trillSpan e4 grace { f16@!trillSpan } g4 a4 |", "GTSC");
+    private static readonly string GTSD = GraceTieBook("c4 grace { a'16@trillSpan } e4 f4 g4@!trillSpan |", "GTSD");
+    private static readonly string GTSE = GraceTieBook("c4 a'16@trillSpan e8. f4 g4@!trillSpan |", "GTSE");
+    private static readonly string GTSF = GraceTieBook("c4@trillSpan e4 grace { a'16@!trillSpan } g4 a4 |", "GTSF");
     // A bowing mark or another up-script on a grace note (audit/lp-geometry/probes/grace-bowing.ly).
     private static readonly string GBWA = GraceTieBook("c4 grace { d16@upBow } e4 c2 |", "GBWA");
     private static readonly string GBWB = GraceTieBook("c4 grace { d16@downBow } e4 c2 |", "GBWB");

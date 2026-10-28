@@ -1,7 +1,7 @@
 // trill-spanner-direction.ly の Lily# 訳。
 // CLAIM: trill spanner の向きは .up/.down で強制でき、\voiceTwo の既定 DOWN より優先。
 // 綴り: LP \voiceTwo(単独 voice)→ voice{}{} 第1分岐=全 spacer。LP g=G3=Lily# g,。
-// LP ^/_/- → .up/.down/裸。連続 @startTrillSpan は前の spanner を新 start の列で終端(LP 同)。
+// LP ^/_/- → .up/.down/裸。連続 @trillSpan は前の spanner を新 start の列で終端(LP 同)。
 octave absolute
 time 4/4
 
@@ -9,7 +9,7 @@ part melody
 
 section A {
   melody {
-    voice { s1 } { g4@startTrillSpan g4@startTrillSpan.up g4@startTrillSpan.down g4@startTrillSpan } |
+    voice { s1 } { g4@trillSpan g4@trillSpan.up g4@trillSpan.down g4@trillSpan } |
   }
 }
 

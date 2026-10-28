@@ -92,6 +92,10 @@ public sealed partial class LilyPondExporter
                     when Semantics.AnnotationValues.IsPhrasingSlurName(pe.Name):
                     suffix.Append("\\)");
                     break;
+                // '@!trillSpan' — `\stopTrillSpan`, the TrillSpanEvent STOP, a POST-event too.
+                case MusicMarkSyntax { IsSpanEnd: true, Name: Svg.Model.MusicMarkItem.TrillSpanName }:
+                    suffix.Append("\\stopTrillSpan");
+                    break;
                 // '@!cresc' / '@!decresc' / '@!dim' — `\!`, a POST-event too: written before the
                 // note it would end the hairpin on the previous one.
                 case MusicMarkSyntax { IsSpanEnd: true } he
@@ -829,8 +833,9 @@ public sealed partial class LilyPondExporter
             //   'PhrasingSlurEvent START / STOP.
             case "phrasingSlur":
                 return a.ForcedAbove switch { true => "^\\(", false => "_\\(", null => "\\(" };
-            case "startTrillSpan": return "\\startTrillSpan";
-            case "stopTrillSpan": return "\\stopTrillSpan";
+            // '@trillSpan' opens LilyPond's trill spanner; its end '@!trillSpan' is a
+            // terminator (SplitAttachments).
+            case "trillSpan": return "\\startTrillSpan";
             // The half-tie events DO carry a meaningful written direction — ^/_ is
             // copied onto the tie (laissez-vibrer-engraver.cc:99-103, inherited by
             // Repeat_tie_engraver) and repeat-tie-chords.ly writes `d^\repeatTie` —

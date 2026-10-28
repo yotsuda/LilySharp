@@ -52,7 +52,7 @@ public class TrillSpannerTests
     {
         var source = @"
 part melody { clef treble }
-phrase m { c''4@startTrillSpan d e f@stopTrillSpan | }
+phrase m { c''4@trillSpan d e f@!trillSpan | }
 section A { melody { m } }
 form { A }
 score test { staff melody }
@@ -82,7 +82,7 @@ score test { staff melody }
     {
         var source = @"
 part melody { clef treble }
-phrase m { c''4@startTrillSpan d e f | g4 a b c'@stopTrillSpan | }
+phrase m { c''4@trillSpan d e f | g4 a b c'@!trillSpan | }
 section A { melody { m } }
 form { A }
 score test { staff melody }
@@ -102,7 +102,7 @@ score test { staff melody }
     {
         var source = @"
 part melody { clef treble }
-phrase m { c''4@startTrillSpan d@stopTrillSpan e4@startTrillSpan f@stopTrillSpan | }
+phrase m { c''4@trillSpan d@!trillSpan e4@trillSpan f@!trillSpan | }
 section A { melody { m } }
 form { A }
 score test { staff melody }
@@ -127,7 +127,7 @@ score test { staff melody }
     {
         var source = @"
 part melody { clef treble }
-phrase m { c''4@startTrillSpan d e f@stopTrillSpan | g4 a b c' | }
+phrase m { c''4@trillSpan d e f@!trillSpan | g4 a b c' | }
 section A { melody { m } }
 form { A }
 score test { staff melody }
@@ -149,17 +149,16 @@ score test { staff melody }
     }
 
     /// <summary>
-    /// The spanner has ONE spelling, LilyPond's: @startTrillSpan /
-    /// @stopTrillSpan. '@trillSpan(start)' was a second way to say the same
-    /// thing — and an argument on an event that has none in LilyPond either — so
-    /// it is gone rather than silently accepted.
+    /// The spanner has ONE spelling: @trillSpan … @!trillSpan, opened and closed by one name
+    /// like every other span (owner's decision 2026-10-28). LilyPond's two words, the spelling
+    /// until then, draw nothing and are told the new one rather than silently accepted.
     /// </summary>
     [Fact]
-    public void TrillSpanner_CompoundSyntax_IsNoLongerAccepted()
+    public void TrillSpanner_LilyPondsTwoWords_AreNoLongerAccepted()
     {
         var source = @"
 part melody { clef treble }
-phrase m { c''4@trillSpan(start) d e f@trillSpan(stop) | g4 a b c' | }
+phrase m { c''4@startTrillSpan d e f@stopTrillSpan | g4 a b c' | }
 section A { melody { m } }
 form { A }
 score test { staff melody }
@@ -179,7 +178,7 @@ score test { staff melody }
     public void MeasureStartStop_EndsTheWaveAtTheBarline_NotTheStopColumn()
     {
         // slur-vertical-skylines.ly (the outside-staff-vs-slur book): the trill
-        // spans g1~ | g1@stopTrillSpan — the stop event lands on a measure
+        // spans g1~ | g1@!trillSpan — the stop event lands on a measure
         // START, so the Bar_engraver rewrites the right bound to the BAR LINE
         // and the wave never enters the stop measure. LP draws exactly 3
         // trill_element repetitions (staff-rel X 38.30/39.30/40.30); before the
@@ -193,8 +192,8 @@ score test { staff melody }
             "octave absolute\n\n" +
             "f'8@text(\"rit\").up( c''8 f'' c''' f''') r8 r4 |\n" +
             "c'''2( c''2 |\n" +
-            "g'1)~@startTrillSpan |\n" +
-            "g'1@stopTrillSpan |\n" +
+            "g'1)~@trillSpan |\n" +
+            "g'1@!trillSpan |\n" +
             "g'1(@f |\n" +
             "g1) |\n");
         double middle = MiddleLineY(svg);
@@ -253,7 +252,7 @@ score test { staff melody }
         //   — finalize sets the open spanner's RIGHT bound to currentCommandColumn.
         var source = @"
 part melody { clef treble }
-phrase m { c''4@startTrillSpan d e f | }
+phrase m { c''4@trillSpan d e f | }
 section A { melody { m } }
 form { A }
 score test { staff melody }
@@ -297,8 +296,8 @@ score test { staff melody }
             part p1 { clef treble }
             section Piece {
               p1 {
-                c''4 d''4 e''4 f''4@startTrillSpan | break
-                g''4 a''8 b''8@stopTrillSpan@startTrillSpan c'''8 b''8 a''4@stopTrillSpan |
+                c''4 d''4 e''4 f''4@trillSpan | break
+                g''4 a''8 b''8@!trillSpan@trillSpan c'''8 b''8 a''4@!trillSpan |
               }
             }
             form { ~Piece }
@@ -338,13 +337,13 @@ score test { staff melody }
     /// the phase; one of them is the shape the OMR found over a break (session 961).
     /// </summary>
     [Theory]
-    [InlineData("c'4 d'4 e'4 f'4@startTrillSpan | g'4 a'8 b'8@stopTrillSpan@startTrillSpan c''8 b'8 a'4@stopTrillSpan |")]
-    [InlineData("c'4 d'4 e'4 f'4@startTrillSpan | break g'4 a'8 b'8@stopTrillSpan@startTrillSpan c''8 b'8 a'4@stopTrillSpan |")]
-    [InlineData("f'4@startTrillSpan g'4 a'4 b'4@stopTrillSpan@startTrillSpan c''2@stopTrillSpan |")]
-    [InlineData("f'2@startTrillSpan a'4 b'4@stopTrillSpan@startTrillSpan c''2@stopTrillSpan |")]
-    [InlineData("f'4.@startTrillSpan g'8 a'8 b'8@stopTrillSpan@startTrillSpan c''4@stopTrillSpan |")]
-    [InlineData("f'8@startTrillSpan g'8 a'8 b'8@stopTrillSpan@startTrillSpan c''4 d''4@stopTrillSpan |")]
-    [InlineData("f'16@startTrillSpan g'16 a'16 b'16@stopTrillSpan@startTrillSpan c''4 d''2@stopTrillSpan |")]
+    [InlineData("c'4 d'4 e'4 f'4@trillSpan | g'4 a'8 b'8@!trillSpan@trillSpan c''8 b'8 a'4@!trillSpan |")]
+    [InlineData("c'4 d'4 e'4 f'4@trillSpan | break g'4 a'8 b'8@!trillSpan@trillSpan c''8 b'8 a'4@!trillSpan |")]
+    [InlineData("f'4@trillSpan g'4 a'4 b'4@!trillSpan@trillSpan c''2@!trillSpan |")]
+    [InlineData("f'2@trillSpan a'4 b'4@!trillSpan@trillSpan c''2@!trillSpan |")]
+    [InlineData("f'4.@trillSpan g'8 a'8 b'8@!trillSpan@trillSpan c''4@!trillSpan |")]
+    [InlineData("f'8@trillSpan g'8 a'8 b'8@!trillSpan@trillSpan c''4 d''4@!trillSpan |")]
+    [InlineData("f'16@trillSpan g'16 a'16 b'16@!trillSpan@trillSpan c''4 d''2@!trillSpan |")]
     public void ChainedTrills_TheEndedWave_StopsBeforeTheNextTr(string music)
     {
         // Read off the SVG: the wave is a run of trill_element glyphs the recorder does not

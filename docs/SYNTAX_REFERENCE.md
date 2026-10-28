@@ -1201,7 +1201,7 @@ so the grace notes after it take flags, as in LilyPond; before a grace rest it s
 way (`grace { d16@breath r16 e16 } f4`), and in an `afterGrace` too (`c2 afterGrace { d16@breath } e2`).
 Before a grace spacer it stands the same way. One written on a chord's member is not drawn yet
 (LYS4020 names it, and every other mark still dropped).
-A trill spanner can start or stop on a grace note (`grace { d16@startTrillSpan } e4 f g@stopTrillSpan`),
+A trill spanner can start or stop on a grace note (`grace { d16@trillSpan } e4 f g@!trillSpan`),
 and so can an ottava (`grace { d''16@ottava } e''4 f'' g'@!ottava`) — an `@!ottava` on a grace ends
 the span before it, as LilyPond's `\ottava #0` there does, so that grace keeps its written octave.
 A phrasing slur can start, stop or close on grace notes too (`grace { d16@phrasingSlur } e4 f
@@ -2258,7 +2258,7 @@ c4@unaCorda d@treCorde |              // the same release, written as the word i
 ### Trill Spanners
 
 ```
-c4@startTrillSpan d e@stopTrillSpan f |
+c4@trillSpan d e@!trillSpan f |
 ```
 
 ## Glissando

@@ -43,7 +43,8 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
     private static readonly HashSet<string> ExtraPlainNames =
         new(StringComparer.Ordinal)
         {
-            "startTrillSpan", "stopTrillSpan",
+            // The trill spanner's start; its end is the terminator '@!trillSpan'.
+            "trillSpan",
             "courtesy", "editorial",
             "glissando",
             "cross",
@@ -82,7 +83,7 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
         "sfz", "sf", "fp", "rf", "rfz", "fz", "sffz",
         "pppp", "ppppp", "ffff", "fffff", "niente",
         "trill", "mordent", "prall", "turn", "reverseTurn", "pralltriller",
-        "startTrillSpan", "stopTrillSpan", "courtesy", "editorial", "glissando", "parenthesize",
+        "trillSpan", "courtesy", "editorial", "glissando", "parenthesize",
         // ⚠️ The navigation marks (segno, coda, fine, ds, dc, to coda) are NOT
         // here: they are bare landmarks, and writing one with an '@' has its own
         // diagnostic ("A navigation mark is bare, not '@'"). Suggesting '@segno'
@@ -216,7 +217,12 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
                 if (mark.IsSpanEnd)
                 {
                     var name = mark.MarkName;
-                    if (MusicMarkItem.ParseSpanEndName(name) is null
+                    if (name == MusicMarkItem.TrillSpanName)
+                    {
+                        // The trill spanner's end — paired by the collector's trill events,
+                        // not a MusicMarkItem, so ParseSpanEndName does not know it.
+                    }
+                    else if (MusicMarkItem.ParseSpanEndName(name) is null
                         && AnnotationNames.CaseOnlyMatch(name) is { } canonical
                         && MusicMarkItem.ParseSpanEndName(canonical) is not null)
                         _diagnostics.Warning(
@@ -232,7 +238,8 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
                             + "The spans with a terminator: a text spanner ('@!rit', '@!accel', "
                             + "'@!rall', '@!textSpan'), an ottava ('@!ottava', '@!quindicesima'), "
                             + "a pedal ('@!sustain', '@!sostenuto', '@!unaCorda'), a phrasing "
-                            + "slur ('@!phrasingSlur') and a hairpin ('@!cresc', '@!decresc', '@!dim').");
+                            + "slur ('@!phrasingSlur'), a trill span ('@!trillSpan') and a hairpin "
+                            + "('@!cresc', '@!decresc', '@!dim').");
                 }
                 else if (!IsKnownCompoundName(mark))
                 {
@@ -591,6 +598,15 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
         // '@ds(al fien)'.) A candidate has no source text, so the suggestion below is
         // still rendered from its internal name, which is what that reconstruction is for.
         var message = $"Unknown annotation '{Written(node, name)}' — it is ignored.";
+        // The trill span's old pair of words (until 2026-10-28) is told the new spelling, not
+        // sent to guess at a near name.
+        if (name is "startTrillSpan" or "stopTrillSpan")
+        {
+            _diagnostics.Warning(node.Span, DiagnosticCodes.UnknownAnnotation,
+                message + " A trill span is written '@trillSpan' … '@!trillSpan', opened and "
+                + "closed by one name like every other span.");
+            return;
+        }
         // A name that differs from a real one only in case gets that spelling, not a typo
         // guess: names are case-sensitive (owner's decision 2026-09-27).
         if (CaseCorrected(node, name) is { } corrected)

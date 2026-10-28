@@ -182,7 +182,7 @@ internal static class TrillSpannerEngraver
             // (glyphOrigin: GlyphOrigin, computed above for every spanner.)
 
             // The NEIGHBOUR: a trill starting on this one's stop item in the same voice —
-            // `b'8@stopTrillSpan@startTrillSpan` — whose glyph's TRUE left edge caps this
+            // `b'8@!trillSpan@trillSpan` — whose glyph's TRUE left edge caps this
             // line's right end (adjust-on-neighbor). Without it the wave's last element ran
             // into the next "tr" whenever the run's phase let it, and the outside-staff pass
             // then stacked the next trill a level up (OMR report 2026-10-21, item 1: after a

@@ -44,8 +44,8 @@ public class TrillSpannerDirectionTests
         // spanners entirely (the pending start was overwritten, not ended).
         string svg = Render(
             "octave absolute\ntime 4/4\n\n"
-            + "voice { s1 } { g4@startTrillSpan g4@startTrillSpan.up"
-            + " g4@startTrillSpan.down g4@startTrillSpan } |\n");
+            + "voice { s1 } { g4@trillSpan g4@trillSpan.up"
+            + " g4@trillSpan.down g4@trillSpan } |\n");
         double middle = MiddleLineY(svg);
 
         var trs = MusicGlyphs(svg, EmmentalerGlyphs.OrnTrill)

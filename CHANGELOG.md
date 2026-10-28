@@ -14,6 +14,10 @@ workflow attaches that section to the GitHub Release verbatim.
   LYS4032, whose quick fix writes the opening name. The drawing is unchanged. An unclosed span is
   told its own end; MusicXML import writes it. Ctrl+Shift+Up / Down on `@8va` steps the printed
   spellings (15mb, 8vb, 8va, 15ma) and renames the `@!8va` that closes it.
+- `[lang]` **The trill span is `@trillSpan … @!trillSpan`**, opened and closed by one name like every
+  other span. LilyPond's `@startTrillSpan` / `@stopTrillSpan` are no longer accepted: they draw
+  nothing and the warning names the new spelling. The LilyPond twin still writes `\startTrillSpan` /
+  `\stopTrillSpan`.
 
 ### Checks
 

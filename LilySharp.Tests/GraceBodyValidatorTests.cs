@@ -381,8 +381,8 @@ public class GraceBodyValidatorTests
     /// trill.grace.*). Nothing is reported.
     /// </summary>
     [Theory]
-    [InlineData("grace { d'8@startTrillSpan } c'1 | e'1@stopTrillSpan |", "grace { d'8 } c'1 | e'1 |")]
-    [InlineData("c'1@startTrillSpan | grace { d'8@stopTrillSpan } e'1 |", "c'1 | grace { d'8 } e'1 |")]
+    [InlineData("grace { d'8@trillSpan } c'1 | e'1@!trillSpan |", "grace { d'8 } c'1 | e'1 |")]
+    [InlineData("c'1@trillSpan | grace { d'8@!trillSpan } e'1 |", "c'1 | grace { d'8 } e'1 |")]
     public void ATrillSpanOnAGrace_IsDrawn_AndNotReported(string written, string control)
     {
         Assert.Empty(Warnings(Book(written)));

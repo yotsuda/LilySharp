@@ -72,7 +72,7 @@ public class OutsideStaffFewLineStaffTests
     public void ATrillSpanner_SidesOffItsOwnStaff(int lines, int index, double lineAboveMiddle)
     {
         // LilyPond's absolute octaves (owner's decision 2026-10-28): the music LilyPond was measured on.
-        var g = Render(lines, "c''4@startTrillSpan d'' e'' f''@stopTrillSpan | r1 | g'4@startTrillSpan a' b' c''@stopTrillSpan |");
+        var g = Render(lines, "c''4@trillSpan d'' e'' f''@!trillSpan | r1 | g'4@trillSpan a' b' c''@!trillSpan |");
         double line = g.GlyphAboveStaffLine(EmmentalerGlyphs.OrnTrill, index, 0)
             + EngravingDefaults.TrillSpannerTextOffsetDown + TopAboveMiddle(lines);
         Assert.InRange(line, lineAboveMiddle - 0.02, lineAboveMiddle + 0.02);

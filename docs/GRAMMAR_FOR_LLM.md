@@ -908,7 +908,7 @@ draws nothing at all, its word included, and says so with LYS4018),
 ottava `@ottava` / `@ottava(bassa)` ... `@!ottava`, `@quindicesima` ... `@!quindicesima`, `@8va` ... `@!8va`
 (**the end is REQUIRED**, and **it repeats the name the span was opened with** — `@8va` ... `@!15ma` is
 an error; `@loco` is retired),
-trill spanner `@startTrillSpan` ... `@stopTrillSpan`, 15ma `@quindicesima` / `@quindicesima(bassa)`,
+trill spanner `@trillSpan` ... `@!trillSpan`, 15ma `@quindicesima` / `@quindicesima(bassa)`,
 pedals `@sustain` ... `@!sustain`, `@sostenuto` ... `@!sostenuto`, `@unaCorda` ... `@!unaCorda`
 (`@treCorde` is the same release written as the word the Text style prints) — one word each,
 LilyPond's own names, taking NO argument (`@ped`, `@ped(off)`, `@sost(off)`, `@una(corda)` do not exist).

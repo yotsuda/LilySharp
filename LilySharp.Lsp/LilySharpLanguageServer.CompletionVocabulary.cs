@@ -4535,7 +4535,7 @@ public sealed partial class LilySharpLanguageServer
     /// search that read "tril → 4 names" turned into "trill → 2 placements" and
     /// then back into "trills → 2 names". A name being complete does not mean the
     /// user has finished typing it: 'trill' is also a prefix of nothing, but a
-    /// substring of pralltriller, startTrillSpan and stopTrillSpan.
+    /// substring of pralltriller and trillSpan.
     ///
     /// The two kinds coexist because they edit different ranges: a placement item
     /// carries an explicit empty TextEdit range at the caret (it appends '.up'),
@@ -4673,7 +4673,7 @@ public sealed partial class LilySharpLanguageServer
     /// <summary>
     /// Incremental search over the annotation list: an item survives if the typed
     /// text appears ANYWHERE in its name or search terms, so "ill" finds
-    /// startTrillSpan and "corda" finds unaCorda.
+    /// trillSpan and "corda" finds unaCorda.
     /// </summary>
     /// <remarks>
     /// The editor cannot do this. Its suggest widget matches at word starts, and
@@ -4715,7 +4715,7 @@ public sealed partial class LilySharpLanguageServer
     /// Widens what <see cref="MatchAnywhere"/> searches: the label plus the words
     /// from <see cref="ExtraSearchTerms"/>. Nothing is derived from the label
     /// itself — a substring search already reaches every part of it ("ill" finds
-    /// startTrillSpan), so only words that are NOT in the name need listing.
+    /// trillSpan), so only words that are NOT in the name need listing.
     /// Applied to the whole list rather than to chosen items: no annotation is a
     /// special case.
     /// </summary>
@@ -4787,7 +4787,7 @@ public sealed partial class LilySharpLanguageServer
         var items = new List<CompletionItem>();
         foreach (var item in GetArticulationCompletions().Items)
         {
-            if (LilySharp.Core.Svg.Model.MusicMarkItem.ParseSpanEndName(item.Label) is null)
+            if (!LilySharp.Core.Svg.Model.MusicMarkItem.IsSpanEndName(item.Label))
                 continue;
             bool isOpen = item.Label == open;
             items.Add(new CompletionItem
@@ -4815,15 +4815,17 @@ public sealed partial class LilySharpLanguageServer
             if (c == '}') depth++;
             else if (c == '{' && depth-- == 0) break;
         }
-        var open = new Dictionary<LilySharp.Core.Svg.Model.MusicMarkType, (string Name, int At)>();
+        // Keyed by the family's stop; the trill spanner, not a mark, by its own name.
+        var open = new Dictionary<string, (string Name, int At)>(StringComparer.Ordinal);
         foreach (System.Text.RegularExpressions.Match m in
                  System.Text.RegularExpressions.Regex.Matches(text[start..Math.Min(offset, text.Length)], @"@(!?)([A-Za-z0-9]+)"))
         {
             if (start + m.Index + m.Length >= offset)
                 continue;                                  // the name being typed at the caret
             string name = m.Groups[2].Value;
-            if (LilySharp.Core.Svg.Model.MusicMarkItem.ParseSpanEndName(name) is not { } end
-                || end == LilySharp.Core.Svg.Model.MusicMarkType.HairpinStop)
+            string? end = name == LilySharp.Core.Svg.Model.MusicMarkItem.TrillSpanName ? name
+                : LilySharp.Core.Svg.Model.MusicMarkItem.ParseSpanEndName(name)?.ToString();
+            if (end is null || end == nameof(LilySharp.Core.Svg.Model.MusicMarkType.HairpinStop))
                 continue;
             if (m.Groups[1].Value == "!") open.Remove(end);
             else open[end] = (name, m.Index);
@@ -4979,10 +4981,9 @@ public sealed partial class LilySharpLanguageServer
                 new CompletionItem { Label = "8vb", Kind = CompletionItemKind.Value, Detail = "Ottava bracket down - the printed spelling of @ottava(bassa); ends at @!8vb", SortText = "4ottava.bassa.8vb" },
                 new CompletionItem { Label = "15ma", Kind = CompletionItemKind.Value, Detail = "Quindicesima bracket up - the printed spelling of @quindicesima; ends at @!15ma", SortText = "4quindicesima.15ma" },
                 new CompletionItem { Label = "15mb", Kind = CompletionItemKind.Value, Detail = "Quindicesima bracket down - the printed spelling of @quindicesima(bassa); ends at @!15mb", SortText = "4quindicesima.bassa.15mb" },
-                // One word per end, as in LilyPond. (The '@trillSpan(start)'
-                // spelling was a second way to say the same thing; it is gone.)
-                new CompletionItem { Label = "startTrillSpan", Kind = CompletionItemKind.Value, Detail = "Start trill spanner", SortText = "4startTrillSpan" },
-                new CompletionItem { Label = "stopTrillSpan", Kind = CompletionItemKind.Value, Detail = "Stop trill spanner", SortText = "4stopTrillSpan" },
+                // Opened and closed by one name, like every other span (owner's decision
+                // 2026-10-28; until then LilyPond's '@startTrillSpan' / '@stopTrillSpan').
+                new CompletionItem { Label = "trillSpan", Kind = CompletionItemKind.Value, Detail = "Trill spanner (tr + wavy line) - ends at @!trillSpan", SortText = "4trillSpan" },
                 ArgumentStub("feather", "Feathered beam — offers right (accel.), left (rit.)", "4feather"),
 
                 // Pedal markings

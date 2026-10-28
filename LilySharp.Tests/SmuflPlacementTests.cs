@@ -129,7 +129,7 @@ public class SmuflPlacementTests
     [InlineData("Petaluma", 1.36)]
     public void TheTrillLine_RepeatsEveryRepeatOffset(string font, double repeatOffset)
     {
-        var symbols = Symbols(font, "c'4@startTrillSpan d' e' f' | g'1@stopTrillSpan");
+        var symbols = Symbols(font, "c'4@trillSpan d' e' f' | g'1@!trillSpan");
         var elements = symbols.Where(s => s.Kind == "ornament").OrderBy(s => s.Box[0]).Skip(1).ToList();  // past the "tr"
         Assert.True(elements.Count >= 3, $"{font}: {elements.Count} elements");
         for (int i = 1; i < elements.Count; i++)

@@ -147,7 +147,7 @@ internal sealed class SectionCarryValidator : ISharedCollectValidator
             SectionSpanKind.TextSpanner => ("text spanner", "a text spanner (@rit / @accel / @textSpan)", "'@!rit' (or '@!textSpan')", cut),
             SectionSpanKind.Ottava => ("ottava", "an ottava (@ottava / @quindicesima)", "'@!ottava'", cut),
             SectionSpanKind.Pedal => ("pedal", "a pedal (@sustain / @sostenuto / @unaCorda)", "'@!sustain' (or '@!sostenuto' / '@!unaCorda')", cut),
-            SectionSpanKind.Trill => ("trill span", "a trill span (@startTrillSpan)", "'@stopTrillSpan'", cut),
+            SectionSpanKind.Trill => ("trill span", "a trill span (@trillSpan)", "'@!trillSpan'", cut),
             _ => ("hairpin", "a hairpin", "a dynamic", cut),
         };
         // A text spanner's or an ottava's end is the name its span opened with (owner's decision

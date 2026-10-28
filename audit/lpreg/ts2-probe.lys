@@ -5,7 +5,7 @@ part melody
 
 section A {
   melody {
-    voice { s2 } { g4@startTrillSpan g4@startTrillSpan } |
+    voice { s2 } { g4@trillSpan g4@trillSpan } |
   }
 }
 

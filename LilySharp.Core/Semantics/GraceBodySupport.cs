@@ -539,8 +539,8 @@ internal static class GraceBodySupport
     };
 
     /// <summary>
-    /// True for a TRILL SPANNER's start or stop a grace note carries — <c>@startTrillSpan</c>,
-    /// <c>@stopTrillSpan</c>: the bound is the grace column, read off the run, and the grace's
+    /// True for a TRILL SPANNER's start or end a grace note carries — <c>@trillSpan</c>,
+    /// <c>@!trillSpan</c>: the bound is the grace column, read off the run, and the grace's
     /// head and stem are among its supports (session 924; ledger trill.grace.*).
     /// </summary>
     /// <remarks>
@@ -548,7 +548,7 @@ internal static class GraceBodySupport
     ///   bounds and side supports are note columns, a grace's as any.
     /// </remarks>
     internal static bool IsCarriedTrillSpan(SyntaxNode annotation)
-        => annotation is ArticulationSyntax { Name: "startTrillSpan" or "stopTrillSpan" };
+        => annotation is ArticulationSyntax { Name: "trillSpan" } or MusicMarkSyntax { IsSpanEnd: true, Name: "trillSpan" };
 
     /// <summary>
     /// True for an OTTAVA's start or stop a grace note carries — <c>@ottava</c>,

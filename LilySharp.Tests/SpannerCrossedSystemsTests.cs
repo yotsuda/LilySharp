@@ -104,7 +104,7 @@ public class SpannerCrossedSystemsTests
 
     private static string TrillBook()
     {
-        string music = Bars(24, b => Cell(b, "c'4 d'@startTrillSpan e' f'", "c'4 d'@stopTrillSpan e' f'"));
+        string music = Bars(24, b => Cell(b, "c'4 d'@trillSpan e' f'", "c'4 d'@!trillSpan e' f'"));
         return $$"""
             octave absolute
             time 4/4
@@ -140,8 +140,8 @@ public class SpannerCrossedSystemsTests
     [InlineData("hairpin", "@f", "")]
     [InlineData("hairpin", "@cresc", "")]
     [InlineData("hairpin", "@f", "@ff")]
-    [InlineData("trill", "@stopTrillSpan", "")]
-    [InlineData("trill", "@startTrillSpan", "")]
+    [InlineData("trill", "@!trillSpan", "")]
+    [InlineData("trill", "@trillSpan", "")]
     [InlineData("volta", "[1. B]", "[1-2. B]")]
     [InlineData("volta", "[1. B] :| [2. C]", "B C")]
     [InlineData("volta", "[2. C]", "[2. C] break")]

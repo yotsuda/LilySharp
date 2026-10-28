@@ -48,7 +48,7 @@ public sealed record TrillSpannerItem(
     // outside-staff collision pass instead. Same field, same reason, as
     // DynamicItem.VoiceIndex.
     int VoiceIndex = 0,
-    // The direction the WRITER forced with @startTrillSpan.up/.down (LilyPond's
+    // The direction the WRITER forced with @trillSpan.up/.down (LilyPond's
     // ^\startTrillSpan / _\startTrillSpan): +1 / −1, or 0 when unforced — the engraver
     // then falls to the voice default (TrillSpanner is a direction-polyphonic grob, so
     // an even voice's trills sit BELOW) and lastly the grob's own UP.

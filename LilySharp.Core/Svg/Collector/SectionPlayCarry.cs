@@ -83,7 +83,7 @@ public enum SectionSpanKind
     /// <summary>A piano pedal <c>@sustain</c> / <c>@sostenuto</c> / <c>@unaCorda</c> … its
     /// release (or a re-pedalling, which closes it).</summary>
     Pedal,
-    /// <summary>A trill spanner <c>@startTrillSpan</c> … <c>@stopTrillSpan</c> (or the next
+    /// <summary>A trill spanner <c>@trillSpan</c> … <c>@!trillSpan</c> (or the next
     /// start, which closes it).</summary>
     Trill,
 }

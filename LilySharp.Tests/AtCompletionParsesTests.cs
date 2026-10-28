@@ -1,4 +1,4 @@
-﻿// Lily# - Music notation compiler
+// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -252,10 +252,10 @@ public class AtCompletionParsesTests
     /// matcher cannot do this, which is why the server filters.
     /// </summary>
     [Theory]
-    [InlineData("start", "startTrillSpan")]      // prefix
-    [InlineData("span", "startTrillSpan")]       // camelCase hump
-    [InlineData("ill", "startTrillSpan")]        // mid-word — the case that fails elsewhere
-    [InlineData("rill", "stopTrillSpan")]
+    [InlineData("trillS", "trillSpan")]          // prefix
+    [InlineData("span", "trillSpan")]            // camelCase hump
+    [InlineData("ill", "trillSpan")]             // mid-word — the case that fails elsewhere
+    [InlineData("rill", "pralltriller")]
     [InlineData("corda", "unaCorda")]
     [InlineData("orde", "treCorde")]
     [InlineData("head", "notehead")]
@@ -340,7 +340,7 @@ public class AtCompletionParsesTests
         var partial = LabelsFor("c4@tril");
         Assert.Contains("trill", partial);
         Assert.Contains("pralltriller", partial);
-        Assert.Contains("startTrillSpan", partial);
+        Assert.Contains("trillSpan", partial);
         Assert.DoesNotContain(".up", partial);          // not a complete name yet
 
         var complete = LabelsFor("c4@trill");
@@ -348,11 +348,10 @@ public class AtCompletionParsesTests
         Assert.Contains(".down", complete);
         Assert.Contains("trill", complete);             // …and so is everything still matching
         Assert.Contains("pralltriller", complete);
-        Assert.Contains("startTrillSpan", complete);
-        Assert.Contains("stopTrillSpan", complete);
+        Assert.Contains("trillSpan", complete);
 
         var longer = LabelsFor("c4@trills");
-        Assert.Contains("startTrillSpan", longer);
+        Assert.Contains("trillSpan", longer);
         Assert.DoesNotContain("trill", longer);         // 'trills' is not in 'trill'
     }
 

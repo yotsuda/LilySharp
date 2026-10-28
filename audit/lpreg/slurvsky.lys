@@ -10,8 +10,8 @@ section A {
   melody {
     f'8@text("rit").up( c''8 f'' c''' f''') r8 r4 |
     c'''2( c''2 |
-    g'1)~@startTrillSpan |
-    g'1@stopTrillSpan |
+    g'1)~@trillSpan |
+    g'1@!trillSpan |
     g'1(@f |
     g1) |
   }

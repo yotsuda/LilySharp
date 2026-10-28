@@ -8177,7 +8177,7 @@
       "category": "plain",
       "state": "skip",
       "claim": "\\pitchedTrill の補助音がタイの未終端警告を誘発しない(c1~ の~は補助音 d でなく次の c1 に繋がる)",
-      "notes": "skip: \\pitchedTrill(トリル補助音を括弧付き音符で示す)綴りなし=補助音が居ないと claim(タイが補助音を飛び越える)の枠が書けない。@startTrillSpan/@stopTrillSpan 自体は実装済(trill-spanner fixture)。タイの半分(c1~ c1 の素通し)は自明に成立"
+      "notes": "skip: \\pitchedTrill(トリル補助音を括弧付き音符で示す)綴りなし=補助音が居ないと claim(タイが補助音を飛び越える)の枠が書けない。@trillSpan/@!trillSpan 自体は実装済(trill-spanner fixture)。タイの半分(c1~ c1 の素通し)は自明に成立"
     },
     "tie-semi-single.ly": {
       "category": "scheme",
@@ -8373,7 +8373,7 @@
       "category": "plain",
       "state": "fixed",
       "claim": "trill spanner の向きは ^/_ で強制でき、\\voiceTwo の既定 DOWN より優先される",
-      "notes": "起票時: LS の trill spanner は常時 UP・@startTrillSpan.down は silent 無視。**fixed 第69号(第124S第4便)**: 修理5枚 ⑴**pairing が LP の字面でなかった**——連続 start は pendingStart を上書き=前の spanner が無警告で消えていた(本書は start×4 無 stop で3本消失)→LP の ender 規則(scheme-engravers.scm:1809-1814=新 start/stop が走行中 spanner を現在列で終端・右bound=新startの列)に書換 ⑵.up/.down 配線(ForcedAbove→TrillSpannerItem.Direction。event の direction が voice 既定に優先=:1818-1820) ⑶**voice 既定 DOWN**(TrillSpanner ∈ direction-polyphonic-grobs=music-functions.scm:617-634 で裏取り。engraver で一度だけ解決し layout.Direction に載せ全消費者が読む) ⑷**DOWN 側 aligned_side+下側 stacker 参加**——AlignedSideLineY を dir 鏡映(facing profile/column down skyline/staff床−2/dir符号)・StackBelowStaff に priority50 の trill 置きを追加(profile は上下共有の TrillProfileSkylines=綴り1本) ⑸engraver が非primary voice の item を layout の item 枠(=primary枠)で index→voice-2 trill が範囲外 guard で全滅+終端が小節末 fallback(「単独\\voiceTwo の枠」の実体)→VoiceItemX/VoiceItemCount(voice の timing で X を引く)。照合: **tr 4本の Y が LP 桁一致**(+9.6/−2.55/+9.6/+11.564=4本目は下側 stacker の積みまで一致)・wave Y 一致(+9.0/−3.15/+9.0/+10.964)・**X も桁一致**(9.24/12.24/15.24/18.24)。twin=audit lys+scratch\\lpreg\\trillsdir-lp.{ly,svg}。観測者=TrillSpannerDirectionTests。snapshot 0枚(単声=UP・primary=X恒等)。札: ⑴LP の right-neighbor/adjust-on-neighbor(隣接 trill への右端詰め)未読 ⑵voice 既定は小節粒度(span 実届 onset ゲート未配線=stamp と同族の近似) ⑶'-'(強制中立)は裸と同扱い"
+      "notes": "起票時: LS の trill spanner は常時 UP・@trillSpan.down は silent 無視。**fixed 第69号(第124S第4便)**: 修理5枚 ⑴**pairing が LP の字面でなかった**——連続 start は pendingStart を上書き=前の spanner が無警告で消えていた(本書は start×4 無 stop で3本消失)→LP の ender 規則(scheme-engravers.scm:1809-1814=新 start/stop が走行中 spanner を現在列で終端・右bound=新startの列)に書換 ⑵.up/.down 配線(ForcedAbove→TrillSpannerItem.Direction。event の direction が voice 既定に優先=:1818-1820) ⑶**voice 既定 DOWN**(TrillSpanner ∈ direction-polyphonic-grobs=music-functions.scm:617-634 で裏取り。engraver で一度だけ解決し layout.Direction に載せ全消費者が読む) ⑷**DOWN 側 aligned_side+下側 stacker 参加**——AlignedSideLineY を dir 鏡映(facing profile/column down skyline/staff床−2/dir符号)・StackBelowStaff に priority50 の trill 置きを追加(profile は上下共有の TrillProfileSkylines=綴り1本) ⑸engraver が非primary voice の item を layout の item 枠(=primary枠)で index→voice-2 trill が範囲外 guard で全滅+終端が小節末 fallback(「単独\\voiceTwo の枠」の実体)→VoiceItemX/VoiceItemCount(voice の timing で X を引く)。照合: **tr 4本の Y が LP 桁一致**(+9.6/−2.55/+9.6/+11.564=4本目は下側 stacker の積みまで一致)・wave Y 一致(+9.0/−3.15/+9.0/+10.964)・**X も桁一致**(9.24/12.24/15.24/18.24)。twin=audit lys+scratch\\lpreg\\trillsdir-lp.{ly,svg}。観測者=TrillSpannerDirectionTests。snapshot 0枚(単声=UP・primary=X恒等)。札: ⑴LP の right-neighbor/adjust-on-neighbor(隣接 trill への右端詰め)未読 ⑵voice 既定は小節粒度(span 実届 onset ゲート未配線=stamp と同族の近似) ⑶'-'(強制中立)は裸と同扱い"
     },
     "trill-spanner-grace.ly": {
       "category": "scheme",
@@ -8387,7 +8387,7 @@
       "category": "plain",
       "state": "skip",
       "claim": "同名同オクターブ連続の pitched trill でもトリル音の臨時記号が全部出る",
-      "notes": "skip: \\pitchedTrill 綴りなし(tie-pitched-trill と同ゲート)=トリル音(括弧付き補助音)の臨時記号が主張の核。@startTrillSpan 自体は実装済",
+      "notes": "skip: \\pitchedTrill 綴りなし(tie-pitched-trill と同ゲート)=トリル音(括弧付き補助音)の臨時記号が主張の核。@trillSpan 自体は実装済",
       "seeAlso": "tie-pitched-trill.ly"
     },
     "trill-spanner-pitched-forced.ly": {
@@ -8408,7 +8408,7 @@
     "trill-spanner-terminated-implicitly.ly": {
       "category": "plain",
       "state": "fixed",
-      "claim": "@stopTrillSpan を書かなければ trill spanner は score 末尾まで走る",
+      "claim": "@!trillSpan を書かなければ trill spanner は score 末尾まで走る",
       "notes": "fixed(第59号): 旧 LS は未終端 start を PairTrillSpannerEvents のループ末尾で silent drop(trill が丸ごと消える・probe で2枚目に ink ゼロ)。port = Trill_spanner_engraver の finalize(scheme-engravers.scm:1797-1860・open spanner の右 bound を currentCommandColumn=終端の非音楽列へ)——「(小節数, item 0) の仮想 stop」に符号化すると既存 to-barline 枝(endsOnMeasureStart は EndMeasureIndex <= measureLayouts.Length を許す)にそのまま乗る。照合: tr=頭+0.98・終端=最終小節線−1.75・波間隔1.0 が LP と一致(to-barline 本と同じ項=LP 実測で両本とも gap 1.75)。CaptureScoreContent(measureCount) 化(3呼び手)。旧挙動への釘テスト NoStopEvent_NoPairing を LP 主張(RunsToEndOfScore)に書換。snapshot 0枚。twin=scratch\\lpreg\\trillimpl{,-lp}一式"
     },
     "trill-spanner-to-barline.ly": {

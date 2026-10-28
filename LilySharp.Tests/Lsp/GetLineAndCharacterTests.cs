@@ -39,7 +39,7 @@ public class GetLineAndCharacterTests
     [InlineData("a\r\nb\nc\rd\r\n")]              // mixed, trailing break
     [InlineData("\n\n\n")]                        // empty lines
     [InlineData("\r\n\r\n")]
-    [InlineData("c'4@startTrillSpan d'4 |\r\n  e'4 f'4 |\n")]
+    [InlineData("c'4@trillSpan d'4 |\r\n  e'4 f'4 |\n")]
     public void AgreesWithTheScanFromZero_AtEveryOffset(string text)
     {
         for (int position = -2; position <= text.Length + 2; position++)

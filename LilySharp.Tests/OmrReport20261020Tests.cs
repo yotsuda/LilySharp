@@ -74,7 +74,7 @@ public class OmrReport20261020Tests
     public void Item2_ALowerStaffsTrillSpanner_IsBoundByItsOwnNotes()
     {
         var (score, layout) = Render(GrandStaffHead
-            + "  lh { c4 d4@startTrillSpan e4 f4@stopTrillSpan | g,2@startTrillSpan a,4 b,4@stopTrillSpan | c1 | }\n"
+            + "  lh { c4 d4@trillSpan e4 f4@!trillSpan | g,2@trillSpan a,4 b,4@!trillSpan | c1 | }\n"
             + GrandStaffTail);
         var lh = score.StaffGroups[0].Staves[1].PrimaryVoice.Measures;
         var trills = layout.TrillSpannerLayouts.OrderBy(t => t.StartMeasureIndex).ToList();
@@ -128,8 +128,8 @@ public class OmrReport20261020Tests
             "octave absolute\ntime 3/4\nkey g major\npart p1 { clef bass }\nsection Piece {\n  p1 {\n" +
             "    d,8. a,16 a,8 bes,8 e,16 r16 d,16 e,16 |\n    d,16 e,16 b,8 c4 b,16 a,16 b,8 |\n" +
             "    tuplet 3/2 { c8 b,8 c8 } b,4. b,8 |\n" +
-            "    a,8 b,16 c16 b,8. d,16 c,16 b,,16@startTrillSpan a,,8 |\n" +
-            "    a,,8 g,,16 a,,16@stopTrillSpan b,,4. a,,8 |\n    r2. | g,,2. |\n" +
+            "    a,8 b,16 c16 b,8. d,16 c,16 b,,16@trillSpan a,,8 |\n" +
+            "    a,,8 g,,16 a,,16@!trillSpan b,,4. a,,8 |\n    r2. | g,,2. |\n" +
             "    r16 fis,,16 g,,16 a,,16 b,,8 c,16 fis,,16 c,4 |\n    b,,4 a,,8. b,,16 a,,8. g,,16 |\n" +
             "    f,,4 e,,8 c,8 b,,4 |\n    a,,8 e,8 fis,2 |\n  }\n}\nform { ~Piece }\nscore { staff p1 \"Staff\" }\n");
         Assert.True(SystemOf(layout, 3) != SystemOf(layout, 4), "the trill crosses a line break");

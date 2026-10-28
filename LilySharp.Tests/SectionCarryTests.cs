@@ -358,8 +358,8 @@ public class SectionCarryTests
     {
         const string src = """
             part vn {
-              section C { c'''4@rit d e f@ottava | g4@sustain a b@startTrillSpan c || }
-              section D { c'''4@!rit d@!ottava e@!sustain f@stopTrillSpan | }
+              section C { c'''4@rit d e f@ottava | g4@sustain a b@trillSpan c || }
+              section D { c'''4@!rit d@!ottava e@!sustain f@!trillSpan | }
             }
             form { C D }
             score { staff vn }
@@ -387,8 +387,8 @@ public class SectionCarryTests
         const string src = """
             part vn {
               section C { c'''4@rit d e f@ottava || }
-              section D { g4@sustain a b c@startTrillSpan || }
-              section E { c'4@!rit d@!ottava e@!sustain f@stopTrillSpan | }
+              section D { g4@sustain a b c@trillSpan || }
+              section E { c'4@!rit d@!ottava e@!sustain f@!trillSpan | }
             }
             form { C D E }
             score { staff vn }

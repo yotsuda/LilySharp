@@ -103,7 +103,7 @@ public class OmrRequestsLate20261020Tests
             Assert.Equal(2, systems.Length);
             return systems[1].Y - systems[0].Y;
         }
-        double with = Gap("@startTrillSpan");
+        double with = Gap("@trillSpan");
         double without = Gap("");
         // The trill's line stands well over a staff space above the a's head.
         Assert.True(System.Math.Abs(with) > System.Math.Abs(without) + 0.5,
@@ -138,7 +138,7 @@ public class OmrRequestsLate20261020Tests
             var staves = layout.AllSystems[0].StaffGroups.SelectMany(g => g.Staves).ToList();
             return staves[0].Y - staves[1].Y;
         }
-        double with = Gap("@startTrillSpan", "@stopTrillSpan");
+        double with = Gap("@trillSpan", "@!trillSpan");
         double without = Gap("", "");
         Assert.True(System.Math.Abs(with) > System.Math.Abs(without) + 0.5,
             $"the staves stand {with:F3} apart with the trill, {without:F3} without");

@@ -14,6 +14,8 @@ All notable changes to the Lily# VS Code extension are documented here.
   `@!rit` that ends it changes with it.
 - **Ctrl+Shift+Up / Down on `@8va` steps it** through `@15mb` `@8vb` `@8va` `@15ma`, and the `@!8va`
   that closes it changes with it.
+- **The trill span is `@trillSpan … @!trillSpan`** (was `@startTrillSpan` / `@stopTrillSpan`):
+  `@!` completion offers it, the open one first.
 
 ### Checks
 

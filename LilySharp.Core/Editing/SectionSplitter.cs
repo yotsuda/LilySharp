@@ -782,7 +782,7 @@ public static class SectionSplitter
             ["textSpan"] = "text spanner", ["rit"] = "text spanner", ["accel"] = "text spanner",
             ["rall"] = "text spanner",
             ["ottava"] = "ottava", ["quindicesima"] = "ottava",
-            ["startTrillSpan"] = "trill span", ["stopTrillSpan"] = "trill span",
+            ["trillSpan"] = "trill span",
             ["sustain"] = "sustain pedal", ["sostenuto"] = "sostenuto pedal",
             ["unaCorda"] = "una corda pedal", ["treCorde"] = "una corda pedal",
             ["phrasingSlur"] = "phrasing slur",
@@ -847,7 +847,7 @@ public static class SectionSplitter
                 }
                 if (!SpanFamilies.TryGetValue(name, out var family))
                     continue;
-                if (end || name is "stopTrillSpan" or "treCorde")
+                if (end || name is "treCorde")
                     spans.Remove(family);
                 else
                     spans[family] = (name, t.Span.Start);

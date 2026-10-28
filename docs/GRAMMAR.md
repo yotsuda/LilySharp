@@ -2747,7 +2747,7 @@ TwoDigitFret   = Digit , Digit ;                                 (* 10-15 *)
                      was opened with, LYS4032 otherwise]
                      (* an end is REQUIRED here too; '@loco' is retired — it named a
                         mark nothing printed, and LilyPond has no such command either *)
-                     @startTrillSpan … @stopTrillSpan ,
+                     @trillSpan … @!trillSpan ,
                      @sustain … @!sustain , @sostenuto … @!sostenuto ,
                      @unaCorda … @!unaCorda   [@treCorde = @!unaCorda, the printed word]
                      (* a pedal CHANGE is the start again while the pedal is down:
@@ -2793,7 +2793,7 @@ Grace          = ( 'grace' | 'acciaccatura' | 'appoggiatura' | 'afterGrace' ) , 
                     spanner's start or end '@rit' '@!rit' (session 921), and a pedal's
                     engage or release '@sustain' '@!sustain' (and the sostenuto and una
                     corda), bound and supported by the grace column (session 922), and a
-                    trill spanner's '@startTrillSpan' '@stopTrillSpan' (session 924), and an
+                    trill spanner's '@trillSpan' '@!trillSpan' (session 924), and an
                     ottava's '@ottava' '@!ottava' (session 925: a stop on a grace ends the
                     span before it), and a phrasing slur's '@phrasingSlur'
                     '@!phrasingSlur' (session 926), and a '@courtesy' accidental in

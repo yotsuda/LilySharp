@@ -814,11 +814,15 @@ public sealed partial class MeasureCollector
                 }
                 else
                 {
-                    // Check for trill spanner start/stop
+                    // The trill spanner's START, '@trillSpan' (its end is '@!trillSpan', read
+                    // with the other terminators below). Until 2026-10-28 the pair was
+                    // '@startTrillSpan' / '@stopTrillSpan', LilyPond's two words; it is now
+                    // written like every other span, opened and closed by one name (owner's
+                    // decision 2026-10-28).
                     // LILYPOND-REF: scm/scheme-engravers.scm — \startTrillSpan / \stopTrillSpan
                     // Names are case-sensitive (owner's decision 2026-09-27).
                     var nameText = articulationSyntax.Name;
-                    if (nameText == "startTrillSpan")
+                    if (nameText == "trillSpan")
                     {
                         // .up/.down forces the spanner's direction — LilyPond's
                         // ^\startTrillSpan / _\startTrillSpan, which the engraver sets
@@ -830,10 +834,6 @@ public sealed partial class MeasureCollector
                             true => 1, false => -1, null => 0,
                         };
                         _trillSpannerEvents.Add((true, measureIndex, itemIndex, articulationSyntax.SourceStart, _v.Cursor.StaffIndex, _v.Cursor.VoiceIndex, forcedDir));
-                    }
-                    else if (nameText == "stopTrillSpan")
-                    {
-                        _trillSpannerEvents.Add((false, measureIndex, itemIndex, articulationSyntax.SourceStart, _v.Cursor.StaffIndex, _v.Cursor.VoiceIndex, 0));
                     }
                     else if (nameText == "courtesy")
                     {
@@ -886,11 +886,13 @@ public sealed partial class MeasureCollector
             }
             else if (articulation is MusicMarkSyntax markSyntax)
             {
-                // Compound mark syntax. The trill spanner is NOT here: it is
-                // @startTrillSpan / @stopTrillSpan, one word each, exactly as in
-                // LilyPond — the '@trillSpan(start)' spelling was a second way to
-                // say the same thing and was dropped.
-                if (markSyntax.IsSpanEnd)
+                // Compound mark syntax, and the terminators '@!X'.
+                if (markSyntax.IsSpanEnd && markSyntax.Name == "trillSpan")
+                {
+                    // The trill spanner's end: an event of the trill pairing, not a mark.
+                    _trillSpannerEvents.Add((false, measureIndex, itemIndex, markSyntax.SourceStart, _v.Cursor.StaffIndex, _v.Cursor.VoiceIndex, 0));
+                }
+                else if (markSyntax.IsSpanEnd)
                 {
                     // '@!X' — the TERMINATOR, read first because the '!' changes what the
                     // name means and every arm below reads names. Only the text spanner has
@@ -1177,7 +1179,7 @@ public sealed partial class MeasureCollector
                 carrySink?.Add(plays.RefusedClose(evt.sourcePosition, SectionSpanKind.Trill, closeFault, evt.measureIndex));
         }
 
-        // A start with no @stopTrillSpan runs to the END OF THE SCORE (it used to
+        // A start with no @!trillSpan runs to the END OF THE SCORE (it used to
         // be dropped without a mark). Encoded as a virtual stop at item 0 of the
         // measure PAST the last one, it rides the existing to-barline branch —
         // the engraver's endsOnMeasureStart allows EndMeasureIndex ==

@@ -165,7 +165,7 @@ public class NameCaseSensitivityTests
     [InlineData("c''4@stemUp d'' e'' f'' | c''4 d'' e'' f'' |", "c''4@stemup d'' e'' f'' | c''4 d'' e'' f'' |")]
     [InlineData("c''4@hammerOn d'' e'' f'' | c''4 d'' e'' f'' |", "c''4@hammeron d'' e'' f'' | c''4 d'' e'' f'' |")]
     [InlineData("c''4@glissando d'' e'' f'' | c''4 d'' e'' f'' |", "c''4@Glissando d'' e'' f'' | c''4 d'' e'' f'' |")]
-    [InlineData("c''4@startTrillSpan d'' e''@stopTrillSpan f'' | c''4 d'' e'' f'' |", "c''4@starttrillspan d'' e''@stoptrillspan f'' | c''4 d'' e'' f'' |")]
+    [InlineData("c''4@trillSpan d'' e''@!trillSpan f'' | c''4 d'' e'' f'' |", "c''4@starttrillspan d'' e''@stoptrillspan f'' | c''4 d'' e'' f'' |")]
     [InlineData("c''4@unaCorda d'' e''@!unaCorda f'' | c''4 d'' e'' f'' |", "c''4@unacorda d'' e''@!unacorda f'' | c''4 d'' e'' f'' |")]
     [InlineData("c''4@phrasingSlur d'' e''@!phrasingSlur f'' | c''4 d'' e'' f'' |", "c''4@phrasingslur d'' e''@!phrasingslur f'' | c''4 d'' e'' f'' |")]
     [InlineData("c''4 d'' e'' f'' | c''4@mark(\"Z\") d'' e'' f'' |", "c''4 d'' e'' f'' | c''4@Mark(\"Z\") d'' e'' f'' |")]

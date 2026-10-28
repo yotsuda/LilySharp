@@ -8965,7 +8965,7 @@
       "score": "TSA",
       "lilypond": 3.55,
       "residual": 0.0,
-      "why": "EXACT. `grace { d16@startTrillSpan }`: the trill starts on the grace column at its quiet level (the low grace reaches nothing up there). Until session 924 the grace's @startTrillSpan was dropped (LYS4020) and the lone @stopTrillSpan closed nothing; TrillSpannerEngraver.VoiceItemX now reads a grace item off the run (ElementCoordinator.GraceColumnAt)."
+      "why": "EXACT. `grace { d16@trillSpan }`: the trill starts on the grace column at its quiet level (the low grace reaches nothing up there). Until session 924 the grace's @trillSpan was dropped (LYS4020) and the lone @!trillSpan closed nothing; TrillSpannerEngraver.VoiceItemX now reads a grace item off the run (ElementCoordinator.GraceColumnAt)."
     },
     "trill.grace.control.staff-to-line": {
       "probe": "grace-trill.ly",
@@ -8979,14 +8979,14 @@
       "score": "TSC",
       "lilypond": 3.55,
       "residual": 0.0,
-      "why": "EXACT. A trill from the c4 that STOPS on a grace (`grace { f16@stopTrillSpan }`): its right bound is the grace column's left edge."
+      "why": "EXACT. A trill from the c4 that STOPS on a grace (`grace { f16@!trillSpan }`): its right bound is the grace column's left edge."
     },
     "trill.grace.high.staff-to-line": {
       "probe": "grace-trill.ly",
       "score": "TSD",
       "lilypond": 7.1,
       "residual": 0.0,
-      "why": "EXACT. From a HIGH grace, `grace { a'16@startTrillSpan }` (LilyPond's a''): a grace stem is UP whatever the pitch, so its tip is the binding support and the line stands 2.055 over the control's (TSE, stem down). The support is the grace column at its own X, its head at the grace's size and its stem by the grace rule (DynamicEngraver.ColumnSupportSkylines)."
+      "why": "EXACT. From a HIGH grace, `grace { a'16@trillSpan }` (LilyPond's a''): a grace stem is UP whatever the pitch, so its tip is the binding support and the line stands 2.055 over the control's (TSE, stem down). The support is the grace column at its own X, its head at the grace's size and its stem by the grace rule (DynamicEngraver.ColumnSupportSkylines)."
     },
     "trill.grace.high.control.staff-to-line": {
       "probe": "grace-trill.ly",
