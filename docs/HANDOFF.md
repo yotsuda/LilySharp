@@ -130,6 +130,8 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 ### 1.1 第1031セッション（2026-10-28・YT-DELL2）
 
 第1030 と同じ会話の続き（記録の枠が詰まったので便を切った）。開始時 full **13467 / 0 / 2**・build 0 エラー・OMR の REQUESTS に `open` なし。作業場所は Lab `sessions/p1031/`。
+- ⚠️ 第1029 は §1 に自分のブロックを持たなかった（第1028 のブロックの中に書いた）＝`-Start p1031` の後で `HandoffArchiveContinuityTests` が継ぎ目を咎めた → ARCHIVE に第287 の型の見出し「第1029 … §1 のブロックは無い」を立てた。**同じ会話で便を続けるときは、便ごとに自分の `### 1.1` を立てる**。
+- **ユーザー「続けて」→ 第1030 の総点検を常設の網にした**: `CompletionTypingAuditTests`（35 か所＋値の位置の一覧の語 1058 個を VS Code の動きで 1 文字ずつ＝取りこぼし 0・3 件の報告の語が歩いた中にあること・`editors/vscode/test/completion-typing.json` が古くないこと＝`LILYSHARP_UPDATE_DOCS=1` で再生成）と npm の `completionTyping.test.ts`（その fixture の語を smart typing で打って書き換え 0）。**補完の一覧が変わったら fixture を再生成する**。毒: `@!` の判定を外す → C# 2 本赤／設定のブロックの門を外す → npm 2 本赤。
 
 ## 以下は第1030セッションの経緯
 
