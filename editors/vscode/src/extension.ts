@@ -835,6 +835,7 @@ export function activate(context: vscode.ExtensionContext) {
         extensionUri: context.extensionUri,
         getClient: () => client,
         isReady: () => clientReady,
+        ensureReady: ensureClientReady,
         log: (msg: string) => outputChannel.appendLine(msg),
         // A candidate's Play (owner's request 2026-10-25) sounds through the document's preview.
         playOnPreview: (uri: vscode.Uri, notes: unknown[]) => {

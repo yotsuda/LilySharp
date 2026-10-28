@@ -53,6 +53,9 @@ export interface AiTransformDeps {
     getClient: () => LanguageClient | undefined;
     /** True once the client has started and is ready to serve requests. */
     isReady: () => boolean;
+    /** Starts the client if nothing has yet (no .lys open — Compose with AI from File > New File…)
+     *  and waits for it. */
+    ensureReady?: () => Promise<void>;
     log: (msg: string) => void;
     /** Plays a note list (lilysharp/playback's) on the open preview of `uri` — its synth, its
      *  sound font, its MIDI output; false when no preview of it is open. */
@@ -211,6 +214,9 @@ function currentUri(uri: vscode.Uri): vscode.Uri {
  * candidate reviewed and accepted as any other.
  */
 async function runCompose(deps: AiTransformDeps): Promise<void> {
+    // Run from File > New File… (owner's request 2026-10-29), nothing may have started the
+    // language server yet: it is started here, as opening a .lys would.
+    await deps.ensureReady?.();
     const client = deps.getClient();
     if (!client || !deps.isReady()) {
         vscode.window.showErrorMessage('Lily#: language server not ready.');

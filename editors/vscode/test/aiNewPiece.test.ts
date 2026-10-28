@@ -67,7 +67,13 @@ describe('a new piece in place of the score', () => {
         // What the notification says is the musician's request, not the instruction to the AI.
         assert.match(transform, /const said = composeAsked \?\? instruction;/);
         const pkg = fs.readFileSync(path.join(__dirname, '..', '..', 'package.json'), 'utf8');
-        assert.match(pkg, /"command": "lilysharp\.composeWithAi",\s*"category": "Lily#",\s*"icon": "\$\(sparkle\)",\s*"title": "Compose with AI…"/);
+        assert.match(pkg, /"command": "lilysharp\.composeWithAi",\s*"category": "Lily#",\s*"icon": "\$\(sparkle\)",\s*"title": "Compose with AI…",\s*"shortTitle": "Lily# Score, Composed with AI…"/);
+        // Found where a piece is begun (owner's request 2026-10-29): File > New File… beside New
+        // Score, the language server started for it when no .lys has started it yet.
+        assert.match(pkg, /"command": "lilysharp\.newScore",\s*"group": "file"\s*\},\s*\{\s*"command": "lilysharp\.composeWithAi",\s*"group": "file"/);
+        assert.match(transform, /async function runCompose\(deps: AiTransformDeps\): Promise<void> \{[\s\S]{0,300}?await deps\.ensureReady\?\.\(\);/);
+        const ext = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
+        assert.match(ext, /ensureReady: ensureClientReady,/);
     });
 });
 

@@ -373,7 +373,8 @@
         "command": "lilysharp.composeWithAi",
         "category": "Lily#",
         "icon": "$(sparkle)",
-        "title": "Compose with AI…"
+        "title": "Compose with AI…",
+        "shortTitle": "Lily# Score, Composed with AI…"
       },
       {
         "command": "lilysharp.previewAiTransform",
@@ -585,6 +586,10 @@
       "file/newFile": [
         {
           "command": "lilysharp.newScore",
+          "group": "file"
+        },
+        {
+          "command": "lilysharp.composeWithAi",
           "group": "file"
         }
       ],

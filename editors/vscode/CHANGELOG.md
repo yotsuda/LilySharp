@@ -23,6 +23,8 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ### AI
 
+- **Compose with AI is in File > New File…**, as "Lily# Score, Composed with AI…" beside "Lily# Score
+  (.lys)": where a piece is begun. It starts the language server itself when no score is open yet.
 - **Copilot's Auto, picked by name, no longer fails every request when it hands one to a model VS
   Code keeps for itself** ("Model gpt-5.6-luna is only available to VS Code core"): the request goes
   on to the automatic pick, as it already did when the model was chosen automatically.
@@ -1853,6 +1855,8 @@ reader is offered its update when a scan is read.
 
 ### AI
 
+- **Compose with AI is in File > New File…**, as "Lily# Score, Composed with AI…" beside "Lily# Score
+  (.lys)": where a piece is begun. It starts the language server itself when no score is open yet.
 - **Copilot now knows the Lily# grammar.** The extension contributes the language spec as a
   Copilot instructions file for `.lys` files, so Copilot Chat, agent mode and inline chat
   (`Ctrl+I` from Copilot's own menus) answer in Lily# instead of guessing LilyPond. Lily#'s own
