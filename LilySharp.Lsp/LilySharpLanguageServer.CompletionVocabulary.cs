@@ -4968,8 +4968,8 @@ public sealed partial class LilySharpLanguageServer
                 new CompletionItem { Label = "textSpan", Kind = CompletionItemKind.Value, InsertText = "textSpan(\"$0\")", InsertTextFormat = InsertTextFormat.Snippet, Detail = "Text spanner with your own word (ends at @!textSpan)", SortText = "4textSpan" },
                 new CompletionItem { Label = "ottava", Kind = CompletionItemKind.Value, Detail = "Ottava bracket up (8va) - ends at @!ottava", SortText = "4ottava" },
                 new CompletionItem { Label = "ottava(bassa)", Kind = CompletionItemKind.Value, Detail = "Ottava bracket down (8vb) - ends at @!ottava", SortText = "4ottava.bassa" },
-                new CompletionItem { Label = "quindicesima", Kind = CompletionItemKind.Value, Detail = "Quindicesima bracket up (15ma) - ends at @!ottava", SortText = "4quindicesima" },
-                new CompletionItem { Label = "quindicesima(bassa)", Kind = CompletionItemKind.Value, Detail = "Quindicesima bracket down (15mb) - ends at @!ottava", SortText = "4quindicesima.bassa" },
+                new CompletionItem { Label = "quindicesima", Kind = CompletionItemKind.Value, Detail = "Quindicesima bracket up (15ma) - ends at @!quindicesima", SortText = "4quindicesima" },
+                new CompletionItem { Label = "quindicesima(bassa)", Kind = CompletionItemKind.Value, Detail = "Quindicesima bracket down (15mb) - ends at @!quindicesima", SortText = "4quindicesima.bassa" },
                 // The printed spellings, which the compiler reads as the same four marks
                 // (MusicMarkItem.ParseMarkName; `8va` lexes as ONE identifier —
                 // Lexer.GluedOttavaSuffixLength). Offered beside the long names as `ho` stands

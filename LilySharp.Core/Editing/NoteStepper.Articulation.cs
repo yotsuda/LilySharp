@@ -68,13 +68,17 @@ public static partial class NoteStepper
             new[] { "fall", "doit" },
             new[] { "breath", "caesura" },
             new[] { "stemDown", "stemUp" },
+            // The ottava's printed spellings, lowest first (owner's request 2026-10-28); the end
+            // that closes the stepped one is renamed with it (Step, SpanNames.EndOf).
+            new[] { "15mb", "8vb", "8va", "15ma" },
         }.Select(g => g.Where(IsSteppable).ToArray()).Where(g => g.Length > 1)];
 
     /// <summary>A name the step may write: one the registry draws, or a plain annotation the
     /// collector consumes by name — <c>@stemUp</c> / <c>@stemDown</c> are a stem's direction, not
     /// an articulation (MeasureCollector reads them; AnnotationNameValidator names them).</summary>
     private static bool IsSteppable(string name)
-        => ArticulationRegistry.IsKnown(name) || AnnotationNameValidator.PlainFeatureNames.Contains(name);
+        => ArticulationRegistry.IsKnown(name) || AnnotationNameValidator.PlainFeatureNames.Contains(name)
+           || Svg.Model.MusicMarkItem.ParseMarkName(name) != null;
 
     /// <summary>The group a mark's name is in, or null: a mark in no group has nothing of its own
     /// to step, so the keys step the note it is written on (<see cref="CarrierOf"/>).</summary>

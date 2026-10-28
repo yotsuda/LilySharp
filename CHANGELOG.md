@@ -6,6 +6,15 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+### Span ends — BREAKING
+
+- `[lang]` **A span is closed by the name it was opened with**: `@8va … @!8va`, `@rit … @!rit`,
+  `@quindicesima … @!quindicesima`, `@ottava(bassa) … @!ottava`. Any name of the family used to close
+  any start (`@8va … @!15ma`, `@rit … @!accel`), as LilyPond's one stop does; that is now an error,
+  LYS4032, whose quick fix writes the opening name. The drawing is unchanged. An unclosed span is
+  told its own end; MusicXML import writes it. Ctrl+Shift+Up / Down on `@8va` steps the printed
+  spellings (15mb, 8vb, 8va, 15ma) and renames the `@!8va` that closes it.
+
 ### Checks
 
 - `[lang]` **`check` — a pragma that turns a check on.** `check voiceLeading s a t b` compares the

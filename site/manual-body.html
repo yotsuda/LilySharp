@@ -350,7 +350,7 @@ score { staff vc }</pre>
   <table class="g">
     <tr><th>Opens</th><th>Closes</th></tr>
     <tr><td><code>@textSpan("poco rit.")</code>, or the sugar <code>@rit @accel @rall</code></td><td><code>@!textSpan</code> / <code>@!rit</code> …</td></tr>
-    <tr><td><code>@ottava</code>, <code>@ottava(bassa)</code>, <code>@quindicesima</code></td><td><code>@!ottava</code> closes any of them</td></tr>
+    <tr><td><code>@ottava</code>, <code>@ottava(bassa)</code>, <code>@quindicesima</code></td><td>the same name: <code>@!ottava</code>, <code>@!quindicesima</code> (<code>@8va</code> … <code>@!8va</code>)</td></tr>
     <tr><td><code>@startTrillSpan</code></td><td><code>@stopTrillSpan</code></td></tr>
     <tr><td><code>@sustain</code>, <code>@sostenuto</code>, <code>@unaCorda</code></td><td><code>@!sustain</code>, <code>@!sostenuto</code>, <code>@!unaCorda</code> (<code>@treCorde</code> is the last one's release, spelled as the printed word)</td></tr>
   </table>
@@ -1444,7 +1444,7 @@ ppp pp p mp mf ff fff</pre>
     <tr><td><code>fonts "Georgia"</code></td><td><code>fonts</code> binds a face per text role, so it takes a block…</td></tr>
     <tr><td><code>paperWidth 210 mm</code></td><td><code>mm</code> is a unit, and a unit is spelled glued to its number: <code>210mm</code>, one word.</td></tr>
     <tr><td><code>override Beam.thickness = 2</code></td><td>'Beam.thickness' is not supported in this version of Lily# — this 'override' would change nothing. Supported: NoteHead.color, NoteHead.transparent, Stem.color, Stem.transparent. …</td></tr>
-    <tr><td><code>c4@rit d e f</code> (never closed)</td><td>a text spanner is never closed, so neither its word nor its line is drawn; write '@!rit' (or '@!textSpan') on the note it should reach…</td></tr>
+    <tr><td><code>c4@rit d e f</code> (never closed)</td><td>a text spanner is never closed, so neither its word nor its line is drawn; write '@!rit' on the note it should reach…</td></tr>
     <tr><td><code>c4~ d4</code></td><td>the note after a tie '~' does not repeat the tied pitch; a tie joins two notes of the same pitch - use a slur '( )' to connect different pitches</td></tr>
     <tr><td>a slur crossing a cue edge</td><td>a slur cannot cross a cue boundary…</td></tr>
     <tr><td><code>c4@upbow</code></td><td>Unknown annotation '@upbow' — it is ignored. Names are case-sensitive: write '@upBow'.</td></tr>

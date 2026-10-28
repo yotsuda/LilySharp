@@ -1505,6 +1505,11 @@ public static class DiagnosticCodes
     /// spellings (<c>@dead</c>, <c>@notehead(cross)</c>), the mistake that prompted it.</summary>
     public const string CrossStaffWithoutPartner = "LYS4031";
 
+    /// <summary>Error: a span end whose name is not the one the span was opened with —
+    /// <c>@8va … @!15ma</c> (owner's decision 2026-10-28: a span is closed by its own name;
+    /// <c>Semantics.SpanNames</c>). The quick fix writes the start's name.</summary>
+    public const string SpanEndName = "LYS4032";
+
     /// <summary>A slur, phrasing slur, tie or hairpin — and, since 2026-09-29, a text spanner,
     /// ottava, pedal or trill span — that breaks the SECTION CARRY RULE
     /// (owner's decisions, 2026-09-28): a span open when a section ends is carried into the

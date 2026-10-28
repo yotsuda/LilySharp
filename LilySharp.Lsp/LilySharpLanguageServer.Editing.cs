@@ -374,6 +374,8 @@ public sealed partial class LilySharpLanguageServer
                     actions.Add(restRun);
                 if (MissingBarLineAction(doc, uri, diagnostic) is { } barLines)
                     actions.Add(barLines);
+                if (SpanEndNameAction(doc, uri, diagnostic) is { } spanEnd)
+                    actions.Add(spanEnd);
                 if (ChordToneAction(doc, uri, diagnostic) is { } chordName)
                     actions.Add(chordName);
                 if (TabOctaveAction(doc, uri, diagnostic) is { } tabOctave)
@@ -595,6 +597,26 @@ public sealed partial class LilySharpLanguageServer
         var edits = offsets.Select(o => EditOf(doc.Text, o, o, " |")).ToArray();
         return QuickFix(offsets.Count == 1 ? "Write the missing bar line" : $"Write the {offsets.Count} missing bar lines",
             doc, uri, diagnostic, edits);
+    }
+
+    /// <summary>LYS4032's fix: the end takes the name its span was opened with (owner's decision
+    /// 2026-10-28, <see cref="LilySharp.Core.Semantics.SpanNames"/>) — <c>@!15ma</c> after
+    /// <c>@8va</c> becomes <c>@!8va</c>.</summary>
+    private static CodeAction? SpanEndNameAction(Document doc, Uri uri, CoreDiagnostic diagnostic)
+    {
+        if (diagnostic.Code != DiagnosticCodes.SpanEndName)
+            return null;
+        foreach (var mark in doc.Tree.GetNodes<MusicMarkSyntax>())
+        {
+            if (LilySharp.Core.Semantics.SpanNames.Of(mark) is not { IsEnd: true } end
+                || end.NameToken.Span.Start != diagnostic.Span.Start)
+                continue;
+            if (LilySharp.Core.Semantics.SpanNames.StartOf(mark) is not { } start)
+                return null;
+            return QuickFix($"Write '@!{start.Name}'", doc, uri, diagnostic,
+                [EditOf(doc.Text, end.NameToken.Span.Start, end.NameToken.Span.End, start.Name)]);
+        }
+        return null;
     }
 
     /// <summary>LYS5004's fix: write the octave the advice names on the tab item (owner's

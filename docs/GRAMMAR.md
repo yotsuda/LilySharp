@@ -2742,7 +2742,9 @@ TwoDigitFret   = Digit , Digit ;                                 (* 10-15 *)
    - Feathered beam: c16@feather(right) … (accel) / @feather(left) (rit)
    - Spanners:       @textSpan("poco rit.") … @!textSpan   [sugar: @rit @accel @rall,
                      each ended by @!rit / @!accel / @!rall — an end is REQUIRED]
-                     @ottava(…) @quindicesima(…) … @!ottava ,  [labels: 8va/15ma; @…(bassa) = down]
+                     @ottava(…) … @!ottava, @quindicesima(…) … @!quindicesima, @8va … @!8va
+                     [labels: 8va/15ma; @…(bassa) = down; a span is closed by the name it
+                     was opened with, LYS4032 otherwise]
                      (* an end is REQUIRED here too; '@loco' is retired — it named a
                         mark nothing printed, and LilyPond has no such command either *)
                      @startTrillSpan … @stopTrillSpan ,

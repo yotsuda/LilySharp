@@ -701,7 +701,7 @@ public class MusicXmlRoundTripTests
             part rh { clef treble }
             part lh { clef bass }
             section A {
-              rh { c'''4@quindicesima d''' e''' f'''@!ottava@p | g'''1 | g'''1 | }
+              rh { c'''4@quindicesima d''' e''' f'''@!quindicesima@p | g'''1 | g'''1 | }
               lh { c'4@f@ottava(bassa) d' e' f'@!ottava | g1@sustain | c'1@!sustain | }
             }
             form { ~A }
@@ -710,7 +710,7 @@ public class MusicXmlRoundTripTests
         var xml = new MusicXmlExporter().Export(original).ToXml().ToString();
         var (lys, _) = new MusicXmlImporter().Import(xml);
         Assert.False(HasErrors(SyntaxTree.Parse(lys)), lys);
-        Assert.Contains("c'''4@quindicesima d'''4 e'''4 f'''4@!ottava@p |", lys);
+        Assert.Contains("c'''4@quindicesima d'''4 e'''4 f'''4@!quindicesima@p |", lys);
         Assert.Contains("c'4@f@ottava(bassa) d'4 e'4 f'4@!ottava | g1@sustain | c'1@!sustain |", lys);
     }
 

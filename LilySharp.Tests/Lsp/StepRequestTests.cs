@@ -1578,6 +1578,24 @@ public class StepRequestTests
         Assert.True(answer.Strum);
     }
 
+    // ---------------------------------------------------------------- the ottava's spellings
+
+    /// <summary>On <c>@8va</c> the keys step the printed spellings, lowest first — 15mb, 8vb, 8va,
+    /// 15ma — stopping at the ends, and the <c>@!8va</c> that closes it is renamed with it
+    /// (owner's request 2026-10-28), so the pair keeps one name (LYS4032).</summary>
+    [Fact]
+    public void AnOttava_StepsItsSpelling_AndItsEndWithIt()
+    {
+        Assert.Equal(Plain("c''4@15ma d'' e'' f''@!15ma | g'1 |"), Step(Plain("c''4@8‸va d'' e'' f''@!8va | g'1 |"), +1, semitone: true).After);
+        Assert.Equal(Plain("c''4@8vb d'' e'' f''@!8vb | g'1 |"), Step(Plain("c''4@8‸va d'' e'' f''@!8va | g'1 |"), -1, semitone: true).After);
+        var (top, same) = Step(Plain("c''4@15‸ma d'' e'' f''@!15ma | g'1 |"), +1, semitone: true);
+        Assert.False(top.Fallback);
+        Assert.Equal(Plain("c''4@15ma d'' e'' f''@!15ma | g'1 |"), same);
+        Assert.Equal("15ma / 8va / 8vb / 15mb", top.Message);
+        // An end already named otherwise is left as written (LYS4032 says so).
+        Assert.Equal(Plain("c''4@15ma d'' e'' f''@!ottava | g'1 |"), Step(Plain("c''4@8‸va d'' e'' f''@!ottava | g'1 |"), +1, semitone: true).After);
+    }
+
     // ---------------------------------------------------------------- a mark's .up / .down
 
     /// <summary>The octave pair on a mark that takes a placement (owner's request 2026-10-28):

@@ -4,6 +4,13 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ## Unreleased
 
+### Span ends — BREAKING
+
+- **A span is closed by the name it was opened with** — `@8va … @!8va`, `@rit … @!rit`. A
+  different name (`@8va … @!15ma`) is an error with a quick fix that writes the right one.
+- **Ctrl+Shift+Up / Down on `@8va` steps it** through `@15mb` `@8vb` `@8va` `@15ma`, and the `@!8va`
+  that closes it changes with it.
+
 ### Checks
 
 - **Voice-leading check for four-part writing.** Write `check voiceLeading s a t b` (the voices,

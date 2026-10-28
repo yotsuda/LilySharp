@@ -206,6 +206,7 @@ internal static class MusicXmlReader
         var lastNoteOfStaff = new Dictionary<int, ImportNote>();
         ImportNote? partLastNote = null;
         var pedals = new List<string>();                   // the pedals down, oldest first
+        var ottava = new List<string>();                   // the octave line open, by the name it opened with
 
         foreach (var measEl in Els(partEl, "measure"))
         {
@@ -272,7 +273,7 @@ internal static class MusicXmlReader
                         // the note at their position exactly as a dynamic does.
                         foreach (var text in ReadDirectionTexts(el, report, measureNo))
                             pendingDynamics.Add((text, at, dirStaff));
-                        foreach (var span in ReadDirectionSpans(el, pedals, report, measureNo))
+                        foreach (var span in ReadDirectionSpans(el, pedals, ottava, report, measureNo))
                             pendingDynamics.Add((span, at, dirStaff));
                         break;
                     }
@@ -820,7 +821,7 @@ internal static class MusicXmlReader
     /// <summary>
     /// The lines a &lt;direction&gt; opens and closes: an &lt;octave-shift&gt; as
     /// <c>ottava</c> / <c>ottava(bassa)</c> / <c>quindicesima</c>(…) and its stop as
-    /// <c>!ottava</c>; a &lt;pedal&gt; as <c>sustain</c> / <c>sostenuto</c> and its stop as
+    /// the end of the line by the name it opened with (<c>!quindicesima</c>; LYS4032); a &lt;pedal&gt; as <c>sustain</c> / <c>sostenuto</c> and its stop as
     /// the end of the pedal that is down (MusicXML has one stop for both). Until 2026-09-30
     /// neither was read: every <c>@ottava</c> and <c>@sustain</c> was lost on import.
     /// </summary>
@@ -831,7 +832,7 @@ internal static class MusicXmlReader
     /// start again while the pedal is down (<c>g,4@sustain</c>). <paramref name="pedals"/>
     /// holds the part's pedals that are down, so a stop closes the latest one.
     /// </remarks>
-    private static IEnumerable<string> ReadDirectionSpans(XElement dir, List<string> pedals, ImportReport report, int measureNo)
+    private static IEnumerable<string> ReadDirectionSpans(XElement dir, List<string> pedals, List<string> ottava, ImportReport report, int measureNo)
     {
         foreach (var dt in Els(dir, "direction-type"))
         {
@@ -840,7 +841,9 @@ internal static class MusicXmlReader
                 string type = (string?)shift.Attribute("type") ?? "";
                 if (type == "stop")
                 {
-                    yield return "!ottava";
+                    // Closed by the name it opened with (owner's decision 2026-10-28, LYS4032).
+                    yield return "!" + (ottava.Count > 0 ? ottava[^1] : "ottava");
+                    ottava.Clear();
                     continue;
                 }
                 if (type is not ("up" or "down"))
@@ -856,6 +859,8 @@ internal static class MusicXmlReader
                     report.Warn(measureNo, $"An octave line of size {(string?)shift.Attribute("size")} has no Lily# spelling (8 or 15); it is dropped.");
                     continue;
                 }
+                ottava.Clear();
+                ottava.Add(name);
                 yield return type == "up" ? name + "(bassa)" : name;
             }
             foreach (var pedal in Els(dt, "pedal"))

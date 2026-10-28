@@ -398,7 +398,7 @@ public class SectionCarryTests
         Assert.All(carry, d => Assert.Equal(DiagnosticSeverity.Warning, d.Severity));
         Assert.Contains(carry, d => d.Message.StartsWith("a text spanner (@rit / @accel / @textSpan) is carried from section C "
             + "into section D, which follows it in the form, and is not closed there, so it is cut at the end of section C; "
-            + "close it with '@!rit' (or '@!textSpan') in section D"));
+            + "close it with '@!rit' in section D"));
         Assert.Contains(carry, d => d.Message.StartsWith("an ottava (@ottava / @quindicesima) is carried from section C into section D"));
         var score = Collect(src);
         var plays = SectionPlays.For(score);
@@ -456,7 +456,7 @@ public class SectionCarryTests
         var diagnostics = Check(src);
         var carry = diagnostics.Where(d => d.Code == DiagnosticCodes.SpanAcrossSectionBoundary).ToList();
         Assert.Equal(2, carry.Count);
-        Assert.Contains(carry, d => d.Message.StartsWith("this '@!rit' (or '@!textSpan') closes nothing: no text spanner is open, "
+        Assert.Contains(carry, d => d.Message.StartsWith("this '@!rit' closes nothing: no text spanner is open, "
             + "and section C, played before section D in the form, carries none into it, so nothing is drawn for it"));
         Assert.Contains(carry, d => d.Message.StartsWith("this '@!ottava' closes nothing: no ottava is open"));
         Assert.DoesNotContain(diagnostics, d => d.Code == DiagnosticCodes.UnpairedSpan);

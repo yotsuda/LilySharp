@@ -445,7 +445,14 @@ public static partial class NoteStepper
                 };
                 message ??= valueSaid;
                 if (valueEdit is { } ve)
+                {
                     edits.Add(ve);
+                    // A span start's end is renamed with it (owner's request 2026-10-28: @8va's
+                    // @!8va), so the pair keeps the one name SpanEndNameValidator asks for.
+                    if (t.Kind == TargetKind.Articulation && SpanNames.EndOf(t.Node) is { } end
+                        && end.Name == ((ArticulationSyntax)t.Node).Name)
+                        edits.Add(new Edit(end.NameToken.Span.Start, end.NameToken.Span.End, ve.NewText));
+                }
                 stepped.Add(t);
                 continue;
             }

@@ -129,13 +129,10 @@ public class VocabularyPerturbationTests
     /// fixture would read as "refused" rather than telling us anything.
     /// </summary>
     /// <remarks>
-    /// ⚠️ The families do not all close the same way, and the difference is the language's,
-    /// not a detail of this file: a text spanner and a pedal repeat their own name
-    /// (<c>@!rit</c>, <c>@!sustain</c> — the fixtures in showcase/03-piano.lys write the
-    /// pedal that way), while the ottava family is closed by <c>@!ottava</c> whatever
-    /// spelling opened it (its digit spellings also accept their own). Guessing one rule for
-    /// all of them is what made this sweep's first runs report five "dead words" that were
-    /// only unclosed spans.
+    /// Every span is closed by the name it was opened with (owner's decision 2026-10-28,
+    /// LYS4032) — <c>@!rit</c>, <c>@!sustain</c>, <c>@!15ma</c>; a start with an argument by its
+    /// word, <c>@ottava(bassa) … @!ottava</c>. Until then the ottava family took <c>@!ottava</c>
+    /// whatever spelling opened it, and this table said so.
     /// </remarks>
     private static string SpanEnd(string name) => name switch
     {
@@ -143,7 +140,8 @@ public class VocabularyPerturbationTests
         "8va" or "8vb" or "15ma" or "15mb" => "@!" + name,
         "sustain" or "sostenuto" or "unaCorda" => "@!" + name,
         "phrasingSlur" => "@!" + name,
-        "ottava" or "ottava(bassa)" or "quindicesima" or "quindicesima(bassa)" => "@!ottava",
+        "ottava" or "ottava(bassa)" => "@!ottava",
+        "quindicesima" or "quindicesima(bassa)" => "@!quindicesima",
         _ => "",
     };
 

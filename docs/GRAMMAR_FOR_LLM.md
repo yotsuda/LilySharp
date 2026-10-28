@@ -905,8 +905,9 @@ In-note marks: `c4@mark("A")` (rehearsal mark),
 text spanners `@textSpan("poco rit.")` ... `@!textSpan` (sugar: `@rit` / `@accel` / `@rall`,
 closed by `@!rit` / `@!accel` / `@!rall` — **the end is REQUIRED**: a spanner nobody closes
 draws nothing at all, its word included, and says so with LYS4018),
-ottava `@ottava` / `@ottava(bassa)` / `@quindicesima` ... `@!ottava` (**the end is REQUIRED**;
-one `@!ottava` closes any of them, and `@loco` is retired),
+ottava `@ottava` / `@ottava(bassa)` ... `@!ottava`, `@quindicesima` ... `@!quindicesima`, `@8va` ... `@!8va`
+(**the end is REQUIRED**, and **it repeats the name the span was opened with** — `@8va` ... `@!15ma` is
+an error; `@loco` is retired),
 trill spanner `@startTrillSpan` ... `@stopTrillSpan`, 15ma `@quindicesima` / `@quindicesima(bassa)`,
 pedals `@sustain` ... `@!sustain`, `@sostenuto` ... `@!sostenuto`, `@unaCorda` ... `@!unaCorda`
 (`@treCorde` is the same release written as the word the Text style prints) — one word each,

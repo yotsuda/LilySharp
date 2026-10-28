@@ -90,7 +90,7 @@ internal sealed class SpanPairingValidator : ISharedCollectValidator
             //
             // ASCII punctuation only: these strings reach legacy-codepage consoles via the CLI.
             var span = new TextSpan(w.SourcePosition, 1);
-            string message = MessageFor(w.Kind, w.Fault);
+            string message = MessageFor(w.Kind, w.Fault, OpenedAs(tree.Text, w.SourcePosition));
             if (w.Fault == SpanPairingFault.Unterminated)
                 _diagnostics.Error(span, DiagnosticCodes.UnpairedSpan, message);
             else
@@ -98,12 +98,24 @@ internal sealed class SpanPairingValidator : ISharedCollectValidator
         }
     }
 
+    /// <summary>The name a span start is written with at <paramref name="position"/> (its
+    /// name, or its <c>@</c>) — <c>8va</c>, <c>accel</c>, <c>ottava</c> for <c>@ottava(bassa)</c> — or null.</summary>
+    private static string? OpenedAs(string text, int position)
+    {
+        // The collector's position is the name's own first letter; an '@' before it is stepped over.
+        if (position < 0 || position >= text.Length)
+            return null;
+        int at = text[position] == '@' ? position + 1 : position;
+        var m = System.Text.RegularExpressions.Regex.Match(text[at..], @"^[A-Za-z0-9]+");
+        return m.Success ? m.Value : null;
+    }
+
     /// <summary>The words for one fault, in the family's own vocabulary.</summary>
     /// <remarks>
     /// The NOUN and the terminator's spelling are all that vary; the sentence a reader has to
     /// act on ("nothing is drawn, write the end here") is the same because the rule is.
     /// </remarks>
-    private static string MessageFor(SpanKind kind, SpanPairingFault fault)
+    private static string MessageFor(SpanKind kind, SpanPairingFault fault, string? opened = null)
     {
         if (kind == SpanKind.PhrasingSlur)
             return fault switch
@@ -136,7 +148,8 @@ internal sealed class SpanPairingValidator : ISharedCollectValidator
             };
         bool ottava = kind == SpanKind.Ottava;
         string noun = ottava ? "an ottava bracket" : "a text spanner";
-        string ends = ottava ? "'@!ottava'" : "'@!rit' (or '@!textSpan')";
+        // A span is closed by the name it was opened with (owner's decision 2026-10-28, LYS4032).
+        string ends = opened != null ? $"'@!{opened}'" : ottava ? "'@!ottava'" : "'@!rit'";
         return fault switch
         {
             // The two families lose DIFFERENT things, and naming which is the whole use of

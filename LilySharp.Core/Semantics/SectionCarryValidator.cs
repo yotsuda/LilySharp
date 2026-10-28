@@ -61,7 +61,7 @@ internal sealed class SectionCarryValidator : ISharedCollectValidator
 
         var specs = RenderSpecParser.FindAll(tree);
         var first = specs.Count > 0 ? specs[0] : null;
-        Report(sharedCollect.Value, FormLabel(first?.Form), extra: false);
+        Report(sharedCollect.Value, FormLabel(first?.Form), extra: false, tree);
 
         // Every other form a score plays, once per (form, part): the first score covers its
         // own form's parts.
@@ -91,7 +91,7 @@ internal sealed class SectionCarryValidator : ISharedCollectValidator
         foreach (var w in collector.SectionCarryWarnings)
         {
             var span = new TextSpan(w.SourcePosition, 1);
-            string message = MessageFor(w, form);
+            string message = MessageFor(w, form, tree?.Text);
             _diagnostics.Add(w.Fault == SectionCarryFault.AcrossRepeat
                 ? Diagnostic.Error(span, DiagnosticCodes.SpanAcrossSectionBoundary, message)
                 : Diagnostic.Warning(span, DiagnosticCodes.SpanAcrossSectionBoundary, message));
@@ -114,13 +114,27 @@ internal sealed class SectionCarryValidator : ISharedCollectValidator
         }
     }
 
+    /// <summary>The name a mark at <paramref name="position"/> is written with — <c>rit</c> for
+    /// <c>@rit</c> and for <c>@!rit</c> — or null.</summary>
+    private static string? WrittenName(string? text, int position)
+    {
+        // The collector's position is the name's own first letter; an '@' (and a '!') before it is stepped over.
+        if (text == null || position < 0 || position >= text.Length)
+            return null;
+        int at = position;
+        if (text[at] == '@') at++;
+        if (at < text.Length && text[at] == '!') at++;
+        var m = System.Text.RegularExpressions.Regex.Match(text[at..], @"^[A-Za-z0-9]+");
+        return m.Success ? m.Value : null;
+    }
+
     /// <summary>"form 'practice'", "the form" for the unnamed one, or the order the sections are declared in when no form is.</summary>
     private static string FormLabel(FormDeclarationSyntax? form)
         => form is null ? "the order the sections are declared in" : form.NameText is { Length: > 0 } name ? "form '" + name + "'" : "the form";
 
     /// <summary>The words for one fault. ASCII punctuation only: these strings reach
     /// legacy-codepage consoles via the CLI.</summary>
-    internal static string MessageFor(SectionCarryWarning w, string form)
+    internal static string MessageFor(SectionCarryWarning w, string form, string? text = null)
     {
         string from = w.From ?? "?", into = w.Into ?? "?";
         string cut = "it is cut at the end of section " + from;
@@ -136,6 +150,11 @@ internal sealed class SectionCarryValidator : ISharedCollectValidator
             SectionSpanKind.Trill => ("trill span", "a trill span (@startTrillSpan)", "'@stopTrillSpan'", cut),
             _ => ("hairpin", "a hairpin", "a dynamic", cut),
         };
+        // A text spanner's or an ottava's end is the name its span opened with (owner's decision
+        // 2026-10-28, LYS4032): said with the name written at the mark — the start's, or the stray
+        // end's own.
+        if (w.Kind is SectionSpanKind.TextSpanner or SectionSpanKind.Ottava && WrittenName(text, w.SourcePosition) is { } written)
+            close = $"'@!{written}'";
         string rule = " - a " + noun + " open when a section ends is carried into the section played next and must end there";
         // At a CLOSE there is no span to cut: a mark-paired family's stray stop draws nothing.
         string atClose = w.Kind is SectionSpanKind.Slur or SectionSpanKind.PhrasingSlur or SectionSpanKind.Tie

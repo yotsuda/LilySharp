@@ -2207,25 +2207,30 @@ c4@textSpan d e f@!textSpan |                // no word: a bare dashed line
 ```
 
 `@rit`, `@accel` and `@rall` are shorthand for `@textSpan("rit.")` and its siblings —
-nothing else about them differs, so `@!rit` and `@!textSpan` are the same mark and either
-closes either start. One spanner is open at a time in a voice, and a spanner does not
-carry from one voice into another.
+nothing else about them differs. **A spanner is closed by the name it was opened with**:
+`@rit … @!rit`, `@textSpan("…") … @!textSpan` — `@rit … @!accel` is an error (LYS4032) whose
+quick fix writes the right name. One spanner is open at a time in a voice, and a spanner does
+not carry from one voice into another.
 
 ### Ottava Brackets
 
 Like a text spanner, an ottava **must be closed** — an unclosed one draws no bracket at
-all, and the notes under it are not transposed, and it says so (LYS4018). One
-`@!ottava` closes whichever of the family was opened.
+all, and the notes under it are not transposed, and it says so (LYS4018). It is closed by the
+name it was opened with (LYS4032 otherwise): `@!ottava` after `@ottava` or `@ottava(bassa)`,
+`@!quindicesima` after `@quindicesima`, `@!8va` after `@8va` — the printed spellings `@8va`,
+`@8vb`, `@15ma`, `@15mb` are the same four brackets. A new start while one is open changes the
+octavation, and the end then closes the last one.
 
 ```
 c4@ottava d e f@!ottava |            // 8va bracket
 c4@ottava(bassa) d e f@!ottava |     // 8vb
-c4@quindicesima d e f@!ottava |      // 15ma - the same terminator
+c4@quindicesima d e f@!quindicesima |  // 15ma
+c4@8vb d e f@!8vb |                  // the printed spelling
 ```
 
 ⚠️ `@loco` is **retired**. It named a mark that printed nothing — writing it only moved
 where the bracket stopped — and LilyPond has no `loco` command either (the word is in
-its glossary and nowhere else). Write `@!ottava`.
+its glossary and nowhere else). Write the end, `@!ottava` (or the name the line opened with).
 
 ### Pedal Markings
 

@@ -211,7 +211,7 @@ public class AnnotationNameValidatorTests
     {
         var warning = Assert.Single(Validate(music), d => d.Code == DiagnosticCodes.UnknownAnnotation);
         Assert.Contains("An ottava is written '@ottava' (8va), '@ottava(bassa)' (8vb), '@quindicesima' (15ma) "
-                        + "or '@quindicesima(bassa)' (15mb), and closed by '@!ottava'.", warning.Message);
+                        + "or '@quindicesima(bassa)' (15mb), and closed by the name it opened with ('@!ottava', '@!quindicesima').", warning.Message);
         Assert.DoesNotContain("Did you mean", warning.Message);
         // The case-only slip keeps its own, more exact hint.
         Assert.Contains("write '@ottava(bassa)'",

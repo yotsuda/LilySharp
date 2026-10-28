@@ -621,7 +621,7 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
         string head = dot < 0 ? name : name[..dot];
         return head is "ottava" or "quindicesima"
             ? "An ottava is written '@ottava' (8va), '@ottava(bassa)' (8vb), '@quindicesima' (15ma) "
-              + "or '@quindicesima(bassa)' (15mb), and closed by '@!ottava'."
+              + "or '@quindicesima(bassa)' (15mb), and closed by the name it opened with ('@!ottava', '@!quindicesima')."
             : null;
     }
 
