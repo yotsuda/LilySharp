@@ -1578,13 +1578,41 @@ public class StepRequestTests
         Assert.True(answer.Strum);
     }
 
+    // ---------------------------------------------------------------- a mark's .up / .down
+
+    /// <summary>The octave pair on a mark that takes a placement (owner's request 2026-10-28):
+    /// PageUp raises it — .down, none, .up — PageDown lowers it, stopping at the ends; the
+    /// semitone pair still steps the name or the level and keeps the placement.</summary>
+    [Fact]
+    public void TheOctavePair_PlacesAMark_DownNoneUp()
+    {
+        Assert.Equal(Plain("c'4@staccato.up d'"), Step(Plain("c'4@stacc‸ato d'"), +1).After);
+        Assert.Equal(Plain("c'4@staccato.down d'"), Step(Plain("c'4@stacc‸ato d'"), -1).After);
+        Assert.Equal(Plain("c'4@staccato d'"), Step(Plain("c'4@staccato.u‸p d'"), -1).After);
+        Assert.Equal(Plain("c'4@staccato d'"), Step(Plain("c'4@stacc‸ato.down d'"), +1).After);
+        var (top, same) = Step(Plain("c'4@fer‸mata.up d'"), +1);
+        Assert.False(top.Fallback);
+        Assert.Equal(Plain("c'4@fermata.up d'"), same);
+        Assert.Equal("@fermata: .up / its own side / .down", top.Message);
+        // A dynamic level, its subito kept; a hairpin takes none, so the octave pair turns it as before.
+        Assert.Equal(Plain("c'4@f.up d'"), Step(Plain("c'4@‸f d'"), +1).After);
+        Assert.Equal(Plain("c'4@p.subito.down d'"), Step(Plain("c'4@p‸.subito d'"), -1).After);
+        Assert.Equal(Plain("c'4@cresc d'"), Step(Plain("c'4@de‸cresc d'"), +1).After);
+        // The value annotations that take it: after their argument.
+        Assert.Equal(Plain("c'4@text(\"dolce\").down d'"), Step(Plain("c'4@te‸xt(\"dolce\") d'"), -1).After);
+        Assert.Equal(Plain("c'4@todo(\"memo\").down d'"), Step(Plain("c'4@todo(\"me‸mo\") d'"), -1).After);
+        // The semitone pair keeps the name's step, the placement with it.
+        Assert.Equal(Plain("c'4@portato.up d'"), Step(Plain("c'4@stacc‸ato.up d'"), +1, semitone: true).After);
+    }
+
     // ---------------------------------------------------------------- a dynamic, a time, octave N, transpose
 
     [Fact]
     public void ADynamic_StepsALevel_AndAHairpinTurnsWithTheKeys()
     {
         Assert.Equal(Plain("c'4@mf d'"), Step(Plain("c'4@m‸p d'"), +1, semitone: true).After);
-        Assert.Equal(Plain("c'4@pp d'"), Step(Plain("c'4@p‸ d'"), -1).After);
+        // The octave pair places a dynamic level instead (owner's request 2026-10-28; below).
+        Assert.Equal(Plain("c'4@p.down d'"), Step(Plain("c'4@p‸ d'"), -1).After);
         Assert.Equal(Plain("c'4@f.up d'"), Step(Plain("c'4@m‸f.up d'"), +1, semitone: true).After);
         Assert.Equal(Plain("c'4@cresc d'"), Step(Plain("c'4@de‸cresc d'"), +1, semitone: true).After);
         Assert.Equal(Plain("c'4@decresc d'"), Step(Plain("c'4@cresc‸ d'"), -1, semitone: true).After);
@@ -1603,7 +1631,8 @@ public class StepRequestTests
         // past the end stays (owner's decision 2026-10-16: small groups do not rotate).
         Assert.Equal(Plain("c'4@upBow d'"), Step(Plain("c'4@down‸Bow d'"), +1, semitone: true).After);
         Assert.Equal(Plain("c'4@downBow d'"), Step(Plain("c'4@upBow‸ d'"), -1, semitone: true).After);
-        Assert.Equal(Plain("c'4@upBow d'"), Step(Plain("c'4@down‸Bow d'"), +1).After);
+        // The octave pair places the mark instead (owner's request 2026-10-28; below).
+        Assert.Equal(Plain("c'4@downBow.up d'"), Step(Plain("c'4@down‸Bow d'"), +1).After);
         Assert.Equal(Plain("c'4@hammerOn d'"), Step(Plain("c'4@p‸ullOff d'"), +1, semitone: true).After);
         Assert.Equal(Plain("c'4@pullOff d'"), Step(Plain("c'4@hammer‸On d'"), -1, semitone: true).After);
         var (end, same) = Step(Plain("c'4@up‸Bow d'"), +1, semitone: true);
@@ -1634,7 +1663,8 @@ public class StepRequestTests
         var (alone, after) = Step(Plain("c'4@t‸ap d'"), +1, semitone: true);
         Assert.False(alone.Fallback);
         Assert.Equal(Plain("d'4@tap d'"), after);
-        Assert.Equal(Plain("c''4@tap d'"), Step(Plain("c'4@t‸ap d'"), +1).After);
+        // The octave pair places a mark that takes a placement instead (owner's request 2026-10-28).
+        Assert.Equal(Plain("c'4@tap.up d'"), Step(Plain("c'4@t‸ap d'"), +1).After);
         Assert.Equal(Plain("d'4@sfz d'"), Step(Plain("c'4@s‸fz d'"), +1, semitone: true).After);
         Assert.Equal(Plain("<c' f'@tap g'>4"), Step(Plain("<c' e'@t‸ap g'>4"), +1, semitone: true).After);
         Assert.Equal(Plain("<c'' e' g'>4@chord"), Step(Plain("<c' e' g'>4@ch‸ord"), +1, semitone: true).After);

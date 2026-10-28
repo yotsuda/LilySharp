@@ -24,7 +24,8 @@ namespace LilySharp.Core.Editing;
 /// <summary>
 /// The step keys on an articulation (owner's request 2026-10-16: "@upBow and @downBow should
 /// switch on Ctrl+Shift+Up / Down; @hammerOn and @pullOff too; and any other meaningful group
-/// should rotate"). Either pair steps the mark along its group
+/// should rotate"). The semitone pair steps the mark along its group (the octave pair places it,
+/// <see cref="PlacementEdit"/>)
 /// (<see cref="ArticulationGroups"/>): Up to the next name, Down to the one before. A group
 /// of up to four STOPS at its ends (owner's decision, same day: "ふたつかみっつ程度なら
 /// ローテートしない方が使いやすい" — so Up always means the same thing: up-bow, hammer-on,
@@ -93,6 +94,53 @@ public static partial class NoteStepper
             if (a.SourceStart < offset && offset <= a.Span.End)
                 return a;
         return null;
+    }
+
+    /// <summary>
+    /// A mark the caret is on that takes a <c>.up</c> / <c>.down</c> placement — an articulation
+    /// (<c>@staccato</c>), a dynamic level (<c>@f</c>, not a hairpin), or <c>@text(…)</c> /
+    /// <c>@diagram(…)</c> / <c>@todo(…)</c> — or null. The same marks the editor offers the
+    /// placement after (the completion's <c>TakesPlacement</c> and
+    /// <see cref="SyntaxFacts.AnnotationTakesPlacementAfterArgument"/>).
+    /// </summary>
+    private static SyntaxNode? PlacementAt(SyntaxTree tree, int offset)
+    {
+        if (ArticulationAt(tree, offset) is { } articulation && ArticulationRegistry.IsKnown(articulation.Name))
+            return articulation;
+        if (DynamicAt(tree, offset) is { } dynamic && LanguageVocabulary.IsDynamicLevel(dynamic.DynamicToken.Text))
+            return dynamic;
+        foreach (var mark in tree.GetNodes<MusicMarkSyntax>())
+            if (SyntaxFacts.AnnotationTakesPlacementAfterArgument(mark.Name) && mark.Span.Start < offset && offset <= mark.Span.End)
+                return mark;
+        return null;
+    }
+
+    /// <summary>
+    /// One step of a mark's placement on the octave pair (owner's request 2026-10-28: "直後に
+    /// .up/.down をつけることができる装飾の上で ctrl+shift+pgup を押したら、.up/.down を切り替える"):
+    /// PageUp raises it — <c>.down</c> → none (the mark's own side) → <c>.up</c> — PageDown lowers
+    /// it, each stopping at its end, as the other steps of up to four stops do. The name, a
+    /// dynamic's <c>.subito</c> and an argument stay; nothing sounds.
+    /// </summary>
+    private static (Edit? Edit, string Message) PlacementEdit(string text, SyntaxNode mark, int dir)
+    {
+        string name = mark switch
+        {
+            ArticulationSyntax a => a.Name,
+            DynamicSyntax d => d.DynamicToken.Text,
+            MusicMarkSyntax m => m.Name,
+            _ => "",
+        };
+        string listed = $"@{name}: .up / its own side / .down";
+        int end = mark.Span.End;
+        string written = text[mark.Span.Start..end];
+        int now = written.EndsWith(".up", StringComparison.Ordinal) ? 1
+            : written.EndsWith(".down", StringComparison.Ordinal) ? -1 : 0;
+        int to = now + dir;
+        if (to is > 1 or < -1)
+            return (null, listed);
+        int from = end - (now == 1 ? ".up".Length : now == -1 ? ".down".Length : 0);
+        return (new Edit(from, end, to == 1 ? ".up" : to == -1 ? ".down" : ""), listed);
     }
 
     /// <summary>One step of an articulation: the edit (null when it has no group, or stands at

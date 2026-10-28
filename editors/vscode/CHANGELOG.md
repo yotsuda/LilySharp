@@ -151,6 +151,10 @@ All notable changes to the Lily# VS Code extension are documented here.
   same. The position used to offer the note names.
 - **Nothing in a `paper`, `layout` or `fonts` block is rewritten as you type.** `paper { size a5 }`
   lost its 5 (the `a` was read as a note and the digit as its duration; `a3` became `a32`).
+- **Ctrl+Shift+PageUp / PageDown on a mark places it.** On an articulation, a dynamic level,
+  `@text(…)`, `@diagram(…)` or `@todo(…)`, PageUp raises the mark — `.down` → none → `.up` —
+  and PageDown lowers it, stopping at the ends. Ctrl+Shift+Up / Down still step its name
+  (`@downBow` → `@upBow`) or its level (`@p` → `@mf`); the octave pair used to do the same.
 - **The list after `@` is in alphabetical order** (`!` first), not grouped by family — find
   `sustain` under s, not after the ornaments and the dynamics. After `@!` the open span still
   comes first, the rest alphabetical.

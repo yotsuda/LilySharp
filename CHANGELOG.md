@@ -171,6 +171,9 @@ workflow attaches that section to the GitHub Release verbatim.
   The list right after `@` offers `!` too, which writes it and opens those names.
 - `[editor]` Smart typing leaves a `paper`, `layout`, `fonts`, `header`, `midi` or `markup` block
   alone: `paper { size a5 }` lost its 5 to the duration rule.
+- `[editor]` The octave step pair (Ctrl+Shift+PageUp / PageDown) on a mark that takes `.up` /
+  `.down` — an articulation, a dynamic level, `@text` / `@diagram` / `@todo` — steps its placement
+  (`.down`, none, `.up`) instead of its name or level, which stay on the semitone pair.
 - `[editor]` The `@` list is sorted alphabetically (lower-cased, as VS Code compares), `!` first,
   instead of by family; the `@!` list keeps the open span first.
 - `[editor]` A digit typed right after `@` (or `@!`) begins the annotation's name, so `@8va`,

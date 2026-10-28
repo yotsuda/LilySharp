@@ -36,8 +36,9 @@ namespace LilySharp.Core.Editing;
 /// pair moves it a fifth round the circle (same day, NoteStepper.Key.cs); on a <c>clef</c> it
 /// steps to the next clef, and the octave pair jumps a group of clefs (2026-10-24,
 /// NoteStepper.Clef.cs); on an
-/// articulation either pair steps it along its group — <c>@downBow</c> ⇄ <c>@upBow</c>
-/// (same day, NoteStepper.Articulation.cs); on an <c>octave relative</c> / <c>octave absolute</c>
+/// articulation the semitone pair steps it along its group — <c>@downBow</c> ⇄ <c>@upBow</c>
+/// (same day, NoteStepper.Articulation.cs) — and the octave pair places any mark that takes
+/// <c>.up</c> / <c>.down</c> (owner's request 2026-10-28, <c>PlacementEdit</c>); on an <c>octave relative</c> / <c>octave absolute</c>
 /// Up writes <c>absolute</c> and Down <c>relative</c> (owner's request 2026-10-17,
 /// NoteStepper.Values.cs); on a <c>fonts { }</c> entry either pair writes the next font of its
 /// key — <c>music "…"</c> a music font the machine has, <c>bend "…"</c> a text face — and on a
@@ -115,6 +116,9 @@ public static partial class NoteStepper
         Dynamic,
         /// <summary>An articulation — <c>@downBow</c> steps to <c>@upBow</c> within its group (NoteStepper.Articulation.cs).</summary>
         Articulation,
+        /// <summary>The <c>.up</c> / <c>.down</c> of a mark that takes one, on the octave pair
+        /// (NoteStepper.Articulation.cs, <see cref="PlacementAt"/>).</summary>
+        Placement,
         /// <summary>A <c>time</c> — its beats or its beat unit (NoteStepper.Values.cs).</summary>
         Time,
         /// <summary>A header's <c>octave N</c> or <c>transpose X</c> (NoteStepper.Values.cs).</summary>
@@ -288,7 +292,11 @@ public static partial class NoteStepper
             int start = Math.Min(rawStart, rawEnd), end = Math.Max(rawStart, rawEnd);
             if (start == end)
             {
-                if (TargetAt(text, tree, start) is { } t)
+                // The octave pair on a mark that takes `.up` / `.down` places it (owner's request
+                // 2026-10-28); the semitone pair keeps stepping its name or level.
+                if (!semitone && PlacementAt(tree, start) is { } placed)
+                    Add(new Target(TargetKind.Placement, placed));
+                else if (TargetAt(text, tree, start) is { } t)
                     Add(t);
                 continue;
             }
@@ -381,7 +389,7 @@ public static partial class NoteStepper
                 stepped.Add(t);
                 continue;
             }
-            if (t.Kind is TargetKind.Dynamic or TargetKind.Articulation or TargetKind.Time or TargetKind.HeaderValue
+            if (t.Kind is TargetKind.Dynamic or TargetKind.Articulation or TargetKind.Placement or TargetKind.Time or TargetKind.HeaderValue
                 or TargetKind.Font or TargetKind.Instrument or TargetKind.Tuning or TargetKind.Percent
                 or TargetKind.StaffGroup or TargetKind.StaffOrTab or TargetKind.FontSize or TargetKind.ScorePart
                 or TargetKind.StaffLines or TargetKind.StaffSelector or TargetKind.KeywordValue
@@ -431,6 +439,7 @@ public static partial class NoteStepper
                         ? FontSizeEdit(size.Word, size.Operand, dir, semitone)
                         : (null, "size: write its number first (lyrics size 2.2)"),
                     TargetKind.Articulation => ArticulationEdit((ArticulationSyntax)t.Node, dir),
+                    TargetKind.Placement => PlacementEdit(text, t.Node, dir),
                     TargetKind.Time => TimeEdit((TimeSignatureSyntax)t.Node, dir, semitone),
                     _ => ValuePropertyEdit(text, tree, (PropertyAssignmentSyntax)t.Node, dir, semitone),
                 };
