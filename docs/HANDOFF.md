@@ -131,6 +131,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 
 第1030 と同じ会話の続き（記録の枠が詰まったので便を切った）。開始時 full **13467 / 0 / 2**・build 0 エラー・OMR の REQUESTS に `open` なし。作業場所は Lab `sessions/p1031/`。
 - ⚠️ 第1029 は §1 に自分のブロックを持たなかった（第1028 のブロックの中に書いた）＝`-Start p1031` の後で `HandoffArchiveContinuityTests` が継ぎ目を咎めた → ARCHIVE に第287 の型の見出し「第1029 … §1 のブロックは無い」を立てた。**同じ会話で便を続けるときは、便ごとに自分の `### 1.1` を立てる**。
+- **ユーザー決定「`@rall`・`@rit`・`@accel` を Ctrl+Shift+Up の仲間に」**: 群 `rall/rit/accel`（↑＝速い・端で止まる）・組の `@!` 連動は `SpanNames.EndOf`。
 - **ユーザー指示「`@cresc` と `@!cresc` も連動して Ctrl+Shift+Up で `@decresc` に」**: 向きは以前のまま（↑＝cresc・↓＝decresc・2 度目は止まる＝ユーザー訂正「上を連続して押したら cresc で止まって」）、組の `@!` だけ連動＝`SpanNames.HairpinEndOf`（強弱が先に来たら組の `@!` は無い）。
 - **ユーザー報告「閉じていない `@accel` の下線が `@` だけ」**: `SpanNames.MarkSpan`（位置を含む最小の印のノード）を閉じ忘れと セクションまたぎの警告に＝印全体に波線。網 `SpanEndNameTests` に 3 行。
 - **ユーザー決定「C」＝span は開いた名前で閉じる（`@8va … @!8va`）＋「`@8va` の上で Ctrl+Shift+Up で属を切り替え、対応する `@!8va` も一緒に」**: `Semantics/SpanNames.cs`（構文の上で声部の線ごとに組を読む・オッターヴァと文字の伸びだけ＝ペダルは元から名前ごと、松葉は強弱でも閉じるので対象外）・LYS4032 エラー＋クイックフィックス・閉じ忘れの文が開いた名前で言う（`SpanPairingValidator`・`SectionCarryValidator`＝位置は名前の先頭を指す）・MusicXML 読み込みが開いた名前で閉じる・ステップの群 `15mb/8vb/8va/15ma`＋組の閉じの書き換え。文書（SYNTAX_REFERENCE・GRAMMAR・GRAMMAR_FOR_LLM・site）と網を新しい規則に。⚠️ **OMR は 15ma／15mb を `@!ottava` で閉じている**（`OmrProto/Program.cs` 1129・`OmrGen/Gen.cs` 506）＝依頼 `..\LilySharp-Omr\docs\repro\lilysharp-requests-2026-10-28-span-end-name.md`。

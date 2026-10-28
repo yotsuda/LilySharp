@@ -1596,6 +1596,20 @@ public class StepRequestTests
         Assert.Equal(Plain("c''4@15ma d'' e'' f''@!ottava | g'1 |"), Step(Plain("c''4@8‸va d'' e'' f''@!ottava | g'1 |"), +1, semitone: true).After);
     }
 
+    /// <summary>The tempo words step slowest to fastest — rall, rit, accel — stopping at the ends,
+    /// and the @! that closes the stepped one follows it (owner's decisions 2026-10-28).</summary>
+    [Fact]
+    public void ATempoWord_StepsRallRitAccel_AndItsEndWithIt()
+    {
+        Assert.Equal(Plain("c'4@accel d' e' f'@!accel | g'1 |"), Step(Plain("c'4@ri‸t d' e' f'@!rit | g'1 |"), +1, semitone: true).After);
+        Assert.Equal(Plain("c'4@rall d' e' f'@!rall | g'1 |"), Step(Plain("c'4@ri‸t d' e' f'@!rit | g'1 |"), -1, semitone: true).After);
+        Assert.Equal(Plain("c'4@rit d' e' f'@!rit | g'1 |"), Step(Plain("c'4@ra‸ll d' e' f'@!rall | g'1 |"), +1).After);
+        var (top, same) = Step(Plain("c'4@acc‸el d' e' f'@!accel | g'1 |"), +1, semitone: true);
+        Assert.False(top.Fallback);
+        Assert.Equal(Plain("c'4@accel d' e' f'@!accel | g'1 |"), same);
+        Assert.Equal("accel / rit / rall", top.Message);
+    }
+
     // ---------------------------------------------------------------- a mark's .up / .down
 
     /// <summary>The octave pair on a mark that takes a placement (owner's request 2026-10-28):

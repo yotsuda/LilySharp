@@ -10,6 +10,8 @@ All notable changes to the Lily# VS Code extension are documented here.
   different name (`@8va … @!15ma`) is an error with a quick fix that writes the right one.
 - **The `@!cresc` that ends a hairpin follows it**: Ctrl+Shift+Down on `@cresc` writes `@decresc` and its `@!decresc`, Up back.
 - **An unclosed span is underlined whole** (`@accel`, `@textSpan("…")`), not its `@` alone.
+- **Ctrl+Shift+Up / Down on `@rit` steps it** — `@rall` → `@rit` → `@accel`, Up the faster — and the
+  `@!rit` that ends it changes with it.
 - **Ctrl+Shift+Up / Down on `@8va` steps it** through `@15mb` `@8vb` `@8va` `@15ma`, and the `@!8va`
   that closes it changes with it.
 

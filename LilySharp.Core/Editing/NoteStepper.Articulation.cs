@@ -41,8 +41,9 @@ namespace LilySharp.Core.Editing;
 /// long), the mordent pair (mordent below, prall above), the turn pair (reverseTurn starts
 /// below, turn above), the trill pair (trill, pralltriller), the organ pedal pair (heel, toe),
 /// the jazz approaches (scoop from below, plop from above) and departures (fall down, doit up),
-/// the breathing pair (breath, caesura), and the stem's direction (stemDown, stemUp — owner's
-/// request 2026-10-17). <c>@harmonic</c> / <c>@flageolet</c> draw the same
+/// the breathing pair (breath, caesura), the stem's direction (stemDown, stemUp — owner's
+/// request 2026-10-17), the ottava's printed spellings (15mb, 8vb, 8va, 15ma) and the tempo
+/// words (rall, rit, accel — owner's decisions 2026-10-28), whose <c>@!</c> end follows them. <c>@harmonic</c> / <c>@flageolet</c> draw the same
 /// circle, so they are not a group; <c>@tap</c>, <c>@snapPizz</c>, <c>@stopped</c> and
 /// <c>@thumb</c> stand alone, and the status bar says so. LILYSHARP-OWN: an editor convenience
 /// with no LilyPond counterpart.
@@ -71,6 +72,10 @@ public static partial class NoteStepper
             // The ottava's printed spellings, lowest first (owner's request 2026-10-28); the end
             // that closes the stepped one is renamed with it (Step, SpanNames.EndOf).
             new[] { "15mb", "8vb", "8va", "15ma" },
+            // The tempo words, slowest first — Up is faster, as a tempo's number steps (owner's
+            // decision 2026-10-28: rall in the group too, so rall and rit can be traded); the
+            // @! that closes the stepped one is renamed with it.
+            new[] { "rall", "rit", "accel" },
         }.Select(g => g.Where(IsSteppable).ToArray()).Where(g => g.Length > 1)];
 
     /// <summary>A name the step may write: one the registry draws, or a plain annotation the
