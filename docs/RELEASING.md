@@ -131,11 +131,13 @@ cd editors\vscode
 
 ⚠️ **The OMR seed tooling never ships** (owner's instruction 2026-10-29). OMR learns from
 generated scores grown from bars the owner reports as misread
-(`LilySharp-Omr/docs/repro/lilysharp-requests-2026-10-29-seed-from-fixed-bars.md`). Anything
-Lily# adds for that, such as a command that puts a bar, its scan and its fixed `.lys` in OMR's
-seed folder, is for the owner's machine only: it is not contributed in the released
-`package.json`, and no seed, scan or fixed bar is in the VSIX or the site. Before tagging,
-list a built VSIX (`dist\*.vsix` is a zip) and look for `seed`.
+(`LilySharp-Omr/docs/repro/lilysharp-requests-2026-10-29-seed-from-fixed-bars.md`). Lily#'s
+part is the Bar fixes panel's **Report Misread to OMR…** (`omrSeedCore.ts`): its code is in the
+extension, but it shows only when `lilysharp.omr.seedFolder` is written in settings.json by
+hand. That setting and the report are never contributed in `package.json` (`omrSeed.test.ts`
+checks), never in the CHANGELOG or the README, and no seed, scan or reported bar is in the VSIX
+or the site. Before tagging, list a built VSIX (`dist\*.vsix` is a zip) and look for `seed`
+beyond `omrSeedCore`.
 
 ### 5. Push, and wait for CI to be green
 

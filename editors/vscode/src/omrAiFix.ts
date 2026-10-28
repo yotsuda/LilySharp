@@ -40,6 +40,7 @@ import {
 import { OmrVersion, canVerifyBars, exitMeaning, launchOf, parseVersion, runOmr, verifyArguments } from './omrCore';
 import { findOmr } from './omrReader';
 import { SCAN_DEFAULT_THRESHOLD, ScanSideFile, lineAround, markFactsOf, parseSideFile, shownImage, sideFileOf } from './omrScanCore';
+import { SEED_FOLDER_SETTING, SeedBar, seedDirName, seedRecordOf } from './omrSeedCore';
 import { textFontFaceCss, textFontsRoot } from './scoreFonts';
 
 export interface OmrAiFixDeps extends AiTransformDeps {
@@ -1117,6 +1118,11 @@ async function onPanelMessage(deps: OmrAiFixDeps, m: PanelMessage): Promise<void
         case 'focus':
             if (row) { await showBar(run, row); }
             return;
+        case 'report':
+            if (row && await reportMisread(run, row)) {
+                void panel?.webview.postMessage({ type: 'reported', index: row.index });
+            }
+            return;
         case 'cancel':
             log(`Fix OMR marks: Discard All in the panel — ${run.rows.filter(isLive).length} bars left unwritten`
                 + ` (${run.rows.filter(r => r.state === 'applied').length} written before).`);
@@ -1125,6 +1131,81 @@ async function onPanelMessage(deps: OmrAiFixDeps, m: PanelMessage): Promise<void
         default:
             return;
     }
+}
+
+/** The owner's seed folder (omrSeedCore), or undefined: the setting is written by hand alone. */
+function seedFolder(): string | undefined {
+    return vscode.workspace.getConfiguration('lilysharp').get<string>(SEED_FOLDER_SETTING, '').trim() || undefined;
+}
+
+/**
+ * Report Misread to OMR (owner's request 2026-10-29, omrSeedCore): asks what was wrong, then
+ * copies the .lys as it is now, its side file, the page and the bar's crop into a new folder of
+ * the seed folder with seed.json. Never on an Accept. False when nothing was written.
+ */
+async function reportMisread(run: FixRun, row: FixRow): Promise<boolean> {
+    const root = seedFolder();
+    if (!root) {
+        return false;
+    }
+    const t = row.target;
+    const reader = readerBarOf(t, run.side);
+    const label = labelOf(t);
+    const note = await vscode.window.showInputBox({
+        title: `Report Misread to OMR — ${label}`,
+        prompt: 'What did the reader get wrong? (optional) The bar, its scan and the .lys are kept as a seed for OMR\'s training scores.',
+        placeHolder: 'e.g. the natural on the low chord is missing',
+    });
+    if (note === undefined) {
+        return false;
+    }
+    const lys = run.uri.fsPath;
+    const doc = vscode.workspace.textDocuments.find(d => d.uri.toString() === run.uri.toString());
+    const text = doc?.getText() ?? (fs.existsSync(lys) ? fs.readFileSync(lys, 'utf8') : run.base.text);
+    const info = t.crop ? run.side?.pages.find(p => p.page === t.crop!.page) : undefined;
+    const sidePath = sideFileOf(lys);
+    const bar: SeedBar = {
+        lys, line: t.line + 1,
+        bar: text.split('\n')[t.line]?.replace(/\r$/, '').trim() ?? t.written,
+        ...(reader ? { measure: reader.measure, part: reader.part } : {}),
+        ...(t.crop ? { crop: { page: t.crop.page, box: [...t.crop.box] } } : {}),
+        ...(info ? { pageImage: info.image } : {}),
+        ...(sidePath && fs.existsSync(sidePath) ? { sideFile: sidePath } : {}),
+    };
+    const when = new Date();
+    const dir = path.join(root, seedDirName(when, bar));
+    try {
+        fs.mkdirSync(dir, { recursive: true });
+        fs.writeFileSync(path.join(dir, path.basename(lys)), text, 'utf8');
+        const copy = (from: string | undefined, to: string): boolean => {
+            try {
+                if (!from || !fs.existsSync(from)) { return false; }
+                fs.copyFileSync(from, path.join(dir, to));
+                return true;
+            } catch {
+                return false;
+            }
+        };
+        const record = seedRecordOf(when, bar, note, {
+            image: !!t.crop && copy(bar.pageImage, `page-${t.crop.page}${path.extname(bar.pageImage ?? '')}`),
+            sideFile: copy(bar.sideFile, path.basename(bar.sideFile ?? '')),
+            crop: (() => {
+                const crop = scanOf(run, t);
+                if (!crop) { return false; }
+                fs.writeFileSync(path.join(dir, 'bar.png'), crop.data);
+                return true;
+            })(),
+        });
+        fs.writeFileSync(path.join(dir, 'seed.json'), JSON.stringify(record, null, 2) + '\n', 'utf8');
+    } catch (err) {
+        vscode.window.showErrorMessage(`Lily#: could not write the report to ${dir}: ${err}`);
+        return false;
+    }
+    log(`Report Misread to OMR: ${label} → ${dir}`);
+    void vscode.window.showInformationMessage(`Lily#: ${label} reported to OMR.`, 'Reveal Folder').then(go => {
+        if (go) { void vscode.commands.executeCommand('revealFileInOS', vscode.Uri.file(path.join(dir, 'seed.json'))); }
+    });
+    return true;
 }
 
 /** A row still in the panel: not written, not discarded. */
@@ -1613,6 +1694,11 @@ function rowHtml(run: FixRun, r: FixRow, pageUris: ReadonlyMap<number, { uri: st
           + ` title="Write this bar into the .lys now (Ctrl+Z undoes it) — without a bar of its own (the AI's or your edit), its @todo is removed and the notes stay">${parts.accept.word}</button>`
           + `<button class="row-discard" data-i="${r.index}" title="Take this bar off the panel, writing nothing">Discard</button>`
         : '';
+    // The owner's alone (omrSeedCore: shown only with lilysharp.omr.seedFolder written by hand),
+    // apart from Accept so that an Accept is never a report.
+    const report = can && seedFolder()
+        ? `<button class="row-report" data-i="${r.index}" title="Keep this bar, its scan and the .lys as a seed for OMR's training scores — the reader got it wrong">Report Misread to OMR…</button>`
+        : '';
     // Taken but still marked (owner's request 2026-10-24): the bar is written with a @todo at
     // the same note — the reader's key kept — and the words typed here as its memo. A bar that
     // carries no mark (one opened by Edit Bars Beside the Scan) gets one instead: "add", at its
@@ -1634,7 +1720,7 @@ function rowHtml(run: FixRun, r: FixRow, pageUris: ReadonlyMap<number, { uri: st
     // (owner, 2026-10-24: scan first put the proposal two pictures away from it).
     const cls = `row ${r.state}`;
     return `<tr class="${cls} head" data-i="${r.index}">
-  <td colspan="3" class="who">${box}${keepBox} <span class="label">${esc(labelOf(t))}</span>`
+  <td colspan="3" class="who">${box}${keepBox}${report} <span class="label">${esc(labelOf(t))}</span>`
         + (t.memos.length ? ` <span class="memo">${esc(t.memos.join('; '))}</span>` : '')
         + ` <span class="memo dim">· line ${t.line + 1}${t.confidence === undefined ? '' : ` · reader ${t.confidence.toFixed(2)}`}<span class="secs" data-i="${r.index}">${secondsOf(run, r)}</span></span></td>
 </tr>
@@ -1805,6 +1891,10 @@ ${rows}
     if (b.classList.contains('row-accept') || b.classList.contains('row-discard')) {
       e.stopImmediatePropagation();
       vscode.postMessage({ action: b.classList.contains('row-accept') ? 'acceptRow' : 'discard', index: Number(b.dataset.i) });
+    }
+    else if (b.classList.contains('row-report')) {
+      e.stopImmediatePropagation();
+      vscode.postMessage({ action: 'report', index: Number(b.dataset.i) });
     }
     else if (b.id === 'acceptAll') vscode.postMessage({ action: 'acceptAll' });
     else if (b.id === 'cancel') vscode.postMessage({ action: 'cancel' });
@@ -2309,6 +2399,11 @@ ${rows}
     if (m.type === 'remove') {
       for (const i of m.indices) for (const tr of document.querySelectorAll('tr.row[data-i="' + i + '"]')) tr.remove();
       header(m);
+      return;
+    }
+    // Report Misread to OMR written: the button says so (a second report is still a click away).
+    if (m.type === 'reported') {
+      for (const b of document.querySelectorAll('button.row-report[data-i="' + m.index + '"]')) b.textContent = 'Reported ✓ — Report Again…';
       return;
     }
     if (m.type === 'reveal') {
