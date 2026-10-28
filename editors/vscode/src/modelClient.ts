@@ -276,13 +276,25 @@ function lmClient(model: vscode.LanguageModelChat, use: ModelUse, byName: boolea
                 last = offered ? withImages : undefined;
                 return text;
             } catch (err) {
-                if (isCoreOnlyRefusal(String((err as Error)?.message ?? err))) {
+                const refusal = String((err as Error)?.message ?? err);
+                if (isCoreOnlyRefusal(refusal)) {
                     coreOnly.add(model.id);   // no later choice takes it
+                    // …nor the model the refusal names: Copilot's Auto hands a request on, and the
+                    // model it went to is the one that is VS Code's own.
+                    const named = /Model (\S+) is only available/i.exec(refusal)?.[1];
+                    if (named) {
+                        coreOnly.add(named);
+                    }
                     // An automatic pick that VS Code keeps for itself is passed over at once, and the
                     // request goes to the next one (owner's report 2026-10-28: "compose with AI failed:
                     // Model gpt-5.6-luna is only available to VS Code core" — the request just failed).
-                    // A model picked by name is the user's to change; that one fails as before.
-                    const next = byName || token.isCancellationRequested ? undefined : await selectLmModel(use);
+                    // A model picked by name is the user's to change; that one fails as before —
+                    // except Copilot's Auto, which picks the model itself: refused because it
+                    // handed the request to a model VS Code keeps (owner's report 2026-10-28: Auto
+                    // chosen by name, routed to gpt-5.6-luna, failed on every bar), the request
+                    // goes on to the automatic pick as an automatic choice's does.
+                    const next = (byName && !isAutoModel(model)) || token.isCancellationRequested
+                        ? undefined : await selectLmModel(use);
                     if (!next || next.id === model.id) {
                         throw err;
                     }

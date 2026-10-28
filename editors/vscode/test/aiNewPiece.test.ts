@@ -210,7 +210,10 @@ describe('the composer\'s prompt', () => {
         assert.match(client, /get modelName\(\) \{ return isAutoModel\(model\) \? undefined : model\.name \|\| undefined; \}/);
         // An automatic pick VS Code keeps for itself goes to the next model at once (owner's report
         // 2026-10-28: "Model gpt-5.6-luna is only available to VS Code core" failed the compose).
-        assert.match(client, /const next = byName \|\| token\.isCancellationRequested \? undefined : await selectLmModel\(use\);/);
+        // …and so does Copilot's Auto picked by name, which handed the request to such a model
+        // (owner's report 2026-10-28: Auto chosen, routed to gpt-5.6-luna, failed on every bar).
+        assert.match(client, /const next = \(byName && !isAutoModel\(model\)\) \|\| token\.isCancellationRequested\s*\? undefined : await selectLmModel\(use\);/);
+        assert.match(client, /const named = \/Model \(\\S\+\) is only available\/i\.exec\(refusal\)\?\.\[1\];/);
         assert.match(client, /model = next;\s*return await this\.send\(messages, token\);/);
         // Copilot's Auto says so, and signs no composer line (owner's report 2026-10-27).
         assert.match(client, /return isAutoModel\(model\) \? `\$\{model\.vendor\}\/auto`/);

@@ -21,6 +21,12 @@ All notable changes to the Lily# VS Code extension are documented here.
 - **The trill span is `@trillSpan … @!trillSpan`** (was `@startTrillSpan` / `@stopTrillSpan`):
   `@!` completion offers it, the open one first.
 
+### AI
+
+- **Copilot's Auto, picked by name, no longer fails every request when it hands one to a model VS
+  Code keeps for itself** ("Model gpt-5.6-luna is only available to VS Code core"): the request goes
+  on to the automatic pick, as it already did when the model was chosen automatically.
+
 ### Step keys
 
 - **Related marks are a Ctrl+Shift+Up / Down away**, even where the order means little: the pedals (`@unaCorda` `@sostenuto` `@sustain`, the `@!`
