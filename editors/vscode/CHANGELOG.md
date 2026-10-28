@@ -28,6 +28,8 @@ All notable changes to the Lily# VS Code extension are documented here.
 - **The trills step shortest to longest**: `@pralltriller` → `@trill` → `@trillSpan` (was `@trill` →
   `@pralltriller`). Stepping to `@trillSpan` writes its `@!trillSpan` on the next note; stepping back
   deletes it.
+- **The keys work on an `@!` end too**: on `@!accel` Ctrl+Shift+Down writes `@rit` and `@!rit` — the
+  start and its end step together (text spans, ottavas, pedals, hairpins, trill spans).
 - **`grace` / `acciaccatura` / `appoggiatura` step among themselves**, and `break` ⇄ `pageBreak`,
   `noBreak` ⇄ `noPageBreak`.
 

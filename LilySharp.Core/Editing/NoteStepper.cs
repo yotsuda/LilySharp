@@ -661,6 +661,14 @@ public static partial class NoteStepper
         // `@notehead(x)`): its own step, as an articulation's.
         if (SteppingMarkAt(text, tree, offset) is { } steppingMark)
             return new Target(TargetKind.Articulation, steppingMark);
+        // An @! end steps the start it closes, and is renamed with it (owner's request
+        // 2026-10-28: "@!accel も ctrl+shift+down で動くように").
+        foreach (var end in tree.GetNodes<MusicMarkSyntax>())
+            if (end.IsSpanEnd && end.Span.Start < offset && offset <= end.Span.End
+                && SpanNames.OpenerOf(end) is { } opener)
+                return opener is DynamicSyntax hairpin
+                    ? (DynamicSteps(hairpin.DynamicToken.Text) ? new Target(TargetKind.Dynamic, hairpin) : null)
+                    : MarkSteps(text, opener) ? new Target(TargetKind.Articulation, opener) : null;
         // An @chord: strictly after its '@' — a caret just before the '@' is also just after
         // the note's duration, and belongs to the note.
         // A bare one on a chord(…) item names the item's words (ChordAnnotation.Of), so it

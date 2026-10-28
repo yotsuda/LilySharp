@@ -136,6 +136,36 @@ public static class SpanNames
         return null;
     }
 
+    /// <summary>
+    /// The start an <c>@!</c> end closes, whatever its family — a mark's (<see cref="StartOf"/>),
+    /// a hairpin's (the dynamic whose end it is, <see cref="HairpinEndOf"/>), a trill span's (the
+    /// <c>@trillSpan</c> whose end it is, <see cref="TrillSpanEndOf"/>) — or null. For the step
+    /// keys on an end, which step its start and the end with it (owner's request 2026-10-28:
+    /// "@!accel も ctrl+shift+down で動くように").
+    /// </summary>
+    public static SyntaxNode? OpenerOf(MusicMarkSyntax end)
+    {
+        if (!end.IsSpanEnd)
+            return null;
+        if (StartOf(end) is { } start)
+            return start.Node;
+        var line = Line(end);
+        SyntaxNode? last = null;
+        foreach (var d in line.DescendantNodes())
+            if (d.Span.Start < end.Span.Start && ReferenceEquals(Line(d), line)
+                && (d is DynamicSyntax || d is ArticulationSyntax { Name: MusicMarkItem.TrillSpanName }))
+                last = d;
+        return last switch
+        {
+            DynamicSyntax hairpin when SyntaxFacts.IsDynamicSpannerName(end.Name)
+                && HairpinEndOf(hairpin) is { } hairpinEnd && hairpinEnd.Span.Start >= end.Span.Start
+                && hairpinEnd.Span.End <= end.Span.End => hairpin,
+            ArticulationSyntax trill when end.Name == MusicMarkItem.TrillSpanName
+                && TrillSpanEndOf(trill) is { } trillEnd && trillEnd.Span == end.Span => trill,
+            _ => null,
+        };
+    }
+
     /// <summary>The nodes written after <paramref name="node"/> in its voice line, in order.</summary>
     public static IEnumerable<SyntaxNode> After(SyntaxNode node)
     {

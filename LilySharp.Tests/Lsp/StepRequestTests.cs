@@ -1671,6 +1671,20 @@ public class StepRequestTests
         Assert.Equal("trillSpan / trill / pralltriller", top.Message);
     }
 
+    /// <summary>On an @! end the keys step the start it closes, and the end with it (owner's
+    /// request 2026-10-28: "@!accel も ctrl+shift+down で動くように") — a text span, an ottava,
+    /// a pedal, a hairpin, a trill span (stepped away, its end goes).</summary>
+    [Theory]
+    [InlineData("c'4@accel d' e' f'@!acc‸el | g'1 |", -1, "c'4@rit d' e' f'@!rit | g'1 |")]
+    [InlineData("c'4@rit d' e' f'@!r‸it | g'1 |", +1, "c'4@accel d' e' f'@!accel | g'1 |")]
+    [InlineData("c''4@8va d'' e'' f''@!8‸va | g'1 |", +1, "c''4@15ma d'' e'' f''@!15ma | g'1 |")]
+    [InlineData("c4@ottava(bassa) d e f@!otta‸va | g'1 |", -1, "c4@quindicesima(bassa) d e f@!quindicesima | g'1 |")]
+    [InlineData("c'4@sustain d' e' f'@!sus‸tain | g'1 |", -1, "c'4@sostenuto d' e' f'@!sostenuto | g'1 |")]
+    [InlineData("c'4@cresc d' e' f'@!cre‸sc | g'1 |", -1, "c'4@decresc d' e' f'@!decresc | g'1 |")]
+    [InlineData("c''4@trillSpan d'' e''@!trill‸Span f'' |", -1, "c''4@trill d'' e'' f'' |")]
+    public void AnEnd_StepsItsStart_AndItself(string from, int dir, string to)
+        => Assert.Equal(Plain(to), Step(Plain(from), dir, semitone: true).After);
+
     /// <summary>The accent dynamics step among themselves, the lighter first (owner's request
     /// 2026-10-28) — they stepped the note before.</summary>
     [Fact]
