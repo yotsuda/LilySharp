@@ -1169,15 +1169,30 @@ async function reportMisread(run: FixRun, row: FixRow): Promise<boolean> {
     // 2026-10-29: "Not fixed yet" ended the report with no chance to say anything).
     type Right = vscode.QuickPickItem & { from: 'draft' | 'file' | 'none' };
     const draft = barOf(row);
+    // Each choice names where its bar is and shows it (owner's report 2026-10-29: the Draft held the
+    // fix, "The bar in the file is right — fixed already" read as "I fixed it" and was taken, and
+    // the seed got the bar without the fix).
+    const drafted = draft !== undefined && draft !== resolvedLine(fileBar);
     const items: Right[] = [
-        ...(draft !== undefined && draft !== resolvedLine(fileBar)
-            ? [{ label: 'The Draft is right', detail: draft, from: 'draft' as const }] : []),
-        { label: 'The bar in the file is right — fixed already', detail: resolvedLine(fileBar), from: 'file' },
+        ...(drafted ? [{ label: 'The Draft is right — the bar edited in this panel', detail: draft, from: 'draft' as const }] : []),
+        { label: 'The .lys is right — its bar was fixed in the editor', detail: resolvedLine(fileBar), from: 'file' },
         { label: 'Not fixed yet', detail: 'Say what is wrong instead — fixing it in the Draft first makes a better seed.', from: 'none' },
     ];
     const right = await vscode.window.showQuickPick(items, { title: `Report Misread to OMR — ${label}: which bar is right?` });
     if (!right) {
         return false;
+    }
+    // The .lys's bar taken while the Draft holds something else, or while the bar still carries the
+    // reader's marks: likely not fixed — asked once more.
+    if (right.from === 'file' && (drafted || fileBar !== resolvedLine(fileBar))) {
+        const why = drafted
+            ? 'The Draft holds an edit the .lys does not have.'
+            : 'The bar in the .lys still carries the reader\'s @todo.';
+        const go = await vscode.window.showWarningMessage(`${why} Report the .lys's bar as the right one?`,
+            { modal: true, detail: resolvedLine(fileBar) }, 'Report the .lys\'s Bar');
+        if (!go) {
+            return false;
+        }
     }
     const correct = right.from === 'draft' ? draft! : right.from === 'file' ? resolvedLine(fileBar) : null;
     const note = await vscode.window.showInputBox({

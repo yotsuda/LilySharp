@@ -52,6 +52,14 @@ describe('Report Misread to OMR', () => {
         assert.match(fix, /const REPORT_AGAIN = 'Reported ✓ — Replace Report…';/);
     });
 
+    // Owner's report 2026-10-29: the fix was in the Draft, "the bar in the file is right — fixed
+    // already" was taken, and the seed got the bar without it.
+    it('says where each choice\'s bar is, and asks again when the .lys\'s bar looks unfixed', () => {
+        assert.match(fix, /label: 'The Draft is right — the bar edited in this panel'/);
+        assert.match(fix, /label: 'The \.lys is right — its bar was fixed in the editor'/);
+        assert.match(fix, /right\.from === 'file' && \(drafted \|\| fileBar !== resolvedLine\(fileBar\)\)/);
+    });
+
     it('names its folder by when, the score and the bar', () => {
         assert.equal(seedDirName(new Date(2026, 9, 29, 15, 30, 12), bar), '20261029-153012-Largo_op_1-bar12-right');
         assert.equal(seedDirName(new Date(2026, 9, 29, 15, 30, 12), { lys: '/a/b.lys', line: 7, bar: 'c1 |', correct: 'c1 |', correctFrom: 'file' }),
