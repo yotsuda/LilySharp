@@ -26,7 +26,8 @@
 // Everything is taken at the report (owner's request 2026-10-29: the .lys may be fixed again or
 // deleted after it): the .lys, the side file, the page and the crop are copied, and the right bar
 // goes with them — the owner says which one is right, the Draft or the bar in the file; a bar not
-// fixed yet is not reported. The .lys's path is kept only to say where it came from.
+// fixed yet goes with the owner's words of what is wrong. The .lys's path is kept only to say
+// where it came from.
 
 /** The setting under `lilysharp` that names the seed folder; not in package.json on purpose. */
 export const SEED_FOLDER_SETTING = 'omr.seedFolder';
@@ -42,9 +43,10 @@ export interface SeedBar {
     readonly line: number;
     /** The bar's line as the .lys has it at the report. */
     readonly bar: string;
-    /** The bar as it should read, and where the owner said it is: the panel's Draft, or the file. */
-    readonly correct: string;
-    readonly correctFrom: 'draft' | 'file';
+    /** The bar as it should read, and where the owner said it is: the panel's Draft, or the file;
+     *  null and 'none' when it is not fixed yet (the note says what is wrong). */
+    readonly correct: string | null;
+    readonly correctFrom: 'draft' | 'file' | 'none';
     /** Where it is on the scan, when the side file says. */
     readonly crop?: { readonly page: number; readonly box: readonly number[] };
     /** The page's image and the side file, their paths, when there are. */
@@ -63,15 +65,16 @@ export interface SeedRecord {
     readonly lysWas: string;
     /** The .lys as it was at the report, copied beside seed.json. */
     readonly lysCopy: string;
-    /** The .lys with the right bar in it: lysCopy itself when the file's bar is the right one. */
-    readonly fixedCopy: string;
+    /** The .lys with the right bar in it: lysCopy itself when the file's bar is the right one,
+     *  null when the bar is not fixed yet. */
+    readonly fixedCopy: string | null;
     readonly measure: number | null;
     readonly part: string | null;
     readonly line: number;
     /** The bar's line in lysCopy, and the bar as it should read. */
     readonly bar: string;
-    readonly correct: string;
-    readonly correctFrom: 'draft' | 'file';
+    readonly correct: string | null;
+    readonly correctFrom: 'draft' | 'file' | 'none';
     readonly scan: {
         readonly page: number;
         readonly box: readonly number[];
@@ -129,7 +132,7 @@ export function seedRecordOf(when: Date, bar: SeedBar, note: string,
         note: note.trim(),
         lysWas: bar.lys,
         lysCopy: baseName(bar.lys),
-        fixedCopy: bar.correctFrom === 'file' ? baseName(bar.lys) : fixedCopyName(bar.lys),
+        fixedCopy: bar.correctFrom === 'file' ? baseName(bar.lys) : bar.correctFrom === 'draft' ? fixedCopyName(bar.lys) : null,
         measure: bar.measure ?? null,
         part: bar.part ?? null,
         line: bar.line,

@@ -59,9 +59,12 @@ describe('Report Misread to OMR', () => {
         assert.equal(seedRecordOf(new Date(), { ...bar, correctFrom: 'file' }, '', {}).fixedCopy, 'Largo (op. 1).lys');
         assert.equal(withBar('a\r\n    c4 d e f |\r\nb', 2, 'c4 d e fis |'), 'a\r\n    c4 d e fis |\r\nb');
         assert.equal(fixedCopyName('/x/largo.lys'), 'largo.fixed.lys');
-        // A bar not fixed yet is not reported: "Not fixed yet" carries no bar.
-        assert.match(fix, /label: 'Not fixed yet', detail: [^\n]*\}/);
-        assert.match(fix, /if \(!right\?\.from\) \{\s*return false;/);
+        // A bar not fixed yet goes with what is wrong in words, asked for, not optional (owner's
+        // report 2026-10-29: "Not fixed yet" gave no chance to say anything).
+        const none = seedRecordOf(new Date(), { ...bar, correct: null, correctFrom: 'none' }, 'the natural is missing', {});
+        assert.deepEqual([none.correct, none.correctFrom, none.fixedCopy, none.note], [null, 'none', null, 'the natural is missing']);
+        assert.match(fix, /label: 'Not fixed yet', [^\n]*from: 'none' \}/);
+        assert.match(fix, /correct === null \? \{ validateInput: /);
     });
 
     it('records the bar, where it is on the scan, and the copies made', () => {

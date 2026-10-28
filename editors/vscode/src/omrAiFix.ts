@@ -1157,25 +1157,29 @@ async function reportMisread(run: FixRun, row: FixRow): Promise<boolean> {
     const text = doc?.getText() ?? (fs.existsSync(lys) ? fs.readFileSync(lys, 'utf8') : run.base.text);
     const fileBar = text.split('\n')[t.line]?.replace(/\r$/, '').trim() ?? t.written;
     // The right bar goes with the report, taken now (owner's request 2026-10-29): the .lys may be
-    // fixed again or deleted after it. The owner says which one it is; a bar not fixed yet is not
-    // a seed.
-    type Right = vscode.QuickPickItem & { from?: 'draft' | 'file' };
+    // fixed again or deleted after it. The owner says which one it is; a bar not fixed yet goes
+    // with what is wrong in words instead, which is then asked for, not optional (owner's report
+    // 2026-10-29: "Not fixed yet" ended the report with no chance to say anything).
+    type Right = vscode.QuickPickItem & { from: 'draft' | 'file' | 'none' };
     const draft = barOf(row);
     const items: Right[] = [
         ...(draft !== undefined && draft !== resolvedLine(fileBar)
             ? [{ label: 'The Draft is right', detail: draft, from: 'draft' as const }] : []),
         { label: 'The bar in the file is right — fixed already', detail: resolvedLine(fileBar), from: 'file' },
-        { label: 'Not fixed yet', detail: 'Fix it in the Draft first, then report: a report keeps the right bar with it.' },
+        { label: 'Not fixed yet', detail: 'Say what is wrong instead — fixing it in the Draft first makes a better seed.', from: 'none' },
     ];
     const right = await vscode.window.showQuickPick(items, { title: `Report Misread to OMR — ${label}: which bar is right?` });
-    if (!right?.from) {
+    if (!right) {
         return false;
     }
-    const correct = right.from === 'draft' ? draft! : resolvedLine(fileBar);
+    const correct = right.from === 'draft' ? draft! : right.from === 'file' ? resolvedLine(fileBar) : null;
     const note = await vscode.window.showInputBox({
         title: `Report Misread to OMR — ${label}`,
-        prompt: 'What did the reader get wrong? (optional) The bar, its scan and the .lys are kept as a seed for OMR\'s training scores.',
+        prompt: correct === null
+            ? 'What did the reader get wrong, and what should the bar be? The bar is not fixed, so this is all OMR will know of it.'
+            : 'What did the reader get wrong? (optional) The bar, its scan and the .lys are kept as a seed for OMR\'s training scores.',
         placeHolder: 'e.g. the natural on the low chord is missing',
+        ...(correct === null ? { validateInput: (v: string) => v.trim() ? undefined : 'Say what is wrong — the bar is not fixed.' } : {}),
     });
     if (note === undefined) {
         return false;
@@ -1194,7 +1198,7 @@ async function reportMisread(run: FixRun, row: FixRow): Promise<boolean> {
     try {
         fs.mkdirSync(dir, { recursive: true });
         fs.writeFileSync(path.join(dir, path.basename(lys)), text, 'utf8');
-        if (right.from === 'draft') {
+        if (right.from === 'draft' && correct !== null) {
             fs.writeFileSync(path.join(dir, fixedCopyName(lys)), withBar(text, t.line + 1, correct), 'utf8');
         }
         const copy = (from: string | undefined, to: string): boolean => {
