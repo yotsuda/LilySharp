@@ -586,11 +586,11 @@
       "file/newFile": [
         {
           "command": "lilysharp.newScore",
-          "group": "file"
+          "group": "file@1"
         },
         {
           "command": "lilysharp.composeWithAi",
-          "group": "file"
+          "group": "file@2"
         }
       ],
       "commandPalette": [

@@ -70,7 +70,8 @@ describe('a new piece in place of the score', () => {
         assert.match(pkg, /"command": "lilysharp\.composeWithAi",\s*"category": "Lily#",\s*"icon": "\$\(sparkle\)",\s*"title": "Compose with AI…",\s*"shortTitle": "Lily# Score, Composed with AI…"/);
         // Found where a piece is begun (owner's request 2026-10-29): File > New File… beside New
         // Score, the language server started for it when no .lys has started it yet.
-        assert.match(pkg, /"command": "lilysharp\.newScore",\s*"group": "file"\s*\},\s*\{\s*"command": "lilysharp\.composeWithAi",\s*"group": "file"/);
+        // New Score first, then Compose (owner's request 2026-10-29): by order, not by title.
+        assert.match(pkg, /"command": "lilysharp\.newScore",\s*"group": "file@1"\s*\},\s*\{\s*"command": "lilysharp\.composeWithAi",\s*"group": "file@2"/);
         assert.match(transform, /async function runCompose\(deps: AiTransformDeps, asked\?: string\): Promise<void> \{[\s\S]{0,300}?await deps\.ensureReady\?\.\(\);/);
         // A broken connection offers Try Again, the request in the box to send or shorten
         // (owner's report 2026-10-29: net::ERR_HTTP2_PROTOCOL_ERROR two minutes into a piece).
