@@ -38,7 +38,7 @@ describe('Report Misread to OMR', () => {
     });
 
     it('is its own button, never an Accept', () => {
-        assert.match(fix, /case 'report':\s*if \(row\) \{ row\.reportPartial = !!m\.on; \}\s*if \(row && await reportMisread\(run, row\)\)/);
+        assert.match(fix, /case 'report':\s*if \(row\) \{ row\.reportPartial = !!m\.on; row\.reportFalseAlarm = !!m\.falseAlarm; \}\s*if \(row && await reportMisread\(run, row\)\)/);
         const accept = fix.slice(fix.indexOf("case 'acceptRow':"), fix.indexOf("case 'report':"));
         assert.ok(!accept.includes('reportMisread'));
         assert.ok(!fix.slice(fix.indexOf('async function applyRows')).slice(0, 4000).includes('reportMisread'));
@@ -55,7 +55,7 @@ describe('Report Misread to OMR', () => {
     // Owner's decision 2026-10-29: the bar fixed in the panel is what is reported — the choice of
     // "the .lys's bar" was taken by mistake while the fix sat in the Draft, and dropped.
     it('reports the Draft as the right bar, with no choice of the .lys\'s', () => {
-        assert.match(fix, /const correct = draft !== undefined && draft !== resolvedLine\(fileBar\) \? draft : null;/);
+        assert.match(fix, /const drafted = draft !== undefined && draft !== resolvedLine\(fileBar\);/);
         assert.ok(!/showQuickPick/.test(fix.slice(fix.indexOf('async function reportMisread'), fix.indexOf('/** A row still in the panel'))));
         assert.ok(!fix.includes('The .lys is right'));
     });
@@ -66,9 +66,29 @@ describe('Report Misread to OMR', () => {
         assert.equal(seedRecordOf(new Date(), { ...bar, partial: true }, 'x', {}).partial, true);
         assert.equal(seedRecordOf(new Date(), { ...bar, correct: null, correctFrom: 'none', partial: true }, 'x', {}).partial, false);
         assert.match(fix, /<input type="checkbox" class="report-partial" data-i="\$\{r\.index\}"/);
-        assert.match(fix, /vscode\.postMessage\(\{ action: 'report', index: Number\(b\.dataset\.i\), on: !!\(partial && partial\.checked\) \}\)/);
-        assert.match(fix, /if \(row\) \{ row\.reportPartial = !!m\.on; \}/);
+        assert.match(fix, /vscode\.postMessage\(\{ action: 'report', index: Number\(b\.dataset\.i\), on: !!\(partial && partial\.checked\), /);
+        assert.match(fix, /if \(row\) \{ row\.reportPartial = !!m\.on; /);
         assert.match(fix, /const asked = correct === null \|\| partial;/);
+    });
+
+    // Owner's request 2026-10-29: the reader's own reading goes with every report, and a bar read
+    // right whose @todo was raised for nothing is reported as such.
+    it('keeps the bar as the panel first had it, and says when the .lys\'s was edited since', () => {
+        const same = seedRecordOf(new Date(), { ...bar, barWhenOpened: bar.bar }, '', {});
+        assert.deepEqual([same.barWhenOpened, same.editedSinceOpened], [bar.bar, false]);
+        const edited = seedRecordOf(new Date(), { ...bar, barWhenOpened: 'c4 d e g |' }, '', {});
+        assert.deepEqual([edited.barWhenOpened, edited.editedSinceOpened], ['c4 d e g |', true]);
+        assert.match(fix, /barWhenOpened: t\.written,/);
+    });
+
+    it('reports a false @todo with the reader\'s bar as the right one, never with a Draft that changes it', () => {
+        const r = seedRecordOf(new Date(), { ...bar, correct: 'c4 d e f |', correctFrom: 'reading', partial: true }, '', {});
+        assert.deepEqual([r.correct, r.correctFrom, r.falseAlarm, r.partial, r.fixedCopy], ['c4 d e f |', 'reading', true, false, 'Largo (op. 1).fixed.lys']);
+        assert.equal(seedRecordOf(new Date(), bar, '', {}).falseAlarm, false);
+        assert.match(fix, /if \(falseAlarm && drafted\) \{/);
+        assert.match(fix, /const correct = falseAlarm \? resolvedLine\(fileBar\) : drafted \? draft! : null;/);
+        assert.match(fix, /<input type="checkbox" class="report-false" data-i="\$\{r\.index\}"/);
+        assert.match(fix, /falseAlarm: !!\(falseAlarm && falseAlarm\.checked\)/);
     });
 
     it('names its folder by when, the score and the bar', () => {
@@ -89,7 +109,7 @@ describe('Report Misread to OMR', () => {
         // (owner's report 2026-10-29: "Not fixed yet" gave no chance to say anything).
         const none = seedRecordOf(new Date(), { ...bar, correct: null, correctFrom: 'none' }, 'the natural is missing', {});
         assert.deepEqual([none.correct, none.correctFrom, none.fixedCopy, none.note], [null, 'none', null, 'the natural is missing']);
-        assert.match(fix, /correctFrom: correct === null \? 'none' : 'draft'/);
+        assert.match(fix, /correctFrom: falseAlarm \? 'reading' : correct === null \? 'none' : 'draft'/);
         assert.match(fix, /\.\.\.\(asked \? \{ validateInput: /);
     });
 

@@ -163,6 +163,8 @@ interface FixRow {
     reported?: string;
     /** The row's "Draft not fully fixed" box, ticked: the next report says the Draft is right only in part. */
     reportPartial?: boolean;
+    /** The row's "Reading is right — @todo is a false alarm" box, ticked. */
+    reportFalseAlarm?: boolean;
     /** The page's count of edits to this row: an answer to an older one is dropped. */
     editSeq?: number;
     /** The bar as it stands (its marks taken out), drawn where a row has no bar of its own to
@@ -1000,6 +1002,8 @@ interface PanelMessage {
     /** complete: the caret's offset in the field, and the character typed that asks. */
     caret?: number;
     trigger?: string | null;
+    /** report: the row's "Reading is right — @todo is a false alarm" box (`on` is its "Draft not fully fixed"). */
+    falseAlarm?: boolean;
 }
 
 /** An item of lilysharp/completeText (LilySharp.Lsp CompleteTextItem). */
@@ -1124,7 +1128,7 @@ async function onPanelMessage(deps: OmrAiFixDeps, m: PanelMessage): Promise<void
             if (row) { await showBar(run, row); }
             return;
         case 'report':
-            if (row) { row.reportPartial = !!m.on; }
+            if (row) { row.reportPartial = !!m.on; row.reportFalseAlarm = !!m.falseAlarm; }
             if (row && await reportMisread(run, row)) {
                 void panel?.webview.postMessage({ type: 'reported', index: row.index, label: REPORT_AGAIN, title: REPORT_AGAIN_TITLE });
             }
@@ -1172,21 +1176,34 @@ async function reportMisread(run: FixRun, row: FixRow): Promise<boolean> {
     // while the fix sat in the Draft, and dropped). A Draft no different from the .lys is a bar not
     // fixed yet: it goes with what is wrong in words, asked for, not optional.
     const draft = barOf(row);
-    const correct = draft !== undefined && draft !== resolvedLine(fileBar) ? draft : null;
+    const drafted = draft !== undefined && draft !== resolvedLine(fileBar);
+    // "Reading is right — @todo is a false alarm", the row's other box (owner's request 2026-10-29):
+    // the reader's bar is the right one, its marks taken out — the reader's check was wrong, not
+    // its reading. A Draft that changes the bar says otherwise, so the two are not reported together.
+    const falseAlarm = !!row.reportFalseAlarm;
+    if (falseAlarm && drafted) {
+        vscode.window.showErrorMessage('Lily#: the Draft changes the bar, so the reading was not right — untick "Reading is right", or undo the edit.');
+        return false;
+    }
+    const correct = falseAlarm ? resolvedLine(fileBar) : drafted ? draft! : null;
     // "Draft not fully fixed", the row's check box (owner's request 2026-10-29: a fix half done is
     // worth reporting, marked so — a box, not a sign typed in the note, which would be forgotten):
     // what is still wrong is then asked for, as for a bar not fixed at all.
-    const partial = correct !== null && !!row.reportPartial;
+    const partial = drafted && !falseAlarm && !!row.reportPartial;
     const asked = correct === null || partial;
     const note = await vscode.window.showInputBox({
         title: correct === null ? `Report Misread to OMR — ${label}, not fixed in the Draft`
+            : falseAlarm ? `Report to OMR — ${label}: the reading is right, the @todo a false alarm`
             : `Report Misread to OMR — ${label}${partial ? ' (Draft not fully fixed)' : ''}: ${correct}`,
         prompt: correct === null
             ? 'The Draft holds no fix, so say what the reader got wrong and what the bar should be — this is all OMR will know of it. (Esc, fix it in the Draft, and report again for a better seed.)'
+            : falseAlarm
+                ? 'The bar as the reader wrote it is reported as right. Anything to add? (optional)'
             : partial
                 ? 'The Draft above is reported as fixed only in part. What is still wrong in it?'
                 : 'The Draft above is reported as the right bar. What did the reader get wrong? (optional)',
-        placeHolder: partial ? 'e.g. the slur is fixed; the top note head may be a step too low' : 'e.g. the natural on the low chord is missing',
+        placeHolder: falseAlarm ? 'e.g. the tie it asks about is not on the scan'
+            : partial ? 'e.g. the slur is fixed; the top note head may be a step too low' : 'e.g. the natural on the low chord is missing',
         ...(asked ? { validateInput: (v: string) => v.trim() ? undefined : partial ? 'Say what is still wrong in the Draft.' : 'Say what is wrong — the bar is not fixed.' } : {}),
     });
     if (note === undefined) {
@@ -1195,7 +1212,10 @@ async function reportMisread(run: FixRun, row: FixRow): Promise<boolean> {
     const info = t.crop ? run.side?.pages.find(p => p.page === t.crop!.page) : undefined;
     const sidePath = sideFileOf(lys);
     const bar: SeedBar = {
-        lys, line: t.line + 1, bar: fileBar, correct, correctFrom: correct === null ? 'none' : 'draft', partial,
+        lys, line: t.line + 1, bar: fileBar, correct, correctFrom: falseAlarm ? 'reading' : correct === null ? 'none' : 'draft', partial,
+        // The bar as the panel first had it (owner's request 2026-10-29: the reader's own reading
+        // must go with the report, and the .lys's bar may have been edited in the editor since).
+        barWhenOpened: t.written,
         ...(reader ? { measure: reader.measure, part: reader.part } : {}),
         ...(t.crop ? { crop: { page: t.crop.page, box: [...t.crop.box] } } : {}),
         ...(info ? { pageImage: info.image } : {}),
@@ -1746,6 +1766,8 @@ function rowHtml(run: FixRun, r: FixRow, pageUris: ReadonlyMap<number, { uri: st
         ? `<button class="row-report" data-i="${r.index}" title="${r.reported ? REPORT_AGAIN_TITLE : 'Keep this bar, its scan and the .lys as a seed for OMR\'s training scores — the reader got it wrong'}">${r.reported ? REPORT_AGAIN : 'Report Misread to OMR…'}</button>`
           + `<label class="take" title="The Draft is fixed only in part: the report says so, and asks what is still wrong">`
           + `<input type="checkbox" class="report-partial" data-i="${r.index}" ${r.reportPartial ? 'checked' : ''}> Draft not fully fixed</label>`
+          + `<label class="take" title="The bar as the reader wrote it is right, and its @todo was raised for nothing: the report says so">`
+          + `<input type="checkbox" class="report-false" data-i="${r.index}" ${r.reportFalseAlarm ? 'checked' : ''}> Reading is right — @todo is a false alarm</label>`
         : '';
     // Taken but still marked (owner's request 2026-10-24): the bar is written with a @todo at
     // the same note — the reader's key kept — and the words typed here as its memo. A bar that
@@ -1927,6 +1949,12 @@ ${rows}
     vscode.postMessage({ action: 'keep', index: Number(i), on, text: n.value });
     if (on) n.focus();
   });
+  // The report's two boxes say opposite things of the Draft: ticking one unticks the other.
+  document.addEventListener('change', e => {
+    if (!(e.target.matches && e.target.matches('input.report-partial, input.report-false')) || !e.target.checked) return;
+    const other = e.target.classList.contains('report-partial') ? 'input.report-false' : 'input.report-partial';
+    for (const x of document.querySelectorAll(other + '[data-i="' + e.target.dataset.i + '"]')) x.checked = false;
+  });
   document.addEventListener('input', e => {
     if (e.target.matches && e.target.matches('input.note')) vscode.postMessage({ action: 'keep', index: Number(e.target.dataset.i), text: e.target.value });
   });
@@ -1943,7 +1971,8 @@ ${rows}
     else if (b.classList.contains('row-report')) {
       e.stopImmediatePropagation();
       const partial = document.querySelector('input.report-partial[data-i="' + b.dataset.i + '"]');
-      vscode.postMessage({ action: 'report', index: Number(b.dataset.i), on: !!(partial && partial.checked) });
+      const falseAlarm = document.querySelector('input.report-false[data-i="' + b.dataset.i + '"]');
+      vscode.postMessage({ action: 'report', index: Number(b.dataset.i), on: !!(partial && partial.checked), falseAlarm: !!(falseAlarm && falseAlarm.checked) });
     }
     else if (b.id === 'acceptAll') vscode.postMessage({ action: 'acceptAll' });
     else if (b.id === 'cancel') vscode.postMessage({ action: 'cancel' });

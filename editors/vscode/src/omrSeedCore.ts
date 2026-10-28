@@ -43,13 +43,17 @@ export interface SeedBar {
     readonly line: number;
     /** The bar's line as the .lys has it at the report. */
     readonly bar: string;
-    /** The bar as it should read — the panel's Draft ('draft'); null and 'none' when the Draft
-     *  holds no fix (the note says what is wrong). */
+    /** The bar as it should read — the panel's Draft ('draft'), or the reader's own bar, its marks
+     *  taken out, when its @todo was a false alarm ('reading'); null and 'none' when the Draft holds
+     *  no fix (the note says what is wrong). */
     readonly correct: string | null;
-    readonly correctFrom: 'draft' | 'none';
+    readonly correctFrom: 'draft' | 'reading' | 'none';
     /** The Draft is fixed only in part (the row's "Draft not fully fixed" box): the note says what
      *  is still wrong. */
     readonly partial?: boolean;
+    /** The bar's line as the panel first had it — the reader's own, unless it was edited before the
+     *  panel opened. */
+    readonly barWhenOpened?: string;
     /** Where it is on the scan, when the side file says. */
     readonly crop?: { readonly page: number; readonly box: readonly number[] };
     /** The page's image and the side file, their paths, when there are. */
@@ -75,8 +79,17 @@ export interface SeedRecord {
     readonly line: number;
     /** The bar's line in lysCopy, and the bar as it should read. */
     readonly bar: string;
+    /** The bar's line as the panel first had it, and whether lysCopy's differs from it (edited in
+     *  the editor while the panel was open — then `barWhenOpened` is the nearer the reader's own;
+     *  the reader's own for certain is the copied page read again by the same reader, `omr` in
+     *  the side file). */
+    readonly barWhenOpened: string;
+    readonly editedSinceOpened: boolean;
     readonly correct: string | null;
-    readonly correctFrom: 'draft' | 'none';
+    /** `reading`: the reader's bar was right and its @todo a false alarm — a check to mend, not a
+     *  reading. */
+    readonly correctFrom: 'draft' | 'reading' | 'none';
+    readonly falseAlarm: boolean;
     /** `correct` is right only in part: the note says what is still wrong. Not for the scan's
      *  evaluation, where it would count a right reading as wrong. */
     readonly partial: boolean;
@@ -142,9 +155,12 @@ export function seedRecordOf(when: Date, bar: SeedBar, note: string,
         part: bar.part ?? null,
         line: bar.line,
         bar: bar.bar,
+        barWhenOpened: bar.barWhenOpened ?? bar.bar,
+        editedSinceOpened: bar.barWhenOpened !== undefined && bar.barWhenOpened !== bar.bar,
         correct: bar.correct,
         correctFrom: bar.correctFrom,
-        partial: bar.correct !== null && !!bar.partial,
+        falseAlarm: bar.correctFrom === 'reading',
+        partial: bar.correctFrom === 'draft' && !!bar.partial,
         scan: bar.crop ? {
             page: bar.crop.page,
             box: [...bar.crop.box],
