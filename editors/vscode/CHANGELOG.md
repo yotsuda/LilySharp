@@ -8,6 +8,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 - **A span is closed by the name it was opened with** — `@8va … @!8va`, `@rit … @!rit`. A
   different name (`@8va … @!15ma`) is an error with a quick fix that writes the right one.
+- **Ctrl+Shift+Up / Down on `@cresc` turns it** into `@decresc` (and back), with the `@!cresc` that ends it.
 - **An unclosed span is underlined whole** (`@accel`, `@textSpan("…")`), not its `@` alone.
 - **Ctrl+Shift+Up / Down on `@8va` steps it** through `@15mb` `@8vb` `@8va` `@15ma`, and the `@!8va`
   that closes it changes with it.

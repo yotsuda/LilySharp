@@ -452,6 +452,11 @@ public static partial class NoteStepper
                     if (t.Kind == TargetKind.Articulation && SpanNames.EndOf(t.Node) is { } end
                         && end.Name == ((ArticulationSyntax)t.Node).Name)
                         edits.Add(new Edit(end.NameToken.Span.Start, end.NameToken.Span.End, ve.NewText));
+                    // A hairpin's @!cresc turns with it (owner's request 2026-10-28).
+                    if (t.Kind == TargetKind.Dynamic && t.Node is DynamicSyntax hairpin
+                        && SyntaxFacts.IsDynamicSpannerName(hairpin.DynamicToken.Text)
+                        && SpanNames.HairpinEndOf(hairpin) is { } hairpinEnd && hairpinEnd.Text == hairpin.DynamicToken.Text)
+                        edits.Add(new Edit(hairpinEnd.Span.Start, hairpinEnd.Span.End, ve.NewText));
                 }
                 stepped.Add(t);
                 continue;

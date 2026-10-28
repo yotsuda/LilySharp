@@ -111,6 +111,25 @@ public static class SpanNames
         return marks;
     }
 
+    /// <summary>The <c>@!</c> that ends a hairpin — the next <c>@!cresc</c> / <c>@!decresc</c> /
+    /// <c>@!dim</c> in its line, when no dynamic (a level, which ends it, or a new hairpin) comes
+    /// first — or null. For the step that turns a hairpin and its end together (owner's request
+    /// 2026-10-28).</summary>
+    public static SyntaxTokenNode? HairpinEndOf(DynamicSyntax start)
+    {
+        var line = Line(start);
+        foreach (var d in line.DescendantNodes())
+        {
+            if (d.Span.Start <= start.Span.Start || !ReferenceEquals(Line(d), line))
+                continue;
+            if (d is DynamicSyntax)
+                return null;
+            if (d is MusicMarkSyntax { IsSpanEnd: true } end && SyntaxFacts.IsDynamicSpannerName(end.Name))
+                return NameTokenOf(end);
+        }
+        return null;
+    }
+
     /// <summary>The end that closes <paramref name="start"/> — the next mark of its family in its
     /// line, when that one is an end — or null.</summary>
     public static Mark? EndOf(SyntaxNode start)

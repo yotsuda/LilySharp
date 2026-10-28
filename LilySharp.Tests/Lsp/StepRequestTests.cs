@@ -1635,9 +1635,14 @@ public class StepRequestTests
         Assert.Equal(Plain("c'4@cresc d'"), Step(Plain("c'4@de‸cresc d'"), +1, semitone: true).After);
         Assert.Equal(Plain("c'4@decresc d'"), Step(Plain("c'4@cresc‸ d'"), -1, semitone: true).After);
         Assert.Equal(Plain("c'4@cresc d'"), Step(Plain("c'4@‸dim d'"), +1, semitone: true).After);
+        // Either pair turns a hairpin (owner's request 2026-10-28: it was a direction per key),
+        // and the @! that ends it turns with it; one a dynamic ended is left alone.
         var (again, after) = Step(Plain("c'4@cre‸sc d'"), +1, semitone: true);
         Assert.False(again.Fallback);
-        Assert.Equal(Plain("c'4@cresc d'"), after);
+        Assert.Equal(Plain("c'4@decresc d'"), after);
+        Assert.Equal(Plain("c'4@decresc d' e' f'@!decresc | g'1 |"), Step(Plain("c'4@cre‸sc d' e' f'@!cresc | g'1 |"), +1, semitone: true).After);
+        Assert.Equal(Plain("c'4@cresc d' e' f'@!cresc | g'1 |"), Step(Plain("c'4@decre‸sc d' e' f'@!decresc | g'1 |"), +1, semitone: true).After);
+        Assert.Equal(Plain("c'4@decresc d' e'@f f' | g'1@!cresc |"), Step(Plain("c'4@cre‸sc d' e'@f f' | g'1@!cresc |"), -1, semitone: true).After);
         // Just before the '@' the caret is on the note.
         Assert.Equal(Plain("d'4@p d'"), Step(Plain("c'4‸@p d'"), +1, semitone: true).After);
     }
