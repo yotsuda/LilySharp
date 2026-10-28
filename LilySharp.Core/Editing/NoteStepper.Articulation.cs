@@ -41,7 +41,7 @@ namespace LilySharp.Core.Editing;
 /// (staccatissimo, staccato, portato, tenuto), weight (accent, marcato), fermatas (short, plain,
 /// long), the mordent pair (mordent below, prall above), the turn pair (reverseTurn starts
 /// below, turn above), the trills (pralltriller, trill, trillSpan — the span's end follows,
-/// <see cref="TrillSpanEndEdit"/>), the organ pedal pair (heel, toe),
+/// <see cref="SpanEndEdit"/>), the organ pedal pair (heel, toe),
 /// the jazz approaches (scoop from below, plop from above) and departures (fall down, doit up),
 /// the breathing pair (breath, caesura), the stem's direction (stemDown, stemUp — owner's
 /// request 2026-10-17), the ottava's printed spellings (15mb, 8vb, 8va, 15ma) and the tempo
@@ -302,26 +302,54 @@ public static partial class NoteStepper
     }
 
     /// <summary>
-    /// The end that goes with a step into or out of <c>@trillSpan</c> (owner's decision
-    /// 2026-10-28): stepped away, its <c>@!trillSpan</c> is deleted, so no stray end is left;
-    /// stepped to, an <c>@!trillSpan</c> is written after the marks of the next note, rest or
-    /// chord in its line — the shortest span, which the writer then moves — unless an end is
-    /// already there. Null when nothing goes with it (no next note: the span runs on, as an
-    /// unclosed one does, and the writer closes it).
+    /// The end that goes with a step (owner's decisions 2026-10-28). Stepped away from
+    /// <c>@trillSpan</c>, its <c>@!trillSpan</c> is deleted, so no stray end is left. Stepped to a
+    /// span start — a text span, an ottava, a pedal, a trill span — that nothing closes (no end
+    /// and no later start of its family in its line), an <c>@!</c> of the new name is written on
+    /// the last note, chord or rest of the same bar, after its marks; when the mark stands on that
+    /// last one itself, on the last of the next bar. An unclosed span draws nothing, so the step
+    /// leaves one that does; the writer then moves the end. Null when nothing goes with it (no
+    /// note after it: the writer closes it).
     /// </summary>
-    private static Edit? TrillSpanEndEdit(string text, SyntaxNode mark, Edit edit)
+    private static Edit? SpanEndEdit(string text, SyntaxNode mark, Edit edit)
     {
-        if (mark is not ArticulationSyntax start || edit.NewText == start.Name)
+        const string trill = Svg.Model.MusicMarkItem.TrillSpanName;
+        if (mark is ArticulationSyntax { Name: trill } trillStart && edit.NewText != trill)
+            return SpanNames.TrillSpanEndOf(trillStart) is { } end ? new Edit(end.Span.Start, end.Span.End, "") : null;
+        if (SpellingOf(text, mark) is not { } spelling || edit.Start < spelling.Start || edit.End > spelling.End)
             return null;
-        const string span = Svg.Model.MusicMarkItem.TrillSpanName;
-        if (start.Name == span)
-            return SpanNames.TrillSpanEndOf(start) is { } end ? new Edit(end.Span.Start, end.Span.End, "") : null;
-        if (edit.NewText != span || SpanNames.TrillSpanEndOf(start) != null || EventOf(start) is not { } carrier)
+        string head = HeadOf(text[spelling.Start..edit.Start] + edit.NewText + text[edit.End..spelling.End]);
+        var family = head == trill ? null : SpanNames.FamilyOf(head);
+        if (head != trill && family == null)
             return null;
-        foreach (var next in SpanNames.After(carrier))
-            if (EventMarksEnd(text, next) is { } at)
-                return new Edit(at, at, "@!" + span);
-        return null;
+        if (SpanNames.EndOf(mark) != null
+            || SpanNames.After(mark).Any(d => head == trill
+                ? d is ArticulationSyntax { Name: trill } or MusicMarkSyntax { IsSpanEnd: true, Name: trill }
+                : SpanNames.Of(d)?.Family == family))
+            return null;
+        return EventOf(mark) is { } carrier && LastOfBarAfter(text, carrier) is { } at ? new Edit(at, at, "@!" + head) : null;
+    }
+
+    /// <summary>Where the end goes for a span opened on <paramref name="carrier"/>: after the
+    /// marks of the last note, chord or rest of its bar — of the next bar when it is that last one
+    /// itself — or of the line's last when no bar line comes; null when no note follows.</summary>
+    private static int? LastOfBarAfter(string text, SyntaxNode carrier)
+    {
+        int? last = null;
+        bool crossed = false;
+        foreach (var d in SpanNames.After(carrier))
+        {
+            if (d is BarlineSyntax)
+            {
+                if (last != null || crossed)
+                    return last;
+                crossed = true;
+                continue;
+            }
+            if (EventMarksEnd(text, d) is { } at)
+                last = at;
+        }
+        return last;
     }
 
     /// <summary>The note, chord or rest a mark is written on (a chord member's mark: its chord).</summary>

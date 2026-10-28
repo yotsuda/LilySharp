@@ -26,10 +26,13 @@ All notable changes to the Lily# VS Code extension are documented here.
 - **An argument from a list steps**: `@notehead(x)` → `@notehead(cross)` …, `@finger(3)` → `@finger(4)`,
   `@pluck(…)`, `@bend(…)`, `@feather(…)` — the values `Ctrl+Space` offers there.
 - **The trills step shortest to longest**: `@pralltriller` → `@trill` → `@trillSpan` (was `@trill` →
-  `@pralltriller`). Stepping to `@trillSpan` writes its `@!trillSpan` on the next note; stepping back
+  `@pralltriller`). Stepping to `@trillSpan` writes its `@!trillSpan` on the bar's last note; stepping back
   deletes it.
 - **The keys work on an `@!` end too**: on `@!accel` Ctrl+Shift+Down writes `@rit` and `@!rit` — the
   start and its end step together (text spans, ottavas, pedals, hairpins, trill spans).
+- **A span nothing closes is closed when it steps**: `@rit` with no `@!rit`, stepped to `@accel`, gets
+  `@!accel` on the last note of its bar (of the next bar when it stands on that last note) — text
+  spans, ottavas, pedals and trill spans.
 - **`grace` / `acciaccatura` / `appoggiatura` step among themselves**, and `break` ⇄ `pageBreak`,
   `noBreak` ⇄ `noPageBreak`.
 

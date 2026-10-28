@@ -53,6 +53,11 @@ public static class SpanNames
         MusicMarkType.SustainOff, MusicMarkType.SostenutoOff, MusicMarkType.UnaCordaOff,
     ];
 
+    /// <summary>The family a start's name opens when it is one this class reads (a text span, an
+    /// ottava, a pedal), or null.</summary>
+    public static MusicMarkType? FamilyOf(string name)
+        => MusicMarkItem.ParseSpanEndName(name) is { } family && Families.Contains(family) ? family : null;
+
     /// <summary>The node as a span mark of a family this rule reads, or null.</summary>
     public static Mark? Of(SyntaxNode node)
     {

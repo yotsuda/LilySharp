@@ -1647,11 +1647,11 @@ public class StepRequestTests
 
     /// <summary>The trills step shortest to longest — pralltriller, trill, trillSpan (owner's
     /// decision 2026-10-28) — and the span's end goes with it: stepped to, an @!trillSpan on the
-    /// next note, after its marks; stepped away, its @!trillSpan deleted.</summary>
+    /// bar's last note, after its marks; stepped away, its @!trillSpan deleted.</summary>
     [Theory]
-    [InlineData("c''4@tri‸ll d'' e'' f'' |", +1, "c''4@trillSpan d''@!trillSpan e'' f'' |")]
-    [InlineData("c''4@tri‸ll d''@staccato e'' f'' |", +1, "c''4@trillSpan d''@staccato@!trillSpan e'' f'' |")]
-    [InlineData("c''4@tri‸ll <d'' f''>8 r8 e''4 f'' |", +1, "c''4@trillSpan <d'' f''>8@!trillSpan r8 e''4 f'' |")]
+    [InlineData("c''4@tri‸ll d'' e'' f'' |", +1, "c''4@trillSpan d'' e'' f''@!trillSpan |")]
+    [InlineData("c''4@tri‸ll d'' e'' f''@staccato |", +1, "c''4@trillSpan d'' e'' f''@staccato@!trillSpan |")]
+    [InlineData("c''4@tri‸ll d''8 r8 e''4 <f'' a''>4 |", +1, "c''4@trillSpan d''8 r8 e''4 <f'' a''>4@!trillSpan |")]
     [InlineData("c''2.@tri‸ll r4 |", +1, "c''2.@trillSpan r4@!trillSpan |")]
     [InlineData("c''4@trill‸Span d'' e''@!trillSpan f'' |", -1, "c''4@trill d'' e'' f'' |")]
     [InlineData("c''4@pralltr‸iller d'' e'' f'' |", +1, "c''4@trill d'' e'' f'' |")]
@@ -1669,6 +1669,33 @@ public class StepRequestTests
             d => d.Severity != LilySharp.Core.Syntax.DiagnosticSeverity.Info);
         var (top, _) = Step(Plain("c''4@trillSp‸an d''@!trillSpan e'' f'' |"), +1, semitone: true);
         Assert.Equal("trillSpan / trill / pralltriller", top.Message);
+    }
+
+    /// <summary>A span start that nothing closes, stepped, gets its end on the last note of its
+    /// bar — of the next bar when it stands on that last one (owner's decision 2026-10-28) — for
+    /// every family the keys step: a text span, an ottava, a pedal. One already closed, by its
+    /// end or by a later start of its family, is left alone.</summary>
+    [Theory]
+    [InlineData("c'4@ri‸t d' e' f' | g'1 |", +1, "c'4@accel d' e' f'@!accel | g'1 |")]
+    [InlineData("c'4 d' e' f'@ri‸t | g'2 a' | b'1 |", +1, "c'4 d' e' f'@accel | g'2 a'@!accel | b'1 |")]
+    [InlineData("c'4@ra‸ll d' e' f'@fermata | g'1 |", +1, "c'4@rit d' e' f'@fermata@!rit | g'1 |")]
+    [InlineData("c''4@8‸va d'' e'' f'' | g'1 |", +1, "c''4@15ma d'' e'' f''@!15ma | g'1 |")]
+    [InlineData("c4@otta‸va d e f | g1 |", -1, "c4@ottava(bassa) d e f@!ottava | g1 |")]
+    [InlineData("c'4@sus‸tain d' e' f' | g'1 |", -1, "c'4@sostenuto d' e' f'@!sostenuto | g'1 |")]
+    // Already closed: by its end (renamed with it), a later start of its family (an ottava's change).
+    [InlineData("c'4@ri‸t d' | e' f'@!rit g'2 |", +1, "c'4@accel d' | e' f'@!accel g'2 |")]
+    [InlineData("c''4@8‸va d'' e''@15ma f'' | g''1@!15ma |", +1, "c''4@15ma d'' e''@15ma f'' | g''1@!15ma |")]
+    // Not a span: nothing is added.
+    [InlineData("c'4@staccato‸ d' e' f' | g'1 |", +1, "c'4@portato d' e' f' | g'1 |")]
+    public void AnUnclosedSpan_Stepped_IsClosedAtItsBarsLastNote(string from, int dir, string to)
+        => Assert.Equal(Plain(to), Step(Plain(from), dir, semitone: true).After);
+
+    [Fact]
+    public void AnUnclosedSpan_Stepped_CompilesClean()
+    {
+        string after = Step(Plain("c'4@ri‸t d' e' f' | g'1 |"), +1, semitone: true).After;
+        Assert.DoesNotContain(LilySharp.Core.Semantics.SemanticValidation.Run(LilySharp.Core.Syntax.SyntaxTree.Parse(after)),
+            d => d.Severity != LilySharp.Core.Syntax.DiagnosticSeverity.Info);
     }
 
     /// <summary>On an @! end the keys step the start it closes, and the end with it (owner's
