@@ -47,10 +47,11 @@ public class TabDisplayCompletionTests
         => Assert.Equal(LilySharpLanguageServer.CompletionContext.AfterChordDisplayAs, Ctx(text));
 
     [Fact]
-    public void TabDisplayModeCompletions_AreNumbersAndFull()
+    public void TabDisplayModeCompletions_AreTheStylesThenTheOctaves()
     {
+        // The octave the tab is played in joined the style after `as` on 2026-10-28.
         var labels = LilySharpLanguageServer.GetTabDisplayModeCompletions().Items
             .Select(i => i.Label).ToArray();
-        Assert.Equal(new[] { "numbers", "full" }, labels);
+        Assert.Equal(new[] { "numbers", "full", "8vb", "15mb", "8va", "15ma" }, labels);
     }
 }

@@ -1586,6 +1586,11 @@ public static class DiagnosticCodes
     /// requires negative fret … Ignoring string request and recalculating",
     /// scm/translation-functions.scm:745-756).</summary>
     public const string TabStringUnplayable = "LYS5003";
+    /// <summary>Tablature advice: a tab in another tuning than its part's (<c>tab bass5 melody</c>)
+    /// leaves many notes off the strings, and a whole octave or two would put every one on —
+    /// written with the tab's octave word (<c>as 8vb</c>), offered as a quick fix (owner's
+    /// decision 2026-10-28: the writer chooses; the tab never moves by itself).</summary>
+    public const string TabOctaveAdvice = "LYS5004";
 
     // Render/score declaration errors (LYS6xxx)
 

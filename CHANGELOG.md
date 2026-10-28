@@ -134,6 +134,18 @@ workflow attaches that section to the GitHub Release verbatim.
   sound. MusicXML puts a row's harmonies on the part it is for, else on a part that does not
   transpose where the score has one.
 
+### Tablature
+
+- `[lang]` **A tab says the octave it is played in**: `tab bass5 melody as 8vb` frets a guitar
+  line an octave lower on a five-string bass (`8vb` `15mb` `8va` `15ma`, after the one `as`,
+  beside `numbers | full`). Only the frets move — not the MIDI, the staff or the part.
+- `[lang]` LYS5004: a tab in its own tuning that leaves a quarter or more of its notes off the
+  strings, where an octave or two would put every one on, names the word; the quick fix writes
+  it. The tab never picks an octave by itself.
+- `[ly]` The twin frets a tab on the item's own tuning (`tab bass5 melody`), not the part's, and
+  with its octave.
+- `[editor]` Completion offers the octave words after `as`, and the other selector after one.
+
 ### Editing
 
 - `[editor]` **A minor key's step keys walk its key signature** (the natural minor: A minor

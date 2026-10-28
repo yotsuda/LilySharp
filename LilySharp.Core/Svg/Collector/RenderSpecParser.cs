@@ -871,6 +871,13 @@ public static class RenderSpecParser
     internal static bool TabIsNumbersOnly(TabRenderSyntax tab, RenderDeclarationSyntax render)
         => ParseTab(tab, StaffRenderedParts(render))?.NumbersOnly ?? false;
 
+    /// <summary>The page's reading of a tab item — its tuning (the item's own word, else the
+    /// part's), and the written→sounding shift it frets against with the item's octave
+    /// (<c>as 8vb</c>) folded in — for the twin to ask instead of reading the part alone
+    /// (until 2026-10-28 it fretted <c>tab bass5 melody</c> on the part's own tuning).</summary>
+    internal static TabStaffSpec? TabSpecOf(TabRenderSyntax tab, RenderDeclarationSyntax render)
+        => ParseTab(tab, StaffRenderedParts(render));
+
     private static TabStaffSpec? ParseTab(TabRenderSyntax tab, HashSet<string> staffParts)
     {
         // [tuning?] part [as numbers|full]. Which word is the part and which the tuning is
@@ -910,7 +917,10 @@ public static class RenderSpecParser
         // Carry the part's NOTATION clef: treble_8 marks written-8va
         // (guitar) parts, which the fret calculation shifts down an octave.
         var sourceClef = GetPartClef(tab, voiceName) ?? ClefType.Treble;
-        var transposition = ResolvePartTransposition(tab, voiceName, tuning);
+        // …and the octave the TAB is played in (`as 8vb`, owner's decision 2026-10-28): where
+        // its notes are fretted, never what the part sounds or its staff prints.
+        var transposition = ResolvePartTransposition(tab, voiceName, tuning)
+            + Semantics.TabRenderVocabularyValidator.OctaveSemitones(tab);
         var staffSpec = new StaffSpec(sourceClef, voiceName);
         // The STYLE: an explicit `as` wins; otherwise the score answers. A tab beside a
         // notation staff of the same part is fret digits only, because that staff already

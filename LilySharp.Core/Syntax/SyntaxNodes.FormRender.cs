@@ -1254,15 +1254,38 @@ public sealed partial class TabRenderSyntax : SyntaxNode
     /// Matched by TEXT because <c>as</c> also lexes as the Dutch A-flat pitch.
     /// </remarks>
     public SyntaxTokenNode? DisplayModeToken
+        => SelectorWords().FirstOrDefault(w => !Semantics.TabRenderVocabularyValidator.OctaveVocabulary.Contains(w.Text));
+
+    /// <summary>The token carrying the octave the tab is played in (<c>as 8vb</c>, owner's
+    /// decision 2026-10-28), or null when the item writes none.</summary>
+    public SyntaxTokenNode? OctaveToken
+        => SelectorWords().FirstOrDefault(w => Semantics.TabRenderVocabularyValidator.OctaveVocabulary.Contains(w.Text));
+
+    /// <summary>The edit that writes <paramref name="word"/> as this tab's octave: over the octave
+    /// word it has, else after its <c>as</c>, else as a new <c>as</c> after its part — what the
+    /// editor's quick fix for LYS5004 applies.</summary>
+    public (int Start, int End, string Text) OctaveEdit(string word)
     {
-        get
+        if (OctaveToken is { } own)
+            return (own.Span.Start, own.Span.End, word);
+        if (SelectorWords().FirstOrDefault() is { } first)
+            return (first.Span.Start, first.Span.Start, word + " ");
+        var last = PartToken ?? TabKeyword;
+        return (last.Span.End, last.Span.End, " as " + word);
+    }
+
+    /// <summary>Every word after the item's <c>as</c>, in order.</summary>
+    internal IEnumerable<SyntaxTokenNode> SelectorWords()
+    {
+        bool after = false;
+        for (int i = 1; i < SlotCount; i++)
         {
-            for (int i = 1; i + 1 < SlotCount; i++)
-                if (GetChild(i) is SyntaxTokenNode a
-                    && string.Equals(a.Text, "as", System.StringComparison.Ordinal)
-                    && GetChild(i + 1) is SyntaxTokenNode m)
-                    return m;
-            return null;
+            if (GetChild(i) is not SyntaxTokenNode t)
+                continue;
+            if (after)
+                yield return t;
+            else if (string.Equals(t.Text, "as", System.StringComparison.Ordinal))
+                after = true;
         }
     }
 

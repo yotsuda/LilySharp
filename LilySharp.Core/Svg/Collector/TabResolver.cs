@@ -37,6 +37,12 @@ internal sealed class TabResolver
     /// <summary>Tab notes pitched outside the fretboard's range.</summary>
     public IReadOnlyList<TabRangeWarning> RangeWarnings => _rangeWarnings;
 
+    private readonly List<TabFit> _fits = new();
+
+    /// <summary>Each resolved tab voice's sounding pitches on its tuning — what
+    /// <c>TabRangeValidator</c> asks whether a whole octave would put on the strings.</summary>
+    public IReadOnlyList<TabFit> Fits => _fits;
+
     private readonly List<TabStringUnplayableWarning> _stringWarnings = new();
 
     /// <summary>Written string numbers that cannot fret their pitch (and are ignored).</summary>
@@ -361,6 +367,8 @@ internal sealed class TabResolver
         bool restSince = false, previousSlurStart = false, previousFall = false;
 
         var barWritten = new Dictionary<int, int>(); // written MIDI -> its written string, this bar
+        var sounding = new List<int>();
+        _fits.Add(new TabFit(voice.Name, tuning, sounding));
         for (int mi = 0; mi < measures.Length; mi++)
         {
             barWritten.Clear();
@@ -389,8 +397,11 @@ internal sealed class TabResolver
                     var newNotes = AssignChordStrings(chord.Notes, tun, shift);
                     Work(mi)[ii] = chord with { Notes = newNotes };
                     foreach (var cn in newNotes)
+                    {
+                        sounding.Add(cn.Midi + shift);
                         if (!IsTabPlaceable(cn.Midi + shift, tun))
                             _rangeWarnings.Add(new TabRangeWarning(chord.SourcePosition, cn.Midi + shift < lowestOpen));
+                    }
                     if (newNotes.Length == 0) continue;
                     var low = newNotes.MinBy(cn => cn.Midi)!;
                     midi = low.Midi + shift;
@@ -410,6 +421,8 @@ internal sealed class TabResolver
                 else if (item is NoteItem note)
                 {
                     midi = note.Midi + shift;
+                    if (!note.IsPitchlessSlash)
+                        sounding.Add(midi);
                     if (!IsTabPlaceable(midi, tun))
                     {
                         bool below = midi < lowestOpen;

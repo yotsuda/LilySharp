@@ -1699,7 +1699,7 @@ ScoreItem      = StaffRender                        (* staff partName — BARE, 
                | 'choirStaff' , StaffGroupBody      (* a BRACKET, bar lines NOT drawn through *)
                | CondensedStaff                     (* several parts on ONE staff *)
                | CombinedStaff                      (* two parts on one staff, MERGED *)
-               | 'tab' , [ [ TuningName ] , PartRef ] , [ 'as' , TabStyle ]
+               | 'tab' , [ [ TuningName ] , PartRef ] , [ 'as' , TabSelector , { TabSelector } ]
                                                      (* tablature: tab partName, or
                                                         tab bass5 partName to override the
                                                         part header's own `tuning`.
@@ -1769,6 +1769,18 @@ ScoreItem      = StaffRender                        (* staff partName — BARE, 
                | PartRef                            (* a bare part name: MIDI only — see below *)
                ;
 
+TabSelector    = TabStyle | TabOctave ;   (* one 'as' takes both, in either order, each once *)
+TabOctave      = '8vb' | '15mb' | '8va' | '15ma' ;
+                 (* The octave the tab is PLAYED in (owner's decision 2026-10-28): 'tab bass5
+                    melody as 8vb' frets a guitar line an octave below what it sounds, on a
+                    five-string bass - 'as 8va' a bass line an octave up on a ukulele. The
+                    words are a part's 'transposition' and the '@8vb' mark, read the same way.
+                    Only the tab's frets move: the part sounds, and its staff prints, as
+                    written. The tab never picks an octave by itself (one stray low E-flat
+                    would move it the wrong way). A tab that names its own tuning and leaves
+                    a quarter or more of its notes off the strings, where an octave or two
+                    would put every one on, is told the word (LYS5004, with a quick fix).
+                    A note that stays off is LYS5002 and is not drawn. *)
 TabStyle       = 'numbers' | 'full' ;
                  (* How much of the rhythm a tab staff draws.
                     'numbers' is LilyPond's plain TabStaff: fret DIGITS only, with no time

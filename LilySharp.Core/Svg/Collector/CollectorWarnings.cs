@@ -77,6 +77,13 @@ public record TabRangeWarning(
 );
 
 /// <summary>
+/// One tab voice's sounding pitches (the fretted ones, after the tab's own octave) on its
+/// tuning: whether a whole octave more would put every one on a string is the question
+/// <c>TabRangeValidator</c> answers with its advice (owner's decision 2026-10-28).
+/// </summary>
+public readonly record struct TabFit(string Voice, TuningType Tuning, IReadOnlyList<int> Sounding);
+
+/// <summary>
 /// A written string number (<c>\N</c>) that cannot fret its note's pitch: the fret on that
 /// string would be below 0 or above 24. The string request is ignored and the string chosen
 /// again (single notes by <c>Tunings.CalculateFret</c>, chord members by

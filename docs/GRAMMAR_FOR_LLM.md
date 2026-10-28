@@ -1498,7 +1498,10 @@ MUSIC only: `q`, `chord` (`chord(C x32010)`) and the drum names (`bd` `sn` `hh` 
 phrase cannot be named them; a part can. In a score, `tab X Y` is part X's tab plus the
 MIDI-only part Y when the file declares a part named X, else the X tuning over part Y
 (`tab bass click` beside `part bass`: the part wins, LYS1044 names `tab bass4 click` for
-the tuning). Articulation,
+the tuning). A tab in another instrument's tuning says the octave it is PLAYED in after its
+`as`, beside the style, each once: `tab bass5 gt as 8vb numbers` frets a guitar line an octave
+lower on a five-string bass (`8vb` `15mb` `8va` `15ma`); only the tab moves, never what the part
+sounds. Articulation,
 ornament, dynamic-text and mark NAMES (`staccato`, `tr`, `mordent`, `cresc`, `dim`, …) are
 NOT reserved — they are resolved from the `@name` text — so they remain free for your own
 identifiers.

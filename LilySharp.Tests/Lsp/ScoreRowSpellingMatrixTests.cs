@@ -93,11 +93,13 @@ public class ScoreRowSpellingMatrixTests
         { "ossia melody", ["as lines", "as removeEmpty"] },
         { "ossia treble melody", ["as lines", "as removeEmpty"] },
         { "ossia melody as lines 1", ["removeEmpty"] },
-        // tab — [Tuning] Name ['as' Style]
-        { "tab melody", ["as numbers", "as full"] },
-        { "tab bass5 melody", ["as numbers", "as full"] },
-        { "tab melody as numbers", [] },
-        { "tab bass5 melody as full", [] },
+        // tab — [Tuning] Name ['as' Sel {Sel}] — a style and an octave (2026-10-28)
+        { "tab melody", ["as numbers", "as full", "as 8vb"] },
+        { "tab bass5 melody", ["as numbers", "as full", "as 8vb"] },
+        { "tab melody as numbers", ["8vb", "15ma"] },
+        { "tab bass5 melody as full", ["8vb"] },
+        { "tab bass5 melody as 8vb", ["numbers", "full"] },
+        { "tab bass5 melody as 8vb numbers", [] },
         // chords — Name ['as' Mode]
         { "chords prog", ["as roman", "as names"] },
         { "chords prog as roman", [] },

@@ -498,7 +498,7 @@ public class CompletionAuditTests
         var items = LilySharpLanguageServer.GetTabAttachNameCompletions().Items;
         // The selector rows first, one per compiler style, then the score's continuations.
         var selectors = items.TakeWhile(i => i.Label!.StartsWith("as ", StringComparison.Ordinal)).Select(i => i.Label!).ToList();
-        Assert.Equal(LanguageVocabulary.TabStyles.Select(s => "as " + s), selectors);
+        Assert.Equal(LanguageVocabulary.TabStyles.Concat(LanguageVocabulary.TabOctaves).Select(s => "as " + s), selectors);
         Assert.Contains(items, i => i.Label == "staff");
         foreach (string selector in selectors)
         {

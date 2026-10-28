@@ -121,6 +121,14 @@ All notable changes to the Lily# VS Code extension are documented here.
 - Ctrl+Space offers `for` and then the parts; Ctrl+Shift+Up / Down on the trumpet's `pitch`
   respells its chord track along with its notes.
 
+### Tablature
+
+- **A tab for another instrument can say its octave**: `tab bass5 melody as 8vb` draws the
+  guitar's line on a five-string bass an octave lower; `as 8va` an octave higher (a bass line
+  on a ukulele). Only the tab moves.
+- When many notes of such a tab are off the strings, the editor names the octave that puts
+  them all on, and Ctrl+. writes it.
+
 ### Editing
 
 - **In a minor key, Ctrl+Shift+Up / Down walk the key signature** — its natural minor: in A minor

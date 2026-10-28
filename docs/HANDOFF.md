@@ -154,6 +154,13 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
   - 補完は `for` とパート名。`for` の後のパート名は色付けされ、`for P {` の中もコード欄として扱う（Parser の `chordsStage`・LSP の `ReadFrame`）。
   - 網は `ChordRowTransposeTests`（書き直し・`for` の網を追加）・`TypedPitchStepTests`・`ChordForCompletionTests`。MANUAL-CHECKS C42。
   - 文書は GRAMMAR（ChordsBlock・ScoreItem）・GRAMMAR_FOR_LLM・SYNTAX_REFERENCE・site の manual。`RowStaffPart` は呼ぶ側が無くなり消した。
+- **タブのオクターブ（第1029・ユーザー決定 2026-10-28）**: 別の楽器のタブは前から `tab bass5 melody` で書けた（ユーザー「staff treble melody と対応するからわかりやすい」）。足したのは、弾くオクターブを `as` の後に書く語 `8vb` `15mb` `8va` `15ma`（`tab bass5 melody as 8vb numbers`・順は自由・各 1 回）。
+  - 検討して捨てた案: `for`（コードの `for PART` と後ろに来る名前の種類が違う）、`as transpose c,`（ベースではほぼ毎回書くことになり冗長、とユーザー）、自動選択（最低弦より低い E♭ が 1 音あるだけで全体を上げてしまう、とユーザー指摘）。
+  - 意味: タブのフレットだけを移す。`TabStaffSpec.Transposition` に足すので、タブの読み手は全部そろう。MIDI・五線譜・パートは不変。
+  - 載らない音は、前からの LYS5002 で知らせて描かない（ユーザー決定 A）。
+  - 調弦を自分で名指すタブで 4 分の 1 以上の音が載らず、1〜2 オクターブ動かせば全部載るときは LYS5004（情報）が語を言い、クイックフィックスで書く（`TabRenderSyntax.OctaveEdit`）。
+  - LilyPond の双子は、タブの行の調弦の上書きを読まずパートの調弦でフレットを打っていた（前からの抜け）。`RenderSpecParser.TabSpecOf` で譜面と同じ答えを使うように直した。
+  - 網は `TabOctaveTests` 12 本、確認項目は MANUAL-CHECKS C43。
   - ⑷ 移調楽器を書いた音で綴り直す変換（「B」）＝**入れた（第1029・⑸ の項）**。
   - ⑸ Ctrl+Shift+↑ で `pitch` の written／concert を切り替えたとき、楽譜も書き直す＝**入れた（第1029・`OctaveModeConverter.SwitchTypedPitch`・網 `TypedPitchStepTests` 6 本・MANUAL-CHECKS C40）**。⑷ も同日に入れた＝半音の移調楽器は `\transpose` の綴りで音と調を移し、奏者の文字にするときは調の無いパートにファイルの調を移して書く（F の曲の B♭ トランペットは `key g major`）。セクション見出しの調を共有するパートだけは移せず、自分の `pitch` に旧い語を書いて文字を保つ（パート見出しの切り替えなら断る）。AI 作曲を開くときも同じ（`WithoutConcertPitch`）。網 `TypedPitchStepTests` 8 本・`ConcertPitchRemovalTests`。
   - ⑹ OMR の `.lys` 出力を新しいオクターブへ＝**閉じた**（OMR の返事 `lilysharp-reply-2026-10-28-octaves.md`・REQUESTS 9＝お知らせのみ・Lily# 側の作業なし: OMR は LilyPond のオクターブで書く（OMR 側のコミットは返事の末尾）・`treble_8` は鳴る高さ・版の床も目印も持たない＝オーナーの方針「後方互換なし、両側を同時に新しくする」）。

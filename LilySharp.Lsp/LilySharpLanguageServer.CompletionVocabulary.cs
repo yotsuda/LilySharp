@@ -2516,7 +2516,15 @@ public sealed partial class LilySharpLanguageServer
     {
         ["numbers"] = "Fret digits only — no stems, dots or rests",
         ["full"] = "Full tablature staff with stems, dots and rests (the default)",
+        ["8vb"] = "Played an octave below the written notes — a guitar line on a bass",
+        ["15mb"] = "Played two octaves below the written notes",
+        ["8va"] = "Played an octave above the written notes — a bass line on a ukulele",
+        ["15ma"] = "Played two octaves above the written notes",
     };
+
+    // The tab's selector words in the order offered: the styles, then the octaves.
+    private static IEnumerable<string> TabSelectorWords
+        => LanguageVocabulary.TabStyles.Concat(LanguageVocabulary.TabOctaves);
 
     /// <summary>After <c>tab … as</c>: the two tab display styles.</summary>
     /// <remarks>
@@ -2531,7 +2539,7 @@ public sealed partial class LilySharpLanguageServer
     {
         return new CompletionList
         {
-            Items = LilySharp.Core.Semantics.LanguageVocabulary.TabStyles
+            Items = TabSelectorWords
                 .Select((label, i) => new CompletionItem
                 {
                     Label = label,
@@ -2542,11 +2550,35 @@ public sealed partial class LilySharpLanguageServer
         };
     }
 
+    /// <summary>After a tab's selector (<c>tab bass5 m as 8vb ▮</c>): the words of the kind not
+    /// yet written — a style after an octave, an octave after a style — bare, as the one <c>as</c>
+    /// takes them, then the score's continuations, the row being complete.</summary>
+    internal static CompletionList GetTabSelectorChainCompletions(IReadOnlyCollection<string> written)
+    {
+        bool hasStyle = written.Any(w => LanguageVocabulary.TabStyles.Contains(w));
+        bool hasOctave = written.Any(w => LanguageVocabulary.TabOctaves.Contains(w));
+        var items = TabSelectorWords
+            .Where(w => LanguageVocabulary.TabStyles.Contains(w) ? !hasStyle : !hasOctave)
+            .Select((label, i) => new CompletionItem
+            {
+                Label = label,
+                Kind = CompletionItemKind.Keyword,
+                Detail = TabStyleDetails.TryGetValue(label, out var d) ? d : null,
+                SortText = i.ToString(),
+            }).ToList();
+        foreach (var it in GetScoreBlockCompletions().Items)
+        {
+            it.SortText = "9" + (it.SortText ?? "");
+            items.Add(it);
+        }
+        return new CompletionList { Items = items.ToArray() };
+    }
+
     /// <summary>The tab style selector as <c>as …</c> items, one per word of
     /// <see cref="LanguageVocabulary.TabStyles"/> — the tab sibling of
     /// <see cref="StaffSelectorItems"/>.</summary>
     private static IEnumerable<CompletionItem> TabStyleSelectorItems(string prefix)
-        => LanguageVocabulary.TabStyles.Select((style, i) => new CompletionItem
+        => TabSelectorWords.Select((style, i) => new CompletionItem
         {
             Label = prefix + style,
             Kind = CompletionItemKind.Keyword,

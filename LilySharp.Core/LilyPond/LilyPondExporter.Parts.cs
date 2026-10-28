@@ -498,11 +498,13 @@ public sealed partial class LilyPondExporter
     /// tunings and clefs produce. Anything else is REPORTED rather than dropped: a twin
     /// silently fretting other pitches is the shape that hid this hole in the first place.
     /// </remarks>
-    private void AppendTabTranspose(StringBuilder sb, PartDeclarationSyntax? part, string? partName)
+    private void AppendTabTranspose(StringBuilder sb, PartDeclarationSyntax? part, string? partName,
+        Svg.Collector.TabStaffSpec? tabSpec = null)
     {
         var clef = ClefFromName(PartClefWord(part));
+        // The page's shift when the item is known — it carries the tab's octave (`as 8vb`).
         int shift = Tablature.Tunings.ClefOctaveShift(clef)
-                    + PartTransposition(part);
+                    + (tabSpec?.Transposition ?? PartTransposition(part));
         if (shift == 0)
             return;
         if (shift % 12 != 0)

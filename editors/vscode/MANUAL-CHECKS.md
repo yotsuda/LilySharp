@@ -277,6 +277,10 @@ edocs/HANDOFF.mde §2 R13 ⒝・OMR の提案 B1〜B6（e..\LilySharp-Omr\docs\r
   - (2) `for` の無い `chords band { … F6 … }` を `staff tp` の真上に置いても F6 のまま（`pitch` を切り替えても動かない）。score の行を `chords band for tp` にすると G6 になる。
   - (3) 先頭の `pitch written` の上で Ctrl+Shift+Down → `chords tpc for tp` の中身が F6 B♭7 に書き直される（`chords band` は動かない）。Ctrl+Shift+Up で戻る。
   - (4) `for nobody` に赤い波線（LYS7006）。`for` の後のパート名がパートの色になる。
+- [ ] **C43**（第1029・タブのオクターブ）:
+  - (1) `octave absolute`・`part melody { instrument guitar }`・`melody { e'4 g' a' b' | c''1 | }`・`score { staff melody  tab bass5 melody }` → 高い 3 音に黄色の波線（LYS5002）と、`melody` に青い情報（LYS5004「… write 'as 8vb'」）。Ctrl+. で `tab bass5 melody as 8vb` になり、波線が消え、5 弦ベースのタブに 12〜17 フレットが並ぶ。五線譜と ▶ の音は変わらない。
+  - (2) `as ▮` で Ctrl+Space → `numbers` `full` `8vb` `15mb` `8va` `15ma`。`as 8vb ▮` でもう一度 → 一覧が出る。
+  - (3) `as 8vb 8va` に赤い波線。
 
 ## 4. §2 R13 ⒝ — 差分頁の配信（実機未確認・第404）
 

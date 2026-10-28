@@ -1285,8 +1285,25 @@ internal sealed partial class Parser
         // A bare `tab` renders the file's unnamed part (2026-10-09).
         if (IsPartNameStart() && !string.Equals(Current.Text, "as", System.StringComparison.Ordinal))
             tokens.Add(Advance());
-        ConsumeAsSelector(tokens); // `... as numbers | full` (numbers-only tab)
+        ConsumeTabSelectors(tokens);
         return new TabRenderGreen([.. tokens]);
+    }
+
+    /// <summary>
+    /// A tab's selectors after ONE <c>as</c>, in any order: the style (<c>numbers | full</c>) and
+    /// the octave the tab is played in (<c>8va | 8vb | 15ma | 15mb</c>, owner's decision
+    /// 2026-10-28 — <c>tab bass5 melody as 8vb numbers</c>), the shape of a staff's
+    /// <c>as lines 1 removeEmpty all</c>. A first word that is neither is still taken, so
+    /// TabRenderVocabularyValidator names it rather than the score's stray-item report.
+    /// </summary>
+    private void ConsumeTabSelectors(List<SyntaxToken> tokens)
+    {
+        if (!string.Equals(Current.Text, "as", System.StringComparison.Ordinal) || Peek(1) == null)
+            return;
+        tokens.Add(Advance()); // as
+        tokens.Add(Advance()); // the first word, known or not
+        while (Semantics.TabRenderVocabularyValidator.IsSelectorWord(Current.Text))
+            tokens.Add(Advance());
     }
 
     /// <summary>

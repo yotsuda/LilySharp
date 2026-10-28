@@ -130,7 +130,7 @@ public class StaffRowSpellingCompletionTests
         // offered after every tuning word for the same untested reason. One book, one part
         // named `bass`, both answers.
         Assert.Equal(new[] { "melody" }, LabelsAt(OnePart, "score { tab bass5 ▮ }"));
-        Assert.Equal(new[] { "melody", "bass", "as numbers", "as full" },
+        Assert.Equal(new[] { "melody", "bass", "as numbers", "as full", "as 8vb", "as 15mb", "as 8va", "as 15ma" },
             LabelsAt(PartNamedBass, "score { tab bass ▮ }"));
 
         var withName = LabelsAt(OnePart, "score { tab bass5 melody ▮ }");
@@ -225,8 +225,21 @@ public class StaffRowSpellingCompletionTests
     }
 
     [Theory]
+    [InlineData("score { tab m as numbers ▮ }", "8vb")]
+    [InlineData("score { tab bass5 m as 8vb ▮ }", "numbers")]
+    public void TheTabRowsSelectorsChain_AndTheRowMayEnd(string row, string next)
+    {
+        // One `as` takes the style and the octave (2026-10-28): after one, the other kind and
+        // the score's continuations — the written kind is not offered again.
+        string doc = "part m { section A { c''4 } }\nform { A }\n";
+        var labels = LabelsAt(doc, row);
+        Assert.Contains(next, labels);
+        Assert.Contains("staff", labels);
+        Assert.DoesNotContain(row.Contains("numbers") ? "full" : "8va", labels);
+    }
+
+    [Theory]
     [InlineData("score { chords prog as roman ▮ }")]
-    [InlineData("score { tab m as numbers ▮ }")]
     public void ARowWhoseSelectorDoesNotChain_EndsThere(string row)
     {
         // Control on the other rows: `ConsumeAsSelector` takes exactly ONE word, so there is

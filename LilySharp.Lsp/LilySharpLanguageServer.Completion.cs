@@ -451,6 +451,8 @@ public sealed partial class LilySharpLanguageServer
             CompletionContext.AfterStaffLinesValue => GetStaffLinesValueCompletions(),
             CompletionContext.AfterChordDisplayAs => GetChordDisplayModeCompletions(),
             CompletionContext.AfterTabDisplayAs => GetTabDisplayModeCompletions(),
+            CompletionContext.AfterTabSelectorChain => GetTabSelectorChainCompletions(
+                TabSelectorsWritten(doc.Text, offset) ?? []),
             CompletionContext.AfterInstrument => GetInstrumentCompletions(doc.Text, offset, position),
             CompletionContext.AfterMidiInstrument => GetMidiInstrumentCompletions(doc.Text, offset, position),
             CompletionContext.AfterTuning => GetTuningCompletions(),

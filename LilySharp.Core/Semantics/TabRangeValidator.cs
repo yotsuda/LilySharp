@@ -42,16 +42,19 @@ internal sealed class TabRangeValidator : ISemanticValidator
     {
         var seen = new HashSet<int>();
         var seenStrings = new HashSet<(int, int, int)>();
+        var advised = new HashSet<int>();
         foreach (var spec in RenderSpecParser.FindAll(tree).Where(s => s.HasTab))
         {
             IReadOnlyList<TabRangeWarning> warnings;
             IReadOnlyList<TabStringUnplayableWarning> stringWarnings;
+            IReadOnlyList<TabFit> fits;
             try
             {
                 var collector = new MeasureCollector();
                 collector.CollectMultiStaff(tree, spec);
                 warnings = collector.TabRangeWarnings;
                 stringWarnings = collector.TabStringWarnings;
+                fits = collector.TabFits;
             }
             catch
             {
@@ -70,6 +73,8 @@ internal sealed class TabRangeValidator : ISemanticValidator
                         : "note is above the tab's range (no fret 0-24 on any string) — likely an octave too high");
             }
 
+            AdviseOctaves(tree, fits, advised);
+
             // LYS5003 — one per member: a chord can ask two members for a string that cannot
             // play either (LilyPond warns once per pitch), and a repeated section plays the
             // same note twice (one warning, as for LYS5002). The fret tells the members apart.
@@ -85,4 +90,49 @@ internal sealed class TabRangeValidator : ISemanticValidator
             }
         }
     }
+
+    /// <summary>
+    /// LYS5004: a tab whose item names its own tuning (<c>tab bass5 melody</c>) and leaves at
+    /// least a quarter of its notes off the strings, where one or two octaves more would put
+    /// every one on — said once on the item, with the octave word to write (owner's decision
+    /// 2026-10-28). A few strays are the notes' own LYS5002 and no advice: an octave chosen for
+    /// one low E♭ would move the whole tab the wrong way. The tab never moves by itself.
+    /// </summary>
+    private void AdviseOctaves(SyntaxTree tree, IReadOnlyList<TabFit> fits, HashSet<int> advised)
+    {
+        foreach (var tab in tree.GetRoot().DescendantNodes<TabRenderSyntax>())
+        {
+            if (tab.TuningToken is not { } tuningWord || tab.PartToken is not { } part)
+                continue;
+            var tuning = Tablature.Tunings.Parse(tuningWord.Text);
+            // This score's tab of that part in that tuning (another score is another spec's).
+            var sounding = fits.Where(f => f.Voice == part.Text && f.Tuning == tuning).SelectMany(f => f.Sounding).ToList();
+            if (sounding.Count == 0 || !advised.Add(tab.SourceStart))
+                continue;
+            int[] open = Tablature.Tunings.GetTuning(tuning);
+            int low = open.Min(), high = open.Max() + 24;
+            int Off(int by) => sounding.Count(m => m + by < low || m + by > high);
+            int off = Off(0);
+            if (off * 4 < sounding.Count)
+                continue;
+            int current = TabRenderVocabularyValidator.OctaveSemitones(tab);
+            foreach (int by in new[] { -12, 12, -24, 24 })
+            {
+                if (Off(by) != 0)
+                    continue;
+                if (OctaveWord(current + by) is not { } word)
+                    break;
+                _diagnostics.Info(part.Span, DiagnosticCodes.TabOctaveAdvice,
+                    $"{off} of this tab's {sounding.Count} notes are off the strings of {tab.TuningToken.Text}; "
+                    + $"every one is on them an octave {(by < 0 ? "lower" : "higher")}{(Math.Abs(by) == 24 ? " again" : "")} - write 'as {word}'.");
+                break;
+            }
+        }
+    }
+
+    /// <summary>The tab octave word for a shift in semitones, or null (none, or past two octaves).</summary>
+    internal static string? OctaveWord(int semitones) => semitones switch
+    {
+        -12 => "8vb", -24 => "15mb", 12 => "8va", 24 => "15ma", _ => null,
+    };
 }

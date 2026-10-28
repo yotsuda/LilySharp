@@ -291,6 +291,9 @@ public sealed partial class MeasureCollector
     /// <summary>Notes that fall outside the tab range (clamped). Populated by the
     /// tab-string resolution during multi-staff collection.</summary>
     public IReadOnlyList<TabRangeWarning> TabRangeWarnings => _tabResolver.RangeWarnings;
+
+    /// <summary>Each tab voice's sounding pitches on its tuning (<see cref="TabFit"/>).</summary>
+    public IReadOnlyList<TabFit> TabFits => _tabResolver.Fits;
     /// <summary>Written string numbers that cannot fret their pitch (LYS5003).</summary>
     public IReadOnlyList<TabStringUnplayableWarning> TabStringWarnings => _tabResolver.StringWarnings;
     /// <summary>Tied note pairs with conflicting explicit tab string numbers.

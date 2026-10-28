@@ -376,6 +376,8 @@ public sealed partial class LilySharpLanguageServer
                     actions.Add(barLines);
                 if (ChordToneAction(doc, uri, diagnostic) is { } chordName)
                     actions.Add(chordName);
+                if (TabOctaveAction(doc, uri, diagnostic) is { } tabOctave)
+                    actions.Add(tabOctave);
                 if (diagnostic.Code == DiagnosticCodes.TodoMark && !todoOffered)
                 {
                     todoOffered = true;
@@ -593,6 +595,23 @@ public sealed partial class LilySharpLanguageServer
         var edits = offsets.Select(o => EditOf(doc.Text, o, o, " |")).ToArray();
         return QuickFix(offsets.Count == 1 ? "Write the missing bar line" : $"Write the {offsets.Count} missing bar lines",
             doc, uri, diagnostic, edits);
+    }
+
+    /// <summary>LYS5004's fix: write the octave the advice names on the tab item (owner's
+    /// decision 2026-10-28 — <c>tab bass5 melody as 8vb</c>; the writer chooses, the tab never
+    /// moves by itself).</summary>
+    private static CodeAction? TabOctaveAction(Document doc, Uri uri, CoreDiagnostic diagnostic)
+    {
+        if (diagnostic.Code != DiagnosticCodes.TabOctaveAdvice)
+            return null;
+        var word = System.Text.RegularExpressions.Regex.Match(diagnostic.Message, @"write 'as (\S+)'");
+        var tab = doc.Tree.GetRoot().DescendantNodes<LilySharp.Core.Syntax.TabRenderSyntax>()
+            .FirstOrDefault(t => t.Span.Start <= diagnostic.Span.Start && diagnostic.Span.End <= t.Span.End);
+        if (!word.Success || tab == null)
+            return null;
+        var (start, end, text) = tab.OctaveEdit(word.Groups[1].Value);
+        return QuickFix($"Play this tab {word.Groups[1].Value} (as {word.Groups[1].Value})", doc, uri, diagnostic,
+            [EditOf(doc.Text, start, end, text)]);
     }
 
     /// <summary>

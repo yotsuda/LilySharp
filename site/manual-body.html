@@ -1245,6 +1245,15 @@ score {
   meter, stems, rests and ties itself</b> (beams are not drawn yet). That is the default;
   say which you want with
   <code>tab gt as numbers</code> or <code>tab gt as full</code>.</p>
+  <p><b>The same line for another instrument.</b> A tuning word before the part draws its tab
+  for that instrument, whatever the part's own — <code>tab bass5 gt</code> is a five-string
+  bass tab of the guitar's line, the way <code>staff treble gt</code> names the clef. A bass
+  plays such a line lower, so say the octave it is played in after <code>as</code>:
+  <code>tab bass5 gt as 8vb</code> (an octave below; <code>15mb</code> two, <code>8va</code>
+  and <code>15ma</code> above — a bass line on a ukulele is <code>tab ukulele bs as 8va</code>).
+  Only the tab moves; the part sounds, and its staff prints, as written. When many notes of
+  such a tab are off the strings, the editor names the octave that puts them all on, and
+  Ctrl+. writes it.</p>
   <p><code>\N</code> pins a note to string N when the automatic choice is not the one your
   fingers want: <code>c'\2</code>. Technique letters (<code>@tap @hammerOn @pullOff
   @pluck(i)</code>) print on the tab, because they are ink a guitarist reads there.</p>

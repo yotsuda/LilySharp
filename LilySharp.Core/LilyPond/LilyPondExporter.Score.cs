@@ -103,7 +103,7 @@ public sealed partial class LilyPondExporter
                             if (!numbersOnly)
                                 AddInlineChordRow(rows, RenderPartName(tb), "    ");
                             rows.Add(EmitStaff(RenderPartName(tb), parts, partVars, tab: true, "    ",
-                                tabNumbersOnly: numbersOnly));
+                                tabNumbersOnly: numbersOnly, tabSpec: RenderSpecParser.TabSpecOf(tb, render)));
                             AddLyricRows(rows, RenderPartName(tb), "    ", asRow: false);
                             lastMainStaffPart = RenderPartName(tb) ?? lastMainStaffPart;
                         }
@@ -563,7 +563,8 @@ public sealed partial class LilyPondExporter
     /// no score item names (the fallback row).</param>
     private string EmitStaff(string? partName, List<PartDeclarationSyntax> parts,
         Dictionary<string, string> partVars, bool tab, string indent,
-        bool tabNumbersOnly = false, string? writtenClef = null, StaffSpec? selectors = null)
+        bool tabNumbersOnly = false, string? writtenClef = null, StaffSpec? selectors = null,
+        TabStaffSpec? tabSpec = null)
     {
         string varName = partName != null && partVars.TryGetValue(partName, out var v)
             ? v : partVars.Values.FirstOrDefault() ?? "music";
@@ -574,7 +575,8 @@ public sealed partial class LilyPondExporter
         var sb = new StringBuilder();
         if (tab)
         {
-            string tuning = TabTuning(part);
+            // The page's tuning: the item's own word (`tab bass5 melody`) over the part's.
+            string tuning = tabSpec != null ? Tablature.Tunings.LilyPondName(tabSpec.Tuning) : TabTuning(part);
             sb.Append(indent).Append("\\new TabStaff");
             var tabWith = new List<string>(3);
             if (tuning.Length > 0) tabWith.Add("stringTunings = #" + tuning);
@@ -605,7 +607,7 @@ public sealed partial class LilyPondExporter
             // No StrokeFingerSet here: LilyPond's TabVoice removes New_fingering_engraver
             // (ly/engraver-init.ly, TabVoice), so a tab staff prints no right-hand finger
             // whatever the orientation says; the page letters its tab (self-acknowledged).
-            AppendTabTranspose(sb, part, partName);
+            AppendTabTranspose(sb, part, partName, tabSpec);
             sb.Append('\\').Append(varName).Append(" }\n");
         }
         else if (partName != null && _drumParts.Contains(partName))

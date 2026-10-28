@@ -104,6 +104,22 @@ internal sealed class TabRenderVocabularyValidator : ISemanticValidator
     internal static readonly IReadOnlyCollection<string> StyleVocabulary =
         new[] { "numbers", "full" };
 
+    /// <summary>The octave a tab is played in, after its <c>as</c> (owner's decision
+    /// 2026-10-28): the words of a part's <c>transposition</c> and of the <c>@8vb</c> mark, read
+    /// the same way — <c>8vb</c> is played an octave below the written notes. Up first and the
+    /// nearer first, as the completion offers them.</summary>
+    internal static readonly IReadOnlyCollection<string> OctaveVocabulary =
+        new[] { "8vb", "15mb", "8va", "15ma" };
+
+    /// <summary>Whether <paramref name="word"/> is a tab selector of either kind.</summary>
+    internal static bool IsSelectorWord(string word)
+        => StyleVocabulary.Contains(word, StringComparer.Ordinal) || OctaveVocabulary.Contains(word, StringComparer.Ordinal);
+
+    /// <summary>The semitones a tab's octave word moves where its notes are fretted: −12 for
+    /// <c>8vb</c>, 0 for none.</summary>
+    internal static int OctaveSemitones(TabRenderSyntax tab)
+        => tab.OctaveToken is { } o ? Svg.Model.InstrumentDefaults.ParseTranspositionSemitones(o.Text) ?? 0 : 0;
+
     /// <summary>
     /// Whether a tab item asks for the numbers-only style — the ONE reading of the style
     /// word, used by the page (<c>RenderSpecParser.ParseTab</c>) and by the LilyPond twin
@@ -131,8 +147,17 @@ internal sealed class TabRenderVocabularyValidator : ISemanticValidator
                 _diagnostics.Error(style.Span, DiagnosticCodes.UnknownTabRenderWord,
                     $"'{style.Text}' is not a tab style. Tab styles are case-sensitive; "
                     + $"write 'as {string.Join("' or 'as ", StyleVocabulary)}' "
-                    + "(omit 'as' for full).");
+                    + $"(omit 'as' for full), and the octave the tab is played in with "
+                    + $"{string.Join(", ", OctaveVocabulary)} ('as 8vb numbers').");
             }
+
+            // One style and one octave: a second of either says two things the tab cannot both do.
+            var words = tab.SelectorWords().ToList();
+            foreach (var group in new[] { StyleVocabulary, OctaveVocabulary })
+                foreach (var extra in words.Where(w => group.Contains(w.Text, StringComparer.Ordinal)).Skip(1))
+                    _diagnostics.Error(extra.Span, DiagnosticCodes.UnknownTabRenderWord,
+                        $"'{extra.Text}': this tab already says " + (group == StyleVocabulary ? "its style" : "its octave")
+                        + " - write one.");
 
             if (tab.TuningToken is { } tuning && tuning.Text.Length > 0
                 && !LanguageVocabulary.TuningNames.Contains(tuning.Text, StringComparer.Ordinal))

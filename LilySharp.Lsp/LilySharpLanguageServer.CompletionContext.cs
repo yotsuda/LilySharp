@@ -524,6 +524,33 @@ public sealed partial class LilySharpLanguageServer
     // A named part (`part rh {`) has `part` one word before the brace; the nameless one
     // (`part {`) has it right before. Until 2026-10-28 only the named form was read, so the
     // nameless part's body got the music completions and no `instrument` (owner's report).
+    /// <summary>The tab selectors written after the caret's row's <c>as</c> when the caret
+    /// follows one of them (<c>tab bass5 m as 8vb ▮</c>), else null: the words back to the
+    /// <c>as</c> must all be selector words, and the word before that <c>as</c>'s row a tab's.</summary>
+    internal static List<string>? TabSelectorsWritten(string text, int offset)
+    {
+        static bool IsWordChar(char c) => char.IsLetterOrDigit(c) || c == '_' || c == '-';
+        var words = new List<string>();
+        int i = offset;
+        while (i > 0 && IsWordChar(text[i - 1])) i--;   // a partial word is not a written one
+        while (true)
+        {
+            while (i > 0 && text[i - 1] is ' ' or '\t') i--;
+            int end = i;
+            while (i > 0 && IsWordChar(text[i - 1])) i--;
+            if (end == i)
+                return null;
+            string w = text[i..end];
+            if (w == "as")
+                break;
+            if (!LilySharp.Core.Semantics.LanguageVocabulary.TabStyles.Contains(w)
+                && !LilySharp.Core.Semantics.LanguageVocabulary.TabOctaves.Contains(w))
+                return null;
+            words.Add(w);
+        }
+        return words.Count > 0 && AsSelectorContext(text, i + 3) == CompletionContext.AfterTabDisplayAs ? words : null;
+    }
+
     /// <summary>The caret right after a chord track's <c>for</c>: <c>chords for ▮</c> or
     /// <c>chords NAME for ▮</c>.</summary>
     private static bool IsChordForSlot(string text, int offset, string prevWord)
@@ -753,6 +780,9 @@ public sealed partial class LilySharpLanguageServer
         AfterGroupStaffSelectorChain,
         AfterChordDisplayAs,
         AfterTabDisplayAs,
+        /// <summary><c>tab bass5 m as 8vb ▮</c> — the selector kind not yet written (the style,
+        /// the octave), bare, then the score's continuations.</summary>
+        AfterTabSelectorChain,
         /// <summary><c>chords NAME ▮</c> at a definition site — the <c>for PART</c> pair
         /// (whose letters the track is typed in, Semantics.ChordTrackPitch).</summary>
         AfterChordsTrackName,
@@ -1322,6 +1352,10 @@ public sealed partial class LilySharpLanguageServer
             // roman|names.
             if (prevWord == "as")
                 return AsSelectorContext(text, offset);
+            // `tab bass5 m as 8vb ▮`: one `as` takes the style and the octave (2026-10-28), so
+            // after one of them the other kind is still offered, and the row may end here.
+            if (TabSelectorsWritten(text, offset) is { Count: > 0 })
+                return CompletionContext.AfterTabSelectorChain;
 
             // ⚠️ THE STAFF / OSSIA ROW IS READ BY THE GRAMMAR, not by counting words back
             // from the caret: it carries FOUR optional clauses (`staff [~] [CLEF] NAME

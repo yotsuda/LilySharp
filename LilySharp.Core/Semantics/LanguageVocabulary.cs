@@ -87,6 +87,10 @@ public static class LanguageVocabulary
     public static IReadOnlyCollection<string> TabStyles =>
         TabRenderVocabularyValidator.StyleVocabulary;
 
+    /// <summary>The octave a tab is played in (<c>tab bass5 NAME as 8vb</c>, 2026-10-28).</summary>
+    public static IReadOnlyCollection<string> TabOctaves =>
+        TabRenderVocabularyValidator.OctaveVocabulary;
+
     /// <summary>Every value <c>removeEmpty</c> accepts (enforced since 2026-08-19) — the score
     /// selector <c>staff m as removeEmpty V</c> since 2026-09-08, no longer a part property.</summary>
     public static IReadOnlyCollection<string> RemoveEmptyValues => SymbolCaseValidator.RemoveEmptyValueVocabulary;
