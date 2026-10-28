@@ -39,6 +39,9 @@ describe('the Edit Bars Beside the Scan page', () => {
         assert.match(src, /<div class="over" title="The bar as the \.lys has it now, drawn — what Accept replaces">now — in the file<\/div>/);
         assert.match(src, /\$\{esc\(t\.crop \? `scan — page \$\{t\.crop\.page\}` : 'scan'\)\}<\/div>\$\{scan\}/);
         assert.match(src, /<div class="over draft-of" data-i="\$\{r\.index\}">\$\{parts\.source\}<\/div>/);
+        // The Draft alone says "original", as it does among the three (owner's request 2026-10-28).
+        assert.match(src, /: 'original' \+ \(busy \|\| \(r\.asked \? ' — no AI proposal' : ''\)\)\);/);
+        assert.doesNotMatch(src, /'the bar as it stands'/);
     });
 
     it('is a script that parses', () => {

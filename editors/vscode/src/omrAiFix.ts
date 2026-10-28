@@ -1552,8 +1552,10 @@ function rowParts(run: FixRun, r: FixRow): RowParts {
             ? `<span class="pick on">${esc(word)}</span>`
             : `<button class="link pick" data-i="${r.index}" data-show="${which}" title="${esc(title)}">${esc(word)}</button>`).join(' / ')
             + esc(busy)
+        // The same three words alone (owner's request 2026-10-28: "the bar as it stands" was a
+        // fourth name for "original").
         : esc(edited ? 'your edit' : hasProposal(r) ? 'AI proposal'
-            : busy ? busy.slice(3) : r.asked ? 'no AI proposal — the bar as it stands' : 'the bar as it stands');
+            : 'original' + (busy || (r.asked ? ' — no AI proposal' : '')));
     return {
         gates: gatesHtml(gate), reason: lost + reason + sure + hint + barLine + aiNow, proposal, source, nowText: piecesHtml(diff.before), afterText: piecesHtml(diff.after), del,
         accept: { word: !own && marked && !r.keepTodo ? 'Accept (remove @todo)' : 'Accept', can: own || marked || !!r.keepTodo, ready: isReady(r) },

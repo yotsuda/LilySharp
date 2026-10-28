@@ -31,7 +31,8 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 - **Every picture of Edit Bars Beside the Scan has its caption**: "now — in the file" over the bar as
   the .lys has it, "scan — page N" over the scan; the Draft's ("original / your edit / AI proposal")
-  was the only one.
+  was the only one. The Draft's says **original** when it shows the bar as the file has it — alone as
+  among the three (it said "the bar as it stands").
 
 ### Step keys
 
