@@ -214,6 +214,13 @@ describe('the composer\'s prompt', () => {
         // (owner's report 2026-10-28: Auto chosen, routed to gpt-5.6-luna, failed on every bar).
         assert.match(client, /const next = \(byName && !isAutoModel\(model\)\) \|\| token\.isCancellationRequested\s*\? undefined : await selectLmModel\(use\);/);
         assert.match(client, /const named = \/Model \(\\S\+\) is only available\/i\.exec\(refusal\)\?\.\[1\];/);
+        // A refusal is remembered past the session, until VS Code's version changes, so a model
+        // that cannot be used is no longer offered (owner's request 2026-10-28); Auto is not kept.
+        assert.match(client, /if \(kept && kept\.version === vscode\.version\) \{\s*kept\.ids\.forEach\(id => coreOnly\.add\(id\)\);/);
+        assert.match(client, /noteRefusal\(model\.id, isAutoModel\(model\)\);/);
+        assert.match(client, /return \[\.\.\.copilot, \.\.\.rest\]\.filter\(m => !isCoreTaskModel\(m\) && !coreOnly\.has\(m\.id\)\);/);
+        const ext = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
+        assert.match(ext, /rememberRefusalsIn\(context\.globalState\);/);
         assert.match(client, /model = next;\s*return await this\.send\(messages, token\);/);
         // Copilot's Auto says so, and signs no composer line (owner's report 2026-10-27).
         assert.match(client, /return isAutoModel\(model\) \? `\$\{model\.vendor\}\/auto`/);

@@ -26,6 +26,9 @@ All notable changes to the Lily# VS Code extension are documented here.
 - **Copilot's Auto, picked by name, no longer fails every request when it hands one to a model VS
   Code keeps for itself** ("Model gpt-5.6-luna is only available to VS Code core"): the request goes
   on to the automatic pick, as it already did when the model was chosen automatically.
+- **A model VS Code keeps for itself is no longer offered once it has refused**: "Lily#: Select AI
+  Model" and the automatic pick leave it out, across restarts, until VS Code updates (what it keeps
+  for itself can change with a release). There is no way to know it before it refuses once.
 
 ### Scan
 

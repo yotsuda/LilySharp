@@ -25,9 +25,40 @@
 import * as vscode from 'vscode';
 import { isAutoModel, isCoreOnlyRefusal, isCoreTaskModel, pickModel } from './aiTransformCore';
 
-/** The models that refused this session as VS Code's own ("only available to VS Code core"):
- *  left out of every choice from then on, so the next request takes another. */
+/** The models that refused as VS Code's own ("only available to VS Code core"): left out of every
+ *  choice from then on — the automatic pick and "Lily#: Select AI Model"'s list — so the next
+ *  request takes another. Kept across sessions (rememberRefusalsIn) until VS Code's version
+ *  changes: the API has no flag for such a model, so a refusal is the only way to know it, and
+ *  what VS Code keeps for itself can change with a release (owner's request 2026-10-28: GPT-5.6
+ *  Luna, which cannot be used, was offered in the list and as the automatic pick). */
 const coreOnly = new Set<string>();
+
+/** Where the refusals are kept between sessions, and under which key. */
+let refusalMemory: vscode.Memento | undefined;
+const REFUSALS_KEY = 'lilysharp.ai.coreOnlyModels';
+
+/** Reads the refusals kept by an earlier session of this VS Code version, and keeps the new ones. */
+export function rememberRefusalsIn(state: vscode.Memento): void {
+    refusalMemory = state;
+    const kept = state.get<{ version: string; ids: string[] }>(REFUSALS_KEY);
+    if (kept && kept.version === vscode.version) {
+        kept.ids.forEach(id => coreOnly.add(id));
+    }
+}
+
+/** A model that refused as VS Code's own: left out from now on. Copilot's Auto is left out for this
+ *  session alone — it refused because of the model it handed the request to, which may not be the
+ *  one it picks next time. */
+function noteRefusal(id: string, auto: boolean): void {
+    coreOnly.add(id);
+    if (auto) {
+        return;
+    }
+    const kept = refusalMemory?.get<{ version: string; ids: string[] }>(REFUSALS_KEY);
+    const ids = new Set(kept && kept.version === vscode.version ? kept.ids : []);
+    ids.add(id);
+    void refusalMemory?.update(REFUSALS_KEY, { version: vscode.version, ids: [...ids] });
+}
 
 export type ChatRole = 'system' | 'user' | 'assistant';
 /** A picture a user message carries (the scan of a bar, docs/omr-ai-fix-design.md §3.1 ④). */
@@ -278,12 +309,12 @@ function lmClient(model: vscode.LanguageModelChat, use: ModelUse, byName: boolea
             } catch (err) {
                 const refusal = String((err as Error)?.message ?? err);
                 if (isCoreOnlyRefusal(refusal)) {
-                    coreOnly.add(model.id);   // no later choice takes it
+                    noteRefusal(model.id, isAutoModel(model));   // no later choice takes it
                     // …nor the model the refusal names: Copilot's Auto hands a request on, and the
                     // model it went to is the one that is VS Code's own.
                     const named = /Model (\S+) is only available/i.exec(refusal)?.[1];
                     if (named) {
-                        coreOnly.add(named);
+                        noteRefusal(named, false);
                     }
                     // An automatic pick that VS Code keeps for itself is passed over at once, and the
                     // request goes to the next one (owner's report 2026-10-28: "compose with AI failed:

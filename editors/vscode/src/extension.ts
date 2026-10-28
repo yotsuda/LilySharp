@@ -27,7 +27,7 @@ import {
 } from 'vscode-languageclient/node';
 import { registerAiTransform, showCandidateSounding } from './aiTransform';
 import { registerAiComplete } from './aiComplete';
-import { pickAiModel } from './modelClient';
+import { pickAiModel, rememberRefusalsIn } from './modelClient';
 import { registerSmartTyping } from './smartTyping';
 import { registerStepAudition } from './stepAudition';
 import { registerCaretInfo } from './caretInfo';
@@ -408,6 +408,8 @@ const HIGHLIGHT_DISTANCE_THRESHOLD = 50;
 
 export function activate(context: vscode.ExtensionContext) {
     outputChannel.appendLine('Lily# extension activating...');
+    // The models that refused as VS Code's own, remembered from an earlier session (modelClient).
+    rememberRefusalsIn(context.globalState);
 
     const config = vscode.workspace.getConfiguration('lilysharp');
     // A server built by hand: settings.json only, not in the Settings UI since 2026-10-25
