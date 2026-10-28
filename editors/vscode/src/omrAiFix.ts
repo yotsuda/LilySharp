@@ -158,6 +158,9 @@ interface FixRow {
      *  compiler finds missing written in — what the row's "write the missing bar line" puts in its
      *  field (owner's request 2026-10-27); undefined when it has none missing. */
     barFix?: string;
+    /** The folder this row's Report Misread to OMR wrote last: a second report replaces it (owner's
+     *  request 2026-10-29: a report is made again because the first was wrong). */
+    reported?: string;
     /** The page's count of edits to this row: an answer to an older one is dropped. */
     editSeq?: number;
     /** The bar as it stands (its marks taken out), drawn where a row has no bar of its own to
@@ -1120,7 +1123,7 @@ async function onPanelMessage(deps: OmrAiFixDeps, m: PanelMessage): Promise<void
             return;
         case 'report':
             if (row && await reportMisread(run, row)) {
-                void panel?.webview.postMessage({ type: 'reported', index: row.index });
+                void panel?.webview.postMessage({ type: 'reported', index: row.index, label: REPORT_AGAIN, title: REPORT_AGAIN_TITLE });
             }
             return;
         case 'cancel':
@@ -1132,6 +1135,10 @@ async function onPanelMessage(deps: OmrAiFixDeps, m: PanelMessage): Promise<void
             return;
     }
 }
+
+/** The row's report button once it has reported: a second report replaces the first. */
+const REPORT_AGAIN = 'Reported ✓ — Replace Report…';
+const REPORT_AGAIN_TITLE = 'Report this bar again: the new report replaces the one made from this panel';
 
 /** The owner's seed folder (omrSeedCore), or undefined: the setting is written by hand alone. */
 function seedFolder(): string | undefined {
@@ -1194,7 +1201,7 @@ async function reportMisread(run: FixRun, row: FixRow): Promise<boolean> {
         ...(sidePath && fs.existsSync(sidePath) ? { sideFile: sidePath } : {}),
     };
     const when = new Date();
-    const dir = path.join(root, seedDirName(when, bar));
+    const dir = path.join(path.resolve(root), seedDirName(when, bar));
     try {
         fs.mkdirSync(dir, { recursive: true });
         fs.writeFileSync(path.join(dir, path.basename(lys)), text, 'utf8');
@@ -1225,8 +1232,22 @@ async function reportMisread(run: FixRun, row: FixRow): Promise<boolean> {
         vscode.window.showErrorMessage(`Lily#: could not write the report to ${dir}: ${err}`);
         return false;
     }
-    log(`Report Misread to OMR: ${label} → ${dir}`);
-    void vscode.window.showInformationMessage(`Lily#: ${label} reported to OMR.`, 'Reveal Folder').then(go => {
+    // The row's earlier report goes once the new one is written — never before, so a report given
+    // up half way leaves the earlier one — and only a folder of the seed folder that holds a
+    // seed.json.
+    const old = row.reported;
+    row.reported = dir;
+    let replaced = false;
+    if (old && old !== dir && path.dirname(old) === path.resolve(root) && fs.existsSync(path.join(old, 'seed.json'))) {
+        try {
+            fs.rmSync(old, { recursive: true, force: true });
+            replaced = true;
+        } catch (err) {
+            log(`Report Misread to OMR: the earlier report ${old} could not be removed: ${err}`);
+        }
+    }
+    log(`Report Misread to OMR: ${label} → ${dir}${replaced ? ` (replaces ${path.basename(old!)})` : ''}`);
+    void vscode.window.showInformationMessage(`Lily#: ${label} ${replaced ? 'reported again — the earlier report was replaced' : 'reported to OMR'}.`, 'Reveal Folder').then(go => {
         if (go) { void vscode.commands.executeCommand('revealFileInOS', vscode.Uri.file(path.join(dir, 'seed.json'))); }
     });
     return true;
@@ -1721,7 +1742,7 @@ function rowHtml(run: FixRun, r: FixRow, pageUris: ReadonlyMap<number, { uri: st
     // The owner's alone (omrSeedCore: shown only with lilysharp.omr.seedFolder written by hand),
     // apart from Accept so that an Accept is never a report.
     const report = can && seedFolder()
-        ? `<button class="row-report" data-i="${r.index}" title="Keep this bar, its scan and the .lys as a seed for OMR's training scores — the reader got it wrong">Report Misread to OMR…</button>`
+        ? `<button class="row-report" data-i="${r.index}" title="${r.reported ? REPORT_AGAIN_TITLE : 'Keep this bar, its scan and the .lys as a seed for OMR\'s training scores — the reader got it wrong'}">${r.reported ? REPORT_AGAIN : 'Report Misread to OMR…'}</button>`
         : '';
     // Taken but still marked (owner's request 2026-10-24): the bar is written with a @todo at
     // the same note — the reader's key kept — and the words typed here as its memo. A bar that
@@ -2425,9 +2446,9 @@ ${rows}
       header(m);
       return;
     }
-    // Report Misread to OMR written: the button says so (a second report is still a click away).
+    // Report Misread to OMR written: the button says so, and that a second report replaces it.
     if (m.type === 'reported') {
-      for (const b of document.querySelectorAll('button.row-report[data-i="' + m.index + '"]')) b.textContent = 'Reported ✓ — Report Again…';
+      for (const b of document.querySelectorAll('button.row-report[data-i="' + m.index + '"]')) { b.textContent = m.label; b.title = m.title; }
       return;
     }
     if (m.type === 'reveal') {

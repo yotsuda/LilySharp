@@ -44,6 +44,14 @@ describe('Report Misread to OMR', () => {
         assert.ok(!fix.slice(fix.indexOf('async function applyRows')).slice(0, 4000).includes('reportMisread'));
     });
 
+    // Owner's request 2026-10-29: a report is made again because the first was wrong.
+    it('replaces the row\'s earlier report once the new one is written', () => {
+        const fn = fix.slice(fix.indexOf('async function reportMisread'), fix.indexOf('/** A row still in the panel'));
+        assert.ok(fn.indexOf("'seed.json'), JSON.stringify(record") < fn.indexOf('fs.rmSync(old'));
+        assert.match(fn, /old !== dir && path\.dirname\(old\) === path\.resolve\(root\) && fs\.existsSync\(path\.join\(old, 'seed\.json'\)\)/);
+        assert.match(fix, /const REPORT_AGAIN = 'Reported ✓ — Replace Report…';/);
+    });
+
     it('names its folder by when, the score and the bar', () => {
         assert.equal(seedDirName(new Date(2026, 9, 29, 15, 30, 12), bar), '20261029-153012-Largo_op_1-bar12-right');
         assert.equal(seedDirName(new Date(2026, 9, 29, 15, 30, 12), { lys: '/a/b.lys', line: 7, bar: 'c1 |', correct: 'c1 |', correctFrom: 'file' }),
