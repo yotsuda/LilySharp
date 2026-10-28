@@ -127,6 +127,13 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第1030セッション（2026-10-28・YT-DELL2）
+
+第1028〜1029 と別の会話（`/clear` の後）。master `05c471530`（未 push 7）。作業場所は Lab `sessions/p1030/`。
+- 開始時 full **13459 / 0 / 2**（合計 13461）・build 0 エラー・CI success・OMR の REQUESTS に `open` なし。
+
+## 以下は第1028セッションの経緯
+
 ### 1.1 第1028セッション（2026-10-28・YT-DELL2）
 
 第1027 と同じ会話の続き。ブランチ `octave-base`。作業場所は Lab `sessions/p1028/`（`legacy.json`・`literals.json`・`migrate*.txt`・`BRIEF.md`・`zz/`＝使い捨ての移行器 `Zz*.cs`）。
@@ -167,23 +174,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **続き（ユーザー指示）**: ⑴ 旧規則の `.lys` を移すコマンド＝**不要**（ユーザー決定）。⑵ レッスン 1＝「よりよい品質のレッスン」の方針で直した: STEP 2 の cello で譜表がヘ音記号に替わって旋律が上に出て、STEP 3 の Ctrl+Shift+PageDown で旋律がチェロの譜表に入る（png で確認）。`instrument` のホバー・補完・ステータス行から `octave` の行を外した（ユーザー指示: どの楽器でも 3 なので書かない）。site は `<pre>` の例 19 個と `build-examples.ps1` の例を、旧版の音に合わせて直した。`build-site.ps1` が通る。
 - **見つけた不具合（オクターブとは無関係）**: `grace { d'16@caesura e'16 } c'1` が `BeamScoringProblem.MinimumDy` の `Math.Sign(NaN)` で落ちる（`GraceNoteEngraver.QuantGraceBeam` 経由）。`@breath` や D5 なら落ちない（第2 群の報告）。**直した（2026-10-28・ユーザー指示「クラッシュする不具合を調べて」）**: 低い装飾音と五線の上端の caesura は輪郭が重ならず、間の rod が −∞ になっていた。それを `SpacingRules.GraceColumns` が run の rod に足して −∞ にしたので、詰まった段では run が際限なく縮み、梁の最小二乗が NaN になった。rod の床をばねの最小距離にした（`Math.Max(IntoRod, Into.MinDistance)`）。breath は梁を切るので落ちなかった。網は `GraceBodyValidatorTests.ACaesuraOverALowBeamedGrace_Renders`（直しを外すと 2 本とも赤）。
 判定（2026-10-28・第1028 の終わり）: `octave-base` を master へ merge 済み（push はユーザー）。
-
-## 以下は第1027セッションの経緯
-
-### 1.1 第1027セッション（2026-10-28・YT-DELL2）
-
-第1026 と同じ会話の続き。**ユーザー決定（2026-10-28）＝Lily# のオクターブを LilyPond に揃える**（「今ならまだユーザーはほとんどいない」）。
-- 内容は 4 つ。
-  - absolute でも relative でも、どの楽器でも、セクションの始まりの基準は LilyPond と同じ（absolute の裸の `c` = C3、relative の新しい枠は F3）。
-  - preset はオクターブを動かさない（OMR の楽譜に後から `instrument bass` を書いても音符が動かない）。
-  - `octave N` は明示のずらしとして残す。
-  - オクターブ記号付きの音部記号（treble_8）は鳴る高さで書く。
-- 作曲はこう変わった。
-  - AI は `pitch concert` で書き、開くときに外す。オクターブだけの移調楽器は書く高さへ、半音の移調楽器（トランペット）は part に `pitch concert` を残す。
-  - 開くときに `octave N` の杖を落とす。
-  - VS Code core 専用のモデルは避ける。
-- `pitch` の説明をステータスバーに出す（ユーザーはホバーよりステータスバーを選んだ・語 `concert` は今のまま）。
-- 試行の commit は `6fbd44e8b`〜`92f5d8df3`。AI の作曲が良くなったことを確かめてから、リポジトリの書き換え（第1028）に進んだ。
 
 ## 2. 開いている作業
 
