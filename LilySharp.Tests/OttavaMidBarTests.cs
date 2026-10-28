@@ -1,4 +1,4 @@
-﻿// Lily# - Music notation compiler
+// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+using System;
 using System.Globalization;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -63,7 +64,7 @@ public class OttavaMidBarTests
     {
         var tree = SyntaxTree.Parse(
             "octave absolute\nkey e major\npart m { clef treble }\npart l { clef bass }\n"
-            + "section A {\n  m { e'''8@ottava( dis''' cis''' b'' a'' gis'' fis'' e''@!ottava) | }\n"
+            + "section A {\n  m { e'''8@ottava( dis''' cis''' b'' a'' gis'' fis''@!ottava e'') | }\n"
             + "  l { e1 | }\n}\nform { A }\nscore { " + staves + " }\n");
         Assert.False(tree.HasErrors);
         var score = SvgGenerator.CollectScore(tree,
@@ -80,10 +81,11 @@ public class OttavaMidBarTests
     [Fact]
     public void AStopOnABarsLastNote_KeepsTheBarsOtherNotesUnderTheOttava()
     {
-        var shifted = Heads(Svg("a,,4@ottava(bassa) e, a, e, | a,,4 e, a, e,@!ottava | a,,4 e, a, e, |"));
+        var shifted = Heads(Svg("a,,4@ottava(bassa) e, a, e, | a,,4 e, a,@!ottava e, | a,,4 e, a, e, |"));
         var plain = Heads(Svg("a,,4 e, a, e, | a,,4 e, a, e, | a,,4 e, a, e, |"));
-        // 8vb draws an octave higher: 3.5 staff spaces up — the first seven notes; the eighth
-        // (the one the stop is written on) and the last bar are back at written pitch.
+        // 8vb draws an octave higher: 3.5 staff spaces up — the first seven notes, the stop's
+        // own included (an end includes its note, owner's decision 2026-10-28); the eighth and
+        // the last bar are back at written pitch.
         for (int i = 0; i < 12; i++)
             Assert.Equal(i < 7 ? plain[i].Y - 3.5 : plain[i].Y, shifted[i].Y, 2);
     }
@@ -91,7 +93,7 @@ public class OttavaMidBarTests
     [Fact]
     public void AStartInsideABar_LeavesTheNotesBeforeItAtWrittenPitch()
     {
-        var shifted = Heads(Svg("a,,4 e,@ottava(bassa) a, e, | a,,4 e, a, e,@!ottava |"));
+        var shifted = Heads(Svg("a,,4 e,@ottava(bassa) a, e, | a,,4 e, a,@!ottava e, |"));
         var plain = Heads(Svg("a,,4 e, a, e, | a,,4 e, a, e, |"));
         for (int i = 0; i < 8; i++)
             Assert.Equal(i >= 1 && i < 7 ? plain[i].Y - 3.5 : plain[i].Y, shifted[i].Y, 2);
@@ -100,10 +102,43 @@ public class OttavaMidBarTests
     [Fact]
     public void TheBracket_StopsJustAfterTheLastNoteItCovers()
     {
-        string svg = Svg("a,,4@ottava(bassa) e, a, e, | a,,4 e, a, e,@!ottava | a,,4 e, a, e, |");
+        string svg = Svg("a,,4@ottava(bassa) e, a, e, | a,,4 e, a,@!ottava e, | a,,4 e, a, e, |");
         var hook = Regex.Match(svg,
             "<line x1=\"([\\d.]+)\" y1=\"([\\d.]+)\" x2=\"\\1\" y2=\"[\\d.]+\" stroke=\"#000000\" stroke-width=\"0.100\" data-pos");
         double end = double.Parse(hook.Groups[1].Value, CultureInfo.InvariantCulture);
         Assert.Equal(1.904, end - Heads(svg)[6].X, 1);
+    }
+
+    /// <summary>
+    /// The end INCLUDES its note (owner's decision 2026-10-28: an @! is written on the last note
+    /// the line covers): on a bar's last note it keeps the whole bar under the line, and only
+    /// the next bar is back at written pitch.
+    /// </summary>
+    [Fact]
+    public void AnEnd_IncludesTheNoteItIsWrittenOn()
+    {
+        var shifted = Heads(Svg("a,,4@ottava(bassa) e, a, e,@!ottava | a,,4 e, a, e, |"));
+        var plain = Heads(Svg("a,,4 e, a, e, | a,,4 e, a, e, |"));
+        for (int i = 0; i < 8; i++)
+            Assert.Equal(i < 4 ? plain[i].Y - 3.5 : plain[i].Y, shifted[i].Y, 2);
+    }
+
+    /// <summary>
+    /// The octavation stops at the END of the note the end is written on, not at its start: a
+    /// second voice's notes sounding under that note are under the line too (the ottava is the
+    /// staff's), as LilyPond's <c>\ottava #0</c> after the note says.
+    /// </summary>
+    [Fact]
+    public void AnEnd_StopsAtTheEndOfItsNote_ForEveryVoiceOfTheStaff()
+    {
+        const string marked = "voice { a,,2@ottava(bassa)@!ottava a,,2 } { e,4 e, e, e, } |";
+        var shifted = Heads(Svg(marked));
+        var plain = Heads(Svg(marked.Replace("@ottava(bassa)@!ottava", "")));
+        Assert.Equal(plain.Length, shifted.Length);
+        // The lower voice's quarters (the black heads Heads reads): the two under the half note
+        // an octave up, the two after it not.
+        Assert.Equal(4, plain.Length);
+        Assert.Equal(2, Enumerable.Range(0, plain.Length).Count(i => Math.Abs(plain[i].Y - 3.5 - shifted[i].Y) < 0.01));
+        Assert.Equal(2, Enumerable.Range(0, plain.Length).Count(i => Math.Abs(plain[i].Y - shifted[i].Y) < 0.01));
     }
 }

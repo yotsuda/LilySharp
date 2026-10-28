@@ -193,6 +193,13 @@ public sealed partial class LilyPondExporter
     // Standalone music a note leaves for AFTER its sibling post-events — `\breathe`,
     // `\caesura` (SplitAttachments) — written by EmitMusicStream before the next event.
     private readonly StringBuilder _trailingMusic = new();
+    // A span's end that INCLUDES its note — `\ottava #0`, `<>\stopTrillSpan` (owner's decision
+    // 2026-10-28) — written after it like _trailingMusic, except before a grace: LilyPond times a
+    // grace BEFORE the main moment the end would stand at, so the end goes inside the grace's
+    // braces, first (EmitGrace, _graceLead) — the moment the next note, the grace, begins.
+    private readonly StringBuilder _trailingSpanEnds = new();
+    // The span ends EmitGrace writes at the head of its body (see _trailingSpanEnds).
+    private string _graceLead = "";
     // (The pickup in force — a `partial` read and not yet closed by a bar — is _bars.Partial,
     // for the two readers that need it here: the spacer an empty `| |` bar stands for and a
     // bare `R`. The same BarContext.Partial the page's MeasureBuilder reads, spent the same way:

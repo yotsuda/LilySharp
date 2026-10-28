@@ -14,6 +14,17 @@ workflow attaches that section to the GitHub Release verbatim.
   LYS4032, whose quick fix writes the opening name. The drawing is unchanged. An unclosed span is
   told its own end; MusicXML import writes it. Ctrl+Shift+Up / Down on `@8va` steps the printed
   spellings (15mb, 8vb, 8va, 15ma) and renames the `@!8va` that closes it.
+- `[lang]` **An ottava's and a trill's `@!` stands on the LAST note the line covers**: `c4@ottava d e
+  f@!ottava` moves f too and the bracket stops after it; `c4@trillSpan d e@!trillSpan f` trills c, d
+  and e and the wave stops before f. Until now the end went on the first note OUTSIDE the line, as
+  LilyPond's `\ottava #0` and `\stopTrillSpan` do; written that way the line is now a note longer. A
+  chain of trills needs no `@!` between them (a new start ends the one running). Text spans,
+  hairpins and phrasing slurs already ended this way; a pedal's `@!` is still the note it is lifted
+  at. The LilyPond twin writes `\ottava #0` / `<>\stopTrillSpan` after the note (inside a grace that
+  follows it), MusicXML writes the octave-shift stop at the note's end and reads it back onto the
+  note before it, and the upper staff of a grand staff now names its directions' `<staff>`. Drawn
+  against LilyPond: an 8va ending on a bar's last note now stops just after that note's head, as
+  LilyPond's does (it used to stop at the bar line).
 - `[lang]` **The trill span is `@trillSpan … @!trillSpan`**, opened and closed by one name like every
   other span. LilyPond's `@startTrillSpan` / `@stopTrillSpan` are no longer accepted: they draw
   nothing and the warning names the new spelling. The LilyPond twin still writes `\startTrillSpan` /

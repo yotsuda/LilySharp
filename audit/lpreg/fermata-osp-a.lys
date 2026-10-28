@@ -6,7 +6,7 @@ part melody
 
 section A {
   melody {
-    g''2@ottava@accent@fermata@trillSpan r2@!ottava@!trillSpan |
+    g''2@ottava@accent@fermata@trillSpan@!ottava@!trillSpan r2 |
   }
 }
 

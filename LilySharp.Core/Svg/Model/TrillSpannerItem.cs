@@ -56,7 +56,13 @@ public sealed record TrillSpannerItem(
     //   start event's direction is set on the grob when the writer gave one;
     // LILYPOND-REF: scm/music-functions.scm:617-634 direction-polyphonic-grobs —
     //   TrillSpanner is in the list; scm/define-grobs.scm:4076 — (direction . UP).
-    int Direction = 0
+    int Direction = 0,
+    // The end INCLUDES the note at (EndMeasureIndex, EndItemIndex) — an @!trillSpan, written on
+    // the last trilled note (owner's decision 2026-10-28) — so the line runs to the NEXT note,
+    // or to the bar line when that note ends its bar: what LilyPond's \stopTrillSpan on the
+    // next note draws. False when the end is the next note itself (a new start, a cut, the
+    // score's end). TrillSpannerEngraver reads it; everything else reads the written note.
+    bool EndInclusive = false
 )
 {
     // Identity, not value equality: see ModelIdentity.

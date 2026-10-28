@@ -110,7 +110,7 @@
   <line x1="81.63" y1="21.91" x2="81.63" y2="28.26" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="84.39" y="20.26" font-size="4.00" data-pos="374"></text>
   <line x1="84.46" y1="20.41" x2="84.46" y2="28.26" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="87.94" y="17.26" font-size="4.00" data-pos="380"></text>
+  <text class="music" x="87.94" y="17.26" font-size="4.00" data-pos="388"></text>
   <line x1="88.01" y1="17.26" x2="88.01" y2="28.26" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="91.38" y="18.76" font-size="4.00" data-pos="391"></text>
   <line x1="91.45" y1="18.76" x2="91.45" y2="28.26" stroke="#000000" stroke-width="0.130"/>
@@ -123,7 +123,7 @@
   <rect x="55.16" y="26.26" width="0.19" height="4.00" data-pos="306"/>
   <rect x="62.64" y="26.26" width="0.19" height="4.00" data-pos="319"/>
   <rect x="74.70" y="26.26" width="0.19" height="4.00" data-pos="363"/>
-  <rect x="86.84" y="26.26" width="0.19" height="4.00" data-pos="376"/>
+  <rect x="86.84" y="26.26" width="0.19" height="4.00" data-pos="384"/>
   <rect x="94.75" y="26.26" width="0.19" height="4.00" data-pos="393"/>
   <rect x="102.24" y="26.26" width="0.19" height="4.00" data-pos="404"/>
   <line x1="8.59" y1="35.26" x2="102.38" y2="35.26" stroke="#000000" stroke-width="0.100"/>
@@ -208,8 +208,8 @@
   <line x1="40.10" y1="32.21" x2="54.35" y2="31.54" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="285"/>
   <line x1="40.10" y1="32.21" x2="54.35" y2="32.87" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="285"/>
   <text x="62.96" y="19.92" font-size="2.20" font-weight="bold" font-style="italic" data-pos="349">8va</text>
-  <line x1="67.18" y1="19.17" x2="86.43" y2="19.17" stroke="#000000" stroke-width="0.100" stroke-dasharray="0.60 1.40" data-pos="349"/>
-  <line x1="86.43" y1="19.17" x2="86.43" y2="19.97" stroke="#000000" stroke-width="0.100" data-pos="349"/>
+  <line x1="67.18" y1="19.17" x2="86.30" y2="19.17" stroke="#000000" stroke-width="0.100" stroke-dasharray="0.60 1.40" data-pos="349"/>
+  <line x1="86.30" y1="19.17" x2="86.30" y2="19.97" stroke="#000000" stroke-width="0.100" data-pos="349"/>
   <text class="music" x="13.54" y="24.89" font-size="3.56" data-pos="134"></text>
   <line x1="14.64" y1="24.73" x2="14.64" y2="22.22" stroke="#000000" stroke-width="0.116" data-pos="134"/>
   <text x="15.32" y="25.38" font-size="2.20" data-pos="134">= 108</text>

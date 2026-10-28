@@ -76,7 +76,7 @@ public class OmrReport20261020Tests
     public void Item2_ALowerStaffsTrillSpanner_IsBoundByItsOwnNotes()
     {
         var (score, layout) = Render(GrandStaffHead
-            + "  lh { c4 d4@trillSpan e4 f4@!trillSpan | g,2@trillSpan a,4 b,4@!trillSpan | c1 | }\n"
+            + "  lh { c4 d4@trillSpan e4@!trillSpan f4 | g,2@trillSpan a,4@!trillSpan b,4 | c1 | }\n"
             + GrandStaffTail);
         var lh = score.StaffGroups[0].Staves[1].PrimaryVoice.Measures;
         var trills = layout.TrillSpannerLayouts.OrderBy(t => t.StartMeasureIndex).ToList();

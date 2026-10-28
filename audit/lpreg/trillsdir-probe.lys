@@ -3,7 +3,7 @@
 octave absolute
 part m { }
 section A {
-  m { g'4@trillSpan g'4@!trillSpan g'4@trillSpan.down g'4@!trillSpan | }
+  m { g'4@trillSpan@!trillSpan g'4 g'4@trillSpan.down@!trillSpan g'4 | }
 }
 form { A }
 score { staff m }

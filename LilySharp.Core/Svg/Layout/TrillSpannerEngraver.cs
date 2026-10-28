@@ -146,6 +146,8 @@ internal static class TrillSpannerEngraver
             var trillVoices = voicesByStaff != null
                 && voicesByStaff.TryGetValue(spanner.StaffIndex, out var vv)
                 ? vv : ImmutableArray<Voice>.Empty;
+            // An end written on the last trilled note is read as LilyPond's, on the next one.
+            spanner = AtTheNextNote(spanner, trillVoices, measureLayouts);
             // The staff floor under the supports and the staff-padding floor are this staff's
             // own extent (an `as lines N` staff's drawn lines); a caller without staves stands
             // on five.
@@ -604,6 +606,41 @@ internal static class TrillSpannerEngraver
         }
         var lastMeasure = measureLayouts[^1];
         return lastMeasure.X + lastMeasure.Width - BoundPadding;
+    }
+
+    /// <summary>
+    /// A trill whose end INCLUDES its note (<see cref="TrillSpannerItem.EndInclusive"/>, an
+    /// <c>@!trillSpan</c> on the last trilled note — owner's decision 2026-10-28) as the end
+    /// LilyPond's <c>\stopTrillSpan</c> writes: the next note of its voice in that bar — a grace
+    /// too, the first thing heard after the trill (a turn's grace notes are not under the wave;
+    /// the twin writes the stop inside the grace, LilyPondExporter._trailingSpanEnds) — or the
+    /// next bar's start — the to-barline end below — when the note ends its bar (or the score).
+    /// Any other trill is returned as it is.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/line-spanner.cc:155-175 Line_spanner::calc_bound_info — the right
+    ///   bound read at TrillSpanner's bound-details right (attach-dir . LEFT): the line stops at
+    ///   the left of the stop note's column, so the stop stands on the note AFTER the last
+    ///   trilled one.
+    /// </remarks>
+    private static TrillSpannerItem AtTheNextNote(TrillSpannerItem spanner, ImmutableArray<Voice> voices,
+        ImmutableArray<MeasureLayout> measureLayouts)
+    {
+        if (!spanner.EndInclusive)
+            return spanner;
+        int m = spanner.EndMeasureIndex;
+        if (!voices.IsDefaultOrEmpty && spanner.VoiceIndex >= 0 && spanner.VoiceIndex < voices.Length)
+        {
+            var measures = voices[spanner.VoiceIndex].Measures;
+            if (m >= 0 && m < measures.Length)
+            {
+                if (spanner.EndItemIndex + 1 < measures[m].Items.Length)
+                    return spanner with { EndItemIndex = spanner.EndItemIndex + 1, EndInclusive = false };
+            }
+        }
+        else if (m >= 0 && m < measureLayouts.Length && spanner.EndItemIndex + 1 < measureLayouts[m].Items.Length)
+            return spanner with { EndItemIndex = spanner.EndItemIndex + 1, EndInclusive = false };
+        return spanner with { EndMeasureIndex = m + 1, EndItemIndex = 0, EndInclusive = false };
     }
 
     /// <summary>

@@ -29,7 +29,7 @@ namespace LilySharp.Tests;
 /// A tie binds equal PITCHES, not equal staff positions (lily/tie-engraver.cc): where an
 /// ottava bracket ends between the two heads, the second one is drawn an octave away and the
 /// tie still joins them. LilyPond 2.26.0 (Lab sessions/p655, the S1 book tie-ottava): in
-/// `c''4@ottava~ c'' d''~ d''@!ottava` both ties are drawn, the second at its first head's
+/// `c''4@ottava~ c'' d''@!ottava~ d''` both ties are drawn, the second at its first head's
 /// height and ending 0.335 short of the octave-shifted head — its end column is built around
 /// the head the tie really reaches, whose stem stands in the way. Until session 655 Lily#
 /// matched the heads by position and dropped that tie.
@@ -43,7 +43,7 @@ public sealed class OttavaBoundaryTieTests
         var tree = SyntaxTree.Parse("""
             octave absolute
             part m {
-              section A { c'''4@ottava~ c''' d'''~ d'''@!ottava | }
+              section A { c'''4@ottava~ c''' d'''@!ottava~ d''' | }
             }
             form { A }
             score { staff m }
@@ -74,7 +74,7 @@ public sealed class OttavaBoundaryTieTests
         var tree = SyntaxTree.Parse("""
             octave absolute
             part m {
-              section A { c'''4@ottava~ c''' d'''~ d'''@!ottava | }
+              section A { c'''4@ottava~ c''' d'''@!ottava~ d''' | }
             }
             form { A }
             score { staff m }

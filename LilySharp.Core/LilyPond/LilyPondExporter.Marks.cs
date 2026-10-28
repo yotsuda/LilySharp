@@ -36,6 +36,15 @@ public sealed partial class LilyPondExporter
     {
         var prefix = new StringBuilder();
         var suffix = new StringBuilder();
+        // The ends that INCLUDE their note (owner's decision 2026-10-28: an @! is written on the
+        // last note its line covers) go out AFTER the note and everything on it — its siblings
+        // `~` `)` `]` too, so they ride _trailingMusic as \breathe does — at the moment the note
+        // ends, where LilyPond's own spelling puts them, before the next note.
+        void Trail(string music)
+        {
+            if (_trailingSpanEnds.Length > 0) _trailingSpanEnds.Append(' ');
+            _trailingSpanEnds.Append(music);
+        }
         foreach (var a in arts)
         {
             switch (a)
@@ -92,9 +101,11 @@ public sealed partial class LilyPondExporter
                     when Semantics.AnnotationValues.IsPhrasingSlurName(pe.Name):
                     suffix.Append("\\)");
                     break;
-                // '@!trillSpan' — `\stopTrillSpan`, the TrillSpanEvent STOP, a POST-event too.
+                // '@!trillSpan' — `\stopTrillSpan`, the TrillSpanEvent STOP, at the END of its
+                // note: on an empty chord after it, `<>`, which takes no time — the moment
+                // LilyPond's own spelling, the stop on the next note, names.
                 case MusicMarkSyntax { IsSpanEnd: true, Name: Svg.Model.MusicMarkItem.TrillSpanName }:
-                    suffix.Append("\\stopTrillSpan");
+                    Trail("<>\\stopTrillSpan");
                     break;
                 // '@!cresc' / '@!decresc' / '@!dim' — `\!`, a POST-event too: written before the
                 // note it would end the hairpin on the previous one.
@@ -136,7 +147,11 @@ public sealed partial class LilyPondExporter
                 // bare word (`@ottava`) three cases down. Until 2026-09-23 all of them were
                 // "dropped (out of scope)" and the twin drew every 8va at written pitch.
                 case MusicMarkSyntax mk when OttavaCommand(mk.MarkName, mk.IsSpanEnd) is { } ott:
-                    prefix.Append(ott).Append(' ');
+                    // The end (`@!ottava`) includes its note: `\ottava #0` after it.
+                    if (mk.IsSpanEnd)
+                        Trail(ott);
+                    else
+                        prefix.Append(ott).Append(' ');
                     break;
                 // An @chord that chooses a diagram: the diagram is the note's markup, and the
                 // name goes wherever EmitMark sends an @chord (the part's ChordNames stream).

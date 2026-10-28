@@ -278,7 +278,13 @@ public sealed partial class LilyPondExporter
             // out once every post-event written as a SIBLING of that note — the tie, slur,
             // beam marker, dynamic, string number — has been written, so `c4@breath~ c4`
             // is `c4 ~ \breathe c4` and the tie is still attached.
-            if (_trailingMusic.Length > 0
+            if (_trailingSpanEnds.Length > 0 && item is GraceExpressionSyntax { IsAfterGrace: false })
+            {
+                // A span's end before a grace goes inside it (_trailingSpanEnds).
+                _graceLead = _trailingSpanEnds.ToString() + " ";
+                _trailingSpanEnds.Clear();
+            }
+            if ((_trailingMusic.Length > 0 || _trailingSpanEnds.Length > 0)
                 && item is not (TieSyntax or SlurSyntax or BeamMarkerSyntax or DynamicSyntax
                     or StringNumberAnnotationSyntax or ArticulationSyntax or MusicMarkSyntax))
                 FlushTrailingMusic(line, indent);
@@ -391,10 +397,12 @@ public sealed partial class LilyPondExporter
     /// written out and forgotten.</summary>
     private void FlushTrailingMusic(StringBuilder line, string indent)
     {
-        if (_trailingMusic.Length == 0)
-            return;
-        AppendToken(line, _trailingMusic.ToString(), indent);
+        if (_trailingMusic.Length > 0)
+            AppendToken(line, _trailingMusic.ToString(), indent);
         _trailingMusic.Clear();
+        if (_trailingSpanEnds.Length > 0)
+            AppendToken(line, _trailingSpanEnds.ToString(), indent);
+        _trailingSpanEnds.Clear();
     }
 
     /// <summary>
@@ -2325,6 +2333,8 @@ public sealed partial class LilyPondExporter
         if (g.IsAfterGrace && !Semantics.GraceBodySupport.AfterGraceHasMain(g))
             return "";
         string kw = g.IsAfterGrace ? "" : g.IsAcciaccatura ? "\\acciaccatura " : g.IsAppoggiatura ? "\\appoggiatura " : "\\grace ";
+        string lead = _graceLead;
+        _graceLead = "";
         var buf = OpenNested();
         // The grace body has its OWN default duration, an eighth, and it is Lily#'s own rule
         // (MeasureCollector.CollectGraceNotes graceDefaultDuration = Fraction.Eighth;
@@ -2351,7 +2361,7 @@ public sealed partial class LilyPondExporter
         _lastWrittenValue = streamValue;
         _lastWrittenDots = streamDots;
         _forceNextDuration = true;
-        return $"{kw}{{ {body} }}";
+        return $"{kw}{{ {lead}{body} }}";
     }
 
     // The clef the twin is reading in — what a slash note's middle-line pitch is spelled against.

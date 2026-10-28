@@ -1201,9 +1201,11 @@ so the grace notes after it take flags, as in LilyPond; before a grace rest it s
 way (`grace { d16@breath r16 e16 } f4`), and in an `afterGrace` too (`c2 afterGrace { d16@breath } e2`).
 Before a grace spacer it stands the same way. One written on a chord's member is not drawn yet
 (LYS4020 names it, and every other mark still dropped).
-A trill spanner can start or stop on a grace note (`grace { d16@trillSpan } e4 f g@!trillSpan`),
-and so can an ottava (`grace { d''16@ottava } e''4 f'' g'@!ottava`) — an `@!ottava` on a grace ends
-the span before it, as LilyPond's `\ottava #0` there does, so that grace keeps its written octave.
+A trill spanner can start or stop on a grace note (`grace { d16@trillSpan } e4 f@!trillSpan g`),
+and so can an ottava (`grace { d''16@ottava } e''4 f''@!ottava g'`). ⚠️ An `@!ottava` written ON a
+grace still ends the span before that grace (it keeps its written octave): a grace takes no time on
+the bar's clock, so the end cannot fall between it and the note it leans on. An end on the note
+BEFORE a grace (`e''4@!ottava grace { f'16 } g'4`) leaves the grace outside the line.
 A phrasing slur can start, stop or close on grace notes too (`grace { d16@phrasingSlur } e4 f
 g@!phrasingSlur`, `grace { d16@phrasingSlur e16@!phrasingSlur } f4`), and a courtesy accidental is
 drawn in parentheses on a grace note (`grace { fis16@courtesy } g4` — LilyPond's `fis?16`), and an
@@ -2221,6 +2223,11 @@ name it was opened with (LYS4032 otherwise): `@!ottava` after `@ottava` or `@ott
 `@8vb`, `@15ma`, `@15mb` are the same four brackets. A new start while one is open changes the
 octavation, and the end then closes the last one.
 
+The end is written on the **last note under the line** (owner's decision 2026-10-28): in
+`c4@ottava d e f@!ottava` all four notes are moved, and the bracket stops just after f. An end on
+a bar's last note keeps the whole bar under the line. (LilyPond writes `\ottava #0` before the next
+note instead; the LilyPond export does that.)
+
 ```
 c4@ottava d e f@!ottava |            // 8va bracket
 c4@ottava(bassa) d e f@!ottava |     // 8vb
@@ -2257,8 +2264,13 @@ c4@unaCorda d@treCorde |              // the same release, written as the word i
 
 ### Trill Spanners
 
+The end is written on the **last trilled note** (owner's decision 2026-10-28), and the wavy line
+runs to the next note — to the bar line when that note ends its bar. A new `@trillSpan` ends the
+one running, so a chain needs no `@!` between its trills.
+
 ```
-c4@trillSpan d e@!trillSpan f |
+c4@trillSpan d e@!trillSpan f |      // c, d and e trilled; the line stops before f
+c4@trillSpan d e@trillSpan f@!trillSpan |   // two trills: c-d, then e-f
 ```
 
 ## Glissando

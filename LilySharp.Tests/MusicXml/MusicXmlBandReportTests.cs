@@ -176,8 +176,10 @@ public class MusicXmlBandReportTests
         string Numbered(string name) => string.Join(" ", part.Descendants(name)
             .Select(e => $"{e.Ancestors("direction").Single().Element("staff")?.Value ?? "-"}:{e.Attribute("type")!.Value}:{(string?)e.Attribute("number") ?? "-"}")
             .Order());
-        Assert.Equal("-:crescendo:- -:stop:- 2:crescendo:2 2:stop:2", Numbered("wedge"));
-        Assert.Equal("-:down:- -:stop:- 2:down:2 2:stop:2", Numbered("octave-shift"));
+        // The upper staff's directions name staff 1 (since 2026-10-28: an ottava's stop stands at
+        // its note's end, where only <staff> says whose line it closes).
+        Assert.Equal("1:crescendo:- 1:stop:- 2:crescendo:2 2:stop:2", Numbered("wedge"));
+        Assert.Equal("1:down:- 1:stop:- 2:down:2 2:stop:2", Numbered("octave-shift"));
     }
 
     /// <summary>A grand staff whose staves are labelled apart keeps both labels: two parts

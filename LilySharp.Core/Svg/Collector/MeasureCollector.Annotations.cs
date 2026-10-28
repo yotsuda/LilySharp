@@ -901,12 +901,26 @@ public sealed partial class MeasureCollector
                     // quietly turned into the mark '@X' would have made.
                     if (MusicMarkItem.ParseSpanEndName(markSyntax.Name) is { } endType
                         && endType != MusicMarkType.PhrasingSlurStop)
+                    {
+                        // An ottava's end INCLUDES its note (owner's decision 2026-10-28: "@! は線が
+                        // かかる最後の音符に書く"): the octavation stops at the END of the note it
+                        // is written on, so the mark stands at that moment and past that item —
+                        // what LilyPond's `\ottava #0` before the next note says. The pairing, the
+                        // display transposition and the bracket's last column then read it as
+                        // they read a closer at the next note (OttavaBracketEngraver.BracketFrom).
+                        // ⚠️ On a grace, or with no onset to add to, it stays at its note's onset:
+                        // a grace has no length on the bar's clock.
+                        var (endItem, endTiming) = (itemIndex, anchorTiming);
+                        if (endType == MusicMarkType.OttavaStop && !graceTime && anchorTiming.Denominator != 0
+                            && _v.LastAddedItem is { } carrier && carrier.Duration > Fraction.Zero)
+                            (endItem, endTiming) = (itemIndex + 1, anchorTiming + carrier.Duration);
                         _musicMarks.Add(new MusicMarkItem(
-                            endType, measureIndex, markSyntax.SourceStart, itemIndex, anchorTiming)
+                            endType, measureIndex, markSyntax.SourceStart, endItem, endTiming)
                         {
                             StaffIndex = _v.Cursor.StaffIndex,
                             VoiceIndex = _v.Cursor.VoiceIndex,
                         });
+                    }
                 }
                 else if (Semantics.AnnotationValues.Pluck(markSyntax) is { } pluckLetter)
                 {
@@ -1136,16 +1150,18 @@ public sealed partial class MeasureCollector
         // when the carry rule refuses the end.
         TrillSpannerItem Closed(
             (bool isStart, int measureIndex, int itemIndex, int sourcePosition, int staffIndex, int voiceIndex, int forcedDir) start,
-            int endMeasure, int endItem)
+            int endMeasure, int endItem, bool inclusive = false)
         {
             if (plays?.Judge(start.measureIndex, endMeasure) is { } fault)
             {
                 carrySink?.Add(plays.Refused(start.sourcePosition, SectionSpanKind.Trill, fault, start.measureIndex));
                 endMeasure = plays.CutMeasure(start.measureIndex);
                 endItem = 0;
+                inclusive = false;
             }
             return new TrillSpannerItem(start.measureIndex, start.itemIndex, endMeasure, endItem,
-                start.sourcePosition, start.staffIndex, start.voiceIndex, Direction: start.forcedDir);
+                start.sourcePosition, start.staffIndex, start.voiceIndex, Direction: start.forcedDir,
+                EndInclusive: inclusive);
         }
 
         foreach (var evt in _trillSpannerEvents)
@@ -1171,7 +1187,9 @@ public sealed partial class MeasureCollector
                 // The START event's voice owns the spanner: LilyPond's engraver lives in
                 // that Voice context and makes the grob there (scheme-engravers.scm:1816),
                 // so its supports and its left bound are that voice's columns.
-                items.Add(Closed(pendingStart.Value, evt.measureIndex, evt.itemIndex));
+                // An @!trillSpan INCLUDES its note (owner's decision 2026-10-28): the trill
+                // runs to the next note (TrillSpannerItem.EndInclusive).
+                items.Add(Closed(pendingStart.Value, evt.measureIndex, evt.itemIndex, inclusive: true));
                 pendingStart = null;
             }
             else if (plays != null && plays.OnUnmatchedStop(evt.measureIndex,

@@ -346,7 +346,7 @@ score { staff vc }</pre>
 
   <h3>Spanners — the end is required</h3>
   <p>These open on one note and must be closed on another. A spanner nobody closes draws
-  <i>nothing at all</i>, its word included, and says so:</p>
+  <i>nothing at all</i>, its word included, and says so. The end goes on the <b>last note the line covers</b>: <code>c4@ottava d e f@!ottava</code> moves f too and the bracket stops after it, and <code>c4@trillSpan d e@!trillSpan f</code> trills c, d and e. A pedal's end is the note it is lifted at.</p>
   <table class="g">
     <tr><th>Opens</th><th>Closes</th></tr>
     <tr><td><code>@textSpan("poco rit.")</code>, or the sugar <code>@rit @accel @rall</code></td><td><code>@!textSpan</code> / <code>@!rit</code> …</td></tr>

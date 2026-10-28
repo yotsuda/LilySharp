@@ -238,6 +238,7 @@ public sealed partial class MeasureCollector
         {
             _clock.CountReach();
             builder.AddItem(item);
+            _v.LastAddedItem = item;
             return default;
         }
         return AddItemInSpanAsync(builder, item);
@@ -247,6 +248,7 @@ public sealed partial class MeasureCollector
     {
         await _clock.ReachAsync(builder);
         builder.AddItem(item);
+        _v.LastAddedItem = item;
     }
 
     /// <summary>Reaches the builder's moment, then <see cref="MeasureBuilder.AddItemWithoutDuration"/>.</summary>
@@ -311,6 +313,11 @@ public sealed partial class MeasureCollector
     internal sealed class BranchState
     {
         public CollectionCursor Cursor;
+
+        // The item this branch added last — the note whose marks are read next, for the
+        // ottava end that includes its note (its length; MeasureCollector.Annotations). Per
+        // branch: inside a span the voices take turns, and another voice's last item is not it.
+        public MusicItem? LastAddedItem;
 
         // The relative-octave chain plus the part transpose that composes on top of
         // it, bundled into one named collaborator (see OctaveContext). The main walk

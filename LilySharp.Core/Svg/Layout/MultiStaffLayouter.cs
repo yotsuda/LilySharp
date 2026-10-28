@@ -4500,6 +4500,7 @@ internal sealed class MultiStaffLayouter
                 EndMeasureIndex = clipEnd ? maxMeasureIndex : t.EndMeasureIndex,
                 // Past the voice's last item: GetEndX's bar-line bound.
                 EndItemIndex = clipEnd ? int.MaxValue : t.EndItemIndex,
+                EndInclusive = !clipEnd && t.EndInclusive,
             });
         }
         if (onThisSystem.Count == 0 && continued.Count == 0)

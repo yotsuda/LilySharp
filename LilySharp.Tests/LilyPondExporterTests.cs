@@ -564,9 +564,9 @@ public class LilyPondExporterTests
     /// <summary>
     /// An ottava is <c>\ottava #n</c> BEFORE the note it starts on — <c>#1</c> for
     /// <c>@ottava</c>, <c>#-1</c> for <c>@ottava(bassa)</c>, <c>#±2</c> for the quindicesima —
-    /// and <c>\ottava #0</c> before the terminator's note, which is the first note back at
-    /// written pitch. Until 2026-09-23 every one was dropped and the twin drew the 8va at
-    /// written pitch.
+    /// and <c>\ottava #0</c> AFTER the terminator's note, the last one under the line (owner's
+    /// decision 2026-10-28; until then before it, the first note back at written pitch). Until
+    /// 2026-09-23 every one was dropped and the twin drew the 8va at written pitch.
     /// LILYPOND-REF: ly/music-functions-init.ly:1342-1349 ottava = define-music-function
     ///   → make-music 'OttavaEvent 'ottava-number; lily/ottava-engraver.cc:123-136
     ///   process_music — any ottava event ends the open bracket, a non-zero one starts the next.
@@ -578,13 +578,29 @@ public class LilyPondExporterTests
             "c,4@ottava d,4 e,4 f,4@!ottava | c,4@ottava(bassa) d,4 e,4@!ottava f,4 | "
             + "c,4@quindicesima d,4@quindicesima(bassa) e,4@!quindicesima f,4"));
         Assert.Contains("\\ottava #1 c,4", ly);
-        Assert.Contains("\\ottava #0 f,4", ly);
+        Assert.Contains("f,4 \\ottava #0", ly);
         Assert.Contains("\\ottava #-1 c,4", ly);
-        Assert.Contains("\\ottava #0 e,4", ly);
+        Assert.Contains("e,4 \\ottava #0", ly);
         Assert.Contains("\\ottava #2 c,4", ly);
         Assert.Contains("\\ottava #-2 d,4", ly);
         Assert.Equal(3, Occurrences(ly, "\\ottava #0"));
         Assert.DoesNotContain(warnings, w => w.Contains("ottava") || w.Contains("quindicesima"));
+    }
+
+    /// <summary>
+    /// An end that includes its note goes out after everything on that note — its tie, slur and
+    /// beam too — and, before a grace, inside the grace: LilyPond times a grace before the main
+    /// moment `\ottava #0` / `<>\stopTrillSpan` would stand at, so written after the note it would
+    /// put the grace under the line (owner's decision 2026-10-28; LilyPond 2.26.0 compiles each
+    /// without a warning, Lab sessions/p1032/incl).
+    /// </summary>
+    [Fact]
+    public void AnEndThatIncludesItsNote_TrailsItsSiblings_AndOpensAGraceThatFollows()
+    {
+        Assert.Contains("f, ] ) \\ottava #0", Export(Score("c,8[@ottava( d, e, f,@!ottava]) g,2.")));
+        Assert.Contains("\\grace { \\ottava #0 ", Export(Score("c,4@ottava d,4@!ottava grace { e,16 } f,4 g,4")));
+        Assert.Contains("\\grace { <>\\stopTrillSpan ", Export(Score("c,4@trillSpan d,4@!trillSpan grace { e,16 } f,4 g,4")));
+        Assert.Contains("d,4~ <>\\stopTrillSpan", Export(Score("c,4@trillSpan d,4~@!trillSpan d,4 e,4")));
     }
 
     /// <summary>
@@ -860,7 +876,8 @@ public class LilyPondExporterTests
     {
         Assert.Contains("c,1\\glissando", Export(Score("c,1@glissando")));
         Assert.Contains("c,1\\startTrillSpan", Export(Score("c,1@trillSpan")));
-        Assert.Contains("c,1\\stopTrillSpan", Export(Score("c,1@!trillSpan")));
+        // The end includes its note: the stop on an empty chord after it (owner's decision 2026-10-28).
+        Assert.Contains("c,1 <>\\stopTrillSpan", Export(Score("c,1@!trillSpan")));
         Assert.Contains("c,1\\laissezVibrer", Export(Score("c,1@laissezVibrer")));
         Assert.Contains("c,1\\repeatTie", Export(Score("c,1@repeatTie")));
 

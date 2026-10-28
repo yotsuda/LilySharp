@@ -603,6 +603,11 @@ public sealed class MusicXmlExporter
                         u.Attributes.Staff2Clef = (sign, l.Attributes.ClefLine, l.Attributes.ClefOctaveChange);
                 }
 
+                // The upper hand's directions name their staff too: a stop that stands at the
+                // bar's end (an @!ottava includes its note, owner's decision 2026-10-28) is no
+                // note's neighbour, and only <staff> tells the reader whose line it ends.
+                foreach (var d in u.Directions)
+                    d.Staff ??= 1;
                 foreach (var d in l.Directions)
                 {
                     d.Staff = 2;
@@ -5159,6 +5164,8 @@ public sealed class MusicXmlExporter
         // ⚠️ This read used to take whatever followed "frame." with NO gate, so a spec
         // Lily# refuses to draw still reached the XML. It asks the one reader now.
         _noteFrameSpec = null;
+        // The note's length on the bar's clock, for an end that includes its note (@!ottava).
+        _markedNoteLength = xmlNote.IsGrace || xmlNote.IsChord || xmlNote.IsBackup ? 0 : xmlNote.Duration;
         foreach (var artic in articulations)
             if (artic is MusicMarkSyntax fm
                 && Semantics.AnnotationValues.Frame(fm) is { } spec)
@@ -5414,6 +5421,10 @@ public sealed class MusicXmlExporter
         _niente = (_currentMeasure, offset, word);
     }
 
+    /// <summary>The length of the note whose marks are being read, in divisions (0 for a grace
+    /// or a chord's later member): where an end that includes its note stands.</summary>
+    private int _markedNoteLength;
+
     /// <summary>
     /// Adds a direction to the current measure at the position the stream has reached — the
     /// onset of the note about to be written, since a note's marks are read before it is
@@ -5563,9 +5574,15 @@ public sealed class MusicXmlExporter
             if (_currentMeasure != null)
                 switch (Svg.Model.MusicMarkItem.ParseSpanEndName(mark.Name))
                 {
+                    // The end INCLUDES its note (owner's decision 2026-10-28): the stop stands
+                    // where the note ends, after it — where MusicXML's own stop stands.
                     case Svg.Model.MusicMarkType.OttavaStop:
-                        AddDirection(new MusicXmlDirection { OctaveShiftType = "stop", OctaveShiftSize = _octaveShiftSize });
+                    {
+                        var stop = new MusicXmlDirection { OctaveShiftType = "stop", OctaveShiftSize = _octaveShiftSize };
+                        AddDirection(stop);
+                        stop.Offset += _markedNoteLength;
                         break;
+                    }
                     // MusicXML has ONE pedal stop for the sustain and the sostenuto.
                     case Svg.Model.MusicMarkType.SustainOff:
                     case Svg.Model.MusicMarkType.SostenutoOff:

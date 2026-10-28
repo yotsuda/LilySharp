@@ -52,7 +52,7 @@ public class TrillSpannerTests
     {
         var source = @"
 part melody { clef treble }
-phrase m { c''4@trillSpan d e f@!trillSpan | }
+phrase m { c''4@trillSpan d e@!trillSpan f | }
 section A { melody { m } }
 form { A }
 score test { staff melody }
@@ -74,7 +74,10 @@ score test { staff melody }
         Assert.Equal(0, spanner.StartMeasureIndex);
         Assert.Equal(0, spanner.StartItemIndex);  // c' (first note)
         Assert.Equal(0, spanner.EndMeasureIndex);
-        Assert.Equal(3, spanner.EndItemIndex);     // f (fourth note)
+        // The end is the note it is written on, e — the last trilled one, which it includes
+        // (owner's decision 2026-10-28); the engraver reads it as LilyPond's stop on f.
+        Assert.Equal(2, spanner.EndItemIndex);
+        Assert.True(spanner.EndInclusive);
     }
 
     [Fact]
@@ -82,7 +85,7 @@ score test { staff melody }
     {
         var source = @"
 part melody { clef treble }
-phrase m { c''4@trillSpan d e f | g4 a b c'@!trillSpan | }
+phrase m { c''4@trillSpan d e f | g4 a b@!trillSpan c' | }
 section A { melody { m } }
 form { A }
 score test { staff melody }
@@ -102,7 +105,7 @@ score test { staff melody }
     {
         var source = @"
 part melody { clef treble }
-phrase m { c''4@trillSpan d@!trillSpan e4@trillSpan f@!trillSpan | }
+phrase m { c''4@trillSpan@!trillSpan d e4@trillSpan@!trillSpan f | }
 section A { melody { m } }
 form { A }
 score test { staff melody }
@@ -113,13 +116,15 @@ score test { staff melody }
         _output.WriteLine($"TrillSpanners count: {singleScore.TrillSpanners.Length}");
         Assert.Equal(2, singleScore.TrillSpanners.Length);
 
-        // First spanner: c' to d
+        // First spanner: on c' alone (its end includes it), drawn to d
         Assert.Equal(0, singleScore.TrillSpanners[0].StartItemIndex);
-        Assert.Equal(1, singleScore.TrillSpanners[0].EndItemIndex);
+        Assert.Equal(0, singleScore.TrillSpanners[0].EndItemIndex);
+        Assert.True(singleScore.TrillSpanners[0].EndInclusive);
 
-        // Second spanner: e to f
+        // Second spanner: on e alone, drawn to f
         Assert.Equal(2, singleScore.TrillSpanners[1].StartItemIndex);
-        Assert.Equal(3, singleScore.TrillSpanners[1].EndItemIndex);
+        Assert.Equal(2, singleScore.TrillSpanners[1].EndItemIndex);
+        Assert.True(singleScore.TrillSpanners[1].EndInclusive);
     }
 
     [Fact]
@@ -127,7 +132,7 @@ score test { staff melody }
     {
         var source = @"
 part melody { clef treble }
-phrase m { c''4@trillSpan d e f@!trillSpan | g4 a b c' | }
+phrase m { c''4@trillSpan d e@!trillSpan f | g4 a b c' | }
 section A { melody { m } }
 form { A }
 score test { staff melody }
@@ -178,8 +183,9 @@ score test { staff melody }
     public void MeasureStartStop_EndsTheWaveAtTheBarline_NotTheStopColumn()
     {
         // slur-vertical-skylines.ly (the outside-staff-vs-slur book): the trill
-        // spans g1~ | g1@!trillSpan — the stop event lands on a measure
-        // START, so the Bar_engraver rewrites the right bound to the BAR LINE
+        // spans g1~@!trillSpan | g1 — the end includes the first g1, so the stop
+        // lands on the next measure's START (LilyPond's `| g1\stopTrillSpan`), and
+        // the Bar_engraver rewrites the right bound to the BAR LINE
         // and the wave never enters the stop measure. LP draws exactly 3
         // trill_element repetitions (staff-rel X 38.30/39.30/40.30); before the
         // to-barline port Lily# ran the wave to the stop column (5 elements).
@@ -192,8 +198,8 @@ score test { staff melody }
             "octave absolute\n\n" +
             "f'8@text(\"rit\").up( c''8 f'' c''' f''') r8 r4 |\n" +
             "c'''2( c''2 |\n" +
-            "g'1)~@trillSpan |\n" +
-            "g'1@!trillSpan |\n" +
+            "g'1)~@trillSpan@!trillSpan |\n" +
+            "g'1 |\n" +
             "g'1(@f |\n" +
             "g1) |\n");
         double middle = MiddleLineY(svg);
@@ -297,7 +303,7 @@ score test { staff melody }
             section Piece {
               p1 {
                 c''4 d''4 e''4 f''4@trillSpan | break
-                g''4 a''8 b''8@!trillSpan@trillSpan c'''8 b''8 a''4@!trillSpan |
+                g''4 a''8 b''8@trillSpan c'''8 b''8@!trillSpan a''4 |
               }
             }
             form { ~Piece }
@@ -337,13 +343,13 @@ score test { staff melody }
     /// the phase; one of them is the shape the OMR found over a break (session 961).
     /// </summary>
     [Theory]
-    [InlineData("c'4 d'4 e'4 f'4@trillSpan | g'4 a'8 b'8@!trillSpan@trillSpan c''8 b'8 a'4@!trillSpan |")]
-    [InlineData("c'4 d'4 e'4 f'4@trillSpan | break g'4 a'8 b'8@!trillSpan@trillSpan c''8 b'8 a'4@!trillSpan |")]
-    [InlineData("f'4@trillSpan g'4 a'4 b'4@!trillSpan@trillSpan c''2@!trillSpan |")]
-    [InlineData("f'2@trillSpan a'4 b'4@!trillSpan@trillSpan c''2@!trillSpan |")]
-    [InlineData("f'4.@trillSpan g'8 a'8 b'8@!trillSpan@trillSpan c''4@!trillSpan |")]
-    [InlineData("f'8@trillSpan g'8 a'8 b'8@!trillSpan@trillSpan c''4 d''4@!trillSpan |")]
-    [InlineData("f'16@trillSpan g'16 a'16 b'16@!trillSpan@trillSpan c''4 d''2@!trillSpan |")]
+    [InlineData("c'4 d'4 e'4 f'4@trillSpan | g'4 a'8 b'8@trillSpan c''8 b'8@!trillSpan a'4 |")]
+    [InlineData("c'4 d'4 e'4 f'4@trillSpan | break g'4 a'8 b'8@trillSpan c''8 b'8@!trillSpan a'4 |")]
+    [InlineData("f'4@trillSpan g'4 a'4 b'4@trillSpan@!trillSpan c''2 |")]
+    [InlineData("f'2@trillSpan a'4 b'4@trillSpan@!trillSpan c''2 |")]
+    [InlineData("f'4.@trillSpan g'8 a'8 b'8@trillSpan@!trillSpan c''4 |")]
+    [InlineData("f'8@trillSpan g'8 a'8 b'8@trillSpan c''4@!trillSpan d''4 |")]
+    [InlineData("f'16@trillSpan g'16 a'16 b'16@trillSpan c''4@!trillSpan d''2 |")]
     public void ChainedTrills_TheEndedWave_StopsBeforeTheNextTr(string music)
     {
         // Read off the SVG: the wave is a run of trill_element glyphs the recorder does not

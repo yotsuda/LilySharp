@@ -2748,6 +2748,8 @@ TwoDigitFret   = Digit , Digit ;                                 (* 10-15 *)
                      (* an end is REQUIRED here too; '@loco' is retired — it named a
                         mark nothing printed, and LilyPond has no such command either *)
                      @trillSpan … @!trillSpan ,
+                     [an ottava's and a trill's end stands on the LAST note the line
+                      covers: c4@ottava d e f@!ottava moves f too]
                      @sustain … @!sustain , @sostenuto … @!sostenuto ,
                      @unaCorda … @!unaCorda   [@treCorde = @!unaCorda, the printed word]
                      (* a pedal CHANGE is the start again while the pedal is down:

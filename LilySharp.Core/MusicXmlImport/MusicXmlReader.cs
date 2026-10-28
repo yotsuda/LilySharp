@@ -244,7 +244,16 @@ internal static class MusicXmlReader
                 int k = 0;
                 for (int i = 0; i < pendingDynamics.Count; i++)
                     if (Due(pendingDynamics[i]))
-                        note.Articulations.Insert(k++, pendingDynamics[i].Dynamic);
+                    {
+                        // An octave line's end INCLUDES its note in Lily# (owner's decision
+                        // 2026-10-28): the stop that stands before this note closes the line on
+                        // the note before it, its staff's last one.
+                        if (EndsWithItsNote(pendingDynamics[i].Dynamic)
+                            && (lastNoteOfStaff.TryGetValue(staff, out var before) ? before : partLastNote) is { } last)
+                            last.Articulations.Add(pendingDynamics[i].Dynamic);
+                        else
+                            note.Articulations.Insert(k++, pendingDynamics[i].Dynamic);
+                    }
                 pendingDynamics.RemoveAll(Due);
             }
 
@@ -357,7 +366,7 @@ internal static class MusicXmlReader
             // to the next bar's note instead (carriedEnds).
             foreach (var (dyn, _, dynStaff) in pendingDynamics)
             {
-                if (dyn.StartsWith('!'))
+                if (dyn.StartsWith('!') && !EndsWithItsNote(dyn))
                     carriedEnds.Add((dyn, dynStaff));
                 else if ((dynStaff is { } s && lastNoteOfStaff.TryGetValue(s, out var own) ? own : lastNote) is { } host)
                     host.Articulations.Add(dyn);
@@ -818,6 +827,12 @@ internal static class MusicXmlReader
         }
     }
 
+    /// <summary>A span end that includes the note it is written on — an octave line's
+    /// (<c>!ottava</c>, <c>!quindicesima</c>): it goes on the last note the line covers, not on
+    /// the next one as a pedal's release does.</summary>
+    private static bool EndsWithItsNote(string mark)
+        => mark.StartsWith('!')
+           && Svg.Model.MusicMarkItem.ParseSpanEndName(mark[1..]) == Svg.Model.MusicMarkType.OttavaStop;
     /// <summary>
     /// The lines a &lt;direction&gt; opens and closes: an &lt;octave-shift&gt; as
     /// <c>ottava</c> / <c>ottava(bassa)</c> / <c>quindicesima</c>(…) and its stop as
@@ -832,6 +847,7 @@ internal static class MusicXmlReader
     /// start again while the pedal is down (<c>g,4@sustain</c>). <paramref name="pedals"/>
     /// holds the part's pedals that are down, so a stop closes the latest one.
     /// </remarks>
+
     private static IEnumerable<string> ReadDirectionSpans(XElement dir, List<string> pedals, List<string> ottava, ImportReport report, int measureNo)
     {
         foreach (var dt in Els(dir, "direction-type"))

@@ -145,7 +145,7 @@ public class OmrRequestsOpen20261020Tests
               }
               lh {
                 tuplet 3/2 { g8 ges,8@ottava(bassa) f,8 } ees,4. f,8 bes,8 ces8 |
-                bes,8 <ges, bes, des>16 <f, aes,>16 tuplet 3/2 { des,8 ces,8 <f ges>8@!ottava } ees4 r8 f8 |
+                bes,8 <ges, bes, des>16 <f, aes,>16 tuplet 3/2 { des,8 ces,8@!ottava <f ges>8 } ees4 r8 f8 |
               }
             }
             form { ~Piece }
@@ -172,7 +172,7 @@ public class OmrRequestsOpen20261020Tests
             part p1 { clef bass }
             section Piece {
               p1 {
-                c4@ottava(bassa) d4@text("dolce") e4 f4@!ottava | c'1 |
+                c4@ottava(bassa) d4@text("dolce") e4@!ottava f4 | c'1 |
               }
             }
             score { staff p1 }
