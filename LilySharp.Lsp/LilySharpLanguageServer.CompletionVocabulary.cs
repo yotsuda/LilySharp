@@ -4729,6 +4729,27 @@ public sealed partial class LilySharpLanguageServer
         return list;
     }
 
+    /// <summary>
+    /// Right after <c>@</c>, before a name is typed: a <c>!</c> row that writes the span end's
+    /// <c>!</c> and opens its names (owner's request 2026-10-28: the <c>!</c> was not in the list).
+    /// Kept out of <see cref="GetArticulationCompletions"/>, whose every row is a whole annotation.
+    /// </summary>
+    internal static CompletionList WithSpanEndOpener(CompletionList list, string partial)
+        => partial.Length > 0 ? list : new CompletionList
+        {
+            IsIncomplete = list.IsIncomplete,
+            Items =
+            [
+                .. list.Items,
+                new CompletionItem
+                {
+                    Label = "!", Kind = CompletionItemKind.Operator, InsertText = "!", SortText = "4!",
+                    Detail = "End a span: @!rit, @!ottava, @!sustain, @!phrasingSlur, @!cresc … (the open one first)",
+                    Command = new Command { Title = "Suggest span ends", CommandIdentifier = "editor.action.triggerSuggest" },
+                },
+            ],
+        };
+
     /// <summary>After <c>check</c>: the checks there are (Semantics.CheckPragma.Rules).</summary>
     internal static CompletionList GetCheckRuleCompletions() => new()
     {

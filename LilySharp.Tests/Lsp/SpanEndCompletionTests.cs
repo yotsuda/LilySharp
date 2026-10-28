@@ -97,6 +97,17 @@ public class SpanEndCompletionTests
             (Head + music + Tail).Replace("▮", ""), (Head + music).IndexOf('▮')).ToString());
     }
 
+    /// <summary>Right after '@' the list has a '!' row (owner's request 2026-10-28) that writes the
+    /// '!' and opens the span ends; once a name is being typed it is gone.</summary>
+    [Fact]
+    public void RightAfterTheAt_TheListOffersTheBang()
+    {
+        var bang = Assert.Single(ItemsAt("c'4@rit d'4@▮", "@")!, i => i.Label == "!");
+        Assert.Equal("!", bang.InsertText);
+        Assert.Equal("editor.action.triggerSuggest", bang.Command?.CommandIdentifier);
+        Assert.DoesNotContain(ItemsAt("c'4@st▮", null)!, i => i.Label == "!");
+    }
+
     /// <summary>A '!' that is not after an '@' opens nothing — the trigger is gated as '.' is.</summary>
     [Fact]
     public void ABangElsewhere_AnswersNothing()

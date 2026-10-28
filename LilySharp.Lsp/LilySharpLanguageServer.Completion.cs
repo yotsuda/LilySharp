@@ -469,10 +469,10 @@ public sealed partial class LilySharpLanguageServer
             // The bare-@chord item is offered only when the group before the '@'
             // will actually auto-name; an unrecognizable one falls back to the
             // note form — @chord() with the caret inside the parens.
-            CompletionContext.AfterAt => MatchAnywhere(
+            CompletionContext.AfterAt => WithSpanEndOpener(MatchAnywhere(
                 GetArticulationCompletions(
                     AtFollowsChord(doc.Text, offset) && GroupBeforeAtAutoNames(doc.Text, offset)),
-                PartialAnnotationName(doc.Text, offset)),
+                PartialAnnotationName(doc.Text, offset)), PartialAnnotationName(doc.Text, offset)),
             CompletionContext.AfterCheck => GetCheckRuleCompletions(),
             CompletionContext.AfterCheckArguments => GetCheckPartCompletions(doc.Text, offset),
             CompletionContext.AfterAtBang => MatchAnywhere(

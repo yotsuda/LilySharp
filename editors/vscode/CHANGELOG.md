@@ -147,7 +147,8 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 - **`@!` completes the span ends.** After `@!` the list offers what ends a span — `rit`, `ottava`,
   `8va`, `sustain`, `phrasingSlur`, `cresc` … — with the span still open before the caret first
-  and selected; typing `!` after `@` opens it. The position used to offer the note names.
+  and selected; typing `!` after `@` opens it, and the list after `@` has a `!` row that does the
+  same. The position used to offer the note names.
 - **Nothing in a `paper`, `layout` or `fonts` block is rewritten as you type.** `paper { size a5 }`
   lost its 5 (the `a` was read as a note and the digit as its duration; `a3` became `a32`).
 - **A digit right after `@` begins the annotation's name**: `c'4@8` now types `@8`, and `@8va`,
