@@ -129,6 +129,14 @@ cd editors\vscode
 .\publish-marketplace.ps1          # no -Publish: writes ./dist only
 ```
 
+⚠️ **The OMR seed tooling never ships** (owner's instruction 2026-10-29). OMR learns from
+generated scores grown from bars the owner reports as misread
+(`LilySharp-Omr/docs/repro/lilysharp-requests-2026-10-29-seed-from-fixed-bars.md`). Anything
+Lily# adds for that, such as a command that puts a bar, its scan and its fixed `.lys` in OMR's
+seed folder, is for the owner's machine only: it is not contributed in the released
+`package.json`, and no seed, scan or fixed bar is in the VSIX or the site. Before tagging,
+list a built VSIX (`dist\*.vsix` is a zip) and look for `seed`.
+
 ### 5. Push, and wait for CI to be green
 
 Do not tag a commit whose CI you have not seen pass. The `test` job in `release.yml`
