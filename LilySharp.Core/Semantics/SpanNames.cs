@@ -136,6 +136,31 @@ public static class SpanNames
         return null;
     }
 
+    /// <summary>The nodes written after <paramref name="node"/> in its voice line, in order.</summary>
+    public static IEnumerable<SyntaxNode> After(SyntaxNode node)
+    {
+        var line = Line(node);
+        foreach (var d in line.DescendantNodes())
+            if (d.Span.Start >= node.Span.End && ReferenceEquals(Line(d), line))
+                yield return d;
+    }
+
+    /// <summary>The <c>@!trillSpan</c> that ends a trill span opened at <paramref name="start"/> —
+    /// the next one in its line, when no other <c>@trillSpan</c> comes first — or null. The
+    /// trill span is not a mark (its family is the collector's trill events), so
+    /// <see cref="EndOf"/> does not read it.</summary>
+    public static MusicMarkSyntax? TrillSpanEndOf(ArticulationSyntax start)
+    {
+        foreach (var d in After(start))
+        {
+            if (d is ArticulationSyntax { Name: MusicMarkItem.TrillSpanName })
+                return null;
+            if (d is MusicMarkSyntax { IsSpanEnd: true, Name: MusicMarkItem.TrillSpanName } end)
+                return end;
+        }
+        return null;
+    }
+
     /// <summary>The end that closes <paramref name="start"/> — the next mark of its family in its
     /// line, when that one is an end — or null.</summary>
     public static Mark? EndOf(SyntaxNode start)

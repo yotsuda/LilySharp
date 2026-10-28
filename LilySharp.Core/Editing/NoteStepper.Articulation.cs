@@ -40,7 +40,8 @@ namespace LilySharp.Core.Editing;
 /// (downBow, upBow), legato (pullOff, hammerOn — a hammer-on usually climbs), length
 /// (staccatissimo, staccato, portato, tenuto), weight (accent, marcato), fermatas (short, plain,
 /// long), the mordent pair (mordent below, prall above), the turn pair (reverseTurn starts
-/// below, turn above), the trill pair (trill, pralltriller), the organ pedal pair (heel, toe),
+/// below, turn above), the trills (pralltriller, trill, trillSpan — the span's end follows,
+/// <see cref="TrillSpanEndEdit"/>), the organ pedal pair (heel, toe),
 /// the jazz approaches (scoop from below, plop from above) and departures (fall down, doit up),
 /// the breathing pair (breath, caesura), the stem's direction (stemDown, stemUp — owner's
 /// request 2026-10-17), the ottava's printed spellings (15mb, 8vb, 8va, 15ma) and the tempo
@@ -68,7 +69,10 @@ public static partial class NoteStepper
             new[] { "shortFermata", "fermata", "longFermata" },
             new[] { "mordent", "prall" },
             new[] { "reverseTurn", "turn" },
-            new[] { "trill", "pralltriller" },
+            // The trills, shortest first: Up to the trill with its wavy line, whose @!trillSpan
+            // is written on the next note with it and goes again when it steps away (owner's
+            // decision 2026-10-28, "今の順番は尊重する必要がない" — until then trill, pralltriller).
+            new[] { "pralltriller", "trill", "trillSpan" },
             new[] { "heel", "toe" },
             new[] { "scoop", "plop" },
             new[] { "fall", "doit" },
@@ -295,6 +299,58 @@ public static partial class NoteStepper
             to = (to + group.Length) % group.Length;
         }
         return (new Edit(spelling.Start, spelling.End, group[to]), listed);
+    }
+
+    /// <summary>
+    /// The end that goes with a step into or out of <c>@trillSpan</c> (owner's decision
+    /// 2026-10-28): stepped away, its <c>@!trillSpan</c> is deleted, so no stray end is left;
+    /// stepped to, an <c>@!trillSpan</c> is written after the marks of the next note, rest or
+    /// chord in its line — the shortest span, which the writer then moves — unless an end is
+    /// already there. Null when nothing goes with it (no next note: the span runs on, as an
+    /// unclosed one does, and the writer closes it).
+    /// </summary>
+    private static Edit? TrillSpanEndEdit(string text, SyntaxNode mark, Edit edit)
+    {
+        if (mark is not ArticulationSyntax start || edit.NewText == start.Name)
+            return null;
+        const string span = Svg.Model.MusicMarkItem.TrillSpanName;
+        if (start.Name == span)
+            return SpanNames.TrillSpanEndOf(start) is { } end ? new Edit(end.Span.Start, end.Span.End, "") : null;
+        if (edit.NewText != span || SpanNames.TrillSpanEndOf(start) != null || EventOf(start) is not { } carrier)
+            return null;
+        foreach (var next in SpanNames.After(carrier))
+            if (EventMarksEnd(text, next) is { } at)
+                return new Edit(at, at, "@!" + span);
+        return null;
+    }
+
+    /// <summary>The note, chord or rest a mark is written on (a chord member's mark: its chord).</summary>
+    private static SyntaxNode? EventOf(SyntaxNode mark)
+    {
+        for (var p = mark.Parent; p != null; p = p.Parent)
+            if (p is NoteSyntax or ChordSyntax or ArpeggioSyntax or RestSyntax)
+                return p.Parent is ArpeggioSyntax arpeggio ? arpeggio : p;
+        return null;
+    }
+
+    /// <summary>Just past a note's, a chord's or a rest's head and the marks written on it — where
+    /// one more mark goes — or null for anything else.</summary>
+    private static int? EventMarksEnd(string text, SyntaxNode node)
+    {
+        int end = node switch
+        {
+            NoteSyntax note when note.Parent is not (ChordSyntax or ArpeggioSyntax) => NoteHeadEnd(text, note),
+            ChordSyntax { IsShapeChord: false } or ArpeggioSyntax when CloseBracket(node) is { } close
+                => ChordHeadEnd(text, node, close),
+            RestSyntax { IsMultiMeasure: false } rest => rest.Duration?.Span.End ?? rest.RestToken.Span.End,
+            _ => -1,
+        };
+        if (end < 0)
+            return null;
+        foreach (var d in node.DescendantNodes())
+            if (d.Parent == node && d is ArticulationSyntax or MusicMarkSyntax or DynamicSyntax)
+                end = Math.Max(end, d.Span.End);
+        return end;
     }
 
     /// <summary>The name a stepped mark's <c>@!</c> end is to be renamed to — the head of its new

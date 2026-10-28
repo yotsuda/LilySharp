@@ -455,6 +455,9 @@ public static partial class NoteStepper
                     // @!8va), so the pair keeps the one name SpanEndNameValidator asks for.
                     if (t.Kind == TargetKind.Articulation && RenamedEnd(text, t.Node, ve) is { } renamed)
                         edits.Add(new Edit(renamed.End.Span.Start, renamed.End.Span.End, renamed.Name));
+                    // Into or out of a trill span: its @!trillSpan is written or deleted with it.
+                    if (t.Kind == TargetKind.Articulation && TrillSpanEndEdit(text, t.Node, ve) is { } trillEnd)
+                        edits.Add(trillEnd);
                     // A hairpin's @!cresc turns with it (owner's request 2026-10-28).
                     if (t.Kind == TargetKind.Dynamic && t.Node is DynamicSyntax hairpin
                         && SyntaxFacts.IsDynamicSpannerName(hairpin.DynamicToken.Text)
