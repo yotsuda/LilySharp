@@ -34,10 +34,10 @@ namespace LilySharp.Core.Editing;
 /// <list type="bullet">
 /// <item>A dynamic (<c>@p</c>, <c>@mf.up</c>, <c>@p.subito</c>): either pair steps the level
 /// one mark, <c>ppppp</c> … <c>fffff</c>. On <c>@cresc</c> / <c>@decresc</c> / <c>@dim</c>
-/// either pair turns it — <c>@cresc</c> ⇄ <c>@decresc</c>, <c>@dim</c> to <c>@cresc</c> — and the
-/// <c>@!</c> that ends it with it (owner's request 2026-10-28; it was a direction per key, a
-/// second press staying). <c>@sfz</c>, <c>@fp</c> and the like have no place on the ladder and
-/// say so.</item>
+/// Up writes <c>@cresc</c> and Down <c>@decresc</c> — the owner: one pair of keys to remember,
+/// not another. Lily#'s choices: the pair sets the direction rather than toggling, so a second
+/// press stays; <c>@sfz</c>, <c>@fp</c> and the like have no place on the ladder and say so. The
+/// <c>@!</c> that ends the hairpin changes with it (owner's request 2026-10-28).</item>
 /// <item>A <c>time</c>: the semitone pair steps the beats by 1 (<c>3/4</c> → <c>4/4</c>, never
 /// below 1); the octave pair walks the common meters by the length of their bar,
 /// <see cref="CommonMeters"/> — owner's decision 2026-10-16, replacing the first day's doubling or
@@ -145,10 +145,11 @@ public static partial class NoteStepper
         string? next;
         if (SyntaxFacts.IsDynamicSpannerName(name))
         {
-            // Either pair turns it (owner's request 2026-10-28: "@cresc ... Ctrl+Shift+Up で @decresc
-            // に切り替わる"), its @! with it (Step); until then Up wrote @cresc and Down @decresc,
-            // a second press staying.
-            next = name == "cresc" ? "decresc" : "cresc";
+            // A direction per key, a second press staying (the owner, 2026-10-28: "上を連続して押した
+            // ら、cresc で止まって"); the @! that ends it changes with it (Step).
+            next = dir > 0 ? "cresc" : "decresc";
+            if (next == name)
+                return (null, $"@{name}: already {(dir > 0 ? "a crescendo - Down writes @decresc" : "a decrescendo - Up writes @cresc")}");
         }
         else
         {
