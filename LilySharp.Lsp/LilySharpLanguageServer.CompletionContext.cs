@@ -334,7 +334,9 @@ public sealed partial class LilySharpLanguageServer
         // (`part melody "Violin I" {`). Without this the closing quote is read as the
         // (empty) NAME word, so `part … "…" {` is not recognized as a part block and
         // its body falls through to the music completions (note names, `break`).
-        if (j >= 0 && text[j] == '"')
+        // A part may carry two — the name and the short name (`part flute "Flute" "Fl." {`):
+        // skip every one (owner's report 2026-10-28: the second one hid the part).
+        while (j >= 0 && text[j] == '"')
         {
             j--;                                    // past the closing quote
             while (j >= 0 && text[j] != '"') j--;   // back to the opening quote
@@ -501,8 +503,11 @@ public sealed partial class LilySharpLanguageServer
         return true;
     }
 
+    // A named part (`part rh {`) has `part` one word before the brace; the nameless one
+    // (`part {`) has it right before. Until 2026-10-28 only the named form was read, so the
+    // nameless part's body got the music completions and no `instrument` (owner's report).
     private static bool IsInsidePartBlock(List<OpenBlock> stack)
-        => stack.Count > 0 && stack[^1].Frame.Prefix == "part";
+        => stack.Count > 0 && (stack[^1].Frame.Prefix == "part" || stack[^1].Frame.Name == "part");
 
     // ⚠️ A lyrics track is asked for by IsLyricsFrame, never by the keyword alone: the
     // `sings` spelling puts the keyword FOUR words before the brace, out of the frame's
@@ -1179,7 +1184,7 @@ public sealed partial class LilySharpLanguageServer
             return CompletionContext.AfterScoreHeader;
 
         // Right after the `instrument` part property only the known instrument presets
-        // are valid — offer those alone (they set clef/octave/tuning defaults). Unlike
+        // are valid — offer those alone (they set clef/tuning defaults). Unlike
         // the music-jargon "clef", "instrument" is an ordinary English word, so the
         // keyword alone is not enough context: it must sit where the part property is
         // actually valid — inside a part { } body and not inside a string — or lyrics

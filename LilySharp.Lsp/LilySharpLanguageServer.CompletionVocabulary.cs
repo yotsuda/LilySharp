@@ -202,7 +202,7 @@ public sealed partial class LilySharpLanguageServer
         {
             ["clef"] = ($"Clef — {LanguageVocabulary.PartClefNames.Count} names in a part header, "
                         + $"{LanguageVocabulary.ClefNames.Count} inside music", true),
-            ["instrument"] = ("Instrument preset — sets the clef, octave and tuning defaults", true),
+            ["instrument"] = ("Instrument preset — sets the clef, tuning and MIDI sound defaults", true),
             ["tuning"] = ($"Tab tuning ({string.Join("/", LanguageVocabulary.TuningNames)})", true),
             ["octave"] = ("Base octave for this part — a whole number, e.g. `octave 3`. "
                           + "The words absolute and relative belong to the TOP-LEVEL octave "
@@ -3487,7 +3487,7 @@ public sealed partial class LilySharpLanguageServer
     }
 
     /// <summary>The instrument-preset names valid right after the <c>instrument</c>
-    /// part property (they set clef/octave/tuning defaults). Sourced from
+    /// part property (they set clef/tuning defaults). Sourced from
     /// <see cref="InstrumentDefaults.KnownInstruments"/> so the list never drifts from
     /// what the compiler recognizes. When the request context is supplied, each item
     /// carries a TextEdit replacing the whole hyphenated token being typed: the

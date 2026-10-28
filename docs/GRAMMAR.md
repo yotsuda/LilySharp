@@ -1142,7 +1142,7 @@ TranspositionMarker = '8va' | '8vb' | '15ma' | '15mb' ;
    part only, and silenced with the long one by `staff ~X`. *)
 
 (* instrument: a bare preset word (violin, cello, piano-right, …) drives the
-   default clef/octave/tuning and the MIDI timbre, and names the staff by the
+   default clef/tuning and the MIDI timbre (never the octave), and names the staff by the
    preset's PRINTED name (InstrumentDefaults.PrintedName: alto-sax → "Alto
    Saxophone", both piano hands → "Piano"; a bare name is its family's common
    member, "Clarinet" the B♭ one, and the others name their key, "Clarinet in A").

@@ -42,6 +42,11 @@ public class InstrumentCompletionTests
 
     [Theory]
     [InlineData("part m { instrument ", true)]           // the real part property
+    // Owner's reports 2026-10-28: the nameless part, and a part with a name AND a short name.
+    [InlineData("part {\n  instrument ", true)]
+    [InlineData("c'4 d e f\npart { instrument ", true)]
+    [InlineData("part flute \"Flute\" \"Fl.\" { instrument ", true)]
+    [InlineData("part flute \"Flute\" { instrument ", true)]
     [InlineData("part m { instrument piano-", true)]     // hyphenated partial keeps the context
     [InlineData("lyrics { play my instrument ", false)]  // ordinary English word in lyrics
     [InlineData("title \"My instrument ", false)]        // inside a string literal
@@ -52,6 +57,17 @@ public class InstrumentCompletionTests
         var context = LilySharpLanguageServer.GetCompletionContext(text, text.Length);
         Assert.Equal(expected,
             context == LilySharpLanguageServer.CompletionContext.AfterInstrument);
+    }
+
+    [Theory]
+    [InlineData("part {\n  ")]
+    [InlineData("part flute \"Flute\" \"Fl.\" { ")]
+    public void ThePartProperties_AreOfferedInEveryPartHeaderShape(string text)
+    {
+        // The property list (whose `instrument` item re-opens the list onto the presets) is
+        // the part body's, whatever names the header carries.
+        Assert.Equal(LilySharpLanguageServer.CompletionContext.PartBlock,
+            LilySharpLanguageServer.GetCompletionContext(text, text.Length));
     }
 
     [Fact]

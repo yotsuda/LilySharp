@@ -269,6 +269,9 @@ edocs/HANDOFF.mde §2 R13 ⒝・OMR の提案 B1〜B6（e..\LilySharp-Omr\docs\r
   - (2) そのまま Ctrl+Shift+Up → 元のファイルに戻る。Ctrl+Z 1 回でも戻る。
   - (3) トランペット（`instrument trumpet key d major`・`d'2 fis'`）を足して (1) → トランペットは長 2 度下の `c'2 e'` に綴り直され、`key d major` は消える。音は動かない。(2) で D 長調の `d'2 fis'` に戻る。
   - (4) セクション見出しに `key f major` があるとき、トランペットのパート見出しの `pitch concert` で Ctrl+Shift+Up → 何も変わらず、ステータスバーに「… shares the key …」。
+- [ ] **C41**（第1029・名前の無い part と短い名前のある part の補完）:
+  - (1) `part { ▮ }` で Ctrl+Space → パートの属性（`clef`・`instrument` …）が出る（音名ではない）。`instrument` を選ぶと、すぐ楽器の一覧が開く。
+  - (2) `part flute "Flute" "Fl." { ▮ }` で同じ。
 
 ## 4. §2 R13 ⒝ — 差分頁の配信（実機未確認・第404）
 

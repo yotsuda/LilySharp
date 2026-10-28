@@ -116,6 +116,9 @@ All notable changes to the Lily# VS Code extension are documented here.
   the notes of C major, `g` → `a`. The leading tone was a stop of its own (`g` → `gis` →
   `a`), a press more at every step past it, though `g` is the far commoner note in minor-key
   music; a `gis` is written. A church mode walks its own signature, as before.
+- **Ctrl+Space offers `instrument` in every part**: in a nameless `part { }` and in one with a
+  short name (`part flute "Flute" "Fl." { }`) it listed notes instead. Picking `instrument` opens
+  the list of instruments at once.
 
 ### Ask AI
 
