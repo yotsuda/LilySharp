@@ -126,9 +126,13 @@ internal sealed class CheckPragmaValidator : ISemanticValidator
 /// <remarks>
 /// <para>A SONORITY is the voices' notes sounding when any voice starts one. Two neighbouring
 /// sonorities are compared; a voice resting in either breaks the line there.</para>
-/// <para>Stage 1 (§6): one voice is one part. A part sounding two notes at once (a chord, or
-/// <c>voice { } { }</c>) is read by its highest note, the lowest voice by its lowest; the two
-/// voices of one staff are stage 2.</para>
+/// <para>A part is one voice — or several (§1, stage 2): the branches of its <c>voice { } { }</c>,
+/// first branch highest, named as the branch is when it has a name (<c>voice sop { } alt { }</c>);
+/// or, when most of its onsets are chords, the chord's notes from the top. A note where a part
+/// writes fewer notes than it has voices (one note for a unison) is SHARED by the voices it
+/// fills, and two voices moving on the same shared notes are one written line, not parallels.
+/// A one-voice part sounding two notes at once (a rare divisi) is read by its highest note, the
+/// lowest voice of all by its lowest.</para>
 /// <para>LILYSHARP-OWN: LilyPond checks no voice leading. The rules are the common-practice
 /// textbook's — parallel perfect intervals, crossing, an octave between upper voices and a twelfth
 /// over the bass.</para>
@@ -163,25 +167,117 @@ internal sealed class VoiceLeadingValidator : ISemanticValidator
         }
         string text = tree.Text;
         var reported = new HashSet<(string Code, int Pos)>();
-        foreach (var parts in lines)
-            Check(parts, midi, text, reported);
+        var branches = Branches(tree);
+        foreach (var lineParts in lines)
+        {
+            var names = new List<string>();
+            var lists = new List<List<Note>>();
+            for (int p = 0; p < lineParts.Count; p++)
+                foreach (var (name, notes) in VoicesOf(lineParts[p], p == lineParts.Count - 1, midi, branches))
+                {
+                    names.Add(name);
+                    lists.Add(notes);
+                }
+            Check(names, [.. lists], text, reported);
+        }
     }
 
-    private void Check(IReadOnlyList<string> parts, MidiFile midi, string text, HashSet<(string, int)> reported)
+    /// <summary>The voice blocks of every <c>voice { } { }</c>: their span, their place among
+    /// the span's blocks (0 = the first, the highest), and their name if written.</summary>
+    private static List<(int Start, int End, int Index, string? Name)> Branches(SyntaxTree tree)
+    {
+        var list = new List<(int, int, int, string?)>();
+        foreach (var parallel in tree.GetRoot().DescendantNodes<ParallelExpressionSyntax>())
+        {
+            if (parallel.IsDrums)
+                continue;
+            int i = 0;
+            foreach (var (name, block) in parallel.NamedVoices)
+                list.Add((block.Span.Start, block.Span.End, i++, name));
+        }
+        return list;
+    }
+
+    /// <summary>The voices one part sings (see the remarks), highest first.</summary>
+    private static List<(string Name, List<Note> Notes)> VoicesOf(
+        string part, bool lowestPart, MidiFile midi, List<(int Start, int End, int Index, string? Name)> branches)
+    {
+        var notes = midi.Tracks.SelectMany(t => t.Notes)
+            .Where(m => m.Part == part && m.Channel != 9 && !m.IsGrace)
+            .Select(m => (Note: new Note(m.StartTick, m.StartTick + m.DurationTicks, m.Pitch, m.SourcePos),
+                          Branch: BranchOf(m.SourcePos, branches)))
+            .ToList();
+        var onsets = notes.GroupBy(x => x.Note.Start).OrderBy(g => g.Key).ToList();
+
+        int k = 1;
+        var names = new Dictionary<int, string>();
+        bool byBranch = notes.Any(x => x.Branch != null);
+        if (byBranch)
+        {
+            k = notes.Where(x => x.Branch != null).Max(x => x.Branch!.Value.Index) + 1;
+            foreach (var x in notes)
+                if (x.Branch is { Name: { } branchName } b)
+                    names.TryAdd(b.Index, branchName);
+        }
+        else
+        {
+            var chordSizes = onsets.Select(g => g.Select(x => x.Note.Pitch).Distinct().Count()).Where(c => c >= 2).ToList();
+            if (chordSizes.Count * 2 > onsets.Count)
+                k = Math.Min(4, chordSizes.GroupBy(c => c).OrderByDescending(g => g.Count()).ThenByDescending(g => g.Key).First().Key);
+        }
+
+        var voices = Enumerable.Range(0, k).Select(_ => new List<Note>()).ToList();
+        foreach (var onset in onsets)
+        {
+            if (k == 1)
+            {
+                var pick = lowestPart ? onset.MinBy(x => x.Note.Pitch) : onset.MaxBy(x => x.Note.Pitch);
+                voices[0].Add(pick.Note);
+                continue;
+            }
+            // A branch's own notes go to its voice (its top note, the part's lowest voice its bottom).
+            var free = new List<Note>();
+            foreach (var group in onset.GroupBy(x => x.Branch?.Index))
+            {
+                if (group.Key is int b && b < k)
+                {
+                    bool bottom = lowestPart && b == k - 1;
+                    voices[b].Add((bottom ? group.MinBy(x => x.Note.Pitch) : group.MaxBy(x => x.Note.Pitch)).Note);
+                }
+                else
+                    free.AddRange(group.Select(x => x.Note));
+            }
+            // Notes outside any branch (a chord, or one note for several voices): from the top, the
+            // last of them shared by the voices below it. Only the voices no branch filled take them.
+            var open = Enumerable.Range(0, k).Where(v => !voices[v].Any(m => m.Start == onset.Key)).ToList();
+            var sorted = free.GroupBy(m => m.Pitch).Select(g => g.First()).OrderByDescending(m => m.Pitch).ToList();
+            for (int i = 0; i < open.Count && sorted.Count > 0; i++)
+            {
+                var m = sorted[Math.Min(i, sorted.Count - 1)];
+                voices[open[i]].Add(m);
+            }
+        }
+        foreach (var v in voices)
+            v.Sort((a, b) => a.Start.CompareTo(b.Start));
+        return [.. voices.Select((v, i) => (k == 1 ? part : names.TryGetValue(i, out var nm) ? nm : $"{part}/{i + 1}", v))];
+    }
+
+    private static (int Index, string? Name)? BranchOf(int pos, List<(int Start, int End, int Index, string? Name)> branches)
+    {
+        (int Index, string? Name)? found = null;
+        int width = int.MaxValue;
+        foreach (var (start, end, index, name) in branches)
+            if (pos >= start && pos < end && end - start < width)
+            {
+                found = (index, name);
+                width = end - start;
+            }
+        return found;
+    }
+
+    private void Check(IReadOnlyList<string> parts, List<Note>[] voices, string text, HashSet<(string, int)> reported)
     {
         int n = parts.Count;
-        var voices = new List<Note>[n];
-        for (int v = 0; v < n; v++)
-        {
-            bool lowest = v == n - 1;
-            voices[v] = midi.Tracks.SelectMany(t => t.Notes)
-                .Where(m => m.Part == parts[v] && m.Channel != 9 && !m.IsGrace)
-                .GroupBy(m => m.StartTick)
-                .Select(g => lowest ? g.MinBy(m => m.Pitch) : g.MaxBy(m => m.Pitch))
-                .OrderBy(m => m.StartTick)
-                .Select(m => new Note(m.StartTick, m.StartTick + m.DurationTicks, m.Pitch, m.SourcePos))
-                .ToList();
-        }
         var times = voices.SelectMany(v => v.Select(m => m.Start)).Distinct().Order().ToList();
         Note?[]? before = null;
         foreach (int t in times)
@@ -247,6 +343,8 @@ internal sealed class VoiceLeadingValidator : ISemanticValidator
                     continue;
                 if (a0.Pitch == a1.Pitch || b0.Pitch == b1.Pitch)
                     continue;   // one voice holds or repeats: not parallel motion
+                if (a0 == b0 && a1 == b1)
+                    continue;   // the same written notes shared by two voices (a unison written once)
                 int from = Math.Abs(a0.Pitch - b0.Pitch), to = Math.Abs(a1.Pitch - b1.Pitch);
                 int kind = from % 12;
                 if (kind != to % 12 || (kind != 0 && kind != 7))
@@ -265,8 +363,15 @@ internal sealed class VoiceLeadingValidator : ISemanticValidator
         if (pos < 0 || pos >= text.Length || !reported.Add((code, pos)))
             return;
         int end = pos;
-        while (end < text.Length && (char.IsLetter(text[end]) || text[end] is '\'' or ','))
-            end++;
+        if (text[pos] == '<')
+        {
+            // A chord's notes all point at its '<': the squiggle takes the whole chord.
+            int close = text.IndexOf('>', pos);
+            end = close < 0 ? pos + 1 : close + 1;
+        }
+        else
+            while (end < text.Length && (char.IsLetter(text[end]) || text[end] is '\'' or ','))
+                end++;
         _diagnostics.Info(new TextSpan(pos, Math.Max(1, end - pos)), code, message);
     }
 

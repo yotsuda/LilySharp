@@ -2786,10 +2786,26 @@ compares the parts named, by their sounding pitches:
 - **Spacing** (LYS3004): neighbouring upper voices more than an octave apart, or the lowest two
   more than a twelfth.
 
-A rest breaks the line. A part that sounds two notes at once is read by its top note (the lowest
-voice by its bottom one). A check Lily# does not have, a part the file does not declare, a part
-named twice or fewer than two parts is an error (LYS3001). Renaming a part renames it on the
-`check` line too.
+A rest breaks the line. A hymn written two voices to a staff is named by its staves:
+
+```
+part upper { clef treble }
+part lower { clef bass }
+check voiceLeading upper lower
+section A {
+  upper { voice sop { e'4 f' g' a' | } alt { c'4 c' e' f' | } }   // or: <c' e'>4 <c' f'> …
+  lower { voice ten { g4 a c' c' | } bas { c4 f, c d | } }
+}
+```
+
+The branches of a part's `voice { } { }` are its voices, the first one highest, called by the
+branch's name when it has one (else `upper/1`, `upper/2`); a part most of whose notes are chords
+gives its voices from the chord's top note down. One note written where two voices sing it (a
+unison) is shared, and two voices moving on the same written notes are not parallels. A part
+of one voice with an occasional chord (divisi) stays one voice, read by its top note (the lowest
+voice of all by its bottom one). A check Lily# does not have, a part the file does not declare,
+a part named twice or fewer than two parts is an error (LYS3001). Renaming a part renames it on
+the `check` line too.
 
 ## Comments
 

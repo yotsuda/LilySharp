@@ -10,6 +10,8 @@ All notable changes to the Lily# VS Code extension are documented here.
   highest first) and the editor marks parallel fifths and octaves, crossed voices, and voices
   too far apart, in blue — information, not errors: the score, the sound and the exports are
   unchanged. Completion offers `check`, `voiceLeading` and the parts; hover says what it checks.
+  A hymn on two staves works too (`check voiceLeading upper lower`): each staff's `voice { } { }`
+  branches, or its chords, are its two voices.
 
 ### Octaves — BREAKING
 

@@ -171,6 +171,75 @@ public class VoiceLeadingTests
         Assert.Contains(tokens, t => t.Span.Start > line && t.Span.Start < tree.Text.IndexOf('\n', line));
     }
 
+    // ---- stage 2: two voices on a staff (§1 ⒝ ⒞) ----
+
+    /// <summary>A hymn on two staves, two voices each: <c>check voiceLeading upper lower</c>.</summary>
+    private static string Hymn(string upper, string lower) => $"""
+        time 4/4
+        octave absolute
+        part upper {"{"} clef treble {"}"}
+        part lower {"{"} clef bass {"}"}
+        check voiceLeading upper lower
+        section A {"{"}
+          upper {"{"} {upper} {"}"}
+          lower {"{"} {lower} {"}"}
+        {"}"}
+        form {"{"} A {"}"}
+        score {"{"} grandStaff {"{"} staff upper  staff lower {"}"} {"}"}
+        """;
+
+    private static List<string> Parallels(string src)
+        => [.. Found(src, DiagnosticCodes.ParallelPerfectIntervals).OrderBy(d => d.Span.Start).Select(d => d.Message[(d.Message.IndexOf(" move") )..])];
+
+    [Fact]
+    public void TheThreeWaysToWriteFourVoices_FindTheSameParallels()
+    {
+        // The same music: s e f g a | g, a c c e f | e, t g a c c | c, b c F2 c d | c.
+        string onePerPart = Book("e'4 f' g' a' | g'1 |", "c'4 c' e' f' | e'1 |", "g4 a c' c' | c'1 |", "c4 f, c d | c1 |");
+        string branches = Hymn("voice { e'4 f' g' a' | g'1 | } { c'4 c' e' f' | e'1 | }", "voice { g4 a c' c' | c'1 | } { c4 f, c d | c1 | }");
+        string chords = Hymn("<c' e'>4 <c' f'> <e' g'> <f' a'> | <e' g'>1 |", "<c g>4 <f, a> <c c'> <d c'> | <c c'>1 |");
+        var expected = Parallels(onePerPart);
+        Assert.Equal(2, expected.Count);
+        Assert.Equal(expected, Parallels(branches));
+        Assert.Equal(expected, Parallels(chords));
+        Assert.Contains(Found(branches, DiagnosticCodes.ParallelPerfectIntervals), d => d.Message.StartsWith("parallel fifths: upper/1 and lower/2"));
+        // A chord's squiggle is the whole chord.
+        var onChord = Found(chords, DiagnosticCodes.ParallelPerfectIntervals).OrderBy(d => d.Span.Start).First();
+        Assert.Equal("<f' a'>", chords.Substring(onChord.Span.Start, onChord.Span.Length));
+    }
+
+    [Fact]
+    public void ANamedBranch_IsCalledByItsName()
+    {
+        string src = Hymn("voice sop { e'4 f' g' a' | g'1 | } alt { c'4 c' e' f' | e'1 | }",
+                          "voice ten { g4 a c' c' | c'1 | } bas { c4 f, c d | c1 | }");
+        Assert.Contains(Found(src, DiagnosticCodes.ParallelPerfectIntervals), d => d.Message.StartsWith("parallel fifths: sop and bas"));
+    }
+
+    [Fact]
+    public void AUnisonWrittenOnce_MovesAsOneLine_NotAsParallels()
+    {
+        // s and a sing E4 then F4 together, written as one note each; the bass moves under them.
+        string src = Hymn("<g' c''>4 e' f' <g' b'> | <g' c''>1 |", "<e c>4 <g c> <a d> <g g,> | <e c>1 |");
+        Assert.DoesNotContain(Found(src, DiagnosticCodes.ParallelPerfectIntervals), d => d.Message.Contains("upper/1 and upper/2"));
+    }
+
+    [Fact]
+    public void TheSecondBranchAboveTheFirst_IsACrossing()
+    {
+        string src = Hymn("voice { e'4 d' c' d' | e'1 | } { c'4 f' g c' | c'1 | }", "voice { g4 g e g | g1 | } { c4 g, c g, | c1 | }");
+        var crossing = Assert.Single(Found(src, DiagnosticCodes.VoiceCrossing));
+        Assert.Contains("upper/2 (F4) is above upper/1 (D4)", crossing.Message);
+    }
+
+    [Fact]
+    public void ARareDivisi_KeepsAPartOneVoice()
+    {
+        // One chord in the soprano's eight onsets: still one voice (its top note), so four voices.
+        string src = Book("e'4 d' c' d' | <c' e'>1 |", QuietA, QuietT, QuietB);
+        Assert.DoesNotContain(All(src), d => d.Message.Contains("s/1") || d.Message.Contains("s/2"));
+    }
+
     [Fact]
     public void QuietVoices_SayNothing()
     {

@@ -225,7 +225,9 @@ CheckRule      = 'voiceLeading' ;
                     FIRST: parallel fifths and octaves (LYS3002), a lower voice above the one
                     over it (LYS3003), neighbouring upper voices more than an octave apart or
                     the lowest two more than a twelfth (LYS3004) — by the sounding pitches,
-                    every transposition applied. A rule Lily# does not have, a part the file
+                    every transposition applied. A part may be several voices: its
+                    'voice { } { }' branches (first highest), or the notes of its chords from the
+                    top when most of its onsets are chords. A rule Lily# does not have, a part the file
                     does not declare, a part named twice, or fewer than two parts is LYS3001.
                     Top level only, any number of lines. 'check' is no keyword: a part may
                     still be named check. docs/voice-leading-design.md. *)

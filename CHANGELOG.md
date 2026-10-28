@@ -13,7 +13,9 @@ workflow attaches that section to the GitHub Release verbatim.
   crossed voices (LYS3003), voices too far apart (LYS3004) — information, by the sounding
   pitches. Nothing drawn, played or exported changes. A check Lily# does not have, an undeclared
   part, a part twice or fewer than two parts is LYS3001. `check` is no keyword (a part may be
-  named so). docs/voice-leading-design.md.
+  named so). A part may be several voices — a hymn's two staves with two voices each: the
+  branches of its `voice { } { }` (first highest, called by their names), or its chords' notes
+  from the top; a unison written once is shared, not parallel. docs/voice-leading-design.md.
 - `[editor]` Completion offers `check`, the checks after it and the parts not named yet; the
   line has a hover, and renaming a part renames it there.
 

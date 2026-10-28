@@ -75,8 +75,11 @@
    `Parser.ParseCheckPragma`（`pitch` と同じ PropertyAssignment・行末まで）・`Semantics/VoiceLeading.cs`
    （`CheckPragma`・`CheckPragmaValidator` LYS3001・`VoiceLeadingValidator` LYS3002–3004）・補完／ホバー・
    名前の変更（`PartReferenceFinder`）。網 `VoiceLeadingTests`・`CheckPragmaCompletionTests`。
-   ⒝ ⒞ はまだ: 同時に鳴る音は上声なら一番上、最低声なら一番下で代表させている。
-2. ⒝ ⒞ の書き方。
+2. ⒝ ⒞ の書き方。**済（第1031）**: `VoicesOf`＝`voice` の枝（音の `SourcePos` を含む最も内側の
+   枝・最初の枝が上声・名前付きの枝はその名前）、枝が無く拍頭の過半が和音なら和音の音を上から。
+   声部の数より少ない音は下の声部が共有し、同じ書かれた音を共有して動く 2 声は連続としない。たまの
+   divisi は 1 声のまま。和音の波線は `<…>` 全体。網は 3 つの書き方で同じ連続が出ること・名前・
+   斉唱・枝の交差・divisi。
 3. 超越・隠伏 5 度／8 度。強拍だけを見る選択肢（誤検出の数を見てから）。
 
 ## 7. 決めたこと・決めてほしいこと

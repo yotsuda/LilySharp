@@ -19,8 +19,8 @@ it does not.
 Warnings for parallel fifths and octaves, crossed voices, and voices too far apart, for
 four-part (SATB) writing — church choirs and choral arranging. Designed 2026-10-28
 (`docs/voice-leading-design.md`): a general check pragma, `check voiceLeading s a t b`, turns it on;
-the findings are information, not warnings. Stage 1 is built (one voice per part); the two
-voices of one staff and the hidden fifths are stages 2 and 3 of the design.
+the findings are information, not warnings. Stages 1 and 2 are built (a voice per part, and two voices to a
+staff by `voice { } { }` or chords); overlapping voices and hidden fifths are stage 3.
 
 ### MIDI keyboard input (deferred by the owner 2026-10-25)
 
