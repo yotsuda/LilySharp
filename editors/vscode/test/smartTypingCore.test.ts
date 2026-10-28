@@ -247,6 +247,16 @@ describe('durations (rules 16–18a, 25, 28)', () => {
     it('28. inside an annotation\'s arguments a digit is the argument', () => {
         typed('c4@figuredBass(6‸)', '4', 'c4@figuredBass(64‸)');
     });
+    it('28. right after @ a digit begins the name — @8va, @15ma — not the duration', () => {
+        // Owner's report 2026-10-28: `@8` wrote `c'8@`, so `@8va` never reached the list.
+        typed('c\'4@‸', '8', 'c\'4@8‸');
+        typed('c4@‸', '1', 'c4@1‸');
+        typed('c4@1‸', '5', 'c4@15‸');
+        typed('c4@!‸', '8', 'c4@!8‸');
+        typed('c4@!1‸', '5', 'c4@!15‸');
+        // Past a name a digit is the note's again (rule 28).
+        typed('c8@fermata‸', '4', 'c4@fermata‸');
+    });
     it('a digit in a header line is typed as pressed', () => {
         typed('time 4/‸', '4', 'time 4/4‸');
     });

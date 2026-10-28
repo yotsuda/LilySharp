@@ -136,6 +136,9 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ### Editing
 
+- **A digit right after `@` begins the annotation's name**: `c'4@8` now types `@8`, and `@8va`,
+  `@8vb`, `@15ma` and `@15mb` complete. The digit used to change the note's duration (`c'8@`), so
+  the printed ottava spellings never reached the completion list.
 - **In a minor key, Ctrl+Shift+Up / Down walk the key signature** — its natural minor: in A minor
   the notes of C major, `g` → `a`. The leading tone was a stop of its own (`g` → `gis` →
   `a`), a press more at every step past it, though `g` is the far commoner note in minor-key

@@ -152,6 +152,10 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Editing
 
+- `[editor]` A digit typed right after `@` (or `@!`) begins the annotation's name, so `@8va`,
+  `@8vb`, `@15ma` and `@15mb` complete; smart typing used to take it as the note's duration
+  (`c'4@` + `8` → `c'8@`).
+
 - `[editor]` **A minor key's step keys walk its key signature** (the natural minor: A minor
   walks the notes of C major); the leading tone is no longer a stop of its own.
 - `[lsp]` **The part properties complete in a nameless `part { }` and in a part with a short

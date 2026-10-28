@@ -1579,6 +1579,11 @@ export function octaveMarkPlan(before: string, offset: number, mark: string): Ty
  * with a status-bar hint). Notes, rests, chords and slash notes alike. */
 export function durationPlan(before: string, offset: number, digit: string): TypePlan | null {
     if (inStringOrComment(before, offset)) { return null; }
+    // Right after '@' (or '@!') a digit begins the annotation's name — the printed
+    // ottava spellings @8va, @8vb, @15ma, @15mb — and is typed as pressed. Rule 28
+    // reads the caret as on the note there too, so `c'4@` + '8' wrote `c'8@` and
+    // `@8va` never reached the completion list (owner's report 2026-10-28).
+    if (/@!?\d*$/.test(before.slice(Math.max(0, offset - 6), offset))) { return null; }
     const found = noteAtCaret(before, offset, true);
     if (!found) { return null; }
     const { marksEnd, digitsEnd } = found.slots;
