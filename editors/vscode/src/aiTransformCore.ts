@@ -618,6 +618,38 @@ export function isCoreTaskModel(m: ModelLike): boolean {
     return /dictation|cleanup/i.test(`${m.id} ${m.family}`);
 }
 
+/** Whether an error is the connection's, not the model's or Lily#'s — the request went and the line
+ *  broke (owner's report 2026-10-29: "net::ERR_HTTP2_PROTOCOL_ERROR" two minutes into a piece). */
+export function isConnectionError(message: string): boolean {
+    return /net::ERR_|ECONNRESET|ETIMEDOUT|ECONNREFUSED|socket hang up|network connection|firewall/i.test(message);
+}
+
+/** A length of time as a person reads it: "24 s", "2 min 24 s". */
+export function spokenDuration(ms: number): string {
+    const s = Math.max(0, Math.round(ms / 1000));
+    return s < 60 ? `${s} s` : `${Math.floor(s / 60)} min${s % 60 ? ` ${s % 60} s` : ''}`;
+}
+
+/**
+ * What a failed AI request says, and whether it offers Try Again (owner's request 2026-10-29: the
+ * connection's own English, "Please check your firewall rules…", said nothing of what happened).
+ * A broken connection says when it broke and offers to ask again; for a piece, a shorter one breaks
+ * less often. Anything else says the error as it came.
+ */
+export function aiFailure(kind: 'compose' | 'ask', message: string, elapsedMs: number): { text: string; retry: boolean } {
+    if (!isConnectionError(message)) {
+        return { text: `Lily#: ${kind === 'compose' ? 'compose with AI' : 'Ask AI'} failed: ${message}`, retry: false };
+    }
+    const after = spokenDuration(elapsedMs);
+    return {
+        text: kind === 'compose'
+            ? `Lily#: the connection to the AI broke off after ${after}, before the piece was written. `
+              + 'Try again — or ask for a shorter piece, which takes the AI less time to write.'
+            : `Lily#: the connection to the AI broke off after ${after}. Try again.`,
+        retry: true,
+    };
+}
+
 /** Whether an error says the model is not an extension's to use. */
 export function isCoreOnlyRefusal(message: string): boolean {
     return /only available to VS Code core/i.test(message);

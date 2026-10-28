@@ -24,7 +24,34 @@ import * as path from 'node:path';
 import {
     SEL_CLOSE, SEL_OPEN, carryOffset, documentBudget, documentContext, estimateTokens, isProblem, isUnchanged, marksContext, octaveOutliers,
     pickModel, isAutoModel, pitchToMidi, splitNote, planOf, withoutPlan, startTimeAt, toCandidateEdit, changedWords, diffMarkup, wholeTextMarkup, rangeFixOf,
+    aiFailure, isConnectionError, spokenDuration,
 } from '../src/aiTransformCore';
+
+// Owner's report 2026-10-29: "compose with AI failed: Please check your firewall rules and network
+// connection then try again. Error Code: net::ERR_HTTP2_PROTOCOL_ERROR." — two minutes into the
+// piece the connection broke, and the message said nothing of that.
+describe('a failed AI request', () => {
+    const broke = 'Please check your firewall rules and network connection then try again. Error Code: net::ERR_HTTP2_PROTOCOL_ERROR.';
+    it('tells a broken connection, when it broke, and offers to try again', () => {
+        assert.ok(isConnectionError(broke));
+        const f = aiFailure('compose', broke, 144155);
+        assert.ok(f.retry);
+        assert.equal(f.text, 'Lily#: the connection to the AI broke off after 2 min 24 s, before the piece was written. '
+            + 'Try again — or ask for a shorter piece, which takes the AI less time to write.');
+        assert.equal(aiFailure('ask', 'read ECONNRESET', 24000).text, 'Lily#: the connection to the AI broke off after 24 s. Try again.');
+    });
+    it('says any other error as it came, with no Try Again', () => {
+        const f = aiFailure('compose', 'Model gpt-5.6-luna is only available to VS Code core.', 100);
+        assert.ok(!f.retry);
+        assert.equal(f.text, 'Lily#: compose with AI failed: Model gpt-5.6-luna is only available to VS Code core.');
+    });
+    it('reads a length of time as a person does', () => {
+        assert.equal(spokenDuration(0), '0 s');
+        assert.equal(spokenDuration(59400), '59 s');
+        assert.equal(spokenDuration(120000), '2 min');
+        assert.equal(spokenDuration(144155), '2 min 24 s');
+    });
+});
 
 // Owner's report 2026-10-27: "this note sounds C1, below the range of the Bass" came back through
 // every repair — the repair now names the note as written and the note to write.

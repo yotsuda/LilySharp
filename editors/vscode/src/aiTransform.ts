@@ -40,7 +40,7 @@ import {
     CandidateEdit as CoreCandidateEdit, ChangedSpan, MarkInSelection, MarkReadings, SEL_CLOSE, SEL_OPEN, cleanCandidate,
     TextChange, carryOffset, documentBudget, documentContext, estimateTokens, isProblem, marksContext, octaveOutliers, splitNote,
     startTimeAt, toCandidateEdit, wholeFileEdit, carrySelection, changedWords, wholeTextMarkup, titleOf, isPlaceholderTitle,
-    cleanTitle, withTitle, asksForOneStaff, partCount, rangeFixOf,
+    cleanTitle, withTitle, asksForOneStaff, partCount, rangeFixOf, aiFailure,
 } from './aiTransformCore';
 import { markFactsOf, sideFileOf } from './omrScanCore';
 import { textFontFaceCss, textFontsRoot } from './scoreFonts';
@@ -213,7 +213,7 @@ function currentUri(uri: vscode.Uri): vscode.Uri {
  * it whole — the grammar's "Compose a piece" recipe, the musical check after it compiles, the
  * candidate reviewed and accepted as any other.
  */
-async function runCompose(deps: AiTransformDeps): Promise<void> {
+async function runCompose(deps: AiTransformDeps, asked?: string): Promise<void> {
     // Run from File > New File… (owner's request 2026-10-29), nothing may have started the
     // language server yet: it is started here, as opening a .lys would.
     await deps.ensureReady?.();
@@ -226,6 +226,8 @@ async function runCompose(deps: AiTransformDeps): Promise<void> {
         title: 'Lily# — Compose with AI',
         prompt: 'What should the AI compose? Say the instruments, the length and the character.',
         placeHolder: 'e.g. a dramatic string quartet in D minor, about 3 minutes, slow – fast – slow',
+        // Asked again after a failure: the request as it was, to send or to shorten.
+        value: asked,
         ignoreFocusOut: true,
     });
     if (description === undefined || description.trim().length === 0) {
@@ -250,6 +252,7 @@ async function runCompose(deps: AiTransformDeps): Promise<void> {
     };
     const grammar = await loadGrammar(deps);
     const budget = documentBudget(chat.maxInputTokens, estimateTokens(composeSystemPrompt(grammar, chat.modelName)));
+    const began = Date.now();
     try {
         // In the octaves the AI writes it: a new piece has no octave mode of its own to go back to.
         const ai: AiSpace = { snap: snapshot, converted: false };
@@ -264,12 +267,17 @@ async function runCompose(deps: AiTransformDeps): Promise<void> {
             + 'fits its music and its mood, on a `title "…"` line at the top, in the language of the request.',
             true, grammar, documentContext(ai.snap, budget, true), true, description.trim());
     } catch (err: any) {
-        vscode.window.showErrorMessage(`Lily#: compose with AI failed: ${err?.message ?? err}`);
+        const failed = aiFailure('compose', String(err?.message ?? err), Date.now() - began);
+        if (failed.retry && await vscode.window.showErrorMessage(failed.text, 'Try Again') === 'Try Again') {
+            await runCompose(deps, description.trim());
+        } else if (!failed.retry) {
+            vscode.window.showErrorMessage(failed.text);
+        }
     }
 }
 
 /** The whole select→prompt→validate→render→apply transaction (§3/§4). */
-async function runAiTransform(deps: AiTransformDeps, wholeScore = false, selected?: string): Promise<void> {
+async function runAiTransform(deps: AiTransformDeps, wholeScore = false, selected?: string, asked?: string): Promise<void> {
     const editor = vscode.window.activeTextEditor;
     if (!editor || editor.document.languageId !== 'lilysharp') {
         vscode.window.showErrorMessage('Lily#: open a .lys file and select what to transform.');
@@ -346,18 +354,26 @@ async function runAiTransform(deps: AiTransformDeps, wholeScore = false, selecte
             ? `What should the AI change?${partly}`
             : `${what} — a hint for the AI. What should it change?${partly}`,
         placeHolder: nextPlaceholder(),
+        // Asked again after a failure: the request as it was.
+        value: asked,
         ignoreFocusOut: true,
     });
     if (instruction === undefined || instruction.trim().length === 0) {
         return; // cancelled
     }
 
+    const began = Date.now();
     try {
         const ai = await toAbsoluteOctaves(deps, client, snapshot, whole);
         await drive(deps, client, chat, snapshot, ai, instruction, whole, grammar,
             ai.converted ? documentContext(ai.snap, budget, whole) : shown);
     } catch (err: any) {
-        vscode.window.showErrorMessage(`Lily#: AI transform failed: ${err?.message ?? err}`);
+        const failed = aiFailure('ask', String(err?.message ?? err), Date.now() - began);
+        if (failed.retry && await vscode.window.showErrorMessage(failed.text, 'Try Again') === 'Try Again') {
+            await runAiTransform(deps, wholeScore, selected, instruction);
+        } else if (!failed.retry) {
+            vscode.window.showErrorMessage(failed.text);
+        }
     }
 }
 

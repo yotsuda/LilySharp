@@ -71,7 +71,11 @@ describe('a new piece in place of the score', () => {
         // Found where a piece is begun (owner's request 2026-10-29): File > New File… beside New
         // Score, the language server started for it when no .lys has started it yet.
         assert.match(pkg, /"command": "lilysharp\.newScore",\s*"group": "file"\s*\},\s*\{\s*"command": "lilysharp\.composeWithAi",\s*"group": "file"/);
-        assert.match(transform, /async function runCompose\(deps: AiTransformDeps\): Promise<void> \{[\s\S]{0,300}?await deps\.ensureReady\?\.\(\);/);
+        assert.match(transform, /async function runCompose\(deps: AiTransformDeps, asked\?: string\): Promise<void> \{[\s\S]{0,300}?await deps\.ensureReady\?\.\(\);/);
+        // A broken connection offers Try Again, the request in the box to send or shorten
+        // (owner's report 2026-10-29: net::ERR_HTTP2_PROTOCOL_ERROR two minutes into a piece).
+        assert.match(transform, /const failed = aiFailure\('compose', String\(err\?\.message \?\? err\), Date\.now\(\) - began\);\s*if \(failed\.retry && await vscode\.window\.showErrorMessage\(failed\.text, 'Try Again'\) === 'Try Again'\) \{\s*await runCompose\(deps, description\.trim\(\)\);/);
+        assert.match(transform, /value: asked,/);
         const ext = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
         assert.match(ext, /ensureReady: ensureClientReady,/);
     });
