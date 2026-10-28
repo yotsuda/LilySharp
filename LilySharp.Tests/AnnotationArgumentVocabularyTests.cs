@@ -50,15 +50,15 @@ public class AnnotationArgumentVocabularyTests
     }
 
     /// <summary>
-    /// A name whose argument is OPTIONAL has the same trap GLUED: <c>e8@ottava( d c b)</c> is
-    /// the slur, and it was read as <c>@ottava</c>'s argument — the slur's notes, its
-    /// <c>@!ottava</c> included, vanished into one unknown mark (user report 2026-09-26, a
-    /// nocturne probe). The argument is written against the '(' (<c>@ottava(bassa)</c>, the
+    /// A name whose argument is OPTIONAL has the same trap GLUED: <c>e8@8va( d c b)</c> is
+    /// the slur, and it was read as <c>@8va</c>'s argument — the slur's notes, its
+    /// <c>@!8va</c> included, vanished into one unknown mark (user report 2026-09-26, a
+    /// nocturne probe). The argument is written against the '(' (<c>@8vb</c>, the
     /// theory below); a slur's next note after a space.
     /// </summary>
     [Theory]
-    [InlineData("e4@ottava( d4 c4 b,4@!ottava) |")]
-    [InlineData("e4@quindicesima( d4 c4 b,4@!ottava) |")]
+    [InlineData("e4@8va( d4 c4 b,4@!8va) |")]
+    [InlineData("e4@15ma( d4 c4 b,4@!15ma) |")]
     [InlineData("c4@arpeggio( d4 e4 f4) |")]
     [InlineData("c4@chord( d4 e4 f4) |")]
     public void AnOptionalArgument_AndASlurOnTheSameNote_KeepTheSlur(string music)
@@ -77,7 +77,6 @@ public class AnnotationArgumentVocabularyTests
     [InlineData("c4@chord(Cm7) |", "chord.Cm7")]
     [InlineData("c4@feather(right) |", "feather.right")]
     [InlineData("c4@arpeggio(bracket) |", "arpeggio.bracket")]
-    [InlineData("c4@ottava(bassa) |", "ottava.bassa")]
     public void AnArgumentTakingAnnotation_StillReadsItsArgument(string music, string markName)
     {
         var mark = Assert.Single(Root(music).DescendantNodes().OfType<MusicMarkSyntax>());

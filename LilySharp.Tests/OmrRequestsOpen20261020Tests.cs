@@ -52,9 +52,9 @@ public class OmrRequestsOpen20261020Tests
             voice { f''8 bes'16 d''16 ees''8 <aes'' c'''>8. g''16 g''8 } { c'8 d'8 ees'8 aes'16 ges'16 g'16 c'16 d'8 } |
           }
           lh {
-            g,8 <f, aes,>16 aes,16 r8 f8 g'8@ottava ees'8 |
+            g,8 <f, aes,>16 aes,16 r8 f8 g'8@8va ees'8 |
             dis'4 ees'8 d'4. |
-            c'4. bes4 r8@!ottava |
+            c'4. bes4 r8@!8va |
           }
         }
         form { ~Piece }
@@ -75,7 +75,7 @@ public class OmrRequestsOpen20261020Tests
             return staves[0].Y - staves[1].Y;
         }
         double withLine = Gap(GrandStaffOttava);
-        double withoutLine = Gap(GrandStaffOttava.Replace("@!ottava", "").Replace("@ottava", ""));
+        double withoutLine = Gap(GrandStaffOttava.Replace("@!8va", "").Replace("@8va", ""));
         Assert.True(withLine > withoutLine - 1.0,
             $"with the 8va the staves stand {withLine:F3} apart, without it {withoutLine:F3}");
         // And the line stands between the staves, nearer the left hand than the right.
@@ -96,9 +96,9 @@ public class OmrRequestsOpen20261020Tests
             part lh { clef bass }
             section Piece {
               lh {
-                bes,8 ges,8@ottava(bassa) f,16@!ottava ees,16 bes,8 |
-                tuplet 3/2 { des,8@ottava(bassa) ces,8 <f ges>8@!ottava } ees4 |
-                d,8@ottava(bassa) tuplet 3/2 { ees,8 d,8 <ees, g, bes,>8 } f,8@!ottava |
+                bes,8 ges,8@8vb f,16@!8vb ees,16 bes,8 |
+                tuplet 3/2 { des,8@8vb ces,8 <f ges>8@!8vb } ees4 |
+                d,8@8vb tuplet 3/2 { ees,8 d,8 <ees, g, bes,>8 } f,8@!8vb |
               }
             }
             score { staff lh "Left" }
@@ -144,8 +144,8 @@ public class OmrRequestsOpen20261020Tests
                 voice { r16 ges''16 f''16 f''16 r8 f''8 f''8. <ees'' f''>16 f''8. ges''16 } { ges'4. f'8 aes'4 ges'16 f'16 r8 } |
               }
               lh {
-                tuplet 3/2 { g8 ges,8@ottava(bassa) f,8 } ees,4. f,8 bes,8 ces8 |
-                bes,8 <ges, bes, des>16 <f, aes,>16 tuplet 3/2 { des,8 ces,8@!ottava <f ges>8 } ees4 r8 f8 |
+                tuplet 3/2 { g8 ges,8@8vb f,8 } ees,4. f,8 bes,8 ces8 |
+                bes,8 <ges, bes, des>16 <f, aes,>16 tuplet 3/2 { des,8 ces,8@!8vb <f ges>8 } ees4 r8 f8 |
               }
             }
             form { ~Piece }
@@ -172,7 +172,7 @@ public class OmrRequestsOpen20261020Tests
             part p1 { clef bass }
             section Piece {
               p1 {
-                c4@ottava(bassa) d4@text("dolce") e4@!ottava f4 | c'1 |
+                c4@8vb d4@text("dolce") e4@!8vb f4 | c'1 |
               }
             }
             score { staff p1 }

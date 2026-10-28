@@ -858,16 +858,19 @@ internal static class MusicXmlReader
                 if (type == "stop")
                 {
                     // Closed by the name it opened with (owner's decision 2026-10-28, LYS4032).
-                    yield return "!" + (ottava.Count > 0 ? ottava[^1] : "ottava");
+                    yield return "!" + (ottava.Count > 0 ? ottava[^1] : "8va");
                     ottava.Clear();
                     continue;
                 }
                 if (type is not ("up" or "down"))
                     continue;
-                string? name = (string?)shift.Attribute("size") switch
+                // MusicXML's "up" moves the notes UP on the page: the music sounds lower, 8vb.
+                string? name = ((string?)shift.Attribute("size"), type) switch
                 {
-                    null or "8" => "ottava",
-                    "15" => "quindicesima",
+                    (null or "8", "down") => "8va",
+                    (null or "8", _) => "8vb",
+                    ("15", "down") => "15ma",
+                    ("15", _) => "15mb",
                     _ => null,
                 };
                 if (name == null)
@@ -877,7 +880,7 @@ internal static class MusicXmlReader
                 }
                 ottava.Clear();
                 ottava.Add(name);
-                yield return type == "up" ? name + "(bassa)" : name;
+                yield return name;
             }
             foreach (var pedal in Els(dt, "pedal"))
             {

@@ -130,8 +130,8 @@ public class AtCompletionParsesTests
     [InlineData("feather")]        // feathered beams
     [InlineData("figuredBass")]            // figured bass
     [InlineData("diagram(")]       // guitar chord diagrams — free-form, no second list
-    [InlineData("ottava(")]        // ottava bassa
-    [InlineData("quindicesima")]   // 15ma / 15mb
+    [InlineData("8vb")]           // ottava bassa
+    [InlineData("15m")]           // 15ma / 15mb
     [InlineData("text")]           // free expressive text
     [InlineData("mark")]           // rehearsal mark
     public void CompoundAnnotationFamily_IsOffered(string labelPrefix)

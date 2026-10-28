@@ -145,7 +145,7 @@ internal sealed class SectionCarryValidator : ISharedCollectValidator
             SectionSpanKind.Tie => ("tie", "a tie '~'", "", "no tie is drawn"),
             // The mark-paired families (2026-09-29): cut at their own section's end, as the hairpin is.
             SectionSpanKind.TextSpanner => ("text spanner", "a text spanner (@rit / @accel / @textSpan)", "'@!rit' (or '@!textSpan')", cut),
-            SectionSpanKind.Ottava => ("ottava", "an ottava (@ottava / @quindicesima)", "'@!ottava'", cut),
+            SectionSpanKind.Ottava => ("ottava", "an ottava (@8va / @8vb / @15ma / @15mb)", "'@!8va'", cut),
             SectionSpanKind.Pedal => ("pedal", "a pedal (@sustain / @sostenuto / @unaCorda)", "'@!sustain' (or '@!sostenuto' / '@!unaCorda')", cut),
             SectionSpanKind.Trill => ("trill span", "a trill span (@trillSpan)", "'@!trillSpan'", cut),
             _ => ("hairpin", "a hairpin", "a dynamic", cut),

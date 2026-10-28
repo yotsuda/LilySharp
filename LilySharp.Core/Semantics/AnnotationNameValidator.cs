@@ -100,10 +100,10 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
         "cresc", "decresc", "dim",
         // Spelled exactly as they must be WRITTEN — names are case-sensitive. The typo
         // matcher still lowercases both sides, so '@hammron' finds '@hammerOn'.
-        // The ottava family, each ended by '@!ottava'. 'loco' is NOT here: it was
+        // The ottava lines, each ended by its own name ('@!8va'). 'loco' is NOT here: it was
         // retired with MusicMarkType.Loco (session 289) and no longer compiles, and
         // every candidate in this list must (EverySuggestionCandidate_CompilesAsWritten).
-        "ottava", "ottava.bassa",
+        "8va", "8vb", "15ma", "15mb",
         // The pedals, each closed by '@!' (session 289). 'sustainOn' / 'sustainOff' /
         // 'sostenutoOn' / 'sostenutoOff' are RETIRED and cannot be candidates: every entry
         // in this list must compile (EverySuggestionCandidate_CompilesAsWritten).
@@ -236,7 +236,7 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
                             DiagnosticCodes.UnknownAnnotation,
                             $"'@!{name}' is ignored: nothing of that name can be ended. "
                             + "The spans with a terminator: a text spanner ('@!rit', '@!accel', "
-                            + "'@!rall', '@!textSpan'), an ottava ('@!ottava', '@!quindicesima'), "
+                            + "'@!rall', '@!textSpan'), an ottava ('@!8va', '@!8vb', '@!15ma', '@!15mb'), "
                             + "a pedal ('@!sustain', '@!sostenuto', '@!unaCorda'), a phrasing "
                             + "slur ('@!phrasingSlur'), a trill span ('@!trillSpan') and a hairpin "
                             + "('@!cresc', '@!decresc', '@!dim').");
@@ -598,26 +598,13 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
         // '@ds(al fien)'.) A candidate has no source text, so the suggestion below is
         // still rendered from its internal name, which is what that reconstruction is for.
         var message = $"Unknown annotation '{Written(node, name)}' — it is ignored.";
-        // The trill span's old pair of words (until 2026-10-28) is told the new spelling, not
-        // sent to guess at a near name.
-        if (name is "startTrillSpan" or "stopTrillSpan")
-        {
-            _diagnostics.Warning(node.Span, DiagnosticCodes.UnknownAnnotation,
-                message + " A trill span is written '@trillSpan' … '@!trillSpan', opened and "
-                + "closed by one name like every other span.");
-            return;
-        }
+
         // A name that differs from a real one only in case gets that spelling, not a typo
         // guess: names are case-sensitive (owner's decision 2026-09-27).
         if (CaseCorrected(node, name) is { } corrected)
             message += " " + (SameHead(corrected, Written(node, name))
                 ? $"Values are case-sensitive: write '{corrected}'."
                 : CaseHint(corrected));
-        // An ottava with an argument the family does not take — '@ottava(8va)', '@ottava(1)'
-        // — is told the four spellings, not sent to guess ("Did you mean '@ottava'?" was all
-        // it got, and '@ottava(8va)' got nothing; session 762's piano book).
-        else if (OttavaHint(name) is { } ottava)
-            message += " " + ottava;
         else if (FindSuggestion(name) is { } suggestion)
             message += $" Did you mean '@{SourceSpelling(suggestion)}'?";
 
@@ -627,19 +614,6 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
             message);
     }
 
-    /// <summary>The sentence naming the ottava family's four spellings, for an unknown name
-    /// whose head is <c>ottava</c> or <c>quindicesima</c> (a dotted name carries the written
-    /// argument: <c>@ottava(8va)</c> reaches here as <c>ottava.8va</c>); null otherwise. The
-    /// spellings are <c>MusicMarkItem</c>'s four ottava names.</summary>
-    private static string? OttavaHint(string name)
-    {
-        int dot = name.IndexOf('.');
-        string head = dot < 0 ? name : name[..dot];
-        return head is "ottava" or "quindicesima"
-            ? "An ottava is written '@ottava' (8va), '@ottava(bassa)' (8vb), '@quindicesima' (15ma) "
-              + "or '@quindicesima(bassa)' (15mb), and closed by the name it opened with ('@!ottava', '@!quindicesima')."
-            : null;
-    }
 
     /// <summary>Whether two written annotations share their name — the part before '(' —
     /// i.e. the correction is in the VALUE, not the name.</summary>

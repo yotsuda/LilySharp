@@ -4666,8 +4666,11 @@ public sealed partial class LilySharpLanguageServer
         ["mark"] = "rehearsal",
         ["text"] = "dolce expressive",
         ["todo"] = "check fixme review",
-        ["ottava"] = "8va octave",
-        ["quindicesima"] = "15ma octave",
+        // The ottava lines by their labels; the Italian words find them.
+        ["8va"] = "ottava octave",
+        ["8vb"] = "ottava bassa octave",
+        ["15ma"] = "quindicesima octave",
+        ["15mb"] = "quindicesima bassa octave",
     };
 
     /// <summary>
@@ -4968,19 +4971,12 @@ public sealed partial class LilySharpLanguageServer
                 new CompletionItem { Label = "accel", Kind = CompletionItemKind.Value, Detail = "Accelerando text spanner (ends at @!accel)", SortText = "4accel" },
                 new CompletionItem { Label = "rall", Kind = CompletionItemKind.Value, Detail = "Rallentando text spanner (ends at @!rall)", SortText = "4rall" },
                 new CompletionItem { Label = "textSpan", Kind = CompletionItemKind.Value, InsertText = "textSpan(\"$0\")", InsertTextFormat = InsertTextFormat.Snippet, Detail = "Text spanner with your own word (ends at @!textSpan)", SortText = "4textSpan" },
-                new CompletionItem { Label = "ottava", Kind = CompletionItemKind.Value, Detail = "Ottava bracket up (8va) - ends at @!ottava", SortText = "4ottava" },
-                new CompletionItem { Label = "ottava(bassa)", Kind = CompletionItemKind.Value, Detail = "Ottava bracket down (8vb) - ends at @!ottava", SortText = "4ottava.bassa" },
-                new CompletionItem { Label = "quindicesima", Kind = CompletionItemKind.Value, Detail = "Quindicesima bracket up (15ma) - ends at @!quindicesima", SortText = "4quindicesima" },
-                new CompletionItem { Label = "quindicesima(bassa)", Kind = CompletionItemKind.Value, Detail = "Quindicesima bracket down (15mb) - ends at @!quindicesima", SortText = "4quindicesima.bassa" },
-                // The printed spellings, which the compiler reads as the same four marks
-                // (MusicMarkItem.ParseMarkName; `8va` lexes as ONE identifier —
-                // Lexer.GluedOttavaSuffixLength). Offered beside the long names as `ho` stands
-                // beside `hammerOn`. Until 2026-09-10 "8va" was only a search term that
-                // reached `ottava`: typing it found the row and nothing inserted it.
-                new CompletionItem { Label = "8va", Kind = CompletionItemKind.Value, Detail = "Ottava bracket up - the printed spelling of @ottava; ends at @!8va", SortText = "4ottava.8va" },
-                new CompletionItem { Label = "8vb", Kind = CompletionItemKind.Value, Detail = "Ottava bracket down - the printed spelling of @ottava(bassa); ends at @!8vb", SortText = "4ottava.bassa.8vb" },
-                new CompletionItem { Label = "15ma", Kind = CompletionItemKind.Value, Detail = "Quindicesima bracket up - the printed spelling of @quindicesima; ends at @!15ma", SortText = "4quindicesima.15ma" },
-                new CompletionItem { Label = "15mb", Kind = CompletionItemKind.Value, Detail = "Quindicesima bracket down - the printed spelling of @quindicesima(bassa); ends at @!15mb", SortText = "4quindicesima.bassa.15mb" },
+                // The ottava lines, by the label they print — the one spelling since 2026-10-28
+                // (`8va` lexes as ONE identifier, Lexer.GluedOttavaSuffixLength).
+                new CompletionItem { Label = "8va", Kind = CompletionItemKind.Value, Detail = "Ottava: an octave higher - ends at @!8va", SortText = "4ottava.8va" },
+                new CompletionItem { Label = "8vb", Kind = CompletionItemKind.Value, Detail = "Ottava bassa: an octave lower - ends at @!8vb", SortText = "4ottava.8vb" },
+                new CompletionItem { Label = "15ma", Kind = CompletionItemKind.Value, Detail = "Quindicesima: two octaves higher - ends at @!15ma", SortText = "4ottava.15ma" },
+                new CompletionItem { Label = "15mb", Kind = CompletionItemKind.Value, Detail = "Quindicesima bassa: two octaves lower - ends at @!15mb", SortText = "4ottava.15mb" },
                 // Opened and closed by one name, like every other span (owner's decision
                 // 2026-10-28; until then LilyPond's '@startTrillSpan' / '@stopTrillSpan').
                 new CompletionItem { Label = "trillSpan", Kind = CompletionItemKind.Value, Detail = "Trill spanner (tr + wavy line) - ends at @!trillSpan", SortText = "4trillSpan" },

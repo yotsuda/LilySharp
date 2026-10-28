@@ -483,7 +483,7 @@ public class MusicXmlExportShapeTests
             part pno { clef treble }
             section A { pno {
               |: c''4@sustain@chord(Dm7) d''@cresc e'' f''@!sustain | g''1@f :|
-              a''4@ottava b'' a''@!ottava g'' | c''1@chord(G7/B) |
+              a''4@8va b'' a''@!8va g'' | c''1@chord(G7/B) |
             } }
             form { A }
             score { staff pno }
@@ -515,7 +515,7 @@ public class MusicXmlExportShapeTests
             octave absolute
             part pno { clef treble }
             section A { pno {
-              c''4 d''@cresc e'' f''@f | c''4@unaCorda d'' e'' f''@treCorde | c''4@quindicesima d'' e'' f''@!ottava | c''1@p |
+              c''4 d''@cresc e'' f''@f | c''4@unaCorda d'' e'' f''@treCorde | c''4@15ma d'' e'' f''@!15ma | c''1@p |
             } }
             form { A }
             score { staff pno }

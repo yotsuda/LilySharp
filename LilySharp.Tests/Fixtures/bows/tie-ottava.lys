@@ -1,7 +1,7 @@
 octave absolute
 time 4/4
 part m {
-  section A { c'''4@ottava~ c''' d'''@!ottava~ d''' | e'''4~ e''' f'''2 | a'''4@ottava( b''' c''''@!ottava~ c'''') | }
+  section A { c'''4@8va~ c''' d'''@!8va~ d''' | e'''4~ e''' f'''2 | a'''4@8va( b''' c''''@!8va~ c'''') | }
 }
 form { A }
 score {

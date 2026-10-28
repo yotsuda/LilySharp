@@ -905,11 +905,11 @@ In-note marks: `c4@mark("A")` (rehearsal mark),
 text spanners `@textSpan("poco rit.")` ... `@!textSpan` (sugar: `@rit` / `@accel` / `@rall`,
 closed by `@!rit` / `@!accel` / `@!rall` — **the end is REQUIRED**: a spanner nobody closes
 draws nothing at all, its word included, and says so with LYS4018),
-ottava `@ottava` / `@ottava(bassa)` ... `@!ottava`, `@quindicesima` ... `@!quindicesima`, `@8va` ... `@!8va`
+ottava `@8va` / `@8vb` / `@15ma` / `@15mb` ... `@!8va` (the label the page prints; `@ottava` / `@quindicesima` are retired)
 (**the end is REQUIRED**, and **it repeats the name the span was opened with** — `@8va` ... `@!15ma` is
 an error; `@loco` is retired),
 trill spanner `@trillSpan` ... `@!trillSpan` (an ottava's and a trill's end goes on the LAST note
-the line covers — `c4@ottava d e f@!ottava` moves f too), 15ma `@quindicesima` / `@quindicesima(bassa)`,
+the line covers — `c4@8va d e f@!8va` moves f too),
 pedals `@sustain` ... `@!sustain`, `@sostenuto` ... `@!sostenuto`, `@unaCorda` ... `@!unaCorda`
 (`@treCorde` is the same release written as the word the Text style prints) — one word each,
 LilyPond's own names, taking NO argument (`@ped`, `@ped(off)`, `@sost(off)`, `@una(corda)` do not exist).

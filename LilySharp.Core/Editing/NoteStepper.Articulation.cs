@@ -47,7 +47,7 @@ namespace LilySharp.Core.Editing;
 /// request 2026-10-17), the ottava's printed spellings (15mb, 8vb, 8va, 15ma) and the tempo
 /// words (rall, rit, accel — owner's decisions 2026-10-28), whose <c>@!</c> end follows them.
 /// Since the same day a group may also be marks whose order means little, so that a related one
-/// is a key away: the ottava's words with their argument form, the pedals, courtesy / editorial,
+/// is a key away: the pedals, courtesy / editorial,
 /// the half ties, harmonic / flageolet, the arpeggio and its bracket — a group lists SPELLINGS,
 /// an argument included (<see cref="SpellingOf"/>). A mark whose argument is one of a list —
 /// <c>@notehead(x)</c>, <c>@finger(3)</c> — steps that argument (<see cref="ArgumentSteps"/>).
@@ -87,12 +87,10 @@ public static partial class NoteStepper
             new[] { "rall", "rit", "accel" },
             // Groups whose order means little, so that a related mark is a key away (owner's
             // request 2026-10-28: "並びの順に意味がなくても、ユーザーがなるべく関連する記号を簡単に
-            // 見つけられる方が良い"). The ottava's words, lowest first, the argument form among them;
-            // the pedals as they stand under the piano, left to right; the two ways of bracketing
-            // an accidental; the half ties, the one that looks back below the one that rings on;
-            // the two harmonic circles; the arpeggio and its bracket. A pedal's or an ottava's
-            // @! end is renamed with it.
-            new[] { "quindicesima(bassa)", "ottava(bassa)", "ottava", "quindicesima" },
+            // 見つけられる方が良い"). The pedals as they stand under the piano, left to right; the
+            // two ways of bracketing an accidental; the half ties, the one that looks back below
+            // the one that rings on; the two harmonic circles; the arpeggio and its bracket. A
+            // pedal's @! end is renamed with it.
             new[] { "unaCorda", "sostenuto", "sustain" },
             new[] { "editorial", "courtesy" },
             new[] { "repeatTie", "laissezVibrer" },

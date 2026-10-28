@@ -707,10 +707,10 @@ internal static class SyntaxFacts
             // prints. The sugar spellings (@rit, @accel, @rall) take no argument and are
             // NOT here: each is this annotation with the argument already filled in.
             "textSpan",
-            // Also plain marks on their own (@ottava, @ds): they are in the list so
-            // the argument form keeps parsing, since the rule below would otherwise
-            // hand their '(' to the slur.
-            "ottava", "quindicesima", "ds", "dc", "to",
+            // Also plain marks on their own (@ds): they are in the list so the argument
+            // form keeps parsing, since the rule below would otherwise hand their '(' to
+            // the slur.
+            "ds", "dc", "to",
             // @todo / @todo("memo") — a plain mark too, for the same reason.
             "todo",
         };
@@ -730,9 +730,9 @@ internal static class SyntaxFacts
 
     /// <summary>
     /// Whether <paramref name="name"/>'s argument is OPTIONAL — the name is complete on its
-    /// own (<c>@ottava</c>, <c>@quindicesima</c>, <c>@arpeggio</c>, a bare <c>@chord</c>) and
-    /// also takes one (<c>@ottava(bassa)</c>). For such a name a glued <c>(</c> is ambiguous:
-    /// the argument, or the slur that starts on the same note (<c>e8@ottava( d c b)</c>).
+    /// own (<c>@arpeggio</c>, a bare <c>@chord</c>) and also takes one
+    /// (<c>@arpeggio(bracket)</c>). For such a name a glued <c>(</c> is ambiguous: the
+    /// argument, or the slur that starts on the same note (<c>e8@arpeggio( d c b)</c>).
     /// The parser tells them apart by what follows the <c>(</c> — an argument is written
     /// against it, a slur's next note after a space (user report 2026-09-26: the slur's
     /// whole run, <c>@!ottava</c> included, was read as the argument and dropped).

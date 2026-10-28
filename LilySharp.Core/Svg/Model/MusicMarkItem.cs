@@ -405,13 +405,11 @@ public sealed record MusicMarkItem
             ["cresc"] = MusicMarkType.Cresc,
             ["decresc"] = MusicMarkType.Decresc,
             ["dim"] = MusicMarkType.Dim,
-            ["ottava"] = MusicMarkType.OttavaUp,
+            // The ottava lines by the label they print (owner's decision 2026-10-28: the words
+            // '@ottava' / '@quindicesima' and their '(bassa)' forms are retired — one spelling).
             ["8va"] = MusicMarkType.OttavaUp,
-            ["ottava.bassa"] = MusicMarkType.OttavaDown,
             ["8vb"] = MusicMarkType.OttavaDown,
-            ["quindicesima"] = MusicMarkType.QuindicesUp,
             ["15ma"] = MusicMarkType.QuindicesUp,
-            ["quindicesima.bassa"] = MusicMarkType.QuindicesDown,
             ["15mb"] = MusicMarkType.QuindicesDown,
             // The pedals: each is ONE span, opened by its name and closed by '@!' —
             // '@sustain' … '@!sustain', '@sostenuto' … '@!sostenuto',

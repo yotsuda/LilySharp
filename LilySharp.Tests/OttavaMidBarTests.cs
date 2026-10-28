@@ -29,7 +29,7 @@ namespace LilySharp.Tests;
 /// An ottava that starts or stops inside a bar moves exactly the notes it spans, and its
 /// bracket stops just after the last of them. LilyPond's ottava is a moment-granular span
 /// (lily/ottava-engraver.cc:122-136, the right bound the last note column :168-191); until
-/// 2026-09-26 Lily# moved whole bars, so an `@!ottava` on a bar's last note left the whole
+/// 2026-09-26 Lily# moved whole bars, so an `@!8va` on a bar's last note left the whole
 /// bar at written pitch (Lab probes/complex-lys/07, bar 8). MEASURED against LilyPond 2.26
 /// (Lab sessions/p644 o2): the bracket's right end 1.904 past the left of the last head it
 /// covers.
@@ -64,7 +64,7 @@ public class OttavaMidBarTests
     {
         var tree = SyntaxTree.Parse(
             "octave absolute\nkey e major\npart m { clef treble }\npart l { clef bass }\n"
-            + "section A {\n  m { e'''8@ottava( dis''' cis''' b'' a'' gis'' fis''@!ottava e'') | }\n"
+            + "section A {\n  m { e'''8@8va( dis''' cis''' b'' a'' gis'' fis''@!8va e'') | }\n"
             + "  l { e1 | }\n}\nform { A }\nscore { " + staves + " }\n");
         Assert.False(tree.HasErrors);
         var score = SvgGenerator.CollectScore(tree,
@@ -81,7 +81,7 @@ public class OttavaMidBarTests
     [Fact]
     public void AStopOnABarsLastNote_KeepsTheBarsOtherNotesUnderTheOttava()
     {
-        var shifted = Heads(Svg("a,,4@ottava(bassa) e, a, e, | a,,4 e, a,@!ottava e, | a,,4 e, a, e, |"));
+        var shifted = Heads(Svg("a,,4@8vb e, a, e, | a,,4 e, a,@!8vb e, | a,,4 e, a, e, |"));
         var plain = Heads(Svg("a,,4 e, a, e, | a,,4 e, a, e, | a,,4 e, a, e, |"));
         // 8vb draws an octave higher: 3.5 staff spaces up — the first seven notes, the stop's
         // own included (an end includes its note, owner's decision 2026-10-28); the eighth and
@@ -93,7 +93,7 @@ public class OttavaMidBarTests
     [Fact]
     public void AStartInsideABar_LeavesTheNotesBeforeItAtWrittenPitch()
     {
-        var shifted = Heads(Svg("a,,4 e,@ottava(bassa) a, e, | a,,4 e, a,@!ottava e, |"));
+        var shifted = Heads(Svg("a,,4 e,@8vb a, e, | a,,4 e, a,@!8vb e, |"));
         var plain = Heads(Svg("a,,4 e, a, e, | a,,4 e, a, e, |"));
         for (int i = 0; i < 8; i++)
             Assert.Equal(i >= 1 && i < 7 ? plain[i].Y - 3.5 : plain[i].Y, shifted[i].Y, 2);
@@ -102,7 +102,7 @@ public class OttavaMidBarTests
     [Fact]
     public void TheBracket_StopsJustAfterTheLastNoteItCovers()
     {
-        string svg = Svg("a,,4@ottava(bassa) e, a, e, | a,,4 e, a,@!ottava e, | a,,4 e, a, e, |");
+        string svg = Svg("a,,4@8vb e, a, e, | a,,4 e, a,@!8vb e, | a,,4 e, a, e, |");
         var hook = Regex.Match(svg,
             "<line x1=\"([\\d.]+)\" y1=\"([\\d.]+)\" x2=\"\\1\" y2=\"[\\d.]+\" stroke=\"#000000\" stroke-width=\"0.100\" data-pos");
         double end = double.Parse(hook.Groups[1].Value, CultureInfo.InvariantCulture);
@@ -117,7 +117,7 @@ public class OttavaMidBarTests
     [Fact]
     public void AnEnd_IncludesTheNoteItIsWrittenOn()
     {
-        var shifted = Heads(Svg("a,,4@ottava(bassa) e, a, e,@!ottava | a,,4 e, a, e, |"));
+        var shifted = Heads(Svg("a,,4@8vb e, a, e,@!8vb | a,,4 e, a, e, |"));
         var plain = Heads(Svg("a,,4 e, a, e, | a,,4 e, a, e, |"));
         for (int i = 0; i < 8; i++)
             Assert.Equal(i < 4 ? plain[i].Y - 3.5 : plain[i].Y, shifted[i].Y, 2);
@@ -131,9 +131,9 @@ public class OttavaMidBarTests
     [Fact]
     public void AnEnd_StopsAtTheEndOfItsNote_ForEveryVoiceOfTheStaff()
     {
-        const string marked = "voice { a,,2@ottava(bassa)@!ottava a,,2 } { e,4 e, e, e, } |";
+        const string marked = "voice { a,,2@8vb@!8vb a,,2 } { e,4 e, e, e, } |";
         var shifted = Heads(Svg(marked));
-        var plain = Heads(Svg(marked.Replace("@ottava(bassa)@!ottava", "")));
+        var plain = Heads(Svg(marked.Replace("@8vb@!8vb", "")));
         Assert.Equal(plain.Length, shifted.Length);
         // The lower voice's quarters (the black heads Heads reads): the two under the half note
         // an octave up, the two after it not.

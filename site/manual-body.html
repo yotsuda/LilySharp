@@ -341,16 +341,16 @@ score { staff vc }</pre>
     <tr><td>Accidental style</td><td><code>@courtesy</code> (parenthesised), <code>@editorial</code></td></tr>
     <tr><td>Effects</td><td><code>@arpeggio</code> <code>@glissando</code> <code>@cross</code> <code>@dead</code> <code>@parenthesize</code> <code>@fall</code> <code>@doit</code> <code>@breath</code> <code>@caesura</code> — <code>@parenthesize</code> puts the head in parentheses (a ghost note, <code>sn16@parenthesize</code>); on a chord it draws one pair round the whole chord</td></tr>
     <tr><td>Half ties</td><td><code>@laissezVibrer</code>, <code>@repeatTie</code></td></tr>
-    <tr><td>With a value</td><td><code>@finger(3)</code> <code>@figuredBass(6 4)</code> <code>@bend(half)</code> <code>@notehead(triangle)</code> <code>@feather(right)</code> <code>@text("dolce")</code> <code>@mark("A")</code> <code>@chord(Dm)</code> <code>@chord(Cm7 x3x546)</code> <code>@diagram(032010)</code> <code>@pluck(i)</code> <code>@ottava(bassa)</code> — an <code>@chord</code> that also writes a shape (<code>@chord(Cm7 x3x546)</code>) draws that chord diagram under its name; a name alone draws none. Shapes, <code>@diagram</code> and which instrument a diagram is drawn for are on <a href="chords.html">Chords and chord diagrams</a></td></tr>
+    <tr><td>With a value</td><td><code>@finger(3)</code> <code>@figuredBass(6 4)</code> <code>@bend(half)</code> <code>@notehead(triangle)</code> <code>@feather(right)</code> <code>@text("dolce")</code> <code>@mark("A")</code> <code>@chord(Dm)</code> <code>@chord(Cm7 x3x546)</code> <code>@diagram(032010)</code> <code>@pluck(i)</code> — an <code>@chord</code> that also writes a shape (<code>@chord(Cm7 x3x546)</code>) draws that chord diagram under its name; a name alone draws none. Shapes, <code>@diagram</code> and which instrument a diagram is drawn for are on <a href="chords.html">Chords and chord diagrams</a></td></tr>
   </table>
 
   <h3>Spanners — the end is required</h3>
   <p>These open on one note and must be closed on another. A spanner nobody closes draws
-  <i>nothing at all</i>, its word included, and says so. The end goes on the <b>last note the line covers</b>: <code>c4@ottava d e f@!ottava</code> moves f too and the bracket stops after it, and <code>c4@trillSpan d e@!trillSpan f</code> trills c, d and e. A pedal's end is the note it is lifted at.</p>
+  <i>nothing at all</i>, its word included, and says so. The end goes on the <b>last note the line covers</b>: <code>c4@8va d e f@!8va</code> moves f too and the bracket stops after it, and <code>c4@trillSpan d e@!trillSpan f</code> trills c, d and e. A pedal's end is the note it is lifted at.</p>
   <table class="g">
     <tr><th>Opens</th><th>Closes</th></tr>
     <tr><td><code>@textSpan("poco rit.")</code>, or the sugar <code>@rit @accel @rall</code></td><td><code>@!textSpan</code> / <code>@!rit</code> …</td></tr>
-    <tr><td><code>@ottava</code>, <code>@ottava(bassa)</code>, <code>@quindicesima</code></td><td>the same name: <code>@!ottava</code>, <code>@!quindicesima</code> (<code>@8va</code> … <code>@!8va</code>)</td></tr>
+    <tr><td><code>@8va</code>, <code>@8vb</code>, <code>@15ma</code>, <code>@15mb</code> (the label the page prints)</td><td>the same name: <code>@!8va</code>, <code>@!8vb</code> …</td></tr>
     <tr><td><code>@trillSpan</code></td><td><code>@!trillSpan</code></td></tr>
     <tr><td><code>@sustain</code>, <code>@sostenuto</code>, <code>@unaCorda</code></td><td><code>@!sustain</code>, <code>@!sostenuto</code>, <code>@!unaCorda</code> (<code>@treCorde</code> is the last one's release, spelled as the printed word)</td></tr>
   </table>
@@ -1493,7 +1493,7 @@ ppp pp p mp mf ff fff</pre>
     <code>@bend(half)</code> — but the other two remain.</p>
     <p>Collapsing them means letting the parser eat the <code>.half</code>, and the obvious
     rule for that (an argument-taking name followed by a dot) is wrong:
-    <code>@ottava.bassa</code> is a legitimate dotted <i>name</i>, and <code>ottava</code>
+    <code>@ds.al.fine</code> is a legitimate dotted <i>name</i>, and <code>ds</code>
     is in the same vocabulary.
     The correct test is whether the whole dotted name is known, and that lives downstream.</p>
   </div>

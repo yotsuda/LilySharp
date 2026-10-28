@@ -23,8 +23,8 @@ phrase rhTheme {
 }
 
 phrase rhOttava {
-  c'''4@ottava e g c |
-  d4 f a d@!ottava |
+  c'''4@8va e g c |
+  d4 f a d@!8va |
   c2 g |
   e2. r4 |
 }

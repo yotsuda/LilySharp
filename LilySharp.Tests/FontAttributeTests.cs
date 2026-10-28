@@ -91,7 +91,7 @@ public class FontAttributeTests
         }
         section C {
           chords prog { D | }
-          melody { c'''4@ottava d@figuredBass(6) e f@!ottava | }
+          melody { c'''4@8va d@figuredBass(6) e f@!8va | }
           lyrics words { la la la la | }
         }
         section Z {

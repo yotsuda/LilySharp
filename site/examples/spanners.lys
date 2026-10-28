@@ -5,7 +5,7 @@ part rh { clef treble }
 part lh { clef bass }
 section A {
   rh {
-    c''4@ottava d e f | g4 a b c@!ottava |
+    c''4@8va d e f | g4 a b c@!8va |
     c,4@rit b a g@!rit | c1 |
   }
   lh {

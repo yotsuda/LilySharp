@@ -701,8 +701,8 @@ public class MusicXmlRoundTripTests
             part rh { clef treble }
             part lh { clef bass }
             section A {
-              rh { c'''4@quindicesima d''' e''' f'''@!quindicesima@p | g'''1 | g'''1 | }
-              lh { c'4@f@ottava(bassa) d' e' f'@!ottava | g1@sustain | c'1@!sustain | }
+              rh { c'''4@15ma d''' e''' f'''@!15ma@p | g'''1 | g'''1 | }
+              lh { c'4@f@8vb d' e' f'@!8vb | g1@sustain | c'1@!sustain | }
             }
             form { ~A }
             score { grandStaff { staff rh "Piano"  staff lh } }
@@ -712,8 +712,8 @@ public class MusicXmlRoundTripTests
         Assert.False(HasErrors(SyntaxTree.Parse(lys)), lys);
         // The stop stands at f'''s end (an end includes its note, 2026-10-28), so it comes back
         // after the dynamic that stands at its start.
-        Assert.Contains("c'''4@quindicesima d'''4 e'''4 f'''4@p@!quindicesima |", lys);
-        Assert.Contains("c'4@f@ottava(bassa) d'4 e'4 f'4@!ottava | g1@sustain | c'1@!sustain |", lys);
+        Assert.Contains("c'''4@15ma d'''4 e'''4 f'''4@p@!15ma |", lys);
+        Assert.Contains("c'4@f@8vb d'4 e'4 f'4@!8vb | g1@sustain | c'1@!sustain |", lys);
     }
 
     /// <summary>
@@ -890,7 +890,7 @@ public class MusicXmlRoundTripTests
 
     /// <summary>
     /// An octave line's stop written where MusicXML programs usually write it — after the last
-    /// note it covers, at the bar's end — closes on THAT note: Lily#'s @!ottava includes its
+    /// note it covers, at the bar's end — closes on THAT note: Lily#'s @!8vb includes its
     /// note (owner's decision 2026-10-28; until then it went on the next note, the first one
     /// outside the line). A pedal's release is still the note it is lifted on: a stop after the
     /// part's last note stays on that note (Lily# requires the end).
@@ -921,7 +921,7 @@ public class MusicXmlRoundTripTests
             </score-partwise>
             """);
         Assert.False(HasErrors(SyntaxTree.Parse(lys)), lys);
-        Assert.Contains("c'''4@ottava@sostenuto d'''4@!ottava | e''4 f''4@!sostenuto |", lys);
+        Assert.Contains("c'''4@8va@sostenuto d'''4@!8va | e''4 f''4@!sostenuto |", lys);
     }
 
     private static int CountOccurrences(string haystack, string needle)

@@ -395,8 +395,8 @@ public class GraceBodyValidatorTests
     /// its written octave (ledger ottava.grace.*). Nothing is reported.
     /// </summary>
     [Theory]
-    [InlineData("grace { d''8@ottava } c''1 | e''1@!ottava |", "grace { d''8 } c''1 | e''1 |")]
-    [InlineData("c''1@ottava | grace { d''8@!ottava } e''1 |", "c''1 | grace { d''8 } e''1 |")]
+    [InlineData("grace { d''8@8va } c''1 | e''1@!8va |", "grace { d''8 } c''1 | e''1 |")]
+    [InlineData("c''1@8va | grace { d''8@!8va } e''1 |", "c''1 | grace { d''8 } e''1 |")]
     public void AnOttavaOnAGrace_IsDrawn_AndNotReported(string written, string control)
     {
         Assert.Empty(Warnings(Book(written)));

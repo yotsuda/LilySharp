@@ -27,7 +27,7 @@ namespace LilySharp.Tests;
 
 /// <summary>
 /// A span is closed by the name it was opened with (owner's decision 2026-10-28, LYS4032):
-/// <c>@8va … @!8va</c>, <c>@rit … @!rit</c>, <c>@ottava(bassa) … @!ottava</c>; a mismatch is an
+/// <c>@8va … @!8va</c>, <c>@rit … @!rit</c>, <c>@8vb … @!8vb</c>; a mismatch is an
 /// error whose quick fix writes the start's name.
 /// </summary>
 [Trait("Category", "Unit")]
@@ -41,9 +41,8 @@ public class SpanEndNameTests
 
     [Theory]
     [InlineData("c''4@8va d'' e'' f''@!8va | g'1 |")]
-    [InlineData("c''4@ottava d'' e'' f''@!ottava | g'1 |")]
-    [InlineData("c4@ottava(bassa) d e f@!ottava | g'1 |")]
-    [InlineData("c''4@quindicesima d'' e'' f''@!quindicesima | g'1 |")]
+    [InlineData("c4@8vb d e f@!8vb | g'1 |")]
+    [InlineData("c''4@15ma d'' e'' f''@!15ma | g'1 |")]
     [InlineData("c'4@rit d' e' f'@!rit | g'1 |")]
     [InlineData("c'4@textSpan(\"poco rit.\") d' e' f'@!textSpan | g'1 |")]
     [InlineData("c''4@8va d''@15ma e'' f''@!15ma | g'1 |")]   // a change: the end closes the last start
@@ -52,7 +51,7 @@ public class SpanEndNameTests
 
     [Theory]
     [InlineData("c''4@8va d'' e'' f''@!15ma | g'1 |", "'@!15ma' closes the '@8va'", "8va")]
-    [InlineData("c''4@quindicesima d'' e'' f''@!ottava | g'1 |", "'@!ottava' closes the '@quindicesima'", "quindicesima")]
+    [InlineData("c''4@15ma d'' e'' f''@!8va | g'1 |", "'@!8va' closes the '@15ma'", "15ma")]
     [InlineData("c'4@rit d' e' f'@!accel | g'1 |", "'@!accel' closes the '@rit'", "rit")]
     [InlineData("c''4@8va d''@15ma e'' f''@!8va | g'1 |", "'@!8va' closes the '@15ma'", "15ma")]
     public void AnotherName_IsAnError_AndTheQuickFixWritesTheOpeningOne(string music, string says, string fixedName)
@@ -86,7 +85,7 @@ public class SpanEndNameTests
     /// <summary>An unclosed span is told to write the end by its own name.</summary>
     [Theory]
     [InlineData("c''4@8va d'' e'' f'' | g'1 |", "'@!8va'")]
-    [InlineData("c''4@quindicesima d'' e'' f'' | g'1 |", "'@!quindicesima'")]
+    [InlineData("c''4@15ma d'' e'' f'' | g'1 |", "'@!15ma'")]
     [InlineData("c'4@accel d' e' f' | g'1 |", "'@!accel'")]
     public void AnUnclosedSpan_IsToldItsOwnEnd(string music, string end)
     {
@@ -114,12 +113,10 @@ public class SpanEndNameTests
         var all = SemanticValidation.Run(SyntaxTree.Parse(Book("c''4@trillSpan d'' e'' f''@!trillSpan | g'1 |")));
         Assert.DoesNotContain(all, d => d.Code == DiagnosticCodes.UnknownAnnotation);
 
+        // LilyPond's two words are unknown, as any retired name is (no word of their own).
         foreach (string old in new[] { "startTrillSpan", "stopTrillSpan" })
-        {
-            var retired = Assert.Single(SemanticValidation.Run(SyntaxTree.Parse(Book($"c''4@{old} d'' e'' f'' | g'1 |"))),
+            Assert.Single(SemanticValidation.Run(SyntaxTree.Parse(Book($"c''4@{old} d'' e'' f'' | g'1 |"))),
                 d => d.Code == DiagnosticCodes.UnknownAnnotation);
-            Assert.Contains("'@trillSpan' … '@!trillSpan'", retired.Message);
-        }
 
         string text = "c''4@trillSpan d'' e''@!";
         Assert.Equal("trillSpan", LilySharpLanguageServer.OpenSpanBefore(text, text.Length));

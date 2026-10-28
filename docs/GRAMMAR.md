@@ -2742,14 +2742,14 @@ TwoDigitFret   = Digit , Digit ;                                 (* 10-15 *)
    - Feathered beam: c16@feather(right) … (accel) / @feather(left) (rit)
    - Spanners:       @textSpan("poco rit.") … @!textSpan   [sugar: @rit @accel @rall,
                      each ended by @!rit / @!accel / @!rall — an end is REQUIRED]
-                     @ottava(…) … @!ottava, @quindicesima(…) … @!quindicesima, @8va … @!8va
-                     [labels: 8va/15ma; @…(bassa) = down; a span is closed by the name it
-                     was opened with, LYS4032 otherwise]
+                     @8va … @!8va, @8vb … @!8vb, @15ma … @!15ma, @15mb … @!15mb
+                     [the label the page prints; a span is closed by the name it was
+                      opened with, LYS4032 otherwise; @ottava / @quindicesima are retired]
                      (* an end is REQUIRED here too; '@loco' is retired — it named a
                         mark nothing printed, and LilyPond has no such command either *)
                      @trillSpan … @!trillSpan ,
                      [an ottava's and a trill's end stands on the LAST note the line
-                      covers: c4@ottava d e f@!ottava moves f too]
+                      covers: c4@8va d e f@!8va moves f too]
                      @sustain … @!sustain , @sostenuto … @!sostenuto ,
                      @unaCorda … @!unaCorda   [@treCorde = @!unaCorda, the printed word]
                      (* a pedal CHANGE is the start again while the pedal is down:
@@ -2796,7 +2796,7 @@ Grace          = ( 'grace' | 'acciaccatura' | 'appoggiatura' | 'afterGrace' ) , 
                     engage or release '@sustain' '@!sustain' (and the sostenuto and una
                     corda), bound and supported by the grace column (session 922), and a
                     trill spanner's '@trillSpan' '@!trillSpan' (session 924), and an
-                    ottava's '@ottava' '@!ottava' (session 925: a stop on a grace ends the
+                    ottava's '@8va' '@!8va' (session 925: a stop on a grace ends the
                     span before it), and a phrasing slur's '@phrasingSlur'
                     '@!phrasingSlur' (session 926), and a '@courtesy' accidental in
                     parentheses (session 927), and an '@editorial' accidental above

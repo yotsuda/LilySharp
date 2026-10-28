@@ -1,4 +1,4 @@
-﻿// Lily# - Music notation compiler
+// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -42,15 +42,18 @@ public class OttavaBracketTests
     [Fact]
     public void MusicMarkType_ParsesOttavaNames()
     {
-        Assert.Equal(MusicMarkType.OttavaUp, MusicMarkItem.ParseMarkName("ottava"));
-        Assert.Equal(MusicMarkType.OttavaDown, MusicMarkItem.ParseMarkName("ottava.bassa"));
-        Assert.Equal(MusicMarkType.QuindicesUp, MusicMarkItem.ParseMarkName("quindicesima"));
-        Assert.Equal(MusicMarkType.QuindicesDown, MusicMarkItem.ParseMarkName("quindicesima.bassa"));
+        Assert.Equal(MusicMarkType.OttavaUp, MusicMarkItem.ParseMarkName("8va"));
+        Assert.Equal(MusicMarkType.OttavaDown, MusicMarkItem.ParseMarkName("8vb"));
+        Assert.Equal(MusicMarkType.QuindicesUp, MusicMarkItem.ParseMarkName("15ma"));
+        Assert.Equal(MusicMarkType.QuindicesDown, MusicMarkItem.ParseMarkName("15mb"));
+        // The Italian words are retired (owner's decision 2026-10-28: one spelling, the label).
+        Assert.Null(MusicMarkItem.ParseMarkName("ottava"));
+        Assert.Null(MusicMarkItem.ParseMarkName("quindicesima.bassa"));
         // 'loco' is retired: it named a mark nothing printed, and LilyPond has no such
-        // command either (session 289). The ottava now ends with '@!ottava'.
+        // command either (session 289). The ottava now ends with '@!8va'.
         Assert.Null(MusicMarkItem.ParseMarkName("loco"));
-        Assert.Equal(MusicMarkType.OttavaStop, MusicMarkItem.ParseSpanEndName("ottava"));
-        Assert.Equal(MusicMarkType.OttavaStop, MusicMarkItem.ParseSpanEndName("quindicesima"));
+        Assert.Equal(MusicMarkType.OttavaStop, MusicMarkItem.ParseSpanEndName("8va"));
+        Assert.Equal(MusicMarkType.OttavaStop, MusicMarkItem.ParseSpanEndName("15mb"));
     }
 
     [Fact]
@@ -137,7 +140,7 @@ public class OttavaBracketTests
         // The defect sessions 288 fixed in the text spanner and in the hairpin, which nobody
         // looked for HERE: the old walk took "the next ottava mark on the same staff" with no
         // test for a shared SourcePosition, so a form that repeats a section had the second
-        // PLAYING of one written @ottava terminate its first. Pairing in played order cannot
+        // PLAYING of one written @8va terminate its first. Pairing in played order cannot
         // make that mistake — playing 1's @! is reached before playing 2's start — so the
         // defect is closed without a rule against it.
         var musicMarks = ImmutableArray.Create(
@@ -171,7 +174,7 @@ public class OttavaBracketTests
     public void DetectOttavaBrackets_OneStopClosesEitherStart()
     {
         // ONE STOP FOR THE FAMILY, as in LilyPond: `\ottava #0` cancels whatever octavation
-        // runs, so '@!ottava' closes a quindicesima too. The bracket's TYPE comes from its
+        // runs, so '@!8va' closes a quindicesima too. The bracket's TYPE comes from its
         // start, which is the only place it is written.
         var musicMarks = ImmutableArray.Create(
             new MusicMarkItem(MusicMarkType.QuindicesDown, 0, 0),

@@ -1202,10 +1202,10 @@ way (`grace { d16@breath r16 e16 } f4`), and in an `afterGrace` too (`c2 afterGr
 Before a grace spacer it stands the same way. One written on a chord's member is not drawn yet
 (LYS4020 names it, and every other mark still dropped).
 A trill spanner can start or stop on a grace note (`grace { d16@trillSpan } e4 f@!trillSpan g`),
-and so can an ottava (`grace { d''16@ottava } e''4 f''@!ottava g'`). ⚠️ An `@!ottava` written ON a
+and so can an ottava (`grace { d''16@8va } e''4 f''@!8va g'`). ⚠️ An `@!8va` written ON a
 grace still ends the span before that grace (it keeps its written octave): a grace takes no time on
 the bar's clock, so the end cannot fall between it and the note it leans on. An end on the note
-BEFORE a grace (`e''4@!ottava grace { f'16 } g'4`) leaves the grace outside the line.
+BEFORE a grace (`e''4@!8va grace { f'16 } g'4`) leaves the grace outside the line.
 A phrasing slur can start, stop or close on grace notes too (`grace { d16@phrasingSlur } e4 f
 g@!phrasingSlur`, `grace { d16@phrasingSlur e16@!phrasingSlur } f4`), and a courtesy accidental is
 drawn in parentheses on a grace note (`grace { fis16@courtesy } g4` — LilyPond's `fis?16`), and an
@@ -2217,27 +2217,28 @@ not carry from one voice into another.
 ### Ottava Brackets
 
 Like a text spanner, an ottava **must be closed** — an unclosed one draws no bracket at
-all, and the notes under it are not transposed, and it says so (LYS4018). It is closed by the
-name it was opened with (LYS4032 otherwise): `@!ottava` after `@ottava` or `@ottava(bassa)`,
-`@!quindicesima` after `@quindicesima`, `@!8va` after `@8va` — the printed spellings `@8va`,
-`@8vb`, `@15ma`, `@15mb` are the same four brackets. A new start while one is open changes the
-octavation, and the end then closes the last one.
+all, and the notes under it are not transposed, and it says so (LYS4018). The four lines are written
+by the label they print — `@8va` (an octave higher), `@8vb` (an octave lower), `@15ma`, `@15mb`
+(two octaves) — and each is closed by the name it was opened with (LYS4032 otherwise): `@8va` …
+`@!8va`. A new start while one is open changes the octavation, and the end then closes the last one.
+(The Italian words `@ottava` / `@quindicesima` and their `(bassa)` forms were retired on
+2026-10-28: one spelling, the one the page prints.)
 
 The end is written on the **last note under the line** (owner's decision 2026-10-28): in
-`c4@ottava d e f@!ottava` all four notes are moved, and the bracket stops just after f. An end on
+`c4@8va d e f@!8va` all four notes are moved, and the bracket stops just after f. An end on
 a bar's last note keeps the whole bar under the line. (LilyPond writes `\ottava #0` before the next
 note instead; the LilyPond export does that.)
 
 ```
-c4@ottava d e f@!ottava |            // 8va bracket
-c4@ottava(bassa) d e f@!ottava |     // 8vb
-c4@quindicesima d e f@!quindicesima |  // 15ma
-c4@8vb d e f@!8vb |                  // the printed spelling
+c4@8va d e f@!8va |                  // an octave higher
+c4@8vb d e f@!8vb |                  // an octave lower
+c4@15ma d e f@!15ma |                // two octaves higher
+c4@15mb d e f@!15mb |                // two octaves lower
 ```
 
 ⚠️ `@loco` is **retired**. It named a mark that printed nothing — writing it only moved
 where the bracket stopped — and LilyPond has no `loco` command either (the word is in
-its glossary and nowhere else). Write the end, `@!ottava` (or the name the line opened with).
+its glossary and nowhere else). Write the end, `@!8va` (the name the line opened with).
 
 ### Pedal Markings
 

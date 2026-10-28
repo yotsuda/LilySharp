@@ -131,7 +131,7 @@ public class VocabularyPerturbationTests
     /// <remarks>
     /// Every span is closed by the name it was opened with (owner's decision 2026-10-28,
     /// LYS4032) — <c>@!rit</c>, <c>@!sustain</c>, <c>@!15ma</c>; a start with an argument by its
-    /// word, <c>@ottava(bassa) … @!ottava</c>. Until then the ottava family took <c>@!ottava</c>
+    /// word, <c>@8vb … @!8vb</c>. Until then the ottava family took <c>@!8vb</c>
     /// whatever spelling opened it, and this table said so.
     /// </remarks>
     private static string SpanEnd(string name) => name switch
@@ -140,8 +140,8 @@ public class VocabularyPerturbationTests
         "8va" or "8vb" or "15ma" or "15mb" => "@!" + name,
         "sustain" or "sostenuto" or "unaCorda" => "@!" + name,
         "phrasingSlur" => "@!" + name,
-        "ottava" or "ottava(bassa)" => "@!ottava",
-        "quindicesima" or "quindicesima(bassa)" => "@!quindicesima",
+        "ottava" or "ottava(bassa)" => "@!8vb",
+        "quindicesima" or "quindicesima(bassa)" => "@!8vb",
         _ => "",
     };
 

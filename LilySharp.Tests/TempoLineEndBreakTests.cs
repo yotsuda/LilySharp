@@ -82,7 +82,7 @@ public sealed class TempoLineEndBreakTests
             tempo "Più mosso" 4. = 76
             c'''8(@mf@cresc d''' ees''' f'''4 g'''8) | aes'''8( g''' f''' ees'''4.)@f |
             tuplet 2/3 { d'''8@decresc( ees''') } c'''4.@p | b''4.( g''4.) |
-            c''''8@ottava( b''' aes''' g'''4 f'''8) | ees'''8( d''' c'''@!ottava b''4.) |
+            c''''8@8va( b''' aes''' g'''4 f'''8) | ees'''8( d''' c'''@!8va b''4.) |
             tuplet 3/2 { c'''16 d''' ees''' } tuplet 3/2 { f'''16 g''' aes''' } b'''8 c''''4.@fermata |
             <g'' c''' ees'''>2.@arpeggio@pp |
           }

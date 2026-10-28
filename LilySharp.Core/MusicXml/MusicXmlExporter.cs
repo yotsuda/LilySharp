@@ -5628,23 +5628,23 @@ public sealed class MusicXmlExporter
             case "treCorde":
                 AddDirection(new MusicXmlDirection { Words = "tre corde", Placement = "below" });
                 break;
-            case "ottava":
+            case "8va":
                 // 8va above: MusicXML octave-shift "down" (written an octave
                 // below the sounding pitch).
                 _octaveShiftSize = 8;
                 AddDirection(new MusicXmlDirection { OctaveShiftType = "down" });
                 break;
-            case "ottava.bassa":
+            case "8vb":
                 _octaveShiftSize = 8;
                 AddDirection(new MusicXmlDirection { OctaveShiftType = "up", Placement = "below" });
                 break;
             // The quindicesima (2026-09-29, 第662 ⑴): the same line two octaves wide — size 15,
             // on its stop too.
-            case "quindicesima":
+            case "15ma":
                 _octaveShiftSize = 15;
                 AddDirection(new MusicXmlDirection { OctaveShiftType = "down", OctaveShiftSize = 15 });
                 break;
-            case "quindicesima.bassa":
+            case "15mb":
                 _octaveShiftSize = 15;
                 AddDirection(new MusicXmlDirection { OctaveShiftType = "up", OctaveShiftSize = 15, Placement = "below" });
                 break;

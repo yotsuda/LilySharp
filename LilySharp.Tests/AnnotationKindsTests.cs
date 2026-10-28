@@ -37,7 +37,7 @@ public sealed class AnnotationKindsTests
     private const string EverySpelling = """
         melody {
           c4@staccato d4@accent e4@finger(1) f4@figuredBass(6 4) |
-          <c e g>4@chord g4@text("dolce") a4@ottava.bassa b4@rit |
+          <c e g>4@chord g4@text("dolce") a4@8va.bassa b4@rit |
           c'4@!rit << c e g >>@chord r4 |
         }
         """;

@@ -1593,7 +1593,7 @@ public class StepRequestTests
         Assert.Equal(Plain("c''4@15ma d'' e'' f''@!15ma | g'1 |"), same);
         Assert.Equal("15ma / 8va / 8vb / 15mb", top.Message);
         // An end already named otherwise is left as written (LYS4032 says so).
-        Assert.Equal(Plain("c''4@15ma d'' e'' f''@!ottava | g'1 |"), Step(Plain("c''4@8‸va d'' e'' f''@!ottava | g'1 |"), +1, semitone: true).After);
+        Assert.Equal(Plain("c''4@15ma d'' e'' f''@!8vb | g'1 |"), Step(Plain("c''4@8‸va d'' e'' f''@!8vb | g'1 |"), +1, semitone: true).After);
     }
 
     /// <summary>The tempo words step slowest to fastest — rall, rit, accel — stopping at the ends,
@@ -1611,21 +1611,11 @@ public class StepRequestTests
     }
 
     /// <summary>Groups whose order means little, so a related mark is a key away (owner's request
-    /// 2026-10-28): the ottava's words with the argument form among them, the end renamed to the
-    /// new word; the pedals, their end following; the bracketed accidentals, the half ties, the
+    /// 2026-10-28): the pedals, their end following; the bracketed accidentals, the half ties, the
     /// harmonic circles, the arpeggio and its bracket.</summary>
     [Fact]
     public void RelatedMarks_StepEvenWhereTheOrderMeansLittle()
     {
-        Assert.Equal(Plain("c''4@quindicesima d'' e'' f''@!quindicesima | g'1 |"),
-            Step(Plain("c''4@otta‸va d'' e'' f''@!ottava | g'1 |"), +1, semitone: true).After);
-        Assert.Equal(Plain("c4@ottava(bassa) d e f@!ottava | g'1 |"),
-            Step(Plain("c4@otta‸va d e f@!ottava | g'1 |"), -1, semitone: true).After);
-        Assert.Equal(Plain("c4@quindicesima(bassa) d e f@!quindicesima | g'1 |"),
-            Step(Plain("c4@otta‸va(bassa) d e f@!ottava | g'1 |"), -1, semitone: true).After);
-        Assert.Equal(Plain("c4@ottava d e f@!ottava | g'1 |"),
-            Step(Plain("c4@ottava(bas‸sa) d e f@!ottava | g'1 |"), +1, semitone: true).After);
-
         Assert.Equal(Plain("c'4@sostenuto d' e' f'@!sostenuto | g'1 |"),
             Step(Plain("c'4@sus‸tain d' e' f'@!sustain | g'1 |"), -1, semitone: true).After);
         Assert.Equal(Plain("c'4@unaCorda d' e' f'@!unaCorda | g'1 |"),
@@ -1680,7 +1670,7 @@ public class StepRequestTests
     [InlineData("c'4 d' e' f'@ri‸t | g'2 a' | b'1 |", +1, "c'4 d' e' f'@accel | g'2 a'@!accel | b'1 |")]
     [InlineData("c'4@ra‸ll d' e' f'@fermata | g'1 |", +1, "c'4@rit d' e' f'@fermata@!rit | g'1 |")]
     [InlineData("c''4@8‸va d'' e'' f'' | g'1 |", +1, "c''4@15ma d'' e'' f''@!15ma | g'1 |")]
-    [InlineData("c4@otta‸va d e f | g1 |", -1, "c4@ottava(bassa) d e f@!ottava | g1 |")]
+    [InlineData("c4@8‸va d e f | g1 |", -1, "c4@8vb d e f@!8vb | g1 |")]
     [InlineData("c'4@sus‸tain d' e' f' | g'1 |", -1, "c'4@sostenuto d' e' f'@!sostenuto | g'1 |")]
     // Already closed: by its end (renamed with it), a later start of its family (an ottava's change).
     [InlineData("c'4@ri‸t d' | e' f'@!rit g'2 |", +1, "c'4@accel d' | e' f'@!accel g'2 |")]
@@ -1705,7 +1695,7 @@ public class StepRequestTests
     [InlineData("c'4@accel d' e' f'@!acc‸el | g'1 |", -1, "c'4@rit d' e' f'@!rit | g'1 |")]
     [InlineData("c'4@rit d' e' f'@!r‸it | g'1 |", +1, "c'4@accel d' e' f'@!accel | g'1 |")]
     [InlineData("c''4@8va d'' e'' f''@!8‸va | g'1 |", +1, "c''4@15ma d'' e'' f''@!15ma | g'1 |")]
-    [InlineData("c4@ottava(bassa) d e f@!otta‸va | g'1 |", -1, "c4@quindicesima(bassa) d e f@!quindicesima | g'1 |")]
+    [InlineData("c4@8vb d e f@!8‸vb | g'1 |", -1, "c4@15mb d e f@!15mb | g'1 |")]
     [InlineData("c'4@sustain d' e' f'@!sus‸tain | g'1 |", -1, "c'4@sostenuto d' e' f'@!sostenuto | g'1 |")]
     [InlineData("c'4@cresc d' e' f'@!cre‸sc | g'1 |", -1, "c'4@decresc d' e' f'@!decresc | g'1 |")]
     [InlineData("c''4@trillSpan d'' e''@!trill‸Span f'' |", -1, "c''4@trill d'' e'' f'' |")]

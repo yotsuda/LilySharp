@@ -358,8 +358,8 @@ public class SectionCarryTests
     {
         const string src = """
             part vn {
-              section C { c'''4@rit d e f@ottava | g4@sustain a b@trillSpan c || }
-              section D { c'''4@!rit d@!ottava e@!sustain f@!trillSpan | }
+              section C { c'''4@rit d e f@8va | g4@sustain a b@trillSpan c || }
+              section D { c'''4@!rit d@!8va e@!sustain f@!trillSpan | }
             }
             form { C D }
             score { staff vn }
@@ -386,9 +386,9 @@ public class SectionCarryTests
     {
         const string src = """
             part vn {
-              section C { c'''4@rit d e f@ottava || }
+              section C { c'''4@rit d e f@8va || }
               section D { g4@sustain a b c@trillSpan || }
-              section E { c'4@!rit d@!ottava e@!sustain f@!trillSpan | }
+              section E { c'4@!rit d@!8va e@!sustain f@!trillSpan | }
             }
             form { C D E }
             score { staff vn }
@@ -399,7 +399,7 @@ public class SectionCarryTests
         Assert.Contains(carry, d => d.Message.StartsWith("a text spanner (@rit / @accel / @textSpan) is carried from section C "
             + "into section D, which follows it in the form, and is not closed there, so it is cut at the end of section C; "
             + "close it with '@!rit' in section D"));
-        Assert.Contains(carry, d => d.Message.StartsWith("an ottava (@ottava / @quindicesima) is carried from section C into section D"));
+        Assert.Contains(carry, d => d.Message.StartsWith("an ottava (@8va / @8vb / @15ma / @15mb) is carried from section C into section D"));
         var score = Collect(src);
         var plays = SectionPlays.For(score);
         var rit = Assert.Single(TextSpannerEngraver.DetectTextSpanners(score.MusicMarks, plays));
@@ -410,7 +410,7 @@ public class SectionCarryTests
         Assert.Single(PedalEngraver.DetectPedalBrackets(score.MusicMarks, plays), p => (p.StartMeasureIndex, p.EndMeasureIndex) == (1, 2));
         Assert.Single(score.TrillSpanners, t => (t.StartMeasureIndex, t.EndMeasureIndex) == (1, 2));
         // The notes of D are written at pitch: the cut bracket transposes nothing past C.
-        var plain = Collect(src.Replace("@ottava", "").Replace("@!ottava", ""));
+        var plain = Collect(src.Replace("@8va", "").Replace("@!8va", ""));
         Assert.Equal(Notes(plain)[4].StaffPosition, Notes(score)[4].StaffPosition);
         Assert.NotEqual(Notes(plain)[3].StaffPosition, Notes(score)[3].StaffPosition);   // C's f, under the 8va
     }
@@ -448,7 +448,7 @@ public class SectionCarryTests
         const string src = """
             part vn {
               section C { c'''4 d e f || }
-              section D { g4@!rit a b c@!ottava | }
+              section D { g4@!rit a b c@!8va | }
             }
             form { C D }
             score { staff vn }
@@ -458,7 +458,7 @@ public class SectionCarryTests
         Assert.Equal(2, carry.Count);
         Assert.Contains(carry, d => d.Message.StartsWith("this '@!rit' closes nothing: no text spanner is open, "
             + "and section C, played before section D in the form, carries none into it, so nothing is drawn for it"));
-        Assert.Contains(carry, d => d.Message.StartsWith("this '@!ottava' closes nothing: no ottava is open"));
+        Assert.Contains(carry, d => d.Message.StartsWith("this '@!8va' closes nothing: no ottava is open"));
         Assert.DoesNotContain(diagnostics, d => d.Code == DiagnosticCodes.UnpairedSpan);
         // Played first, the same stops are the families' own unpaired stops.
         var first = Check(src.Replace("form { C D }", "form { D C }"));

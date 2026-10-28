@@ -200,24 +200,6 @@ public class AnnotationNameValidatorTests
         Assert.Contains("Did you mean '@glissando'?", warning.Message);
     }
 
-    /// <summary>An ottava with an argument the family does not take is told the four
-    /// spellings — '@ottava(8va)' got nothing and '@ottava(1)' a guess ("Did you mean
-    /// '@ottava'?") until 2026-10-03 (session 762's piano book, HANDOFF ⑼ ⒠).</summary>
-    [Theory]
-    [InlineData("c4@ottava(8va) d e f@!ottava |")]
-    [InlineData("c4@ottava(1) d e f@!ottava |")]
-    [InlineData("c4@quindicesima(15ma) d e f@!ottava |")]
-    public void AnOttavaWithAnArgumentItDoesNotTake_IsToldTheSpellings(string music)
-    {
-        var warning = Assert.Single(Validate(music), d => d.Code == DiagnosticCodes.UnknownAnnotation);
-        Assert.Contains("An ottava is written '@ottava' (8va), '@ottava(bassa)' (8vb), '@quindicesima' (15ma) "
-                        + "or '@quindicesima(bassa)' (15mb), and closed by the name it opened with ('@!ottava', '@!quindicesima').", warning.Message);
-        Assert.DoesNotContain("Did you mean", warning.Message);
-        // The case-only slip keeps its own, more exact hint.
-        Assert.Contains("write '@ottava(bassa)'",
-            Assert.Single(Validate("c4@ottava(BASSA) d e f@!ottava |"), d => d.Code == DiagnosticCodes.UnknownAnnotation).Message);
-    }
-
     /// <summary>
     /// A suggestion the reader cannot type is worse than no suggestion. A
     /// compound annotation is keyed internally as one dotted string
@@ -365,7 +347,7 @@ public class AnnotationNameValidatorTests
     [InlineData("c4@segno d@coda e@fine f |")]
     [InlineData("c4@mark(\"A\") d@mark(\"12\") e f |")]
     [InlineData("c4@rit d@accel e@cresc f@dim |")]
-    [InlineData("c4@ottava d@ottava(bassa) e@!ottava f |")]
+    [InlineData("c4@8va d@8vb e@!8vb f |")]
     [InlineData("c4@sustain d@!sustain e@sostenuto f@treCorde |")]
     [InlineData("c4@!sostenuto d@unaCorda e f |")]
     [InlineData("c4@ds(al fine) d e f |")]

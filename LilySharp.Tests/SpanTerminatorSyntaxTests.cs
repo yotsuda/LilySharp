@@ -1,4 +1,4 @@
-﻿// Lily# - Music notation compiler
+// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -112,8 +112,8 @@ public class SpanTerminatorSyntaxTests
     }
 
     /// <summary>
-    /// ONE STOP PER FAMILY, whichever of the family's words was written: '@!quindicesima'
-    /// and '@!ottava' are the same mark, as '\ottava #0' cancels whatever octavation runs,
+    /// ONE STOP PER FAMILY, whichever of the family's words was written: '@!8va'
+    /// and '@!8va' are the same mark, as '\ottava #0' cancels whatever octavation runs,
     /// and '@!rit' and '@!textSpan' are the same mark for the same reason on their side.
     /// </summary>
     [Theory]
@@ -121,9 +121,9 @@ public class SpanTerminatorSyntaxTests
     [InlineData("accel", MusicMarkType.TextSpanStop)]
     [InlineData("rall", MusicMarkType.TextSpanStop)]
     [InlineData("textSpan", MusicMarkType.TextSpanStop)]
-    [InlineData("ottava", MusicMarkType.OttavaStop)]
-    [InlineData("ottava.bassa", MusicMarkType.OttavaStop)]
-    [InlineData("quindicesima", MusicMarkType.OttavaStop)]
+    [InlineData("8va", MusicMarkType.OttavaStop)]
+    [InlineData("8vb", MusicMarkType.OttavaStop)]
+    [InlineData("15ma", MusicMarkType.OttavaStop)]
     [InlineData("15mb", MusicMarkType.OttavaStop)]
     [InlineData("sustain", MusicMarkType.SustainOff)]
     [InlineData("sostenuto", MusicMarkType.SostenutoOff)]

@@ -781,7 +781,7 @@ public static class SectionSplitter
             ["cresc"] = "hairpin", ["decresc"] = "hairpin", ["dim"] = "hairpin",
             ["textSpan"] = "text spanner", ["rit"] = "text spanner", ["accel"] = "text spanner",
             ["rall"] = "text spanner",
-            ["ottava"] = "ottava", ["quindicesima"] = "ottava",
+            ["8va"] = "ottava", ["8vb"] = "ottava", ["15ma"] = "ottava", ["15mb"] = "ottava",
             ["trillSpan"] = "trill span",
             ["sustain"] = "sustain pedal", ["sostenuto"] = "sostenuto pedal",
             ["unaCorda"] = "una corda pedal", ["treCorde"] = "una corda pedal",

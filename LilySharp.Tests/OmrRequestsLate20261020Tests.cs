@@ -60,7 +60,7 @@ public class OmrRequestsLate20261020Tests
     public void Item3_PastAnOttava_TheSamePitchOnAnotherLine_PrintsItsAccidental()
     {
         var (score, _) = Render(OttavaBook(
-            "fis,,,16@ottava(bassa) ges,,,16 c,,,16 c,,,16@!ottava ges,,,8 r8 r2"));
+            "fis,,,16@8vb ges,,,16 c,,,16 c,,,16@!8vb ges,,,8 r8 r2"));
         var items = score.StaffGroups[0].Staves[0].PrimaryVoice.Measures[0].Items.OfType<NoteItem>().ToList();
         Assert.Equal("flat", items[1].Accidental);   // under the line, on G2
         Assert.Equal("flat", items[4].Accidental);   // past it, on G1
@@ -73,7 +73,7 @@ public class OmrRequestsLate20261020Tests
     public void Item3_PastAnOttava_ThePitchTheKeyGives_PrintsNothing()
     {
         var (score, _) = Render(OttavaBook(
-            "fis,,,16@ottava(bassa) c,,,16 c,,,16 c,,,16@!ottava fis,,,8 r8 r2"));
+            "fis,,,16@8vb c,,,16 c,,,16 c,,,16@!8vb fis,,,8 r8 r2"));
         var items = score.StaffGroups[0].Staves[0].PrimaryVoice.Measures[0].Items.OfType<NoteItem>().ToList();
         Assert.Null(items[4].Accidental);
     }

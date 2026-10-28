@@ -1,6 +1,6 @@
 // Ottava per staff on a grand staff, exercising BOTH directions: the top staff
 // runs an 8va (bracket ABOVE its staff, notes drawn an octave lower), the lower
-// staff an 8vb (@ottava(bassa) → bracket BELOW its staff, notes drawn an octave
+// staff an 8vb (@8vb → bracket BELOW its staff, notes drawn an octave
 // higher). Each terminates at the loco on ITS OWN staff, and each bracket stacks
 // over/under its own staff — the two staves no longer share one score.MusicMarks
 // table. The same written pitch shows transposed in measure 1 (8va/8vb) and at
@@ -12,8 +12,8 @@ title "Multi-staff ottava"
 part top { clef treble }
 part low { clef bass }
 section S {
-  top { c''''4@ottava c''''4 c''''4 c''''4@!ottava | c''''4 c''''4 c''''4 c''''4 | }
-  low { c4@ottava(bassa) c4 c4 c4@!ottava | c4 c4 c4 c4 | }
+  top { c''''4@8va c''''4 c''''4 c''''4@!8va | c''''4 c''''4 c''''4 c''''4 | }
+  low { c4@8vb c4 c4 c4@!8vb | c4 c4 c4 c4 | }
 }
 form { S }
 score { staff top staff low }

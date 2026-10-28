@@ -14,15 +14,16 @@ All notable changes to the Lily# VS Code extension are documented here.
   `@!rit` that ends it changes with it.
 - **Ctrl+Shift+Up / Down on `@8va` steps it** through `@15mb` `@8vb` `@8va` `@15ma`, and the `@!8va`
   that closes it changes with it.
-- **An ottava's and a trill's `@!` goes on the last note the line covers** — `c4@ottava d e f@!ottava`
+- **An ottava's and a trill's `@!` goes on the last note the line covers** — `c4@8va d e f@!8va`
   moves f too, `c4@trillSpan d e@!trillSpan f` trills c, d, e. It went on the next note before.
+- **An ottava is written by its label only** — `@8va` `@8vb` `@15ma` `@15mb`; `@ottava`, `@ottava(bassa)`,
+  `@quindicesima` are retired (unknown annotations now) and gone from completion.
 - **The trill span is `@trillSpan … @!trillSpan`** (was `@startTrillSpan` / `@stopTrillSpan`):
   `@!` completion offers it, the open one first.
 
 ### Step keys
 
-- **Related marks are a Ctrl+Shift+Up / Down away**, even where the order means little: the ottava's
-  words with `@ottava(bassa)` among them, the pedals (`@unaCorda` `@sostenuto` `@sustain`, the `@!`
+- **Related marks are a Ctrl+Shift+Up / Down away**, even where the order means little: the pedals (`@unaCorda` `@sostenuto` `@sustain`, the `@!`
   end following), `@editorial` / `@courtesy`, `@repeatTie` / `@laissezVibrer`, `@flageolet` /
   `@harmonic`, `@arpeggio` / `@arpeggio(bracket)`, and the accent dynamics (`@fp` … `@sffz`).
 - **An argument from a list steps**: `@notehead(x)` → `@notehead(cross)` …, `@finger(3)` → `@finger(4)`,

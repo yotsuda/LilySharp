@@ -9,13 +9,18 @@ workflow attaches that section to the GitHub Release verbatim.
 ### Span ends — BREAKING
 
 - `[lang]` **A span is closed by the name it was opened with**: `@8va … @!8va`, `@rit … @!rit`,
-  `@quindicesima … @!quindicesima`, `@ottava(bassa) … @!ottava`. Any name of the family used to close
+  `@15mb … @!15mb`. Any name of the family used to close
   any start (`@8va … @!15ma`, `@rit … @!accel`), as LilyPond's one stop does; that is now an error,
   LYS4032, whose quick fix writes the opening name. The drawing is unchanged. An unclosed span is
   told its own end; MusicXML import writes it. Ctrl+Shift+Up / Down on `@8va` steps the printed
   spellings (15mb, 8vb, 8va, 15ma) and renames the `@!8va` that closes it.
-- `[lang]` **An ottava's and a trill's `@!` stands on the LAST note the line covers**: `c4@ottava d e
-  f@!ottava` moves f too and the bracket stops after it; `c4@trillSpan d e@!trillSpan f` trills c, d
+- `[lang]` **An ottava is written by the label it prints, and by nothing else**: `@8va` `@8vb` `@15ma`
+  `@15mb`. The Italian words `@ottava` / `@quindicesima` and their `(bassa)` forms are retired:
+  they are unknown annotations (LYS1008) like any other unknown name, and draw nothing. MusicXML
+  import writes the labels, and MusicXML export now writes an `@8va` line at all (it read only the
+  words). The LilyPond twin still writes `\ottava #n`.
+- `[lang]` **An ottava's and a trill's `@!` stands on the LAST note the line covers**: `c4@8va d e
+  f@!8va` moves f too and the bracket stops after it; `c4@trillSpan d e@!trillSpan f` trills c, d
   and e and the wave stops before f. Until now the end went on the first note OUTSIDE the line, as
   LilyPond's `\ottava #0` and `\stopTrillSpan` do; written that way the line is now a note longer. A
   chain of trills needs no `@!` between them (a new start ends the one running). Text spans,
@@ -27,7 +32,7 @@ workflow attaches that section to the GitHub Release verbatim.
   LilyPond's does (it used to stop at the bar line).
 - `[lang]` **The trill span is `@trillSpan … @!trillSpan`**, opened and closed by one name like every
   other span. LilyPond's `@startTrillSpan` / `@stopTrillSpan` are no longer accepted: they draw
-  nothing and the warning names the new spelling. The LilyPond twin still writes `\startTrillSpan` /
+  nothing, as any unknown annotation (LYS1008). The LilyPond twin still writes `\startTrillSpan` /
   `\stopTrillSpan`.
 
 ### Drawing

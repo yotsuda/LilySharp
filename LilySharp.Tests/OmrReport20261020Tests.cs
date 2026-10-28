@@ -176,8 +176,8 @@ public class OmrReport20261020Tests
         var (score, layout) = Render(
             "title \"ott-tuplet\"\noctave absolute\ntime 4/4\nkey aes major\npart p1 { clef treble }\nsection Piece {\n" +
             "  p1 {\n    c'4 d'4 ees'4 f'4 |\n" +
-            "    fis''4@quindicesima ges''4. aes''8 tuplet 3/2 { g''8 c'''8 bes''8 } | break\n" +
-            "    c'''4 tuplet 3/2 { des'''8 c'8@!ottava bes8 } r4 aes4 |\n    c'1 |\n  }\n}\n" +
+            "    fis''4@15ma ges''4. aes''8 tuplet 3/2 { g''8 c'''8 bes''8 } | break\n" +
+            "    c'''4 tuplet 3/2 { des'''8 c'8@!15ma bes8 } r4 aes4 |\n    c'1 |\n  }\n}\n" +
             "score { staff p1 }\n");
         var bar3 = score.StaffGroups[0].Staves[0].PrimaryVoice.Measures[2].Items;
         var c = Assert.IsType<NoteItem>(bar3[0]);
@@ -216,8 +216,8 @@ public class OmrReport20261020Tests
     {
         var (score, _) = Render(
             "octave absolute\ntime 4/4\nkey a major\npart p1 { clef treble }\nsection Piece {\n" +
-            "  p1 {\n    fis'8@ottava cisis''8 r16 b16@!ottava cis'8 d'2 |\n" +
-            "    d'8@ottava ais'8 b'8 r16 b16@!ottava a8 d'4. |\n    a'1 |\n  }\n}\n" +
+            "  p1 {\n    fis'8@8va cisis''8 r16 b16@!8va cis'8 d'2 |\n" +
+            "    d'8@8va ais'8 b'8 r16 b16@!8va a8 d'4. |\n    a'1 |\n  }\n}\n" +
             "form { ~Piece }\nscore { staff p1 \"Staff\" }\n");
         var measures = score.StaffGroups[0].Staves[0].PrimaryVoice.Measures;
         var cis = Assert.IsType<NoteItem>(measures[0].Items[4]);
@@ -247,8 +247,8 @@ public class OmrReport20261020Tests
             voice { <ais'' cis'''>1. } { ais'4. r16 gis'16 ais'16 <gis' b'>16 ais'8 r4 cis'8 dis'4 e'8 } |
             <ais' cis''>8 gis'8 dis'8 b'8 fis''16 gis''16 fis''8 e''8 <ais' cis'' e''>8 ais'8 r8 gis'16 ais'16 r8 |
             <ais' cis''>16 e'16 r16 fis'16 e'8 dis'8 e'16 fisis'16 gis'8 ais'8 gis'16 fis'16 <gis' b' dis''>8 gis'4. |
-            <disis' fis'>16 fis'16 e'16 cis'16 fis'8 e'4 dis'8 cis''4.@ottava <dis'' fis'' ais''>4. |
-            ais''4 gis''8 <dis''' fis'''>4. <ais' cis'' e''>8.@!ottava b'16 b'8 e''8. dis''16 <cis'' e''>8 |
+            <disis' fis'>16 fis'16 e'16 cis'16 fis'8 e'4 dis'8 cis''4.@8va <dis'' fis'' ais''>4. |
+            ais''4 gis''8 <dis''' fis'''>4. <ais' cis'' e''>8.@!8va b'16 b'8 e''8. dis''16 <cis'' e''>8 |
             dis''8 ais'8 r8 gis'8. dis'16 e'8 dis'16 cis'16 fis'16 <gis' b' dis''>16 ais'8 <b' dis'' fis''>8. ais'16 dis''8 |
             cis''16 bis'16 r16 ais'16 ais'8 <a' cis'' e''>16 <dis' fis' ais'>16 cis'16 dis'16 cis'8 eis'4. dis'8 e'16 b'16 b'8 |
           }
@@ -256,13 +256,13 @@ public class OmrReport20261020Tests
             r8 b,16 ais,16 <b, cis>8 <fis ais>4. e8. <fis gis>16 cis'8 gis4. |
             ais1. |
             dis4. e4. dis8 e16 gis16 gis8 r16 r16 <cis' e'>16 b16 cis'8 |
-            r4. b16 <a cis' e'>16 b16 <e, gis,>16@ottava(bassa) dis,8 dis,8. cis,16 <dis, fis,>8 b,4 cis8 |
-            cis4 <fis, ais,>8 gis,4. <dis, fis,>8 <ais,, b,,>8 b,8@!ottava <b, dis>8 <b, dis fis>16 <cis dis>16 e,8 |
-            fis,,1.@ottava(bassa) |
+            r4. b16 <a cis' e'>16 b16 <e, gis,>16@8vb dis,8 dis,8. cis,16 <dis, fis,>8 b,4 cis8 |
+            cis4 <fis, ais,>8 gis,4. <dis, fis,>8 <ais,, b,,>8 b,8@!8vb <b, dis>8 <b, dis fis>16 <cis dis>16 e,8 |
+            fis,,1.@8vb |
             <fis,, ais,,>4. cis,4 b,,8 <gis, b,>4. ais,4. |
-            <gis, ais,>4. r8 b,,8 gis,,8 fisis,,8. r16 e,8@!ottava e,8 r8 e,8 |
-            b,4. <e, gis,>16 gis,16 <gis, b,>16 fis,16 <e, gis,>8 fis,16 gis,16 r16 cis,16@ottava(bassa) dis,8 <e, gis,>4. |
-            b,,8 r8 cis8@!ottava <b, dis>8 gis,16 ais,16 r8 fisis,4. eis,4 cis8 |
+            <gis, ais,>4. r8 b,,8 gis,,8 fisis,,8. r16 e,8@!8vb e,8 r8 e,8 |
+            b,4. <e, gis,>16 gis,16 <gis, b,>16 fis,16 <e, gis,>8 fis,16 gis,16 r16 cis,16@8vb dis,8 <e, gis,>4. |
+            b,,8 r8 cis8@!8vb <b, dis>8 gis,16 ais,16 r8 fisis,4. eis,4 cis8 |
           }
         }
 

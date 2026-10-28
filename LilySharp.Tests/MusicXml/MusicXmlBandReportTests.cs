@@ -168,7 +168,7 @@ public class MusicXmlBandReportTests
             time 4/4
             part rh { clef treble }
             part lh { clef bass }
-            section A { rh { c'''4@cresc@ottava d''' e''' f'''@f@!ottava | } lh { c'4@cresc@ottava d' e' f'@f@!ottava | } }
+            section A { rh { c'''4@cresc@8va d''' e''' f'''@f@!8va | } lh { c'4@cresc@8va d' e' f'@f@!8va | } }
             form { ~A }
             score { grandStaff { staff rh "Piano"  staff lh } }
             """);

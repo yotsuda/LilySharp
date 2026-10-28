@@ -5805,11 +5805,11 @@ internal static class LpGeometryProbes
 
     /// <summary>Floor regime: drawn third-space heads, every support term far below 4.05.</summary>
     private static readonly string OTF = OttavaScore("OTF",
-        "c''4@ottava c'' c'' c''@!ottava | c'4 c' c' c' |");
+        "c''4@8va c'' c'' c''@!8va | c'4 c' c' c' |");
 
     /// <summary>Support regime: the same music two octaves up, the column decides.</summary>
     private static readonly string OTC = OttavaScore("OTC",
-        "c'''4@ottava c''' c''' c'''@!ottava | c''4 c'' c'' c'' |");
+        "c'''4@8va c''' c''' c'''@!8va | c''4 c'' c'' c'' |");
 
     /// <summary>
     /// OTC moved to the LOWER staff of a two-staff system — the ottava's face of the guard
@@ -5830,7 +5830,7 @@ internal static class LpGeometryProbes
 
         section Main {
           upper { b'4 b' b' b' | b' b' b' b' | }
-          lower { c''''4@ottava c'''' c'''' c''''@!ottava | c'''4 c''' c''' c''' | }
+          lower { c''''4@8va c'''' c'''' c''''@!8va | c'''4 c''' c''' c''' | }
         }
 
         form { ~Main }
@@ -9082,11 +9082,11 @@ internal static class LpGeometryProbes
     private static readonly string GPHC = GraceTieBook("c4@phrasingSlur e4 grace { f16@!phrasingSlur } g4 a4 |", "GPHC");
     private static readonly string GPHD = GraceTieBook("c4 grace { d16@phrasingSlur e16@!phrasingSlur } f4 g4 a4 |", "GPHD");
     // An ottava starting or stopping on a grace note (audit/lp-geometry/probes/grace-ottava.ly).
-    private static readonly string GOTA = GraceTieBook("c''4 grace { d''16@ottava } e''4 f''4@!ottava g'4 |", "GOTA");
-    private static readonly string GOTB = GraceTieBook("c''4 d''16@ottava e''8. f''4@!ottava g'4 |", "GOTB");
-    private static readonly string GOTC = GraceTieBook("c''4@ottava e''4@!ottava grace { f'16 } g'4 a'4 |", "GOTC");
-    private static readonly string GOTD = GraceTieBook("c''4@ottava e''4@!ottava f'16 g'8. a'4 |", "GOTD");
-    private static readonly string GOTE = GraceTieBook("c4 grace { d''16@ottava } e''4 f''4@!ottava g'4 |", "GOTE");
+    private static readonly string GOTA = GraceTieBook("c''4 grace { d''16@8va } e''4 f''4@!8va g'4 |", "GOTA");
+    private static readonly string GOTB = GraceTieBook("c''4 d''16@8va e''8. f''4@!8va g'4 |", "GOTB");
+    private static readonly string GOTC = GraceTieBook("c''4@8va e''4@!8va grace { f'16 } g'4 a'4 |", "GOTC");
+    private static readonly string GOTD = GraceTieBook("c''4@8va e''4@!8va f'16 g'8. a'4 |", "GOTD");
+    private static readonly string GOTE = GraceTieBook("c4 grace { d''16@8va } e''4 f''4@!8va g'4 |", "GOTE");
     // A trill spanner starting or stopping on a grace note (audit/lp-geometry/probes/grace-trill.ly).
     private static readonly string GTSA = GraceTieBook("c4 grace { d16@trillSpan } e4 f4@!trillSpan g4 |", "GTSA");
     private static readonly string GTSB = GraceTieBook("c4 d16@trillSpan e8. f4@!trillSpan g4 |", "GTSB");

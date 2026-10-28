@@ -563,7 +563,7 @@ public class LilyPondExporterTests
 
     /// <summary>
     /// An ottava is <c>\ottava #n</c> BEFORE the note it starts on — <c>#1</c> for
-    /// <c>@ottava</c>, <c>#-1</c> for <c>@ottava(bassa)</c>, <c>#±2</c> for the quindicesima —
+    /// <c>@8va</c>, <c>#-1</c> for <c>@8vb</c>, <c>#±2</c> for the quindicesima —
     /// and <c>\ottava #0</c> AFTER the terminator's note, the last one under the line (owner's
     /// decision 2026-10-28; until then before it, the first note back at written pitch). Until
     /// 2026-09-23 every one was dropped and the twin drew the 8va at written pitch.
@@ -575,8 +575,8 @@ public class LilyPondExporterTests
     public void Ottavas_AreWrittenBeforeTheirNotes()
     {
         var (ly, warnings) = ExportWithWarnings(Score(
-            "c,4@ottava d,4 e,4 f,4@!ottava | c,4@ottava(bassa) d,4 e,4@!ottava f,4 | "
-            + "c,4@quindicesima d,4@quindicesima(bassa) e,4@!quindicesima f,4"));
+            "c,4@8va d,4 e,4 f,4@!8va | c,4@8vb d,4 e,4@!8vb f,4 | "
+            + "c,4@15ma d,4@15mb e,4@!15mb f,4"));
         Assert.Contains("\\ottava #1 c,4", ly);
         Assert.Contains("f,4 \\ottava #0", ly);
         Assert.Contains("\\ottava #-1 c,4", ly);
@@ -597,8 +597,8 @@ public class LilyPondExporterTests
     [Fact]
     public void AnEndThatIncludesItsNote_TrailsItsSiblings_AndOpensAGraceThatFollows()
     {
-        Assert.Contains("f, ] ) \\ottava #0", Export(Score("c,8[@ottava( d, e, f,@!ottava]) g,2.")));
-        Assert.Contains("\\grace { \\ottava #0 ", Export(Score("c,4@ottava d,4@!ottava grace { e,16 } f,4 g,4")));
+        Assert.Contains("f, ] ) \\ottava #0", Export(Score("c,8[@8va( d, e, f,@!8va]) g,2.")));
+        Assert.Contains("\\grace { \\ottava #0 ", Export(Score("c,4@8va d,4@!8va grace { e,16 } f,4 g,4")));
         Assert.Contains("\\grace { <>\\stopTrillSpan ", Export(Score("c,4@trillSpan d,4@!trillSpan grace { e,16 } f,4 g,4")));
         Assert.Contains("d,4~ <>\\stopTrillSpan", Export(Score("c,4@trillSpan d,4~@!trillSpan d,4 e,4")));
     }
@@ -612,7 +612,7 @@ public class LilyPondExporterTests
     [Fact]
     public void AnOttavaPart_OpensWithTheOrdinalOttavation()
     {
-        string with = Export(Score("c,4@ottava d,4 e,4 f,4@!ottava |"));
+        string with = Export(Score("c,4@8va d,4 e,4 f,4@!8va |"));
         Assert.Equal(1, Occurrences(with, "\\set Staff.ottavationMarkups = #ottavation-simple-ordinals"));
         string without = Export(Score("c,4 d,4 e,4 f,4 |"));
         Assert.DoesNotContain("ottavationMarkups", without);

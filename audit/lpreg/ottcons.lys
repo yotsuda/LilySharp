@@ -1,5 +1,5 @@
 // ottava-consecutive.ly twin — 連続 ottava (間に loco なし) は結合されない。
-// 綴り: LP 絶対 c (C3) = Lily# c,。@ottava 開始→次小節で @ottava(bassa) 直接切替。
+// 綴り: LP 絶対 c (C3) = Lily# c,。@8va 開始→次小節で @8vb 直接切替。
 // ⚠️ 2 小節目の終わりで明示的に閉じる（第289・@! はその音符を含む＝2026-10-28）。主張は「結合されないこと」であって「閉じないとどうなるか」
 // ではない——閉じないままだと Lily# は LYS4018 を出して 2 本目を描かず、LP は最後まで描くので、
 // 双子が*別の問い*で割れて、本来の主張が測れなくなる。**双子の .ly も同じ小節で \ottava 0 する。**
@@ -9,7 +9,7 @@ time 4/4
 part v { }
 
 section Main {
-  v { c1@ottava | c1@ottava(bassa)@!ottava | c1 | }
+  v { c1@8va | c1@8vb@!8vb | c1 | }
 }
 
 form { ~Main }

@@ -83,7 +83,7 @@ public class OutsideStaffFewLineStaffTests
     [InlineData(5, 3.29)]
     public void AnOttavaBracket_SidesOffItsOwnStaff(int lines, double baselineAboveMiddle)
     {
-        var g = Render(lines, "c'''4@ottava d''' e'''@!ottava f''' |");
+        var g = Render(lines, "c'''4@8va d''' e'''@!8va f''' |");
         Assert.InRange(g.TextBaselineAboveStaffLine(TextRole.Ottava, 0, 0) + TopAboveMiddle(lines),
             baselineAboveMiddle - 0.02, baselineAboveMiddle + 0.02);
     }

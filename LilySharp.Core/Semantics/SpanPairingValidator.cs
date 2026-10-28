@@ -1,4 +1,4 @@
-﻿// Lily# - Music notation compiler
+// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -149,7 +149,7 @@ internal sealed class SpanPairingValidator : ISharedCollectValidator
         bool ottava = kind == SpanKind.Ottava;
         string noun = ottava ? "an ottava bracket" : "a text spanner";
         // A span is closed by the name it was opened with (owner's decision 2026-10-28, LYS4032).
-        string ends = opened != null ? $"'@!{opened}'" : ottava ? "'@!ottava'" : "'@!rit'";
+        string ends = opened != null ? $"'@!{opened}'" : ottava ? "'@!8va'" : "'@!rit'";
         return fault switch
         {
             // The two families lose DIFFERENT things, and naming which is the whole use of

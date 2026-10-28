@@ -1,4 +1,4 @@
-﻿// Lily# - Music notation compiler
+// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -169,16 +169,16 @@ public class SpanPairingValidatorTests
     // ---- the ottava, on the same rule ----
 
     [Theory]
-    [InlineData("c'4@ottava c' c' c'@!ottava |")]
-    [InlineData("c'4@quindicesima c' c' c'@!ottava |")]   // one stop for the family
-    [InlineData("c'4@ottava(bassa) c' c' c'@!ottava |")]
+    [InlineData("c'4@8va c' c' c'@!8va |")]
+    [InlineData("c'4@15ma c' c' c'@!15ma |")]   // one stop for the family
+    [InlineData("c'4@8vb c' c' c'@!8vb |")]
     public void APairedOttava_NoWarning(string music) =>
         Assert.Equal(0, ReportCount(music));
 
     [Fact]
     public void AnUnterminatedOttava_IsReported()
     {
-        var warning = Assert.Single(Reports("c'4@ottava c' c' c' |"));
+        var warning = Assert.Single(Reports("c'4@8va c' c' c' |"));
         Assert.Contains("never closed", warning.Message);
         // The ottava loses the TRANSPOSITION with its bracket, and the message says so —
         // that is the half a reader cannot see by looking at the page.
@@ -188,7 +188,7 @@ public class SpanPairingValidatorTests
     [Fact]
     public void AnOttavaTerminatorWithNothingOpen_IsReported()
     {
-        var warning = Assert.Single(Reports("c'4@!ottava c' c' c' |"));
+        var warning = Assert.Single(Reports("c'4@!8va c' c' c' |"));
         Assert.Contains("closes nothing", warning.Message);
         // ...and it reads as English: the article belongs to the family's noun, not glued on.
         Assert.Contains("no ottava bracket is open", warning.Message);
@@ -202,7 +202,7 @@ public class SpanPairingValidatorTests
     [Fact]
     public void ConsecutiveOttavas_AreNotAFault() =>
         Assert.Equal(0, ReportCount(
-            "c'4@ottava c' | c'@ottava(bassa) c' | c'@!ottava c' |"));
+            "c'4@8va c' | c'@8vb c' | c'@!8vb c' |"));
 
     // ---- the pedal: the two faults it has, and the one it does NOT ----
 
@@ -276,7 +276,7 @@ public class SpanPairingValidatorTests
         Assert.Equal(DiagnosticSeverity.Error,
             Assert.Single(Reports("c'4@rit c' c' c' |")).Severity);
         Assert.Equal(DiagnosticSeverity.Error,
-            Assert.Single(Reports("c'4@ottava c' c' c' |")).Severity);
+            Assert.Single(Reports("c'4@8va c' c' c' |")).Severity);
         Assert.Equal(DiagnosticSeverity.Warning,
             Assert.Single(Reports("c'4@!rit c' c' c' |")).Severity);
         Assert.Equal(DiagnosticSeverity.Warning,

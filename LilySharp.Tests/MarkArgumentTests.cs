@@ -64,7 +64,6 @@ public class MarkArgumentTests
     [Theory]
     [InlineData("c4@notehead(triangle) |", "triangle")]
     [InlineData("c4@feather(right) |", "right")]
-    [InlineData("c4@ottava(bassa) |", "bassa")]
     public void AnIdentifierArgument_IsASymbol(string music, string name)
     {
         var argument = Assert.Single(Mark(music).Arguments);

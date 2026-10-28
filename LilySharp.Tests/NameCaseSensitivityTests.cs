@@ -44,8 +44,8 @@ public class NameCaseSensitivityTests
     // Annotation names — the canonical list
     // ================================================================================
 
-    /// <summary>The '@' completion labels, each cut to its NAME (<c>ottava(bassa)</c> →
-    /// <c>ottava</c>): the canonical spellings the editor teaches.</summary>
+    /// <summary>The '@' completion labels, each cut to its NAME (<c>arpeggio(bracket)</c> →
+    /// <c>arpeggio</c>): the canonical spellings the editor teaches.</summary>
     private static string[] CompletionNames() =>
         [.. LilySharpLanguageServer.GetArticulationCompletions().Items
             .Select(i => i.Label.Split('(')[0])
@@ -66,9 +66,6 @@ public class NameCaseSensitivityTests
             .Where(n => !AnnotationNames.All.Contains(n, StringComparer.Ordinal)).ToList();
         Assert.True(missing.Count == 0,
             "completion labels the tables do not know as written: " + string.Join(", ", missing));
-        // The argument rows' dotted names too: ottava(bassa) is the compound name ottava.bassa.
-        Assert.Contains("ottava.bassa", AnnotationNames.All);
-        Assert.Contains("quindicesima.bassa", AnnotationNames.All);
     }
 
     /// <summary>
@@ -121,8 +118,8 @@ public class NameCaseSensitivityTests
     [Theory]
     [InlineData("c4@!UNACORDA d |", "@!unaCorda")]
     [InlineData("c4@!textspan d |", "@!textSpan")]
-    [InlineData("c4@Ottava(bassa) d |", "@ottava(bassa)")]
-    [InlineData("c4@ottava(BASSA) d |", "@ottava(bassa)")]
+    [InlineData("c4@Arpeggio(bracket) d |", "@arpeggio(bracket)")]
+    [InlineData("c4@arpeggio(BRACKET) d |", "@arpeggio(bracket)")]
     [InlineData("c4@Text(\"dolce\") d |", "@text(\"dolce\")")]
     [InlineData("c4@Notehead(x) d |", "@notehead(x)")]
     public void AWrongCaseTerminatorOrArgumentName_NamesTheSpelling(string source, string canonical)

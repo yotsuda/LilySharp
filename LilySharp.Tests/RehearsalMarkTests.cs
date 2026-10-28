@@ -135,7 +135,7 @@ public class RehearsalMarkTests
     [InlineData("coda", MusicMarkType.Coda)]
     [InlineData("fine", MusicMarkType.Fine)]
     [InlineData("ds.al.fine", MusicMarkType.DalSegnoAlFine)]
-    [InlineData("ottava.bassa", MusicMarkType.OttavaDown)]
+    [InlineData("to.coda", MusicMarkType.ToCoda)]
     public void TheNameTable_StillAnswersTheDottedNames(string name, MusicMarkType expected)
         => Assert.Equal(expected, MusicMarkItem.ParseMarkName(name));
 

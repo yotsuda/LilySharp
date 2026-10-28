@@ -84,7 +84,7 @@ public class CaseSpellingQuickFixTests
 
     [Theory]
     [InlineData("c'4@upbow d e f |", "@upbow", "@upBow")]                     // a name
-    [InlineData("c'4@ottava(BASSA) d e f@!ottava |", "@ottava(BASSA)", "@ottava(bassa)")]   // a value
+    [InlineData("c'4@arpeggio(BRACKET) d e f |", "@arpeggio(BRACKET)", "@arpeggio(bracket)")]   // a value
     [InlineData("c'4@Mark(\"A\") d e f |", "@Mark", "@mark(\"A\")")]          // a name with its argument kept
     public void AWrongCaseAnnotation_IsOfferedItsSpelling_AndTheWarningGoes(string music, string caret, string wanted)
     {
