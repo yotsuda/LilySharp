@@ -17,6 +17,15 @@ All notable changes to the Lily# VS Code extension are documented here.
 - **The trill span is `@trillSpan … @!trillSpan`** (was `@startTrillSpan` / `@stopTrillSpan`):
   `@!` completion offers it, the open one first.
 
+### Step keys
+
+- **Related marks are a Ctrl+Shift+Up / Down away**, even where the order means little: the ottava's
+  words with `@ottava(bassa)` among them, the pedals (`@unaCorda` `@sostenuto` `@sustain`, the `@!`
+  end following), `@editorial` / `@courtesy`, `@repeatTie` / `@laissezVibrer`, `@flageolet` /
+  `@harmonic`, `@arpeggio` / `@arpeggio(bracket)`, and the accent dynamics (`@fp` … `@sffz`).
+- **An argument from a list steps**: `@notehead(x)` → `@notehead(cross)` …, `@finger(3)` → `@finger(4)`,
+  `@pluck(…)`, `@bend(…)`, `@feather(…)` — the values `Ctrl+Space` offers there.
+
 ### Checks
 
 - **Voice-leading check for four-part writing.** Write `check voiceLeading s a t b` (the voices,

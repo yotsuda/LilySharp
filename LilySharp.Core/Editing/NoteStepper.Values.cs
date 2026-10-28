@@ -81,6 +81,12 @@ public static partial class NoteStepper
         [.. new[] { "ppppp", "pppp", "ppp", "pp", "p", "mp", "mf", "f", "ff", "fff", "ffff", "fffff" }
             .Where(SyntaxFacts.IsDynamicText)];
 
+    /// <summary>The accent dynamics, a step apart (owner's request 2026-10-28: related marks a key
+    /// away, even where the order means little) — Lily#'s order, the lighter first: Up the
+    /// stronger, stopping at the ends.</summary>
+    private static readonly string[] AccentDynamics =
+        [.. new[] { "fp", "rf", "rfz", "sf", "fz", "sfz", "sffz" }.Where(SyntaxFacts.IsDynamicText)];
+
     /// <summary>The meters the octave pair walks, shortest bar first; the bars of equal length
     /// stand side by side (<c>6/8</c> ⇄ <c>3/4</c>, <c>2/2</c> ⇄ <c>4/4</c>), so one press compares
     /// the two ways of counting it. Lily#'s list, the owner's decision to walk one.</summary>
@@ -131,11 +137,12 @@ public static partial class NoteStepper
         return null;
     }
 
-    /// <summary>Whether the keys have a step for a dynamic of this name: a level on the ladder, or
-    /// a hairpin word (cresc / decresc / dim). <c>@sfz</c>, <c>@fp</c> and the like have none, so
-    /// the keys step the note they are written on (<see cref="CarrierOf"/>).</summary>
+    /// <summary>Whether the keys have a step for a dynamic of this name: a level on the ladder, an
+    /// accent dynamic (<c>@sfz</c>, <c>@fp</c> …), or a hairpin word (cresc / decresc / dim).
+    /// <c>@niente</c> has none, so the keys step the note it is written on (<see cref="CarrierOf"/>).</summary>
     private static bool DynamicSteps(string name)
-        => SyntaxFacts.IsDynamicSpannerName(name) || Array.IndexOf(DynamicLadder, name) >= 0;
+        => SyntaxFacts.IsDynamicSpannerName(name) || Array.IndexOf(DynamicLadder, name) >= 0
+           || Array.IndexOf(AccentDynamics, name) >= 0;
 
     /// <summary>One step of a dynamic: the edit (null when it cannot move) and the message.</summary>
     private static (Edit? Edit, string Message) DynamicEdit(DynamicSyntax dynamic, int dir)
@@ -150,6 +157,15 @@ public static partial class NoteStepper
             next = dir > 0 ? "cresc" : "decresc";
             if (next == name)
                 return (null, $"@{name}: already {(dir > 0 ? "a crescendo - Down writes @decresc" : "a decrescendo - Up writes @cresc")}");
+        }
+        else if (Array.IndexOf(AccentDynamics, name) is var accent and >= 0)
+        {
+            string listed = string.Join(" / ", AccentDynamics.Reverse());
+            int to = accent + dir;
+            if (to < 0 || to >= AccentDynamics.Length)
+                return (null, listed);
+            next = AccentDynamics[to];
+            return (new Edit(token.Span.Start, token.Span.End, next), listed);
         }
         else
         {

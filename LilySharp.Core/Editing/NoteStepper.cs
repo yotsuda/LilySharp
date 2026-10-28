@@ -438,7 +438,7 @@ public static partial class NoteStepper
                     TargetKind.FontSize => FontSizeAt(tree, t.Node.Span.Start) is { } size
                         ? FontSizeEdit(size.Word, size.Operand, dir, semitone)
                         : (null, "size: write its number first (lyrics size 2.2)"),
-                    TargetKind.Articulation => ArticulationEdit((ArticulationSyntax)t.Node, dir),
+                    TargetKind.Articulation => ArticulationEdit(text, t.Node, dir),
                     TargetKind.Placement => PlacementEdit(text, t.Node, dir),
                     TargetKind.Time => TimeEdit((TimeSignatureSyntax)t.Node, dir, semitone),
                     _ => ValuePropertyEdit(text, tree, (PropertyAssignmentSyntax)t.Node, dir, semitone),
@@ -449,9 +449,8 @@ public static partial class NoteStepper
                     edits.Add(ve);
                     // A span start's end is renamed with it (owner's request 2026-10-28: @8va's
                     // @!8va), so the pair keeps the one name SpanEndNameValidator asks for.
-                    if (t.Kind == TargetKind.Articulation && SpanNames.EndOf(t.Node) is { } end
-                        && end.Name == ((ArticulationSyntax)t.Node).Name)
-                        edits.Add(new Edit(end.NameToken.Span.Start, end.NameToken.Span.End, ve.NewText));
+                    if (t.Kind == TargetKind.Articulation && RenamedEnd(text, t.Node, ve) is { } renamed)
+                        edits.Add(new Edit(renamed.End.Span.Start, renamed.End.Span.End, renamed.Name));
                     // A hairpin's @!cresc turns with it (owner's request 2026-10-28).
                     if (t.Kind == TargetKind.Dynamic && t.Node is DynamicSyntax hairpin
                         && SyntaxFacts.IsDynamicSpannerName(hairpin.DynamicToken.Text)
@@ -649,6 +648,10 @@ public static partial class NoteStepper
             return GroupOf(articulation.NameToken.Text) != null
                 ? new Target(TargetKind.Articulation, articulation)
                 : CarrierOf(articulation) ?? new Target(TargetKind.Articulation, articulation);
+        // A mark with an argument whose spelling or argument steps (`@ottava(bassa)`,
+        // `@notehead(x)`): its own step, as an articulation's.
+        if (SteppingMarkAt(text, tree, offset) is { } steppingMark)
+            return new Target(TargetKind.Articulation, steppingMark);
         // An @chord: strictly after its '@' — a caret just before the '@' is also just after
         // the note's duration, and belongs to the note.
         // A bare one on a chord(…) item names the item's words (ChordAnnotation.Of), so it

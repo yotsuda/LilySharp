@@ -15,6 +15,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using LilySharp.Core.Semantics;
 using LilySharp.Core.Syntax;
@@ -43,10 +44,14 @@ namespace LilySharp.Core.Editing;
 /// the jazz approaches (scoop from below, plop from above) and departures (fall down, doit up),
 /// the breathing pair (breath, caesura), the stem's direction (stemDown, stemUp — owner's
 /// request 2026-10-17), the ottava's printed spellings (15mb, 8vb, 8va, 15ma) and the tempo
-/// words (rall, rit, accel — owner's decisions 2026-10-28), whose <c>@!</c> end follows them. <c>@harmonic</c> / <c>@flageolet</c> draw the same
-/// circle, so they are not a group; <c>@tap</c>, <c>@snapPizz</c>, <c>@stopped</c> and
-/// <c>@thumb</c> stand alone, and the status bar says so. LILYSHARP-OWN: an editor convenience
-/// with no LilyPond counterpart.
+/// words (rall, rit, accel — owner's decisions 2026-10-28), whose <c>@!</c> end follows them.
+/// Since the same day a group may also be marks whose order means little, so that a related one
+/// is a key away: the ottava's words with their argument form, the pedals, courtesy / editorial,
+/// the half ties, harmonic / flageolet, the arpeggio and its bracket — a group lists SPELLINGS,
+/// an argument included (<see cref="SpellingOf"/>). A mark whose argument is one of a list —
+/// <c>@notehead(x)</c>, <c>@finger(3)</c> — steps that argument (<see cref="ArgumentSteps"/>).
+/// <c>@tap</c>, <c>@snapPizz</c>, <c>@stopped</c> and <c>@thumb</c> stand alone, and the status
+/// bar says so. LILYSHARP-OWN: an editor convenience with no LilyPond counterpart.
 /// </remarks>
 public static partial class NoteStepper
 {
@@ -76,7 +81,38 @@ public static partial class NoteStepper
             // decision 2026-10-28: rall in the group too, so rall and rit can be traded); the
             // @! that closes the stepped one is renamed with it.
             new[] { "rall", "rit", "accel" },
-        }.Select(g => g.Where(IsSteppable).ToArray()).Where(g => g.Length > 1)];
+            // Groups whose order means little, so that a related mark is a key away (owner's
+            // request 2026-10-28: "並びの順に意味がなくても、ユーザーがなるべく関連する記号を簡単に
+            // 見つけられる方が良い"). The ottava's words, lowest first, the argument form among them;
+            // the pedals as they stand under the piano, left to right; the two ways of bracketing
+            // an accidental; the half ties, the one that looks back below the one that rings on;
+            // the two harmonic circles; the arpeggio and its bracket. A pedal's or an ottava's
+            // @! end is renamed with it.
+            new[] { "quindicesima(bassa)", "ottava(bassa)", "ottava", "quindicesima" },
+            new[] { "unaCorda", "sostenuto", "sustain" },
+            new[] { "editorial", "courtesy" },
+            new[] { "repeatTie", "laissezVibrer" },
+            new[] { "flageolet", "harmonic" },
+            new[] { "arpeggio", "arpeggio(bracket)" },
+        }.Select(g => g.Where(s => IsSteppable(HeadOf(s))).ToArray()).Where(g => g.Length > 1)];
+
+    /// <summary>
+    /// The values an argument steps through, in Up order (owner's request 2026-10-28: "notehead
+    /// のかっこの中なども up/down で操作できる方が便利"): the completion's lists
+    /// (<c>GetAnnotationArgumentCompletions</c>; a test holds the two together). A finger and a
+    /// bend go Up to the larger number, a feather Up to the faster beam (as the tempo words do);
+    /// the notehead shapes and the plucking fingers have no order, so Down walks the completion's
+    /// list, as a keyword's value word steps. Each stops at its ends.
+    /// </summary>
+    internal static readonly IReadOnlyDictionary<string, string[]> ArgumentSteps = new Dictionary<string, string[]>(StringComparer.Ordinal)
+    {
+        ["notehead"] = ["xcircle", "slash", "triangle", "diamond", "cross", "x"],
+        ["finger"] = ["0", "1", "2", "3", "4", "5"],
+        ["pluck"] = ["a", "m", "i", "p"],
+        // The words, then the counts AnnotationValues.Bend also takes (1..12 semitones).
+        ["bend"] = ["half", "full", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"],
+        ["feather"] = ["left", "right"],
+    };
 
     /// <summary>A name the step may write: one the registry draws, or a plain annotation the
     /// collector consumes by name — <c>@stemUp</c> / <c>@stemDown</c> are a stem's direction, not
@@ -85,10 +121,79 @@ public static partial class NoteStepper
         => ArticulationRegistry.IsKnown(name) || AnnotationNameValidator.PlainFeatureNames.Contains(name)
            || Svg.Model.MusicMarkItem.ParseMarkName(name) != null;
 
-    /// <summary>The group a mark's name is in, or null: a mark in no group has nothing of its own
+    /// <summary>The group a spelling is in, or null: a mark in no group has nothing of its own
     /// to step, so the keys step the note it is written on (<see cref="CarrierOf"/>).</summary>
-    private static string[]? GroupOf(string name)
-        => Array.Find(ArticulationGroups, g => Array.IndexOf(g, name) >= 0);
+    private static string[]? GroupOf(string spelling)
+        => Array.Find(ArticulationGroups, g => Array.IndexOf(g, spelling) >= 0);
+
+    /// <summary>A spelling's name, before its argument: <c>ottava(bassa)</c> → <c>ottava</c>.</summary>
+    private static string HeadOf(string spelling)
+        => spelling.IndexOf('(') is var open and >= 0 ? spelling[..open] : spelling;
+
+    /// <summary>
+    /// A mark as a group lists it, with the range that spells it: an articulation's name, or a
+    /// mark's name with its argument as written, blanks dropped (<c>ottava(bassa)</c>,
+    /// <c>arpeggio(bracket)</c>) — from the name to the <c>)</c>, so a <c>.up</c> after it stays.
+    /// Null for an end (<c>@!8va</c>: it follows its start) or anything else.
+    /// </summary>
+    private static (string Spelling, int Start, int End)? SpellingOf(string text, SyntaxNode node)
+    {
+        if (node is ArticulationSyntax a)
+            return (a.Name, a.NameToken.Span.Start, a.NameToken.Span.End);
+        if (node is not MusicMarkSyntax { IsSpanEnd: false } mark)
+            return null;
+        SyntaxTokenNode? name = null, close = null;
+        for (int i = 0; i < mark.SlotCount; i++)
+            if (mark.GetChild(i) is SyntaxTokenNode t)
+            {
+                if (name == null && t.Kind is not SyntaxKind.At)
+                    name = t;
+                else if (t.Kind == SyntaxKind.CloseParen)
+                    close = t;
+            }
+        if (name == null)
+            return null;
+        int end = mark.HasArgumentList && close != null ? close.Span.End : name.Span.End;
+        string spelling = string.Concat(text[name.Span.Start..end].Where(c => !char.IsWhiteSpace(c)));
+        return (spelling, name.Span.Start, end);
+    }
+
+    /// <summary>The argument of a mark whose argument steps (<see cref="ArgumentSteps"/>): its
+    /// values and the written value's range, or null.</summary>
+    private static (string[] Values, int Start, int End)? SteppedArgumentOf(string text, SyntaxNode node)
+    {
+        if (node is not MusicMarkSyntax { IsSpanEnd: false, HasArgumentList: true } mark
+            || !ArgumentSteps.TryGetValue(mark.Name, out var values))
+            return null;
+        int open = -1, close = -1;
+        for (int i = 0; i < mark.SlotCount; i++)
+            if (mark.GetChild(i) is SyntaxTokenNode t)
+            {
+                if (t.Kind == SyntaxKind.OpenParen && open < 0) open = t.Span.End;
+                else if (t.Kind == SyntaxKind.CloseParen) close = t.Span.Start;
+            }
+        if (open < 0 || close < open)
+            return null;
+        int start = open, end = close;
+        while (start < end && char.IsWhiteSpace(text[start])) start++;
+        while (end > start && char.IsWhiteSpace(text[end - 1])) end--;
+        return (values, start, end);
+    }
+
+    /// <summary>Whether the keys have a step of the mark's own: its spelling is in a group, or its
+    /// argument steps.</summary>
+    private static bool MarkSteps(string text, SyntaxNode node)
+        => SpellingOf(text, node) is { } s && GroupOf(s.Spelling) != null || SteppedArgumentOf(text, node) != null;
+
+    /// <summary>A mark with an argument the caret is on — strictly after its <c>@</c> — whose
+    /// spelling or argument steps, or null.</summary>
+    private static MusicMarkSyntax? SteppingMarkAt(string text, SyntaxTree tree, int offset)
+    {
+        foreach (var m in tree.GetNodes<MusicMarkSyntax>())
+            if (m.Span.Start < offset && offset <= m.Span.End && MarkSteps(text, m))
+                return m;
+        return null;
+    }
 
     /// <summary>The size from which a group wraps round instead of stopping at its ends (owner's
     /// decision 2026-10-16: two or three — and four, Lily#'s reading — are easier to use when
@@ -157,17 +262,31 @@ public static partial class NoteStepper
     /// repeating the current name is redundant, and "already the last" was noise), listed from
     /// the top down (owner's request 2026-10-17: "upBow / downBow" reads as Up above Down, the
     /// way the keys go), or why nothing moved.</summary>
-    private static (Edit? Edit, string Message) ArticulationEdit(ArticulationSyntax articulation, int dir)
+    private static (Edit? Edit, string Message) ArticulationEdit(string text, SyntaxNode mark, int dir)
     {
-        var token = articulation.NameToken;
-        string name = token.Text;
-        var group = GroupOf(name);
+        if (SpellingOf(text, mark) is not { } spelling)
+            return (null, "not a mark to step");
+        var group = GroupOf(spelling.Spelling);
         if (group == null)
+        {
+            // A mark whose argument steps: along its values (ArgumentSteps), stopping at the ends.
+            if (SteppedArgumentOf(text, mark) is { } argument)
+            {
+                string head = HeadOf(spelling.Spelling);
+                string values = $"@{head}(…): {string.Join(" / ", argument.Values.Reverse())}";
+                int now = Array.IndexOf(argument.Values, text[argument.Start..argument.End]);
+                int next = now + dir;
+                if (now < 0 || next < 0 || next >= argument.Values.Length)
+                    return (null, values);
+                return (new Edit(argument.Start, argument.End, argument.Values[next]), values);
+            }
+            string name = HeadOf(spelling.Spelling);
             return (null, IsSteppable(name)
                 ? $"@{name}: in no group of marks to rotate through"
                 : $"@{name}: not an articulation Lily# knows");
+        }
         string listed = string.Join(" / ", group.Reverse());
-        int at = Array.IndexOf(group, name);
+        int at = Array.IndexOf(group, spelling.Spelling);
         int to = at + dir;
         if (to < 0 || to >= group.Length)
         {
@@ -175,6 +294,19 @@ public static partial class NoteStepper
                 return (null, listed);
             to = (to + group.Length) % group.Length;
         }
-        return (new Edit(token.Span.Start, token.Span.End, group[to]), listed);
+        return (new Edit(spelling.Start, spelling.End, group[to]), listed);
+    }
+
+    /// <summary>The name a stepped mark's <c>@!</c> end is to be renamed to — the head of its new
+    /// spelling, when its end carries its old head (<c>@ottava … @!ottava</c> stepped to
+    /// <c>@quindicesima(bassa)</c> ends at <c>@!quindicesima</c>) — with that end, or null.</summary>
+    private static (SyntaxTokenNode End, string Name)? RenamedEnd(string text, SyntaxNode mark, Edit edit)
+    {
+        if (SpellingOf(text, mark) is not { } spelling || SpanNames.EndOf(mark) is not { } end
+            || end.Name != HeadOf(spelling.Spelling) || edit.Start < spelling.Start || edit.End > spelling.End)
+            return null;
+        string after = text[spelling.Start..edit.Start] + edit.NewText + text[edit.End..spelling.End];
+        string head = HeadOf(after);
+        return head == end.Name ? null : (end.NameToken, head);
     }
 }

@@ -1610,6 +1610,92 @@ public class StepRequestTests
         Assert.Equal("accel / rit / rall", top.Message);
     }
 
+    /// <summary>Groups whose order means little, so a related mark is a key away (owner's request
+    /// 2026-10-28): the ottava's words with the argument form among them, the end renamed to the
+    /// new word; the pedals, their end following; the bracketed accidentals, the half ties, the
+    /// harmonic circles, the arpeggio and its bracket.</summary>
+    [Fact]
+    public void RelatedMarks_StepEvenWhereTheOrderMeansLittle()
+    {
+        Assert.Equal(Plain("c''4@quindicesima d'' e'' f''@!quindicesima | g'1 |"),
+            Step(Plain("c''4@otta‸va d'' e'' f''@!ottava | g'1 |"), +1, semitone: true).After);
+        Assert.Equal(Plain("c4@ottava(bassa) d e f@!ottava | g'1 |"),
+            Step(Plain("c4@otta‸va d e f@!ottava | g'1 |"), -1, semitone: true).After);
+        Assert.Equal(Plain("c4@quindicesima(bassa) d e f@!quindicesima | g'1 |"),
+            Step(Plain("c4@otta‸va(bassa) d e f@!ottava | g'1 |"), -1, semitone: true).After);
+        Assert.Equal(Plain("c4@ottava d e f@!ottava | g'1 |"),
+            Step(Plain("c4@ottava(bas‸sa) d e f@!ottava | g'1 |"), +1, semitone: true).After);
+
+        Assert.Equal(Plain("c'4@sostenuto d' e' f'@!sostenuto | g'1 |"),
+            Step(Plain("c'4@sus‸tain d' e' f'@!sustain | g'1 |"), -1, semitone: true).After);
+        Assert.Equal(Plain("c'4@unaCorda d' e' f'@!unaCorda | g'1 |"),
+            Step(Plain("c'4@soste‸nuto d' e' f'@!sostenuto | g'1 |"), -1, semitone: true).After);
+
+        foreach (var (from, to, dir) in new[]
+        {
+            ("cis'4@cour‸tesy", "cis'4@editorial", -1), ("c'4@repeat‸Tie", "c'4@laissezVibrer", +1),
+            ("c'4@harm‸onic", "c'4@flageolet", -1), ("<c' e' g'>4@arpe‸ggio", "<c' e' g'>4@arpeggio(bracket)", +1),
+            ("<c' e' g'>4@arpeggio(brac‸ket)", "<c' e' g'>4@arpeggio", -1),
+        })
+            Assert.Equal(Plain(to + " d'2. |"), Step(Plain(from + " d'2. |"), dir, semitone: true).After);
+        // Every pair stops at its ends.
+        var (stays, same) = Step(Plain("c'4@laissez‸Vibrer d'2. |"), +1, semitone: true);
+        Assert.False(stays.Fallback);
+        Assert.Equal(Plain("c'4@laissezVibrer d'2. |"), same);
+        Assert.Equal("laissezVibrer / repeatTie", stays.Message);
+    }
+
+    /// <summary>The accent dynamics step among themselves, the lighter first (owner's request
+    /// 2026-10-28) — they stepped the note before.</summary>
+    [Fact]
+    public void AnAccentDynamic_StepsAmongTheAccents()
+    {
+        Assert.Equal(Plain("c'4@sfz d'2. |"), Step(Plain("c'4@f‸z d'2. |"), +1, semitone: true).After);
+        Assert.Equal(Plain("c'4@sf d'2. |"), Step(Plain("c'4@f‸z d'2. |"), -1, semitone: true).After);
+        var (top, same) = Step(Plain("c'4@sff‸z d'2. |"), +1, semitone: true);
+        Assert.False(top.Fallback);
+        Assert.Equal(Plain("c'4@sffz d'2. |"), same);
+        Assert.Equal("sffz / sfz / fz / sf / rfz / rf / fp", top.Message);
+    }
+
+    /// <summary>An argument from a list steps along it (owner's request 2026-10-28: "notehead の
+    /// かっこの中なども up/down で操作できる方が便利"): a notehead's shape and a plucking finger down
+    /// the completion's list, a finger and a bend Up to the larger, a feather Up to the faster.</summary>
+    [Theory]
+    [InlineData("c'4@notehead(‸x) d'2. |", -1, "c'4@notehead(cross) d'2. |")]
+    [InlineData("c'4@notehead( dia‸mond ) d'2. |", -1, "c'4@notehead( triangle ) d'2. |")]
+    [InlineData("c'4@notehead(cr‸oss).up d'2. |", +1, "c'4@notehead(x).up d'2. |")]
+    [InlineData("c'4@finger(‸3) d'2. |", +1, "c'4@finger(4) d'2. |")]
+    [InlineData("c'4@pluck(‸p) d'2. |", -1, "c'4@pluck(i) d'2. |")]
+    [InlineData("c'4@bend(‸full) d'2. |", +1, "c'4@bend(3) d'2. |")]
+    [InlineData("c'4@bend(‸full) d'2. |", -1, "c'4@bend(half) d'2. |")]
+    [InlineData("c'8@feather(‸left)[ d' e' f'] g'2 |", +1, "c'8@feather(right)[ d' e' f'] g'2 |")]
+    public void AnArgumentFromAList_StepsAlongIt(string from, int dir, string to)
+        => Assert.Equal(Plain(to), Step(Plain(from), dir, semitone: true).After);
+
+    [Fact]
+    public void AnArgument_StopsAtItsEnds_AndSaysItsList()
+    {
+        var (top, same) = Step(Plain("c'4@finger(‸5) d'2. |"), +1, semitone: true);
+        Assert.False(top.Fallback);
+        Assert.Equal(Plain("c'4@finger(5) d'2. |"), same);
+        Assert.Equal("@finger(…): 5 / 4 / 3 / 2 / 1 / 0", top.Message);
+    }
+
+    /// <summary>The stepped arguments are the completion's: every value it offers can be stepped
+    /// to, so the two cannot drift apart.</summary>
+    [Fact]
+    public void TheSteppedArguments_AreTheCompletionsValues()
+    {
+        foreach (var (name, values) in LilySharp.Core.Editing.NoteStepper.ArgumentSteps)
+        {
+            var offered = LilySharpLanguageServer.GetAnnotationArgumentCompletions(name)!.Items.Select(i => i.Label).ToList();
+            Assert.Empty(offered.Except(values));
+            if (name != "bend")
+                Assert.Equal(offered.OrderBy(v => v), values.OrderBy(v => v));
+        }
+    }
+
     // ---------------------------------------------------------------- a mark's .up / .down
 
     /// <summary>The octave pair on a mark that takes a placement (owner's request 2026-10-28):
@@ -1703,7 +1789,7 @@ public class StepRequestTests
         Assert.Equal(Plain("d'4@tap d'"), after);
         // The octave pair places a mark that takes a placement instead (owner's request 2026-10-28).
         Assert.Equal(Plain("c'4@tap.up d'"), Step(Plain("c'4@t‸ap d'"), +1).After);
-        Assert.Equal(Plain("d'4@sfz d'"), Step(Plain("c'4@s‸fz d'"), +1, semitone: true).After);
+        Assert.Equal(Plain("d'4@niente d'"), Step(Plain("c'4@nie‸nte d'"), +1, semitone: true).After);
         Assert.Equal(Plain("<c' f'@tap g'>4"), Step(Plain("<c' e'@t‸ap g'>4"), +1, semitone: true).After);
         Assert.Equal(Plain("<c'' e' g'>4@chord"), Step(Plain("<c' e' g'>4@ch‸ord"), +1, semitone: true).After);
         Assert.Equal(Plain("<c' e' g'>'4@chord"), Step(Plain("<c' e' g'>4@ch‸ord"), +1).After);

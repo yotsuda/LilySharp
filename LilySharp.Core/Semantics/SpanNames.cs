@@ -31,8 +31,10 @@ namespace LilySharp.Core.Semantics;
 /// <remarks>
 /// <para>The families where two names can meet: the ottava (8va, 8vb, 15ma, 15mb, ottava,
 /// quindicesima) and the text spanner (rit, accel, rall, textSpan). A pedal is closed only by
-/// its own name already; a hairpin also ends at the next dynamic, so the mark before an
-/// <c>@!cresc</c> need not be the one it closes, and it is left alone.</para>
+/// its own name already, so the rule cannot fail on one, but it is read here too, for the end
+/// that follows its start when the step keys turn a sustain into a sostenuto (owner's request
+/// 2026-10-28). A hairpin also ends at the next dynamic, so the mark before an <c>@!cresc</c>
+/// need not be the one it closes, and it is left alone.</para>
 /// <para>Read on the syntax, in the order written within one voice line (a part's cell, a
 /// phrase, one branch of <c>voice { } { }</c>): the end's partner is the nearest mark of its
 /// family before it. A start that runs into another start (an ottava's change) is closed by
@@ -45,7 +47,11 @@ public static class SpanNames
     /// ends a span, and its family (the end the family shares).</summary>
     public readonly record struct Mark(SyntaxNode Node, string Name, SyntaxTokenNode NameToken, bool IsEnd, MusicMarkType Family);
 
-    private static readonly HashSet<MusicMarkType> Families = [MusicMarkType.OttavaStop, MusicMarkType.TextSpanStop];
+    private static readonly HashSet<MusicMarkType> Families =
+    [
+        MusicMarkType.OttavaStop, MusicMarkType.TextSpanStop,
+        MusicMarkType.SustainOff, MusicMarkType.SostenutoOff, MusicMarkType.UnaCordaOff,
+    ];
 
     /// <summary>The node as a span mark of a family this rule reads, or null.</summary>
     public static Mark? Of(SyntaxNode node)
