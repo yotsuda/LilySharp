@@ -160,6 +160,29 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第1030セッションの経緯
+
+### 1.1 第1030セッション（2026-10-28・YT-DELL2）
+
+第1028〜1029 と別の会話（`/clear` の後）。master `05c471530`（未 push 7）。作業場所は Lab `sessions/p1030/`。
+- 開始時 full **13459 / 0 / 2**（合計 13461）・build 0 エラー・CI success・OMR の REQUESTS に `open` なし。
+- **§1.0 の ⒜ は全部ユーザー側だったので候補 4 つを訊いた → ユーザー「lysc wav を Export に接続」**:
+  - LSP: `ExportParams.SoundFont`。`ScoreExport.Extensions` に `wav` を足した（前は「エディタに渡す音源が無い」ので外していた）。`wav` は音源が無い・`.sf3`・DLS なら、フォルダを作る前に断る。一括の側も同じ options を渡す。
+  - 拡張: 保存ダイアログに *WAV audio (through a SoundFont 2)*、一括の submenu に `lilysharp.exportWav`（MIDI の次）。音源は `wavSoundFont`: プレビューの `lilysharp.playback.soundFont` が `.sf2` ならそれ、でなければ音源の履歴の `.sf2` か、ファイルを選ばせる（履歴が空なら先に理由のダイアログ）。選んだものは履歴に入れ、設定は変えない。WAV のときだけ進捗の通知を出す。
+  - 網は `ExportRequestTests` に 2 本（score ごとの WAV・音源が無い／`.sf3` は何も書かずに断る）。この機械には実の `.sf2` が無い（開発用の `media/soundfont` は `.sf3`）＝合成の `TinySoundFont` で確かめた。実機は MANUAL-CHECKS C44。
+  - 文書: 両 CHANGELOG・拡張 README・site の editor／commands・`playback-design.md`・設定の説明。
+- 終了時 full **13461 / 0 / 2**（合計 13463）・npm **513 / 0**。
+- **ユーザー「続けて」→ サイトのはみ出しの計測（HANDOFF-LEARNING §3 の残り）**: 全 25 ページ × 4 幅を CDP で測った（Lab `sessions/p1030/cdp/measure.mjs`）。375px は 0。広い幅で `table.g` の表 3 枚がはみ出していた（`build-manual.ps1` の 1 列目と `code` の nowrap）→ 長い `<code>` を語ごとに分け、1 列目は `min-width:9em` で折り返しを許した＝全幅で 0。
+  - ⚠️ 計器は 1 ページで最初にはみ出した表しか名指さない＝1 枚直すと次が出る。表ごとの印ではなく規則で直した。
+  - **ついでに見つけた: オクターブの変更（第1027）の取り残し**＝「preset がオクターブを決める」と書いた文が site（ref-structure の clef の行・editor の補完の説明）、GRAMMAR、GRAMMAR_FOR_LLM、コードの注釈 7 か所に残っていた（`GetDefaults(preset).Octave` は常に 3）。行数を変えずに直した。LYS1050 の規則そのものは正しい。
+  - full **13461 / 0 / 2**。
+- **ユーザー報告「VS Code で `@8va` が補完候補に出てこない」**: サーバーは `@8` に `ottava`・`8va`・`8vb` を返していた（使い捨ての網で確認）。犯人は拡張の smart typing＝規則 28（音符に続く印の中でも数字は音符の音価）が `@` の直後にも効き、`c'4@` + `8` を `c'8@` に書き換えていた（`@1` も同じ）。`durationPlan` で「`@`／`@!` の後に数字しか無い位置」の数字は押したとおりにした。網は `smartTypingCore.test.ts` の 28 に 1 本（直す前は赤）。npm **514 / 0**。MANUAL-CHECKS C45。
+- **ユーザー報告「`@!` で始まるキーワードも補完されない」＋指示「書けるのに補完できない語を調べて」**:
+  - `@!` は補完の文脈が無く音名に落ちていた → `AfterAtBang`（名前は `ParseSpanEndName` が読むものだけ・開いている span を先頭に選択・`!` を trigger に足し `@` の後以外は何も返さない）。網 `SpanEndCompletionTests` 6 本。
+  - **総点検**（Lab `sessions/p1030/audit/`・器は `*.txt` に保存）: 35 か所＋その値の位置＝67 か所の一覧の語 1063 個を、VS Code の動き（trigger・incomplete で再要求・既定の語の区切りで絞り込み）で 1 文字ずつ打った＝サーバー側の取りこぼし 0。同じ語を打鍵の模擬器で打った＝**`paper { size a5 }` など 23 個が smart typing に書き換えられていた**（`a` を音符、数字を音価と読む）→ `inSettingsBlock`（paper／layout／fonts／header／midi／markup の中は規則を止める・後ろ向きに 1 回だけ読む）。模擬器は直す前の `@8va` を 4 個拾う＝陽性対照あり。語彙そのもの（コンパイラが受け付ける語が一覧にあるか）は既存の網が見ている。音楽の途中の `clef` が 5 種なのはコンパイラも同じ＝言語の仕様。
+  - npm **517 / 0**。MANUAL-CHECKS C46・C47。
+- **ユーザー指示: OMR の返事 `lilysharp-reply-2026-10-28-missed-barline.md`**（10-27 の依頼への返事・OMR `2464d77`）: OMR は長さが拍子の k 小節分で box が隣の約 k 倍なら memo を「a bar line may be missed here: …」にし、その行の長さの注釈を書かなくなった。**Lily# 側の作業なし**＝「Write the missing bar line」は LYS2017、AI の直しの「箱が隣の何倍か」も Lily# 自身の計測で、memo の文言にも注釈にも頼っていない（grep で確認）。REQUESTS の 10-28 の行の下に受け取りを 1 行書いた（OMR の repo・未 commit＝OMR 側が commit する慣例）。
+
 ## 以下は第1029セッションの経緯 — **§1 のブロックは無い（第1028 のブロックの中に書かれた）**
 
 ⚠️ この見出しは欠落ではなく事実を記録するためのもの（第287 の見出しと同じ役目）。第1029 は第1028 と同じ会話の続きで、§1 に自分のブロックを立てず、作業（補完の直し・コードトラックの `for`・タブのオクターブ・`pitch` の切り替えでの書き直し・`grace` と caesura の落ち）を第1028 のブロックに「（第1029）」と付けて書いた。中身はすぐ下の第1028 の経緯にある。第1030 の `-Start` は第1027 を、第1031 の `-Start` は第1028 を出した。
