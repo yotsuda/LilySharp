@@ -253,7 +253,19 @@ internal sealed partial class Parser
     private ChordPartBlockGreen ParseChordPartBlock()
     {
         var keyword = Expect(SyntaxKind.ChordsKeyword);
-        var name = Check(SyntaxKind.Identifier) ? Advance() : (SyntaxToken?)null;
+        // No name before `for`: the unnamed track.
+        var name = Check(SyntaxKind.Identifier)
+            && !(Current.Text == Semantics.ChordTrackPitch.ForWord && Peek(1)?.Kind != SyntaxKind.OpenBrace)
+            ? Advance() : (SyntaxToken?)null;
+        // `chords tpc for tp { … }`: the track is typed in tp's letters (owner's decision
+        // 2026-10-28, Semantics.ChordTrackPitch). Contextual like the lyrics' `sings`.
+        SyntaxToken? forKeyword = null, forTarget = null;
+        if (Check(SyntaxKind.Identifier) && Current.Text == Semantics.ChordTrackPitch.ForWord
+            && Peek(1)?.Kind != SyntaxKind.OpenBrace)
+        {
+            forKeyword = Advance();
+            forTarget = IsPartNameToken(Current) ? Advance() : null;
+        }
         var openBrace = Expect(SyntaxKind.OpenBrace);
         var items = new List<GreenNode?>();
 
@@ -274,7 +286,7 @@ internal sealed partial class Parser
         }
 
         var closeBrace = Expect(SyntaxKind.CloseBrace);
-        return new ChordPartBlockGreen(keyword, name, openBrace, [.. items], closeBrace);
+        return new ChordPartBlockGreen(keyword, name, openBrace, [.. items], closeBrace, forKeyword, forTarget);
     }
 
     /// <summary>A chord track's inner section (by-part grouping): <c>section NAME {

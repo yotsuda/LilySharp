@@ -351,6 +351,24 @@ public sealed partial class LilySharpLanguageServer
         int end2 = k + 1;
         while (k >= 0 && IsWordChar(text[k])) k--;
         string prefix = text.Substring(k + 1, end2 - (k + 1));  // and the one before it
+        // `chords tpc for tp {` / `chords for tp {`: the `for PART` pair (2026-10-28) is not the
+        // block's name — read the frame from the words before it, as if it were not written.
+        if (prefix == LilySharp.Core.Semantics.ChordTrackPitch.ForWord)
+        {
+            int m = k;
+            while (m >= 0 && char.IsWhiteSpace(text[m])) m--;
+            int end3 = m + 1;
+            while (m >= 0 && IsWordChar(text[m])) m--;
+            string before = text.Substring(m + 1, end3 - (m + 1));
+            if (before == "chords")
+                return new BlockFrame("", "chords");
+            int p = m;
+            while (p >= 0 && char.IsWhiteSpace(text[p])) p--;
+            int end4 = p + 1;
+            while (p >= 0 && IsWordChar(text[p])) p--;
+            if (text.Substring(p + 1, end4 - (p + 1)) == "chords")
+                return new BlockFrame("chords", before);
+        }
         // `condensedStaff bass {`: the clef word is the staff's, and the block is still the
         // bare-part-name group (2026-10-13) — read as if the clef were not there.
         if (IsBarePartNameGroup(prefix) && name is "treble" or "bass" or "alto" or "tenor" or "treble_8")
@@ -506,6 +524,12 @@ public sealed partial class LilySharpLanguageServer
     // A named part (`part rh {`) has `part` one word before the brace; the nameless one
     // (`part {`) has it right before. Until 2026-10-28 only the named form was read, so the
     // nameless part's body got the music completions and no `instrument` (owner's report).
+    /// <summary>The caret right after a chord track's <c>for</c>: <c>chords for ▮</c> or
+    /// <c>chords NAME for ▮</c>.</summary>
+    private static bool IsChordForSlot(string text, int offset, string prevWord)
+        => prevWord == LilySharp.Core.Semantics.ChordTrackPitch.ForWord
+           && (SecondWordBeforeCursor(text, offset) == "chords" || ThirdWordBeforeCursor(text, offset) == "chords");
+
     private static bool IsInsidePartBlock(List<OpenBlock> stack)
         => stack.Count > 0 && (stack[^1].Frame.Prefix == "part" || stack[^1].Frame.Name == "part");
 
@@ -729,6 +753,11 @@ public sealed partial class LilySharpLanguageServer
         AfterGroupStaffSelectorChain,
         AfterChordDisplayAs,
         AfterTabDisplayAs,
+        /// <summary><c>chords NAME ▮</c> at a definition site — the <c>for PART</c> pair
+        /// (whose letters the track is typed in, Semantics.ChordTrackPitch).</summary>
+        AfterChordsTrackName,
+        /// <summary><c>chords [NAME] for ▮</c>, a definition or a score row — the part names.</summary>
+        AfterChordForTarget,
         AfterInstrument,
         /// <summary><c>midiInstrument "|"</c>, <c>midiInstrument "ele|"</c> or
         /// <c>midiInstrument |</c> in a part header — the 128 General MIDI names.</summary>
@@ -1334,6 +1363,9 @@ public sealed partial class LilySharpLanguageServer
                 }
             }
 
+            // `chords prog for ▮` / `chords for ▮` on a score row: whose reading the row prints.
+            if (IsChordForSlot(text, offset, prevWord))
+                return CompletionContext.AfterChordForTarget;
             switch (prevWord)
             {
                 // `tab` references a part too, and an optional tuning may precede the
@@ -1442,6 +1474,17 @@ public sealed partial class LilySharpLanguageServer
             && ThirdWordBeforeCursor(text, offset) == "lyrics"
             && !IsInsideStringLiteral(text, offset))
             return CompletionContext.AfterSingsTarget;
+
+        // `chords NAME ▮` / `chords [NAME] for ▮` at a definition site: the `for PART` pair —
+        // the part whose letters the track is typed in (owner's decision 2026-10-28). A `{`
+        // between the words empties the scanned word, so a track BODY never triggers it.
+        if (!IsInsideStringLiteral(text, offset))
+        {
+            if (IsChordForSlot(text, offset, prevWord))
+                return CompletionContext.AfterChordForTarget;
+            if (SecondWordBeforeCursor(text, offset) == "chords" && prevWord.Length > 0)
+                return CompletionContext.AfterChordsTrackName;
+        }
 
         // Inside a lyrics BODY — a by-section `lyrics w { | }` cell, a by-part track's
         // inner `section A { | }`, a note-bound `lyrics { | }` — syllables are typed, not

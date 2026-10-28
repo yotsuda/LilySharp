@@ -184,7 +184,8 @@ public static class RenderSpecParser
                     break;
 
                 case ChordRowRenderSyntax chordRow:
-                    items.Add(new ChordRowSpec(chordRow.PartName, ParseChordMode(chordRow.DisplayModeText)));
+                    items.Add(new ChordRowSpec(chordRow.PartName, ParseChordMode(chordRow.DisplayModeText))
+                        { For = chordRow.ForTarget });
                     break;
 
                 // A row inside a group body belongs to the group (ParseGrandStaff
@@ -329,13 +330,13 @@ public static class RenderSpecParser
                 {
                     case SingleStaffSpec { Staff.WithChords: null } s:
                         items[i + 1] = new SingleStaffSpec(s.Staff with
-                        { WithChords = row.PartName, ChordDisplay = row.DisplayMode });
+                        { WithChords = row.PartName, ChordDisplay = row.DisplayMode, ChordFor = row.For });
                         items.RemoveAt(i);
                         i--;
                         continue;
                     case TabStaffSpec { WithChords: null } tab:
                         items[i + 1] = tab with
-                        { WithChords = row.PartName, ChordDisplay = row.DisplayMode };
+                        { WithChords = row.PartName, ChordDisplay = row.DisplayMode, ChordFor = row.For };
                         items.RemoveAt(i);
                         i--;
                         continue;

@@ -344,6 +344,17 @@ public static class PartReferenceFinder
         _ => null,
     };
 
+    /// <summary>The token naming the part after a chord track's <c>for</c>, or null — the
+    /// definition <c>chords tpc for tp { … }</c> (whose letters it is typed in) and the score row
+    /// <c>chords prog for tp</c> (whose reading that row prints). A part, never a voice
+    /// (<c>ChordForValidator</c>, LYS7006).</summary>
+    public static SyntaxTokenNode? ChordForTargetToken(SyntaxNode node) => node switch
+    {
+        ChordPartBlockSyntax block => block.ForTargetToken,
+        ChordRowRenderSyntax row => row.ForTargetToken,
+        _ => null,
+    };
+
     /// <summary>The named voices this node introduces, appended to
     /// <paramref name="into"/> — the second half of what a <c>sings</c> target may name.
     /// </summary>

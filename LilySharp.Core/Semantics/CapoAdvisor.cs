@@ -73,7 +73,7 @@ public static class CapoAdvisor
             if (site is ChordEntrySyntax entry)
             {
                 if (ChordStructure.TryParseChordEntry(entry.SymbolText, out var chord))
-                    Add(entry.SymbolText, chord);
+                    Add(entry.SymbolText, ChordTrackPitch.Sounding(entry, chord, 0));
             }
             else if (site is MusicMarkSyntax mark
                      && ChordAnnotation.Of(mark) is { Symbol: { } symbol, Structure: { } structure })

@@ -1347,8 +1347,19 @@ LyricSyllable  = LyricText , [ '-' ] | '--' | '-' | '~' | '_' ;
                     the slur's. '__' is the extender LINE and takes no note; '_' and a
                     detached '~' take one note each, holding the previous syllable. *)
 
-ChordsBlock    = 'chords' , [ Identifier ] , '{' , { ChordRowEntry | ChordExtend | ChordRowRest | Barline } , '}' ;
+ChordsBlock    = 'chords' , [ Identifier ] , [ 'for' , PartRef ] , '{' , { ChordRowEntry | ChordExtend | ChordRowRest | Barline } , '}' ;
                  (* The UNNAMED track (2026-10-09) is placed by a score's bare 'chords' row. *)
+                 (* 'for PART' (owner's decision 2026-10-28, Semantics.ChordTrackPitch): the track
+                    is typed in PART's letters — under PART's 'pitch', so the player's letters of
+                    a transposing part by default — and it sounds what those letters mean
+                    ('chords tpc for tp { G6 }' sounds F6 for a B♭ trumpet). It is also the
+                    track's default reader: a score row prints it as PART's player reads it on
+                    that page. A track with no 'for' is SOUNDING pitch, printed as written: no
+                    'pitch' moves it, and neither does the staff a row stands above. Any one
+                    block of a name says it - another may repeat it or omit it, and a different
+                    part is LYS7007; a PART that is no part is LYS7006. 'for' is contextual,
+                    as the lyrics' 'sings' is. Switching PART's typed 'pitch' (the step keys)
+                    respells the track with PART's notes. *)
 ChordRowEntry  = ( ChordEntry | RomanEntry ) , [ '(' , ShapeWords , ')' ] , [ TodoMark ] ;   (* '(' GLUED to the symbol;
                                                                     the symbol's own '(' list (C7(b9, #11)) comes
                                                                     first, the shapes in a second group *)
@@ -1715,9 +1726,14 @@ ScoreItem      = StaffRender                        (* staff partName — BARE, 
                                                         ⚠️ keep semicolons out of comments
                                                         inside this production — the doc
                                                         tests cut the block at the first *)
-               | 'chords' , [ PartRef ] , [ 'as' , ( 'roman' | 'names' ) ]
+               | 'chords' , [ PartRef ] , [ 'for' , PartRef ] , [ 'as' , ( 'roman' | 'names' ) ]
                                                      (* independent chord ROW (lead sheet) - bare,
-                                                        the unnamed chords track *)
+                                                        the unnamed chords track. The optional
+                                                        'for' (before or after 'as') names the
+                                                        part whose player's reading THIS ROW
+                                                        prints on this page, over the track's
+                                                        own 'for' - without either the row prints
+                                                        what sounds *)
                | 'lyrics' , [ PartRef ] , [ 'sings' , PartRef ]
                                                      (* lyrics ROW. The optional 'sings' names
                                                         the melody THIS ROW sings - it overrides

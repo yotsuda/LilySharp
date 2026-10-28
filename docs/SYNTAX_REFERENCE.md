@@ -2375,6 +2375,28 @@ but voices none, so Lily# picks one voicing, the same everywhere: every tone tak
 pitch from G3 up to (not including) G4, and a slash bass its pitch an octave below that —
 `G7/B` sounds B2 G3 B3 D4 F4. Hovering the symbol in the editor lists those pitches.
 
+### Chords for a transposing part — `for`
+
+A track is the band's chords at **concert pitch**: it prints and plays as written, whatever the
+file's `pitch` and whatever staff a row stands above. A track written for one transposing part
+says so with `for` — it is then typed in that part's letters, the way its notes are (under its
+`pitch`: by default as its player reads them), and sounds what those letters mean:
+
+```
+pitch written
+part tp { instrument trumpet key g major }
+chords tpc for tp { section A { G6 | C7 | } }      // the trumpeter's G6 — sounds F6
+```
+
+A score row prints the chords as one part's player reads them on that page: the part the row
+names with its own `for`, else the track's. `score trumpet pitch transposed { chords prog for tp
+staff tp }` names a concert `F6` as `G6`, spelled in the key the trumpet prints; on a sounding
+page — a conductor's score — the same row prints `F6`. Without a `for` anywhere the row prints
+what sounds. A row's `for` may name any part (`chords tpc for pn` puts the trumpeter's track
+over the piano at concert pitch); the track's own `for` is stated once — two blocks naming
+different parts are LYS7007, and a `for` that names no part is LYS7006. Ctrl+Shift+Up / Down on
+the trumpet's typed `pitch` respells its track with its notes.
+
 ## Chord Diagrams
 
 `@diagram(…)` draws a guitar chord diagram (a fret diagram) over its note. The argument is a

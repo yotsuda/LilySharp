@@ -25,11 +25,12 @@ using Xunit;
 namespace LilySharp.Tests;
 
 /// <summary>
-/// A chord row over a staff that prints a transposing part for its player names the chords that
-/// player reads (owner's report 2026-10-12: a B♭ trumpet part in G major under F6 and B♭7). The
-/// row is sounding pitch — it belongs to no instrument, and the MIDI plays it so — and the names
-/// move as the staff does: the capo's pressed-name road (ChordStructure.Pressed), spelled in the
-/// key the staff prints.
+/// A chord row that is <c>for</c> a transposing part names the chords that part's player reads
+/// on the page (owner's report 2026-10-12: a B♭ trumpet part in G major under F6 and B♭7). The
+/// track is sounding pitch — the MIDI plays it so — and the names move as the part does on this
+/// page: the capo's pressed-name road (ChordStructure.Pressed), spelled in the key it prints.
+/// Since 2026-10-28 (owner's decision, Semantics.ChordTrackPitch) the row says so with `for`;
+/// the staff it stands above decides nothing, and a row with no `for` prints as written.
 /// </summary>
 [Trait("Category", "Unit")]
 public class ChordRowTransposeTests
@@ -48,11 +49,13 @@ public class ChordRowTransposeTests
         }
         form { ~A }
         score { chords prog  staff pn }
-        score trumpet pitch transposed { chords prog  staff tp }
-        score alto pitch transposed { chords prog  staff ax }
-        score mixed { chords prog  staff tp as pitch transposed  staff pn }
-        score conductor { chords prog  staff tp }
+        score trumpet pitch transposed { chords prog for tp  staff tp }
+        score alto pitch transposed { chords prog for ax  staff ax }
+        score mixed { chords prog for tp  staff tp as pitch transposed  staff pn }
+        score conductor { chords prog for tp  staff tp }
         score sheet pitch transposed { chords prog }
+        score plain pitch transposed { chords prog  staff tp }
+        score apart pitch transposed { staff pn  chords prog for tp }
         """;
 
     private static string Names(string score)
@@ -68,9 +71,11 @@ public class ChordRowTransposeTests
     [InlineData("trumpet", "G6 C7 C♯°7 Am7 D7")]
     // The E♭ alto saxophone reads a major sixth up, in D.
     [InlineData("alto", "D6 G7 G♯°7 Em7 A7")]
-    // A row over a staff printed for its player inside a sounding score moves with that staff.
+    // A row for a staff printed for its player inside a sounding score moves with that staff.
     [InlineData("mixed", "G6 C7 C♯°7 Am7 D7")]
-    public void ARowOverATransposedStaff_NamesWhatThePlayerReads(string score, string names)
+    // The row says whose reading it prints wherever it stands: here over no staff of the trumpet.
+    [InlineData("apart", "G6 C7 C♯°7 Am7 D7")]
+    public void ARowForATransposedPart_NamesWhatThePlayerReads(string score, string names)
         => Assert.Equal(names, Names(score).Replace("dim7", "°7"));
 
     [Theory]
@@ -79,8 +84,94 @@ public class ChordRowTransposeTests
     [InlineData("")]
     [InlineData("conductor")]
     [InlineData("sheet")]
-    public void ARowOverASoundingStaff_OrOverNone_IsAsWritten(string score)
+    // With no `for`, the row is the band's chords at concert pitch, even right above the trumpet's
+    // staff printed for its player (until 2026-10-28 the staff below moved it).
+    [InlineData("plain")]
+    public void ARowWithNoReader_OrForASoundingPart_IsAsWritten(string score)
         => Assert.Equal("F6 B♭7 B°7 Gm7 C7", Names(score).Replace("dim7", "°7"));
+
+    /// <summary>A track typed in a trumpet's letters (`for tp`, the file typing the trumpet as
+    /// its player reads it): the trumpet's page prints it as written, a concert page — and the
+    /// MIDI — a major second lower, and no `pitch` of the file changes what it means.</summary>
+    private const string Typed = """
+        pitch written
+        key f major
+        part tp { instrument trumpet key g major }
+        part pn { instrument piano-right }
+        chords tpc for tp { section A { G6 | C7 | } }
+        section A {
+          tp { b'1 | b'1 | }
+          pn { c''1 | d''1 | }
+        }
+        form { ~A }
+        score trumpet { chords tpc  staff tp }
+        score full pitch concert { chords tpc  staff tp  staff pn }
+        score band pitch concert { chords tpc for pn  staff pn }
+        """;
+
+    private static string NamesOf(string book, string score)
+    {
+        var tree = SyntaxTree.Parse(book);
+        var spec = RenderSpecParser.FindByName(tree, score)!;
+        return string.Join(" ", SvgGenerator.CollectScore(tree, spec).ChordNames
+            .OrderBy(c => c.MeasureIndex).ThenBy(c => c.Timing.ToDouble()).Select(c => c.ChordText));
+    }
+
+    [Theory]
+    [InlineData("trumpet", "G6 C7")]
+    [InlineData("full", "F6 B♭7")]
+    // The row names the piano as its reader: what sounds.
+    [InlineData("band", "F6 B♭7")]
+    public void ATrackTypedForATransposingPart_IsReadInItsLetters(string score, string names)
+        => Assert.Equal(names, NamesOf(Typed, score));
+
+    // One track placed twice is two rows, each with its own `for` (the first row's must not
+    // reach the second: found rendering a part sheet, 2026-10-28).
+    [Fact]
+    public void ATrackPlacedTwice_EachRowPrintsItsOwnReading()
+    {
+        string book = Book + "\nscore twice pitch transposed { chords prog for tp  chords prog  staff tp }\n";
+        var names = NamesOf(book, "twice").Split(' ');
+        Assert.Single(names, n => n == "G6");   // the trumpeter's reading
+        Assert.Single(names, n => n == "F6");   // the band's, as written
+    }
+
+    [Fact]
+    public void ATrackTypedForATransposingPart_SoundsWhatItsLettersMean()
+    {
+        // F6 = F A C D, B♭7 = B♭ D F A♭: the MIDI plays the concert chords.
+        var midi = new LilySharp.Core.Midi.MidiExporter().Export(SyntaxTree.Parse(Typed));
+        var classes = midi.Tracks.Where(t => t.Name == "tpc (chords)").SelectMany(t => t.Notes)
+            .GroupBy(n => n.StartTick).OrderBy(g => g.Key)
+            .Select(g => string.Join(",", g.Select(n => n.Pitch % 12).Distinct().Order()))
+            .ToArray();
+        Assert.Equal(["0,2,5,9", "2,5,8,10"], classes);
+    }
+
+    private static IReadOnlyList<LilySharp.Core.Syntax.Diagnostic> Validate(string src)
+        => LilySharp.Core.Semantics.SemanticValidation.Run(SyntaxTree.Parse(src));
+
+    [Fact]
+    public void ARowWithAReaderThatIsNoPart_IsReported()
+        => Assert.Contains(Validate(Typed.Replace("chords tpc for pn", "chords tpc for nobody")),
+            d => d.Code == DiagnosticCodes.ChordForUnknown);
+
+    [Fact]
+    public void TwoBlocksOfATrackForDifferentParts_AreAConflict()
+    {
+        Assert.Contains(Validate(Typed.Replace("form { ~A }", "chords tpc for pn { section A { C | C | } }\nform { ~A }")),
+            d => d.Code == DiagnosticCodes.ChordForConflict);
+        Assert.DoesNotContain(Validate(Typed), d => d.Code is DiagnosticCodes.ChordForUnknown or DiagnosticCodes.ChordForConflict);
+    }
+
+    [Fact]
+    public void TheUnnamedTrack_TakesFor()
+    {
+        string book = Typed.Replace("chords tpc for tp", "chords for tp").Replace("chords tpc", "chords");
+        Assert.Equal("tp", LilySharp.Core.Semantics.ChordTrackPitch.TargetOf(SyntaxTree.Parse(book).GetRoot(), SyntaxFacts.UnnamedChordsName));
+        Assert.Equal("F6 B♭7", NamesOf(book, "full"));
+        Assert.Equal("G6 C7", NamesOf(book, "trumpet"));
+    }
 
     [Theory]
     // The LilyPond twin moves the row with the same interval its part's music takes.

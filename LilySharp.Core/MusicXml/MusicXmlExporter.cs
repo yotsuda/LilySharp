@@ -5996,10 +5996,14 @@ public sealed class MusicXmlExporter
     }
 
     /// <summary>
-    /// The part a row's harmonies go to: the part of a staff that names the row as its attached
-    /// chords, else the first staff AFTER the row in the score's order, else the score's first
-    /// staff; null when the score engraves no staff at all (<paramref name="scoreHasStaff"/>
-    /// false: a lead sheet, whose row gets a part of its own).
+    /// The part a row's harmonies go to. A part written with a <c>&lt;transpose&gt;</c> carries its
+    /// harmonies in written pitch and a reader shows them as that part's player reads them, so the
+    /// harmonies go where the page agrees (owner's decision 2026-10-28, <see cref="Semantics.ChordTrackPitch"/>):
+    /// the part the row or its track is <c>for</c>, when the score engraves it; else, among the
+    /// staff the row is folded over, the first staff after it and the score's first staff, the
+    /// first that does not transpose — and failing that, the first of them. Null when the score
+    /// engraves no staff at all (<paramref name="scoreHasStaff"/> false: a lead sheet, whose row
+    /// gets a part of its own).
     /// </summary>
     private string? RowTargetPart(string row, out bool scoreHasStaff)
     {
@@ -6008,25 +6012,40 @@ public sealed class MusicXmlExporter
             return null;
         var items = spec.Items;
         int rowAt = -1;
-        for (int i = 0; i < items.Length; i++)
-            if (items[i] is ChordRowSpec r && r.PartName == row)
-            {
-                rowAt = i;
-                break;
-            }
-        string? first = null, after = null;
+        string? rowFor = null, folded = null;
         for (int i = 0; i < items.Length; i++)
         {
-            if (items[i] is SingleStaffSpec { Staff.WithChords: { } attached } s && attached == row)
-                return s.Staff.VoiceName;
-            if (FirstEngravedPart(items[i]) is not { } name)
-                continue;
-            first ??= name;
-            if (i > rowAt)
-                after ??= name;
+            if (rowAt < 0 && items[i] is ChordRowSpec r && r.PartName == row)
+            {
+                rowAt = i;
+                rowFor = r.For;
+            }
+            if (folded == null && items[i] is SingleStaffSpec { Staff.WithChords: { } attached } s && attached == row)
+            {
+                folded = s.Staff.VoiceName;
+                rowFor ??= s.Staff.ChordFor;
+            }
         }
-        scoreHasStaff = first != null;
-        return after ?? first;
+        var engraved = new List<(int At, string Name)>();
+        for (int i = 0; i < items.Length; i++)
+            if (FirstEngravedPart(items[i]) is { } name)
+                engraved.Add((i, name));
+        scoreHasStaff = engraved.Count > 0;
+        if (!scoreHasStaff)
+            return null;
+        if (_root != null && Semantics.ChordTrackPitch.ReaderOfRow(_root, row, rowFor) is { } reader
+            && spec.BindsVoice(reader))
+            return reader;
+        var candidates = new List<string>();
+        if (folded != null)
+            candidates.Add(folded);
+        if (engraved.FirstOrDefault(e => e.At > rowAt).Name is { } after)
+            candidates.Add(after);
+        candidates.Add(engraved[0].Name);
+        foreach (var name in candidates)
+            if (WrittenDrop(PartHeaderDefaults.Read(_root == null ? null : Semantics.ConcertPitch.FindPart(_root, name)).TranspositionSemitones) == 0)
+                return name;
+        return candidates[0];
     }
 
     /// <summary>The first part a score item engraves on a staff, or null (a row, an ossia).</summary>
@@ -6051,6 +6070,9 @@ public sealed class MusicXmlExporter
         {
             var bars = RowBars(pending.Items);
             string? target = RowTargetPart(pending.Row, out bool scoreHasStaff);
+            // A track typed in a transposing part's letters is read to what sounds first.
+            int typedDrop = _root == null ? 0
+                : Semantics.ChordTrackPitch.TypedDrop(_root, pending.Row, Semantics.ConcertPitch.FileIsConcert(_root));
             if (target != null)
             {
                 // The part wrote nothing in this play: no bar of its holds the harmony.
@@ -6066,11 +6088,11 @@ public sealed class MusicXmlExporter
                     AddRowHarmonies(measure, bars[k], pending, tuning, k == 0 && measure.Implicit ? pending.Pickup : null,
                         // The file's `shift N` moves the row's names with the piece (FileShift.RowDrop).
                         Semantics.FileShift.RowDrop(WrittenDrop(header.TranspositionSemitones),
-                            _root != null ? Semantics.FileShift.ReadSemitones(_root) : 0));
+                            _root != null ? Semantics.FileShift.ReadSemitones(_root) : 0), typedDrop);
                 }
             }
             else if (!scoreHasStaff)
-                EmitRowAsItsOwnPart(pending, bars);
+                EmitRowAsItsOwnPart(pending, bars, typedDrop);
         }
         _pendingChordRows.Clear();
     }
@@ -6083,7 +6105,7 @@ public sealed class MusicXmlExporter
     /// not written, as the MIDI does not play it.
     /// </summary>
     private void AddRowHarmonies(MusicXmlMeasure measure, List<SyntaxNode> bar, PendingChordRow pending,
-        TuningType? tuning, Fraction? cut, int drop = 0)
+        TuningType? tuning, Fraction? cut, int drop = 0, int typedDrop = 0)
     {
         if (bar.Count == 0)
             return;
@@ -6095,8 +6117,9 @@ public sealed class MusicXmlExporter
                 continue;   // N.C. and a bar-head '.' write nothing
             if (cut is { } pickup && timing >= pickup)
                 continue;
-            if (Svg.Collector.ChordNameCollector.StructureOf(entry.SymbolText, pending.TonicStep, pending.Sharps) is not { } chord)
+            if (Svg.Collector.ChordNameCollector.StructureOf(entry.SymbolText, pending.TonicStep, pending.Sharps) is not { } typed)
                 continue;
+            var chord = Semantics.ChordTrackPitch.Sounding(typed, entry.SymbolText, typedDrop, pending.Sharps);
             // A part written with a <transpose> carries its harmonies in WRITTEN pitch, as it does
             // its notes (a reader adds the <transpose> to both): the row is sounding, so a B♭
             // trumpet's harmony is the chord a major second up — the name its page prints
@@ -6166,7 +6189,7 @@ public sealed class MusicXmlExporter
     /// <summary>A lead sheet's row (a score with no staff): a part named "ROW (chords)" — the
     /// MIDI's track name — of one whole rest a bar (the pickup's length for a pickup bar), the
     /// harmonies at their offsets, in the treble clef, the section's key and meter.</summary>
-    private void EmitRowAsItsOwnPart(PendingChordRow pending, List<List<SyntaxNode>> bars)
+    private void EmitRowAsItsOwnPart(PendingChordRow pending, List<List<SyntaxNode>> bars, int typedDrop)
     {
         EnsurePart(pending.Row + " (chords)");
         _currentTranspose = null;
@@ -6198,7 +6221,7 @@ public sealed class MusicXmlExporter
             }
             var (type, dots) = GetNoteType(length);
             _currentMeasure!.Notes.Add(new MusicXmlNote { IsRest = true, Duration = FractionToTicks(length), Type = type, Dots = dots });
-            AddRowHarmonies(_currentMeasure, bars[k], pending, tuning, cut);
+            AddRowHarmonies(_currentMeasure, bars[k], pending, tuning, cut, typedDrop: typedDrop);
             _currentPart.Measures.Add(_currentMeasure);
             _currentMeasure = null;
         }

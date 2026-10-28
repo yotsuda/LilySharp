@@ -113,6 +113,27 @@ workflow attaches that section to the GitHub Release verbatim.
   the line it is written on now (it went by the reader's line numbers, wrong once a line was added
   or deleted above it).
 
+### Chords for a transposing part — BREAKING
+
+- `[lang]` **`chords NAME for PART { … }`** types a chord track in PART's letters — under PART's
+  `pitch`, so a B♭ trumpet's player's letters by default — and it sounds what they mean
+  (`chords tpc for tp { G6 }` sounds F6). A track with no `for` is sounding pitch and prints as
+  written: no `pitch` moves it (owner's decision 2026-10-28, `Semantics.ChordTrackPitch`).
+- `[lang]` **A score row's `chords NAME for PART`** prints the row as PART's player reads it on
+  that page, over the track's own `for`. **The staff a row stands above no longer moves its
+  names**: `score trumpet pitch transposed { chords prog  staff tp }` now prints the concert
+  chords; write `chords prog for tp` for the trumpeter's.
+- `[lang]` LYS7006 (a `for` that names no part) and LYS7007 (two blocks of one track for
+  different parts).
+- `[editor]` Ctrl+Shift+Up / Down on a typed `pitch` respells a track `for` a chromatic
+  transposer with its notes (root and slash bass), and Compose with AI does the same on open.
+- `[editor]` Completion offers `for` after a track's name (definition and score row) and the
+  parts after it; the part after `for` is coloured, and a body after `for PART {` still
+  completes chords.
+- `[midi]` `[musicxml]` `[ly]` A `for` track plays, exports and transposes from what its letters
+  sound. MusicXML puts a row's harmonies on the part it is for, else on a part that does not
+  transpose where the score has one.
+
 ### Editing
 
 - `[editor]` **A minor key's step keys walk its key signature** (the natural minor: A minor

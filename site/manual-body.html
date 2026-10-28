@@ -725,6 +725,12 @@ part v1 { clef treble instrument "1st Violin" } // label only — no preset beha
   each place refuses the other's word. Octave-only instruments (<code>bass</code>,
   <code>piccolo</code>, a <code>transposition 8vb</code>) keep their notation under both, as
   a printed concert score keeps them.</p>
+  <p><b>Chord symbols for a transposing part.</b> A <code>chords</code> track is the band's
+  chords at concert pitch: it prints and plays as written, whatever the <code>pitch</code>.
+  A track written for one part says so with <code>for</code> — <code>chords tpc for tp { G6 | C7 }</code>
+  is typed in the trumpet's letters, as its notes are, and sounds <code>F6 B♭7</code>. On a score,
+  <code>chords prog for tp</code> prints the row as the trumpeter reads it on that page:
+  <code>G6</code> on the trumpet's part, <code>F6</code> on the conductor's score.</p>
   <p class="note">An explicit <code>transpose</code> is a different thing: it moves the
   written notes by hand. Its argument is a PITCH, not a number of steps — it renames
   <code>c</code> to that pitch and shifts every note by the same interval, so

@@ -87,6 +87,25 @@ public class TypedPitchStepTests
         Assert.Equal(Trumpet, written);
     }
 
+    // A chord track `for` the trumpet is in its letters (owner's decision 2026-10-28): it is
+    // respelled with the trumpet's notes, root and slash bass, and comes back. A track for no part
+    // is sounding and stays.
+    [Fact]
+    public void AChordTrackForTheTransposer_IsRespelledWithIt_AndBack()
+    {
+        string book = Trumpet
+            .Replace("section B { tp {", "chords tpc for tp { section B { E/G# | A7 | } }\nchords band { section B { C | Dm7 | } }\nsection B { tp {")
+            .Replace("score { staff pno staff bs }", "score { staff pno staff bs chords tpc chords band staff tp }");
+        Assert.Empty(SyntaxTree.Parse(book).Diagnostics);
+        var (concert, said) = StepAt(book, "pitch written", -1);
+        Assert.StartsWith("pitch concert: ", said);
+        Assert.Contains("chords tpc for tp { section B { D/F# | G7 | } }", concert);
+        Assert.Contains("chords band { section B { C | Dm7 | } }", concert);
+        Assert.Equal(OctaveModeConverter.SoundSignature(book), OctaveModeConverter.SoundSignature(concert));
+        var (written, _) = StepAt(concert, "pitch concert", +1);
+        Assert.Equal(book, written);
+    }
+
     [Fact]
     public void AnAltoSaxophone_IsRespelledAMajorSixthUp_InA()
     {

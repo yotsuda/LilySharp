@@ -73,6 +73,12 @@ internal sealed class ChordNameCollector
     /// transposing part for its player), 0 for as written — set by the collector before each row.</summary>
     public int RowNameDrop { get; set; }
 
+    /// <summary>How many semitones the row's LETTERS stand above what sounds
+    /// (<see cref="Semantics.ChordTrackPitch.TypedDrop"/>: a track typed <c>for</c> a transposing
+    /// part in its player's letters), 0 for a sounding track — set with <see cref="RowNameDrop"/>.
+    /// The structure is moved by it first, so the MIDI, the hover and the diagrams read what sounds.</summary>
+    public int RowTypedDrop { get; set; }
+
     /// <summary>The file's <c>shift N</c> in semitones (<see cref="Semantics.FileShift"/>), 0 for
     /// none — set by the collector before each row, beside <see cref="RowNameDrop"/>, which
     /// already carries it for the NAMES. This one decides the DIAGRAMS: under a shift a written
@@ -849,7 +855,8 @@ internal sealed class ChordNameCollector
         // the name a transposing staff's player reads (RowNameDrop) the same way: the chord that
         // many semitones down, spelled in the key that many down. The STRUCTURE stays sounding —
         // the MIDI, the hover and the diagrams read what sounds.
-        return StructureOf(symbol, tonicStep, sharps) is { } structure
+        return StructureOf(symbol, tonicStep, sharps) is { } typed
+               && Semantics.ChordTrackPitch.Sounding(typed, symbol, RowTypedDrop, sharps) is var structure
             ? (RowNameDrop == 0 ? structure.PrintedSymbol(Spelling, sharps)
                 : structure.Pressed(RowNameDrop, sharps).PrintedSymbol(Spelling,
                     LilySharp.Core.Music.ChordStructure.PressedKeySharps(sharps, RowNameDrop)), structure)

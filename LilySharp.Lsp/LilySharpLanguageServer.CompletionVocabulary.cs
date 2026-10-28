@@ -2448,6 +2448,7 @@ public sealed partial class LilySharpLanguageServer
         {
             AsItem("as roman", "Show chord symbols as Roman-numeral degrees (I, IIm7, V7)", "0"),
             AsItem("as names", "Show absolute chord names (C, Am7) — the default", "1"),
+            ChordForItem("Print the chords as this part's player reads them on this page", "2"),
         };
         // The next render item can also start here; keep those, sorted after `as …`.
         foreach (var it in GetScoreBlockCompletions().Items)
@@ -2466,6 +2467,27 @@ public sealed partial class LilySharpLanguageServer
             SortText = sort,
         };
     }
+
+    /// <summary>The <c>for</c> item of a chord track (owner's decision 2026-10-28,
+    /// Semantics.ChordTrackPitch): it writes the word and re-opens the list onto the parts.</summary>
+    private static CompletionItem ChordForItem(string detail, string sort) => new()
+    {
+        Label = LilySharp.Core.Semantics.ChordTrackPitch.ForWord,
+        Kind = CompletionItemKind.Keyword,
+        InsertTextFormat = InsertTextFormat.Snippet,
+        InsertText = LilySharp.Core.Semantics.ChordTrackPitch.ForWord + " $0",
+        Detail = detail,
+        SortText = sort,
+        Command = new Command { Title = "Suggest part name", CommandIdentifier = "editor.action.triggerSuggest" },
+    };
+
+    /// <summary>After <c>chords NAME</c> at a definition site: the <c>for</c> pair — the part
+    /// whose letters the track is typed in. Without it the track is sounding pitch, and no
+    /// <c>pitch</c> moves it.</summary>
+    internal static CompletionList GetChordsTrackNameCompletions() => new()
+    {
+        Items = [ChordForItem("Type these chords in this part's letters - as its notes are typed under its `pitch`", "0")],
+    };
 
     /// <summary>After <c>… as</c>: the two chord display modes.</summary>
     internal static CompletionList GetChordDisplayModeCompletions()

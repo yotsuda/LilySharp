@@ -80,6 +80,7 @@ public static class SemanticValidation
         new LyricSyllableValidator(),       // more syllables than notes
         new TrackNeedsSectionsValidator(),  // by-part lyrics/chords track must use sections
         new LyricSingsValidator(),          // sings bindings: unknown target / conflict / attachment
+        new ChordForValidator(),            // chord-track `for`: unknown part / conflict
         new LyricPlainVerseShadowedValidator(), // a plain verse fully shadowed by [N.] verses
         new FormJumpTargetValidator(),      // a form's jump text with no segno / fine / to coda / coda to work with
         new TabTieStringValidator(),        // a tie naming two tab strings

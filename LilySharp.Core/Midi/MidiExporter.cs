@@ -1488,25 +1488,37 @@ public sealed class MidiExporter
         int tonicStep = _ambientTonic.Valid ? _ambientTonic.Step : 0;
         int barStart = startTick;
         var bar = new List<SyntaxNode>();
+        // A track typed `for` a transposing part in its player's letters sounds that many
+        // semitones lower (Semantics.ChordTrackPitch): read once, off the first item's tree.
+        int? typedDrop = null;
 
         void Sound()
         {
             if (bar.Count == 0)
                 return;
+            if (typedDrop == null)
+            {
+                SyntaxNode root = bar[0];
+                while (root.Parent != null)
+                    root = root.Parent;
+                typedDrop = Semantics.ChordTrackPitch.TypedDrop(root, rowName, Semantics.ConcertPitch.FileIsConcert(root));
+            }
             foreach (var (node, timing, duration) in
                      Svg.Collector.ChordNameCollector.SlotGroups(bar, _bars.Meter.Beats, _bars.Meter.BeatType, out _))
             {
                 if (node is not ChordEntrySyntax entry
                     || Svg.Collector.ChordNameCollector.StructureOf(entry.SymbolText, tonicStep, _keySharps)
-                        is not { } chord)
+                        is not { } typed)
                     continue;
+                var chord = Semantics.ChordTrackPitch.Sounding(typed, entry.SymbolText, typedDrop.Value, _keySharps);
                 int onset = barStart + FractionToTicks(timing);
                 int length = Math.Min(FractionToTicks(duration), barStart + thisBarTicks - onset);
                 if (length < 1)
                     continue;
                 int position = entry.SourceStart;
                 int ordinal = NextOrdinal(position);
-                // A row is sounding pitch, moved only by the file's `shift N` (FileShift).
+                // A row is sounding pitch once its letters are read (above), moved only by the
+                // file's `shift N` (FileShift).
                 foreach (var tone in Music.ChordVoicing.Window(chord))
                     track.Notes.Add(new MidiNote(track.Channel, SoundKey(tone.Midi + _fileShiftSemitones, position), velocity,
                         onset, length, position, SourceOrdinal: ordinal, Timbre: timbre, Part: part));

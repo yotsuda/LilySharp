@@ -398,6 +398,21 @@ public static class OctaveModeConverter
                         mine.Add(new Edit(tonic.PitchToken.Span.Start, tonic.PitchToken.Span.End, to.Name));
                 }
             }
+            // A chord track typed `for` this part is in its letters (Semantics.ChordTrackPitch): it
+            // is respelled with the part's notes (owner's decision 2026-10-28).
+            if (why == null)
+                foreach (var entry in root.DescendantNodes<ChordEntrySyntax>())
+                {
+                    if (TrackOf(entry) is not { } track
+                        || Semantics.ChordTrackPitch.TargetOf(root, track) != part.Name.Text)
+                        continue;
+                    if (RespelledSymbol(source, entry, interval) is not { } symbolEdits)
+                    {
+                        why = $"the chord {entry.SymbolText} at {LineCol(source, entry.SourceStart)} cannot be respelled";
+                        break;
+                    }
+                    mine.AddRange(symbolEdits);
+                }
             // Respelled into its player's letters, the part reads its player's key too: a part with
             // no key of its own gets the file's, moved as its notes are (a B♭ trumpet in F major
             // reads G major). A key it shares with the other parts — a section's, written outside
@@ -438,6 +453,62 @@ public static class OctaveModeConverter
 
         static bool InPart(SyntaxNode node, PartDeclarationSyntax part)
             => BlockOf(node) is { } block && block.PartName.Text == part.Name.Text;
+    }
+
+    /// <summary>The chord track an entry is written in, or null.</summary>
+    private static string? TrackOf(ChordEntrySyntax entry)
+    {
+        for (var n = entry.Parent; n != null; n = n.Parent)
+            if (n is ChordPartBlockSyntax block)
+                return block.PartName;
+        return null;
+    }
+
+    /// <summary>
+    /// The edits that move a chord symbol's root and its slash bass by <paramref name="interval"/>
+    /// (<c>G6</c> → <c>F6</c>, <c>D7/F#</c> → <c>C7/E</c>), the quality left as written — none for
+    /// a Roman degree, which names no letter; null when a result needs more than one ♯ or ♭
+    /// (a chord root takes one, GRAMMAR ChordRoot).
+    /// </summary>
+    private static List<Edit>? RespelledSymbol(string source, ChordEntrySyntax entry, (int step, int alt, int oct) interval)
+    {
+        int start = entry.SourceStart;
+        int end = entry.ShapesOpenParen?.SourceStart ?? entry.Span.End;
+        while (end > start && char.IsWhiteSpace(source[end - 1])) end--;
+        string text = source[start..end];
+        var edits = new List<Edit>();
+        if (text.Length == 0 || text[0] is < 'A' or > 'G')
+            return edits;
+        int slash = -1, depth = 0;
+        for (int i = 0; i < text.Length; i++)
+        {
+            if (text[i] == '(') depth++;
+            else if (text[i] == ')') depth--;
+            else if (text[i] == '/' && depth == 0) { slash = i; break; }
+        }
+        string main = slash >= 0 ? text[..slash] : text;
+        if (Root(main, 0) is not { } rootEdit)
+            return null;
+        edits.Add(rootEdit);
+        if (slash >= 0 && text.Length > slash + 1 && text[slash + 1] is >= 'A' and <= 'G')
+        {
+            if (Root(text[(slash + 1)..], slash + 1) is not { } bassEdit)
+                return null;
+            edits.Add(bassEdit);
+        }
+        return edits;
+
+        Edit? Root(string from, int at)
+        {
+            if (!Music.ChordStructure.TryParseSymbolPitch(from, out int step, out int alter, out string rest))
+                return null;
+            var (s, a, _) = Semantics.PitchTransposer.Transpose(step, alter, 0, interval.step, interval.alt, interval.oct);
+            if (Math.Abs(a) > 1)
+                return null;
+            bool glyphs = from.Length > 1 && from[1] is '♯' or '♭';
+            string name = "CDEFGAB"[s] + a switch { 1 => glyphs ? "♯" : "#", -1 => glyphs ? "♭" : "b", _ => "" };
+            return new Edit(start + at, start + at + (from.Length - rest.Length), name);
+        }
     }
 
     /// <summary>Whether <paramref name="key"/> respelled to <paramref name="tonic"/> is the file's own

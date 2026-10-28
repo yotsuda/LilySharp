@@ -1335,17 +1335,32 @@ internal sealed class LyricSyllableGreen : GreenSyntaxNode
 /// </summary>
 internal sealed class ChordPartBlockGreen : GreenSyntaxNode
 {
+    // `chords [name] [for part] { … }` — the optional `for part` pair says whose letters the
+    // track is typed in (Semantics.ChordTrackPitch). Present-or-absent slots, as LyricsBlockGreen's
+    // `sings`: the red side finds the brace by kind.
     public ChordPartBlockGreen(
         SyntaxToken keyword,
         SyntaxToken? name,
         SyntaxToken openBrace,
         GreenNode?[] items,
-        SyntaxToken closeBrace)
-        : base(SyntaxKind.ChordPartBlock,
-            name != null
-                ? [keyword, name, openBrace, .. items, closeBrace]
-                : [keyword, openBrace, .. items, closeBrace])
+        SyntaxToken closeBrace,
+        SyntaxToken? forKeyword = null,
+        SyntaxToken? forTarget = null)
+        : base(SyntaxKind.ChordPartBlock, Slots(keyword, name, forKeyword, forTarget, openBrace, items, closeBrace))
     {
+    }
+
+    private static GreenNode?[] Slots(SyntaxToken kw, SyntaxToken? name, SyntaxToken? forKw,
+        SyntaxToken? forTarget, SyntaxToken open, GreenNode?[] items, SyntaxToken close)
+    {
+        var head = new List<GreenNode?> { kw };
+        if (name != null) head.Add(name);
+        if (forKw != null) head.Add(forKw);
+        if (forTarget != null) head.Add(forTarget);
+        head.Add(open);
+        head.AddRange(items);
+        head.Add(close);
+        return head.ToArray();
     }
 }
 

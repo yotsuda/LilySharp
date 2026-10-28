@@ -186,8 +186,14 @@ internal sealed partial class Parser
                 chordsDepth = 1;
                 chordsStage = 0;
             }
+            // `chords [NAME] for PART {` (2026-10-28): the pair sits between the name and the brace.
+            else if (chordsStage is 1 or 2 && t.Kind == SyntaxKind.Identifier
+                     && t.Text == Semantics.ChordTrackPitch.ForWord)
+                chordsStage = 3;
             else if (chordsStage == 1 && t.Kind == SyntaxKind.Identifier)
                 chordsStage = 2;
+            else if (chordsStage == 3 && t.Kind != SyntaxKind.CloseBrace)
+                chordsStage = 4;
             else
                 chordsStage = 0;
 

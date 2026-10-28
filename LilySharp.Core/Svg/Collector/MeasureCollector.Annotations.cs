@@ -287,14 +287,21 @@ public sealed partial class MeasureCollector
             ? Tablature.Tunings.Parse(word)
             : null;
 
-    /// <summary>How many semitones down a chord row over <paramref name="partName"/>'s staff names
-    /// its chords on THIS score's page (<see cref="Semantics.ConcertPitch.ChordNameDrop"/>), with
-    /// the file's <c>shift</c> folded in (<see cref="Semantics.FileShift.RowDrop"/>: a row over no
-    /// staff moves with the piece too).</summary>
-    private int ChordRowDrop(SyntaxNode root, string? partName)
-        => Semantics.FileShift.RowDrop(partName == null ? 0
-            : Semantics.ConcertPitch.ChordNameDrop(PagePitchOf(partName), _fileIsConcert, Semantics.ConcertPitch.FindPart(root, partName)),
+    /// <summary>How many semitones down a row placing chord track <paramref name="track"/> — with its
+    /// own <c>for</c> <paramref name="rowFor"/> — names what the track sounds on THIS score's page:
+    /// to the reading of the part the row or the track is <c>for</c>
+    /// (<see cref="Semantics.ChordTrackPitch.ReaderDrop"/> — the staff below decides nothing,
+    /// owner's decision 2026-10-28), with the file's <c>shift</c> folded in
+    /// (<see cref="Semantics.FileShift.RowDrop"/>: a row over no staff moves with the piece too).</summary>
+    /// <remarks>Also sets the collector's <see cref="ChordNameCollector.RowTypedDrop"/>: the
+    /// letters reach what sounds before the reader's reading is taken.</remarks>
+    private int ChordRowDrop(SyntaxNode root, string track, string? rowFor)
+    {
+        _chordNameCollector.RowTypedDrop = Semantics.ChordTrackPitch.TypedDrop(root, track, _fileIsConcert);
+        return Semantics.FileShift.RowDrop(
+            Semantics.ChordTrackPitch.ReaderDrop(root, track, rowFor, _fileIsConcert, PagePitchOf),
             _fileShiftSemitones);
+    }
 
     /// <summary>Reads the tuning of <paramref name="partName"/> for the names its symbol-less
     /// <c>@chord</c> shapes derive, and its fretted tuning for the diagrams they draw.</summary>

@@ -206,6 +206,10 @@ public sealed partial class LilySharpLanguageServer
         // closing. Asked of every node, like the voices below.
         if (PartReferenceFinder.SingsTargetToken(node) is { } sings)
             names.SingsTargets.Add(sings);
+        // A chord track's `for` part sits on the track's node in the same way, and names a
+        // part only (LYS7006).
+        if (PartReferenceFinder.ChordForTargetToken(node) is { } chordFor)
+            names.PartReferences.Add(chordFor);
 
         PartReferenceFinder.CollectVoiceNames(node, names.Voices);
 

@@ -852,10 +852,27 @@ internal sealed partial class Parser
         var tokens = new List<SyntaxToken> { Expect(SyntaxKind.ChordsKeyword) };
         // A bare `chords` places the file's unnamed chord track (2026-10-09). ⚠️ So a bare
         // word right after it is always the track's name, never a MIDI-only part.
-        if (IsPartNameStart() && !string.Equals(Current.Text, "as", System.StringComparison.Ordinal))
+        if (IsPartNameStart() && !string.Equals(Current.Text, "as", System.StringComparison.Ordinal)
+            && !IsChordRowFor())
             tokens.Add(Advance());
+        // `chords prog for tp`: this row prints the chords as tp's player reads them on this
+        // page (Semantics.ChordTrackPitch.ReaderOfRow) — before or after the `as` selector.
+        ConsumeChordRowFor(tokens);
         ConsumeAsSelector(tokens);
+        ConsumeChordRowFor(tokens);
         return new ChordRowRenderGreen([.. tokens]);
+    }
+
+    private bool IsChordRowFor()
+        => Check(SyntaxKind.Identifier) && Current.Text == Semantics.ChordTrackPitch.ForWord
+           && Peek(1) is { } next && IsPartNameToken(next);
+
+    private void ConsumeChordRowFor(List<SyntaxToken> tokens)
+    {
+        if (!(Check(SyntaxKind.Identifier) && Current.Text == Semantics.ChordTrackPitch.ForWord))
+            return;
+        tokens.Add(Advance());
+        tokens.Add(ExpectPartName());
     }
 
     /// <summary>Consumes an optional <c>as WORD</c> selector, appending its two tokens.

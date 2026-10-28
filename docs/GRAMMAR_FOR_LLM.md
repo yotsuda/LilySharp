@@ -248,11 +248,14 @@ verbatim `@"C:\music"` / `@"say ""hi"""` (backslash as written, `""` = one quote
   typed as they SOUND under `pitch concert` too (a bass's low E `e,,`, E1) and keep their printed
   octave on every page; without a transposing `instrument` the word changes nothing. A composed
   piece is best written at concert pitch: every part by the pitch it sounds.
-- A chords row is SOUNDING pitch (it belongs to no instrument; the MIDI plays it so). A row
-  standing directly above a staff that prints a transposing part for its player names the
-  chords that player reads: over `score trumpet pitch transposed { chords prog  staff tp }`
-  a B♭ trumpet reads concert `F6 Bb7` as `G6 C7`, spelled in the key the staff prints. A row
-  over a sounding staff, or over no staff (a lead sheet), prints as written.
+- A chords track is SOUNDING pitch unless it says whose letters it is in: `chords tpc for tp
+  { G6 | C7 }` is typed as the trumpet's notes are (under its `pitch`: the player's letters by
+  default), and sounds `F6 Bb7`. With no `for` no `pitch` moves a track, and no staff it
+  stands above does. A score ROW prints the reading of the part it is for — its own `for`, else
+  the track's: `score trumpet pitch transposed { chords prog for tp  staff tp }` names concert
+  `F6 Bb7` as `G6 C7`, spelled in the key the trumpet prints; the same row with no `for` prints
+  `F6 Bb7`. `for` names a part (LYS7006); two blocks of a track naming different parts conflict
+  (LYS7007) — a row's `for` never does.
 - Numbers: `1`=whole, `2`=half, `4`=quarter, `8`, `16`, `32`, `64`, `128`.
 - Dots after the number: `4.`=dotted quarter, `4..`=double-dotted.
 - Omitting the duration reuses the previous note's duration.

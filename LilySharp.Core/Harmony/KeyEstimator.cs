@@ -217,8 +217,10 @@ public static class KeyEstimator
             foreach (var (node, _, duration) in ChordNameCollector.SlotGroups(bar, beats, beatType, out _))
             {
                 if (node is not ChordEntrySyntax entry
-                    || !ChordStructure.TryParseChordEntry(entry.SymbolText, out var chord))
+                    || !ChordStructure.TryParseChordEntry(entry.SymbolText, out var typed))
                     continue;
+                // A track typed in a transposing part's letters says what sounds once read.
+                var chord = Semantics.ChordTrackPitch.Sounding(entry, typed, 0);
                 double w = duration.ToDouble();
                 int rootPc = Mod12(StepSemitones[chord.RootStep] + chord.RootAlter);
                 foreach (int pc in chord.Intervals.Select(i => Mod12(rootPc + i)).Append(rootPc).Distinct())

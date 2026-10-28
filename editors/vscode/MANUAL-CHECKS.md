@@ -272,6 +272,11 @@ edocs/HANDOFF.mde §2 R13 ⒝・OMR の提案 B1〜B6（e..\LilySharp-Omr\docs\r
 - [ ] **C41**（第1029・名前の無い part と短い名前のある part の補完）:
   - (1) `part { ▮ }` で Ctrl+Space → パートの属性（`clef`・`instrument` …）が出る（音名ではない）。`instrument` を選ぶと、すぐ楽器の一覧が開く。
   - (2) `part flute "Flute" "Fl." { ▮ }` で同じ。
+- [ ] **C42**（第1029・コードトラックの `for`）:
+  - (1) `pitch written`・`key f major`・`part tp { instrument trumpet key g major }` に `chords tpc ▮` → Ctrl+Space に `for`、選ぶとパート名の一覧が開く。`chords tpc for tp { section A { G6 | C7 | } }` と書き、`score trumpet { chords tpc  staff tp }` のプレビューは G6 C7、`score full pitch concert { chords tpc  staff tp }` は F6 B♭7。▶ で鳴るのは F6 B♭7。
+  - (2) `for` の無い `chords band { … F6 … }` を `staff tp` の真上に置いても F6 のまま（`pitch` を切り替えても動かない）。score の行を `chords band for tp` にすると G6 になる。
+  - (3) 先頭の `pitch written` の上で Ctrl+Shift+Down → `chords tpc for tp` の中身が F6 B♭7 に書き直される（`chords band` は動かない）。Ctrl+Shift+Up で戻る。
+  - (4) `for nobody` に赤い波線（LYS7006）。`for` の後のパート名がパートの色になる。
 
 ## 4. §2 R13 ⒝ — 差分頁の配信（実機未確認・第404）
 

@@ -144,6 +144,16 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **残り（ユーザー判断）**:
   - ⑶ ユーザーが戻した `samples/` の 5 冊（amazing-grace・canon-in-d・fur-elise・greensleeves・nocturne）の移行＝**閉じた**（ユーザーが新しい規則で書き直していた・Claude は manual-beam-demo と注釈だけ直して commit＝第1029）。
 - **補完の直し（第1029・ユーザー報告）**: 名前の無い `part { }` と、短い名前まで書いた `part flute "Flute" "Fl." { }` の中で Ctrl+Space がパートの属性を出さず音名を出していた（`instrument` を補完できない）。`BlockContextScan` の枠読み（`ReadFrame`）が引用符の名前を 1 つしか飛ばさず、`IsInsidePartBlock` は名前のある形しか読まなかった。両方直した（網 `InstrumentCompletionTests`・MANUAL-CHECKS C41）。`instrument` を選ぶと一覧がすぐ開くのは前からの仕組み（`editor.action.triggerSuggest`）。
+- **コードトラックの `for`（第1029・ユーザー決定 2026-10-28）**: ユーザー指摘「chords の和音が pitch の指定で動くのはおかしい・どのパートのためのコードか指定できないといけない・score の中でも」。それまでは、コード行は実音で、直下の譜表が移調楽器を奏者向けに描くとき奏者の名前に移していた（`ChordNameDrop`）。結び付きはどこにも書かれていなかった。
+  - 定義 `chords tpc for tp { … }` は tp の文字で書く（tp の `pitch` に従う）。同時に、このトラックの既定の読み手。
+  - score の行 `chords prog for tp`（`as` の前後どちらでも）は、その行を tp の奏者の読みで描く。定義の `for` を上書きする。
+  - `for` がどこにも無ければ実音で、書いたとおり描く（`pitch` でも直下の譜表でも動かない）。歌詞の `sings` と同じ二層。
+  - 核は `Semantics.ChordTrackPitch`（`TypedDrop`＝文字→実音、`ReaderDrop`＝実音→読み手の読み、`Sounding`＝ローマ数字は動かさない）。
+  - 読む側: 譜面（`ChordNameCollector.RowTypedDrop`・行ごとの `for` は `ChordRowSpec.For`／`StaffSpec.ChordFor`。同じトラックを 2 回置くと行ごとに別）、MIDI、MusicXML（harmony は読み手のパートへ。無ければ移調しないパートへ）、LilyPond の双子、キー推定、カポの助言。
+  - 検証は LYS7006（パートでない）・LYS7007（定義の食い違い）。`pitch` の切り替えと AI 作曲を開くときに、`for` のトラックを音と一緒に綴り直す（`OctaveModeConverter.RespelledSymbol`）。
+  - 補完は `for` とパート名。`for` の後のパート名は色付けされ、`for P {` の中もコード欄として扱う（Parser の `chordsStage`・LSP の `ReadFrame`）。
+  - 網は `ChordRowTransposeTests`（書き直し・`for` の網を追加）・`TypedPitchStepTests`・`ChordForCompletionTests`。MANUAL-CHECKS C42。
+  - 文書は GRAMMAR（ChordsBlock・ScoreItem）・GRAMMAR_FOR_LLM・SYNTAX_REFERENCE・site の manual。`RowStaffPart` は呼ぶ側が無くなり消した。
   - ⑷ 移調楽器を書いた音で綴り直す変換（「B」）＝**入れた（第1029・⑸ の項）**。
   - ⑸ Ctrl+Shift+↑ で `pitch` の written／concert を切り替えたとき、楽譜も書き直す＝**入れた（第1029・`OctaveModeConverter.SwitchTypedPitch`・網 `TypedPitchStepTests` 6 本・MANUAL-CHECKS C40）**。⑷ も同日に入れた＝半音の移調楽器は `\transpose` の綴りで音と調を移し、奏者の文字にするときは調の無いパートにファイルの調を移して書く（F の曲の B♭ トランペットは `key g major`）。セクション見出しの調を共有するパートだけは移せず、自分の `pitch` に旧い語を書いて文字を保つ（パート見出しの切り替えなら断る）。AI 作曲を開くときも同じ（`WithoutConcertPitch`）。網 `TypedPitchStepTests` 8 本・`ConcertPitchRemovalTests`。
   - ⑹ OMR の `.lys` 出力を新しいオクターブへ＝**閉じた**（OMR の返事 `lilysharp-reply-2026-10-28-octaves.md`・REQUESTS 9＝お知らせのみ・Lily# 側の作業なし: OMR は LilyPond のオクターブで書く（OMR 側のコミットは返事の末尾）・`treble_8` は鳴る高さ・版の床も目印も持たない＝オーナーの方針「後方互換なし、両側を同時に新しくする」）。

@@ -110,6 +110,17 @@ All notable changes to the Lily# VS Code extension are documented here.
 - **A row asking the AI shows it**: a turning ring and a pulsing *asking the AI…* beside the row's
   note and in its Draft, until the answer comes.
 
+### Chords for a transposing part — BREAKING
+
+- **A chord track can say which part it is for**: `chords tpc for tp { G6 | C7 }` is typed the
+  way the trumpet's notes are — as its player reads them — and sounds F6 and B♭7. A track with no
+  `for` is the band's chords at concert pitch: changing `pitch` never moves it.
+- **A score row prints one part's reading**: `chords prog for tp` above the trumpet's part names
+  the chords as the trumpeter reads them. The staff a row stands above no longer decides this —
+  a row without `for` prints the chords as written.
+- Ctrl+Space offers `for` and then the parts; Ctrl+Shift+Up / Down on the trumpet's `pitch`
+  respells its chord track along with its notes.
+
 ### Editing
 
 - **In a minor key, Ctrl+Shift+Up / Down walk the key signature** — its natural minor: in A minor

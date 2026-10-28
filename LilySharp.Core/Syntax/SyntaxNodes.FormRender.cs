@@ -942,11 +942,40 @@ public sealed class ChordRowRenderSyntax : SyntaxNode
     /// <summary>The token naming the chord part to place, or null for a bare <c>chords</c> —
     /// the file's unnamed chord track.</summary>
     public SyntaxTokenNode? NameToken =>
-        GetChild(1) is SyntaxTokenNode t && !(t.Text == "as" && SlotCount > 2) ? t : null;
+        GetChild(1) is SyntaxTokenNode t
+            && !((t.Text == "as" || t.Text == Semantics.ChordTrackPitch.ForWord) && SlotCount > 2) ? t : null;
 
     /// <summary>The chord part name to place (e.g. <c>chords riff</c> → "riff"; a bare
     /// <c>chords</c> → <see cref="SyntaxFacts.UnnamedChordsName"/>).</summary>
     public string PartName => NameToken?.Text ?? SyntaxFacts.UnnamedChordsName;
+
+    /// <summary>The <c>for</c> keyword of a row naming whose reading it prints
+    /// (<c>chords prog for tp</c>), or null when the row writes none.</summary>
+    public SyntaxTokenNode? ForKeyword => ForIndex is int i ? (SyntaxTokenNode)GetChild(i)! : null;
+
+    /// <summary>The token naming the part after the row's <c>for</c>, or null.</summary>
+    public SyntaxTokenNode? ForTargetToken =>
+        ForIndex is int i && GetChild(i + 1) is SyntaxTokenNode t && SyntaxFacts.IsPartNameToken(t.Kind, t.Text)
+            ? t : null;
+
+    // The slot of the row's `for` (before or after its `as` selector), or null.
+    private int? ForIndex
+    {
+        get
+        {
+            for (int i = NameToken != null ? 2 : 1; i < SlotCount; i++)
+                if (GetChild(i) is SyntaxTokenNode { Kind: SyntaxKind.Identifier } f
+                    && f.Text == Semantics.ChordTrackPitch.ForWord
+                    && GetChild(i - 1) is not SyntaxTokenNode { Text: "as" })
+                    return i;
+            return null;
+        }
+    }
+
+    /// <summary>The part whose player's reading THIS ROW prints (<c>chords prog for tp</c> →
+    /// "tp"), or null when the row states none and the track's own <c>for</c> applies
+    /// (<see cref="Semantics.ChordTrackPitch.ReaderOfRow"/>).</summary>
+    public string? ForTarget => ForTargetToken?.Text;
 
     /// <summary>The chord display selector after the name (<c>as roman|names</c> →
     /// "roman"), or null when absent.</summary>

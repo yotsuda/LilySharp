@@ -76,6 +76,11 @@ public sealed record StaffSpec(
     /// suppressed (`~`).</summary>
     public string? ShortInstrumentName { get; init; }
 
+    /// <summary>The folded chord row's own <c>for</c> (<c>chords prog for tp  staff tp</c>):
+    /// the part whose player's reading it prints, or null when the row wrote none
+    /// (<see cref="Semantics.ChordTrackPitch.ReaderOfRow"/>).</summary>
+    public string? ChordFor { get; init; }
+
     /// <summary>The voice each folded verse sings by its <c>sings</c> (see
     /// <see cref="VerseVoices"/>), keyed by track, or null when no verse of this staff
     /// names one — the common case, which then allocates nothing.</summary>
@@ -232,7 +237,11 @@ public sealed record TabStaffSpec(StaffSpec Staff, TuningType Tuning, int Transp
     // (`tab part with chords CHORDPART [as roman|names]`) — exactly like the
     // notation-staff `staff … with chords …` attachment.
     string? WithChords = null,
-    ChordDisplayMode ChordDisplay = ChordDisplayMode.Names) : RenderItemSpec;
+    ChordDisplayMode ChordDisplay = ChordDisplayMode.Names) : RenderItemSpec
+{
+    /// <summary>The folded chord row's own <c>for</c>, as <see cref="StaffSpec.ChordFor"/>.</summary>
+    public string? ChordFor { get; init; }
+}
 
 /// <summary>
 /// Ossia staff render item (small alternative passage above/below main staff).
@@ -246,7 +255,12 @@ public sealed record OssiaStaffSpec(StaffSpec Staff) : RenderItemSpec;
 /// </summary>
 public sealed record ChordRowSpec(
     string PartName,
-    ChordDisplayMode DisplayMode = ChordDisplayMode.Names) : RenderItemSpec;
+    ChordDisplayMode DisplayMode = ChordDisplayMode.Names) : RenderItemSpec
+{
+    /// <summary>The row's own <c>for</c> (<c>chords prog for tp</c>): the part whose player's
+    /// reading it prints, or null when it wrote none (<see cref="Semantics.ChordTrackPitch.ReaderOfRow"/>).</summary>
+    public string? For { get; init; }
+}
 
 /// <summary>
 /// Independent lyrics-row render item: <c>lyrics name</c> places a lyrics part
@@ -557,6 +571,35 @@ public sealed record RenderSpec(
             {
                 case SingleStaffSpec s when s.Staff.VoiceName == partName:
                     return s.Staff.VerseVoiceMap();
+                case GrandStaffRenderSpec g:
+                    foreach (var member in g.GrandStaff.Members)
+                        if (Find(member) is { } inner)
+                            return inner;
+                    return null;
+                default:
+                    return null;
+            }
+        }
+    }
+
+    /// <summary>The own <c>for</c> of the row placing chord track <paramref name="track"/> folded
+    /// over <paramref name="staffVoice"/>'s staff, or null when the row wrote none. (A row of its
+    /// own carries it on its <see cref="ChordRowSpec.For"/>: one track may be placed twice.)</summary>
+    public string? ChordRowFor(string track, string? staffVoice)
+    {
+        foreach (var item in Items)
+            if (Find(item) is { } found)
+                return found;
+        return null;
+
+        string? Find(RenderItemSpec item)
+        {
+            switch (item)
+            {
+                case SingleStaffSpec s when s.Staff.VoiceName == staffVoice && s.Staff.WithChords == track:
+                    return s.Staff.ChordFor;
+                case TabStaffSpec t when t.Staff.VoiceName == staffVoice && t.WithChords == track:
+                    return t.ChordFor;
                 case GrandStaffRenderSpec g:
                     foreach (var member in g.GrandStaff.Members)
                         if (Find(member) is { } inner)

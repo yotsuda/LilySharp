@@ -146,8 +146,13 @@ public sealed class ChordPartBlockSyntax : SyntaxNode
     /// <summary>The <c>chords</c> keyword token.</summary>
     public SyntaxTokenNode ChordsKeyword => (SyntaxTokenNode)GetChild(0)!;
 
+    // The name slot is the token after the keyword unless that token is the `for` of an
+    // unnamed track (`chords for tp {`: the parser's own test — `for` right before the brace
+    // is a track named `for`).
     private bool HasName =>
-        GetChild(1) is SyntaxTokenNode t && t.Kind == SyntaxKind.Identifier;
+        GetChild(1) is SyntaxTokenNode { Kind: SyntaxKind.Identifier } t
+            && !(t.Text == Semantics.ChordTrackPitch.ForWord
+                 && GetChild(2) is SyntaxTokenNode { Kind: not SyntaxKind.OpenBrace });
 
     /// <summary>The token carrying this block's track name, or null when it writes none —
     /// what the editor colours. <see cref="PartName"/> reads the same slot.</summary>
@@ -157,7 +162,32 @@ public sealed class ChordPartBlockSyntax : SyntaxNode
     /// for an unnamed block.</summary>
     public string? PartName => NameToken?.Text ?? SyntaxFacts.UnnamedChordsName;
 
-    private int OpenBraceIndex => HasName ? 2 : 1;
+    /// <summary>The <c>for</c> keyword token of a track typed in a part's letters
+    /// (<c>chords tpc for tp { … }</c>), or null when the block writes none.</summary>
+    public SyntaxTokenNode? ForKeyword =>
+        GetChild(HasName ? 2 : 1) is SyntaxTokenNode { Kind: SyntaxKind.Identifier } f
+            && f.Text == Semantics.ChordTrackPitch.ForWord ? f : null;
+
+    /// <summary>The token naming the part after <c>for</c>, or null.</summary>
+    public SyntaxTokenNode? ForTargetToken =>
+        ForKeyword != null && GetChild(HasName ? 3 : 2) is SyntaxTokenNode t2
+            && SyntaxFacts.IsPartNameToken(t2.Kind, t2.Text) ? t2 : null;
+
+    /// <summary>The part whose letters this block is typed in (<c>for tp</c> → "tp"), or null.
+    /// A property of the TRACK — <see cref="Semantics.ChordTrackPitch.TargetOf"/> resolves it
+    /// across the track's blocks.</summary>
+    public string? ForTarget => ForTargetToken?.Text;
+
+    private int OpenBraceIndex
+    {
+        get
+        {
+            for (int i = 1; i < SlotCount; i++)
+                if (GetChild(i) is SyntaxTokenNode { Kind: SyntaxKind.OpenBrace })
+                    return i;
+            return HasName ? 2 : 1;
+        }
+    }
 
     /// <summary>The opening <c>{</c> token.</summary>
     public SyntaxTokenNode OpenBrace => (SyntaxTokenNode)GetChild(OpenBraceIndex)!;

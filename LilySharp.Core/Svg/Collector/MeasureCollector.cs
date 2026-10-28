@@ -1114,7 +1114,8 @@ public sealed partial class MeasureCollector
         if (attachedChordPart != null)
         {
             _chordNameCollector.RowStaffTuning = StaffDiagramTuning(tree.GetRoot(), renderSpec, voiceName, attachedChordPart);
-            _chordNameCollector.RowNameDrop = ChordRowDrop(tree.GetRoot(), voiceName);
+            _chordNameCollector.RowNameDrop = ChordRowDrop(tree.GetRoot(), attachedChordPart,
+                renderSpec?.ChordRowFor(attachedChordPart, voiceName));
             _chordNameCollector.RowShift = _fileShiftSemitones;
             _chordNameCollector.CollectAttached(
                 tree.GetRoot(), attachedChordPart, _sectionState.StartMeasure, _v.Cursor.StaffIndex,
@@ -1623,7 +1624,8 @@ public sealed partial class MeasureCollector
         // StaffVoice = the staff's primary voice, whose notes the syllables align to.
         var attachedLyrics = new List<(string PartName, int StaffIndex, string StaffVoice)>();
         // Chord rows are also deferred (see the ChordRowSpec branch below).
-        var pendingChordRows = new List<(string Name, int StaffIndex, ChordDisplayMode Mode)>();
+        var pendingChordRows = new List<(string Name, int StaffIndex, ChordDisplayMode Mode, string? For)>();
+        var chordRowsSeen = new Dictionary<string, int>(StringComparer.Ordinal);
         foreach (var (voiceName, withChords, chordDisplay, withLyrics, slotting) in renderSpec.GetVoiceBindings())
         {
             _voiceName = voiceName;
@@ -1676,7 +1678,12 @@ public sealed partial class MeasureCollector
             // 0, overprinting them.
             if (renderSpec.Items.OfType<ChordRowSpec>().Any(c => c.PartName == voiceName))
             {
-                pendingChordRows.Add((voiceName, _v.Cursor.StaffIndex, chordDisplay));
+                // The row's own `for`: a track placed twice is two rows, each with its own
+                // (`chords band for tp … chords band`), met in the score's order.
+                int nth = chordRowsSeen.TryGetValue(voiceName, out int seen) ? seen : 0;
+                chordRowsSeen[voiceName] = nth + 1;
+                var rows = renderSpec.Items.OfType<ChordRowSpec>().Where(c => c.PartName == voiceName).ToList();
+                pendingChordRows.Add((voiceName, _v.Cursor.StaffIndex, chordDisplay, rows[Math.Min(nth, rows.Count - 1)].For));
                 staffVoices[voiceName] = ImmutableArray.Create(
                     new Voice(voiceName, ImmutableArray<Measure>.Empty));
                 continue;
@@ -1765,7 +1772,7 @@ public sealed partial class MeasureCollector
             EnsureSectionStartsForRows(tree.GetRoot());
         _chordNameCollector.KeyByMeasure = BuildKeyTimeline();
         _chordNameCollector.SectionStarts = _sectionState.AllStarts;
-        foreach (var (rowName, rowIdx, rowMode) in pendingChordRows)
+        foreach (var (rowName, rowIdx, rowMode, rowFor) in pendingChordRows)
         {
             // A row's diagrams draw on the instrument of the staff it stands directly above
             // (a lead-sheet row: none, so the guitar) — ChordDiagramScores.RowStaffWord.
@@ -1774,8 +1781,7 @@ public sealed partial class MeasureCollector
                     ? Tablature.Tunings.Parse(rowWord) : null;
             // (renderSpec is never null on this road — a null test here made the flow analysis
             // doubt it for the rest of the pass: six CS8602/CS8604 from one `== null`.)
-            _chordNameCollector.RowNameDrop = ChordRowDrop(tree.GetRoot(),
-                Semantics.ChordDiagramScores.RowStaffPart(renderSpec, rowName));
+            _chordNameCollector.RowNameDrop = ChordRowDrop(tree.GetRoot(), rowName, rowFor);
             _chordNameCollector.RowShift = _fileShiftSemitones;
             var rowMeasures = _chordNameCollector.CollectPart(
                 tree.GetRoot(), rowName, rowIdx, _sectionState.StartMeasure, _v.Meta.TimeBeats, _v.Meta.TimeBeatType, rowMode);
@@ -1838,12 +1844,12 @@ public sealed partial class MeasureCollector
         //   the Score holds the one Timing every context reads, so a ChordNames or Lyrics
         //   bar IS the staff's bar, pickup and meter change included.
         var rowNames = new HashSet<string>(_lyricsRowNames);
-        foreach (var (rowName, _, _) in pendingChordRows)
+        foreach (var (rowName, _, _, _) in pendingChordRows)
             rowNames.Add(rowName);
         // …and a score with NO music voice reads the same clock off its structure
         // (RowsOnlyBarLengths): the header's pickup and meter, which no walk applied to a row.
         var rowStaffIndex = new Dictionary<string, int>();
-        foreach (var (rowName, rowIdx, _) in pendingChordRows)
+        foreach (var (rowName, rowIdx, _, _) in pendingChordRows)
             rowStaffIndex[rowName] = rowIdx;
         foreach (var (rowName, rowIdx, _) in pendingLyricsRows)
             rowStaffIndex[rowName] = rowIdx;
@@ -1990,7 +1996,8 @@ public sealed partial class MeasureCollector
             _chordNameCollector.RowStaffTuning =
                 Semantics.ChordDiagramScores.StaffWord(tree.GetRoot(), renderSpec, staffVoice, attachedPart) is { } staffWord
                     ? Tablature.Tunings.Parse(staffWord) : null;
-            _chordNameCollector.RowNameDrop = ChordRowDrop(tree.GetRoot(), staffVoice);
+            _chordNameCollector.RowNameDrop = ChordRowDrop(tree.GetRoot(), attachedPart,
+                renderSpec.ChordRowFor(attachedPart, staffVoice));
             _chordNameCollector.RowShift = _fileShiftSemitones;
             _chordNameCollector.CollectAttached(
                 tree.GetRoot(), attachedPart, _sectionState.StartMeasure, attachedStaff,
@@ -2555,7 +2562,8 @@ public sealed partial class MeasureCollector
         if (attachedChordPart != null)
         {
             _chordNameCollector.RowStaffTuning = StaffDiagramTuning(root, renderSpec, voiceName, attachedChordPart);
-            _chordNameCollector.RowNameDrop = ChordRowDrop(root, voiceName);
+            _chordNameCollector.RowNameDrop = ChordRowDrop(root, attachedChordPart,
+                renderSpec?.ChordRowFor(attachedChordPart, voiceName));
             _chordNameCollector.RowShift = _fileShiftSemitones;
             _chordNameCollector.CollectAttached(
                 root, attachedChordPart, _sectionState.StartMeasure, _v.Cursor.StaffIndex,

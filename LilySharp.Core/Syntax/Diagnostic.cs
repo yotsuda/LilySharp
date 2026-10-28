@@ -1785,6 +1785,15 @@ public static class DiagnosticCodes
     /// (one verse under every staff of a chorale).</summary>
     public const string SingsConflict = "LYS7005";
 
+    /// <summary>Track error: <c>chords N for P</c> (a definition or a score row) where P names
+    /// no declared part (Semantics.ChordTrackPitch).</summary>
+    public const string ChordForUnknown = "LYS7006";
+
+    /// <summary>Track error: two definition blocks of the same chord track name different
+    /// <c>for</c> parts — the letters of one track are typed one way. A score row's <c>for</c>
+    /// is not this: it says only whose reading that row prints.</summary>
+    public const string ChordForConflict = "LYS7007";
+
     // Font warnings (LYS8xxx)
     // (LYS6xxx is already taken by the render/score-declaration band above.)
 

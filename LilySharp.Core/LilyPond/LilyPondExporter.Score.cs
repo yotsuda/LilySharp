@@ -29,24 +29,23 @@ namespace LilySharp.Core.LilyPond;
 public sealed partial class LilyPondExporter
 {
     /// <summary>
-    /// The <c>\transpose</c> a ChordNames row takes over a staff that prints a transposing part
-    /// for its player (<see cref="Semantics.ConcertPitch.ChordNameDrop"/>: the page names the
-    /// chords that player reads) — <c>\transpose c d </c> over a B♭ trumpet's part — or empty.
-    /// The row's chords are sounding pitch, as the part's music is under the part's own
-    /// <c>\transpose</c>, so the twin moves them by the same interval the page does.
+    /// The <c>\transpose</c> a ChordNames row takes from its track's letters to what the page
+    /// names (<see cref="Semantics.ChordTrackPitch"/>): to what sounds, then to the reading of the
+    /// part the row or the track is <c>for</c> — <c>\transpose c d </c> for a sounding track
+    /// printed as a B♭ trumpet's player reads it — or empty. The twin moves the row by the same
+    /// interval the page does.
     /// </summary>
-    private string ChordNamesTranspose(RenderDeclarationSyntax? render, string rowName)
+    private string ChordNamesTranspose(RenderDeclarationSyntax? render, ChordRowRenderSyntax row)
     {
         if (render == null)
             return "";
         SyntaxNode root = render;
         while (root.Parent != null)
             root = root.Parent;
-        int drop = RenderSpecParser.Parse(render) is { } spec
-            && Semantics.ChordDiagramScores.RowStaffPart(spec, rowName) is { } partName
-            ? Semantics.ConcertPitch.ChordNameDrop(Semantics.ConcertPitch.PageMode(render, partName),
-                Semantics.ConcertPitch.FileIsConcert(root), Semantics.ConcertPitch.FindPart(root, partName))
-            : 0;
+        bool fileIsConcert = Semantics.ConcertPitch.FileIsConcert(root);
+        int drop = (Semantics.ChordTrackPitch.TypedDrop(root, row.PartName, fileIsConcert)
+                    + Semantics.ChordTrackPitch.ReaderDrop(root, row.PartName, row.ForTarget, fileIsConcert,
+                        p => Semantics.ConcertPitch.PageMode(render, p))) % 12;
         // The file's `shift N` moves the row too (FileShift.RowDrop); alone, it is spelled as
         // the notes are (FileShift.Interval) rather than by the drop's flat-leaning table.
         int shift = Semantics.FileShift.ReadSemitones(root);
@@ -123,7 +122,7 @@ public sealed partial class LilyPondExporter
                     case ChordRowRenderSyntax chords:
                         if (_chordVars.TryGetValue(chords.PartName, out var chordVar))
                         {
-                            rows.Add("    \\new ChordNames " + ChordNamesWith() + ChordNamesTranspose(render, chords.PartName) + "\\" + chordVar + "\n");
+                            rows.Add("    \\new ChordNames " + ChordNamesWith() + ChordNamesTranspose(render, chords) + "\\" + chordVar + "\n");
                             // …and its diagrams under the names, when some entry writes a shape.
                             if (_fretVars.TryGetValue(chords.PartName, out var fretVar))
                                 rows.Add("    \\new FretBoards " + FretBoardsWith(chords.PartName) + "\\" + fretVar + "\n");
