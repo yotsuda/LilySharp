@@ -30,7 +30,7 @@ All notable changes to the Lily# VS Code extension are documented here.
   Model" and the automatic pick leave it out, across restarts, until VS Code updates (what it keeps
   for itself can change with a release). There is no way to know it before it refuses once.
 - **Select AI Model names every feature its first choice serves**: "Ask (Ctrl+I), Compose and Fix OMR
-  with AI…" — Compose with AI uses that model too, and was left out.
+  Marks with AI…" — Compose with AI uses that model too, and was left out.
 
 ### Scan
 
