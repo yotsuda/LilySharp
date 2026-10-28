@@ -89,7 +89,7 @@ internal sealed class SpanPairingValidator : ISharedCollectValidator
             // tracked book, none of the author's.
             //
             // ASCII punctuation only: these strings reach legacy-codepage consoles via the CLI.
-            var span = new TextSpan(w.SourcePosition, 1);
+            var span = SpanNames.MarkSpan(tree, w.SourcePosition);
             string message = MessageFor(w.Kind, w.Fault, OpenedAs(tree.Text, w.SourcePosition));
             if (w.Fault == SpanPairingFault.Unterminated)
                 _diagnostics.Error(span, DiagnosticCodes.UnpairedSpan, message);

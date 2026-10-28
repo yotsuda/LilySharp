@@ -94,6 +94,18 @@ public class SpanEndNameTests
         Assert.Contains("write " + end, unclosed.Message);
     }
 
+    /// <summary>The squiggle is under the whole mark, not its '@' alone (owner's request 2026-10-28).</summary>
+    [Theory]
+    [InlineData("c'4@accel d' e' f' | g'1 |", "@accel")]
+    [InlineData("c'4@textSpan(\"poco rit.\") d' e' f' | g'1 |", "@textSpan(\"poco rit.\")")]
+    [InlineData("c'4 d' e' f'@!rit | g'1 |", "@!rit")]
+    public void AnUnpairedMark_IsUnderlinedWhole(string music, string underlined)
+    {
+        string text = Book(music);
+        var d = SemanticValidation.Run(SyntaxTree.Parse(text)).Single(x => x.Code == DiagnosticCodes.UnpairedSpan);
+        Assert.Equal(underlined, text.Substring(d.Span.Start, d.Span.Length));
+    }
+
     [Fact]
     public void EachVoiceIsItsOwnLine()
     {

@@ -69,6 +69,23 @@ public static class SpanNames
         return null;
     }
 
+    /// <summary>The whole mark written at <paramref name="position"/> — <c>@accel</c>,
+    /// <c>@textSpan("poco rit.")</c>, <c>@!8va</c>, the <c>@</c> to the end of its name or its
+    /// argument — for a squiggle under the mark rather than under its first character (owner's
+    /// request 2026-10-28: an unclosed <c>@accel</c> underlined only its <c>@</c>). One character
+    /// where no mark stands there (a slur's <c>(</c>, a tie's <c>~</c>) or with no tree.</summary>
+    public static TextSpan MarkSpan(SyntaxTree? tree, int position)
+    {
+        SyntaxNode? best = null;
+        if (tree != null)
+            foreach (var node in tree.GetRoot().DescendantNodes())
+                if (node is ArticulationSyntax or MusicMarkSyntax or DynamicSyntax
+                    && node.Span.Start <= position && position < node.Span.End
+                    && (best == null || node.Span.Length < best.Span.Length))
+                    best = node;
+        return best?.Span ?? new TextSpan(position, 1);
+    }
+
     /// <summary>The voice line a node is written in: the nearest branch of a <c>voice { } { }</c>,
     /// a section's part cell, a phrase, a section, else the file.</summary>
     private static SyntaxNode Line(SyntaxNode node)

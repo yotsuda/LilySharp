@@ -90,7 +90,7 @@ internal sealed class SectionCarryValidator : ISharedCollectValidator
             return;
         foreach (var w in collector.SectionCarryWarnings)
         {
-            var span = new TextSpan(w.SourcePosition, 1);
+            var span = SpanNames.MarkSpan(tree, w.SourcePosition);
             string message = MessageFor(w, form, tree?.Text);
             _diagnostics.Add(w.Fault == SectionCarryFault.AcrossRepeat
                 ? Diagnostic.Error(span, DiagnosticCodes.SpanAcrossSectionBoundary, message)
