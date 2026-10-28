@@ -52,17 +52,17 @@ describe('Report Misread to OMR', () => {
         assert.match(fix, /const REPORT_AGAIN = 'Reported ✓ — Replace Report…';/);
     });
 
-    // Owner's report 2026-10-29: the fix was in the Draft, "the bar in the file is right — fixed
-    // already" was taken, and the seed got the bar without it.
-    it('says where each choice\'s bar is, and asks again when the .lys\'s bar looks unfixed', () => {
-        assert.match(fix, /label: 'The Draft is right — the bar edited in this panel'/);
-        assert.match(fix, /label: 'The \.lys is right — its bar was fixed in the editor'/);
-        assert.match(fix, /right\.from === 'file' && \(drafted \|\| fileBar !== resolvedLine\(fileBar\)\)/);
+    // Owner's decision 2026-10-29: the bar fixed in the panel is what is reported — the choice of
+    // "the .lys's bar" was taken by mistake while the fix sat in the Draft, and dropped.
+    it('reports the Draft as the right bar, with no choice of the .lys\'s', () => {
+        assert.match(fix, /const correct = draft !== undefined && draft !== resolvedLine\(fileBar\) \? draft : null;/);
+        assert.ok(!/showQuickPick/.test(fix.slice(fix.indexOf('async function reportMisread'), fix.indexOf('/** A row still in the panel'))));
+        assert.ok(!fix.includes('The .lys is right'));
     });
 
     it('names its folder by when, the score and the bar', () => {
         assert.equal(seedDirName(new Date(2026, 9, 29, 15, 30, 12), bar), '20261029-153012-Largo_op_1-bar12-right');
-        assert.equal(seedDirName(new Date(2026, 9, 29, 15, 30, 12), { lys: '/a/b.lys', line: 7, bar: 'c1 |', correct: 'c1 |', correctFrom: 'file' }),
+        assert.equal(seedDirName(new Date(2026, 9, 29, 15, 30, 12), { lys: '/a/b.lys', line: 7, bar: 'c1 |', correct: 'c1 |', correctFrom: 'draft' }),
             '20261029-153012-b-line7');
     });
 
@@ -72,14 +72,13 @@ describe('Report Misread to OMR', () => {
         assert.equal(r.lysWas, bar.lys);
         assert.ok(!('lys' in r));
         assert.deepEqual([r.lysCopy, r.fixedCopy, r.correct, r.correctFrom], ['Largo (op. 1).lys', 'Largo (op. 1).fixed.lys', 'c4 d e fis |', 'draft']);
-        assert.equal(seedRecordOf(new Date(), { ...bar, correctFrom: 'file' }, '', {}).fixedCopy, 'Largo (op. 1).lys');
         assert.equal(withBar('a\r\n    c4 d e f |\r\nb', 2, 'c4 d e fis |'), 'a\r\n    c4 d e fis |\r\nb');
         assert.equal(fixedCopyName('/x/largo.lys'), 'largo.fixed.lys');
-        // A bar not fixed yet goes with what is wrong in words, asked for, not optional (owner's
-        // report 2026-10-29: "Not fixed yet" gave no chance to say anything).
+        // A bar not fixed in the Draft goes with what is wrong in words, asked for, not optional
+        // (owner's report 2026-10-29: "Not fixed yet" gave no chance to say anything).
         const none = seedRecordOf(new Date(), { ...bar, correct: null, correctFrom: 'none' }, 'the natural is missing', {});
         assert.deepEqual([none.correct, none.correctFrom, none.fixedCopy, none.note], [null, 'none', null, 'the natural is missing']);
-        assert.match(fix, /label: 'Not fixed yet', [^\n]*from: 'none' \}/);
+        assert.match(fix, /correctFrom: correct === null \? 'none' : 'draft'/);
         assert.match(fix, /correct === null \? \{ validateInput: /);
     });
 
@@ -93,6 +92,6 @@ describe('Report Misread to OMR', () => {
             page: 2, box: [10, 20, 110, 80], image: 'C:\\scores\\largo-2.png', imageCopy: 'page-2.png', crop: 'bar.png',
             sideFile: 'C:\\scores\\Largo (op. 1).omr.json',
         });
-        assert.equal(seedRecordOf(new Date(), { lys: 'x.lys', line: 1, bar: '', correct: '', correctFrom: 'file' }, '', {}).scan, null);
+        assert.equal(seedRecordOf(new Date(), { lys: 'x.lys', line: 1, bar: '', correct: null, correctFrom: 'none' }, 'x', {}).scan, null);
     });
 });

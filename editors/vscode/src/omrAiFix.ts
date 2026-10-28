@@ -1164,42 +1164,17 @@ async function reportMisread(run: FixRun, row: FixRow): Promise<boolean> {
     const text = doc?.getText() ?? (fs.existsSync(lys) ? fs.readFileSync(lys, 'utf8') : run.base.text);
     const fileBar = text.split('\n')[t.line]?.replace(/\r$/, '').trim() ?? t.written;
     // The right bar goes with the report, taken now (owner's request 2026-10-29): the .lys may be
-    // fixed again or deleted after it. The owner says which one it is; a bar not fixed yet goes
-    // with what is wrong in words instead, which is then asked for, not optional (owner's report
-    // 2026-10-29: "Not fixed yet" ended the report with no chance to say anything).
-    type Right = vscode.QuickPickItem & { from: 'draft' | 'file' | 'none' };
+    // fixed again or deleted after it. It is the Draft, always (owner's decision 2026-10-29: the
+    // bar fixed in the panel is what is reported; a choice of "the .lys's bar" was taken by mistake
+    // while the fix sat in the Draft, and dropped). A Draft no different from the .lys is a bar not
+    // fixed yet: it goes with what is wrong in words, asked for, not optional.
     const draft = barOf(row);
-    // Each choice names where its bar is and shows it (owner's report 2026-10-29: the Draft held the
-    // fix, "The bar in the file is right — fixed already" read as "I fixed it" and was taken, and
-    // the seed got the bar without the fix).
-    const drafted = draft !== undefined && draft !== resolvedLine(fileBar);
-    const items: Right[] = [
-        ...(drafted ? [{ label: 'The Draft is right — the bar edited in this panel', detail: draft, from: 'draft' as const }] : []),
-        { label: 'The .lys is right — its bar was fixed in the editor', detail: resolvedLine(fileBar), from: 'file' },
-        { label: 'Not fixed yet', detail: 'Say what is wrong instead — fixing it in the Draft first makes a better seed.', from: 'none' },
-    ];
-    const right = await vscode.window.showQuickPick(items, { title: `Report Misread to OMR — ${label}: which bar is right?` });
-    if (!right) {
-        return false;
-    }
-    // The .lys's bar taken while the Draft holds something else, or while the bar still carries the
-    // reader's marks: likely not fixed — asked once more.
-    if (right.from === 'file' && (drafted || fileBar !== resolvedLine(fileBar))) {
-        const why = drafted
-            ? 'The Draft holds an edit the .lys does not have.'
-            : 'The bar in the .lys still carries the reader\'s @todo.';
-        const go = await vscode.window.showWarningMessage(`${why} Report the .lys's bar as the right one?`,
-            { modal: true, detail: resolvedLine(fileBar) }, 'Report the .lys\'s Bar');
-        if (!go) {
-            return false;
-        }
-    }
-    const correct = right.from === 'draft' ? draft! : right.from === 'file' ? resolvedLine(fileBar) : null;
+    const correct = draft !== undefined && draft !== resolvedLine(fileBar) ? draft : null;
     const note = await vscode.window.showInputBox({
-        title: `Report Misread to OMR — ${label}`,
+        title: correct === null ? `Report Misread to OMR — ${label}, not fixed in the Draft` : `Report Misread to OMR — ${label}: ${correct}`,
         prompt: correct === null
-            ? 'What did the reader get wrong, and what should the bar be? The bar is not fixed, so this is all OMR will know of it.'
-            : 'What did the reader get wrong? (optional) The bar, its scan and the .lys are kept as a seed for OMR\'s training scores.',
+            ? 'The Draft holds no fix, so say what the reader got wrong and what the bar should be — this is all OMR will know of it. (Esc, fix it in the Draft, and report again for a better seed.)'
+            : 'The Draft above is reported as the right bar. What did the reader get wrong? (optional)',
         placeHolder: 'e.g. the natural on the low chord is missing',
         ...(correct === null ? { validateInput: (v: string) => v.trim() ? undefined : 'Say what is wrong — the bar is not fixed.' } : {}),
     });
@@ -1209,7 +1184,7 @@ async function reportMisread(run: FixRun, row: FixRow): Promise<boolean> {
     const info = t.crop ? run.side?.pages.find(p => p.page === t.crop!.page) : undefined;
     const sidePath = sideFileOf(lys);
     const bar: SeedBar = {
-        lys, line: t.line + 1, bar: fileBar, correct, correctFrom: right.from,
+        lys, line: t.line + 1, bar: fileBar, correct, correctFrom: correct === null ? 'none' : 'draft',
         ...(reader ? { measure: reader.measure, part: reader.part } : {}),
         ...(t.crop ? { crop: { page: t.crop.page, box: [...t.crop.box] } } : {}),
         ...(info ? { pageImage: info.image } : {}),
@@ -1220,7 +1195,7 @@ async function reportMisread(run: FixRun, row: FixRow): Promise<boolean> {
     try {
         fs.mkdirSync(dir, { recursive: true });
         fs.writeFileSync(path.join(dir, path.basename(lys)), text, 'utf8');
-        if (right.from === 'draft' && correct !== null) {
+        if (correct !== null) {
             fs.writeFileSync(path.join(dir, fixedCopyName(lys)), withBar(text, t.line + 1, correct), 'utf8');
         }
         const copy = (from: string | undefined, to: string): boolean => {
