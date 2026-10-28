@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 64 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 64 | 観測者がゼロだと自認しているもの |
-| `OWN` | 278 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **406** | |
+| `OWN` | 280 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **408** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -247,7 +247,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（278 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（280 件）
 
 ### `LilySharp.Core/Editing/KeyRespeller.cs`
 - **`KeyRespeller`** LILYSHARP-OWN: an editor aid. The rule:
@@ -387,6 +387,9 @@
 - **`RepeatPasses.EndingFor`** LILYSHARP-OWN: a pass no ending names replays the LAST ending — |: A [1. B] :|*3 [2. C]
 ### `LilySharp.Core/Semantics/RestRunFractionValidator.cs`
 - **`RestRunFractionValidator`** gets no suggestion, only the reading. LILYSHARP-OWN: LilyPond reads *5/4 as a
+### `LilySharp.Core/Semantics/VoiceLeading.cs`
+- **`CheckPragma`** LILYSHARP-OWN: LilyPond has no checks to turn on; the pragma is Lily#'s own.
+- **`VoiceLeadingValidator`** LILYSHARP-OWN: LilyPond checks no voice leading. The rules are the common-practice
 ### `LilySharp.Core/Semantics/WrittenBar.cs`
 - **`WrittenBar`** LILYSHARP-OWN: in LilyPond `|` is only a bar CHECK — Timing draws the bars, a failed check
 ### `LilySharp.Core/Svg/Collector/BeamDetector.cs`

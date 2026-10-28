@@ -27,6 +27,7 @@ namespace LilySharp.Core.Semantics;
 /// <c>#pragma warning</c> is in C# (owner's decision 2026-10-28: "pragma であることがわかりやすい方が
 /// 良いし、一般化しておけば後でほかの拡張もしやすくなる"). It changes nothing that is drawn, played
 /// or exported; it only adds what the check finds. docs/voice-leading-design.md §7.
+/// LILYSHARP-OWN: LilyPond has no checks to turn on; the pragma is Lily#'s own.
 /// </summary>
 public static class CheckPragma
 {
@@ -128,6 +129,9 @@ internal sealed class CheckPragmaValidator : ISemanticValidator
 /// <para>Stage 1 (§6): one voice is one part. A part sounding two notes at once (a chord, or
 /// <c>voice { } { }</c>) is read by its highest note, the lowest voice by its lowest; the two
 /// voices of one staff are stage 2.</para>
+/// <para>LILYSHARP-OWN: LilyPond checks no voice leading. The rules are the common-practice
+/// textbook's — parallel perfect intervals, crossing, an octave between upper voices and a twelfth
+/// over the bass.</para>
 /// <para>Information, not a warning (owner's decision 2026-10-28): the rules are a style's.
 /// ASCII only: the message reaches legacy-codepage consoles through the CLI.</para>
 /// </remarks>
