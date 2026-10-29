@@ -204,6 +204,10 @@ score test { staff vln staff vla }
         // name across its brace (GrandStaff_InstrumentName_CenteredInSvg).
         Assert.Equal(new string?[] { "Soprano", "Piano", null }, Labels(piano
             + "part v { instrument soprano section S { c''1 } }\nform { ~S }\nscore { staff v  grandStaff { staff rh staff lh } }"));
+        // A hand the writer names names the instrument: the other hand takes no "Piano" of its own
+        // (owner's report 2026-10-29: "ピアノ" over "Piano", and "Pno." alone on later lines).
+        Assert.Equal(new string?[] { "Soprano", "ピアノ", null }, Labels(piano.Replace("part rh {", "part rh \"ピアノ\" \"Pno.\" {")
+            + "part v { instrument soprano section S { c''1 } }\nform { ~S }\nscore { staff v  grandStaff { staff rh staff lh } }"));
         // A choirStaff is its members: each voice is an instrument and shows its name.
         Assert.Equal(new[] { "Soprano", "Alto" }, Labels(
             "part s { instrument soprano section S { c''1 } }\npart a { instrument alto section S { c''1 } }\nform { ~S }\nscore { choirStaff { staff s staff a } }"));

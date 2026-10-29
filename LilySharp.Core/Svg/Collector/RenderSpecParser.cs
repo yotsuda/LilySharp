@@ -1004,10 +1004,16 @@ public static class RenderSpecParser
 
     /// <summary>A group's members with their presets' printed names, where a member has no
     /// label of its own; inside a grandStaff a name an earlier member already shows is not
-    /// repeated, so the brace carries it once.</summary>
+    /// repeated, so the brace carries it once — and a grandStaff one of whose members is named
+    /// by the writer takes no preset name at all: the instrument is named, its other hand
+    /// is not a second name (owner's report 2026-10-29: `part rh "ピアノ" "Pno."` over an unnamed
+    /// `instrument piano-left` printed "ピアノ" and "Piano" one above the other, and "Pno." alone
+    /// on the later lines).</summary>
     private static GrandStaffSpec WithPresetNames(GrandStaffSpec group)
     {
         var shown = new HashSet<string>(StringComparer.Ordinal);
+        bool named = group.Type == StaffGroupType.GrandStaff
+            && group.Members.Any(m => m is SingleStaffSpec { Staff.InstrumentName: not null });
         var members = group.Members.ToBuilder();
         for (int i = 0; i < members.Count; i++)
         {
@@ -1017,7 +1023,7 @@ public static class RenderSpecParser
                     shown.Add(own);
                     break;
                 case SingleStaffSpec { Staff: { InstrumentName: null, NameSuppressed: false, PresetName: { } preset } st } sss:
-                    if (group.Type == StaffGroupType.GrandStaff && !shown.Add(preset))
+                    if (named || group.Type == StaffGroupType.GrandStaff && !shown.Add(preset))
                         break;
                     members[i] = sss with { Staff = st with { InstrumentName = preset } };
                     break;
