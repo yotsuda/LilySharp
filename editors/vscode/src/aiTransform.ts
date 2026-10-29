@@ -1147,10 +1147,13 @@ function composeSystemPrompt(grammar: string, modelName?: string): string {
         '   `d\'` – `a\'\'`).',
         '   DYNAMICS — the level each phrase starts at and the hairpins between; every mark for a reason, the',
         '   same level never written twice in a row.',
-        '   CHARACTER — how the character asked for is heard: the devices that make it, named (for "cool",',
-        '   "かっこいい": a driving rhythm, syncopation and accents, octaves and chords on the strong beats, a run',
-        '   into the climax; for "lovely", "すてき": a singing line with long notes at its peaks, a gentle flowing',
-        '   accompaniment).',
+        // Each device as it is written and where (owner's trial 2026-10-29: a "dramatic" string
+        // quartet planned its character and wrote none of it — Andante, p to f, no accent).
+        '   CHARACTER — how the character asked for is heard: each device that makes it, with how it is written',
+        '   in this file and the bars it is in (for "dramatic": `@sf` and `@p.subito` after a loud bar, a tremolo',
+        '   `d\'2:32`, every part in unison at the climax, the low register; for "cool": a driving rhythm,',
+        '   syncopation and `@accent`, octaves on the strong beats, a run into the climax; for "lovely": a singing',
+        '   line with long notes at its peaks, a gentle flowing accompaniment).',
         // Owner's request 2026-10-29: the guide covers songs, and how words are set.
         // Words first, then notes (owner's trial 2026-10-29: the syllables matched the notes, but
         // as words cut to fit them — "ひ を も や" for 燃やす, a phrase ending on "あ" of あけて).
@@ -1187,8 +1190,8 @@ function composeSystemPrompt(grammar: string, modelName?: string): string {
         '- Before you reply, go through the piece bar by bar: every bar of every part fills the meter, the parts',
         '  agree on each bar\'s harmony, each part stays in its register, and the last bar is the tonic. Then hold',
         '  the file to the plan: the theme stands in its bars as written there, each phrase starts, peaks and ends',
-        '  on its planned notes, the climax and the dynamics are where the plan put them. Where they differ,',
-        '  change the file (or the plan) until they agree.',
+        '  on its planned notes, the climax, the dynamics and every device of the character are written where',
+        '  the plan put them. Where they differ, change the file (or the plan) until they agree.',
         '- If the musician sends you findings about a draft, revise the whole piece with them in mind, in the same',
         '  three blocks.',
         '- Never emit LilyPond-only constructs (\\relative, \\new Staff, \\repeat volta, \\version, << \\\\ >>). Annotations use @name, never \\name.',

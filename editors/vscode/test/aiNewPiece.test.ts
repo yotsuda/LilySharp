@@ -214,7 +214,8 @@ describe('the composer\'s prompt', () => {
         assert.match(transform, /the AI\\'s last revision was cut off \(the connection broke\), '\s*\+ 'so this is the version before it: '/);
     });
     it('has the plan name the devices that make the character asked for', () => {
-        assert.match(transform, /CHARACTER — how the character asked for is heard: the devices that make it, named/);
+        assert.match(transform, /CHARACTER — how the character asked for is heard: each device that makes it, with how it is written',\s*'\s*in this file and the bars it is in/);
+        assert.match(transform, /every device of the character are written where',\s*'\s*the plan put them\./);
     });
     // Owner's request 2026-10-29: a poor piece's plan named its theme only in words, and no bar was
     // made of it; its phrases did not answer, it had no high point, its dynamics went against the plan.

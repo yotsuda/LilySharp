@@ -69,6 +69,10 @@ All notable changes to the Lily# VS Code extension are documented here.
   piece went back asking for "the corrected edits, each `<old>` copied from the file" — the
   composer answered with bare `<old>`/`<new>`, which was read as the file, the rounds ran out, and
   the music checks never saw the piece. It now asks for the whole corrected piece in `<file>`.
+- **A composed piece's character is written into it**: the plan names each device of the character
+  asked for with how it is written and the bars it is in (for "dramatic": `@sf`, `@p.subito`, a
+  tremolo `d'2:32`, the parts in unison at the climax), and the piece is checked for them before it
+  is sent — a "dramatic" quartet had planned its character and written none of it.
 - **A model too small for the instructions is not sent them**: Ask AI and Compose with AI check the
   chosen model's input limit first — the Lily# grammar with the instructions is some 30 000 tokens,
   and a model listed on this machine reads 12 000 — and say so, with Select AI Model a click away.
@@ -1967,6 +1971,10 @@ reader is offered its update when a scan is read.
   piece went back asking for "the corrected edits, each `<old>` copied from the file" — the
   composer answered with bare `<old>`/`<new>`, which was read as the file, the rounds ran out, and
   the music checks never saw the piece. It now asks for the whole corrected piece in `<file>`.
+- **A composed piece's character is written into it**: the plan names each device of the character
+  asked for with how it is written and the bars it is in (for "dramatic": `@sf`, `@p.subito`, a
+  tremolo `d'2:32`, the parts in unison at the climax), and the piece is checked for them before it
+  is sent — a "dramatic" quartet had planned its character and written none of it.
 - **A model too small for the instructions is not sent them**: Ask AI and Compose with AI check the
   chosen model's input limit first — the Lily# grammar with the instructions is some 30 000 tokens,
   and a model listed on this machine reads 12 000 — and say so, with Select AI Model a click away.
