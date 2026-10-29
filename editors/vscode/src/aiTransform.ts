@@ -324,8 +324,11 @@ async function proposeScore(deps: AiTransformDeps, input: ProposeScoreInput, tok
     ]);
     const caption = `Proposed in Copilot's chat — ${path.basename(input.file)}`
         + (added.length ? ` — ⚠ ${added.length} new warning(s): ${added.map(w => w.Message).join(' / ')}` : '');
-    // The chat stopped while the panel waits: the round ends as a Reject.
+    // The musician went on in the chat while the panel waited (a new message stops the tool): the
+    // proposal stays on the panel, undecided, and the chat's next one replaces it there.
+    let wentOn = false;
     const stop = token.onCancellationRequested(() => {
+        wentOn = true;
         const resolve = pendingDecision;
         pendingDecision = undefined;
         resolve?.('reject');
@@ -333,10 +336,17 @@ async function proposeScore(deps: AiTransformDeps, input: ProposeScoreInput, tok
     try {
         let again: string | undefined;
         for (;;) {
+            // Ask Again is not offered: what to change is said in the chat (owner's request 2026-10-29).
             const decision = again !== undefined ? await decideAgain(again)
                 : await reviewOnScore(deps, renderBefore, renderAfter, caption, wholeTextMarkup(current, text, changed), changed,
-                    { uri, before: current, after: text }, input.note ?? null);
+                    { uri, before: current, after: text }, input.note ?? null, true, isEmptyScore(current));
             again = undefined;
+            if (wentOn) {
+                panelStatus('Not decided — the chat went on; its next proposal opens here.');
+                deps.log('AI proposal (chat): not decided — the chat went on.');
+                return 'Not decided: the musician went on in the chat before deciding, and the file is unchanged. '
+                    + 'Read their message; propose again with lilysharp_proposeScore if it asks for changes.';
+            }
             if (decision === 'accept') {
                 if (!exists) {
                     const create = new vscode.WorkspaceEdit();
@@ -358,24 +368,10 @@ async function proposeScore(deps: AiTransformDeps, input: ProposeScoreInput, tok
                 return 'Accepted: the musician accepted the proposal, and the file is written.'
                     + (added.length ? ` It has these warnings, which they may want fixed:\n${formatDiags(added, text)}` : '');
             }
-            if (decision === 'iterate') {
-                const words = await vscode.window.showInputBox({
-                    title: 'Lily# — ask the chat again',
-                    prompt: 'What should change in this proposal? The chat is told, and proposes again. (Esc returns to it)',
-                    placeHolder: 'e.g. keep the rhythm but a third lower / less busy',
-                    ignoreFocusOut: true,
-                });
-                if (words === undefined || words.trim().length === 0) {
-                    again = '';
-                    continue;
-                }
-                candidatePanel?.dispose();
-                deps.log('AI proposal (chat): asked again.');
-                return `Not accepted: the musician asks for changes — "${words.trim()}". The file is unchanged; `
-                    + 'make them and call lilysharp_proposeScore again with the whole new text.';
-            }
+            // Rejected: the panel stays, saying so, for the chat's next proposal to open in.
             deps.log('AI proposal (chat): rejected.');
-            return 'Rejected: the musician rejected the proposal, and the file is unchanged. Ask them what they want before proposing again.';
+            return 'Rejected: the musician rejected the proposal, and the file is unchanged. They will say in the chat what '
+                + 'they want; propose again with lilysharp_proposeScore when they do.';
         }
     } finally {
         stop.dispose();
@@ -1760,6 +1756,9 @@ async function reviewOnScore(
     changed: ChangedSpan[],
     play: Audible,
     note: string | null = null,
+    /** Proposed by Copilot's chat, and a new piece (getCandidateHtml). */
+    fromChat = false,
+    newPiece = false,
 ): Promise<Decision> {
     const panel = ensureCandidatePanel(deps);
     audible = play;
@@ -1771,7 +1770,7 @@ async function reviewOnScore(
     panel.webview.html = getCandidateHtml(
         fontUri.toString(), braceFontUri.toString(), panel.webview.cspSource, getNonce(),
         renderBefore.Svg, renderAfter.Svg, renderAfter.Error, caption, candidateHtml, changed,
-        textFontFaceCss(panel.webview, deps.extensionUri), note);
+        textFontFaceCss(panel.webview, deps.extensionUri), note, fromChat, newPiece);
     // Where it stands: Beside would be beside the panel itself once Ask Again is clicked in it,
     // a new column for every round (owner, 2026-10-25). Only a new panel goes Beside.
     panel.reveal(panel.viewColumn ?? vscode.ViewColumn.Beside, true);
@@ -1887,6 +1886,12 @@ function getCandidateHtml(
     fontUri: string, braceFontUri: string, cspSource: string, nonce: string,
     svgBefore: string | null, svgAfter: string | null, error: string | null,
     caption: string, candidateHtml: string, changed: ChangedSpan[], textFontCss: string, note: string | null = null,
+    /** Proposed by Copilot's chat: no Ask Again — what to change is said in the chat (owner's
+     *  request 2026-10-29). */
+    fromChat = false,
+    /** A new piece proposed by the chat: no Reject either — rejected, it would leave an empty
+     *  file (owner's request 2026-10-29). */
+    newPiece = false,
 ): string {
     const afterBody = svgAfter
         ? `<div class="score">${svgAfter}</div>`
@@ -2013,11 +2018,11 @@ button:disabled { opacity:0.45; cursor:default; }
 <div class="snippet"><details><summary title="The whole file as Accept leaves it; what the AI changed is green, what it dropped struck red">Text after Accept</summary><pre>${candidateHtml}</pre></details></div>
 <div class="footer">
   <button class="primary" id="accept" title="Write this candidate into the file (Ctrl+Z in the editor undoes it)">Accept (Enter)</button>
-  <button id="iterate" title="Tell the AI what to change about this candidate — it answers with a new one, shown here">Ask Again…</button>
+  <button id="iterate" title="Tell the AI what to change about this candidate — it answers with a new one, shown here"${fromChat ? ' hidden' : ''}>Ask Again…</button>
   <button id="play" title="Play the pane shown — After or Before — in the preview, from the selected bar if one is (Space). Click a bar to select it; click a note to play from it.">▶ Play</button>
   <button id="stop">■ Stop</button>
   <span id="playState" class="playstate"></span>
-  <button id="reject" title="Drop this candidate and close the panel — the file stays as it is">Reject (Esc)</button>
+  <button id="reject" title="Drop this candidate and close the panel — the file stays as it is"${newPiece ? ' hidden' : ''}>Reject (Esc)</button>
 </div>
 <script nonce="${nonce}">
   const vscode = acquireVsCodeApi();
@@ -2214,8 +2219,13 @@ button:disabled { opacity:0.45; cursor:default; }
   const SAY = {
     accept: 'Writing it into the file…',
     iterate: 'Type what to change in the box at the top of the window (Esc comes back here)…',
-    reject: 'Rejected — the file stays as it is.',
+    reject: ${JSON.stringify(fromChat
+        ? 'Rejected — the file stays as it is. Tell the chat what to change: its next proposal opens here.'
+        : 'Rejected — the file stays as it is.')},
   };
+  // From the chat, what to change is said there (owner's request 2026-10-29): the footer says so.
+  if (${fromChat}) say('To change it, write in the chat — its next proposal opens here.');
+  const NO_REJECT = ${newPiece};
   const decide = (action) => {
     if (decided) return;
     decided = true;
@@ -2307,7 +2317,7 @@ button:disabled { opacity:0.45; cursor:default; }
   });
   window.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') { e.preventDefault(); decide('accept'); }
-    else if (e.key === 'Escape') { e.preventDefault(); decide('reject'); }
+    else if (e.key === 'Escape' && !NO_REJECT) { e.preventDefault(); decide('reject'); }
     else if (e.key === 'Tab') { e.preventDefault(); show(!paneAfter.classList.contains('show')); }
     else if (e.key === ' ') { e.preventDefault(); play(); }
   });

@@ -76,7 +76,10 @@ All notable changes to the Lily# VS Code extension are documented here.
   `lilysharp_proposeScore` (#proposeScore), and asks it to write or change a .lys through it. The
   proposal is compiled first — one with errors goes back to the chat, never shown — then opens in
   the AI candidate panel beside the score as it stands, to play and to Accept (the file is written,
-  one Ctrl+Z), Ask Again (your words go back to the chat) or Reject; the chat is told which.
+  one Ctrl+Z) or Reject; the chat is told which. What to change is said in the chat — there is no
+  Ask Again — and the panel stays open after a Reject, the chat's next proposal drawn into it. A
+  new piece has no Reject (it would leave an empty file): Accept it, or tell the chat what to
+  change; a message sent before deciding is told to the chat as such.
   Compose with AI in Chat proposes its piece this way. A new piece is checked as music once
   before it is shown (the same check as Compose with AI's): what it finds goes back to the chat,
   and the next proposal is shown whatever it did with it. The file's opening comments are kept
@@ -2033,7 +2036,10 @@ reader is offered its update when a scan is read.
   `lilysharp_proposeScore` (#proposeScore), and asks it to write or change a .lys through it. The
   proposal is compiled first — one with errors goes back to the chat, never shown — then opens in
   the AI candidate panel beside the score as it stands, to play and to Accept (the file is written,
-  one Ctrl+Z), Ask Again (your words go back to the chat) or Reject; the chat is told which.
+  one Ctrl+Z) or Reject; the chat is told which. What to change is said in the chat — there is no
+  Ask Again — and the panel stays open after a Reject, the chat's next proposal drawn into it. A
+  new piece has no Reject (it would leave an empty file): Accept it, or tell the chat what to
+  change; a message sent before deciding is told to the chat as such.
   Compose with AI in Chat proposes its piece this way. A new piece is checked as music once
   before it is shown (the same check as Compose with AI's): what it finds goes back to the chat,
   and the next proposal is shown whatever it did with it. The file's opening comments are kept

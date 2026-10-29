@@ -78,7 +78,15 @@ describe('the composing guide', () => {
         assert.match(fn, /if \(errors\.length > 0\) \{[\s\S]*?return `Not shown to the musician: it does not compile\./);
         assert.match(fn, /await reviewOnScore\(deps, renderBefore, renderAfter, caption, wholeTextMarkup\(current, text, changed\)/);
         assert.match(fn, /return 'Accepted: the musician accepted the proposal, and the file is written\.'/);
-        assert.match(fn, /return `Not accepted: the musician asks for changes — "\$\{words\.trim\(\)\}"\./);
+        // Owner's requests 2026-10-29: what to change is said in the chat — no Ask Again — and a new
+        // piece has no Reject (rejected, it would leave an empty file); the panel stays for the next
+        // proposal, and a message sent in the chat before deciding is told as such.
+        assert.ok(!/showInputBox/.test(fn));
+        assert.match(fn, /input\.note \?\? null, true, isEmptyScore\(current\)\);/);
+        assert.match(fn, /return 'Not decided: the musician went on in the chat before deciding, and the file is unchanged\. '/);
+        assert.match(transform, /<button id="iterate"[^>]*\$\{fromChat \? ' hidden' : ''\}>Ask Again…<\/button>/);
+        assert.match(transform, /<button id="reject"[^>]*\$\{newPiece \? ' hidden' : ''\}>Reject \(Esc\)<\/button>/);
+        assert.match(transform, /else if \(e\.key === 'Escape' && !NO_REJECT\) \{/);
         assert.match(fn, /token\.onCancellationRequested/);
         assert.match(fn, /\.find\(d => d\.uri\.toString\(\) === uri\.toString\(\)\)\?\.save\(\);/);
         const build = fs.readFileSync(path.join(__dirname, '..', '..', 'esbuild.js'), 'utf8');
