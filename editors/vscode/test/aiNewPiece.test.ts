@@ -20,6 +20,38 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { asksForOneStaff, carrySelection, cleanTitle, isPlaceholderTitle, isProblem, partCount, titleOf, toCandidateEdit, withTitle } from '../src/aiTransformCore';
 
+/** The grammar and the composing guide, as the composer is sent them (owner's decision 2026-10-29:
+ *  the guide is a document of its own, sent with Compose with AI alone). */
+function llmDocs(): string {
+    const docs = path.join(__dirname, '..', '..', '..', '..', 'docs');
+    return fs.readFileSync(path.join(docs, 'GRAMMAR_FOR_LLM.md'), 'utf8') + '\n' + fs.readFileSync(path.join(docs, 'COMPOSE_FOR_LLM.md'), 'utf8');
+}
+
+// Owner's decision 2026-10-29: the composing guide is kept apart from the grammar — sent with
+// Compose with AI, not with Ask AI — and bundled beside it.
+describe('the composing guide', () => {
+    const docs = path.join(__dirname, '..', '..', '..', '..', 'docs');
+    const transform = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'aiTransform.ts'), 'utf8');
+    it('holds the recipe, and the grammar only points at it', () => {
+        const grammar = fs.readFileSync(path.join(docs, 'GRAMMAR_FOR_LLM.md'), 'utf8');
+        const guide = fs.readFileSync(path.join(docs, 'COMPOSE_FOR_LLM.md'), 'utf8');
+        assert.match(guide, /\*\*"Compose a piece" \/ "write it for a string quartet, …"\*\*/);
+        assert.doesNotMatch(grammar, /\*\*A piano piece\*\*|\*\*Gospel\*\*|\*\*A song with words\*\*/);
+        assert.match(grammar, /the composing guide sent with\s+Compose with AI \(`docs\/COMPOSE_FOR_LLM\.md`\)/);
+    });
+    it('is sent with the composer\'s prompt and not with Ask AI\'s', () => {
+        assert.match(transform, /\.\.\.\(guide \? \['<composing-guide>', guide, '<\/composing-guide>', ''\] : \[\]\)/);
+        const ask = transform.slice(transform.indexOf('function systemPrompt(grammar'));
+        assert.ok(!ask.slice(0, 3000).includes('composing-guide'));
+        assert.match(transform, /await loadComposeGuide\(deps\);\s*const systemTokens = estimateTokens\(composeSystemPrompt\(grammar, chat\.modelName\)\);/);
+    });
+    it('is bundled beside the grammar, and given to Copilot\'s chat with it', () => {
+        const build = fs.readFileSync(path.join(__dirname, '..', '..', 'esbuild.js'), 'utf8');
+        assert.match(build, /fs\.copyFileSync\(compose, path\.join\(outDir, 'COMPOSE_FOR_LLM\.md'\)\);/);
+        assert.match(build, /fs\.readFileSync\(compose, 'utf8'\),\s*\]\.join/);
+    });
+});
+
 // Owner's report 2026-10-26: "discard the score and compose a new string quartet" failed three
 // times — the model answered with <edit> blocks quoting the old score, and copied none of it
 // exactly. A new piece is the whole new file; and a failure says why.
@@ -102,7 +134,7 @@ describe('a composed piece opens in relative octaves', () => {
 // and the warnings filled the candidate's head.
 describe('the instruments\' ranges, and a head that holds a long list', () => {
     const transform = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'aiTransform.ts'), 'utf8');
-    const grammar = fs.readFileSync(path.join(__dirname, '..', '..', '..', '..', 'docs', 'GRAMMAR_FOR_LLM.md'), 'utf8');
+    const grammar = llmDocs();
     it('tells the AI each instrument\'s range, the guitar\'s among them, in the grammar every request carries', () => {
         assert.match(grammar, /## Instrument ranges[\s\S]*keep\s+EVERY note inside the range/);
         assert.match(grammar, /\| `guitar` \| E2–E6 \| `e,` – `e'''` \|/);
@@ -204,7 +236,7 @@ describe('the composer\'s prompt', () => {
     // Owner's trial 2026-10-29: the A′ of an A–B–A′–Coda piece was A again, note for note.
     it('has a section that returns as it was named again in the form, not copied', () => {
         assert.match(transform, /A section that comes back as it was is written once and named again in the form',\s*'\s*\(`form \{ A B A Coda \}`\), never copied;/);
-        const grammarDoc = fs.readFileSync(path.join(__dirname, '..', '..', '..', '..', 'docs', 'GRAMMAR_FOR_LLM.md'), 'utf8');
+        const grammarDoc = llmDocs();
         assert.match(grammarDoc, /\*\*A section that returns is named again, not copied\*\*/);
     });
     // Owner's report 2026-10-29: the connection broke during the third round, and the piece the
@@ -221,7 +253,7 @@ describe('the composer\'s prompt', () => {
     // made of it; its phrases did not answer, it had no high point, its dynamics went against the plan.
     // Owner's trial 2026-10-29: a song's syllables matched its notes as words cut to fit them.
     it('has a song\'s words written whole first and the notes fitted to them', () => {
-        const grammarDoc = fs.readFileSync(path.join(__dirname, '..', '..', '..', '..', 'docs', 'GRAMMAR_FOR_LLM.md'), 'utf8');
+        const grammarDoc = llmDocs();
         assert.match(grammarDoc, /\*\*Write the words first, whole, then set them\*\*/);
         assert.match(grammarDoc, /the notes fit the words, never the words cut\s+to fit the notes/);
         assert.match(transform, /WORDS \(a song only\) — each line of the words written out WHOLE first/);
@@ -230,20 +262,20 @@ describe('the composer\'s prompt', () => {
     // Owner's trials 2026-10-29: a pop song's tune mixed quarters, eighths and halves but never
     // crossed a beat — told now how often, and how.
     it('asks a pop song\'s sung line for a syncopation in at least half its bars', () => {
-        const grammarDoc = fs.readFileSync(path.join(__dirname, '..', '..', '..', '..', 'docs', 'GRAMMAR_FOR_LLM.md'), 'utf8');
+        const grammarDoc = llmDocs();
         assert.match(grammarDoc, /\*\*At least\s+half the bars of the sung line have a syncopation\*\*/);
         assert.match(grammarDoc, /`r8 g'8 b'8 d''8~ d''4 b'4 \|`/);
     });
     // Owner's trials 2026-10-29: a violin piece wrote `key b minor` over D major's sharps, printing
     // them again; a piano's left hand leapt from C2 to E4 in one broken chord.
     it('writes no key line for the relative key, and keeps a broken chord within a twelfth', () => {
-        const grammarDoc = fs.readFileSync(path.join(__dirname, '..', '..', '..', '..', 'docs', 'GRAMMAR_FOR_LLM.md'), 'utf8');
+        const grammarDoc = llmDocs();
         assert.match(grammarDoc, /A section in the RELATIVE key \(B\s+minor in a D major piece, A minor in C\) keeps the signature and writes no `key` line/);
         assert.match(grammarDoc, /A broken-chord figure\s+stays within an octave and a half \(a twelfth\)/);
     });
     // Owner's request 2026-10-29: the guide covers jazz, a violin, rock, pop and gospel, and how words are set.
     it('guides the other kinds of music and the setting of words, Japanese one mora a note', () => {
-        const grammarDoc = fs.readFileSync(path.join(__dirname, '..', '..', '..', '..', 'docs', 'GRAMMAR_FOR_LLM.md'), 'utf8');
+        const grammarDoc = llmDocs();
         for (const kind of ['**A solo instrument with piano**', '**A pop song**', '**Rock**', '**Gospel**', '**A song with words**']) {
             assert.ok(grammarDoc.includes(kind), kind);
         }
@@ -260,7 +292,7 @@ describe('the composer\'s prompt', () => {
         assert.match(transform, /THEME — the motif the piece is made of \(a melody\\'s motif[\s\S]*?WRITTEN OUT here in this file\\'s notes with its rhythm/);
         assert.match(transform, /The second phrase of a pair starts as the first did and ends otherwise: the first',\s*'\s*stops open \(on V, or the chord that leads back\), the second closes on I\./);
         assert.match(transform, /Then hold',\s*'\s*the file to the plan:/);
-        const grammarDoc = fs.readFileSync(path.join(__dirname, '..', '..', '..', '..', 'docs', 'GRAMMAR_FOR_LLM.md'), 'utf8');
+        const grammarDoc = llmDocs();
         assert.match(grammarDoc, /\*\*Phrases that answer\*\*/);
         assert.match(grammarDoc, /\*\*One climax\*\*/);
         assert.match(grammarDoc, /a theme that is only words \("a rising broken chord"\) is not one yet/);

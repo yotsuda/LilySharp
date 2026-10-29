@@ -87,7 +87,10 @@ function logExchange(chat: ChatClient, grammar: string, messages: ChatMessage[],
     const stamp = new Date().toLocaleTimeString();
     for (const m of messages.slice(from)) {
         if (m.role === 'assistant') continue; // its reply, logged as it came (logReply)
-        const text = m.content.split(grammar).join(`[the Lily# grammar, docs/GRAMMAR_FOR_LLM.md — ${grammar.length} characters]`);
+        let text = m.content.split(grammar).join(`[the Lily# grammar, docs/GRAMMAR_FOR_LLM.md — ${grammar.length} characters]`);
+        if (cachedComposeGuide) {
+            text = text.split(cachedComposeGuide).join(`[the composing guide, docs/COMPOSE_FOR_LLM.md — ${cachedComposeGuide.length} characters]`);
+        }
         // The model the request goes to, as VS Code lists it (owner's question 2026-10-27: was the
         // model the notification named the one that answered?). Which model the vendor ran is not
         // returned to an extension.
@@ -269,6 +272,7 @@ async function runCompose(deps: AiTransformDeps, asked?: string): Promise<void> 
         uri: vscode.Uri.parse('untitled:Composed.lys'),
     };
     const grammar = await loadGrammar(deps);
+    await loadComposeGuide(deps);
     const systemTokens = estimateTokens(composeSystemPrompt(grammar, chat.modelName));
     if (!tellsTooSmall(chat, systemTokens, 'compose with')) {
         return;
@@ -280,13 +284,13 @@ async function runCompose(deps: AiTransformDeps, asked?: string): Promise<void> 
         const ai: AiSpace = { snap: snapshot, converted: false };
         await drive(deps, client, chat, snapshot, ai,
             `Compose a new piece: ${description.trim()}\nThe file is an empty start: plan the piece in <plan>, then `
-            + 'write it whole in <file>, as the grammar\'s "Compose a piece" recipe says for '
+            + 'write it whole in <file>, as the composing guide says for '
             + 'its kind of music — concert music (an instrument for every part, a staffGroup for an ensemble, '
             + 'a form whose sections contrast and a theme that returns), a solo instrument with piano (the solo on its staff '
             + 'above the piano\'s), a band — rock, pop — (the whole rhythm section — drums, electric bass, guitar or '
             + 'keyboards — at one tempo), jazz (a combo; a lead sheet — one melody staff under a chords row — '
             + 'only when a lead sheet is asked for), gospel (piano or organ under a voice or a choir), a song (a voice part '
-            + 'with its words under it, set as the recipe\'s "A song with words" says) — with melody and accompaniment, varied rhythm, '
+            + 'with its words under it, set as the composing guide\'s "A song with words" says) — with melody and accompaniment, varied rhythm, '
             + 'articulations and dynamics. One staff only for a lead sheet, a melody alone or a solo. Give the piece a title of its own that '
             + 'fits its music and its mood, on a `title "…"` line at the top, in the language of the request.',
             true, grammar, documentContext(ai.snap, budget, true), true, description.trim());
@@ -1093,7 +1097,7 @@ async function drive(
  * The grammar's sketches show the notation, not a piece's length or form: the "Compose a piece"
  * recipe once carried three 8-bar pieces, and what came back was 8 bars with a tempo per section.
  */
-function composeSystemPrompt(grammar: string, modelName?: string): string {
+function composeSystemPrompt(grammar: string, modelName?: string, guide: string = cachedComposeGuide ?? ''): string {
     return [
         'You are a composer. You write a complete new piece of music for the musician who asks, and you write it',
         'down in Lily#, a text music-notation language. Lily# is NOT LilyPond; obey the grammar below exactly.',
@@ -1109,6 +1113,9 @@ function composeSystemPrompt(grammar: string, modelName?: string): string {
         grammar,
         '</lilysharp-grammar>',
         '',
+        // The composing guide, after the grammar: what makes a piece music for its players, the
+        // kinds of music, the setting of words (docs/COMPOSE_FOR_LLM.md; owner's decision 2026-10-29).
+        ...(guide ? ['<composing-guide>', guide, '</composing-guide>', ''] : []),
         'Compose it as music for players, as you would write it out for a performer: a form, a harmony, a theme',
         'and an ending, at the length the music needs. The grammar\'s snippets only show how a thing is written;',
         'none of them is a model of a piece\'s length, form or style.',
@@ -2202,6 +2209,31 @@ export async function loadGrammar(deps: AiTransformDeps): Promise<string> {
     deps.log('AI transform: bundled grammar not found; using compact fallback.');
     cachedGrammar = GRAMMAR_FALLBACK;
     return cachedGrammar;
+}
+
+let cachedComposeGuide: string | undefined;
+
+/**
+ * The composing guide (docs/COMPOSE_FOR_LLM.md, copied to out/ at build), sent with Compose with AI
+ * after the grammar (owner's decision 2026-10-29: kept apart, so Ask AI is not sent it). Empty when
+ * it is missing: the grammar and the composer's prompt still carry the piece.
+ */
+export async function loadComposeGuide(deps: AiTransformDeps): Promise<string> {
+    if (cachedComposeGuide !== undefined) {
+        return cachedComposeGuide;
+    }
+    for (const uri of [vscode.Uri.joinPath(deps.extensionUri, 'out', 'COMPOSE_FOR_LLM.md'), vscode.Uri.joinPath(deps.extensionUri, 'COMPOSE_FOR_LLM.md')]) {
+        try {
+            const buf = fs.readFileSync(uri.fsPath, 'utf8');
+            if (buf.trim().length > 0) {
+                return (cachedComposeGuide = buf);
+            }
+        } catch {
+            // try next
+        }
+    }
+    deps.log('AI transform: the composing guide was not found; composing with the grammar alone.');
+    return (cachedComposeGuide = '');
 }
 
 // ======================================================================

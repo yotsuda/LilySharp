@@ -69,6 +69,11 @@ All notable changes to the Lily# VS Code extension are documented here.
   piece went back asking for "the corrected edits, each `<old>` copied from the file" — the
   composer answered with bare `<old>`/`<new>`, which was read as the file, the rounds ran out, and
   the music checks never saw the piece. It now asks for the whole corrected piece in `<file>`.
+- **The composing guide is its own document, sent only when composing**: what makes a new piece
+  music (form, theme, phrases, the kinds of music, the setting of words) moved from the grammar to
+  `docs/COMPOSE_FOR_LLM.md`, bundled beside it. Compose with AI sends both; Ask AI, which edits a
+  score, is sent the grammar alone — some 3 000 tokens less a request, and the guide can grow
+  without weighing on it. Copilot's chat is given both.
 - **A composed piece's character is written into it**: the plan names each device of the character
   asked for with how it is written and the bars it is in (for "dramatic": `@sf`, `@p.subito`, a
   tremolo `d'2:32`, the parts in unison at the climax), and the piece is checked for them before it
@@ -1971,6 +1976,11 @@ reader is offered its update when a scan is read.
   piece went back asking for "the corrected edits, each `<old>` copied from the file" — the
   composer answered with bare `<old>`/`<new>`, which was read as the file, the rounds ran out, and
   the music checks never saw the piece. It now asks for the whole corrected piece in `<file>`.
+- **The composing guide is its own document, sent only when composing**: what makes a new piece
+  music (form, theme, phrases, the kinds of music, the setting of words) moved from the grammar to
+  `docs/COMPOSE_FOR_LLM.md`, bundled beside it. Compose with AI sends both; Ask AI, which edits a
+  score, is sent the grammar alone — some 3 000 tokens less a request, and the guide can grow
+  without weighing on it. Copilot's chat is given both.
 - **A composed piece's character is written into it**: the plan names each device of the character
   asked for with how it is written and the bars it is in (for "dramatic": `@sf`, `@p.subito`, a
   tremolo `d'2:32`, the parts in unison at the climax), and the piece is checked for them before it

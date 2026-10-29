@@ -34,6 +34,11 @@ function copyGrammar() {
         fs.mkdirSync(outDir, { recursive: true });
         fs.copyFileSync(src, path.join(outDir, 'GRAMMAR_FOR_LLM.md'));
         console.log('esbuild: bundled GRAMMAR_FOR_LLM.md');
+        // The composing guide, sent with Compose with AI alone (owner's decision 2026-10-29: Ask AI
+        // edits a score and is not sent it).
+        const compose = path.resolve(__dirname, '..', '..', 'docs', 'COMPOSE_FOR_LLM.md');
+        fs.copyFileSync(compose, path.join(outDir, 'COMPOSE_FOR_LLM.md'));
+        console.log('esbuild: bundled COMPOSE_FOR_LLM.md');
         // The SAME canon, as a Copilot instructions file (package.json
         // contributes.chatInstructions). Only Lily#'s own AI features read the copy above;
         // Copilot's chat, agent and inline chat never did, so asked about a .lys file they
@@ -47,6 +52,9 @@ function copyGrammar() {
             '---',
             '',
             fs.readFileSync(src, 'utf8'),
+            '',
+            // Copilot's chat may be asked for a piece too: it has the composing guide as well.
+            fs.readFileSync(compose, 'utf8'),
         ].join('\n');
         fs.writeFileSync(path.join(outDir, 'lilysharp.instructions.md'), instructions);
         console.log('esbuild: wrote lilysharp.instructions.md');
