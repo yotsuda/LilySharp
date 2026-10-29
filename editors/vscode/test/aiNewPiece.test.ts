@@ -32,6 +32,11 @@ function llmDocs(): string {
 describe('the composing guide', () => {
     const docs = path.join(__dirname, '..', '..', '..', '..', 'docs');
     const transform = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'aiTransform.ts'), 'utf8');
+    // Owner's trial 2026-10-29: a quartet's three lower parts rested together on beat 4 of every bar.
+    it('says a rest in one part is covered by another', () => {
+        const guide = fs.readFileSync(path.join(docs, 'COMPOSE_FOR_LLM.md'), 'utf8');
+        assert.match(guide, /\*\*A rest in one part is covered by another\*\*: the\s+accompanying parts do not stop together bar after bar/);
+    });
     it('holds the recipe, and the grammar only points at it', () => {
         const grammar = fs.readFileSync(path.join(docs, 'GRAMMAR_FOR_LLM.md'), 'utf8');
         const guide = fs.readFileSync(path.join(docs, 'COMPOSE_FOR_LLM.md'), 'utf8');

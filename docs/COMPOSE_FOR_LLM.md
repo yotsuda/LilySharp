@@ -137,7 +137,10 @@ it should sound like the ensemble asked for. What makes it music:
   turning back — not leaping two octaves from a low bass to the treble.
 - **Texture**: one voice carries the melody while the others accompany — broken chords,
   repeated eighths, a moving bass — and the roles pass between the parts. Not every part in the
-  same rhythm; not whole notes everywhere.
+  same rhythm; not whole notes everywhere. **A rest in one part is covered by another**: the
+  accompanying parts do not stop together bar after bar (three lower strings all resting on beat
+  4 of every bar leave the tune alone there, and the music hiccups) — while one breathes, another
+  holds a note or moves on; they rest together only at a phrase's end, or for an effect.
 - **Rhythm and articulation**: long and short notes mixed, rests that let a line breathe,
   slurs over a phrase, `@staccato`, `@accent`, and dynamics with hairpins
   (`@p … @cresc … @f`) that shape each section — every mark for a reason, the same level never

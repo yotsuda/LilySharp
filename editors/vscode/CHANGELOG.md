@@ -69,6 +69,9 @@ All notable changes to the Lily# VS Code extension are documented here.
   piece went back asking for "the corrected edits, each `<old>` copied from the file" — the
   composer answered with bare `<old>`/`<new>`, which was read as the file, the rounds ran out, and
   the music checks never saw the piece. It now asks for the whole corrected piece in `<file>`.
+- **The accompanying parts do not stop together bar after bar**: the composing guide says a rest in
+  one part is covered by another — a quartet's three lower strings rested together on beat 4 of
+  every bar, leaving the tune alone there.
 - **The composing guide is its own document, sent only when composing**: what makes a new piece
   music (form, theme, phrases, the kinds of music, the setting of words) moved from the grammar to
   `docs/COMPOSE_FOR_LLM.md`, bundled beside it. Compose with AI sends both; Ask AI, which edits a
@@ -1977,6 +1980,9 @@ reader is offered its update when a scan is read.
   piece went back asking for "the corrected edits, each `<old>` copied from the file" — the
   composer answered with bare `<old>`/`<new>`, which was read as the file, the rounds ran out, and
   the music checks never saw the piece. It now asks for the whole corrected piece in `<file>`.
+- **The accompanying parts do not stop together bar after bar**: the composing guide says a rest in
+  one part is covered by another — a quartet's three lower strings rested together on beat 4 of
+  every bar, leaving the tune alone there.
 - **The composing guide is its own document, sent only when composing**: what makes a new piece
   music (form, theme, phrases, the kinds of music, the setting of words) moved from the grammar to
   `docs/COMPOSE_FOR_LLM.md`, bundled beside it. Compose with AI sends both; Ask AI, which edits a
