@@ -54,8 +54,9 @@ describe('the composing guide', () => {
         const pkg = fs.readFileSync(path.join(__dirname, '..', '..', 'package.json'), 'utf8');
         assert.match(pkg, /"command": "lilysharp\.composeWithAiInChat",\s*"category": "Lily#",[\s\S]*?"title": "Compose with AI in Chat…"/);
         assert.match(pkg, /"command": "lilysharp\.composeWithAiInChat",\s*"group": "file@2"/);
-        // Named there as the composer was (owner's request 2026-10-29).
-        assert.match(pkg, /"command": "lilysharp\.composeWithAiInChat",[^}]*"shortTitle": "Lily# Score, Composed with AI…"/);
+        // Named there for Copilot, apart from Lily#'s own Compose with AI in the palette (owner's
+        // request 2026-10-29).
+        assert.match(pkg, /"command": "lilysharp\.composeWithAiInChat",[^}]*"shortTitle": "Lily# Score, Composed with Copilot…"/);
         assert.match(transform, /registerCommand\('lilysharp\.composeWithAiInChat', \(\) => runComposeInChat\(deps\)\)/);
         const fn = transform.slice(transform.indexOf('async function runComposeInChat'), transform.indexOf('async function runCompose('));
         assert.match(fn, /'octave absolute',\s*'pitch concert',/);

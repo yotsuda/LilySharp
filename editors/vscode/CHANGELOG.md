@@ -160,7 +160,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 - **A broken connection says so, and offers Try Again**: Compose with AI and Ask AI tell when the
   connection to the AI broke off ("after 2 min 24 s") instead of the network's own English, and Try
   Again opens the box with the request as it was — to send again, or to ask for a shorter piece.
-- **Composing is in File > New File…**, as "Lily# Score, Composed with AI…" (now composing in Copilot's chat) beside "Lily#
+- **Composing is in File > New File…**, as "Lily# Score, Composed with Copilot…" (composing in Copilot's chat) beside "Lily#
   Score (.lys)": where a piece is begun. Lily#'s own Compose with AI, without the chat, left that
   menu and the editor's right-click menu; it stays in the command palette and starts the language
   server itself when no score is open yet.
