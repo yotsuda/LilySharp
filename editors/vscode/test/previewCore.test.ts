@@ -212,6 +212,16 @@ describe('an editor coming to the front', () => {
         assert.equal(previewOnEditorShown({ ...opened, languageId: 'markdown' }), 'none');
         assert.equal(previewOnEditorShown({ ...opened, hasFollower: true, scheme: 'git' }), 'none');
     });
+
+    // Owner's report 2026-10-29: a score saved and closed, opened again from a link in the chat,
+    // came without its preview — closed with the score, it had been taken for dismissed for good.
+    it('forgets a closed preview and the first showing once the score\'s last tab is closed', () => {
+        const fs = require('node:fs') as typeof import('node:fs');
+        const path = require('node:path') as typeof import('node:path');
+        const ext = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
+        assert.match(ext, /if \(uri && !open\.has\(uri\)\) \{\s*shownDocs\.delete\(uri\);\s*dismissedPreviews\.delete\(uri\);/);
+        assert.match(ext, /vscode\.window\.tabGroups\.onDidChangeTabs\(forgetClosedScores\),/);
+    });
 });
 
 describe('the column a new preview opens in', () => {

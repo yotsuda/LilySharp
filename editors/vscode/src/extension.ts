@@ -1121,8 +1121,24 @@ export function activate(context: vscode.ExtensionContext) {
             openPreview(context, vscode.ViewColumn.Beside, true);
         }
     };
+    // A score whose last tab is closed is opened afresh next time: its preview comes again, though
+    // the writer closed it while the score was open (owner's report 2026-10-29: a score saved and
+    // closed, opened again from a link in the chat, came without its preview). The document
+    // itself lingers after its tab (onDidCloseTextDocument comes minutes later), so the tabs say it.
+    const forgetClosedScores = (e: vscode.TabChangeEvent) => {
+        const open = new Set(vscode.window.tabGroups.all.flatMap(g => g.tabs)
+            .map(t => t.input instanceof vscode.TabInputText ? t.input.uri.toString() : undefined));
+        for (const tab of e.closed) {
+            const uri = tab.input instanceof vscode.TabInputText ? tab.input.uri.toString() : undefined;
+            if (uri && !open.has(uri)) {
+                shownDocs.delete(uri);
+                dismissedPreviews.delete(uri);
+            }
+        }
+    };
     context.subscriptions.push(
         vscode.window.onDidChangeActiveTextEditor(onEditorShown),
+        vscode.window.tabGroups.onDidChangeTabs(forgetClosedScores),
         vscode.workspace.onDidCloseTextDocument(d => shownDocs.delete(d.uri.toString())),
         vscode.commands.registerCommand('lilysharp.lockPreview', () => setActivePreviewLocked(true)),
         vscode.commands.registerCommand('lilysharp.unlockPreview', () => setActivePreviewLocked(false))
