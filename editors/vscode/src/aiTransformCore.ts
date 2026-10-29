@@ -720,6 +720,50 @@ export function warningTodoLines(text: string, warnings: readonly { Line: number
     return out;
 }
 
+/**
+ * The text with a `lyrics NAME` row in each score that shows the part a lyrics track sings but not
+ * the track — put on its own line under the part's `staff` item (owner's report 2026-10-29: a
+ * composed song's words were written in every section and drawn nowhere). A score that does not
+ * show the part is left as it is. Returns the names of the tracks given a row.
+ */
+export function withLyricsRows(text: string): { text: string; added: string[] } {
+    const tracks = new Map<string, string>();   // track → the part it sings
+    for (const m of text.matchAll(/\blyrics\s+(\w+)\s+sings\s+(\w+)/g)) {
+        if (!tracks.has(m[1])) { tracks.set(m[1], m[2]); }
+    }
+    const added: string[] = [];
+    if (tracks.size === 0) {
+        return { text, added };
+    }
+    let out = text;
+    // Each score block, from its `score` keyword to its closing brace (scores nest groups, not scores).
+    for (let from = 0; ;) {
+        const head = /^[ \t]*score\b[^{\n]*\{/m.exec(out.slice(from));
+        if (!head) { break; }
+        const open = from + head.index + head[0].length - 1;
+        let depth = 0, close = -1;
+        for (let i = open; i < out.length; i++) {
+            if (out[i] === '{') { depth++; }
+            else if (out[i] === '}' && --depth === 0) { close = i; break; }
+        }
+        if (close < 0) { break; }
+        let body = out.slice(open, close);
+        for (const [track, part] of tracks) {
+            if (new RegExp(`\\blyrics\\s+${track}\\b`).test(body)) { continue; }
+            const staff = new RegExp(`^([ \\t]*)staff\\s+${part}\\b[^\\n]*$`, 'm').exec(body);
+            if (!staff) { continue; }
+            const at = staff.index + staff[0].length;
+            const cr = staff[0].endsWith('\r') ? '\r' : '';
+            const lineEnd = cr ? at - 1 : at;
+            body = body.slice(0, lineEnd) + `${cr}\n${staff[1]}lyrics ${track}` + body.slice(lineEnd);
+            if (!added.includes(track)) { added.push(track); }
+        }
+        out = out.slice(0, open) + body + out.slice(close);
+        from = open + body.length + 1;
+    }
+    return { text: out, added };
+}
+
 /** Whether an error says the service answered with nothing ("Response contained no choices"). */
 export function isEmptyReply(message: string): boolean {
     return /contained no choices|empty response|no response (was )?returned/i.test(message);

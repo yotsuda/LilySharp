@@ -61,7 +61,7 @@ describe('a new piece in place of the score', () => {
         // the piece opens in an editor of its own when it comes — no review panel, nothing to compare.
         assert.match(transform, /uri: vscode\.Uri\.parse\('untitled:Composed\.lys'\),/);
         assert.doesNotMatch(transform.slice(transform.indexOf('async function runCompose'), transform.indexOf('async function runAiTransform')), /openTextDocument/);
-        assert.match(transform, /if \(compose\) \{[\s\S]{0,4500}?openTextDocument\(\{ language: 'lilysharp', content: `\$\{preface\}\$\{eol\}\$\{eol\}\$\{text\}` \}\);\s*await vscode\.window\.showTextDocument\(piece\);/);
+        assert.match(transform, /if \(compose\) \{[\s\S]{0,5500}?openTextDocument\(\{ language: 'lilysharp', content: `\$\{preface\}\$\{eol\}\$\{eol\}\$\{text\}` \}\);\s*await vscode\.window\.showTextDocument\(piece\);/);
         // The request and the AI's note head the piece as comments (owner's request 2026-10-27).
         assert.match(transform, /line\(`Asked: \$\{composeAsked \?\? instruction\}`\),\s*\.\.\.\(note \? \[line\(`The AI: \$\{note\}`\)\] : \[\]\),/);
         // What the notification says is the musician's request, not the instruction to the AI.

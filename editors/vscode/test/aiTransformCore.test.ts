@@ -24,8 +24,33 @@ import * as path from 'node:path';
 import {
     SEL_CLOSE, SEL_OPEN, carryOffset, documentBudget, documentContext, estimateTokens, isProblem, isUnchanged, marksContext, octaveOutliers,
     pickModel, isAutoModel, pitchToMidi, splitNote, planOf, withoutPlan, startTimeAt, toCandidateEdit, changedWords, diffMarkup, wholeTextMarkup, rangeFixOf,
-    aiFailure, isConnectionError, spokenDuration, servedModelsIn, cleanCandidate, warningTodoLines,
+    aiFailure, isConnectionError, spokenDuration, servedModelsIn, cleanCandidate, warningTodoLines, withLyricsRows,
 } from '../src/aiTransformCore';
+
+// Owner's report 2026-10-29: a composed song wrote `lyrics words sings lead` in every section and no
+// `lyrics words` row in its score, so the words were drawn nowhere.
+describe('a lyrics track no score shows', () => {
+    const song = 'part lead { instrument soprano }\r\nsection A {\r\n  lead { c\'\'4 d\'\' e\'\' f\'\' | }\r\n  lyrics words sings lead { a b c d | }\r\n}\r\n'
+        + 'form { A }\r\n\r\nscore {\r\n  staff lead\r\n  staff gtr\r\n}\r\n';
+    it('is given a row under the staff it sings', () => {
+        const r = withLyricsRows(song);
+        assert.deepEqual(r.added, ['words']);
+        assert.match(r.text, /score \{\r\n  staff lead\r\n  lyrics words\r\n  staff gtr\r\n\}/);
+    });
+    it('leaves a score that shows it, or does not show the part, as it is', () => {
+        const shown = song.replace('  staff lead\r\n', '  staff lead\r\n  lyrics words\r\n');
+        assert.deepEqual(withLyricsRows(shown), { text: shown, added: [] });
+        const other = song.replace('  staff lead\r\n', '');
+        assert.deepEqual(withLyricsRows(other), { text: other, added: [] });
+        assert.deepEqual(withLyricsRows('score { staff a }'), { text: 'score { staff a }', added: [] });
+    });
+    it('is added to each score that shows the part', () => {
+        const two = song.replace(/\n\r\nscore \{/, '\n\r\nscore full {') + 'score voice {\n  staff lead\n}\n';
+        const r = withLyricsRows(two);
+        assert.equal((r.text.match(/lyrics words\r?\n/g) ?? []).length, 2);
+        assert.match(r.text, /score voice \{\n  staff lead\n  lyrics words\n\}/);
+    });
+});
 import { withTodoMark } from '../src/omrAiFixCore';
 
 // Owner's request 2026-10-29: a newer composed version that renders is shown though it warns, each

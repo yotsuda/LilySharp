@@ -40,7 +40,7 @@ import {
     CandidateEdit as CoreCandidateEdit, ChangedSpan, MarkInSelection, MarkReadings, SEL_CLOSE, SEL_OPEN, cleanCandidate,
     TextChange, carryOffset, documentBudget, documentContext, estimateTokens, isProblem, marksContext, octaveOutliers, splitNote,
     startTimeAt, toCandidateEdit, wholeFileEdit, carrySelection, changedWords, wholeTextMarkup, titleOf, isPlaceholderTitle,
-    cleanTitle, withTitle, asksForOneStaff, partCount, rangeFixOf, aiFailure, warningTodoLines,
+    cleanTitle, withTitle, asksForOneStaff, partCount, rangeFixOf, aiFailure, warningTodoLines, withLyricsRows,
 } from './aiTransformCore';
 import { withTodoMark } from './omrAiFixCore';
 import { markFactsOf, sideFileOf } from './omrScanCore';
@@ -892,6 +892,14 @@ async function drive(
                     text = withTitle(text, title);
                     deps.log(`AI transform: the piece came untitled — titled "${title}".`);
                 }
+            }
+            // Words written and never shown (owner's report 2026-10-29: `lyrics words sings lead` in
+            // every section, no `lyrics words` row in the score — the words were not drawn): the row
+            // goes under the staff the words sing.
+            const placed = withLyricsRows(text);
+            if (placed.added.length > 0) {
+                text = placed.text;
+                deps.log(`AI transform: the score showed no row for ${placed.added.join(', ')} — added under the staff it sings.`);
             }
             // The AI writes in absolute octaves; the piece opens in relative ones (owner's request
             // 2026-10-27), converted mechanically — the server compiles the result and compares every
