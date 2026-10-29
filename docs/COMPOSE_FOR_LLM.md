@@ -45,7 +45,9 @@ What makes it music:
   — the first stops open (on V, or on the chord that leads back: a jazz turnaround, a rock IV or
   ♭VII), the second closes on I. The first half's last melody note is NOT the tonic: a tune
   that lands on its home note at bar 4 has ended, and its second half only ends again. Each
-  phrase rises to a high note and falls to its cadence. A middle section that leads back to the
+  phrase rises to a high note and falls to its cadence — by steps: a leap wider than a fifth is
+  followed by a step back the other way, above all from the high note, which a ninth's drop
+  (`d'''2 | c''4`) breaks off instead of leaving. A middle section that leads back to the
   first (the B of A–B–A, a bridge) ends on the home key's V, so the return is heard arriving —
   not closed in its own key (vi, a relative minor) with the return simply starting after it.
 - **One climax**: the piece rises to one high point — a bar and a note, the loudest place — and the

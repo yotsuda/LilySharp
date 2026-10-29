@@ -54,6 +54,11 @@ describe('the composing guide', () => {
         assert.match(guide, /A chord\s+sounds its third — the accompaniment has it, or the melody does on the beat/);
         assert.match(guide, /\(the B of A–B–A, a bridge\) ends on the home key's V/);
     });
+    // Owner's review 2026-10-29: a wedding piece's melody dropped a ninth from its climax.
+    it('says a wide leap is followed by a step back, above all from the high note', () => {
+        const guide = fs.readFileSync(path.join(docs, 'COMPOSE_FOR_LLM.md'), 'utf8');
+        assert.match(guide, /a leap wider than a fifth is\s+followed by a step back the other way, above all from the high note/);
+    });
     // Owner's report 2026-10-29: a piece composed in Copilot's chat was written as absolute in a
     // relative file, and its pitches flew off — the guide, which the chat is given too, says to start absolute.
     it('says a new piece starts in absolute octaves', () => {
