@@ -3795,6 +3795,11 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             padding: 6px 8px; font-size: 12px; max-height: 60vh; overflow: auto;
         }
         .range-panel[hidden] { display: none; }
+        /* Dragged anywhere but its inputs (owner's request 2026-10-29), its buttons and cells
+           still clicked; nothing selects while it moves. */
+        .range-panel { cursor: move; }
+        .range-panel button, .range-panel input, .range-panel td { cursor: pointer; }
+        .range-panel.moving, .range-panel.moving * { user-select: none; cursor: move; }
         /* The page's tooltip, in VS Code's hover look (the browser's title tip is too small). */
         .tip {
             position: fixed; z-index: 100; max-width: 320px; pointer-events: none;
@@ -5447,7 +5452,8 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             rangePanel.hidden = !rangePanel.hidden;
             rangeBtn.setAttribute('aria-pressed', String(!rangePanel.hidden));
             if (rangePanel.hidden) return;
-            rangePanel.style.top = (document.querySelector('.toolbar').getBoundingClientRect().bottom + 6) + 'px';
+            if (rangePanel.dataset.moved) clampPanel(rangePanel);
+            else rangePanel.style.top = (document.querySelector('.toolbar').getBoundingClientRect().bottom + 6) + 'px';
             if (!rangeParts && !rangeError) rangePanel.textContent = 'Reading the ranges…';
             refreshRanges();
         });
@@ -6179,15 +6185,78 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             if (!practicePanel.hidden) { closePractice(); return; }
             const b = practiceBtn.getBoundingClientRect();
             practicePanel.hidden = false;
-            practicePanel.style.top = (document.querySelector('.toolbar').getBoundingClientRect().bottom + 6) + 'px';
-            practicePanel.style.right = 'auto';
-            practicePanel.style.left = Math.max(6, Math.min(b.left, window.innerWidth - practicePanel.offsetWidth - 6)) + 'px';
+            if (practicePanel.dataset.moved) clampPanel(practicePanel);
+            else {
+                practicePanel.style.top = (document.querySelector('.toolbar').getBoundingClientRect().bottom + 6) + 'px';
+                practicePanel.style.right = 'auto';
+                practicePanel.style.left = Math.max(6, Math.min(b.left, window.innerWidth - practicePanel.offsetWidth - 6)) + 'px';
+            }
             practiceBtn.setAttribute('aria-expanded', 'true');
             vscode.postMessage({ type: 'requestParts' });
         });
         practicePanel.addEventListener('click', (e) => e.stopPropagation());
         document.addEventListener('click', () => { if (!practicePanel.hidden) closePractice(); });
         document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !practicePanel.hidden) closePractice(); });
+
+        // The Range and practice panels move where they are dragged (owner's request
+        // 2026-10-29), inside the preview: what goes past its edge is cut off there, and a panel
+        // keeps its top under the toolbar and PANEL_KEEP pixels in sight each way, so it can
+        // always be taken back. Once moved it stays where it was put, also when opened again.
+        const PANEL_KEEP = 48;
+        function clampPanel(panel) {
+            if (panel.hidden || !panel.dataset.moved) return;
+            const r = panel.getBoundingClientRect();
+            const under = document.querySelector('.toolbar').getBoundingClientRect().bottom;
+            const left = Math.min(Math.max(r.left, PANEL_KEEP - r.width), window.innerWidth - PANEL_KEEP);
+            const top = Math.min(Math.max(r.top, under), window.innerHeight - PANEL_KEEP);
+            panel.style.right = 'auto';
+            panel.style.left = left + 'px';
+            panel.style.top = top + 'px';
+        }
+        // A press anywhere but an input starts it, once it has gone 4 px: a click on a
+        // button or a cell stays a click, and the click a drag ends with does nothing.
+        function installPanelDrag(panel) {
+            let drag = null, dragged = false;
+            panel.addEventListener('pointerdown', (e) => {
+                dragged = false;
+                if (e.button !== 0 || e.target.closest('input, select, textarea')) return;
+                const r = panel.getBoundingClientRect();
+                drag = { id: e.pointerId, x: e.clientX, y: e.clientY, left: r.left, top: r.top, moving: false };
+            });
+            panel.addEventListener('pointermove', (e) => {
+                if (!drag || e.pointerId !== drag.id) return;
+                const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+                if (!drag.moving) {
+                    if (Math.abs(dx) + Math.abs(dy) < 4) return;
+                    drag.moving = true;
+                    panel.setPointerCapture(e.pointerId);
+                    panel.classList.add('moving');
+                }
+                panel.dataset.moved = '1';
+                panel.style.right = 'auto';
+                panel.style.left = (drag.left + dx) + 'px';
+                panel.style.top = (drag.top + dy) + 'px';
+                clampPanel(panel);
+                e.preventDefault();
+            });
+            const end = (e) => {
+                if (!drag || e.pointerId !== drag.id) return;
+                dragged = drag.moving;
+                drag = null;
+                panel.classList.remove('moving');
+            };
+            panel.addEventListener('pointerup', end);
+            panel.addEventListener('pointercancel', end);
+            panel.addEventListener('click', (e) => {
+                if (!dragged) return;
+                dragged = false;
+                e.stopPropagation();
+                e.preventDefault();
+            }, true);
+        }
+        installPanelDrag(rangePanel);
+        installPanelDrag(practicePanel);
+        window.addEventListener('resize', () => { clampPanel(rangePanel); clampPanel(practicePanel); });
         // The slider says its value as it moves and sets the tempo where it is let go: a
         // playback restarts once, not at every step of a drag.
         function setSpeed(percent) {
@@ -6539,7 +6608,8 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 case 'partsData':
                     renderParts(message.parts);
                     // Its width is known once filled: keep it inside the window.
-                    if (!practicePanel.hidden) {
+                    if (!practicePanel.hidden && practicePanel.dataset.moved) clampPanel(practicePanel);
+                    else if (!practicePanel.hidden) {
                         const b = practiceBtn.getBoundingClientRect();
                         practicePanel.style.left = Math.max(6, Math.min(b.left, window.innerWidth - practicePanel.offsetWidth - 6)) + 'px';
                     }

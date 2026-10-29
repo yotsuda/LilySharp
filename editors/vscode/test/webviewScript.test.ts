@@ -486,6 +486,62 @@ describe('the preview tells a note\'s printed copies apart by their bars', () =>
     });
 });
 
+// Owner's request 2026-10-29: the Range and practice panels move where they are dragged, inside
+// the preview, and never so far that they cannot be taken back.
+describe('the preview\'s panels are dragged, and kept where they can be taken back', () => {
+    type Panel = {
+        hidden: boolean; dataset: Record<string, string>; style: Record<string, string>;
+        width: number; height: number; getBoundingClientRect: () => { left: number; top: number; width: number; height: number };
+    };
+    const panel = (left: number, top: number): Panel => {
+        const p: Panel = {
+            hidden: false, dataset: { moved: '1' }, style: { left: left + 'px', top: top + 'px' }, width: 300, height: 200,
+            getBoundingClientRect: () => ({ left: parseFloat(p.style.left), top: parseFloat(p.style.top), width: p.width, height: p.height }),
+        };
+        return p;
+    };
+    const clamp = pageFunction('clampPanel', {
+        PANEL_KEEP: 48,
+        window: { innerWidth: 800, innerHeight: 600 },
+        document: { querySelector: () => ({ getBoundingClientRect: () => ({ bottom: 40 }) }) },
+    }) as (p: Panel) => void;
+    const at = (p: Panel) => [parseFloat(p.style.left), parseFloat(p.style.top)];
+
+    it('leaves a panel where it was put inside the preview', () => {
+        const p = panel(200, 100);
+        clamp(p);
+        assert.deepEqual(at(p), [200, 100]);
+        assert.equal(p.style.right, 'auto');
+    });
+    it('lets it go past an edge, cut off there, but keeps 48 px of it in sight', () => {
+        const left = panel(-500, 100); clamp(left);
+        assert.deepEqual(at(left), [48 - 300, 100]);
+        const right = panel(900, 100); clamp(right);
+        assert.deepEqual(at(right), [800 - 48, 100]);
+        const down = panel(200, 900); clamp(down);
+        assert.deepEqual(at(down), [200, 600 - 48]);
+    });
+    it('keeps its top under the toolbar, where it is taken hold of', () => {
+        const up = panel(200, -300); clamp(up);
+        assert.deepEqual(at(up), [200, 40]);
+    });
+    it('does not touch a panel never moved, or one hidden', () => {
+        const p = panel(-500, 100); p.dataset = {}; clamp(p);
+        assert.deepEqual(at(p), [-500, 100]);
+        const h = panel(-500, 100); h.hidden = true; clamp(h);
+        assert.deepEqual(at(h), [-500, 100]);
+    });
+    it('is installed on both panels, left alone by their inputs, and kept on a resize', () => {
+        const source = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
+        assert.match(source, /installPanelDrag\(rangePanel\);\s*installPanelDrag\(practicePanel\);/);
+        assert.match(source, /e\.target\.closest\('input, select, textarea'\)\) return;/);
+        assert.match(source, /window\.addEventListener\('resize', \(\) => \{ clampPanel\(rangePanel\); clampPanel\(practicePanel\); \}\);/);
+        // Opened again, a moved panel stays where it was put.
+        assert.match(source, /if \(rangePanel\.dataset\.moved\) clampPanel\(rangePanel\);/);
+        assert.match(source, /if \(practicePanel\.dataset\.moved\) clampPanel\(practicePanel\);/);
+    });
+});
+
 // Owner's report 2026-10-29: a song's system was taller than half the view, and following one
 // note at a time centred the voice, then the drums it pushed off, then the voice — the view shook.
 describe('the preview keeps what sounds in view, every part together', () => {
