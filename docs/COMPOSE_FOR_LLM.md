@@ -111,7 +111,10 @@ What makes it music:
   round D5–A5 (its low G string for warmth, the E string for brilliance), a flute round A4–A6, a
   cello round C3–A4. Slurs are a string player's bowings — a slur of a few notes, not a whole
   phrase; a wind player breathes at the rests between phrases; a double stop on a violin now and
-  then, never a run of them.
+  then, never a run of them. The piano's chords lie BELOW the solo, not in its register and never
+  over it; a dance's figure is one pair, not two — a waltz's bass on beat 1 and its chords on 2
+  and 3 round middle C, the two hands sharing that one figure, not each playing it — and the
+  right hand's own line comes where the solo holds or rests, an answer to it.
 - **A pop song**: intro, verse, pre-chorus, chorus (bridge before the last chorus) — the verse low
   and narrow, the chorus higher and wider, its hook the song's title words on its highest, most
   repeated phrase. A chord loop of four (I–V–vi–IV, vi–IV–I–V) that changes between verse and

@@ -206,6 +206,15 @@ describe('the composing guide', () => {
         assert.match(guide, /\*\*Piano comping\*\*: rootless voicings/);
         assert.match(guide, /\*\*A blues head\*\*: a riff stated, stated again over the IV, answered/);
     });
+    // Owner's trials 2026-10-29: a flute waltz's piano doubled the tune, then, asked not to, set its
+    // chords in the flute's register on beats 2 and 3 over the left hand's own, and rested where the
+    // flute rested.
+    it('says where a piano\'s chords lie under a solo, and that a dance\'s figure is one pair', () => {
+        const guide = fs.readFileSync(path.join(docs, 'COMPOSE_FOR_LLM.md'), 'utf8');
+        assert.match(guide, /The piano's chords lie BELOW the solo, not in its register and never\s+over it/);
+        assert.match(guide, /a waltz's bass on beat 1 and its chords on 2\s+and 3 round middle C, the two hands sharing that one figure, not each playing it/);
+        assert.match(guide, /the\s+right hand's own line comes where the solo holds or rests, an answer to it/);
+    });
     it('says how a hymn or a chorale for choir is written', () => {
         const guide = fs.readFileSync(path.join(docs, 'COMPOSE_FOR_LLM.md'), 'utf8');
         assert.match(guide, /\*\*A hymn or chorale for choir\*\* \(SATB, `choirStaff`\): the four voices move together/);
