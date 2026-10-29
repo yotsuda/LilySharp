@@ -73,6 +73,8 @@ describe('the chords of a score', () => {
         const editor = pkg.contributes.menus['editor/context'] as { command: string; group: string }[];
         assert.equal(editor.find(m => m.command === 'lilysharp.askAiInChat')?.group, '1_modification@1');
         assert.ok(!editor.some(m => m.command === 'lilysharp.aiTransform'));
+        // …nor composing: a new piece is begun from File > New File… (owner's decision, the same day).
+        assert.ok(!editor.some(m => m.command.startsWith('lilysharp.composeWithAi')));
         assert.equal(of('lilysharp.previewSelectChord'), '1_edit@2');
         assert.equal(of('lilysharp.editBarsBesideScan'), '1_edit@5');
         assert.equal(of('lilysharp.previewPlayFromHere'), '2_playback@1');

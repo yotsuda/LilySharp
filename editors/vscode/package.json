@@ -935,11 +935,6 @@
           "group": "1_modification@1"
         },
         {
-          "command": "lilysharp.composeWithAi",
-          "when": "resourceLangId == lilysharp",
-          "group": "1_modification@2"
-        },
-        {
           "command": "lilysharp.omrFixWithAi",
           "when": "resourceLangId == lilysharp && lilysharp.hasScan",
           "group": "1_modification@1"
