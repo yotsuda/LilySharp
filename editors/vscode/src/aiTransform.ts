@@ -439,23 +439,30 @@ async function proposeScore(deps: AiTransformDeps, input: ProposeScoreInput, tok
     // 2026-10-29: a chat's quartet had one rhythm in 20 of its first violin's 24 bars, and half notes
     // below it throughout): the findings go back unseen, and the next proposal is shown whatever
     // it does with them — the AI may keep what it meant.
+    const before = current ? await checkText(client, current) : [];
+    const added = addedWarnings({ HasErrors: false, Diagnostics: diags }, [{ beforeLo: 0, beforeHi: current.length, afterLo: 0, afterHi: text.length }],
+        before.filter(d => d.Severity === 'warning' && !MACHINE_WARNING.test(d.Message)).length);
+    // Its compiler warnings go back with it, unseen, the same once (owner's report 2026-10-29: a
+    // piece written with a warning was proposed again at once to mend it, and the musician saw the
+    // half-done piece in the editor and then a panel to accept its mending).
     if (isEmptyScore(current) && !musicCheckedFor.has(uri.toString())) {
         const music = await compositionFindings(client, text);
         musicCheckedFor.add(uri.toString());
-        if (music.length > 0) {
-            deps.log(`AI proposal (chat): sent back once as music — ${music.join(' / ')}`);
+        if (music.length > 0 || added.length > 0) {
+            deps.log(`AI proposal (chat): sent back once — ${added.length} warning(s); as music: ${music.join(' / ') || 'nothing'}`);
             // The check counts notes and does not know the music meant (owner's decision 2026-10-29: a
             // hymn's even quarters, sent back, came again stumbling): said before what it found.
-            return 'Not shown to the musician yet: Lily#\'s check of a new piece found this. It counts notes and does not know '
-                + 'the kind of music you mean: take what helps the piece, and leave what does not fit it —\n'
-                + `${music.map(m => `- ${m}`).join('\n')}\n`
+            return 'Not shown to the musician yet. '
+                + (added.length > 0 ? `The Lily# compiler warns:\n${formatDiags(added, text)}\nFix what is not meant. ` : '')
+                + (music.length > 0
+                    ? 'Lily#\'s check of a new piece found this. It counts notes and does not know '
+                      + 'the kind of music you mean: take what helps the piece, and leave what does not fit it —\n'
+                      + `${music.map(m => `- ${m}`).join('\n')}\n`
+                    : '')
                 + 'Revise the piece with these in mind and call lilysharp_proposeScore again with the whole text. '
                 + 'Where something is as you meant it, keep it: the next proposal is written as it is.';
         }
     }
-    const before = current ? await checkText(client, current) : [];
-    const added = addedWarnings({ HasErrors: false, Diagnostics: diags }, [{ beforeLo: 0, beforeHi: current.length, afterLo: 0, afterHi: text.length }],
-        before.filter(d => d.Severity === 'warning' && !MACHINE_WARNING.test(d.Message)).length);
     // A new piece goes straight into the file, not to the panel (owner's request 2026-10-29: a
     // composed piece decided on beside an empty score was the less clear way — what is to change is
     // said in the chat afterwards, a bar named there if need be).
@@ -465,10 +472,12 @@ async function proposeScore(deps: AiTransformDeps, input: ProposeScoreInput, tok
             return `Not written: ${written}`;
         }
         deps.log('AI proposal (chat): a new piece — written into the file.');
+        // The piece is done: what is to change, the musician says — not proposed again unasked, which
+        // would put a panel over the piece just written (owner's report 2026-10-29).
         return 'Written: a new piece goes straight into the file, and it is open in the editor, not saved: the musician '
-            + 'saves it when they want to keep it. Read it with lilysharp_readScore, not from the disk. The musician will '
-            + 'say in the chat what to change.'
-            + (added.length ? ` It has these warnings:\n${formatDiags(added, text)}` : '');
+            + 'saves it when they want to keep it. Read it with lilysharp_readScore, not from the disk. The piece is done: '
+            + 'do not propose it again unless the musician asks for a change in the chat.'
+            + (added.length ? ` It keeps these warnings, as you proposed it:\n${formatDiags(added, text)}` : '');
     }
     const snapshot: Snapshot = {
         version: doc?.version ?? 0, startOffset: 0, endOffset: current.length,

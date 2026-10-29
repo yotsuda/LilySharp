@@ -48,7 +48,14 @@ describe('a proposal from Copilot\'s chat', () => {
         assert.match(src, /const text = withLeadingComments\(current, input\.text\);/);
         assert.match(src, /if \(isEmptyScore\(current\) && !musicCheckedFor\.has\(uri\.toString\(\)\)\) \{\s*const music = await compositionFindings\(client, text\);\s*musicCheckedFor\.add\(uri\.toString\(\)\);/);
         // …saying first that it counts notes and leaves what does not fit the music (owner's decision 2026-10-29).
-        assert.match(src, /'Not shown to the musician yet: Lily#\\'s check of a new piece found this\. It counts notes and does not know '\s*\+ 'the kind of music you mean: take what helps the piece, and leave what does not fit it —\\n'/);
+        assert.match(src, /'Lily#\\'s check of a new piece found this\. It counts notes and does not know '\s*\+ 'the kind of music you mean: take what helps the piece, and leave what does not fit it —\\n'/);
+        // Its compiler warnings go back with it, the same once, before it is written (owner's report
+        // 2026-10-29: a piece written with a warning was proposed again at once, over a panel).
+        assert.match(src, /if \(music\.length > 0 \|\| added\.length > 0\) \{/);
+        assert.match(src, /\(added\.length > 0 \? `The Lily# compiler warns:\\n\$\{formatDiags\(added, text\)\}\\nFix what is not meant\. ` : ''\)/);
+        assert.ok(src.indexOf('const added = addedWarnings(') < src.indexOf('const music = await compositionFindings(client, text);'));
+        // Written, it is done: not proposed again unasked.
+        assert.match(src, /'do not propose it again unless the musician asks for a change in the chat\.'/);
     });
 });
 
