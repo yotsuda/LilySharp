@@ -662,6 +662,19 @@ export function spokenDuration(ms: number): string {
  * less often. Anything else says the error as it came.
  */
 export function aiFailure(kind: 'compose' | 'ask', message: string, elapsedMs: number): { text: string; retry: boolean } {
+    // The service ended the request with no answer (owner's report 2026-10-29: "compose with AI
+    // failed: Response contained no choices." — Copilot's log: gpt-6-luna, 164 s, status unknown).
+    // Nothing in the request made it so; the same request asked again may well be answered.
+    if (isEmptyReply(message)) {
+        const after = spokenDuration(elapsedMs);
+        return {
+            text: kind === 'compose'
+                ? `Lily#: the AI ended the request after ${after} without writing anything back — nothing in the request `
+                  + 'caused it. Try again — or ask for a shorter piece, which takes the AI less time to write.'
+                : `Lily#: the AI ended the request after ${after} without an answer. Try again.`,
+            retry: true,
+        };
+    }
     if (!isConnectionError(message)) {
         return { text: `Lily#: ${kind === 'compose' ? 'compose with AI' : 'Ask AI'} failed: ${message}`, retry: false };
     }
@@ -673,6 +686,11 @@ export function aiFailure(kind: 'compose' | 'ask', message: string, elapsedMs: n
             : `Lily#: the connection to the AI broke off after ${after}. Try again.`,
         retry: true,
     };
+}
+
+/** Whether an error says the service answered with nothing ("Response contained no choices"). */
+export function isEmptyReply(message: string): boolean {
+    return /contained no choices|empty response|no response (was )?returned/i.test(message);
 }
 
 /** Whether an error says the model is not an extension's to use. */

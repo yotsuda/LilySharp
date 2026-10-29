@@ -74,6 +74,14 @@ describe('a failed AI request', () => {
             + 'Try again — or ask for a shorter piece, which takes the AI less time to write.');
         assert.equal(aiFailure('ask', 'read ECONNRESET', 24000).text, 'Lily#: the connection to the AI broke off after 24 s. Try again.');
     });
+    // Owner's report 2026-10-29: "compose with AI failed: Response contained no choices."
+    it('tells a request the AI ended with no answer, and offers to try again', () => {
+        const f = aiFailure('compose', 'Response contained no choices.', 164071);
+        assert.ok(f.retry);
+        assert.equal(f.text, 'Lily#: the AI ended the request after 2 min 44 s without writing anything back — nothing in the request '
+            + 'caused it. Try again — or ask for a shorter piece, which takes the AI less time to write.');
+        assert.equal(aiFailure('ask', 'Response contained no choices.', 9000).text, 'Lily#: the AI ended the request after 9 s without an answer. Try again.');
+    });
     it('says any other error as it came, with no Try Again', () => {
         const f = aiFailure('compose', 'Model gpt-5.6-luna is only available to VS Code core.', 100);
         assert.ok(!f.retry);
