@@ -1637,6 +1637,15 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
                 // editor's selection when there is one (owner's report 2026-10-25: notes selected
                 // in the editor were answered with "Nothing is selected"), else the whole score.
                 await aiTransformFromPreviewHeader(uri);
+            } else if (message.type === 'askAiInChat') {
+                // The header's ✨ (owner's request 2026-10-29): Copilot's chat, the bars selected on
+                // the score as the pointer, else the file — put in its input, unsent.
+                const doc = await previewDocument(uri);
+                if (doc) {
+                    const picked = Number.isInteger(message.startPos) && message.startPos >= 0;
+                    await askAiInChat(doc, picked ? message.startPos : undefined,
+                        picked ? noteSelectionEnd(doc.getText(), message.endPos ?? message.startPos) : undefined);
+                }
             }
         },
         undefined,
@@ -3770,6 +3779,13 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             color: var(--vscode-button-foreground);
         }
         .toolbar button.ai:hover { background: var(--vscode-button-hoverBackground); }
+        /* Pressed, it sinks (owner's request 2026-10-29: a click on ✨ showed nothing — the chat
+           opens beside, out of the eye's way): shaded in, nudged down, darker. */
+        .toolbar button.ai:active, .toolbar button.ai.pressed {
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.45);
+            transform: translateY(1px);
+            filter: brightness(0.85);
+        }
         /* A toggle that is on looks pressed in (owner's request 2026-10-25: Range read as a plain
            button): sunk, blue-edged, tinted. */
         .toolbar button.toggle[aria-pressed="true"] {
@@ -3876,7 +3892,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         </span>
         <span class="sep"></span>
         <span class="group">
-        <button id="aiTransformBtn" class="ai icon" type="button" title="Ask AI (Ctrl+I)">✨</button>
+        <button id="aiTransformBtn" class="ai icon" type="button" title="Ask AI in Chat">✨</button>
         <button id="rangeBtn" class="toggle icon" type="button" aria-pressed="false" aria-label="Range" title="Each part's range"><svg viewBox="0 -.25 16.5 16.5" fill="currentColor" aria-hidden="true"><path d="M3 1.5 5.95 5.3H3.8v6.6h2.15L3 15.7.05 11.9H2.2V5.3H.05z"/><g transform="translate(.8 0)"><ellipse cx="9.4" cy="12.4" rx="2.8" ry="2" transform="rotate(-22 9.4 12.4)"/><rect x="11.35" y="1.5" width="1.05" height="10.8"/><path d="M12.4 1.5c.3 2 1.6 2.8 2.4 3.9.9 1.5 1.1 3.6.3 5.5.1-2.1-.9-3.6-2.7-4.2z"/></g></svg></button>
         </span>
         <span class="sep"></span>
@@ -3990,11 +4006,18 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             return n === 0 ? 'The selection' : n === 1 ? '1 bar selected' : n + ' bars selected';
         }
         // The header's AI button is its emoji alone, "✨" (owner's request 2026-10-25); its tooltip
-        // names it in a few words, and with bars selected says they are a hint for the AI.
+        // names it in a few words, and with bars selected says they go with the request. It opens
+        // Copilot's chat (owner's request 2026-10-29); Ctrl+I stays Lily#'s own Ask AI.
         function updateAiButton() {
             aiTransformBtn.title = aiRangeLo < 0
-                ? 'Ask AI (Ctrl+I)'
-                : 'Ask AI, the selected bars as a hint (Ctrl+I)';
+                ? 'Ask AI in Chat'
+                : 'Ask AI in Chat, about the selected bars';
+        }
+        function askInChat() {
+            // Held sunk a moment, so a quick click is seen to land.
+            aiTransformBtn.classList.add('pressed');
+            setTimeout(() => aiTransformBtn.classList.remove('pressed'), 180);
+            vscode.postMessage({ type: 'askAiInChat', startPos: aiRangeLo, endPos: aiRangeHi });
         }
         function aiSubmitSelection() {
             if (aiRangeLo < 0) {
@@ -4004,7 +4027,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             vscode.postMessage({ type: 'aiTransformFromScore', startPos: aiRangeLo, endPos: aiRangeHi,
                 selected: selectedLabel() });
         }
-        aiTransformBtn.addEventListener('click', aiSubmitSelection);
+        aiTransformBtn.addEventListener('click', askInChat);
 
         function showErrorBanner(text) {
             errorBanner.textContent = text;

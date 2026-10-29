@@ -57,6 +57,18 @@ describe('the pointer put in the chat', () => {
         const ext = fs.readFileSync(path.join(root, 'src', 'extension.ts'), 'utf8');
         assert.match(ext, /executeCommand\('workbench\.action\.chat\.open', \{ query, isPartialQuery: true, mode: 'agent' \}\)/);
     });
+    // Owner's request 2026-10-29: the preview header's ✨ opens the chat; Ctrl+I stays Lily#'s Ask AI.
+    it('is what the preview header\'s ✨ does, the selected bars with it', () => {
+        const ext = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
+        assert.match(ext, /<button id="aiTransformBtn" class="ai icon" type="button" title="Ask AI in Chat">✨<\/button>/);
+        assert.match(ext, /aiTransformBtn\.addEventListener\('click', askInChat\);/);
+        assert.match(ext, /vscode\.postMessage\(\{ type: 'askAiInChat', startPos: aiRangeLo, endPos: aiRangeHi \}\);/);
+        assert.match(ext, /message\.type === 'askAiInChat'\) \{[\s\S]{0,600}?await askAiInChat\(doc,/);
+        assert.match(ext, /e\.preventDefault\(\); aiSubmitSelection\(\);/);
+        // …and it is seen to be pressed: sunk while held, and a moment after a quick click.
+        assert.match(ext, /\.toolbar button\.ai:active, \.toolbar button\.ai\.pressed \{\s*box-shadow: inset/);
+        assert.match(ext, /aiTransformBtn\.classList\.add\('pressed'\);/);
+    });
     it('is the file alone with no range, and its lines and bars with one', () => {
         assert.equal(chatPointer('Dusk.lys', text), 'Dusk.lys: ');
         assert.equal(chatPointer('Dusk.lys', text, { from: at(5), to: at(5, 10) }), 'Dusk.lys, line 5 (section A, part vn1, bar 1): ');
