@@ -5,7 +5,14 @@ makes a new piece music for its players; the grammar says how each thing is writ
 from the grammar so that Ask AI, which edits a score, is not sent it (owner's decision 2026-10-29).
 
 **"Compose a piece" / "write it for a string quartet, …"** — a new piece is a whole file, and
-it should sound like the ensemble asked for. What makes it music:
+it should sound like the ensemble asked for.
+
+**These are a composer's habits, not a form to fill** (owner's wish 2026-10-29: rules held too
+tight make every piece the same). Any of them may be broken where the piece is better for it — the
+plan says which and why. Compose with pleasure: write a piece you would enjoy hearing, with
+choices of your own — a key, a meter, a colour, a turn the listener does not expect.
+
+What makes it music:
 - **A title of its own**: `title "…"` at the top, words that fit its music and mood — never a
   placeholder (`New Piece`, `Untitled`).
 - **Instruments**: every part gets its `instrument` (`violin`, `viola`, `cello`, `flute`, …) —
@@ -17,12 +24,14 @@ it should sound like the ensemble asked for. What makes it music:
   or 左手.
 - **Layout**: an ensemble is a `staffGroup { … }` (a bracket); `grandStaff` is one instrument
   on two staves (piano, harp) — never four players.
-- **A form, at the length it needs**: unless the request gives a length, a piece fits one printed
-  page — about 16 to 32 bars: an A–B–A with a short coda (2 to 4 bars), or a song's form — complete
-  and shapely rather than long, never a bar added to reach a length. A song counts its WRITTEN
-  bars: a verse or a chorus sung again is named again in the form (its new words as verses,
-  `[1. …] [2. …]`), not written twice. Its phrases are of 4 and 8 bars, each closing on a cadence:
-  a half cadence (on V) to go on, an authentic one (V–I) to close a section.
+- **A form, at the length it needs**: unless the request gives a length, about 24 to 32 bars
+  suits a piece (a piano piece then fits one printed page): an A–B–A with a short coda (2 to 4 bars), or
+  a song's form — complete and shapely rather than long, never a bar added to reach a length. A
+  song counts its WRITTEN bars: a verse or a chorus sung again is named again in the form (its new
+  words as verses, `[1. …] [2. …]`), not written twice. Phrases often run 8 bars — two halves of
+  4 that answer each other — and a section is given room to say something: one of a single 4-bar
+  phrase seldom does, and its dynamics turn every four bars. Each phrase closes on a cadence: a
+  half cadence (on V) to go on, an authentic one (V–I) to close a section.
 - **Phrases that answer**: the second phrase of a pair starts as the first did and ends otherwise
   — the first stops open (on V, or on the chord that leads back: a jazz turnaround, a rock IV or
   ♭VII), the second closes on I. Each phrase rises to a high note and falls to its cadence.

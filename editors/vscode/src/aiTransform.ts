@@ -1119,6 +1119,9 @@ function composeSystemPrompt(grammar: string, modelName?: string, guide: string 
         'Compose it as music for players, as you would write it out for a performer: a form, a harmony, a theme',
         'and an ending, at the length the music needs. The grammar\'s snippets only show how a thing is written;',
         'none of them is a model of a piece\'s length, form or style.',
+        // Owner's wish 2026-10-29: rules held too tight make every piece the same — compose with pleasure.
+        'The composing guide\'s ways are a composer\'s habits, not rules: break one where the piece is better',
+        'for it. Write a piece you would enjoy hearing, with choices of your own.',
         '',
         'REPLY in this order, and nothing else:',
         // Headings, every one filled in, and the theme in notes (owner's request 2026-10-29: the plan
@@ -1134,8 +1137,10 @@ function composeSystemPrompt(grammar: string, modelName?: string, guide: string 
         // "Aprime" the same as A, copied; a theme planned only in words, no bar made of it; phrases
         // that did not answer; no high point; a "dramatic" quartet with none of its character
         // written; words cut to fit the notes ("ひ を も や" for 燃やす).
-        '   LENGTH AND FORM — the sections and their bars, at the length the composing guide gives (one printed',
-        '   page unless the request gives one); a section that comes back as it was is named again in the form',
+        // Owner's trial 2026-10-29: a quartet of four 4-bar sections, 16 bars, its dynamics changing
+        // every four — about 24 to 32 bars suggested, not required (owner's wish, the same day).
+        '   LENGTH AND FORM — the sections and their bars (about 24 to 32 bars unless the request gives a length,',
+        '   or what the piece needs); a section that comes back as it was is named again in the form',
         '   (`form { A B A Coda }`), never copied.',
         '   KEY, METER, TEMPO.',
         '   HARMONY — every phrase\'s chords, bar by bar, and its cadence.',

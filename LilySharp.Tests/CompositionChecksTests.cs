@@ -355,6 +355,6 @@ public class CompositionChecksTests
         var guide = File.ReadAllText(Path.Combine(CollectResumeTests.FindRepoRoot(), "docs", "COMPOSE_FOR_LLM.md"));
         foreach (var title in new[] { "Little Quartet", "Night Drive", "Blue Window" })
             Assert.DoesNotContain($"title \"{title}\"", guide);
-        Assert.Contains("a piece fits one printed\n  page — about 16 to 32 bars", guide.Replace("\r\n", "\n"));
+        Assert.Contains("about 24 to 32 bars\n  suits a piece", guide.Replace("\r\n", "\n"));
     }
 }

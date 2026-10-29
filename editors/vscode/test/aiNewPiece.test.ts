@@ -219,7 +219,10 @@ describe('the composer\'s prompt', () => {
     it('has it plan the piece where the musician does not see it, then the note, then the file', () => {
         assert.match(transform, /'1\. <plan> … <\/plan> — your working notes; the musician never sees them\./);
         // Owner's decision 2026-10-29: short and shapely rather than long — one printed page unless asked.
-        assert.match(transform, /at the length the composing guide gives \(one printed',\s*'\s*page unless the request gives one\)/);
+        assert.match(transform, /LENGTH AND FORM — the sections and their bars \(about 24 to 32 bars unless the request gives a length,',\s*'\s*or what the piece needs\)/);
+        // Owner's wish 2026-10-29: rules held too tight make every piece the same — habits, broken where the piece is better.
+        assert.match(transform, /'The composing guide\\'s ways are a composer\\'s habits, not rules: break one where the piece is better',/);
+        assert.match(llmDocs(), /\*\*These are a composer's habits, not a form to fill\*\*/);
         assert.doesNotMatch(transform, /32 to 64 bars/);
         assert.match(transform, /return 'Reply with <plan>…<\/plan>, <note>…<\/note> and the whole piece in <file>…<\/file>';/);
     });

@@ -248,7 +248,7 @@ public static class CompositionChecks
         int barCount = 1 + barStarts.Count(b => b > 0 && b < lastTick);
         if (pitched.Count > 0 && barCount < ShortestPiece)
             findings.Add($"The piece is {barCount} bars long: unless a short piece was asked for, give it the length its form needs — "
-                + "about 16 to 32 bars, one printed page, in phrases of 4 and 8 bars, each closing on a cadence.");
+                + "about 24 to 32 bars, its phrases long enough to say something, each closing on a cadence.");
         var keys = System.Text.RegularExpressions.Regex.Matches(source,
             @"^[ \t]*key[ \t]+([a-g](?:isis|eses|is|es|s)?)[ \t]+(major|minor)\b", System.Text.RegularExpressions.RegexOptions.Multiline);
         if (keys.Count > 0 && pitched.Count > 0)
@@ -305,7 +305,9 @@ public static class CompositionChecks
         @"^\s*((right|left)\s*hand|[RL]\.\s*H\.?|[RL]H|右手|左手|みぎて|ひだりて)\s*$",
         System.Text.RegularExpressions.RegexOptions.IgnoreCase);
 
-    // Under this many bars a piece is a sketch, not a piece (16: two 8-bar phrases).
+    // Under this many bars a piece is a sketch, not a piece (16: two 8-bar phrases). Kept a floor, not
+    // the length asked for (owner's wish 2026-10-29: rules held too tight make every piece the same):
+    // the guide suggests about 24 to 32 bars, and the AI may choose otherwise.
     private const int ShortestPiece = 16;
 
     // The dynamic levels — not an accent like `@sf`, which says nothing of how loud the bars after it are.

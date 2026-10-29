@@ -69,6 +69,12 @@ All notable changes to the Lily# VS Code extension are documented here.
   piece went back asking for "the corrected edits, each `<old>` copied from the file" — the
   composer answered with bare `<old>`/`<new>`, which was read as the file, the rounds ran out, and
   the music checks never saw the piece. It now asks for the whole corrected piece in `<file>`.
+- **A composed piece is given room, and leave to be itself**: about 24 to 32 bars is suggested
+  (a quartet of four 4-bar sections, 16 bars, had no room to say anything and its dynamics turned
+  every four bars), phrases often 8 bars — and the guide and the prompt now say its ways are a
+  composer's habits, not rules: any may be broken where the piece is better for it, and the AI is
+  asked to write a piece it would enjoy hearing. The check that sends a sketch back keeps its floor
+  of 16 bars.
 - **Every part carries its own dynamics**: a composed piece whose dynamic levels are in some parts
   and not others is sent back (each player reads only their own staff) — a quartet's were all in the
   first violin. An `@sf` is not a level; a piano hand rides on the other's; a drum part needs none.
@@ -1986,6 +1992,12 @@ reader is offered its update when a scan is read.
   piece went back asking for "the corrected edits, each `<old>` copied from the file" — the
   composer answered with bare `<old>`/`<new>`, which was read as the file, the rounds ran out, and
   the music checks never saw the piece. It now asks for the whole corrected piece in `<file>`.
+- **A composed piece is given room, and leave to be itself**: about 24 to 32 bars is suggested
+  (a quartet of four 4-bar sections, 16 bars, had no room to say anything and its dynamics turned
+  every four bars), phrases often 8 bars — and the guide and the prompt now say its ways are a
+  composer's habits, not rules: any may be broken where the piece is better for it, and the AI is
+  asked to write a piece it would enjoy hearing. The check that sends a sketch back keeps its floor
+  of 16 bars.
 - **Every part carries its own dynamics**: a composed piece whose dynamic levels are in some parts
   and not others is sent back (each player reads only their own staff) — a quartet's were all in the
   first violin. An `@sf` is not a level; a piano hand rides on the other's; a drum part needs none.
