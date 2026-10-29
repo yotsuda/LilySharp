@@ -294,7 +294,7 @@ describe('a new piece in place of the score', () => {
     it('a new piece is checked as music once, and what is found goes back for a revision', () => {
         assert.match(transform, /const newPiece = compose \|\| \/<file>\/\.test\(raw\);/);
         assert.match(transform, /if \(newPiece && !musicAsked && attempt < maxRepairs\) \{\s*const music = await compositionFindings\(client, reconstructed\);/);
-        assert.match(transform, /sendRequest<\{ Findings: string\[\] \}>\('lilysharp\/compositionCheck', \{ Text: text \}\)/);
+        assert.match(transform, /sendRequest<\{ Findings: string\[\]; Ranges\?: string\[\] \}>\('lilysharp\/compositionCheck', \{ Text: text \}\)/);
         // The octave check measures against the old notes: not for a new piece.
         assert.match(transform, /if \(edit\.text !== octaveAsked && !newPiece\) \{/);
         // A revision that does not come leaves the piece as first written, with what was found.

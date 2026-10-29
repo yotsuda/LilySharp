@@ -90,6 +90,17 @@ public class PartRangesTests
         Assert.Equal(("C4", "C♭5"), (p.Low.Name, p.High.Name));
     }
 
+    /// <summary>Each part's range as one line, for an AI composing to read back (owner's request
+    /// 2026-10-29: a beginner's piece meant for C4–G4 reached B4 by an octave slip).</summary>
+    [Fact]
+    public void SaysEachPartsRangeInALine()
+    {
+        Assert.Equal(["sop: C4–G5, most of its time C4–G5", "alt: F3–E4, most of its time F3–E4"], PartRanges.Lines(Source));
+        const string slip = "octave absolute\ntime 4/4\npart melody { instrument piano-right }\nsection A { melody { c'4 d' e' g' | g'4 e' d' b' | c'1 | } }\nform { A }";
+        Assert.StartsWith("melody: C4–B4", PartRanges.Lines(slip).Single());
+        Assert.Empty(PartRanges.Lines("part p { section A { p { c'4 ( } } }"));
+    }
+
     /// <summary>A chord's lowest member is found where it is written — a written chord, one of
     /// degrees, a grace chord; a member written lower but sounding higher is passed over.</summary>
     [Theory]

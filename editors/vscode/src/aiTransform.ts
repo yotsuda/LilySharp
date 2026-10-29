@@ -473,8 +473,11 @@ async function proposeScore(deps: AiTransformDeps, input: ProposeScoreInput, tok
     // Its compiler warnings go back with it, unseen, the same once (owner's report 2026-10-29: a
     // piece written with a warning was proposed again at once to mend it, and the musician saw the
     // half-done piece in the editor and then a panel to accept its mending).
+    let ranges: string[] | undefined;
     if (isEmptyScore(current) && !musicCheckedFor.has(uri.toString())) {
-        const music = await compositionFindings(client, text);
+        const report = await compositionReport(client, text);
+        const music = report.findings;
+        ranges = report.ranges;
         musicCheckedFor.add(uri.toString());
         if (music.length > 0 || added.length > 0) {
             deps.log(`AI proposal (chat): sent back once — ${added.length} warning(s); as music: ${music.join(' / ') || 'nothing'}`);
@@ -488,7 +491,8 @@ async function proposeScore(deps: AiTransformDeps, input: ProposeScoreInput, tok
                       + `${music.map(m => `- ${m}`).join('\n')}\n`
                     : '')
                 + 'Revise the piece with these in mind and call lilysharp_proposeScore again with the whole text. '
-                + 'Where something is as you meant it, keep it: the next proposal is written as it is.';
+                + 'Where something is as you meant it, keep it: the next proposal is written as it is.'
+                + rangesSaid(ranges);
         }
     }
     // A new piece goes straight into the file, not to the panel (owner's request 2026-10-29: a
@@ -508,7 +512,8 @@ async function proposeScore(deps: AiTransformDeps, input: ProposeScoreInput, tok
             + 'not by the piece\'s title. It is open in the editor, not saved: the musician '
             + 'saves it when they want to keep it. Read it with lilysharp_readScore, not from the disk. The piece is done: '
             + 'do not propose it again unless the musician asks for a change in the chat.'
-            + (added.length ? ` It keeps these warnings, as you proposed it:\n${formatDiags(added, text)}` : '');
+            + (added.length ? ` It keeps these warnings, as you proposed it:\n${formatDiags(added, text)}` : '')
+            + rangesSaid(ranges ?? (await compositionReport(client, text)).ranges);
     }
     const snapshot: Snapshot = {
         version: doc?.version ?? 0, startOffset: 0, endOffset: current.length,
@@ -556,7 +561,8 @@ async function proposeScore(deps: AiTransformDeps, input: ProposeScoreInput, tok
                 return 'Accepted: the musician accepted the proposal, and it is in the editor, not saved yet — '
                     + `${path.basename(currentUri(uri).fsPath)} (call the file by that name; it may have been renamed). Read it `
                     + 'with lilysharp_readScore, not from the disk.'
-                    + (added.length ? ` It has these warnings, which they may want fixed:\n${formatDiags(added, text)}` : '');
+                    + (added.length ? ` It has these warnings, which they may want fixed:\n${formatDiags(added, text)}` : '')
+                    + rangesSaid((await compositionReport(client, text)).ranges);
             }
             // Rejected: the panel stays, saying so, for the chat's next proposal to open in.
             deps.log('AI proposal (chat): rejected.');
@@ -1744,12 +1750,25 @@ async function titleFor(chat: ChatClient, piece: string, asked: string): Promise
 /** What a new piece's notation leaves flat (lilysharp/compositionCheck), one sentence each;
  *  none from a server that does not know the request. */
 async function compositionFindings(client: LanguageClient, text: string): Promise<string[]> {
+    return (await compositionReport(client, text)).findings;
+}
+
+/** The music check's findings, and each part's range as one line ("melody: C4–B4, most of its
+ *  time E4–G4") — what the piece is, for a chat to read back what it wrote (owner's request
+ *  2026-10-29: a beginner's piece meant for C4–G4 reached B4 by an octave slip). */
+async function compositionReport(client: LanguageClient, text: string): Promise<{ findings: string[]; ranges: string[] }> {
     try {
-        const resp = await client.sendRequest<{ Findings: string[] }>('lilysharp/compositionCheck', { Text: text });
-        return resp?.Findings ?? [];
+        const resp = await client.sendRequest<{ Findings: string[]; Ranges?: string[] }>('lilysharp/compositionCheck', { Text: text });
+        return { findings: resp?.Findings ?? [], ranges: resp?.Ranges ?? [] };
     } catch {
-        return [];
+        return { findings: [], ranges: [] };
     }
+}
+
+/** The ranges as a chat is told them: a fact to check against what was meant, not a finding. */
+function rangesSaid(ranges: string[]): string {
+    return ranges.length === 0 ? ''
+        : `\nThe parts' ranges, as written (check them against what you meant — an octave mark slips easily): ${ranges.join('; ')}.`;
 }
 
 /**

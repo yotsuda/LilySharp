@@ -46,14 +46,19 @@ describe('a proposal from Copilot\'s chat', () => {
     it('checks a new piece as music once, its findings sent back unseen', () => {
         const src = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'aiTransform.ts'), 'utf8');
         assert.match(src, /const text = withLeadingComments\(current, input\.text\);/);
-        assert.match(src, /if \(isEmptyScore\(current\) && !musicCheckedFor\.has\(uri\.toString\(\)\)\) \{\s*const music = await compositionFindings\(client, text\);\s*musicCheckedFor\.add\(uri\.toString\(\)\);/);
+        assert.match(src, /if \(isEmptyScore\(current\) && !musicCheckedFor\.has\(uri\.toString\(\)\)\) \{\s*const report = await compositionReport\(client, text\);\s*const music = report\.findings;\s*ranges = report\.ranges;\s*musicCheckedFor\.add\(uri\.toString\(\)\);/);
+        // Each part's range goes with it, a fact to check against what was meant (owner's request
+        // 2026-10-29: a beginner's piece slipped an octave), on the bounce, the write and an Accept.
+        assert.match(src, /'Where something is as you meant it, keep it: the next proposal is written as it is\.'\s*\+ rangesSaid\(ranges\);/);
+        assert.match(src, /\+ rangesSaid\(ranges \?\? \(await compositionReport\(client, text\)\)\.ranges\);/);
+        assert.match(src, /an octave mark slips easily/);
         // …saying first that it counts notes and leaves what does not fit the music (owner's decision 2026-10-29).
         assert.match(src, /'Lily#\\'s check of a new piece found this\. It counts notes and does not know '\s*\+ 'the kind of music you mean: take what helps the piece, and leave what does not fit it —\\n'/);
         // Its compiler warnings go back with it, the same once, before it is written (owner's report
         // 2026-10-29: a piece written with a warning was proposed again at once, over a panel).
         assert.match(src, /if \(music\.length > 0 \|\| added\.length > 0\) \{/);
         assert.match(src, /\(added\.length > 0 \? `The Lily# compiler warns:\\n\$\{formatDiags\(added, text\)\}\\nFix what is not meant\. ` : ''\)/);
-        assert.ok(src.indexOf('const added = addedWarnings(') < src.indexOf('const music = await compositionFindings(client, text);'));
+        assert.ok(src.indexOf('const added = addedWarnings(') < src.indexOf('const report = await compositionReport(client, text);'));
         // Written, it is done: not proposed again unasked.
         assert.match(src, /'do not propose it again unless the musician asks for a change in the chat\.'/);
     });

@@ -731,6 +731,9 @@ public class CompleteTextItem
 public class CompositionCheckResponse
 {
     public string[] Findings { get; set; } = System.Array.Empty<string>();
+    /// <summary>Each part's range, one line each (<see cref="LilySharp.Core.Midi.PartRanges.Lines"/>):
+    /// what the piece is, said beside what the check finds in it.</summary>
+    public string[] Ranges { get; set; } = System.Array.Empty<string>();
 }
 
 /// <summary>Parameters for lilysharp/renderText: render an arbitrary candidate

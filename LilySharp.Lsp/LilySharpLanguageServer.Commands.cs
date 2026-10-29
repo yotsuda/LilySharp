@@ -1412,6 +1412,7 @@ public sealed partial class LilySharpLanguageServer
         => OffDispatch(() => new CompositionCheckResponse
         {
             Findings = [.. LilySharp.Core.Editing.CompositionChecks.Of(@params.Text ?? "")],
+            Ranges = [.. LilySharp.Core.Midi.PartRanges.Lines(@params.Text ?? "")],
         }, token);
 
     public CheckCandidateResponse CheckCandidate(CheckCandidateParams @params)

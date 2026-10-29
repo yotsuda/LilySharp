@@ -44,6 +44,25 @@ public static class PartRanges
     private const int DrumChannel = 9;
     private const string ChordRowSuffix = " (chords)";
 
+    /// <summary>
+    /// Each part's range as one line, for an AI composing to read back what it wrote (owner's
+    /// request 2026-10-29: a beginner's piece meant to keep within C4–G4 reached B4, an octave
+    /// slip the AI could not see): "melody: C4–B4, most of its time E4–G4". The score drawn first
+    /// is the one played, as the Range panel plays it; none when the source does not compile.
+    /// </summary>
+    public static IReadOnlyList<string> Lines(string source)
+    {
+        var tree = Syntax.SyntaxTree.Parse(source);
+        if (tree.HasErrors)
+            return [];
+        var score = Svg.Collector.RenderSpecParser.Choose(Svg.Collector.RenderSpecParser.FindAll(tree), null);
+        var midi = new MidiExporter { Form = score?.Form, Score = score }.Export(tree);
+        return Of(midi, source)
+            .Select(p => $"{p.Name}: {p.Low.Name}–{p.High.Name}, most of its time "
+                + $"{SpelledFromPitch(p.TessituraLow)}–{SpelledFromPitch(p.TessituraHigh)}")
+            .ToList();
+    }
+
     /// <summary>The ranges in <paramref name="midi"/>, parts in track order; <paramref name="source"/>
     /// spells each end as it is written (null: spelled from the pitch).</summary>
     public static IReadOnlyList<PartRange> Of(MidiFile midi, string? source)
