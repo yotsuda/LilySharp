@@ -312,6 +312,36 @@ public class CompositionChecksTests
         Assert.DoesNotContain(CompositionChecks.Of(varied), f => f.Contains("have the same rhythm"));
     }
 
+    // Owner's trial 2026-10-29: a quartet's dynamics were all in the first violin. Each player reads
+    // only their own staff; an @sf is not a level; a piano hand rides on the other's, a drum part on none.
+    [Fact]
+    public void APartWithNoDynamicsOfItsOwn_IsToldSo()
+    {
+        const string quartet = """
+            title "Dusk"
+            time 4/4
+            octave absolute
+            part vn1 "Violin I" { instrument violin }
+            part vn2 "Violin II" { instrument violin }
+            part vc "Cello" { instrument cello }
+            phrase low { c4@mf g,4 c4 g,4 | }
+            section A {
+              vn1 { e''4@p f''4 g''4@f a''4 | }
+              vn2 { c''4 d''4@sf e''4 f''4 | }
+              vc { low }
+            }
+            form { ~A }
+            score { staffGroup { staff vn1  staff vn2  staff vc } }
+            """;
+        var findings = CompositionChecks.Of(quartet);
+        Assert.Contains(findings, f => f.StartsWith("No dynamics in vn2: each player reads only their own staff"));
+        Assert.DoesNotContain(findings, f => f.StartsWith("No dynamics") && f.Contains("vc"));
+        Assert.DoesNotContain(CompositionChecks.Of(quartet.Replace("d''4@sf", "d''4@mp")), f => f.StartsWith("No dynamics"));
+        // None anywhere: nothing to measure the others by — the piece is not told this.
+        Assert.DoesNotContain(CompositionChecks.Of(quartet.Replace("@p", "").Replace("@f", "").Replace("@mf", "")),
+            f => f.StartsWith("No dynamics"));
+    }
+
     // Owner's question 2026-10-27, "a model asked in a chat has no example — is none better?": the
     // grammar shows no whole piece to compose after, only how each thing is written.
     [Fact]

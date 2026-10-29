@@ -78,6 +78,21 @@ public static class CompositionChecks
                     + "(write `instrument violin`, `viola`, `cello`, … in its part declaration).");
         }
 
+        // Every player reads only their own staff, so a level written in one part says nothing to the
+        // others (owner's trial 2026-10-29: a string quartet's dynamics were all in the first violin,
+        // the three below it with an @sf at most). A drum part, and a piano hand whose other hand
+        // carries them (a piano's dynamics stand between its staves), need none of their own.
+        if (parts.Count >= 2 && DynamicLevelsByPart(root) is var levelled && levelled.Count > 0)
+        {
+            var silent = parts.Where(p => !levelled.Contains(p.Name.Text) && !RoleOf(p).Drums
+                    && !(InstrumentOf(p) is "piano-left" or "piano-right" && parts.Any(o => o != p
+                        && InstrumentOf(o) is "piano-left" or "piano-right" && levelled.Contains(o.Name.Text))))
+                .Select(p => p.Name.Text).ToList();
+            if (silent.Count > 0)
+                findings.Add($"No dynamics in {string.Join(", ", silent)}: each player reads only their own staff — write the levels "
+                    + "(`@p`, `@mf`, `@f`, …) and the hairpins in every part, where its own music asks for them, not in one part alone.");
+        }
+
         MidiFile midi;
         try
         {
@@ -292,6 +307,23 @@ public static class CompositionChecks
 
     // Under this many bars a piece is a sketch, not a piece (16: two 8-bar phrases).
     private const int ShortestPiece = 16;
+
+    // The dynamic levels — not an accent like `@sf`, which says nothing of how loud the bars after it are.
+    private static readonly HashSet<string> Levels = ["pppp", "ppp", "pp", "p", "mp", "mf", "f", "ff", "fff", "ffff", "fp"];
+
+    /// <summary>The parts whose music writes a dynamic level, in a section's cell or in a phrase the
+    /// cell names.</summary>
+    private static HashSet<string> DynamicLevelsByPart(SyntaxNode root)
+    {
+        static bool HasLevel(SyntaxNode n) => n.DescendantNodes<DynamicSyntax>().Any(d => Levels.Contains(d.DynamicToken.Text));
+        var phrases = root.DescendantNodes<PhraseDeclarationSyntax>().Where(HasLevel).Select(p => p.Name.Text)
+            .ToHashSet(System.StringComparer.Ordinal);
+        var parts = new HashSet<string>(System.StringComparer.Ordinal);
+        foreach (var cell in root.DescendantNodes<PartBlockSyntax>())
+            if (HasLevel(cell) || (phrases.Count > 0 && cell.DescendantNodes<SyntaxTokenNode>().Any(t => phrases.Contains(t.Text))))
+                parts.Add(cell.PartName.Text);
+        return parts;
+    }
 
     // The share of one note value past which a part reads as one value: an accompaniment's figure
     // may keep one, a melody may not (owner's trials 2026-10-29).

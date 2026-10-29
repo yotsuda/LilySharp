@@ -69,6 +69,9 @@ All notable changes to the Lily# VS Code extension are documented here.
   piece went back asking for "the corrected edits, each `<old>` copied from the file" — the
   composer answered with bare `<old>`/`<new>`, which was read as the file, the rounds ran out, and
   the music checks never saw the piece. It now asks for the whole corrected piece in `<file>`.
+- **Every part carries its own dynamics**: a composed piece whose dynamic levels are in some parts
+  and not others is sent back (each player reads only their own staff) — a quartet's were all in the
+  first violin. An `@sf` is not a level; a piano hand rides on the other's; a drum part needs none.
 - **The character runs through the piece**: the composing guide says each device of the character
   asked for comes back in more than one section, growing to the climax — a quartet's tremolo and
   sforzando were all in two bars of its middle section.
@@ -1983,6 +1986,9 @@ reader is offered its update when a scan is read.
   piece went back asking for "the corrected edits, each `<old>` copied from the file" — the
   composer answered with bare `<old>`/`<new>`, which was read as the file, the rounds ran out, and
   the music checks never saw the piece. It now asks for the whole corrected piece in `<file>`.
+- **Every part carries its own dynamics**: a composed piece whose dynamic levels are in some parts
+  and not others is sent back (each player reads only their own staff) — a quartet's were all in the
+  first violin. An `@sf` is not a level; a piano hand rides on the other's; a drum part needs none.
 - **The character runs through the piece**: the composing guide says each device of the character
   asked for comes back in more than one section, growing to the climax — a quartet's tremolo and
   sforzando were all in two bars of its middle section.
