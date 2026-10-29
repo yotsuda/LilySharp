@@ -52,7 +52,7 @@ describe('a new piece in place of the score', () => {
         // The octave check measures against the old notes: not for a new piece.
         assert.match(transform, /if \(edit\.text !== octaveAsked && !newPiece\) \{/);
         // A revision that does not come leaves the piece as first written, with what was found.
-        assert.match(transform, /if \(candidate === null && flat\) \{\s*candidate = flat\.edit;/);
+        assert.match(transform, /if \(candidate === null && flat && !newerWarned\) \{\s*candidate = flat\.edit;/);
     });
 
     it('Compose with AI is a command of its own, writing into a new score', () => {

@@ -24,8 +24,31 @@ import * as path from 'node:path';
 import {
     SEL_CLOSE, SEL_OPEN, carryOffset, documentBudget, documentContext, estimateTokens, isProblem, isUnchanged, marksContext, octaveOutliers,
     pickModel, isAutoModel, pitchToMidi, splitNote, planOf, withoutPlan, startTimeAt, toCandidateEdit, changedWords, diffMarkup, wholeTextMarkup, rangeFixOf,
-    aiFailure, isConnectionError, spokenDuration, servedModelsIn, cleanCandidate,
+    aiFailure, isConnectionError, spokenDuration, servedModelsIn, cleanCandidate, warningTodoLines,
 } from '../src/aiTransformCore';
+import { withTodoMark } from '../src/omrAiFixCore';
+
+// Owner's request 2026-10-29: a newer composed version that renders is shown though it warns, each
+// warning marked with a @todo on the line it is about.
+describe('a composed piece\'s warnings marked @todo', () => {
+    const text = 'section A {\r\n  lead {\r\n    a\'8 fis\'8 e\'8 d\'8 b\'8 a\'8 d\'2 |\r\n  }\r\n}';
+    it('marks the item the warning points at, with the warning\'s words', () => {
+        const lines = warningTodoLines(text, [{ Line: 2, Char: 4, Message: 'Measure duration 5/4 exceeds time signature 4/4: the music past the bar line is not drawn or played' }], withTodoMark);
+        assert.deepEqual(lines, [{ line: 2, marked: '    a\'8@todo("Measure duration 5/4 exceeds time signature 4/4") fis\'8 e\'8 d\'8 b\'8 a\'8 d\'2 |\r' }]);
+    });
+    it('puts two warnings of one line in one mark, and leaves a line with nothing to mark', () => {
+        const two = warningTodoLines(text, [{ Line: 2, Char: 30, Message: 'one: x' }, { Line: 2, Char: 4, Message: 'two: y' }], withTodoMark);
+        assert.equal(two.length, 1);
+        assert.match(two[0].marked, /@todo\("one \/ two"\)/);
+        assert.deepEqual(warningTodoLines(text, [{ Line: 4, Char: 0, Message: 'brace' }], withTodoMark), []);
+    });
+    it('shows the newer of the two, as long as it renders, and tries each line\'s mark on its own', () => {
+        const src = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'aiTransform.ts'), 'utf8');
+        assert.match(src, /const newerWarned = compose && warned !== null && \(flat === null \|\| warned\.attempt > flat\.attempt\);/);
+        assert.match(src, /if \(candidate === null && flat && !newerWarned\) \{/);
+        assert.match(src, /for \(const m of warningTodoLines\(text, warned\.warnings, withTodoMark\)\) \{[\s\S]*?if \(!check\.HasErrors\) \{/);
+    });
+});
 
 // Owner's trial 2026-10-29: a piece fenced as "```Lily#" kept the '#' as its first line.
 describe('a candidate in a code fence', () => {

@@ -40,8 +40,9 @@ import {
     CandidateEdit as CoreCandidateEdit, ChangedSpan, MarkInSelection, MarkReadings, SEL_CLOSE, SEL_OPEN, cleanCandidate,
     TextChange, carryOffset, documentBudget, documentContext, estimateTokens, isProblem, marksContext, octaveOutliers, splitNote,
     startTimeAt, toCandidateEdit, wholeFileEdit, carrySelection, changedWords, wholeTextMarkup, titleOf, isPlaceholderTitle,
-    cleanTitle, withTitle, asksForOneStaff, partCount, rangeFixOf, aiFailure,
+    cleanTitle, withTitle, asksForOneStaff, partCount, rangeFixOf, aiFailure, warningTodoLines,
 } from './aiTransformCore';
+import { withTodoMark } from './omrAiFixCore';
 import { markFactsOf, sideFileOf } from './omrScanCore';
 import { textFontFaceCss, textFontsRoot } from './scoreFonts';
 export { cleanCandidate }; // aiComplete reads it from here
@@ -560,13 +561,16 @@ async function drive(
                 // run out, the best such candidate is still shown, with its warnings named, rather
                 // than nothing — it is valid Lily#, and the user can see on the score whether it is
                 // what they asked for.
-                let warned: { edit: CandidateEdit; warnings: CandidateDiagnostic[] } | null = null;
+                // For a composed piece it is the NEWEST such candidate (owner's request 2026-10-29: as
+                // long as it renders, a later version is worth more than an earlier one without
+                // warnings), its warnings marked with @todo on the score.
+                let warned: { edit: CandidateEdit; warnings: CandidateDiagnostic[]; text: string; attempt: number } | null = null;
                 let unchanged = false;
                 let octaveAsked: string | null = null;
                 let octaveNote: ResolvedPitchFact[] | null = null;
                 let musicAsked = false;
                 // A valid piece the music check sent back: shown if no better one comes.
-                let flat: { edit: CandidateEdit; music: string[] } | null = null;
+                let flat: { edit: CandidateEdit; music: string[]; attempt: number } | null = null;
                 // Why the last attempt was turned down, logged with each (owner's report 2026-10-26:
                 // "could not produce a valid transform" said nothing of why, and the log neither).
                 let lastReason = '';
@@ -712,7 +716,7 @@ async function drive(
                             }
                             if (music.length > 0) {
                                 musicAsked = true;
-                                flat = { edit, music };
+                                flat = { edit, music, attempt };
                                 repairs = attempt + 1;
                                 turnedDown(attempt, `it compiles, but as music: ${music.join(' / ')}`);
                                 messages.push({ role: 'assistant', content: raw });
@@ -752,8 +756,8 @@ async function drive(
                             `That candidate does not compile. The Lily# compiler reported:\n${formatDiags(badness)}\n` +
                             `${sameForm} — same output rules.` });
                     } else {
-                        if (!warned || newWarnings.length < warned.warnings.length) {
-                            warned = { edit, warnings: newWarnings };
+                        if (compose || !warned || newWarnings.length < warned.warnings.length) {
+                            warned = { edit, warnings: newWarnings, text: reconstructed, attempt };
                         }
                         messages.push({ role: 'user', content:
                             `That candidate compiles, but it adds warnings the file did not have:\n${formatDiags(newWarnings, reconstructed)}\n` +
@@ -762,14 +766,36 @@ async function drive(
                 }
 
                 let caption = instruction;
-                if (candidate === null && flat) {
+                // A composed piece: the newer of the two wins, as long as it renders.
+                const newerWarned = compose && warned !== null && (flat === null || warned.attempt > flat.attempt);
+                if (candidate === null && flat && !newerWarned) {
                     candidate = flat.edit;
                     caption = `${instruction} — ⚠ ${flat.music.join(' / ')}`;
                     deps.log('AI transform: the revision did not come; shown as first written, with what the music check found.');
                 }
                 if (candidate === null && warned) {
                     candidate = warned.edit;
-                    caption = `${instruction} — ⚠ ${warned.warnings.length} new warning(s): `
+                    let marked = 0;
+                    if (compose) {
+                        // Each warning's line marked with a @todo carrying its words, a line at a time:
+                        // a line that cannot take one (a lyric line) is left as it is.
+                        let text = warned.text;
+                        for (const m of warningTodoLines(text, warned.warnings, withTodoMark)) {
+                            const lines = text.split('\n');
+                            lines[m.line] = m.marked;
+                            const tried = lines.join('\n');
+                            const check = await client.sendRequest<CheckCandidateResponse>('lilysharp/checkCandidate', { Text: tried });
+                            if (!check.HasErrors) {
+                                text = tried;
+                                marked++;
+                            }
+                        }
+                        if (marked > 0) {
+                            candidate = { ...wholeFileEdit(work, text), reply: warned.edit.reply };
+                        }
+                    }
+                    caption = `${instruction} — ⚠ ${warned.warnings.length} new warning(s)`
+                        + (marked > 0 ? `, marked @todo on ${marked} line(s)` : '') + ': '
                         + warned.warnings.map(w => w.Message).join(' / ');
                     deps.log(`AI transform: shown with ${warned.warnings.length} new warning(s) after ${maxRepairs} repairs: `
                         + warned.warnings.map(w => w.Message).join(' | '));

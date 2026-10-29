@@ -688,6 +688,38 @@ export function aiFailure(kind: 'compose' | 'ask', message: string, elapsedMs: n
     };
 }
 
+/**
+ * The lines a composed piece's warnings are on, each with a `@todo` carrying the warnings' words at
+ * the item nearest where they point (owner's request 2026-10-29: a newer version that renders is
+ * worth more than an older one with no warnings — shown, and its warnings marked on the score).
+ * Lines with nothing to hang a mark on are left out; each line's mark is to be tried on its own,
+ * for a line that takes none (a lyric line) would not compile with one. `mark` places the mark
+ * (omrAiFixCore.withTodoMark, passed in: that module imports this one).
+ */
+export function warningTodoLines(text: string, warnings: readonly { Line: number; Char: number; Message: string }[],
+    mark: (written: string, bar: string, memo: string) => string | undefined): { line: number; marked: string }[] {
+    const lines = text.split('\n');
+    const byLine = new Map<number, { Char: number; Message: string }[]>();
+    for (const w of warnings) {
+        if (w.Line >= 0 && w.Line < lines.length) {
+            (byLine.get(w.Line) ?? byLine.set(w.Line, []).get(w.Line)!).push(w);
+        }
+    }
+    const out: { line: number; marked: string }[] = [];
+    for (const [line, ws] of byLine) {
+        const cr = lines[line].endsWith('\r') ? '\r' : '';
+        const raw = lines[line].slice(0, lines[line].length - cr.length);
+        const col = Math.min(raw.length, Math.max(0, Math.min(...ws.map(w => w.Char))));
+        const words = ws.map(w => w.Message.split(/:\s/)[0]).join(' / ');
+        const memo = words.length > 120 ? `${words.slice(0, 119)}…` : words;
+        const marked = mark(raw.slice(0, col) + '@todo' + raw.slice(col), raw, memo);
+        if (marked !== undefined && marked !== raw) {
+            out.push({ line, marked: marked + cr });
+        }
+    }
+    return out;
+}
+
 /** Whether an error says the service answered with nothing ("Response contained no choices"). */
 export function isEmptyReply(message: string): boolean {
     return /contained no choices|empty response|no response (was )?returned/i.test(message);

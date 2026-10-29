@@ -69,6 +69,11 @@ All notable changes to the Lily# VS Code extension are documented here.
   piece went back asking for "the corrected edits, each `<old>` copied from the file" — the
   composer answered with bare `<old>`/`<new>`, which was read as the file, the rounds ran out, and
   the music checks never saw the piece. It now asks for the whole corrected piece in `<file>`.
+- **A composed piece shows its newest version that renders, its warnings marked `@todo`**: when
+  the rounds run out, a later version with warnings wins over an earlier one without (the music
+  check's revision, the better piece, lost to the draft before it for three bars a beat long), and
+  each line a warning is about carries a `@todo` with the warning's words — tried a line at a time,
+  so a line that takes no mark (a lyric line) is left as it is.
 - **A composed piece gets one round more**: four in all, so the revision the music check asks for —
   the better piece in a trial, its phrases ending on long notes — can still have its slips (three
   bars a beat long) repaired instead of being dropped for the first draft.
@@ -1956,6 +1961,11 @@ reader is offered its update when a scan is read.
   piece went back asking for "the corrected edits, each `<old>` copied from the file" — the
   composer answered with bare `<old>`/`<new>`, which was read as the file, the rounds ran out, and
   the music checks never saw the piece. It now asks for the whole corrected piece in `<file>`.
+- **A composed piece shows its newest version that renders, its warnings marked `@todo`**: when
+  the rounds run out, a later version with warnings wins over an earlier one without (the music
+  check's revision, the better piece, lost to the draft before it for three bars a beat long), and
+  each line a warning is about carries a `@todo` with the warning's words — tried a line at a time,
+  so a line that takes no mark (a lyric line) is left as it is.
 - **A composed piece gets one round more**: four in all, so the revision the music check asks for —
   the better piece in a trial, its phrases ending on long notes — can still have its slips (three
   bars a beat long) repaired instead of being dropped for the first draft.
