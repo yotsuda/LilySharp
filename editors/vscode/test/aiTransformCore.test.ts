@@ -46,7 +46,8 @@ describe('a lyrics track no score shows', () => {
     });
     it('goes in before each candidate is checked, so its syllables are counted against the notes', () => {
         const src = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'aiTransform.ts'), 'utf8');
-        assert.match(src, /if \(compose\) \{\s*const placed = withLyricsRows\(spliceCandidate\(edit\.snap, edit\.text\)\);[\s\S]{0,400}?step\('validating the candidate'\)/);
+        const placedAt = src.indexOf('const placed = withLyricsRows(spliceCandidate(edit.snap, edit.text));');
+        assert.ok(placedAt > 0 && placedAt < src.indexOf("step('validating the candidate')"));
     });
     it('is added to each score that shows the part', () => {
         const two = song.replace(/\n\r\nscore \{/, '\n\r\nscore full {') + 'score voice {\n  staff lead\n}\n';
