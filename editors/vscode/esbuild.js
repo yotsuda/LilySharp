@@ -95,6 +95,11 @@ function copyGrammar() {
             'When the request is to compose or write out music as a score — a piece, a song, a hymn, an',
             'arrangement — and names no other format, write it in Lily#: first read how with the',
             'lilysharp_readGuide tool (topic "composing"), then propose it with lilysharp_proposeScore.',
+            // A scan read and mended in Lily#'s own panels (owner's request 2026-10-29).
+            'Asked to turn images or a PDF of sheet music into a score, read them with lilysharp_readScan.',
+            'A score read from a scan (its .omr.json beside it) is not corrected by you: asked to fix its',
+            'misreadings, open the bars named with lilysharp_fixScanBars; with none named, tell the musician to',
+            'right-click the bar on the score and choose Edit Bars Beside the Scan.',
             'Leave this aside for anything else.',
             '',
         ].join('\n');

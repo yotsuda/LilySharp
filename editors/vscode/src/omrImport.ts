@@ -41,14 +41,14 @@ export interface OmrImportDeps {
 
 /** The command: from the palette (a file picker), or the Explorer (one file or a selection). */
 export async function importFromImage(
-    context: vscode.ExtensionContext, deps: OmrImportDeps, uri?: vscode.Uri, uris?: vscode.Uri[]): Promise<void> {
+    context: vscode.ExtensionContext, deps: OmrImportDeps, uri?: vscode.Uri, uris?: vscode.Uri[]): Promise<OmrRead | undefined> {
     // The reader first, the files after: without the reader there is nothing to pick for, so
     // the offer comes before the file dialog (owner's decision 2026-10-17; it used to come after,
     // and a reader-less user chose files only to be told to install).
     const where = await findOmr(context);
     if (!where) {
         await offerOmrExtension();
-        return;
+        return undefined;
     }
 
     let inputs = (uris && uris.length > 0 ? uris : uri ? [uri] : [])
@@ -60,7 +60,7 @@ export async function importFromImage(
             filters: { 'Scans and PDF': [...OMR_INPUT_EXTENSIONS] },
         });
         if (!picked || picked.length === 0) {
-            return;
+            return undefined;
         }
         inputs = picked;
     }
@@ -75,7 +75,7 @@ export async function importFromImage(
     const v = version === undefined ? undefined : parseVersion(version);
     if (!v) {
         vscode.window.showErrorMessage(`Lily#: the OMR reader at ${where.path} did not answer '--version --json'.`);
-        return;
+        return undefined;
     }
     if (!speaksProtocol(v.protocol)) {
         const why = `speaks protocol ${v.protocol}; this Lily# speaks ${OMR_PROTOCOLS.min}–${OMR_PROTOCOLS.max}.`;
@@ -84,13 +84,13 @@ export async function importFromImage(
         } else {
             await offerOmrUpdate(v, `${why} Update Scan Import?`);
         }
-        return;
+        return undefined;
     }
     // Lily#'s own floor (OMR_MIN_VERSION): an older reader is offered its update, and the read
     // goes on with it when the offer is declined. New versions as such are VS Code's auto-update.
     if (readerIsOld(v) && await offerOmrUpdate(v,
         `is older than this Lily# is written for (${OMR_MIN_VERSION} or newer). Update it? The read goes on with this one otherwise.`)) {
-        return;
+        return undefined;
     }
 
     // Next to the first input, unless that folder cannot be written: then ask.
@@ -103,7 +103,7 @@ export async function importFromImage(
             title: `Lily#: ${outDir} cannot be written — where should the score go?`,
         });
         if (!folder || folder.length === 0) {
-            return;
+            return undefined;
         }
         outDir = folder[0].fsPath;
     }
@@ -147,7 +147,7 @@ export async function importFromImage(
         }
     });
     if (!result) {
-        return;
+        return undefined;
     }
 
     const meaning = exitMeaning(result.exitCode);
@@ -155,19 +155,19 @@ export async function importFromImage(
     switch (meaning) {
         case 'stopped':
             vscode.window.showInformationMessage(`Lily#: reading ${name} was stopped.`);
-            return;
+            return undefined;
         case 'input':
             vscode.window.showErrorMessage(`Lily#: ${name} cannot be read${tail ? `: ${tail}` : '.'}`);
-            return;
+            return undefined;
         case 'internal':
             vscode.window.showErrorMessage(`Lily#: the OMR reader failed (exit code ${result.exitCode}).`, 'Show Output')
                 .then(choice => { if (choice === 'Show Output') { deps.output.show(true); } });
-            return;
+            return undefined;
     }
     if (!result.done || !fs.existsSync(result.done.lys)) {
         vscode.window.showErrorMessage(`Lily#: the OMR reader finished without writing a score.`, 'Show Output')
             .then(choice => { if (choice === 'Show Output') { deps.output.show(true); } });
-        return;
+        return undefined;
     }
 
     // The score, its preview beside it, and beside that the scan it was read from (the marks
@@ -196,4 +196,15 @@ export async function importFromImage(
     } else {
         vscode.window.showInformationMessage(`Lily#: read ${name} — ${markText}.`);
     }
+    return { lys: result.done.lys, marks: markText, partial: meaning === 'partial' };
+}
+
+/** What a read wrote (Copilot's chat is told it, lilysharp_readScan). */
+export interface OmrRead {
+    /** The score's path. */
+    readonly lys: string;
+    /** Its marks to check, as the notification says them. */
+    readonly marks: string;
+    /** Some pages could not be read. */
+    readonly partial: boolean;
 }

@@ -93,6 +93,12 @@ All notable changes to the Lily# VS Code extension are documented here.
   point drawn at random — which topic "start" gives alone; Compose with AI in Chat's request is now
   the request and where to read that, no more. A new piece proposed for a file not there opens as
   an unsaved score named by its path.
+- **Copilot's chat reads a scan, and leaves its mending to the panel beside the scan**: asked to turn
+  images or a PDF of sheet music into a score, the chat runs Lily#'s OMR reader (`lilysharp_readScan`,
+  #readScan — the same read as Convert Image/PDF to Lily#, its offers, progress and messages). Asked to
+  fix a scanned score's misreadings, it does not rewrite them: it opens the bars named beside the scan
+  (`lilysharp_fixScanBars`, #fixScanBars) — one bar marked @todo has the AI's reading asked for at once —
+  or tells the musician to right-click the bar on the score and choose Edit Bars Beside the Scan.
 - **Copilot knows Lily# is here**: a third instructions file, a few lines with every request, says
   that a piece asked for as a score, no other format named, is written in Lily# — read with
   #readGuide, proposed with #proposeScore — and to leave it aside for anything else. In a folder with

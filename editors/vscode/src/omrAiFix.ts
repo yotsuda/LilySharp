@@ -42,6 +42,7 @@ import { findOmr } from './omrReader';
 import { SCAN_DEFAULT_THRESHOLD, ScanSideFile, lineAround, markFactsOf, parseSideFile, shownImage, sideFileOf } from './omrScanCore';
 import { SEED_FOLDER_SETTING, SeedBar, fixedCopyName, seedDirName, seedRecordOf, withBar } from './omrSeedCore';
 import { textFontFaceCss, textFontsRoot } from './scoreFonts';
+import { placeAt } from './chatPointerCore';
 
 export interface OmrAiFixDeps extends AiTransformDeps {
     /** The *Marks below* slider of the document's scan view, if one is open (omrScan.scanThresholdOf). */
@@ -315,6 +316,7 @@ let shownRun: FixRun | undefined;
  *  uri and the offset of one mark from the quick fix (the server's "Fix this bar with AI…"). */
 export function registerOmrAiFix(context: vscode.ExtensionContext, deps: OmrAiFixDeps): void {
     extensionContext = context;
+    registerFixScanBarsTool(context, deps);
     context.subscriptions.push(
         // A fourth door for both (owner's request 2026-10-24): the preview's and the scan view's
         // context menu, on the bar right-clicked — Edit Bars Beside the Scan's alone since the
@@ -339,6 +341,90 @@ export function registerOmrAiFix(context: vscode.ExtensionContext, deps: OmrAiFi
                 : runEditBars(context, deps, uri as string | vscode.Uri | undefined, undefined, which === 'marks');
         }),
         { dispose: () => { panel?.dispose(); clearBarMark(); output?.dispose(); } });
+}
+
+/** What Copilot's chat hands the tool that opens a scanned score's bars beside the scan. */
+interface FixScanBarsInput {
+    /** The .lys an OMR reader wrote, its absolute path. */
+    file: string;
+    /** Its bars, as written in their part (1 = the part's first bar in its section). */
+    bars?: number[];
+    /** The part the bars are in; else the first part. */
+    part?: string;
+    /** The bars' lines in the file (1-based), as Ask AI in Chat's pointer gives them. */
+    lines?: number[];
+}
+
+/**
+ * Opens the bars a chat asks about in the panel beside the scan (owner's request 2026-10-29: a
+ * scanned score's misreadings are mended there, its scan in view — the chat does not rewrite
+ * them itself): one bar the reader marked (@todo) has the AI's reading of it asked for at once, as
+ * the quick fix does; any other bar, or several, open to be edited (each row's Ask AI is there).
+ * The musician decides in the panel; the chat is told so.
+ */
+function registerFixScanBarsTool(context: vscode.ExtensionContext, deps: OmrAiFixDeps): void {
+    const lm = vscode.lm as unknown as { registerTool?: typeof vscode.lm.registerTool };
+    if (typeof lm.registerTool !== 'function') {
+        return;
+    }
+    context.subscriptions.push(lm.registerTool<FixScanBarsInput>('lilysharp_fixScanBars', {
+        prepareInvocation: options => ({
+            invocationMessage: `Opening bars of ${path.basename(options.input?.file ?? 'the score')} beside the scan…`,
+        }),
+        invoke: async options => new vscode.LanguageModelToolResult([
+            new vscode.LanguageModelTextPart(await fixScanBars(context, deps, options.input)),
+        ]),
+    }));
+}
+
+async function fixScanBars(context: vscode.ExtensionContext, deps: OmrAiFixDeps, input: FixScanBarsInput | undefined): Promise<string> {
+    if (!input || typeof input.file !== 'string') {
+        return 'Nothing opened: give `file` (the .lys\'s absolute path) and `bars` (with `part`) or `lines`.';
+    }
+    const uri = vscode.Uri.file(input.file);
+    const doc = vscode.workspace.textDocuments.find(d => d.uri.fsPath.toLowerCase() === uri.fsPath.toLowerCase())
+        ?? (fs.existsSync(input.file) ? await vscode.workspace.openTextDocument(uri) : undefined);
+    if (!doc) {
+        return `Nothing opened: no score ${input.file} is open in the editor or on the disk.`;
+    }
+    if (!sideOf(deps, doc).side) {
+        return `Nothing opened: ${path.basename(input.file)} was not read from a scan (no .omr.json beside it). Its bars `
+            + 'are changed as any score\'s, with lilysharp_proposeScore.';
+    }
+    const text = doc.getText();
+    const lines = new Set<number>((input.lines ?? []).filter(l => Number.isInteger(l) && l >= 1).map(l => l - 1));
+    if (input.bars?.length) {
+        // The line each bar opens on, read as Ask AI in Chat's pointer reads a place (placeAt).
+        const want = new Set(input.bars);
+        let part: string | undefined;
+        for (let l = 0; l < doc.lineCount; l++) {
+            const line = doc.lineAt(l);
+            if (line.isEmptyOrWhitespace) { continue; }
+            const place = placeAt(text, doc.offsetAt(line.range.start) + line.firstNonWhitespaceCharacterIndex);
+            if (place.part === undefined || place.bar === undefined) { continue; }
+            part ??= input.part ?? place.part;
+            if (place.part === part && want.has(place.bar)) { lines.add(l); }
+        }
+    }
+    const chosen = [...lines].filter(l => l < doc.lineCount).sort((a, b) => a - b);
+    if (chosen.length === 0) {
+        return `Nothing opened: no such bar in ${path.basename(input.file)}. Ask the musician which bar, or have them `
+            + 'right-click it on the score and choose Edit Bars Beside the Scan.';
+    }
+    const editor = await vscode.window.showTextDocument(doc, { preview: false });
+    const marked = chosen.length === 1 && /@todo/.test(doc.lineAt(chosen[0]).text);
+    if (marked) {
+        void runOmrAiFix(context, deps, doc.uri, doc.offsetAt(doc.lineAt(chosen[0]).range.start));
+    } else {
+        editor.selections = chosen.map(l => new vscode.Selection(l, 0, l, doc.lineAt(l).text.length));
+        void runEditBars(context, deps, doc.uri);
+    }
+    log(`Chat: ${chosen.length} bar(s) of ${path.basename(input.file)} opened beside the scan${marked ? ', the AI asked' : ''}.`);
+    return `Opened beside the scan: ${chosen.length === 1 ? 'the bar on line' : 'the bars on lines'} `
+        + `${chosen.map(l => l + 1).join(', ')} of ${path.basename(input.file)}, in the panel where a misreading is mended with `
+        + 'the scan in view. '
+        + (marked ? 'The bar is marked @todo: the AI\'s reading of it, against the scan, is on its way there. ' : 'Each row has its Ask AI. ')
+        + 'The musician decides there, and Accept writes the bar: do not change these bars yourself.';
 }
 
 function log(line: string): void {

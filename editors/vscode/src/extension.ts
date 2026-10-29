@@ -33,7 +33,7 @@ import { registerSmartTyping } from './smartTyping';
 import { registerStepAudition } from './stepAudition';
 import { registerCaretInfo } from './caretInfo';
 import { registerExportBatch } from './exportBatch';
-import { importFromImage } from './omrImport';
+import { OmrImportDeps, importFromImage } from './omrImport';
 import { registerOmrContexts } from './omrReader';
 import { OmrScanDeps, hasScan, previewHoversBar, previewReady, previewShowsBar, registerScanFollow, scanBarAt, scanColumnOf, scanSideOf, scanThresholdOf, showScan } from './omrScan';
 import { registerOmrAiFix } from './omrAiFix';
@@ -646,6 +646,40 @@ export function activate(context: vscode.ExtensionContext) {
     };
     // Check on save against the scan (B5, lilysharp.omr.verifyOnSave).
     registerVerifyOnSave(context, { output: outputChannel, lysc: bundledLysc });
+    const omrImportDeps: OmrImportDeps = {
+        output: outputChannel,
+        openPreview: column => openPreview(context, column),
+        lysc: bundledLysc,
+        showScan: lys => showScan(context, deps, lys, vscode.ViewColumn.Three),
+    };
+    // Copilot's chat reads a scan through the same command (owner's request 2026-10-29: "turn this
+    // image into a score" asked in the chat): the reader's offers, progress and messages are the
+    // command's; the chat is told the score it wrote, and that its misreadings are mended beside
+    // the scan (lilysharp_fixScanBars), not by the chat.
+    const lm = vscode.lm as unknown as { registerTool?: typeof vscode.lm.registerTool };
+    if (typeof lm.registerTool === 'function') {
+        context.subscriptions.push(lm.registerTool<{ files: string[] }>('lilysharp_readScan', {
+            prepareInvocation: options => ({
+                invocationMessage: `Reading ${(options.input?.files ?? []).map(f => path.basename(f)).join(', ') || 'the scan'} into a score…`,
+            }),
+            invoke: async options => {
+                const files = (options.input?.files ?? []).filter(f => typeof f === 'string' && fs.existsSync(f));
+                if (files.length === 0) {
+                    return new vscode.LanguageModelToolResult([new vscode.LanguageModelTextPart(
+                        'Nothing read: give `files`, the absolute paths of the images or PDFs (the pages in order) — none was found.')]);
+                }
+                const uris = files.map(f => vscode.Uri.file(f));
+                const read = await importFromImage(context, omrImportDeps, uris[0], uris);
+                return new vscode.LanguageModelToolResult([new vscode.LanguageModelTextPart(read
+                    ? `Read: ${read.lys}${read.partial ? ' (some pages could not be read)' : ''} — ${read.marks}. It is open in the `
+                      + 'editor, its score beside it and the scan beside that. The reader marked what it doubts with @todo. A '
+                      + 'misreading is mended beside the scan, not by you: for bars the musician names, open them there with '
+                      + 'lilysharp_fixScanBars; else tell them to right-click a bar on the score and choose Edit Bars Beside the Scan.'
+                    : 'Not read: Lily# said why in a message (the reader may need installing — Lily# offered it — or the read '
+                      + 'was stopped or failed). Tell the musician to look at that message.')]);
+            },
+        }));
+    }
     context.subscriptions.push(vscode.window.onDidChangeActiveTextEditor(updateHasScan));
 
     // Push preview.theme changes to every open preview, so the setting takes effect
@@ -801,12 +835,7 @@ export function activate(context: vscode.ExtensionContext) {
                 return applyScoreTemplate(label, template, range);
             }),
         vscode.commands.registerCommand('lilysharp.importImage', (uri?: vscode.Uri, uris?: vscode.Uri[]) =>
-            importFromImage(context, {
-                output: outputChannel,
-                openPreview: column => openPreview(context, column),
-                lysc: bundledLysc,
-                showScan: lys => showScan(context, deps, lys, vscode.ViewColumn.Three),
-            }, uri, uris)),
+            importFromImage(context, omrImportDeps, uri, uris)),
         vscode.commands.registerCommand('lilysharp.showScan', (uri?: vscode.Uri) =>
             showScan(context, deps, uri instanceof vscode.Uri ? uri : undefined)),
         vscode.commands.registerCommand('lilysharp.importMusicXml', (uri?: vscode.Uri) => {

@@ -172,8 +172,24 @@ describe('the composing guide', () => {
         const build = fs.readFileSync(path.join(__dirname, '..', '..', 'esbuild.js'), 'utf8');
         const here = build.slice(build.indexOf('const everywhere = ['), build.indexOf("'lilysharp-here.instructions.md'), everywhere)"));
         assert.match(here, /"applyTo: '\*\*'",/);
-        assert.match(here, /'lilysharp_readGuide tool \(topic "composing"\), then propose it with lilysharp_proposeScore\.',\s*'Leave this aside for anything else\.',/);
-        assert.ok(here.length < 1400, 'kept to a few lines');
+        assert.match(here, /'lilysharp_readGuide tool \(topic "composing"\), then propose it with lilysharp_proposeScore\.',/);
+        assert.match(here, /'Leave this aside for anything else\.',\s*'',\s*\]\.join/);
+        assert.ok(here.length < 2000, 'kept to a few lines');
+        // A scan read with Lily#'s reader, and its misreadings mended beside the scan, not by the chat
+        // (owner's request 2026-10-29).
+        assert.match(here, /'Asked to turn images or a PDF of sheet music into a score, read them with lilysharp_readScan\.',/);
+        assert.match(here, /'misreadings, open the bars named with lilysharp_fixScanBars; with none named, tell the musician to',\s*'right-click the bar on the score and choose Edit Bars Beside the Scan\.',/);
+        assert.match(pkg, /"name": "lilysharp_readScan",\s*"toolReferenceName": "readScan"/);
+        assert.match(pkg, /"name": "lilysharp_fixScanBars",\s*"toolReferenceName": "fixScanBars"/);
+        assert.match(pkg, /"onLanguageModelTool:lilysharp_readScan",\s*"onLanguageModelTool:lilysharp_fixScanBars"/);
+        const ext = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
+        assert.match(ext, /lm\.registerTool<\{ files: string\[\] \}>\('lilysharp_readScan'/);
+        assert.match(ext, /const read = await importFromImage\(context, omrImportDeps, uris\[0\], uris\);/);
+        const fix = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'omrAiFix.ts'), 'utf8');
+        assert.match(fix, /lm\.registerTool<FixScanBarsInput>\('lilysharp_fixScanBars'/);
+        // One marked bar has the AI asked at once; else the bars open to be edited.
+        assert.match(fix, /if \(marked\) \{\s*void runOmrAiFix\(context, deps, doc\.uri, doc\.offsetAt\(doc\.lineAt\(chosen\[0\]\)\.range\.start\)\);\s*\} else \{\s*editor\.selections = chosen\.map/);
+        assert.match(fix, /'The musician decides there, and Accept writes the bar: do not change these bars yourself\.'/);
         assert.match(pkg, /"path": "\.\/out\/lilysharp-here\.instructions\.md"/);
         const compose = transform.slice(transform.indexOf('async function runComposeInChat'), transform.indexOf('async function runCompose('));
         assert.match(compose, /lilysharp_readGuide, topic "composing"/);

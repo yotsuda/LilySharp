@@ -28,7 +28,9 @@
     "onLanguage:markdown",
     "onLanguageModelTool:lilysharp_proposeScore",
     "onLanguageModelTool:lilysharp_readScore",
-    "onLanguageModelTool:lilysharp_readGuide"
+    "onLanguageModelTool:lilysharp_readGuide",
+    "onLanguageModelTool:lilysharp_readScan",
+    "onLanguageModelTool:lilysharp_fixScanBars"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -84,6 +86,43 @@
             "topic": { "type": "string", "enum": ["grammar", "composing", "start"], "description": "\"grammar\": how Lily# is written. \"composing\": how to compose a new piece, with the composing guide. \"start\": how a new piece begins, and its starting point, alone." }
           },
           "required": ["topic"]
+        }
+      },
+      {
+        "name": "lilysharp_readScan",
+        "toolReferenceName": "readScan",
+        "displayName": "Read a scan into a Lily# score",
+        "icon": "$(file-media)",
+        "canBeReferencedInPrompt": true,
+        "tags": ["lilysharp", "lys", "music", "score", "notation", "omr", "scan", "image", "pdf"],
+        "userDescription": "Reads images or a PDF of sheet music into a Lily# score (OMR), opened beside its scan.",
+        "modelDescription": "Use this to turn images or a PDF of sheet music into a score — \"convert this image to a score\", \"read this scan\", \"OMR this PDF\" — instead of transcribing it yourself. Give the absolute paths of the files, the pages in order. Lily#'s OMR reader writes a .lys beside them, opens it with its preview and its scan, and marks the bars it doubts with @todo; the result names the file. It may take a minute or more a page.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "files": { "type": "array", "items": { "type": "string" }, "description": "The images (png, jpg, …) or PDFs, absolute paths, the pages in order." }
+          },
+          "required": ["files"]
+        }
+      },
+      {
+        "name": "lilysharp_fixScanBars",
+        "toolReferenceName": "fixScanBars",
+        "displayName": "Open a scanned score's bars beside the scan",
+        "icon": "$(file-media)",
+        "canBeReferencedInPrompt": true,
+        "tags": ["lilysharp", "lys", "music", "score", "notation", "omr", "scan"],
+        "userDescription": "Opens bars of a score read from a scan beside the scan, to mend misreadings there.",
+        "modelDescription": "Use this when the musician asks to fix a misreading in a score read from a scan (a .lys with its .omr.json beside it) and names the bars: it opens them beside the scan, where the musician mends them — a bar the reader marked @todo has the AI's reading of it, against the scan, asked for at once. Do not rewrite such bars yourself. Give the file's absolute path and the bars (as numbered in their part, with the part's name) or their lines. With no bar named, ask which, or tell the musician to right-click the bar on the score and choose Edit Bars Beside the Scan.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "file": { "type": "string", "description": "The .lys an OMR reader wrote, its absolute path." },
+            "bars": { "type": "array", "items": { "type": "integer" }, "description": "The bars, as numbered in their part (1 = its first bar)." },
+            "part": { "type": "string", "description": "The part the bars are in; the first part when left out." },
+            "lines": { "type": "array", "items": { "type": "integer" }, "description": "Or the bars' lines in the file, 1-based (as Ask AI in Chat's pointer gives them)." }
+          },
+          "required": ["file"]
         }
       }
     ],
