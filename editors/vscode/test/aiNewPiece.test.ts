@@ -41,13 +41,13 @@ describe('a new piece in place of the score', () => {
     });
 
     it('a failure names the last try\'s reason, and every turned-down try is logged', () => {
-        assert.match(transform, /deps\.log\(`AI transform: attempt \$\{attempt \+ 1\}\/\$\{MAX_REPAIR_ATTEMPTS \+ 1\} turned down — \$\{reason\}`\)/);
-        assert.match(transform, /could not produce a valid transform in \$\{MAX_REPAIR_ATTEMPTS \+ 1\} tries\. Nothing was changed\.`\s*\+ \(why \? ` The last try: \$\{why\}` : ''\), showLog\)/);
+        assert.match(transform, /deps\.log\(`AI transform: attempt \$\{attempt \+ 1\}\/\$\{maxRepairs \+ 1\} turned down — \$\{reason\}`\)/);
+        assert.match(transform, /could not produce a valid transform in \$\{maxRepairs \+ 1\} tries\. Nothing was changed\.`\s*\+ \(why \? ` The last try: \$\{why\}` : ''\), showLog\)/);
     });
 
     it('a new piece is checked as music once, and what is found goes back for a revision', () => {
         assert.match(transform, /const newPiece = compose \|\| \/<file>\/\.test\(raw\);/);
-        assert.match(transform, /if \(newPiece && !musicAsked && attempt < MAX_REPAIR_ATTEMPTS\) \{\s*const music = await compositionFindings\(client, reconstructed\);/);
+        assert.match(transform, /if \(newPiece && !musicAsked && attempt < maxRepairs\) \{\s*const music = await compositionFindings\(client, reconstructed\);/);
         assert.match(transform, /sendRequest<\{ Findings: string\[\] \}>\('lilysharp\/compositionCheck', \{ Text: text \}\)/);
         // The octave check measures against the old notes: not for a new piece.
         assert.match(transform, /if \(edit\.text !== octaveAsked && !newPiece\) \{/);
