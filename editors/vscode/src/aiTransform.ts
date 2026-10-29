@@ -626,11 +626,21 @@ async function drive(
                     }
                     // What it makes of the candidate, as one change to the file: Accept writes the
                     // revision and the candidate it revised together.
-                    const edit: CandidateEdit = base === work
+                    let edit: CandidateEdit = base === work
                         ? parsed
                         : parsed.text === parsed.snap.origSelectedText
                             ? { ...parsed, snap: work, text: work.origSelectedText }
                             : { ...wholeFileEdit(work, spliceCandidate(parsed.snap, parsed.text)), reply: parsed.reply };
+                    // A composed song's lyrics row, if the score left it out, goes in before the check
+                    // (owner's report 2026-10-29): a row not shown is not counted against its notes, so
+                    // the words drew nowhere and their extra syllables went unreported.
+                    if (compose) {
+                        const placed = withLyricsRows(spliceCandidate(edit.snap, edit.text));
+                        if (placed.added.length > 0) {
+                            edit = { ...wholeFileEdit(work, placed.text), reply: edit.reply };
+                            deps.log(`AI transform: the score showed no row for ${placed.added.join(', ')} — added under the staff it sings.`);
+                        }
+                    }
                     // A reply that changes nothing is not a transform. The owner accepted one such
                     // candidate, the section exactly as it was, because nothing said it was
                     // unchanged (2026-09-26) — the model had been asked for a new part it could not
