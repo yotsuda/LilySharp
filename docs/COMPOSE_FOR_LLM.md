@@ -38,10 +38,14 @@ What makes it music:
   words as verses, `[1. …] [2. …]`), not written twice. Phrases often run 8 bars — two halves of
   4 that answer each other — and a section is given room to say something: one of a single 4-bar
   phrase seldom does, and its dynamics turn every four bars. Each phrase closes on a cadence: a
-  half cadence (on V) to go on, an authentic one (V–I) to close a section.
+  half cadence (on V) to go on, an authentic one (V–I) to close a section. Check each one bar by
+  bar: the chord just before a closing I is V (or V7), with IV or ii before it — never V, then IV,
+  then I, which goes back before it arrives (a blues's or a rock song's V–IV–I is their own).
 - **Phrases that answer**: the second phrase of a pair starts as the first did and ends otherwise
   — the first stops open (on V, or on the chord that leads back: a jazz turnaround, a rock IV or
-  ♭VII), the second closes on I. Each phrase rises to a high note and falls to its cadence.
+  ♭VII), the second closes on I. The first half's last melody note is NOT the tonic: a tune
+  that lands on its home note at bar 4 has ended, and its second half only ends again. Each
+  phrase rises to a high note and falls to its cadence.
 - **One climax**: the piece rises to one high point — a bar and a note, the loudest place — and the
   dynamics lead there and away. In a song it is the chorus's high note, strongest its last time.
 - **Harmony first**: each phrase has its chord progression in the key, and every part is

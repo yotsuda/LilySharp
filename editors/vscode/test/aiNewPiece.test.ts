@@ -42,6 +42,12 @@ describe('the composing guide', () => {
         const guide = fs.readFileSync(path.join(docs, 'COMPOSE_FOR_LLM.md'), 'utf8');
         assert.match(guide, /\*\*The devices run\s+through the piece\*\*, not spent in one place: each comes back in more than one section/);
     });
+    // Owner's review 2026-10-29: a wedding waltz's A landed on the tonic at bar 4 and closed V–IV–I.
+    it('says how a cadence is checked, and that the first half does not land on the tonic', () => {
+        const guide = fs.readFileSync(path.join(docs, 'COMPOSE_FOR_LLM.md'), 'utf8');
+        assert.match(guide, /the chord just before a closing I is V \(or V7\), with IV or ii before it — never V, then IV,\s+then I/);
+        assert.match(guide, /The first half's last melody note is NOT the tonic/);
+    });
     // Owner's report 2026-10-29: a piece composed in Copilot's chat was written as absolute in a
     // relative file, and its pitches flew off — the guide, which the chat is given too, says to start absolute.
     it('says a new piece starts in absolute octaves', () => {
