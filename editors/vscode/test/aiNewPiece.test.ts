@@ -63,6 +63,25 @@ describe('the composing guide', () => {
         // The bundled lysc, for the agent to check its piece with (owner's request 2026-10-29).
         assert.match(fn, /const lysc = deps\.lysc\?\.\(\);/);
         assert.match(fn, /check it with the Lily# compiler — \\`& "\$\{lysc\}" check "\$\{target\.fsPath\}"\\`/);
+        // Proposed through Lily#'s tool, written straight only without it (owner's request 2026-10-29).
+        assert.match(fn, /propose it, whole, with the `\s*\+ 'lilysharp_proposeScore tool \(#proposeScore\)/);
+    });
+    // Owner's request 2026-10-29: Copilot's chat proposes a score through Lily#'s tool, the musician
+    // deciding on the score — compiled first, an error sent back unseen.
+    it('gives Copilot\'s chat a tool to propose a score with, decided on in the candidate panel', () => {
+        const pkg = fs.readFileSync(path.join(__dirname, '..', '..', 'package.json'), 'utf8');
+        assert.match(pkg, /"name": "lilysharp_proposeScore",\s*"toolReferenceName": "proposeScore"/);
+        assert.match(pkg, /"onLanguageModelTool:lilysharp_proposeScore"/);
+        assert.match(pkg, /"required": \["file", "text"\]/);
+        assert.match(transform, /lm\.registerTool<ProposeScoreInput>\('lilysharp_proposeScore'/);
+        const fn = transform.slice(transform.indexOf('async function proposeScore'), transform.indexOf('async function runComposeInChat'));
+        assert.match(fn, /if \(errors\.length > 0\) \{[\s\S]*?return `Not shown to the musician: it does not compile\./);
+        assert.match(fn, /await reviewOnScore\(deps, renderBefore, renderAfter, caption, wholeTextMarkup\(current, text, changed\)/);
+        assert.match(fn, /return 'Accepted: the musician accepted the proposal, and the file is written\.'/);
+        assert.match(fn, /return `Not accepted: the musician asks for changes — "\$\{words\.trim\(\)\}"\./);
+        assert.match(fn, /token\.onCancellationRequested/);
+        const build = fs.readFileSync(path.join(__dirname, '..', '..', 'esbuild.js'), 'utf8');
+        assert.match(build, /'\*\*Changing or writing a \.lys file\*\*: do it through the `lilysharp_proposeScore` tool \(#proposeScore\) —',/);
     });
     it('holds the recipe, and the grammar only points at it', () => {
         const grammar = fs.readFileSync(path.join(docs, 'GRAMMAR_FOR_LLM.md'), 'utf8');

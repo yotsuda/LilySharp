@@ -51,6 +51,13 @@ function copyGrammar() {
             "applyTo: '**/*.lys'",
             '---',
             '',
+            // Copilot's chat proposes a score through Lily#'s tool, the musician deciding on the
+            // score as Ask AI's review has them (owner's request 2026-10-29).
+            '**Changing or writing a .lys file**: do it through the `lilysharp_proposeScore` tool (#proposeScore) —',
+            'the file\'s absolute path and its WHOLE new text. Lily# compiles it, shows the musician the score',
+            'as it stands and the new one side by side, and tells you whether they accepted it, asked for',
+            'changes or rejected it. Do not edit a .lys file yourself while the tool is there.',
+            '',
             fs.readFileSync(src, 'utf8'),
         ].join('\n');
         fs.writeFileSync(path.join(outDir, 'lilysharp.instructions.md'), instructions);

@@ -69,6 +69,12 @@ All notable changes to the Lily# VS Code extension are documented here.
   piece went back asking for "the corrected edits, each `<old>` copied from the file" — the
   composer answered with bare `<old>`/`<new>`, which was read as the file, the rounds ran out, and
   the music checks never saw the piece. It now asks for the whole corrected piece in `<file>`.
+- **Copilot's chat proposes a score, and you decide on the score**: Lily# gives the chat a tool,
+  `lilysharp_proposeScore` (#proposeScore), and asks it to write or change a .lys through it. The
+  proposal is compiled first — one with errors goes back to the chat, never shown — then opens in
+  the AI candidate panel beside the score as it stands, to play and to Accept (the file is written,
+  one Ctrl+Z), Ask Again (your words go back to the chat) or Reject; the chat is told which.
+  Compose with AI in Chat proposes its piece this way.
 - **Ask AI in Chat**: on the score's right-click menu and the editor's, it puts the place the
   request is about in Copilot's chat input — unsent, for you to finish and send: the file alone, or
   with the notes or bars picked their lines, section, part and bars (`Dusk.lys, lines 5–7 (section
@@ -2014,6 +2020,12 @@ reader is offered its update when a scan is read.
   piece went back asking for "the corrected edits, each `<old>` copied from the file" — the
   composer answered with bare `<old>`/`<new>`, which was read as the file, the rounds ran out, and
   the music checks never saw the piece. It now asks for the whole corrected piece in `<file>`.
+- **Copilot's chat proposes a score, and you decide on the score**: Lily# gives the chat a tool,
+  `lilysharp_proposeScore` (#proposeScore), and asks it to write or change a .lys through it. The
+  proposal is compiled first — one with errors goes back to the chat, never shown — then opens in
+  the AI candidate panel beside the score as it stands, to play and to Accept (the file is written,
+  one Ctrl+Z), Ask Again (your words go back to the chat) or Reject; the chat is told which.
+  Compose with AI in Chat proposes its piece this way.
 - **Ask AI in Chat**: on the score's right-click menu and the editor's, it puts the place the
   request is about in Copilot's chat input — unsent, for you to finish and send: the file alone, or
   with the notes or bars picked their lines, section, part and bars (`Dusk.lys, lines 5–7 (section

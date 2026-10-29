@@ -185,6 +185,7 @@ export function registerAiTransform(context: vscode.ExtensionContext, deps: AiTr
         vscode.commands.registerCommand('lilysharp.composeWithAi', () => runCompose(deps)),
         vscode.commands.registerCommand('lilysharp.composeWithAiInChat', () => runComposeInChat(deps)),
     );
+    registerProposeScoreTool(context, deps);
     context.subscriptions.push({
         dispose: () => {
             candidatePanel?.dispose();
@@ -230,6 +231,134 @@ function currentUri(uri: vscode.Uri): vscode.Uri {
         }
     }
     return uri;
+}
+
+/** What Copilot's chat hands the proposal tool. */
+interface ProposeScoreInput {
+    /** The .lys file, its absolute path. */
+    file: string;
+    /** The whole new text of the file. */
+    text: string;
+    /** A sentence or two to the musician about the change. */
+    note?: string;
+}
+
+/**
+ * The tool Copilot's chat proposes a score with (owner's request 2026-10-29: the chat's thinking in
+ * view, and the decision on the score as Ask AI makes it): Lily# compiles the proposal — one that
+ * does not compile goes back with its errors, never shown — then shows it beside the file as it
+ * stands in the AI candidate panel, to play and to Accept, Ask Again or Reject, and tells the chat
+ * what the musician decided; Accept writes the file (one Ctrl+Z). The chat is asked to propose this
+ * way, not to edit a .lys itself (the instructions file, Compose with AI in Chat); it cannot be
+ * made to.
+ */
+function registerProposeScoreTool(context: vscode.ExtensionContext, deps: AiTransformDeps): void {
+    const lm = vscode.lm as unknown as { registerTool?: typeof vscode.lm.registerTool };
+    if (typeof lm.registerTool !== 'function') {
+        return;   // a VS Code before the tools API
+    }
+    context.subscriptions.push(lm.registerTool<ProposeScoreInput>('lilysharp_proposeScore', {
+        prepareInvocation: options => ({
+            invocationMessage: `Showing the proposed score of ${path.basename(options.input?.file ?? 'the file')}…`,
+        }),
+        invoke: async (options, token) => new vscode.LanguageModelToolResult([
+            new vscode.LanguageModelTextPart(await proposeScore(deps, options.input, token)),
+        ]),
+    }));
+}
+
+/** The proposal shown and decided on; what is told to the chat. */
+async function proposeScore(deps: AiTransformDeps, input: ProposeScoreInput, token: vscode.CancellationToken): Promise<string> {
+    if (!input || typeof input.file !== 'string' || typeof input.text !== 'string') {
+        return 'Nothing shown: give `file` (the .lys file\'s absolute path) and `text` (its whole new text).';
+    }
+    await deps.ensureReady?.();
+    const client = deps.getClient();
+    if (!client || !deps.isReady()) {
+        return 'Nothing shown: the Lily# language server is not running. Write the file directly instead.';
+    }
+    const uri = vscode.Uri.file(input.file);
+    const exists = fs.existsSync(input.file);
+    const doc = exists ? await vscode.workspace.openTextDocument(uri) : undefined;
+    const current = doc?.getText() ?? '';
+    const text = input.text;
+    // Errors go back unseen: the musician is shown only a score that compiles.
+    const diags = await checkText(client, text);
+    const errors = diags.filter(d => d.Severity === 'error');
+    if (errors.length > 0) {
+        deps.log(`AI proposal (chat): turned down — ${errors.length} error(s).`);
+        return `Not shown to the musician: it does not compile.\n${formatDiags(errors, text)}\n`
+            + 'Fix these and call lilysharp_proposeScore again with the whole corrected text.';
+    }
+    const before = current ? await checkText(client, current) : [];
+    const added = addedWarnings({ HasErrors: false, Diagnostics: diags }, [{ beforeLo: 0, beforeHi: current.length, afterLo: 0, afterHi: text.length }],
+        before.filter(d => d.Severity === 'warning' && !MACHINE_WARNING.test(d.Message)).length);
+    const snapshot: Snapshot = {
+        version: doc?.version ?? 0, startOffset: 0, endOffset: current.length,
+        origFullText: current, origSelectedText: current, uri,
+    };
+    const edit = wholeFileEdit(snapshot, text);
+    const changed = changedWords(current, text, edit.spans);
+    const [renderBefore, renderAfter] = await Promise.all([
+        client.sendRequest<SvgResponse>('lilysharp/renderText', { Text: current }),
+        client.sendRequest<SvgResponse>('lilysharp/renderText', { Text: text }),
+    ]);
+    const caption = `Proposed in Copilot's chat — ${path.basename(input.file)}`
+        + (added.length ? ` — ⚠ ${added.length} new warning(s): ${added.map(w => w.Message).join(' / ')}` : '');
+    // The chat stopped while the panel waits: the round ends as a Reject.
+    const stop = token.onCancellationRequested(() => {
+        const resolve = pendingDecision;
+        pendingDecision = undefined;
+        resolve?.('reject');
+    });
+    try {
+        let again: string | undefined;
+        for (;;) {
+            const decision = again !== undefined ? await decideAgain(again)
+                : await reviewOnScore(deps, renderBefore, renderAfter, caption, wholeTextMarkup(current, text, changed), changed,
+                    { uri, before: current, after: text }, input.note ?? null);
+            again = undefined;
+            if (decision === 'accept') {
+                if (!exists) {
+                    const create = new vscode.WorkspaceEdit();
+                    create.createFile(uri, { ignoreIfExists: true, contents: Buffer.from(text, 'utf8') });
+                    if (!await vscode.workspace.applyEdit(create)) {
+                        again = 'Not written — the file could not be created. Accept to try again.';
+                        continue;
+                    }
+                    candidatePanel?.dispose();
+                } else {
+                    again = await applyCandidate(deps, snapshot, text);
+                    if (again !== undefined) {
+                        continue;
+                    }
+                }
+                deps.log('AI proposal (chat): accepted.');
+                return 'Accepted: the musician accepted the proposal, and the file is written.'
+                    + (added.length ? ` It has these warnings, which they may want fixed:\n${formatDiags(added, text)}` : '');
+            }
+            if (decision === 'iterate') {
+                const words = await vscode.window.showInputBox({
+                    title: 'Lily# — ask the chat again',
+                    prompt: 'What should change in this proposal? The chat is told, and proposes again. (Esc returns to it)',
+                    placeHolder: 'e.g. keep the rhythm but a third lower / less busy',
+                    ignoreFocusOut: true,
+                });
+                if (words === undefined || words.trim().length === 0) {
+                    again = '';
+                    continue;
+                }
+                candidatePanel?.dispose();
+                deps.log('AI proposal (chat): asked again.');
+                return `Not accepted: the musician asks for changes — "${words.trim()}". The file is unchanged; `
+                    + 'make them and call lilysharp_proposeScore again with the whole new text.';
+            }
+            deps.log('AI proposal (chat): rejected.');
+            return 'Rejected: the musician rejected the proposal, and the file is unchanged. Ask them what they want before proposing again.';
+        }
+    } finally {
+        stop.dispose();
+    }
 }
 
 /**
@@ -280,11 +409,15 @@ async function runComposeInChat(deps: AiTransformDeps): Promise<void> {
     // agent checked its piece by building Lily# from the sources this machine happens to hold).
     const lysc = deps.lysc?.();
     const check = lysc
-        ? `When the piece is written, check it with the Lily# compiler — \`& "${lysc}" check "${target.fsPath}"\` — and `
-          + 'fix every error and warning it reports, checking again until it reports none.\n'
+        ? `Before proposing, check it with the Lily# compiler — \`& "${lysc}" check "${target.fsPath}"\` on a copy, or on the `
+          + 'file if you write it — and fix every error and warning it reports.\n'
         : '';
-    const query = `Compose a new piece of music in Lily# and write it, whole, into the open file ${path.basename(target.fsPath)}. `
-        + 'It starts with `octave absolute` and `pitch concert`: keep both lines, and write every pitch as the pitch it sounds. '
+    // Proposed through Lily#'s tool, the musician deciding on the score (owner's request 2026-10-29);
+    // written straight into the file only where the tool is not there.
+    const query = `Compose a new piece of music in Lily# for the file ${target.fsPath} and propose it, whole, with the `
+        + 'lilysharp_proposeScore tool (#proposeScore): it compiles the piece and shows it to me to accept. If that tool is '
+        + 'not available, write the piece into the file instead. '
+        + 'The file starts with `octave absolute` and `pitch concert`: keep both lines, and write every pitch as the pitch it sounds. '
         + 'Follow the Lily# grammar and the Lily# composing guide (the Lily# instructions).\n'
         + check
         + `The request: ${description.trim()}\n${hint}`;
