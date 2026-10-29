@@ -856,26 +856,6 @@
       ],
       "webview/context": [
         {
-          "command": "lilysharp.previewAiTransform",
-          "when": "webviewId == 'lilysharpPreview' && lysAiKind == 'selection'",
-          "group": "1_edit@1"
-        },
-        {
-          "command": "lilysharp.previewAiTransformNote",
-          "when": "webviewId == 'lilysharpPreview' && lysAiKind == 'note'",
-          "group": "1_edit@1"
-        },
-        {
-          "command": "lilysharp.previewAiTransformBar",
-          "when": "webviewId == 'lilysharpPreview' && lysAiKind == 'bar'",
-          "group": "1_edit@1"
-        },
-        {
-          "command": "lilysharp.previewAiTransformScore",
-          "when": "webviewId == 'lilysharpPreview' && lysAiKind == 'score'",
-          "group": "1_edit@1"
-        },
-        {
           "command": "lilysharp.previewAskAiInChat",
           "when": "webviewId == 'lilysharpPreview'",
           "group": "1_edit@1"
@@ -950,7 +930,7 @@
       ],
       "editor/context": [
         {
-          "command": "lilysharp.aiTransform",
+          "command": "lilysharp.askAiInChat",
           "when": "resourceLangId == lilysharp",
           "group": "1_modification@1"
         },
@@ -958,11 +938,6 @@
           "command": "lilysharp.composeWithAi",
           "when": "resourceLangId == lilysharp",
           "group": "1_modification@2"
-        },
-        {
-          "command": "lilysharp.askAiInChat",
-          "when": "resourceLangId == lilysharp",
-          "group": "1_modification@3"
         },
         {
           "command": "lilysharp.omrFixWithAi",

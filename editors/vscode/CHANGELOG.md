@@ -89,10 +89,9 @@ All notable changes to the Lily# VS Code extension are documented here.
 - **Copilot's chat reads a score as it stands in the editor**: a second tool,
   `lilysharp_readScore` (#readScore), gives the chat a .lys as the editor holds it, saved or not —
   the chat's agent reads the disk, where an unsaved score is not and a saved one may be behind.
-- **Ask AI in Chat — the preview's ✨ and Ctrl+I**: the header's ✨ and Ctrl+I, in the preview and
-  in the editor, now open Copilot's chat (they started Lily#'s own Ask AI, which stays on the
-  right-click menus); the button sinks when pressed. On the score's right-click menu and the
-  editor's, Ask AI in Chat puts the place the request is about in Copilot's chat input — unsent,
+- **Ask AI is Copilot's chat — the preview's ✨, Ctrl+I and the right-click menus**: they open
+  Copilot's chat (they started Lily#'s own Ask AI, which stays in the command palette as
+  *Lily#: Ask AI…*); the button sinks when pressed. Ask AI in Chat puts the place the request is about in Copilot's chat input — unsent,
   for you to finish and send: the file alone, or with the notes or bars picked their lines,
   section, part and bars (`Dusk.lys, lines 5–7 (section A, part vn1, bars 1–3): `). The picked
   notes become the editor's selection, which the chat takes in. An unsaved score is named by its
