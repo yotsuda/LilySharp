@@ -80,6 +80,26 @@ function copyGrammar() {
         ].join('\n');
         fs.writeFileSync(path.join(outDir, 'lilysharp-compose.instructions.md'), composing);
         console.log('esbuild: wrote lilysharp-compose.instructions.md');
+        // A few lines with every request, so a piece asked for with no .lys in the workspace is
+        // written in Lily# (owner's report 2026-10-29: in an empty folder the chat answered a hymn
+        // in prose, the tools never searched for). Kept to what a request for a score needs, and
+        // told to stand aside otherwise: VS Code is used for much besides music.
+        const everywhere = [
+            '---',
+            'name: Lily# is here',
+            "description: 'Lily#, the music notation language this editor engraves: what to use when music is to be written out as a score.'",
+            "applyTo: '**'",
+            '---',
+            '',
+            'This VS Code has Lily#, a music notation language (.lys files) it engraves, plays and checks.',
+            'When the request is to compose or write out music as a score — a piece, a song, a hymn, an',
+            'arrangement — and names no other format, write it in Lily#: first read how with the',
+            'lilysharp_readGuide tool (topic "composing"), then propose it with lilysharp_proposeScore.',
+            'Leave this aside for anything else.',
+            '',
+        ].join('\n');
+        fs.writeFileSync(path.join(outDir, 'lilysharp-here.instructions.md'), everywhere);
+        console.log('esbuild: wrote lilysharp-here.instructions.md');
     } catch (e) {
         console.warn('esbuild: could not copy GRAMMAR_FOR_LLM.md (extension will use the compact fallback):', e.message);
     }

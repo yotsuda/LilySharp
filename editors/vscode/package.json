@@ -93,6 +93,9 @@
       },
       {
         "path": "./out/lilysharp-compose.instructions.md"
+      },
+      {
+        "path": "./out/lilysharp-here.instructions.md"
       }
     ],
     "languages": [

@@ -157,6 +157,14 @@ describe('the composing guide', () => {
         assert.match(fn, /\+ newPieceSteps\(deps\.lysc\?\.\(\)\)\s*\+ `\$\{hint\}\\n`;/);
         // …beginning with the header the menu writes (owner's request 2026-10-29).
         assert.match(fn, /\+ newPieceHeader\('<the request>', '\\n'\)\.trimEnd\(\) \+ '\\n'/);
+        // A few lines with every request, saying Lily# is here and where to read it — for a score
+        // asked for with no .lys about, and aside otherwise (owner's report and decision 2026-10-29).
+        const build = fs.readFileSync(path.join(__dirname, '..', '..', 'esbuild.js'), 'utf8');
+        const here = build.slice(build.indexOf('const everywhere = ['), build.indexOf("'lilysharp-here.instructions.md'), everywhere)"));
+        assert.match(here, /"applyTo: '\*\*'",/);
+        assert.match(here, /'lilysharp_readGuide tool \(topic "composing"\), then propose it with lilysharp_proposeScore\.',\s*'Leave this aside for anything else\.',/);
+        assert.ok(here.length < 1400, 'kept to a few lines');
+        assert.match(pkg, /"path": "\.\/out\/lilysharp-here\.instructions\.md"/);
         const compose = transform.slice(transform.indexOf('async function runComposeInChat'), transform.indexOf('async function runCompose('));
         assert.match(compose, /lilysharp_readGuide, topic "composing"/);
     });

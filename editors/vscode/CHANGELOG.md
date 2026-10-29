@@ -93,6 +93,10 @@ All notable changes to the Lily# VS Code extension are documented here.
   point drawn at random — which topic "start" gives alone; Compose with AI in Chat's request is now
   the request and where to read that, no more. A new piece proposed for a file not there opens as
   an unsaved score named by its path.
+- **Copilot knows Lily# is here**: a third instructions file, a few lines with every request, says
+  that a piece asked for as a score, no other format named, is written in Lily# — read with
+  #readGuide, proposed with #proposeScore — and to leave it aside for anything else. In a folder with
+  no .lys, the chat answered a hymn in prose.
 - **Copilot's chat reads a score as it stands in the editor**: a second tool,
   `lilysharp_readScore` (#readScore), gives the chat a .lys as the editor holds it, saved or not —
   the chat's agent reads the disk, where an unsaved score is not and a saved one may be behind.
