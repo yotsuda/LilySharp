@@ -82,11 +82,14 @@ describe('the composing guide', () => {
         // piece has no Reject (rejected, it would leave an empty file); the panel stays for the next
         // proposal, and a message sent in the chat before deciding is told as such.
         assert.ok(!/showInputBox/.test(fn));
-        assert.match(fn, /input\.note \?\? null, true, isEmptyScore\(current\)\);/);
+        assert.match(fn, /input\.note \?\? null, true\);/);
+        // Owner's request 2026-10-29: a new piece goes straight into the file, open in the editor —
+        // no panel; the music check still speaks once first.
+        assert.match(fn, /if \(isEmptyScore\(current\)\) \{\s*const written = await writeWhole\(uri, exists, doc, text\);/);
+        assert.ok(fn.indexOf('const music = await compositionFindings') < fn.indexOf('const written = await writeWhole'));
+        assert.match(transform, /await written\.save\(\);\s*await vscode\.window\.showTextDocument\(written, \{ preview: false \}\);/);
         assert.match(fn, /return 'Not decided: the musician went on in the chat before deciding, and the file is unchanged\. '/);
         assert.match(transform, /<button id="iterate"[^>]*\$\{fromChat \? ' hidden' : ''\}>Ask Again…<\/button>/);
-        assert.match(transform, /<button id="reject"[^>]*\$\{newPiece \? ' hidden' : ''\}>Reject \(Esc\)<\/button>/);
-        assert.match(transform, /else if \(e\.key === 'Escape' && !NO_REJECT\) \{/);
         assert.match(fn, /token\.onCancellationRequested/);
         assert.match(fn, /\.find\(d => d\.uri\.toString\(\) === uri\.toString\(\)\)\?\.save\(\);/);
         const build = fs.readFileSync(path.join(__dirname, '..', '..', 'esbuild.js'), 'utf8');

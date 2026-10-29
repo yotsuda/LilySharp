@@ -267,6 +267,24 @@ function registerProposeScoreTool(context: vscode.ExtensionContext, deps: AiTran
     }));
 }
 
+/** Writes `text` as the whole file — created when it is not there — saves it (the chat's agent reads
+ *  the disk) and opens it; the reason when it could not. */
+async function writeWhole(uri: vscode.Uri, exists: boolean, doc: vscode.TextDocument | undefined, text: string): Promise<string | undefined> {
+    const edit = new vscode.WorkspaceEdit();
+    if (!exists || !doc) {
+        edit.createFile(uri, { overwrite: true, contents: Buffer.from(text, 'utf8') });
+    } else {
+        edit.replace(uri, new vscode.Range(doc.positionAt(0), doc.positionAt(doc.getText().length)), text);
+    }
+    if (!await vscode.workspace.applyEdit(edit)) {
+        return 'the file could not be written.';
+    }
+    const written = await vscode.workspace.openTextDocument(uri);
+    await written.save();
+    await vscode.window.showTextDocument(written, { preview: false });
+    return undefined;
+}
+
 /** The files whose new piece the music check has spoken on, this session: it speaks once a file. */
 const musicCheckedFor = new Set<string>();
 
@@ -306,12 +324,25 @@ async function proposeScore(deps: AiTransformDeps, input: ProposeScoreInput, tok
             return 'Not shown to the musician yet: Lily#\'s check of a new piece found this —\n'
                 + `${music.map(m => `- ${m}`).join('\n')}\n`
                 + 'Revise the piece with these in mind and call lilysharp_proposeScore again with the whole text. '
-                + 'Where something is as you meant it, keep it: the next proposal is shown as it is.';
+                + 'Where something is as you meant it, keep it: the next proposal is written as it is.';
         }
     }
     const before = current ? await checkText(client, current) : [];
     const added = addedWarnings({ HasErrors: false, Diagnostics: diags }, [{ beforeLo: 0, beforeHi: current.length, afterLo: 0, afterHi: text.length }],
         before.filter(d => d.Severity === 'warning' && !MACHINE_WARNING.test(d.Message)).length);
+    // A new piece goes straight into the file, not to the panel (owner's request 2026-10-29: a
+    // composed piece decided on beside an empty score was the less clear way — what is to change is
+    // said in the chat afterwards, a bar named there if need be).
+    if (isEmptyScore(current)) {
+        const written = await writeWhole(uri, exists, doc, text);
+        if (written !== undefined) {
+            return `Not written: ${written}`;
+        }
+        deps.log('AI proposal (chat): a new piece — written into the file.');
+        return 'Written: a new piece goes straight into the file, and it is open in the editor. The musician will say in '
+            + 'the chat what to change.'
+            + (added.length ? ` It has these warnings:\n${formatDiags(added, text)}` : '');
+    }
     const snapshot: Snapshot = {
         version: doc?.version ?? 0, startOffset: 0, endOffset: current.length,
         origFullText: current, origSelectedText: current, uri,
@@ -339,7 +370,7 @@ async function proposeScore(deps: AiTransformDeps, input: ProposeScoreInput, tok
             // Ask Again is not offered: what to change is said in the chat (owner's request 2026-10-29).
             const decision = again !== undefined ? await decideAgain(again)
                 : await reviewOnScore(deps, renderBefore, renderAfter, caption, wholeTextMarkup(current, text, changed), changed,
-                    { uri, before: current, after: text }, input.note ?? null, true, isEmptyScore(current));
+                    { uri, before: current, after: text }, input.note ?? null, true);
             again = undefined;
             if (wentOn) {
                 panelStatus('Not decided — the chat went on; its next proposal opens here.');
@@ -348,22 +379,12 @@ async function proposeScore(deps: AiTransformDeps, input: ProposeScoreInput, tok
                     + 'Read their message; propose again with lilysharp_proposeScore if it asks for changes.';
             }
             if (decision === 'accept') {
-                if (!exists) {
-                    const create = new vscode.WorkspaceEdit();
-                    create.createFile(uri, { ignoreIfExists: true, contents: Buffer.from(text, 'utf8') });
-                    if (!await vscode.workspace.applyEdit(create)) {
-                        again = 'Not written — the file could not be created. Accept to try again.';
-                        continue;
-                    }
-                    candidatePanel?.dispose();
-                } else {
-                    again = await applyCandidate(deps, snapshot, text);
-                    if (again !== undefined) {
-                        continue;
-                    }
-                    // Saved: the chat's agent reads the file from the disk, and would find it as it was.
-                    await vscode.workspace.textDocuments.find(d => d.uri.toString() === uri.toString())?.save();
+                again = await applyCandidate(deps, snapshot, text);
+                if (again !== undefined) {
+                    continue;
                 }
+                // Saved: the chat's agent reads the file from the disk, and would find it as it was.
+                await vscode.workspace.textDocuments.find(d => d.uri.toString() === uri.toString())?.save();
                 deps.log('AI proposal (chat): accepted.');
                 return 'Accepted: the musician accepted the proposal, and the file is written.'
                     + (added.length ? ` It has these warnings, which they may want fixed:\n${formatDiags(added, text)}` : '');
@@ -432,7 +453,7 @@ async function runComposeInChat(deps: AiTransformDeps): Promise<void> {
     // Proposed through Lily#'s tool, the musician deciding on the score (owner's request 2026-10-29);
     // written straight into the file only where the tool is not there.
     const query = `Compose a new piece of music in Lily# for the file ${target.fsPath} and propose it, whole, with the `
-        + 'lilysharp_proposeScore tool (#proposeScore): it compiles the piece and shows it to me to accept. If that tool is '
+        + 'lilysharp_proposeScore tool (#proposeScore): it checks the piece and writes it into the file. If that tool is '
         + 'not available, write the piece into the file instead. '
         + 'The file starts with `octave absolute` and `pitch concert`: keep both lines, and write every pitch as the pitch it sounds. '
         + 'Follow the Lily# grammar and the Lily# composing guide (the Lily# instructions).\n'
@@ -1756,9 +1777,8 @@ async function reviewOnScore(
     changed: ChangedSpan[],
     play: Audible,
     note: string | null = null,
-    /** Proposed by Copilot's chat, and a new piece (getCandidateHtml). */
+    /** Proposed by Copilot's chat (getCandidateHtml). */
     fromChat = false,
-    newPiece = false,
 ): Promise<Decision> {
     const panel = ensureCandidatePanel(deps);
     audible = play;
@@ -1770,7 +1790,7 @@ async function reviewOnScore(
     panel.webview.html = getCandidateHtml(
         fontUri.toString(), braceFontUri.toString(), panel.webview.cspSource, getNonce(),
         renderBefore.Svg, renderAfter.Svg, renderAfter.Error, caption, candidateHtml, changed,
-        textFontFaceCss(panel.webview, deps.extensionUri), note, fromChat, newPiece);
+        textFontFaceCss(panel.webview, deps.extensionUri), note, fromChat);
     // Where it stands: Beside would be beside the panel itself once Ask Again is clicked in it,
     // a new column for every round (owner, 2026-10-25). Only a new panel goes Beside.
     panel.reveal(panel.viewColumn ?? vscode.ViewColumn.Beside, true);
@@ -1889,9 +1909,6 @@ function getCandidateHtml(
     /** Proposed by Copilot's chat: no Ask Again — what to change is said in the chat (owner's
      *  request 2026-10-29). */
     fromChat = false,
-    /** A new piece proposed by the chat: no Reject either — rejected, it would leave an empty
-     *  file (owner's request 2026-10-29). */
-    newPiece = false,
 ): string {
     const afterBody = svgAfter
         ? `<div class="score">${svgAfter}</div>`
@@ -2022,7 +2039,7 @@ button:disabled { opacity:0.45; cursor:default; }
   <button id="play" title="Play the pane shown — After or Before — in the preview, from the selected bar if one is (Space). Click a bar to select it; click a note to play from it.">▶ Play</button>
   <button id="stop">■ Stop</button>
   <span id="playState" class="playstate"></span>
-  <button id="reject" title="Drop this candidate and close the panel — the file stays as it is"${newPiece ? ' hidden' : ''}>Reject (Esc)</button>
+  <button id="reject" title="Drop this candidate and close the panel — the file stays as it is">Reject (Esc)</button>
 </div>
 <script nonce="${nonce}">
   const vscode = acquireVsCodeApi();
@@ -2225,7 +2242,6 @@ button:disabled { opacity:0.45; cursor:default; }
   };
   // From the chat, what to change is said there (owner's request 2026-10-29): the footer says so.
   if (${fromChat}) say('To change it, write in the chat — its next proposal opens here.');
-  const NO_REJECT = ${newPiece};
   const decide = (action) => {
     if (decided) return;
     decided = true;
@@ -2317,7 +2333,7 @@ button:disabled { opacity:0.45; cursor:default; }
   });
   window.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') { e.preventDefault(); decide('accept'); }
-    else if (e.key === 'Escape' && !NO_REJECT) { e.preventDefault(); decide('reject'); }
+    else if (e.key === 'Escape') { e.preventDefault(); decide('reject'); }
     else if (e.key === 'Tab') { e.preventDefault(); show(!paneAfter.classList.contains('show')); }
     else if (e.key === ' ') { e.preventDefault(); play(); }
   });
