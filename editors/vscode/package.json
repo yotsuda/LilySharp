@@ -433,7 +433,7 @@
         "category": "Lily#",
         "icon": "$(comment-discussion)",
         "title": "Compose with AI in Chat…",
-        "shortTitle": "Lily# Score, Composed in Copilot Chat…"
+        "shortTitle": "Lily# Score, Composed with AI…"
       },
       {
         "command": "lilysharp.previewAiTransform",
