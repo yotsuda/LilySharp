@@ -70,11 +70,14 @@ describe('the composing guide', () => {
         // and the starting point come from the guide tool's "start".
         assert.match(fn, /'First read how to begin and the composing guide: lilysharp_readGuide, topic "composing"\.\\n'/);
         assert.ok(!/compositionHint|newPieceSteps/.test(fn));
-        // The bundled lysc, for the agent to check its piece with, and Lily#'s tool to propose it
-        // through, written straight only without it (owner's requests 2026-10-29).
+        // Lily#'s tool to propose it through, which compiles it: no compiler run by the chat (owner's
+        // request 2026-10-29: its check on a temp copy asked "Run terminal?" mid-composing) — the
+        // bundled lysc named only for a file written without the tool.
         const steps = transform.slice(transform.indexOf('function newPieceSteps('), transform.indexOf('async function writeWhole'));
-        assert.match(steps, /check it with the Lily# compiler — \\`& "\$\{lysc\}" check <copy>\\` on a copy of your text/);
-        assert.match(steps, /'Propose it, whole, with the lilysharp_proposeScore tool \(#proposeScore\), giving that path: it checks the '/);
+        assert.match(steps, /'Propose it, whole, with the lilysharp_proposeScore tool \(#proposeScore\), giving that path: it compiles the '/);
+        assert.match(steps, /'yourself\. If that tool is not available, write the piece into the file instead'\s*\+ \(lysc \? `, and check it with/);
+        assert.match(steps, /do not run a compiler '/);
+        assert.ok(!/on a copy of your text/.test(steps));
         // Owner's request 2026-10-29: no save dialog — an unsaved score, saved when the musician wants
         // it kept; and, the same day, no "Composed.lys": the folder is given, the chat names the file
         // after the piece's title.

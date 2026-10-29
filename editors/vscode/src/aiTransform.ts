@@ -358,17 +358,17 @@ function newPieceHeader(asked: string, note: string, eol: string): string {
 /**
  * How a new piece is proposed, said alike by Compose with AI in Chat's request and the composing
  * guide (owner's request 2026-10-29, the two kept one): through Lily#'s tool, written straight into
- * the file only where the tool is not there; in sounding pitches; checked by the bundled compiler,
- * where the extension carries one, on a copy (the document is not on the disk).
+ * the file only where the tool is not there; in sounding pitches. The tool compiles the piece and
+ * sends back its errors and warnings, so the chat runs no compiler of its own (owner's request
+ * 2026-10-29: its check on a temp copy asked "Run terminal?" in the middle of composing) — the
+ * bundled one is named only for a file written without the tool.
  */
 function newPieceSteps(lysc: string | undefined): string {
-    return 'Propose it, whole, with the lilysharp_proposeScore tool (#proposeScore), giving that path: it checks the '
-        + 'piece and writes it into the document. If that tool is not available, write the piece into the file instead.\n'
-        + 'Keep `octave absolute` and `pitch concert`, and write every pitch as the pitch it sounds.\n'
-        + (lysc
-            ? `Before proposing, check it with the Lily# compiler — \`& "${lysc}" check <copy>\` on a copy of your text in the `
-              + 'temporary folder — and fix every error and warning it reports.\n'
-            : '');
+    return 'Propose it, whole, with the lilysharp_proposeScore tool (#proposeScore), giving that path: it compiles the '
+        + 'piece, sends back its errors and warnings to fix, and writes it into the document — do not run a compiler '
+        + 'yourself. If that tool is not available, write the piece into the file instead'
+        + (lysc ? `, and check it with \`& "${lysc}" check <file>\`` : '') + '.\n'
+        + 'Keep `octave absolute` and `pitch concert`, and write every pitch as the pitch it sounds.\n';
 }
 
 /** Writes `text` as the whole file and opens it, not saved: the musician saves it when they want it
