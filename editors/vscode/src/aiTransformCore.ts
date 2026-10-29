@@ -813,6 +813,44 @@ const HINT_OPENINGS = ['the bass alone for a bar or two', 'a pickup into the fir
     'a soft chord held, the melody entering over it', 'everyone at once, loud', 'a short introduction on the accompaniment\'s figure'];
 
 /**
+ * A guide cut into parts of at most `limit` UTF-8 bytes, at blank lines where it can be (a
+ * paragraph, a list item, a code block whole), else at line ends. For Copilot's chat (owner's
+ * report 2026-10-29): its agent keeps a tool's answer over about 8 KB in a temp file and reads that
+ * back by its own means — once with PowerShell, asking the musician "Run in terminal?" mid-compose.
+ * The first part may be given a smaller limit, to leave room for what goes before it.
+ */
+export function guidePages(text: string, limit: number, firstLimit: number = limit): string[] {
+    const bytes = (s: string) => Buffer.byteLength(s, 'utf8');
+    const pages: string[] = [];
+    let page = '';
+    const add = (piece: string, sep: string) => {
+        if (page && bytes(page) + bytes(sep) + bytes(piece) > (pages.length === 0 ? firstLimit : limit)) {
+            pages.push(page);
+            page = '';
+        }
+        page = page ? page + sep + piece : piece;
+    };
+    for (const block of text.replace(/\r\n/g, '\n').split(/\n{2,}/)) {
+        if (bytes(block) <= Math.min(limit, firstLimit)) {
+            add(block, '\n\n');
+            continue;
+        }
+        // Too long to keep whole: line by line, from a page of its own.
+        if (page) {
+            pages.push(page);
+            page = '';
+        }
+        for (const line of block.split('\n')) {
+            add(line, '\n');
+        }
+    }
+    if (page.trim()) {
+        pages.push(page);
+    }
+    return pages;
+}
+
+/**
  * A starting point drawn at random, for a piece to begin somewhere other than the model's habit
  * (owner's request 2026-10-29: six "dramatic string quartets" were all D minor, 4/4, A–B–A, and
  * opened on the same A–D–F–E–D). A hint, not a rule: the request comes first, and the model takes

@@ -41,7 +41,7 @@ import {
     CandidateEdit as CoreCandidateEdit, ChangedSpan, MarkInSelection, MarkReadings, SEL_CLOSE, SEL_OPEN, cleanCandidate,
     TextChange, carryOffset, documentBudget, documentContext, estimateTokens, isProblem, marksContext, octaveOutliers, splitNote,
     startTimeAt, toCandidateEdit, wholeFileEdit, carrySelection, changedWords, wholeTextMarkup, titleOf, isPlaceholderTitle,
-    cleanTitle, withTitle, asksForOneStaff, partCount, rangeFixOf, aiFailure, warningTodoLines, withLyricsRows, promptFits, compositionHint, withLeadingComments, isEmptyScore,
+    cleanTitle, withTitle, asksForOneStaff, partCount, rangeFixOf, aiFailure, warningTodoLines, withLyricsRows, promptFits, compositionHint, withLeadingComments, isEmptyScore, guidePages,
 } from './aiTransformCore';
 import { withTodoMark } from './omrAiFixCore';
 import { markFactsOf, sideFileOf } from './omrScanCore';
@@ -294,7 +294,14 @@ interface ReadGuideInput {
     /** 'grammar' — how Lily# is written; 'composing' — how to compose a new piece in it, with the
      *  composing guide; 'start' — how a new piece begins and its starting point alone. */
     topic?: string;
+    /** Which part, from 1: a guide comes in parts small enough to be read whole (guidePages). */
+    part?: number;
 }
+
+/** A guide part's most: under the 8 KB past which Copilot's agent keeps a tool's answer in a file. */
+const GUIDE_PAGE_BYTES = 7000;
+/** Room for how a new piece begins, before the composing guide's first part. */
+const GUIDE_START_BYTES = 2500;
 
 /**
  * The Lily# instructions files Copilot is given with a .lys in hand (esbuild.js writes them), for a
@@ -315,8 +322,28 @@ async function readGuide(deps: AiTransformDeps, input: ReadGuideInput | undefine
             return undefined;
         }
     };
+    const part = Math.max(1, Math.floor(Number(input?.part) || 1));
+    // One part of a guide, saying which comes next (owner's report 2026-10-29: whole, it went to a
+    // temp file, read back with PowerShell — "Run in terminal?" mid-compose).
+    const paged = (name: string, pages: string[], before = '') => {
+        if (part > pages.length) {
+            return `The ${name} has ${pages.length} part(s); there is no part ${part}.`;
+        }
+        const body = before + pages[part - 1];
+        return pages.length === 1 ? body
+            : `${body}\n\n[Part ${part} of ${pages.length} of the ${name}. `
+                + (part < pages.length
+                    ? `Read part ${part + 1} next: lilysharp_readGuide, topic "${topic === 'start' || topic === 'composing' ? 'composing' : 'grammar'}", part ${part + 1} — every part before you write.]`
+                    : 'The end.]');
+    };
     if (topic !== 'composing' && topic !== 'start') {
-        return built('lilysharp.instructions.md') ?? await loadGrammar(deps);
+        return paged('Lily# grammar', guidePages(built('lilysharp.instructions.md') ?? await loadGrammar(deps), GUIDE_PAGE_BYTES));
+    }
+    // Its first part has room for how a new piece begins, which goes before it.
+    const guide = async () => guidePages(built('lilysharp-compose.instructions.md') ?? await loadComposeGuide(deps),
+        GUIDE_PAGE_BYTES, GUIDE_PAGE_BYTES - GUIDE_START_BYTES);
+    if (topic === 'composing' && part > 1) {
+        return paged('composing guide', await guide());
     }
     const hint = compositionHint();
     deps.log(`AI transform (chat, guide): ${hint}`);
@@ -336,8 +363,7 @@ async function readGuide(deps: AiTransformDeps, input: ReadGuideInput | undefine
         + 'Read the Lily# grammar and the composing guide first (lilysharp_readGuide) unless you have them.\n'
         + newPieceSteps(deps.lysc?.())
         + `${hint}\n`;
-    return topic === 'start' ? start
-        : start + '\n' + (built('lilysharp-compose.instructions.md') ?? await loadComposeGuide(deps));
+    return topic === 'start' ? start : paged('composing guide', await guide(), start + '\n');
 }
 
 /** The first lines of a piece composed in the chat — what it is, what was asked and what the AI

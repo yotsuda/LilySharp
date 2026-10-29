@@ -24,8 +24,31 @@ import * as path from 'node:path';
 import {
     SEL_CLOSE, SEL_OPEN, carryOffset, documentBudget, documentContext, estimateTokens, isProblem, isUnchanged, marksContext, octaveOutliers,
     pickModel, isAutoModel, pitchToMidi, splitNote, planOf, withoutPlan, startTimeAt, toCandidateEdit, changedWords, diffMarkup, wholeTextMarkup, rangeFixOf,
-    aiFailure, isConnectionError, spokenDuration, servedModelsIn, cleanCandidate, warningTodoLines, withLyricsRows, promptFits, compositionHint, withLeadingComments, isEmptyScore,
+    aiFailure, isConnectionError, spokenDuration, servedModelsIn, cleanCandidate, warningTodoLines, withLyricsRows, promptFits, compositionHint, withLeadingComments, isEmptyScore, guidePages,
 } from '../src/aiTransformCore';
+
+// Owner's report 2026-10-29: the composing guide, 19 KB in one answer, went to a temp file that
+// Copilot's agent read back with PowerShell — "Run in terminal?" in the middle of composing.
+describe('a guide in parts', () => {
+    const docs = path.join(__dirname, '..', '..', '..', '..', 'docs');
+    const squash = (s: string) => s.replace(/\s+/g, ' ').trim();
+    for (const name of ['COMPOSE_FOR_LLM.md', 'GRAMMAR_FOR_LLM.md']) {
+        it(`cuts ${name} into parts read whole, losing nothing`, () => {
+            const text = fs.readFileSync(path.join(docs, name), 'utf8');
+            const pages = guidePages(text, 7000, 4500);
+            assert.ok(pages.length > 1);
+            assert.ok(Buffer.byteLength(pages[0], 'utf8') <= 4500);
+            for (const p of pages) {
+                assert.ok(Buffer.byteLength(p, 'utf8') <= 7000, `a part of ${Buffer.byteLength(p, 'utf8')} bytes`);
+            }
+            assert.equal(squash(pages.join('\n\n')), squash(text));
+        });
+    }
+    it('keeps a paragraph whole where it fits, and one that does not fit goes line by line', () => {
+        assert.deepEqual(guidePages('aaaa\n\nbbbb\n\ncccc', 10), ['aaaa\n\nbbbb', 'cccc']);
+        assert.deepEqual(guidePages('x\n\n123456\n789012\n345', 8), ['x', '123456', '789012', '345']);
+    });
+});
 
 // Owner's request 2026-10-29: a piece proposed in Copilot's chat dropped the file's opening
 // comments; a new piece is checked as music once before it is shown.

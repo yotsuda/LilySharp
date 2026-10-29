@@ -83,7 +83,8 @@
         "inputSchema": {
           "type": "object",
           "properties": {
-            "topic": { "type": "string", "enum": ["grammar", "composing", "start"], "description": "\"grammar\": how Lily# is written. \"composing\": how to compose a new piece, with the composing guide. \"start\": how a new piece begins, and its starting point, alone." }
+            "topic": { "type": "string", "enum": ["grammar", "composing", "start"], "description": "\"grammar\": how Lily# is written. \"composing\": how to compose a new piece, with the composing guide. \"start\": how a new piece begins, and its starting point, alone." },
+            "part": { "type": "integer", "minimum": 1, "description": "Which part, from 1 (the default). A guide comes in parts; each says which part to read next." }
           },
           "required": ["topic"]
         }
