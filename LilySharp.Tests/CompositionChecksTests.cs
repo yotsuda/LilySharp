@@ -167,7 +167,7 @@ public class CompositionChecksTests
         Assert.DoesNotContain(CompositionChecks.Of(close), f => f.Contains("far apart") || f.Contains("a pianist's"));
         // A right hand's line of one value is still flat.
         Assert.Contains(CompositionChecks.Of(Piano(Hands, Bars("d'8 f' a' f' e' f' g' e'", 16), Bars("d,2 a,", 16))),
-            f => f.StartsWith("rh: 100% of its notes are eighth notes"));
+            f => f.StartsWith("rh, the melody: 100% of its notes are eighth notes"));
     }
 
     [Fact]
@@ -250,6 +250,37 @@ public class CompositionChecksTests
         // 16 bars, home on F.
         Assert.Empty(CompositionChecks.Of(ComposedPieces.BlueWindow));
         Assert.Contains("chords changes", ComposedPieces.BlueWindow);
+    }
+
+    // Owner's trials 2026-10-29: a violin's tune two thirds quarters passed the 80% an accompaniment
+    // is allowed. The melody — the solo beside a piano, a sung part, a solo piano's right hand — is
+    // told at 60%; the piano under the violin, at the same share, is not.
+    private const string ViolinAndPiano = """
+        title "Lantern"
+        time 4/4
+        octave absolute
+        key d major
+        part vn "Violin" "Vn." { instrument violin }
+        part rh "Piano" "Pno." { instrument piano-right }
+        part lh { instrument piano-left }
+        section A {
+          vn { d''4 e''4 fis''4 d''4 | a''2 fis''4 d''4 | e''4 fis''4 g''4 e''4 | d''2 a'2 | d''4 e''4 fis''4 d''4 | a''2 fis''4 d''4 | e''4 fis''4 g''4 e''4 | d''1 | }
+          rh { <d' fis'>2 <d' fis'>4 <d' fis'>4 | <d' fis'>2 <d' fis'>4 <d' fis'>4 | <cis' e'>2 <cis' e'>4 <cis' e'>4 | <d' fis'>2 <cis' e'>4 <cis' e'>4 | <d' fis'>2 <d' fis'>4 <d' fis'>4 | <d' fis'>2 <d' fis'>4 <d' fis'>4 | <cis' e'>2 <cis' e'>4 <cis' e'>4 | <d' fis'>2 <d' fis'>4 <d' fis'>4 | }
+          lh { d2 a,2 | d2 a,2 | a,2 e2 | d2 a,2 | d2 a,2 | d2 a,2 | a,2 e2 | d1 | }
+        }
+        form { ~A }
+        score { staff vn  grandStaff { staff rh  staff lh } }
+        """;
+
+    [Fact]
+    public void TheMelody_IsHeldToMoreRhythmThanItsAccompaniment()
+    {
+        var findings = CompositionChecks.Of(ViolinAndPiano);
+        Assert.Contains(findings, f => f.StartsWith("vn, the melody: ") && f.Contains("a tune lives on its rhythm"));
+        Assert.DoesNotContain(findings, f => f.StartsWith("rh"));
+        // Sung: the part a lyrics track sings is the melody.
+        Assert.Contains(CompositionChecks.Of(ViolinAndPiano.Replace("  lh {", "  lyrics words sings rh { a a a a a | }\n  lh {")),
+            f => f.StartsWith("rh, the melody: "));
     }
 
     // Owner's question 2026-10-27, "a model asked in a chat has no example — is none better?": the

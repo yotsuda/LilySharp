@@ -1114,7 +1114,9 @@ it should sound like the ensemble asked for. What makes it music:
   section of its own (`A2`), and the plan says what changes; the bars that do not change are
   written as they were.
 - **One home key, one tempo**: a section may move to a related key (`key g major` at its head —
-  the relative, the dominant) and the piece comes home to end. The tempo stays unless the
+  the relative, the dominant) and the piece comes home to end. A section in the RELATIVE key (B
+  minor in a D major piece, A minor in C) keeps the signature and writes no `key` line: the same
+  sharps or flats would only be printed again. The tempo stays unless the
   character changes with it (a slow middle section, `tempo "Adagio" 4 = 60`), never a new tempo
   for every section.
 - **The end**: the last phrase closes in the home key — V (or V7) to I, the tonic chord held
@@ -1192,7 +1194,9 @@ it should sound like the ensemble asked for. What makes it music:
   up toward middle C, the right hand's melody round C5 with its harmony under it (thirds, sixths,
   chords on the strong beats), never an octave of empty keyboard between the hands for long. A
   left hand may keep one note value through a section: its figure is the rhythm; the melody is
-  where the rhythm varies. A contrasting section takes a figure of its own.
+  where the rhythm varies. A contrasting section takes a figure of its own. A broken-chord figure
+  stays within an octave and a half (a twelfth), climbing from its bass by the chord's tones and
+  turning back — not leaping two octaves from a low bass to the treble.
 - **Texture**: one voice carries the melody while the others accompany — broken chords,
   repeated eighths, a moving bass — and the roles pass between the parts. Not every part in the
   same rhythm; not whole notes everywhere.

@@ -35,6 +35,11 @@ All notable changes to the Lily# VS Code extension are documented here.
   gospel (call and response, rich chords, the "amen" ending), and a song's words — one syllable a
   note, Japanese one mora a note written apart (`き ら き ら`: Lily# does not split kana), the
   stress or pitch accent with the melody, a line of words a phrase of music.
+- **A composed melody is held to more rhythm**: the part that carries the tune — the one a lyrics
+  track sings, the solo beside a piano, a solo piano's right hand — is sent back for a revision when
+  60% of its notes are one value (an accompaniment still at 80%). The guide also says a section in
+  the relative key writes no `key` line (it printed the same signature again), and a left hand's
+  broken chord stays within a twelfth.
 - **A piece composed through Copilot's Auto names the model that answered**: its first line said
   `copilot/auto`; it now reads `copilot/gpt-6-luna, via Auto` (several models in order when the
   revisions went to more than one), from GitHub Copilot Chat's log — the API does not say. Without
@@ -1892,6 +1897,11 @@ reader is offered its update when a scan is read.
   gospel (call and response, rich chords, the "amen" ending), and a song's words — one syllable a
   note, Japanese one mora a note written apart (`き ら き ら`: Lily# does not split kana), the
   stress or pitch accent with the melody, a line of words a phrase of music.
+- **A composed melody is held to more rhythm**: the part that carries the tune — the one a lyrics
+  track sings, the solo beside a piano, a solo piano's right hand — is sent back for a revision when
+  60% of its notes are one value (an accompaniment still at 80%). The guide also says a section in
+  the relative key writes no `key` line (it printed the same signature again), and a left hand's
+  broken chord stays within a twelfth.
 - **A piece composed through Copilot's Auto names the model that answered**: its first line said
   `copilot/auto`; it now reads `copilot/gpt-6-luna, via Auto` (several models in order when the
   revisions went to more than one), from GitHub Copilot Chat's log — the API does not say. Without

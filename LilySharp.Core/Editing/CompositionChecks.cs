@@ -139,6 +139,7 @@ public static class CompositionChecks
         var bandBasses = band
             ? parts.Where(p => RoleOf(p).Bass).Select(p => p.Name.Text).ToHashSet(System.StringComparer.Ordinal)
             : [];
+        var melodies = MelodiesOf(source, parts, hands, band);
         foreach (var (part, onsets) in byPart)
         {
             if (onsets.Count < 16 || bandBasses.Contains(part) || hands.GetValueOrDefault(part))
@@ -147,9 +148,17 @@ public static class CompositionChecks
             // shorter than it is written), the last note its own length.
             var values = onsets.Select((o, i) => Value(i + 1 < onsets.Count ? onsets[i + 1].Start - o.Start : o.Length, tpq));
             var common = values.GroupBy(v => v).OrderByDescending(g => g.Count()).First();
-            if (common.Count() >= onsets.Count * 0.8)
-                findings.Add($"{part}: {common.Count() * 100 / onsets.Count}% of its notes are {common.Key}s — mix long and short notes, "
-                    + "rests, dotted rhythms; give the line a rhythm of its own.");
+            // The melody is held to more (owner's trials 2026-10-29: a pop song's tune two thirds
+            // quarters, a piano piece's right hand two thirds eighths in one figure bar after bar,
+            // a violin's quarters and halves — each under the 80% an accompaniment is allowed).
+            bool melody = melodies.Contains(part);
+            if (common.Count() >= onsets.Count * (melody ? MelodyOneValue : PartOneValue))
+                findings.Add(melody
+                    ? $"{part}, the melody: {common.Count() * 100 / onsets.Count}% of its notes are {common.Key}s — a tune lives on its "
+                        + "rhythm: long notes at its peaks, shorter ones leading to them, dotted rhythms, a note tied over the beat, a "
+                        + "rest to breathe; give its theme a rhythm of its own and vary it from phrase to phrase."
+                    : $"{part}: {common.Count() * 100 / onsets.Count}% of its notes are {common.Key}s — mix long and short notes, "
+                        + "rests, dotted rhythms; give the line a rhythm of its own.");
         }
 
         // A staff labelled by the hand that plays it (owner's report 2026-10-27: a piano piece printed
@@ -275,6 +284,30 @@ public static class CompositionChecks
 
     // Under this many bars a piece is a sketch, not a piece (16: two 8-bar phrases).
     private const int ShortestPiece = 16;
+
+    // The share of one note value past which a part reads as one value: an accompaniment's figure
+    // may keep one, a melody may not (owner's trials 2026-10-29).
+    private const double PartOneValue = 0.8, MelodyOneValue = 0.6;
+
+    /// <summary>
+    /// The parts that carry the melody: those a lyrics track sings; else, beside a piano, the
+    /// parts that are neither the piano nor a band's drums, bass or chords (a violin's, a flute's);
+    /// else a piano's right hand.
+    /// </summary>
+    private static HashSet<string> MelodiesOf(string source, IReadOnlyList<PartDeclarationSyntax> parts,
+        IReadOnlyDictionary<string, bool> hands, bool band)
+    {
+        var sung = System.Text.RegularExpressions.Regex.Matches(source, @"\blyrics\s+\w+\s+sings\s+(\w+)")
+            .Select(m => m.Groups[1].Value).ToHashSet(System.StringComparer.Ordinal);
+        if (sung.Count > 0)
+            return sung;
+        var solos = parts.Where(p => !hands.ContainsKey(p.Name.Text)
+                && !(RoleOf(p) is var r && (r.Drums || r.Bass || (band && r.Chords))))
+            .Select(p => p.Name.Text).ToHashSet(System.StringComparer.Ordinal);
+        if (solos.Count > 0 && solos.Count < parts.Count)
+            return solos;
+        return hands.Where(h => !h.Value).Select(h => h.Key).ToHashSet(System.StringComparer.Ordinal);
+    }
 
     private static readonly string[] PitchClassNames = ["C", "C♯", "D", "E♭", "E", "F", "F♯", "G", "A♭", "A", "B♭", "B"];
 

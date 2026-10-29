@@ -218,6 +218,13 @@ describe('the composer\'s prompt', () => {
     });
     // Owner's request 2026-10-29: a poor piece's plan named its theme only in words, and no bar was
     // made of it; its phrases did not answer, it had no high point, its dynamics went against the plan.
+    // Owner's trials 2026-10-29: a violin piece wrote `key b minor` over D major's sharps, printing
+    // them again; a piano's left hand leapt from C2 to E4 in one broken chord.
+    it('writes no key line for the relative key, and keeps a broken chord within a twelfth', () => {
+        const grammarDoc = fs.readFileSync(path.join(__dirname, '..', '..', '..', '..', 'docs', 'GRAMMAR_FOR_LLM.md'), 'utf8');
+        assert.match(grammarDoc, /A section in the RELATIVE key \(B\s+minor in a D major piece, A minor in C\) keeps the signature and writes no `key` line/);
+        assert.match(grammarDoc, /A broken-chord figure\s+stays within an octave and a half \(a twelfth\)/);
+    });
     // Owner's request 2026-10-29: the guide covers jazz, a violin, rock, pop and gospel, and how words are set.
     it('guides the other kinds of music and the setting of words, Japanese one mora a note', () => {
         const grammarDoc = fs.readFileSync(path.join(__dirname, '..', '..', '..', '..', 'docs', 'GRAMMAR_FOR_LLM.md'), 'utf8');
