@@ -170,6 +170,14 @@ describe('the composing guide', () => {
         const compose = transform.slice(transform.indexOf('async function runComposeInChat'), transform.indexOf('async function runCompose('));
         assert.match(compose, /lilysharp_readGuide, topic "composing"/);
     });
+    // Owner's trials 2026-10-29: a chat's hymns crossed the alto under the tenor, set the alto in the
+    // tenor's range, and rocked the bass between root and fifth — the guide had no hymn.
+    it('says how a hymn or a chorale for choir is written', () => {
+        const guide = fs.readFileSync(path.join(docs, 'COMPOSE_FOR_LLM.md'), 'utf8');
+        assert.match(guide, /\*\*A hymn or chorale for choir\*\* \(SATB, `choirStaff`\): the four voices move together/);
+        assert.match(guide, /the alto ABOVE the tenor, never crossing it/);
+        assert.match(guide, /not rocking between a chord's root and fifth/);
+    });
     it('holds the recipe, and the grammar only points at it', () => {
         const grammar = fs.readFileSync(path.join(docs, 'GRAMMAR_FOR_LLM.md'), 'utf8');
         const guide = fs.readFileSync(path.join(docs, 'COMPOSE_FOR_LLM.md'), 'utf8');

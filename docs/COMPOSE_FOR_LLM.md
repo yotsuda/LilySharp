@@ -119,6 +119,13 @@ What makes it music:
   soloist sings a line, the choir answers it. Rich chords (added 9ths and 7ths, a dominant with a
   sus4 before it resolves, passing diminished chords, the bass walking up into the next chord), a
   slow 12/8 or a swinging fast 4/4, and the IV–I "amen" at the end.
+- **A hymn or chorale for choir** (SATB, `choirStaff`): the four voices move together, mostly in
+  quarter notes, a longer note at each phrase's end, where the harmony makes a cadence; a fermata
+  on the last chord. Each voice in its own range — soprano C4–G5, alto G3–D5, tenor C3–G4, bass
+  E2–C4 — the alto ABOVE the tenor, never crossing it, the upper three within an octave of each
+  other. Each inner voice is a line of its own, by step where it can, holding a common tone from
+  chord to chord; the bass carries the harmony with steps and leaps of its own (to the root at a
+  cadence), not rocking between a chord's root and fifth.
 - **A song with words** (a voice part — `instrument soprano`, `alto`, `tenor` or `voice-bass`, the
   vocal line of a pop song too — and its lyrics row under it, see *Lyrics*):
   - **One sung unit a note, each written apart**: the unit is the language's own beat of speech —
