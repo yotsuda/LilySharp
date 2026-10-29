@@ -159,6 +159,14 @@ public static class CompositionChecks
                         + "rest to breathe; give its theme a rhythm of its own and vary it from phrase to phrase."
                     : $"{part}: {common.Count() * 100 / onsets.Count}% of its notes are {common.Key}s — mix long and short notes, "
                         + "rests, dotted rhythms; give the line a rhythm of its own.");
+            // One bar's rhythm on most of the melody's bars (owner's trial 2026-10-29: a pop song sang
+            // `r8 x8 x8 x8~ x4 x4` in every bar, four syllables poured into each and a breath at every
+            // bar line, in the middle of words) — a mix of values the count above passes.
+            if (melody && SameRhythmBars(onsets, midi.BarTicks) is var (alike, inBars) && inBars >= SameRhythmFewestBars
+                && alike >= inBars * SameRhythmShare)
+                findings.Add($"{part}, the melody: {alike} of its {inBars} bars have the same rhythm — a pattern poured full, not a line: "
+                    + "let the rhythm follow the words and the phrase — a longer note at a phrase's end and a breath only there, "
+                    + "a phrase that runs on over the bar line, the rhythm changing from section to section.");
         }
 
         // A staff labelled by the hand that plays it (owner's report 2026-10-27: a piano piece printed
@@ -288,6 +296,32 @@ public static class CompositionChecks
     // The share of one note value past which a part reads as one value: an accompaniment's figure
     // may keep one, a melody may not (owner's trials 2026-10-29).
     private const double PartOneValue = 0.8, MelodyOneValue = 0.6;
+
+    // A melody whose bars mostly share one rhythm: half of them or more, over 8 bars at least (a
+    // theme's rhythm comes back often, but not in every other bar).
+    private const double SameRhythmShare = 0.5;
+    private const int SameRhythmFewestBars = 8;
+
+    /// <summary>How many of the bars a part sounds in share its commonest rhythm (the onsets' places
+    /// in the bar), and how many bars it sounds in.</summary>
+    private static (int Same, int Bars) SameRhythmBars(IReadOnlyList<(int Start, int Length)> onsets, IEnumerable<int> barTicks)
+    {
+        var starts = barTicks.Distinct().OrderBy(t => t).ToList();
+        if (starts.Count == 0 || starts[0] > 0)
+            starts.Insert(0, 0);
+        var byBar = new Dictionary<int, List<int>>();
+        foreach (var (start, _) in onsets)
+        {
+            int i = starts.BinarySearch(start);
+            if (i < 0)
+                i = ~i - 1;
+            (byBar.TryGetValue(i, out var list) ? list : byBar[i] = []).Add(start - starts[i]);
+        }
+        if (byBar.Count == 0)
+            return (0, 0);
+        int same = byBar.Values.GroupBy(l => string.Join(",", l)).Max(g => g.Count());
+        return (same, byBar.Count);
+    }
 
     /// <summary>
     /// The parts that carry the melody: those a lyrics track sings; else, beside a piano, the

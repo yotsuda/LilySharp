@@ -283,6 +283,35 @@ public class CompositionChecksTests
             f => f.StartsWith("rh, the melody: "));
     }
 
+    // Owner's trial 2026-10-29: a pop song sang `r8 x8 x8 x8~ x4 x4` in every bar — eighths and
+    // dotted quarters half and half, which the one-value count passes.
+    private static string Song(string tune) => $$"""
+        title "Morning"
+        time 4/4
+        octave absolute
+        part vox "Voice" { instrument soprano }
+        part rh "Piano" "Pno." { instrument piano-right }
+        part lh { instrument piano-left }
+        section A {
+          vox { {{tune}} }
+          lyrics words sings vox { a a a a | }
+          rh { {{string.Concat(Enumerable.Repeat("<e' g'>2 <e' g'>4 <e' g'>4 | ", 8))}} }
+          lh { {{string.Concat(Enumerable.Repeat("c4 g4 e4 g4 | ", 8))}} }
+        }
+        form { ~A }
+        score { staff vox  lyrics words  grandStaff { staff rh  staff lh } }
+        """;
+
+    [Fact]
+    public void AMelodyOfOneBarsRhythm_IsToldSo_AVariedOneIsNot()
+    {
+        var poured = Song(string.Concat(Enumerable.Repeat("r8 a'8 c''8 e''8~ e''4 d''4 | ", 8)));
+        Assert.Contains(CompositionChecks.Of(poured), f => f.StartsWith("vox, the melody: 8 of its 8 bars have the same rhythm"));
+        var varied = Song("r8 a'8 c''8 e''8~ e''4 d''4 | c''2. r4 | e''4. d''8 c''4 a'4 | g'1 | "
+            + "r8 a'8 c''8 e''8~ e''4 d''4 | c''4 d''8 e''8 g''2 | e''8 d''8 c''4~ c''4 a'4 | c''1 | ");
+        Assert.DoesNotContain(CompositionChecks.Of(varied), f => f.Contains("have the same rhythm"));
+    }
+
     // Owner's question 2026-10-27, "a model asked in a chat has no example — is none better?": the
     // grammar shows no whole piece to compose after, only how each thing is written.
     [Fact]

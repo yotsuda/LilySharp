@@ -51,6 +51,10 @@ All notable changes to the Lily# VS Code extension are documented here.
   cut to fit the notes (a song sang 燃やす as `も や`) and every line ends on a whole word. The
   guide says it for any language — the sung unit (a syllable; a mora in Japanese), the words' own
   stress, pitch accent or tones.
+- **A melody of one bar's rhythm is sent back**: when half or more of the melody's bars (8 at
+  least) share one rhythm — a song sang `r8 x8 x8 x8~ x4 x4` in 24 of its 26 bars, a breath at every
+  bar line in the middle of words — the AI is told to let the rhythm follow the words and the
+  phrase.
 - **A piece composed through Copilot's Auto names the model that answered**: its first line said
   `copilot/auto`; it now reads `copilot/gpt-6-luna, via Auto` (several models in order when the
   revisions went to more than one), from GitHub Copilot Chat's log — the API does not say. Without
@@ -1924,6 +1928,10 @@ reader is offered its update when a scan is read.
   cut to fit the notes (a song sang 燃やす as `も や`) and every line ends on a whole word. The
   guide says it for any language — the sung unit (a syllable; a mora in Japanese), the words' own
   stress, pitch accent or tones.
+- **A melody of one bar's rhythm is sent back**: when half or more of the melody's bars (8 at
+  least) share one rhythm — a song sang `r8 x8 x8 x8~ x4 x4` in 24 of its 26 bars, a breath at every
+  bar line in the middle of words — the AI is told to let the rhythm follow the words and the
+  phrase.
 - **A piece composed through Copilot's Auto names the model that answered**: its first line said
   `copilot/auto`; it now reads `copilot/gpt-6-luna, via Auto` (several models in order when the
   revisions went to more than one), from GitHub Copilot Chat's log — the API does not say. Without
