@@ -209,7 +209,7 @@ describe('the composer\'s prompt', () => {
     it('has it plan the piece where the musician does not see it, then the note, then the file', () => {
         assert.match(transform, /'1\. <plan> … <\/plan> — your working notes; the musician never sees them\./);
         // Owner's decision 2026-10-29: short and shapely rather than long — one printed page unless asked.
-        assert.match(transform, /Unless the request gives a length, the piece fits',\s*'\s*one printed page: about 16 to 32 bars/);
+        assert.match(transform, /at the length the composing guide gives \(one printed',\s*'\s*page unless the request gives one\)/);
         assert.doesNotMatch(transform, /32 to 64 bars/);
         assert.match(transform, /return 'Reply with <plan>…<\/plan>, <note>…<\/note> and the whole piece in <file>…<\/file>';/);
     });
@@ -224,7 +224,7 @@ describe('the composer\'s prompt', () => {
         assert.match(transform, /The octaves are LilyPond\\'s, in every part and for every instrument: `c` = C3, `c\\'` = middle C \(C4\)/);
         assert.doesNotMatch(transform, /NOT LilyPond\\'s octaves/);
         assert.match(transform, /AND as you will write/);
-        assert.match(transform, /is written',\s*'\s*`d\\'` – `a\\'\\'`/);
+        assert.match(transform, /is written `d\\'` – `a\\'\\'`/);
     });
     // Owner's review 2026-10-27: the piece was tidy but not "cool" — the character is to be planned
     // as the devices that make it.
@@ -235,7 +235,7 @@ describe('the composer\'s prompt', () => {
     });
     // Owner's trial 2026-10-29: the A′ of an A–B–A′–Coda piece was A again, note for note.
     it('has a section that returns as it was named again in the form, not copied', () => {
-        assert.match(transform, /A section that comes back as it was is written once and named again in the form',\s*'\s*\(`form \{ A B A Coda \}`\), never copied;/);
+        assert.match(transform, /a section that comes back as it was is named again in the form',\s*'\s*\(`form \{ A B A Coda \}`\), never copied\./);
         const grammarDoc = llmDocs();
         assert.match(grammarDoc, /\*\*A section that returns is named again, not copied\*\*/);
     });
@@ -246,7 +246,8 @@ describe('the composer\'s prompt', () => {
         assert.match(transform, /the AI\\'s last revision was cut off \(the connection broke\), '\s*\+ 'so this is the version before it: '/);
     });
     it('has the plan name the devices that make the character asked for', () => {
-        assert.match(transform, /CHARACTER — how the character asked for is heard: each device that makes it, with how it is written',\s*'\s*in this file and the bars it is in/);
+        assert.match(transform, /CHARACTER — each device of the character asked for, with how it is written in this file and the bars',\s*'\s*it is in/);
+        assert.match(llmDocs(), /\*\*The character asked for\*\* is heard through devices, each written into the piece where it\s+acts/);
         assert.match(transform, /every device of the character are written where',\s*'\s*the plan put them\./);
     });
     // Owner's request 2026-10-29: a poor piece's plan named its theme only in words, and no bar was
@@ -257,7 +258,7 @@ describe('the composer\'s prompt', () => {
         assert.match(grammarDoc, /\*\*Write the words first, whole, then set them\*\*/);
         assert.match(grammarDoc, /the notes fit the words, never the words cut\s+to fit the notes/);
         assert.match(transform, /WORDS \(a song only\) — each line of the words written out WHOLE first/);
-        assert.match(transform, /every line ends on a whole word, on the phrase\\'s last',\s*'\s*note;/);
+        assert.match(transform, /phrase that sings it, given that many notes \(the guide\\'s "A song with words"\)/);
     });
     // Owner's trials 2026-10-29: a pop song's tune mixed quarters, eighths and halves but never
     // crossed a beat — told now how often, and how.
@@ -289,8 +290,9 @@ describe('the composer\'s prompt', () => {
         for (const heading of ['LENGTH AND FORM', 'KEY, METER, TEMPO', 'HARMONY', 'THEME', 'PHRASES', 'CLIMAX', 'PARTS', 'DYNAMICS', 'CHARACTER', 'WORDS', 'ENDING']) {
             assert.ok(transform.includes(`'   ${heading}`), heading);
         }
-        assert.match(transform, /THEME — the motif the piece is made of \(a melody\\'s motif[\s\S]*?WRITTEN OUT here in this file\\'s notes with its rhythm/);
-        assert.match(transform, /The second phrase of a pair starts as the first did and ends otherwise: the first',\s*'\s*stops open \(on V, or the chord that leads back\), the second closes on I\./);
+        assert.match(transform, /THEME — its one or two bars WRITTEN OUT here in this file\\'s notes, its rhythm with them/);
+        assert.match(transform, /its cadence \(a pair answering, as the guide says\)/);
+        assert.match(llmDocs(), /the second phrase of a pair starts as the first did and ends otherwise/);
         assert.match(transform, /Then hold',\s*'\s*the file to the plan:/);
         const grammarDoc = llmDocs();
         assert.match(grammarDoc, /\*\*Phrases that answer\*\*/);

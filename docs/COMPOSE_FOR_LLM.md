@@ -142,3 +142,8 @@ it should sound like the ensemble asked for. What makes it music:
   slurs over a phrase, `@staccato`, `@accent`, and dynamics with hairpins
   (`@p … @cresc … @f`) that shape each section — every mark for a reason, the same level never
   written twice in a row, the ending at the level it was planned.
+- **The character asked for** is heard through devices, each written into the piece where it
+  acts — not only planned: "dramatic" — `@sf` and `@p.subito` after a loud bar, a tremolo
+  (`d'2:32`), every part in unison at the climax, the low register; "cool" — a driving rhythm,
+  syncopation and `@accent`, octaves on the strong beats, a run into the climax; "lovely" — a
+  singing line with long notes at its peaks, a gentle flowing accompaniment.

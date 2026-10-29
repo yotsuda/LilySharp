@@ -1128,49 +1128,30 @@ function composeSystemPrompt(grammar: string, modelName?: string, guide: string 
         // and written f, and the character asked for was never planned).
         '1. <plan> … </plan> — your working notes; the musician never sees them. Fill in every heading below, in',
         '   this order, before any note is written — a heading left vague is a decision not made:',
-        // Owner's decision 2026-10-29: short and shapely rather than long; one printed page unless asked.
-        '   LENGTH AND FORM — the sections, each with its bars. Unless the request gives a length, the piece fits',
-        '   one printed page: about 16 to 32 bars, an A–B–A with a short coda (2 to 4 bars), in phrases of 4 and',
-        '   8 bars — complete and shapely rather than long; never a bar added to reach a length.',
-        // A return written out again note for note (owner's trial 2026-10-29: an "Aprime" the same as
-        // A) is the form's to say, and a second copy is a second place to miscount the bars.
-        '   A section that comes back as it was is written once and named again in the form',
-        '   (`form { A B A Coda }`), never copied; a return that changes is a section of its own, and the plan',
-        '   says what changes.',
+        // The headings say what to decide; why and how are the composing guide's, said there once
+        // (owner's request 2026-10-29: the prompt and the guide said the same things twice). The
+        // decisions behind each, owner's trials 2026-10-29: a piece of 32 bars padded out; an
+        // "Aprime" the same as A, copied; a theme planned only in words, no bar made of it; phrases
+        // that did not answer; no high point; a "dramatic" quartet with none of its character
+        // written; words cut to fit the notes ("ひ を も や" for 燃やす).
+        '   LENGTH AND FORM — the sections and their bars, at the length the composing guide gives (one printed',
+        '   page unless the request gives one); a section that comes back as it was is named again in the form',
+        '   (`form { A B A Coda }`), never copied.',
         '   KEY, METER, TEMPO.',
         '   HARMONY — every phrase\'s chords, bar by bar, and its cadence.',
-        '   THEME — the motif the piece is made of (a melody\'s motif, a song\'s hook, a band\'s riff, a jazz head\'s',
-        '   opening figure), one or two bars, WRITTEN OUT here in this file\'s notes with its rhythm',
-        '   (`fis\'\'2 e\'\'8 d\'\'8 | d\'\'4 b\'4 g\'\'4 |`) — a rhythm of its own, not even quarters — and the bars',
-        '   where it comes back: repeated, sequenced, varied.',
-        '   PHRASES — for each phrase its bars, the note it starts on, its highest note, and the note it ends on',
-        '   over its cadence. The second phrase of a pair starts as the first did and ends otherwise: the first',
-        '   stops open (on V, or the chord that leads back), the second closes on I.',
-        '   CLIMAX — the one bar and note the piece rises to (in a song, the chorus\'s high note), and how the',
-        '   dynamics lead there and away.',
+        '   THEME — its one or two bars WRITTEN OUT here in this file\'s notes, its rhythm with them',
+        '   (`fis\'\'2 e\'\'8 d\'\'8 | d\'\'4 b\'4 g\'\'4 |`), and the bars where it comes back.',
+        '   PHRASES — for each phrase its bars, the note it starts on, its highest note and the note it ends on over',
+        '   its cadence (a pair answering, as the guide says).',
+        '   CLIMAX — its bar and note, and how the dynamics lead there and away.',
         '   PARTS — what each part does in each section (melody, bass line, inner parts, the accompaniment figure',
-        '   and its rhythm — a contrasting section has a figure of its own) and its register, as sounding pitches',
-        '   (C4 = middle C) AND as you will write them in this file (a right hand round C5, D4–A5, is written',
-        '   `d\'` – `a\'\'`).',
-        '   DYNAMICS — the level each phrase starts at and the hairpins between; every mark for a reason, the',
-        '   same level never written twice in a row.',
-        // Each device as it is written and where (owner's trial 2026-10-29: a "dramatic" string
-        // quartet planned its character and wrote none of it — Andante, p to f, no accent).
-        '   CHARACTER — how the character asked for is heard: each device that makes it, with how it is written',
-        '   in this file and the bars it is in (for "dramatic": `@sf` and `@p.subito` after a loud bar, a tremolo',
-        '   `d\'2:32`, every part in unison at the climax, the low register; for "cool": a driving rhythm,',
-        '   syncopation and `@accent`, octaves on the strong beats, a run into the climax; for "lovely": a singing',
-        '   line with long notes at its peaks, a gentle flowing accompaniment).',
-        // Owner's request 2026-10-29: the guide covers songs, and how words are set.
-        // Words first, then notes (owner's trial 2026-10-29: the syllables matched the notes, but
-        // as words cut to fit them — "ひ を も や" for 燃やす, a phrase ending on "あ" of あけて).
-        // In terms of any language (owner's request 2026-10-29): the language's sung unit, its own
-        // stress or pitch, whole words.
-        '   WORDS (a song only) — each line of the words written out WHOLE first, as the sentence it is, with',
-        '   its sung units counted (the language\'s own: a syllable, a mora in Japanese — each written apart,',
-        '   `Hap- py`, `き ら き ら`); then the phrase that sings it, given that many notes — the notes fit the',
-        '   words, never a word cut to fit the notes; every line ends on a whole word, on the phrase\'s last',
-        '   note; the words\' stress, pitch accent or tones where the melody follows them.',
+        '   and its rhythm) and its register, as sounding pitches (C4 = middle C) AND as you will write them in',
+        '   this file (a right hand round C5, D4–A5, is written `d\'` – `a\'\'`).',
+        '   DYNAMICS — the level each phrase starts at and the hairpins between.',
+        '   CHARACTER — each device of the character asked for, with how it is written in this file and the bars',
+        '   it is in (`@sf` in bar 13, a tremolo `d\'2:32` in bars 14–15, …).',
+        '   WORDS (a song only) — each line of the words written out WHOLE first, its sung units counted; then the',
+        '   phrase that sings it, given that many notes (the guide\'s "A song with words").',
         '   ENDING — in the home key, on a held tonic chord, at the dynamic planned for it.',
         '2. <note> … </note> — one or two sentences to the musician about the piece, warm and plain, in the language',
         '   of the request.',

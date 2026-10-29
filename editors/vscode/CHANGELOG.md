@@ -73,7 +73,8 @@ All notable changes to the Lily# VS Code extension are documented here.
   music (form, theme, phrases, the kinds of music, the setting of words) moved from the grammar to
   `docs/COMPOSE_FOR_LLM.md`, bundled beside it. Compose with AI sends both; Ask AI, which edits a
   score, is sent the grammar alone — some 3 000 tokens less a request, and the guide can grow
-  without weighing on it. Copilot's chat is given both.
+  without weighing on it. Copilot's chat is given both. The composer's plan headings now say only
+  what to decide, the guide why and how — said once, not twice.
 - **A composed piece's character is written into it**: the plan names each device of the character
   asked for with how it is written and the bars it is in (for "dramatic": `@sf`, `@p.subito`, a
   tremolo `d'2:32`, the parts in unison at the climax), and the piece is checked for them before it
@@ -1980,7 +1981,8 @@ reader is offered its update when a scan is read.
   music (form, theme, phrases, the kinds of music, the setting of words) moved from the grammar to
   `docs/COMPOSE_FOR_LLM.md`, bundled beside it. Compose with AI sends both; Ask AI, which edits a
   score, is sent the grammar alone — some 3 000 tokens less a request, and the guide can grow
-  without weighing on it. Copilot's chat is given both.
+  without weighing on it. Copilot's chat is given both. The composer's plan headings now say only
+  what to decide, the guide why and how — said once, not twice.
 - **A composed piece's character is written into it**: the plan names each device of the character
   asked for with how it is written and the bars it is in (for "dramatic": `@sf`, `@p.subito`, a
   tremolo `d'2:32`, the parts in unison at the climax), and the piece is checked for them before it
