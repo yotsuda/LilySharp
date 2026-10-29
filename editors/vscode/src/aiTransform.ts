@@ -40,7 +40,7 @@ import {
     CandidateEdit as CoreCandidateEdit, ChangedSpan, MarkInSelection, MarkReadings, SEL_CLOSE, SEL_OPEN, cleanCandidate,
     TextChange, carryOffset, documentBudget, documentContext, estimateTokens, isProblem, marksContext, octaveOutliers, splitNote,
     startTimeAt, toCandidateEdit, wholeFileEdit, carrySelection, changedWords, wholeTextMarkup, titleOf, isPlaceholderTitle,
-    cleanTitle, withTitle, asksForOneStaff, partCount, rangeFixOf, aiFailure, warningTodoLines, withLyricsRows, promptFits,
+    cleanTitle, withTitle, asksForOneStaff, partCount, rangeFixOf, aiFailure, warningTodoLines, withLyricsRows, promptFits, compositionHint,
 } from './aiTransformCore';
 import { withTodoMark } from './omrAiFixCore';
 import { markFactsOf, sideFileOf } from './omrScanCore';
@@ -292,7 +292,10 @@ async function runCompose(deps: AiTransformDeps, asked?: string): Promise<void> 
             + 'only when a lead sheet is asked for), gospel (piano or organ under a voice or a choir), a song (a voice part '
             + 'with its words under it, set as the composing guide\'s "A song with words" says) — with melody and accompaniment, varied rhythm, '
             + 'articulations and dynamics. One staff only for a lead sheet, a melody alone or a solo. Give the piece a title of its own that '
-            + 'fits its music and its mood, on a `title "…"` line at the top, in the language of the request.',
+            + 'fits its music and its mood, on a `title "…"` line at the top, in the language of the request.\n'
+            // A starting point drawn at random, the request's own word first (owner's request
+            // 2026-10-29: every "dramatic string quartet" came out D minor, 4/4, A–B–A, the same opening).
+            + compositionHint(),
             true, grammar, documentContext(ai.snap, budget, true), true, description.trim());
     } catch (err: any) {
         const failed = aiFailure('compose', String(err?.message ?? err), Date.now() - began);

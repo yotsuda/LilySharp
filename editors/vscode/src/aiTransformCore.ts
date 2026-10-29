@@ -773,6 +773,28 @@ export function withLyricsRows(text: string): { text: string; added: string[] } 
     return { text: out, added };
 }
 
+/** The choices a starting point is drawn from (compositionHint). */
+const HINT_KEYS = ['C major', 'G major', 'D major', 'A major', 'E major', 'F major', 'B♭ major', 'E♭ major', 'A♭ major',
+    'A minor', 'E minor', 'B minor', 'F♯ minor', 'C♯ minor', 'D minor', 'G minor', 'C minor', 'F minor'];
+const HINT_METERS = ['4/4', '3/4', '6/8', '2/4', '12/8'];
+const HINT_FORMS = ['A–B–A', 'two halves (A–B)', 'a rondo (A–B–A–C–A)', 'a theme and two variations',
+    'an introduction, A–B–A and a coda', 'one section that grows from start to end'];
+const HINT_OPENINGS = ['the bass alone for a bar or two', 'a pickup into the first bar', 'the theme in the lowest part',
+    'a soft chord held, the melody entering over it', 'everyone at once, loud', 'a short introduction on the accompaniment\'s figure'];
+
+/**
+ * A starting point drawn at random, for a piece to begin somewhere other than the model's habit
+ * (owner's request 2026-10-29: six "dramatic string quartets" were all D minor, 4/4, A–B–A, and
+ * opened on the same A–D–F–E–D). A hint, not a rule: the request comes first, and the model takes
+ * what suits the piece. `random` gives numbers in [0, 1) (Math.random; a test passes its own).
+ */
+export function compositionHint(random: () => number = Math.random): string {
+    const pick = <T>(xs: readonly T[]) => xs[Math.min(xs.length - 1, Math.floor(random() * xs.length))];
+    return `A starting point for this piece, drawn at random so that not every piece begins alike — take what suits `
+        + `the music asked for, leave the rest, and whatever the request itself says (a key, a meter, a form, a length, `
+        + `a style) comes first: ${pick(HINT_KEYS)}; ${pick(HINT_METERS)}; ${pick(HINT_FORMS)}; opening with ${pick(HINT_OPENINGS)}.`;
+}
+
 /** Whether an error says the service answered with nothing ("Response contained no choices"). */
 export function isEmptyReply(message: string): boolean {
     return /contained no choices|empty response|no response (was )?returned/i.test(message);

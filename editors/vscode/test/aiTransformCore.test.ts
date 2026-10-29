@@ -24,8 +24,27 @@ import * as path from 'node:path';
 import {
     SEL_CLOSE, SEL_OPEN, carryOffset, documentBudget, documentContext, estimateTokens, isProblem, isUnchanged, marksContext, octaveOutliers,
     pickModel, isAutoModel, pitchToMidi, splitNote, planOf, withoutPlan, startTimeAt, toCandidateEdit, changedWords, diffMarkup, wholeTextMarkup, rangeFixOf,
-    aiFailure, isConnectionError, spokenDuration, servedModelsIn, cleanCandidate, warningTodoLines, withLyricsRows, promptFits,
+    aiFailure, isConnectionError, spokenDuration, servedModelsIn, cleanCandidate, warningTodoLines, withLyricsRows, promptFits, compositionHint,
 } from '../src/aiTransformCore';
+
+// Owner's request 2026-10-29: six "dramatic string quartets" were all D minor, 4/4, A–B–A, with the
+// same opening — a starting point drawn at random, the request's own word first.
+describe('a starting point drawn at random', () => {
+    it('names a key, a meter, a form and an opening, each drawn from its list', () => {
+        assert.equal(compositionHint(() => 0), 'A starting point for this piece, drawn at random so that not every piece begins alike — take what suits '
+            + 'the music asked for, leave the rest, and whatever the request itself says (a key, a meter, a form, a length, '
+            + 'a style) comes first: C major; 4/4; A–B–A; opening with the bass alone for a bar or two.');
+        assert.match(compositionHint(() => 0.9999), /: F minor; 12\/8; one section that grows from start to end; opening with a short introduction on the accompaniment's figure\.$/);
+    });
+    it('differs from piece to piece', () => {
+        const seen = new Set(Array.from({ length: 20 }, () => compositionHint()));
+        assert.ok(seen.size > 1);
+    });
+    it('goes with every Compose with AI request', () => {
+        const src = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'aiTransform.ts'), 'utf8');
+        assert.match(src, /in the language of the request\.\\n'\s*\/\/[^\n]*\n\s*\/\/[^\n]*\n\s*\+ compositionHint\(\),/);
+    });
+});
 
 // Owner's request 2026-10-29: the instructions are some 30 000 tokens, and a model on this machine
 // reads 12 000 — it is told so, not sent them.
