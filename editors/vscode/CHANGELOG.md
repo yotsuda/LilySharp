@@ -43,6 +43,9 @@ All notable changes to the Lily# VS Code extension are documented here.
 - **A reply fenced as ```` ```Lily# ```` is read**: the fence comes off whatever its language tag
   (the `#` stayed as the file's first line, and the piece went back as one that does not compile),
   and a composed piece writes no `composer` line unless asked (two wrote `composer "OpenAI"`).
+- **A pop song's tune syncopates**: the guide asks for a syncopation in at least half the bars of
+  the sung line — a note that comes off the beat and rings across the next one, or a phrase's last
+  note an eighth early, tied over the bar line — with examples in notes.
 - **A piece composed through Copilot's Auto names the model that answered**: its first line said
   `copilot/auto`; it now reads `copilot/gpt-6-luna, via Auto` (several models in order when the
   revisions went to more than one), from GitHub Copilot Chat's log — the API does not say. Without
@@ -1908,6 +1911,9 @@ reader is offered its update when a scan is read.
 - **A reply fenced as ```` ```Lily# ```` is read**: the fence comes off whatever its language tag
   (the `#` stayed as the file's first line, and the piece went back as one that does not compile),
   and a composed piece writes no `composer` line unless asked (two wrote `composer "OpenAI"`).
+- **A pop song's tune syncopates**: the guide asks for a syncopation in at least half the bars of
+  the sung line — a note that comes off the beat and rings across the next one, or a phrase's last
+  note an eighth early, tied over the bar line — with examples in notes.
 - **A piece composed through Copilot's Auto names the model that answered**: its first line said
   `copilot/auto`; it now reads `copilot/gpt-6-luna, via Auto` (several models in order when the
   revisions went to more than one), from GitHub Copilot Chat's log — the API does not say. Without

@@ -218,6 +218,13 @@ describe('the composer\'s prompt', () => {
     });
     // Owner's request 2026-10-29: a poor piece's plan named its theme only in words, and no bar was
     // made of it; its phrases did not answer, it had no high point, its dynamics went against the plan.
+    // Owner's trials 2026-10-29: a pop song's tune mixed quarters, eighths and halves but never
+    // crossed a beat — told now how often, and how.
+    it('asks a pop song\'s sung line for a syncopation in at least half its bars', () => {
+        const grammarDoc = fs.readFileSync(path.join(__dirname, '..', '..', '..', '..', 'docs', 'GRAMMAR_FOR_LLM.md'), 'utf8');
+        assert.match(grammarDoc, /\*\*At least\s+half the bars of the sung line have a syncopation\*\*/);
+        assert.match(grammarDoc, /`r8 g'8 b'8 d''8~ d''4 b'4 \|`/);
+    });
     // Owner's trials 2026-10-29: a violin piece wrote `key b minor` over D major's sharps, printing
     // them again; a piano's left hand leapt from C2 to E4 in one broken chord.
     it('writes no key line for the relative key, and keeps a broken chord within a twelfth', () => {

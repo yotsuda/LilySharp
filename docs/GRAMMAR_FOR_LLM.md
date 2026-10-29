@@ -1162,7 +1162,11 @@ it should sound like the ensemble asked for. What makes it music:
   and narrow, the chorus higher and wider, its hook the song's title words on its highest, most
   repeated phrase. A chord loop of four (I–V–vi–IV, vi–IV–I–V) that changes between verse and
   chorus. A syncopated melody — anticipations tied over the beat, eighths and sixteenths — over a
-  backbeat (drums with the snare on 2 and 4) and bass, keys or guitar, or a piano alone.
+  backbeat (drums with the snare on 2 and 4) and bass, keys or guitar, or a piano alone. **At least
+  half the bars of the sung line have a syncopation**: a note that starts off the beat and is held
+  across the next one (`r8 g'8 b'8 d''8~ d''4 b'4 |` — the D comes an eighth early and rings over
+  beat 3), or a phrase's last note sung an eighth before the bar line and tied into the next bar
+  (`… a'8 g'8~ | g'2 r2 |`). A line of plain quarter notes is a nursery song, not pop.
 - **Rock**: a riff the song is built on — power chords (`<e, b,>`) or a single-note figure on the
   guitar — doubled by the bass, the drums driving with the snare on 2 and 4; verse and chorus in a
   guitar-friendly key (E, A, D, G), an instrumental break (a guitar solo over the verse's chords)
