@@ -773,6 +773,33 @@ export function withLyricsRows(text: string): { text: string; added: string[] } 
     return { text: out, added };
 }
 
+/**
+ * The proposed text with the comment lines that open the file as it stands, where the proposal left
+ * them out (owner's request 2026-10-29: a piece proposed in Copilot's chat dropped "// Composed in
+ * Copilot's chat" and "// Asked: …"). Comments the proposal keeps, anywhere, are not added again.
+ */
+export function withLeadingComments(current: string, proposed: string): string {
+    const lines = current.split(/\r?\n/);
+    const head: string[] = [];
+    for (const line of lines) {
+        if (/^\s*\/\//.test(line)) { head.push(line); continue; }
+        if (line.trim() === '' && head.length > 0) { continue; }
+        break;
+    }
+    const missing = head.filter(l => !proposed.includes(l.trim()));
+    if (missing.length === 0) {
+        return proposed;
+    }
+    const eol = proposed.includes('\r\n') ? '\r\n' : '\n';   // the proposal's own line ends
+    return missing.join(eol) + eol + eol + proposed.replace(/^\s*\r?\n/, '');
+}
+
+/** Whether a file holds no music yet — only comments, blank lines and the opening `octave` / `pitch`
+ *  lines: a proposal for it is a new piece (the composition check is for one). */
+export function isEmptyScore(text: string): boolean {
+    return text.split(/\r?\n/).every(l => /^\s*(\/\/.*|octave\s+\w+|pitch\s+\w+)?\s*$/.test(l));
+}
+
 /** The choices a starting point is drawn from (compositionHint). */
 const HINT_KEYS = ['C major', 'G major', 'D major', 'A major', 'E major', 'F major', 'B♭ major', 'E♭ major', 'A♭ major',
     'A minor', 'E minor', 'B minor', 'F♯ minor', 'C♯ minor', 'D minor', 'G minor', 'C minor', 'F minor'];

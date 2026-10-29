@@ -24,8 +24,32 @@ import * as path from 'node:path';
 import {
     SEL_CLOSE, SEL_OPEN, carryOffset, documentBudget, documentContext, estimateTokens, isProblem, isUnchanged, marksContext, octaveOutliers,
     pickModel, isAutoModel, pitchToMidi, splitNote, planOf, withoutPlan, startTimeAt, toCandidateEdit, changedWords, diffMarkup, wholeTextMarkup, rangeFixOf,
-    aiFailure, isConnectionError, spokenDuration, servedModelsIn, cleanCandidate, warningTodoLines, withLyricsRows, promptFits, compositionHint,
+    aiFailure, isConnectionError, spokenDuration, servedModelsIn, cleanCandidate, warningTodoLines, withLyricsRows, promptFits, compositionHint, withLeadingComments, isEmptyScore,
 } from '../src/aiTransformCore';
+
+// Owner's request 2026-10-29: a piece proposed in Copilot's chat dropped the file's opening
+// comments; a new piece is checked as music once before it is shown.
+describe('a proposal from Copilot\'s chat', () => {
+    const start = '// Composed in Copilot\'s chat, 2026-10-29\r\n// Asked: a quartet\r\n\r\noctave absolute\r\npitch concert\r\n';
+    it('keeps the opening comments the proposal left out', () => {
+        assert.equal(withLeadingComments(start, 'octave absolute\npitch concert\ntitle "A"\n'),
+            '// Composed in Copilot\'s chat, 2026-10-29\n// Asked: a quartet\n\noctave absolute\npitch concert\ntitle "A"\n');
+        const kept = '// Composed in Copilot\'s chat, 2026-10-29\n// Asked: a quartet\noctave absolute\n';
+        assert.equal(withLeadingComments(start, kept), kept);
+        assert.equal(withLeadingComments('title "A"\n', 'title "B"\n'), 'title "B"\n');
+    });
+    it('knows a file with no music yet', () => {
+        assert.ok(isEmptyScore(start));
+        assert.ok(isEmptyScore(''));
+        assert.ok(!isEmptyScore(start + 'title "A"\n'));
+    });
+    it('checks a new piece as music once, its findings sent back unseen', () => {
+        const src = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'aiTransform.ts'), 'utf8');
+        assert.match(src, /const text = withLeadingComments\(current, input\.text\);/);
+        assert.match(src, /if \(isEmptyScore\(current\) && !musicCheckedFor\.has\(uri\.toString\(\)\)\) \{\s*const music = await compositionFindings\(client, text\);\s*musicCheckedFor\.add\(uri\.toString\(\)\);/);
+        assert.match(src, /'Not shown to the musician yet: Lily#\\'s check of a new piece found this —\\n'/);
+    });
+});
 
 // Owner's request 2026-10-29: six "dramatic string quartets" were all D minor, 4/4, A–B–A, with the
 // same opening — a starting point drawn at random, the request's own word first.

@@ -41,7 +41,7 @@ import {
     CandidateEdit as CoreCandidateEdit, ChangedSpan, MarkInSelection, MarkReadings, SEL_CLOSE, SEL_OPEN, cleanCandidate,
     TextChange, carryOffset, documentBudget, documentContext, estimateTokens, isProblem, marksContext, octaveOutliers, splitNote,
     startTimeAt, toCandidateEdit, wholeFileEdit, carrySelection, changedWords, wholeTextMarkup, titleOf, isPlaceholderTitle,
-    cleanTitle, withTitle, asksForOneStaff, partCount, rangeFixOf, aiFailure, warningTodoLines, withLyricsRows, promptFits, compositionHint,
+    cleanTitle, withTitle, asksForOneStaff, partCount, rangeFixOf, aiFailure, warningTodoLines, withLyricsRows, promptFits, compositionHint, withLeadingComments, isEmptyScore,
 } from './aiTransformCore';
 import { withTodoMark } from './omrAiFixCore';
 import { markFactsOf, sideFileOf } from './omrScanCore';
@@ -267,6 +267,9 @@ function registerProposeScoreTool(context: vscode.ExtensionContext, deps: AiTran
     }));
 }
 
+/** The files whose new piece the music check has spoken on, this session: it speaks once a file. */
+const musicCheckedFor = new Set<string>();
+
 /** The proposal shown and decided on; what is told to the chat. */
 async function proposeScore(deps: AiTransformDeps, input: ProposeScoreInput, token: vscode.CancellationToken): Promise<string> {
     if (!input || typeof input.file !== 'string' || typeof input.text !== 'string') {
@@ -281,7 +284,8 @@ async function proposeScore(deps: AiTransformDeps, input: ProposeScoreInput, tok
     const exists = fs.existsSync(input.file);
     const doc = exists ? await vscode.workspace.openTextDocument(uri) : undefined;
     const current = doc?.getText() ?? '';
-    const text = input.text;
+    // The file's opening comments kept, where the proposal left them out (owner's request 2026-10-29).
+    const text = withLeadingComments(current, input.text);
     // Errors go back unseen: the musician is shown only a score that compiles.
     const diags = await checkText(client, text);
     const errors = diags.filter(d => d.Severity === 'error');
@@ -289,6 +293,21 @@ async function proposeScore(deps: AiTransformDeps, input: ProposeScoreInput, tok
         deps.log(`AI proposal (chat): turned down — ${errors.length} error(s).`);
         return `Not shown to the musician: it does not compile.\n${formatDiags(errors, text)}\n`
             + 'Fix these and call lilysharp_proposeScore again with the whole corrected text.';
+    }
+    // A new piece is checked as music once, as Compose with AI checks it (owner's request
+    // 2026-10-29: a chat's quartet had one rhythm in 20 of its first violin's 24 bars, and half notes
+    // below it throughout): the findings go back unseen, and the next proposal is shown whatever
+    // it does with them — the AI may keep what it meant.
+    if (isEmptyScore(current) && !musicCheckedFor.has(uri.toString())) {
+        const music = await compositionFindings(client, text);
+        musicCheckedFor.add(uri.toString());
+        if (music.length > 0) {
+            deps.log(`AI proposal (chat): sent back once as music — ${music.join(' / ')}`);
+            return 'Not shown to the musician yet: Lily#\'s check of a new piece found this —\n'
+                + `${music.map(m => `- ${m}`).join('\n')}\n`
+                + 'Revise the piece with these in mind and call lilysharp_proposeScore again with the whole text. '
+                + 'Where something is as you meant it, keep it: the next proposal is shown as it is.';
+        }
     }
     const before = current ? await checkText(client, current) : [];
     const added = addedWarnings({ HasErrors: false, Diagnostics: diags }, [{ beforeLo: 0, beforeHi: current.length, afterLo: 0, afterHi: text.length }],
