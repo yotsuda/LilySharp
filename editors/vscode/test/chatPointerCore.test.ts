@@ -56,6 +56,8 @@ describe('the pointer put in the chat', () => {
         assert.match(pkg, /"command": "lilysharp\.askAiInChat",\s*"when": "resourceLangId == lilysharp"/);
         const ext = fs.readFileSync(path.join(root, 'src', 'extension.ts'), 'utf8');
         assert.match(ext, /executeCommand\('workbench\.action\.chat\.open', \{ query, isPartialQuery: true, mode: 'agent' \}\)/);
+        // A saved score by its whole path (owner's request 2026-10-29: one name in two folders).
+        assert.match(ext, /const name = doc\.uri\.scheme === 'file' \? doc\.uri\.fsPath\s*:/);
     });
     // Owner's requests 2026-10-29: the preview header's ✨ opens the chat, and so does Ctrl+I, in the
     // preview and in the editor.

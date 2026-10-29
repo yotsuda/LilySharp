@@ -100,7 +100,8 @@ All notable changes to the Lily# VS Code extension are documented here.
   Copilot's chat (they started Lily#'s own Ask AI, which stays in the command palette as
   *Lily#: Ask AI…*); the button sinks when pressed. Ask AI in Chat puts the place the request is about in Copilot's chat input — unsent,
   for you to finish and send: the file alone, or with the notes or bars picked their lines,
-  section, part and bars (`Dusk.lys, lines 5–7 (section A, part vn1, bars 1–3): `). The picked
+  section, part and bars (`C:\songs\Dusk.lys, lines 5–7 (section A, part vn1, bars 1–3): `) — the
+  file by its whole path, so two scores of one name in two folders are not taken for each other. The picked
   notes become the editor's selection, which the chat takes in. An unsaved score is named by its
   whole path, with #readScore to read it.
 - **Compose with AI in Chat**: a menu of its own (File > New File… and the command palette) that
