@@ -612,7 +612,9 @@ async function drive(
                     if (isProblem(parsed)) {
                         turnedDown(attempt, `its edits could not be applied: ${parsed.problem}`);
                         messages.push({ role: 'assistant', content: raw });
-                        messages.push({ role: 'user', content: `${parsed.problem}\nReply again, all edits — same output rules.` });
+                        messages.push({ role: 'user', content: compose
+                            ? `${parsed.problem}\nReply with the whole piece between <file> and </file> — same output rules.`
+                            : `${parsed.problem}\nReply again, all edits — same output rules.` });
                         continue;
                     }
                     // What it makes of the candidate, as one change to the file: Accept writes the
@@ -730,9 +732,14 @@ async function drive(
 
                     // Self-repair: feed the diagnostics back and try again.
                     // Edits are answered against the file as it stands, not on top of the failed ones.
-                    const sameForm = edit.whole
-                        ? 'Reply again with all the corrected edits, each <old> copied from the file as it stands'
-                        : 'Return a corrected replacement for the selection (or <edit> blocks)';
+                    // A composed piece is answered as it was written, whole (owner's report 2026-10-29: asked
+                    // for "the corrected edits, each <old> copied from the file", the composer replied with
+                    // bare <old>/<new>, read as the file — twice — and the music check never ran).
+                    const sameForm = compose
+                        ? 'Reply with the whole corrected piece between <file> and </file>, every bar the report does not name as it was'
+                        : edit.whole
+                            ? 'Reply again with all the corrected edits, each <old> copied from the file as it stands'
+                            : 'Return a corrected replacement for the selection (or <edit> blocks)';
                     messages.push({ role: 'assistant', content: raw });
                     turnedDown(attempt, badness.length > 0
                         ? `it does not compile (${badness.length} error(s), a ${raw.length}-character reply): ${formatDiags(badness.slice(0, 3)).replace(/\s*\n\s*/g, ' / ')}`

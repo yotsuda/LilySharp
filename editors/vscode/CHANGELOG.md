@@ -65,6 +65,10 @@ All notable changes to the Lily# VS Code extension are documented here.
 - **A revision cut off shows the version before it**: when the connection breaks while the AI is
   revising a candidate that still has warnings, the candidate before the revision opens, its caption
   saying the last revision was cut off.
+- **A composed piece's repair asks for the whole piece again**: a warning or an error in a composed
+  piece went back asking for "the corrected edits, each `<old>` copied from the file" — the
+  composer answered with bare `<old>`/`<new>`, which was read as the file, the rounds ran out, and
+  the music checks never saw the piece. It now asks for the whole corrected piece in `<file>`.
 - **A request the AI ended with no answer says so, and offers Try Again**: Copilot's "Response
   contained no choices." (a model that ran 2 min 44 s and sent nothing back) now reads as what
   happened, and the request can be asked again at once.
@@ -1945,6 +1949,10 @@ reader is offered its update when a scan is read.
 - **A revision cut off shows the version before it**: when the connection breaks while the AI is
   revising a candidate that still has warnings, the candidate before the revision opens, its caption
   saying the last revision was cut off.
+- **A composed piece's repair asks for the whole piece again**: a warning or an error in a composed
+  piece went back asking for "the corrected edits, each `<old>` copied from the file" — the
+  composer answered with bare `<old>`/`<new>`, which was read as the file, the rounds ran out, and
+  the music checks never saw the piece. It now asks for the whole corrected piece in `<file>`.
 - **A request the AI ended with no answer says so, and offers Try Again**: Copilot's "Response
   contained no choices." (a model that ran 2 min 44 s and sent nothing back) now reads as what
   happened, and the request can be asked again at once.

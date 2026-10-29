@@ -265,6 +265,12 @@ describe('the composer\'s prompt', () => {
         assert.match(grammarDoc, /a theme that is only words \("a rising broken chord"\) is not one yet/);
     });
     // Owner's report 2026-10-27: a piano piece labelled its staves 右手 and 左手.
+    // Owner's report 2026-10-29: a composed piece's warning went back asking for "the corrected
+    // edits"; the composer replied with bare <old>/<new>, read as the file, and the music check never ran.
+    it('asks a composed piece\'s repair for the whole piece in <file>, not edits', () => {
+        assert.match(transform, /const sameForm = compose\s*\?\s*'Reply with the whole corrected piece between <file> and <\/file>/);
+        assert.match(transform, /content: compose\s*\?\s*`\$\{parsed\.problem\}\\nReply with the whole piece between <file> and <\/file>/);
+    });
     it('writes no composer line unless asked', () => {
         assert.match(transform, /'- Write no `composer` line unless the musician asks for one\.'/);
     });
