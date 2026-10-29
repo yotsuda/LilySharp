@@ -3250,11 +3250,26 @@ internal static class OutsideStaffStacker
 
                 if (m.TempoText != null)
                 {
-                    var (mtUp, mtDown) = TextOutlineSkylines.Place(
-                        m.TempoText, em, fonts.Face(TextRole.Tempo, tempoTextStyle), tx, anchor);
-                    tUp.Merge(mtUp);
-                    tDown.Merge(mtDown);
-                    tx += fonts.Advance(m.TempoText, em, TextRole.Tempo, tempoTextStyle);
+                    // A marking the face cannot spell (CJK: "そよぐ夕暮れ") is drawn from a fallback
+                    // face whose outline the layout never walks: its reserved box over its advance
+                    // stands in, as an expressive text's does (DynamicEngraver), or the label of the
+                    // bar was stacked as if the marking were not there (owner's report 2026-10-29:
+                    // "Intro" over its first characters).
+                    var tempoFace = fonts.Face(TextRole.Tempo, tempoTextStyle);
+                    double markingAdvance = fonts.Advance(m.TempoText, em, TextRole.Tempo, tempoTextStyle);
+                    if (TextFontMetrics.HasMissingGlyph(m.TempoText, em, tempoFace))
+                    {
+                        var (fb, ft) = fonts.InkOrFallbackBox(m.TempoText, em, TextRole.Tempo, tempoTextStyle);
+                        tUp.Merge(VerticalSkyline.FromBox(tx, tx + markingAdvance, anchor + fb, anchor + ft, VerticalDirection.Up));
+                        tDown.Merge(VerticalSkyline.FromBox(tx, tx + markingAdvance, anchor + fb, anchor + ft, VerticalDirection.Down));
+                    }
+                    else
+                    {
+                        var (mtUp, mtDown) = TextOutlineSkylines.Place(m.TempoText, em, tempoFace, tx, anchor);
+                        tUp.Merge(mtUp);
+                        tDown.Merge(mtDown);
+                    }
+                    tx += markingAdvance;
                     if (hasMetronome)
                     {
                         var (pUp, pDown) = TextOutlineSkylines.Place(

@@ -340,7 +340,11 @@ internal static class MetronomeMarkGeometry
         bool hasMetronome = count.Length > 0;
         if (tempoText != null)
         {
-            var tInk = fonts.Ink(tempoText, em, TextRole.Tempo, textStyle);
+            // A marking the face cannot spell (CJK: "そよぐ夕暮れ") is drawn from a fallback face the
+            // layout never measures: its reserved box stands in for the ink, or the mark is
+            // reserved as the parentheses alone and a section label lands on it (owner's report
+            // 2026-10-29: "Intro" over the first characters).
+            var tInk = fonts.InkOrFallbackBox(tempoText, em, TextRole.Tempo, textStyle);
             top = Math.Max(top, tInk.Top);
             bottom = Math.Min(bottom, tInk.Bottom);
             x += fonts.Advance(tempoText, em, TextRole.Tempo, textStyle);
