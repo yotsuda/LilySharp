@@ -427,3 +427,87 @@ describe('the preview offers Play from Here on a note and on a bar', () => {
         assert.match(source, /case 'ctxPlayFromHere':\s*if \(ctxPlayPos >= 0\) \{\s*pendingStartPos = ctxPlayPos;/);
     });
 });
+
+// The page script's own function, taken out of the evaluated template.
+function pageFunction(name: string, context: Record<string, unknown>): unknown {
+    const source = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
+    const start = source.indexOf('return `<!DOCTYPE html>') + 'return '.length;
+    const end = source.indexOf('</html>`;', start) + '</html>`'.length;
+    const html = new vm.Script(source.slice(start, end).replace(/\$\{[^}]*\}/g, 'X')).runInNewContext({}) as string;
+    const at = html.indexOf('function ' + name + '(');
+    assert.ok(at >= 0, name + ' is not in the page script');
+    let depth = 0, close = -1;
+    for (let i = html.indexOf('{', at); i < html.length; i++) {
+        if (html[i] === '{') depth++;
+        else if (html[i] === '}' && --depth === 0) { close = i + 1; break; }
+    }
+    return new vm.Script('(' + html.slice(at, close) + ')').runInNewContext({ Math, Infinity, Array, ...context });
+}
+
+// Owner's report 2026-10-29: in `form { A B A }` on one staff, playing A lit both of its printed
+// copies — each began a system, at one x, and the systems were closer than the 12 a y gap asked
+// for. The copies are told apart by the bar each stands in.
+describe('the preview tells a note\'s printed copies apart by their bars', () => {
+    const rect = (left: number, top: number, w: number, h: number) => ({ left, top, right: left + w, bottom: top + h, width: w, height: h });
+    // Two systems, two bars each; the second system 10 below the first.
+    const bars = [rect(0, 0, 50, 8), rect(50, 0, 50, 8), rect(0, 10, 50, 8), rect(50, 10, 50, 8)];
+    const el = (x: number, y: number) => ({
+        getBBox: () => ({ x, y }),
+        getBoundingClientRect: () => rect(x, y, 1, 1),
+    });
+    const cluster = (boxes: ReturnType<typeof rect>[]) => pageFunction('clusterInstances', {
+        svgContainer: { querySelectorAll: () => boxes.map(b => ({ getBoundingClientRect: () => b })) },
+    }) as (m: unknown[]) => unknown[][];
+    // The sizes of the copies, as an array of this realm (the function's are the vm's).
+    const sizes = (copies: unknown[][]) => Array.from(copies, c => c.length);
+
+    it('splits two copies at one x on systems closer than the old gap', () => {
+        // A chord (two heads) at the start of each system: two copies, not one.
+        const copies = cluster(bars)([el(5, 2), el(5, 3), el(5, 12), el(5, 13)]);
+        assert.deepEqual(sizes(copies), [2, 2]);
+    });
+    it('splits a phrase written twice in one bar, and keeps a mark outside the bars with its note', () => {
+        assert.deepEqual(sizes(cluster(bars)([el(5, 2), el(30, 2)])), [1, 1]);
+        assert.deepEqual(sizes(cluster(bars)([el(5, 2), el(5, 9), el(55, 2)])), [2, 1]);
+    });
+    it('falls back to the gaps where the page draws no bars', () => {
+        assert.deepEqual(sizes(cluster([])([el(5, 2), el(5, 12)])), [2]);
+        assert.deepEqual(sizes(cluster([])([el(5, 2), el(5, 30)])), [1, 1]);
+    });
+});
+
+// Owner's report 2026-10-29: a song's system was taller than half the view, and following one
+// note at a time centred the voice, then the drums it pushed off, then the voice — the view shook.
+describe('the preview keeps what sounds in view, every part together', () => {
+    const rect = (top: number, bottom: number, left = 100, right = 200) => ({ top, bottom, left, right, width: right - left, height: bottom - top });
+    const follow = () => {
+        const scrolls: { top: number; left: number }[] = [];
+        const mainContent = {
+            getBoundingClientRect: () => rect(0, 600, 0, 800),
+            scrollBy: (o: { top: number; left: number }) => scrolls.push(o),
+        };
+        const keep = pageFunction('keepSoundingInView', { mainContent }) as (els: unknown[]) => void;
+        const notes = (...rs: ReturnType<typeof rect>[]) => rs.map(r => ({ getBoundingClientRect: () => r }));
+        return { keep, notes, scrolls };
+    };
+    it('leaves alone what is all in view', () => {
+        const { keep, notes, scrolls } = follow();
+        keep(notes(rect(100, 110), rect(400, 410)));
+        assert.equal(scrolls.length, 0);
+    });
+    it('centres the parts together when they fit, not one note', () => {
+        const { keep, notes, scrolls } = follow();
+        keep(notes(rect(500, 510), rect(800, 810)));
+        assert.equal(scrolls.length, 1);
+        assert.equal(scrolls[0].top, (500 + 810) / 2 - 300);
+    });
+    it('keeps the top of a system taller than the view, and does not move for its lower part', () => {
+        const { keep, notes, scrolls } = follow();
+        // The voice at 40, the drums at 900: the drums out of sight, the top in view — no move.
+        keep(notes(rect(40, 50), rect(900, 910)));
+        assert.equal(scrolls.length, 0);
+        // The same system come up from below: its top goes to the view's top.
+        keep(notes(rect(700, 710), rect(1500, 1510)));
+        assert.deepEqual(scrolls.map(s => s.top), [700 - 30]);
+    });
+});

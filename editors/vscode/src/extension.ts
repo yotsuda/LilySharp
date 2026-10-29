@@ -5014,22 +5014,47 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         function clusterInstances(matches) {
             // DOM order IS drawing order (measure by measure, system by
             // system) - i.e. chronological within the part's staff. Keep it,
-            // and only SPLIT when the next element sits far from the
-            // previous one (another measure or another system). The earlier
-            // y-band sort could merge two systems through ledger-note ys and
-            // then x-sorting interleaved their copies out of time order.
+            // and only SPLIT when the next element sits in another bar, or far
+            // from the previous one in its bar (a phrase written twice in one
+            // bar). The earlier y-band sort could merge two systems through
+            // ledger-note ys and then x-sorting interleaved their copies out of
+            // time order.
+            // ⚠️ THE BAR, NOT A Y GAP, tells two systems apart (owner's report
+            // 2026-10-29: in "form { A B A }" on one staff, playing A lit both
+            // copies — each began a system, at one x, and the systems were less
+            // than the 12 apart the gap asked for). The bar is the preview's
+            // bar-box the element's left edge stands in; the gap stays where
+            // there are none.
+            const boxes = Array.from(svgContainer.querySelectorAll('rect.bar-box'))
+                .map(r => r.getBoundingClientRect());
+            const barOf = (el) => {
+                if (boxes.length === 0) return -1;
+                const b = el.getBoundingClientRect();
+                const x = b.left + 0.5, y = (b.top + b.bottom) / 2;
+                for (let i = 0; i < boxes.length; i++) {
+                    const r = boxes[i];
+                    if (x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) return i;
+                }
+                return -1;
+            };
             const instances = [];
             let inst = null;
             let prev = null;
             for (const el of matches) {
                 let x = 0, y = 0;
                 try { const b = el.getBBox(); x = b.x; y = b.y; } catch (e) { /* non-SVG */ }
-                if (!inst || Math.abs(x - prev.x) > 6 || Math.abs(y - prev.y) > 12) {
+                // An element outside every bar (a mark below the staves) stays with the one before.
+                let bar = barOf(el);
+                if (bar < 0 && prev) bar = prev.bar;
+                const apart = !prev ? true
+                    : bar >= 0 && prev.bar >= 0 ? bar !== prev.bar || Math.abs(x - prev.x) > 6
+                    : Math.abs(x - prev.x) > 6 || Math.abs(y - prev.y) > 12;
+                if (!inst || apart) {
                     inst = [];
                     instances.push(inst);
                 }
                 inst.push(el);
-                prev = { x: x, y: y };
+                prev = { x: x, y: y, bar: bar };
             }
             return instances;
         }
@@ -5697,17 +5722,41 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                     lastHighlightPos = r.sounding[0].pos;
                     lastResolvedPos = r.sounding[0].pos;
                 }
-                const el = r.hadNew && painted.length > 0 ? painted[0] : null;
-                if (el) {
-                    const rect = el.getBoundingClientRect();
-                    const m = mainContent.getBoundingClientRect();
-                    const off = rect.top < m.top + 30 || rect.bottom > m.bottom - 30
-                             || rect.left < m.left + 30 || rect.right > m.right - 30;
-                    if (off) el.scrollIntoView({ block: 'center', inline: 'center', behavior: 'smooth' });
-                }
+                if (r.hadNew && painted.length > 0) keepSoundingInView(painted);
             };
             followTick = tick;
             playheadTimer = setInterval(tick, 50);
+        }
+
+        // Keeps what sounds now in view, the notes of every part TOGETHER (owner's report
+        // 2026-10-29: a song's system — chords, voice, words, guitar, bass, drums — was taller
+        // than half the view, and following one note at a time centred the voice, then the
+        // drums it pushed off, then the voice: the view shook up and down). Their union is
+        // centred when it fits the view; when it does not, its top is kept near the view's top,
+        // moved only when that top is out of sight — so a voice's rest does not move it.
+        function keepSoundingInView(els) {
+            let top = Infinity, bottom = -Infinity, left = Infinity, right = -Infinity;
+            for (const el of els) {
+                const b = el.getBoundingClientRect();
+                if (b.width === 0 && b.height === 0) continue;
+                top = Math.min(top, b.top); bottom = Math.max(bottom, b.bottom);
+                left = Math.min(left, b.left); right = Math.max(right, b.right);
+            }
+            if (top === Infinity) return;
+            const m = mainContent.getBoundingClientRect();
+            const margin = 30;
+            const fits = bottom - top <= m.height - 2 * margin;
+            const offV = fits
+                ? top < m.top + margin || bottom > m.bottom - margin
+                : top < m.top + margin || top > m.bottom - 2 * margin;
+            const offH = right - left <= m.width - 2 * margin
+                ? left < m.left + margin || right > m.right - margin
+                : left < m.left + margin || left > m.right - 2 * margin;
+            if (!offV && !offH) return;
+            const dy = !offV ? 0 : fits ? (top + bottom) / 2 - (m.top + m.bottom) / 2 : top - (m.top + margin);
+            const dx = !offH ? 0 : (right - left <= m.width - 2 * margin)
+                ? (left + right) / 2 - (m.left + m.right) / 2 : left - (m.left + margin);
+            mainContent.scrollBy({ top: dy, left: dx, behavior: 'smooth' });
         }
 
         // The fallback: oscillator patches, one node pair per note, built up front (fine
