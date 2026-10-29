@@ -107,7 +107,10 @@ public static class CompositionChecks
         // (owner's rules 2026-10-27: "a song with electric guitar and drums" came back with no bass;
         // guitar and bass ask for drums as well; a band does not change tempo in the middle).
         var roles = parts.Select(p => RoleOf(p)).ToList();
-        bool band = roles.Any(r => r.Drums || r.Electric) || (roles.Any(r => r.Bass) && roles.Any(r => r.Chords));
+        // Drums alone do not make one: strings with drums are an orchestra's (owner's trial
+        // 2026-10-29: a boss-battle piece for strings and drums was asked for a bass and a guitar).
+        bool band = roles.Any(r => r.Electric) || (roles.Any(r => r.Bass) && roles.Any(r => r.Chords))
+            || (roles.Any(r => r.Drums) && roles.Any(r => r.Bass || r.Chords));
         if (band && parts.Count >= 2)
         {
             if (!roles.Any(r => r.Drums))
@@ -388,10 +391,12 @@ public static class CompositionChecks
             .Select(m => m.Groups[1].Value).ToHashSet(System.StringComparer.Ordinal);
         if (sung.Count > 0)
             return sung;
+        // Beside a piano only (owner's trial 2026-10-29: in strings with drums, every string — the
+        // viola's figure, the cello's bass — was held to a melody's rhythm).
         var solos = parts.Where(p => !hands.ContainsKey(p.Name.Text)
                 && !(RoleOf(p) is var r && (r.Drums || r.Bass || (band && r.Chords))))
             .Select(p => p.Name.Text).ToHashSet(System.StringComparer.Ordinal);
-        if (solos.Count > 0 && solos.Count < parts.Count)
+        if (hands.Count > 0 && solos.Count > 0 && solos.Count < parts.Count)
             return solos;
         return hands.Where(h => !h.Value).Select(h => h.Key).ToHashSet(System.StringComparer.Ordinal);
     }

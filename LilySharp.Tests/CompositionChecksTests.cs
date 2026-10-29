@@ -321,6 +321,37 @@ public class CompositionChecksTests
         Assert.Contains(sung, f => f.StartsWith("sop, the melody: "));
     }
 
+    /// <summary>Strings with drums are no band, and no string of them a solo (owner's trial
+    /// 2026-10-29: a boss-battle piece for strings and drums was asked for a bass and a guitar, and
+    /// its viola's figure and cello's bass were held to a melody's rhythm).</summary>
+    [Fact]
+    public void StringsWithDrums_AreNoBand_AndNoneOfThemASolo()
+    {
+        static string Bars(string bar) => string.Concat(Enumerable.Repeat(bar + " | ", 16));
+        string piece = $$"""
+            octave absolute
+            time 4/4
+            key d minor
+            part vn { instrument violin }
+            part va { instrument viola }
+            part vc { instrument cello }
+            part kit { clef percussion }
+            section A {
+              vn { {{Bars("d''8@f f'' a''4 g''8 f'' d''4")}} }
+              va { {{Bars("d'8@f a' d' a' f' a' d' a'")}} }
+              vc { {{Bars("d,4@f a, d, a,")}} }
+              kit { {{Bars("bd4@f sn bd sn")}} }
+            }
+            form { A }
+            """;
+        var findings = CompositionChecks.Of(piece);
+        Assert.DoesNotContain(findings, f => f.StartsWith("A band piece"));
+        Assert.DoesNotContain(findings, f => f.Contains(", the melody: "));
+        // With a bass guitar or keyboards beside the drums it is a band, as before.
+        Assert.Contains(CompositionChecks.Of(piece.Replace("part va { instrument viola }", "part va { instrument guitar midiInstrument \"electric guitar (clean)\" }")),
+            f => f.StartsWith("A band piece has an electric bass"));
+    }
+
     [Fact]
     public void TheMelody_IsHeldToMoreRhythmThanItsAccompaniment()
     {
