@@ -317,6 +317,18 @@ public class CompositionChecksTests
             f => f.StartsWith("A tune is played"));
     }
 
+    // Owner's trial 2026-10-30: a rock trio's bass jumped E1–E2–E1–B2–E2–D3 eighth by eighth.
+    [Fact]
+    public void ABandBassLeapingOctaves_IsSaid()
+    {
+        string Rock(string bass) => Band(Guitar + "\n" + Bass + "\n" + Drums,
+            $"  gtr {{ {string.Concat(Enumerable.Repeat("e'8 g' b'4 a'8 g' fis'4 | g'4. a'8 b'2 | ", 4))} }}\n  bass {{ {string.Concat(Enumerable.Repeat(bass, 8))} }}\n"
+            + $"  kit {{ voice {{ {string.Concat(Enumerable.Repeat("hh8 hh hh hh hh hh hh hh | ", 8))} }} {{ {string.Concat(Enumerable.Repeat("bd4 sn bd sn | ", 8))} }} }}",
+            "staff gtr  staff bass  staff kit", "tempo 176");
+        Assert.Contains(CompositionChecks.Of(Rock("e,,8 e, e,, b, e, d b, e,, | ")), f => f.StartsWith("bass: 25% of its steps leap more than an octave"));
+        Assert.DoesNotContain(CompositionChecks.Of(Rock("e,8 e, e, e e, e, b, e, | ")), f => f.Contains("leap more than an octave"));
+    }
+
     // Owner's report 2026-10-29: a rock trio's Chorus2 was its Chorus again, every part.
     [Fact]
     public void ASectionWrittenTwice_IsToldToBeNamedAgain()

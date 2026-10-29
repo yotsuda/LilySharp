@@ -267,6 +267,22 @@ public static class CompositionChecks
                     + "groove under a tune, not the tune.");
         }
 
+        // A band's bass leaping about (owner's trial 2026-10-30: a rock trio's bass at ♩=176 jumped
+        // E1–E2–E1–B2–E2–D3 eighth by eighth, two octaves in a bar). A bass drives the root with the
+        // kick; an octave is its own, more than one from note to note is not.
+        foreach (var bass in bandBasses)
+        {
+            var lows = midi.Tracks.SelectMany(t => t.Notes.Where(n => (n.Part ?? t.Name) == bass && n.Channel != 9))
+                .GroupBy(n => n.StartTick).OrderBy(g => g.Key).Select(g => g.Min(n => n.Pitch)).ToList();
+            if (lows.Count < 16)
+                continue;
+            int wide = lows.Zip(lows.Skip(1), (a, b) => System.Math.Abs(a - b)).Count(d => d > 12);
+            if (wide >= (lows.Count - 1) * BassLeapShare)
+                findings.Add($"{bass}: {wide * 100 / (lows.Count - 1)}% of its steps leap more than an octave — a band's bass drives "
+                    + "the chord's root in eighths with the kick drum (an octave or a fifth now and then, a run at a fill) and "
+                    + "doubles the riff; it does not jump octaves from note to note.");
+        }
+
         // A staff labelled by the hand that plays it (owner's report 2026-10-27: a piano piece printed
         // 右手 and 左手 beside its staves) — a score names the instrument, and a solo piano none.
         var handNamed = parts.Where(p => new[] { p.DisplayName, p.ShortName }.Any(n => n != null && HandLabel.IsMatch(n)))
@@ -436,7 +452,7 @@ public static class CompositionChecks
 
     // A band's line in a bar: most of its onsets single notes; and the share of the bars a tune is
     // heard in, under which an instrumental has none to speak of (owner's report 2026-10-29).
-    private const double TuneSingleShare = 0.7, TunedBarsShare = 0.5;
+    private const double TuneSingleShare = 0.7, TunedBarsShare = 0.5, BassLeapShare = 0.2;
     private const double AcrossBeatShare = 0.2;
 
     /// <summary>The seconds from the start to <paramref name="tick"/>, by the tempo changes of every
