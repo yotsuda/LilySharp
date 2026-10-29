@@ -30,6 +30,11 @@ All notable changes to the Lily# VS Code extension are documented here.
   the devices of the character asked for, the ending — and the piece is held to it before it is
   sent. A piece fits one printed page (about 16 to 32 bars) unless a length is asked for; it was
   32 to 64, and the extra bars were filler.
+- **Compose with AI knows more kinds of music, and how to set words**: a solo instrument with piano
+  (the solo above the piano, where it sings), a pop song (verse, chorus, its hook), rock (a riff),
+  gospel (call and response, rich chords, the "amen" ending), and a song's words — one syllable a
+  note, Japanese one mora a note written apart (`き ら き ら`: Lily# does not split kana), the
+  stress or pitch accent with the melody, a line of words a phrase of music.
 - **A piece composed through Copilot's Auto names the model that answered**: its first line said
   `copilot/auto`; it now reads `copilot/gpt-6-luna, via Auto` (several models in order when the
   revisions went to more than one), from GitHub Copilot Chat's log — the API does not say. Without
@@ -1882,6 +1887,11 @@ reader is offered its update when a scan is read.
   the devices of the character asked for, the ending — and the piece is held to it before it is
   sent. A piece fits one printed page (about 16 to 32 bars) unless a length is asked for; it was
   32 to 64, and the extra bars were filler.
+- **Compose with AI knows more kinds of music, and how to set words**: a solo instrument with piano
+  (the solo above the piano, where it sings), a pop song (verse, chorus, its hook), rock (a riff),
+  gospel (call and response, rich chords, the "amen" ending), and a song's words — one syllable a
+  note, Japanese one mora a note written apart (`き ら き ら`: Lily# does not split kana), the
+  stress or pitch accent with the melody, a line of words a phrase of music.
 - **A piece composed through Copilot's Auto names the model that answered**: its first line said
   `copilot/auto`; it now reads `copilot/gpt-6-luna, via Auto` (several models in order when the
   revisions went to more than one), from GitHub Copilot Chat's log — the API does not say. Without

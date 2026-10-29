@@ -260,9 +260,11 @@ async function runCompose(deps: AiTransformDeps, asked?: string): Promise<void> 
             `Compose a new piece: ${description.trim()}\nThe file is an empty start: plan the piece in <plan>, then `
             + 'write it whole in <file>, as the grammar\'s "Compose a piece" recipe says for '
             + 'its kind of music — concert music (an instrument for every part, a staffGroup for an ensemble, '
-            + 'a form whose sections contrast and a theme that returns), a band (the whole rhythm section — drums, electric bass, guitar or '
+            + 'a form whose sections contrast and a theme that returns), a solo instrument with piano (the solo on its staff '
+            + 'above the piano\'s), a band — rock, pop — (the whole rhythm section — drums, electric bass, guitar or '
             + 'keyboards — at one tempo), jazz (a combo; a lead sheet — one melody staff under a chords row — '
-            + 'only when a lead sheet is asked for) — with melody and accompaniment, varied rhythm, '
+            + 'only when a lead sheet is asked for), gospel (piano or organ under a voice or a choir), a song (a voice part '
+            + 'with its words under it, set as the recipe\'s "A song with words" says) — with melody and accompaniment, varied rhythm, '
             + 'articulations and dynamics. One staff only for a lead sheet, a melody alone or a solo. Give the piece a title of its own that '
             + 'fits its music and its mood, on a `title "…"` line at the top, in the language of the request.',
             true, grammar, documentContext(ai.snap, budget, true), true, description.trim());
@@ -1051,13 +1053,15 @@ function composeSystemPrompt(grammar: string, modelName?: string): string {
         '   says what changes.',
         '   KEY, METER, TEMPO.',
         '   HARMONY — every phrase\'s chords, bar by bar, and its cadence.',
-        '   THEME — the motif the piece is made of, one or two bars, WRITTEN OUT here in this file\'s notes with its',
-        '   rhythm (`fis\'\'2 e\'\'8 d\'\'8 | d\'\'4 b\'4 g\'\'4 |`) — a rhythm of its own, not even quarters — and the',
-        '   bars where it comes back: repeated, sequenced, varied.',
+        '   THEME — the motif the piece is made of (a melody\'s motif, a song\'s hook, a band\'s riff, a jazz head\'s',
+        '   opening figure), one or two bars, WRITTEN OUT here in this file\'s notes with its rhythm',
+        '   (`fis\'\'2 e\'\'8 d\'\'8 | d\'\'4 b\'4 g\'\'4 |`) — a rhythm of its own, not even quarters — and the bars',
+        '   where it comes back: repeated, sequenced, varied.',
         '   PHRASES — for each phrase its bars, the note it starts on, its highest note, and the note it ends on',
         '   over its cadence. The second phrase of a pair starts as the first did and ends otherwise: the first',
-        '   stops on V, the second closes on I.',
-        '   CLIMAX — the one bar and note the piece rises to, and how the dynamics lead there and away.',
+        '   stops open (on V, or the chord that leads back), the second closes on I.',
+        '   CLIMAX — the one bar and note the piece rises to (in a song, the chorus\'s high note), and how the',
+        '   dynamics lead there and away.',
         '   PARTS — what each part does in each section (melody, bass line, inner parts, the accompaniment figure',
         '   and its rhythm — a contrasting section has a figure of its own) and its register, as sounding pitches',
         '   (C4 = middle C) AND as you will write them in this file (a right hand round C5, D4–A5, is written',
@@ -1068,6 +1072,10 @@ function composeSystemPrompt(grammar: string, modelName?: string): string {
         '   "かっこいい": a driving rhythm, syncopation and accents, octaves and chords on the strong beats, a run',
         '   into the climax; for "lovely", "すてき": a singing line with long notes at its peaks, a gentle flowing',
         '   accompaniment).',
+        // Owner's request 2026-10-29: the guide covers songs, and how words are set.
+        '   WORDS (a song only) — each line of the words under its phrase, its syllables counted against the',
+        '   phrase\'s notes (Japanese one mora a note, each written apart: `き ら き ら`), the stressed syllables',
+        '   or the pitch accent where the melody puts them.',
         '   ENDING — in the home key, on a held tonic chord, at the dynamic planned for it.',
         '2. <note> … </note> — one or two sentences to the musician about the piece, warm and plain, in the language',
         '   of the request.',

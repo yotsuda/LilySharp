@@ -218,12 +218,22 @@ describe('the composer\'s prompt', () => {
     });
     // Owner's request 2026-10-29: a poor piece's plan named its theme only in words, and no bar was
     // made of it; its phrases did not answer, it had no high point, its dynamics went against the plan.
+    // Owner's request 2026-10-29: the guide covers jazz, a violin, rock, pop and gospel, and how words are set.
+    it('guides the other kinds of music and the setting of words, Japanese one mora a note', () => {
+        const grammarDoc = fs.readFileSync(path.join(__dirname, '..', '..', '..', '..', 'docs', 'GRAMMAR_FOR_LLM.md'), 'utf8');
+        for (const kind of ['**A solo instrument with piano**', '**A pop song**', '**Rock**', '**Gospel**', '**A song with words**']) {
+            assert.ok(grammarDoc.includes(kind), kind);
+        }
+        assert.match(grammarDoc, /\*\*Japanese is sung one mora a note, each written apart\*\*: `き ら き ら ひ か る`\. Lily# does not\s+split kana/);
+        assert.match(transform, /WORDS \(a song only\) — each line of the words under its phrase/);
+        assert.match(transform, /gospel \(piano or organ under a voice or a choir\), a song \(a voice part/);
+    });
     it('has the plan fill in every heading, the theme in notes, and the file held to the plan', () => {
-        for (const heading of ['LENGTH AND FORM', 'KEY, METER, TEMPO', 'HARMONY', 'THEME', 'PHRASES', 'CLIMAX', 'PARTS', 'DYNAMICS', 'CHARACTER', 'ENDING']) {
+        for (const heading of ['LENGTH AND FORM', 'KEY, METER, TEMPO', 'HARMONY', 'THEME', 'PHRASES', 'CLIMAX', 'PARTS', 'DYNAMICS', 'CHARACTER', 'WORDS', 'ENDING']) {
             assert.ok(transform.includes(`'   ${heading}`), heading);
         }
-        assert.match(transform, /THEME — the motif the piece is made of, one or two bars, WRITTEN OUT here in this file\\'s notes with its/);
-        assert.match(transform, /The second phrase of a pair starts as the first did and ends otherwise: the first',\s*'\s*stops on V, the second closes on I\./);
+        assert.match(transform, /THEME — the motif the piece is made of \(a melody\\'s motif[\s\S]*?WRITTEN OUT here in this file\\'s notes with its rhythm/);
+        assert.match(transform, /The second phrase of a pair starts as the first did and ends otherwise: the first',\s*'\s*stops open \(on V, or the chord that leads back\), the second closes on I\./);
         assert.match(transform, /Then hold',\s*'\s*the file to the plan:/);
         const grammarDoc = fs.readFileSync(path.join(__dirname, '..', '..', '..', '..', 'docs', 'GRAMMAR_FOR_LLM.md'), 'utf8');
         assert.match(grammarDoc, /\*\*Phrases that answer\*\*/);

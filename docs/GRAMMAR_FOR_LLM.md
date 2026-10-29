@@ -1092,19 +1092,21 @@ it should sound like the ensemble asked for. What makes it music:
   on two staves (piano, harp) — never four players.
 - **A form, at the length it needs**: unless the request gives a length, a piece fits one printed
   page — about 16 to 32 bars: an A–B–A with a short coda (2 to 4 bars), or a song's form — complete
-  and shapely rather than long, never a bar added to reach a length. Its phrases are of 4 and 8
-  bars, each closing on a cadence: a half cadence (on V) to go on, an authentic one (V–I) to close
-  a section.
+  and shapely rather than long, never a bar added to reach a length. A song counts its WRITTEN
+  bars: a verse or a chorus sung again is named again in the form (its new words as verses,
+  `[1. …] [2. …]`), not written twice. Its phrases are of 4 and 8 bars, each closing on a cadence:
+  a half cadence (on V) to go on, an authentic one (V–I) to close a section.
 - **Phrases that answer**: the second phrase of a pair starts as the first did and ends otherwise
-  — the first stops on V, the second closes on I. Each phrase rises to a high note and falls to its
-  cadence.
+  — the first stops open (on V, or on the chord that leads back: a jazz turnaround, a rock IV or
+  ♭VII), the second closes on I. Each phrase rises to a high note and falls to its cadence.
 - **One climax**: the piece rises to one high point — a bar and a note, the loudest place — and the
-  dynamics lead there and away.
+  dynamics lead there and away. In a song it is the chorus's high note, strongest its last time.
 - **Harmony first**: each phrase has its chord progression in the key, and every part is
   written from it — the bass on the chords' roots and inversions, the inner parts on their
   tones, the melody's strong beats on chord tones and its passing notes between them.
-- **A theme**: a motif of a bar or two that the piece is made of — with a rhythm of its own, not
-  even quarters — stated, repeated, sequenced, varied, and back near the end. Decide it in notes
+- **A theme**: a motif of a bar or two that the piece is made of — a melody's motif, a song's hook,
+  a band's riff, a jazz head's opening figure — with a rhythm of its own, not even quarters —
+  stated, repeated, sequenced, varied, and back near the end. Decide it in notes
   before writing the piece: a theme that is only words ("a rising broken chord") is not one yet.
 - **A section that returns is named again, not copied**: one that comes back as it was is written
   once and played twice by the form (`form { A B A Coda }`) — never a second section with the same
@@ -1146,6 +1148,45 @@ it should sound like the ensemble asked for. What makes it music:
   (`e'8~ | e'4`), chord tones on the strong beats and the colour tones (9ths, 13ths, the ♭9) for
   tension. The head in sections of 8 bars (AABA, ABAC — 32 bars, or a 16-bar or 12-bar blues). The
   sheet is written `score { chords NAME  staff lead }`, the row above its staff.
+- **A solo instrument with piano** ("a violin piece", "for flute and piano", a sax ballad): the
+  solo sings the melody on its own staff, above the piano's `grandStaff` (`score { staff vn
+  grandStaff { staff rh  staff lh } }`), and the piano accompanies — it does not double the tune
+  bar after bar; it takes the line where the solo rests. The solo lies where it sings: a violin
+  round D5–A5 (its low G string for warmth, the E string for brilliance), a flute round A4–A6, a
+  cello round C3–A4. Slurs are a string player's bowings — a slur of a few notes, not a whole
+  phrase; a wind player breathes at the rests between phrases; a double stop on a violin now and
+  then, never a run of them.
+- **A pop song**: intro, verse, pre-chorus, chorus (bridge before the last chorus) — the verse low
+  and narrow, the chorus higher and wider, its hook the song's title words on its highest, most
+  repeated phrase. A chord loop of four (I–V–vi–IV, vi–IV–I–V) that changes between verse and
+  chorus. A syncopated melody — anticipations tied over the beat, eighths and sixteenths — over a
+  backbeat (drums with the snare on 2 and 4) and bass, keys or guitar, or a piano alone.
+- **Rock**: a riff the song is built on — power chords (`<e, b,>`) or a single-note figure on the
+  guitar — doubled by the bass, the drums driving with the snare on 2 and 4; verse and chorus in a
+  guitar-friendly key (E, A, D, G), an instrumental break (a guitar solo over the verse's chords)
+  before the last chorus.
+- **Gospel**: a piano (or an organ: `midiInstrument "drawbar organ"`) under a solo voice, a choir
+  (`choirStaff`, soprano–alto–tenor–bass in close harmony), or both in call and response — the
+  soloist sings a line, the choir answers it. Rich chords (added 9ths and 7ths, a dominant with a
+  sus4 before it resolves, passing diminished chords, the bass walking up into the next chord), a
+  slow 12/8 or a swinging fast 4/4, and the IV–I "amen" at the end.
+- **A song with words** (a voice part — `instrument soprano`, `alto`, `tenor` or `voice-bass`, the
+  vocal line of a pop song too — and its lyrics row under it, see *Lyrics*):
+  - One syllable a note; a melisma (one syllable over several notes) is a slur and is rare.
+  - **Japanese is sung one mora a note, each written apart**: `き ら き ら ひ か る`. Lily# does not
+    split kana — `きらきら` written together is ONE syllable on one note, with no warning. A small
+    kana goes with the one before it (`きゃ`, `ちょ` are one mora); `っ`, `ん` and a long vowel's
+    `ー` are moras of their own and take a note (or sit inside a held note's slur).
+  - English: one syllable a note, a word's syllables joined by `-` (`Hap- py`); the stressed
+    syllables on the strong beats, the weak ones off them.
+  - The melody follows the words: in Japanese a word's pitch accent goes with the line (`あ`↘`め`,
+    rain, falls from its first mora; a note that rises there makes it 飴, candy); in English the
+    stress. A long or high note on an open vowel (a, o, e), not on i or u or a closed syllable.
+  - A line of words is a phrase of music: the line ends where the phrase does, on a longer note, a
+    rest after it to breathe; a comma in the words is a breath in the line.
+  - Count every bar: as many syllables as notes, less the notes a slur or a tie carries over.
+  - Words the request gives are set as they stand. Words written for it tell their story in the
+    verses and come back unchanged in the chorus, its hook the title.
 - **A piano piece** is written for two hands that fill the keyboard between them: the left
   hand's figure — broken chords, an octave bass, a root-and-fifth beat, an ostinato — reaching
   up toward middle C, the right hand's melody round C5 with its harmony under it (thirds, sixths,
