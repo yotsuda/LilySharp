@@ -384,6 +384,17 @@ function unsavedNamed(file: string): vscode.TextDocument | undefined {
         && d.uri.fsPath.toLowerCase() === path.resolve(file).toLowerCase());
 }
 
+/** The score a chat's tool call means, as the editor holds it: an unsaved one named by the path, else
+ *  the file open in the editor, else the file on the disk; undefined when there is none. The reading
+ *  and the proposing tool find it alike (owner's report 2026-10-29: "make it longer" — the reading
+ *  tool found the open score, the proposing one did not, and wrote the longer piece over it as new). */
+async function scoreDocument(file: string): Promise<vscode.TextDocument | undefined> {
+    return unsavedNamed(file)
+        ?? vscode.workspace.textDocuments.find(d => d.uri.scheme === 'file'
+            && d.uri.fsPath.toLowerCase() === path.resolve(file).toLowerCase())
+        ?? (fs.existsSync(file) ? await vscode.workspace.openTextDocument(vscode.Uri.file(file)) : undefined);
+}
+
 /** What Copilot's chat hands the reading tool. */
 interface ReadScoreInput {
     /** The .lys file, its absolute path — an unsaved one's, the path it is named by. */
@@ -396,10 +407,7 @@ async function readScore(input: ReadScoreInput): Promise<string> {
     if (!input || typeof input.file !== 'string') {
         return 'Nothing read: give `file` (the .lys file\'s absolute path).';
     }
-    const doc = unsavedNamed(input.file)
-        ?? vscode.workspace.textDocuments.find(d => d.uri.scheme === 'file'
-            && d.uri.fsPath.toLowerCase() === path.resolve(input.file).toLowerCase())
-        ?? (fs.existsSync(input.file) ? await vscode.workspace.openTextDocument(vscode.Uri.file(input.file)) : undefined);
+    const doc = await scoreDocument(input.file);
     if (!doc) {
         return `Nothing read: no score ${input.file} is open in the editor or on the disk.`;
     }
@@ -420,10 +428,9 @@ async function proposeScore(deps: AiTransformDeps, input: ProposeScoreInput, tok
     if (!client || !deps.isReady()) {
         return 'Nothing shown: the Lily# language server is not running. Write the file directly instead.';
     }
-    const untitled = unsavedNamed(input.file);
-    const uri = untitled?.uri ?? vscode.Uri.file(input.file);
-    const exists = untitled !== undefined || fs.existsSync(input.file);
-    const doc = untitled ?? (exists ? await vscode.workspace.openTextDocument(uri) : undefined);
+    const doc = await scoreDocument(input.file);
+    const uri = doc?.uri ?? vscode.Uri.file(input.file);
+    const exists = doc !== undefined;
     const current = doc?.getText() ?? '';
     // The file's opening comments kept, where the proposal left them out (owner's request 2026-10-29).
     const text = withLeadingComments(current, input.text);

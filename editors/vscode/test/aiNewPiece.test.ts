@@ -112,7 +112,11 @@ describe('the composing guide', () => {
         // A file not there opens as an unsaved score named by its path, as Compose with AI in Chat's.
         assert.match(write, /const target = exists && doc \? doc : await vscode\.workspace\.openTextDocument\(uri\.with\(\{ scheme: 'untitled' \}\)\);/);
         assert.ok(!/createFile/.test(write));
-        assert.match(fn, /const untitled = unsavedNamed\(input\.file\);/);
+        // The score found as the reading tool finds it — unsaved, else open, else on the disk (owner's
+        // report 2026-10-29: renamed on the disk while the chat worked, the open score was written over as new).
+        assert.match(fn, /const doc = await scoreDocument\(input\.file\);\s*const uri = doc\?\.uri \?\? vscode\.Uri\.file\(input\.file\);\s*const exists = doc !== undefined;/);
+        const find = transform.slice(transform.indexOf('async function scoreDocument('), transform.indexOf('interface ReadScoreInput'));
+        assert.match(find, /return unsavedNamed\(file\)\s*\?\? vscode\.workspace\.textDocuments\.find\(d => d\.uri\.scheme === 'file'/);
         assert.match(transform, /d\.uri\.scheme === 'untitled'\s*&& d\.uri\.fsPath\.toLowerCase\(\) === path\.resolve\(file\)\.toLowerCase\(\)/);
         assert.match(fn, /return 'Not decided: the musician went on in the chat before deciding, and the file is unchanged\. '/);
         assert.match(transform, /<button id="iterate"[^>]*\$\{fromChat \? ' hidden' : ''\}>Ask Again…<\/button>/);
@@ -128,7 +132,7 @@ describe('the composing guide', () => {
         assert.match(pkg, /"onLanguageModelTool:lilysharp_readScore"/);
         assert.match(transform, /lm\.registerTool<ReadScoreInput>\('lilysharp_readScore'/);
         const fn = transform.slice(transform.indexOf('async function readScore'), transform.indexOf('const musicCheckedFor'));
-        assert.match(fn, /const doc = unsavedNamed\(input\.file\)\s*\?\? vscode\.workspace\.textDocuments\.find/);
+        assert.match(fn, /const doc = await scoreDocument\(input\.file\);/);
         assert.match(fn, /return `\$\{path\.basename\(doc\.uri\.fsPath\)\} \(\$\{state\}\), \$\{doc\.lineCount\} lines, as it stands:\\n\$\{doc\.getText\(\)\}`;/);
         const build = fs.readFileSync(path.join(__dirname, '..', '..', 'esbuild.js'), 'utf8');
         assert.match(build, /'\*\*Reading a \.lys file\*\*: read it through the `lilysharp_readScore` tool \(#readScore\), not from the disk —',/);
