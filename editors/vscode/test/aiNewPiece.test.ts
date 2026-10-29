@@ -56,6 +56,12 @@ describe('the composing guide', () => {
         assert.match(transform, /ABSOLUTE_LINE\.test\(text\) && !ABSOLUTE_LINE\.test\(current\) && await chatAbsolute\(deps, current\) !== undefined/);
         assert.match(transform, /'lilysharp\/aiOctaves', \{ Text: text, ToAbsolute: false, Original: current \}/);
     });
+    // Owner's report 2026-10-29: a piece composed in the chat opened in absolute octaves.
+    it('opens the chat\'s new piece in relative octaves, as Compose with AI\'s', () => {
+        assert.match(transform, /const written = await writeWhole\(uri, exists, doc, await asMusicianWrites\(deps, client, text\)\);/);
+        assert.match(transform, /text = await asMusicianWrites\(deps, client, text\);\s*const eol/);
+        assert.match(transform, /'lilysharp\/convertOctaves', \{ Text: text, Absolute: false, DropPartOctaves: true, DropConcertPitch: true \}/);
+    });
     // Owner's request 2026-10-29: a Compose menu that hands the request to Copilot's chat, its
     // thinking in view — the file started absolute, no Lily# check yet (the owner's choice).
     it('is handed to Copilot\'s chat by a menu of its own, the file started in absolute octaves', () => {
@@ -121,7 +127,7 @@ describe('the composing guide', () => {
         assert.match(fn, /input\.note \?\? null, true\);/);
         // Owner's request 2026-10-29: a new piece goes straight into the file, open in the editor —
         // no panel; the music check still speaks once first.
-        assert.match(fn, /if \(isEmptyScore\(current\)\) \{\s*const written = await writeWhole\(uri, exists, doc, text\);/);
+        assert.match(fn, /if \(isEmptyScore\(current\)\) \{[\s\S]*?const written = await writeWhole\(uri, exists, doc, await asMusicianWrites\(deps, client, text\)\);/);
         assert.ok(fn.indexOf('const music = await compositionFindings') < fn.indexOf('const written = await writeWhole'));
         // Written, not saved; an unsaved score is found by the path it is named by.
         const write = transform.slice(transform.indexOf('async function writeWhole'), transform.indexOf('function unsavedNamed'));
@@ -348,7 +354,7 @@ describe('a composed piece opens in relative octaves', () => {
         const at = (s: string) => transform.indexOf(s);
         assert.ok(at("'lilysharp/convertOctaves', { Text: text, Absolute: false, DropPartOctaves: true, DropConcertPitch: true }") > 0);
         assert.ok(at("'lilysharp/convertOctaves', { Text: text, Absolute: false, DropPartOctaves: true, DropConcertPitch: true }") < at("const piece = await vscode.workspace.openTextDocument({ language: 'lilysharp'"));
-        assert.match(transform, /if \(relative\.Success && relative\.NewText\) \{\s*text = relative\.NewText;/);
+        assert.match(transform, /if \(relative\.Success && relative\.NewText\) \{\s*return relative\.NewText;/);
         assert.match(transform, /the piece stays in absolute octaves/);
     });
 });

@@ -50,7 +50,7 @@ describe('a proposal from Copilot\'s chat', () => {
         // Each part's range goes with it, a fact to check against what was meant (owner's request
         // 2026-10-29: a beginner's piece slipped an octave), on the bounce, the write and an Accept.
         assert.match(src, /'Where something is as you meant it, keep it: the next proposal is written as it is\.'\s*\+ rangesSaid\(ranges\);/);
-        assert.match(src, /\+ rangesSaid\(ranges \?\? \(await compositionReport\(client, text\)\)\.ranges\);/);
+        assert.match(src, /ranges \?\?= \(await compositionReport\(client, text\)\)\.ranges;/);
         assert.match(src, /an octave mark slips easily/);
         // …saying first that it counts notes and leaves what does not fit the music (owner's decision 2026-10-29).
         assert.match(src, /'Lily#\\'s check of a new piece found this\. It counts notes and does not know '\s*\+ 'the kind of music you mean: take what helps the piece, and leave what does not fit it —\\n'/);

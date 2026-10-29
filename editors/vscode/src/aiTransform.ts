@@ -538,7 +538,10 @@ async function proposeScore(deps: AiTransformDeps, input: ProposeScoreInput, tok
     // composed piece decided on beside an empty score was the less clear way — what is to change is
     // said in the chat afterwards, a bar named there if need be).
     if (isEmptyScore(current)) {
-        const written = await writeWhole(uri, exists, doc, text);
+        // Opened as a musician writes it, as Compose with AI's piece is (owner's report 2026-10-29).
+        // The ranges are of the piece as the AI wrote it: they are the same notes.
+        ranges ??= (await compositionReport(client, text)).ranges;
+        const written = await writeWhole(uri, exists, doc, await asMusicianWrites(deps, client, text));
         if (written !== undefined) {
             return `Not written: ${written}`;
         }
@@ -549,10 +552,11 @@ async function proposeScore(deps: AiTransformDeps, input: ProposeScoreInput, tok
         // chat called Meifu-no-Ou-to-no-Kessen.lys "冥府の王との決戦.lys", the piece's title).
         return `Written: the new piece is ${path.basename(currentUri(uri).fsPath)} — call the file by that name, `
             + 'not by the piece\'s title. It is open in the editor, not saved: the musician '
-            + 'saves it when they want to keep it. Read it with lilysharp_readScore, not from the disk. The piece is done: '
+            + 'saves it when they want to keep it. It is written in relative octaves, as a musician writes it; '
+            + 'read it with lilysharp_readScore (not from the disk), which shows it to you in absolute octaves. The piece is done: '
             + 'do not propose it again unless the musician asks for a change in the chat.'
             + (added.length ? ` It keeps these warnings, as you proposed it:\n${formatDiags(added, text)}` : '')
-            + rangesSaid(ranges ?? (await compositionReport(client, text)).ranges);
+            + rangesSaid(ranges);
     }
     const snapshot: Snapshot = {
         version: doc?.version ?? 0, startOffset: 0, endOffset: current.length,
@@ -874,6 +878,45 @@ async function toAbsoluteOctaves(deps: AiTransformDeps, client: LanguageClient, 
         snap: { ...snapshot, origFullText: text, startOffset: start, endOffset: end, origSelectedText: text.slice(start, end) },
         converted: true,
     };
+}
+
+/**
+ * A composed piece as a musician writes it. The AI writes in absolute octaves; the piece opens in
+ * relative ones (owner's request 2026-10-27), converted mechanically — the server compiles the
+ * result and compares every note before it answers, so it sounds as the AI wrote it. Left as it
+ * came if it cannot.
+ * …and without the parts' `octave N` (owner's request 2026-10-28): the bass is written under
+ * `octave 4` so the AI can name the pitches it sounds, and that is the AI's crutch, not the
+ * musician's — taken out, every note re-marked to sound where it did. If that cannot be done, the
+ * piece keeps the line.
+ * …and without its `pitch concert` (owner's request 2026-10-28): the AI writes every part as it
+ * sounds, and the piece opens as a musician writes it, each part as its player reads it — a bass
+ * an octave up, a B♭ trumpet or an E♭ saxophone respelled in its player's key. One that shares a
+ * section's key with the others keeps its letters under a `pitch concert` of its own (the key
+ * cannot move for it alone).
+ * Compose with AI's piece and the chat's new piece alike (owner's report 2026-10-29: a piece
+ * composed in the chat opened in absolute octaves).
+ */
+async function asMusicianWrites(deps: AiTransformDeps, client: LanguageClient, text: string): Promise<string> {
+    type Converted = { Success: boolean; NewText: string | null; Error: string | null; Notes?: string | null };
+    try {
+        let relative = await client.sendRequest<Converted>(
+            'lilysharp/convertOctaves', { Text: text, Absolute: false, DropPartOctaves: true, DropConcertPitch: true });
+        if (relative.Notes) {
+            deps.log(`AI transform: ${relative.Notes}`);
+        }
+        if (!relative.Success) {
+            deps.log(`AI transform: the parts' octave lines stay — ${relative.Error}`);
+            relative = await client.sendRequest<Converted>('lilysharp/convertOctaves', { Text: text, Absolute: false });
+        }
+        if (relative.Success && relative.NewText) {
+            return relative.NewText;
+        }
+        deps.log(`AI transform: the piece stays in absolute octaves — ${relative.Error}`);
+    } catch (err) {
+        deps.log(`AI transform: the piece stays in absolute octaves — ${err}`);
+    }
+    return text;
 }
 
 /** A top-level `octave absolute` line. */
@@ -1374,37 +1417,7 @@ async function drive(
                 text = placed.text;
                 deps.log(`AI transform: the score showed no row for ${placed.added.join(', ')} — added under the staff it sings.`);
             }
-            // The AI writes in absolute octaves; the piece opens in relative ones (owner's request
-            // 2026-10-27), converted mechanically — the server compiles the result and compares every
-            // note before it answers, so it sounds as the AI wrote it. Left as it came if it cannot.
-            // …and without the parts' `octave N` (owner's request 2026-10-28): the bass is written
-            // under `octave 4` so the AI can name the pitches it sounds, and that is the AI's crutch,
-            // not the musician's — taken out, every note re-marked to sound where it did. If that
-            // cannot be done, the piece keeps the line.
-            // …and without its `pitch concert` (owner's request 2026-10-28): the AI writes every part
-            // as it sounds, and the piece opens as a musician writes it, each part as its player
-            // reads it — a bass an octave up, a B♭ trumpet or an E♭ saxophone respelled in its player's
-            // key. One that shares a section's key with the others keeps its letters under a `pitch
-            // concert` of its own (the key cannot move for it alone).
-            type Converted = { Success: boolean; NewText: string | null; Error: string | null; Notes?: string | null };
-            try {
-                let relative = await client.sendRequest<Converted>(
-                    'lilysharp/convertOctaves', { Text: text, Absolute: false, DropPartOctaves: true, DropConcertPitch: true });
-                if (relative.Notes) {
-                    deps.log(`AI transform: ${relative.Notes}`);
-                }
-                if (!relative.Success) {
-                    deps.log(`AI transform: the parts' octave lines stay — ${relative.Error}`);
-                    relative = await client.sendRequest<Converted>('lilysharp/convertOctaves', { Text: text, Absolute: false });
-                }
-                if (relative.Success && relative.NewText) {
-                    text = relative.NewText;
-                } else {
-                    deps.log(`AI transform: the piece stays in absolute octaves — ${relative.Error}`);
-                }
-            } catch (err) {
-                deps.log(`AI transform: the piece stays in absolute octaves — ${err}`);
-            }
+            text = await asMusicianWrites(deps, client, text);
             const eol = text.includes('\r\n') ? '\r\n' : '\n';
             const line = (s: string) => `// ${s.replace(/\s*\r?\n\s*/g, ' ')}`;
             const preface = [
