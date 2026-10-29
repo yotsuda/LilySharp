@@ -59,7 +59,9 @@ describe('the composing guide', () => {
         assert.match(pkg, /"command": "lilysharp\.composeWithAiInChat",[^}]*"shortTitle": "Lily# Score, Composed with Copilot…"/);
         assert.match(transform, /registerCommand\('lilysharp\.composeWithAiInChat', \(\) => runComposeInChat\(deps\)\)/);
         const fn = transform.slice(transform.indexOf('async function runComposeInChat'), transform.indexOf('async function runCompose('));
-        assert.match(fn, /'octave absolute',\s*'pitch concert',/);
+        assert.match(fn, /const header = newPieceHeader\(description\.trim\(\)\.replace\(\/\\s\*\\r\?\\n\\s\*\/g, ' '\), os\.EOL\);/);
+        const header = transform.slice(transform.indexOf('function newPieceHeader('), transform.indexOf('function newPieceSteps('));
+        assert.match(header, /`\/\/ Composed in Copilot's chat, \$\{new Date\(\)\.toISOString\(\)\.slice\(0, 10\)\}`,\s*`\/\/ Asked: \$\{asked\}`,\s*'',\s*'octave absolute',\s*'pitch concert',/);
         assert.match(fn, /executeCommand\('workbench\.action\.chat\.open', \{ query, mode: 'agent' \}\)/);
         assert.match(fn, /const hint = compositionHint\(\);/);
         assert.ok(!/compositionFindings|checkCandidate/.test(fn));
@@ -148,6 +150,8 @@ describe('the composing guide', () => {
         assert.match(fn, /\.replace\(\/\^---\\r\?\\n\[\\s\\S\]\*\?\\r\?\\n---\\r\?\\n\/, ''\)/);
         // How a new piece begins: the steps Compose with AI in Chat's request gives, and a starting point.
         assert.match(fn, /\+ newPieceSteps\(deps\.lysc\?\.\(\)\)\s*\+ `\$\{hint\}\\n\\n`/);
+        // …beginning with the header the menu writes (owner's request 2026-10-29).
+        assert.match(fn, /\+ newPieceHeader\('<the request>', '\\n'\)\.trimEnd\(\) \+ '\\n'/);
         const compose = transform.slice(transform.indexOf('async function runComposeInChat'), transform.indexOf('async function runCompose('));
         assert.match(compose, /\+ newPieceSteps\(deps\.lysc\?\.\(\)\)/);
     });

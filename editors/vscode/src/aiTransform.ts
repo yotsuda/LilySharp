@@ -312,12 +312,30 @@ async function readGuide(deps: AiTransformDeps, input: ReadGuideInput | undefine
     }
     const hint = compositionHint();
     deps.log(`AI transform (chat, guide): ${hint}`);
+    // The header Compose with AI in Chat writes, the request in it the musician's (owner's request
+    // 2026-10-29: a piece composed this way began at `octave absolute`, saying nothing of itself).
     return 'Compose a new piece of music in Lily# for a new .lys file — in the workspace folder (e.g. Composed.lys), '
-        + 'its absolute path; it is not on the disk until the musician saves it. Its first lines are `octave absolute` '
-        + 'and `pitch concert`. Read the Lily# grammar first (lilysharp_readGuide, topic "grammar") unless you have it.\n'
+        + 'its absolute path; it is not on the disk until the musician saves it. Its first lines are these, the '
+        + 'request as the musician put it, on one line:\n'
+        + newPieceHeader('<the request>', '\n').trimEnd() + '\n'
+        + 'Read the Lily# grammar first (lilysharp_readGuide, topic "grammar") unless you have it.\n'
         + newPieceSteps(deps.lysc?.())
         + `${hint}\n\n`
         + (built('lilysharp-compose.instructions.md') ?? await loadComposeGuide(deps));
+}
+
+/** The first lines of a piece composed in the chat — what it is and what was asked, then
+ *  `octave absolute` and `pitch concert` — written by Compose with AI in Chat and asked for by the
+ *  composing guide alike. */
+function newPieceHeader(asked: string, eol: string): string {
+    return [
+        `// Composed in Copilot's chat, ${new Date().toISOString().slice(0, 10)}`,
+        `// Asked: ${asked}`,
+        '',
+        'octave absolute',
+        'pitch concert',
+        '',
+    ].join(eol);
 }
 
 /**
@@ -534,15 +552,7 @@ async function runComposeInChat(deps: AiTransformDeps): Promise<void> {
     for (let n = 2; taken(file); n++) {
         file = path.join(folder, `Composed${n}.lys`);
     }
-    const eol = os.EOL;
-    const header = [
-        `// Composed in Copilot's chat, ${new Date().toISOString().slice(0, 10)}`,
-        `// Asked: ${description.trim().replace(/\s*\r?\n\s*/g, ' ')}`,
-        '',
-        'octave absolute',
-        'pitch concert',
-        '',
-    ].join(eol);
+    const header = newPieceHeader(description.trim().replace(/\s*\r?\n\s*/g, ' '), os.EOL);
     const untitled = await vscode.workspace.openTextDocument(vscode.Uri.file(file).with({ scheme: 'untitled' }));
     const start = new vscode.WorkspaceEdit();
     start.insert(untitled.uri, new vscode.Position(0, 0), header);
