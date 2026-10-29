@@ -94,7 +94,8 @@ describe('the composing guide', () => {
         assert.ok(fn.indexOf('const music = await compositionFindings') < fn.indexOf('const written = await writeWhole'));
         assert.match(transform, /await written\.save\(\);\s*await vscode\.window\.showTextDocument\(written, \{ preview: false \}\);/);
         // An unsaved score is found by the path it is named by, written, and left unsaved.
-        assert.match(fn, /d\.uri\.scheme === 'untitled'\s*&& d\.uri\.fsPath\.toLowerCase\(\) === path\.resolve\(input\.file\)\.toLowerCase\(\)/);
+        assert.match(fn, /const untitled = unsavedNamed\(input\.file\);/);
+        assert.match(transform, /d\.uri\.scheme === 'untitled'\s*&& d\.uri\.fsPath\.toLowerCase\(\) === path\.resolve\(file\)\.toLowerCase\(\)/);
         assert.match(transform, /if \(written\.isUntitled\) \{\s*await vscode\.window\.showTextDocument\(written, \{ preview: false \}\);\s*return undefined;/);
         assert.match(fn, /return 'Not decided: the musician went on in the chat before deciding, and the file is unchanged\. '/);
         assert.match(transform, /<button id="iterate"[^>]*\$\{fromChat \? ' hidden' : ''\}>Ask Again…<\/button>/);
@@ -102,6 +103,21 @@ describe('the composing guide', () => {
         assert.match(fn, /\.find\(d => d\.uri\.toString\(\) === uri\.toString\(\) && !d\.isUntitled\)\?\.save\(\);/);
         const build = fs.readFileSync(path.join(__dirname, '..', '..', 'esbuild.js'), 'utf8');
         assert.match(build, /'\*\*Changing or writing a \.lys file\*\*: do it through the `lilysharp_proposeScore` tool \(#proposeScore\) —',/);
+    });
+    // Owner's request 2026-10-29: the chat's agent reads the disk, where an unsaved score is not —
+    // a tool reads the score as it stands in the editor.
+    it('gives Copilot\'s chat a tool to read a score as it stands in the editor, saved or not', () => {
+        const pkg = fs.readFileSync(path.join(__dirname, '..', '..', 'package.json'), 'utf8');
+        assert.match(pkg, /"name": "lilysharp_readScore",\s*"toolReferenceName": "readScore"/);
+        assert.match(pkg, /"onLanguageModelTool:lilysharp_readScore"/);
+        assert.match(transform, /lm\.registerTool<ReadScoreInput>\('lilysharp_readScore'/);
+        const fn = transform.slice(transform.indexOf('async function readScore'), transform.indexOf('const musicCheckedFor'));
+        assert.match(fn, /const doc = unsavedNamed\(input\.file\)\s*\?\? vscode\.workspace\.textDocuments\.find/);
+        assert.match(fn, /return `\$\{path\.basename\(doc\.uri\.fsPath\)\} \(\$\{state\}\), \$\{doc\.lineCount\} lines, as it stands:\\n\$\{doc\.getText\(\)\}`;/);
+        const build = fs.readFileSync(path.join(__dirname, '..', '..', 'esbuild.js'), 'utf8');
+        assert.match(build, /'\*\*Reading a \.lys file\*\*: read it through the `lilysharp_readScore` tool \(#readScore\), not from the disk —',/);
+        const ext = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
+        assert.match(ext, /`\$\{doc\.uri\.fsPath\} \(not saved — read it with #readScore\)`/);
     });
     it('holds the recipe, and the grammar only points at it', () => {
         const grammar = fs.readFileSync(path.join(docs, 'GRAMMAR_FOR_LLM.md'), 'utf8');

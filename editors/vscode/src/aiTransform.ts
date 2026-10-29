@@ -265,6 +265,14 @@ function registerProposeScoreTool(context: vscode.ExtensionContext, deps: AiTran
             new vscode.LanguageModelTextPart(await proposeScore(deps, options.input, token)),
         ]),
     }));
+    context.subscriptions.push(lm.registerTool<ReadScoreInput>('lilysharp_readScore', {
+        prepareInvocation: options => ({
+            invocationMessage: `Reading ${path.basename(options.input?.file ?? 'the score')} as it stands in the editor…`,
+        }),
+        invoke: async options => new vscode.LanguageModelToolResult([
+            new vscode.LanguageModelTextPart(await readScore(options.input)),
+        ]),
+    }));
 }
 
 /** Writes `text` as the whole file — created when it is not there — saves it (the chat's agent reads
@@ -290,6 +298,36 @@ async function writeWhole(uri: vscode.Uri, exists: boolean, doc: vscode.TextDocu
     return undefined;
 }
 
+/** The unsaved document named by the path it will be saved to (Compose with AI in Chat): the one a
+ *  chat's tool call means, not the disk. */
+function unsavedNamed(file: string): vscode.TextDocument | undefined {
+    return vscode.workspace.textDocuments.find(d => d.uri.scheme === 'untitled'
+        && d.uri.fsPath.toLowerCase() === path.resolve(file).toLowerCase());
+}
+
+/** What Copilot's chat hands the reading tool. */
+interface ReadScoreInput {
+    /** The .lys file, its absolute path — an unsaved one's, the path it is named by. */
+    file: string;
+}
+
+/** The score as it stands in the editor, saved or not (owner's request 2026-10-29: the chat's agent
+ *  reads the disk, where an unsaved score is not and a saved one may be behind the editor). */
+async function readScore(input: ReadScoreInput): Promise<string> {
+    if (!input || typeof input.file !== 'string') {
+        return 'Nothing read: give `file` (the .lys file\'s absolute path).';
+    }
+    const doc = unsavedNamed(input.file)
+        ?? vscode.workspace.textDocuments.find(d => d.uri.scheme === 'file'
+            && d.uri.fsPath.toLowerCase() === path.resolve(input.file).toLowerCase())
+        ?? (fs.existsSync(input.file) ? await vscode.workspace.openTextDocument(vscode.Uri.file(input.file)) : undefined);
+    if (!doc) {
+        return `Nothing read: no score ${input.file} is open in the editor or on the disk.`;
+    }
+    const state = doc.isUntitled ? 'open in the editor, not saved' : doc.isDirty ? 'open in the editor, with changes not saved' : 'saved';
+    return `${path.basename(doc.uri.fsPath)} (${state}), ${doc.lineCount} lines, as it stands:\n${doc.getText()}`;
+}
+
 /** The files whose new piece the music check has spoken on, this session: it speaks once a file. */
 const musicCheckedFor = new Set<string>();
 
@@ -303,10 +341,7 @@ async function proposeScore(deps: AiTransformDeps, input: ProposeScoreInput, tok
     if (!client || !deps.isReady()) {
         return 'Nothing shown: the Lily# language server is not running. Write the file directly instead.';
     }
-    // An unsaved document named by the path it will be saved to (Compose with AI in Chat) is the
-    // one meant, not the disk.
-    const untitled = vscode.workspace.textDocuments.find(d => d.uri.scheme === 'untitled'
-        && d.uri.fsPath.toLowerCase() === path.resolve(input.file).toLowerCase());
+    const untitled = unsavedNamed(input.file);
     const uri = untitled?.uri ?? vscode.Uri.file(input.file);
     const exists = untitled !== undefined || fs.existsSync(input.file);
     const doc = untitled ?? (exists ? await vscode.workspace.openTextDocument(uri) : undefined);

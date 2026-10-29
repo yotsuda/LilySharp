@@ -59,6 +59,8 @@ function copyGrammar() {
             'goes straight into the file, and a change to a score is shown to the musician beside the score as',
             'it stands, to accept or reject — the result says which. Do not edit a .lys file yourself while the',
             'tool is there.',
+            '**Reading a .lys file**: read it through the `lilysharp_readScore` tool (#readScore), not from the disk —',
+            'it gives the text as it stands in the editor; a score not saved yet is not on the disk at all.',
             '',
             fs.readFileSync(src, 'utf8'),
         ].join('\n');

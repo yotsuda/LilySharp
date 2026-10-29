@@ -26,7 +26,8 @@
   "activationEvents": [
     "onLanguage:lilysharp",
     "onLanguage:markdown",
-    "onLanguageModelTool:lilysharp_proposeScore"
+    "onLanguageModelTool:lilysharp_proposeScore",
+    "onLanguageModelTool:lilysharp_readScore"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -47,6 +48,22 @@
             "note": { "type": "string", "description": "One or two sentences to the musician about the change, in their language." }
           },
           "required": ["file", "text"]
+        }
+      },
+      {
+        "name": "lilysharp_readScore",
+        "toolReferenceName": "readScore",
+        "displayName": "Read a Lily# score",
+        "icon": "$(book)",
+        "canBeReferencedInPrompt": true,
+        "userDescription": "Reads a .lys score as it stands in the editor, saved or not.",
+        "modelDescription": "Use this to read a Lily# (.lys) file before changing it, instead of reading the file from the disk: it gives the text as it stands in the editor — a score not saved yet is not on the disk at all, and a saved one may have changes the disk does not. Give the file's absolute path (for a score not saved yet, the path it is named by).",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "file": { "type": "string", "description": "The .lys file's absolute path — for a score open in the editor and not saved yet, the path it is named by." }
+          },
+          "required": ["file"]
         }
       }
     ],
