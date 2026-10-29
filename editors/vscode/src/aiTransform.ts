@@ -332,6 +332,8 @@ async function proposeScore(deps: AiTransformDeps, input: ProposeScoreInput, tok
                     if (again !== undefined) {
                         continue;
                     }
+                    // Saved: the chat's agent reads the file from the disk, and would find it as it was.
+                    await vscode.workspace.textDocuments.find(d => d.uri.toString() === uri.toString())?.save();
                 }
                 deps.log('AI proposal (chat): accepted.');
                 return 'Accepted: the musician accepted the proposal, and the file is written.'

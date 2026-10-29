@@ -80,6 +80,7 @@ describe('the composing guide', () => {
         assert.match(fn, /return 'Accepted: the musician accepted the proposal, and the file is written\.'/);
         assert.match(fn, /return `Not accepted: the musician asks for changes — "\$\{words\.trim\(\)\}"\./);
         assert.match(fn, /token\.onCancellationRequested/);
+        assert.match(fn, /\.find\(d => d\.uri\.toString\(\) === uri\.toString\(\)\)\?\.save\(\);/);
         const build = fs.readFileSync(path.join(__dirname, '..', '..', 'esbuild.js'), 'utf8');
         assert.match(build, /'\*\*Changing or writing a \.lys file\*\*: do it through the `lilysharp_proposeScore` tool \(#proposeScore\) —',/);
     });
