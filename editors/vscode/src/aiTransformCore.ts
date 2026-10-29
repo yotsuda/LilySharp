@@ -800,9 +800,10 @@ export function isEmptyScore(text: string): boolean {
     return text.split(/\r?\n/).every(l => /^\s*(\/\/.*|octave\s+\w+|pitch\s+\w+)?\s*$/.test(l));
 }
 
-/** The choices a starting point is drawn from (compositionHint). */
-const HINT_KEYS = ['C major', 'G major', 'D major', 'A major', 'E major', 'F major', 'B♭ major', 'E♭ major', 'A♭ major',
-    'A minor', 'E minor', 'B minor', 'F♯ minor', 'C♯ minor', 'D minor', 'G minor', 'C minor', 'F minor'];
+/** The choices a starting point is drawn from (compositionHint). The key is its tonic alone, major
+ *  or minor as the music asks (owner's report 2026-10-29: two "bright waltzes" drew C minor and F♯
+ *  minor, set the draw aside as the wrong mode, and fell back on G major both times). */
+const HINT_TONICS = ['C', 'G', 'D', 'A', 'E', 'B', 'F♯', 'D♭', 'A♭', 'E♭', 'B♭', 'F'];
 // Weighted: 4/4 most of the time, 3/4 seldom (owner's request 2026-10-29: rock and pop are nearly
 // always in 4/4; a three is to come only now and then).
 const HINT_METERS = ['4/4', '4/4', '4/4', '4/4', '4/4', '4/4', '6/8', '12/8', '2/4', '3/4'];
@@ -822,7 +823,8 @@ export function compositionHint(random: () => number = Math.random): string {
     return `A starting point for this piece, drawn at random so that not every piece begins alike — take what suits `
         + `the music asked for, leave the rest, and whatever the request itself says (a key, a meter, a form, a length, `
         + `a style) comes first, and a band's music — rock, pop — keeps its 4/4 whatever meter is drawn: `
-        + `${pick(HINT_KEYS)}; ${pick(HINT_METERS)}; ${pick(HINT_FORMS)}; opening with ${pick(HINT_OPENINGS)}.`;
+        + `the key on ${pick(HINT_TONICS)}, major or minor as the music asks; ${pick(HINT_METERS)}; ${pick(HINT_FORMS)}; `
+        + `opening with ${pick(HINT_OPENINGS)}.`;
 }
 
 /** Whether an error says the service answered with nothing ("Response contained no choices"). */

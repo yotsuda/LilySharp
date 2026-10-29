@@ -66,8 +66,15 @@ describe('a starting point drawn at random', () => {
         assert.equal(compositionHint(() => 0), 'A starting point for this piece, drawn at random so that not every piece begins alike — take what suits '
             + 'the music asked for, leave the rest, and whatever the request itself says (a key, a meter, a form, a length, '
             + 'a style) comes first, and a band\'s music — rock, pop — keeps its 4/4 whatever meter is drawn: '
-            + 'C major; 4/4; A–B–A; opening with the bass alone for a bar or two.');
-        assert.match(compositionHint(() => 0.9999), /: F minor; 3\/4; one section that grows from start to end; opening with a short introduction on the accompaniment's figure\.$/);
+            + 'the key on C, major or minor as the music asks; 4/4; A–B–A; opening with the bass alone for a bar or two.');
+        assert.match(compositionHint(() => 0.9999), /: the key on F, major or minor as the music asks; 3\/4; one section that grows from start to end; opening with a short introduction on the accompaniment's figure\.$/);
+    });
+    // Owner's report 2026-10-29: two "bright waltzes" drew minor keys, set them aside, and both fell
+    // back on G major — the tonic alone is drawn, its mode left to the music; all twelve come.
+    it('draws a tonic alone, every one of the twelve, the mode left to the music', () => {
+        const tonics = new Set(Array.from({ length: 2000 }, () => /the key on ([A-G][♯♭]?), major or minor as the music asks;/.exec(compositionHint())![1]));
+        assert.equal(tonics.size, 12);
+        assert.ok(!/major;|minor;/.test(compositionHint().replace('major or minor as the music asks;', '')));
     });
     // Owner's request 2026-10-29: rock and pop are nearly always in 4/4; a three only now and then.
     it('draws 4/4 most of the time and 3/4 seldom', () => {
