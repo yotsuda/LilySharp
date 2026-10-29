@@ -377,6 +377,13 @@
         "shortTitle": "Lily# Score, Composed with AI…"
       },
       {
+        "command": "lilysharp.composeWithAiInChat",
+        "category": "Lily#",
+        "icon": "$(comment-discussion)",
+        "title": "Compose with AI in Chat…",
+        "shortTitle": "Lily# Score, Composed in Copilot Chat…"
+      },
+      {
         "command": "lilysharp.previewAiTransform",
         "category": "Lily#",
         "icon": "$(sparkle)",
@@ -591,6 +598,10 @@
         {
           "command": "lilysharp.composeWithAi",
           "group": "file@2"
+        },
+        {
+          "command": "lilysharp.composeWithAiInChat",
+          "group": "file@3"
         }
       ],
       "commandPalette": [

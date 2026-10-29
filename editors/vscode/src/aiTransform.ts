@@ -34,6 +34,7 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
+import * as os from 'os';
 import type { LanguageClient } from 'vscode-languageclient/node';
 import { ChatClient, ChatMessage, resolveChatClient } from './modelClient';
 import {
@@ -180,6 +181,7 @@ export function registerAiTransform(context: vscode.ExtensionContext, deps: AiTr
         vscode.commands.registerCommand('lilysharp.aiTransform', (opts?: { whole?: boolean; selected?: string }) =>
             runAiTransform(deps, opts?.whole === true, opts?.selected)),
         vscode.commands.registerCommand('lilysharp.composeWithAi', () => runCompose(deps)),
+        vscode.commands.registerCommand('lilysharp.composeWithAiInChat', () => runComposeInChat(deps)),
     );
     context.subscriptions.push({
         dispose: () => {
@@ -226,6 +228,65 @@ function currentUri(uri: vscode.Uri): vscode.Uri {
         }
     }
     return uri;
+}
+
+/**
+ * "Lily#: Compose with AI in Chat…" (owner's request 2026-10-29: in Copilot's chat the model's
+ * thinking and its tries are seen, and a stronger model may be picked there): asks what to compose
+ * and where to keep it, writes the file's first lines — `octave absolute` and `pitch concert`, so
+ * the piece is written in the pitches it sounds (owner's report, the same day: a piece composed in
+ * the chat was written absolute in a relative file, and its pitches flew off) — opens it, and hands
+ * the request to the chat's agent with a starting point drawn at random. The chat is given the
+ * grammar and the composing guide by the Lily# instructions file, a .lys being in hand. Lily#'s own
+ * checks do not run there (the owner's choice, to see the chat compose without them first).
+ */
+async function runComposeInChat(deps: AiTransformDeps): Promise<void> {
+    const description = await vscode.window.showInputBox({
+        title: 'Lily# — Compose with AI in Chat',
+        prompt: 'What should the AI compose? Copilot\'s chat writes it into a new file, its thinking in view.',
+        placeHolder: 'e.g. a dramatic string quartet in D minor, about 3 minutes, slow – fast – slow',
+        ignoreFocusOut: true,
+    });
+    if (description === undefined || description.trim().length === 0) {
+        return;
+    }
+    const active = vscode.window.activeTextEditor?.document.uri;
+    const folder = active?.scheme === 'file' ? vscode.Uri.file(path.dirname(active.fsPath))
+        : vscode.workspace.workspaceFolders?.[0]?.uri ?? vscode.Uri.file(os.homedir());
+    const target = await vscode.window.showSaveDialog({
+        title: 'Lily# — where to write the new piece',
+        defaultUri: vscode.Uri.joinPath(folder, 'Composed.lys'),
+        filters: { 'Lily#': ['lys'] },
+        saveLabel: 'Compose Here',
+    });
+    if (!target) {
+        return;
+    }
+    const eol = os.EOL;
+    fs.writeFileSync(target.fsPath, [
+        `// Composed in Copilot's chat, ${new Date().toISOString().slice(0, 10)}`,
+        `// Asked: ${description.trim().replace(/\s*\r?\n\s*/g, ' ')}`,
+        '',
+        'octave absolute',
+        'pitch concert',
+        '',
+    ].join(eol), 'utf8');
+    await vscode.window.showTextDocument(await vscode.workspace.openTextDocument(target));
+    const hint = compositionHint();
+    deps.log(`AI transform (chat): ${hint}`);
+    const query = `Compose a new piece of music in Lily# and write it, whole, into the open file ${path.basename(target.fsPath)}. `
+        + 'It starts with `octave absolute` and `pitch concert`: keep both lines, and write every pitch as the pitch it sounds. '
+        + 'Follow the Lily# grammar and the composing guide in the Lily# instructions.\n'
+        + `The request: ${description.trim()}\n${hint}`;
+    try {
+        await vscode.commands.executeCommand('workbench.action.chat.open', { query, mode: 'agent' });
+    } catch {
+        try {
+            await vscode.commands.executeCommand('workbench.action.chat.open', query);
+        } catch (err) {
+            void vscode.window.showErrorMessage(`Lily#: Copilot's chat could not be opened (${err}). Is GitHub Copilot Chat installed and signed in?`);
+        }
+    }
 }
 
 /**

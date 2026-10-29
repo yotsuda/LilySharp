@@ -69,6 +69,12 @@ All notable changes to the Lily# VS Code extension are documented here.
   piece went back asking for "the corrected edits, each `<old>` copied from the file" — the
   composer answered with bare `<old>`/`<new>`, which was read as the file, the rounds ran out, and
   the music checks never saw the piece. It now asks for the whole corrected piece in `<file>`.
+- **Compose with AI in Chat**: a menu of its own (File > New File… and the command palette) that
+  asks what to compose and where to keep it, writes the new file's first lines (`octave absolute`,
+  `pitch concert`), opens it and hands the request — with a starting point drawn at random — to
+  Copilot's chat agent, where the model's thinking and its tries are seen and a stronger model can be
+  picked. The chat is given the grammar and the composing guide; Lily#'s own checks do not run there
+  (yet). Compose with AI stays as it was.
 - **A new piece starts in absolute octaves, in Copilot's chat too**: the composing guide — which the
   chat is given as well — says to put `octave absolute` at the top before anything else; a piece
   composed in the chat was written as absolute in a relative file, and its pitches flew off.
@@ -2000,6 +2006,12 @@ reader is offered its update when a scan is read.
   piece went back asking for "the corrected edits, each `<old>` copied from the file" — the
   composer answered with bare `<old>`/`<new>`, which was read as the file, the rounds ran out, and
   the music checks never saw the piece. It now asks for the whole corrected piece in `<file>`.
+- **Compose with AI in Chat**: a menu of its own (File > New File… and the command palette) that
+  asks what to compose and where to keep it, writes the new file's first lines (`octave absolute`,
+  `pitch concert`), opens it and hands the request — with a starting point drawn at random — to
+  Copilot's chat agent, where the model's thinking and its tries are seen and a stronger model can be
+  picked. The chat is given the grammar and the composing guide; Lily#'s own checks do not run there
+  (yet). Compose with AI stays as it was.
 - **A new piece starts in absolute octaves, in Copilot's chat too**: the composing guide — which the
   chat is given as well — says to put `octave absolute` at the top before anything else; a piece
   composed in the chat was written as absolute in a relative file, and its pitches flew off.

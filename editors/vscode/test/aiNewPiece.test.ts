@@ -48,6 +48,19 @@ describe('the composing guide', () => {
         const guide = fs.readFileSync(path.join(docs, 'COMPOSE_FOR_LLM.md'), 'utf8');
         assert.match(guide, /\*\*Start in absolute octaves\*\*: a new piece begins with `octave absolute` \(and `pitch concert`\)/);
     });
+    // Owner's request 2026-10-29: a Compose menu that hands the request to Copilot's chat, its
+    // thinking in view — the file started absolute, no Lily# check yet (the owner's choice).
+    it('is handed to Copilot\'s chat by a menu of its own, the file started in absolute octaves', () => {
+        const pkg = fs.readFileSync(path.join(__dirname, '..', '..', 'package.json'), 'utf8');
+        assert.match(pkg, /"command": "lilysharp\.composeWithAiInChat",\s*"category": "Lily#",[\s\S]*?"title": "Compose with AI in Chat…"/);
+        assert.match(pkg, /"command": "lilysharp\.composeWithAiInChat",\s*"group": "file@3"/);
+        assert.match(transform, /registerCommand\('lilysharp\.composeWithAiInChat', \(\) => runComposeInChat\(deps\)\)/);
+        const fn = transform.slice(transform.indexOf('async function runComposeInChat'), transform.indexOf('async function runCompose('));
+        assert.match(fn, /'octave absolute',\s*'pitch concert',/);
+        assert.match(fn, /executeCommand\('workbench\.action\.chat\.open', \{ query, mode: 'agent' \}\)/);
+        assert.match(fn, /const hint = compositionHint\(\);/);
+        assert.ok(!/compositionFindings|checkCandidate/.test(fn));
+    });
     it('holds the recipe, and the grammar only points at it', () => {
         const grammar = fs.readFileSync(path.join(docs, 'GRAMMAR_FOR_LLM.md'), 'utf8');
         const guide = fs.readFileSync(path.join(docs, 'COMPOSE_FOR_LLM.md'), 'utf8');
@@ -108,7 +121,7 @@ describe('a new piece in place of the score', () => {
         // No document while the AI works (owner's request 2026-10-27): the start is in memory, and
         // the piece opens in an editor of its own when it comes — no review panel, nothing to compare.
         assert.match(transform, /uri: vscode\.Uri\.parse\('untitled:Composed\.lys'\),/);
-        assert.doesNotMatch(transform.slice(transform.indexOf('async function runCompose'), transform.indexOf('async function runAiTransform')), /openTextDocument/);
+        assert.doesNotMatch(transform.slice(transform.indexOf('async function runCompose('), transform.indexOf('async function runAiTransform')), /openTextDocument/);
         assert.match(transform, /if \(compose\) \{[\s\S]{0,5500}?openTextDocument\(\{ language: 'lilysharp', content: `\$\{preface\}\$\{eol\}\$\{eol\}\$\{text\}` \}\);\s*await vscode\.window\.showTextDocument\(piece\);/);
         // The request and the AI's note head the piece as comments (owner's request 2026-10-27).
         assert.match(transform, /line\(`Asked: \$\{composeAsked \?\? instruction\}`\),\s*\.\.\.\(note \? \[line\(`The AI: \$\{note\}`\)\] : \[\]\),/);
