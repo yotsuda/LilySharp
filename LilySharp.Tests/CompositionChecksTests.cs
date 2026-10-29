@@ -196,6 +196,22 @@ public class CompositionChecksTests
         Assert.DoesNotContain(CompositionChecks.Of(kept), f => f.Contains("reaches the melody") || f.Contains("twelfth"));
     }
 
+    // Owner's trial 2026-10-29: B in D major, then A and the coda with no key line — back in G, as
+    // they are drawn and played — was told it "ends in D major", and the chat added a needless key.
+    [Fact]
+    public void TheKeyAPieceEndsIn_IsTheLastSectionPlayed_ItsOwnOrTheFiles()
+    {
+        string Piece(string form) => "title \"Ribbon\"\ntime 4/4\noctave absolute\nkey g major\n" + Hands
+            + "\nsection A {\n  rh { b'4 d''4 a'4 g'4 | }\n  lh { g,2 d2 | }\n}\n"
+            + "section B {\n  key d major\n  rh { fis'4 a'4 e'4 d'4 | }\n  lh { a,2 d,2 | }\n}\n"
+            + "section Coda {\n  rh { g'1 | }\n  lh { g,1 | }\n}\n"
+            + $"form {{ {form} }}\nscore {{ grandStaff {{ staff rh  staff lh }} }}\n";
+        Assert.DoesNotContain(CompositionChecks.Of(Piece("A B A Coda")), f => f.StartsWith("The piece begins in") || f.StartsWith("The piece ends over"));
+        var findings = CompositionChecks.Of(Piece("A B"));
+        Assert.Contains(findings, f => f.StartsWith("The piece begins in G major and ends in D major"));
+        Assert.DoesNotContain(findings, f => f.StartsWith("The piece ends over"));
+    }
+
     [Fact]
     public void ARightHandOverItsRegister_IsToldToMoveDown()
     {

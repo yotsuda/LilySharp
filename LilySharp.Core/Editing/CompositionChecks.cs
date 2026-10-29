@@ -307,14 +307,12 @@ public static class CompositionChecks
         if (pitched.Count > 0 && barCount < ShortestPiece)
             findings.Add($"The piece is {barCount} bars long: unless a short piece was asked for, give it the length its form needs — "
                 + "about 24 to 32 bars, its phrases long enough to say something, each closing on a cadence.");
-        var keys = System.Text.RegularExpressions.Regex.Matches(source,
-            @"^[ \t]*key[ \t]+([a-g](?:isis|eses|is|es|s)?)[ \t]+(major|minor)\b", System.Text.RegularExpressions.RegexOptions.Multiline);
-        if (keys.Count > 0 && pitched.Count > 0)
+        if (PlayedKeys(root) is { } inKeys && pitched.Count > 0)
         {
-            var (home, end) = (keys[0], keys[^1]);
-            int homeTonic = PitchClass(home.Groups[1].Value), endTonic = PitchClass(end.Groups[1].Value);
-            string KeyName(System.Text.RegularExpressions.Match k) => $"{PitchClassName(PitchClass(k.Groups[1].Value))} {k.Groups[2].Value}";
-            if (homeTonic != endTonic || home.Groups[2].Value != end.Groups[2].Value)
+            var (home, end) = inKeys;
+            int homeTonic = PitchClass(home.Tonic), endTonic = PitchClass(end.Tonic);
+            string KeyName((string Tonic, string Mode) k) => $"{PitchClassName(PitchClass(k.Tonic))} {k.Mode}";
+            if (homeTonic != endTonic || home.Mode != end.Mode)
                 findings.Add($"The piece begins in {KeyName(home)} and ends in {KeyName(end)}: come back to the home key for the last "
                     + "section, and close there.");
             // The lowest note sounding at the last onset: the final chord's bass.
@@ -441,6 +439,40 @@ public static class CompositionChecks
     private static readonly string[] PitchClassNames = ["C", "C♯", "D", "E♭", "E", "F", "F♯", "G", "A♭", "A", "B♭", "B"];
 
     private static string PitchClassName(int pitch) => PitchClassNames[(pitch % 12 + 12) % 12];
+
+    /// <summary>
+    /// The key the piece begins in and the one it ends in, as the form plays them: the first and the
+    /// last section played, each in its own <c>key</c>, else in the file's — a section that writes
+    /// none is in the file's key whatever was played before it (owner's trial 2026-10-29: B in D
+    /// major, the A after it and the coda back in G with no line of their own, was told it "ends in
+    /// D major", and the chat wrote a `key g major` the coda did not need). Null with no key written.
+    /// </summary>
+    private static ((string Tonic, string Mode) Home, (string Tonic, string Mode) End)? PlayedKeys(SyntaxNode root)
+    {
+        static (string, string)? Of(KeySignatureSyntax? k)
+            => k is null || k.IsCustom ? null
+                : (k.Pitch.ToFullString().Trim().ToLowerInvariant(), k.Mode.Text.ToLowerInvariant());
+        var keys = root.DescendantNodes<KeySignatureSyntax>().ToList();
+        static bool InSection(SyntaxNode n)
+        {
+            for (var p = n.Parent; p != null; p = p.Parent)
+                if (p is SectionDeclarationSyntax)
+                    return true;
+            return false;
+        }
+        var fileKey = Of(keys.FirstOrDefault(k => !InSection(k)));
+        var sections = root.DescendantNodes<SectionDeclarationSyntax>().Where(s => s.Parent is { Parent: null })
+            .GroupBy(s => s.SectionName).ToDictionary(g => g.Key, g => g.First());
+        (string, string)? KeyOf(string section)
+            => sections.TryGetValue(section, out var s) ? Of(s.DescendantNodes<KeySignatureSyntax>().LastOrDefault()) ?? fileKey : fileKey;
+        var form = root.DescendantNodes<FormDeclarationSyntax>().Where(f => !f.InScore).OrderBy(f => f.Name != null).FirstOrDefault();
+        var played = form?.DescendantNodes<SectionReferenceSyntax>().ToList() ?? [];
+        if (played.Count > 0)
+            return KeyOf(played[0].SectionName) is { } first && KeyOf(played[^1].SectionName) is { } last ? (first, last) : null;
+        // No form: the keys as written.
+        var written = keys.Select(Of).OfType<(string, string)>().ToList();
+        return written.Count > 0 ? (written[0], written[^1]) : null;
+    }
 
     /// <summary>The pitch class of a note name (<c>fis</c>, <c>bes</c>, <c>es</c>), 0 = C.</summary>
     private static int PitchClass(string name)
