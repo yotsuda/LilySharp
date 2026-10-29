@@ -164,5 +164,10 @@ describe('an AI candidate plays before it is accepted', () => {
         assert.match(extension, /if \(relaying\) \{\s*relaying = false;\s*vscode\.postMessage\(\{ type: 'candidateSounding', sounding: \[\] \}\);/);
         assert.match(extension, /if \(message\.type === 'candidateSounding'\) \{\s*showCandidateSounding\(message\.sounding\);/);
         assert.match(transform, /if \(e\.data\.type === 'sounding'\) \{ lightSounding\(e\.data\.which, e\.data\.sounding \|\| \[\]\); return; \}/);
+        // A chord sounds at its '<', which its heads carry as data-alt: they light too (owner's report
+        // 2026-10-29: a song's right-hand chords stayed dark in the panel), the click target and the
+        // fret digit's mask left out, as in the preview.
+        assert.match(transform, /querySelectorAll\('\[data-pos\], \[data-alt\]'\)\.forEach\(el => \{\s*if \(el\.classList\.contains\('nh-hit'\)/);
+        assert.match(transform, /if \(alt\) alt\.split\(' '\)\.forEach\(a => add\(parseInt\(a, 10\), el\)\);/);
     });
 });

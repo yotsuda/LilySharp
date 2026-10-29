@@ -2430,12 +2430,20 @@ button:disabled { opacity:0.45; cursor:default; }
   // preview playing them follows them; the newest stays in view.
   let lit = [];
   const byPos = { after: null, before: null };
+  // Every element of an offset, as its data-pos or a data-alt member: a chord sounds at its '<',
+  // which each head carries as data-alt beside its own pitch's data-pos (owner's report 2026-10-29:
+  // a song's right-hand chords stayed dark here while the preview lit them). The click target and
+  // the white mask behind a fret digit are left out, as the preview leaves them (sourcePositions).
   function elementsAt(w, pos) {
     if (!byPos[w]) {
       byPos[w] = new Map();
-      (w === 'after' ? paneAfter : paneBefore).querySelectorAll('[data-pos]').forEach(el => {
-        const p = parseInt(el.getAttribute('data-pos'), 10);
-        if (!isNaN(p)) { if (!byPos[w].has(p)) byPos[w].set(p, []); byPos[w].get(p).push(el); }
+      const add = (p, el) => { if (!isNaN(p)) { if (!byPos[w].has(p)) byPos[w].set(p, []); byPos[w].get(p).push(el); } };
+      (w === 'after' ? paneAfter : paneBefore).querySelectorAll('[data-pos], [data-alt]').forEach(el => {
+        if (el.classList.contains('nh-hit')
+            || (el.tagName.toLowerCase() === 'rect' && !el.getAttribute('stroke') && el.getAttribute('fill'))) return;
+        add(parseInt(el.getAttribute('data-pos'), 10), el);
+        const alt = el.getAttribute('data-alt');
+        if (alt) alt.split(' ').forEach(a => add(parseInt(a, 10), el));
       });
     }
     return byPos[w].get(pos) || [];
