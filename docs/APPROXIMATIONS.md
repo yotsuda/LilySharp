@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 63 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 64 | 観測者がゼロだと自認しているもの |
-| `OWN` | 281 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **408** | |
+| `OWN` | 282 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **409** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -246,7 +246,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（281 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（282 件）
 
 ### `LilySharp.Core/Editing/KeyRespeller.cs`
 - **`KeyRespeller`** LILYSHARP-OWN: an editor aid. The rule:
@@ -279,6 +279,7 @@
 - **`MidiExporter.ShareGrandStaffDynamics`** LILYSHARP-OWN: LilyPond's Dynamic_performer is consisted per Voice
 - **`MidiExporter.SplitIntoPartTracks`** LILYSHARP-OWN: LilyPond's performer gives each staff its own channel in the same way
 - **`MidiExporter.PlayChordRow`** LILYSHARP-OWN (owner decision 2026-09-25, HANDOFF §1.1 第625): LilyPond engraves a
+- **`MidiExporter.SwingNotes`** LILYSHARP-OWN: LilyPond's MIDI plays its swing equation straight unless the score asks for
 - **`MidiExporter.ProcessGrace`** previous written duration), so this is LILYSHARP-OWN and Lily# used to
 ### `LilySharp.Core/Music/ArpeggioSpread.cs`
 - **`ArpeggioSpread`** LILYSHARP-OWN: the owner's decision (2026-09-30) — &lt;&lt; chord(C x32010) &gt;&gt;2

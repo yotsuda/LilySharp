@@ -599,6 +599,7 @@ public sealed class MidiExporter
         _partVelocity.Clear();
         _velocity = DefaultVelocity;
         _sourceOrdinals = new Dictionary<int, int>();
+        _swing.Clear();
         OpenBarGrid(mainTrack, null);
         _levelLog.Clear();
         ProcessNode(_root, mainTrack, conductorTrack);
@@ -606,6 +607,7 @@ public sealed class MidiExporter
         // The notes an overfull bar ran past its bar line (AlignBarLine), once nothing indexes
         // the track any more.
         mainTrack.Notes.RemoveAll(n => n.DurationTicks < 0);
+        SwingNotes(mainTrack);
 
         // Ensure there is an initial time signature at tick 0. If the score already
         // declared one at the downbeat (ProcessTimeSignature added it), keep that and
@@ -3146,6 +3148,53 @@ public sealed class MidiExporter
         {
             _tempo = (int)System.Math.Round(quarterBpm);
             conductorTrack.SetTempo(_currentTick, BpmToMicroseconds(quarterBpm));
+        }
+        // The swing its equation prints (`tempo … swing`, `swing 16`) is played from here on
+        // (SwingNotes).
+        if (tempo.Value.SwingSubdivision is 8 or 16)
+            _swing.Add((_currentTick, tempo.Value.SwingSubdivision));
+    }
+
+    /// <summary>Where a swing feel starts, and what it swings (8 or 16), in the order met.</summary>
+    private readonly List<(int Tick, int Subdivision)> _swing = new();
+
+    /// <summary>
+    /// Plays the swing a tempo mark's equation prints (owner's request 2026-10-29: `tempo … swing`
+    /// was drawn and not heard): from the tick of the first such mark on, a note that starts — or
+    /// ends — on the second of a pair of the swung value moves to the third of a triplet over the
+    /// pair, as the equation reads (♫ = ♩♪³): a pair of eighths in a beat sounds long–short. The
+    /// pairs are counted from the bar line, so a pickup keeps them. Only that place moves: a note on
+    /// the beat, a triplet, a sixteenth elsewhere keep their time; the drums swing with the band.
+    /// </summary>
+    /// <remarks>
+    /// LILYSHARP-OWN: LilyPond's MIDI plays its swing equation straight unless the score asks for
+    /// swing through scm/swing.scm; Lily# plays what the mark says, in the 2:1 triplet feel the
+    /// mark prints. The feel lasts to the end: Lily# has no mark that ends it.
+    /// </remarks>
+    private void SwingNotes(MidiTrack track)
+    {
+        if (_swing.Count == 0)
+            return;
+        var swing = _swing.OrderBy(s => s.Tick).ToList();
+        var bars = _barTicks.Prepend(0).Distinct().OrderBy(t => t).ToList();
+        int Swung(int tick)
+        {
+            int sub = 0;
+            foreach (var (from, s) in swing)
+                if (from <= tick) sub = s; else break;
+            if (sub == 0)
+                return tick;
+            int pair = _ticksPerQuarter * 8 / sub;
+            int i = bars.BinarySearch(tick);
+            int bar = bars[i >= 0 ? i : System.Math.Max(0, ~i - 1)];
+            return (tick - bar) % pair == pair / 2 ? tick + (int)System.Math.Round(pair / 6.0) : tick;
+        }
+        for (int i = 0; i < track.Notes.Count; i++)
+        {
+            var n = track.Notes[i];
+            int start = Swung(n.StartTick), end = Swung(n.StartTick + n.DurationTicks);
+            if (start != n.StartTick || end != n.StartTick + n.DurationTicks)
+                track.Notes[i] = n with { StartTick = start, DurationTicks = System.Math.Max(1, end - start) };
         }
     }
 
