@@ -266,7 +266,7 @@
           "lilysharp.ai.editModel": {
             "type": "string",
             "default": "",
-            "markdownDescription": "The language model the features that write or change the music use — *Ask AI…* (Ctrl+I), *Compose with AI…* and *Fix OMR Marks with AI…*: a model id or family from **Lily#: Select AI Model…**. Empty chooses automatically — the largest model on offer, passing over the small ones (mini, nano, lite, …), which write poor Lily#. Ghost Completion has its own: `#lilysharp.ai.ghostModel#`.\n\n**[Choose a model…](command:lilysharp.selectAiModel?%5B%22edit%22%5D)**"
+            "markdownDescription": "The language model the features that write or change the music use — *Ask AI…*, *Compose with AI…* and *Fix OMR Marks with AI…*: a model id or family from **Lily#: Select AI Model…**. Empty chooses automatically — the largest model on offer, passing over the small ones (mini, nano, lite, …), which write poor Lily#. Ghost Completion has its own: `#lilysharp.ai.ghostModel#`.\n\n**[Choose a model…](command:lilysharp.selectAiModel?%5B%22edit%22%5D)**"
           },
           "lilysharp.ai.ghostModel": {
             "type": "string",
@@ -1057,7 +1057,7 @@
         "when": "resourceLangId == lilysharp"
       },
       {
-        "command": "lilysharp.aiTransform",
+        "command": "lilysharp.askAiInChat",
         "key": "ctrl+i",
         "mac": "cmd+i",
         "when": "editorTextFocus && editorLangId == lilysharp"

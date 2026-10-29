@@ -75,23 +75,32 @@ All notable changes to the Lily# VS Code extension are documented here.
 - **Copilot's chat proposes a score, and you decide on the score**: Lily# gives the chat a tool,
   `lilysharp_proposeScore` (#proposeScore), and asks it to write or change a .lys through it. The
   proposal is compiled first — one with errors goes back to the chat, never shown — then opens in
-  the AI candidate panel beside the score as it stands, to play and to Accept (the file is written,
-  one Ctrl+Z) or Reject; the chat is told which. What to change is said in the chat — there is no
-  Ask Again — and the panel stays open after a Reject, the chat's next proposal drawn into it; a
-  message sent before deciding is told to the chat as such. A new piece (the file empty) does not
-  go to the panel at all: checked as music once, it is written straight into the file and opened
-  in the editor — what to change is said in the chat afterwards, a bar named there if need be.
+  the AI candidate panel beside the score as it stands, to play and to Accept (into the editor, one
+  Ctrl+Z, not saved — you save when you want to) or Reject; the chat is told which. What to change
+  is said in the chat — there is no Ask Again — and the panel stays open after a Reject, the chat's
+  next proposal drawn into it; a message sent before deciding is told to the chat as such. A new
+  piece (the file empty) does not go to the panel at all: checked as music once, it is written
+  straight into the editor, not saved — what to change is said in the chat afterwards, a bar named
+  there if need be.
   Compose with AI in Chat proposes its piece this way. A new piece is checked as music once
   before it is shown (the same check as Compose with AI's): what it finds goes back to the chat,
   and the next proposal is shown whatever it did with it. The file's opening comments are kept
   where a proposal leaves them out.
-- **Ask AI in Chat**: on the score's right-click menu and the editor's, it puts the place the
-  request is about in Copilot's chat input — unsent, for you to finish and send: the file alone, or
-  with the notes or bars picked their lines, section, part and bars (`Dusk.lys, lines 5–7 (section
-  A, part vn1, bars 1–3): `). The picked notes become the editor's selection, which the chat takes in.
+- **Copilot's chat reads a score as it stands in the editor**: a second tool,
+  `lilysharp_readScore` (#readScore), gives the chat a .lys as the editor holds it, saved or not —
+  the chat's agent reads the disk, where an unsaved score is not and a saved one may be behind.
+- **Ask AI in Chat — the preview's ✨ and Ctrl+I**: the header's ✨ and Ctrl+I, in the preview and
+  in the editor, now open Copilot's chat (they started Lily#'s own Ask AI, which stays on the
+  right-click menus); the button sinks when pressed. On the score's right-click menu and the
+  editor's, Ask AI in Chat puts the place the request is about in Copilot's chat input — unsent,
+  for you to finish and send: the file alone, or with the notes or bars picked their lines,
+  section, part and bars (`Dusk.lys, lines 5–7 (section A, part vn1, bars 1–3): `). The picked
+  notes become the editor's selection, which the chat takes in. An unsaved score is named by its
+  whole path, with #readScore to read it.
 - **Compose with AI in Chat**: a menu of its own (File > New File… and the command palette) that
-  asks what to compose and where to keep it, writes the new file's first lines (`octave absolute`,
-  `pitch concert`), opens it and hands the request — with a starting point drawn at random — to
+  asks what to compose, opens a new unsaved score for it — Composed.lys, or the first ComposedN.lys
+  free, beside the active file; Ctrl+S keeps it there — writes its first lines (`octave absolute`,
+  `pitch concert`) and hands the request — with a starting point drawn at random — to
   Copilot's chat agent, where the model's thinking and its tries are seen and a stronger model can be
   picked. The chat is given the grammar and the composing guide; Lily#'s own checks do not run there
   (yet). Compose with AI stays as it was. The request names the bundled `lysc` to check the piece
@@ -1984,137 +1993,6 @@ reader is offered its update when a scan is read.
 
 ### AI
 
-- **Compose with AI plans the music, not only the chords**: the plan fills in every heading — form
-  and length, key, harmony, the theme written out in notes with a rhythm of its own, each phrase's
-  first, highest and last notes (the second phrase of a pair starting as the first, ending on I
-  where the first stopped on V), one climax, each section's accompaniment figure, the dynamics,
-  the devices of the character asked for, the ending — and the piece is held to it before it is
-  sent. A piece fits one printed page (about 16 to 32 bars) unless a length is asked for; it was
-  32 to 64, and the extra bars were filler.
-- **Compose with AI knows more kinds of music, and how to set words**: a solo instrument with piano
-  (the solo above the piano, where it sings), a pop song (verse, chorus, its hook), rock (a riff),
-  gospel (call and response, rich chords, the "amen" ending), and a song's words — one syllable a
-  note, Japanese one mora a note written apart (`き ら き ら`: Lily# does not split kana), the
-  stress or pitch accent with the melody, a line of words a phrase of music.
-- **A composed melody is held to more rhythm**: the part that carries the tune — the one a lyrics
-  track sings, the solo beside a piano, a solo piano's right hand — is sent back for a revision when
-  60% of its notes are one value (an accompaniment still at 80%). The guide also says a section in
-  the relative key writes no `key` line (it printed the same signature again), and a left hand's
-  broken chord stays within a twelfth.
-- **A reply fenced as ```` ```Lily# ```` is read**: the fence comes off whatever its language tag
-  (the `#` stayed as the file's first line, and the piece went back as one that does not compile),
-  and a composed piece writes no `composer` line unless asked (two wrote `composer "OpenAI"`).
-- **A pop song's tune syncopates**: the guide asks for a syncopation in at least half the bars of
-  the sung line — a note that comes off the beat and rings across the next one, or a phrase's last
-  note an eighth early, tied over the bar line — with examples in notes.
-- **A song's words are written whole first, and the notes fitted to them**: the plan writes each
-  line as the sentence it is and counts its sung units before the phrase is written, so no word is
-  cut to fit the notes (a song sang 燃やす as `も や`) and every line ends on a whole word. The
-  guide says it for any language — the sung unit (a syllable; a mora in Japanese), the words' own
-  stress, pitch accent or tones.
-- **A melody of one bar's rhythm is sent back**: when half or more of the melody's bars (8 at
-  least) share one rhythm — a song sang `r8 x8 x8 x8~ x4 x4` in 24 of its 26 bars, a breath at every
-  bar line in the middle of words — the AI is told to let the rhythm follow the words and the
-  phrase.
-- **A piece composed through Copilot's Auto names the model that answered**: its first line said
-  `copilot/auto`; it now reads `copilot/gpt-6-luna, via Auto` (several models in order when the
-  revisions went to more than one), from GitHub Copilot Chat's log — the API does not say. Without
-  that log it says `copilot/auto` as before.
-- **A returning section is named again, not copied**: Compose with AI's plan writes a section that
-  comes back as it was once and plays it again from the form (`form { A B A Coda }`); a return that
-  changes is a section of its own, and the plan says what changes.
-- **A revision cut off shows the version before it**: when the connection breaks while the AI is
-  revising a candidate that still has warnings, the candidate before the revision opens, its caption
-  saying the last revision was cut off.
-- **A composed piece's repair asks for the whole piece again**: a warning or an error in a composed
-  piece went back asking for "the corrected edits, each `<old>` copied from the file" — the
-  composer answered with bare `<old>`/`<new>`, which was read as the file, the rounds ran out, and
-  the music checks never saw the piece. It now asks for the whole corrected piece in `<file>`.
-- **A section mark the AI wrote stays readable in its candidate**: its white box was painted green
-  with the changes (and orange while playing), hiding its name; the box keeps its white, its
-  outline and name turn green.
-- **Copilot's chat proposes a score, and you decide on the score**: Lily# gives the chat a tool,
-  `lilysharp_proposeScore` (#proposeScore), and asks it to write or change a .lys through it. The
-  proposal is compiled first — one with errors goes back to the chat, never shown — then opens in
-  the AI candidate panel beside the score as it stands, to play and to Accept (the file is written,
-  one Ctrl+Z) or Reject; the chat is told which. What to change is said in the chat — there is no
-  Ask Again — and the panel stays open after a Reject, the chat's next proposal drawn into it; a
-  message sent before deciding is told to the chat as such. A new piece (the file empty) does not
-  go to the panel at all: checked as music once, it is written straight into the file and opened
-  in the editor — what to change is said in the chat afterwards, a bar named there if need be.
-  Compose with AI in Chat proposes its piece this way. A new piece is checked as music once
-  before it is shown (the same check as Compose with AI's): what it finds goes back to the chat,
-  and the next proposal is shown whatever it did with it. The file's opening comments are kept
-  where a proposal leaves them out.
-- **Ask AI in Chat**: on the score's right-click menu and the editor's, it puts the place the
-  request is about in Copilot's chat input — unsent, for you to finish and send: the file alone, or
-  with the notes or bars picked their lines, section, part and bars (`Dusk.lys, lines 5–7 (section
-  A, part vn1, bars 1–3): `). The picked notes become the editor's selection, which the chat takes in.
-- **Compose with AI in Chat**: a menu of its own (File > New File… and the command palette) that
-  asks what to compose and where to keep it, writes the new file's first lines (`octave absolute`,
-  `pitch concert`), opens it and hands the request — with a starting point drawn at random — to
-  Copilot's chat agent, where the model's thinking and its tries are seen and a stronger model can be
-  picked. The chat is given the grammar and the composing guide; Lily#'s own checks do not run there
-  (yet). Compose with AI stays as it was. The request names the bundled `lysc` to check the piece
-  with until it reports nothing; the composing guide is an instructions file of its own (with the
-  grammar, 103.7 KB, it was too large for the agent to read at once, and was read in pieces found
-  by search); and the guide says to write no `composer` line unasked (a chat piece signed itself
-  `composer "Lily#"`).
-- **A new piece starts in absolute octaves, in Copilot's chat too**: the composing guide — which the
-  chat is given as well — says to put `octave absolute` at the top before anything else; a piece
-  composed in the chat was written as absolute in a relative file, and its pitches flew off.
-- **Each composed piece is given a starting point drawn at random**: a key, a meter, a form and a way
-  to open, to take or leave — six "dramatic string quartets" had all come out D minor, 4/4, A–B–A,
-  opening on the same five notes. Whatever the request itself says (a key, a meter, a form, a length,
-  a style) comes first. Its meter is 4/4 most of the time and 3/4 seldom, and a band's music — rock,
-  pop — keeps its 4/4 whatever is drawn.
-- **A composed piece is given room, and leave to be itself**: about 24 to 32 bars is suggested
-  (a quartet of four 4-bar sections, 16 bars, had no room to say anything and its dynamics turned
-  every four bars), phrases often 8 bars — and the guide and the prompt now say its ways are a
-  composer's habits, not rules: any may be broken where the piece is better for it, and the AI is
-  asked to write a piece it would enjoy hearing. The check that sends a sketch back keeps its floor
-  of 16 bars.
-- **Every part carries its own dynamics**: a composed piece whose dynamic levels are in some parts
-  and not others is sent back (each player reads only their own staff) — a quartet's were all in the
-  first violin. An `@sf` is not a level; a piano hand rides on the other's; a drum part needs none.
-- **The character runs through the piece**: the composing guide says each device of the character
-  asked for comes back in more than one section, growing to the climax — a quartet's tremolo and
-  sforzando were all in two bars of its middle section.
-- **The accompanying parts do not stop together bar after bar**: the composing guide says a rest in
-  one part is covered by another — a quartet's three lower strings rested together on beat 4 of
-  every bar, leaving the tune alone there.
-- **The composing guide is its own document, sent only when composing**: what makes a new piece
-  music (form, theme, phrases, the kinds of music, the setting of words) moved from the grammar to
-  `docs/COMPOSE_FOR_LLM.md`, bundled beside it. Compose with AI sends both; Ask AI, which edits a
-  score, is sent the grammar alone — some 3 000 tokens less a request, and the guide can grow
-  without weighing on it. Copilot's chat is given both. The composer's plan headings now say only
-  what to decide, the guide why and how — said once, not twice.
-- **A composed piece's character is written into it**: the plan names each device of the character
-  asked for with how it is written and the bars it is in (for "dramatic": `@sf`, `@p.subito`, a
-  tremolo `d'2:32`, the parts in unison at the climax), and the piece is checked for them before it
-  is sent — a "dramatic" quartet had planned its character and written none of it.
-- **A model too small for the instructions is not sent them**: Ask AI and Compose with AI check the
-  chosen model's input limit first — the Lily# grammar with the instructions is some 30 000 tokens,
-  and a model listed on this machine reads 12 000 — and say so, with Select AI Model a click away.
-- **A composed song's words are drawn**: a lyrics track the score did not show (`lyrics words sings
-  lead` in every section, no `lyrics words` row) gets its row, under the staff it sings, before the
-  piece opens.
-- **A composed piece shows its newest version that renders, its warnings marked `@todo`**: when
-  the rounds run out, a later version with warnings wins over an earlier one without (the music
-  check's revision, the better piece, lost to the draft before it for three bars a beat long), and
-  each line a warning is about carries a `@todo` with the warning's words — tried a line at a time,
-  so a line that takes no mark (a lyric line) is left as it is.
-- **A composed piece gets one round more**: four in all, so the revision the music check asks for —
-  the better piece in a trial, its phrases ending on long notes — can still have its slips (three
-  bars a beat long) repaired instead of being dropped for the first draft.
-- **A request the AI ended with no answer says so, and offers Try Again**: Copilot's "Response
-  contained no choices." (a model that ran 2 min 44 s and sent nothing back) now reads as what
-  happened, and the request can be asked again at once.
-- **A broken connection says so, and offers Try Again**: Compose with AI and Ask AI tell when the
-  connection to the AI broke off ("after 2 min 24 s") instead of the network's own English, and Try
-  Again opens the box with the request as it was — to send again, or to ask for a shorter piece.
-- **Compose with AI is in File > New File…**, as "Lily# Score, Composed with AI…" beside "Lily# Score
-  (.lys)": where a piece is begun. It starts the language server itself when no score is open yet.
 - **Copilot now knows the Lily# grammar.** The extension contributes the language spec as a
   Copilot instructions file for `.lys` files, so Copilot Chat, agent mode and inline chat
   (`Ctrl+I` from Copilot's own menus) answer in Lily# instead of guessing LilyPond. Lily#'s own

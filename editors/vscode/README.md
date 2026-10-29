@@ -48,8 +48,12 @@ same number. See the [changelog](https://github.com/yotsuda/LilySharp/blob/maste
 
 Uses the language models VS Code offers — GitHub Copilot's, or another provider's.
 
-- **✨ Ask AI… (`Ctrl+I`)**: say what to change ("add a bass line", "make bar 5 a fill") and the
-  AI rewrites the score. A selection — text in the editor, or bars, a bar or a note on the score
+- **✨ Ask AI in Chat (`Ctrl+I`)**: the preview's ✨ and Ctrl+I open Copilot's chat with the file,
+  or the bars selected, in its input — say what to change and send. The chat reads the score as it
+  stands, and its proposal opens beside the score to play and Accept or Reject; a new piece (Compose
+  with AI in Chat) goes straight into an unsaved score.
+- **Ask AI…** (right-click): Lily#'s own, without the chat — say what to change ("add a bass
+  line", "make bar 5 a fill") and the AI rewrites the score. A selection — text in the editor, or bars, a bar or a note on the score
   — is a hint of where to look; the whole score stays open to change. Every answer is compiled
   and checked first, then shown **before** anything is written: the score as it is and as it
   would be, what changed in green, the AI's note on what it did, ▶ to hear it, *Ask Again…* to

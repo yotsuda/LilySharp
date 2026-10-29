@@ -1627,18 +1627,8 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
                 if (doc) {
                     updatePreviewContent(doc, panel, context);
                 }
-            } else if (message.type === 'aiTransformFromScore') {
-                // M3: a note range selected ON THE SCORE maps to a text range, which
-                // becomes the editor selection, then the same AI transform runs — so
-                // the loop is identical whether the selection started in text or score.
-                await aiTransformFromScore(uri, message.startPos, message.endPos, message.selected);
-            } else if (message.type === 'aiWholeScore') {
-                // The header's AI button (or Ctrl+I) with nothing selected on the score: the
-                // editor's selection when there is one (owner's report 2026-10-25: notes selected
-                // in the editor were answered with "Nothing is selected"), else the whole score.
-                await aiTransformFromPreviewHeader(uri);
             } else if (message.type === 'askAiInChat') {
-                // The header's ✨ (owner's request 2026-10-29): Copilot's chat, the bars selected on
+                // The header's ✨ and Ctrl+I (owner's requests 2026-10-29): Copilot's chat, the bars selected on
                 // the score as the pointer, else the file — put in its input, unsent.
                 const doc = await previewDocument(uri);
                 if (doc) {
@@ -2918,20 +2908,6 @@ async function importMusicXml(context: vscode.ExtensionContext, sourceUri?: vsco
     }
 }
 
-/** The whole score from the preview: its editor brought forward, then Ctrl+I with `whole`. */
-async function aiTransformFromPreviewHeader(uri: string): Promise<void> {
-    // The editor showing the file keeps its selection while the preview has the focus.
-    const editor = vscode.window.visibleTextEditors.find(e => e.document.uri.toString() === uri && !e.selection.isEmpty);
-    if (!editor) {
-        await aiTransformWholeScore(uri);
-        return;
-    }
-    await vscode.window.showTextDocument(editor.document, { viewColumn: editor.viewColumn, preserveFocus: false });
-    const lines = editor.selection.end.line - editor.selection.start.line + 1;
-    await vscode.commands.executeCommand('lilysharp.aiTransform',
-        { selected: lines === 1 ? 'The text selected in the editor' : `${lines} lines selected in the editor` });
-}
-
 async function aiTransformWholeScore(uri: string): Promise<void> {
     const doc = vscode.workspace.textDocuments.find(d => d.uri.toString() === uri);
     if (!doc) {
@@ -3892,7 +3868,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         </span>
         <span class="sep"></span>
         <span class="group">
-        <button id="aiTransformBtn" class="ai icon" type="button" title="Ask AI in Chat">✨</button>
+        <button id="aiTransformBtn" class="ai icon" type="button" title="Ask AI in Chat (Ctrl+I)">✨</button>
         <button id="rangeBtn" class="toggle icon" type="button" aria-pressed="false" aria-label="Range" title="Each part's range"><svg viewBox="0 -.25 16.5 16.5" fill="currentColor" aria-hidden="true"><path d="M3 1.5 5.95 5.3H3.8v6.6h2.15L3 15.7.05 11.9H2.2V5.3H.05z"/><g transform="translate(.8 0)"><ellipse cx="9.4" cy="12.4" rx="2.8" ry="2" transform="rotate(-22 9.4 12.4)"/><rect x="11.35" y="1.5" width="1.05" height="10.8"/><path d="M12.4 1.5c.3 2 1.6 2.8 2.4 3.9.9 1.5 1.1 3.6.3 5.5.1-2.1-.9-3.6-2.7-4.2z"/></g></svg></button>
         </span>
         <span class="sep"></span>
@@ -4007,25 +3983,17 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         }
         // The header's AI button is its emoji alone, "✨" (owner's request 2026-10-25); its tooltip
         // names it in a few words, and with bars selected says they go with the request. It opens
-        // Copilot's chat (owner's request 2026-10-29); Ctrl+I stays Lily#'s own Ask AI.
+        // Copilot's chat, as Ctrl+I does (owner's requests 2026-10-29).
         function updateAiButton() {
             aiTransformBtn.title = aiRangeLo < 0
-                ? 'Ask AI in Chat'
-                : 'Ask AI in Chat, about the selected bars';
+                ? 'Ask AI in Chat (Ctrl+I)'
+                : 'Ask AI in Chat, about the selected bars (Ctrl+I)';
         }
         function askInChat() {
             // Held sunk a moment, so a quick click is seen to land.
             aiTransformBtn.classList.add('pressed');
             setTimeout(() => aiTransformBtn.classList.remove('pressed'), 180);
             vscode.postMessage({ type: 'askAiInChat', startPos: aiRangeLo, endPos: aiRangeHi });
-        }
-        function aiSubmitSelection() {
-            if (aiRangeLo < 0) {
-                vscode.postMessage({ type: 'aiWholeScore' });
-                return;
-            }
-            vscode.postMessage({ type: 'aiTransformFromScore', startPos: aiRangeLo, endPos: aiRangeHi,
-                selected: selectedLabel() });
         }
         aiTransformBtn.addEventListener('click', askInChat);
 
@@ -6870,11 +6838,11 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             });
         }, true);
 
-        // M3 keyboard: Ctrl/Cmd+I asks the AI, as the header button does — about the score
-        // selection, or the whole score when nothing is selected; Escape clears the selection.
+        // M3 keyboard: Ctrl/Cmd+I asks the AI in Copilot's chat, as the header button does (owner's
+        // request 2026-10-29) — about the bars selected, else the file; Escape clears the selection.
         window.addEventListener('keydown', (e) => {
             if ((e.ctrlKey || e.metaKey) && (e.key === 'i' || e.key === 'I')) {
-                e.preventDefault(); aiSubmitSelection();
+                e.preventDefault(); askInChat();
             } else if (e.key === 'Escape') {
                 if (aiRangeLo >= 0) { aiClearSelection(); clearHighlights(); }
             }

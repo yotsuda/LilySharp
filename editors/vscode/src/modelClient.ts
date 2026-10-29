@@ -212,7 +212,7 @@ export async function pickAiModel(only?: ModelUse): Promise<void> {
         // The three features that write music (owner's requests 2026-10-28: Compose with AI uses
         // this model too, and the label left it out; then the owner's wording, one "AI" for all
         // three — Ask AI…, Compose with AI…, Fix OMR Marks with AI…).
-        { label: 'Ask (Ctrl+I), Compose and Fix OMR Marks with AI…', description: shown('edit'), detail: 'Writes or changes the music as you ask: a strong model is worth waiting for.', use: 'edit' },
+        { label: 'Ask, Compose and Fix OMR Marks with AI…', description: shown('edit'), detail: 'Writes or changes the music as you ask: a strong model is worth waiting for.', use: 'edit' },
         { label: 'Ghost Completion', description: shown('ghost'), detail: 'Answers as you type: a fast model, or the suggestion is cancelled before it shows.', use: 'ghost' },
     ];
     const which = only
