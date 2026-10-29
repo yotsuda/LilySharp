@@ -279,6 +279,8 @@ async function runCompose(deps: AiTransformDeps, asked?: string): Promise<void> 
     }
     const budget = documentBudget(chat.maxInputTokens, systemTokens);
     const began = Date.now();
+    const hint = compositionHint();
+    deps.log(`AI transform: ${hint}`);
     try {
         // In the octaves the AI writes it: a new piece has no octave mode of its own to go back to.
         const ai: AiSpace = { snap: snapshot, converted: false };
@@ -295,7 +297,7 @@ async function runCompose(deps: AiTransformDeps, asked?: string): Promise<void> 
             + 'fits its music and its mood, on a `title "…"` line at the top, in the language of the request.\n'
             // A starting point drawn at random, the request's own word first (owner's request
             // 2026-10-29: every "dramatic string quartet" came out D minor, 4/4, A–B–A, the same opening).
-            + compositionHint(),
+            + hint,
             true, grammar, documentContext(ai.snap, budget, true), true, description.trim());
     } catch (err: any) {
         const failed = aiFailure('compose', String(err?.message ?? err), Date.now() - began);

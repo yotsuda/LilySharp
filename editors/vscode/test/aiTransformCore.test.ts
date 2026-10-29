@@ -42,7 +42,8 @@ describe('a starting point drawn at random', () => {
     });
     it('goes with every Compose with AI request', () => {
         const src = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'aiTransform.ts'), 'utf8');
-        assert.match(src, /in the language of the request\.\\n'\s*\/\/[^\n]*\n\s*\/\/[^\n]*\n\s*\+ compositionHint\(\),/);
+        assert.match(src, /in the language of the request\.\\n'\s*\/\/[^\n]*\n\s*\/\/[^\n]*\n\s*\+ hint,/);
+        assert.match(src, /const hint = compositionHint\(\);\s*deps\.log\(`AI transform: \$\{hint\}`\);/);
     });
 });
 
