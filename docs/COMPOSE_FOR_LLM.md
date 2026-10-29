@@ -133,6 +133,13 @@ What makes it music:
   soloist sings a line, the choir answers it. Rich chords (added 9ths and 7ths, a dominant with a
   sus4 before it resolves, passing diminished chords, the bass walking up into the next chord), a
   slow 12/8 or a swinging fast 4/4, and the IV–I "amen" at the end.
+- **A piece for a beginner** ("for a beginner", "an easy exercise", "for a child learning the
+  piano"): the hand stays in one place — five notes under five fingers (C to G for the right
+  hand from middle C), moving by step with a few skips of a third, no leap out of the five, no
+  sharp or flat the key does not have; quarter and half notes, a whole note at the end. Fingering
+  on the first note and wherever the hand must think (`c'4@finger(1)`); a slur over each phrase
+  and a dynamic at its start, so the piece teaches them too. The last note is the tonic, reached
+  by step (`d'4 c'1`, or `b4 c'1` — the B below middle C, not `b'` an octave above).
 - **A hymn or chorale for choir** (SATB, `choirStaff`): the four voices move together, mostly in
   quarter notes, a longer note at each phrase's end, where the harmony makes a cadence; a fermata
   on the last chord. Each voice in its own range — soprano C4–G5, alto G3–D5, tenor C3–G4, bass

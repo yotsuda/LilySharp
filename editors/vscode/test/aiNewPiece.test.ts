@@ -225,6 +225,15 @@ describe('the composing guide', () => {
         assert.match(guide, /a waltz's bass on beat 1 and its chords on 2\s+and 3 round middle C, the two hands sharing that one figure, not each playing it/);
         assert.match(guide, /the\s+right hand's own line comes where the solo holds or rests, an answer to it/);
     });
+    // Owner's trial 2026-10-29: a beginner's right-hand piece reached A and B outside the five-finger
+    // place, wrote no fingering, and leapt a seventh from `b'` to its last note `c'`.
+    it('says how a piece for a beginner is written', () => {
+        const guide = fs.readFileSync(path.join(docs, 'COMPOSE_FOR_LLM.md'), 'utf8');
+        assert.match(guide, /\*\*A piece for a beginner\*\* \("for a beginner", "an easy exercise"/);
+        assert.match(guide, /five notes under five fingers \(C to G for the right\s+hand from middle C\)/);
+        assert.match(guide, /Fingering\s+on the first note and wherever the hand must think \(`c'4@finger\(1\)`\)/);
+        assert.match(guide, /`b4 c'1` — the B below middle C, not `b'` an octave above/);
+    });
     it('says how a hymn or a chorale for choir is written', () => {
         const guide = fs.readFileSync(path.join(docs, 'COMPOSE_FOR_LLM.md'), 'utf8');
         assert.match(guide, /\*\*A hymn or chorale for choir\*\* \(SATB, `choirStaff`\): the four voices move together/);
