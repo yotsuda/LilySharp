@@ -279,6 +279,14 @@ function registerProposeScoreTool(context: vscode.ExtensionContext, deps: AiTran
             new vscode.LanguageModelTextPart(await readScore(deps, options.input)),
         ]),
     }));
+    context.subscriptions.push(lm.registerTool<ReadScoreInput>('lilysharp_checkName', {
+        prepareInvocation: options => ({
+            invocationMessage: `Checking that ${path.basename(options.input?.file ?? 'the name')} is free…`,
+        }),
+        invoke: async options => new vscode.LanguageModelToolResult([
+            new vscode.LanguageModelTextPart(await checkName(options.input)),
+        ]),
+    }));
     context.subscriptions.push(lm.registerTool<ReadGuideInput>('lilysharp_readGuide', {
         prepareInvocation: options => ({
             invocationMessage: options.input?.topic === 'composing' ? 'Reading the Lily# composing guide…' : 'Reading the Lily# grammar…',
@@ -356,7 +364,7 @@ async function readGuide(deps: AiTransformDeps, input: ReadGuideInput | undefine
         + 'were given, or the workspace folder, its absolute path; it is not on the disk until the musician saves it. '
         + 'Name a new file after the piece\'s title, in letters, digits and hyphens (a title in another script '
         + 'romanized: 風のリボン → Kaze-no-Ribbon.lys), never a placeholder (Composed, Untitled), and a name no file in '
-        + 'that folder has yet — check. Its first '
+        + 'that folder has yet — check it with the lilysharp_checkName tool (#checkName). Its first '
         + 'lines are these, the request as the musician put it and what you made of it, each on one line, in the '
         + 'language of the request:\n'
         + newPieceHeader('<the request>', '<the piece you composed, in a sentence or two>', '\n').trimEnd() + '\n'
@@ -392,7 +400,7 @@ function newPieceHeader(asked: string, note: string, eol: string): string {
 function newPieceSteps(lysc: string | undefined): string {
     return 'Propose it, whole, with the lilysharp_proposeScore tool (#proposeScore), giving that path: it compiles the '
         + 'piece, sends back its errors and warnings to fix, and writes it into the document — do not run a compiler '
-        + 'yourself. If that tool is not available, write the piece into the file instead'
+        + 'yourself, nor anything else in a terminal: Lily#\'s tools and your file tools do all a new piece needs. If that tool is not available, write the piece into the file instead'
         + (lysc ? `, and check it with \`& "${lysc}" check <file>\`` : '') + '.\n'
         + 'Keep `octave absolute` and `pitch concert`, and write every pitch as the pitch it sounds.\n';
 }
@@ -471,6 +479,32 @@ async function readScore(deps: AiTransformDeps, input: ReadScoreInput): Promise<
             + absolute;
     }
     return `${path.basename(doc.uri.fsPath)} (${state}), ${doc.lineCount} lines, as it stands:\n${text}`;
+}
+
+/**
+ * Whether a new piece's file name is free: no file on the disk, no score open in the editor, saved
+ * or not, by that name — else the first free one beside it (`Name-2.lys`, …). Owner's request
+ * 2026-10-29: the chat listed the folder in a terminal to check, asking "Run in terminal?".
+ */
+async function checkName(input: ReadScoreInput): Promise<string> {
+    if (!input || typeof input.file !== 'string' || !path.isAbsolute(input.file)) {
+        return 'Nothing checked: give `file`, the new .lys file\'s absolute path.';
+    }
+    const file = path.resolve(input.file);
+    const taken = async (p: string) => fs.existsSync(p) || (await scoreDocument(p)) !== undefined;
+    if (!await taken(file)) {
+        return `Free: ${path.basename(file)} is not taken in ${path.dirname(file)} — propose the new piece there.`;
+    }
+    const ext = path.extname(file) || '.lys';
+    const stem = path.basename(file, path.extname(file)).replace(/-\d+$/, '');
+    for (let n = 2; n < 100; n++) {
+        const free = path.join(path.dirname(file), `${stem}-${n}${ext}`);
+        if (!await taken(free)) {
+            return `Taken: ${path.basename(file)} is already a score in ${path.dirname(file)}. Name the new piece ${free} — `
+                + 'it is free — or after another title.';
+        }
+    }
+    return `Taken: ${path.basename(file)} and its numbered names are all in use in ${path.dirname(file)}; name the piece after another title.`;
 }
 
 /** The score in absolute octaves for the chat, or undefined when it goes as it is: a file

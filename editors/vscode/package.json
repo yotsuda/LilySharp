@@ -28,6 +28,7 @@
     "onLanguage:markdown",
     "onLanguageModelTool:lilysharp_proposeScore",
     "onLanguageModelTool:lilysharp_readScore",
+    "onLanguageModelTool:lilysharp_checkName",
     "onLanguageModelTool:lilysharp_readGuide",
     "onLanguageModelTool:lilysharp_readScan",
     "onLanguageModelTool:lilysharp_fixScanBars"
@@ -67,6 +68,23 @@
           "type": "object",
           "properties": {
             "file": { "type": "string", "description": "The .lys file's absolute path — for a score open in the editor and not saved yet, the path it is named by." }
+          },
+          "required": ["file"]
+        }
+      },
+      {
+        "name": "lilysharp_checkName",
+        "toolReferenceName": "checkName",
+        "displayName": "Check a new Lily# score's name",
+        "icon": "$(search)",
+        "canBeReferencedInPrompt": true,
+        "tags": ["lilysharp", "lys", "music", "score", "notation", "compose", "song"],
+        "userDescription": "Says whether a new .lys file's name is free in its folder, or a free one beside it.",
+        "modelDescription": "Use this before proposing a NEW piece, to know that its file name is not taken — instead of listing the folder in a terminal. Give the absolute path you mean to use. It says whether a file, or a score open in the editor and not saved, already has that name, and if so names a free one to use instead.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "file": { "type": "string", "description": "The new .lys file's absolute path, named after the piece's title." }
           },
           "required": ["file"]
         }

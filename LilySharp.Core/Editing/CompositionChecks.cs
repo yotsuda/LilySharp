@@ -92,6 +92,7 @@ public static class CompositionChecks
                 findings.Add($"No dynamics in {string.Join(", ", silent)}: each player reads only their own staff — write the levels "
                     + "(`@p`, `@mf`, `@f`, …) and the hairpins in every part, where its own music asks for them, not in one part alone.");
         }
+        findings.AddRange(DynamicDrops(root));
 
         MidiFile midi;
         try
@@ -426,6 +427,50 @@ public static class CompositionChecks
 
     /// <summary>The parts whose music writes a dynamic level, in a section's cell or in a phrase the
     /// cell names.</summary>
+    /// <summary>
+    /// A section that ends loud and the one played after it opening soft, two levels down or more, with
+    /// no <c>@decresc</c> (<c>@dim</c>) after the last level to lead there and no <c>@p.subito</c> to
+    /// say it is meant (owner's trials 2026-10-29: three wedding pieces in a row went from B's @f
+    /// straight to the returning A's @p). Read part by part, each part's marks in the order written.
+    /// </summary>
+    private static IEnumerable<string> DynamicDrops(SyntaxNode root)
+    {
+        string[] order = ["pppp", "ppp", "pp", "p", "mp", "mf", "f", "ff", "fff", "ffff"];
+        var sections = root.DescendantNodes<SectionDeclarationSyntax>().Where(s => s.Parent is { Parent: null })
+            .GroupBy(s => s.SectionName).ToDictionary(g => g.Key, g => g.First());
+        var form = root.DescendantNodes<FormDeclarationSyntax>().Where(f => !f.InScore).OrderBy(f => f.Name != null).FirstOrDefault();
+        var played = form?.DescendantNodes<SectionReferenceSyntax>().Select(r => r.SectionName).Where(sections.ContainsKey).ToList() ?? [];
+        List<DynamicSyntax> MarksOf(string section, string part) => sections[section].DescendantNodes<PartBlockSyntax>()
+            .Where(b => b.PartName.Text == part).SelectMany(b => b.DescendantNodes<DynamicSyntax>()).ToList();
+        var said = new HashSet<(string, string)>();
+        for (int i = 0; i + 1 < played.Count; i++)
+        {
+            var (from, to) = (played[i], played[i + 1]);
+            if (from == to || said.Contains((from, to)))
+                continue;
+            foreach (var part in sections[from].DescendantNodes<PartBlockSyntax>().Select(b => b.PartName.Text).Distinct())
+            {
+                var before = MarksOf(from, part);
+                var after = MarksOf(to, part);
+                if (before.Count == 0 || after.Count == 0)
+                    continue;
+                // The last mark is a level: no hairpin after it leads anywhere.
+                int loud = System.Array.IndexOf(order, before[^1].DynamicToken.Text);
+                var first = after.FirstOrDefault(d => System.Array.IndexOf(order, d.DynamicToken.Text) >= 0);
+                if (loud < 0 || first is null || first.IsSubito || first != after[0])
+                    continue;
+                int soft = System.Array.IndexOf(order, first.DynamicToken.Text);
+                if (loud - soft < 2)
+                    continue;
+                said.Add((from, to));
+                yield return $"{part}: {from} ends at @{order[loud]} and {to}, played after it, opens at @{order[soft]} — a drop of "
+                    + $"{loud - soft} levels with nothing leading to it: bring the level down over {from}'s last bars (a @decresc to "
+                    + $"@{order[soft]}), or, if the sudden quiet is meant, write @{order[soft]}.subito.";
+                break;
+            }
+        }
+    }
+
     private static HashSet<string> DynamicLevelsByPart(SyntaxNode root)
     {
         static bool HasLevel(SyntaxNode n) => n.DescendantNodes<DynamicSyntax>().Any(d => Levels.Contains(d.DynamicToken.Text));

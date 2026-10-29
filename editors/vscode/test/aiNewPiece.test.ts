@@ -54,6 +54,17 @@ describe('the composing guide', () => {
         assert.match(guide, /A chord\s+sounds its third — the accompaniment has it, or the melody does on the beat/);
         assert.match(guide, /\(the B of A–B–A, a bridge\) ends on the home key's V/);
     });
+    // Owner's request 2026-10-29: the chat listed the folder in a terminal to see that a name was free.
+    it('gives the chat a tool to check a new file name, and asks for nothing in a terminal', () => {
+        const pkg = fs.readFileSync(path.join(__dirname, '..', '..', 'package.json'), 'utf8');
+        assert.match(pkg, /"onLanguageModelTool:lilysharp_checkName"/);
+        assert.match(pkg, /"name": "lilysharp_checkName",\s*"toolReferenceName": "checkName"/);
+        assert.match(transform, /lm\.registerTool<ReadScoreInput>\('lilysharp_checkName'/);
+        assert.match(transform, /const taken = async \(p: string\) => fs\.existsSync\(p\) \|\| \(await scoreDocument\(p\)\) !== undefined;/);
+        assert.match(transform, /`\$\{stem\}-\$\{n\}\$\{ext\}`/);
+        assert.match(transform, /check it with the lilysharp_checkName tool \(#checkName\)/);
+        assert.match(transform, /nor anything else in a terminal: Lily#\\'s tools and your file tools do all a new piece needs/);
+    });
     // Owner's review 2026-10-29: a wedding piece's melody dropped a ninth from its climax.
     it('says a wide leap is followed by a step back, above all from the high note', () => {
         const guide = fs.readFileSync(path.join(docs, 'COMPOSE_FOR_LLM.md'), 'utf8');
@@ -112,7 +123,7 @@ describe('the composing guide', () => {
         // bundled lysc named only for a file written without the tool.
         const steps = transform.slice(transform.indexOf('function newPieceSteps('), transform.indexOf('async function writeWhole'));
         assert.match(steps, /'Propose it, whole, with the lilysharp_proposeScore tool \(#proposeScore\), giving that path: it compiles the '/);
-        assert.match(steps, /'yourself\. If that tool is not available, write the piece into the file instead'\s*\+ \(lysc \? `, and check it with/);
+        assert.match(steps, /a new piece needs\. If that tool is not available, write the piece into the file instead'\s*\+ \(lysc \? `, and check it with/);
         assert.match(steps, /do not run a compiler '/);
         assert.ok(!/on a copy of your text/.test(steps));
         // Owner's request 2026-10-29: no save dialog — an unsaved score, saved when the musician wants
@@ -122,7 +133,7 @@ describe('the composing guide', () => {
         assert.match(fn, /const query = `Compose a new piece of music in Lily# in the folder \$\{folder\} \(a new file: your proposal opens it in the editor\)\.\\n`/);
         const guide = transform.slice(transform.indexOf('async function readGuide('), transform.indexOf('function newPieceHeader('));
         assert.match(guide, /'Name a new file after the piece\\'s title, in letters, digits and hyphens \(a title in another script '/);
-        assert.match(guide, /never a placeholder \(Composed, Untitled\), and a name no file in '\s*\+ 'that folder has yet — check\./);
+        assert.match(guide, /never a placeholder \(Composed, Untitled\), and a name no file in '\s*\+ 'that folder has yet — check it with the lilysharp_checkName tool/);
         assert.ok(!/\+ 'folder \(e\.g\. Composed\.lys\)/.test(guide));
     });
     // Owner's request 2026-10-29: Copilot's chat proposes a score through Lily#'s tool, the musician
@@ -198,7 +209,7 @@ describe('the composing guide', () => {
         assert.match(pkg, /"name": "lilysharp_readGuide",\s*"toolReferenceName": "readGuide",\s*"displayName": "Read the Lily# guide"/);
         assert.match(pkg, /"onLanguageModelTool:lilysharp_readGuide"/);
         const tags = '"tags": ["lilysharp", "lys", "music", "score", "notation", "compose", "song"]';
-        assert.equal(pkg.split(tags).length - 1, 3);
+        assert.equal(pkg.split(tags).length - 1, 4);   // proposeScore, readScore, checkName, readGuide
         assert.match(pkg, /"modelDescription": "Use this before composing music — a piece, a song, a score — or writing or changing Lily# \(\.lys\) text/);
         assert.match(pkg, /"enum": \["grammar", "composing", "start"\]/);
         assert.match(transform, /lm\.registerTool<ReadGuideInput>\('lilysharp_readGuide'/);

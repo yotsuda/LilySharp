@@ -225,6 +225,23 @@ public class CompositionChecksTests
         Assert.DoesNotContain(CompositionChecks.Of(common), f => f.Contains("seconds played") || f.Contains("a note starts within a beat"));
     }
 
+    // Owner's trials 2026-10-29: three wedding pieces went from B's @f straight to the returning A's @p.
+    [Fact]
+    public void ALoudSectionDroppingToASoftOne_WithNothingLeadingThere_IsSaid()
+    {
+        string Piece(string bEnd) => "title \"Hikari\"\ntime 4/4\noctave absolute\nkey f major\n" + Hands
+            + "\nsection A {\n  rh { a'4@p c''8 d''8 f''2 | g'2 c''4 e''4 | }\n  lh { f,8 c a c' f, c a c' | e,8 c g c' e, c g c' | }\n}\n"
+            + $"section B {{\n  rh {{ a'2@mp@cresc d''4 f''4 | {bEnd} | }}\n  lh {{ d,8 a, f a d, a, f a | c,8 g, e g c, g, e g | }}\n}}\n"
+            + "form { A B A }\nscore { grandStaff { staff rh  staff lh } }\n";
+        var drop = Assert.Single(CompositionChecks.Of(Piece("e''4 f''8 g''8 g''2@f")), f => f.Contains("a drop of"));
+        Assert.Equal("rh: B ends at @f and A, played after it, opens at @p — a drop of 3 levels with nothing leading to it: bring "
+            + "the level down over B's last bars (a @decresc to @p), or, if the sudden quiet is meant, write @p.subito.", drop);
+        // Led down by a hairpin, or one level: not said.
+        Assert.DoesNotContain(CompositionChecks.Of(Piece("e''4@f f''8 g''8 g''2@decresc")), f => f.Contains("a drop of"));
+        Assert.DoesNotContain(CompositionChecks.Of(Piece("e''4 f''8 g''8 g''2@mp")), f => f.Contains("a drop of"));
+        Assert.DoesNotContain(CompositionChecks.Of(Piece("e''4 f''8 g''8 g''2@f").Replace("a'4@p", "a'4@p.subito")), f => f.Contains("a drop of"));
+    }
+
     // Owner's trial 2026-10-29: B in D major, then A and the coda with no key line — back in G, as
     // they are drawn and played — was told it "ends in D major", and the chat added a needless key.
     [Fact]
