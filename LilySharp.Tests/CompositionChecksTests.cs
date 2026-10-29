@@ -213,7 +213,9 @@ public class CompositionChecksTests
         var beats = Assert.Single(findings, f => f.Contains("a note starts within a beat"));
         Assert.StartsWith("rh, the melody: in 9 of its 24 bars", beats);
         Assert.Contains("(bars 1, 2, 5, 9, 10, 13,", beats);
-        Assert.Contains(findings, f => f.StartsWith("The piece is 24 bars long, about 50 seconds played"));
+        Assert.Contains(findings, f => f.StartsWith("The piece is 24 bars long, about 50 seconds played")
+            // More music, not a slower tempo (owner's report 2026-10-29: ♩ = 72 became 48).
+            && f.EndsWith("never by slowing its tempo: keep the tempo its character asks for."));
         // The tune by its beats: not said.
         string kept = Piece("6/8", "4. = 58",
             "d''4 b'8 a'4 g'8 | a'4 b'8 d''4. | e''4 d''8 b'4 a'8 | fis'4. a'4. | b'4 d''8 g''4. | e''4 d''8 c''4. | a'4 c''8 fis''4. | g''2. |",

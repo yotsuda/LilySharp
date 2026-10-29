@@ -75,6 +75,8 @@ describe('the composing guide', () => {
         const guide = fs.readFileSync(path.join(docs, 'COMPOSE_FOR_LLM.md'), 'utf8');
         assert.match(guide, /in 6\/8 \(9\/8, 12\/8\) a beat is three eighths/);
         assert.match(guide, /a minute and a half to three\s+minutes played — a shorter bar or a quicker beat takes more bars/);
+        // Owner's report 2026-10-29: told it was short, the chat slowed ♩ = 72 to 48.
+        assert.match(guide, /never a slower tempo than the character asks for, to fill the\s+time/);
     });
     // Owner's report 2026-10-29: a piece composed in Copilot's chat was written as absolute in a
     // relative file, and its pitches flew off — the guide, which the chat is given too, says to start absolute.

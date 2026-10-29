@@ -341,9 +341,13 @@ public static class CompositionChecks
         // melody alone, one staff, is a head played round or a tune to sing: its length is its form's.
         int seconds = (int)System.Math.Round(SecondsAt(midi, lastTick));
         if (pitched.Count > 0 && (barCount < ShortestPiece || (seconds < ShortestSeconds && byPart.Count >= 2)))
+            // More music, not a slower tempo (owner's report 2026-10-29: told 70 seconds, the chat took
+            // its Andante from ♩ = 72 to 48 and added no bar).
             findings.Add($"The piece is {barCount} bars long, about {seconds} seconds played: unless a short piece was asked for, give it "
                 + "the length its form needs — a minute and a half to three minutes (about 24 to 32 bars of 4/4; a shorter bar "
-                + "or a quicker beat takes more), its phrases long enough to say something, each closing on a cadence.");
+                + "or a quicker beat takes more), its phrases long enough to say something, each closing on a cadence. Lengthen it "
+                + "with music — a section more, a varied return, an introduction — never by slowing its tempo: keep the tempo its "
+                + "character asks for.");
         if (PlayedKeys(root) is { } inKeys && pitched.Count > 0)
         {
             var (home, end) = inKeys;

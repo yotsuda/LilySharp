@@ -34,7 +34,8 @@ What makes it music:
 - **A form, at the length it needs**: unless the request gives a length, about 24 to 32 bars
   of 4/4 suits a piece (a piano piece then fits one printed page), a minute and a half to three
   minutes played — a shorter bar or a quicker beat takes more bars (6/8 at ♩. = 60 is two seconds
-  a bar: 26 bars, under a minute): an A–B–A with a short coda (2 to 4 bars), or
+  a bar: 26 bars, under a minute) — never a slower tempo than the character asks for, to fill the
+  time: an A–B–A with a short coda (2 to 4 bars), or
   a song's form — complete and shapely rather than long, never a bar added to reach a length. A
   song counts its WRITTEN bars: a verse or a chorus sung again is named again in the form (its new
   words as verses, `[1. …] [2. …]`), not written twice. Phrases often run 8 bars — two halves of
