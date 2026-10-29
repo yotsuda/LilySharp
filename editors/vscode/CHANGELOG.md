@@ -72,7 +72,8 @@ All notable changes to the Lily# VS Code extension are documented here.
 - **Each composed piece is given a starting point drawn at random**: a key, a meter, a form and a way
   to open, to take or leave — six "dramatic string quartets" had all come out D minor, 4/4, A–B–A,
   opening on the same five notes. Whatever the request itself says (a key, a meter, a form, a length,
-  a style) comes first.
+  a style) comes first. Its meter is 4/4 most of the time and 3/4 seldom, and a band's music — rock,
+  pop — keeps its 4/4 whatever is drawn.
 - **A composed piece is given room, and leave to be itself**: about 24 to 32 bars is suggested
   (a quartet of four 4-bar sections, 16 bars, had no room to say anything and its dynamics turned
   every four bars), phrases often 8 bars — and the guide and the prompt now say its ways are a
@@ -1999,7 +2000,8 @@ reader is offered its update when a scan is read.
 - **Each composed piece is given a starting point drawn at random**: a key, a meter, a form and a way
   to open, to take or leave — six "dramatic string quartets" had all come out D minor, 4/4, A–B–A,
   opening on the same five notes. Whatever the request itself says (a key, a meter, a form, a length,
-  a style) comes first.
+  a style) comes first. Its meter is 4/4 most of the time and 3/4 seldom, and a band's music — rock,
+  pop — keeps its 4/4 whatever is drawn.
 - **A composed piece is given room, and leave to be itself**: about 24 to 32 bars is suggested
   (a quartet of four 4-bar sections, 16 bars, had no room to say anything and its dynamics turned
   every four bars), phrases often 8 bars — and the guide and the prompt now say its ways are a

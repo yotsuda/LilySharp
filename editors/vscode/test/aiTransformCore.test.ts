@@ -33,8 +33,16 @@ describe('a starting point drawn at random', () => {
     it('names a key, a meter, a form and an opening, each drawn from its list', () => {
         assert.equal(compositionHint(() => 0), 'A starting point for this piece, drawn at random so that not every piece begins alike — take what suits '
             + 'the music asked for, leave the rest, and whatever the request itself says (a key, a meter, a form, a length, '
-            + 'a style) comes first: C major; 4/4; A–B–A; opening with the bass alone for a bar or two.');
-        assert.match(compositionHint(() => 0.9999), /: F minor; 12\/8; one section that grows from start to end; opening with a short introduction on the accompaniment's figure\.$/);
+            + 'a style) comes first, and a band\'s music — rock, pop — keeps its 4/4 whatever meter is drawn: '
+            + 'C major; 4/4; A–B–A; opening with the bass alone for a bar or two.');
+        assert.match(compositionHint(() => 0.9999), /: F minor; 3\/4; one section that grows from start to end; opening with a short introduction on the accompaniment's figure\.$/);
+    });
+    // Owner's request 2026-10-29: rock and pop are nearly always in 4/4; a three only now and then.
+    it('draws 4/4 most of the time and 3/4 seldom', () => {
+        const meters = Array.from({ length: 2000 }, () => /; (\d+\/\d+); /.exec(compositionHint())![1]);
+        const share = (m: string) => meters.filter(x => x === m).length / meters.length;
+        assert.ok(share('4/4') > 0.5, `4/4 ${share('4/4')}`);
+        assert.ok(share('3/4') < 0.2, `3/4 ${share('3/4')}`);
     });
     it('differs from piece to piece', () => {
         const seen = new Set(Array.from({ length: 20 }, () => compositionHint()));

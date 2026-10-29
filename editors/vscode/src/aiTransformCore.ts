@@ -776,7 +776,9 @@ export function withLyricsRows(text: string): { text: string; added: string[] } 
 /** The choices a starting point is drawn from (compositionHint). */
 const HINT_KEYS = ['C major', 'G major', 'D major', 'A major', 'E major', 'F major', 'B♭ major', 'E♭ major', 'A♭ major',
     'A minor', 'E minor', 'B minor', 'F♯ minor', 'C♯ minor', 'D minor', 'G minor', 'C minor', 'F minor'];
-const HINT_METERS = ['4/4', '3/4', '6/8', '2/4', '12/8'];
+// Weighted: 4/4 most of the time, 3/4 seldom (owner's request 2026-10-29: rock and pop are nearly
+// always in 4/4; a three is to come only now and then).
+const HINT_METERS = ['4/4', '4/4', '4/4', '4/4', '4/4', '4/4', '6/8', '12/8', '2/4', '3/4'];
 const HINT_FORMS = ['A–B–A', 'two halves (A–B)', 'a rondo (A–B–A–C–A)', 'a theme and two variations',
     'an introduction, A–B–A and a coda', 'one section that grows from start to end'];
 const HINT_OPENINGS = ['the bass alone for a bar or two', 'a pickup into the first bar', 'the theme in the lowest part',
@@ -792,7 +794,8 @@ export function compositionHint(random: () => number = Math.random): string {
     const pick = <T>(xs: readonly T[]) => xs[Math.min(xs.length - 1, Math.floor(random() * xs.length))];
     return `A starting point for this piece, drawn at random so that not every piece begins alike — take what suits `
         + `the music asked for, leave the rest, and whatever the request itself says (a key, a meter, a form, a length, `
-        + `a style) comes first: ${pick(HINT_KEYS)}; ${pick(HINT_METERS)}; ${pick(HINT_FORMS)}; opening with ${pick(HINT_OPENINGS)}.`;
+        + `a style) comes first, and a band's music — rock, pop — keeps its 4/4 whatever meter is drawn: `
+        + `${pick(HINT_KEYS)}; ${pick(HINT_METERS)}; ${pick(HINT_FORMS)}; opening with ${pick(HINT_OPENINGS)}.`;
 }
 
 /** Whether an error says the service answered with nothing ("Response contained no choices"). */
