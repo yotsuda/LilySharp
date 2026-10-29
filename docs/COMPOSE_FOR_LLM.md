@@ -82,7 +82,18 @@ What makes it music:
 - **Jazz** not asked for as a lead sheet is a **combo**: a rhythm section — piano or guitar for the
   chords, a bass (`instrument bass` with `midiInstrument "acoustic bass"`), drums swinging on the
   ride cymbal (`cymr`) and hi-hat — under a melody instrument (`instrument tenor-sax`, `trumpet`,
-  `alto-sax`, …), with the harmony and the feel of a jazz lead sheet (next), at one tempo.
+  `alto-sax`, …), with the harmony and the feel of a jazz lead sheet (next), at one tempo — or a
+  piano trio, the piano's right hand the melody. How the rhythm section plays:
+  - **Drums**: the ride's swing figure, `cymr4 cymr8 cymr cymr4 cymr8 cymr`, the hi-hat pedal on
+    2 and 4 (`hhp`), the bass drum light or silent, the snare an accent now and then — never a
+    backbeat of bass drum on 1 and 3 and snare on 2 and 4 (that is rock); a fill into a new chorus.
+  - **Bass**: walking quarter notes, the chord's root on beat 1, and the note on beat 4 leading a
+    step or a half step into the next root (`f, a, c e | f,`) — not the chord's notes in a row.
+  - **Piano comping**: rootless voicings — the 3rd and 7th with a 9th or a 13th (the bass has the
+    root) — short and off the beat, anticipating the next chord, around middle C; not on every beat.
+  - **A blues head**: a riff stated, stated again over the IV, answered in its last four bars
+    (AAB), with the blue notes (the ♭3, ♭5, ♭7) bent against the chord — and no 7th of the scale
+    held against the dominant 7th (an E♮ sustained over F7).
 - **A jazz lead sheet** (asked for as "a lead sheet", "a tune to jam on"): ONE staff — the
   melody, no instrument needed (a lead sheet is concert pitch) — with a `chords NAME` row
   directly above it, and nothing else. The harmony is jazz's: seventh chords throughout

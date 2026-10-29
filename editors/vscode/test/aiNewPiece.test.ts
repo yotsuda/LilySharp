@@ -180,6 +180,16 @@ describe('the composing guide', () => {
     });
     // Owner's trials 2026-10-29: a chat's hymns crossed the alto under the tenor, set the alto in the
     // tenor's range, and rocked the bass between root and fifth — the guide had no hymn.
+    // Owner's trials 2026-10-29: a jazz trio's drums came as a rock backbeat, its bass the chord's
+    // notes in a row; the next time they swung — the guide said only "swinging on the ride".
+    it('says how a jazz rhythm section plays', () => {
+        const guide = fs.readFileSync(path.join(docs, 'COMPOSE_FOR_LLM.md'), 'utf8');
+        assert.match(guide, /the ride's swing figure, `cymr4 cymr8 cymr cymr4 cymr8 cymr`, the hi-hat pedal on\s+2 and 4 \(`hhp`\)/);
+        assert.match(guide, /never a\s+backbeat of bass drum on 1 and 3 and snare on 2 and 4 \(that is rock\)/);
+        assert.match(guide, /the note on beat 4 leading a\s+step or a half step into the next root/);
+        assert.match(guide, /\*\*Piano comping\*\*: rootless voicings/);
+        assert.match(guide, /\*\*A blues head\*\*: a riff stated, stated again over the IV, answered/);
+    });
     it('says how a hymn or a chorale for choir is written', () => {
         const guide = fs.readFileSync(path.join(docs, 'COMPOSE_FOR_LLM.md'), 'utf8');
         assert.match(guide, /\*\*A hymn or chorale for choir\*\* \(SATB, `choirStaff`\): the four voices move together/);
