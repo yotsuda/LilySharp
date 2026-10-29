@@ -28,6 +28,7 @@ import {
 import { registerAiTransform, showCandidateSounding } from './aiTransform';
 import { registerAiComplete } from './aiComplete';
 import { findCopilotLogFrom, pickAiModel, rememberRefusalsIn } from './modelClient';
+import { chatPointer } from './chatPointerCore';
 import { registerSmartTyping } from './smartTyping';
 import { registerStepAudition } from './stepAudition';
 import { registerCaretInfo } from './caretInfo';
@@ -898,6 +899,31 @@ export function activate(context: vscode.ExtensionContext) {
         'lilysharp.previewAiTransformBar', 'lilysharp.previewAiTransformScore']) {
         context.subscriptions.push(vscode.commands.registerCommand(id, previewAi));
     }
+    // Ask AI in Chat (owner's request 2026-10-29): the same place the menu's Change … with AI
+    // works on — the selection, the note or the bar right-clicked, else the whole file — put in
+    // Copilot's chat input, unsent; from the editor, its selection, else the file.
+    context.subscriptions.push(
+        vscode.commands.registerCommand('lilysharp.previewAskAiInChat', async (m?: { lysAiKind?: string; lysAiFrom?: number; lysAiTo?: number }) => {
+            const shown = [...previewPanels.entries()].find(([, p]) => p.active);
+            if (!shown) {
+                return;
+            }
+            const doc = vscode.workspace.textDocuments.find(d => d.uri.toString() === shown[0])
+                ?? await vscode.workspace.openTextDocument(vscode.Uri.parse(shown[0]));
+            const picked = m && m.lysAiKind !== 'score' && Number.isInteger(m.lysAiFrom) && m.lysAiFrom! >= 0;
+            const to = picked ? noteSelectionEnd(doc.getText(), m!.lysAiTo ?? m!.lysAiFrom!) : undefined;
+            await askAiInChat(doc, picked ? m!.lysAiFrom : undefined, to);
+        }),
+        vscode.commands.registerCommand('lilysharp.askAiInChat', async () => {
+            const editor = vscode.window.activeTextEditor;
+            if (!editor || editor.document.languageId !== 'lilysharp') {
+                vscode.window.showInformationMessage('Lily#: open a .lys file to ask about it in the chat.');
+                return;
+            }
+            const s = editor.selection;
+            await askAiInChat(editor.document, s.isEmpty ? undefined : editor.document.offsetAt(s.start),
+                s.isEmpty ? undefined : editor.document.offsetAt(s.end));
+        }));
     // The score's selection from its menu: the bar right-clicked selected (Shift+click or
     // Shift+drag extends it), and the selection cleared.
     context.subscriptions.push(
@@ -2943,6 +2969,43 @@ async function aiTransformFromScore(uri: string, startPos: number, endPos: numbe
     editor.selection = new vscode.Selection(range.start, range.end);
     editor.revealRange(range, vscode.TextEditorRevealType.InCenter);
     await vscode.commands.executeCommand('lilysharp.aiTransform', { selected });
+}
+
+/**
+ * "Ask AI in Chat" (owner's request 2026-10-29: Copilot's chat is the better place to talk the
+ * music over): the place the request is about put in the chat's input, unsent, for the musician to
+ * finish and send — the file alone, or with the notes or bars picked (on the score or in the
+ * editor) their lines, section, part and bars (chatPointerCore). The picked text is made the
+ * editor's selection too, which the chat takes in as it stands.
+ */
+async function askAiInChat(doc: vscode.TextDocument, from?: number, to?: number): Promise<void> {
+    const text = doc.getText();
+    let range: { from: number; to: number } | undefined;
+    if (from !== undefined && to !== undefined && from >= 0 && to >= from) {
+        let start = Math.min(from, text.length);
+        while (start < text.length && (text[start] === ' ' || text[start] === '\t')) {
+            start++;
+        }
+        const end = Math.max(start, Math.min(to, text.length));
+        if (end > start) {
+            range = { from: start, to: end };
+            const editor = await vscode.window.showTextDocument(doc, { preserveFocus: true });
+            const r = new vscode.Range(doc.positionAt(start), doc.positionAt(end));
+            editor.selection = new vscode.Selection(r.start, r.end);
+            editor.revealRange(r, vscode.TextEditorRevealType.InCenterIfOutsideViewport);
+        }
+    }
+    const name = doc.uri.scheme === 'file' ? path.basename(doc.uri.fsPath) : path.basename(doc.uri.path);
+    const query = chatPointer(name, text, range);
+    try {
+        await vscode.commands.executeCommand('workbench.action.chat.open', { query, isPartialQuery: true, mode: 'agent' });
+    } catch {
+        try {
+            await vscode.commands.executeCommand('workbench.action.chat.open', { query, isPartialQuery: true });
+        } catch (err) {
+            void vscode.window.showErrorMessage(`Lily#: Copilot's chat could not be opened (${err}). Is GitHub Copilot Chat installed and signed in?`);
+        }
+    }
 }
 
 /**

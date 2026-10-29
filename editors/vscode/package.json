@@ -380,6 +380,17 @@
         "shortTitle": "Lily# Score, Composed with AI…"
       },
       {
+        "command": "lilysharp.askAiInChat",
+        "category": "Lily#",
+        "icon": "$(comment-discussion)",
+        "title": "Ask AI in Chat…"
+      },
+      {
+        "command": "lilysharp.previewAskAiInChat",
+        "category": "Lily#",
+        "title": "Ask AI in Chat…"
+      },
+      {
         "command": "lilysharp.composeWithAiInChat",
         "category": "Lily#",
         "icon": "$(comment-discussion)",
@@ -630,6 +641,10 @@
           "when": "false"
         },
         {
+          "command": "lilysharp.previewAskAiInChat",
+          "when": "false"
+        },
+        {
           "command": "lilysharp.previewAiTransformScore",
           "when": "false"
         },
@@ -823,6 +838,11 @@
           "group": "1_edit@1"
         },
         {
+          "command": "lilysharp.previewAskAiInChat",
+          "when": "webviewId == 'lilysharpPreview'",
+          "group": "1_edit@1"
+        },
+        {
           "command": "lilysharp.previewSelectChord",
           "when": "webviewId == 'lilysharpPreview' && lysOnChord",
           "group": "1_edit@2"
@@ -900,6 +920,11 @@
           "command": "lilysharp.composeWithAi",
           "when": "resourceLangId == lilysharp",
           "group": "1_modification@2"
+        },
+        {
+          "command": "lilysharp.askAiInChat",
+          "when": "resourceLangId == lilysharp",
+          "group": "1_modification@3"
         },
         {
           "command": "lilysharp.omrFixWithAi",
