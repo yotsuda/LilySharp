@@ -1094,6 +1094,9 @@ function composeSystemPrompt(grammar: string, modelName?: string): string {
         '- Write at CONCERT pitch: `pitch concert` at the top of the file too, and every part by the pitch it',
         '  SOUNDS, whatever the instrument — a bass\'s low E string is `e,,` (E1), a guitar\'s `e,` (E2), a B♭ trumpet\'s',
         '  middle C `c\'`. Lily# prints each part where its player reads it.',
+        // Owner's decision 2026-10-27, which the prompt did not say (owner's trials 2026-10-29: two
+        // pieces through Copilot's Auto wrote `composer "OpenAI"` unasked).
+        '- Write no `composer` line unless the musician asks for one.',
         '- Name the parts as a score prints them, by the instrument. A piece for piano alone names no part; a piano',
         '  in an ensemble is named once, on its upper part (`"Piano" "Pno."`). Never "Right hand", "L.H.", 右手, 左手.',
         '- Before you reply, go through the piece bar by bar: every bar of every part fills the meter, the parts',

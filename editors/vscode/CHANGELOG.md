@@ -40,6 +40,9 @@ All notable changes to the Lily# VS Code extension are documented here.
   60% of its notes are one value (an accompaniment still at 80%). The guide also says a section in
   the relative key writes no `key` line (it printed the same signature again), and a left hand's
   broken chord stays within a twelfth.
+- **A reply fenced as ```` ```Lily# ```` is read**: the fence comes off whatever its language tag
+  (the `#` stayed as the file's first line, and the piece went back as one that does not compile),
+  and a composed piece writes no `composer` line unless asked (two wrote `composer "OpenAI"`).
 - **A piece composed through Copilot's Auto names the model that answered**: its first line said
   `copilot/auto`; it now reads `copilot/gpt-6-luna, via Auto` (several models in order when the
   revisions went to more than one), from GitHub Copilot Chat's log — the API does not say. Without
@@ -1902,6 +1905,9 @@ reader is offered its update when a scan is read.
   60% of its notes are one value (an accompaniment still at 80%). The guide also says a section in
   the relative key writes no `key` line (it printed the same signature again), and a left hand's
   broken chord stays within a twelfth.
+- **A reply fenced as ```` ```Lily# ```` is read**: the fence comes off whatever its language tag
+  (the `#` stayed as the file's first line, and the piece went back as one that does not compile),
+  and a composed piece writes no `composer` line unless asked (two wrote `composer "OpenAI"`).
 - **A piece composed through Copilot's Auto names the model that answered**: its first line said
   `copilot/auto`; it now reads `copilot/gpt-6-luna, via Auto` (several models in order when the
   revisions went to more than one), from GitHub Copilot Chat's log — the API does not say. Without

@@ -62,13 +62,15 @@ export function isProblem<S extends SpanLike>(r: CandidateEdit<S> | ReplyProblem
 /** Strips code fences / stray commentary the model may add despite the contract. */
 export function cleanCandidate(raw: string): string {
     let t = raw.trim();
-    // Whole reply wrapped in a fenced block -> take the inner content.
-    const fence = t.match(/^```[a-zA-Z0-9]*\s*\n([\s\S]*?)\n?```$/);
+    // Whole reply wrapped in a fenced block -> take the inner content. The language tag is any word
+    // (owner's trial 2026-10-29: "```Lily#" left its '#' as the file's first line, and the piece
+    // went back as one that does not compile).
+    const fence = t.match(/^```[^\s`]*[ \t]*\n([\s\S]*?)\n?```$/);
     if (fence) {
         t = fence[1];
     } else {
         // Or just strip a leading ```lang and a trailing ``` if present unbalanced.
-        t = t.replace(/^```[a-zA-Z0-9]*\s*\n?/, '').replace(/\n?```\s*$/, '');
+        t = t.replace(/^```[^\s`]*[ \t]*\n?/, '').replace(/\n?```\s*$/, '');
     }
     return t.replace(/\s+$/, '').replace(/^\n+/, '');
 }

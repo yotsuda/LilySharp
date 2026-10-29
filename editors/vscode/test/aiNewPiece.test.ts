@@ -248,6 +248,9 @@ describe('the composer\'s prompt', () => {
         assert.match(grammarDoc, /a theme that is only words \("a rising broken chord"\) is not one yet/);
     });
     // Owner's report 2026-10-27: a piano piece labelled its staves 右手 and 左手.
+    it('writes no composer line unless asked', () => {
+        assert.match(transform, /'- Write no `composer` line unless the musician asks for one\.'/);
+    });
     it('names the parts by the instrument, a solo piano none', () => {
         assert.match(transform, /A piece for piano alone names no part/);
         assert.match(transform, /Never "Right hand", "L\.H\.", 右手, 左手\./);

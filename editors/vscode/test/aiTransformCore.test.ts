@@ -24,8 +24,19 @@ import * as path from 'node:path';
 import {
     SEL_CLOSE, SEL_OPEN, carryOffset, documentBudget, documentContext, estimateTokens, isProblem, isUnchanged, marksContext, octaveOutliers,
     pickModel, isAutoModel, pitchToMidi, splitNote, planOf, withoutPlan, startTimeAt, toCandidateEdit, changedWords, diffMarkup, wholeTextMarkup, rangeFixOf,
-    aiFailure, isConnectionError, spokenDuration, servedModelsIn,
+    aiFailure, isConnectionError, spokenDuration, servedModelsIn, cleanCandidate,
 } from '../src/aiTransformCore';
+
+// Owner's trial 2026-10-29: a piece fenced as "```Lily#" kept the '#' as its first line.
+describe('a candidate in a code fence', () => {
+    it('takes the fence off whatever its language tag', () => {
+        assert.equal(cleanCandidate('```Lily#\ntitle "A"\n```'), 'title "A"');
+        assert.equal(cleanCandidate('```lilysharp\ntitle "A"\n```'), 'title "A"');
+        assert.equal(cleanCandidate('```\ntitle "A"\n```'), 'title "A"');
+        assert.equal(cleanCandidate('```lys#\ntitle "A"'), 'title "A"');
+        assert.equal(cleanCandidate('title "A"'), 'title "A"');
+    });
+});
 
 // Owner's request 2026-10-29: a piece composed through Copilot's Auto said "copilot/auto" on its
 // first line; Copilot's own log names the model that answered.
