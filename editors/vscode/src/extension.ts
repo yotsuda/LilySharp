@@ -3800,6 +3800,13 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         .range-panel { cursor: move; }
         .range-panel button, .range-panel input, .range-panel td { cursor: pointer; }
         .range-panel.moving, .range-panel.moving * { user-select: none; cursor: move; }
+        /* The × at the top right (owner's request 2026-10-29), kept there as the panel scrolls. */
+        .range-panel .panel-close {
+            float: right; position: sticky; top: 0; z-index: 1; margin: -4px -6px 0 8px;
+            width: 20px; height: 20px; padding: 0; line-height: 18px; text-align: center;
+            font-size: 15px; border: none; border-radius: 3px; background: transparent; color: inherit; opacity: 0.7;
+        }
+        .range-panel .panel-close:hover { opacity: 1; background: rgba(128, 128, 128, 0.25); }
         /* The page's tooltip, in VS Code's hover look (the browser's title tip is too small). */
         .tip {
             position: fixed; z-index: 100; max-width: 320px; pointer-events: none;
@@ -3894,8 +3901,9 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         </span>
     </div>
     <div id="errorBanner" class="error-banner" role="alert"></div>
-    <div id="rangePanel" class="range-panel" hidden></div>
+    <div id="rangePanel" class="range-panel" hidden><button type="button" id="rangeClose" class="panel-close" title="Close" aria-label="Close">×</button><div id="rangeBody"></div></div>
     <div id="practicePanel" class="range-panel practice-panel" hidden>
+        <button type="button" id="practiceClose" class="panel-close" title="Close" aria-label="Close">×</button>
         <div class="prow"><span class="plbl">Tempo</span><span class="tempo"><input type="range" id="tempoSlider" min="50" max="150" step="5" value="100" aria-label="Tempo"><span id="tempoValue" class="tval">100%</span><button type="button" id="tempoReset" title="Back to the tempo as written (100%)">Reset</button></span></div>
         <div class="prow"><span class="plbl">Loop</span><button type="button" id="loopBtn" class="toggle" aria-pressed="false" title="Play the selected bars, or the whole score, round and round — the score's repeats ignored">Off</button></div>
         <div class="prow"><span class="plbl">Metronome</span><button type="button" id="clickBtn" class="toggle" aria-pressed="false">Off</button></div>
@@ -5441,6 +5449,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         // every render while open.
         const rangeBtn = document.getElementById('rangeBtn');
         const rangePanel = document.getElementById('rangePanel');
+        const rangeBody = document.getElementById('rangeBody');   // what the panel says, under its ×
         let rangeParts = null;      // the last answer: [{ Name, Low, High }], each end { Pitch, Name, Positions }
         let rangeError = null;
         const rangeAt = {};         // 'part|Low' / 'part|High' -> the index of the place shown
@@ -5454,8 +5463,13 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             if (rangePanel.hidden) return;
             if (rangePanel.dataset.moved) clampPanel(rangePanel);
             else rangePanel.style.top = (document.querySelector('.toolbar').getBoundingClientRect().bottom + 6) + 'px';
-            if (!rangeParts && !rangeError) rangePanel.textContent = 'Reading the ranges…';
+            if (!rangeParts && !rangeError) rangeBody.textContent = 'Reading the ranges…';
             refreshRanges();
+        });
+        // Its × closes it, as the Range button does (owner's request 2026-10-29).
+        document.getElementById('rangeClose').addEventListener('click', () => {
+            rangePanel.hidden = true;
+            rangeBtn.setAttribute('aria-pressed', 'false');
         });
         // The bar a note is drawn in: the bar box over its x nearest it in y (a high note stands
         // above its staff's box).
@@ -5475,10 +5489,10 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             return best ? best.getAttribute('data-bar') : null;
         }
         function renderRanges() {
-            rangePanel.textContent = '';
-            if (rangeError) { rangePanel.textContent = 'Range: ' + rangeError; return; }
+            rangeBody.textContent = '';
+            if (rangeError) { rangeBody.textContent = 'Range: ' + rangeError; return; }
             if (!rangeParts) return;
-            if (rangeParts.length === 0) { rangePanel.textContent = 'No pitched notes in this score.'; return; }
+            if (rangeParts.length === 0) { rangeBody.textContent = 'No pitched notes in this score.'; return; }
             const table = document.createElement('table');
             const head = document.createElement('tr');
             for (const h of ['Part', 'Lowest', 'Highest', 'Tessitura']) {
@@ -5497,11 +5511,11 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 tr.appendChild(tessituraCell(p));
                 table.appendChild(tr);
             }
-            rangePanel.appendChild(table);
+            rangeBody.appendChild(table);
             const note = document.createElement('div');
             note.className = 'note';
             note.textContent = 'Sounding pitches · C4 = middle C · tessitura: where four-fifths of the time is';
-            rangePanel.appendChild(note);
+            rangeBody.appendChild(note);
         }
         // The tessitura (owner's request 2026-10-25): where the part spends four-fifths of its
         // sounding time, named, over a small chart of that time on each semitone from its lowest
@@ -6195,6 +6209,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             vscode.postMessage({ type: 'requestParts' });
         });
         practicePanel.addEventListener('click', (e) => e.stopPropagation());
+        document.getElementById('practiceClose').addEventListener('click', closePractice);
         document.addEventListener('click', () => { if (!practicePanel.hidden) closePractice(); });
         document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !practicePanel.hidden) closePractice(); });
 

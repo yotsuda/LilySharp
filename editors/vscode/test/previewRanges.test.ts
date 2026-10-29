@@ -31,7 +31,14 @@ describe('the preview\'s Range panel', () => {
     it('has a Range button and its panel, and the page script parses', () => {
         assert.match(html, /<button id="rangeBtn" class="toggle icon" type="button" aria-pressed="false" aria-label="Range"[^>]*><svg [^>]*>/);
         assert.match(html, /rangeBtn\.setAttribute\('aria-pressed', String\(!rangePanel\.hidden\)\);/);
-        assert.match(html, /<div id="rangePanel" class="range-panel" hidden><\/div>/);
+        // Its × at the top right, what it says under it (owner's request 2026-10-29).
+        assert.match(html, /<div id="rangePanel" class="range-panel" hidden><button type="button" id="rangeClose" class="panel-close" title="Close" aria-label="Close">×<\/button><div id="rangeBody"><\/div><\/div>/);
+        assert.match(html, /getElementById\('rangeClose'\)\.addEventListener\('click', \(\) => \{\s*rangePanel\.hidden = true;\s*rangeBtn\.setAttribute\('aria-pressed', 'false'\);/);
+        assert.doesNotMatch(html, /rangePanel\.(textContent|appendChild)/);
+        // The practice panel's × closes it.
+        assert.match(html, /<div id="practicePanel" class="range-panel practice-panel" hidden>\s*<button type="button" id="practiceClose" class="panel-close"/);
+        assert.match(html, /getElementById\('practiceClose'\)\.addEventListener\('click', closePractice\);/);
+        assert.match(html, /\.range-panel \.panel-close \{\s*float: right; position: sticky; top: 0;/);
         for (const m of html.matchAll(/<script[^>]*>([\s\S]*?)<\/script>/g)) {
             assert.doesNotThrow(() => new vm.Script(m[1]));
         }
