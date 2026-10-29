@@ -1073,9 +1073,15 @@ function composeSystemPrompt(grammar: string, modelName?: string): string {
         '   into the climax; for "lovely", "すてき": a singing line with long notes at its peaks, a gentle flowing',
         '   accompaniment).',
         // Owner's request 2026-10-29: the guide covers songs, and how words are set.
-        '   WORDS (a song only) — each line of the words under its phrase, its syllables counted against the',
-        '   phrase\'s notes (Japanese one mora a note, each written apart: `き ら き ら`), the stressed syllables',
-        '   or the pitch accent where the melody puts them.',
+        // Words first, then notes (owner's trial 2026-10-29: the syllables matched the notes, but
+        // as words cut to fit them — "ひ を も や" for 燃やす, a phrase ending on "あ" of あけて).
+        // In terms of any language (owner's request 2026-10-29): the language's sung unit, its own
+        // stress or pitch, whole words.
+        '   WORDS (a song only) — each line of the words written out WHOLE first, as the sentence it is, with',
+        '   its sung units counted (the language\'s own: a syllable, a mora in Japanese — each written apart,',
+        '   `Hap- py`, `き ら き ら`); then the phrase that sings it, given that many notes — the notes fit the',
+        '   words, never a word cut to fit the notes; every line ends on a whole word, on the phrase\'s last',
+        '   note; the words\' stress, pitch accent or tones where the melody follows them.',
         '   ENDING — in the home key, on a held tonic chord, at the dynamic planned for it.',
         '2. <note> … </note> — one or two sentences to the musician about the piece, warm and plain, in the language',
         '   of the request.',

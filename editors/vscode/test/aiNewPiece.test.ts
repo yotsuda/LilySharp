@@ -218,6 +218,14 @@ describe('the composer\'s prompt', () => {
     });
     // Owner's request 2026-10-29: a poor piece's plan named its theme only in words, and no bar was
     // made of it; its phrases did not answer, it had no high point, its dynamics went against the plan.
+    // Owner's trial 2026-10-29: a song's syllables matched its notes as words cut to fit them.
+    it('has a song\'s words written whole first and the notes fitted to them', () => {
+        const grammarDoc = fs.readFileSync(path.join(__dirname, '..', '..', '..', '..', 'docs', 'GRAMMAR_FOR_LLM.md'), 'utf8');
+        assert.match(grammarDoc, /\*\*Write the words first, whole, then set them\*\*/);
+        assert.match(grammarDoc, /the notes fit the words, never the words cut\s+to fit the notes/);
+        assert.match(transform, /WORDS \(a song only\) — each line of the words written out WHOLE first/);
+        assert.match(transform, /every line ends on a whole word, on the phrase\\'s last',\s*'\s*note;/);
+    });
     // Owner's trials 2026-10-29: a pop song's tune mixed quarters, eighths and halves but never
     // crossed a beat — told now how often, and how.
     it('asks a pop song\'s sung line for a syncopation in at least half its bars', () => {
@@ -238,8 +246,10 @@ describe('the composer\'s prompt', () => {
         for (const kind of ['**A solo instrument with piano**', '**A pop song**', '**Rock**', '**Gospel**', '**A song with words**']) {
             assert.ok(grammarDoc.includes(kind), kind);
         }
-        assert.match(grammarDoc, /\*\*Japanese is sung one mora a note, each written apart\*\*: `き ら き ら ひ か る`\. Lily# does not\s+split kana/);
-        assert.match(transform, /WORDS \(a song only\) — each line of the words under its phrase/);
+        assert.match(grammarDoc, /\*\*One sung unit a note, each written apart\*\*: the unit is the language's own beat of speech/);
+        assert.match(grammarDoc, /Lily# splits nothing: text written together\s+is ONE unit on one note, with no warning\./);
+        assert.match(grammarDoc, /\*\*The melody follows the words' own shape\*\*/);
+        assert.match(transform, /WORDS \(a song only\) — each line of the words written out WHOLE first/);
         assert.match(transform, /gospel \(piano or organ under a voice or a choir\), a song \(a voice part/);
     });
     it('has the plan fill in every heading, the theme in notes, and the file held to the plan', () => {

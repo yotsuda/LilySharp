@@ -1178,19 +1178,26 @@ it should sound like the ensemble asked for. What makes it music:
   slow 12/8 or a swinging fast 4/4, and the IV–I "amen" at the end.
 - **A song with words** (a voice part — `instrument soprano`, `alto`, `tenor` or `voice-bass`, the
   vocal line of a pop song too — and its lyrics row under it, see *Lyrics*):
-  - One syllable a note; a melisma (one syllable over several notes) is a slur and is rare.
-  - **Japanese is sung one mora a note, each written apart**: `き ら き ら ひ か る`. Lily# does not
-    split kana — `きらきら` written together is ONE syllable on one note, with no warning. A small
-    kana goes with the one before it (`きゃ`, `ちょ` are one mora); `っ`, `ん` and a long vowel's
-    `ー` are moras of their own and take a note (or sit inside a held note's slur).
-  - English: one syllable a note, a word's syllables joined by `-` (`Hap- py`); the stressed
-    syllables on the strong beats, the weak ones off them.
-  - The melody follows the words: in Japanese a word's pitch accent goes with the line (`あ`↘`め`,
-    rain, falls from its first mora; a note that rises there makes it 飴, candy); in English the
-    stress. A long or high note on an open vowel (a, o, e), not on i or u or a closed syllable.
+  - **One sung unit a note, each written apart**: the unit is the language's own beat of speech —
+    a syllable in most languages (English `Hap- py`, a word's syllables joined by `-`), a mora in
+    Japanese (`き ら き ら`: a small kana goes with the one before it, `きゃ`; `っ`, `ん` and `ー`
+    are units of their own), a character in Chinese. Lily# splits nothing: text written together
+    is ONE unit on one note, with no warning. A melisma (one unit over several notes) is a slur,
+    and is rare.
+  - **The melody follows the words' own shape**: their stressed syllables on the strong beats and
+    the weak ones off them (English, German, Spanish …); the rise and fall of a pitch accent or a
+    tone where the language has one (Japanese 雨 falls from its first mora — a line that rises
+    there sings 飴; a Chinese word's tone is not sung against). A long or high note on an open
+    vowel (a, o, e), not on i or u or a closed syllable.
   - A line of words is a phrase of music: the line ends where the phrase does, on a longer note, a
     rest after it to breathe; a comma in the words is a breath in the line.
-  - Count every bar: as many syllables as notes, less the notes a slur or a tie carries over.
+  - **Write the words first, whole, then set them**: each line as the sentence it is, its units
+    counted, and its phrase given that many notes — the notes fit the words, never the words cut
+    to fit the notes. Every word is sung whole: a line whose notes run out inside a word
+    (`to- mor-` for "tomorrow", `も や` for 燃やす) gets another note or other words. A long note or
+    a phrase's last note ends a word; a bar line may fall inside a word only where the phrase runs
+    on through it.
+  - Count every bar: as many units as notes, less the notes a slur or a tie carries over.
   - Words the request gives are set as they stand. Words written for it tell their story in the
     verses and come back unchanged in the chorus, its hook the title.
 - **A piano piece** is written for two hands that fill the keyboard between them: the left

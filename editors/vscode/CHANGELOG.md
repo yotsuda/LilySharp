@@ -46,6 +46,11 @@ All notable changes to the Lily# VS Code extension are documented here.
 - **A pop song's tune syncopates**: the guide asks for a syncopation in at least half the bars of
   the sung line — a note that comes off the beat and rings across the next one, or a phrase's last
   note an eighth early, tied over the bar line — with examples in notes.
+- **A song's words are written whole first, and the notes fitted to them**: the plan writes each
+  line as the sentence it is and counts its sung units before the phrase is written, so no word is
+  cut to fit the notes (a song sang 燃やす as `も や`) and every line ends on a whole word. The
+  guide says it for any language — the sung unit (a syllable; a mora in Japanese), the words' own
+  stress, pitch accent or tones.
 - **A piece composed through Copilot's Auto names the model that answered**: its first line said
   `copilot/auto`; it now reads `copilot/gpt-6-luna, via Auto` (several models in order when the
   revisions went to more than one), from GitHub Copilot Chat's log — the API does not say. Without
@@ -1914,6 +1919,11 @@ reader is offered its update when a scan is read.
 - **A pop song's tune syncopates**: the guide asks for a syncopation in at least half the bars of
   the sung line — a note that comes off the beat and rings across the next one, or a phrase's last
   note an eighth early, tied over the bar line — with examples in notes.
+- **A song's words are written whole first, and the notes fitted to them**: the plan writes each
+  line as the sentence it is and counts its sung units before the phrase is written, so no word is
+  cut to fit the notes (a song sang 燃やす as `も や`) and every line ends on a whole word. The
+  guide says it for any language — the sung unit (a syllable; a mora in Japanese), the words' own
+  stress, pitch accent or tones.
 - **A piece composed through Copilot's Auto names the model that answered**: its first line said
   `copilot/auto`; it now reads `copilot/gpt-6-luna, via Auto` (several models in order when the
   revisions went to more than one), from GitHub Copilot Chat's log — the API does not say. Without
