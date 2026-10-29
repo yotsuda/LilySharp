@@ -169,5 +169,45 @@ describe('an AI candidate plays before it is accepted', () => {
         // fret digit's mask left out, as in the preview.
         assert.match(transform, /querySelectorAll\('\[data-pos\], \[data-alt\]'\)\.forEach\(el => \{\s*if \(el\.classList\.contains\('nh-hit'\)/);
         assert.match(transform, /if \(alt\) alt\.split\(' '\)\.forEach\(a => add\(parseInt\(a, 10\), el\)\);/);
+        // Only the copy sounding lights — a phrase played often, a section a form plays twice — told
+        // apart by the bar-boxes, as the preview tells them (owner's request 2026-10-29).
+        assert.match(transform, /function soundingAt\(w, s\) \{\s*const els = elementsAt\(w, s\.pos\);\s*if \(!\(Number\.isInteger\(s\.occ\) && s\.occ >= 0\) \|\| els\.length < 2\) return els;\s*const copies = copiesOf\(w, els\);\s*return copies\[Math\.min\(s\.occ, copies\.length - 1\)\] \|\| els;/);
+        assert.match(transform, /for \(const s of sounding\) lit\.push\(\.\.\.soundingAt\(w, s\)\);/);
+        assert.match(transform, /function copiesOf\(w, els\) \{\s*const bars = Array\.from\(\(w === 'after' \? paneAfter : paneBefore\)\.querySelectorAll\('rect\.bar-box'\)\);/);
+    });
+});
+
+// The panel's page script lives in a template literal (getCandidateHtml): it parses once evaluated,
+// and its copiesOf splits a note's copies by the bar each stands in, in the order of the bars.
+describe('the AI candidate panel\'s page script', () => {
+    // The template's script blocks as written (its HTML around them nests substitutions a plain
+    // evaluation cannot take), each `${…}` standing for a value.
+    const transform = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'aiTransform.ts'), 'utf8');
+    const at = transform.indexOf('return `<!DOCTYPE html>', transform.indexOf('function getCandidateHtml('));
+    const end = transform.indexOf('</html>`;', at);
+    const scripts = [...transform.slice(at, end).matchAll(/<script[^>]*>([\s\S]*?)<\/script>/g)]
+        .map(m => m[1].replace(/\$\{[^}]*\}/g, '0'));
+
+    it('parses', () => {
+        assert.ok(scripts.length > 0);
+        for (const s of scripts) assert.doesNotThrow(() => new vm.Script(s));
+    });
+    it('splits a note\'s copies by their bars, whatever the order of the DOM', () => {
+        const page = scripts.join('\n');
+        const head = page.indexOf('function copiesOf(');
+        let depth = 0, close = -1;
+        for (let i = page.indexOf('{', head); i < page.length; i++) {
+            if (page[i] === '{') depth++;
+            else if (page[i] === '}' && --depth === 0) { close = i + 1; break; }
+        }
+        const rect = (left: number, top: number, w: number, h: number) => ({ left, top, right: left + w, bottom: top + h, width: w, height: h });
+        const boxes = [rect(0, 0, 50, 4), rect(50, 0, 50, 4)];
+        const pane = { querySelectorAll: () => boxes.map(b => ({ getBoundingClientRect: () => b, getBBox: () => ({ width: b.width }) })) };
+        const copiesOf = new vm.Script('(' + page.slice(head, close) + ')')
+            .runInNewContext({ paneAfter: pane, paneBefore: pane, Array, Map, Math, Infinity }) as (w: string, els: unknown[]) => { id: string }[][];
+        const el = (x: number, y: number) => ({ id: x + ',' + y, getBoundingClientRect: () => rect(x, y, 1, 1) });
+        // The second bar's copy drawn first, a head under the staff with the first bar's copy.
+        const copies = copiesOf('after', [el(55, 2), el(5, 2), el(5, 6)]);
+        assert.deepEqual(Array.from(copies, c => Array.from(c, e => e.id).join(' ')), ['5,2 5,6', '55,2']);
     });
 });

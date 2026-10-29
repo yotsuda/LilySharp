@@ -2448,12 +2448,57 @@ button:disabled { opacity:0.45; cursor:default; }
     }
     return byPos[w].get(pos) || [];
   }
+  // A note's printed copies (a phrase written once and played often, a section a form plays
+  // twice), told apart as the preview tells them (its clusterInstances; owner's request 2026-10-29):
+  // what stands in one bar-box's column — the nearest up or down — within 6 staff spaces across,
+  // the copies in the order of the bars; one copy where the pane draws no bar-box.
+  function copiesOf(w, els) {
+    const bars = Array.from((w === 'after' ? paneAfter : paneBefore).querySelectorAll('rect.bar-box'));
+    if (bars.length === 0) return [els];
+    const boxes = bars.map(r => r.getBoundingClientRect());
+    let unit = 1;
+    try { const b0 = bars[0].getBBox(); if (b0.width > 0) unit = boxes[0].width / b0.width; } catch (e) { /* non-SVG */ }
+    const byBar = new Map();
+    const loose = [];
+    let last = null;
+    for (const el of els) {
+      const b = el.getBoundingClientRect();
+      const x = b.left + 0.5, y = (b.top + b.bottom) / 2;
+      let bar = -1, nearest = Infinity;
+      for (let i = 0; i < boxes.length; i++) {
+        const r = boxes[i];
+        if (x < r.left || x > r.right) continue;
+        const d = y < r.top ? r.top - y : y > r.bottom ? y - r.bottom : 0;
+        if (d < nearest) { nearest = d; bar = i; }
+      }
+      if (bar < 0) { if (last) last.els.push(el); else loose.push(el); continue; }
+      let list = byBar.get(bar);
+      if (!list) byBar.set(bar, list = []);
+      let copy = list.find(c => Math.abs(c.x - b.left) <= 6 * unit);
+      if (!copy) { copy = { x: b.left, els: [] }; list.push(copy); }
+      copy.els.push(el);
+      last = copy;
+    }
+    const copies = [];
+    for (const bar of Array.from(byBar.keys()).sort((p, q) => p - q)) {
+      for (const c of byBar.get(bar).sort((p, q) => p.x - q.x)) copies.push(c.els);
+    }
+    if (loose.length > 0) { if (copies.length > 0) copies[0].unshift(...loose); else copies.push(loose); }
+    return copies;
+  }
+  // The copy sounding: the occ-th in the order of the bars (the server's printed-copy ordinal).
+  function soundingAt(w, s) {
+    const els = elementsAt(w, s.pos);
+    if (!(Number.isInteger(s.occ) && s.occ >= 0) || els.length < 2) return els;
+    const copies = copiesOf(w, els);
+    return copies[Math.min(s.occ, copies.length - 1)] || els;
+  }
   function lightSounding(w, sounding) {
     lit.forEach(el => el.classList.remove('playing'));
     lit = [];
-    for (const s of sounding) lit.push(...elementsAt(w, s.pos));
+    for (const s of sounding) lit.push(...soundingAt(w, s));
     lit.forEach(el => el.classList.add('playing'));
-    const el = sounding.length > 0 ? elementsAt(w, sounding[0].pos)[0] : null;
+    const el = sounding.length > 0 ? soundingAt(w, sounding[0])[0] : null;
     if (el) {
       const r = el.getBoundingClientRect();
       const m = document.querySelector('.main').getBoundingClientRect();
