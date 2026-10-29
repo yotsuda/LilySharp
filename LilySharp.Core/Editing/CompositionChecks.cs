@@ -93,6 +93,7 @@ public static class CompositionChecks
                     + "(`@p`, `@mf`, `@f`, …) and the hairpins in every part, where its own music asks for them, not in one part alone.");
         }
         findings.AddRange(DynamicDrops(root));
+        findings.AddRange(CopiedSections(root));
 
         MidiFile midi;
         try
@@ -159,6 +160,15 @@ public static class CompositionChecks
             ? parts.Where(p => RoleOf(p).Bass).Select(p => p.Name.Text).ToHashSet(System.StringComparer.Ordinal)
             : [];
         var melodies = MelodiesOf(source, parts, hands, band);
+        var barList = midi.BarTicks.Where(b => b > 0).Distinct().OrderBy(b => b).Prepend(0).ToList();
+        // A band's instrumental: the bars where each part over the bass plays a line (said below when
+        // there are few), and the part playing them its melody, held to a melody's rhythm (owner's
+        // report 2026-10-29: told it had no tune, a rock trio's guitar ran six eighths after a chord
+        // in every bar of every section — single notes, no tune to remember).
+        var instrumentalLines = band && !System.Text.RegularExpressions.Regex.IsMatch(source, @"\blyrics\s+\w+\s+sings\b")
+            ? LineBars(midi, parts, barList) : ((Dictionary<string, HashSet<int>>, int)?)null;
+        if (instrumentalLines is { } il && melodies.Count == 0)
+            melodies.UnionWith(il.Item1.Where(l => l.Value.Count >= System.Math.Max(4, il.Item2 / 4)).Select(l => l.Key));
         // Every part in the same rhythm, bar after bar (said at the end). Moving as one, the parts
         // share one rhythm, said of the top one alone — the melody, else the first part (owner's
         // trials 2026-10-29: a hymn sung in every voice heard the same two findings four times over,
@@ -217,7 +227,6 @@ public static class CompositionChecks
         // accompaniment in threes (owner's trial 2026-10-29). Syncopation is a 4/4 song's own, so
         // only 6/8, 9/8 and 12/8 are read.
         var meters = midi.Tracks.SelectMany(t => t.TimeSignatures).OrderBy(t => t.Tick).ToList();
-        var barList = midi.BarTicks.Where(b => b > 0).Distinct().OrderBy(b => b).Prepend(0).ToList();
         foreach (var part in melodies.Where(byPart.ContainsKey))
         {
             var across = new List<int>();
@@ -247,24 +256,10 @@ public static class CompositionChecks
         // and drums had power chords and arpeggios through its verse and chorus, a tune only in a
         // four-bar solo). A bar has a tune where a part other than the drums and the bass plays a line:
         // three onsets or more, most of them single notes. Words sung are a tune of their own.
-        if (band && !System.Text.RegularExpressions.Regex.IsMatch(source, @"\blyrics\s+\w+\s+sings\b"))
+        if (instrumentalLines is { } instrumental)
         {
-            var lineParts = parts.Where(p => RoleOf(p) is { Drums: false, Bass: false }).Select(p => p.Name.Text)
-                .ToHashSet(System.StringComparer.Ordinal);
-            var onsets = midi.Tracks.SelectMany(t => t.Notes.Where(n => n.Channel != 9).Select(n => (Part: n.Part ?? t.Name, n.StartTick)))
-                .Where(n => lineParts.Contains(n.Part))
-                .GroupBy(n => (n.Part, n.StartTick)).Select(g => (g.Key.Part, g.Key.StartTick, Single: g.Count() == 1)).ToList();
-            int withTune = 0, playedBars = 0;
-            for (int b = 0; b < barList.Count; b++)
-            {
-                int start = barList[b], end = b + 1 < barList.Count ? barList[b + 1] : int.MaxValue;
-                var inBar = onsets.Where(o => o.StartTick >= start && o.StartTick < end).ToList();
-                if (inBar.Count == 0)
-                    continue;
-                playedBars++;
-                if (inBar.GroupBy(o => o.Part).Any(g => g.Count() >= 3 && g.Count(o => o.Single) >= g.Count() * TuneSingleShare))
-                    withTune++;
-            }
+            var (lineBars, playedBars) = instrumental;
+            int withTune = lineBars.Values.SelectMany(b => b).Distinct().Count();
             if (playedBars >= 8 && withTune < playedBars * TunedBarsShare)
                 findings.Add($"A tune is played in only {withTune} of the {playedBars} bars: the parts over the bass play chords and figures, and "
                     + "no words are sung. An instrumental's tune is its lead — let the guitar (or a lead instrument added for it) play "
@@ -463,6 +458,26 @@ public static class CompositionChecks
     private static readonly HashSet<string> Levels = ["pppp", "ppp", "pp", "p", "mp", "mf", "f", "ff", "fff", "ffff", "fp"];
 
     /// <summary>
+    /// Sections written twice, note for note — their bodies alike but for spacing (owner's report
+    /// 2026-10-29: a rock trio's Chorus2 was its Chorus again, every part). The guide says a section
+    /// that returns is named again in the form, not copied.
+    /// </summary>
+    private static IEnumerable<string> CopiedSections(SyntaxNode root)
+    {
+        static string Body(SectionDeclarationSyntax s)
+        {
+            string text = s.ToFullString();
+            int open = text.IndexOf('{');
+            return open < 0 ? "" : System.Text.RegularExpressions.Regex.Replace(text[open..], @"\s+", " ").Trim();
+        }
+        return root.DescendantNodes<SectionDeclarationSyntax>().Where(s => s.Parent is { Parent: null })
+            .GroupBy(Body).Where(g => g.Key.Length > 0 && g.Count() > 1)
+            .Select(g => g.Select(s => s.SectionName).ToList())
+            .Select(names => $"{string.Join(" and ", names.Skip(1))} {(names.Count > 2 ? "are" : "is")} {names[0]} again, note for note: "
+                + $"write {names[0]} once and name it again in the form where it returns, not a second section with the same notes.");
+    }
+
+    /// <summary>
     /// A section that ends loud and the one played after it opening soft, two levels down or more, with
     /// no <c>@decresc</c> (<c>@dim</c>) after the last level to lead there and no <c>@p.subito</c> to
     /// say it is meant (owner's trials 2026-10-29: three wedding pieces in a row went from B's @f
@@ -554,6 +569,35 @@ public static class CompositionChecks
             return (0, 0);
         int same = byBar.Values.GroupBy(l => string.Join(",", l)).Max(g => g.Count());
         return (same, byBar.Count);
+    }
+
+    /// <summary>
+    /// For each part over the bass (not the drums, not a bass), the bars (indices into
+    /// <paramref name="barList"/>) where it plays a line — three onsets or more, most of them single
+    /// notes — and how many bars anything is played in.
+    /// </summary>
+    private static (Dictionary<string, HashSet<int>> Lines, int Played) LineBars(MidiFile midi,
+        IReadOnlyList<PartDeclarationSyntax> parts, List<int> barList)
+    {
+        var lineParts = parts.Where(p => RoleOf(p) is { Drums: false, Bass: false }).Select(p => p.Name.Text)
+            .ToHashSet(System.StringComparer.Ordinal);
+        var onsets = midi.Tracks.SelectMany(t => t.Notes.Where(n => n.Channel != 9).Select(n => (Part: n.Part ?? t.Name, n.StartTick)))
+            .Where(n => lineParts.Contains(n.Part))
+            .GroupBy(n => (n.Part, n.StartTick)).Select(g => (g.Key.Part, g.Key.StartTick, Single: g.Count() == 1)).ToList();
+        var lines = lineParts.ToDictionary(p => p, _ => new HashSet<int>(), System.StringComparer.Ordinal);
+        int played = 0;
+        for (int b = 0; b < barList.Count; b++)
+        {
+            int start = barList[b], end = b + 1 < barList.Count ? barList[b + 1] : int.MaxValue;
+            var inBar = onsets.Where(o => o.StartTick >= start && o.StartTick < end).ToList();
+            if (inBar.Count == 0)
+                continue;
+            played++;
+            foreach (var g in inBar.GroupBy(o => o.Part))
+                if (g.Count() >= 3 && g.Count(o => o.Single) >= g.Count() * TuneSingleShare)
+                    lines[g.Key].Add(b);
+        }
+        return (lines, played);
     }
 
     /// <summary>

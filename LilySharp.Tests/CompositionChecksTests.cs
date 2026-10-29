@@ -306,9 +306,28 @@ public class CompositionChecksTests
         Assert.Contains(CompositionChecks.Of(chords), f => f.StartsWith("A tune is played in only 0 of the 8 bars"));
         string tune = Rock(string.Concat(Enumerable.Repeat("e'8 g' b'4 a'8 g' fis'4 | g'4. a'8 b'2 | ", 4)));
         Assert.DoesNotContain(CompositionChecks.Of(tune), f => f.StartsWith("A tune is played"));
+        // A line in every bar, but a chord and six running eighths each time (owner's report
+        // 2026-10-29): a tune, and held to a melody's rhythm.
+        var running = CompositionChecks.Of(Rock(string.Concat(Enumerable.Repeat("<e, b,>4 e'8 fis' gis' b' a' fis' | ", 8))));
+        Assert.DoesNotContain(running, f => f.StartsWith("A tune is played"));
+        Assert.Contains(running, f => f.StartsWith("gtr, the melody: 85% of its notes are eighth notes"));
+        Assert.Contains(running, f => f.StartsWith("gtr, the melody: 8 of its 8 bars have the same rhythm"));
         // Sung: the words are the tune.
         Assert.DoesNotContain(CompositionChecks.Of(chords.Replace("score {", "lyrics words sings gtr { la }\nscore {")),
             f => f.StartsWith("A tune is played"));
+    }
+
+    // Owner's report 2026-10-29: a rock trio's Chorus2 was its Chorus again, every part.
+    [Fact]
+    public void ASectionWrittenTwice_IsToldToBeNamedAgain()
+    {
+        const string body = "{\n  gtr { e'4 g' b' e'' | }\n  bass { e,1 | }\n}";
+        string piece = $"title \"Copy\"\ntime 4/4\noctave absolute\n{Guitar}\n{Bass}\nsection Chorus {body}\nsection Bridge {{\n  gtr {{ a'1 | }}\n  bass {{ a,1 | }}\n}}\n"
+            + $"section Chorus2 {body.Replace("\n  ", "\n    ")}\nform {{ Chorus Bridge Chorus2 }}\n";
+        Assert.Contains(CompositionChecks.Of(piece), f => f == "Chorus2 is Chorus again, note for note: write Chorus once and name it "
+            + "again in the form where it returns, not a second section with the same notes.");
+        Assert.DoesNotContain(CompositionChecks.Of(piece.Replace("section Chorus2 {\n    gtr { e'4 g' b' e''", "section Chorus2 {\n    gtr { e'4 g' b' g''")),
+            f => f.Contains("note for note"));
     }
 
     [Fact]
