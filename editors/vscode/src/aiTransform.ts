@@ -212,10 +212,16 @@ export function registerAiTransform(context: vscode.ExtensionContext, deps: AiTr
         }),
         vscode.window.onDidChangeActiveTextEditor(e => adopt(e?.document)),
         vscode.workspace.onDidSaveTextDocument(adopt),
+        // A score renamed or moved in VS Code goes on as itself: the chat that asked for its change
+        // under the old name has it changed where it now is (owner's request 2026-10-29: renamed while
+        // the chat worked, the score was taken for gone, and the change written as a new piece).
+        vscode.workspace.onDidRenameFiles(e => {
+            for (const f of e.files) { movedUris.set(f.oldUri.toString(), f.newUri); }
+        }),
     );
 }
 
-/** Where each saved untitled document went (registerAiTransform). */
+/** Where each saved untitled document went, and each score renamed or moved (registerAiTransform). */
 const movedUris = new Map<string, vscode.Uri>();
 
 /** The document a snapshot's URI names now: itself while it is open (an untitled score not
@@ -389,10 +395,19 @@ function unsavedNamed(file: string): vscode.TextDocument | undefined {
  *  and the proposing tool find it alike (owner's report 2026-10-29: "make it longer" — the reading
  *  tool found the open score, the proposing one did not, and wrote the longer piece over it as new). */
 async function scoreDocument(file: string): Promise<vscode.TextDocument | undefined> {
-    return unsavedNamed(file)
-        ?? vscode.workspace.textDocuments.find(d => d.uri.scheme === 'file'
-            && d.uri.fsPath.toLowerCase() === path.resolve(file).toLowerCase())
+    const open = (p: string) => vscode.workspace.textDocuments.find(d => d.uri.scheme === 'file'
+        && d.uri.fsPath.toLowerCase() === path.resolve(p).toLowerCase());
+    const found = unsavedNamed(file) ?? open(file)
         ?? (fs.existsSync(file) ? await vscode.workspace.openTextDocument(vscode.Uri.file(file)) : undefined);
+    if (found) {
+        return found;
+    }
+    // Renamed or moved in VS Code since (onDidRenameFiles): the score where it is now, as the
+    // editor holds it — the editor it was asked about.
+    const moved = currentUri(vscode.Uri.file(path.resolve(file)));
+    return moved.fsPath.toLowerCase() === path.resolve(file).toLowerCase() ? undefined
+        : vscode.workspace.textDocuments.find(d => d.uri.toString() === moved.toString())
+            ?? (moved.scheme === 'file' && fs.existsSync(moved.fsPath) ? await vscode.workspace.openTextDocument(moved) : undefined);
 }
 
 /** What Copilot's chat hands the reading tool. */

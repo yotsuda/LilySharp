@@ -116,7 +116,11 @@ describe('the composing guide', () => {
         // report 2026-10-29: renamed on the disk while the chat worked, the open score was written over as new).
         assert.match(fn, /const doc = await scoreDocument\(input\.file\);\s*const uri = doc\?\.uri \?\? vscode\.Uri\.file\(input\.file\);\s*const exists = doc !== undefined;/);
         const find = transform.slice(transform.indexOf('async function scoreDocument('), transform.indexOf('interface ReadScoreInput'));
-        assert.match(find, /return unsavedNamed\(file\)\s*\?\? vscode\.workspace\.textDocuments\.find\(d => d\.uri\.scheme === 'file'/);
+        assert.match(find, /const found = unsavedNamed\(file\) \?\? open\(file\)/);
+        // …and, renamed or moved in VS Code since, where it is now: the editor it was asked about
+        // (owner's request 2026-10-29: renamed while the chat worked, the change was written as new).
+        assert.match(find, /const moved = currentUri\(vscode\.Uri\.file\(path\.resolve\(file\)\)\);/);
+        assert.match(transform, /vscode\.workspace\.onDidRenameFiles\(e => \{\s*for \(const f of e\.files\) \{ movedUris\.set\(f\.oldUri\.toString\(\), f\.newUri\); \}/);
         assert.match(transform, /d\.uri\.scheme === 'untitled'\s*&& d\.uri\.fsPath\.toLowerCase\(\) === path\.resolve\(file\)\.toLowerCase\(\)/);
         assert.match(fn, /return 'Not decided: the musician went on in the chat before deciding, and the file is unchanged\. '/);
         assert.match(transform, /<button id="iterate"[^>]*\$\{fromChat \? ' hidden' : ''\}>Ask Again…<\/button>/);
