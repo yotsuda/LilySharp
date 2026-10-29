@@ -275,6 +275,45 @@ public class CompositionChecksTests
         score { staff vn  grandStaff { staff rh  staff lh } }
         """;
 
+    /// <summary>
+    /// Voices moving as one share one rhythm: the melody's findings are said of the top voice alone
+    /// (owner's trial 2026-10-29: a hymn sung in every voice heard the same two findings four times
+    /// over, and came back stumbling in every voice).
+    /// </summary>
+    [Fact]
+    public void VoicesMovingAsOne_HearTheMelodysRhythmOnce_OfTheTopVoice()
+    {
+        static string Voice(string bar) => string.Concat(Enumerable.Repeat(bar + " | ", 8));
+        string hymn = $$"""
+            octave absolute
+            time 4/4
+            key c major
+            part sop { instrument soprano }
+            part alt { instrument alto }
+            part ten { instrument tenor }
+            part bas { instrument voice-bass }
+            section V {
+              sop { {{Voice("e'4@mp g'4 e'4 c'4")}} }
+              alt { {{Voice("c'4@mp e'4 c'4 g4")}} }
+              ten { {{Voice("g4@mp c'4 g4 e4")}} }
+              bas { {{Voice("c4@mp c4 c4 c4")}} }
+              lyrics words sings sop { {{string.Concat(Enumerable.Repeat("la la la la | ", 8))}} }
+            }
+            form { V }
+            score { choirStaff {
+              staff sop  lyrics words sings sop
+              staff alt  lyrics words sings alt
+              staff ten  lyrics words sings ten
+              staff bas  lyrics words sings bas
+            } }
+            """;
+        var findings = CompositionChecks.Of(hymn);
+        var melody = findings.Where(f => f.Contains(", the melody: ")).ToList();
+        Assert.NotEmpty(melody);
+        Assert.All(melody, f => Assert.StartsWith("sop, the melody: ", f));
+        Assert.Contains(findings, f => f.Contains("every part moves in the same rhythm"));
+    }
+
     [Fact]
     public void TheMelody_IsHeldToMoreRhythmThanItsAccompaniment()
     {

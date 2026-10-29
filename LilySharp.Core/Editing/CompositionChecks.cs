@@ -155,6 +155,26 @@ public static class CompositionChecks
             ? parts.Where(p => RoleOf(p).Bass).Select(p => p.Name.Text).ToHashSet(System.StringComparer.Ordinal)
             : [];
         var melodies = MelodiesOf(source, parts, hands, band);
+        // Every part in the same rhythm, bar after bar (said at the end). Moving as one, the parts
+        // share one rhythm, and the melody's is said of the top one alone (owner's trial 2026-10-29:
+        // a hymn sung in every voice heard the same two findings four times over, and came back
+        // stumbling in every voice, its "keep it" drowned).
+        var bars = midi.BarTicks.ToList();
+        int together = 0, counted = 0;
+        if (byPart.Count >= 3 && bars.Count >= 4)
+            for (int b = 0; b + 1 < bars.Count; b++)
+            {
+                var rhythms = byPart.Values
+                    .Select(o => string.Join(",", o.Where(x => x.Start >= bars[b] && x.Start < bars[b + 1]).Select(x => x.Start - bars[b])))
+                    .Where(r => r.Length > 0).ToList();
+                if (rhythms.Count < 3)
+                    continue;
+                counted++;
+                if (rhythms.Distinct().Count() == 1)
+                    together++;
+            }
+        bool asOne = counted >= 4 && together >= counted * 0.6;
+        string? topMelody = parts.Select(p => p.Name.Text).FirstOrDefault(n => melodies.Contains(n) && byPart.ContainsKey(n));
         foreach (var (part, onsets) in byPart)
         {
             if (onsets.Count < 16 || bandBasses.Contains(part) || hands.GetValueOrDefault(part))
@@ -167,6 +187,8 @@ public static class CompositionChecks
             // quarters, a piano piece's right hand two thirds eighths in one figure bar after bar,
             // a violin's quarters and halves — each under the 80% an accompaniment is allowed).
             bool melody = melodies.Contains(part);
+            if (melody && asOne && part != topMelody)
+                continue;
             if (common.Count() >= onsets.Count * (melody ? MelodyOneValue : PartOneValue))
                 findings.Add(melody
                     ? $"{part}, the melody: {common.Count() * 100 / onsets.Count}% of its notes are {common.Key}s — a tune lives on its "
@@ -267,23 +289,9 @@ public static class CompositionChecks
                     + $"(V–I) on the tonic chord, held through the last bar, the bass on {PitchClassName(endTonic)}.");
         }
 
-        // Every part in the same rhythm, bar after bar.
-        var bars = midi.BarTicks.ToList();
-        if (byPart.Count >= 3 && bars.Count >= 4)
+        // Every part in the same rhythm, bar after bar (counted above).
         {
-            int together = 0, counted = 0;
-            for (int b = 0; b + 1 < bars.Count; b++)
-            {
-                var rhythms = byPart.Values
-                    .Select(o => string.Join(",", o.Where(x => x.Start >= bars[b] && x.Start < bars[b + 1]).Select(x => x.Start - bars[b])))
-                    .Where(r => r.Length > 0).ToList();
-                if (rhythms.Count < 3)
-                    continue;
-                counted++;
-                if (rhythms.Distinct().Count() == 1)
-                    together++;
-            }
-            if (counted >= 4 && together >= counted * 0.6)
+            if (asOne)
                 findings.Add($"In {together} of {counted} bars every part moves in the same rhythm: let one voice carry the melody "
                     + "while the others accompany (broken chords, repeated notes, a moving bass), and pass the roles between them"
                     // A hymn's four voices move as one (owner's trial 2026-10-29: told this, the chat

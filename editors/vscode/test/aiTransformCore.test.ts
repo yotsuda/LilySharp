@@ -47,7 +47,8 @@ describe('a proposal from Copilot\'s chat', () => {
         const src = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'aiTransform.ts'), 'utf8');
         assert.match(src, /const text = withLeadingComments\(current, input\.text\);/);
         assert.match(src, /if \(isEmptyScore\(current\) && !musicCheckedFor\.has\(uri\.toString\(\)\)\) \{\s*const music = await compositionFindings\(client, text\);\s*musicCheckedFor\.add\(uri\.toString\(\)\);/);
-        assert.match(src, /'Not shown to the musician yet: Lily#\\'s check of a new piece found this —\\n'/);
+        // …saying first that it counts notes and leaves what does not fit the music (owner's decision 2026-10-29).
+        assert.match(src, /'Not shown to the musician yet: Lily#\\'s check of a new piece found this\. It counts notes and does not know '\s*\+ 'the kind of music you mean: take what helps the piece, and leave what does not fit it —\\n'/);
     });
 });
 

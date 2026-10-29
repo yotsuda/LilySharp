@@ -444,7 +444,10 @@ async function proposeScore(deps: AiTransformDeps, input: ProposeScoreInput, tok
         musicCheckedFor.add(uri.toString());
         if (music.length > 0) {
             deps.log(`AI proposal (chat): sent back once as music — ${music.join(' / ')}`);
-            return 'Not shown to the musician yet: Lily#\'s check of a new piece found this —\n'
+            // The check counts notes and does not know the music meant (owner's decision 2026-10-29: a
+            // hymn's even quarters, sent back, came again stumbling): said before what it found.
+            return 'Not shown to the musician yet: Lily#\'s check of a new piece found this. It counts notes and does not know '
+                + 'the kind of music you mean: take what helps the piece, and leave what does not fit it —\n'
                 + `${music.map(m => `- ${m}`).join('\n')}\n`
                 + 'Revise the piece with these in mind and call lilysharp_proposeScore again with the whole text. '
                 + 'Where something is as you meant it, keep it: the next proposal is written as it is.';
