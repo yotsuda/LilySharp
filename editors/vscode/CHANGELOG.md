@@ -69,6 +69,9 @@ All notable changes to the Lily# VS Code extension are documented here.
   piece went back asking for "the corrected edits, each `<old>` copied from the file" — the
   composer answered with bare `<old>`/`<new>`, which was read as the file, the rounds ran out, and
   the music checks never saw the piece. It now asks for the whole corrected piece in `<file>`.
+- **A model too small for the instructions is not sent them**: Ask AI and Compose with AI check the
+  chosen model's input limit first — the Lily# grammar with the instructions is some 30 000 tokens,
+  and a model listed on this machine reads 12 000 — and say so, with Select AI Model a click away.
 - **A composed song's words are drawn**: a lyrics track the score did not show (`lyrics words sings
   lead` in every section, no `lyrics words` row) gets its row, under the staff it sings, before the
   piece opens.
@@ -1964,6 +1967,9 @@ reader is offered its update when a scan is read.
   piece went back asking for "the corrected edits, each `<old>` copied from the file" — the
   composer answered with bare `<old>`/`<new>`, which was read as the file, the rounds ran out, and
   the music checks never saw the piece. It now asks for the whole corrected piece in `<file>`.
+- **A model too small for the instructions is not sent them**: Ask AI and Compose with AI check the
+  chosen model's input limit first — the Lily# grammar with the instructions is some 30 000 tokens,
+  and a model listed on this machine reads 12 000 — and say so, with Select AI Model a click away.
 - **A composed song's words are drawn**: a lyrics track the score did not show (`lyrics words sings
   lead` in every section, no `lyrics words` row) gets its row, under the staff it sings, before the
   piece opens.

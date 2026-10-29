@@ -40,7 +40,7 @@ import {
     CandidateEdit as CoreCandidateEdit, ChangedSpan, MarkInSelection, MarkReadings, SEL_CLOSE, SEL_OPEN, cleanCandidate,
     TextChange, carryOffset, documentBudget, documentContext, estimateTokens, isProblem, marksContext, octaveOutliers, splitNote,
     startTimeAt, toCandidateEdit, wholeFileEdit, carrySelection, changedWords, wholeTextMarkup, titleOf, isPlaceholderTitle,
-    cleanTitle, withTitle, asksForOneStaff, partCount, rangeFixOf, aiFailure, warningTodoLines, withLyricsRows,
+    cleanTitle, withTitle, asksForOneStaff, partCount, rangeFixOf, aiFailure, warningTodoLines, withLyricsRows, promptFits,
 } from './aiTransformCore';
 import { withTodoMark } from './omrAiFixCore';
 import { markFactsOf, sideFileOf } from './omrScanCore';
@@ -95,6 +95,23 @@ function logExchange(chat: ChatClient, grammar: string, messages: ChatMessage[],
         exchangeChannel.appendLine(text);
     }
     return messages.length;
+}
+
+/**
+ * False, having said so with the way to another model, when the instructions do not fit the model
+ * (aiTransformCore.promptFits): the request is not sent (owner's request 2026-10-29).
+ */
+function tellsTooSmall(chat: ChatClient, systemTokens: number, what: 'compose with' | 'Ask'): boolean {
+    if (promptFits(chat.maxInputTokens, systemTokens)) {
+        return true;
+    }
+    const pick = 'Select AI Model…';
+    void vscode.window.showWarningMessage(
+        `Lily#: ${chat.label} reads at most ${chat.maxInputTokens!.toLocaleString('en-US')} tokens, and the instructions to `
+        + `${what} AI — the Lily# grammar with them — are about ${systemTokens.toLocaleString('en-US')}: it cannot take them. `
+        + 'Choose a model that reads more.', pick)
+        .then(c => { if (c === pick) { void vscode.commands.executeCommand('lilysharp.selectAiModel'); } });
+    return false;
 }
 
 function logReply(raw: string): void {
@@ -252,7 +269,11 @@ async function runCompose(deps: AiTransformDeps, asked?: string): Promise<void> 
         uri: vscode.Uri.parse('untitled:Composed.lys'),
     };
     const grammar = await loadGrammar(deps);
-    const budget = documentBudget(chat.maxInputTokens, estimateTokens(composeSystemPrompt(grammar, chat.modelName)));
+    const systemTokens = estimateTokens(composeSystemPrompt(grammar, chat.modelName));
+    if (!tellsTooSmall(chat, systemTokens, 'compose with')) {
+        return;
+    }
+    const budget = documentBudget(chat.maxInputTokens, systemTokens);
     const began = Date.now();
     try {
         // In the octaves the AI writes it: a new piece has no octave mode of its own to go back to.
@@ -337,7 +358,11 @@ async function runAiTransform(deps: AiTransformDeps, wholeScore = false, selecte
         return;
     }
     const grammar = await loadGrammar(deps);
-    const budget = documentBudget(chat.maxInputTokens, estimateTokens(systemPrompt(grammar)));
+    const systemTokens = estimateTokens(systemPrompt(grammar));
+    if (!tellsTooSmall(chat, systemTokens, 'Ask')) {
+        return;
+    }
+    const budget = documentBudget(chat.maxInputTokens, systemTokens);
     const shown = documentContext(snapshot, budget, whole);
     if (!shown.complete) {
         deps.log(`AI transform: the file (~${estimateTokens(snapshot.origFullText)} tokens) is over ${chat.label}'s `

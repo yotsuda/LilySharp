@@ -488,6 +488,15 @@ export const DEFAULT_INPUT_TOKENS = 32_000;
  * the conversation (the instruction, the facts, the repair rounds). Never under 4K, the file's
  * share the fixed 12,000-character window used to give.
  */
+/**
+ * Whether the instructions fit the model at all, with room for the file and the answer (owner's
+ * request 2026-10-29: the grammar alone is some 30 000 tokens, and a model listed on this machine
+ * takes 12 000 — it was sent the request regardless). Unknown limits are taken to fit.
+ */
+export function promptFits(maxInputTokens: number | undefined, systemTokens: number): boolean {
+    return !(maxInputTokens && maxInputTokens > 0) || systemTokens + 12_000 <= Math.floor(maxInputTokens * 0.9);
+}
+
 export function documentBudget(maxInputTokens: number | undefined, systemTokens: number): number {
     const max = maxInputTokens && maxInputTokens > 0 ? maxInputTokens : DEFAULT_INPUT_TOKENS;
     return Math.max(4_000, Math.floor(max * 0.9) - systemTokens - 12_000);

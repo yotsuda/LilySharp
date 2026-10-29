@@ -24,8 +24,25 @@ import * as path from 'node:path';
 import {
     SEL_CLOSE, SEL_OPEN, carryOffset, documentBudget, documentContext, estimateTokens, isProblem, isUnchanged, marksContext, octaveOutliers,
     pickModel, isAutoModel, pitchToMidi, splitNote, planOf, withoutPlan, startTimeAt, toCandidateEdit, changedWords, diffMarkup, wholeTextMarkup, rangeFixOf,
-    aiFailure, isConnectionError, spokenDuration, servedModelsIn, cleanCandidate, warningTodoLines, withLyricsRows,
+    aiFailure, isConnectionError, spokenDuration, servedModelsIn, cleanCandidate, warningTodoLines, withLyricsRows, promptFits,
 } from '../src/aiTransformCore';
+
+// Owner's request 2026-10-29: the instructions are some 30 000 tokens, and a model on this machine
+// reads 12 000 — it is told so, not sent them.
+describe('instructions too large for a model', () => {
+    it('fit a model with room for the file and the answer, not one without', () => {
+        assert.ok(promptFits(111_409, 30_000));
+        assert.ok(!promptFits(12_078, 30_000));
+        assert.ok(!promptFits(45_000, 30_000));   // 40 500 usable, 42 000 needed
+        assert.ok(promptFits(undefined, 30_000));
+        assert.ok(promptFits(0, 30_000));
+    });
+    it('is checked before Ask and Compose send anything', () => {
+        const src = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'aiTransform.ts'), 'utf8');
+        assert.match(src, /if \(!tellsTooSmall\(chat, systemTokens, 'compose with'\)\) \{\s*return;/);
+        assert.match(src, /if \(!tellsTooSmall\(chat, systemTokens, 'Ask'\)\) \{\s*return;/);
+    });
+});
 
 // Owner's report 2026-10-29: a composed song wrote `lyrics words sings lead` in every section and no
 // `lyrics words` row in its score, so the words were drawn nowhere.
