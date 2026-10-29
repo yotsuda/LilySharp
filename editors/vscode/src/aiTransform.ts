@@ -322,8 +322,14 @@ async function readGuide(deps: AiTransformDeps, input: ReadGuideInput | undefine
     deps.log(`AI transform (chat, guide): ${hint}`);
     // The header Compose with AI in Chat writes, the request in it the musician's (owner's request
     // 2026-10-29: a piece composed this way began at `octave absolute`, saying nothing of itself).
-    const start = 'Compose the new piece in Lily# for the .lys file you were given — else a new one in the workspace '
-        + 'folder (e.g. Composed.lys), its absolute path; it is not on the disk until the musician saves it. Its first '
+    // Named after its title (owner's request 2026-10-29: "e.g. Composed.lys" here was taken for the
+    // name, and the musician renamed each piece by hand), and a name not taken: a score there would
+    // be proposed to as a change.
+    const start = 'Compose the new piece in Lily# for the .lys file you were given — else a new one in the folder you '
+        + 'were given, or the workspace folder, its absolute path; it is not on the disk until the musician saves it. '
+        + 'Name a new file after the piece\'s title, in letters, digits and hyphens (a title in another script '
+        + 'romanized: 風のリボン → Kaze-no-Ribbon.lys), never a placeholder (Composed, Untitled), and a name no file in '
+        + 'that folder has yet — check. Its first '
         + 'lines are these, the request as the musician put it and what you made of it, each on one line, in the '
         + 'language of the request:\n'
         + newPieceHeader('<the request>', '<the piece you composed, in a sentence or two>', '\n').trimEnd() + '\n'
@@ -575,23 +581,17 @@ async function runComposeInChat(deps: AiTransformDeps): Promise<void> {
     if (description === undefined || description.trim().length === 0) {
         return;
     }
-    // The file it is to be: Composed.lys, or the first ComposedN.lys free beside the active file,
-    // chosen here so the chat does not pick a score already there. Nothing is opened before the
-    // piece comes (owner's request 2026-10-29: the chat's proposal opens it, unsaved, as it opens a
-    // piece asked for with no .lys open — the header written by the chat as the guide gives it).
+    // The folder it goes in, beside the active file; its name the chat gives it from the piece's
+    // title, as the composing guide says (owner's request 2026-10-29: pieces saved as "Composed.lys"
+    // were renamed by hand). Nothing is opened before the piece comes: the chat's proposal opens it,
+    // unsaved, as it opens a piece asked for with no .lys open.
     const active = vscode.window.activeTextEditor?.document.uri;
     const folder = active?.scheme === 'file' ? path.dirname(active.fsPath)
         : vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? os.homedir();
-    const taken = (p: string) => fs.existsSync(p)
-        || vscode.workspace.textDocuments.some(d => d.uri.fsPath.toLowerCase() === p.toLowerCase());
-    let file = path.join(folder, 'Composed.lys');
-    for (let n = 2; taken(file); n++) {
-        file = path.join(folder, `Composed${n}.lys`);
-    }
     // The request alone, and where to read how to begin (owner's request 2026-10-29: the header, the
     // steps, a starting point drawn at random and the composing guide come from the guide tool, as
     // they do to a chat that asks with no .lys open).
-    const query = `Compose a new piece of music in Lily# for ${file} (a new file: your proposal opens it in the editor).\n`
+    const query = `Compose a new piece of music in Lily# in the folder ${folder} (a new file: your proposal opens it in the editor).\n`
         + 'First read how to begin and the composing guide: lilysharp_readGuide, topic "composing".\n'
         + `The request: ${description.trim()}`;
     try {

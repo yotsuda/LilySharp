@@ -75,12 +75,15 @@ describe('the composing guide', () => {
         const steps = transform.slice(transform.indexOf('function newPieceSteps('), transform.indexOf('async function writeWhole'));
         assert.match(steps, /check it with the Lily# compiler — \\`& "\$\{lysc\}" check <copy>\\` on a copy of your text/);
         assert.match(steps, /'Propose it, whole, with the lilysharp_proposeScore tool \(#proposeScore\), giving that path: it checks the '/);
-        // Owner's request 2026-10-29: no save dialog — an unsaved score named Composed.lys (or the first
-        // ComposedN.lys free), saved when the musician wants it kept.
-        assert.ok(!/showSaveDialog|writeFileSync/.test(fn));
-        // The name is chosen here, free on the disk and in the editor, so the chat picks no score there.
-        assert.match(fn, /file = path\.join\(folder, `Composed\$\{n\}\.lys`\);/);
-        assert.match(fn, /const query = `Compose a new piece of music in Lily# for \$\{file\} \(a new file: your proposal opens it in the editor\)\.\\n`/);
+        // Owner's request 2026-10-29: no save dialog — an unsaved score, saved when the musician wants
+        // it kept; and, the same day, no "Composed.lys": the folder is given, the chat names the file
+        // after the piece's title.
+        assert.ok(!/showSaveDialog|writeFileSync|'Composed|`Composed/.test(fn));
+        assert.match(fn, /const query = `Compose a new piece of music in Lily# in the folder \$\{folder\} \(a new file: your proposal opens it in the editor\)\.\\n`/);
+        const guide = transform.slice(transform.indexOf('async function readGuide('), transform.indexOf('function newPieceHeader('));
+        assert.match(guide, /'Name a new file after the piece\\'s title, in letters, digits and hyphens \(a title in another script '/);
+        assert.match(guide, /never a placeholder \(Composed, Untitled\), and a name no file in '\s*\+ 'that folder has yet — check\./);
+        assert.ok(!/\+ 'folder \(e\.g\. Composed\.lys\)/.test(guide));
     });
     // Owner's request 2026-10-29: Copilot's chat proposes a score through Lily#'s tool, the musician
     // deciding on the score — compiled first, an error sent back unseen.
