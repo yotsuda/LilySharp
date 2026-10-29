@@ -425,8 +425,6 @@ public static class CompositionChecks
     // The dynamic levels — not an accent like `@sf`, which says nothing of how loud the bars after it are.
     private static readonly HashSet<string> Levels = ["pppp", "ppp", "pp", "p", "mp", "mf", "f", "ff", "fff", "ffff", "fp"];
 
-    /// <summary>The parts whose music writes a dynamic level, in a section's cell or in a phrase the
-    /// cell names.</summary>
     /// <summary>
     /// A section that ends loud and the one played after it opening soft, two levels down or more, with
     /// no <c>@decresc</c> (<c>@dim</c>) after the last level to lead there and no <c>@p.subito</c> to
@@ -471,6 +469,8 @@ public static class CompositionChecks
         }
     }
 
+    /// <summary>The parts whose music writes a dynamic level, in a section's cell or in a phrase the
+    /// cell names.</summary>
     private static HashSet<string> DynamicLevelsByPart(SyntaxNode root)
     {
         static bool HasLevel(SyntaxNode n) => n.DescendantNodes<DynamicSyntax>().Any(d => Levels.Contains(d.DynamicToken.Text));
