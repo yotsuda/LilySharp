@@ -611,6 +611,29 @@ export function isAutoModel(m: Pick<ModelLike, 'id'>): boolean {
     return m.id.trim().toLowerCase() === 'auto';
 }
 
+/**
+ * The models Copilot sent an extension's requests to since `since`, in order, from its own log
+ * (GitHub Copilot Chat.log: "2026-10-29 09:19:38.601 [info] ccreq:92b4ed0a.copilotmd | success |
+ * gpt-6-luna | 55133ms | [copilotLanguageModelWrapper]"). Copilot's Auto does not tell the API
+ * which model answered, and the log does (owner's request 2026-10-29: the composed piece's first
+ * line said "copilot/auto"). The log's times are local, and a line is written as its request ends.
+ */
+export function servedModelsIn(log: string, since: Date): string[] {
+    const served: string[] = [];
+    const line = /^(\d{4})-(\d\d)-(\d\d) (\d\d):(\d\d):(\d\d)\.(\d{3}) \[info\] ccreq:\S+ \| success \| (\S+) \| \d+ms \| \[copilotLanguageModelWrapper\]/;
+    for (const text of log.split(/\r?\n/)) {
+        const m = line.exec(text);
+        if (!m) {
+            continue;
+        }
+        const at = new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6], +m[7]);
+        if (at.getTime() >= since.getTime() && served[served.length - 1] !== m[8]) {
+            served.push(m[8]);
+        }
+    }
+    return served;
+}
+
 /** A model VS Code lists but keeps for a task of its own (dictation clean-up and the like),
  *  which answers an extension with an error. Known by its name; one that slips through is
  *  dropped when it refuses (modelClient's refusal list). */

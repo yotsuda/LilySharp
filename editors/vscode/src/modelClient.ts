@@ -23,7 +23,9 @@
 // Code, and authentication is Copilot's, so nothing is stored in settings or SecretStorage.
 
 import * as vscode from 'vscode';
-import { isAutoModel, isCoreOnlyRefusal, isCoreTaskModel, pickModel } from './aiTransformCore';
+import * as fs from 'fs';
+import * as path from 'path';
+import { isAutoModel, isCoreOnlyRefusal, isCoreTaskModel, pickModel, servedModelsIn } from './aiTransformCore';
 
 /** The models that refused as VS Code's own ("only available to VS Code core"): left out of every
  *  choice from then on — the automatic pick and "Lily#: Select AI Model"'s list — so the next
@@ -36,6 +38,24 @@ const coreOnly = new Set<string>();
 /** Where the refusals are kept between sessions, and under which key. */
 let refusalMemory: vscode.Memento | undefined;
 const REFUSALS_KEY = 'lilysharp.ai.coreOnlyModels';
+
+/** GitHub Copilot Chat's log, beside this extension's in the window's log folder: the one place
+ *  that names the model Copilot's Auto sent a request to (aiTransformCore.servedModelsIn). */
+let copilotLog: string | undefined;
+
+/** Finds Copilot Chat's log from this extension's log folder (`context.logUri`). */
+export function findCopilotLogFrom(logUri: vscode.Uri): void {
+    copilotLog = path.join(path.dirname(logUri.fsPath), 'GitHub.copilot-chat', 'GitHub Copilot Chat.log');
+}
+
+/** The models Copilot's log says answered since `since`; none when there is no log to read. */
+function servedSince(since: Date): string[] {
+    try {
+        return copilotLog && fs.existsSync(copilotLog) ? servedModelsIn(fs.readFileSync(copilotLog, 'utf8'), since) : [];
+    } catch {
+        return [];
+    }
+}
 
 /** Reads the refusals kept by an earlier session of this VS Code version, and keeps the new ones. */
 export function rememberRefusalsIn(state: vscode.Memento): void {
@@ -76,6 +96,10 @@ export interface ChatClient {
     readonly modelName?: string;
     /** The model as the request went to it, for the exchange log: vendor, id, family, version. */
     readonly modelDetail?: string;
+    /** The label with the model that answered, as far as can be known: for Copilot's Auto, the
+     *  models its log says it sent this client's requests to ("copilot/gpt-6-luna, via Auto"); else
+     *  the label. */
+    answeredBy?(): string;
     /** Runs the messages and returns the full response text. */
     send(messages: ChatMessage[], token: vscode.CancellationToken): Promise<string>;
     /** Whether the last `send` carried the images its messages offered: false when this VS Code
@@ -267,6 +291,7 @@ function lmClient(model: vscode.LanguageModelChat, use: ModelUse, byName: boolea
     const canImage = typeof api.LanguageModelDataPart?.image === 'function' && typeof api.LanguageModelTextPart === 'function';
     let refused = false;
     let last: boolean | undefined;
+    let firstSent: Date | undefined;
     const build = (messages: ChatMessage[], images: boolean) => messages.map(m => {
         // vscode.lm has only User/Assistant roles; a system message rides as the first User message.
         if (m.role === 'assistant') {
@@ -302,7 +327,17 @@ function lmClient(model: vscode.LanguageModelChat, use: ModelUse, byName: boolea
             return `name "${model.name}", vendor ${model.vendor}, id ${model.id}, family ${model.family}, version ${model.version}`
                 + (model.maxInputTokens ? `, ${model.maxInputTokens} input tokens` : '');
         },
+        answeredBy() {
+            if (!isAutoModel(model) || !firstSent) {
+                return this.label;
+            }
+            const served = servedSince(firstSent);
+            return served.length ? `${model.vendor}/${served.join(', then ')}, via Auto` : this.label;
+        },
         async send(messages, token) {
+            // A second earlier than the request: the log's times are to the millisecond, the
+            // clocks the same, and this is only a lower bound.
+            firstSent ??= new Date(Date.now() - 1000);
             const offered = messages.some(m => m.images && m.images.length > 0);
             const withImages = offered && canImage && !refused;
             try {

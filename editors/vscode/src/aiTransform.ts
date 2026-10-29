@@ -889,7 +889,8 @@ async function drive(
             const eol = text.includes('\r\n') ? '\r\n' : '\n';
             const line = (s: string) => `// ${s.replace(/\s*\r?\n\s*/g, ' ')}`;
             const preface = [
-                line(`Composed with AI (${chat.label}), ${new Date().toISOString().slice(0, 10)}`),
+                // The model that answered, not "copilot/auto" (owner's request 2026-10-29).
+                line(`Composed with AI (${chat.answeredBy?.() ?? chat.label}), ${new Date().toISOString().slice(0, 10)}`),
                 line(`Asked: ${composeAsked ?? instruction}`),
                 ...(note ? [line(`The AI: ${note}`)] : []),
                 ...(flatNote ? [line(`Still to improve: ${flatNote}`)] : []),

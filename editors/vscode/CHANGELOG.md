@@ -23,6 +23,10 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ### AI
 
+- **A piece composed through Copilot's Auto names the model that answered**: its first line said
+  `copilot/auto`; it now reads `copilot/gpt-6-luna, via Auto` (several models in order when the
+  revisions went to more than one), from GitHub Copilot Chat's log — the API does not say. Without
+  that log it says `copilot/auto` as before.
 - **A returning section is named again, not copied**: Compose with AI's plan writes a section that
   comes back as it was once and plays it again from the form (`form { A B A Coda }`); a return that
   changes is a section of its own, and the plan says what changes.
@@ -1864,6 +1868,10 @@ reader is offered its update when a scan is read.
 
 ### AI
 
+- **A piece composed through Copilot's Auto names the model that answered**: its first line said
+  `copilot/auto`; it now reads `copilot/gpt-6-luna, via Auto` (several models in order when the
+  revisions went to more than one), from GitHub Copilot Chat's log — the API does not say. Without
+  that log it says `copilot/auto` as before.
 - **A returning section is named again, not copied**: Compose with AI's plan writes a section that
   comes back as it was once and plays it again from the form (`form { A B A Coda }`); a return that
   changes is a section of its own, and the plan says what changes.

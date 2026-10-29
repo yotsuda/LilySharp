@@ -24,8 +24,31 @@ import * as path from 'node:path';
 import {
     SEL_CLOSE, SEL_OPEN, carryOffset, documentBudget, documentContext, estimateTokens, isProblem, isUnchanged, marksContext, octaveOutliers,
     pickModel, isAutoModel, pitchToMidi, splitNote, planOf, withoutPlan, startTimeAt, toCandidateEdit, changedWords, diffMarkup, wholeTextMarkup, rangeFixOf,
-    aiFailure, isConnectionError, spokenDuration,
+    aiFailure, isConnectionError, spokenDuration, servedModelsIn,
 } from '../src/aiTransformCore';
+
+// Owner's request 2026-10-29: a piece composed through Copilot's Auto said "copilot/auto" on its
+// first line; Copilot's own log names the model that answered.
+describe('the models Copilot\'s log says answered', () => {
+    const log = [
+        '2026-10-29 09:18:43.285 [info] ccreq:ad40da6e.copilotmd | markdown',
+        '2026-10-29 09:18:50.000 [info] ccreq:11111111.copilotmd | success | claude-fable-5.1 | 900ms | [copilotLanguageModelWrapper]',
+        '2026-10-29 09:19:38.601 [info] ccreq:92b4ed0a.copilotmd | success | gpt-6-luna | 55133ms | [copilotLanguageModelWrapper]',
+        '2026-10-29 09:20:10.000 [info] ccreq:22222222.copilotmd | success | gpt-6-luna | 30000ms | [copilotLanguageModelWrapper]',
+        '2026-10-29 09:21:00.000 [info] ccreq:33333333.copilotmd | success | claude-sonnet-5.5 | 800ms | [panel/editAgent]',
+        '2026-10-29 09:22:00.000 [info] ccreq:44444444.copilotmd | success | claude-fable-5.1 | 4000ms | [copilotLanguageModelWrapper]',
+    ].join('\r\n');
+    it('takes the extension\'s requests since the time asked, in order, a model once in a row', () => {
+        assert.deepEqual(servedModelsIn(log, new Date(2026, 9, 29, 9, 18, 44)), ['claude-fable-5.1', 'gpt-6-luna', 'claude-fable-5.1']);
+        assert.deepEqual(servedModelsIn(log, new Date(2026, 9, 29, 9, 19, 0)), ['gpt-6-luna', 'claude-fable-5.1']);
+        assert.deepEqual(servedModelsIn(log, new Date(2026, 9, 29, 10, 0, 0)), []);
+        assert.deepEqual(servedModelsIn('', new Date(0)), []);
+    });
+    it('writes the model that answered on the composed piece\'s first line', () => {
+        const src = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'aiTransform.ts'), 'utf8');
+        assert.match(src, /Composed with AI \(\$\{chat\.answeredBy\?\.\(\) \?\? chat\.label\}\)/);
+    });
+});
 
 // Owner's report 2026-10-29: "compose with AI failed: Please check your firewall rules and network
 // connection then try again. Error Code: net::ERR_HTTP2_PROTOCOL_ERROR." — two minutes into the
