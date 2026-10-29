@@ -69,6 +69,9 @@ All notable changes to the Lily# VS Code extension are documented here.
   piece went back asking for "the corrected edits, each `<old>` copied from the file" — the
   composer answered with bare `<old>`/`<new>`, which was read as the file, the rounds ran out, and
   the music checks never saw the piece. It now asks for the whole corrected piece in `<file>`.
+- **A section mark the AI wrote stays readable in its candidate**: its white box was painted green
+  with the changes (and orange while playing), hiding its name; the box keeps its white, its
+  outline and name turn green.
 - **Copilot's chat proposes a score, and you decide on the score**: Lily# gives the chat a tool,
   `lilysharp_proposeScore` (#proposeScore), and asks it to write or change a .lys through it. The
   proposal is compiled first — one with errors goes back to the chat, never shown — then opens in
@@ -2023,6 +2026,9 @@ reader is offered its update when a scan is read.
   piece went back asking for "the corrected edits, each `<old>` copied from the file" — the
   composer answered with bare `<old>`/`<new>`, which was read as the file, the rounds ran out, and
   the music checks never saw the piece. It now asks for the whole corrected piece in `<file>`.
+- **A section mark the AI wrote stays readable in its candidate**: its white box was painted green
+  with the changes (and orange while playing), hiding its name; the box keeps its white, its
+  outline and name turn green.
 - **Copilot's chat proposes a score, and you decide on the score**: Lily# gives the chat a tool,
   `lilysharp_proposeScore` (#proposeScore), and asks it to write or change a .lys through it. The
   proposal is compiled first — one with errors goes back to the chat, never shown — then opens in

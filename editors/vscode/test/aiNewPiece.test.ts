@@ -372,6 +372,11 @@ describe('the composer\'s prompt', () => {
         assert.match(transform, /const maxRepairs = compose \? MAX_REPAIR_ATTEMPTS \+ 1 : MAX_REPAIR_ATTEMPTS;/);
         assert.match(transform, /for \(let attempt = 0; attempt <= maxRepairs; attempt\+\+\)/);
     });
+    // Owner's report 2026-10-29: a section mark the AI wrote filled green, its name hidden in a block.
+    it('keeps a white box white when it paints the changes green or the notes playing orange', () => {
+        assert.match(transform, /\.score \.chg \*:not\(\[fill="none"\]\):not\(\[fill="#FFFFFF"\]\):not\(\[fill="#ffffff"\]\):not\(\[fill="white"\]\) \{ fill: #2e9e43 !important; \}/);
+        assert.match(transform, /\.score \.playing \*:not\(\[fill="none"\]\):not\(\[fill="#FFFFFF"\]\)/);
+    });
     it('writes no composer line unless asked', () => {
         assert.match(transform, /'- Write no `composer` line unless the musician asks for one\.'/);
     });

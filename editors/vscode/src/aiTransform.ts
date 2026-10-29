@@ -1940,7 +1940,11 @@ body { margin:0; padding:0; display:flex; flex-direction:column; height:100vh; o
 .score svg { max-width:100%; height:auto; }
 /* The notes the AI changed, painted green — the green the OMR fix panel paints its proposals in
    (owner's request 2026-10-25; a glow alone left them black). */
-.score .chg:not([fill="none"]), .score .chg *:not([fill="none"]) { fill: #2e9e43 !important; }
+/* A box drawn white (a section's or a rehearsal mark's frame) keeps its white: only its outline
+   turns green, and its name stays readable inside it (owner's report 2026-10-29: the mark became
+   a green block). */
+.score .chg:not([fill="none"]):not([fill="#FFFFFF"]):not([fill="#ffffff"]):not([fill="white"]),
+.score .chg *:not([fill="none"]):not([fill="#FFFFFF"]):not([fill="#ffffff"]):not([fill="white"]) { fill: #2e9e43 !important; }
 .score .chg[stroke]:not([stroke="none"]), .score .chg [stroke]:not([stroke="none"]) { stroke: #2e9e43 !important; }
 /* A note plays the pane from it when clicked. */
 .score [data-pos] { cursor: pointer; }
@@ -1984,7 +1988,8 @@ button:disabled { opacity:0.45; cursor:default; }
 /* The bar Play starts from (a click on a bar selects it), lit as the preview lights a selection. */
 .score rect.bar-staff.selected { fill: rgba(0, 120, 215, 0.22); }
 /* The notes sounding now while Play plays — orange, the preview's own playback color. */
-.score .playing:not([fill="none"]), .score .playing *:not([fill="none"]) { fill: #ff6600 !important; }
+.score .playing:not([fill="none"]):not([fill="#FFFFFF"]):not([fill="#ffffff"]):not([fill="white"]),
+.score .playing *:not([fill="none"]):not([fill="#FFFFFF"]):not([fill="#ffffff"]):not([fill="white"]) { fill: #ff6600 !important; }
 .score .playing[stroke]:not([stroke="none"]), .score .playing [stroke]:not([stroke="none"]) { stroke: #ff6600 !important; }
 </style>
 </head>
