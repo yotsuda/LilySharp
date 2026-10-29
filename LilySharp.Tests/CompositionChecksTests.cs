@@ -215,7 +215,7 @@ public class CompositionChecksTests
         Assert.Contains("(bars 1, 2, 5, 9, 10, 13,", beats);
         Assert.Contains(findings, f => f.StartsWith("The piece is 24 bars long, about 50 seconds played")
             // More music, not a slower tempo (owner's report 2026-10-29: ♩ = 72 became 48).
-            && f.EndsWith("never by slowing its tempo: keep the tempo its character asks for."));
+            && f.EndsWith("never by slowing its tempo (keep the tempo its character asks for), nor by playing one section over and over in a row."));
         // The tune by its beats: not said.
         string kept = Piece("6/8", "4. = 58",
             "d''4 b'8 a'4 g'8 | a'4 b'8 d''4. | e''4 d''8 b'4 a'8 | fis'4. a'4. | b'4 d''8 g''4. | e''4 d''8 c''4. | a'4 c''8 fis''4. | g''2. |",
@@ -293,6 +293,24 @@ public class CompositionChecksTests
     private const string BassMusic = "  bass { e8 e e e c c c c | g,8 g, g, g, d d d d | }";
     private const string DrumMusic = "  kit { voice { hh8 hh hh hh hh hh hh hh | hh8 hh hh hh hh hh hh hh | } { bd4 sn bd sn | bd4 sn bd sn | } }";
 
+    // Owner's report 2026-10-29: a rock instrumental's guitar played power chords and arpeggios
+    // through verse and chorus — a tune only in a four-bar solo.
+    [Fact]
+    public void ABandInstrumentalWithNoTune_IsSaid()
+    {
+        string Rock(string guitar) => Band(Guitar + "\n" + Bass + "\n" + Drums,
+            $"  gtr {{ {guitar} }}\n  bass {{ {string.Concat(Enumerable.Repeat("e,8 e, e, e, e, e, e, e, | c8 c c c d d d d | ", 4))} }}\n"
+            + $"  kit {{ voice {{ {string.Concat(Enumerable.Repeat("hh8 hh hh hh hh hh hh hh | ", 8))} }} {{ {string.Concat(Enumerable.Repeat("bd4 sn bd sn | ", 8))} }} }}",
+            "staff gtr  staff bass  staff kit", "tempo 176");
+        string chords = Rock(string.Concat(Enumerable.Repeat("<e, b,>8 r <e, b,> <e, b,> e, g, b, e | <c g>4 <c g>8 r <d a,>4 <d a,> | ", 4)));
+        Assert.Contains(CompositionChecks.Of(chords), f => f.StartsWith("A tune is played in only 0 of the 8 bars"));
+        string tune = Rock(string.Concat(Enumerable.Repeat("e'8 g' b'4 a'8 g' fis'4 | g'4. a'8 b'2 | ", 4)));
+        Assert.DoesNotContain(CompositionChecks.Of(tune), f => f.StartsWith("A tune is played"));
+        // Sung: the words are the tune.
+        Assert.DoesNotContain(CompositionChecks.Of(chords.Replace("score {", "lyrics words sings gtr { la }\nscore {")),
+            f => f.StartsWith("A tune is played"));
+    }
+
     [Fact]
     public void GuitarAndDrums_AreToldTheBassIsMissing()
     {
@@ -323,7 +341,10 @@ public class CompositionChecksTests
     [Fact]
     public void TheBandSketch_IsWhole()
     {
-        Assert.Empty(Flatness(ComposedPieces.NightDrive));
+        // Its rhythm section whole; chords under no tune and no words, which it is told (owner's
+        // report 2026-10-29: an instrumental's tune is its lead).
+        Assert.Equal(["A tune is played in only 0 of the 8 bars"],
+            Flatness(ComposedPieces.NightDrive).Select(f => f[..f.IndexOf(':')]));
     }
 
     [Fact]

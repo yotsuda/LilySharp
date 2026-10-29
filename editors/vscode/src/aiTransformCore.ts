@@ -813,6 +813,26 @@ const HINT_OPENINGS = ['the bass alone for a bar or two', 'a pickup into the fir
     'a soft chord held, the melody entering over it', 'everyone at once, loud', 'a short introduction on the accompaniment\'s figure'];
 
 /**
+ * Compiler diagnostics as lines for the AI, one per line of the source and message — the same
+ * message on the same line said once, with how many times (owner's report 2026-10-29: "this note
+ * sounds D2, below the range of the Guitar" came back 28 times, one a note, burying the rest).
+ * The first fix any of them offers goes with it.
+ */
+export function diagLines<D extends { Line: number; Message: string }>(diags: D[], fixOf: (d: D) => string): string {
+    const groups = new Map<string, { line: number; message: string; count: number; fix: string }>();
+    for (const d of diags) {
+        const key = `${d.Line}\u0000${d.Message}`;
+        const g = groups.get(key) ?? { line: d.Line, message: d.Message, count: 0, fix: '' };
+        g.count++;
+        g.fix ||= fixOf(d);
+        groups.set(key, g);
+    }
+    return [...groups.values()]
+        .map(g => `  - line ${g.line + 1}${g.count > 1 ? ` (${g.count} times)` : ''}: ${g.message}${g.fix}`)
+        .join('\n');
+}
+
+/**
  * What to say when a new piece's "// The AI:" line is not in the language of its "// Asked:" line —
  * told by their scripts, Latin or not (owner's report 2026-10-29: asked in Japanese, the chat
  * described its piece in English). Undefined when they agree, or a line is missing.

@@ -243,6 +243,35 @@ public static class CompositionChecks
                     + "a beat only where a syncopation is meant.");
         }
 
+        // A band's instrumental with no tune (owner's report 2026-10-29: a rock piece for guitar, bass
+        // and drums had power chords and arpeggios through its verse and chorus, a tune only in a
+        // four-bar solo). A bar has a tune where a part other than the drums and the bass plays a line:
+        // three onsets or more, most of them single notes. Words sung are a tune of their own.
+        if (band && !System.Text.RegularExpressions.Regex.IsMatch(source, @"\blyrics\s+\w+\s+sings\b"))
+        {
+            var lineParts = parts.Where(p => RoleOf(p) is { Drums: false, Bass: false }).Select(p => p.Name.Text)
+                .ToHashSet(System.StringComparer.Ordinal);
+            var onsets = midi.Tracks.SelectMany(t => t.Notes.Where(n => n.Channel != 9).Select(n => (Part: n.Part ?? t.Name, n.StartTick)))
+                .Where(n => lineParts.Contains(n.Part))
+                .GroupBy(n => (n.Part, n.StartTick)).Select(g => (g.Key.Part, g.Key.StartTick, Single: g.Count() == 1)).ToList();
+            int withTune = 0, playedBars = 0;
+            for (int b = 0; b < barList.Count; b++)
+            {
+                int start = barList[b], end = b + 1 < barList.Count ? barList[b + 1] : int.MaxValue;
+                var inBar = onsets.Where(o => o.StartTick >= start && o.StartTick < end).ToList();
+                if (inBar.Count == 0)
+                    continue;
+                playedBars++;
+                if (inBar.GroupBy(o => o.Part).Any(g => g.Count() >= 3 && g.Count(o => o.Single) >= g.Count() * TuneSingleShare))
+                    withTune++;
+            }
+            if (playedBars >= 8 && withTune < playedBars * TunedBarsShare)
+                findings.Add($"A tune is played in only {withTune} of the {playedBars} bars: the parts over the bass play chords and figures, and "
+                    + "no words are sung. An instrumental's tune is its lead — let the guitar (or a lead instrument added for it) play "
+                    + "the melody of the verse and the chorus, single notes with a hook to remember; a riff and chords alone are the "
+                    + "groove under a tune, not the tune.");
+        }
+
         // A staff labelled by the hand that plays it (owner's report 2026-10-27: a piano piece printed
         // 右手 and 左手 beside its staves) — a score names the instrument, and a solo piano none.
         var handNamed = parts.Where(p => new[] { p.DisplayName, p.ShortName }.Any(n => n != null && HandLabel.IsMatch(n)))
@@ -346,8 +375,8 @@ public static class CompositionChecks
             findings.Add($"The piece is {barCount} bars long, about {seconds} seconds played: unless a short piece was asked for, give it "
                 + "the length its form needs — a minute and a half to three minutes (about 24 to 32 bars of 4/4; a shorter bar "
                 + "or a quicker beat takes more), its phrases long enough to say something, each closing on a cadence. Lengthen it "
-                + "with music — a section more, a varied return, an introduction — never by slowing its tempo: keep the tempo its "
-                + "character asks for.");
+                + "with music — a section more, a varied return, an introduction — never by slowing its tempo (keep the tempo its "
+                + "character asks for), nor by playing one section over and over in a row.");
         if (PlayedKeys(root) is { } inKeys && pitched.Count > 0)
         {
             var (home, end) = inKeys;
@@ -409,6 +438,10 @@ public static class CompositionChecks
     // A compound meter's melody notes that start within a beat and run across the next, in this many
     // bars and this share of them (owner's trial 2026-10-29: `b'8 d''4. b'8 a'8` in 8 of a 6/8 tune's bars).
     private const int AcrossBeatFewestBars = 3;
+
+    // A band's line in a bar: most of its onsets single notes; and the share of the bars a tune is
+    // heard in, under which an instrumental has none to speak of (owner's report 2026-10-29).
+    private const double TuneSingleShare = 0.7, TunedBarsShare = 0.5;
     private const double AcrossBeatShare = 0.2;
 
     /// <summary>The seconds from the start to <paramref name="tick"/>, by the tempo changes of every

@@ -24,8 +24,18 @@ import * as path from 'node:path';
 import {
     SEL_CLOSE, SEL_OPEN, carryOffset, documentBudget, documentContext, estimateTokens, isProblem, isUnchanged, marksContext, octaveOutliers,
     pickModel, isAutoModel, pitchToMidi, splitNote, planOf, withoutPlan, startTimeAt, toCandidateEdit, changedWords, diffMarkup, wholeTextMarkup, rangeFixOf,
-    aiFailure, isConnectionError, spokenDuration, servedModelsIn, cleanCandidate, warningTodoLines, withLyricsRows, promptFits, compositionHint, withLeadingComments, isEmptyScore, guidePages, headerLanguageNote,
+    aiFailure, isConnectionError, spokenDuration, servedModelsIn, cleanCandidate, warningTodoLines, withLyricsRows, promptFits, compositionHint, withLeadingComments, isEmptyScore, guidePages, headerLanguageNote, diagLines,
 } from '../src/aiTransformCore';
+
+// Owner's report 2026-10-29: one range warning came back 28 times, a line a note.
+describe('compiler diagnostics for the AI', () => {
+    it('says the same message on the same line once, with how many times, and its fix', () => {
+        const low = 'this note sounds D2, below the range of the Guitar';
+        const d = (Line: number, Message: string, fix = '') => ({ Line, Message, fix });
+        const lines = diagLines([d(16, low), d(16, low), d(16, low, ' — write `d8`'), d(22, low), d(30, 'another')], x => x.fix);
+        assert.equal(lines, `  - line 17 (3 times): ${low} — write \`d8\`\n  - line 23: ${low}\n  - line 31: another`);
+    });
+});
 
 // Owner's request 2026-10-29: asked in Japanese, the chat described its piece in English.
 describe('a new piece\'s header in the request\'s language', () => {
