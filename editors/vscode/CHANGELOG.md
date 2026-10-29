@@ -69,6 +69,9 @@ All notable changes to the Lily# VS Code extension are documented here.
   piece went back asking for "the corrected edits, each `<old>` copied from the file" — the
   composer answered with bare `<old>`/`<new>`, which was read as the file, the rounds ran out, and
   the music checks never saw the piece. It now asks for the whole corrected piece in `<file>`.
+- **The character runs through the piece**: the composing guide says each device of the character
+  asked for comes back in more than one section, growing to the climax — a quartet's tremolo and
+  sforzando were all in two bars of its middle section.
 - **The accompanying parts do not stop together bar after bar**: the composing guide says a rest in
   one part is covered by another — a quartet's three lower strings rested together on beat 4 of
   every bar, leaving the tune alone there.
@@ -1980,6 +1983,9 @@ reader is offered its update when a scan is read.
   piece went back asking for "the corrected edits, each `<old>` copied from the file" — the
   composer answered with bare `<old>`/`<new>`, which was read as the file, the rounds ran out, and
   the music checks never saw the piece. It now asks for the whole corrected piece in `<file>`.
+- **The character runs through the piece**: the composing guide says each device of the character
+  asked for comes back in more than one section, growing to the climax — a quartet's tremolo and
+  sforzando were all in two bars of its middle section.
 - **The accompanying parts do not stop together bar after bar**: the composing guide says a rest in
   one part is covered by another — a quartet's three lower strings rested together on beat 4 of
   every bar, leaving the tune alone there.

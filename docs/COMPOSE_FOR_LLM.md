@@ -149,4 +149,7 @@ it should sound like the ensemble asked for. What makes it music:
   acts — not only planned: "dramatic" — `@sf` and `@p.subito` after a loud bar, a tremolo
   (`d'2:32`), every part in unison at the climax, the low register; "cool" — a driving rhythm,
   syncopation and `@accent`, octaves on the strong beats, a run into the climax; "lovely" — a
-  singing line with long notes at its peaks, a gentle flowing accompaniment.
+  singing line with long notes at its peaks, a gentle flowing accompaniment. **The devices run
+  through the piece**, not spent in one place: each comes back in more than one section (a
+  quartet's tremolo and `@sf` only in two bars of its middle section left its opening merely
+  loud and soft), growing toward the climax, where they are strongest and come together.

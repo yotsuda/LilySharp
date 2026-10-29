@@ -37,6 +37,11 @@ describe('the composing guide', () => {
         const guide = fs.readFileSync(path.join(docs, 'COMPOSE_FOR_LLM.md'), 'utf8');
         assert.match(guide, /\*\*A rest in one part is covered by another\*\*: the\s+accompanying parts do not stop together bar after bar/);
     });
+    // Owner's trial 2026-10-29: a "dramatic" quartet's tremolo and sforzando were all in two bars.
+    it('says the character\'s devices run through the piece, strongest at the climax', () => {
+        const guide = fs.readFileSync(path.join(docs, 'COMPOSE_FOR_LLM.md'), 'utf8');
+        assert.match(guide, /\*\*The devices run\s+through the piece\*\*, not spent in one place: each comes back in more than one section/);
+    });
     it('holds the recipe, and the grammar only points at it', () => {
         const grammar = fs.readFileSync(path.join(docs, 'GRAMMAR_FOR_LLM.md'), 'utf8');
         const guide = fs.readFileSync(path.join(docs, 'COMPOSE_FOR_LLM.md'), 'utf8');
