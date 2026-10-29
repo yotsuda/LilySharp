@@ -813,6 +813,23 @@ const HINT_OPENINGS = ['the bass alone for a bar or two', 'a pickup into the fir
     'a soft chord held, the melody entering over it', 'everyone at once, loud', 'a short introduction on the accompaniment\'s figure'];
 
 /**
+ * What to say when a new piece's "// The AI:" line is not in the language of its "// Asked:" line —
+ * told by their scripts, Latin or not (owner's report 2026-10-29: asked in Japanese, the chat
+ * described its piece in English). Undefined when they agree, or a line is missing.
+ */
+export function headerLanguageNote(text: string): string | undefined {
+    const asked = /^\/\/ Asked: (.*)$/m.exec(text)?.[1];
+    const said = /^\/\/ The AI: (.*)$/m.exec(text)?.[1];
+    if (!asked?.trim() || !said?.trim()) {
+        return undefined;
+    }
+    const otherScript = (s: string) => /[^\p{Script=Latin}\p{Script=Common}\p{Script=Inherited}]/u.test(s);
+    return otherScript(asked) === otherScript(said) ? undefined
+        : 'The header\'s "// The AI:" line is not in the language of the request on its "// Asked:" line: write it in '
+          + 'the request\'s language.';
+}
+
+/**
  * A guide cut into parts of at most `limit` UTF-8 bytes, at blank lines where it can be (a
  * paragraph, a list item, a code block whole), else at line ends. For Copilot's chat (owner's
  * report 2026-10-29): its agent keeps a tool's answer over about 8 KB in a temp file and reads that

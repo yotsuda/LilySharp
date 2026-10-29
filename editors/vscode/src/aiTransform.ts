@@ -41,7 +41,7 @@ import {
     CandidateEdit as CoreCandidateEdit, ChangedSpan, MarkInSelection, MarkReadings, SEL_CLOSE, SEL_OPEN, cleanCandidate,
     TextChange, carryOffset, documentBudget, documentContext, estimateTokens, isProblem, marksContext, octaveOutliers, splitNote,
     startTimeAt, toCandidateEdit, wholeFileEdit, carrySelection, changedWords, wholeTextMarkup, titleOf, isPlaceholderTitle,
-    cleanTitle, withTitle, asksForOneStaff, partCount, rangeFixOf, aiFailure, warningTodoLines, withLyricsRows, promptFits, compositionHint, withLeadingComments, isEmptyScore, guidePages,
+    cleanTitle, withTitle, asksForOneStaff, partCount, rangeFixOf, aiFailure, warningTodoLines, withLyricsRows, promptFits, compositionHint, withLeadingComments, isEmptyScore, guidePages, headerLanguageNote,
 } from './aiTransformCore';
 import { withTodoMark } from './omrAiFixCore';
 import { markFactsOf, sideFileOf } from './omrScanCore';
@@ -575,7 +575,9 @@ async function proposeScore(deps: AiTransformDeps, input: ProposeScoreInput, tok
     let ranges: string[] | undefined;
     if (isEmptyScore(current) && !musicCheckedFor.has(uri.toString())) {
         const report = await compositionReport(client, text);
-        const music = report.findings;
+        // …and its header said in the request's language, sent back with them (owner's request 2026-10-29).
+        const language = headerLanguageNote(text);
+        const music = language ? [...report.findings, language] : report.findings;
         ranges = report.ranges;
         musicCheckedFor.add(uri.toString());
         if (music.length > 0 || added.length > 0) {

@@ -24,8 +24,27 @@ import * as path from 'node:path';
 import {
     SEL_CLOSE, SEL_OPEN, carryOffset, documentBudget, documentContext, estimateTokens, isProblem, isUnchanged, marksContext, octaveOutliers,
     pickModel, isAutoModel, pitchToMidi, splitNote, planOf, withoutPlan, startTimeAt, toCandidateEdit, changedWords, diffMarkup, wholeTextMarkup, rangeFixOf,
-    aiFailure, isConnectionError, spokenDuration, servedModelsIn, cleanCandidate, warningTodoLines, withLyricsRows, promptFits, compositionHint, withLeadingComments, isEmptyScore, guidePages,
+    aiFailure, isConnectionError, spokenDuration, servedModelsIn, cleanCandidate, warningTodoLines, withLyricsRows, promptFits, compositionHint, withLeadingComments, isEmptyScore, guidePages, headerLanguageNote,
 } from '../src/aiTransformCore';
+
+// Owner's request 2026-10-29: asked in Japanese, the chat described its piece in English.
+describe('a new piece\'s header in the request\'s language', () => {
+    const header = (asked: string, said: string) => `// Composed in Copilot's chat, 2026-10-29\n// Asked: ${asked}\n// The AI: ${said}\n\ntitle "x"\n`;
+    it('is said when the AI line is in another script than the request', () => {
+        assert.match(headerLanguageNote(header('結婚式で流す、優しいピアノ曲を書いて', 'A gentle piano piece in F major.')) ?? '',
+            /not in the language of the request/);
+        assert.ok(headerLanguageNote(header('Write a gentle piano piece', '結婚式のための優しい曲です。')));
+    });
+    it('is not said when they agree, or a line is missing', () => {
+        assert.equal(headerLanguageNote(header('結婚式で流す曲', 'F majorの穏やかなピアノ曲です。')), undefined);
+        assert.equal(headerLanguageNote(header('Write a waltz', 'A waltz in D — "Valse à deux".')), undefined);
+        assert.equal(headerLanguageNote('title "x"\n'), undefined);
+    });
+    it('goes back with the new piece\'s check, once', () => {
+        const src = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'aiTransform.ts'), 'utf8');
+        assert.match(src, /const language = headerLanguageNote\(text\);\s*const music = language \? \[\.\.\.report\.findings, language\] : report\.findings;/);
+    });
+});
 
 // Owner's report 2026-10-29: the composing guide, 19 KB in one answer, went to a temp file that
 // Copilot's agent read back with PowerShell — "Run in terminal?" in the middle of composing.
@@ -69,7 +88,7 @@ describe('a proposal from Copilot\'s chat', () => {
     it('checks a new piece as music once, its findings sent back unseen', () => {
         const src = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'aiTransform.ts'), 'utf8');
         assert.match(src, /let text = withLeadingComments\(current, input\.text\);/);
-        assert.match(src, /if \(isEmptyScore\(current\) && !musicCheckedFor\.has\(uri\.toString\(\)\)\) \{\s*const report = await compositionReport\(client, text\);\s*const music = report\.findings;\s*ranges = report\.ranges;\s*musicCheckedFor\.add\(uri\.toString\(\)\);/);
+        assert.match(src, /if \(isEmptyScore\(current\) && !musicCheckedFor\.has\(uri\.toString\(\)\)\) \{\s*const report = await compositionReport\(client, text\);[\s\S]*?const music = language \? \[\.\.\.report\.findings, language\] : report\.findings;\s*ranges = report\.ranges;\s*musicCheckedFor\.add\(uri\.toString\(\)\);/);
         // Each part's range goes with it, a fact to check against what was meant (owner's request
         // 2026-10-29: a beginner's piece slipped an octave), on the bounce, the write and an Accept.
         assert.match(src, /'Where something is as you meant it, keep it: the next proposal is written as it is\.'\s*\+ rangesSaid\(ranges\);/);
