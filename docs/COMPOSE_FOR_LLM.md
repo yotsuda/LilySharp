@@ -12,6 +12,12 @@ tight make every piece the same). Any of them may be broken where the piece is b
 plan says which and why. Compose with pleasure: write a piece you would enjoy hearing, with
 choices of your own — a key, a meter, a colour, a turn the listener does not expect.
 
+**Start in absolute octaves**: a new piece begins with `octave absolute` (and `pitch concert`) at
+the top of the file, before anything else — every pitch then says where it sounds (`c'` is middle
+C), and a slip stays one note instead of carrying every note after it away. Without that line every
+pitch is read relative to the one before it, and pitches written as absolute fly off by octaves
+(owner's report 2026-10-29: a piece composed in Copilot's chat did just that).
+
 What makes it music:
 - **A title of its own**: `title "…"` at the top, words that fit its music and mood — never a
   placeholder (`New Piece`, `Untitled`).

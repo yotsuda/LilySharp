@@ -69,6 +69,9 @@ All notable changes to the Lily# VS Code extension are documented here.
   piece went back asking for "the corrected edits, each `<old>` copied from the file" — the
   composer answered with bare `<old>`/`<new>`, which was read as the file, the rounds ran out, and
   the music checks never saw the piece. It now asks for the whole corrected piece in `<file>`.
+- **A new piece starts in absolute octaves, in Copilot's chat too**: the composing guide — which the
+  chat is given as well — says to put `octave absolute` at the top before anything else; a piece
+  composed in the chat was written as absolute in a relative file, and its pitches flew off.
 - **Each composed piece is given a starting point drawn at random**: a key, a meter, a form and a way
   to open, to take or leave — six "dramatic string quartets" had all come out D minor, 4/4, A–B–A,
   opening on the same five notes. Whatever the request itself says (a key, a meter, a form, a length,
@@ -1997,6 +2000,9 @@ reader is offered its update when a scan is read.
   piece went back asking for "the corrected edits, each `<old>` copied from the file" — the
   composer answered with bare `<old>`/`<new>`, which was read as the file, the rounds ran out, and
   the music checks never saw the piece. It now asks for the whole corrected piece in `<file>`.
+- **A new piece starts in absolute octaves, in Copilot's chat too**: the composing guide — which the
+  chat is given as well — says to put `octave absolute` at the top before anything else; a piece
+  composed in the chat was written as absolute in a relative file, and its pitches flew off.
 - **Each composed piece is given a starting point drawn at random**: a key, a meter, a form and a way
   to open, to take or leave — six "dramatic string quartets" had all come out D minor, 4/4, A–B–A,
   opening on the same five notes. Whatever the request itself says (a key, a meter, a form, a length,
