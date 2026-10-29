@@ -23,6 +23,13 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ### AI
 
+- **Compose with AI plans the music, not only the chords**: the plan fills in every heading — form
+  and length, key, harmony, the theme written out in notes with a rhythm of its own, each phrase's
+  first, highest and last notes (the second phrase of a pair starting as the first, ending on I
+  where the first stopped on V), one climax, each section's accompaniment figure, the dynamics,
+  the devices of the character asked for, the ending — and the piece is held to it before it is
+  sent. A piece fits one printed page (about 16 to 32 bars) unless a length is asked for; it was
+  32 to 64, and the extra bars were filler.
 - **A piece composed through Copilot's Auto names the model that answered**: its first line said
   `copilot/auto`; it now reads `copilot/gpt-6-luna, via Auto` (several models in order when the
   revisions went to more than one), from GitHub Copilot Chat's log — the API does not say. Without
@@ -1868,6 +1875,13 @@ reader is offered its update when a scan is read.
 
 ### AI
 
+- **Compose with AI plans the music, not only the chords**: the plan fills in every heading — form
+  and length, key, harmony, the theme written out in notes with a rhythm of its own, each phrase's
+  first, highest and last notes (the second phrase of a pair starting as the first, ending on I
+  where the first stopped on V), one climax, each section's accompaniment figure, the dynamics,
+  the devices of the character asked for, the ending — and the piece is held to it before it is
+  sent. A piece fits one printed page (about 16 to 32 bars) unless a length is asked for; it was
+  32 to 64, and the extra bars were filler.
 - **A piece composed through Copilot's Auto names the model that answered**: its first line said
   `copilot/auto`; it now reads `copilot/gpt-6-luna, via Auto` (several models in order when the
   revisions went to more than one), from GitHub Copilot Chat's log — the API does not say. Without

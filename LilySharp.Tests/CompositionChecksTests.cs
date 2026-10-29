@@ -260,6 +260,7 @@ public class CompositionChecksTests
         var grammar = File.ReadAllText(Path.Combine(CollectResumeTests.FindRepoRoot(), "docs", "GRAMMAR_FOR_LLM.md"));
         foreach (var title in new[] { "Little Quartet", "Night Drive", "Blue Window" })
             Assert.DoesNotContain($"title \"{title}\"", grammar);
-        Assert.Contains("a piece runs 32 to\n  64 bars", grammar.Replace("\r\n", "\n"));
+        // Owner's decision 2026-10-29: one printed page unless a length is asked for.
+        Assert.Contains("a piece fits one printed\n  page — about 16 to 32 bars", grammar.Replace("\r\n", "\n"));
     }
 }

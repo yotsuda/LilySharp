@@ -216,7 +216,7 @@ public static class CompositionChecks
         int barCount = 1 + barStarts.Count(b => b > 0 && b < lastTick);
         if (pitched.Count > 0 && barCount < ShortestPiece)
             findings.Add($"The piece is {barCount} bars long: unless a short piece was asked for, give it the length its form needs — "
-                + "32 to 64 bars, in phrases of 4 and 8 bars, each closing on a cadence.");
+                + "about 16 to 32 bars, one printed page, in phrases of 4 and 8 bars, each closing on a cadence.");
         var keys = System.Text.RegularExpressions.Regex.Matches(source,
             @"^[ \t]*key[ \t]+([a-g](?:isis|eses|is|es|s)?)[ \t]+(major|minor)\b", System.Text.RegularExpressions.RegexOptions.Multiline);
         if (keys.Count > 0 && pitched.Count > 0)

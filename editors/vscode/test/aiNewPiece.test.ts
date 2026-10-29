@@ -117,7 +117,7 @@ describe('the instruments\' ranges, and a head that holds a long list', () => {
     // Owner's review 2026-10-27: an octave of empty keyboard between the hands, a left hand broken up.
     it('tells it how a piano piece fills the keyboard, and that a left hand may keep one value', () => {
         assert.match(grammar, /\*\*A piano piece\*\* is written for two hands that fill the keyboard between them/);
-        assert.match(grammar, /A\s+left hand may keep one note value throughout: its figure is the rhythm/);
+        assert.match(grammar, /A\s+left hand may keep one note value through a section: its figure is the rhythm;[\s\S]*?A contrasting section takes a figure of its own\./);
     });
     // Owner's request 2026-10-27: a part names its instrument and lets the preset bring its clef
     // (and, since 2026-10-28, no octave: the octaves are LilyPond's whatever the instrument).
@@ -176,7 +176,9 @@ describe('the composer\'s prompt', () => {
     });
     it('has it plan the piece where the musician does not see it, then the note, then the file', () => {
         assert.match(transform, /'1\. <plan> … <\/plan> — your working notes; the musician never sees them\./);
-        assert.match(transform, /unless the request says\s*'\s*\+?\s*'?\s*otherwise a piece runs 32 to 64 bars|otherwise a piece runs 32 to 64 bars/);
+        // Owner's decision 2026-10-29: short and shapely rather than long — one printed page unless asked.
+        assert.match(transform, /Unless the request gives a length, the piece fits',\s*'\s*one printed page: about 16 to 32 bars/);
+        assert.doesNotMatch(transform, /32 to 64 bars/);
         assert.match(transform, /return 'Reply with <plan>…<\/plan>, <note>…<\/note> and the whole piece in <file>…<\/file>';/);
     });
     // Owner's decision 2026-10-28: Lily#'s octaves are LilyPond's — no anchors to name, no habit to warn of.
@@ -190,7 +192,7 @@ describe('the composer\'s prompt', () => {
         assert.match(transform, /The octaves are LilyPond\\'s, in every part and for every instrument: `c` = C3, `c\\'` = middle C \(C4\)/);
         assert.doesNotMatch(transform, /NOT LilyPond\\'s octaves/);
         assert.match(transform, /AND as you will write/);
-        assert.match(transform, /is written `d\\'` – `a\\'\\'`/);
+        assert.match(transform, /is written',\s*'\s*`d\\'` – `a\\'\\'`/);
     });
     // Owner's review 2026-10-27: the piece was tidy but not "cool" — the character is to be planned
     // as the devices that make it.
@@ -201,7 +203,7 @@ describe('the composer\'s prompt', () => {
     });
     // Owner's trial 2026-10-29: the A′ of an A–B–A′–Coda piece was A again, note for note.
     it('has a section that returns as it was named again in the form, not copied', () => {
-        assert.match(transform, /a section that comes back as it was is',\s*'\s*written once and named again in the form \(`form \{ A B A Coda \}`\), never copied;/);
+        assert.match(transform, /A section that comes back as it was is written once and named again in the form',\s*'\s*\(`form \{ A B A Coda \}`\), never copied;/);
         const grammarDoc = fs.readFileSync(path.join(__dirname, '..', '..', '..', '..', 'docs', 'GRAMMAR_FOR_LLM.md'), 'utf8');
         assert.match(grammarDoc, /\*\*A section that returns is named again, not copied\*\*/);
     });
@@ -212,7 +214,21 @@ describe('the composer\'s prompt', () => {
         assert.match(transform, /the AI\\'s last revision was cut off \(the connection broke\), '\s*\+ 'so this is the version before it: '/);
     });
     it('has the plan name the devices that make the character asked for', () => {
-        assert.match(transform, /how the character asked for',\s*'\s*is heard — the devices that make it, named/);
+        assert.match(transform, /CHARACTER — how the character asked for is heard: the devices that make it, named/);
+    });
+    // Owner's request 2026-10-29: a poor piece's plan named its theme only in words, and no bar was
+    // made of it; its phrases did not answer, it had no high point, its dynamics went against the plan.
+    it('has the plan fill in every heading, the theme in notes, and the file held to the plan', () => {
+        for (const heading of ['LENGTH AND FORM', 'KEY, METER, TEMPO', 'HARMONY', 'THEME', 'PHRASES', 'CLIMAX', 'PARTS', 'DYNAMICS', 'CHARACTER', 'ENDING']) {
+            assert.ok(transform.includes(`'   ${heading}`), heading);
+        }
+        assert.match(transform, /THEME — the motif the piece is made of, one or two bars, WRITTEN OUT here in this file\\'s notes with its/);
+        assert.match(transform, /The second phrase of a pair starts as the first did and ends otherwise: the first',\s*'\s*stops on V, the second closes on I\./);
+        assert.match(transform, /Then hold',\s*'\s*the file to the plan:/);
+        const grammarDoc = fs.readFileSync(path.join(__dirname, '..', '..', '..', '..', 'docs', 'GRAMMAR_FOR_LLM.md'), 'utf8');
+        assert.match(grammarDoc, /\*\*Phrases that answer\*\*/);
+        assert.match(grammarDoc, /\*\*One climax\*\*/);
+        assert.match(grammarDoc, /a theme that is only words \("a rising broken chord"\) is not one yet/);
     });
     // Owner's report 2026-10-27: a piano piece labelled its staves 右手 and 左手.
     it('names the parts by the instrument, a solo piano none', () => {

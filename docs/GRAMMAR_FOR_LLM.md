@@ -1090,14 +1090,22 @@ it should sound like the ensemble asked for. What makes it music:
   or 左手.
 - **Layout**: an ensemble is a `staffGroup { … }` (a bracket); `grandStaff` is one instrument
   on two staves (piano, harp) — never four players.
-- **A form, and the length to carry it**: unless the request says otherwise, a piece runs 32 to
-  64 bars — a song's form, or A–B–A′ — in phrases of 4 and 8 bars, each closing on a cadence: a
-  half cadence (on V) to go on, an authentic one (V–I) to close a section.
+- **A form, at the length it needs**: unless the request gives a length, a piece fits one printed
+  page — about 16 to 32 bars: an A–B–A with a short coda (2 to 4 bars), or a song's form — complete
+  and shapely rather than long, never a bar added to reach a length. Its phrases are of 4 and 8
+  bars, each closing on a cadence: a half cadence (on V) to go on, an authentic one (V–I) to close
+  a section.
+- **Phrases that answer**: the second phrase of a pair starts as the first did and ends otherwise
+  — the first stops on V, the second closes on I. Each phrase rises to a high note and falls to its
+  cadence.
+- **One climax**: the piece rises to one high point — a bar and a note, the loudest place — and the
+  dynamics lead there and away.
 - **Harmony first**: each phrase has its chord progression in the key, and every part is
   written from it — the bass on the chords' roots and inversions, the inner parts on their
   tones, the melody's strong beats on chord tones and its passing notes between them.
-- **A theme**: a motif of a bar or two that the piece is made of — stated, repeated, sequenced,
-  varied, and back near the end.
+- **A theme**: a motif of a bar or two that the piece is made of — with a rhythm of its own, not
+  even quarters — stated, repeated, sequenced, varied, and back near the end. Decide it in notes
+  before writing the piece: a theme that is only words ("a rising broken chord") is not one yet.
 - **A section that returns is named again, not copied**: one that comes back as it was is written
   once and played twice by the form (`form { A B A Coda }`) — never a second section with the same
   notes. A return that changes (the tune an octave higher, a new accompaniment, another ending) is a
@@ -1142,14 +1150,15 @@ it should sound like the ensemble asked for. What makes it music:
   hand's figure — broken chords, an octave bass, a root-and-fifth beat, an ostinato — reaching
   up toward middle C, the right hand's melody round C5 with its harmony under it (thirds, sixths,
   chords on the strong beats), never an octave of empty keyboard between the hands for long. A
-  left hand may keep one note value throughout: its figure is the rhythm; the melody is where the
-  rhythm varies.
+  left hand may keep one note value through a section: its figure is the rhythm; the melody is
+  where the rhythm varies. A contrasting section takes a figure of its own.
 - **Texture**: one voice carries the melody while the others accompany — broken chords,
   repeated eighths, a moving bass — and the roles pass between the parts. Not every part in the
   same rhythm; not whole notes everywhere.
 - **Rhythm and articulation**: long and short notes mixed, rests that let a line breathe,
   slurs over a phrase, `@staccato`, `@accent`, and dynamics with hairpins
-  (`@p … @cresc … @f`) that shape each section.
+  (`@p … @cresc … @f`) that shape each section — every mark for a reason, the same level never
+  written twice in a row, the ending at the level it was planned.
 
 ## Rules and gotchas
 
