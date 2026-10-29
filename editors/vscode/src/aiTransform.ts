@@ -268,7 +268,8 @@ function registerProposeScoreTool(context: vscode.ExtensionContext, deps: AiTran
 }
 
 /** Writes `text` as the whole file — created when it is not there — saves it (the chat's agent reads
- *  the disk) and opens it; the reason when it could not. */
+ *  the disk) and opens it; the reason when it could not. An unsaved document stays unsaved, for the
+ *  musician to save when they want it (owner's request 2026-10-29). */
 async function writeWhole(uri: vscode.Uri, exists: boolean, doc: vscode.TextDocument | undefined, text: string): Promise<string | undefined> {
     const edit = new vscode.WorkspaceEdit();
     if (!exists || !doc) {
@@ -280,6 +281,10 @@ async function writeWhole(uri: vscode.Uri, exists: boolean, doc: vscode.TextDocu
         return 'the file could not be written.';
     }
     const written = await vscode.workspace.openTextDocument(uri);
+    if (written.isUntitled) {
+        await vscode.window.showTextDocument(written, { preview: false });
+        return undefined;
+    }
     await written.save();
     await vscode.window.showTextDocument(written, { preview: false });
     return undefined;
@@ -298,9 +303,13 @@ async function proposeScore(deps: AiTransformDeps, input: ProposeScoreInput, tok
     if (!client || !deps.isReady()) {
         return 'Nothing shown: the Lily# language server is not running. Write the file directly instead.';
     }
-    const uri = vscode.Uri.file(input.file);
-    const exists = fs.existsSync(input.file);
-    const doc = exists ? await vscode.workspace.openTextDocument(uri) : undefined;
+    // An unsaved document named by the path it will be saved to (Compose with AI in Chat) is the
+    // one meant, not the disk.
+    const untitled = vscode.workspace.textDocuments.find(d => d.uri.scheme === 'untitled'
+        && d.uri.fsPath.toLowerCase() === path.resolve(input.file).toLowerCase());
+    const uri = untitled?.uri ?? vscode.Uri.file(input.file);
+    const exists = untitled !== undefined || fs.existsSync(input.file);
+    const doc = untitled ?? (exists ? await vscode.workspace.openTextDocument(uri) : undefined);
     const current = doc?.getText() ?? '';
     // The file's opening comments kept, where the proposal left them out (owner's request 2026-10-29).
     const text = withLeadingComments(current, input.text);
@@ -339,8 +348,9 @@ async function proposeScore(deps: AiTransformDeps, input: ProposeScoreInput, tok
             return `Not written: ${written}`;
         }
         deps.log('AI proposal (chat): a new piece — written into the file.');
-        return 'Written: a new piece goes straight into the file, and it is open in the editor. The musician will say in '
-            + 'the chat what to change.'
+        return 'Written: a new piece goes straight into the file, and it is open in the editor'
+            + (doc?.isUntitled ? ', not saved: the musician saves it when they want to keep it' : '')
+            + '. The musician will say in the chat what to change.'
             + (added.length ? ` It has these warnings:\n${formatDiags(added, text)}` : '');
     }
     const snapshot: Snapshot = {
@@ -383,8 +393,9 @@ async function proposeScore(deps: AiTransformDeps, input: ProposeScoreInput, tok
                 if (again !== undefined) {
                     continue;
                 }
-                // Saved: the chat's agent reads the file from the disk, and would find it as it was.
-                await vscode.workspace.textDocuments.find(d => d.uri.toString() === uri.toString())?.save();
+                // Saved: the chat's agent reads the file from the disk, and would find it as it was. An
+                // unsaved document stays so, for the musician to save.
+                await vscode.workspace.textDocuments.find(d => d.uri.toString() === uri.toString() && !d.isUntitled)?.save();
                 deps.log('AI proposal (chat): accepted.');
                 return 'Accepted: the musician accepted the proposal, and the file is written.'
                     + (added.length ? ` It has these warnings, which they may want fixed:\n${formatDiags(added, text)}` : '');
@@ -402,7 +413,7 @@ async function proposeScore(deps: AiTransformDeps, input: ProposeScoreInput, tok
 /**
  * "Lily#: Compose with AI in Chat…" (owner's request 2026-10-29: in Copilot's chat the model's
  * thinking and its tries are seen, and a stronger model may be picked there): asks what to compose
- * and where to keep it, writes the file's first lines — `octave absolute` and `pitch concert`, so
+ * and opens a new, unsaved score for it (saved when the musician wants it kept), writes its first lines — `octave absolute` and `pitch concert`, so
  * the piece is written in the pitches it sounds (owner's report, the same day: a piece composed in
  * the chat was written absolute in a relative file, and its pitches flew off) — opens it, and hands
  * the request to the chat's agent with a starting point drawn at random. The chat is given the
@@ -412,49 +423,58 @@ async function proposeScore(deps: AiTransformDeps, input: ProposeScoreInput, tok
 async function runComposeInChat(deps: AiTransformDeps): Promise<void> {
     const description = await vscode.window.showInputBox({
         title: 'Lily# — Compose with AI in Chat',
-        prompt: 'What should the AI compose? Copilot\'s chat writes it into a new file, its thinking in view.',
+        prompt: 'What should the AI compose? Copilot\'s chat writes it into a new, unsaved score, its thinking in view.',
         placeHolder: 'e.g. a dramatic string quartet in D minor, about 3 minutes, slow – fast – slow',
         ignoreFocusOut: true,
     });
     if (description === undefined || description.trim().length === 0) {
         return;
     }
+    // An unsaved document, saved when the musician wants it kept (owner's request 2026-10-29: no save
+    // dialog before composing). It is named — Composed.lys, or the first ComposedN.lys free beside
+    // the active file — so Copilot attaches the Lily# instructions (their `applyTo: '**/*.lys'`), and
+    // Ctrl+S keeps it there; Save As puts it elsewhere.
     const active = vscode.window.activeTextEditor?.document.uri;
-    const folder = active?.scheme === 'file' ? vscode.Uri.file(path.dirname(active.fsPath))
-        : vscode.workspace.workspaceFolders?.[0]?.uri ?? vscode.Uri.file(os.homedir());
-    const target = await vscode.window.showSaveDialog({
-        title: 'Lily# — where to write the new piece',
-        defaultUri: vscode.Uri.joinPath(folder, 'Composed.lys'),
-        filters: { 'Lily#': ['lys'] },
-        saveLabel: 'Compose Here',
-    });
-    if (!target) {
-        return;
+    const folder = active?.scheme === 'file' ? path.dirname(active.fsPath)
+        : vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? os.homedir();
+    const taken = (p: string) => fs.existsSync(p)
+        || vscode.workspace.textDocuments.some(d => d.uri.fsPath.toLowerCase() === p.toLowerCase());
+    let file = path.join(folder, 'Composed.lys');
+    for (let n = 2; taken(file); n++) {
+        file = path.join(folder, `Composed${n}.lys`);
     }
     const eol = os.EOL;
-    fs.writeFileSync(target.fsPath, [
+    const header = [
         `// Composed in Copilot's chat, ${new Date().toISOString().slice(0, 10)}`,
         `// Asked: ${description.trim().replace(/\s*\r?\n\s*/g, ' ')}`,
         '',
         'octave absolute',
         'pitch concert',
         '',
-    ].join(eol), 'utf8');
-    await vscode.window.showTextDocument(await vscode.workspace.openTextDocument(target));
+    ].join(eol);
+    const untitled = await vscode.workspace.openTextDocument(vscode.Uri.file(file).with({ scheme: 'untitled' }));
+    const start = new vscode.WorkspaceEdit();
+    start.insert(untitled.uri, new vscode.Position(0, 0), header);
+    await vscode.workspace.applyEdit(start);
+    await vscode.languages.setTextDocumentLanguage(untitled, 'lilysharp');
+    await vscode.window.showTextDocument(untitled, { preview: false });
     const hint = compositionHint();
     deps.log(`AI transform (chat): ${hint}`);
     // The compiler to check it with, where the extension carries one (owner's request 2026-10-29: the
-    // agent checked its piece by building Lily# from the sources this machine happens to hold).
+    // agent checked its piece by building Lily# from the sources this machine happens to hold). The
+    // document is not on the disk, so a copy is checked.
     const lysc = deps.lysc?.();
     const check = lysc
-        ? `Before proposing, check it with the Lily# compiler — \`& "${lysc}" check "${target.fsPath}"\` on a copy, or on the `
-          + 'file if you write it — and fix every error and warning it reports.\n'
+        ? `Before proposing, check it with the Lily# compiler — \`& "${lysc}" check <copy>\` on a copy of your text in the `
+          + 'temporary folder — and fix every error and warning it reports.\n'
         : '';
     // Proposed through Lily#'s tool, the musician deciding on the score (owner's request 2026-10-29);
     // written straight into the file only where the tool is not there.
-    const query = `Compose a new piece of music in Lily# for the file ${target.fsPath} and propose it, whole, with the `
-        + 'lilysharp_proposeScore tool (#proposeScore): it checks the piece and writes it into the file. If that tool is '
-        + 'not available, write the piece into the file instead. '
+    const query = `Compose a new piece of music in Lily# for ${file} — open in the editor, not saved yet, so not on the `
+        + 'disk — and propose it, whole, with the '
+        + 'lilysharp_proposeScore tool (#proposeScore), giving that path: it checks the piece and writes it into the '
+        + 'document. If that tool is not available, write the piece into the file instead. '
+        + `Its first lines are:\n${header.trimEnd()}\n`
         + 'The file starts with `octave absolute` and `pitch concert`: keep both lines, and write every pitch as the pitch it sounds. '
         + 'Follow the Lily# grammar and the Lily# composing guide (the Lily# instructions).\n'
         + check

@@ -2995,7 +2995,11 @@ async function askAiInChat(doc: vscode.TextDocument, from?: number, to?: number)
             editor.revealRange(r, vscode.TextEditorRevealType.InCenterIfOutsideViewport);
         }
     }
-    const name = doc.uri.scheme === 'file' ? path.basename(doc.uri.fsPath) : path.basename(doc.uri.path);
+    // An unsaved score is not on the disk for the chat to find by name: its whole path is given, the
+    // one Lily#'s proposal tool knows it by (Compose with AI in Chat, owner's request 2026-10-29).
+    const name = doc.uri.scheme === 'file' ? path.basename(doc.uri.fsPath)
+        : doc.isUntitled && path.isAbsolute(doc.uri.fsPath) ? `${doc.uri.fsPath} (not saved)`
+        : path.basename(doc.uri.path);
     const query = chatPointer(name, text, range);
     try {
         await vscode.commands.executeCommand('workbench.action.chat.open', { query, isPartialQuery: true, mode: 'agent' });

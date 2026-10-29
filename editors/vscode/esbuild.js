@@ -54,7 +54,8 @@ function copyGrammar() {
             // Copilot's chat proposes a score through Lily#'s tool, the musician deciding on the
             // score as Ask AI's review has them (owner's request 2026-10-29).
             '**Changing or writing a .lys file**: do it through the `lilysharp_proposeScore` tool (#proposeScore) —',
-            'the file\'s absolute path and its WHOLE new text. Lily# compiles it; a new piece (the file empty)',
+            'the file\'s absolute path (for a score not saved yet, the path it is named by) and its WHOLE new text.',
+            'Lily# compiles it; a new piece (the file empty)',
             'goes straight into the file, and a change to a score is shown to the musician beside the score as',
             'it stands, to accept or reject — the result says which. Do not edit a .lys file yourself while the',
             'tool is there.',

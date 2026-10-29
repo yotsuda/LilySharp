@@ -62,9 +62,14 @@ describe('the composing guide', () => {
         assert.ok(!/compositionFindings|checkCandidate/.test(fn));
         // The bundled lysc, for the agent to check its piece with (owner's request 2026-10-29).
         assert.match(fn, /const lysc = deps\.lysc\?\.\(\);/);
-        assert.match(fn, /check it with the Lily# compiler — \\`& "\$\{lysc\}" check "\$\{target\.fsPath\}"\\`/);
+        assert.match(fn, /check it with the Lily# compiler — \\`& "\$\{lysc\}" check <copy>\\` on a copy of your text/);
         // Proposed through Lily#'s tool, written straight only without it (owner's request 2026-10-29).
-        assert.match(fn, /propose it, whole, with the `\s*\+ 'lilysharp_proposeScore tool \(#proposeScore\)/);
+        assert.match(fn, /propose it, whole, with the '\s*\+ 'lilysharp_proposeScore tool \(#proposeScore\), giving that path/);
+        // Owner's request 2026-10-29: no save dialog — an unsaved score named Composed.lys (or the first
+        // ComposedN.lys free), saved when the musician wants it kept.
+        assert.ok(!/showSaveDialog|writeFileSync/.test(fn));
+        assert.match(fn, /openTextDocument\(vscode\.Uri\.file\(file\)\.with\(\{ scheme: 'untitled' \}\)\)/);
+        assert.match(fn, /file = path\.join\(folder, `Composed\$\{n\}\.lys`\);/);
     });
     // Owner's request 2026-10-29: Copilot's chat proposes a score through Lily#'s tool, the musician
     // deciding on the score — compiled first, an error sent back unseen.
@@ -88,10 +93,13 @@ describe('the composing guide', () => {
         assert.match(fn, /if \(isEmptyScore\(current\)\) \{\s*const written = await writeWhole\(uri, exists, doc, text\);/);
         assert.ok(fn.indexOf('const music = await compositionFindings') < fn.indexOf('const written = await writeWhole'));
         assert.match(transform, /await written\.save\(\);\s*await vscode\.window\.showTextDocument\(written, \{ preview: false \}\);/);
+        // An unsaved score is found by the path it is named by, written, and left unsaved.
+        assert.match(fn, /d\.uri\.scheme === 'untitled'\s*&& d\.uri\.fsPath\.toLowerCase\(\) === path\.resolve\(input\.file\)\.toLowerCase\(\)/);
+        assert.match(transform, /if \(written\.isUntitled\) \{\s*await vscode\.window\.showTextDocument\(written, \{ preview: false \}\);\s*return undefined;/);
         assert.match(fn, /return 'Not decided: the musician went on in the chat before deciding, and the file is unchanged\. '/);
         assert.match(transform, /<button id="iterate"[^>]*\$\{fromChat \? ' hidden' : ''\}>Ask Again…<\/button>/);
         assert.match(fn, /token\.onCancellationRequested/);
-        assert.match(fn, /\.find\(d => d\.uri\.toString\(\) === uri\.toString\(\)\)\?\.save\(\);/);
+        assert.match(fn, /\.find\(d => d\.uri\.toString\(\) === uri\.toString\(\) && !d\.isUntitled\)\?\.save\(\);/);
         const build = fs.readFileSync(path.join(__dirname, '..', '..', 'esbuild.js'), 'utf8');
         assert.match(build, /'\*\*Changing or writing a \.lys file\*\*: do it through the `lilysharp_proposeScore` tool \(#proposeScore\) —',/);
     });
