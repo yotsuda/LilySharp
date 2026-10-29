@@ -55,6 +55,9 @@ public class CompositionChecksTests
         Assert.Contains(findings, f => f.StartsWith("No instrument for violin1, violin2, viola, cello"));
         Assert.Contains(findings, f => f.StartsWith("violin1: 100% of its notes are whole notes"));
         Assert.Contains(findings, f => f.Contains("every part moves in the same rhythm"));
+        // …and leaves the voices moving together to a hymn or a chorale (owner's trial 2026-10-29).
+        Assert.Contains(findings, f => f.Contains("every part moves in the same rhythm")
+            && f.EndsWith("unless the voices moving together is the music's own character, as in a hymn or a chorale: then keep it."));
     }
 
     // The findings of a piece's form — its length, its keys, its last chord — which a short sketch

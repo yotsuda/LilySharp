@@ -285,7 +285,10 @@ public static class CompositionChecks
             }
             if (counted >= 4 && together >= counted * 0.6)
                 findings.Add($"In {together} of {counted} bars every part moves in the same rhythm: let one voice carry the melody "
-                    + "while the others accompany (broken chords, repeated notes, a moving bass), and pass the roles between them.");
+                    + "while the others accompany (broken chords, repeated notes, a moving bass), and pass the roles between them"
+                    // A hymn's four voices move as one (owner's trial 2026-10-29: told this, the chat
+                    // turned a hymn into a tune over held notes — the alto on whole notes for 16 bars).
+                    + " — unless the voices moving together is the music's own character, as in a hymn or a chorale: then keep it.");
         }
         return findings;
     }
