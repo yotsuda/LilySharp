@@ -105,10 +105,11 @@ All notable changes to the Lily# VS Code extension are documented here.
   notes become the editor's selection, which the chat takes in. An unsaved score is named by its
   whole path, with #readScore to read it.
 - **Compose with AI in Chat**: a menu of its own (File > New File… and the command palette) that
-  asks what to compose, opens a new unsaved score for it — Composed.lys, or the first ComposedN.lys
-  free, beside the active file; Ctrl+S keeps it there — writes its first lines (`octave absolute`,
-  `pitch concert`) and hands the request — with a starting point drawn at random — to
-  Copilot's chat agent, where the model's thinking and its tries are seen and a stronger model can be
+  asks what to compose, picks its file — Composed.lys, or the first ComposedN.lys free, beside the
+  active file — and hands the request to Copilot's chat agent, which reads how to begin (the first
+  lines, `octave absolute` and `pitch concert`; a starting point drawn at random) and the composing
+  guide from #readGuide. Nothing opens before the piece comes: the proposal opens it, unsaved, and
+  Ctrl+S keeps it there. In the chat agent, where the model's thinking and its tries are seen and a stronger model can be
   picked. The chat is given the grammar and the composing guide; Lily#'s own checks do not run there
   (yet). Compose with AI stays as it was. The request names the bundled `lysc` to check the piece
   with until it reports nothing; the composing guide is an instructions file of its own (with the

@@ -59,14 +59,16 @@ describe('the composing guide', () => {
         assert.match(pkg, /"command": "lilysharp\.composeWithAiInChat",[^}]*"shortTitle": "Lily# Score, Composed with Copilot…"/);
         assert.match(transform, /registerCommand\('lilysharp\.composeWithAiInChat', \(\) => runComposeInChat\(deps\)\)/);
         const fn = transform.slice(transform.indexOf('async function runComposeInChat'), transform.indexOf('async function runCompose('));
-        assert.match(fn, /const header = newPieceHeader\(description\.trim\(\)\.replace\(\/\\s\*\\r\?\\n\\s\*\/g, ' '\), os\.EOL\);/);
+        // Nothing opened before the piece comes (owner's request 2026-10-29): the chat writes the
+        // header the guide gives, and its proposal opens the piece.
+        assert.ok(!/newPieceHeader|openTextDocument|applyEdit/.test(fn));
         const header = transform.slice(transform.indexOf('function newPieceHeader('), transform.indexOf('function newPieceSteps('));
         assert.match(header, /`\/\/ Composed in Copilot's chat, \$\{new Date\(\)\.toISOString\(\)\.slice\(0, 10\)\}`,\s*`\/\/ Asked: \$\{asked\}`,\s*'',\s*'octave absolute',\s*'pitch concert',/);
         assert.match(fn, /executeCommand\('workbench\.action\.chat\.open', \{ query, mode: 'agent' \}\)/);
         assert.ok(!/compositionFindings|checkCandidate/.test(fn));
         // The request alone, and where to read how to begin (owner's request 2026-10-29): the steps
         // and the starting point come from the guide tool's "start".
-        assert.match(fn, /'First read how to begin: lilysharp_readGuide, topic "start"\.\\n'/);
+        assert.match(fn, /'First read how to begin and the composing guide: lilysharp_readGuide, topic "composing"\.\\n'/);
         assert.ok(!/compositionHint|newPieceSteps/.test(fn));
         // The bundled lysc, for the agent to check its piece with, and Lily#'s tool to propose it
         // through, written straight only without it (owner's requests 2026-10-29).
@@ -76,8 +78,9 @@ describe('the composing guide', () => {
         // Owner's request 2026-10-29: no save dialog — an unsaved score named Composed.lys (or the first
         // ComposedN.lys free), saved when the musician wants it kept.
         assert.ok(!/showSaveDialog|writeFileSync/.test(fn));
-        assert.match(fn, /openTextDocument\(vscode\.Uri\.file\(file\)\.with\(\{ scheme: 'untitled' \}\)\)/);
+        // The name is chosen here, free on the disk and in the editor, so the chat picks no score there.
         assert.match(fn, /file = path\.join\(folder, `Composed\$\{n\}\.lys`\);/);
+        assert.match(fn, /const query = `Compose a new piece of music in Lily# for \$\{file\} \(a new file: your proposal opens it in the editor\)\.\\n`/);
     });
     // Owner's request 2026-10-29: Copilot's chat proposes a score through Lily#'s tool, the musician
     // deciding on the score — compiled first, an error sent back unseen.
@@ -155,7 +158,7 @@ describe('the composing guide', () => {
         // …beginning with the header the menu writes (owner's request 2026-10-29).
         assert.match(fn, /\+ newPieceHeader\('<the request>', '\\n'\)\.trimEnd\(\) \+ '\\n'/);
         const compose = transform.slice(transform.indexOf('async function runComposeInChat'), transform.indexOf('async function runCompose('));
-        assert.match(compose, /lilysharp_readGuide, topic "start"/);
+        assert.match(compose, /lilysharp_readGuide, topic "composing"/);
     });
     it('holds the recipe, and the grammar only points at it', () => {
         const grammar = fs.readFileSync(path.join(docs, 'GRAMMAR_FOR_LLM.md'), 'utf8');
