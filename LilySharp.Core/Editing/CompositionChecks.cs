@@ -171,7 +171,7 @@ public static class CompositionChecks
                 findings.Add(melody
                     ? $"{part}, the melody: {common.Count() * 100 / onsets.Count}% of its notes are {common.Key}s — a tune lives on its "
                         + "rhythm: long notes at its peaks, shorter ones leading to them, dotted rhythms, a note tied over the beat, a "
-                        + "rest to breathe; give its theme a rhythm of its own and vary it from phrase to phrase."
+                        + "rest to breathe; give its theme a rhythm of its own and vary it from phrase to phrase" + EvenPaceKept
                     : $"{part}: {common.Count() * 100 / onsets.Count}% of its notes are {common.Key}s — mix long and short notes, "
                         + "rests, dotted rhythms; give the line a rhythm of its own.");
             // One bar's rhythm on most of the melody's bars (owner's trial 2026-10-29: a pop song sang
@@ -181,7 +181,7 @@ public static class CompositionChecks
                 && alike >= inBars * SameRhythmShare)
                 findings.Add($"{part}, the melody: {alike} of its {inBars} bars have the same rhythm — a pattern poured full, not a line: "
                     + "let the rhythm follow the words and the phrase — a longer note at a phrase's end and a breath only there, "
-                    + "a phrase that runs on over the bar line, the rhythm changing from section to section.");
+                    + "a phrase that runs on over the bar line, the rhythm changing from section to section" + EvenPaceKept);
         }
 
         // A staff labelled by the hand that plays it (owner's report 2026-10-27: a piano piece printed
@@ -330,6 +330,12 @@ public static class CompositionChecks
     // The share of one note value past which a part reads as one value: an accompaniment's figure
     // may keep one, a melody may not (owner's trials 2026-10-29).
     private const double PartOneValue = 0.8, MelodyOneValue = 0.6;
+
+    // Where an even pace is the music's own (owner's trial 2026-10-29: a hymn's soprano in quarters
+    // was sent back, and came again stumbling over eighths and dotted quarters in every voice): the
+    // melody's findings say so, and leave the choice to the composer.
+    private const string EvenPaceKept = " — unless an even pace is the music's own character, as in a hymn, a chorale "
+        + "or a march: then keep it.";
 
     // A melody whose bars mostly share one rhythm: half of them or more, over 8 bars at least (a
     // theme's rhythm comes back often, but not in every other bar).

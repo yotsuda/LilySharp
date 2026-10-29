@@ -277,6 +277,10 @@ public class CompositionChecksTests
     {
         var findings = CompositionChecks.Of(ViolinAndPiano);
         Assert.Contains(findings, f => f.StartsWith("vn, the melody: ") && f.Contains("a tune lives on its rhythm"));
+        // …leaving an even pace that is the music's own to the composer (owner's trial 2026-10-29: a
+        // hymn sent back for its soprano's quarters came again stumbling in every voice).
+        Assert.All(findings.Where(f => f.Contains(", the melody: ")),
+            f => Assert.EndsWith("unless an even pace is the music's own character, as in a hymn, a chorale or a march: then keep it.", f));
         Assert.DoesNotContain(findings, f => f.StartsWith("rh"));
         // Sung: the part a lyrics track sings is the melody.
         Assert.Contains(CompositionChecks.Of(ViolinAndPiano.Replace("  lh {", "  lyrics words sings rh { a a a a a | }\n  lh {")),
