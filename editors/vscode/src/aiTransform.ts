@@ -572,13 +572,16 @@ async function drive(
                 let lastReason = '';
                 // Why the last revision did not come, when it was cut off (a broken connection).
                 let cutOff: string | null = null;
+                // A composed piece has one round more (owner's trial 2026-10-29: the music check's revision was
+                // the better piece, but three of its bars were a beat long and no round was left to fix them).
+                const maxRepairs = compose ? MAX_REPAIR_ATTEMPTS + 1 : MAX_REPAIR_ATTEMPTS;
                 const turnedDown = (attempt: number, reason: string) => {
                     lastReason = reason;
-                    deps.log(`AI transform: attempt ${attempt + 1}/${MAX_REPAIR_ATTEMPTS + 1} turned down — ${reason}`);
+                    deps.log(`AI transform: attempt ${attempt + 1}/${maxRepairs + 1} turned down — ${reason}`);
                 };
-                for (let attempt = 0; attempt <= MAX_REPAIR_ATTEMPTS; attempt++) {
+                for (let attempt = 0; attempt <= maxRepairs; attempt++) {
                     if (token.isCancellationRequested) return null;
-                    step(attempt === 0 ? 'generating' : `repairing (${attempt}/${MAX_REPAIR_ATTEMPTS})`);
+                    step(attempt === 0 ? 'generating' : `repairing (${attempt}/${maxRepairs})`);
 
                     logged = logExchange(chat, grammar, messages, logged);
                     let raw: string;
@@ -676,7 +679,7 @@ async function drive(
                             }
                         }
                         const outliers = octaveOutliers(facts, written);
-                        if (outliers.length > 0 && attempt < MAX_REPAIR_ATTEMPTS) {
+                        if (outliers.length > 0 && attempt < maxRepairs) {
                             octaveAsked = edit.text;
                             repairs = attempt + 1;
                             const range = facts.map(f => f.Resolved);
@@ -698,7 +701,7 @@ async function drive(
                         // ensemble braced as a piano, one note value throughout, every part in one
                         // rhythm (owner's report 2026-10-26: a "dramatic quartet" of piano staves
                         // and whole notes). What it finds goes back for a revision of the whole piece.
-                        if (newPiece && !musicAsked && attempt < MAX_REPAIR_ATTEMPTS) {
+                        if (newPiece && !musicAsked && attempt < maxRepairs) {
                             const music = await compositionFindings(client, reconstructed);
                             // One staff only when it was asked for (owner's rule 2026-10-27): a lead
                             // sheet, a melody alone, a solo — anything else has its accompaniment.
@@ -768,7 +771,7 @@ async function drive(
                     candidate = warned.edit;
                     caption = `${instruction} — ⚠ ${warned.warnings.length} new warning(s): `
                         + warned.warnings.map(w => w.Message).join(' / ');
-                    deps.log(`AI transform: shown with ${warned.warnings.length} new warning(s) after ${MAX_REPAIR_ATTEMPTS} repairs: `
+                    deps.log(`AI transform: shown with ${warned.warnings.length} new warning(s) after ${maxRepairs} repairs: `
                         + warned.warnings.map(w => w.Message).join(' | '));
                 }
                 // Said first, so it is read first: what is shown is the version before a revision
@@ -781,16 +784,16 @@ async function drive(
                 if (candidate === null) {
                     // §4 Failed: exhausted repairs — abort WITHOUT showing broken notation.
                     if (unchanged) {
-                        deps.log(`AI transform: the model returned the file unchanged after ${MAX_REPAIR_ATTEMPTS} retries — nothing applied.`);
+                        deps.log(`AI transform: the model returned the file unchanged after ${maxRepairs} retries — nothing applied.`);
                         vscode.window.showWarningMessage(
                             'Lily#: the AI returned the music unchanged, even when asked again. Nothing was changed — try wording the request differently.');
                     } else {
-                        deps.log(`AI transform: FAILED validation after ${MAX_REPAIR_ATTEMPTS} repairs — nothing applied.`);
+                        deps.log(`AI transform: FAILED validation after ${maxRepairs} repairs — nothing applied.`);
                         // The last try's reason with it, and the log a click away.
                         const showLog = 'Show Log';
                         const why = lastReason.length > 240 ? `${lastReason.slice(0, 239)}…` : lastReason;
                         void vscode.window.showWarningMessage(
-                            `Lily#: the AI could not produce a valid transform in ${MAX_REPAIR_ATTEMPTS + 1} tries. Nothing was changed.`
+                            `Lily#: the AI could not produce a valid transform in ${maxRepairs + 1} tries. Nothing was changed.`
                             + (why ? ` The last try: ${why}` : ''), showLog)
                             .then(c => { if (c === showLog) { deps.showLog?.(); } });
                     }

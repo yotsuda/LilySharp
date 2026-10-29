@@ -271,6 +271,11 @@ describe('the composer\'s prompt', () => {
         assert.match(transform, /const sameForm = compose\s*\?\s*'Reply with the whole corrected piece between <file> and <\/file>/);
         assert.match(transform, /content: compose\s*\?\s*`\$\{parsed\.problem\}\\nReply with the whole piece between <file> and <\/file>/);
     });
+    // Owner's trial 2026-10-29: the music check's revision was the better piece, but three bars a beat long, and no round left.
+    it('gives a composed piece one round more than an edit', () => {
+        assert.match(transform, /const maxRepairs = compose \? MAX_REPAIR_ATTEMPTS \+ 1 : MAX_REPAIR_ATTEMPTS;/);
+        assert.match(transform, /for \(let attempt = 0; attempt <= maxRepairs; attempt\+\+\)/);
+    });
     it('writes no composer line unless asked', () => {
         assert.match(transform, /'- Write no `composer` line unless the musician asks for one\.'/);
     });

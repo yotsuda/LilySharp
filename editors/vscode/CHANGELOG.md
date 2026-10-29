@@ -69,6 +69,9 @@ All notable changes to the Lily# VS Code extension are documented here.
   piece went back asking for "the corrected edits, each `<old>` copied from the file" — the
   composer answered with bare `<old>`/`<new>`, which was read as the file, the rounds ran out, and
   the music checks never saw the piece. It now asks for the whole corrected piece in `<file>`.
+- **A composed piece gets one round more**: four in all, so the revision the music check asks for —
+  the better piece in a trial, its phrases ending on long notes — can still have its slips (three
+  bars a beat long) repaired instead of being dropped for the first draft.
 - **A request the AI ended with no answer says so, and offers Try Again**: Copilot's "Response
   contained no choices." (a model that ran 2 min 44 s and sent nothing back) now reads as what
   happened, and the request can be asked again at once.
@@ -1953,6 +1956,9 @@ reader is offered its update when a scan is read.
   piece went back asking for "the corrected edits, each `<old>` copied from the file" — the
   composer answered with bare `<old>`/`<new>`, which was read as the file, the rounds ran out, and
   the music checks never saw the piece. It now asks for the whole corrected piece in `<file>`.
+- **A composed piece gets one round more**: four in all, so the revision the music check asks for —
+  the better piece in a trial, its phrases ending on long notes — can still have its slips (three
+  bars a beat long) repaired instead of being dropped for the first draft.
 - **A request the AI ended with no answer says so, and offers Try Again**: Copilot's "Response
   contained no choices." (a model that ran 2 min 44 s and sent nothing back) now reads as what
   happened, and the request can be asked again at once.
