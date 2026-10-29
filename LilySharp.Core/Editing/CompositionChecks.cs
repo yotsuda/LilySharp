@@ -211,6 +211,37 @@ public static class CompositionChecks
                     + "a phrase that runs on over the bar line, the rhythm changing from section to section" + EvenPaceKept);
         }
 
+        // A compound meter's tune that does not keep its beats: a note starting within a beat and running
+        // across the next — `8 4. 8 8`, `8 8 4 4` in 6/8 — heard as another meter against an
+        // accompaniment in threes (owner's trial 2026-10-29). Syncopation is a 4/4 song's own, so
+        // only 6/8, 9/8 and 12/8 are read.
+        var meters = midi.Tracks.SelectMany(t => t.TimeSignatures).OrderBy(t => t.Tick).ToList();
+        var barList = midi.BarTicks.Where(b => b > 0).Distinct().OrderBy(b => b).Prepend(0).ToList();
+        foreach (var part in melodies.Where(byPart.ContainsKey))
+        {
+            var across = new List<int>();
+            int compoundBars = 0;
+            for (int b = 0; b < barList.Count; b++)
+            {
+                int start = barList[b], end = b + 1 < barList.Count ? barList[b + 1] : int.MaxValue;
+                var meter = meters.LastOrDefault(m => m.Tick <= start);
+                if (meter.Denominator != 8 || meter.Numerator is not (6 or 9 or 12))
+                    continue;
+                var inBar = byPart[part].Where(o => o.Start >= start && o.Start < end).ToList();
+                if (inBar.Count == 0)
+                    continue;
+                compoundBars++;
+                int beat = tpq * 3 / 2;
+                if (inBar.Any(o => (o.Start - start) % beat != 0 && o.Start + o.Length > start + ((o.Start - start) / beat + 1) * beat))
+                    across.Add(b + 1);
+            }
+            if (across.Count >= AcrossBeatFewestBars && across.Count >= compoundBars * AcrossBeatShare)
+                findings.Add($"{part}, the melody: in {across.Count} of its {compoundBars} bars a note starts within a beat and runs "
+                    + $"across the next (bars {string.Join(", ", across.Take(6))}{(across.Count > 6 ? ", …" : "")}, as the form plays them) — "
+                    + "in a compound meter a beat is three eighths: group the tune by its beats (`4.`, `4 8`, `8 8 8`), and cross "
+                    + "a beat only where a syncopation is meant.");
+        }
+
         // A staff labelled by the hand that plays it (owner's report 2026-10-27: a piano piece printed
         // 右手 and 左手 beside its staves) — a score names the instrument, and a solo piano none.
         var handNamed = parts.Where(p => new[] { p.DisplayName, p.ShortName }.Any(n => n != null && HandLabel.IsMatch(n)))
@@ -304,9 +335,14 @@ public static class CompositionChecks
         int lastTick = pitched.Count == 0 ? 0 : pitched.Max(n => n.StartTick + n.DurationTicks);
         // The first bar, and every bar that starts before the music ends.
         int barCount = 1 + barStarts.Count(b => b > 0 && b < lastTick);
-        if (pitched.Count > 0 && barCount < ShortestPiece)
-            findings.Add($"The piece is {barCount} bars long: unless a short piece was asked for, give it the length its form needs — "
-                + "about 24 to 32 bars, its phrases long enough to say something, each closing on a cadence.");
+        // …and as long as it plays (owner's trials 2026-10-29: two 6/8 wedding pieces of 26 and 28 bars
+        // lasted under a minute — the guide's minutes, said once, went unheeded). A lead sheet or a
+        // melody alone, one staff, is a head played round or a tune to sing: its length is its form's.
+        int seconds = (int)System.Math.Round(SecondsAt(midi, lastTick));
+        if (pitched.Count > 0 && (barCount < ShortestPiece || (seconds < ShortestSeconds && byPart.Count >= 2)))
+            findings.Add($"The piece is {barCount} bars long, about {seconds} seconds played: unless a short piece was asked for, give it "
+                + "the length its form needs — a minute and a half to three minutes (about 24 to 32 bars of 4/4; a shorter bar "
+                + "or a quicker beat takes more), its phrases long enough to say something, each closing on a cadence.");
         if (PlayedKeys(root) is { } inKeys && pitched.Count > 0)
         {
             var (home, end) = inKeys;
@@ -360,6 +396,30 @@ public static class CompositionChecks
     // the length asked for (owner's wish 2026-10-29: rules held too tight make every piece the same):
     // the guide suggests about 24 to 32 bars, and the AI may choose otherwise.
     private const int ShortestPiece = 16;
+
+    // …nor under this many seconds played, a floor under the guide's minute and a half (owner's trials
+    // 2026-10-29: 6/8 pieces of 26 and 28 bars played in under a minute).
+    private const int ShortestSeconds = 75;
+
+    // A compound meter's melody notes that start within a beat and run across the next, in this many
+    // bars and this share of them (owner's trial 2026-10-29: `b'8 d''4. b'8 a'8` in 8 of a 6/8 tune's bars).
+    private const int AcrossBeatFewestBars = 3;
+    private const double AcrossBeatShare = 0.2;
+
+    /// <summary>The seconds from the start to <paramref name="tick"/>, by the tempo changes of every
+    /// track (MIDI's 120 to the quarter before the first).</summary>
+    private static double SecondsAt(MidiFile midi, int tick)
+    {
+        var changes = midi.Tracks.SelectMany(t => t.TempoChanges).OrderBy(c => c.Tick).ToList();
+        double seconds = 0;
+        int at = 0, perBeat = 500_000;
+        foreach (var c in changes.Where(c => c.Tick < tick))
+        {
+            seconds += (c.Tick - at) * (double)perBeat / midi.TicksPerQuarterNote / 1e6;
+            (at, perBeat) = (c.Tick, c.MicrosecondsPerBeat);
+        }
+        return seconds + (tick - at) * (double)perBeat / midi.TicksPerQuarterNote / 1e6;
+    }
 
     // The dynamic levels — not an accent like `@sf`, which says nothing of how loud the bars after it are.
     private static readonly HashSet<string> Levels = ["pppp", "ppp", "pp", "p", "mp", "mf", "f", "ff", "fff", "ffff", "fp"];

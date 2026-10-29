@@ -87,7 +87,7 @@ public class CompositionChecksTests
         string Bars(string bar, int n) => string.Concat(Enumerable.Repeat(bar + " | ", n));
         // 16 bars of C major ending on the tonic: nothing to say of its form.
         string home = Piece("key c major", Bars("e'4 g' e' c'", 15) + "c'1 |", Bars("c2 g,", 15) + "c1 |");
-        Assert.Empty(CompositionChecks.Of(home).Where(f => f.StartsWith("The piece")));
+        Assert.Empty(CompositionChecks.Of(home).Where(f => f.StartsWith("The piece") && !f.Contains("seconds played")));
         // The same, stopping over its dominant.
         string open = Piece("key c major", Bars("e'4 g' e' c'", 15) + "d'1 |", Bars("c2 g,", 15) + "g,1 |");
         Assert.Contains(CompositionChecks.Of(open), f => f.StartsWith("The piece ends over G, not its tonic C"));
@@ -194,6 +194,35 @@ public class CompositionChecksTests
             "d''4 b'8 a'4 g'8 | a'4 b'8 d''4. | e''4 d''8 b'4 a'8 | fis'4. a'4. | b'4 d''8 g''4. | e''4 d''8 c''4. | a'4 c''8 fis''4. | g''2. |",
             "g,8 d b, d g d | fis,8 a, d a, fis a, | e,8 b, g b, e b, | d,8 a, fis a, d a, | b,8 d g d b, d | c,8 g, e g, c g, | d,8 a, c a, fis a, | g,2. |");
         Assert.DoesNotContain(CompositionChecks.Of(kept), f => f.Contains("reaches the melody") || f.Contains("twelfth"));
+    }
+
+    // Owner's trial 2026-10-29: a 6/8 wedding piece sang `b'8 d''4. b'8 a'8` across its beats, and
+    // its 28 bars lasted under a minute.
+    [Fact]
+    public void ACompoundMetersTuneAcrossItsBeats_AndAPieceUnderAMinute_AreSaid()
+    {
+        string Piece(string time, string tempo, string rh, string lh, int times)
+            => $"title \"Ribbon\"\ntime {time}\ntempo \"Andante\" {tempo}\noctave absolute\nkey g major\n{Hands}\n"
+                + $"section A {{\n  rh {{ {rh} }}\n  lh {{ {lh} }}\n}}\nform {{ {string.Join(" ", Enumerable.Repeat("A", times))} }}\n"
+                + "score { grandStaff { staff rh  staff lh } }\n";
+        const string Lh68 = "g,8 d b d g d | fis,8 a, d fis, a, fis, | e,8 b, g b, e g | d,8 a, c fis a c | c,8 g, e g e g, | b,8 g b d' g d' | d,8 a, c fis a c | g,8 d b d g d |";
+        string across = Piece("6/8", "4. = 58",
+            "b'8 d''4. b'8 a'8 | g'8 a'8 b'4. d''8 | e''4. d''8 b'4 | a'4. fis'8 a'4 | b'8 d''8 b'4. a'8 | g'4. a'8 b'4 | c''8 b'8 a'8 fis'8 d'4 | g'2. |",
+            Lh68, 3);
+        var findings = CompositionChecks.Of(across);
+        var beats = Assert.Single(findings, f => f.Contains("a note starts within a beat"));
+        Assert.StartsWith("rh, the melody: in 9 of its 24 bars", beats);
+        Assert.Contains("(bars 1, 2, 5, 9, 10, 13,", beats);
+        Assert.Contains(findings, f => f.StartsWith("The piece is 24 bars long, about 50 seconds played"));
+        // The tune by its beats: not said.
+        string kept = Piece("6/8", "4. = 58",
+            "d''4 b'8 a'4 g'8 | a'4 b'8 d''4. | e''4 d''8 b'4 a'8 | fis'4. a'4. | b'4 d''8 g''4. | e''4 d''8 c''4. | a'4 c''8 fis''4. | g''2. |",
+            Lh68, 3);
+        Assert.DoesNotContain(CompositionChecks.Of(kept), f => f.Contains("a note starts within a beat"));
+        // 4/4 at 72, 24 bars: 80 seconds, long enough; and a syncopation in 4/4 is a song's own.
+        string common = Piece("4/4", "4 = 72", "d''8 b'4 a'8 g'2 | a'4 b'4 d''2 | e''8 d''4 b'8 a'2 | fis'2 a'2 |",
+            "g,8 d b d g d b d | fis,8 a, d a, fis, a, d a, | e,8 b, g b, e, b, g b, | d,8 a, fis a, d, a, fis a, |", 6);
+        Assert.DoesNotContain(CompositionChecks.Of(common), f => f.Contains("seconds played") || f.Contains("a note starts within a beat"));
     }
 
     // Owner's trial 2026-10-29: B in D major, then A and the coda with no key line — back in G, as
