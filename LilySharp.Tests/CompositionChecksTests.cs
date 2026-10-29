@@ -312,6 +312,13 @@ public class CompositionChecksTests
         Assert.NotEmpty(melody);
         Assert.All(melody, f => Assert.StartsWith("sop, the melody: ", f));
         Assert.Contains(findings, f => f.Contains("every part moves in the same rhythm"));
+        // Sung by the soprano alone, the lower voices are not told of one value each either (owner's
+        // trial, the same day: so told, they were pulled apart).
+        string sopranoSings = hymn.Replace("  staff alt  lyrics words sings alt", "  staff alt")
+            .Replace("  staff ten  lyrics words sings ten", "  staff ten").Replace("  staff bas  lyrics words sings bas", "  staff bas");
+        var sung = CompositionChecks.Of(sopranoSings);
+        Assert.DoesNotContain(sung, f => f.StartsWith("alt") || f.StartsWith("ten") || f.StartsWith("bas"));
+        Assert.Contains(sung, f => f.StartsWith("sop, the melody: "));
     }
 
     [Fact]

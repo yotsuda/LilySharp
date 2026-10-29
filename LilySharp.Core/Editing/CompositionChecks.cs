@@ -156,9 +156,10 @@ public static class CompositionChecks
             : [];
         var melodies = MelodiesOf(source, parts, hands, band);
         // Every part in the same rhythm, bar after bar (said at the end). Moving as one, the parts
-        // share one rhythm, and the melody's is said of the top one alone (owner's trial 2026-10-29:
-        // a hymn sung in every voice heard the same two findings four times over, and came back
-        // stumbling in every voice, its "keep it" drowned).
+        // share one rhythm, said of the top one alone — the melody, else the first part (owner's
+        // trials 2026-10-29: a hymn sung in every voice heard the same two findings four times over,
+        // and came back stumbling in every voice, its "keep it" drowned; sung by the soprano alone,
+        // its lower voices were told one value each, and were pulled apart).
         var bars = midi.BarTicks.ToList();
         int together = 0, counted = 0;
         if (byPart.Count >= 3 && bars.Count >= 4)
@@ -174,7 +175,8 @@ public static class CompositionChecks
                     together++;
             }
         bool asOne = counted >= 4 && together >= counted * 0.6;
-        string? topMelody = parts.Select(p => p.Name.Text).FirstOrDefault(n => melodies.Contains(n) && byPart.ContainsKey(n));
+        string? top = parts.Select(p => p.Name.Text).FirstOrDefault(n => melodies.Contains(n) && byPart.ContainsKey(n))
+            ?? parts.Select(p => p.Name.Text).FirstOrDefault(byPart.ContainsKey);
         foreach (var (part, onsets) in byPart)
         {
             if (onsets.Count < 16 || bandBasses.Contains(part) || hands.GetValueOrDefault(part))
@@ -187,7 +189,7 @@ public static class CompositionChecks
             // quarters, a piano piece's right hand two thirds eighths in one figure bar after bar,
             // a violin's quarters and halves — each under the 80% an accompaniment is allowed).
             bool melody = melodies.Contains(part);
-            if (melody && asOne && part != topMelody)
+            if (asOne && part != top)
                 continue;
             if (common.Count() >= onsets.Count * (melody ? MelodyOneValue : PartOneValue))
                 findings.Add(melody
