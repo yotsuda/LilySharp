@@ -54,6 +54,14 @@ describe('the composing guide', () => {
         assert.match(guide, /A chord\s+sounds its third — the accompaniment has it, or the melody does on the beat/);
         assert.match(guide, /\(the B of A–B–A, a bridge\) ends on the home key's V/);
     });
+    // Owner's report 2026-10-29: a revision's 7/8 bar was written in, the hands out of step after it.
+    it('turns down a proposal whose bars do not add up, every time', () => {
+        assert.match(transform, /const BAR_LENGTH_CODES = new Set\(\['LYS2001', 'LYS2002', 'LYS2004', 'LYS2006'\]\);/);
+        const fn = transform.slice(transform.indexOf('async function proposeScore('));
+        const misfit = fn.indexOf('const misfit = added.filter(d => BAR_LENGTH_CODES.has(d.Code ?? \'\'));');
+        assert.ok(misfit > 0 && misfit < fn.indexOf('musicCheckedFor.has(uri.toString())'));
+        assert.match(fn, /return `Not shown to the musician: its bars do not add up/);
+    });
     // Owner's request 2026-10-29: the chat listed the folder in a terminal to see that a name was free.
     it('gives the chat a tool to check a new file name, and asks for nothing in a terminal', () => {
         const pkg = fs.readFileSync(path.join(__dirname, '..', '..', 'package.json'), 'utf8');

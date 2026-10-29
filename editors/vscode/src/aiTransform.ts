@@ -569,6 +569,14 @@ async function proposeScore(deps: AiTransformDeps, input: ProposeScoreInput, tok
     const before = current ? await checkText(client, current) : [];
     const added = addedWarnings({ HasErrors: false, Diagnostics: diags }, [{ beforeLo: 0, beforeHi: current.length, afterLo: 0, afterHi: text.length }],
         before.filter(d => d.Severity === 'warning' && !MACHINE_WARNING.test(d.Message)).length);
+    // A bar that does not add up goes back every time, as an error does (owner's report 2026-10-29: a
+    // revision's 7/8 bar was written in, the hands out of step from there on; warnings go back once).
+    const misfit = added.filter(d => BAR_LENGTH_CODES.has(d.Code ?? ''));
+    if (misfit.length > 0) {
+        deps.log(`AI proposal (chat): turned down — ${misfit.length} bar(s) that do not add up.`);
+        return `Not shown to the musician: its bars do not add up — the parts would not stay together.\n${formatDiags(misfit, text)}\n`
+            + 'Count the beats of each bar named, mend it, and call lilysharp_proposeScore again with the whole corrected text.';
+    }
     // Its compiler warnings go back with it, unseen, the same once (owner's report 2026-10-29: a
     // piece written with a warning was proposed again at once to mend it, and the musician saw the
     // half-done piece in the editor and then a panel to accept its mending).
@@ -1932,6 +1940,10 @@ function count(diags: CandidateDiagnostic[], severity: string): number {
 
 /** A warning about the machine (a font the host lacks), not about the source. */
 const MACHINE_WARNING = /is not installed on this system/;
+
+/** A bar short or over its meter (LYS2001, LYS2002), the parts' bars of different lengths (LYS2004),
+ *  a first bar short with no `partial` (LYS2006): turned down from the chat as an error is. */
+const BAR_LENGTH_CODES = new Set(['LYS2001', 'LYS2002', 'LYS2004', 'LYS2006']);
 
 /**
  * The warnings a candidate ADDS, judged the way errors are: the file with the candidate has
