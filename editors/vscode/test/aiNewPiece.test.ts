@@ -82,7 +82,9 @@ describe('the composing guide', () => {
         const fn = transform.slice(transform.indexOf('async function proposeScore'), transform.indexOf('async function runComposeInChat'));
         assert.match(fn, /if \(errors\.length > 0\) \{[\s\S]*?return `Not shown to the musician: it does not compile\./);
         assert.match(fn, /await reviewOnScore\(deps, renderBefore, renderAfter, caption, wholeTextMarkup\(current, text, changed\)/);
-        assert.match(fn, /return 'Accepted: the musician accepted the proposal, and the file is written\.'/);
+        assert.match(fn, /return 'Accepted: the musician accepted the proposal, and it is in the editor, not saved yet/);
+        // Owner's request 2026-10-29: Accept puts it in the editor and saves nothing.
+        assert.ok(!/\.save\(\)/.test(fn));
         // Owner's requests 2026-10-29: what to change is said in the chat — no Ask Again — and a new
         // piece has no Reject (rejected, it would leave an empty file); the panel stays for the next
         // proposal, and a message sent in the chat before deciding is told as such.
@@ -92,15 +94,15 @@ describe('the composing guide', () => {
         // no panel; the music check still speaks once first.
         assert.match(fn, /if \(isEmptyScore\(current\)\) \{\s*const written = await writeWhole\(uri, exists, doc, text\);/);
         assert.ok(fn.indexOf('const music = await compositionFindings') < fn.indexOf('const written = await writeWhole'));
-        assert.match(transform, /await written\.save\(\);\s*await vscode\.window\.showTextDocument\(written, \{ preview: false \}\);/);
-        // An unsaved score is found by the path it is named by, written, and left unsaved.
+        // Written, not saved; an unsaved score is found by the path it is named by.
+        const write = transform.slice(transform.indexOf('async function writeWhole'), transform.indexOf('function unsavedNamed'));
+        assert.ok(!/\.save\(\)/.test(write));
+        assert.match(write, /await vscode\.window\.showTextDocument\(written, \{ preview: false \}\);/);
         assert.match(fn, /const untitled = unsavedNamed\(input\.file\);/);
         assert.match(transform, /d\.uri\.scheme === 'untitled'\s*&& d\.uri\.fsPath\.toLowerCase\(\) === path\.resolve\(file\)\.toLowerCase\(\)/);
-        assert.match(transform, /if \(written\.isUntitled\) \{\s*await vscode\.window\.showTextDocument\(written, \{ preview: false \}\);\s*return undefined;/);
         assert.match(fn, /return 'Not decided: the musician went on in the chat before deciding, and the file is unchanged\. '/);
         assert.match(transform, /<button id="iterate"[^>]*\$\{fromChat \? ' hidden' : ''\}>Ask Again…<\/button>/);
         assert.match(fn, /token\.onCancellationRequested/);
-        assert.match(fn, /\.find\(d => d\.uri\.toString\(\) === uri\.toString\(\) && !d\.isUntitled\)\?\.save\(\);/);
         const build = fs.readFileSync(path.join(__dirname, '..', '..', 'esbuild.js'), 'utf8');
         assert.match(build, /'\*\*Changing or writing a \.lys file\*\*: do it through the `lilysharp_proposeScore` tool \(#proposeScore\) —',/);
     });

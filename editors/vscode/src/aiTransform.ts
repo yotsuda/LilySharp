@@ -275,9 +275,9 @@ function registerProposeScoreTool(context: vscode.ExtensionContext, deps: AiTran
     }));
 }
 
-/** Writes `text` as the whole file — created when it is not there — saves it (the chat's agent reads
- *  the disk) and opens it; the reason when it could not. An unsaved document stays unsaved, for the
- *  musician to save when they want it (owner's request 2026-10-29). */
+/** Writes `text` as the whole file — created when it is not there — and opens it, not saved: the
+ *  musician saves it when they want it kept (owner's requests 2026-10-29), and the chat reads it as it
+ *  stands with lilysharp_readScore. The reason when it could not. */
 async function writeWhole(uri: vscode.Uri, exists: boolean, doc: vscode.TextDocument | undefined, text: string): Promise<string | undefined> {
     const edit = new vscode.WorkspaceEdit();
     if (!exists || !doc) {
@@ -289,11 +289,6 @@ async function writeWhole(uri: vscode.Uri, exists: boolean, doc: vscode.TextDocu
         return 'the file could not be written.';
     }
     const written = await vscode.workspace.openTextDocument(uri);
-    if (written.isUntitled) {
-        await vscode.window.showTextDocument(written, { preview: false });
-        return undefined;
-    }
-    await written.save();
     await vscode.window.showTextDocument(written, { preview: false });
     return undefined;
 }
@@ -383,9 +378,9 @@ async function proposeScore(deps: AiTransformDeps, input: ProposeScoreInput, tok
             return `Not written: ${written}`;
         }
         deps.log('AI proposal (chat): a new piece — written into the file.');
-        return 'Written: a new piece goes straight into the file, and it is open in the editor'
-            + (doc?.isUntitled ? ', not saved: the musician saves it when they want to keep it' : '')
-            + '. The musician will say in the chat what to change.'
+        return 'Written: a new piece goes straight into the file, and it is open in the editor, not saved: the musician '
+            + 'saves it when they want to keep it. Read it with lilysharp_readScore, not from the disk. The musician will '
+            + 'say in the chat what to change.'
             + (added.length ? ` It has these warnings:\n${formatDiags(added, text)}` : '');
     }
     const snapshot: Snapshot = {
@@ -428,11 +423,11 @@ async function proposeScore(deps: AiTransformDeps, input: ProposeScoreInput, tok
                 if (again !== undefined) {
                     continue;
                 }
-                // Saved: the chat's agent reads the file from the disk, and would find it as it was. An
-                // unsaved document stays so, for the musician to save.
-                await vscode.workspace.textDocuments.find(d => d.uri.toString() === uri.toString() && !d.isUntitled)?.save();
+                // Not saved: Accept puts it in the editor, the musician saving when they want to
+                // (owner's request 2026-10-29); the chat reads it there with lilysharp_readScore.
                 deps.log('AI proposal (chat): accepted.');
-                return 'Accepted: the musician accepted the proposal, and the file is written.'
+                return 'Accepted: the musician accepted the proposal, and it is in the editor, not saved yet — read the file '
+                    + 'with lilysharp_readScore, not from the disk.'
                     + (added.length ? ` It has these warnings, which they may want fixed:\n${formatDiags(added, text)}` : '');
             }
             // Rejected: the panel stays, saying so, for the chat's next proposal to open in.

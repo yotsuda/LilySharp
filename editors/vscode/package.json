@@ -39,7 +39,7 @@
         "icon": "$(sparkle)",
         "canBeReferencedInPrompt": true,
         "userDescription": "Shows the AI's new version of a .lys file beside the score as it stands, to play and to accept or reject.",
-        "modelDescription": "Use this to write or change a Lily# (.lys) file, instead of editing the file yourself. Give the file's absolute path and the WHOLE new text of the file. Lily# compiles it first: if it has errors they come back and nothing is shown — fix them and call again. Otherwise a new piece (the file empty) is written straight into the file; a change to a score is shown to the musician beside the score as it stands, to play and to accept or reject, and the result says which. Accepted, the file is written. What to change next, the musician says in the chat; call it again with the whole new text.",
+        "modelDescription": "Use this to write or change a Lily# (.lys) file, instead of editing the file yourself. Give the file's absolute path and the WHOLE new text of the file. Lily# compiles it first: if it has errors they come back and nothing is shown — fix them and call again. Otherwise a new piece (the file empty) is written straight into the file; a change to a score is shown to the musician beside the score as it stands, to play and to accept or reject, and the result says which. Accepted, it is in the editor, not saved: read it with lilysharp_readScore, not from the disk. What to change next, the musician says in the chat; call it again with the whole new text.",
         "inputSchema": {
           "type": "object",
           "properties": {
