@@ -45,7 +45,7 @@ describe('a proposal from Copilot\'s chat', () => {
     });
     it('checks a new piece as music once, its findings sent back unseen', () => {
         const src = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'aiTransform.ts'), 'utf8');
-        assert.match(src, /const text = withLeadingComments\(current, input\.text\);/);
+        assert.match(src, /let text = withLeadingComments\(current, input\.text\);/);
         assert.match(src, /if \(isEmptyScore\(current\) && !musicCheckedFor\.has\(uri\.toString\(\)\)\) \{\s*const report = await compositionReport\(client, text\);\s*const music = report\.findings;\s*ranges = report\.ranges;\s*musicCheckedFor\.add\(uri\.toString\(\)\);/);
         // Each part's range goes with it, a fact to check against what was meant (owner's request
         // 2026-10-29: a beginner's piece slipped an octave), on the bounce, the write and an Accept.

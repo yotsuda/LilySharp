@@ -276,7 +276,7 @@ function registerProposeScoreTool(context: vscode.ExtensionContext, deps: AiTran
             invocationMessage: `Reading ${path.basename(options.input?.file ?? 'the score')} as it stands in the editor…`,
         }),
         invoke: async options => new vscode.LanguageModelToolResult([
-            new vscode.LanguageModelTextPart(await readScore(options.input)),
+            new vscode.LanguageModelTextPart(await readScore(deps, options.input)),
         ]),
     }));
     context.subscriptions.push(lm.registerTool<ReadGuideInput>('lilysharp_readGuide', {
@@ -424,7 +424,7 @@ interface ReadScoreInput {
 
 /** The score as it stands in the editor, saved or not (owner's request 2026-10-29: the chat's agent
  *  reads the disk, where an unsaved score is not and a saved one may be behind the editor). */
-async function readScore(input: ReadScoreInput): Promise<string> {
+async function readScore(deps: AiTransformDeps, input: ReadScoreInput): Promise<string> {
     if (!input || typeof input.file !== 'string') {
         return 'Nothing read: give `file` (the .lys file\'s absolute path).';
     }
@@ -433,7 +433,33 @@ async function readScore(input: ReadScoreInput): Promise<string> {
         return `Nothing read: no score ${input.file} is open in the editor or on the disk.`;
     }
     const state = doc.isUntitled ? 'open in the editor, not saved' : doc.isDirty ? 'open in the editor, with changes not saved' : 'saved';
-    return `${path.basename(doc.uri.fsPath)} (${state}), ${doc.lineCount} lines, as it stands:\n${doc.getText()}`;
+    const text = doc.getText();
+    // In absolute octaves, as Ask AI sends it (owner's request 2026-10-29): proposeScore brings the
+    // proposal back to the file's relative octaves. Lines stay where they were.
+    const absolute = await chatAbsolute(deps, text);
+    if (absolute !== undefined) {
+        deps.log('AI proposal (chat): the score read in absolute octaves.');
+        return `${path.basename(doc.uri.fsPath)} (${state}), ${doc.lineCount} lines, as it stands — shown in absolute octaves `
+            + '(the file itself is in relative octaves; every pitch here says its own octave). Propose your change in '
+            + 'absolute octaves, keeping `octave absolute`: Lily# brings it back to the file\'s relative octaves.\n'
+            + absolute;
+    }
+    return `${path.basename(doc.uri.fsPath)} (${state}), ${doc.lineCount} lines, as it stands:\n${text}`;
+}
+
+/** The score in absolute octaves for the chat, or undefined when it goes as it is: a file
+ *  already absolute, one the server cannot convert exactly, or no server. */
+async function chatAbsolute(deps: AiTransformDeps, text: string): Promise<string | undefined> {
+    const client = deps.getClient();
+    if (!client || !deps.isReady() || isEmptyScore(text)) {
+        return undefined;
+    }
+    try {
+        const resp = await client.sendRequest<AiOctavesResponse>('lilysharp/aiOctaves', { Text: text, ToAbsolute: true });
+        return resp.NewText != null && resp.NewText !== text ? resp.NewText : undefined;
+    } catch {
+        return undefined;
+    }
 }
 
 /** The files whose new piece the music check has spoken on, this session: it speaks once a file. */
@@ -454,14 +480,27 @@ async function proposeScore(deps: AiTransformDeps, input: ProposeScoreInput, tok
     const exists = doc !== undefined;
     const current = doc?.getText() ?? '';
     // The file's opening comments kept, where the proposal left them out (owner's request 2026-10-29).
-    const text = withLeadingComments(current, input.text);
+    let text = withLeadingComments(current, input.text);
     // Errors go back unseen: the musician is shown only a score that compiles.
-    const diags = await checkText(client, text);
+    let diags = await checkText(client, text);
     const errors = diags.filter(d => d.Severity === 'error');
     if (errors.length > 0) {
         deps.log(`AI proposal (chat): turned down — ${errors.length} error(s).`);
         return `Not shown to the musician: it does not compile.\n${formatDiags(errors, text)}\n`
             + 'Fix these and call lilysharp_proposeScore again with the whole corrected text.';
+    }
+    // Written in the absolute octaves readScore showed: back to the file's relative octaves before
+    // the musician sees it (owner's request 2026-10-29).
+    if (ABSOLUTE_LINE.test(text) && !ABSOLUTE_LINE.test(current) && await chatAbsolute(deps, current) !== undefined) {
+        const resp = await client.sendRequest<AiOctavesResponse>('lilysharp/aiOctaves', { Text: text, ToAbsolute: false, Original: current });
+        if (resp.NewText == null) {
+            deps.log(`AI proposal (chat): could not be brought back to relative octaves — ${resp.Error}`);
+            return `Not shown to the musician: written in absolute octaves, it could not be brought back to the file's `
+                + `relative octaves (${resp.Error}). Mend that, or propose the whole text in the file's own relative octaves.`;
+        }
+        deps.log('AI proposal (chat): brought back to relative octaves.');
+        text = resp.NewText;
+        diags = await checkText(client, text);
     }
     // A new piece is checked as music once, as Compose with AI checks it (owner's request
     // 2026-10-29: a chat's quartet had one rhythm in 20 of its first violin's 24 bars, and half notes
@@ -836,6 +875,9 @@ async function toAbsoluteOctaves(deps: AiTransformDeps, client: LanguageClient, 
         converted: true,
     };
 }
+
+/** A top-level `octave absolute` line. */
+const ABSOLUTE_LINE = /^[ \t]*octave[ \t]+absolute\b/m;
 
 /** How many `octave …` lines a text holds (the server checks where they stand). */
 function octaveLines(text: string): number {

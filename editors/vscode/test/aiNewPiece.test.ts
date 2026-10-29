@@ -48,6 +48,14 @@ describe('the composing guide', () => {
         const guide = fs.readFileSync(path.join(docs, 'COMPOSE_FOR_LLM.md'), 'utf8');
         assert.match(guide, /\*\*Start in absolute octaves\*\*: a new piece begins with `octave absolute` \(and `pitch concert`\)/);
     });
+    // Owner's request 2026-10-29: the chat edits in absolute octaves, as Ask AI does, and the
+    // musician sees and gets the file's relative octaves.
+    it('lets the chat read a relative score in absolute octaves, and brings its proposal back', () => {
+        assert.match(transform, /const absolute = await chatAbsolute\(deps, text\);/);
+        assert.match(transform, /'lilysharp\/aiOctaves', \{ Text: text, ToAbsolute: true \}/);
+        assert.match(transform, /ABSOLUTE_LINE\.test\(text\) && !ABSOLUTE_LINE\.test\(current\) && await chatAbsolute\(deps, current\) !== undefined/);
+        assert.match(transform, /'lilysharp\/aiOctaves', \{ Text: text, ToAbsolute: false, Original: current \}/);
+    });
     // Owner's request 2026-10-29: a Compose menu that hands the request to Copilot's chat, its
     // thinking in view — the file started absolute, no Lily# check yet (the owner's choice).
     it('is handed to Copilot\'s chat by a menu of its own, the file started in absolute octaves', () => {
@@ -147,7 +155,7 @@ describe('the composing guide', () => {
         assert.match(transform, /lm\.registerTool<ReadScoreInput>\('lilysharp_readScore'/);
         const fn = transform.slice(transform.indexOf('async function readScore'), transform.indexOf('const musicCheckedFor'));
         assert.match(fn, /const doc = await scoreDocument\(input\.file\);/);
-        assert.match(fn, /return `\$\{path\.basename\(doc\.uri\.fsPath\)\} \(\$\{state\}\), \$\{doc\.lineCount\} lines, as it stands:\\n\$\{doc\.getText\(\)\}`;/);
+        assert.match(fn, /return `\$\{path\.basename\(doc\.uri\.fsPath\)\} \(\$\{state\}\), \$\{doc\.lineCount\} lines, as it stands:\\n\$\{text\}`;/);
         const build = fs.readFileSync(path.join(__dirname, '..', '..', 'esbuild.js'), 'utf8');
         assert.match(build, /'\*\*Reading a \.lys file\*\*: read it through the `lilysharp_readScore` tool \(#readScore\), not from the disk —',/);
         const ext = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
