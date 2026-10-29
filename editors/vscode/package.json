@@ -27,7 +27,8 @@
     "onLanguage:lilysharp",
     "onLanguage:markdown",
     "onLanguageModelTool:lilysharp_proposeScore",
-    "onLanguageModelTool:lilysharp_readScore"
+    "onLanguageModelTool:lilysharp_readScore",
+    "onLanguageModelTool:lilysharp_readGuide"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -38,6 +39,7 @@
         "displayName": "Propose a Lily# score",
         "icon": "$(sparkle)",
         "canBeReferencedInPrompt": true,
+        "tags": ["lilysharp", "lys", "music", "score", "notation", "compose", "song"],
         "userDescription": "Shows the AI's new version of a .lys file beside the score as it stands, to play and to accept or reject.",
         "modelDescription": "Use this to write or change a Lily# (.lys) file, instead of editing the file yourself. Give the file's absolute path and the WHOLE new text of the file. Lily# compiles it first: if it has errors they come back and nothing is shown — fix them and call again. Otherwise a new piece (the file empty) is written straight into the file; a change to a score is shown to the musician beside the score as it stands, to play and to accept or reject, and the result says which. Accepted, it is in the editor, not saved: read it with lilysharp_readScore, not from the disk. What to change next, the musician says in the chat; call it again with the whole new text.",
         "inputSchema": {
@@ -56,6 +58,7 @@
         "displayName": "Read a Lily# score",
         "icon": "$(book)",
         "canBeReferencedInPrompt": true,
+        "tags": ["lilysharp", "lys", "music", "score", "notation", "compose", "song"],
         "userDescription": "Reads a .lys score as it stands in the editor, saved or not.",
         "modelDescription": "Use this to read a Lily# (.lys) file before changing it, instead of reading the file from the disk: it gives the text as it stands in the editor — a score not saved yet is not on the disk at all, and a saved one may have changes the disk does not. Give the file's absolute path (for a score not saved yet, the path it is named by).",
         "inputSchema": {
@@ -64,6 +67,23 @@
             "file": { "type": "string", "description": "The .lys file's absolute path — for a score open in the editor and not saved yet, the path it is named by." }
           },
           "required": ["file"]
+        }
+      },
+      {
+        "name": "lilysharp_readGuide",
+        "toolReferenceName": "readGuide",
+        "displayName": "Read the Lily# guide",
+        "icon": "$(book)",
+        "canBeReferencedInPrompt": true,
+        "tags": ["lilysharp", "lys", "music", "score", "notation", "compose", "song"],
+        "userDescription": "Gives the AI the Lily# grammar, or the guide to composing a new piece in Lily#.",
+        "modelDescription": "Use this before composing music — a piece, a song, a score — or writing or changing Lily# (.lys) text, unless the Lily# instructions are already in your context. Lily# is the music notation language (.lys files) this editor engraves, plays and checks; it is NOT LilyPond. Topic \"grammar\" gives how Lily# is written; topic \"composing\" gives how to compose a new piece — its file, the tool to propose it with, and the composing guide. Asked to compose music here with no file named, compose it in Lily#.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "topic": { "type": "string", "enum": ["grammar", "composing"], "description": "\"grammar\": how Lily# is written. \"composing\": how to compose a new piece, with the composing guide." }
+          },
+          "required": ["topic"]
         }
       }
     ],

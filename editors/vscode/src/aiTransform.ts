@@ -273,23 +273,84 @@ function registerProposeScoreTool(context: vscode.ExtensionContext, deps: AiTran
             new vscode.LanguageModelTextPart(await readScore(options.input)),
         ]),
     }));
+    context.subscriptions.push(lm.registerTool<ReadGuideInput>('lilysharp_readGuide', {
+        prepareInvocation: options => ({
+            invocationMessage: options.input?.topic === 'composing' ? 'Reading the Lily# composing guide…' : 'Reading the Lily# grammar…',
+        }),
+        invoke: async options => new vscode.LanguageModelToolResult([
+            new vscode.LanguageModelTextPart(await readGuide(deps, options.input)),
+        ]),
+    }));
 }
 
-/** Writes `text` as the whole file — created when it is not there — and opens it, not saved: the
- *  musician saves it when they want it kept (owner's requests 2026-10-29), and the chat reads it as it
- *  stands with lilysharp_readScore. The reason when it could not. */
-async function writeWhole(uri: vscode.Uri, exists: boolean, doc: vscode.TextDocument | undefined, text: string): Promise<string | undefined> {
-    const edit = new vscode.WorkspaceEdit();
-    if (!exists || !doc) {
-        edit.createFile(uri, { overwrite: true, contents: Buffer.from(text, 'utf8') });
-    } else {
-        edit.replace(uri, new vscode.Range(doc.positionAt(0), doc.positionAt(doc.getText().length)), text);
+/** What Copilot's chat hands the guide tool. */
+interface ReadGuideInput {
+    /** 'grammar' — how Lily# is written; 'composing' — how to compose a new piece in it. */
+    topic?: string;
+}
+
+/**
+ * The Lily# instructions files Copilot is given with a .lys in hand (esbuild.js writes them), for a
+ * chat with none (owner's request 2026-10-29: a piece asked for in the chat with no .lys open was
+ * written without them): the grammar, or the composing guide with how a new piece begins — the
+ * same steps Compose with AI in Chat's request gives (newPieceSteps), and a starting point drawn
+ * at random. The file is the bundled one the instructions are made of where the built one is not.
+ */
+async function readGuide(deps: AiTransformDeps, input: ReadGuideInput | undefined): Promise<string> {
+    const composing = input?.topic === 'composing';
+    const built = (name: string) => {
+        try {
+            // The instructions file without its front matter (name, description, applyTo).
+            return fs.readFileSync(vscode.Uri.joinPath(deps.extensionUri, 'out', name).fsPath, 'utf8')
+                .replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n/, '');
+        } catch {
+            return undefined;
+        }
+    };
+    if (!composing) {
+        return built('lilysharp.instructions.md') ?? await loadGrammar(deps);
     }
+    const hint = compositionHint();
+    deps.log(`AI transform (chat, guide): ${hint}`);
+    return 'Compose a new piece of music in Lily# for a new .lys file — in the workspace folder (e.g. Composed.lys), '
+        + 'its absolute path; it is not on the disk until the musician saves it. Its first lines are `octave absolute` '
+        + 'and `pitch concert`. Read the Lily# grammar first (lilysharp_readGuide, topic "grammar") unless you have it.\n'
+        + newPieceSteps(deps.lysc?.())
+        + `${hint}\n\n`
+        + (built('lilysharp-compose.instructions.md') ?? await loadComposeGuide(deps));
+}
+
+/**
+ * How a new piece is proposed, said alike by Compose with AI in Chat's request and the composing
+ * guide (owner's request 2026-10-29, the two kept one): through Lily#'s tool, written straight into
+ * the file only where the tool is not there; in sounding pitches; checked by the bundled compiler,
+ * where the extension carries one, on a copy (the document is not on the disk).
+ */
+function newPieceSteps(lysc: string | undefined): string {
+    return 'Propose it, whole, with the lilysharp_proposeScore tool (#proposeScore), giving that path: it checks the '
+        + 'piece and writes it into the document. If that tool is not available, write the piece into the file instead.\n'
+        + 'Keep `octave absolute` and `pitch concert`, and write every pitch as the pitch it sounds.\n'
+        + (lysc
+            ? `Before proposing, check it with the Lily# compiler — \`& "${lysc}" check <copy>\` on a copy of your text in the `
+              + 'temporary folder — and fix every error and warning it reports.\n'
+            : '');
+}
+
+/** Writes `text` as the whole file and opens it, not saved: the musician saves it when they want it
+ *  kept (owner's requests 2026-10-29), and the chat reads it as it stands with lilysharp_readScore. A
+ *  file not there opens as an unsaved score named by its path, as Compose with AI in Chat opens one.
+ *  The reason when it could not. */
+async function writeWhole(uri: vscode.Uri, exists: boolean, doc: vscode.TextDocument | undefined, text: string): Promise<string | undefined> {
+    const target = exists && doc ? doc : await vscode.workspace.openTextDocument(uri.with({ scheme: 'untitled' }));
+    const edit = new vscode.WorkspaceEdit();
+    edit.replace(target.uri, new vscode.Range(target.positionAt(0), target.positionAt(target.getText().length)), text);
     if (!await vscode.workspace.applyEdit(edit)) {
         return 'the file could not be written.';
     }
-    const written = await vscode.workspace.openTextDocument(uri);
-    await vscode.window.showTextDocument(written, { preview: false });
+    if (target.isUntitled && target.languageId !== 'lilysharp') {
+        await vscode.languages.setTextDocumentLanguage(target, 'lilysharp');
+    }
+    await vscode.window.showTextDocument(target, { preview: false });
     return undefined;
 }
 
@@ -490,24 +551,12 @@ async function runComposeInChat(deps: AiTransformDeps): Promise<void> {
     await vscode.window.showTextDocument(untitled, { preview: false });
     const hint = compositionHint();
     deps.log(`AI transform (chat): ${hint}`);
-    // The compiler to check it with, where the extension carries one (owner's request 2026-10-29: the
-    // agent checked its piece by building Lily# from the sources this machine happens to hold). The
-    // document is not on the disk, so a copy is checked.
-    const lysc = deps.lysc?.();
-    const check = lysc
-        ? `Before proposing, check it with the Lily# compiler — \`& "${lysc}" check <copy>\` on a copy of your text in the `
-          + 'temporary folder — and fix every error and warning it reports.\n'
-        : '';
-    // Proposed through Lily#'s tool, the musician deciding on the score (owner's request 2026-10-29);
-    // written straight into the file only where the tool is not there.
+    // Proposed through Lily#'s tool, checked by the bundled compiler (owner's requests 2026-10-29):
+    // the steps the composing guide gives as well (newPieceSteps).
     const query = `Compose a new piece of music in Lily# for ${file} — open in the editor, not saved yet, so not on the `
-        + 'disk — and propose it, whole, with the '
-        + 'lilysharp_proposeScore tool (#proposeScore), giving that path: it checks the piece and writes it into the '
-        + 'document. If that tool is not available, write the piece into the file instead. '
-        + `Its first lines are:\n${header.trimEnd()}\n`
-        + 'The file starts with `octave absolute` and `pitch concert`: keep both lines, and write every pitch as the pitch it sounds. '
+        + `disk. Its first lines are:\n${header.trimEnd()}\n`
+        + newPieceSteps(deps.lysc?.())
         + 'Follow the Lily# grammar and the Lily# composing guide (the Lily# instructions).\n'
-        + check
         + `The request: ${description.trim()}\n${hint}`;
     try {
         await vscode.commands.executeCommand('workbench.action.chat.open', { query, mode: 'agent' });

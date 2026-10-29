@@ -86,6 +86,11 @@ All notable changes to the Lily# VS Code extension are documented here.
   before it is shown (the same check as Compose with AI's): what it finds goes back to the chat,
   and the next proposal is shown whatever it did with it. The file's opening comments are kept
   where a proposal leaves them out.
+- **Copilot's chat can ask for the Lily# guide**: a third tool, `lilysharp_readGuide` (#readGuide),
+  gives the grammar or the composing guide — the instructions files Copilot is given with a .lys in
+  hand — so a piece asked for in the chat with no .lys open is written knowing Lily#. The composing
+  guide comes with the same steps Compose with AI in Chat's request gives, and a starting point; a
+  new piece proposed for a file not there opens as an unsaved score named by its path.
 - **Copilot's chat reads a score as it stands in the editor**: a second tool,
   `lilysharp_readScore` (#readScore), gives the chat a .lys as the editor holds it, saved or not —
   the chat's agent reads the disk, where an unsaved score is not and a saved one may be behind.
