@@ -47,7 +47,11 @@ public readonly record struct MidiNote(
     string? Part = null,
     // A grace note: it sounds, but it is not an onset a lyric syllable is sung on
     // (MidiExporter.AttachLyrics). Not written to .mid files.
-    bool IsGrace = false
+    bool IsGrace = false,
+    // A chord member's OWN place — its pitch, degree or drum, where the page puts its head —
+    // where SourcePos is the chord's '<' (the onset the preview lights the chord by). -1 for
+    // anything not a chord member. The Range panel goes to it. Not written to .mid files.
+    int MemberPos = -1
 );
 
 /// <summary>

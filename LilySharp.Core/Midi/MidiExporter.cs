@@ -2982,7 +2982,7 @@ public sealed class MidiExporter
             {
                 track.Notes.Add(new MidiNote(track.Channel, midiPitch, velocity, startTick, soundTicks, chord.SourceStart,
                     QuarterBend: pitch.QuarterOffset,
-                    SourceOrdinal: chordOrdinal, Timbre: _currentTimbre, Part: _currentPart));
+                    SourceOrdinal: chordOrdinal, Timbre: _currentTimbre, Part: _currentPart, MemberPos: pitch.SourceStart));
                 onset.Add(track.Notes.Count - 1);
             }
             resolved.Add((midiPitch, pitch.QuarterOffset, false));
@@ -3038,7 +3038,7 @@ public sealed class MidiExporter
             else
             {
                 track.Notes.Add(new MidiNote(track.Channel, midiPitch, velocity, startTick, soundTicks, chord.SourceStart,
-                    SourceOrdinal: chordOrdinal, Timbre: _currentTimbre, Part: _currentPart));
+                    SourceOrdinal: chordOrdinal, Timbre: _currentTimbre, Part: _currentPart, MemberPos: degree.SourceStart));
                 onset.Add(track.Notes.Count - 1);
             }
             resolved.Add((midiPitch, 0, false));
@@ -3476,7 +3476,7 @@ public sealed class MidiExporter
                         track.Notes.Add(new MidiNote(track.Channel, mp, _velocity, _currentTick, g,
                             chord.SourceStart, QuarterBend: pitch.QuarterOffset,
                             SourceOrdinal: chordOrdinal, Timbre: _currentTimbre, Part: _currentPart,
-                            IsGrace: true));
+                            IsGrace: true, MemberPos: pitch.SourceStart));
                     }
                     // A chord(…) item in a grace body: its strings, as ProcessChord plays them.
                     Music.ShapeNote? graceLowest = null;

@@ -81,10 +81,27 @@ public class PartRangesTests
     {
         var alt = Part("alt");
         Assert.Equal(("F3", "E4"), (alt.Low.Name, alt.High.Name));
-        Assert.StartsWith("<c' e'>", Source[alt.High.Positions[0]..].TrimStart());
+        // The member itself, not the chord's '<' (owner's request 2026-10-29: Lowest and Highest
+        // put the caret on the note).
+        Assert.StartsWith("e'>", Source[alt.High.Positions[0]..]);
 
         const string flat = "octave absolute\ntime 4/4\npart p { clef treble }\nsection A { p { c'4 bes' ces'' bes' | } }\nform { A }";
         var p = PartRanges.Of(new MidiExporter().Export(SyntaxTree.Parse(flat)), flat).Single();
         Assert.Equal(("C4", "C♭5"), (p.Low.Name, p.High.Name));
+    }
+
+    /// <summary>A chord's lowest member is found where it is written — a written chord, one of
+    /// degrees, a grace chord; a member written lower but sounding higher is passed over.</summary>
+    [Theory]
+    [InlineData("<e' a c''>2 d''2", "a")]
+    [InlineData("d''2 <c' 3 5>2", "c'")]
+    [InlineData("d''2 \\grace { <g c'>16 } d''2", "g")]
+    [InlineData("<c'' g'>2 d''2", "g'")]
+    public void FindsAChordsLowestMemberWhereItIsWritten(string music, string written)
+    {
+        string src = "octave absolute\ntime 4/4\npart p { clef treble }\nsection A { p { " + music + " | } }\nform { A }";
+        var low = PartRanges.Of(new MidiExporter().Export(SyntaxTree.Parse(src)), src).Single().Low;
+        Assert.Single(low.Positions);
+        Assert.Equal(written, src[low.Positions[0]..].Split(' ', '>', '}')[0]);
     }
 }

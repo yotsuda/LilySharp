@@ -88,7 +88,9 @@ public static class PartRanges
     private static RangeEnd End(List<MidiNote> notes, double pitch, string? source)
     {
         var at = notes.Where(n => n.Pitch + 0.5 * n.QuarterBend == pitch).ToList();
-        var positions = at.Select(n => n.SourcePos).Where(p => p >= 0).Distinct().ToList();
+        // A chord member's own place, not the chord's '<' (owner's request 2026-10-29: Lowest
+        // put the caret on the chord, not on its low note).
+        var positions = at.Select(n => n.MemberPos >= 0 ? n.MemberPos : n.SourcePos).Where(p => p >= 0).Distinct().ToList();
         string? written = null;
         int midi = (int)Math.Round(pitch);
         foreach (int p in positions)
