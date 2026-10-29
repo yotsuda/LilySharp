@@ -502,7 +502,10 @@ async function proposeScore(deps: AiTransformDeps, input: ProposeScoreInput, tok
         deps.log('AI proposal (chat): a new piece — written into the file.');
         // The piece is done: what is to change, the musician says — not proposed again unasked, which
         // would put a panel over the piece just written (owner's report 2026-10-29).
-        return 'Written: a new piece goes straight into the file, and it is open in the editor, not saved: the musician '
+        // The file by its own name, for the chat to tell the musician (owner's report 2026-10-29: the
+        // chat called Meifu-no-Ou-to-no-Kessen.lys "冥府の王との決戦.lys", the piece's title).
+        return `Written: the new piece is ${path.basename(currentUri(uri).fsPath)} — call the file by that name, `
+            + 'not by the piece\'s title. It is open in the editor, not saved: the musician '
             + 'saves it when they want to keep it. Read it with lilysharp_readScore, not from the disk. The piece is done: '
             + 'do not propose it again unless the musician asks for a change in the chat.'
             + (added.length ? ` It keeps these warnings, as you proposed it:\n${formatDiags(added, text)}` : '');
@@ -550,7 +553,8 @@ async function proposeScore(deps: AiTransformDeps, input: ProposeScoreInput, tok
                 // Not saved: Accept puts it in the editor, the musician saving when they want to
                 // (owner's request 2026-10-29); the chat reads it there with lilysharp_readScore.
                 deps.log('AI proposal (chat): accepted.');
-                return 'Accepted: the musician accepted the proposal, and it is in the editor, not saved yet — read the file '
+                return 'Accepted: the musician accepted the proposal, and it is in the editor, not saved yet — '
+                    + `${path.basename(currentUri(uri).fsPath)} (call the file by that name; it may have been renamed). Read it `
                     + 'with lilysharp_readScore, not from the disk.'
                     + (added.length ? ` It has these warnings, which they may want fixed:\n${formatDiags(added, text)}` : '');
             }

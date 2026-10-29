@@ -100,6 +100,10 @@ describe('the composing guide', () => {
         assert.match(fn, /if \(errors\.length > 0\) \{[\s\S]*?return `Not shown to the musician: it does not compile\./);
         assert.match(fn, /await reviewOnScore\(deps, renderBefore, renderAfter, caption, wholeTextMarkup\(current, text, changed\)/);
         assert.match(fn, /return 'Accepted: the musician accepted the proposal, and it is in the editor, not saved yet/);
+        // The file named by its own name, where it is now, for the chat to tell (owner's report
+        // 2026-10-29: the chat called the file by the piece's title).
+        assert.match(fn, /return `Written: the new piece is \$\{path\.basename\(currentUri\(uri\)\.fsPath\)\} — call the file by that name, `/);
+        assert.match(fn, /`\$\{path\.basename\(currentUri\(uri\)\.fsPath\)\} \(call the file by that name; it may have been renamed\)\. Read it `/);
         // Owner's request 2026-10-29: Accept puts it in the editor and saves nothing.
         assert.ok(!/\.save\(\)/.test(fn));
         // Owner's requests 2026-10-29: what to change is said in the chat — no Ask Again — and a new
