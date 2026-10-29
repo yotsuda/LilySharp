@@ -2982,8 +2982,10 @@ async function askAiInChat(doc: vscode.TextDocument, from?: number, to?: number)
     }
     // The score by its whole path, the one Lily#'s tools know it by (owner's request 2026-10-29: two
     // scores of one name in two folders, and the name alone did not say which). An unsaved score is
-    // not on the disk for the chat to read: the tool to read it with is named too.
-    const name = doc.uri.scheme === 'file' ? doc.uri.fsPath
+    // not on the disk for the chat to read, nor a saved one's changes since (owner's request, the
+    // same day): the tool to read it with is named too.
+    const name = doc.uri.scheme === 'file'
+        ? doc.uri.fsPath + (doc.isDirty ? ' (changes not saved — read it with #readScore)' : '')
         : doc.isUntitled && path.isAbsolute(doc.uri.fsPath) ? `${doc.uri.fsPath} (not saved — read it with #readScore)`
         : path.basename(doc.uri.path);
     const query = chatPointer(name, text, range);
