@@ -32,7 +32,9 @@ What makes it music:
 - **Layout**: an ensemble is a `staffGroup { … }` (a bracket); `grandStaff` is one instrument
   on two staves (piano, harp) — never four players.
 - **A form, at the length it needs**: unless the request gives a length, about 24 to 32 bars
-  suits a piece (a piano piece then fits one printed page): an A–B–A with a short coda (2 to 4 bars), or
+  of 4/4 suits a piece (a piano piece then fits one printed page), a minute and a half to three
+  minutes played — a shorter bar or a quicker beat takes more bars (6/8 at ♩. = 60 is two seconds
+  a bar: 26 bars, under a minute): an A–B–A with a short coda (2 to 4 bars), or
   a song's form — complete and shapely rather than long, never a bar added to reach a length. A
   song counts its WRITTEN bars: a verse or a chorus sung again is named again in the form (its new
   words as verses, `[1. …] [2. …]`), not written twice. Phrases often run 8 bars — two halves of
@@ -199,7 +201,9 @@ What makes it music:
 - **Rhythm and articulation**: long and short notes mixed, rests that let a line breathe,
   slurs over a phrase, `@staccato`, `@accent`, and dynamics with hairpins
   (`@p … @cresc … @f`) that shape each section — every mark for a reason, the same level never
-  written twice in a row, the ending at the level it was planned.
+  written twice in a row, the ending at the level it was planned. The rhythm keeps the meter's
+  beats: in 6/8 (9/8, 12/8) a beat is three eighths, the melody grouped `4.`, `4 8`, `8 8 8` —
+  `8 8 4 4`, a quarter across the beat, is 3/4's hemiola, written only where it is meant.
 - **The character asked for** is heard through devices, each written into the piece where it
   acts — not only planned: "dramatic" — `@sf` and `@p.subito` after a loud bar, a tremolo
   (`d'2:32`), every part in unison at the climax, the low register; "cool" — a driving rhythm,

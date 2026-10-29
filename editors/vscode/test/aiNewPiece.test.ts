@@ -59,6 +59,12 @@ describe('the composing guide', () => {
         const guide = fs.readFileSync(path.join(docs, 'COMPOSE_FOR_LLM.md'), 'utf8');
         assert.match(guide, /a leap wider than a fifth is\s+followed by a step back the other way, above all from the high note/);
     });
+    // Owner's review 2026-10-29: a 6/8 wedding piece sang 8 8 4 4 in four bars, and lasted 52 seconds.
+    it('says the rhythm keeps a compound meter\'s beats, and a length in minutes', () => {
+        const guide = fs.readFileSync(path.join(docs, 'COMPOSE_FOR_LLM.md'), 'utf8');
+        assert.match(guide, /in 6\/8 \(9\/8, 12\/8\) a beat is three eighths/);
+        assert.match(guide, /a minute and a half to three\s+minutes played — a shorter bar or a quicker beat takes more bars/);
+    });
     // Owner's report 2026-10-29: a piece composed in Copilot's chat was written as absolute in a
     // relative file, and its pitches flew off — the guide, which the chat is given too, says to start absolute.
     it('says a new piece starts in absolute octaves', () => {

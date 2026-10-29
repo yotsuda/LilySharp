@@ -173,6 +173,29 @@ public class CompositionChecksTests
             f => f.StartsWith("rh, the melody: 100% of its notes are eighth notes"));
     }
 
+    // Owner's review 2026-10-29: a wedding piece's broken chords ran D2 to A4 every bar, on the
+    // melody's own notes and over them where it dipped.
+    [Fact]
+    public void ALeftHandIntoTheMelody_AndAFigureWiderThanATwelfth_AreSaid()
+    {
+        string Waltz(string rh, string lh) => $"title \"Hana\"\ntime 6/8\noctave absolute\n{Hands}\n"
+            + $"section A {{\n  rh {{ {rh} }}\n  lh {{ {lh} }}\n}}\nform {{ A }}\nscore {{ grandStaff {{ staff rh  staff lh }} }}\n";
+        string into = Waltz(
+            "g'4.( b'8 a'4) | a'8( d''8 c''4 a'4) | b'4( e''8 d''8 b'4) | a'4.( d'4.) | e'4( g'8 a'8 g'4) | d''8( b'8 a'4 g'4) | a'4.( c''8 b'4) | g'2. |",
+            "g,8 d g b d' b | fis,8 a d' fis' a' fis' | e,8 b e' g' b' g' | d,8 a d' fis' a' fis' | c,8 g c' e' g' e' | a,8 e a c' e' c' | d,8 a d' fis' a' fis' | g,2. |");
+        var findings = CompositionChecks.Of(into);
+        var meet = Assert.Single(findings, f => f.StartsWith("lh, rh: in "));
+        Assert.Contains("the left hand reaches the melody", meet);
+        Assert.Contains("bars 2, 3, 4", meet);
+        var wide = Assert.Single(findings, f => f.StartsWith("lh: in "));
+        Assert.Contains("spans more than a twelfth (F♯2 to A4 in bar 2)", wide);
+        // A figure within a twelfth, under the tune (the owner's next piece): neither.
+        string kept = Waltz(
+            "d''4 b'8 a'4 g'8 | a'4 b'8 d''4. | e''4 d''8 b'4 a'8 | fis'4. a'4. | b'4 d''8 g''4. | e''4 d''8 c''4. | a'4 c''8 fis''4. | g''2. |",
+            "g,8 d b, d g d | fis,8 a, d a, fis a, | e,8 b, g b, e b, | d,8 a, fis a, d a, | b,8 d g d b, d | c,8 g, e g, c g, | d,8 a, c a, fis a, | g,2. |");
+        Assert.DoesNotContain(CompositionChecks.Of(kept), f => f.Contains("reaches the melody") || f.Contains("twelfth"));
+    }
+
     [Fact]
     public void ARightHandOverItsRegister_IsToldToMoveDown()
     {
@@ -439,6 +462,6 @@ public class CompositionChecksTests
         var guide = File.ReadAllText(Path.Combine(CollectResumeTests.FindRepoRoot(), "docs", "COMPOSE_FOR_LLM.md"));
         foreach (var title in new[] { "Little Quartet", "Night Drive", "Blue Window" })
             Assert.DoesNotContain($"title \"{title}\"", guide);
-        Assert.Contains("about 24 to 32 bars\n  suits a piece", guide.Replace("\r\n", "\n"));
+        Assert.Contains("about 24 to 32 bars\n  of 4/4 suits a piece", guide.Replace("\r\n", "\n"));
     }
 }

@@ -263,6 +263,37 @@ public static class CompositionChecks
                     + "hand's figure reach up toward middle C, and give the right hand's melody its harmony under it (thirds, sixths, "
                     + "chords on the strong beats).");
         }
+        // The left hand's figure into the melody, and spread wider than a hand's figure (owner's review
+        // 2026-10-29: a wedding piece's broken chords ran D2 to A4 every bar — on the melody's own note,
+        // and over it where the tune dipped; the guide said so, and was not heeded).
+        if (lefts.Count == 1 && rights.Count == 1)
+        {
+            var notesOf = (string part) => midi.Tracks.SelectMany(t => t.Notes.Where(n => (n.Part ?? t.Name) == part && n.Channel != 9)).ToList();
+            var (lh, rh) = (notesOf(lefts[0]), notesOf(rights[0]));
+            var barTicks = midi.BarTicks.Where(b => b > 0).Distinct().OrderBy(b => b).ToList();
+            int BarOf(int tick) => 1 + barTicks.Count(b => b <= tick);   // as the form plays
+            // A left-hand note at or above the lowest right-hand note sounding with it.
+            var into = lh.Where(n =>
+                {
+                    var with = rh.Where(r => r.StartTick < n.StartTick + n.DurationTicks && n.StartTick < r.StartTick + r.DurationTicks).ToList();
+                    return with.Count > 0 && n.Pitch >= with.Min(r => r.Pitch);
+                })
+                .Select(n => BarOf(n.StartTick)).Distinct().OrderBy(b => b).ToList();
+            int played = lh.Concat(rh).Select(n => BarOf(n.StartTick)).Distinct().Count();
+            if (into.Count >= HandsMeetFewestBars && into.Count >= played * HandsMeetShare)
+                findings.Add($"{lefts[0]}, {rights[0]}: in {into.Count} of {played} bars the left hand reaches the melody — the right hand's own note "
+                    + $"or above it (bars {string.Join(", ", into.Take(6))}{(into.Count > 6 ? ", …" : "")}, as the form plays them): the melody is "
+                    + "lost in its accompaniment. Keep the left hand's figure below the tune, round C3 up toward middle C.");
+            // A bar of the left hand's broken chords (single notes, four or more) wider than a twelfth.
+            var wide = lh.GroupBy(n => BarOf(n.StartTick))
+                .Where(g => g.GroupBy(n => n.StartTick).Count() >= 4 && g.GroupBy(n => n.StartTick).All(c => c.Count() == 1))
+                .Select(g => (Bar: g.Key, Low: g.Min(n => n.Pitch), High: g.Max(n => n.Pitch))).ToList();
+            var over = wide.Where(w => w.High - w.Low > Twelfth).ToList();
+            if (over.Count >= HandsMeetFewestBars && over.Count >= wide.Count * HandsMeetShare)
+                findings.Add($"{lefts[0]}: in {over.Count} of its {wide.Count} bars of broken chords the figure spans more than a twelfth "
+                    + $"({PartRanges.SpelledFromPitch(over[0].Low)} to {PartRanges.SpelledFromPitch(over[0].High)} in bar {over[0].Bar}): a hand's "
+                    + "figure stays within an octave and a half, climbing from its bass by the chord's tones and turning back.");
+        }
 
         // The length and the ending (owner's report 2026-10-27: the composed piano piece was 8 bars, two
         // sections of four, and its end "unnatural" — it began in E minor and stopped in G major).
@@ -315,6 +346,12 @@ public static class CompositionChecks
     // Semitones between the top of the left hand's tessitura and the bottom of the right hand's
     // past which the middle of the keyboard is empty: an octave.
     private const int WidestGapBetweenHands = 12;
+
+    // The left hand meeting the melody, or a figure spread past a twelfth, in this many bars and this
+    // share of them: a touch in passing is a pianist's, a habit is the figure's.
+    private const int HandsMeetFewestBars = 3;
+    private const double HandsMeetShare = 0.15;
+    private const int Twelfth = 19;
 
     // A label that names a hand, not an instrument.
     private static readonly System.Text.RegularExpressions.Regex HandLabel = new(
