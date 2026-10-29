@@ -77,11 +77,11 @@
         "canBeReferencedInPrompt": true,
         "tags": ["lilysharp", "lys", "music", "score", "notation", "compose", "song"],
         "userDescription": "Gives the AI the Lily# grammar, or the guide to composing a new piece in Lily#.",
-        "modelDescription": "Use this before composing music — a piece, a song, a score — or writing or changing Lily# (.lys) text, unless the Lily# instructions are already in your context. Lily# is the music notation language (.lys files) this editor engraves, plays and checks; it is NOT LilyPond. Topic \"grammar\" gives how Lily# is written; topic \"composing\" gives how to compose a new piece — its file, the tool to propose it with, and the composing guide. Asked to compose music here with no file named, compose it in Lily#.",
+        "modelDescription": "Use this before composing music — a piece, a song, a score — or writing or changing Lily# (.lys) text, unless the Lily# instructions are already in your context. Lily# is the music notation language (.lys files) this editor engraves, plays and checks; it is NOT LilyPond. Topic \"grammar\" gives how Lily# is written; topic \"composing\" gives how to compose a new piece — its file and first lines, the tool to propose it with, a starting point — and the composing guide; topic \"start\" gives how a new piece begins without the guide, for a chat that has the Lily# instructions. Asked to compose music here with no file named, compose it in Lily#.",
         "inputSchema": {
           "type": "object",
           "properties": {
-            "topic": { "type": "string", "enum": ["grammar", "composing"], "description": "\"grammar\": how Lily# is written. \"composing\": how to compose a new piece, with the composing guide." }
+            "topic": { "type": "string", "enum": ["grammar", "composing", "start"], "description": "\"grammar\": how Lily# is written. \"composing\": how to compose a new piece, with the composing guide. \"start\": how a new piece begins, and its starting point, alone." }
           },
           "required": ["topic"]
         }

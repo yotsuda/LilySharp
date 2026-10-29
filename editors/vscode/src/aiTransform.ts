@@ -285,19 +285,21 @@ function registerProposeScoreTool(context: vscode.ExtensionContext, deps: AiTran
 
 /** What Copilot's chat hands the guide tool. */
 interface ReadGuideInput {
-    /** 'grammar' — how Lily# is written; 'composing' — how to compose a new piece in it. */
+    /** 'grammar' — how Lily# is written; 'composing' — how to compose a new piece in it, with the
+     *  composing guide; 'start' — how a new piece begins and its starting point alone. */
     topic?: string;
 }
 
 /**
  * The Lily# instructions files Copilot is given with a .lys in hand (esbuild.js writes them), for a
  * chat with none (owner's request 2026-10-29: a piece asked for in the chat with no .lys open was
- * written without them): the grammar, or the composing guide with how a new piece begins — the
- * same steps Compose with AI in Chat's request gives (newPieceSteps), and a starting point drawn
- * at random. The file is the bundled one the instructions are made of where the built one is not.
+ * written without them): the grammar, or how a new piece begins — its first lines, the steps to
+ * propose it (newPieceSteps) and a starting point drawn at random — followed by the composing
+ * guide; or, for a chat that has the guide already (Compose with AI in Chat's), how it begins alone.
+ * The file is the bundled one the instructions are made of where the built one is not.
  */
 async function readGuide(deps: AiTransformDeps, input: ReadGuideInput | undefined): Promise<string> {
-    const composing = input?.topic === 'composing';
+    const topic = input?.topic;
     const built = (name: string) => {
         try {
             // The instructions file without its front matter (name, description, applyTo).
@@ -307,21 +309,22 @@ async function readGuide(deps: AiTransformDeps, input: ReadGuideInput | undefine
             return undefined;
         }
     };
-    if (!composing) {
+    if (topic !== 'composing' && topic !== 'start') {
         return built('lilysharp.instructions.md') ?? await loadGrammar(deps);
     }
     const hint = compositionHint();
     deps.log(`AI transform (chat, guide): ${hint}`);
     // The header Compose with AI in Chat writes, the request in it the musician's (owner's request
     // 2026-10-29: a piece composed this way began at `octave absolute`, saying nothing of itself).
-    return 'Compose a new piece of music in Lily# for a new .lys file — in the workspace folder (e.g. Composed.lys), '
-        + 'its absolute path; it is not on the disk until the musician saves it. Its first lines are these, the '
-        + 'request as the musician put it, on one line:\n'
+    const start = 'Compose the new piece in Lily# for the .lys file you were given — else a new one in the workspace '
+        + 'folder (e.g. Composed.lys), its absolute path; it is not on the disk until the musician saves it. Its first '
+        + 'lines are these, the request as the musician put it, on one line:\n'
         + newPieceHeader('<the request>', '\n').trimEnd() + '\n'
-        + 'Read the Lily# grammar first (lilysharp_readGuide, topic "grammar") unless you have it.\n'
+        + 'Read the Lily# grammar and the composing guide first (lilysharp_readGuide) unless you have them.\n'
         + newPieceSteps(deps.lysc?.())
-        + `${hint}\n\n`
-        + (built('lilysharp-compose.instructions.md') ?? await loadComposeGuide(deps));
+        + `${hint}\n`;
+    return topic === 'start' ? start
+        : start + '\n' + (built('lilysharp-compose.instructions.md') ?? await loadComposeGuide(deps));
 }
 
 /** The first lines of a piece composed in the chat — what it is and what was asked, then
@@ -525,9 +528,9 @@ async function proposeScore(deps: AiTransformDeps, input: ProposeScoreInput, tok
  * and opens a new, unsaved score for it (saved when the musician wants it kept), writes its first lines — `octave absolute` and `pitch concert`, so
  * the piece is written in the pitches it sounds (owner's report, the same day: a piece composed in
  * the chat was written absolute in a relative file, and its pitches flew off) — opens it, and hands
- * the request to the chat's agent with a starting point drawn at random. The chat is given the
- * grammar and the composing guide by the Lily# instructions file, a .lys being in hand. Lily#'s own
- * checks do not run there (the owner's choice, to see the chat compose without them first).
+ * the request to the chat's agent, which reads how to begin — the steps and a starting point drawn
+ * at random — from lilysharp_readGuide. The chat is given the grammar and the composing guide by
+ * the Lily# instructions files, a .lys being in hand.
  */
 async function runComposeInChat(deps: AiTransformDeps): Promise<void> {
     const description = await vscode.window.showInputBox({
@@ -559,15 +562,12 @@ async function runComposeInChat(deps: AiTransformDeps): Promise<void> {
     await vscode.workspace.applyEdit(start);
     await vscode.languages.setTextDocumentLanguage(untitled, 'lilysharp');
     await vscode.window.showTextDocument(untitled, { preview: false });
-    const hint = compositionHint();
-    deps.log(`AI transform (chat): ${hint}`);
-    // Proposed through Lily#'s tool, checked by the bundled compiler (owner's requests 2026-10-29):
-    // the steps the composing guide gives as well (newPieceSteps).
-    const query = `Compose a new piece of music in Lily# for ${file} — open in the editor, not saved yet, so not on the `
-        + `disk. Its first lines are:\n${header.trimEnd()}\n`
-        + newPieceSteps(deps.lysc?.())
-        + 'Follow the Lily# grammar and the Lily# composing guide (the Lily# instructions).\n'
-        + `The request: ${description.trim()}\n${hint}`;
+    // The request alone, and where to read how to begin (owner's request 2026-10-29: the steps and
+    // the starting point drawn at random come from the guide tool, said there as they are to a chat
+    // that asks with no .lys open; the grammar and the guide are the instructions a .lys brings).
+    const query = `Compose a new piece of music in Lily# for ${file} (open in the editor, not saved yet).\n`
+        + 'First read how to begin: lilysharp_readGuide, topic "start".\n'
+        + `The request: ${description.trim()}`;
     try {
         await vscode.commands.executeCommand('workbench.action.chat.open', { query, mode: 'agent' });
     } catch {

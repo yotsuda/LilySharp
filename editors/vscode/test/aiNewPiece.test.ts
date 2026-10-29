@@ -63,12 +63,13 @@ describe('the composing guide', () => {
         const header = transform.slice(transform.indexOf('function newPieceHeader('), transform.indexOf('function newPieceSteps('));
         assert.match(header, /`\/\/ Composed in Copilot's chat, \$\{new Date\(\)\.toISOString\(\)\.slice\(0, 10\)\}`,\s*`\/\/ Asked: \$\{asked\}`,\s*'',\s*'octave absolute',\s*'pitch concert',/);
         assert.match(fn, /executeCommand\('workbench\.action\.chat\.open', \{ query, mode: 'agent' \}\)/);
-        assert.match(fn, /const hint = compositionHint\(\);/);
         assert.ok(!/compositionFindings|checkCandidate/.test(fn));
+        // The request alone, and where to read how to begin (owner's request 2026-10-29): the steps
+        // and the starting point come from the guide tool's "start".
+        assert.match(fn, /'First read how to begin: lilysharp_readGuide, topic "start"\.\\n'/);
+        assert.ok(!/compositionHint|newPieceSteps/.test(fn));
         // The bundled lysc, for the agent to check its piece with, and Lily#'s tool to propose it
-        // through, written straight only without it (owner's requests 2026-10-29): the steps the
-        // composing guide gives as well.
-        assert.match(fn, /\+ newPieceSteps\(deps\.lysc\?\.\(\)\)/);
+        // through, written straight only without it (owner's requests 2026-10-29).
         const steps = transform.slice(transform.indexOf('function newPieceSteps('), transform.indexOf('async function writeWhole'));
         assert.match(steps, /check it with the Lily# compiler — \\`& "\$\{lysc\}" check <copy>\\` on a copy of your text/);
         assert.match(steps, /'Propose it, whole, with the lilysharp_proposeScore tool \(#proposeScore\), giving that path: it checks the '/);
@@ -141,19 +142,20 @@ describe('the composing guide', () => {
         const tags = '"tags": ["lilysharp", "lys", "music", "score", "notation", "compose", "song"]';
         assert.equal(pkg.split(tags).length - 1, 3);
         assert.match(pkg, /"modelDescription": "Use this before composing music — a piece, a song, a score — or writing or changing Lily# \(\.lys\) text/);
-        assert.match(pkg, /"enum": \["grammar", "composing"\]/);
+        assert.match(pkg, /"enum": \["grammar", "composing", "start"\]/);
         assert.match(transform, /lm\.registerTool<ReadGuideInput>\('lilysharp_readGuide'/);
         const fn = transform.slice(transform.indexOf('async function readGuide('), transform.indexOf('function newPieceSteps('));
         // The instructions files Copilot is given with a .lys in hand, their front matter left out.
         assert.match(fn, /return built\('lilysharp\.instructions\.md'\) \?\? await loadGrammar\(deps\);/);
-        assert.match(fn, /\(built\('lilysharp-compose\.instructions\.md'\) \?\? await loadComposeGuide\(deps\)\)/);
+        // "start" is how a new piece begins alone; "composing" is that and the composing guide.
+        assert.match(fn, /return topic === 'start' \? start\s*: start \+ '\\n' \+ \(built\('lilysharp-compose\.instructions\.md'\) \?\? await loadComposeGuide\(deps\)\);/);
         assert.match(fn, /\.replace\(\/\^---\\r\?\\n\[\\s\\S\]\*\?\\r\?\\n---\\r\?\\n\/, ''\)/);
         // How a new piece begins: the steps Compose with AI in Chat's request gives, and a starting point.
-        assert.match(fn, /\+ newPieceSteps\(deps\.lysc\?\.\(\)\)\s*\+ `\$\{hint\}\\n\\n`/);
+        assert.match(fn, /\+ newPieceSteps\(deps\.lysc\?\.\(\)\)\s*\+ `\$\{hint\}\\n`;/);
         // …beginning with the header the menu writes (owner's request 2026-10-29).
         assert.match(fn, /\+ newPieceHeader\('<the request>', '\\n'\)\.trimEnd\(\) \+ '\\n'/);
         const compose = transform.slice(transform.indexOf('async function runComposeInChat'), transform.indexOf('async function runCompose('));
-        assert.match(compose, /\+ newPieceSteps\(deps\.lysc\?\.\(\)\)/);
+        assert.match(compose, /lilysharp_readGuide, topic "start"/);
     });
     it('holds the recipe, and the grammar only points at it', () => {
         const grammar = fs.readFileSync(path.join(docs, 'GRAMMAR_FOR_LLM.md'), 'utf8');
