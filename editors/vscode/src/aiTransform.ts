@@ -318,8 +318,9 @@ async function readGuide(deps: AiTransformDeps, input: ReadGuideInput | undefine
     // 2026-10-29: a piece composed this way began at `octave absolute`, saying nothing of itself).
     const start = 'Compose the new piece in Lily# for the .lys file you were given — else a new one in the workspace '
         + 'folder (e.g. Composed.lys), its absolute path; it is not on the disk until the musician saves it. Its first '
-        + 'lines are these, the request as the musician put it, on one line:\n'
-        + newPieceHeader('<the request>', '\n').trimEnd() + '\n'
+        + 'lines are these, the request as the musician put it and what you made of it, each on one line, in the '
+        + 'language of the request:\n'
+        + newPieceHeader('<the request>', '<the piece you composed, in a sentence or two>', '\n').trimEnd() + '\n'
         + 'Read the Lily# grammar and the composing guide first (lilysharp_readGuide) unless you have them.\n'
         + newPieceSteps(deps.lysc?.())
         + `${hint}\n`;
@@ -327,13 +328,14 @@ async function readGuide(deps: AiTransformDeps, input: ReadGuideInput | undefine
         : start + '\n' + (built('lilysharp-compose.instructions.md') ?? await loadComposeGuide(deps));
 }
 
-/** The first lines of a piece composed in the chat — what it is and what was asked, then
- *  `octave absolute` and `pitch concert` — written by Compose with AI in Chat and asked for by the
- *  composing guide alike. */
-function newPieceHeader(asked: string, eol: string): string {
+/** The first lines of a piece composed in the chat — what it is, what was asked and what the AI
+ *  made of it (its "The AI:" line as Compose with AI writes it; owner's request 2026-10-29), then
+ *  `octave absolute` and `pitch concert` — the header the composing guide asks for. */
+function newPieceHeader(asked: string, note: string, eol: string): string {
     return [
         `// Composed in Copilot's chat, ${new Date().toISOString().slice(0, 10)}`,
         `// Asked: ${asked}`,
+        `// The AI: ${note}`,
         '',
         'octave absolute',
         'pitch concert',

@@ -63,7 +63,7 @@ describe('the composing guide', () => {
         // header the guide gives, and its proposal opens the piece.
         assert.ok(!/newPieceHeader|openTextDocument|applyEdit/.test(fn));
         const header = transform.slice(transform.indexOf('function newPieceHeader('), transform.indexOf('function newPieceSteps('));
-        assert.match(header, /`\/\/ Composed in Copilot's chat, \$\{new Date\(\)\.toISOString\(\)\.slice\(0, 10\)\}`,\s*`\/\/ Asked: \$\{asked\}`,\s*'',\s*'octave absolute',\s*'pitch concert',/);
+        assert.match(header, /`\/\/ Composed in Copilot's chat, \$\{new Date\(\)\.toISOString\(\)\.slice\(0, 10\)\}`,\s*`\/\/ Asked: \$\{asked\}`,\s*`\/\/ The AI: \$\{note\}`,\s*'',\s*'octave absolute',\s*'pitch concert',/);
         assert.match(fn, /executeCommand\('workbench\.action\.chat\.open', \{ query, mode: 'agent' \}\)/);
         assert.ok(!/compositionFindings|checkCandidate/.test(fn));
         // The request alone, and where to read how to begin (owner's request 2026-10-29): the steps
@@ -156,7 +156,9 @@ describe('the composing guide', () => {
         // How a new piece begins: the steps Compose with AI in Chat's request gives, and a starting point.
         assert.match(fn, /\+ newPieceSteps\(deps\.lysc\?\.\(\)\)\s*\+ `\$\{hint\}\\n`;/);
         // …beginning with the header the menu writes (owner's request 2026-10-29).
-        assert.match(fn, /\+ newPieceHeader\('<the request>', '\\n'\)\.trimEnd\(\) \+ '\\n'/);
+        // …and what the AI made of it, as Compose with AI's "The AI:" line (owner's request, the same day).
+        assert.match(fn, /\+ newPieceHeader\('<the request>', '<the piece you composed, in a sentence or two>', '\\n'\)\.trimEnd\(\) \+ '\\n'/);
+        assert.match(fn, /'lines are these, the request as the musician put it and what you made of it, each on one line, in the '/);
         // A few lines with every request, saying Lily# is here and where to read it — for a score
         // asked for with no .lys about, and aside otherwise (owner's report and decision 2026-10-29).
         const build = fs.readFileSync(path.join(__dirname, '..', '..', 'esbuild.js'), 'utf8');
