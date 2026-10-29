@@ -648,12 +648,8 @@
           "group": "file@1"
         },
         {
-          "command": "lilysharp.composeWithAi",
-          "group": "file@2"
-        },
-        {
           "command": "lilysharp.composeWithAiInChat",
-          "group": "file@3"
+          "group": "file@2"
         }
       ],
       "commandPalette": [

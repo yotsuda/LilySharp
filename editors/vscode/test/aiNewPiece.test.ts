@@ -53,7 +53,7 @@ describe('the composing guide', () => {
     it('is handed to Copilot\'s chat by a menu of its own, the file started in absolute octaves', () => {
         const pkg = fs.readFileSync(path.join(__dirname, '..', '..', 'package.json'), 'utf8');
         assert.match(pkg, /"command": "lilysharp\.composeWithAiInChat",\s*"category": "Lily#",[\s\S]*?"title": "Compose with AI in Chat…"/);
-        assert.match(pkg, /"command": "lilysharp\.composeWithAiInChat",\s*"group": "file@3"/);
+        assert.match(pkg, /"command": "lilysharp\.composeWithAiInChat",\s*"group": "file@2"/);
         assert.match(transform, /registerCommand\('lilysharp\.composeWithAiInChat', \(\) => runComposeInChat\(deps\)\)/);
         const fn = transform.slice(transform.indexOf('async function runComposeInChat'), transform.indexOf('async function runCompose('));
         assert.match(fn, /'octave absolute',\s*'pitch concert',/);
@@ -197,8 +197,9 @@ describe('a new piece in place of the score', () => {
         assert.match(pkg, /"command": "lilysharp\.composeWithAi",\s*"category": "Lily#",\s*"icon": "\$\(sparkle\)",\s*"title": "Compose with AI…",\s*"shortTitle": "Lily# Score, Composed with AI…"/);
         // Found where a piece is begun (owner's request 2026-10-29): File > New File… beside New
         // Score, the language server started for it when no .lys has started it yet.
-        // New Score first, then Compose (owner's request 2026-10-29): by order, not by title.
-        assert.match(pkg, /"command": "lilysharp\.newScore",\s*"group": "file@1"\s*\},\s*\{\s*"command": "lilysharp\.composeWithAi",\s*"group": "file@2"/);
+        // New Score first, then Compose (owner's request 2026-10-29): by order, not by title. The
+        // composer there is the chat's (owner's decision, the same day); this one is in the palette.
+        assert.match(pkg, /"command": "lilysharp\.newScore",\s*"group": "file@1"\s*\},\s*\{\s*"command": "lilysharp\.composeWithAiInChat",\s*"group": "file@2"\s*\}\s*\]/);
         assert.match(transform, /async function runCompose\(deps: AiTransformDeps, asked\?: string\): Promise<void> \{[\s\S]{0,300}?await deps\.ensureReady\?\.\(\);/);
         // A broken connection offers Try Again, the request in the box to send or shorten
         // (owner's report 2026-10-29: net::ERR_HTTP2_PROTOCOL_ERROR two minutes into a piece).
