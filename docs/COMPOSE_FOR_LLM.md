@@ -20,7 +20,8 @@ pitch is read relative to the one before it, and pitches written as absolute fly
 
 What makes it music:
 - **A title of its own**: `title "…"` at the top, words that fit its music and mood — never a
-  placeholder (`New Piece`, `Untitled`).
+  placeholder (`New Piece`, `Untitled`). **No `composer` line** unless the request asks for one
+  (a piece composed in Copilot's chat signed itself `composer "Lily#"`).
 - **Instruments**: every part gets its `instrument` (`violin`, `viola`, `cello`, `flute`, …) —
   without one it plays a piano. The octaves are LilyPond's whatever the instrument (`c'` is
   middle C, so a violin's open A is `a'`, a cello's open C is `c,`). Name the parts as a score prints them,

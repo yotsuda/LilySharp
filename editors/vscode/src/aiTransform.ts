@@ -68,6 +68,8 @@ export interface AiTransformDeps {
     renderNameOf?: (uri: vscode.Uri) => string | undefined;
     /** Shows the extension's log (the Output panel's Lily# Extension). */
     showLog?: () => void;
+    /** The lysc beside the bundled server, if the extension carries one. */
+    lysc?: () => string | undefined;
 }
 
 /** What a candidate's Play sounds (owner's request 2026-10-25: hear it before accepting): the
@@ -274,9 +276,17 @@ async function runComposeInChat(deps: AiTransformDeps): Promise<void> {
     await vscode.window.showTextDocument(await vscode.workspace.openTextDocument(target));
     const hint = compositionHint();
     deps.log(`AI transform (chat): ${hint}`);
+    // The compiler to check it with, where the extension carries one (owner's request 2026-10-29: the
+    // agent checked its piece by building Lily# from the sources this machine happens to hold).
+    const lysc = deps.lysc?.();
+    const check = lysc
+        ? `When the piece is written, check it with the Lily# compiler — \`& "${lysc}" check "${target.fsPath}"\` — and `
+          + 'fix every error and warning it reports, checking again until it reports none.\n'
+        : '';
     const query = `Compose a new piece of music in Lily# and write it, whole, into the open file ${path.basename(target.fsPath)}. `
         + 'It starts with `octave absolute` and `pitch concert`: keep both lines, and write every pitch as the pitch it sounds. '
-        + 'Follow the Lily# grammar and the composing guide in the Lily# instructions.\n'
+        + 'Follow the Lily# grammar and the Lily# composing guide (the Lily# instructions).\n'
+        + check
         + `The request: ${description.trim()}\n${hint}`;
     try {
         await vscode.commands.executeCommand('workbench.action.chat.open', { query, mode: 'agent' });

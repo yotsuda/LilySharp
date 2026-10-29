@@ -52,12 +52,23 @@ function copyGrammar() {
             '---',
             '',
             fs.readFileSync(src, 'utf8'),
-            '',
-            // Copilot's chat may be asked for a piece too: it has the composing guide as well.
-            fs.readFileSync(compose, 'utf8'),
         ].join('\n');
         fs.writeFileSync(path.join(outDir, 'lilysharp.instructions.md'), instructions);
         console.log('esbuild: wrote lilysharp.instructions.md');
+        // The composing guide, a file of its own (owner's request 2026-10-29: Copilot's agent could
+        // not read the two together — 103.7 KB, "too large to read at once" — and read pieces of it
+        // found by search; alone, some 13 KB, it is read whole).
+        const composing = [
+            '---',
+            "name: Lily# composing guide",
+            "description: 'How to compose a new piece in Lily# (.lys): what makes it music for its players, the kinds of music, the setting of words. Read it whole before composing.'",
+            "applyTo: '**/*.lys'",
+            '---',
+            '',
+            fs.readFileSync(compose, 'utf8'),
+        ].join('\n');
+        fs.writeFileSync(path.join(outDir, 'lilysharp-compose.instructions.md'), composing);
+        console.log('esbuild: wrote lilysharp-compose.instructions.md');
     } catch (e) {
         console.warn('esbuild: could not copy GRAMMAR_FOR_LLM.md (extension will use the compact fallback):', e.message);
     }

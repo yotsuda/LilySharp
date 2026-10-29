@@ -32,6 +32,9 @@
     "chatInstructions": [
       {
         "path": "./out/lilysharp.instructions.md"
+      },
+      {
+        "path": "./out/lilysharp-compose.instructions.md"
       }
     ],
     "languages": [

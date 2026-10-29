@@ -60,6 +60,9 @@ describe('the composing guide', () => {
         assert.match(fn, /executeCommand\('workbench\.action\.chat\.open', \{ query, mode: 'agent' \}\)/);
         assert.match(fn, /const hint = compositionHint\(\);/);
         assert.ok(!/compositionFindings|checkCandidate/.test(fn));
+        // The bundled lysc, for the agent to check its piece with (owner's request 2026-10-29).
+        assert.match(fn, /const lysc = deps\.lysc\?\.\(\);/);
+        assert.match(fn, /check it with the Lily# compiler — \\`& "\$\{lysc\}" check "\$\{target\.fsPath\}"\\`/);
     });
     it('holds the recipe, and the grammar only points at it', () => {
         const grammar = fs.readFileSync(path.join(docs, 'GRAMMAR_FOR_LLM.md'), 'utf8');
@@ -77,7 +80,13 @@ describe('the composing guide', () => {
     it('is bundled beside the grammar, and given to Copilot\'s chat with it', () => {
         const build = fs.readFileSync(path.join(__dirname, '..', '..', 'esbuild.js'), 'utf8');
         assert.match(build, /fs\.copyFileSync\(compose, path\.join\(outDir, 'COMPOSE_FOR_LLM\.md'\)\);/);
-        assert.match(build, /fs\.readFileSync\(compose, 'utf8'\),\s*\]\.join/);
+        // Its own instructions file (owner's request 2026-10-29: the two together, 103.7 KB, were too
+        // large for Copilot's agent to read at once).
+        assert.match(build, /fs\.writeFileSync\(path\.join\(outDir, 'lilysharp-compose\.instructions\.md'\), composing\);/);
+        assert.doesNotMatch(build, /fs\.readFileSync\(src, 'utf8'\),\s*'',\s*\/\/[^\n]*\n\s*fs\.readFileSync\(compose/);
+        const pkg = fs.readFileSync(path.join(__dirname, '..', '..', 'package.json'), 'utf8');
+        assert.match(pkg, /"path": "\.\/out\/lilysharp-compose\.instructions\.md"/);
+        assert.match(fs.readFileSync(path.join(docs, 'COMPOSE_FOR_LLM.md'), 'utf8'), /\*\*No `composer` line\*\* unless the request asks for one/);
     });
 });
 

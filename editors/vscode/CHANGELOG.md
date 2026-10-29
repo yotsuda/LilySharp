@@ -74,7 +74,11 @@ All notable changes to the Lily# VS Code extension are documented here.
   `pitch concert`), opens it and hands the request — with a starting point drawn at random — to
   Copilot's chat agent, where the model's thinking and its tries are seen and a stronger model can be
   picked. The chat is given the grammar and the composing guide; Lily#'s own checks do not run there
-  (yet). Compose with AI stays as it was.
+  (yet). Compose with AI stays as it was. The request names the bundled `lysc` to check the piece
+  with until it reports nothing; the composing guide is an instructions file of its own (with the
+  grammar, 103.7 KB, it was too large for the agent to read at once, and was read in pieces found
+  by search); and the guide says to write no `composer` line unasked (a chat piece signed itself
+  `composer "Lily#"`).
 - **A new piece starts in absolute octaves, in Copilot's chat too**: the composing guide — which the
   chat is given as well — says to put `octave absolute` at the top before anything else; a piece
   composed in the chat was written as absolute in a relative file, and its pitches flew off.
@@ -2011,7 +2015,11 @@ reader is offered its update when a scan is read.
   `pitch concert`), opens it and hands the request — with a starting point drawn at random — to
   Copilot's chat agent, where the model's thinking and its tries are seen and a stronger model can be
   picked. The chat is given the grammar and the composing guide; Lily#'s own checks do not run there
-  (yet). Compose with AI stays as it was.
+  (yet). Compose with AI stays as it was. The request names the bundled `lysc` to check the piece
+  with until it reports nothing; the composing guide is an instructions file of its own (with the
+  grammar, 103.7 KB, it was too large for the agent to read at once, and was read in pieces found
+  by search); and the guide says to write no `composer` line unasked (a chat piece signed itself
+  `composer "Lily#"`).
 - **A new piece starts in absolute octaves, in Copilot's chat too**: the composing guide — which the
   chat is given as well — says to put `octave absolute` at the top before anything else; a piece
   composed in the chat was written as absolute in a relative file, and its pitches flew off.

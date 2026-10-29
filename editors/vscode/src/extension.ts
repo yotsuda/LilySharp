@@ -851,6 +851,8 @@ export function activate(context: vscode.ExtensionContext) {
         },
         renderNameOf: (uri: vscode.Uri) => selectedRenders.get(uri.toString()) || undefined,
         showLog: () => outputChannel.show(true),
+        // The lysc beside the bundled server, for Compose with AI in Chat to tell the agent of.
+        lysc: bundledLysc,
     };
     registerAiTransform(context, aiDeps);
     // Second mode: validated ghost-text "next measure" completion (opt-in).
