@@ -5019,42 +5019,69 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             // bar). The earlier y-band sort could merge two systems through
             // ledger-note ys and then x-sorting interleaved their copies out of
             // time order.
-            // ⚠️ THE BAR, NOT A Y GAP, tells two systems apart (owner's report
-            // 2026-10-29: in "form { A B A }" on one staff, playing A lit both
-            // copies — each began a system, at one x, and the systems were less
-            // than the 12 apart the gap asked for). The bar is the preview's
-            // bar-box the element's left edge stands in; the gap stays where
-            // there are none.
-            const boxes = Array.from(svgContainer.querySelectorAll('rect.bar-box'))
-                .map(r => r.getBoundingClientRect());
-            const barOf = (el) => {
-                if (boxes.length === 0) return -1;
+            // ⚠️ WHERE IT IS DRAWN ON THE PAGE, NOT ITS NEIGHBOUR IN THE DOM, makes
+            // a copy (owner's reports 2026-10-29: in "form { A B A }" playing A lit
+            // both copies, and a song's playback shook the view between pages).
+            // getBBox is in the element's own frame and every system has its own,
+            // so copies on two systems at one x stood 0 apart and were one copy;
+            // and a page draws some heads again in its overlay group after its
+            // systems (a hi-hat's), so the DOM is not in time order. A copy is the
+            // elements in one bar-box (in time order, the DOM's order of the bars)
+            // within 6 staff spaces of each other across; the old gaps stay for a
+            // page with no bar-boxes.
+            const bars = Array.from(svgContainer.querySelectorAll('rect.bar-box'));
+            if (bars.length === 0) return clusterByGaps(matches);
+            const boxes = bars.map(r => r.getBoundingClientRect());
+            let unit = 1;
+            try { const b0 = bars[0].getBBox(); if (b0.width > 0) unit = boxes[0].width / b0.width; } catch (e) { /* non-SVG */ }
+            const byBar = new Map();
+            const loose = [];
+            let last = null;
+            for (const el of matches) {
                 const b = el.getBoundingClientRect();
                 const x = b.left + 0.5, y = (b.top + b.bottom) / 2;
+                // The bar whose column holds it, the nearest of them up or down: a box
+                // spans the staff lines only, and a note under the staff is outside it.
+                let bar = -1, nearest = Infinity;
                 for (let i = 0; i < boxes.length; i++) {
                     const r = boxes[i];
-                    if (x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) return i;
+                    if (x < r.left || x > r.right) continue;
+                    const d = y < r.top ? r.top - y : y > r.bottom ? y - r.bottom : 0;
+                    if (d < nearest) { nearest = d; bar = i; }
                 }
-                return -1;
-            };
+                // In no bar's column (a mark beyond the staves): with the element before it.
+                if (bar < 0) { if (last) last.els.push(el); else loose.push(el); continue; }
+                let list = byBar.get(bar);
+                if (!list) byBar.set(bar, list = []);
+                let inst = list.find(c => Math.abs(c.x - b.left) <= 6 * unit);
+                if (!inst) { inst = { x: b.left, els: [] }; list.push(inst); }
+                inst.els.push(el);
+                last = inst;
+            }
+            const instances = [];
+            for (const bar of Array.from(byBar.keys()).sort((p, q) => p - q)) {
+                for (const c of byBar.get(bar).sort((p, q) => p.x - q.x)) instances.push(c.els);
+            }
+            if (loose.length > 0) {
+                if (instances.length > 0) instances[0].unshift.apply(instances[0], loose);
+                else instances.push(loose);
+            }
+            return instances;
+        }
+        // The copies told apart by gaps in DOM order: a page drawn without bar-boxes.
+        function clusterByGaps(matches) {
             const instances = [];
             let inst = null;
             let prev = null;
             for (const el of matches) {
                 let x = 0, y = 0;
                 try { const b = el.getBBox(); x = b.x; y = b.y; } catch (e) { /* non-SVG */ }
-                // An element outside every bar (a mark below the staves) stays with the one before.
-                let bar = barOf(el);
-                if (bar < 0 && prev) bar = prev.bar;
-                const apart = !prev ? true
-                    : bar >= 0 && prev.bar >= 0 ? bar !== prev.bar || Math.abs(x - prev.x) > 6
-                    : Math.abs(x - prev.x) > 6 || Math.abs(y - prev.y) > 12;
-                if (!inst || apart) {
+                if (!inst || Math.abs(x - prev.x) > 6 || Math.abs(y - prev.y) > 12) {
                     inst = [];
                     instances.push(inst);
                 }
                 inst.push(el);
-                prev = { x: x, y: y, bar: bar };
+                prev = { x: x, y: y };
             }
             return instances;
         }

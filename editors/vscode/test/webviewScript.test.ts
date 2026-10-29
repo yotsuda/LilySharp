@@ -444,35 +444,45 @@ function pageFunction(name: string, context: Record<string, unknown>): unknown {
     return new vm.Script('(' + html.slice(at, close) + ')').runInNewContext({ Math, Infinity, Array, ...context });
 }
 
-// Owner's report 2026-10-29: in `form { A B A }` on one staff, playing A lit both of its printed
-// copies — each began a system, at one x, and the systems were closer than the 12 a y gap asked
-// for. The copies are told apart by the bar each stands in.
+// Owner's reports 2026-10-29: in `form { A B A }` playing A lit both of its printed copies, and a
+// song's playback shook the view between pages. getBBox is in each system's own frame, so copies
+// on two systems at one x stood 0 apart; and a page draws a hi-hat's heads again in its overlay
+// after its systems, so the DOM is not in time order. A copy is what stands in one bar's column,
+// close across; the copies come in the order of the bars.
 describe('the preview tells a note\'s printed copies apart by their bars', () => {
     const rect = (left: number, top: number, w: number, h: number) => ({ left, top, right: left + w, bottom: top + h, width: w, height: h });
-    // Two systems, two bars each; the second system 10 below the first.
-    const bars = [rect(0, 0, 50, 8), rect(50, 0, 50, 8), rect(0, 10, 50, 8), rect(50, 10, 50, 8)];
-    const el = (x: number, y: number) => ({
-        getBBox: () => ({ x, y }),
+    // Two systems, two bars each, a box over each bar's staff lines; the second system 20 below.
+    const bars = [rect(0, 0, 50, 4), rect(50, 0, 50, 4), rect(0, 20, 50, 4), rect(50, 20, 50, 4)];
+    // An element at (x, y) on the page; its own frame's y is the same on every system (local).
+    const el = (x: number, y: number, local = y % 20) => ({
+        id: x + ',' + y,
+        getBBox: () => ({ x, y: local }),
         getBoundingClientRect: () => rect(x, y, 1, 1),
     });
+    const clusterByGaps = pageFunction('clusterByGaps', {});
     const cluster = (boxes: ReturnType<typeof rect>[]) => pageFunction('clusterInstances', {
-        svgContainer: { querySelectorAll: () => boxes.map(b => ({ getBoundingClientRect: () => b })) },
-    }) as (m: unknown[]) => unknown[][];
-    // The sizes of the copies, as an array of this realm (the function's are the vm's).
-    const sizes = (copies: unknown[][]) => Array.from(copies, c => c.length);
+        svgContainer: { querySelectorAll: () => boxes.map(b => ({ getBoundingClientRect: () => b, getBBox: () => ({ width: b.width }) })) },
+        clusterByGaps,
+    }) as (m: unknown[]) => { id: string }[][];
+    // The copies by their elements, as arrays of this realm (the function's are the vm's).
+    const ids = (copies: { id: string }[][]) => Array.from(copies, c => Array.from(c, e => e.id).join(' '));
 
-    it('splits two copies at one x on systems closer than the old gap', () => {
-        // A chord (two heads) at the start of each system: two copies, not one.
-        const copies = cluster(bars)([el(5, 2), el(5, 3), el(5, 12), el(5, 13)]);
-        assert.deepEqual(sizes(copies), [2, 2]);
+    it('splits two copies at one x on two systems, a note under the staff with its bar', () => {
+        // A chord at the start of each system, its lower head under the staff lines.
+        assert.deepEqual(ids(cluster(bars)([el(5, 2), el(5, 6), el(5, 22), el(5, 26)])), ['5,2 5,6', '5,22 5,26']);
     });
-    it('splits a phrase written twice in one bar, and keeps a mark outside the bars with its note', () => {
-        assert.deepEqual(sizes(cluster(bars)([el(5, 2), el(30, 2)])), [1, 1]);
-        assert.deepEqual(sizes(cluster(bars)([el(5, 2), el(5, 9), el(55, 2)])), [2, 1]);
+    it('puts the copies in the order of the bars, whatever the order of the DOM', () => {
+        // A page's systems, then its overlay drawing the same heads again: four bars, four copies.
+        const page = [el(5, 2), el(55, 2), el(5, 22), el(55, 22), el(6, 2), el(56, 2), el(6, 22), el(56, 22)];
+        assert.deepEqual(ids(cluster(bars)(page)), ['5,2 6,2', '55,2 56,2', '5,22 6,22', '55,22 56,22']);
+    });
+    it('splits a phrase written twice in one bar, and keeps a mark beyond the bars with its note', () => {
+        assert.deepEqual(ids(cluster(bars)([el(5, 2), el(30, 2)])), ['5,2', '30,2']);
+        assert.deepEqual(ids(cluster(bars)([el(5, 2), el(120, 2), el(55, 2)])), ['5,2 120,2', '55,2']);
     });
     it('falls back to the gaps where the page draws no bars', () => {
-        assert.deepEqual(sizes(cluster([])([el(5, 2), el(5, 12)])), [2]);
-        assert.deepEqual(sizes(cluster([])([el(5, 2), el(5, 30)])), [1, 1]);
+        assert.deepEqual(ids(cluster([])([el(5, 2), el(5, 12, 12)])), ['5,2 5,12']);
+        assert.deepEqual(ids(cluster([])([el(5, 2), el(5, 30, 30)])), ['5,2', '5,30']);
     });
 });
 
