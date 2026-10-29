@@ -48,6 +48,12 @@ describe('the composing guide', () => {
         assert.match(guide, /the chord just before a closing I is V \(or V7\), with IV or ii before it — never V, then IV,\s+then I/);
         assert.match(guide, /The first half's last melody note is NOT the tonic/);
     });
+    // Owner's review 2026-10-29: a wedding piece's B had a left hand of bare fifths and closed on vi.
+    it('says a chord sounds its third, and a middle section ends on V', () => {
+        const guide = fs.readFileSync(path.join(docs, 'COMPOSE_FOR_LLM.md'), 'utf8');
+        assert.match(guide, /A chord\s+sounds its third — the accompaniment has it, or the melody does on the beat/);
+        assert.match(guide, /\(the B of A–B–A, a bridge\) ends on the home key's V/);
+    });
     // Owner's report 2026-10-29: a piece composed in Copilot's chat was written as absolute in a
     // relative file, and its pitches flew off — the guide, which the chat is given too, says to start absolute.
     it('says a new piece starts in absolute octaves', () => {

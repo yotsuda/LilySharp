@@ -45,12 +45,17 @@ What makes it music:
   — the first stops open (on V, or on the chord that leads back: a jazz turnaround, a rock IV or
   ♭VII), the second closes on I. The first half's last melody note is NOT the tonic: a tune
   that lands on its home note at bar 4 has ended, and its second half only ends again. Each
-  phrase rises to a high note and falls to its cadence.
+  phrase rises to a high note and falls to its cadence. A middle section that leads back to the
+  first (the B of A–B–A, a bridge) ends on the home key's V, so the return is heard arriving —
+  not closed in its own key (vi, a relative minor) with the return simply starting after it.
 - **One climax**: the piece rises to one high point — a bar and a note, the loudest place — and the
   dynamics lead there and away. In a song it is the chorus's high note, strongest its last time.
 - **Harmony first**: each phrase has its chord progression in the key, and every part is
   written from it — the bass on the chords' roots and inversions, the inner parts on their
-  tones, the melody's strong beats on chord tones and its passing notes between them.
+  tones, the melody's strong beats on chord tones and its passing notes between them. A chord
+  sounds its third — the accompaniment has it, or the melody does on the beat: a left hand of bare
+  fifths (`b, fis`) is hollow and leaves the chord unsaid (major or minor? V of the relative
+  minor needs its raised third, `ais` under B minor), unless a drone or a power chord is meant.
 - **A theme**: a motif of a bar or two that the piece is made of — a melody's motif, a song's hook,
   a band's riff, a jazz head's opening figure — with a rhythm of its own, not even quarters —
   stated, repeated, sequenced, varied, and back near the end. Decide it in notes
