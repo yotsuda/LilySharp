@@ -576,7 +576,7 @@ public class ShapeChordItemTests
         Assert.Contains("<< >>", ShapeChordConverter.ToNotes(spread, spread.IndexOf("diagram", StringComparison.Ordinal)).Error);
     }
 
-    /// <summary>Right-click a &lt;…&gt; chord → "Convert to Guitar Diagram" (owner's decision
+    /// <summary>Right-click a &lt;…&gt; chord → "Add Guitar Diagram" (owner's decision
     /// 2026-10-31): the chord stays and gains @diagram(SHAPE), the shape a bare @diagram draws;
     /// LYS1057 warns when the notes later leave the shape, and its fix writes the chord's own.</summary>
     [Fact]

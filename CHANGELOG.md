@@ -58,7 +58,7 @@ workflow attaches that section to the GitHub Release verbatim.
   marks the frame there needs: `diagram(133211)4` → `<f,\6 c\5 f'\4 a'\3 c'\2 f''\1>4`. A
   `chord(…)` item's name stays as `@chord(F)`; the diagram does not. The file must sound the same
   afterwards, or nothing changes. Not inside `<< >>`.
-- `[editor]` **Right-click a `<…>` chord → "Convert to Guitar Diagram".** The chord stays and gains
+- `[editor]` **Right-click a `<…>` chord → "Add Guitar Diagram".** The chord stays and gains
   `@diagram(SHAPE)`, the shape a bare `@diagram` draws: `<g b d' f'>1` → `<g b d' f'>1@diagram(xx5431)`.
   With the caret on the shape, Ctrl+Shift+Up/Down walks the other ways to hold the same notes
   (*fingering 2 of 3*), the notes unchanged.

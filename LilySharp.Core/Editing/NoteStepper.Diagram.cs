@@ -24,7 +24,7 @@ public static partial class NoteStepper
 {
     /// <summary>
     /// Ctrl+Shift+Up/Down with the caret on the shape of an <c>@diagram(SHAPE)</c> over a
-    /// <c>&lt;…&gt;</c> chord (owner's decision 2026-10-31, with "Convert to Guitar Diagram"): the
+    /// <c>&lt;…&gt;</c> chord (owner's decision 2026-10-31, with "Add Guitar Diagram"): the
     /// other ways a hand holds the SAME notes, the one a player reaches for first
     /// (<see cref="ChordFingering.Fingerings"/>) — the notes never change, only the strings and
     /// the frets. A shape that is none of them (the notes edited since; LYS1057) steps to the

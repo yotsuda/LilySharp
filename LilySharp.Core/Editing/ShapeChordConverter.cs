@@ -37,7 +37,7 @@ namespace LilySharp.Core.Editing;
 /// played it at, and the marks are what that took from the frame — relative or absolute alike.</item>
 /// <item>The NAME a <c>chord(…)</c> item printed stays: <c>&lt;…&gt;@chord(F)</c>. The diagram does
 /// not (owner's decision 2026-10-31: the notes are what was asked for, and a diagram left over
-/// them would not follow an edit); "Convert to Guitar Diagram" goes back.</item>
+/// them would not follow an edit); "Add Guitar Diagram" goes back.</item>
 /// <item>The file must sound the same afterwards (<see cref="OctaveModeConverter.SoundSignature"/>),
 /// or nothing changes.</item>
 /// </list>
@@ -138,7 +138,7 @@ public static class ShapeChordConverter
     }
 
     /// <summary>
-    /// Right-click → "Convert to Guitar Diagram" on a <c>&lt;…&gt;</c> chord (owner's decision
+    /// Right-click → "Add Guitar Diagram" on a <c>&lt;…&gt;</c> chord (owner's decision
     /// 2026-10-31): the chord stays as written and gains <c>@diagram(SHAPE)</c> — the shape a bare
     /// <c>@diagram</c> would draw (<see cref="ChordFingering"/>, on the part's fretted strings, else
     /// the guitar's), written out so it shows in the source and the step keys can walk it. A bare

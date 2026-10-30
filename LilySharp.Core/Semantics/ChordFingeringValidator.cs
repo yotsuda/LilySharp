@@ -118,7 +118,7 @@ internal sealed class ChordFingeringValidator : ISemanticValidator
 
     /// <summary>
     /// LYS1057: an <c>@diagram(SHAPE)</c> on a <c>&lt;…&gt;</c> chord of a fretted part whose shape does
-    /// not sound the chord's notes (owner's decision 2026-10-31: "Convert to Guitar Diagram" writes
+    /// not sound the chord's notes (owner's decision 2026-10-31: "Add Guitar Diagram" writes
     /// the shape out, and an edit of the notes afterwards would leave it behind). Every note shifted
     /// alike is the same chord — a capo, a transposing part. The fix named is the chord's own shape,
     /// the one a bare <c>@diagram</c> draws.

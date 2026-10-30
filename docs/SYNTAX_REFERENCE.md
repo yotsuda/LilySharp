@@ -2444,7 +2444,7 @@ position, the fewest fingers). A chord no hand can hold draws none, and a frette
 (LYS1055, naming a voicing of its notes that can be held). On a single note a bare `@diagram`
 draws nothing: its shape must be written.
 
-**Right-click a `<…>` chord → *Convert to Guitar Diagram*** writes that shape out:
+**Right-click a `<…>` chord → *Add Guitar Diagram*** writes that shape out:
 `<g b d' f'>1` becomes `<g b d' f'>1@diagram(xx5431)` (a bare `@diagram` there is the one
 written out). The notes stay as they are; the shape shows in the source, and `Ctrl+Shift+Up` walks
 it. On a fretted part, an `@diagram(SHAPE)` on a `<…>` chord whose shape does not sound the chord's
@@ -2846,7 +2846,7 @@ diagram(C xx-10-12-13-12)2.~ diagram(C xx-10-12-13-12)4 |  // frets 10-15 in the
   names its chord (*this shape is **C***), and the quick fix writes the name in. Right-click →
   *Convert to Chord Notes <…>* writes the item out as the `<…>` chord it plays, with its octave
   marks and string numbers — a `chord(…)` item's name kept as `@chord(F)`, no diagram; the file
-  must sound the same afterwards, or nothing changes. The way back is *Convert to Guitar Diagram*
+  must sound the same afterwards, or nothing changes. The way back is *Add Guitar Diagram*
   on the `<…>` chord (*Chord diagrams* above).
 - `chord` and `diagram` are reserved in music only: a phrase cannot be named either (a part can).
 

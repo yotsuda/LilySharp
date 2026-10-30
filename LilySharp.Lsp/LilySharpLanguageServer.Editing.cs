@@ -420,14 +420,14 @@ public sealed partial class LilySharpLanguageServer
 
     internal const string ConvertShapeToNotesTitle = "Convert to Chord Notes <…>";
 
-    /// <summary>The command "Convert to Guitar Diagram" runs on a <c>&lt;…&gt;</c> chord — the
+    /// <summary>The command "Add Guitar Diagram" runs on a <c>&lt;…&gt;</c> chord — the
     /// extension's, which asks the server for the mark (lilysharp/addChordDiagram,
     /// <see cref="LilySharp.Core.Editing.ShapeChordConverter.AddDiagram"/>) and applies it.</summary>
     internal const string AddChordDiagramCommand = "lilysharp.addChordDiagram";
 
-    internal const string AddChordDiagramTitle = "Convert to Guitar Diagram";
+    internal const string AddChordDiagramTitle = "Add Guitar Diagram";
 
-    /// <summary>On a <c>&lt;…&gt;</c> chord with no written diagram, "Convert to Guitar Diagram"
+    /// <summary>On a <c>&lt;…&gt;</c> chord with no written diagram, "Add Guitar Diagram"
     /// (owner's decision 2026-10-31): the chord gains <c>@diagram(SHAPE)</c>. Offered on sight,
     /// worked out when picked (the server plays the file to find the notes).</summary>
     internal static CodeAction? ChordDiagramAction(Document doc, Uri uri, int offset)

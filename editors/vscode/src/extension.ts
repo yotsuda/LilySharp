@@ -1173,7 +1173,7 @@ export function activate(context: vscode.ExtensionContext) {
     }));
 
     // "Convert to Chord Notes" stands in the context menu only on a chord(…) / diagram(…) item,
-    // "Convert to Guitar Diagram" only on a <…> chord.
+    // "Add Guitar Diagram" only on a <…> chord.
     let wasOnShapeItem = false, wasOnAngleChord = false;
     context.subscriptions.push(
         vscode.window.onDidChangeTextEditorSelection(event => {
