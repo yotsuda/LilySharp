@@ -312,6 +312,12 @@ public class CompositionChecksTests
         Assert.DoesNotContain(running, f => f.StartsWith("A tune is played"));
         Assert.Contains(running, f => f.StartsWith("gtr, the melody: 85% of its notes are eighth notes"));
         Assert.Contains(running, f => f.StartsWith("gtr, the melody: 8 of its 8 bars have the same rhythm"));
+        // Not let off as a hymn's even pace (owner's trial 2026-10-30: a rock guitar kept its eighths "for the drive").
+        Assert.All(running.Where(f => f.StartsWith("gtr, the melody: ")), f =>
+        {
+            Assert.Contains("a band's drive is its drums' and bass's eighths under the tune", f);
+            Assert.DoesNotContain("a hymn", f);
+        });
         // Sung: the words are the tune.
         Assert.DoesNotContain(CompositionChecks.Of(chords.Replace("score {", "lyrics words sings gtr { la }\nscore {")),
             f => f.StartsWith("A tune is played"));

@@ -224,7 +224,7 @@ public static class CompositionChecks
                 findings.Add(melody
                     ? $"{part}, the melody: {common.Count() * 100 / onsets.Count}% of its notes are {common.Key}s — a tune lives on its "
                         + "rhythm: long notes at its peaks, shorter ones leading to them, dotted rhythms, a note tied over the beat, a "
-                        + "rest to breathe; give its theme a rhythm of its own and vary it from phrase to phrase" + EvenPaceKept
+                        + "rest to breathe; give its theme a rhythm of its own and vary it from phrase to phrase" + (band ? BandTuneSings : EvenPaceKept)
                     : $"{part}: {common.Count() * 100 / onsets.Count}% of its notes are {common.Key}s — mix long and short notes, "
                         + "rests, dotted rhythms; give the line a rhythm of its own.");
             // One bar's rhythm on most of the melody's bars (owner's trial 2026-10-29: a pop song sang
@@ -234,7 +234,7 @@ public static class CompositionChecks
                 && alike >= inBars * SameRhythmShare)
                 findings.Add($"{part}, the melody: {alike} of its {inBars} bars have the same rhythm — a pattern poured full, not a line: "
                     + "let the rhythm follow the words and the phrase — a longer note at a phrase's end and a breath only there, "
-                    + "a phrase that runs on over the bar line, the rhythm changing from section to section" + EvenPaceKept);
+                    + "a phrase that runs on over the bar line, the rhythm changing from section to section" + (band ? BandTuneSings : EvenPaceKept));
         }
 
         // A melody of leaps alone (owner's trial 2026-10-30: told it had no tune, a rock guitar broke
@@ -677,6 +677,12 @@ public static class CompositionChecks
     // melody's findings say so, and leave the choice to the composer.
     private const string EvenPaceKept = " — unless an even pace is the music's own character, as in a hymn, a chorale "
         + "or a march: then keep it.";
+
+    // A band's tune is not let off so (owner's trial 2026-10-30: told of its eighths, a rock guitar
+    // kept 95% of them "for the drive", sixty bars without a rest or a long note).
+    private const string BandTuneSings = " — a band's drive is its drums' and bass's eighths under the tune: the tune over "
+        + "them sings in longer notes, held over the beat and breathing between phrases, a hook in a rhythm of its own; "
+        + "only a solo may run on in eighths.";
 
     // A melody whose bars mostly share one rhythm: half of them or more, over 8 bars at least (a
     // theme's rhythm comes back often, but not in every other bar).
