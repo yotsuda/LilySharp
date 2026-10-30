@@ -911,6 +911,28 @@ public class StepRequestTests
         Assert.Empty(none.Pitches);
     }
 
+    /// <summary>Owner's request 2026-10-30: a note selected on a percussion staff was silent — the
+    /// caret found pitched notes only. A drum note sounds its drum (General MIDI's key) on the
+    /// kit's channel (timbre 9); a drum chord, its drums together; a drums { } chart's hits too.</summary>
+    [Fact]
+    public void ADrumNote_AnswersTheAudition_WithItsDrum()
+    {
+        var At = (string text, string mark) => Open(text).AuditionAt(new AuditionAtParams
+        {
+            TextDocument = new TextDocumentIdentifier { Uri = DocUri },
+            Offset = text.IndexOf(mark, StringComparison.Ordinal) + 1,
+        });
+        const string kit = "part kit { clef percussion }\nsection A {\n  kit { voice { hh8 hh hh hh <hh sn> hh hh hh | } { bd4 sn bd sn | } }\n}\nform { A }\n";
+        var hat = At(kit, "hh8");
+        Assert.Equal("drum", hat.Kind);
+        Assert.Equal([42], hat.Pitches);      // a closed hi-hat
+        Assert.Equal(9, hat.Timbre);
+        Assert.Equal([38, 42], At(kit, "hh sn>").Pitches);
+        Assert.Equal([36], At(kit, "bd4").Pitches);
+        const string chart = "part kit { clef percussion }\nsection A {\n  kit { drums { { hh8 hh hh hh hh hh hh hh | } { bd4 sn bd sn | } } }\n}\nform { A }\n";
+        Assert.Equal([38], At(chart, "sn bd sn").Pitches);
+    }
+
     // ---------------------------------------------------------------- a percent mark
 
     [Fact]

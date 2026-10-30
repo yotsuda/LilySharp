@@ -191,6 +191,9 @@ public static partial class NoteStepper
         /// <summary>A navigation mark — <c>segno</c>, <c>dc al fine</c> … — in a form or in music
         /// (NoteStepper.Words.cs).</summary>
         NavigationMark,
+        /// <summary>A drum note (<c>hh8</c>, <c>bd4</c>) — heard, not stepped: only the audition
+        /// finds it (<see cref="AuditionAt"/>).</summary>
+        Drum,
     }
 
     /// <summary>The kinds whose step changes a setting, not a sound — the audition skips them.</summary>
@@ -576,7 +579,17 @@ public static partial class NoteStepper
     public static Audition? AuditionAt(string text, SyntaxTree tree, int offset, SyntaxTree? sounding = null,
         bool includeStretch = false)
     {
-        if (TargetAt(text, tree, offset) is not { } target || IsSilent(target.Kind))
+        var found = TargetAt(text, tree, offset);
+        // A drum note sounds its drum on the kit's channel (owner's request 2026-10-30: a note
+        // selected on a percussion staff was silent — the caret found only pitched notes). Its
+        // marks stay theirs, as a pitched note's do.
+        if (found is null or { Kind: TargetKind.Barline or TargetKind.Chord or TargetKind.Member or TargetKind.Note }
+            && DrumNoteAt(tree, offset) is { } drum)
+        {
+            var hit = DrumVoice(drum, sounding ?? tree);
+            return hit.Pitches.IsEmpty ? null : new Audition(new Target(TargetKind.Drum, drum), hit.Pitches, hit.Timbre, hit.Program);
+        }
+        if (found is not { } target || IsSilent(target.Kind))
             return null;
         // A chords-row entry sounds when STEPPED, not when the caret lands on it: the caret
         // audition stays what it was before row entries became steppable (Lily#'s choice,
@@ -592,6 +605,40 @@ public static partial class NoteStepper
             target = new Target(TargetKind.Chord, chord);
         var voice = Sound(target, sounding ?? tree, includeStretch);
         return voice.Pitches.IsEmpty ? null : new Audition(target, voice.Pitches, voice.Timbre, voice.Program, voice.Strum, voice.Apart);
+    }
+
+    /// <summary>The drum note the caret is on — from its name's first character to the end of its
+    /// length — or null.</summary>
+    private static DrumNoteSyntax? DrumNoteAt(SyntaxTree tree, int offset)
+    {
+        foreach (var drum in tree.GetNodes<DrumNoteSyntax>())
+        {
+            int end = drum.NameToken.SourceStart + drum.NameToken.Text.Length;
+            if (drum.Duration is { } length)
+                end = Math.Max(end, length.Span.Start + length.Span.Length);
+            if (drum.SourceStart <= offset && offset <= end)
+                return drum;
+        }
+        return null;
+    }
+
+    /// <summary>The General MIDI timbre the preview strikes the drum channel for.</summary>
+    private const int DrumTimbre = 9;
+
+    /// <summary>What a drum note sounds — the kit's key the export plays it on (a drummap's
+    /// included), else the drum's own; with the other drums of its <c>&lt;…&gt;</c>, struck
+    /// together.</summary>
+    private static Voice DrumVoice(DrumNoteSyntax drum, SyntaxTree sounding)
+    {
+        var index = SoundIndex.Of(sounding);
+        var drums = drum.Parent is ChordSyntax chord ? chord.ChildNodes().OfType<DrumNoteSyntax>().ToList() : [drum];
+        var keys = new SortedSet<int>();
+        foreach (var d in drums)
+            if (index.Drums.TryGetValue(d.SourceStart, out var played))
+                keys.UnionWith(played);
+            else if (DrumNameRegistry.TryGet(d.DrumName, out var info))
+                keys.Add(info.GmKey);
+        return new Voice([.. keys.Take(MaxAuditionPitches)], DrumTimbre, NoProgram);
     }
 
     /// <summary>The <c>&lt;…&gt;</c> a member target belongs to — what it SOUNDS as (owner's
@@ -1501,6 +1548,8 @@ public static partial class NoteStepper
     private sealed class SoundIndex
     {
         public Dictionary<int, List<int>> Midi { get; } = [];
+        /// <summary>The drum channel's keys, by the drum note's position (<see cref="DrumVoice"/>).</summary>
+        public Dictionary<int, List<int>> Drums { get; } = [];
         public Dictionary<int, int> Timbre { get; } = [];
         /// <summary>Filed beside <see cref="Timbre"/>, for the same positions.</summary>
         public Dictionary<int, int> Program { get; } = [];
@@ -1531,8 +1580,16 @@ public static partial class NoteStepper
                     .OrderBy(x => x.Note.StartTick);
                 foreach (var (track, note) in placed)
                 {
-                    if (note.SourcePos < 0 || note.Channel == 9)
+                    if (note.SourcePos < 0)
                         continue;
+                    if (note.Channel == 9)
+                    {
+                        if (!index.Drums.TryGetValue(note.SourcePos, out var keys))
+                            index.Drums[note.SourcePos] = keys = [];
+                        if (!keys.Contains(note.Pitch))
+                            keys.Add(note.Pitch);
+                        continue;
+                    }
                     if (note.Part is { } part)
                     {
                         index.PartVoice.TryAdd(part, (note.Timbre, track.Program ?? NoProgram));

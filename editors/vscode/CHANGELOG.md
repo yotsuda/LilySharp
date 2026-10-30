@@ -20,6 +20,8 @@ All notable changes to the Lily# VS Code extension are documented here.
 - **LYS2019 stands where the extra bars begin**: "Bar 57 starts here", or inside the phrase there.
 - **A voice that runs past the others is drawn**: the staff runs on to its end, and the other
   parts are shown as empty bars there. The section's CodeLens and LYS2007 say those parts are short.
+- **A drum note sounds its drum when selected**: a hi-hat, kick, snare… heard on the kit's
+  channel, the drums of a `<…>` together, a `drums { }` chart's hits too — it was silent.
 - **New warnings**:
   - A key past seven sharps or flats (LYS4034), with the key that sounds the same.
   - A hairpin leading the other way from its next level (LYS4035).
