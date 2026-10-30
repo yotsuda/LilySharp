@@ -317,6 +317,20 @@ public class CompositionChecksTests
             f => f.StartsWith("A tune is played"));
     }
 
+    // Owner's trial 2026-10-30: told it had no tune, a rock guitar broke each bar's chord up and down
+    // after it — a line counted, an accompaniment heard.
+    [Fact]
+    public void AMelodyOfItsChordsBrokenUpAndDown_IsSaid()
+    {
+        string Rock(string guitar) => Band(Guitar + "\n" + Bass + "\n" + Drums,
+            $"  gtr {{ {string.Concat(Enumerable.Repeat(guitar, 4))} }}\n  bass {{ {string.Concat(Enumerable.Repeat("a,8 a, a, a, e e g, a, | f,8 f, f, f, c c e f, | ", 4))} }}\n"
+            + $"  kit {{ voice {{ {string.Concat(Enumerable.Repeat("hh8 hh hh hh hh hh hh hh | ", 8))} }} {{ {string.Concat(Enumerable.Repeat("bd4 sn bd sn | ", 8))} }} }}",
+            "staff gtr  staff bass  staff kit", "tempo 176");
+        Assert.Contains(CompositionChecks.Of(Rock("<a, e>4 a8 c'8 e'4 c'8 a8 | <f, c>4 f8 a8 c'4 a8 f8 | ")),
+            f => f.StartsWith("gtr, the melody: only 0% of its moves are steps"));
+        Assert.DoesNotContain(CompositionChecks.Of(Rock("e'8 g' b'4 a'8 g' fis'4 | g'4. a'8 b'2 | ")), f => f.Contains("of its moves are steps"));
+    }
+
     // Owner's trial 2026-10-30: a rock trio's bass jumped E1–E2–E1–B2–E2–D3 eighth by eighth.
     [Fact]
     public void ABandBassLeapingOctaves_IsSaid()

@@ -794,6 +794,33 @@ export function withLeadingComments(current: string, proposed: string): string {
     return missing.join(eol) + eol + eol + proposed.replace(/^\s*\r?\n/, '');
 }
 
+/**
+ * The model that called Lily#'s proposeScore in a Copilot CLI session, by its events log
+ * (~/.copilot/session-state/<id>/events.jsonl): its display name where the log gives one, else its id;
+ * undefined when no such call is in it. The tool is not told which model calls it, and a model set
+ * to "auto" does not know which it is (owner's request 2026-10-30: the header to name the model).
+ */
+export function copilotModelOf(events: string): string | undefined {
+    let id: string | undefined;
+    const names = new Map<string, string>();
+    for (const line of events.split(/\r?\n/)) {
+        if (!line.includes('"tool.execution_start"') && !line.includes('modelDisplayName')) { continue; }
+        let e: { type?: string; data?: { toolName?: string; model?: string; usage?: { model?: string; modelDisplayName?: string } } };
+        try { e = JSON.parse(line); } catch { continue; }
+        if (e.type === 'tool.execution_start' && /proposeScore$/.test(e.data?.toolName ?? '') && e.data?.model) {
+            id = e.data.model;
+        }
+        const usage = e.data?.usage;
+        if (usage?.model && usage.modelDisplayName) { names.set(usage.model, usage.modelDisplayName); }
+    }
+    return id === undefined ? undefined : names.get(id) ?? id;
+}
+
+/** The text with the model named in its "// Composed in Copilot's chat" line (copilotModelOf). */
+export function withModelNamed(text: string, model: string): string {
+    return text.replace(/^(\s*\/\/ Composed in Copilot's chat)(?: \([^)\r\n]*\))?,/m, `$1 (${model}),`);
+}
+
 /** Whether a file holds no music yet — only comments, blank lines and the opening `octave` / `pitch`
  *  lines: a proposal for it is a new piece (the composition check is for one). */
 export function isEmptyScore(text: string): boolean {

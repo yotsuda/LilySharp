@@ -41,7 +41,7 @@ import {
     CandidateEdit as CoreCandidateEdit, ChangedSpan, MarkInSelection, MarkReadings, SEL_CLOSE, SEL_OPEN, cleanCandidate,
     TextChange, carryOffset, documentBudget, documentContext, estimateTokens, isProblem, marksContext, octaveOutliers, splitNote,
     startTimeAt, toCandidateEdit, wholeFileEdit, carrySelection, changedWords, wholeTextMarkup, titleOf, isPlaceholderTitle,
-    cleanTitle, withTitle, asksForOneStaff, partCount, rangeFixOf, aiFailure, warningTodoLines, withLyricsRows, promptFits, compositionHint, hintTonic, drawnKeyNote, withLeadingComments, isEmptyScore, guidePages, headerLanguageNote, diagLines,
+    cleanTitle, withTitle, asksForOneStaff, partCount, rangeFixOf, aiFailure, warningTodoLines, withLyricsRows, promptFits, compositionHint, hintTonic, drawnKeyNote, copilotModelOf, withModelNamed, withLeadingComments, isEmptyScore, guidePages, headerLanguageNote, diagLines,
 } from './aiTransformCore';
 import { withTodoMark } from './omrAiFixCore';
 import { markFactsOf, sideFileOf } from './omrScanCore';
@@ -526,6 +526,24 @@ async function chatAbsolute(deps: AiTransformDeps, text: string): Promise<string
 /** The tonic the last composing guide drew for the chat's piece (readGuide), its key checked once. */
 let drawnTonic: string | undefined;
 
+/** The model calling proposeScore, read from the newest Copilot CLI session's log (copilotModelOf);
+ *  undefined in a chat that keeps none, as VS Code's own. */
+async function chatModelName(): Promise<string | undefined> {
+    try {
+        const root = path.join(os.homedir(), '.copilot', 'session-state');
+        let newest: { file: string; time: number } | undefined;
+        for (const dir of await fs.promises.readdir(root)) {
+            const file = path.join(root, dir, 'events.jsonl');
+            const time = (await fs.promises.stat(file).catch(() => undefined))?.mtimeMs;
+            if (time !== undefined && (newest === undefined || time > newest.time)) { newest = { file, time }; }
+        }
+        // A log not written to just now is another chat's: this call was logged as it began.
+        return newest && Date.now() - newest.time < 60_000 ? copilotModelOf(await fs.promises.readFile(newest.file, 'utf8')) : undefined;
+    } catch {
+        return undefined;
+    }
+}
+
 /** The files whose new piece the music check has spoken on, this session: it speaks once a file. */
 const musicCheckedFor = new Set<string>();
 
@@ -626,6 +644,9 @@ async function proposeScore(deps: AiTransformDeps, input: ProposeScoreInput, tok
             ranges = report.ranges;
             kept = report.findings;
         }
+        // Its header names the model that composed it (owner's request 2026-10-30).
+        const model = await chatModelName();
+        if (model !== undefined) { text = withModelNamed(text, model); }
         const written = await writeWhole(uri, exists, doc, await asMusicianWrites(deps, client, text));
         if (written !== undefined) {
             return `Not written: ${written}`;

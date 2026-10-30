@@ -24,8 +24,31 @@ import * as path from 'node:path';
 import {
     SEL_CLOSE, SEL_OPEN, carryOffset, documentBudget, documentContext, estimateTokens, isProblem, isUnchanged, marksContext, octaveOutliers,
     pickModel, isAutoModel, pitchToMidi, splitNote, planOf, withoutPlan, startTimeAt, toCandidateEdit, changedWords, diffMarkup, wholeTextMarkup, rangeFixOf,
-    aiFailure, isConnectionError, spokenDuration, servedModelsIn, cleanCandidate, warningTodoLines, withLyricsRows, promptFits, compositionHint, hintTonic, drawnKeyNote, withLeadingComments, isEmptyScore, guidePages, headerLanguageNote, diagLines,
+    aiFailure, isConnectionError, spokenDuration, servedModelsIn, cleanCandidate, warningTodoLines, withLyricsRows, promptFits, compositionHint, hintTonic, drawnKeyNote, copilotModelOf, withModelNamed, withLeadingComments, isEmptyScore, guidePages, headerLanguageNote, diagLines,
 } from '../src/aiTransformCore';
+
+// Owner's request 2026-10-30: the header to name the model that composed the piece.
+describe('the model a chat\'s piece names in its header', () => {
+    const log = [
+        '{"type":"session.start","data":{"selectedModel":"auto"}}',
+        '{"type":"session.usage_record","data":{"usage":{"model":"gpt-6-luna","modelDisplayName":"GPT-6 Luna"}}}',
+        '{"type":"tool.execution_start","data":{"toolName":"readGuide","model":"other-model"}}',
+        '{"type":"tool.execution_start","data":{"toolName":"proposeScore","model":"gpt-6-luna"}}',
+        'not json',
+    ].join('\n');
+    it('is the one that called proposeScore, by its display name, else its id', () => {
+        assert.equal(copilotModelOf(log), 'GPT-6 Luna');
+        assert.equal(copilotModelOf('{"type":"tool.execution_start","data":{"toolName":"lilysharp_proposeScore","model":"m-1"}}'), 'm-1');
+        assert.equal(copilotModelOf('{"type":"session.start","data":{}}'), undefined);
+    });
+    it('goes into the "Composed in Copilot\'s chat" line, once', () => {
+        const text = '// Composed in Copilot\'s chat, 2026-10-30\n// Asked: rock\n';
+        const named = withModelNamed(text, 'GPT-6 Luna');
+        assert.equal(named, '// Composed in Copilot\'s chat (GPT-6 Luna), 2026-10-30\n// Asked: rock\n');
+        assert.equal(withModelNamed(named, 'Claude Opus 5.5'), '// Composed in Copilot\'s chat (Claude Opus 5.5), 2026-10-30\n// Asked: rock\n');
+        assert.equal(withModelNamed('title "x"\n', 'M'), 'title "x"\n');
+    });
+});
 
 // Owner's report 2026-10-29: one range warning came back 28 times, a line a note.
 describe('compiler diagnostics for the AI', () => {

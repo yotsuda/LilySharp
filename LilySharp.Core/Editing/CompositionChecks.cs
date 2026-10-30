@@ -237,6 +237,25 @@ public static class CompositionChecks
                     + "a phrase that runs on over the bar line, the rhythm changing from section to section" + EvenPaceKept);
         }
 
+        // A melody of leaps alone (owner's trial 2026-10-30: told it had no tune, a rock guitar broke
+        // each bar's chord up and down after it, `<a, e>4 a8 c'8 e'4 c'8 a8` — counted a line, heard
+        // an accompaniment). Its single notes are read, a repeated note no move; parts moving as one
+        // are told of it in the top one alone, as of their rhythm.
+        foreach (var part in melodies)
+        {
+            if (asOne && part != top)
+                continue;
+            var line = midi.Tracks.SelectMany(t => t.Notes.Where(n => (n.Part ?? t.Name) == part && n.Channel != 9))
+                .GroupBy(n => n.StartTick).OrderBy(g => g.Key).Where(g => g.Count() == 1).Select(g => g.First().Pitch).ToList();
+            var moves = line.Zip(line.Skip(1), (a, b) => System.Math.Abs(a - b)).Where(d => d > 0).ToList();
+            int steps = moves.Count(d => d <= 2);
+            if (moves.Count >= LeapsFewestMoves && steps < moves.Count * MelodyStepShare)
+                findings.Add($"{part}, the melody: only {steps * 100 / moves.Count}% of its moves are steps — it goes up and down "
+                    + "its chords, a broken chord, the accompaniment's figure: a tune moves mostly by step (a second up or down), "
+                    + "a leap now and then to reach a peak, turning back by step after it — unless its theme is a fanfare, a call "
+                    + "on its chord's notes: then keep it.");
+        }
+
         // A compound meter's tune that does not keep its beats: a note starting within a beat and running
         // across the next — `8 4. 8 8`, `8 8 4 4` in 6/8 — heard as another meter against an
         // accompaniment in threes (owner's trial 2026-10-29). Syncopation is a 4/4 song's own, so
@@ -278,8 +297,8 @@ public static class CompositionChecks
             if (playedBars >= 8 && withTune < playedBars * TunedBarsShare)
                 findings.Add($"A tune is played in only {withTune} of the {playedBars} bars: the parts over the bass play chords and figures, and "
                     + "no words are sung. An instrumental's tune is its lead — let the guitar (or a lead instrument added for it) play "
-                    + "the melody of the verse and the chorus, single notes with a hook to remember; a riff and chords alone are the "
-                    + "groove under a tune, not the tune.");
+                    + "the melody of the verse and the chorus, single notes with a hook to remember, moving mostly by step; a riff, "
+                    + "chords and their notes broken up and down are the groove under a tune, not the tune.");
             // The same sections played three times over (owner's trial 2026-10-30: told it was short, a
             // rock instrumental played Verse Chorus three times, the same each time). A song's verses
             // change their words; an instrumental's return the same music.
@@ -508,6 +527,8 @@ public static class CompositionChecks
     // heard in, under which an instrumental has none to speak of (owner's report 2026-10-29).
     private const double TuneSingleShare = 0.7, TunedBarsShare = 0.5, BassLeapShare = 0.2;
     private const int SlipFewest = 3;
+    private const double MelodyStepShare = 0.25;
+    private const int LeapsFewestMoves = 16;
     private const double AcrossBeatShare = 0.2;
 
     /// <summary>The seconds from the start to <paramref name="tick"/>, by the tempo changes of every
