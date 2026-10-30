@@ -626,8 +626,17 @@ public sealed partial class LilyPondExporter
     /// </para>
     /// </remarks>
     private string? FretDiagram(MusicMarkSyntax mk)
-        => Semantics.AnnotationValues.Frame(mk) is { } spec
+        => (Semantics.AnnotationValues.Frame(mk) ?? PageFrameAt(mk)) is { } spec
             ? FretDiagramMarkup(spec, above: mk.ForcedAbove != false)
+            : null;
+
+    /// <summary>The shape the page found for a bare <c>@diagram</c> on a chord — its own notes, as
+    /// the part's strings fret them (<see cref="Semantics.AnnotationValues.IsNotesDiagram"/>) — read
+    /// off the page's diagram at the mark, so the twin draws the page's fingering; null for any other
+    /// mark, or a page not collected.</summary>
+    private string? PageFrameAt(MusicMarkSyntax mk)
+        => Semantics.AnnotationValues.IsNotesDiagram(mk)
+            ? _page?.Articulations.FirstOrDefault(a => a.Type == ArticulationType.FretFrame && a.SourcePosition == mk.SourceStart)?.FrameSpec
             : null;
 
     /// <summary>

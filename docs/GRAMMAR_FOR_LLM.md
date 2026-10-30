@@ -445,6 +445,8 @@ Value words inside the parentheses are lowercase too (`@notehead(triangle)`,
   to high: a digit is the fret (`0` or `o` open), `x` muted — frets 10–15 with a `-` on each
   side (`@diagram(xx-10-12-13-11)`); 4–8 strings. Above the note
   whatever the stem; `@diagram(x32010).down` puts it below. Size: `fonts { diagram step +3 }`.
+  A bare `@diagram` on a `<…>` chord draws the chord's own notes as the part's strings fret them
+  (`<g b d' f'>1@diagram` = xx5431); a chord no hand can hold draws none (LYS1055 warns).
 - Guitar bend: `c4@bend(half)` (1 semitone), `@bend(full)` (2), `@bend(N)` (N = 1–12
   semitones) — an arrow labelled in steps.
 - Tab technique letters: `@hammerOn` (H), `@pullOff` (P), `@tap` (T) — small italic

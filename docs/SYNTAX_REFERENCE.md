@@ -2437,6 +2437,17 @@ it warns as an unknown annotation and is ignored.
 c4@diagram(x32010) d@diagram(xx0232) e@diagram(022100).down f |   // C, D, E (the E below)
 ```
 
+A bare `@diagram` on a `<…>` chord draws **the chord's own notes**, as the part's strings fret
+them (its `instrument` or `tuning`, else the guitar's): each note on a string of its own, the
+fretted ones within four frets, the shape a player reaches for (no crossed strings, the lowest
+position, the fewest fingers). A chord no hand can hold draws none, and a fretted part warns it
+(LYS1055, naming a voicing of its notes that can be held). On a single note a bare `@diagram`
+draws nothing: its shape must be written.
+
+```
+<g b d' f'>1@diagram |   // G7 as xx5431
+```
+
 A diagram stands above its note whatever the stem; `.down` puts it below. The `.ly` twin
 writes `\fret-diagram-terse`; MusicXML writes a `<frame>`, inside the `<harmony>` of an
 `@chord(…)` on the same note. Its size is the `fonts` key `diagram` (see *Text Fonts*).

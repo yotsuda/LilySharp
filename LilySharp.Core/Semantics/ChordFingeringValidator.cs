@@ -35,12 +35,8 @@ namespace LilySharp.Core.Semantics;
 /// <remarks>
 /// <para>
 /// A chord is the notes the MIDI export starts at one moment in one part, so a phrase, a repeat or
-/// a second voice is heard as the player plays it, at its sounding pitch. Fingerable: each note on
-/// a string of its own, its fret 0 (open) to <see cref="TopFret"/>, the fretted ones no more than
-/// <see cref="Reach"/> frets apart (LilyPond's <c>maximumFretStretch</c>, the tab's own rule —
-/// <see cref="Tunings.CalculateChordFrets"/>), and no more fretted notes above the lowest fret than
-/// three fingers can hold (the index barring that fret). Every assignment is tried: the tab's own
-/// placement is greedy, highest note first, and answers "no string" for chords a hand can hold.
+/// a second voice is heard as the player plays it, at its sounding pitch. Fingerable is
+/// <see cref="Music.ChordFingering"/>'s rule, the one a bare <c>@diagram</c> draws by.
 /// </para>
 /// <para>
 /// The voicing offered keeps the lowest note and moves the others by octaves, the fewest moves
@@ -49,11 +45,7 @@ namespace LilySharp.Core.Semantics;
 /// </remarks>
 internal sealed class ChordFingeringValidator : ISemanticValidator
 {
-    /// <summary>The highest fret looked at.</summary>
-    private const int TopFret = 22;
-
-    /// <summary>The widest a fretted chord may stretch, from its lowest fretted note to its highest.</summary>
-    private const int Reach = 4;
+    private const int Reach = Music.ChordFingering.Reach;
 
     private readonly DiagnosticBag _diagnostics = new();
 
@@ -136,40 +128,9 @@ internal sealed class ChordFingeringValidator : ISemanticValidator
         return false;
     }
 
-    /// <summary>A fret for each string (index 0 the lowest; -1 unplayed) holding every pitch, or null.</summary>
-    internal static int[]? Fingering(IReadOnlyList<int> pitches, int[] strings)
-    {
-        var frets = Enumerable.Repeat(-1, strings.Length).ToArray();
-        return Place(0) ? frets : null;
-
-        bool Place(int i)
-        {
-            if (i == pitches.Count)
-                return Holdable(frets);
-            for (int s = 0; s < strings.Length; s++)
-            {
-                int fret = pitches[i] - strings[s];
-                if (frets[s] >= 0 || fret < 0 || fret > TopFret)
-                    continue;
-                frets[s] = fret;
-                if (Holdable(frets) && Place(i + 1))
-                    return true;
-                frets[s] = -1;
-            }
-            return false;
-        }
-    }
-
-    /// <summary>The fretted notes within <see cref="Reach"/>, and no more of them above the lowest
-    /// fret than three fingers (the index barring the lowest).</summary>
-    private static bool Holdable(int[] frets)
-    {
-        var fretted = frets.Where(f => f > 0).ToList();
-        if (fretted.Count == 0)
-            return true;
-        int low = fretted.Min();
-        return fretted.Max() - low <= Reach && fretted.Count(f => f > low) <= 3;
-    }
+    /// <summary>A fret for each string (index 0 the lowest; -1 unplayed) holding every pitch, or null
+    /// (<see cref="Music.ChordFingering.Fingering"/>).</summary>
+    internal static int[]? Fingering(IReadOnlyList<int> pitches, int[] strings) => Music.ChordFingering.Fingering(pitches, strings);
 
     /// <summary>The same notes with the fewest moved by an octave, the lowest kept, that can be held.</summary>
     private static (int[] Pitches, int[] Frets)? Playable(int[] pitches, int[] strings)

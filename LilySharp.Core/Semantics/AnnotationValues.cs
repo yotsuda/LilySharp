@@ -334,6 +334,16 @@ public static class AnnotationValues
             : null;
 
     /// <summary>
+    /// A bare <c>@diagram</c> on a <c>&lt;…&gt;</c> chord: the diagram of the chord's own notes, as a
+    /// player frets them on the part's strings (owner's request 2026-10-30;
+    /// <see cref="Music.ChordFingering"/>). The shape is the page's to find — it has the notes'
+    /// pitches (MeasureCollector.CollectArticulations) — and the twin and the MusicXML read it off
+    /// the page at the mark (its FretFrame articulation's FrameSpec).
+    /// </summary>
+    public static bool IsNotesDiagram(MusicMarkSyntax mark)
+        => Named(mark, "diagram") && mark.Arguments.IsEmpty && mark.Parent is ChordSyntax { IsShapeChord: false };
+
+    /// <summary>
     /// The symbol an <c>@chord</c> mark prints, spelled the way <paramref name="spelling"/>
     /// asks, and the structure behind it; null when the mark is not an <c>@chord</c> or
     /// names nothing Lily# can print from its words alone.

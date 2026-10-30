@@ -344,6 +344,7 @@ public sealed class MusicXmlExporter
 
         var root = tree.GetRoot();
         _root = root;
+        _tree = tree;
         // Every section's voices and canonical bar count (SectionBarCounts, the semantic
         // counter): a part voice that writes fewer bars than its section-mates is padded
         // with silent measures when its span ends (PadVoice), as the page pads its staff.
@@ -799,6 +800,19 @@ public sealed class MusicXmlExporter
         }.CollectMultiStaff(tree, spec);
 
     private Svg.Model.MultiStaffScore? _pageModel;
+
+    /// <summary>The tree being exported, for the page a bare <c>@diagram</c> is read off.</summary>
+    private SyntaxTree? _tree;
+
+    /// <summary>The shape the page found for a bare <c>@diagram</c> on a chord — its own notes, as the
+    /// part's strings fret them (<see cref="Semantics.AnnotationValues.IsNotesDiagram"/>) — read off
+    /// the page's diagram at the mark, the page collected only when one is written; null for any
+    /// other mark.</summary>
+    private string? PageFrameAt(MusicMarkSyntax mark)
+        => Semantics.AnnotationValues.IsNotesDiagram(mark) && _tree is { } tree && _playedSpec is { } spec
+            ? PageModel(tree, spec).Articulations
+                .FirstOrDefault(a => a.Type == ArticulationType.FretFrame && a.SourcePosition == mark.SourceStart)?.FrameSpec
+            : null;
 
     /// <summary>A part's exported pitched notes by where they were written, k-th printing by
     /// k-th printing — the side of the page match (<see cref="MusicXmlNote.SourcePosition"/>) a
@@ -5186,7 +5200,7 @@ public sealed class MusicXmlExporter
         _markedNoteLength = xmlNote.IsGrace || xmlNote.IsChord || xmlNote.IsBackup ? 0 : xmlNote.Duration;
         foreach (var artic in articulations)
             if (artic is MusicMarkSyntax fm
-                && Semantics.AnnotationValues.Frame(fm) is { } spec)
+                && (Semantics.AnnotationValues.Frame(fm) ?? PageFrameAt(fm)) is { } spec)
                 _noteFrameSpec = spec;
 
         ApplyHalfTies(articulations, xmlNote);

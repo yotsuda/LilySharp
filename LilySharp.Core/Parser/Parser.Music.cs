@@ -1598,12 +1598,14 @@ internal sealed partial class Parser
                         GreenRun.Take(new MusicMarkGreen([.. parts]), ref first, ref second, ref more);
                     }
                     else if (Current.Kind == SyntaxKind.Identifier
-                             && Current.Text.Equals("chord", StringComparison.Ordinal))
+                             && Current.Text is "chord" or "diagram")
                     {
                         // Bare '@chord' (no argument): auto-derive the chord symbol
                         // from the notes it is attached to. Kept as a MusicMark (like
                         // @chord(…)) so the chord-name collector handles it; the
-                        // explicit form is still @chord(c:maj7).
+                        // explicit form is still @chord(c:maj7). A bare '@diagram' on a
+                        // <…> chord draws the chord's own notes as fretted (owner's request
+                        // 2026-10-30; AnnotationValues.IsNotesDiagram).
                         var name = Advance();
                         GreenRun.Take(new MusicMarkGreen([at, name]), ref first, ref second, ref more);
                     }

@@ -375,6 +375,7 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
             || AnnotationValues.Feather(mark) != 0
             || AnnotationValues.IsArpeggioBracket(mark)
             || AnnotationValues.Frame(mark) is not null
+            || AnnotationValues.IsNotesDiagram(mark)
             // The spelling cannot change WHETHER a mark names a chord, only how it prints.
             || AnnotationValues.Chord(mark, ChordSpelling.Default, out _) is not null
             // …and a written-out diagram alone names its chord from its notes

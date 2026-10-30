@@ -28,6 +28,9 @@ workflow attaches that section to the GitHub Release verbatim.
   parts are padded with empty bars (LYS2007 and the section's CodeLens say they are short). This
   holds on the page, in the LilyPond and MusicXML exports and in the MIDI. Before, those bars were
   heard after the song ended and drawn nowhere.
+- `[lang]` **A bare `@diagram` on a `<…>` chord draws the chord's own notes as fretted**
+  (`<g b d' f'>1@diagram` draws xx5431). The fingering is found on the part's strings: no crossed
+  strings, the lowest position, the fewest fingers. The `.ly` twin draws the same shape.
 - `[lang]` **A chord its player cannot hold warns** (LYS1055).
   - On a guitar, bass, ukulele or banjo, it warns when no string per note within a hand's reach
     (four frets) fits the chord. The warning names a voicing of the same notes that can be held,
