@@ -31,6 +31,16 @@ public class AnnotationNameValidatorTests
         return validator.Diagnostics;
     }
 
+    // A pitch after '@' is said as written, and where it goes (owner's trial 2026-10-30: `<c, g,>2@g'`
+    // was told "found 'PitchG'").
+    [Fact]
+    public void APitchAfterTheAt_IsSaidAsWritten()
+    {
+        var tree = SyntaxTree.Parse("<c g>2@g' e8 d e f |");
+        Assert.Contains(tree.Diagnostics, d => d.Message == "Expected articulation or dynamic name after '@', found 'g', a pitch: "
+            + "after '@' comes a name (@f, @staccato, …); a note's pitch goes before its '@'");
+    }
+
     // --- Unknown names warn ---
 
     [Theory]

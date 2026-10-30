@@ -342,6 +342,13 @@ public class CompositionChecksTests
             f => f.StartsWith("bass: 3 times one note leaps more than an octave away and straight back (bars 2, 4, 6, as the form plays them; "));
         Assert.DoesNotContain(CompositionChecks.Of(Rock("e,8 e, b, e, e, e, b, dis, | a,8 a, e, a, a, a, e, cis | ")), f => f.Contains("straight back"));
         Assert.DoesNotContain(CompositionChecks.Of(Rock("e,8 d' e, b e, d' e, b | a,8 e' a, cis' a, e' a, cis' | ")), f => f.Contains("straight back"));
+        // A chord struck under the part's own tune is not one (owner's trial 2026-10-30).
+        string chorus = Band(Guitar + "\n" + Bass + "\n" + Drums,
+            $"  gtr {{ {string.Concat(Enumerable.Repeat("e''8 d'' <d a>2 fis''8 e'' | ", 8))} }}\n  bass {{ {string.Concat(Enumerable.Repeat("d,8 d, d, d, d, d, d, d, | ", 8))} }}\n"
+            + $"  kit {{ voice {{ {string.Concat(Enumerable.Repeat("hh8 hh hh hh hh hh hh hh | ", 8))} }} {{ {string.Concat(Enumerable.Repeat("bd4 sn bd sn | ", 8))} }} }}",
+            "staff gtr  staff bass  staff kit", "tempo 176");
+        Assert.DoesNotContain(CompositionChecks.Of(chorus), f => f.Contains("straight back"));
+        Assert.Contains(CompositionChecks.Of(chorus.Replace("<d a>2", "d2")), f => f.StartsWith("gtr: 8 times one note leaps"));
     }
 
     // Owner's report 2026-10-29: a rock trio's Chorus2 was its Chorus again, every part.

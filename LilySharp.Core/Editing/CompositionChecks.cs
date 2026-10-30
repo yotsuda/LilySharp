@@ -292,7 +292,8 @@ public static class CompositionChecks
             .Where(n => !n.Part.EndsWith(" (chords)", System.StringComparison.Ordinal) && !hands.ContainsKey(n.Part))
             .GroupBy(n => n.Part))
         {
-            var lows = line.GroupBy(n => n.StartTick).OrderBy(g => g.Key).Select(g => (Tick: g.Key, Pitch: g.Min(n => n.Pitch))).ToList();
+            var lows = line.GroupBy(n => n.StartTick).OrderBy(g => g.Key)
+                .Select(g => (Tick: g.Key, Pitch: g.Min(n => n.Pitch), Chord: g.Count() > 1)).ToList();
             bool Spike(int i)
             {
                 if (i <= 0 || i + 1 >= lows.Count)
@@ -300,7 +301,9 @@ public static class CompositionChecks
                 var (before, after) =(lows[i].Pitch - lows[i - 1].Pitch, lows[i].Pitch - lows[i + 1].Pitch);
                 return (before > 12 && after > 12) || (before < -12 && after < -12);
             }
-            var slips = Enumerable.Range(0, lows.Count).Where(i => Spike(i) && !Spike(i - 1) && !Spike(i + 1)).ToList();
+            // A chord is not one: a guitar's chord struck under its own tune (owner's trial 2026-10-30:
+            // `<d, a>2 fis'8 e8 d8 fis8` in every bar of a chorus was told of fifteen slips).
+            var slips = Enumerable.Range(0, lows.Count).Where(i => Spike(i) && !lows[i].Chord && !Spike(i - 1) && !Spike(i + 1)).ToList();
             if (slips.Count < SlipFewest)
                 continue;
             var at = slips.Select(i => 1 + spikeBars.Count(b => b <= lows[i].Tick)).Distinct().ToList();

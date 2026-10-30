@@ -1618,9 +1618,15 @@ internal sealed partial class Parser
                 else
                 {
                     // Error: expected articulation or dynamic name after @
+                    // What is there said as written, not as a token kind (owner's trial 2026-10-30:
+                    // `<c, g,>2@g'` was told "found 'PitchG'"), and a pitch said where it goes.
                     var span = new TextSpan(_textPosition, Current.FullWidth);
+                    string found = Current.Text.Length == 0 ? $"{Current.Kind}" : $"'{Current.Text}'";
                     _diagnostics.Error(span, DiagnosticCodes.ExpectedToken,
-                        $"Expected articulation or dynamic name after '@', found '{Current.Kind}'");
+                        $"Expected articulation or dynamic name after '@', found {found}"
+                        + (Current.Kind.ToString().StartsWith("Pitch", StringComparison.Ordinal)
+                            ? ", a pitch: after '@' comes a name (@f, @staccato, …); a note's pitch goes before its '@'"
+                            : ""));
                     // ...and the '@' already consumed stays ON the tree, as ReportUnclaimedDot's
                     // dot does: dropped, its width went with it and every later node's position
                     // slid one left — MEASURED (session 594, a typo `a,,8\4@@staccato` in the
