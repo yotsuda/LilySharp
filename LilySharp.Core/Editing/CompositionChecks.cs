@@ -93,6 +93,8 @@ public static class CompositionChecks
                     + "(`@p`, `@mf`, `@f`, …) and the hairpins in every part, where its own music asks for them, not in one part alone.");
         }
         findings.AddRange(DynamicDrops(root));
+        findings.AddRange(LateLevels(root, parts.Where(p => RoleOf(p).Drums || InstrumentOf(p) is "" || InstrumentOf(p).StartsWith("piano", System.StringComparison.Ordinal))
+            .Select(p => p.Name.Text).ToHashSet(System.StringComparer.Ordinal)));
         findings.AddRange(CopiedSections(root));
 
         MidiFile midi;
@@ -265,6 +267,14 @@ public static class CompositionChecks
                     + "no words are sung. An instrumental's tune is its lead — let the guitar (or a lead instrument added for it) play "
                     + "the melody of the verse and the chorus, single notes with a hook to remember; a riff and chords alone are the "
                     + "groove under a tune, not the tune.");
+            // The same sections played three times over (owner's trial 2026-10-30: told it was short, a
+            // rock instrumental played Verse Chorus three times, the same each time). A song's verses
+            // change their words; an instrumental's return the same music.
+            var thrice = PlayedSections(root).GroupBy(s => s).Where(g => g.Count() >= 3).Select(g => (Name: g.Key, Times: g.Count())).ToList();
+            if (thrice.Count > 0)
+                findings.Add($"{string.Join(", ", thrice.Select(t => $"{t.Name} ({t.Times} times)"))}: played the same each time, and no "
+                    + "words are sung to change them — vary a return as a section of its own (a lead tune over the verse, the chorus "
+                    + "an octave up or a key higher, a breakdown), or play it twice.");
         }
 
         // A band's bass leaping about (owner's trial 2026-10-30: a rock trio's bass at ♩=176 jumped
@@ -418,7 +428,7 @@ public static class CompositionChecks
                 + "the length its form needs — a minute and a half to three minutes (about 24 to 32 bars of 4/4; a shorter bar "
                 + "or a quicker beat takes more), its phrases long enough to say something, each closing on a cadence. Lengthen it "
                 + "with music — a section more, a varied return, an introduction — never by slowing its tempo (keep the tempo its "
-                + "character asks for), nor by playing one section over and over in a row.");
+                + "character asks for), nor by playing the same sections over and over, in a row or apart.");
         if (PlayedKeys(root) is { } inKeys && pitched.Count > 0)
         {
             var (home, end) = inKeys;
@@ -567,6 +577,47 @@ public static class CompositionChecks
                 break;
             }
         }
+    }
+
+    /// <summary>The sections as the form plays them; with no form, as written.</summary>
+    private static List<string> PlayedSections(SyntaxNode root)
+    {
+        var sections = root.DescendantNodes<SectionDeclarationSyntax>().Where(s => s.Parent is { Parent: null })
+            .Select(s => s.SectionName).ToList();
+        var form = root.DescendantNodes<FormDeclarationSyntax>().Where(f => !f.InScore).OrderBy(f => f.Name != null).FirstOrDefault();
+        return form?.DescendantNodes<SectionReferenceSyntax>().Select(r => r.SectionName).Where(sections.Contains).ToList() ?? sections;
+    }
+
+    /// <summary>
+    /// A part whose levels begin after its music does: the first section it plays in, as the form
+    /// plays them, writes none (owner's trial 2026-10-30: a rock trio's guitar and bass wrote their
+    /// first level in the last bar of the chorus, twenty bars in, and the drums none). Drums need
+    /// none, as for a part with no level at all — said apart — nor does a piano's hand, its levels
+    /// written between the staves, in the other hand's part.
+    /// </summary>
+    private static IEnumerable<string> LateLevels(SyntaxNode root, HashSet<string> drums)
+    {
+        var phrases = root.DescendantNodes<PhraseDeclarationSyntax>()
+            .Where(p => p.DescendantNodes<DynamicSyntax>().Any(d => Levels.Contains(d.DynamicToken.Text)))
+            .Select(p => p.Name.Text).ToHashSet(System.StringComparer.Ordinal);
+        bool HasLevel(PartBlockSyntax cell) => cell.DescendantNodes<DynamicSyntax>().Any(d => Levels.Contains(d.DynamicToken.Text))
+            || (phrases.Count > 0 && cell.DescendantNodes<SyntaxTokenNode>().Any(t => phrases.Contains(t.Text)));
+        var sections = root.DescendantNodes<SectionDeclarationSyntax>().Where(s => s.Parent is { Parent: null })
+            .GroupBy(s => s.SectionName).ToDictionary(g => g.Key, g => g.First());
+        var played = PlayedSections(root);
+        var late = new List<(string Part, string? From)>();
+        foreach (var part in root.DescendantNodes<PartBlockSyntax>().Select(b => b.PartName.Text).Distinct().Where(p => !drums.Contains(p)))
+        {
+            var cells = played.Select(s => sections[s].DescendantNodes<PartBlockSyntax>().Where(b => b.PartName.Text == part).ToList())
+                .Select((c, i) => (Section: played[i], Cells: c)).Where(c => c.Cells.Count > 0).ToList();
+            if (cells.Count == 0 || cells[0].Cells.Any(HasLevel))
+                continue;
+            var from = cells.FirstOrDefault(c => c.Cells.Any(HasLevel));
+            if (from.Section != null)
+                late.Add((part, from.Section));
+        }
+        return late.GroupBy(l => l.From).Select(g => $"{string.Join(", ", g.Select(l => l.Part))}: no level until {g.Key} — the "
+            + "section a part begins in says none: write one at each part's first note (`@p`, `@mf`, `@f`, …), the level the piece opens at.");
     }
 
     /// <summary>The parts whose music writes a dynamic level, in a section's cell or in a phrase the

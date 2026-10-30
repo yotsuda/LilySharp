@@ -215,7 +215,7 @@ public class CompositionChecksTests
         Assert.Contains("(bars 1, 2, 5, 9, 10, 13,", beats);
         Assert.Contains(findings, f => f.StartsWith("The piece is 24 bars long, about 50 seconds played")
             // More music, not a slower tempo (owner's report 2026-10-29: ♩ = 72 became 48).
-            && f.EndsWith("never by slowing its tempo (keep the tempo its character asks for), nor by playing one section over and over in a row."));
+            && f.EndsWith("never by slowing its tempo (keep the tempo its character asks for), nor by playing the same sections over and over, in a row or apart."));
         // The tune by its beats: not said.
         string kept = Piece("6/8", "4. = 58",
             "d''4 b'8 a'4 g'8 | a'4 b'8 d''4. | e''4 d''8 b'4 a'8 | fis'4. a'4. | b'4 d''8 g''4. | e''4 d''8 c''4. | a'4 c''8 fis''4. | g''2. |",
@@ -349,6 +349,29 @@ public class CompositionChecksTests
             "staff gtr  staff bass  staff kit", "tempo 176");
         Assert.DoesNotContain(CompositionChecks.Of(chorus), f => f.Contains("straight back"));
         Assert.Contains(CompositionChecks.Of(chorus.Replace("<d a>2", "d2")), f => f.StartsWith("gtr: 8 times one note leaps"));
+    }
+
+    // Owner's trial 2026-10-30: a rock instrumental played Verse Chorus three times, the same each
+    // time, its guitar and bass with no level before the chorus's last bar.
+    [Fact]
+    public void AnInstrumentalsSectionsThriceOver_AndLevelsBegunLate_AreSaid()
+    {
+        string Section(string name, string gtr, string bass) => $"section {name} {{\n  gtr {{ {gtr} }}\n  bass {{ {bass} }}\n"
+            + "  kit { voice { hh8 hh hh hh hh hh hh hh | hh8 hh hh hh hh hh hh hh | } { bd4 sn bd sn | bd4 sn bd sn | } }\n}\n";
+        string Piece(string form, string verseLevel) => $"title \"Run\"\ntempo 176\ntime 4/4\noctave absolute\n{Guitar}\n{Bass}\n{Drums}\n"
+            + Section("Verse", $"<e b>8{verseLevel} r <e b> <e b> <e b> r <e b> <e b> | <c' g>8 r <c' g> <c' g> <c' g> r <c' g> <c' g> |",
+                $"e,8{verseLevel} e, e, b, e, e, e, b, | c8 c c g c c c g |")
+            + Section("Chorus", "b'4 b'8 a' fis'4 e' | d''4 cis''8 b' a'2@f |", "g,8 g, g, d g, g, g, d | d8 d d a d d d a@f |")
+            + $"form {{ {form} }}\nscore {{ staff gtr staff bass staff kit }}\n";
+        var thrice = CompositionChecks.Of(Piece("Verse Chorus Verse Chorus Verse Chorus", ""));
+        Assert.Contains(thrice, f => f.StartsWith("Verse (3 times), Chorus (3 times): played the same each time"));
+        Assert.Contains(thrice, f => f.StartsWith("gtr, bass: no level until Chorus — "));
+        var twice = CompositionChecks.Of(Piece("Verse Chorus Verse Chorus", "@mf"));
+        Assert.DoesNotContain(twice, f => f.Contains("played the same each time"));
+        Assert.DoesNotContain(twice, f => f.Contains("no level until"));
+        // Sung, the verses change their words.
+        Assert.DoesNotContain(CompositionChecks.Of(Piece("Verse Chorus Verse Chorus Verse Chorus", "").Replace("form {", "lyrics words sings gtr { la }\nform {")),
+            f => f.Contains("played the same each time"));
     }
 
     // Owner's report 2026-10-29: a rock trio's Chorus2 was its Chorus again, every part.
