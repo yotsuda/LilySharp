@@ -850,6 +850,34 @@ public class CompositionChecksTests
     }
 
     [Fact]
+    public void ASectionPlayingAnEarlierOneAgain_ButABar_IsToldSo()
+    {
+        // Eight bars a part, the last chorus's final bar its own (owner's review 2026-10-30).
+        string Book(string last) => Song2.Replace("tuneA { e'4@f g' a' b' | e''1 | }", "tuneA { e'4@f g' a' b' | e''1 | e'4 g' a' b' | e''1 | e'4 g' a' b' | e''1 | e'4 g' a' b' | e''1 | }")
+            .Replace("tuneZ { e'4@ff g' a' b' | e''1 | }", $"tuneZ {{ e'4@ff g' a' b' | e''1 | e'4 g' a' b' | e''1 | e'4 g' a' b' | e''1 | e'4 g' a' b' | {last} | }}")
+            .Replace("lowA { e,8@f e, e, e, e, e, e, e, | e,8 e, e, e, e, e, e, e, | }", "lowA { " + string.Concat(Enumerable.Repeat("e,8 e, e, e, e, e, e, e, | ", 8)) + "}")
+            .Replace("lowZ { e,8@ff e, e, e, e, e, e, e, | ENDING | }", "lowZ { " + string.Concat(Enumerable.Repeat("e,8 e, e, e, e, e, e, e, | ", 8)) + "}");
+        Assert.Contains(CompositionChecks.Of(Book("e'''1")), f => f.StartsWith("Z plays A again, note for note in every part but 1 bar"));
+        Assert.DoesNotContain(CompositionChecks.Of(Book("e'''1").Replace("tuneZ { e'4@ff g' a' b' | e''1", "tuneZ { g'4@ff a' b' c'' | d''1")),
+            f => f.StartsWith("Z plays A again"));
+    }
+
+    // Owner's review 2026-10-30: a trio's one guitar, told it had no tune, played one in every bar;
+    // told nobody played the chords, it struck them in every bar again.
+    [Fact]
+    public void ABandsOnlyPartOverTheBass_IsToldToShareItsChordsAndItsTune()
+    {
+        string chords = string.Concat(Enumerable.Repeat("<e b>8 <e b> <e b> <e b> <e b> <e b> <e b> <e b> | ", 8));
+        string low = string.Concat(Enumerable.Repeat("e,8 e, e, e, e, e, e, e, | ", 8));
+        string beat = string.Concat(Enumerable.Repeat("hh8 hh hh hh hh hh hh hh | ", 8));
+        string book = "title \"Run\"\ntime 4/4\noctave absolute\npart gt \"Guitar\" { instrument guitar midiInstrument \"overdriven guitar\" }\n"
+            + "part bs \"Bass\" { instrument bass }\npart kit \"Drums\" { clef percussion }\n"
+            + $"section A {{\n  gt {{ {chords} }}\n  bs {{ {low} }}\n  kit {{ {beat} }}\n}}\nform {{ ~A }}\nscore {{ staff gt staff bs staff kit }}\n";
+        Assert.Contains(CompositionChecks.Of(book), f => f.StartsWith("A tune is played in only")
+            && f.Contains("gt is the band's only part over the bass, its chords and its tune both: share them out"));
+    }
+
+    [Fact]
     public void APartRunningOnUnderTheOthersLastHeldChord_IsToldSo()
     {
         Assert.Contains(CompositionChecks.Of(Song2.Replace("ENDING", "e,8 e, e, e, e, e, e, e,")),

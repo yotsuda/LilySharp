@@ -333,6 +333,16 @@ public static class CompositionChecks
         // and drums had power chords and arpeggios through its verse and chorus, a tune only in a
         // four-bar solo). A bar has a tune where a part other than the drums and the bass plays a line:
         // three onsets or more, most of them single notes. Words sung are a tune of their own.
+        // One part over the bass and drums plays both the chords and the tune (owner's review
+        // 2026-10-30: a rock trio's guitar, told it had no tune, played one in every bar; told then that
+        // nobody played the chords, it struck chords in every bar again — each finding pushing it to
+        // the other end). Both findings say how the two are shared.
+        var overBass = parts.Where(p => RoleOf(p) is { Drums: false, Bass: false }).Select(p => p.Name.Text).ToList();
+        string shared = overBass.Count == 1
+            ? $" {overBass[0]} is the band's only part over the bass, its chords and its tune both: share them out — the chords or a "
+              + "riff under the verse, the tune in the chorus (its hook, a chord struck where the tune rests) — not all one or all "
+              + "the other."
+            : "";
         if (instrumentalLines is { } instrumental)
         {
             var (lineBars, playedBars) = instrumental;
@@ -340,8 +350,9 @@ public static class CompositionChecks
             if (playedBars >= 8 && withTune < playedBars * TunedBarsShare)
                 findings.Add($"A tune is played in only {withTune} of the {playedBars} bars: the parts over the bass play chords and figures, and "
                     + "no words are sung. An instrumental's tune is its lead — let the guitar (or a lead instrument added for it) play "
-                    + "the melody of the verse and the chorus, single notes with a hook to remember, moving mostly by step; a riff, "
-                    + "chords and their notes broken up and down are the groove under a tune, not the tune.");
+                    + (shared.Length > 0 ? "a melody" : "the melody of the verse and the chorus")
+                    + ", single notes with a hook to remember, moving mostly by step; a riff, "
+                    + "chords and their notes broken up and down are the groove under a tune, not the tune." + shared);
             // The same sections played three times over (owner's trial 2026-10-30: told it was short, a
             // rock instrumental played Verse Chorus three times, the same each time). A song's verses
             // change their words; an instrumental's return the same music.
@@ -519,8 +530,9 @@ public static class CompositionChecks
             if (!chordRow && strumBars >= 8 && chordBars < strumBars * NoChordsShare)
                 findings.Add($"Nobody plays the chords: {string.Join(", ", strummers)} plays a tune of single notes in {strumBars - chordBars} of its "
                     + $"{strumBars} bars, and the harmony is the bass's root alone — a band's guitar (or keyboards) strikes the chords: "
-                    + "power chords or a riff on the root through the verse and the chorus, open chords ringing in a quiet part; its "
-                    + "tune goes over them in a solo, a fill, or a lead part of its own.");
+                    + $"power chords or a riff on the root {(shared.Length > 0 ? "under the verse" : "through the verse and the chorus")}, "
+                    + "open chords ringing in a quiet part; its "
+                    + "tune goes over them in a solo, a fill, or a lead part of its own." + shared);
         }
         if (parts.Select(p => p.Name.Text).FirstOrDefault(n => melodies.Contains(n) && byPart.ContainsKey(n)) is { } tune)
             findings.AddRange(OpenEndings(midi, tune, fifths));
@@ -902,24 +914,37 @@ public static class CompositionChecks
             string text = s.ToFullString();
             return System.Text.RegularExpressions.Regex.Replace(text[System.Math.Max(0, text.IndexOf('{'))..], @"\s+", " ").Trim();
         }
+        // Each part's bars, as written between its bar lines, its phrases in place and its marks left out.
+        static string[] Bars(string played) => [.. played.Split('|').Select(b => b.Trim().Trim('{', '}').Trim())];
         var notes = sections.Select(s => (Section: s, Written: Written(s),
-            Parts: s.ChildNodes().OfType<PartBlockSyntax>().ToDictionary(b => b.PartName.Text, b => Unmarked(Played(b, 0))))).ToList();
+            Parts: s.ChildNodes().OfType<PartBlockSyntax>().ToDictionary(b => b.PartName.Text, b => Bars(Unmarked(Played(b, 0)))))).ToList();
         var said = new HashSet<string>();
         for (int later = 1; later < notes.Count; later++)
             for (int earlier = 0; earlier < later; earlier++)
             {
                 var (a, b) = (notes[earlier], notes[later]);
                 if (said.Contains(b.Section.SectionName) || b.Parts.Count == 0 || a.Parts.Count != b.Parts.Count
-                    || b.Parts.Any(p => !a.Parts.TryGetValue(p.Key, out var same) || same != p.Value)
-                    || a.Written == b.Written)
+                    || a.Written == b.Written
+                    || b.Parts.Any(p => !a.Parts.TryGetValue(p.Key, out var bars) || bars.Length != p.Value.Length))
+                    continue;
+                // Bar by bar, every part: the same but for its marks, or all but a bar or two
+                // (owner's review 2026-10-30: a last chorus was its chorus again but for its final bar).
+                int total = b.Parts.Sum(p => p.Value.Length);
+                int differ = b.Parts.Sum(p => p.Value.Where((bar, i) => bar != a.Parts[p.Key][i]).Count());
+                if (differ > 0 && (total < 8 || differ > total * (1 - NearlyReplayedShare)))
                     continue;
                 said.Add(b.Section.SectionName);
-                yield return $"{b.Section.SectionName} plays {a.Section.SectionName} again, note for note in every part — only its levels "
-                    + $"and marks differ: a section that returns to end the piece lifts — the tune an octave up or in harmony, a held "
-                    + $"note at its top, a bar or two changed toward its close, the drums opened up — or, if it is the same music, name "
-                    + $"{a.Section.SectionName} again in the form instead of a copy.";
+                string how = differ == 0 ? "note for note in every part — only its levels and marks differ"
+                    : $"note for note in every part but {differ} {(differ == 1 ? "bar" : "bars")} — elsewhere only its levels and marks differ";
+                yield return $"{b.Section.SectionName} plays {a.Section.SectionName} again, {how}: a section that returns to end the piece "
+                    + $"lifts — the tune an octave up or in harmony, a held note at its top, its bars changed toward its close, the drums "
+                    + $"opened up — or, if it is the same music, name {a.Section.SectionName} again in the form instead of a copy.";
             }
     }
+
+    /// <summary>The share of a returning section's bars, every part's together, at or above which it
+    /// is the earlier one played again (<see cref="ReplayedSections"/>).</summary>
+    private const double NearlyReplayedShare = 0.9;
 
     /// <summary>
     /// A section that ends loud and the one played after it opening soft, two levels down or more, with
