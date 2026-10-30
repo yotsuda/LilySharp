@@ -478,7 +478,9 @@ with the original before anything is written.
 
 A file is left alone, with the reason printed, when it has syntax errors, pulls in another
 file with `using`, or contains a note no score plays (a section missing from the form, a
-file with no `score`) — nothing says what octave such a note means.
+file with no `score`) — nothing says what octave such a note means. A phrase no score plays
+is converted all the same: its body begins a fresh frame wherever it is called, so its notes
+mean the same played or not.
 
 **Options:**
 | Option | Description |

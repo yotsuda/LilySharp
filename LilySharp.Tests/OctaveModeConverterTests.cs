@@ -157,6 +157,20 @@ public class OctaveModeConverterTests
         Assert.Contains("section B", result.Error);
     }
 
+    // Owner's report 2026-10-30: a composed piece kept a riff it never played and stayed in
+    // absolute octaves. A phrase's body begins a fresh frame wherever it is called, so its notes
+    // mean the same played or not.
+    [Fact]
+    public void APhraseNoScorePlays_IsConverted_AsItsBodyMeansItsNotes()
+    {
+        var src = "octave absolute\npart m { }\nphrase riff { a,8 c e g a c' e' a | }\nsection A {\n  m { c'4 d' e' f' | }\n}" + Score;
+        var relative = OctaveModeConverter.Convert(src, OctaveMode.Relative);
+        Assert.True(relative.NewText != null, relative.Error);
+        Assert.Contains("phrase riff { a,8 c e g a c e a, | }", relative.NewText);
+        Assert.DoesNotContain("Probe", relative.NewText);
+        Assert.Equal(src, OctaveModeConverter.Convert(relative.NewText!, OctaveMode.Absolute).NewText);
+    }
+
     [Theory]
     [InlineData("part m { }\nsection A {\n  m { c4 d e f | \n}" + Score)]
     [InlineData("using \"other.lys\"\npart m { }\nsection A {\n  m { c'4 d e f | }\n}" + Score)]

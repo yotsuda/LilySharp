@@ -674,7 +674,13 @@ async function proposeScore(deps: AiTransformDeps, input: ProposeScoreInput, tok
         // Its header names the model that composed it (owner's request 2026-10-30).
         const model = await chatModelName();
         if (model !== undefined) { text = withModelNamed(text, model); }
-        const written = await writeWhole(uri, exists, doc, await asMusicianWrites(deps, client, text));
+        const musicians = await asMusicianWrites(deps, client, text);
+        // Said as it is written (owner's report 2026-10-30: a piece left in absolute octaves was told
+        // to the chat as relative).
+        const octaves = ABSOLUTE_LINE.test(musicians)
+            ? 'It is written in absolute octaves, as you proposed it (Lily# could not bring it into relative octaves); '
+            : 'It is written in relative octaves, as a musician writes it; ';
+        const written = await writeWhole(uri, exists, doc, musicians);
         if (written !== undefined) {
             return `Not written: ${written}`;
         }
@@ -685,7 +691,7 @@ async function proposeScore(deps: AiTransformDeps, input: ProposeScoreInput, tok
         // chat called Meifu-no-Ou-to-no-Kessen.lys "冥府の王との決戦.lys", the piece's title).
         return `Written: the new piece is ${path.basename(currentUri(uri).fsPath)} — call the file by that name, `
             + 'not by the piece\'s title. It is open in the editor, not saved: the musician '
-            + 'saves it when they want to keep it. It is written in relative octaves, as a musician writes it; '
+            + 'saves it when they want to keep it. ' + octaves
             + 'read it with lilysharp_readScore (not from the disk), which shows it to you in absolute octaves. The piece is done: '
             + 'do not propose it again unless the musician asks for a change in the chat.'
             + (added.length ? ` It keeps these warnings, as you proposed it:\n${formatDiags(added, text)}` : '')

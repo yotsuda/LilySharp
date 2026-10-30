@@ -143,7 +143,8 @@ public static class OctaveModeConverter
         return new Result(Apply(back.NewText, restore), null, back.ChangedPitches);
     }
 
-    private static (Result Result, List<Edit> Edits) ConvertWithEdits(string source, OctaveMode target, bool keepTopLevel = false)
+    private static (Result Result, List<Edit> Edits) ConvertWithEdits(string source, OctaveMode target, bool keepTopLevel = false,
+        bool probing = false)
     {
         var tree = SyntaxTree.Parse(source);
         if (tree.HasErrors)
@@ -168,9 +169,17 @@ public static class OctaveModeConverter
 
         foreach (var (pos, _) in pitches)
             if (!recorded.ContainsKey(pos))
-                return No($"The note at {LineCol(source, pos)}{Where(root, pos)} is never played by "
+            {
+                var never = No($"The note at {LineCol(source, pos)}{Where(root, pos)} is never played by "
                     + "any score, so nothing says what octave it means. Play it (add it to the form "
                     + "or a score) or remove it, then convert again — no changes made.");
+                // A phrase no score plays still means its notes: its body begins a fresh frame
+                // wherever it is called (owner's report 2026-10-30: a composed piece kept a riff it
+                // never played, and stayed in absolute octaves).
+                return !probing && UnplayedPhrases(root, pitches.Keys.Where(p => !recorded.ContainsKey(p))) is { } unplayed
+                    && Probed(source, target, keepTopLevel, unplayed) is { Result.NewText: not null } probed
+                    ? probed : never;
+            }
         foreach (var pos in recorded.Keys)
             if (!pitches.ContainsKey(pos))
                 return No("A note resolved outside this file's text — no changes made.");
@@ -1021,6 +1030,39 @@ public static class OctaveModeConverter
 
     private static Result Fail(string error) => new(null, error, 0);
     private static (Result, List<Edit>) No(string error) => (Fail(error), []);
+
+    /// <summary>The top-level phrases holding <paramref name="unplayed"/>, by name — or null when
+    /// one of those notes is anywhere else (a section no form plays).</summary>
+    private static List<string>? UnplayedPhrases(SyntaxNode root, IEnumerable<int> unplayed)
+    {
+        var phrases = root.DescendantNodes<PhraseDeclarationSyntax>().Where(p => p.Parent is CompilationUnitSyntax).ToList();
+        var names = new List<string>();
+        foreach (int pos in unplayed)
+        {
+            var phrase = phrases.FirstOrDefault(p => p.Span.Start <= pos && pos < p.Span.End);
+            if (phrase == null)
+                return null;
+            if (!names.Contains(phrase.Name.Text))
+                names.Add(phrase.Name.Text);
+        }
+        return names;
+    }
+
+    private const string ProbeName = "unplayedPhrasesProbe";
+
+    /// <summary>The conversion with <paramref name="phrases"/> played after the file by a score of
+    /// their own, in a part of the default anchor — the frame a phrase's body begins in — and that
+    /// probe taken off the result. Its notes are converted and checked as every other.</summary>
+    private static (Result Result, List<Edit> Edits) Probed(string source, OctaveMode target, bool keepTopLevel, List<string> phrases)
+    {
+        string probe = $"\npart {ProbeName} {{ }}\nsection {ProbeName} {{ {ProbeName} {{ {string.Join(" ", phrases)} }} }}\n"
+            + $"form {ProbeName} {{ {ProbeName} }}\nscore {ProbeName} {{ form {ProbeName} staff {ProbeName} }}\n";
+        var (result, edits) = ConvertWithEdits(source + probe, target, keepTopLevel, probing: true);
+        if (result.NewText is not { } text || !text.EndsWith(probe, StringComparison.Ordinal)
+            || edits.Any(e => e.End > source.Length))
+            return No("The phrases no score plays could not be converted — no changes made.");
+        return (result with { NewText = text[..^probe.Length] }, edits);
+    }
 
     /// <summary>" (section B2 of part bass)" — the declarations around the pitch at
     /// <paramref name="pos"/>, so an unplayed note's refusal says which block is unplayed.</summary>

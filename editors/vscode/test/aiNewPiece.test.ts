@@ -102,7 +102,7 @@ describe('the composing guide', () => {
     });
     // Owner's report 2026-10-29: a piece composed in the chat opened in absolute octaves.
     it('opens the chat\'s new piece in relative octaves, as Compose with AI\'s', () => {
-        assert.match(transform, /const written = await writeWhole\(uri, exists, doc, await asMusicianWrites\(deps, client, text\)\);/);
+        assert.match(transform, /const musicians = await asMusicianWrites\(deps, client, text\);[\s\S]*?const written = await writeWhole\(uri, exists, doc, musicians\);/);
         assert.match(transform, /text = await asMusicianWrites\(deps, client, text\);\s*const eol/);
         assert.match(transform, /'lilysharp\/convertOctaves', \{ Text: text, Absolute: false, DropPartOctaves: true, DropConcertPitch: true \}/);
     });
@@ -171,7 +171,7 @@ describe('the composing guide', () => {
         assert.match(fn, /input\.note \?\? null, true\);/);
         // Owner's request 2026-10-29: a new piece goes straight into the file, open in the editor —
         // no panel; the music check still speaks once first.
-        assert.match(fn, /if \(isEmptyScore\(current\)\) \{[\s\S]*?const written = await writeWhole\(uri, exists, doc, await asMusicianWrites\(deps, client, text\)\);/);
+        assert.match(fn, /if \(isEmptyScore\(current\)\) \{[\s\S]*?const musicians = await asMusicianWrites\(deps, client, text\);[\s\S]*?const written = await writeWhole\(uri, exists, doc, musicians\);/);
         assert.ok(fn.indexOf('const music = await compositionFindings') < fn.indexOf('const written = await writeWhole'));
         // Written, not saved; an unsaved score is found by the path it is named by.
         const write = transform.slice(transform.indexOf('async function writeWhole'), transform.indexOf('function unsavedNamed'));

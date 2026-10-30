@@ -124,6 +124,8 @@ describe('a proposal from Copilot\'s chat', () => {
         assert.match(src, /if \(isEmptyScore\(current\) && !musicCheckedFor\.has\(uri\.toString\(\)\)\) \{\s*const report = await compositionReport\(client, text\);[\s\S]*?const music = \[\.\.\.report\.findings, language, drawnKeyNote\(text, drawnTonic\)\]\.filter\(\(m\): m is string => m !== undefined\);\s*drawnTonic = undefined;[^\n]*\s*drawnHint = undefined;[^\n]*\s*ranges = report\.ranges;\s*musicCheckedFor\.add\(uri\.toString\(\)\);/);
         // Each part's range goes with it, a fact to check against what was meant (owner's request
         // 2026-10-29: a beginner's piece slipped an octave), on the bounce, the write and an Accept.
+        // Its octaves said as written (owner's report 2026-10-30: left absolute, told relative).
+        assert.match(src, /const octaves = ABSOLUTE_LINE\.test\(musicians\)\s*\? 'It is written in absolute octaves, as you proposed it/);
         // One draw a piece, the guide read however often (owner's trial 2026-10-30: F, then E♭).
         assert.match(src, /const hint = drawnHint \?\?= compositionHint\(\);\s*drawnTonic = hintTonic\(hint\);/);
         assert.match(src, /'is checked again only for what it brings in, and what the check still finds in it is told to the musician\.'\s*\+ rangesSaid\(ranges\);/);
