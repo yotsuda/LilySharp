@@ -5,7 +5,7 @@ octave absolute
 time 4/4
 part gt { instrument guitar }
 section A {
-  gt { <g b d' f'>1@diagram | diagram(C x32010)2 diagram(Am x02210)2@chord | << diagram(G 320003) >>1 | }
+  gt { <g b d' f'>1@diagram | diagram(C x32010)2 chord(Am x02210)2 | << diagram(G 320003) >>1 | }
 }
 form { ~A }
 score { staff gt  tab gt }

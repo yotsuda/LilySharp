@@ -1,13 +1,13 @@
-// diagram(NAME SHAPE) WRITES the shape's notes: each string's open pitch plus its fret,
-// with its string number, so the tab shows the same shape, and draws the shape. A bare
-// @chord adds the name over it. A chord name belongs to the beat, so a rest or a spacer
-// takes one.
+// chord(NAME SHAPE) WRITES the shape's notes: each string's open pitch plus its fret,
+// with its string number, so the tab shows the same shape, and prints the name over its
+// diagram; diagram(NAME SHAPE) the same notes under the diagram alone. A chord name
+// belongs to the beat, so a rest or a spacer takes one.
 time 4/4
 part gt { instrument guitar }
 section A {
   gt {
     s1@chord(C x32010) | diagram(C x32013)1 |
-    diagram(Am x02210)2@chord diagram(F 133211)2@chord | r1@chord(G 320003) |
+    chord(Am x02210)2 chord(F 133211)2 | r1@chord(G 320003) |
   }
 }
 form { ~A }

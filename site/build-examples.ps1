@@ -288,16 +288,16 @@ score { staff melody }
 '@
 
 'chord-notes' = @'
-// diagram(NAME SHAPE) WRITES the shape's notes: each string's open pitch plus its fret,
-// with its string number, so the tab shows the same shape, and draws the shape. A bare
-// @chord adds the name over it. A chord name belongs to the beat, so a rest or a spacer
-// takes one.
+// chord(NAME SHAPE) WRITES the shape's notes: each string's open pitch plus its fret,
+// with its string number, so the tab shows the same shape, and prints the name over its
+// diagram; diagram(NAME SHAPE) the same notes under the diagram alone. A chord name
+// belongs to the beat, so a rest or a spacer takes one.
 time 4/4
 part gt { instrument guitar }
 section A {
   gt {
     s1@chord(C x32010) | diagram(C x32013)1 |
-    diagram(Am x02210)2@chord diagram(F 133211)2@chord | r1@chord(G 320003) |
+    chord(Am x02210)2 chord(F 133211)2 | r1@chord(G 320003) |
   }
 }
 form { ~A }
@@ -401,6 +401,33 @@ form { ~A }
 score { staff piano }
 '@
 
+'chord-items' = @'
+// chord(...) plays a chord and prints its name; with no shape a guitar plays its usual
+// shape, and strum after strum the name and diagram stand only where the chord changes.
+// chord(x32010) prints the name the shape spells; diagram(...) plays it under the picture alone.
+time 4/4
+part gt { instrument guitar }
+section A {
+  gt {
+    chord(G)4 chord(G)4 chord(G)4 chord(G)4 | chord(C x32010)4 chord(C x32010)4 chord(D)2 |
+    chord(x02210)2 diagram(x24442)2 | chord(G)1 |
+  }
+}
+form { ~A }
+score { staff gt }
+'@
+
+'chord-items-piano' = @'
+// On a piano, chord(...) with no shape plays the chord close, by middle C, and prints its name.
+time 4/4
+part piano { clef treble }
+section A {
+  piano { chord(C)2 chord(Am)2 | chord(F)2 chord(G7)2 | chord(C)1 | }
+}
+form { ~A }
+score { staff piano }
+'@
+
 'chord-fretted' = @'
 // On a guitar, a bare @diagram draws a <...> chord's own notes as they are fretted.
 // diagram(NAME SHAPE) writes a shape's notes and draws it; in << >> its strings are
@@ -409,7 +436,7 @@ octave absolute
 time 4/4
 part gt { instrument guitar }
 section A {
-  gt { <g b d' f'>1@diagram | diagram(C x32010)2 diagram(Am x02210)2@chord | << diagram(G 320003) >>1 | }
+  gt { <g b d' f'>1@diagram | diagram(C x32010)2 chord(Am x02210)2 | << diagram(G 320003) >>1 | }
 }
 form { ~A }
 score { staff gt  tab gt }

@@ -80,6 +80,9 @@ Every combination is ONE word. Nothing needs two marks.
 ## 6. Implementation plan
 
 Each stage is committed alone, with its tests, and leaves the build and the site green.
+All five shipped on 2026-10-31 (stage 4 with a second part: an item's repeated NAME drops like
+its diagram, and a repeat is not priced in its bar — the owner's decision after seeing a strummed
+line spread to two bars).
 
 1. **`chord(…)` comes back as an item.** The parser reads `chord(` as the shape-chord item again,
    with its word kept on the node; `chord` is reserved in music again (a phrase cannot be

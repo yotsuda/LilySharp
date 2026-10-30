@@ -357,25 +357,46 @@ the chord's c, not the g), and `<c, e g> <c, e g>` falls an octave, as `c, c,` d
 the mark once. Degree chords hand on the TONIC, not the first degree written. (Until
 2026-10-18 the anchor was the first member's BARE letter and its mark local — superseded.)
 
-A CHORD FROM A SHAPE — `diagram(SYMBOL SHAPE)` + a chord's tail (duration, dots, ties, slurs,
-beams, scripts, dynamics): writes the notes a fretted shape sounds (2026-09-28).
+CHORDS IN ONE WORD (2026-10-31) — `chord` shows the NAME, `diagram` the PICTURE; with `@` it marks
+the note it is on, without `@` it is an item that SOUNDS. Never two marks for one chord.
+
+| Written | Name | Diagram | Sounds |
+|---|---|---|---|
+| `c1@chord(F)` | ✓ | | |
+| `c1@chord(F 133211)` | ✓ | ✓ | |
+| `c1@chord(x32010)` | ✓ read off the shape (C) | ✓ | |
+| `<f a c>1@chord` | ✓ read off the notes | | |
+| `c1@diagram(133211)` | | ✓ | |
+| `<f a c>1@diagram` | | ✓ the notes, fretted | |
+| `chord(F)4` | ✓ | | ✓ the usual voicing |
+| `chord(F 133211)4` | ✓ | ✓ | ✓ the shape's strings |
+| `diagram(133211)4` / `diagram(F 133211)4` | | ✓ | ✓ the shape's strings |
 
 ```
-diagram(C x32013)1 |          // C3 E3 G3 C4 G4 on a guitar — each string's open pitch + fret
-diagram(Cm7 x3x546)2@chord    // + name and diagram: a bare @chord takes the item's words
+chord(C x32013)1 |            // C3 E3 G3 C4 G4 on a guitar, the name C and its diagram
+diagram(C x32013)1 |          // the same notes and diagram, no name (C is data: checked, stepped)
+chord(G)2 chord(D)2 |         // no shape: a guitar plays its usual shape, a piano G B D by middle C
 diagram(C xx-10-12-13-12)4.~  // frets 10-15 in the dash form
 ```
 
-- The words are `@chord(…)`'s (a symbol + a shape, or a shape alone); the shape is REQUIRED —
-  `diagram(C)` warns (LYS1040) and is a SPACER of its length.
+- Item words are `@chord(…)`'s: a symbol + a shape, a shape alone, or a symbol alone. With no
+  shape, a fretted part plays its instrument's usual shape (pressed above a capo); any other
+  part the chord's notes close, root from G3 to F♯4, no string numbers. A shape written badly,
+  or only for another instrument, warns (LYS1040) and is a spacer of its length.
 - Tuning: the PART's fretted instrument (its tab tuning), else the guitar. The shape gives
   SOUNDING pitches, and a guitar part (treble_8) is written as it sounds. ABSOLUTE: the frame, `octave absolute` and marks do not move
   it; marks after `)` are an error (LYS0035).
 - The note AFTER it is read from its LOWEST sounding note (relative mode).
   A phrase whose body opens with it hands the same note on after its reference.
 - Chord tones are spelled from the symbol (Cm7 → E♭ B♭); every note carries its string
-  number (a tab shows the shape). It draws its shape's diagram (unless `chordDiagrams none`, or an `@chord`/`@diagram` on it draws one); no name unless `@chord`.
-- `diagram` is reserved in music: a phrase cannot be named it. (Never write `chord(…)`: it is not an item.)
+  number (a tab shows the shape). The diagram is drawn unless `chordDiagrams none`, or an
+  `@chord`/`@diagram` on the item draws its own.
+- Strum after strum (`chord(F 133211)4 chord(F 133211)4 …`), the name and diagram stand where
+  the chord CHANGES and again at each system's head — write every strum the same; never thin
+  them out yourself.
+- To learn the name of a shape: `chord(x32010)4` prints it. `@diagram(x32010)@chord` warns
+  (LYS1056): write `@chord(C x32010)`.
+- `chord` and `diagram` are reserved in music: a phrase cannot be named either.
 
 ## Arpeggios `<< … >>` (written-out broken chords)
 
@@ -473,8 +494,9 @@ Value words inside the parentheses are lowercase too (`@notehead(triangle)`,
   (a listed chord draws wherever it is named — the table's shape, the usual one for a name
   alone; a `section NAME { … }` block's entries apply to the chords written in that section;
   a shape written at the chord still wins). A shape is one character per string, LOW string
-  first (`x` muted, `o`/`0` open, a digit the fret): `@chord(Cm7 x3x546)` (a shape alone is
-  `@diagram(x32010)`, no name; `diagram(x32010)@chord` plays it and names it); in a chords row
+  first (`x` muted, `o`/`0` open, a digit the fret): `@chord(Cm7 x3x546)` (`@chord(x32010)` names
+  it from the shape, `@diagram(x32010)` draws it with no name, `chord(x32010)4` plays it and
+  names it); in a chords row
   glued to the symbol: `F(133211)`,
   `F(133211 2010)` (a guitar and a ukulele shape, routed by string count),
   `F(guitar 133211 ukulele 2010)` (bound by tuning name). Frets 10–15: put a `-` on each
@@ -1391,7 +1413,7 @@ layout {
   shape is the shape pressed above the capo (`Eb(x32010)` is the C shape, checked against the
   pressed chord), the printed name is the pressed chord's (`C`), spelled in the key N
   semitones below the key at the bar, "Capo N" stands at the score's head, and a
-  `diagram(Eb x32010)` item sounds N semitones higher. There is no `capo auto`.
+  `chord(Eb x32010)` / `diagram(Eb x32010)` item sounds N semitones higher. There is no `capo auto`.
 - `chordNames shape` (the default) names the pressed chord under a capo, `sounding` the
   sounding chord, `both` both — `E♭m7 (Cm7)`. Without a capo all three print the same name.
 - `chordList true` puts every chord the score names at its head under the title, each once in
@@ -1450,7 +1472,7 @@ ppp pp p mp mf ff fff   (f is a PITCH; @f still works - dynamics resolve from te
 ```
 
 Also special: single letters `a`-`g` are pitches; `r`/`R`/`s` are rests. Reserved IN
-MUSIC only: `q`, `diagram` (`diagram(C x32010)`) and the drum names (`bd` `sn` `hh` …) — a
+MUSIC only: `q`, `chord` and `diagram` (`chord(C x32010)`, `diagram(C x32010)`) and the drum names (`bd` `sn` `hh` …) — a
 phrase cannot be named them; a part can. In a score, `tab X Y` is part X's tab plus the
 MIDI-only part Y when the file declares a part named X, else the X tuning over part Y
 (`tab bass click` beside `part bass`: the part wins, LYS1044 names `tab bass4 click` for

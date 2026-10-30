@@ -139,7 +139,7 @@ Keyword = 'title' | 'subtitle' | 'composer' | 'poet' | 'tempo' | 'time' | 'key' 
    implemented, top level only: LYS0029 elsewhere).
 
    RESERVED IN MUSIC ONLY (claimed by the music-item dispatch, not by the lexer, so they
-   are not in the list above): 'q' (ChordRepetition), 'chord' (ShapeChord, 2026-09-28) and
+   are not in the list above): 'q' (ChordRepetition), 'chord' and 'diagram' (ShapeChord) and
    the drum-kit names. A phrase cannot be named any of them (LYS1030 — a music stream
    would read the reference as the item); a part, a section, a fonts key and '@chord' are
    untouched. Measured before 'chord' was claimed: 0 identifiers 'chord' outside strings
@@ -2357,11 +2357,13 @@ ChordNote      = PitchToken , { Annotation } ;
    shape sounds, written as a chord. The words between the parentheses are an '@chord(…)'
    argument's — a chord symbol and a shape (ChordShapes.TryRead: one character per string,
    or the dash form for frets 10-15), a tuning word binding a shape by name, or a shape
-   alone. 'diagram' is claimed by the music-item dispatch only (reserved in music, like 'q':
-   a phrase cannot be named it; '@diagram' and a part named 'diagram' are untouched); the '('
-   may follow after a space. The word was 'chord' until 2026-10-30 and was then dropped
-   outright (owner's decision: no one wrote it yet); 'chord' is free again (a phrase may be
-   named it). The tail is a chord's: duration, dots, tremolo, post-events.
+   alone, or a symbol alone. TWO WORDS (owner's decision 2026-10-31, docs/chord-syntax-design.md):
+   the word says what is seen — 'chord(…)' prints the NAME (and the diagram of a shape written
+   with it), 'diagram(…)' the DIAGRAM only (a symbol written there is data: the shape is checked
+   against it, the step keys walk its shapes). Both are claimed by the music-item dispatch only
+   (reserved in music, like 'q': a phrase cannot be named either; '@chord', '@diagram' and a
+   part so named are untouched); the '(' may follow after a space. The tail is a chord's:
+   duration, dots, tremolo, post-events.
    - PITCHES: each unmuted string's open pitch + fret, on the tuning of the PART playing
      the item — its fretted instrument (the tuning its tab frets on), else the standard
      guitar. They are SOUNDING pitches; the staff writes them less the part's
@@ -2374,15 +2376,22 @@ ChordNote      = PitchToken , { Annotation } ;
      there. In 'octave absolute' nothing changes. (The twin writes the notes lowest first,
      so LilyPond's frame after the chord, its first note, is the same note.)
    - Each note carries its string number, as 'c\3' would; a muted string gives no note.
-   - The shape is REQUIRED for now: with none the part's tuning takes ('diagram(C)', a shape
-     of another string count) the item is a SPACER of its length and warns (LYS1040),
-     naming the fix. The words' own diagnostics are LYS1038 / LYS1039's.
-   - The item draws its shape's diagram (no name) on the page and in the twin (2026-10-30),
-     unless the score's 'chordDiagrams none' turns diagrams off or an '@chord' / '@diagram'
-     on it draws one; a bare '@chord' on it reads the ITEM's words (name + diagram, as
-     '@chord(SYMBOL SHAPE)'), a symbol-less item's by its notes.
+   - NO SHAPE ('chord(F)', 'diagram(F)', 2026-10-31): a fretted part plays its instrument's
+     usual shape (pressed above a capo) — 'diagram(F)' draws it, 'chord(F)' prints the name
+     alone, as '@chord(F)' does; any other part the chord's notes as the
+     completion writes them, close, the root written from G3 to F#4, with no string numbers.
+     A shape written badly, or only for another string count, does not fall back: the item is
+     a SPACER of its length and warns (LYS1040). The words' own diagnostics are LYS1038 / LYS1039's.
+   - The item draws its shape's diagram on the page and in the twin, unless the score's
+     'chordDiagrams none' turns diagrams off or an '@chord' / '@diagram' on it draws its own;
+     'chord(…)' prints its name over it, a symbol-less 'chord(x32010)' the name its notes spell.
+     A bare '@chord' on a 'diagram(…)' item reads the ITEM's words, as '@chord(SYMBOL SHAPE)'.
+   - Strum after strum, an item's diagram and name stand where the chord CHANGES (another
+     shape or name, or any other chord in the voice between) and again at the head of each
+     system; a repeat takes no room in its bar (ItemDiagramRuns, LayoutEngine.ItemDiagramsAtChanges;
+     the twin asks LilyPond's breaks the same question).
    LILYSHARP-OWN: LilyPond has no such item; the twin writes the chord out. *)
-ShapeChord     = 'diagram' , '(' , ChordArgument , ')'    (* ChordArgument: 8.4, not QuotedText *)
+ShapeChord     = ( 'chord' | 'diagram' ) , '(' , ChordArgument , ')'    (* ChordArgument: 8.4, not QuotedText *)
                , [ DurationToken ] , { Annotation } ;
 
 (* Arpeggio: a written-out broken chord. Members carry NO duration of their own — they play
@@ -2630,7 +2639,8 @@ Placement      = '.up' | '.down' ;   (* force above / below; default is automati
    is the symbol C7(b9,#11) and one shape (2026-10-23): inside a '(' … ')' neither whitespace
    nor ',' separates, in every '@name(…)' argument (MarkArgument). *)
 ChordArgument  = ChordEntry , ShapeWords                         (* the name + its diagram's shapes *)
-               | Shape , { Shape }                               (* the name comes from its notes *)
+               | Shape , { Shape }                               (* the name comes from its notes:
+                                                                    '@chord(x32010)' prints C over its diagram *)
                | QuotedText ;                                    (* @chord("N.C.") *)
 ShapeWords     = { [ TuningName ] , Shape } ;                    (* also a chords row's F(…) *)
 Shape          = OneCharShape | DashShape ;                      (* LOW string first; an unnamed

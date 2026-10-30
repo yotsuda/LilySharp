@@ -1,0 +1,8 @@
+// On a piano, chord(...) with no shape plays the chord close, by middle C, and prints its name.
+time 4/4
+part piano { clef treble }
+section A {
+  piano { chord(C)2 chord(Am)2 | chord(F)2 chord(G7)2 | chord(C)1 | }
+}
+form { ~A }
+score { staff piano }

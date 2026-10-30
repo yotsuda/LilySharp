@@ -7,9 +7,10 @@
     <li><a href="#complete">2. Let completion spell it</a></li>
     <li><a href="#named">3. Name a chord from its notes</a></li>
     <li><a href="#broken">4. Rolled and broken chords</a></li>
-    <li><a href="#fretted">5. On a fretted instrument</a></li>
-    <li><a href="#bowed">6. On a bowed string</a></li>
-    <li><a href="#ai">7. Ask the AI which voicings</a></li>
+    <li><a href="#byname">5. By name or by shape</a></li>
+    <li><a href="#fretted">6. On a fretted instrument</a></li>
+    <li><a href="#bowed">7. On a bowed string</a></li>
+    <li><a href="#ai">8. Ask the AI which voicings</a></li>
   </ol>
   <p class="grp">Elsewhere</p>
   <ol>
@@ -92,6 +93,39 @@ quickly, and how Lily# checks that a player can hold them. Chord <i>names</i> ov
   <!--EXAMPLE:chord-broken-->
 </section>
 
+<section id="byname">
+  <h2>By name or by shape</h2>
+  <p>You can also write the chord's <b>name</b>, or a guitarist's <b>shape</b>, instead of its
+  notes. One rule covers every spelling: <b>the word says what is seen</b>. <code>chord</code>
+  shows the name, <code>diagram</code> shows the fret diagram. Without <code>@</code> the chord
+  sounds; with <code>@</code> it only marks the note it is on.</p>
+  <table class="g">
+    <tr><th>Written</th><th>Name</th><th>Diagram</th><th>Sounds</th></tr>
+    <tr><td><code>chord(F)4</code></td><td>F</td><td></td><td>the usual voicing</td></tr>
+    <tr><td><code>chord(F 133211)4</code></td><td>F</td><td>✓</td><td>that shape's strings</td></tr>
+    <tr><td><code>chord(x32010)4</code></td><td>C, read off the shape</td><td>✓</td><td>that shape's strings</td></tr>
+    <tr><td><code>diagram(133211)4</code></td><td></td><td>✓</td><td>that shape's strings</td></tr>
+    <tr><td><code>c1@chord(F)</code></td><td>F</td><td></td><td>only the c</td></tr>
+    <tr><td><code>c1@chord(F 133211)</code></td><td>F</td><td>✓</td><td>only the c</td></tr>
+    <tr><td><code>c1@diagram(133211)</code></td><td></td><td>✓</td><td>only the c</td></tr>
+  </table>
+  <ul>
+    <li><b>No shape:</b> a guitar, bass, ukulele or banjo plays its usual shape for the name
+    (<code>chord(G)</code> prints the name, <code>diagram(G)</code> draws the shape). Any other
+    part plays the chord close, with its root near middle C.</li>
+    <li><b>Strum after strum:</b> write every strum the same. The name and the diagram stand
+    where the chord changes, and again at the head of each system, and the repeats take no
+    room.</li>
+    <li><b>Found a shape by ear?</b> Write <code>chord(x32010)4</code> and the page prints its
+    name. Or hover <code>diagram(x32010)</code>: it says <i>this shape is C</i>, and the quick
+    fix (Ctrl+.) writes the name in.</li>
+    <li><kbd>Ctrl+Shift+Up</kbd> / <kbd>Down</kbd> on either item walks the other shapes of the
+    same chord, and sounds each one.</li>
+  </ul>
+  <!--EXAMPLE:chord-items-->
+  <!--EXAMPLE:chord-items-piano-->
+</section>
+
 <section id="fretted">
   <h2>On a fretted instrument</h2>
   <p>A guitar, bass, ukulele or banjo part can hold only what one hand can fret: one note per
@@ -101,11 +135,11 @@ quickly, and how Lily# checks that a player can hold them. Chord <i>names</i> ov
     <code>&lt;g b d' f'&gt;1@diagram</code> draws <code>xx5431</code>. It chooses no crossed
     strings, the lowest position and the fewest fingers. The <code>.ly</code> twin draws the
     same shape.</li>
-    <li><b><code>diagram(NAME SHAPE)</code> goes the other way:</b> you write the shape and it
-    writes the notes. Each string's open pitch plus its fret becomes a note, with its string
-    number, so a <code>tab</code> shows exactly that shape. It draws its diagram too, and a
-    bare <code>@chord</code> adds the name. In <code>&lt;&lt; &gt;&gt;</code> its strings are
-    played in turn, lowest first. The diagram is drawn once, over the first note.</li>
+    <li><b><code>chord(NAME SHAPE)</code> and <code>diagram(NAME SHAPE)</code> go the other
+    way:</b> you write the shape and it writes the notes (<a href="#byname">By name or by
+    shape</a>). Each string's open pitch plus its fret becomes a note, with its string number,
+    so a <code>tab</code> shows exactly that shape. In <code>&lt;&lt; &gt;&gt;</code> its strings
+    are played in turn, lowest first. The diagram is drawn once, over the first note.</li>
     <li><b>A chord no hand can hold is warned</b> (LYS1055). The warning names a voicing of the
     same notes that can be held, written as a diagram writes it.</li>
   </ul>
