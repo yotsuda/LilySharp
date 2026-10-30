@@ -61,6 +61,9 @@ public static partial class NoteStepper
             "chordNames" => LanguageVocabulary.ChordNameWords,
             "chordList" => LanguageVocabulary.ChordListWords,
             "compressRests" => LanguageVocabulary.CompressRestsWords,
+            "voltaBracket" => VoltaBracketLength.Words,
+            // A tuning word steps the tunings (and `none`); `capo` and `all` are not a tuning.
+            "chordDiagrams" => [.. LanguageVocabulary.ChordDiagramWords.Where(w => w is not (ChordDiagramsKey.CapoWord or ChordDiagramsKey.AllWord))],
             // `as` governs three different words: a chord row's display, a tab's style, and a
             // fonts entry's family — the one whose list holds the word.
             "as" => new[] { ChordAsWords, (IReadOnlyCollection<string>)LanguageVocabulary.TabStyles, FontFamilyWords }
@@ -288,10 +291,85 @@ public static partial class NoteStepper
     {
         if (!int.TryParse(number.Text, out int n))
             return (null, $"{what}: write a whole number");
-        int next = n + dir;
-        if (next < min || next > max)
+        // A step of several (the octave pair's) stops at the bound rather than refusing.
+        int next = Math.Clamp(n + dir, min, max);
+        if (next == n)
             return (null, $"{what} {n}: already the {(dir > 0 ? "most" : "fewest")} ({min} to {max})");
         return (new Edit(number.Span.Start, number.Span.End, next.ToString()), $"{what} {next}");
+    }
+
+    // ------------------------------------------------------------------ numbers in a layout { }
+
+    /// <summary>
+    /// The steps of a layout number key (owner's request 2026-10-30): the small one on the
+    /// semitone pair (Ctrl+Shift+Up / Down), the large one on the octave pair (PageUp / PageDown),
+    /// and the least it may be. Each sized to its key's default — a hundredth of a staff space for
+    /// the thin lines, a tenth for a multiplier near 1. A two-number key (<c>LedgerLine.thickness
+    /// 1.0 0.1</c>) has a row for each.
+    /// </summary>
+    private static readonly Dictionary<string, (double Small, double Large, double Min)[]> LayoutNumberSteps = new(StringComparer.Ordinal)
+    {
+        ["lineThickness"] = [(0.01, 0.05, 0.01)],
+        ["StaffLine.thickness"] = [(0.1, 0.5, 0.1)],
+        ["LedgerLine.thickness"] = [(0.1, 0.5, 0), (0.01, 0.05, 0)],
+        ["LedgerLine.lengthFraction"] = [(0.05, 0.25, 0.05)],
+        ["Stem.thickness"] = [(0.1, 0.5, 0.1)],
+        ["Stem.lengthFraction"] = [(0.05, 0.25, 0.05)],
+        ["Beam.thickness"] = [(0.02, 0.1, 0.02)],
+        ["Beam.damping"] = [(0.1, 1.0, 0)],
+        ["Dots.padding"] = [(0.05, 0.25, 0)],
+        ["Accidental.rightPadding"] = [(0.05, 0.25, 0)],
+        ["NoteHead.scale"] = [(0.05, 0.25, 0.05)],
+        ["BarLine.thinThickness"] = [(0.1, 0.5, 0.1)],
+        ["BarLine.thickThickness"] = [(0.5, 2.0, 0.5)],
+    };
+
+    /// <summary>A number in a <c>layout { }</c> block the caret is on — a number key's value (its
+    /// index among them), <c>voltaBracket N</c>, or the fret of <c>chordDiagrams … capo N</c>
+    /// (<paramref name="Capo"/>) — with its key, or null. <c>barNumbers every N</c> is
+    /// <see cref="BarNumberEveryAt"/>'s.</summary>
+    private static (string Key, SyntaxTokenNode Number, int Index, bool Capo)? LayoutNumberAt(SyntaxTree tree, int offset)
+    {
+        foreach (var layout in tree.GetNodes<LayoutDeclarationSyntax>())
+            foreach (var entry in layout.Entries)
+                for (int i = 0; i < entry.Values.Count; i++)
+                {
+                    var value = entry.Values[i];
+                    if (value.Kind is not (SyntaxKind.IntegerLiteral or SyntaxKind.DecimalLiteral)
+                        || value.Span.Start > offset || offset > value.Span.End)
+                        continue;
+                    bool capo = entry.Key == ChordDiagramsKey.Key && i > 0 && entry.Values[i - 1].Text == ChordDiagramsKey.CapoWord;
+                    if (capo || (entry.Key == VoltaBracketLength.Key && i == 0) || LayoutNumberSteps.ContainsKey(entry.Key))
+                        return (entry.Key, value, i, capo);
+                }
+        return null;
+    }
+
+    /// <summary>One step of a layout number: a whole count for <c>voltaBracket N</c> (a bar, four on
+    /// the octave pair) and a capo's fret (1 to 11), else the key's own steps
+    /// (<see cref="LayoutNumberSteps"/>), the value kept on the small step's grid and never under its
+    /// least.</summary>
+    private static (Edit? Edit, string Message) LayoutNumberEdit(string key, SyntaxTokenNode number, int index, bool capo,
+        int dir, bool small)
+    {
+        if (capo)
+            return CountEdit(number, dir, "chordDiagrams capo", max: ChordDiagramsKey.MaxCapo);
+        if (key == VoltaBracketLength.Key)
+            return CountEdit(number, small ? dir : 4 * dir, "voltaBracket");
+        var steps = LayoutNumberSteps[key];
+        var (fine, coarse, min) = steps[Math.Min(index, steps.Length - 1)];
+        if (!double.TryParse(number.Text, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double now))
+            return (null, $"{key}: write a number");
+        double next = Math.Max(min, Math.Round((now + dir * (small ? fine : coarse)) / fine) * fine);
+        // As many places as the small step has (0.05 → two), one at least: 1.0, 0.15.
+        string step = fine.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        int decimals = Math.Max(1, step.Contains('.') ? step.Length - step.IndexOf('.') - 1 : 0);
+        string written = next.ToString("0.0" + new string('#', decimals - 1), System.Globalization.CultureInfo.InvariantCulture);
+        string? fallback = LanguageVocabulary.LayoutNumberKeyDefault(key);
+        string said = $"{key} {written}" + (fallback != null ? $" (default {fallback})" : "");
+        if (Math.Abs(next - now) < fine / 2)
+            return (null, $"{key} {number.Text}: already the least ({min.ToString(System.Globalization.CultureInfo.InvariantCulture)})");
+        return (new Edit(number.Span.Start, number.Span.End, written), said);
     }
 
     /// <summary>The fewest times a <c>:|*N</c> plays: a repeat plays at least twice, which is what

@@ -1201,6 +1201,38 @@ public class StepRequestTests
         var (fewest, same) = Step(L("barNumbers every 1‸"), -1, semitone: true);
         Assert.Equal(L("barNumbers every 1"), same);
         Assert.Contains("fewest", fewest.Message);
+        // The octave pair steps a phrase, four bars, and stops at the least.
+        Assert.Equal(L("barNumbers every 8"), Step(L("barNumbers every ‸4"), +1, semitone: false).After);
+        Assert.Equal(L("barNumbers every 1"), Step(L("barNumbers every ‸3"), -1, semitone: false).After);
+    }
+
+    /// <summary>Owner's request 2026-10-30: every value in a layout block steps — the number keys
+    /// by a small step on Up / Down and a large one on PageUp / PageDown, each on its own grid and
+    /// never under its least; voltaBracket's bars and a capo's fret as counts; voltaBracket's and
+    /// chordDiagrams' words along their lists.</summary>
+    [Fact]
+    public void ALayoutsNumbers_Step_SmallOnUpDown_LargeOnPageUpDown()
+    {
+        string L(string entry) => $"layout {{ {entry} }}\npart m {{ }}\nsection A {{ m {{ c'4 }} }}\n";
+        Assert.Equal(L("Stem.thickness 1.4"), Step(L("Stem.thickness ‸1.3"), +1, semitone: true).After);
+        Assert.Equal(L("Stem.thickness 1.8"), Step(L("Stem.thickness ‸1.3"), +1, semitone: false).After);
+        Assert.Equal(L("lineThickness 0.11"), Step(L("lineThickness ‸0.1"), +1, semitone: true).After);
+        Assert.Equal(L("Dots.padding 0.4"), Step(L("Dots.padding ‸0.45"), -1, semitone: true).After);
+        Assert.Equal(L("NoteHead.scale 1.05"), Step(L("NoteHead.scale ‸1.0"), +1, semitone: true).After);
+        // Each of LedgerLine.thickness's two numbers on its own steps.
+        Assert.Equal(L("LedgerLine.thickness 1.0 0.11"), Step(L("LedgerLine.thickness 1.0 ‸0.1"), +1, semitone: true).After);
+        Assert.Equal(L("LedgerLine.thickness 1.1 0.1"), Step(L("LedgerLine.thickness ‸1.0 0.1"), +1, semitone: true).After);
+        // Never under the least.
+        var (least, kept) = Step(L("lineThickness ‸0.01"), -1, semitone: false);
+        Assert.Equal(L("lineThickness 0.01"), kept);
+        Assert.Contains("least", least.Message);
+        // Counts.
+        Assert.Equal(L("voltaBracket 3"), Step(L("voltaBracket ‸2"), +1, semitone: true).After);
+        Assert.Equal(L("voltaBracket 6"), Step(L("voltaBracket ‸2"), +1, semitone: false).After);
+        Assert.Equal(L("chordDiagrams guitar capo 4"), Step(L("chordDiagrams guitar capo ‸3"), +1, semitone: true).After);
+        // Words.
+        Assert.Equal(L("voltaBracket line"), Step(L("voltaBracket ‸all"), -1, semitone: true).After);
+        Assert.NotEqual(L("chordDiagrams guitar"), Step(L("chordDiagrams ‸guitar"), -1, semitone: true).After);
     }
 
     [Fact]

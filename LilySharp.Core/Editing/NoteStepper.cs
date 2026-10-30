@@ -161,6 +161,9 @@ public static partial class NoteStepper
         KeywordValue,
         /// <summary>The number of a layout's <c>barNumbers every N</c> (NoteStepper.Words.cs).</summary>
         BarNumberEvery,
+        /// <summary>A number in a <c>layout { }</c> block — a line thickness, <c>voltaBracket N</c>,
+        /// <c>chordDiagrams capo N</c> (NoteStepper.Words.cs).</summary>
+        LayoutNumber,
         /// <summary>A <c>paper { size … }</c> page name (NoteStepper.Words.cs).</summary>
         PaperSize,
         /// <summary>A part's <c>instrument</c> preset — it sounds the new one (NoteStepper.Words.cs).</summary>
@@ -197,7 +200,7 @@ public static partial class NoteStepper
             or TargetKind.Font or TargetKind.FontSize or TargetKind.Percent or TargetKind.StaffGroup
             or TargetKind.StaffOrTab or TargetKind.ScorePart or TargetKind.StaffLines
             or TargetKind.StaffSelector or TargetKind.KeywordValue or TargetKind.BarNumberEvery
-            or TargetKind.PaperSize or TargetKind.TupletRatio or TargetKind.MusicCount or TargetKind.PartialLength
+            or TargetKind.LayoutNumber or TargetKind.PaperSize or TargetKind.TupletRatio or TargetKind.MusicCount or TargetKind.PartialLength
             or TargetKind.FormSection or TargetKind.SingsTarget or TargetKind.Duration or TargetKind.ChordQuality
             or TargetKind.Barline or TargetKind.MusicKeyword or TargetKind.NavigationMark;
 
@@ -399,7 +402,7 @@ public static partial class NoteStepper
                 or TargetKind.Font or TargetKind.Instrument or TargetKind.Tuning or TargetKind.Percent
                 or TargetKind.StaffGroup or TargetKind.StaffOrTab or TargetKind.FontSize or TargetKind.ScorePart
                 or TargetKind.StaffLines or TargetKind.StaffSelector or TargetKind.KeywordValue
-                or TargetKind.BarNumberEvery or TargetKind.PaperSize or TargetKind.InstrumentPreset
+                or TargetKind.BarNumberEvery or TargetKind.LayoutNumber or TargetKind.PaperSize or TargetKind.InstrumentPreset
                 or TargetKind.TupletRatio or TargetKind.MusicCount or TargetKind.PartialLength
                 or TargetKind.FormSection or TargetKind.SingsTarget or TargetKind.Duration or TargetKind.ChordQuality
                 or TargetKind.Barline or TargetKind.MusicKeyword or TargetKind.NavigationMark)
@@ -423,7 +426,11 @@ public static partial class NoteStepper
                     TargetKind.KeywordValue => KeywordValueAt(tree, t.Node.Span.Start) is { } kv
                         ? KeywordValueEdit(tree, kv.Keyword, kv.Value, dir)
                         : (null, "write a value"),
-                    TargetKind.BarNumberEvery => CountEdit((SyntaxTokenNode)t.Node, dir, "barNumbers every"),
+                    // A bar a step, four (a phrase) on the octave pair.
+                    TargetKind.BarNumberEvery => CountEdit((SyntaxTokenNode)t.Node, semitone ? dir : 4 * dir, "barNumbers every"),
+                    TargetKind.LayoutNumber => LayoutNumberAt(tree, t.Node.Span.Start) is { } ln
+                        ? LayoutNumberEdit(ln.Key, ln.Number, ln.Index, ln.Capo, dir, semitone)
+                        : (null, "write a number"),
                     TargetKind.TupletRatio => TupletRatioEdit((TupletExpressionSyntax)t.Node, dir),
                     TargetKind.MusicCount => t.Node.Parent is BarlineSyntax or FormRepeatBlockSyntax
                         ? RepeatPlaysEdit((SyntaxTokenNode)t.Node, dir)
@@ -639,6 +646,8 @@ public static partial class NoteStepper
             return new Target(nameReference.Kind, nameReference.Name);
         if (BarNumberEveryAt(tree, offset) is { } every)
             return new Target(TargetKind.BarNumberEvery, every);
+        if (LayoutNumberAt(tree, offset) is { } layoutNumber)
+            return new Target(TargetKind.LayoutNumber, layoutNumber.Number);
         if (PaperSizeAt(tree, offset) is { } pageSize)
             return new Target(TargetKind.PaperSize, pageSize.First);
         if (InstrumentPresetAt(tree, offset) is { } preset)
