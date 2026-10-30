@@ -440,6 +440,30 @@ public static class CompositionChecks
                     + "figure stays within an octave and a half, climbing from its bass by the chord's tones and turning back.");
         }
 
+        findings.AddRange(Clashes(midi, melodies, barList));
+        findings.AddRange(LowChords(midi, barList));
+        // A band's part crowding its bass (owner's trial 2026-10-30: a rock guitar mostly D2–D3 over a
+        // bass mostly E1–E2 — two low lines in one register, a muddy sound).
+        foreach (var bass in bandBasses.Where(sounding.ContainsKey))
+        {
+            int under = PercentileOf(sounding[bass], 0.5);
+            foreach (var (part, notes) in sounding)
+            {
+                if (part == bass || bandBasses.Contains(part) || hands.ContainsKey(part) || notes.Count < 16
+                    || part.EndsWith(" (chords)", System.StringComparison.Ordinal))
+                    continue;
+                int middle = PercentileOf(notes, 0.5);
+                if (middle - under < 12)
+                    findings.Add($"{part}: most of its time round {PartRanges.SpelledFromPitch(middle)}, within an octave of the bass's "
+                        + $"{PartRanges.SpelledFromPitch(under)} — two low lines in one register muddy each other: lift it an octave "
+                        + "(a guitar's chords round C3 to C5, its tune above them), and leave the low register to the bass.");
+            }
+        }
+        if (band)
+            findings.AddRange(OneGroove(midi, barList));
+        if (parts.Select(p => p.Name.Text).FirstOrDefault(n => melodies.Contains(n) && byPart.ContainsKey(n)) is { } tune)
+            findings.AddRange(OpenEndings(midi, tune));
+
         // The length and the ending (owner's report 2026-10-27: the composed piano piece was 8 bars, two
         // sections of four, and its end "unnatural" — it began in E minor and stopped in G major).
         var barStarts = midi.BarTicks.ToList();
@@ -520,6 +544,140 @@ public static class CompositionChecks
     // …nor under this many seconds played, a floor under the guide's minute and a half (owner's trials
     // 2026-10-29: 6/8 pieces of 26 and 28 bars played in under a minute).
     private const int ShortestSeconds = 75;
+
+    // A note on the beat a semitone from the harmony, this many times and in this share of the
+    // melody's long notes on the beat: a wrong note, not a passing one (owner's request 2026-10-30).
+    private const int ClashFewest = 3;
+    private const double ClashShare = 0.05;
+
+    /// <summary>A melody's notes held on the beat (a quarter or longer) a semitone — or a minor ninth,
+    /// a major seventh — from a note another part sounds with them at their start. A suspension is
+    /// struck before the harmony moves under it, so it is not one.</summary>
+    private static IEnumerable<string> Clashes(MidiFile midi, HashSet<string> melodies, List<int> barList)
+    {
+        int tpq = midi.TicksPerQuarterNote;
+        var notes = midi.Tracks.SelectMany(t => t.Notes.Where(n => n.Channel != 9)
+            .Select(n => (Part: n.Part ?? t.Name, n.StartTick, n.DurationTicks, n.Pitch))).ToList();
+        foreach (var part in melodies)
+        {
+            var line = notes.Where(n => n.Part == part).GroupBy(n => n.StartTick).Where(g => g.Count() == 1).Select(g => g.First()).ToList();
+            var others = notes.Where(n => n.Part != part).ToList();
+            var held = line.Where(m => m.DurationTicks >= tpq && (m.StartTick - barList.LastOrDefault(b => b <= m.StartTick)) % tpq == 0).ToList();
+            var clashes = new List<(int Bar, int Note, int Against)>();
+            foreach (var m in held)
+            {
+                var against = others.FirstOrDefault(n => n.StartTick <= m.StartTick && m.StartTick < n.StartTick + n.DurationTicks
+                    && ((m.Pitch - n.Pitch) % 12 + 12) % 12 is 1 or 11);
+                if (against.Part != null)
+                    clashes.Add((barList.Count(b => b <= m.StartTick), m.Pitch, against.Pitch));
+            }
+            if (clashes.Count < ClashFewest || clashes.Count < held.Count * ClashShare)
+                continue;
+            var bars = clashes.Select(c => c.Bar).Distinct().ToList();
+            yield return $"{part}, the melody: {clashes.Count} times a note held on the beat stands a semitone from the harmony sounding "
+                + $"with it (bars {string.Join(", ", bars.Take(6))}{(bars.Count > 6 ? ", …" : "")}, as the form plays them; "
+                + $"{PartRanges.SpelledFromPitch(clashes[0].Note)} against {PartRanges.SpelledFromPitch(clashes[0].Against)} first) — "
+                + "a wrong note? Take the chord's own tone there, or change the chord under it; a note against the chord is a "
+                + "passing one, short and moving on by step — unless it is a blue note meant, a minor third over a major chord.";
+        }
+    }
+
+    // A third or a second stacked under C3 (MIDI 48) muddies — the low interval limit — in this many
+    // of a part's chords (owner's trial 2026-10-30: a rock guitar's E chord `<e, gis b>`, E2 G♯2 B2).
+    private const int LowThirdCeiling = 48, LowChordsFewest = 4;
+
+    /// <summary>A part's chords with a third or a second under C3.</summary>
+    private static IEnumerable<string> LowChords(MidiFile midi, List<int> barList)
+    {
+        foreach (var part in midi.Tracks.SelectMany(t => t.Notes.Where(n => n.Channel != 9).Select(n => (Part: n.Part ?? t.Name, n.StartTick, n.Pitch)))
+            .GroupBy(n => n.Part))
+        {
+            var muddy = part.GroupBy(n => n.StartTick).Select(g => (Tick: g.Key, Pitches: g.Select(n => n.Pitch).Distinct().OrderBy(p => p).ToList()))
+                .Where(c => c.Pitches.Count >= 2 && c.Pitches.Zip(c.Pitches.Skip(1)).Any(p => p.Second - p.First <= 4 && p.First < LowThirdCeiling))
+                .ToList();
+            if (muddy.Count < LowChordsFewest)
+                continue;
+            var first = muddy[0];
+            yield return $"{part.Key}: {muddy.Count} chords stack a third or a second below C3 ("
+                + $"{string.Join(" ", first.Pitches.Select(PartRanges.SpelledFromPitch))} in bar {barList.Count(b => b <= first.Tick)} first, "
+                + "as the form plays them) — so low, close notes are mud: voice it open, the root and fifth below (a power chord) "
+                + "and the third an octave or more higher.";
+        }
+    }
+
+    /// <summary>The sections as played, by name, each once: its first play's start and end.</summary>
+    private static List<(string Name, int Start, int End)> PlayedSpans(MidiFile midi)
+    {
+        var starts = midi.SectionStarts.ToList();
+        return starts.Select((s, i) => (Name: s.Value, Start: s.Key, End: i + 1 < starts.Count ? starts[i + 1].Key : midi.EndTick))
+            .Where(s => s.End > s.Start).GroupBy(s => s.Name).Select(g => g.First()).ToList();
+    }
+
+    /// <summary>A band's drums playing one groove in every section: the commonest bar of each the same
+    /// (owner's trial 2026-10-30: a rock trio's kick and snare `bd4 sn4 bd8 bd8 sn4` in all 52 bars),
+    /// or its kick and snare the same while only the cymbals change.</summary>
+    private static IEnumerable<string> OneGroove(MidiFile midi, List<int> barList)
+    {
+        var spans = PlayedSpans(midi);
+        foreach (var kit in midi.Tracks.SelectMany(t => t.Notes.Where(n => n.Channel == 9).Select(n => (Part: n.Part ?? t.Name, n.StartTick, n.Pitch)))
+            .GroupBy(n => n.Part))
+        {
+            string? Commonest(int start, int end, bool feet)
+            {
+                var bars = barList.Where(b => b >= start && b < end).ToList();
+                var patterns = bars.Select((b, i) =>
+                {
+                    int next = i + 1 < bars.Count ? bars[i + 1] : end;
+                    return string.Join(";", kit.Where(n => n.StartTick >= b && n.StartTick < next && (!feet || n.Pitch is >= 35 and <= 40))
+                        .OrderBy(n => n.StartTick).ThenBy(n => n.Pitch).Select(n => $"{n.StartTick - b}:{n.Pitch}"));
+                }).Where(p => p.Length > 0).ToList();
+                return patterns.Count < 2 ? null : patterns.GroupBy(p => p).OrderByDescending(g => g.Count()).First().Key;
+            }
+            var grooves = spans.Select(s => (s.Name, All: Commonest(s.Start, s.End, false), Feet: Commonest(s.Start, s.End, true)))
+                .Where(g => g.All != null).ToList();
+            string names = string.Join(", ", grooves.Select(g => g.Name));
+            if (grooves.Count >= 3 && grooves.Select(g => g.All).Distinct().Count() == 1)
+                yield return $"{kit.Key}: the same groove in every section ({names}) — the drums change with the song: the closed hi-hat "
+                    + "in the verse, the ride or crashes and the open hi-hat in the chorus, half-time or the toms in a quiet bridge, and a "
+                    + "fill into each new section.";
+            else if (grooves.Count >= 4 && grooves.Select(g => g.Feet).Distinct().Count() == 1)
+                yield return $"{kit.Key}: the kick and the snare play one beat in every section ({names}), only the cymbals change — let "
+                    + "a section change the beat itself: half-time in a bridge or a breakdown (the snare on 3), the kick driving harder "
+                    + "in the last chorus.";
+        }
+    }
+
+    /// <summary>The melody's last note in each section open against the bass under it — a second, a
+    /// tritone or a seventh: its phrase not closed. Not a fourth: a band's bass passes through the
+    /// chord's fifth under the root it ends on (owner's request 2026-10-30; the length
+    /// finding asks for phrases "each closing on a cadence", and nothing saw whether they did).</summary>
+    private static IEnumerable<string> OpenEndings(MidiFile midi, string tune)
+    {
+        var notes = midi.Tracks.SelectMany(t => t.Notes.Where(n => n.Channel != 9)
+            .Select(n => (Part: n.Part ?? t.Name, n.StartTick, n.DurationTicks, n.Pitch))).ToList();
+        var spans = PlayedSpans(midi);
+        var open = new List<string>();
+        int read = 0;
+        foreach (var (name, start, end) in spans)
+        {
+            var mine = notes.Where(n => n.Part == tune && n.StartTick >= start && n.StartTick < end).ToList();
+            if (mine.Count == 0)
+                continue;
+            int last = mine.Max(n => n.StartTick);
+            int top = mine.Where(n => n.StartTick == last).Max(n => n.Pitch);
+            var under = notes.Where(n => n.Part != tune && n.StartTick <= last && last < n.StartTick + n.DurationTicks).ToList();
+            if (under.Count == 0)
+                continue;
+            read++;
+            int bass = under.Min(n => n.Pitch);
+            if (((top - bass) % 12 + 12) % 12 is 1 or 2 or 6 or 10 or 11)
+                open.Add($"{name}: {PartRanges.SpelledFromPitch(top)} over {PartRanges.SpelledFromPitch(bass)}");
+        }
+        if (read >= 3 && open.Count >= 2 && open.Count * 3 >= read)
+            yield return $"{tune}: {open.Count} of {read} sections end their tune on a note open against the bass ({string.Join(", ", open.Take(4))}"
+                + $"{(open.Count > 4 ? ", …" : "")}) — a section closes its phrase: end it on the chord's own tone (the root, the third "
+                + "or the fifth over the bass), held, a cadence the next section starts from.";
+    }
 
     /// <summary>The bars a minute and a half to three minutes take at the piece's own pace — its
     /// seconds over its bars; the guide's 4/4 count where it played no time.</summary>

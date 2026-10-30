@@ -132,6 +132,10 @@ public class MidiFile
     /// </summary>
     public SortedSet<int> BarTicks { get; } = [];
 
+    /// <summary>The ticks the sections begin at as the music plays, each with its section's name —
+    /// the composition checks read a section's end by them. Not written to .mid files.</summary>
+    public SortedDictionary<int, string> SectionStarts { get; } = [];
+
     /// <summary>The piece's end: the last tick any track sounds or says anything at.
     /// Every track's end-of-track stands here (<see cref="WriteTo"/>).</summary>
     public int EndTick => Tracks.Count == 0 ? 0 : Tracks.Max(t => t.LastTick);

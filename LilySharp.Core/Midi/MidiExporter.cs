@@ -542,6 +542,7 @@ public sealed class MidiExporter
         _drumOverrides = DrumOverrides.Build(tree.GetRoot());
         var midi = new MidiFile { TicksPerQuarterNote = _ticksPerQuarter };
         _barTicks = midi.BarTicks;
+        _sectionStarts = midi.SectionStarts;
 
         var conductorTrack = new MidiTrack { Name = "Tempo", Channel = 0 };
         // The default tempo at tick 0; a book's own `tempo` replaces it there (SetTempo:
@@ -1136,6 +1137,7 @@ public sealed class MidiExporter
         // done, whichever of PlaySectionCore's exits it leaves by (AttachLyrics).
         int notesBefore = track.Notes.Count;
         int sectionStart = _currentTick;
+        _sectionStarts?.TryAdd(sectionStart, section.SectionName);
         var outerLyrics = _sectionLyrics;
         _sectionLyrics = new List<(LyricsBlockSyntax, string?)>();
         PlaySectionCore(section, track, conductorTrack, octaveOffset, firstBarTicks);
@@ -2186,6 +2188,9 @@ public sealed class MidiExporter
 
     // The bar lines' ticks of the file being exported (MidiFile.BarTicks).
     private SortedSet<int>? _barTicks;
+
+    // The sections' starting ticks of the file being exported (MidiFile.SectionStarts).
+    private SortedDictionary<int, string>? _sectionStarts;
 
     /// <summary>A bar line at the current tick: the next bar opens here.</summary>
     private void MarkBarLine(MidiTrack track)

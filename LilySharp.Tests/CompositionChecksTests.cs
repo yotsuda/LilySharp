@@ -325,6 +325,65 @@ public class CompositionChecksTests
             f => f.StartsWith("A tune is played"));
     }
 
+    // Owner's request 2026-10-30: four findings for a piece's sound — a wrong note held against the
+    // harmony, low close chords and a part in the bass's register, one groove in every section, and
+    // sections whose tune ends open.
+    private static string Rock3(string guitar, string bass, string? lastGuitar = null, string? lastBass = null,
+        (string Hands, string Feet)[]? kits = null)
+    {
+        kits ??= [("hh8 hh hh hh hh hh hh hh", "bd4 sn bd sn"), ("hh8 hh hh hh hh hh hh hh", "bd4 sn bd sn"), ("hh8 hh hh hh hh hh hh hh", "bd4 sn bd sn")];
+        string Bars(string bar, int n) => string.Concat(Enumerable.Repeat(bar + " | ", n));
+        var names = kits.Select((_, i) => ((char)('A' + i)).ToString()).ToList();
+        string sections = string.Concat(kits.Select((k, i) => $"section {names[i]} {{\n  gtr {{ {Bars(guitar, 3)}{lastGuitar ?? guitar} | }}\n"
+            + $"  bass {{ {Bars(bass, 3)}{lastBass ?? bass} | }}\n  kit {{ voice {{ {Bars(k.Hands, 4)} }} {{ {Bars(k.Feet, 4)} }} }}\n}}\n"));
+        return $"title \"Riff\"\ntempo 168\ntime 4/4\noctave absolute\n{Guitar}\n{Bass}\n{Drums}\n" + sections
+            + $"form {{ {string.Join(" ", names)} {string.Join(" ", names)} }}\nscore {{ staff gtr  staff bass  staff kit }}\n";
+    }
+
+    [Fact]
+    public void AMelodyHeldASemitoneFromItsHarmony_IsSaid()
+    {
+        Assert.Contains(CompositionChecks.Of(Rock3("f'4 g' a'2", "fis,8 fis, fis, fis, fis, fis, fis, fis,")),
+            f => f.StartsWith("gtr, the melody: ") && f.Contains("times a note held on the beat stands a semitone from the harmony")
+                && f.Contains("F4 against F♯1 first"));
+        Assert.DoesNotContain(CompositionChecks.Of(Rock3("f'4 g' a'2", "d,8 d, d, d, d, d, d, d,")), f => f.Contains("a semitone from the harmony"));
+    }
+
+    [Fact]
+    public void LowCloseChords_AndAPartInTheBasssRegister_AreSaid()
+    {
+        // The bass sounds an octave below its written note: `e` is E2, in the guitar's own register.
+        var low = CompositionChecks.Of(Rock3("<e, gis, b,>2 <e, gis, b,>2", "e8 e e e e e e e"));
+        Assert.Contains(low, f => f.StartsWith("gtr: ") && f.Contains("chords stack a third or a second below C3 (E2 A♭2 B2 in bar 1 first"));
+        Assert.Contains(low, f => f.StartsWith("gtr: most of its time round ") && f.Contains("within an octave of the bass's"));
+        var open = CompositionChecks.Of(Rock3("<e b e' gis'>2 <e b e' gis'>2", "e,8 e, e, e, e, e, e, e,"));
+        Assert.DoesNotContain(open, f => f.Contains("below C3") || f.Contains("within an octave of the bass's"));
+    }
+
+    [Fact]
+    public void ABandsDrumsInOneGrooveThroughEverySection_AreSaid()
+    {
+        Assert.Contains(CompositionChecks.Of(Rock3("e'4 g' a'2", "e,8 e, e, e, e, e, e, e,")),
+            f => f.StartsWith("kit: the same groove in every section (A, B, C)"));
+        // The cymbals changing with the section, the kick and the snare the same: said of four sections or more.
+        const string hats = "hh8 hh hh hh hh hh hh hh", ride = "cymr8 cymr cymr cymr cymr cymr cymr cymr", beat = "bd4 sn bd sn";
+        var feet = CompositionChecks.Of(Rock3("e'4 g' a'2", "e,8 e, e, e, e, e, e, e,", kits: [(hats, beat), (ride, beat), (hats, beat), (ride, beat)]));
+        Assert.DoesNotContain(feet, f => f.StartsWith("kit: the same groove"));
+        Assert.Contains(feet, f => f.StartsWith("kit: the kick and the snare play one beat in every section (A, B, C, D)"));
+        // A half-time section changes the beat itself.
+        Assert.DoesNotContain(CompositionChecks.Of(Rock3("e'4 g' a'2", "e,8 e, e, e, e, e, e, e,",
+            kits: [(hats, beat), (ride, beat), (hats, "bd4 r sn r"), (ride, beat)])), f => f.StartsWith("kit: the"));
+    }
+
+    [Fact]
+    public void SectionsWhoseTuneEndsOpenAgainstTheBass_AreSaid()
+    {
+        Assert.Contains(CompositionChecks.Of(Rock3("e'4 g' a'2", "e,8 e, e, e, e, e, e, e,", lastGuitar: "e'4 g' d''2", lastBass: "e,1")),
+            f => f.StartsWith("gtr: 3 of 3 sections end their tune on a note open against the bass (A: D5 over E1, B: D5 over E1"));
+        Assert.DoesNotContain(CompositionChecks.Of(Rock3("e'4 g' a'2", "e,8 e, e, e, e, e, e, e,", lastGuitar: "e'4 g' b'2", lastBass: "e,1")),
+            f => f.Contains("end their tune on a note open"));
+    }
+
     // Owner's trial 2026-10-30: told it had no tune, a rock guitar broke each bar's chord up and down
     // after it — a line counted, an accompaniment heard.
     [Fact]
