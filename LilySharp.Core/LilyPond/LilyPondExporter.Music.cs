@@ -2040,6 +2040,12 @@ public sealed partial class LilyPondExporter
                     head = SpellPitch(sn.Step, sn.Alter) + OctaveMarks(ArpeggioMarks(sn.Step, sn.Octave));
                     (prefix, suffix) = SplitAttachments(spreadItem.Articulations);
                     suffix = "\\" + sn.StringNumber + suffix;
+                    // The page draws the item's diagram once, over its first note: so does the twin.
+                    var ((before, _, _, _, _, _), _) = members[Math.Max(i - 1, 0)];
+                    if ((i == 0 || !ReferenceEquals(before, spreadItem))
+                        && _page?.Articulations.FirstOrDefault(a => a.Type == ArticulationType.FretFrame
+                            && a.SourcePosition == spreadItem.SourceStart)?.FrameSpec is { } spreadFrame)
+                        suffix += FretDiagramMarkup(spreadFrame, above: true);
                     AdvanceLilyPondFrame(sn.Step, sn.Octave);
                     break;
                 }

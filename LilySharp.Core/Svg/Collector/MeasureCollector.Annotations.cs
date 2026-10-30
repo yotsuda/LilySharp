@@ -721,6 +721,10 @@ public sealed partial class MeasureCollector
                 // (`chordDiagrams none`: the notes alone).
                 if (chord.IsShapeChord && !graceTime
                     && !chord.Articulations.Any(a => a is MusicMarkSyntax { Name: "chord" or "diagram" })
+                    // Spread in a << >> group (ArpeggioSpread, lowest first): once, over its first note.
+                    && (_v.SpreadNote is not { } spread || !ReferenceEquals(spread.Item, chord.Green)
+                        || spread.Note == Music.ShapeChords.Notes(chord, _partShapeTuning,
+                            _partSoundingShift - _chordSpelling.Capo, WrittenKeySharps()).MinBy(n => n.SoundingMidi))
                     && Semantics.ChordDiagramsKey.Resolve(_chordDiagramsWord, _partFrettedTuning) is not null
                     && Music.ShapeChords.ShapeFor(Music.ShapeChords.Words(chord), _partFrettedTuning ?? TuningType.Guitar) is { } shape
                     && Music.ChordShapes.TryRead(shape, out var shapeFrets, out _))

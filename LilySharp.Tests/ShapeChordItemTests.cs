@@ -142,6 +142,12 @@ public class ShapeChordItemTests
         Assert.Contains("\\fret-diagram-terse \"x;3;2;o;1;o;\"", ly);
         Assert.Contains("\\fret-diagram-terse \"x;o;2;2;1;o;\"", ly);
         Assert.Single(Frames(Book("instrument guitar", "diagram(Am x02210)1@chord |")));
+        // Spread in << >>: once, over its first (lowest) note — on the page and in the twin.
+        string spread = Book("instrument guitar", "<< diagram(G 320003) >>1 |");
+        Assert.Equal(new[] { "320003" }, Frames(spread));
+        string spreadLy = new LilyPondExporter().Export(SyntaxTree.Parse(spread));
+        Assert.Single(Regex.Matches(spreadLy, "fret-diagram-terse"));
+        Assert.Contains("g4\\6-\\tweak", spreadLy);
         Assert.Empty(Frames(Book("instrument guitar", "diagram(C x32010)1 |", top: "layout { chordDiagrams none }\n")));
     }
 
@@ -374,8 +380,10 @@ public class ShapeChordItemTests
         Assert.Equal(5, Regex.Matches(xml, @"<actual-notes>5</actual-notes>").Count);
         Assert.Equal(new[] { "5", "4", "3", "2", "1" },
             Regex.Matches(xml, @"<string>(\d)</string>").Select(m => m.Groups[1].Value));
-        Assert.Contains(@"\tuplet 5/4 { c8\5 e8\4 g8\3 c8\2 g'8\1 }",
-            new LilyPondExporter().Export(SyntaxTree.Parse(alone)));
+        // The item's diagram stands on its first note (2026-10-30).
+        string aloneLy = new LilyPondExporter().Export(SyntaxTree.Parse(alone));
+        Assert.Contains(@"\tuplet 5/4 { c8\5-", aloneLy);
+        Assert.Contains(@" e8\4 g8\3 c8\2 g'8\1 }", aloneLy);
 
         // Mixed: c, then G's six strings (its share dot on its LAST note), then e — nine shares;
         // e stacks above the group's root c, and the d after the group reads from it.
