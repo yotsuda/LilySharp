@@ -84,7 +84,10 @@ public sealed record LayoutPlan(
     // (Svg.EngravingStyle; owner's decision 2026-10-05, LilySharp-Omr's proposal P4). Null is
     // LilyPond's defaults. NUMBERS, the one exception to "no unit" above: each is a multiple of a
     // line thickness or a staff space, never a page length, and score-wide.
-    Svg.EngravingStyle? Style = null)
+    Svg.EngravingStyle? Style = null,
+    // `sectionLabelAlign center|left` — where a mid-line section name stands on its bar line
+    // (SectionLabelAligns; owner's decision 2026-10-30).
+    SectionLabelAlign SectionLabelAlign = SectionLabelAlign.Center)
 {
     /// <summary>The engraving style this plan asks for, never null.</summary>
     public Svg.EngravingStyle EngravingStyle => Style ?? Svg.EngravingStyle.Default;
@@ -406,6 +409,40 @@ public static class SectionLabels
 
     /// <summary>The word for <paramref name="style"/>.</summary>
     public static string WordOf(SectionLabelStyle style) => Words[(int)style];
+}
+
+/// <summary>Where a form section's name stands on the bar line it opens, mid-line.</summary>
+/// <remarks>
+/// The two are LilyPond's two grobs: a Lily# section name is engraved as a RehearsalMark (the
+/// twin writes <c>\mark \markup \box</c>), CENTRED on the bar line, so half of it stands over the
+/// bar before — where a bend's arrow or a long note's mark is (owner's report 2026-10-30: "full"
+/// over the last note of a solo ran into "LastChorus"). <c>left</c> is LilyPond's own SectionLabel
+/// picture, its left edge on the bar line. A label that opens a line is placed alike either way.
+/// </remarks>
+public enum SectionLabelAlign
+{
+    /// <summary>Centred on the bar line (the default; RehearsalMark's self-alignment).</summary>
+    Center,
+    /// <summary>The left edge on the bar line (SectionLabel's self-alignment-X LEFT).</summary>
+    Left,
+}
+
+/// <summary>The <c>sectionLabelAlign</c> key's words.</summary>
+public static class SectionLabelAligns
+{
+    /// <summary>The key as written in the block.</summary>
+    public const string Key = "sectionLabelAlign";
+
+    /// <summary>The words, the default first.</summary>
+    public static readonly IReadOnlyList<string> Words = ["center", "left"];
+
+    /// <summary>The alignment <paramref name="word"/> names, or null.</summary>
+    public static SectionLabelAlign? Find(string word) => word switch
+    {
+        "center" => SectionLabelAlign.Center,
+        "left" => SectionLabelAlign.Left,
+        _ => null,
+    };
 }
 
 /// <summary>The <c>partCombineText</c> key's words — LilyPond's

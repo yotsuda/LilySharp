@@ -475,7 +475,7 @@ internal static class SyntaxFacts
     /// cut the entries; the reader (<c>LayoutPlanReader</c>) reads the same list.
     /// </summary>
     public static IReadOnlyList<string> LayoutKeyVocabulary { get; } =
-        ["markTempo", "barNumbers", "accidentals", "sectionLabels", "partCombineText",
+        ["markTempo", "barNumbers", "accidentals", "sectionLabels", "sectionLabelAlign", "partCombineText",
          "chordQualities", "minorChords", "chordDiagrams", "chordNames", "chordList", "voltaBracket",
          "compressRests",
          // The engraving style (Svg.EngravingStyle, 2026-10-05): a number each, the dotted ones

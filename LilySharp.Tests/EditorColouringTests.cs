@@ -829,6 +829,7 @@ public class EditorColouringTests
             ("barNumbers", LanguageVocabulary.BarNumberPolicies),
             ("accidentals", LanguageVocabulary.AccidentalStyleWords),
             ("sectionLabels", LanguageVocabulary.SectionLabelStyles),
+            ("sectionLabelAlign", LanguageVocabulary.SectionLabelAlignWords),
             ("partCombineText", LanguageVocabulary.PartCombineTextWords),
             ("chordQualities", LanguageVocabulary.ChordQualityStyleWords),
             ("minorChords", LanguageVocabulary.MinorChordWords),

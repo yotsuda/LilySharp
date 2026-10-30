@@ -6,6 +6,15 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+### Section names and bends
+
+- `[lang]` **`layout { sectionLabelAlign center | left }`** says where a mid-line section name
+  stands on its bar line. `center` (the default, the page as before) centres it, as LilyPond's
+  RehearsalMark is; `left` puts its left edge on the bar line, LilyPond's own SectionLabel, so a
+  mark over the last note of the bar before stands beside it. The LilyPond twin writes the same.
+- `[render]` **A guitar bend's arrow and amount are ink the marks above the staff clear**: a
+  section name or a tempo over a bend's "full" now stands above it instead of on it.
+
 ### Span ends — BREAKING
 
 - `[lang]` **A span is closed by the name it was opened with**: `@8va … @!8va`, `@rit … @!rit`,

@@ -1989,6 +1989,7 @@ layout {
   barNumbers lines         // the default: a number at the start of every line but the first
   accidentals default      // the default: the 18th-century style
   sectionLabels boxed      // the default: the section's name in a frame
+  sectionLabelAlign center // the default: a mid-line name centred on its bar line
   partCombineText true     // the default: a combinedStaff prints a2 / Solo
   chordQualities symbols   // the default: C°, C+, Cø, C°7 — LilyPond's own
   minorChords upper        // the default: Am, Am7
@@ -2002,6 +2003,7 @@ layout chart {
   barNumbers every 4       // a number on every fourth bar, wherever it stands
   accidentals modern       // Kurt Stone's: cancelled in other octaves and the next measure
   sectionLabels plain      // the name with no frame (LilyPond's own picture)
+  sectionLabelAlign left   // its left edge on the bar line, clear of the bar before
   partCombineText false    // no a2 / Solo words
   chordQualities words     // Cdim, Caug, Cm7♭5, Cdim7 — spelled out
   minorChords lower        // a, a7 — a lowercase root, no m
@@ -2098,6 +2100,12 @@ next bar). LilyPond adds nothing here; this is Lily#'s own (owner's decision, 20
 key d major
 c'4 d e f | clef tenor fis,,1 |   // the F♯ in tenor clef is written with its ♯
 ```
+
+**`sectionLabelAlign`** — where a mid-line section name stands on its bar line. `center` (the
+default) centres it there, as LilyPond's `RehearsalMark` (the twin's `\mark`) is, so half of
+it stands over the end of the bar before. `left` puts its left edge on the bar line —
+LilyPond's own `SectionLabel` — so a mark over the last note before it (a bend's "full")
+stands beside the name rather than under it. A name that opens a line stands alike either way.
 
 **`sectionLabels`** — how a `form` section's name is drawn. `boxed` (the default) is the
 frame Lily# has always drawn, and it is Lily#-own: LilyPond's `SectionLabel` grob draws the

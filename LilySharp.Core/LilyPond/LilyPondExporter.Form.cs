@@ -995,9 +995,13 @@ public sealed partial class LilyPondExporter
         // mark, then the section's own directives (EmitItem's head arm keeps that order).
         if (sp.MarkLabel is { Length: > 0 } label
             && _layoutPlan.SectionLabels != Semantics.SectionLabelStyle.None)
-            _heldMark = _layoutPlan.SectionLabels == Semantics.SectionLabelStyle.Plain
-                ? "\\mark \\markup \"" + Escape(label) + "\""
-                : "\\mark \\markup \\box \"" + Escape(label) + "\"";
+            // `layout { sectionLabelAlign left }`: the mark's left edge on its bar line, as the
+            // page draws it (at a line start LilyPond already aligns it LEFT, off the key).
+            _heldMark = (_layoutPlan.SectionLabelAlign == Semantics.SectionLabelAlign.Left
+                    ? "\\once \\override Score.RehearsalMark.self-alignment-X = #LEFT " : "")
+                + (_layoutPlan.SectionLabels == Semantics.SectionLabelStyle.Plain
+                    ? "\\mark \\markup \"" + Escape(label) + "\""
+                    : "\\mark \\markup \\box \"" + Escape(label) + "\"");
         return string.Join(" ", parts);
     }
 

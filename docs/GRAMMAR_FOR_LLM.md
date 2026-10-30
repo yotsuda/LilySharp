@@ -1302,6 +1302,7 @@ layout {
   accidentals modern       // which notes carry one: default (d.) | modern | modernCautionary
                            //                        | forget | noReset
   sectionLabels plain      // section names: boxed (default) | plain | none
+  sectionLabelAlign left   // a mid-line section name on its bar line: center (default) | left
   partCombineText false    // a2 / Solo words: true (default) | false
   chordQualities words     // chord quality: symbols (default) | words
   minorChords lower        // a minor chord's root: upper (default) | lower
@@ -1336,6 +1337,11 @@ layout {
   SectionLabel grob draws the bare string). `plain` drops the frame and engraves the name
   alone, which is LilyPond's own picture. `none` engraves no section names at all — the part
   sheet's answer. The form still plays the section.
+- `sectionLabelAlign center` centres a mid-line section name on its bar line, half of it over
+  the end of the bar before (LilyPond's RehearsalMark, as the twin writes it). `left` puts its
+  left edge on the bar line, clear of the bar before — LilyPond's own SectionLabel — so a mark
+  over the last note there (a bend's "full", a fermata) stands beside it, not under it. A name
+  that opens a line stands alike either way.
 - `partCombineText true` prints `a2` / `Solo` / `Solo II` on a `combinedStaff` (LilyPond's
   default); `false` is its `printPartCombineTexts = ##f`. The merging
   itself is unchanged — this is the words, not the combining.

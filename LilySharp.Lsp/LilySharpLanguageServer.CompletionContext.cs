@@ -727,6 +727,8 @@ public sealed partial class LilySharpLanguageServer
         AfterLayoutAccidentals,
         /// <summary><c>layout { sectionLabels |</c> — boxed / plain / none.</summary>
         AfterLayoutSectionLabels,
+        /// <summary><c>layout { sectionLabelAlign |</c> — center / left.</summary>
+        AfterLayoutSectionLabelAlign,
         /// <summary><c>layout { partCombineText |</c> — true / false.</summary>
         AfterLayoutPartCombineText,
         /// <summary><c>layout { chordQualities |</c> — words / symbols.</summary>
@@ -1191,6 +1193,8 @@ public sealed partial class LilySharpLanguageServer
                 return CompletionContext.AfterLayoutAccidentals;
             if (prevWord.Equals(SectionLabels.Key, StringComparison.Ordinal))
                 return CompletionContext.AfterLayoutSectionLabels;
+            if (prevWord.Equals(SectionLabelAligns.Key, StringComparison.Ordinal))
+                return CompletionContext.AfterLayoutSectionLabelAlign;
             if (prevWord.Equals(PartCombineTexts.Key, StringComparison.Ordinal))
                 return CompletionContext.AfterLayoutPartCombineText;
             if (prevWord.Equals(ChordQualityStyles.Key, StringComparison.Ordinal))

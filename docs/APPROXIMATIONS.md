@@ -14,15 +14,15 @@
 |---|---:|---|
 | `APPROX` | 63 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 64 | 観測者がゼロだと自認しているもの |
-| `OWN` | 282 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **409** | |
+| `OWN` | 283 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **410** | |
 
 ## 密度の高いファイル（上位 12）
 
 | ファイル | 件数 |
 |---|---:|
 | `LilySharp.Core/Svg/Layout/MusicMarkEngraver.cs` | 20 |
-| `LilySharp.Core/Svg/Layout/ArticulationEngraver.cs` | 16 |
+| `LilySharp.Core/Svg/Layout/ArticulationEngraver.cs` | 17 |
 | `LilySharp.Core/Svg/Layout/MultiStaffLayouter.cs` | 14 |
 | `LilySharp.Core/Svg/EngravingDefaults.cs` | 12 |
 | `LilySharp.Core/Svg/Layout/NoteCollision.cs` | 9 |
@@ -246,7 +246,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（282 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（283 件）
 
 ### `LilySharp.Core/Editing/KeyRespeller.cs`
 - **`KeyRespeller`** LILYSHARP-OWN: an editor aid. The rule:
@@ -453,6 +453,7 @@
 - **`ArticulationEngraver.CalculateWithFingerings`** LILYSHARP-OWN: LilyPond draws NO fall or doit on a chord at all — its
 - **`ArticulationEngraver.CalculateWithFingerings`** LILYSHARP-OWN: LilyPond prints the collision. Its Script_engraver acknowledges
 - **`ArticulationEngraver.OtherVoiceRestSupport`** The rule and its LILYSHARP-OWN declaration are at the one call site in
+- **`ArticulationEngraver.GuitarBendReach,GuitarBendRise,GuitarBendHeadHalfWidth,GuitarBendLabelGap`** ink box below read. LILYSHARP-OWN, as the device is.
 - **`ArticulationEngraver.DiagramYUpOverInk`** LILYSHARP-OWN (2026-09-28, defect seen on the owner's "Shape chords" book: the Cm diagram's
 ### `LilySharp.Core/Svg/Layout/ArticulationSpacing.cs`
 - **`ArticulationSpacing.OutsideStaffPriority`** LILYSHARP-OWN (owner's decision 2026-09-27: "the diagram stands below the name, between

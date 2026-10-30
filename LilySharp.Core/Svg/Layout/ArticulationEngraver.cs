@@ -1089,9 +1089,13 @@ internal static class ArticulationEngraver
                     // sentinel and draws arrow + label.
                     _ => $"bendUp:{articulation.BendSemitones}",
                 };
+                // The bend-up's arrow and amount are ink the marks above must clear (owner's
+                // report 2026-10-30: a section name was drawn over the "full" of the solo's last
+                // note): its box seeds the staff's profile as any script's does.
                 layouts.Add(new ArticulationLayout(
                     articulation.MeasureIndex, articulation.ItemIndex, fx, fyUp,
                     bendGlyph, true, articulation.SourcePosition, FontSizeStep: 0.0,
+                    Ink: approach ? default : GuitarBendInkBox(fonts, articulation.BendSemitones),
                     SourceIndex: arti, StaffIndex: articulation.StaffIndex));
                 continue;
             }
@@ -2549,6 +2553,39 @@ internal static class ArticulationEngraver
         ArticulationType.Tap => "T",
         _ => null
     };
+
+    /// <summary>The guitar bend-up's curve: its reach right and its rise from the note, and the
+    /// arrowhead's half width — the one home the draw (SharedRenderer.DrawGuitarBend) and the
+    /// ink box below read. LILYSHARP-OWN, as the device is.</summary>
+    internal const double GuitarBendReach = 1.6, GuitarBendRise = 2.6, GuitarBendHeadHalfWidth = 0.32,
+        GuitarBendLabelGap = 0.35;
+
+    /// <summary>A bend-up's amount as a guitarist reads it: ½, full, 1½, 2, …</summary>
+    internal static string GuitarBendLabel(int semitones) => semitones switch
+    {
+        1 => "½",
+        2 => "full",
+        _ => (semitones % 2 == 0) ? (semitones / 2).ToString() : $"{semitones / 2}½",
+    };
+
+    /// <summary>
+    /// The bend-up's ink about its anchor (the curve's start, Y-up): the curve and arrowhead
+    /// up to the rise, and the amount centred over the arrowhead's tip — so that what stands
+    /// above the staff (a section name, a tempo) clears it.
+    /// </summary>
+    internal static GlyphMetrics.BBox GuitarBendInkBox(ScoreTextMetrics fonts, int semitones)
+    {
+        string label = GuitarBendLabel(semitones);
+        double em = fonts.Size(TextRole.Bend, Rendering.SharedRenderer.BendLabelEm);
+        var style = fonts.Style(TextRole.Bend, FontStyle.Italic);
+        var ink = fonts.Ink(label, em, TextRole.Bend, style);
+        double half = fonts.Advance(label, em, TextRole.Bend, style) / 2.0;
+        const double stroke = 0.08;
+        return new GlyphMetrics.BBox(-stroke,
+            -stroke,
+            GuitarBendReach + System.Math.Max(GuitarBendHeadHalfWidth + stroke, half),
+            GuitarBendRise + GuitarBendLabelGap + ink.Top);
+    }
 
     /// <summary>
     /// The drawn letter's own ink box about its BASELINE, Y-up — the anchor the renderer

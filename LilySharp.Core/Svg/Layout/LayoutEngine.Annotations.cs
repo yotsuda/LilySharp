@@ -1250,6 +1250,8 @@ internal sealed partial class LayoutEngine
             marksBeside: ctx.MultiScore?.MarksBeside ?? false,
             sectionLabels: ctx.MultiScore?.LayoutPlan.SectionLabels
                 ?? ctx.Score?.LayoutPlan.SectionLabels ?? Semantics.SectionLabelStyle.Boxed,
+            sectionLabelAlign: ctx.MultiScore?.LayoutPlan.SectionLabelAlign
+                ?? ctx.Score?.LayoutPlan.SectionLabelAlign ?? Semantics.SectionLabelAlign.Center,
             // The pass's one map, handed down like the stackers' (see its build above).
             prebuiltMeasureToSystem: measureToSystem,
             gridBarlineRowIndex: ctx.GridBarlineRowIndex,

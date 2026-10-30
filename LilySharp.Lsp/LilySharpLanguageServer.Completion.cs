@@ -366,6 +366,7 @@ public sealed partial class LilySharpLanguageServer
             CompletionContext.AfterLayoutBarNumbers => GetBarNumberPolicyCompletions(),
             CompletionContext.AfterLayoutAccidentals => GetAccidentalStyleCompletions(),
             CompletionContext.AfterLayoutSectionLabels => GetSectionLabelCompletions(),
+            CompletionContext.AfterLayoutSectionLabelAlign => GetSectionLabelAlignCompletions(),
             CompletionContext.AfterLayoutPartCombineText => GetPartCombineTextCompletions(),
             CompletionContext.AfterLayoutChordQualities => GetChordQualityStyleCompletions(),
             CompletionContext.AfterLayoutMinorChords => GetMinorChordCompletions(),

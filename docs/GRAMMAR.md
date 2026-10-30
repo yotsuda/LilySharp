@@ -752,6 +752,7 @@ LayoutEntry    = 'markTempo' , MarkArrangement
                | 'barNumbers' , BarNumberPolicy
                | 'accidentals' , AccidentalStyle
                | 'sectionLabels' , SectionLabelStyle
+               | 'sectionLabelAlign' , ( 'center' | 'left' )
                | 'partCombineText' , Boolean
                | 'chordQualities' , ChordQualityStyle
                | 'minorChords' , MinorChordCase
@@ -860,6 +861,14 @@ ShapeEntry     = ChordSymbol , { [ TuningName ] , Shape } ;   (* the symbol and 
    hold is refused at the word. The .ly twin writes `\accidentalStyle <name>` (LilyPond's
    hyphenated spelling) at the head of each part's music, where the function's own
    default context is the Staff — a book that writes no style writes nothing there.
+
+   sectionLabelAlign — where a mid-line section name stands on its bar line. 'center' (the
+   default) centres it there, as the twin's RehearsalMark is: half of it stands over the end
+   of the bar before. 'left' puts its left edge on the bar line, LilyPond's own SectionLabel
+   (self-alignment-X LEFT), clear of the bar before; the twin writes
+   \once \override Score.RehearsalMark.self-alignment-X = #LEFT before the \mark. A name that
+   opens a line stands alike either way (owner's decision 2026-10-30: a bend's "full" on the
+   last note of a solo ran into the centred "LastChorus").
 
    sectionLabels — how a form section's name is drawn. 'boxed' (the default) is the
    frame Lily# has always drawn, and it is Lily#-OWN: LilyPond's SectionLabel grob draws

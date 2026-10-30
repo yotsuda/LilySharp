@@ -552,6 +552,8 @@ internal static class MusicMarkEngraver
         // reason: on a MULTI-staff score `score` is null here, so reading the plan off it
         // would silently answer the default for every book with more than one staff.
         Semantics.SectionLabelStyle sectionLabels = Semantics.SectionLabelStyle.Boxed,
+        // `layout { sectionLabelAlign … }` — passed as `sectionLabels` is, for the same reason.
+        Semantics.SectionLabelAlign sectionLabelAlign = Semantics.SectionLabelAlign.Center,
         // The pass's own measure→system map, when the caller already holds one — session
         // 407's shape, and this is the house that never got the door (see the remark at
         // `measureToSystemIdx` below). Null keeps the local build, so the CLI, the
@@ -602,7 +604,7 @@ internal static class MusicMarkEngraver
             var measureLayout = measureLayouts[mark.MeasureIndex];
             double x = CalculateXPosition(
                 fonts, mark, measureLayout, systems, prefixTimeSignatureX, lineStartBarlineX,
-                prefixMarkAnchorX, measures, marksBeside);
+                prefixMarkAnchorX, measures, marksBeside, boxed: BoxedOf(mark.Type), sectionLabelAlign: sectionLabelAlign);
             markEntries.Add((mark, x, si));
         }
 
@@ -2608,7 +2610,9 @@ internal static class MusicMarkEngraver
         // ⚠️ Optional only because C# puts required parameters first and this method's
         // options came earlier: BOTH call sites pass it (they are in this file, five lines
         // apart), and the leaf that actually prices the frame takes it as required.
-        bool boxed = true)
+        bool boxed = true,
+        // `layout { sectionLabelAlign left }`: a mid-line SECTION label's left edge on its bar.
+        Semantics.SectionLabelAlign sectionLabelAlign = Semantics.SectionLabelAlign.Center)
     {
         if (mark.Position == MusicMarkPosition.End)
         {
@@ -2847,6 +2851,12 @@ internal static class MusicMarkEngraver
             else if (!measures.IsDefaultOrEmpty
                      && MidLineBarAnchorX(measureLayout, measures) is { } barAnchor)
             {
+                // `sectionLabelAlign left` (owner's decision 2026-10-30): a section name's LEFT
+                // edge on the anchor, LilyPond's own SectionLabel — clear of the bar before,
+                // where a bend's arrow over its last note ran into the centred box.
+                // LILYPOND-REF: scm/define-grobs.scm SectionLabel — (self-alignment-X . LEFT).
+                if (mark.Type == MusicMarkType.SectionLabel && sectionLabelAlign == Semantics.SectionLabelAlign.Left)
+                    return barAnchor + LabelBoxHalfWidth(fonts, mark.Type, mark.Text, boxed);
                 // Centred on the bar line's anchor: the returned X IS the box centre.
                 return barAnchor;
             }

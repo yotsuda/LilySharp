@@ -216,7 +216,7 @@ public class LayoutBlockTests
     public void TheVocabularyIsPublished_AndTheReaderReadsIt()
     {
         Assert.Equal(
-            new[] { "markTempo", "barNumbers", "accidentals", "sectionLabels", "partCombineText",
+            new[] { "markTempo", "barNumbers", "accidentals", "sectionLabels", "sectionLabelAlign", "partCombineText",
                     "chordQualities", "minorChords", "chordDiagrams", "chordNames", "chordList", "voltaBracket",
                     "compressRests", "lineThickness", "StaffLine.thickness", "LedgerLine.thickness", "LedgerLine.lengthFraction", "Stem.thickness",
                     "Stem.lengthFraction", "Beam.thickness", "Beam.damping", "Dots.padding", "Accidental.rightPadding", "NoteHead.scale", "BarLine.thinThickness", "BarLine.thickThickness" },
@@ -513,6 +513,56 @@ public class LayoutBlockTests
         var hidden = SyntaxTree.Parse("layout { sectionLabels none }\n" + TwoSections);
         Assert.Equal(2, SvgGenerator.CollectScore(hidden, RenderSpecParser.FindFirst(hidden))
             .StaffGroups[0].Staves[0].Voices[0].Measures.Length);
+    }
+
+    // ================================================================================
+    // sectionLabelAlign — where a mid-line name stands on its bar line
+    // ================================================================================
+
+    /// <summary>Owner's decision 2026-10-30: a section name centred on its bar line ran into
+    /// the "full" of a bend on the last note before it. `left` puts its left edge on the bar
+    /// line — LilyPond's own SectionLabel — and the default stays centred. A label that opens
+    /// a line stands alike either way.</summary>
+    [Fact]
+    public void SectionLabelAlign_Left_PutsAMidLineNamesLeftEdgeOnItsBar()
+    {
+        Assert.Equal(SectionLabelAlign.Left, Read("layout { sectionLabelAlign left }", out var problems).SectionLabelAlign);
+        Assert.Empty(problems);
+        var centred = LabelLayouts("");
+        var left = LabelLayouts("layout { sectionLabelAlign left }\n");
+        Assert.Equal(centred[0].X, left[0].X, 6);          // A opens the line
+        Assert.True(left[1].X - centred[1].X > 0.3, $"B: {centred[1].X} → {left[1].X}");
+        // Writing the default is the same page.
+        Assert.Equal(
+            MaskDataPos(SvgGenerator.Generate(SyntaxTree.Parse(TwoSections), Opt)),
+            MaskDataPos(SvgGenerator.Generate(SyntaxTree.Parse("layout { sectionLabelAlign center }\n" + TwoSections), Opt)));
+        // The twin aligns its mark the same way.
+        Assert.Contains("\\once \\override Score.RehearsalMark.self-alignment-X = #LEFT \\mark \\markup \\box \"B\"",
+            new LilyPondExporter().Export(SyntaxTree.Parse("layout { sectionLabelAlign left }\n" + TwoSections)), StringComparison.Ordinal);
+        Assert.DoesNotContain("self-alignment-X", new LilyPondExporter().Export(SyntaxTree.Parse(TwoSections)), StringComparison.Ordinal);
+    }
+
+    /// <summary>A bend-up's arrow and amount are ink a name above the staff clears (owner's
+    /// report 2026-10-30): centred, the name over the bar line rises over a bend on the bar's
+    /// last note; with `left` it stands beside a bend that keeps inside the bar, at its own
+    /// height.</summary>
+    [Fact]
+    public void ASectionNameClearsABendBeforeItsBar()
+    {
+        MusicMarkLayout B(string top, string lastBar)
+        {
+            var tree = SyntaxTree.Parse(top + "octave absolute\npart m { instrument guitar }\n"
+                + $"section A {{ m {{ c'4 d' e' f' | {lastBar} | }} }}\nsection LastChorus {{ m {{ c'1 | }} }}\n"
+                + "form { A LastChorus }\nscore { staff m }\n");
+            Assert.False(tree.HasErrors, string.Join(" | ", tree.Diagnostics.Select(d => d.Message)));
+            var score = SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree));
+            return new LayoutEngine(score.Paper).Layout(score).MusicMarkLayouts.Single(m => m.Text == "LastChorus");
+        }
+        double plain = B("", "g'4 a' c''2").YUp, bent = B("", "g'4 a' c''2@bend(full)").YUp;
+        Assert.True(bent > plain + 0.5, $"centred: {plain} → {bent}");
+        const string left = "layout { sectionLabelAlign left }\n";
+        Assert.Equal(B(left, "c''4 g'8 a' b' a' g'4").YUp,
+            B(left, "c''4@bend(full) g'8 a' b' a' g'4").YUp, 6);
     }
 
     /// <summary>The SectionLabel layouts of a book, each with the frame bit it was placed

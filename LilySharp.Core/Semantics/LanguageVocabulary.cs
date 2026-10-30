@@ -120,6 +120,10 @@ public static class LanguageVocabulary
     /// (<see cref="Semantics.SectionLabels"/>), the default first.</summary>
     public static IReadOnlyCollection<string> SectionLabelStyles => SectionLabels.Words;
 
+    /// <summary>The words the <c>sectionLabelAlign</c> key of a <c>layout { }</c> block takes
+    /// (<see cref="SectionLabelAligns"/>), the default first.</summary>
+    public static IReadOnlyCollection<string> SectionLabelAlignWords => SectionLabelAligns.Words;
+
     /// <summary>The words the <c>partCombineText</c> key of a <c>layout { }</c> block takes
     /// (<see cref="PartCombineTexts"/>), the default first.</summary>
     public static IReadOnlyCollection<string> PartCombineTextWords => PartCombineTexts.Words;

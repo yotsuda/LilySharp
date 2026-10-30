@@ -1035,8 +1035,9 @@ internal static partial class SharedRenderer
     /// </summary>
     private static void DrawGuitarBend(ScoreTextMetrics fonts, double x0, double y0, int semitones, IDrawingContext gc)
     {
-        const double len = 1.6;    // horizontal reach
-        const double rise = 2.6;   // vertical reach (upward = larger Y-up)
+        // The reach and rise are the layout's (ArticulationEngraver.GuitarBendInkBox reads them too).
+        const double len = LilySharp.Core.Svg.Layout.ArticulationEngraver.GuitarBendReach;    // horizontal reach
+        const double rise = LilySharp.Core.Svg.Layout.ArticulationEngraver.GuitarBendRise;   // vertical reach (upward = larger Y-up)
         double cx = x0 + len * 0.95, cy = y0 + rise * 0.1; // sharp late turn upward
         double topX = x0 + len, topY = y0 + rise;
         double px = x0, py = y0;
@@ -1050,17 +1051,13 @@ internal static partial class SharedRenderer
             px = nx; py = ny;
         }
         // Arrowhead: a V of two strokes at the curve's top (no polygon API).
-        const double ah = 0.55, aw = 0.32;
+        const double ah = 0.55, aw = LilySharp.Core.Svg.Layout.ArticulationEngraver.GuitarBendHeadHalfWidth;
         gc.DrawLine(topX - aw, topY - ah, topX, topY, Color.Black, 0.16, cap: LineCap.Round);
         gc.DrawLine(topX + aw, topY - ah, topX, topY, Color.Black, 0.16, cap: LineCap.Round);
         // Amount label in guitar convention: semitones → steps.
-        string label = semitones switch
-        {
-            1 => "½",
-            2 => "full",
-            _ => (semitones % 2 == 0) ? (semitones / 2).ToString() : $"{semitones / 2}½",
-        };
-        gc.DrawText(label, topX, topY + 0.35, fonts.Size(TextRole.Bend, BendLabelEm),
+        string label = LilySharp.Core.Svg.Layout.ArticulationEngraver.GuitarBendLabel(semitones);
+        gc.DrawText(label, topX, topY + LilySharp.Core.Svg.Layout.ArticulationEngraver.GuitarBendLabelGap,
+            fonts.Size(TextRole.Bend, BendLabelEm),
             TextRole.Bend, fonts.Style(TextRole.Bend, FontStyle.Italic),
             TextAnchor.Middle, Color.Black);
     }

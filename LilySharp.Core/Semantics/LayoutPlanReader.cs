@@ -81,6 +81,7 @@ internal static class LayoutPlanReader
         BarNumberPolicy.Key => BarNumberPolicy.Words,
         AccidentalStyles.Key => AccidentalStyles.Words,
         SectionLabels.Key => SectionLabels.Words,
+        SectionLabelAligns.Key => SectionLabelAligns.Words,
         PartCombineTexts.Key => PartCombineTexts.Words,
         ChordQualityStyles.Key => ChordQualityStyles.Words,
         MinorChords.Key => MinorChords.Words,
@@ -268,6 +269,9 @@ internal static class LayoutPlanReader
                 SectionLabels.Key => ReadOneWord(plan, entry, span, found, SectionLabels.Key,
                     SectionLabels.Words, w => SectionLabels.Find(w) is { } s
                         ? plan with { SectionLabels = s } : null),
+                SectionLabelAligns.Key => ReadOneWord(plan, entry, span, found, SectionLabelAligns.Key,
+                    SectionLabelAligns.Words, w => SectionLabelAligns.Find(w) is { } a
+                        ? plan with { SectionLabelAlign = a } : null),
                 PartCombineTexts.Key => ReadOneWord(plan, entry, span, found, PartCombineTexts.Key,
                     PartCombineTexts.Words, w => PartCombineTexts.Find(w) is { } b
                         ? plan with { PartCombineText = b } : null),
