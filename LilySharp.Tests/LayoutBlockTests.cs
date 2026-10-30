@@ -595,6 +595,15 @@ public class LayoutBlockTests
         Assert.Contains(warned, d => d.Code == DiagnosticCodes.DrumLevelsConflict && d.Message.Contains("@p here and @f"));
         Assert.DoesNotContain(LilySharp.Core.Semantics.SemanticValidation.Run(SyntaxTree.Parse(Kit("@ff", "@ff"))),
             d => d.Code == DiagnosticCodes.DrumLevelsConflict);
+        // Owner's report 2026-10-30: a feet line 18 bars longer than the hands' played on after the
+        // song ended, and nothing said so. A later voice running past the first is LYS2019.
+        string Lines(int feet) => "part kit { clef percussion }\nphrase hats { hh8 hh hh hh hh hh hh hh | }\nphrase back { bd4 sn bd sn | }\n"
+            + $"section A {{\n  kit {{ voice {{ hats hats }} {{ {string.Concat(Enumerable.Repeat("back ", feet))}}} }}\n}}\n"
+            + "form { A }\nscore { staff kit }\n";
+        var past = LilySharp.Core.Semantics.SemanticValidation.Run(SyntaxTree.Parse(Lines(4)));
+        Assert.Contains(past, d => d.Code == DiagnosticCodes.VoiceRunsPastSpan && d.Message.StartsWith("this voice runs 4 bars, 2 more than the first voice of its span (2)"));
+        Assert.DoesNotContain(LilySharp.Core.Semantics.SemanticValidation.Run(SyntaxTree.Parse(Lines(2))), d => d.Code == DiagnosticCodes.VoiceRunsPastSpan);
+        Assert.DoesNotContain(LilySharp.Core.Semantics.SemanticValidation.Run(SyntaxTree.Parse(Lines(1))), d => d.Code == DiagnosticCodes.VoiceRunsPastSpan);
         // A pitched staff's two voices keep LilyPond's two texts.
         var piano = "part m { clef treble }\nsection A {\n  m { voice { c''4@ff d'' e'' f'' | } { c'4@ff d' e' f' | } }\n}\nform { A }\nscore { staff m }\n";
         Assert.Equal(2, Printed(piano).Length);

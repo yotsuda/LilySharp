@@ -20,6 +20,9 @@ workflow attaches that section to the GitHub Release verbatim.
   hands' line and the feet's used to print "ff" twice).
 - `[lang]` **Two different levels in a drum staff's voices at one moment warn** (LYS4033): `@f` on
   one line and `@p` on another — one drummer plays one level.
+- `[lang]` **A voice that runs past its span's first voice warns** (LYS2019): a `voice { } { }` span's
+  later voice, or a `drums { }` chart's later line, written longer than the first plays on alone
+  after the other parts stop. Nothing said so before.
 
 ### Span ends — BREAKING
 

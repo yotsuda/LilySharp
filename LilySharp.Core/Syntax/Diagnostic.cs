@@ -1510,6 +1510,11 @@ public static class DiagnosticCodes
     /// <c>Semantics.SpanNames</c>). The quick fix writes the start's name.</summary>
     public const string SpanEndName = "LYS4032";
 
+    /// <summary>Warning: a later voice of a <c>voice { } { }</c> span or a <c>drums { }</c> chart runs
+    /// more bars than the span's first voice, and plays on alone after the other parts stop (owner's
+    /// report 2026-10-30; <c>Semantics.VoiceSpanLengthValidator</c>).</summary>
+    public const string VoiceRunsPastSpan = "LYS2019";
+
     /// <summary>Warning: a drum staff's voices write two different levels at one moment —
     /// <c>@f</c> on the hands' line and <c>@p</c> on the feet's (owner's decision 2026-10-30).
     /// One drummer plays one level; the same level in both lines prints once

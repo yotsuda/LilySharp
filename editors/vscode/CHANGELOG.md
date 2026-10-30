@@ -12,6 +12,8 @@ All notable changes to the Lily# VS Code extension are documented here.
 - **A guitar bend's "full" no longer runs into the section name or tempo above it**, and a bend on a
   bar's last note widens the bar so it ends before the bar line.
 - **Drums: the same level in both lines prints once; `@f` against `@p` at one moment is warned** (LYS4033).
+- **A voice of a `voice { } { }` span that runs past the first is warned** (LYS2019), and a piece
+  composed in Copilot's chat is sent back for it — it would play on after the song ends.
 - **Every value in a `layout { }` steps with Ctrl+Shift+Up / Down**: the line thicknesses and stem length
   by a small step, PageUp / PageDown by a large one; `voltaBracket N` and `barNumbers every N` by a bar,
   four on PageUp / PageDown; a capo's fret; `voltaBracket` and `chordDiagrams`' words. The pre-filled

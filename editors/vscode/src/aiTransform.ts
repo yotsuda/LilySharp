@@ -2018,8 +2018,10 @@ const MACHINE_WARNING = /is not installed on this system/;
 /** A bar short or over its meter (LYS2001, LYS2002), the parts' bars of different lengths (LYS2004),
  *  a first bar short with no `partial` (LYS2006), a section of more bars in one part than another
  *  (LYS2007 — owner's decision 2026-10-30: a chorus's guitar played 9 bars to the bass and drums'
- *  8, and the band stopped for a bar): turned down from the chat as an error is. */
-const BAR_LENGTH_CODES = new Set(['LYS2001', 'LYS2002', 'LYS2004', 'LYS2006', 'LYS2007']);
+ *  8, and the band stopped for a bar), a span's later voice running past its first (LYS2019 — the
+ *  same day: a drum part's feet line ran 18 bars past the song): turned down from the chat as an
+ *  error is. */
+const BAR_LENGTH_CODES = new Set(['LYS2001', 'LYS2002', 'LYS2004', 'LYS2006', 'LYS2007', 'LYS2019']);
 
 /**
  * The warnings a candidate ADDS, judged the way errors are: the file with the candidate has

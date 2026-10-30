@@ -127,6 +127,7 @@ public static class SemanticValidation
         new LoneVoiceValidator(),           // a span with a single (transparent) voice block
         new DrumChartValidator(),           // hits in a drums { } chart no drummer can play at once
         new DrumLevelValidator(),           // two levels in a drum staff's voices at one moment
+        new VoiceSpanLengthValidator(),     // a later voice of a span running more bars than its first
         new CueRegionValidator(),           // a nested cue, or a voice span inside a cue
         new CueSpanBoundaryValidator(),     // a slur/tie with one end inside a cue
         new GraceBodyValidator(),           // grace { } body content that is not engraved
