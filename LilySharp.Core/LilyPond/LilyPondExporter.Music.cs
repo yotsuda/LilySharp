@@ -1456,20 +1456,20 @@ public sealed partial class LilyPondExporter
     /// </summary>
     private System.Collections.Immutable.ImmutableArray<Music.ShapeNote> ShapeNotesOf(ChordSyntax c, bool warn = false)
     {
-        var (tuning, shift) = (TuningType.Guitar, 0);
+        var (tuning, shift, fretted) = (TuningType.Guitar, 0, true);
         if (_currentPartName != null && _shared.Root is { } root)
         {
             var header = Semantics.PartHeaderDefaults.Read(Semantics.ConcertPitch.FindPart(root, _currentPartName));
-            (tuning, shift) = (Music.ShapeChords.TuningOf(header), header.SoundingShiftSemitones);
+            (tuning, shift, fretted) = (Music.ShapeChords.TuningOf(header), header.SoundingShiftSemitones, header.FrettedTuning != null);
         }
         else if (Music.ShapeChords.PartTuningsOf(c) is [var only])
-            (tuning, shift) = (only.Tuning, only.SoundingShift);
+            (tuning, shift, fretted) = (only.Tuning, only.SoundingShift, only.Fretted);
         else if (warn)
             _warnings.Add("a diagram(...) item in a phrase played by parts of different tunings is "
                 + "written on the guitar's strings - check its notes by hand");
         // A capo raises every string by its fret (the page's ShapeNotesOf; 2026-09-29): the shift
         // is "sounding = written + shift", so the capo comes OFF it.
-        return Music.ShapeChords.Notes(c, tuning, shift - _layoutPlan.Chords.Capo, _keySharps);
+        return Music.ShapeChords.Notes(c, tuning, shift - _layoutPlan.Chords.Capo, _keySharps, _layoutPlan.Chords.Capo, fretted);
     }
 
     /// <summary>
@@ -1507,7 +1507,7 @@ public sealed partial class LilyPondExporter
                 ? n.Octave - _absoluteBaseOctave
                 : n.Octave - RelativeOctave.Resolve(chainStep, chainOctave, n.Step, 0);
             sb.Append(SpellPitch(n.Step, n.Alter)).Append(OctaveMarks(marks))
-              .Append('\\').Append(n.StringNumber);
+              .Append(n.StringNumber > 0 ? $"\\{n.StringNumber}" : "");
             if (firstStep < 0) { firstStep = n.Step; firstOctave = n.Octave; }
             chainStep = n.Step;
             chainOctave = n.Octave;
@@ -2039,7 +2039,7 @@ public sealed partial class LilyPondExporter
                     }
                     head = SpellPitch(sn.Step, sn.Alter) + OctaveMarks(ArpeggioMarks(sn.Step, sn.Octave));
                     (prefix, suffix) = SplitAttachments(spreadItem.Articulations);
-                    suffix = "\\" + sn.StringNumber + suffix;
+                    suffix = (sn.StringNumber > 0 ? "\\" + sn.StringNumber : "") + suffix;
                     // The page draws the item's diagram once, over its first note: so does the twin.
                     var ((before, _, _, _, _, _), _) = members[Math.Max(i - 1, 0)];
                     if ((i == 0 || !ReferenceEquals(before, spreadItem))

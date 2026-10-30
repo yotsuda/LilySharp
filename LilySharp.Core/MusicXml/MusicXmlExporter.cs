@@ -4215,7 +4215,7 @@ public sealed class MusicXmlExporter
         => _spreadNote is { } spread && ReferenceEquals(spread.Item, chord.Green)
             ? [spread.Note]
             : Music.ShapeChords.Notes(chord, _partFrettedTuning ?? TuningType.Guitar,
-                _partTransposeSemitones - DiagramCapo, _keyFifths);
+                _partTransposeSemitones - DiagramCapo, _keyFifths, DiagramCapo, _partFrettedTuning != null);
 
     /// <summary>The <c>diagram(…)</c> member of a <c>&lt;&lt; &gt;&gt;</c> group being written one
     /// note at a time and the note it writes now (the page's MeasureCollector._spreadNote).</summary>
@@ -4240,7 +4240,7 @@ public sealed class MusicXmlExporter
         if (chord.ShowsName && !chord.Articulations.Any(a => a is MusicMarkSyntax { Name: "chord" })
             && (_spreadNote is not { } spreadAt || !ReferenceEquals(spreadAt.Item, chord.Green)
                 || spreadAt.Note == Music.ShapeChords.Notes(chord, _partFrettedTuning ?? TuningType.Guitar,
-                    _partTransposeSemitones - DiagramCapo, _keyFifths).MinBy(n => n.SoundingMidi))
+                    _partTransposeSemitones - DiagramCapo, _keyFifths, DiagramCapo, _partFrettedTuning != null).MinBy(n => n.SoundingMidi))
             && LilySharp.Core.Music.ShapeChords.Words(chord) is { IsBare: false } itemWords)
             WriteHarmony(itemWords with { Problems = [], FromShapeItem = true }, chord);
 
@@ -4421,7 +4421,8 @@ public sealed class MusicXmlExporter
                 ActualNotes = tupletActual,
                 NormalNotes = tupletNormal
             };
-            xmlNote.Technicals.Add(new System.Xml.Linq.XElement("string", sn.StringNumber));
+            if (sn.StringNumber > 0)
+                xmlNote.Technicals.Add(new System.Xml.Linq.XElement("string", sn.StringNumber));
             if (isFirst)
             {
                 if (chord.Articulations.Any(a2 => a2 is ArticulationSyntax { Type: ArticulationType.None } na
@@ -5143,7 +5144,8 @@ public sealed class MusicXmlExporter
                             ActualNotes = chordActual,
                             NormalNotes = chordNormal
                         };
-                        graceNote.Technicals.Add(new System.Xml.Linq.XElement("string", sn.StringNumber));
+                        if (sn.StringNumber > 0)
+                            graceNote.Technicals.Add(new System.Xml.Linq.XElement("string", sn.StringNumber));
                         _currentMeasure.Notes.Add(graceNote);
                         firstMember = false;
                     }

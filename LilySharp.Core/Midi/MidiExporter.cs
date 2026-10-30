@@ -2882,7 +2882,7 @@ public sealed class MidiExporter
             return [spread.Note];
         var header = _currentPart != null ? Header(_currentPart) : Semantics.PartHeaderDefaults.Empty;
         return Music.ShapeChords.Notes(chord, Music.ShapeChords.TuningOf(header),
-            header.SoundingShiftSemitones - Capo, _keySharps);
+            header.SoundingShiftSemitones - Capo, _keySharps, Capo, header.FrettedTuning != null);
     }
 
     /// <summary>The <c>diagram(…)</c> member of a <c>&lt;&lt; &gt;&gt;</c> group being played one

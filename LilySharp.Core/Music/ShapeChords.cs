@@ -101,10 +101,19 @@ public static class ShapeChords
     public static TuningType TuningOf(PartHeaderDefaults? header)
         => header?.FrettedTuning ?? TuningType.Guitar;
 
-    /// <summary>The written shape the item plays on <paramref name="tuning"/>, or null (none
-    /// written, or none of that string count / bound to that tuning — LYS1040).</summary>
-    public static string? ShapeFor(ChordAnnotation words, TuningType tuning)
-        => ChordShapes.WrittenFor(tuning, words.Shapes);
+    /// <summary>The shape the item plays on <paramref name="tuning"/>: the one written for it;
+    /// with none written at all (and no word in error), the usual shape of its chord — <c>chord(F)4</c> sounds F
+    /// (owner's decision 2026-10-31, docs/chord-syntax-design.md Q1) — pressed above
+    /// <paramref name="capo"/>; else null (shapes written for other tunings only, or a chord with
+    /// no usual shape on the tuning — LYS1040).</summary>
+    /// <param name="fretted">The part frets its strings; a part that does not (a piano, a voice,
+    /// a violin) plays no usual shape — <see cref="Notes(ChordAnnotation, TuningType, int, int, int, bool)"/>
+    /// voices its chord instead.</param>
+    public static string? ShapeFor(ChordAnnotation words, TuningType tuning, int capo = 0, bool fretted = true)
+        => ChordShapes.WrittenFor(tuning, words.Shapes)
+           ?? (fretted && words.Shapes.IsEmpty && words.Problems.IsEmpty && words.Structure is { } chord
+               && ChordShapes.Default(tuning, chord.Pressed(capo, 0)) is { } usual
+               ? ChordVoicings.Spell(usual.Frets) : null);
 
     /// <summary>The notes of <paramref name="chord"/> — see the class remarks — in string order,
     /// LOW string first; empty when no written shape fits <paramref name="tuning"/>.</summary>
@@ -112,13 +121,22 @@ public static class ShapeChords
     /// <param name="tuning">The part's tuning (<see cref="TuningOf"/>).</param>
     /// <param name="soundingShift">The part's written→sounding shift in semitones.</param>
     /// <param name="keySharps">The written key at the item, for a note outside the symbol.</param>
-    public static ImmutableArray<ShapeNote> Notes(ChordSyntax chord, TuningType tuning, int soundingShift, int keySharps)
-        => Notes(Words(chord), tuning, soundingShift, keySharps);
+    /// <param name="capo">The capo the usual shape of an item with none written is pressed
+    /// above (<see cref="ShapeFor"/>); <paramref name="soundingShift"/> already counts it.</param>
+    /// <param name="fretted">The part frets its strings (<see cref="ShapeFor"/>).</param>
+    public static ImmutableArray<ShapeNote> Notes(ChordSyntax chord, TuningType tuning, int soundingShift, int keySharps,
+        int capo = 0, bool fretted = true)
+        => Notes(Words(chord), tuning, soundingShift, keySharps, capo, fretted);
 
-    /// <summary><see cref="Notes(ChordSyntax, TuningType, int, int)"/> on words already read.</summary>
-    public static ImmutableArray<ShapeNote> Notes(ChordAnnotation words, TuningType tuning, int soundingShift, int keySharps)
+    /// <summary><see cref="Notes(ChordSyntax, TuningType, int, int, int, bool)"/> on words already read.</summary>
+    public static ImmutableArray<ShapeNote> Notes(ChordAnnotation words, TuningType tuning, int soundingShift, int keySharps,
+        int capo = 0, bool fretted = true)
     {
-        if (ShapeFor(words, tuning) is not { } shape)
+        // A part with no frets and no shape written (owner's decision 2026-10-31, Q1): the chord's
+        // notes as the completion writes them, close and root up — written around middle C.
+        if (!fretted && words.Shapes.IsEmpty && words.Problems.IsEmpty && words.Structure is { } voiced)
+            return CloseVoicing(voiced, soundingShift + capo);
+        if (ShapeFor(words, tuning, capo, fretted) is not { } shape)
             return [];
         var frets = ChordShapes.Frets(shape);
         var open = Tablature.Tunings.GetTuning(tuning);
@@ -150,6 +168,33 @@ public static class ShapeChords
         return notes.ToImmutable();
     }
 
+    /// <summary>The tones of <paramref name="chord"/> close, root up, as the completion's note chord
+    /// spells them (<c>F</c> → F A C), the root written from G3 to F♯4 — on a treble staff, by
+    /// middle C — and a slash bass below the root; no string numbers (0).
+    /// <paramref name="partShift"/> is the part's written→sounding shift.</summary>
+    private static ImmutableArray<ShapeNote> CloseVoicing(ChordStructure chord, int partShift)
+    {
+        var notes = ImmutableArray.CreateBuilder<ShapeNote>();
+        int previous = -1, root = -1;
+        foreach (var t in chord.Tones)
+        {
+            int pc = Mod12(RelativeOctave.StepSemitoneOf(t.Step) + t.Alter);
+            int written = previous < 0 ? 55 + Mod12(pc - 55) : previous + 1 + Mod12(pc - previous - 1);
+            if (previous < 0)
+                root = written;
+            previous = written;
+            notes.Add(new ShapeNote(t.Step, t.Alter, ShapeNote.OctaveOf(written, t.Step, t.Alter), 0, written + partShift));
+        }
+        if (chord.BassStep is int bs && root >= 0)
+        {
+            int step = Mod7(bs), alter = chord.BassAlter ?? 0;
+            int pc = Mod12(RelativeOctave.StepSemitoneOf(step) + alter);
+            int written = root - 1 - Mod12(root - 1 - pc);
+            notes.Insert(0, new ShapeNote(step, alter, ShapeNote.OctaveOf(written, step, alter), 0, written + partShift));
+        }
+        return notes.ToImmutable();
+    }
+
     /// <summary>The note the item hands on as the relative frame: its lowest sounding one
     /// (the first of the lowest, on a re-entrant tuning where two strings sound alike).</summary>
     public static ShapeNote? Lowest(ImmutableArray<ShapeNote> notes)
@@ -168,7 +213,7 @@ public static class ShapeChords
 
     /// <summary>A part a shape chord may be played by, as the tree says it: its tuning, the
     /// word naming it, and its written→sounding shift.</summary>
-    public readonly record struct PartTuning(TuningType Tuning, string Word, int SoundingShift);
+    public readonly record struct PartTuning(TuningType Tuning, string Word, int SoundingShift, bool Fretted = true);
 
     /// <summary>
     /// The parts <paramref name="node"/> is played by, from the SYNTAX — the enclosing part
@@ -183,7 +228,7 @@ public static class ShapeChords
         while (root.Parent != null)
             root = root.Parent;
         static PartTuning Of(PartHeaderDefaults h)
-            => new(TuningOf(h), h.FrettedTuningWord ?? "guitar", h.SoundingShiftSemitones);
+            => new(TuningOf(h), h.FrettedTuningWord ?? "guitar", h.SoundingShiftSemitones, h.FrettedTuning != null);
         if (ChordDiagramScores.PartNameOf(node) is { } part)
             return [Of(PartHeaderDefaults.Read(ConcertPitch.FindPart(root, part)))];
         var all = root.ChildNodes().OfType<PartDeclarationSyntax>()

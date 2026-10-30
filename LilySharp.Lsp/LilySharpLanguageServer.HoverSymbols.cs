@@ -210,17 +210,19 @@ public sealed partial class LilySharpLanguageServer
         foreach (var (capo, label) in perCapo)
         foreach (var part in ShapeChords.PartTuningsOf(item))
         {
-            var notes = ShapeChords.Notes(words, part.Tuning, part.SoundingShift - capo, keySharps);
-            if (ShapeChords.ShapeFor(words, part.Tuning) is not { } shape || notes.IsEmpty)
+            var notes = ShapeChords.Notes(words, part.Tuning, part.SoundingShift - capo, keySharps, capo, part.Fretted);
+            if (notes.IsEmpty)
             {
                 lines.Add($"{part.Word}: no shape for its {LilySharp.Core.Tablature.Tunings.GetStringCount(part.Tuning)} "
                     + "strings - a spacer, nothing sounds");
                 continue;
             }
-            string spelled = ChordVoicings.Spell(ChordShapes.Frets(shape));
-            string place = (words.Structure ?? named) is { } chord
+            // A part with no frets and no shape written voices the chord close (Q1): no shape to show.
+            var shape = ShapeChords.ShapeFor(words, part.Tuning, capo, part.Fretted);
+            string spelled = shape != null ? $"`{ChordVoicings.Spell(ChordShapes.Frets(shape))}`" : "close voicing";
+            string place = shape != null && (words.Structure ?? named) is { } chord
                 && NoteStepper.ShapePlace(item, chord, ChordShapes.Frets(shape)) is { } p ? $" — {p}" : "";
-            lines.Add($"{part.Word}{label}: `{spelled}` — "
+            lines.Add($"{(shape != null ? part.Word : "notes")}{label}: {spelled} — "
                 + string.Join("  ", ShapeChords.Ascending(notes).Select(n => PitchGlyphs(n.NameAt(n.WrittenMidi + part.SoundingShift))))
                 + place);
         }

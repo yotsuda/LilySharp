@@ -23,6 +23,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 - ⚠️ **A chord from a shape: `chord(F 133211)1` prints its name and diagram, `diagram(F 133211)1`
   the diagram alone**, and both sound the shape. Both words are coloured as keywords;
   Ctrl+Shift+Up/Down steps the shape and completion offers chord symbols inside the parentheses.
+  With no shape written, `chord(F)1` plays the usual shape (a piano part: `<f a c>`).
 - **Ctrl+Shift+Up/Down steps a `diagram(…)` item with no symbol** (`diagram(x32010)`) through the
   other shapes of the chord it sounds. x32010 is C, and only the shape changes.
 - **With shapes for two instruments written** (`@chord(C x32010 0003)`), Ctrl+Shift+Up/Down steps

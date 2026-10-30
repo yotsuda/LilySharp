@@ -169,6 +169,28 @@ public class ShapeChordItemTests
         Assert.Empty(Frames(Book("instrument guitar", "diagram(C x32010)1 |", top: "layout { chordDiagrams none }\n")));
     }
 
+    /// <summary>Owner's decision 2026-10-31 (docs/chord-syntax-design.md Q1): with no shape
+    /// written the item sounds — on a fretted part the usual shape of its instrument (pressed
+    /// above the capo), on any other part the chord's notes close, root up, by middle C.</summary>
+    [Fact]
+    public void WithNoShape_TheItemSoundsTheUsualVoicing()
+    {
+        string guitar = Book("instrument guitar", "chord(F)2 diagram(G)2 |");
+        Assert.DoesNotContain(Diagnostics(guitar), d => d.Code == DiagnosticCodes.ShapeChordNoShape);
+        Assert.Equal(MidiPitches(Book("instrument guitar", "diagram(F 133211)2 diagram(G 320003)2 |")), MidiPitches(guitar));
+        Assert.Equal(new[] { "F" }, Collected(guitar).ChordNames.Select(n => n.ChordText));
+        Assert.Equal(new[] { "320003" }, Frames(guitar));      // chord(F) writes no shape: no diagram
+
+        string capo = Book("instrument guitar", "chord(Eb)1 |", top: "layout { chordDiagrams guitar capo 3 }");
+        Assert.Equal(new[] { 51, 55, 58, 63, 67 }, MidiPitches(capo));   // C's x32010 above the capo
+
+        string piano = Book("clef treble", "chord(F)2 diagram(G)2 | chord(C/E)1 |");
+        Assert.DoesNotContain(Diagnostics(piano), d => d.Code == DiagnosticCodes.ShapeChordNoShape);
+        Assert.Equal(new[] { 65, 69, 72, 55, 59, 62, 52, 60, 64, 67 }, MidiPitches(piano));
+        Assert.DoesNotContain("\\1", new LilyPondExporter().Export(SyntaxTree.Parse(piano)).Split("chordmode")[0]
+            .Split('\n').Where(l => l.Contains("<f")).DefaultIfEmpty("").First());
+    }
+
     /// <summary>Under a capo (2026-09-29) the shape is pressed above it: every string sounds the
     /// capo's fret higher — x32010 at capo 3 is E♭ major, on the page, in the MIDI and the twin.</summary>
     [Fact]
@@ -188,12 +210,13 @@ public class ShapeChordItemTests
                 "diagram(C x32013)2 diagram(G 320003)4 diagram(Am x02210) |")),
             d => d.Severity != DiagnosticSeverity.Info);
 
-    /// <summary>Owner's decision 2026-09-28: the shape is REQUIRED for now — `diagram(C)` warns,
-    /// naming the fix, and keeps its time as a SPACER so the bar still adds up.</summary>
+    /// <summary>A shape the part's tuning cannot play — written for another instrument only — warns,
+    /// naming the fix, and keeps its time as a SPACER so the bar still adds up. (A shape left out
+    /// altogether is the usual one since 2026-10-31: WithNoShape_TheItemSoundsTheUsualVoicing.)</summary>
     [Fact]
     public void NoShape_WarnsNamingTheFix_AndIsASpacer()
     {
-        string book = Book("instrument guitar", "c'2 diagram(C)2 |");
+        string book = Book("instrument guitar", "c'2 diagram(C 0003)2 |");
         var warning = Assert.Single(Diagnostics(book), d => d.Code == DiagnosticCodes.ShapeChordNoShape);
         Assert.Contains("write a shape: diagram(C x32010)", warning.Message);
         Assert.Contains("spacer", warning.Message);
@@ -204,7 +227,7 @@ public class ShapeChordItemTests
         Assert.Contains("s2", new LilyPondExporter().Export(SyntaxTree.Parse(book)));
         // The symbol's own default is the example when there is one.
         Assert.Contains("diagram(Am x02210)",
-            Assert.Single(Diagnostics(Book("instrument guitar", "diagram(Am)1 |")),
+            Assert.Single(Diagnostics(Book("instrument guitar", "diagram(Am 2000)1 |")),
                 d => d.Code == DiagnosticCodes.ShapeChordNoShape).Message);
     }
 
@@ -422,7 +445,7 @@ public class ShapeChordItemTests
     [Fact]
     public void InAGroup_TheSpreadsEdges()
     {
-        string unshaped = Book("instrument guitar", "<< c diagram(C) e >>2 r2 |");
+        string unshaped = Book("instrument guitar", "<< c diagram(C 0003) e >>2 r2 |");
         Assert.Equal(new[] { 48, 52 }, MidiPitches(unshaped));
         var items = Items(Collected(unshaped));
         Assert.True(Assert.IsType<RestItem>(items[1]).IsSpacer);
@@ -583,7 +606,7 @@ public class ShapeChordItemTests
         Assert.NotNull(hover);
         Assert.Contains("**Chord from a shape** `C`", hover);
         Assert.Contains("guitar: `x32013` — C3  E3  G3  C4  G4", hover);
-        Assert.Contains("nothing sounds", HoverAt(doc, "diagram(C)"));
+        Assert.Contains("guitar: `x32010`", HoverAt(doc, "diagram(C)"));   // the usual shape (2026-10-31)
     }
 
     /// <summary>Each score sounds the item under its own capo (the page and the MIDI read the

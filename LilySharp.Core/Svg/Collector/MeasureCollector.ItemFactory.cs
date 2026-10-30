@@ -440,7 +440,7 @@ public sealed partial class MeasureCollector
             ? [spread.Note]
             // A capo raises every string by its fret: the shape is pressed above it (2026-09-29).
             // The shift is "sounding = written + shift", so a higher sounding note is a SMALLER shift.
-            : Music.ShapeChords.Notes(chord, _partShapeTuning, _partSoundingShift - _chordSpelling.Capo, WrittenKeySharps());
+            : Music.ShapeChords.Notes(chord, _partShapeTuning, _partSoundingShift - _chordSpelling.Capo, WrittenKeySharps(), _chordSpelling.Capo, _partFrettedTuning != null);
 
     /// <summary>A <c>diagram(…)</c> item with no usable shape as a SPACER of its written length —
     /// the duration carry as a chord's (LYS1040 says why nothing is drawn).</summary>
@@ -688,7 +688,7 @@ public sealed partial class MeasureCollector
                 notes.Add(new ChordNoteInfo(
                     rp.StaffPosition, accidental,
                     IsCourtesy: styleCourtesy,
-                    StringNumber: sn.StringNumber,
+                    StringNumber: sn.StringNumber > 0 ? sn.StringNumber : null,
                     Midi: midi,
                     SourcePosition: chord.SourceStart,
                     HasLaissezVibrer: chordLv,

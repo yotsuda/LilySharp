@@ -149,7 +149,7 @@ public sealed partial class MeasureCollector
     private bool IsFirstSpreadNote(ChordSyntax chord)
         => _v.SpreadNote is not { } spread || !ReferenceEquals(spread.Item, chord.Green)
            || spread.Note == Music.ShapeChords.Notes(chord, _partShapeTuning,
-               _partSoundingShift - _chordSpelling.Capo, WrittenKeySharps()).MinBy(n => n.SoundingMidi);
+               _partSoundingShift - _chordSpelling.Capo, WrittenKeySharps(), _chordSpelling.Capo, _partFrettedTuning != null).MinBy(n => n.SoundingMidi);
 
     /// <summary>One chord name at <paramref name="site"/> — an <c>@chord</c> mark, or a
     /// <c>chord(…)</c> item — read from <paramref name="words"/>; see
@@ -753,7 +753,7 @@ public sealed partial class MeasureCollector
                     // Spread in a << >> group (ArpeggioSpread, lowest first): once, over its first note.
                     && IsFirstSpreadNote(chord)
                     && Semantics.ChordDiagramsKey.Resolve(_chordDiagramsWord, _partFrettedTuning) is not null
-                    && Music.ShapeChords.ShapeFor(Music.ShapeChords.Words(chord), _partFrettedTuning ?? TuningType.Guitar) is { } shape
+                    && Music.ShapeChords.ShapeFor(Music.ShapeChords.Words(chord), _partFrettedTuning ?? TuningType.Guitar, _chordSpelling.Capo) is { } shape
                     && Music.ChordShapes.TryRead(shape, out var shapeFrets, out _))
                     _articulations.Add(new ArticulationItem(
                         ArticulationType.FretFrame, measureIndex, itemIndex, true, chord.SourceStart, _v.Cursor.StaffIndex)

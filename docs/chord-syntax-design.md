@@ -71,7 +71,7 @@ Every combination is ONE word. Nothing needs two marks.
 
 | | Question | Decided |
 |---|---|---|
-| Q1 | Does `chord(F)4`, with no shape, sound? | Yes: a fretted part plays the usual shape of its instrument; any other part the chord's notes as the completion writes them (`<f a c>`). This reverses "the shape is required (for now)" of 2026-09-28 for `chord(…)`. `diagram(F)` with no shape plays and draws the usual shape the same way |
+| Q1 | Does `chord(F)4`, with no shape, sound? | Yes: a fretted part plays the usual shape of its instrument; any other part the chord's notes as the completion writes them (`<f a c>`), close and root up, the root written from G3 to F♯4 (by middle C on a treble staff), with no string numbers. A shape written badly, or only for another instrument, does not fall back: LYS1040 says so. This reverses "the shape is required (for now)" of 2026-09-28 for `chord(…)`. `diagram(F)` with no shape plays and draws the usual shape the same way |
 | Q2 | Does an item draw its diagram every time? | No: where the chord changes, and at each system's head |
 | — | `@chord(F 133211)` | Stays: a name over its diagram (the proposal to forbid it is withdrawn) |
 | — | `@chord(x32010)` | Stays: the name read off the shape, over the diagram. LYS1056 no longer warns it |
