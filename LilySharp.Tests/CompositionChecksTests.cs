@@ -877,6 +877,25 @@ public class CompositionChecksTests
             && f.Contains("gt is the band's only part over the bass, its chords and its tune both: share them out"));
     }
 
+    // Owner's review 2026-10-30: in C minor the chat's AI wrote every B natural — the leading tone — as
+    // `ces`, thinking the key made `b` a B-flat.
+    [Fact]
+    public void ANaturalOutOfTheKey_WrittenWithAForeignAccidental_IsToldSo()
+    {
+        string Book(string key, string seven) => "title \"Run\"\ntime 4/4\noctave absolute\n"
+            + $"key {key}\npart vn \"Violin\" {{ instrument violin }}\npart vc \"Cello\" {{ instrument cello }}\n"
+            + $"section A {{\n  vn {{ c''4@mf d'' ees'' {seven}'' | c''1 | c''4 d'' ees'' {seven}'' | c''1 | }}\n"
+            + "  vc { c4@mf g, c g, | c1 | c4 g, c g, | c1 | }\n}\nform { ~A }\nscore { staffGroup { staff vn staff vc } }\n";
+        Assert.Contains(CompositionChecks.Of(Book("c minor", "ces")),
+            f => f.StartsWith("vn: naturals out of the key written with an accidental it does not use, in C minor — `ces` for `b` (2 times)")
+                && f.Contains("B natural is `b` in any key") && f.Contains("`ces` prints a C♭"));
+        Assert.DoesNotContain(CompositionChecks.Of(Book("c minor", "b")), f => f.Contains("naturals out of the key"));
+        // In the key, its own name: E-flat minor's C-flat (said, if at all, by the other finding).
+        Assert.DoesNotContain(CompositionChecks.Of(Book("ees minor", "ces")), f => f.Contains("naturals out of the key"));
+        // A sharp in a key of sharps is the raised degree's own name.
+        Assert.DoesNotContain(CompositionChecks.Of(Book("fis minor", "eis")), f => f.Contains("naturals out of the key"));
+    }
+
     [Fact]
     public void APartRunningOnUnderTheOthersLastHeldChord_IsToldSo()
     {

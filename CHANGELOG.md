@@ -43,6 +43,9 @@ workflow attaches that section to the GitHub Release verbatim.
   - A section that plays an earlier one again, note for note in every part, with only its levels
     and marks changed. This is caught even when the copy is written out in phrases with new names,
     and when a bar or two differ (nine bars in ten the same).
+  - A natural out of the key written with an accidental the key does not use, such as the leading
+    tone B written `ces` in C minor. The grammar for LLMs now says that a note's name is its
+    pitch: the key never changes it.
   - When a band's only part over the bass is told it has no tune, or that nobody plays the chords,
     it is also told to share the two: chords under the verse, the tune in the chorus. Before, each
     finding pushed it to the other end.

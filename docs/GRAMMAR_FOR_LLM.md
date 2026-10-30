@@ -32,6 +32,9 @@ time 4/4                // optional (default 4/4); 4/4 engraves as the C
 key c major             // optional (default c major); all church modes work:
                         // major minor ionian dorian phrygian lydian mixolydian aeolian locrian
                         // (key d dorian = no accidentals, key e dorian = 2 sharps)
+                        // A note's NAME IS ITS PITCH: the key never changes it. In
+                        // 'key c minor', 'b' is B natural (drawn with its natural sign) and
+                        // B-flat is 'bes'; a minor key's raised leading tone is 'b', never 'ces'
                         // (a pickup is 'partial': the SECTION header for a section's opening
                         //  bar, or in the music at a LATER bar's start — see below; the top
                         //  level rejects it)

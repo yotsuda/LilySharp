@@ -1370,6 +1370,7 @@ public static class CompositionChecks
         const string letters = "cdefgab";
         int[] natural = [0, 2, 4, 5, 7, 9, 11];
         var wrong = new Dictionary<string, Dictionary<(string Written, string Key), int>>(System.StringComparer.Ordinal);
+        var outside = new Dictionary<string, Dictionary<(string Written, string Natural), int>>(System.StringComparer.Ordinal);
         string keyName = "";
         foreach (var (part, music, key) in blocks)
         {
@@ -1391,7 +1392,26 @@ public static class CompositionChecks
                     continue;
                 string written = token.Text.ToLowerInvariant();
                 int pc = PitchClass(written);
-                if (!spelled.TryGetValue(pc, out var own) || own[0] == written[0])
+                if (!spelled.TryGetValue(pc, out var own))
+                {
+                    // A note out of the key that is a plain natural, written with an accidental the
+                    // key does not use — the leading tone B as `ces` in C minor (owner's review
+                    // 2026-10-30: the chat's AI thought the key turned `b` into B-flat, and wrote every
+                    // B natural as C-flat). A sharp in a key of sharps is left alone: E-sharp in
+                    // F-sharp minor's dominant is the right name.
+                    bool flat = written.EndsWith("es", System.StringComparison.Ordinal) || written is "as";
+                    bool keyFlats = spelled.Values.Any(v => v.EndsWith("es", System.StringComparison.Ordinal) && v[0] == written[0]);
+                    bool keySharps = spelled.Values.Any(v => v.EndsWith("is", System.StringComparison.Ordinal));
+                    int at = System.Array.IndexOf(natural, pc);
+                    if (written.Length == 1 || at < 0 || (flat ? keyFlats : keySharps))
+                        continue;
+                    if (!outside.TryGetValue(part, out var odd))
+                        outside[part] = odd = [];
+                    odd[(written, letters[at].ToString())] = odd.GetValueOrDefault((written, letters[at].ToString())) + 1;
+                    keyName = $"{TonicName(tonic)} {mode}";
+                    continue;
+                }
+                if (own[0] == written[0])
                     continue;
                 if (!wrong.TryGetValue(part, out var counts))
                     wrong[part] = counts = [];
@@ -1407,10 +1427,25 @@ public static class CompositionChecks
             yield return $"{part}: notes of the key written under another name, in {keyName} — {string.Join(", ", most)}: write a note of "
                 + "the key by the key's own name; a sharp or a natural in a flat key (a flat in a sharp one) reads as a note out of the key.";
         }
+        foreach (var (part, counts) in outside)
+        {
+            if (counts.Values.Sum() < OddlySpelledFewest)
+                continue;
+            var ordered = counts.OrderByDescending(c => c.Value).ToList();
+            var most = ordered.Take(3).Select(c => $"`{c.Key.Written}` for `{c.Key.Natural}` ({c.Value} times)");
+            var (w, n) = ordered[0].Key;
+            yield return $"{part}: naturals out of the key written with an accidental it does not use, in {keyName} — {string.Join(", ", most)}: "
+                + $"a note's name is its pitch and the key never changes it — {char.ToUpperInvariant(n[0])} natural is `{n}` in any key, drawn "
+                + $"with its natural sign where the key alters it; `{w}` prints a {TonicName(w)}. Write each by its natural name.";
+        }
     }
 
     // Notes of the key misspelled in a part this many times: a habit, not a slip.
     private const int MisspelledFewest = 4;
+
+    // Naturals out of the key written with a foreign accidental this many times (a leading tone comes
+    // seldom, and one `ces` for B in C minor is already a misreading).
+    private const int OddlySpelledFewest = 2;
 
     /// <summary>The pitch class of a note name (<c>fis</c>, <c>bes</c>, <c>es</c>), 0 = C.</summary>
     private static int PitchClass(string name)
