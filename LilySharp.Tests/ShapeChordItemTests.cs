@@ -513,6 +513,36 @@ public class ShapeChordItemTests
         Assert.DoesNotContain(Diagnostics(book), d => d.Severity != DiagnosticSeverity.Info);
     }
 
+    /// <summary>An item's diagram stands where the chord changes, and again at each system's head
+    /// (owner's decision 2026-10-31, docs/chord-syntax-design.md Q2): the page drops a repeat on
+    /// its own breaks; the twin asks LilyPond's breaks the same question.</summary>
+    [Fact]
+    public void AnItemsDiagram_StandsWhereTheChordChanges_AndAtEachSystemsHead()
+    {
+        string book = Book("instrument guitar",
+            "chord(F 133211)4 chord(F 133211)4 diagram(G 320003)4 diagram(G 320003)4 | diagram(G 320003)1 | break "
+            + "diagram(G 320003)2 c'2@chord(G) | diagram(G 320003)1 |");
+        var tree = SyntaxTree.Parse(book);
+        var collected = SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree));
+        var frames = collected.Articulations.Where(a => a.Type == ArticulationType.FretFrame)
+            .OrderBy(a => a.SourcePosition).ToList();
+        // Marked by the collector: the F and G repeats, bars back; a name between ends the run.
+        Assert.Equal(new[] { -1, 0, -1, 0, 1, 1, -1 }, frames.Select(a => a.RepeatsDiagramBack));
+        // The page: the change, and the head of the second system — not the repeats on a system.
+        var laid = new LayoutEngine().Layout(collected);
+        Assert.Equal(new[] { "frame:133211", "frame:320003", "frame:320003", "frame:320003" },
+            laid.ArticulationLayouts.Where(a => a.Glyph.StartsWith("frame:")).OrderBy(a => a.SourceIndex)
+                .Select(a => a.Glyph));
+        // The twin: each repeat asks whether the diagram it repeats is on its system.
+        string ly = new LilyPondExporter().Export(tree);
+        Assert.Contains("#(define (lysRepeatedDiagram from)", ly);
+        Assert.Equal(4, Regex.Matches(ly, "lysRepeatedDiagram \\d+").Count);
+        Assert.Equal(4, Regex.Matches(ly, "lysItemDiagram \\d+").Count);
+        // None repeats: none of it.
+        Assert.DoesNotContain("lysItemDiagram", new LilyPondExporter().Export(SyntaxTree.Parse(
+            Book("instrument guitar", "chord(F 133211)2 chord(G 320003)2 |"))));
+    }
+
     // ================================================================ the outputs
 
     [Fact]

@@ -190,7 +190,7 @@ public sealed partial class MeasureCollector
                         naming.Frets, naming.Tuning, WrittenKeySharps());
                     var diagram = DiagramFor(fromFrets);
                     if (diagram != null)
-                        AddChordDiagram(site, diagram.FrameSpec, measureIndex, itemIndex);
+                        AddChordDiagram(site, diagram.FrameSpec, measureIndex, itemIndex, words.FromShapeItem);
                     if (fromFrets != null)
                     {
                         var named = fromFrets.PrintedSymbol(_chordSpelling, keySharps);
@@ -236,7 +236,7 @@ public sealed partial class MeasureCollector
             if (graceTime)
                 (_v.GraceChordNames ??= new())[itemIndex] = symbol;
             if (drawn != null)
-                AddChordDiagram(site, drawn.FrameSpec, measureIndex, itemIndex);
+                AddChordDiagram(site, drawn.FrameSpec, measureIndex, itemIndex, words.FromShapeItem);
         }
     }
 
@@ -258,9 +258,9 @@ public sealed partial class MeasureCollector
     /// staff with its name over it would not be a chord symbol any more.
     /// </remarks>
     private void AddChordDiagram(SyntaxNode markSyntax, string frameSpec,
-        int measureIndex, int itemIndex)
+        int measureIndex, int itemIndex, bool fromItem)
     {
-        _articulations.Add(new ArticulationItem(
+        var diagram = new ArticulationItem(
             ArticulationType.FretFrame, measureIndex, itemIndex, true,
             markSyntax.SourceStart, _v.Cursor.StaffIndex)
         {
@@ -269,7 +269,9 @@ public sealed partial class MeasureCollector
             FrameSpec = frameSpec,
             VoiceIndex = _v.Cursor.VoiceIndex,
             UnderChordName = true,
-        });
+        };
+        // A chord(…) item's: where the chord changes, and at a system's head (ItemDiagramRuns).
+        _articulations.Add(fromItem ? diagram with { IsItemDiagram = true } : diagram);
         // On a grace column the run's spacing rods the box (GraceColumnInfo.FrameSpec, session 964).
         if (_v.GraceDepth > 0)
             (_v.GraceFrameSpecs ??= new())[itemIndex] = frameSpec;
@@ -760,6 +762,8 @@ public sealed partial class MeasureCollector
                     {
                         FrameSpec = Music.ChordVoicings.ToFrameSpec(shapeFrets),
                         VoiceIndex = _v.Cursor.VoiceIndex,
+                        // Where the chord changes, and at a system's head (ItemDiagramRuns).
+                        IsItemDiagram = true,
                     });
                 break;
             case ChordRepetitionSyntax rep:

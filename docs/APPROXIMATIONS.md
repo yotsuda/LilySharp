@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 63 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 64 | 観測者がゼロだと自認しているもの |
-| `OWN` | 286 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **413** | |
+| `OWN` | 288 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **415** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -246,7 +246,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（286 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（288 件）
 
 ### `LilySharp.Core/Editing/KeyRespeller.cs`
 - **`KeyRespeller`** LILYSHARP-OWN: an editor aid. The rule:
@@ -402,6 +402,8 @@
 - **`BeamingPattern.Options.For`** LILYSHARP-OWN: a meter with no beats (senza misura, or a malformed one) has no
 ### `LilySharp.Core/Svg/Collector/CompressRests.cs`
 - **`CompressRests`** LILYSHARP-OWN: LilyPond has no switch for this. MEASURED (2.26.0, Lab sessions/p903/b5):
+### `LilySharp.Core/Svg/Collector/ItemDiagramRuns.cs`
+- **`ItemDiagramRuns`** LILYSHARP-OWN: LilyPond draws a markup diagram wherever it is written; the twin asks it the
 ### `LilySharp.Core/Svg/Collector/MeasureBuilder.cs`
 - **`MeasureBuilder.SectionHead`** LILYSHARP-OWN (owner's decisions, 2026-10-02, HANDOFF §1.1 第737): a time, key
 ### `LilySharp.Core/Svg/Collector/MeasureCollector.cs`
@@ -509,6 +511,7 @@
 - **`LayoutEngine.TrailingRowBandBelowSystem`** ⚠️ LILYSHARP-OWN: departs from lily/page-layout-problem.cc:919-925
 - **`LayoutEngine.BuildLooseLinesBetween`** ⚠️ ONLY ACROSS A GROUP BOUNDARY, AND THAT CONDITION IS LILYSHARP-OWN. LilyPond has
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.cs`
+- **`LayoutEngine.ItemDiagramsAtChanges`** LILYSHARP-OWN: made once the lines are broken, and the breaks priced every diagram: a
 - **`LayoutEngine.LayoutSystems`** (LILYSHARP-OWN: LilyPond never emits a system with no live staff at all).
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.Finishing.cs`
 - **`LayoutEngine.EffectiveIndent`** score were cut at the edge (owner's report 2026-10-27). LILYSHARP-OWN: the indent grows

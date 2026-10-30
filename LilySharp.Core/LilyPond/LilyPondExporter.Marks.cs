@@ -684,6 +684,56 @@ public sealed partial class LilyPondExporter
     private Music.ChordStructure? PageChordAt(MusicMarkSyntax mk)
         => _page?.ChordNames.FirstOrDefault(c => !c.UseTiming && c.SourcePosition == mk.SourceStart)?.Structure;
 
+    /// <summary>
+    /// The diagram a <c>chord(…)</c> or <c>diagram(…)</c> item at <paramref name="itemStart"/>
+    /// draws — the page's, read off its diagram there, so the twin draws what the page draws and
+    /// nothing where the page draws none — or null.
+    /// </summary>
+    /// <remarks>
+    /// A diagram that repeats the item diagram before it in its voice stands only at a system's
+    /// head (<see cref="Svg.Model.ArticulationItem.RepeatsDiagramBack"/>, owner's decision
+    /// 2026-10-31). The page drops it on its own breaks (LayoutEngine.ItemDiagramsAtChanges);
+    /// LilyPond breaks its lines itself, so the twin asks LilyPond's: each diagram a repeat
+    /// points at is found by its grob, and the repeat empties its stencil when that grob is
+    /// on its system (<see cref="ItemDiagramFunctions"/>).
+    /// LILYPOND-REF: lily/system.cc pre_processing — every grob's before-line-breaking runs
+    /// before the lines are broken, and after-line-breaking after.
+    /// </remarks>
+    private string? ItemDiagramMarkup(int itemStart)
+    {
+        if (_page?.Articulations.FirstOrDefault(a => a.Type == ArticulationType.FretFrame && a.SourcePosition == itemStart)
+                is not { FrameSpec: { } spec } diagram)
+            return null;
+        _repeatedItemDiagrams ??= [.. _page.Articulations.Where(a => a.RepeatsDiagramAt >= 0).Select(a => a.RepeatsDiagramAt)];
+        var inv = System.Globalization.CultureInfo.InvariantCulture;
+        string tweaks = (_repeatedItemDiagrams.Contains(itemStart)
+                ? "-\\tweak before-line-breaking #(lysItemDiagram " + itemStart.ToString(inv) + ") "
+                : "")
+            + (diagram.RepeatsDiagramAt >= 0
+                ? "-\\tweak after-line-breaking #(lysRepeatedDiagram " + diagram.RepeatsDiagramAt.ToString(inv) + ") "
+                : "");
+        return tweaks + FretDiagramMarkup(spec, above: true);
+    }
+
+    /// <summary>The item diagrams some later one repeats, by source position (<see cref="ItemDiagramMarkup"/>).</summary>
+    private HashSet<int>? _repeatedItemDiagrams;
+
+    /// <summary>The Scheme <see cref="ItemDiagramMarkup"/> calls, written once before the parts
+    /// when the page has a repeated item diagram: the grobs repeats point at, by source
+    /// position, and the repeat's emptying when that grob stands on its system.</summary>
+    private static readonly string ItemDiagramFunctions = """
+        #(define lysItemDiagrams (make-hash-table))
+        #(define (lysItemDiagram at)
+           (lambda (grob) (hash-set! lysItemDiagrams at grob)))
+        #(define (lysRepeatedDiagram from)
+           (lambda (grob)
+             (let ((before (hash-ref lysItemDiagrams from #f)))
+               (if (and before (eq? (ly:grob-system before) (ly:grob-system grob)))
+                   (ly:grob-set-property! grob 'stencil #f)))))
+
+
+        """.ReplaceLineEndings("\n");
+
     private string FretDiagramMarkup(string spec, bool above)
     {
         // One entry a string, low string first: x, o, or the fret — read by the page's own

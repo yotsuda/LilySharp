@@ -95,7 +95,8 @@ internal static class ScoreAssembler
             c.Title,
             c.Composer,
             dynamics: c.Dynamics,
-            articulations: c.Articulations,
+            // A chord item's diagram where the chord changes (ItemDiagramRuns).
+            articulations: ItemDiagramRuns.Mark(c.Articulations, c.ChordNames),
             graceNotes: c.GraceNotes,
             lyrics: c.Lyrics,
             musicMarks: c.MusicMarks,
@@ -148,7 +149,8 @@ internal static class ScoreAssembler
             voltaBrackets: c.VoltaBrackets,
             tupletBrackets: c.TupletBrackets,
             dynamics: c.Dynamics,
-            articulations: c.Articulations,
+            // A chord item's diagram where the chord changes (ItemDiagramRuns).
+            articulations: ItemDiagramRuns.Mark(c.Articulations, c.ChordNames),
             graceNotes: c.GraceNotes,
             arpeggios: c.Arpeggios,
             figuredBasses: c.FiguredBasses,

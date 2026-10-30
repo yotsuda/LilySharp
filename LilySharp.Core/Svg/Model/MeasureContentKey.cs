@@ -544,6 +544,9 @@ public readonly record struct MeasureContentKey(long Hash)
     private static readonly HashSet<string> SideExclusions = new(StringComparer.Ordinal)
     {
         "SourcePosition", "MeasureIndex", "StartMeasureIndex", "EndMeasureIndex",
+        // The item diagram an ArticulationItem repeats, by its source offset (the twin's key);
+        // its relative bar count, RepeatsDiagramBack, is the content.
+        "RepeatsDiagramAt",
     };
 
     // ⚠️ THERE IS NO BUCKET — the side-table hashes fold straight into a per-measure

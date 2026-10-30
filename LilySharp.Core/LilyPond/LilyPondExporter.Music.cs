@@ -1522,9 +1522,8 @@ public sealed partial class LilyPondExporter
         // The item draws its shape (owner's decision 2026-10-30: written diagram(…)) — the page's,
         // read off its diagram at the item, so the twin draws what the page draws, and nothing
         // where the page draws none (an @chord or an @diagram of its own, `chordDiagrams none`).
-        if (_page?.Articulations.FirstOrDefault(a => a.Type == ArticulationType.FretFrame && a.SourcePosition == c.SourceStart)
-                ?.FrameSpec is { } itemFrame)
-            suffix += FretDiagramMarkup(itemFrame, above: true);
+        if (ItemDiagramMarkup(c.SourceStart) is { } itemFrame)
+            suffix += itemFrame;
         return prefix + sb + suffix;
     }
 
@@ -2043,9 +2042,8 @@ public sealed partial class LilyPondExporter
                     // The page draws the item's diagram once, over its first note: so does the twin.
                     var ((before, _, _, _, _, _), _) = members[Math.Max(i - 1, 0)];
                     if ((i == 0 || !ReferenceEquals(before, spreadItem))
-                        && _page?.Articulations.FirstOrDefault(a => a.Type == ArticulationType.FretFrame
-                            && a.SourcePosition == spreadItem.SourceStart)?.FrameSpec is { } spreadFrame)
-                        suffix += FretDiagramMarkup(spreadFrame, above: true);
+                        && ItemDiagramMarkup(spreadItem.SourceStart) is { } spreadFrame)
+                        suffix += spreadFrame;
                     AdvanceLilyPondFrame(sn.Step, sn.Octave);
                     break;
                 }

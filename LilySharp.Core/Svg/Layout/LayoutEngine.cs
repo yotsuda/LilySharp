@@ -208,6 +208,10 @@ internal sealed partial class LayoutEngine
             if (st.IsTextRow)
                 textRowStaves.Add(gi);
 
+        // A chord item's diagram stands where the chord changes and at each system's head
+        // (ItemDiagramsAtChanges) — known now, the lines broken with every diagram priced.
+        var brokenScore = score;
+        score = ItemDiagramsAtChanges(brokenScore, systemMeasures);
         var pass = PlaceSystems(score, multiStaffLayouter, systemMeasures, systemCache,
             indent, shortIndent, commonShortestDuration, header);
 
@@ -222,6 +226,7 @@ internal sealed partial class LayoutEngine
             if (chosen != null)
             {
                 systemMeasures = KnuthPlassBreaker.CreateMeasureGroups(primaryMeasures, chosen);
+                score = ItemDiagramsAtChanges(brokenScore, systemMeasures);
                 pass = PlaceSystems(score, multiStaffLayouter, systemMeasures, systemCache,
                     indent, shortIndent, commonShortestDuration, header);
             }
@@ -243,6 +248,36 @@ internal sealed partial class LayoutEngine
         return FinishLayout(score, systemCache, multiStaffLayouter, textRowStaves,
             systems, perSystemExtents, perSystemSkylines, placed, prelim, pages, systemsArray,
             lineBreaks);
+    }
+
+    /// <summary>
+    /// <paramref name="score"/> without the chord items' diagrams that repeat one on their own
+    /// system (<see cref="ArticulationItem.RepeatsDiagramBack"/>): a diagram stands where the
+    /// chord changes, and at the head of each system (owner's decision 2026-10-31,
+    /// docs/chord-syntax-design.md Q2). The same score when none repeats.
+    /// </summary>
+    /// <remarks>
+    /// LILYSHARP-OWN: made once the lines are broken, and the breaks priced every diagram: a
+    /// dropped one only leaves its column room it no longer needs. The choice reads the system's
+    /// own bars only (the repeat's distance is relative), so a cached system is the same system.
+    /// The LilyPond twin makes it on LilyPond's breaks (LilyPondExporter.ItemDiagramMarkup).
+    /// </remarks>
+    private static MultiStaffScore ItemDiagramsAtChanges(MultiStaffScore score, List<List<Measure>> systemMeasures)
+    {
+        if (!score.Articulations.Any(a => a.RepeatsDiagramBack >= 0))
+            return score;
+        var systemOf = new List<int>();
+        for (int s = 0; s < systemMeasures.Count; s++)
+            systemOf.AddRange(Enumerable.Repeat(s, systemMeasures[s].Count));
+        bool OnItsSystem(ArticulationItem a)
+        {
+            int from = a.MeasureIndex - a.RepeatsDiagramBack;
+            return from >= 0 && a.MeasureIndex < systemOf.Count && systemOf[from] == systemOf[a.MeasureIndex];
+        }
+        return score with
+        {
+            Articulations = [.. score.Articulations.Where(a => a.RepeatsDiagramBack < 0 || !OnItsSystem(a))],
+        };
     }
 
     /// <summary>What one placement of the systems produces, index-aligned by system —

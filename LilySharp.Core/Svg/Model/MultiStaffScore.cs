@@ -191,7 +191,9 @@ public sealed record MultiStaffScore
     public ImmutableArray<DynamicItem> Dynamics { get; }
 
     /// <summary>Articulation marks.</summary>
-    public ImmutableArray<ArticulationItem> Articulations { get; }
+    /// <remarks>Init-settable for the layout's one rewrite of them, once the lines are broken
+    /// (<c>LayoutEngine.ItemDiagramsAtChanges</c>).</remarks>
+    public ImmutableArray<ArticulationItem> Articulations { get; init; }
 
     /// <summary>Grace notes.</summary>
     public ImmutableArray<GraceNoteItem> GraceNotes { get; }

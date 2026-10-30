@@ -73,6 +73,24 @@ public sealed record ArticulationItem
     /// </summary>
     public bool UnderChordName { get; init; }
 
+    /// <summary>True for the diagram a <c>chord(…)</c> or <c>diagram(…)</c> ITEM draws — the one
+    /// kind that stands only where the chord changes (<see cref="RepeatsDiagramBack"/>).</summary>
+    public bool IsItemDiagram { get; init; }
+
+    /// <summary>
+    /// For the diagram a <c>chord(…)</c> or <c>diagram(…)</c> ITEM draws, when it repeats the
+    /// diagram the item before it in its voice drew: how many bars back that one stands (0 = the
+    /// same bar). Else -1. Such a diagram stands only at the head of a system — the layout drops
+    /// it when the one it repeats is on its own system (owner's decision 2026-10-31,
+    /// docs/chord-syntax-design.md Q2: a diagram where the chord changes, and at each system's head).
+    /// </summary>
+    public int RepeatsDiagramBack { get; init; } = -1;
+
+    /// <summary>The source position of the item diagram this one repeats
+    /// (<see cref="RepeatsDiagramBack"/>), or -1: the key the LilyPond twin finds that
+    /// diagram's grob by, to make the same choice on LilyPond's own line breaks.</summary>
+    public int RepeatsDiagramAt { get; init; } = -1;
+
     /// <summary>Right-hand pluck letter (p/i/m/a); only for
     /// <see cref="ArticulationType.Pluck"/>.</summary>
     public string? PluckLetter { get; init; }
