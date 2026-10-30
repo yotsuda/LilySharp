@@ -41,7 +41,7 @@ import {
     CandidateEdit as CoreCandidateEdit, ChangedSpan, MarkInSelection, MarkReadings, SEL_CLOSE, SEL_OPEN, cleanCandidate,
     TextChange, carryOffset, documentBudget, documentContext, estimateTokens, isProblem, marksContext, octaveOutliers, splitNote,
     startTimeAt, toCandidateEdit, wholeFileEdit, carrySelection, changedWords, wholeTextMarkup, titleOf, isPlaceholderTitle,
-    cleanTitle, withTitle, asksForOneStaff, partCount, rangeFixOf, aiFailure, warningTodoLines, withLyricsRows, promptFits, compositionHint, withLeadingComments, isEmptyScore, guidePages, headerLanguageNote, diagLines,
+    cleanTitle, withTitle, asksForOneStaff, partCount, rangeFixOf, aiFailure, warningTodoLines, withLyricsRows, promptFits, compositionHint, hintTonic, drawnKeyNote, withLeadingComments, isEmptyScore, guidePages, headerLanguageNote, diagLines,
 } from './aiTransformCore';
 import { withTodoMark } from './omrAiFixCore';
 import { markFactsOf, sideFileOf } from './omrScanCore';
@@ -354,6 +354,7 @@ async function readGuide(deps: AiTransformDeps, input: ReadGuideInput | undefine
         return paged('composing guide', await guide());
     }
     const hint = compositionHint();
+    drawnTonic = hintTonic(hint);
     deps.log(`AI transform (chat, guide): ${hint}`);
     // The header Compose with AI in Chat writes, the request in it the musician's (owner's request
     // 2026-10-29: a piece composed this way began at `octave absolute`, saying nothing of itself).
@@ -522,6 +523,9 @@ async function chatAbsolute(deps: AiTransformDeps, text: string): Promise<string
     }
 }
 
+/** The tonic the last composing guide drew for the chat's piece (readGuide), its key checked once. */
+let drawnTonic: string | undefined;
+
 /** The files whose new piece the music check has spoken on, this session: it speaks once a file. */
 const musicCheckedFor = new Set<string>();
 
@@ -585,7 +589,9 @@ async function proposeScore(deps: AiTransformDeps, input: ProposeScoreInput, tok
         const report = await compositionReport(client, text);
         // …and its header said in the request's language, sent back with them (owner's request 2026-10-29).
         const language = headerLanguageNote(text);
-        const music = language ? [...report.findings, language] : report.findings;
+        // …and its key held to the one drawn for it, the draw said to the AI alone (owner's decision 2026-10-30).
+        const music = [...report.findings, language, drawnKeyNote(text, drawnTonic)].filter((m): m is string => m !== undefined);
+        drawnTonic = undefined;   // one draw, one piece: not held against the next, its guide maybe read from the rules file
         ranges = report.ranges;
         musicCheckedFor.add(uri.toString());
         if (music.length > 0 || added.length > 0) {

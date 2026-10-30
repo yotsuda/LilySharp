@@ -24,7 +24,7 @@ import * as path from 'node:path';
 import {
     SEL_CLOSE, SEL_OPEN, carryOffset, documentBudget, documentContext, estimateTokens, isProblem, isUnchanged, marksContext, octaveOutliers,
     pickModel, isAutoModel, pitchToMidi, splitNote, planOf, withoutPlan, startTimeAt, toCandidateEdit, changedWords, diffMarkup, wholeTextMarkup, rangeFixOf,
-    aiFailure, isConnectionError, spokenDuration, servedModelsIn, cleanCandidate, warningTodoLines, withLyricsRows, promptFits, compositionHint, withLeadingComments, isEmptyScore, guidePages, headerLanguageNote, diagLines,
+    aiFailure, isConnectionError, spokenDuration, servedModelsIn, cleanCandidate, warningTodoLines, withLyricsRows, promptFits, compositionHint, hintTonic, drawnKeyNote, withLeadingComments, isEmptyScore, guidePages, headerLanguageNote, diagLines,
 } from '../src/aiTransformCore';
 
 // Owner's report 2026-10-29: one range warning came back 28 times, a line a note.
@@ -52,7 +52,7 @@ describe('a new piece\'s header in the request\'s language', () => {
     });
     it('goes back with the new piece\'s check, once', () => {
         const src = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'aiTransform.ts'), 'utf8');
-        assert.match(src, /const language = headerLanguageNote\(text\);\s*const music = language \? \[\.\.\.report\.findings, language\] : report\.findings;/);
+        assert.match(src, /const language = headerLanguageNote\(text\);\s*\/\/[^\n]*\n\s*const music = \[\.\.\.report\.findings, language, drawnKeyNote\(text, drawnTonic\)\]/);
     });
 });
 
@@ -98,7 +98,7 @@ describe('a proposal from Copilot\'s chat', () => {
     it('checks a new piece as music once, its findings sent back unseen', () => {
         const src = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'aiTransform.ts'), 'utf8');
         assert.match(src, /let text = withLeadingComments\(current, input\.text\);/);
-        assert.match(src, /if \(isEmptyScore\(current\) && !musicCheckedFor\.has\(uri\.toString\(\)\)\) \{\s*const report = await compositionReport\(client, text\);[\s\S]*?const music = language \? \[\.\.\.report\.findings, language\] : report\.findings;\s*ranges = report\.ranges;\s*musicCheckedFor\.add\(uri\.toString\(\)\);/);
+        assert.match(src, /if \(isEmptyScore\(current\) && !musicCheckedFor\.has\(uri\.toString\(\)\)\) \{\s*const report = await compositionReport\(client, text\);[\s\S]*?const music = \[\.\.\.report\.findings, language, drawnKeyNote\(text, drawnTonic\)\]\.filter\(\(m\): m is string => m !== undefined\);\s*drawnTonic = undefined;[^\n]*\s*ranges = report\.ranges;\s*musicCheckedFor\.add\(uri\.toString\(\)\);/);
         // Each part's range goes with it, a fact to check against what was meant (owner's request
         // 2026-10-29: a beginner's piece slipped an octave), on the bounce, the write and an Accept.
         assert.match(src, /'is written as it is, and what the check still finds in it is told to the musician\.'\s*\+ rangesSaid\(ranges\);/);
@@ -124,9 +124,10 @@ describe('a proposal from Copilot\'s chat', () => {
 // same opening — a starting point drawn at random, the request's own word first.
 describe('a starting point drawn at random', () => {
     it('names a key, a meter, a form and an opening, each drawn from its list', () => {
-        assert.equal(compositionHint(() => 0), 'A starting point for this piece, drawn at random so that not every piece begins alike — take what suits '
-            + 'the music asked for, leave the rest, and whatever the request itself says (a key, a meter, a form, a length, '
-            + 'a style) comes first, and a band\'s music — rock, pop — keeps its 4/4 whatever meter is drawn: '
+        assert.equal(compositionHint(() => 0), 'A starting point for this piece, drawn at random so that not every piece begins alike — write the piece '
+            + 'so wherever the request itself says nothing of it: whatever the request says (a key, a meter, a form, a length, '
+            + 'a style) comes first, and a band\'s music — rock, pop — keeps its 4/4 whatever meter is drawn; it is yours '
+            + 'alone, unseen by the musician — do not speak of it: '
             + 'the key on C, major or minor as the music asks; 4/4; A–B–A; opening with the bass alone for a bar or two.');
         assert.match(compositionHint(() => 0.9999), /: the key on F, major or minor as the music asks; 3\/4; one section that grows from start to end; opening with a short introduction on the accompaniment's figure\.$/);
     });
@@ -143,6 +144,25 @@ describe('a starting point drawn at random', () => {
         const share = (m: string) => meters.filter(x => x === m).length / meters.length;
         assert.ok(share('4/4') > 0.5, `4/4 ${share('4/4')}`);
         assert.ok(share('3/4') < 0.2, `3/4 ${share('3/4')}`);
+    });
+    // Owner's decision 2026-10-30: gentle piano pieces left the drawn A and B for G and F — the key is
+    // checked once against the draw, unless the request named one; enharmonic keys are the same.
+    it('holds a new piece to the tonic drawn, said to the AI alone', () => {
+        assert.equal(hintTonic(compositionHint(() => 0)), 'C');
+        assert.equal(hintTonic(compositionHint(() => 0.9999)), 'F');
+        const piece = (key: string, asked = '優しいピアノ曲を書いて') => `// Asked: ${asked}\noctave absolute\nkey ${key}\n`;
+        assert.equal(drawnKeyNote(piece('g major'), 'A'),
+            'The key: write the piece on A (A major or A minor, as the music asks), the starting point drawn for it — the request names no key.');
+        assert.equal(drawnKeyNote(piece('a minor'), 'A'), undefined);
+        assert.equal(drawnKeyNote(piece('fis major'), 'F♯'), undefined);
+        assert.equal(drawnKeyNote(piece('ges major'), 'F♯'), undefined);
+        assert.equal(drawnKeyNote(piece('bes major'), 'B♭'), undefined);
+        assert.equal(drawnKeyNote(piece('es major'), 'E♭'), undefined);
+        assert.ok(drawnKeyNote(piece('e minor'), 'E♭'));
+        assert.equal(drawnKeyNote(piece('g major', 'ト長調でピアノ曲を'), 'A'), undefined);
+        assert.equal(drawnKeyNote(piece('g major', 'a waltz in G major'), 'A'), undefined);
+        assert.equal(drawnKeyNote(piece('g major'), undefined), undefined);
+        assert.equal(drawnKeyNote('// Asked: x\ntitle "A"\n', 'A'), undefined);
     });
     it('differs from piece to piece', () => {
         const seen = new Set(Array.from({ length: 20 }, () => compositionHint()));

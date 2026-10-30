@@ -895,11 +895,46 @@ export function guidePages(text: string, limit: number, firstLimit: number = lim
  */
 export function compositionHint(random: () => number = Math.random): string {
     const pick = <T>(xs: readonly T[]) => xs[Math.min(xs.length - 1, Math.floor(random() * xs.length))];
-    return `A starting point for this piece, drawn at random so that not every piece begins alike — take what suits `
-        + `the music asked for, leave the rest, and whatever the request itself says (a key, a meter, a form, a length, `
-        + `a style) comes first, and a band's music — rock, pop — keeps its 4/4 whatever meter is drawn: `
+    // Followed wherever the request is silent, and not spoken of (owner's decision 2026-10-30: told to
+    // take what suits, the AI left the drawn key for G or F in every gentle piano piece; told to say
+    // why, it would speak to the musician of a starting point they never saw).
+    return `A starting point for this piece, drawn at random so that not every piece begins alike — write the piece `
+        + `so wherever the request itself says nothing of it: whatever the request says (a key, a meter, a form, a length, `
+        + `a style) comes first, and a band's music — rock, pop — keeps its 4/4 whatever meter is drawn; it is yours `
+        + `alone, unseen by the musician — do not speak of it: `
         + `the key on ${pick(HINT_TONICS)}, major or minor as the music asks; ${pick(HINT_METERS)}; ${pick(HINT_FORMS)}; `
         + `opening with ${pick(HINT_OPENINGS)}.`;
+}
+
+/** The tonic a starting point drew ("E", "F♯", "B♭"), or undefined for a text with none. */
+export function hintTonic(hint: string): string | undefined {
+    return /the key on ([A-G][♯♭]?), major or minor/.exec(hint)?.[1];
+}
+
+/**
+ * Said with a new piece's first check when its key is not on the tonic drawn for it, and the
+ * request names no key (owner's decision 2026-10-30: the drawn key was left for G or F in every
+ * gentle piano piece). Said to the AI alone: the musician never saw the draw. Enharmonic keys
+ * (G♭ for F♯) are the same key.
+ */
+export function drawnKeyNote(text: string, tonic: string | undefined): string | undefined {
+    const key = /^[ \t]*key[ \t]+([a-g](?:is|es|s)*)[ \t]+\w+/m.exec(text);
+    if (!tonic || !key) {
+        return undefined;
+    }
+    const steps: Record<string, number> = { c: 0, d: 2, e: 4, f: 5, g: 7, a: 9, b: 11 };
+    const name = key[1];
+    const written = steps[name[0]] + (name.match(/is/g)?.length ?? 0) - (name.slice(1).replace(/is/g, '').match(/e?s/g)?.length ?? 0);
+    const drawn = steps[tonic[0].toLowerCase()] + (tonic.includes('♯') ? 1 : 0) - (tonic.includes('♭') ? 1 : 0);
+    if ((written - drawn) % 12 === 0) {
+        return undefined;
+    }
+    const asked = /^\/\/ Asked:(.*)$/m.exec(text)?.[1] ?? '';
+    if (/\b[A-G][#♯b♭]?[- ]?(major|minor|dur|moll)\b|[ハニホヘトイロ][嬰変]?[長短]調|[A-G][#♯b♭]?(メジャー|マイナー)|\bkey\b|調で/i.test(asked)) {
+        return undefined;
+    }
+    return `The key: write the piece on ${tonic} (${tonic} major or ${tonic} minor, as the music asks), the starting point drawn for `
+        + 'it — the request names no key.';
 }
 
 /** Whether an error says the service answered with nothing ("Response contained no choices"). */
