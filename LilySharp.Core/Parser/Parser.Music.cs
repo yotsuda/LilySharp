@@ -349,7 +349,6 @@ internal sealed partial class Parser
             // be named it — RejectUnreachablePhraseName) and stays an ordinary word elsewhere;
             // `@chord` is read after its '@' and never reaches this switch.
             SyntaxKind.Identifier when Current.Text == ShapeChordWord => ParseShapeChord(),
-            SyntaxKind.Identifier when Current.Text == RetiredShapeChordWord && Peek().Kind == SyntaxKind.OpenParen => ParseShapeChord(),
 
             // `drums { hats  back  kick }` — a drum chart, its lines played together
             // (Parser.Drums). Claimed only before a `{`, so a phrase may still be named
@@ -935,12 +934,9 @@ internal sealed partial class Parser
 
     /// <summary>The word that opens a chord from a shape in a music stream: <c>diagram(C x32010)1</c>
     /// (owner's decision 2026-10-30 — what is written is the diagram, the notes come from it; it was
-    /// <c>diagram(…)</c>, read as a chord's NAME beside <c>@chord(…)</c>).</summary>
+    /// <c>chord(…)</c>, read as a chord's NAME beside <c>@chord(…)</c>, and was dropped outright:
+    /// no one wrote it yet).</summary>
     internal const string ShapeChordWord = "diagram";
-
-    /// <summary>The item's word until 2026-10-30: still read as the item, and refused (LYS0043)
-    /// naming the new word, so a bar written with it keeps its length.</summary>
-    internal const string RetiredShapeChordWord = "chord";
 
     /// <summary>
     /// <c>diagram(SYMBOL SHAPE)</c> + the tail a <c>&lt;…&gt;</c> chord takes — duration, dots,
@@ -954,7 +950,7 @@ internal sealed partial class Parser
     /// marks after the <c>)</c> would move a chord that is where the strings are, so they are
     /// refused (LYS0035) and ignored rather than read — the recommendation the owner left open,
     /// taken: <c>diagram(…)'</c> has no natural reading once the frame does not apply.
-    /// The '(' may follow after a space: <c>chord</c> alone means nothing in music, so there
+    /// The '(' may follow after a space: <c>diagram</c> alone means nothing in music, so there
     /// is no slur to confuse it with (the glue rule of <c>@name(…)</c> guards a note's slur).
     /// LILYSHARP-OWN: LilyPond writes such a chord out note by note.
     /// </remarks>
@@ -966,11 +962,6 @@ internal sealed partial class Parser
     {
         int wordStart = _textPosition + Current.LeadingTriviaWidth;
         var word = Advance();
-        if (word.Text == RetiredShapeChordWord)
-            // ASCII punctuation only: the CLI prints this to legacy-codepage consoles.
-            _diagnostics.Error(new TextSpan(wordStart, word.Text.Length), DiagnosticCodes.RetiredShapeChordWord,
-                $"a chord from a shape is written {ShapeChordWord}(...) - {ShapeChordWord}(C x32010)1 - since 2026-10-30: "
-                + $"write '{ShapeChordWord}' for '{RetiredShapeChordWord}' (a name over it is '@chord')");
         var tokens = new List<GreenNode?>();
         SyntaxToken openParen, closeParen;
         if (Check(SyntaxKind.OpenParen))
@@ -1069,7 +1060,7 @@ internal sealed partial class Parser
                 members.Add(ParseChord());
             }
             else if (Current.Kind == SyntaxKind.Identifier
-                     && (Current.Text == ShapeChordWord || Current.Text == RetiredShapeChordWord && Peek().Kind == SyntaxKind.OpenParen))
+                     && Current.Text == ShapeChordWord)
             {
                 // A chord from a shape: its notes are spread across the group (ArpeggioSpread).
                 members.Add(ParseShapeChord(inGroup: true));

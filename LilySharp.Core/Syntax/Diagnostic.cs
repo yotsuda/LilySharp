@@ -618,11 +618,6 @@ public static class DiagnosticCodes
     /// the message names the fix (another shape, higher up the neck).</summary>
     public const string ShapeChordOctaveMarks = "LYS0035";
 
-    /// <summary>Error: a chord from a shape written with its retired word, <c>chord(C x32010)1</c> —
-    /// <c>diagram(C x32010)1</c> since 2026-10-30 (owner's decision). Still read as the item, so
-    /// the bar keeps its length; the message names the new word.</summary>
-    public const string RetiredShapeChordWord = "LYS0043";
-
     /// <summary>Parser error: an ending's passes written with the printed points —
     /// <c>[1.3. B]</c>, where the spelling is <c>[1,3. B]</c> (a list) or <c>[1-3. B]</c> (a
     /// range). The lexer reads <c>1.3</c> as one decimal number, so without this report the

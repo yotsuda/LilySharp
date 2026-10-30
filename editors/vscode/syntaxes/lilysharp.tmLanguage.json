@@ -588,8 +588,8 @@
             ]
         },
         "shape-chord": {
-            "comment": "A chord from a shape: `diagram(C x32013)1` (2026-09-28; the word was `chord` until 2026-10-30, still read with LYS0043). `diagram` is claimed only by the music-item dispatch (Parser.ParseShapeChord), not by the lexer — `@chord` and a part named `chord` stay what they are — so it is coloured only where it opens its parentheses, never after an '@', and never from the bare-word #keywords list.",
-            "match": "(?<![@\\w])(diagram|chord)(?=\\s*\\()",
+            "comment": "A chord from a shape: `diagram(C x32013)1` (2026-09-28; the word was `chord` until 2026-10-30). `diagram` is claimed only by the music-item dispatch (Parser.ParseShapeChord), not by the lexer — `@diagram` and a part named `diagram` stay what they are — so it is coloured only where it opens its parentheses, never after an '@', and never from the bare-word #keywords list.",
+            "match": "(?<![@\\w])(diagram)(?=\\s*\\()",
             "captures": {
                 "1": { "name": "keyword.control.lilysharp" }
             }

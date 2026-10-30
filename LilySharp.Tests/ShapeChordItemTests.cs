@@ -110,24 +110,15 @@ public class ShapeChordItemTests
         Assert.DoesNotContain(tree.Diagnostics, d => d.Severity == DiagnosticSeverity.Error);
     }
 
-    /// <summary>Owner's decision 2026-10-30: the item's word is <c>diagram</c>. The retired
-    /// <c>chord(…)</c> is an error naming the new word (LYS0043), yet still read as the item, so
-    /// the bar keeps its length and sounds; the word is free again for a phrase.</summary>
+    /// <summary>Owner's decisions 2026-10-30: the item's word is <c>diagram</c>, and the old
+    /// <c>chord(…)</c> was dropped outright (no one wrote it yet) — it is no item, and the word
+    /// is free again for a phrase.</summary>
     [Fact]
-    public void TheRetiredWord_IsAnError_ButStillTheItem()
+    public void TheOldWord_IsNoItem_AndFreeForAPhrase()
     {
         string book = Book("instrument guitar", "chord(G 320003)1 |");
-        var error = Assert.Single(Diagnostics(book), d => d.Code == DiagnosticCodes.RetiredShapeChordWord);
-        Assert.Equal(DiagnosticSeverity.Error, error.Severity);
-        Assert.Equal(5, error.Span.Length);
-        Assert.Contains("write 'diagram' for 'chord'", error.Message);
-        Assert.True(Item(book).IsShapeChord);
-        Assert.Equal(5, Item(book).ShapeWordLength);
-        Assert.DoesNotContain(Diagnostics(book), d => d.Code.StartsWith("LYS2", StringComparison.Ordinal));
-        Assert.Equal(MidiPitches(Book("instrument guitar", "diagram(G 320003)1 |")), MidiPitches(book));
-        // '@chord(…)' and a bare '@chord' are untouched.
-        Assert.DoesNotContain(Diagnostics(Book("instrument guitar", "c'1@chord(C) | diagram(C x32010)1@chord |")),
-            d => d.Code == DiagnosticCodes.RetiredShapeChordWord);
+        Assert.DoesNotContain(SyntaxTree.Parse(book).GetNodes<ChordSyntax>(), c => c.IsShapeChord);
+        Assert.Contains(Diagnostics(book), d => d.Severity == DiagnosticSeverity.Error);
         Assert.DoesNotContain(SyntaxTree.Parse("phrase chord { c'4 d' e' f' | }\n").Diagnostics,
             d => d.Severity == DiagnosticSeverity.Error);
     }

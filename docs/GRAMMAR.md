@@ -2359,9 +2359,9 @@ ChordNote      = PitchToken , { Annotation } ;
    or the dash form for frets 10-15), a tuning word binding a shape by name, or a shape
    alone. 'diagram' is claimed by the music-item dispatch only (reserved in music, like 'q':
    a phrase cannot be named it; '@diagram' and a part named 'diagram' are untouched); the '('
-   may follow after a space. The word was 'chord' until 2026-10-30 (owner's decision): 'chord'
-   followed by '(' is still read as the item, so the bar keeps its length, but is an error
-   (LYS0043) naming 'diagram'; 'chord' alone is free again (a phrase may be named it). The tail is a chord's: duration, dots, tremolo, post-events.
+   may follow after a space. The word was 'chord' until 2026-10-30 and was then dropped
+   outright (owner's decision: no one wrote it yet); 'chord' is free again (a phrase may be
+   named it). The tail is a chord's: duration, dots, tremolo, post-events.
    - PITCHES: each unmuted string's open pitch + fret, on the tuning of the PART playing
      the item — its fretted instrument (the tuning its tab frets on), else the standard
      guitar. They are SOUNDING pitches; the staff writes them less the part's

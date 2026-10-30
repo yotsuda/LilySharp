@@ -21,7 +21,7 @@ All notable changes to the Lily# VS Code extension are documented here.
 - **A voice that runs past the others is drawn**: the staff runs on to its end, and the other
   parts are shown as empty bars there. The section's CodeLens and LYS2007 say those parts are short.
 - ⚠️ **A chord from a shape is written `diagram(C x32010)1`** (was `chord(…)`), and it draws its
-  diagram. The old word is an error (LYS0043) naming the new one. Ctrl+Shift+Up/Down steps the shape
+  diagram. The old word is no longer read. Ctrl+Shift+Up/Down steps the shape
   and completion offers chord symbols inside `diagram(`, both as before.
 - **#chordVoicings**: Copilot's chat can ask which voicings of a chord a player can hold on a
   guitar, bass, ukulele or bowed string, in a register. It answers as Lily# chords with their

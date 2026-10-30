@@ -375,7 +375,7 @@ diagram(C xx-10-12-13-12)4.~  // frets 10-15 in the dash form
   A phrase whose body opens with it hands the same note on after its reference.
 - Chord tones are spelled from the symbol (Cm7 → E♭ B♭); every note carries its string
   number (a tab shows the shape). It draws its shape's diagram (unless `chordDiagrams none`, or an `@chord`/`@diagram` on it draws one); no name unless `@chord`.
-- `diagram` is reserved in music: a phrase cannot be named it. (`chord(…)` is the retired spelling: error LYS0043.)
+- `diagram` is reserved in music: a phrase cannot be named it. (Never write `chord(…)`: it is not an item.)
 
 ## Arpeggios `<< … >>` (written-out broken chords)
 

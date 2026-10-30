@@ -2783,7 +2783,7 @@ diagram(x32010)2@chord             // no symbol: the shape alone gives the notes
   shape through the order above on the PART's tuning (from `diagram(C)`, Up writes the usual shape),
   sounding each, and Down stops at the usual shape (the item keeps a shape); inside `diagram(` the
   completion offers the chord symbols `@chord(` does.
-- `diagram` is reserved in music only: a phrase cannot be named it (a part can). The item was written `chord(…)` until 2026-10-30; that spelling is now an error (LYS0043) naming `diagram`.
+- `diagram` is reserved in music only: a phrase cannot be named it (a part can). The item was written `chord(…)` until 2026-10-30; that spelling is no longer read.
 
 ## Guitar Bends and Technique Letters
 

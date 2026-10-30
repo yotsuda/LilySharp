@@ -2074,7 +2074,7 @@ public sealed partial class LilySharpLanguageServer
             while (e >= 0 && text[e] == ' ') e--;
             int s = e;
             while (s >= 0 && (char.IsLetterOrDigit(text[s]) || text[s] == '_')) s--;
-            return s + 1 <= e && text[(s + 1)..(e + 1)] is "diagram" or "chord" && (s < 0 || text[s] != '@');
+            return s + 1 <= e && text[(s + 1)..(e + 1)] == "diagram" && (s < 0 || text[s] != '@');
         }
         return false;
     }

@@ -800,7 +800,7 @@ public static partial class NoteStepper
     /// <summary>Just past a <c>diagram(…)</c> item's <c>)</c> (or its last word, unclosed).</summary>
     private static int ShapeItemHeadEnd(ChordSyntax item)
     {
-        int end = item.SourceStart + item.ShapeWordLength;
+        int end = item.SourceStart + Parser.Parser.ShapeChordWord.Length;
         for (int i = 0; i < item.SlotCount; i++)
             if (item.GetChild(i) is SyntaxTokenNode t && t.Text.Length > 0)
             {

@@ -34,8 +34,7 @@ workflow attaches that section to the GitHub Release verbatim.
 - `[lang]` ⚠️ **A chord from a shape is written `diagram(C x32010)1`**; it was `chord(C x32010)1`.
   - The item now draws its shape's diagram, with no name, on the page and in the twin.
     `chordDiagrams none` turns it off, and an `@chord` or `@diagram` on it draws only one.
-  - `chord(…)` is still read as the item, so the bar keeps its length and plays, but it is an
-    error (LYS0043) that names `diagram`. Rename the word to fix it.
+  - `chord(…)` is no longer read at all: rename the word to `diagram`.
   - `diagram` is now reserved in music instead of `chord`, so a phrase may be named `chord`.
   - Ctrl+Shift+Up/Down still steps the item's shape, and completion inside `diagram(` still
     offers the chord symbols.
