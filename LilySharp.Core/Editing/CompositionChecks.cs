@@ -550,8 +550,8 @@ public static class CompositionChecks
     private const int ClashFewest = 3;
     private const double ClashShare = 0.05;
 
-    /// <summary>A melody's notes held on the beat (a quarter or longer) a semitone — or a minor ninth,
-    /// a major seventh — from a note another part sounds with them at their start. A suspension is
+    /// <summary>A melody's notes held on the beat (a quarter or longer) a semitone or a minor ninth over
+    /// a note another part sounds with them at their start, or a semitone under one. A suspension is
     /// struck before the harmony moves under it, so it is not one.</summary>
     private static IEnumerable<string> Clashes(MidiFile midi, HashSet<string> melodies, List<int> barList)
     {
@@ -566,8 +566,11 @@ public static class CompositionChecks
             var clashes = new List<(int Bar, int Note, int Against)>();
             foreach (var m in held)
             {
+                // A semitone or a minor ninth over a note, or a semitone under one close by — not a major
+                // seventh over the bass, a chord's colour (owner's trial 2026-10-30: B♭ over a C♭ bass,
+                // ♭VImaj7, was told a wrong note).
                 var against = others.FirstOrDefault(n => n.StartTick <= m.StartTick && m.StartTick < n.StartTick + n.DurationTicks
-                    && ((m.Pitch - n.Pitch) % 12 + 12) % 12 is 1 or 11);
+                    && (m.Pitch - n.Pitch) is var gap && (gap > 0 ? gap % 12 == 1 || gap == 11 : -gap % 12 is 1 or 11));
                 if (against.Part != null)
                     clashes.Add((barList.Count(b => b <= m.StartTick), m.Pitch, against.Pitch));
             }
@@ -752,8 +755,10 @@ public static class CompositionChecks
             .GroupBy(s => s.SectionName).ToDictionary(g => g.Key, g => g.First());
         var form = root.DescendantNodes<FormDeclarationSyntax>().Where(f => !f.InScore).OrderBy(f => f.Name != null).FirstOrDefault();
         var played = form?.DescendantNodes<SectionReferenceSyntax>().Select(r => r.SectionName).Where(sections.ContainsKey).ToList() ?? [];
+        var phrases = root.DescendantNodes<PhraseDeclarationSyntax>().Where(p => p.Parent is CompilationUnitSyntax)
+            .GroupBy(p => p.Name.Text).ToDictionary(g => g.Key, g => g.First());
         List<DynamicSyntax> MarksOf(string section, string part) => sections[section].DescendantNodes<PartBlockSyntax>()
-            .Where(b => b.PartName.Text == part).SelectMany(b => b.DescendantNodes<DynamicSyntax>()).ToList();
+            .Where(b => b.PartName.Text == part).SelectMany(b => DynamicsPlayed(b, phrases)).ToList();
         var said = new HashSet<(string, string)>();
         for (int i = 0; i + 1 < played.Count; i++)
         {
@@ -781,6 +786,21 @@ public static class CompositionChecks
                 break;
             }
         }
+    }
+
+    /// <summary>The dynamics <paramref name="node"/> plays, in order, a phrase's marks in place of its
+    /// reference (owner's trial 2026-10-30: a piece written all in phrases went from @ff to @p
+    /// unsaid, its levels inside them).</summary>
+    private static List<DynamicSyntax> DynamicsPlayed(SyntaxNode node, IReadOnlyDictionary<string, PhraseDeclarationSyntax> phrases,
+        int depth = 0)
+    {
+        var marks = new List<DynamicSyntax>();
+        foreach (var n in node.DescendantNodes<SyntaxNode>())
+            if (n is DynamicSyntax d)
+                marks.Add(d);
+            else if (n is VariableReferenceSyntax r && depth < 8 && phrases.TryGetValue(r.Name.Text, out var phrase))
+                marks.AddRange(DynamicsPlayed(phrase, phrases, depth + 1));
+        return marks;
     }
 
     /// <summary>The sections as the form plays them; with no form, as written.</summary>

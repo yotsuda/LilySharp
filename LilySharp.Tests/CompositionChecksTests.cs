@@ -229,6 +229,17 @@ public class CompositionChecksTests
         Assert.DoesNotContain(CompositionChecks.Of(common), f => f.Contains("seconds played") || f.Contains("a note starts within a beat"));
     }
 
+    // Owner's trial 2026-10-30: a piece written all in phrases went from @ff to @p unsaid, its levels inside them.
+    [Fact]
+    public void ADropBetweenLevelsWrittenInPhrases_IsSaid()
+    {
+        string Piece(string soft) => "title \"Yoake\"\ntime 4/4\noctave absolute\npart m { instrument violin }\n"
+            + "phrase loud { c''4@f d'' e'' f'' | }\n" + $"phrase quiet {{ c''4{soft} d'' e'' f'' | }}\n"
+            + "section A {\n  m { loud }\n}\nsection B {\n  m { quiet }\n}\nform { A B }\nscore { staff m }\n";
+        Assert.Contains(CompositionChecks.Of(Piece("@p")), f => f.StartsWith("m: A ends at @f and B, played after it, opens at @p"));
+        Assert.DoesNotContain(CompositionChecks.Of(Piece("@p.subito")), f => f.Contains("ends at @f and B"));
+    }
+
     // Owner's trials 2026-10-29: three wedding pieces went from B's @f straight to the returning A's @p.
     [Fact]
     public void ALoudSectionDroppingToASoftOne_WithNothingLeadingThere_IsSaid()
@@ -345,7 +356,7 @@ public class CompositionChecksTests
     {
         Assert.Contains(CompositionChecks.Of(Rock3("f'4 g' a'2", "fis,8 fis, fis, fis, fis, fis, fis, fis,")),
             f => f.StartsWith("gtr, the melody: ") && f.Contains("times a note held on the beat stands a semitone from the harmony")
-                && f.Contains("F4 against F♯1 first"));
+                && f.Contains("G4 against F♯1 first"));
         Assert.DoesNotContain(CompositionChecks.Of(Rock3("f'4 g' a'2", "d,8 d, d, d, d, d, d, d,")), f => f.Contains("a semitone from the harmony"));
     }
 
