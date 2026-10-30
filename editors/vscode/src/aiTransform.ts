@@ -471,6 +471,7 @@ async function readScore(deps: AiTransformDeps, input: ReadScoreInput): Promise<
     }
     const state = doc.isUntitled ? 'open in the editor, not saved' : doc.isDirty ? 'open in the editor, with changes not saved' : 'saved';
     const text = doc.getText();
+    const said = await saidOf(deps, text);
     // In absolute octaves, as Ask AI sends it (owner's request 2026-10-29): proposeScore brings the
     // proposal back to the file's relative octaves. Lines stay where they were.
     const absolute = await chatAbsolute(deps, text);
@@ -479,9 +480,22 @@ async function readScore(deps: AiTransformDeps, input: ReadScoreInput): Promise<
         return `${path.basename(doc.uri.fsPath)} (${state}), ${doc.lineCount} lines, as it stands — shown in absolute octaves `
             + '(the file itself is in relative octaves; every pitch here says its own octave). Propose your change in '
             + 'absolute octaves, keeping `octave absolute`: Lily# brings it back to the file\'s relative octaves.\n'
-            + absolute;
+            + absolute + said;
     }
-    return `${path.basename(doc.uri.fsPath)} (${state}), ${doc.lineCount} lines, as it stands:\n${text}`;
+    return `${path.basename(doc.uri.fsPath)} (${state}), ${doc.lineCount} lines, as it stands:\n${text}${said}`;
+}
+
+/** What Lily# says of the score as it stands, after its text (owner's report 2026-10-30: asked to
+ *  mend a drum line that ran past the song, the chat's agent counted its phrases in a terminal
+ *  script — "Run in terminal?" — where the warning named the bar to cut it at). */
+async function saidOf(deps: AiTransformDeps, text: string): Promise<string> {
+    const client = deps.getClient();
+    if (!client || !deps.isReady() || isEmptyScore(text)) {
+        return '';
+    }
+    const diags = (await checkText(client, text)).filter(d => d.Severity === 'error' || (d.Severity === 'warning' && !MACHINE_WARNING.test(d.Message)));
+    return diags.length === 0 ? '\n\nLily# finds nothing to warn of in it.'
+        : `\n\nWhat Lily# says of it (the lines and columns are the file's):\n${formatDiags(diags, text)}`;
 }
 
 /**
@@ -2073,7 +2087,21 @@ function candidateBadness(
 }
 
 function formatDiags(diags: CandidateDiagnostic[], text?: string): string {
-    return diagLines(diags, d => text ? rangeFixOf(d, text) : '');
+    return diagLines(diags, d => text ? spotOf(d, text) + rangeFixOf(d, text) : '');
+}
+
+/** Where on a long line a diagnostic stands, its text quoted (owner's report 2026-10-30: "line 159"
+ *  of a drum line of 70 phrases did not say at which one bar 57 starts, and the chat's agent
+ *  counted them in a terminal script). A short line is its own answer. */
+function spotOf(d: CandidateDiagnostic, text: string): string {
+    const start = d.Offset - d.Char;
+    const end = text.indexOf('\n', start);
+    const line = text.slice(start, end < 0 ? text.length : end).trimEnd();
+    if (line.length <= 100 || d.Char >= line.length) {
+        return '';
+    }
+    const at = line.slice(d.Char, d.Char + 40);
+    return ` [here is column ${d.Char + 1}: \`${at}${d.Char + 40 < line.length ? '…' : ''}\`]`;
 }
 
 

@@ -205,7 +205,7 @@ describe('the composing guide', () => {
         assert.match(transform, /lm\.registerTool<ReadScoreInput>\('lilysharp_readScore'/);
         const fn = transform.slice(transform.indexOf('async function readScore'), transform.indexOf('const musicCheckedFor'));
         assert.match(fn, /const doc = await scoreDocument\(input\.file\);/);
-        assert.match(fn, /return `\$\{path\.basename\(doc\.uri\.fsPath\)\} \(\$\{state\}\), \$\{doc\.lineCount\} lines, as it stands:\\n\$\{text\}`;/);
+        assert.match(fn, /return `\$\{path\.basename\(doc\.uri\.fsPath\)\} \(\$\{state\}\), \$\{doc\.lineCount\} lines, as it stands:\\n\$\{text\}\$\{said\}`;/);
         const build = fs.readFileSync(path.join(__dirname, '..', '..', 'esbuild.js'), 'utf8');
         assert.match(build, /'\*\*Reading a \.lys file\*\*: read it through the `lilysharp_readScore` tool \(#readScore\), not from the disk —',/);
         const ext = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'extension.ts'), 'utf8');
@@ -249,6 +249,14 @@ describe('the composing guide', () => {
         assert.match(here, /'Leave this aside for anything else\.',\s*'',\s*\]\.join/);
         // A .lys read through Lily#'s tool, not a file viewer (owner's report 2026-10-30).
         assert.match(here, /'To read a \.lys file, attached or named, use lilysharp_readScore \(search the tools for it\),',/);
+        // …which says what Lily# finds in it, the spot on a long line quoted (the same day: the agent
+        // counted a drum line's phrases in a terminal script).
+        assert.match(here, /'Run no script or terminal on a score\.',/);
+        const read = transform.slice(transform.indexOf('async function readScore('), transform.indexOf('async function checkName('));
+        assert.match(read, /const said = await saidOf\(deps, text\);/);
+        assert.match(read, /\+ absolute \+ said;/);
+        assert.match(read, /as it stands:\\n\$\{text\}\$\{said\}`;/);
+        assert.match(transform, /return diagLines\(diags, d => text \? spotOf\(d, text\) \+ rangeFixOf\(d, text\) : ''\);/);
         assert.ok(here.length < 2000, 'kept to a few lines');
         // A scan read with Lily#'s reader, and its misreadings mended beside the scan, not by the chat
         // (owner's request 2026-10-29).

@@ -15,7 +15,9 @@ All notable changes to the Lily# VS Code extension are documented here.
 - **A voice of a `voice { } { }` span that runs past the first is warned** (LYS2019), and a piece
   composed in Copilot's chat is sent back for it — it would play on after the song ends.
 - **Copilot's chat reads a .lys file through `#readScore`**, attached or named: the score as it stands
-  in the editor, unsaved changes and all, with no "Allow reading file outside of workspace?".
+  in the editor, unsaved changes and all, with no "Allow reading file outside of workspace?" — and
+  what Lily# warns of in it, the spot on a long line quoted, so nothing is counted in a terminal.
+- **LYS2019 stands where the extra bars begin**: "Bar 57 starts here", or inside the phrase there.
 - **Every value in a `layout { }` steps with Ctrl+Shift+Up / Down**: the line thicknesses and stem length
   by a small step, PageUp / PageDown by a large one; `voltaBracket N` and `barNumbers every N` by a bar,
   four on PageUp / PageDown; a capo's fret; `voltaBracket` and `chordDiagrams`' words. The pre-filled

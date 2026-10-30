@@ -608,6 +608,19 @@ public class LayoutBlockTests
         string pickup = Lines(4).Replace("section A {\n", "section A {\n  partial 8\n").Replace("voice { hats", "voice { hh8 | hats").Replace("{ back", "{ bd8 | back");
         Assert.Contains(LilySharp.Core.Semantics.SemanticValidation.Run(SyntaxTree.Parse(pickup)),
             d => d.Code == DiagnosticCodes.VoiceRunsPastSpan && d.Message.StartsWith("this voice runs 4 bars, 2 more than the first voice of its span (2)"));
+        // It stands where the bars past the first voice's begin (owner's report 2026-10-30: the chat's
+        // agent counted the phrases in a terminal script to find it): the third `back`, past the
+        // pickup too; inside a phrase that runs past the end, on that phrase, said so.
+        int Third(string s) => s.IndexOf("back ", s.IndexOf("back ", s.IndexOf("back ", s.IndexOf("section")) + 1) + 1);
+        Assert.Contains(past, d => d.Code == DiagnosticCodes.VoiceRunsPastSpan && d.Span.Start == Third(Lines(4))
+            && d.Message.EndsWith("Bar 3 starts here: end the voice before it."));
+        Assert.Contains(LilySharp.Core.Semantics.SemanticValidation.Run(SyntaxTree.Parse(pickup)),
+            d => d.Code == DiagnosticCodes.VoiceRunsPastSpan && d.Span.Start == Third(pickup));
+        string two = Lines(1).Replace("phrase back", "phrase two { bd4 sn bd sn | bd4 sn bd sn | }\nphrase back")
+            .Replace("voice { hats hats }", "voice { hats hats hats }").Replace("{ back }", "{ two two }");
+        Assert.Contains(LilySharp.Core.Semantics.SemanticValidation.Run(SyntaxTree.Parse(two)),
+            d => d.Code == DiagnosticCodes.VoiceRunsPastSpan && d.Span.Start == two.LastIndexOf("two }")
+                && d.Message.EndsWith("Bar 4 starts inside the phrase here, which runs on past the first voice's end."));
         // The drums' conflict names the bar it meets in.
         Assert.Contains(warned, d => d.Code == DiagnosticCodes.DrumLevelsConflict && d.Message.Contains("(bar 1, as the form plays it)"));
         // A pitched staff's two voices keep LilyPond's two texts.

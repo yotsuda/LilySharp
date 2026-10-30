@@ -100,11 +100,11 @@ function copyGrammar() {
             'A score read from a scan (its .omr.json beside it) is not corrected by you: asked to fix its',
             'misreadings, open the bars named with lilysharp_fixScanBars; with none named, tell the musician to',
             'right-click the bar on the score and choose Edit Bars Beside the Scan.',
-            // Here, not only in the grammar's instructions (owner's report 2026-10-30: asked about an
-            // attached .lys, the agent viewed it from the disk first, the grammar too large to have
-            // been read, and the editor asked "Allow reading file outside of workspace?").
+            // Owner's reports 2026-10-30: an attached .lys viewed from the disk ("Allow reading file
+            // outside of workspace?"), a drum line's phrases counted in a script ("Run in terminal?").
             'To read a .lys file, attached or named, use lilysharp_readScore (search the tools for it),',
-            'never a file viewer: it gives the score as it stands in the editor, saved or not, wherever it is.',
+            'never a file viewer: it gives the score as it stands in the editor, and what Lily# says of it.',
+            'Run no script or terminal on a score.',
             'Leave this aside for anything else.',
             '',
         ].join('\n');
