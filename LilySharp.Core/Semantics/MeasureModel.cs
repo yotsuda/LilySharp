@@ -85,11 +85,11 @@ internal static class MeasureModel
     public static List<Bar> Split(SyntaxNode scope, IReadOnlyDictionary<string, SyntaxNode> phraseBodies,
         Fraction? initialMeter = null, List<(int Bar, TimeSignatureSyntax Time, bool MidBar)>? meterChanges = null,
         Func<int, TimeSignatureSyntax?>? plannedMeterAt = null, int expansionBudget = ExpansionCap,
-        Dictionary<(string Chain, int Position), int>? index = null)
+        Dictionary<(string Chain, int Position), int>? index = null, bool longestVoice = false)
     {
         var stream = new List<object>();
         var budget = new ExpansionBudget(expansionBudget);
-        Flatten(scope, stream, new HashSet<string>(), phraseBodies, budget, inPhrase: false);
+        Flatten(scope, stream, new HashSet<string>(), phraseBodies, budget, inPhrase: false, longestVoice);
 
         var bars = new List<Bar>();
         var current = new List<SyntaxNode>();
@@ -159,6 +159,18 @@ internal static class MeasureModel
                 if (!boundary.IsEnter)
                 {
                     confirmable = current.Count == 0 && bars.Count > 0;
+                    atScopeStart = false;
+                }
+                continue;
+            }
+            if (entry is SpanPadMarker pad)
+            {
+                // A span closing on a bar line only, as the collector pads it.
+                if (current.Count == 0)
+                {
+                    for (int i = 0; i < pad.Bars; i++)
+                        bars.Add(new Bar(meter, pad.Span, Flowed: true));
+                    confirmable = true;
                     atScopeStart = false;
                 }
                 continue;
@@ -311,6 +323,27 @@ internal static class MeasureModel
         public static readonly DurationResetMarker Instance = new();
     }
 
+    /// <summary>Marks the end of a voice span's first voice when a later voice runs longer:
+    /// <see cref="Bars"/> more bars of the meter, the spacer bars the collector pads the first
+    /// voice with (ProcessParallelSpan; owner's decision 2026-10-30). Only under
+    /// <c>longestVoice</c>.</summary>
+    private sealed class SpanPadMarker(int bars, TextSpan span)
+    {
+        public int Bars { get; } = bars;
+        public TextSpan Span { get; } = span;
+    }
+
+    /// <summary>The bars a voice writes, as the collector draws them: a trailing empty bar
+    /// (the bar line closing it) is not one.</summary>
+    private static int VoiceBars(SyntaxNode voice, IReadOnlyDictionary<string, SyntaxNode> phraseBodies)
+    {
+        var bars = Split(voice, phraseBodies, longestVoice: true);
+        int n = bars.Count;
+        while (n > 0 && bars[n - 1].IsEmpty)
+            n--;
+        return n;
+    }
+
     /// <summary>Marks a phrase-reference boundary. The two edges are NOT the same: ENTER
     /// consumes the boundary (the phrase body's own leading <c>|</c> closes an empty
     /// measure), EXIT re-arms it when the phrase left a closed bar (an outer <c>|</c>
@@ -364,9 +397,22 @@ internal static class MeasureModel
     /// <param name="inPhrase">True inside an expanded phrase body, where every site is
     /// charged (the collector's <c>ExpandVariable</c> charges each node it emits); the
     /// written music of the scope itself, and a repeat body's first pass, are free.</param>
+    /// <param name="longestVoice">A voice span is as long as its longest voice: after its first
+    /// voice, a <see cref="SpanPadMarker"/> for the bars a later voice runs on (the section's
+    /// bar count, SectionBarCounts; the other checks read the first voice's bars alone).</param>
     private static void Flatten(SyntaxNode scope, List<object> output, HashSet<string> activeRefs,
-        IReadOnlyDictionary<string, SyntaxNode> phraseBodies, ExpansionBudget budget, bool inPhrase)
+        IReadOnlyDictionary<string, SyntaxNode> phraseBodies, ExpansionBudget budget, bool inPhrase,
+        bool longestVoice = false)
     {
+        // The spans whose first voice is being walked, innermost last, each with the bars a
+        // later voice runs past it: emitted once the walk leaves the span.
+        Stack<(int End, SpanPadMarker Pad)>? pads = null;
+        void EmitPadsBefore(int position)
+        {
+            while (pads is { Count: > 0 } && pads.Peek().End <= position)
+                output.Add(pads.Pop().Pad);
+        }
+
         // A site of the expansion: charged inside a phrase body, free elsewhere. False
         // once the budget is spent — the caller stops, as the collector's walk does.
         bool Emit(SyntaxNode n)
@@ -389,6 +435,7 @@ internal static class MeasureModel
 
         foreach (var n in scope.DescendantNodes())
         {
+            EmitPadsBefore(n.Span.Start);
             // Tuplet/grace interiors are folded into their wrapper by ItemDuration;
             // inline-volta interiors are ordinary written measures and flow through
             // as themselves. Repeat interiors are expanded by the case below.
@@ -456,7 +503,24 @@ internal static class MeasureModel
                         // collector's ExpandVariable emits the wrapper as one node).
                         if (inPhrase && !budget.Charge(1))
                             return;
-                        Flatten(rep.Body, output, activeRefs, phraseBodies, budget, inPhrase: false);
+                        Flatten(rep.Body, output, activeRefs, phraseBodies, budget, inPhrase: false, longestVoice);
+                    }
+                    break;
+
+                // A span's later voice running past its first lengthens it (longestVoice).
+                case ParallelExpressionSyntax par when longestVoice:
+                    {
+                        int first = -1, longest = 0;
+                        foreach (var voice in par.Voices)
+                        {
+                            int voiceBars = VoiceBars(voice, phraseBodies);
+                            if (first < 0)
+                                first = voiceBars;
+                            else
+                                longest = Math.Max(longest, voiceBars);
+                        }
+                        if (longest > first)
+                            (pads ??= new()).Push((par.Span.End, new SpanPadMarker(longest - first, par.Span)));
                     }
                     break;
 
@@ -485,13 +549,14 @@ internal static class MeasureModel
                         }
                         output.Add(DurationResetMarker.Instance);
                         output.Add(BoundaryMarker.EnterAt(varRef.Span.Start));
-                        Flatten(body, output, activeRefs, phraseBodies, budget, inPhrase: true);
+                        Flatten(body, output, activeRefs, phraseBodies, budget, inPhrase: true, longestVoice);
                         output.Add(BoundaryMarker.Exit);
                         activeRefs.Remove(name);
                     }
                     break;
             }
         }
+        EmitPadsBefore(int.MaxValue);
     }
 
     private static bool IsInside<T>(SyntaxNode node, SyntaxNode scope) where T : SyntaxNode

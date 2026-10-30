@@ -18,6 +18,8 @@ All notable changes to the Lily# VS Code extension are documented here.
   in the editor, unsaved changes and all, with no "Allow reading file outside of workspace?" — and
   what Lily# warns of in it, the spot on a long line quoted, so nothing is counted in a terminal.
 - **LYS2019 stands where the extra bars begin**: "Bar 57 starts here", or inside the phrase there.
+- **A voice that runs past the others is drawn**: the staff runs on to its end, and the other
+  parts are shown as empty bars there. The section's CodeLens and LYS2007 say those parts are short.
 - **Rejecting a chat proposal closes its panel**, as Ask AI's Reject does, and the chat says what the
   rejected proposal changed before asking what to do instead.
 - **A chat proposal whose bars do not add up goes back even when the score already had them wrong**:

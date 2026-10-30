@@ -298,7 +298,7 @@ internal sealed class CrossPartMeasureValidator
                 // A bare `R` or an empty bar under another part's `time` is a bar of that
                 // meter (Lab sessions/p849/pm/r-bareR.lys: "lasts 3/4 but part 'top' has 1").
                 : MeasureModel.Split(block, _phraseBodies, blockTime, null,
-                    bar => _meterPlan.ForeignChangeAt(section.SectionName, bar, block))));
+                    bar => _meterPlan.ForeignChangeAt(section.SectionName, bar, block), longestVoice: true)));
         if (parts.Count < 2)
         {
             // One part beside chord rows: nothing to compare per measure, only the count.
@@ -381,6 +381,6 @@ internal sealed class CrossPartMeasureValidator
     /// repeat-flow auto-complete.
     /// </summary>
     private List<MeasureModel.Bar> BuildPartMeasures(SyntaxNode scope, Fraction time)
-        => MeasureModel.Split(scope, _phraseBodies, time);
+        => MeasureModel.Split(scope, _phraseBodies, time, longestVoice: true);
 
 }

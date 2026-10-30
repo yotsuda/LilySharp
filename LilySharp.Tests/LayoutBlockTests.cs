@@ -575,6 +575,35 @@ public class LayoutBlockTests
         Assert.Equal(B(left, "g'4 a' c''2").YUp, B(left, "g'4 a' c''2@bend(full)").YUp, 6);
     }
 
+    /// <summary>Owner's decision 2026-10-30: a drum part's feet line ran past its hands' and was
+    /// heard after the song, drawn nowhere. A span is as long as its longest voice — the first
+    /// padded with empty bars, the section with it, the other parts padded to it — on the page,
+    /// in the MusicXML and in both bar counts (LYS2007 and the lens read the semantic one).</summary>
+    [Fact]
+    public void AVoiceRunningPastTheFirst_LengthensTheSection_AndTheOtherPartsArePadded()
+    {
+        const string band = "part gt { instrument guitar }\npart kit { clef percussion }\n"
+            + "phrase hats { hh8 hh hh hh hh hh hh hh | }\nphrase back { bd4 sn bd sn | }\n"
+            + "section A {\n  gt { c'1 | d' | }\n  kit { voice { hats hats } { back back back back } }\n}\n"
+            + "form { A }\nscore { staff gt staff kit }\n";
+        var tree = SyntaxTree.Parse(band);
+        var score = SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree));
+        Assert.All(score.StaffGroups.SelectMany(g => g.Staves), s => Assert.Equal(4, s.Voices[0].Measures.Length));
+        Assert.Equal(4, LilySharp.Core.Svg.Collector.SectionBarCounts.CanonicalByNameSyntactic(tree.GetRoot())["A"]);
+        Assert.Equal(4, LilySharp.Core.Svg.Collector.SectionBarCounts.BuildSemanticIndex(tree.GetRoot()).Canonical["A"]);
+        Assert.Contains(LilySharp.Core.Semantics.SemanticValidation.Run(tree),
+            d => d.Code == DiagnosticCodes.SectionBarCountMismatch && d.Message.Contains("4 bar(s) in part 'kit'; 2 bar(s) in part 'gt'"));
+        var parts = new LilySharp.Core.MusicXml.MusicXmlExporter().Export(tree).Parts;
+        Assert.All(parts, p => Assert.Equal(4, p.Measures.Count));
+        // The single staff runs on too: a drum note is music to the page's bar count.
+        const string alone = "part kit { clef percussion }\nphrase hats { hh8 hh hh hh hh hh hh hh | }\n"
+            + "phrase back { bd4 sn bd sn | }\nsection A {\n  kit { voice { hats hats } { back back back back } }\n}\n"
+            + "form { A }\nscore { staff kit }\n";
+        var single = SyntaxTree.Parse(alone);
+        Assert.Equal(4, SvgGenerator.CollectScore(single, RenderSpecParser.FindFirst(single))
+            .StaffGroups[0].Staves[0].Voices[0].Measures.Length);
+    }
+
     /// <summary>Owner's report 2026-10-30: a drum staff's two voices both writing @ff at one
     /// moment printed "ff" twice; @f against @p is warned (LYS4033) and both print.</summary>
     [Fact]

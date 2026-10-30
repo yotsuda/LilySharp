@@ -21,8 +21,15 @@ workflow attaches that section to the GitHub Release verbatim.
 - `[lang]` **Two different levels in a drum staff's voices at one moment warn** (LYS4033): `@f` on
   one line and `@p` on another — one drummer plays one level.
 - `[lang]` **A voice that runs past its span's first voice warns** (LYS2019): a `voice { } { }` span's
-  later voice, or a `drums { }` chart's later line, written longer than the first plays on alone
-  after the other parts stop. Nothing said so before.
+  later voice, or a `drums { }` chart's later line, written longer than the first. It warns at
+  the bar where the extra bars begin.
+- `[render]` **A voice span is as long as its longest voice**: the extra bars of a later voice are
+  drawn. The first voice is padded with empty bars, the section runs on with it, and the other
+  parts are padded with empty bars (LYS2007 and the section's CodeLens say they are short). This
+  holds on the page, in the LilyPond and MusicXML exports and in the MIDI. Before, those bars were
+  heard after the song ended and drawn nowhere.
+- `[render]` **A drum part's bars are counted by its notes**: the page's bar count had counted only
+  a drum part's bar lines, so a drum part longer than the others was cut to their length.
 
 ### Span ends — BREAKING
 

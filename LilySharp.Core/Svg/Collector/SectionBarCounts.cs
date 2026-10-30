@@ -199,7 +199,8 @@ internal static class SectionBarCounts
     private static SemanticVoice Music(string section, string label, SyntaxNode container, TextSpan anchor,
         Fraction time, IReadOnlyDictionary<string, SyntaxNode> phrases, bool groupedByPart)
     {
-        int bars = MeasureModel.Split(container, phrases, time).Count;
+        // A voice span as long as its longest voice, as the page draws it (owner's decision 2026-10-30).
+        int bars = MeasureModel.Split(container, phrases, time, longestVoice: true).Count;
         MeasureCollector.CountBarsInScope(container, out bool open);
         return new SemanticVoice(section, label, false, container, anchor, bars, open, groupedByPart);
     }

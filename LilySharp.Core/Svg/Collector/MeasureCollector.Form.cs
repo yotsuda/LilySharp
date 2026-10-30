@@ -1422,6 +1422,9 @@ public sealed partial class MeasureCollector
                     }
                     break;
                 case SyntaxKind.Note:
+                // A drum note is music as a note is (2026-10-30: uncounted, a drum part's bars
+                // were its bar lines alone, and its section's length came from the other parts).
+                case SyntaxKind.DrumNote:
                 case SyntaxKind.Chord:
                 case SyntaxKind.ChordRepetition:
                 case SyntaxKind.SlashNote:
@@ -1431,14 +1434,34 @@ public sealed partial class MeasureCollector
                     pendingMusic = true;
                     break;
                 case SyntaxKind.ParallelExpression:
-                    // First voice only (ParallelExpressionSyntax.Voices: the
-                    // MusicBlock slots between the << >> tokens).
-                    for (int v = 1; v < child.SlotCount - 1; v++)
                     {
-                        if (child.GetSlot(v) is { Kind: SyntaxKind.MusicBlock } firstVoice)
+                        // The first voice is walked on (ParallelExpressionSyntax.Voices: the
+                        // MusicBlock slots between the << >> tokens); a later voice that runs
+                        // longer lengthens the span by its extra bars, the first voice padded
+                        // with spacer bars there (ProcessParallelSpan; owner's decision 2026-10-30).
+                        int before = bars, longest = 0;
+                        bool entryPending = pendingMusic, entry = confirmable, walkedFirst = false;
+                        var entryMeter = meter;
+                        for (int v = 1; v < child.SlotCount - 1; v++)
                         {
-                            WalkBars(firstVoice, ref bars, ref pendingMusic, ref confirmable, ref meter, phrases, activeRefs, ref budget);
-                            break;
+                            if (child.GetSlot(v) is not { Kind: SyntaxKind.MusicBlock } voice)
+                                continue;
+                            if (!walkedFirst)
+                            {
+                                WalkBars(voice, ref bars, ref pendingMusic, ref confirmable, ref meter, phrases, activeRefs, ref budget);
+                                walkedFirst = true;
+                                continue;
+                            }
+                            int voiceBars = 0; bool voicePending = false; bool voiceConfirmable = entry;
+                            var voiceMeter = entryMeter;
+                            WalkBars(voice, ref voiceBars, ref voicePending, ref voiceConfirmable, ref voiceMeter, phrases, activeRefs, ref budget);
+                            longest = Math.Max(longest, voiceBars + (voicePending ? 1 : 0));
+                        }
+                        // Only a span opening and closing on a bar line: a mid-bar one is not padded.
+                        if (!entryPending && !pendingMusic && longest > bars - before)
+                        {
+                            bars = Math.Min(DefaultExpansionBudgetCap, before + longest);
+                            confirmable = true;
                         }
                     }
                     break;
@@ -1538,6 +1561,7 @@ public sealed partial class MeasureCollector
                     }
                     break;
                 case NoteSyntax:
+                case DrumNoteSyntax:
                 case ChordSyntax:
                 case ChordRepetitionSyntax:
                 case SlashNoteSyntax:
@@ -1547,9 +1571,30 @@ public sealed partial class MeasureCollector
                     pendingMusic = true;
                     break;
                 case ParallelExpressionSyntax parallel:
-                    var first = parallel.Voices.FirstOrDefault();
-                    if (first != null)
-                        WalkBarsRed(first, ref bars, ref pendingMusic, ref confirmable, ref meter);
+                    {
+                        // The first voice walked on, a longer later voice's extra bars added (WalkBars).
+                        int before = bars, longest = 0;
+                        bool entryPending = pendingMusic, entry = confirmable, walkedFirst = false;
+                        var entryMeter = meter;
+                        foreach (var voice in parallel.Voices)
+                        {
+                            if (!walkedFirst)
+                            {
+                                WalkBarsRed(voice, ref bars, ref pendingMusic, ref confirmable, ref meter);
+                                walkedFirst = true;
+                                continue;
+                            }
+                            int voiceBars = 0; bool voicePending = false; bool voiceConfirmable = entry;
+                            var voiceMeter = entryMeter;
+                            WalkBarsRed(voice, ref voiceBars, ref voicePending, ref voiceConfirmable, ref voiceMeter);
+                            longest = Math.Max(longest, voiceBars + (voicePending ? 1 : 0));
+                        }
+                        if (!entryPending && !pendingMusic && longest > bars - before)
+                        {
+                            bars = (int)Math.Min(DefaultExpansionBudgetCap, (long)before + longest);
+                            confirmable = true;
+                        }
+                    }
                     break;
                 default:
                     WalkBarsRed(child, ref bars, ref pendingMusic, ref confirmable, ref meter);

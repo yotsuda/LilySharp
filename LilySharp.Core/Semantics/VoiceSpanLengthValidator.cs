@@ -20,11 +20,12 @@ namespace LilySharp.Core.Semantics;
 
 /// <summary>
 /// Warns for a later voice of a <c>voice { } { }</c> span (or a later line of a <c>drums { }</c>
-/// chart) that runs more bars than the span's first voice (LYS2019): the bars the section is
-/// counted in are the first voice's, so the longer voice plays on alone after every other part has
-/// stopped (owner's report 2026-10-30: a composed rock piece's feet line ran 74 bars to the hands'
-/// 56, and the drums went on 18 bars after the song ended). MeasureValidator holds each bar of a
-/// later voice to the meter, and no check counted its bars.
+/// chart) that runs more bars than the span's first voice (LYS2019) (owner's report 2026-10-30: a
+/// composed rock piece's feet line ran 74 bars to the hands' 56, and the drums went on 18 bars
+/// after the song ended, drawn nowhere). The span is as long as its longest voice — the first
+/// padded with empty bars, the section with it and the other parts padded to it (owner's decision,
+/// the same day; ProcessParallelSpan, SectionBarCounts) — so what sounds is drawn; this says which
+/// voice ran on, and where.
 /// </summary>
 internal sealed class VoiceSpanLengthValidator : ISemanticValidator
 {
@@ -66,8 +67,8 @@ internal sealed class VoiceSpanLengthValidator : ISemanticValidator
                 // ASCII punctuation only: these strings reach legacy-codepage consoles via the CLI.
                 _diagnostics.Warning(new TextSpan(found ? starts.Written : voices[v].Span.Start, 1), DiagnosticCodes.VoiceRunsPastSpan,
                     $"this voice runs {bars} bars, {bars - first} more than the first voice of its span ({first}) - "
-                    + "the voices sound together and the section is the first voice's length, so the rest plays on "
-                    + "alone after the other parts stop: end each voice where the first one ends." + from);
+                    + "the section runs on to this voice's end, the first voice and the other parts silent in empty bars "
+                    + "there: end each voice where the first one ends, or give the others music for those bars." + from);
             }
         }
     }

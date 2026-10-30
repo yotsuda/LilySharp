@@ -3022,6 +3022,7 @@ public sealed class MusicXmlExporter
         FlushCurrentMeasure(); // voice blocks are bar-aligned; settle voice 1
         int endMeasure = _currentPart.Measures.Count;
 
+        var temps = new List<MusicXmlPart>(voices.Count - 1);
         for (int v = 1; v < voices.Count; v++)
         {
             var savedPart = _currentPart;
@@ -3062,7 +3063,24 @@ public sealed class MusicXmlExporter
             _tieToNextNote = savedTie;
             _tieOpen.Clear();
             _tieOpen.AddRange(savedTieOpen);
+            temps.Add(temp);
+        }
 
+        // A later voice that runs past the first: voice 1 rests through its extra bars, as the
+        // page pads it with empty ones (ProcessParallelSpan; owner's decision 2026-10-30) — until
+        // then those bars were dropped here.
+        int longest = temps.Select(t => t.Measures.Count).DefaultIfEmpty(0).Max();
+        for (int i = endMeasure - startMeasure; i < longest; i++)
+        {
+            StartNewMeasure();
+            AddSilentBar();
+            FlushCurrentMeasure();
+        }
+        endMeasure = _currentPart.Measures.Count;
+
+        for (int v = 1; v < voices.Count; v++)
+        {
+            var temp = temps[v - 1];
             for (int i = 0; i < temp.Measures.Count && startMeasure + i < endMeasure; i++)
             {
                 var target = _currentPart.Measures[startMeasure + i];

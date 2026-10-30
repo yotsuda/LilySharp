@@ -684,6 +684,26 @@ public sealed partial class MeasureCollector
                 measureIndexBase: spanStart,
                 emit: drums != null ? b => EmitDrumVoice(drums.Lower, b, stemUp: false) : null));
         _v.Cursor.VoiceScope = null;
+        // A later voice that runs past the first: the staff runs on to its end, the first voice
+        // silent there in spacer bars, so what sounds is drawn (owner's decision 2026-10-30: a drum
+        // part's feet line ran 18 bars past its hands', heard after the song ended and drawn
+        // nowhere). SectionBarCounts counts the span by its longest voice too, so the section is
+        // that long and the other parts are padded to it.
+        int longest = 0;
+        foreach (var measures in children)
+        {
+            int n = measures.Count;
+            while (n > 0 && measures[n - 1].Items.IsEmpty)
+                n--;
+            longest = Math.Max(longest, n);
+        }
+        // Only a span opening and closing on a bar line, as the bar counts read it (WalkBars).
+        if (spanOffset.Numerator == 0 && !builder.HasMeasureContent)
+            for (int bar = builder.CurrentMeasureIndex - spanStart; bar < longest; bar++)
+            {
+                await ApplyPlannedMeter(builder);
+                await AddItemAsync(builder, new RestItem(builder.CurrentMeasureLength, 0, parallel.SourceStart) { IsSpacer = true });
+            }
         // The beam stamp (ResolveBeamStemDirections) is NOT taken here but where the tracks are
         // laid (BuildExtraVoiceTracks), after the primary's own: beam ids are handed out in that
         // order, and a resumed collect that adopts a span from its recording must hand out the
