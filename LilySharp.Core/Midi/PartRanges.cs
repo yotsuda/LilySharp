@@ -57,15 +57,17 @@ public static class PartRanges
             return [];
         var score = Svg.Collector.RenderSpecParser.Choose(Svg.Collector.RenderSpecParser.FindAll(tree), null);
         var midi = new MidiExporter { Form = score?.Form, Score = score }.Export(tree);
-        return Of(midi, source)
+        int fifths = KeyFifths(tree.GetRoot());
+        return Of(midi, source, fifths)
             .Select(p => $"{p.Name}: {p.Low.Name}–{p.High.Name}, most of its time "
-                + $"{SpelledFromPitch(p.TessituraLow)}–{SpelledFromPitch(p.TessituraHigh)}")
+                + $"{SpelledFromPitch(p.TessituraLow, fifths)}–{SpelledFromPitch(p.TessituraHigh, fifths)}")
             .ToList();
     }
 
     /// <summary>The ranges in <paramref name="midi"/>, parts in track order; <paramref name="source"/>
-    /// spells each end as it is written (null: spelled from the pitch).</summary>
-    public static IReadOnlyList<PartRange> Of(MidiFile midi, string? source)
+    /// spells each end as it is written (null: spelled from the pitch, by the key's
+    /// <paramref name="fifths"/>).</summary>
+    public static IReadOnlyList<PartRange> Of(MidiFile midi, string? source, int fifths = 0)
     {
         var parts = new List<PartRange>();
         foreach (var track in midi.Tracks)
@@ -79,7 +81,7 @@ public static class PartRanges
             static double Sounding(MidiNote n) => n.Pitch + 0.5 * n.QuarterBend;
             double low = notes.Min(Sounding), high = notes.Max(Sounding);
             var (weights, tLow, tHigh) = Spread(notes, (int)Math.Floor(low), (int)Math.Floor(high));
-            parts.Add(new PartRange(track.Name, End(notes, low, source), End(notes, high, source), weights, tLow, tHigh));
+            parts.Add(new PartRange(track.Name, End(notes, low, source, fifths), End(notes, high, source, fifths), weights, tLow, tHigh));
         }
         return parts;
     }
@@ -104,7 +106,7 @@ public static class PartRanges
         return (weights, Percentile(0.1), Percentile(0.9));
     }
 
-    private static RangeEnd End(List<MidiNote> notes, double pitch, string? source)
+    private static RangeEnd End(List<MidiNote> notes, double pitch, string? source, int fifths)
     {
         var at = notes.Where(n => n.Pitch + 0.5 * n.QuarterBend == pitch).ToList();
         // A chord member's own place, not the chord's '<' (owner's request 2026-10-29: Lowest
@@ -115,7 +117,7 @@ public static class PartRanges
         foreach (int p in positions)
             if ((written = WrittenName(source, p, midi)) != null)
                 break;
-        return new RangeEnd(pitch, written ?? SpelledFromPitch(midi), positions);
+        return new RangeEnd(pitch, written ?? SpelledFromPitch(midi, fifths), positions);
     }
 
     private static readonly int[] StepSemitones = [0, 2, 4, 5, 7, 9, 11];
@@ -179,7 +181,38 @@ public static class PartRanges
     };
 
     private static readonly string[] PitchClassNames = ["C", "C♯", "D", "E♭", "E", "F", "F♯", "G", "A♭", "A", "B♭", "B"];
+    private static readonly string[] FlatNames = ["C", "D♭", "D", "E♭", "E", "F", "G♭", "G", "A♭", "A", "B♭", "B"];
+    private static readonly string[] SharpNames = ["C", "C♯", "D", "D♯", "E", "F", "F♯", "G", "G♯", "A", "A♯", "B"];
 
     /// <summary>A pitch named without its written spelling: the common one of each pitch class.</summary>
     public static string SpelledFromPitch(int midi) => PitchClassNames[((midi % 12) + 12) % 12] + (midi / 12 - 1);
+
+    /// <summary>A pitch named without its written spelling, as the key spells it: flats in a key of
+    /// flats, sharps in a key of sharps (<paramref name="fifths"/>, <see cref="KeyFifths"/>), else the
+    /// common name (owner's request 2026-10-30: a piece in B♭ minor was told its range in C♯, and
+    /// the AI reads the names it is told).</summary>
+    public static string SpelledFromPitch(int midi, int fifths)
+        => (fifths < 0 ? FlatNames : fifths > 0 ? SharpNames : PitchClassNames)[((midi % 12) + 12) % 12] + (midi / 12 - 1);
+
+    private static readonly string[] MajorTonics = ["ces", "ges", "des", "aes", "ees", "bes", "f", "c", "g", "d", "a", "e", "b", "fis", "cis"];
+    private static readonly string[] MinorTonics = ["aes", "ees", "bes", "f", "c", "g", "d", "a", "e", "b", "fis", "cis", "gis", "dis", "ais"];
+
+    /// <summary>The sharps (positive) or flats (negative) of the file's own key — its top-level
+    /// <c>key</c>, else the first one written; 0 with none, or a mode other than major or minor.</summary>
+    public static int KeyFifths(Syntax.SyntaxNode root)
+    {
+        var keys = root.DescendantNodes<Syntax.KeySignatureSyntax>().Where(k => !k.IsCustom).ToList();
+        var key = keys.FirstOrDefault(k => k.Parent is Syntax.CompilationUnitSyntax) ?? keys.FirstOrDefault();
+        if (key is null)
+            return 0;
+        // The contracted flats (`as`, `es`) as the tables write them.
+        string tonic = key.Pitch.ToFullString().Trim().ToLowerInvariant() switch { "as" => "aes", "es" => "ees", var t => t };
+        int at = key.Mode.Text.ToLowerInvariant() switch
+        {
+            "major" => Array.IndexOf(MajorTonics, tonic),
+            "minor" => Array.IndexOf(MinorTonics, tonic),
+            _ => -1,
+        };
+        return at < 0 ? 0 : at - 7;
+    }
 }

@@ -40,6 +40,8 @@ public static class CompositionChecks
             return [];
         var root = tree.GetRoot();
         var findings = new List<string>();
+        // Pitches named as the key spells them (owner's request 2026-10-30: B♭ minor told in C♯).
+        int fifths = PartRanges.KeyFifths(root);
         var declared = RenderSpecParser.ChooseDeclared(tree, null);
 
         // A piece has a title of its own (owner's request 2026-10-27).
@@ -353,8 +355,8 @@ public static class CompositionChecks
             int first = slips[0];
             findings.Add($"{line.Key}: {slips.Count} times one note leaps more than an octave away and straight back (bars "
                 + $"{string.Join(", ", at.Take(6))}{(at.Count > 6 ? ", …" : "")}, as the form plays them; "
-                + $"{PartRanges.SpelledFromPitch(lows[first].Pitch)} between {PartRanges.SpelledFromPitch(lows[first - 1].Pitch)} and "
-                + $"{PartRanges.SpelledFromPitch(lows[first + 1].Pitch)} first) — an octave mark slipped? Write it in its line's octave.");
+                + $"{PartRanges.SpelledFromPitch(lows[first].Pitch, fifths)} between {PartRanges.SpelledFromPitch(lows[first - 1].Pitch, fifths)} and "
+                + $"{PartRanges.SpelledFromPitch(lows[first + 1].Pitch, fifths)} first) — an octave mark slipped? Write it in its line's octave.");
         }
 
         // A staff labelled by the hand that plays it (owner's report 2026-10-27: a piano piece printed
@@ -385,7 +387,7 @@ public static class CompositionChecks
                 continue;
             int Percentile(double p) => PercentileOf(notes, p);
             int middle = Percentile(0.5);
-            string Name(int m) => PartRanges.SpelledFromPitch(m);
+            string Name(int m) => PartRanges.SpelledFromPitch(m, fifths);
             string mostly = $"most of its time is between {Name(Percentile(0.1))} and {Name(Percentile(0.9))}, its middle {Name(middle)}";
             if (left && middle < LeftHandLowestMiddle)
                 findings.Add($"{part}: {mostly} — far below a pianist's left hand, which lies mostly between C2 and C4, round C3: "
@@ -404,8 +406,8 @@ public static class CompositionChecks
         {
             int lhTop = PercentileOf(sounding[lefts[0]], 0.9), rhFloor = PercentileOf(sounding[rights[0]], 0.1);
             if (rhFloor - lhTop > WidestGapBetweenHands)
-                findings.Add($"{rights[0]}, {lefts[0]}: the hands stand far apart — the left hand mostly up to {PartRanges.SpelledFromPitch(lhTop)}, "
-                    + $"the right hand mostly from {PartRanges.SpelledFromPitch(rhFloor)} — and the middle of the keyboard is empty: let the left "
+                findings.Add($"{rights[0]}, {lefts[0]}: the hands stand far apart — the left hand mostly up to {PartRanges.SpelledFromPitch(lhTop, fifths)}, "
+                    + $"the right hand mostly from {PartRanges.SpelledFromPitch(rhFloor, fifths)} — and the middle of the keyboard is empty: let the left "
                     + "hand's figure reach up toward middle C, and give the right hand's melody its harmony under it (thirds, sixths, "
                     + "chords on the strong beats).");
         }
@@ -437,12 +439,12 @@ public static class CompositionChecks
             var over = wide.Where(w => w.High - w.Low > Twelfth).ToList();
             if (over.Count >= HandsMeetFewestBars && over.Count >= wide.Count * HandsMeetShare)
                 findings.Add($"{lefts[0]}: in {over.Count} of its {wide.Count} bars of broken chords the figure spans more than a twelfth "
-                    + $"({PartRanges.SpelledFromPitch(over[0].Low)} to {PartRanges.SpelledFromPitch(over[0].High)} in bar {over[0].Bar}): a hand's "
+                    + $"({PartRanges.SpelledFromPitch(over[0].Low, fifths)} to {PartRanges.SpelledFromPitch(over[0].High, fifths)} in bar {over[0].Bar}): a hand's "
                     + "figure stays within an octave and a half, climbing from its bass by the chord's tones and turning back.");
         }
 
-        findings.AddRange(Clashes(midi, melodies, barList));
-        findings.AddRange(LowChords(midi, barList));
+        findings.AddRange(Clashes(midi, melodies, barList, fifths));
+        findings.AddRange(LowChords(midi, barList, fifths));
         // A band's part crowding its bass (owner's trial 2026-10-30: a rock guitar mostly D2–D3 over a
         // bass mostly E1–E2 — two low lines in one register, a muddy sound).
         foreach (var bass in bandBasses.Where(sounding.ContainsKey))
@@ -455,8 +457,8 @@ public static class CompositionChecks
                     continue;
                 int middle = PercentileOf(notes, 0.5);
                 if (middle - under < 12)
-                    findings.Add($"{part}: most of its time round {PartRanges.SpelledFromPitch(middle)}, within an octave of the bass's "
-                        + $"{PartRanges.SpelledFromPitch(under)} — two low lines in one register muddy each other: lift it an octave "
+                    findings.Add($"{part}: most of its time round {PartRanges.SpelledFromPitch(middle, fifths)}, within an octave of the bass's "
+                        + $"{PartRanges.SpelledFromPitch(under, fifths)} — two low lines in one register muddy each other: lift it an octave "
                         + "(a guitar's chords round C3 to C5, its tune above them), and leave the low register to the bass.");
             }
         }
@@ -481,7 +483,7 @@ public static class CompositionChecks
                     + "tune goes over them in a solo, a fill, or a lead part of its own.");
         }
         if (parts.Select(p => p.Name.Text).FirstOrDefault(n => melodies.Contains(n) && byPart.ContainsKey(n)) is { } tune)
-            findings.AddRange(OpenEndings(midi, tune));
+            findings.AddRange(OpenEndings(midi, tune, fifths));
 
         // The length and the ending (owner's report 2026-10-27: the composed piano piece was 8 bars, two
         // sections of four, and its end "unnatural" — it began in E minor and stopped in G major).
@@ -510,7 +512,7 @@ public static class CompositionChecks
         {
             var (home, end) = inKeys;
             int homeTonic = PitchClass(home.Tonic), endTonic = PitchClass(end.Tonic);
-            string KeyName((string Tonic, string Mode) k) => $"{PitchClassName(PitchClass(k.Tonic))} {k.Mode}";
+            string KeyName((string Tonic, string Mode) k) => $"{TonicName(k.Tonic)} {k.Mode}";
             if (homeTonic != endTonic || home.Mode != end.Mode)
                 findings.Add($"The piece begins in {KeyName(home)} and ends in {KeyName(end)}: come back to the home key for the last "
                     + "section, and close there.");
@@ -518,8 +520,8 @@ public static class CompositionChecks
             int lastOnset = pitched.Max(n => n.StartTick);
             int bass = pitched.Where(n => n.StartTick <= lastOnset && n.StartTick + n.DurationTicks > lastOnset).Min(n => n.Pitch);
             if ((bass % 12 + 12) % 12 != endTonic)
-                findings.Add($"The piece ends over {PitchClassName(bass)}, not its tonic {PitchClassName(endTonic)}: close with a cadence "
-                    + $"(V–I) on the tonic chord, held through the last bar, the bass on {PitchClassName(endTonic)}.");
+                findings.Add($"The piece ends over {PitchClassName(bass, fifths)}, not its tonic {PitchClassName(endTonic, fifths)}: close with a cadence "
+                    + $"(V–I) on the tonic chord, held through the last bar, the bass on {PitchClassName(endTonic, fifths)}.");
         }
 
         // Every part in the same rhythm, bar after bar (counted above).
@@ -572,7 +574,7 @@ public static class CompositionChecks
     /// <summary>A melody's notes held on the beat (a quarter or longer) a semitone or a minor ninth over
     /// a note another part sounds with them at their start, or a semitone under one. A suspension is
     /// struck before the harmony moves under it, so it is not one.</summary>
-    private static IEnumerable<string> Clashes(MidiFile midi, HashSet<string> melodies, List<int> barList)
+    private static IEnumerable<string> Clashes(MidiFile midi, HashSet<string> melodies, List<int> barList, int fifths)
     {
         int tpq = midi.TicksPerQuarterNote;
         var notes = midi.Tracks.SelectMany(t => t.Notes.Where(n => n.Channel != 9)
@@ -598,7 +600,7 @@ public static class CompositionChecks
             var bars = clashes.Select(c => c.Bar).Distinct().ToList();
             yield return $"{part}, the melody: {clashes.Count} times a note held on the beat stands a semitone from the harmony sounding "
                 + $"with it (bars {string.Join(", ", bars.Take(6))}{(bars.Count > 6 ? ", …" : "")}, as the form plays them; "
-                + $"{PartRanges.SpelledFromPitch(clashes[0].Note)} against {PartRanges.SpelledFromPitch(clashes[0].Against)} first) — "
+                + $"{PartRanges.SpelledFromPitch(clashes[0].Note, fifths)} against {PartRanges.SpelledFromPitch(clashes[0].Against, fifths)} first) — "
                 + "a wrong note? Take the chord's own tone there, or change the chord under it; a note against the chord is a "
                 + "passing one, short and moving on by step — unless it is a blue note meant, a minor third over a major chord.";
         }
@@ -612,7 +614,7 @@ public static class CompositionChecks
     private const double NoChordsShare = 0.1;
 
     /// <summary>A part's chords with a third or a second under C3.</summary>
-    private static IEnumerable<string> LowChords(MidiFile midi, List<int> barList)
+    private static IEnumerable<string> LowChords(MidiFile midi, List<int> barList, int fifths)
     {
         foreach (var part in midi.Tracks.SelectMany(t => t.Notes.Where(n => n.Channel != 9).Select(n => (Part: n.Part ?? t.Name, n.StartTick, n.Pitch)))
             .GroupBy(n => n.Part))
@@ -624,7 +626,7 @@ public static class CompositionChecks
                 continue;
             var first = muddy[0];
             yield return $"{part.Key}: {muddy.Count} chords stack a third or a second below C3 ("
-                + $"{string.Join(" ", first.Pitches.Select(PartRanges.SpelledFromPitch))} in bar {barList.Count(b => b <= first.Tick)} first, "
+                + $"{string.Join(" ", first.Pitches.Select(p => PartRanges.SpelledFromPitch(p, fifths)))} in bar {barList.Count(b => b <= first.Tick)} first, "
                 + "as the form plays them) — so low, close notes are mud: voice it open, the root and fifth below (a power chord) "
                 + "and the third an octave or more higher.";
         }
@@ -676,7 +678,7 @@ public static class CompositionChecks
     /// tritone or a seventh: its phrase not closed. Not a fourth: a band's bass passes through the
     /// chord's fifth under the root it ends on (owner's request 2026-10-30; the length
     /// finding asks for phrases "each closing on a cadence", and nothing saw whether they did).</summary>
-    private static IEnumerable<string> OpenEndings(MidiFile midi, string tune)
+    private static IEnumerable<string> OpenEndings(MidiFile midi, string tune, int fifths)
     {
         var notes = midi.Tracks.SelectMany(t => t.Notes.Where(n => n.Channel != 9)
             .Select(n => (Part: n.Part ?? t.Name, n.StartTick, n.DurationTicks, n.Pitch))).ToList();
@@ -696,7 +698,7 @@ public static class CompositionChecks
             read++;
             int bass = under.Min(n => n.Pitch);
             if (((top - bass) % 12 + 12) % 12 is 1 or 2 or 6 or 10 or 11)
-                open.Add($"{name}: {PartRanges.SpelledFromPitch(top)} over {PartRanges.SpelledFromPitch(bass)}");
+                open.Add($"{name}: {PartRanges.SpelledFromPitch(top, fifths)} over {PartRanges.SpelledFromPitch(bass, fifths)}");
         }
         if (read >= 3 && open.Count >= 2 && open.Count * 3 >= read)
             yield return $"{tune}: {open.Count} of {read} sections end their tune on a note open against the bass ({string.Join(", ", open.Take(4))}"
@@ -973,9 +975,15 @@ public static class CompositionChecks
         return hands.Where(h => !h.Value).Select(h => h.Key).ToHashSet(System.StringComparer.Ordinal);
     }
 
-    private static readonly string[] PitchClassNames = ["C", "C♯", "D", "E♭", "E", "F", "F♯", "G", "A♭", "A", "B♭", "B"];
+    /// <summary>A pitch class named as the key spells it (<see cref="PartRanges.SpelledFromPitch(int, int)"/>).</summary>
+    private static string PitchClassName(int pitch, int fifths) => PartRanges.SpelledFromPitch((pitch % 12 + 12) % 12 + 60, fifths)[..^1];
 
-    private static string PitchClassName(int pitch) => PitchClassNames[(pitch % 12 + 12) % 12];
+    /// <summary>A key's tonic as written (<c>ees</c>, <c>fis</c>, <c>as</c>) named as a musician names it: E♭, F♯, A♭.</summary>
+    private static string TonicName(string tonic)
+        => tonic.Length == 0 ? tonic : char.ToUpperInvariant(tonic[0]) + tonic[1..] switch
+        {
+            "is" => "♯", "isis" => "𝄪", "es" or "s" => "♭", "eses" or "ses" => "𝄫", _ => "",
+        };
 
     /// <summary>
     /// The key the piece begins in and the one it ends in, as the form plays them: the first and the
@@ -1078,7 +1086,7 @@ public static class CompositionChecks
                 if (!wrong.TryGetValue(part, out var counts))
                     wrong[part] = counts = [];
                 counts[(written, own)] = counts.GetValueOrDefault((written, own)) + 1;
-                keyName = $"{PitchClassName(tonicPc)} {mode}";
+                keyName = $"{TonicName(tonic)} {mode}";
             }
         }
         foreach (var (part, counts) in wrong)

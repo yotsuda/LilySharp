@@ -947,15 +947,16 @@ public sealed partial class LilySharpLanguageServer
             var midi = new LilySharp.Core.Midi.MidiExporter { Form = score?.Form, Score = score }.Export(tree);
             static RangeEnd Dto(LilySharp.Core.Midi.RangeEnd e)
                 => new() { Pitch = e.Pitch, Name = e.Name, Positions = e.Positions.ToArray() };
+            int fifths = LilySharp.Core.Midi.PartRanges.KeyFifths(tree.GetRoot());
             return new RangesResponse
             {
-                Parts = LilySharp.Core.Midi.PartRanges.Of(midi, doc.Text)
+                Parts = LilySharp.Core.Midi.PartRanges.Of(midi, doc.Text, fifths)
                     .Select(p => new PartRange
                     {
                         Name = p.Name, Low = Dto(p.Low), High = Dto(p.High),
                         Weights = p.Weights.ToArray(), TessituraLow = p.TessituraLow, TessituraHigh = p.TessituraHigh,
-                        Tessitura = LilySharp.Core.Midi.PartRanges.SpelledFromPitch(p.TessituraLow) + "–"
-                            + LilySharp.Core.Midi.PartRanges.SpelledFromPitch(p.TessituraHigh),
+                        Tessitura = LilySharp.Core.Midi.PartRanges.SpelledFromPitch(p.TessituraLow, fifths) + "–"
+                            + LilySharp.Core.Midi.PartRanges.SpelledFromPitch(p.TessituraHigh, fifths),
                     })
                     .ToArray(),
             };

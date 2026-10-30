@@ -101,6 +101,23 @@ public class PartRangesTests
         Assert.Empty(PartRanges.Lines("part p { section A { p { c'4 ( } } }"));
     }
 
+    /// <summary>A pitch named without its written spelling is named as the key spells it (owner's
+    /// request 2026-10-30: a piece in B♭ minor was told "most of its time F2–C♯3").</summary>
+    [Fact]
+    public void NamesAPitchAsTheKeySpellsIt()
+    {
+        string Piece(string key, string note) => $"octave absolute\ntime 4/4\nkey {key}\npart m {{ instrument violin }}\n"
+            + $"section A {{ m {{ {note}4 {note} {note} {note} | {note}4 {note} {note} {note} | f'1 | }} }}\nform {{ A }}";
+        // The ends are spelled as written; the tessitura's, from the pitch, by the key.
+        Assert.Equal("m: D♭4–F4, most of its time D♭4–F4", PartRanges.Lines(Piece("bes minor", "des'")).Single());
+        Assert.Equal("m: C♯4–F4, most of its time C♯4–F4", PartRanges.Lines(Piece("a major", "cis'")).Single());
+        Assert.Equal(-5, PartRanges.KeyFifths(SyntaxTree.Parse(Piece("bes minor", "c'")).GetRoot()));
+        Assert.Equal(3, PartRanges.KeyFifths(SyntaxTree.Parse(Piece("a major", "c'")).GetRoot()));
+        Assert.Equal(-4, PartRanges.KeyFifths(SyntaxTree.Parse(Piece("as major", "c'")).GetRoot()));
+        Assert.Equal("G♭2", PartRanges.SpelledFromPitch(42, -5));
+        Assert.Equal("F♯2", PartRanges.SpelledFromPitch(42, 2));
+    }
+
     /// <summary>A chord's lowest member is found where it is written — a written chord, one of
     /// degrees, a grace chord; a member written lower but sounding higher is passed over.</summary>
     [Theory]
