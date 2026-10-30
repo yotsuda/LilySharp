@@ -1,0 +1,9 @@
+// @arpeggio rolls a chord; << >> writes a broken chord out, its notes sharing the time
+// (a bare number inside is a degree of the key). A member may be a chord itself.
+time 4/4
+part piano { clef treble }
+section A {
+  piano { <c' e g c'>2@arpeggio <c e g c'>2 | << c e g c' >>2 << c 3 5 8 >>2 | << <c e> g <c e> g >>1 | }
+}
+form { ~A }
+score { staff piano }

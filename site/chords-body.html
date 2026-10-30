@@ -15,6 +15,7 @@
   </ol>
   <p class="grp">Elsewhere</p>
   <ol>
+    <li><a href="chord-input.html">Writing chords as notes</a></li>
     <li><a href="grammar.html#chordrows">Chord rows (the manual)</a></li>
     <li><a href="grammar.html#tab">Tablature (the manual)</a></li>
   </ol>
@@ -95,29 +96,31 @@
     <tr><td><code>@chord(C x32010)</code></td><td>the name and its diagram</td></tr>
     <tr><td><code>@chord(x02210)</code></td><td>the diagram, and a name read off the shape's notes (Am)</td></tr>
     <tr><td><code>@diagram(x24442)</code></td><td>a diagram with no name at all — not a chord symbol, so it always draws. <code>.down</code> puts it under the staff</td></tr>
+    <tr><td><code>&lt;g b d' f'&gt;1@diagram</code></td><td>a bare <code>@diagram</code> on a chord: the chord's own notes, fretted on the part's strings (<code>xx5431</code>) — see <a href="chord-input.html#fretted">Writing chords</a></td></tr>
   </table>
   <!--EXAMPLE:chord-on-note-->
 </section>
 
 <section id="notes">
   <h2>The notes on the staff</h2>
-  <p>A diagram shows a shape; <b><code>chord(NAME SHAPE)</code></b> plays it. It is a music
+  <p><code>@diagram</code> draws a shape; <b><code>diagram(NAME SHAPE)</code></b> draws it and plays it. It is a music
   item, written where a note or a <code>&lt;…&gt;</code> chord would be, and it writes each
   sounding string as a note — the string's open pitch plus its fret, on the part's
   instrument — with its string number, so a <code>tab</code> of the part shows exactly that
-  shape. <code>chord(C x32013)1</code> on a guitar is C3 E3 G3 C4 G4 for a whole note.</p>
+  shape. <code>diagram(C x32013)1</code> on a guitar is C3 E3 G3 C4 G4 for a whole note.</p>
   <ul>
     <li>It takes what a chord takes after it: a duration, dots, ties, slurs, beams,
     articulations, dynamics; a bare duration or <code>q</code> repeats it.</li>
-    <li>It draws no name of its own. A bare <code>@chord</code> on it adds the item's name
-    and diagram: <code>chord(Am x02210)2@chord</code>.</li>
+    <li>It draws its shape's diagram, with no name (<code>chordDiagrams none</code> turns that
+    off). A bare <code>@chord</code> on it adds the item's name over that diagram:
+    <code>diagram(Am x02210)2@chord</code>.</li>
     <li>Its pitches are absolute — octave marks after the <code>)</code> are an error; play
     it higher on the neck instead. The note after it reads its lowest note.</li>
-    <li>In <code>&lt;&lt; &gt;&gt;</code> it is spread: <code>&lt;&lt; chord(C x32010) &gt;&gt;2</code>
+    <li>In <code>&lt;&lt; &gt;&gt;</code> it is spread: <code>&lt;&lt; diagram(C x32010) &gt;&gt;2</code>
     plays the five strings in turn, lowest first, under 5:4 — a written-out broken chord of a
-    guitar shape — and mixed with other members (<code>&lt;&lt; c chord(G 320003) e &gt;&gt;</code>)
+    guitar shape — and mixed with other members (<code>&lt;&lt; c diagram(G 320003) e &gt;&gt;</code>)
     its notes take their places in the sequence.</li>
-    <li>The shape is required: <code>chord(C)</code> warns — <i>write a shape: chord(C
+    <li>The shape is required: <code>diagram(C)</code> warns — <i>write a shape: diagram(C
     x32010)</i> — and keeps its time as a spacer.</li>
   </ul>
   <p><b>A chord name belongs to the beat, not to a note</b>, so a rest, a spacer or a
@@ -211,7 +214,7 @@ score piano { layout piano  chords prog  staff melody } // no diagrams</pre>
     at the bar (in E major at capo 3 a sounding <code>G#m</code> prints <code>Fm</code>). A
     Roman degree is the sounding key's and is not moved.</li>
     <li><b>"Capo 3" stands at the score's head</b>, on the header's instrument line.</li>
-    <li><b>A <code>chord(Eb x32010)</code> item sounds three semitones higher</b> — on the
+    <li><b>A <code>diagram(Eb x32010)</code> item sounds three semitones higher</b> — on the
     staff, in the MIDI and in the <code>.ly</code> twin.</li>
   </ul>
   <p>What a name shows under the capo is <code>layout { chordNames … }</code>:</p>

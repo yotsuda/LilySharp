@@ -1,0 +1,10 @@
+// A chord is notes in angle brackets, one duration after the >. Degrees of the key write
+// the same chords; q repeats the last chord, and a bare duration repeats it at a new length.
+time 4/4
+key c major
+part piano { clef treble }
+section A {
+  piano { <c' e g>2 <1 3 5>2 | <2 4 6>4 q q2 | <f a c>4 4 <g b d f>2 | <c e g c'>1 | }
+}
+form { ~A }
+score { staff piano }

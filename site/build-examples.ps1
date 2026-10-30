@@ -116,7 +116,7 @@ part rh { clef treble }
 part lh { clef bass }
 section A {
   rh {
-    c''4@ottava d e f | g4 a b c@!ottava |
+    c''4@8va d e f | g4 a b c@!8va |
     c,4@rit b a g@!rit | c1 |
   }
   lh {
@@ -288,15 +288,16 @@ score { staff melody }
 '@
 
 'chord-notes' = @'
-// chord(NAME SHAPE) WRITES the shape's notes: each string's open pitch plus its fret,
-// with its string number, so the tab shows the same shape. A bare @chord on it adds the
-// name and the diagram. A chord name belongs to the beat, so a rest or a spacer takes one.
+// diagram(NAME SHAPE) WRITES the shape's notes: each string's open pitch plus its fret,
+// with its string number, so the tab shows the same shape, and draws the shape. A bare
+// @chord adds the name over it. A chord name belongs to the beat, so a rest or a spacer
+// takes one.
 time 4/4
 part gt { instrument guitar }
 section A {
   gt {
-    s1@chord(C x32010) | chord(C x32013)1 |
-    chord(Am x02210)2@chord chord(F 133211)2@chord | r1@chord(G 320003) |
+    s1@chord(C x32010) | diagram(C x32013)1 |
+    diagram(Am x02210)2@chord diagram(F 133211)2@chord | r1@chord(G 320003) |
   }
 }
 form { ~A }
@@ -360,6 +361,58 @@ section A {
 }
 form { ~A }
 score { chords prog  staff melody }
+'@
+
+# ---- chord-input.html: writing chords as notes
+
+'chord-entry' = @'
+// A chord is notes in angle brackets, one duration after the >. Degrees of the key write
+// the same chords; q repeats the last chord, and a bare duration repeats it at a new length.
+time 4/4
+key c major
+part piano { clef treble }
+section A {
+  piano { <c' e g>2 <1 3 5>2 | <2 4 6>4 q q2 | <f a c>4 4 <g b d f>2 | <c e g c'>1 | }
+}
+form { ~A }
+score { staff piano }
+'@
+
+'chord-named' = @'
+// A bare @chord names a chord from its own notes - a seventh, an inversion, the bass.
+time 4/4
+part piano { clef treble }
+section A {
+  piano { <c' e g>2@chord <a c e g>2@chord | <f a c e>2@chord <g b d f>2@chord | <e g c>1@chord | }
+}
+form { ~A }
+score { staff piano }
+'@
+
+'chord-broken' = @'
+// @arpeggio rolls a chord; << >> writes a broken chord out, its notes sharing the time
+// (a bare number inside is a degree of the key). A member may be a chord itself.
+time 4/4
+part piano { clef treble }
+section A {
+  piano { <c' e g c'>2@arpeggio <c e g c'>2 | << c e g c' >>2 << c 3 5 8 >>2 | << <c e> g <c e> g >>1 | }
+}
+form { ~A }
+score { staff piano }
+'@
+
+'chord-fretted' = @'
+// On a guitar, a bare @diagram draws a <...> chord's own notes as they are fretted.
+// diagram(NAME SHAPE) writes a shape's notes and draws it; in << >> its strings are
+// played in turn, lowest first.
+octave absolute
+time 4/4
+part gt { instrument guitar }
+section A {
+  gt { <g b d' f'>1@diagram | diagram(C x32010)2 diagram(Am x02210)2@chord | << diagram(G 320003) >>1 | }
+}
+form { ~A }
+score { staff gt  tab gt }
 '@
 
 }

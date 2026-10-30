@@ -3,6 +3,7 @@
 #   grammar.html, ref-music.html, ref-structure.html, ref-output.html, ref-lookup.html
 #                 <- manual-body.html   the language reference, split by its contents' groups
 #   chords.html   <- chords-body.html   chords and chord diagrams, step by step (under Reference)
+#   chord-input.html <- chord-input-body.html  writing chords as notes, step by step (under Reference)
 #   editor.html   <- editor-body.html   the VS Code extension and its AI features
 #   commands.html <- commands-body.html every editor command, one by one (under Editor)
 #   scan.html     <- scan-body.html     Scan Import: the reader extension, reading and checking a scan (under Editor)
@@ -97,6 +98,11 @@ $pages = @(
        Title = 'Lily# — chords and chord diagrams'
        Desc = 'Chord names, guitar chord diagrams and chords written from a shape in Lily#, step by step, with engraved examples.'
        Sub = 'Reference — chords and chord diagrams, step by step'
+       Authority = $byParser },
+    @{ Out = 'chord-input.html'; Body = 'chord-input-body.html'; Section = 'grammar.html'
+       Title = 'Lily# — writing chords'
+       Desc = 'Writing chords as notes in Lily#: angle brackets and degrees, completion, naming a chord from its notes, broken chords, and what a guitar or a bowed string can hold.'
+       Sub = 'Reference — writing chords, step by step'
        Authority = $byParser },
     @{ Out = 'editor.html'; Body = 'editor-body.html'; Section = 'editor.html'
        Title = 'Lily# Studio — the editor and AI'
@@ -314,7 +320,7 @@ function Get-RefSiblings([string]$out) {
         $name = $name.Substring(0, 1).ToUpperInvariant() + $name.Substring(1)
         $p -eq $out ? "    <li><a href=`"$p`" aria-current=`"page`"><b>$name</b></a></li>" : "    <li><a href=`"$p`">$name</a></li>"
     }
-    "  <p class=`"grp`">Reference pages</p>`n  <ol>`n    <li><a href=`"grammar.html`">How to read this</a></li>`n$($items -join "`n")`n    <li><a href=`"chords.html`">Chords and diagrams</a></li>`n  </ol>"
+    "  <p class=`"grp`">Reference pages</p>`n  <ol>`n    <li><a href=`"grammar.html`">How to read this</a></li>`n$($items -join "`n")`n    <li><a href=`"chords.html`">Chords and diagrams</a></li>`n    <li><a href=`"chord-input.html`">Writing chords</a></li>`n  </ol>"
 }
 
 foreach ($p in $refPages.Keys) {
@@ -372,6 +378,10 @@ $frontCards
 <section class="refcard">
   <h2><a href="chords.html">Chords and chord diagrams</a></h2>
   <p>Chord names, guitar and ukulele diagrams, and chords written from a shape — step by step.</p>
+</section>
+<section class="refcard">
+  <h2><a href="chord-input.html">Writing chords</a></h2>
+  <p>Chords as notes: angle brackets, degrees, completion, names from the notes, broken chords, and what a guitar or a bowed string can hold.</p>
 </section>
 </article>
 <script>{ const moved = {$redirects}; const hash = decodeURIComponent(location.hash); if (moved[hash]) location.replace(moved[hash] + hash); }</script>

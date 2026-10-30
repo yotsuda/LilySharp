@@ -1,0 +1,8 @@
+// A bare @chord names a chord from its own notes - a seventh, an inversion, the bass.
+time 4/4
+part piano { clef treble }
+section A {
+  piano { <c' e g>2@chord <a c e g>2@chord | <f a c e>2@chord <g b d f>2@chord | <e g c>1@chord | }
+}
+form { ~A }
+score { staff piano }

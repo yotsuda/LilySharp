@@ -211,7 +211,7 @@ score {               // one or more render blocks
     <tr><td><code>/4</code></td><td>slash note — pitchless rhythm, silent, on the middle line</td></tr>
     <tr><td><code>q</code></td><td>the previous chord again</td></tr>
     <tr><td><code>q'</code></td><td>…an octave up (<code>q,,</code> two down)</td></tr>
-    <tr><td><code>chord(C x32013)1</code></td><td>a chord from a shape — each string's open pitch plus its fret on the part's instrument (else the guitar): C3 E3 G3 C4 G4, absolute, with string numbers; the next note reads its lowest note — see <a href="chords.html#notes">Chords and chord diagrams</a></td></tr>
+    <tr><td><code>diagram(C x32013)1</code></td><td>a chord from a shape — each string's open pitch plus its fret on the part's instrument (else the guitar): C3 E3 G3 C4 G4, absolute, with string numbers; the next note reads its lowest note — see <a href="chords.html#notes">Chords and chord diagrams</a></td></tr>
   </table>
 
   <h3>Repeating a chord — and why there are two ways</h3>
@@ -271,7 +271,7 @@ score {               // one or more render blocks
 &lt;&lt; c@accent e\3 g( a) &gt;&gt;   // a member carries scripts, string numbers, fingering, dynamics, slur marks
 &lt;&lt; c e g &gt;&gt;4\2   // on the group: a dynamic, a chord name, a string number (every member's);
                  //   a ~ or ( written after &gt;&gt; hangs on the last member
-&lt;&lt; chord(C x32010) &gt;&gt;2   // a shape is SPREAD: its strings in turn, lowest first — five, under 5:4</pre>
+&lt;&lt; diagram(C x32010) &gt;&gt;2   // a shape is SPREAD: its strings in turn, lowest first — five, under 5:4</pre>
   <p>The tuplet is spelled the way engraving convention spells it — the member count against
   the power of two below it (3:2, 5:4, 7:4), a dotted total against 3 (2:3, 4:3) — from the
   total number of shares.</p>
@@ -1267,7 +1267,7 @@ score {
   <code>tab bass click</code> is part <code>bass</code>'s tab plus the MIDI-only
   <code>click</code>, as after a <code>staff</code>; for a tuning over a part that shares a
   tuning word's name, write the synonym: <code>tab bass4 click</code>.</p>
-  <p>Chord diagrams over the staff, and <code>chord(C x32013)</code> — a chord written as a
+  <p>Chord diagrams over the staff, and <code>diagram(C x32013)</code> — a chord written as a
   fretboard shape, which the tab then shows string for string — are on
   <a href="chords.html">Chords and chord diagrams</a>.</p>
 </section>

@@ -1,6 +1,7 @@
 // diagram(NAME SHAPE) WRITES the shape's notes: each string's open pitch plus its fret,
-// with its string number, so the tab shows the same shape. A bare @chord on it adds the
-// name and the diagram. A chord name belongs to the beat, so a rest or a spacer takes one.
+// with its string number, so the tab shows the same shape, and draws the shape. A bare
+// @chord adds the name over it. A chord name belongs to the beat, so a rest or a spacer
+// takes one.
 time 4/4
 part gt { instrument guitar }
 section A {
