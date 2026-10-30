@@ -197,7 +197,7 @@ public sealed partial class MeasureCollector
                         var shapeSymbol = _chordNameCollector.AddInline(
                             named.Text, measureIndex, itemIndex, anchorTiming, site.SourceStart,
                             _v.Cursor.StaffIndex, fromFrets, named.SuperFrom, named.BracketSuperFrom,
-                            diagram?.FrameSpec, _v.Cursor.VoiceIndex);
+                            diagram?.FrameSpec, _v.Cursor.VoiceIndex, words.FromShapeItem);
                         if (graceTime)
                             (_v.GraceChordNames ??= new())[itemIndex] = shapeSymbol;
                     }
@@ -232,7 +232,7 @@ public sealed partial class MeasureCollector
             var symbol = _chordNameCollector.AddInline(
                 chordText, measureIndex, itemIndex, anchorTiming, site.SourceStart,
                 _v.Cursor.StaffIndex, structure, superFrom, bracketSuperFrom, drawn?.FrameSpec,
-                _v.Cursor.VoiceIndex);
+                _v.Cursor.VoiceIndex, words.FromShapeItem);
             if (graceTime)
                 (_v.GraceChordNames ??= new())[itemIndex] = symbol;
             if (drawn != null)

@@ -388,6 +388,9 @@ public sealed partial class LilyPondExporter
     /// by <see cref="Music.ChordStructure.ToChordMode"/>; a symbol with no tone set (an
     /// unregistered quality, or a literal the page could not parse) goes out as its root or
     /// as silence, and the twin says so once.</summary>
+    /// <remarks>A chord item's name that repeats the one before it stands only at a system's
+    /// head (<see cref="Svg.Model.ChordNameItem.RepeatsNameBack"/>): asked of LilyPond's breaks as
+    /// a repeated diagram is (<see cref="ItemNameTweaks"/>).</remarks>
     private string InlineChordEntry(Svg.Model.ChordNameItem c, string duration)
     {
         if (c.Structure is { } s)
@@ -396,7 +399,7 @@ public sealed partial class LilyPondExporter
             if (s.RawSuffix != null && _chordWarned.Add(c.ChordText))
                 _warnings.Add($"@chord '{c.ChordText}': the quality '{s.RawSuffix}' has no \\chordmode spelling — "
                     + $"the twin writes the root alone ({spelled})");
-            return TwinEntry(s, _keySharps, duration);
+            return ItemNameTweaks(c) + TwinEntry(s, _keySharps, duration);
         }
         if (_chordWarned.Add(c.ChordText))
             _warnings.Add($"@chord '{c.ChordText}' is not a chord symbol the twin can spell — written as a silent slot");

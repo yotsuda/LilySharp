@@ -712,21 +712,52 @@ public sealed partial class LilyPondExporter
             + (diagram.RepeatsDiagramAt >= 0
                 ? "-\\tweak after-line-breaking #(lysRepeatedDiagram " + diagram.RepeatsDiagramAt.ToString(inv) + ") "
                 : "");
-        return tweaks + FretDiagramMarkup(spec, above: true);
+        return tweaks + FretDiagramMarkup(spec, above: true, textLength: diagram.RepeatsDiagramAt < 0);
     }
 
     /// <summary>The item diagrams some later one repeats, by source position (<see cref="ItemDiagramMarkup"/>).</summary>
     private HashSet<int>? _repeatedItemDiagrams;
 
+    /// <summary>
+    /// The overrides a chord item's NAME takes in the twin's ChordNames stream, or "": the name a
+    /// later one repeats registers its grob, and a repeat empties its stencil when that grob is on
+    /// its system — <see cref="ItemDiagramMarkup"/>'s question, keyed by <c>-(position + 1)</c>
+    /// beside the diagram at the same position. A repeat takes no width either, as on the page
+    /// (SpacingRules.ApplyChordRowSpacing).
+    /// LILYPOND-REF: scm/define-grobs.scm ChordName extra-spacing-width (-0.5 . 0.5).
+    /// </summary>
+    private string ItemNameTweaks(Svg.Model.ChordNameItem c)
+    {
+        if (!c.IsItemName || _page is null)
+            return "";
+        _repeatedItemNames ??= [.. _page.ChordNames.Where(n => n.RepeatsNameAt >= 0).Select(n => n.RepeatsNameAt)];
+        var inv = System.Globalization.CultureInfo.InvariantCulture;
+        return (_repeatedItemNames.Contains(c.SourcePosition)
+                ? "\\once \\override ChordName.before-line-breaking = #(lysItemDiagram " + (-(c.SourcePosition + 1)).ToString(inv) + ") "
+                : "")
+            + (c.RepeatsNameAt >= 0
+                ? "\\once \\override ChordName.after-line-breaking = #(lysRepeatedDiagram " + (-(c.RepeatsNameAt + 1)).ToString(inv) + ") "
+                  + "\\once \\override ChordName.extra-spacing-width = #'(+inf.0 . -inf.0) "
+                : "");
+    }
+
+    /// <summary>The item names some later one repeats, by source position (<see cref="ItemNameTweaks"/>).</summary>
+    private HashSet<int>? _repeatedItemNames;
+
     /// <summary>The Scheme <see cref="ItemDiagramMarkup"/> calls, written once before the parts
-    /// when the page has a repeated item diagram: the grobs repeats point at, by source
-    /// position, and the repeat's emptying when that grob stands on its system.</summary>
+    /// when the page has a repeated item diagram or name: the grobs repeats point at, by source
+    /// position, and the repeat's emptying when that grob stands on its system. A ChordName's
+    /// own after-line-breaking runs first, as the override replaces it.
+    /// LILYPOND-REF: scm/define-grobs.scm ChordName after-line-breaking ly:chord-name::after-line-breaking;
+    /// TextScript has none.</summary>
     private static readonly string ItemDiagramFunctions = """
         #(define lysItemDiagrams (make-hash-table))
         #(define (lysItemDiagram at)
            (lambda (grob) (hash-set! lysItemDiagrams at grob)))
         #(define (lysRepeatedDiagram from)
            (lambda (grob)
+             (if (grob::has-interface grob 'chord-name-interface)
+                 (ly:chord-name::after-line-breaking grob))
              (let ((before (hash-ref lysItemDiagrams from #f)))
                (if (and before (eq? (ly:grob-system before) (ly:grob-system grob)))
                    (ly:grob-set-property! grob 'stencil #f)))))
@@ -734,7 +765,10 @@ public sealed partial class LilyPondExporter
 
         """.ReplaceLineEndings("\n");
 
-    private string FretDiagramMarkup(string spec, bool above)
+    /// <param name="textLength">Whether the diagram widens its column (<c>\textLengthOn</c>, as the
+    /// page's SpacingRules.ApplyFretFrameSpacing) — all but an item's repeat, which the page does
+    /// not price.</param>
+    private string FretDiagramMarkup(string spec, bool above, bool textLength = true)
     {
         // One entry a string, low string first: x, o, or the fret — read by the page's own
         // reader, so a chosen voicing's frets 10–15 are written as numbers; a predefined
@@ -749,7 +783,7 @@ public sealed partial class LilyPondExporter
         // (SpacingRules.ApplyFretFrameSpacing) — LilyPond's \textLengthOn, tweaked onto the
         // diagram alone so an ordinary ^"text" keeps overhanging as it does on the page.
         // LILYPOND-REF: ly/property-init.ly textLengthOn.
-        return "-\\tweak extra-spacing-width #'(-0.0 . 0.4) -\\tweak extra-spacing-height #'(-inf.0 . +inf.0) "
+        return (textLength ? "-\\tweak extra-spacing-width #'(-0.0 . 0.4) -\\tweak extra-spacing-height #'(-inf.0 . +inf.0) " : "")
             + (above ? "^" : "_")
             + "\\markup " + size + "\\fret-diagram-terse \"" + terse + "\"";
     }

@@ -593,7 +593,8 @@ public sealed partial class LilyPondExporter
         if (_layoutPlan.CompressRests)
             _sb.Append(CompressRestsFunction);
         // …and the item diagrams that stand only at a system's head (ItemDiagramMarkup).
-        if (render != null && PageModel(tree, render) is { } page && page.Articulations.Any(a => a.RepeatsDiagramAt >= 0))
+        if (render != null && PageModel(tree, render) is { } page
+            && (page.Articulations.Any(a => a.RepeatsDiagramAt >= 0) || page.ChordNames.Any(c => c.RepeatsNameAt >= 0)))
             _sb.Append(ItemDiagramFunctions);
 
         var parts = root.DescendantNodes<PartDeclarationSyntax>().ToList();

@@ -251,32 +251,32 @@ internal sealed partial class LayoutEngine
     }
 
     /// <summary>
-    /// <paramref name="score"/> without the chord items' diagrams that repeat one on their own
-    /// system (<see cref="ArticulationItem.RepeatsDiagramBack"/>): a diagram stands where the
-    /// chord changes, and at the head of each system (owner's decision 2026-10-31,
-    /// docs/chord-syntax-design.md Q2). The same score when none repeats.
+    /// <paramref name="score"/> without the chord items' diagrams and names that repeat one on
+    /// their own system (<see cref="ArticulationItem.RepeatsDiagramBack"/>,
+    /// <see cref="ChordNameItem.RepeatsNameBack"/>): they stand where the chord changes, and at
+    /// the head of each system (owner's decisions 2026-10-31, docs/chord-syntax-design.md Q2).
+    /// The same score when none repeats.
     /// </summary>
     /// <remarks>
-    /// LILYSHARP-OWN: made once the lines are broken, and the breaks priced every diagram: a
-    /// dropped one only leaves its column room it no longer needs. The choice reads the system's
-    /// own bars only (the repeat's distance is relative), so a cached system is the same system.
-    /// The LilyPond twin makes it on LilyPond's breaks (LilyPondExporter.ItemDiagramMarkup).
+    /// LILYSHARP-OWN: made once the lines are broken. A repeat is not priced in the bar's springs
+    /// (SpacingRules.ApplyFretFrameSpacing / ApplyChordRowSpacing), so the breaks are the ones the
+    /// kept marks need. The choice reads the system's own bars only (the repeat's distance is
+    /// relative), so a cached system is the same system. The LilyPond twin makes it on
+    /// LilyPond's breaks (LilyPondExporter.ItemDiagramMarkup, InlineChordEntry).
     /// </remarks>
     private static MultiStaffScore ItemDiagramsAtChanges(MultiStaffScore score, List<List<Measure>> systemMeasures)
     {
-        if (!score.Articulations.Any(a => a.RepeatsDiagramBack >= 0))
+        if (!score.Articulations.Any(a => a.RepeatsDiagramBack >= 0) && !score.ChordNames.Any(c => c.RepeatsNameBack >= 0))
             return score;
         var systemOf = new List<int>();
         for (int s = 0; s < systemMeasures.Count; s++)
             systemOf.AddRange(Enumerable.Repeat(s, systemMeasures[s].Count));
-        bool OnItsSystem(ArticulationItem a)
-        {
-            int from = a.MeasureIndex - a.RepeatsDiagramBack;
-            return from >= 0 && a.MeasureIndex < systemOf.Count && systemOf[from] == systemOf[a.MeasureIndex];
-        }
+        bool OnItsSystem(int measure, int back)
+            => back >= 0 && measure - back >= 0 && measure < systemOf.Count && systemOf[measure - back] == systemOf[measure];
         return score with
         {
-            Articulations = [.. score.Articulations.Where(a => a.RepeatsDiagramBack < 0 || !OnItsSystem(a))],
+            Articulations = [.. score.Articulations.Where(a => !OnItsSystem(a.MeasureIndex, a.RepeatsDiagramBack))],
+            ChordNames = [.. score.ChordNames.Where(c => !OnItsSystem(c.MeasureIndex, c.RepeatsNameBack))],
         };
     }
 

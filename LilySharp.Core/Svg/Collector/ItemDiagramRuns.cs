@@ -21,66 +21,112 @@ using LilySharp.Core.Syntax;
 namespace LilySharp.Core.Svg.Collector;
 
 /// <summary>
-/// Marks each chord item's diagram that repeats the one before it in its voice
-/// (<see cref="ArticulationItem.RepeatsDiagramBack"/>): a diagram stands where the chord changes,
-/// and at the head of each system (owner's decision 2026-10-31, docs/chord-syntax-design.md Q2).
-/// The layout drops a repeat on its own system (LayoutEngine.ItemDiagramsAtChanges); the twin asks
-/// LilyPond's breaks (LilyPondExporter.ItemDiagramMarkup).
+/// Marks each chord item's diagram and name that repeat the item before it in its voice
+/// (<see cref="ArticulationItem.RepeatsDiagramBack"/>, <see cref="ChordNameItem.RepeatsNameBack"/>):
+/// they stand where the chord changes, and at the head of each system (owner's decisions
+/// 2026-10-31, docs/chord-syntax-design.md Q2). The layout drops a repeat on its own system
+/// (LayoutEngine.ItemDiagramsAtChanges); the twin asks LilyPond's breaks (LilyPondExporter.ItemDiagramMarkup).
 /// </summary>
 /// <remarks>
 /// LILYSHARP-OWN: LilyPond draws a markup diagram wherever it is written; the twin asks it the
-/// page's question in Scheme. ⚠️ A PASS OVER THE FINISHED TABLES, NOT WALK STATE: the collect resumes mid-score
-/// after an edit (WalkCheckpoint), and "the voice's last diagram" kept in a collector field would
-/// be lost at the resume point. Read here from the tables, it is the same however they were filled.
+/// page's question in Scheme. ⚠️ A PASS OVER THE FINISHED TABLES, NOT WALK STATE: the collect resumes
+/// mid-score after an edit (WalkCheckpoint), and "the voice's last diagram" kept in a collector
+/// field would be lost at the resume point. Read here from the tables, it is the same however
+/// they were filled.
 /// <para>
-/// What ends a run: any other chord in the voice — a name with no item diagram under it (an
-/// <c>@chord</c>), a diagram that is not an item's (an <c>@diagram</c>), an item drawing another shape.
+/// What ends a run: any other chord in the voice — an <c>@chord</c>'s name, an <c>@diagram</c>,
+/// an item that prints another shape or name, or none (a <c>diagram(…)</c> item ends a run of
+/// names, a <c>chord(…)</c> item with no diagram one of diagrams).
 /// </para>
 /// </remarks>
 internal static class ItemDiagramRuns
 {
-    public static ImmutableArray<ArticulationItem> Mark(
+    /// <summary><paramref name="content"/> with its item diagrams and names marked — once its
+    /// staves are final (after CombinedStaffAddressing), as ScoreAssembler builds the score.</summary>
+    public static ScoreContent Mark(ScoreContent content)
+    {
+        var (articulations, chordNames) = Mark(content.Articulations, content.ChordNames);
+        return content with { Articulations = articulations, ChordNames = chordNames };
+    }
+
+    public static (ImmutableArray<ArticulationItem> Articulations, ImmutableArray<ChordNameItem> ChordNames) Mark(
         ImmutableArray<ArticulationItem> articulations, ImmutableArray<ChordNameItem> chordNames)
     {
-        if (articulations.IsDefaultOrEmpty || !articulations.Any(a => a.IsItemDiagram))
-            return articulations;
+        bool anyDiagram = !articulations.IsDefaultOrEmpty && articulations.Any(a => a.IsItemDiagram);
+        bool anyName = !chordNames.IsDefaultOrEmpty && chordNames.Any(c => c.IsItemName);
+        if (!anyDiagram && !anyName)
+            return (articulations, chordNames);
 
-        // Each voice's chords in order: (bar, item), the item diagram first at one item, as it is
-        // the chord there (a chord(…) item's name stands over its own diagram).
-        var events = new List<(int Staff, int Voice, int Measure, int Item, int Kind, int Index)>();
-        for (int i = 0; i < articulations.Length; i++)
-            if (articulations[i] is { Type: ArticulationType.FretFrame } a)
-                events.Add((a.StaffIndex, a.VoiceIndex, a.MeasureIndex, a.ItemIndex, a.IsItemDiagram ? 0 : 1, i));
-        if (!chordNames.IsDefaultOrEmpty)
-            foreach (var c in chordNames)
-                if (!c.UseTiming && !c.IsChordRow)
-                    events.Add((c.StaffIndex, c.VoiceIndex, c.MeasureIndex, c.ItemIndex, 2, -1));
-
-        var marked = articulations.ToBuilder();
-        foreach (var voice in events.GroupBy(e => (e.Staff, e.Voice)))
+        // Each voice's chords by site (bar, item): the item's diagram and name there, and
+        // whether anything else named or drew a chord there.
+        var sites = new Dictionary<(int Staff, int Voice), SortedDictionary<(int Measure, int Item), Site>>();
+        Site At(int staff, int voice, int measure, int item)
         {
-            ArticulationItem? last = null;
-            (int Measure, int Item) lastAt = (-1, -1);
-            foreach (var e in voice.OrderBy(e => e.Measure).ThenBy(e => e.Item).ThenBy(e => e.Kind))
-            {
-                if (e.Kind != 0)
+            if (!sites.TryGetValue((staff, voice), out var voiceSites))
+                sites[(staff, voice)] = voiceSites = new();
+            if (!voiceSites.TryGetValue((measure, item), out var site))
+                voiceSites[(measure, item)] = site = new Site();
+            return site;
+        }
+        if (!articulations.IsDefaultOrEmpty)
+            for (int i = 0; i < articulations.Length; i++)
+                if (articulations[i] is { Type: ArticulationType.FretFrame } a)
                 {
-                    // The name over the item diagram just taken is that chord's own.
-                    if (!(e.Kind == 2 && last != null && (e.Measure, e.Item) == lastAt))
-                        last = null;
-                    continue;
+                    var site = At(a.StaffIndex, a.VoiceIndex, a.MeasureIndex, a.ItemIndex);
+                    if (a.IsItemDiagram) site.Diagram = i; else site.Other = true;
                 }
-                var diagram = articulations[e.Index];
-                if (last != null && last.FrameSpec == diagram.FrameSpec)
-                    marked[e.Index] = diagram with
-                    {
-                        RepeatsDiagramBack = diagram.MeasureIndex - last.MeasureIndex,
-                        RepeatsDiagramAt = last.SourcePosition,
-                    };
-                last = diagram;
-                lastAt = (e.Measure, e.Item);
+        if (!chordNames.IsDefaultOrEmpty)
+            for (int i = 0; i < chordNames.Length; i++)
+                if (chordNames[i] is { UseTiming: false, IsChordRow: false } c)
+                {
+                    var site = At(c.StaffIndex, c.VoiceIndex, c.MeasureIndex, c.ItemIndex);
+                    if (c.IsItemName) site.Name = i; else site.Other = true;
+                }
+
+        var markedArticulations = anyDiagram ? articulations.ToBuilder() : null;
+        var markedNames = anyName ? chordNames.ToBuilder() : null;
+        foreach (var voiceSites in sites.Values)
+        {
+            ArticulationItem? lastDiagram = null;
+            ChordNameItem? lastName = null;
+            foreach (var site in voiceSites.Values)
+            {
+                if (site.Other)
+                    (lastDiagram, lastName) = (null, null);
+                if (site.Diagram is int d)
+                {
+                    var diagram = articulations[d];
+                    if (lastDiagram != null && lastDiagram.FrameSpec == diagram.FrameSpec)
+                        markedArticulations![d] = diagram with
+                        {
+                            RepeatsDiagramBack = diagram.MeasureIndex - lastDiagram.MeasureIndex,
+                            RepeatsDiagramAt = lastDiagram.SourcePosition,
+                        };
+                    lastDiagram = diagram;
+                }
+                else
+                    lastDiagram = null;
+                if (site.Name is int n)
+                {
+                    var name = chordNames[n];
+                    if (lastName != null && lastName.ChordText == name.ChordText && lastName.DrawnShape == name.DrawnShape)
+                        markedNames![n] = name with
+                        {
+                            RepeatsNameBack = name.MeasureIndex - lastName.MeasureIndex,
+                            RepeatsNameAt = lastName.SourcePosition,
+                        };
+                    lastName = name;
+                }
+                else
+                    lastName = null;
             }
         }
-        return marked.MoveToImmutable();
+        return (markedArticulations?.MoveToImmutable() ?? articulations, markedNames?.MoveToImmutable() ?? chordNames);
+    }
+
+    private sealed class Site
+    {
+        public int? Diagram, Name;
+        public bool Other;
     }
 }

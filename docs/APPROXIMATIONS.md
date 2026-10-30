@@ -511,7 +511,7 @@
 - **`LayoutEngine.TrailingRowBandBelowSystem`** ⚠️ LILYSHARP-OWN: departs from lily/page-layout-problem.cc:919-925
 - **`LayoutEngine.BuildLooseLinesBetween`** ⚠️ ONLY ACROSS A GROUP BOUNDARY, AND THAT CONDITION IS LILYSHARP-OWN. LilyPond has
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.cs`
-- **`LayoutEngine.ItemDiagramsAtChanges`** LILYSHARP-OWN: made once the lines are broken, and the breaks priced every diagram: a
+- **`LayoutEngine.ItemDiagramsAtChanges`** LILYSHARP-OWN: made once the lines are broken. A repeat is not priced in the bar's springs
 - **`LayoutEngine.LayoutSystems`** (LILYSHARP-OWN: LilyPond never emits a system with no live staff at all).
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.Finishing.cs`
 - **`LayoutEngine.EffectiveIndent`** score were cut at the edge (owner's report 2026-10-27). LILYSHARP-OWN: the indent grows

@@ -205,7 +205,8 @@ public sealed record MultiStaffScore
     public ImmutableArray<FiguredBassItem> FiguredBasses { get; }
 
     /// <summary>Chord name symbols.</summary>
-    public ImmutableArray<ChordNameItem> ChordNames { get; }
+    /// <remarks>Init-settable as <see cref="Articulations"/> is (<c>LayoutEngine.ItemDiagramsAtChanges</c>).</remarks>
+    public ImmutableArray<ChordNameItem> ChordNames { get; init; }
 
     /// <summary>Percent repeat markers.</summary>
     public ImmutableArray<PercentRepeatItem> PercentRepeats { get; }

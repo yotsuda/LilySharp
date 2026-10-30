@@ -473,7 +473,10 @@ internal static partial class SpacingRules
         bool any = false;
         foreach (var cn in chordNames)
         {
-            if (cn.MeasureIndex != measureIndex)
+            // A chord item's repeated name is not priced, as its repeated diagram is not
+            // (ApplyFretFrameSpacing): it stands only at a system's head. The twin writes it
+            // with an empty extra-spacing-width (LilyPondExporter.InlineChordEntry).
+            if (cn.MeasureIndex != measureIndex || cn.RepeatsNameBack >= 0)
                 continue;
             // Row symbols always price; STAFF-ATTACHED symbols only when the
             // caller opts in (an all-rest measure has no other width source).
@@ -660,7 +663,7 @@ internal static partial class SpacingRules
 
         foreach (var cn in chordNames)
         {
-            if (cn.MeasureIndex != measureIndex)
+            if (cn.MeasureIndex != measureIndex || cn.RepeatsNameBack >= 0)
                 continue;
             // The same filter as ApplyChordRowSpacing: an inline @chord is attached too.
             if (!cn.IsChordRow && !includeAttached)
@@ -1690,7 +1693,12 @@ internal static partial class SpacingRules
         {
             if (art.Type != Syntax.ArticulationType.FretFrame || art.StaffIndex != staffIndex
                 || art.MeasureIndex != measureIndex || art.VoiceIndex >= voices.Length
-                || measureIndex >= voices[art.VoiceIndex].Measures.Length)
+                || measureIndex >= voices[art.VoiceIndex].Measures.Length
+                // A chord item's repeated diagram is not priced (owner's decision 2026-10-31):
+                // it stands only at a system's head (LayoutEngine.ItemDiagramsAtChanges), and
+                // a strum's bar priced for a diagram on every beat spread a line to two bars.
+                // There it may meet a change a column on; the twin writes it without textLengthOn.
+                || art.RepeatsDiagramBack >= 0)
                 continue;
             var items = voices[art.VoiceIndex].Measures[measureIndex].Items;
             if (art.ItemIndex >= items.Length)

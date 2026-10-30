@@ -159,6 +159,20 @@ public sealed record ChordNameItem
     /// articulation item).</summary>
     public string? DrawnShape { get; init; }
 
+    /// <summary>True for the name a <c>chord(…)</c> ITEM prints — the one kind that stands only
+    /// where the chord changes (<see cref="RepeatsNameBack"/>).</summary>
+    public bool IsItemName { get; init; }
+
+    /// <summary>For an item's name that repeats the name the item before it in its voice printed
+    /// (the same text over the same diagram): how many bars back that one stands (0 = the same
+    /// bar). Else -1. Like an item's repeated diagram (<see cref="ArticulationItem.RepeatsDiagramBack"/>),
+    /// it stands only at a system's head (owner's decision 2026-10-31).</summary>
+    public int RepeatsNameBack { get; init; } = -1;
+
+    /// <summary>The source position of the item name this one repeats, or -1: the twin's key
+    /// (<see cref="ArticulationItem.RepeatsDiagramAt"/>).</summary>
+    public int RepeatsNameAt { get; init; } = -1;
+
     /// <summary>
     /// The <c>@todo</c> a chords-row symbol or no-chord slot carries (<c>Am7@todo("Am7 or C?")</c>,
     /// owner's decision 2026-10-11, docs/todo-memo-design.md §5), as <see cref="MusicItem.TodoKey"/>

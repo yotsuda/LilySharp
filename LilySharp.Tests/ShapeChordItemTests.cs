@@ -533,11 +533,16 @@ public class ShapeChordItemTests
         Assert.Equal(new[] { "frame:133211", "frame:320003", "frame:320003", "frame:320003" },
             laid.ArticulationLayouts.Where(a => a.Glyph.StartsWith("frame:")).OrderBy(a => a.SourceIndex)
                 .Select(a => a.Glyph));
-        // The twin: each repeat asks whether the diagram it repeats is on its system.
+        // The names likewise: the repeated F goes; the diagram(…) items print none, the @chord(G) is its own.
+        Assert.Equal(new[] { -1, 0, -1 }, collected.ChordNames.OrderBy(c => c.SourcePosition).Select(c => c.RepeatsNameBack));
+        Assert.Equal(new[] { "F", "G" }, laid.ChordNameLayouts.OrderBy(c => c.SourcePosition).Select(c => c.ChordText));
+        // The twin: each repeat asks whether the diagram (or name) it repeats is on its system.
         string ly = new LilyPondExporter().Export(tree);
         Assert.Contains("#(define (lysRepeatedDiagram from)", ly);
-        Assert.Equal(4, Regex.Matches(ly, "lysRepeatedDiagram \\d+").Count);
-        Assert.Equal(4, Regex.Matches(ly, "lysItemDiagram \\d+").Count);
+        Assert.Equal(4, Regex.Matches(ly, "-\\\\tweak after-line-breaking #\\(lysRepeatedDiagram \\d+").Count);
+        Assert.Equal(4, Regex.Matches(ly, "-\\\\tweak before-line-breaking #\\(lysItemDiagram \\d+").Count);
+        Assert.Single(Regex.Matches(ly, "ChordName.after-line-breaking = #\\(lysRepeatedDiagram -\\d+"));
+        Assert.Single(Regex.Matches(ly, "ChordName.before-line-breaking = #\\(lysItemDiagram -\\d+"));
         // None repeats: none of it.
         Assert.DoesNotContain("lysItemDiagram", new LilyPondExporter().Export(SyntaxTree.Parse(
             Book("instrument guitar", "chord(F 133211)2 chord(G 320003)2 |"))));

@@ -289,13 +289,15 @@ internal sealed class ChordNameCollector
         int position, int staffIndex, LilySharp.Core.Music.ChordStructure? structure = null,
         int superFrom = LilySharp.Core.Music.ChordSymbolText.NoSuperscript,
         int bracketSuperFrom = LilySharp.Core.Music.ChordSymbolText.NoSuperscript,
-        string? drawnShape = null, int voiceIndex = 0)
+        string? drawnShape = null, int voiceIndex = 0, bool fromItem = false)
     {
         var item = new ChordNameItem(text, measureIndex, itemIndex, position, staffIndex,
             timing: timing, structure: structure)
         {
             SuperFrom = superFrom, BracketSuperFrom = bracketSuperFrom, DrawnShape = drawnShape,
             VoiceIndex = voiceIndex,
+            // A chord(…) item's: where the chord changes, and at a system's head (ItemDiagramRuns).
+            IsItemName = fromItem,
         };
         _items.Add(item);
         return item;

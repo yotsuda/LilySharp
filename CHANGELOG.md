@@ -48,10 +48,11 @@ workflow attaches that section to the GitHub Release verbatim.
     the chord symbols.
   - Spread in `<< >>`, the item draws its diagram once, over its first note, on the page and
     in the twin. Before, it drew one over every note.
-  - Strum after strum, the diagram stands where the chord changes, and again at the head of each
-    system: `chord(F 133211)4` four times draws one diagram, not four. Any other chord in between
-    (an `@chord`, an `@diagram`, another shape) starts a new one. The twin makes the same choice on
-    LilyPond's own line breaks.
+  - Strum after strum, the diagram and the name stand where the chord changes, and again at the
+    head of each system: `chord(F 133211)4` four times prints one F and one diagram, not four. Any
+    other chord in between (an `@chord`, an `@diagram`, another shape) starts again. A repeat takes
+    no room in its bar, so a strummed line is as tight as one without diagrams. The twin makes the
+    same choice on LilyPond's own line breaks.
 - `[editor]` **Ctrl+Shift+Up/Down steps a `diagram(…)` item with no symbol** (`diagram(x32010)`).
   It walks the other shapes of the chord the shape sounds, rewriting the shape only: x32010 is C,
   and the status bar says *C: shape 2 of …*. Down at the first shape keeps it.

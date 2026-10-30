@@ -86,6 +86,9 @@ internal static class ScoreAssembler
     /// path used to drop chord names / percent repeats / cross-staff items.
     /// </summary>
     public static Score BuildScore(ImmutableArray<Voice> voices, ScoreContent c) =>
+        BuildMarkedScore(voices, ItemDiagramRuns.Mark(c));
+
+    private static Score BuildMarkedScore(ImmutableArray<Voice> voices, ScoreContent c) =>
         new Score(
             voices,
             c.TimeSignature,
@@ -95,8 +98,7 @@ internal static class ScoreAssembler
             c.Title,
             c.Composer,
             dynamics: c.Dynamics,
-            // A chord item's diagram where the chord changes (ItemDiagramRuns).
-            articulations: ItemDiagramRuns.Mark(c.Articulations, c.ChordNames),
+            articulations: c.Articulations,
             graceNotes: c.GraceNotes,
             lyrics: c.Lyrics,
             musicMarks: c.MusicMarks,
@@ -135,6 +137,9 @@ internal static class ScoreAssembler
     /// in-music \override colours / hides grobs on a multi-staff score too).
     /// </summary>
     public static MultiStaffScore BuildMultiStaffScore(ImmutableArray<StaffGroup> staffGroups, ScoreContent c) =>
+        BuildMarkedMultiStaffScore(staffGroups, ItemDiagramRuns.Mark(c));
+
+    private static MultiStaffScore BuildMarkedMultiStaffScore(ImmutableArray<StaffGroup> staffGroups, ScoreContent c) =>
         new MultiStaffScore(
             staffGroups,
             c.TimeSignature,
@@ -149,8 +154,7 @@ internal static class ScoreAssembler
             voltaBrackets: c.VoltaBrackets,
             tupletBrackets: c.TupletBrackets,
             dynamics: c.Dynamics,
-            // A chord item's diagram where the chord changes (ItemDiagramRuns).
-            articulations: ItemDiagramRuns.Mark(c.Articulations, c.ChordNames),
+            articulations: c.Articulations,
             graceNotes: c.GraceNotes,
             arpeggios: c.Arpeggios,
             figuredBasses: c.FiguredBasses,
