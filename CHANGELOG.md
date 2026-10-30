@@ -35,6 +35,9 @@ workflow attaches that section to the GitHub Release verbatim.
   - A drop of two levels or more between two phrases a part plays one after the other, inside a
     section. A phrase played again keeps the levels written in it.
   - A drum part whose crashes mostly come in off the bars the other parts' phrases begin on.
+  - A section that plays an earlier one again, note for note in every part, with only its levels
+    and marks changed. This is caught even when the copy is written out in phrases with new names.
+  - A last bar where one part runs on while the others hold their final note.
 - `[render]` **A drum part's bars are counted by its notes**: the page's bar count had counted only
   a drum part's bar lines, so a drum part longer than the others was cut to their length.
 

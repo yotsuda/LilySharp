@@ -99,6 +99,7 @@ public static class CompositionChecks
         findings.AddRange(LateLevels(root, parts.Where(p => RoleOf(p).Drums || InstrumentOf(p) is "" || InstrumentOf(p).StartsWith("piano", System.StringComparison.Ordinal))
             .Select(p => p.Name.Text).ToHashSet(System.StringComparer.Ordinal)));
         findings.AddRange(CopiedSections(root));
+        findings.AddRange(ReplayedSections(root));
         findings.AddRange(CrashesOffThePhrases(root, parts.Where(p => RoleOf(p).Drums).Select(p => p.Name.Text)
             .ToHashSet(System.StringComparer.Ordinal)));
         findings.AddRange(SpelledAgainstTheKey(root, parts, System.Text.RegularExpressions.Regex.IsMatch(source, @"(?m)^\s*pitch\s+concert\b")));
@@ -523,6 +524,7 @@ public static class CompositionChecks
         }
         if (parts.Select(p => p.Name.Text).FirstOrDefault(n => melodies.Contains(n) && byPart.ContainsKey(n)) is { } tune)
             findings.AddRange(OpenEndings(midi, tune, fifths));
+        findings.AddRange(EndsApart(midi, barList));
 
         // The length and the ending (owner's report 2026-10-27: the composed piano piece was 8 bars, two
         // sections of four, and its end "unnatural" — it began in E minor and stopped in G major).
@@ -745,6 +747,35 @@ public static class CompositionChecks
                 + "or the fifth over the bass), held, a cadence the next section starts from.";
     }
 
+    /// <summary>
+    /// The last bar with some parts holding their final note or chord from its first beat and another
+    /// still running on through it (owner's review 2026-10-30: a rock trio's guitar held its last chord
+    /// and the drums struck a crash and a kick for the whole bar while the bass went on in eighths — the
+    /// band did not end together). A part holds when everything it plays there starts on the downbeat;
+    /// it runs on with four onsets or more.
+    /// </summary>
+    private static IEnumerable<string> EndsApart(MidiFile midi, List<int> barList)
+    {
+        int end = midi.EndTick;
+        var starts = barList.Where(b => b < end).ToList();
+        if (starts.Count < 2)
+            yield break;
+        int last = starts[^1];
+        var inLast = midi.Tracks.SelectMany(t => t.Notes.Select(n => (Part: n.Part ?? t.Name, n.StartTick)))
+            .Where(n => n.StartTick >= last && n.StartTick < end && !n.Part.EndsWith(" (chords)", System.StringComparison.Ordinal))
+            .GroupBy(n => n.Part).ToDictionary(g => g.Key, g => g.Select(n => n.StartTick).Distinct().Count());
+        var heldOn = midi.Tracks.SelectMany(t => t.Notes.Select(n => (Part: n.Part ?? t.Name, n.StartTick)))
+            .Where(n => n.StartTick >= last && n.StartTick < end).GroupBy(n => n.Part)
+            .Where(g => g.All(n => n.StartTick == last)).Select(g => g.Key).ToList();
+        var running = inLast.Where(p => p.Value >= 4).Select(p => p.Key).ToList();
+        if (heldOn.Count == 0 || running.Count == 0)
+            yield break;
+        yield return $"{string.Join(", ", running)} {(running.Count == 1 ? "runs" : "run")} on through the last bar "
+            + $"({inLast[running[0]]} notes) while {string.Join(" and ", heldOn)} {(heldOn.Count == 1 ? "holds its" : "hold their")} "
+            + "last note from its first beat — the parts end together: let every part land on the final chord on the same beat "
+            + "and hold it (the bass on the root), or all stop together on a hit.";
+    }
+
     /// <summary>The bars a minute and a half to three minutes take at the piece's own pace — its
     /// seconds over its bars; the guide's 4/4 count where it played no time.</summary>
     private static string BarsFor(int seconds, int bars)
@@ -834,6 +865,60 @@ public static class CompositionChecks
             .Select(g => g.Select(s => s.SectionName).ToList())
             .Select(names => $"{string.Join(" and ", names.Skip(1))} {(names.Count > 2 ? "are" : "is")} {names[0]} again, note for note: "
                 + $"write {names[0]} once and name it again in the form where it returns, not a second section with the same notes.");
+    }
+
+    /// <summary>
+    /// A section that plays an earlier one again, note for note in every part, only its marks — levels,
+    /// accents — changed (owner's review 2026-10-30: a rock trio's last chorus was its chorus again at
+    /// @ff, written out in phrases of new names, an octave below the solo before it — no lift).
+    /// <see cref="CopiedSections"/> reads the written text and misses it: here each part's phrases are
+    /// read in place and the marks left out. A section copied as written is said there, not here.
+    /// </summary>
+    private static IEnumerable<string> ReplayedSections(SyntaxNode root)
+    {
+        var phrases = SectionBarCounts.PhraseBodies(root);
+        string source = root.ToFullString();
+        // The node's text, each phrase reference in it replaced by the phrase it plays.
+        string Played(SyntaxNode node, int depth)
+        {
+            var text = new System.Text.StringBuilder();
+            int at = node.Span.Start;
+            foreach (var r in node.DescendantNodes<VariableReferenceSyntax>().OrderBy(r => r.Span.Start))
+            {
+                if (r.Span.Start < at || depth >= 8 || !phrases.TryGetValue(r.Name.Text, out var body))
+                    continue;
+                text.Append(source, at, r.Span.Start - at).Append(' ').Append(Played(body, depth + 1)).Append(' ');
+                at = r.Span.Start + r.Span.Length;
+            }
+            return text.Append(source, at, node.Span.Start + node.Span.Length - at).ToString();
+        }
+        static string Unmarked(string text) => System.Text.RegularExpressions.Regex.Replace(
+            System.Text.RegularExpressions.Regex.Replace(text, @"@\s*[\w.()<>!]+", ""), @"\s+", " ").Trim();
+        var sections = root.DescendantNodes<SectionDeclarationSyntax>().Where(s => s.Parent is CompilationUnitSyntax)
+            .GroupBy(s => s.SectionName).Select(g => g.First()).ToList();
+        // The written body, as CopiedSections compares it.
+        static string Written(SectionDeclarationSyntax s)
+        {
+            string text = s.ToFullString();
+            return System.Text.RegularExpressions.Regex.Replace(text[System.Math.Max(0, text.IndexOf('{'))..], @"\s+", " ").Trim();
+        }
+        var notes = sections.Select(s => (Section: s, Written: Written(s),
+            Parts: s.ChildNodes().OfType<PartBlockSyntax>().ToDictionary(b => b.PartName.Text, b => Unmarked(Played(b, 0))))).ToList();
+        var said = new HashSet<string>();
+        for (int later = 1; later < notes.Count; later++)
+            for (int earlier = 0; earlier < later; earlier++)
+            {
+                var (a, b) = (notes[earlier], notes[later]);
+                if (said.Contains(b.Section.SectionName) || b.Parts.Count == 0 || a.Parts.Count != b.Parts.Count
+                    || b.Parts.Any(p => !a.Parts.TryGetValue(p.Key, out var same) || same != p.Value)
+                    || a.Written == b.Written)
+                    continue;
+                said.Add(b.Section.SectionName);
+                yield return $"{b.Section.SectionName} plays {a.Section.SectionName} again, note for note in every part — only its levels "
+                    + $"and marks differ: a section that returns to end the piece lifts — the tune an octave up or in harmony, a held "
+                    + $"note at its top, a bar or two changed toward its close, the drums opened up — or, if it is the same music, name "
+                    + $"{a.Section.SectionName} again in the form instead of a copy.";
+            }
     }
 
     /// <summary>

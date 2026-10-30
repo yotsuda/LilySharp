@@ -625,6 +625,16 @@ async function proposeScore(deps: AiTransformDeps, input: ProposeScoreInput, tok
         return `Not shown to the musician: its bars do not add up — the parts would not stay together.\n${formatDiags(misfit, text)}\n`
             + 'Count the beats of each bar named (the bars of each voice named), mend it, and call lilysharp_proposeScore again with the whole corrected text.';
     }
+    // A note its instrument cannot sound goes back every time too, the score's own as well (owner's
+    // decision 2026-10-30: a rock trio's last guitar chord kept an E♭2 below the guitar's E2, "for its
+    // open sound", the warning told once and left).
+    const unplayable = diags.filter(d => d.Severity === 'warning' && d.Code === OUT_OF_RANGE_CODE);
+    if (unplayable.length > 0) {
+        deps.log(`AI proposal (chat): turned down — ${unplayable.length} note(s) out of their instrument's range.`);
+        return `Not shown to the musician: its players cannot play it — a note out of its instrument's range.\n${formatDiags(unplayable, text)}\n`
+            + 'Move each note named into the range (an octave up or down, or another note of its chord), or give the part an '
+            + 'instrument that has it, and call lilysharp_proposeScore again with the whole corrected text.';
+    }
     // Its compiler warnings go back with it, unseen, the same once (owner's report 2026-10-29: a
     // piece written with a warning was proposed again at once to mend it, and the musician saw the
     // half-done piece in the editor and then a panel to accept its mending).
@@ -2043,6 +2053,10 @@ const MACHINE_WARNING = /is not installed on this system/;
  *  same day: a drum part's feet line ran 18 bars past the song): turned down from the chat as an
  *  error is. */
 const BAR_LENGTH_CODES = new Set(['LYS2001', 'LYS2002', 'LYS2004', 'LYS2006', 'LYS2007', 'LYS2019']);
+
+/** A note its part's instrument cannot sound (LYS1052): turned down from the chat as a bar that
+ *  does not add up is (owner's decision 2026-10-30). */
+const OUT_OF_RANGE_CODE = 'LYS1052';
 
 /**
  * The warnings a candidate ADDS, judged the way errors are: the file with the candidate has

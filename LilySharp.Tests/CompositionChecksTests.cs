@@ -821,6 +821,42 @@ public class CompositionChecksTests
         Assert.DoesNotContain(CompositionChecks.Of(onTime), f => f.StartsWith("kit:") && f.Contains("crashes"));
     }
 
+    // Owner's review 2026-10-30: a rock trio's last chorus was its chorus again at @ff, written out in
+    // phrases of new names; and its bass ran on in eighths under the last held chord and crash.
+    const string Song2 = """
+        title "Spark"
+        time 4/4
+        octave absolute
+        part gt "Guitar" { instrument guitar }
+        part bs "Bass" { instrument bass }
+        phrase tuneA { e'4@f g' a' b' | e''1 | }
+        phrase tuneZ { e'4@ff g' a' b' | e''1 | }
+        phrase lowA { e,8@f e, e, e, e, e, e, e, | e,8 e, e, e, e, e, e, e, | }
+        phrase lowZ { e,8@ff e, e, e, e, e, e, e, | ENDING | }
+        section A { gt { tuneA } bs { lowA } }
+        section Z { gt { tuneZ } bs { lowZ } }
+        form { ~A ~Z }
+        score { staff gt staff bs }
+        """;
+
+    [Fact]
+    public void ASectionPlayingAnEarlierOneAgain_OnlyLouder_IsToldSo()
+    {
+        var findings = CompositionChecks.Of(Song2.Replace("ENDING", "e,8 e, e, e, e, e, e, e,"));
+        Assert.Contains(findings, f => f.StartsWith("Z plays A again, note for note in every part — only its levels and marks differ"));
+        // A bar changed toward its close is music of its own.
+        Assert.DoesNotContain(CompositionChecks.Of(Song2.Replace("ENDING", "e,8 e, e, e, e, e, e, e,").Replace("tuneZ { e'4@ff g' a' b' | e''1", "tuneZ { e'4@ff g' a' b' | g''1")),
+            f => f.StartsWith("Z plays A again"));
+    }
+
+    [Fact]
+    public void APartRunningOnUnderTheOthersLastHeldChord_IsToldSo()
+    {
+        Assert.Contains(CompositionChecks.Of(Song2.Replace("ENDING", "e,8 e, e, e, e, e, e, e,")),
+            f => f.StartsWith("bs runs on through the last bar (8 notes) while gt holds its last note from its first beat"));
+        Assert.DoesNotContain(CompositionChecks.Of(Song2.Replace("ENDING", "e,1")), f => f.Contains("through the last bar"));
+    }
+
     // Owner's question 2026-10-27, "a model asked in a chat has no example — is none better?": the
     // grammar shows no whole piece to compose after, only how each thing is written.
     [Fact]

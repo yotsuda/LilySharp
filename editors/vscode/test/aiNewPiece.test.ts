@@ -62,6 +62,11 @@ describe('the composing guide', () => {
         const misfit = fn.indexOf('const misfit = diags.filter(d => d.Severity === \'warning\' && BAR_LENGTH_CODES.has(d.Code ?? \'\'));');
         assert.ok(misfit > 0 && misfit < fn.indexOf('musicCheckedFor.has(uri.toString())'));
         assert.match(fn, /return `Not shown to the musician: its bars do not add up/);
+        // A note out of its instrument's range, the same (owner's decision 2026-10-30).
+        assert.match(transform, /const OUT_OF_RANGE_CODE = 'LYS1052';/);
+        const unplayable = fn.indexOf('const unplayable = diags.filter(d => d.Severity === \'warning\' && d.Code === OUT_OF_RANGE_CODE);');
+        assert.ok(unplayable > misfit && unplayable < fn.indexOf('musicCheckedFor.has(uri.toString())'));
+        assert.match(fn, /return `Not shown to the musician: its players cannot play it/);
     });
     // Owner's request 2026-10-29: the chat listed the folder in a terminal to see that a name was free.
     it('gives the chat a tool to check a new file name, and asks for nothing in a terminal', () => {
