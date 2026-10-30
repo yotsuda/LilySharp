@@ -493,6 +493,23 @@ public class RemoveStringNumbersResponse
     public string? Error { get; set; }
 }
 
+/// <summary>Parameters for lilysharp/shapeToNotes: the document and an offset on the item.</summary>
+public class ShapeToNotesParams
+{
+    public TextDocumentIdentifier TextDocument { get; set; } = null!;
+    public int Offset { get; set; }
+}
+
+/// <summary>Response for lilysharp/shapeToNotes: replace <c>[Start, End)</c> (source offsets)
+/// with <see cref="Replacement"/>, or <see cref="Error"/> says why the item was left alone.</summary>
+public class ShapeToNotesResponse
+{
+    public int Start { get; set; }
+    public int End { get; set; }
+    public string? Replacement { get; set; }
+    public string? Error { get; set; }
+}
+
 /// <summary>Parameters for lilysharp/splitSections: the document, and optionally the section
 /// to split (null: the first one some part subdivides) and the part to follow (null: the only
 /// candidate, or the first of several that agree — otherwise the response asks).</summary>

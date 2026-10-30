@@ -455,6 +455,11 @@
         "title": "Remove All String Numbers"
       },
       {
+        "command": "lilysharp.convertShapeToNotes",
+        "category": "Lily#",
+        "title": "Convert to Chord Notes <…>"
+      },
+      {
         "command": "lilysharp.extractPhrase",
         "category": "Lily#",
         "title": "Extract Phrase from Section"
@@ -760,6 +765,10 @@
           "command": "lilysharp.newScore"
         },
         {
+          "command": "lilysharp.convertShapeToNotes",
+          "when": "editorLangId == lilysharp"
+        },
+        {
           "command": "lilysharp.chooseSoundFont"
         },
         {
@@ -1028,6 +1037,11 @@
         }
       ],
       "editor/context": [
+        {
+          "command": "lilysharp.convertShapeToNotes",
+          "when": "resourceLangId == lilysharp && lilysharp.onShapeItem",
+          "group": "1_modification@0"
+        },
         {
           "command": "lilysharp.askAiInChat",
           "when": "resourceLangId == lilysharp",

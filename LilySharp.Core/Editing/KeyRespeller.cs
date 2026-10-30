@@ -200,10 +200,10 @@ public static class KeyRespeller
     }
 
     // `es`/`as` rather than `ees`/`aes` when the file already writes them so.
-    private static bool UsesContractedFlats(SyntaxNode root)
+    internal static bool UsesContractedFlats(SyntaxNode root)
         => root.DescendantNodes<PitchSyntax>().Any(p => p.PitchToken.Text is "es" or "as" or "eses" or "ases");
 
-    private static string Name(int step, int alter, bool contracted)
+    internal static string Name(int step, int alter, bool contracted)
     {
         char letter = "cdefgab"[step];
         if (contracted && letter is 'e' or 'a' && alter < 0)

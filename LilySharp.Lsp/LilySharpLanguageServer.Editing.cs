@@ -409,6 +409,13 @@ public sealed partial class LilySharpLanguageServer
     /// the server for the plan (lilysharp/splitSections), shows it and applies it.</summary>
     internal const string SplitSectionsCommand = "lilysharp.splitSectionsToMatch";
 
+    /// <summary>The command "Convert to chord notes" runs — the extension's, which asks the server
+    /// for the rewrite (lilysharp/shapeToNotes, <see cref="LilySharp.Core.Editing.ShapeChordConverter"/>)
+    /// and applies it. The editor's context menu runs it too, at the caret.</summary>
+    internal const string ConvertShapeToNotesCommand = "lilysharp.convertShapeToNotes";
+
+    internal const string ConvertShapeToNotesTitle = "Convert to chord notes <…>";
+
     /// <summary>The second quick fix for an LYS2007 (owner's decision, 2026-09-28): when one part
     /// has cut the section into several and the others still write it whole, offer to cut the
     /// others the same way. Only OFFERED here, from the cheap part of the splitter (a parse
@@ -663,7 +670,21 @@ public sealed partial class LilySharpLanguageServer
     internal static IEnumerable<CodeAction> ShapeNameActions(Document doc, Uri uri, int offset)
     {
         var item = doc.Tree.GetNodes<ChordSyntax>().FirstOrDefault(c => c.IsShapeChord
-            && c.SourceStart <= offset && offset <= c.SourceStart + c.Width);
+            && c.Span.Start <= offset && offset <= c.Span.End);
+        // Write it out as the <…> chord it plays (owner's request 2026-10-31) — offered on sight,
+        // worked out when picked (lilysharp/shapeToNotes walks the file).
+        if (item != null)
+            yield return new CodeAction
+            {
+                Title = ConvertShapeToNotesTitle,
+                Kind = CodeActionKind.RefactorRewrite,
+                Command = new Command
+                {
+                    Title = ConvertShapeToNotesTitle,
+                    CommandIdentifier = ConvertShapeToNotesCommand,
+                    Arguments = [uri.ToString(), item.SourceStart],
+                },
+            };
         if (item == null || item.ShapeWordSpans is not { Count: > 0 } spans
             || NoteStepper.UnnamedShapeChord(item) is not { } chord)
             yield break;

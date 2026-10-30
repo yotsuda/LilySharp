@@ -943,6 +943,10 @@ public sealed class ChordSyntax : SyntaxNode
         }
     }
 
+    /// <summary>The source position just past a shape chord's closing <c>)</c>, or -1 (a
+    /// <c>&lt;…&gt;</c> chord, or words never closed).</summary>
+    public int ShapeCloseEnd => ShapeCloseSlot is int close and >= 0 && GetChild(close) is SyntaxTokenNode t ? t.Span.End : -1;
+
     /// <summary>The first slot of the chord's tail (octave marks, duration, tremolo,
     /// post-events): past the <c>)</c> of a shape chord's words, 0 otherwise (a
     /// <c>&lt;…&gt;</c> chord's accessors have always scanned from the start).</summary>

@@ -42,6 +42,7 @@ import { markdownItExtensionApi } from './markdownFence';
 import { svgPostKey, pagesSummary, SvgPages, previewOnEditorShown, sourceGroupToReveal, newPreviewColumn, scoreGroupFor, sourceGroupToOpen, SourceTab, jumpOffsetFor, chordSpans, chordAtCaret } from './previewCore';
 import { textFontFaceCss, textFontsRoot } from './scoreFonts';
 import { SplitSectionsChoice, modalText, splitChoiceItems } from './splitSectionsCore';
+import { onShapeItem } from './shapeItemCore';
 import { cleanHistory, forgetFont, recordFont, samePath, shownFonts } from './soundFontHistoryCore';
 
 // True if `cmd` resolves on PATH (used to give a clear error when the
@@ -768,6 +769,10 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.commands.registerCommand('lilysharp.convertOctavesToAbsolute', () => convertOctaves(true)),
         vscode.commands.registerCommand('lilysharp.convertOctavesToRelative', () => convertOctaves(false)),
         vscode.commands.registerCommand('lilysharp.removeStringNumbers', () => removeStringNumbers()),
+        // From the context menu at the caret, or from the code action with the document and offset.
+        vscode.commands.registerCommand('lilysharp.convertShapeToNotes',
+            (uri?: string, offset?: number) => convertShapeToNotes(
+                typeof uri === 'string' ? uri : undefined, typeof offset === 'number' ? offset : undefined)),
         vscode.commands.registerCommand('lilysharp.extractPhrase', () => {
             outputChannel.appendLine('extractPhrase command triggered');
             extractPhrase();
@@ -1163,6 +1168,20 @@ export function activate(context: vscode.ExtensionContext) {
             }
         }
     }));
+
+    // "Convert to chord notes" stands in the context menu only on a chord(…) / diagram(…) item.
+    let wasOnShapeItem = false;
+    context.subscriptions.push(
+        vscode.window.onDidChangeTextEditorSelection(event => {
+            const doc = event.textEditor.document;
+            const at = event.selections[0]?.active;
+            const on = doc.languageId === 'lilysharp' && at !== undefined
+                && onShapeItem(doc.lineAt(at.line).text, at.character);
+            if (on !== wasOnShapeItem) {
+                wasOnShapeItem = on;
+                void vscode.commands.executeCommand('setContext', 'lilysharp.onShapeItem', on);
+            }
+        }));
 
     // Watch for cursor position changes
     context.subscriptions.push(
@@ -2442,6 +2461,50 @@ async function removeStringNumbers() {
             `Lily#: removed ${response.Removed} string number(s); the tab now chooses every string.`);
     } catch (err) {
         vscode.window.showErrorMessage(`Lily#: removing string numbers failed: ${err}`);
+    }
+}
+
+interface ShapeToNotesResponse {
+    Start: number;
+    End: number;
+    Replacement: string | null;
+    Error: string | null;
+}
+
+/**
+ * Writes the chord(…) / diagram(…) item at the caret (or at `offset` of `uri`, from the code
+ * action) out as the <…> chord it plays — the server works out the notes and their octave marks
+ * and checks that the file still sounds the same. One edit, so one undo puts the item back.
+ */
+async function convertShapeToNotes(uri?: string, offset?: number) {
+    if (!client) {
+        vscode.window.showErrorMessage('Lily#: language server not ready.');
+        return;
+    }
+    const editor = vscode.window.activeTextEditor;
+    const doc = uri !== undefined
+        ? vscode.workspace.textDocuments.find(d => d.uri.toString() === uri)
+        : editor?.document;
+    if (!doc || doc.languageId !== 'lilysharp') {
+        vscode.window.showErrorMessage('Lily#: put the caret on a chord(…) or diagram(…) item in a .lys file.');
+        return;
+    }
+    const at = offset ?? (editor ? doc.offsetAt(editor.selection.active) : 0);
+    try {
+        const response = await client.sendRequest<ShapeToNotesResponse>('lilysharp/shapeToNotes', {
+            textDocument: { uri: doc.uri.toString() },
+            offset: at,
+        });
+        if (response.Replacement == null) {
+            vscode.window.showInformationMessage(`Lily#: ${response.Error}`);
+            return;
+        }
+        const edit = new vscode.WorkspaceEdit();
+        edit.replace(doc.uri, new vscode.Range(doc.positionAt(response.Start), doc.positionAt(response.End)),
+            response.Replacement);
+        await vscode.workspace.applyEdit(edit);
+    } catch (err) {
+        vscode.window.showErrorMessage(`Lily#: converting the chord failed: ${err}`);
     }
 }
 

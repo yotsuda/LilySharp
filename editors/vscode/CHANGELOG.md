@@ -24,6 +24,12 @@ All notable changes to the Lily# VS Code extension are documented here.
   the diagram alone**, and both sound the shape. Both words are coloured as keywords;
   Ctrl+Shift+Up/Down steps the shape and completion offers chord symbols inside the parentheses.
   With no shape written, `chord(F)1` plays the usual shape (a piano part: `<f a c>`).
+  Strum after strum, the name and diagram stand where the chord changes and at each system's head.
+- **Right-click a `chord(…)` or `diagram(…)` item → "Convert to Chord Notes <…>"** writes it out
+  as the chord it plays, with its octave marks and string numbers: `diagram(133211)4` becomes
+  `<f,\6 c\5 f'\4 a'\3 c'\2 f''\1>4@diagram(133211)`. What it showed stays, as `@chord(…)` or
+  `@diagram(…)`; the file sounds the same, or nothing changes. Also in the light bulb and the
+  command palette.
 - **Ctrl+Shift+Up/Down steps a `diagram(…)` item with no symbol** (`diagram(x32010)`) through the
   other shapes of the chord it sounds. x32010 is C, and only the shape changes.
 - **With shapes for two instruments written** (`@chord(C x32010 0003)`), Ctrl+Shift+Up/Down steps

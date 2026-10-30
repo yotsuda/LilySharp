@@ -1108,7 +1108,8 @@ public static class OctaveModeConverter
     /// file — the same passes <see cref="Semantics.ResolvedPitches"/> makes) with
     /// <paramref name="hook"/> on every written pitch. False when a score will not collect.
     /// </summary>
-    private static bool Walk(SyntaxTree tree, Func<int, int, int> hook)
+    internal static bool Walk(SyntaxTree tree, Func<int, int, int> hook,
+        Action<int, System.Collections.Immutable.ImmutableArray<Music.ShapeNote>>? shapeNotes = null)
     {
         var specs = RenderSpecParser.FindAll(tree);
         IEnumerable<RenderSpec?> passes = specs;
@@ -1125,6 +1126,7 @@ public static class OctaveModeConverter
                     StaffPitch = spec?.StaffPitch,
                     RecordsPitchTrace = false,
                     OctaveOverride = hook,
+                    ShapeNotesObserver = shapeNotes,
                 };
                 SvgGenerator.CollectScore(collector, tree, spec);
             }

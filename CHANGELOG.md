@@ -53,6 +53,11 @@ workflow attaches that section to the GitHub Release verbatim.
     other chord in between (an `@chord`, an `@diagram`, another shape) starts again. A repeat takes
     no room in its bar, so a strummed line is as tight as one without diagrams. The twin makes the
     same choice on LilyPond's own line breaks.
+- `[editor]` **Right-click a `chord(…)` or `diagram(…)` item → "Convert to Chord Notes <…>".** The item
+  becomes the `<…>` chord it plays — its notes lowest first, with string numbers and the octave
+  marks the frame there needs: `diagram(133211)4` → `<f,\6 c\5 f'\4 a'\3 c'\2 f''\1>4@diagram(133211)`.
+  What it showed stays in one word (`@chord(F 133211)`, `@diagram(133211)`). The file must sound
+  the same afterwards, or nothing changes. Not inside `<< >>`.
 - `[editor]` **Ctrl+Shift+Up/Down steps a `diagram(…)` item with no symbol** (`diagram(x32010)`).
   It walks the other shapes of the chord the shape sounds, rewriting the shape only: x32010 is C,
   and the status bar says *C: shape 2 of …*. Down at the first shape keeps it.

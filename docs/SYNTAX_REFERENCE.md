@@ -2836,7 +2836,10 @@ diagram(C xx-10-12-13-12)2.~ diagram(C xx-10-12-13-12)4 |  // frets 10-15 in the
   shape through the order above on the PART's tuning (from `diagram(C)`, Up writes the usual shape),
   sounding each, and Down stops at the usual shape (the item keeps a shape); inside `chord(` and
   `diagram(` the completion offers the chord symbols `@chord(` does. Hover on a symbol-less item
-  names its chord (*this shape is **C***), and the quick fix writes the name in.
+  names its chord (*this shape is **C***), and the quick fix writes the name in. Right-click →
+  *Convert to Chord Notes <…>* writes the item out as the `<…>` chord it plays, with its octave
+  marks and string numbers, what it showed kept as `@chord(…)` / `@diagram(…)`; the file must
+  sound the same afterwards, or nothing changes.
 - `chord` and `diagram` are reserved in music only: a phrase cannot be named either (a part can).
 
 ## Guitar Bends and Technique Letters

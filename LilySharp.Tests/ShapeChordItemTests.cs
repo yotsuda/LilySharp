@@ -19,6 +19,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
+using LilySharp.Core.Editing;
 using LilySharp.Core.LilyPond;
 using LilySharp.Core.Midi;
 using LilySharp.Core.Music;
@@ -546,6 +547,31 @@ public class ShapeChordItemTests
         // None repeats: none of it.
         Assert.DoesNotContain("lysItemDiagram", new LilyPondExporter().Export(SyntaxTree.Parse(
             Book("instrument guitar", "chord(F 133211)2 chord(G 320003)2 |"))));
+    }
+
+    /// <summary>Right-click → "Convert to chord notes" (owner's request 2026-10-31): the item
+    /// becomes the &lt;…&gt; chord it plays, octave marks read off the walk, what it showed kept
+    /// in one word — and the file sounds the same.</summary>
+    [Fact]
+    public void AnItem_ConvertsToTheChordItPlays_AndSoundsTheSame()
+    {
+        static string Convert(string book, string at)
+        {
+            var r = ShapeChordConverter.ToNotes(book, book.IndexOf(at, StringComparison.Ordinal));
+            Assert.True(r.Replacement != null, r.Error);
+            return r.Replacement;
+        }
+        string guitar = Book("instrument guitar", "c4 diagram(133211)4 chord(F 133211)4 e4 | chord(x32010)2 g2 |");
+        // Relative mode: each member read from the chord's first note; the shape kept as its diagram.
+        Assert.Equal(@"<f,\6 c\5 f'\4 a'\3 c'\2 f''\1>4@diagram(133211)", Convert(guitar, "diagram("));
+        Assert.Equal(@"<f\6 c\5 f'\4 a'\3 c'\2 f''\1>4@chord(F 133211)", Convert(guitar, "chord(F"));
+        // A piano's usual voicing, no string numbers; the name kept.
+        string piano = Book("clef treble", "c'4 chord(C)4 chord(G7)2 |");
+        Assert.Equal("<c e g>4@chord(C)", Convert(piano, "chord(C"));
+        // Not on an item, or inside << >>: nothing, and why.
+        Assert.NotNull(ShapeChordConverter.ToNotes(guitar, guitar.IndexOf("e4", StringComparison.Ordinal)).Error);
+        string spread = Book("instrument guitar", "<< diagram(C x32010) >>2 r2 |");
+        Assert.Contains("<< >>", ShapeChordConverter.ToNotes(spread, spread.IndexOf("diagram", StringComparison.Ordinal)).Error);
     }
 
     // ================================================================ the outputs

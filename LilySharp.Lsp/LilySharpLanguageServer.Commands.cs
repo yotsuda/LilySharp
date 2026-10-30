@@ -1270,6 +1270,22 @@ public sealed partial class LilySharpLanguageServer
         return new RemoveStringNumbersResponse { NewText = result.NewText, Removed = result.Removed };
     }
 
+    [JsonRpcMethod("lilysharp/shapeToNotes", UseSingleObjectParameterDeserialization = true)]
+    public Task<ShapeToNotesResponse> ShapeToNotesAsync(ShapeToNotesParams @params, CancellationToken token)
+        => OffDispatch(() => ShapeToNotes(@params), token);
+
+    /// <summary>The <c>chord(…)</c> / <c>diagram(…)</c> item at the offset written out as the
+    /// <c>&lt;…&gt;</c> chord it plays (<see cref="LilySharp.Core.Editing.ShapeChordConverter"/>):
+    /// the span to replace and its text, or why not.</summary>
+    public ShapeToNotesResponse ShapeToNotes(ShapeToNotesParams @params)
+    {
+        var doc = _documentManager.GetDocument(@params.TextDocument.Uri);
+        if (doc == null)
+            return new ShapeToNotesResponse { Error = "Document not found" };
+        var r = LilySharp.Core.Editing.ShapeChordConverter.ToNotes(doc.Text, @params.Offset);
+        return new ShapeToNotesResponse { Start = r.Start, End = r.End, Replacement = r.Replacement, Error = r.Error };
+    }
+
     [JsonRpcMethod("lilysharp/splitSections", UseSingleObjectParameterDeserialization = true)]
     public Task<SplitSectionsResponse> SplitSectionsAsync(SplitSectionsParams @params, CancellationToken token)
         => OffDispatch(() => SplitSections(@params), token);
