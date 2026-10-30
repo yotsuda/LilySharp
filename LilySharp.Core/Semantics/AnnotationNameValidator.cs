@@ -260,6 +260,19 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
                         "a rehearsal mark label must be quoted: write @mark(\"A\") not @mark(A).");
                 else if (ChordDiagramProblem(mark) is { } diagramProblem)
                     _diagnostics.Warning(mark.Span, DiagnosticCodes.ChordDiagramNotDrawn, diagramProblem);
+                else if (ShapeNameSpelling(mark) is { } spelling)
+                    _diagnostics.Warning(mark.Span, DiagnosticCodes.ChordNameOfAShape, spelling);
+                else if (DiagramStringsProblem(mark) is { } strings)
+                    _diagnostics.Warning(mark.Span, DiagnosticCodes.ChordDiagramNotDrawn, strings);
+                // A bare @chord on a single note has no chord to name (owner's request
+                // 2026-10-31): the page drew nothing and said nothing — say so, as on a rest.
+                else if (mark.Parent is NoteSyntax && mark.MarkName == "chord"
+                         && AnnotationValues.Chord(mark, ChordSpelling.Default, out _) is { Text.Length: 0 })
+                    _diagnostics.Warning(
+                        mark.Span,
+                        DiagnosticCodes.ChordNotRecognized,
+                        "@chord on a single note has no chord to name, so nothing is drawn; write the "
+                        + "name, e.g. @chord(C), or put it on a chord (<c e g>1@chord).");
                 else if (mark.Parent is ChordSyntax chord && mark.MarkName == "chord" && !CanNameChord(chord))
                     _diagnostics.Warning(
                         chord.Span,
@@ -537,6 +550,75 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
         return ChordAnnotation.NameFromFrets(naming.Frets, naming.Tuning, 0) is null
             ? ChordAnnotation.NoDerivedName(chord.Shapes[0].Shape)
             : null;
+    }
+
+    /// <summary>
+    /// A chord's name asked of a shape in a spelling that does not say it (owner's decision
+    /// 2026-10-31, LYS1056): <c>@chord(x32010)</c> — a shape alone in an <c>@chord</c>, which
+    /// names the shape but sounds the note under it — and a bare <c>@chord</c> beside an
+    /// <c>@diagram(x32010)</c>, whose name and diagram are drawn apart. The message names the
+    /// spellings that say what is meant; null for anything else.
+    /// </summary>
+    private static string? ShapeNameSpelling(MusicMarkSyntax mark)
+    {
+        if (mark.Name != "chord" || mark.Parent is null)
+            return null;
+        string? shape = null, name = null;
+        if (ChordAnnotation.Of(mark) is { NamesFromDiagram: true, FromShapeItem: false } words)
+        {
+            shape = words.Shapes[0].Shape;
+            if (ChordAnnotation.PartTuningOf(mark) is { } partTuning
+                && words.NamingShape(null, partTuning) is { } naming
+                && ChordAnnotation.NameFromFrets(naming.Frets, naming.Tuning, 0) is { } named)
+                name = ChordShapes.SourceSymbol(named);
+            return $"a shape alone in @chord - @chord({shape}) - names a shape it does not play: to "
+                + $"hear the shape and see its name write diagram({shape})@chord in place of the note, "
+                + $"for the name and the diagram @chord({name ?? "NAME"} {shape}), for the diagram alone "
+                + $"@diagram({shape}).";
+        }
+        if (mark.Arguments.IsEmpty
+            && mark.Parent.ChildNodes().OfType<MusicMarkSyntax>().FirstOrDefault(m => AnnotationValues.Frame(m) != null)
+                is { } diagram)
+        {
+            shape = diagram.Arguments[0].Text;
+            return $"@diagram({shape})@chord draws the name apart from the diagram: to hear the shape "
+                + $"and see its name write diagram({shape})@chord in place of the note, for the name "
+                + $"and the diagram @chord(NAME {shape}).";
+        }
+        return null;
+    }
+
+    /// <summary>
+    /// An <c>@diagram(SHAPE)</c> whose string count is not its part's fretted instrument's
+    /// (owner's request 2026-10-31, LYS1038): <c>@diagram(0x32010)</c> on a guitar drew seven
+    /// strings and said nothing. A part with no fretted instrument may draw any diagram.
+    /// </summary>
+    private static string? DiagramStringsProblem(MusicMarkSyntax mark)
+    {
+        if (AnnotationValues.Frame(mark) is null || mark.Arguments.Length != 1
+            || FrettedPartOf(mark) is not { FrettedTuning: { } tuning, FrettedTuningWord: { } word })
+            return null;
+        string shape = mark.Arguments[0].Text;
+        int strings = Tablature.Tunings.GetStringCount(tuning);
+        return ChordShapes.StringCount(shape) == strings ? null
+            : ChordShapes.WrongLengthNamed(shape, word, strings);
+    }
+
+    /// <summary>The header of the part <paramref name="node"/> is written in, read from the
+    /// syntax as <see cref="ChordAnnotation.PartTuningOf"/> does; null outside every part.</summary>
+    private static PartHeaderDefaults? FrettedPartOf(SyntaxNode node)
+    {
+        SyntaxNode root = node;
+        while (root.Parent != null)
+            root = root.Parent;
+        for (var p = node.Parent; p != null; p = p.Parent)
+        {
+            if (p is PartDeclarationSyntax declared)
+                return PartHeaderDefaults.Read(declared);
+            if (p is PartBlockSyntax block)
+                return ConcertPitch.FindPart(root, block.Name) is { } part ? PartHeaderDefaults.Read(part) : null;
+        }
+        return null;
     }
 
     /// <summary>

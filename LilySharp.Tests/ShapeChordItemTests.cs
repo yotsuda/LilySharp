@@ -704,6 +704,69 @@ public class ShapeChordItemTests
         Assert.StartsWith("Am: shape 2 of", said.Message);
     }
 
+    /// <summary>Owner's decision 2026-10-31: the name comes with @chord, the picture alone with
+    /// @diagram, and a shape's name is learned by playing it — diagram(x32010)@chord. The
+    /// spellings that ask a name of a shape another way warn (LYS1056) with those, and still draw.</summary>
+    [Fact]
+    public void AShapesName_IsAskedOfTheItem_TheOtherSpellingsSayHow()
+    {
+        var alone = Assert.Single(Diagnostics(Book("instrument guitar", "c'1@chord(x32010) |")),
+            d => d.Code == DiagnosticCodes.ChordNameOfAShape);
+        Assert.Contains("diagram(x32010)@chord", alone.Message);
+        Assert.Contains("@chord(C x32010)", alone.Message);
+        Assert.Contains("@diagram(x32010)", alone.Message);
+        Assert.Contains(Diagnostics(Book("instrument guitar", "c'1@diagram(x32010)@chord |")),
+            d => d.Code == DiagnosticCodes.ChordNameOfAShape && d.Message.Contains("diagram(x32010)@chord"));
+        foreach (var fine in new[] { "diagram(x32010)1@chord |", "c'1@chord(C x32010) |",
+                                     "<c e g>1@chord |", "c'1@diagram(x32010) |" })
+            Assert.DoesNotContain(Diagnostics(Book("instrument guitar", fine)),
+                d => d.Code == DiagnosticCodes.ChordNameOfAShape);
+        // A bare @chord on a single note names nothing: said, as on a rest.
+        Assert.Contains(Diagnostics(Book("instrument guitar", "c'1@chord |")),
+            d => d.Code == DiagnosticCodes.ChordNotRecognized && d.Message.Contains("single note"));
+    }
+
+    /// <summary>An @diagram's shape on a fretted part must have its strings (LYS1038): seven
+    /// characters on a guitar drew seven strings in silence. Elsewhere any diagram is drawn.</summary>
+    [Fact]
+    public void ADiagramOfTheWrongStringCount_OnAFrettedPart_Warns()
+    {
+        var warning = Assert.Single(Diagnostics(Book("instrument guitar", "c'1@diagram(0x32010) |")),
+            d => d.Code == DiagnosticCodes.ChordDiagramNotDrawn);
+        Assert.Contains("'guitar' has 6 strings", warning.Message);
+        Assert.DoesNotContain(Diagnostics(Book("instrument guitar", "c'1@diagram(x32010) |")),
+            d => d.Code == DiagnosticCodes.ChordDiagramNotDrawn);
+        Assert.DoesNotContain(Diagnostics(Book("clef treble", "c'1@diagram(0x32010) |")),
+            d => d.Code == DiagnosticCodes.ChordDiagramNotDrawn);
+    }
+
+    /// <summary>Owner's request 2026-10-31: hovering a symbol-less item names the chord it
+    /// sounds, and Ctrl+. writes that name in.</summary>
+    [Fact]
+    public void ASymbolLessItem_IsNamedByItsHover_AndTheQuickFixWritesTheName()
+    {
+        string text = Book("instrument guitar", "diagram(x02210)1 |");
+        Assert.Contains("this shape is **Am**", LilySharpLanguageServer.ShapeChordHover(Item(text), text));
+        Assert.DoesNotContain("this shape is", LilySharpLanguageServer.ShapeChordHover(
+            Item(Book("instrument guitar", "diagram(Am x02210)1 |")), text));
+
+        var server = new LilySharpLanguageServer(Stream.Null, Stream.Null);
+        var uri = new Uri("file:///shape-name.lys");
+        server.DidOpen(new DidOpenTextDocumentParams
+        {
+            TextDocument = new TextDocumentItem { Uri = uri, Text = text, LanguageId = "lilysharp", Version = 1 },
+        });
+        var (line, character) = LilySharpLanguageServer.GetLineAndCharacter(text, text.IndexOf("x02210", StringComparison.Ordinal) + 2);
+        var fix = Assert.Single(server.GetCodeActions(new CodeActionParams
+        {
+            TextDocument = new TextDocumentIdentifier { Uri = uri },
+            Range = new LilySharp.Lsp.Protocol.Range { Start = new Position(line, character), End = new Position(line, character) },
+        }) ?? [], a => a.Title == "Write the chord name: Am");
+        var edit = fix.Edit!.Changes!.Values.Single().Single();
+        int start = DocumentManager.GetOffset(text, edit.Range.Start), end = DocumentManager.GetOffset(text, edit.Range.End);
+        Assert.Equal(Book("instrument guitar", "diagram(Am x02210)1 |"), text[..start] + edit.NewText + text[end..]);
+    }
+
     [Fact]
     public void Completion_InsideTheItem_IsTheChordSymbols()
     {

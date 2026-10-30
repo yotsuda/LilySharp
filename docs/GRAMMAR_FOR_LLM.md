@@ -473,8 +473,9 @@ Value words inside the parentheses are lowercase too (`@notehead(triangle)`,
   (a listed chord draws wherever it is named — the table's shape, the usual one for a name
   alone; a `section NAME { … }` block's entries apply to the chords written in that section;
   a shape written at the chord still wins). A shape is one character per string, LOW string
-  first (`x` muted, `o`/`0` open, a digit the fret): `@chord(Cm7 x3x546)`, `@chord(x32010)`
-  (the name is derived from its notes); in a chords row glued to the symbol: `F(133211)`,
+  first (`x` muted, `o`/`0` open, a digit the fret): `@chord(Cm7 x3x546)` (a shape alone is
+  `@diagram(x32010)`, no name; `diagram(x32010)@chord` plays it and names it); in a chords row
+  glued to the symbol: `F(133211)`,
   `F(133211 2010)` (a guitar and a ukulele shape, routed by string count),
   `F(guitar 133211 ukulele 2010)` (bound by tuning name). Frets 10–15: put a `-` on each
   side of each two-digit fret — `@chord(Cm 8xx88-11)`, `Cm(xx-10-12-13-11)`,

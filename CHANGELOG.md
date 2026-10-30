@@ -43,6 +43,19 @@ workflow attaches that section to the GitHub Release verbatim.
 - `[editor]` **Ctrl+Shift+Up/Down steps a `diagram(…)` item with no symbol** (`diagram(x32010)`).
   It walks the other shapes of the chord the shape sounds, rewriting the shape only: x32010 is C,
   and the status bar says *C: shape 2 of …*. Down at the first shape keeps it.
+- `[editor]` **Hovering a `diagram(…)` item with no symbol names its chord** (*this shape is
+  **Am***), and the quick fix (Ctrl+.) writes the name in: `diagram(Am x02210)`. A player who found
+  a shape by ear learns what it is.
+- `[lang]` **The name comes with `@chord`, the picture alone with `@diagram`.**
+  - `@chord(C)` is a name, `@chord(C x32010)` a name over its diagram, `@diagram(x32010)` a
+    diagram alone. To learn a shape's name, play it: `diagram(x32010)@chord`.
+  - A shape alone in an `@chord` (`@chord(x32010)`) still draws, but warns (LYS1056) with those
+    spellings: it names a shape the note under it does not play. So does a bare `@chord` beside an
+    `@diagram(x32010)`, whose name and diagram were drawn apart.
+  - A bare `@chord` on a single note warns (LYS1020): there is no chord to name, and nothing was
+    drawn or said.
+  - An `@diagram` shape whose string count is not its part's fretted instrument's warns
+    (LYS1038). `@diagram(0x32010)` on a guitar drew seven strings in silence.
 - `[lang]` **A chord its player cannot hold warns** (LYS1055).
   - On a guitar, bass, ukulele or banjo, it warns when no string per note within a hand's reach
     (four frets) fits the chord. The warning names a voicing of the same notes that can be held,

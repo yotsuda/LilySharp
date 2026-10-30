@@ -94,11 +94,19 @@
     <tr><th>Written</th><th>Draws</th></tr>
     <tr><td><code>@chord(C)</code></td><td>the name only</td></tr>
     <tr><td><code>@chord(C x32010)</code></td><td>the name and its diagram</td></tr>
-    <tr><td><code>@chord(x02210)</code></td><td>the diagram, and a name read off the shape's notes (Am)</td></tr>
     <tr><td><code>@diagram(x24442)</code></td><td>a diagram with no name at all — not a chord symbol, so it always draws. <code>.down</code> puts it under the staff</td></tr>
     <tr><td><code>&lt;g b d' f'&gt;1@diagram</code></td><td>a bare <code>@diagram</code> on a chord: the chord's own notes, fretted on the part's strings (<code>xx5431</code>) — see <a href="chord-input.html#fretted">Writing chords</a></td></tr>
   </table>
+  <p>The rule is short: <b>the name comes with <code>@chord</code>, the picture alone with
+  <code>@diagram</code></b>, and <code>@chord(NAME SHAPE)</code> gives both.</p>
   <!--EXAMPLE:chord-on-note-->
+  <p><b>Found a shape by ear and want its name?</b> Write it as a
+  <a href="#notes"><code>diagram(x02210)</code></a> item in place of the note, so it sounds, and
+  hover it: <i>this shape is <b>Am</b></i>. <kbd>Ctrl+.</kbd> writes the name in
+  (<code>diagram(Am x02210)</code>), and a bare <code>@chord</code> on it prints the name over
+  the diagram. <kbd>Ctrl+Shift+Up</kbd> on the shape then walks the other shapes of the same
+  chord. A shape alone in an <code>@chord</code> (<code>@chord(x02210)</code>) still draws, but
+  warns (LYS1056) with these spellings: it names a shape the note under it does not play.</p>
 </section>
 
 <section id="notes">
@@ -267,7 +275,7 @@ score piano { layout piano  chords prog  staff melody } // no diagrams</pre>
     <tr><td><code>@chord(C x02210)</code></td><td>'x02210' sounds A C E, which is Am, not C (A is not a tone of C) - write @chord(Am x02210) or another shape.</td></tr>
     <tr><td><code>@chord(C7 x3201x)</code></td><td>'x3201x' for C7 lacks B♭ (the 7th) - fret B♭ or write another shape.</td></tr>
   </table>
-  <p>A shape with no name (<code>@chord(x32010)</code>), an <code>@diagram</code> and a Roman
+  <p>A shape with no name (<code>diagram(x32010)</code>), an <code>@diagram</code> and a Roman
   degree in a row are not checked. Nine of LilyPond's predefined shapes would fail this check
   (guitar D♯m <code>xx4341</code>, Faug and Baug among them), so Lily# does not use them as
   usual shapes.</p>

@@ -400,6 +400,8 @@ public sealed partial class LilySharpLanguageServer
             var refactorings = GenerateRefactorings(doc, node, uri);
             actions.AddRange(refactorings);
         }
+        if (ShapeNameAction(doc, uri, startOffset) is { } shapeName)
+            actions.Add(shapeName);
 
         return actions.ToArray();
     }
@@ -649,6 +651,29 @@ public sealed partial class LilySharpLanguageServer
             return null;
         return QuickFix($"Name the chord {name}", doc, uri, diagnostic,
             [EditOf(doc.Text, symbol.Start, symbol.End, name)]);
+    }
+
+    /// <summary>
+    /// On a <c>diagram(…)</c> item with no symbol, the action that writes the chord its notes
+    /// sound in front of the shape — <c>diagram(x32010)</c> → <c>diagram(C x32010)</c> (owner's
+    /// request 2026-10-31: a player who found a shape by ear wants its name). The hover names
+    /// the same chord (<see cref="NoteStepper.UnnamedShapeChord"/>). No diagnostic: the item is
+    /// fine as it is.
+    /// </summary>
+    internal static CodeAction? ShapeNameAction(Document doc, Uri uri, int offset)
+    {
+        var item = doc.Tree.GetNodes<ChordSyntax>().FirstOrDefault(c => c.IsShapeChord
+            && c.SourceStart <= offset && offset <= c.SourceStart + c.Width);
+        if (item == null || item.ShapeWordSpans is not { Count: > 0 } spans
+            || NoteStepper.UnnamedShapeChord(item) is not { } chord)
+            return null;
+        string name = ChordShapes.SourceSymbol(chord);
+        return new CodeAction
+        {
+            Title = $"Write the chord name: {name}",
+            Kind = CodeActionKind.QuickFix,
+            Edit = WorkspaceEditOf(uri, EditOf(doc.Text, spans[0].Start, spans[0].Start, name + " ")),
+        };
     }
 
     /// <summary>

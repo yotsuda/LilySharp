@@ -276,12 +276,12 @@ score { chords prog  staff melody }
 '@
 
 'chord-on-note' = @'
-// On a note, the shape follows the name inside @chord( ). A shape with no name names
-// itself from its notes; @diagram draws a diagram with no name at all.
+// On a note, the shape follows the name inside @chord( ): the name over its diagram.
+// @diagram draws a diagram with no name at all; .down puts it under the staff.
 time 4/4
 part melody { clef treble }
 section A {
-  melody { e''1@chord(C x32010) | c1@chord(Am7 x02010) | a'1@chord(x02210) | b1@diagram(x24442) | }
+  melody { e''1@chord(C x32010) | c1@chord(Am7 x02010) | a'1@diagram(x02210) | b1@diagram(x24442).down | }
 }
 form { ~A }
 score { staff melody }

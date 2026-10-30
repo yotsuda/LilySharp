@@ -980,13 +980,10 @@ public static partial class NoteStepper
             // A diagram(…) item with no symbol (owner's request 2026-10-31): the chord is the one
             // the written shape sounds on this tuning, above the capo — the name a bare @chord
             // would print — and the step walks that chord's order, writing shapes only.
-            var shape = site.Words.FirstOrDefault(w => Music.ChordShapes.StartsShape(w.Text)
-                && Music.ChordShapes.StringCount(w.Text) == tuning.Length).Text;
+            var (sounded, shape) = SoundedChord(site, tuning, CapoOf(node));
             if (shape == null)
                 return (null, $"no {word} shape written to step{note}.", true);
-            int capo = CapoOf(node);
-            if (ChordAnnotation.NameFromFrets(Music.ChordShapes.Frets(shape), [.. tuning.Select(p => p + capo)], 0)
-                is not { } sounded)
+            if (sounded == null)
                 return (null, $"'{shape}' names no chord on {word} - write its symbol to step it{note}.", true);
             site = site with { Symbol = sounded.DisplayName(ChordSpelling.Canonical), Chord = sounded };
         }
@@ -1109,6 +1106,30 @@ public static partial class NoteStepper
         (int Open, int OpenEnd, int Close)? Group, bool IsRow, bool IsItem = false)
     {
         public bool Unnamed => Chord is null;
+    }
+
+    /// <summary>The chord a <c>diagram(…)</c> item with no symbol sounds — <c>diagram(x32010)</c> is
+    /// C — on the tuning its step uses, above the capo: what the step walks, the hover names and
+    /// the "write its name" quick fix writes (owner's request 2026-10-31). Null for an item with a
+    /// symbol, or a shape whose notes name no chord.</summary>
+    public static Music.ChordStructure? UnnamedShapeChord(ChordSyntax item)
+    {
+        if (ShapeSiteOf(item).Site is not { Unnamed: true } site)
+            return null;
+        var tuning = Tablature.Tunings.GetTuning(Tablature.Tunings.Parse(StepTuning(item).Item1));
+        return SoundedChord(site, tuning, CapoOf(item)).Chord;
+    }
+
+    /// <summary>The chord the shape a symbol-less site writes for <paramref name="tuning"/> sounds
+    /// above <paramref name="capo"/> (the name a bare <c>@chord</c> prints), and that shape; both
+    /// null when no shape is written for the tuning.</summary>
+    private static (Music.ChordStructure? Chord, string? Shape) SoundedChord(ShapeSite site,
+        IReadOnlyList<int> tuning, int capo)
+    {
+        var shape = site.Words.FirstOrDefault(w => Music.ChordShapes.StartsShape(w.Text)
+            && Music.ChordShapes.StringCount(w.Text) == tuning.Count).Text;
+        return shape == null ? (null, null)
+            : (ChordAnnotation.NameFromFrets(Music.ChordShapes.Frets(shape), [.. tuning.Select(p => p + capo)], 0), shape);
     }
 
     /// <summary>The site a step at <paramref name="node"/> rewrites, or null with the refusal

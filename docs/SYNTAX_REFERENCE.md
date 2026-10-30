@@ -2151,7 +2151,7 @@ a `<harmony>` carries the chord as data, and asks for the words.
 **`chordDiagrams`** — the tuning the score's **chord diagrams** draw on: a tuning word — the
 words a tab's `tuning` takes (`guitar`, `ukulele`, `mandolin`, `guitarDropD`, `bass`, …) — or
 `none`. A diagram draws only where a chord WRITES its shape (`G(320003)`, `@chord(G 320003)`,
-`@chord(x32010)`; *Chord Diagrams*); this key says which of the written shapes applies. Unset,
+`diagram(x32010)`; *Chord Diagrams*); this key says which of the written shapes applies. Unset,
 each diagram takes the instrument of its part (the part an `@chord`'s note is in, the staff a
 row stands over), else the guitar. `none` draws no diagram at all, written shapes included —
 so the same source makes a piano score and a guitar score. `@diagram(…)` is not a chord symbol
@@ -2457,8 +2457,8 @@ A shape that reaches past the 4th fret is drawn from its lowest fretted fret and
 ### Diagrams under the chord names: a written shape
 
 A chord draws a diagram UNDER its name only where its SHAPE is written — `G(320003)` in a
-`chords` row, `@chord(G 320003)` on a note, or `@chord(x32010)` (the name derived from the
-shape) — between the name and the staff, side by side, and the bars widen to fit them. A
+`chords` row, `@chord(G 320003)` on a note, or a `diagram(x32010)@chord` item (the name derived
+from the shape) — between the name and the staff, side by side, and the bars widen to fit them. A
 name alone (`G`, `@chord(G)`, a bare `@chord`) draws no diagram — save in a score whose
 layout writes `all` (below). The editor writes shapes for you: `Ctrl+Shift+Up` on a chord adds
 its usual shape (below).
@@ -2602,12 +2602,22 @@ that tuning is the diagram's. `@chord` takes the same words after its symbol:
 `@chord(F guitar 133211 ukulele 2010)`. A written shape is checked against its chord symbol
 (below, LYS1039).
 
-- `@chord(x32010)` — a shape with no symbol — draws that shape and names the chord from its
-  notes (C), on the diagram's tuning, else on the part's tuning.
+- **The name comes with `@chord`, the picture alone with `@diagram`** (owner's decision
+  2026-10-31): `@chord(C)` is a name, `@chord(C x32010)` a name over its diagram,
+  `@diagram(x32010)` a diagram with no name.
+- **To learn a shape's name, play it**: `diagram(x32010)@chord` sounds the shape and prints the
+  name its notes spell (C). Hovering a symbol-less `diagram(x32010)` names it too, and the
+  quick fix (Ctrl+.) writes the name in: `diagram(C x32010)`.
+- `@chord(x32010)` — a shape alone in an `@chord` — still draws the shape and the name read off
+  it, but warns (LYS1056) with the spellings above: it names a shape the note under it does not
+  play. So does a bare `@chord` beside an `@diagram(x32010)`, whose name and diagram are drawn
+  apart.
 - A bare `@chord` on a chord names it from its notes; it writes no shape, so draws no diagram
-  (in an `all` score, the usual shape of the chord it names).
+  (in an `all` score, the usual shape of the chord it names). On a single note it has nothing to
+  name and warns (LYS1020).
 - `@chord` takes no `.up`/`.down`: the diagram is always above, under its name.
-- `@diagram(x32010)` is not a chord symbol: it always draws, with no name.
+- `@diagram(x32010)` is not a chord symbol: it always draws, with no name. On a part with a
+  fretted instrument its shape must have that instrument's string count (LYS1038).
 
 **The usual shape** — what `Ctrl+Shift+Up` writes first on a chord with none, what the
 hover offers, and what an `all` score draws for a name alone — is LilyPond's predefined shape for the tuning (its tables for the guitar: 136
@@ -2650,7 +2660,7 @@ ordinary shape. One warning per shape lists every problem. A shape is checked on
 in each score that draws it (layout, else the part's instrument, else the guitar); a shape
 no score uses (a four-string shape in a guitar-only score) is not — it is warned as unused
 (LYS1038: *'0232' is a 4-string shape, but the scores here draw this chord's diagram on
- guitar (6 strings)*) — and a shape under `chordDiagrams none` is neither. A symbol-less `@chord(x32010)` (its name comes from the shape),
+ guitar (6 strings)*) — and a shape under `chordDiagrams none` is neither. A symbol-less shape (`diagram(x32010)`, its name comes from the shape),
 `@diagram` and a Roman degree in a row (its chord is the key's at its bar) are not checked.
 The notes are named as the chord spells them; any other in the key its root suggests.
 Nine of LilyPond's predefined shapes would warn and are left out of Lily#'s tables — seven

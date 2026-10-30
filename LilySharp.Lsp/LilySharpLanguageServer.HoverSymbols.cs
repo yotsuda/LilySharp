@@ -191,6 +191,12 @@ public sealed partial class LilySharpLanguageServer
             head.Append(" `").Append(words.Symbol).Append('`');
         if (!words.Problems.IsEmpty)
             return head + " — " + words.Problems[0].Message;
+        // With no symbol, the chord its notes sound — what a player who found the shape by ear
+        // wants to know (owner's request 2026-10-31); the quick fix writes it in.
+        var named = words.Symbol == null ? NoteStepper.UnnamedShapeChord(item) : null;
+        if (named != null)
+            head.Append(" — this shape is **").Append(named.DisplayName(LilySharp.Core.Semantics.ChordSpelling.Canonical))
+                .Append("** (Ctrl+. writes the name in)");
         var lines = new List<string>();
         // A capo raises every string by its fret. Each score sounds the item under its own capo:
         // one line per capo when the scores drawing the part differ (2026-09-30 — until then the
@@ -212,7 +218,7 @@ public sealed partial class LilySharpLanguageServer
                 continue;
             }
             string spelled = ChordVoicings.Spell(ChordShapes.Frets(shape));
-            string place = words.Structure is { } chord
+            string place = (words.Structure ?? named) is { } chord
                 && NoteStepper.ShapePlace(item, chord, ChordShapes.Frets(shape)) is { } p ? $" — {p}" : "";
             lines.Add($"{part.Word}{label}: `{spelled}` — "
                 + string.Join("  ", ShapeChords.Ascending(notes).Select(n => PitchGlyphs(n.NameAt(n.WrittenMidi + part.SoundingShift))))

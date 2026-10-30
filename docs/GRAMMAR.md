@@ -2723,7 +2723,7 @@ TwoDigitFret   = Digit , Digit ;                                 (* 10-15 *)
                     lowercase ':' entry ('@chord(a:m)') is NOT recognised — LYS1008 warns
                     and the symbol is not engraved. A bare '@chord' derives it from the notes.
                     The words after the symbol are the shapes of its chord DIAGRAM
-                    (ChordArgument above): c4@chord(Cm7 x3x546) , c4@chord(x32010) ,
+                    (ChordArgument above): c4@chord(Cm7 x3x546) ,
                     c4@chord(F guitar 133211 ukulele 2010). Only a written shape draws a
                     diagram under the name, on the layout's 'chordDiagrams' tuning, else the
                     part's fretted instrument, else the guitar (SYNTAX_REFERENCE *Chord
