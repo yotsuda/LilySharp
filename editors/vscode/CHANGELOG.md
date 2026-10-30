@@ -25,6 +25,8 @@ All notable changes to the Lily# VS Code extension are documented here.
   and completion offers chord symbols inside `diagram(`, both as before.
 - **Ctrl+Shift+Up/Down steps a `diagram(…)` item with no symbol** (`diagram(x32010)`) through the
   other shapes of the chord it sounds. x32010 is C, and only the shape changes.
+- **With shapes for two instruments written** (`@chord(C x32010 0003)`), Ctrl+Shift+Up/Down steps
+  the one under the caret on its own instrument, and the status bar names it.
 - **Hovering a `diagram(…)` item with no symbol names its chord**, and the quick fix (Ctrl+.)
   writes the name in (`diagram(x02210)` → `diagram(Am x02210)`).
 - **`@chord(x32010)`, a shape alone in an `@chord`, warns** (LYS1056) and points to

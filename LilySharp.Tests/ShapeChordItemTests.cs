@@ -767,6 +767,28 @@ public class ShapeChordItemTests
         Assert.Equal(Book("instrument guitar", "diagram(Am x02210)1 |"), text[..start] + edit.NewText + text[end..]);
     }
 
+    /// <summary>Owner's request 2026-10-31: with shapes for two tunings written, the caret on one
+    /// steps that one on its own tuning — the message names it — and the caret on a shape no
+    /// tuning here has the strings of keeps the old rule (the score's shape steps) and says how.</summary>
+    [Fact]
+    public void TheStep_OnOneOfSeveralShapes_StepsThatOne()
+    {
+        const string both = "layout uke { chordDiagrams ukulele }\npart melody { clef treble }\n"
+            + "section A { melody { e''1@chord(C x32010 0003) | } }\nform { A }\n"
+            + "score { staff melody }\nscore uke { layout uke  staff melody }\n";
+        var (uke, said) = Step(both, both.IndexOf("0003", StringComparison.Ordinal) + 1, +1);
+        Assert.Contains("@chord(C x32010 0403)", uke);
+        Assert.StartsWith("C (ukulele): shape 2 of", said.Message);
+        var (gtr, saidGtr) = Step(both, both.IndexOf("x32010", StringComparison.Ordinal) + 1, +1);
+        Assert.Contains("@chord(C x32013 0003)", gtr);
+        Assert.StartsWith("C (guitar): shape 2 of", saidGtr.Message);
+
+        string guitarOnly = both.Replace("score uke { layout uke  staff melody }\n", "");
+        var (stepped, told) = Step(guitarOnly, guitarOnly.IndexOf("0003", StringComparison.Ordinal) + 1, +1);
+        Assert.Contains("@chord(C x32013 0003)", stepped);
+        Assert.Contains("'0003' is drawn by no score here", told.Message);
+    }
+
     [Fact]
     public void Completion_InsideTheItem_IsTheChordSymbols()
     {

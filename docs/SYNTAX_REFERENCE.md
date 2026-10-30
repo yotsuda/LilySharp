@@ -2710,7 +2710,12 @@ writes the usual shape (`@chord(G 320003)`, `G(320003)`) and the diagram appears
 walk the order — frets 10–15 included, a `-` around each two-digit fret (Cm goes on past
 `8xx888` to `8xx88-11` … `x-15-13-x-13-15`, its 29th); `Down` back AT the usual shape removes it again (the diagram goes, a row's
 empty `( )` with it); `Down` on a name alone does nothing. With several shapes written, the
-one for the chord's tuning steps and the others stay. That tuning is the rule above read in
+one for the chord's tuning steps and the others stay — unless the caret is ON one of them
+(2026-10-31): then that one steps, on its own tuning (the word before it, else the scores', the
+part's or the guitar's with its string count), and the status bar names it —
+`@chord(C x32010 0003)` with the caret on `0003` reads `C (ukulele): shape 2 of 39 (0403)`.
+A shape no tuning here has the strings of keeps the first rule, and the status bar says to write
+its tuning before it. The chord's tuning is the rule above read in
 the FIRST score that renders the chord (for a row, the first score placing it); when another
 score draws it on another tuning, the status bar says so. When that first score writes
 `chordDiagrams … all`, a name alone already SHOWS the usual shape, so the step counts from it:

@@ -503,8 +503,12 @@ public static partial class NoteStepper
                         bySemitone.Add(p);
                 continue;
             }
+            // A voicing hears where the caret is: on one of several shapes, that one steps.
+            int? caret = selections.Where(s => s.Start == s.End && t.Node.SourceStart <= s.Start
+                    && s.Start <= t.Node.SourceStart + t.Node.Width)
+                .Select(s => (int?)s.Start).FirstOrDefault();
             var (edit, said, handled) = t.Kind == TargetKind.Voicing
-                ? VoicingEdit(t.Node, dir, includeStretch)
+                ? VoicingEdit(t.Node, dir, includeStretch, caret)
                 : (MarkEdit(text, MarksStart(t), dir), null, true);
             if (!handled)
                 continue;
@@ -963,7 +967,7 @@ public static partial class NoteStepper
     /// after it, Down to the last before it, or back to the default.
     /// </remarks>
     private static (Edit? Edit, string? Message, bool Handled) VoicingEdit(SyntaxNode node, int dir,
-        bool includeStretch)
+        bool includeStretch, int? caret = null)
     {
         var (site, refusal) = ShapeSiteOf(node);
         if (site == null)
@@ -972,6 +976,26 @@ public static partial class NoteStepper
             return (null, site.Problems[0], true);
 
         var (word, note) = StepTuning(node);
+        // The caret ON a shape steps that shape, on its own tuning (owner's request 2026-10-31):
+        // in @chord(C x32010 0003) the caret on 0003 walks the ukulele's shapes, whichever
+        // tuning the first score draws. Its tuning is the word before it, else the first of the
+        // scores', the part's and the guitar with its string count; none — the old rule.
+        int caretAt = caret is int c
+            ? site.Words.FindIndex(w => w.Start <= c && c <= w.End && Music.ChordShapes.StartsShape(w.Text)) : -1;
+        string? caretWord = caretAt < 0 ? null
+            : caretAt > 0 && Tablature.Tunings.Names.Contains(site.Words[caretAt - 1].Text) ? site.Words[caretAt - 1].Text
+            : TuningWordWithStrings(node, Music.ChordShapes.StringCount(site.Words[caretAt].Text));
+        // A shape no tuning here has the strings of: the old rule (the first score's shape steps,
+        // or is written), and the message says how to step that one (StepRequestTests).
+        if (caretAt >= 0 && caretWord == null)
+        {
+            note += $" ('{site.Words[caretAt].Text}' is drawn by no score here - its tuning written "
+                + "before it, as in ukulele 0003, steps it)";
+            caretAt = -1;
+        }
+        bool otherTuning = caretWord != null && caretWord != word;
+        if (otherTuning)
+            (word, note) = (caretWord!, null);
         var tuningType = Tablature.Tunings.Parse(word);
         var tuning = Tablature.Tunings.GetTuning(tuningType);
         bool unnamed = site.Unnamed;
@@ -988,15 +1012,21 @@ public static partial class NoteStepper
             site = site with { Symbol = sounded.DisplayName(ChordSpelling.Canonical), Chord = sounded };
         }
         var chord = site.Chord!;
-        var (_, order) = ShapeOrder(node, chord, includeStretch);
+        var (_, order) = ShapeOrder(node, chord, includeStretch, word);
         // Under a capo the shapes are the PRESSED chord's (ChordStructure.Pressed), as the order is.
         var pressedChord = chord.Pressed(CapoOf(node), 0);
-        string symbol = site.Symbol;
+        // With shapes for more than one tuning written, the message names the one stepped.
+        string symbol = site.Words.Count(w => Music.ChordShapes.StartsShape(w.Text)) > 1
+            ? $"{site.Symbol} ({word})" : site.Symbol;
         if (order.Count == 0)
             return (null, $"{symbol}: no shape to step through on {word}{note}.", true);
 
-        // The shape written for the step's tuning, if any: its word, and its tuning word's.
+        // The shape written for the step's tuning, if any: its word, and its tuning word's — the
+        // one under the caret first.
         int shapeAt = -1, namedAt = -1;
+        if (caretAt >= 0)
+            (namedAt, shapeAt) = (caretAt > 0 && Tablature.Tunings.Names.Contains(site.Words[caretAt - 1].Text)
+                ? caretAt - 1 : -1, caretAt);
         for (int i = 0; i + 1 < site.Words.Count && shapeAt < 0; i++)
             if (site.Words[i].Text is var t && Tablature.Tunings.Names.Contains(t)
                 && Tablature.Tunings.Parse(t) == tuningType
@@ -1017,7 +1047,9 @@ public static partial class NoteStepper
         // The same where the score's layout TABLE lists the chord (2026-09-29): the name alone
         // draws the table's shape, and the step counts from it.
         // A symbol-less shape has no name to stand alone: its shape is all there is.
-        var nameAlone = unnamed ? null : ShapeOfNameAlone(node, chord);
+        // Neither has a shape stepped on another tuning than the first score's: what a name draws
+        // alone is that score's.
+        var nameAlone = unnamed || otherTuning ? null : ShapeOfNameAlone(node, chord);
         bool drawsAll = nameAlone != null && DrawsEveryChord(node);
         string shows = drawsAll ? "this score draws every chord, so it shows the default"
             : "this score's layout table lists it, so it shows";
@@ -1276,10 +1308,12 @@ public static partial class NoteStepper
     /// <c>8xx88-11</c>. (Until then they were left out: one character per string could not
     /// write them back.)
     /// </remarks>
+    /// <param name="tuningWord">The tuning to order the shapes on; null for
+    /// <see cref="StepTuning"/>'s.</param>
     public static (IReadOnlyList<int> Tuning, List<ImmutableArray<int>> Order) ShapeOrder(
-        SyntaxNode site, Music.ChordStructure chord, bool includeStretch)
+        SyntaxNode site, Music.ChordStructure chord, bool includeStretch, string? tuningWord = null)
     {
-        var tuningType = Tablature.Tunings.Parse(StepTuning(site).Word);
+        var tuningType = Tablature.Tunings.Parse(tuningWord ?? StepTuning(site).Word);
         IReadOnlyList<int> tuning = Tablature.Tunings.GetTuning(tuningType);
         // Under a capo (the first score's, like the tuning) the shapes are the PRESSED chord's:
         // the sounding chord that many semitones down (ChordStructure.Pressed; 2026-09-29).
@@ -1347,6 +1381,16 @@ public static partial class NoteStepper
             return (partWord ?? "guitar", " (the first score writes chordDiagrams none: no diagram there)");
         var other = scores.Select(s => s.Word).OfType<string>().FirstOrDefault(w => w != word);
         return (word, other == null ? null : $" - on {word}, the first score's; another draws {other}");
+    }
+
+    /// <summary>The tuning a shape of <paramref name="strings"/> strings written at
+    /// <paramref name="site"/> belongs to: the first of the scores' diagram tunings, the part's
+    /// fretted instrument and the guitar with that many strings; null when none has them.</summary>
+    private static string? TuningWordWithStrings(SyntaxNode site, int strings)
+    {
+        var scores = ScoresOf(site, out string? partWord);
+        return scores.Select(s => s.Word).Append(partWord).Append("guitar").OfType<string>()
+            .FirstOrDefault(w => Tablature.Tunings.GetStringCount(Tablature.Tunings.Parse(w)) == strings);
     }
 
     /// <summary>

@@ -46,6 +46,9 @@ workflow attaches that section to the GitHub Release verbatim.
 - `[editor]` **Hovering a `diagram(…)` item with no symbol names its chord** (*this shape is
   **Am***), and the quick fix (Ctrl+.) writes the name in: `diagram(Am x02210)`. A player who found
   a shape by ear learns what it is.
+- `[editor]` **Ctrl+Shift+Up/Down steps the shape under the caret.** In `@chord(C x32010 0003)` the
+  caret on `0003` walks the ukulele's shapes, even where the first score draws guitar diagrams.
+  The status bar names the instrument: *C (ukulele): shape 2 of 39 (0403)*.
 - `[lang]` **The name comes with `@chord`, the picture alone with `@diagram`.**
   - `@chord(C)` is a name, `@chord(C x32010)` a name over its diagram, `@diagram(x32010)` a
     diagram alone. To learn a shape's name, play it: `diagram(x32010)@chord`.
