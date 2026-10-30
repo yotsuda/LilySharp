@@ -56,16 +56,12 @@ internal sealed class VoiceSpanLengthValidator : ISemanticValidator
                 // 2026-10-30: told "18 more", the chat's agent counted the line's phrases in a terminal
                 // script to find where to cut): the written item the first of them starts in — a note,
                 // or the phrase reference it was inlined through.
-                int past = first + (pickup ? 1 : 0);
-                var starts = index.Select(e => (Written: e.Key.Chain == "" ? e.Key.Position : int.Parse(e.Key.Chain.Split('/')[0]), Bar: e.Value))
-                    .GroupBy(e => e.Written).Select(g => (Written: g.Key, From: g.Min(e => e.Bar), To: g.Max(e => e.Bar)))
-                    .Where(e => e.To >= past).OrderBy(e => e.Written).FirstOrDefault();
-                bool found = starts.To >= past;
-                string from = !found ? ""
-                    : starts.From < past ? $" Bar {first + 1} starts inside the phrase here, which runs on past the first voice's end."
+                var start = MeasureModel.WhereBarStarts(index, first + (pickup ? 1 : 0));
+                string from = start is not { } s ? ""
+                    : s.Inside ? $" Bar {first + 1} starts inside the phrase here, which runs on past the first voice's end."
                     : $" Bar {first + 1} starts here: end the voice before it.";
                 // ASCII punctuation only: these strings reach legacy-codepage consoles via the CLI.
-                _diagnostics.Warning(new TextSpan(found ? starts.Written : voices[v].Span.Start, 1), DiagnosticCodes.VoiceRunsPastSpan,
+                _diagnostics.Warning(new TextSpan(start?.Position ?? voices[v].Span.Start, 1), DiagnosticCodes.VoiceRunsPastSpan,
                     $"this voice runs {bars} bars, {bars - first} more than the first voice of its span ({first}) - "
                     + "the section runs on to this voice's end, the first voice and the other parts silent in empty bars "
                     + "there: end each voice where the first one ends, or give the others music for those bars." + from);

@@ -772,6 +772,55 @@ public class CompositionChecksTests
             f => f.StartsWith("No dynamics"));
     }
 
+    // Owner's review 2026-10-30: a rock trio's bass reused its intro phrases under the chorus, from
+    // the intro's last @ff straight back to @p, inside one section; and its drum line, re-cut, had
+    // the crashes a bar before each phrase began.
+    const string Trio = """
+        title "Run"
+        time 4/4
+        octave absolute
+        part gt "Guitar" { instrument guitar }
+        part bs "Bass" { instrument bass }
+        part kit "Drums" { clef percussion }
+        phrase lo { e,4@p g, a, b, | e,4 g, a, b, | e,4 g, a, b, | e,1@ff | }
+        phrase hi { e4 g a b | e4 g a b | e4 g a b | e1 | }
+        phrase hats { hh8 hh hh hh hh hh hh hh | }
+        phrase crash { cymc1 | }
+        section A {
+          gt { hi hi hi hi }
+          bs { lo lo lo lo }
+          kit { hats hats hats CRASHES hats hats hats hats hats hats hats hats }
+        }
+        form { ~A }
+        score { staff gt staff bs staff kit }
+        """;
+
+    [Fact]
+    public void APhrasePlayedAgain_DroppingFromItsLastLevel_IsToldSo()
+    {
+        var findings = CompositionChecks.Of(Trio.Replace("CRASHES", "crash"));
+        Assert.Contains(findings, f => f.StartsWith("bs: lo ends at @ff and lo opens at @p — played one after the other"));
+        // Brought down, or meant: said nothing.
+        Assert.DoesNotContain(CompositionChecks.Of(Trio.Replace("CRASHES", "crash").Replace("e,4@p", "e,4@p.subito")),
+            f => f.StartsWith("bs: lo ends"));
+        Assert.DoesNotContain(CompositionChecks.Of(Trio.Replace("CRASHES", "crash").Replace("e,1@ff", "e,1@mp")),
+            f => f.StartsWith("bs: lo ends"));
+    }
+
+    [Fact]
+    public void CrashesMostlyOffThePhrasesFirstBars_AreToldSo()
+    {
+        // Phrases begin at bars 1, 5, 9, 13: crashes at 4, 8, 12 are each a bar early.
+        string early = Trio.Replace("CRASHES hats hats hats hats hats hats hats hats",
+            "crash hats hats hats crash hats hats hats crash hats hats hats");
+        Assert.Contains(CompositionChecks.Of(early), f => f.StartsWith("kit: 4 of its 4 crashes in A come in off the bars the phrases begin on (bars 4, 8, 12")
+            || f.StartsWith("kit: 3 of its 3 crashes in A come in off the bars the phrases begin on (bars 4, 8, 12"));
+        // On the phrases' first bars: nothing to say.
+        string onTime = Trio.Replace("hats hats hats CRASHES hats hats hats hats hats hats hats hats",
+            "crash hats hats hats crash hats hats hats crash hats hats hats crash hats hats hats");
+        Assert.DoesNotContain(CompositionChecks.Of(onTime), f => f.StartsWith("kit:") && f.Contains("crashes"));
+    }
+
     // Owner's question 2026-10-27, "a model asked in a chat has no example — is none better?": the
     // grammar shows no whole piece to compose after, only how each thing is written.
     [Fact]

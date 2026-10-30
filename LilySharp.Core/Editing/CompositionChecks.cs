@@ -95,9 +95,12 @@ public static class CompositionChecks
                     + "(`@p`, `@mf`, `@f`, …) and the hairpins in every part, where its own music asks for them, not in one part alone.");
         }
         findings.AddRange(DynamicDrops(root));
+        findings.AddRange(PhraseDrops(root));
         findings.AddRange(LateLevels(root, parts.Where(p => RoleOf(p).Drums || InstrumentOf(p) is "" || InstrumentOf(p).StartsWith("piano", System.StringComparison.Ordinal))
             .Select(p => p.Name.Text).ToHashSet(System.StringComparer.Ordinal)));
         findings.AddRange(CopiedSections(root));
+        findings.AddRange(CrashesOffThePhrases(root, parts.Where(p => RoleOf(p).Drums).Select(p => p.Name.Text)
+            .ToHashSet(System.StringComparer.Ordinal)));
         findings.AddRange(SpelledAgainstTheKey(root, parts, System.Text.RegularExpressions.Regex.IsMatch(source, @"(?m)^\s*pitch\s+concert\b")));
 
         MidiFile midi;
@@ -877,6 +880,136 @@ public static class CompositionChecks
                 break;
             }
         }
+    }
+
+    /// <summary>
+    /// The same drop between two phrases a part plays one after the other inside a section (owner's
+    /// review 2026-10-30: a rock trio's bass reused its intro phrases under the chorus, so it went
+    /// from the intro's last @ff straight back to its first @p, one section all through — the section
+    /// check never met it). A part's own drops only, at most three told per part.
+    /// </summary>
+    private static IEnumerable<string> PhraseDrops(SyntaxNode root)
+    {
+        string[] order = ["pppp", "ppp", "pp", "p", "mp", "mf", "f", "ff", "fff", "ffff"];
+        var phrases = root.DescendantNodes<PhraseDeclarationSyntax>().Where(p => p.Parent is CompilationUnitSyntax)
+            .GroupBy(p => p.Name.Text).ToDictionary(g => g.Key, g => g.First());
+        foreach (var part in root.DescendantNodes<PartBlockSyntax>().Where(b => b.Parent is SectionDeclarationSyntax { Parent: CompilationUnitSyntax })
+            .GroupBy(b => b.PartName.Text))
+        {
+            var drops = new List<string>();
+            foreach (var block in part)
+            {
+                // The references a line plays in turn: those of one music block (a voice's own line).
+                var lines = block.DescendantNodes<VariableReferenceSyntax>().Where(r => phrases.ContainsKey(r.Name.Text))
+                    .GroupBy(r => r.Parent);
+                foreach (var line in lines)
+                {
+                    var refs = line.ToList();
+                    for (int i = 0; i + 1 < refs.Count && drops.Count < 3; i++)
+                    {
+                        var before = DynamicsPlayed(phrases[refs[i].Name.Text], phrases);
+                        var after = DynamicsPlayed(phrases[refs[i + 1].Name.Text], phrases);
+                        if (before.Count == 0 || after.Count == 0)
+                            continue;
+                        int loud = System.Array.IndexOf(order, before[^1].DynamicToken.Text);
+                        var first = after[0];
+                        int soft = System.Array.IndexOf(order, first.DynamicToken.Text);
+                        if (loud < 0 || soft < 0 || first.IsSubito || loud - soft < 2)
+                            continue;
+                        string said = $"{refs[i].Name.Text} ends at @{order[loud]} and {refs[i + 1].Name.Text} opens at @{order[soft]}";
+                        if (!drops.Contains(said))
+                            drops.Add(said);
+                    }
+                }
+            }
+            if (drops.Count > 0)
+                yield return $"{part.Key}: {string.Join("; ", drops)} — played one after the other, a drop of two levels or more "
+                    + "with nothing leading to it: bring the level down over the first one's last bars (a @decresc), or, if the "
+                    + "sudden quiet is meant, write the second's level .subito. A phrase played again keeps the levels written in "
+                    + "it: where it returns in a louder place, give it that place's levels (a phrase of its own).";
+        }
+    }
+
+    /// <summary>
+    /// A drum part whose crashes mostly come in off the bars the other parts' phrases begin on
+    /// (owner's review 2026-10-30: a rock trio's drum line, re-cut to end with the song, had its
+    /// hands a bar early from then on — crashes on the last bar of each phrase, under the fill).
+    /// A crash marks where a phrase begins; held crashes are one, counted from their first bar.
+    /// Read section by section, in the section's own bars: the phrase starts are where the other
+    /// parts' phrase references begin, so a section written in notes alone says nothing.
+    /// </summary>
+    private static IEnumerable<string> CrashesOffThePhrases(SyntaxNode root, HashSet<string> drums)
+    {
+        if (drums.Count == 0)
+            return [];
+        var bodies = SectionBarCounts.PhraseBodies(root);
+        var crashes = root.DescendantNodes<DrumNoteSyntax>()
+            .Where(n => DrumNameRegistry.TryGet(n.DrumName, out var info) && info.GmKey is 49 or 57)
+            .Select(n => n.Span.Start).ToHashSet();
+        if (crashes.Count == 0)
+            return [];
+        var findings = new List<string>();
+        foreach (var section in root.DescendantNodes<SectionDeclarationSyntax>().Where(s => s.Parent is CompilationUnitSyntax))
+        {
+            var blocks = section.ChildNodes().OfType<PartBlockSyntax>().ToList();
+            // The bars the other parts' phrases begin on.
+            var starts = new HashSet<int>();
+            foreach (var block in blocks.Where(b => !drums.Contains(b.PartName.Text)))
+            {
+                var index = new Dictionary<(string Chain, int Position), int>();
+                Semantics.MeasureModel.Split(block, bodies, index: index);
+                foreach (var g in index.Where(e => e.Key.Chain != "").GroupBy(e => e.Key.Chain.Split('/')[0]))
+                    starts.Add(g.Min(e => e.Value));
+            }
+            if (starts.Count < 2)
+                continue;
+            foreach (var kit in blocks.Where(b => drums.Contains(b.PartName.Text)))
+            {
+                var bars = new HashSet<int>();
+                var index = new Dictionary<(string Chain, int Position), int>();
+                var split = Semantics.MeasureModel.Split(kit, bodies, index: index);
+                AddCrashBars(index, 0);
+                // A span's later voices are split apart, from the bar the span begins in.
+                foreach (var span in kit.DescendantNodes<ParallelExpressionSyntax>())
+                {
+                    var voices = span.Voices.ToList();
+                    if (voices.Count < 2)
+                        continue;
+                    var lead = voices[0].Span;
+                    int from = index.Where(e => (e.Key.Chain == "" ? e.Key.Position : int.Parse(e.Key.Chain.Split('/')[0])) is var w
+                            && w >= lead.Start && w < lead.Start + lead.Length)
+                        .Select(e => e.Value).DefaultIfEmpty(0).Min();
+                    foreach (var voice in voices.Skip(1))
+                    {
+                        var own = new Dictionary<(string Chain, int Position), int>();
+                        Semantics.MeasureModel.Split(voice, bodies, index: own);
+                        AddCrashBars(own, from);
+                    }
+                }
+                void AddCrashBars(Dictionary<(string Chain, int Position), int> found, int offset)
+                {
+                    foreach (var e in found)
+                        if (crashes.Contains(e.Key.Position))
+                            bars.Add(e.Value + offset);
+                }
+                var entries = bars.Where(b => !bars.Contains(b - 1)).OrderBy(b => b).ToList();
+                var off = entries.Where(b => !starts.Contains(b)).ToList();
+                if (off.Count < 2 || off.Count * 2 <= entries.Count)
+                    continue;
+                // Bars as the page numbers them: a pickup is bar 0.
+                int shift = split.Count >= 2 && split[0].Duration < split[1].Duration ? 0 : 1;
+                string Bars(IEnumerable<int> list, int most)
+                {
+                    var shown = list.OrderBy(b => b).Select(b => (b + shift).ToString()).ToList();
+                    return string.Join(", ", shown.Take(most)) + (shown.Count > most ? ", ..." : "");
+                }
+                findings.Add($"{kit.PartName.Text}: {off.Count} of its {entries.Count} crashes in {section.SectionName} come in off the bars "
+                    + $"the phrases begin on (bars {Bars(off, 6)}; the other parts' phrases begin at bars {Bars(starts, 8)}) — a crash "
+                    + "marks where a phrase begins, with the fill in the bar before it: move each crash to the first bar of the phrase "
+                    + "it announces, and keep the time (hi-hat or ride) going through the bars between.");
+            }
+        }
+        return findings;
     }
 
     /// <summary>The dynamics <paramref name="node"/> plays, in order, a phrase's marks in place of its

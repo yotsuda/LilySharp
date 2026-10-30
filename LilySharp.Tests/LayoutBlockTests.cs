@@ -604,6 +604,23 @@ public class LayoutBlockTests
             .StaffGroups[0].Staves[0].Voices[0].Measures.Length);
     }
 
+    /// <summary>Owner's report 2026-10-30: told "58 bar(s) in part 'kit'; 57 in part 'gt' and part
+    /// 'bs'", the chat's agent tried seven drum lines before one fitted. LYS2007 says where the
+    /// longer part's first extra bar begins — its own written music, by line and column.</summary>
+    [Fact]
+    public void ASectionLongerInOnePart_SaysWhereItsExtraBarBegins()
+    {
+        string Book(string kit) => "part gt { instrument guitar }\npart kit { clef percussion }\n"
+            + "phrase hats { hh8 hh hh hh hh hh hh hh | }\nphrase back { bd4 sn bd sn | }\n"
+            + $"section A {{\n  gt {{ c'1 | d' | }}\n  kit {{ {kit} }}\n}}\nform {{ A }}\nscore {{ staff gt staff kit }}\n";
+        Assert.Contains(LilySharp.Core.Semantics.SemanticValidation.Run(SyntaxTree.Parse(Book("hats hats hats"))),
+            d => d.Code == DiagnosticCodes.SectionBarCountMismatch
+                && d.Message.Contains("In part 'kit', bar 3 - the first past the others' 2 - starts at line 7, column 19"));
+        // The lead voice of a span running on is found the same way.
+        Assert.Contains(LilySharp.Core.Semantics.SemanticValidation.Run(SyntaxTree.Parse(Book("voice { hats hats hats } { back back back }"))),
+            d => d.Code == DiagnosticCodes.SectionBarCountMismatch && d.Message.Contains("bar 3 - the first past the others' 2 - starts at line 7, column 27"));
+    }
+
     /// <summary>Owner's report 2026-10-30: a drum staff's two voices both writing @ff at one
     /// moment printed "ff" twice; @f against @p is warned (LYS4033) and both print.</summary>
     [Fact]

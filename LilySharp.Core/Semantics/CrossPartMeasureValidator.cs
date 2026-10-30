@@ -113,7 +113,8 @@ internal sealed class CrossPartMeasureValidator
         {
             if (!byName.TryGetValue(voice.SectionName, out var list))
                 byName[voice.SectionName] = list = new();
-            list.Add(new SectionVoice(voice.Label, voice.IsChords, voice.Bars, voice.Anchor));
+            list.Add(new SectionVoice(voice.Label, voice.IsChords, voice.Bars, voice.Anchor,
+                Container: voice.IsChords ? null : voice.Container));
         }
         // The lyrics cells, after the voices: compared as the short side only.
         foreach (var cell in Svg.Collector.SectionBarCounts.LyricsCells(root))
@@ -134,9 +135,13 @@ internal sealed class CrossPartMeasureValidator
     /// section's length) but is reported when short. <see cref="Label"/> is how the message
     /// names it (the spelling SectionBarCounts.SemanticVoice.Label uses: <c>part 'x'</c> /
     /// <c>chords 'x'</c> / <c>lyrics 'x'</c>).</summary>
-    private readonly record struct SectionVoice(string Label, bool IsChords, int Bars, TextSpan Span, bool IsLyrics = false)
+    /// <param name="Container">A part's music, where the message looks for the bar a longer part
+    /// runs on from; null for a chord row or a lyrics cell.</param>
+    private readonly record struct SectionVoice(string Label, bool IsChords, int Bars, TextSpan Span, bool IsLyrics = false,
+        SyntaxNode? Container = null)
     {
-        public static SectionVoice Part(string name, int bars, TextSpan span) => new($"part '{name}'", false, bars, span);
+        public static SectionVoice Part(string name, int bars, TextSpan span, SyntaxNode? container = null)
+            => new($"part '{name}'", false, bars, span, Container: container);
         public static SectionVoice Chords(string name, int bars, TextSpan span) => new($"chords '{name}'", true, bars, span);
         public static SectionVoice Lyrics(LyricsBlockSyntax block)
             => new(Svg.Collector.SectionBarCounts.LyricsLabel(block), false,
@@ -213,8 +218,33 @@ internal sealed class CrossPartMeasureValidator
             // tracks it lists are named by what the book calls them (the owner asked what
             // "layer" meant — a word Lily#'s own documents never use in that sense).
             $"Section '{sectionName}' is not the same length everywhere it is written: {lengths}. "
-            + $"It is laid out at {maxBars} bar(s): {string.Join("; ", recovery)}",
+            + $"It is laid out at {maxBars} bar(s): {string.Join("; ", recovery)}" + RunsOnFrom(counted),
             related);
+    }
+
+    /// <summary>
+    /// Where a part longer than most of the section's voices runs on past them: the written place
+    /// its first extra bar begins, by line and column (owner's report 2026-10-30: told "58 bar(s)
+    /// in part 'kit'; 57 in part 'gt' and part 'bs'", the chat's agent tried seven drum lines before
+    /// one fitted — a line of 57 phrase names does not say which is the 58th). Empty when the
+    /// longer length is the common one, or the extra bars hold no written music of the part's own
+    /// (a voice span's later voice running on: LYS2019 says where).
+    /// </summary>
+    private string RunsOnFrom(List<SectionVoice> counted)
+    {
+        // On a tie the shorter: two parts a bar apart, the longer one's extra bar is told.
+        int common = counted.GroupBy(v => v.Bars).OrderByDescending(g => g.Count()).ThenBy(g => g.Key).First().Key;
+        var said = new List<string>();
+        foreach (var voice in counted.Where(v => v.Bars > common && v.Container != null))
+        {
+            var index = new Dictionary<(string Chain, int Position), int>();
+            MeasureModel.Split(voice.Container!, _phraseBodies, index: index, longestVoice: true);
+            if (MeasureModel.WhereBarStarts(index, common) is not { } start)
+                continue;
+            said.Add($" In {voice.Label}, bar {common + 1} - the first past the others' {common} - starts "
+                + (start.Inside ? "inside the phrase at " : "at ") + MeasureModel.LineColumn(voice.Container!, start.Position));
+        }
+        return said.Count == 0 ? "" : "." + string.Join(";", said) + ": end it before there, or write the others' bars to match";
     }
 
     /// <summary><c>a</c>, <c>a and b</c>, <c>a, b and c</c>.</summary>
@@ -366,7 +396,8 @@ internal sealed class CrossPartMeasureValidator
         List<(string Name, Fraction Time, TextSpan TimeSpan, List<MeasureModel.Bar> Measures)> parts,
         List<SectionVoice> chordVoices)
     {
-        var voices = parts.Select(p => SectionVoice.Part(p.Name, p.Measures.Count, p.TimeSpan)).ToList();
+        var voices = parts.Select(p => SectionVoice.Part(p.Name, p.Measures.Count, p.TimeSpan,
+            section.ChildNodes().OfType<PartBlockSyntax>().FirstOrDefault(b => b.Name == p.Name))).ToList();
         voices.AddRange(chordVoices);
         ReportBarCountMismatch(section.SectionName, voices);
     }

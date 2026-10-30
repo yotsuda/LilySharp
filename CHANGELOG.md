@@ -28,6 +28,13 @@ workflow attaches that section to the GitHub Release verbatim.
   parts are padded with empty bars (LYS2007 and the section's CodeLens say they are short). This
   holds on the page, in the LilyPond and MusicXML exports and in the MIDI. Before, those bars were
   heard after the song ended and drawn nowhere.
+- `[lang]` **LYS2007 says where a longer part runs on**: when one part writes more bars than the
+  others, the warning gives the line and column where its first extra bar begins. Before, a line
+  of 57 phrase names did not say which one was the 58th.
+- `[ai]` **The composition checks tell two more things**:
+  - A drop of two levels or more between two phrases a part plays one after the other, inside a
+    section. A phrase played again keeps the levels written in it.
+  - A drum part whose crashes mostly come in off the bars the other parts' phrases begin on.
 - `[render]` **A drum part's bars are counted by its notes**: the page's bar count had counted only
   a drum part's bar lines, so a drum part longer than the others was cut to their length.
 

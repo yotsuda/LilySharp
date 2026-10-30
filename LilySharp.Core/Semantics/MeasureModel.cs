@@ -333,6 +333,36 @@ internal static class MeasureModel
         public TextSpan Span { get; } = span;
     }
 
+    /// <summary>Where bar <paramref name="bar"/> (0-based, as <see cref="Split"/> counts) begins in
+    /// the scope an <paramref name="index"/> was filled for: the start of the written item its
+    /// first music is — a note, or the phrase reference it was inlined through — and whether that
+    /// reference began in an earlier bar (the bar starts inside it). Null when no written music
+    /// lands in it (owner's reports 2026-10-30: told "18 more" or "58 bars to 57", the chat's agent
+    /// counted the phrases itself, in a script or by trial).</summary>
+    internal static (int Position, bool Inside)? WhereBarStarts(Dictionary<(string Chain, int Position), int> index, int bar)
+    {
+        var start = index
+            .Select(e => (Written: e.Key.Chain == "" ? e.Key.Position : int.Parse(e.Key.Chain.Split('/')[0]), Bar: e.Value))
+            .GroupBy(e => e.Written).Select(g => (Written: g.Key, From: g.Min(e => e.Bar), To: g.Max(e => e.Bar)))
+            .Where(e => e.To >= bar).OrderBy(e => e.Written).FirstOrDefault();
+        return start.To >= bar ? (start.Written, start.From < bar) : null;
+    }
+
+    /// <summary>"line L, column C" (1-based) of <paramref name="position"/> in the tree
+    /// <paramref name="node"/> belongs to, for a message to name a place other than its own.</summary>
+    internal static string LineColumn(SyntaxNode node, int position)
+    {
+        var root = node;
+        while (root.Parent != null)
+            root = root.Parent;
+        string text = root.ToFullString();
+        int line = 1, col = 1;
+        for (int i = 0; i < position && i < text.Length; i++)
+            if (text[i] == '\n') { line++; col = 1; }
+            else col++;
+        return $"line {line}, column {col}";
+    }
+
     /// <summary>The bars a voice writes, as the collector draws them: a trailing empty bar
     /// (the bar line closing it) is not one.</summary>
     private static int VoiceBars(SyntaxNode voice, IReadOnlyDictionary<string, SyntaxNode> phraseBodies)
