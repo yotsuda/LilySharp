@@ -316,7 +316,8 @@ public sealed partial class LilySharpLanguageServer
             CompletionContext.MusicBlock => IsInsidePercussionPartMusic(doc.Text, offset, out bool inVoice)
                 ? WithPhraseSummaries(GetDrumCompletions(inVoice), doc.Tree, drums: true)
                 : WithPhraseSummaries(GetMusicCompletions(word, CurrentKeySharps(doc.Text, offset), _flatSpellingContracted, inVoice,
-                    CurrentKey(doc.Text, offset).Tonic, DeclaredNamesOf(doc.Text, "phrase")), doc.Tree, drums: false),
+                    CurrentKey(doc.Text, offset).Tonic, DeclaredNamesOf(doc.Text, "phrase"),
+                    bowed: IsInsideBowedPartMusic(doc.Tree, offset)), doc.Tree, drums: false),
             // The position goes with the text here too: a repeat barline typed as far as
             // `|` or `:` is REPLACED by the item, not appended to (see GetFormCompletions).
             CompletionContext.FormBlock => GetFormCompletions(doc.Text, offset, position),

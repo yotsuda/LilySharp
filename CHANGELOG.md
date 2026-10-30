@@ -28,6 +28,18 @@ workflow attaches that section to the GitHub Release verbatim.
   parts are padded with empty bars (LYS2007 and the section's CodeLens say they are short). This
   holds on the page, in the LilyPond and MusicXML exports and in the MIDI. Before, those bars were
   heard after the song ended and drawn nowhere.
+- `[lang]` **A chord its player cannot hold warns** (LYS1055).
+  - On a guitar, bass, ukulele or banjo, it warns when no string per note within a hand's reach
+    (four frets) fits the chord. The warning names a voicing of the same notes that can be held,
+    as a chord diagram writes it (`3x3430`).
+  - On a violin, viola, cello or double bass, a chord of three notes or more warns: a bow sounds
+    two strings at once. So does a double stop off its neighbouring strings.
+  - In a bowed part, completion's chord rows write a double stop: the first two notes of the
+    chord (`Cmaj7` writes `<c e>`). Lesson 1's step 5 says so.
+- `[ai]` **Composing in the chat asks which voicings a player can hold**: a new tool,
+  `lilysharp_chordVoicings` (#chordVoicings). Give it a chord symbol, an instrument and a
+  register; it answers the voicings, commonest first, as Lily# chords with their diagrams. A
+  bowed string's answers are double stops (language server request `lilysharp/chordVoicings`).
 - `[lang]` **A key past seven sharps or flats warns** (LYS4034), naming the key that sounds the
   same: `key des minor` (eight flats, every A a B𝄫) → `key cis minor`.
 - `[lang]` **A hairpin whose next level goes the other way warns** (LYS4035): `@decresc` leading to

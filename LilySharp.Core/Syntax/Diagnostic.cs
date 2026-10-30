@@ -805,6 +805,11 @@ public static class DiagnosticCodes
     /// Read off the notes the MIDI export plays, so transpositions, repeats and phrases count.</remarks>
     public const string NoteOutsideInstrumentRange = "LYS1052";
 
+    /// <summary>Warning: a chord a fretted part's player cannot finger — no string for each of its
+    /// notes within a hand's reach — named with a voicing of the same notes that can be held, as a
+    /// chord diagram writes it (owner's request 2026-10-30; <c>Semantics.ChordFingeringValidator</c>).</summary>
+    public const string ChordNotFingerable = "LYS1055";
+
     /// <summary>Warning: a <c>chords</c> row entry that is no chord Lily# reads — <c>C7b9</c>,
     /// <c>C-5</c>, a misspelled quality. The row still prints it as written and plays only its
     /// root (a root that is no A–G is the parser's error); the message names the spelling's fix, as the

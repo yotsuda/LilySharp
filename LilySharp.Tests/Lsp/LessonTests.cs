@@ -598,6 +598,12 @@ public class LessonTests
         string inG = emptied.Insert(EmptyLineAfter(emptied, "STEP 1"), "key g major");
         int inGAt = at + "key g major".Length;
         Assert.Equal("<c e g b>", CompletionAt(inG, inGAt).Single(i => i.Label == "Cmaj7").InsertText);
+
+        // After step 2 the part is a cello: the row writes a double stop, a bow sounding two strings
+        // at once (owner's rule 2026-10-30; LYS1055 warns a chord of more).
+        string cello = inG.Insert(EmptyLineAfter(inG, "STEP 2"), "instrument cello");
+        int celloAt = inGAt + "instrument cello".Length;
+        Assert.Equal("<c e>", CompletionAt(cello, celloAt).Single(i => i.Label == "Cmaj7").InsertText);
     }
 
     [Fact]
@@ -622,7 +628,7 @@ public class LessonTests
         int step4 = text.LastIndexOf("e@todo(\"STEP 4\")", System.StringComparison.Ordinal) + 1;
         text = text.Remove(step4, "@todo(\"STEP 4\")".Length).Insert(step4, "@mf");
         int rest = text.LastIndexOf("r1@todo(\"STEP 5\")", System.StringComparison.Ordinal);
-        text = text.Remove(rest, "r1@todo(\"STEP 5\")".Length).Insert(rest, "<c e g b>");
+        text = text.Remove(rest, "r1@todo(\"STEP 5\")".Length).Insert(rest, "<c e>");   // the cello's double stop
         Assert.Contains("form { |: ~A :| }", Lesson1);   // the sample step 6 shows
         text = text.Replace("form { ~A }", "form { |: ~A :| }");
 

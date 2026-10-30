@@ -2088,6 +2088,31 @@ public sealed partial class LilySharpLanguageServer
     internal static bool IsInsidePercussionPartMusic(string text, int offset)
         => IsInsidePercussionPartMusic(text, offset, out _);
 
+    /// <summary>
+    /// True when the cursor sits in the music of a bowed string's part (an <c>instrument</c>
+    /// violin, viola, cello or contrabass): its chord rows insert a double stop, two strings being
+    /// all a bow sounds at once (owner's rule 2026-10-30). The part is the block's, by section
+    /// (<c>section A { cello { … } }</c>) or by part (<c>part cello { section A { … } }</c>).
+    /// </summary>
+    internal static bool IsInsideBowedPartMusic(LilySharp.Core.Syntax.SyntaxTree tree, int offset)
+    {
+        var root = tree.GetRoot();
+        string? part = null;
+        foreach (var block in root.DescendantNodes<LilySharp.Core.Syntax.PartBlockSyntax>())
+            if (block.Span.Start < offset && offset <= block.Span.Start + block.Span.Length)
+                part = block.Name;
+        if (part == null)
+            foreach (var section in root.DescendantNodes<LilySharp.Core.Syntax.SectionDeclarationSyntax>())
+                if (section.Parent is LilySharp.Core.Syntax.PartDeclarationSyntax owner
+                    && section.Span.Start < offset && offset <= section.Span.Start + section.Span.Length)
+                    part = owner.Name.Text;
+        if (part == null)
+            return false;
+        var declaration = root.ChildNodes().OfType<LilySharp.Core.Syntax.PartDeclarationSyntax>().FirstOrDefault(p => p.Name.Text == part);
+        return declaration != null
+            && LilySharp.Core.Semantics.PartHeaderDefaults.Read(declaration).Preset is "violin" or "viola" or "cello" or "contrabass";
+    }
+
     internal static bool IsInsidePercussionPartMusic(string text, int offset, out bool insideVoice)
     {
         insideVoice = false;

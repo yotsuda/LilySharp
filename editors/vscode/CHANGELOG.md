@@ -20,6 +20,11 @@ All notable changes to the Lily# VS Code extension are documented here.
 - **LYS2019 stands where the extra bars begin**: "Bar 57 starts here", or inside the phrase there.
 - **A voice that runs past the others is drawn**: the staff runs on to its end, and the other
   parts are shown as empty bars there. The section's CodeLens and LYS2007 say those parts are short.
+- **#chordVoicings**: Copilot's chat can ask which voicings of a chord a player can hold on a
+  guitar, bass, ukulele or bowed string, in a register. It answers as Lily# chords with their
+  diagrams (`<c g bes ees' g'>`, `x35343`), and for a bowed string the double stops.
+- **A chord its player cannot hold is warned** (LYS1055). In a violin, viola, cello or double bass
+  part, completion's chord rows write a double stop.
 - **A drum note sounds its drum when selected**: a hi-hat, kick, snare… heard on the kit's
   channel, the drums of a `<…>` together, a `drums { }` chart's hits too — it was silent.
 - **New warnings**:

@@ -1,0 +1,208 @@
+// Lily# - Music notation compiler
+// Copyright (C) 2025-2026 Yoshifumi Tsuda
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+using System.Collections.Generic;
+using System.Linq;
+using LilySharp.Core.Midi;
+using LilySharp.Core.Syntax;
+using LilySharp.Core.Tablature;
+
+namespace LilySharp.Core.Semantics;
+
+/// <summary>
+/// LYS1055: a chord a fretted part's player cannot finger — no way to give each of its notes a
+/// string of its own within one hand's reach (owner's request 2026-10-30: a composed rock piece's
+/// guitar wrote <c>&lt;g b d f&gt;</c>, G2 B2 D3 F3, which no guitar can hold). Named with a voicing of
+/// the same notes that can be held, as a chord diagram reads it (<c>3x3430</c>). A bowed string's
+/// part (violin, viola, cello, double bass) sounds two strings at once (owner's rule, the same day):
+/// a chord of three or more is warned, and two notes not on neighbouring strings within the hand's
+/// reach. The voicings that can be held are asked of <see cref="Editing.ChordVoicingFinder"/>
+/// (the composing chat's <c>lilysharp_chordVoicings</c>).
+/// </summary>
+/// <remarks>
+/// <para>
+/// A chord is the notes the MIDI export starts at one moment in one part, so a phrase, a repeat or
+/// a second voice is heard as the player plays it, at its sounding pitch. Fingerable: each note on
+/// a string of its own, its fret 0 (open) to <see cref="TopFret"/>, the fretted ones no more than
+/// <see cref="Reach"/> frets apart (LilyPond's <c>maximumFretStretch</c>, the tab's own rule —
+/// <see cref="Tunings.CalculateChordFrets"/>), and no more fretted notes above the lowest fret than
+/// three fingers can hold (the index barring that fret). Every assignment is tried: the tab's own
+/// placement is greedy, highest note first, and answers "no string" for chords a hand can hold.
+/// </para>
+/// <para>
+/// The voicing offered keeps the lowest note and moves the others by octaves, the fewest moves
+/// first. ASCII only: the message reaches legacy-codepage consoles through the CLI.
+/// </para>
+/// </remarks>
+internal sealed class ChordFingeringValidator : ISemanticValidator
+{
+    /// <summary>The highest fret looked at.</summary>
+    private const int TopFret = 22;
+
+    /// <summary>The widest a fretted chord may stretch, from its lowest fretted note to its highest.</summary>
+    private const int Reach = 4;
+
+    private readonly DiagnosticBag _diagnostics = new();
+
+    public IReadOnlyList<Diagnostic> Diagnostics => _diagnostics.ToList();
+
+    public void Validate(SyntaxTree tree)
+    {
+        var tunings = new Dictionary<string, int[]>(System.StringComparer.Ordinal);
+        var bowed = new HashSet<string>(System.StringComparer.Ordinal);
+        foreach (var part in tree.GetRoot().ChildNodes().OfType<PartDeclarationSyntax>())
+        {
+            var header = PartHeaderDefaults.Read(part);
+            if (header.FrettedTuning is { } tuning)
+                tunings.TryAdd(part.Name.Text, Tunings.GetTuning(tuning));
+            // A bowed string (owner's rule 2026-10-30): two strings sound at once.
+            else if (header.Preset is "violin" or "viola" or "cello" or "contrabass" && tunings.TryAdd(part.Name.Text, Tunings.GetTuning(header.Tuning)))
+                bowed.Add(part.Name.Text);
+        }
+        if (tunings.Count == 0)
+            return;
+
+        MidiFile midi;
+        try
+        {
+            midi = new MidiExporter().Export(tree);
+        }
+        catch
+        {
+            return; // a book that cannot play surfaces its real error elsewhere
+        }
+
+        var said = new HashSet<int>();
+        var chords = midi.Tracks.SelectMany(t => t.Notes)
+            .Where(n => n.SourcePos >= 0 && n.Part is { } p && tunings.ContainsKey(p))
+            .GroupBy(n => (n.Part!, n.StartTick));
+        foreach (var chord in chords)
+        {
+            var pitches = chord.Select(n => n.Pitch).Distinct().OrderBy(p => p).ToArray();
+            if (pitches.Length < 2)
+                continue;
+            int at = chord.Min(n => n.SourcePos);
+            if (!said.Add(at))
+                continue;
+            var strings = tunings[chord.Key.Item1];
+            if (bowed.Contains(chord.Key.Item1))
+            {
+                if (pitches.Length == 2 && DoubleStop(pitches[0], pitches[1], strings))
+                    continue;
+                // ASCII punctuation only: the CLI prints this to legacy-codepage consoles.
+                _diagnostics.Warning(new TextSpan(at, 1), DiagnosticCodes.ChordNotFingerable,
+                    $"this chord ({string.Join(" ", pitches.Select(Spell))}) cannot be bowed at once: "
+                    + (pitches.Length > 2
+                        ? $"a bowed string sounds two strings together, not {pitches.Length} - keep two of its notes (a double stop), or break the chord, the low notes first"
+                        : $"its two notes do not lie on neighbouring strings within the hand's reach ({Editing.ChordVoicingFinder.BowedReach} semitones) - move one by an octave, or choose another pair of the chord's notes"));
+                continue;
+            }
+            if (Fingering(pitches, strings) != null)
+                continue;
+            var instead = Playable(pitches, strings);
+            _diagnostics.Warning(new TextSpan(at, 1), DiagnosticCodes.ChordNotFingerable,
+                $"this chord ({string.Join(" ", pitches.Select(Spell))}) cannot be fingered: no string for each note within a hand's "
+                + $"reach ({Reach} frets) - "
+                + (instead is { } v
+                    ? $"a voicing of its notes a player can hold: {string.Join(" ", v.Pitches.Select(Spell))} ({Diagram(v.Frets)}), "
+                      + "the lowest note kept, the others moved by an octave"
+                    : "spread it out, or leave notes out (the root and fifth below, the third above)"));
+        }
+    }
+
+    /// <summary>Two pitches a bowed string sounds together: on two neighbouring strings, the stopped
+    /// ones within the hand's reach (<see cref="Editing.ChordVoicingFinder"/>'s rule).</summary>
+    private static bool DoubleStop(int low, int high, int[] strings)
+    {
+        for (int s = 0; s + 1 < strings.Length; s++)
+        {
+            int a = low - strings[s], b = high - strings[s + 1];
+            if (a >= 0 && b >= 0 && (a == 0 || b == 0 || System.Math.Abs(a - b) <= Editing.ChordVoicingFinder.BowedReach))
+                return true;
+        }
+        return false;
+    }
+
+    /// <summary>A fret for each string (index 0 the lowest; -1 unplayed) holding every pitch, or null.</summary>
+    internal static int[]? Fingering(IReadOnlyList<int> pitches, int[] strings)
+    {
+        var frets = Enumerable.Repeat(-1, strings.Length).ToArray();
+        return Place(0) ? frets : null;
+
+        bool Place(int i)
+        {
+            if (i == pitches.Count)
+                return Holdable(frets);
+            for (int s = 0; s < strings.Length; s++)
+            {
+                int fret = pitches[i] - strings[s];
+                if (frets[s] >= 0 || fret < 0 || fret > TopFret)
+                    continue;
+                frets[s] = fret;
+                if (Holdable(frets) && Place(i + 1))
+                    return true;
+                frets[s] = -1;
+            }
+            return false;
+        }
+    }
+
+    /// <summary>The fretted notes within <see cref="Reach"/>, and no more of them above the lowest
+    /// fret than three fingers (the index barring the lowest).</summary>
+    private static bool Holdable(int[] frets)
+    {
+        var fretted = frets.Where(f => f > 0).ToList();
+        if (fretted.Count == 0)
+            return true;
+        int low = fretted.Min();
+        return fretted.Max() - low <= Reach && fretted.Count(f => f > low) <= 3;
+    }
+
+    /// <summary>The same notes with the fewest moved by an octave, the lowest kept, that can be held.</summary>
+    private static (int[] Pitches, int[] Frets)? Playable(int[] pitches, int[] strings)
+    {
+        int n = pitches.Length - 1;
+        (int[] Pitches, int[] Frets)? best = null;
+        int bestMoves = int.MaxValue;
+        // Each upper note stays, or goes an octave up or down: 3^n tries (a chord has few notes).
+        int tries = (int)System.Math.Pow(3, n);
+        for (int code = 0; code < tries; code++)
+        {
+            var moved = new int[pitches.Length];
+            moved[0] = pitches[0];
+            int moves = 0, c = code;
+            for (int i = 1; i <= n; i++, c /= 3)
+            {
+                int shift = (c % 3) switch { 1 => 12, 2 => -12, _ => 0 };
+                moves += shift == 0 ? 0 : 1;
+                moved[i] = pitches[i] + shift;
+            }
+            if (moves >= bestMoves || moved.Skip(1).Any(p => p <= pitches[0]) || moved.Distinct().Count() < moved.Length)
+                continue;
+            var sorted = moved.OrderBy(p => p).ToArray();
+            if (Fingering(sorted, strings) is { } frets)
+                (best, bestMoves) = ((sorted, frets), moves);
+        }
+        return best;
+    }
+
+    /// <summary>A diagram's fret string, lowest string first: <c>3x3430</c>.</summary>
+    private static string Diagram(int[] frets)
+        => string.Concat(frets.Select(f => f < 0 ? "x" : f < 10 ? f.ToString() : $"({f})"));
+
+    private static string Spell(int midi)
+        => new[] { "C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B" }[midi % 12] + (midi / 12 - 1);
+}

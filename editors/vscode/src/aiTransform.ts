@@ -279,6 +279,16 @@ function registerProposeScoreTool(context: vscode.ExtensionContext, deps: AiTran
             new vscode.LanguageModelTextPart(await readScore(deps, options.input)),
         ]),
     }));
+    // The voicings a player can hold (owner's request 2026-10-30: a composed guitar part wrote a chord
+    // no hand could hold — a tool to ask before writing one, rather than a rule refusing it after).
+    context.subscriptions.push(lm.registerTool<ChordVoicingsInput>('lilysharp_chordVoicings', {
+        prepareInvocation: options => ({
+            invocationMessage: `Finding ${options.input?.chord ?? 'the chord'}'s voicings on the ${options.input?.instrument ?? 'guitar'}…`,
+        }),
+        invoke: async options => new vscode.LanguageModelToolResult([
+            new vscode.LanguageModelTextPart(await chordVoicings(deps, options.input)),
+        ]),
+    }));
     context.subscriptions.push(lm.registerTool<ReadScoreInput>('lilysharp_checkName', {
         prepareInvocation: options => ({
             invocationMessage: `Checking that ${path.basename(options.input?.file ?? 'the name')} is free…`,
@@ -451,6 +461,36 @@ async function scoreDocument(file: string): Promise<vscode.TextDocument | undefi
     return moved.fsPath.toLowerCase() === path.resolve(file).toLowerCase() ? undefined
         : vscode.workspace.textDocuments.find(d => d.uri.toString() === moved.toString())
             ?? (moved.scheme === 'file' && fs.existsSync(moved.fsPath) ? await vscode.workspace.openTextDocument(moved) : undefined);
+}
+
+/** What Copilot's chat hands the voicing tool. */
+interface ChordVoicingsInput {
+    chord: string;
+    instrument?: string;
+    low?: string;
+    high?: string;
+    count?: number;
+}
+
+/** A chord's voicings a player can hold, from the server (lilysharp/chordVoicings). */
+async function chordVoicings(deps: AiTransformDeps, input: ChordVoicingsInput): Promise<string> {
+    if (!input || typeof input.chord !== 'string' || input.chord.trim().length === 0) {
+        return 'Nothing found: give `chord`, a chord symbol (Cm7, G7/B …).';
+    }
+    await deps.ensureReady?.();
+    const client = deps.getClient();
+    if (!client || !deps.isReady()) {
+        return 'Nothing found: the Lily# language server is not running.';
+    }
+    try {
+        const answer = await client.sendRequest<{ Text: string }>('lilysharp/chordVoicings', {
+            Chord: input.chord, Instrument: input.instrument ?? 'guitar', Low: input.low ?? null, High: input.high ?? null,
+            Count: typeof input.count === 'number' ? input.count : null,
+        });
+        return answer.Text;
+    } catch (err) {
+        return `Nothing found: ${err}`;
+    }
 }
 
 /** What Copilot's chat hands the reading tool. */

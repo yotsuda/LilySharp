@@ -1219,6 +1219,17 @@ public sealed partial class LilySharpLanguageServer
             : new ConvertOctavesResponse { Success = false, Error = result.Error, Notes = notes };
     }
 
+    /// <summary>The voicings of a chord a player can hold on a string instrument, in a register
+    /// (<see cref="LilySharp.Core.Editing.ChordVoicingFinder"/>; owner's request 2026-10-30): the
+    /// composing chat's tool, asked before it writes a chord.</summary>
+    [JsonRpcMethod("lilysharp/chordVoicings", UseSingleObjectParameterDeserialization = true)]
+    public Task<ChordVoicingsResponse> ChordVoicingsAsync(ChordVoicingsParams @params, CancellationToken token)
+        => OffDispatch(() => new ChordVoicingsResponse
+        {
+            Text = LilySharp.Core.Editing.ChordVoicingFinder.Describe(@params.Chord ?? "", @params.Instrument ?? "guitar",
+                @params.Low, @params.High, @params.Count is int n and > 0 ? n : 6),
+        }, token);
+
     [JsonRpcMethod("lilysharp/aiOctaves", UseSingleObjectParameterDeserialization = true)]
     public Task<AiOctavesResponse> AiOctavesAsync(AiOctavesParams @params, CancellationToken token)
         => OffDispatch(() => AiOctaves(@params), token);

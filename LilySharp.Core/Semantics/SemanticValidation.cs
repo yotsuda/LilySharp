@@ -114,6 +114,7 @@ public static class SemanticValidation
         new StaffClefWordPartValidator(),   // staff/ossia X Y where X is a declared part and a clef word
         new InstrumentPresetPropertyValidator(), // an octave or a tuning that slips against the part's preset
         new InstrumentRangeValidator(),     // a note the part's instrument cannot sound
+        new ChordFingeringValidator(),      // a chord a fretted part's player cannot finger
         new PercentRepeatValidator(),       // the old repeat percent/unfold; a % mark that repeats nothing
         new EmptyScoreValidator(),          // a score block with no staff to engrave
         new MissingScoreValidator(),        // a book with music and no score block at all

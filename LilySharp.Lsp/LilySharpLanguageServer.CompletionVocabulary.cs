@@ -4342,8 +4342,11 @@ public sealed partial class LilySharpLanguageServer
     /// signature still gets the rows of that signature's C-rooted scale.</param>
     /// <param name="phraseNames">The document's declared <c>phrase NAME</c>s, offered as
     /// references (GRAMMAR PhraseRef); none when the caller has no document.</param>
+    /// <param name="bowed">The music of a bowed string's part: each chord row inserts a double stop,
+    /// the first two of its notes (the root and the third, or the suspension) — a bow sounds two
+    /// strings at once (owner's rule 2026-10-30; LYS1055 warns a chord of more).</param>
     internal static CompletionList GetMusicCompletions(string word, int keySharps, bool contracted = false, bool insideVoice = false, char keyTonic = 'c',
-        IEnumerable<string>? phraseNames = null)
+        IEnumerable<string>? phraseNames = null, bool bowed = false)
     {
         var items = new System.Collections.Generic.List<CompletionItem>();
 
@@ -4443,6 +4446,8 @@ public sealed partial class LilySharpLanguageServer
                 if (!ChordStructure.TryParseChordEntry(symbol, out var structure))
                     continue;
                 string chordNotes = Contract(structure.ToNoteChord(), contracted);
+                if (bowed)
+                    chordNotes = "<" + string.Join(" ", chordNotes.Trim('<', '>').Split(' ').Take(2)) + ">";
                 // The detail is what the row inserts, and no more (MusicCompletionWidthTests: the
                 // popup is as wide as its widest detail); what the row IS goes to the
                 // documentation, which only the details panel shows.

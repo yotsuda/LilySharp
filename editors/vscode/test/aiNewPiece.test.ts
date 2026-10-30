@@ -262,6 +262,12 @@ describe('the composing guide', () => {
         // …which says what Lily# finds in it, the spot on a long line quoted (the same day: the agent
         // counted a drum line's phrases in a terminal script).
         assert.match(here, /'Run no script or terminal on a score\.',/);
+        // The voicings a player can hold, asked before a chord is written (owner's request 2026-10-30).
+        assert.match(here, /ask lilysharp_chordVoicings what its player can hold\.',/);
+        assert.match(pkg, /"onLanguageModelTool:lilysharp_chordVoicings"/);
+        assert.match(pkg, /"name": "lilysharp_chordVoicings",\s*"toolReferenceName": "chordVoicings"/);
+        assert.match(transform, /lm\.registerTool<ChordVoicingsInput>\('lilysharp_chordVoicings'/);
+        assert.match(transform, /client\.sendRequest<\{ Text: string \}>\('lilysharp\/chordVoicings'/);
         const read = transform.slice(transform.indexOf('async function readScore('), transform.indexOf('async function checkName('));
         assert.match(read, /const said = await saidOf\(deps, text\);/);
         assert.match(read, /\+ absolute \+ said;/);
