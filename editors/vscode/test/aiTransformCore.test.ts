@@ -101,8 +101,12 @@ describe('a proposal from Copilot\'s chat', () => {
         assert.match(src, /if \(isEmptyScore\(current\) && !musicCheckedFor\.has\(uri\.toString\(\)\)\) \{\s*const report = await compositionReport\(client, text\);[\s\S]*?const music = language \? \[\.\.\.report\.findings, language\] : report\.findings;\s*ranges = report\.ranges;\s*musicCheckedFor\.add\(uri\.toString\(\)\);/);
         // Each part's range goes with it, a fact to check against what was meant (owner's request
         // 2026-10-29: a beginner's piece slipped an octave), on the bounce, the write and an Accept.
-        assert.match(src, /'Where something is as you meant it, keep it: the next proposal is written as it is\.'\s*\+ rangesSaid\(ranges\);/);
-        assert.match(src, /ranges \?\?= \(await compositionReport\(client, text\)\)\.ranges;/);
+        assert.match(src, /'is written as it is, and what the check still finds in it is told to the musician\.'\s*\+ rangesSaid\(ranges\);/);
+        // The revision checked again, written, and what still holds told to the musician (owner's
+        // decision 2026-10-30: a rock piece sent back as too short came again as short, unmentioned).
+        assert.match(src, /if \(ranges === undefined\) \{\s*const report = await compositionReport\(client, text\);\s*ranges = report\.ranges;\s*kept = report\.findings;/);
+        assert.match(src, /\+ \(kept\.length > 0\s*\? '\\nLily#\\'s check of the new piece still finds this in it, as written — tell the musician each point/);
+        assert.match(src, /keep it, and say why in the proposal\\'s note/);
         assert.match(src, /an octave mark slips easily/);
         // …saying first that it counts notes and leaves what does not fit the music (owner's decision 2026-10-29).
         assert.match(src, /'Lily#\\'s check of a new piece found this\. It counts notes and does not know '\s*\+ 'the kind of music you mean: take what helps the piece, and leave what does not fit it —\\n'/);

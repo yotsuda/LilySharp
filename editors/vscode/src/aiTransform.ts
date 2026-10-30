@@ -600,7 +600,8 @@ async function proposeScore(deps: AiTransformDeps, input: ProposeScoreInput, tok
                       + `${music.map(m => `- ${m}`).join('\n')}\n`
                     : '')
                 + 'Revise the piece with these in mind and call lilysharp_proposeScore again with the whole text. '
-                + 'Where something is as you meant it, keep it: the next proposal is written as it is.'
+                + 'Where something is as you meant it, keep it, and say why in the proposal\'s note: the next proposal '
+                + 'is written as it is, and what the check still finds in it is told to the musician.'
                 + rangesSaid(ranges);
         }
     }
@@ -610,7 +611,15 @@ async function proposeScore(deps: AiTransformDeps, input: ProposeScoreInput, tok
     if (isEmptyScore(current)) {
         // Opened as a musician writes it, as Compose with AI's piece is (owner's report 2026-10-29).
         // The ranges are of the piece as the AI wrote it: they are the same notes.
-        ranges ??= (await compositionReport(client, text)).ranges;
+        // The revision is written as it is, and what the check still finds in it said to the musician
+        // (owner's decision 2026-10-30: sent back, a rock piece of 44 seconds came again at 42, the
+        // length unmentioned, its missing tune made eighth-note arpeggios the check did not see).
+        let kept: string[] = [];
+        if (ranges === undefined) {
+            const report = await compositionReport(client, text);
+            ranges = report.ranges;
+            kept = report.findings;
+        }
         const written = await writeWhole(uri, exists, doc, await asMusicianWrites(deps, client, text));
         if (written !== undefined) {
             return `Not written: ${written}`;
@@ -626,6 +635,11 @@ async function proposeScore(deps: AiTransformDeps, input: ProposeScoreInput, tok
             + 'read it with lilysharp_readScore (not from the disk), which shows it to you in absolute octaves. The piece is done: '
             + 'do not propose it again unless the musician asks for a change in the chat.'
             + (added.length ? ` It keeps these warnings, as you proposed it:\n${formatDiags(added, text)}` : '')
+            + (kept.length > 0
+                ? '\nLily#\'s check of the new piece still finds this in it, as written — tell the musician each point, in '
+                  + 'a line in your own words, and why you left it (or that you can change it if they wish):\n'
+                  + kept.map(m => `- ${m}`).join('\n')
+                : '')
             + rangesSaid(ranges);
     }
     const snapshot: Snapshot = {
