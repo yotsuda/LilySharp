@@ -767,10 +767,15 @@ async function proposeScore(deps: AiTransformDeps, input: ProposeScoreInput, tok
                     + (added.length ? ` It has these warnings, which they may want fixed:\n${formatDiags(added, text)}` : '')
                     + rangesSaid((await compositionReport(client, text)).ranges);
             }
-            // Rejected: the panel stays, saying so, for the chat's next proposal to open in.
+            // Rejected: the panel closes, as Ask AI's Reject closes it (owner's request 2026-10-30: kept
+            // open, its buttons greyed, it could only be closed, and the chat said only "tell me what to
+            // change"); the chat's next proposal opens a new one. The chat says what was turned down.
             deps.log('AI proposal (chat): rejected.');
-            return 'Rejected: the musician rejected the proposal, and the file is unchanged. They will say in the chat what '
-                + 'they want; propose again with lilysharp_proposeScore when they do.';
+            candidatePanel?.dispose();
+            vscode.window.setStatusBarMessage('Lily#: the chat\'s proposal rejected — the file is unchanged.', 4000);
+            return 'Rejected: the musician rejected the proposal, and its panel is closed; the file is unchanged. '
+                + 'Tell them in a line or two what the rejected proposal changed (and anything it left undone), then '
+                + 'ask what they want instead. Propose again with lilysharp_proposeScore when they say.';
         }
     } finally {
         stop.dispose();
@@ -2631,9 +2636,7 @@ button:disabled { opacity:0.45; cursor:default; }
   const SAY = {
     accept: 'Writing it into the file…',
     iterate: 'Type what to change in the box at the top of the window (Esc comes back here)…',
-    reject: ${JSON.stringify(fromChat
-        ? 'Rejected — the file stays as it is. Tell the chat what to change: its next proposal opens here.'
-        : 'Rejected — the file stays as it is.')},
+    reject: 'Rejected — the file stays as it is.',
   };
   // From the chat, what to change is said there (owner's request 2026-10-29): the footer says so.
   if (${fromChat}) say('To change it, write in the chat — its next proposal opens here.');

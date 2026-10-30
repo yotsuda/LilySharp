@@ -170,6 +170,10 @@ describe('the composing guide', () => {
         // proposal, and a message sent in the chat before deciding is told as such.
         assert.ok(!/showInputBox/.test(fn));
         assert.match(fn, /input\.note \?\? null, true\);/);
+        // Owner's request 2026-10-30: Reject closes the panel, as Ask AI's does, and the chat says what
+        // the rejected proposal changed before asking what to change.
+        assert.match(fn, /deps\.log\('AI proposal \(chat\): rejected\.'\);\s*candidatePanel\?\.dispose\(\);/);
+        assert.match(fn, /'Tell them in a line or two what the rejected proposal changed \(and anything it left undone\), then '/);
         // Owner's request 2026-10-29: a new piece goes straight into the file, open in the editor —
         // no panel; the music check still speaks once first.
         assert.match(fn, /if \(isEmptyScore\(current\)\) \{[\s\S]*?const musicians = await asMusicianWrites\(deps, client, text\);[\s\S]*?const written = await writeWhole\(uri, exists, doc, musicians\);/);
