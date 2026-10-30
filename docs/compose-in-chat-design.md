@@ -31,7 +31,9 @@ next step and the open items are `docs/HANDOFF.md` §1.0, which points here.
    - **A bar that does not add up** goes back, every time. This covers LYS2001, 2002, 2004 and
      2006; **LYS2007**, a section longer in one part than in another; and **LYS2019**, a later voice
      of a `voice { } { }` span or `drums { }` chart running past the first. That voice lengthens
-     the section, and the other parts are drawn silent there (`BAR_LENGTH_CODES`). It goes back even when the score had it before the
+     the section, and the other parts are drawn silent there (`BAR_LENGTH_CODES`).
+   - **A note its instrument cannot play** (LYS1052, `OUT_OF_RANGE_CODE`) also goes back every time.
+     Told once, the AI kept a guitar's E♭2 "for its open sound". It goes back even when the score had it before the
      proposal: a revision that leaves it (fewer warnings in all) is not shown either.
    - **The first proposal of a new piece** is checked as music once (`musicCheckedFor`). The
      compiler's warnings, `CompositionChecks.Of`'s findings (through LSP `lilysharp/compositionCheck`),
