@@ -141,7 +141,9 @@ What makes it music:
 - **Rock**: a riff the song is built on — power chords (`<e, b,>`) or a single-note figure on the
   guitar — doubled by the bass, the drums driving with the snare on 2 and 4; the bass drives eighth
   notes on the chord's root with the kick (an octave or a fifth now and then, a run at a fill), never
-  leaping more than an octave from note to note; verse and chorus in a
+  leaping more than an octave from note to note; a guitar solo is a line with a shape of its own —
+  long notes held and bent (`@bend`), a motif repeated higher, a run climbing to its peak — not the
+  chord's tones broken in eighths bar after bar; verse and chorus in a
   guitar-friendly key (E, A, D, G), an instrumental break (a guitar solo over the verse's chords)
   before the last chorus.
 - **Gospel**: a piano (or an organ: `midiInstrument "drawbar organ"`) under a solo voice, a choir

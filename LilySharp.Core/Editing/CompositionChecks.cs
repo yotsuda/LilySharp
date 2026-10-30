@@ -283,6 +283,34 @@ public static class CompositionChecks
                     + "doubles the riff; it does not jump octaves from note to note.");
         }
 
+        // One note out of its line and straight back, an octave mark slipped (owner's trial 2026-10-30: a
+        // rock bass ended its A and B bars `… e cis'' | b …`, a C♯4 between E2 and B2, a passing note
+        // two octaves up). Not a piano's hand, whose stride leaps so by nature, nor a pedal riff,
+        // whose notes leap so one after another: a slip stands alone.
+        var spikeBars = midi.BarTicks.Where(b => b > 0).Distinct().OrderBy(b => b).ToList();
+        foreach (var line in midi.Tracks.SelectMany(t => t.Notes.Where(n => n.Channel != 9).Select(n => (Part: n.Part ?? t.Name, n.StartTick, n.Pitch)))
+            .Where(n => !n.Part.EndsWith(" (chords)", System.StringComparison.Ordinal) && !hands.ContainsKey(n.Part))
+            .GroupBy(n => n.Part))
+        {
+            var lows = line.GroupBy(n => n.StartTick).OrderBy(g => g.Key).Select(g => (Tick: g.Key, Pitch: g.Min(n => n.Pitch))).ToList();
+            bool Spike(int i)
+            {
+                if (i <= 0 || i + 1 >= lows.Count)
+                    return false;
+                var (before, after) =(lows[i].Pitch - lows[i - 1].Pitch, lows[i].Pitch - lows[i + 1].Pitch);
+                return (before > 12 && after > 12) || (before < -12 && after < -12);
+            }
+            var slips = Enumerable.Range(0, lows.Count).Where(i => Spike(i) && !Spike(i - 1) && !Spike(i + 1)).ToList();
+            if (slips.Count < SlipFewest)
+                continue;
+            var at = slips.Select(i => 1 + spikeBars.Count(b => b <= lows[i].Tick)).Distinct().ToList();
+            int first = slips[0];
+            findings.Add($"{line.Key}: {slips.Count} times one note leaps more than an octave away and straight back (bars "
+                + $"{string.Join(", ", at.Take(6))}{(at.Count > 6 ? ", …" : "")}, as the form plays them; "
+                + $"{PartRanges.SpelledFromPitch(lows[first].Pitch)} between {PartRanges.SpelledFromPitch(lows[first - 1].Pitch)} and "
+                + $"{PartRanges.SpelledFromPitch(lows[first + 1].Pitch)} first) — an octave mark slipped? Write it in its line's octave.");
+        }
+
         // A staff labelled by the hand that plays it (owner's report 2026-10-27: a piano piece printed
         // 右手 and 左手 beside its staves) — a score names the instrument, and a solo piano none.
         var handNamed = parts.Where(p => new[] { p.DisplayName, p.ShortName }.Any(n => n != null && HandLabel.IsMatch(n)))
@@ -453,6 +481,7 @@ public static class CompositionChecks
     // A band's line in a bar: most of its onsets single notes; and the share of the bars a tune is
     // heard in, under which an instrumental has none to speak of (owner's report 2026-10-29).
     private const double TuneSingleShare = 0.7, TunedBarsShare = 0.5, BassLeapShare = 0.2;
+    private const int SlipFewest = 3;
     private const double AcrossBeatShare = 0.2;
 
     /// <summary>The seconds from the start to <paramref name="tick"/>, by the tempo changes of every

@@ -329,6 +329,21 @@ public class CompositionChecksTests
         Assert.DoesNotContain(CompositionChecks.Of(Rock("e,8 e, e, e e, e, b, e, | ")), f => f.Contains("leap more than an octave"));
     }
 
+    // Owner's trial 2026-10-30: a rock bass ended its A and B bars `… e cis'' | b …`, a C♯4 between
+    // E2 and B2 — an octave mark slipped. A pedal riff leaping one note after another is not one.
+    [Fact]
+    public void ANoteOutOfItsLineAndStraightBack_IsAskedAbout()
+    {
+        string Rock(string bass) => Band(Guitar + "\n" + Bass + "\n" + Drums,
+            $"  gtr {{ {string.Concat(Enumerable.Repeat("e'8 g' b'4 a'8 g' fis'4 | g'4. a'8 b'2 | ", 4))} }}\n  bass {{ {string.Concat(Enumerable.Repeat(bass, 4))} }}\n"
+            + $"  kit {{ voice {{ {string.Concat(Enumerable.Repeat("hh8 hh hh hh hh hh hh hh | ", 8))} }} {{ {string.Concat(Enumerable.Repeat("bd4 sn bd sn | ", 8))} }} }}",
+            "staff gtr  staff bass  staff kit", "tempo 176");
+        Assert.Contains(CompositionChecks.Of(Rock("e,8 e, b, e, e, e, b, dis, | a,8 a, e, a, a, a, e, cis' | ")),
+            f => f.StartsWith("bass: 3 times one note leaps more than an octave away and straight back (bars 2, 4, 6, as the form plays them; "));
+        Assert.DoesNotContain(CompositionChecks.Of(Rock("e,8 e, b, e, e, e, b, dis, | a,8 a, e, a, a, a, e, cis | ")), f => f.Contains("straight back"));
+        Assert.DoesNotContain(CompositionChecks.Of(Rock("e,8 d' e, b e, d' e, b | a,8 e' a, cis' a, e' a, cis' | ")), f => f.Contains("straight back"));
+    }
+
     // Owner's report 2026-10-29: a rock trio's Chorus2 was its Chorus again, every part.
     [Fact]
     public void ASectionWrittenTwice_IsToldToBeNamedAgain()
