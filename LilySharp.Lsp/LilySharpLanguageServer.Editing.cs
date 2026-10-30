@@ -400,8 +400,7 @@ public sealed partial class LilySharpLanguageServer
             var refactorings = GenerateRefactorings(doc, node, uri);
             actions.AddRange(refactorings);
         }
-        if (ShapeNameAction(doc, uri, startOffset) is { } shapeName)
-            actions.Add(shapeName);
+        actions.AddRange(ShapeNameActions(doc, uri, startOffset));
 
         return actions.ToArray();
     }
@@ -654,25 +653,35 @@ public sealed partial class LilySharpLanguageServer
     }
 
     /// <summary>
-    /// On a <c>diagram(…)</c> item with no symbol, the action that writes the chord its notes
-    /// sound in front of the shape — <c>diagram(x32010)</c> → <c>diagram(C x32010)</c> (owner's
-    /// request 2026-10-31: a player who found a shape by ear wants its name). The hover names
-    /// the same chord (<see cref="NoteStepper.UnnamedShapeChord"/>). No diagnostic: the item is
-    /// fine as it is.
+    /// On a <c>diagram(…)</c> or <c>chord(…)</c> item with no symbol, the actions that write the
+    /// chord its notes sound in front of the shape (owner's requests 2026-10-31: a player who found
+    /// a shape by ear wants its name): <c>diagram(x02210)</c> → <c>diagram(Am x02210)</c>, and on a
+    /// <c>diagram(…)</c> one that also shows the name — <c>chord(Am x02210)</c>, the word that says
+    /// a name is seen (docs/chord-syntax-design.md). The hover names the same chord
+    /// (<see cref="NoteStepper.UnnamedShapeChord"/>). No diagnostic: the item is fine as it is.
     /// </summary>
-    internal static CodeAction? ShapeNameAction(Document doc, Uri uri, int offset)
+    internal static IEnumerable<CodeAction> ShapeNameActions(Document doc, Uri uri, int offset)
     {
         var item = doc.Tree.GetNodes<ChordSyntax>().FirstOrDefault(c => c.IsShapeChord
             && c.SourceStart <= offset && offset <= c.SourceStart + c.Width);
         if (item == null || item.ShapeWordSpans is not { Count: > 0 } spans
             || NoteStepper.UnnamedShapeChord(item) is not { } chord)
-            return null;
+            yield break;
         string name = ChordShapes.SourceSymbol(chord);
-        return new CodeAction
+        var insert = EditOf(doc.Text, spans[0].Start, spans[0].Start, name + " ");
+        if (!item.ShowsName)
+            yield return new CodeAction
+            {
+                Title = $"Show the chord name: chord({name} …)",
+                Kind = CodeActionKind.QuickFix,
+                Edit = WorkspaceEditOf(uri,
+                    EditOf(doc.Text, item.SourceStart, item.SourceStart + item.ShapeWordLength, "chord"), insert),
+            };
+        yield return new CodeAction
         {
             Title = $"Write the chord name: {name}",
             Kind = CodeActionKind.QuickFix,
-            Edit = WorkspaceEditOf(uri, EditOf(doc.Text, spans[0].Start, spans[0].Start, name + " ")),
+            Edit = WorkspaceEditOf(uri, insert),
         };
     }
 

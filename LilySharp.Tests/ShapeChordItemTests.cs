@@ -745,21 +745,19 @@ public class ShapeChordItemTests
         Assert.StartsWith("Am: shape 2 of", said.Message);
     }
 
-    /// <summary>Owner's decision 2026-10-31: the name comes with @chord, the picture alone with
-    /// @diagram, and a shape's name is learned by playing it — diagram(x32010)@chord. The
-    /// spellings that ask a name of a shape another way warn (LYS1056) with those, and still draw.</summary>
+    /// <summary>Owner's decisions 2026-10-31 (docs/chord-syntax-design.md): every combination is
+    /// one word. A bare @chord beside an @diagram(shape) asks in two what @chord(NAME shape) or
+    /// chord(shape) says in one: it warns (LYS1056) naming both, and still draws. A shape alone in
+    /// an @chord is one word — the name read off it and its diagram — and is not warned.</summary>
     [Fact]
     public void AShapesName_IsAskedOfTheItem_TheOtherSpellingsSayHow()
     {
-        var alone = Assert.Single(Diagnostics(Book("instrument guitar", "c'1@chord(x32010) |")),
+        var two = Assert.Single(Diagnostics(Book("instrument guitar", "c'1@diagram(x32010)@chord |")),
             d => d.Code == DiagnosticCodes.ChordNameOfAShape);
-        Assert.Contains("diagram(x32010)@chord", alone.Message);
-        Assert.Contains("@chord(C x32010)", alone.Message);
-        Assert.Contains("@diagram(x32010)", alone.Message);
-        Assert.Contains(Diagnostics(Book("instrument guitar", "c'1@diagram(x32010)@chord |")),
-            d => d.Code == DiagnosticCodes.ChordNameOfAShape && d.Message.Contains("diagram(x32010)@chord"));
-        foreach (var fine in new[] { "diagram(x32010)1@chord |", "c'1@chord(C x32010) |",
-                                     "<c e g>1@chord |", "c'1@diagram(x32010) |" })
+        Assert.Contains("@chord(C x32010)", two.Message);
+        Assert.Contains("chord(x32010) in place of the note", two.Message);
+        foreach (var fine in new[] { "c'1@chord(x32010) |", "chord(x32010)1 |", "diagram(x32010)1@chord |",
+                                     "c'1@chord(C x32010) |", "<c e g>1@chord |", "c'1@diagram(x32010) |" })
             Assert.DoesNotContain(Diagnostics(Book("instrument guitar", fine)),
                 d => d.Code == DiagnosticCodes.ChordNameOfAShape);
         // A bare @chord on a single note names nothing: said, as on a rest.
@@ -806,6 +804,16 @@ public class ShapeChordItemTests
         var edit = fix.Edit!.Changes!.Values.Single().Single();
         int start = DocumentManager.GetOffset(text, edit.Range.Start), end = DocumentManager.GetOffset(text, edit.Range.End);
         Assert.Equal(Book("instrument guitar", "diagram(Am x02210)1 |"), text[..start] + edit.NewText + text[end..]);
+        // …and the one that shows it, in the word that says a name is seen.
+        var show = Assert.Single(server.GetCodeActions(new CodeActionParams
+        {
+            TextDocument = new TextDocumentIdentifier { Uri = uri },
+            Range = new LilySharp.Lsp.Protocol.Range { Start = new Position(line, character), End = new Position(line, character) },
+        }) ?? [], a => a.Title.StartsWith("Show the chord name: chord(Am", StringComparison.Ordinal));
+        string shown = text;
+        foreach (var e in show.Edit!.Changes!.Values.Single().OrderByDescending(e => DocumentManager.GetOffset(text, e.Range.Start)))
+            shown = shown[..DocumentManager.GetOffset(shown, e.Range.Start)] + e.NewText + shown[DocumentManager.GetOffset(shown, e.Range.End)..];
+        Assert.Equal(Book("instrument guitar", "chord(Am x02210)1 |"), shown);
     }
 
     /// <summary>Owner's request 2026-10-31: with shapes for two tunings written, the caret on one

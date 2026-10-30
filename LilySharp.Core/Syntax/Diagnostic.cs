@@ -810,12 +810,10 @@ public static class DiagnosticCodes
     /// chord diagram writes it (owner's request 2026-10-30; <c>Semantics.ChordFingeringValidator</c>).</summary>
     public const string ChordNotFingerable = "LYS1055";
 
-    /// <summary>Warning: a chord's name asked of a shape in a spelling that does not say it —
-    /// <c>@chord(x32010)</c>, a shape alone in an <c>@chord</c>, or a bare <c>@chord</c> beside an
-    /// <c>@diagram(x32010)</c> — named with the spellings that do: <c>diagram(x32010)1@chord</c>
-    /// to hear the shape and see its name, <c>@chord(C x32010)</c> for the name and the diagram,
-    /// <c>@diagram(x32010)</c> for the diagram alone (owner's decision 2026-10-31). Still drawn
-    /// as before.</summary>
+    /// <summary>Warning: a chord's name asked of a shape in two words — a bare <c>@chord</c> beside
+    /// an <c>@diagram(x32010)</c>, whose name and diagram are drawn apart — named with the one word
+    /// that says it: <c>@chord(C x32010)</c> over the note, <c>chord(x32010)</c> in its place
+    /// (owner's decisions 2026-10-31, docs/chord-syntax-design.md). Still drawn as before.</summary>
     public const string ChordNameOfAShape = "LYS1056";
 
     /// <summary>Warning: a <c>chords</c> row entry that is no chord Lily# reads — <c>C7b9</c>,

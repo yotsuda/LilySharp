@@ -553,39 +553,27 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
     }
 
     /// <summary>
-    /// A chord's name asked of a shape in a spelling that does not say it (owner's decision
-    /// 2026-10-31, LYS1056): <c>@chord(x32010)</c> — a shape alone in an <c>@chord</c>, which
-    /// names the shape but sounds the note under it — and a bare <c>@chord</c> beside an
-    /// <c>@diagram(x32010)</c>, whose name and diagram are drawn apart. The message names the
-    /// spellings that say what is meant; null for anything else.
+    /// A chord's name asked of a shape in two words (owner's decisions 2026-10-31, LYS1056,
+    /// docs/chord-syntax-design.md): a bare <c>@chord</c> beside an <c>@diagram(x32010)</c>,
+    /// whose name and diagram are drawn apart. One word says it: <c>@chord(NAME x32010)</c> over
+    /// the note, or <c>chord(x32010)</c> in its place to hear the shape too. (<c>@chord(x32010)</c>,
+    /// a shape alone in an <c>@chord</c>, is one word for the name read off the shape and its
+    /// diagram: not warned.) Null for anything else.
     /// </summary>
     private static string? ShapeNameSpelling(MusicMarkSyntax mark)
     {
-        if (mark.Name != "chord" || mark.Parent is null)
+        if (mark.Name != "chord" || mark.Parent is null || !mark.Arguments.IsEmpty
+            || mark.Parent.ChildNodes().OfType<MusicMarkSyntax>().FirstOrDefault(m => AnnotationValues.Frame(m) != null)
+                is not { } diagram)
             return null;
-        string? shape = null, name = null;
-        if (ChordAnnotation.Of(mark) is { NamesFromDiagram: true, FromShapeItem: false } words)
-        {
-            shape = words.Shapes[0].Shape;
-            if (ChordAnnotation.PartTuningOf(mark) is { } partTuning
-                && words.NamingShape(null, partTuning) is { } naming
-                && ChordAnnotation.NameFromFrets(naming.Frets, naming.Tuning, 0) is { } named)
-                name = ChordShapes.SourceSymbol(named);
-            return $"a shape alone in @chord - @chord({shape}) - names a shape it does not play: to "
-                + $"hear the shape and see its name write diagram({shape})@chord in place of the note, "
-                + $"for the name and the diagram @chord({name ?? "NAME"} {shape}), for the diagram alone "
-                + $"@diagram({shape}).";
-        }
-        if (mark.Arguments.IsEmpty
-            && mark.Parent.ChildNodes().OfType<MusicMarkSyntax>().FirstOrDefault(m => AnnotationValues.Frame(m) != null)
-                is { } diagram)
-        {
-            shape = diagram.Arguments[0].Text;
-            return $"@diagram({shape})@chord draws the name apart from the diagram: to hear the shape "
-                + $"and see its name write diagram({shape})@chord in place of the note, for the name "
-                + $"and the diagram @chord(NAME {shape}).";
-        }
-        return null;
+        string shape = diagram.Arguments[0].Text, name = "NAME";
+        if (ChordAnnotation.PartTuningOf(mark) is { } partTuning
+            && ChordAnnotation.Parse([shape]).NamingShape(null, partTuning) is { } naming
+            && ChordAnnotation.NameFromFrets(naming.Frets, naming.Tuning, 0) is { } named)
+            name = ChordShapes.SourceSymbol(named);
+        return $"@diagram({shape})@chord draws the name apart from the diagram: write @chord({name} {shape}) "
+            + $"for the name over its diagram, or chord({shape}) in place of the note to hear the shape with "
+            + "its name and diagram.";
     }
 
     /// <summary>

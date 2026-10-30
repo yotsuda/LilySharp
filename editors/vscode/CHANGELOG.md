@@ -29,10 +29,9 @@ All notable changes to the Lily# VS Code extension are documented here.
 - **With shapes for two instruments written** (`@chord(C x32010 0003)`), Ctrl+Shift+Up/Down steps
   the one under the caret on its own instrument, and the status bar names it.
 - **Hovering a `diagram(…)` item with no symbol names its chord**, and the quick fix (Ctrl+.)
-  writes the name in (`diagram(x02210)` → `diagram(Am x02210)`).
-- **`@chord(x32010)`, a shape alone in an `@chord`, warns** (LYS1056) and points to
-  `diagram(x32010)@chord` to hear the shape and see its name, `@chord(C x32010)` for the name and
-  the diagram, or `@diagram(x32010)` for the diagram alone.
+  writes the name in (`diagram(x02210)` → `diagram(Am x02210)`), or shows it too (`chord(Am x02210)`).
+- **`@diagram(x32010)@chord` warns** (LYS1056): its name and diagram are drawn apart. It points to
+  `@chord(C x32010)`, or `chord(x32010)` in place of the note.
 - **#chordVoicings**: Copilot's chat can ask which voicings of a chord a player can hold on a
   guitar, bass, ukulele or bowed string, in a register. It answers as Lily# chords with their
   diagrams (`<c g bes ees' g'>`, `x35343`), and for a bowed string the double stops.

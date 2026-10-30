@@ -52,17 +52,18 @@ workflow attaches that section to the GitHub Release verbatim.
   It walks the other shapes of the chord the shape sounds, rewriting the shape only: x32010 is C,
   and the status bar says *C: shape 2 of …*. Down at the first shape keeps it.
 - `[editor]` **Hovering a `diagram(…)` item with no symbol names its chord** (*this shape is
-  **Am***), and the quick fix (Ctrl+.) writes the name in: `diagram(Am x02210)`. A player who found
-  a shape by ear learns what it is.
+  **Am***), and the quick fix (Ctrl+.) writes the name in: `diagram(Am x02210)`, or shows it too:
+  `chord(Am x02210)`. A player who found a shape by ear learns what it is.
 - `[editor]` **Ctrl+Shift+Up/Down steps the shape under the caret.** In `@chord(C x32010 0003)` the
   caret on `0003` walks the ukulele's shapes, even where the first score draws guitar diagrams.
   The status bar names the instrument: *C (ukulele): shape 2 of 39 (0403)*.
 - `[lang]` **The name comes with `@chord`, the picture alone with `@diagram`.**
-  - `@chord(C)` is a name, `@chord(C x32010)` a name over its diagram, `@diagram(x32010)` a
-    diagram alone. To learn a shape's name, play it: `diagram(x32010)@chord`.
-  - A shape alone in an `@chord` (`@chord(x32010)`) still draws, but warns (LYS1056) with those
-    spellings: it names a shape the note under it does not play. So does a bare `@chord` beside an
-    `@diagram(x32010)`, whose name and diagram were drawn apart.
+  - `@chord(C)` is a name, `@chord(C x32010)` a name over its diagram, `@chord(x32010)` the name
+    read off the shape over it, `@diagram(x32010)` a diagram alone. To learn a shape's name, play
+    it: `chord(x32010)1`.
+  - A bare `@chord` beside an `@diagram(x32010)`, whose name and diagram were drawn apart, warns
+    (LYS1056) and names the one word that says both: `@chord(C x32010)`, or `chord(x32010)` in
+    place of the note.
   - A bare `@chord` on a single note warns (LYS1020): there is no chord to name, and nothing was
     drawn or said.
   - An `@diagram` shape whose string count is not its part's fretted instrument's warns
