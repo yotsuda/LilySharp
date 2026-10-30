@@ -9,6 +9,15 @@ to *Decided against* with the reason). What is being worked on now, and the next
 
 ## Proposed
 
+### Score review for people (proposed 2026-10-30, the owner's design)
+
+The composing checks, given a second entrance for a person's own piece: the AI tool
+`lilysharp_reviewScore` returns a structured report (facts, strengths, and findings, each with its
+kind, why, fix, fine-when and ask), which the AI explains to the person — above all to a beginner.
+A command and `lysc review` do the same without an AI. The review adds key checks: the key heard
+against the key written, notes outside the key, spelling by direction, and chords outside the
+scale. The design and the order of work are in `docs/review-tool-design.md`.
+
 ### Chord diagrams: one key doing four jobs (proposed 2026-10-30, the owner's question)
 
 The owner: "`layout { chordDiagrams }` seems out of place in a layout block." The grammar is to be
