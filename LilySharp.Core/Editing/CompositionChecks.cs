@@ -139,6 +139,27 @@ public static class CompositionChecks
                 findings.Add($"{string.Join(", ", unlevelled)}: no level, while the others go from @{order[levels.Min()]} to "
                     + $"@{order[levels.Max()]} — write the drummer's levels too (`@p` on the first note of a quiet section, "
                     + "`@f` where the band comes in full), with the hairpins the others play.");
+            // The rhythm section at one level while the band moves (owner's trial 2026-10-30: the bass
+            // and drums held their opening @mf through every chorus the guitar played @f). A part with
+            // no level at all is said above; the levels in its phrases count.
+            var phraseBodies = root.DescendantNodes<PhraseDeclarationSyntax>().Where(p => p.Parent is CompilationUnitSyntax)
+                .GroupBy(p => p.Name.Text).ToDictionary(g => g.Key, g => g.First());
+            List<string> LevelsOf(string part) => root.DescendantNodes<PartBlockSyntax>().Where(b => b.PartName.Text == part)
+                .SelectMany(b => DynamicsPlayed(b, phraseBodies)).Select(d => d.DynamicToken.Text)
+                .Where(order.Contains).Distinct().ToList();
+            var rhythmSection = parts.Where(p => RoleOf(p) is { Drums: true } or { Bass: true }).Select(p => p.Name.Text).ToList();
+            var moving = parts.Where(p => !rhythmSection.Contains(p.Name.Text)).Select(p => (Name: p.Name.Text, Levels: LevelsOf(p.Name.Text)))
+                .Where(p => p.Levels.Count >= 2).ToList();
+            var held = rhythmSection.Select(p => (Name: p, Levels: LevelsOf(p))).Where(p => p.Levels.Count == 1).ToList();
+            if (held.Count > 0 && moving.Count > 0)
+            {
+                var span = moving.SelectMany(p => p.Levels).Select(l => System.Array.IndexOf(order, l)).ToList();
+                findings.Add($"{string.Join(", ", held.Select(p => p.Name))}: one level, @{held[0].Levels[0]}, from start to end, while "
+                    + $"{string.Join(", ", moving.Select(p => p.Name))} {(moving.Count == 1 ? "goes" : "go")} from @{order[span.Min()]} "
+                    + $"to @{order[span.Max()]} — a band rises "
+                    + "and falls together: write the rhythm section's levels where the lead's change (the drums @f where the chorus "
+                    + "comes in, the bass with them, both down for a quiet bridge), with the hairpins between.");
+            }
             int tempos = midi.Tracks.SelectMany(t => t.TempoChanges).Select(t => t.MicrosecondsPerBeat).Distinct().Count();
             if (tempos > 1)
                 findings.Add("A band piece keeps one tempo from start to end: write one `tempo` at the top and none in the sections.");
@@ -257,6 +278,21 @@ public static class CompositionChecks
                     + "its chords, a broken chord, the accompaniment's figure: a tune moves mostly by step (a second up or down), "
                     + "a leap now and then to reach a peak, turning back by step after it — unless its theme is a fanfare, a call "
                     + "on its chord's notes: then keep it.");
+        }
+
+        // One bar's figure moved along the chords (owner's trial 2026-10-30: a rock guitar's verse was
+        // "up two steps and back" in bar after bar, `g a bes a g` over Gm, `ees f g f ees` over E♭ —
+        // a varied rhythm, so no rhythm check saw it).
+        foreach (var part in melodies)
+        {
+            if (asOne && part != top)
+                continue;
+            var (alike, inBars, shape) = BarContours(midi, part, barList);
+            if (inBars >= ContourFewestBars && alike >= inBars * ContourShare)
+                findings.Add($"{part}, the melody: {alike} of its {inBars} bars move in the shape of the bar before ({shape}) — "
+                    + "one bar's figure moved along the chords, not a line: let a phrase run two or four bars as one line, rising "
+                    + "to a peak and falling to its close, its hook a shape of its own, answered by a different one"
+                    + (band ? "." : " — unless a sequence is the music's own design, as in a baroque episode: then keep it."));
         }
 
         // A compound meter's tune that does not keep its beats: a note starting within a beat and running
@@ -725,6 +761,37 @@ public static class CompositionChecks
     private const double TuneSingleShare = 0.7, TunedBarsShare = 0.5, BassLeapShare = 0.2;
     private const int SlipFewest = 3;
     private const double MelodyStepShare = 0.25;
+
+    // A melody whose bars take the shape of the bar before in this share of them, over this many bars.
+    // MEASURED (2026-10-30, the owner's 60 composed pieces and two folk tunes): the sequenced rock
+    // guitars 0.53–0.61, everything else 0.42 or less, Ode to Joy 0.11.
+    private const double ContourShare = 0.5;
+    private const int ContourFewestBars = 8;
+
+    /// <summary>
+    /// How many of a melody's bars move in the SHAPE of the bar just before — the directions from
+    /// single note to single note within the bar, a repeated note level ("↗↗↘↘") — counted over the
+    /// bars with three moves or more; the commonest such shape. A theme returning bars apart is not
+    /// counted: only a figure moved on bar after bar is.
+    /// </summary>
+    internal static (int Alike, int Bars, string Shape) BarContours(MidiFile midi, string part, List<int> barList)
+    {
+        var line = midi.Tracks.SelectMany(t => t.Notes.Where(n => (n.Part ?? t.Name) == part && n.Channel != 9))
+            .GroupBy(n => n.StartTick).OrderBy(g => g.Key).Where(g => g.Count() == 1)
+            .Select(g => (Tick: g.Key, g.First().Pitch)).ToList();
+        var shapes = line.GroupBy(n => barList.Count(b => b <= n.Tick))
+            .Select(bar => (Bar: bar.Key, Pitches: bar.Select(n => n.Pitch).ToList()))
+            .Where(p => p.Pitches.Count >= 4)
+            .Select(p => (p.Bar, Shape: string.Concat(p.Pitches.Zip(p.Pitches.Skip(1), (a, b) => b > a ? '↗' : b < a ? '↘' : '→'))))
+            .ToList();
+        if (shapes.Count == 0)
+            return (0, 0, "");
+        // A bar in the shape of the bar just before it: a figure moved on, not a phrase returning
+        // (a theme played again stands bars apart, as Ode to Joy's do).
+        var repeated = shapes.Skip(1).Where((s, i) => s.Bar == shapes[i].Bar + 1 && s.Shape == shapes[i].Shape).ToList();
+        string commonest = repeated.Count > 0 ? repeated.GroupBy(s => s.Shape).OrderByDescending(g => g.Count()).First().Key : "";
+        return (repeated.Count, shapes.Count, commonest);
+    }
     private const int LeapsFewestMoves = 16;
     private const double AcrossBeatShare = 0.2;
 

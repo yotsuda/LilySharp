@@ -326,7 +326,7 @@ public class CompositionChecksTests
         Assert.Contains(running, f => f.StartsWith("gtr, the melody: 85% of its notes are eighth notes"));
         Assert.Contains(running, f => f.StartsWith("gtr, the melody: 8 of its 8 bars have the same rhythm"));
         // Not let off as a hymn's even pace (owner's trial 2026-10-30: a rock guitar kept its eighths "for the drive").
-        Assert.All(running.Where(f => f.StartsWith("gtr, the melody: ")), f =>
+        Assert.All(running.Where(f => f.StartsWith("gtr, the melody: ") && !f.Contains("shape of the bar before")), f =>
         {
             Assert.Contains("a band's drive is its drums' and bass's eighths under the tune", f);
             Assert.DoesNotContain("a hymn", f);
@@ -384,6 +384,39 @@ public class CompositionChecksTests
         // A half-time section changes the beat itself.
         Assert.DoesNotContain(CompositionChecks.Of(Rock3("e'4 g' a'2", "e,8 e, e, e, e, e, e, e,",
             kits: [(hats, beat), (ride, beat), (hats, "bd4 r sn r"), (ride, beat)])), f => f.StartsWith("kit: the"));
+    }
+
+    // Owner's trial 2026-10-30: a rock guitar's verse moved one "up two and back" figure along the
+    // chords bar after bar. A tune whose phrase runs over bars — Ode to Joy — is not one.
+    [Fact]
+    public void AMelodyOfOneBarsShapeMovedBarAfterBar_IsSaid()
+    {
+        const string bass = "g,8 g, g, g, g, g, g, g,";
+        Assert.Contains(CompositionChecks.Of(Rock3("g'8 a' bes'4 a'8 g' f'4", bass)),
+            f => f.StartsWith("gtr, the melody: ") && f.Contains("bars move in the shape of the bar before (↗↗↘↘↘)"));
+        string ode = "e''4 e'' f'' g'' | g'' f'' e'' d'' | c'' c'' d'' e'' | e''4. d''8 d''2 | e''4 e'' f'' g'' | g'' f'' e'' d'' | "
+            + "c'' c'' d'' e'' | d''4. c''8 c''2 | d''4 d'' e'' c'' | d'' e''8 f'' e''4 c'' | d'' e''8 f'' e''4 d'' | c'' d'' g'2 |";
+        string band = "title \"Ode\"\ntempo 120\ntime 4/4\noctave absolute\n" + Guitar + "\n" + Bass + "\n" + Drums + "\n"
+            + $"section A {{\n  gtr {{ {ode} }}\n  bass {{ {string.Concat(Enumerable.Repeat("c,2 g, | ", 12))} }}\n"
+            + $"  kit {{ voice {{ {string.Concat(Enumerable.Repeat("hh8 hh hh hh hh hh hh hh | ", 12))} }} {{ {string.Concat(Enumerable.Repeat("bd4 sn bd sn | ", 12))} }} }}\n}}\n"
+            + "form { A }\nscore { staff gtr  staff bass  staff kit }\n";
+        Assert.DoesNotContain(CompositionChecks.Of(band), f => f.Contains("shape of the bar before"));
+    }
+
+    // Owner's trial 2026-10-30: the bass and drums held their opening @mf through every chorus the
+    // guitar played @f.
+    [Fact]
+    public void ABandsRhythmSectionAtOneLevelWhileTheLeadMoves_IsSaid()
+    {
+        string Piece(string bassB) => "title \"Riff\"\ntempo 168\ntime 4/4\noctave absolute\n" + Guitar + "\n" + Bass + "\n" + Drums + "\n"
+            + "section A {\n  gtr { <e, b,>4@mf e'8 g' a'4 g' | }\n  bass { e,8@mf e, e, e, e, e, e, e, | }\n"
+            + "  kit { voice { hh8@mf hh hh hh hh hh hh hh | } { bd4 sn bd sn | } }\n}\n"
+            + $"section B {{\n  gtr {{ <e, b,>4@f e'8 g' a'4 g' | }}\n  bass {{ e,8{bassB} e, e, e, e, e, e, e, | }}\n"
+            + "  kit { voice { hh8 hh hh hh hh hh hh hh | } { bd4 sn bd sn | } }\n}\n"
+            + "form { A B }\nscore { staff gtr  staff bass  staff kit }\n";
+        Assert.Contains(CompositionChecks.Of(Piece("")),
+            f => f.StartsWith("bass, kit: one level, @mf, from start to end, while gtr goes from @mf to @f"));
+        Assert.Contains(CompositionChecks.Of(Piece("@f")), f => f.StartsWith("kit: one level, @mf"));
     }
 
     // Owner's trial 2026-10-30: told it had no tune, a rock trio's guitar played single notes from start

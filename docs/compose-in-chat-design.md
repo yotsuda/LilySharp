@@ -65,11 +65,15 @@ that prompted each check is written beside it in the code.
 - A part in the bass's register.
 - Nobody playing the chords: only single notes, high (a low single-note riff counts as chords).
 - One drum groove through every section (a varying kick and snare are said apart from the cymbals).
+- The bass or drums at one level from start to end while the lead's level moves.
 
 **The melody**
 - One note value.
 - One rhythm in most bars. A band's tune is NOT let off as "an even pace is the music's character".
 - Leaps up and down its chords (fewer than a quarter of the moves are steps).
+- One bar's figure moved along the chords: half the bars or more take the up-and-down shape of the
+  bar before. Measured on the owner's 60 pieces: the sequenced rock guitars scored 0.53–0.61, the
+  rest 0.42 or less, and Ode to Joy 0.11.
 - Compound-meter beats crossed.
 - A note held a semitone or a minor ninth from the harmony (a major seventh over the bass is
   colour, not a clash).
