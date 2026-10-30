@@ -147,14 +147,18 @@ public class OctaveModeConverterTests
         Assert.Equal("octave relative\n" + src, Convert(absolute, OctaveMode.Relative));
     }
 
+    // A section the form leaves out begins a fresh frame as every section does: played once by
+    // a form of every section, after the file, it is converted with the rest (owner's request
+    // 2026-10-30).
     [Fact]
-    public void ANoteNoScorePlays_IsRefused_NamingItsSection()
+    public void ASectionNoFormPlays_IsConverted_AsASectionBeginsItsNotes()
     {
         var src = "part m { }\nsection A {\n  m { c'4 d e f | }\n}\nsection B {\n  m { g4 a b c | }\n}" + Score;
-        var result = OctaveModeConverter.Convert(src, OctaveMode.Absolute);
-        Assert.Null(result.NewText);
-        Assert.Contains("line 6, column 7", result.Error);
-        Assert.Contains("section B", result.Error);
+        var absolute = OctaveModeConverter.Convert(src, OctaveMode.Absolute);
+        Assert.True(absolute.NewText != null, absolute.Error);
+        Assert.Contains("m { g4 a b c' | }", absolute.NewText);
+        Assert.DoesNotContain("unplayedProbe", absolute.NewText);
+        Assert.Equal("octave relative\n" + src, OctaveModeConverter.Convert(absolute.NewText!, OctaveMode.Relative).NewText);
     }
 
     // Owner's report 2026-10-30: a composed piece kept a riff it never played and stayed in

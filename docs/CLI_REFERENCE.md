@@ -476,11 +476,10 @@ nothing else in the file changes. In absolute mode a chord's or arpeggio's group
 (`<c e g>'`) is folded into its members. The result is compiled and compared note by note
 with the original before anything is written.
 
-A file is left alone, with the reason printed, when it has syntax errors, pulls in another
-file with `using`, or contains a note no score plays (a section missing from the form, a
-file with no `score`) — nothing says what octave such a note means. A phrase no score plays
-is converted all the same: its body begins a fresh frame wherever it is called, so its notes
-mean the same played or not.
+A file is left alone, with the reason printed, when it has syntax errors or pulls in another
+file with `using`. A section the form leaves out, or a phrase no score plays, is converted
+all the same: each begins a fresh frame, so its notes mean the same played or not — it is
+played once, for the conversion alone, by a form of every section and a score of every part.
 
 **Options:**
 | Option | Description |

@@ -63,9 +63,10 @@ public enum OctaveMode
 /// </para>
 /// <para>
 /// Refused rather than guessed: a file with syntax errors, a file that pulls in another
-/// (<c>using</c> — its pitches are not in this text), a written pitch no score plays (the
-/// walk never reads it, so nothing says what it means), and a pitch whose plays would need
-/// different marks.
+/// (<c>using</c> — its pitches are not in this text), and a pitch whose plays would need
+/// different marks. A section or a top-level phrase no score plays is played once by a score
+/// added after the file for the walk alone (<see cref="ProbeFor"/>), and taken off again: each
+/// begins a fresh frame, so it means the same notes there (owner's request 2026-10-30).
 /// </para>
 /// </remarks>
 public static class OctaveModeConverter
@@ -173,11 +174,11 @@ public static class OctaveModeConverter
                 var never = No($"The note at {LineCol(source, pos)}{Where(root, pos)} is never played by "
                     + "any score, so nothing says what octave it means. Play it (add it to the form "
                     + "or a score) or remove it, then convert again — no changes made.");
-                // A phrase no score plays still means its notes: its body begins a fresh frame
-                // wherever it is called (owner's report 2026-10-30: a composed piece kept a riff it
-                // never played, and stayed in absolute octaves).
-                return !probing && UnplayedPhrases(root, pitches.Keys.Where(p => !recorded.ContainsKey(p))) is { } unplayed
-                    && Probed(source, target, keepTopLevel, unplayed) is { Result.NewText: not null } probed
+                // A phrase or a section no score plays still means its notes: each begins a fresh
+                // frame (owner's report 2026-10-30: a composed piece kept a riff it never played,
+                // and stayed in absolute octaves).
+                return !probing && ProbeFor(root, pitches.Keys.Where(p => !recorded.ContainsKey(p))) is { } probe
+                    && Probed(source, target, keepTopLevel, probe) is { Result.NewText: not null } probed
                     ? probed : never;
             }
         foreach (var pos in recorded.Keys)
@@ -1031,36 +1032,54 @@ public static class OctaveModeConverter
     private static Result Fail(string error) => new(null, error, 0);
     private static (Result, List<Edit>) No(string error) => (Fail(error), []);
 
-    /// <summary>The top-level phrases holding <paramref name="unplayed"/>, by name — or null when
-    /// one of those notes is anywhere else (a section no form plays).</summary>
-    private static List<string>? UnplayedPhrases(SyntaxNode root, IEnumerable<int> unplayed)
+    private const string ProbeName = "unplayedProbe";
+
+    /// <summary>A score to add after the file that plays what no score of its own does: every
+    /// section once, in written order, by every part, when a section is unplayed, and the
+    /// top-level phrases no score plays in a part of the default anchor — the frame a phrase's
+    /// body begins in. Null when an unplayed note is in neither.</summary>
+    private static string? ProbeFor(SyntaxNode root, IEnumerable<int> unplayed)
     {
-        var phrases = root.DescendantNodes<PhraseDeclarationSyntax>().Where(p => p.Parent is CompilationUnitSyntax).ToList();
-        var names = new List<string>();
+        static bool TopLevel(SyntaxNode n) => n.Parent is CompilationUnitSyntax;
+        var phrases = root.DescendantNodes<PhraseDeclarationSyntax>().Where(TopLevel).ToList();
+        var sections = root.DescendantNodes<SectionDeclarationSyntax>().Where(TopLevel).ToList();
+        var inPhrases = new List<string>();
+        bool inSections = false;
         foreach (int pos in unplayed)
         {
-            var phrase = phrases.FirstOrDefault(p => p.Span.Start <= pos && pos < p.Span.End);
-            if (phrase == null)
+            if (phrases.FirstOrDefault(p => p.Span.Start <= pos && pos < p.Span.End) is { } phrase)
+            {
+                if (!inPhrases.Contains(phrase.Name.Text))
+                    inPhrases.Add(phrase.Name.Text);
+            }
+            else if (sections.Any(s => s.Span.Start <= pos && pos < s.Span.End))
+                inSections = true;
+            else
                 return null;
-            if (!names.Contains(phrase.Name.Text))
-                names.Add(phrase.Name.Text);
         }
-        return names;
+        var played = inSections ? sections.Select(s => s.SectionName).ToList() : [];
+        var staves = inSections
+            ? root.DescendantNodes<PartDeclarationSyntax>().Where(TopLevel).Select(p => p.Name.Text).ToList()
+            : [];
+        string probe = "\n";
+        if (inPhrases.Count > 0)
+        {
+            probe += $"part {ProbeName} {{ }}\nsection {ProbeName} {{ {ProbeName} {{ {string.Join(" ", inPhrases)} }} }}\n";
+            played.Add(ProbeName);
+            staves.Add(ProbeName);
+        }
+        return probe + $"form {ProbeName} {{ {string.Join(" ", played)} }}\n"
+            + $"score {ProbeName} {{ form {ProbeName} {string.Join(" ", staves.Select(s => $"staff {s}"))} }}\n";
     }
 
-    private const string ProbeName = "unplayedPhrasesProbe";
-
-    /// <summary>The conversion with <paramref name="phrases"/> played after the file by a score of
-    /// their own, in a part of the default anchor — the frame a phrase's body begins in — and that
-    /// probe taken off the result. Its notes are converted and checked as every other.</summary>
-    private static (Result Result, List<Edit> Edits) Probed(string source, OctaveMode target, bool keepTopLevel, List<string> phrases)
+    /// <summary>The conversion with <paramref name="probe"/> (<see cref="ProbeFor"/>) after the file,
+    /// and that probe taken off the result. Its notes are converted and checked as every other.</summary>
+    private static (Result Result, List<Edit> Edits) Probed(string source, OctaveMode target, bool keepTopLevel, string probe)
     {
-        string probe = $"\npart {ProbeName} {{ }}\nsection {ProbeName} {{ {ProbeName} {{ {string.Join(" ", phrases)} }} }}\n"
-            + $"form {ProbeName} {{ {ProbeName} }}\nscore {ProbeName} {{ form {ProbeName} staff {ProbeName} }}\n";
         var (result, edits) = ConvertWithEdits(source + probe, target, keepTopLevel, probing: true);
         if (result.NewText is not { } text || !text.EndsWith(probe, StringComparison.Ordinal)
             || edits.Any(e => e.End > source.Length))
-            return No("The phrases no score plays could not be converted — no changes made.");
+            return No("The music no score plays could not be converted — no changes made.");
         return (result with { NewText = text[..^probe.Length] }, edits);
     }
 
