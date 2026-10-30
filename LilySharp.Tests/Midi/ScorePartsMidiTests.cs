@@ -173,7 +173,7 @@ public class ScorePartsMidiTests
             layout capo3 { chordDiagrams guitar capo 3 }
             layout open { chordDiagrams guitar }
             part gt { instrument guitar }
-            section A { gt { chord(C x32010)1 | } }
+            section A { gt { diagram(C x32010)1 | } }
             form { A }
             score { layout capo3  staff gt }
             score open { layout open  staff gt }

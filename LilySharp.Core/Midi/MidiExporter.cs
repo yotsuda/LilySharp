@@ -403,7 +403,7 @@ public sealed class MidiExporter
     private SyntaxNode? _root;
 
     /// <summary>The capo fret of the score being played (its layout's <c>chordDiagrams … capo N</c>,
-    /// <see cref="_playedSpec"/>), 0 for none: a <c>chord(…)</c> item's strings sound that many
+    /// <see cref="_playedSpec"/>), 0 for none: a <c>diagram(…)</c> item's strings sound that many
     /// semitones higher. Read once per export (<see cref="_capo"/>). Until 2026-09-29 it was the
     /// FIRST score's, whichever score was played — <c>score open { … }</c> with no capo
     /// sounded the main score's capo (HANDOFF §1.0 ⒜, the capo's holes).</summary>
@@ -1013,7 +1013,7 @@ public sealed class MidiExporter
                         n => _phraseBodies!.TryGetValue(n, out var b) ? b : null, out var anchorShape);
                     if (anchorStep == LilySharp.Core.Music.PhraseAnchor.Tonic)
                         anchorStep = _ambientTonic.Valid ? _ambientTonic.Step : 0;
-                    // A body opening with a chord(…) item: its lowest note, absolute.
+                    // A body opening with a diagram(…) item: its lowest note, absolute.
                     var shapeAnchor = anchorStep == LilySharp.Core.Music.PhraseAnchor.Shape
                         ? ShapeAnchorOf(anchorShape) : null;
                     if (anchorStep == LilySharp.Core.Music.PhraseAnchor.Shape)
@@ -2379,7 +2379,7 @@ public sealed class MidiExporter
     /// </summary>
     private void ProcessArpeggio(ArpeggioSyntax arpeggio, MidiTrack track, MidiTrack conductorTrack)
     {
-        // Bare pitches, degrees, chords and/or rests, with shares — a chord(…) member spread
+        // Bare pitches, degrees, chords and/or rests, with shares — a diagram(…) member spread
         // into its notes (the page's MeasureCollector.ProcessArpeggio).
         var members = Music.ArpeggioSpread.Of(arpeggio, ShapeNotesOf);
         if (members.Count == 0)
@@ -2455,7 +2455,7 @@ public sealed class MidiExporter
                 EmitArpeggioMidiPitch(pitch, track, isRoot ? groupOctave : 0);
             else if (member is ChordSyntax chord)
             {
-                // A spread note plays as its chord(…) item narrowed to that note (the page's rule).
+                // A spread note plays as its diagram(…) item narrowed to that note (the page's rule).
                 _spreadNote = spreadNote is { } sn ? (chord.Green, sn) : null;
                 ProcessChord(chord, track, isRoot ? groupOctave : 0);
                 _spreadNote = null;
@@ -2873,7 +2873,7 @@ public sealed class MidiExporter
         return WrittenToMidi(step, pitch.AccidentalOffset, octave);
     }
 
-    /// <summary>A <c>chord(…)</c> item's strings on the current part's tuning, as written — the
+    /// <summary>A <c>diagram(…)</c> item's strings on the current part's tuning, as written — the
     /// page's reading (Music.ShapeChords); the capo raises the strings (2026-09-29).</summary>
     private System.Collections.Immutable.ImmutableArray<Music.ShapeNote> ShapeNotesOf(ChordSyntax chord)
     {
@@ -2885,11 +2885,11 @@ public sealed class MidiExporter
             header.SoundingShiftSemitones - Capo, _keySharps);
     }
 
-    /// <summary>The <c>chord(…)</c> member of a <c>&lt;&lt; &gt;&gt;</c> group being played one
+    /// <summary>The <c>diagram(…)</c> member of a <c>&lt;&lt; &gt;&gt;</c> group being played one
     /// note at a time and the note it plays now (the page's MeasureCollector._spreadNote).</summary>
     private (Syntax.InternalSyntax.GreenNode Item, Music.ShapeNote Note)? _spreadNote;
 
-    /// <summary>A phrase's outgoing anchor when its body opens with a <c>chord(…)</c> item
+    /// <summary>A phrase's outgoing anchor when its body opens with a <c>diagram(…)</c> item
     /// (<see cref="Music.PhraseAnchor.Shape"/>): the item's lowest note as written, as
     /// (step, octave) — the page's MeasureCollector.EnterPhraseTranspose; null when the part's
     /// tuning has no shape for it.</summary>
@@ -2995,7 +2995,7 @@ public sealed class MidiExporter
             resolved.Add((midiPitch, pitch.QuarterOffset, false));
         }
 
-        // chord(SYMBOL SHAPE): the shape's strings on the part's tuning, written as the part
+        // diagram(SYMBOL SHAPE): the shape's strings on the part's tuning, written as the part
         // writes a sounding pitch and then played the way every written pitch is — the page's
         // reading (MeasureCollector.CreateChordItem; Music.ShapeChords). No usable shape: the
         // item sounds nothing and keeps its time (a spacer, LYS1040).
@@ -3532,7 +3532,7 @@ public sealed class MidiExporter
                             SourceOrdinal: chordOrdinal, Timbre: _currentTimbre, Part: _currentPart,
                             IsGrace: true, MemberPos: pitch.SourceStart));
                     }
-                    // A chord(…) item in a grace body: its strings, as ProcessChord plays them.
+                    // A diagram(…) item in a grace body: its strings, as ProcessChord plays them.
                     Music.ShapeNote? graceLowest = null;
                     if (chord.IsShapeChord)
                     {

@@ -31,6 +31,14 @@ workflow attaches that section to the GitHub Release verbatim.
 - `[lang]` **A bare `@diagram` on a `<…>` chord draws the chord's own notes as fretted**
   (`<g b d' f'>1@diagram` draws xx5431). The fingering is found on the part's strings: no crossed
   strings, the lowest position, the fewest fingers. The `.ly` twin draws the same shape.
+- `[lang]` ⚠️ **A chord from a shape is written `diagram(C x32010)1`**; it was `chord(C x32010)1`.
+  - The item now draws its shape's diagram, with no name, on the page and in the twin.
+    `chordDiagrams none` turns it off, and an `@chord` or `@diagram` on it draws only one.
+  - `chord(…)` is still read as the item, so the bar keeps its length and plays, but it is an
+    error (LYS0043) that names `diagram`. Rename the word to fix it.
+  - `diagram` is now reserved in music instead of `chord`, so a phrase may be named `chord`.
+  - Ctrl+Shift+Up/Down still steps the item's shape, and completion inside `diagram(` still
+    offers the chord symbols.
 - `[lang]` **A chord its player cannot hold warns** (LYS1055).
   - On a guitar, bass, ukulele or banjo, it warns when no string per note within a hand's reach
     (four frets) fits the chord. The warning names a voicing of the same notes that can be held,

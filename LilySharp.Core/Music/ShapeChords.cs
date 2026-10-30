@@ -58,7 +58,7 @@ public readonly record struct ShapeNote(int Step, int Alter, int Octave, int Str
 }
 
 /// <summary>
-/// The notes of a chord from a shape — <c>chord(SYMBOL SHAPE)</c> — on the tuning of the part
+/// The notes of a chord from a shape — <c>diagram(SYMBOL SHAPE)</c> — on the tuning of the part
 /// that plays it: one shared resolver, which the page, the MIDI, the MusicXML, the LilyPond
 /// twin, the validator and the editor all ask.
 /// </summary>
@@ -201,11 +201,11 @@ public static class ShapeChords
         bool anyShape, string? exampleShape)
     {
         string shape = exampleShape ?? (strings == 6 ? "x32010" : new string('0', strings));
-        string example = $"chord({(symbol == null ? "" : symbol + " ")}{shape})";
+        string example = $"diagram({(symbol == null ? "" : symbol + " ")}{shape})";
         string why = anyShape
             ? $"none of its shapes fits '{tuningWord}' ({strings} strings)"
             : "it has no shape";
-        return $"chord({written}) draws and sounds nothing: {why} - write a shape: {example}. "
+        return $"diagram({written}) draws and sounds nothing: {why} - write a shape: {example}. "
                + "The item keeps its time as a spacer, so the bar still adds up.";
     }
 

@@ -178,7 +178,7 @@ public sealed partial class LilyPondExporter
     {
         foreach (var item in music)
             foreach (var n in item.DescendantNodes().Prepend(item))
-                // A chord(…) item writes a string number on every note (EmitShapeChord).
+                // A diagram(…) item writes a string number on every note (EmitShapeChord).
                 if (n is StringNumberAnnotationSyntax or ChordSyntax { IsShapeChord: true })
                     return true;
         return false;

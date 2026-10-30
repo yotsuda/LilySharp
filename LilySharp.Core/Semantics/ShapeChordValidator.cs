@@ -22,7 +22,7 @@ using LilySharp.Core.Syntax;
 namespace LilySharp.Core.Semantics;
 
 /// <summary>
-/// What a <c>chord(SYMBOL SHAPE)</c> item's words earn (owner's decisions 2026-09-28, HANDOFF
+/// What a <c>diagram(SYMBOL SHAPE)</c> item's words earn (owner's decisions 2026-09-28, HANDOFF
 /// §2 K5): every shape diagnostic an <c>@chord(…)</c>'s words earn (LYS1038 — a word that is
 /// not a shape, a dash error, the case), a symbol Lily# does not know (LYS1020), NO SHAPE the
 /// part's tuning can play (LYS1040 — the item is then a spacer), and the shape against its
@@ -62,8 +62,8 @@ internal sealed class ShapeChordValidator : ISemanticValidator
         if (words.QuotedText != null)
         {
             _diagnostics.Warning(SpanOf(0), DiagnosticCodes.ShapeChordNoShape,
-                $"chord({written}) takes a chord symbol and a shape, not quoted text - write "
-                + "chord(C x32010). It draws and sounds nothing; the item keeps its time as a spacer.");
+                $"diagram({written}) takes a chord symbol and a shape, not quoted text - write "
+                + "diagram(C x32010). It draws and sounds nothing; the item keeps its time as a spacer.");
             return;
         }
         if (words.Symbol is { } unknown && words.Structure == null)
@@ -88,7 +88,7 @@ internal sealed class ShapeChordValidator : ISemanticValidator
                 string message = ShapeChords.NoShape(written, words.Symbol, part.Word, strings.Length,
                     !words.Shapes.IsEmpty, example);
                 if (said.Add(message))
-                    _diagnostics.Warning(new TextSpan(item.SourceStart, "chord".Length),
+                    _diagnostics.Warning(new TextSpan(item.SourceStart, item.ShapeWordLength),
                         DiagnosticCodes.ShapeChordNoShape, message);
                 continue;
             }

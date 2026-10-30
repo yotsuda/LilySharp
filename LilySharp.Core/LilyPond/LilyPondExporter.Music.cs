@@ -1450,7 +1450,7 @@ public sealed partial class LilyPondExporter
     }
 
     /// <summary>
-    /// The notes of a <c>chord(…)</c> item (the page's ShapeNotesOf): the part's strings;
+    /// The notes of a <c>diagram(…)</c> item (the page's ShapeNotesOf): the part's strings;
     /// outside a part (a phrase body, written once for every part that plays it) the one tuning
     /// the file's parts share, else the guitar — which <paramref name="warn"/> reports.
     /// </summary>
@@ -1465,7 +1465,7 @@ public sealed partial class LilyPondExporter
         else if (Music.ShapeChords.PartTuningsOf(c) is [var only])
             (tuning, shift) = (only.Tuning, only.SoundingShift);
         else if (warn)
-            _warnings.Add("a chord(...) item in a phrase played by parts of different tunings is "
+            _warnings.Add("a diagram(...) item in a phrase played by parts of different tunings is "
                 + "written on the guitar's strings - check its notes by hand");
         // A capo raises every string by its fret (the page's ShapeNotesOf; 2026-09-29): the shift
         // is "sounding = written + shift", so the capo comes OFF it.
@@ -1473,7 +1473,7 @@ public sealed partial class LilyPondExporter
     }
 
     /// <summary>
-    /// <c>chord(SYMBOL SHAPE)</c> written out: the shape's strings on the part's tuning
+    /// <c>diagram(SYMBOL SHAPE)</c> written out: the shape's strings on the part's tuning
     /// (<see cref="Music.ShapeChords"/>, the page's reading) as an ordinary LilyPond chord,
     /// lowest sounding note first, each note with its string number — <c>&lt;c\5 e\4 g\3 c'\2
     /// g'\1&gt;1</c> in absolute terms — and, with no usable shape, a spacer of the item's length
@@ -1494,7 +1494,7 @@ public sealed partial class LilyPondExporter
             return prefix + "s" + EmitEventDuration(c.Duration) + suffix;
         if (!_octaveAbsolute && !_frameTracked)
             _warnings.Add(
-                "a chord(...) item follows a phrase reference, whose nested \\relative leaves the "
+                "a diagram(...) item follows a phrase reference, whose nested \\relative leaves the "
                 + "octave frame with a different answer on each side — check its octave by hand");
 
         var sb = new StringBuilder("<");
@@ -1519,6 +1519,12 @@ public sealed partial class LilyPondExporter
         }
         sb.Append('>');
         sb.Append(EmitEventDuration(c.Duration));
+        // The item draws its shape (owner's decision 2026-10-30: written diagram(…)) — the page's,
+        // read off its diagram at the item, so the twin draws what the page draws, and nothing
+        // where the page draws none (an @chord or an @diagram of its own, `chordDiagrams none`).
+        if (_page?.Articulations.FirstOrDefault(a => a.Type == ArticulationType.FretFrame && a.SourcePosition == c.SourceStart)
+                ?.FrameSpec is { } itemFrame)
+            suffix += FretDiagramMarkup(itemFrame, above: true);
         return prefix + sb + suffix;
     }
 
@@ -1918,7 +1924,7 @@ public sealed partial class LilyPondExporter
     /// </remarks>
     private string EmitArpeggio(ArpeggioSyntax arp)
     {
-        // A chord(…) member spread into its notes (the page's MeasureCollector.ProcessArpeggio).
+        // A diagram(…) member spread into its notes (the page's MeasureCollector.ProcessArpeggio).
         var members = Music.ArpeggioSpread.Of(arp, c => ShapeNotesOf(c));
         if (members.Count == 0)
             return "";
@@ -2021,7 +2027,7 @@ public sealed partial class LilyPondExporter
                     break;
                 }
 
-                // A spread note of a chord(…) member: that one note, absolute, on its string —
+                // A spread note of a diagram(…) member: that one note, absolute, on its string —
                 // the root when it comes first (its lowest note, as the item hands on).
                 case ChordSyntax spreadItem when spreadNote is { } sn:
                 {
@@ -2038,7 +2044,7 @@ public sealed partial class LilyPondExporter
                     break;
                 }
 
-                // A chord(…) member with no shape on the tuning: a spacer of its share, as the
+                // A diagram(…) member with no shape on the tuning: a spacer of its share, as the
                 // item alone is (EmitShapeChord).
                 case ChordSyntax { IsShapeChord: true } unshaped:
                     (prefix, suffix) = SplitAttachments(unshaped.Articulations);

@@ -759,7 +759,7 @@ public class ChordDiagramTests
         title "Shape chords"
         part gt { instrument guitar }
         section A { gt {
-          chord(C x32013)2@chord e | chord(Am x02210)2@chord a | chord(G 320003)1@chord | chord(Cm xx-10-12-13-11)2@chord d2 |
+          diagram(C x32013)2@chord e | diagram(Am x02210)2@chord a | diagram(G 320003)1@chord | diagram(Cm xx-10-12-13-11)2@chord d2 |
         } }
         form { A }
         score { staff gt  tab gt }

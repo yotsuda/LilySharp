@@ -762,7 +762,7 @@ public sealed partial class LilyPondExporter
     /// body can do; the observer is AMarkedReference_MovesTheAnchor_WithANestedFixed reached
     /// through a container. SectionOctaveOffset rides with it for the same reason: a nested
     /// body written inside a <c>~B'</c> play sounds where the play sounds.
-    /// The part's name and the tree (<see cref="SharedState.Root"/>) are for a chord(…) item
+    /// The part's name and the tree (<see cref="SharedState.Root"/>) are for a diagram(…) item
     /// in the body: its notes are on the PART's strings (EmitShapeChord). Measured 2026-09-28:
     /// without them a grace or tuplet body wrote the item on the guitar at sounding pitch, an
     /// octave under the page.

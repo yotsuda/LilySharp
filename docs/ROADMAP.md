@@ -37,7 +37,7 @@ Code: `Semantics/LayoutPlan.cs` (`ChordDiagramsKey`; the plan's `ChordDiagrams`,
 `ChordDiagramsAll`, `ChordDiagramTable` and the capo), `Semantics/LayoutPlanReader.cs` (the
 `chordDiagrams` arm from about line 490, and the table reader), `Music/ChordShapes.cs` (`Drawn`)
 and `Music/ChordShapeTable`. The capo is also read by the MIDI (`LayoutPlanReader`, about line 218),
-by the sound of a `chord(Eb x32010)` item, by the header's "Capo N" line, by the LilyPond twin and
+by the sound of a `diagram(Eb x32010)` item, by the header's "Capo N" line, by the LilyPond twin and
 by MusicXML.
 
 **2. What stays: decided, not to reopen** (HANDOFF §2 K0, K6)
@@ -56,7 +56,7 @@ by MusicXML.
 - **The capo is tied to the diagrams.** `chordDiagrams none capo 3` is refused. So a chord sheet
   with "Capo 3" and pressed names but no diagrams cannot be written, and that is the commonest
   guitar chart.
-- **The capo changes the sound** (a `chord(Eb x32010)` item, the MIDI), yet it lives in a block
+- **The capo changes the sound** (a `diagram(Eb x32010)` item, the MIDI), yet it lives in a block
   whose rule is "a switch that picks a drawing" (the remarks on `LayoutPlan`). The shapes written
   IN THE MUSIC are pressed shapes, relative to the capo, so the capo is part of what those shapes
   mean.
@@ -82,7 +82,7 @@ layout {
 - **Q2: where the capo lives.**
   - **(a) A `layout` key `capo N`.** It is the edition's, as the tuning is: the guitarist's chart
     has it and the piano score does not. It is the smallest change and removes the tie to the
-    diagrams. But a score without the capo then reads `chord(Eb x32010)` as a shape that does not
+    diagrams. But a score without the capo then reads `diagram(Eb x32010)` as a shape that does not
     sound E♭.
   - **(b) Beside the shapes, at file level** (`chordShapes capo 3 { … }`). The shapes written in
     the music are relative to it, so it is data. An edition then chooses only the NAMES

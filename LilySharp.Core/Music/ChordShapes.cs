@@ -646,8 +646,8 @@ public static class ChordShapes
     /// word binding it (or null), <paramref name="symbol"/> the symbol as written, <paramref name="inRow"/> whether it is a
     /// chords-row entry (<c>Am(x02210)</c>) or an <c>@chord</c> (<c>@chord(Am x02210)</c>).
     /// </summary>
-    /// <param name="item">A <c>chord(…)</c> item's shape (<see cref="ShapeChords"/>): the fix is
-    /// spelled <c>chord(X shape)</c>.</param>
+    /// <param name="item">A <c>diagram(…)</c> item's shape (<see cref="ShapeChords"/>): the fix is
+    /// spelled <c>diagram(X shape)</c>.</param>
     /// <param name="inTable">A layout table entry's shape (<see cref="ChordShapeTable"/>): the fix
     /// is spelled as the table writes it, <c>X shape</c>.</param>
     /// <param name="capo">The fret the score's capo is on, 0 for none. Under a capo
@@ -660,8 +660,8 @@ public static class ChordShapes
     /// <remarks>
     /// ⚠️ THE TWO FRAMES MUST NOT MIX. Until 2026-10-03 the callers checked the pressed shape
     /// against the PRESSED chord and then printed the SOUNDING symbol beside the pressed
-    /// recognition: <c>chord(G 320003)</c> under capo 2 said "'320003' sounds G B D, which is
-    /// G, not G (G B D are not tones of G; it lacks A (the 3rd)) - write chord(G 320003)" —
+    /// recognition: <c>diagram(G 320003)</c> under capo 2 said "'320003' sounds G B D, which is
+    /// G, not G (G B D are not tones of G; it lacks A (the 3rd)) - write diagram(G 320003)" —
     /// a sentence that contradicts itself and names the written spelling as the fix (session
     /// 762's big-band book). The check is the same in either frame (a capo transposes every
     /// note alike); only the message cares, and it now speaks sounding names throughout.
@@ -673,7 +673,7 @@ public static class ChordShapes
         string Notes(IEnumerable<int> pcs) => string.Join(" ", pcs.Select(m.Spell));
         string written = tuningName == null ? shape : $"{tuningName} {shape}";
         string FormWith(string sym, string shp) => inRow ? $"{sym}({shp})"
-            : item ? $"chord({sym} {shp})"
+            : item ? $"diagram({sym} {shp})"
             : inTable ? $"{sym} {shp}"
             : $"@chord({sym} {shp})";
         string Form(string sym) => FormWith(sym, written);

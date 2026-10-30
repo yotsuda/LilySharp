@@ -39,7 +39,7 @@ using Position = LilySharp.Lsp.Protocol.Position;
 namespace LilySharp.Tests;
 
 /// <summary>
-/// <c>chord(SYMBOL SHAPE)</c> — a chord FROM A SHAPE (owner's decisions 2026-09-28, HANDOFF §2 K5):
+/// <c>diagram(SYMBOL SHAPE)</c> — a chord FROM A SHAPE (owner's decisions 2026-09-28, HANDOFF §2 K5):
 /// the shape's sounding strings on the tuning of the part that plays it (its fretted instrument,
 /// else the guitar), ABSOLUTE, each note with its string number; the relative frame after it is
 /// its lowest sounding note; notes only — a bare <c>@chord</c> on it names the item's symbol and
@@ -88,10 +88,10 @@ public class ShapeChordItemTests
     // ================================================================ the parse
 
     [Theory]
-    [InlineData("chord(C x32013)1", "C", "x32013", 1, 0, false)]
-    [InlineData("chord(Cm7 x3x546)2@chord", "Cm7", "x3x546", 2, 0, false)]
-    [InlineData("chord(C xx-10-12-13-12)4.~", "C", "xx-10-12-13-12", 4, 1, true)]
-    [InlineData("chord(x32013)8", "x32013", null, 8, 0, false)]
+    [InlineData("diagram(C x32013)1", "C", "x32013", 1, 0, false)]
+    [InlineData("diagram(Cm7 x3x546)2@chord", "Cm7", "x3x546", 2, 0, false)]
+    [InlineData("diagram(C xx-10-12-13-12)4.~", "C", "xx-10-12-13-12", 4, 1, true)]
+    [InlineData("diagram(x32013)8", "x32013", null, 8, 0, false)]
     public void TheItem_ParsesItsWordsAndTheTailOfAChord(string music, string first, string? second,
         int value, int dots, bool tie)
     {
@@ -110,33 +110,77 @@ public class ShapeChordItemTests
         Assert.DoesNotContain(tree.Diagnostics, d => d.Severity == DiagnosticSeverity.Error);
     }
 
+    /// <summary>Owner's decision 2026-10-30: the item's word is <c>diagram</c>. The retired
+    /// <c>chord(…)</c> is an error naming the new word (LYS0043), yet still read as the item, so
+    /// the bar keeps its length and sounds; the word is free again for a phrase.</summary>
+    [Fact]
+    public void TheRetiredWord_IsAnError_ButStillTheItem()
+    {
+        string book = Book("instrument guitar", "chord(G 320003)1 |");
+        var error = Assert.Single(Diagnostics(book), d => d.Code == DiagnosticCodes.RetiredShapeChordWord);
+        Assert.Equal(DiagnosticSeverity.Error, error.Severity);
+        Assert.Equal(5, error.Span.Length);
+        Assert.Contains("write 'diagram' for 'chord'", error.Message);
+        Assert.True(Item(book).IsShapeChord);
+        Assert.Equal(5, Item(book).ShapeWordLength);
+        Assert.DoesNotContain(Diagnostics(book), d => d.Code.StartsWith("LYS2", StringComparison.Ordinal));
+        Assert.Equal(MidiPitches(Book("instrument guitar", "diagram(G 320003)1 |")), MidiPitches(book));
+        // '@chord(…)' and a bare '@chord' are untouched.
+        Assert.DoesNotContain(Diagnostics(Book("instrument guitar", "c'1@chord(C) | diagram(C x32010)1@chord |")),
+            d => d.Code == DiagnosticCodes.RetiredShapeChordWord);
+        Assert.DoesNotContain(SyntaxTree.Parse("phrase chord { c'4 d' e' f' | }\n").Diagnostics,
+            d => d.Severity == DiagnosticSeverity.Error);
+    }
+
+    private static List<string?> Frames(string book)
+    {
+        var tree = SyntaxTree.Parse(book);
+        return [.. LilySharp.Core.Svg.SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree)).Articulations
+            .Where(a => a.Type == ArticulationType.FretFrame).OrderBy(a => a.SourcePosition).Select(a => a.FrameSpec)];
+    }
+
+    /// <summary>Owner's decision 2026-10-30: the item draws its own shape's diagram — on the page
+    /// and in the twin — unless an <c>@chord</c>/<c>@diagram</c> on it draws one already, or the
+    /// score turns diagrams off.</summary>
+    [Fact]
+    public void TheItem_DrawsItsShape_OnceAndUnlessDiagramsAreOff()
+    {
+        string book = Book("instrument guitar", "diagram(C x32010)2 diagram(x02210)2 |");
+        Assert.Equal(new[] { "x32010", "x02210" }, Frames(book));
+        string ly = new LilyPondExporter().Export(SyntaxTree.Parse(book));
+        Assert.Contains("\\fret-diagram-terse \"x;3;2;o;1;o;\"", ly);
+        Assert.Contains("\\fret-diagram-terse \"x;o;2;2;1;o;\"", ly);
+        Assert.Single(Frames(Book("instrument guitar", "diagram(Am x02210)1@chord |")));
+        Assert.Empty(Frames(Book("instrument guitar", "diagram(C x32010)1 |", top: "layout { chordDiagrams none }\n")));
+    }
+
     /// <summary>Under a capo (2026-09-29) the shape is pressed above it: every string sounds the
     /// capo's fret higher — x32010 at capo 3 is E♭ major, on the page, in the MIDI and the twin.</summary>
     [Fact]
     public void UnderACapo_TheShapeSoundsAboveTheCapo()
     {
-        string book = Book("instrument guitar", "chord(Eb x32010)1 |", top: "layout { chordDiagrams guitar capo 3 }");
+        string book = Book("instrument guitar", "diagram(Eb x32010)1 |", top: "layout { chordDiagrams guitar capo 3 }");
         Assert.Equal(new[] { 51, 55, 58, 63, 67 }, MidiPitches(book));   // E♭3 G3 B♭3 E♭4 G4
         Assert.DoesNotContain(Diagnostics(book), d => d.Severity != DiagnosticSeverity.Info);
         Assert.Contains("<ees\\5 g\\4 bes\\3 ees\\2 g\\1>1", new LilyPondExporter().Export(SyntaxTree.Parse(book)));
     }
 
-    /// <summary>`<>` and `chord(…)` are the same node: the MeasureDurations and every chord arm
+    /// <summary>`<>` and `diagram(…)` are the same node: the MeasureDurations and every chord arm
     /// see a chord that takes its time — the bar adds up with no warning.</summary>
     [Fact]
     public void ABarOfItems_AddsUp()
         => Assert.DoesNotContain(Diagnostics(Book("instrument guitar",
-                "chord(C x32013)2 chord(G 320003)4 chord(Am x02210) |")),
+                "diagram(C x32013)2 diagram(G 320003)4 diagram(Am x02210) |")),
             d => d.Severity != DiagnosticSeverity.Info);
 
-    /// <summary>Owner's decision 2026-09-28: the shape is REQUIRED for now — `chord(C)` warns,
+    /// <summary>Owner's decision 2026-09-28: the shape is REQUIRED for now — `diagram(C)` warns,
     /// naming the fix, and keeps its time as a SPACER so the bar still adds up.</summary>
     [Fact]
     public void NoShape_WarnsNamingTheFix_AndIsASpacer()
     {
-        string book = Book("instrument guitar", "c'2 chord(C)2 |");
+        string book = Book("instrument guitar", "c'2 diagram(C)2 |");
         var warning = Assert.Single(Diagnostics(book), d => d.Code == DiagnosticCodes.ShapeChordNoShape);
-        Assert.Contains("write a shape: chord(C x32010)", warning.Message);
+        Assert.Contains("write a shape: diagram(C x32010)", warning.Message);
         Assert.Contains("spacer", warning.Message);
         Assert.DoesNotContain(Diagnostics(book), d => d.Code.StartsWith("LYS2", StringComparison.Ordinal));
         var items = Items(Collected(book));
@@ -144,53 +188,53 @@ public class ShapeChordItemTests
         Assert.Equal(new[] { 60 + 12 - 12 }, MidiPitches(book));   // c' (C5 written) sounds C4; the spacer nothing
         Assert.Contains("s2", new LilyPondExporter().Export(SyntaxTree.Parse(book)));
         // The symbol's own default is the example when there is one.
-        Assert.Contains("chord(Am x02210)",
-            Assert.Single(Diagnostics(Book("instrument guitar", "chord(Am)1 |")),
+        Assert.Contains("diagram(Am x02210)",
+            Assert.Single(Diagnostics(Book("instrument guitar", "diagram(Am)1 |")),
                 d => d.Code == DiagnosticCodes.ShapeChordNoShape).Message);
     }
 
     [Fact]
     public void OctaveMarksAfterTheItem_AreRefused_AndIgnored()
     {
-        string book = Book("instrument guitar", "chord(C x32013)'1 |");
+        string book = Book("instrument guitar", "diagram(C x32013)'1 |");
         var error = Assert.Single(Diagnostics(book), d => d.Code == DiagnosticCodes.ShapeChordOctaveMarks);
         Assert.Contains("remove the marks", error.Message);
         Assert.Equal(0, Item(book).ChordOctaveOffset);
-        Assert.Equal(MidiPitches(Book("instrument guitar", "chord(C x32013)1 |")), MidiPitches(book));
+        Assert.Equal(MidiPitches(Book("instrument guitar", "diagram(C x32013)1 |")), MidiPitches(book));
     }
 
     [Fact]
     public void TheShapesDiagnosticsApply()
     {
         // A shape of the wrong length for every tuning: LYS1038 at the word, and no shape at all.
-        var wrong = Diagnostics(Book("instrument guitar", "chord(C x32)1 |"));
+        var wrong = Diagnostics(Book("instrument guitar", "diagram(C x32)1 |"));
         Assert.Contains(wrong, d => d.Code == DiagnosticCodes.ChordDiagramNotDrawn && d.Message.Contains("'x32' has 3"));
         Assert.Contains(wrong, d => d.Code == DiagnosticCodes.ShapeChordNoShape);
         // A five-string shape is a real length — but not the guitar's.
         Assert.Contains("none of its shapes fits 'guitar' (6 strings)",
-            Assert.Single(Diagnostics(Book("instrument guitar", "chord(C x3201)1 |")),
+            Assert.Single(Diagnostics(Book("instrument guitar", "diagram(C x3201)1 |")),
                 d => d.Code == DiagnosticCodes.ShapeChordNoShape).Message);
         // The case and the dash errors.
-        Assert.Contains(Diagnostics(Book("instrument guitar", "chord(C X32010)1 |")),
+        Assert.Contains(Diagnostics(Book("instrument guitar", "diagram(C X32010)1 |")),
             d => d.Code == DiagnosticCodes.ChordDiagramNotDrawn && d.Message.Contains("write 'x32010'"));
-        Assert.Contains(Diagnostics(Book("instrument guitar", "chord(C x-32010-)1 |")),
+        Assert.Contains(Diagnostics(Book("instrument guitar", "diagram(C x-32010-)1 |")),
             d => d.Code == DiagnosticCodes.ChordDiagramNotDrawn && d.Message.Contains("starts or ends with '-'"));
         // LYS1039: the shape against the symbol, the fix spelled as the item.
-        var mismatch = Assert.Single(Diagnostics(Book("instrument guitar", "chord(Cm x32010)1 |")),
+        var mismatch = Assert.Single(Diagnostics(Book("instrument guitar", "diagram(Cm x32010)1 |")),
             d => d.Code == DiagnosticCodes.ChordShapeMismatch);
-        Assert.Contains("chord(C x32010)", mismatch.Message);
+        Assert.Contains("diagram(C x32010)", mismatch.Message);
         // No LYS1039 when the shape plays the symbol.
-        Assert.DoesNotContain(Diagnostics(Book("instrument guitar", "chord(C x32013)1 |")),
+        Assert.DoesNotContain(Diagnostics(Book("instrument guitar", "diagram(C x32013)1 |")),
             d => d.Code == DiagnosticCodes.ChordShapeMismatch);
     }
 
     [Fact]
-    public void ChordIsReservedInMusic_APhraseCannotBeNamedIt()
+    public void DiagramIsReservedInMusic_APhraseCannotBeNamedIt()
     {
-        Assert.Contains(Diagnostics("phrase chord { c4 d e f | }\n" + Book("instrument guitar", "chord |")),
-            d => d.Code == DiagnosticCodes.PhraseNameUnreachable && d.Message.Contains("'chord'"));
-        Assert.Contains(Diagnostics(Book("instrument guitar", "chord c1 |")),
-            d => d.Code == DiagnosticCodes.ExpectedToken && d.Message.Contains("chord(C x32010)4"));
+        Assert.Contains(Diagnostics("phrase diagram { c4 d e f | }\n" + Book("instrument guitar", "diagram |")),
+            d => d.Code == DiagnosticCodes.PhraseNameUnreachable && d.Message.Contains("'diagram'"));
+        Assert.Contains(Diagnostics(Book("instrument guitar", "diagram c1 |")),
+            d => d.Code == DiagnosticCodes.ExpectedToken && d.Message.Contains("diagram(C x32010)4"));
         // A PART may still be named chord: no music stream reads a part name.
         Assert.DoesNotContain(Diagnostics("""
             part chord { instrument guitar }
@@ -213,14 +257,14 @@ public class ShapeChordItemTests
         Assert.Equal(new[] { 48, 52, 55, 60, 67 }, notes.Select(n => n.SoundingMidi));
         // A guitar part (treble_8) writes them where they sound, as LilyPond's treble_8 does
         // (owner's decision 2026-10-28), and plays them there.
-        string book = Book("instrument guitar", "chord(C x32013)1 |");
+        string book = Book("instrument guitar", "diagram(C x32013)1 |");
         Assert.Equal(new[] { 48, 52, 55, 60, 67 }, MidiPitches(book));
         var chord = Assert.IsType<ChordItem>(Items(Collected(book))[0]);
         Assert.Equal(new[] { 48, 52, 55, 60, 67 }, chord.Notes.Select(n => n.Midi).OrderBy(m => m));
         // With no instrument the guitar's strings are written where they sound.
-        Assert.Equal(new[] { 48, 52, 55, 60, 67 }, MidiPitches(Book("clef treble", "chord(C x32013)1 |")));
+        Assert.Equal(new[] { 48, 52, 55, 60, 67 }, MidiPitches(Book("clef treble", "diagram(C x32013)1 |")));
         Assert.Equal(new[] { 48, 52, 55, 60, 67 },
-            Assert.IsType<ChordItem>(Items(Collected(Book("clef treble", "chord(C x32013)1 |")))[0])
+            Assert.IsType<ChordItem>(Items(Collected(Book("clef treble", "diagram(C x32013)1 |")))[0])
                 .Notes.Select(n => n.Midi).OrderBy(m => m));
     }
 
@@ -230,14 +274,14 @@ public class ShapeChordItemTests
     public void OnAUkuleleAndADropDPart_TheirOwnStrings()
     {
         Assert.Equal(new[] { 60, 64, 67, 72 },
-            MidiPitches(Book("instrument ukulele", "chord(C 0003)1 |")));
+            MidiPitches(Book("instrument ukulele", "diagram(C 0003)1 |")));
         Assert.Equal("G4 C4 E4 C5", Names(Notes("C 0003", TuningType.Ukulele)));
         Assert.Equal(new[] { 38, 45, 50, 57, 62, 66 },
-            MidiPitches(Book("tuning guitarDropD", "chord(D 000232)1 |")));
+            MidiPitches(Book("tuning guitarDropD", "diagram(D 000232)1 |")));
         // A six-string shape on the ukulele part: no shape for its four strings — a spacer.
-        Assert.Contains(Diagnostics(Book("instrument ukulele", "chord(C x32010)1 |")),
+        Assert.Contains(Diagnostics(Book("instrument ukulele", "diagram(C x32010)1 |")),
             d => d.Code == DiagnosticCodes.ShapeChordNoShape && d.Message.Contains("'ukulele' (4 strings)"));
-        Assert.Empty(MidiPitches(Book("instrument ukulele", "chord(C x32010)1 |")));
+        Assert.Empty(MidiPitches(Book("instrument ukulele", "diagram(C x32010)1 |")));
     }
 
     /// <summary>A chord tone is spelled as the symbol spells it (Cm7's third is E♭ and its seventh
@@ -250,7 +294,7 @@ public class ShapeChordItemTests
         Assert.Equal("F#4", Notes("C x32012", TuningType.Guitar, keySharps: 0)[^1].SoundingName);
         Assert.Equal("Gb4", Notes("C x32012", TuningType.Guitar, keySharps: -1)[^1].SoundingName);
         // The page spells what the item names: E♭ and B♭ print flats.
-        var chord = Assert.IsType<ChordItem>(Items(Collected(Book("instrument guitar", "chord(Cm7 x3x546)1 |")))[0]);
+        var chord = Assert.IsType<ChordItem>(Items(Collected(Book("instrument guitar", "diagram(Cm7 x3x546)1 |")))[0]);
         Assert.Equal(2, chord.Notes.Count(n => n.Accidental == "flat"));
     }
 
@@ -265,16 +309,16 @@ public class ShapeChordItemTests
         // g'' puts the frame high up; the item ignores it, and the d after it reads from the
         // item's lowest note (C3: treble_8 is written at sounding pitch since the owner's
         // decision 2026-10-28) — D3.
-        string relative = Book("instrument guitar", "g''1 | chord(C x32013)1 | d1 |");
+        string relative = Book("instrument guitar", "g''1 | diagram(C x32013)1 | d1 |");
         int[] played = MidiPitches(relative);
         Assert.Equal(new[] { 48, 52, 55, 60, 67 }, played[1..6]);
         Assert.Equal(50, played[^1]);
         // Without the item the same d reads from g'': a different pitch — the rule is observed.
         Assert.NotEqual(50, MidiPitches(Book("instrument guitar", "g''1 | c1 | d1 |"))[^1]);
         // The ukulele's lowest note is its C string, not its first (G) string.
-        Assert.Equal(62, MidiPitches(Book("instrument ukulele", "chord(C 0003)1 | d1 |"))[^1]);
+        Assert.Equal(62, MidiPitches(Book("instrument ukulele", "diagram(C 0003)1 | d1 |"))[^1]);
         // Absolute: nothing moves — d is D at the base octave, and the item the same notes.
-        string absolute = Book("instrument guitar", "chord(C x32013)1 | d1 |", top: "octave absolute");
+        string absolute = Book("instrument guitar", "diagram(C x32013)1 | d1 |", top: "octave absolute");
         int[] fixedPlayed = MidiPitches(absolute);
         Assert.Equal(new[] { 48, 52, 55, 60, 67 }, fixedPlayed[..5]);
         Assert.Equal(62 - 12, fixedPlayed[^1]);   // d = D3, written and sounding
@@ -296,7 +340,7 @@ public class ShapeChordItemTests
     {
         static string Song(string second, string reference = "P")
             => Book("instrument guitar", $"g''1 | {reference} | g1 |",
-                top: $"phrase P {{ chord(C x32013)1 | {second} | }}");
+                top: $"phrase P {{ diagram(C x32013)1 | {second} | }}");
         static (string Page, int Midi, string Xml) After(string book)
         {
             var tree = SyntaxTree.Parse(book);
@@ -313,21 +357,21 @@ public class ShapeChordItemTests
         Assert.Equal(("G2", 43, "G2"), After(Song("e'1", "P,")));
         // A grace body naming such a phrase hands the same note on to the grace after it.
         string grace = Book("instrument guitar", "g''1 | grace { Q g16 } c1 |",
-            top: "phrase Q { chord(C x32013)16 e'16 }");
+            top: "phrase Q { diagram(C x32013)16 e'16 }");
         int[] played = MidiPitches(grace);
         Assert.Equal(43, played[^2]);
     }
 
     // ================================================================ in << >>
 
-    /// <summary>Owner's decision 2026-09-30: a <c>chord(…)</c> member of <c>&lt;&lt; &gt;&gt;</c>
+    /// <summary>Owner's decision 2026-09-30: a <c>diagram(…)</c> member of <c>&lt;&lt; &gt;&gt;</c>
     /// is SPREAD — its notes, lowest first, each one member of the broken chord, dividing the
     /// group's total with the other members. Until then the parser refused it.</summary>
     [Fact]
     public void InAGroup_TheShapeIsSpread_LowestFirst()
     {
         // x32013 on a guitar: C3 E3 G3 C4 G4 sounding, five eighths of a quintuplet.
-        string alone = Book("instrument guitar", "<< chord(C x32013) >>2 r2 |");
+        string alone = Book("instrument guitar", "<< diagram(C x32013) >>2 r2 |");
         Assert.DoesNotContain(Diagnostics(alone), d => d.Severity == DiagnosticSeverity.Error);
         Assert.Equal(new[] { 48, 52, 55, 60, 67 }, MidiPitches(alone));
         var notes = Items(Collected(alone)).OfType<ChordItem>().ToList();
@@ -344,7 +388,7 @@ public class ShapeChordItemTests
 
         // Mixed: c, then G's six strings (its share dot on its LAST note), then e — nine shares;
         // e stacks above the group's root c, and the d after the group reads from it.
-        string mixed = Book("instrument guitar", "<< c chord(G 320003) . e >>2 d2 |");
+        string mixed = Book("instrument guitar", "<< c diagram(G 320003) . e >>2 d2 |");
         int[] played = MidiPitches(mixed);
         Assert.Equal(new[] { 48, 43, 47, 50, 55, 59, 67, 52, 50 }, played);
         var mixedItems = Items(Collected(mixed));
@@ -352,7 +396,7 @@ public class ShapeChordItemTests
         Assert.Equal(new Fraction(1, 18), mixedItems[5].Duration);
         // A shape first is the root: the group's frame is its lowest note, as the item's is.
         Assert.Equal(new[] { 43, 47, 50, 55, 59, 67, 48 },
-            MidiPitches(Book("instrument guitar", "<< chord(G 320003) >>2 c2 |")));
+            MidiPitches(Book("instrument guitar", "<< diagram(G 320003) >>2 c2 |")));
     }
 
     /// <summary>The spread's edges: a shape with no notes on the tuning is a silence of its share
@@ -361,25 +405,25 @@ public class ShapeChordItemTests
     [Fact]
     public void InAGroup_TheSpreadsEdges()
     {
-        string unshaped = Book("instrument guitar", "<< c chord(C) e >>2 r2 |");
+        string unshaped = Book("instrument guitar", "<< c diagram(C) e >>2 r2 |");
         Assert.Equal(new[] { 48, 52 }, MidiPitches(unshaped));
         var items = Items(Collected(unshaped));
         Assert.True(Assert.IsType<RestItem>(items[1]).IsSpacer);
         Assert.Contains(@"\tuplet 3/2 { c4 s4 e4 }", new LilyPondExporter().Export(SyntaxTree.Parse(unshaped)));
 
-        var slurred = Items(Collected(Book("instrument guitar", "<< chord(C x32010)( g) >>2 r2 |")));
+        var slurred = Items(Collected(Book("instrument guitar", "<< diagram(C x32010)( g) >>2 r2 |")));
         Assert.True(Assert.IsType<ChordItem>(slurred[0]).HasSlurStart);
         Assert.False(Assert.IsType<ChordItem>(slurred[4]).HasSlurStart);
         Assert.True(Assert.IsType<NoteItem>(slurred[5]).HasSlurEnd);
 
-        var named = Collected(Book("instrument guitar", "<< chord(x02210) >>2@chord r2 |")).ChordNames;
+        var named = Collected(Book("instrument guitar", "<< diagram(x02210) >>2@chord r2 |")).ChordNames;
         Assert.Equal("Am", Assert.Single(named).ChordText);
 
-        Assert.Contains(Diagnostics(Book("instrument guitar", "<< chord(C x32010)4 >>2 r2 |")),
+        Assert.Contains(Diagnostics(Book("instrument guitar", "<< diagram(C x32010)4 >>2 r2 |")),
             d => d.Code == DiagnosticCodes.DurationInsideChord);
 
         // The octave-mode conversion keeps every note where it was, both ways.
-        string mixed = Book("instrument guitar", "<< chord(G 320003) c e >>2 d2 | << b chord(C x32010) >>1 |");
+        string mixed = Book("instrument guitar", "<< diagram(G 320003) c e >>2 d2 | << b diagram(C x32010) >>1 |");
         var absolute = LilySharp.Core.Editing.OctaveModeConverter.Convert(mixed, LilySharp.Core.Editing.OctaveMode.Absolute);
         Assert.Null(absolute.Error);
         Assert.Equal(MidiPitches(mixed), MidiPitches(absolute.NewText!));
@@ -393,7 +437,7 @@ public class ShapeChordItemTests
     [Fact]
     public void EveryNoteCarriesItsString_SoTheTabShowsTheShape()
     {
-        string book = Book("instrument guitar", "chord(C x32013)1 |", "staff gt  tab gt");
+        string book = Book("instrument guitar", "diagram(C x32013)1 |", "staff gt  tab gt");
         var score = Collected(book);
         var staff = Assert.IsType<ChordItem>(Items(score)[0]);
         Assert.Equal(new int?[] { 5, 4, 3, 2, 1 },
@@ -415,8 +459,8 @@ public class ShapeChordItemTests
     [Fact]
     public void ABareAtChordOnTheItem_NamesItAndDrawsItsShape()
     {
-        Assert.Empty(Collected(Book("instrument guitar", "chord(Cm7 x3x546)1 |")).ChordNames);
-        string book = Book("instrument guitar", "chord(Cm7 x3x546)2@chord chord(x32010)2@chord |");
+        Assert.Empty(Collected(Book("instrument guitar", "diagram(Cm7 x3x546)1 |")).ChordNames);
+        string book = Book("instrument guitar", "diagram(Cm7 x3x546)2@chord diagram(x32010)2@chord |");
         var names = Collected(book).ChordNames.OrderBy(c => c.Timing.ToDouble()).ToList();
         Assert.Equal(new[] { "Cm7", "C" }, names.Select(n => n.ChordText));
         var tree = SyntaxTree.Parse(book);
@@ -424,7 +468,7 @@ public class ShapeChordItemTests
         Assert.Contains(laid.ArticulationLayouts, a => a.Glyph == "frame:x3x546");
         Assert.Contains(laid.ArticulationLayouts, a => a.Glyph == "frame:x32010");
         // Explicit: its own words.
-        Assert.Equal("G", Assert.Single(Collected(Book("instrument guitar", "chord(C x32013)1@chord(G) |")).ChordNames).ChordText);
+        Assert.Equal("G", Assert.Single(Collected(Book("instrument guitar", "diagram(C x32013)1@chord(G) |")).ChordNames).ChordText);
         // No warning for the bare mark: it names what the item names.
         Assert.DoesNotContain(Diagnostics(book), d => d.Severity != DiagnosticSeverity.Info);
     }
@@ -435,7 +479,7 @@ public class ShapeChordItemTests
     public void Midi_PlaysTheShape_TiesAndDynamicsAsOnAChord()
     {
         var notes = new MidiExporter().Export(SyntaxTree.Parse(
-                Book("instrument guitar", "chord(C x32013)2~ chord(C x32013)2 | chord(G 320003)1@ff |")))
+                Book("instrument guitar", "diagram(C x32013)2~ diagram(C x32013)2 | diagram(G 320003)1@ff |")))
             .Tracks.SelectMany(t => t.Notes).ToList();
         // The tie extends each string: five notes of a whole bar, then G's six.
         Assert.Equal(11, notes.Count);
@@ -450,7 +494,7 @@ public class ShapeChordItemTests
     public void InAGraceAndATuplet_TheSameNotes()
     {
         string book = Book("instrument guitar",
-            "grace { chord(C x32013)8 } c'2 tuplet 3/2 { chord(C x32013)4 chord(G 320003) r } |");
+            "grace { diagram(C x32013)8 } c'2 tuplet 3/2 { diagram(C x32013)4 diagram(G 320003) r } |");
         int[] played = MidiPitches(book);
         Assert.Equal(new[] { 48, 52, 55, 60, 67, 60 }, played[..6]);   // the c' after it: C5 written
         Assert.Equal(new[] { 48, 52, 55, 60, 67, 43, 47, 50, 55, 59, 67 }, played[6..]);
@@ -465,7 +509,7 @@ public class ShapeChordItemTests
     public void MusicXml_WritesTheNotesWithTheirStrings()
     {
         string xml = new MusicXmlExporter().Export(SyntaxTree.Parse(
-            Book("instrument guitar", "chord(Cm7 x3x546)1 |"))).ToXml().ToString();
+            Book("instrument guitar", "diagram(Cm7 x3x546)1 |"))).ToXml().ToString();
         Assert.Equal(new[] { "5", "3", "2", "1" },
             Regex.Matches(xml, @"<string>(\d)</string>").Select(m => m.Groups[1].Value));
         // Under the guitar's treble_8 clef: the pitches it sounds (Spelling_FollowsTheSymbolThenTheKey).
@@ -482,7 +526,7 @@ public class ShapeChordItemTests
     public void TheTwin_WritesTheChordOutWithStringNumbers()
     {
         string ly = new LilyPondExporter().Export(SyntaxTree.Parse(
-            Book("instrument guitar", "g''1 | chord(C x32013)1 | d1 | chord(Cm7 x3x546)1 |")));
+            Book("instrument guitar", "g''1 | diagram(C x32013)1 | d1 | diagram(Cm7 x3x546)1 |")));
         // The twin is `\relative c` since the owner's decision 2026-10-28, so from the G5 the
         // chord's C3 is c,,,.
         Assert.Contains(@"<c,,,\5 e\4 g\3 c\2 g'\1>1", ly);
@@ -490,7 +534,7 @@ public class ShapeChordItemTests
         Assert.Contains(@"<c\5 c'\3 ees\2 bes'\1>1", ly);   // read from the d, D3
         Assert.Contains(@"\omit StringNumber", ly);
         string fixedLy = new LilyPondExporter().Export(SyntaxTree.Parse(
-            Book("instrument guitar", "chord(C x32013)1 |", top: "octave absolute")));
+            Book("instrument guitar", "diagram(C x32013)1 |", top: "octave absolute")));
         Assert.Contains(@"<c\5 e\4 g\3 c'\2 g'\1>1", fixedLy);
     }
 
@@ -517,12 +561,12 @@ public class ShapeChordItemTests
     [Fact]
     public void Hover_ListsTheSoundingNotesAndTheShape()
     {
-        string doc = Book("instrument guitar", "chord(C x32013)2 chord(C)2 |");
-        string? hover = HoverAt(doc, "chord(C x");
+        string doc = Book("instrument guitar", "diagram(C x32013)2 diagram(C)2 |");
+        string? hover = HoverAt(doc, "diagram(C x");
         Assert.NotNull(hover);
         Assert.Contains("**Chord from a shape** `C`", hover);
         Assert.Contains("guitar: `x32013` — C3  E3  G3  C4  G4", hover);
-        Assert.Contains("nothing sounds", HoverAt(doc, "chord(C)"));
+        Assert.Contains("nothing sounds", HoverAt(doc, "diagram(C)"));
     }
 
     /// <summary>Each score sounds the item under its own capo (the page and the MIDI read the
@@ -535,21 +579,21 @@ public class ShapeChordItemTests
             layout capo3 { chordDiagrams guitar capo 3 }
             layout open { chordDiagrams guitar }
             part gt { instrument guitar }
-            section A { gt { chord(Eb x32010)1 | } }
+            section A { gt { diagram(Eb x32010)1 | } }
             form { A }
             score { layout capo3  staff gt }
             score open { layout open  staff gt }
             """;
-        string? hover = HoverAt(book, "chord(Eb x");
+        string? hover = HoverAt(book, "diagram(Eb x");
         Assert.Contains("guitar, capo 3 (Default): `x32010` — E♭3  G3  B♭3  E♭4  G4", hover);
         Assert.Contains("guitar, no capo (open): `x32010` — C3  E3  G3  C4  E4", hover);
         // One capo for every score: the line as it always was.
-        string single = Book("instrument guitar", "chord(C x32010)1 |");
-        Assert.Contains("guitar: `x32010` — C3  E3  G3  C4  E4", HoverAt(single, "chord(C x"));
+        string single = Book("instrument guitar", "diagram(C x32010)1 |");
+        Assert.Contains("guitar: `x32010` — C3  E3  G3  C4  E4", HoverAt(single, "diagram(C x"));
     }
 
     /// <summary>LYS1039 checks the item under each score's capo, as each score sounds it: x32010
-    /// is E♭ at capo 3 and C with no capo, so `chord(Eb x32010)` warns once whichever score comes
+    /// is E♭ at capo 3 and C with no capo, so `diagram(Eb x32010)` warns once whichever score comes
     /// first. Until 2026-09-30 it read the first score's capo alone — silent when that was capo 3.</summary>
     [Theory]
     [InlineData(true)]
@@ -562,7 +606,7 @@ public class ShapeChordItemTests
             layout capo3 { chordDiagrams guitar capo 3 }
             layout open { chordDiagrams guitar }
             part gt { instrument guitar }
-            section A { gt { chord(Eb x32010)1 | } }
+            section A { gt { diagram(Eb x32010)1 | } }
             form { A }
             {{(capoFirst ? capo : open)}}
             {{(capoFirst ? open : capo)}}
@@ -570,7 +614,7 @@ public class ShapeChordItemTests
         var mismatch = Assert.Single(Diagnostics(book), d => d.Code == DiagnosticCodes.ChordShapeMismatch);
         Assert.Contains("x32010", mismatch.Message);
         // Under one capo that presses it, nothing to say.
-        Assert.DoesNotContain(Diagnostics(Book("instrument guitar", "chord(Eb x32010)1 |",
+        Assert.DoesNotContain(Diagnostics(Book("instrument guitar", "diagram(Eb x32010)1 |",
             top: "layout { chordDiagrams guitar capo 3 }")), d => d.Code == DiagnosticCodes.ChordShapeMismatch);
     }
 
@@ -580,9 +624,9 @@ public class ShapeChordItemTests
     [Fact]
     public void Hover_SpellsANonChordToneInTheKey()
     {
-        Assert.Contains("F♯4", HoverAt(Book("instrument guitar", "chord(C x32012)1 |"), "chord(C x"));
-        string flat = Book("instrument guitar\n  key f major", "chord(C x32012)1 |");
-        string? hover = HoverAt(flat, "chord(C x");
+        Assert.Contains("F♯4", HoverAt(Book("instrument guitar", "diagram(C x32012)1 |"), "diagram(C x"));
+        string flat = Book("instrument guitar\n  key f major", "diagram(C x32012)1 |");
+        string? hover = HoverAt(flat, "diagram(C x");
         Assert.Contains("G♭4", hover);
         Assert.DoesNotContain("F♯", hover);
         // …as the page prints the same note.
@@ -616,32 +660,32 @@ public class ShapeChordItemTests
     [Fact]
     public void TheStep_StepsTheItemsShape_AndSoundsIt()
     {
-        string Doc(string words) => Book("instrument guitar", $"chord({words})1 |");
+        string Doc(string words) => Book("instrument guitar", $"diagram({words})1 |");
         string text = Doc("C");
-        var (after, up) = Step(text, text.IndexOf("chord(C", StringComparison.Ordinal) + 7, +1);
+        var (after, up) = Step(text, text.IndexOf("diagram(C", StringComparison.Ordinal) + 9, +1);
         Assert.Equal(Doc("C x32010"), after);
         Assert.StartsWith("C: shape 1 of", up.Message);
         Assert.Equal(new[] { 48, 52, 55, 60, 64 }, up.Pitches);
         text = Doc("C x32010");
         var (next, _) = Step(text, text.IndexOf("x32010", StringComparison.Ordinal) + 2, +1);
         Assert.NotEqual(text, next);
-        Assert.Matches(@"chord\(C [x0-9-]+\)1", next);
+        Assert.Matches(@"diagram\(C [x0-9-]+\)1", next);
         var (same, down) = Step(text, text.IndexOf("x32010", StringComparison.Ordinal) + 2, -1);
         Assert.Equal(text, same);
         Assert.False(down.Fallback);
         Assert.Contains("keeps its shape", down.Message);
         // On a ukulele part it steps the ukulele's shapes.
-        string uke = Book("instrument ukulele", "chord(C)1 |");
-        Assert.Equal(Book("instrument ukulele", "chord(C 0003)1 |"),
-            Step(uke, uke.IndexOf("chord(C", StringComparison.Ordinal) + 7, +1).After);
+        string uke = Book("instrument ukulele", "diagram(C)1 |");
+        Assert.Equal(Book("instrument ukulele", "diagram(C 0003)1 |"),
+            Step(uke, uke.IndexOf("diagram(C", StringComparison.Ordinal) + 9, +1).After);
     }
 
     [Fact]
     public void Completion_InsideTheItem_IsTheChordSymbols()
     {
-        Assert.True(LilySharpLanguageServer.IsInsideShapeChordItem("gt { chord(", 11));
-        Assert.True(LilySharpLanguageServer.IsInsideChordAnnotation("gt { chord(C ", 13));
+        Assert.True(LilySharpLanguageServer.IsInsideShapeChordItem("gt { diagram(", 13));
+        Assert.True(LilySharpLanguageServer.IsInsideChordAnnotation("gt { diagram(C ", 15));
         Assert.False(LilySharpLanguageServer.IsInsideShapeChordItem("gt { c4@chord(", 14));
-        Assert.False(LilySharpLanguageServer.IsInsideShapeChordItem("gt { chord(C) ", 14));
+        Assert.False(LilySharpLanguageServer.IsInsideShapeChordItem("gt { diagram(C) ", 16));
     }
 }

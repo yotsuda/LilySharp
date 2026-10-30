@@ -199,7 +199,7 @@ internal sealed class ChordGreen : GreenSyntaxNode
     }
 
     /// <summary>
-    /// A chord FROM A SHAPE: <c>chord(SYMBOL SHAPE)</c> + the same tail a <c>&lt;…&gt;</c>
+    /// A chord FROM A SHAPE: <c>diagram(SYMBOL SHAPE)</c> + the same tail a <c>&lt;…&gt;</c>
     /// chord takes (owner's decision 2026-09-28, HANDOFF §2 K5). The words between the
     /// parentheses are kept as raw tokens, read the way an <c>@chord(…)</c> argument is
     /// (<see cref="MarkArgument"/> runs); the pitches are not in the tree — they depend on the

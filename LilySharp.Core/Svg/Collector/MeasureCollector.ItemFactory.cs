@@ -431,7 +431,7 @@ public sealed partial class MeasureCollector
     /// <see cref="VoiceWalkRecording.RepetitionOriginalReads"/>. Cleared per walk.</summary>
     private readonly List<(int Start, int End)> _repetitionOriginalReads = new();
 
-    /// <summary>The notes of a <c>chord(…)</c> item on the part being collected
+    /// <summary>The notes of a <c>diagram(…)</c> item on the part being collected
     /// (<see cref="Music.ShapeChords"/>): its tuning and sounding shift, and the key as
     /// written here. Empty when no written shape fits — the walk then makes a spacer.</summary>
     private ImmutableArray<Music.ShapeNote> ShapeNotesOf(ChordSyntax chord)
@@ -442,7 +442,7 @@ public sealed partial class MeasureCollector
             // The shift is "sounding = written + shift", so a higher sounding note is a SMALLER shift.
             : Music.ShapeChords.Notes(chord, _partShapeTuning, _partSoundingShift - _chordSpelling.Capo, WrittenKeySharps());
 
-    /// <summary>A <c>chord(…)</c> item with no usable shape as a SPACER of its written length —
+    /// <summary>A <c>diagram(…)</c> item with no usable shape as a SPACER of its written length —
     /// the duration carry as a chord's (LYS1040 says why nothing is drawn).</summary>
     private RestItem CreateShapeSpacerItem(ChordSyntax chord)
     {
@@ -663,7 +663,7 @@ public sealed partial class MeasureCollector
                 rp.DisplayOctave, NoteheadStyle.Default, PitchToMidi(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave)));
         }
 
-        // chord(SYMBOL SHAPE): the shape's strings on the part's tuning, ABSOLUTE and each with
+        // diagram(SYMBOL SHAPE): the shape's strings on the part's tuning, ABSOLUTE and each with
         // its string number (Music.ShapeChords, owner's decisions 2026-09-28). The written pitch
         // takes the path a note's does from here on (transpose, staff position, accidentals).
         // The frame it hands on is its LOWEST sounding note — see the frame update below.
@@ -1294,7 +1294,7 @@ public sealed partial class MeasureCollector
     /// Shared by ordinary pitches (after relative-octave resolution) and by
     /// scale-degree chord members (absolute from the start, anchored on the root).
     /// </summary>
-    /// <param name="fixedOctave">The octave is not the writer's to convert — a <c>chord(…)</c>
+    /// <param name="fixedOctave">The octave is not the writer's to convert — a <c>diagram(…)</c>
     /// item's note, where its string is — so the octave-mode converter neither records nor
     /// forces it (it has no pitch text to rewrite).</param>
     private ResolvedPitch ResolveAbsolutePitch(int step, int accidentalOffset, int actualOctave, int position,

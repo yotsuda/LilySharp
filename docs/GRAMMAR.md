@@ -952,7 +952,7 @@ ShapeEntry     = ChordSymbol , { [ TuningName ] , Shape } ;   (* the symbol and 
    '@chord(Eb)'); every shape — written at the chord, listed in the table, the usual one — is
    the shape PRESSED above the capo, drawn capo-relative ('Eb(x32010)' is the C shape, and its
    check, LYS1039, reads the pressed chord: the sounding chord that many semitones down); the
-   usual shape is the pressed chord's; a 'chord(SYMBOL SHAPE)' item's strings sound that many
+   usual shape is the pressed chord's; a 'diagram(SYMBOL SHAPE)' item's strings sound that many
    semitones higher. The printed NAME is the pressed chord's — 'C' for a sounding E♭ — spelled
    in the key that many semitones below the key at the bar (the key's own letter for the note,
    else a natural, else the key's side of the accidental; the tritone falls to F♯: owner's
@@ -1457,7 +1457,7 @@ SpelledQuality = (* THE PRINTED SPELLINGS (owner's decisions 2026-10-23, HANDOFF
                     two are the root's and the bass's (Bb5 is B♭'s power chord), and the rule is
                     kept one rule: write C7(b9) / C7-9, Cm7(b5) / Cm7-5. The parenthesized list
                     is ONE WORD of the symbol, in a chords row (C7(b9, #11)/E, then the shapes in
-                    a SECOND group: C7(b9)(x32310)) and in '@chord(…)' / 'chord(…)' alike; a
+                    a SECOND group: C7(b9)(x32310)) and in '@chord(…)' / 'diagram(…)' alike; a
                     row tells the list from a shape group by its words (a shape is x/o/digits
                     four or more long or dashed, a tuning a name). A symbol that is no chord is
                     warned with its fix: an '@chord' names nothing (LYS1008); a chords row prints
@@ -2357,9 +2357,11 @@ ChordNote      = PitchToken , { Annotation } ;
    shape sounds, written as a chord. The words between the parentheses are an '@chord(…)'
    argument's — a chord symbol and a shape (ChordShapes.TryRead: one character per string,
    or the dash form for frets 10-15), a tuning word binding a shape by name, or a shape
-   alone. 'chord' is claimed by the music-item dispatch only (reserved in music, like 'q':
-   a phrase cannot be named it; '@chord' and a part named 'chord' are untouched); the '('
-   may follow after a space. The tail is a chord's: duration, dots, tremolo, post-events.
+   alone. 'diagram' is claimed by the music-item dispatch only (reserved in music, like 'q':
+   a phrase cannot be named it; '@diagram' and a part named 'diagram' are untouched); the '('
+   may follow after a space. The word was 'chord' until 2026-10-30 (owner's decision): 'chord'
+   followed by '(' is still read as the item, so the bar keeps its length, but is an error
+   (LYS0043) naming 'diagram'; 'chord' alone is free again (a phrase may be named it). The tail is a chord's: duration, dots, tremolo, post-events.
    - PITCHES: each unmuted string's open pitch + fret, on the tuning of the PART playing
      the item — its fretted instrument (the tuning its tab frets on), else the standard
      guitar. They are SOUNDING pitches; the staff writes them less the part's
@@ -2372,13 +2374,15 @@ ChordNote      = PitchToken , { Annotation } ;
      there. In 'octave absolute' nothing changes. (The twin writes the notes lowest first,
      so LilyPond's frame after the chord, its first note, is the same note.)
    - Each note carries its string number, as 'c\3' would; a muted string gives no note.
-   - The shape is REQUIRED for now: with none the part's tuning takes ('chord(C)', a shape
+   - The shape is REQUIRED for now: with none the part's tuning takes ('diagram(C)', a shape
      of another string count) the item is a SPACER of its length and warns (LYS1040),
      naming the fix. The words' own diagnostics are LYS1038 / LYS1039's.
-   - The item makes notes only; a bare '@chord' on it reads the ITEM's words (name +
-     diagram, as '@chord(SYMBOL SHAPE)'), a symbol-less item's by its notes.
+   - The item draws its shape's diagram (no name) on the page and in the twin (2026-10-30),
+     unless the score's 'chordDiagrams none' turns diagrams off or an '@chord' / '@diagram'
+     on it draws one; a bare '@chord' on it reads the ITEM's words (name + diagram, as
+     '@chord(SYMBOL SHAPE)'), a symbol-less item's by its notes.
    LILYSHARP-OWN: LilyPond has no such item; the twin writes the chord out. *)
-ShapeChord     = 'chord' , '(' , ChordArgument , ')'    (* ChordArgument: 8.4, not QuotedText *)
+ShapeChord     = 'diagram' , '(' , ChordArgument , ')'    (* ChordArgument: 8.4, not QuotedText *)
                , [ DurationToken ] , { Annotation } ;
 
 (* Arpeggio: a written-out broken chord. Members carry NO duration of their own — they play
@@ -2413,7 +2417,7 @@ ShapeChord     = 'chord' , '(' , ChordArgument , ')'    (* ChordArgument: 8.4, n
    This reuses '<< … >>' (LilyPond's parallel-voice form, which Lily# writes as
    'voice { }'); a '\\' inside is reported as the removed-polyphony form, not an arpeggio.
    A ShapeChord member is SPREAD (owner's decision 2026-09-30): its notes, lowest sounding
-   first, each one member — '<< chord(C x32010) >>2' is five notes under 5:4. Each is absolute
+   first, each one member — '<< diagram(C x32010) >>2' is five notes under 5:4. Each is absolute
    with its string number; the first before any pitched member is the group's root (the
    frame after the group is its lowest note, the item's rule). Its share dots go to its last
    note, a '(' after it to its first, a ')' to its last; with no shape on the part's tuning it
@@ -2575,7 +2579,7 @@ PhraseRef      = PhraseName , { "'" | ',' } ;
                     later edited — cannot move the music after a reference. A body
                     evaluates in the
                     default frame; a pitchless body (rests only) hands nothing off. A
-                    body that opens with a 'chord(…)' item anchors on that item's
+                    body that opens with a 'diagram(…)' item anchors on that item's
                     LOWEST note as written — what the item hands on — and the
                     reference's marks do not move it (owner's decision 2026-09-30). *)
 

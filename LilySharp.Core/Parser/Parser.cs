@@ -159,9 +159,10 @@ internal sealed partial class Parser
                      && (t.Text.Equals("chord", StringComparison.Ordinal)
                          || t.Text.Equals("figuredBass", StringComparison.Ordinal)))
                 stage = 2;
-            // The shape-chord ITEM, chord(C#m7 x46654): its words are an @chord's (session 967).
+            // The shape-chord ITEM, diagram(C#m7 x46654): its words are an @chord's (session 967).
             else if (stage == 0 && t.Kind == SyntaxKind.Identifier
-                     && t.Text.Equals(ShapeChordWord, StringComparison.Ordinal))
+                     && (t.Text.Equals(ShapeChordWord, StringComparison.Ordinal)
+                         || t.Text.Equals(RetiredShapeChordWord, StringComparison.Ordinal)))
                 stage = 2;
             else if (stage == 2 && t.Kind == SyntaxKind.OpenParen)
             {

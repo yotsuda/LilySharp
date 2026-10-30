@@ -2053,13 +2053,13 @@ public sealed partial class LilySharpLanguageServer
 
     /// <summary>True when <paramref name="offset"/> sits inside a <c>@chord(…)</c>
     /// argument.</summary>
-    /// <remarks>A <c>chord(…)</c> item's words are an <c>@chord</c>'s (2026-09-28), so its
+    /// <remarks>A <c>diagram(…)</c> item's words are an <c>@chord</c>'s (2026-09-28), so its
     /// parentheses offer the same chord symbols.</remarks>
     internal static bool IsInsideChordAnnotation(string text, int offset) =>
         string.Equals(AnnotationArgumentName(text, offset), "chord", StringComparison.Ordinal)
         || IsInsideShapeChordItem(text, offset);
 
-    /// <summary>True when <paramref name="offset"/> sits inside a <c>chord(…)</c> item's words:
+    /// <summary>True when <paramref name="offset"/> sits inside a <c>diagram(…)</c> item's words:
     /// the nearest unclosed '(' on the line follows the bare word <c>chord</c>.</summary>
     internal static bool IsInsideShapeChordItem(string text, int offset)
     {
@@ -2074,7 +2074,7 @@ public sealed partial class LilySharpLanguageServer
             while (e >= 0 && text[e] == ' ') e--;
             int s = e;
             while (s >= 0 && (char.IsLetterOrDigit(text[s]) || text[s] == '_')) s--;
-            return s + 1 <= e && text[(s + 1)..(e + 1)] == "chord" && (s < 0 || text[s] != '@');
+            return s + 1 <= e && text[(s + 1)..(e + 1)] is "diagram" or "chord" && (s < 0 || text[s] != '@');
         }
         return false;
     }

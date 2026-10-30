@@ -734,7 +734,7 @@ public static partial class NoteStepper
                     : MarkSteps(text, opener) ? new Target(TargetKind.Articulation, opener) : null;
         // An @chord: strictly after its '@' — a caret just before the '@' is also just after
         // the note's duration, and belongs to the note.
-        // A bare one on a chord(…) item names the item's words (ChordAnnotation.Of), so it
+        // A bare one on a diagram(…) item names the item's words (ChordAnnotation.Of), so it
         // steps the item's shape; one with no shape site (a bare @chord on <…>) is its chord's.
         foreach (var mark in tree.GetNodes<MusicMarkSyntax>())
             if (mark.Name == "chord" && mark.Span.Start < offset && offset <= mark.Span.End)
@@ -743,7 +743,7 @@ public static partial class NoteStepper
                     : ShapeSiteOf(mark) is not (null, null)
                         ? new Target(TargetKind.Voicing, mark)
                         : CarrierOf(mark) ?? new Target(TargetKind.Voicing, mark);
-        // A chord(…) item (owner's decision 2026-09-28): from its word 'chord' to its ')' —
+        // A diagram(…) item (owner's decision 2026-09-28): from its word 'chord' to its ')' —
         // the step rewrites its shape as an @chord's, on the part's tuning (StepTuning).
         foreach (var item in tree.GetNodes<ChordSyntax>())
             if (item.IsShapeChord && item.SourceStart <= offset && offset <= ShapeItemHeadEnd(item))
@@ -787,7 +787,7 @@ public static partial class NoteStepper
 
     /// <summary>The note, chord member or chord an annotation is written on — what the keys step
     /// when the annotation itself has nothing to step — or null (a rest's, a slash note's, a
-    /// <c>chord(…)</c> item's).</summary>
+    /// <c>diagram(…)</c> item's).</summary>
     private static Target? CarrierOf(SyntaxNode annotation) => annotation.Parent switch
     {
         NoteSyntax note => new Target(TargetKind.Note, note),
@@ -797,10 +797,10 @@ public static partial class NoteStepper
         _ => null,
     };
 
-    /// <summary>Just past a <c>chord(…)</c> item's <c>)</c> (or its last word, unclosed).</summary>
+    /// <summary>Just past a <c>diagram(…)</c> item's <c>)</c> (or its last word, unclosed).</summary>
     private static int ShapeItemHeadEnd(ChordSyntax item)
     {
-        int end = item.SourceStart + Parser.Parser.ShapeChordWord.Length;
+        int end = item.SourceStart + item.ShapeWordLength;
         for (int i = 0; i < item.SlotCount; i++)
             if (item.GetChild(i) is SyntaxTokenNode t && t.Text.Length > 0)
             {
@@ -1053,9 +1053,9 @@ public static partial class NoteStepper
         }
         else if (dir < 0 && at == 0 && site.IsItem)
         {
-            // A chord(…) item's shape IS its notes (required, owner's decision 2026-09-28):
+            // A diagram(…) item's shape IS its notes (required, owner's decision 2026-09-28):
             // Down stops at the default instead of leaving a spacer.
-            return (null, ShapeMessage(symbol, 0, order) + " - the first; a chord(...) item keeps its shape" + note, true);
+            return (null, ShapeMessage(symbol, 0, order) + " - the first; a diagram(...) item keeps its shape" + note, true);
         }
         else if (dir < 0 && at == 0)
         {
@@ -1087,7 +1087,7 @@ public static partial class NoteStepper
     /// to show (null refusal: not steppable at all — the key's own command runs).</summary>
     private static (ShapeSite? Site, string? Refusal) ShapeSiteOf(SyntaxNode node)
     {
-        // A chord(…) item: its words are an @chord's (Music.ShapeChords.Words).
+        // A diagram(…) item: its words are an @chord's (Music.ShapeChords.Words).
         if (node is ChordSyntax { IsShapeChord: true } item)
         {
             var itemWords = Music.ShapeChords.Words(item);
@@ -1249,7 +1249,7 @@ public static partial class NoteStepper
     /// <paramref name="site"/> (<see cref="StepTuning"/>'s score), 0 for none.</summary>
     public static int CapoOf(SyntaxNode site)
         => ScoresOf(site, out _) is { Count: > 0 } scores ? scores[0].Score.Capo
-            // A chord(…) item, or a mark no score places: the first score drawing its part.
+            // A diagram(…) item, or a mark no score places: the first score drawing its part.
             : ChordDiagramScores.CapoOfNode(site);
 
     /// <summary>

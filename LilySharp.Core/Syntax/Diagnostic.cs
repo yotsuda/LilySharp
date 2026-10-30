@@ -612,11 +612,16 @@ public static class DiagnosticCodes
     /// sixteenths whatever it said (reported 2026-09-26).</remarks>
     public const string UnsupportedSwingValue = "LYS0034";
 
-    /// <summary>Error: octave marks after a chord-from-a-shape's <c>)</c> — <c>chord(C x32013)'</c>.
+    /// <summary>Error: octave marks after a chord-from-a-shape's <c>)</c> — <c>diagram(C x32013)'</c>.
     /// The item's notes are where the strings are (owner's decision 2026-09-28: absolute, never
     /// moved by marks, the relative frame or <c>octave absolute</c>); the marks are ignored and
     /// the message names the fix (another shape, higher up the neck).</summary>
     public const string ShapeChordOctaveMarks = "LYS0035";
+
+    /// <summary>Error: a chord from a shape written with its retired word, <c>chord(C x32010)1</c> —
+    /// <c>diagram(C x32010)1</c> since 2026-10-30 (owner's decision). Still read as the item, so
+    /// the bar keeps its length; the message names the new word.</summary>
+    public const string RetiredShapeChordWord = "LYS0043";
 
     /// <summary>Parser error: an ending's passes written with the printed points —
     /// <c>[1.3. B]</c>, where the spelling is <c>[1,3. B]</c> (a list) or <c>[1-3. B]</c> (a
@@ -1120,12 +1125,12 @@ public static class DiagnosticCodes
     /// </remarks>
     public const string ChordShapeMismatch = "LYS1039";
 
-    /// <summary>Warning: a <c>chord(…)</c> item has no shape its part's tuning can play —
-    /// none written (<c>chord(C)</c>), or none of the written ones usable (a problem LYS1038
+    /// <summary>Warning: a <c>diagram(…)</c> item has no shape its part's tuning can play —
+    /// none written (<c>diagram(C)</c>), or none of the written ones usable (a problem LYS1038
     /// names, or a length the tuning does not have). The item keeps its time as a SPACER, so
     /// the bars still add up, and draws and sounds nothing.</summary>
     /// <remarks>Owner's decision 2026-09-28 (HANDOFF §2 K5): the shape is REQUIRED for now; the
-    /// message names the fix (<c>chord(C x32010)</c>).</remarks>
+    /// message names the fix (<c>diagram(C x32010)</c>).</remarks>
     public const string ShapeChordNoShape = "LYS1040";
 
     // Measure errors (LYS2xxx)

@@ -468,7 +468,7 @@ public sealed partial class MeasureCollector
         public int PendingEmptyChordSlurStartSource;
         public int PendingEmptyChordSlurEndSource;
 
-        /// <summary>The <c>chord(…)</c> member of a <c>&lt;&lt; &gt;&gt;</c> group being played one
+        /// <summary>The <c>diagram(…)</c> member of a <c>&lt;&lt; &gt;&gt;</c> group being played one
         /// note at a time (<see cref="Music.ArpeggioSpread"/>) and the note it plays now; null
         /// outside that member. Keyed by the item's green node — a red node is re-created per read.</summary>
         public (Syntax.InternalSyntax.GreenNode Item, Music.ShapeNote Note)? SpreadNote;

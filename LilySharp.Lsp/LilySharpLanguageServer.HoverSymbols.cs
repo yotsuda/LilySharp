@@ -178,7 +178,7 @@ public sealed partial class LilySharpLanguageServer
     }
 
     /// <summary>
-    /// A <c>chord(…)</c> item's hover (owner's decision 2026-09-28): the notes it sounds on each
+    /// A <c>diagram(…)</c> item's hover (owner's decision 2026-09-28): the notes it sounds on each
     /// tuning of the parts that play it, lowest first — <c>guitar: `x32013` — C3 E3 G3 C4 G4</c> —
     /// with where the shape stands in the step's order, or why it sounds nothing. A tone that is
     /// no chord tone is spelled in the key in force (<see cref="CurrentKey"/>), as the page spells it.

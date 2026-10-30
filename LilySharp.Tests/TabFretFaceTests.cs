@@ -42,7 +42,7 @@ public class TabFretFaceTests
 {
     private const string Guitar = """
         part gt { instrument guitar }
-        section A { gt { chord(Em 022000)2 chord(C x32010)2 | } }
+        section A { gt { diagram(Em 022000)2 diagram(C x32010)2 | } }
         form { ~A }
         score { staff gt  tab gt }
         """;

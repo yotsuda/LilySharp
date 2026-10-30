@@ -35,7 +35,7 @@ internal static class PhraseAnchor
     public const int Tonic = -1;
 
     /// <summary>Sentinel step for a body that opens with a chord from a shape
-    /// (<c>chord(C x32010)</c>): the anchor is that item's LOWEST sounding note as written —
+    /// (<c>diagram(C x32010)</c>): the anchor is that item's LOWEST sounding note as written —
     /// the note the item itself hands on (owner's decision 2026-09-28) — which only the
     /// caller can compute (the part's tuning, the capo, the key). It is absolute: the
     /// reference's own marks do not move it, as they do not move the item (owner's decision
@@ -103,7 +103,7 @@ internal static class PhraseAnchor
             case ArpeggioSyntax a:
                 foreach (var member in a.Members)
                 {
-                    // A chord(…) member first: the group's root is its lowest note (ArpeggioSpread).
+                    // A diagram(…) member first: the group's root is its lowest note (ArpeggioSpread).
                     if (member is ChordSyntax { IsShapeChord: true } spread)
                     {
                         shape = spread;

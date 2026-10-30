@@ -315,12 +315,12 @@ public sealed partial class MeasureCollector
         _partSoundingShift = header?.SoundingShiftSemitones ?? 0;
     }
 
-    /// <summary>The tuning a <c>chord(…)</c> item of the part being collected sounds on
+    /// <summary>The tuning a <c>diagram(…)</c> item of the part being collected sounds on
     /// (<see cref="Music.ShapeChords.TuningOf"/>: its fretted instrument, else the guitar).</summary>
     private TuningType _partShapeTuning = TuningType.Guitar;
 
     /// <summary>The part's written→sounding shift (<see cref="Semantics.PartHeaderDefaults.SoundingShiftSemitones"/>):
-    /// what a <c>chord(…)</c> item's sounding strings are written less.</summary>
+    /// what a <c>diagram(…)</c> item's sounding strings are written less.</summary>
     private int _partSoundingShift;
 
     /// <summary>
@@ -554,7 +554,7 @@ public sealed partial class MeasureCollector
                 case PitchSyntax p:
                     AddPitch(p);
                     break;
-                // A chord(…) member sounds its shape's notes, lowest first (ArpeggioSpread).
+                // A diagram(…) member sounds its shape's notes, lowest first (ArpeggioSpread).
                 case ChordSyntax { IsShapeChord: true } shape:
                     foreach (var n in Music.ShapeChords.Ascending(ShapeNotesOf(shape)))
                         Add(n.Step, n.Alter);
@@ -715,6 +715,21 @@ public sealed partial class MeasureCollector
                 foreach (var drum in chord.DrumNames)
                     foreach (var a in drum.Articulations)
                         Collect(a, isChordMember: true);
+                // A chord from a shape draws its shape (owner's decision 2026-10-30: written
+                // diagram(C x32010), the item IS its diagram) — save where an @chord on it draws
+                // its name and diagram, an @diagram another, or the score draws none
+                // (`chordDiagrams none`: the notes alone).
+                if (chord.IsShapeChord && !graceTime
+                    && !chord.Articulations.Any(a => a is MusicMarkSyntax { Name: "chord" or "diagram" })
+                    && Semantics.ChordDiagramsKey.Resolve(_chordDiagramsWord, _partFrettedTuning) is not null
+                    && Music.ShapeChords.ShapeFor(Music.ShapeChords.Words(chord), _partFrettedTuning ?? TuningType.Guitar) is { } shape
+                    && Music.ChordShapes.TryRead(shape, out var shapeFrets, out _))
+                    _articulations.Add(new ArticulationItem(
+                        ArticulationType.FretFrame, measureIndex, itemIndex, true, chord.SourceStart, _v.Cursor.StaffIndex)
+                    {
+                        FrameSpec = Music.ChordVoicings.ToFrameSpec(shapeFrets),
+                        VoiceIndex = _v.Cursor.VoiceIndex,
+                    });
                 break;
             case ChordRepetitionSyntax rep:
                 foreach (var a in rep.Articulations)

@@ -314,7 +314,7 @@ public sealed class MusicXmlExporter
     }
 
     /// <summary>The exported score's capo fret (read with <see cref="DiagramTuning"/>), 0 for
-    /// none: a diagram is the pressed shape, a <c>chord(…)</c> item's strings sound that many
+    /// none: a diagram is the pressed shape, a <c>diagram(…)</c> item's strings sound that many
     /// semitones higher. The <c>&lt;harmony&gt;</c> stays the sounding chord (data).</summary>
     private int DiagramCapo
     {
@@ -2934,7 +2934,7 @@ public sealed class MusicXmlExporter
                         n => _variables.TryGetValue(n, out var b) ? b : null, out var anchorShape);
                     if (anchorStep == LilySharp.Core.Music.PhraseAnchor.Tonic)
                         anchorStep = _ambientTonic.Valid ? _ambientTonic.Step : 0;
-                    // A body opening with a chord(…) item: its lowest note, absolute.
+                    // A body opening with a diagram(…) item: its lowest note, absolute.
                     var shapeAnchor = anchorStep == LilySharp.Core.Music.PhraseAnchor.Shape
                         ? ShapeAnchorOf(anchorShape) : null;
                     if (anchorStep == LilySharp.Core.Music.PhraseAnchor.Shape)
@@ -3571,7 +3571,7 @@ public sealed class MusicXmlExporter
     /// </summary>
     private void ProcessArpeggio(ArpeggioSyntax arpeggio)
     {
-        // A chord(…) member spread into its notes (the page's MeasureCollector.ProcessArpeggio).
+        // A diagram(…) member spread into its notes (the page's MeasureCollector.ProcessArpeggio).
         var members = Music.ArpeggioSpread.Of(arpeggio, ShapeNotesOf);
         if (members.Count == 0)
             return;
@@ -3657,7 +3657,7 @@ public sealed class MusicXmlExporter
                 // A second part re-reads the chord, so the frame is put back to what the
                 // first part read (the root chord folds the group's marks in on every read).
                 var frame = (_octaveAbsolute, _octaveAnchor, _currentStep, _currentOctave);
-                // A spread note plays as its chord(…) item narrowed to that note (the page's rule).
+                // A spread note plays as its diagram(…) item narrowed to that note (the page's rule).
                 _spreadNote = spreadNote is { } sn ? (chord.Green, sn) : null;
                 for (int k = 0; k < parts.Count; k++)
                 {
@@ -4208,7 +4208,7 @@ public sealed class MusicXmlExporter
         return ApplyTranspose(pitch, step, alter, targetOctave);
     }
 
-    /// <summary>A <c>chord(…)</c> item's strings on the part's tuning (Music.ShapeChords — the
+    /// <summary>A <c>diagram(…)</c> item's strings on the part's tuning (Music.ShapeChords — the
     /// page's reading); the capo raises the strings (2026-09-29).</summary>
     private System.Collections.Immutable.ImmutableArray<Music.ShapeNote> ShapeNotesOf(ChordSyntax chord)
         // A spread note of a << >> group (ArpeggioSpread) is the item narrowed to that one note.
@@ -4217,11 +4217,11 @@ public sealed class MusicXmlExporter
             : Music.ShapeChords.Notes(chord, _partFrettedTuning ?? TuningType.Guitar,
                 _partTransposeSemitones - DiagramCapo, _keyFifths);
 
-    /// <summary>The <c>chord(…)</c> member of a <c>&lt;&lt; &gt;&gt;</c> group being written one
+    /// <summary>The <c>diagram(…)</c> member of a <c>&lt;&lt; &gt;&gt;</c> group being written one
     /// note at a time and the note it writes now (the page's MeasureCollector._spreadNote).</summary>
     private (Syntax.InternalSyntax.GreenNode Item, Music.ShapeNote Note)? _spreadNote;
 
-    /// <summary>A phrase's outgoing anchor when its body opens with a <c>chord(…)</c> item
+    /// <summary>A phrase's outgoing anchor when its body opens with a <c>diagram(…)</c> item
     /// (<see cref="Music.PhraseAnchor.Shape"/>): the item's lowest note as written, as
     /// (step, octave) — the page's MeasureCollector.EnterPhraseTranspose; null when the part's
     /// tuning has no shape for it.</summary>
@@ -4235,7 +4235,7 @@ public sealed class MusicXmlExporter
         _lastEmittedHost = chord.SourceStart;
 
         var pitches = chord.Pitches.ToList();
-        // chord(SYMBOL SHAPE): the shape's strings on the part's tuning (Music.ShapeChords —
+        // diagram(SYMBOL SHAPE): the shape's strings on the part's tuning (Music.ShapeChords —
         // the page's reading), each with its <technical><string>. No usable shape: a rest-
         // shaped silence keeps the time (the page's spacer, LYS1040).
         var shapeNotes = chord.IsShapeChord ? ShapeNotesOf(chord) : [];
@@ -4393,7 +4393,7 @@ public sealed class MusicXmlExporter
             _chordMembers.Add(xmlNote);
         }
 
-        // chord(SYMBOL SHAPE): lowest sounding first, each note's string in <technical>.
+        // diagram(SYMBOL SHAPE): lowest sounding first, each note's string in <technical>.
         foreach (var sn in Music.ShapeChords.Ascending(shapeNotes))
         {
             var (sstep, salter, soctave) = ApplyWrittenTransforms(sn.Step, sn.Alter, sn.Octave);
@@ -5115,7 +5115,7 @@ public sealed class MusicXmlExporter
                         });
                         firstMember = false;
                     }
-                    // A chord(…) item in a grace body: its strings, as ProcessChord writes them.
+                    // A diagram(…) item in a grace body: its strings, as ProcessChord writes them.
                     var graceShape = chord.IsShapeChord ? ShapeNotesOf(chord) : [];
                     foreach (var sn in Music.ShapeChords.Ascending(graceShape))
                     {

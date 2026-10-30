@@ -195,7 +195,7 @@ public class PartNameVocabularyTests
     [InlineData("major", "reserved")]
     [InlineData("tuplet", "reserved")]
     [InlineData("q", "repeats")]           // the three families refused before
-    [InlineData("chord", "shape")]
+    [InlineData("diagram", "shape")]
     [InlineData("sn", "drum")]
     public void APhrase_NamedForAWordTheStreamCannotReadBack_IsRefusedAtTheDeclaration(string name, string why)
     {

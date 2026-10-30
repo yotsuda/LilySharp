@@ -1226,7 +1226,7 @@ public static class OctaveModeConverter
         // carry themselves. Dropped here, and the forcing walk puts each member where it was.
         if (target == OctaveMode.Absolute)
             foreach (var group in root.DescendantNodes<SyntaxNode>()
-                         // A chord(…) item has no marks to drop (refused, LYS0035), and the ','
+                         // A diagram(…) item has no marks to drop (refused, LYS0035), and the ','
                          // between its words is a separator, not an octave.
                          .Where(n => n is ChordSyntax { IsShapeChord: false } or ArpeggioSyntax))
                 for (int i = 0; i < group.SlotCount; i++)

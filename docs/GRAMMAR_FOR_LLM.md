@@ -357,25 +357,25 @@ the chord's c, not the g), and `<c, e g> <c, e g>` falls an octave, as `c, c,` d
 the mark once. Degree chords hand on the TONIC, not the first degree written. (Until
 2026-10-18 the anchor was the first member's BARE letter and its mark local — superseded.)
 
-A CHORD FROM A SHAPE — `chord(SYMBOL SHAPE)` + a chord's tail (duration, dots, ties, slurs,
+A CHORD FROM A SHAPE — `diagram(SYMBOL SHAPE)` + a chord's tail (duration, dots, ties, slurs,
 beams, scripts, dynamics): writes the notes a fretted shape sounds (2026-09-28).
 
 ```
-chord(C x32013)1 |          // C3 E3 G3 C4 G4 on a guitar — each string's open pitch + fret
-chord(Cm7 x3x546)2@chord    // + name and diagram: a bare @chord takes the item's words
-chord(C xx-10-12-13-12)4.~  // frets 10-15 in the dash form
+diagram(C x32013)1 |          // C3 E3 G3 C4 G4 on a guitar — each string's open pitch + fret
+diagram(Cm7 x3x546)2@chord    // + name and diagram: a bare @chord takes the item's words
+diagram(C xx-10-12-13-12)4.~  // frets 10-15 in the dash form
 ```
 
 - The words are `@chord(…)`'s (a symbol + a shape, or a shape alone); the shape is REQUIRED —
-  `chord(C)` warns (LYS1040) and is a SPACER of its length.
+  `diagram(C)` warns (LYS1040) and is a SPACER of its length.
 - Tuning: the PART's fretted instrument (its tab tuning), else the guitar. The shape gives
   SOUNDING pitches, and a guitar part (treble_8) is written as it sounds. ABSOLUTE: the frame, `octave absolute` and marks do not move
   it; marks after `)` are an error (LYS0035).
 - The note AFTER it is read from its LOWEST sounding note (relative mode).
   A phrase whose body opens with it hands the same note on after its reference.
 - Chord tones are spelled from the symbol (Cm7 → E♭ B♭); every note carries its string
-  number (a tab shows the shape). It draws no name/diagram itself.
-- `chord` is reserved in music: a phrase cannot be named it.
+  number (a tab shows the shape). It draws its shape's diagram (unless `chordDiagrams none`, or an `@chord`/`@diagram` on it draws one); no name unless `@chord`.
+- `diagram` is reserved in music: a phrase cannot be named it. (`chord(…)` is the retired spelling: error LYS0043.)
 
 ## Arpeggios `<< … >>` (written-out broken chords)
 
@@ -401,8 +401,8 @@ degrees-only group anchors on the tonic. NOT LilyPond's `<< >>`
                  //  5 in a quarter → 16ths 5:4; 4 in a quarter → plain 16ths; 2 in a
                  //  dotted quarter → 8ths 2:3)
 << c e g >>'     // marks after >> shift the whole group and propagate to the next note
-<< chord(C x32010) >>2 | // a chord(…) member is SPREAD: its notes lowest first, one member each (5:4)
-<< c chord(G 320003) e >>2   // mixed: c, G's six strings, then e (e stacks above the root c)
+<< diagram(C x32010) >>2 | // a diagram(…) member is SPREAD: its notes lowest first, one member each (5:4)
+<< c diagram(G 320003) e >>2   // mixed: c, G's six strings, then e (e stacks above the root c)
 ```
 
 Must fit in one measure (else it overflows the meter).
@@ -1390,7 +1390,7 @@ layout {
   shape is the shape pressed above the capo (`Eb(x32010)` is the C shape, checked against the
   pressed chord), the printed name is the pressed chord's (`C`), spelled in the key N
   semitones below the key at the bar, "Capo N" stands at the score's head, and a
-  `chord(Eb x32010)` item sounds N semitones higher. There is no `capo auto`.
+  `diagram(Eb x32010)` item sounds N semitones higher. There is no `capo auto`.
 - `chordNames shape` (the default) names the pressed chord under a capo, `sounding` the
   sounding chord, `both` both — `E♭m7 (Cm7)`. Without a capo all three print the same name.
 - `chordList true` puts every chord the score names at its head under the title, each once in
@@ -1449,7 +1449,7 @@ ppp pp p mp mf ff fff   (f is a PITCH; @f still works - dynamics resolve from te
 ```
 
 Also special: single letters `a`-`g` are pitches; `r`/`R`/`s` are rests. Reserved IN
-MUSIC only: `q`, `chord` (`chord(C x32010)`) and the drum names (`bd` `sn` `hh` …) — a
+MUSIC only: `q`, `diagram` (`diagram(C x32010)`) and the drum names (`bd` `sn` `hh` …) — a
 phrase cannot be named them; a part can. In a score, `tab X Y` is part X's tab plus the
 MIDI-only part Y when the file declares a part named X, else the X tuning over part Y
 (`tab bass click` beside `part bass`: the part wins, LYS1044 names `tab bass4 click` for

@@ -285,7 +285,7 @@ public sealed class ChordSymbolSpellingTests
     [Fact]
     public void AShapeChordItem_ReadsTheListToo()
     {
-        var tree = Book("C |", "chord(C7(b9) x32310)1 |");
+        var tree = Book("C |", "diagram(C7(b9) x32310)1 |");
         Assert.False(tree.HasErrors, string.Join(" | ", tree.Diagnostics.Select(d => d.Message)));
         var item = tree.GetRoot().DescendantNodes<ChordSyntax>().First(c => c.IsShapeChord);
         Assert.Equal(new[] { "C7(b9)", "x32310" }, item.ShapeArguments.Select(a => a.Text));

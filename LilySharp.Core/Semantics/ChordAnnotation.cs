@@ -86,7 +86,7 @@ public sealed record ChordAnnotation
     /// <summary>A shape with no symbol: the name comes from the shape's notes.</summary>
     public bool NamesFromDiagram => Symbol == null && QuotedText == null && !Shapes.IsEmpty;
 
-    /// <summary>The words came from the <c>chord(…)</c> item a bare <c>@chord</c> is attached
+    /// <summary>The words came from the <c>diagram(…)</c> item a bare <c>@chord</c> is attached
     /// to, not from the mark (<see cref="Of"/>): there is nothing of the mark's own to edit or
     /// to point a diagnostic at.</summary>
     public bool FromShapeItem { get; init; }
@@ -94,11 +94,11 @@ public sealed record ChordAnnotation
     /// <summary>Reads the words of <paramref name="mark"/>, or null when it is not an
     /// <c>@chord</c>.</summary>
     /// <remarks>
-    /// ⚠️ A BARE <c>@chord</c> ON A <c>chord(…)</c> ITEM reads THE ITEM'S words (owner's decision
-    /// 2026-09-28, HANDOFF §2 K5): <c>chord(Cm7 x3x546)2@chord</c> names Cm7 and draws x3x546,
+    /// ⚠️ A BARE <c>@chord</c> ON A <c>diagram(…)</c> ITEM reads THE ITEM'S words (owner's decision
+    /// 2026-09-28, HANDOFF §2 K5): <c>diagram(Cm7 x3x546)2@chord</c> names Cm7 and draws x3x546,
     /// exactly as <c>@chord(Cm7 x3x546)</c> would — so every reader of an <c>@chord</c> (the page,
     /// the MusicXML harmony, the twin, the hover) treats it alike with no second path. A symbol-
-    /// less item (<c>chord(x32010)</c>) names from its shape's notes, which are the item's notes.
+    /// less item (<c>diagram(x32010)</c>) names from its shape's notes, which are the item's notes.
     /// The words' problems are left off (<see cref="FromShapeItem"/>): the item's own validator
     /// reports them at the item's words, once.
     /// </remarks>

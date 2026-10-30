@@ -344,11 +344,12 @@ internal sealed partial class Parser
             // (part names, section names).
             SyntaxKind.Identifier when Current.Text == "q" => ParseChordRepetition(),
 
-            // `chord(C x32013)1` — a chord FROM A SHAPE (owner's decision 2026-09-28). Claimed
+            // `diagram(C x32013)1` — a chord FROM A SHAPE (owner's decision 2026-09-28). Claimed
             // here like `q`, so `chord` is reserved in a music stream only (a phrase cannot
             // be named it — RejectUnreachablePhraseName) and stays an ordinary word elsewhere;
             // `@chord` is read after its '@' and never reaches this switch.
             SyntaxKind.Identifier when Current.Text == ShapeChordWord => ParseShapeChord(),
+            SyntaxKind.Identifier when Current.Text == RetiredShapeChordWord && Peek().Kind == SyntaxKind.OpenParen => ParseShapeChord(),
 
             // `drums { hats  back  kick }` — a drum chart, its lines played together
             // (Parser.Drums). Claimed only before a `{`, so a phrase may still be named
@@ -932,11 +933,17 @@ internal sealed partial class Parser
         return new ChordGreen(openAngle, [.. pitches], closeAngle, [.. octaveMarks], duration, tremolo, articulations);
     }
 
-    /// <summary>The word that opens a chord from a shape in a music stream.</summary>
-    internal const string ShapeChordWord = "chord";
+    /// <summary>The word that opens a chord from a shape in a music stream: <c>diagram(C x32010)1</c>
+    /// (owner's decision 2026-10-30 — what is written is the diagram, the notes come from it; it was
+    /// <c>diagram(…)</c>, read as a chord's NAME beside <c>@chord(…)</c>).</summary>
+    internal const string ShapeChordWord = "diagram";
+
+    /// <summary>The item's word until 2026-10-30: still read as the item, and refused (LYS0043)
+    /// naming the new word, so a bar written with it keeps its length.</summary>
+    internal const string RetiredShapeChordWord = "chord";
 
     /// <summary>
-    /// <c>chord(SYMBOL SHAPE)</c> + the tail a <c>&lt;…&gt;</c> chord takes — duration, dots,
+    /// <c>diagram(SYMBOL SHAPE)</c> + the tail a <c>&lt;…&gt;</c> chord takes — duration, dots,
     /// tremolo, post-events (ties, slurs, beams, scripts, dynamics). The words between the
     /// parentheses are kept as tokens and read later as an <c>@chord(…)</c> argument's are
     /// (<see cref="ChordSyntax.ShapeArguments"/>, <see cref="Music.ShapeChords"/>).
@@ -946,7 +953,7 @@ internal sealed partial class Parser
     /// sounding strings on the part's tuning, absolute, each with its string number. Octave
     /// marks after the <c>)</c> would move a chord that is where the strings are, so they are
     /// refused (LYS0035) and ignored rather than read — the recommendation the owner left open,
-    /// taken: <c>chord(…)'</c> has no natural reading once the frame does not apply.
+    /// taken: <c>diagram(…)'</c> has no natural reading once the frame does not apply.
     /// The '(' may follow after a space: <c>chord</c> alone means nothing in music, so there
     /// is no slur to confuse it with (the glue rule of <c>@name(…)</c> guards a note's slur).
     /// LILYSHARP-OWN: LilyPond writes such a chord out note by note.
@@ -959,13 +966,18 @@ internal sealed partial class Parser
     {
         int wordStart = _textPosition + Current.LeadingTriviaWidth;
         var word = Advance();
+        if (word.Text == RetiredShapeChordWord)
+            // ASCII punctuation only: the CLI prints this to legacy-codepage consoles.
+            _diagnostics.Error(new TextSpan(wordStart, word.Text.Length), DiagnosticCodes.RetiredShapeChordWord,
+                $"a chord from a shape is written {ShapeChordWord}(...) - {ShapeChordWord}(C x32010)1 - since 2026-10-30: "
+                + $"write '{ShapeChordWord}' for '{RetiredShapeChordWord}' (a name over it is '@chord')");
         var tokens = new List<GreenNode?>();
         SyntaxToken openParen, closeParen;
         if (Check(SyntaxKind.OpenParen))
         {
             openParen = Advance();
             // Stop at the ')' that matches — a symbol's alteration list nests its own pair,
-            // chord(C7(b9) x32310) (session 967) — and at a '}' or the end, so an unclosed
+            // diagram(C7(b9) x32310) (session 967) — and at a '}' or the end, so an unclosed
             // item cannot swallow the rest of its block (Expect reports the missing ')').
             int depth = 0;
             while (!(Check(SyntaxKind.CloseParen) && depth == 0) && !Check(SyntaxKind.CloseBrace) && !Check(SyntaxKind.EndOfFile))
@@ -982,8 +994,8 @@ internal sealed partial class Parser
         {
             // Zero-width stand-ins carry no trivia (Expect's own rule), so the round trip holds.
             _diagnostics.Error(new TextSpan(wordStart, word.Text.Length), DiagnosticCodes.ExpectedToken,
-                "'chord' in music writes the notes of a chord shape: chord(C x32010)4 - a chord "
-                + "symbol and a shape in parentheses. (A phrase cannot be named 'chord'.)");
+                $"'{ShapeChordWord}' in music writes the notes of a chord shape: {ShapeChordWord}(C x32010)4 - a chord "
+                + $"symbol and a shape in parentheses. (A phrase cannot be named '{ShapeChordWord}'.)");
             openParen = new SyntaxToken(SyntaxKind.OpenParen, "", null, null);
             closeParen = new SyntaxToken(SyntaxKind.CloseParen, "", null, null);
         }
@@ -996,7 +1008,7 @@ internal sealed partial class Parser
         {
             string marks = string.Concat(octaveMarks.OfType<SyntaxToken>().Select(t => t.Text));
             _diagnostics.Error(new TextSpan(marksStart, marks.Length), DiagnosticCodes.ShapeChordOctaveMarks,
-                $"'{marks}' cannot move a chord(...) item: its notes are where the shape's strings "
+                $"'{marks}' cannot move a diagram(...) item: its notes are where the shape's strings "
                 + "are, whatever the octave marks, the relative frame or 'octave absolute' say - "
                 + "remove the marks, and write a shape higher (or lower) on the neck to play it "
                 + "there. The marks are ignored.");
@@ -1006,7 +1018,7 @@ internal sealed partial class Parser
             if (Current.Kind is SyntaxKind.IntegerLiteral && CurrentGluedToPrevious)
                 ReportDurationInsideChord(
                     "A member of << >> can't carry a duration - its notes share the group's total, "
-                    + "written after the closing '>>': << chord(C x32010) >>2.");
+                    + "written after the closing '>>': << diagram(C x32010) >>2.");
             return new ChordGreen(word, openParen, [.. tokens], closeParen, [.. octaveMarks], null, null,
                 ParsePostEvents());
         }
@@ -1056,7 +1068,8 @@ internal sealed partial class Parser
             {
                 members.Add(ParseChord());
             }
-            else if (Current.Kind == SyntaxKind.Identifier && Current.Text == ShapeChordWord)
+            else if (Current.Kind == SyntaxKind.Identifier
+                     && (Current.Text == ShapeChordWord || Current.Text == RetiredShapeChordWord && Peek().Kind == SyntaxKind.OpenParen))
             {
                 // A chord from a shape: its notes are spread across the group (ArpeggioSpread).
                 members.Add(ParseShapeChord(inGroup: true));

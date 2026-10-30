@@ -241,7 +241,7 @@ public static partial class ChordHarmonizer
             {
                 if (!pcByPos.TryGetValue(item.SourcePosition, out var pcs))
                     continue;
-                // A chord whose syntax spells no letter — one from a shape (chord(Am x02210)),
+                // A chord whose syntax spells no letter — one from a shape (diagram(Am x02210)),
                 // a degree chord (<1 3 5>) — counts the notes the page collected for it. Until
                 // 2026-09-30 it counted nothing, so a bar of them read as a rest.
                 if (pcs.Count == 0 && item is ChordItem collected)

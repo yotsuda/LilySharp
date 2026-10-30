@@ -97,7 +97,7 @@ always means the same notes at every call site. What flows out is the
 phrase's **anchor** — its first note's bare letter, shifted with the
 reference's own marks — exactly like a chord: a note written after the
 reference is relative to that anchor, never to how the body ends. A body that opens
-with a `chord(…)` item anchors on the item's lowest note, as the item itself hands on —
+with a `diagram(…)` item anchors on the item's lowest note, as the item itself hands on —
 absolute, so the reference's marks do not move it.
 **Section boundaries** also reset the frame.
 
@@ -2526,7 +2526,7 @@ reads follows the capo:
   shape; the usual shape of a chord is its pressed chord's (`Eb` at capo 3 draws `x32010`
   under `all`); the table's shapes are pressed shapes; a written shape is checked (LYS1039)
   as pressed above the capo — the warning speaks in sounding names ("'320003' sounds A C♯ E
-  with the capo on fret 2, which is A, not G … write chord(A 320003), or chord(G 133211) for
+  with the capo on fret 2, which is A, not G … write diagram(A 320003), or diagram(G 133211) for
   G under the capo") and offers the symbol's own pressed shape as the fix that keeps it;
 - the printed NAME is the pressed chord's: `C` for `Eb`, `G` for `Bb`, spelled in the key that
   many semitones below the key at the bar (the key's own letter, else a natural, else the key's
@@ -2536,7 +2536,7 @@ reads follows the capo:
   A Roman degree is the sounding key's and is not moved;
 - "Capo 3" stands at the score's head, on the header's instrument line (the middle of the
   poet / composer row);
-- a `chord(Eb x32010)` item's strings sound three semitones higher (E♭ major), on the staff,
+- a `diagram(Eb x32010)` item's strings sound three semitones higher (E♭ major), on the staff,
   in the MIDI and in the twin.
 
 `capo 0` is refused (leave the word out), as is a fret above 11, `none capo 3` and `all capo
@@ -2731,32 +2731,32 @@ not LilyPond's own tables, which would draw a shape of LilyPond's where they hol
 yet, nor is a bare `@chord`'s name); on a rest or a spacer the `<harmony>` stands before the
 rest, at its moment. A diagram does not sound in the MIDI.
 
-### Chords from a shape — `chord(…)`
+### Chords from a shape — `diagram(…)`
 
-`chord(SYMBOL SHAPE)` is a music item that WRITES THE NOTES of a shape: each unmuted
+`diagram(SYMBOL SHAPE)` is a music item that WRITES THE NOTES of a shape: each unmuted
 string's open pitch plus its fret, as a chord on the staff, every note with its string number.
 It takes what a `<…>` chord takes after it — duration, dots, tremolo, ties, slurs, beams,
 articulations, dynamics, a bare duration or `q` repeating it, a tuplet or a grace body around it.
 
 ```
-chord(C x32013)1                 // C3 E3 G3 C4 G4 on a guitar, a whole note
-chord(Cm7 x3x546)2@chord         // + the name and the diagram (the bare @chord takes the item's words)
-chord(C xx-10-12-13-12)4.~       // frets 10-15 in the dash form; duration, dots, tie as on <…>
-chord(x32010)2@chord             // no symbol: the shape alone gives the notes; @chord names them (C)
+diagram(C x32013)1                 // C3 E3 G3 C4 G4 on a guitar, a whole note
+diagram(Cm7 x3x546)2@chord         // + the name and the diagram (the bare @chord takes the item's words)
+diagram(C xx-10-12-13-12)4.~       // frets 10-15 in the dash form; duration, dots, tie as on <…>
+diagram(x32010)2@chord             // no symbol: the shape alone gives the notes; @chord names them (C)
 ```
 
 - **The words** are an `@chord(…)` argument's: a symbol then a shape (or a shape alone), either
-  shape form, a tuning word binding a shape to one tuning (`chord(F guitar 133211 ukulele 2010)`).
+  shape form, a tuning word binding a shape to one tuning (`diagram(F guitar 133211 ukulele 2010)`).
   Every shape warning applies (LYS1038: length, dashes, case), and a shape that disagrees with its
-  symbol warns (LYS1039, the fix written `chord(X shape)`).
-- **The shape is required** (for now): `chord(C)` warns (LYS1040) naming the fix —
-  `write a shape: chord(C x32010)` — and keeps its time as a SPACER, so the bar still adds up;
+  symbol warns (LYS1039, the fix written `diagram(X shape)`).
+- **The shape is required** (for now): `diagram(C)` warns (LYS1040) naming the fix —
+  `write a shape: diagram(C x32010)` — and keeps its time as a SPACER, so the bar still adds up;
   so does a shape no string count of the part's tuning takes.
 - **The tuning** is the PART's: its fretted instrument (its `tuning`, else its `instrument`
   preset's — the tuning its tab frets on), else the standard guitar. The shape gives SOUNDING
   pitches, and every part writes them where they sound: a guitar part (`treble_8`, whose clef
   draws them an octave up, as LilyPond's does) writes and plays x32013 as C3 E3 G3 C4 G4. The ukulele's re-entrant G string sounds where
-  it is (`chord(C 0003)` = G4 C4 E4 C5).
+  it is (`diagram(C 0003)` = G4 C4 E4 C5).
 - **Absolute.** Octave marks, the relative frame and `octave absolute` do not move the item;
   marks after its `)` are an error (LYS0035) and ignored — write a shape higher on the neck.
 - **The frame after it** is its LOWEST sounding note (as a `<…>` chord hands on its anchor): in
@@ -2764,25 +2764,26 @@ chord(x32010)2@chord             // no symbol: the shape alone gives the notes; 
   opens with the item hands the same note on after its reference (not moved by the
   reference's marks).
 - **In `<< >>`** the item is SPREAD: its notes, lowest first, each one member of the broken
-  chord — `<< chord(C x32010) >>2` plays the five strings in turn under 5:4, and
-  `<< c chord(G 320003) e >>` plays c, G's six strings, then e. A share dot after it holds its
+  chord — `<< diagram(C x32010) >>2` plays the five strings in turn under 5:4, and
+  `<< c diagram(G 320003) e >>` plays c, G's six strings, then e. A share dot after it holds its
   last note, a `(` after it starts the bow on its first; first in the group, it is the root.
 - **Spelling:** a note that is a tone of the symbol (or its slash bass) is spelled as the chord
   spells it — Cm7's E♭ and B♭, never D♯ and A♯; any other note in the key.
 - **String numbers:** every note carries its string, so a `tab` of the part shows exactly the
   shape; a muted string gives no note.
-- **Notes only.** The item draws no name and no diagram of its own. A bare `@chord` on it names
-  the item's symbol and draws its shape (the usual diagram rules: the diagram's tuning is layout,
+- **Its diagram.** The item draws its shape's diagram (no name) over the staff and in the twin
+  (2026-10-30) — `chordDiagrams none` turns it off with every other diagram. A bare `@chord` on it names
+  the item's symbol and draws its shape once (the usual diagram rules: the diagram's tuning is layout,
   else the part's instrument, else the guitar); an `@chord(Other …)` on it is its own.
 - **Exports.** The MIDI plays the notes; MusicXML writes the chord with each note's
   `<technical><string>`; the `.ly` twin writes the notes out as a chord, lowest first, each with
   its string number (`<c\5 e\4 g\3 c'\2 g'\1>1`), and `\omit StringNumber` on the staff.
 - **Editor.** Hover lists the notes it sounds on each tuning that plays it —
   `guitar: x32013 — C3 E3 G3 C4 G4 — shape n of N`; `Ctrl+Shift+Up`/`Down` on the item steps its
-  shape through the order above on the PART's tuning (from `chord(C)`, Up writes the usual shape),
-  sounding each, and Down stops at the usual shape (the item keeps a shape); inside `chord(` the
+  shape through the order above on the PART's tuning (from `diagram(C)`, Up writes the usual shape),
+  sounding each, and Down stops at the usual shape (the item keeps a shape); inside `diagram(` the
   completion offers the chord symbols `@chord(` does.
-- `chord` is reserved in music only: a phrase cannot be named it (a part can).
+- `diagram` is reserved in music only: a phrase cannot be named it (a part can). The item was written `chord(…)` until 2026-10-30; that spelling is now an error (LYS0043) naming `diagram`.
 
 ## Guitar Bends and Technique Letters
 
@@ -2904,8 +2905,8 @@ fine — `include`, `let`, `use`, `chordnames`, `tabStaff` — and the sixteen a
 Notes:
 
 - Single letters `a`–`g` are pitch names; `r`/`R` are rests, `s` is a spacer rest.
-- **Reserved in music only:** `q` (repeats the previous chord), `chord` (a chord from a
-  shape, `chord(C x32010)` — 2026-09-28) and the drum-kit names (`bd`, `sn`, `hh`, …). A music
+- **Reserved in music only:** `q` (repeats the previous chord), `diagram` (a chord from a
+  shape, `diagram(C x32010)` — 2026-09-28) and the drum-kit names (`bd`, `sn`, `hh`, …). A music
   stream reads them as music items, so a **phrase** cannot be named any of them (LYS1030); a
   part, a section or a `fonts` key still can (`part chord { … }` compiles).
 - **`tab X Y` reads a declared part first** (2026-10-03): with a part named `bass` in the

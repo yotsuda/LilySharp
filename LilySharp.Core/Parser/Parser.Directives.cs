@@ -557,7 +557,7 @@ internal sealed partial class Parser
                   + "read as a phrase to play"
             // Reserved 2026-09-28 with the chord-from-a-shape item (Parser.ParseShapeChord).
             : text == ShapeChordWord
-                ? "'chord' opens a chord from a shape in a music stream (chord(C x32010)4), so "
+                ? $"'{ShapeChordWord}' opens a chord from a shape in a music stream ({ShapeChordWord}(C x32010)4), so "
                   + "it can never be read as a phrase to play"
             : DrumNameRegistry.Contains(text)
                 ? $"'{text}' is a drum-kit name, so a music stream reads it as a drum note "

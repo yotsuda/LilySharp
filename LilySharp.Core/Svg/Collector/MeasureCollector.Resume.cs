@@ -445,7 +445,7 @@ public sealed partial class MeasureCollector
         // measure-span test above cannot see it: a replayed measure's SourceStart is the
         // form's bar or the previous play's end, its items cite the body. The tail's
         // measures ARE the old walk of that body, so a window inside it makes them stale.
-        // MEASURED (user report 2026-09-29, C:\tmp\diagram.lys): `chord(C x35550)1@chord()`
+        // MEASURED (user report 2026-09-29, C:\tmp\diagram.lys): `diagram(C x35550)1@chord()`
         // in a section the form plays six times; stepping the shape (Ctrl+Shift+↑) redrew
         // the first play's diagram and the splice adopted the other five with the old
         // shape — window [84,87), the replays' measures [124,99) / [102,99), items at 74.

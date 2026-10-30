@@ -122,7 +122,7 @@ index の「03 Speed」は見出しだけ。
 ### 6.4 分け方・ナビ
 
 - コード行は manual、ダイアグラムは chords.html（`grammar#layout` の chordDiagrams 系の行は chords へ飛ばすだけ）。
-  tab（`grammar#tab`）が `chord(…)`（`chords#notes`）から遠い。`repeat unfold/percent/tremolo` が `#groups` にあり反復記号は `#forms`。
+  tab（`grammar#tab`）が `diagram(…)`（`chords#notes`）から遠い。`repeat unfold/percent/tremolo` が `#groups` にあり反復記号は `#forms`。
   CLI と Markdown が「Editor and AI」頁。Lineage・Licence・Architecture が宣伝頁。
 - index に上部ナビが無く、読み物 3 頁のナビは index を載せない（ブランド名だけが home）。manual の目次が上部ナビを繰り返す。
   index の眉の番号が「01 Engraving / Lineage / 02 Grammar」と混在。~~manual の 01〜25 は手打ち~~ → 2026-10-12 に生成へ（`Add-SectionNumbers`）。

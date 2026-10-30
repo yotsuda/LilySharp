@@ -76,7 +76,7 @@ public class ChordHarmonizerTests
     [Fact]
     public void ShapeAndDegreeChords_AreCountedByTheirNotes()
         => Assert.Contains("Am | F | G7",
-            Harmonize("chord(Am x02210)1 | chord(F xx3211)1 | <5 7 2>1 |"));
+            Harmonize("diagram(Am x02210)1 | diagram(F xx3211)1 | <5 7 2>1 |"));
 
     [Fact]
     public void RestOnlyMeasure_HoldsThePreviousChord()

@@ -23,7 +23,7 @@ using Xunit;
 namespace LilySharp.Tests;
 
 /// <summary>
-/// Stepping a <c>chord(…)</c>'s shape (Ctrl+Shift+↑) in a section the form plays SIX times
+/// Stepping a <c>diagram(…)</c>'s shape (Ctrl+Shift+↑) in a section the form plays SIX times
 /// must redraw all six diagrams: the preview redrew the first play's and kept the other five
 /// (user report 2026-09-29, <c>C:\tmp\diagram.lys</c>). The resumed render is held to the
 /// fresh one byte for byte, as every resume net is (CollectEditResumeTests).
@@ -37,7 +37,7 @@ public class ShapeChordIncrementalTests
         part melody {
           clef treble
           instrument guitar
-          section A { chord(C x35550)1@chord() | c'1 }
+          section A { diagram(C x35550)1@chord() | c'1 }
         }
 
         form { A |: A  [1. ~A ~A ] :| ~A A }

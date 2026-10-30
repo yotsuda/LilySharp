@@ -504,7 +504,7 @@ public sealed partial class MeasureCollector
         bool tieAfterGroup = false, bool slurStartAfterGroup = false, bool slurEndAfterGroup = false,
         int tieAfterSource = 0, int slurStartAfterSource = 0, int slurEndAfterSource = 0)
     {
-        // Bare pitches, degrees, chords and/or rests, with shares — a chord(…) member spread
+        // Bare pitches, degrees, chords and/or rests, with shares — a diagram(…) member spread
         // into its notes (owner's decision 2026-09-30, Music.ArpeggioSpread).
         var members = Music.ArpeggioSpread.Of(arpeggio, ShapeNotesOf);
         if (members.Count == 0)
@@ -597,7 +597,7 @@ public sealed partial class MeasureCollector
             Fraction onset = startTiming;
             for (int i = startNoteIndex; i < builder.CurrentItemCount; i++)
                 onset += builder.CurrentItems[i].Duration;
-            // A spread note plays as its chord(…) item narrowed to that note: absolute, with its
+            // A spread note plays as its diagram(…) item narrowed to that note: absolute, with its
             // string. The first one before any pitched member is the group's root — its lowest
             // note, as the item hands on (the marks after '>>' do not move it).
             _v.SpreadNote = spreadNote is { } sn ? (member.Green, sn) : null;
@@ -705,7 +705,7 @@ public sealed partial class MeasureCollector
                 }
                 break;
             }
-            // A chord(…) member with no shape on the tuning is not spread (ArpeggioSpread): its
+            // A diagram(…) member with no shape on the tuning is not spread (ArpeggioSpread): its
             // share is a silence, as the item alone is a spacer (LYS1040 says why).
             case ChordSyntax { IsShapeChord: true } unshaped when ShapeNotesOf(unshaped).IsEmpty:
                 foreach (var part in parts)
@@ -1360,7 +1360,7 @@ public sealed partial class MeasureCollector
                         _v.PendingEmptyChordSlurEnd |= hasSlurEndAfter;
                         break;
                     }
-                    // A chord(…) item with no shape its part's tuning can play: a SPACER of its
+                    // A diagram(…) item with no shape its part's tuning can play: a SPACER of its
                     // written length (owner's decision 2026-09-28, LYS1040) — the bar adds up,
                     // nothing is drawn. A bare @chord on it still names the item's symbol.
                     if (chord.IsShapeChord && ShapeNotesOf(chord).IsEmpty)
@@ -2494,7 +2494,7 @@ public sealed partial class MeasureCollector
             }
             case ChordSyntax chord when chord.IsShapeChord && ShapeNotesOf(chord).IsEmpty:
             {
-                // A chord(…) item with no usable shape: a spacer (LYS1040), as the main arm.
+                // A diagram(…) item with no usable shape: a spacer (LYS1040), as the main arm.
                 var spacer = CreateShapeSpacerItem(chord);
                 await AddItemWithoutDurationAsync(builder, WithBowSources(spacer with { TimeScale = scale }, m));
                 CollectDynamics(chord, annMeasureIndex, annItemIndex);

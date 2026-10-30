@@ -23,17 +23,17 @@ using LilySharp.Core.Syntax;
 namespace LilySharp.Core.Music;
 
 /// <summary>
-/// A <c>&lt;&lt; … &gt;&gt;</c> group's members with every <c>chord(…)</c> member SPREAD into
+/// A <c>&lt;&lt; … &gt;&gt;</c> group's members with every <c>diagram(…)</c> member SPREAD into
 /// its notes, lowest sounding first — each note one member of the broken chord.
 /// </summary>
 /// <remarks>
-/// LILYSHARP-OWN: the owner's decision (2026-09-30) — <c>&lt;&lt; chord(C x32010) &gt;&gt;2</c>
+/// LILYSHARP-OWN: the owner's decision (2026-09-30) — <c>&lt;&lt; diagram(C x32010) &gt;&gt;2</c>
 /// plays the shape's notes one after another, equally dividing the half; mixed with other
-/// members (<c>&lt;&lt; c chord(C x32010) &gt;&gt;</c>) the shape's notes take their places in
+/// members (<c>&lt;&lt; c diagram(C x32010) &gt;&gt;</c>) the shape's notes take their places in
 /// the sequence. LilyPond has neither the group nor the item.
 /// <para>
 /// The notes depend on the part's tuning, the capo and the key, so the spread is not a syntax
-/// fact: each walker passes the function it plays a <c>chord(…)</c> item with, and reads the
+/// fact: each walker passes the function it plays a <c>diagram(…)</c> item with, and reads the
 /// group's share count off the spread (<see cref="ShareCount"/>), never off
 /// <see cref="ArpeggioSyntax.ShareCount"/>. A spread note is handed to the walker's own chord
 /// path as the item narrowed to that one note (<see cref="Entry.Note"/>), so its spelling,
@@ -49,11 +49,11 @@ namespace LilySharp.Core.Music;
 public static class ArpeggioSpread
 {
     /// <summary>One member of the spread sequence: <see cref="Member"/> as
-    /// <see cref="ArpeggioSyntax.Sequence"/> hands it out (its node is the <c>chord(…)</c> item
+    /// <see cref="ArpeggioSyntax.Sequence"/> hands it out (its node is the <c>diagram(…)</c> item
     /// for a spread note), and the one note it plays when it comes from a spread item.</summary>
     public readonly record struct Entry(ArpeggioMember Member, ShapeNote? Note);
 
-    /// <summary>The spread sequence of <paramref name="group"/>, reading each <c>chord(…)</c>
+    /// <summary>The spread sequence of <paramref name="group"/>, reading each <c>diagram(…)</c>
     /// member's notes with <paramref name="notesOf"/>.</summary>
     public static List<Entry> Of(ArpeggioSyntax group, Func<ChordSyntax, ImmutableArray<ShapeNote>> notesOf)
     {

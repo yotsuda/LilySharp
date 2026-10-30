@@ -282,7 +282,7 @@
 - **`MidiExporter.SwingNotes`** LILYSHARP-OWN: LilyPond's MIDI plays its swing equation straight unless the score asks for
 - **`MidiExporter.ProcessGrace`** previous written duration), so this is LILYSHARP-OWN and Lily# used to
 ### `LilySharp.Core/Music/ArpeggioSpread.cs`
-- **`ArpeggioSpread`** LILYSHARP-OWN: the owner's decision (2026-09-30) — &lt;&lt; chord(C x32010) &gt;&gt;2
+- **`ArpeggioSpread`** LILYSHARP-OWN: the owner's decision (2026-09-30) — &lt;&lt; diagram(C x32010) &gt;&gt;2
 ### `LilySharp.Core/Music/BarRest.cs`
 - **`BarRest`** meter (owner's decision 2026-10-02, LILYSHARP-OWN): a whole-bar rest is one sign in every
 ### `LilySharp.Core/Music/ChordFormula.cs`

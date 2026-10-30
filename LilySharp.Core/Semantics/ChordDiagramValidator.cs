@@ -249,7 +249,7 @@ public static class ChordDiagramScores
 
     /// <summary>The capo frets of the scores that draw the part <paramref name="node"/> is written
     /// in (every score when none does), each once in score order, with the names of the scores on
-    /// it — what a <c>chord(…)</c> item's hover lists, in parentheses, when they differ: each
+    /// it — what a <c>diagram(…)</c> item's hover lists, in parentheses, when they differ: each
     /// score sounds the item under its own capo (2026-09-30). The unnamed score is
     /// <c>Default</c>, so the hover reads <c>(Default)</c> as the preview's picker does.</summary>
     public static IReadOnlyList<(int Capo, IReadOnlyList<string> Scores)> CaposOfNode(SyntaxNode node)

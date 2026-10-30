@@ -233,9 +233,9 @@ public class ChordShapeCheckTests
     /// </summary>
     /// <remarks>
     /// Until 2026-10-03 the check ran in the pressed frame and the message printed the sounding
-    /// symbol beside the pressed recognition: <c>chord(G 320003)</c> under capo 2 said
+    /// symbol beside the pressed recognition: <c>diagram(G 320003)</c> under capo 2 said
     /// "'320003' sounds G B D, which is G, not G (G B D are not tones of G; it lacks A (the
-    /// 3rd)) - write chord(G 320003) or another shape" — the written spelling offered as its own
+    /// 3rd)) - write diagram(G 320003) or another shape" — the written spelling offered as its own
     /// fix (session 762's big-band book, HANDOFF ⑼ ⒝).
     /// </remarks>
     [Fact]
@@ -244,14 +244,14 @@ public class ChordShapeCheckTests
         const string capo2 = "layout { chordDiagrams guitar capo 2 }\n";
         // The G shape above a capo on 2 is A; G itself is pressed as F there (133211).
         Assert.Equal("'320003' sounds A C♯ E with the capo on fret 2, which is A, not G (A C♯ E are not tones of G; "
-                     + "it lacks B (the 3rd)) - write chord(A 320003), or chord(G 133211) for G under the capo, or another shape.",
-            Single(OnGuitar("chord(G 320003)1 |", capo2)));
+                     + "it lacks B (the 3rd)) - write diagram(A 320003), or diagram(G 133211) for G under the capo, or another shape.",
+            Single(OnGuitar("diagram(G 320003)1 |", capo2)));
         // No chord names the notes: the foreign ones are listed, the pressed shape is the fix.
         Assert.Equal("'x32011' for C with the capo on fret 2 sounds D F♯ A, which are not tones of C, and lacks E (the 3rd) "
-                     + "- write chord(C x13331) (C under the capo) or another shape of C's tones.",
-            Single(OnGuitar("chord(C x32011)1 |", capo2)));
+                     + "- write diagram(C x13331) (C under the capo) or another shape of C's tones.",
+            Single(OnGuitar("diagram(C x32011)1 |", capo2)));
         // The pressed shape IS the symbol's shape under the capo: silent.
-        Assert.Empty(Mismatches(OnGuitar("chord(G 133211)1 chord(A 320003)1 |", capo2)));
+        Assert.Empty(Mismatches(OnGuitar("diagram(G 133211)1 diagram(A 320003)1 |", capo2)));
         // The same reading for a chords row and a layout table.
         Assert.Equal("'320003' sounds A C♯ E with the capo on fret 2, which is A, not G (A C♯ E are not tones of G; "
                      + "it lacks B (the 3rd)) - write A(320003), or G(133211) for G under the capo, or another shape.",

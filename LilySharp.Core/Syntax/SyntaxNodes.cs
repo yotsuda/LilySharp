@@ -909,10 +909,10 @@ public sealed class ChordSyntax : SyntaxNode
     /// <c>,</c> word separators be read as marks.</remarks>
     public int ChordOctaveOffset => IsShapeChord ? 0 : SyntaxFacts.NetOctaveMarks(this);
 
-    // ---------------------------------------------------------------- chord(SYMBOL SHAPE)
+    // ---------------------------------------------------------------- diagram(SYMBOL SHAPE)
 
     /// <summary>
-    /// Whether this is a chord FROM A SHAPE — <c>chord(C x32013)1</c> — rather than a
+    /// Whether this is a chord FROM A SHAPE — <c>diagram(C x32013)1</c> — rather than a
     /// <c>&lt;…&gt;</c> chord: the item whose notes are the shape's sounding strings on the
     /// tuning of the part that plays it (owner's decision 2026-09-28, HANDOFF §2 K5;
     /// <see cref="Music.ShapeChords"/>). It holds no pitch member in the tree.
@@ -930,7 +930,7 @@ public sealed class ChordSyntax : SyntaxNode
             if (!IsShapeChord)
                 return -1;
             // The ')' that matches the item's '(' — a symbol's alteration list nests its
-            // own pair inside the words, chord(C7(b9) x32310) (session 967).
+            // own pair inside the words, diagram(C7(b9) x32310) (session 967).
             int depth = 0;
             for (int i = 2; i < SlotCount; i++)
             {
@@ -966,12 +966,16 @@ public sealed class ChordSyntax : SyntaxNode
     }
 
     /// <summary>A shape chord's WORDS — the runs an <c>@chord(…)</c> argument reads
-    /// (<see cref="MarkArgument"/>): <c>chord(Cm7 x3x546)</c> → <c>Cm7</c>, <c>x3x546</c>.</summary>
+    /// (<see cref="MarkArgument"/>): <c>diagram(Cm7 x3x546)</c> → <c>Cm7</c>, <c>x3x546</c>.</summary>
     public ImmutableArray<MarkArgument> ShapeArguments => MarkArgument.FromTokens(ShapeTokens);
 
     /// <summary>The source span of each of <see cref="ShapeArguments"/>, by the same run rule
     /// (<see cref="MarkArgument.SpansOf"/>).</summary>
     public IReadOnlyList<TextSpan> ShapeWordSpans => MarkArgument.SpansOf(ShapeTokens);
+
+    /// <summary>The length of a shape chord's opening word — <c>diagram</c>, or the retired
+    /// <c>chord</c> (LYS0043) — 0 for a <c>&lt;…&gt;</c> chord.</summary>
+    public int ShapeWordLength => IsShapeChord && GetChild(0) is SyntaxTokenNode word ? word.Text.Length : 0;
 
     /// <summary>The <c>'</c> / <c>,</c> tokens written after a shape chord's <c>)</c> — refused
     /// by the parser, kept so the tree spells the source.</summary>
