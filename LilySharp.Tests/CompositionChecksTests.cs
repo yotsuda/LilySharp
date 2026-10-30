@@ -386,6 +386,30 @@ public class CompositionChecksTests
             kits: [(hats, beat), (ride, beat), (hats, "bd4 r sn r"), (ride, beat)])), f => f.StartsWith("kit: the"));
     }
 
+    // Owner's trial 2026-10-30: told it had no tune, a rock trio's guitar played single notes from start
+    // to end, the harmony the bass's root alone. A riff on the root, low, is the harmony too.
+    [Fact]
+    public void ABandWhoseGuitarPlaysNoChords_IsSaid()
+    {
+        const string bass = "e,8 e, e, e, e, e, e, e,";
+        Assert.Contains(CompositionChecks.Of(Rock3("e'4 g' a'2", bass)), f => f.StartsWith("Nobody plays the chords: gtr plays a tune of single notes in 24 of its 24 bars"));
+        Assert.DoesNotContain(CompositionChecks.Of(Rock3("<e b>2 <e b>2", bass)), f => f.StartsWith("Nobody plays the chords"));
+        Assert.DoesNotContain(CompositionChecks.Of(Rock3("e8 r e g a r b a", bass)), f => f.StartsWith("Nobody plays the chords"));
+    }
+
+    // Owner's trial 2026-10-30: a bass in E♭ minor wrote `b` and `fis` for the key's C♭ and G♭.
+    [Fact]
+    public void NotesOfTheKeyWrittenUnderAnotherName_AreSaid()
+    {
+        string Piece(string bar) => "title \"Yoake\"\ntime 4/4\noctave absolute\nkey ees minor\npart b { instrument cello }\n"
+            + $"section A {{\n  b {{ {string.Concat(Enumerable.Repeat(bar + " | ", 4))} }}\n}}\nform {{ A }}\nscore {{ staff b }}\n";
+        Assert.Contains(CompositionChecks.Of(Piece("b,4 fis b, ees")),
+            f => f.StartsWith("b: notes of the key written under another name, in E♭ minor — `b` for its `ces` (8 times), `fis` for its `ges` (4 times)"));
+        Assert.DoesNotContain(CompositionChecks.Of(Piece("ces4 ges ces ees")), f => f.Contains("under another name"));
+        // A note the key does not hold — the raised leading tone — is not one.
+        Assert.DoesNotContain(CompositionChecks.Of(Piece("d4 d ees ees")), f => f.Contains("under another name"));
+    }
+
     [Fact]
     public void SectionsWhoseTuneEndsOpenAgainstTheBass_AreSaid()
     {

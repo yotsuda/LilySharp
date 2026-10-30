@@ -96,6 +96,7 @@ public static class CompositionChecks
         findings.AddRange(LateLevels(root, parts.Where(p => RoleOf(p).Drums || InstrumentOf(p) is "" || InstrumentOf(p).StartsWith("piano", System.StringComparison.Ordinal))
             .Select(p => p.Name.Text).ToHashSet(System.StringComparer.Ordinal)));
         findings.AddRange(CopiedSections(root));
+        findings.AddRange(SpelledAgainstTheKey(root, parts, System.Text.RegularExpressions.Regex.IsMatch(source, @"(?m)^\s*pitch\s+concert\b")));
 
         MidiFile midi;
         try
@@ -460,7 +461,25 @@ public static class CompositionChecks
             }
         }
         if (band)
+        {
             findings.AddRange(OneGroove(midi, barList));
+            // Nobody playing the chords (owner's trial 2026-10-30: told it had no tune, a rock trio's
+            // guitar played single notes from start to end, the harmony the bass's root alone).
+            var strummers = parts.Where(p => RoleOf(p).Chords).Select(p => p.Name.Text).ToHashSet(System.StringComparer.Ordinal);
+            // A riff on the root is single notes low down (owner's trial, the same day: `a,8 r a, c e r g e`
+            // under the tune is the harmony too): a bar with a chord, or whose notes lie mostly under C4.
+            var onsets = midi.Tracks.SelectMany(t => t.Notes.Where(n => n.Channel != 9).Select(n => (Part: n.Part ?? t.Name, n.StartTick, n.Pitch)))
+                .Where(n => strummers.Contains(n.Part)).GroupBy(n => (n.Part, n.StartTick))
+                .Select(g => (Bar: barList.Count(b => b <= g.Key.StartTick), Chord: g.Count() > 1, Low: g.Min(n => n.Pitch) < 60)).ToList();
+            int strumBars = onsets.Select(o => o.Bar).Distinct().Count();
+            int chordBars = onsets.GroupBy(o => o.Bar).Count(b => b.Any(o => o.Chord) || b.Count(o => o.Low) * 2 > b.Count());
+            bool chordRow = midi.Tracks.Any(t => t.Notes.Any(n => (n.Part ?? t.Name).EndsWith(" (chords)", System.StringComparison.Ordinal)));
+            if (!chordRow && strumBars >= 8 && chordBars < strumBars * NoChordsShare)
+                findings.Add($"Nobody plays the chords: {string.Join(", ", strummers)} plays a tune of single notes in {strumBars - chordBars} of its "
+                    + $"{strumBars} bars, and the harmony is the bass's root alone — a band's guitar (or keyboards) strikes the chords: "
+                    + "power chords or a riff on the root through the verse and the chorus, open chords ringing in a quiet part; its "
+                    + "tune goes over them in a solo, a fill, or a lead part of its own.");
+        }
         if (parts.Select(p => p.Name.Text).FirstOrDefault(n => melodies.Contains(n) && byPart.ContainsKey(n)) is { } tune)
             findings.AddRange(OpenEndings(midi, tune));
 
@@ -588,6 +607,9 @@ public static class CompositionChecks
     // A third or a second stacked under C3 (MIDI 48) muddies — the low interval limit — in this many
     // of a part's chords (owner's trial 2026-10-30: a rock guitar's E chord `<e, gis b>`, E2 G♯2 B2).
     private const int LowThirdCeiling = 48, LowChordsFewest = 4;
+
+    // A band's chord instruments striking a chord in fewer of their bars than this: nobody plays them.
+    private const double NoChordsShare = 0.1;
 
     /// <summary>A part's chords with a third or a second under C3.</summary>
     private static IEnumerable<string> LowChords(MidiFile midi, List<int> barList)
@@ -988,6 +1010,89 @@ public static class CompositionChecks
         var written = keys.Select(Of).OfType<(string, string)>().ToList();
         return written.Count > 0 ? (written[0], written[^1]) : null;
     }
+
+    /// <summary>
+    /// Notes of the key written under another name (owner's trial 2026-10-30: a bass in E♭ minor
+    /// wrote <c>b</c> and <c>fis</c> for the key's C♭ and G♭, its staff full of naturals and sharps).
+    /// A note the key does not hold — a raised leading tone, a chromatic passing note — is not one.
+    /// Each section's notes are read in its own key, a top-level phrase's in the file's; a part that
+    /// reads a transposed staff only when the file writes <c>pitch concert</c>.
+    /// </summary>
+    private static IEnumerable<string> SpelledAgainstTheKey(SyntaxNode root, IReadOnlyList<PartDeclarationSyntax> parts, bool concert)
+    {
+        static (string Tonic, string Mode)? Of(KeySignatureSyntax? k)
+            => k is null || k.IsCustom ? null : (k.Pitch.ToFullString().Trim().ToLowerInvariant(), k.Mode.Text.ToLowerInvariant());
+        static bool InSection(SyntaxNode n)
+        {
+            for (var p = n.Parent; p != null; p = p.Parent)
+                if (p is SectionDeclarationSyntax)
+                    return true;
+            return false;
+        }
+        var fileKey = Of(root.DescendantNodes<KeySignatureSyntax>().FirstOrDefault(k => !InSection(k)));
+        var read = parts.Where(p => !RoleOf(p).Drums && (concert || Svg.Model.InstrumentDefaults.GetTransposition(InstrumentOf(p)) % 12 == 0))
+            .Select(p => p.Name.Text).ToHashSet(System.StringComparer.Ordinal);
+        // The music read, each with its key: a section's part blocks, and a top-level phrase played by those parts alone.
+        var blocks = new List<(string Part, SyntaxNode Music, (string, string)? Key)>();
+        foreach (var section in root.DescendantNodes<SectionDeclarationSyntax>().Where(s => s.Parent is { Parent: null }))
+        {
+            var key = Of(section.DescendantNodes<KeySignatureSyntax>().LastOrDefault()) ?? fileKey;
+            foreach (var block in section.DescendantNodes<PartBlockSyntax>().Where(b => read.Contains(b.PartName.Text)))
+                blocks.Add((block.PartName.Text, block, key));
+        }
+        var cells = root.DescendantNodes<PartBlockSyntax>().ToList();
+        foreach (var phrase in root.DescendantNodes<PhraseDeclarationSyntax>().Where(p => p.Parent is CompilationUnitSyntax))
+        {
+            var players = cells.Where(c => c.DescendantNodes<VariableReferenceSyntax>().Any(r => r.Name.Text == phrase.Name.Text))
+                .Select(c => c.PartName.Text).Distinct().ToList();
+            if (players.Count == 1 && read.Contains(players[0]))
+                blocks.Add((players[0], phrase, fileKey));
+        }
+        int[] major = [0, 2, 4, 5, 7, 9, 11], minor = [0, 2, 3, 5, 7, 8, 10];
+        const string letters = "cdefgab";
+        int[] natural = [0, 2, 4, 5, 7, 9, 11];
+        var wrong = new Dictionary<string, Dictionary<(string Written, string Key), int>>(System.StringComparer.Ordinal);
+        string keyName = "";
+        foreach (var (part, music, key) in blocks)
+        {
+            if (key is not var (tonic, mode) || mode is not ("major" or "minor") || tonic.Length == 0 || !letters.Contains(tonic[0]))
+                continue;
+            int tonicPc = PitchClass(tonic), tonicLetter = letters.IndexOf(tonic[0]);
+            var steps = mode == "major" ? major : minor;
+            // The key's own name for each of its pitch classes.
+            var spelled = new Dictionary<int, string>();
+            for (int i = 0; i < 7; i++)
+            {
+                int letter = (tonicLetter + i) % 7, pc = (tonicPc + steps[i]) % 12;
+                int alter = ((pc - natural[letter]) % 12 + 18) % 12 - 6;
+                spelled[pc] = letters[letter] + alter switch { -2 => "eses", -1 => "es", 1 => "is", 2 => "isis", _ => "" };
+            }
+            foreach (var pitch in music.DescendantNodes<PitchSyntax>().Where(p => p.Parent is NoteSyntax or ChordSyntax or ArpeggioSyntax))
+            {
+                if (pitch.GetChild(0) is not SyntaxTokenNode token || token.Text.Length == 0)
+                    continue;
+                string written = token.Text.ToLowerInvariant();
+                int pc = PitchClass(written);
+                if (!spelled.TryGetValue(pc, out var own) || own[0] == written[0])
+                    continue;
+                if (!wrong.TryGetValue(part, out var counts))
+                    wrong[part] = counts = [];
+                counts[(written, own)] = counts.GetValueOrDefault((written, own)) + 1;
+                keyName = $"{PitchClassName(tonicPc)} {mode}";
+            }
+        }
+        foreach (var (part, counts) in wrong)
+        {
+            if (counts.Values.Sum() < MisspelledFewest)
+                continue;
+            var most = counts.OrderByDescending(c => c.Value).Take(3).Select(c => $"`{c.Key.Written}` for its `{c.Key.Key}` ({c.Value} times)");
+            yield return $"{part}: notes of the key written under another name, in {keyName} — {string.Join(", ", most)}: write a note of "
+                + "the key by the key's own name; a sharp or a natural in a flat key (a flat in a sharp one) reads as a note out of the key.";
+        }
+    }
+
+    // Notes of the key misspelled in a part this many times: a habit, not a slip.
+    private const int MisspelledFewest = 4;
 
     /// <summary>The pitch class of a note name (<c>fis</c>, <c>bes</c>, <c>es</c>), 0 = C.</summary>
     private static int PitchClass(string name)
