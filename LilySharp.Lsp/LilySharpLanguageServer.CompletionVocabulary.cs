@@ -810,13 +810,7 @@ public sealed partial class LilySharpLanguageServer
                     FilterText = "layout",
                     Kind = CompletionItemKind.Snippet,
                     InsertTextFormat = InsertTextFormat.Snippet,
-                    InsertText = "{\n  markTempo ${1:stacked}\n  barNumbers ${2:lines}\n  accidentals ${3:default}"
-                        + "\n  sectionLabels ${4:boxed}\n  partCombineText ${5:true}"
-                        + "\n  chordQualities ${6:symbols}\n  minorChords ${7:upper}"
-                        // `guitar`, not the absent key's "the part's instrument, else guitar"
-                        // (no word says that): the same page unless a part is a ukulele,
-                        // a mandolin, a bass… (owner's rule 2026-09-28, ChordDiagramsKey.Resolve).
-                        + "\n  chordDiagrams ${8:guitar}\n  chordNames ${9:shape}\n  chordList ${10:false}\n  voltaBracket ${11:all}\n  compressRests ${12:false}\n  sectionLabelAlign ${13:center}" + LayoutNumberLines("  ") + "$0\n}",
+                    InsertText = "{" + LayoutSnippetLines("  ") + "$0\n}",
                     Preselect = true,
                     SortText = "0",
                     Detail = "Set the score's display switches (pre-filled with LilyPond's defaults)",
@@ -835,16 +829,44 @@ public sealed partial class LilySharpLanguageServer
             ]
         };
 
-    /// <summary>The number keys' lines of the pre-filled <c>layout</c> snippet, each at its
-    /// default (<see cref="LanguageVocabulary.LayoutNumberKeyDefault"/>), its tab stops after the
-    /// eleven word keys'.</summary>
-    private static string LayoutNumberLines(string indent)
+    /// <summary>The value each WORD key of the pre-filled <c>layout</c> snippet is written at —
+    /// LilyPond's picture, so accepting it changes nothing. A word key not named here is left out
+    /// of the snippet, which LayoutBlockTests (every key in the snippet) then says.</summary>
+    private static readonly System.Collections.Generic.Dictionary<string, string> LayoutSnippetDefaults = new()
+    {
+        ["markTempo"] = "stacked",
+        ["barNumbers"] = "lines",
+        ["accidentals"] = "default",
+        ["sectionLabels"] = "boxed",
+        ["sectionLabelAlign"] = "center",
+        ["partCombineText"] = "true",
+        ["chordQualities"] = "symbols",
+        ["minorChords"] = "upper",
+        // `guitar`, not the absent key's "the part's instrument, else guitar" (no word says
+        // that): the same page unless a part is a ukulele, a mandolin, a bass… (owner's rule
+        // 2026-09-28, ChordDiagramsKey.Resolve).
+        ["chordDiagrams"] = "guitar",
+        ["chordNames"] = "shape",
+        ["chordList"] = "false",
+        ["voltaBracket"] = "all",
+        ["compressRests"] = "false",
+    };
+
+    /// <summary>Every key's line of the pre-filled <c>layout</c> snippet, at its default — the
+    /// word keys' (<see cref="LayoutSnippetDefaults"/>) and the number keys'
+    /// (<see cref="LanguageVocabulary.LayoutNumberKeyDefault"/>) — in alphabetical order, case
+    /// aside (owner's request 2026-10-30), each its own tab stop.</summary>
+    private static string LayoutSnippetLines(string indent)
     {
         var sb = new System.Text.StringBuilder();
-        int stop = 14;   // after the word keys' 13 stops
-        foreach (string key in LanguageVocabulary.LayoutKeys)
-            if (LanguageVocabulary.LayoutNumberKeyDefault(key) is { } value)
+        int stop = 1;
+        foreach (string key in LanguageVocabulary.LayoutKeys.OrderBy(k => k, StringComparer.OrdinalIgnoreCase))
+        {
+            string? value = LanguageVocabulary.LayoutNumberKeyDefault(key)
+                ?? (LayoutSnippetDefaults.TryGetValue(key, out var word) ? word : null);
+            if (value != null)
                 sb.Append('\n').Append(indent).Append(key).Append(" ${").Append(stop++).Append(':').Append(value).Append('}');
+        }
         return sb.ToString();
     }
 
@@ -3855,7 +3877,7 @@ public sealed partial class LilySharpLanguageServer
                 // ⚠️ Pre-filled with the DEFAULTS (stacked, lines), the paper snippet's rule:
                 // accepting the completion and changing nothing does not move the page — save
                 // chordDiagrams, whose default no word spells (see GetLayoutDeclarationCompletions).
-                new CompletionItem { Label = "layout", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "layout {\n\tmarkTempo ${1:stacked}\n\tbarNumbers ${2:lines}\n\taccidentals ${3:default}\n\tsectionLabels ${4:boxed}\n\tpartCombineText ${5:true}\n\tchordQualities ${6:symbols}\n\tminorChords ${7:upper}\n\tchordDiagrams ${8:guitar}\n\tchordNames ${9:shape}\n\tchordList ${10:false}\n\tvoltaBracket ${11:all}\n\tcompressRests ${12:false}\n\tsectionLabelAlign ${13:center}" + LayoutNumberLines("\t") + "$0\n}", Detail = "Display switches (marks, barNumbers, accidentals, sectionLabels, partCombineText, chordQualities, minorChords, chordDiagrams, chordNames, chordList, voltaBracket) and the line thicknesses and stem length, pre-filled with LilyPond's defaults" },
+                new CompletionItem { Label = "layout", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "layout {" + LayoutSnippetLines("\t") + "$0\n}", Detail = "Display switches (marks, barNumbers, accidentals, sectionLabels, partCombineText, chordQualities, minorChords, chordDiagrams, chordNames, chordList, voltaBracket) and the line thicknesses and stem length, pre-filled with LilyPond's defaults" },
                 // `override` is a valid global default; `revert` / `once` are NOT offered at
                 // the top level — they only work in a music stream (LYS1023 otherwise).
                 // `partial` is likewise NOT offered here — a pickup belongs to a section, not

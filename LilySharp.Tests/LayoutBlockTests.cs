@@ -192,6 +192,13 @@ public class LayoutBlockTests
             .Single(i => i.Label == "layout").InsertText!;
         foreach (string key in LanguageVocabulary.LayoutKeys)
             Assert.Contains(key, snippet, StringComparison.Ordinal);
+        // …in alphabetical order, case aside (owner's request 2026-10-30), both snippets alike.
+        foreach (string body in new[] { snippet, LilySharpLanguageServer.GetLayoutDeclarationCompletions().Items[0].InsertText! })
+        {
+            var keys = body.Split('\n').Select(l => l.Trim()).Where(l => l.Contains("${", StringComparison.Ordinal))
+                .Select(l => l.Split(' ')[0]).ToList();
+            Assert.Equal(LanguageVocabulary.LayoutKeys.OrderBy(k => k, StringComparer.OrdinalIgnoreCase), keys);
+        }
     }
 
     [Fact]

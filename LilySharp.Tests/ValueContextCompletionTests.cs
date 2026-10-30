@@ -535,8 +535,9 @@ public class ValueContextCompletionTests
         // popup on the declared block names.
         var top = LilySharpLanguageServer.GetTopLevelCompletions().Items
             .Single(i => i.Label == "layout");
-        Assert.Contains("markTempo ${1:stacked}", top.InsertText, StringComparison.Ordinal);
-        Assert.Contains("barNumbers ${2:lines}", top.InsertText, StringComparison.Ordinal);
+        // The keys stand in alphabetical order (owner's request 2026-10-30), so the stops are numbered by it.
+        Assert.Matches(@"markTempo \$\{\d+:stacked\}", top.InsertText);
+        Assert.Matches(@"barNumbers \$\{\d+:lines\}", top.InsertText);
 
         var inScore = LilySharpLanguageServer.GetScoreBlockCompletions().Items
             .Single(i => i.Label == "layout");
