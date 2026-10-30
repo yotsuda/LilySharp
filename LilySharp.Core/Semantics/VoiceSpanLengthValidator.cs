@@ -58,13 +58,17 @@ internal sealed class VoiceSpanLengthValidator : ISemanticValidator
         }
     }
 
-    /// <summary>The bars a voice writes, its phrases played in place; a trailing empty bar (the
-    /// bar line closing the voice) is not one.</summary>
+    /// <summary>The bars a voice writes, its phrases played in place, as a reader counts them: a
+    /// trailing empty bar (the bar line closing the voice) is not one, nor an opening pickup —
+    /// a first bar shorter than the bar after it (owner's report 2026-10-30: "75 bars … (57)"
+    /// counted the `hh8 |` before bar 1).</summary>
     private static int Bars(SyntaxNode voice, IReadOnlyDictionary<string, SyntaxNode> phrases)
     {
         var bars = MeasureModel.Split(voice, phrases);
         int count = bars.Count;
         while (count > 0 && bars[count - 1].IsEmpty)
+            count--;
+        if (count >= 2 && bars[0].Duration < bars[1].Duration)
             count--;
         return count;
     }

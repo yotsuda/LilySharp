@@ -396,9 +396,9 @@ public sealed partial class MeasureCollector
     /// 2026-10-30): each a dynamic of a later voice whose level differs from one already
     /// written there, with the level it meets. The same level twice prints once and is not one.
     /// </summary>
-    internal IReadOnlyList<(DynamicItem At, string Other)> DrumLevelConflicts()
+    internal IReadOnlyList<(DynamicItem At, string Other, int Bar)> DrumLevelConflicts()
     {
-        var found = new List<(DynamicItem, string)>();
+        var found = new List<(DynamicItem, string, int)>();
         if (Collected is not { } score)
             return found;
         foreach (var (_, staff, index) in score.EnumerateStaves())
@@ -415,7 +415,8 @@ public sealed partial class MeasureCollector
                 if (!moments.TryGetValue(key, out var first))
                     moments[key] = d;
                 else if (first.VoiceIndex != d.VoiceIndex && first.Text != d.Text)
-                    found.Add((d, first.Text));
+                    // The bar as a reader numbers it, as the form plays it: a pickup is bar 0.
+                    found.Add((d, first.Text, d.MeasureIndex + (staff.Voices[0].Measures is [{ IsPickup: true }, ..] ? 0 : 1)));
             }
         }
         return found;

@@ -47,14 +47,19 @@ internal sealed class DrumLevelValidator : ISharedCollectValidator
             return;
         if (sharedCollect.Value is not { } collector)
             return;
-        var said = new HashSet<int>();
-        foreach (var (at, other) in collector.DrumLevelConflicts())
-            // A level in a phrase played twice is named once.
-            if (said.Add(at.SourcePosition))
-                // ASCII punctuation only: these strings reach legacy-codepage consoles via the CLI.
-                _diagnostics.Warning(new TextSpan(at.SourcePosition, 1 + at.Text.Length),
-                    DiagnosticCodes.DrumLevelsConflict,
-                    $"the drums play @{at.Text} here and @{other} in another line at the same moment - "
-                    + "one drummer plays one level: write the same level in each line, or in one line alone");
+        // A level in a phrase played more than once is named once, with every bar it meets the other
+        // level in (owner's request 2026-10-30: the warning stood on the phrase, which bar was not said).
+        foreach (var at in collector.DrumLevelConflicts().GroupBy(c => (c.At.SourcePosition, c.At.Text, c.Other)))
+        {
+            var bars = at.Select(c => c.Bar).Distinct().OrderBy(b => b).ToList();
+            string where = bars.Count == 1
+                ? $"bar {bars[0]}, as the form plays it"
+                : $"bars {string.Join(", ", bars.Take(6))}{(bars.Count > 6 ? ", ..." : "")}, as the form plays them";
+            // ASCII punctuation only: these strings reach legacy-codepage consoles via the CLI.
+            _diagnostics.Warning(new TextSpan(at.Key.SourcePosition, 1 + at.Key.Text.Length),
+                DiagnosticCodes.DrumLevelsConflict,
+                $"the drums play @{at.Key.Text} here and @{at.Key.Other} in another line at the same moment ({where}) - "
+                + "one drummer plays one level: write the same level in each line, or in one line alone");
+        }
     }
 }

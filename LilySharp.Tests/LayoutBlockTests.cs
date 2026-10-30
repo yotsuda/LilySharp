@@ -604,6 +604,12 @@ public class LayoutBlockTests
         Assert.Contains(past, d => d.Code == DiagnosticCodes.VoiceRunsPastSpan && d.Message.StartsWith("this voice runs 4 bars, 2 more than the first voice of its span (2)"));
         Assert.DoesNotContain(LilySharp.Core.Semantics.SemanticValidation.Run(SyntaxTree.Parse(Lines(2))), d => d.Code == DiagnosticCodes.VoiceRunsPastSpan);
         Assert.DoesNotContain(LilySharp.Core.Semantics.SemanticValidation.Run(SyntaxTree.Parse(Lines(1))), d => d.Code == DiagnosticCodes.VoiceRunsPastSpan);
+        // A pickup before bar 1 is not counted, in either voice.
+        string pickup = Lines(4).Replace("section A {\n", "section A {\n  partial 8\n").Replace("voice { hats", "voice { hh8 | hats").Replace("{ back", "{ bd8 | back");
+        Assert.Contains(LilySharp.Core.Semantics.SemanticValidation.Run(SyntaxTree.Parse(pickup)),
+            d => d.Code == DiagnosticCodes.VoiceRunsPastSpan && d.Message.StartsWith("this voice runs 4 bars, 2 more than the first voice of its span (2)"));
+        // The drums' conflict names the bar it meets in.
+        Assert.Contains(warned, d => d.Code == DiagnosticCodes.DrumLevelsConflict && d.Message.Contains("(bar 1, as the form plays it)"));
         // A pitched staff's two voices keep LilyPond's two texts.
         var piano = "part m { clef treble }\nsection A {\n  m { voice { c''4@ff d'' e'' f'' | } { c'4@ff d' e' f' | } }\n}\nform { A }\nscore { staff m }\n";
         Assert.Equal(2, Printed(piano).Length);
