@@ -1286,6 +1286,22 @@ public sealed partial class LilySharpLanguageServer
         return new ShapeToNotesResponse { Start = r.Start, End = r.End, Replacement = r.Replacement, Error = r.Error };
     }
 
+    [JsonRpcMethod("lilysharp/addChordDiagram", UseSingleObjectParameterDeserialization = true)]
+    public Task<ShapeToNotesResponse> AddChordDiagramAsync(ShapeToNotesParams @params, CancellationToken token)
+        => OffDispatch(() => AddChordDiagram(@params), token);
+
+    /// <summary>The <c>&lt;…&gt;</c> chord at the offset with its <c>@diagram(SHAPE)</c> written
+    /// (<see cref="LilySharp.Core.Editing.ShapeChordConverter.AddDiagram"/>): the span to replace
+    /// (empty for an insertion) and its text, or why not. The same shapes as lilysharp/shapeToNotes.</summary>
+    public ShapeToNotesResponse AddChordDiagram(ShapeToNotesParams @params)
+    {
+        var doc = _documentManager.GetDocument(@params.TextDocument.Uri);
+        if (doc == null)
+            return new ShapeToNotesResponse { Error = "Document not found" };
+        var r = LilySharp.Core.Editing.ShapeChordConverter.AddDiagram(doc.Text, @params.Offset);
+        return new ShapeToNotesResponse { Start = r.Start, End = r.End, Replacement = r.Replacement, Error = r.Error };
+    }
+
     [JsonRpcMethod("lilysharp/splitSections", UseSingleObjectParameterDeserialization = true)]
     public Task<SplitSectionsResponse> SplitSectionsAsync(SplitSectionsParams @params, CancellationToken token)
         => OffDispatch(() => SplitSections(@params), token);

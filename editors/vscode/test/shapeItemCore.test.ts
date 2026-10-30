@@ -16,7 +16,7 @@
 
 import { test } from 'node:test';
 import * as assert from 'node:assert/strict';
-import { onShapeItem } from '../src/shapeItemCore';
+import { onAngleChord, onShapeItem } from '../src/shapeItemCore';
 
 test('the caret on a chord(...) or diagram(...) item, its words or its duration', () => {
     const line = '  c4 diagram(133211)4 chord(C7(b9) x32310)2. e4';
@@ -33,4 +33,14 @@ test('not on a note, and not on an @chord / @diagram mark', () => {
     assert.equal(onShapeItem(line, line.indexOf('x32010')), false);
     assert.equal(onShapeItem(line, line.indexOf('133211')), false);
     assert.equal(onShapeItem('part chord { }', 6), false);
+});
+
+test('the caret on a <...> chord, not on a << >> group', () => {
+    const line = "  c4 <g b d' f'>2. << c e g >>4 e4";
+    assert.equal(onAngleChord(line, line.indexOf('<g')), true);
+    assert.equal(onAngleChord(line, line.indexOf("d'")), true);
+    assert.equal(onAngleChord(line, line.indexOf('2.') + 2), true);
+    assert.equal(onAngleChord(line, line.indexOf('c e g')), false);
+    assert.equal(onAngleChord(line, line.indexOf('c4')), false);
+    assert.equal(onAngleChord(line, line.indexOf('e4')), false);
 });

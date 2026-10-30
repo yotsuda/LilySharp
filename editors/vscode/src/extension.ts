@@ -42,7 +42,7 @@ import { markdownItExtensionApi } from './markdownFence';
 import { svgPostKey, pagesSummary, SvgPages, previewOnEditorShown, sourceGroupToReveal, newPreviewColumn, scoreGroupFor, sourceGroupToOpen, SourceTab, jumpOffsetFor, chordSpans, chordAtCaret } from './previewCore';
 import { textFontFaceCss, textFontsRoot } from './scoreFonts';
 import { SplitSectionsChoice, modalText, splitChoiceItems } from './splitSectionsCore';
-import { onShapeItem } from './shapeItemCore';
+import { onAngleChord, onShapeItem } from './shapeItemCore';
 import { cleanHistory, forgetFont, recordFont, samePath, shownFonts } from './soundFontHistoryCore';
 
 // True if `cmd` resolves on PATH (used to give a clear error when the
@@ -771,7 +771,10 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.commands.registerCommand('lilysharp.removeStringNumbers', () => removeStringNumbers()),
         // From the context menu at the caret, or from the code action with the document and offset.
         vscode.commands.registerCommand('lilysharp.convertShapeToNotes',
-            (uri?: string, offset?: number) => convertShapeToNotes(
+            (uri?: string, offset?: number) => rewriteChordAt('lilysharp/shapeToNotes',
+                typeof uri === 'string' ? uri : undefined, typeof offset === 'number' ? offset : undefined)),
+        vscode.commands.registerCommand('lilysharp.addChordDiagram',
+            (uri?: string, offset?: number) => rewriteChordAt('lilysharp/addChordDiagram',
                 typeof uri === 'string' ? uri : undefined, typeof offset === 'number' ? offset : undefined)),
         vscode.commands.registerCommand('lilysharp.extractPhrase', () => {
             outputChannel.appendLine('extractPhrase command triggered');
@@ -1169,17 +1172,23 @@ export function activate(context: vscode.ExtensionContext) {
         }
     }));
 
-    // "Convert to chord notes" stands in the context menu only on a chord(…) / diagram(…) item.
-    let wasOnShapeItem = false;
+    // "Convert to Chord Notes" stands in the context menu only on a chord(…) / diagram(…) item,
+    // "Convert to Guitar Diagram" only on a <…> chord.
+    let wasOnShapeItem = false, wasOnAngleChord = false;
     context.subscriptions.push(
         vscode.window.onDidChangeTextEditorSelection(event => {
             const doc = event.textEditor.document;
             const at = event.selections[0]?.active;
-            const on = doc.languageId === 'lilysharp' && at !== undefined
-                && onShapeItem(doc.lineAt(at.line).text, at.character);
-            if (on !== wasOnShapeItem) {
-                wasOnShapeItem = on;
-                void vscode.commands.executeCommand('setContext', 'lilysharp.onShapeItem', on);
+            const line = doc.languageId === 'lilysharp' && at !== undefined ? doc.lineAt(at.line).text : undefined;
+            const onItem = line !== undefined && onShapeItem(line, at!.character);
+            const onChord = line !== undefined && !onItem && onAngleChord(line, at!.character);
+            if (onItem !== wasOnShapeItem) {
+                wasOnShapeItem = onItem;
+                void vscode.commands.executeCommand('setContext', 'lilysharp.onShapeItem', onItem);
+            }
+            if (onChord !== wasOnAngleChord) {
+                wasOnAngleChord = onChord;
+                void vscode.commands.executeCommand('setContext', 'lilysharp.onAngleChord', onChord);
             }
         }));
 
@@ -2472,11 +2481,13 @@ interface ShapeToNotesResponse {
 }
 
 /**
- * Writes the chord(…) / diagram(…) item at the caret (or at `offset` of `uri`, from the code
- * action) out as the <…> chord it plays — the server works out the notes and their octave marks
- * and checks that the file still sounds the same. One edit, so one undo puts the item back.
+ * One of the chord rewrites at the caret (or at `offset` of `uri`, from the code action):
+ * `lilysharp/shapeToNotes` writes a chord(…) / diagram(…) item out as the <…> chord it plays
+ * (the server works out the notes and their octave marks and checks that the file still sounds
+ * the same); `lilysharp/addChordDiagram` gives a <…> chord its @diagram(SHAPE). One edit, so one
+ * undo takes it back.
  */
-async function convertShapeToNotes(uri?: string, offset?: number) {
+async function rewriteChordAt(method: string, uri?: string, offset?: number) {
     if (!client) {
         vscode.window.showErrorMessage('Lily#: language server not ready.');
         return;
@@ -2486,12 +2497,12 @@ async function convertShapeToNotes(uri?: string, offset?: number) {
         ? vscode.workspace.textDocuments.find(d => d.uri.toString() === uri)
         : editor?.document;
     if (!doc || doc.languageId !== 'lilysharp') {
-        vscode.window.showErrorMessage('Lily#: put the caret on a chord(…) or diagram(…) item in a .lys file.');
+        vscode.window.showErrorMessage('Lily#: put the caret on a chord in a .lys file.');
         return;
     }
     const at = offset ?? (editor ? doc.offsetAt(editor.selection.active) : 0);
     try {
-        const response = await client.sendRequest<ShapeToNotesResponse>('lilysharp/shapeToNotes', {
+        const response = await client.sendRequest<ShapeToNotesResponse>(method, {
             textDocument: { uri: doc.uri.toString() },
             offset: at,
         });
@@ -2504,7 +2515,7 @@ async function convertShapeToNotes(uri?: string, offset?: number) {
             response.Replacement);
         await vscode.workspace.applyEdit(edit);
     } catch (err) {
-        vscode.window.showErrorMessage(`Lily#: converting the chord failed: ${err}`);
+        vscode.window.showErrorMessage(`Lily#: rewriting the chord failed: ${err}`);
     }
 }
 

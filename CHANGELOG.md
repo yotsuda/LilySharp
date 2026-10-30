@@ -55,9 +55,17 @@ workflow attaches that section to the GitHub Release verbatim.
     same choice on LilyPond's own line breaks.
 - `[editor]` **Right-click a `chord(…)` or `diagram(…)` item → "Convert to Chord Notes <…>".** The item
   becomes the `<…>` chord it plays — its notes lowest first, with string numbers and the octave
-  marks the frame there needs: `diagram(133211)4` → `<f,\6 c\5 f'\4 a'\3 c'\2 f''\1>4@diagram(133211)`.
-  What it showed stays in one word (`@chord(F 133211)`, `@diagram(133211)`). The file must sound
-  the same afterwards, or nothing changes. Not inside `<< >>`.
+  marks the frame there needs: `diagram(133211)4` → `<f,\6 c\5 f'\4 a'\3 c'\2 f''\1>4`. A
+  `chord(…)` item's name stays as `@chord(F)`; the diagram does not. The file must sound the same
+  afterwards, or nothing changes. Not inside `<< >>`.
+- `[editor]` **Right-click a `<…>` chord → "Convert to Guitar Diagram".** The chord stays and gains
+  `@diagram(SHAPE)`, the shape a bare `@diagram` draws: `<g b d' f'>1` → `<g b d' f'>1@diagram(xx5431)`.
+  With the caret on the shape, Ctrl+Shift+Up/Down walks the other ways to hold the same notes
+  (*fingering 2 of 3*), the notes unchanged.
+- `[lang]` **A diagram that no longer sounds its chord warns** (LYS1057): on a fretted part, an
+  `@diagram(SHAPE)` on a `<…>` chord whose shape is not the chord's notes — edited since the shape
+  was written. The quick fix writes the chord's own shape. A capo or a transposing part, every note
+  moved alike, is not a difference.
 - `[editor]` **Ctrl+Shift+Up/Down steps a `diagram(…)` item with no symbol** (`diagram(x32010)`).
   It walks the other shapes of the chord the shape sounds, rewriting the shape only: x32010 is C,
   and the status bar says *C: shape 2 of …*. Down at the first shape keeps it.

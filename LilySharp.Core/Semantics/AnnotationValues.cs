@@ -333,6 +333,11 @@ public static class AnnotationValues
             ? (Music.ChordShapes.IsDashed(written) ? Music.ChordVoicings.ToFrameSpec(frets) : written)
             : null;
 
+    /// <summary>The frets an <c>@diagram(SHAPE)</c> writes, lowest string first (-1 muted), or null
+    /// (no shape, or one <see cref="Frame"/> does not draw).</summary>
+    public static int[]? DiagramFrets(MusicMarkSyntax mark)
+        => Frame(mark) != null && Music.ChordShapes.TryRead(Sole(mark)!.Text, out var frets, out _) ? [.. frets] : null;
+
     /// <summary>
     /// A bare <c>@diagram</c> on a <c>&lt;…&gt;</c> chord: the diagram of the chord's own notes, as a
     /// player frets them on the part's strings (owner's request 2026-10-30;

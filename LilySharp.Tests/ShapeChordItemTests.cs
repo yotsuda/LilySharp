@@ -562,9 +562,11 @@ public class ShapeChordItemTests
             return r.Replacement;
         }
         string guitar = Book("instrument guitar", "c4 diagram(133211)4 chord(F 133211)4 e4 | chord(x32010)2 g2 |");
-        // Relative mode: each member read from the chord's first note; the shape kept as its diagram.
-        Assert.Equal(@"<f,\6 c\5 f'\4 a'\3 c'\2 f''\1>4@diagram(133211)", Convert(guitar, "diagram("));
-        Assert.Equal(@"<f\6 c\5 f'\4 a'\3 c'\2 f''\1>4@chord(F 133211)", Convert(guitar, "chord(F"));
+        // Relative mode: each member read from the chord's first note; no diagram carried over,
+        // a chord(…) item's name kept (its symbol alone: a shape there would draw a diagram).
+        Assert.Equal(@"<f,\6 c\5 f'\4 a'\3 c'\2 f''\1>4", Convert(guitar, "diagram("));
+        Assert.Equal(@"<f\6 c\5 f'\4 a'\3 c'\2 f''\1>4@chord(F)", Convert(guitar, "chord(F"));
+        Assert.EndsWith(">2@chord", Convert(guitar, "chord(x"));
         // A piano's usual voicing, no string numbers; the name kept.
         string piano = Book("clef treble", "c'4 chord(C)4 chord(G7)2 |");
         Assert.Equal("<c e g>4@chord(C)", Convert(piano, "chord(C"));
@@ -572,6 +574,40 @@ public class ShapeChordItemTests
         Assert.NotNull(ShapeChordConverter.ToNotes(guitar, guitar.IndexOf("e4", StringComparison.Ordinal)).Error);
         string spread = Book("instrument guitar", "<< diagram(C x32010) >>2 r2 |");
         Assert.Contains("<< >>", ShapeChordConverter.ToNotes(spread, spread.IndexOf("diagram", StringComparison.Ordinal)).Error);
+    }
+
+    /// <summary>Right-click a &lt;…&gt; chord → "Convert to Guitar Diagram" (owner's decision
+    /// 2026-10-31): the chord stays and gains @diagram(SHAPE), the shape a bare @diagram draws;
+    /// LYS1057 warns when the notes later leave the shape, and its fix writes the chord's own.</summary>
+    [Fact]
+    public void AChord_GainsItsDiagram_AndAStaleOneWarns()
+    {
+        string book = Book("instrument guitar", "<g b d' f'>1 | <c e g c' e'>2@diagram r2 | <e g c'>1@diagram(x32010) |", top: "octave absolute\n");
+        var r = ShapeChordConverter.AddDiagram(book, book.IndexOf("<g", StringComparison.Ordinal));
+        Assert.Equal("@diagram(xx5431)", r.Replacement);
+        Assert.Equal(r.Start, r.End);   // an insertion, after the duration
+        Assert.Equal("1", book[(r.Start - 1)..r.Start]);
+        // A bare @diagram is written out where it stands.
+        var bare = ShapeChordConverter.AddDiagram(book, book.IndexOf("<c e", StringComparison.Ordinal));
+        Assert.Equal("@diagram", book[bare.Start..bare.End]);
+        // One written already: nothing.
+        Assert.NotNull(ShapeChordConverter.AddDiagram(book, book.IndexOf("<e g", StringComparison.Ordinal)).Error);
+
+        // E G C sounds no C major shape: stale, with the chord's own shape as the fix.
+        var stale = Assert.Single(Diagnostics(book), d => d.Code == DiagnosticCodes.DiagramNotTheChord);
+        Assert.Equal("@diagram(x32010)", book.Substring(stale.Span.Start, stale.Span.Length));
+        Assert.Contains("own shape: @diagram(", stale.Message);
+        // Ctrl+Shift+Up on the written shape: another hand for the same notes; nothing else moves.
+        string written = Book("instrument guitar", "<g b d' f'>1@diagram(xx5431) |", top: "octave absolute\n");
+        int caret = written.IndexOf("5431", StringComparison.Ordinal);
+        var step = LilySharp.Core.Editing.NoteStepper.Step(written, SyntaxTree.Parse(written), [(caret, caret)], 1, semitone: true);
+        var edit = Assert.Single(step.Edits);
+        Assert.Equal("xx5431", written[edit.Start..edit.End]);
+        Assert.Equal("x-10-976x", edit.NewText);
+        Assert.Contains("fingering 2 of", step.Message);
+        // The shape the notes sound, written out: no warning.
+        string fresh = Book("instrument guitar", "<c e g c' e'>1@diagram(x32010) |", top: "octave absolute\n");
+        Assert.DoesNotContain(Diagnostics(fresh), d => d.Code == DiagnosticCodes.DiagramNotTheChord);
     }
 
     // ================================================================ the outputs

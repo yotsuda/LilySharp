@@ -378,6 +378,8 @@ public sealed partial class LilySharpLanguageServer
                     actions.Add(spanEnd);
                 if (ChordToneAction(doc, uri, diagnostic) is { } chordName)
                     actions.Add(chordName);
+                if (OwnDiagramAction(doc, uri, diagnostic) is { } ownDiagram)
+                    actions.Add(ownDiagram);
                 if (TabOctaveAction(doc, uri, diagnostic) is { } tabOctave)
                     actions.Add(tabOctave);
                 if (diagnostic.Code == DiagnosticCodes.TodoMark && !todoOffered)
@@ -401,6 +403,8 @@ public sealed partial class LilySharpLanguageServer
             actions.AddRange(refactorings);
         }
         actions.AddRange(ShapeNameActions(doc, uri, startOffset));
+        if (ChordDiagramAction(doc, uri, startOffset) is { } chordDiagram)
+            actions.Add(chordDiagram);
 
         return actions.ToArray();
     }
@@ -414,7 +418,50 @@ public sealed partial class LilySharpLanguageServer
     /// and applies it. The editor's context menu runs it too, at the caret.</summary>
     internal const string ConvertShapeToNotesCommand = "lilysharp.convertShapeToNotes";
 
-    internal const string ConvertShapeToNotesTitle = "Convert to chord notes <…>";
+    internal const string ConvertShapeToNotesTitle = "Convert to Chord Notes <…>";
+
+    /// <summary>The command "Convert to Guitar Diagram" runs on a <c>&lt;…&gt;</c> chord — the
+    /// extension's, which asks the server for the mark (lilysharp/addChordDiagram,
+    /// <see cref="LilySharp.Core.Editing.ShapeChordConverter.AddDiagram"/>) and applies it.</summary>
+    internal const string AddChordDiagramCommand = "lilysharp.addChordDiagram";
+
+    internal const string AddChordDiagramTitle = "Convert to Guitar Diagram";
+
+    /// <summary>On a <c>&lt;…&gt;</c> chord with no written diagram, "Convert to Guitar Diagram"
+    /// (owner's decision 2026-10-31): the chord gains <c>@diagram(SHAPE)</c>. Offered on sight,
+    /// worked out when picked (the server plays the file to find the notes).</summary>
+    internal static CodeAction? ChordDiagramAction(Document doc, Uri uri, int offset)
+    {
+        var chord = doc.Tree.GetNodes<ChordSyntax>().FirstOrDefault(c => !c.IsShapeChord && !c.IsEmpty
+            && c.Span.Start <= offset && offset <= c.Span.End);
+        if (chord == null || chord.DrumNames.Any()
+            || chord.Articulations.Any(a => a is MusicMarkSyntax { Name: "diagram", Arguments.IsEmpty: false }))
+            return null;
+        return new CodeAction
+        {
+            Title = AddChordDiagramTitle,
+            Kind = CodeActionKind.RefactorRewrite,
+            Command = new Command
+            {
+                Title = AddChordDiagramTitle,
+                CommandIdentifier = AddChordDiagramCommand,
+                Arguments = [uri.ToString(), chord.Span.Start],
+            },
+        };
+    }
+
+    /// <summary>LYS1057's quick fix: the diagram the chord's notes are held by, named in the
+    /// message ("the chord's own shape: @diagram(X)"), in place of the stale one.</summary>
+    private static CodeAction? OwnDiagramAction(Document doc, Uri uri, CoreDiagnostic diagnostic)
+    {
+        if (diagnostic.Code != DiagnosticCodes.DiagramNotTheChord)
+            return null;
+        var m = System.Text.RegularExpressions.Regex.Match(diagnostic.Message, @"own shape: (@diagram\([^)]*\))");
+        if (!m.Success || diagnostic.Span.End > doc.Text.Length)
+            return null;
+        return QuickFix($"Write the chord's own diagram: {m.Groups[1].Value}", doc, uri, diagnostic,
+            [EditOf(doc.Text, diagnostic.Span.Start, diagnostic.Span.End, m.Groups[1].Value)]);
+    }
 
     /// <summary>The second quick fix for an LYS2007 (owner's decision, 2026-09-28): when one part
     /// has cut the section into several and the others still write it whole, offer to cut the

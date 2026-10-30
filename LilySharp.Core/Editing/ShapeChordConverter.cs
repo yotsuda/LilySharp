@@ -24,7 +24,7 @@ namespace LilySharp.Core.Editing;
 /// <summary>
 /// Writes a <c>chord(…)</c> or <c>diagram(…)</c> item out as the <c>&lt;…&gt;</c> chord it plays
 /// (owner's request 2026-10-31: right-click → "Convert to chord notes"):
-/// <c>diagram(133211)4</c> → <c>&lt;f, c f a c' f'&gt;4@diagram(133211)</c> on a guitar.
+/// <c>diagram(133211)4</c> → <c>&lt;f,\6 c\5 f'\4 a'\3 c'\2 f''\1&gt;4</c> on a guitar.
 /// </summary>
 /// <remarks>
 /// <list type="bullet">
@@ -35,9 +35,9 @@ namespace LilySharp.Core.Editing;
 /// <item>Their octave marks are read off the same walk the octave-mode converter makes
 /// (<see cref="OctaveModeConverter.Walk"/>): each new pitch is forced to the octave the item
 /// played it at, and the marks are what that took from the frame — relative or absolute alike.</item>
-/// <item>What is SEEN stays, in one word (docs/chord-syntax-design.md): a <c>chord(…)</c> item
-/// becomes <c>&lt;…&gt;@chord(its words)</c>, a <c>diagram(…)</c> item <c>&lt;…&gt;@diagram(its
-/// shape)</c> — a bare <c>@diagram</c> (the notes, fretted) when it wrote none or several.</item>
+/// <item>The NAME a <c>chord(…)</c> item printed stays: <c>&lt;…&gt;@chord(F)</c>. The diagram does
+/// not (owner's decision 2026-10-31: the notes are what was asked for, and a diagram left over
+/// them would not follow an edit); "Convert to Guitar Diagram" goes back.</item>
 /// <item>The file must sound the same afterwards (<see cref="OctaveModeConverter.SoundSignature"/>),
 /// or nothing changes.</item>
 /// </list>
@@ -98,7 +98,7 @@ public static class ShapeChordConverter
 
         // The tail stays as written; what was seen comes after its duration, in one word.
         int end = item.Duration is { } duration ? duration.Span.End : close;
-        string mark = SeenMark(source, item);
+        string mark = NameMark(source, item);
         string tailBeforeMark = source[close..end];
         string chordText = sb.ToString();
         string Replacement(IReadOnlyList<int> marks)
@@ -137,20 +137,94 @@ public static class ShapeChordConverter
         return new Result(item.SourceStart, end, replacement, null);
     }
 
-    /// <summary>What the item shows, as the one mark that shows it on a <c>&lt;…&gt;</c> chord:
-    /// <c>@chord(its words)</c> for a <c>chord(…)</c>; for a <c>diagram(…)</c>, <c>@diagram(its
-    /// shape)</c> when it wrote one, else a bare <c>@diagram</c> (the notes, fretted).</summary>
-    private static string SeenMark(string source, ChordSyntax item)
+    /// <summary>
+    /// Right-click → "Convert to Guitar Diagram" on a <c>&lt;…&gt;</c> chord (owner's decision
+    /// 2026-10-31): the chord stays as written and gains <c>@diagram(SHAPE)</c> — the shape a bare
+    /// <c>@diagram</c> would draw (<see cref="ChordFingering"/>, on the part's fretted strings, else
+    /// the guitar's), written out so it shows in the source and the step keys can walk it. A bare
+    /// <c>@diagram</c> already there is the one written out. Nothing sounds different: the edit is
+    /// a mark. LYS1057 warns when the notes are edited away from the shape later.
+    /// </summary>
+    public static Result AddDiagram(string source, int offset)
+    {
+        var tree = SyntaxTree.Parse(source);
+        if (tree.HasErrors)
+            return Fail("The file has syntax errors - no changes made.");
+        var chord = tree.GetNodes<ChordSyntax>().FirstOrDefault(c => !c.IsShapeChord
+            && c.Span.Start <= offset && offset <= c.Span.End);
+        if (chord == null || chord.DrumNames.Any())
+            return Fail("Put the caret on a <...> chord.");
+        var marks = chord.Articulations.OfType<MusicMarkSyntax>().Where(m => m.Name == "diagram").ToList();
+        if (marks.Any(m => !m.Arguments.IsEmpty))
+            return Fail("This chord already has a diagram.");
+
+        if (PlayedPitches(tree, chord) is not { } pitches)
+            return Fail("This chord is not played in any score - nothing to finger.");
+        if (ChordFingering.Fingering(pitches, StringsOf(chord)) is not { } frets || frets.Max() > 15)
+            return Fail("No hand can hold this chord (LYS1055) - nothing to draw.");
+
+        string mark = "@diagram(" + ChordVoicings.Spell(frets) + ")";
+        if (marks.FirstOrDefault() is { } bare)
+            return new Result(bare.Span.Start, bare.Span.End, mark, null);
+        int at = chord.Duration is { } duration ? duration.Span.End : CloseAngleEnd(chord);
+        return at < 0 ? Fail("The chord's brackets are not closed.") : new Result(at, at, mark, null);
+    }
+
+    private static int CloseAngleEnd(ChordSyntax chord)
+    {
+        for (int i = 0; i < chord.SlotCount; i++)
+            if (chord.GetChild(i) is SyntaxTokenNode { Kind: SyntaxKind.CloseAngle } close)
+                return close.Span.End;
+        return -1;
+    }
+
+    /// <summary>The pitches a <c>&lt;…&gt;</c> chord plays, lowest first, as the MIDI export starts
+    /// them (one moment, one part: the first time it is played), or null when it is not played.</summary>
+    internal static int[]? PlayedPitches(SyntaxTree tree, ChordSyntax chord)
+    {
+        var span = chord.Span;
+        var played = new Midi.MidiExporter().Export(tree).Tracks.SelectMany(t => t.Notes)
+            .Where(n => n.SourcePos >= span.Start && n.SourcePos < span.End)
+            .GroupBy(n => (n.Part, n.StartTick)).FirstOrDefault();
+        return played?.Select(n => n.Pitch).Distinct().OrderBy(p => p).ToArray();
+    }
+
+    /// <summary>The open strings a chord's diagram is fretted on: its part's fretted instrument's,
+    /// else the guitar's (the strings a bare <c>@diagram</c> draws on).</summary>
+    internal static int[] StringsOf(SyntaxNode node)
+        => Tablature.Tunings.GetTuning(PartOf(node)?.FrettedTuning ?? TuningType.Guitar);
+
+    /// <summary>The header of the part <paramref name="node"/> is written in, or null (a phrase body).</summary>
+    private static Semantics.PartHeaderDefaults? PartOf(SyntaxNode node)
+    {
+        SyntaxNode root = node;
+        while (root.Parent != null)
+            root = root.Parent;
+        for (var p = node.Parent; p != null; p = p.Parent)
+        {
+            if (p is PartDeclarationSyntax declared)
+                return Semantics.PartHeaderDefaults.Read(declared);
+            if (p is PartBlockSyntax block)
+                return Semantics.ConcertPitch.FindPart(root, block.Name) is { } part ? Semantics.PartHeaderDefaults.Read(part) : null;
+        }
+        return null;
+    }
+
+    /// <summary>The NAME a <c>chord(…)</c> item printed, as the mark that prints it on a
+    /// <c>&lt;…&gt;</c> chord — <c>@chord(F)</c>, or a bare <c>@chord</c> for a symbol-less item
+    /// (named from the notes, as the item was) — and nothing for a <c>diagram(…)</c>: the
+    /// diagram is not carried over (owner's decision 2026-10-31), so a shape never follows the
+    /// symbol into the mark.</summary>
+    private static string NameMark(string source, ChordSyntax item)
     {
         // An @chord or @diagram on the item draws instead of it, and stays where it is.
-        if (item.Articulations.Any(a => a is MusicMarkSyntax { Name: "chord" or "diagram" }))
+        if (!item.ShowsName || item.Articulations.Any(a => a is MusicMarkSyntax { Name: "chord" or "diagram" }))
             return "";
         var spans = item.ShapeWordSpans;
-        if (item.ShowsName)
-            return spans.Count == 0 ? "@chord"
-                : "@chord(" + source[spans[0].Start..spans[^1].End] + ")";
-        var shapes = spans.Select(s => source[s.Start..s.End]).Where(w => ChordShapes.TryRead(w, out _, out _)).ToList();
-        return shapes.Count == 1 ? "@diagram(" + shapes[0] + ")" : "@diagram";
+        string? symbol = spans.Count > 0 && source[spans[0].Start..spans[0].End] is var first
+            && !ChordShapes.TryRead(first, out _, out _) && !Tablature.Tunings.Names.Contains(first)
+            ? first : null;
+        return symbol is null ? "@chord" : "@chord(" + symbol + ")";
     }
 
     private static bool InGroup(SyntaxNode node)

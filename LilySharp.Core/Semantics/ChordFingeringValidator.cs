@@ -113,6 +113,48 @@ internal sealed class ChordFingeringValidator : ISemanticValidator
                       + "the lowest note kept, the others moved by an octave"
                     : "spread it out, or leave notes out (the root and fifth below, the third above)"));
         }
+        StaleDiagrams(tree, midi, tunings, bowed);
+    }
+
+    /// <summary>
+    /// LYS1057: an <c>@diagram(SHAPE)</c> on a <c>&lt;…&gt;</c> chord of a fretted part whose shape does
+    /// not sound the chord's notes (owner's decision 2026-10-31: "Convert to Guitar Diagram" writes
+    /// the shape out, and an edit of the notes afterwards would leave it behind). Every note shifted
+    /// alike is the same chord — a capo, a transposing part. The fix named is the chord's own shape,
+    /// the one a bare <c>@diagram</c> draws.
+    /// </summary>
+    private void StaleDiagrams(SyntaxTree tree, MidiFile midi, Dictionary<string, int[]> tunings, HashSet<string> bowed)
+    {
+        var notes = midi.Tracks.SelectMany(t => t.Notes)
+            .Where(n => n.SourcePos >= 0 && n.Part is { } p && tunings.ContainsKey(p) && !bowed.Contains(p))
+            .ToList();
+        if (notes.Count == 0)
+            return;
+        foreach (var chord in tree.GetNodes<ChordSyntax>())
+        {
+            if (chord.IsShapeChord
+                || chord.Articulations.OfType<MusicMarkSyntax>().FirstOrDefault(m => m.Name == "diagram") is not { } mark
+                || AnnotationValues.DiagramFrets(mark) is not { } frets)
+                continue;
+            var span = chord.Span;
+            var played = notes.Where(n => n.SourcePos >= span.Start && n.SourcePos < span.End)
+                .GroupBy(n => (n.Part!, n.StartTick)).FirstOrDefault();
+            if (played == null)
+                continue;
+            var strings = tunings[played.Key.Item1];
+            if (frets.Length != strings.Length)
+                continue;   // another instrument's shape: LYS1038 says so
+            var shape = frets.Select((f, s) => f < 0 ? -1 : strings[s] + f).Where(p => p >= 0).Distinct().OrderBy(p => p).ToArray();
+            var pitches = played.Select(n => n.Pitch).Distinct().OrderBy(p => p).ToArray();
+            if (shape.Length == pitches.Length && shape.Zip(pitches, (a, b) => b - a).Distinct().Count() == 1)
+                continue;
+            string own = Fingering(pitches, strings) is { } held && held.Max() <= 15
+                ? $" - the chord's own shape: @diagram({Music.ChordVoicings.Spell(held)})"
+                : " - and no hand can hold the chord: write the diagram you mean, or a bare @diagram";
+            _diagnostics.Warning(mark.Span, DiagnosticCodes.DiagramNotTheChord,
+                $"this diagram sounds {string.Join(" ", shape.Select(Spell))}, not the chord's notes "
+                + $"({string.Join(" ", pitches.Select(Spell))}){own}");
+        }
     }
 
     /// <summary>Two pitches a bowed string sounds together: on two neighbouring strings, the stopped

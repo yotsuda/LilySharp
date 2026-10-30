@@ -27,9 +27,12 @@ All notable changes to the Lily# VS Code extension are documented here.
   Strum after strum, the name and diagram stand where the chord changes and at each system's head.
 - **Right-click a `chord(…)` or `diagram(…)` item → "Convert to Chord Notes <…>"** writes it out
   as the chord it plays, with its octave marks and string numbers: `diagram(133211)4` becomes
-  `<f,\6 c\5 f'\4 a'\3 c'\2 f''\1>4@diagram(133211)`. What it showed stays, as `@chord(…)` or
-  `@diagram(…)`; the file sounds the same, or nothing changes. Also in the light bulb and the
-  command palette.
+  `<f,\6 c\5 f'\4 a'\3 c'\2 f''\1>4` (a `chord(…)` item keeps its name as `@chord(F)`); the file
+  sounds the same, or nothing changes. Also in the light bulb and the command palette.
+- **Right-click a `<…>` chord → "Convert to Guitar Diagram"** adds `@diagram(SHAPE)`:
+  `<g b d' f'>1@diagram(xx5431)`. With the caret on the shape, Ctrl+Shift+Up/Down walks the other
+  ways to hold the same notes. When the notes are edited away from the shape, LYS1057 warns and
+  the quick fix writes the chord's own.
 - **Ctrl+Shift+Up/Down steps a `diagram(…)` item with no symbol** (`diagram(x32010)`) through the
   other shapes of the chord it sounds. x32010 is C, and only the shape changes.
 - **With shapes for two instruments written** (`@chord(C x32010 0003)`), Ctrl+Shift+Up/Down steps

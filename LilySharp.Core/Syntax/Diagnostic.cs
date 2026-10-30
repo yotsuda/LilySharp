@@ -816,6 +816,13 @@ public static class DiagnosticCodes
     /// (owner's decisions 2026-10-31, docs/chord-syntax-design.md). Still drawn as before.</summary>
     public const string ChordNameOfAShape = "LYS1056";
 
+    /// <summary>Warning: an <c>@diagram(SHAPE)</c> on a <c>&lt;…&gt;</c> chord of a fretted part whose
+    /// shape does not sound the chord's notes — a diagram left behind when the notes were edited.
+    /// A shift of every note alike (a capo, a transposing part) is not one. The quick fix writes the
+    /// chord's own shape, the one a bare <c>@diagram</c> draws (owner's decision 2026-10-31;
+    /// <c>Semantics.ChordFingeringValidator</c>).</summary>
+    public const string DiagramNotTheChord = "LYS1057";
+
     /// <summary>Warning: a <c>chords</c> row entry that is no chord Lily# reads — <c>C7b9</c>,
     /// <c>C-5</c>, a misspelled quality. The row still prints it as written and plays only its
     /// root (a root that is no A–G is the parser's error); the message names the spelling's fix, as the

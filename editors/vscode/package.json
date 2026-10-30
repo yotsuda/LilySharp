@@ -460,6 +460,11 @@
         "title": "Convert to Chord Notes <…>"
       },
       {
+        "command": "lilysharp.addChordDiagram",
+        "category": "Lily#",
+        "title": "Convert to Guitar Diagram"
+      },
+      {
         "command": "lilysharp.extractPhrase",
         "category": "Lily#",
         "title": "Extract Phrase from Section"
@@ -769,6 +774,10 @@
           "when": "editorLangId == lilysharp"
         },
         {
+          "command": "lilysharp.addChordDiagram",
+          "when": "editorLangId == lilysharp"
+        },
+        {
           "command": "lilysharp.chooseSoundFont"
         },
         {
@@ -1040,6 +1049,11 @@
         {
           "command": "lilysharp.convertShapeToNotes",
           "when": "resourceLangId == lilysharp && lilysharp.onShapeItem",
+          "group": "1_modification@0"
+        },
+        {
+          "command": "lilysharp.addChordDiagram",
+          "when": "resourceLangId == lilysharp && lilysharp.onAngleChord",
           "group": "1_modification@0"
         },
         {

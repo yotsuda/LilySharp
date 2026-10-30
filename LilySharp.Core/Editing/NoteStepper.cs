@@ -289,6 +289,10 @@ public static partial class NoteStepper
         Func<string, IReadOnlyList<string>>? textFaces = null)
     {
         int dir = direction >= 0 ? 1 : -1;
+        // On the shape of an @diagram(SHAPE) over a <…> chord: the other fingerings of its notes.
+        if (semitone && selections is [var (caretAt, caretTo)] && caretAt == caretTo
+            && DiagramFingeringStep(text, tree, caretAt, dir) is { } fingering)
+            return fingering;
         var targets = new List<Target>();
         // A selected chord symbol's span, by its node (TargetKind.ChordQuality).
         var selectedSymbols = new Dictionary<int, (int Start, int End)>();

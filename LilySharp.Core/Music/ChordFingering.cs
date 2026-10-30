@@ -74,6 +74,38 @@ public static class ChordFingering
         }
     }
 
+    /// <summary>Every way a hand can hold <paramref name="pitches"/> — each a fret for each string as
+    /// <see cref="Fingering"/> gives it — the one a player reaches for first, by the same weighing
+    /// (strings crossed, the position, the fingers): what Ctrl+Shift+Up/Down walks on an
+    /// <c>@diagram(SHAPE)</c> over a <c>&lt;…&gt;</c> chord (owner's decision 2026-10-31).</summary>
+    public static List<int[]> Fingerings(IReadOnlyList<int> pitches, IReadOnlyList<int> strings)
+    {
+        var sorted = pitches.Distinct().OrderBy(p => p).ToArray();
+        var frets = Enumerable.Repeat(-1, strings.Count).ToArray();
+        var all = new List<int[]>();
+        Place(0);
+        return [.. all.OrderBy(f => Cost(f, sorted, strings)).ThenBy(f => string.Join(",", f))];
+
+        void Place(int i)
+        {
+            if (i == sorted.Length)
+            {
+                all.Add((int[])frets.Clone());
+                return;
+            }
+            for (int s = 0; s < strings.Count; s++)
+            {
+                int fret = sorted[i] - strings[s];
+                if (frets[s] >= 0 || fret < 0 || fret > TopFret)
+                    continue;
+                frets[s] = fret;
+                if (Holdable(frets))
+                    Place(i + 1);
+                frets[s] = -1;
+            }
+        }
+    }
+
     /// <summary>The chord's shape as the page's diagram spec (<see cref="ChordVoicings.ToFrameSpec"/>),
     /// or null when no hand can hold it, or it climbs past the diagram's 15th fret.</summary>
     public static string? FrameSpec(IReadOnlyList<int> pitches, IReadOnlyList<int> strings)
