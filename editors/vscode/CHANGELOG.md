@@ -14,6 +14,8 @@ All notable changes to the Lily# VS Code extension are documented here.
 - **Drums: the same level in both lines prints once; `@f` against `@p` at one moment is warned** (LYS4033).
 - **A voice of a `voice { } { }` span that runs past the first is warned** (LYS2019), and a piece
   composed in Copilot's chat is sent back for it — it would play on after the song ends.
+- **Copilot's chat reads a .lys file through `#readScore`**, attached or named: the score as it stands
+  in the editor, unsaved changes and all, with no "Allow reading file outside of workspace?".
 - **Every value in a `layout { }` steps with Ctrl+Shift+Up / Down**: the line thicknesses and stem length
   by a small step, PageUp / PageDown by a large one; `voltaBracket N` and `barNumbers every N` by a bar,
   four on PageUp / PageDown; a capo's fret; `voltaBracket` and `chordDiagrams`' words. The pre-filled

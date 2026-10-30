@@ -247,6 +247,8 @@ describe('the composing guide', () => {
         assert.match(here, /"applyTo: '\*\*'",/);
         assert.match(here, /'lilysharp_readGuide tool \(topic "composing"\), then propose it with lilysharp_proposeScore\.',/);
         assert.match(here, /'Leave this aside for anything else\.',\s*'',\s*\]\.join/);
+        // A .lys read through Lily#'s tool, not a file viewer (owner's report 2026-10-30).
+        assert.match(here, /'To read a \.lys file, attached or named, use lilysharp_readScore \(search the tools for it\),',/);
         assert.ok(here.length < 2000, 'kept to a few lines');
         // A scan read with Lily#'s reader, and its misreadings mended beside the scan, not by the chat
         // (owner's request 2026-10-29).
