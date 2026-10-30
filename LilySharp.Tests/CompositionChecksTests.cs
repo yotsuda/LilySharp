@@ -215,7 +215,9 @@ public class CompositionChecksTests
         Assert.Contains("(bars 1, 2, 5, 9, 10, 13,", beats);
         Assert.Contains(findings, f => f.StartsWith("The piece is 24 bars long, about 50 seconds played")
             // More music, not a slower tempo (owner's report 2026-10-29: ♩ = 72 became 48).
-            && f.EndsWith("never by slowing its tempo (keep the tempo its character asks for), nor by playing the same sections over and over, in a row or apart."));
+            && f.EndsWith("never by slowing its tempo (keep the tempo its character asks for), nor by playing the same sections over and over, in a row or apart.")
+            // The bars it takes, at its own pace (owner's trial 2026-10-30: told "24 to 32 bars of 4/4", a quick piece stopped short).
+            && f.Contains("a minute and a half to three minutes (at this tempo and meter, about 44 to 86 bars)"));
         // The tune by its beats: not said.
         string kept = Piece("6/8", "4. = 58",
             "d''4 b'8 a'4 g'8 | a'4 b'8 d''4. | e''4 d''8 b'4 a'8 | fis'4. a'4. | b'4 d''8 g''4. | e''4 d''8 c''4. | a'4 c''8 fis''4. | g''2. |",

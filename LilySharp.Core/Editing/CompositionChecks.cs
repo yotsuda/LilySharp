@@ -456,9 +456,11 @@ public static class CompositionChecks
         if (pitched.Count > 0 && (barCount < ShortestPiece || (seconds < ShortestSeconds && byPart.Count >= 2)))
             // More music, not a slower tempo (owner's report 2026-10-29: told 70 seconds, the chat took
             // its Andante from ♩ = 72 to 48 and added no bar).
+            // The bars it takes, at the piece's own tempo and meter (owner's trial 2026-10-30: told "about
+            // 24 to 32 bars of 4/4", a rock piece at ♩ = 168 grew from 32 bars to 44 and stopped, at 63 seconds).
             findings.Add($"The piece is {barCount} bars long, about {seconds} seconds played: unless a short piece was asked for, give it "
-                + "the length its form needs — a minute and a half to three minutes (about 24 to 32 bars of 4/4; a shorter bar "
-                + "or a quicker beat takes more), its phrases long enough to say something, each closing on a cadence. Lengthen it "
+                + $"the length its form needs — a minute and a half to three minutes ({BarsFor(seconds, barCount)}), its phrases long "
+                + "enough to say something, each closing on a cadence. Lengthen it "
                 + "with music — a section more, a varied return, an introduction — never by slowing its tempo (keep the tempo its "
                 + "character asks for), nor by playing the same sections over and over, in a row or apart.");
         if (PlayedKeys(root) is { } inKeys && pitched.Count > 0)
@@ -518,6 +520,16 @@ public static class CompositionChecks
     // …nor under this many seconds played, a floor under the guide's minute and a half (owner's trials
     // 2026-10-29: 6/8 pieces of 26 and 28 bars played in under a minute).
     private const int ShortestSeconds = 75;
+
+    /// <summary>The bars a minute and a half to three minutes take at the piece's own pace — its
+    /// seconds over its bars; the guide's 4/4 count where it played no time.</summary>
+    private static string BarsFor(int seconds, int bars)
+    {
+        if (seconds <= 0 || bars <= 0)
+            return "about 24 to 32 bars of a moderate 4/4";
+        double perBar = (double)seconds / bars;
+        return $"at this tempo and meter, about {(int)System.Math.Ceiling(90 / perBar)} to {(int)System.Math.Round(180 / perBar)} bars";
+    }
 
     // A compound meter's melody notes that start within a beat and run across the next, in this many
     // bars and this share of them (owner's trial 2026-10-29: `b'8 d''4. b'8 a'8` in 8 of a 6/8 tune's bars).

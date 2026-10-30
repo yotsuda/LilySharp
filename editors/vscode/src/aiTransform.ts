@@ -353,7 +353,9 @@ async function readGuide(deps: AiTransformDeps, input: ReadGuideInput | undefine
     if (topic === 'composing' && part > 1) {
         return paged('composing guide', await guide());
     }
-    const hint = compositionHint();
+    // One draw a piece, whatever times the guide is read before it is proposed (owner's trial
+    // 2026-10-30: read twice, the guide drew F and then E♭, and the piece came in E minor).
+    const hint = drawnHint ??= compositionHint();
     drawnTonic = hintTonic(hint);
     deps.log(`AI transform (chat, guide): ${hint}`);
     // The header Compose with AI in Chat writes, the request in it the musician's (owner's request
@@ -525,6 +527,8 @@ async function chatAbsolute(deps: AiTransformDeps, text: string): Promise<string
 
 /** The tonic the last composing guide drew for the chat's piece (readGuide), its key checked once. */
 let drawnTonic: string | undefined;
+/** The starting point drawn for the chat's next piece, kept until that piece is first checked. */
+let drawnHint: string | undefined;
 
 /** The model calling proposeScore, read from the newest Copilot CLI session's log (copilotModelOf);
  *  undefined in a chat that keeps none, as VS Code's own. */
@@ -616,6 +620,7 @@ async function proposeScore(deps: AiTransformDeps, input: ProposeScoreInput, tok
         // …and its key held to the one drawn for it, the draw said to the AI alone (owner's decision 2026-10-30).
         const music = [...report.findings, language, drawnKeyNote(text, drawnTonic)].filter((m): m is string => m !== undefined);
         drawnTonic = undefined;   // one draw, one piece: not held against the next, its guide maybe read from the rules file
+        drawnHint = undefined;    // …and the next piece draws its own
         ranges = report.ranges;
         musicCheckedFor.add(uri.toString());
         firstFindings.set(uri.toString(), new Set(report.findings.map(findingKey)));
