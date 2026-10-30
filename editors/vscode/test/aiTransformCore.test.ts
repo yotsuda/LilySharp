@@ -124,7 +124,12 @@ describe('a proposal from Copilot\'s chat', () => {
         assert.match(src, /if \(isEmptyScore\(current\) && !musicCheckedFor\.has\(uri\.toString\(\)\)\) \{\s*const report = await compositionReport\(client, text\);[\s\S]*?const music = \[\.\.\.report\.findings, language, drawnKeyNote\(text, drawnTonic\)\]\.filter\(\(m\): m is string => m !== undefined\);\s*drawnTonic = undefined;[^\n]*\s*ranges = report\.ranges;\s*musicCheckedFor\.add\(uri\.toString\(\)\);/);
         // Each part's range goes with it, a fact to check against what was meant (owner's request
         // 2026-10-29: a beginner's piece slipped an octave), on the bounce, the write and an Accept.
-        assert.match(src, /'is written as it is, and what the check still finds in it is told to the musician\.'\s*\+ rangesSaid\(ranges\);/);
+        assert.match(src, /'is checked again only for what it brings in, and what the check still finds in it is told to the musician\.'\s*\+ rangesSaid\(ranges\);/);
+        // What the revision brought in goes back once more, the proposal after it written (owner's
+        // decision 2026-10-30: a revision's bass slipped two octaves and was written in untold).
+        assert.match(src, /firstFindings\.set\(uri\.toString\(\), new Set\(report\.findings\.map\(findingKey\)\)\);/);
+        assert.match(src, /const brought = kept\.filter\(m => !first\.has\(findingKey\(m\)\)\);\s*if \(brought\.length > 0 && !recheckedFor\.has\(uri\.toString\(\)\)\) \{\s*recheckedFor\.add\(uri\.toString\(\)\);/);
+        assert.match(src, /'The proposal after this one is written as it is, and what the check still finds in it is told to the musician\.'\s*\+ rangesSaid\(ranges\);/);
         // The revision checked again, written, and what still holds told to the musician (owner's
         // decision 2026-10-30: a rock piece sent back as too short came again as short, unmentioned).
         assert.match(src, /if \(ranges === undefined\) \{\s*const report = await compositionReport\(client, text\);\s*ranges = report\.ranges;\s*kept = report\.findings;/);

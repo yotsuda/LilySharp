@@ -547,6 +547,12 @@ async function chatModelName(): Promise<string | undefined> {
 /** The files whose new piece the music check has spoken on, this session: it speaks once a file. */
 const musicCheckedFor = new Set<string>();
 
+/** What the first music check found in each file's new piece, its counts left out (findingKey), and
+ *  the files whose revision has been sent back for what it brought in: the second time, the last. */
+const firstFindings = new Map<string, Set<string>>();
+const recheckedFor = new Set<string>();
+const findingKey = (finding: string) => finding.replace(/\d+/g, '#');
+
 /** The proposal shown and decided on; what is told to the chat. */
 async function proposeScore(deps: AiTransformDeps, input: ProposeScoreInput, token: vscode.CancellationToken): Promise<string> {
     if (!input || typeof input.file !== 'string' || typeof input.text !== 'string') {
@@ -612,6 +618,7 @@ async function proposeScore(deps: AiTransformDeps, input: ProposeScoreInput, tok
         drawnTonic = undefined;   // one draw, one piece: not held against the next, its guide maybe read from the rules file
         ranges = report.ranges;
         musicCheckedFor.add(uri.toString());
+        firstFindings.set(uri.toString(), new Set(report.findings.map(findingKey)));
         if (music.length > 0 || added.length > 0) {
             deps.log(`AI proposal (chat): sent back once — ${added.length} warning(s); as music: ${music.join(' / ') || 'nothing'}`);
             // The check counts notes and does not know the music meant (owner's decision 2026-10-29: a
@@ -625,7 +632,7 @@ async function proposeScore(deps: AiTransformDeps, input: ProposeScoreInput, tok
                     : '')
                 + 'Revise the piece with these in mind and call lilysharp_proposeScore again with the whole text. '
                 + 'Where something is as you meant it, keep it, and say why in the proposal\'s note: the next proposal '
-                + 'is written as it is, and what the check still finds in it is told to the musician.'
+                + 'is checked again only for what it brings in, and what the check still finds in it is told to the musician.'
                 + rangesSaid(ranges);
         }
     }
@@ -643,6 +650,21 @@ async function proposeScore(deps: AiTransformDeps, input: ProposeScoreInput, tok
             const report = await compositionReport(client, text);
             ranges = report.ranges;
             kept = report.findings;
+            // What the revision brought in goes back once more (owner's decision 2026-10-30: a revision's
+            // bass slipped two octaves, `cis''`, and was written in, the AI never told of it); the
+            // proposal after that is written.
+            const first = firstFindings.get(uri.toString()) ?? new Set<string>();
+            const brought = kept.filter(m => !first.has(findingKey(m)));
+            if (brought.length > 0 && !recheckedFor.has(uri.toString())) {
+                recheckedFor.add(uri.toString());
+                deps.log(`AI proposal (chat): revision sent back — as music: ${brought.join(' / ')}`);
+                return 'Not shown to the musician yet. Lily#\'s check finds this in the revision, not in the piece before '
+                    + 'it — it counts notes and does not know the kind of music you mean: take what helps the piece, and '
+                    + `leave what does not fit it —\n${brought.map(m => `- ${m}`).join('\n')}\n`
+                    + 'Revise the piece with these in mind and call lilysharp_proposeScore again with the whole text. '
+                    + 'The proposal after this one is written as it is, and what the check still finds in it is told to the musician.'
+                    + rangesSaid(ranges);
+            }
         }
         // Its header names the model that composed it (owner's request 2026-10-30).
         const model = await chatModelName();
