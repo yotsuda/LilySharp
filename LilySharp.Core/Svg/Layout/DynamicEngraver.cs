@@ -191,6 +191,42 @@ internal static class DynamicEngraver
     /// </remarks>
     /// <param name="staffLinesOf">The lines a staff (by index) draws, for the staff extent the
     /// side position floors on; absent, every staff stands on five.</param>
+    /// <summary>
+    /// The indices in <paramref name="dynamics"/> of a drum staff's second copy of a level: the same level
+    /// written in two of the staff's voices at one moment (the hands' and the feet's line of a
+    /// `drums { }` chart, both <c>@ff</c>) is ONE drummer's one level, printed once — the first
+    /// voice's. Two different levels at one moment both stand (LYS4033 says so).
+    /// </summary>
+    /// <remarks>
+    /// LILYSHARP-OWN: LilyPond's Dynamic_engraver lives in each Voice, and a DrumStaff of two
+    ///   voices prints each voice's DynamicText — two "ff" stacked (owner's report 2026-10-30).
+    ///   departs from: ly/engraver-init.ly Voice's Dynamic_engraver (one per voice).
+    ///   observed by: LayoutBlockTests.ADrumStaffsLevelInBothVoices_PrintsOnce_AndTwoLevelsAreWarned.
+    /// </remarks>
+    internal static HashSet<int>? DrumDoubles(ImmutableArray<DynamicItem> dynamics,
+        Func<int, bool> isDrumStaff, Dictionary<int, ImmutableArray<Voice>>? voicesByStaff, ImmutableArray<Voice> voices)
+    {
+        if (dynamics.IsDefaultOrEmpty)
+            return null;
+        var seen = new HashSet<(int Staff, int Measure, Semantics.Fraction Onset, string Text, bool Above)>();
+        HashSet<int>? doubles = null;
+        // The first voice's copy stands: read in voice order, each index kept as handed in.
+        foreach (int i in Enumerable.Range(0, dynamics.Length).OrderBy(i => dynamics[i].VoiceIndex))
+        {
+            var d = dynamics[i];
+            if (!isDrumStaff(d.StaffIndex) || d.IsExpressiveText || d.Level == DynamicLevel.None)
+                continue;
+            var staffVoices = voicesByStaff != null && voicesByStaff.TryGetValue(d.StaffIndex, out var sv) ? sv : voices;
+            if (staffVoices.IsDefaultOrEmpty || d.VoiceIndex >= staffVoices.Length
+                || d.MeasureIndex >= staffVoices[d.VoiceIndex].Measures.Length)
+                continue;
+            var onset = LayoutUtilities.ItemOnset(staffVoices[d.VoiceIndex].Measures[d.MeasureIndex], d.ItemIndex);
+            if (!seen.Add((d.StaffIndex, d.MeasureIndex, onset, d.Text, d.IsAbove)))
+                (doubles ??= []).Add(i);
+        }
+        return doubles;
+    }
+
     public static ImmutableArray<DynamicLayout> Calculate(
         Score score,
         ImmutableArray<DynamicItem> dynamics,
@@ -201,7 +237,9 @@ internal static class DynamicEngraver
         ImmutableArray<BeamLayout> beamLayouts = default,
         HashSet<(int Staff, int Measure, int Item, int Source)>? circled = null,
         Func<int, int>? staffLinesOf = null,
-        ImmutableArray<GraceNoteItem> graceNotes = default)
+        ImmutableArray<GraceNoteItem> graceNotes = default,
+        // The indices not engraved: a drum staff's second copy of a level (DrumDoubles).
+        HashSet<int>? skipped = null)
     {
         if (dynamics.IsDefaultOrEmpty)
             return ImmutableArray<DynamicLayout>.Empty;
@@ -234,6 +272,8 @@ internal static class DynamicEngraver
         for (int di = 0; di < dynamics.Length; di++)
         {
             var dynamic = dynamics[di];
+            if (skipped != null && skipped.Contains(di))
+                continue;
             if (circledNientes != null && dynamic.Level == DynamicLevel.Niente
                 && circledNientes.Contains(HairpinEngraver.NienteKey(dynamic)))
                 continue;

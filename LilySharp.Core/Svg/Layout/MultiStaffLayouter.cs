@@ -2691,6 +2691,10 @@ internal sealed class MultiStaffLayouter
                         springs = SpacingRules.ApplyFretFrameSpacing(
                             score.TextMetrics, springs, allTimings, aStaff,
                             score.Articulations, measureIndex, artStaffIndex);
+                        // A guitar bend-up's arrow and amount clear the next column.
+                        springs = SpacingRules.ApplyGuitarBendSpacing(
+                            score.TextMetrics, springs, allTimings, aStaff,
+                            score.Articulations, measureIndex, artStaffIndex);
                     }
                     artStaffIndex++;
                 }

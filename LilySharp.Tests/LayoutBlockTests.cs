@@ -563,6 +563,34 @@ public class LayoutBlockTests
         const string left = "layout { sectionLabelAlign left }\n";
         Assert.Equal(B(left, "c''4 g'8 a' b' a' g'4").YUp,
             B(left, "c''4@bend(full) g'8 a' b' a' g'4").YUp, 6);
+        // On the bar's last note too: the bar makes room for the bend's reach before its bar
+        // line (SpacingRules.ApplyGuitarBendSpacing), so the name beside it stays at its height.
+        Assert.Equal(B(left, "g'4 a' c''2").YUp, B(left, "g'4 a' c''2@bend(full)").YUp, 6);
+    }
+
+    /// <summary>Owner's report 2026-10-30: a drum staff's two voices both writing @ff at one
+    /// moment printed "ff" twice; @f against @p is warned (LYS4033) and both print.</summary>
+    [Fact]
+    public void ADrumStaffsLevelInBothVoices_PrintsOnce_AndTwoLevelsAreWarned()
+    {
+        string Kit(string hands, string feet) => "part kit { clef percussion }\n"
+            + $"section A {{\n  kit {{ voice {{ hh8{hands} hh hh hh hh hh hh hh | }} {{ bd4{feet} sn bd sn | }} }}\n}}\n"
+            + "form { A }\nscore { staff kit }\n";
+        string[] Printed(string src)
+        {
+            var tree = SyntaxTree.Parse(src);
+            var score = SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree));
+            return [.. new LayoutEngine(score.Paper).Layout(score).DynamicLayouts.Select(d => d.Text)];
+        }
+        Assert.Equal(new[] { "ff" }, Printed(Kit("@ff", "@ff")));
+        Assert.Equal(2, Printed(Kit("@f", "@p")).Length);
+        var warned = LilySharp.Core.Semantics.SemanticValidation.Run(SyntaxTree.Parse(Kit("@f", "@p")));
+        Assert.Contains(warned, d => d.Code == DiagnosticCodes.DrumLevelsConflict && d.Message.Contains("@p here and @f"));
+        Assert.DoesNotContain(LilySharp.Core.Semantics.SemanticValidation.Run(SyntaxTree.Parse(Kit("@ff", "@ff"))),
+            d => d.Code == DiagnosticCodes.DrumLevelsConflict);
+        // A pitched staff's two voices keep LilyPond's two texts.
+        var piano = "part m { clef treble }\nsection A {\n  m { voice { c''4@ff d'' e'' f'' | } { c'4@ff d' e' f' | } }\n}\nform { A }\nscore { staff m }\n";
+        Assert.Equal(2, Printed(piano).Length);
     }
 
     /// <summary>The SectionLabel layouts of a book, each with the frame bit it was placed

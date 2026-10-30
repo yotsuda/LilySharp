@@ -732,7 +732,11 @@ internal sealed partial class LayoutEngine
         // The lines each staff draws, which the DynamicLineSpanner family floors on.
         Func<int, int> staffLinesOf = si => staffByIndex != null && staffByIndex.TryGetValue(si, out var st)
             ? MultiStaffLayouter.NotationStaffLinesOf(st) : EngravingDefaults.DefaultStaffLines;
-        var dynamicLayouts = score != null ? DynamicEngraver.Calculate(score, dynamics, ml, staffVoices, voicesByStaff, measuresByStaff, beamLayouts ?? default, circledNientes, staffLinesOf, ctx.GraceNotes) : ImmutableArray<DynamicLayout>.Empty;
+        // A drum staff's level written in both its voices at one moment prints once.
+        var drumDoubles = DynamicEngraver.DrumDoubles(dynamics,
+            si => staffByIndex != null && staffByIndex.TryGetValue(si, out var ds) && ds.Clef == ClefType.Percussion,
+            voicesByStaff, staffVoices);
+        var dynamicLayouts = score != null ? DynamicEngraver.Calculate(score, dynamics, ml, staffVoices, voicesByStaff, measuresByStaff, beamLayouts ?? default, circledNientes, staffLinesOf, ctx.GraceNotes, drumDoubles) : ImmutableArray<DynamicLayout>.Empty;
         // …minus the ones a tab staff blanks. LILYPOND-REF:
         // ly/engraver-init.ly:1280-1285 Tab_staff_symbol_engraver — that context's
         // \override DynamicText.stencil = ##f / \override TextScript.stencil = ##f — one

@@ -787,7 +787,9 @@ merged into chords where lines meet, and the feet's (`bd`, `bda`, `hhp`) on stem
 `up` or `down` before a line to put the whole line on that side (`drums { hats  down
 { … } }`). Each line keeps its own durations, so a triplet fill is just a line with a `tuplet`.
 Hits no drummer can play at once — three for the hands, three for the feet, or the closed and
-the open hi-hat together — warn (LYS4030); notes written straight into the chart instead of
+the open hi-hat together — warn (LYS4030). A level written in two lines (or two voices of a
+drum staff) at one moment prints once when it is the same; two different levels warn (LYS4033),
+one drummer playing one level. Notes written straight into the chart instead of
 in a line are an error (LYS0040). A line holding something a drum part does not (a pitched
 note, a nested tuplet) leaves the chart drawn a voice a line. MIDI plays every line; the
 LilyPond and MusicXML exports write each line as a voice.

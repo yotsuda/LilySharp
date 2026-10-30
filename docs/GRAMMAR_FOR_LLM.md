@@ -737,7 +737,9 @@ drummap { hh: position 6 notehead x }  // TOP LEVEL, optional: re-table a drum
   led by `up`/`down`; the lines play together (`drums { hats back kick }`). Drawn in two
   voices: hands merged on stems up, feet (`bd bda hhp`) stems down. Lines hold drum notes,
   drum chords, rests, `tuplet`, percent marks. Notes straight in the chart =
-  LYS0040; three hands / three feet / hh with hho at once = warning LYS4030. Prefer it to
+  LYS0040; three hands / three feet / hh with hho at once = warning LYS4030. A level written in two
+  lines at one moment prints once when it is the same (`@ff` and `@ff`); two different levels
+  (`@f` and `@p`) = warning LYS4033 — write a drum level in one line. Prefer it to
   `voice { } { }` for a kit: write each pattern once as a one-bar phrase. Flam:
   `acciaccatura { sn16 } sn4`. The editor offers stock one-bar patterns (`hats8 hats16 hats4
   hatsOpen shuffle back halfTime ghost flam fourFloor kick8 kickSync fillToms fillTriplet`) and

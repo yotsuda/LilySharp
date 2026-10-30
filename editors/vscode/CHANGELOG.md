@@ -9,7 +9,9 @@ All notable changes to the Lily# VS Code extension are documented here.
 - **`layout { sectionLabelAlign left }`** puts a mid-line section name's left edge on its bar line,
   clear of the bar before; `center` (the default) keeps it centred. Completed, coloured and stepped
   with Ctrl+Shift+Up / Down like the other layout words.
-- **A guitar bend's "full" no longer runs into the section name or tempo above it.**
+- **A guitar bend's "full" no longer runs into the section name or tempo above it**, and a bend on a
+  bar's last note widens the bar so it ends before the bar line.
+- **Drums: the same level in both lines prints once; `@f` against `@p` at one moment is warned** (LYS4033).
 
 ### Span ends — BREAKING
 

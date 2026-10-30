@@ -126,6 +126,7 @@ public static class SemanticValidation
         new PartialScopeValidator(),        // a partial (pickup) outside a section
         new LoneVoiceValidator(),           // a span with a single (transparent) voice block
         new DrumChartValidator(),           // hits in a drums { } chart no drummer can play at once
+        new DrumLevelValidator(),           // two levels in a drum staff's voices at one moment
         new CueRegionValidator(),           // a nested cue, or a voice span inside a cue
         new CueSpanBoundaryValidator(),     // a slur/tie with one end inside a cue
         new GraceBodyValidator(),           // grace { } body content that is not engraved
@@ -248,7 +249,7 @@ public static class SemanticValidation
                 ScoreConcert = renderSpec?.ScoreConcert,
                 StaffPitch = renderSpec?.StaffPitch,
             };
-            Svg.SvgGenerator.CollectScore(collector, tree, renderSpec);
+            collector.Collected = Svg.SvgGenerator.CollectScore(collector, tree, renderSpec);
             return collector;
         }
         catch

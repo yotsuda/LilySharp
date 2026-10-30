@@ -14,6 +14,12 @@ workflow attaches that section to the GitHub Release verbatim.
   mark over the last note of the bar before stands beside it. The LilyPond twin writes the same.
 - `[render]` **A guitar bend's arrow and amount are ink the marks above the staff clear**: a
   section name or a tempo over a bend's "full" now stands above it instead of on it.
+- `[render]` **A bend on a bar's last note gets its room**: the bar widens so the arrow and its
+  amount end before the bar line, with room for a section name beside them.
+- `[render]` **A drum staff's level written in both voices at one moment prints once** (`@ff` on the
+  hands' line and the feet's used to print "ff" twice).
+- `[lang]` **Two different levels in a drum staff's voices at one moment warn** (LYS4033): `@f` on
+  one line and `@p` on another — one drummer plays one level.
 
 ### Span ends — BREAKING
 

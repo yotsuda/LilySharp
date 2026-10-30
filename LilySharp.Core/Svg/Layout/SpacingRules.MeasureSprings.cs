@@ -1411,6 +1411,74 @@ internal static partial class SpacingRules
         return widened ? result.ToImmutable() : springs;
     }
 
+    /// <summary>The room past a bend's amount on a bar's last note beyond the bar line's own
+    /// reach: a mark's outside-staff-horizontal-padding (0.2) and as much again. LILYSHARP-OWN.</summary>
+    private const double BendBeforeBarExtra = 0.4;
+
+    /// <summary>
+    /// A guitar bend-up's room: the arrow and its amount leave the note to the RIGHT, so the
+    /// note's column stands at least their reach before the next column — or the bar line —
+    /// whatever height the next note's ink is at (owner's report 2026-10-30: in a short bar the
+    /// "full" of a bend on its last note reached the bar line and the section name after it).
+    /// </summary>
+    /// <remarks>
+    /// LILYSHARP-OWN, as the bend-up is (ArticulationEngraver.GuitarBendInkBox): LilyPond's
+    ///   BendSpanner runs to the note it bends to, and is spaced as a spanner.
+    ///   departs from: nothing ported — the device is Lily#'s own.
+    ///   observed by: LayoutBlockTests.ASectionNameClearsABendBeforeItsBar.
+    /// A rod, as every reservation here: the minimum moves and nothing else
+    /// (lily/simple-spacer.cc:90-127 Simple_spacer::add_rod).
+    /// </remarks>
+    public static ImmutableArray<Spring> ApplyGuitarBendSpacing(
+        Rendering.ScoreTextMetrics fonts,
+        ImmutableArray<Spring> springs,
+        IReadOnlyList<Fraction> timings,
+        Model.Staff staff,
+        ImmutableArray<ArticulationItem> articulations,
+        int measureIndex,
+        int staffIndex)
+    {
+        if (articulations.IsDefaultOrEmpty || springs.Length != timings.Count + 1)
+            return springs;
+        ImmutableArray<Spring>.Builder? result = null;
+        var voices = staff.Voices;
+        foreach (var art in articulations)
+        {
+            if (art.Type != Syntax.ArticulationType.Bend || art.StaffIndex != staffIndex
+                || art.MeasureIndex != measureIndex || art.VoiceIndex >= voices.Length
+                || measureIndex >= voices[art.VoiceIndex].Measures.Length)
+                continue;
+            var items = voices[art.VoiceIndex].Measures[measureIndex].Items;
+            if (art.ItemIndex >= items.Length)
+                continue;
+            var onset = LayoutUtilities.ItemOnset(voices[art.VoiceIndex].Measures[measureIndex], art.ItemIndex);
+            int t = -1;
+            for (int c = 0; c < timings.Count; c++)
+                if (timings[c] == onset)
+                {
+                    t = c;
+                    break;
+                }
+            if (t < 0)
+                continue;
+            // From the column: the head (and its dots), the gap the curve leaves it, the curve
+            // and amount's reach, and a script's gap to whatever stands next.
+            double needed = CalculateNoteheadRightExtent(fonts, items[art.ItemIndex])
+                + ArticulationEngraver.BendHeadPadding
+                + ArticulationEngraver.GuitarBendInkBox(fonts, art.BendSemitones).Right
+                + ArticulationSpacing.ScriptToNeighbourGap;
+            // Before the bar line, room too for what stands over it: the bar's own reach and a
+            // mark's outside-staff-horizontal-padding (MusicMarkEngraver, 0.2), so a section name
+            // whose left edge is on the bar stands beside the amount, not over it.
+            if (t == timings.Count - 1)
+                needed += DefaultExtraSpacingWidth + BendBeforeBarExtra;
+            result ??= springs.ToBuilder();
+            // Spring t+1 spans column t → the next column, or → the bar line after the last.
+            result[t + 1] = result[t + 1].EnsureMinDistance(needed);
+        }
+        return result?.ToImmutable() ?? springs;
+    }
+
     /// <summary>
     /// Reserves the sideways reach of a wide, always-outside script (a fermata or
     /// ornament) in the shared note columns, so a fermata over one note does not

@@ -133,7 +133,7 @@ internal static class ArticulationEngraver
     /// <summary>X offset of a bend-up's curve from the fret digit on a TAB staff. LILYSHARP-OWN (above).</summary>
     private const double BendTabXOffset = 0.5;
     /// <summary>X gap between a bend-up's curve and the notehead's right edge. LILYSHARP-OWN (above).</summary>
-    private const double BendHeadPadding = 0.15;
+    internal const double BendHeadPadding = 0.15;
     /// <summary>X offset for a curve that arrives FROM THE LEFT (scoop/plop). LILYSHARP-OWN (above).</summary>
     private const double BendApproachXOffset = 1.55;
 

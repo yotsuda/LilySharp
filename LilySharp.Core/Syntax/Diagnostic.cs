@@ -1510,6 +1510,12 @@ public static class DiagnosticCodes
     /// <c>Semantics.SpanNames</c>). The quick fix writes the start's name.</summary>
     public const string SpanEndName = "LYS4032";
 
+    /// <summary>Warning: a drum staff's voices write two different levels at one moment —
+    /// <c>@f</c> on the hands' line and <c>@p</c> on the feet's (owner's decision 2026-10-30).
+    /// One drummer plays one level; the same level in both lines prints once
+    /// (<c>Layout.DynamicEngraver.DrumDoubles</c>), two different ones both print.</summary>
+    public const string DrumLevelsConflict = "LYS4033";
+
     /// <summary>A slur, phrasing slur, tie or hairpin — and, since 2026-09-29, a text spanner,
     /// ottava, pedal or trill span — that breaks the SECTION CARRY RULE
     /// (owner's decisions, 2026-09-28): a span open when a section ends is carried into the

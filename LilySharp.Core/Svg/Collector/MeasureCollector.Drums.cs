@@ -387,6 +387,40 @@ public sealed partial class MeasureCollector
         }
     }
 
+    /// <summary>The score this collect produced, when <c>SemanticValidation.TryCollect</c> ran it:
+    /// the staves, their voices and the dynamics as the page reads them (DrumLevelValidator).</summary>
+    internal MultiStaffScore? Collected { get; set; }
+
+    /// <summary>
+    /// The levels a drum staff's voices write at one moment that disagree (owner's decision
+    /// 2026-10-30): each a dynamic of a later voice whose level differs from one already
+    /// written there, with the level it meets. The same level twice prints once and is not one.
+    /// </summary>
+    internal IReadOnlyList<(DynamicItem At, string Other)> DrumLevelConflicts()
+    {
+        var found = new List<(DynamicItem, string)>();
+        if (Collected is not { } score)
+            return found;
+        foreach (var (_, staff, index) in score.EnumerateStaves())
+        {
+            if (staff.Clef != ClefType.Percussion || staff.Voices.Length < 2)
+                continue;
+            var moments = new Dictionary<(int, Fraction), DynamicItem>();
+            foreach (var d in score.Dynamics.Where(d => d.StaffIndex == index && !d.IsExpressiveText
+                         && d.Level != DynamicLevel.None).OrderBy(d => d.VoiceIndex))
+            {
+                if (d.VoiceIndex >= staff.Voices.Length || d.MeasureIndex >= staff.Voices[d.VoiceIndex].Measures.Length)
+                    continue;
+                var key = (d.MeasureIndex, Layout.LayoutUtilities.ItemOnset(staff.Voices[d.VoiceIndex].Measures[d.MeasureIndex], d.ItemIndex));
+                if (!moments.TryGetValue(key, out var first))
+                    moments[key] = d;
+                else if (first.VoiceIndex != d.VoiceIndex && first.Text != d.Text)
+                    found.Add((d, first.Text));
+            }
+        }
+        return found;
+    }
+
     /// <summary>
     /// The hits of <paramref name="chart"/> no drummer can play at once (owner's rule
     /// 2026-10-11): three or more kit pieces for the two hands, three or more for the two

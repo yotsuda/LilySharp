@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 63 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 64 | 観測者がゼロだと自認しているもの |
-| `OWN` | 283 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **410** | |
+| `OWN` | 286 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **413** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -246,7 +246,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **`TimeSignature.NumeratorText`** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（283 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（286 件）
 
 ### `LilySharp.Core/Editing/KeyRespeller.cs`
 - **`KeyRespeller`** LILYSHARP-OWN: an editor aid. The rule:
@@ -483,6 +483,7 @@
 - **`DotColumn.Reserved`** ⚠️ LILYSHARP-OWN: the dots' preferred DIRECTION is not read here. LilyPond's
 ### `LilySharp.Core/Svg/Layout/DynamicEngraver.cs`
 - **`DynamicEngraver.MeasuredExpressiveInk`** ⚠️ LILYSHARP-OWN: a string the bundled face cannot spell (CJK — TextFontMetrics reports
+- **`DynamicEngraver.DrumDoubles`** LILYSHARP-OWN: LilyPond's Dynamic_engraver lives in each Voice, and a DrumStaff of two
 - **`DynamicEngraver.PlaceOnMultiMeasureRests`** ⚠️ LILYSHARP-OWN: the number is a support of THIS text alone, not ink of the staff's
 - **`DynamicEngraver.SmuflGlyphRun`** the ink the side-position reads. LILYSHARP-OWN: LilyPond reads no SMuFL font and sets its
 ### `LilySharp.Core/Svg/Layout/ElementCoordinator.cs`
@@ -612,6 +613,8 @@
 ### `LilySharp.Core/Svg/Layout/SpacingRules.MeasureSprings.cs`
 - **`SpacingRules.ApplyChordRowSpacing`** column, d being the run's remaining length. ⚠️ LILYSHARP-OWN in one respect — d is
 - **`SpacingRules.EnsureLeadSheetBarWidth`** LILYSHARP-OWN: LilyPond has no such floor — a chords-only chart's bar width is
+- **`SpacingRules.BendBeforeBarExtra`** reach: a mark's outside-staff-horizontal-padding (0.2) and as much again. LILYSHARP-OWN.
+- **`SpacingRules.ApplyGuitarBendSpacing`** LILYSHARP-OWN, as the bend-up is (ArticulationEngraver.GuitarBendInkBox): LilyPond's
 - **`SpacingRules.ApplyFretFrameSpacing`** ⚠️ LILYSHARP-OWN by the owner's decision (session 646: "コード図は、横に並べてほしい。
 ### `LilySharp.Core/Svg/Layout/StaffSize.cs`
 - **`StaffSize.Of`** ⚠️ LILYSHARP-OWN: THIS LINE IS A TYPE ENUMERATION, and it is the one part of this file

@@ -767,7 +767,7 @@
 "Svg/Layout/ArticulationEngraver.cs","ArticulationLayout","0.0","double SkylineHorizontalPadding = 0.0,","(file-level) LILYPOND-REF: define-grobs.scm:2992-3024 Script grob","Yellow"
 "Svg/Layout/ArticulationEngraver.cs","ArticulationEngraver.ScriptHorizonPadding","0.1","private const double ScriptHorizonPadding = 0.1;","LILYPOND-REF: lily/side-position-interface.cc:354-357 aligned_side — spends the","Green"
 "Svg/Layout/ArticulationEngraver.cs","ArticulationEngraver.BendTabXOffset","0.5","private const double BendTabXOffset = 0.5;","(file-level) LILYPOND-REF: define-grobs.scm:2992-3024 Script grob","Yellow"
-"Svg/Layout/ArticulationEngraver.cs","ArticulationEngraver.BendHeadPadding","0.15","private const double BendHeadPadding = 0.15;","LILYPOND-REF there).","Green"
+"Svg/Layout/ArticulationEngraver.cs","ArticulationEngraver.BendHeadPadding","0.15","internal const double BendHeadPadding = 0.15;","LILYPOND-REF there).","Green"
 "Svg/Layout/ArticulationEngraver.cs","ArticulationEngraver.BendApproachXOffset","1.55","private const double BendApproachXOffset = 1.55;","LILYPOND-REF there).","Green"
 "Svg/Layout/ArticulationEngraver.cs","ArticulationEngraver.EditorialFontSizeStep","2.0","private const double EditorialFontSizeStep = -2.0;","LILYPOND-REF: scm/define-grobs.scm:101 AccidentalSuggestion (font-size . -2)","Green"
 "Svg/Layout/ArticulationEngraver.cs","ArticulationEngraver.BreathGap","0.55","private const double BreathGap = 0.55;","LILYPOND-REF: lily/breathing-sign.cc:262-277 offset_callback — the line span's UP end.","Green"
